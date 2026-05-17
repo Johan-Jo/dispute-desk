@@ -19,7 +19,8 @@
 import { describe, it, expect } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 
-import { ALL_REASON_CODE_MODULES } from "../reasonCodes/registry";
+import { ALL_REASON_CODE_MODULES, familyKeyForModule } from "../reasonCodes/registry";
+import { getFamily } from "../reasonCodes/familyRegistry";
 
 const SUPABASE_URL =
   process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -123,6 +124,63 @@ describe("defence prompt modules — drift guard", () => {
       }
 
       expect(undeclaredDrift).toEqual([]);
+    },
+  );
+
+  it.skipIf(!HAS_CREDS)(
+    "no active DB row contains any of its family's prohibitedBankPhrases (override flag is NOT a bypass) — v2.2+",
+    async () => {
+      const sb = createClient(SUPABASE_URL!, SUPABASE_KEY!, {
+        auth: { persistSession: false },
+      });
+      const { data, error } = await sb
+        .from("defence_prompt_modules")
+        .select("key, prompt_body, version, intentional_override")
+        .eq("is_active", true)
+        .order("version", { ascending: false });
+      expect(error, error?.message ?? "select failed").toBeNull();
+
+      type DbRow = { key: string; prompt_body: string; version: number };
+      const latestByKey = new Map<string, DbRow>();
+      for (const row of (data ?? []) as DbRow[]) {
+        if (!latestByKey.has(row.key)) latestByKey.set(row.key, row);
+      }
+
+      const offences: Array<{ key: string; phrase: string; matched: string }> = [];
+      for (const mod of ALL_REASON_CODE_MODULES) {
+        const dbRow = latestByKey.get(mod.key);
+        if (!dbRow) continue;
+        const family = getFamily(familyKeyForModule(mod.key));
+        for (const pattern of family.prohibitedBankPhrases) {
+          const m = dbRow.prompt_body.match(pattern);
+          if (m) {
+            offences.push({
+              key: mod.key,
+              phrase: pattern.source,
+              matched: m[0],
+            });
+          }
+        }
+      }
+
+      if (offences.length > 0) {
+        const lines = offences.map(
+          (o) => `  - ${o.key}: matched /${o.phrase}/i → "${o.matched}"`,
+        );
+        throw new Error(
+          [
+            `${offences.length} active defence_prompt_modules row(s) contain a family-prohibited bank-framing phrase.`,
+            `intentional_override does NOT exempt prompts from this check.`,
+            "",
+            ...lines,
+            "",
+            "Remediation:",
+            "  1. Edit the offending row through the admin editor (the PUT route blocks unsafe saves).",
+            "  2. OR run `npx tsx scripts/reconcile-defence-prompt-modules.mts` to promote the safe file default.",
+          ].join("\n"),
+        );
+      }
+      expect(offences).toEqual([]);
     },
   );
 

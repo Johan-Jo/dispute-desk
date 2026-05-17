@@ -17,5 +17,7 @@ export const item_not_received: ReasonCodeFamily = {
   fallbackModuleKey: "inr_product_not_received",
   overlayPromptBody: "",
   familyAvoid: [],
+  prohibitedBankPhrases: [],
+  guardedBankPhrases: [],
   version: 1,
 };

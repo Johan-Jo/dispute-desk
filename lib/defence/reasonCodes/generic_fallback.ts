@@ -11,10 +11,11 @@ import type { ReasonCodeGuidance } from "../types";
 
 export const generic_fallback: ReasonCodeGuidance = {
   key: "generic_fallback",
-  displayName: "Generic representment (unknown / unmapped reason code)",
+  displayName: "Generic representment",
+  claimType: "Unmapped chargeback claim",
   reasonCodeKeys: [],
   promptBody: [
-    "You are writing a bank-facing representment for a dispute whose specific reason code is unknown.",
+    "You are writing a bank-facing representment for a chargeback whose specific reason code is unknown.",
     "Argue from the approved facts only. Do not invent scheme-specific rules.",
     "Cite the strongest available approved facts: payment authentication if present, delivery/access if present, order record consistency, customer communication, policy disclosures.",
     "Avoid aggressive conclusions. Use hedged framing: 'The available evidence supports…', 'The available records indicate…'.",
@@ -63,5 +64,5 @@ export const generic_fallback: ReasonCodeGuidance = {
     "account_history",
     "manual_evidence",
   ],
-  version: 1,
+  version: 2,
 };

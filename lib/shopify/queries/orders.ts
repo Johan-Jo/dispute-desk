@@ -19,6 +19,7 @@ export const ORDER_DETAIL_QUERY = `
         displayFinancialStatus
         displayFulfillmentStatus
         note
+        sourceName
         # NOTE: Order.cartToken was removed from Admin API 2026-01.
         # Selecting it fails the entire query with an undefinedField
         # error and silently nulls data.node — confirmed via incident
@@ -274,6 +275,10 @@ export interface OrderDetailNode {
   displayFinancialStatus: string | null;
   displayFulfillmentStatus: string | null;
   note: string | null;
+  /** Shopify channel id — "web", "android", "iphone", "pos",
+   *  "shopify_draft_order", etc. v2.2+: drives the
+   *  transaction_channel_online_present predicate. */
+  sourceName: string | null;
   /** Removed from Admin API 2026-01. Always undefined at runtime; the
    *  type is kept for downstream callers that null-check defensively
    *  (`cartToken ?? null`). LSE session matching now degrades to

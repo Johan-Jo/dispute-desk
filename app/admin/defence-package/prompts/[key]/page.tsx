@@ -4,7 +4,8 @@ import { FileText, ArrowLeft } from "lucide-react";
 import { hasAdminSession } from "@/lib/admin/auth";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { getPromptModule } from "@/lib/defence/admin-queries";
-import { ALL_REASON_CODE_MODULES } from "@/lib/defence/reasonCodes/registry";
+import { ALL_REASON_CODE_MODULES, familyKeyForModule } from "@/lib/defence/reasonCodes/registry";
+import { getFamily } from "@/lib/defence/reasonCodes/familyRegistry";
 import { PromptEditor, type FileDefaultSnapshot } from "./editor";
 
 export const runtime = "nodejs";
@@ -41,6 +42,14 @@ export default async function PromptModuleEditorPage({
       }
     : null;
 
+  // Serialise the family's hard-prohibited bank-framing phrases so the
+  // client-side editor can run the same check the PUT route enforces
+  // (and disable Save when the current promptBody contains one). v2.2+.
+  const family = fileMod ? getFamily(familyKeyForModule(fileMod.key)) : null;
+  const prohibitedBankPhrasePatterns: string[] = family
+    ? family.prohibitedBankPhrases.map((re) => re.source)
+    : [];
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex items-center gap-3">
@@ -53,7 +62,11 @@ export default async function PromptModuleEditorPage({
           icon={FileText}
         />
       </div>
-      <PromptEditor initial={promptModule} fileDefault={fileDefault} />
+      <PromptEditor
+        initial={promptModule}
+        fileDefault={fileDefault}
+        prohibitedBankPhrasePatterns={prohibitedBankPhrasePatterns}
+      />
     </div>
   );
 }

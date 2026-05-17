@@ -21,5 +21,7 @@ export const cancelled_recurring: ReasonCodeFamily = {
   fallbackModuleKey: "canceled_recurring",
   overlayPromptBody: "",
   familyAvoid: [],
+  prohibitedBankPhrases: [],
+  guardedBankPhrases: [],
   version: 1,
 };

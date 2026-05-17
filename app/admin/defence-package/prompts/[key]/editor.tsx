@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { AdminPromptModuleRow } from "@/lib/defence/admin-queries";
 
 export interface FileDefaultSnapshot {
@@ -14,9 +14,18 @@ interface Props {
   /** File-default snapshot (from ALL_REASON_CODE_MODULES). When present
    *  the "Reset to file default" button is enabled. */
   fileDefault: FileDefaultSnapshot | null;
+  /** Family-level hard-banned bank-framing phrases, serialised as regex
+   *  source strings. Reconstructed client-side to drive the
+   *  "Unsafe override" banner + Save button gate. The same list is
+   *  enforced server-side by the PUT route. v2.2+. */
+  prohibitedBankPhrasePatterns: string[];
 }
 
-export function PromptEditor({ initial, fileDefault }: Props) {
+export function PromptEditor({
+  initial,
+  fileDefault,
+  prohibitedBankPhrasePatterns,
+}: Props) {
   const [promptBody, setPromptBody] = useState(initial.promptBody);
   const [model, setModel] = useState(initial.model ?? "");
   const [saving, setSaving] = useState(false);
@@ -25,6 +34,22 @@ export function PromptEditor({ initial, fileDefault }: Props) {
   const [dryRunResult, setDryRunResult] = useState<unknown>(null);
   const [dryRunning, setDryRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const unsafeMatches = useMemo(() => {
+    const out: Array<{ pattern: string; match: string }> = [];
+    for (const src of prohibitedBankPhrasePatterns) {
+      let re: RegExp;
+      try {
+        re = new RegExp(src, "i");
+      } catch {
+        continue;
+      }
+      const m = promptBody.match(re);
+      if (m) out.push({ pattern: src, match: m[0] });
+    }
+    return out;
+  }, [promptBody, prohibitedBankPhrasePatterns]);
+  const hasUnsafe = unsafeMatches.length > 0;
 
   async function onSave() {
     setSaving(true);
@@ -115,6 +140,23 @@ export function PromptEditor({ initial, fileDefault }: Props) {
 
   return (
     <div className="space-y-6">
+      {hasUnsafe && (
+        <div className="rounded border border-rose-300 bg-rose-50 p-3 text-sm text-rose-800">
+          <p className="font-medium">Unsafe override — prompt body contains banned bank-framing phrases:</p>
+          <ul className="mt-1 list-disc pl-5">
+            {unsafeMatches.map((m, i) => (
+              <li key={i}>
+                <code className="font-mono">{m.match}</code>{" "}
+                <span className="text-rose-600">(matches /{m.pattern}/i)</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs">
+            Saving is disabled until these are removed. Use <strong>Reset to file default</strong> to restore the safe baseline.
+          </p>
+        </div>
+      )}
+
       <section className="space-y-2">
         <label className="block text-sm font-medium text-[#0F172A]">Prompt body</label>
         <textarea
@@ -123,6 +165,16 @@ export function PromptEditor({ initial, fileDefault }: Props) {
           value={promptBody}
           onChange={(e) => setPromptBody(e.target.value)}
         />
+      </section>
+
+      <section className="space-y-1">
+        <label className="block text-sm font-medium text-[#0F172A]">Claim type (file-default)</label>
+        <div className="px-3 py-2 border border-[#E2E8F0] rounded bg-[#F8FAFC] text-sm text-[#0F172A]">
+          {initial.claimType}
+        </div>
+        <p className="text-xs text-[#64748B]">
+          Merchant-facing claim category. File-default only — not editable from the admin override path.
+        </p>
       </section>
 
       <section className="space-y-2">
@@ -141,7 +193,8 @@ export function PromptEditor({ initial, fileDefault }: Props) {
       <div className="flex items-center gap-3 flex-wrap">
         <button
           onClick={onSave}
-          disabled={saving || resetting}
+          disabled={saving || resetting || hasUnsafe}
+          title={hasUnsafe ? "Prompt body contains a banned bank-framing phrase. Remove it or Reset to file default." : undefined}
           className="px-4 py-2 rounded bg-[#1D4ED8] text-white font-medium hover:bg-[#1E40AF] disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save new version"}

@@ -38,7 +38,14 @@ export interface DefencePackageMeta {
   disputeGid: string | null;
   orderName: string | null;
   reasonCode: string | null;
+  /** Bank-facing network reference label, e.g. "Visa 10.4 / Mastercard
+   *  4837". The reason-code identifier with no product/claim noun. */
   reasonCodeDisplay: string | null;
+  /** Merchant-facing claim category label, e.g. "Unauthorized
+   *  transaction claim". Distinct from `reasonCodeDisplay`; describes
+   *  what the cardholder is alleging in the merchant's own words.
+   *  v2.2+. */
+  claimType?: string | null;
   reasonCodeModuleKey?: ReasonCodeModuleKey;
   shopName: string;
   merchantName: string | null;
@@ -144,7 +151,7 @@ function Cover({ meta }: { meta: DefencePackageMeta }) {
         Prepared for {meta.merchantName ?? meta.shopName}
       </Text>
       <Text style={styles.coverSubtitle}>
-        {meta.reasonCodeDisplay ?? meta.reasonCode ?? "—"} • {meta.amountDisplay ?? "—"} • v{meta.version} ({meta.packageMode})
+        {[meta.reasonCodeDisplay, meta.claimType].filter(Boolean).join(" — ") || meta.reasonCode || "—"} • {meta.amountDisplay ?? "—"} • v{meta.version} ({meta.packageMode})
       </Text>
       <Text style={styles.coverSubtitle}>
         Generated {fmtIsoDate(meta.generatedAt)}
@@ -163,6 +170,7 @@ function CaseDetailsTable({ meta }: { meta: DefencePackageMeta }) {
     ["Transaction date", fmtIsoDate(meta.transactionDate)],
     ["Disputed amount", meta.amountDisplay ?? "—"],
     ["Reason code", meta.reasonCodeDisplay ?? meta.reasonCode ?? "—"],
+    ["Claim type", meta.claimType ?? "—"],
     ["Order ID", meta.orderName ?? "—"],
     ["Cardholder name", meta.cardholderName ?? "—"],
     ["Card (last 4)", meta.cardLast4 ?? "—"],

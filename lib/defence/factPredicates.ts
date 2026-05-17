@@ -278,6 +278,26 @@ export const FACT_PREDICATES: Record<FactPredicateId, FactPredicate> = {
     description: "order_record fact present (basic order context exists)",
     evaluate: (facts) => hasCategory(facts, ["order_record"]),
   },
+
+  transaction_channel_online_present: {
+    id: "transaction_channel_online_present",
+    description:
+      "order_record fact present with data.channel in the online channel set " +
+      "(web, android, iphone) — i.e. Shopify sourceName indicates an online " +
+      "store transaction, not POS or draft. Gates argumentative use of " +
+      "'online transaction' / 'ecommerce transaction' in bank-facing prose.",
+    evaluate: (facts) => {
+      const ONLINE_CHANNELS = new Set(["web", "android", "iphone"]);
+      return facts.some((f) => {
+        if (f.category !== "order_record") return false;
+        const channel = (f.value as Record<string, unknown>)?.channel;
+        return (
+          typeof channel === "string" &&
+          ONLINE_CHANNELS.has(channel.toLowerCase())
+        );
+      });
+    },
+  },
 };
 
 /** Evaluate every predicate against the given facts. Result keys are

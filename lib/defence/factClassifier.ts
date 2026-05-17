@@ -237,9 +237,13 @@ function extractValue(
           : typeof p.displayFulfillmentStatus === "string"
             ? p.displayFulfillmentStatus
             : null;
+      // channel: Shopify Order.sourceName. Gates the
+      // transaction_channel_online_present predicate (v2.2+).
+      const channel = typeof p.channel === "string" ? p.channel : null;
       return {
         confirmationSent: p.confirmationSent === true || typeof p.confirmationEmail === "string",
         fulfillmentStatus,
+        channel,
       };
     }
     case "product_description":

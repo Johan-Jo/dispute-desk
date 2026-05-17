@@ -20,10 +20,12 @@
  */
 
 import { runClaimGuards } from "./claimGuards";
+import { FACT_PREDICATES } from "./factPredicates";
 import type {
   ComposedDocumentBlock,
   DefenceNarrativeOutput,
   EvidenceFact,
+  FactPredicateId,
   NarrativeSectionKey,
   PackageMode,
   ReasonCodeGuidance,
@@ -81,6 +83,10 @@ export interface ValidateNarrativeInput {
   reasonCodeModule: ReasonCodeGuidance;
   packageMode: PackageMode;
   internalOnlyFactIds?: string[];
+  /** Family-level hard-banned phrases. v2.2+. */
+  extraHardPhrases?: readonly RegExp[];
+  /** Family-level predicate-gated phrases. v2.2+. */
+  guardedPhrases?: readonly { pattern: RegExp; requires: FactPredicateId }[];
 }
 
 /** Shared phrase + guard check for any single piece of prose. The layer
@@ -93,12 +99,29 @@ export interface RunPhraseAndGuardChecksInput {
   approvedFacts: EvidenceFact[];
   packageMode: PackageMode;
   layer: "narrative" | "thesis" | "llm" | "fallback";
+  /** Hard-banned extra phrases from the family
+   *  (`ReasonCodeFamily.prohibitedBankPhrases`). Always rejected like
+   *  the global FORBIDDEN_PHRASES list. v2.2+. */
+  extraHardPhrases?: readonly RegExp[];
+  /** Predicate-gated phrases from the family
+   *  (`ReasonCodeFamily.guardedBankPhrases`). Each entry is rejected
+   *  only when its `requires` predicate evaluates `false` against
+   *  `approvedFacts`. v2.2+. */
+  guardedPhrases?: readonly { pattern: RegExp; requires: FactPredicateId }[];
 }
 
 export function runPhraseAndGuardChecks(
   input: RunPhraseAndGuardChecksInput,
 ): ValidationError[] {
-  const { text, sectionKey, approvedFacts, packageMode, layer } = input;
+  const {
+    text,
+    sectionKey,
+    approvedFacts,
+    packageMode,
+    layer,
+    extraHardPhrases,
+    guardedPhrases,
+  } = input;
   const errors: ValidationError[] = [];
   if (!text || !text.trim()) return errors;
 
@@ -114,6 +137,35 @@ export function runPhraseAndGuardChecks(
         layer,
       });
     }
+  }
+  // 1a. Family-specific hard list (v2.2+).
+  for (const pattern of extraHardPhrases ?? []) {
+    const match = text.match(pattern);
+    if (match) {
+      errors.push({
+        section: sectionKey,
+        rule: "forbidden_phrase",
+        message: `Forbidden bank-framing phrase "${match[0]}" in ${sectionKey}`,
+        evidenceText: match[0],
+        layer,
+      });
+    }
+  }
+  // 1b. Family-specific guarded list — rejected only when the gating
+  //     predicate fails against approvedFacts (v2.2+).
+  for (const entry of guardedPhrases ?? []) {
+    const match = text.match(entry.pattern);
+    if (!match) continue;
+    const predicate = FACT_PREDICATES[entry.requires];
+    if (predicate && predicate.evaluate(approvedFacts)) continue;
+    errors.push({
+      section: sectionKey,
+      rule: "forbidden_phrase",
+      message: `Unsupported channel assertion "${match[0]}" in ${sectionKey} (requires ${entry.requires})`,
+      evidenceText: match[0],
+      requiredFact: entry.requires,
+      layer,
+    });
   }
   if (packageMode === "narrow") {
     for (const pattern of NARROW_AGGRESSIVE_PHRASES) {
@@ -167,6 +219,8 @@ export function validateNarrative(input: ValidateNarrativeInput): ValidationResu
         approvedFacts: input.approvedFacts,
         packageMode: input.packageMode,
         layer: "narrative",
+        extraHardPhrases: input.extraHardPhrases,
+        guardedPhrases: input.guardedPhrases,
       }),
     );
   }
@@ -228,6 +282,10 @@ export interface ValidateComposedDocumentInput {
   blocks: ComposedDocumentBlock[];
   approvedFacts: EvidenceFact[];
   packageMode: PackageMode;
+  /** Family-level hard-banned phrases. v2.2+. */
+  extraHardPhrases?: readonly RegExp[];
+  /** Family-level predicate-gated phrases. v2.2+. */
+  guardedPhrases?: readonly { pattern: RegExp; requires: FactPredicateId }[];
 }
 
 /** Run forbidden-phrase + claim-guard checks against every sub-text of
@@ -249,6 +307,8 @@ export function validateComposedDocument(
         approvedFacts: input.approvedFacts,
         packageMode: input.packageMode,
         layer: "thesis",
+        extraHardPhrases: input.extraHardPhrases,
+        guardedPhrases: input.guardedPhrases,
       }),
     );
     errors.push(
@@ -258,6 +318,8 @@ export function validateComposedDocument(
         approvedFacts: input.approvedFacts,
         packageMode: input.packageMode,
         layer: "llm",
+        extraHardPhrases: input.extraHardPhrases,
+        guardedPhrases: input.guardedPhrases,
       }),
     );
     errors.push(
@@ -267,6 +329,8 @@ export function validateComposedDocument(
         approvedFacts: input.approvedFacts,
         packageMode: input.packageMode,
         layer: "fallback",
+        extraHardPhrases: input.extraHardPhrases,
+        guardedPhrases: input.guardedPhrases,
       }),
     );
   }

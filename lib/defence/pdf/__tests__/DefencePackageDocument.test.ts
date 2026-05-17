@@ -68,7 +68,8 @@ function defaultMeta(): DefencePackageMeta {
     disputeGid: "gid://shopify/Dispute/99",
     orderName: "#1042",
     reasonCode: "10.4",
-    reasonCodeDisplay: "Visa 10.4 — Other Fraud",
+    reasonCodeDisplay: "Visa 10.4 / Mastercard 4837",
+    claimType: "Unauthorized transaction claim",
     shopName: "Acme Co",
     merchantName: "Acme Co LLC",
     amountDisplay: "USD 119.95",
@@ -227,6 +228,53 @@ describe("DefencePackageDocument", () => {
         }
       }
     });
+
+    it("THESIS_TEMPLATES entries contain no family-prohibited bank-framing phrase (v2.2+)", async () => {
+      const { ALL_REASON_CODE_FAMILIES, getFamily } = await import(
+        "../../reasonCodes/familyRegistry"
+      );
+      const familyKeys = new Set(ALL_REASON_CODE_FAMILIES.map((f) => f.key));
+      for (const t of THESIS_TEMPLATES) {
+        const stripped = t.template.replace(/\{\{\w+\}\}/g, "TOKEN").replace(/\[\[|\]\]/g, "");
+        // A template tagged familyKey: "any" must satisfy every family's
+        // hard list (it could be selected for any family). Templates
+        // bound to a specific family only need to satisfy that family.
+        const familiesToCheck = familyKeys.has(t.familyKey as never)
+          ? [getFamily(t.familyKey as never)]
+          : ALL_REASON_CODE_FAMILIES;
+        for (const family of familiesToCheck) {
+          for (const pattern of family.prohibitedBankPhrases) {
+            const match = stripped.match(pattern)?.[0];
+            expect(
+              match,
+              `THESIS_TEMPLATES["${t.key}"] (familyKey=${t.familyKey}) matched ${pattern} from family ${family.key}: "${match}"`,
+            ).toBeUndefined();
+          }
+        }
+      }
+    });
+  });
+
+  describe("Case Details — v2.2 claim type", () => {
+    it("renders without error when meta has both reasonCodeDisplay and claimType set", async () => {
+      // PDF stream content is FlateDecode-compressed so we can't
+      // substring-search the binary for labels. The structural
+      // assertion below covers what we care about: the meta flows
+      // through composePdfBlocks + renderer end-to-end and the PDF
+      // signature is well-formed. The PDF unit tests upstream of this
+      // file (CaseDetailsTable test would belong on a separate render
+      // path that doesn't exist yet) cover the row-level shape.
+      const result = await renderDefencePdf(
+        sampleData({
+          meta: {
+            reasonCodeDisplay: "Visa 10.4 / Mastercard 4837",
+            claimType: "Unauthorized transaction claim",
+          },
+        }),
+      );
+      expect(result.buffer.slice(0, 5).toString()).toBe("%PDF-");
+      expect(result.buffer.length).toBeGreaterThan(2000);
+    }, 30000);
   });
 
   it("renders with an empty omittedSections list (all sections present)", async () => {

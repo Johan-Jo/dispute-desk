@@ -426,6 +426,8 @@ export default async function DefencePackagePipelinePage() {
                 <th className="text-left px-4 py-2 text-[#64748B] font-medium">Unmodeled codes</th>
                 <th className="text-left px-4 py-2 text-[#64748B] font-medium">Fallback module</th>
                 <th className="text-left px-4 py-2 text-[#64748B] font-medium">Overlay</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Prohibited phrases</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Guarded phrases</th>
               </tr>
             </thead>
             <tbody>
@@ -441,6 +443,12 @@ export default async function DefencePackagePipelinePage() {
                   <td className="px-4 py-2 font-mono text-xs text-[#475569]">{f.fallbackModuleKey}</td>
                   <td className="px-4 py-2 text-[#475569] text-xs">
                     {f.overlayPromptBody.trim().length > 0 ? `${f.overlayPromptBody.length} chars` : "empty"}
+                  </td>
+                  <td className="px-4 py-2 text-[#475569] text-xs">
+                    {f.prohibitedBankPhrases.length === 0 ? "—" : `${f.prohibitedBankPhrases.length} phrase${f.prohibitedBankPhrases.length === 1 ? "" : "s"}`}
+                  </td>
+                  <td className="px-4 py-2 text-[#475569] text-xs">
+                    {f.guardedBankPhrases.length === 0 ? "—" : `${f.guardedBankPhrases.length} phrase${f.guardedBankPhrases.length === 1 ? "" : "s"}`}
                   </td>
                 </tr>
               ))}
@@ -464,6 +472,7 @@ export default async function DefencePackagePipelinePage() {
               <tr>
                 <th className="text-left px-4 py-2 text-[#64748B] font-medium">Key</th>
                 <th className="text-left px-4 py-2 text-[#64748B] font-medium">Display name</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Claim type</th>
                 <th className="text-left px-4 py-2 text-[#64748B] font-medium">Reason codes</th>
                 <th className="text-left px-4 py-2 text-[#64748B] font-medium">Source</th>
                 <th className="text-left px-4 py-2 text-[#64748B] font-medium">Active version</th>
@@ -476,6 +485,7 @@ export default async function DefencePackagePipelinePage() {
                 <tr key={m.key} className="border-b border-[#F1F5F9] last:border-b-0">
                   <td className="px-4 py-2 font-mono text-xs text-[#0F172A]">{m.key}</td>
                   <td className="px-4 py-2 text-[#0F172A]">{m.displayName}</td>
+                  <td className="px-4 py-2 text-[#475569]">{m.claimType}</td>
                   <td className="px-4 py-2 text-[#475569]">
                     {m.reasonCodeKeys.length === 0 ? "—" : m.reasonCodeKeys.join(", ")}
                   </td>
@@ -692,6 +702,78 @@ export default async function DefencePackagePipelinePage() {
 
         <h3 className="text-sm font-semibold text-[#0F172A]">Forbidden phrases (all modes)</h3>
         <RegexTable rows={FORBIDDEN_PHRASES} />
+
+        <h3 className="text-sm font-semibold text-[#0F172A]">
+          Family-prohibited bank-framing phrases (v2.2+)
+        </h3>
+        <p className="text-xs text-[#64748B]">
+          Hard-banned at the family layer. Threaded into{" "}
+          <code>runPhraseAndGuardChecks</code> as <code>extraHardPhrases</code>{" "}
+          and rejected like <code>FORBIDDEN_PHRASES</code> for any module routed
+          to the family. Source:{" "}
+          <code>ReasonCodeFamily.prohibitedBankPhrases</code>.
+        </p>
+        <div className="rounded-lg border border-[#E5E7EB] bg-white overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-[#F8FAFC] border-b border-[#E5E7EB]">
+              <tr>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Family</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Pattern</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ALL_REASON_CODE_FAMILIES.flatMap((f) =>
+                f.prohibitedBankPhrases.map((re, i) => (
+                  <tr key={`${f.key}-${i}`} className="border-b border-[#F1F5F9] last:border-b-0">
+                    <td className="px-4 py-2 font-mono text-xs text-[#0F172A]">{f.key}</td>
+                    <td className="px-4 py-2 font-mono text-xs text-[#475569]">/{re.source}/{re.flags}</td>
+                  </tr>
+                )),
+              )}
+              {ALL_REASON_CODE_FAMILIES.every((f) => f.prohibitedBankPhrases.length === 0) && (
+                <tr>
+                  <td className="px-4 py-2 text-xs text-[#64748B]" colSpan={2}>No family-level phrases configured.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="text-sm font-semibold text-[#0F172A]">
+          Family-guarded phrases (predicate-gated, v2.2+)
+        </h3>
+        <p className="text-xs text-[#64748B]">
+          Rejected only when the gating predicate evaluates <code>false</code>{" "}
+          against <code>approvedFacts</code>. Source:{" "}
+          <code>ReasonCodeFamily.guardedBankPhrases</code>.
+        </p>
+        <div className="rounded-lg border border-[#E5E7EB] bg-white overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-[#F8FAFC] border-b border-[#E5E7EB]">
+              <tr>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Family</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Pattern</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Requires</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ALL_REASON_CODE_FAMILIES.flatMap((f) =>
+                f.guardedBankPhrases.map((g, i) => (
+                  <tr key={`${f.key}-g-${i}`} className="border-b border-[#F1F5F9] last:border-b-0">
+                    <td className="px-4 py-2 font-mono text-xs text-[#0F172A]">{f.key}</td>
+                    <td className="px-4 py-2 font-mono text-xs text-[#475569]">/{g.pattern.source}/{g.pattern.flags}</td>
+                    <td className="px-4 py-2 font-mono text-xs text-[#475569]">{g.requires}</td>
+                  </tr>
+                )),
+              )}
+              {ALL_REASON_CODE_FAMILIES.every((f) => f.guardedBankPhrases.length === 0) && (
+                <tr>
+                  <td className="px-4 py-2 text-xs text-[#64748B]" colSpan={3}>No guarded phrases configured.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
         <h3 className="text-sm font-semibold text-[#0F172A]">Narrow-mode aggressive phrases</h3>
         <p className="text-xs text-[#64748B]">

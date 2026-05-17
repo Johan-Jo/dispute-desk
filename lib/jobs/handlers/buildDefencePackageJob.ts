@@ -270,6 +270,8 @@ export async function handleBuildDefencePackage(
     reasonCodeModule,
     packageMode: classification.packageMode,
     internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
+    extraHardPhrases: reasonCodeFamily.prohibitedBankPhrases,
+    guardedPhrases: reasonCodeFamily.guardedBankPhrases,
   });
   if (!validation.ok) {
     await sb
@@ -345,6 +347,8 @@ export async function handleBuildDefencePackage(
     blocks: composedBlocks,
     approvedFacts: classification.approved,
     packageMode: classification.packageMode,
+    extraHardPhrases: reasonCodeFamily.prohibitedBankPhrases,
+    guardedPhrases: reasonCodeFamily.guardedBankPhrases,
   });
   if (!composedValidation.ok) {
     const summary = summariseComposedErrors(composedValidation.errors);
@@ -391,6 +395,7 @@ export async function handleBuildDefencePackage(
       orderName: orderContext.orderName,
       reasonCode,
       reasonCodeDisplay: reasonCodeModule.displayName,
+      claimType: reasonCodeModule.claimType,
       shopName: merchantDisplayName,
       merchantName: merchantDisplayName,
       amountDisplay: dispute?.amount != null

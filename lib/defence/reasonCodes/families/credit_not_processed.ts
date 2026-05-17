@@ -16,5 +16,7 @@ export const credit_not_processed_family: ReasonCodeFamily = {
   fallbackModuleKey: "credit_not_processed",
   overlayPromptBody: "",
   familyAvoid: [],
+  prohibitedBankPhrases: [],
+  guardedBankPhrases: [],
   version: 1,
 };

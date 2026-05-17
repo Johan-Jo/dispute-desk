@@ -50,7 +50,14 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // (only test fixtures and the constant itself referenced 1). This is a
 // global cache invalidation event — first call after deploy pays full
 // prompt cost, subsequent calls amortise normally.
-const PROMPT_VERSION = 2;
+//
+// v2.2 (2026-05-17): bumped 2 → 3. The unauthorized_fraud family now
+// ships a non-empty overlayPromptBody (Block 1), the LLM payload
+// includes the new merchant-facing `claimType` field, and module
+// promptBodies were rewritten to lead with the claim category instead
+// of the network's environment classification. Same cache-invalidation
+// pattern as the 2→3 bump above.
+const PROMPT_VERSION = 3;
 
 /* ── Static base system prompt (cached, ephemeral) ── */
 
@@ -370,6 +377,7 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
     reasonCodeGuidance: {
       key: input.reasonCodeModule.key,
       displayName: input.reasonCodeModule.displayName,
+      claimType: input.reasonCodeModule.claimType,
       prioritize: input.reasonCodeModule.prioritize,
       avoid: input.reasonCodeModule.avoid,
       mustNotClaim: input.reasonCodeModule.mustNotClaim,

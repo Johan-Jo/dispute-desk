@@ -10,10 +10,11 @@ import type { ReasonCodeGuidance } from "../types";
 
 export const canceled_recurring: ReasonCodeGuidance = {
   key: "canceled_recurring",
-  displayName: "Visa 13.2 / Mastercard 4841 — Cancelled Recurring Transaction",
+  displayName: "Visa 13.2 / Mastercard 4841",
+  claimType: "Cancelled recurring transaction claim",
   reasonCodeKeys: ["13.2", "4841"],
   promptBody: [
-    "You are writing a bank-facing representment for a CANCELLED RECURRING TRANSACTION dispute.",
+    "You are writing a bank-facing response to a CANCELLED RECURRING TRANSACTION CLAIM (cardholder alleges a recurring charge was billed after cancellation). The reason code is the issuer/cardholder's CLAIM CATEGORY, not a merchant admission.",
     "Prioritise: subscription terms, cancellation policy, renewal notice, customer consent at sign-up, cancellation timing, service usage records after renewal.",
     "Do NOT argue the customer used the service after cancellation unless an approved service_access fact carries timestamps after the disputed charge.",
     "Do NOT cite the cancellation policy unless an approved policy_cancellation fact exists.",
@@ -46,5 +47,5 @@ export const canceled_recurring: ReasonCodeGuidance = {
     "order_record",
     "manual_evidence",
   ],
-  version: 1,
+  version: 2,
 };

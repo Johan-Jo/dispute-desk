@@ -49,6 +49,7 @@ export async function GET() {
     return {
       key: mod.key,
       displayName: dbRow?.display_name ?? mod.displayName,
+      claimType: mod.claimType,
       reasonCodeKeys: mod.reasonCodeKeys,
       promptBody: dbRow?.prompt_body ?? mod.promptBody,
       guidanceJson: dbRow?.guidance_json ?? {

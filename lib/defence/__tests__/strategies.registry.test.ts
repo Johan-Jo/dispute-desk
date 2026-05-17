@@ -227,4 +227,21 @@ describe("strategy file invariants", () => {
     const fallbacks = family.filter((s) => s.isFallback);
     expect(fallbacks).toHaveLength(1);
   });
+
+  it("no strategy promptBody contains its own family's prohibited bank-framing phrase (v2.2+)", () => {
+    const familiesByKey = new Map(
+      ALL_REASON_CODE_FAMILIES.map((f) => [f.key, f]),
+    );
+    for (const strategy of ALL_STRATEGIES) {
+      const family = familiesByKey.get(strategy.familyKey);
+      if (!family) continue;
+      for (const pattern of family.prohibitedBankPhrases) {
+        const match = strategy.promptBody.match(pattern)?.[0];
+        expect(
+          match,
+          `${strategy.key} (family=${strategy.familyKey}) contains ${pattern}: "${match}"`,
+        ).toBeUndefined();
+      }
+    }
+  });
 });

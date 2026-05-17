@@ -3825,6 +3825,38 @@ Pilot family `unauthorized_fraud` ships with 4 strategies: `auth_signal_stack` (
 Operator-facing source-of-truth principle: nothing material may live in code that isn't reflected in admin. The exported constants the admin pipeline page renders today are `BASE_SYSTEM_PROMPT`, `FORBIDDEN_PHRASES`, `NARROW_AGGRESSIVE_PHRASES`, `SUBMISSION_RISK_FIELDS`, `INTERNAL_ONLY_FIELDS`, `categoryForField`, `CLAIM_GUARDS`, and (post-v2.1) `THESIS_TEMPLATES` + `THESIS_TOKENS`. The deleted static `THESIS_LIBRARY` + `GENERIC_THESIS` were replaced by `THESIS_TEMPLATES` (fact-templated) and `THESIS_TOKENS` (predicate-gated extractors). None of these are runtime callsites for the new admin code paths — they are read-only renders.
 
 Drift fix: a new `intentional_override boolean` column on `defence_prompt_modules` (`supabase/migrations/20260516120000_defence_prompt_modules_intentional_override.sql`) marks DB rows that deliberately diverge from `lib/defence/reasonCodes/<key>.ts`. The drift banner on `/admin/defence-package` and the CI guard in `lib/defence/__tests__/promptModuleDrift.test.ts` both ignore rows with this flag set. Manual saves through the module editor set it to `true`; the "Reset to file default" button (also added) inserts a new active row matching the file with `intentional_override=false`. The reconcile script `scripts/reconcile-defence-prompt-modules.mts` does this batch-style — running it once on 2026-05-16 promoted `visa_10_4_fraud` from v1 (which silently shipped an older prompt missing CNP + physical-card-possession + absolute-authorization-conclusion guards) to v2 matching the file. `detectPromptModuleDrift()` in `lib/defence/admin-queries.ts` is the shared comparison logic, used by both the banner and the test.
+
+### v2.2 (2026-05-17): claim type decoupled from network reason code, family-level phrase enforcement
+
+Bank-framing prose in v2.1 PDFs still echoed the network's reason-code rubric ("Other Fraud", "Card Absent Environment", "card-not-present") because the module's `displayName` doubled as both the bank-facing reference and the LLM's semantic prompt input. v2.2 splits these into two fields:
+
+- **`ReasonCodeGuidance.displayName`** — bank-facing reference label only. Now `"Visa 10.4 / Mastercard 4837"` (network identifier, no product/claim noun). Appears in the PDF's Case Details metadata row.
+- **`ReasonCodeGuidance.claimType`** — merchant-facing claim category. New field, e.g. `"Unauthorized transaction claim"`. Appears as a separate Case Details row and in the cover composite line (`"<reasonCodeDisplay> — <claimType>"`). Sent inside `reasonCodeGuidance` in the LLM user payload so the model has the merchant-facing label available without ever needing to restate the network words.
+
+Module promptBodies were also rewritten to open with the claim category instead of the network's environment classification (e.g. `"You are writing a bank-facing response to an UNAUTHORIZED TRANSACTION CLAIM..."`). All seven file-default modules bump to `version: 2`.
+
+The `unauthorized_fraud` family's `overlayPromptBody` is non-empty for the first time (activates Block 1 of the cached system payload — global cache invalidation event; `PROMPT_VERSION` bumps `2 → 3`). The overlay states the cross-cutting rule that the reason code names a claim category, not a merchant-asserted fact, and does NOT enumerate banned phrases (the validator's machine-readable list is the single source of truth; quoting them in instructive prose would brittle the drift tests and feed the model the bad wording).
+
+Two new fields on `ReasonCodeFamily`:
+
+- **`prohibitedBankPhrases: readonly RegExp[]`** — hard-banned phrases. Threaded into `runPhraseAndGuardChecks` as `extraHardPhrases` and rejected like the global `FORBIDDEN_PHRASES`. For `unauthorized_fraud`: `card absent`, `card missing`, `card-not-present`, `other fraud`, `friendly fraud`. Every other family ships `[]`.
+- **`guardedBankPhrases: readonly { pattern: RegExp; requires: FactPredicateId }[]`** — predicate-gated phrases. Rejected only when the `requires` predicate evaluates `false` against `approvedFacts`. For `unauthorized_fraud`: `ecommerce transaction` and `online transaction`, both gated by the new `transaction_channel_online_present` predicate.
+
+The new predicate `transaction_channel_online_present` (in `lib/defence/factPredicates.ts`) reads the `channel` field on the `order_record` fact and returns true when it's in the online channel set (`web`, `android`, `iphone`). The channel field is sourced from `Order.sourceName` — newly fetched in `ORDER_DETAIL_QUERY` and surfaced into the `order_record` fact via `factClassifier.extractValue("order_confirmation")`. Without the predicate, "online transaction" would be wrongly allowed for POS-originated orders.
+
+Both validators (`validateNarrative` + `validateComposedDocument`) accept `extraHardPhrases` and `guardedPhrases` and thread them through every per-section invocation. `buildDefencePackageJob.ts` passes `reasonCodeFamily.prohibitedBankPhrases` and `reasonCodeFamily.guardedBankPhrases` to both. A guarded-phrase failure carries `requiredFact` set to the predicate id so admin debug surfaces can distinguish "unsupported channel assertion" from a hard-list match.
+
+**Operator surfaces** mirror the new contract:
+- `/admin/defence-package/pipeline` Stage 4 Layer 1 (families) gains "Prohibited phrases" and "Guarded phrases" count columns; Stage 4 Layer 2 (modules) gains a "Claim type" column. Stage 7 Validators adds two panels listing family-prohibited and family-guarded phrases with their patterns + predicate gates.
+- `/admin/defence-package/prompts/[key]` editor shows the file-default claim type read-only above the prompt body. The PUT route (`app/api/admin/defence-package/prompt-modules/[key]/route.ts`) blocks saves with HTTP 422 + `matches[]` when the submitted `promptBody` contains any of the family's hard-prohibited phrases; the editor mirrors this client-side with a red "Unsafe override" banner and a disabled Save button. **Reset to file default** is always allowed and is the always-safe escape hatch.
+
+**Drift tests across every prose surface** (per-family scoped — checking `unauthorized_fraud` phrases against an `item_not_received` strategy promptBody would produce false positives):
+- `lib/defence/__tests__/strategies.registry.test.ts` — no strategy `promptBody` contains its own family's hard list.
+- `lib/defence/__tests__/reasonCodeRegistry.test.ts` — no module `promptBody` contains its own family's hard list; every module declares a non-empty `claimType`.
+- `lib/defence/__tests__/familyRegistry.test.ts` — no family `overlayPromptBody` contains its own hard list.
+- `lib/defence/pdf/__tests__/DefencePackageDocument.test.ts` — `THESIS_TEMPLATES` entries respect their `familyKey`'s hard list (templates tagged `familyKey: "any"` must satisfy every family's list since they may be selected for any family).
+- `lib/defence/__tests__/promptModuleDrift.test.ts` — second assertion: no active `defence_prompt_modules` row contains a family-hard phrase regardless of `intentional_override`. `intentional_override` excuses *intended* divergence; it never excuses bank-framing leaks. The deploy sequence runs `npx tsx scripts/reconcile-defence-prompt-modules.mts` after merge to promote the new file defaults into active DB rows.
+
 - **API routes**: 12 routes total — merchant-facing under `/api/defence-packages/[id]/*`, admin-facing under `/api/admin/defence-package/*`.
 
 ### Audit events

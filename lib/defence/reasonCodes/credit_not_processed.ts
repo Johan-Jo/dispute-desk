@@ -10,10 +10,11 @@ import type { ReasonCodeGuidance } from "../types";
 
 export const credit_not_processed: ReasonCodeGuidance = {
   key: "credit_not_processed",
-  displayName: "Visa 13.6 / Mastercard 4860 — Credit Not Processed",
+  displayName: "Visa 13.6 / Mastercard 4860",
+  claimType: "Credit not processed claim",
   reasonCodeKeys: ["13.6", "4860"],
   promptBody: [
-    "You are writing a bank-facing representment for a CREDIT NOT PROCESSED dispute.",
+    "You are writing a bank-facing response to a CREDIT NOT PROCESSED CLAIM (cardholder alleges a refund or credit owed to them was never applied). The reason code is the issuer/cardholder's CLAIM CATEGORY, not a merchant admission.",
     "Prioritise: refund status, refund timeline, cancellation terms, partial refund records, store credit records, customer communication about the refund.",
     "Do NOT claim a refund was issued unless an approved refund_record fact carries refundStatus='processed'.",
     "If no refund was owed under policy, cite the approved refund policy fact (acceptedAtCheckout=true) explicitly.",
@@ -46,5 +47,5 @@ export const credit_not_processed: ReasonCodeGuidance = {
     "order_record",
     "manual_evidence",
   ],
-  version: 1,
+  version: 2,
 };

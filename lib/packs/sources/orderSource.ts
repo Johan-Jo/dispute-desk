@@ -82,6 +82,7 @@ export async function collectOrderEvidence(
             }
           : null,
         cancelledAt: order.cancelledAt,
+        channel: order.sourceName ?? null,
       },
     },
   ];

@@ -10,10 +10,11 @@ import type { ReasonCodeGuidance } from "../types";
 
 export const duplicate_processing: ReasonCodeGuidance = {
   key: "duplicate_processing",
-  displayName: "Visa 12.6 / Mastercard 4834 — Duplicate Processing",
+  displayName: "Visa 12.6 / Mastercard 4834",
+  claimType: "Duplicate processing claim",
   reasonCodeKeys: ["12.6", "4834"],
   promptBody: [
-    "You are writing a bank-facing representment for a DUPLICATE PROCESSING dispute.",
+    "You are writing a bank-facing response to a DUPLICATE PROCESSING CLAIM (cardholder alleges they were charged twice for the same transaction). The reason code is the issuer/cardholder's CLAIM CATEGORY, not a merchant admission.",
     "Prioritise: unique order ids, unique authorisation/capture ids, distinct timestamps, distinct items/quantities, refund records when one of the transactions was reversed.",
     "Frame the argument around the distinctness of the transactions, citing each order/auth id approved fact explicitly.",
     "Do NOT claim the duplicate was refunded unless an approved refund_record fact supports it.",
@@ -43,5 +44,5 @@ export const duplicate_processing: ReasonCodeGuidance = {
     "billing_match",
     "manual_evidence",
   ],
-  version: 1,
+  version: 2,
 };

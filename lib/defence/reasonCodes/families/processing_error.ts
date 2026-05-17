@@ -25,5 +25,7 @@ export const processing_error: ReasonCodeFamily = {
   fallbackModuleKey: "generic_fallback",
   overlayPromptBody: "",
   familyAvoid: [],
+  prohibitedBankPhrases: [],
+  guardedBankPhrases: [],
   version: 1,
 };

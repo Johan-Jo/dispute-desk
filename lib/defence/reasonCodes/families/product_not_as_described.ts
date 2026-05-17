@@ -16,5 +16,7 @@ export const product_not_as_described: ReasonCodeFamily = {
   fallbackModuleKey: "product_unacceptable",
   overlayPromptBody: "",
   familyAvoid: [],
+  prohibitedBankPhrases: [],
+  guardedBankPhrases: [],
   version: 1,
 };

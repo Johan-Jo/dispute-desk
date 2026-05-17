@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   resolveReasonCodeModule,
   ALL_REASON_CODE_MODULES,
+  familyKeyForModule,
 } from "../reasonCodes/registry";
+import { getFamily } from "../reasonCodes/familyRegistry";
 
 describe("reason-code registry", () => {
   it("maps Visa 10.4 → visa_10_4_fraud", () => {
@@ -69,6 +71,25 @@ describe("reason-code registry", () => {
   it("every module declares at least one allowedFactCategory", () => {
     for (const mod of ALL_REASON_CODE_MODULES) {
       expect(mod.allowedFactCategories.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("every module declares a non-empty claimType (v2.2+)", () => {
+    for (const mod of ALL_REASON_CODE_MODULES) {
+      expect(mod.claimType.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("no module promptBody contains its own family's prohibited bank-framing phrase (v2.2+)", () => {
+    for (const mod of ALL_REASON_CODE_MODULES) {
+      const family = getFamily(familyKeyForModule(mod.key));
+      for (const pattern of family.prohibitedBankPhrases) {
+        const match = mod.promptBody.match(pattern)?.[0];
+        expect(
+          match,
+          `module ${mod.key} (family=${family.key}) contains ${pattern}: "${match}"`,
+        ).toBeUndefined();
+      }
     }
   });
 });

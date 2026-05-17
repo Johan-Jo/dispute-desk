@@ -13,6 +13,10 @@ import type { ReasonCodeGuidance, ReasonCodeModuleKey } from "./types";
 export interface AdminPromptModuleRow {
   key: ReasonCodeModuleKey;
   displayName: string;
+  /** Merchant-facing claim category. File-default only — DB override
+   *  path does not carry `claim_type`. Always reflects the value in
+   *  `lib/defence/reasonCodes/<key>.ts`. v2.2+. */
+  claimType: string;
   reasonCodeKeys: string[];
   promptBody: string;
   guidanceJson: Record<string, unknown>;
@@ -54,6 +58,7 @@ export async function listPromptModules(): Promise<AdminPromptModuleRow[]> {
     return {
       key: mod.key,
       displayName: dbRow?.display_name ?? mod.displayName,
+      claimType: mod.claimType,
       reasonCodeKeys: mod.reasonCodeKeys,
       promptBody: dbRow?.prompt_body ?? mod.promptBody,
       guidanceJson:

@@ -10,9 +10,38 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getServiceClient } from "@/lib/supabase/server";
 import { hasAdminSession, getAdminSessionUser } from "@/lib/admin/auth";
+import { familyKeyForModule } from "@/lib/defence/reasonCodes/registry";
+import { getFamily } from "@/lib/defence/reasonCodes/familyRegistry";
+import type { ReasonCodeModuleKey } from "@/lib/defence/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/** v2.2+: hard-banned bank-framing phrases per
+ *  ReasonCodeFamily.prohibitedBankPhrases must never appear in the
+ *  saved prompt body. The CI drift guard
+ *  (lib/defence/__tests__/promptModuleDrift.test.ts) checks the same
+ *  thing post-deploy; this server-side gate stops the row from
+ *  landing in the first place. */
+function findProhibitedMatches(
+  key: string,
+  promptBody: string,
+): Array<{ pattern: string; match: string }> {
+  let familyKey: ReturnType<typeof familyKeyForModule>;
+  try {
+    familyKey = familyKeyForModule(key as ReasonCodeModuleKey);
+  } catch {
+    // Unknown module key — can't resolve family, fall back to no check.
+    return [];
+  }
+  const family = getFamily(familyKey);
+  const out: Array<{ pattern: string; match: string }> = [];
+  for (const pattern of family.prohibitedBankPhrases) {
+    const m = promptBody.match(pattern);
+    if (m) out.push({ pattern: pattern.source, match: m[0] });
+  }
+  return out;
+}
 
 const BodySchema = z.object({
   displayName: z.string().min(1).max(200),
@@ -45,6 +74,21 @@ export async function PUT(
   } catch (err) {
     return NextResponse.json(
       { error: "Validation failed", details: err instanceof Error ? err.message : "unknown" },
+      { status: 422 },
+    );
+  }
+
+  // Block "unsafe override" saves: a manual edit must not (re)introduce
+  // any family-hard-prohibited bank-framing phrase. Reset-to-file is
+  // the always-safe path; this gate only catches manual edits that
+  // would regress the prompt. v2.2+.
+  const matches = findProhibitedMatches(key, body.promptBody);
+  if (matches.length > 0) {
+    return NextResponse.json(
+      {
+        error: "Prompt body contains a banned bank-framing phrase",
+        matches,
+      },
       { status: 422 },
     );
   }

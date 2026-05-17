@@ -315,4 +315,56 @@ describe("factPredicates", () => {
       expect(result.three_d_secure_present).toBe(false);
     });
   });
+
+  describe("transaction_channel_online_present (v2.2+)", () => {
+    function orderRecord(channel: unknown): EvidenceFact {
+      return fact({
+        id: "fc",
+        category: "order_record",
+        label: "Order record",
+        value: { channel, fieldKey: "order_confirmation" },
+      });
+    }
+
+    it("true when order_record.value.channel === 'web'", () => {
+      expect(
+        FACT_PREDICATES.transaction_channel_online_present.evaluate([orderRecord("web")]),
+      ).toBe(true);
+    });
+
+    it.each(["android", "iphone", "WEB"])(
+      "true for known online channel %s (case-insensitive)",
+      (ch) => {
+        expect(
+          FACT_PREDICATES.transaction_channel_online_present.evaluate([orderRecord(ch)]),
+        ).toBe(true);
+      },
+    );
+
+    it("false when channel='pos' (in-store, not online)", () => {
+      expect(
+        FACT_PREDICATES.transaction_channel_online_present.evaluate([orderRecord("pos")]),
+      ).toBe(false);
+    });
+
+    it("false when channel='shopify_draft_order'", () => {
+      expect(
+        FACT_PREDICATES.transaction_channel_online_present.evaluate([
+          orderRecord("shopify_draft_order"),
+        ]),
+      ).toBe(false);
+    });
+
+    it("false when no order_record fact exists", () => {
+      expect(
+        FACT_PREDICATES.transaction_channel_online_present.evaluate([fact()]),
+      ).toBe(false);
+    });
+
+    it("false when order_record present but channel is null", () => {
+      expect(
+        FACT_PREDICATES.transaction_channel_online_present.evaluate([orderRecord(null)]),
+      ).toBe(false);
+    });
+  });
 });

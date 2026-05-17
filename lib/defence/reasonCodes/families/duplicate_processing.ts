@@ -17,5 +17,7 @@ export const duplicate_processing_family: ReasonCodeFamily = {
   fallbackModuleKey: "duplicate_processing",
   overlayPromptBody: "",
   familyAvoid: [],
+  prohibitedBankPhrases: [],
+  guardedBankPhrases: [],
   version: 1,
 };

@@ -16,5 +16,7 @@ export const fallback_family: ReasonCodeFamily = {
   fallbackModuleKey: "generic_fallback",
   overlayPromptBody: "",
   familyAvoid: [],
+  prohibitedBankPhrases: [],
+  guardedBankPhrases: [],
   version: 1,
 };

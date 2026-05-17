@@ -224,12 +224,37 @@ export interface ReasonCodeFamily {
   /** Categories the family-wide overlay refuses to cite. Phase 1: empty;
    *  reserve for cross-module avoidance rules. */
   familyAvoid: EvidenceFactCategory[];
+  /** Hard-prohibited bank-framing phrases. The validator rejects any
+   *  match in bank-facing prose for modules routed to this family, in
+   *  all contexts. Use for words the merchant should never echo from
+   *  the network's reason-code rubric (e.g. "card absent", "other
+   *  fraud", "friendly fraud"). v2.2+. */
+  prohibitedBankPhrases: readonly RegExp[];
+  /** Predicate-gated phrases. Each entry's `pattern` is rejected only
+   *  when the `requires` predicate evaluates `false` against
+   *  `approvedFacts`. Use for words that are neutral descriptors when
+   *  the supporting facts are on record but become bank-framing
+   *  substitution when they aren't (e.g. "online transaction",
+   *  "ecommerce transaction" gated by an on-record channel signal).
+   *  v2.2+. */
+  guardedBankPhrases: readonly { pattern: RegExp; requires: FactPredicateId }[];
   version: number;
 }
 
 export interface ReasonCodeGuidance {
   key: ReasonCodeModuleKey;
+  /** Bank-facing network reference label — the rule-book identifier of
+   *  the reason code (e.g. "Visa 10.4 / Mastercard 4837"). Appears in
+   *  the PDF's Case Details metadata row. Never used as a merchant
+   *  argument. v2.2+ removed product/claim nouns from this string;
+   *  merchant-facing wording lives in `claimType` instead. */
   displayName: string;
+  /** Merchant-facing claim category label (e.g. "Unauthorized
+   *  transaction claim"). What the cardholder is alleging, in the
+   *  merchant's own words. Appears in the PDF cover composite line
+   *  and as a dedicated Case Details row. Distinct from
+   *  `displayName`, which is the bank's reference label. v2.2+. */
+  claimType: string;
   /** Network reason codes (Visa + MC) this module covers. */
   reasonCodeKeys: string[];
   /** Module-specific system prompt body (rendered into the second cached
@@ -360,7 +385,8 @@ export type FactPredicateId =
   | "fulfilment_status_unfulfilled"
   | "safe_to_claim_fulfilment"
   | "duplicate_distinct_markers"
-  | "order_record_present";
+  | "order_record_present"
+  | "transaction_channel_online_present";
 
 export interface FactPredicate {
   id: FactPredicateId;

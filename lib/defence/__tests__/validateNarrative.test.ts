@@ -229,4 +229,107 @@ describe("validateNarrative", () => {
       result.errors.some((e) => e.rule === "omitted_section_inconsistent"),
     ).toBe(true);
   });
+
+  describe("v2.2 — family-level phrase lists", () => {
+    const EXTRA_HARD = [/\bcard\s*absent\b/i];
+    const GUARDED = [
+      { pattern: /\bonline\s+transaction\b/i, requires: "transaction_channel_online_present" as const },
+    ];
+    function orderRecord(channel: string | null): EvidenceFact {
+      return fact({
+        id: "f1",
+        category: "order_record",
+        label: "Order record",
+        value: { channel, fieldKey: "order_confirmation" },
+      });
+    }
+
+    it("extraHardPhrases match → reports forbidden_phrase with the narrative layer tag", () => {
+      const result = validateNarrative({
+        narrative: narrative({
+          transactionOverviewArgument: {
+            text: "This was a card absent purchase.",
+            usedFactIds: ["f0"],
+          },
+        }),
+        approvedFacts: [fact()],
+        reasonCodeModule,
+        packageMode: "full",
+        extraHardPhrases: EXTRA_HARD,
+      });
+      const hit = result.errors.find((e: ValidationError) => e.rule === "forbidden_phrase");
+      expect(hit).toBeDefined();
+      expect(hit?.evidenceText?.toLowerCase()).toContain("card absent");
+      expect(hit?.layer).toBe("narrative");
+    });
+
+    it("extraHardPhrases absent → behaviour unchanged (no error)", () => {
+      const result = validateNarrative({
+        narrative: narrative({
+          transactionOverviewArgument: {
+            text: "This was a card absent purchase.",
+            usedFactIds: ["f0"],
+          },
+        }),
+        approvedFacts: [fact()],
+        reasonCodeModule,
+        packageMode: "full",
+        // no extraHardPhrases
+      });
+      expect(result.errors.some((e: ValidationError) => e.evidenceText?.toLowerCase().includes("card absent"))).toBe(false);
+    });
+
+    it("guardedPhrases match AND predicate true (channel=web) → no error", () => {
+      const result = validateNarrative({
+        narrative: narrative({
+          transactionOverviewArgument: {
+            text: "The merchant processed this as an online transaction.",
+            usedFactIds: ["f0"],
+          },
+        }),
+        approvedFacts: [fact(), orderRecord("web")],
+        reasonCodeModule,
+        packageMode: "full",
+        guardedPhrases: GUARDED,
+      });
+      expect(result.errors.some((e: ValidationError) => e.evidenceText?.toLowerCase().includes("online transaction"))).toBe(false);
+    });
+
+    it("guardedPhrases match AND predicate false (channel=pos) → forbidden_phrase with requiredFact set", () => {
+      const result = validateNarrative({
+        narrative: narrative({
+          transactionOverviewArgument: {
+            text: "The merchant processed this as an online transaction.",
+            usedFactIds: ["f0"],
+          },
+        }),
+        approvedFacts: [fact(), orderRecord("pos")],
+        reasonCodeModule,
+        packageMode: "full",
+        guardedPhrases: GUARDED,
+      });
+      const hit = result.errors.find(
+        (e: ValidationError) => e.evidenceText?.toLowerCase().includes("online transaction"),
+      );
+      expect(hit).toBeDefined();
+      expect(hit?.rule).toBe("forbidden_phrase");
+      expect(hit?.requiredFact).toBe("transaction_channel_online_present");
+    });
+
+    it("guardedPhrases does not match → no error regardless of predicate", () => {
+      const result = validateNarrative({
+        narrative: narrative({
+          transactionOverviewArgument: {
+            text: "The order was placed through the merchant's store.",
+            usedFactIds: ["f0"],
+          },
+        }),
+        approvedFacts: [fact()],
+        reasonCodeModule,
+        packageMode: "full",
+        guardedPhrases: GUARDED,
+      });
+      expect(result.errors.length).toBe(0);
+    });
+  });
 });

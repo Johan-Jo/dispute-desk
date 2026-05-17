@@ -100,9 +100,25 @@ describe("reason-code family registry", () => {
     ]);
   });
 
-  it("Phase 1 overlays are empty strings (filled in in later phases)", () => {
+  it("v2.2 overlay state: unauthorized_fraud has a non-empty overlay; every other family is still empty", () => {
     for (const family of ALL_REASON_CODE_FAMILIES) {
-      expect(family.overlayPromptBody).toBe("");
+      if (family.key === "unauthorized_fraud") {
+        expect(family.overlayPromptBody.length).toBeGreaterThan(0);
+      } else {
+        expect(family.overlayPromptBody).toBe("");
+      }
+    }
+  });
+
+  it("no family's overlayPromptBody contains its own prohibited bank-framing phrase", () => {
+    for (const family of ALL_REASON_CODE_FAMILIES) {
+      for (const pattern of family.prohibitedBankPhrases) {
+        const match = family.overlayPromptBody.match(pattern)?.[0];
+        expect(
+          match,
+          `${family.key}.overlayPromptBody contains ${pattern}: "${match}"`,
+        ).toBeUndefined();
+      }
     }
   });
 
