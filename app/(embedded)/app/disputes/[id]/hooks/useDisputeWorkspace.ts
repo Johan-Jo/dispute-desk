@@ -282,6 +282,14 @@ export interface WorkspaceClientState {
   pendingRegeneratePrompt: PendingRegeneratePrompt | null;
   /** Resubmission Window: in-flight flag for the regenerate POST. */
   regenerateSubmitting: boolean;
+  /** Resubmission Window: timestamp of the most recently-dismissed
+   *  rebuild outcome banner (matches `pack.lastRebuildAt`). Used to hide
+   *  the outcome banner after the merchant acknowledges it, so the
+   *  workspace doesn't badger them every fetch cycle. Reset when a new
+   *  outcome with a later timestamp arrives. Session-only — refreshing
+   *  the page brings the banner back, which is the correct behaviour
+   *  for the "blocked, still not resaved" case. */
+  dismissedRebuildOutcomeAt: string | null;
   /** Resubmission Window: error from non-window regenerate failures.
    *  Rendered inside the modal. Cleared when the modal closes. The
    *  WINDOW_CLOSED case closes the modal silently and lets the
@@ -354,6 +362,7 @@ export function useDisputeWorkspace(disputeId: string) {
     pendingRegeneratePrompt: null,
     regenerateSubmitting: false,
     regenerateError: null,
+    dismissedRebuildOutcomeAt: null,
   });
 
   const pollRef = useRef<ReturnType<typeof setInterval>>();
@@ -589,6 +598,13 @@ export function useDisputeWorkspace(disputeId: string) {
       ...s,
       pendingRegeneratePrompt: null,
       regenerateError: null,
+    }));
+  }, []);
+
+  const dismissRebuildOutcome = useCallback((outcomeAt: string | null) => {
+    setClientState((s) => ({
+      ...s,
+      dismissedRebuildOutcomeAt: outcomeAt,
     }));
   }, []);
 
@@ -870,6 +886,7 @@ export function useDisputeWorkspace(disputeId: string) {
       uploadEvidence,
       regeneratePack,
       dismissRegeneratePrompt,
+      dismissRebuildOutcome,
       waiveItem,
       unwaiveItem,
       submitToShopify,

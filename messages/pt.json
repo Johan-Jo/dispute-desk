@@ -684,6 +684,32 @@
         "title": "Regenerando o pacote de defesa",
         "body": "Seu pacote atualmente salvo permanece na disputa do Shopify. O DisputeDesk está regenerando o resumo das provas, o argumento de defesa e o PDF — quando pronto, a nova versão substituirá a atual."
       },
+      "rebuildOutcomeBanner": {
+        "saved": {
+          "title": "Novo pacote de defesa salvo no Shopify",
+          "body": "O pacote regenerado substituiu a versão anteriormente salva na disputa do Shopify."
+        },
+        "blocked_weak": {
+          "title": "Pacote de defesa regenerado — não foi re-salvo",
+          "body": "O pacote regenerado foi concluído, mas o caso continua classificado como fraco, então não foi salvo automaticamente no Shopify. O pacote anteriormente salvo permanece na disputa. Revise o novo rascunho e envie manualmente se quiser substituí-lo."
+        },
+        "blocked_no_material_change": {
+          "title": "Pacote de defesa regenerado — sem mudança substancial",
+          "body": "A regeneração foi concluída, mas a nova prova não adicionou um sinal admissível para o banco, então o pacote regenerado não é substancialmente diferente do que já estava salvo. O pacote anteriormente salvo permanece na disputa."
+        },
+        "blocked_fatal_loss": {
+          "title": "Pacote de defesa regenerado — re-envio bloqueado",
+          "body": "A regeneração detectou uma condição estruturalmente perdida (por exemplo, um reembolso foi emitido) e não foi re-salva no Shopify. O pacote anteriormente salvo permanece na disputa."
+        },
+        "blocked_covered": {
+          "title": "Shopify Protect agora cobre esta disputa",
+          "body": "O Shopify Protect está cobrindo esta disputa, então nenhum pacote de defesa adicional é necessário. O pacote anteriormente salvo permanece na disputa."
+        },
+        "failed": {
+          "title": "Falha na regeneração do pacote de defesa",
+          "body": "A regeneração mais recente não foi concluída. O pacote anteriormente salvo permanece na disputa. Tente regenerar novamente, ou entre em contato com o suporte se o problema persistir."
+        }
+      },
       "regenerateModal": {
         "title": "Regenerar o pacote de defesa com esta nova prova?",
         "bodyAuto": "Seu arquivo foi salvo. Para incluí-lo no pacote direcionado ao banco, o DisputeDesk regenerará o pacote de defesa completo — resumo das provas, argumento e PDF — e a nova versão será salva no Shopify e substituirá o pacote atual na disputa.",

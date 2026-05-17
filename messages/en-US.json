@@ -717,6 +717,32 @@
         "title": "Regenerating defense package",
         "body": "Your current saved package remains on the Shopify dispute. DisputeDesk is regenerating the evidence summary, defense narrative, and PDF — once ready, the new version will replace the current one."
       },
+      "rebuildOutcomeBanner": {
+        "saved": {
+          "title": "New defense package saved to Shopify",
+          "body": "The regenerated package replaced the previously saved version on the Shopify dispute."
+        },
+        "blocked_weak": {
+          "title": "Defense package rebuilt — not re-saved",
+          "body": "The regenerated package was completed, but the case is still rated weak so it was not auto-saved to Shopify. The previously saved package remains on the dispute. Review the new draft and submit manually if you want to replace it."
+        },
+        "blocked_no_material_change": {
+          "title": "Defense package rebuilt — no material change",
+          "body": "The regeneration completed, but the new evidence did not add a bank-eligible signal, so the rebuilt package is not materially different from the one already saved. The previously saved package remains on the dispute."
+        },
+        "blocked_fatal_loss": {
+          "title": "Defense package rebuilt — re-save blocked",
+          "body": "The rebuild detected a structurally unwinnable condition (for example, a refund was issued) and was not re-saved to Shopify. The previously saved package remains on the dispute."
+        },
+        "blocked_covered": {
+          "title": "Shopify Protect now covering this dispute",
+          "body": "Shopify Protect is underwriting this dispute, so no further defense package is needed. The previously saved package remains on the dispute."
+        },
+        "failed": {
+          "title": "Defense package rebuild failed",
+          "body": "The most recent regeneration did not complete. The previously saved package remains on the dispute. Try regenerating again, or contact support if it keeps failing."
+        }
+      },
       "regenerateModal": {
         "title": "Regenerate the defense package with this new evidence?",
         "bodyAuto": "Your file has been saved. To include it in the bank-facing package, DisputeDesk will regenerate the full defense package — evidence summary, argument narrative, and PDF — and the new version will be saved to Shopify and replace the current package on the dispute.",

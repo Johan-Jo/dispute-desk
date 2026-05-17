@@ -360,6 +360,19 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
          *  package" banner during the gap between request and worker
          *  pickup, when status is still `saved_to_shopify_verified`. */
         rebuildPending: (packRow.rebuild_pending as boolean | null) ?? false,
+        /** Resubmission Window: user-facing explanation of the most
+         *  recent regenerate attempt. NOT authoritative submission
+         *  state. See `lib/automation/rebuildOutcome.ts` for the
+         *  invariant. Possible values: saved | blocked_weak |
+         *  blocked_fatal_loss | blocked_covered |
+         *  blocked_no_material_change | failed | null (never
+         *  regenerated). */
+        lastRebuildOutcome:
+          (packRow.last_rebuild_outcome as string | null) ?? null,
+        lastRebuildAt:
+          (packRow.last_rebuild_at as string | null) ?? null,
+        lastRebuildReason:
+          (packRow.last_rebuild_reason as string | null) ?? null,
         activeBuildJob: buildJobRes.data ?? null,
         // Surface system-failure metadata so the UI can render a
         // system-error banner instead of misleading evidence-gap copy.

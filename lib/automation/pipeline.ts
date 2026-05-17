@@ -17,6 +17,11 @@ import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { normalizeMode, type AutomationMode } from "@/lib/rules/normalizeMode";
 import { SETUP_RULE_PREFIX } from "@/lib/rules/setupAutomation";
 import {
+  isRegenerateBuild,
+  isMaterialChange,
+  stampRebuildOutcome,
+} from "@/lib/automation/rebuildOutcome";
+import {
   DISPUTE_ATTENTION_REASONS,
   type DisputeAttentionReason,
 } from "@/lib/disputes/attentionReasons";
@@ -304,6 +309,13 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // knows a dispute came in. Sync-time send is now deferred for every
   // `pack_enqueued` outcome; without this we'd silently drop the alert.
   if (pack.status === "failed") {
+    if (await isRegenerateBuild(pack.dispute_id)) {
+      await stampRebuildOutcome({
+        packId,
+        outcome: "failed",
+        reason: "build_failed",
+      });
+    }
     if (pack.dispute_id) {
       void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
         () => {
@@ -322,6 +334,13 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // we emit a single audit event so the action is traceable.
   const coverage = (pack.pack_json as { coverage?: { state?: string; shopifyProtectStatus?: string } } | null)?.coverage;
   if (coverage?.state === "covered_shopify") {
+    if (await isRegenerateBuild(pack.dispute_id)) {
+      await stampRebuildOutcome({
+        packId,
+        outcome: "blocked_covered",
+        reason: "coverage_active",
+      });
+    }
     const reason = `Covered by Shopify Protect (${coverage.shopifyProtectStatus ?? "unknown"}) — no merchant action required`;
     await sb.from("audit_events").insert({
       shop_id: pack.shop_id,
@@ -396,6 +415,11 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     }
   }
 
+  // Resubmission Window stamp: only true on rebuilds (window-open
+  // disputes). All `stampRebuildOutcome` calls below short-circuit on
+  // `false`. Computed once so we don't hit the DB per branch.
+  const isRegen = await isRegenerateBuild(pack.dispute_id);
+
   // Fatal-loss Gate (PRD §3 step 2 / §5). Sits between Coverage Gate
   // and the strength gate. When triggered, auto-mode never submits
   // regardless of completeness or strength — the case is structurally
@@ -415,6 +439,13 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       event_type: "auto_save_blocked",
       event_payload: { reasons: [reason], fatal_loss: fatalLoss.reason },
     });
+    if (isRegen) {
+      await stampRebuildOutcome({
+        packId,
+        outcome: "blocked_fatal_loss",
+        reason: fatalLoss.reason ?? "fatal_loss",
+      });
+    }
     if (pack.dispute_id) {
       void emitDisputeEvent({
         disputeId: pack.dispute_id,
@@ -454,7 +485,46 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // behavior intact for them rather than silently flipping decisions.
   const caseStrength = (pack.pack_json as { case_strength?: { overall?: string } } | null)?.case_strength;
   const strengthOverall = caseStrength?.overall ?? null;
+  // Approved-fact count for the material-change heuristic. We need it
+  // before the review-mode branch, which is where the
+  // `blocked_no_material_change` outcome fires. Read from the most
+  // recent draft on this dispute — that's what the next save would
+  // submit.
+  let newApprovedFactCount: number | null = null;
+  if (isRegen && pack.dispute_id) {
+    const { data: latestDraft } = await sb
+      .from("defence_packages")
+      .select("facts_json")
+      .eq("dispute_id", pack.dispute_id)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    newApprovedFactCount = Array.isArray(latestDraft?.facts_json)
+      ? (latestDraft!.facts_json as unknown[]).length
+      : null;
+  }
   if (ruleMode === "auto" && strengthOverall === "moderate") {
+    // No rebuild-outcome stamp here. Moderate-strength parks for
+    // merchant review with a fresh draft — that's the happy path for
+    // a regenerate (new draft is now the candidate), not a blocker.
+    // Workspace shows the new draft and the merchant can submit
+    // manually. We only stamp `blocked_no_material_change` if the
+    // regenerate produced no new bank-eligible signals — in that case
+    // re-parking is just noise.
+    if (isRegen && pack.dispute_id) {
+      const material = await isMaterialChange({
+        disputeId: pack.dispute_id,
+        newOverall: strengthOverall,
+        newApprovedFactCount,
+      });
+      if (!material) {
+        await stampRebuildOutcome({
+          packId,
+          outcome: "blocked_no_material_change",
+          reason: "no_new_bank_eligible_signals",
+        });
+      }
+    }
     const reason = "Auto-mode case strength is Moderate — parked for merchant review per PRD §9";
     const alreadySaved =
       pack.status === "saved_to_shopify" ||
@@ -506,6 +576,24 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     ruleMode === "auto" &&
     (strengthOverall === "weak" || strengthOverall === "insufficient")
   ) {
+    if (isRegen && pack.dispute_id) {
+      // On a regenerate that lands at weak/insufficient, the merchant
+      // needs to know nothing was re-saved AND, if their upload didn't
+      // move the needle, why. `blocked_no_material_change` is a more
+      // specific banner than `blocked_weak` when applicable.
+      const material = await isMaterialChange({
+        disputeId: pack.dispute_id,
+        newOverall: strengthOverall,
+        newApprovedFactCount,
+      });
+      await stampRebuildOutcome({
+        packId,
+        outcome: material ? "blocked_weak" : "blocked_no_material_change",
+        reason: material
+          ? `case_strength_${strengthOverall}`
+          : "no_new_bank_eligible_signals",
+      });
+    }
     const reason = `Auto-mode case strength is ${strengthOverall === "weak" ? "Weak" : "Insufficient"} — auto-submit blocked per PRD §9`;
     await sb.from("audit_events").insert({
       shop_id: pack.shop_id,

@@ -684,6 +684,32 @@
         "title": "Verteidigungspaket wird neu erstellt",
         "body": "Ihr aktuell gespeichertes Paket bleibt auf dem Shopify-Streitfall. DisputeDesk erstellt die Beweiszusammenfassung, das Verteidigungsnarrativ und die PDF neu — sobald fertig, ersetzt die neue Version die aktuelle."
       },
+      "rebuildOutcomeBanner": {
+        "saved": {
+          "title": "Neues Verteidigungspaket auf Shopify gespeichert",
+          "body": "Das neu erstellte Paket hat die zuvor gespeicherte Version auf dem Shopify-Streitfall ersetzt."
+        },
+        "blocked_weak": {
+          "title": "Verteidigungspaket neu erstellt — nicht erneut gespeichert",
+          "body": "Das neu erstellte Paket wurde fertiggestellt, aber der Fall ist weiterhin als schwach bewertet und wurde daher nicht automatisch auf Shopify gespeichert. Das zuvor gespeicherte Paket bleibt im Streitfall. Prüfen Sie den neuen Entwurf und reichen Sie ihn manuell ein, wenn Sie ihn ersetzen möchten."
+        },
+        "blocked_no_material_change": {
+          "title": "Verteidigungspaket neu erstellt — keine wesentliche Änderung",
+          "body": "Die Neuerstellung wurde abgeschlossen, aber der neue Beweis hat kein für die Bank zulässiges Signal hinzugefügt — das neu erstellte Paket unterscheidet sich nicht wesentlich vom bereits gespeicherten. Das zuvor gespeicherte Paket bleibt im Streitfall."
+        },
+        "blocked_fatal_loss": {
+          "title": "Verteidigungspaket neu erstellt — erneutes Speichern blockiert",
+          "body": "Die Neuerstellung hat eine strukturell verlorene Bedingung erkannt (zum Beispiel eine ausgestellte Rückerstattung) und wurde nicht erneut auf Shopify gespeichert. Das zuvor gespeicherte Paket bleibt im Streitfall."
+        },
+        "blocked_covered": {
+          "title": "Shopify Protect deckt diesen Streitfall jetzt ab",
+          "body": "Shopify Protect übernimmt diesen Streitfall — ein zusätzliches Verteidigungspaket ist nicht erforderlich. Das zuvor gespeicherte Paket bleibt im Streitfall."
+        },
+        "failed": {
+          "title": "Neuerstellung des Verteidigungspakets fehlgeschlagen",
+          "body": "Die letzte Neuerstellung wurde nicht abgeschlossen. Das zuvor gespeicherte Paket bleibt im Streitfall. Versuchen Sie es erneut oder kontaktieren Sie den Support, falls der Fehler weiterhin auftritt."
+        }
+      },
       "regenerateModal": {
         "title": "Verteidigungspaket mit diesem neuen Beleg neu erstellen?",
         "bodyAuto": "Ihre Datei wurde gespeichert. Um sie in das bankseitige Paket aufzunehmen, erstellt DisputeDesk das gesamte Verteidigungspaket neu — Beweiszusammenfassung, Argumentationstext und PDF — und die neue Version wird an Shopify gespeichert und ersetzt das aktuelle Paket auf dem Streitfall.",

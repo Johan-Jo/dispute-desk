@@ -684,6 +684,32 @@
         "title": "Régénération du dossier de défense",
         "body": "Votre dossier actuellement enregistré reste sur le litige Shopify. DisputeDesk régénère le résumé des preuves, l'argumentaire de défense et le PDF — une fois prêt, la nouvelle version remplacera l'actuelle."
       },
+      "rebuildOutcomeBanner": {
+        "saved": {
+          "title": "Nouveau dossier de défense enregistré sur Shopify",
+          "body": "Le dossier régénéré a remplacé la version précédemment enregistrée sur le litige Shopify."
+        },
+        "blocked_weak": {
+          "title": "Dossier de défense régénéré — non ré-enregistré",
+          "body": "Le dossier régénéré a été finalisé, mais le dossier reste évalué comme faible et n'a donc pas été enregistré automatiquement sur Shopify. Le dossier précédemment enregistré reste attaché au litige. Examinez le nouveau brouillon et soumettez-le manuellement si vous souhaitez le remplacer."
+        },
+        "blocked_no_material_change": {
+          "title": "Dossier de défense régénéré — aucun changement substantiel",
+          "body": "La régénération est terminée, mais la nouvelle preuve n'a pas ajouté de signal recevable par la banque ; le dossier régénéré ne diffère donc pas de manière substantielle de celui déjà enregistré. Le dossier précédemment enregistré reste attaché au litige."
+        },
+        "blocked_fatal_loss": {
+          "title": "Dossier de défense régénéré — ré-enregistrement bloqué",
+          "body": "La régénération a détecté une condition structurellement perdante (par exemple, un remboursement émis) et n'a pas été ré-enregistrée sur Shopify. Le dossier précédemment enregistré reste attaché au litige."
+        },
+        "blocked_covered": {
+          "title": "Shopify Protect couvre désormais ce litige",
+          "body": "Shopify Protect prend en charge ce litige — aucun dossier de défense supplémentaire n'est nécessaire. Le dossier précédemment enregistré reste attaché au litige."
+        },
+        "failed": {
+          "title": "Échec de la régénération du dossier de défense",
+          "body": "La régénération la plus récente n'a pas abouti. Le dossier précédemment enregistré reste attaché au litige. Réessayez ou contactez le support si l'erreur persiste."
+        }
+      },
       "regenerateModal": {
         "title": "Régénérer le dossier de défense avec cette nouvelle preuve ?",
         "bodyAuto": "Votre fichier a été enregistré. Pour l'inclure dans le dossier destiné à la banque, DisputeDesk régénérera l'intégralité du dossier de défense — résumé des preuves, argumentaire et PDF — et la nouvelle version sera enregistrée sur Shopify et remplacera le dossier actuel sur le litige.",

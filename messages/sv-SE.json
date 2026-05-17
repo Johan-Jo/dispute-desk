@@ -718,6 +718,32 @@
         "title": "Försvarspaketet regenereras",
         "body": "Ditt nuvarande sparade paket finns kvar på Shopify-tvisten. DisputeDesk regenererar bevisöversikten, försvarsberättelsen och PDF:en — när det är klart ersätter den nya versionen den nuvarande."
       },
+      "rebuildOutcomeBanner": {
+        "saved": {
+          "title": "Nytt försvarspaket sparat till Shopify",
+          "body": "Det regenererade paketet har ersatt den tidigare sparade versionen på Shopify-tvisten."
+        },
+        "blocked_weak": {
+          "title": "Försvarspaketet regenererades — sparades inte om",
+          "body": "Det regenererade paketet slutfördes, men ärendet bedöms fortfarande som svagt och sparades därför inte automatiskt till Shopify. Det tidigare sparade paketet ligger kvar på tvisten. Granska det nya utkastet och skicka in det manuellt om du vill ersätta det."
+        },
+        "blocked_no_material_change": {
+          "title": "Försvarspaketet regenererades — ingen väsentlig förändring",
+          "body": "Regenereringen slutfördes, men den nya bevisningen tillförde ingen banktillåten signal — det regenererade paketet skiljer sig inte väsentligt från det redan sparade. Det tidigare sparade paketet ligger kvar på tvisten."
+        },
+        "blocked_fatal_loss": {
+          "title": "Försvarspaketet regenererades — omsparning blockerad",
+          "body": "Regenereringen upptäckte ett strukturellt förlorande villkor (till exempel en utfärdad återbetalning) och sparades inte om till Shopify. Det tidigare sparade paketet ligger kvar på tvisten."
+        },
+        "blocked_covered": {
+          "title": "Shopify Protect täcker nu denna tvist",
+          "body": "Shopify Protect står för denna tvist — inget ytterligare försvarspaket behövs. Det tidigare sparade paketet ligger kvar på tvisten."
+        },
+        "failed": {
+          "title": "Regenereringen av försvarspaketet misslyckades",
+          "body": "Den senaste regenereringen slutfördes inte. Det tidigare sparade paketet ligger kvar på tvisten. Försök igen, eller kontakta supporten om felet kvarstår."
+        }
+      },
       "regenerateModal": {
         "title": "Regenerera försvarspaketet med detta nya bevis?",
         "bodyAuto": "Din fil har sparats. För att inkludera den i det bankriktade paketet kommer DisputeDesk att regenerera hela försvarspaketet — bevisöversikt, argumenterande berättelse och PDF — och den nya versionen sparas till Shopify och ersätter det nuvarande paketet på tvisten.",

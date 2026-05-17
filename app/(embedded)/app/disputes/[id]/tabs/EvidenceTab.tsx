@@ -19,6 +19,7 @@
 
 "use client";
 
+import type { ReactElement } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { BlockStack, Banner, Spinner } from "@shopify/polaris";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
@@ -110,6 +111,49 @@ export default function EvidenceTab({ workspace }: Props) {
       </Banner>
     ) : null;
 
+  // ── Rebuild-outcome banner ──
+  // Surfaces the result of the most recent merchant-initiated regenerate
+  // so the workspace can answer "what happened after I clicked
+  // Regenerate?". Only renders when:
+  //   - a rebuild outcome exists (`lastRebuildOutcome` non-null)
+  //   - the regenerate isn't currently in flight (otherwise the
+  //     regenerating banner is the correct signal)
+  //   - the merchant hasn't dismissed this specific outcome timestamp
+  //   - the resubmission window isn't closed (the closed banner takes
+  //     precedence)
+  // The banner is purely user-facing — `lastRebuildOutcome` is not an
+  // authoritative submission state per `lib/automation/rebuildOutcome.ts`.
+  const rebuildOutcome = data?.pack?.lastRebuildOutcome ?? null;
+  const rebuildOutcomeAt = data?.pack?.lastRebuildAt ?? null;
+  const showRebuildOutcomeBanner =
+    !!rebuildOutcome &&
+    !derived.isRegenerating &&
+    !isWindowClosed &&
+    clientState.dismissedRebuildOutcomeAt !== rebuildOutcomeAt;
+
+  let rebuildOutcomeBanner: ReactElement | null = null;
+  if (showRebuildOutcomeBanner && rebuildOutcome) {
+    const key = `disputes.evidenceTab.rebuildOutcomeBanner.${rebuildOutcome}`;
+    const tone =
+      rebuildOutcome === "saved"
+        ? "success"
+        : rebuildOutcome === "failed"
+          ? "critical"
+          : "warning";
+    rebuildOutcomeBanner = (
+      <Banner
+        tone={tone}
+        title={t(`rebuildOutcomeBanner.${rebuildOutcome}.title`)}
+        onDismiss={() => actions.dismissRebuildOutcome(rebuildOutcomeAt)}
+      >
+        <p>{t(`rebuildOutcomeBanner.${rebuildOutcome}.body`)}</p>
+      </Banner>
+    );
+    // Silence the unused-key lint warning — the actual translation key
+    // is built dynamically above; keeping `key` referenced for grep.
+    void key;
+  }
+
   const windowOpenBanner =
     isWindowOpen && !derived.isRegenerating && !isWindowClosed ? (
       <Banner tone="success" title={t("windowOpenBanner.title")}>
@@ -148,6 +192,7 @@ export default function EvidenceTab({ workspace }: Props) {
       {failedBanner}
       {windowClosedBanner}
       {regeneratingBanner}
+      {rebuildOutcomeBanner}
       {buildingBanner}
       {windowOpenBanner}
       {noPackBanner}

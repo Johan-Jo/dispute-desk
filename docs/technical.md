@@ -2738,6 +2738,50 @@ The regenerate endpoint deliberately does NOT change `evidence_packs.status` to 
 
 The status transitions naturally when `buildPackJob` picks up the job and writes `status = "building"`. From that point, the standard build → finalize → save chain runs and produces the new verified state. The UI's `derived.isRegenerating` (defined as `hasPriorSave && isInFlight`) keeps the "current saved package remains" copy active across the whole window.
 
+### Last-rebuild outcome banner
+
+When a merchant-initiated regenerate completes, the workspace surfaces a banner that explains what happened — "saved", "rebuilt but not re-saved because the case is still weak", "no material change", etc. Without this, a regenerate that gets blocked by the §9 strength gate (or the fatal-loss / coverage gates) is invisible: the prior Shopify save stays canonical and the merchant has no signal that the new draft is parked.
+
+The state lives on three new `evidence_packs` columns (migration `20260517223633_pack_last_rebuild_outcome.sql`):
+
+| Column | Type | Meaning |
+|--------|------|---------|
+| `last_rebuild_outcome` | text (enum) | `saved` \| `blocked_weak` \| `blocked_fatal_loss` \| `blocked_covered` \| `blocked_no_material_change` \| `failed` |
+| `last_rebuild_at`      | timestamptz | When the outcome was stamped. Drives the per-outcome dismiss-state in the workspace hook (`dismissedRebuildOutcomeAt`). |
+| `last_rebuild_reason`  | text        | Short merchant-safe reason code (`case_strength_weak`, `refund_issued`, `coverage_active`, `shopify_user_error`, …). Pairs with the outcome for tooltip / debug surfacing. |
+
+**Non-authoritative invariant.** These columns are user-facing explanation ONLY. The canonical submission state of a dispute remains `disputes.submission_state` plus `evidence_packs.status` and the Shopify-side `disputeEvidence.evidenceSentOn` readback. Nothing in the pipeline, automation, save path, or gates may READ `last_rebuild_outcome` to make a decision — it is an audit annotation that the workspace happens to surface. The helper module (`lib/automation/rebuildOutcome.ts`) documents this invariant in code, and the column comment in the migration repeats it for anyone querying the DB.
+
+**Stamp sites.**
+
+| Where | Outcome | Condition |
+|-------|---------|-----------|
+| `pipeline.ts` evaluateAndMaybeAutoSave | `failed` | `pack.status === "failed"` AND this is a regenerate build |
+| `pipeline.ts` coverage branch | `blocked_covered` | `coverage.state === "covered_shopify"` AND this is a regenerate build |
+| `pipeline.ts` fatal-loss branch | `blocked_fatal_loss` | `fatalLoss.triggered === true` (auto-mode) AND this is a regenerate build |
+| `pipeline.ts` strength gate (weak / insufficient) | `blocked_weak` OR `blocked_no_material_change` | Auto-mode + weak/insufficient; refined by `isMaterialChange` heuristic |
+| `pipeline.ts` strength gate (moderate) | `blocked_no_material_change` (only when no material change) | Auto-mode + moderate, parks for review; if the new draft has the same fact count as the prior submitted draft, the re-park is reported as no material change |
+| `saveToShopifyJob.ts` (success) | `saved` | Pre-save `dispute.submission_state === "saved_to_shopify"` (i.e. this was a regenerate save). Reason `save_verified` or `save_unverified` depending on Shopify readback. |
+| `saveToShopifyJob.ts` (auth invalid / GraphQL error / userError) | `failed` | Same pre-save gate as above. Reason carries the failure category. |
+
+The "is this a regenerate" check is `isRegenerateBuild(disputeId)` in `lib/automation/rebuildOutcome.ts`. First-time builds (`submission_state` null / `not_saved`) skip stamping entirely so the column stays null on disputes that have never been saved.
+
+**Material-change heuristic (`isMaterialChange`).** Used only inside `pipeline.ts` to refine the outcome reported when the gate decision would otherwise have been an undifferentiated re-park or re-block. v1 heuristic:
+
+- Prior submitted defence package has no `facts_json` (legacy) → assume material.
+- New draft's `approved` fact count is greater than the prior submitted draft's → material.
+- Otherwise → not material.
+
+The heuristic is deliberately coarse; refining it (e.g., comparing canonical-signal sets per category) is easier than retracting the column. The strength-overall comparison was considered but deferred — `defence_packages` doesn't currently carry a frozen strength snapshot, and the alternative source (`evidence_packs.pack_json.case_strength`) is overwritten on each rebuild so it can't be compared against itself.
+
+**UI rendering.** `EvidenceTab.tsx` renders the banner between `regeneratingBanner` and `buildingBanner`. Suppression rules:
+
+- Hidden while `derived.isRegenerating === true` (regenerate is currently in flight — the regenerating banner is the correct signal).
+- Hidden when `isWindowClosed === true` (the window-closed banner takes precedence).
+- Dismissable per-outcome: clicking dismiss writes `lastRebuildAt` into `clientState.dismissedRebuildOutcomeAt`. A new outcome with a later timestamp re-shows the banner. Session-only — a page refresh brings the banner back, which is correct for the "still not re-saved" case so the merchant doesn't lose context after navigation.
+
+Tone mapping in the banner: `saved` → success, `failed` → critical, everything else → warning.
+
 ## Billing & Plan Limits
 
 ### Plans

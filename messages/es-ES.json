@@ -717,6 +717,32 @@
         "title": "Regenerando el paquete de defensa",
         "body": "Su paquete actualmente guardado permanece en la disputa de Shopify. DisputeDesk está regenerando el resumen de pruebas, el alegato de defensa y el PDF — una vez listo, la nueva versión reemplazará a la actual."
       },
+      "rebuildOutcomeBanner": {
+        "saved": {
+          "title": "Nuevo paquete de defensa guardado en Shopify",
+          "body": "El paquete regenerado reemplazó la versión guardada anteriormente en la disputa de Shopify."
+        },
+        "blocked_weak": {
+          "title": "Paquete de defensa regenerado — no se volvió a guardar",
+          "body": "El paquete regenerado se completó, pero el caso sigue calificándose como débil, por lo que no se guardó automáticamente en Shopify. El paquete guardado anteriormente permanece en la disputa. Revise el nuevo borrador y envíelo manualmente si desea reemplazarlo."
+        },
+        "blocked_no_material_change": {
+          "title": "Paquete de defensa regenerado — sin cambios sustanciales",
+          "body": "La regeneración se completó, pero la nueva prueba no añadió una señal admisible para el banco, por lo que el paquete regenerado no difiere de forma sustancial del ya guardado. El paquete guardado anteriormente permanece en la disputa."
+        },
+        "blocked_fatal_loss": {
+          "title": "Paquete de defensa regenerado — re-guardado bloqueado",
+          "body": "La regeneración detectó una condición estructuralmente imposible de ganar (por ejemplo, se emitió un reembolso) y no se volvió a guardar en Shopify. El paquete guardado anteriormente permanece en la disputa."
+        },
+        "blocked_covered": {
+          "title": "Shopify Protect ahora cubre esta disputa",
+          "body": "Shopify Protect está respaldando esta disputa, por lo que no se necesita ningún paquete de defensa adicional. El paquete guardado anteriormente permanece en la disputa."
+        },
+        "failed": {
+          "title": "Falló la regeneración del paquete de defensa",
+          "body": "La regeneración más reciente no se completó. El paquete guardado anteriormente permanece en la disputa. Intente regenerar de nuevo, o contacte al soporte si el error persiste."
+        }
+      },
       "regenerateModal": {
         "title": "¿Regenerar el paquete de defensa con esta nueva prueba?",
         "bodyAuto": "Su archivo se ha guardado. Para incluirlo en el paquete dirigido al banco, DisputeDesk regenerará el paquete de defensa completo — resumen de pruebas, alegato y PDF — y la nueva versión se guardará en Shopify y reemplazará al paquete actual en la disputa.",

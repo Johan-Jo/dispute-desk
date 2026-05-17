@@ -47,6 +47,10 @@ import {
 } from "@/lib/shopify/mutations/disputeEvidenceUpdate";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { emitSaveToShopifyEvents } from "./saveToShopifyEvents";
+import {
+  isRegenerateBuild,
+  stampRebuildOutcome,
+} from "@/lib/automation/rebuildOutcome";
 import type { ClaimedJob, JobResult } from "../claimJobs";
 
 const ALLOWED_PACK_STATUSES = new Set(["ready", "saving", "saved_to_shopify"]);
@@ -400,6 +404,13 @@ export async function handleSaveToShopify(
         .from("evidence_packs")
         .update({ status: "save_failed", updated_at: new Date().toISOString() })
         .eq("id", packId);
+      if (dispute.submission_state === "saved_to_shopify") {
+        await stampRebuildOutcome({
+          packId,
+          outcome: "failed",
+          reason: "shopify_auth_invalid",
+        });
+      }
       await logAuditEvent({
         shopId: pack.shop_id,
         disputeId: pack.dispute_id,
@@ -429,6 +440,13 @@ export async function handleSaveToShopify(
       .from("evidence_packs")
       .update({ status: "save_failed", updated_at: new Date().toISOString() })
       .eq("id", packId);
+    if (dispute.submission_state === "saved_to_shopify") {
+      await stampRebuildOutcome({
+        packId,
+        outcome: "failed",
+        reason: "shopify_graphql_error",
+      });
+    }
     return {
       ok: false,
       retriable: true,
@@ -442,6 +460,13 @@ export async function handleSaveToShopify(
       .from("evidence_packs")
       .update({ status: "save_failed", updated_at: new Date().toISOString() })
       .eq("id", packId);
+    if (dispute.submission_state === "saved_to_shopify") {
+      await stampRebuildOutcome({
+        packId,
+        outcome: "failed",
+        reason: "shopify_user_error",
+      });
+    }
     await logAuditEvent({
       shopId: pack.shop_id,
       disputeId: pack.dispute_id,
@@ -517,6 +542,27 @@ export async function handleSaveToShopify(
         evidence_saved_to_shopify_at: now,
       })
       .eq("id", pack.dispute_id);
+  }
+
+  // Resubmission Window outcome stamp. This save completed without
+  // hitting the early/late `submitted_confirmed` guards — at job start
+  // the dispute was at `saved_to_shopify`, meaning the merchant had a
+  // prior save and this cycle is the regenerate. Stamping `saved` here
+  // (not after verification) is correct because verification can fail
+  // for read-replica reasons unrelated to the actual save.
+  // Note: `isRegenerateBuild` checks live state, which is now back to
+  // `saved_to_shopify` (we just set it above at line ~516). That's
+  // the intended check — it answers "did this dispute have a prior
+  // save before this job ran", and the answer is yes if the dispute
+  // had any save before; the line above is idempotent for repeat saves.
+  // To avoid a false positive on the very first save, we gate on the
+  // pre-save `submission_state` captured in section 2.
+  if (dispute.submission_state === "saved_to_shopify") {
+    await stampRebuildOutcome({
+      packId,
+      outcome: "saved",
+      reason: verified ? "save_verified" : "save_unverified",
+    });
   }
 
   /* ── 12. Mark the defence package submitted (when verified) ── */

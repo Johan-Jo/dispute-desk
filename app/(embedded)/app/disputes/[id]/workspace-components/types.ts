@@ -82,6 +82,21 @@ export interface WorkspacePack {
    *  `buildPackJob` at start. Used to drive the "Regenerating defence
    *  package" banner during the gap between request and worker pickup. */
   rebuildPending: boolean;
+  /** Resubmission Window: user-facing outcome of the most recent
+   *  regenerate attempt. NOT authoritative submission state — see
+   *  `lib/automation/rebuildOutcome.ts`. Drives the Evidence-tab outcome
+   *  banner that explains "we rebuilt, here's what happened". `null`
+   *  on first-time packs that have never been regenerated. */
+  lastRebuildOutcome:
+    | "saved"
+    | "blocked_weak"
+    | "blocked_fatal_loss"
+    | "blocked_covered"
+    | "blocked_no_material_change"
+    | "failed"
+    | null;
+  lastRebuildAt: string | null;
+  lastRebuildReason: string | null;
   activeBuildJob: { id: string; status: string } | null;
   /** Machine-readable failure code, set when status === "failed". */
   failureCode: string | null;
