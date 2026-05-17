@@ -2820,6 +2820,34 @@ These are targets, not SLAs. The actual restore drill has not been measured agai
 `lib/logging/logger.ts`: JSON format with `timestamp`, `level`, `message`, context fields.
 `logger.timed()` wraps operations with duration measurement.
 
+## Security posture
+
+Pre-Shopify-submission defense-in-depth, established by `supabase/migrations/20260515120000_p0_security_lockdown.sql`. All three measures are belt-and-braces — the app already reaches Supabase via `service_role` from server-only code (`getServiceClient()`), so none of these changes alter runtime behaviour. They close paths that would only matter if an anon-key call ever reached these surfaces or if a `SECURITY DEFINER` RPC were called through PostgREST's `/rest/v1/rpc/*`.
+
+### 1. RLS service-role policies scoped to `to service_role`
+
+~50 service-role policies across the schema were created with the default role (`public`), so a `using (true) with check (true)` rule would satisfy any caller — anon-key included — that reached the table. The migration drops and recreates every such policy with explicit `to service_role`, so only the service role qualifies. Affected tables include `disputes`, `evidence_packs`, `evidence_items`, `jobs`, `pack_template_*`, `shops`, `shop_sessions`, `policy_snapshots`, `submission_*`, and the full content/CMS surface.
+
+When adding a new table with a service-role policy, always write it as `for all to service_role using (true) with check (true)` — not `for all using (true) with check (true)`. The latter passes the Supabase advisor's syntactic check but leaves the policy globally permissive.
+
+### 2. Pinned `search_path` on `SECURITY DEFINER`-adjacent functions
+
+Supabase advisors flag `function_search_path_mutable` because an unpinned `search_path` lets a caller shadow built-in names (`now()`, table refs) via temp objects. The migration pins:
+
+- `set_updated_at`, `submission_logs_set_updated_at`, `dispute_qualifications_set_updated_at`, `reject_dispute_event_mutation`, `reject_audit_mutation`, `shopify_orders_lock_initial_risk` → `search_path = ''` (only `pg_catalog` refs)
+- `ensure_shop_settings(uuid)`, `claim_jobs(text, integer, integer)` → `search_path = public, pg_temp` (touch public tables; explicit list satisfies the lint and still resolves unqualified names)
+
+New functions should pick one of these patterns explicitly.
+
+### 3. `dd_admin_*` RPCs revoked from `anon` / `authenticated`
+
+Two `SECURITY DEFINER` RPCs are reachable through PostgREST by default:
+
+- `dd_admin_resolve_user_id_by_email(text)` — could enumerate user IDs by email
+- `dd_admin_touch_last_login(uuid)` — could spoof last-login timestamps
+
+Both are only called server-side via `getServiceClient()` ([middleware.ts:221,395](middleware.ts), [app/api/admin/team/route.ts:74](app/api/admin/team/route.ts)). The migration revokes `EXECUTE` from `public`, `anon`, and `authenticated`, so they're only callable through the service role. Any new `dd_admin_*` RPC should follow the same pattern: define with `SECURITY DEFINER`, then revoke from non-service roles in the same migration.
+
 ## Testing
 
 ### Unit Tests (Vitest)
