@@ -22,6 +22,7 @@ interface TemplateItemRow {
   required: boolean;
   guidance: string | null;
   item_type: string;
+  collector_key: string | null;
 }
 
 /**
@@ -59,6 +60,7 @@ async function fetchTemplateItems(
            required,
            guidance_default,
            sort,
+           collector_key,
            pack_template_item_i18n!pack_template_item_i18n_template_item_id_fkey(locale, label, guidance)
          )`,
       )
@@ -77,6 +79,7 @@ async function fetchTemplateItems(
           required: boolean;
           guidance_default: string | null;
           sort: number;
+          collector_key: string | null;
           pack_template_item_i18n?: Array<{
             locale: string;
             label: string;
@@ -102,6 +105,7 @@ async function fetchTemplateItems(
           required: it.required,
           guidance: itLocale?.guidance ?? it.guidance_default,
           item_type: it.item_type,
+          collector_key: it.collector_key,
         });
       }
     }
@@ -141,6 +145,7 @@ async function fetchTemplateItems(
         required: it.required,
         guidance: it.guidance,
         item_type: it.item_type,
+        collector_key: null,
       });
     }
   }

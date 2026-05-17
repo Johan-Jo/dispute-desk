@@ -35,6 +35,7 @@ export interface PackTemplateItem {
   required: boolean;
   guidance_default: string | null;
   sort: number;
+  collector_key: string | null;
 }
 
 /** Template with resolved i18n fields, used in list responses. */

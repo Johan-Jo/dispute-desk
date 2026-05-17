@@ -3010,6 +3010,34 @@ Single source of truth for all locale data. Exports:
 ### CI
 - Forbidden-copy check scans both `.ts/.tsx` source files and `messages/*.json` translation files.
 
+### Template → collector mapping
+
+The "What DisputeDesk will collect" section on the embedded pack-detail page (`app/(embedded)/app/packs/[packId]/page.tsx`) drives its source badges off `pack_template_items.collector_key`, not off the item key. `collector_key` describes an **evidence capability**, not an implementation file — `refund_record` is the capability key even though the data flows through `lib/packs/sources/orderSource.ts`.
+
+A template item is marked **automatic** only when a current collector truly produces that evidence. Conditional evidence (e.g. 3-D Secure when Shopify exposes it on the receipt) is labeled "if available" and stays `required=false`. Genuine merchant-upload items keep `collector_key=NULL`.
+
+| `collector_key` | Evidence capability | Source | Type |
+|---|---|---|---|
+| `order_confirmation` | Order record (number, date, line items, totals, customer details) | `lib/packs/sources/orderSource.ts` | Automatic |
+| `payment_authentication` | AVS / CVV match codes from authorization | `lib/packs/sources/paymentSource.ts` | Automatic |
+| `tds_authentication` | 3-D Secure result read from gateway receipt | `lib/packs/sources/threeDSecureSource.ts` | Conditional (Shopify Payments only, "if available") |
+| `fraud_risk_screening` | Shopify pre-authorization risk assessment | `lib/packs/sources/fraudRiskSource.ts` | Automatic |
+| `ip_location_check` | Checkout IP resolved via IPinfo, compared to billing country | `lib/packs/sources/deviceLocationSource.ts` | Automatic |
+| `billing_address_match` | Billing vs shipping city/country comparison | `lib/packs/sources/orderSource.ts` | Automatic |
+| `customer_account_info` | Repeat-customer signal (`customer.numberOfOrders` from the disputed order) | `lib/packs/sources/orderSource.ts` | Automatic |
+| `customer_communication` | Shopify timeline messages, order notes, buyer attributes | `lib/packs/sources/customerCommSource.ts` | Automatic |
+| `shipping_tracking` | Carrier tracking number + status from fulfillment | `lib/packs/sources/fulfillmentSource.ts` | Automatic when shipped |
+| `delivery_proof` | Carrier delivery status (with signature/photo when provided) | `lib/packs/sources/fulfillmentSource.ts` | Automatic when shipped |
+| `refund_record` | `order.refunds[]` (date, amount, note) from the Shopify order | `lib/packs/sources/orderSource.ts` | Automatic (capability key, not file name) |
+| `refund_policy` | Published refund policy snapshot | `lib/packs/sources/policySource.ts` | Policy-derived |
+| `shipping_policy` | Published shipping policy snapshot | `lib/packs/sources/policySource.ts` | Policy-derived |
+| `cancellation_policy` | Published cancellation policy snapshot | `lib/packs/sources/policySource.ts` | Policy-derived |
+| `NULL` | No current collector — merchant uploads the file at dispute time | — | Merchant-upload fallback |
+
+The whitelist is enforced by `tests/unit/templateCollectorKey.test.ts`, which scans every migration touching `pack_template_items.collector_key` and fails the build if a literal is not in the allowed set. Adding a new collector_key requires: (1) a real collector that produces the evidence, (2) an entry in `ALLOWED_COLLECTOR_KEYS` in that test, (3) a row in `COLLECTOR_KEY_SOURCE` in `app/(embedded)/app/packs/[packId]/page.tsx`, and (4) a row in this table.
+
+The 10 chargeback templates (T1–T10) and 8 inquiry templates (T11–T18) were aligned with this contract in `supabase/migrations/20260517120000_align_chargeback_templates_with_v2_pipeline.sql`; T1 Fraud / Unrecognized is the canonical example showing every fraud-relevant collector.
+
 ## Setup Wizard & Onboarding
 
 ### Overview

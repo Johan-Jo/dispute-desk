@@ -77,6 +77,7 @@ interface TemplateItemRow {
   required: boolean;
   guidance: string | null;
   item_type: string;
+  collector_key: string | null;
 }
 
 interface PackData {
@@ -138,18 +139,56 @@ const EVENT_TYPE_KEYS: Record<string, string> = {
   manual_upload: "packs.eventManualUpload",
 };
 
-type FieldSource = "shopify_order" | "shopify_shipping" | "store_policy" | "merchant_upload";
+type FieldSource =
+  | "shopify_order"
+  | "shopify_order_auto"
+  | "shopify_shipping"
+  | "store_policy"
+  | "merchant_upload";
 
-function getFieldSource(key: string): FieldSource {
-  const k = key.toLowerCase();
+// Authoritative collector_key → source bucket map. A template item is only
+// marked automatic when a current collector truly produces that evidence;
+// every other row falls through to merchant_upload. See docs/technical.md
+// "Template → collector mapping".
+const COLLECTOR_KEY_SOURCE: Record<string, FieldSource> = {
+  order_confirmation: "shopify_order",
+  customer_communication: "shopify_order",
+  payment_authentication: "shopify_order_auto",
+  tds_authentication: "shopify_order_auto",
+  fraud_risk_screening: "shopify_order_auto",
+  ip_location_check: "shopify_order_auto",
+  billing_address_match: "shopify_order_auto",
+  customer_account_info: "shopify_order_auto",
+  refund_record: "shopify_order_auto",
+  shipping_tracking: "shopify_shipping",
+  delivery_proof: "shopify_shipping",
+  refund_policy: "store_policy",
+  shipping_policy: "store_policy",
+  cancellation_policy: "store_policy",
+};
+
+function getFieldSource(
+  item: string | { key: string; collector_key?: string | null },
+): FieldSource {
+  const normalized =
+    typeof item === "string" ? { key: item, collector_key: null } : item;
+  if (
+    normalized.collector_key &&
+    COLLECTOR_KEY_SOURCE[normalized.collector_key]
+  ) {
+    return COLLECTOR_KEY_SOURCE[normalized.collector_key];
+  }
+  // Defensive fallback for legacy callers without collector_key (e.g. evidence
+  // items, dispute checklist fields). Post-migration this is unreachable for
+  // the 10 chargeback + 8 inquiry templates.
+  const k = normalized.key.toLowerCase();
   if (k.includes("policy") || k.includes("terms")) return "store_policy";
   if (
     k.includes("tracking") ||
     k.includes("carrier") ||
-    k.includes("delivery") ||
-    k.startsWith("shipping_") ||
-    k.includes("shipping_receipt") ||
-    k.includes("shipping_method")
+    k.startsWith("shipping_tracking") ||
+    k.includes("delivery_signature") ||
+    k.includes("delivery_photo")
   )
     return "shopify_shipping";
   if (
@@ -157,7 +196,6 @@ function getFieldSource(key: string): FieldSource {
     k.includes("customer_comm") ||
     k.includes("correspondence") ||
     k.includes("message") ||
-    k === "customer_account_info" ||
     k.startsWith("note") ||
     k.includes("_note")
   )
@@ -168,6 +206,7 @@ function getFieldSource(key: string): FieldSource {
 function getSourceLabel(source: FieldSource): string {
   switch (source) {
     case "shopify_order":
+    case "shopify_order_auto":
     case "shopify_shipping":
       return "From Shopify order";
     case "store_policy":
@@ -181,6 +220,8 @@ function getFieldSourceLabel(source: FieldSource, t: (key: string) => string): s
   switch (source) {
     case "shopify_order":
       return t("packs.sourceShopifyOrder");
+    case "shopify_order_auto":
+      return t("packs.sourceShopifyOrderAuto");
     case "shopify_shipping":
       return t("packs.sourceShopifyShipping");
     case "store_policy":
@@ -655,7 +696,7 @@ export default function PackPreviewPage() {
                           </Text>
                           <BlockStack gap="300">
                             {group.items.map((item) => {
-                              const source = getFieldSource(item.key);
+                              const source = getFieldSource(item);
                               return (
                                 <BlockStack
                                   key={`${group.title}-${item.key}`}
