@@ -32,6 +32,7 @@ import {
   NARROW_AGGRESSIVE_PHRASES,
 } from "@/lib/defence/validateNarrative";
 import { CLAIM_GUARDS } from "@/lib/defence/claimGuards";
+import { FACT_PREDICATES } from "@/lib/defence/factPredicates";
 import {
   SUBMISSION_RISK_FIELDS,
   INTERNAL_ONLY_FIELDS,
@@ -40,6 +41,8 @@ import {
 import { THESIS_TEMPLATES } from "@/lib/defence/pdf/thesisTemplates";
 import { THESIS_TOKENS } from "@/lib/defence/pdf/thesisTokens";
 import { resolveReasonCodeModule } from "@/lib/defence/reasonCodes/registry";
+import { ALL_REASON_CODE_FAMILIES } from "@/lib/defence/reasonCodes/familyRegistry";
+import { STRATEGIES_BY_FAMILY } from "@/lib/defence/strategies/registry";
 import type { EvidenceFact, NarrativeInput } from "@/lib/defence/types";
 
 export const runtime = "nodejs";
@@ -298,13 +301,43 @@ export default async function DefencePackagePipelinePage() {
             <li>Negative evidence (missing-evidence list, fatal-loss reasons) must stay merchant/admin-facing — never quoted in the package output.</li>
           </ul>
         </div>
+
+        <h3 className="text-sm font-semibold text-[#0F172A]">
+          Fact predicates (v2.1 — emitted as <code>predicateEvaluations</code>)
+        </h3>
+        <p className="text-xs text-[#64748B]">
+          After classification, <code>evaluateAllPredicates()</code> runs every
+          named predicate against the approved facts and the result lands on{" "}
+          <code>FactClassificationResult.predicateEvaluations</code>. The same
+          predicates back (a) claim guards in stage 7, (b) strategy gates in
+          stage 4, and (c) thesis tokens in stage 8 — one source of truth for
+          every &quot;does the evidence support X?&quot; check.
+        </p>
+        <div className="rounded-lg border border-[#E5E7EB] bg-white overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-[#F8FAFC] border-b border-[#E5E7EB]">
+              <tr>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Predicate id</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Required fact / value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.values(FACT_PREDICATES).map((p) => (
+                <tr key={p.id} className="border-b border-[#F1F5F9] last:border-b-0 align-top">
+                  <td className="px-4 py-2 font-mono text-xs text-[#0F172A] whitespace-nowrap">{p.id}</td>
+                  <td className="px-4 py-2 text-[#475569]">{p.description}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
-      {/* ── Stage 3 — Prompt Block 1 ─────────────────────────── */}
+      {/* ── Stage 3 — Prompt Block 0 (BASE) + 4-block layout ─── */}
       <section id="stage-3" className="space-y-4">
         <StageHeading
           number={3}
-          title="Prompt — Block 1 (base system prompt)"
+          title="Prompt — Block 0 (base system prompt) + v2.1 4-block layout"
           source="lib/defence/narrativeWriter.ts:51 BASE_SYSTEM_PROMPT"
         />
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -314,25 +347,116 @@ export default async function DefencePackagePipelinePage() {
           numbered rules including the output JSON schema, fulfillment
           precision, narrow-mode hedging, CNP guards).
         </div>
+
+        <div className="rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] p-4 text-sm text-[#475569] space-y-2">
+          <p className="font-semibold text-[#0F172A]">
+            v2.1 cached-block layout (4 blocks max)
+          </p>
+          <ol className="list-decimal list-inside space-y-1">
+            <li>
+              <strong>Block 0</strong> — <code>BASE_SYSTEM_PROMPT</code> (always
+              emitted). Below ↓
+            </li>
+            <li>
+              <strong>Block 1</strong> — family overlay (emitted only when
+              non-empty; Phase 1 ships these empty so this block is currently
+              skipped for every dispute). Stage 4.
+            </li>
+            <li>
+              <strong>Block 2</strong> — module promptBody (always emitted;
+              DB-overridable). Stage 4.
+            </li>
+            <li>
+              <strong>Block 3</strong> — strategy bundle (emitted only when
+              <code>rankStrategies()</code> selected ≥1 strategy with a
+              non-empty <code>promptBody</code>). Stage 4.
+            </li>
+          </ol>
+          <p className="text-xs text-[#64748B]">
+            Each block has <code>cache_control: {`{ type: "ephemeral" }`}</code>. The
+            cache-smoke script (<code>scripts/defence/cache-smoke.mjs</code>)
+            confirmed 100% prefix cache hit rate covering blocks 0–2 across 20
+            fixtures, so the layout is validated.
+          </p>
+          <p className="text-xs text-[#64748B]">
+            <code>PROMPT_VERSION = 2</code> — bumped 1 → 2 when the 4-block
+            layout shipped (2026-05-16). Persisted on every{" "}
+            <code>defence_package_runs</code> row.
+          </p>
+        </div>
+
         <pre className="bg-[#0F172A] text-[#F1F5F9] text-xs p-4 rounded overflow-x-auto whitespace-pre-wrap leading-relaxed">
 {BASE_SYSTEM_PROMPT}
         </pre>
       </section>
 
-      {/* ── Stage 4 — Prompt Block 2 ─────────────────────────── */}
+      {/* ── Stage 4 — Family + Module + Strategy resolution ──── */}
       <section id="stage-4" className="space-y-4">
         <StageHeading
           number={4}
-          title="Prompt — Block 2 (reason-code module overlay)"
-          source="lib/defence/reasonCodes/* (file defaults) ⊕ defence_prompt_modules (DB overrides)"
+          title="Prompt — Family + Module + Strategy (Blocks 1–3)"
+          source="lib/defence/reasonCodes/familyRegistry.ts ⊕ reasonCodes/registry.ts ⊕ strategies/registry.ts"
         />
         <p className="text-sm text-[#475569]">
-          The second cached system block. <code>resolveReasonCodeModule</code>{" "}
-          (<code>lib/defence/reasonCodes/registry.ts:54</code>) reads the
-          latest active DB row from <code>defence_prompt_modules</code>; if
-          present its <code>prompt_body</code> and <code>guidance_json</code>{" "}
-          fields win over the file default. Unknown reason codes fall
-          through to <code>generic_fallback</code>.
+          Three layers below Block 0. <strong>Layer 1 — Family</strong>{" "}
+          (<code>resolveReasonCodeFamily</code>): groups reason codes into 9
+          cross-cutting clusters. <strong>Layer 2 — Module</strong>{" "}
+          (<code>resolveReasonCodeModule</code>): per-reason-code prompt body,
+          DB-overridable. <strong>Layer 3 — Strategy</strong>{" "}
+          (<code>rankStrategies</code>): selects 1–3 strategies per dispute
+          based on fact-predicate gates; the family&apos;s narrow_fallback is
+          always appended last so the bundle is never empty.
+        </p>
+
+        <h3 className="text-sm font-semibold text-[#0F172A]">
+          Layer 1 — Reason-code families (Block 1)
+        </h3>
+        <p className="text-xs text-[#64748B]">
+          Block 1 emits only when <code>overlayPromptBody</code> is non-empty.
+          Phase 1 ships every family with an empty overlay — the block is
+          currently skipped on every call. Families fill in over time as
+          cross-cutting rules emerge.
+        </p>
+        <div className="rounded-lg border border-[#E5E7EB] bg-white overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-[#F8FAFC] border-b border-[#E5E7EB]">
+              <tr>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Family key</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Modules</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Unmodeled codes</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Fallback module</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Overlay</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ALL_REASON_CODE_FAMILIES.map((f) => (
+                <tr key={f.key} className="border-b border-[#F1F5F9] last:border-b-0 align-top">
+                  <td className="px-4 py-2 font-mono text-xs text-[#0F172A] whitespace-nowrap">{f.key}</td>
+                  <td className="px-4 py-2 text-[#475569] font-mono text-xs">
+                    {f.moduleKeys.length === 0 ? "—" : f.moduleKeys.join(", ")}
+                  </td>
+                  <td className="px-4 py-2 text-[#475569] text-xs">
+                    {f.unmodeledCodes.length === 0 ? "—" : f.unmodeledCodes.join(", ")}
+                  </td>
+                  <td className="px-4 py-2 font-mono text-xs text-[#475569]">{f.fallbackModuleKey}</td>
+                  <td className="px-4 py-2 text-[#475569] text-xs">
+                    {f.overlayPromptBody.trim().length > 0 ? `${f.overlayPromptBody.length} chars` : "empty"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="text-sm font-semibold text-[#0F172A]">
+          Layer 2 — Reason-code modules (Block 2)
+        </h3>
+        <p className="text-xs text-[#64748B]">
+          Always emitted. <code>resolveReasonCodeModule</code> reads the latest
+          active DB row from <code>defence_prompt_modules</code>; if present
+          its <code>prompt_body</code> and <code>guidance_json</code> fields
+          win over the file default. Unknown reason codes fall through to{" "}
+          <code>generic_fallback</code>.
         </p>
         <div className="rounded-lg border border-[#E5E7EB] bg-white overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -374,6 +498,58 @@ export default async function DefencePackagePipelinePage() {
                   </td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="text-sm font-semibold text-[#0F172A]">
+          Layer 3 — Strategy submodules (Block 3)
+        </h3>
+        <p className="text-xs text-[#64748B]">
+          <code>rankStrategies({"{familyKey, predicateEvaluations, packageMode, max=3}"})</code>{" "}
+          filters by predicate gates (<code>all</code> / <code>any</code> /
+          <code>none</code>), sorts by family-canonical order with{" "}
+          <code>priority</code> as tiebreaker, caps non-fallback at{" "}
+          <code>max - 1</code>, and ALWAYS appends the family&apos;s
+          <code>narrow_fallback</code> as the last entry. The concatenated{" "}
+          <code>promptBody</code> strings (joined by{" "}
+          <code>\n\n---\n\n</code>) become Block 3.
+        </p>
+        <div className="rounded-lg border border-[#E5E7EB] bg-white overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-[#F8FAFC] border-b border-[#E5E7EB]">
+              <tr>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Family</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Strategy key</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Fallback?</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Gate (all)</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Gate (any)</th>
+                <th className="text-left px-4 py-2 text-[#64748B] font-medium">Priority</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(STRATEGIES_BY_FAMILY).flatMap(([familyKey, strategies]) =>
+                strategies.map((s) => (
+                  <tr key={s.key} className="border-b border-[#F1F5F9] last:border-b-0 align-top">
+                    <td className="px-4 py-2 font-mono text-xs text-[#475569] whitespace-nowrap">{familyKey}</td>
+                    <td className="px-4 py-2 font-mono text-xs text-[#0F172A] whitespace-nowrap">{s.key}</td>
+                    <td className="px-4 py-2 text-xs">
+                      {s.isFallback ? (
+                        <span className="inline-block px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-700">fallback</span>
+                      ) : (
+                        <span className="text-[#94A3B8]">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-[#475569] text-xs font-mono">
+                      {s.predicates.all && s.predicates.all.length > 0 ? s.predicates.all.join(", ") : "—"}
+                    </td>
+                    <td className="px-4 py-2 text-[#475569] text-xs font-mono">
+                      {s.predicates.any && s.predicates.any.length > 0 ? s.predicates.any.join(", ") : "—"}
+                    </td>
+                    <td className="px-4 py-2 text-[#475569] text-xs">{s.priority}</td>
+                  </tr>
+                )),
+              )}
             </tbody>
           </table>
         </div>
@@ -457,7 +633,7 @@ export default async function DefencePackagePipelinePage() {
           <ParamRow label="temperature" value="0.2" />
           <ParamRow
             label="System blocks"
-            value="2 × cache_control: { type: 'ephemeral' } — Block 1 (base) and Block 2 (reason-code overlay)"
+            value="Up to 4 × cache_control: { type: 'ephemeral' } — Block 0 (base) + Block 1 (family overlay, when non-empty) + Block 2 (module promptBody) + Block 3 (strategy bundle, when ≥1 strategy). Phase 1 ships family overlays empty so Block 1 is skipped today."
           />
           <ParamRow
             label="Retry"
@@ -485,6 +661,34 @@ export default async function DefencePackagePipelinePage() {
           Run after the LLM returns. Validation fails closed — a failure
           blocks PDF render and Shopify submission.
         </p>
+
+        <div className="rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] p-4 text-sm text-[#475569] space-y-2">
+          <p className="font-semibold text-[#0F172A]">
+            v2.1: two validators, same kernel
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-xs">
+            <li>
+              <code>validateNarrative</code> — runs the kernel against the
+              LLM&apos;s JSON output. Layer tag <code>narrative</code>.
+            </li>
+            <li>
+              <code>validateComposedDocument</code> (v2.1, NEW) — runs the
+              SAME kernel against every block&apos;s{" "}
+              <code>thesisText</code>, <code>llmText</code>, and{" "}
+              <code>fallbackText</code> AFTER{" "}
+              <code>composePdfBlocks</code> builds the prose and BEFORE the
+              renderer is invoked. Each failure is tagged with{" "}
+              <code>layer: &quot;thesis&quot; | &quot;llm&quot; | &quot;fallback&quot;</code> so{" "}
+              <code>failure_reason</code> reads like{" "}
+              <code>composed:thesis &quot;irrefutable&quot; in executiveSummary</code>.
+            </li>
+          </ul>
+          <p className="text-xs text-[#475569]">
+            Static renderer prose now obeys the same safety contract as LLM
+            output. Pre-v2.1 the static <code>THESIS_LIBRARY</code> bypassed
+            every check; that&apos;s structurally closed.
+          </p>
+        </div>
 
         <h3 className="text-sm font-semibold text-[#0F172A]">Forbidden phrases (all modes)</h3>
         <RegexTable rows={FORBIDDEN_PHRASES} />
