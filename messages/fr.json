@@ -622,6 +622,7 @@
         },
         "missing": {
           "title": "Missing or weak evidence",
+          "description": "Non obligatoires, mais les ajouter renforce le dossier. Chaque élément correspond à une preuve que la banque recherche.",
           "required": "Required",
           "optional": "Optional",
           "actions": {

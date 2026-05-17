@@ -655,6 +655,7 @@
         },
         "missing": {
           "title": "Missing or weak evidence",
+          "description": "Not required to submit, but adding these will strengthen the case. Each item maps to evidence the bank looks for.",
           "required": "Required",
           "optional": "Optional",
           "actions": {

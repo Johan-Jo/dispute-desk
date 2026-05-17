@@ -622,6 +622,7 @@
         },
         "missing": {
           "title": "Missing or weak evidence",
+          "description": "Nicht zwingend erforderlich, aber das Hinzufügen stärkt den Fall. Jeder Eintrag entspricht einem Nachweis, den die Bank prüft.",
           "required": "Required",
           "optional": "Optional",
           "actions": {

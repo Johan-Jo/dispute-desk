@@ -656,6 +656,7 @@
         },
         "missing": {
           "title": "Missing or weak evidence",
+          "description": "Inte obligatoriskt att skicka in, men att lägga till dem stärker ärendet. Varje punkt motsvarar bevis som banken letar efter.",
           "required": "Required",
           "optional": "Optional",
           "actions": {

@@ -655,6 +655,7 @@
         },
         "missing": {
           "title": "Missing or weak evidence",
+          "description": "Não é obrigatório enviar, mas adicionar reforça o caso. Cada item corresponde a uma evidência que o banco procura.",
           "required": "Required",
           "optional": "Optional",
           "actions": {

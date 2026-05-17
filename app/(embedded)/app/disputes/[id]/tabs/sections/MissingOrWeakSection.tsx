@@ -73,6 +73,7 @@ interface RowProps {
   item: MissingItemViewModel;
   t: ReturnType<typeof useTranslations>;
   tActions: ReturnType<typeof useTranslations>;
+  showPerRowBadge: boolean;
   uploading: boolean;
   highlighted: boolean;
   rowRef?: React.Ref<HTMLDivElement>;
@@ -84,6 +85,7 @@ function MissingRow({
   item,
   t,
   tActions,
+  showPerRowBadge,
   uploading,
   highlighted,
   rowRef,
@@ -92,13 +94,48 @@ function MissingRow({
 }: RowProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const actions =
+    onUpload || onWaiveClick ? (
+      <InlineStack gap="200" wrap={false}>
+        {onUpload ? (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={SHOPIFY_DISPUTE_EVIDENCE_FILE_ACCEPT_ATTR}
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                if (files.length > 0) onUpload(item.field, files);
+                e.target.value = "";
+              }}
+            />
+            <Button
+              size="slim"
+              onClick={() => fileInputRef.current?.click()}
+              loading={uploading}
+              disabled={uploading}
+            >
+              {uploading ? tActions("uploading") : tActions("upload")}
+            </Button>
+          </>
+        ) : null}
+        {onWaiveClick ? (
+          <Button
+            variant="plain"
+            size="slim"
+            onClick={() => onWaiveClick(item.field)}
+          >
+            {tActions("markNotApplicable")}
+          </Button>
+        ) : null}
+      </InlineStack>
+    ) : null;
+
   return (
     <div
       ref={rowRef}
       style={{
-        // Negative margin lets the highlight bleed into the card's
-        // gap so it visually feels like the row is glowing, not a
-        // box inside a box.
         margin: "-8px -12px",
         padding: "8px 12px",
         borderRadius: 8,
@@ -107,63 +144,29 @@ function MissingRow({
           : undefined,
       }}
     >
-      <BlockStack gap="100">
-        <InlineStack gap="200" blockAlign="center">
-          <Text as="h4" variant="headingSm">
-            {item.title}
-          </Text>
-          <Badge tone={item.required ? "critical" : "info"}>
-            {item.required ? t("required") : t("optional")}
-          </Badge>
-        </InlineStack>
-        <Text as="p" variant="bodySm" tone="subdued">
-          {item.whyItMatters}
-        </Text>
-
-        {(onUpload || onWaiveClick) ? (
-          <InlineStack gap="200">
-            {onUpload ? (
-              <>
-                {/* Hidden native input — single, contextual file picker.
-                    No DropZone, no inline preview state. */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept={SHOPIFY_DISPUTE_EVIDENCE_FILE_ACCEPT_ATTR}
-                  style={{ display: "none" }}
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files ?? []);
-                    if (files.length > 0) onUpload(item.field, files);
-                    e.target.value = ""; // allow same-file re-selection
-                  }}
-                />
-                <Button
-                  size="slim"
-                  onClick={() => fileInputRef.current?.click()}
-                  loading={uploading}
-                  disabled={uploading}
-                >
-                  {uploading ? tActions("uploading") : tActions("upload")}
-                </Button>
-              </>
-            ) : null}
-            {onWaiveClick ? (
-              <Button
-                variant="plain"
-                size="slim"
-                onClick={() => onWaiveClick(item.field)}
-              >
-                {tActions("markNotApplicable")}
-              </Button>
+      <InlineStack gap="400" align="space-between" blockAlign="start" wrap={false}>
+        <BlockStack gap="100">
+          <InlineStack gap="200" blockAlign="center">
+            <Text as="h4" variant="headingSm">
+              {item.title}
+            </Text>
+            {showPerRowBadge ? (
+              <Badge tone={item.required ? "critical" : "info"}>
+                {item.required ? t("required") : t("optional")}
+              </Badge>
             ) : null}
           </InlineStack>
-        ) : item.actionInstruction ? (
-          // Read-only fallback when no callbacks are wired.
-          <Text as="p" variant="bodySm">
-            {item.actionInstruction}
+          <Text as="p" variant="bodySm" tone="subdued">
+            {item.whyItMatters}
           </Text>
-        ) : null}
-      </BlockStack>
+          {!actions && item.actionInstruction ? (
+            <Text as="p" variant="bodySm">
+              {item.actionInstruction}
+            </Text>
+          ) : null}
+        </BlockStack>
+        {actions}
+      </InlineStack>
     </div>
   );
 }
@@ -238,17 +241,34 @@ export function MissingOrWeakSection({
     setWaiveReason("not_applicable");
   };
 
+  const requiredCount = items.filter((i) => i.required).length;
+  const optionalCount = items.length - requiredCount;
+  const allSamePriority = requiredCount === 0 || optionalCount === 0;
+  const headerBadgeLabel = allSamePriority
+    ? requiredCount > 0
+      ? `${t("required")} (${requiredCount})`
+      : `${t("optional")} (${optionalCount})`
+    : null;
+  const headerBadgeTone = allSamePriority && requiredCount > 0 ? "critical" : "info";
+
   return (
     <Card>
-      {/* Inject the keyframes once at the top of the section. SSR-safe
-          — duplicate <style> blocks are harmless and the browser
-          deduplicates the rules at parse time. */}
       <style>{FOCUS_KEYFRAMES}</style>
 
       <BlockStack gap="400">
-        <Text as="h2" variant="headingMd">
-          {t("title")}
-        </Text>
+        <BlockStack gap="100">
+          <Text as="h2" variant="headingMd">
+            {t("title")}
+          </Text>
+          <Text as="p" variant="bodySm" tone="subdued">
+            {t("description")}
+          </Text>
+          {headerBadgeLabel ? (
+            <InlineStack>
+              <Badge tone={headerBadgeTone}>{headerBadgeLabel}</Badge>
+            </InlineStack>
+          ) : null}
+        </BlockStack>
 
         {items.map((item) => (
           <MissingRow
@@ -256,6 +276,7 @@ export function MissingOrWeakSection({
             item={item}
             t={t}
             tActions={tActions}
+            showPerRowBadge={!allSamePriority}
             uploading={uploadingField === item.field}
             highlighted={highlightedField === item.field}
             rowRef={(el) => {
