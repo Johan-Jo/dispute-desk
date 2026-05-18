@@ -403,6 +403,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         auditEvents: auditRes.data ?? [],
         pdfPath: packRow.pdf_path ?? null,
         savedToShopifyAt: packRow.saved_to_shopify_at ?? null,
+        /** Last successful build timestamp. Used by the EvidenceTab
+         *  rebuild-outcome banner to detect stale outcomes — if
+         *  `lastRebuildAt < updatedAt`, the outcome describes a save
+         *  attempt against a previous build, not the current one, and
+         *  the banner suppresses itself. */
+        updatedAt: (packRow.updated_at as string | null) ?? null,
         /** Resubmission Window: true when a merchant regenerate request
          *  is pending (set by the regenerate endpoint, cleared by
          *  buildPackJob at start). Drives the "Regenerating defence

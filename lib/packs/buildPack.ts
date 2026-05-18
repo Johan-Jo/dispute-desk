@@ -615,6 +615,22 @@ export async function buildPack(
   //
   // We also now check the update's error result so future schema drifts
   // surface immediately instead of silently dropping pack state.
+  //
+  // last_rebuild_* clearing: a successful build invalidates the prior
+  // rebuild-outcome verdict — the prior outcome described a save attempt
+  // against stale data. The downstream auto-save pipeline
+  // (evaluateAndMaybeAutoSave in lib/automation/pipeline.ts) re-stamps
+  // with the new verdict if a save attempt fires. When no save attempt
+  // runs (manual builds, admin reruns), the columns stay null instead of
+  // surfacing a stale "Defense package rebuilt — not re-saved" banner
+  // that contradicts the fresh case_strength.
+  const clearedRebuildColumns = !isFailed
+    ? {
+        last_rebuild_outcome: null,
+        last_rebuild_at: null,
+        last_rebuild_reason: null,
+      }
+    : {};
   const { error: packUpdateErr } = await sb
     .from("evidence_packs")
     .update({
@@ -630,6 +646,7 @@ export async function buildPack(
         : completenessV2.submissionReadiness,
       failure_code: failureCode,
       failure_reason: failureReason,
+      ...clearedRebuildColumns,
       updated_at: new Date().toISOString(),
     })
     .eq("id", packId);

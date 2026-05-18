@@ -125,8 +125,19 @@ export default function EvidenceTab({ workspace }: Props) {
   // authoritative submission state per `lib/automation/rebuildOutcome.ts`.
   const rebuildOutcome = data?.pack?.lastRebuildOutcome ?? null;
   const rebuildOutcomeAt = data?.pack?.lastRebuildAt ?? null;
+  // Staleness gate: if the pack has been rebuilt since the outcome was
+  // stamped, the outcome describes a previous save attempt against
+  // out-of-date data — suppress the banner. buildPack also clears the
+  // outcome columns on success, so this is belt-and-suspenders.
+  const packUpdatedAt = data?.pack?.updatedAt ?? null;
+  const rebuildOutcomeIsStale =
+    !!rebuildOutcome &&
+    !!rebuildOutcomeAt &&
+    !!packUpdatedAt &&
+    new Date(rebuildOutcomeAt).getTime() < new Date(packUpdatedAt).getTime();
   const showRebuildOutcomeBanner =
     !!rebuildOutcome &&
+    !rebuildOutcomeIsStale &&
     !derived.isRegenerating &&
     !isWindowClosed &&
     clientState.dismissedRebuildOutcomeAt !== rebuildOutcomeAt;

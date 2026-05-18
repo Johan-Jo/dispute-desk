@@ -109,6 +109,14 @@ export interface WorkspacePack {
   auditEvents: AuditEvent[];
   pdfPath: string | null;
   savedToShopifyAt: string | null;
+  /** Last successful build timestamp (`evidence_packs.updated_at`).
+   *  Used by the rebuild-outcome banner to detect stale outcomes —
+   *  buildPack clears the outcome columns on success, but if a write
+   *  is missed or a race lands the wrong row, the banner falls back
+   *  to a timestamp comparison: when `lastRebuildAt < updatedAt`, the
+   *  outcome describes a save attempt against a previous build, so
+   *  the banner suppresses itself. */
+  updatedAt: string | null;
   /** Resubmission Window: true when a merchant regenerate request is
    *  pending. Set by the regenerate endpoint and cleared by
    *  `buildPackJob` at start. Used to drive the "Regenerating defence
