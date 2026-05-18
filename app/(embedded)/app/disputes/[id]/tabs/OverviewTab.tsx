@@ -315,60 +315,158 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
    *        flipped to `under_review`). Bank is now reviewing.
    *    - dispute.finalOutcome != null: bank decided.
    */
-  const bankReviewing =
-    dispute.normalizedStatus === "submitted_to_bank" ||
-    dispute.normalizedStatus === "won" ||
-    dispute.normalizedStatus === "lost" ||
-    !!dispute.finalOutcome;
-  const savedAwaitingForward = submitted && !bankReviewing && !dispute.finalOutcome;
-
+  // ── Timeline ── driven by presentationStatus.
+  //
+  // Five-step sequence (post-save):
+  //   1. Defence package prepared
+  //   2. Evidence saved to Shopify
+  //   3. Awaiting Shopify forwarding to card network
+  //   4. Card network review
+  //   5. Outcome posted in Shopify
+  //
+  // Pre-save (DRAFT):
+  //   1. Defence package prepared
+  //   2. Review and submit
+  //   3. Card network review (pending)
+  //
+  // Hard rule: card-network wording NEVER reaches the timeline copy
+  // unless presentationStatus is AWAITING_*, SUBMITTED_TO_NETWORK, or
+  // CLOSED_*. The forwarding step's "Awaiting Shopify forwarding to
+  // card network" title is the only place the phrase appears before
+  // forwarding actually happens, and it accurately describes a future
+  // event Shopify controls.
   type TimelineStep = { state: "done" | "active" | "pending"; title: string; helper: string };
-  const timeline: TimelineStep[] = submitted
-    ? [
-        {
-          state: "done",
-          title: "Evidence saved to Shopify",
-          helper: submittedAt
-            ? `Saved on ${formatDate(submittedAt)}`
-            : "Saved to Shopify",
-        },
-        savedAwaitingForward
-          ? {
-              state: "active",
-              title: "Shopify auto-submits to your card network",
-              helper: dispute.dueAt
-                ? `Scheduled for ${formatDate(dispute.dueAt)} (the dispute deadline). You can keep adding evidence until then, or click Submit in Shopify Admin to send sooner.`
-                : "Shopify will auto-submit on the dispute deadline. You can keep adding evidence until then.",
-            }
-          : {
-              state: "done",
-              title: "Submitted to your card network",
-              helper: "Shopify has forwarded the evidence — the card network is now reviewing.",
-            },
-        bankReviewing
-          ? {
-              state: dispute.finalOutcome ? "done" : "active",
-              title: "Bank review in progress",
-              helper: "Expected duration: 30–75 days",
-            }
-          : {
-              state: "pending",
-              title: "Bank review",
-              helper: "Begins once Shopify forwards the evidence to your card network.",
-            },
-        {
-          state: dispute.finalOutcome ? "done" : "pending",
-          title: "Outcome notification",
-          helper: dispute.finalOutcome
-            ? `Outcome: ${dispute.finalOutcome}`
-            : "You’ll be notified by email when a decision is made",
-        },
-      ]
-    : [
-        { state: data.pack ? "done" : "active", title: "Evidence pack built", helper: data.pack ? "DisputeDesk assembled the evidence available for this case." : "Generate the evidence pack to begin." },
-        { state: data.pack ? "active" : "pending", title: "Review and submit", helper: dispute.dueAt ? `Submission deadline: ${formatDate(dispute.dueAt)}` : "Review the pack and submit to Shopify before the deadline." },
-        { state: "pending", title: "Bank review", helper: "Once submitted, the issuing bank typically responds within 30–75 days." },
-      ];
+  const dueDateStr = dispute.dueAt ? formatDate(dispute.dueAt) : null;
+  const savedDateStr = submittedAt ? formatDate(submittedAt) : null;
+
+  function timelineForPresentation(): TimelineStep[] {
+    switch (presentationStatus) {
+      case "DRAFT": {
+        const packExists = !!data?.pack;
+        return [
+          {
+            state: packExists ? "done" : "active",
+            title: packExists
+              ? t("timeline.defencePackagePrepared.titleDone")
+              : t("timeline.defencePackagePrepared.titleActive"),
+            helper: packExists
+              ? t("timeline.defencePackagePrepared.helperDone")
+              : t("timeline.defencePackagePrepared.helperActive"),
+          },
+          {
+            state: packExists ? "active" : "pending",
+            title: t("timeline.reviewAndSubmit.title"),
+            helper: dueDateStr
+              ? t("timeline.reviewAndSubmit.helperWithDeadline", { deadline: dueDateStr })
+              : t("timeline.reviewAndSubmit.helperNoDeadline"),
+          },
+          {
+            state: "pending",
+            title: t("timeline.cardNetworkReview.title"),
+            helper: t("timeline.cardNetworkReview.helperPending"),
+          },
+        ];
+      }
+      case "SAVED_TO_SHOPIFY":
+      case "AWAITING_SHOPIFY_AUTO_SUBMISSION": {
+        return [
+          {
+            state: "done",
+            title: t("timeline.defencePackagePrepared.titleDone"),
+            helper: t("timeline.defencePackagePrepared.helperDone"),
+          },
+          {
+            state: "done",
+            title: t("timeline.evidenceSavedToShopify.title"),
+            helper: savedDateStr
+              ? t("timeline.evidenceSavedToShopify.helperWithDate", { savedDate: savedDateStr })
+              : t("timeline.evidenceSavedToShopify.helperNoDate"),
+          },
+          {
+            state: "active",
+            title: t("timeline.awaitingShopifyForwarding.title"),
+            helper: dueDateStr
+              ? t("timeline.awaitingShopifyForwarding.helperWithDeadline", { deadline: dueDateStr })
+              : t("timeline.awaitingShopifyForwarding.helperNoDeadline"),
+          },
+          {
+            state: "pending",
+            title: t("timeline.cardNetworkReview.title"),
+            helper: t("timeline.cardNetworkReview.helperPending"),
+          },
+        ];
+      }
+      case "SUBMITTED_TO_NETWORK": {
+        return [
+          {
+            state: "done",
+            title: t("timeline.defencePackagePrepared.titleDone"),
+            helper: t("timeline.defencePackagePrepared.helperDone"),
+          },
+          {
+            state: "done",
+            title: t("timeline.evidenceSavedToShopify.title"),
+            helper: savedDateStr
+              ? t("timeline.evidenceSavedToShopify.helperWithDate", { savedDate: savedDateStr })
+              : t("timeline.evidenceSavedToShopify.helperNoDate"),
+          },
+          {
+            state: "done",
+            title: t("timeline.submittedToCardNetwork.title"),
+            helper: t("timeline.submittedToCardNetwork.helper"),
+          },
+          {
+            state: "active",
+            title: t("timeline.cardNetworkReview.title"),
+            helper: t("timeline.cardNetworkReview.helperActive"),
+          },
+          {
+            state: "pending",
+            title: t("timeline.outcomePosted.title"),
+            helper: t("timeline.outcomePosted.helperPending"),
+          },
+        ];
+      }
+      case "CLOSED_WON":
+      case "CLOSED_LOST":
+      case "CLOSED_UNKNOWN": {
+        return [
+          {
+            state: "done",
+            title: t("timeline.defencePackagePrepared.titleDone"),
+            helper: t("timeline.defencePackagePrepared.helperDone"),
+          },
+          {
+            state: "done",
+            title: t("timeline.evidenceSavedToShopify.title"),
+            helper: savedDateStr
+              ? t("timeline.evidenceSavedToShopify.helperWithDate", { savedDate: savedDateStr })
+              : t("timeline.evidenceSavedToShopify.helperNoDate"),
+          },
+          {
+            state: "done",
+            title: t("timeline.submittedToCardNetwork.title"),
+            helper: t("timeline.submittedToCardNetwork.helper"),
+          },
+          {
+            state: "done",
+            title: t("timeline.cardNetworkReview.title"),
+            helper: t("timeline.cardNetworkReview.helperActive"),
+          },
+          {
+            state: "done",
+            title: t("timeline.outcomePosted.title"),
+            helper: t("timeline.outcomePosted.helperWithOutcome", {
+              outcome: dispute.finalOutcome ?? "—",
+            }),
+          },
+        ];
+      }
+      default:
+        return [];
+    }
+  }
+  const timeline: TimelineStep[] = timelineForPresentation();
 
   /* ── O4 Coverage breakdown by priority ──
      Hide two kinds of rows from coverage + the Evidence collected list:

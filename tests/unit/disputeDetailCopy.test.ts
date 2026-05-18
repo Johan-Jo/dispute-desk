@@ -85,3 +85,43 @@ describe("Hero copy — SUBMITTED_TO_NETWORK may use card-network wording", () =
     expect(usesCardNetwork).toBe(true);
   });
 });
+
+interface TimelineMessages {
+  defencePackagePrepared: Record<string, string>;
+  reviewAndSubmit: Record<string, string>;
+  evidenceSavedToShopify: Record<string, string>;
+  awaitingShopifyForwarding: Record<string, string>;
+  submittedToCardNetwork: Record<string, string>;
+  cardNetworkReview: Record<string, string>;
+  outcomePosted: Record<string, string>;
+}
+
+const timeline = (
+  enMessages as { disputes: { overview: { timeline: TimelineMessages } } }
+).disputes.overview.timeline;
+
+describe("Timeline copy — banned phrases", () => {
+  it("'Shopify auto-submits to your card network' is gone everywhere", () => {
+    function walkStrings(value: unknown): string[] {
+      if (typeof value === "string") return [value];
+      if (value && typeof value === "object") {
+        return Object.values(value).flatMap(walkStrings);
+      }
+      return [];
+    }
+    const allStrings = walkStrings(timeline);
+    for (const s of allStrings) {
+      expect(s).not.toMatch(/shopify auto[- ]submits/i);
+    }
+  });
+
+  it("pre-forwarding steps never claim DisputeDesk submitted to the bank", () => {
+    // The forwarding step's title mentions "Awaiting Shopify forwarding
+    // to card network" — that's a future-tense description of Shopify's
+    // action, not a claim that DisputeDesk submitted. Confirm via shape.
+    const awaitingTitle = timeline.awaitingShopifyForwarding.title;
+    expect(awaitingTitle).toMatch(/awaiting/i);
+    expect(awaitingTitle).toMatch(/shopify/i);
+    expect(awaitingTitle).not.toMatch(/disputedesk submitted/i);
+  });
+});

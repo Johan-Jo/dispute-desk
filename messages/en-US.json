@@ -625,6 +625,45 @@
       "none": "None"
     },
     "overview": {
+      "timeline": {
+        "defencePackagePrepared": {
+          "titleDone": "Defence package prepared",
+          "titleActive": "Building defence package",
+          "titlePending": "Prepare defence package",
+          "helperDone": "DisputeDesk assembled the evidence available for this case.",
+          "helperActive": "The pack is being assembled.",
+          "helperPending": "Generate the evidence pack to begin."
+        },
+        "reviewAndSubmit": {
+          "title": "Review and submit",
+          "helperWithDeadline": "Submission deadline: {deadline}",
+          "helperNoDeadline": "Review the pack and submit to Shopify before the deadline."
+        },
+        "evidenceSavedToShopify": {
+          "title": "Evidence saved to Shopify",
+          "helperWithDate": "Saved on {savedDate}",
+          "helperNoDate": "Saved to Shopify"
+        },
+        "awaitingShopifyForwarding": {
+          "title": "Awaiting Shopify forwarding to card network",
+          "helperWithDeadline": "Shopify forwards the evidence to your card network by the deadline ({deadline}) or sooner if you click Submit in Shopify Admin. DisputeDesk cannot independently verify when forwarding occurs.",
+          "helperNoDeadline": "Shopify forwards the evidence to your card network by the deadline or sooner if you click Submit in Shopify Admin. DisputeDesk cannot independently verify when forwarding occurs."
+        },
+        "submittedToCardNetwork": {
+          "title": "Sent to card network",
+          "helper": "Shopify has forwarded the evidence — the card network is now reviewing."
+        },
+        "cardNetworkReview": {
+          "title": "Card network review",
+          "helperActive": "Expected duration: 30–75 days.",
+          "helperPending": "Begins once Shopify forwards the evidence to your card network."
+        },
+        "outcomePosted": {
+          "title": "Outcome posted in Shopify",
+          "helperWithOutcome": "Outcome: {outcome}",
+          "helperPending": "You'll be notified by email when a decision is made."
+        }
+      },
       "submissionSummary": {
         "titlePreSave": "What will be saved to Shopify",
         "titlePostSave": "What was saved to Shopify",
