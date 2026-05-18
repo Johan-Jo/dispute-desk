@@ -63,6 +63,21 @@ export type EvidenceSource =
   | "derived"
   | "manual";
 
+/**
+ * An internal-only warning attached to a row that still carries useful
+ * context. For example: `order_confirmation` may stay `context_only`
+ * (order details flow into the PDF) while a billing/shipping mismatch
+ * is surfaced here as a warning. Standalone synthetic signals with no
+ * field anchor continue to render through `deriveInternalOnlySignals`
+ * in the dedicated Internal-only Signals UI section.
+ */
+export interface InternalSignalWarning {
+  id: string;
+  label: string;
+  reason: string;
+  severity: "info" | "warning";
+}
+
 export interface EvidenceLineItem {
   id: string;
   field: string;
@@ -82,6 +97,11 @@ export interface EvidenceLineItem {
   submissionMethod: SubmissionMethod;
   isNegativeOrAmbiguous: boolean;
   reason: string;
+  /** Optional internal-only warnings attached to a row whose primary
+   *  evidentiary value is still useful as context. Surfaced by UI
+   *  components that want to flag the row without changing its
+   *  submission state. */
+  internalSignals?: InternalSignalWarning[];
 }
 
 export interface DeriveEvidenceLineItemsInput {
@@ -97,6 +117,11 @@ export interface DeriveEvidenceLineItemsInput {
   attachmentUploadFailures: Map<string, string>;
   inclusionOverrides: Map<string, "force_include" | "force_exclude">;
   reasonFamily: ReasonFamily;
+  /** Optional map of internal-only warnings to attach to field-keyed
+   *  rows. Keyed by field. Mirrors the synthetic signals emitted by
+   *  `deriveInternalOnlySignals` so the dedicated Internal-only Signals
+   *  UI section and the line items stay consistent. */
+  internalSignalsByField?: Map<string, InternalSignalWarning[]>;
 }
 
 /* ── Source inference ────────────────────────────────────────────── */
@@ -193,13 +218,24 @@ function categoryForField(field: string, payload: Record<string, unknown> | null
   return categorizeEvidenceField(field, payload);
 }
 
+const AVS_MATCH_CODES = new Set(["Y", "A", "W", "X", "D", "M"]);
+const CVV_MATCH_CODES = new Set(["M"]);
+
+function readString(v: unknown): string | null {
+  return typeof v === "string" ? v : null;
+}
+
 /**
- * Negative-or-ambiguous detector. Today this fires for the three
- * internal-only fields (IP/device/fraud-screening) when their payload
- * carries a definitively negative signal (different_country, high
- * risk, etc.). Used as a belt-and-suspenders check so even if an
- * inclusion override slips past the API guard, the derivation refuses
- * to elevate.
+ * Negative-or-ambiguous detector. Fires for:
+ *   - the three INTERNAL_ONLY_FIELDS (ip/device/fraud-screening),
+ *     unconditionally — they ride a separate channel
+ *   - `avs_cvv_match` when BOTH codes are non-match (i.e. the payment
+ *     authentication failed), per user-spec §H
+ *
+ * Used as a belt-and-suspenders check so even if an inclusion override
+ * slips past the API guard, the derivation refuses to elevate. Also
+ * used to gate `includedInBankArgument` so a negative row never feeds
+ * the bank narrative.
  */
 function isNegativeOrAmbiguous(
   field: string,
@@ -207,9 +243,18 @@ function isNegativeOrAmbiguous(
 ): boolean {
   if (INTERNAL_ONLY_FIELDS.has(field)) return true;
   if (!payload) return false;
-  // billing_address_match payload mismatch is detected at the section
-  // level by classifyBillingAddressMismatch in useEvidenceSections;
-  // here we surface it on the order_confirmation row.
+
+  if (field === "avs_cvv_match") {
+    const avs = readString(payload.avsResultCode);
+    const cvv = readString(payload.cvvResultCode);
+    const avsPresent = avs !== null && avs !== "";
+    const cvvPresent = cvv !== null && cvv !== "";
+    const avsFail = avsPresent && !AVS_MATCH_CODES.has(avs.toUpperCase());
+    const cvvFail = cvvPresent && !CVV_MATCH_CODES.has(cvv.toUpperCase());
+    // Both codes present AND both fail → unambiguously negative.
+    if (avsPresent && cvvPresent && avsFail && cvvFail) return true;
+  }
+
   return false;
 }
 
@@ -285,6 +330,13 @@ function resolveSubmissionMethod(ctx: ResolutionContext): SubmissionMethod {
 
   // Internal-only fields land here regardless of strength.
   if (ctx.internalFlag) return "internal_only";
+
+  // Negative-or-ambiguous payloads on otherwise-bank-facing fields
+  // (e.g. avs_cvv_match with both codes failing) — surface as
+  // internal_only so the row doesn't read as a positive bank argument.
+  if (ctx.status === "available" && isNegativeOrAmbiguous(ctx.field, ctx.payload)) {
+    return "internal_only";
+  }
 
   // The row exists in the registry but has no canonical PDF representation.
   // Today every registered field has either a fact pathway or a context
@@ -399,6 +451,7 @@ export function deriveEvidenceLineItems(
 
     const submittedToShopify = includedInDefencePackage && packSavedToShopify;
 
+    const internalSignals = input.internalSignalsByField?.get(item.field);
     out.push({
       id: `line:${item.field}`,
       field: item.field,
@@ -415,6 +468,9 @@ export function deriveEvidenceLineItems(
       submissionMethod,
       isNegativeOrAmbiguous: negativeOrAmbiguous,
       reason: reasonFor(item.field, submissionMethod),
+      ...(internalSignals && internalSignals.length > 0
+        ? { internalSignals }
+        : {}),
     });
   }
 

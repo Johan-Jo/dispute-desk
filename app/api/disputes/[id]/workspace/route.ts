@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import path from "node:path";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { getArgumentTemplate, getIssuerClaimText } from "@/lib/argument/templates";
@@ -10,6 +11,54 @@ import {
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import { isFileEvidenceAttachmentsEnabled } from "@/lib/featureFlags";
 import { deriveOrderContext } from "@/lib/defence/orderContext";
+import {
+  deriveEvidenceLineItems,
+  type EvidenceLineItem,
+  type SubmissionMethod,
+} from "@/lib/argument/evidenceLineItem";
+import { buildInternalSignalsByField } from "@/lib/argument/internalSignals";
+import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
+import { CANONICAL_EVIDENCE, categoryFor } from "@/lib/argument/canonicalEvidence";
+import {
+  calculateCaseStrength,
+  type CaseStrengthContribution,
+} from "@/lib/argument/caseStrength";
+import type { EvidenceFact } from "@/lib/defence/types";
+
+/** Merchant-facing dispute submission state derived from the underlying
+ *  DB enums + Shopify forwarding signal. See plan §"presentationStatus". */
+export type PresentationStatus =
+  | "DRAFT"
+  | "SAVED_TO_SHOPIFY"
+  | "AWAITING_SHOPIFY_AUTO_SUBMISSION"
+  | "SUBMITTED_TO_NETWORK"
+  | "CLOSED_WON"
+  | "CLOSED_LOST"
+  | "CLOSED_UNKNOWN";
+
+function derivePresentationStatus(args: {
+  packExists: boolean;
+  submissionState: string | null;
+  normalizedStatus: string | null;
+  finalOutcome: string | null;
+  evidenceSentOn: string | null;
+}): PresentationStatus {
+  if (!args.packExists) return "DRAFT";
+  if (args.finalOutcome === "won") return "CLOSED_WON";
+  if (args.finalOutcome === "lost") return "CLOSED_LOST";
+  if (args.finalOutcome != null) return "CLOSED_UNKNOWN";
+  if (args.submissionState === "manual_submission_reported") return "CLOSED_UNKNOWN";
+  // Shopify forwarded to the card network — the only state in which the
+  // UI may say "card network review" / "submitted to network".
+  if (args.normalizedStatus === "submitted_to_bank" || args.evidenceSentOn != null) {
+    return "SUBMITTED_TO_NETWORK";
+  }
+  if (args.submissionState === "submitted_confirmed") {
+    return "AWAITING_SHOPIFY_AUTO_SUBMISSION";
+  }
+  if (args.submissionState === "saved_to_shopify") return "SAVED_TO_SHOPIFY";
+  return "DRAFT";
+}
 
 /** Scopes required for the file evidence layer's REST upload path
  *  (Phase 0 + 3). When the flag is on but the merchant's offline
@@ -537,13 +586,197 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     missingScopes,
   };
 
+  // ── 7. Derive presentationStatus + evidenceLineItems + submissionSummary ──
+  // Single source of truth for the dispute-detail UI surfaces. Plan v2.
+  // `submitted_at` stores Shopify's `evidenceSentOn` (per syncDisputes.ts).
+  // When set, Shopify has forwarded the evidence to the card network —
+  // the only state in which `SUBMITTED_TO_NETWORK` is reachable.
+  const presentationStatus = derivePresentationStatus({
+    packExists: !!packRow,
+    submissionState: row.submission_state ?? null,
+    normalizedStatus: row.normalized_status ?? null,
+    finalOutcome: row.final_outcome ?? null,
+    evidenceSentOn: (row.submitted_at as string | null) ?? null,
+  });
+
+  // Build the payload-by-field map the line-item derivation expects.
+  const payloadByField = new Map<string, unknown>();
+  for (const [field, item] of Object.entries(evidenceItemsByField)) {
+    if (item.payload) payloadByField.set(field, item.payload);
+  }
+
+  // Reuse the most recent defence_packages.facts_json when present.
+  // When absent (no defence package built yet), facts is empty — the
+  // line items still resolve via the canonical categorizer, just without
+  // fact-anchored bank-narrative flags.
+  let factsJson: EvidenceFact[] = [];
+  if (packRow?.id) {
+    const { data: defenceRow } = await sb
+      .from("defence_packages")
+      .select("facts_json")
+      .eq("source_pack_id", packRow.id)
+      .eq("shop_id", row.shop_id)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (Array.isArray(defenceRow?.facts_json)) {
+      factsJson = defenceRow!.facts_json as EvidenceFact[];
+    }
+  }
+
+  // Compute strong/moderate contributions for the line-item resolver.
+  // Mirrors `useDisputeWorkspace`'s derivation but server-side so the
+  // workspace API can ship a fully-derived view-model.
+  const coverageInput = pack?.coverage ?? undefined;
+  const caseStrength = calculateCaseStrength(
+    reconciledChecklistV2,
+    row.reason,
+    { kind: "byField", map: evidenceItemsByField as Record<string, { payload?: Record<string, unknown> | null }> },
+    coverageInput
+      ? { state: coverageInput.state, shopifyProtectStatus: coverageInput.shopifyProtectStatus }
+      : undefined,
+  );
+  // computeContributions equivalent inline — same logic as
+  // useDisputeWorkspace's derivation, deduped by signalId.
+  const RANK_CONTRIB: Record<string, number> = { strong: 3, moderate: 2, supporting: 1, invalid: 0 };
+  const bestBySignal = new Map<
+    string,
+    { category: "strong" | "moderate"; label: string; evidenceFieldKey: string }
+  >();
+  for (const item of reconciledChecklistV2) {
+    if (item.status !== "available" && item.status !== "waived") continue;
+    const spec = CANONICAL_EVIDENCE[item.field];
+    if (!spec) continue;
+    const cat = categoryFor({
+      fieldKey: item.field,
+      payload: (evidenceItemsByField[item.field]?.payload ?? null) as Record<string, unknown> | null,
+    });
+    if (cat !== "strong" && cat !== "moderate") continue;
+    const prev = bestBySignal.get(spec.signalId);
+    if (!prev || RANK_CONTRIB[cat] > RANK_CONTRIB[prev.category]) {
+      bestBySignal.set(spec.signalId, {
+        category: cat,
+        label: spec.label,
+        evidenceFieldKey: item.field,
+      });
+    }
+  }
+  const strongContribs: CaseStrengthContribution[] = [];
+  const moderateContribs: CaseStrengthContribution[] = [];
+  for (const [signalId, acc] of bestBySignal.entries()) {
+    const entry: CaseStrengthContribution = {
+      signalId: signalId as CaseStrengthContribution["signalId"],
+      category: acc.category,
+      label: acc.label,
+      evidenceFieldKey: acc.evidenceFieldKey,
+    };
+    if (acc.category === "strong") strongContribs.push(entry);
+    else moderateContribs.push(entry);
+  }
+
+  // Inclusion overrides — keyed by field. Stored in
+  // pack_json.inclusionOverrides (commit 10 writes here; empty until
+  // the override route lands).
+  type InclusionOverrideMap = Record<string, "force_include" | "force_exclude">;
+  const rawOverrides =
+    ((packRow?.pack_json as { inclusionOverrides?: InclusionOverrideMap } | null)
+      ?.inclusionOverrides as InclusionOverrideMap | undefined) ?? {};
+  const inclusionOverrides = new Map<string, "force_include" | "force_exclude">(
+    Object.entries(rawOverrides) as Array<[string, "force_include" | "force_exclude"]>,
+  );
+
+  // Excluded fields — legacy excludedFields list lives transiently in
+  // clientState; pack-side persistence happens through inclusionOverrides
+  // (force_exclude). For server-side derivation we just consume the
+  // overrides map.
+  const excludedFromOverrides = new Set<string>();
+  for (const [field, value] of inclusionOverrides.entries()) {
+    if (value === "force_exclude") excludedFromOverrides.add(field);
+  }
+
+  // Attachment upload failures map. Today `pack_json.attachmentUploads`
+  // only records successes; future schema may add `attachmentUploadFailures[]`.
+  // Stay defensive — empty map when not present.
+  const rawFailures =
+    ((packRow?.pack_json as { attachmentUploadFailures?: Array<{ field: string; reason: string }> } | null)
+      ?.attachmentUploadFailures as Array<{ field: string; reason: string }> | undefined) ?? [];
+  const attachmentUploadFailures = new Map<string, string>();
+  for (const f of rawFailures) attachmentUploadFailures.set(f.field, f.reason);
+
+  // Internal-only signals, anchored to fields.
+  const internalSignalsByField = buildInternalSignalsByField(payloadByField);
+
+  const evidenceLineItems: EvidenceLineItem[] = packRow
+    ? deriveEvidenceLineItems({
+        checklist: reconciledChecklistV2,
+        facts: factsJson,
+        payloadByField,
+        contributions: { strong: strongContribs, moderate: moderateContribs },
+        packSavedToShopify: !!packRow.saved_to_shopify_at,
+        excludedFields: excludedFromOverrides,
+        attachmentUploadFailures,
+        inclusionOverrides,
+        reasonFamily: resolveReasonFamily(row.reason),
+        internalSignalsByField,
+      })
+    : [];
+
+  // Submission summary — drives the SubmissionSummaryPanel.
+  // shopifyStructuredFields uses the same first/last split as
+  // composeShopifyMutationPayload so the panel matches what gets sent.
+  const displayName = (row.customer_display_name as string | null)?.trim() ?? "";
+  let customerFirstName: string | null = null;
+  let customerLastName: string | null = null;
+  if (displayName) {
+    const [first, ...rest] = displayName.split(/\s+/);
+    customerFirstName = first || null;
+    const last = rest.join(" ").trim();
+    customerLastName = last || null;
+  }
+  const factsInPdf = factsJson
+    .filter((f) => f.bankEligible && f.includeInBankNarrative && !f.submissionRisk)
+    .map((f) => ({
+      field: ((f.value as { fieldKey?: string } | null)?.fieldKey ?? "") as string,
+      label: f.label,
+      categoryLabel: f.category as string,
+    }));
+  const methodCount = (m: SubmissionMethod): number =>
+    evidenceLineItems.filter((li) => li.submissionMethod === m).length;
+  const submissionSummary = {
+    pdfFileName: packRow?.pdf_path
+      ? path.basename(String(packRow.pdf_path))
+      : null,
+    shopifyStructuredFields: [
+      { field: "customer_first_name" as const, value: customerFirstName },
+      { field: "customer_last_name" as const, value: customerLastName },
+      { field: "customer_email" as const, value: (row.customer_email as string | null) ?? null },
+    ],
+    factsInPdf,
+    counts: {
+      usedAsPositiveBankArgument: evidenceLineItems.filter((li) => li.usedAsPositiveBankEvidence).length,
+      contextOnly: methodCount("context_only"),
+      internalOnly: methodCount("internal_only"),
+      excluded: methodCount("excluded"),
+      notSupported: methodCount("not_supported"),
+      failedUpload: methodCount("failed_upload"),
+      waived: methodCount("waived"),
+    },
+  };
+  // Reference unused fields so tsc doesn't complain when caseStrength
+  // isn't directly returned (the workspace UI re-derives it client-side
+  // for now; the server-side compute exists so future commits can move
+  // strengthReason composition to the API).
+  void caseStrength;
+
   return NextResponse.json({
     dispute,
     pack,
     argumentMap,
     rebuttalDraft,
     rebuttalOutdated,
-    submissionFields: [],
+    presentationStatus,
+    evidenceLineItems,
+    submissionSummary,
     // Derived first-class attachment inventory for the dispute Review
     // tab. Always an array (never null) — empty array is the explicit
     // empty state. Plan v3 §3.A.4.
