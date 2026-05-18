@@ -143,21 +143,24 @@ export function EvidenceUsedSection({
                 {t(group.captionKey)}
               </Text>
             ) : null}
-            {group.rows.map((item, rowIndex) => (
-              <Fragment key={item.id}>
-                {rowIndex > 0 ? (
-                  <Box
-                    borderBlockStartWidth="025"
-                    borderColor="border"
-                    paddingBlockStart="300"
-                  >
-                    <EvidenceRow item={item} />
-                  </Box>
-                ) : (
-                  <EvidenceRow item={item} />
-                )}
-              </Fragment>
-            ))}
+            {group.rows.map((item, rowIndex) => {
+              const li = lineItemsByField.get(item.field);
+              return (
+                <Fragment key={item.id}>
+                  {rowIndex > 0 ? (
+                    <Box
+                      borderBlockStartWidth="025"
+                      borderColor="border"
+                      paddingBlockStart="300"
+                    >
+                      <EvidenceRow item={item} lineItem={li} />
+                    </Box>
+                  ) : (
+                    <EvidenceRow item={item} lineItem={li} />
+                  )}
+                </Fragment>
+              );
+            })}
           </BlockStack>
         ))}
       </BlockStack>

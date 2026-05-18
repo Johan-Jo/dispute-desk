@@ -756,7 +756,21 @@
         "notSubmittedReason": "Not submitted to Shopify to avoid weakening the case.",
         "sourceShopify": "Shopify",
         "sourceMerchant": "Merchant upload",
-        "sourceDerived": "Derived"
+        "sourceDerived": "Derived",
+        "packageStatus": {
+          "included": "Included in defence package",
+          "internal_only": "Internal only",
+          "not_included": "Not included",
+          "not_supported": "Not supported",
+          "excluded": "Excluded",
+          "failed_upload": "Upload failed",
+          "waived": "Marked not applicable"
+        },
+        "bankArgumentStatus": {
+          "used": "Used as bank argument",
+          "context_only": "Context only",
+          "not_used": "Not used in bank argument"
+        }
       },
       "automation": {
         "automatic": "DisputeDesk will handle this automatically based on the evidence shown above.",
