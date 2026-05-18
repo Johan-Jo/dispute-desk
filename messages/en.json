@@ -858,6 +858,33 @@
       "windowClosedError": "Shopify has already forwarded this dispute evidence to the bank, so new files can no longer be added."
     },
     "reviewTab": {
+      "inclusion": {
+        "title": "Inclusion review",
+        "subtitle": "Verify what reaches the bank before saving. The defence package is the only bank-facing channel — DisputeDesk does not send structured evidence fields to Shopify.",
+        "groups": {
+          "usedAsBankArgument": "Used as positive bank argument",
+          "contextOnly": "Context only",
+          "keptInternal": "Kept internal",
+          "notIncluded": "Not included",
+          "excludedByMerchant": "Excluded by you"
+        },
+        "groupHelpers": {
+          "usedAsBankArgument": "Evidence the defence narrative cites as decisive proof. Read-only — adding or removing decisive evidence requires changing the underlying payload.",
+          "contextOnly": "Background context in the package. Read-only — system decides whether each item rises to decisive proof.",
+          "keptInternal": "Signals that may weaken the case if surfaced to the bank. Promoting these requires a confirmation flow not available in Phase 1.",
+          "notIncluded": "Items on file but not in the package. Safe rows can be force-included to add them as supporting context (never as decisive proof).",
+          "excludedByMerchant": "Items you have explicitly excluded. Clear the override to restore the natural state."
+        },
+        "toggle": {
+          "include": "Include in package",
+          "restore": "Restore default",
+          "disabledInternalOnly": "Promoting an internal-only signal to bank-facing requires a confirmation flow that's not available yet."
+        },
+        "emptyGroup": "—",
+        "emptyAll": "No evidence rows are available for this dispute yet. Generate or rebuild the defence package to populate this section.",
+        "errorOverride": "Could not update inclusion ({code}). Please try again.",
+        "errorOverrideNeedsConfirmation": "This signal requires a confirmation flow that isn't available yet. Phase 2 will add the warning + override audit trail."
+      },
       "sections": {
         "status": {
           "submitted": "Evidence submitted to Shopify",

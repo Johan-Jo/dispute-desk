@@ -24,6 +24,12 @@ export type EventType =
   | "data_retained"
   | "evidence_waived"
   | "evidence_unwaived"
+  // Merchant inclusion override (Phase 1 of the dispute-detail redesign).
+  // Written by app/api/packs/[packId]/inclusion-override/route.ts when
+  // the merchant toggles a row's inclusion in the bank-facing package.
+  // Payload: { field, action: "force_include" | "force_exclude" | "clear",
+  // priorState?: "force_include" | "force_exclude" | null }.
+  | "evidence_inclusion_overridden"
   | "submitted_with_warnings"
   | "order_fetch_failed"
   // Conditional file evidence layer (Phase 3 of

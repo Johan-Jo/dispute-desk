@@ -14,6 +14,7 @@ import { BlockStack, Banner, Spinner } from "@shopify/polaris";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { useReviewView } from "./useReviewView";
 import { CompleteDefencePackageCard } from "./sections/CompleteDefencePackageCard";
+import { InclusionReviewSection } from "./sections/InclusionReviewSection";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -22,7 +23,7 @@ interface Props {
 }
 
 export default function ReviewSubmitTab({ workspace }: Props) {
-  const { data, derived, clientState } = workspace;
+  const { data, derived, clientState, actions } = workspace;
   const view = useReviewView(workspace);
 
   // ── Loading state ──
@@ -62,6 +63,16 @@ export default function ReviewSubmitTab({ workspace }: Props) {
       {failedBanner}
       {buildingBanner}
       {noPackBanner}
+
+      {/* Inclusion review — Phase 1 read-only inspection of every
+          evidence row with an audit-logged toggle for the safe set.
+          Mounted above the package card so the merchant verifies
+          inclusion before clicking Finalize/Submit. */}
+      <InclusionReviewSection
+        packId={data?.pack?.id ?? null}
+        lineItems={data?.evidenceLineItems ?? []}
+        onToggleInclusionOverride={actions.toggleInclusionOverride}
+      />
 
       {/* Complete Defence Package — the only card on this tab.
           Header renders the submission-state banner (success when

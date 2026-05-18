@@ -632,6 +632,38 @@ export function useDisputeWorkspace(disputeId: string) {
     [data?.pack, fetchAll],
   );
 
+  /** Toggle a merchant inclusion override for a single evidence field.
+   *
+   *  Value semantics:
+   *    - "force_include": include in the defence package (but ONLY as
+   *      `bank_argument` when the payload independently qualifies; the
+   *      derivation refuses to elevate strength on its own).
+   *    - "force_exclude": remove from the defence package entirely.
+   *    - null: clear an existing override and restore the natural state.
+   *
+   *  Phase 1: the API rejects `force_include` for internal-only fields
+   *  (returns 409 OVERRIDE_NEEDS_CONFIRMATION). The UI must surface
+   *  the disabled state proactively to avoid the round-trip. */
+  const toggleInclusionOverride = useCallback(
+    async (field: string, value: "force_include" | "force_exclude" | null) => {
+      if (!data?.pack) return;
+      const res = await fetch(
+        `/api/packs/${data.pack.id}/inclusion-override`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ field, value }),
+        },
+      );
+      // Refetch even on failure so the UI reflects the unchanged
+      // canonical state. The component is responsible for surfacing
+      // 409 OVERRIDE_NEEDS_CONFIRMATION; this hook doesn't show toasts.
+      void res;
+      fetchAll();
+    },
+    [data?.pack, fetchAll],
+  );
+
   // saveRebuttal + regenerateArgument removed 2026-05-16 — the legacy
   // text rebuttal engine is retired. The defence-package builder owns
   // bank-facing narrative now; regenerate happens via the
@@ -889,6 +921,7 @@ export function useDisputeWorkspace(disputeId: string) {
       dismissRebuildOutcome,
       waiveItem,
       unwaiveItem,
+      toggleInclusionOverride,
       submitToShopify,
       exportPdf,
       downloadPdf,
