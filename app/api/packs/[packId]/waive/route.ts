@@ -3,10 +3,9 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
-import {
-  evaluateCompletenessV2,
-} from "@/lib/automation/completeness";
+import { deriveCompletenessMetrics } from "@/lib/automation/completeness";
 import type {
+  ChecklistItemV2,
   WaiveReason,
   WaivedItemRecord,
 } from "@/lib/types/evidenceItem";
@@ -18,7 +17,17 @@ export const runtime = "nodejs";
  * POST /api/packs/:packId/waive
  *
  * Waive a missing evidence item — merchant chooses to proceed without it.
- * Updates waived_items, re-evaluates completeness, logs audit event.
+ * Updates waived_items, patches the existing checklist_v2 row in place,
+ * re-derives metrics, logs audit event.
+ *
+ * Why an in-place patch (not a full evaluateCompletenessV2 rebuild):
+ * the build path feeds evaluateCompletenessV2 the real `collectedFields`,
+ * DB-backed `templateItems`, and the live `orderContext`. The waive
+ * endpoint has none of those on hand, so re-running the full evaluation
+ * would silently strip rows (template items vanish; conditional rows
+ * resolve against DEFAULT_ORDER_CONTEXT and flip to `unavailable`),
+ * collapsing the entire "Evidence on file" section after a single waive.
+ * Mirrors the manual-upload route's pattern.
  */
 export async function POST(
   req: NextRequest,
@@ -64,7 +73,7 @@ export async function POST(
   const { data: pack, error } = await sb
     .from("evidence_packs")
     .select(
-      "id, shop_id, dispute_id, status, waived_items, checklist, checklist_v2",
+      "id, shop_id, dispute_id, status, waived_items, checklist_v2",
     )
     .eq("id", packId)
     .eq("shop_id", shopId)
@@ -81,62 +90,75 @@ export async function POST(
     );
   }
 
+  const priorChecklist = (pack.checklist_v2 ?? []) as ChecklistItemV2[];
+
+  // Resolve label from the existing checklist — the row we're waiving
+  // is the source of truth for the field's display label.
+  const targetRow = priorChecklist.find((c) => c.field === field);
+  const fieldLabel = targetRow?.label ?? field;
+
   // Append to waived_items (idempotent: replace if field already waived)
   const existing = (pack.waived_items ?? []) as WaivedItemRecord[];
-  const fieldLabel =
-    (pack.checklist_v2 as { field: string; label: string }[] | null)?.find(
-      (c) => c.field === field,
-    )?.label ??
-    (pack.checklist as { field: string; label: string }[] | null)?.find(
-      (c) => c.field === field,
-    )?.label ??
-    field;
-
+  const waivedAt = new Date().toISOString();
   const newRecord: WaivedItemRecord = {
     field,
     label: fieldLabel,
     reason,
     note,
-    waivedAt: new Date().toISOString(),
+    waivedAt,
     waivedBy: "merchant",
   };
-  const updated = [
+  const updatedWaivedItems = [
     ...existing.filter((w) => w.field !== field),
     newRecord,
   ];
 
-  // Re-evaluate completeness with the waive applied
-  const { data: dispute } = pack.dispute_id
-    ? await sb
-        .from("disputes")
-        .select("reason")
-        .eq("id", pack.dispute_id)
-        .single()
-    : { data: null };
+  // Patch the existing checklist in place. Only the target row's status
+  // flips to "waived"; every other row preserves its prior state so the
+  // "Evidence on file" supporting bucket stays intact. If the row doesn't
+  // exist yet (rare — manual upload of an off-template field), append it
+  // so the waive record has a corresponding checklist row.
+  const patchedChecklist: ChecklistItemV2[] = targetRow
+    ? priorChecklist.map((c) =>
+        c.field === field
+          ? {
+              ...c,
+              status: "waived" as const,
+              waiveReason: reason,
+              waiveNote: note,
+              waivedAt,
+              waivedBy: "merchant",
+            }
+          : c,
+      )
+    : [
+        ...priorChecklist,
+        {
+          field,
+          label: fieldLabel,
+          status: "waived" as const,
+          priority: "optional",
+          blocking: false,
+          source: "manual_upload",
+          waiveReason: reason,
+          waiveNote: note,
+          waivedAt,
+          waivedBy: "merchant",
+        },
+      ];
 
-  // Collect present fields from v1 checklist
-  const presentFields = new Set<string>();
-  for (const c of (pack.checklist ?? []) as { field: string; present: boolean }[]) {
-    if (c.present) presentFields.add(c.field);
-  }
-
-  const result = evaluateCompletenessV2(
-    dispute?.reason ?? null,
-    presentFields,
-    updated,
-    null,
-  );
+  const metrics = deriveCompletenessMetrics(patchedChecklist);
 
   await sb
     .from("evidence_packs")
     .update({
-      waived_items: updated,
-      checklist_v2: result.checklist,
-      checklist: result.legacyChecklist,
-      completeness_score: result.completenessScore,
-      blockers: result.legacyBlockers,
-      recommended_actions: result.legacyRecommendedActions,
-      submission_readiness: result.submissionReadiness,
+      waived_items: updatedWaivedItems,
+      checklist_v2: patchedChecklist,
+      checklist: metrics.legacyChecklist,
+      completeness_score: metrics.completenessScore,
+      blockers: metrics.legacyBlockers,
+      recommended_actions: metrics.legacyRecommendedActions,
+      submission_readiness: metrics.submissionReadiness,
       updated_at: new Date().toISOString(),
     })
     .eq("id", packId);
@@ -152,8 +174,8 @@ export async function POST(
 
   return NextResponse.json({
     ok: true,
-    submissionReadiness: result.submissionReadiness,
-    completenessScore: result.completenessScore,
+    submissionReadiness: metrics.submissionReadiness,
+    completenessScore: metrics.completenessScore,
   });
 }
 
@@ -161,6 +183,7 @@ export async function POST(
  * DELETE /api/packs/:packId/waive?field=xxx
  *
  * Un-waive a previously waived item — restores it to missing state.
+ * Same in-place patch rationale as POST.
  */
 export async function DELETE(
   req: NextRequest,
@@ -187,7 +210,7 @@ export async function DELETE(
   const { data: pack, error } = await sb
     .from("evidence_packs")
     .select(
-      "id, shop_id, dispute_id, status, waived_items, checklist",
+      "id, shop_id, dispute_id, status, waived_items, checklist_v2",
     )
     .eq("id", packId)
     .eq("shop_id", shopId)
@@ -198,43 +221,41 @@ export async function DELETE(
   }
 
   const existing = (pack.waived_items ?? []) as WaivedItemRecord[];
-  const updated = existing.filter((w) => w.field !== field);
+  const updatedWaivedItems = existing.filter((w) => w.field !== field);
 
-  if (updated.length === existing.length) {
+  if (updatedWaivedItems.length === existing.length) {
     return NextResponse.json({ error: "Field not found in waived items" }, { status: 404 });
   }
 
-  // Re-evaluate
-  const { data: dispute } = pack.dispute_id
-    ? await sb
-        .from("disputes")
-        .select("reason")
-        .eq("id", pack.dispute_id)
-        .single()
-    : { data: null };
+  // Patch in place: flip the row from "waived" back to "missing" and
+  // strip waive metadata. Everything else stays untouched. The next
+  // workspace read will run reconcileChecklistWithCollectedFields, which
+  // will flip the row to "available" if the field was actually collected.
+  const priorChecklist = (pack.checklist_v2 ?? []) as ChecklistItemV2[];
+  const patchedChecklist: ChecklistItemV2[] = priorChecklist.map((c) => {
+    if (c.field !== field) return c;
+    const {
+      waiveReason: _waiveReason,
+      waiveNote: _waiveNote,
+      waivedAt: _waivedAt,
+      waivedBy: _waivedBy,
+      ...rest
+    } = c;
+    return { ...rest, status: "missing" as const };
+  });
 
-  const presentFields = new Set<string>();
-  for (const c of (pack.checklist ?? []) as { field: string; present: boolean }[]) {
-    if (c.present) presentFields.add(c.field);
-  }
-
-  const result = evaluateCompletenessV2(
-    dispute?.reason ?? null,
-    presentFields,
-    updated,
-    null,
-  );
+  const metrics = deriveCompletenessMetrics(patchedChecklist);
 
   await sb
     .from("evidence_packs")
     .update({
-      waived_items: updated,
-      checklist_v2: result.checklist,
-      checklist: result.legacyChecklist,
-      completeness_score: result.completenessScore,
-      blockers: result.legacyBlockers,
-      recommended_actions: result.legacyRecommendedActions,
-      submission_readiness: result.submissionReadiness,
+      waived_items: updatedWaivedItems,
+      checklist_v2: patchedChecklist,
+      checklist: metrics.legacyChecklist,
+      completeness_score: metrics.completenessScore,
+      blockers: metrics.legacyBlockers,
+      recommended_actions: metrics.legacyRecommendedActions,
+      submission_readiness: metrics.submissionReadiness,
       updated_at: new Date().toISOString(),
     })
     .eq("id", packId);
@@ -250,7 +271,7 @@ export async function DELETE(
 
   return NextResponse.json({
     ok: true,
-    submissionReadiness: result.submissionReadiness,
-    completenessScore: result.completenessScore,
+    submissionReadiness: metrics.submissionReadiness,
+    completenessScore: metrics.completenessScore,
   });
 }
