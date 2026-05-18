@@ -30,6 +30,10 @@ export type EventType =
   // Payload: { field, action: "force_include" | "force_exclude" | "clear",
   // priorState?: "force_include" | "force_exclude" | null }.
   | "evidence_inclusion_overridden"
+  // Auto-build of an evidence_pack was enqueued by the system. Existing
+  // direct audit_events inserts in lib/automation/pipeline.ts and the
+  // new defence-package-deadline-rebuild cron use this event type.
+  | "auto_build_enqueued"
   | "submitted_with_warnings"
   | "order_fetch_failed"
   // Conditional file evidence layer (Phase 3 of
