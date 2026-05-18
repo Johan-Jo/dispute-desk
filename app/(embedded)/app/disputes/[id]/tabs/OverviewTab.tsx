@@ -301,8 +301,22 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         { state: "pending", title: "Bank review", helper: "Once submitted, the issuing bank typically responds within 30–75 days." },
       ];
 
-  /* ── O4 Coverage breakdown by priority ── */
-  const visibleChecklist = effectiveChecklist.filter((c) => c.status !== "unavailable");
+  /* ── O4 Coverage breakdown by priority ──
+     Hide two kinds of rows from coverage + the Evidence collected list:
+       1. `unavailable` — structurally impossible to collect (e.g. 3DS
+          on non-Shopify-Payments orders).
+       2. `missing` rows the merchant cannot act on — auto-only signals
+          like `fraud_risk_screening`, `avs_cvv_match`, or
+          `billing_address_match`. Per commit 9241996 + fraud-risk source
+          rules: absence of an auto-collected signal is never a negative
+          signal, so it must not render as a red "Missing" card with no
+          actionable CTA. Mirrors the §3 Missing-or-weak filter
+          (deriveMissingItems → collectionType === "manual"). */
+  const visibleChecklist = effectiveChecklist.filter((c) => {
+    if (c.status === "unavailable") return false;
+    if (c.status === "missing" && !canMerchantUpload(c)) return false;
+    return true;
+  });
   type Bucket = { key: "critical" | "recommended" | "optional"; label: string; items: ChecklistItemV2[]; complete: number };
   const buckets: Bucket[] = (["critical", "recommended", "optional"] as const).map((key) => {
     const items = visibleChecklist.filter((c) => (c.priority as string) === key);
@@ -525,8 +539,22 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           "Collected" pill has been dropped — presence in the list
           implies collected unless the pill says otherwise. */}
       {(() => {
+        // Hide rows that aren't actionable feedback for the merchant:
+        //   1. `unavailable` — structural facts (3DS on non-Shopify-
+        //      Payments, "No card payment on this order" for AVS/CVV
+        //      when the order paid with a wallet/installments, etc.).
+        //      The data is correct; surfacing it just adds noise the
+        //      merchant can't act on.
+        //   2. `missing` rows the merchant cannot act on — auto-only
+        //      signals (fraud_risk_screening, avs_cvv_match on missing
+        //      gateway codes, etc.). Per commit 9241996 + fraudRiskSource
+        //      rules: absence of an auto-collected signal is never a
+        //      negative signal. Mirrors `visibleChecklist` above and the
+        //      §3 Missing-or-weak gate in `deriveMissingItems`.
         const collectedRows = effectiveChecklist
           .filter((c) => CANONICAL_EVIDENCE[c.field])
+          .filter((c) => c.status !== "unavailable")
+          .filter((c) => !(c.status === "missing" && !canMerchantUpload(c)))
           .map((c) => {
             const spec = CANONICAL_EVIDENCE[c.field]!;
             const payload =
