@@ -48,7 +48,7 @@ describe("Test 2 — supporting count never upgrades to Moderate or Strong", () 
 });
 
 describe("Test 3 — Fraud + policies only → Weak (fraud decisive-signal filter)", () => {
-  it.fails("policies accepted at checkout do not make a fraud case strong", () => {
+  it("policies accepted at checkout do not make a fraud case strong", () => {
     const f = policiesOnlyFraudFixture();
     const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField));
     expect(result.overall).toBe("weak");

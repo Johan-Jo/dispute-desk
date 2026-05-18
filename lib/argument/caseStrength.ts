@@ -417,25 +417,52 @@ export function calculateCaseStrength(
     strongSignalIds.has("device_session") || moderateSignalIds.has("device_session");
   const hasCommunicationStrong = strongSignalIds.has("communication");
 
+  // FRAUD_DECISIVE_SIGNALS — the only signals that can elevate a fraud
+  // case to Strong on count alone. Policies, order receipts, supporting
+  // documents (etc.) cannot make a fraud case strong by themselves,
+  // even when each happens to land as `strong` per the canonical
+  // categorizer (e.g. policy_refund with acceptedAtCheckout=true).
+  //
+  // Without this filter, three policies-accepted-at-checkout rows would
+  // count as `strongCount === 3` and the `>=2` branch would label the
+  // case Strong — but for an unauthorized-transaction dispute, policy
+  // acceptance proves nothing about cardholder identity. The user-spec
+  // explicitly forbids this elevation.
+  const FRAUD_DECISIVE_SIGNALS = new Set<SignalId>([
+    "payment_auth",
+    "delivery",
+    "device_session",
+    "communication",
+    "account_history",
+  ]);
+  const strongCountFromFraudSignals = strongRows.filter((r) =>
+    FRAUD_DECISIVE_SIGNALS.has(r.signalId),
+  ).length;
+  const moderateCountFromFraudSignals = moderateRows.filter((r) =>
+    FRAUD_DECISIVE_SIGNALS.has(r.signalId),
+  ).length;
+
   let overall: CaseStrengthLevel;
   let isFraudAvsOnlyStrong = false;
   if (family === "fraud") {
     if (
-      strongCount >= 2 ||
+      strongCountFromFraudSignals >= 2 ||
       (hasAvsStrong && (hasDeliverySupport || hasDeviceSupport || hasCommunicationStrong))
     ) {
       overall = "strong";
     } else if (
       hasAvsStrong ||
-      (strongCount === 1 && moderateCount >= 1) ||
-      moderateCount >= 2
+      (strongCountFromFraudSignals === 1 && moderateCountFromFraudSignals >= 1) ||
+      moderateCountFromFraudSignals >= 2
     ) {
       overall = "moderate";
       // Flag the AVS-Strong-alone path so the hero can show "Needs
       // strengthening" instead of "Could win" — same tone, different
       // accent on what's required next.
       isFraudAvsOnlyStrong =
-        hasAvsStrong && strongCount === 1 && moderateCount === 0;
+        hasAvsStrong &&
+        strongCountFromFraudSignals === 1 &&
+        moderateCountFromFraudSignals === 0;
     } else {
       overall = "weak";
     }
