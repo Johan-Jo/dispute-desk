@@ -41,6 +41,7 @@ import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
 import { classifyEvidenceRow } from "@/lib/argument/categoryBadge";
 import { canMerchantUpload, type useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { LiabilityShiftPanel } from "@/components/liability-shift/LiabilityShiftPanel";
+import { SubmissionSummaryPanel } from "./sections/SubmissionSummaryPanel";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -922,6 +923,17 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           </div>
         );
       })()}
+
+      {/* O5: Submission summary — "What was/will be saved to Shopify".
+              Same EvidenceLineItem source as the §2 Evidence section so
+              the panel cannot disagree with the rows. Plan v2 §G. */}
+      {data?.submissionSummary && (
+        <SubmissionSummaryPanel
+          summary={data.submissionSummary}
+          lineItems={data.evidenceLineItems ?? []}
+          presentationStatus={presentationStatus}
+        />
+      )}
 
       {/* Automation rule card */}
       <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
