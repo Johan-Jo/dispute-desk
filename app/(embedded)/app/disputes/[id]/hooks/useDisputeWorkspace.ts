@@ -141,22 +141,58 @@ export const MERCHANT_ACTIONABLE_FIELDS: ReadonlySet<string> = new Set(
   Object.keys(FIELD_ACTIONS),
 );
 
+/** Fields that are UNAMBIGUOUSLY system-derived: the data comes from a
+ *  source outside the merchant's control (payment gateway, carrier,
+ *  Shopify's risk engine, IPinfo, etc.). The merchant cannot upload
+ *  these by definition — surfacing Upload/Mark-not-applicable buttons
+ *  for them is misleading.
+ *
+ *  This list is the inverse of MERCHANT_ACTIONABLE_FIELDS for the
+ *  fields the canonical registry knows about. Kept as an explicit
+ *  allowlist (not derived) so a future template/registry change that
+ *  inadvertently nulls `collectionType` cannot accidentally promote
+ *  a system signal back to a merchant task. Same set as
+ *  SOURCE_OUTSIDE_MERCHANT_CONTROL in lib/argument/evidenceLineItem.ts.
+ */
+export const SYSTEM_DERIVED_FIELDS: ReadonlySet<string> = new Set([
+  "avs_cvv_match",
+  "billing_address_match",
+  "tds_authentication",
+  "fraud_risk_screening",
+  "ip_location_check",
+  "device_session_consistency",
+  "shipping_tracking",
+  "delivery_proof",
+  "order_confirmation",
+  "customer_account_info",
+  "activity_log",
+  "product_description",
+]);
+
 /** True when the merchant should see an upload affordance on a
  *  missing evidence row. Used by both the Overview tab "Add this
  *  evidence" CTA and the Evidence tab inventory + per-row Upload
  *  button so the policy is single-sourced.
  *
- *  Allows the merchant to act when the field is in the explicit
- *  `MERCHANT_ACTIONABLE_FIELDS` allowlist *or* the field is not
- *  strictly auto-collected (preserves the 2026-04-24 manual fallback
- *  for `conditional_auto` rows like AVS when payment data is
- *  missing). */
+ *  Precedence:
+ *   1. `MERCHANT_ACTIONABLE_FIELDS` allowlist → always allow upload
+ *      (e.g. `customer_communication` overrides any collectionType
+ *      because uploads are the actual path to strength).
+ *   2. `SYSTEM_DERIVED_FIELDS` denylist → always refuse, regardless
+ *      of `collectionType`. Catches the case where a DB-backed
+ *      template row doesn't carry `collection_type` and the prior
+ *      fallback (`collectionType !== "auto"`) was too permissive.
+ *   3. Otherwise: only allow when `collectionType` is explicitly
+ *      `manual` or `conditional_auto`. An absent `collectionType`
+ *      defaults to "no upload" (strict) so off-registry/template
+ *      rows can't accidentally surface upload buttons. */
 export function canMerchantUpload(item: {
   field: string;
   collectionType?: string;
 }): boolean {
   if (MERCHANT_ACTIONABLE_FIELDS.has(item.field)) return true;
-  return item.collectionType !== "auto";
+  if (SYSTEM_DERIVED_FIELDS.has(item.field)) return false;
+  return item.collectionType === "manual" || item.collectionType === "conditional_auto";
 }
 
 /* ── Derived state helpers ── */
@@ -205,10 +241,14 @@ function deriveMissingItems(
 ): MissingItemWithContext[] {
   return checklist
     .filter((c) => c.status === "missing")
-    // Only merchant-actionable items appear as tasks.
-    // System-derived evidence (auto/conditional_auto) is not something
-    // the merchant can upload or fix — it should never appear as a CTA.
-    .filter((c) => c.collectionType === "manual" || !c.collectionType)
+    // Only merchant-actionable items appear as tasks. Delegate to the
+    // single-sourced canMerchantUpload predicate so the Missing-or-weak
+    // section, Overview "Add this evidence" CTA, and any future surface
+    // share the same field gate. Catches system-derived fields like
+    // fraud_risk_screening and billing_address_match even when their
+    // DB-backed template row leaves collectionType null — those rows
+    // cannot be uploaded and must not surface upload buttons.
+    .filter((c) => canMerchantUpload(c))
     .map((c) => {
       const action = FIELD_ACTIONS[c.field] ?? DEFAULT_ACTION;
       return {
