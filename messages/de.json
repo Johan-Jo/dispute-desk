@@ -587,7 +587,75 @@
     "itemStrength": {
       "strong": "Strong",
       "moderate": "Moderate",
-      "supporting": "Supporting"
+      "supporting": "Supporting",
+      "internal_only": "Nur intern",
+      "none": "Keine"
+    },
+    "overview": {
+      "coverage": {
+        "title": "Beweisabdeckung",
+        "sectionsFound": "{count, plural, =0 {Keine Beweisabschnitte gefunden} =1 {1 Beweisabschnitt gefunden} other {# Beweisabschnitte gefunden}}",
+        "includedInPackage": "{count, plural, =0 {Nichts im Verteidigungspaket enthalten} =1 {1 Element im Verteidigungspaket enthalten} other {# Elemente im Verteidigungspaket enthalten}}",
+        "usedAsPositiveBankArgument": "{count, plural, =0 {0 als positives Bankargument verwendet} =1 {1 als positives Bankargument verwendet} other {# als positives Bankargument verwendet}}",
+        "keptInternal": "{count, plural, =0 {0 intern gehalten} =1 {1 intern gehalten} other {# intern gehalten}}",
+        "missingDecisiveLabel": "Fehlende entscheidende Beweise",
+        "missingDecisiveNone": "Alle entscheidenden Beweise vorhanden.",
+        "missingDecisiveFraud": "Zahlungsverifizierung, bestätigte Zustellung, Bestätigung des Kunden zum Kauf",
+        "summarySentence": "Wir haben {found, plural, =1 {1 Beweisabschnitt} other {# Beweisabschnitte}}{savedClause, select, none {} other {{savedClause}}} gefunden.{weakClause, select, none {} other { {weakClause}}}",
+        "savedClauseSaved": " und das Verteidigungspaket bei Shopify gespeichert",
+        "savedClauseDraft": "",
+        "weakClauseHardToWin": "Der Fall bleibt schwach, weil die verfügbaren Beweise überwiegend Hintergrundkontext sind, während entscheidende {family}-Beweise fehlen.",
+        "weakClauseNotHardToWin": ""
+      },
+      "hero": {
+        "title": {
+          "preSubmit": {
+            "likely_to_win": "Starker Fall zum Anfechten",
+            "could_win": "Vor dem Anfechten prüfen",
+            "needs_strengthening": "Vor dem Anfechten prüfen",
+            "hard_to_win": "Vollständige Dokumentation, schwache Verteidigung",
+            "covered": "Durch Shopify Protect abgedeckt"
+          },
+          "saved": {
+            "likely_to_win": "Starke Verteidigung bei Shopify gespeichert",
+            "could_win": "Moderate Verteidigung bei Shopify gespeichert",
+            "needs_strengthening": "Moderate Verteidigung bei Shopify gespeichert",
+            "hard_to_win": "Schwache Verteidigung bei Shopify gespeichert",
+            "covered": "Durch Shopify Protect abgedeckt"
+          },
+          "awaiting": {
+            "likely_to_win": "Starke Verteidigung an Shopify weitergeleitet",
+            "could_win": "Moderate Verteidigung an Shopify weitergeleitet",
+            "needs_strengthening": "Moderate Verteidigung an Shopify weitergeleitet",
+            "hard_to_win": "Schwache Verteidigung an Shopify weitergeleitet",
+            "covered": "Durch Shopify Protect abgedeckt"
+          },
+          "submitted_to_network": {
+            "likely_to_win": "Starke Verteidigung an das Kartennetzwerk gesendet",
+            "could_win": "Moderate Verteidigung an das Kartennetzwerk gesendet",
+            "needs_strengthening": "Moderate Verteidigung an das Kartennetzwerk gesendet",
+            "hard_to_win": "Schwache Verteidigung an das Kartennetzwerk gesendet",
+            "covered": "Durch Shopify Protect abgedeckt"
+          },
+          "closed": {
+            "won": "Vorgang gewonnen",
+            "lost": "Vorgang verloren",
+            "unknown": "Vorgang abgeschlossen"
+          }
+        },
+        "subtitle": {
+          "draftWithReason": "{strengthReason}",
+          "savedWithReason": "{strengthReason} Bei Shopify gespeichert am {savedDate}.",
+          "savedWithReasonAndDeadline": "{strengthReason} Bei Shopify gespeichert am {savedDate}. Shopify leitet die Beweise bis zur Frist ({deadline}) an Ihr Kartennetzwerk weiter. Bis dahin können Sie weitere Beweise hinzufügen.",
+          "savedNoDate": "{strengthReason} Bei Shopify gespeichert — wartet auf Weiterleitung von Shopify an Ihr Kartennetzwerk.",
+          "awaitingForward": "{strengthReason} Shopify hat das Paket und leitet es an Ihr Kartennetzwerk weiter. DisputeDesk kann bestätigen, dass die Beweise bei Shopify gespeichert wurden, kann aber nicht unabhängig überprüfen, wann die Weiterleitung erfolgt.",
+          "submittedToNetwork": "{strengthReason} Das Kartennetzwerk prüft diese Verteidigung. Das Ergebnis wird in der Regel in 30–75 Tagen veröffentlicht.",
+          "submittedToNetworkWithDate": "Am {submittedDate} an Ihr Kartennetzwerk gesendet. Das Ergebnis wird in der Regel in 30–75 Tagen veröffentlicht.",
+          "closedWon": "Ergebnis: gewonnen{submittedDate, select, none {} other { (entschieden am {submittedDate})}}.",
+          "closedLost": "Ergebnis: verloren{submittedDate, select, none {} other { (entschieden am {submittedDate})}}.",
+          "closedUnknown": "Von Shopify gemeldetes Ergebnis: {outcome}."
+        }
+      }
     },
     "evidenceTab": {
       "sections": {

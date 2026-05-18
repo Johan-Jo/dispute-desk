@@ -625,6 +625,21 @@
       "none": "None"
     },
     "overview": {
+      "coverage": {
+        "title": "Evidence coverage",
+        "sectionsFound": "{count, plural, =0 {No evidence sections found} =1 {1 evidence section found} other {# evidence sections found}}",
+        "includedInPackage": "{count, plural, =0 {Nothing included in the defence package} =1 {1 item included in the defence package} other {# items included in the defence package}}",
+        "usedAsPositiveBankArgument": "{count, plural, =0 {0 used as positive bank argument} =1 {1 used as positive bank argument} other {# used as positive bank argument}}",
+        "keptInternal": "{count, plural, =0 {0 kept internal} =1 {1 kept internal} other {# kept internal}}",
+        "missingDecisiveLabel": "Missing decisive evidence",
+        "missingDecisiveNone": "All decisive evidence present.",
+        "missingDecisiveFraud": "payment verification, confirmed delivery, customer purchase acknowledgement",
+        "summarySentence": "We found {found, plural, =1 {1 evidence section} other {# evidence sections}}{savedClause, select, none {} other {{savedClause}}}.{weakClause, select, none {} other { {weakClause}}}",
+        "savedClauseSaved": " and saved the defence package to Shopify",
+        "savedClauseDraft": "",
+        "weakClauseHardToWin": "The case remains weak because the available evidence is mostly supporting context, while decisive {family} evidence is missing.",
+        "weakClauseNotHardToWin": ""
+      },
       "hero": {
         "title": {
           "preSubmit": {

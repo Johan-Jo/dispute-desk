@@ -836,59 +836,88 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         );
       })()}
 
-      {/* O4: Evidence coverage — compact per Figma. Headline + count
-          + progress bar + a single bottom row that flips between
-          "Supporting evidence complete ✓" and the count of missing
-          supporting items. The detailed bucket breakdown and
-          "View all evidence" button were removed — full coverage
-          surfaces in the Evidence tab. */}
+      {/* O4: Evidence coverage — five separate metrics, sourced from
+          `data.evidenceLineItems`. The "8/8 collected" headline is gone:
+          completeness is NOT the same as case strength. The merchant
+          sees what was found, what reached the package, what
+          contributes to the bank argument, what stayed internal, and
+          which decisive signals are still missing. */}
       {(() => {
-        const supportingBucket = buckets.find((b) => b.key === "recommended");
-        const supportingComplete =
-          supportingBucket && supportingBucket.complete === supportingBucket.items.length;
-        const supportingLabel = supportingComplete
-          ? "Supporting evidence complete"
-          : supportingBucket
-            ? `${supportingBucket.items.length - supportingBucket.complete} supporting ${
-                supportingBucket.items.length - supportingBucket.complete === 1 ? "item" : "items"
-              } missing`
+        const lineItems = data?.evidenceLineItems ?? [];
+        const sectionsFound = lineItems.filter((li) => li.hasEvidence).length;
+        const includedInPackage = lineItems.filter((li) => li.includedInDefencePackage).length;
+        const usedAsPositive = lineItems.filter((li) => li.usedAsPositiveBankEvidence).length;
+        const keptInternal = lineItems.filter((li) => li.submissionMethod === "internal_only").length;
+
+        // Family-specific decisive triplet for "missing decisive evidence".
+        // Currently fraud-specific copy lives in the i18n file; other
+        // families render the generic "all decisive evidence present"
+        // string when nothing is missing.
+        const isFraud = /(fraudulent|unrecognized)/i.test(dispute.reason ?? "");
+        const missingDecisive =
+          isFraud && usedAsPositive === 0
+            ? t("coverage.missingDecisiveFraud")
             : null;
+
+        // One-line truthful summary sentence. Wired through ICU so it
+        // composes "We found N evidence sections [and saved the
+        // defence package to Shopify]. [Weak-clause when applicable.]"
+        const isSaved =
+          presentationStatus === "SAVED_TO_SHOPIFY" ||
+          presentationStatus === "AWAITING_SHOPIFY_AUTO_SUBMISSION" ||
+          presentationStatus === "SUBMITTED_TO_NETWORK";
+        const family = isFraud ? "fraud" : "general";
+        const savedClause = isSaved
+          ? t("coverage.savedClauseSaved")
+          : "none";
+        const weakClause =
+          heroVariant === "hard_to_win"
+            ? t("coverage.weakClauseHardToWin", { family })
+            : "none";
+        const summary = t("coverage.summarySentence", {
+          found: sectionsFound,
+          savedClause,
+          weakClause,
+        });
+
         return (
           <div data-help-guide="detail-overview-evidence" style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
             <BlockStack gap="300">
-              <Text as="h3" variant="headingSm">Evidence coverage</Text>
+              <Text as="h3" variant="headingSm">{t("coverage.title")}</Text>
 
-              <div>
-                <InlineStack align="space-between" blockAlign="center">
-                  <Text as="p" variant="bodySm" fontWeight="semibold">
-                    {criticalMissing.length === 0
-                      ? "All critical evidence present"
-                      : `${criticalMissing.length} critical ${criticalMissing.length === 1 ? "item" : "items"} missing`}
+              {/* Metric rows */}
+              <BlockStack gap="150">
+                <Text as="p" variant="bodySm">{t("coverage.sectionsFound", { count: sectionsFound })}</Text>
+                <Text as="p" variant="bodySm">{t("coverage.includedInPackage", { count: includedInPackage })}</Text>
+                <Text as="p" variant="bodySm" fontWeight={usedAsPositive > 0 ? "semibold" : undefined}>
+                  {t("coverage.usedAsPositiveBankArgument", { count: usedAsPositive })}
+                </Text>
+                {keptInternal > 0 && (
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {t("coverage.keptInternal", { count: keptInternal })}
                   </Text>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 500,
-                      color: criticalMissing.length === 0 ? "#059669" : "#6D7175",
-                    }}
-                  >
-                    {`${totalIncluded}/${totalCount} collected`}
-                  </span>
-                </InlineStack>
-              </div>
+                )}
+              </BlockStack>
 
-              {supportingLabel && (
+              {/* Missing decisive evidence — only renders for fraud
+                  cases with zero positive bank argument rows. */}
+              {missingDecisive && (
                 <div style={{ paddingTop: 12, borderTop: "1px solid #E1E3E5" }}>
-                  <InlineStack align="space-between" blockAlign="center">
-                    <Text as="span" variant="bodySm" tone="subdued">{supportingLabel}</Text>
-                    {supportingComplete && (
-                      <span style={{ width: 16, height: 16, color: "#059669", display: "inline-flex" }}>
-                        <Icon source={CheckCircleIcon} />
-                      </span>
-                    )}
-                  </InlineStack>
+                  <BlockStack gap="050">
+                    <Text as="span" variant="bodySm" fontWeight="semibold">
+                      {t("coverage.missingDecisiveLabel")}
+                    </Text>
+                    <Text as="span" variant="bodySm" tone="subdued">
+                      {missingDecisive}
+                    </Text>
+                  </BlockStack>
                 </div>
               )}
+
+              {/* Truthful one-line summary. */}
+              <div style={{ paddingTop: 12, borderTop: "1px solid #E1E3E5" }}>
+                <Text as="p" variant="bodySm" tone="subdued">{summary}</Text>
+              </div>
             </BlockStack>
           </div>
         );
