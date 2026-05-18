@@ -412,6 +412,86 @@ function classifyAvsCvv(payload: unknown): InternalSignalViewModel | null {
   };
 }
 
+/**
+ * Classify billing/shipping address mismatch as an internal-only signal.
+ *
+ * `billing_address_match` is auto-collected from Shopify order data
+ * (`lib/packs/sources/orderSource.ts`) — the merchant cannot upload it.
+ * When billing and shipping addresses do not align by city + country,
+ * surfacing that to the bank would expose a weakness; instead the
+ * merchant sees it as an internal-only signal.
+ *
+ * Sources of truth:
+ *   - The order section payload (under the `order_confirmation` field)
+ *     carries redacted `billingAddress` and `shippingAddress` objects
+ *     with `{ city, provinceCode, countryCode, zipPrefix }`.
+ *   - The collector only adds `billing_address_match` to `fieldsProvided`
+ *     when city + countryCode match. Absence of the field in the
+ *     checklist's "available" state therefore implies non-match
+ *     (provided both addresses exist).
+ *
+ * Conservative: emits ONLY when both addresses are present AND at least
+ * one of city/countryCode mismatches. Missing addresses → no signal
+ * (absence is not a negative signal, per the existing classifier rules).
+ */
+export function classifyBillingAddressMismatch(
+  effectiveChecklist: EvidenceItemWithStrength[],
+): InternalSignalViewModel | null {
+  // If billing_address_match is already available, the collector confirmed
+  // a match — nothing to surface internally.
+  const billingItem = effectiveChecklist.find(
+    (i) => i.field === "billing_address_match",
+  );
+  if (billingItem?.status === "available") return null;
+
+  // Read the order section payload (carried on the order_confirmation row).
+  const orderItem = effectiveChecklist.find(
+    (i) => i.field === "order_confirmation",
+  );
+  const payload = orderItem?.payload;
+  if (!isPlainObject(payload)) return null;
+
+  const billing = payload.billingAddress;
+  const shipping = payload.shippingAddress;
+  if (!isPlainObject(billing) || !isPlainObject(shipping)) return null;
+
+  const billingCountry = readString(billing.countryCode);
+  const shippingCountry = readString(shipping.countryCode);
+  const billingCity = readString(billing.city);
+  const shippingCity = readString(shipping.city);
+
+  // Need both countryCodes to make a meaningful claim. If either is
+  // null/empty, treat as insufficient data rather than a mismatch.
+  if (
+    billingCountry === null ||
+    billingCountry === "" ||
+    shippingCountry === null ||
+    shippingCountry === ""
+  ) {
+    return null;
+  }
+
+  const countryMismatch = billingCountry !== shippingCountry;
+  const cityMismatch =
+    billingCity !== null &&
+    billingCity !== "" &&
+    shippingCity !== null &&
+    shippingCity !== "" &&
+    billingCity !== shippingCity;
+
+  if (!countryMismatch && !cityMismatch) return null;
+
+  const detail = countryMismatch
+    ? `Billing country ${billingCountry} differs from shipping country ${shippingCountry}.`
+    : `Billing city differs from shipping city.`;
+
+  return {
+    id: "internal:billing_address_mismatch",
+    title: "Billing and shipping addresses do not match",
+    explanation: `${detail} Used internally for assessment; not surfaced to the bank to avoid weakening the response.`,
+  };
+}
+
 function classifyIpLocation(payload: unknown): InternalSignalViewModel | null {
   if (!isPlainObject(payload)) return null;
   const locationMatch = readString(payload.locationMatch);
@@ -465,6 +545,9 @@ function deriveInternalOnlySignals(
 
   const avs = classifyAvsCvv(byField.get("avs_cvv_match"));
   if (avs) out.push(avs);
+
+  const billing = classifyBillingAddressMismatch(effectiveChecklist);
+  if (billing) out.push(billing);
 
   const ip = classifyIpLocation(byField.get("ip_location_check"));
   if (ip) out.push(ip);

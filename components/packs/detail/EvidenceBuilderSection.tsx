@@ -84,6 +84,55 @@ function getWhyText(field: string): string {
   return WHY_TEXT[field] ?? "Strengthens your dispute response";
 }
 
+/**
+ * Internal-only signals — auto-collected from Shopify order data, never
+ * uploaded by the merchant, never surfaced to the bank. When missing,
+ * they belong in their own status-only card, not the merchant-actionable
+ * blockers/high-impact lists.
+ *
+ * `billing_address_match` and `avs_cvv_match` are the canonical examples:
+ * structural payment/order facts the merchant cannot "upload". When
+ * missing, surfacing them under a section with an Upload button is
+ * confusing — there is nothing to upload, and exposing a mismatch as a
+ * weakness is exactly what `feedback_bank_optimized_rebuttal.md` warns
+ * against.
+ */
+const INTERNAL_ONLY_FIELDS: ReadonlySet<string> = new Set([
+  "billing_address_match",
+  "avs_cvv_match",
+  "ip_location_check",
+  "device_session_consistency",
+  "fraud_risk_screening",
+]);
+
+function isInternalOnly(item: ChecklistItemV2): boolean {
+  if (INTERNAL_ONLY_FIELDS.has(item.field)) return true;
+  // Any field auto-collected from Shopify with no merchant-actionable
+  // upload path falls under the same rule. Conditional-auto (e.g. AVS
+  // when card data is missing) and manual-upload fields are excluded.
+  return item.collectionType === "auto" && item.source === "auto_shopify";
+}
+
+const INTERNAL_ONLY_REASON: Record<string, string> = {
+  billing_address_match:
+    "We could not confirm that the billing address matches the order from Shopify data. Used internally for assessment; not surfaced to the bank to avoid weakening the response.",
+  avs_cvv_match:
+    "The payment gateway did not return a clean AVS/CVV match for this order. Used internally for assessment; not surfaced to the bank.",
+  ip_location_check:
+    "IP and location signals were not collected for this order. Used internally for assessment; not surfaced to the bank.",
+  device_session_consistency:
+    "Device and session consistency signals were not collected for this order. Used internally for assessment; not surfaced to the bank.",
+  fraud_risk_screening:
+    "Shopify's pre-authorization fraud screening signal is not available for this order. Used internally for assessment; not surfaced to the bank.",
+};
+
+function getInternalOnlyReason(item: ChecklistItemV2): string {
+  return (
+    INTERNAL_ONLY_REASON[item.field] ??
+    "Auto-collected from Shopify when available. Used internally for assessment; not surfaced to the bank."
+  );
+}
+
 interface IncludedItem {
   label: string;
   sourceLabel: string;
@@ -150,17 +199,26 @@ export function EvidenceBuilderSection({
     return () => clearTimeout(timer);
   }, [focusField, onFocusHandled]);
 
-  // Derive 6 sections from checklist
+  // Derive 7 sections from checklist. Internal-only signals (auto-only
+  // fields the merchant cannot upload) are bucketed first so they do not
+  // appear as actionable blockers/high-impact/recommended rows.
+  const internalOnlyMissing = sortByPriority(
+    checklist.filter((c) => c.status === "missing" && isInternalOnly(c)),
+  );
+  const merchantActionable = checklist.filter(
+    (c) => !(c.status === "missing" && isInternalOnly(c)),
+  );
+
   const blockers = sortByPriority(
-    checklist.filter((c) => c.blocking && c.status === "missing"),
+    merchantActionable.filter((c) => c.blocking && c.status === "missing"),
   );
   const highImpact = sortByPriority(
-    checklist.filter(
+    merchantActionable.filter(
       (c) => c.priority === "critical" && !c.blocking && c.status === "missing",
     ),
   );
   const recommended = sortByPriority(
-    checklist.filter(
+    merchantActionable.filter(
       (c) => c.priority !== "critical" && c.status === "missing",
     ),
   );
@@ -173,10 +231,11 @@ export function EvidenceBuilderSection({
   const hasUnavailable = unavailable.length > 0;
   const hasWaived = waived.length > 0;
   const hasIncluded = includedItems.length > 0;
+  const hasInternalOnly = internalOnlyMissing.length > 0;
 
   const isEmpty =
     !hasBlockers && !hasHighImpact && !hasRecommended &&
-    !hasUnavailable && !hasWaived && !hasIncluded;
+    !hasUnavailable && !hasWaived && !hasIncluded && !hasInternalOnly;
 
   if (isEmpty) {
     return (
@@ -311,6 +370,35 @@ export function EvidenceBuilderSection({
                       {item.unavailableReason}
                     </Text>
                   )}
+                </BlockStack>
+              </div>
+            ))}
+          </BlockStack>
+        </Card>
+      )}
+
+      {/* D2. Internal-only signals — auto-collected, not surfaced to bank.
+            Status-only; no upload affordance. */}
+      {hasInternalOnly && (
+        <Card>
+          <BlockStack gap="200">
+            <BlockStack gap="100">
+              <Text as="h3" variant="headingMd" tone="subdued">
+                Internal-only signals
+              </Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                {"These signals inform our assessment but are not submitted to Shopify."}
+              </Text>
+            </BlockStack>
+            {internalOnlyMissing.map((item) => (
+              <div key={item.field} className={styles.evidenceRowIncluded}>
+                <BlockStack gap="050">
+                  <Text as="span" variant="bodyMd" tone="subdued">
+                    {item.label}
+                  </Text>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {getInternalOnlyReason(item)}
+                  </Text>
                 </BlockStack>
               </div>
             ))}
