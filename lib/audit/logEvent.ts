@@ -34,6 +34,12 @@ export type EventType =
   // direct audit_events inserts in lib/automation/pipeline.ts and the
   // new defence-package-deadline-rebuild cron use this event type.
   | "auto_build_enqueued"
+  // Merchant submitted a cardholder-acknowledgement text + confirmation
+  // checkbox via POST /api/packs/:packId/cardholder-acknowledgement.
+  // Written separately from `item_added` so compliance can audit the
+  // attestation independently of the evidence_items insert. Payload
+  // carries no PII — just `{ evidenceItemId, textLength, confirmedAt }`.
+  | "cardholder_acknowledgement_confirmed"
   | "submitted_with_warnings"
   | "order_fetch_failed"
   // Conditional file evidence layer (Phase 3 of

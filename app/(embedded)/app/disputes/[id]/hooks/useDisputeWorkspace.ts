@@ -672,6 +672,65 @@ export function useDisputeWorkspace(disputeId: string) {
     [data?.pack, fetchAll],
   );
 
+  /** Submit a cardholder-acknowledgement text + confirmation checkbox.
+   *  The server validates both inputs, writes a manual_text evidence_item
+   *  with `customerConfirmsOrder=true` (which the canonical categorizer
+   *  treats as the decisive signal that elevates customer_communication
+   *  to strong), patches checklist_v2, and enqueues a rebuild.
+   *
+   *  Returns the API response so the caller can branch on
+   *  `promptRebuild` and open the existing RegeneratePromptModal. */
+  const submitCardholderAcknowledgement = useCallback(
+    async (text: string): Promise<{
+      ok: boolean;
+      promptRebuild?: boolean;
+      evidenceItemId?: string;
+      error?: string;
+      code?: string;
+    }> => {
+      if (!data?.pack) return { ok: false, error: "No pack" };
+      const res = await fetch(
+        `/api/packs/${data.pack.id}/cardholder-acknowledgement`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, confirmedByMerchant: true }),
+        },
+      );
+      const body = (await res.json().catch(() => null)) as
+        | { evidenceItemId?: string; promptRebuild?: boolean; error?: string; code?: string }
+        | null;
+      // Re-fetch regardless so the new evidence_items row shows up in
+      // the workspace UI immediately (independent of the rebuild job
+      // landing later).
+      fetchAll();
+      if (!res.ok) {
+        return {
+          ok: false,
+          error: body?.error ?? `Server error (${res.status})`,
+          code: body?.code,
+        };
+      }
+      // Surface the regenerate prompt for window-open disputes — same
+      // modal the upload + waive flows use.
+      if (body?.promptRebuild && body?.evidenceItemId) {
+        setClientState((s) => ({
+          ...s,
+          pendingRegeneratePrompt: {
+            packId: data.pack!.id,
+            evidenceItemId: body.evidenceItemId!,
+          },
+        }));
+      }
+      return {
+        ok: true,
+        promptRebuild: body?.promptRebuild,
+        evidenceItemId: body?.evidenceItemId,
+      };
+    },
+    [data?.pack, fetchAll],
+  );
+
   /** Toggle a merchant inclusion override for a single evidence field.
    *
    *  Value semantics:
@@ -962,6 +1021,7 @@ export function useDisputeWorkspace(disputeId: string) {
       waiveItem,
       unwaiveItem,
       toggleInclusionOverride,
+      submitCardholderAcknowledgement,
       submitToShopify,
       exportPdf,
       downloadPdf,

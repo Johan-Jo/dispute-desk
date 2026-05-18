@@ -903,6 +903,24 @@
           "body": "The most recent regeneration did not complete. The previously saved package remains on the dispute. Try regenerating again, or contact support if it keeps failing."
         }
       },
+      "cardholderAck": {
+        "title": "Add cardholder acknowledgement",
+        "subtitle": "If you have an email, chat, or other message in which the cardholder confirms they placed and received this order, paste it here. Cardholder acknowledgement is decisive evidence for fraud disputes — it elevates customer communication from supporting context to a positive bank argument.",
+        "textareaLabel": "Cardholder message",
+        "textareaPlaceholder": "Paste the email, chat, or message from the cardholder. Include the date and any context that ties it to this order.",
+        "textareaHint": "Minimum 20 characters. The text is included verbatim in the defence package PDF.",
+        "checkboxLabel": "I confirm this message is from the cardholder and demonstrates that they placed and/or received the order in this dispute.",
+        "checkboxHelper": "By checking this box you attest that the cardholder authored this message. DisputeDesk records the confirmation in the dispute's audit trail.",
+        "submit": "Save acknowledgement",
+        "submitting": "Saving…",
+        "successTitle": "Cardholder acknowledgement saved",
+        "successBody": "Customer communication is now marked as decisive evidence. DisputeDesk is rebuilding the defence package — you can review the result in a moment.",
+        "errorTooShort": "Please paste at least 20 characters of the cardholder's message.",
+        "errorConfirmationRequired": "Please confirm the message is from the cardholder before saving.",
+        "errorWindowClosed": "Shopify has already forwarded this dispute to the bank, so new acknowledgements can no longer be added.",
+        "errorGeneric": "Could not save the acknowledgement ({code}). Please try again.",
+        "charCount": "{count}/{max}"
+      },
       "regenerateModal": {
         "title": "Regenerate the defense package with this new evidence?",
         "bodyAuto": "Your file has been saved. To include it in the bank-facing package, DisputeDesk will regenerate the full defense package — evidence summary, argument narrative, and PDF — and the new version will be saved to Shopify and replace the current package on the dispute.",

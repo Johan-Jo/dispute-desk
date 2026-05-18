@@ -29,6 +29,7 @@ import { EvidenceUsedSection } from "./sections/EvidenceUsedSection";
 import { MissingOrWeakSection } from "./sections/MissingOrWeakSection";
 import { InternalOnlySignalsSection } from "./sections/InternalOnlySignalsSection";
 import { RegeneratePromptModal } from "./sections/RegeneratePromptModal";
+import { CardholderAcknowledgementCard } from "./sections/CardholderAcknowledgementCard";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -223,6 +224,17 @@ export default function EvidenceTab({ workspace }: Props) {
         items={sections.usedInDefense}
         lineItems={data?.evidenceLineItems ?? []}
       />
+
+      {/* Cardholder acknowledgement — merchant pastes a confirming
+              message from the cardholder + ticks the attestation
+              checkbox. Server records the confirmation, patches
+              checklist_v2, enqueues a build_pack rebuild, and (for
+              window-open disputes) opens RegeneratePromptModal so the
+              new PDF reaches Shopify. Hides itself when the dispute is
+              closed, already submitted to bank, or when
+              customer_communication is already a positive bank
+              argument. */}
+      <CardholderAcknowledgementCard workspace={workspace} />
 
       {/* §3 — Missing or weak evidence (collapses when empty)
               Inline actions: Upload evidence + Mark as not applicable.
