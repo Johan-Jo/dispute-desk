@@ -352,25 +352,45 @@ export async function buildPack(
     if (items.length > 0) templateItems = items;
   }
 
-  // Derive order context for conditional requirement evaluation
+  // Derive order context for conditional requirement evaluation.
+  //
+  // hasCardPayment / avsCvvAvailable: a transaction counts as
+  // "card-backed" when EITHER (a) its paymentDetails typename is the
+  // canonical CardPaymentDetails, OR (b) the union member exposes
+  // non-empty `avsResultCode` / `cvvResultCode` at runtime (the
+  // presence of those codes IS the proof a card was charged, even on
+  // payment-details typenames like ShopPayInstallmentsPaymentDetails
+  // that aren't strictly `CardPaymentDetails`). Without (b), conditional
+  // fields like AVS/CVV/billing_address_match incorrectly flip to
+  // `unavailable` for Shopify Payments orders that wrap a card behind
+  // a non-card union member — the workspace UI then renders "no
+  // decisive bank-facing evidence" while the PDF, which reads the
+  // collector payload directly, cites AVS=Y/CVV=M correctly.
+  function transactionExposesCardCodes(t: typeof order extends null ? never : NonNullable<typeof order>["transactions"][number] | undefined): boolean {
+    if (!t?.paymentDetails) return false;
+    if (t.paymentDetails.__typename === "CardPaymentDetails") return true;
+    // Runtime fallback — read the codes regardless of static typing.
+    const d = t.paymentDetails as Record<string, unknown>;
+    const avs = typeof d.avsResultCode === "string" ? d.avsResultCode : null;
+    const cvv = typeof d.cvvResultCode === "string" ? d.cvvResultCode : null;
+    return (avs != null && avs !== "") || (cvv != null && cvv !== "");
+  }
+
   const isFulfilled =
     order?.displayFulfillmentStatus !== "UNFULFILLED" &&
     (order?.fulfillments?.length ?? 0) > 0;
   const hasCardPayment =
-    order?.transactions?.some(
-      (t) => t.paymentDetails?.__typename === "CardPaymentDetails",
-    ) ?? false;
-  // AVS/CVV is only "available" if a card transaction actually returned codes.
+    order?.transactions?.some(transactionExposesCardCodes) ?? false;
+  // AVS/CVV is only "available" if the transaction actually returned codes.
   // External gateways (Stripe via Shopify, Adyen, etc.) often return null
   // even for card payments — this must NOT block or penalize the pack.
   const avsCvvAvailable =
     order?.transactions?.some((t) => {
-      if (t.paymentDetails?.__typename !== "CardPaymentDetails") return false;
-      const d = t.paymentDetails as import("@/lib/shopify/queries/orders").CardPaymentDetails;
-      return (
-        (d.avsResultCode != null && d.avsResultCode !== "") ||
-        (d.cvvResultCode != null && d.cvvResultCode !== "")
-      );
+      if (!transactionExposesCardCodes(t)) return false;
+      const d = t.paymentDetails as Record<string, unknown> | null;
+      const avs = typeof d?.avsResultCode === "string" ? d.avsResultCode : null;
+      const cvv = typeof d?.cvvResultCode === "string" ? d.cvvResultCode : null;
+      return (avs != null && avs !== "") || (cvv != null && cvv !== "");
     }) ?? false;
   // Has at least one fulfillment record carrying tracking — used to
   // distinguish "Order is unfulfilled" from "Awaiting delivery
