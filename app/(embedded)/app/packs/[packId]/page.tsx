@@ -410,12 +410,11 @@ export default function PackPreviewPage() {
     setRendering(false);
   }, [packId, fetchPack]);
 
-  const handleDownload = useCallback(async () => {
-    const res = await fetch(`/api/packs/${packId}/download`);
-    if (res.ok) {
-      const { url } = await res.json();
-      window.open(url, "_blank");
-    }
+  const handleDownload = useCallback(() => {
+    // The route proxies PDF bytes through our origin, so opening the
+    // route URL itself is sufficient — the merchant never sees the
+    // Supabase storage URL or its signing token.
+    window.open(`/api/packs/${packId}/download`, "_blank");
   }, [packId]);
 
   /* ── Save handler ── */

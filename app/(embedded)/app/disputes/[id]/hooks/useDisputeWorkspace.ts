@@ -803,13 +803,13 @@ export function useDisputeWorkspace(disputeId: string) {
     setClientState((s) => ({ ...s, rendering: false }));
   }, [data?.pack, fetchAll]);
 
-  const downloadPdf = useCallback(async () => {
+  const downloadPdf = useCallback(() => {
     if (!data?.pack) return;
-    const res = await fetch(`/api/packs/${data.pack.id}/download`);
-    if (res.ok) {
-      const { url } = await res.json();
-      window.open(url, "_blank");
-    }
+    // The route now proxies the PDF bytes directly, so we can open the
+    // route URL itself in a new tab. The Supabase signed URL never
+    // crosses the wire to the browser — no token leakage in the address
+    // bar or referrer header.
+    window.open(`/api/packs/${data.pack.id}/download`, "_blank");
   }, [data?.pack]);
 
   const syncDispute = useCallback(async () => {

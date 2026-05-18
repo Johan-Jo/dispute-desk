@@ -7,7 +7,18 @@ export const runtime = "nodejs";
 /**
  * GET /api/packs/:packId/download
  *
- * Returns a time-limited signed URL (1 hour) for the pack PDF.
+ * Streams the pack PDF inline. The PDF bytes are fetched server-side
+ * from Supabase Storage using the service role and forwarded to the
+ * client through this route. The browser only ever sees
+ * `disputedesk.app/api/packs/:packId/download` — never the raw
+ * Supabase URL, never a signing token.
+ *
+ * Mirrors the same proxy pattern as
+ * `app/api/defence-packages/[id]/preview/route.ts`. Prior versions
+ * of this route returned `{ url, expiresIn }` JSON containing a
+ * Supabase signed URL; the client then did `window.open(url)`,
+ * exposing the supabase.co host + signing token in the address bar
+ * and any referrer header. That pattern is now retired.
  */
 export async function GET(
   req: NextRequest,
@@ -37,16 +48,29 @@ export async function GET(
     );
   }
 
-  const { data: signedUrl, error: signErr } = await db.storage
+  const { data: blob, error: downloadErr } = await db.storage
     .from("evidence-packs")
-    .createSignedUrl(pack.pdf_path, 3600);
-
-  if (signErr || !signedUrl) {
+    .download(pack.pdf_path);
+  if (downloadErr || !blob) {
     return NextResponse.json(
-      { error: "Failed to generate download URL" },
-      { status: 500 }
+      { error: `PDF download failed: ${downloadErr?.message ?? "unknown"}` },
+      { status: 500 },
     );
   }
 
-  return NextResponse.json({ url: signedUrl.signedUrl, expiresIn: 3600 });
+  const arrayBuffer = await blob.arrayBuffer();
+  const pathSegments = (pack.pdf_path as string).split("/");
+  const filename =
+    pathSegments[pathSegments.length - 1] || `pack-${packId}.pdf`;
+
+  return new NextResponse(arrayBuffer, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Length": String(arrayBuffer.byteLength),
+      "Content-Disposition": `inline; filename="${filename}"`,
+      "Cache-Control": "private, max-age=60, must-revalidate",
+      "Referrer-Policy": "no-referrer",
+    },
+  });
 }

@@ -1,17 +1,25 @@
 /**
  * GET /api/defence-packages/:id/preview
  *
- * Generates a short-lived signed Supabase Storage URL for the package
- * PDF and 302-redirects to it. The embedded UI links to this endpoint
- * with `target="_blank"` so the browser opens the PDF in a new tab in
- * a true user-gesture context. TTL is 600s.
+ * Streams the defence-package PDF inline. The PDF bytes are fetched
+ * server-side from Supabase Storage using the service role and
+ * forwarded to the client via this route. The browser only ever sees
+ * `disputedesk.app/api/defence-packages/:id/preview` — never the raw
+ * Supabase URL, never a signing token.
  *
- * Previously this route returned JSON `{ url }` and the client did
- * `fetch → window.open(url, "_blank")` — that pattern is blocked by
- * Shopify Admin's iframe sandbox (the window.open fires from an async
- * callback, losing user-gesture context). The redirect path moves the
- * URL fetch off the client entirely, so clicking the link is the user
- * gesture and the browser handles the rest.
+ * Why proxy and not 302 to a signed URL:
+ *   - A redirect would expose `sddzuglxdnkhcnjmcpbj.supabase.co` plus
+ *     a JWT-style signing token in the browser address bar / referrer
+ *     header. Even short-TTL tokens are still credentials and must
+ *     never leak.
+ *   - Streaming through our origin keeps the token bound to the
+ *     server-side fetch.
+ *
+ * The previous redirect implementation also used `target="_blank"`
+ * + a true user gesture (a link click) to satisfy Shopify Admin's
+ * iframe sandbox. The proxy preserves that: the merchant still
+ * clicks the link, the browser still opens a new tab, the response
+ * just happens to be the PDF bytes instead of a redirect.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -19,8 +27,6 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 
 export const runtime = "nodejs";
-
-const PREVIEW_TTL_SECONDS = 600;
 
 export async function GET(
   req: NextRequest,
@@ -46,14 +52,41 @@ export async function GET(
   }
 
   const bucket = (row.pdf_storage_bucket as string) ?? "evidence-packs";
-  const { data: signed, error } = await sb.storage
+  // Download the bytes server-side. `download()` uses the service-role
+  // key from the server's `sb` client; the token never enters the
+  // response we send to the merchant.
+  const { data: blob, error: downloadErr } = await sb.storage
     .from(bucket)
-    .createSignedUrl(row.pdf_path as string, PREVIEW_TTL_SECONDS);
-  if (error || !signed?.signedUrl) {
+    .download(row.pdf_path as string);
+  if (downloadErr || !blob) {
     return NextResponse.json(
-      { error: `Signed URL generation failed: ${error?.message ?? "unknown"}` },
+      {
+        error: `PDF download failed: ${downloadErr?.message ?? "unknown"}`,
+      },
       { status: 500 },
     );
   }
-  return NextResponse.redirect(signed.signedUrl, 302);
+
+  const arrayBuffer = await blob.arrayBuffer();
+
+  // Inline disposition so the browser renders the PDF in the new tab
+  // rather than downloading it. Filename mirrors the dispute id
+  // segment of the storage path for merchant clarity.
+  const pathSegments = (row.pdf_path as string).split("/");
+  const filename =
+    pathSegments[pathSegments.length - 1] || `defence-${id}.pdf`;
+
+  return new NextResponse(arrayBuffer, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Length": String(arrayBuffer.byteLength),
+      "Content-Disposition": `inline; filename="${filename}"`,
+      // Short-lived browser cache only — clear when the PDF rotates.
+      "Cache-Control": "private, max-age=60, must-revalidate",
+      // Defence in depth: never let an embedded PDF preview leak a
+      // referrer to a third party.
+      "Referrer-Policy": "no-referrer",
+    },
+  });
 }
