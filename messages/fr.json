@@ -616,11 +616,14 @@
           }
         },
         "used": {
-          "title": "Preuves au dossier",
-          "destinationExplainer": "Les preuves solides sont incluses dans le dossier de défense envoyé à la banque. Les preuves complémentaires restent au dossier — les communiquer à la banque affaiblirait le dossier (par exemple, un client sans commandes antérieures ou une politique non acceptée au paiement).",
-          "groupSent": "Envoyé à la banque",
-          "groupWithheld": "Au dossier — non envoyé",
-          "groupWithheldCaption": "Ces signaux figurent dans la commande mais ne sont pas transmis à la banque, car ils affaibliraient le dossier au lieu de le renforcer."
+          "title": "Preuves dans votre dossier de défense",
+          "explainerHasBankFacing": "Preuves utilisées comme argument auprès de la banque : {fields}.",
+          "explainerNoBankFacing": "Aucune preuve décisive destinée à la banque n’est disponible pour ce litige. Le dossier de défense peut tout de même inclure le contexte de commande et des pièces justificatives, mais aucun signal de fraude solide.",
+          "groupUsedInBankArgument": "Utilisé comme argument positif auprès de la banque",
+          "groupContextOnly": "Contexte uniquement",
+          "groupContextOnlyCaption": "Inclus dans le dossier de défense à titre de contexte, mais non utilisé comme preuve décisive.",
+          "groupNotIncluded": "Au dossier — non inclus",
+          "groupNotIncludedCaption": "Ces signaux figurent dans la commande mais ne font pas partie de l’argumentation transmise à la banque."
         },
         "missing": {
           "title": "Missing or weak evidence",

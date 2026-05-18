@@ -691,11 +691,14 @@
           }
         },
         "used": {
-          "title": "Evidence on file",
-          "destinationExplainer": "Strong evidence is included in the defence package sent to the bank. Supporting evidence stays on file — surfacing it to the bank would weaken the case (e.g. a customer with no prior orders, or a policy that wasn't accepted at checkout).",
-          "groupSent": "Sent to the bank",
-          "groupWithheld": "On file — not sent",
-          "groupWithheldCaption": "These signals exist on the order but are withheld from the bank submission because they would weaken the case rather than strengthen it."
+          "title": "Evidence in your defence package",
+          "explainerHasBankFacing": "Bank-facing evidence used in the defence argument: {fields}.",
+          "explainerNoBankFacing": "No decisive bank-facing evidence is available for this dispute. The defence package may still include order context and supporting documentation, but no strong fraud signal is present.",
+          "groupUsedInBankArgument": "Used as positive bank argument",
+          "groupContextOnly": "Context only",
+          "groupContextOnlyCaption": "Included in the defence package as background, but not relied on as decisive proof.",
+          "groupNotIncluded": "On file — not included",
+          "groupNotIncludedCaption": "These signals exist on the order but are not part of the bank-facing argument."
         },
         "missing": {
           "title": "Missing or weak evidence",

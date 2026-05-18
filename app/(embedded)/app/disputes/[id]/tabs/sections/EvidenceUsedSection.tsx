@@ -1,74 +1,116 @@
 /**
  * EvidenceUsedSection — Section 2 of EvidenceTab.
  *
- * Lists ALL signals associated with the case, grouped by what reaches
- * the bank:
- *   - "Sent to the bank"   → strong + moderate tiers
- *   - "On file — not sent" → supporting tier (would weaken the case)
+ * Renders every evidence row in three buckets, gated by the line-item
+ * booleans (NOT by the legacy `strength` field):
  *
- * The two-bucket split is intentional: previously the section was titled
- * "Evidence used in defense" with three strength tiers, which implied
- * all listed items were sent to the bank. They weren't — `lib/defence/
- * pdf/evidenceBasisRows.ts` filters out supporting facts because a
- * customer with 0 prior orders or a policy that wasn't accepted at
- * checkout are negative signals that hurt the bank submission rather
- * than support it.
+ *   1. "Used as positive bank argument" — `usedAsPositiveBankEvidence`
+ *   2. "Context only"                   — `includedInDefencePackage && !usedAsPositiveBankEvidence`
+ *   3. "On file — not included"         — everything else with `hasEvidence`
+ *
+ * The explainer is conditional:
+ *   - At least one positive bank evidence row → enumerate the fields
+ *   - Zero positive bank evidence rows         → "no decisive bank-facing evidence is available"
+ *
+ * Hard rule: the explainer never claims strong bank-facing evidence
+ * exists unless the booleans confirm it. The unconditional "Strong
+ * evidence is included in the defence package sent to the bank" copy
+ * is gone.
  */
 
 "use client";
 
 import { Card, BlockStack, InlineStack, Box, Text, Badge } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
-import { Fragment } from "react";
-import type {
-  EvidenceRowViewModel,
-  ItemStrength,
-} from "../useEvidenceSections";
+import { Fragment, useMemo } from "react";
+import type { EvidenceRowViewModel } from "../useEvidenceSections";
+import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
 import { EvidenceRow } from "./EvidenceRow";
 
-type Bucket = "sent" | "withheld";
+type Bucket = "bankArgument" | "contextOnly" | "notIncluded";
 
-function bucketFor(strength: ItemStrength): Bucket {
-  return strength === "supporting" ? "withheld" : "sent";
+interface BucketSpec {
+  bucket: Bucket;
+  rows: EvidenceRowViewModel[];
+  headerKey: "groupUsedInBankArgument" | "groupContextOnly" | "groupNotIncluded";
+  captionKey: "groupContextOnlyCaption" | "groupNotIncludedCaption" | null;
+  tone: "success" | "subdued";
+}
+
+function bucketForRow(row: EvidenceRowViewModel, lineItem: EvidenceLineItem | undefined): Bucket {
+  if (lineItem) {
+    if (lineItem.usedAsPositiveBankEvidence) return "bankArgument";
+    if (lineItem.includedInDefencePackage) return "contextOnly";
+    return "notIncluded";
+  }
+  // Fallback when the workspace API hasn't yet returned evidenceLineItems
+  // (older client cache, transient state). Match the historical split so
+  // the section never looks empty: strong/moderate → bankArgument,
+  // supporting → notIncluded. The contextOnly bucket stays empty in this
+  // fallback path — strictly more accurate to under-claim than over-claim.
+  return row.strength === "supporting" ? "notIncluded" : "bankArgument";
 }
 
 export function EvidenceUsedSection({
   items,
+  lineItems,
 }: {
   items: EvidenceRowViewModel[];
+  lineItems: EvidenceLineItem[];
 }) {
   const t = useTranslations("disputes.evidenceTab.sections.used");
 
+  const lineItemsByField = useMemo(() => {
+    const m = new Map<string, EvidenceLineItem>();
+    for (const li of lineItems) m.set(li.field, li);
+    return m;
+  }, [lineItems]);
+
   const buckets: Record<Bucket, EvidenceRowViewModel[]> = {
-    sent: [],
-    withheld: [],
+    bankArgument: [],
+    contextOnly: [],
+    notIncluded: [],
   };
   for (const item of items) {
-    buckets[bucketFor(item.strength)].push(item);
+    const li = lineItemsByField.get(item.field);
+    buckets[bucketForRow(item, li)].push(item);
   }
 
-  const visible: Array<{
-    bucket: Bucket;
-    rows: EvidenceRowViewModel[];
-    headerKey: "groupSent" | "groupWithheld";
-    captionKey: "groupWithheldCaption" | null;
-    tone: "success" | "subdued";
-  }> = [
-    {
-      bucket: "sent",
-      rows: buckets.sent,
-      headerKey: "groupSent",
-      captionKey: null,
-      tone: "success",
-    },
-    {
-      bucket: "withheld",
-      rows: buckets.withheld,
-      headerKey: "groupWithheld",
-      captionKey: "groupWithheldCaption",
-      tone: "subdued",
-    },
-  ].filter((g) => g.rows.length > 0) as typeof visible;
+  const visible: BucketSpec[] = (
+    [
+      {
+        bucket: "bankArgument" as const,
+        rows: buckets.bankArgument,
+        headerKey: "groupUsedInBankArgument" as const,
+        captionKey: null,
+        tone: "success" as const,
+      },
+      {
+        bucket: "contextOnly" as const,
+        rows: buckets.contextOnly,
+        headerKey: "groupContextOnly" as const,
+        captionKey: "groupContextOnlyCaption" as const,
+        tone: "subdued" as const,
+      },
+      {
+        bucket: "notIncluded" as const,
+        rows: buckets.notIncluded,
+        headerKey: "groupNotIncluded" as const,
+        captionKey: "groupNotIncludedCaption" as const,
+        tone: "subdued" as const,
+      },
+    ] satisfies BucketSpec[]
+  ).filter((g) => g.rows.length > 0);
+
+  // Conditional explainer — the central truthfulness gate. Only renders
+  // "bank-facing evidence used" copy when at least one row is actually
+  // a positive bank argument.
+  const explainer =
+    buckets.bankArgument.length > 0
+      ? t("explainerHasBankFacing", {
+          fields: buckets.bankArgument.map((r) => r.title).join(", "),
+        })
+      : t("explainerNoBankFacing");
 
   return (
     <Card>
@@ -78,7 +120,7 @@ export function EvidenceUsedSection({
             {t("title")}
           </Text>
           <Text as="p" variant="bodySm" tone="subdued">
-            {t("destinationExplainer")}
+            {explainer}
           </Text>
         </BlockStack>
 

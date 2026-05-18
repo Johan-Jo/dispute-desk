@@ -201,8 +201,17 @@ export default function EvidenceTab({ workspace }: Props) {
       {/* §1 — Case summary */}
       <CaseSummaryCard {...sections.caseSummary} />
 
-      {/* §2 — Evidence used in defense (Strong → Moderate → Supporting) */}
-      <EvidenceUsedSection items={sections.usedInDefense} />
+      {/* §2 — Evidence in your defence package.
+              Three buckets driven by EvidenceLineItem booleans:
+                - Used as positive bank argument
+                - Context only (in PDF but not relied on as proof)
+                - On file — not included
+              The explainer text is conditional on whether any row is
+              actually `usedAsPositiveBankEvidence`. */}
+      <EvidenceUsedSection
+        items={sections.usedInDefense}
+        lineItems={data?.evidenceLineItems ?? []}
+      />
 
       {/* §3 — Missing or weak evidence (collapses when empty)
               Inline actions: Upload evidence + Mark as not applicable.

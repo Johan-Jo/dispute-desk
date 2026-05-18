@@ -616,11 +616,14 @@
           }
         },
         "used": {
-          "title": "Pruebas registradas",
-          "destinationExplainer": "Las pruebas sólidas se incluyen en el paquete de defensa enviado al banco. Las pruebas complementarias permanecen registradas — exponerlas al banco debilitaría el caso (p. ej., un cliente sin pedidos previos, o una política que no fue aceptada en el checkout).",
-          "groupSent": "Enviado al banco",
-          "groupWithheld": "Registrado — no enviado",
-          "groupWithheldCaption": "Estas señales existen en el pedido pero se retienen de la presentación al banco porque debilitarían el caso en lugar de fortalecerlo."
+          "title": "Pruebas en tu paquete de defensa",
+          "explainerHasBankFacing": "Pruebas usadas como argumento ante el banco: {fields}.",
+          "explainerNoBankFacing": "No hay pruebas decisivas dirigidas al banco disponibles para esta disputa. El paquete de defensa puede seguir incluyendo el contexto del pedido y documentación de respaldo, pero ninguna señal de fraude sólida.",
+          "groupUsedInBankArgument": "Usado como argumento positivo ante el banco",
+          "groupContextOnly": "Solo contexto",
+          "groupContextOnlyCaption": "Incluido en el paquete de defensa como referencia, pero no usado como prueba decisiva.",
+          "groupNotIncluded": "Registrado — no incluido",
+          "groupNotIncludedCaption": "Estas señales existen en el pedido pero no forman parte del argumento dirigido al banco."
         },
         "missing": {
           "title": "Missing or weak evidence",

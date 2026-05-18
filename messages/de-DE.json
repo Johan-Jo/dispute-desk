@@ -649,11 +649,14 @@
           }
         },
         "used": {
-          "title": "Beweismittel im Vorgang",
-          "destinationExplainer": "Starke Beweise werden im Verteidigungspaket an die Bank gesendet. Unterstützende Beweise bleiben in der Akte — sie würden den Fall schwächen, wenn sie der Bank vorgelegt würden (z. B. ein Kunde ohne frühere Bestellungen oder eine Richtlinie, die nicht beim Checkout akzeptiert wurde).",
-          "groupSent": "An die Bank gesendet",
-          "groupWithheld": "In der Akte — nicht gesendet",
-          "groupWithheldCaption": "Diese Signale liegen zur Bestellung vor, werden aber nicht an die Bank übermittelt, weil sie den Fall eher schwächen als stärken würden."
+          "title": "Beweismittel im Verteidigungspaket",
+          "explainerHasBankFacing": "Bank-relevante Beweise im Verteidigungsargument: {fields}.",
+          "explainerNoBankFacing": "Für diesen Fall liegen keine entscheidenden bank-relevanten Beweise vor. Das Verteidigungspaket kann weiterhin Bestellkontext und unterstützende Unterlagen enthalten, aber kein starkes Betrugssignal.",
+          "groupUsedInBankArgument": "Als positives Bankargument verwendet",
+          "groupContextOnly": "Nur Kontext",
+          "groupContextOnlyCaption": "Im Verteidigungspaket als Hintergrund enthalten, aber nicht als entscheidender Beweis herangezogen.",
+          "groupNotIncluded": "In der Akte — nicht enthalten",
+          "groupNotIncludedCaption": "Diese Signale liegen zur Bestellung vor, sind aber nicht Teil des bank-relevanten Arguments."
         },
         "missing": {
           "title": "Missing or weak evidence",
