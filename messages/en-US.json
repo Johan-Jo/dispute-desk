@@ -625,6 +625,12 @@
       "none": "None"
     },
     "overview": {
+      "monitoring": {
+        "title": "DisputeDesk is monitoring this order",
+        "bodyWithDeadline": "If shipping tracking, delivery confirmation, payment verification, or other system-derived evidence becomes available before your deadline ({deadline}), DisputeDesk will refresh the defence package automatically. No action needed from you.",
+        "bodyNoDeadline": "If shipping tracking, delivery confirmation, payment verification, or other system-derived evidence becomes available before your deadline, DisputeDesk will refresh the defence package automatically. No action needed from you."
+      },
+      "rowSourceCaptionPendingSystem": "Pending order activity — populates automatically when Shopify reports it",
       "timeline": {
         "defencePackagePrepared": {
           "titleDone": "Defence package prepared",

@@ -790,6 +790,13 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         //   · trailing pill self-aligned.
         const renderRow = (row: Row) => {
           const { item, spec, classification } = row;
+          const isMissing = classification.status === "missing";
+          // System-derived row that's currently missing — replace the
+          // generic "From Shopify order data" caption with the more
+          // informative "Pending order activity — populates automatically
+          // when Shopify reports it" so the merchant understands the
+          // system is watching and they don't need to act.
+          const isPendingSystemSignal = isMissing && !canMerchantUpload(item);
           // Prefer the row-specific reason copy when the row is
           // structurally unavailable (e.g. "Order is unfulfilled" for
           // delivery_proof on an unfulfilled order) — much more
@@ -798,8 +805,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           const sourceNote =
             classification.status === "not_applicable" && item.unavailableReason
               ? item.unavailableReason
-              : (SOURCE_NOTE[item.source ?? ""] ?? null);
-          const isMissing = classification.status === "missing";
+              : isPendingSystemSignal
+                ? t("rowSourceCaptionPendingSystem")
+                : (SOURCE_NOTE[item.source ?? ""] ?? null);
           const isNeutral =
             classification.status === "not_applicable" ||
             classification.status === "waived";
@@ -934,6 +942,26 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           </div>
         );
       })()}
+
+      {/* O3.5: Monitoring banner — informs the merchant that
+          DisputeDesk auto-refreshes the defence package as Shopify
+          reports new order activity (shipping tracking, delivery
+          confirmation, AVS/CVV codes, etc.). Backed by the
+          `defence-package-deadline-rebuild` cron. Only renders while
+          a rebuild could still change the outcome — suppressed once
+          Shopify has forwarded to the card network or the dispute is
+          closed. */}
+      {(presentationStatus === "DRAFT" ||
+        presentationStatus === "SAVED_TO_SHOPIFY" ||
+        presentationStatus === "AWAITING_SHOPIFY_AUTO_SUBMISSION") && (
+        <Banner tone="info" title={t("monitoring.title")}>
+          <Text as="p" variant="bodySm">
+            {dispute.dueAt
+              ? t("monitoring.bodyWithDeadline", { deadline: formatDate(dispute.dueAt) })
+              : t("monitoring.bodyNoDeadline")}
+          </Text>
+        </Banner>
+      )}
 
       {/* O4: Evidence coverage — five separate metrics, sourced from
           `data.evidenceLineItems`. The "8/8 collected" headline is gone:
