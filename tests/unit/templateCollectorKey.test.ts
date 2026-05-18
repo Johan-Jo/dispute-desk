@@ -3,12 +3,20 @@ import { readdirSync, readFileSync } from "fs";
 import { resolve } from "path";
 
 // Whitelist of evidence-capability keys allowed in pack_template_items.collector_key.
-// Adding a new key here must be paired with a real collector that produces the
-// evidence, and the page.tsx COLLECTOR_KEY_SOURCE map must learn about it.
-// See docs/technical.md "Template → collector mapping".
+//
+// Adding a new key here must be paired with a real collector that
+// produces the evidence (look at `fieldsProvided: ["…"]` in
+// lib/packs/sources/*) and, where applicable, the COLLECTOR_KEY_SOURCE
+// map in app/(embedded)/app/packs/[packId]/page.tsx must learn about
+// it. See docs/technical.md "Template → collector mapping".
+//
+// 2026-05-18: removed `payment_authentication` (no collector emits this
+// key — the paymentSource collector uses `avs_cvv_match`). The drifted
+// template row was repaired by migration
+// 20260518201947_fix_avs_cvv_match_collector_key.sql.
 const ALLOWED_COLLECTOR_KEYS = new Set([
   "order_confirmation",
-  "payment_authentication",
+  "avs_cvv_match",
   "tds_authentication",
   "fraud_risk_screening",
   "ip_location_check",
@@ -32,7 +40,11 @@ function collectCollectorKeyLiterals(): { value: string; file: string }[] {
   const found: { value: string; file: string }[] = [];
 
   for (const file of files) {
-    const sql = readFileSync(resolve(dir, file), "utf8");
+    const rawSql = readFileSync(resolve(dir, file), "utf8");
+    // Strip line comments so explanatory `collector_key='foo'` references
+    // inside `-- …` blocks don't trigger false positives. The whitelist
+    // only cares about real SQL assignments.
+    const sql = rawSql.replace(/--[^\n]*/g, "");
     if (!sql.includes("collector_key")) continue;
 
     // Match: SET collector_key = 'value' | collector_key = 'value' | ,'value', in a VALUES tuple
@@ -72,8 +84,29 @@ describe("pack_template_items.collector_key whitelist", () => {
     expect(literals.length).toBeGreaterThan(10);
   });
 
-  it("every non-null collector_key literal is in the allowed whitelist", () => {
-    const bad = literals.filter((l) => !ALLOWED_COLLECTOR_KEYS.has(l.value));
+  // Historical drifts that were corrected by a later migration. Each
+  // entry pins the EXACT {bad value, source file} pair so re-introducing
+  // the same drift in a new migration still fails the whitelist check.
+  // Shipped migrations are immutable; we acknowledge the legacy violation
+  // and verify the corrective migration exists.
+  const KNOWN_SUPERSEDED: Array<{ value: string; file: string; correctedBy: string }> = [
+    {
+      value: "payment_authentication",
+      file: "20260517120000_align_chargeback_templates_with_v2_pipeline.sql",
+      // Migration that re-points the same row to 'avs_cvv_match':
+      correctedBy: "20260518201947_fix_avs_cvv_match_collector_key.sql",
+    },
+  ];
+
+  it("every non-null collector_key literal is allowed (or a known-superseded historical drift)", () => {
+    const bad = literals
+      .filter((l) => !ALLOWED_COLLECTOR_KEYS.has(l.value))
+      .filter(
+        (l) =>
+          !KNOWN_SUPERSEDED.some(
+            (s) => s.value === l.value && s.file === l.file,
+          ),
+      );
     if (bad.length > 0) {
       const detail = bad
         .map((b) => `  - "${b.value}" in ${b.file}`)
@@ -83,5 +116,13 @@ describe("pack_template_items.collector_key whitelist", () => {
       );
     }
     expect(bad).toEqual([]);
+  });
+
+  it("every known-superseded historical drift is matched by an existing corrective migration", () => {
+    const dir = resolve(__dirname, "../../supabase/migrations");
+    const migrationFiles = new Set(readdirSync(dir));
+    for (const s of KNOWN_SUPERSEDED) {
+      expect(migrationFiles.has(s.correctedBy)).toBe(true);
+    }
   });
 });
