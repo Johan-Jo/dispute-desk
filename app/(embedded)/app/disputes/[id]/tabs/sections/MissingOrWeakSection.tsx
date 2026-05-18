@@ -39,6 +39,7 @@ import {
   Button,
   Modal,
   Select,
+  Divider,
 } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import { SHOPIFY_DISPUTE_EVIDENCE_FILE_ACCEPT_ATTR } from "@/lib/uploads/shopifyDisputeEvidenceFileConstraints";
@@ -102,45 +103,38 @@ function MissingRow({
 
   const actions =
     onUpload || onWaiveClick ? (
-      <BlockStack gap="100" align="end">
-        <InlineStack gap="200" wrap={false} align="end">
-          {onUpload ? (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept={SHOPIFY_DISPUTE_EVIDENCE_FILE_ACCEPT_ATTR}
-                style={{ display: "none" }}
-                onChange={(e) => {
-                  const files = Array.from(e.target.files ?? []);
-                  if (files.length > 0) onUpload(item.field, files);
-                  e.target.value = "";
-                }}
-              />
-              <Button
-                size="slim"
-                onClick={() => fileInputRef.current?.click()}
-                loading={uploading}
-                disabled={uploading || uploadsDisabled}
-              >
-                {uploading ? tActions("uploading") : tActions("upload")}
-              </Button>
-            </>
-          ) : null}
-          {onWaiveClick ? (
-            <Button
-              variant="plain"
-              size="slim"
-              onClick={() => onWaiveClick(item.field)}
-            >
-              {tActions("markNotApplicable")}
-            </Button>
-          ) : null}
-        </InlineStack>
+      <BlockStack gap="150" align="end" inlineAlign="end">
         {onUpload ? (
-          <Text as="p" variant="bodyXs" tone="subdued" alignment="end">
-            {tActions("fileHint")}
-          </Text>
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={SHOPIFY_DISPUTE_EVIDENCE_FILE_ACCEPT_ATTR}
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                if (files.length > 0) onUpload(item.field, files);
+                e.target.value = "";
+              }}
+            />
+            <Button
+              size="slim"
+              onClick={() => fileInputRef.current?.click()}
+              loading={uploading}
+              disabled={uploading || uploadsDisabled}
+            >
+              {uploading ? tActions("uploading") : tActions("upload")}
+            </Button>
+          </>
+        ) : null}
+        {onWaiveClick ? (
+          <Button
+            variant="tertiary"
+            size="micro"
+            onClick={() => onWaiveClick(item.field)}
+          >
+            {tActions("markNotApplicable")}
+          </Button>
         ) : null}
       </BlockStack>
     ) : null;
@@ -157,16 +151,14 @@ function MissingRow({
           : undefined,
       }}
     >
-      <InlineStack gap="400" align="space-between" blockAlign="start" wrap={false}>
-        <BlockStack gap="100">
+      <InlineStack gap="400" align="space-between" blockAlign="center" wrap={false}>
+        <BlockStack gap="050">
           <InlineStack gap="200" blockAlign="center">
             <Text as="h4" variant="headingSm">
               {item.title}
             </Text>
-            {showPerRowBadge ? (
-              <Badge tone={item.required ? "critical" : "info"}>
-                {item.required ? t("required") : t("optional")}
-              </Badge>
+            {showPerRowBadge && item.required ? (
+              <Badge tone="critical">{t("required")}</Badge>
             ) : null}
           </InlineStack>
           <Text as="p" variant="bodySm" tone="subdued">
@@ -261,13 +253,6 @@ export function MissingOrWeakSection({
 
   const requiredCount = items.filter((i) => i.required).length;
   const optionalCount = items.length - requiredCount;
-  const allSamePriority = requiredCount === 0 || optionalCount === 0;
-  const headerBadgeLabel = allSamePriority
-    ? requiredCount > 0
-      ? `${t("required")} (${requiredCount})`
-      : `${t("optional")} (${optionalCount})`
-    : null;
-  const headerBadgeTone = allSamePriority && requiredCount > 0 ? "critical" : "info";
 
   return (
     <Card>
@@ -281,30 +266,49 @@ export function MissingOrWeakSection({
           <Text as="p" variant="bodySm" tone="subdued">
             {t("description")}
           </Text>
-          {headerBadgeLabel ? (
-            <InlineStack>
-              <Badge tone={headerBadgeTone}>{headerBadgeLabel}</Badge>
-            </InlineStack>
-          ) : null}
+          <InlineStack gap="200">
+            {requiredCount > 0 ? (
+              <Badge tone="critical">
+                {`${requiredCount} ${t("required")}`}
+              </Badge>
+            ) : null}
+            {optionalCount > 0 ? (
+              <Badge tone="info">
+                {`${optionalCount} ${t("optional")}`}
+              </Badge>
+            ) : null}
+          </InlineStack>
         </BlockStack>
 
-        {items.map((item) => (
-          <MissingRow
-            key={item.id}
-            item={item}
-            t={t}
-            tActions={tActions}
-            showPerRowBadge={!allSamePriority}
-            uploading={uploadingField === item.field}
-            highlighted={highlightedField === item.field}
-            uploadsDisabled={uploadsDisabled}
-            rowRef={(el) => {
-              rowRefs.current[item.field] = el;
-            }}
-            onUpload={onUpload}
-            onWaiveClick={onWaive ? (field) => setWaiveTarget(field) : undefined}
-          />
-        ))}
+        <BlockStack gap="0">
+          {items.map((item, idx) => (
+            <BlockStack gap="0" key={item.id}>
+              {idx > 0 ? <Divider /> : null}
+              <div style={{ padding: "12px 0" }}>
+                <MissingRow
+                  item={item}
+                  t={t}
+                  tActions={tActions}
+                  showPerRowBadge
+                  uploading={uploadingField === item.field}
+                  highlighted={highlightedField === item.field}
+                  uploadsDisabled={uploadsDisabled}
+                  rowRef={(el) => {
+                    rowRefs.current[item.field] = el;
+                  }}
+                  onUpload={onUpload}
+                  onWaiveClick={
+                    onWaive ? (field) => setWaiveTarget(field) : undefined
+                  }
+                />
+              </div>
+            </BlockStack>
+          ))}
+        </BlockStack>
+
+        <Text as="p" variant="bodyXs" tone="subdued">
+          {tActions("fileHint")}
+        </Text>
       </BlockStack>
 
       {onWaive ? (
