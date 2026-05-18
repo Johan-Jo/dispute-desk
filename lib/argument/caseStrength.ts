@@ -139,6 +139,56 @@ function decisiveHintFor(family: ReasonFamily): string {
   }
 }
 
+/** Per-family "decisive triplet" used in the WEAK reason composition.
+ *  The user spec calls out the fraud triplet explicitly: payment
+ *  verification, confirmed delivery, customer purchase acknowledgement.
+ *  Other families use parallel construction. Plan v2 §11. */
+function decisiveFamiliesFor(family: ReasonFamily): string {
+  switch (family) {
+    case "fraud":
+      return "payment verification, confirmed delivery, or a clear customer purchase acknowledgement";
+    case "delivery":
+      return "carrier signature confirmation, proof of delivery to the cardholder's verified address, or customer acknowledgement of receipt";
+    case "product":
+      return "the product listing as advertised, refund policy disclosure, or customer correspondence";
+    case "refund":
+      return "documented refund processing, refund timeline, or customer correspondence";
+    case "subscription":
+      return "cancellation policy disclosure, cancellation timeline, or customer correspondence";
+    case "billing":
+      return "transaction records, AVS/CVV verification, or 3-D Secure authentication";
+    case "digital":
+      return "access logs showing the customer used the digital good";
+    case "general":
+    default:
+      return "decisive evidence specific to this dispute reason";
+  }
+}
+
+/** Family label used in the WEAK reason sentence ("no decisive {family}
+ *  evidence"). Mirrors the merchant-facing phrasing of the dispute reason. */
+function familyLabelFor(family: ReasonFamily): string {
+  switch (family) {
+    case "fraud":
+      return "fraud";
+    case "delivery":
+      return "delivery";
+    case "product":
+      return "product-conformity";
+    case "refund":
+      return "refund";
+    case "subscription":
+      return "subscription";
+    case "billing":
+      return "billing";
+    case "digital":
+      return "digital-good";
+    case "general":
+    default:
+      return "dispute";
+  }
+}
+
 function joinLabels(labels: string[], conj: "and" | "with" = "and"): string {
   if (labels.length === 0) return "";
   if (labels.length === 1) return labels[0];
@@ -195,10 +245,12 @@ function composeStrengthReason(args: {
     const labels = moderate.slice(0, 2).map((c) => c.label);
     return `${joinLabels(labels)} provide partial support. A strong signal such as ${decisiveHintFor(family)} would significantly strengthen the case.`;
   }
-  // strong=0 AND moderate=0 — true "weak". Use the family fallback,
-  // which is the only case where it's accurate to say a category of
-  // decisive evidence is missing.
-  return STRENGTH_REASONS[family].weak;
+  // strong=0 AND moderate=0 — true "weak" with only supporting context.
+  // Compose a truthful sentence that names what's missing using the
+  // family-specific decisive triplet. Plan v2 §11.
+  const familyLabel = familyLabelFor(family);
+  const decisive = decisiveFamiliesFor(family);
+  return `This is weak because the defence package contains mostly supporting documentation, but no decisive ${familyLabel} evidence. ${decisive.charAt(0).toUpperCase()}${decisive.slice(1)} would strengthen the case.`;
 }
 
 /* ── Public API ── */

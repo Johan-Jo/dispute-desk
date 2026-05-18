@@ -499,7 +499,7 @@ describe("Test 17 — strength reason mentions missing payment verification for 
 });
 
 describe("Test 18 — strength reason mentions missing confirmed delivery when absent", () => {
-  it.fails("the redesigned WEAK reason names delivery confirmation", () => {
+  it("the redesigned WEAK reason names delivery confirmation", () => {
     const f = weakFraudFixture();
     const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField));
     expect(result.strengthReason).toMatch(/delivery/i);
@@ -507,7 +507,7 @@ describe("Test 18 — strength reason mentions missing confirmed delivery when a
 });
 
 describe("Test 19 — strength reason mentions missing customer purchase acknowledgement", () => {
-  it.fails("the redesigned WEAK reason names customer acknowledgement / communication", () => {
+  it("the redesigned WEAK reason names customer acknowledgement / communication", () => {
     const f = weakFraudFixture();
     const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField));
     expect(result.strengthReason).toMatch(/(customer|acknowledg|communication)/i);
