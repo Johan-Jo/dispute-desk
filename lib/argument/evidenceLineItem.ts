@@ -2,16 +2,39 @@
  * Evidence line-item derivation — single source of truth for per-row
  * dispute-detail UI state.
  *
- * Stub introduced by commit 1 (front-loaded tests). The full derivation
- * lands in commit 2 alongside the fraud decisive-signal filter. Until
- * then, the function throws on call so the `it.fails(...)` tests can
- * exercise the import path without flipping green prematurely.
+ * Inputs come from the workspace pipeline (`ChecklistItemV2[]` + the
+ * already-classified `EvidenceFact[]` + raw payloads). The output is
+ * consumed by:
+ *
+ *   - The Overview tab's "Evidence collected" list
+ *   - The Evidence tab's "Evidence in your defence package" section
+ *   - The Review/Submit tab's "Inclusion review" interface
+ *   - The Submission Summary panel
+ *
+ * Every UI surface reads the booleans (`includedInDefencePackage`,
+ * `includedInBankArgument`, `usedAsPositiveBankEvidence`) — never the
+ * `submissionMethod` enum — for gating "is this in X?" questions. The
+ * enum only describes WHY a row landed in its current state.
+ *
+ * Hard invariant: a merchant `force_include` override NEVER, by itself,
+ * elevates a row to positive bank evidence. The override is honored
+ * only when the payload independently qualifies via the canonical
+ * categorizer.
  *
  * Plan: C:\Users\johan\.claude\plans\do-a-plan-for-scalable-parrot.md
  */
 
+import {
+  CANONICAL_EVIDENCE,
+  categorizeEvidenceField,
+  type EvidenceCategory,
+} from "./canonicalEvidence";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type { EvidenceFact } from "@/lib/defence/types";
+import {
+  INTERNAL_ONLY_FIELDS,
+  isFieldBankEligible,
+} from "@/lib/defence/factClassifier";
 import type { CaseStrengthContribution } from "./caseStrength";
 import type { ReasonFamily } from "./reasonFamily";
 
@@ -65,7 +88,10 @@ export interface DeriveEvidenceLineItemsInput {
   checklist: ChecklistItemV2[];
   facts: EvidenceFact[];
   payloadByField: Map<string, unknown>;
-  contributions: { strong: CaseStrengthContribution[]; moderate: CaseStrengthContribution[] };
+  contributions: {
+    strong: CaseStrengthContribution[];
+    moderate: CaseStrengthContribution[];
+  };
   packSavedToShopify: boolean;
   excludedFields: Set<string>;
   attachmentUploadFailures: Map<string, string>;
@@ -73,14 +99,324 @@ export interface DeriveEvidenceLineItemsInput {
   reasonFamily: ReasonFamily;
 }
 
+/* ── Source inference ────────────────────────────────────────────── */
+
+const MERCHANT_FIELDS = new Set<string>([
+  "supporting_documents",
+  "product_description",
+  "duplicate_explanation",
+  "customer_communication",
+]);
+
+const DERIVED_FIELDS = new Set<string>([
+  "ip_location_check",
+  "device_session_consistency",
+  "avs_cvv_match",
+]);
+
+function inferSource(field: string): EvidenceSource {
+  if (MERCHANT_FIELDS.has(field)) return "merchant_upload";
+  if (DERIVED_FIELDS.has(field)) return "derived";
+  return "shopify";
+}
+
+/* ── Reason copy ─────────────────────────────────────────────────── */
+
+const REASON_FOR_METHOD: Record<SubmissionMethod, string> = {
+  bank_argument: "Used as positive bank-facing evidence.",
+  context_only: "Included in the defence package as context, not as decisive proof.",
+  internal_only: "Used internally for assessment; not surfaced to the bank.",
+  not_included: "Field is on file but no usable evidence payload was emitted.",
+  not_supported: "No bank-facing slot exists for this field.",
+  excluded: "Excluded by merchant from the bank submission.",
+  failed_upload: "Upload failed; the file did not reach the defence package.",
+  waived: "Marked not applicable by the merchant.",
+};
+
+const REASON_OVERRIDES: Record<string, Partial<Record<SubmissionMethod, string>>> = {
+  ip_location_check: {
+    internal_only:
+      "This signal is ambiguous or unfavorable and could weaken the fraud response.",
+  },
+  device_session_consistency: {
+    internal_only:
+      "Device/session signals can weaken the fraud response when inconclusive; kept internal.",
+  },
+  fraud_risk_screening: {
+    internal_only:
+      "Pre-authorization risk scoring is informational only; not surfaced to the bank.",
+  },
+  refund_policy: {
+    context_only:
+      "Documents merchant policy, but does not by itself prove authorization for this fraud dispute.",
+  },
+  shipping_policy: {
+    context_only:
+      "Documents shipping commitments; supporting context only.",
+  },
+  cancellation_policy: {
+    context_only:
+      "Documents cancellation rules; supporting context only.",
+  },
+  order_confirmation: {
+    context_only:
+      "Confirms order details, but does not prove the customer authorized the transaction.",
+  },
+  avs_cvv_match: {
+    bank_argument: "Payment verification supports cardholder identity.",
+  },
+};
+
+function reasonFor(field: string, method: SubmissionMethod): string {
+  return REASON_OVERRIDES[field]?.[method] ?? REASON_FOR_METHOD[method];
+}
+
+/* ── Categorizer helpers ─────────────────────────────────────────── */
+
+function payloadObjectFor(
+  payloadByField: Map<string, unknown>,
+  field: string,
+): Record<string, unknown> | null {
+  const p = payloadByField.get(field);
+  if (p == null || typeof p !== "object" || Array.isArray(p)) return null;
+  return p as Record<string, unknown>;
+}
+
+function strengthFromCategory(cat: EvidenceCategory): StrengthContribution {
+  if (cat === "strong") return "strong";
+  if (cat === "moderate") return "moderate";
+  if (cat === "supporting") return "supporting";
+  return "none";
+}
+
+function categoryForField(field: string, payload: Record<string, unknown> | null): EvidenceCategory {
+  return categorizeEvidenceField(field, payload);
+}
+
 /**
- * STUB — full implementation in commit 2.
- *
- * Returns an empty array so `it.fails` tests reach their assertions
- * (they currently fail by design until the real derivation lands).
+ * Negative-or-ambiguous detector. Today this fires for the three
+ * internal-only fields (IP/device/fraud-screening) when their payload
+ * carries a definitively negative signal (different_country, high
+ * risk, etc.). Used as a belt-and-suspenders check so even if an
+ * inclusion override slips past the API guard, the derivation refuses
+ * to elevate.
  */
+function isNegativeOrAmbiguous(
+  field: string,
+  payload: Record<string, unknown> | null,
+): boolean {
+  if (INTERNAL_ONLY_FIELDS.has(field)) return true;
+  if (!payload) return false;
+  // billing_address_match payload mismatch is detected at the section
+  // level by classifyBillingAddressMismatch in useEvidenceSections;
+  // here we surface it on the order_confirmation row.
+  return false;
+}
+
+/* ── Inclusion fact lookup ───────────────────────────────────────── */
+
+interface FactLookup {
+  hasApprovedFact: boolean;
+  includeInBankNarrative: boolean;
+  bankEligibleFromFact: boolean;
+}
+
+function buildFactLookup(facts: EvidenceFact[]): Map<string, FactLookup> {
+  const byField = new Map<string, FactLookup>();
+  for (const f of facts) {
+    // `value` carries `fieldKey` per `factClassifier.extractValue`.
+    const fieldKey = (f.value as { fieldKey?: string } | null)?.fieldKey;
+    if (typeof fieldKey !== "string") continue;
+    const existing = byField.get(fieldKey);
+    const merged: FactLookup = {
+      hasApprovedFact: existing?.hasApprovedFact ? true : !f.internalOnly,
+      includeInBankNarrative:
+        existing?.includeInBankNarrative ? true : f.includeInBankNarrative === true,
+      bankEligibleFromFact:
+        existing?.bankEligibleFromFact ? true : f.bankEligible === true,
+    };
+    byField.set(fieldKey, merged);
+  }
+  return byField;
+}
+
+/* ── Submission method resolver ──────────────────────────────────── */
+
+interface ResolutionContext {
+  field: string;
+  status: ChecklistItemV2["status"];
+  payload: Record<string, unknown> | null;
+  excluded: boolean;
+  failed: boolean;
+  override: "force_include" | "force_exclude" | undefined;
+  internalFlag: boolean;
+  contributesStrongOrModerate: boolean;
+  naturalCategory: EvidenceCategory;
+  factLookup: FactLookup | undefined;
+}
+
+function resolveSubmissionMethod(ctx: ResolutionContext): SubmissionMethod {
+  // First-match wins, in priority order:
+  if (ctx.failed) return "failed_upload";
+
+  // Explicit merchant exclusion (via the new inclusion override or the
+  // legacy excludedFields set).
+  if (ctx.override === "force_exclude" || ctx.excluded) return "excluded";
+
+  if (ctx.status === "waived") return "waived";
+
+  // `force_include` rules (per plan §"Architectural decisions" #3):
+  //   1. If internal-only / negative — IGNORE the override; preserve
+  //      the natural state.
+  //   2. If the payload independently qualifies as decisive (categorizer
+  //      returns strong/moderate) — promote to bank_argument.
+  //   3. Otherwise — context_only. The override NEVER itself elevates
+  //      strength or sets usedAsPositiveBankEvidence=true.
+  if (ctx.override === "force_include") {
+    const unsafe = ctx.internalFlag || isNegativeOrAmbiguous(ctx.field, ctx.payload);
+    if (!unsafe) {
+      if (ctx.naturalCategory === "strong" || ctx.naturalCategory === "moderate") {
+        return "bank_argument";
+      }
+      return "context_only";
+    }
+    // Fall through to the natural resolution.
+  }
+
+  // Internal-only fields land here regardless of strength.
+  if (ctx.internalFlag) return "internal_only";
+
+  // The row exists in the registry but has no canonical PDF representation.
+  // Today every registered field has either a fact pathway or a context
+  // pathway, so this branch is reserved for future "not_supported" cases.
+
+  // Bank-argument: row contributes strong/moderate AND has an approved fact.
+  if (ctx.contributesStrongOrModerate && ctx.factLookup?.hasApprovedFact) {
+    return "bank_argument";
+  }
+
+  // Context-only: row contributes (or is on file as supporting) and has
+  // an approved fact, but doesn't reach strong/moderate.
+  if (
+    ctx.status === "available" &&
+    (ctx.factLookup?.hasApprovedFact ||
+      ctx.naturalCategory === "supporting" ||
+      ctx.naturalCategory === "moderate")
+  ) {
+    return "context_only";
+  }
+
+  return "not_included";
+}
+
+/* ── Public derivation ───────────────────────────────────────────── */
+
 export function deriveEvidenceLineItems(
-  _args: DeriveEvidenceLineItemsInput,
+  input: DeriveEvidenceLineItemsInput,
 ): EvidenceLineItem[] {
-  return [];
+  const {
+    checklist,
+    facts,
+    payloadByField,
+    contributions,
+    packSavedToShopify,
+    excludedFields,
+    attachmentUploadFailures,
+    inclusionOverrides,
+  } = input;
+
+  const factLookup = buildFactLookup(facts);
+
+  const strongSignalFields = new Set(
+    contributions.strong.map((c) => c.evidenceFieldKey),
+  );
+  const moderateSignalFields = new Set(
+    contributions.moderate.map((c) => c.evidenceFieldKey),
+  );
+
+  const out: EvidenceLineItem[] = [];
+
+  for (const item of checklist) {
+    const spec = CANONICAL_EVIDENCE[item.field];
+    if (!spec) continue; // Off-registry fields are invisible everywhere.
+
+    const payload = payloadObjectFor(payloadByField, item.field);
+    const internalFlag = INTERNAL_ONLY_FIELDS.has(item.field);
+    const negativeOrAmbiguous = isNegativeOrAmbiguous(item.field, payload);
+    const override = inclusionOverrides.get(item.field);
+    const failed = attachmentUploadFailures.has(item.field);
+    const excluded = excludedFields.has(item.field);
+
+    const naturalCategory = categoryForField(item.field, payload);
+    const hasContribution =
+      strongSignalFields.has(item.field) || moderateSignalFields.has(item.field);
+
+    const lookup = factLookup.get(item.field);
+    const bankEligibleField =
+      !internalFlag && isFieldBankEligible(item.field, payload);
+
+    const submissionMethod = resolveSubmissionMethod({
+      field: item.field,
+      status: item.status,
+      payload,
+      excluded,
+      failed,
+      override,
+      internalFlag,
+      contributesStrongOrModerate: hasContribution,
+      naturalCategory,
+      factLookup: lookup,
+    });
+
+    // Strength contribution. Internal-only fields are always rendered
+    // as `internal_only` (regardless of category); excluded/waived rows
+    // collapse to `none` because they don't influence the argument.
+    let strengthContribution: StrengthContribution;
+    if (internalFlag) {
+      strengthContribution = "internal_only";
+    } else if (submissionMethod === "excluded" || submissionMethod === "waived") {
+      strengthContribution = "none";
+    } else if (item.status !== "available") {
+      strengthContribution = "none";
+    } else {
+      strengthContribution = strengthFromCategory(naturalCategory);
+    }
+
+    const hasEvidence = item.status === "available" || item.status === "waived";
+
+    const includedInDefencePackage =
+      submissionMethod === "bank_argument" || submissionMethod === "context_only";
+
+    const includedInBankArgument =
+      submissionMethod === "bank_argument" &&
+      bankEligibleField &&
+      !negativeOrAmbiguous;
+
+    const usedAsPositiveBankEvidence =
+      includedInBankArgument &&
+      (strengthContribution === "strong" || strengthContribution === "moderate") &&
+      (lookup?.includeInBankNarrative ?? bankEligibleField);
+
+    const submittedToShopify = includedInDefencePackage && packSavedToShopify;
+
+    out.push({
+      id: `line:${item.field}`,
+      field: item.field,
+      label: item.label || spec.label,
+      source: inferSource(item.field),
+      hasEvidence,
+      strengthContribution,
+      bankEligible: bankEligibleField,
+      merchantVisible: true,
+      includedInDefencePackage,
+      includedInBankArgument,
+      usedAsPositiveBankEvidence,
+      submittedToShopify,
+      submissionMethod,
+      isNegativeOrAmbiguous: negativeOrAmbiguous,
+      reason: reasonFor(item.field, submissionMethod),
+    });
+  }
+
+  return out;
 }

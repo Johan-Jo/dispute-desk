@@ -105,6 +105,26 @@ export const INTERNAL_ONLY_FIELDS = new Set([
   "fraud_risk_screening",
 ]);
 
+/**
+ * Bank-eligibility predicate for a single field + payload.
+ *
+ * A field is bank-eligible when it is NOT in `INTERNAL_ONLY_FIELDS` AND
+ * its categorizer-derived category is `strong` or `moderate`. Extracted
+ * so `deriveEvidenceLineItems` (lib/argument/evidenceLineItem.ts) can
+ * share the rule without re-classifying facts.
+ *
+ * Mirrors the inline check in the per-section classifier loop below
+ * (line 349 — `bankEligible: !isInternalOnly && (cat === "strong" || cat === "moderate")`).
+ */
+export function isFieldBankEligible(
+  fieldKey: string,
+  payload: Record<string, unknown> | null,
+): boolean {
+  if (INTERNAL_ONLY_FIELDS.has(fieldKey)) return false;
+  const cat = categoryFor({ fieldKey, payload });
+  return cat === "strong" || cat === "moderate";
+}
+
 export function categoryForField(fieldKey: string, payload: Record<string, unknown> | null): EvidenceFactCategory {
   switch (fieldKey) {
     case "avs_cvv_match":

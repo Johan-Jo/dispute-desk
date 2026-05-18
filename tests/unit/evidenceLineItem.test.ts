@@ -64,7 +64,7 @@ describe("Test 4 — Fraud + order_receipt only → Weak", () => {
 });
 
 describe("Test 5 — internal-only negative signals are never includedInBankArgument", () => {
-  it.fails("AVS-mismatch / IP-mismatch line items have includedInBankArgument=false", async () => {
+  it("AVS-mismatch / IP-mismatch line items have includedInBankArgument=false", async () => {
     const mod = await import("@/lib/argument/evidenceLineItem");
     const { deriveEvidenceLineItems } = mod as {
       deriveEvidenceLineItems: (args: unknown) => Array<{ field: string; includedInBankArgument: boolean }>;
@@ -114,7 +114,7 @@ describe("Test 6 — billing/shipping mismatch is internal-only for fraud", () =
 });
 
 describe("Test 7 — IP/location mismatch is internal-only by default", () => {
-  it.fails("ip_location_check with different_country resolves to internal_only", async () => {
+  it("ip_location_check with different_country resolves to internal_only", async () => {
     const mod = await import("@/lib/argument/evidenceLineItem");
     const { deriveEvidenceLineItems } = mod as {
       deriveEvidenceLineItems: (args: unknown) => Array<{ field: string; submissionMethod: string }>;
@@ -173,7 +173,7 @@ describe("Test 8 — failed AVS/CVV is internal-only by default", () => {
 });
 
 describe("Test 9 — UI never renders \"all evidence included\"", () => {
-  it.fails("the rendered dispute-detail markup does not contain that phrase", async () => {
+  it("the rendered dispute-detail markup does not contain that phrase", async () => {
     // Component-render assertion lives in disputeDetailCopy.test.ts; this
     // placeholder pins the contract from the line-item perspective: when
     // any item resolves to internal_only or excluded, the panel cannot
@@ -202,7 +202,7 @@ describe("Test 9 — UI never renders \"all evidence included\"", () => {
 });
 
 describe("Test 10 — UI never renders \"8/8 collected\"", () => {
-  it.fails("coverage card emits 5 separate metrics, not a single ratio", async () => {
+  it("coverage card emits 5 separate metrics, not a single ratio", async () => {
     // The coverage card consumes deriveEvidenceLineItems output. This
     // test asserts the contract supplies the metrics needed to split the
     // headline into 5 separate numbers.
@@ -238,7 +238,7 @@ describe("Test 10 — UI never renders \"8/8 collected\"", () => {
 });
 
 describe("Test 11 — \"Strong evidence is included\" only renders when strong bank-eligible exists", () => {
-  it.fails("the explainer key resolves to the no-bank-facing variant for the weak fixture", async () => {
+  it("the explainer key resolves to the no-bank-facing variant for the weak fixture", async () => {
     const mod = await import("@/lib/argument/evidenceLineItem");
     const { deriveEvidenceLineItems } = mod as {
       deriveEvidenceLineItems: (args: unknown) => Array<{ usedAsPositiveBankEvidence: boolean }>;
@@ -274,7 +274,7 @@ describe("Test 12 — \"submitted to card network\" never appears for SAVED_TO_S
 });
 
 describe("Test 13 — coverage card shows 5 separate metrics", () => {
-  it.fails("sectionsFound, includedInPackage, usedAsPositiveBankArgument, keptInternal, missingDecisive each computable from lineItems", async () => {
+  it("sectionsFound, includedInPackage, usedAsPositiveBankArgument, keptInternal, missingDecisive each computable from lineItems", async () => {
     const mod = await import("@/lib/argument/evidenceLineItem");
     const { deriveEvidenceLineItems } = mod as {
       deriveEvidenceLineItems: (args: unknown) => Array<{
@@ -357,7 +357,7 @@ describe("Test 15 — same item cannot be internal-only here and bank-facing the
 });
 
 describe("Test 16 — PDF inclusion ≠ bank argument inclusion (context_only category)", () => {
-  it.fails("supporting items can land in the package as context_only without being bank-argument", async () => {
+  it("supporting items can land in the package as context_only without being bank-argument", async () => {
     const mod = await import("@/lib/argument/evidenceLineItem");
     const { deriveEvidenceLineItems } = mod as {
       deriveEvidenceLineItems: (args: unknown) => Array<{
@@ -421,7 +421,7 @@ describe("Test 20 — merchant inclusion override creates evidence_inclusion_ove
 });
 
 describe("Test 21 — force_include on generic supporting_documents → context_only", () => {
-  it.fails("override on a row with no decisive payload lands as context_only, not bank_argument", async () => {
+  it("override on a row with no decisive payload lands as context_only, not bank_argument", async () => {
     const mod = await import("@/lib/argument/evidenceLineItem");
     const { deriveEvidenceLineItems } = mod as {
       deriveEvidenceLineItems: (args: unknown) => Array<{
@@ -465,7 +465,7 @@ describe("Test 21 — force_include on generic supporting_documents → context_
 });
 
 describe("Test 22 — force_include + signedContract=true → bank_argument (payload qualifies)", () => {
-  it.fails("override does not bypass the categorizer; the payload itself elevates strength", async () => {
+  it("override does not bypass the categorizer; the payload itself elevates strength", async () => {
     const mod = await import("@/lib/argument/evidenceLineItem");
     const { deriveEvidenceLineItems } = mod as {
       deriveEvidenceLineItems: (args: unknown) => Array<{
@@ -509,7 +509,7 @@ describe("Test 22 — force_include + signedContract=true → bank_argument (pay
 });
 
 describe("Test 23 — force_include on internal-only field refused at the derivation layer", () => {
-  it.fails("override on ip_location_check is ignored; row stays internal_only", async () => {
+  it("override on ip_location_check is ignored; row stays internal_only", async () => {
     const mod = await import("@/lib/argument/evidenceLineItem");
     const { deriveEvidenceLineItems } = mod as {
       deriveEvidenceLineItems: (args: unknown) => Array<{
