@@ -150,7 +150,8 @@ export function CompleteDefencePackageCard({
     () => (submittedToShopifyAt ? null : daysRemainingFrom(dispute?.dueAt)),
     [dispute?.dueAt, submittedToShopifyAt],
   );
-  const [row, setRow] = useState<DefencePackageRow | null>(null);
+  const [latest, setLatest] = useState<DefencePackageRow | null>(null);
+  const [bankFacing, setBankFacing] = useState<DefencePackageRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"regen" | "finalize" | "submit" | null>(null);
@@ -165,15 +166,21 @@ export function CompleteDefencePackageCard({
       const res = await fetch(`/api/packs/${packId}/defence-packages`);
       if (!res.ok) {
         setError(`Could not load defence package (${res.status})`);
-        setRow(null);
+        setLatest(null);
+        setBankFacing(null);
       } else {
-        const json = (await res.json()) as { latest: DefencePackageRow | null };
-        setRow(json.latest);
+        const json = (await res.json()) as {
+          latest: DefencePackageRow | null;
+          bankFacing?: DefencePackageRow | null;
+        };
+        setLatest(json.latest);
+        setBankFacing(json.bankFacing ?? null);
         setError(null);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "unknown error");
-      setRow(null);
+      setLatest(null);
+      setBankFacing(null);
     } finally {
       setLoading(false);
     }
@@ -189,22 +196,42 @@ export function CompleteDefencePackageCard({
   // isn't readable (Safari ITP, brand-new install, server-render flows).
   const shopIdQs = dispute?.shopId ? `?shop_id=${encodeURIComponent(dispute.shopId)}` : "";
 
+  const isSubmittedToBank = Boolean(submittedToShopifyAt);
+
+  // The card distinguishes two rows now:
+  //   - `latest`: the most recent version (what the merchant is editing).
+  //   - `bankFacing`: the row whose PDF the bank actually has (status=
+  //     submitted). Set when `isSubmittedToBank` is true and the workspace
+  //     has been saved to Shopify; otherwise null.
+  //
+  // The body view + Preview button render `bankFacing` when present
+  // (truth: what the bank sees). Action buttons (Regenerate / Finalize /
+  // Submit) always operate on `latest` (the work-in-progress draft).
+  // When the two diverge, a small info banner explains the state.
+  const displayRow = isSubmittedToBank && bankFacing ? bankFacing : latest;
+  const hasUnsubmittedDraft = Boolean(
+    isSubmittedToBank &&
+      bankFacing &&
+      latest &&
+      latest.id !== bankFacing.id,
+  );
+
   // Preview URL is now a server-side redirect: the API route generates
   // the signed Supabase URL and 302s to it. Rendering as `<Button
   // url={previewHref} target="_blank">` keeps the open-in-new-tab inside
   // a real user-gesture context (a link click), instead of an async
   // window.open() from a fetch callback — which Shopify Admin's iframe
   // sandbox blocks.
-  const previewHref = row?.pdf_path
-    ? `/api/defence-packages/${row.id}/preview${shopIdQs}`
+  const previewHref = displayRow?.pdf_path
+    ? `/api/defence-packages/${displayRow.id}/preview${shopIdQs}`
     : null;
 
   const onRegenerate = useCallback(async () => {
-    if (!row) return;
+    if (!latest) return;
     setError(null);
     setBusy("regen");
     try {
-      const res = await fetch(`/api/defence-packages/${row.id}/regenerate${shopIdQs}`, { method: "POST" });
+      const res = await fetch(`/api/defence-packages/${latest.id}/regenerate${shopIdQs}`, { method: "POST" });
       if (!res.ok) {
         setError(`Regenerate failed (${res.status})`);
       }
@@ -212,14 +239,14 @@ export function CompleteDefencePackageCard({
     } finally {
       setBusy(null);
     }
-  }, [row, load, shopIdQs]);
+  }, [latest, load, shopIdQs]);
 
   const onFinalize = useCallback(async () => {
-    if (!row) return;
+    if (!latest) return;
     setError(null);
     setBusy("finalize");
     try {
-      const res = await fetch(`/api/defence-packages/${row.id}/finalize${shopIdQs}`, { method: "POST" });
+      const res = await fetch(`/api/defence-packages/${latest.id}/finalize${shopIdQs}`, { method: "POST" });
       if (!res.ok) {
         setError(`Finalize failed (${res.status})`);
       }
@@ -227,14 +254,14 @@ export function CompleteDefencePackageCard({
     } finally {
       setBusy(null);
     }
-  }, [row, load, shopIdQs]);
+  }, [latest, load, shopIdQs]);
 
   const onSubmit = useCallback(async () => {
-    if (!row) return;
+    if (!latest) return;
     setError(null);
     setBusy("submit");
     try {
-      const res = await fetch(`/api/defence-packages/${row.id}/submit${shopIdQs}`, { method: "POST" });
+      const res = await fetch(`/api/defence-packages/${latest.id}/submit${shopIdQs}`, { method: "POST" });
       if (!res.ok) {
         setError(`Submit failed (${res.status})`);
       }
@@ -242,7 +269,7 @@ export function CompleteDefencePackageCard({
     } finally {
       setBusy(null);
     }
-  }, [row, load, shopIdQs]);
+  }, [latest, load, shopIdQs]);
 
   if (!packId) return null;
   if (loading) {
@@ -256,9 +283,12 @@ export function CompleteDefencePackageCard({
     );
   }
   // Feature flag off OR build hasn't run yet — hide the card entirely.
-  if (!row) return null;
+  if (!latest) return null;
 
-  const isSubmittedToBank = Boolean(submittedToShopifyAt);
+  // `row` continues to drive metadata + action gates (status, validation,
+  // generated_at, package_mode) — those are properties of the working
+  // draft, not the bank-facing snapshot.
+  const row = latest;
   const canFinalize =
     !isSubmittedToBank &&
     row.status === "draft" &&
@@ -299,20 +329,30 @@ export function CompleteDefencePackageCard({
           {/* Submission state banner — replaces "Ready to submit" + deadline
               once the pack has been saved to Shopify. */}
           {isSubmittedToBank ? (
-            <Banner tone="success" title="Submitted to bank">
-              <BlockStack gap="100">
-                {formattedSubmittedAt ? (
-                  <Text as="p" variant="bodySm">
-                    Submitted on {formattedSubmittedAt}.
-                  </Text>
-                ) : null}
-                {shopifyAdminUrl ? (
-                  <Link url={shopifyAdminUrl} external>
-                    Open in Shopify Admin
-                  </Link>
-                ) : null}
-              </BlockStack>
-            </Banner>
+            <BlockStack gap="200">
+              <Banner tone="success" title="Submitted to bank">
+                <BlockStack gap="100">
+                  {formattedSubmittedAt ? (
+                    <Text as="p" variant="bodySm">
+                      Submitted on {formattedSubmittedAt}
+                      {bankFacing ? ` (v${bankFacing.version})` : ""}.
+                    </Text>
+                  ) : null}
+                  {shopifyAdminUrl ? (
+                    <Link url={shopifyAdminUrl} external>
+                      Open in Shopify Admin
+                    </Link>
+                  ) : null}
+                </BlockStack>
+              </Banner>
+              {hasUnsubmittedDraft && latest && bankFacing ? (
+                <Banner tone="info" title={`Newer draft v${latest.version} ready to resubmit`}>
+                  <p>
+                    The bank received v{bankFacing.version}. A newer draft is on file. Finalize and resubmit to replace the PDF on the Shopify dispute.
+                  </p>
+                </Banner>
+              ) : null}
+            </BlockStack>
           ) : (
             <InlineStack gap="400" align="space-between">
               <BlockStack gap="050">
@@ -431,9 +471,15 @@ export function CompleteDefencePackageCard({
 
       {/* Inline HTML defence view — visually mirrors the PDF document
           section-for-section. Hidden when the package has no narrative
-          (skipped / failed rows). */}
-      {row.narrative_json && row.facts_json && (
-        <DefencePackageHtmlView row={row} dispute={dispute} />
+          (skipped / failed rows).
+
+          Renders `displayRow` — `bankFacing` when the pack is submitted,
+          `latest` otherwise. Without this, a regenerate after save_to_
+          shopify would display the draft narrative under the "Submitted
+          to bank" banner, falsely claiming the bank received content the
+          PDF on file does not contain. */}
+      {displayRow?.narrative_json && displayRow?.facts_json && (
+        <DefencePackageHtmlView row={displayRow} dispute={dispute} />
       )}
     </>
   );

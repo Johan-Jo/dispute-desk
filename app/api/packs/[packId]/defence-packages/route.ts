@@ -41,8 +41,20 @@ export async function GET(
     .eq("shop_id", shopId)
     .order("version", { ascending: false });
 
+  // `bankFacing` is the row whose PDF the bank actually has — the one
+  // with `status = "submitted"`. There is at most one per pack (the
+  // finalize route supersedes the prior `final` row but never touches
+  // `submitted` rows, and save_to_shopify flips the row to `submitted`
+  // immutably). When `latest.id !== bankFacing.id`, a newer draft has
+  // been generated but not yet sent — the embedded card must render
+  // `bankFacing` under the "Submitted to bank" banner to avoid showing
+  // body copy that the bank does not have.
+  const bankFacing =
+    (data ?? []).find((r) => r.status === "submitted") ?? null;
+
   return NextResponse.json({
     latest: data?.[0] ?? null,
+    bankFacing,
     all: data ?? [],
   });
 }
