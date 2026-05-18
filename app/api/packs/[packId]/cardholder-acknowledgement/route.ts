@@ -18,9 +18,12 @@
  *     server defence-in-depth alongside the client requirement.
  *
  * Side effects:
- *   1. Insert evidence_items row (source=manual_upload, type=manual_text).
- *      Payload carries `customerConfirmsOrder=true`,
+ *   1. Insert evidence_items row (source=manual_upload, type=comms).
+ *      Payload carries `customerConfirmsOrder=true`, `kind=
+ *      cardholder_acknowledgement` as the discriminator,
  *      `fieldsProvided=["customer_communication"]`, and the text.
+ *      `type` must match the DB CHECK constraint allowlist
+ *      (order | shipping | tracking | policy | comms | other).
  *   2. Patch checklist_v2.customer_communication → status=available so
  *      the row reflects the new evidence immediately.
  *   3. Log audit events: `item_added` (existing) +
@@ -161,11 +164,17 @@ export async function POST(
   // flips the customer_communication checklist row to `available` on
   // the next workspace fetch, AND carries `customerConfirmsOrder: true`
   // so the categorizer treats it as the decisive strong signal.
+  //
+  // `type: "comms"` matches the DB CHECK constraint allowlist
+  // (order | shipping | tracking | policy | comms | other); the
+  // `payload.kind: "cardholder_acknowledgement"` discriminator
+  // distinguishes this row from a regular customer-communication
+  // upload for downstream consumers.
   const { data: item, error: itemErr } = await sb
     .from("evidence_items")
     .insert({
       pack_id: packId,
-      type: "manual_text",
+      type: "comms",
       label: "Cardholder acknowledgement",
       source: "manual_upload",
       payload: {
@@ -189,6 +198,7 @@ export async function POST(
         error: `Failed to record acknowledgement: ${
           itemErr?.message ?? "unknown error"
         }`,
+        code: "PERSIST_FAILED",
       },
       { status: 500 },
     );
@@ -225,7 +235,7 @@ export async function POST(
     actorType: "merchant",
     eventType: "item_added",
     eventPayload: {
-      type: "manual_text",
+      type: "comms",
       label: "Cardholder acknowledgement",
       evidenceItemId: item.id,
       checklistField: FIELD_KEY,
