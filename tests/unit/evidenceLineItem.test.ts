@@ -281,12 +281,21 @@ describe("Test 11 — \"Strong evidence is included\" only renders when strong b
 });
 
 describe("Test 12 — \"submitted to card network\" never appears for SAVED_TO_SHOPIFY / AWAITING_*", () => {
-  it.fails("hero copy resolution gates on presentationStatus", async () => {
-    // Pinned at the resolver layer. The render-side regex test lives in
-    // disputeDetailCopy.test.ts after the hero rewrite (commit 5).
-    // Card-network wording IS allowed for SUBMITTED_TO_NETWORK and
-    // CLOSED_* — see Test 24 for the positive case.
-    expect("commit 5 — hero rewrite").toBe("delivered");
+  it("hero copy gates card-network wording on presentationStatus", async () => {
+    // The detailed regex assertions over every i18n entry live in
+    // disputeDetailCopy.test.ts. Here we pin the contract: the title
+    // family used for SAVED_TO_SHOPIFY and AWAITING_SHOPIFY_AUTO_SUBMISSION
+    // (`saved.*` / `awaiting.*`) must NOT match the card-network regex.
+    const mod = await import("@/messages/en.json");
+    const hero = mod.disputes.overview.hero;
+    const bannedRe = /(submitted|sent) to (the |your )?(bank|card network)/i;
+    for (const family of ["saved", "awaiting"] as const) {
+      for (const copy of Object.values(hero.title[family])) {
+        expect(copy).not.toMatch(bannedRe);
+      }
+    }
+    expect(hero.subtitle.savedNoDate).not.toMatch(bannedRe);
+    expect(hero.subtitle.awaitingForward).not.toMatch(bannedRe);
   });
 });
 

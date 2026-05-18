@@ -609,7 +609,60 @@
     "itemStrength": {
       "strong": "Strong",
       "moderate": "Moderate",
-      "supporting": "Supporting"
+      "supporting": "Supporting",
+      "internal_only": "Internal only",
+      "none": "None"
+    },
+    "overview": {
+      "hero": {
+        "title": {
+          "preSubmit": {
+            "likely_to_win": "Strong case to challenge",
+            "could_win": "Review before challenging",
+            "needs_strengthening": "Review before challenging",
+            "hard_to_win": "Complete documentation, weak defence",
+            "covered": "Covered by Shopify Protect"
+          },
+          "saved": {
+            "likely_to_win": "Strong defence saved to Shopify",
+            "could_win": "Moderate defence saved to Shopify",
+            "needs_strengthening": "Moderate defence saved to Shopify",
+            "hard_to_win": "Weak defence saved to Shopify",
+            "covered": "Covered by Shopify Protect"
+          },
+          "awaiting": {
+            "likely_to_win": "Strong defence forwarded to Shopify",
+            "could_win": "Moderate defence forwarded to Shopify",
+            "needs_strengthening": "Moderate defence forwarded to Shopify",
+            "hard_to_win": "Weak defence forwarded to Shopify",
+            "covered": "Covered by Shopify Protect"
+          },
+          "submitted_to_network": {
+            "likely_to_win": "Strong defence sent to the card network",
+            "could_win": "Moderate defence sent to the card network",
+            "needs_strengthening": "Moderate defence sent to the card network",
+            "hard_to_win": "Weak defence sent to the card network",
+            "covered": "Covered by Shopify Protect"
+          },
+          "closed": {
+            "won": "Dispute won",
+            "lost": "Dispute lost",
+            "unknown": "Dispute closed"
+          }
+        },
+        "subtitle": {
+          "draftWithReason": "{strengthReason}",
+          "savedWithReason": "{strengthReason} Saved to Shopify on {savedDate}.",
+          "savedWithReasonAndDeadline": "{strengthReason} Saved to Shopify on {savedDate}. Shopify will forward the evidence to your card network by the deadline ({deadline}). You can keep adding evidence until then.",
+          "savedNoDate": "{strengthReason} Saved to Shopify — awaiting Shopify forwarding to your card network.",
+          "awaitingForward": "{strengthReason} Shopify has the package and will forward it to your card network. DisputeDesk can confirm the evidence was saved to Shopify, but cannot independently verify when forwarding occurs.",
+          "submittedToNetwork": "{strengthReason} The card network is reviewing this defence. Outcome typically posts in 30–75 days.",
+          "submittedToNetworkWithDate": "Sent to your card network on {submittedDate}. Outcome typically posts in 30–75 days.",
+          "closedWon": "Outcome: won{submittedDate, select, none {} other { (decided on {submittedDate})}}.",
+          "closedLost": "Outcome: lost{submittedDate, select, none {} other { (decided on {submittedDate})}}.",
+          "closedUnknown": "Outcome reported by Shopify: {outcome}."
+        }
+      }
     },
     "evidenceTab": {
       "sections": {

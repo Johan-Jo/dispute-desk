@@ -5,9 +5,41 @@
 
 import type { ChecklistItemV2, SubmissionReadiness, WaivedItemRecord, WaiveReason } from "@/lib/types/evidenceItem";
 import type { CaseStrengthResult, WhyWinsResult, RiskResult, ImprovementSignal, NextAction, MissingItemWithContext } from "@/lib/argument/types";
+import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
 
 export type { ChecklistItemV2, SubmissionReadiness, WaivedItemRecord, WaiveReason };
 export type { CaseStrengthResult, WhyWinsResult, RiskResult, ImprovementSignal, NextAction, MissingItemWithContext };
+
+/** Merchant-facing dispute submission state. Derived server-side by
+ *  the workspace API from the underlying DB enums + Shopify forwarding
+ *  signal. Card-network wording is only permitted in SUBMITTED_TO_NETWORK
+ *  and CLOSED_*. */
+export type PresentationStatus =
+  | "DRAFT"
+  | "SAVED_TO_SHOPIFY"
+  | "AWAITING_SHOPIFY_AUTO_SUBMISSION"
+  | "SUBMITTED_TO_NETWORK"
+  | "CLOSED_WON"
+  | "CLOSED_LOST"
+  | "CLOSED_UNKNOWN";
+
+export interface SubmissionSummary {
+  pdfFileName: string | null;
+  shopifyStructuredFields: Array<{
+    field: "customer_first_name" | "customer_last_name" | "customer_email";
+    value: string | null;
+  }>;
+  factsInPdf: Array<{ field: string; label: string; categoryLabel: string }>;
+  counts: {
+    usedAsPositiveBankArgument: number;
+    contextOnly: number;
+    internalOnly: number;
+    excluded: number;
+    notSupported: number;
+    failedUpload: number;
+    waived: number;
+  };
+}
 
 export interface EvidenceItemFull {
   id: string;
@@ -172,7 +204,19 @@ export interface AppliedRule {
 export interface WorkspaceData {
   dispute: WorkspaceDispute;
   pack: WorkspacePack | null;
-  submissionFields: SubmissionField[];
+  /** Merchant-facing submission state for the dispute. Drives the
+   *  Overview hero copy, the timeline active step, and the Submission
+   *  Summary panel's tense. Plan v2. */
+  presentationStatus: PresentationStatus;
+  /** Per-row dispute-detail view-model from `deriveEvidenceLineItems`.
+   *  Single source of truth for every UI surface; never duplicated. */
+  evidenceLineItems: EvidenceLineItem[];
+  /** What was (or will be) sent to Shopify. Counts derive from
+   *  `evidenceLineItems` so the panel cannot disagree with the rows. */
+  submissionSummary: SubmissionSummary;
+  /** @deprecated 2026-05-16 — structured field routing was retired.
+   *  Always an empty array. Kept on the type for legacy consumers. */
+  submissionFields?: SubmissionField[];
   /** First-class file inventory derived from
    *  `pack.evidenceItems[*].payload.fileId`. Plan v3 §3.A.4. Always
    *  an array; empty array is the explicit empty state for the

@@ -1,36 +1,87 @@
 /**
  * Render-side copy assertions for the dispute-detail redesign.
  *
- * The detailed tests (regex assertion against rendered markup with
- * @testing-library/react) flip green as each UI commit lands. Until
- * then, this file pins the copy contract via constants so the
- * deleted-string list can be enforced even before components render.
+ * Reads `messages/en.json` directly so the assertions exercise the
+ * canonical strings that will be rendered. Component-render assertions
+ * with @testing-library/react can land later — these contract-level
+ * tests already pin the most common copy regressions.
  */
 
 import { describe, it, expect } from "vitest";
+import enMessages from "@/messages/en.json";
 
-const BANNED_PHRASES = [
-  "All evidence included",
-  "8/8 collected",
-  "Low-likelihood case submitted",
-  "Strong evidence is included in the defence package sent to the bank",
-  "DisputeDesk saved available evidence to your card network",
-  "submitted to bank",
-  "sent to bank",
-  "submitted to card network",
-  "sent to card network",
-  "Shopify auto-submits to your card network",
+const BANNED_FOR_NON_NETWORK = [
+  /submitted to (the )?bank/i,
+  /sent to (the )?bank/i,
+  /submitted to (the |your )?card network/i,
+  /sent to (the |your )?card network/i,
+  /shopify auto[- ]submits to (your )?card network/i,
 ];
 
-describe("Banned-phrase inventory", () => {
-  it("the banned-phrase list is non-empty and matches the plan", () => {
-    expect(BANNED_PHRASES.length).toBeGreaterThan(0);
-  });
+const ALWAYS_BANNED = [
+  /all evidence included/i,
+  /8\/8 collected/i,
+  /low-likelihood case submitted/i,
+  /strong evidence is included in the defence package sent to the bank/i,
+  /disputedesk saved available evidence to your card network/i,
+];
 
-  // Component-render assertions land alongside their respective commits:
-  //   - Commit 5: hero (Test 12)
-  //   - Commit 6: evidence used section (Test 11)
-  //   - Commit 7: coverage card (Test 10)
-  //   - Commit 9: submission summary (Test 9)
-  //   - Commit 12: timeline (no test number; covered by Test 12 regex)
+interface HeroMessages {
+  title: Record<string, Record<string, string>>;
+  subtitle: Record<string, string>;
+}
+
+const hero = (
+  enMessages as { disputes: { overview: { hero: HeroMessages } } }
+).disputes.overview.hero;
+
+describe("Hero copy — banned phrases never appear in non-network states", () => {
+  const FAMILIES = ["preSubmit", "saved", "awaiting"] as const;
+  for (const family of FAMILIES) {
+    for (const [variant, copy] of Object.entries(hero.title[family])) {
+      it(`title.${family}.${variant} contains no card-network wording`, () => {
+        for (const re of BANNED_FOR_NON_NETWORK) {
+          expect(copy).not.toMatch(re);
+        }
+      });
+    }
+  }
+
+  it("subtitle.savedNoDate contains no card-network wording", () => {
+    for (const re of BANNED_FOR_NON_NETWORK) {
+      expect(hero.subtitle.savedNoDate).not.toMatch(re);
+    }
+  });
+  it("subtitle.awaitingForward contains no card-network wording", () => {
+    for (const re of BANNED_FOR_NON_NETWORK) {
+      expect(hero.subtitle.awaitingForward).not.toMatch(re);
+    }
+  });
+});
+
+describe("Hero copy — always-banned phrases never appear", () => {
+  function walk(value: unknown, path: string, hits: string[]): void {
+    if (typeof value === "string") {
+      for (const re of ALWAYS_BANNED) {
+        if (re.test(value)) hits.push(`${path}: matches ${re}`);
+      }
+      return;
+    }
+    if (value && typeof value === "object") {
+      for (const [k, v] of Object.entries(value)) walk(v, `${path}.${k}`, hits);
+    }
+  }
+  it("disputes.overview.hero never contains the always-banned phrases", () => {
+    const hits: string[] = [];
+    walk(hero, "disputes.overview.hero", hits);
+    expect(hits).toEqual([]);
+  });
+});
+
+describe("Hero copy — SUBMITTED_TO_NETWORK may use card-network wording", () => {
+  it("at least one submitted_to_network title contains card-network wording", () => {
+    const titles = Object.values(hero.title.submitted_to_network);
+    const usesCardNetwork = titles.some((s) => /card network/i.test(s));
+    expect(usesCardNetwork).toBe(true);
+  });
 });

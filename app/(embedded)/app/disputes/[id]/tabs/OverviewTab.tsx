@@ -31,10 +31,12 @@ import {
   ShieldCheckMarkIcon,
 } from "@shopify/polaris-icons";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import { EVIDENCE_EVALUATION_HELPER } from "@/lib/argument/evidenceStatus";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
+import type { PresentationStatus } from "../workspace-components/types";
 import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
 import { classifyEvidenceRow } from "@/lib/argument/categoryBadge";
 import { canMerchantUpload, type useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
@@ -74,29 +76,12 @@ const FAILURE_FALLBACK = {
  */
 type HeroVariant = "likely_to_win" | "could_win" | "needs_strengthening" | "hard_to_win" | "covered";
 
-// Labels per PRD §10. Both moderate variants (could_win and
-// needs_strengthening) collapse to the same label — the underlying
-// tone difference still surfaces via palette + body copy.
-//
-// Two label sets — pre-submit copy prompts a merchant decision
-// ("Strong case to challenge", "Review before challenging"); once the
-// pack has been submitted to Shopify the decision is already made, so
-// the hero shifts to a status framing that describes the case strength
-// without dangling a stale CTA.
-const HERO_LABEL_BY_VARIANT_PRE_SUBMIT: Record<HeroVariant, string> = {
-  likely_to_win: "Strong case to challenge",
-  could_win: "Review before challenging",
-  needs_strengthening: "Review before challenging",
-  hard_to_win: "Low likelihood case",
-  covered: "Covered by Shopify",
-};
-const HERO_LABEL_BY_VARIANT_SUBMITTED: Record<HeroVariant, string> = {
-  likely_to_win: "Likely to win",
-  could_win: "Moderate case submitted",
-  needs_strengthening: "Moderate case submitted",
-  hard_to_win: "Low-likelihood case submitted",
-  covered: "Covered by Shopify",
-};
+// Hero title + subtitle copy lives in messages/en.json under
+// `disputes.overview.hero.*`. The component picks the right variant ×
+// status combination at render time (see `resolveHeroTitle` /
+// `resolveHeroSubtitle` inside the component) so the rule that
+// "submitted to card network" / "sent to bank" never appears outside
+// SUBMITTED_TO_NETWORK + CLOSED_* is enforced in one place.
 
 const HERO_TONE_BY_VARIANT: Record<
   HeroVariant,
@@ -159,11 +144,16 @@ function mapReasonToRulesFamily(reason: string | null | undefined): string {
 
 export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const searchParams = useSearchParams();
+  const t = useTranslations("disputes.overview");
   const { data, derived, actions, clientState } = workspace;
 
   if (!data) return null;
 
   const { dispute, appliedRule } = data;
+  // Workspace API exposes presentationStatus on every fetch. Default to
+  // DRAFT for the brief render window before the first response lands.
+  const presentationStatus: PresentationStatus =
+    (data.presentationStatus as PresentationStatus | undefined) ?? "DRAFT";
   const {
     caseStrength,
     effectiveChecklist,
@@ -222,12 +212,90 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       })()
     : null;
 
-  /* ── Hero ── */
+  /* ── Hero ──
+   *
+   *  Title resolution: title family is picked from `presentationStatus`
+   *  (DRAFT → preSubmit, SAVED_TO_SHOPIFY → saved,
+   *  AWAITING_SHOPIFY_AUTO_SUBMISSION → awaiting,
+   *  SUBMITTED_TO_NETWORK → submitted_to_network, CLOSED_* → closed).
+   *  Inside the chosen family the variant key (`hard_to_win`, etc.)
+   *  selects the actual string. Hard rule: card-network wording only
+   *  reaches the title via the `submitted_to_network` and `closed`
+   *  families — both of which are reachable only when Shopify exposes
+   *  `evidenceSentOn` or a terminal `finalOutcome`. */
   const heroVariant: HeroVariant = (caseStrength.heroVariant as HeroVariant | undefined) ?? "hard_to_win";
-  const strengthLabel = submitted
-    ? HERO_LABEL_BY_VARIANT_SUBMITTED[heroVariant]
-    : HERO_LABEL_BY_VARIANT_PRE_SUBMIT[heroVariant];
   const heroTone = HERO_TONE_BY_VARIANT[heroVariant];
+
+  function resolveHeroTitle(): string {
+    switch (presentationStatus) {
+      case "CLOSED_WON":
+        return t("hero.title.closed.won");
+      case "CLOSED_LOST":
+        return t("hero.title.closed.lost");
+      case "CLOSED_UNKNOWN":
+        return t("hero.title.closed.unknown");
+      case "SUBMITTED_TO_NETWORK":
+        return t(`hero.title.submitted_to_network.${heroVariant}`);
+      case "AWAITING_SHOPIFY_AUTO_SUBMISSION":
+        return t(`hero.title.awaiting.${heroVariant}`);
+      case "SAVED_TO_SHOPIFY":
+        return t(`hero.title.saved.${heroVariant}`);
+      case "DRAFT":
+      default:
+        return t(`hero.title.preSubmit.${heroVariant}`);
+    }
+  }
+  const strengthLabel = resolveHeroTitle();
+
+  function resolveHeroSubtitle(): string | null {
+    const reason = (caseStrength.strengthReason ?? "").trim();
+    const savedDate = formatDate(submittedAt);
+    const deadline = dispute.dueAt ? formatDate(dispute.dueAt) : null;
+    switch (presentationStatus) {
+      case "DRAFT":
+        return reason.length > 0 ? reason : null;
+      case "SAVED_TO_SHOPIFY":
+        if (!reason && !submittedAt) return null;
+        if (reason && submittedAt && deadline) {
+          return t("hero.subtitle.savedWithReasonAndDeadline", {
+            strengthReason: reason || " ",
+            savedDate,
+            deadline,
+          });
+        }
+        if (reason && submittedAt) {
+          return t("hero.subtitle.savedWithReason", {
+            strengthReason: reason || " ",
+            savedDate,
+          });
+        }
+        return t("hero.subtitle.savedNoDate", { strengthReason: reason || " " });
+      case "AWAITING_SHOPIFY_AUTO_SUBMISSION":
+        return t("hero.subtitle.awaitingForward", { strengthReason: reason || " " });
+      case "SUBMITTED_TO_NETWORK":
+        if (submittedAt) {
+          return t("hero.subtitle.submittedToNetworkWithDate", {
+            submittedDate: formatDate(submittedAt),
+          });
+        }
+        return t("hero.subtitle.submittedToNetwork", { strengthReason: reason || " " });
+      case "CLOSED_WON":
+        return t("hero.subtitle.closedWon", {
+          submittedDate: submittedAt ? formatDate(submittedAt) : "none",
+        });
+      case "CLOSED_LOST":
+        return t("hero.subtitle.closedLost", {
+          submittedDate: submittedAt ? formatDate(submittedAt) : "none",
+        });
+      case "CLOSED_UNKNOWN":
+        return t("hero.subtitle.closedUnknown", {
+          outcome: dispute.finalOutcome ?? "—",
+        });
+      default:
+        return reason.length > 0 ? reason : null;
+    }
+  }
+  const heroSubtitle = resolveHeroSubtitle();
 
   /* ── Timeline ──
    *
@@ -414,24 +482,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               {strengthLabel}
             </span>
           </div>
-          {caseStrength.strengthReason && !submitted && (
+          {heroSubtitle && (
             <p style={{ fontSize: 14, color: heroTone.bodyColor, margin: 0, lineHeight: 1.5, opacity: 0.85 }}>
-              {caseStrength.strengthReason}
-            </p>
-          )}
-          {submitted && (
-            <p style={{ fontSize: 14, color: heroTone.bodyColor, margin: 0, lineHeight: 1.5, opacity: 0.85 }}>
-              {savedAwaitingForward
-                ? submittedAt
-                  ? dispute.dueAt
-                    ? `Saved to Shopify on ${formatDate(submittedAt)}. Shopify will auto-submit to your card network on ${formatDate(dispute.dueAt)} (the deadline) — you can keep adding evidence until then.`
-                    : `Saved to Shopify on ${formatDate(submittedAt)} — awaiting auto-submit to your card network. You can keep adding evidence until the deadline.`
-                  : "Saved to Shopify — awaiting auto-submit to your card network. You can keep adding evidence until the deadline."
-                : dispute.finalOutcome
-                  ? `Outcome reported: ${dispute.finalOutcome}.`
-                  : submittedAt
-                    ? `Submitted to your card network on ${formatDate(submittedAt)} — bank review in progress (typically 30–75 days).`
-                    : "Submitted to your card network — bank review in progress (typically 30–75 days)."}
+              {heroSubtitle}
             </p>
           )}
         </div>
