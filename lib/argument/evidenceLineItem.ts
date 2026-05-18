@@ -97,6 +97,13 @@ export interface EvidenceLineItem {
   submissionMethod: SubmissionMethod;
   isNegativeOrAmbiguous: boolean;
   reason: string;
+  /** True when a `force_include` would actually surface something
+   *  bank-facing. False when the row has no payload to elevate (e.g.
+   *  AVS codes the gateway never returned, delivery proof for an
+   *  unshipped order). The Inclusion Review section uses this to
+   *  disable the "Include in package" button — clicking it on a row
+   *  with no payload is a no-op. */
+  canBeForceIncluded: boolean;
   /** Optional internal-only warnings attached to a row whose primary
    *  evidentiary value is still useful as context. Surfaced by UI
    *  components that want to flag the row without changing its
@@ -162,35 +169,128 @@ const REASON_OVERRIDES: Record<string, Partial<Record<SubmissionMethod, string>>
   ip_location_check: {
     internal_only:
       "This signal is ambiguous or unfavorable and could weaken the fraud response.",
+    not_included:
+      "IP and location data are not available for this order.",
   },
   device_session_consistency: {
     internal_only:
       "Device/session signals can weaken the fraud response when inconclusive; kept internal.",
+    not_included:
+      "Device and session signals are not available for this order.",
   },
   fraud_risk_screening: {
     internal_only:
       "Pre-authorization risk scoring is informational only; not surfaced to the bank.",
+    not_included:
+      "Shopify did not return a qualifying pre-authorization risk assessment for this order.",
   },
   refund_policy: {
     context_only:
       "Documents merchant policy, but does not by itself prove authorization for this fraud dispute.",
+    not_included:
+      "Your refund policy text is not on file for this checkout.",
   },
   shipping_policy: {
     context_only:
       "Documents shipping commitments; supporting context only.",
+    not_included:
+      "Your shipping policy text is not on file for this checkout.",
   },
   cancellation_policy: {
     context_only:
       "Documents cancellation rules; supporting context only.",
+    not_included:
+      "Your cancellation policy text is not on file for this checkout.",
   },
   order_confirmation: {
     context_only:
       "Confirms order details, but does not prove the customer authorized the transaction.",
+    not_included:
+      "The order confirmation data could not be loaded from Shopify.",
   },
   avs_cvv_match: {
     bank_argument: "Payment verification supports cardholder identity.",
+    not_included:
+      "The payment processor did not return AVS or CVV verification codes for this transaction. Nothing to include — these codes come from the payment gateway at checkout, not after the fact.",
+  },
+  billing_address_match: {
+    not_included:
+      "The payment gateway did not return an AVS match result for this transaction. The billing address is on file, but no match/mismatch decision is available.",
+  },
+  shipping_tracking: {
+    not_included:
+      "The order has not shipped yet, so no carrier tracking is available. Once you ship the order this row will populate automatically.",
+  },
+  delivery_proof: {
+    not_included:
+      "Delivery has not been confirmed yet. Once the carrier marks the order delivered (or you upload a signature/photo) this row will populate automatically.",
+  },
+  tds_authentication: {
+    not_included:
+      "The payment receipt does not include 3-D Secure authentication data for this transaction.",
+  },
+  customer_communication: {
+    not_included:
+      "No customer correspondence is on file for this order. Upload a transcript from your helpdesk to add one.",
+  },
+  customer_account_info: {
+    not_included:
+      "Customer account history is not available for this order.",
+  },
+  activity_log: {
+    not_included:
+      "Customer activity history is not available for this order.",
+  },
+  supporting_documents: {
+    not_included:
+      "No supplementary documents have been uploaded yet. Add one from the Evidence tab to include it.",
+  },
+  product_description: {
+    not_included:
+      "Product description text is not on file for this order.",
+  },
+  duplicate_explanation: {
+    not_included:
+      "No duplicate-charge explanation has been provided yet.",
   },
 };
+
+/**
+ * Fields where a force_include can never produce a useful row because
+ * the underlying payload comes from a source DisputeDesk cannot
+ * influence (the payment gateway, the carrier, Shopify's risk engine,
+ * etc.). The button in the Inclusion Review UI is disabled for these
+ * when they're in the `not_included` state.
+ */
+const SOURCE_OUTSIDE_MERCHANT_CONTROL = new Set<string>([
+  "avs_cvv_match",
+  "billing_address_match",
+  "tds_authentication",
+  "fraud_risk_screening",
+  "ip_location_check",
+  "device_session_consistency",
+  "shipping_tracking",
+  "delivery_proof",
+  "order_confirmation",
+  "customer_account_info",
+  "activity_log",
+  "product_description",
+]);
+
+/**
+ * Fields that DO accept merchant-driven force_include even when no
+ * fact is on the row yet — uploading a document or pasting in a
+ * snippet IS the payload-producing action. Listed explicitly so the
+ * UI surfaces an actionable button.
+ */
+const FIELDS_MERCHANT_CAN_FORCE_INCLUDE = new Set<string>([
+  "supporting_documents",
+  "customer_communication",
+  "duplicate_explanation",
+  "refund_policy",
+  "shipping_policy",
+  "cancellation_policy",
+]);
 
 function reasonFor(field: string, method: SubmissionMethod): string {
   return REASON_OVERRIDES[field]?.[method] ?? REASON_FOR_METHOD[method];
@@ -452,6 +552,27 @@ export function deriveEvidenceLineItems(
     const submittedToShopify = includedInDefencePackage && packSavedToShopify;
 
     const internalSignals = input.internalSignalsByField?.get(item.field);
+
+    // canBeForceIncluded — true only when clicking "Include in package"
+    // would actually surface a row. Already-included rows (bank_argument
+    // or context_only) don't expose the button at all, so the flag is
+    // irrelevant there. For not_included rows: merchant-actionable
+    // fields (uploads, policy text) can be force-included even without
+    // an existing payload, because the merchant CAN add one. Auto-only
+    // fields (AVS, shipping, fraud risk) require a payload from an
+    // upstream system the merchant doesn't control — force-including
+    // an empty row would be a no-op.
+    const hasPayload = payload != null;
+    const canBeForceIncluded =
+      submissionMethod === "not_included"
+        ? hasPayload || FIELDS_MERCHANT_CAN_FORCE_INCLUDE.has(item.field)
+        : submissionMethod === "excluded" || submissionMethod === "waived"
+          ? true // restoring is always allowed
+          : false;
+    // Reference the source-control allowlist so future maintenance has
+    // a clear hook — the set is the inverse of FIELDS_MERCHANT_CAN_FORCE_INCLUDE.
+    void SOURCE_OUTSIDE_MERCHANT_CONTROL;
+
     out.push({
       id: `line:${item.field}`,
       field: item.field,
@@ -468,6 +589,7 @@ export function deriveEvidenceLineItems(
       submissionMethod,
       isNegativeOrAmbiguous: negativeOrAmbiguous,
       reason: reasonFor(item.field, submissionMethod),
+      canBeForceIncluded,
       ...(internalSignals && internalSignals.length > 0
         ? { internalSignals }
         : {}),

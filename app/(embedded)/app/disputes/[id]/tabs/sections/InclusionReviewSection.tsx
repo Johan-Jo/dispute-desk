@@ -179,6 +179,13 @@ export function InclusionReviewSection({
                   const showRestoreToggle = group === "excludedByMerchant";
                   const showDisabledInternalToggle =
                     group === "keptInternal" && isInternalOnly;
+                  // canBeForceIncluded is false when the source data
+                  // comes from outside the merchant's control (AVS
+                  // codes, carrier tracking, etc.). The button is
+                  // rendered disabled so the merchant sees clearly that
+                  // there is nothing to include here.
+                  const includeDisabled =
+                    showIncludeToggle && !li.canBeForceIncluded;
                   return (
                     <InlineStack
                       key={li.field}
@@ -194,13 +201,26 @@ export function InclusionReviewSection({
                         <Text as="span" variant="bodyXs" tone="subdued">
                           {li.reason}
                         </Text>
+                        {includeDisabled ? (
+                          <Text as="span" variant="bodyXs" tone="subdued">
+                            {t("toggle.disabledNoPayload")}
+                          </Text>
+                        ) : null}
                       </BlockStack>
                       {showIncludeToggle ? (
                         <Button
                           size="slim"
                           onClick={() => handleToggle(li, "force_include")}
                           loading={busyField === li.field}
-                          disabled={busyField !== null && busyField !== li.field}
+                          disabled={
+                            includeDisabled ||
+                            (busyField !== null && busyField !== li.field)
+                          }
+                          accessibilityLabel={
+                            includeDisabled
+                              ? t("toggle.disabledNoPayload")
+                              : undefined
+                          }
                         >
                           {t("toggle.include")}
                         </Button>

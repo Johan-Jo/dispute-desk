@@ -917,7 +917,8 @@
         "toggle": {
           "include": "Include in package",
           "restore": "Restore default",
-          "disabledInternalOnly": "Promoting an internal-only signal to bank-facing requires a confirmation flow that's not available yet."
+          "disabledInternalOnly": "Promoting an internal-only signal to bank-facing requires a confirmation flow that's not available yet.",
+          "disabledNoPayload": "Nothing to include — the data behind this row comes from a source outside DisputeDesk's control (the payment gateway, the carrier, or Shopify's risk engine)."
         },
         "emptyGroup": "—",
         "emptyAll": "No evidence rows are available for this dispute yet. Generate or rebuild the defence package to populate this section.",
