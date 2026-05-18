@@ -58,6 +58,367 @@
   animation-delay: 4s;
 }
 
+/* ── Brand hero (editorial dossier) — Hero DisputeDesk Brand.html ─── */
+.dd-brand-hero {
+  --dd-bg-start: #0f172a;
+  --dd-bg-mid: #1e293b;
+  --dd-bg-end: #334155;
+  --dd-grad-from: #60a5fa;
+  --dd-grad-via: #3b82f6;
+  --dd-grad-to: #2563eb;
+  --dd-cream: #f4eee2;
+  --dd-paper: #fbf7ee;
+  --dd-ink: #0b1220;
+  --dd-ink-3: #475569;
+  --dd-ink-4: #64748b;
+  --dd-line: #e5e7eb;
+  --dd-line-on-blue: rgba(244, 238, 226, 0.22);
+  --dd-line-on-blue-soft: rgba(244, 238, 226, 0.12);
+  --dd-accent-wax: #8a2a1f;
+  --dd-blue-400: #60a5fa;
+  --dd-blue-600: #2563eb;
+  font-family: var(--font-inter), "Inter", system-ui, sans-serif;
+  color: var(--dd-cream);
+}
+
+.dd-brand-hero .dd-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(244, 238, 226, 0.65);
+  margin-bottom: 24px;
+}
+.dd-brand-hero .dd-eyebrow::before {
+  content: "";
+  width: 36px;
+  height: 1px;
+  background: var(--dd-cream);
+  opacity: 0.6;
+}
+.dd-brand-hero .dd-eyebrow .dd-pill {
+  background: var(--dd-cream);
+  color: var(--dd-bg-mid);
+  padding: 3px 8px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.dd-brand-hero .dd-headline {
+  font-family: var(--font-crimson-pro), "Instrument Serif", Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(36px, 5.5vw, 80px);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin: 0;
+  color: var(--dd-cream);
+}
+.dd-brand-hero .dd-headline em {
+  font-style: italic;
+  display: inline-block;
+  padding-right: 0.12em;
+  margin-right: -0.12em;
+  background: linear-gradient(
+    135deg,
+    var(--dd-grad-from) 0%,
+    var(--dd-grad-via) 50%,
+    var(--dd-grad-to) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.dd-brand-hero .dd-rule {
+  height: 1px;
+  background: var(--dd-cream);
+  opacity: 0.5;
+  margin: 32px 0 28px;
+  max-width: 560px;
+  position: relative;
+}
+.dd-brand-hero .dd-rule::after {
+  content: "§";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--dd-bg-mid);
+  padding: 0 12px;
+  font-family: var(--font-crimson-pro), "Instrument Serif", serif;
+  font-style: italic;
+  color: rgba(244, 238, 226, 0.6);
+  font-size: 16px;
+}
+
+.dd-brand-hero p.dd-lede,
+.dd-brand-hero .dd-lede {
+  font-family: var(--font-inter), "Inter", system-ui, sans-serif !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-synthesis: none !important;
+  font-size: 17px;
+  line-height: 1.6;
+  color: rgba(244, 238, 226, 0.82);
+  margin: 0 0 32px;
+  max-width: 540px;
+}
+
+.dd-brand-hero .dd-checks {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 540px;
+  border-top: 1px solid var(--dd-line-on-blue);
+}
+.dd-brand-hero .dd-checks li {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 14px;
+  align-items: baseline;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--dd-line-on-blue);
+  font-family: var(--font-crimson-pro), "Instrument Serif", Georgia, serif;
+  font-size: 16px;
+  color: rgba(244, 238, 226, 0.86);
+  line-height: 1.45;
+}
+.dd-brand-hero .dd-checks .dd-marker {
+  font-family: var(--font-crimson-pro), "Instrument Serif", serif;
+  font-style: italic;
+  font-size: 19px;
+  color: var(--dd-blue-400);
+  text-align: center;
+}
+.dd-brand-hero .dd-checks strong {
+  color: var(--dd-cream);
+  font-weight: 600;
+}
+
+.dd-brand-hero .dd-submit-note {
+  font-family: var(--font-crimson-pro), "Instrument Serif", Georgia, serif;
+  font-style: italic;
+  font-size: 14.5px;
+  color: rgba(244, 238, 226, 0.65);
+  border-top: 1px dashed var(--dd-line-on-blue);
+  padding-top: 14px;
+  max-width: 540px;
+  margin: 0;
+}
+
+/* — dossier — cream paper graphic on slate — */
+.dd-brand-hero .dd-dossier-wrap {
+  position: relative;
+  padding-top: 120px;
+}
+.dd-brand-hero .dd-dossier {
+  position: relative;
+  z-index: 2;
+  background: var(--dd-paper);
+  color: var(--dd-ink);
+  border: 1px solid var(--dd-ink);
+  padding: 28px 30px 24px;
+  font-family: var(--font-inter), "Inter", sans-serif;
+  background-image: radial-gradient(rgba(27, 20, 16, 0.025) 1px, transparent 1px),
+    radial-gradient(rgba(27, 20, 16, 0.018) 1px, transparent 1px);
+  background-size: 24px 24px, 17px 17px;
+  background-position: 0 0, 8px 8px;
+}
+.dd-brand-hero .dd-dossier::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(27, 20, 16, 0.18);
+  pointer-events: none;
+}
+.dd-brand-hero .dd-dossier-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--dd-ink);
+  margin-bottom: 18px;
+  font-family: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dd-ink-3);
+}
+.dd-brand-hero .dd-dossier-head .dd-vol {
+  color: var(--dd-ink);
+  font-weight: 600;
+}
+.dd-brand-hero .dd-dossier-head .dd-hash {
+  color: var(--dd-accent-wax);
+  letter-spacing: 0.06em;
+  text-transform: none;
+  font-weight: 600;
+}
+.dd-brand-hero .dd-dossier-title {
+  font-family: var(--font-crimson-pro), "Instrument Serif", serif;
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  margin: 0 0 4px;
+  color: var(--dd-ink);
+}
+.dd-brand-hero .dd-dossier-title em {
+  font-style: italic;
+  color: var(--dd-accent-wax);
+}
+.dd-brand-hero .dd-dossier-meta {
+  font-family: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--dd-ink-3);
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--dd-line);
+  margin-bottom: 8px;
+}
+.dd-brand-hero .dd-dossier-row {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 11px 0;
+  border-bottom: 1px dashed var(--dd-line);
+  font-size: 13.5px;
+}
+.dd-brand-hero .dd-dossier-row:last-of-type {
+  border-bottom: 0;
+}
+.dd-brand-hero .dd-dossier-row .dd-mark {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--dd-ink);
+  color: var(--dd-cream);
+}
+.dd-brand-hero .dd-dossier-row .dd-mark svg {
+  width: 9px;
+  height: 9px;
+  stroke-width: 4;
+}
+.dd-brand-hero .dd-dossier-row.dd-missing .dd-mark {
+  background: transparent;
+  color: var(--dd-ink-4);
+  border: 1px dashed var(--dd-ink-4);
+}
+.dd-brand-hero .dd-dossier-row .dd-name {
+  color: var(--dd-ink);
+  font-family: var(--font-crimson-pro), "Instrument Serif", serif;
+  font-size: 16px;
+}
+.dd-brand-hero .dd-dossier-row .dd-src {
+  font-family: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dd-ink-4);
+}
+.dd-brand-hero .dd-dossier-row.dd-missing .dd-name {
+  color: var(--dd-ink-4);
+  font-style: italic;
+}
+.dd-brand-hero .dd-dossier-row.dd-missing .dd-src {
+  color: var(--dd-ink-4);
+}
+.dd-brand-hero .dd-dossier-foot {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--dd-ink);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.dd-brand-hero .dd-dossier-foot .dd-complete {
+  font-family: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dd-ink-3);
+}
+.dd-brand-hero .dd-dossier-foot .dd-complete .dd-num {
+  color: var(--dd-accent-wax);
+  font-weight: 600;
+  font-size: 14px;
+  margin-right: 4px;
+}
+.dd-brand-hero .dd-dossier-foot .dd-stamp {
+  background: var(--dd-ink);
+  color: var(--dd-cream);
+  font-family: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.dd-brand-hero .dd-dossier-foot .dd-stamp svg {
+  width: 10px;
+  height: 10px;
+  stroke-width: 3.5;
+}
+.dd-brand-hero .dd-wax {
+  position: absolute;
+  top: 98px;
+  right: -22px;
+  z-index: 4;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: var(--dd-accent-wax);
+  color: var(--dd-cream);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  transform: rotate(-8deg);
+  box-shadow: 0 10px 30px -10px rgba(138, 42, 31, 0.6);
+  border: 2px dashed rgba(244, 238, 226, 0.4);
+}
+.dd-brand-hero .dd-wax-inner {
+  font-family: var(--font-crimson-pro), "Instrument Serif", serif;
+  font-style: italic;
+  font-size: 17px;
+  line-height: 1.05;
+  padding: 14px;
+}
+.dd-brand-hero .dd-wax-inner small {
+  display: block;
+  font-family: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-top: 2px;
+  opacity: 0.85;
+}
+
+@media (max-width: 960px) {
+  .dd-brand-hero .dd-dossier-wrap {
+    padding-top: 0;
+  }
+  .dd-brand-hero .dd-wax {
+    top: -16px;
+    right: -10px;
+    width: 90px;
+    height: 90px;
+  }
+}
+
 body {
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, sans-serif;

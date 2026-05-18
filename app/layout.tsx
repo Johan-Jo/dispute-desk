@@ -43,6 +43,12 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital,wght@0,400;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap"
+          rel="stylesheet"
+        />
         {apiKey && loadAppBridge && (
           // App Bridge must load synchronously in <head> for embedded Shopify; next/script is deferred.
           // eslint-disable-next-line @next/next/no-sync-scripts -- required by Shopify App Bridge

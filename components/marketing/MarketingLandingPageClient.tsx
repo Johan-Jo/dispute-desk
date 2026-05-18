@@ -37,6 +37,41 @@ const ROI_DATA: Record<RoiMode, { segments: { segment: string; popular?: boolean
 
 const IS_APP_STORE_SET = !!process.env.NEXT_PUBLIC_SHOPIFY_APP_STORE_URL?.trim();
 
+// Render the hero headline with the final sentence italicized + gradient-clipped
+// (e.g. "Win more chargebacks. Keep more revenue." → italic emphasis on the second sentence).
+// Matches the editorial Hero DisputeDesk Brand.html mock without changing the source copy.
+function renderHeroHeadline(headline: string): ReactNode {
+  const trimmed = headline.trim().replace(/\.$/, "");
+  const lastPeriod = trimmed.lastIndexOf(".");
+  if (lastPeriod <= 0) {
+    return <em>{trimmed}</em>;
+  }
+  const first = trimmed.slice(0, lastPeriod).trim();
+  const second = trimmed.slice(lastPeriod + 1).trim();
+  return (
+    <>
+      {first}
+      <br />
+      <em>{second}</em>
+    </>
+  );
+}
+
+function DossierCheck() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
 function normalizeShopDomain(value: string): string | null {
   const trimmed = value.trim().toLowerCase();
   if (!trimmed) return null;
@@ -101,9 +136,9 @@ export function MarketingLandingPageClient({
     <div className="min-h-screen bg-white">
       <MarketingSiteHeader />
 
-      {/* Hero — palette + layout from Figma Make (DisputeDesk Shopify App Design) */}
+      {/* Hero — editorial dossier layout from Hero DisputeDesk Brand.html */}
       <section
-        className="relative py-12 sm:py-20 lg:py-28 overflow-hidden"
+        className="dd-brand-hero relative py-12 sm:py-20 lg:py-24 overflow-hidden"
         style={{
           background:
             "linear-gradient(135deg, var(--dd-hero-bg-start) 0%, var(--dd-hero-bg-mid) 40%, var(--dd-hero-bg-end) 100%)",
@@ -125,34 +160,34 @@ export function MarketingLandingPageClient({
         </div>
 
         <div className={`${MARKETING_PAGE_CONTAINER_CLASS} relative z-10`}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
-            <div>
-              <p className="text-sm uppercase tracking-wide text-[#93C5FD] font-medium mb-3">
-                {t("hero.tagline")}
-              </p>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 sm:mb-6 leading-tight tracking-tight bg-gradient-to-r from-[var(--dd-hero-gradient-from)] via-[var(--dd-hero-gradient-via)] to-[var(--dd-hero-gradient-to)] bg-clip-text text-transparent">
-                {t("hero.headline")}
-              </h1>
-              <p className="text-lg sm:text-xl text-slate-300 mb-6 sm:mb-8 leading-relaxed">
-                {t("hero.subheadline")}
-              </p>
+          <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-10 sm:gap-12 lg:gap-16 items-start">
+            <div className="pt-2">
+              <span className="dd-eyebrow">
+                <span className="dd-pill">{t("hero.tagline")}</span>
+              </span>
 
-              <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
-                <div className="flex items-start gap-3">
-                  <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-[#22C55E] flex-shrink-0 mt-0.5 sm:mt-1" />
-                  <p className="text-sm sm:text-base text-slate-200">{t("hero.bullet1")}</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Check className="w-5 h-5 sm:w-6 sm:h-6 text-[#22C55E] flex-shrink-0 mt-0.5 sm:mt-1" />
-                  <p className="text-sm sm:text-base text-slate-200">{t("hero.bullet2")}</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-[#22C55E] flex-shrink-0 mt-0.5 sm:mt-1" />
-                  <p className="text-sm sm:text-base text-slate-200">{t("hero.bullet3")}</p>
-                </div>
-              </div>
+              <h1 className="dd-headline">{renderHeroHeadline(t("hero.headline"))}</h1>
 
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <div className="dd-rule" />
+
+              <p className="dd-lede">{t("hero.subheadline")}</p>
+
+              <ul className="dd-checks">
+                <li>
+                  <span className="dd-marker">§</span>
+                  <span>{t("hero.bullet1")}</span>
+                </li>
+                <li>
+                  <span className="dd-marker">§</span>
+                  <span>{t("hero.bullet2")}</span>
+                </li>
+                <li>
+                  <span className="dd-marker">§</span>
+                  <span>{t("hero.bullet3")}</span>
+                </li>
+              </ul>
+
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
                 <Button
                   variant="primary"
                   size="lg"
@@ -173,83 +208,66 @@ export function MarketingLandingPageClient({
                 </a>
               </div>
 
-              <p className="text-xs sm:text-sm text-slate-400 mt-4 sm:mt-6 border-t border-white/15 pt-4 sm:pt-6">
-                {t("hero.disclaimer")}
-              </p>
+              <p className="dd-submit-note">{t("hero.disclaimer")}</p>
             </div>
 
-            {/* Product preview card — visible on all screens */}
-            <div className="relative mt-8 lg:mt-0">
-              <div className="absolute -inset-4 bg-gradient-to-r from-[#3B82F6]/30 via-[#60A5FA]/20 to-[#3B82F6]/30 rounded-3xl blur-3xl" />
-
-              <div className="relative bg-white rounded-2xl shadow-2xl border border-[#E5E7EB] p-6 overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[#1D4ED8]/5 to-transparent rounded-full -mr-32 -mt-32" />
-
-                <div className="relative mb-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-[#0B1220]">{t("hero.queueTitle")}</h3>
-                    <span className="text-xs text-[#64748B] bg-[#F6F8FB] px-2.5 py-1 rounded-full">{t("hero.queuePending", { count: 3 })}</span>
-                  </div>
-                  <div className="space-y-2.5">
-                    {[
-                      { id: "DP-2401", amount: "$145.00", icon: "\uD83D\uDCB3" },
-                      { id: "DP-2402", amount: "$89.50", icon: "\uD83D\uDCE6" },
-                      { id: "DP-2403", amount: "$312.00", icon: "\uD83D\uDD04" },
-                    ].map((item) => (
-                      <div key={item.id} className="flex items-center justify-between p-3 bg-gradient-to-r from-[#F6F8FB] to-white rounded-xl border border-[#E5E7EB]/50 hover:border-[#1D4ED8]/30 transition-all duration-200 hover:shadow-sm">
-                        <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 bg-gradient-to-br from-[#DBEAFE] to-[#BFDBFE] rounded-lg flex items-center justify-center text-lg shadow-sm">
-                            {item.icon}
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-[#0B1220]">{item.id}</p>
-                            <p className="text-xs text-[#64748B] font-medium">{item.amount}</p>
-                          </div>
-                        </div>
-                        <div className="px-3 py-1.5 bg-gradient-to-r from-[#FEF3C7] to-[#FDE68A] text-[#92400E] text-xs font-semibold rounded-lg shadow-sm">
-                          {t("hero.queueReview")}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+            {/* Right: cream paper dossier graphic */}
+            <div className="dd-dossier-wrap mt-8 lg:mt-0">
+              <div className="dd-dossier">
+                <div className="dd-dossier-head">
+                  <span className="dd-vol">Evidence dossier {"\u00B7"} DP-2402</span>
+                  <span className="dd-hash">a4f2{"\u00B7"}9c3d{"\u00B7"}b201</span>
                 </div>
 
-                <div className="relative bg-gradient-to-br from-[#DBEAFE] via-[#DBEAFE] to-[#BFDBFE] rounded-xl p-5 border border-[#BFDBFE] shadow-inner">
-                  <h4 className="font-semibold text-[#0B1220] mb-4 flex items-center gap-2">
-                    <div className="w-6 h-6 bg-white/50 rounded-lg flex items-center justify-center">
-                      <Check className="w-4 h-4 text-[#1D4ED8]" />
-                    </div>
-                    {t("hero.completenessTitle")}
-                  </h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-2.5 bg-white/60 rounded-lg">
-                      <span className="text-sm text-[#0B1220] font-medium">{t("hero.orderConfirmation")}</span>
-                      <div className="w-5 h-5 bg-[#22C55E] rounded-md flex items-center justify-center shadow-sm">
-                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between p-2.5 bg-white/60 rounded-lg">
-                      <span className="text-sm text-[#0B1220] font-medium">{t("hero.shippingTracking")}</span>
-                      <div className="w-5 h-5 bg-[#22C55E] rounded-md flex items-center justify-center shadow-sm">
-                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between p-2.5 bg-white/40 rounded-lg border border-[#E5E7EB]/30">
-                      <span className="text-sm text-[#64748B] font-medium">{t("hero.customerComm")}</span>
-                      <div className="w-5 h-5 border-2 border-[#CBD5E1] rounded-md bg-white/50" />
-                    </div>
-                  </div>
-                  <div className="mt-4 pt-4 border-t border-white/40">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-[#0B1220]">{t("hero.completenessScore")}</span>
-                      <div className="flex items-center gap-2">
-                        <div className="w-20 h-2 bg-white/50 rounded-full overflow-hidden">
-                          <div className="h-full bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] rounded-full" style={{ width: "67%" }} />
-                        </div>
-                        <span className="text-lg font-bold text-[#1D4ED8]">67%</span>
-                      </div>
-                    </div>
-                  </div>
+                <h2 className="dd-dossier-title">
+                  Disputed transaction,<br />filed under <em>Visa 10.4</em>
+                </h2>
+                <div className="dd-dossier-meta">
+                  <span>USD 890.50</span>
+                  <span>Sealed 16 May {"\u00B7"} 16:14 UTC</span>
+                </div>
+
+                <div className="dd-dossier-row">
+                  <span className="dd-mark"><DossierCheck /></span>
+                  <span className="dd-name">{t("hero.orderConfirmation")}</span>
+                  <span className="dd-src">Shopify</span>
+                </div>
+                <div className="dd-dossier-row">
+                  <span className="dd-mark"><DossierCheck /></span>
+                  <span className="dd-name">Payment authentication</span>
+                  <span className="dd-src">AVS Y {"\u00B7"} CVV M</span>
+                </div>
+                <div className="dd-dossier-row">
+                  <span className="dd-mark"><DossierCheck /></span>
+                  <span className="dd-name">Customer purchase history</span>
+                  <span className="dd-src">6 priors</span>
+                </div>
+                <div className="dd-dossier-row">
+                  <span className="dd-mark"><DossierCheck /></span>
+                  <span className="dd-name">{t("hero.shippingTracking")}</span>
+                  <span className="dd-src">Carrier: UPS</span>
+                </div>
+                <div className="dd-dossier-row dd-missing">
+                  <span className="dd-mark">{"\u00B7"}</span>
+                  <span className="dd-name">{t("hero.customerComm")}</span>
+                  <span className="dd-src">Optional</span>
+                </div>
+
+                <div className="dd-dossier-foot">
+                  <span className="dd-complete">
+                    <span className="dd-num">80%</span>{" \u00B7 "}4 of 5 fields
+                  </span>
+                  <span className="dd-stamp">
+                    <DossierCheck />
+                    Sealed
+                  </span>
+                </div>
+              </div>
+
+              <div className="dd-wax" aria-hidden>
+                <div className="dd-wax-inner">
+                  Filed
+                  <small>DD {"\u00B7"} 5{"\u00B7"}17</small>
                 </div>
               </div>
             </div>
@@ -396,7 +414,7 @@ export function MarketingLandingPageClient({
       {hubArticles}
 
       {/* ROI Snapshot */}
-      <section className="py-12 sm:py-16 lg:py-20 bg-[#F6F8FB]">
+      <section className="py-12 sm:py-16 lg:py-20 bg-white">
         <div className={MARKETING_PAGE_CONTAINER_CLASS}>
           <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm overflow-hidden">
             {/* Header */}

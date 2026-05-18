@@ -98,7 +98,7 @@ export async function MarketingHubArticles({ pathLocale, base }: Props) {
   const blue = RESOURCES_HUB.actionBlue;
 
   return (
-    <section className="py-12 sm:py-16 lg:py-20 bg-white">
+    <section className="py-12 sm:py-16 lg:py-20 bg-[#F6F8FB]">
       <div className={MARKETING_PAGE_CONTAINER_CLASS}>
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 sm:mb-12">
           <div>
