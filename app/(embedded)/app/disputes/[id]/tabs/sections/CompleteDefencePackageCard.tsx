@@ -14,6 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ActionList,
   Badge,
   Banner,
   BlockStack,
@@ -22,6 +23,7 @@ import {
   Card,
   InlineStack,
   Link,
+  Popover,
   Spinner,
   Text,
 } from "@shopify/polaris";
@@ -155,6 +157,10 @@ export function CompleteDefencePackageCard({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"regen" | "finalize" | "submit" | null>(null);
+  // "More actions" popover open/closed state. Holds Regenerate (a
+  // less-common destructive action) so it doesn't sit visually equal
+  // to the primary Approve / Resubmit buttons.
+  const [moreActionsOpen, setMoreActionsOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!packId) {
@@ -247,6 +253,14 @@ export function CompleteDefencePackageCard({
   const previewHref = displayRow?.pdf_path
     ? `/api/defence-packages/${displayRow.id}/preview${shopIdQs}`
     : null;
+  // Separate URL that always points at the bank-facing snapshot,
+  // never the unsubmitted draft. Surfaces under "Submitted package"
+  // as "View submitted vX PDF" so the merchant can verify what the
+  // bank actually has independently of what they're about to send.
+  const bankFacingHref =
+    bankFacing && bankFacing.pdf_path
+      ? `/api/defence-packages/${bankFacing.id}/preview${shopIdQs}`
+      : null;
 
   const onRegenerate = useCallback(async () => {
     if (!latest) return;
@@ -360,34 +374,60 @@ export function CompleteDefencePackageCard({
             </Text>
           </BlockStack>
 
-          {/* Submission state banner — replaces "Ready to submit" + deadline
-              once the pack has been saved to Shopify. */}
+          {/* Workflow layout. Three states:
+              A. Never submitted               → status / mode / deadline strip, then action row
+              B. Submitted, no newer draft     → "Submitted package" panel only
+              C. Submitted + newer draft       → "Submitted package" panel + "New draft" panel
+              See the action row further down for the matching button hierarchy. */}
           {isSubmittedToBank ? (
-            <BlockStack gap="200">
-              <Banner tone="success" title="Submitted to bank">
+            <BlockStack gap="300">
+              {/* Section A — Submitted package. Always renders when
+                  the bank already has a version. Green/success tone
+                  answers "what has already happened?" */}
+              <Banner tone="success" title="Submitted package">
                 <BlockStack gap="100">
-                  {formattedSubmittedAt ? (
+                  {bankFacing ? (
                     <Text as="p" variant="bodySm">
-                      Submitted on {formattedSubmittedAt}
-                      {bankFacing ? ` (v${bankFacing.version})` : ""}.
+                      The bank currently has defence package v
+                      {bankFacing.version}
+                      {formattedSubmittedAt
+                        ? `. Submitted on ${formattedSubmittedAt}.`
+                        : "."}
                     </Text>
-                  ) : null}
-                  {shopifyAdminUrl ? (
-                    <Link url={shopifyAdminUrl} external>
-                      Open in Shopify Admin
-                    </Link>
-                  ) : null}
+                  ) : (
+                    <Text as="p" variant="bodySm">
+                      A defence package has been submitted to the bank.
+                    </Text>
+                  )}
+                  <InlineStack gap="200" blockAlign="center">
+                    {bankFacingHref && bankFacing ? (
+                      <Link url={bankFacingHref} external>
+                        View submitted v{bankFacing.version} PDF
+                      </Link>
+                    ) : null}
+                    {shopifyAdminUrl ? (
+                      <Link url={shopifyAdminUrl} external>
+                        Open in Shopify Admin
+                      </Link>
+                    ) : null}
+                  </InlineStack>
                 </BlockStack>
               </Banner>
+
+              {/* Section B — New draft available. Renders only when a
+                  newer, unsubmitted draft exists. Info/blue tone
+                  answers "what do I do next?" The buttons sit below
+                  with a clear primary action (Approve) and demoted
+                  Regenerate. */}
               {hasUnsubmittedDraft && latest && bankFacing ? (
-                <Banner tone="info" title={`Newer draft v${latest.version} ready to resubmit`}>
-                  <p>
-                    The bank received v{bankFacing.version}. A newer draft is on
-                    file.{" "}
+                <Banner tone="info" title={`Draft v${latest.version} is ready for review`}>
+                  <Text as="p" variant="bodySm">
+                    Draft v{latest.version} has been generated but has not
+                    been sent to Shopify yet. Review it below.{" "}
                     {latest.status === "draft"
-                      ? "Click Finalize, then Resubmit to Shopify below to replace the PDF on the Shopify dispute."
-                      : "Click Resubmit to Shopify below to replace the PDF on the Shopify dispute."}
-                  </p>
+                      ? `If it looks correct, approve v${latest.version} before resubmitting to Shopify.`
+                      : `If it looks correct, resubmit it to Shopify — that will replace v${bankFacing.version}.`}
+                  </Text>
                 </Banner>
               ) : null}
             </BlockStack>
@@ -458,51 +498,108 @@ export function CompleteDefencePackageCard({
             </Banner>
           )}
 
-          <ButtonGroup>
-            {/* Preview button targets the same row as the inline HTML
-                view below (`displayRow`), so opening the PDF and
-                reading the in-page preview show the same content. */}
-            <Button
-              url={previewHref ?? undefined}
-              target="_blank"
-              external
-              disabled={!previewHref || busy !== null}
-            >
-              {hasUnsubmittedDraft && latest
-                ? `Preview draft v${latest.version} PDF`
-                : "Preview PDF"}
-            </Button>
+          {/* Action row — one primary at a time, plain-language labels,
+              Regenerate demoted to a "More actions" overflow.
+              Merchant-facing workflow:
+                  Review draft  →  Approve  →  Resubmit to Shopify
+              The labels intentionally avoid lifecycle jargon
+              ("Finalize") because non-technical merchants ask "finalize
+              what?" Approve communicates the action clearly.
+              See the brief in commit message for the full rationale. */}
+          <InlineStack gap="200" blockAlign="center" wrap={false}>
+            <ButtonGroup>
+              {/* PRIMARY: the next step in the workflow, exactly one
+                  button at a time.
+                    - Draft awaiting approval → "Approve draft vX"
+                    - Final awaiting submit  → "Submit to Shopify" /
+                                                "Resubmit to Shopify"
+                    - Neither (e.g. already submitted, no newer
+                      draft) → no primary button. */}
+              {canFinalize && latest && (
+                <Button
+                  variant="primary"
+                  onClick={onFinalize}
+                  disabled={busy !== null}
+                  loading={busy === "finalize"}
+                >
+                  {isSubmittedToBank
+                    ? `Approve draft v${latest.version}`
+                    : `Approve v${latest.version}`}
+                </Button>
+              )}
+              {canSubmit && !canFinalize && (
+                <Button
+                  variant="primary"
+                  tone="success"
+                  onClick={onSubmit}
+                  disabled={busy !== null}
+                  loading={busy === "submit"}
+                >
+                  {isSubmittedToBank
+                    ? "Resubmit to Shopify"
+                    : "Submit to Shopify"}
+                </Button>
+              )}
+
+              {/* SECONDARY: review the draft the merchant is about to
+                  approve / submit. previewHref tracks displayRow which
+                  now follows the latest-first priority — so this
+                  always opens the version the merchant is reading
+                  inline below. */}
+              <Button
+                url={previewHref ?? undefined}
+                target="_blank"
+                external
+                disabled={!previewHref || busy !== null}
+              >
+                {hasUnsubmittedDraft && latest
+                  ? `Review draft v${latest.version} PDF`
+                  : "View PDF"}
+              </Button>
+            </ButtonGroup>
+
+            {/* TERTIARY (overflow): Regenerate. Hidden behind "More
+                actions" because it's a less-common, destructive
+                action (throws away the current draft). Lives in a
+                popover so it can't be misclicked as the primary
+                action.
+
+                Only renders when canRegenerate is true (matches the
+                existing gate — draft / stale / failed status). */}
             {canRegenerate && (
-              <Button
-                onClick={onRegenerate}
-                disabled={busy !== null}
-                loading={busy === "regen"}
+              <Popover
+                active={moreActionsOpen}
+                onClose={() => setMoreActionsOpen(false)}
+                activator={
+                  <Button
+                    onClick={() => setMoreActionsOpen((v) => !v)}
+                    disclosure
+                    disabled={busy !== null}
+                  >
+                    More actions
+                  </Button>
+                }
               >
-                Regenerate
-              </Button>
+                <ActionList
+                  items={[
+                    {
+                      content:
+                        busy === "regen"
+                          ? "Regenerating…"
+                          : "Regenerate draft from scratch",
+                      helpText:
+                        "Throws away the current draft and rebuilds the narrative + PDF against the latest evidence. The bank-facing submitted version is not touched.",
+                      onAction: () => {
+                        setMoreActionsOpen(false);
+                        void onRegenerate();
+                      },
+                      disabled: busy !== null,
+                    },
+                  ]}
+                />
+              </Popover>
             )}
-            {canFinalize && (
-              <Button
-                variant="primary"
-                onClick={onFinalize}
-                disabled={busy !== null}
-                loading={busy === "finalize"}
-              >
-                Finalize
-              </Button>
-            )}
-            {canSubmit && (
-              <Button
-                variant="primary"
-                tone="success"
-                onClick={onSubmit}
-                disabled={busy !== null}
-                loading={busy === "submit"}
-              >
-                {isSubmittedToBank ? "Resubmit to Shopify" : "Submit to Shopify"}
-              </Button>
-            )}
-          </ButtonGroup>
+          </InlineStack>
 
           {error && (
             <Banner tone="warning" title="Could not load defence package">
@@ -523,11 +620,13 @@ export function CompleteDefencePackageCard({
           reading so they can't conflate v5's clean prose with v1's
           stale prose. */}
       {hasUnsubmittedDraft && latest && bankFacing ? (
-        <Banner tone="info" title={`Showing draft v${latest.version}`}>
+        <Banner
+          tone="info"
+          title={`You are reviewing draft v${latest.version}`}
+        >
           <p>
-            This preview is your latest draft (v{latest.version}). The bank
-            currently has v{bankFacing.version}. If you resubmit, v
-            {latest.version} will replace the PDF on the Shopify dispute.
+            This is the version that will replace v{bankFacing.version} if
+            you resubmit. The bank currently has v{bankFacing.version}.
           </p>
         </Banner>
       ) : null}
