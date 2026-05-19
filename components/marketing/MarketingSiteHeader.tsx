@@ -43,7 +43,7 @@ export function MarketingSiteHeader() {
   const activeSection = useActiveSection();
 
   return (
-    <header className="border-b border-[#E5E7EB] sticky top-0 bg-white z-50">
+    <header className="border-b border-[#E5E7EB] sticky top-0 bg-[#FBF7EE] z-50">
       <div
         className={`${MARKETING_PAGE_CONTAINER_CLASS} h-16 flex items-center justify-between`}
       >
@@ -95,7 +95,7 @@ export function MarketingSiteHeader() {
       </div>
 
       {mobileNav ? (
-        <div className={`md:hidden border-t border-[#E5E7EB] bg-white py-4 space-y-3 ${MARKETING_PAGE_CONTAINER_CLASS}`}>
+        <div className={`md:hidden border-t border-[#E5E7EB] bg-[#FBF7EE] py-4 space-y-3 ${MARKETING_PAGE_CONTAINER_CLASS}`}>
           <Link
             href="/resources"
             onClick={() => setMobileNav(false)}
