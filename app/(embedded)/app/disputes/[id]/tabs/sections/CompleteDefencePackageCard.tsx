@@ -198,23 +198,45 @@ export function CompleteDefencePackageCard({
 
   const isSubmittedToBank = Boolean(submittedToShopifyAt);
 
-  // The card distinguishes two rows now:
-  //   - `latest`: the most recent version (what the merchant is editing).
-  //   - `bankFacing`: the row whose PDF the bank actually has (status=
-  //     submitted). Set when `isSubmittedToBank` is true and the workspace
-  //     has been saved to Shopify; otherwise null.
+  // The card distinguishes two rows:
+  //   - `latest`:     the most recent version (what the merchant is
+  //                   editing / about to submit).
+  //   - `bankFacing`: the row whose PDF the bank actually has
+  //                   (status=submitted). Set when isSubmittedToBank is
+  //                   true and the workspace has been saved to Shopify;
+  //                   otherwise null.
   //
-  // The body view + Preview button render `bankFacing` when present
-  // (truth: what the bank sees). Action buttons (Regenerate / Finalize /
-  // Submit) always operate on `latest` (the work-in-progress draft).
-  // When the two diverge, a small info banner explains the state.
-  const displayRow = isSubmittedToBank && bankFacing ? bankFacing : latest;
+  // `displayRow` is the row used by the inline HTML defence preview AND
+  // the "Preview PDF" button on the Review & Submit tab. The priority
+  // order matches the merchant's mental model on that tab — review
+  // what you're about to send, not what you sent last time.
+  //
+  //   never submitted                → latest
+  //   submitted, no newer draft      → bankFacing (= the only thing on file)
+  //   submitted + newer unsubmitted  → latest   (the next outgoing PDF)
+  //
+  // Before 2026-05-19 this priority was bankFacing-first whenever
+  // `isSubmittedToBank` was true. That rendered the v1 narrative under
+  // the "Newer draft v5 ready to resubmit" banner — a confusing UX
+  // because the prose the merchant saw was NOT the prose they were
+  // about to send.
+  //
+  // Action buttons (Regenerate / Finalize / Submit) always operate on
+  // `latest` (the work-in-progress draft) regardless of what's
+  // rendered; the submission-state banner above the body still cites
+  // `bankFacing.version` so "the bank has v1" stays accurate.
   const hasUnsubmittedDraft = Boolean(
     isSubmittedToBank &&
       bankFacing &&
       latest &&
       latest.id !== bankFacing.id,
   );
+  const displayRow =
+    hasUnsubmittedDraft && latest
+      ? latest
+      : isSubmittedToBank && bankFacing
+        ? bankFacing
+        : latest;
 
   // Preview URL is now a server-side redirect: the API route generates
   // the signed Supabase URL and 302s to it. Rendering as `<Button
@@ -437,13 +459,18 @@ export function CompleteDefencePackageCard({
           )}
 
           <ButtonGroup>
+            {/* Preview button targets the same row as the inline HTML
+                view below (`displayRow`), so opening the PDF and
+                reading the in-page preview show the same content. */}
             <Button
               url={previewHref ?? undefined}
               target="_blank"
               external
               disabled={!previewHref || busy !== null}
             >
-              Preview PDF
+              {hasUnsubmittedDraft && latest
+                ? `Preview draft v${latest.version} PDF`
+                : "Preview PDF"}
             </Button>
             {canRegenerate && (
               <Button
@@ -489,11 +516,21 @@ export function CompleteDefencePackageCard({
           section-for-section. Hidden when the package has no narrative
           (skipped / failed rows).
 
-          Renders `displayRow` — `bankFacing` when the pack is submitted,
-          `latest` otherwise. Without this, a regenerate after save_to_
-          shopify would display the draft narrative under the "Submitted
-          to bank" banner, falsely claiming the bank received content the
-          PDF on file does not contain. */}
+          Renders `displayRow` (see priority in the comment block where
+          displayRow is computed). When a newer unsubmitted draft
+          exists alongside a submitted bank-facing row, a clear banner
+          ABOVE the preview names which version the merchant is
+          reading so they can't conflate v5's clean prose with v1's
+          stale prose. */}
+      {hasUnsubmittedDraft && latest && bankFacing ? (
+        <Banner tone="info" title={`Showing draft v${latest.version}`}>
+          <p>
+            This preview is your latest draft (v{latest.version}). The bank
+            currently has v{bankFacing.version}. If you resubmit, v
+            {latest.version} will replace the PDF on the Shopify dispute.
+          </p>
+        </Banner>
+      ) : null}
       {displayRow?.narrative_json && displayRow?.facts_json && (
         <DefencePackageHtmlView row={displayRow} dispute={dispute} />
       )}
