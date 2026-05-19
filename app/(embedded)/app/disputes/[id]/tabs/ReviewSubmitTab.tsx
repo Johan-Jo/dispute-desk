@@ -64,20 +64,10 @@ export default function ReviewSubmitTab({ workspace }: Props) {
       {buildingBanner}
       {noPackBanner}
 
-      {/* Inclusion review — Phase 1 read-only inspection of every
-          evidence row with an audit-logged toggle for the safe set.
-          Mounted above the package card so the merchant verifies
-          inclusion before clicking Finalize/Submit. */}
-      <InclusionReviewSection
-        packId={data?.pack?.id ?? null}
-        lineItems={data?.evidenceLineItems ?? []}
-        onToggleInclusionOverride={actions.toggleInclusionOverride}
-      />
-
-      {/* Complete Defence Package — the only card on this tab.
-          Header renders the submission-state banner (success when
-          saved to Shopify) or the status/mode/generated/deadline
-          row when not yet submitted. */}
+      {/* Complete Defence Package — the primary card on this tab.
+          Mounted first so the merchant sees the submission state,
+          the "ready to resubmit" banner, and Finalize/Submit actions
+          before the supporting inclusion-review detail below. */}
       <CompleteDefencePackageCard
         packId={data?.pack?.id ?? null}
         submittedToShopifyAt={view.submittedAt}
@@ -105,6 +95,16 @@ export default function ReviewSubmitTab({ workspace }: Props) {
               }
             : undefined
         }
+      />
+
+      {/* Inclusion review — Phase 1 read-only inspection of every
+          evidence row with an audit-logged toggle for the safe set.
+          Mounted below the package card as a supporting detail; the
+          merchant's primary actions live on the card above. */}
+      <InclusionReviewSection
+        packId={data?.pack?.id ?? null}
+        lineItems={data?.evidenceLineItems ?? []}
+        onToggleInclusionOverride={actions.toggleInclusionOverride}
       />
     </BlockStack>
   );

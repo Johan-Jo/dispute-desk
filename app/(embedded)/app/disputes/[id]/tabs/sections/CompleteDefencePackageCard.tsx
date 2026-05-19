@@ -289,14 +289,26 @@ export function CompleteDefencePackageCard({
   // generated_at, package_mode) — those are properties of the working
   // draft, not the bank-facing snapshot.
   const row = latest;
+  // Action gates. The `!isSubmittedToBank` guard is dropped — the
+  // status (`draft` / `final` / `stale` / `failed`) is the real
+  // correctness check, and the "newer draft v2" flow needs Finalize +
+  // Submit to be reachable after the v1 has been saved to Shopify.
+  // The submit API enqueues a `save_to_shopify` job that replaces the
+  // uncategorizedFile buffer (per Commit 10), so a second submit on
+  // the same dispute swaps the PDF on the Shopify dispute cleanly.
+  // To avoid surfacing the buttons on a clean "Submitted to bank"
+  // view when nothing has changed, we further require that the merchant
+  // has an actual draft pending — `hasUnsubmittedDraft` proves the
+  // displayed `latest` row diverges from `bankFacing`.
+  const hasActionableDraft = !isSubmittedToBank || hasUnsubmittedDraft;
   const canFinalize =
-    !isSubmittedToBank &&
+    hasActionableDraft &&
     row.status === "draft" &&
     row.validation_status === "ok" &&
     Boolean(row.pdf_path);
-  const canSubmit = !isSubmittedToBank && row.status === "final";
+  const canSubmit = hasActionableDraft && row.status === "final";
   const canRegenerate =
-    !isSubmittedToBank &&
+    hasActionableDraft &&
     (row.status === "draft" || row.status === "stale" || row.status === "failed");
 
   const formattedSubmittedAt = submittedToShopifyAt
@@ -348,7 +360,11 @@ export function CompleteDefencePackageCard({
               {hasUnsubmittedDraft && latest && bankFacing ? (
                 <Banner tone="info" title={`Newer draft v${latest.version} ready to resubmit`}>
                   <p>
-                    The bank received v{bankFacing.version}. A newer draft is on file. Finalize and resubmit to replace the PDF on the Shopify dispute.
+                    The bank received v{bankFacing.version}. A newer draft is on
+                    file.{" "}
+                    {latest.status === "draft"
+                      ? "Click Finalize, then Resubmit to Shopify below to replace the PDF on the Shopify dispute."
+                      : "Click Resubmit to Shopify below to replace the PDF on the Shopify dispute."}
                   </p>
                 </Banner>
               ) : null}
@@ -448,7 +464,7 @@ export function CompleteDefencePackageCard({
                 Finalize
               </Button>
             )}
-            {!isSubmittedToBank && canSubmit && (
+            {canSubmit && (
               <Button
                 variant="primary"
                 tone="success"
@@ -456,7 +472,7 @@ export function CompleteDefencePackageCard({
                 disabled={busy !== null}
                 loading={busy === "submit"}
               >
-                Submit to Shopify
+                {isSubmittedToBank ? "Resubmit to Shopify" : "Submit to Shopify"}
               </Button>
             )}
           </ButtonGroup>
