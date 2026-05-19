@@ -355,7 +355,17 @@ export async function generateNarrative(
 
 /** Build the strict JSON user payload. ONLY normalised EvidenceFact records
  *  cross this boundary. Test `narrativeWriter.payload.test.ts` asserts that
- *  no raw Shopify JSON keys appear. */
+ *  no raw Shopify JSON keys appear.
+ *
+ *  CONTRACT — bank-inclusion predicates live in `factClassifier.ts` only.
+ *  Do NOT add new "should this reach the bank?" predicates here. The
+ *  filter below re-reads `submissionRisk` + `includeInBankNarrative`,
+ *  both of which are set by `factClassifier.classifyFact()`. If a future
+ *  rule says "fact X must not be cited as positive bank evidence,"
+ *  encode it in the classifier so every consumer (UI `EvidenceLineItem`,
+ *  PDF Evidence Basis rows, this LLM payload) agrees by construction.
+ *  Test `narrativeWriter.bankInclusionInvariant.test.ts` locks in that
+ *  every fact in the payload satisfies the classifier's contract. */
 export function buildLlmFactPayload(input: NarrativeInput): Record<string, unknown> {
   // Filter: never expose submission-risk facts unless includeInBankNarrative override.
   const approvedFacts = input.approvedFacts

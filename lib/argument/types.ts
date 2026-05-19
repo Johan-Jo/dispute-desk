@@ -120,7 +120,7 @@ export interface CaseStrengthResult {
    * The UI is the only consumer; backend logic should keep using
    * `overall` for branching.
    */
-  heroVariant?: "likely_to_win" | "could_win" | "needs_strengthening" | "hard_to_win" | "covered";
+  heroVariant: "likely_to_win" | "could_win" | "needs_strengthening" | "hard_to_win" | "covered";
   /** Coverage gate state. When `state === "covered_shopify"`, the
    *  merchant has no workflow — `heroVariant` is forced to `covered`
    *  and `strengthReason` is replaced with the covered copy. */

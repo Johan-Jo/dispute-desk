@@ -2098,7 +2098,11 @@ Store policies are included in evidence packs. Five policy types are supported: 
 
 ### Download
 
-- `GET /api/packs/:packId/download` returns 1-hour signed URL from Supabase Storage.
+- `GET /api/packs/:packId/download` streams the PDF bytes through the origin (`Content-Type: application/pdf`, inline disposition, `Referrer-Policy: no-referrer`). No Supabase signed URL ever reaches the browser. The same byte-streaming pattern is used by:
+  - `GET /api/defence-packages/:id/preview` (dispute defence package preview)
+  - `GET /api/policies/:id/file` (portal policy files; replaced the 1-year signed-URL pattern)
+  - `GET /api/admin/defence-package/runs/:id/pdf` (admin run-detail preview; replaced the 600s signed-URL pattern)
+  See `app/api/packs/[packId]/download/route.ts` for the reference implementation.
 
 ### Dynamic Import Pattern (aligned with Estimate Pro)
 

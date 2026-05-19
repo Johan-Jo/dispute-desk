@@ -859,7 +859,7 @@ export function useDisputeWorkspace(disputeId: string) {
         readiness: "blocked" as SubmissionReadiness,
         blockerCount: 0,
         warningCount: 0,
-        caseStrength: { overall: "insufficient", score: 0, coveragePercent: 0, strongCount: 0, moderateCount: 0, supportingCount: 0, supportedClaims: 0, totalClaims: 0, improvementHint: null },
+        caseStrength: { overall: "insufficient", score: 0, coveragePercent: 0, strongCount: 0, moderateCount: 0, supportingCount: 0, supportedClaims: 0, totalClaims: 0, improvementHint: null, heroVariant: "hard_to_win" },
         whyWins: { strengths: [], weaknesses: [], overall: "insufficient" },
         risk: { expectedOutcome: "insufficient", risks: [] },
         improvement: null,

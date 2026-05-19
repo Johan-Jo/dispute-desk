@@ -224,7 +224,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
    *  reaches the title via the `submitted_to_network` and `closed`
    *  families — both of which are reachable only when Shopify exposes
    *  `evidenceSentOn` or a terminal `finalOutcome`. */
-  const heroVariant: HeroVariant = (caseStrength.heroVariant as HeroVariant | undefined) ?? "hard_to_win";
+  // heroVariant is server-guaranteed by `calculateCaseStrength()` —
+  // the type was made non-optional in lib/argument/types.ts so a
+  // dropped field surfaces as a TypeScript error rather than a silent
+  // "hard_to_win" degradation in the UI.
+  const heroVariant: HeroVariant = caseStrength.heroVariant as HeroVariant;
   const heroTone = HERO_TONE_BY_VARIANT[heroVariant];
 
   function resolveHeroTitle(): string {
