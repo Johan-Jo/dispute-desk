@@ -28,7 +28,9 @@ export async function collectPolicyEvidence(
 
   const { data: policies } = await sb
     .from("policy_snapshots")
-    .select("id, policy_type, url, content_hash, extracted_text, captured_at")
+    .select(
+      "id, policy_type, storage_path, content_hash, extracted_text, captured_at",
+    )
     .eq("shop_id", ctx.shopId)
     .order("captured_at", { ascending: false });
 
@@ -52,7 +54,11 @@ export async function collectPolicyEvidence(
     policyEntries.push({
       policySnapshotId: policy.id,
       policyType: type,
-      url: policy.url,
+      // Carry the storage path through the pipeline. The PDF builder
+      // and UI never expose this directly to the bank or merchant —
+      // it's used only for server-side lookups. Signed URLs are
+      // never stored.
+      storagePath: policy.storage_path,
       capturedAt: policy.captured_at,
       contentHash: policy.content_hash,
       textPreview: policy.extracted_text?.slice(0, 500) ?? null,
@@ -86,7 +92,7 @@ export async function collectPolicyEvidence(
           {
             policySnapshotId: policy.id,
             policyType: type,
-            url: policy.url,
+            storagePath: policy.storage_path,
             capturedAt: policy.captured_at,
             textPreview: policy.extracted_text?.slice(0, 500) ?? null,
           },

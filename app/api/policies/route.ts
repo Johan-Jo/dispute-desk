@@ -17,9 +17,13 @@ export async function GET(req: NextRequest) {
   }
 
   const sb = getServiceClient();
+  // Note: `url` was previously selected here and returned to the
+  // browser. It held a 1-year Supabase signed URL — a real
+  // signed-URL leak. The proxy route `/api/policies/[id]/file`
+  // replaces direct URL exposure; we return only the id + metadata.
   const { data, error } = await sb
     .from("policy_snapshots")
-    .select("id, policy_type, url, captured_at")
+    .select("id, policy_type, captured_at, storage_path")
     .eq("shop_id", shopId)
     .order("captured_at", { ascending: false });
 
@@ -27,17 +31,30 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // One row per policy_type (most recent)
-  const byType = new Map<string, (typeof data)[0]>();
-  for (const row of data ?? []) {
+  type Row = {
+    id: string;
+    policy_type: string;
+    captured_at: string;
+    storage_path: string | null;
+  };
+  const byType = new Map<string, Row>();
+  for (const row of (data ?? []) as Row[]) {
     if (!byType.has(row.policy_type)) {
       byType.set(row.policy_type, row);
     }
   }
 
-  return NextResponse.json({
-    policies: Array.from(byType.values()),
-  });
+  // Surface a stable proxy URL the portal can pass to window.open.
+  // The proxy authorizes the request via portal session, so the URL
+  // alone is not enough to read the file.
+  const policies = Array.from(byType.values()).map((row) => ({
+    id: row.id,
+    policy_type: row.policy_type,
+    captured_at: row.captured_at,
+    file_url: row.storage_path ? `/api/policies/${row.id}/file` : null,
+  }));
+
+  return NextResponse.json({ policies });
 }
 
 /**

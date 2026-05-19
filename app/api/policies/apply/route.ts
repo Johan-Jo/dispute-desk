@@ -64,28 +64,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { data: signed } = await sb.storage
-    .from("policy-uploads")
-    .createSignedUrl(storagePath, 60 * 60 * 24 * 365); // 1 year for portal use
-
-  const url = signed?.signedUrl ?? null;
-  if (!url) {
-    return NextResponse.json(
-      { error: "Failed to create signed URL" },
-      { status: 500 }
-    );
-  }
-
+  // No signed URL is persisted — files are served via the proxy at
+  // `/api/policies/[id]/file`. See migration
+  // 20260519015032_policy_snapshots_storage_path.sql.
   const { data: row, error: insertErr } = await sb
     .from("policy_snapshots")
     .insert({
       shop_id: shopId,
       policy_type: policyType,
-      url,
+      storage_path: storagePath,
       extracted_text: content,
       captured_at: new Date().toISOString(),
     })
-    .select("id, url, policy_type")
+    .select("id, policy_type")
     .single();
 
   if (insertErr) {

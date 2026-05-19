@@ -113,7 +113,14 @@ export default function PoliciesPage() {
         const list = data.policies ?? [];
         const byType: Record<string, { url: string | null; captured_at: string }> = {};
         for (const p of list) {
-          byType[p.policy_type] = { url: p.url ?? null, captured_at: p.captured_at ?? "" };
+          // `file_url` is the proxy route at /api/policies/{id}/file.
+          // Older API responses surfaced `url` (a direct Supabase signed
+          // URL); we still accept that shape during the rollout window
+          // but the response from the live API now ships `file_url`.
+          byType[p.policy_type] = {
+            url: p.file_url ?? p.url ?? null,
+            captured_at: p.captured_at ?? "",
+          };
         }
         setPolicyByType(byType);
       } catch {
