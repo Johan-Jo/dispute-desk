@@ -674,3 +674,92 @@ describe("Test 23 — force_include on internal-only field refused at the deriva
     expect(row?.includedInBankArgument).toBe(false);
   });
 });
+
+describe("Test 24 — internal-only field with no payload routes to not_included (UI honesty)", () => {
+  it("fraud_risk_screening with no payload/fact becomes not_included, not internal_only", async () => {
+    // Lock in the UI honesty fix from 2026-05-19: saying "Kept
+    // internal" for a row we never actually collected data on is
+    // dishonest — it implies we ran a check and hid the result.
+    // Without payload and without an approved fact, the row should
+    // route to not_included so the merchant reads the field's
+    // honest "Shopify did not return a qualifying pre-authorization
+    // risk assessment for this order" message.
+    const mod = await import("@/lib/argument/evidenceLineItem");
+    const { deriveEvidenceLineItems } = mod as {
+      deriveEvidenceLineItems: (args: unknown) => Array<{
+        field: string;
+        submissionMethod: string;
+      }>;
+    };
+    const checklist = [
+      {
+        field: "fraud_risk_screening",
+        label: "Shopify fraud screening",
+        status: "available" as const,
+        priority: "optional" as const,
+        blocking: false,
+        source: "auto_shopify" as const,
+        collectionType: "conditional_auto" as const,
+      },
+    ];
+    const lineItems = deriveEvidenceLineItems({
+      checklist,
+      facts: [],
+      // No payload — we never captured a risk assessment row for
+      // this order (the ingestion gap exposed on 2026-05-19).
+      payloadByField: new Map<string, unknown>(),
+      contributions: { strong: [], moderate: [] },
+      packSavedToShopify: true,
+      excludedFields: new Set<string>(),
+      attachmentUploadFailures: new Map<string, string>(),
+      inclusionOverrides: new Map(),
+      reasonFamily: "fraud",
+    });
+    const row = lineItems.find((li) => li.field === "fraud_risk_screening");
+    expect(row?.submissionMethod).toBe("not_included");
+  });
+
+  it("fraud_risk_screening WITH a payload stays internal_only (we have data, we hide it)", async () => {
+    const mod = await import("@/lib/argument/evidenceLineItem");
+    const { deriveEvidenceLineItems } = mod as {
+      deriveEvidenceLineItems: (args: unknown) => Array<{
+        field: string;
+        submissionMethod: string;
+      }>;
+    };
+    const checklist = [
+      {
+        field: "fraud_risk_screening",
+        label: "Shopify fraud screening",
+        status: "available" as const,
+        priority: "optional" as const,
+        blocking: false,
+        source: "auto_shopify" as const,
+        collectionType: "conditional_auto" as const,
+      },
+    ];
+    const payloadByField = new Map<string, unknown>([
+      [
+        "fraud_risk_screening",
+        {
+          provider: "shopify",
+          riskLevel: "MEDIUM",
+          recommendation: "INVESTIGATE",
+        },
+      ],
+    ]);
+    const lineItems = deriveEvidenceLineItems({
+      checklist,
+      facts: [],
+      payloadByField,
+      contributions: { strong: [], moderate: [] },
+      packSavedToShopify: true,
+      excludedFields: new Set<string>(),
+      attachmentUploadFailures: new Map<string, string>(),
+      inclusionOverrides: new Map(),
+      reasonFamily: "fraud",
+    });
+    const row = lineItems.find((li) => li.field === "fraud_risk_screening");
+    expect(row?.submissionMethod).toBe("internal_only");
+  });
+});

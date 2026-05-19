@@ -428,8 +428,20 @@ function resolveSubmissionMethod(ctx: ResolutionContext): SubmissionMethod {
     // Fall through to the natural resolution.
   }
 
-  // Internal-only fields land here regardless of strength.
-  if (ctx.internalFlag) return "internal_only";
+  // Internal-only fields. The default is "internal_only" — we
+  // collected the signal and deliberately withhold it from the bank.
+  // EXCEPTION: when no payload AND no approved fact exist for the
+  // field, we don't actually have any signal to withhold. Saying
+  // "kept internal" in that case is dishonest — it implies we ran
+  // a check and hid the result. Route those rows to "not_included"
+  // instead, so the merchant reads the field-specific honest
+  // message (e.g. "Shopify did not return a qualifying
+  // pre-authorization risk assessment for this order").
+  if (ctx.internalFlag) {
+    const hasAnySignal =
+      ctx.payload != null || ctx.factLookup?.hasApprovedFact === true;
+    return hasAnySignal ? "internal_only" : "not_included";
+  }
 
   // Negative-or-ambiguous payloads on otherwise-bank-facing fields
   // (e.g. avs_cvv_match with both codes failing) — surface as
