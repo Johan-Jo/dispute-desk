@@ -1,13 +1,27 @@
 /**
  * POST /api/defence-packages/:id/regenerate
  *
- * Trigger a fresh draft at version=N+1. Force-new even if the evidence
- * hash matches — matches the plan's "regeneration always bumps version"
- * decision.
+ * Merchant-facing "Regenerate draft" entry point. Rebuilds the
+ * underlying evidence pack first, which then automatically chains to
+ * a fresh defence-package draft via `maybeEnqueueDefencePackage` on
+ * pack-build success.
  *
- * The new draft references the same source_pack_id. If a prior draft
- * exists, this route marks it stale (a draft → stale transition is
- * allowed by the immutability trigger).
+ * Two-step flow:
+ *   1. Mark the current draft stale (if any) for clean audit trail.
+ *   2. Enqueue a `build_pack` job on the source_pack_id. The pack
+ *      handler runs every source collector — including fraudRiskSource,
+ *      which now also persists the Shopify risk assessment via
+ *      `lib/packs/buildPack.ts:persistRiskAssessmentIfMissing` — and
+ *      then enqueues the defence-package build for us.
+ *
+ * Why this matters (2026-05-19): before this change, this route
+ * directly enqueued `build_defence_package`, which reads the existing
+ * `pack_json.sections` and never re-ran the source collectors. As a
+ * result, evidence captured AFTER the original pack build (Shopify
+ * risk assessments for post-backfill orders, new uploads, freshly
+ * confirmed delivery, etc.) was invisible to subsequent regenerates.
+ * The fix is to rebuild the pack first; defence regeneration follows
+ * for free.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -33,7 +47,7 @@ export async function POST(
   const { data: existing, error } = await sb
     .from("defence_packages")
     .select(
-      "id, dispute_id, shop_id, source_pack_id, version, status, evidence_hash, reason_code_module",
+      "id, dispute_id, shop_id, source_pack_id, version, status",
     )
     .eq("id", id)
     .eq("shop_id", shopId)
@@ -42,17 +56,10 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Find the latest row for the dispute to compute the next version.
-  const { data: latest } = await sb
-    .from("defence_packages")
-    .select("version, status")
-    .eq("dispute_id", existing.dispute_id)
-    .order("version", { ascending: false })
-    .limit(1)
-    .single();
-  const nextVersion = (latest?.version ?? existing.version) + 1;
-
-  // Mark the current draft (if any) stale.
+  // Mark the current draft stale so the merchant's UI immediately
+  // reflects "regenerating" state. The actual new draft will be
+  // inserted by `maybeEnqueueDefencePackage` once the pack rebuild
+  // completes.
   if (existing.status === "draft") {
     await sb
       .from("defence_packages")
@@ -72,31 +79,14 @@ export async function POST(
     });
   }
 
-  const { data: inserted, error: insertErr } = await sb
-    .from("defence_packages")
-    .insert({
-      dispute_id: existing.dispute_id,
-      shop_id: existing.shop_id,
-      source_pack_id: existing.source_pack_id,
-      version: nextVersion,
-      status: "draft",
-      generated_by: "merchant",
-      evidence_hash: existing.evidence_hash,
-      reason_code_module: existing.reason_code_module,
-    })
-    .select("id, version")
-    .single();
-  if (insertErr || !inserted) {
-    return NextResponse.json(
-      { error: `Insert failed: ${insertErr?.message ?? "unknown"}` },
-      { status: 500 },
-    );
-  }
-
+  // Enqueue a pack rebuild. buildPackJob runs every source collector
+  // (capturing fresh risk assessments / uploads / etc.) and then
+  // automatically chains to maybeEnqueueDefencePackage to create the
+  // next draft against the refreshed pack_json.
   await sb.from("jobs").insert({
     shop_id: existing.shop_id,
-    job_type: "build_defence_package",
-    entity_id: inserted.id,
+    job_type: "build_pack",
+    entity_id: existing.source_pack_id,
   });
 
   await logAuditEvent({
@@ -106,15 +96,20 @@ export async function POST(
     actorType: "merchant",
     eventType: "defence_package_regenerated",
     eventPayload: {
-      packageId: inserted.id,
-      version: inserted.version,
-      predecessorId: id,
+      previousPackageId: id,
+      previousVersion: existing.version,
+      trigger: "merchant_regenerate",
+      mode: "pack_rebuild_then_defence_regenerate",
     },
   });
 
   return NextResponse.json({
     ok: true,
-    packageId: inserted.id,
-    version: inserted.version,
+    // The next draft's id/version aren't known until the pack rebuild
+    // completes and maybeEnqueueDefencePackage inserts the row.
+    // Client polls /api/packs/:packId/defence-packages to discover it.
+    queued: true,
+    previousPackageId: id,
+    previousVersion: existing.version,
   });
 }
