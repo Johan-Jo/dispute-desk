@@ -552,6 +552,16 @@ function deriveInternalOnlySignals(
   const ip = classifyIpLocation(byField.get("ip_location_check"));
   if (ip) out.push(ip);
 
+  // fraud_risk_screening is NO LONGER an internal-only signal as of
+  // bbe0ab3. When Shopify returned ACCEPT, the screening is
+  // supporting bank evidence (surfaces in EvidenceUsedSection +
+  // Inclusion Review + PDF Evidence Basis via the normal
+  // `usedAsPositiveBankEvidence` / `includedInDefencePackage`
+  // pathways). When Shopify returned an unfavourable result, the
+  // source-collector emits no section at all (absence is never a
+  // negative signal — same rule as 3-D Secure). So this card
+  // intentionally never carries a fraud-screening row.
+
   // Generic "bank-ineligible" pass for any other field whose payload
   // explicitly opts out of bank submission. Conservative: only emit
   // when the payload itself sets bankEligible: false.
