@@ -226,11 +226,7 @@ describe("Invariant 3 — policyArgument is deny-listed for visa_10_4_fraud", ()
 });
 
 describe("Invariant 4 — Chronology thesis must not over-promise event categories", () => {
-  it("the embedded HTML view's fraud thesis no longer claims 'site engagement' or 'session traceability'", async () => {
-    // Read the file content directly to assert the bad phrasing is gone.
-    // We can't import the const because the file is a "use client"
-    // React component that doesn't compile under vitest's default JSX
-    // pipeline; a string scan is simpler and tests the right thing.
+  it("the embedded HTML view does not carry an over-promising thesis literal", async () => {
     const { readFileSync } = await import("node:fs");
     const path = await import("node:path");
     const fp = path.resolve(
@@ -238,14 +234,28 @@ describe("Invariant 4 — Chronology thesis must not over-promise event categori
       "app/(embedded)/app/disputes/[id]/tabs/sections/DefencePackageHtmlView.tsx",
     );
     const src = readFileSync(fp, "utf8");
-    // The whole block was the bug — assert it's gone.
+    // The old static thesis library (which used to over-promise
+    // "site engagement, order placement, ...") is gone — the HTML
+    // view now consumes the templated thesis from
+    // lib/defence/pdf/thesisTemplates.ts via renderThesis().
     expect(src).not.toMatch(/site engagement, order placement/);
     expect(src).not.toMatch(/each step traceable to the cardholder's session/);
-    // The replacement (neutral, matches the PDF thesisTemplates) must
-    // be in place.
+    expect(src).not.toMatch(/const VISA_10_4_FRAUD_THESIS:\s*Record</);
+    expect(src).not.toMatch(/const GENERIC_THESIS:\s*Record</);
+  });
+
+  it("the PDF thesis template for chronologyArgument is the neutral wording", async () => {
+    const { readFileSync } = await import("node:fs");
+    const path = await import("node:path");
+    const fp = path.resolve(
+      process.cwd(),
+      "lib/defence/pdf/thesisTemplates.ts",
+    );
+    const src = readFileSync(fp, "utf8");
     expect(src).toMatch(
       /timeline of events records the relevant moments of the customer's interaction/,
     );
+    expect(src).not.toMatch(/site engagement, order placement/);
   });
 });
 
@@ -401,5 +411,197 @@ describe("Invariant 6 — shared chronology builder behaves correctly on both pa
   it("returns empty array when no inputs at all", async () => {
     const { buildChronologyEvents } = await import("../chronology");
     expect(buildChronologyEvents({}, [])).toEqual([]);
+  });
+});
+
+/**
+ * Invariant 7 — every renderer-shared helper has exactly TWO consumers:
+ *   - lib/defence/pdf/DefencePackageDocument.tsx        (PDF renderer)
+ *   - app/(embedded)/.../DefencePackageHtmlView.tsx     (embedded HTML view)
+ *
+ * If either renderer stops importing the shared module, this test
+ * fails. That's the structural guarantee against the chronology-class
+ * divergence we shipped fixes for: a renderer can't quietly grow its
+ * own parallel implementation without breaking the build.
+ */
+describe("Invariant 7 — both renderers import every shared helper", () => {
+  async function readBoth(): Promise<{ pdf: string; html: string }> {
+    const { readFileSync } = await import("node:fs");
+    const path = await import("node:path");
+    const pdf = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "lib/defence/pdf/DefencePackageDocument.tsx",
+      ),
+      "utf8",
+    );
+    const html = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "app/(embedded)/app/disputes/[id]/tabs/sections/DefencePackageHtmlView.tsx",
+      ),
+      "utf8",
+    );
+    return { pdf, html };
+  }
+
+  it("both renderers import the shared SECTION_ORDER + SECTION_TITLES", async () => {
+    const { pdf, html } = await readBoth();
+    // PDF gets them transitively through composePdfBlocks — assert
+    // there's no local copy in either file. The HTML view imports
+    // them directly.
+    expect(html).toMatch(/from\s+["']@\/lib\/defence\/render\/sections["']/);
+    expect(html).toMatch(/SECTION_ORDER/);
+    expect(html).toMatch(/SECTION_TITLES/);
+    // Old local declarations must be gone from the HTML view.
+    expect(html).not.toMatch(/const SECTION_ORDER:\s*NarrativeSectionKey\[\]/);
+    expect(html).not.toMatch(/const SECTION_TITLES:\s*Record</);
+    // The PDF pipeline reads them via composePdfBlocks.
+    const compose = (await import("node:fs")).readFileSync(
+      (await import("node:path")).resolve(
+        process.cwd(),
+        "lib/defence/pdf/composePdfBlocks.ts",
+      ),
+      "utf8",
+    );
+    expect(compose).toMatch(
+      /from\s+["']\.\.\/render\/sections["']/,
+    );
+    void pdf;
+  });
+
+  it("both renderers consume the shared evidence-basis row builder", async () => {
+    const { html } = await readBoth();
+    expect(html).toMatch(/buildEvidenceBasisRows/);
+    expect(html).toMatch(
+      /from\s+["']@\/lib\/defence\/pdf\/evidenceBasisRows["']/,
+    );
+    // The old local renderFactValue is gone — the formatter is
+    // owned by evidenceBasisRows.ts.
+    expect(html).not.toMatch(/^function renderFactValue\(/m);
+    expect(html).not.toMatch(/^function buildEvidenceBasis\(/m);
+  });
+
+  it("both renderers consume the shared thesis system (renderThesis)", async () => {
+    const { html } = await readBoth();
+    expect(html).toMatch(/renderThesis/);
+    expect(html).toMatch(/from\s+["']@\/lib\/defence\/pdf\/renderThesis["']/);
+    // Old static thesis libraries are gone.
+    expect(html).not.toMatch(/const GENERIC_THESIS:\s*Record</);
+    expect(html).not.toMatch(/const VISA_10_4_FRAUD_THESIS:\s*Record</);
+  });
+
+  it("both renderers consume the shared Case Details row builder", async () => {
+    const { pdf, html } = await readBoth();
+    expect(pdf).toMatch(/buildCaseDetailsRows/);
+    expect(pdf).toMatch(
+      /from\s+["']\.\.\/render\/caseDetails["']/,
+    );
+    expect(html).toMatch(/buildCaseDetailsRows/);
+    expect(html).toMatch(
+      /from\s+["']@\/lib\/defence\/render\/caseDetails["']/,
+    );
+  });
+
+  it("both renderers consume the shared Line Items builder", async () => {
+    const { pdf, html } = await readBoth();
+    expect(pdf).toMatch(/buildLineItems/);
+    expect(pdf).toMatch(/from\s+["']\.\.\/render\/lineItems["']/);
+    expect(html).toMatch(/buildLineItems/);
+    expect(html).toMatch(/from\s+["']@\/lib\/defence\/render\/lineItems["']/);
+    // No local `lineItemsFromFacts` in the PDF.
+    expect(pdf).not.toMatch(/^function lineItemsFromFacts\(/m);
+  });
+
+  it("both renderers consume the shared chronology builder", async () => {
+    const { pdf, html } = await readBoth();
+    expect(pdf).toMatch(/buildChronologyEvents/);
+    expect(pdf).toMatch(/from\s+["']\.\.\/chronology["']/);
+    expect(html).toMatch(/buildChronologyEvents/);
+    expect(html).toMatch(/from\s+["']@\/lib\/defence\/chronology["']/);
+  });
+});
+
+/**
+ * Invariant 8 — Evidence Basis rows must never echo raw AVS/CVV
+ * gateway codes or the raw Shopify fulfillmentStatus. Same rule the
+ * LLM narrative obeys; applies to both renderers because they read
+ * the same row data from evidenceBasisRows.ts.
+ */
+describe("Invariant 8 — Evidence Basis never echoes raw gateway codes or fulfillmentStatus", () => {
+  it("payment_authentication fact translates AVS/CVV to plain language", async () => {
+    const { buildEvidenceBasisRows } = await import(
+      "../pdf/evidenceBasisRows"
+    );
+    const rows = buildEvidenceBasisRows([
+      {
+        id: "f8",
+        category: "payment_authentication",
+        label: "Payment authentication",
+        value: {
+          avsResult: "Y",
+          cvvResult: "M",
+          verificationSummary:
+            "the billing address matched the issuer's records and the card verification code matched the issuer's records",
+        },
+        source: "shopify_order",
+        sourceRef: null,
+        strength: "strong",
+        bankEligible: true,
+        merchantVisible: true,
+        internalOnly: false,
+        includeInBankNarrative: true,
+        submissionRisk: false,
+        confidence: null,
+      },
+    ]);
+    expect(rows[0].value).not.toMatch(/\bAVS [YN]\b/);
+    expect(rows[0].value).not.toMatch(/\bCVV [MN]\b/);
+    expect(rows[0].value).toMatch(/billing address matched/i);
+  });
+
+  it("order_record fact never echoes UNFULFILLED/FULFILLED in the value column", async () => {
+    const { buildEvidenceBasisRows } = await import(
+      "../pdf/evidenceBasisRows"
+    );
+    const rowsUnfulfilled = buildEvidenceBasisRows([
+      {
+        id: "f0",
+        category: "order_record",
+        label: "Order record",
+        value: { fulfillmentStatus: "UNFULFILLED" },
+        source: "shopify_order",
+        sourceRef: null,
+        strength: "supporting",
+        bankEligible: true,
+        merchantVisible: true,
+        internalOnly: false,
+        includeInBankNarrative: true,
+        submissionRisk: false,
+        confidence: null,
+      },
+    ]);
+    expect(rowsUnfulfilled[0].value).toBe("Order on record");
+    expect(rowsUnfulfilled[0].value).not.toMatch(/UNFULFILLED/);
+
+    const rowsFulfilled = buildEvidenceBasisRows([
+      {
+        id: "f0",
+        category: "order_record",
+        label: "Order record",
+        value: { fulfillmentStatus: "FULFILLED" },
+        source: "shopify_order",
+        sourceRef: null,
+        strength: "supporting",
+        bankEligible: true,
+        merchantVisible: true,
+        internalOnly: false,
+        includeInBankNarrative: true,
+        submissionRisk: false,
+        confidence: null,
+      },
+    ]);
+    expect(rowsFulfilled[0].value).toBe("Order on record");
+    expect(rowsFulfilled[0].value).not.toMatch(/FULFILLED/);
   });
 });

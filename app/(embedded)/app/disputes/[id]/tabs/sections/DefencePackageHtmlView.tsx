@@ -31,7 +31,6 @@ import {
 import type {
   DefenceNarrativeOutput,
   EvidenceFact,
-  EvidenceFactCategory,
   NarrativeSection,
   NarrativeSectionKey,
   PackageMode,
@@ -41,79 +40,52 @@ import {
   buildChronologyEvents,
   type ChronologyEvent,
 } from "@/lib/defence/chronology";
-
-// ─── Section thesis library (mirrors PDF) ─────────────────────────────
-const GENERIC_THESIS: Record<NarrativeSectionKey, string> = {
-  executiveSummary:
-    "This representment addresses the chargeback identified above. The approved evidence supporting the merchant's position is summarised below.",
-  transactionOverviewArgument:
-    "The transaction record is internally consistent with cardholder-initiated activity.",
-  chronologyArgument:
-    "The timeline of events records the relevant moments of the customer's interaction with the merchant.",
-  paymentAuthenticationArgument:
-    "Authentication and payment-record signals are presented below.",
-  fulfillmentArgument:
-    "Fulfilment, delivery, or access evidence is presented below.",
-  communicationArgument:
-    "Customer communication on record is presented below.",
-  policyArgument:
-    "Relevant policy disclosures and acceptance records are presented below.",
-  manualEvidenceArgument:
-    "Supplementary documentation provided by the merchant supports the foregoing argument.",
-  conclusion:
-    "Based on the evidence above, the merchant respectfully requests reversal of the chargeback.",
-};
+import {
+  SECTION_ORDER,
+  SECTION_TITLES,
+} from "@/lib/defence/render/sections";
+import { buildEvidenceBasisRows } from "@/lib/defence/pdf/evidenceBasisRows";
+import { renderThesis } from "@/lib/defence/pdf/renderThesis";
+import { familyKeyForModule } from "@/lib/defence/reasonCodes/registry";
+import { buildCaseDetailsRows } from "@/lib/defence/render/caseDetails";
+import {
+  buildLineItems,
+  type LineItem,
+} from "@/lib/defence/render/lineItems";
+import type { ReasonCodeModuleKey } from "@/lib/defence/types";
 
 /**
- * Reason-code-specific thesis library for the embedded HTML view.
+ * Resolve the thesis blockquote text for a section.
  *
- * NOTE: these strings parallel `lib/defence/pdf/thesisTemplates.ts`.
- * A follow-up commit will collapse the two into one shared module so
- * future drift is impossible (the HTML view's earlier
- * `chronologyArgument` text over-promised "site engagement, order
- * placement, successful authorisation, and order confirmation" when
- * the deterministic timeline only carries 2–3 events). Until then,
- * keep these in sync with the templates the PDF uses.
+ * Both renderers now call `renderThesis()` from the templated thesis
+ * system in `lib/defence/pdf/renderThesis.ts`. The HTML view's old
+ * static per-module library (`GENERIC_THESIS` + `VISA_10_4_FRAUD_THESIS`)
+ * is gone — it was a parallel implementation that needed to be
+ * hand-synced with `lib/defence/pdf/thesisTemplates.ts`. Now both
+ * surfaces produce identical thesis text for the same pack because
+ * they share the same template registry + token resolver.
  *
- * Each thesis must be safe to render when the matching section's
- * bullet/fact density is sparse — no thesis may claim event categories
- * the deterministic renderer doesn't produce.
+ * Returns "" when the template's required tokens don't resolve
+ * (no fact to ground the thesis claim). The renderer skips the
+ * blockquote in that case.
  */
-const VISA_10_4_FRAUD_THESIS: Record<NarrativeSectionKey, string> = {
-  executiveSummary:
-    "This representment addresses a Visa 10.4 (Other Fraud — Card Absent) chargeback. The approved evidence supports that the transaction was authorised by the cardholder.",
-  transactionOverviewArgument:
-    "The transaction was successfully authorised and captured using authentication factors specific to the cardholder. The payment record is internally consistent and aligned with cardholder-supplied data.",
-  chronologyArgument:
-    "The timeline of events records the relevant moments of the customer's interaction with the merchant.",
-  paymentAuthenticationArgument:
-    "Authentication metrics align with a cardholder-initiated transaction. The verification results reflect data accessible to the legitimate cardholder.",
-  fulfillmentArgument:
-    "Fulfilment and access evidence corroborates that the order was processed and the customer received the agreed delivery or access path.",
-  communicationArgument:
-    "The documented communication record evidences direct cardholder engagement with the merchant before and around the disputed transaction.",
-  // policyArgument intentionally retained here for non-fraud modules
-  // that may reuse this library; the fraud section deny list
-  // (lib/defence/sectionVisibility.ts) prevents this thesis from
-  // ever rendering for visa_10_4_fraud regardless.
-  policyArgument:
-    "The merchant's published policies and the customer's acceptance record are documented and were available at the point of purchase.",
-  manualEvidenceArgument:
-    "Supplementary documentation provided by the merchant supports the foregoing argument.",
-  conclusion:
-    "Based on the approved evidence above, the merchant respectfully requests that the chargeback be reversed and the funds returned.",
-};
-
 function thesisFor(
   sectionKey: NarrativeSectionKey,
   moduleKey: string | null | undefined,
   mode: PackageMode,
+  facts: EvidenceFact[],
 ): string | null {
-  // In full mode, the LLM body stands on its own. The thesis box only
-  // renders in narrow mode (mirrors the PDF refinement).
-  if (mode === "full") return null;
-  if (moduleKey === "visa_10_4_fraud") return VISA_10_4_FRAUD_THESIS[sectionKey];
-  return GENERIC_THESIS[sectionKey];
+  const familyKey = moduleKey
+    ? familyKeyForModule(moduleKey as ReasonCodeModuleKey)
+    : null;
+  if (!familyKey) return null;
+  const out = renderThesis({
+    sectionKey,
+    familyKey,
+    packageMode: mode,
+    approvedFacts: facts,
+  });
+  return out || null;
 }
 
 // ─── Inputs ──────────────────────────────────────────────────────────
@@ -198,124 +170,20 @@ function fmtAmount(amount: number | string | null | undefined, currency: string 
   return currency ? `${currency} ${amount}` : String(amount);
 }
 
-const SECTION_TITLES: Record<NarrativeSectionKey, string> = {
-  executiveSummary: "Executive Summary",
-  transactionOverviewArgument: "Transaction Overview",
-  chronologyArgument: "Chronology of Events",
-  paymentAuthenticationArgument: "Payment Authentication",
-  fulfillmentArgument: "Fulfillment, Delivery & Access",
-  communicationArgument: "Customer Communication",
-  policyArgument: "Policy Disclosure",
-  manualEvidenceArgument: "Supplementary Merchant Evidence",
-  conclusion: "Conclusion",
-};
+// SECTION_ORDER + SECTION_TITLES imported from
+// `lib/defence/render/sections.ts` — single source of truth shared
+// with the PDF render pipeline (`lib/defence/pdf/composePdfBlocks.ts`).
 
-const SECTION_ORDER: NarrativeSectionKey[] = [
-  "executiveSummary",
-  "transactionOverviewArgument",
-  "chronologyArgument",
-  "paymentAuthenticationArgument",
-  "fulfillmentArgument",
-  "communicationArgument",
-  "policyArgument",
-  "manualEvidenceArgument",
-  "conclusion",
-];
-
-const CATEGORY_ORDER: EvidenceFactCategory[] = [
-  "payment_authentication",
-  "payment_auth",
-  "billing_match",
-  "delivery_proof",
-  "shipping_tracking",
-  "digital_access_log",
-  "service_access",
-  "customer_communication",
-  "communication",
-  "prior_customer_history",
-  "account_history",
-  "order_record",
-  "policy_acceptance",
-  "policy_refund",
-  "policy_shipping",
-  "policy_cancellation",
-  "refund_record",
-  "subscription_terms",
-  "duplicate_explanation",
-  "manual_evidence",
-] as EvidenceFactCategory[];
-
-function buildEvidenceBasis(facts: EvidenceFact[]): Array<{ label: string; value: string }> {
-  return facts
-    .filter((f) => f.bankEligible && f.includeInBankNarrative && !f.submissionRisk)
-    .sort((a, b) => {
-      const ra = CATEGORY_ORDER.indexOf(a.category as EvidenceFactCategory);
-      const rb = CATEGORY_ORDER.indexOf(b.category as EvidenceFactCategory);
-      const ra2 = ra === -1 ? 999 : ra;
-      const rb2 = rb === -1 ? 999 : rb;
-      if (ra2 !== rb2) return ra2 - rb2;
-      return a.label.localeCompare(b.label);
-    })
-    .map((f) => ({ label: f.label, value: renderFactValue(f) }));
-}
-
-function renderFactValue(fact: EvidenceFact): string {
-  const v = fact.value as Record<string, unknown>;
-  switch (fact.category) {
-    case "payment_authentication":
-    case "payment_auth": {
-      const parts: string[] = [];
-      if (typeof v.avsResult === "string") parts.push(`AVS ${v.avsResult}`);
-      if (typeof v.cvvResult === "string") parts.push(`CVV ${v.cvvResult}`);
-      if (v.threeDS === true) parts.push("3DS authenticated");
-      return parts.length ? parts.join(" • ") : "Authenticated";
-    }
-    case "billing_match":
-      return v.match === true ? "MATCH" : "Confirmed";
-    case "delivery_proof":
-    case "shipping_tracking": {
-      const proof = typeof v.proofType === "string" ? v.proofType : null;
-      const at = typeof v.deliveredAt === "string" ? v.deliveredAt : null;
-      if (proof === "signature_confirmed") return at ? `Signature on delivery, ${at}` : "Signature on delivery";
-      if (proof === "delivered_confirmed") return at ? `Delivered ${at}` : "Delivered";
-      if (proof === "delivered_unverified") return "In transit / handed to carrier";
-      return "Confirmed";
-    }
-    case "customer_communication":
-    case "communication": {
-      const at = typeof v.lastMessageAt === "string" ? v.lastMessageAt : null;
-      return v.customerConfirmsOrder === true
-        ? at
-          ? `Customer confirmed order, ${at}`
-          : "Customer confirmed order"
-        : at
-          ? `Communication on file, last ${at}`
-          : "Communication on file";
-    }
-    case "prior_customer_history":
-    case "account_history": {
-      const count = typeof v.priorOrderCount === "number" ? (v.priorOrderCount as number) : 0;
-      return count > 0 ? `${count} prior order${count === 1 ? "" : "s"}` : "Confirmed";
-    }
-    case "policy_refund":
-    case "policy_shipping":
-    case "policy_cancellation":
-    case "policy_acceptance":
-      return v.acceptedAtCheckout === true ? "Accepted at checkout" : "On record";
-    case "order_record":
-      return typeof v.fulfillmentStatus === "string"
-        ? `Order on record (${v.fulfillmentStatus})`
-        : "Order on record";
-    case "refund_record":
-      return v.refundStatus === "processed" ? "Refund processed" : "On record";
-    case "duplicate_explanation":
-      return "Distinct transaction";
-    case "manual_evidence":
-      return typeof v.fileType === "string" ? `Uploaded (${v.fileType})` : "Uploaded";
-    default:
-      return "Confirmed";
-  }
-}
+// Evidence Basis filter + sort + per-fact value rendering all live in
+// `lib/defence/pdf/evidenceBasisRows.ts` — single source of truth shared
+// with the PDF renderer. Call `buildEvidenceBasisRows(facts)` to get
+// the same {factId, category, label, value} rows the bank sees.
+//
+// The old local `buildEvidenceBasis()` + `renderFactValue()` here were
+// a parallel implementation that drifted from the canonical version
+// (e.g. they output raw "AVS Y / CVV M" gateway codes and
+// "Order on record (UNFULFILLED)" — both bank-readability problems the
+// canonical formatter now translates to plain language).
 
 /**
  * Chronology rendering is now a thin wrapper over the shared
@@ -356,36 +224,34 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
   const mode: PackageMode = row.package_mode ?? "full";
   const moduleKey = row.reason_code_module;
 
-  const evidenceBasis = buildEvidenceBasis(facts);
+  const evidenceBasis = buildEvidenceBasisRows(facts);
   const chrono = chronologyEvents(dispute, facts);
-  const orderRecord = facts.find((f) => f.category === "order_record");
-  const lineItems =
-    Array.isArray((orderRecord?.value as Record<string, unknown> | undefined)?.lineItems)
-      ? ((orderRecord!.value as Record<string, unknown>).lineItems as Array<{
-          description: string;
-          quantity: number;
-          price: string;
-        }>)
-      : [];
+  // Line items extracted via the shared builder so the PDF and HTML
+  // view show the same rows with the same shape validation.
+  const lineItems: LineItem[] = buildLineItems(facts);
 
   const fulfillmentFallbackVisible =
     omitted.has("fulfillmentArgument") &&
     (typeof dispute?.fulfillmentStatus === "string" && dispute.fulfillmentStatus.toUpperCase() === "FULFILLED");
 
-  const caseRows: Array<[string, string]> = [
-    ["Dispute ID", disputeIdShort(dispute?.disputeGid)],
-    ["Merchant", dispute?.merchantName ?? dispute?.shopName ?? "—"],
-    ["Card network", dispute?.cardNetwork ?? "—"],
-    ["Transaction date", fmtIso(dispute?.transactionDate)],
-    ["Disputed amount", fmtAmount(dispute?.amount, dispute?.currencyCode)],
-    ["Reason code", dispute?.reasonCodeDisplay ?? dispute?.reason ?? "—"],
-    ["Order ID", dispute?.orderName ?? "—"],
-    ["Cardholder name", dispute?.cardholderName ?? "—"],
-    ["Card (last 4)", dispute?.cardLast4 ?? "—"],
-    ["Payment gateway", dispute?.paymentGateway ?? "—"],
-    ["Financial status", dispute?.financialStatus ?? "—"],
-    ["Fulfillment status", dispute?.fulfillmentStatus ?? "—"],
-  ];
+  // Case Details rows come from the shared builder so the PDF and
+  // this HTML view show the same fields in the same order — no
+  // parallel implementation.
+  const caseRows = buildCaseDetailsRows({
+    disputeIdShort: disputeIdShort(dispute?.disputeGid),
+    merchantName: dispute?.merchantName ?? dispute?.shopName ?? null,
+    cardNetwork: dispute?.cardNetwork ?? null,
+    transactionDateDisplay: fmtIso(dispute?.transactionDate),
+    amountDisplay: fmtAmount(dispute?.amount, dispute?.currencyCode),
+    reasonCodeDisplay: dispute?.reasonCodeDisplay ?? dispute?.reason ?? null,
+    claimType: null, // Workspace API doesn't expose claimType today; falls back to "—".
+    orderName: dispute?.orderName ?? null,
+    cardholderName: dispute?.cardholderName ?? null,
+    cardLast4: dispute?.cardLast4 ?? null,
+    paymentGateway: dispute?.paymentGateway ?? null,
+    financialStatus: dispute?.financialStatus ?? null,
+    fulfillmentStatus: dispute?.fulfillmentStatus ?? null,
+  });
 
   return (
     <Card padding="500">
@@ -420,7 +286,7 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
             // Chronology has its own bullet list below the paragraph.
             const section = narrative[key];
             if (omitted.has(key) || !section.text.trim()) return null;
-            const thesis = thesisFor(key, moduleKey, mode);
+            const thesis = thesisFor(key, moduleKey, mode, facts);
             return (
               <BlockStack key={key} gap="200">
                 <Text as="h3" variant="headingMd">{SECTION_TITLES[key]}</Text>
@@ -448,7 +314,7 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
             const section = narrative[key];
             const hasBody = !omitted.has(key) && section.text.trim();
             if (hasBody) {
-              const thesis = thesisFor(key, moduleKey, mode);
+              const thesis = thesisFor(key, moduleKey, mode, facts);
               return (
                 <BlockStack key={key} gap="200">
                   <Text as="h3" variant="headingMd">{SECTION_TITLES[key]}</Text>
@@ -476,7 +342,7 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
             // Render the conclusion with a framed call-out.
             const section = narrative[key];
             if (omitted.has(key) || !section.text.trim()) return null;
-            const thesis = thesisFor(key, moduleKey, mode);
+            const thesis = thesisFor(key, moduleKey, mode, facts);
             return (
               <BlockStack key={key} gap="200">
                 <Text as="h3" variant="headingMd">{SECTION_TITLES[key]}</Text>
@@ -492,7 +358,7 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
             <SectionBlock
               key={key}
               title={SECTION_TITLES[key]}
-              thesis={thesisFor(key, moduleKey, mode)}
+              thesis={thesisFor(key, moduleKey, mode, facts)}
               section={narrative[key]}
               omitted={omitted.has(key)}
             />
@@ -586,7 +452,11 @@ function ThesisBox({ text }: { text: string }) {
   );
 }
 
-function CaseDetailsSection({ rows }: { rows: Array<[string, string]> }) {
+function CaseDetailsSection({
+  rows,
+}: {
+  rows: ReadonlyArray<readonly [string, string]>;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <BlockStack gap="200">

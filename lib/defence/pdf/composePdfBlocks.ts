@@ -14,40 +14,19 @@
 
 import { renderThesis } from "./renderThesis";
 import { isSectionDeniedForModule } from "../sectionVisibility";
+import { SECTION_ORDER, SECTION_TITLES } from "../render/sections";
 import type {
   ComposedDocumentBlock,
   DefenceNarrativeOutput,
   EvidenceFact,
-  NarrativeSectionKey,
   PackageMode,
   ReasonCodeFamilyKey,
 } from "../types";
 
-/** Section keys in the order the renderer walks them — mirrors
- *  DefencePackageDocument's <SectionBlock> sequence. */
-const SECTION_ORDER: NarrativeSectionKey[] = [
-  "executiveSummary",
-  "transactionOverviewArgument",
-  "chronologyArgument",
-  "paymentAuthenticationArgument",
-  "fulfillmentArgument",
-  "communicationArgument",
-  "policyArgument",
-  "manualEvidenceArgument",
-  "conclusion",
-];
-
-const SECTION_HEADINGS: Record<NarrativeSectionKey, string> = {
-  executiveSummary: "Executive Summary",
-  transactionOverviewArgument: "Transaction Overview",
-  chronologyArgument: "Chronology of Events",
-  paymentAuthenticationArgument: "Payment Authentication",
-  fulfillmentArgument: "Fulfillment, Delivery & Access",
-  communicationArgument: "Customer Communication",
-  policyArgument: "Policy Disclosure",
-  manualEvidenceArgument: "Supplementary Merchant Evidence",
-  conclusion: "Conclusion",
-};
+// SECTION_HEADINGS lives in `lib/defence/render/sections.ts` as
+// SECTION_TITLES — both renderers share the same map. Local alias for
+// readability inside this file.
+const SECTION_HEADINGS = SECTION_TITLES;
 
 /** Hard-coded deterministic fallback prose. Currently only
  *  fulfillmentArgument has one — Phase 5 may add others on a per-

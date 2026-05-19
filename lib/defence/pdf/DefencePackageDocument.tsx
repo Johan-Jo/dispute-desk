@@ -28,6 +28,8 @@ import {
   buildChronologyEvents,
   type ChronologyEvent,
 } from "../chronology";
+import { buildCaseDetailsRows } from "../render/caseDetails";
+import { buildLineItems, type LineItem } from "../render/lineItems";
 import type {
   ComposedDocumentBlock,
   EvidenceFact,
@@ -167,21 +169,24 @@ function Cover({ meta }: { meta: DefencePackageMeta }) {
 /* ── Case Details table ───────────────────────────────────────────── */
 
 function CaseDetailsTable({ meta }: { meta: DefencePackageMeta }) {
-  const rows: Array<[string, string]> = [
-    ["Dispute ID", disputeIdShort(meta.disputeGid)],
-    ["Merchant name", meta.merchantName ?? meta.shopName],
-    ["Card network", meta.cardNetwork ?? "—"],
-    ["Transaction date", fmtIsoDate(meta.transactionDate)],
-    ["Disputed amount", meta.amountDisplay ?? "—"],
-    ["Reason code", meta.reasonCodeDisplay ?? meta.reasonCode ?? "—"],
-    ["Claim type", meta.claimType ?? "—"],
-    ["Order ID", meta.orderName ?? "—"],
-    ["Cardholder name", meta.cardholderName ?? "—"],
-    ["Card (last 4)", meta.cardLast4 ?? "—"],
-    ["Payment gateway", meta.paymentGateway ?? "—"],
-    ["Financial status", meta.financialStatus ?? "—"],
-    ["Fulfillment status", meta.fulfillmentStatus ?? "—"],
-  ];
+  // Row builder is shared with the embedded HTML view via
+  // `lib/defence/render/caseDetails.ts` — same fields, same order,
+  // same "—" empty rendering on both surfaces.
+  const rows = buildCaseDetailsRows({
+    disputeIdShort: disputeIdShort(meta.disputeGid),
+    merchantName: meta.merchantName ?? meta.shopName,
+    cardNetwork: meta.cardNetwork,
+    transactionDateDisplay: fmtIsoDate(meta.transactionDate),
+    amountDisplay: meta.amountDisplay,
+    reasonCodeDisplay: meta.reasonCodeDisplay ?? meta.reasonCode,
+    claimType: meta.claimType,
+    orderName: meta.orderName,
+    cardholderName: meta.cardholderName,
+    cardLast4: meta.cardLast4,
+    paymentGateway: meta.paymentGateway,
+    financialStatus: meta.financialStatus,
+    fulfillmentStatus: meta.fulfillmentStatus,
+  });
   return (
     <View minPresenceAhead={120}>
       <Text style={styles.h1}>Case Details</Text>
@@ -230,33 +235,8 @@ function ChronologyBullets({ events }: { events: ChronologyEvent[] }) {
 
 /* ── Order line items table ──────────────────────────────────────── */
 
-interface LineItem {
-  description: string;
-  quantity: number;
-  price: string;
-}
-
-function lineItemsFromFacts(facts: EvidenceFact[], meta: DefencePackageMeta): LineItem[] {
-  if (Array.isArray(meta.lineItemsFromContext) && meta.lineItemsFromContext.length > 0) {
-    return meta.lineItemsFromContext;
-  }
-  for (const f of facts) {
-    if (f.category !== "order_record") continue;
-    const raw = f.value.lineItems;
-    if (!Array.isArray(raw)) continue;
-    return raw
-      .map((it) => {
-        const obj = it as Record<string, unknown>;
-        const description = typeof obj.description === "string" ? obj.description : null;
-        const quantity = typeof obj.quantity === "number" ? obj.quantity : null;
-        const price = typeof obj.price === "string" ? obj.price : null;
-        if (!description || quantity == null || !price) return null;
-        return { description, quantity, price } as LineItem;
-      })
-      .filter((it): it is LineItem => it !== null);
-  }
-  return [];
-}
+// Line-item extraction logic lives in `lib/defence/render/lineItems.ts`
+// (shared with the embedded HTML view). LineItem type imported above.
 
 function LineItemsTable({ items }: { items: LineItem[] }) {
   if (items.length === 0) return null;
@@ -411,7 +391,7 @@ export function DefencePackageDocument({
 }) {
   const { meta, composedBlocks, approvedFacts, manualEvidence } = data;
   const chronology = buildChronologyEvents(meta, approvedFacts);
-  const lineItems = lineItemsFromFacts(approvedFacts, meta);
+  const lineItems = buildLineItems(approvedFacts, meta.lineItemsFromContext);
   const chronologyBlock = findBlock(composedBlocks, "chronologyArgument");
 
   return (

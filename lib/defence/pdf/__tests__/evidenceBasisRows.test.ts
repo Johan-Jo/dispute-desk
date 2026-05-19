@@ -42,13 +42,41 @@ describe("buildEvidenceBasisRows", () => {
     expect(rows.map((r) => r.factId)).toEqual(["payment", "delivery", "policy"]);
   });
 
-  it("renders AVS/CVV/3DS values in payment_authentication rows", () => {
+  it("renders translated AVS/CVV/3DS plain-language summary (no raw gateway codes)", () => {
+    // Prefer the pre-translated verificationSummary built by
+    // factClassifier.ts. Bank-facing prose must never quote the raw
+    // single-letter codes (Y/M/N/etc.) — same rule the narrative obeys.
+    const rows = buildEvidenceBasisRows([
+      fact({
+        value: {
+          avsResult: "Y",
+          cvvResult: "M",
+          threeDS: true,
+          verificationSummary:
+            "the billing address matched the issuer's records and the card verification code matched the issuer's records",
+        },
+      }),
+    ]);
+    expect(rows[0].value).toContain("billing address matched");
+    expect(rows[0].value).toContain("card verification code matched");
+    expect(rows[0].value).toContain("3DS");
+    // Belt-and-suspenders: raw codes must never leak.
+    expect(rows[0].value).not.toMatch(/\bAVS [YN]\b/);
+    expect(rows[0].value).not.toMatch(/\bCVV [MN]\b/);
+  });
+
+  it("falls back to inline translation when verificationSummary is absent (old facts)", () => {
+    // Older facts (before verificationSummary was added) carry only
+    // the raw codes. The formatter still translates rather than
+    // quoting them verbatim.
     const rows = buildEvidenceBasisRows([
       fact({ value: { avsResult: "Y", cvvResult: "M", threeDS: true } }),
     ]);
-    expect(rows[0].value).toContain("AVS Y");
-    expect(rows[0].value).toContain("CVV M");
+    expect(rows[0].value).toContain("billing address matched");
+    expect(rows[0].value).toContain("CVV matched");
     expect(rows[0].value).toContain("3DS");
+    expect(rows[0].value).not.toMatch(/\bAVS Y\b/);
+    expect(rows[0].value).not.toMatch(/\bCVV M\b/);
   });
 
   it("renders delivery proofType=delivered_confirmed", () => {

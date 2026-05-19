@@ -49,12 +49,37 @@ function renderValue(fact: EvidenceFact): string {
   switch (fact.category) {
     case "payment_authentication":
     case "payment_auth": {
+      // Prefer the pre-translated verificationSummary built by
+      // factClassifier.ts — bank-readable plain language, e.g.
+      // "billing address matched • CVV matched". Never quote the raw
+      // single-letter gateway codes (Y/M/N/etc.) in evidence basis
+      // rows — same rule the LLM narrative obeys.
+      const summary =
+        typeof v?.verificationSummary === "string" && v.verificationSummary
+          ? (v.verificationSummary as string)
+          : null;
+      const threeDS = v?.threeDS === true;
+      if (summary) {
+        const parts = [summary];
+        if (threeDS) parts.push("3DS authenticated");
+        return parts.join(" • ");
+      }
+      // Fallback for old facts that predate verificationSummary:
+      // translate the codes inline rather than print them raw.
       const avs = v?.avsResult;
       const cvv = v?.cvvResult;
-      const threeDS = v?.threeDS === true;
       const parts: string[] = [];
-      if (typeof avs === "string") parts.push(`AVS ${avs}`);
-      if (typeof cvv === "string") parts.push(`CVV ${cvv}`);
+      if (typeof avs === "string" && avs.toUpperCase() === "Y") {
+        parts.push("billing address matched");
+      } else if (
+        typeof avs === "string" &&
+        (avs.toUpperCase() === "Z" || avs.toUpperCase() === "W")
+      ) {
+        parts.push("billing postal code matched");
+      }
+      if (typeof cvv === "string" && cvv.toUpperCase() === "M") {
+        parts.push("CVV matched");
+      }
       if (threeDS) parts.push("3DS authenticated");
       return parts.length ? parts.join(" • ") : "Authenticated";
     }
@@ -91,9 +116,12 @@ function renderValue(fact: EvidenceFact): string {
     case "policy_acceptance":
       return v?.acceptedAtCheckout === true ? "Accepted at checkout" : "On record";
     case "order_record":
-      return typeof v?.fulfillmentStatus === "string"
-        ? `Order on record (${v.fulfillmentStatus})`
-        : "Order on record";
+      // Do NOT echo the raw Shopify fulfillmentStatus (UNFULFILLED /
+      // FULFILLED / PARTIAL) — same rule the LLM narrative obeys
+      // (claimGuards.ts / FORBIDDEN_PHRASES). The Evidence Basis row
+      // states the existence of the order record; the bank-facing
+      // argument lives in the narrative, not in the table cell.
+      return "Order on record";
     case "refund_record":
       return v?.refundStatus === "processed" ? "Refund processed" : "On record";
     case "duplicate_explanation":
