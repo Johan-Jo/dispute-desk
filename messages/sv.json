@@ -859,7 +859,15 @@
         "emptyGroup": "—",
         "emptyAll": "Inga bevisrader är tillgängliga ännu för denna tvist. Generera eller bygg om försvarspaketet för att fylla detta avsnitt.",
         "errorOverride": "Det gick inte att uppdatera inklusion ({code}). Försök igen.",
-        "errorOverrideNeedsConfirmation": "Denna signal kräver ett bekräftelseflöde som inte är tillgängligt ännu. Fas 2 lägger till varningen och granskningsspåret för åsidosättningen."
+        "errorOverrideNeedsConfirmation": "Denna signal kräver ett bekräftelseflöde som inte är tillgängligt ännu. Fas 2 lägger till varningen och granskningsspåret för åsidosättningen.",
+        "groupTags": {
+          "usedAsBankArgument": "Avgörande argument",
+          "contextOnly": "Stödjande",
+          "keptInternal": "Dolt för banken",
+          "notIncluded": "Uteslutet",
+          "excludedByMerchant": "Uteslutet"
+        },
+        "outsideDataCallout": "Datan ligger utanför DisputeDesk — i betalningsgatewayen, hos transportören eller i Shopifys riskmotor."
       }
     },
     "overview": {

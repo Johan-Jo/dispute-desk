@@ -858,7 +858,15 @@
         "emptyGroup": "—",
         "emptyAll": "Aucune ligne de preuve n’est encore disponible pour ce litige. Générez ou reconstruisez le dossier de défense pour remplir cette section.",
         "errorOverride": "Impossible de mettre à jour l’inclusion ({code}). Veuillez réessayer.",
-        "errorOverrideNeedsConfirmation": "Ce signal nécessite un flux de confirmation pas encore disponible. La Phase 2 ajoutera l’avertissement et la piste d’audit de la dérogation."
+        "errorOverrideNeedsConfirmation": "Ce signal nécessite un flux de confirmation pas encore disponible. La Phase 2 ajoutera l’avertissement et la piste d’audit de la dérogation.",
+        "groupTags": {
+          "usedAsBankArgument": "Argument décisif",
+          "contextOnly": "Contexte",
+          "keptInternal": "Masqué pour la banque",
+          "notIncluded": "Exclu",
+          "excludedByMerchant": "Exclu"
+        },
+        "outsideDataCallout": "Les données se trouvent en dehors de DisputeDesk — chez la passerelle de paiement, le transporteur ou le moteur de risque de Shopify."
       }
     },
     "overview": {

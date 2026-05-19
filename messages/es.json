@@ -858,7 +858,15 @@
         "emptyGroup": "—",
         "emptyAll": "Todavía no hay filas de pruebas disponibles para esta disputa. Genera o reconstruye el paquete de defensa para poblar esta sección.",
         "errorOverride": "No se pudo actualizar la inclusión ({code}). Inténtalo de nuevo.",
-        "errorOverrideNeedsConfirmation": "Esta señal requiere un flujo de confirmación que aún no está disponible. La Fase 2 añadirá el aviso y el registro de auditoría de la anulación."
+        "errorOverrideNeedsConfirmation": "Esta señal requiere un flujo de confirmación que aún no está disponible. La Fase 2 añadirá el aviso y el registro de auditoría de la anulación.",
+        "groupTags": {
+          "usedAsBankArgument": "Argumento decisivo",
+          "contextOnly": "De apoyo",
+          "keptInternal": "Oculto al banco",
+          "notIncluded": "Excluido",
+          "excludedByMerchant": "Excluido"
+        },
+        "outsideDataCallout": "Los datos están fuera de DisputeDesk: en la pasarela de pago, el transportista o el motor de riesgo de Shopify."
       }
     },
     "overview": {

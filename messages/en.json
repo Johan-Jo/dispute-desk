@@ -945,6 +945,14 @@
           "notIncluded": "Items on file but not in the package. Safe rows can be force-included to add them as supporting context (never as decisive proof).",
           "excludedByMerchant": "Items you have explicitly excluded. Clear the override to restore the natural state."
         },
+        "groupTags": {
+          "usedAsBankArgument": "Strong argument",
+          "contextOnly": "Supporting",
+          "keptInternal": "Hidden from bank",
+          "notIncluded": "Excluded",
+          "excludedByMerchant": "Excluded"
+        },
+        "outsideDataCallout": "Data lives outside DisputeDesk — in the payment gateway, the carrier, or Shopify's risk engine.",
         "toggle": {
           "include": "Include in package",
           "restore": "Restore default",

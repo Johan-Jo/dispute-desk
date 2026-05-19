@@ -443,6 +443,13 @@ function SectionBlock({
   );
 }
 
+/**
+ * Lead-paragraph callout that opens every section in the PDF preview.
+ * Matches the design's `.DocPreview .doc-lead` style: grey background,
+ * Polaris-blue 3px left accent, italic body text, rounded right corners.
+ * Same visual rhyme as the bank-facing PDF so the merchant's preview
+ * and the bank's PDF read identically.
+ */
 function ThesisBox({ text }: { text: string }) {
   return (
     <Box
@@ -450,9 +457,10 @@ function ThesisBox({ text }: { text: string }) {
       borderInlineStartWidth="050"
       borderColor="border-emphasis"
       padding="300"
+      borderRadius="200"
     >
       <Text as="p" variant="bodySm" tone="subdued">
-        {text}
+        <span style={{ fontStyle: "italic" }}>{text}</span>
       </Text>
     </Box>
   );
