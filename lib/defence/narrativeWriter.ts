@@ -59,6 +59,13 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // pattern as the 2→3 bump above.
 const PROMPT_VERSION = 7;
 
+// Re-export under a stable name for read-only consumers (workspace
+// route surfaces this so the embedded card can detect "the submitted
+// version was generated with an older prompt — regenerating would
+// pick up newer guidance"). Keep PROMPT_VERSION as the in-module
+// constant the cache headers and writer reach for.
+export const CURRENT_PROMPT_VERSION = PROMPT_VERSION;
+
 /* ── Static base system prompt (cached, ephemeral) ── */
 
 export const BASE_SYSTEM_PROMPT = `You are a chargeback representment narrative writer for DisputeDesk.

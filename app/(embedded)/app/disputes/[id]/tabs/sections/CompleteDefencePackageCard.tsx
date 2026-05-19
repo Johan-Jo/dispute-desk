@@ -154,6 +154,7 @@ export function CompleteDefencePackageCard({
   );
   const [latest, setLatest] = useState<DefencePackageRow | null>(null);
   const [bankFacing, setBankFacing] = useState<DefencePackageRow | null>(null);
+  const [currentPromptVersion, setCurrentPromptVersion] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"regen" | "finalize" | "submit" | null>(null);
@@ -178,9 +179,15 @@ export function CompleteDefencePackageCard({
         const json = (await res.json()) as {
           latest: DefencePackageRow | null;
           bankFacing?: DefencePackageRow | null;
+          serverState?: { currentPromptVersion?: number | null };
         };
         setLatest(json.latest);
         setBankFacing(json.bankFacing ?? null);
+        setCurrentPromptVersion(
+          typeof json.serverState?.currentPromptVersion === "number"
+            ? json.serverState.currentPromptVersion
+            : null,
+        );
         setError(null);
       }
     } catch (err) {
@@ -343,16 +350,31 @@ export function CompleteDefencePackageCard({
     row.validation_status === "ok" &&
     Boolean(row.pdf_path);
   const canSubmit = hasActionableDraft && row.status === "final";
-  // Regenerate is NOT gated by hasActionableDraft. After submission,
-  // the only `latest` row is the bank-facing one (`status=submitted`)
-  // and `hasActionableDraft` is false — which would lock the merchant
-  // out of producing a new draft. They must always be able to rebuild
-  // against fresh evidence; the submitted PDF on Shopify is untouched.
+  // Regenerate gate. The pre-submit cases (draft / stale / failed) are
+  // always reachable. For a submitted row, only offer Regenerate when
+  // it would actually produce something new — otherwise the merchant
+  // clicks "Regenerate" and gets a v10 that's byte-identical to v9.
+  //
+  // "Something new" today means one of:
+  //   - status === 'stale'  → underlying evidence drifted since this
+  //                           draft was built. (Set by the enqueue
+  //                           path when the evidence_hash changes.)
+  //   - prompt_version lags → a code/prompt upgrade has shipped since
+  //                           this draft was generated, so the next
+  //                           regenerate picks up newer LLM guidance.
+  //
+  // When neither holds, the Regenerate overflow stays hidden.
+  const submittedRowIsStale = row.status === "submitted" && (
+    (latest?.status ?? null) === "stale" ||
+    (typeof row.prompt_version === "number" &&
+      typeof currentPromptVersion === "number" &&
+      row.prompt_version < currentPromptVersion)
+  );
   const canRegenerate =
     row.status === "draft" ||
     row.status === "stale" ||
     row.status === "failed" ||
-    row.status === "submitted";
+    submittedRowIsStale;
 
   const formattedSubmittedAt = submittedToShopifyAt
     ? (() => {

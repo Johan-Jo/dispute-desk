@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
+import { CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
 
 export const runtime = "nodejs";
 
@@ -56,5 +57,13 @@ export async function GET(
     latest: data?.[0] ?? null,
     bankFacing,
     all: data ?? [],
+    // Surfaces "is regenerating worthwhile?" for the embedded card.
+    // When the submitted row's prompt_version lags behind the current
+    // code, a fresh draft will pick up new prompt guidance / module
+    // updates. Pairs with `status === 'stale'` (evidence drifted) on
+    // the client to gate the Regenerate overflow on a submitted row.
+    serverState: {
+      currentPromptVersion: CURRENT_PROMPT_VERSION,
+    },
   });
 }
