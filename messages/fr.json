@@ -666,7 +666,21 @@
         "notSubmittedReason": "Not submitted to Shopify to avoid weakening the case.",
         "sourceShopify": "Shopify",
         "sourceMerchant": "Merchant upload",
-        "sourceDerived": "Derived"
+        "sourceDerived": "Derived",
+        "packageStatus": {
+          "included": "Inclus dans le dossier de défense",
+          "internal_only": "Uniquement interne",
+          "not_included": "Non inclus",
+          "not_supported": "Non pris en charge",
+          "excluded": "Exclu",
+          "failed_upload": "Échec de l’envoi",
+          "waived": "Marqué non applicable"
+        },
+        "bankArgumentStatus": {
+          "used": "Utilisé comme argument auprès de la banque",
+          "context_only": "Contexte uniquement",
+          "not_used": "Non utilisé dans l’argument auprès de la banque"
+        }
       },
       "automation": {
         "automatic": "DisputeDesk will handle this automatically based on the evidence shown above.",
@@ -721,7 +735,25 @@
         "primaryAction": "Régénérer le dossier",
         "secondaryAction": "Conserver le fichier uniquement"
       },
-      "windowClosedError": "Shopify a déjà transmis les preuves de ce litige à la banque, de nouveaux fichiers ne peuvent donc plus être ajoutés."
+      "windowClosedError": "Shopify a déjà transmis les preuves de ce litige à la banque, de nouveaux fichiers ne peuvent donc plus être ajoutés.",
+      "cardholderAck": {
+        "title": "Ajouter la reconnaissance du titulaire de la carte",
+        "subtitle": "Si vous avez un email, un chat ou un autre message dans lequel le titulaire de la carte confirme qu’il a passé et reçu cette commande, collez-le ici. La reconnaissance du titulaire est une preuve décisive pour les litiges de fraude — elle élève la communication client du contexte de soutien à un argument positif auprès de la banque.",
+        "textareaLabel": "Message du titulaire de la carte",
+        "textareaPlaceholder": "Collez l’email, le chat ou le message du titulaire de la carte. Incluez la date et tout contexte qui le rattache à cette commande.",
+        "textareaHint": "Minimum 20 caractères. Le texte est inclus tel quel dans le PDF du dossier de défense.",
+        "checkboxLabel": "Je confirme que ce message provient du titulaire de la carte et démontre qu’il a passé et/ou reçu la commande de ce litige.",
+        "checkboxHelper": "En cochant cette case, vous attestez que le titulaire de la carte a rédigé ce message. DisputeDesk enregistre la confirmation dans la piste d’audit du litige.",
+        "submit": "Enregistrer la reconnaissance",
+        "submitting": "Enregistrement…",
+        "successTitle": "Reconnaissance du titulaire enregistrée",
+        "successBody": "La communication client est désormais marquée comme preuve décisive. DisputeDesk est en train de régénérer le dossier de défense — vous pourrez examiner le résultat dans un instant.",
+        "errorTooShort": "Veuillez coller au moins 20 caractères du message du titulaire de la carte.",
+        "errorConfirmationRequired": "Veuillez confirmer que le message provient du titulaire de la carte avant d’enregistrer.",
+        "errorWindowClosed": "Shopify a déjà transféré ce litige à la banque, donc aucune nouvelle reconnaissance ne peut être ajoutée.",
+        "errorGeneric": "Impossible d’enregistrer la reconnaissance ({code}). Veuillez réessayer.",
+        "charCount": "{count}/{max}"
+      }
     },
     "reviewTab": {
       "sections": {
@@ -778,6 +810,179 @@
           "notePlaceholder": "Add context for the audit log…",
           "cancel": "Cancel",
           "confirm": "Submit anyway"
+        }
+      },
+      "inclusion": {
+        "title": "Révision d’inclusion",
+        "subtitle": "Vérifiez ce qui parvient à la banque avant d’enregistrer. Le dossier de défense est le seul canal vers la banque — DisputeDesk n’envoie pas de champs de preuves structurés à Shopify.",
+        "groups": {
+          "usedAsBankArgument": "Utilisé comme argument positif auprès de la banque",
+          "contextOnly": "Contexte uniquement",
+          "keptInternal": "Gardé en interne",
+          "notIncluded": "Non inclus",
+          "excludedByMerchant": "Exclu par le marchand"
+        },
+        "toggle": {
+          "include": "Inclure dans le dossier",
+          "restore": "Restaurer par défaut",
+          "disabledInternalOnly": "Promouvoir un signal uniquement interne vers la banque nécessite un flux de confirmation pas encore disponible.",
+          "disabledNoPayload": "Rien à inclure — les données derrière cette ligne proviennent d’une source hors du contrôle de DisputeDesk (la passerelle de paiement, le transporteur, ou le moteur de risque de Shopify)."
+        },
+        "groupHelpers": {
+          "usedAsBankArgument": "Preuves que le narratif de défense cite comme preuve décisive. Lecture seule — ajouter ou retirer des preuves décisives nécessite de modifier la charge utile sous-jacente.",
+          "contextOnly": "Contexte de fond dans le dossier. Lecture seule — le système décide si chaque élément s’élève au rang de preuve décisive.",
+          "keptInternal": "Signaux qui pourraient affaiblir le dossier s’ils étaient présentés à la banque. Leur promotion nécessite un flux de confirmation non disponible en Phase 1.",
+          "notIncluded": "Éléments présents au dossier mais pas dans le paquet. Les lignes sûres peuvent être incluses manuellement comme contexte de soutien (jamais comme preuve décisive).",
+          "excludedByMerchant": "Éléments que vous avez explicitement exclus. Supprimez la dérogation pour restaurer l’état naturel."
+        },
+        "emptyGroup": "—",
+        "emptyAll": "Aucune ligne de preuve n’est encore disponible pour ce litige. Générez ou reconstruisez le dossier de défense pour remplir cette section.",
+        "errorOverride": "Impossible de mettre à jour l’inclusion ({code}). Veuillez réessayer.",
+        "errorOverrideNeedsConfirmation": "Ce signal nécessite un flux de confirmation pas encore disponible. La Phase 2 ajoutera l’avertissement et la piste d’audit de la dérogation."
+      }
+    },
+    "overview": {
+      "monitoring": {
+        "title": "DisputeDesk surveille cette commande",
+        "bodyWithDeadline": "Si le suivi d’expédition, la confirmation de livraison, la vérification de paiement ou d’autres preuves dérivées du système deviennent disponibles avant votre échéance ({deadline}), DisputeDesk mettra à jour automatiquement le dossier de défense. Aucune action requise de votre part.",
+        "bodyNoDeadline": "Si le suivi d’expédition, la confirmation de livraison, la vérification de paiement ou d’autres preuves dérivées du système deviennent disponibles avant votre échéance, DisputeDesk mettra à jour automatiquement le dossier de défense. Aucune action requise de votre part."
+      },
+      "rowSourceCaptionPendingSystem": "En attente d’activité sur la commande — se remplit automatiquement dès que Shopify le signale",
+      "timeline": {
+        "defencePackagePrepared": {
+          "titleDone": "Dossier de défense préparé",
+          "titleActive": "Préparation du dossier de défense",
+          "titlePending": "Préparer le dossier de défense",
+          "helperDone": "DisputeDesk a rassemblé les preuves disponibles pour ce dossier.",
+          "helperActive": "Le dossier est en cours de préparation.",
+          "helperPending": "Générez le dossier de preuves pour commencer."
+        },
+        "reviewAndSubmit": {
+          "title": "Réviser et envoyer",
+          "helperWithDeadline": "Échéance d’envoi : {deadline}",
+          "helperNoDeadline": "Révisez le dossier et envoyez-le à Shopify avant l’échéance."
+        },
+        "evidenceSavedToShopify": {
+          "title": "Preuves enregistrées dans Shopify",
+          "helperWithDate": "Enregistré le {savedDate}",
+          "helperNoDate": "Enregistré dans Shopify"
+        },
+        "awaitingShopifyForwarding": {
+          "title": "En attente du transfert par Shopify au réseau de cartes",
+          "helperWithDeadline": "Shopify transfère les preuves à votre réseau de cartes avant l’échéance ({deadline}) ou plus tôt si vous cliquez sur Envoyer dans l’Admin Shopify. DisputeDesk ne peut pas vérifier indépendamment quand le transfert a lieu.",
+          "helperNoDeadline": "Shopify transfère les preuves à votre réseau de cartes avant l’échéance ou plus tôt si vous cliquez sur Envoyer dans l’Admin Shopify. DisputeDesk ne peut pas vérifier indépendamment quand le transfert a lieu."
+        },
+        "submittedToCardNetwork": {
+          "title": "Envoyé au réseau de cartes",
+          "helper": "Shopify a transféré les preuves — le réseau de cartes est en train de les examiner."
+        },
+        "cardNetworkReview": {
+          "title": "Examen par le réseau de cartes",
+          "helperActive": "Durée estimée : 30–75 jours.",
+          "helperPending": "Commence dès que Shopify transfère les preuves à votre réseau de cartes."
+        },
+        "outcomePosted": {
+          "title": "Résultat publié dans Shopify",
+          "helperWithOutcome": "Résultat : {outcome}",
+          "helperPending": "Vous serez notifié par email lorsqu’une décision sera prise."
+        }
+      },
+      "submissionSummary": {
+        "titlePreSave": "Ce qui sera enregistré dans Shopify",
+        "titlePostSave": "Ce qui a été enregistré dans Shopify",
+        "subtitlePreSave": "Ces éléments seront transmis à Shopify lorsque DisputeDesk enregistrera le dossier de défense.",
+        "subtitlePostSave": "Shopify a reçu les éléments listés ci-dessous. Le PDF contient l’argumentaire destiné à la banque ; les champs structurés ne contiennent que l’identité du client.",
+        "shopifyFieldsLabel": "Enregistré en tant que champs Shopify structurés",
+        "shopifyFieldsHelper": "Nom et email du client — les seuls champs structurés envoyés par DisputeDesk. Les preuves voyagent dans le PDF.",
+        "shopifyFieldsCustomerFirstName": "Prénom du client",
+        "shopifyFieldsCustomerLastName": "Nom du client",
+        "shopifyFieldsCustomerEmail": "Email du client",
+        "shopifyFieldsNoneOnFile": "—",
+        "includedInPackageLabel": "Inclus dans le dossier de défense",
+        "includedInPackageHelper": "Faits probatoires qui apparaissent dans le PDF reçu par la banque.",
+        "includedInPackageEmpty": "Aucun fait probatoire n’est inclus dans le dossier.",
+        "includedInPackagePdfLine": "PDF : {pdfFileName}",
+        "bankArgumentLabel": "Utilisé comme argument positif auprès de la banque",
+        "bankArgumentHelper": "Preuves que le narratif de défense cite comme preuve décisive.",
+        "bankArgumentEmpty": "Aucune preuve décisive pour la banque n’est disponible pour ce litige.",
+        "contextOnlyLabel": "Contexte uniquement",
+        "contextOnlyHelper": "Incluses dans le dossier comme contexte ; non citées comme preuve décisive.",
+        "keptInternalLabel": "Gardé en interne",
+        "keptInternalHelper": "Signaux affichés pour vous aider à comprendre le dossier, mais non inclus dans l’argumentaire envoyé à la banque car ils pourraient affaiblir la réponse.",
+        "keptInternalSeeEvidenceTab": "Voir l’onglet Preuves → Signaux uniquement internes pour plus de détails.",
+        "notIncludedLabel": "Non inclus",
+        "notIncludedHelper": "Éléments exclus, non pris en charge ou dont l’envoi a échoué. Aucun n’est transmis à Shopify.",
+        "notIncludedFailedUpload": "Échec d’envoi pour {count, plural, =1 {1 élément} other {# éléments}}.",
+        "notIncludedExcluded": "{count, plural, =1 {1 élément exclu} other {# éléments exclus}} par vous.",
+        "notIncludedWaived": "{count, plural, =1 {1 élément marqué} other {# éléments marqués}} non applicable.",
+        "notIncludedNotSupported": "{count, plural, =1 {1 élément} other {# éléments}} sans emplacement destiné à la banque."
+      },
+      "coverage": {
+        "title": "Couverture des preuves",
+        "sectionsFound": "{count, plural, =0 {Aucune section de preuves trouvée} =1 {1 section de preuves trouvée} other {# sections de preuves trouvées}}",
+        "includedInPackage": "{count, plural, =0 {Rien inclus dans le dossier de défense} =1 {1 élément inclus dans le dossier de défense} other {# éléments inclus dans le dossier de défense}}",
+        "usedAsPositiveBankArgument": "{count, plural, =0 {0 utilisé comme argument positif auprès de la banque} =1 {1 utilisé comme argument positif auprès de la banque} other {# utilisés comme arguments positifs auprès de la banque}}",
+        "keptInternal": "{count, plural, =0 {0 gardé en interne} =1 {1 gardé en interne} other {# gardés en interne}}",
+        "tileSectionsFound": "Sections de preuves trouvées",
+        "tileIncludedInPackage": "Inclus dans le dossier de défense",
+        "tileUsedAsBankArgument": "Utilisé comme argument positif auprès de la banque",
+        "tileKeptInternal": "Gardé en interne",
+        "missingDecisiveLabel": "Preuve décisive manquante",
+        "missingDecisiveNone": "Toutes les preuves décisives sont présentes.",
+        "missingDecisiveFraud": "vérification de paiement, livraison confirmée, reconnaissance d’achat par le client",
+        "summarySentence": "Nous avons trouvé {found, plural, =1 {1 section de preuves} other {# sections de preuves}}{savedClause, select, none {} other {{savedClause}}}.{weakClause, select, none {} other { {weakClause}}}",
+        "savedClauseSaved": " et avons enregistré le dossier de défense dans Shopify",
+        "savedClauseDraft": "",
+        "weakClauseHardToWin": "Le dossier reste faible car les preuves disponibles sont principalement du contexte de soutien, tandis que des preuves décisives de {family} sont manquantes.",
+        "weakClauseNotHardToWin": ""
+      },
+      "hero": {
+        "title": {
+          "preSubmit": {
+            "likely_to_win": "Dossier solide à contester",
+            "could_win": "À examiner avant de contester",
+            "needs_strengthening": "À examiner avant de contester",
+            "hard_to_win": "Documentation complète, défense faible",
+            "covered": "Couvert par Shopify Protect"
+          },
+          "saved": {
+            "likely_to_win": "Défense solide enregistrée dans Shopify",
+            "could_win": "Défense modérée enregistrée dans Shopify",
+            "needs_strengthening": "Défense modérée enregistrée dans Shopify",
+            "hard_to_win": "Défense faible enregistrée dans Shopify",
+            "covered": "Couvert par Shopify Protect"
+          },
+          "awaiting": {
+            "likely_to_win": "Défense solide transférée à Shopify",
+            "could_win": "Défense modérée transférée à Shopify",
+            "needs_strengthening": "Défense modérée transférée à Shopify",
+            "hard_to_win": "Défense faible transférée à Shopify",
+            "covered": "Couvert par Shopify Protect"
+          },
+          "submitted_to_network": {
+            "likely_to_win": "Défense solide envoyée au réseau de cartes",
+            "could_win": "Défense modérée envoyée au réseau de cartes",
+            "needs_strengthening": "Défense modérée envoyée au réseau de cartes",
+            "hard_to_win": "Défense faible envoyée au réseau de cartes",
+            "covered": "Couvert par Shopify Protect"
+          },
+          "closed": {
+            "won": "Litige gagné",
+            "lost": "Litige perdu",
+            "unknown": "Litige clos"
+          }
+        },
+        "subtitle": {
+          "draftWithReason": "{strengthReason}",
+          "savedWithReason": "{strengthReason} Enregistré dans Shopify le {savedDate}.",
+          "savedWithReasonAndDeadline": "{strengthReason} Enregistré dans Shopify le {savedDate}. Shopify transférera les preuves à votre réseau de cartes avant l’échéance ({deadline}). Vous pouvez continuer à ajouter des preuves jusque-là.",
+          "savedNoDate": "{strengthReason} Enregistré dans Shopify — en attente du transfert par Shopify à votre réseau de cartes.",
+          "awaitingForward": "{strengthReason} Shopify a le dossier et le transférera à votre réseau de cartes. DisputeDesk peut confirmer que les preuves ont été enregistrées dans Shopify, mais ne peut pas vérifier indépendamment quand le transfert a lieu.",
+          "submittedToNetwork": "{strengthReason} Le réseau de cartes examine cette défense. Le résultat est généralement publié dans 30–75 jours.",
+          "submittedToNetworkWithDate": "Envoyé à votre réseau de cartes le {submittedDate}. Le résultat est généralement publié dans 30–75 jours.",
+          "closedWon": "Résultat : gagné{submittedDate, select, none {} other { (décidé le {submittedDate})}}.",
+          "closedLost": "Résultat : perdu{submittedDate, select, none {} other { (décidé le {submittedDate})}}.",
+          "closedUnknown": "Résultat signalé par Shopify : {outcome}."
         }
       }
     }
@@ -2098,7 +2303,7 @@
       "tagline": "Gestion des litiges pour Shopify",
       "headline": "Gagnez plus de chargebacks. Gardez plus de revenus.",
       "subheadline": "DisputeDesk transforme le chaos des chargebacks Shopify en une opération professionnelle et reproductible — avec des dossiers de preuves rapides, des contrôles de complétude intégrés et une piste d'audit complète. Aucune commission au succès. Aucune IA opaque. Juste des tarifs prévisibles et des workflows contrôlés par le marchand.",
-      "bullet1": "Dossiers de preuves en minutes — les brouillons sont illimités, les packs comptent uniquement à l'export",
+      "bullet1": "Dossiers de preuves assistés par IA, basés sur les vraies données Shopify — livrés en quelques minutes",
       "bullet2": "File de révision + contrôle de complétude pour éviter les soumissions faibles",
       "bullet3": "Piste d'audit immuable pour chaque modification, fichier et décision",
       "installFree": "Installer sur Shopify (Gratuit pour commencer)",

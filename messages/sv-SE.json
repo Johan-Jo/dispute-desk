@@ -700,7 +700,21 @@
         "notSubmittedReason": "Not submitted to Shopify to avoid weakening the case.",
         "sourceShopify": "Shopify",
         "sourceMerchant": "Merchant upload",
-        "sourceDerived": "Derived"
+        "sourceDerived": "Derived",
+        "packageStatus": {
+          "included": "Inkluderat i försvarspaket",
+          "internal_only": "Endast internt",
+          "not_included": "Ej inkluderat",
+          "not_supported": "Stöds ej",
+          "excluded": "Uteslutet",
+          "failed_upload": "Uppladdning misslyckades",
+          "waived": "Markerat som ej tillämpligt"
+        },
+        "bankArgumentStatus": {
+          "used": "Använt som bankargument",
+          "context_only": "Endast kontext",
+          "not_used": "Ej använt i bankargument"
+        }
       },
       "automation": {
         "automatic": "DisputeDesk will handle this automatically based on the evidence shown above.",
@@ -755,7 +769,25 @@
         "primaryAction": "Regenerera paket",
         "secondaryAction": "Behåll bara filen"
       },
-      "windowClosedError": "Shopify har redan vidarebefordrat bevisen för denna tvist till banken, så nya filer kan inte längre läggas till."
+      "windowClosedError": "Shopify har redan vidarebefordrat bevisen för denna tvist till banken, så nya filer kan inte längre läggas till.",
+      "cardholderAck": {
+        "title": "Lägg till bekräftelse från kortinnehavaren",
+        "subtitle": "Om du har ett e-postmeddelande, en chatt eller annat meddelande där kortinnehavaren bekräftar att de lade och mottog denna order, klistra in det här. Bekräftelse från kortinnehavaren är avgörande bevis i bedrägeritvister — den lyfter kundkommunikation från stödjande kontext till ett positivt bankargument.",
+        "textareaLabel": "Meddelande från kortinnehavaren",
+        "textareaPlaceholder": "Klistra in e-postmeddelandet, chatten eller meddelandet från kortinnehavaren. Inkludera datum och annan kontext som kopplar det till denna order.",
+        "textareaHint": "Minst 20 tecken. Texten inkluderas ordagrant i försvarspaketets PDF.",
+        "checkboxLabel": "Jag bekräftar att detta meddelande är från kortinnehavaren och visar att de la och/eller mottog ordern i denna tvist.",
+        "checkboxHelper": "Genom att kryssa i denna ruta intygar du att kortinnehavaren skrev detta meddelande. DisputeDesk registrerar bekräftelsen i tvistens granskningslogg.",
+        "submit": "Spara bekräftelse",
+        "submitting": "Sparar…",
+        "successTitle": "Kortinnehavarens bekräftelse sparad",
+        "successBody": "Kundkommunikation är nu markerad som avgörande bevis. DisputeDesk regenererar försvarspaketet — du kan granska resultatet om en stund.",
+        "errorTooShort": "Klistra in minst 20 tecken av kortinnehavarens meddelande.",
+        "errorConfirmationRequired": "Bekräfta att meddelandet är från kortinnehavaren innan du sparar.",
+        "errorWindowClosed": "Shopify har redan vidarebefordrat denna tvist till banken, så nya bekräftelser kan inte längre läggas till.",
+        "errorGeneric": "Det gick inte att spara bekräftelsen ({code}). Försök igen.",
+        "charCount": "{count}/{max}"
+      }
     },
     "reviewTab": {
       "sections": {
@@ -812,6 +844,179 @@
           "notePlaceholder": "Add context for the audit log…",
           "cancel": "Cancel",
           "confirm": "Submit anyway"
+        }
+      },
+      "inclusion": {
+        "title": "Inklusionsgranskning",
+        "subtitle": "Verifiera vad som når banken före sparande. Försvarspaketet är den enda bankriktade kanalen — DisputeDesk skickar inte strukturerade bevisfält till Shopify.",
+        "groups": {
+          "usedAsBankArgument": "Använt som positivt bankargument",
+          "contextOnly": "Endast kontext",
+          "keptInternal": "Hålls internt",
+          "notIncluded": "Ej inkluderat",
+          "excludedByMerchant": "Uteslutet av handlaren"
+        },
+        "toggle": {
+          "include": "Inkludera i paket",
+          "restore": "Återställ standard",
+          "disabledInternalOnly": "Att lyfta en enbart intern signal till banken kräver ett bekräftelseflöde som inte är tillgängligt ännu.",
+          "disabledNoPayload": "Inget att inkludera — datan bakom denna rad kommer från en källa utanför DisputeDesks kontroll (betalningsgatewayen, transportören eller Shopifys riskmotor)."
+        },
+        "groupHelpers": {
+          "usedAsBankArgument": "Bevis som försvarsnarrativet citerar som avgörande bevis. Skrivskyddat — att lägga till eller ta bort avgörande bevis kräver att den underliggande datan ändras.",
+          "contextOnly": "Bakgrundskontext i paketet. Skrivskyddat — systemet avgör om varje objekt höjs till avgörande bevis.",
+          "keptInternal": "Signaler som kan försvaga ärendet om de presenteras för banken. Att lyfta dem kräver ett bekräftelseflöde som inte är tillgängligt i fas 1.",
+          "notIncluded": "Objekt i akten men inte i paketet. Säkra rader kan tvångsinkluderas som stödjande kontext (aldrig som avgörande bevis).",
+          "excludedByMerchant": "Objekt som du uttryckligen har uteslutit. Ta bort åsidosättningen för att återställa det naturliga tillståndet."
+        },
+        "emptyGroup": "—",
+        "emptyAll": "Inga bevisrader är tillgängliga ännu för denna tvist. Generera eller bygg om försvarspaketet för att fylla detta avsnitt.",
+        "errorOverride": "Det gick inte att uppdatera inklusion ({code}). Försök igen.",
+        "errorOverrideNeedsConfirmation": "Denna signal kräver ett bekräftelseflöde som inte är tillgängligt ännu. Fas 2 lägger till varningen och granskningsspåret för åsidosättningen."
+      }
+    },
+    "overview": {
+      "monitoring": {
+        "title": "DisputeDesk övervakar denna order",
+        "bodyWithDeadline": "Om leveransspårning, leveransbekräftelse, betalningsverifiering eller andra systemhärledda bevis blir tillgängliga före din deadline ({deadline}) uppdaterar DisputeDesk försvarspaketet automatiskt. Ingen åtgärd krävs från dig.",
+        "bodyNoDeadline": "Om leveransspårning, leveransbekräftelse, betalningsverifiering eller andra systemhärledda bevis blir tillgängliga före din deadline uppdaterar DisputeDesk försvarspaketet automatiskt. Ingen åtgärd krävs från dig."
+      },
+      "rowSourceCaptionPendingSystem": "Väntar på orderaktivitet — fylls i automatiskt när Shopify rapporterar det",
+      "timeline": {
+        "defencePackagePrepared": {
+          "titleDone": "Försvarspaket förberett",
+          "titleActive": "Förbereder försvarspaket",
+          "titlePending": "Förbered försvarspaket",
+          "helperDone": "DisputeDesk samlade in tillgängliga bevis för detta ärende.",
+          "helperActive": "Paketet förbereds.",
+          "helperPending": "Generera bevispaketet för att börja."
+        },
+        "reviewAndSubmit": {
+          "title": "Granska och skicka",
+          "helperWithDeadline": "Inlämningsdeadline: {deadline}",
+          "helperNoDeadline": "Granska paketet och skicka till Shopify före deadline."
+        },
+        "evidenceSavedToShopify": {
+          "title": "Bevis sparade i Shopify",
+          "helperWithDate": "Sparat den {savedDate}",
+          "helperNoDate": "Sparat i Shopify"
+        },
+        "awaitingShopifyForwarding": {
+          "title": "Väntar på att Shopify vidarebefordrar till kortnätverket",
+          "helperWithDeadline": "Shopify vidarebefordrar bevisen till ditt kortnätverk senast deadline ({deadline}) eller tidigare om du klickar på Skicka i Shopify Admin. DisputeDesk kan inte oberoende verifiera när vidarebefordran sker.",
+          "helperNoDeadline": "Shopify vidarebefordrar bevisen till ditt kortnätverk senast deadline eller tidigare om du klickar på Skicka i Shopify Admin. DisputeDesk kan inte oberoende verifiera när vidarebefordran sker."
+        },
+        "submittedToCardNetwork": {
+          "title": "Skickat till kortnätverket",
+          "helper": "Shopify har vidarebefordrat bevisen — kortnätverket granskar nu."
+        },
+        "cardNetworkReview": {
+          "title": "Granskning av kortnätverket",
+          "helperActive": "Förväntad varaktighet: 30–75 dagar.",
+          "helperPending": "Börjar när Shopify vidarebefordrar bevisen till ditt kortnätverk."
+        },
+        "outcomePosted": {
+          "title": "Utfall publicerat i Shopify",
+          "helperWithOutcome": "Utfall: {outcome}",
+          "helperPending": "Du får ett e-postmeddelande när ett beslut fattas."
+        }
+      },
+      "submissionSummary": {
+        "titlePreSave": "Vad som kommer sparas i Shopify",
+        "titlePostSave": "Vad som sparades i Shopify",
+        "subtitlePreSave": "Dessa objekt når Shopify när DisputeDesk sparar försvarspaketet.",
+        "subtitlePostSave": "Shopify mottog objekten nedan. PDF:en innehåller argumentet riktat till banken; strukturerade fält innehåller endast kundens identitet.",
+        "shopifyFieldsLabel": "Sparat som strukturerade Shopify-fält",
+        "shopifyFieldsHelper": "Kundnamn och e-post — de enda strukturerade fält DisputeDesk skickar. Bevis färdas inuti PDF:en.",
+        "shopifyFieldsCustomerFirstName": "Kundens förnamn",
+        "shopifyFieldsCustomerLastName": "Kundens efternamn",
+        "shopifyFieldsCustomerEmail": "Kundens e-post",
+        "shopifyFieldsNoneOnFile": "—",
+        "includedInPackageLabel": "Inkluderat i försvarspaketet",
+        "includedInPackageHelper": "Bevisfakta som visas i den PDF banken får.",
+        "includedInPackageEmpty": "Inga bevisfakta är inkluderade i paketet.",
+        "includedInPackagePdfLine": "PDF: {pdfFileName}",
+        "bankArgumentLabel": "Använt som positivt bankargument",
+        "bankArgumentHelper": "Bevis som försvarsnarrativet citerar som avgörande bevis.",
+        "bankArgumentEmpty": "Inga avgörande bankriktade bevis finns tillgängliga för denna tvist.",
+        "contextOnlyLabel": "Endast kontext",
+        "contextOnlyHelper": "Inkluderade i paketet som bakgrund; inte använda som avgörande bevis.",
+        "keptInternalLabel": "Hålls internt",
+        "keptInternalHelper": "Signaler som visas för att hjälpa dig förstå ärendet, men som inte ingår i argumentet till banken eftersom de kan försvaga svaret.",
+        "keptInternalSeeEvidenceTab": "Se fliken Bevis → Endast interna signaler för detaljer.",
+        "notIncludedLabel": "Ej inkluderat",
+        "notIncludedHelper": "Uteslutna, ej stödda eller misslyckade uppladdningar. Inget av detta når Shopify.",
+        "notIncludedFailedUpload": "Uppladdning misslyckades för {count, plural, =1 {1 objekt} other {# objekt}}.",
+        "notIncludedExcluded": "{count, plural, =1 {1 objekt} other {# objekt}} uteslutna av dig.",
+        "notIncludedWaived": "{count, plural, =1 {1 objekt} other {# objekt}} markerade som ej tillämpliga.",
+        "notIncludedNotSupported": "{count, plural, =1 {1 objekt} other {# objekt}} utan bankriktad plats."
+      },
+      "coverage": {
+        "title": "Bevistäckning",
+        "sectionsFound": "{count, plural, =0 {Inga bevisavsnitt hittades} =1 {1 bevisavsnitt hittades} other {# bevisavsnitt hittades}}",
+        "includedInPackage": "{count, plural, =0 {Inget inkluderat i försvarspaketet} =1 {1 objekt inkluderat i försvarspaketet} other {# objekt inkluderade i försvarspaketet}}",
+        "usedAsPositiveBankArgument": "{count, plural, =0 {0 använda som positivt bankargument} =1 {1 använt som positivt bankargument} other {# använda som positivt bankargument}}",
+        "keptInternal": "{count, plural, =0 {0 hålls internt} =1 {1 hålls internt} other {# hålls internt}}",
+        "tileSectionsFound": "Bevisavsnitt hittade",
+        "tileIncludedInPackage": "Inkluderat i försvarspaket",
+        "tileUsedAsBankArgument": "Använt som positivt bankargument",
+        "tileKeptInternal": "Hålls internt",
+        "missingDecisiveLabel": "Saknar avgörande bevis",
+        "missingDecisiveNone": "Alla avgörande bevis finns.",
+        "missingDecisiveFraud": "betalningsverifiering, bekräftad leverans, kundens köpbekräftelse",
+        "summarySentence": "Vi hittade {found, plural, =1 {1 bevisavsnitt} other {# bevisavsnitt}}{savedClause, select, none {} other {{savedClause}}}.{weakClause, select, none {} other { {weakClause}}}",
+        "savedClauseSaved": " och sparade försvarspaketet i Shopify",
+        "savedClauseDraft": "",
+        "weakClauseHardToWin": "Ärendet förblir svagt eftersom tillgängliga bevis mestadels är stödjande kontext, medan avgörande bevis för {family} saknas.",
+        "weakClauseNotHardToWin": ""
+      },
+      "hero": {
+        "title": {
+          "preSubmit": {
+            "likely_to_win": "Starkt ärende att bestrida",
+            "could_win": "Granska före bestridande",
+            "needs_strengthening": "Granska före bestridande",
+            "hard_to_win": "Fullständig dokumentation, svagt försvar",
+            "covered": "Täcks av Shopify Protect"
+          },
+          "saved": {
+            "likely_to_win": "Starkt försvar sparat i Shopify",
+            "could_win": "Måttligt försvar sparat i Shopify",
+            "needs_strengthening": "Måttligt försvar sparat i Shopify",
+            "hard_to_win": "Svagt försvar sparat i Shopify",
+            "covered": "Täcks av Shopify Protect"
+          },
+          "awaiting": {
+            "likely_to_win": "Starkt försvar vidarebefordrat till Shopify",
+            "could_win": "Måttligt försvar vidarebefordrat till Shopify",
+            "needs_strengthening": "Måttligt försvar vidarebefordrat till Shopify",
+            "hard_to_win": "Svagt försvar vidarebefordrat till Shopify",
+            "covered": "Täcks av Shopify Protect"
+          },
+          "submitted_to_network": {
+            "likely_to_win": "Starkt försvar skickat till kortnätverket",
+            "could_win": "Måttligt försvar skickat till kortnätverket",
+            "needs_strengthening": "Måttligt försvar skickat till kortnätverket",
+            "hard_to_win": "Svagt försvar skickat till kortnätverket",
+            "covered": "Täcks av Shopify Protect"
+          },
+          "closed": {
+            "won": "Tvist vunnen",
+            "lost": "Tvist förlorad",
+            "unknown": "Tvist avslutad"
+          }
+        },
+        "subtitle": {
+          "draftWithReason": "{strengthReason}",
+          "savedWithReason": "{strengthReason} Sparat i Shopify den {savedDate}.",
+          "savedWithReasonAndDeadline": "{strengthReason} Sparat i Shopify den {savedDate}. Shopify vidarebefordrar bevisen till ditt kortnätverk senast deadline ({deadline}). Du kan fortsätta lägga till bevis fram till dess.",
+          "savedNoDate": "{strengthReason} Sparat i Shopify — väntar på att Shopify ska vidarebefordra till ditt kortnätverk.",
+          "awaitingForward": "{strengthReason} Shopify har paketet och vidarebefordrar det till ditt kortnätverk. DisputeDesk kan bekräfta att bevisen sparades i Shopify, men kan inte oberoende verifiera när vidarebefordran sker.",
+          "submittedToNetwork": "{strengthReason} Kortnätverket granskar detta försvar. Utfallet publiceras vanligen om 30–75 dagar.",
+          "submittedToNetworkWithDate": "Skickat till ditt kortnätverk den {submittedDate}. Utfallet publiceras vanligen om 30–75 dagar.",
+          "closedWon": "Utfall: vunnen{submittedDate, select, none {} other { (beslutat den {submittedDate})}}.",
+          "closedLost": "Utfall: förlorad{submittedDate, select, none {} other { (beslutat den {submittedDate})}}.",
+          "closedUnknown": "Utfall rapporterat av Shopify: {outcome}."
         }
       }
     }
@@ -2198,7 +2403,7 @@
       "tagline": "Disputhantering för Shopify",
       "headline": "Vinn fler chargebacks. Behåll mer intäkter.",
       "subheadline": "DisputeDesk förvandlar Shopifys chargeback-kaos till en repeterbar, professionell verksamhet — med snabba bevispaket, inbyggda kompletthetskontroller och ett fullständigt revisionsspår. Inga framgångsavgifter. Ingen black box-AI. Bara förutsägbar prissättning och handlarstyrda arbetsflöden.",
-      "bullet1": "Bevispaket på minuter — utkast är obegränsade, paket räknas bara vid export",
+      "bullet1": "AI-assisterade bevispaket byggda från riktiga Shopify-data — levererade på minuter",
       "bullet2": "Granskningskö + fullständighetsgate för att förhindra svaga inlämningar",
       "bullet3": "Oföränderligt revisionsspår för varje ändring, fil och beslut",
       "installFree": "Installera på Shopify (Gratis att börja)",

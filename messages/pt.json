@@ -666,7 +666,21 @@
         "notSubmittedReason": "Not submitted to Shopify to avoid weakening the case.",
         "sourceShopify": "Shopify",
         "sourceMerchant": "Merchant upload",
-        "sourceDerived": "Derived"
+        "sourceDerived": "Derived",
+        "packageStatus": {
+          "included": "Incluído no pacote de defesa",
+          "internal_only": "Apenas interno",
+          "not_included": "Não incluído",
+          "not_supported": "Não suportado",
+          "excluded": "Excluído",
+          "failed_upload": "Falha no upload",
+          "waived": "Marcado como não aplicável"
+        },
+        "bankArgumentStatus": {
+          "used": "Usado como argumento ao banco",
+          "context_only": "Apenas contexto",
+          "not_used": "Não usado no argumento ao banco"
+        }
       },
       "automation": {
         "automatic": "DisputeDesk will handle this automatically based on the evidence shown above.",
@@ -721,7 +735,25 @@
         "primaryAction": "Regenerar pacote",
         "secondaryAction": "Manter apenas o arquivo"
       },
-      "windowClosedError": "O Shopify já encaminhou as provas desta disputa ao banco, portanto não é mais possível adicionar novos arquivos."
+      "windowClosedError": "O Shopify já encaminhou as provas desta disputa ao banco, portanto não é mais possível adicionar novos arquivos.",
+      "cardholderAck": {
+        "title": "Adicionar reconhecimento do titular do cartão",
+        "subtitle": "Se você tem um e-mail, chat ou outra mensagem em que o titular do cartão confirma ter feito e recebido este pedido, cole aqui. O reconhecimento do titular é prova decisiva em disputas de fraude — eleva a comunicação com o cliente de contexto de apoio a um argumento positivo ao banco.",
+        "textareaLabel": "Mensagem do titular do cartão",
+        "textareaPlaceholder": "Cole o e-mail, chat ou mensagem do titular do cartão. Inclua a data e qualquer contexto que vincule a mensagem a este pedido.",
+        "textareaHint": "Mínimo de 20 caracteres. O texto é incluído literalmente no PDF do pacote de defesa.",
+        "checkboxLabel": "Confirmo que esta mensagem é do titular do cartão e demonstra que ele realizou e/ou recebeu o pedido desta disputa.",
+        "checkboxHelper": "Ao marcar esta caixa, você atesta que o titular do cartão escreveu esta mensagem. O DisputeDesk registra a confirmação no histórico de auditoria da disputa.",
+        "submit": "Salvar reconhecimento",
+        "submitting": "Salvando…",
+        "successTitle": "Reconhecimento do titular salvo",
+        "successBody": "A comunicação com o cliente agora está marcada como prova decisiva. O DisputeDesk está regenerando o pacote de defesa — você poderá revisar o resultado em instantes.",
+        "errorTooShort": "Cole pelo menos 20 caracteres da mensagem do titular do cartão.",
+        "errorConfirmationRequired": "Confirme que a mensagem é do titular do cartão antes de salvar.",
+        "errorWindowClosed": "O Shopify já encaminhou esta disputa ao banco, então novos reconhecimentos não podem mais ser adicionados.",
+        "errorGeneric": "Não foi possível salvar o reconhecimento ({code}). Tente novamente.",
+        "charCount": "{count}/{max}"
+      }
     },
     "reviewTab": {
       "sections": {
@@ -778,6 +810,179 @@
           "notePlaceholder": "Add context for the audit log…",
           "cancel": "Cancel",
           "confirm": "Submit anyway"
+        }
+      },
+      "inclusion": {
+        "title": "Revisão de inclusão",
+        "subtitle": "Verifique o que chega ao banco antes de salvar. O pacote de defesa é o único canal voltado ao banco — o DisputeDesk não envia campos de provas estruturados ao Shopify.",
+        "groups": {
+          "usedAsBankArgument": "Usado como argumento positivo ao banco",
+          "contextOnly": "Apenas contexto",
+          "keptInternal": "Mantido interno",
+          "notIncluded": "Não incluído",
+          "excludedByMerchant": "Excluído pelo lojista"
+        },
+        "toggle": {
+          "include": "Incluir no pacote",
+          "restore": "Restaurar padrão",
+          "disabledInternalOnly": "Promover um sinal apenas interno para o banco exige um fluxo de confirmação ainda não disponível.",
+          "disabledNoPayload": "Nada para incluir — os dados desta linha vêm de uma fonte fora do controle do DisputeDesk (o gateway de pagamento, a transportadora ou o motor de risco do Shopify)."
+        },
+        "groupHelpers": {
+          "usedAsBankArgument": "Provas que a narrativa de defesa cita como prova decisiva. Somente leitura — adicionar ou remover provas decisivas exige alterar o conteúdo subjacente.",
+          "contextOnly": "Contexto de fundo no pacote. Somente leitura — o sistema decide se cada item se eleva a prova decisiva.",
+          "keptInternal": "Sinais que poderiam enfraquecer o caso se apresentados ao banco. Promovê-los exige um fluxo de confirmação não disponível na Fase 1.",
+          "notIncluded": "Itens no arquivo, mas não no pacote. Linhas seguras podem ser incluídas manualmente como contexto de apoio (nunca como prova decisiva).",
+          "excludedByMerchant": "Itens que você excluiu explicitamente. Remova a substituição para restaurar o estado natural."
+        },
+        "emptyGroup": "—",
+        "emptyAll": "Nenhuma linha de prova está disponível ainda para esta disputa. Gere ou reconstrua o pacote de defesa para preencher esta seção.",
+        "errorOverride": "Não foi possível atualizar a inclusão ({code}). Tente novamente.",
+        "errorOverrideNeedsConfirmation": "Este sinal exige um fluxo de confirmação ainda não disponível. A Fase 2 adicionará o aviso e o registro de auditoria da substituição."
+      }
+    },
+    "overview": {
+      "monitoring": {
+        "title": "O DisputeDesk está monitorando este pedido",
+        "bodyWithDeadline": "Se o rastreamento de envio, a confirmação de entrega, a verificação de pagamento ou outras provas derivadas do sistema ficarem disponíveis antes do seu prazo ({deadline}), o DisputeDesk atualizará o pacote de defesa automaticamente. Nenhuma ação necessária da sua parte.",
+        "bodyNoDeadline": "Se o rastreamento de envio, a confirmação de entrega, a verificação de pagamento ou outras provas derivadas do sistema ficarem disponíveis antes do seu prazo, o DisputeDesk atualizará o pacote de defesa automaticamente. Nenhuma ação necessária da sua parte."
+      },
+      "rowSourceCaptionPendingSystem": "Aguardando atividade do pedido — será preenchido automaticamente quando o Shopify informar",
+      "timeline": {
+        "defencePackagePrepared": {
+          "titleDone": "Pacote de defesa preparado",
+          "titleActive": "Preparando pacote de defesa",
+          "titlePending": "Preparar pacote de defesa",
+          "helperDone": "O DisputeDesk reuniu as provas disponíveis para este caso.",
+          "helperActive": "O pacote está sendo preparado.",
+          "helperPending": "Gere o pacote de provas para começar."
+        },
+        "reviewAndSubmit": {
+          "title": "Revisar e enviar",
+          "helperWithDeadline": "Prazo de envio: {deadline}",
+          "helperNoDeadline": "Revise o pacote e envie ao Shopify antes do prazo."
+        },
+        "evidenceSavedToShopify": {
+          "title": "Provas salvas no Shopify",
+          "helperWithDate": "Salvo em {savedDate}",
+          "helperNoDate": "Salvo no Shopify"
+        },
+        "awaitingShopifyForwarding": {
+          "title": "Aguardando o Shopify encaminhar à rede de cartões",
+          "helperWithDeadline": "O Shopify encaminha as provas à sua rede de cartões até o prazo ({deadline}) ou antes, se você clicar em Enviar no Shopify Admin. O DisputeDesk não pode verificar de forma independente quando o encaminhamento ocorre.",
+          "helperNoDeadline": "O Shopify encaminha as provas à sua rede de cartões até o prazo ou antes, se você clicar em Enviar no Shopify Admin. O DisputeDesk não pode verificar de forma independente quando o encaminhamento ocorre."
+        },
+        "submittedToCardNetwork": {
+          "title": "Enviado à rede de cartões",
+          "helper": "O Shopify encaminhou as provas — a rede de cartões está analisando."
+        },
+        "cardNetworkReview": {
+          "title": "Análise pela rede de cartões",
+          "helperActive": "Duração estimada: 30–75 dias.",
+          "helperPending": "Começa assim que o Shopify encaminhar as provas à sua rede de cartões."
+        },
+        "outcomePosted": {
+          "title": "Resultado publicado no Shopify",
+          "helperWithOutcome": "Resultado: {outcome}",
+          "helperPending": "Você será notificado por e-mail quando uma decisão for tomada."
+        }
+      },
+      "submissionSummary": {
+        "titlePreSave": "O que será salvo no Shopify",
+        "titlePostSave": "O que foi salvo no Shopify",
+        "subtitlePreSave": "Estes itens chegarão ao Shopify quando o DisputeDesk salvar o pacote de defesa.",
+        "subtitlePostSave": "O Shopify recebeu os itens listados abaixo. O PDF contém o argumento dirigido ao banco; os campos estruturados contêm apenas a identidade do cliente.",
+        "shopifyFieldsLabel": "Salvo como campos estruturados do Shopify",
+        "shopifyFieldsHelper": "Nome e e-mail do cliente — os únicos campos estruturados que o DisputeDesk envia. As provas viajam dentro do PDF.",
+        "shopifyFieldsCustomerFirstName": "Nome do cliente",
+        "shopifyFieldsCustomerLastName": "Sobrenome do cliente",
+        "shopifyFieldsCustomerEmail": "E-mail do cliente",
+        "shopifyFieldsNoneOnFile": "—",
+        "includedInPackageLabel": "Incluído no pacote de defesa",
+        "includedInPackageHelper": "Fatos probatórios que aparecem no PDF que o banco recebe.",
+        "includedInPackageEmpty": "Nenhum fato probatório está incluído no pacote.",
+        "includedInPackagePdfLine": "PDF: {pdfFileName}",
+        "bankArgumentLabel": "Usado como argumento positivo ao banco",
+        "bankArgumentHelper": "Provas que a narrativa de defesa cita como prova decisiva.",
+        "bankArgumentEmpty": "Nenhuma prova decisiva para o banco está disponível para esta disputa.",
+        "contextOnlyLabel": "Apenas contexto",
+        "contextOnlyHelper": "Incluídas no pacote como pano de fundo; não citadas como prova decisiva.",
+        "keptInternalLabel": "Mantido interno",
+        "keptInternalHelper": "Sinais exibidos para ajudar você a entender o caso, mas não incluídos no argumento dirigido ao banco porque podem enfraquecer a resposta.",
+        "keptInternalSeeEvidenceTab": "Veja a aba Provas → Sinais apenas internos para detalhes.",
+        "notIncludedLabel": "Não incluído",
+        "notIncludedHelper": "Itens excluídos, não suportados ou com falha de upload. Nenhum deles chega ao Shopify.",
+        "notIncludedFailedUpload": "Upload falhou para {count, plural, =1 {1 item} other {# itens}}.",
+        "notIncludedExcluded": "{count, plural, =1 {1 item excluído} other {# itens excluídos}} por você.",
+        "notIncludedWaived": "{count, plural, =1 {1 item marcado} other {# itens marcados}} como não aplicável.",
+        "notIncludedNotSupported": "{count, plural, =1 {1 item} other {# itens}} sem espaço para envio ao banco."
+      },
+      "coverage": {
+        "title": "Cobertura de provas",
+        "sectionsFound": "{count, plural, =0 {Nenhuma seção de provas encontrada} =1 {1 seção de provas encontrada} other {# seções de provas encontradas}}",
+        "includedInPackage": "{count, plural, =0 {Nada incluído no pacote de defesa} =1 {1 item incluído no pacote de defesa} other {# itens incluídos no pacote de defesa}}",
+        "usedAsPositiveBankArgument": "{count, plural, =0 {0 usados como argumento positivo ao banco} =1 {1 usado como argumento positivo ao banco} other {# usados como argumento positivo ao banco}}",
+        "keptInternal": "{count, plural, =0 {0 mantidos internos} =1 {1 mantido interno} other {# mantidos internos}}",
+        "tileSectionsFound": "Seções de provas encontradas",
+        "tileIncludedInPackage": "Incluído no pacote de defesa",
+        "tileUsedAsBankArgument": "Usado como argumento positivo ao banco",
+        "tileKeptInternal": "Mantido interno",
+        "missingDecisiveLabel": "Falta prova decisiva",
+        "missingDecisiveNone": "Todas as provas decisivas estão presentes.",
+        "missingDecisiveFraud": "verificação de pagamento, entrega confirmada, reconhecimento de compra pelo cliente",
+        "summarySentence": "Encontramos {found, plural, =1 {1 seção de provas} other {# seções de provas}}{savedClause, select, none {} other {{savedClause}}}.{weakClause, select, none {} other { {weakClause}}}",
+        "savedClauseSaved": " e salvamos o pacote de defesa no Shopify",
+        "savedClauseDraft": "",
+        "weakClauseHardToWin": "O caso continua fraco porque as provas disponíveis são em sua maioria contexto de apoio, enquanto faltam provas decisivas de {family}.",
+        "weakClauseNotHardToWin": ""
+      },
+      "hero": {
+        "title": {
+          "preSubmit": {
+            "likely_to_win": "Caso forte para contestar",
+            "could_win": "Revisar antes de contestar",
+            "needs_strengthening": "Revisar antes de contestar",
+            "hard_to_win": "Documentação completa, defesa fraca",
+            "covered": "Coberto pelo Shopify Protect"
+          },
+          "saved": {
+            "likely_to_win": "Defesa forte salva no Shopify",
+            "could_win": "Defesa moderada salva no Shopify",
+            "needs_strengthening": "Defesa moderada salva no Shopify",
+            "hard_to_win": "Defesa fraca salva no Shopify",
+            "covered": "Coberto pelo Shopify Protect"
+          },
+          "awaiting": {
+            "likely_to_win": "Defesa forte encaminhada ao Shopify",
+            "could_win": "Defesa moderada encaminhada ao Shopify",
+            "needs_strengthening": "Defesa moderada encaminhada ao Shopify",
+            "hard_to_win": "Defesa fraca encaminhada ao Shopify",
+            "covered": "Coberto pelo Shopify Protect"
+          },
+          "submitted_to_network": {
+            "likely_to_win": "Defesa forte enviada à rede de cartões",
+            "could_win": "Defesa moderada enviada à rede de cartões",
+            "needs_strengthening": "Defesa moderada enviada à rede de cartões",
+            "hard_to_win": "Defesa fraca enviada à rede de cartões",
+            "covered": "Coberto pelo Shopify Protect"
+          },
+          "closed": {
+            "won": "Disputa vencida",
+            "lost": "Disputa perdida",
+            "unknown": "Disputa encerrada"
+          }
+        },
+        "subtitle": {
+          "draftWithReason": "{strengthReason}",
+          "savedWithReason": "{strengthReason} Salvo no Shopify em {savedDate}.",
+          "savedWithReasonAndDeadline": "{strengthReason} Salvo no Shopify em {savedDate}. O Shopify encaminhará as provas à sua rede de cartões até o prazo ({deadline}). Você pode continuar adicionando provas até lá.",
+          "savedNoDate": "{strengthReason} Salvo no Shopify — aguardando o Shopify encaminhar à sua rede de cartões.",
+          "awaitingForward": "{strengthReason} O Shopify tem o pacote e o encaminhará à sua rede de cartões. O DisputeDesk pode confirmar que as provas foram salvas no Shopify, mas não pode verificar independentemente quando o encaminhamento ocorre.",
+          "submittedToNetwork": "{strengthReason} A rede de cartões está analisando esta defesa. O resultado costuma ser publicado em 30–75 dias.",
+          "submittedToNetworkWithDate": "Enviado à sua rede de cartões em {submittedDate}. O resultado costuma ser publicado em 30–75 dias.",
+          "closedWon": "Resultado: vencida{submittedDate, select, none {} other { (decidida em {submittedDate})}}.",
+          "closedLost": "Resultado: perdida{submittedDate, select, none {} other { (decidida em {submittedDate})}}.",
+          "closedUnknown": "Resultado informado pelo Shopify: {outcome}."
         }
       }
     }
@@ -2098,7 +2303,7 @@
       "tagline": "Operações de disputas para Shopify",
       "headline": "Ganhe mais chargebacks. Mantenha mais receita.",
       "subheadline": "O DisputeDesk transforma o caos dos chargebacks da Shopify em uma operação profissional e repetível — com pacotes de evidência rápidos, verificações de completude integradas e uma trilha de auditoria completa. Sem taxa de sucesso. Sem IA caixa-preta. Apenas preços previsíveis e fluxos controlados pelo lojista.",
-      "bullet1": "Pacotes de evidências em minutos — rascunhos são ilimitados, pacotes contam apenas na exportação",
+      "bullet1": "Pacotes de evidências com IA a partir de dados reais do Shopify — entregues em minutos",
       "bullet2": "Fila de revisão + verificação de completude para evitar envios fracos",
       "bullet3": "Registro de auditoria imutável para cada alteração, arquivo e decisão",
       "installFree": "Instalar no Shopify (Grátis para começar)",
