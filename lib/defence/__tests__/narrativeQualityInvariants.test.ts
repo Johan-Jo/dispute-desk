@@ -248,3 +248,49 @@ describe("Invariant 4 — Chronology thesis must not over-promise event categori
     );
   });
 });
+
+describe("Invariant 5 — HTML view chronology mirrors the PDF (no parallel synthesis)", () => {
+  it("the workspace API surfaces `timelineEvents` on the dispute payload", async () => {
+    // Lock in that the workspace API route includes the
+    // `timelineEvents` field. Before 2026-05-19 the field was dropped
+    // between `deriveOrderContext` and the JSON response, forcing the
+    // HTML view's chronology to fall back to the 2-event synthetic
+    // path while the PDF rendered the full 8-event Shopify timeline.
+    const { readFileSync } = await import("node:fs");
+    const path = await import("node:path");
+    const fp = path.resolve(
+      process.cwd(),
+      "app/api/disputes/[id]/workspace/route.ts",
+    );
+    const src = readFileSync(fp, "utf8");
+    expect(src).toMatch(/timelineEvents:\s*orderContext\.timelineEvents/);
+  });
+
+  it("the DisputeContextLike type carries timelineEvents", async () => {
+    const { readFileSync } = await import("node:fs");
+    const path = await import("node:path");
+    const fp = path.resolve(
+      process.cwd(),
+      "app/(embedded)/app/disputes/[id]/tabs/sections/DefencePackageHtmlView.tsx",
+    );
+    const src = readFileSync(fp, "utf8");
+    // The DisputeContextLike interface must declare `timelineEvents`.
+    expect(src).toMatch(
+      /timelineEvents\?:\s*Array<\{\s*at:\s*string;\s*text:\s*string\s*\}>/,
+    );
+    // The local `chronologyEvents` must short-circuit on rich data.
+    expect(src).toMatch(/dispute\?\.\s*timelineEvents/);
+    expect(src).toMatch(/Path 1:.*rich timeline/);
+  });
+
+  it("ReviewSubmitTab threads timelineEvents into the HTML view dispute prop", async () => {
+    const { readFileSync } = await import("node:fs");
+    const path = await import("node:path");
+    const fp = path.resolve(
+      process.cwd(),
+      "app/(embedded)/app/disputes/[id]/tabs/ReviewSubmitTab.tsx",
+    );
+    const src = readFileSync(fp, "utf8");
+    expect(src).toMatch(/timelineEvents:\s*data\.dispute\.timelineEvents/);
+  });
+});

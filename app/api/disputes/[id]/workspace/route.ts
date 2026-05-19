@@ -369,6 +369,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     financialStatus: orderContext.financialStatus,
     fulfillmentStatus: orderContext.fulfillmentStatus,
     cardholderName: orderContext.cardholderName ?? row.customer_display_name ?? null,
+    // Full event timeline from the pack's access_log section. The PDF
+    // builder threads the same array through `meta.timelineEvents`;
+    // surfacing it here lets the embedded HTML view render the same
+    // rich chronology the bank gets instead of falling back to the
+    // synthetic 2-event path. Capped to 20 events upstream in
+    // `lib/packs/sources/orderSource.ts`.
+    timelineEvents: orderContext.timelineEvents,
   };
 
   // Reconcile persisted checklist_v2 against fields actually carried by

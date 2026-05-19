@@ -92,6 +92,11 @@ export interface WorkspaceDispute {
   financialStatus?: string | null;
   fulfillmentStatus?: string | null;
   cardholderName?: string | null;
+  /** Full event timeline from the pack's access_log section — the SAME
+   *  array the PDF builder threads through `meta.timelineEvents`. The
+   *  embedded HTML view's Chronology of Events bullets render from
+   *  this, NOT from a parallel synthetic-2-event implementation. */
+  timelineEvents?: Array<{ at: string; text: string }>;
 }
 
 export interface WorkspacePack {

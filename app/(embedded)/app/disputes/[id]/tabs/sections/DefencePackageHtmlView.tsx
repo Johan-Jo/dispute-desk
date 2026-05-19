@@ -159,6 +159,13 @@ export interface DisputeContextLike {
   transactionDate?: string | null;
   merchantName?: string | null;
   shopName?: string | null;
+  /** Full event timeline from the pack's access_log section. Threaded
+   *  through by the workspace API so the HTML view renders the SAME
+   *  chronology bullets the PDF shows the bank — no parallel
+   *  synthesis. When absent/empty, the renderer falls back to the
+   *  synthetic 2-event path (only fires on packs built before the
+   *  orderSource events capture was added). */
+  timelineEvents?: Array<{ at: string; text: string }>;
 }
 
 interface Props {
@@ -311,10 +318,39 @@ interface ChronologyEvent {
   text: string;
 }
 
+/**
+ * Build the chronology bullet list.
+ *
+ * Priority order matches the PDF (`lib/defence/pdf/DefencePackageDocument.tsx`
+ * `chronologyEvents()`):
+ *
+ *   1. dispute.timelineEvents — the rich Shopify Order.events captured
+ *      by orderSource.ts. The PDF threads the SAME array through
+ *      meta.timelineEvents. When present, this is the canonical
+ *      chronology and the synthetic fallback is skipped.
+ *   2. Synthetic fallback — derive 2 events from dispute.transactionDate
+ *      (order placed + authorisation captured). Only fires for packs
+ *      built before the orderSource events capture was added.
+ *
+ * Both surfaces (PDF + HTML view) MUST produce identical output for
+ * the same pack — the only way to guarantee that is to read the
+ * same underlying array. Investigated 2026-05-19: the workspace API
+ * had been omitting timelineEvents from the response (commit 822c8c8
+ * wired most of orderContext but skipped this field). Now exposed.
+ */
 function chronologyEvents(
   dispute: DisputeContextLike | undefined,
   facts: EvidenceFact[],
 ): ChronologyEvent[] {
+  // Path 1: rich timeline from the pack's access_log section. Sorted
+  // ascending so the bullets render in chronological order.
+  const rich = dispute?.timelineEvents;
+  if (Array.isArray(rich) && rich.length > 0) {
+    return [...rich].sort((a, b) => a.at.localeCompare(b.at));
+  }
+
+  // Path 2: synthetic fallback. Only fires when the pack's access_log
+  // section is missing or empty (old packs pre-orderSource capture).
   const events: ChronologyEvent[] = [];
   if (dispute?.transactionDate) {
     events.push({

@@ -92,6 +92,12 @@ export default function ReviewSubmitTab({ workspace }: Props) {
                 shopName: data.dispute.shopDomain ?? null,
                 merchantName: data.dispute.shopDomain ?? null,
                 dueAt: data.dispute.dueAt ?? null,
+                // Rich Shopify Order.events timeline — the SAME array
+                // the PDF builder threads through meta.timelineEvents.
+                // Surfaces in the HTML view's Chronology of Events
+                // bullets so the merchant's web view matches the
+                // bank-facing PDF byte-for-byte.
+                timelineEvents: data.dispute.timelineEvents ?? undefined,
               }
             : undefined
         }
