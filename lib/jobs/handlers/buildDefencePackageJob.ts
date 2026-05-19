@@ -341,6 +341,7 @@ export async function handleBuildDefencePackage(
     approvedFacts: classification.approved,
     packageMode: classification.packageMode,
     familyKey: reasonCodeFamily.key,
+    moduleKey: reasonCodeModule.key,
     fulfillmentStatus: orderContext.fulfillmentStatus,
   });
   const composedValidation = validateComposedDocument({

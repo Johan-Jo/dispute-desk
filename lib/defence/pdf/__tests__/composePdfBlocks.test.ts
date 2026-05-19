@@ -63,6 +63,7 @@ describe("composePdfBlocks", () => {
       approvedFacts: [fact()],
       packageMode: "full",
       familyKey: "unauthorized_fraud",
+      moduleKey: null,
       fulfillmentStatus: null,
     });
     expect(blocks.map((b) => b.sectionKey)).toEqual([
@@ -79,6 +80,7 @@ describe("composePdfBlocks", () => {
       approvedFacts: [fact()],
       packageMode: "full",
       familyKey: "unauthorized_fraud",
+      moduleKey: null,
       fulfillmentStatus: null,
     });
     const exec = blocks.find((b) => b.sectionKey === "executiveSummary")!;
@@ -96,6 +98,7 @@ describe("composePdfBlocks", () => {
       ],
       packageMode: "full",
       familyKey: "unauthorized_fraud",
+      moduleKey: null,
       fulfillmentStatus: "FULFILLED",
     });
     const exec = blocks.find((b) => b.sectionKey === "executiveSummary")!;
@@ -109,6 +112,7 @@ describe("composePdfBlocks", () => {
       approvedFacts: [fact()],
       packageMode: "full",
       familyKey: "unauthorized_fraud",
+      moduleKey: null,
       fulfillmentStatus: "FULFILLED",
     });
     const fulfilment = blocks.find((b) => b.sectionKey === "fulfillmentArgument")!;
@@ -123,6 +127,7 @@ describe("composePdfBlocks", () => {
       approvedFacts: [fact()],
       packageMode: "full",
       familyKey: "unauthorized_fraud",
+      moduleKey: null,
       fulfillmentStatus: "UNFULFILLED",
     });
     expect(blocks.find((b) => b.sectionKey === "fulfillmentArgument")).toBeUndefined();
@@ -136,6 +141,7 @@ describe("composePdfBlocks", () => {
       approvedFacts: [fact()],
       packageMode: "full",
       familyKey: "unauthorized_fraud",
+      moduleKey: null,
       fulfillmentStatus: null,
     });
     const exec = blocks.find((b) => b.sectionKey === "executiveSummary")!;

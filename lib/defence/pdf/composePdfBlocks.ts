@@ -13,6 +13,7 @@
  */
 
 import { renderThesis } from "./renderThesis";
+import { isSectionDeniedForModule } from "../sectionVisibility";
 import type {
   ComposedDocumentBlock,
   DefenceNarrativeOutput,
@@ -62,6 +63,10 @@ export interface ComposePdfBlocksInput {
   approvedFacts: EvidenceFact[];
   packageMode: PackageMode;
   familyKey: ReasonCodeFamilyKey;
+  /** Reason-code module key (e.g. "visa_10_4_fraud"). Used to consult
+   *  the per-module section deny list — sections deny-listed for this
+   *  module are dropped from the output regardless of LLM emission. */
+  moduleKey: string | null;
   fulfillmentStatus: string | null;
 }
 
@@ -78,6 +83,13 @@ export function composePdfBlocks(
   const blocks: ComposedDocumentBlock[] = [];
 
   for (const sectionKey of SECTION_ORDER) {
+    // Per-module section deny list — sections ruled out for this
+    // reason code are dropped before any fallback/LLM logic runs.
+    // See lib/defence/sectionVisibility.ts.
+    if (isSectionDeniedForModule(sectionKey, input.moduleKey)) {
+      continue;
+    }
+
     const section = input.narrative[sectionKey];
     const llmText = section.text.trim();
     const sectionOmitted = omittedKeys.has(sectionKey);

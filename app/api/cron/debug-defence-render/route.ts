@@ -103,6 +103,7 @@ export async function GET(req: NextRequest) {
             approvedFacts: debugFacts,
             packageMode: "full",
             familyKey: "unauthorized_fraud",
+            moduleKey: "visa_10_4_fraud",
             fulfillmentStatus: "UNFULFILLED",
           }),
           approvedFacts: debugFacts,

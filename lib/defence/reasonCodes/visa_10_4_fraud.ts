@@ -27,7 +27,8 @@ export const visa_10_4_fraud: ReasonCodeGuidance = {
     "You are writing a bank-facing response to an UNAUTHORIZED TRANSACTION CLAIM (cardholder alleges the transaction was not authorized). The reason code is the issuer/cardholder's CLAIM CATEGORY, not a merchant admission.",
     "Prioritise payment authentication signals: AVS+CVV match, 3-D Secure authentication (only if an approved fact explicitly supports it), and successful authorization.",
     "Where approved facts support it, mention billing alignment, prior customer history, and customer communication that pre-dated the dispute.",
-    "Policy disclosure: when policy_refund, policy_shipping, or policy_cancellation facts are in approvedFacts, write a policyArgument paragraph that names which policies were published at the time of purchase (e.g. 'The merchant's refund, shipping, and cancellation policies were published and available at checkout, and the customer had the opportunity to review them prior to placing the order'). Do NOT claim the customer accepted or agreed to the policies unless an approved policy_acceptance fact with acceptedAtCheckout=true is also present — disclosure and acceptance are different claims. Empty acceptedAtCheckout=false is NOT a reason to omit the section; the disclosure itself is bank-facing evidence.",
+    "The policyArgument section is OMITTED for this reason code. Refund, shipping, and cancellation policy disclosure does not refute an unauthorized-transaction claim — the dispute is about cardholder authentication, not the merchant's terms. Always return an empty string for policyArgument and add it to omittedSections with reason 'Policy disclosure is not relevant to an unauthorized-transaction claim. The argument hinges on cardholder authentication signals, not the merchant's published terms.' Do NOT cite policy_refund, policy_shipping, policy_cancellation, or policy_acceptance facts in any section.",
+    "Do NOT cite Shopify's fulfillmentStatus value (UNFULFILLED / FULFILLED / PARTIAL) anywhere in the narrative. fulfillmentStatus is an order-system state, not bank-facing evidence — naming it (especially UNFULFILLED) in a fraud rebuttal invites the bank to ask whether goods shipped, which is irrelevant to the authentication argument. If the order_record fact is cited, ground the argument in channel/timestamp/order details only, never the fulfillment status string.",
     "Do NOT argue that the customer received the goods unless a delivery_proof fact with proofType='delivered'/'signature' or a service_access fact with serviceDelivered=true is in approvedFacts.",
     "Do NOT mention 3-D Secure unless an approved payment_authentication fact carries threeDS=true.",
     "Do NOT claim 'possession of the physical card', 'had the physical card', 'held the card', or that the 'card was physically present'. AVS+CVV confirm access to credentials and billing details, NOT physical possession. Use 'had access to card verification credentials and billing details associated with the cardholder account' instead.",
@@ -46,6 +47,13 @@ export const visa_10_4_fraud: ReasonCodeGuidance = {
     "ip_location",
     "device_session",
     "fraud_screening",
+    // Policy facts are not bank-facing evidence for unauthorized-fraud
+    // claims; the policyArgument section is omitted entirely for this
+    // reason code (see promptBody rule).
+    "policy_refund",
+    "policy_shipping",
+    "policy_cancellation",
+    "policy_acceptance",
   ],
   mustNotClaim: [
     "the customer is committing fraud",
@@ -75,5 +83,5 @@ export const visa_10_4_fraud: ReasonCodeGuidance = {
     "account_history",
     "manual_evidence",
   ],
-  version: 2,
+  version: 3,
 };

@@ -36,6 +36,7 @@ import type {
   NarrativeSectionKey,
   PackageMode,
 } from "@/lib/defence/types";
+import { isSectionDeniedForModule } from "@/lib/defence/sectionVisibility";
 
 // ─── Section thesis library (mirrors PDF) ─────────────────────────────
 const GENERIC_THESIS: Record<NarrativeSectionKey, string> = {
@@ -59,19 +60,38 @@ const GENERIC_THESIS: Record<NarrativeSectionKey, string> = {
     "Based on the evidence above, the merchant respectfully requests reversal of the chargeback.",
 };
 
+/**
+ * Reason-code-specific thesis library for the embedded HTML view.
+ *
+ * NOTE: these strings parallel `lib/defence/pdf/thesisTemplates.ts`.
+ * A follow-up commit will collapse the two into one shared module so
+ * future drift is impossible (the HTML view's earlier
+ * `chronologyArgument` text over-promised "site engagement, order
+ * placement, successful authorisation, and order confirmation" when
+ * the deterministic timeline only carries 2–3 events). Until then,
+ * keep these in sync with the templates the PDF uses.
+ *
+ * Each thesis must be safe to render when the matching section's
+ * bullet/fact density is sparse — no thesis may claim event categories
+ * the deterministic renderer doesn't produce.
+ */
 const VISA_10_4_FRAUD_THESIS: Record<NarrativeSectionKey, string> = {
   executiveSummary:
-    "This representment addresses a Visa 10.4 (Other Fraud — Card Absent) chargeback. The approved evidence — payment authentication, billing alignment, and the customer's documented engagement — supports that the transaction was authorised by the cardholder.",
+    "This representment addresses a Visa 10.4 (Other Fraud — Card Absent) chargeback. The approved evidence supports that the transaction was authorised by the cardholder.",
   transactionOverviewArgument:
     "The transaction was successfully authorised and captured using authentication factors specific to the cardholder. The payment record is internally consistent and aligned with cardholder-supplied data.",
   chronologyArgument:
-    "The timeline of events records a deliberate purchase sequence — site engagement, order placement, successful authorisation, and order confirmation — each step traceable to the cardholder's session.",
+    "The timeline of events records the relevant moments of the customer's interaction with the merchant.",
   paymentAuthenticationArgument:
     "Authentication metrics align with a cardholder-initiated transaction. The verification results reflect data accessible to the legitimate cardholder.",
   fulfillmentArgument:
     "Fulfilment and access evidence corroborates that the order was processed and the customer received the agreed delivery or access path.",
   communicationArgument:
     "The documented communication record evidences direct cardholder engagement with the merchant before and around the disputed transaction.",
+  // policyArgument intentionally retained here for non-fraud modules
+  // that may reuse this library; the fraud section deny list
+  // (lib/defence/sectionVisibility.ts) prevents this thesis from
+  // ever rendering for visa_10_4_fraud regardless.
   policyArgument:
     "The merchant's published policies and the customer's acceptance record are documented and were available at the point of purchase.",
   manualEvidenceArgument:
@@ -388,8 +408,13 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
             expands to verify the metadata) */}
         <CaseDetailsSection rows={caseRows} />
 
-        {/* LLM-authored sections */}
-        {SECTION_ORDER.map((key) => {
+        {/* LLM-authored sections. Per-module section deny list is
+            consulted at render time (see lib/defence/sectionVisibility.ts)
+            so stale narrative_json rows never surface a section that's
+            been ruled out for the reason code. */}
+        {SECTION_ORDER.filter(
+          (key) => !isSectionDeniedForModule(key, moduleKey),
+        ).map((key) => {
           if (key === "chronologyArgument") {
             // Chronology has its own bullet list below the paragraph.
             const section = narrative[key];

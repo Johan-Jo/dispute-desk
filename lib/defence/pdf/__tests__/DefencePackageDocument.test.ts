@@ -120,6 +120,7 @@ function sampleData(overrides: SampleDataOverrides = {}): DefencePackageDocument
     approvedFacts,
     packageMode: meta.packageMode,
     familyKey: "unauthorized_fraud",
+    moduleKey: null,
     fulfillmentStatus: meta.fulfillmentStatus ?? null,
   });
   return { meta, composedBlocks, approvedFacts, manualEvidence };

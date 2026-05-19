@@ -57,6 +57,19 @@ export const FORBIDDEN_PHRASES = [
   /\bhad\s+the\s+physical\s+card\b/i,
   /\bheld\s+the\s+card\b/i,
   /\bcard\s+was\s+physically\s+present\b/i,
+  // Raw AVS/CVV gateway codes must not appear in merchant prose. The
+  // fact value carries a translated `verificationSummary` string —
+  // the LLM is instructed to quote that instead. Patterns match the
+  // canonical bank/gateway phrasing for the code letters, including
+  // "AVS Y", "AVS result of 'Y'", "AVS result was Y".
+  /\bAVS\s+(?:result\s+(?:of\s+|was\s+|=\s*)?)?['"]?[YNXAZWPSGIMNCDU]['"]?\b/i,
+  /\bCVV\s+(?:result\s+(?:of\s+|was\s+|=\s*)?)?['"]?[MNPSUYX]['"]?\b/i,
+  // Fulfillment-status echo in prose — UNFULFILLED/FULFILLED/PARTIAL
+  // as raw uppercase strings is order-system jargon that doesn't
+  // belong in bank-facing argument. The fact value carries the order
+  // record cleanly; the prose must not name the status verbatim.
+  /\bfulfillment\s+status\s+of\s+(?:UNFULFILLED|FULFILLED|PARTIAL)\b/i,
+  /\bUNFULFILLED\b/,
 ];
 
 export const NARROW_AGGRESSIVE_PHRASES = [

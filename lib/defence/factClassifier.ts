@@ -178,11 +178,42 @@ function extractValue(
 ): Record<string, unknown> {
   const p = payload ?? {};
   switch (fieldKey) {
-    case "avs_cvv_match":
+    case "avs_cvv_match": {
+      const avsResult =
+        typeof p.avsResultCode === "string"
+          ? (p.avsResultCode as string).toUpperCase()
+          : null;
+      const cvvResult =
+        typeof p.cvvResultCode === "string"
+          ? (p.cvvResultCode as string).toUpperCase()
+          : null;
+      // Translated phrase the LLM is told to quote instead of the raw
+      // gateway codes (Y/M/N/etc.). Issuers know what the letters mean
+      // but quoting them verbatim ("AVS Y, CVV M") in merchant prose
+      // looks amateurish and forces the merchant to trust we didn't
+      // misquote. The plain-language summary preserves the same evidentiary
+      // signal in language that reads naturally.
+      const parts: string[] = [];
+      if (avsResult === "Y" || avsResult === "X") {
+        parts.push("the billing address matched the issuer's records");
+      } else if (avsResult === "A") {
+        parts.push("the billing street matched the issuer's records");
+      } else if (avsResult === "Z" || avsResult === "W") {
+        parts.push("the billing postal code matched the issuer's records");
+      }
+      if (cvvResult === "M") {
+        parts.push("the card verification code matched the issuer's records");
+      }
+      const verificationSummary =
+        parts.length > 0
+          ? parts.join(" and ")
+          : null;
       return {
-        avsResult: typeof p.avsResultCode === "string" ? (p.avsResultCode as string).toUpperCase() : null,
-        cvvResult: typeof p.cvvResultCode === "string" ? (p.cvvResultCode as string).toUpperCase() : null,
+        avsResult,
+        cvvResult,
+        verificationSummary,
       };
+    }
     case "tds_authentication":
       return {
         threeDS: p.tdsAuthenticated === true || p.tdsVerified === true,
@@ -478,4 +509,23 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
     ineligibilityReason: null,
     predicateEvaluations: evaluateAllPredicates(approved),
   };
+}
+
+/**
+ * Test-only re-export of the internal value extractor. Production
+ * callers go through `classifyFacts`. Used by
+ * `narrativeQualityInvariants.test.ts` to lock in the
+ * `verificationSummary` translation on `avs_cvv_match`.
+ */
+export function extractValueForTest(
+  fieldKey: string,
+  payload: Record<string, unknown> | null,
+): Record<string, unknown> {
+  return extractValue(fieldKey, payload, {
+    type: "test",
+    label: "test",
+    source: "test",
+    fieldsProvided: [],
+    data: {},
+  } as unknown as PackSectionLike);
 }

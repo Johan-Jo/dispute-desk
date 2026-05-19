@@ -57,7 +57,7 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // promptBodies were rewritten to lead with the claim category instead
 // of the network's environment classification. Same cache-invalidation
 // pattern as the 2→3 bump above.
-const PROMPT_VERSION = 3;
+const PROMPT_VERSION = 4;
 
 /* ── Static base system prompt (cached, ephemeral) ── */
 
@@ -80,10 +80,23 @@ Rules:
 7. Professional, bank-facing language. In FULL mode you may use firm
    evidentiary framing — verbs like "establishes", "demonstrates",
    "confirms", "evidences", "corroborates", "records", "documents", "shows".
-   Quote specific values from approved facts (e.g. "AVS Y", "CVV M",
-   "delivered 2026-05-12"). State the relationship between fact and reason
-   code explicitly (e.g. "These authentication results are consistent with
-   a cardholder-initiated transaction under Visa 10.4.").
+   Quote specific values from approved facts to ground each claim
+   (e.g. "delivered 2026-05-12 to the verified address", "the customer
+   confirmed receipt on 2026-05-13"). State the relationship between
+   fact and reason code explicitly (e.g. "These authentication results
+   are consistent with a cardholder-initiated transaction under Visa 10.4.").
+
+   PAYMENT AUTHENTICATION CODES (AVS / CVV) — DO NOT quote the raw
+   single-letter gateway result codes ("Y", "M", "N", "Z", "A", "W",
+   "X", etc.) in any merchant prose. The fact value carries a
+   pre-translated verificationSummary string (e.g. "the billing
+   address matched the issuer's records and the card verification
+   code matched the issuer's records") — quote that summary instead.
+   Raw letter codes look unhinged in bank-facing prose and force the
+   reader to look up the AVS/CVV reference. If verificationSummary
+   is null, summarise neutrally ("the available payment authentication
+   signals are consistent with a cardholder-initiated transaction")
+   without naming the underlying letter codes.
 8. Do NOT use overclaim or accusatory language: NEVER use "irrefutable",
    "definitive proof", "definitively proves", "definitively shows
    authorization", "undeniable", "unequivocally", "baseless", "invalidates
