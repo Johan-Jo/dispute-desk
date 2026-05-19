@@ -215,7 +215,7 @@ export function MarketingLandingPageClient({
             <div className="dd-dossier-wrap mt-8 lg:mt-0">
               <div className="dd-dossier">
                 <div className="dd-dossier-head">
-                  <span className="dd-vol">Evidence dossier {"\u00B7"} DP-2402</span>
+                  <span className="dd-vol">Evidence pack {"\u00B7"} DP-2402</span>
                   <span className="dd-hash">a4f2{"\u00B7"}9c3d{"\u00B7"}b201</span>
                 </div>
 
