@@ -14,11 +14,19 @@
  *    outside FRAUDULENT / UNRECOGNIZED.
  *
  * 2. **Eligibility is strict.** Every condition must hold:
- *      - risk_level = LOW
+ *      - risk_level IN (LOW, NONE)
  *      - recommendation IN (ACCEPT, NONE)
  *      - provider = "shopify" (third-party app scores are not cited;
  *        their wording is unpredictable and may not be defensible)
  *      - at least one POSITIVE-sentiment fact
+ *
+ *    Note on risk_level=NONE: live Shopify responses (2026-05) show
+ *    NONE returned alongside `recommendation: ACCEPT` and a populated
+ *    facts array — i.e. Shopify analysed the order and found no
+ *    concerning signals, not "Shopify didn't analyse." The
+ *    recommendation field is the authoritative bank-facing verdict;
+ *    risk_level is supporting detail. The recommendation gate below
+ *    is the real safety check.
  *
  * 3. **No negative leakage.** The collector emits ONLY positive-sentiment
  *    facts. Neutral and negative facts are dropped. A HIGH or
@@ -117,10 +125,12 @@ export async function collectFraudRiskEvidence(
   );
   if (!shopifyRow) return [];
 
-  // Eligibility gate.
+  // Eligibility gate. See file header rule #2 — risk_level LOW or
+  // NONE are both merchant-accept verdicts on Shopify's taxonomy; the
+  // recommendation field is the authoritative bank-facing signal.
   const riskLevel = (shopifyRow.risk_level ?? "").toUpperCase();
   const recommendation = (shopifyRow.recommendation ?? "").toUpperCase();
-  if (riskLevel !== "LOW") return [];
+  if (riskLevel !== "LOW" && riskLevel !== "NONE") return [];
   if (recommendation !== "ACCEPT" && recommendation !== "NONE") return [];
 
   // Rule #3 — extract ONLY positive-sentiment facts.

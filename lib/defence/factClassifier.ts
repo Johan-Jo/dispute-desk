@@ -93,7 +93,18 @@ export interface ClassifyFactsInput {
 export const SUBMISSION_RISK_FIELDS = new Set([
   "ip_location_check",
   "device_session_consistency",
-  "fraud_risk_screening",
+  // NOTE: fraud_risk_screening was previously in this set. Removed
+  // 2026-05-19 because the source-collector
+  // (`lib/packs/sources/fraudRiskSource.ts`) is already a strict
+  // gate — it ONLY emits a section when:
+  //   - provider = "shopify" (third-party scores stay out)
+  //   - risk_level ∈ {LOW, NONE}
+  //   - recommendation ∈ {ACCEPT, NONE}
+  //   - ≥ 1 POSITIVE-sentiment fact (negative facts are dropped)
+  // So if a fraud_risk_screening section reaches the classifier, it
+  // is bank-safe by construction. Treating it as
+  // submission-risk/internal-only here would silently drop the
+  // strongest pre-authorization corroboration Shopify gives us.
 ]);
 
 /** Field keys whose facts must never appear in bank-facing surfaces by
@@ -102,7 +113,11 @@ export const SUBMISSION_RISK_FIELDS = new Set([
 export const INTERNAL_ONLY_FIELDS = new Set([
   "ip_location_check",
   "device_session_consistency",
-  "fraud_risk_screening",
+  // fraud_risk_screening removed 2026-05-19 — see SUBMISSION_RISK_FIELDS
+  // note above. The source-collector enforces the safety contract;
+  // duplicating it here meant the LLM never saw the favourable
+  // ACCEPT/LOW/NONE signal even when it was the cleanest piece of
+  // pre-auth evidence available.
 ]);
 
 /**

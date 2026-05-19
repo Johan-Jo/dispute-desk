@@ -837,7 +837,13 @@ describe("Test 24 — internal-only field with no payload routes to not_included
     expect(row?.reason).toMatch(/undermine/i);
   });
 
-  it("fraud_risk_screening WITH a payload stays internal_only (we have data, we hide it)", async () => {
+  it("fraud_risk_screening WITH a favourable payload resolves to context_only (citable, not hidden)", async () => {
+    // Updated 2026-05-19. Under the new policy, fraud_risk_screening
+    // is NOT internal-only — `fraudRiskSource` only emits a section
+    // when Shopify returned a favourable verdict (ACCEPT + positive
+    // facts), so any payload that reaches the line-item layer is
+    // bank-safe by construction. The row should be citable in the
+    // bank narrative, not hidden under "Kept internal".
     const mod = await import("@/lib/argument/evidenceLineItem");
     const { deriveEvidenceLineItems } = mod as {
       deriveEvidenceLineItems: (args: unknown) => Array<{
@@ -861,8 +867,12 @@ describe("Test 24 — internal-only field with no payload routes to not_included
         "fraud_risk_screening",
         {
           provider: "shopify",
-          riskLevel: "MEDIUM",
-          recommendation: "INVESTIGATE",
+          riskLevel: "NONE",
+          recommendation: "ACCEPT",
+          positiveFacts: [
+            "Card verification value matches",
+            "Billing address matches",
+          ],
         },
       ],
     ]);
@@ -878,6 +888,11 @@ describe("Test 24 — internal-only field with no payload routes to not_included
       reasonFamily: "fraud",
     });
     const row = lineItems.find((li) => li.field === "fraud_risk_screening");
-    expect(row?.submissionMethod).toBe("internal_only");
+    // Without an approved fact in the test fixture, the row resolves
+    // to context_only (the natural category from canonicalEvidence is
+    // "moderate" but the bank-argument tier requires factLookup.hasApprovedFact,
+    // which isn't set up here). Either way: NOT internal_only.
+    expect(row?.submissionMethod).not.toBe("internal_only");
+    expect(["context_only", "bank_argument"]).toContain(row?.submissionMethod);
   });
 });

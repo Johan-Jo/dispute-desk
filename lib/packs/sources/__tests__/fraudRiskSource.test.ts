@@ -6,11 +6,16 @@
  *
  *   - dispute.reason is fraud-family (FRAUDULENT / UNRECOGNIZED)  → continue
  *   - dispute.reason is NOT fraud-family (e.g. PRODUCT_NOT_RECEIVED) → []
- *   - risk_level !== LOW → []
+ *   - risk_level NOT IN {LOW, NONE} → []
  *   - recommendation NOT IN {ACCEPT, NONE} → []
  *   - provider !== "shopify" → []
  *   - zero POSITIVE-sentiment facts → []
  *   - all positive: emits one section, capped at MAX_POSITIVE_FACTS_CITED
+ *
+ * Note (2026-05-19): risk_level=NONE is also eligible. Live Shopify
+ * responses return NONE + ACCEPT + a populated facts array (Shopify
+ * analysed the order, found no concerning signals). The original
+ * gate treated NONE as "not analysed"; that proved wrong.
  *
  * The Supabase read is mocked; the collector's logic is the unit
  * under test.
@@ -159,6 +164,41 @@ describe("collectFraudRiskEvidence", () => {
       ]) as never,
     );
     expect(await collectFraudRiskEvidence(CTX_FRAUD)).toEqual([]);
+  });
+
+  it("emits a section when risk_level=NONE + recommendation=ACCEPT + positive facts", async () => {
+    // Locks in the 2026-05-19 gate widening. Live Shopify returns
+    // NONE + ACCEPT with a populated facts array — that's a real
+    // ACCEPT verdict, not a "not analysed" placeholder. The
+    // recommendation field is the bank-facing signal.
+    mockGetClient.mockReturnValue(
+      buildSb([
+        {
+          ...POSITIVE_ROW,
+          risk_level: "NONE",
+          recommendation: "ACCEPT",
+        },
+      ]) as never,
+    );
+    const sections = await collectFraudRiskEvidence(CTX_FRAUD);
+    expect(sections).toHaveLength(1);
+    const data = sections[0].data as { riskLevel: string; recommendation: string };
+    expect(data.riskLevel).toBe("NONE");
+    expect(data.recommendation).toBe("ACCEPT");
+  });
+
+  it("emits a section when risk_level=NONE + recommendation=NONE + positive facts", async () => {
+    mockGetClient.mockReturnValue(
+      buildSb([
+        {
+          ...POSITIVE_ROW,
+          risk_level: "NONE",
+          recommendation: "NONE",
+        },
+      ]) as never,
+    );
+    const sections = await collectFraudRiskEvidence(CTX_FRAUD);
+    expect(sections).toHaveLength(1);
   });
 
   it("returns [] when recommendation is REJECT or INVESTIGATE even if LOW", async () => {

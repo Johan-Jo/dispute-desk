@@ -81,7 +81,15 @@ describe("classifyFacts", () => {
     expect(result.approved.find((f) => f.category === "ip_location")).toBeUndefined();
   });
 
-  it("fraud_risk_screening is excluded from approved facts (internal-only)", () => {
+  it("fraud_risk_screening reaches approved facts (citable when source-gated)", () => {
+    // Updated 2026-05-19. fraud_risk_screening is no longer in
+    // INTERNAL_ONLY_FIELDS or SUBMISSION_RISK_FIELDS — see
+    // `lib/defence/factClassifier.ts` for the rationale. The source
+    // collector (`lib/packs/sources/fraudRiskSource.ts`) is now the
+    // strict gate: it ONLY emits a section when Shopify returned a
+    // favourable verdict (LOW/NONE risk_level, ACCEPT recommendation,
+    // ≥1 positive fact). So any section reaching the classifier is
+    // bank-safe by construction.
     const result = classifyFacts(
       baseInput({
         sections: [
@@ -100,8 +108,9 @@ describe("classifyFacts", () => {
         ],
       }),
     );
-    expect(result.approved.find((f) => f.category === "fraud_screening")).toBeUndefined();
-    expect(result.internalOnly.find((f) => f.category === "fraud_screening")).toBeDefined();
+    expect(result.approved.find((f) => f.category === "fraud_screening")).toBeDefined();
+    // And it must NOT be flagged as internal-only or submission-risk.
+    expect(result.internalOnly.find((f) => f.category === "fraud_screening")).toBeUndefined();
   });
 
   it("coverage-gated input returns eligible=false with reason covered_shopify", () => {

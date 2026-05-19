@@ -27,6 +27,7 @@ export const visa_10_4_fraud: ReasonCodeGuidance = {
     "You are writing a bank-facing response to an UNAUTHORIZED TRANSACTION CLAIM (cardholder alleges the transaction was not authorized). The reason code is the issuer/cardholder's CLAIM CATEGORY, not a merchant admission.",
     "Prioritise payment authentication signals: AVS+CVV match, 3-D Secure authentication (only if an approved fact explicitly supports it), and successful authorization.",
     "Where approved facts support it, mention billing alignment, prior customer history, and customer communication that pre-dated the dispute.",
+    "When a fraud_screening fact is in approvedFacts, cite Shopify's pre-authorization screening as supporting context — phrase it as 'the platform's own pre-authorization fraud screening reviewed this transaction at checkout and recommended ACCEPT' or 'an independent pre-authorization risk analysis flagged the order as low-risk and recommended accepting it.' Never quote the raw fact list, the numeric risk score, or the internal taxonomy words 'risk_level' / 'recommendation' — paraphrase only. Treat this as supporting corroboration of the authentication argument, never as the primary basis.",
     "The policyArgument section is OMITTED for this reason code. Refund, shipping, and cancellation policy disclosure does not refute an unauthorized-transaction claim — the dispute is about cardholder authentication, not the merchant's terms. Always return an empty string for policyArgument and add it to omittedSections with reason 'Policy disclosure is not relevant to an unauthorized-transaction claim. The argument hinges on cardholder authentication signals, not the merchant's published terms.' Do NOT cite policy_refund, policy_shipping, policy_cancellation, or policy_acceptance facts in any section.",
     "Do NOT cite Shopify's fulfillmentStatus value (UNFULFILLED / FULFILLED / PARTIAL) anywhere in the narrative. fulfillmentStatus is an order-system state, not bank-facing evidence — naming it (especially UNFULFILLED) in a fraud rebuttal invites the bank to ask whether goods shipped, which is irrelevant to the authentication argument. If the order_record fact is cited, ground the argument in channel/timestamp/order details only, never the fulfillment status string.",
     "Do NOT argue that the customer received the goods unless a delivery_proof fact with proofType='delivered'/'signature' or a service_access fact with serviceDelivered=true is in approvedFacts.",
@@ -46,7 +47,17 @@ export const visa_10_4_fraud: ReasonCodeGuidance = {
   avoid: [
     "ip_location",
     "device_session",
-    "fraud_screening",
+    // NOTE: `fraud_screening` was previously avoided. Removed
+    // 2026-05-19 because the source-collector
+    // (`lib/packs/sources/fraudRiskSource.ts`) only emits a fact
+    // when Shopify's own pre-auth analysis returned ACCEPT and
+    // every cited fact carries POSITIVE sentiment. In that case
+    // the screening is a strong corroborator: "the platform's own
+    // pre-authorization fraud screening recommended ACCEPT for
+    // this order" is exactly the kind of independent signal an
+    // issuer weighs in a fraud rebuttal. Still capped at MODERATE
+    // by the canonical-evidence registry — never elevated to
+    // STRONG (Shopify's facts are descriptive, not contractual).
     // Policy facts are not bank-facing evidence for unauthorized-fraud
     // claims; the policyArgument section is omitted entirely for this
     // reason code (see promptBody rule).
@@ -82,6 +93,10 @@ export const visa_10_4_fraud: ReasonCodeGuidance = {
     "communication",
     "account_history",
     "manual_evidence",
+    // Pre-authorization fraud screening — only ever cited when
+    // Shopify's own analysis returned ACCEPT (gated by
+    // fraudRiskSource). See `avoid` list comment above.
+    "fraud_screening",
   ],
-  version: 3,
+  version: 4,
 };
