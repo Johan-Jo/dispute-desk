@@ -138,7 +138,7 @@ export function MarketingLandingPageClient({
 
       {/* Hero — editorial dossier layout from Hero DisputeDesk Brand.html */}
       <section
-        className="dd-brand-hero relative py-12 sm:py-20 lg:py-24 overflow-hidden"
+        className="dd-brand-hero relative pt-10 pb-12 sm:pt-14 sm:pb-20 lg:pt-16 lg:pb-24 overflow-hidden"
         style={{
           background:
             "linear-gradient(135deg, var(--dd-hero-bg-start) 0%, var(--dd-hero-bg-mid) 40%, var(--dd-hero-bg-end) 100%)",
@@ -214,58 +214,58 @@ export function MarketingLandingPageClient({
             <div className="dd-dossier-wrap mt-8 lg:mt-0">
               <div className="dd-dossier">
                 <div className="dd-dossier-head">
-                  <span className="dd-vol">Evidence pack {"\u00B7"} DP-2402</span>
+                  <span className="dd-vol">{t("hero.dossierLabel")} {"\u00B7"} DP-2402</span>
                   <span className="dd-hash">a4f2{"\u00B7"}9c3d{"\u00B7"}b201</span>
                 </div>
 
                 <h2 className="dd-dossier-title">
-                  Disputed transaction,<br />filed under <em>Visa 10.4</em>
+                  {t("hero.dossierTitlePrefix")}<br />{t("hero.dossierTitleFiledUnder")} <em>Visa 10.4</em>
                 </h2>
                 <div className="dd-dossier-meta">
                   <span>USD 890.50</span>
-                  <span>Sealed 16 May {"\u00B7"} 16:14 UTC</span>
+                  <span>{t("hero.dossierSealedAt")}</span>
                 </div>
 
                 <div className="dd-dossier-row">
                   <span className="dd-mark"><DossierCheck /></span>
                   <span className="dd-name">{t("hero.orderConfirmation")}</span>
-                  <span className="dd-src">Shopify</span>
+                  <span className="dd-src">{t("hero.srcShopify")}</span>
                 </div>
                 <div className="dd-dossier-row">
                   <span className="dd-mark"><DossierCheck /></span>
-                  <span className="dd-name">Payment authentication</span>
-                  <span className="dd-src">AVS Y {"\u00B7"} CVV M</span>
+                  <span className="dd-name">{t("hero.rowPaymentAuth")}</span>
+                  <span className="dd-src">{t("hero.srcAvsCvv")}</span>
                 </div>
                 <div className="dd-dossier-row">
                   <span className="dd-mark"><DossierCheck /></span>
-                  <span className="dd-name">Customer purchase history</span>
-                  <span className="dd-src">6 priors</span>
+                  <span className="dd-name">{t("hero.rowPurchaseHistory")}</span>
+                  <span className="dd-src">{t("hero.srcPriorsCount", { count: 6 })}</span>
                 </div>
                 <div className="dd-dossier-row">
                   <span className="dd-mark"><DossierCheck /></span>
                   <span className="dd-name">{t("hero.shippingTracking")}</span>
-                  <span className="dd-src">Carrier: UPS</span>
+                  <span className="dd-src">{t("hero.srcCarrier")}</span>
                 </div>
                 <div className="dd-dossier-row dd-missing">
                   <span className="dd-mark">{"\u00B7"}</span>
                   <span className="dd-name">{t("hero.customerComm")}</span>
-                  <span className="dd-src">Optional</span>
+                  <span className="dd-src">{t("hero.srcOptional")}</span>
                 </div>
 
                 <div className="dd-dossier-foot">
                   <span className="dd-complete">
-                    <span className="dd-num">80%</span>{" \u00B7 "}4 of 5 fields
+                    <span className="dd-num">80%</span>{" \u00B7 "}{t("hero.dossierFields", { filled: 4, total: 5 })}
                   </span>
                   <span className="dd-stamp">
                     <DossierCheck />
-                    Sealed
+                    {t("hero.dossierStamp")}
                   </span>
                 </div>
               </div>
 
               <div className="dd-wax" aria-hidden>
                 <div className="dd-wax-inner">
-                  Filed
+                  {t("hero.waxFiled")}
                   <small>DD {"\u00B7"} 5{"\u00B7"}17</small>
                 </div>
               </div>
@@ -456,8 +456,32 @@ export function MarketingLandingPageClient({
               </div>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto">
+            {/* Mobile: stacked cards (one per segment) */}
+            <div className="sm:hidden border-t border-[#E5E7EB]">
+              {ROI_DATA[roiMode].segments.map((row, i) => (
+                <div key={i} className="px-5 py-4 border-b border-[#E5E7EB] last:border-b-0">
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <span className="font-semibold text-sm text-[#0B1220]">{row.segment}</span>
+                    {row.popular && (
+                      <span className="text-[10px] font-medium text-[#1D4ED8] bg-[#EFF6FF] border border-[#BFDBFE] px-2 py-0.5 rounded-full whitespace-nowrap">
+                        {t("roi.mostPopular")}
+                      </span>
+                    )}
+                  </div>
+                  <dl className="grid grid-cols-2 gap-y-2 gap-x-3 text-sm">
+                    <dt className="text-[#64748B] text-xs uppercase tracking-wider">{t("roi.colValue")}</dt>
+                    <dd className="text-right font-medium text-[#0B1220]">{row.value}</dd>
+                    <dt className="text-[#64748B] text-xs uppercase tracking-wider">{t("roi.colPrice")}</dt>
+                    <dd className="text-right font-semibold text-[#0B1220]">{row.price}</dd>
+                    <dt className="text-[#64748B] text-xs uppercase tracking-wider">{t("roi.colRoi")}</dt>
+                    <dd className="text-right font-semibold text-[#22C55E]">{row.roi}</dd>
+                  </dl>
+                </div>
+              ))}
+            </div>
+
+            {/* Tablet+ : full table */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-t border-b border-[#E5E7EB]">

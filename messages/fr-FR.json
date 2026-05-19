@@ -2418,7 +2418,21 @@
       "orderConfirmation": "Confirmation de commande",
       "shippingTracking": "Suivi d'expédition",
       "customerComm": "Communication client",
-      "completenessScore": "Score de complétude"
+      "completenessScore": "Score de complétude",
+      "dossierLabel": "Dossier de preuves",
+      "dossierTitlePrefix": "Transaction contestée,",
+      "dossierTitleFiledUnder": "classée sous",
+      "dossierSealedAt": "Scellé le 16 mai · 16:14 UTC",
+      "rowPaymentAuth": "Authentification du paiement",
+      "rowPurchaseHistory": "Historique d'achats du client",
+      "srcShopify": "Shopify",
+      "srcAvsCvv": "AVS Y · CVV M",
+      "srcPriorsCount": "{count} précédentes",
+      "srcCarrier": "Transporteur : UPS",
+      "srcOptional": "Optionnel",
+      "dossierFields": "{filled} sur {total} champs",
+      "dossierStamp": "Scellé",
+      "waxFiled": "Déposé"
     },
     "howItWorks": {
       "title": "Comment ça marche",

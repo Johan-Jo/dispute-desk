@@ -2418,7 +2418,21 @@
       "orderConfirmation": "Confirmación de pedido",
       "shippingTracking": "Seguimiento de envío",
       "customerComm": "Comunicación con cliente",
-      "completenessScore": "Puntuación de completitud"
+      "completenessScore": "Puntuación de completitud",
+      "dossierLabel": "Paquete de evidencia",
+      "dossierTitlePrefix": "Transacción disputada,",
+      "dossierTitleFiledUnder": "registrada bajo",
+      "dossierSealedAt": "Sellado 16 May · 16:14 UTC",
+      "rowPaymentAuth": "Autenticación de pago",
+      "rowPurchaseHistory": "Historial de compras del cliente",
+      "srcShopify": "Shopify",
+      "srcAvsCvv": "AVS Y · CVV M",
+      "srcPriorsCount": "{count} anteriores",
+      "srcCarrier": "Transportista: UPS",
+      "srcOptional": "Opcional",
+      "dossierFields": "{filled} de {total} campos",
+      "dossierStamp": "Sellado",
+      "waxFiled": "Registrado"
     },
     "howItWorks": {
       "title": "Cómo funciona",

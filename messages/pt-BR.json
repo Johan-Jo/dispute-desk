@@ -2418,7 +2418,21 @@
       "orderConfirmation": "Confirmação do Pedido",
       "shippingTracking": "Rastreamento de Envio",
       "customerComm": "Comunicação com o Cliente",
-      "completenessScore": "Pontuação de Completude"
+      "completenessScore": "Pontuação de Completude",
+      "dossierLabel": "Pacote de evidências",
+      "dossierTitlePrefix": "Transação contestada,",
+      "dossierTitleFiledUnder": "arquivada em",
+      "dossierSealedAt": "Selado 16 Mai · 16:14 UTC",
+      "rowPaymentAuth": "Autenticação do pagamento",
+      "rowPurchaseHistory": "Histórico de compras do cliente",
+      "srcShopify": "Shopify",
+      "srcAvsCvv": "AVS Y · CVV M",
+      "srcPriorsCount": "{count} anteriores",
+      "srcCarrier": "Transportadora: UPS",
+      "srcOptional": "Opcional",
+      "dossierFields": "{filled} de {total} campos",
+      "dossierStamp": "Selado",
+      "waxFiled": "Arquivado"
     },
     "howItWorks": {
       "title": "Como funciona",

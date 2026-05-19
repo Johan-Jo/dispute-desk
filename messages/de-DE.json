@@ -2281,7 +2281,21 @@
       "orderConfirmation": "Bestellbestätigung",
       "shippingTracking": "Sendungsverfolgung",
       "customerComm": "Kundenkommunikation",
-      "completenessScore": "Vollständigkeitswert"
+      "completenessScore": "Vollständigkeitswert",
+      "dossierLabel": "Beweispaket",
+      "dossierTitlePrefix": "Strittige Transaktion,",
+      "dossierTitleFiledUnder": "eingereicht unter",
+      "dossierSealedAt": "Versiegelt 16. Mai · 16:14 UTC",
+      "rowPaymentAuth": "Zahlungsauthentifizierung",
+      "rowPurchaseHistory": "Kaufhistorie des Kunden",
+      "srcShopify": "Shopify",
+      "srcAvsCvv": "AVS Y · CVV M",
+      "srcPriorsCount": "{count} frühere",
+      "srcCarrier": "Versand: UPS",
+      "srcOptional": "Optional",
+      "dossierFields": "{filled} von {total} Feldern",
+      "dossierStamp": "Versiegelt",
+      "waxFiled": "Eingereicht"
     },
     "howItWorks": {
       "title": "So funktioniert's",

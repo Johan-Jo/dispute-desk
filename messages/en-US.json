@@ -2401,7 +2401,21 @@
       "orderConfirmation": "Order Confirmation",
       "shippingTracking": "Shipping Tracking",
       "customerComm": "Customer Communication",
-      "completenessScore": "Completeness Score"
+      "completenessScore": "Completeness Score",
+      "dossierLabel": "Evidence pack",
+      "dossierTitlePrefix": "Disputed transaction,",
+      "dossierTitleFiledUnder": "filed under",
+      "dossierSealedAt": "Sealed 16 May · 16:14 UTC",
+      "rowPaymentAuth": "Payment authentication",
+      "rowPurchaseHistory": "Customer purchase history",
+      "srcShopify": "Shopify",
+      "srcAvsCvv": "AVS Y · CVV M",
+      "srcPriorsCount": "{count} priors",
+      "srcCarrier": "Carrier: UPS",
+      "srcOptional": "Optional",
+      "dossierFields": "{filled} of {total} fields",
+      "dossierStamp": "Sealed",
+      "waxFiled": "Filed"
     },
     "howItWorks": {
       "title": "How it works",

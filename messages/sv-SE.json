@@ -2419,7 +2419,21 @@
       "orderConfirmation": "Orderbekräftelse",
       "shippingTracking": "Fraktspårning",
       "customerComm": "Kundkommunikation",
-      "completenessScore": "Fullständighetspoäng"
+      "completenessScore": "Fullständighetspoäng",
+      "dossierLabel": "Bevispaket",
+      "dossierTitlePrefix": "Bestriden transaktion,",
+      "dossierTitleFiledUnder": "anmäld under",
+      "dossierSealedAt": "Förseglat 16 maj · 16:14 UTC",
+      "rowPaymentAuth": "Betalningsautentisering",
+      "rowPurchaseHistory": "Kundens köphistorik",
+      "srcShopify": "Shopify",
+      "srcAvsCvv": "AVS Y · CVV M",
+      "srcPriorsCount": "{count} tidigare",
+      "srcCarrier": "Transportör: UPS",
+      "srcOptional": "Valfritt",
+      "dossierFields": "{filled} av {total} fält",
+      "dossierStamp": "Förseglat",
+      "waxFiled": "Anmält"
     },
     "howItWorks": {
       "title": "Så fungerar det",
