@@ -57,7 +57,7 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // promptBodies were rewritten to lead with the claim category instead
 // of the network's environment classification. Same cache-invalidation
 // pattern as the 2→3 bump above.
-const PROMPT_VERSION = 6;
+const PROMPT_VERSION = 7;
 
 /* ── Static base system prompt (cached, ephemeral) ── */
 

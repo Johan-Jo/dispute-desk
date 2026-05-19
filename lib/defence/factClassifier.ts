@@ -280,12 +280,36 @@ function extractValue(
         acceptanceTimestamp:
           typeof p.acceptanceTimestamp === "string" ? p.acceptanceTimestamp : null,
       };
-    case "fraud_risk_screening":
+    case "fraud_risk_screening": {
+      // Pass the actual positive fact descriptions through to the
+      // LLM payload so the narrative can cite specific Shopify
+      // signals ("the cardholder's CVV matched", "the billing
+      // street address matched the issuer's records") rather than
+      // a meaningless count. Safety is enforced upstream:
+      // `lib/packs/sources/fraudRiskSource.ts` already filters to
+      // POSITIVE-sentiment facts only and caps at
+      // MAX_POSITIVE_FACTS_CITED. Negative + neutral facts never
+      // reach this extractor.
+      //
+      // Pre-2026-05-19 this returned only positiveFactCount to keep
+      // raw risk JSON away from the LLM under the
+      // fraud-screening-is-internal-only policy. That policy was
+      // reversed in bbe0ab3 — the screening is now bank-facing
+      // supporting evidence — so passing the specific fact text is
+      // the whole point of citing it at all.
+      const positiveFacts = Array.isArray(p.positiveFacts)
+        ? (p.positiveFacts as unknown[])
+            .filter((x): x is string => typeof x === "string")
+            .slice(0, 5) // hard cap as a second line of defence
+        : [];
       return {
-        positiveFactCount: Array.isArray(p.positiveFacts) ? p.positiveFacts.length : 0,
-        // Coarse level only — never the raw risk JSON.
+        positiveFacts,
+        positiveFactCount: positiveFacts.length,
         riskLevel: typeof p.riskLevel === "string" ? p.riskLevel : null,
+        recommendation:
+          typeof p.recommendation === "string" ? p.recommendation : null,
       };
+    }
     case "ip_location_check":
       return {
         locationMatch: typeof p.locationMatch === "string" ? p.locationMatch : null,

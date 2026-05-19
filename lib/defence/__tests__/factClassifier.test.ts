@@ -113,6 +113,47 @@ describe("classifyFacts", () => {
     expect(result.internalOnly.find((f) => f.category === "fraud_screening")).toBeUndefined();
   });
 
+  it("fraud_risk_screening passes the actual positive fact PHRASES to the LLM, not just a count", () => {
+    // Locks in the 2026-05-19 extractor fix. Before, the value
+    // carried only `positiveFactCount` — the LLM had no specific
+    // signals to cite and produced meaningless narrative like
+    // "3 positive signals." After, the actual phrases reach
+    // approvedFacts[].value.positiveFacts so the LLM can name them.
+    const result = classifyFacts(
+      baseInput({
+        sections: [
+          section({
+            data: {
+              positiveFacts: [
+                "Card Verification Value (CVV) is correct",
+                "Billing street address matches credit card's registered address",
+                "Billing address ZIP or postal code matches the credit card's registered address",
+              ],
+              riskLevel: "NONE",
+              recommendation: "ACCEPT",
+              provider: "shopify",
+            },
+            fieldsProvided: ["fraud_risk_screening"],
+          }),
+        ],
+      }),
+    );
+    const fact = result.approved.find((f) => f.category === "fraud_screening");
+    expect(fact).toBeDefined();
+    const v = fact!.value as {
+      positiveFacts?: string[];
+      positiveFactCount?: number;
+      recommendation?: string;
+    };
+    expect(v.positiveFacts).toEqual([
+      "Card Verification Value (CVV) is correct",
+      "Billing street address matches credit card's registered address",
+      "Billing address ZIP or postal code matches the credit card's registered address",
+    ]);
+    expect(v.positiveFactCount).toBe(3);
+    expect(v.recommendation).toBe("ACCEPT");
+  });
+
   it("coverage-gated input returns eligible=false with reason covered_shopify", () => {
     const result = classifyFacts(
       baseInput({

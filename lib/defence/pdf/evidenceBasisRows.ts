@@ -130,15 +130,33 @@ function renderValue(fact: EvidenceFact): string {
       return typeof v?.fileType === "string" ? `Uploaded (${v.fileType})` : "Uploaded";
     case "fraud_screening": {
       // Source-collector pre-gates: only LOW/NONE + ACCEPT + ≥1
-      // positive fact reach this branch. Render as a short verdict
-      // string the merchant + bank reviewer can read at a glance,
-      // without quoting the raw fact list or the internal taxonomy
-      // words "risk_level" / "recommendation".
+      // positive fact reach this branch. Render the recommendation
+      // verdict followed by the actual signals Shopify returned, so
+      // the bank reviewer can audit what the screening looked at.
+      //
+      // Pre-2026-05-19 this rendered "N positive signals" with no
+      // names — meaningless for a reviewer. The fact value now
+      // carries the specific phrases (`positiveFacts: string[]`)
+      // since factClassifier passes them through.
+      const facts = Array.isArray(v?.positiveFacts)
+        ? (v.positiveFacts as unknown[]).filter(
+            (x): x is string => typeof x === "string",
+          )
+        : [];
+      if (facts.length > 0) {
+        // Show the first 2 phrases inline so the cell stays scannable;
+        // the full list reaches the bank through the LLM narrative.
+        const preview = facts.slice(0, 2).join("; ");
+        const more = facts.length > 2 ? ` (+${facts.length - 2} more)` : "";
+        return `Shopify recommended ACCEPT — ${preview}${more}`;
+      }
+      // Fallback for legacy facts that only carried the count.
       const count =
         typeof v?.positiveFactCount === "number" ? v.positiveFactCount : 0;
       if (count >= 1) {
-        const factsLabel = count === 1 ? "1 positive signal" : `${count} positive signals`;
-        return `Shopify recommended ACCEPT · ${factsLabel}`;
+        return `Shopify recommended ACCEPT · ${count} positive signal${
+          count === 1 ? "" : "s"
+        }`;
       }
       return "Shopify recommended ACCEPT";
     }
