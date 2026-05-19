@@ -986,7 +986,10 @@
           "closedLost": "Utfall: förlorad{submittedDate, select, none {} other { (beslutat den {submittedDate})}}.",
           "closedUnknown": "Utfall rapporterat av Shopify: {outcome}."
         }
-      }
+      },
+      "rowWaivedByMerchant": "Du markerade detta som ej tillämpligt: {reason}.",
+      "rowWaivedBySystem": "DisputeDesk markerade detta som ej tillämpligt: {reason}.",
+      "rowWaivedNoteSuffix": " Anmärkning: {note}"
     }
   },
   "disputeReasons": {

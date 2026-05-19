@@ -146,6 +146,10 @@ function mapReasonToRulesFamily(reason: string | null | undefined): string {
 export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const searchParams = useSearchParams();
   const t = useTranslations("disputes.overview");
+  // Waive-reason enum labels live alongside the §3 Missing-or-weak
+  // waive modal copy; reuse them here so the Overview row caption
+  // matches the modal verbatim.
+  const tEvidence = useTranslations("disputes.evidenceTab");
   const { data, derived, actions, clientState } = workspace;
 
   if (!data) return null;
@@ -845,16 +849,51 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           //      DisputeDesk is withholding this signal from the
           //      bank-facing argument (e.g. "This signal is ambiguous
           //      or unfavorable and could weaken the fraud response.")
-          //   3. Missing + non-actionable → pending-system caption
-          //   4. Otherwise → generic SOURCE_NOTE
+          //   3. Waived → "You/DisputeDesk marked this not applicable:
+          //      <reason label>." + optional note. Built from
+          //      `item.waiveReason`, `item.waivedBy`, `item.waiveNote`
+          //      (threaded onto the checklist by `completeness.ts:507-511`).
+          //   4. Missing + non-actionable → pending-system caption
+          //   5. Otherwise → generic SOURCE_NOTE
+          const waiveCaption = (() => {
+            if (classification.status !== "waived" || !item.waiveReason) {
+              return null;
+            }
+            const reasonLabel =
+              item.waiveReason === "other" && item.waiveNote
+                ? item.waiveNote
+                : tEvidence(
+                    `sections.missing.actions.waiveReason.${item.waiveReason}`,
+                  );
+            const base =
+              item.waivedBy === "system"
+                ? t("rowWaivedBySystem", { reason: reasonLabel })
+                : t("rowWaivedByMerchant", { reason: reasonLabel });
+            // Append a freeform note only when the reason isn't `other`
+            // (in that case the note IS the reason label already, so
+            // appending it again would be redundant).
+            if (
+              item.waiveReason !== "other" &&
+              item.waiveNote &&
+              item.waiveNote.trim().length > 0
+            ) {
+              return (
+                base + t("rowWaivedNoteSuffix", { note: item.waiveNote.trim() })
+              );
+            }
+            return base;
+          })();
+
           const sourceNote =
             classification.status === "not_applicable" && item.unavailableReason
               ? item.unavailableReason
-              : isInternalOnly && lineItem?.reason
-                ? lineItem.reason
-                : isPendingSystemSignal
-                  ? t("rowSourceCaptionPendingSystem")
-                  : (SOURCE_NOTE[item.source ?? ""] ?? null);
+              : waiveCaption
+                ? waiveCaption
+                : isInternalOnly && lineItem?.reason
+                  ? lineItem.reason
+                  : isPendingSystemSignal
+                    ? t("rowSourceCaptionPendingSystem")
+                    : (SOURCE_NOTE[item.source ?? ""] ?? null);
           const isNeutral =
             classification.status === "not_applicable" ||
             classification.status === "waived";

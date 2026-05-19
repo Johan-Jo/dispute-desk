@@ -592,6 +592,9 @@
       "none": "Keine"
     },
     "overview": {
+      "rowWaivedByMerchant": "Sie haben dies als nicht zutreffend markiert: {reason}.",
+      "rowWaivedBySystem": "DisputeDesk hat dies als nicht zutreffend markiert: {reason}.",
+      "rowWaivedNoteSuffix": " Hinweis: {note}",
       "coverage": {
         "title": "Beweisabdeckung",
         "sectionsFound": "{count, plural, =0 {Keine Beweisabschnitte gefunden} =1 {1 Beweisabschnitt gefunden} other {# Beweisabschnitte gefunden}}",

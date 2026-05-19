@@ -631,6 +631,9 @@
         "bodyNoDeadline": "If shipping tracking, delivery confirmation, payment verification, or other system-derived evidence becomes available before your deadline, DisputeDesk will refresh the defence package automatically. No action needed from you."
       },
       "rowSourceCaptionPendingSystem": "Pending order activity — populates automatically when Shopify reports it",
+      "rowWaivedByMerchant": "You marked this not applicable: {reason}.",
+      "rowWaivedBySystem": "DisputeDesk marked this not applicable: {reason}.",
+      "rowWaivedNoteSuffix": " Note: {note}",
       "timeline": {
         "defencePackagePrepared": {
           "titleDone": "Defence package prepared",

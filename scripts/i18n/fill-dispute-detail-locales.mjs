@@ -35,6 +35,9 @@ const TRANSLATIONS = {
         bodyNoDeadline: "Si la información de envío, la confirmación de entrega, la verificación de pago u otras pruebas derivadas del sistema están disponibles antes de tu plazo, DisputeDesk actualizará automáticamente el paquete de defensa. No necesitas hacer nada.",
       },
       rowSourceCaptionPendingSystem: "Pendiente de actividad del pedido — se completará automáticamente cuando Shopify lo informe",
+      rowWaivedByMerchant: "Marcaste esto como no aplicable: {reason}.",
+      rowWaivedBySystem: "DisputeDesk marcó esto como no aplicable: {reason}.",
+      rowWaivedNoteSuffix: " Nota: {note}",
       timeline: {
         defencePackagePrepared: {
           titleDone: "Paquete de defensa preparado",
@@ -243,6 +246,9 @@ const TRANSLATIONS = {
         bodyNoDeadline: "Si le suivi d’expédition, la confirmation de livraison, la vérification de paiement ou d’autres preuves dérivées du système deviennent disponibles avant votre échéance, DisputeDesk mettra à jour automatiquement le dossier de défense. Aucune action requise de votre part.",
       },
       rowSourceCaptionPendingSystem: "En attente d’activité sur la commande — se remplit automatiquement dès que Shopify le signale",
+      rowWaivedByMerchant: "Vous avez marqué ceci comme non applicable : {reason}.",
+      rowWaivedBySystem: "DisputeDesk a marqué ceci comme non applicable : {reason}.",
+      rowWaivedNoteSuffix: " Note : {note}",
       timeline: {
         defencePackagePrepared: {
           titleDone: "Dossier de défense préparé",
@@ -451,6 +457,9 @@ const TRANSLATIONS = {
         bodyNoDeadline: "Se o rastreamento de envio, a confirmação de entrega, a verificação de pagamento ou outras provas derivadas do sistema ficarem disponíveis antes do seu prazo, o DisputeDesk atualizará o pacote de defesa automaticamente. Nenhuma ação necessária da sua parte.",
       },
       rowSourceCaptionPendingSystem: "Aguardando atividade do pedido — será preenchido automaticamente quando o Shopify informar",
+      rowWaivedByMerchant: "Você marcou isto como não aplicável: {reason}.",
+      rowWaivedBySystem: "O DisputeDesk marcou isto como não aplicável: {reason}.",
+      rowWaivedNoteSuffix: " Nota: {note}",
       timeline: {
         defencePackagePrepared: {
           titleDone: "Pacote de defesa preparado",
@@ -659,6 +668,9 @@ const TRANSLATIONS = {
         bodyNoDeadline: "Om leveransspårning, leveransbekräftelse, betalningsverifiering eller andra systemhärledda bevis blir tillgängliga före din deadline uppdaterar DisputeDesk försvarspaketet automatiskt. Ingen åtgärd krävs från dig.",
       },
       rowSourceCaptionPendingSystem: "Väntar på orderaktivitet — fylls i automatiskt när Shopify rapporterar det",
+      rowWaivedByMerchant: "Du markerade detta som ej tillämpligt: {reason}.",
+      rowWaivedBySystem: "DisputeDesk markerade detta som ej tillämpligt: {reason}.",
+      rowWaivedNoteSuffix: " Anmärkning: {note}",
       timeline: {
         defencePackagePrepared: {
           titleDone: "Försvarspaket förberett",

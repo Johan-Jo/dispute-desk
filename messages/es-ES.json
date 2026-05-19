@@ -1017,7 +1017,10 @@
           "closedLost": "Resultado: perdida{submittedDate, select, none {} other { (decidida el {submittedDate})}}.",
           "closedUnknown": "Resultado informado por Shopify: {outcome}."
         }
-      }
+      },
+      "rowWaivedByMerchant": "Marcaste esto como no aplicable: {reason}.",
+      "rowWaivedBySystem": "DisputeDesk marcó esto como no aplicable: {reason}.",
+      "rowWaivedNoteSuffix": " Nota: {note}"
     }
   },
   "disputeReasons": {

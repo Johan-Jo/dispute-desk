@@ -90,7 +90,7 @@ export function buildInternalSignalsByField(
           push("order_confirmation", {
             id: "internal:billing_address_mismatch",
             label: "Billing and shipping addresses do not match",
-            reason: `${detail} Address mismatch may weaken an unauthorized response and is not included as positive bank evidence.`,
+            reason: `${detail} This mismatch is kept internal because it could weaken an unauthorized response — it is not cited as a positive bank argument, though the underlying order record is still included as supporting context.`,
             severity: "warning",
           });
         }
