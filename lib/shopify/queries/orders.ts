@@ -150,6 +150,26 @@ export const ORDER_DETAIL_QUERY = `
         shopifyProtect {
           status
         }
+        # Pre-authorization risk assessment — populated on order
+        # ingestion via the backfill cron, but post-backfill orders
+        # have no row in shopify_order_risk_assessments. Fetching
+        # the same shape here on the per-dispute pack build closes
+        # the ingestion gap (verified on dispute 30b00826 / order
+        # 6437753061433 — created after the 2026-05-11 backfill).
+        # buildPack persists this on the row if no row exists yet.
+        risk {
+          recommendation
+          assessments {
+            riskLevel
+            provider {
+              title
+            }
+            facts {
+              description
+              sentiment
+            }
+          }
+        }
         # Order-level tracking-app metafields. Fallback when the
         # tracking app writes at the order level instead of per
         # fulfillment (older AfterShip configurations did this).
@@ -331,6 +351,22 @@ export interface OrderDetailNode {
      *  PENDING = decision pending. INACTIVE = ineligible.
      *  NOT_PROTECTED = chargeback received but not covered. */
     status: "ACTIVE" | "INACTIVE" | "NOT_PROTECTED" | "PENDING" | "PROTECTED";
+  } | null;
+  /** Pre-authorization risk assessment shape. Same as
+   *  `ordersForBackfill.ts:RawRiskAssessment` / `risk.assessments[]`.
+   *  Fetched here on the per-pack path so post-backfill orders also
+   *  get their risk-assessment row persisted into
+   *  `shopify_order_risk_assessments`. */
+  risk?: {
+    recommendation: string | null;
+    assessments: Array<{
+      riskLevel: string | null;
+      provider: { title: string | null } | null;
+      facts: Array<{
+        description: string | null;
+        sentiment: string | null;
+      }> | null;
+    }> | null;
   } | null;
   /** Order-level tracking-app metafields. Fallback when the tracking
    *  app writes at the order level rather than per fulfillment.

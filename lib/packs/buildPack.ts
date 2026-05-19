@@ -177,6 +177,31 @@ export async function buildPack(
         eventPayload: orderFetchError,
       });
     }
+
+    // Closes the ingestion gap exposed on dispute 30b00826 / order
+    // 6437753061433: risk assessments are populated by the daily
+    // orders backfill, but orders created AFTER the last backfill
+    // window have no row in `shopify_order_risk_assessments` and
+    // therefore can't be cited by fraudRiskSource OR explained
+    // honestly to the merchant on the Inclusion Review row.
+    //
+    // Here, on the per-dispute pack-build path, we already pay a
+    // single-order GraphQL fetch — so attaching the `risk { ... }`
+    // selection adds zero extra round-trips, just a few extra
+    // fields. If the order carries an assessment AND no row already
+    // exists for this (shop, order, provider) tuple, we insert one.
+    // Idempotent on re-build via the same uniqueness check.
+    if (order?.risk && dispute.order_gid) {
+      await persistRiskAssessmentIfMissing({
+        sb,
+        shopId: pack.shop_id,
+        disputeId: dispute.id,
+        packId,
+        orderGid: dispute.order_gid,
+        risk: order.risk,
+        createdAt: order.createdAt,
+      });
+    }
   }
 
   const ctx: BuildContext = {
@@ -756,5 +781,109 @@ async function loadRiskWeakness(args: {
     riskRecommendationInitial:
       (row?.risk_recommendation_initial as string | null) ?? null,
     fulfillmentCount: resolvedFulfillmentCount,
+  });
+}
+
+/* ── Risk-assessment ingestion (per-pack fallback) ─────────────────── */
+
+/**
+ * Persist a `shopify_order_risk_assessments` row when the pack-build
+ * order fetch returns risk data AND no row already exists for this
+ * (shop, order, provider). Closes the ingestion gap for orders that
+ * are created AFTER the last backfill window — the merchant's
+ * Inclusion Review row would otherwise stay stuck at the "Shopify
+ * did not return a qualifying pre-authorization risk assessment for
+ * this order" message even though the data IS available on Shopify.
+ *
+ * Conservative behaviour:
+ *
+ *   - One provider per call. We pick the first Shopify assessment
+ *     (or "shopify" as a fallback provider when the provider title
+ *     is null, matching what `normalizeBackfillOrder` does for the
+ *     batch backfill writer).
+ *   - Skip when the assessment carries no useful signal
+ *     (no riskLevel AND no facts).
+ *   - Skip when a row already exists for (shop, order, provider) —
+ *     existence check, not value diff. The backfill is append-only
+ *     and inserts a fresh snapshot_at each pass; we don't want to
+ *     create snapshots that nobody asked for on every regenerate.
+ *   - All failures are silent (warn + audit). Never throws — the
+ *     pack build must not fail because we couldn't write a risk
+ *     row.
+ */
+async function persistRiskAssessmentIfMissing(args: {
+  sb: ReturnType<typeof getServiceClient>;
+  shopId: string;
+  disputeId: string;
+  packId: string;
+  orderGid: string;
+  risk: NonNullable<OrderDetailNode["risk"]>;
+  createdAt: string;
+}): Promise<void> {
+  const { sb, shopId, disputeId, packId, orderGid, risk, createdAt } = args;
+  const assessments = risk.assessments ?? [];
+  if (assessments.length === 0) return;
+
+  // Pick the first assessment that carries any signal. Mirror
+  // `normalizeBackfillOrder` filter: `riskLevel != null || facts.length > 0`.
+  const pick = assessments.find(
+    (a) => a.riskLevel != null || (a.facts?.length ?? 0) > 0,
+  );
+  if (!pick) return;
+
+  const provider = pick.provider?.title?.trim() || "shopify";
+
+  // Existence check on (shop, order, provider). Don't add yet another
+  // row if backfill (or a prior pack-build pass) already wrote one —
+  // fraudRiskSource picks the Shopify-provider row regardless of
+  // snapshot_at.
+  const { data: existing, error: lookupErr } = await sb
+    .from("shopify_order_risk_assessments")
+    .select("id")
+    .eq("shop_id", shopId)
+    .eq("shopify_order_id", orderGid)
+    .eq("provider", provider)
+    .limit(1);
+  if (lookupErr) {
+    console.warn(
+      `[buildPack] risk-assessment lookup failed for ${orderGid}:`,
+      lookupErr.message,
+    );
+    return;
+  }
+  if (existing && existing.length > 0) return;
+
+  const row = {
+    shop_id: shopId,
+    shopify_order_id: orderGid,
+    provider,
+    risk_level: pick.riskLevel ?? null,
+    recommendation: risk.recommendation ?? null,
+    facts_json: pick.facts ?? null,
+    assessed_at: createdAt,
+  };
+  const { error: insertErr } = await sb
+    .from("shopify_order_risk_assessments")
+    .insert(row);
+  if (insertErr) {
+    console.warn(
+      `[buildPack] risk-assessment insert failed for ${orderGid}:`,
+      insertErr.message,
+    );
+    return;
+  }
+  await logAuditEvent({
+    shopId,
+    disputeId,
+    packId,
+    actorType: "system",
+    eventType: "risk_assessment_persisted",
+    eventPayload: {
+      orderGid,
+      provider,
+      riskLevel: pick.riskLevel,
+      recommendation: risk.recommendation,
+      factCount: pick.facts?.length ?? 0,
+    },
   });
 }

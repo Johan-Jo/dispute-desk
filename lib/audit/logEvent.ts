@@ -42,6 +42,7 @@ export type EventType =
   | "cardholder_acknowledgement_confirmed"
   | "submitted_with_warnings"
   | "order_fetch_failed"
+  | "risk_assessment_persisted"
   // Conditional file evidence layer (Phase 3 of
   // docs/plans/conditional_file_evidence_layer.plan.md). Both events
   // are emitted from saveToShopifyJob when FILE_EVIDENCE_ATTACHMENTS_ENABLED.
