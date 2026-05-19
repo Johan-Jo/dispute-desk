@@ -8,8 +8,6 @@ import { getServiceClient } from "@/lib/supabase/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const PREVIEW_TTL_SECONDS = 600;
-
 export default async function RunDetailPage({
   params,
 }: {
@@ -28,6 +26,10 @@ export default async function RunDetailPage({
   if (!run) notFound();
 
   let pkg: Record<string, unknown> | null = null;
+  // Stable proxy URL — bytes flow through the origin via the admin
+  // session, no Supabase signing token reaches the browser. See
+  // /api/admin/defence-package/runs/[id]/pdf for the byte-stream
+  // implementation.
   let pdfUrl: string | null = null;
   if (run.package_id) {
     const { data } = await sb
@@ -40,10 +42,7 @@ export default async function RunDetailPage({
     if (data) {
       pkg = data as Record<string, unknown>;
       if (data.pdf_path) {
-        const { data: signed } = await sb.storage
-          .from((data.pdf_storage_bucket as string) ?? "evidence-packs")
-          .createSignedUrl(data.pdf_path as string, PREVIEW_TTL_SECONDS);
-        pdfUrl = signed?.signedUrl ?? null;
+        pdfUrl = `/api/admin/defence-package/runs/${id}/pdf`;
       }
     }
   }
@@ -85,7 +84,7 @@ export default async function RunDetailPage({
             {pdfUrl && (
               <p>
                 <a href={pdfUrl} target="_blank" rel="noopener" className="text-[#1D4ED8] hover:underline">
-                  Download / preview signed PDF
+                  Download / preview PDF
                 </a>
               </p>
             )}
