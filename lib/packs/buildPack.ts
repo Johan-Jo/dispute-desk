@@ -192,15 +192,26 @@ export async function buildPack(
     // exists for this (shop, order, provider) tuple, we insert one.
     // Idempotent on re-build via the same uniqueness check.
     if (order?.risk && dispute.order_gid) {
-      await persistRiskAssessmentIfMissing({
-        sb,
-        shopId: pack.shop_id,
-        disputeId: dispute.id,
-        packId,
-        orderGid: dispute.order_gid,
-        risk: order.risk,
-        createdAt: order.createdAt,
-      });
+      try {
+        await persistRiskAssessmentIfMissing({
+          sb,
+          shopId: pack.shop_id,
+          disputeId: dispute.id,
+          packId,
+          orderGid: dispute.order_gid,
+          risk: order.risk,
+          createdAt: order.createdAt,
+        });
+      } catch (err) {
+        // The persist step is a side-effect that improves UX on the
+        // next regenerate; it must NEVER fail the pack build itself.
+        // Swallow any error and continue — the build's primary job
+        // (narrative + PDF) is unaffected by a missing risk row.
+        console.warn(
+          `[buildPack] risk-assessment persist threw for pack ${packId}:`,
+          err instanceof Error ? err.message : String(err),
+        );
+      }
     }
   }
 
