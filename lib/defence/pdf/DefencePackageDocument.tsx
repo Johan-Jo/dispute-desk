@@ -164,7 +164,7 @@ function Cover({ meta }: { meta: DefencePackageMeta }) {
         Prepared for {meta.merchantName ?? meta.shopName}
       </Text>
       <Text style={styles.coverSubtitle}>
-        {[meta.reasonCodeDisplay, meta.claimType].filter(Boolean).join(" — ") || meta.reasonCode || "—"} • {meta.amountDisplay ?? "—"} • v{meta.version} ({meta.packageMode})
+        {[meta.reasonCodeDisplay, meta.claimType].filter(Boolean).join(" — ") || meta.reasonCode || "—"} • {meta.amountDisplay ?? "—"} • v{meta.version}
       </Text>
       <Text style={styles.coverSubtitle}>
         Generated {fmtIsoDate(meta.generatedAt)}
