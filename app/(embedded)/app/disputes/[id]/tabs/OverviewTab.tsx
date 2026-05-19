@@ -703,6 +703,16 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         //      rules: absence of an auto-collected signal is never a
         //      negative signal. Mirrors `visibleChecklist` above and the
         //      §3 Missing-or-weak gate in `deriveMissingItems`.
+        // Field → line-item lookup. The line-item layer
+        // (lib/argument/evidenceLineItem.ts) is the only place that
+        // computes `submissionMethod: "internal_only"` — the legacy
+        // `classifyEvidenceRow` only sees status + payload category and
+        // returns "supporting" for rows like `ip_location_check` whose
+        // payload is negative/ambiguous. Without this lookup the
+        // Overview list mislabels withheld signals as "Supporting".
+        const lineItemsByField = new Map(
+          (data?.evidenceLineItems ?? []).map((li) => [li.field, li]),
+        );
         const collectedRows = effectiveChecklist
           .filter((c) => CANONICAL_EVIDENCE[c.field])
           .filter((c) => c.status !== "unavailable")
@@ -718,7 +728,12 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               status: c.status,
               payload,
             });
-            return { item: c, spec, classification };
+            return {
+              item: c,
+              spec,
+              classification,
+              lineItem: lineItemsByField.get(c.field),
+            };
           });
         const manualUploads = (data.attachments ?? []).filter(
           (a) => a.source === "manual_upload",
@@ -736,16 +751,31 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
         type Row = (typeof collectedRows)[number];
 
+        // Internal-only check used by both the pill resolver and the
+        // sort tier. Lives at the line-item layer (the legacy
+        // classifier doesn't know about negative-payload withholding).
+        // When the line item flags `internal_only`, the row's primary
+        // evidentiary value is unfavorable and the system has
+        // withheld it from the bank-facing argument — render the
+        // verdict + reason inline so the merchant sees DisputeDesk's
+        // call, not a misleading "Supporting" label.
+        const isInternalOnlyRow = (row: Row): boolean =>
+          row.lineItem?.submissionMethod === "internal_only";
+
         // Single ordered list — sort by tier then preserve checklist
         // order within tier (Array.prototype.sort is stable).
-        const tierOf = ({ classification }: Row): number => {
-          if (classification.status === "missing") return 3;
+        const tierOf = (row: Row): number => {
+          const { classification } = row;
+          if (classification.status === "missing") return 4;
           if (
             classification.status === "not_applicable" ||
             classification.status === "waived"
           ) {
-            return 4;
+            return 5;
           }
+          // Internal-only rows render between supporting and missing —
+          // they're collected, just not bank-facing.
+          if (isInternalOnlyRow(row)) return 3;
           // Collected — defer to category.
           if (classification.category === "strong") return 0;
           if (classification.category === "moderate") return 1;
@@ -756,11 +786,10 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         );
 
         // ── One pill per row. Strength wins when collected; status
-        //    wins when missing / not applicable / waived. Palette
-        //    mirrors Figma `shopify-dispute-detail.tsx`. ──
-        const pillFor = ({
-          classification,
-        }: Row): { label: string; bg: string; color: string } => {
+        //    wins when missing / not applicable / waived / internal-only.
+        //    Palette mirrors Figma `shopify-dispute-detail.tsx`. ──
+        const pillFor = (row: Row): { label: string; bg: string; color: string } => {
+          const { classification } = row;
           if (classification.status === "missing") {
             return { label: "Missing", bg: "#FEE2E2", color: "#991B1B" };
           }
@@ -769,6 +798,13 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           }
           if (classification.status === "waived") {
             return { label: "Waived", bg: "#E5E7EB", color: "#374151" };
+          }
+          // Internal-only — system withheld this signal from the
+          // bank-facing argument because the payload is negative or
+          // ambiguous. Same amber palette as the Internal-only Signals
+          // section on the Evidence tab.
+          if (isInternalOnlyRow(row)) {
+            return { label: "Internal only", bg: "#FEF3C7", color: "#78350F" };
           }
           // Collected — strength label.
           switch (classification.category) {
@@ -789,34 +825,47 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         //   leading icon (5x5) · title (14/600) + descriptor (12/subdued)
         //   · trailing pill self-aligned.
         const renderRow = (row: Row) => {
-          const { item, spec, classification } = row;
+          const { item, spec, classification, lineItem } = row;
           const isMissing = classification.status === "missing";
+          const isInternalOnly = isInternalOnlyRow(row);
           // System-derived row that's currently missing — replace the
           // generic "From Shopify order data" caption with the more
           // informative "Pending order activity — populates automatically
           // when Shopify reports it" so the merchant understands the
           // system is watching and they don't need to act.
           const isPendingSystemSignal = isMissing && !canMerchantUpload(item);
-          // Prefer the row-specific reason copy when the row is
-          // structurally unavailable (e.g. "Order is unfulfilled" for
-          // delivery_proof on an unfulfilled order) — much more
-          // informative than the generic source descriptor. Falls back
-          // to SOURCE_NOTE for collected / missing rows.
+          // Caption priority:
+          //   1. Structurally unavailable → row.unavailableReason
+          //      ("Order is unfulfilled", etc.)
+          //   2. Internal-only → lineItem.reason — explains WHY
+          //      DisputeDesk is withholding this signal from the
+          //      bank-facing argument (e.g. "This signal is ambiguous
+          //      or unfavorable and could weaken the fraud response.")
+          //   3. Missing + non-actionable → pending-system caption
+          //   4. Otherwise → generic SOURCE_NOTE
           const sourceNote =
             classification.status === "not_applicable" && item.unavailableReason
               ? item.unavailableReason
-              : isPendingSystemSignal
-                ? t("rowSourceCaptionPendingSystem")
-                : (SOURCE_NOTE[item.source ?? ""] ?? null);
+              : isInternalOnly && lineItem?.reason
+                ? lineItem.reason
+                : isPendingSystemSignal
+                  ? t("rowSourceCaptionPendingSystem")
+                  : (SOURCE_NOTE[item.source ?? ""] ?? null);
           const isNeutral =
             classification.status === "not_applicable" ||
             classification.status === "waived";
-          const iconSrc = isMissing ? AlertCircleIcon : CheckCircleIcon;
+          const iconSrc = isMissing
+            ? AlertCircleIcon
+            : isInternalOnly
+              ? AlertCircleIcon
+              : CheckCircleIcon;
           const iconColor = isMissing
             ? "#DC2626"
-            : isNeutral
-              ? "#8C9196"
-              : "#059669";
+            : isInternalOnly
+              ? "#D97706"
+              : isNeutral
+                ? "#8C9196"
+                : "#059669";
           const pill = pillFor(row);
           // Inline "Add this evidence" CTA — surfaces on every missing
           // row the merchant can actually act on, gated by the shared
@@ -837,12 +886,26 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           // must remain consistent.
           const isCaseClosed = !!dispute.finalOutcome;
           const showAddCta = !isCaseClosed && isMissing && canMerchantUpload(item);
+          // Row background tone:
+          //   - red for missing rows
+          //   - amber tint for internal-only (matches the pill palette)
+          //   - neutral otherwise
+          const rowBg = isMissing
+            ? "#FEF2F2"
+            : isInternalOnly
+              ? "#FFFBEB"
+              : "#F6F8FB";
+          const rowBorder = isMissing
+            ? "1px solid #FCA5A5"
+            : isInternalOnly
+              ? "1px solid #FDE68A"
+              : "1px solid #E1E3E5";
           return (
             <div
               key={item.field}
               style={{
-                background: isMissing ? "#FEF2F2" : "#F6F8FB",
-                border: isMissing ? "1px solid #FCA5A5" : "1px solid #E1E3E5",
+                background: rowBg,
+                border: rowBorder,
                 borderRadius: 8,
                 padding: 16,
                 display: "flex",
@@ -867,7 +930,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                   style={{
                     fontSize: 14,
                     fontWeight: 600,
-                    color: isMissing ? "#7F1D1D" : "#202223",
+                    color: isMissing
+                      ? "#7F1D1D"
+                      : isInternalOnly
+                        ? "#78350F"
+                        : "#202223",
                     margin: 0,
                     lineHeight: 1.4,
                   }}
@@ -875,10 +942,34 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                   {spec.label}
                 </p>
                 {sourceNote && (
-                  <p style={{ fontSize: 12, color: "#6D7175", margin: "2px 0 0", lineHeight: 1.4 }}>
+                  <p
+                    style={{
+                      fontSize: 12,
+                      color: isInternalOnly ? "#78350F" : "#6D7175",
+                      margin: "2px 0 0",
+                      lineHeight: 1.4,
+                    }}
+                  >
                     {sourceNote}
                   </p>
                 )}
+                {/* Internal-only warnings attached to a row whose
+                    primary value is still useful (e.g.
+                    order_confirmation carrying a billing/shipping
+                    address mismatch). Render after the main caption. */}
+                {lineItem?.internalSignals?.map((sig) => (
+                  <p
+                    key={sig.id}
+                    style={{
+                      fontSize: 12,
+                      color: "#78350F",
+                      margin: "2px 0 0",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {sig.label}: {sig.reason}
+                  </p>
+                ))}
                 {showAddCta && (
                   <div style={{ marginTop: 8 }}>
                     <Button
