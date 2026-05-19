@@ -23,8 +23,8 @@ function useMarketingHomeHref(): string {
 }
 
 const NAV_BASE = "text-sm transition-colors";
-const NAV_IDLE = `${NAV_BASE} text-[#64748B] hover:text-[#0B1220]`;
-const NAV_ACTIVE = `${NAV_BASE} text-[#1D4ED8] font-semibold`;
+const NAV_IDLE = `${NAV_BASE} text-slate-300 hover:text-white`;
+const NAV_ACTIVE = `${NAV_BASE} text-white font-semibold`;
 
 function useActiveSection(): string | null {
   const pathname = usePathname();
@@ -43,7 +43,13 @@ export function MarketingSiteHeader() {
   const activeSection = useActiveSection();
 
   return (
-    <header className="border-b border-[#E5E7EB] sticky top-0 bg-[#FBF7EE] z-50">
+    <header
+      className="border-b border-white/10 sticky top-0 z-50"
+      style={{
+        background:
+          "linear-gradient(135deg, var(--dd-hero-bg-start) 0%, var(--dd-hero-bg-mid) 40%, var(--dd-hero-bg-end) 100%)",
+      }}
+    >
       <div
         className={`${MARKETING_PAGE_CONTAINER_CLASS} h-16 flex items-center justify-between`}
       >
@@ -51,7 +57,7 @@ export function MarketingSiteHeader() {
           <div className="w-8 h-8 bg-[#1D4ED8] rounded-lg flex items-center justify-center">
             <Shield className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold text-[#0B1220]">DisputeDesk</span>
+          <span className="text-xl font-bold text-white">DisputeDesk</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">
@@ -85,7 +91,7 @@ export function MarketingSiteHeader() {
           <button
             type="button"
             onClick={() => setMobileNav(!mobileNav)}
-            className="md:hidden w-10 h-10 flex items-center justify-center rounded-lg hover:bg-[#F1F5F9] text-[#64748B]"
+            className="md:hidden w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/10 text-slate-300"
             aria-expanded={mobileNav}
             aria-label={mobileNav ? "Close menu" : "Open menu"}
           >
@@ -95,7 +101,10 @@ export function MarketingSiteHeader() {
       </div>
 
       {mobileNav ? (
-        <div className={`md:hidden border-t border-[#E5E7EB] bg-[#FBF7EE] py-4 space-y-3 ${MARKETING_PAGE_CONTAINER_CLASS}`}>
+        <div
+          className={`md:hidden border-t border-white/10 py-4 space-y-3 ${MARKETING_PAGE_CONTAINER_CLASS}`}
+          style={{ background: "var(--dd-hero-bg-mid)" }}
+        >
           <Link
             href="/resources"
             onClick={() => setMobileNav(false)}
@@ -131,7 +140,7 @@ export function MarketingSiteHeader() {
           >
             {t("nav.pricing")}
           </a>
-          <div className="pt-3 border-t border-[#E5E7EB] flex flex-col gap-2">
+          <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
             <a href={SHOPIFY_INSTALL_URL}>
               <Button variant="primary" size="sm" className="w-full">
                 {t("nav.installOnShopify")}
