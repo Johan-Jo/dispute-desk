@@ -263,8 +263,13 @@ export async function handleBuildDefencePackage(
     return await markFailed(sb, pkg, narrativeRes.error ?? "narrative null", "llm_error", true);
   }
 
-  // Validate.
-  const validation = validateNarrative({
+  // Validate. If a fact-grounding guard fires (e.g. the LLM wrote
+  // "dispatched" in chronologyArgument without a delivery fact), we
+  // retry the narrative call ONCE with the validator errors fed back
+  // into the user payload. The LLM treats `retryGuidance` as priority
+  // context and corrects much more reliably than expecting it to
+  // re-read the rules list on the next regenerate.
+  let validation = validateNarrative({
     narrative: narrativeRes.narrative,
     approvedFacts: classification.approved,
     reasonCodeModule,
@@ -274,6 +279,80 @@ export async function handleBuildDefencePackage(
     guardedPhrases: reasonCodeFamily.guardedBankPhrases,
   });
   if (!validation.ok) {
+    const feedback = validation.errors.map(
+      (e) =>
+        `${e.section ?? "narrative"}: ${e.message ?? "validation failed"}`,
+    );
+    await logAuditEvent({
+      shopId: pkg.shop_id,
+      disputeId: pkg.dispute_id,
+      packId: pkg.source_pack_id,
+      actorType: "system",
+      eventType: "defence_package_validation_retry",
+      eventPayload: {
+        packageId,
+        version: pkg.version,
+        attemptNumber: 2,
+        validationErrors: validation.errors,
+      },
+    });
+    const retryRes = await generateNarrative(
+      {
+        packageId,
+        disputeId: pkg.dispute_id,
+        reasonCode,
+        reasonCodeModule,
+        familyOverlay: reasonCodeFamily.overlayPromptBody || null,
+        strategies,
+        packageMode: classification.packageMode,
+        caseStrength: "moderate",
+        approvedFacts: classification.approved,
+        manualEvidence: classification.manual,
+        internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
+        missingEvidence: classification.missing,
+      },
+      {
+        shopId: pkg.shop_id,
+        packageId,
+        modelOverride: moduleOverride?.model ?? null,
+        validationFeedback: feedback,
+      },
+    );
+    if (retryRes.capReached) {
+      return await markFailed(sb, pkg, retryRes.error ?? "daily cap reached", "daily_cap_reached", true);
+    }
+    if (!retryRes.narrative || retryRes.error) {
+      // Retry attempt errored or returned no narrative. Fall through
+      // with the original validation failure — that's what the
+      // merchant needs to act on.
+    } else {
+      // Re-validate the retry output. If it still fails, persist the
+      // retry result (closer to correct than the first attempt) along
+      // with its errors.
+      const retryValidation = validateNarrative({
+        narrative: retryRes.narrative,
+        approvedFacts: classification.approved,
+        reasonCodeModule,
+        packageMode: classification.packageMode,
+        internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
+        extraHardPhrases: reasonCodeFamily.prohibitedBankPhrases,
+        guardedPhrases: reasonCodeFamily.guardedBankPhrases,
+      });
+      // Reassign so the rest of the pipeline uses the better output.
+      // We track token totals on the original `narrativeRes` for ops
+      // visibility, but the narrative + validation we act on is the
+      // retry's.
+      narrativeRes.narrative = retryRes.narrative;
+      narrativeRes.modelUsed = retryRes.modelUsed;
+      narrativeRes.tokens.prompt += retryRes.tokens.prompt;
+      narrativeRes.tokens.completion += retryRes.tokens.completion;
+      narrativeRes.tokens.cached += retryRes.tokens.cached;
+      narrativeRes.durationMs += retryRes.durationMs;
+      validation = retryValidation;
+    }
+  }
+
+  if (!validation.ok) {
     await sb
       .from("defence_packages")
       .update({
@@ -281,7 +360,7 @@ export async function handleBuildDefencePackage(
         validation_status: "failed",
         validation_errors: validation.errors,
         failure_code: "validation_failed",
-        failure_reason: `${validation.errors.length} validation error${validation.errors.length === 1 ? "" : "s"}`,
+        failure_reason: `${validation.errors.length} validation error${validation.errors.length === 1 ? "" : "s"} (after one retry)`,
         narrative_json: narrativeRes.narrative,
         facts_json: classification.approved,
         package_mode: classification.packageMode,
@@ -301,6 +380,7 @@ export async function handleBuildDefencePackage(
         packageId,
         version: pkg.version,
         validationErrors: validation.errors,
+        retryAttempted: true,
       },
     });
     return { ok: false, retriable: false, reason: "validation_failed" };

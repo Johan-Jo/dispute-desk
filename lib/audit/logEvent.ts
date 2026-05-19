@@ -60,6 +60,7 @@ export type EventType =
   | "defence_package_skipped"
   | "defence_package_superseded"
   | "defence_package_validation_failed"
+  | "defence_package_validation_retry"
   | "manual_evidence_added_to_package"
   | "llm_narrative_generated"
   | "llm_narrative_failed"

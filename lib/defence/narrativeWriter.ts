@@ -57,7 +57,7 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // promptBodies were rewritten to lead with the claim category instead
 // of the network's environment classification. Same cache-invalidation
 // pattern as the 2→3 bump above.
-const PROMPT_VERSION = 4;
+const PROMPT_VERSION = 5;
 
 /* ── Static base system prompt (cached, ephemeral) ── */
 
@@ -127,14 +127,28 @@ Rules:
      cardholder account"
 
 8c. FULFILLMENT precision. order.fulfillmentStatus=FULFILLED alone is
-   NOT delivery, access, use, or service completion. Never write
-   "received", "accessed", "used", "delivered", "completed", "shipped",
-   "dispatched", or "fulfilled" unless a matching approved fact exists.
-   This applies in EVERY section including chronologyArgument —
-   when describing the timeline of events, never say "the order was
-   dispatched" or "the package was shipped" unless delivery proof
-   facts are present. Use neutral wording instead: "the order record
-   was created", "the payment was authorised", "the order was placed".
+   NOT delivery, access, use, or service completion. The forbidden
+   words below MUST NOT appear in ANY section unless a matching
+   approved fact exists in approvedFacts:
+
+     FORBIDDEN WITHOUT MATCHING FACT:
+       "received", "delivered", "accessed", "used", "downloaded",
+       "logged in", "streamed", "completed", "fulfilled",
+       "shipped", "dispatched"
+
+   This applies in EVERY section including chronologyArgument.
+
+   Concrete examples for an UNFULFILLED order with no delivery_proof:
+
+     WRONG → "the order was placed and dispatched"
+     WRONG → "the package was shipped from the merchant"
+     WRONG → "the customer received the order"
+     RIGHT → "the order record was created"
+     RIGHT → "the payment was authorised"
+     RIGHT → "the order was placed via the web channel"
+
+   When in doubt about whether a fact supports a fulfilment word,
+   use the neutral phrasing.
    - "received" / "delivered to the customer" → delivery_proof or
      shipping_tracking with proofType=delivered or =signature, OR
      digital_access_log with digitalAccessUsed=true, OR service_access
@@ -201,6 +215,17 @@ export interface GenerateNarrativeContext {
   packageId: string;
   /** Override model. Falls through to env var, then default. */
   modelOverride?: string | null;
+  /**
+   * Validator-feedback for retry attempts. When the previous attempt
+   * produced a parseable narrative that then failed `validateNarrative`
+   * (e.g. the LLM wrote "dispatched" in chronologyArgument without a
+   * supporting delivery fact), the build handler retries with the
+   * errors stuffed into the user payload so the LLM sees exactly what
+   * to fix. Each entry is a short string the model can act on.
+   *
+   * Empty / undefined → first attempt; no feedback injected.
+   */
+  validationFeedback?: string[] | null;
 }
 
 export async function generateNarrative(
@@ -227,6 +252,19 @@ export async function generateNarrative(
   }
 
   const userPayload = buildLlmFactPayload(input);
+  // Validator-feedback retry: when present, prepend a `retryGuidance`
+  // block to the user payload listing the previous attempt's errors.
+  // The LLM treats this as priority context — much more reliable than
+  // expecting it to re-read the rules list. See
+  // `lib/jobs/handlers/buildDefencePackageJob.ts` for the caller.
+  if (ctx.validationFeedback && ctx.validationFeedback.length > 0) {
+    (userPayload as Record<string, unknown>).retryGuidance = {
+      attempt: "second",
+      previousAttemptErrors: ctx.validationFeedback,
+      directive:
+        "Your previous response was rejected by the fact-grounding validator for the errors above. Rewrite the affected sections using only language that is supported by approvedFacts. If a claim cannot be grounded in an approved fact, omit it entirely.",
+    };
+  }
   // System payload layout (cached, ephemeral):
   //   [0] BASE_SYSTEM_PROMPT                  (always)
   //   [1] family overlay   — Phase 1+         (only when non-empty)
