@@ -343,9 +343,16 @@ export function CompleteDefencePackageCard({
     row.validation_status === "ok" &&
     Boolean(row.pdf_path);
   const canSubmit = hasActionableDraft && row.status === "final";
+  // Regenerate is NOT gated by hasActionableDraft. After submission,
+  // the only `latest` row is the bank-facing one (`status=submitted`)
+  // and `hasActionableDraft` is false — which would lock the merchant
+  // out of producing a new draft. They must always be able to rebuild
+  // against fresh evidence; the submitted PDF on Shopify is untouched.
   const canRegenerate =
-    hasActionableDraft &&
-    (row.status === "draft" || row.status === "stale" || row.status === "failed");
+    row.status === "draft" ||
+    row.status === "stale" ||
+    row.status === "failed" ||
+    row.status === "submitted";
 
   const formattedSubmittedAt = submittedToShopifyAt
     ? (() => {
