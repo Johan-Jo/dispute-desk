@@ -556,18 +556,24 @@ export function deriveEvidenceLineItems(
     // canBeForceIncluded — true only when clicking "Include in package"
     // would actually surface a row. Already-included rows (bank_argument
     // or context_only) don't expose the button at all, so the flag is
-    // irrelevant there. For not_included rows: merchant-actionable
-    // fields (uploads, policy text) can be force-included even without
-    // an existing payload, because the merchant CAN add one. Auto-only
-    // fields (AVS, shipping, fraud risk) require a payload from an
-    // upstream system the merchant doesn't control — force-including
-    // an empty row would be a no-op.
+    // irrelevant there. For not_included or waived rows: merchant-
+    // actionable fields (uploads, policy text) can be force-included
+    // even without an existing payload, because the merchant CAN add
+    // one. Auto-only fields (AVS, 3DS, shipping, fraud risk) require a
+    // payload from an upstream system the merchant doesn't control —
+    // force-including an empty row would be a no-op, so the button is
+    // disabled with the "Nothing to include — data is outside
+    // DisputeDesk's control" tooltip. For `excluded` (a force_exclude
+    // override), restoring is always allowed because there's a known
+    // payload behind the override.
     const hasPayload = payload != null;
+    const isMerchantActionable =
+      hasPayload || FIELDS_MERCHANT_CAN_FORCE_INCLUDE.has(item.field);
     const canBeForceIncluded =
-      submissionMethod === "not_included"
-        ? hasPayload || FIELDS_MERCHANT_CAN_FORCE_INCLUDE.has(item.field)
-        : submissionMethod === "excluded" || submissionMethod === "waived"
-          ? true // restoring is always allowed
+      submissionMethod === "not_included" || submissionMethod === "waived"
+        ? isMerchantActionable
+        : submissionMethod === "excluded"
+          ? true
           : false;
     // Reference the source-control allowlist so future maintenance has
     // a clear hook — the set is the inverse of FIELDS_MERCHANT_CAN_FORCE_INCLUDE.

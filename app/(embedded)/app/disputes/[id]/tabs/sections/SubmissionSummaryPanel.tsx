@@ -143,22 +143,6 @@ export function SubmissionSummaryPanel({
   const notIncludedTotal =
     counts.excluded + counts.waived + counts.failedUpload + counts.notSupported;
 
-  // Customer-field row builder — always renders the three slots; an
-  // unfilled value renders as "—" so the merchant can see clearly when
-  // a field is empty rather than wondering whether it was omitted.
-  function structuredFieldLabel(
-    field: "customer_first_name" | "customer_last_name" | "customer_email",
-  ): string {
-    switch (field) {
-      case "customer_first_name":
-        return t("shopifyFieldsCustomerFirstName");
-      case "customer_last_name":
-        return t("shopifyFieldsCustomerLastName");
-      case "customer_email":
-        return t("shopifyFieldsCustomerEmail");
-    }
-  }
-
   return (
     <Card>
       <BlockStack gap="400">
@@ -171,7 +155,13 @@ export function SubmissionSummaryPanel({
           </Text>
         </BlockStack>
 
-        {/* §1 Structured Shopify fields — always renders. */}
+        {/* §1 Structured Shopify fields — always renders.
+            Values render as a clean stack with no per-field label;
+            the section's `shopifyFieldsHelper` already tells the
+            merchant what the three rows are ("Customer name and
+            email — the only structured fields DisputeDesk sends.").
+            The order is stable (first name, last name, email) so
+            the values are self-describing. */}
         <Subsection
           label={t("shopifyFieldsLabel")}
           helper={t("shopifyFieldsHelper")}
@@ -179,14 +169,14 @@ export function SubmissionSummaryPanel({
         >
           <BlockStack gap="050">
             {summary.shopifyStructuredFields.map((f) => (
-              <InlineStack key={f.field} gap="200" align="space-between">
-                <Text as="span" variant="bodySm" fontWeight="semibold">
-                  {structuredFieldLabel(f.field)}
-                </Text>
-                <Text as="span" variant="bodySm" tone={f.value ? undefined : "subdued"}>
-                  {f.value ?? t("shopifyFieldsNoneOnFile")}
-                </Text>
-              </InlineStack>
+              <Text
+                key={f.field}
+                as="span"
+                variant="bodySm"
+                tone={f.value ? undefined : "subdued"}
+              >
+                {f.value ?? t("shopifyFieldsNoneOnFile")}
+              </Text>
             ))}
           </BlockStack>
         </Subsection>
@@ -211,15 +201,14 @@ export function SubmissionSummaryPanel({
                   })}
                 </Text>
               ) : null}
+              {/* Just the human-readable label per fact. The internal
+                  category key (e.g. `payment_authentication`) used to
+                  render in a trailing column — leaked engineering
+                  detail with no merchant value. */}
               {summary.factsInPdf.map((f) => (
-                <InlineStack key={f.field} gap="200" align="space-between">
-                  <Text as="span" variant="bodySm" fontWeight="semibold">
-                    {f.label}
-                  </Text>
-                  <Text as="span" variant="bodyXs" tone="subdued">
-                    {f.categoryLabel}
-                  </Text>
-                </InlineStack>
+                <Text key={f.field} as="span" variant="bodySm">
+                  {f.label}
+                </Text>
               ))}
             </BlockStack>
           )}
