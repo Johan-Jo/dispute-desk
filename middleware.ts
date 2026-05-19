@@ -147,6 +147,7 @@ export async function middleware(req: NextRequest) {
       pathname === "/api/chat" ||
       pathname === "/api/contact" ||
       pathname === "/api/health" ||
+      pathname.startsWith("/api/health/") ||
       pathname === "/api/indexnow" ||
       pathname === "/api/jobs/worker" ||
       pathname.startsWith("/api/cron/") ||
