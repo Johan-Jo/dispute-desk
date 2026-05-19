@@ -292,8 +292,80 @@ const FIELDS_MERCHANT_CAN_FORCE_INCLUDE = new Set<string>([
   "cancellation_policy",
 ]);
 
-function reasonFor(field: string, method: SubmissionMethod): string {
+function reasonFor(
+  field: string,
+  method: SubmissionMethod,
+  payload: unknown,
+): string {
+  // Payload-aware specificity for internal-only signals: the merchant
+  // gets to see WHY a signal was kept internal (e.g. "IP country
+  // mismatch" vs "VPN/proxy detected") instead of the generic
+  // "ambiguous or unfavourable" line. Mirrors the granular reasons
+  // already produced for the standalone Internal-only Signals UI
+  // section by `lib/argument/internalSignals.ts` — keeping the two
+  // surfaces in lockstep.
+  if (method === "internal_only") {
+    const specific = specificInternalReason(field, payload);
+    if (specific) return specific;
+  }
   return REASON_OVERRIDES[field]?.[method] ?? REASON_FOR_METHOD[method];
+}
+
+/**
+ * Specific "kept internal" reason text, derived from the payload
+ * when present. Returns null when no payload-specific reason
+ * applies; callers fall back to the generic REASON_OVERRIDES entry.
+ *
+ * The strings mirror `lib/argument/internalSignals.ts` line-by-line
+ * so the Inclusion Review row and the Internal-only Signals card on
+ * the Evidence tab say the same thing for the same payload.
+ */
+function specificInternalReason(field: string, payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const p = payload as Record<string, unknown>;
+
+  if (field === "ip_location_check") {
+    const locationMatch =
+      typeof p.locationMatch === "string" ? p.locationMatch : null;
+    const riskLevel = typeof p.riskLevel === "string" ? p.riskLevel : null;
+    if (locationMatch === "different_country") {
+      return "The customer's IP address resolved to a different country than the shipping address. Kept internal so the bank doesn't read it as a fraud weakness.";
+    }
+    if (locationMatch === "different_region") {
+      return "The customer's IP region differs from the shipping address region. Kept internal so the bank doesn't read it as a fraud weakness.";
+    }
+    if (riskLevel === "high") {
+      return "The IP routes through a VPN, proxy, or data center, which makes the geolocation unreliable. Kept internal because the bank could read it as a fraud weakness.";
+    }
+    if (p.bankEligible === false) {
+      return "The upstream collector marked this signal as not bank-eligible — kept internal.";
+    }
+  }
+
+  if (field === "avs_cvv_match") {
+    const avs = typeof p.avsResultCode === "string" ? p.avsResultCode.toUpperCase() : null;
+    const cvv = typeof p.cvvResultCode === "string" ? p.cvvResultCode.toUpperCase() : null;
+    // Both codes returned a no-match — the LLM narrative can't lean
+    // on AVS/CVV, but the merchant deserves to see what was actually
+    // returned by the gateway.
+    if (avs === "N" && cvv === "N") {
+      return "Both the billing address (AVS) and the card verification code (CVV) failed to match the issuer's records. Kept internal — citing this to the bank would undermine the fraud response.";
+    }
+    if (avs === "N") {
+      return "The billing address (AVS) did not match the issuer's records. Kept internal — citing this to the bank would undermine the fraud response.";
+    }
+    if (cvv === "N") {
+      return "The card verification code (CVV) did not match the issuer's records. Kept internal — citing this to the bank would undermine the fraud response.";
+    }
+  }
+
+  if (field === "device_session_consistency") {
+    if (p.consistent === false) {
+      return "Device or session signals were inconsistent between checkout and prior activity. Kept internal because the bank could read it as a fraud weakness.";
+    }
+  }
+
+  return null;
 }
 
 /* ── Categorizer helpers ─────────────────────────────────────────── */
@@ -606,7 +678,7 @@ export function deriveEvidenceLineItems(
       submittedToShopify,
       submissionMethod,
       isNegativeOrAmbiguous: negativeOrAmbiguous,
-      reason: reasonFor(item.field, submissionMethod),
+      reason: reasonFor(item.field, submissionMethod, payload),
       canBeForceIncluded,
       ...(internalSignals && internalSignals.length > 0
         ? { internalSignals }

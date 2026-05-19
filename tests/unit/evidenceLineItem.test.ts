@@ -719,6 +719,124 @@ describe("Test 24 — internal-only field with no payload routes to not_included
     expect(row?.submissionMethod).toBe("not_included");
   });
 
+  it("ip_location_check with different_country uses payload-specific reason text", async () => {
+    // Locks in the 2026-05-19 specificity fix: instead of the
+    // generic "ambiguous or unfavorable" line, the merchant reads
+    // exactly why the IP signal was withheld (different country
+    // from shipping, VPN/proxy detected, etc.). Mirrors the
+    // granular reasons in lib/argument/internalSignals.ts.
+    const mod = await import("@/lib/argument/evidenceLineItem");
+    const { deriveEvidenceLineItems } = mod as {
+      deriveEvidenceLineItems: (args: unknown) => Array<{
+        field: string;
+        reason: string;
+      }>;
+    };
+    const checklist = [
+      {
+        field: "ip_location_check",
+        label: "IP geolocation check",
+        status: "available" as const,
+        priority: "optional" as const,
+        blocking: false,
+        source: "auto_shopify" as const,
+        collectionType: "conditional_auto" as const,
+      },
+    ];
+    const payloadByField = new Map<string, unknown>([
+      ["ip_location_check", { locationMatch: "different_country" }],
+    ]);
+    const lineItems = deriveEvidenceLineItems({
+      checklist,
+      facts: [],
+      payloadByField,
+      contributions: { strong: [], moderate: [] },
+      packSavedToShopify: true,
+      excludedFields: new Set<string>(),
+      attachmentUploadFailures: new Map<string, string>(),
+      inclusionOverrides: new Map(),
+      reasonFamily: "fraud",
+    });
+    const row = lineItems.find((li) => li.field === "ip_location_check");
+    expect(row?.reason).toMatch(/different country/i);
+    expect(row?.reason).not.toMatch(/ambiguous or unfavorable/i);
+  });
+
+  it("ip_location_check with VPN/proxy reads explains the privacy issue", async () => {
+    const mod = await import("@/lib/argument/evidenceLineItem");
+    const { deriveEvidenceLineItems } = mod as {
+      deriveEvidenceLineItems: (args: unknown) => Array<{
+        field: string;
+        reason: string;
+      }>;
+    };
+    const checklist = [
+      {
+        field: "ip_location_check",
+        label: "IP geolocation check",
+        status: "available" as const,
+        priority: "optional" as const,
+        blocking: false,
+        source: "auto_shopify" as const,
+        collectionType: "conditional_auto" as const,
+      },
+    ];
+    const payloadByField = new Map<string, unknown>([
+      ["ip_location_check", { riskLevel: "high" }],
+    ]);
+    const lineItems = deriveEvidenceLineItems({
+      checklist,
+      facts: [],
+      payloadByField,
+      contributions: { strong: [], moderate: [] },
+      packSavedToShopify: true,
+      excludedFields: new Set<string>(),
+      attachmentUploadFailures: new Map<string, string>(),
+      inclusionOverrides: new Map(),
+      reasonFamily: "fraud",
+    });
+    const row = lineItems.find((li) => li.field === "ip_location_check");
+    expect(row?.reason).toMatch(/VPN|proxy|data center/i);
+  });
+
+  it("avs_cvv_match with both N codes explains AVS+CVV failure specifically", async () => {
+    const mod = await import("@/lib/argument/evidenceLineItem");
+    const { deriveEvidenceLineItems } = mod as {
+      deriveEvidenceLineItems: (args: unknown) => Array<{
+        field: string;
+        reason: string;
+      }>;
+    };
+    const checklist = [
+      {
+        field: "avs_cvv_match",
+        label: "Payment authentication",
+        status: "available" as const,
+        priority: "critical" as const,
+        blocking: false,
+        source: "auto_shopify" as const,
+        collectionType: "conditional_auto" as const,
+      },
+    ];
+    const payloadByField = new Map<string, unknown>([
+      ["avs_cvv_match", { avsResultCode: "N", cvvResultCode: "N" }],
+    ]);
+    const lineItems = deriveEvidenceLineItems({
+      checklist,
+      facts: [],
+      payloadByField,
+      contributions: { strong: [], moderate: [] },
+      packSavedToShopify: true,
+      excludedFields: new Set<string>(),
+      attachmentUploadFailures: new Map<string, string>(),
+      inclusionOverrides: new Map(),
+      reasonFamily: "fraud",
+    });
+    const row = lineItems.find((li) => li.field === "avs_cvv_match");
+    expect(row?.reason).toMatch(/billing address.*CVV/i);
+    expect(row?.reason).toMatch(/undermine/i);
+  });
+
   it("fraud_risk_screening WITH a payload stays internal_only (we have data, we hide it)", async () => {
     const mod = await import("@/lib/argument/evidenceLineItem");
     const { deriveEvidenceLineItems } = mod as {
