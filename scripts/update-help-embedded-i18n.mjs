@@ -21,7 +21,7 @@ function save(rel, data) {
 // ─── Translations per locale ────────────────────────────────────────────────
 
 const TRANSLATIONS = {
-  "en-US": {
+  en: {
     ui: {
       title: "Help",
       search: "Search help...",
@@ -53,7 +53,7 @@ const TRANSLATIONS = {
     },
   },
 
-  "de-DE": {
+  de: {
     ui: {
       title: "Hilfe",
       search: "Hilfe suchen...",
@@ -85,7 +85,7 @@ const TRANSLATIONS = {
     },
   },
 
-  "es-ES": {
+  es: {
     ui: {
       title: "Ayuda",
       search: "Buscar ayuda...",
@@ -117,7 +117,7 @@ const TRANSLATIONS = {
     },
   },
 
-  "fr-FR": {
+  fr: {
     ui: {
       title: "Aide",
       search: "Rechercher de l'aide...",
@@ -149,7 +149,7 @@ const TRANSLATIONS = {
     },
   },
 
-  "pt-BR": {
+  pt: {
     ui: {
       title: "Ajuda",
       search: "Pesquisar ajuda...",
@@ -181,7 +181,7 @@ const TRANSLATIONS = {
     },
   },
 
-  "sv-SE": {
+  sv: {
     ui: {
       title: "Hjälp",
       search: "Sök hjälp...",
@@ -216,27 +216,18 @@ const TRANSLATIONS = {
 
 // ─── Apply updates ───────────────────────────────────────────────────────────
 
-const REGIONAL_FILES = [
-  { file: "messages/en-US.json", locale: "en-US" },
-  { file: "messages/de-DE.json", locale: "de-DE" },
-  { file: "messages/es-ES.json", locale: "es-ES" },
-  { file: "messages/fr-FR.json", locale: "fr-FR" },
-  { file: "messages/pt-BR.json", locale: "pt-BR" },
-  { file: "messages/sv-SE.json", locale: "sv-SE" },
+const LOCALE_FILES = [
+  { file: "messages/en.json", locale: "en" },
+  { file: "messages/de.json", locale: "de" },
+  { file: "messages/es.json", locale: "es" },
+  { file: "messages/fr.json", locale: "fr" },
+  { file: "messages/pt.json", locale: "pt" },
+  { file: "messages/sv.json", locale: "sv" },
 ];
-
-// Shorter locale files mirror their regional counterparts
-const SHORT_FILE_MAP = {
-  "de-DE": "messages/de.json",
-  "es-ES": "messages/es.json",
-  "fr-FR": "messages/fr.json",
-  "pt-BR": "messages/pt.json",
-  "sv-SE": "messages/sv.json",
-};
 
 let updated = 0;
 
-for (const { file, locale } of REGIONAL_FILES) {
+for (const { file, locale } of LOCALE_FILES) {
   const tr = TRANSLATIONS[locale];
   if (!tr) continue;
 
@@ -259,23 +250,6 @@ for (const { file, locale } of REGIONAL_FILES) {
   save(file, data);
   console.log(`✓ ${file}`);
   updated++;
-
-  // Mirror to shorter locale file if applicable
-  const shortFile = SHORT_FILE_MAP[locale];
-  if (shortFile) {
-    const shortData = load(shortFile);
-    if (!shortData.help) shortData.help = {};
-    if (!shortData.help.embedded) shortData.help.embedded = {};
-    const shortEmb = shortData.help.embedded;
-    Object.assign(shortEmb, tr.ui);
-    if (!shortEmb.articles) shortEmb.articles = {};
-    for (const [key, val] of Object.entries(tr.articles)) {
-      shortEmb.articles[key] = val;
-    }
-    save(shortFile, shortData);
-    console.log(`✓ ${shortFile} (mirror)`);
-    updated++;
-  }
 }
 
 console.log(`\nDone. Updated ${updated} files.`);

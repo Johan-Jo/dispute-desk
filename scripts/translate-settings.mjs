@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "fs";
 
 const translations = {
-  "pt-BR": {
+  pt: {
     subtitle: "Gerencie sua conta, automação e preferências",
     storeConnection: "Conexão com a Loja",
     connectedViaOAuth: "Conectado via Shopify OAuth",
@@ -28,7 +28,7 @@ const translations = {
     gdpr: "Pronto para GDPR e CCPA",
     gdprDesc: "Conformidade total com regulamentos de proteção de dados",
   },
-  "de-DE": {
+  de: {
     subtitle: "Verwalte dein Konto, deine Automatisierung und Einstellungen",
     storeConnection: "Shop-Verbindung",
     connectedViaOAuth: "Verbunden über Shopify OAuth",
@@ -55,7 +55,7 @@ const translations = {
     gdpr: "DSGVO & CCPA-konform",
     gdprDesc: "Vollständige Einhaltung der Datenschutzbestimmungen",
   },
-  "fr-FR": {
+  fr: {
     subtitle: "Gérez votre compte, votre automatisation et vos préférences",
     storeConnection: "Connexion à la boutique",
     connectedViaOAuth: "Connecté via Shopify OAuth",
@@ -82,7 +82,7 @@ const translations = {
     gdpr: "Prêt pour le RGPD & CCPA",
     gdprDesc: "Conformité totale aux réglementations sur la protection des données",
   },
-  "es-ES": {
+  es: {
     subtitle: "Gestiona tu cuenta, automatización y preferencias",
     storeConnection: "Conexión con la tienda",
     connectedViaOAuth: "Conectado mediante Shopify OAuth",
@@ -109,7 +109,7 @@ const translations = {
     gdpr: "Listo para GDPR y CCPA",
     gdprDesc: "Pleno cumplimiento de la normativa de protección de datos",
   },
-  "sv-SE": {
+  sv: {
     subtitle: "Hantera ditt konto, automatisering och inställningar",
     storeConnection: "Butiksanslutning",
     connectedViaOAuth: "Ansluten via Shopify OAuth",
@@ -139,19 +139,18 @@ const translations = {
 };
 
 const fileMap = {
-  "pt-BR": ["messages/pt-BR.json", "messages/pt.json"],
-  "de-DE": ["messages/de-DE.json", "messages/de.json"],
-  "fr-FR": ["messages/fr-FR.json", "messages/fr.json"],
-  "es-ES": ["messages/es-ES.json", "messages/es.json"],
-  "sv-SE": ["messages/sv-SE.json", "messages/sv.json"],
+  pt: "messages/pt.json",
+  de: "messages/de.json",
+  fr: "messages/fr.json",
+  es: "messages/es.json",
+  sv: "messages/sv.json",
 };
 
 for (const [locale, trans] of Object.entries(translations)) {
-  for (const file of fileMap[locale]) {
-    const m = JSON.parse(readFileSync(file, "utf8"));
-    if (!m.settings) m.settings = {};
-    Object.assign(m.settings, trans);
-    writeFileSync(file, JSON.stringify(m, null, 2) + "\n");
-    console.log("Updated", file);
-  }
+  const file = fileMap[locale];
+  const m = JSON.parse(readFileSync(file, "utf8"));
+  if (!m.settings) m.settings = {};
+  Object.assign(m.settings, trans);
+  writeFileSync(file, JSON.stringify(m, null, 2) + "\n");
+  console.log("Updated", file);
 }

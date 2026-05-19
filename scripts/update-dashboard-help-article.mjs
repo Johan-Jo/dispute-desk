@@ -15,7 +15,7 @@ const save = (rel, data) =>
   writeFileSync(resolve(root, rel), JSON.stringify(data, null, 2) + "\n", "utf-8");
 
 const BODIES = {
-  "en-US": [
+  en: [
     "The dashboard gives you an at-a-glance view of your dispute operations and lets you control automation from one place.",
     "",
     "**KPI cards**",
@@ -44,7 +44,7 @@ const BODIES = {
     "Lists your five latest chargebacks. Click the order number to jump directly to that order in Shopify Admin, or click View Details to open the dispute and manage its evidence pack.",
   ].join("\n"),
 
-  "de-DE": [
+  de: [
     "Das Dashboard gibt dir einen schnellen Ueberblick ueber deine Streitfalloperationen und ermoeglichst dir, die Automatisierung zentral zu steuern.",
     "",
     "**KPI-Karten**",
@@ -73,7 +73,7 @@ const BODIES = {
     "Zeigt deine fuenf neuesten Rueckbuchungen. Klicke auf die Bestellnummer, um direkt zu Shopify Admin zu gelangen, oder auf Details anzeigen, um das Belegpaket zu verwalten.",
   ].join("\n"),
 
-  "es-ES": [
+  es: [
     "El panel te da una vista rapida de tus operaciones de disputas y te permite controlar la automatizacion desde un solo lugar.",
     "",
     "**Tarjetas KPI**",
@@ -102,7 +102,7 @@ const BODIES = {
     "Lista tus cinco ultimos contracargos. Haz clic en el numero de pedido para ir directamente a Shopify Admin, o en Ver detalles para gestionar el paquete de evidencia.",
   ].join("\n"),
 
-  "fr-FR": [
+  fr: [
     "Le tableau de bord offre une vue d'ensemble de vos operations de litiges et vous permet de piloter l'automatisation en un seul endroit.",
     "",
     "**Cartes KPI**",
@@ -131,7 +131,7 @@ const BODIES = {
     "Liste vos cinq derniers litiges. Cliquez sur le numero de commande pour acceder directement a Shopify Admin, ou sur Voir les details pour gerer le paquet de preuves.",
   ].join("\n"),
 
-  "pt-BR": [
+  pt: [
     "O painel fornece uma visao geral das suas operacoes de disputas e permite controlar a automacao em um so lugar.",
     "",
     "**Cartoes KPI**",
@@ -160,7 +160,7 @@ const BODIES = {
     "Lista seus cinco chargebacks mais recentes. Clique no numero do pedido para ir diretamente ao Shopify Admin, ou clique em Ver detalhes para abrir a disputa e gerenciar seu pacote de evidencias.",
   ].join("\n"),
 
-  "sv-SE": [
+  sv: [
     "Instrumentpanelen ger dig en snabb overblick over dina tvistoperationer och later dig styra automatiseringen pa ett stalle.",
     "",
     "**KPI-kort**",
@@ -190,25 +190,13 @@ const BODIES = {
   ].join("\n"),
 };
 
-const REGIONAL_FILES = ["en-US", "de-DE", "es-ES", "fr-FR", "pt-BR", "sv-SE"];
-const SHORT_MAP = { "de-DE": "de", "es-ES": "es", "fr-FR": "fr", "pt-BR": "pt", "sv-SE": "sv" };
+const LOCALES = ["en", "de", "es", "fr", "pt", "sv"];
 
-for (const locale of REGIONAL_FILES) {
+for (const locale of LOCALES) {
   const file = `messages/${locale}.json`;
   const data = load(file);
   data.help.embedded.articles.understandingDashboard.body = BODIES[locale];
   save(file, data);
   console.log("✓", file);
-
-  const short = SHORT_MAP[locale];
-  if (short) {
-    const sf = `messages/${short}.json`;
-    const sd = load(sf);
-    if (sd.help?.embedded?.articles?.understandingDashboard) {
-      sd.help.embedded.articles.understandingDashboard.body = BODIES[locale];
-      save(sf, sd);
-      console.log("✓", sf, "(mirror)");
-    }
-  }
 }
 console.log("Done.");
