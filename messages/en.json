@@ -313,7 +313,7 @@
     "generateNewPack": "Generate New Pack",
     "noPacks": "No evidence packs yet. Generate one to get started.",
     "noPacksAuto": "No evidence packs yet. The automation pipeline will generate one automatically, or click Generate Pack.",
-    "noDisputes": "No active cases. DisputeDesk will sync new disputes automatically when they appear in Shopify.",
+    "noDisputes": "No disputes found. Click Sync Now to fetch from Shopify.",
     "workQueueSubtitle": "Your active cases — inquiries and chargebacks that need attention",
     "summaryTotal": "{count} active cases",
     "summaryInquiries": "{count} inquiries",
@@ -699,7 +699,7 @@
         "usedAsPositiveBankArgument": "{count, plural, =0 {0 used as positive bank argument} =1 {1 used as positive bank argument} other {# used as positive bank argument}}",
         "keptInternal": "{count, plural, =0 {0 kept internal} =1 {1 kept internal} other {# kept internal}}",
         "tileSectionsFound": "Evidence sections found",
-        "tileIncludedInPackage": "Included in defence package",
+        "tileIncludedInPackage": "Included in defense package",
         "tileUsedAsBankArgument": "Used as positive bank argument",
         "tileKeptInternal": "Kept internal",
         "missingDecisiveLabel": "Missing decisive evidence",
@@ -866,36 +866,36 @@
       },
       "windowClosedBanner": {
         "title": "Submitted to bank",
-        "body": "Shopify forwarded this dispute evidence to the issuing bank on {submittedAt}. New files can no longer be added to the bank-facing defence package.",
-        "bodyNoDate": "Shopify has already forwarded this dispute evidence to the issuing bank. New files can no longer be added to the bank-facing defence package."
+        "body": "Shopify forwarded this dispute evidence to the issuing bank on {submittedAt}. New files can no longer be added to the bank-facing defense package.",
+        "bodyNoDate": "Shopify has already forwarded this dispute evidence to the issuing bank. New files can no longer be added to the bank-facing defense package."
       },
       "regeneratingBanner": {
-        "title": "Regenerating defence package",
-        "body": "Your current saved package remains on the Shopify dispute. DisputeDesk is regenerating the evidence summary, defence narrative, and PDF — once ready, the new version will replace the current one."
+        "title": "Regenerating defense package",
+        "body": "Your current saved package remains on the Shopify dispute. DisputeDesk is regenerating the evidence summary, defense narrative, and PDF — once ready, the new version will replace the current one."
       },
       "rebuildOutcomeBanner": {
         "saved": {
-          "title": "New defence package saved to Shopify",
+          "title": "New defense package saved to Shopify",
           "body": "The regenerated package replaced the previously saved version on the Shopify dispute."
         },
         "blocked_weak": {
-          "title": "Defence package rebuilt — not re-saved",
+          "title": "Defense package rebuilt — not re-saved",
           "body": "The regenerated package was completed, but the case is still rated weak so it was not auto-saved to Shopify. The previously saved package remains on the dispute. Review the new draft and submit manually if you want to replace it."
         },
         "blocked_no_material_change": {
-          "title": "Defence package rebuilt — no material change",
+          "title": "Defense package rebuilt — no material change",
           "body": "The regeneration completed, but the new evidence did not add a bank-eligible signal, so the rebuilt package is not materially different from the one already saved. The previously saved package remains on the dispute."
         },
         "blocked_fatal_loss": {
-          "title": "Defence package rebuilt — re-save blocked",
+          "title": "Defense package rebuilt — re-save blocked",
           "body": "The rebuild detected a structurally unwinnable condition (for example, a refund was issued) and was not re-saved to Shopify. The previously saved package remains on the dispute."
         },
         "blocked_covered": {
           "title": "Shopify Protect now covering this dispute",
-          "body": "Shopify Protect is underwriting this dispute, so no further defence package is needed. The previously saved package remains on the dispute."
+          "body": "Shopify Protect is underwriting this dispute, so no further defense package is needed. The previously saved package remains on the dispute."
         },
         "failed": {
-          "title": "Defence package rebuild failed",
+          "title": "Defense package rebuild failed",
           "body": "The most recent regeneration did not complete. The previously saved package remains on the dispute. Try regenerating again, or contact support if it keeps failing."
         }
       },
@@ -918,10 +918,10 @@
         "charCount": "{count}/{max}"
       },
       "regenerateModal": {
-        "title": "Regenerate the defence package with this new evidence?",
-        "bodyAuto": "Your file has been saved. To include it in the bank-facing package, DisputeDesk will regenerate the full defence package — evidence summary, argument narrative, and PDF — and the new version will be saved to Shopify and replace the current package on the dispute.",
-        "bodyReview": "Your file has been saved. To include it in the bank-facing package, DisputeDesk will regenerate the full defence package — evidence summary, argument narrative, and PDF. The new version will be prepared for your review before it is saved to Shopify.",
-        "bodyNeutral": "Your file has been saved. To include it in the bank-facing package, DisputeDesk will regenerate the full defence package — evidence summary, argument narrative, and PDF. The new version will follow this dispute's current submission settings.",
+        "title": "Regenerate the defense package with this new evidence?",
+        "bodyAuto": "Your file has been saved. To include it in the bank-facing package, DisputeDesk will regenerate the full defense package — evidence summary, argument narrative, and PDF — and the new version will be saved to Shopify and replace the current package on the dispute.",
+        "bodyReview": "Your file has been saved. To include it in the bank-facing package, DisputeDesk will regenerate the full defense package — evidence summary, argument narrative, and PDF. The new version will be prepared for your review before it is saved to Shopify.",
+        "bodyNeutral": "Your file has been saved. To include it in the bank-facing package, DisputeDesk will regenerate the full defense package — evidence summary, argument narrative, and PDF. The new version will follow this dispute's current submission settings.",
         "primaryAction": "Regenerate package",
         "secondaryAction": "Keep file only"
       },
@@ -1063,7 +1063,7 @@
     "clickToUpload": "Click to upload or drag files here",
     "uploading": "Uploading...",
     "uploadSuccess": "File uploaded. The list and completeness score will update.",
-    "uploadFailed": "Upload failed — try again",
+    "uploadFailed": "Upload failed. This pack may not support file uploads yet.",
     "auditLog": "Audit Log",
     "pdfExport": "PDF Export",
     "renderPdf": "Render PDF",
@@ -1086,7 +1086,7 @@
     "compliance": "Evidence is saved to Shopify via API. Submission to the card network happens in Shopify Admin, or Shopify auto-submits on the due date.",
     "packNotFound": "Pack not found.",
     "backToDisputes": "Back to disputes",
-    "backToPacks": "Back to Playbooks",
+    "backToPacks": "Back to packs",
     "playbookTitle": "Playbook Details",
     "evidencePackTitle": "Evidence Pack",
     "approveAndSave": "Approve & Save",
@@ -1119,10 +1119,10 @@
     "recommendedForTemplateDescription": "Define the types of evidence we should collect when this template is applied to a dispute.",
     "useChecklistAsGuide": "Use this checklist as a guide",
     "packReadiness": "Pack readiness",
-    "packReadinessTemplate": "Playbook completeness",
+    "packReadinessTemplate": "Template completeness",
     "evidenceCompleteness": "Evidence completeness",
     "readinessHelper": "This score estimates how complete your evidence pack is based on the files and evidence added so far.",
-    "readinessHelperTemplate": "This score reflects how complete your playbook definition is (required evidence types and optional files).",
+    "readinessHelperTemplate": "This score reflects how complete your template definition is (required evidence types and optional files).",
     "readinessActionHint": "Add and upload evidence in Step 1 below to increase this score.",
     "readinessJustStarted": "Just started",
     "readinessInProgress": "In progress",
@@ -1134,7 +1134,7 @@
     "generatingPdf": "Generating PDF…",
     "downloadPdfReady": "Download PDF",
     "pdfGenerationFailed": "PDF generation failed. Try again.",
-    "statusBannerTemplate": "This is a playbook. It will be applied automatically to matching disputes, or you can assign it manually.",
+    "statusBannerTemplate": "This is a template. It will be applied automatically to matching disputes, or you can assign it manually.",
     "statusDraft": "Draft only — your evidence has not been saved to Shopify yet.",
     "statusTemplateDraft": "Started from template — now add your files and save the evidence to Shopify.",
     "statusSaved": "Saved to Shopify — final submission still needs to be completed in Shopify Admin.",
@@ -1325,8 +1325,8 @@
     "sidebarWarnings": "{count} high-impact {count, plural, one {item} other {items}} missing. You may still proceed."
   },
   "analytics": {
-    "title": "Reporting",
-    "subtitle": "Detailed dispute performance metrics and historical trends. For a real-time operational overview, see the Dashboard.",
+    "title": "Analytics",
+    "subtitle": "Dispute performance metrics and trends",
     "overview": "Overview",
     "period24h": "24h",
     "period7d": "7 days",
@@ -1360,11 +1360,11 @@
     "apiCalls": "API Calls",
     "unlimited": "Unlimited",
     "disputesUnit": "disputes",
-    "packsUnit": "playbooks",
+    "packsUnit": "packs",
     "callsUnit": "calls",
-    "packsUsed": "{used} of {limit} playbooks used",
+    "packsUsed": "{used} of {limit} packs used",
     "packsRemaining": "{count} remaining",
-    "noPackCredits": "No playbook credits remaining. Upgrade or purchase a top-up.",
+    "noPackCredits": "No pack credits remaining. Upgrade or purchase a top-up.",
     "plans": "Available Plans",
     "free": "Free (Sandbox)",
     "starter": "Starter",
@@ -1390,18 +1390,18 @@
     "connectStore": "Connect a store to view billing.",
     "upgradeFailed": "Upgrade could not be started. Reconnect this store from the sidebar and try again, or install the app from Shopify Admin.",
     "openInShopifyAdmin": "Open in Shopify Admin",
-    "topUps": "Need more playbooks?",
+    "topUps": "Need more packs?",
     "topUpsDesc": "Purchase top-up bundles. Credits added immediately.",
-    "topUp25": "+25 playbooks — $19",
-    "topUp100": "+100 playbooks — $59",
+    "topUp25": "+25 packs — $19",
+    "topUp100": "+100 packs — $59",
     "installTitle": "Install DisputeDesk",
     "installSubtitle": "Enter your Shopify store to get started",
     "shopPlaceholder": "yourstore.myshopify.com",
     "shopError": "Enter a valid store name, e.g. yourstore or yourstore.myshopify.com",
     "installButton": "Install",
     "installHint": "You'll be redirected to Shopify to authorize the app.",
-    "packLimitTitle": "Playbook limit reached",
-    "packLimitDesc": "You have no remaining playbook credits. Drafts are still unlimited — but exporting or submitting requires credits.",
+    "packLimitTitle": "Pack limit reached",
+    "packLimitDesc": "You have no remaining pack credits. Drafts are still unlimited — but exporting or submitting requires credits.",
     "upgradeAction": "Upgrade plan",
     "topUpAction": "Buy top-up",
     "starterFeature1": "Up to 25 disputes/month",
@@ -1419,23 +1419,23 @@
     "entFeature4": "Dedicated account manager",
     "entFeature5": "Custom integrations",
     "entFeature6": "SLA guarantee",
-    "freeFeature1": "Unlimited draft building & preview",
-    "freeFeature2": "Evidence pack builder (drafts)",
+    "freeFeature1": "Unlimited draft building",
+    "freeFeature2": "3 exported packs (lifetime)",
     "freeFeature3": "Basic activity log",
-    "freeFeature4": "Up to 3 exported packs total (lifetime)",
-    "realStarterFeature1": "20 playbooks/month included",
+    "freeFeature4": "PDF export",
+    "realStarterFeature1": "20 packs/month",
     "realStarterFeature2": "Basic rules (up to 5)",
-    "realStarterFeature3": "Review queue completeness gate",
-    "realStarterFeature4": "Auto build evidence packs",
+    "realStarterFeature3": "Auto-build packs",
+    "realStarterFeature4": "Review queue",
     "realStarterFeature5": "Email support",
-    "growthFeature1": "100 playbooks/month included",
-    "growthFeature2": "Advanced rules & playbooks",
-    "growthFeature3": "Bulk actions templates",
-    "growthFeature4": "Multi-user access",
-    "growthFeature5": "Auto save to Shopify",
-    "scaleFeature1": "400 playbooks/month included",
-    "scaleFeature2": "Multi-store support",
-    "scaleFeature3": "Advanced exports + audit trail",
+    "growthFeature1": "100 packs/month",
+    "growthFeature2": "Advanced rules",
+    "growthFeature3": "Multi-user",
+    "growthFeature4": "Bulk actions",
+    "growthFeature5": "Auto-save to Shopify",
+    "scaleFeature1": "400 packs/month",
+    "scaleFeature2": "Multi-store",
+    "scaleFeature3": "Advanced exports",
     "scaleFeature4": "SLA options",
     "scaleFeature5": "Priority support",
     "downgradeTo": "Downgrade to {plan}",
@@ -1484,7 +1484,7 @@
   },
   "rules": {
     "title": "Rules",
-    "subtitle": "Configure how disputes are handled automatically. First matching rule wins.",
+    "subtitle": "Configure how disputes are routed — auto-pack or review queue. First matching rule wins.",
     "subtitleDemo": "Automate evidence attachment and dispute handling with custom rules",
     "triggerCondition": "Trigger Condition",
     "executions": "Executions",
@@ -1507,12 +1507,12 @@
     "review": "Review before submit",
     "createRule": "Create Rule",
     "unnamedRule": "Unnamed Rule",
-    "matchesAll": "Matches all disputes",
+    "matchesAll": "All disputes",
     "footer": "Rules are evaluated top-to-bottom. First matching rule wins. Disputes matching no rule go to Review Queue.",
     "noRules": "No rules configured. All new disputes will go to the review queue by default.",
     "setupTitle": "Automate Your Dispute Workflow",
     "setupDescription": "Rules decide what happens when a new dispute arrives. Each rule matches disputes by type or amount, then routes them to auto-pack or the review queue. First matching rule wins.",
-    "suggestedRules": "Suggested Automation Rules",
+    "suggestedRules": "Suggested Starter Rules",
     "installAll": "Install Suggested Rules",
     "createCustomRule": "Create Custom Rule",
     "setupFooterTip": "Pro tip: Rules are evaluated top-to-bottom. First matching rule wins. Disputes matching no rule go to Review Queue.",
@@ -1521,11 +1521,11 @@
     "morePresets": "Want to add more automation? View our suggested rule presets.",
     "viewPresets": "View Presets",
     "presetFraudAuto": "Auto-Pack Fraudulent Disputes",
-    "presetFraudAutoDesc": "Automatically build playbooks for fraudulent or unrecognized transaction disputes.",
+    "presetFraudAutoDesc": "Automatically build evidence packs for fraudulent or unrecognized transaction disputes.",
     "presetPnrAuto": "Auto-Pack Product Not Received",
-    "presetPnrAutoDesc": "Automatically build playbooks when customers claim they didn't receive their order.",
+    "presetPnrAutoDesc": "Automatically build evidence packs when customers claim they didn't receive their order.",
     "presetHighValueReview": "Review High-Value Disputes",
-    "presetHighValueReviewDesc": "Send disputes over $500 to the review queue for manual inspection before handling.",
+    "presetHighValueReviewDesc": "Send disputes over $500 to the review queue for manual inspection before packing.",
     "presetCatchAllReview": "Catch-All: Send to Review",
     "presetCatchAllReviewDesc": "Route any remaining disputes to the review queue as a safety net.",
     "reason": "Reason",
@@ -1606,18 +1606,18 @@
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Advanced preferences and account settings",
+    "subtitle": "Manage your DisputeDesk configuration and preferences",
     "automationSection": "Automation",
     "profileSection": "Profile",
     "notificationsSection": "Notifications",
     "dangerZone": "Danger Zone",
     "automationBanner": "Evidence is saved to Shopify via API. Submission to the card network happens in Shopify Admin (or auto-submits on due date). DisputeDesk does not submit on your behalf.",
-    "autoBuildLabel": "Auto-build playbooks",
-    "autoBuildDesc": "Automatically generate playbooks when new disputes are detected",
+    "autoBuildLabel": "Auto-build evidence packs",
+    "autoBuildDesc": "Automatically generate packs when new disputes are detected",
     "autoSaveLabel": "Auto-save evidence to Shopify",
     "autoSaveDesc": "Automatically push complete evidence to Shopify when gates pass",
     "reviewLabel": "Require review before auto-save",
-    "reviewDesc": "Park evidence in review queue for approval before saving to Shopify",
+    "reviewDesc": "Park packs in review queue for approval before saving to Shopify",
     "blockerLabel": "Enforce zero blockers",
     "blockerDesc": "Block auto-save if any required evidence items are missing",
     "minScore": "Minimum completeness score for auto-save",
@@ -1633,15 +1633,15 @@
     "notifNewDispute": "New dispute alerts",
     "notifNewDisputeDesc": "Get notified when a new dispute needs your attention. If your rules send a dispute to review, the email is sent after automated evidence is collected.",
     "notifBeforeDue": "Before due date",
-    "notifBeforeDueDesc": "Reminder before dispute deadline",
+    "notifBeforeDueDesc": "Reminder 24 hours before dispute deadline",
     "notifEvidenceReady": "Evidence ready",
     "notifEvidenceReadyDesc": "When evidence pack is complete and ready to submit",
     "newDisputeAlerts": "New dispute alerts",
     "newDisputeAlertsDesc": "Get notified about new chargebacks and inquiries. If a dispute is sent to review, the email is sent after your automated pack is ready.",
     "deadlineReminders": "Deadline reminders",
     "deadlineRemindersDesc": "Reminder emails before response deadlines",
-    "packCompletion": "Playbook completion",
-    "packCompletionDesc": "Notified when playbooks finish generating",
+    "packCompletion": "Pack completion",
+    "packCompletionDesc": "Notified when evidence packs finish generating",
     "autoSaveConfirmations": "Auto-save confirmations",
     "autoSaveConfirmationsDesc": "Notified when evidence is auto-saved to Shopify",
     "securitySection": "Security Settings",
@@ -1686,27 +1686,44 @@
     "deleteAccount": "Delete account",
     "active": "Active",
     "notifMonthlyDigest": "Monthly chargeback digest",
-    "notifMonthlyDigestDesc": "A monthly email summarizing your chargeback exposure, where you stand on the network rules, and what changed."
+    "notifMonthlyDigestDesc": "A monthly email summarizing your chargeback exposure, where you stand on the network rules, and what changed.",
+    "storeConnection": "Store Connection",
+    "connectedViaOAuth": "Connected via Shopify OAuth",
+    "reconnect": "Reconnect",
+    "notifications": "Notifications",
+    "inviteMember": "Invite Member",
+    "teamManagedInPortal": "Team management is available in the portal.",
+    "manageTeam": "Manage team in portal",
+    "billingPlan": "Billing & Plan",
+    "billingDesc": "Manage your plan and usage from the Billing page.",
+    "viewPricing": "View Pricing",
+    "security": "Security & Privacy",
+    "dataEncryption": "Data Encryption",
+    "dataEncryptionDesc": "All data is encrypted at rest (AES-256) and in transit (TLS 1.3)",
+    "soc2": "SOC 2 Type II Compliant",
+    "soc2Desc": "Annual third-party security audits",
+    "gdpr": "GDPR & CCPA Ready",
+    "gdprDesc": "Full compliance with data protection regulations"
   },
   "connect": {
-    "title": "Connection Readiness",
+    "title": "Authorize DisputeDesk",
     "subtitle": "DisputeDesk needs Shopify access to sync inquiries and chargebacks, build evidence, and save responses on your behalf.",
     "statusConnected": "Connected",
-    "statusNotConnected": "Not Connected",
-    "storeConnected": "Permissions granted",
-    "description": "Grant the permissions below so DisputeDesk can protect your store across both inquiry and chargeback phases.",
-    "permissionsHeading": "Required permissions",
+    "statusNotConnected": "Not connected",
+    "storeConnected": "Shopify store connected",
+    "description": "Authorize your Shopify account and click Allow to connect. DisputeDesk will use these permissions to automatically sync disputes, build evidence packs, and save responses on your behalf.",
+    "permissionsHeading": "The following permissions will be granted:",
     "permOrders": "Orders",
-    "permOrdersDesc": "Read order details and attach to evidence",
+    "permOrdersDesc": "Read order details for evidence packs",
     "permCustomers": "Customers",
-    "permCustomersDesc": "Include customer info in evidence when required",
+    "permCustomersDesc": "Read customer information for dispute context",
     "permDisputes": "Disputes",
-    "permDisputesDesc": "Sync inquiries and chargebacks from Shopify Payments",
-    "permFiles": "Evidence files",
-    "permFilesDesc": "Upload and save evidence documents to Shopify",
-    "ctaAuthorize": "Authorize DisputeDesk",
-    "ctaContinue": "Continue to setup",
-    "footer": "Your store data is encrypted and never shared with third parties.",
+    "permDisputesDesc": "Read and write dispute evidence",
+    "permFiles": "Files",
+    "permFilesDesc": "Upload evidence documents to Shopify",
+    "ctaAuthorize": "Authorize account",
+    "ctaContinue": "Continue to setup →",
+    "footer": "Only you will have access. You can revoke permissions at any time from Shopify Admin → Apps.",
     "readinessNote": "Once connected, DisputeDesk will begin syncing your disputes and configuring coverage for both inquiries and chargebacks.",
     "whatWeNeed": "What we need from Shopify",
     "whatWeNeedIntro": "DisputeDesk needs the following access. We use it only to manage disputes and evidence; all access is read-only except when we upload evidence for you.",
@@ -1867,34 +1884,34 @@
     "browseByTopic": "Browse by Topic",
     "documentationTitle": "Documentation",
     "quickTasks": {
-      "createPack": "Build a Playbook",
+      "createPack": "Build a Pack",
       "handleDispute": "Handle Dispute",
-      "createRule": "Add Automation"
+      "createRule": "Create Rule"
     },
     "tours": {
       "reviewDispute": {
-        "title": "Review a Case End-to-End",
-        "description": "Walk through handling an inquiry or chargeback from start to resolution"
+        "title": "Handle a Dispute End-to-End",
+        "description": "Complete walkthrough from receiving a dispute to submitting evidence"
       },
       "buildPack": {
-        "title": "Create Your First Playbook",
-        "description": "Build a playbook that supports both inquiry and chargeback responses"
+        "title": "Create Your First Pack",
+        "description": "Learn how to build an evidence pack from scratch with all required documents"
       },
       "automationRules": {
-        "title": "Set Up Automation",
-        "description": "Configure how DisputeDesk handles each dispute family automatically"
+        "title": "Set Up Auto-Assignment Rules",
+        "description": "Automate pack assignment based on dispute type and order details"
       },
       "installTemplate": {
-        "title": "Install & Customize Playbooks",
-        "description": "Install pre-built playbooks and customize them for your store"
+        "title": "Install & Customize Templates",
+        "description": "Install pre-built templates and customize them for your store"
       },
       "configurePolicies": {
-        "title": "Review Coverage",
-        "description": "See how each dispute family is covered across inquiry and chargeback phases"
+        "title": "Configure Store Policies",
+        "description": "Add your shipping, refund, and terms policies for evidence packs"
       },
       "packBuilderAdvanced": {
-        "title": "Advanced Playbook Features",
-        "description": "Customize evidence checklists, narrative templates, and conditional logic"
+        "title": "Advanced Pack Builder Features",
+        "description": "Master conditional logic, custom fields, and narrative templates"
       }
     },
     "resources": {
@@ -1953,40 +1970,40 @@
         "detailSubmitButtonDesc": "This button sends the pack to Shopify. After submitting, this same tab turns into a 'what was sent' summary so you can see exactly what Shopify received and track the bank's response."
       },
       "buildPack": {
-        "title": "Build a Playbook",
-        "description": "See how to create and manage playbooks for your chargebacks.",
-        "introTitle": "Create Your First Playbook",
-        "introDesc": "Playbooks are collections of documents and evidence that prove your case. Let's see where they live and how to create one.",
-        "packsGridTitle": "Your Playbooks Library",
-        "packsGridDesc": "All your playbooks are listed here. You can filter by status, type, or search by name.",
-        "createPackBtnTitle": "Create a Playbook",
-        "createPackBtnDesc": "Click this button to build a new playbook from scratch. You'll name it, choose a dispute type, and add documents.",
+        "title": "Build an Evidence Pack",
+        "description": "See how to create and manage evidence packs for your chargebacks.",
+        "introTitle": "Create Your First Evidence Pack",
+        "introDesc": "Evidence packs are collections of documents that prove your case. Let's see where they live and how to create one.",
+        "packsGridTitle": "Your Packs Library",
+        "packsGridDesc": "All your evidence packs are listed here. You can filter by status, type, or search by name.",
+        "createPackBtnTitle": "Create a Pack",
+        "createPackBtnDesc": "Click this button to build a new pack from scratch. You'll name it, choose a dispute type, and add documents.",
         "templateBtnTitle": "Start From a Template",
-        "templateBtnDesc": "Templates give you a head start with pre-built playbooks for common dispute types. Click to browse the template library.",
+        "templateBtnDesc": "Templates give you a head start with pre-built packs for common dispute types. Click to browse the template library.",
         "duration": "3 min"
       },
       "automationRules": {
         "title": "Set Up Automation",
-        "description": "Configure automation to handle disputes and route them to review.",
-        "introTitle": "Set Up Automation Rules",
-        "introDesc": "Automation rules handle disputes based on conditions you define. Let's see how they work.",
-        "rulesHeaderTitle": "Automation",
+        "description": "Configure rules to auto-build packs and route disputes to review.",
+        "introTitle": "Set Up Auto-Assignment Rules",
+        "introDesc": "Rules automatically assign the right pack to disputes based on conditions you define. Let's see how they work.",
+        "rulesHeaderTitle": "Rules & Automation",
         "rulesHeaderDesc": "This is your automation hub. Rules evaluate incoming disputes and decide what happens next.",
-        "createRuleBtnTitle": "Create an Automation Rule",
+        "createRuleBtnTitle": "Create a Rule",
         "createRuleBtnDesc": "Click here to create a new automation rule. You'll set conditions, choose an action, and set priority.",
         "rulesListTitle": "Your Active Rules",
-        "rulesListDesc": "Rules are evaluated in priority order. The first matching rule handles the dispute. Edit or reorder rules here.",
+        "rulesListDesc": "Rules are evaluated in priority order. The first matching rule assigns its pack. Edit or reorder rules here.",
         "duration": "3 min"
       },
       "installTemplate": {
-        "title": "Install & Customize Playbooks",
-        "description": "Install pre-built playbooks and customize them for your store.",
-        "introTitle": "Install & Customize Playbooks",
-        "introDesc": "DisputeDesk offers expert-built playbooks for common dispute types. Let's install one and customize it.",
-        "templateBtnTitle": "Browse Playbook Library",
-        "templateBtnDesc": "Click 'Start from Template' to open the playbook library. You can preview, install, and customize any playbook.",
-        "packsGridTitle": "Installed Playbooks",
-        "packsGridDesc": "After installation, playbooks appear here as drafts. Open any to customize fields, documents, and the narrative.",
+        "title": "Install & Customize Templates",
+        "description": "Install pre-built templates and customize them for your store.",
+        "introTitle": "Install & Customize Templates",
+        "introDesc": "DisputeDesk offers expert-built templates for common dispute types. Let's install one and customize it.",
+        "templateBtnTitle": "Browse Template Library",
+        "templateBtnDesc": "Click 'Start from Template' to open the template library. You can preview, install, and customize any template.",
+        "packsGridTitle": "Installed Templates",
+        "packsGridDesc": "After installation, templates appear here as draft packs. Open any to customize fields, documents, and the narrative.",
         "duration": "2 min"
       },
       "configurePolicies": {
@@ -2001,26 +2018,26 @@
         "duration": "2 min"
       },
       "packBuilderAdvanced": {
-        "title": "Advanced Playbook Features",
-        "description": "Master playbook management, editing, and optimization.",
-        "introTitle": "Advanced Playbook Features",
-        "introDesc": "Let's explore advanced playbook features — editing, customizing documents, and optimizing your evidence strategy.",
-        "packsGridTitle": "Your Playbooks Library",
-        "packsGridDesc": "Your playbooks are organized by type and status. Use filters to find specific playbooks quickly.",
-        "packRowTitle": "Open a Playbook",
-        "packRowDesc": "Click any playbook to open the detail view. From there you can edit documents, update the narrative, and adjust settings.",
+        "title": "Advanced Pack Features",
+        "description": "Master pack management, editing, and optimization.",
+        "introTitle": "Advanced Pack Builder Features",
+        "introDesc": "Let's explore advanced pack features — editing, customizing documents, and optimizing your evidence strategy.",
+        "packsGridTitle": "Your Packs Library",
+        "packsGridDesc": "Your packs are organized by type and status. Use filters to find specific packs quickly.",
+        "packRowTitle": "Open a Pack",
+        "packRowDesc": "Click any pack to open the detail view. From there you can edit documents, update the narrative, and adjust settings.",
         "duration": "4 min"
       }
     },
     "categories": {
       "gettingStarted": "Getting Started",
-      "gettingStartedDesc": "Connect your store, sync disputes, and understand the inquiry/chargeback lifecycle",
-      "disputes": "Inquiries & Chargebacks",
-      "disputesDesc": "View, filter, and manage cases across both lifecycle phases",
-      "evidencePacks": "Playbooks",
-      "evidencePacksDesc": "Build and manage playbooks for inquiry and chargeback responses",
-      "automationRules": "Automation & Coverage",
-      "automationRulesDesc": "Configure how DisputeDesk handles each dispute family by lifecycle phase",
+      "gettingStartedDesc": "Connect your store, sync disputes, and learn the basics",
+      "disputes": "Disputes",
+      "disputesDesc": "View, filter, sync, and manage your chargebacks",
+      "evidencePacks": "Evidence Packs",
+      "evidencePacksDesc": "Build, review, and strengthen your evidence",
+      "automationRules": "Automation & Rules",
+      "automationRulesDesc": "Configure auto-build, auto-save, and routing rules",
       "billing": "Billing & Plans",
       "billingDesc": "Plans, quotas, upgrades, and trial information",
       "savingToShopify": "Saving to Shopify",
@@ -2028,7 +2045,9 @@
       "lifecycle": "Inquiry & Chargeback Lifecycle",
       "lifecycleDesc": "Understand the two phases of a dispute and how DisputeDesk handles each",
       "policies": "Policies",
-      "policiesDesc": "Manage business policies for stronger evidence"
+      "policiesDesc": "Manage business policies for stronger evidence",
+      "liabilityShift": "Liability Shift (CE 3.0 & FPT)",
+      "liabilityShiftDesc": "Visa Compelling Evidence 3.0, Mastercard First-Party Trust, ratios, and what they mean for your store"
     },
     "articles": {
       "connectShopifyStore": {
@@ -2041,7 +2060,7 @@
       },
       "understandingDashboard": {
         "title": "Understanding the dashboard",
-        "body": "The dashboard gives you an at-a-glance overview of your dispute operations.\n\nAt the top, four summary tiles show:\n- Action Needed: disputes requiring your attention (new, needs review, or action needed).\n- In Progress: disputes being worked on or awaiting issuer decision.\n- Amount at Risk: total value of open disputes.\n- Deadlines Soon: disputes with a deadline within 3 days.\n\nBelow the summary, the main section shows disputes that need your attention. If nothing needs attention, the section shows your in-progress disputes instead.\n\nThe Performance Overview section shows key metrics for the selected time period: Active Disputes, Win Rate, Amount Recovered, and Amount at Risk. Use the period selector to view different time ranges.\n\nThe Dispute Categories section shows a breakdown of your disputes by reason type.\n\nClick any dispute row to see full details and manage evidence."
+        "body": "The dashboard gives you an at-a-glance overview of your dispute operations.\n\nKey metrics displayed:\n- Open Disputes: chargebacks currently awaiting a response.\n- Win Rate: percentage of disputes resolved in your favor.\n- Auto-Saved: evidence packs automatically saved to Shopify this month.\n- Resolved: total disputes closed (won or lost).\n\nThe Automation Status card shows your current settings: whether auto-build and auto-save are enabled, the minimum completeness score, and whether the blocker gate is active.\n\nThe Recent Disputes table lists your latest chargebacks. The Order column links directly to the order in your Shopify Admin. Click View Details on any row to see full dispute details and manage evidence."
       },
       "firstDisputeSync": {
         "title": "Your first dispute sync",
@@ -2049,7 +2068,7 @@
       },
       "automationOverview": {
         "title": "How automation works",
-        "body": "DisputeDesk is automation-first. Here's the flow:\n\n1. A new dispute appears in Shopify.\n2. DisputeDesk detects it (via webhook or scheduled sync).\n3. Your rules are evaluated to decide: auto-pack or send to review queue.\n4. If auto-pack: an evidence pack is built automatically from your order data, tracking info, and store policies.\n5. The completeness score is calculated. If it meets your threshold and there are no blockers, the evidence is saved to Shopify automatically.\n6. If review is required: the pack appears in your Review Queue for manual approval.\n\nYou control every step through your automation settings and rules. Automation can be fully enabled, partially enabled (auto-build but manual save), or disabled entirely.\n\n**New dispute email (review mode):** When a dispute is routed to review and a pack build is queued, the “ready to review” email is only sent after automated evidence is collected and the pack is ready—not the moment the dispute is first detected. If a build is not started (for example, auto-build is off or you are over your pack limit), you may still be notified at detection time. Turn emails on or off in Settings → Notifications (new dispute alerts)."
+        "body": "DisputeDesk is automation-first. Here's the flow:\n\n1. A new dispute appears in Shopify.\n2. DisputeDesk detects it (via webhook or scheduled sync).\n3. Your rules are evaluated to decide: auto-pack or send to review queue.\n4. If auto-pack: an evidence pack is built automatically from your order data, tracking info, and store policies.\n5. The completeness score is calculated. If it meets your threshold and there are no blockers, the evidence is saved to Shopify automatically.\n6. If review is required: the pack appears in your Review Queue for manual approval.\n\n**Pack library vs routing rules:** Templates you install under Packs live in your evidence library (sections and narratives you can edit). **Automation rules** only decide whether a new dispute runs the standard auto-build pipeline or is sent to the review queue first—they do not select a library template for that automated build. Auto-build uses order, tracking, and policy collectors.\n\nYou control every step through your automation settings and rules. Automation can be fully enabled, partially enabled (auto-build but manual save), or disabled entirely.\n\n**New dispute email (review mode):** When a dispute is routed to review and a pack build is queued, the “ready to review” email is only sent after automated evidence is collected and the pack is ready—not the moment the dispute is first detected. If a build is not started (for example, auto-build is off or you are over your pack limit), you may still be notified at detection time. Turn emails on or off in Settings → Notifications (new dispute alerts)."
       },
       "viewingFilteringDisputes": {
         "title": "Viewing and filtering disputes",
@@ -2073,7 +2092,7 @@
       },
       "howPacksBuilt": {
         "title": "How evidence packs are built automatically",
-        "body": "When DisputeDesk builds an evidence pack, it automatically collects evidence from multiple sources:\n\n- Order data: line items, amounts, billing address (city-level only — PII is redacted), customer tenure, and refund history.\n- Fulfillment & tracking: carrier name, tracking numbers, tracking URLs, and delivery status.\n- Store policies: snapshots of your shipping, refund, terms, and cancellation policies.\n\nThe pack is structured by dispute reason. For example, a \"Product not received\" dispute will prioritize shipping and tracking evidence, while a \"Fraudulent\" dispute will emphasize order and customer verification.\n\nOn the pack detail page we make this clear: order, tracking, and store policies are already included from your store. The upload section is for additional documents (e.g. customer emails, screenshots) that aren't in Shopify. After collection, DisputeDesk calculates a completeness score and identifies any blockers (missing required evidence)."
+        "body": "When DisputeDesk builds an evidence pack, it automatically collects evidence from multiple sources:\n\n- Order data: line items, amounts, billing address (city-level only — PII is redacted), customer tenure, and refund history.\n- Fulfillment & tracking: carrier name, tracking numbers, tracking URLs, and delivery status.\n- Store policies: snapshots of your shipping, refund, terms, and cancellation policies.\n\nThe pack is structured by dispute reason. For example, a \"Product not received\" dispute will prioritize shipping and tracking evidence, while a \"Fraudulent\" dispute will emphasize order and customer verification.\n\nAfter collection, DisputeDesk calculates a completeness score and identifies any blockers (missing required evidence). You can then upload additional files to strengthen the pack.\n\n**Library pack templates:** Installing a template from the Packs page adds a pack to your **library** for narratives, sections, and editing. That is separate from each **automated per-dispute build**, which uses the collectors pipeline above. The automated build does not currently merge your library template structure into the pack automatically."
       },
       "generatingPackManually": {
         "title": "Generating a pack manually",
@@ -2089,7 +2108,7 @@
       },
       "uploadingEvidence": {
         "title": "Uploading additional evidence",
-        "body": "Order confirmation, tracking/delivery proof, and store policies are already pulled from your Shopify store when the pack is built. The upload section is for additional evidence that isn't in Shopify.\n\nTo add more evidence:\n1. Open the evidence pack detail page (for a dispute).\n2. Scroll to the \"Upload\" or \"Upload supporting files\" section.\n3. Click to upload or drag and drop files.\n4. Allowed types: PNG, JPG/JPEG, and PDF — the formats Shopify Payments documents for dispute file uploads.\n5. Combined size of all supporting uploads on this evidence pack cannot exceed about 4 MB (Shopify's limit for dispute evidence files). Larger single files are rejected automatically, and uploads that would push your pack beyond the combined cap are blocked.\n\nDisputeDesk can attach qualifying files through Shopify Payments where permitted, and may still include secure DisputeDesk links inside the narrative so reviewers can open them. Links expire 180 days after evidence is saved to Shopify.\n\nCommon uploads include:\n- Screenshots of customer communication.\n- Delivery confirmation photos.\n- Signed receipts or invoices.\n- Additional tracking documentation."
+        "body": "You can upload files to strengthen your evidence pack:\n\n1. Open the evidence pack detail page.\n2. Scroll to the \"Upload Evidence\" section.\n3. Click to upload or drag and drop files.\n4. Allowed types: PNG, JPG/JPEG, and PDF — the formats Shopify Payments documents for dispute file uploads.\n5. Combined size of all supporting uploads on this evidence pack cannot exceed about 4 MB (Shopify's limit for dispute evidence files). Larger single files are rejected automatically, and uploads that would push your pack beyond the combined cap are blocked.\n\nDisputeDesk can attach qualifying files through Shopify Payments where permitted, and may still include secure DisputeDesk links inside the narrative so reviewers can open them. Links expire 180 days after evidence is saved to Shopify.\n\nCommon uploads include:\n- Screenshots of customer communication.\n- Delivery confirmation photos.\n- Signed receipts or invoices.\n- Additional tracking documentation."
       },
       "evidenceChecklist": {
         "title": "Evidence checklist explained",
@@ -2105,11 +2124,11 @@
       },
       "evidencePackTemplates": {
         "title": "Using evidence pack templates",
-        "body": "The Packs page helps you get started with evidence packs using templates.\n\nWhen you have no packs yet, you'll see recommended templates — pre-built packs for common dispute types (e.g. Fraudulent, Product Not Received). Each template card has an \"Install\" button: clicking it creates a new pack from that template for your store. After installing, you're taken to the new pack's detail page; you can also open it anytime from the Packs list. Use \"Back to packs\" on the pack page to return to the library.\n\nIn the embedded app (inside Shopify Admin), Evidence Packs shows these templates in a table with row actions (Activate/Edit/Delete). Use \"Start from template\" to install templates, then activate draft packs from the table.\n\nTip: If the Packs page looks blank or you can't install templates, reopen DisputeDesk from Shopify Admin (Apps > DisputeDesk) so the embedded shop session is established. DisputeDesk relies on server-side shop identity (httpOnly cookies + middleware) and can't read it from the browser.\n\n**Template Setup Wizard:** In the portal you can use the Template Setup Wizard (Packs > customize or /portal/packs/customize) to configure a new template in four steps: choose evidence types to collect, set evidence sources (where each type comes from — auto, reusable, or manual), review how automation works and choose auto-submit or email-to-review, and activate. See \"Template setup wizard\" for details.\n\n**Template vs dispute pack:** When you open a pack, the page adapts. If the pack is a **template** (no dispute linked), you see the template setup wizard — you're defining what evidence to collect and how it is provided when a dispute matches. If the pack is linked to a **dispute**, you see \"Prepare your evidence pack\" and the full flow: we've already pulled order, tracking, and policies from your store; you can add extra documents and then save and submit.\n\n\"Browse All Templates\" opens the full template library. \"Create from Scratch\" starts an empty pack. Templates are a quick way to get evidence packs that match best practices; you can always edit documents and settings after installing."
+        "body": "The Packs page helps you get started with evidence packs using templates.\n\nWhen you have no packs yet, you'll see recommended templates — pre-built packs for common dispute types (e.g. Fraudulent, Product Not Received). Each template card has an \"Install\" button: clicking it creates a new pack from that template for your store. After installing, you're taken to the new pack's detail page; you can also open it anytime from the Packs list. Use \"Back to packs\" on the pack page to return to the library.\n\nIn the embedded app (inside Shopify Admin), Evidence Packs shows these templates in a table with row actions (Activate/Edit/Delete). Use \"Start from template\" to install templates, then activate draft packs from the table.\n\nTip: If the Packs page looks blank or you can't install templates, reopen DisputeDesk from Shopify Admin (Apps > DisputeDesk) so the embedded shop session is established. DisputeDesk relies on server-side shop identity (httpOnly cookies + middleware) and can't read it from the browser.\n\n**Template Setup Wizard:** In the portal you can use the Template Setup Wizard (Packs > customize or /portal/packs/customize) to configure a new template in four steps: choose evidence types to collect, set evidence sources (where each type comes from — auto, reusable, or manual), review how automation works and choose auto-submit or email-to-review, and activate. See \"Template setup wizard\" for details.\n\n\"Browse All Templates\" opens the full template library so you can preview and install any template. \"Create from Scratch\" starts an empty pack.\n\nOnce you have at least one pack, a short banner may appear suggesting you explore more templates; you can dismiss it or click \"Browse Templates\" to open the library again.\n\nTemplates are a quick way to get evidence packs that match best practices; you can always edit documents and settings after installing.\n\n**Related:** **Automation rules** (Rules page or Setup wizard) control whether new disputes are auto-built or sent to the review queue first. They do not swap in a specific library template for each automated build—see \"How automation works\" and \"How evidence packs are built automatically.\""
       },
       "templateSetupWizard": {
         "title": "Template setup wizard",
-        "body": "The Template Setup Wizard (in the portal at Packs > customize, or /portal/packs/customize) walks you through setting up a new evidence template in four steps.\n\n**Step 1 — Choose evidence to collect:** Select which types of evidence this template should gather. Each type is marked Required, Recommended, or Optional, and how it is provided: Auto-collected from Shopify, Set in Policies, or You add manually. For policies (e.g. Refund policy), you’ll see whether the policy is already set or \"Not set — Add in Policies\". You must select all required types before continuing.\n\n**Step 2 — Set evidence sources:** Review where DisputeDesk will get each type of evidence. Each selected type is shown with a clear source: auto (pulled from your store), reusable store document (upload once in Policies; use the Upload button to add or link policies), or added manually per dispute. A summary shows how many types are Automated, Reusable, and Manual.\n\n**Step 3 — Review how automation works:** The wizard explains the flow (dispute appears → pack prepared → ready to review). You choose how submission works: **Auto-submit to Shopify** on the dispute due date, or **Email me to review and submit** so you or your team submit manually. The \"Important to know\" note updates based on your choice.\n\n**Step 4 — Activate template:** Review a summary (evidence types count, how evidence is provided, dispute type, source). You can **Save as draft** to finish later or **Activate template** to start using it. Both actions return you to the Packs library.\n\nIn the **embedded app setup** (Shopify Admin), finishing the Install flow with **Activate** creates the library pack as **ACTIVE** so it appears in the Evidence packs step and the **Automation & review** step alongside activated packs.\n\nThe sidebar shows your setup progress and a checklist of the four steps. Use \"Back to Evidence Packs\" at any time to leave the wizard without saving."
+        "body": "The Template Setup Wizard (in the portal at Packs > customize, or /portal/packs/customize) walks you through setting up a new evidence template in four steps.\n\n**Step 1 — Choose evidence to collect:** Select which types of evidence this template should gather. Each type is marked Required, Recommended, or Optional, and how it is provided: Auto-collected from Shopify, Set in Policies, or You add manually. For policies (e.g. Refund policy), you'll see whether the policy is already set or \"Not set — Add in Policies\". You must select all required types before continuing.\n\n**Step 2 — Set evidence sources:** Review where DisputeDesk will get each type of evidence. Each selected type is shown with a clear source: auto (pulled from your store), reusable store document (upload once in Policies; use the Upload button to add or link policies), or added manually per dispute. A summary shows how many types are Automated, Reusable, and Manual.\n\n**Step 3 — Review how automation works:** The wizard explains the flow (dispute appears → pack prepared → ready to review). You choose how submission works: **Auto-submit to Shopify** on the dispute due date, or **Email me to review and submit** so you or your team submit manually. The \"Important to know\" note updates based on your choice.\n\n**Step 4 — Activate template:** Review a summary (evidence types count, how evidence is provided, dispute type, source). You can **Save as draft** to finish later or **Activate template** to start using it. Both actions return you to the Packs library.\n\nIn the **embedded app setup** (Shopify Admin), finishing the Install flow with **Activate** creates the library pack as **ACTIVE** so it appears in the Evidence packs step and the **Automation & review** step alongside activated packs.\n\nThe sidebar shows your setup progress and a checklist of the four steps. Use \"Back to Evidence Packs\" at any time to leave the wizard without saving."
       },
       "definingStorePolicies": {
         "title": "Defining your store policies",
@@ -2117,15 +2136,15 @@
       },
       "configuringAutomation": {
         "title": "Dispute routing and automation settings",
-        "body": "**During setup — Automation & review step**\n\nAfter you install evidence pack templates (Packs step), the **Automation & review** step explains what happens when a **new** dispute syncs from Shopify. DisputeDesk has **two** automation modes:\n\n- **Automatic** — build the evidence pack and submit it to Shopify automatically. You get an email that the dispute was handled for you.\n- **Review before submit** — build the evidence pack, flag the dispute as needing review, and email you so you can review and submit before the deadline.\n\nBoth modes always build a pack. \"Review\" is never \"do nothing\" — it is a staged automation so you keep control of the final submit.\n\nThe step presents:\n\n- **Installed library packs:** One row per template-backed pack (**draft** or **active** — not archived), with **Review before submit** or **Automatic** handling. Draft packs appear as soon as you install a template, even before you activate the pack on the Packs page. Status badges distinguish active vs draft.\n- **Starting presets:** Review all, Automate all, or Mix (per-family choice). Review is suggested for a safe first setup.\n- **Default rule (General):** Fallback when no per-reason override applies — choose **Automatic** or **Review before submit** and a pack template when relevant.\n- **Exceptions by reason:** Optional overrides per Shopify dispute reason (e.g. fraud, product not received), each in its own card.\n- **Safeguards:** Switches for high-value review. When active, these **override** the per-reason choice and force **Review before submit** for the matching dispute.\n- **Live summary:** A short recap of your effective choices before you save.\n\nThe **Evidence packs** step emphasizes **activated** packs in its summary; the Automation step lists **all** installed template-backed packs so you can set routing for drafts too.\n\nYou need at least one **installed** pack template before you can assign templates or use the full Automatic path; the setup screen shows a clear message if packs are missing.\n\n**How routing is evaluated:** Amount safeguards → rule for the dispute reason → default (General). If no rule matches, the dispute falls through to **Review before submit** by default — never a silent drop.\n\n**After setup — Settings > Automation**\n\nStore-wide toggles: auto-build evidence packs, auto-save evidence to Shopify, enforce zero blockers, and minimum completeness score (0–100, default 80) for auto-save. The Rules page is the single source of truth for per-dispute routing.\n\n**Rules page**\n\nFor custom rules with drag-and-drop order and amount ranges, use **Rules** after setup. See also \"Creating your first rule\" and \"Rule priority.\""
+        "body": "**During setup — Automation & review step**\n\nAfter you install evidence pack templates (Packs step), the **Automation & review** step explains what happens when a **new** dispute syncs from Shopify:\n\n- **Installed library packs:** One row per template-backed pack (**draft** or **active** — not archived), with **Manual review** or **Automatic** handling. Draft packs appear as soon as you install a template, even before you activate the pack on the Packs page. Status badges distinguish active vs draft.\n- **Starting presets:** Manual, Review first, or Automatic (Automatic requires installed templates). Manual is suggested for a safe first setup.\n- **Default rule (General):** Fallback when no per-reason override applies — choose handling (Manual, Review first, or Auto-build) and a pack template when relevant.\n- **Exceptions by reason:** Optional overrides per Shopify dispute reason (e.g. fraud, product not received), each in its own card.\n- **Safeguards:** Switches for high-value review and catch-all review. When active, these **override** the default and per-reason rules when their conditions match.\n- **Live summary:** A short recap of your effective choices before you save.\n\nThe **Evidence packs** step emphasizes **activated** packs in its summary; the Automation step lists **all** installed template-backed packs so you can set routing for drafts too.\n\nYou need at least one **installed** pack template before you can assign templates or use the full Automatic path; the setup screen shows a clear message if packs are missing.\n\n**How routing is evaluated:** Amount safeguards → rule for the dispute reason → default (General) → catch-all safeguards (see technical docs: `pickAutomationAction`).\n\n**After setup — Settings > Automation**\n\nStore-wide toggles: auto-build evidence packs, auto-save evidence to Shopify, require review before auto-save, enforce zero blockers, and minimum completeness score (0–100, default 80) for auto-save.\n\n**Rules page**\n\nFor custom rules with drag-and-drop order and amount ranges, use **Rules** after setup. See also \"Creating your first rule\" and \"Rule priority.\""
       },
       "creatingFirstRule": {
         "title": "Creating your first rule",
-        "body": "Rules let you control how each dispute is handled. Every rule has one of two actions:\n\n- **Automatic** — build the evidence pack and submit it to Shopify automatically.\n- **Review before submit** — build the pack and email you, but wait for you to submit.\n\nBoth actions always build a pack. The difference is whether DisputeDesk submits it for you or holds it for your review.\n\nTo create a rule:\n1. Go to the Rules page.\n2. Click \"Add Rule.\"\n3. Fill in the details:\n   - Name: a label for your reference (e.g. \"High-value review\").\n   - Match Reasons: select which dispute reasons this rule applies to (leave empty to match all).\n   - Amount range: set a minimum and/or maximum dispute amount.\n   - Action: choose **Automatic** or **Review before submit**.\n4. Click \"Create Rule.\"\n\nExample: send all disputes over $500 to your review queue before submit:\n- Name: \"High-value review\"\n- Min Amount: 500\n- Action: Review before submit\n\nRules are available on Starter and Pro plans. Free plan users can upgrade from the Billing page."
+        "body": "Rules let you control how disputes are routed — either to auto-pack or to the review queue.\n\nTo create a rule:\n1. Go to the Rules page.\n2. Click \"Add Rule.\"\n3. Fill in the details:\n   - Name: a label for your reference (e.g. \"High-value review\").\n   - Match Reasons: select which dispute reasons this rule applies to (leave empty to match all).\n   - Amount range: set a minimum and/or maximum dispute amount.\n   - Action: choose \"Auto-Pack\" (automatic processing) or \"Send to Review\" (manual queue).\n4. Click \"Create Rule.\"\n\nExample: create a rule that sends all disputes over $500 to review:\n- Name: \"High-value review\"\n- Min Amount: 500\n- Action: Send to Review\n\n**What \"Auto-Pack\" means:** For a matching dispute, DisputeDesk may run the **standard** evidence collection pipeline when the dispute first syncs. It does **not** mean \"use a specific pack template from your library\"—those templates are managed under Packs separately.\n\nRules are available on Starter and Pro plans. Free plan users can upgrade from the Billing page."
       },
       "rulePriority": {
         "title": "Rule priority and evaluation order",
-        "body": "Rules are evaluated top to bottom. The first rule that matches a dispute wins — no further rules are checked.\n\nHow matching works:\n- If a rule specifies match reasons, the dispute must have one of those reasons.\n- If a rule specifies an amount range, the dispute amount must fall within that range.\n- If a rule has no conditions (empty reasons, no amount range), it matches all disputes.\n\nTo reorder rules, drag and drop them on the Rules page. Put your most specific rules at the top and catch-all rules at the bottom.\n\nIf no rule matches a dispute, DisputeDesk falls through to **Review before submit** by default — the pack is still built, but held for you to review.\n\nTip: create a catch-all **Automatic** rule at the bottom to auto-submit everything, and put specific **Review before submit** rules above it for high-value or unusual disputes."
+        "body": "Rules are evaluated top to bottom. The first rule that matches a dispute wins — no further rules are checked.\n\nHow matching works:\n- If a rule specifies match reasons, the dispute must have one of those reasons.\n- If a rule specifies an amount range, the dispute amount must fall within that range.\n- If a rule has no conditions (empty reasons, no amount range), it matches all disputes.\n\nTo reorder rules, drag and drop them on the Rules page. Put your most specific rules at the top and catch-all rules at the bottom.\n\nIf no rule matches a dispute, it goes to the Review Queue by default.\n\nTip: create a catch-all \"Auto-Pack\" rule at the bottom to automate everything, and put specific \"Send to Review\" rules above it for high-value or unusual disputes."
       },
       "completenessBlockerGates": {
         "title": "Completeness and blocker gates",
@@ -2133,11 +2152,11 @@
       },
       "rulePresets": {
         "title": "Rule presets and suggested rules",
-        "body": "DisputeDesk ships four **suggested starter rules** (fraud, product not received, high-value amount, catch-all). They match the definitions in the product (`lib/rules/presets.ts`).\n\n**Embedded app (Shopify Admin) — Rules**\n\nThe Rules screen shows **Automate Your Dispute Workflow** with those four rows. Each row has a **Routing** control with two options: **Automatic** (build and submit) or **Review before submit** (build and hold for you). Click **Save starter rules** to create or update the matching rules in your store. Above that, if you have any **ACTIVE** evidence packs in your library, they are listed for context (same data as the Packs page).\n\n**Portal — Rules**\n\nWhen you have no rules (and your plan supports rules), you may see an empty state with preset cards and **Install Suggested Rules** to add all at once. Presets are idempotent: installing again won't create duplicates.\n\n**Setup wizard**\n\nThe **Automation & review** step uses the richer per-reason + safeguards flow (see \"Dispute routing and automation settings\") and lists **every installed template-backed library pack** (draft or active) for per-pack handling. The embedded Rules starter list is a faster path to the same four presets with two actions each.\n\nRules are evaluated in priority order (portal: reorder on the Rules page). Rule presets are a good starting point; you can edit or delete any rule after installation. Rules require a Starter or Pro plan."
+        "body": "DisputeDesk ships four **suggested starter rules** (fraud, product not received, high-value amount, catch-all). They match the definitions in the product (`lib/rules/presets.ts`).\n\n**Embedded app (Shopify Admin) — Rules**\n\nThe Rules screen shows **Automate Your Dispute Workflow** with those four rows. Each row has a **Routing** control: **Auto-Pack** or **Send to Review**. Click **Save starter rules** to create or update the matching rules in your store. Above that, if you have any **ACTIVE** evidence packs in your library, they are listed for context (same data as the Packs page).\n\n**Portal — Rules**\n\nWhen you have no rules (and your plan supports rules), you may see an empty state with preset cards and **Install Suggested Rules** to add all at once. Presets are idempotent: installing again won't create duplicates.\n\n**Setup wizard**\n\nThe **Automation & review** step uses the richer per-reason + safeguards flow (see \"Dispute routing and automation settings\") and lists **every installed template-backed library pack** (draft or active) for per-pack handling. The embedded Rules starter list is a faster path to the same four presets with two actions each.\n\nRules are evaluated in priority order (portal: reorder on the Rules page). Rule presets are a good starting point; you can edit or delete any rule after installation. Rules require a Starter or Pro plan."
       },
       "planComparison": {
         "title": "Comparing Free, Starter, and Pro plans",
-        "body": "DisputeDesk offers three plans:\n\nFree ($0/month):\n- 3 evidence packs per month.\n- Manual pack generation only.\n- PDF export.\n- Save evidence to Shopify.\n\nStarter ($29/month):\n- 50 evidence packs per month.\n- Automatic pack building on dispute sync.\n- Custom routing rules.\n- PDF export and save to Shopify.\n- 7-day free trial.\n\nPro ($79/month):\n- Unlimited evidence packs.\n- Automatic pack building on dispute sync.\n- Custom routing rules.\n- Priority support.\n- PDF export and save to Shopify.\n- 7-day free trial.\n\nAll plans include the core features: evidence collection, completeness scoring, PDF export, and saving to Shopify. Paid plans add automation, rules, and higher quotas."
+        "body": "DisputeDesk offers three plans:\n\nFree ($0/month):\n- 3 evidence packs per month.\n- Manual pack generation only.\n- PDF export.\n- Save evidence to Shopify.\n\nStarter ($29/month):\n- 50 evidence packs per month.\n- Auto-pack on dispute sync.\n- Custom routing rules.\n- PDF export and save to Shopify.\n- 7-day free trial.\n\nPro ($79/month):\n- Unlimited evidence packs.\n- Auto-pack on dispute sync.\n- Custom routing rules.\n- Priority support.\n- PDF export and save to Shopify.\n- 7-day free trial.\n\nAll plans include the core features: evidence collection, completeness scoring, PDF export, and saving to Shopify. Paid plans add automation, rules, and higher quotas."
       },
       "upgradingPlan": {
         "title": "How to upgrade your plan",
@@ -2202,6 +2221,34 @@
       "policyBestPractices": {
         "title": "Policy best practices that win disputes",
         "body": "Strong policies, anchored to the buyer checkout timestamp, are some of the most decisive evidence available. Here is how to make yours stand out.\n\n**1. Upload the actual policy text — not just a link.** A live URL can change. A TXT or Markdown file uploaded to DisputeDesk preserves the exact version the buyer accepted at checkout. Issuers want to see the version, not the current site.\n\n**2. Timestamp every policy.** When you update a policy, version it. \"Refund Policy v3 — effective Mar 1\" lets the rebuttal say \"the customer accepted v3 at checkout on Mar 5.\"\n\n**3. Be specific about timeframes.** \"Refunds processed within 5 business days of return receipt\" beats \"refunds are processed promptly.\" Specificity reads as a real commitment, not boilerplate.\n\n**4. Include explicit checkout consent.** Show a checkbox in your checkout flow that says \"I agree to the refund policy\" with the timestamp. This is the single strongest policy evidence available.\n\n**5. Cover the predictable failure modes.** Lost in transit, late delivery, wrong address, refund timing, subscription cancellation, digital-goods access. If your policy is silent on the dispute reason, the issuer reads silence as ambiguity.\n\n**6. Match policy language to the dispute reason.** Shipping policy → Product Not Received. Refund policy → Credit Not Processed. Terms → Subscription Canceled. DisputeDesk auto-selects the right policy variable based on the dispute family.\n\n**7. Do not hide policies behind a click.** Policies linked in tiny footer text are weaker than policies shown at checkout. Issuers know the difference.\n\n**8. Keep them readable.** Plain English wins. Legal-jargon policies are technically valid but harder to quote in a rebuttal.\n\n**9. Update policies at least annually.** Stale policies (last updated 2019) are less convincing than current ones.\n\n**10. Test the variables.** After uploading a policy, build a test pack and confirm the variable resolves correctly in the preview."
+      },
+      "ce30Overview": {
+        "title": "Visa Compelling Evidence 3.0 — what it is and when it qualifies",
+        "body": "Visa Compelling Evidence 3.0 (CE 3.0) is Visa's program that shifts the liability for a chargeback back to the issuing bank when a merchant can prove that the same cardholder made earlier legitimate purchases. It applies only to Visa disputes filed under reason code 10.4 (Other Fraud — Card-Absent Environment).\n\nWhen CE 3.0 applies, the dispute is harder for the issuer to win — Visa expects the issuer to accept the evidence and reverse the chargeback.\n\nQualification rules:\n1. The cardholder has at least 2 prior undisputed transactions with your store.\n2. Those transactions happened between 120 and 365 days before the disputed transaction.\n3. At least 2 of these data points match across all three transactions (disputed + 2 priors): IP address, device fingerprint, shipping address, customer account ID.\n4. At least one of those matches must be IP or device — this is called the 'anchor' requirement.\n\nThe DisputeDesk Liability-Shift panel on each dispute tells you the verdict immediately: Qualifies / Qualifies (low confidence) / Partial / Does not qualify / Not applicable. When a dispute qualifies, DisputeDesk generates a CE 3.0-formatted evidence package and attaches it to the Shopify dispute response.\n\nGuest checkouts can still qualify, but with lower confidence — DisputeDesk matches on email instead of customer ID. B2B / commercial cards qualify just like consumer cards.\n\nWhat CE 3.0 does NOT cover: anything other than Visa reason code 10.4. For 'product not received', 'not as described', or other non-fraud reasons, your standard evidence pack still applies."
+      },
+      "autoQualificationVisaSecure": {
+        "title": "Auto-qualification via Visa Secure — and the April 2026 fee",
+        "body": "Effective October 17, 2025, Visa automatically pre-qualifies for CE 3.0 any transaction authenticated via Visa Secure (3-D Secure 2) or Visa Data Only (frictionless 3DS data exchange). When this auto-qualification fires, the dispute is pre-qualified at the Visa network level — you don't need 2 prior transactions or matching data points.\n\nDisputeDesk detects this automatically by reading the 3-D Secure state on the disputed order. The Liability-Shift panel shows 'Pre-qualified by Visa' with a green badge.\n\nWhat you still need to do: submit your rebuttal evidence as normal. The auto-qualification is metadata attached at Visa's end — your evidence is what completes the defense.\n\nApril 17, 2026 — Visa is introducing a fee:\nVisa will start charging a per-qualification fee on every successful auto-qualification, billed through your acquirer. DisputeDesk surfaces a notice in the Liability-Shift panel whenever this applies (i.e., for any disputed transaction created on or after April 17, 2026 that qualifies via Visa Secure).\n\nThis is automatic and there is no opt-in or opt-out — you simply receive the benefit and the associated fee shows up on your acquirer statement. Talk to your payment processor if you need fee specifics for your account.\n\nMastercard 3DS does NOT auto-qualify for CE 3.0 — CE 3.0 is Visa-only. Mastercard first-party-fraud disputes follow the separate FPT path (see 'Mastercard FPT' help article)."
+      },
+      "subscriptionCe30": {
+        "title": "How subscription / recurring billing qualifies for CE 3.0",
+        "body": "Visa CE 3.0 has a special path for recurring or merchant-initiated transactions (MIT). For a subscription customer, the IP address and device fingerprint usually differ between bills — the customer signed up once and got charged monthly. Visa recognizes this and allows the merchant to use the initial subscription billing transaction (the original signup) as the matching anchor, instead of looking at 120–365-day-old priors.\n\nDisputeDesk detects subscription orders automatically. It recognizes:\n- Native Shopify Subscriptions (line items with a selling plan)\n- Common third-party apps (Recharge, Bold, Loop, Skio, Appstle)\n- Orders tagged 'subscription' or 'recurring'\n\nWhen a subscription dispute lands, DisputeDesk looks up the initial billing transaction and matches IP / device / shipping / account across the disputed bill and the initial billing. If 2 data points match (with at least one being IP or device), the verdict is 'Qualifies via initial billing'.\n\nEdge cases:\n- First-bill dispute (the customer disputed the signup itself, not a recurring bill) → no initial billing exists yet, so DisputeDesk falls back to the standard CE 3.0 path (looking for 120–365-day-old priors).\n- Initial billing was refunded or disputed → excluded; falls back to the standard path.\n- Recurring transactions never match each other on IP/device anyway → the initial-billing path is the right approach.\n\nThis branch is generally medium-confidence (never 'high') because it matches against only one prior transaction. The package DisputeDesk generates explains this clearly to the issuer."
+      },
+      "mastercardFpt": {
+        "title": "Mastercard First-Party Trust (FPT)",
+        "body": "Mastercard First-Party Trust is the Mastercard equivalent of Visa CE 3.0 — but it works differently. FPT applies to Mastercard first-party-fraud disputes (the cardholder claims they didn't authorize the transaction or doesn't recognize it). The eligible reason codes are 4837 (No Cardholder Authorization) and 4863 (Cardholder Does Not Recognize).\n\nFPT does NOT require prior transactions. Instead, it asks whether you have strong evidence across three categories:\n- Device: IP address, device fingerprint, 3-D Secure authentication, session behavior\n- Delivery: shipping address, tracking, delivery confirmation, signed-by-name\n- Identity: customer account, account tenure, login state at checkout, repeat-customer status\n\nDisputeDesk scores each category 0–1 and a dispute is 'ready' for FPT when all three categories have evidence AND the total score is at least 2.0 out of 3.0.\n\nRegional availability is important. FPT is live in:\n- United States — since October 2024\n- Canada, LATAM (including Brazil), Caribbean, APAC — since June 2025\n- European Union — not yet available\n\nIf your store is in a region where FPT isn't live, DisputeDesk shows 'Not applicable' on the Liability-Shift panel and falls back to standard Mastercard representment.\n\nImportant operational note: DisputeDesk generates an FPT-formatted package and submits it through the Shopify dispute API as best-effort. Direct submission to Mastercard's Ethoca Consumer Clarity API requires a separate commercial partnership that DisputeDesk is pursuing but doesn't have yet."
+      },
+      "networkReasonCodes": {
+        "title": "Network reason codes — Visa and Mastercard, not Shopify",
+        "body": "Shopify groups all disputes into 14 broad categories (Fraudulent, Product Not Received, Subscription Canceled, etc.). But Visa and Mastercard use much more specific reason codes underneath: Visa 10.4, 13.1, 13.3, Mastercard 4837, 4855, and so on. The specific network code is what determines how the issuing bank evaluates your evidence and what kind of rebuttal language wins.\n\nDisputeDesk resolves the underlying network reason code automatically for every dispute. The resolution uses several signals (in order of reliability):\n- Direct: a typed field on the Shopify dispute (currently not exposed by Shopify, so this is reserved for a future API change)\n- Derived: parsed from the payment gateway's transaction receipt when available (Shopify Payments only)\n- Inferred: best-guess mapping from Shopify's enum + the card network + order context\n- Unknown: signal not available; standard handling applies\n\nThe dispute detail page shows the resolved code (e.g., 'Visa 13.1 — Merchandise/Services Not Received') with a confidence indicator. Confident resolution lets DisputeDesk:\n1. Detect CE 3.0 eligibility (Visa 10.4 → CE 3.0 path)\n2. Detect FPT eligibility (Mastercard 4837 / 4863 → FPT path)\n3. Pick more specific rebuttal templates per code (Visa 13.1, 13.2, and 13.3 each get different language even though they all map to 'Product Not Received' in Shopify's enum)\n4. Apply tailored evidence checklists per code\n\nYou don't need to do anything — resolution is automatic. If a code resolves as 'unknown', DisputeDesk falls back gracefully to the standard handling for the Shopify enum value."
+      },
+      "vampRatioExplained": {
+        "title": "VAMP, ECM, and EFM — what the numbers mean",
+        "body": "Card networks monitor three key chargeback ratios for every merchant. Crossing the thresholds triggers fees, enrollment in monitoring programs, and in extreme cases account termination. The DisputeDesk Ratio Dashboard shows your calculated estimates plus the counterfactual impact of DisputeDesk's wins.\n\nThe three ratios:\n- Visa VAMP (Acquirer Monitoring Program) — total disputes / total settled transactions. Standard threshold: 0.65%. Excessive threshold: 1.50%. Crossing excessive triggers a per-transaction enforcement fee.\n- Mastercard ECM (Excessive Chargeback Merchant) — Mastercard chargebacks / Mastercard settled. Threshold: 1.00%.\n- Mastercard EFM (Excessive Fraud Merchant) — Mastercard fraud chargebacks / Mastercard settled. Threshold: 0.50%.\n\nDisputeDesk shows a yellow warning at 80% of each threshold and a red alert when you cross it. We also email you when bands change.\n\nThe counterfactual line is the key insight: DisputeDesk-attributed wins (CE 3.0 and FPT successes) are removed from your VAMP numerator when calculating your ratio. The dashed line shows what your ratio would be without DisputeDesk's work — the gap between the two lines is the value DisputeDesk delivered.\n\nImportant caveat: these are calculated estimates from your Shopify data, not the official numbers your acquirer reports. Only your acquirer has the authoritative ratio. DisputeDesk's calculation uses the standard formula but approximates TC40 / TC15 / TC05 settlement codes from Shopify's dispute and order data. If your acquirer's number differs, theirs is the one that matters for compliance — ours is a working approximation to spot trends early.\n\nMonthly impact summary on the dashboard shows: disputes qualified, wins by channel, transactions removed from VAMP, estimated fees avoided, and estimated revenue recovered."
+      },
+      "sessionCapture": {
+        "title": "Storefront session capture — what it is and what we store",
+        "body": "To match disputes against CE 3.0 / FPT requirements, DisputeDesk needs to know certain facts about each customer's checkout session: what IP address they used, whether they were logged in, the pages they viewed, the device they used. Without this data, qualification rates stay artificially low — most disputes will fall short of the matching-data-point requirement.\n\nWhat DisputeDesk captures (when storefront session capture is enabled):\n- The Shopify cart_token (so we can match the session to the eventual order)\n- IP address (hashed at rest with a per-shop salt; raw value encrypted and decrypted only at qualification time)\n- IP-derived geography (country and region only, never city or precise location)\n- User agent string\n- Customer ID and login state at checkout (if logged in)\n- Customer account age (e.g., 'this customer joined 200 days ago')\n- Pages viewed during the session and time spent on the checkout page\n- Privacy signals from the browser (Do Not Track, Global Privacy Control)\n\nWhat DisputeDesk does NOT capture:\n- Form input values (names, addresses, card numbers, anything typed)\n- Composite device fingerprints (canvas / WebGL / audio fingerprinting is deferred to a later, legal-reviewed phase)\n- Mouse movement or behavioral entropy\n- Cross-session cookies linking your storefront to other sites\n\nPrivacy controls:\n- Do Not Track and Global Privacy Control signals cause DisputeDesk to drop the session record server-side\n- Session data is automatically deleted 18 months after capture (covers the 365-day CE 3.0 window plus buffer)\n- LGPD / GDPR / CCPA right-to-be-forgotten requests are honored via the merchant-facing subject-deletion endpoint\n- DisputeDesk acts as your data processor; you are the controller\n\nYou'll need to update your storefront's privacy policy to disclose this capture. DisputeDesk provides a template you can adapt.\n\nForward-looking note: session capture doesn't help disputes filed before you enable it (we have no data on those sessions). It builds the evidence base for every dispute filed after install."
       }
     },
     "embedded": {
@@ -2217,23 +2264,23 @@
       "articles": {
         "connectShopifyStore": {
           "title": "Connecting your store in the Shopify app",
-          "body": "When you install DisputeDesk from the Shopify App Store, your store is connected automatically. You're using the app inside Shopify Admin, so no separate \"connect\" step is needed.\n\nIf you need to reconnect (for example after an app update that requests new permissions):\n1. Open DisputeDesk from Shopify Admin (Apps → DisputeDesk).\n2. If prompted, approve the requested permissions.\n3. Your existing data and settings are preserved.\n\nTo manage multiple stores, use the DisputeDesk portal (sign in at disputedesk.app) and connect additional stores from the store selector. This app shows the store you opened it from in Shopify Admin.\n\nYour store data is encrypted and never shared with third parties."
+          "body": "When you install DisputeDesk from the Shopify App Store, your store is connected automatically. You're using the app inside Shopify Admin, so no separate \"connect\" step is needed.\n\nIf you need to reconnect (for example after an app update that requests new permissions):\n1. Open DisputeDesk from Shopify Admin (Apps → DisputeDesk).\n2. If prompted, approve the requested permissions.\n3. Your existing data and settings are preserved.\n\nYour store data is encrypted and never shared with third parties."
         },
         "shopifyAppStoreInstall": {
           "title": "Using DisputeDesk from the Shopify App Store",
-          "body": "You are using DisputeDesk inside Shopify Admin. That is the recommended way to run the app.\n\nIf you have not installed yet:\n1. Find DisputeDesk in the Shopify App Store.\n2. Tap Add app, approve permissions, and finish install.\n3. Open Apps, then DisputeDesk here in Admin.\n\nIf you started from our website: complete any OAuth steps Shopify shows, then keep opening this app from Apps (not only from a bookmark) so your session stays valid for billing and saving evidence.\n\nFor reconnecting after an update, see Connecting your store in the Shopify app."
+          "body": "You are using DisputeDesk inside Shopify Admin. That is the recommended way to run the app.\n\nIf you have not installed yet:\n1. Find DisputeDesk in the Shopify App Store.\n2. Tap Add app, approve permissions, and finish install.\n3. Open Apps, then DisputeDesk here in Admin.\n\nIf you started from our website: complete any OAuth steps Shopify shows, then keep opening this app from Apps (not only from a bookmark) so your session stays valid.\n\nFor reconnecting after an update, see Connecting your store in the Shopify app."
         },
         "understandingDashboard": {
           "title": "Understanding the dashboard in this app",
-          "body": "The dashboard in this app gives you an at-a-glance overview of your dispute operations.\n\nFour summary tiles at the top show: Action Needed, In Progress, Amount at Risk, and Deadlines Soon.\n\nWhen disputes need your attention, a table shows them with their reason, issue, deadline, and amount so you can review each one. When nothing needs attention, the dashboard shows your in-progress disputes instead.\n\nThe Performance Overview shows Active Disputes, Win Rate, Amount Recovered, and Amount at Risk for your selected time period.\n\nUse the Disputes link in the app to view and filter all disputes, or click Review or View details on any row to manage evidence."
+          "body": "The dashboard gives you an at-a-glance view of your dispute operations and lets you control automation from one place.\n\n**KPI cards**\nFour metrics at the top update based on the selected time period (24h / 7d / 30d / All):\n- **Active Disputes** — disputes currently open and awaiting a response or under review.\n- **Win Rate** — percentage of resolved disputes you won (Won divided by Won + Lost).\n- **Evidence Packs** — total evidence packs created for your store.\n- **Amount at Risk** — total disputed amount across all currently active disputes.\n\nWhere a previous period exists, each card shows a percentage change (green arrow = improved, red arrow = declined).\n\n**Automation Status card**\nShows the four pipeline controls for your store:\n\n- **Auto Build** (ON/OFF) — when a new dispute syncs from Shopify, DisputeDesk automatically creates an evidence pack and starts collecting evidence (order data, tracking info, store policies). If OFF, you click Generate Pack manually on each dispute.\n\n- **Auto Save** (ON/OFF) — once a pack is built and passes the completeness threshold, DisputeDesk automatically saves it to Shopify so it is attached to the dispute. If OFF, you review the pack first and click Save to Shopify manually.\n\n- **Min Score** — the completeness percentage a pack must reach before Auto Save fires. A pack below this score waits until more evidence is collected. You can still save manually below the threshold with a confirmation prompt.\n\n- **Blocker Gate** (ON/OFF) — packs can have blockers: missing critical evidence such as a signed delivery confirmation or a required policy document. When ON, Auto Save is additionally blocked if any blocker is unresolved, regardless of the completeness score. Even a 95% complete pack will not auto-save while a blocker remains.\n\n**Example:** Auto Build ON, Auto Save OFF, Min Score 80%, Blocker Gate ON — DisputeDesk collects evidence automatically for every new dispute, but you review and save each pack manually before it goes to Shopify.\n\n**Recent Disputes table**\nLists your five latest chargebacks. Click the order number to jump directly to that order in Shopify Admin, or click View Details to open the dispute and manage its evidence pack."
         },
         "afterSaving": {
           "title": "What happens after saving evidence",
-          "body": "After you save evidence from this app to Shopify:\n\n1. Evidence appears in Shopify Admin: go to Orders → the linked order → Chargeback to review what Shopify received.\n2. Review in Shopify: you can add final notes or make adjustments in Shopify Admin.\n3. Shopify sends evidence to the card network when you click respond in Shopify Admin, or automatically on the dispute's due date.\n4. The card network reviews and resolves the dispute as Won or Lost.\n\nDisputeDesk updates the dispute status when Shopify reports the resolution. You can continue working in this app or in the portal.\n\n**File rows in Shopify Admin:** when file evidence attachments are enabled, **Shipping documentation**, **Customer communication**, **Proof of service**, and **Any other evidence** rows render a populated file with a download icon — DisputeDesk uploads a focused PDF per slot that includes the reason and key facts from your pack. Your original uploaded files also remain as labelled secure links (https://disputedesk.app/e/…) in the evidence text. **Refund policy** and **Cancellation policy** rows only render on certain dispute reasons; until that's verified per family, those files flow as labelled links. When the layer is disabled, every file flows as a labelled link only. Use **Review & Submit** here to preview the exact payload."
+          "body": "After you save evidence from this app to Shopify:\n\n1. Evidence appears in Shopify Admin: go to Orders → the linked order → Chargeback to review what Shopify received.\n2. Review in Shopify: you can add final notes or make adjustments in Shopify Admin.\n3. Shopify sends evidence to the card network when you click respond in Shopify Admin, or automatically on the dispute's due date.\n4. The card network reviews and resolves the dispute as Won or Lost.\n\nDisputeDesk updates the dispute status when Shopify reports the resolution.\n\n**File rows in Shopify Admin:** when file evidence attachments are enabled, **Shipping documentation**, **Customer communication**, **Proof of service**, and **Any other evidence** rows render a populated file with a download icon — DisputeDesk uploads a focused PDF per slot that includes the reason and key facts from your pack. Your original uploaded files also remain as labelled secure links (https://disputedesk.app/e/…) in the evidence text. **Refund policy** and **Cancellation policy** rows only render on certain dispute reasons; until that's verified per family, those files flow as labelled links. When the layer is disabled, every file flows as a labelled link only. Use **Review & Submit** here to preview the exact payload."
         },
         "viewingFilteringDisputes": {
           "title": "Viewing and filtering disputes",
-          "body": "The **Disputes** page uses Polaris **Page** with a toolbar (**Search**, **Filter**, **Export**, and **More actions** ⋯ for **Sync now**) and a table inside **Card**. Columns match the dashboard **Recent Disputes** list: **Order** (Shopify Admin link when available), **ID** (short id), **Customer**, **Amount**, **Reason**, **Status**, **Deadline**, and **Actions** with **View details** to open a dispute. The order link opens Admin without leaving the list.\n\nSearch matches dispute ids, orders, reasons, and customer name.\n\nThere is no separate **Review Queue** tab. Use **Approve & Save** on the detail page when ready."
+          "body": "The **Disputes** page uses Polaris **Page** with a toolbar and a table inside **Card**. The toolbar has **Search** (dispute ID, order, reason, or customer name), **Filter** (status popover), **Export** (CSV download), and **More actions** ⋯ for **Sync now**.\n\nThe table matches the dashboard **Recent Disputes** columns: **Order** (links to Shopify Admin when available), **ID** (short id), **Customer**, **Amount**, **Reason**, **Status** (badge), **Deadline**, and **Actions** with **View details** to open the dispute. The order link opens Shopify Admin without leaving the list.\n\nThere is no separate **Review Queue** tab. Use **Approve & Save** on the detail page when ready."
         },
         "disputeDetailPage": {
           "title": "Dispute detail in this app",
@@ -2313,7 +2360,9 @@
       "allToursCompleted": "🎉 You completed every tour",
       "allToursCompletedDesc": "You're set up to handle disputes like a pro. You can replay any tour any time from the Help page.",
       "noDisputesYetTitle": "No disputes synced yet",
-      "noDisputesYetDesc": "When a real dispute arrives in Shopify, this is where you'll handle it. The detail-page walkthrough will skip for now — try this tour again once you have a dispute to look at. You can still continue to the next guide."
+      "noDisputesYetDesc": "When a real dispute arrives in Shopify, this is where you'll handle it. The detail-page walkthrough will skip for now — try this tour again once you have a dispute to look at. You can still continue to the next guide.",
+      "articleCount": "{count} articles",
+      "articleNotAvailable": "This article is not available."
     }
   },
   "onboarding": {
@@ -2347,7 +2396,8 @@
       "howItWorks": "How it works",
       "security": "Security",
       "pricing": "Pricing",
-      "installOnShopify": "Install on Shopify"
+      "installOnShopify": "Install on Shopify",
+      "resources": "Resources"
     },
     "seo": {
       "title": "DisputeDesk - Chargeback automation for Shopify",
@@ -2372,7 +2422,21 @@
       "orderConfirmation": "Order Confirmation",
       "shippingTracking": "Shipping Tracking",
       "customerComm": "Customer Communication",
-      "completenessScore": "Completeness Score"
+      "completenessScore": "Completeness Score",
+      "dossierLabel": "Evidence pack",
+      "dossierTitlePrefix": "Disputed transaction,",
+      "dossierTitleFiledUnder": "filed under",
+      "dossierSealedAt": "Sealed 16 May · 16:14 UTC",
+      "rowPaymentAuth": "Payment authentication",
+      "rowPurchaseHistory": "Customer purchase history",
+      "srcShopify": "Shopify",
+      "srcAvsCvv": "AVS Y · CVV M",
+      "srcPriorsCount": "{count} priors",
+      "srcCarrier": "Carrier: UPS",
+      "srcOptional": "Optional",
+      "dossierFields": "{filled} of {total} fields",
+      "dossierStamp": "Sealed",
+      "waxFiled": "Filed"
     },
     "howItWorks": {
       "title": "How it works",
@@ -2431,7 +2495,13 @@
       "topUpsTitle": "Need more packs?",
       "topUpsDesc": "Purchase top-up bundles any time. Credits are added immediately upon payment.",
       "topUp25": "+25 packs",
-      "topUp100": "+100 packs"
+      "topUp100": "+100 packs",
+      "installTitle": "Install DisputeDesk",
+      "installSubtitle": "Enter your Shopify store to get started",
+      "shopPlaceholder": "yourstore.myshopify.com",
+      "shopError": "Enter a valid store name, e.g. yourstore or yourstore.myshopify.com",
+      "installButton": "Install",
+      "installHint": "You'll be redirected to Shopify to authorize the app. Free plan — no credit card required."
     },
     "footer": {
       "tagline": "Your command center for Shopify disputes.",
@@ -2527,25 +2597,25 @@
     "closingBody": "Open the chat and tell us a bit about your store, payment setup, and dispute workflow."
   },
   "sessionRequired": {
-    "title": "Restoring Session",
-    "bannerTitle": "Session needs to be restored",
-    "bannerBody": "Your app session has expired. Open DisputeDesk from Shopify Admin to restore it.",
-    "instructions": "DisputeDesk must be launched from your Shopify Admin panel. If you arrived here by accident, close this tab and reopen the app from your store's admin.",
+    "title": "Session Required",
+    "bannerTitle": "Store session not found",
+    "bannerBody": "Please open DisputeDesk from Shopify Admin (Apps) so we can verify your store session.",
+    "instructions": "This app must be launched from your Shopify Admin panel. If you arrived here by accident, close this tab and open the app from your store's admin dashboard.",
     "returnTo": "You will be returned to: {path}",
     "installCta": "Install DisputeDesk",
     "installHint": "Don't have the app yet? Install it from the Shopify App Store.",
     "learnMore": "Learn more about DisputeDesk"
   },
   "packTemplates": {
-    "title": "Playbooks",
-    "subtitle": "Manage reusable playbooks for different dispute types",
-    "createPack": "Create Playbook",
-    "searchPlaceholder": "Search playbooks by name or type...",
+    "title": "Evidence Packs Library",
+    "subtitle": "Manage reusable evidence templates for different dispute types",
+    "createPack": "Create Pack",
+    "searchPlaceholder": "Search packs by name or type...",
     "filterAll": "All",
     "filterActive": "Active",
     "filterDraft": "Draft",
     "filterArchived": "Archived",
-    "packName": "Playbook Name",
+    "packName": "Pack Name",
     "type": "Type",
     "documents": "Documents",
     "usageCount": "Usage Count",
@@ -2553,18 +2623,18 @@
     "never": "Never",
     "nDocs": "{count} docs",
     "emptyTitle": "No packs found",
-    "emptyDescription": "Create your first playbook to get started",
-    "setupTitle": "Set Up Your Playbooks",
-    "setupDescription": "Playbooks collect the documents DisputeDesk needs to fight each type of dispute. Start with a recommended template — you can customize it later.",
+    "emptyDescription": "Create your first evidence pack template to get started",
+    "setupTitle": "Set Up Your Evidence Packs",
+    "setupDescription": "Evidence packs collect the documents DisputeDesk needs to fight each type of dispute. Start with a recommended template — you can customize it later.",
     "recommendedTemplates": "Recommended Templates",
     "installTemplate": "Install",
     "browseAllTemplates": "Browse All Templates",
     "createFromScratch": "Create from Scratch",
-    "exploreMoreTemplates": "Explore more playbook templates for other dispute types.",
+    "exploreMoreTemplates": "Explore more evidence pack templates for other dispute types.",
     "browseTemplates": "Browse Templates",
     "goToDisputes": "Go to Disputes",
-    "modalTitle": "Create Playbook",
-    "modalDescription": "Build a reusable playbook for dispute evidence",
+    "modalTitle": "Create Evidence Pack",
+    "modalDescription": "Build a reusable template for dispute evidence",
     "nameLabel": "Pack Name",
     "namePlaceholder": "e.g., Fraudulent Transaction - Standard",
     "typeLabel": "Dispute Type",
@@ -2572,10 +2642,10 @@
     "descriptionPlaceholder": "Describe when this pack should be used and what evidence it contains...",
     "nextSteps": "After creating the pack, you'll be able to add documents, configure automatic fields, and set up submission rules.",
     "cancel": "Cancel",
-    "create": "Create Playbook",
-    "detailBack": "Back to Playbooks",
+    "create": "Create Pack",
+    "detailBack": "Back to Packs Library",
     "detailCreated": "Created on {date} · Used {count} times",
-    "editPack": "Edit Playbook",
+    "editPack": "Edit Pack",
     "deletePack": "Delete",
     "packDetails": "Pack Details",
     "packNameField": "Pack Name",
@@ -2595,7 +2665,7 @@
     "exportPack": "Export Pack",
     "recentUsage": "Recent Usage",
     "activate": "Activate",
-    "confirmDelete": "Are you sure you want to delete this playbook? This cannot be undone.",
+    "confirmDelete": "Are you sure you want to delete this pack template? This cannot be undone.",
     "deleteConfirm": "Delete",
     "typeFraudulent": "Fraudulent Transaction",
     "typeProductNotReceived": "Product Not Received",
@@ -2960,13 +3030,13 @@
     "done": "Done",
     "edit": "Edit",
     "complete": {
-      "title": "You're All Set!",
-      "subtitle": "DisputeDesk is configured and ready to protect your store.",
-      "readyHeading": "What's been set up",
-      "highlight1": "Auto-sync disputes from Shopify",
-      "highlight2": "Coverage configured for your dispute types",
-      "highlight3": "Playbooks installed for evidence collection",
-      "highlight4": "Automation rules ready to handle disputes",
+      "title": "You're all set!",
+      "subtitle": "DisputeDesk is ready to handle your chargebacks automatically.",
+      "readyHeading": "Here's what's configured",
+      "highlight1": "Disputes sync from Shopify automatically",
+      "highlight2": "Business policies added to evidence",
+      "highlight3": "Evidence packs auto-generated",
+      "highlight4": "Automation rules active",
       "infoTitle": "How it works from here",
       "infoDesc": "New disputes sync from Shopify automatically. DisputeDesk builds the evidence pack and saves it back to your dispute in Shopify Admin. You review the pack there and submit it to the card network when you're ready.",
       "goToDashboard": "Go to Dashboard",
@@ -3012,7 +3082,26 @@
       "subtitle": "Import your recent disputes to get started.",
       "startSync": "Start Sync",
       "syncing": "Syncing disputes...",
-      "synced": "Disputes synced successfully."
+      "synced": "Disputes synced successfully.",
+      "dateRangeHeading": "How far back should we import?",
+      "days30Title": "Last 30 days",
+      "days30Desc": "Lightweight start — recent disputes only",
+      "days90Title": "Last 90 days",
+      "days90Desc": "Recommended — covers most dispute windows",
+      "days90Recommended": "Recommended",
+      "days180Title": "Last 180 days",
+      "days180Desc": "Full history — all disputes in the past 6 months",
+      "autoSyncTitle": "Auto-sync new disputes",
+      "autoSyncDesc": "Automatically import new disputes as they occur",
+      "unlockHeading": "What you'll get",
+      "unlock1": "Disputes imported and ready to manage",
+      "unlock2": "Evidence packs generated automatically",
+      "unlock3": "Due-date alerts and status tracking",
+      "previewHeading": "Active disputes",
+      "noDisputesYet": "No disputes found yet — save and continue to start syncing.",
+      "viewAll": "View all {count} disputes",
+      "disputeRow": "{count} dispute | {count} disputes",
+      "moreDisputes": "more disputes"
     },
     "businessPolicies": {
       "title": "Business Policies",
@@ -3249,7 +3338,333 @@
       "teamEmailLabel": "Alert email",
       "teamEmailFromShopify": "Pulled from your Shopify account — confirm or change it.",
       "teamEmailInvalid": "Please enter a valid email address before activating."
-    }
+    },
+    "completeCta": "Complete",
+    "policies": {
+      "title": "Add business policies",
+      "subtitle": "Link your store policies to automatically include them in evidence packs.",
+      "wizardTitle": "Policy Wizard Available",
+      "wizardDesc": "Don't have policies yet? Use our templates to generate professional policies tailored to your business.",
+      "wizardCta": "Use Policy Templates",
+      "shippingLabel": "Shipping Policy URL",
+      "shippingPlaceholder": "https://yourstore.com/policies/shipping-policy",
+      "shippingHelper": "Required for 'Product not received' disputes",
+      "returnsLabel": "Return / Refund Policy URL",
+      "returnsPlaceholder": "https://yourstore.com/policies/refund-policy",
+      "returnsHelper": "Required for 'Product unacceptable' and refund-related disputes",
+      "termsLabel": "Terms of Service URL",
+      "termsPlaceholder": "https://yourstore.com/policies/terms-of-service",
+      "termsHelper": "Optional — included in all evidence packs when available",
+      "privacyLabel": "Privacy Policy URL",
+      "privacyPlaceholder": "https://yourstore.com/policies/privacy-policy",
+      "privacyHelper": "Optional - Shows commitment to customer data protection",
+      "contactLabel": "Contact / support page",
+      "contactPlaceholder": "https://yourstore.com/contact",
+      "useTemplate": "Use template",
+      "removeTemplate": "Back to URL",
+      "applied": "Applied",
+      "preview": "Preview",
+      "templateHelpText": "Edit the template to match your store's policies. This content will be saved when you click Save & Continue.",
+      "templatesTitle": "Policy Templates",
+      "templatesAvailable": "3 Available",
+      "shippingTemplateName": "Shipping & Delivery Template",
+      "shippingTemplateDesc": "Processing times, shipping zones, tracking",
+      "returnsTemplateName": "Returns & Refunds Template",
+      "returnsTemplateDesc": "Return window, conditions, refund process",
+      "termsTemplateName": "Terms of Service Template",
+      "termsTemplateDesc": "Usage terms, liability, dispute resolution",
+      "autoIncludeTitle": "Policy links are automatically included",
+      "autoIncludeDesc": "DisputeDesk will attach the relevant policies to each evidence pack based on the dispute type.",
+      "flowSelectTitle": "How would you like to set up your policies?",
+      "flowSelectSubtitle": "Choose how you want to handle your store policies",
+      "languageLabel": "Template language",
+      "languageHint": "Pick English if you sell in English-speaking markets, regardless of your store language.",
+      "legalReviewNotice": "These templates are a starting point. We recommend having a local lawyer review them before publishing.",
+      "ownFlowTitle": "Use your own",
+      "ownFlowDesc": "Link to your existing Shopify policies or upload custom documents",
+      "ownFlowShortDesc": "Link existing policy pages",
+      "templateFlowTitle": "Use templates",
+      "templateFlowDesc": "Professional, legally-reviewed policy templates ready to use",
+      "templateFlowShortDesc": "Generate professional policies",
+      "templateFlowBadge": "Recommended",
+      "mixedFlowTitle": "Mix & match",
+      "mixedFlowDesc": "Choose different sources for each policy type",
+      "mixedBannerTitle": "Mix and match your policies",
+      "mixedBannerDesc": "Choose for each policy whether to link a URL, upload a file, or use our professional template.",
+      "mixedFlowShortDesc": "Combine your own and templates",
+      "whyPoliciesTitle": "Why policies matter",
+      "whyPoliciesDesc": "Store policies are automatically included in evidence packs to strengthen your dispute responses and demonstrate clear terms to customers.",
+      "backToFlowSelection": "Back to flow selection",
+      "backToSelection": "Back to selection",
+      "ownBannerTitle": "Link or upload your policies",
+      "ownBannerDesc": "Provide a URL to your policy page or upload a PDF/document for each policy.",
+      "ownShippingSupport": "Required for \"Product not received\" disputes",
+      "ownRefundsSupport": "Required for \"Product unacceptable\" disputes",
+      "ownTermsSupport": "Optional - Included in all evidence packs",
+      "ownPrivacySupport": "Optional - Shows data protection commitment",
+      "linkUrlBtn": "Link URL",
+      "uploadFileBtn": "Upload file",
+      "shippingTitle": "Shipping & Delivery Policy",
+      "shippingDesc": "Processing times, shipping zones, tracking, and delivery expectations",
+      "refundsTitle": "Returns & Refunds Policy",
+      "refundsDesc": "Return window, conditions, refund process, and restocking fees",
+      "termsTitle": "Terms of Service",
+      "termsDesc": "Usage rights, account terms, prohibited conduct, and legal disclaimers",
+      "privacyTitle": "Privacy Policy",
+      "privacyDesc": "Data collection, usage, storage, and user rights",
+      "optionUrl": "URL Link",
+      "optionUpload": "Upload",
+      "optionTemplate": "Template",
+      "uploadCta": "Click to upload or drag and drop",
+      "uploadHint": "PDF or DOCX (max 10MB)",
+      "uploadHintExtended": "PDF, DOCX, DOC, TXT, or MD (max 10MB)",
+      "removeUpload": "Remove",
+      "previewBtn": "Preview",
+      "templateSelectedTitle": "Policy templates selected",
+      "templateSelectedDesc": "We'll use professional templates for all policies",
+      "templatePreviewTitle": "Template Preview",
+      "previewEditNote": "You can edit this template after selection",
+      "selectTemplateBtn": "Select This Template",
+      "mixedChooseSource": "Choose how to set up this policy",
+      "editTemplateBtn": "Edit template",
+      "closeBtn": "Close",
+      "backToOptions": "Back to options",
+      "templateBannerTitle": "Professional policy templates",
+      "templateBannerDesc": "Our templates are professionally written and cover all essential points for chargeback protection. Customize them to match your business.",
+      "requiredLabel": "Required",
+      "optionalLabel": "Optional",
+      "previewTemplateBtn": "Preview Template",
+      "templateLoadError": "Template failed to load. Please try again.",
+      "customizeAfterGenerationTitle": "Customize after generation",
+      "customizeAfterGenerationDesc": "Templates will be generated and published to your store. You can edit them anytime from your Shopify admin or DisputeDesk settings.",
+      "mixedBestTitle": "Best of both worlds",
+      "mixedBestDesc": "Link the policies you already have and let DisputeDesk generate the ones you're missing.",
+      "ownAutoIncludedTitle": "Your policies are automatically included",
+      "ownAutoIncludedDesc": "DisputeDesk will attach the relevant policies to each evidence pack based on the dispute type.",
+      "editorTitle": "Edit {policyTitle}",
+      "editorSubtitle": "Customize this template to match your store's policies",
+      "editorRequiredSections": "Required Sections",
+      "editorLegalNote": "Legal Compliance",
+      "editorLegalDesc": "Ensure your policy complies with local regulations and accurately reflects your business practices.",
+      "editorPreview": "Preview",
+      "editorEdit": "Edit",
+      "editorReset": "Reset",
+      "editorResetConfirm": "Are you sure you want to reset to the original template? All changes will be lost.",
+      "editorWordCount": "{count} words",
+      "editorUnsaved": "Unsaved changes",
+      "editorSaveChanges": "Save Changes",
+      "editorMarkdownHint": "Use # for headings, - for lists, **bold** for emphasis",
+      "editorPlaceholder": "Start editing your policy template...",
+      "shippingSections": "Processing Times,Shipping Zones,Tracking Information,Delivery Expectations,Lost/Damaged Items",
+      "refundsSections": "Return Window,Return Conditions,Refund Process,Restocking Fees,Exchanges",
+      "termsSections": "Agreement to Terms,Use License,Prohibited Uses,Limitations of Liability,Revisions",
+      "privacySections": "Information We Collect,How We Use Your Information,Data Storage,Third-Party Sharing,User Rights"
+    },
+    "packs": {
+      "title": "Install Evidence Pack Templates",
+      "subtitle": "Choose which evidence pack templates to install for your store. Click Install to configure each template before activating it.",
+      "installBtn": "Install",
+      "installedBtn": "Installed",
+      "notInstalledLabel": "Not installed",
+      "recommended": "Recommended",
+      "empty": "No templates available. You can add packs later from the Packs section.",
+      "fetchError": "Failed to load templates. Please try again.",
+      "installError": "Failed to install template. Please try again.",
+      "changeLaterTitle": "You can change this later",
+      "changeLaterDesc": "You can install more templates or modify existing ones from the Packs page at any time.",
+      "activatedInLibrary": "Activated in your library",
+      "activatedPacksEmptyHint": "None yet — install a template below and activate it to see it here."
+    },
+    "templateWizard": {
+      "stepEvidence": "Choose Evidence",
+      "stepSources": "Data sources",
+      "stepReview": "Review",
+      "stepActivate": "Activate",
+      "stepOf": "Step {current} of {total}",
+      "continueBtn": "Continue",
+      "backBtn": "Back",
+      "cancelBtn": "Cancel",
+      "activateBtn": "Activate Template",
+      "evidenceDesc": "Select the types of evidence DisputeDesk should collect when this dispute type appears.",
+      "autoCollectedTitle": "Auto-collected from Shopify",
+      "autoCollectedDesc": "These evidence types are pulled from your store data when a dispute matches this template.",
+      "manualTitle": "Manual collection",
+      "manualDesc": "These evidence types require manual upload or configuration.",
+      "selected": "selected",
+      "recommended": "Recommended",
+      "sourcesDesc": "For each evidence type you selected, here’s how it can be supplied—through Shopify and connected integrations, or by manual upload when needed.",
+      "sourcesNote": "Badges show what’s connected for your store right now. You don’t change any settings on this step—click Continue when you’re ready.",
+      "evidenceTypes": {
+        "order-details": {
+          "title": "Order details",
+          "description": "Order number, date, amount, status"
+        },
+        "customer-info": {
+          "title": "Customer information",
+          "description": "Name, email, billing address, history"
+        },
+        "shipping-info": {
+          "title": "Shipping information",
+          "description": "Tracking, carrier, delivery confirmation"
+        },
+        "product-info": {
+          "title": "Product information",
+          "description": "Product name, SKU, description, images"
+        },
+        "policies": {
+          "title": "Store policies",
+          "description": "Shipping, return, refund, terms of service"
+        },
+        "communication": {
+          "title": "Customer communication",
+          "description": "Email exchanges and support tickets"
+        },
+        "payment-proof": {
+          "title": "Payment proof",
+          "description": "Transaction ID, payment method, authorization"
+        },
+        "custom-fields": {
+          "title": "Custom fields",
+          "description": "Additional evidence for your business"
+        }
+      },
+      "sourceLabels": {
+        "shopifyOrderApi": "Shopify Order API",
+        "manualUpload": "Manual upload",
+        "shopifyCustomerApi": "Shopify Customer API",
+        "shopifyFulfillmentApi": "Shopify Fulfillment API",
+        "carrierIntegration": "Carrier integration",
+        "shopifyProductApi": "Shopify Product API",
+        "policyUrls": "Policy URLs",
+        "uploadedDocuments": "Uploaded documents",
+        "emailArchive": "Email archive",
+        "supportTicketExport": "Support ticket export",
+        "shopifyPaymentApi": "Shopify Payment API"
+      },
+      "sourceAutomatic": "Automatic",
+      "sourceManual": "Manual",
+      "statusConnected": "Connected",
+      "statusSetupRequired": "Setup Required",
+      "statusNotConfigured": "Not Configured",
+      "statusAvailable": "Available",
+      "reviewIntro": "Here's how DisputeDesk will handle disputes matching this template.",
+      "reviewDetectionTitle": "Dispute Detection",
+      "reviewDetectionDesc": "Templates are grouped by dispute category ({templateType}) so you can tailor evidence checklists and narratives.",
+      "reviewCollectionTitle": "Evidence Collection",
+      "reviewCollectionDesc": "DisputeDesk automatically collects the selected evidence:",
+      "reviewPackTitle": "Evidence Pack Creation",
+      "reviewPackDesc": "All collected evidence is compiled into a ready-to-submit evidence pack. You can review and edit before submission.",
+      "reviewNotifyTitle": "Notification & Review",
+      "reviewNotifyDesc": "You'll be notified when the pack is ready. Review, make any final changes, and save to Shopify with one click.",
+      "andMore": "and {count} more",
+      "activateDesc": "Review your template configuration and activate it to add this layout to your Evidence Packs library.",
+      "summaryTitle": "Template Summary",
+      "summaryType": "Template type",
+      "summaryEvidenceCount": "Evidence types",
+      "summaryAutoCollected": "Auto-collected",
+      "summaryManual": "Manual collection",
+      "types": "types",
+      "readyTitle": "Ready to activate",
+      "readyDesc": "Once activated, manage this pack under Packs. Automation rules (next step) control whether new disputes run automated evidence collection first or go to your review queue."
+    },
+    "rules": {
+      "title": "How new disputes are handled",
+      "subtitle": "Choose how each active pack should behave when a new dispute arrives.",
+      "packHandlingIntro": "Choose how each active pack should behave when a new dispute arrives.",
+      "packHandlingHelper": "Packs you activated in the previous step appear here automatically. Set whether each one should run automatically or go through manual review first.",
+      "packHandlingSectionTitle": "Active packs and handling mode",
+      "packHandlingPriorityHint": "Rule order defines application priority.",
+      "segmentManual": "Manual review",
+      "segmentAuto": "Automatic",
+      "segmentManualHint": "Requires a check before submission",
+      "segmentAutoHint": "Creates and routes the pack automatically",
+      "badgeActiveRow": "Active",
+      "badgeDraftRow": "Draft",
+      "badgeRecommendedRow": "Recommended",
+      "packAutoDisabledHint": "This pack needs an installed template to enable automatic handling.",
+      "emptyPacksTitle": "No active packs yet",
+      "emptyPacksBody": "Activate packs in the previous step to configure rules here.",
+      "backToPacksCta": "Back to Packs",
+      "saveErrorGeneric": "Could not save. Try again.",
+      "pack_auto_requires_template": "Automatic handling requires a template linked to this pack.",
+      "introOneLiner": "Templates define what goes into a pack. This step defines what happens when a new dispute arrives.",
+      "heroIntro": "When a dispute arrives, DisputeDesk uses your default, any reason-specific rule, then safeguards — in that order.",
+      "packsRelationTitle": "Templates vs. automation",
+      "packsRelationBody": "Pack templates in your library define sections and evidence checklists. Automation rules here decide what happens when a dispute first syncs — auto-build a pack, send it to review first, or leave it manual.",
+      "packsLinkLabel": "View your Packs",
+      "packsPrereqTitle": "Install evidence packs first",
+      "packsPrereqBody": "To assign pack templates and set auto-build or review behavior by dispute reason, install at least one pack from the setup step.",
+      "packsPrereqSetupLink": "Go to Evidence packs step",
+      "rulesTableLockedAria": "Dispute reason rules are disabled until you install at least one pack template.",
+      "presetSectionTitle": "Pick a starting point",
+      "presetManualTitle": "Manual",
+      "presetManualLine": "You prepare evidence yourself for each dispute.",
+      "presetReviewTitle": "Review first",
+      "presetReviewLine": "DisputeDesk gathers data, then you review before submitting.",
+      "presetAutoTitle": "Automatic",
+      "presetAutoLine": "We build the pack automatically where it’s safe (when templates are installed).",
+      "presetBadgeSuggested": "Suggested",
+      "defaultSectionTitle": "Default rule (General)",
+      "defaultFallbackBadge": "Fallback",
+      "defaultSectionSubtitle": "Used when no exception below matches the dispute reason.",
+      "exceptionsSectionTitle": "Exceptions by dispute reason",
+      "exceptionsSectionSubtitle": "Optional — only change reasons that should behave differently from your default.",
+      "exceptionsToggleShow": "Show options by dispute reason (optional)",
+      "exceptionsToggleHide": "Hide dispute reason options",
+      "safeguardsSectionTitle": "Safety overrides",
+      "safeguardsOverrideNote": "When on, these take priority over your default and per-reason choices above.",
+      "summarySectionTitle": "At a glance",
+      "summaryDefault": "Default (General): {mode}",
+      "summaryReason": "{reason}: {mode}",
+      "summaryHighValue": "Above {amount} (shop currency): always review",
+      "summaryCatchAll": "When no other rule matches: send to review",
+      "flowHintShort": "Order: safeguards → specific reason → default (General).",
+      "reasonHelpFraudulent": "Unrecognized charges or suspected fraud.",
+      "reasonHelpPnr": "Customer says the order never arrived.",
+      "reasonHelpSub": "Subscription billing or cancellation issues.",
+      "reasonHelpUnacceptable": "Item differs from listing or is defective.",
+      "reasonHelpCredit": "Refund or store credit not received.",
+      "reasonHelpDuplicate": "Customer charged more than once.",
+      "reasonHelpGeneral": "Everything else that doesn’t fit the reasons above.",
+      "sectionByReason": "Dispute handling by reason",
+      "colReason": "Reason",
+      "colTemplate": "Pack template",
+      "colHandling": "Handling",
+      "modeAutoBuild": "Automatic",
+      "modeReviewFirst": "Review before submit",
+      "modeManual": "Review before submit",
+      "templateNoneOptional": "None (optional)",
+      "templateNoneDash": "None selected",
+      "noTemplatesInstalled": "Install packs from the library first",
+      "precedenceNote": "Amount-based safeguards are evaluated first, then rules for the dispute reason, then catch-all rules. If multiple rules could apply at the same tier, review overrides auto-build.",
+      "fallbackNote": "If no rule applies, the dispute stays manual (no automatic pack build).",
+      "safeguardsTitle": "Global safeguards",
+      "safeguardsIntro": "These override the reason-based handling above.",
+      "highValueLabel": "Review disputes above this amount",
+      "highValueMinLabel": "Minimum amount (shop currency)",
+      "catchAllLabel": "Send to review when no specific rule applies",
+      "recommendedButton": "Recommended setup",
+      "loading": "Loading…",
+      "load_failed": "Could not load automation settings. Refresh and try again.",
+      "validationAutoBuildTemplate": "Select a pack template for every reason set to Auto-build.",
+      "validationTemplateInstalled": "Choose a template from your installed packs library.",
+      "changeLaterTitle": "You can adjust this later",
+      "changeLaterBody": "These settings can be changed anytime in Rules.",
+      "changeLaterRulesLink": "Open Rules →",
+      "installedTemplatesSummary": "Templates installed in this setup: {list}",
+      "badgeAutoPack": "Auto-build",
+      "badgeReview": "Review",
+      "activatedPackagesTitle": "Activated packages",
+      "activatedPackagesListIntro": "These evidence packs are ACTIVE in your library (from the Evidence packs step).",
+      "activatedPackagesEmpty": "No activated packs yet. Install a template from the packs step and activate it to see it here."
+    },
+    "openInAdmin": {
+      "title": "Open in Shopify Admin",
+      "description": "Pin the app in Shopify Admin to open DisputeDesk from your sidebar.",
+      "cta": "Open in Shopify Admin",
+      "checklistAction": "Open in Admin"
+    },
+    "getStarted": "Get Started →"
   },
   "disputeTimeline": {
     "title": "History",
@@ -3343,7 +3758,98 @@
   },
   "auth": {
     "shopifyBanner": "DisputeDesk runs inside Shopify Admin. Open it from your store's Apps menu, or continue below if you have a web portal account.",
-    "shopifyBannerCta": "Learn more"
+    "shopifyBannerCta": "Learn more",
+    "signIn": {
+      "title": "Sign in",
+      "subtitle": "Continue with Shopify opens your store in Shopify Admin after you authorize. Or sign in with email below.",
+      "continueWithShopify": "Continue with Shopify",
+      "or": "or",
+      "email": "Email",
+      "emailPlaceholder": "you@company.com",
+      "password": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "forgotPassword": "Forgot password?",
+      "signingIn": "Signing in...",
+      "submit": "Sign in",
+      "sendMagicLink": "Send magic link instead",
+      "footerNoAccount": "Don't have an account?",
+      "createOne": "Create one",
+      "shopLabel": "Your Shopify store",
+      "shopPlaceholder": "yourstore.myshopify.com",
+      "shopHint": "After authorization you'll continue in the embedded app in Shopify Admin.",
+      "shopErrorInvalid": "Enter a valid store name, e.g. yourstore or yourstore.myshopify.com",
+      "continue": "Continue",
+      "cancel": "Cancel",
+      "errValidEmail": "Enter a valid email address.",
+      "errPasswordRequired": "Password is required.",
+      "errValidEmailFirst": "Enter a valid email address first.",
+      "errMagicLinkFailed": "Failed to send magic link. Please try again."
+    },
+    "signUp": {
+      "title": "Create your account",
+      "subtitle": "Connect your store — we'll open Shopify Admin so you can finish setup in the embedded app.",
+      "successTitle": "Check your email",
+      "successSubtitle": "We sent a confirmation link to {email}",
+      "successBody": "Click the link in the email to activate your account.",
+      "backToSignIn": "Back to sign in",
+      "footerHasAccount": "Already have an account?",
+      "signInLink": "Sign in",
+      "shopLabel": "Your Shopify store",
+      "shopPlaceholder": "yourstore.myshopify.com",
+      "shopHint": "After you authorize DisputeDesk, you'll land in the app inside Shopify Admin. You can always use the web portal later.",
+      "shopErrorInvalid": "Enter a valid store name, e.g. yourstore or yourstore.myshopify.com",
+      "continue": "Continue",
+      "cancel": "Cancel",
+      "continueWithShopify": "Continue with Shopify",
+      "or": "or",
+      "fullName": "Full Name",
+      "fullNamePlaceholder": "John Doe",
+      "email": "Email",
+      "emailPlaceholder": "you@company.com",
+      "password": "Password",
+      "passwordPlaceholder": "Create a strong password (min. 8 characters)",
+      "creating": "Creating account...",
+      "createAccount": "Create account",
+      "errFullName": "Full name is required.",
+      "errValidEmail": "Enter a valid email address.",
+      "errPasswordLen": "Password must be at least 8 characters."
+    },
+    "forgotPassword": {
+      "titleCheck": "Check your email",
+      "subtitleSent": "If an account exists for {email}, we sent a reset link.",
+      "backToSignIn": "Back to sign in",
+      "title": "Reset your password",
+      "subtitle": "Enter your email to receive a password reset link",
+      "footerRemember": "Remember your password?",
+      "signIn": "Sign in",
+      "email": "Email",
+      "emailPlaceholder": "you@company.com",
+      "errGeneric": "Something went wrong. Please try again.",
+      "sending": "Sending...",
+      "sendLink": "Send reset link"
+    },
+    "magicLinkSent": {
+      "title": "Check your inbox",
+      "subtitle": "We've sent a magic link to your email",
+      "body": "Click the link in your email to sign in to your account. The link will expire in 15 minutes.",
+      "email": "Email",
+      "emailPlaceholder": "you@company.com",
+      "resend": "Resend email",
+      "sentAgain": "Sent again!",
+      "backToSignIn": "Back to sign in",
+      "errResend": "Failed to resend. Please try again."
+    },
+    "resetPassword": {
+      "titleDone": "Password updated",
+      "subtitleDone": "Your password has been reset. You can now sign in.",
+      "signIn": "Sign in",
+      "title": "Set new password",
+      "subtitle": "Choose a strong password for your account",
+      "newPassword": "New password",
+      "newPasswordPlaceholder": "Enter new password",
+      "updating": "Updating...",
+      "updatePassword": "Update password"
+    }
   },
   "fraudIntel": {
     "title": "Fraud risk overview",
@@ -3505,6 +4011,224 @@
     "stripFailedBody": "We couldn't analyze your past Shopify orders this time. This usually clears up on a retry — give it another shot below.",
     "stripRetryCta": "Retry analysis",
     "stripRetryError": "Couldn't start the retry. Please try again in a moment.",
-    "stripNoOrdersBody": "We didn't find any historical Shopify orders to analyze yet. Once orders start coming in, your risk snapshot will appear here."
+    "stripNoOrdersBody": "We didn't find any historical Shopify orders to analyze yet. Once orders start coming in, your risk snapshot will appear here.",
+    "checkpointSummary": {
+      "healthy": "healthy",
+      "info": "informational",
+      "consider": "to consider",
+      "breach": "threshold breach"
+    },
+    "checkpointSeverity": {
+      "healthy": "Healthy",
+      "info": "Info",
+      "consider": "Consider",
+      "breach": "Breach"
+    }
+  },
+  "consent": {
+    "ariaLabel": "Cookie and privacy choices",
+    "message": "We use cookies to run the site and measure traffic. You can accept analytics or use essential cookies only.",
+    "accept": "Accept",
+    "essentialOnly": "Essential only",
+    "privacy": "Privacy Policy",
+    "privacyPageTitle": "Privacy Policy",
+    "privacyPageUpdated": "Last updated: April 2026",
+    "privacyPageLead": "DisputeDesk processes personal data to provide the service described on our site. This page summarizes how we use cookies and similar technologies on the marketing website.",
+    "privacyPageCookies": "Analytics (Google Analytics) is loaded only if you choose Accept on the cookie banner. Essential cookies are required for basic site operation, security, and your preferences (such as language).",
+    "privacyPageContact": "For questions about privacy or to exercise your rights, contact us through the channels listed on our site."
+  },
+  "configGuide": {
+    "title": "Quick access",
+    "description": "Pin the app in Shopify Admin to open DisputeDesk from your sidebar.",
+    "cta": "Open in Shopify Admin",
+    "dismiss": "Dismiss"
+  },
+  "resources": {
+    "hubTitle": "DisputeDesk Resources",
+    "hubSubtitle": "Guides, templates, and insights for chargebacks and dispute resolution.",
+    "hubKeywords": "Shopify chargebacks, chargeback evidence, dispute resolution, merchant guides, templates, mediation, small claims",
+    "heroTitle": "Insights, templates & playbooks",
+    "hubBadge": "Expert guides",
+    "allArticles": "All",
+    "featuredBadge": "Featured",
+    "latestHeading": "Latest articles",
+    "articlesCount": "{count, plural, one {# article} other {# articles}}",
+    "noMoreArticles": "No additional articles in this view.",
+    "ctaStripeTitle": "Ready to streamline dispute operations?",
+    "ctaStripeBody": "Connect your Shopify store and use DisputeDesk to build evidence packs, track deadlines, and keep your team aligned.",
+    "ctaStripePrimary": "Get started",
+    "ctaStripeSecondary": "Browse templates",
+    "heroSubtitle": "Expert guidance, templates, and strategies to improve chargeback outcomes and dispute operations.",
+    "hubNav": {
+      "resources": "Articles",
+      "templates": "Templates",
+      "caseStudies": "Case studies",
+      "glossary": "Glossary"
+    },
+    "searchPlaceholder": "Search articles, templates, and guides…",
+    "searchButton": "Search",
+    "typeAll": "All types",
+    "noResults": "No content matches your filters.",
+    "filterPillar": "Topic",
+    "filterType": "Type",
+    "filterLanguage": "Language",
+    "breadcrumbHome": "Home",
+    "breadcrumbResources": "Resources",
+    "reviewedBy": "Reviewed by",
+    "lastUpdated": "Last updated",
+    "disclaimer": "Disclaimer",
+    "readTime": "{minutes} min read",
+    "featuredLabel": "Featured resource",
+    "readArticle": "Read full article",
+    "readMore": "Read more",
+    "browseTopicsTitle": "Browse by topic",
+    "resultsCount": "{count, plural, one {Showing # resource} other {Showing # resources}}",
+    "resultsCountTotal": "Showing {count} of {total} resources",
+    "listingMeta": "Page {page} of {totalPages} · {total, plural, one {# article} other {# articles}} · {onPage} on this page",
+    "paginationNav": "Article list pages",
+    "paginationPrev": "Previous",
+    "paginationNext": "Next",
+    "paginationStatus": "Page {page} of {totalPages}",
+    "emptyTitle": "No resources found",
+    "emptyHint": "Try adjusting filters or your search query.",
+    "clearFilters": "Clear filters",
+    "moreFilters": "More Filters",
+    "additionalTypes": "Additional types:",
+    "ctaDemoTitle": "Need help with a specific dispute?",
+    "ctaDemoBody": "Connect your Shopify store and use DisputeDesk to build evidence packs and manage disputes in one place.",
+    "ctaDemoButton": "Get started",
+    "ctaTemplatesTitle": "Templates & playbooks",
+    "ctaTemplatesBody": "Browse structured templates and downloads in the Templates hub.",
+    "ctaTemplatesButton": "Browse templates",
+    "designRef": "Layout reference: DisputeDesk Shopify App Design (Figma Make).",
+    "ctaPrimary": "Get started",
+    "ctaDownload": "Download",
+    "ctaDemo": "Request a demo",
+    "ctaNewsletter": "Subscribe for updates",
+    "backToResources": "Back to Resources",
+    "share": "Share",
+    "linkCopied": "Link copied to clipboard",
+    "ctaCardTitle": "Automate Your Chargeback Responses",
+    "ctaCardBody": "DisputeDesk automatically tracks deadlines, collects evidence, and generates winning responses so you never miss a deadline again.",
+    "ctaDownloadAppTryFree": "Get started free",
+    "ctaSeePlans": "See plans",
+    "relatedResources": "Related Resources",
+    "keyTakeaways": "Key Takeaways",
+    "disclaimerLabel": "Disclaimer",
+    "disclaimerText": "This content is for informational purposes only and does not constitute legal advice.",
+    "updatesLabel": "Updates",
+    "templateHeroTitle": "Templates & playbooks",
+    "templateHeroSubtitle": "Ready-to-use templates, checklists, and playbooks to streamline your chargeback response process.",
+    "templateEmptyHint": "New templates are published regularly — check back soon or browse our articles.",
+    "viewTemplate": "View template",
+    "ctaResourcesTitle": "Explore all resources",
+    "ctaResourcesBody": "Browse articles, case studies, and expert guides on chargebacks and dispute resolution.",
+    "ctaResourcesButton": "Browse resources",
+    "types": {
+      "pillar_page": "Pillar page",
+      "cluster_article": "Article",
+      "template": "Template",
+      "case_study": "Case study",
+      "legal_update": "Policy update",
+      "glossary_entry": "Glossary",
+      "faq_entry": "FAQ",
+      "checklist": "Checklist"
+    },
+    "topicBlurbs": {
+      "chargebacks": "Evidence, timelines, and response strategies.",
+      "dispute-resolution": "Workflows, mediation, and small claims.",
+      "small-claims": "Court processes and documentation.",
+      "mediation-arbitration": "ADR options for merchants.",
+      "dispute-management-software": "Tools, setup, and operations."
+    },
+    "pillars": {
+      "chargebacks": "Chargebacks",
+      "dispute-resolution": "Dispute resolution",
+      "small-claims": "Small claims",
+      "mediation-arbitration": "Mediation & arbitration",
+      "dispute-management-software": "Dispute management software"
+    }
+  },
+  "liabilityShift": {
+    "panelTitle": "Liability shift — Visa CE 3.0",
+    "verdict": {
+      "qualifies": "Qualifies",
+      "qualifies_network_prequalified": "Pre-qualified by Visa",
+      "qualifies_via_initial_billing": "Qualifies (via initial billing)",
+      "partial": "Partial match",
+      "does_not_qualify": "Does not qualify",
+      "not_applicable": "Not applicable"
+    },
+    "confidence": {
+      "high": "High confidence",
+      "medium": "Medium confidence",
+      "low": "Low confidence"
+    },
+    "matchPoints": {
+      "label": "Matched on:"
+    },
+    "matchPoint": {
+      "ip": "IP address",
+      "device": "Device",
+      "shipping": "Shipping address",
+      "account": "Customer account"
+    },
+    "autoQual": {
+      "viaVisaSecure": "Visa pre-qualified this dispute for CE 3.0 via Visa Secure (3-D Secure 2 authentication).",
+      "viaDataOnly": "Visa pre-qualified this dispute for CE 3.0 via Visa Data Only (frictionless 3DS data exchange).",
+      "viaMerchantConfirmed": "CE 3.0 auto-qualified via merchant-confirmed 3-D Secure.",
+      "feeNotice": "Visa charges a per-qualification fee on auto-qualified disputes from April 17, 2026."
+    },
+    "initialBilling": {
+      "notice": "This recurring billing qualifies for CE 3.0 by matching against the initial subscription billing transaction."
+    },
+    "partial": {
+      "intro": "This dispute is close to qualifying but missing one requirement:"
+    },
+    "doesNotQualify": {
+      "intro": "Visa CE 3.0 requirements are not met for this dispute. Standard representment still applies."
+    },
+    "notApplicable": {
+      "intro": "Visa CE 3.0 applies only to Visa reason code 10.4. Standard representment still applies."
+    },
+    "missing": {
+      "anchor": "An IP or device match is required (anchor)",
+      "twoPriors": "Two undisputed prior orders in the 120–365 day window",
+      "secondPrior": "A second undisputed prior order in the 120–365 day window",
+      "matchPointPrefix": "Match needed"
+    },
+    "impact": {
+      "title": "Liability-shift impact",
+      "subtitle": "How DisputeDesk's CE 3.0 and FPT wins affect your card-network compliance ratios.",
+      "periodLabel": "Period: {period}",
+      "vamp": {
+        "label": "Visa VAMP"
+      },
+      "ecm": {
+        "label": "Mastercard ECM"
+      },
+      "efm": {
+        "label": "Mastercard EFM"
+      },
+      "band": {
+        "green": "Healthy",
+        "yellow": "Approaching",
+        "red": "Threshold breached"
+      },
+      "threshold": "Threshold: {value}",
+      "withoutDd": "Without DisputeDesk: {value}",
+      "counterfactualHeader": "This month's DisputeDesk-attributed wins",
+      "tile": {
+        "feesAvoided": "VAMP fees avoided",
+        "feesAvoidedHelper": "Estimated at $8/transaction excluded from VAMP",
+        "revenueRecovered": "Revenue recovered",
+        "revenueRecoveredHelper": "Sum of disputes won via CE 3.0 / FPT this period",
+        "ce30Wins": "CE 3.0 wins",
+        "ce30WinsHelper": "Visa 10.4 disputes won via Compelling Evidence 3.0",
+        "fptWins": "FPT wins",
+        "fptWinsHelper": "Mastercard 4837 / 4863 disputes won via First-Party Trust"
+      },
+      "estimateNotice": "Ratios are calculated estimates from your Shopify data. Your acquirer holds the authoritative numbers used for compliance enforcement."
+    }
   }
 }
