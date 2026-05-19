@@ -208,7 +208,6 @@ export function MarketingLandingPageClient({
                 </a>
               </div>
 
-              <p className="dd-submit-note">{t("hero.disclaimer")}</p>
             </div>
 
             {/* Right: cream paper dossier graphic */}
