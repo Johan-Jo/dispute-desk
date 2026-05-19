@@ -128,6 +128,20 @@ function renderValue(fact: EvidenceFact): string {
       return "Distinct transaction";
     case "manual_evidence":
       return typeof v?.fileType === "string" ? `Uploaded (${v.fileType})` : "Uploaded";
+    case "fraud_screening": {
+      // Source-collector pre-gates: only LOW/NONE + ACCEPT + ≥1
+      // positive fact reach this branch. Render as a short verdict
+      // string the merchant + bank reviewer can read at a glance,
+      // without quoting the raw fact list or the internal taxonomy
+      // words "risk_level" / "recommendation".
+      const count =
+        typeof v?.positiveFactCount === "number" ? v.positiveFactCount : 0;
+      if (count >= 1) {
+        const factsLabel = count === 1 ? "1 positive signal" : `${count} positive signals`;
+        return `Shopify recommended ACCEPT · ${factsLabel}`;
+      }
+      return "Shopify recommended ACCEPT";
+    }
     default:
       return "Confirmed";
   }

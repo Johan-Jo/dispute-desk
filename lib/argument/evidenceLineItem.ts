@@ -179,6 +179,10 @@ const REASON_OVERRIDES: Record<string, Partial<Record<SubmissionMethod, string>>
       "Device and session signals are not available for this order.",
   },
   fraud_risk_screening: {
+    bank_argument:
+      "Shopify's own pre-authorization fraud screening recommended ACCEPT for this order — cited as supporting context in the bank argument.",
+    context_only:
+      "Shopify's own pre-authorization fraud screening reviewed this order at checkout and recommended ACCEPT.",
     internal_only:
       "Pre-authorization risk scoring is informational only; not surfaced to the bank.",
     not_included:
