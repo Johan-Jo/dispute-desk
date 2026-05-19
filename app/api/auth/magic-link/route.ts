@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   const locale: Locale =
     normalizeLocale(rawLocale) ??
     normalizeLocale(req.headers.get("accept-language")?.split(",")[0]) ??
-    "en-US";
+    "en";
 
   // Build the confirm URL with locale encoded so the email hook can read it.
   const base = getPublicSiteBaseUrl();

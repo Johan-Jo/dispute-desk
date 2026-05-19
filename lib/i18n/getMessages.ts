@@ -1,8 +1,8 @@
 import { type Locale, DEFAULT_LOCALE, isLocale } from "./locales";
 
 /**
- * Load messages for a BCP-47 locale.
- * Falls back to en-US if the locale file is missing.
+ * Load messages for a short-code locale (en / de / es / fr / pt / sv).
+ * Falls back to `en` if the locale file is missing.
  */
 export async function getMessages(
   locale: string
@@ -12,6 +12,6 @@ export async function getMessages(
   try {
     return (await import(`@/messages/${resolved}.json`)).default;
   } catch {
-    return (await import(`@/messages/en-US.json`)).default;
+    return (await import(`@/messages/en.json`)).default;
   }
 }

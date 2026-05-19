@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
   }
   const actionLink = `${base}/api/auth/confirm?${confirmParams.toString()}`;
 
-  let locale: Locale = normalizeLocale(localeParam) ?? "en-US";
+  let locale: Locale = normalizeLocale(localeParam) ?? "en";
   if (!localeParam && redirectTo) {
     try {
       const redirectUrl = new URL(redirectTo, "https://x");

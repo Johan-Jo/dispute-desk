@@ -51,7 +51,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
     ? rawLocale
     : isPathLocale(rawLocale)
       ? pathLocaleToMessages[rawLocale as PathLocale]
-      : "en-US";
+      : "en";
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const fullPathname = useFullPathname();

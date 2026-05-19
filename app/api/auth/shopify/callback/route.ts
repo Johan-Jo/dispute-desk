@@ -61,12 +61,12 @@ export async function GET(req: NextRequest) {
 
   const { phase, source, returnTo } = oauthState;
 
-  // Resolve locale for emails: dd_locale cookie → Accept-Language → en-US
+  // Resolve locale for emails: dd_locale cookie → Accept-Language → en
   const cookieStore = await cookies();
   const locale: Locale =
     normalizeLocale(cookieStore.get("dd_locale")?.value) ??
     normalizeLocale(req.headers.get("accept-language")?.split(",")[0]) ??
-    "en-US";
+    "en";
 
   try {
     let tokenResult;

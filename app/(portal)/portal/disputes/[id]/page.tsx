@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
+import { toBcp47Loose } from "@/lib/i18n/bcp47";
 import { ArrowLeft, RefreshCw, FileText, Clock, AlertTriangle, CheckCircle, User, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -164,12 +165,12 @@ const DEMO_DISPUTES: Record<string, {
 
 function formatCurrency(amount: number | null, code: string | null, locale: string): string {
   if (amount == null) return "—";
-  return new Intl.NumberFormat(locale, { style: "currency", currency: code ?? "USD" }).format(amount);
+  return new Intl.NumberFormat(toBcp47Loose(locale), { style: "currency", currency: code ?? "USD" }).format(amount);
 }
 
 function formatDate(iso: string | null, locale: string): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" });
+  return new Date(iso).toLocaleDateString(toBcp47Loose(locale), { month: "short", day: "numeric", year: "numeric" });
 }
 
 function formatAddress(addr: ProfileAddress | null | undefined): string {

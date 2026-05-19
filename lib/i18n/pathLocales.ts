@@ -22,13 +22,19 @@ export const PATH_LOCALES_WITH_PREFIX = [
 export const PATH_LOCALE_PREFIX_PATTERN =
   PATH_LOCALES_WITH_PREFIX.join("|");
 
+/**
+ * Historical map from URL slug → message-file locale. Now an identity map
+ * since `Locale` and `PathLocale` use the same short-code strings; kept so
+ * the ~10 call sites of `pathLocaleToMessages[…]` don't need to change.
+ * Safe to delete in a future cleanup once those call sites are inlined.
+ */
 export const pathLocaleToMessages: Record<PathLocale, Locale> = {
-  en: "en-US",
-  de: "de-DE",
-  es: "es-ES",
-  fr: "fr-FR",
-  pt: "pt-BR",
-  sv: "sv-SE",
+  en: "en",
+  de: "de",
+  es: "es",
+  fr: "fr",
+  pt: "pt",
+  sv: "sv",
 };
 
 const messagesToPath = new Map<Locale, PathLocale>(

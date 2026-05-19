@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import { toBcp47Loose } from "@/lib/i18n/bcp47";
 import { Search, Filter, RefreshCw, Loader2, ExternalLink } from "lucide-react";
 import { useActiveShopId } from "@/lib/portal/activeShopContext";
 import { Badge } from "@/components/ui/badge";
@@ -70,7 +71,7 @@ const STATUS_KEYS: Record<string, string> = {
 
 function formatCurrency(amount: number | null, code: string | null, locale: string): string {
   if (amount == null) return "—";
-  return new Intl.NumberFormat(locale, {
+  return new Intl.NumberFormat(toBcp47Loose(locale), {
     style: "currency",
     currency: code ?? "USD",
   }).format(amount);

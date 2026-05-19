@@ -41,7 +41,7 @@ export async function GET(request: Request) {
     normalizeLocale(localeParam) ??
     normalizeLocale(ddLocale) ??
     normalizeLocale(acceptLanguage) ??
-    "en-US";
+    "en";
 
   const supabase = await createPortalClient();
 

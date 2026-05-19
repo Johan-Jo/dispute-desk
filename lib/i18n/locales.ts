@@ -1,18 +1,22 @@
-// ─── BCP-47 Locale Registry ────────────────────────────────────────
-// Single source of truth for all locale data across UI, DB, and i18n.
+// ─── Locale Registry ──────────────────────────────────────────────
+// Canonical Locale is the 2-letter short code (en, de, es, fr, pt, sv).
+// External systems that need BCP-47 (Shopify Accept-Language, Intl.*,
+// Polaris locale switch, email templates) convert via `toBcp47()` in
+// `./bcp47.ts`. Internal code — including next-intl message loading —
+// uses short codes exclusively.
 
 export const LOCALE_LIST = [
-  "en-US",
-  "de-DE",
-  "fr-FR",
-  "es-ES",
-  "pt-BR",
-  "sv-SE",
+  "en",
+  "de",
+  "fr",
+  "es",
+  "pt",
+  "sv",
 ] as const;
 
 export type Locale = (typeof LOCALE_LIST)[number];
 
-export const DEFAULT_LOCALE: Locale = "en-US";
+export const DEFAULT_LOCALE: Locale = "en";
 
 export interface LocaleEntry {
   locale: Locale;
@@ -25,7 +29,7 @@ export interface LocaleEntry {
 
 export const LOCALES: readonly LocaleEntry[] = [
   {
-    locale: "en-US",
+    locale: "en",
     language: "en",
     region: "US",
     label: "English (US)",
@@ -33,7 +37,7 @@ export const LOCALES: readonly LocaleEntry[] = [
     short: "EN",
   },
   {
-    locale: "de-DE",
+    locale: "de",
     language: "de",
     region: "DE",
     label: "German",
@@ -41,7 +45,7 @@ export const LOCALES: readonly LocaleEntry[] = [
     short: "DE",
   },
   {
-    locale: "fr-FR",
+    locale: "fr",
     language: "fr",
     region: "FR",
     label: "French",
@@ -49,7 +53,7 @@ export const LOCALES: readonly LocaleEntry[] = [
     short: "FR",
   },
   {
-    locale: "es-ES",
+    locale: "es",
     language: "es",
     region: "ES",
     label: "Spanish",
@@ -57,7 +61,7 @@ export const LOCALES: readonly LocaleEntry[] = [
     short: "ES",
   },
   {
-    locale: "pt-BR",
+    locale: "pt",
     language: "pt",
     region: "BR",
     label: "Portuguese (BR)",
@@ -65,7 +69,7 @@ export const LOCALES: readonly LocaleEntry[] = [
     short: "PT",
   },
   {
-    locale: "sv-SE",
+    locale: "sv",
     language: "sv",
     region: "SE",
     label: "Swedish",
@@ -75,17 +79,36 @@ export const LOCALES: readonly LocaleEntry[] = [
 ] as const;
 
 const localeSet = new Set<string>(LOCALE_LIST);
-const byLanguage = new Map<string, Locale>();
 const byLocale = new Map<Locale, LocaleEntry>();
 
 for (const entry of LOCALES) {
   byLocale.set(entry.locale, entry);
-  if (!byLanguage.has(entry.language)) {
-    byLanguage.set(entry.language, entry.locale);
-  }
 }
 
-/** Type guard — checks if an arbitrary string is a supported BCP-47 locale. */
+/** Map BCP-47 inputs (en-US, de-DE, …) to their canonical short code. */
+const BCP47_TO_SHORT: Record<string, Locale> = {
+  "en-us": "en",
+  "en-gb": "en",
+  en: "en",
+  "de-de": "de",
+  "de-at": "de",
+  "de-ch": "de",
+  de: "de",
+  "fr-fr": "fr",
+  "fr-ca": "fr",
+  fr: "fr",
+  "es-es": "es",
+  "es-mx": "es",
+  "es-ar": "es",
+  es: "es",
+  "pt-br": "pt",
+  "pt-pt": "pt",
+  pt: "pt",
+  "sv-se": "sv",
+  sv: "sv",
+};
+
+/** Type guard — checks if an arbitrary string is a supported short-code Locale. */
 export function isLocale(value: string): value is Locale {
   return localeSet.has(value);
 }
@@ -93,8 +116,9 @@ export function isLocale(value: string): value is Locale {
 /**
  * Best-effort normalisation of freeform locale strings to a supported Locale.
  *
- * Handles: BCP-47 (en-US), underscore variants (pt_BR), bare language codes
- * (sv), and case variations.  Returns null when no reasonable match exists.
+ * Accepts BCP-47 (en-US, pt_BR), underscore variants, bare language codes,
+ * and case variations. Always returns a short-code Locale (en, de, es, fr,
+ * pt, sv) or null if no reasonable match exists.
  */
 export function normalizeLocale(input?: string | null): Locale | null {
   if (!input) return null;
@@ -102,28 +126,25 @@ export function normalizeLocale(input?: string | null): Locale | null {
   const trimmed = input.trim();
   if (!trimmed) return null;
 
-  // Normalise separators and casing → "en-us", "pt-br", etc.
-  const normalised = trimmed.replace(/_/g, "-");
+  const normalised = trimmed.replace(/_/g, "-").toLowerCase();
 
-  // Try exact match (case-insensitive)
-  const exact = LOCALE_LIST.find(
-    (l) => l.toLowerCase() === normalised.toLowerCase()
-  );
-  if (exact) return exact;
+  // Direct short-code match
+  if (localeSet.has(normalised)) return normalised as Locale;
 
-  // Extract the base language subtag
-  const base = normalised.split("-")[0].toLowerCase();
+  // BCP-47 → short map
+  const mapped = BCP47_TO_SHORT[normalised];
+  if (mapped) return mapped;
 
-  // Try base language match
-  const fromBase = byLanguage.get(base);
-  if (fromBase) return fromBase;
+  // Last resort: take the base subtag (en-XX → en) and try again
+  const base = normalised.split("-")[0];
+  if (localeSet.has(base)) return base as Locale;
 
   return null;
 }
 
 /**
  * Multi-source locale resolution with cascading fallback:
- *   userLocale → shopLocale → shopifyLocale → en-US
+ *   userLocale → shopLocale → shopifyLocale → en
  */
 export function resolveLocale({
   userLocale,
@@ -142,7 +163,7 @@ export function resolveLocale({
   );
 }
 
-/** Display metadata for a given locale (safe — returns en-US fallback). */
+/** Display metadata for a given locale (safe — returns en fallback). */
 export function getLocaleDisplay(locale: Locale): {
   label: string;
   nativeName: string;
@@ -157,11 +178,10 @@ export function getLocaleDisplay(locale: Locale): {
 }
 
 /**
- * Maps a BCP-47 Locale to the legacy 2-letter code used by next-intl message
- * files during migration.  Once message files are renamed to BCP-47 this can
- * be removed.
+ * Historical helper from the BCP-47 → short-code migration. Locale is now
+ * already a short code, so this is an identity function. Kept exported so
+ * external callers don't break; safe to delete in a future cleanup.
  */
 export function localeToLegacyCode(locale: Locale): string {
-  const entry = byLocale.get(locale);
-  return entry?.language ?? "en";
+  return locale;
 }

@@ -21,6 +21,7 @@
 
 import type { ReactElement } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import { toBcp47Loose } from "@/lib/i18n/bcp47";
 import { BlockStack, Banner, Spinner } from "@shopify/polaris";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { useEvidenceSections } from "./useEvidenceSections";
@@ -77,7 +78,7 @@ export default function EvidenceTab({ workspace }: Props) {
     data?.dispute?.submissionState === "saved_to_shopify";
 
   const formattedSubmittedAt = data?.dispute?.submittedAt
-    ? new Intl.DateTimeFormat(locale, {
+    ? new Intl.DateTimeFormat(toBcp47Loose(locale), {
         dateStyle: "medium",
       }).format(new Date(data.dispute.submittedAt))
     : null;

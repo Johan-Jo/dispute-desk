@@ -27,7 +27,7 @@ interface WelcomeTranslation {
 }
 
 const WELCOME_TRANSLATIONS: Record<Locale, WelcomeTranslation> = {
-  "en-US": {
+  en: {
     subject: "Your DisputeDesk account is ready",
     greeting: "Hi {firstName},",
     content:
@@ -39,7 +39,7 @@ const WELCOME_TRANSLATIONS: Record<Locale, WelcomeTranslation> = {
     footerNote: "You're receiving this because you signed up at DisputeDesk.",
     copyright: "© 2026 DisputeDesk. All rights reserved.",
   },
-  "de-DE": {
+  de: {
     subject: "Dein DisputeDesk-Konto ist bereit",
     greeting: "Hallo {firstName},",
     content:
@@ -52,7 +52,7 @@ const WELCOME_TRANSLATIONS: Record<Locale, WelcomeTranslation> = {
       "Du erhältst diese E-Mail, weil du dich bei DisputeDesk registriert hast.",
     copyright: "© 2026 DisputeDesk. Alle Rechte vorbehalten.",
   },
-  "fr-FR": {
+  fr: {
     subject: "Votre compte DisputeDesk est prêt",
     greeting: "Bonjour {firstName},",
     content:
@@ -65,7 +65,7 @@ const WELCOME_TRANSLATIONS: Record<Locale, WelcomeTranslation> = {
       "Vous recevez cet e-mail car vous vous êtes inscrit sur DisputeDesk.",
     copyright: "© 2026 DisputeDesk. Tous droits réservés.",
   },
-  "es-ES": {
+  es: {
     subject: "Tu cuenta de DisputeDesk está lista",
     greeting: "Hola {firstName},",
     content:
@@ -78,7 +78,7 @@ const WELCOME_TRANSLATIONS: Record<Locale, WelcomeTranslation> = {
       "Recibes este correo porque te registraste en DisputeDesk.",
     copyright: "© 2026 DisputeDesk. Todos los derechos reservados.",
   },
-  "pt-BR": {
+  pt: {
     subject: "Sua conta DisputeDesk está pronta",
     greeting: "Olá {firstName},",
     content:
@@ -91,7 +91,7 @@ const WELCOME_TRANSLATIONS: Record<Locale, WelcomeTranslation> = {
       "Você está recebendo este e-mail porque se cadastrou no DisputeDesk.",
     copyright: "© 2026 DisputeDesk. Todos os direitos reservados.",
   },
-  "sv-SE": {
+  sv: {
     subject: "Ditt DisputeDesk-konto är klart",
     greeting: "Hej {firstName},",
     content:
@@ -223,7 +223,7 @@ interface MagicLinkTranslation {
 }
 
 const MAGIC_LINK_TRANSLATIONS: Record<Locale, MagicLinkTranslation> = {
-  "en-US": {
+  en: {
     subject: "Your DisputeDesk sign-in link",
     heading: "Sign in to DisputeDesk",
     content: "Click the button below to sign in instantly. This link expires in 1 hour and can only be used once.",
@@ -233,7 +233,7 @@ const MAGIC_LINK_TRANSLATIONS: Record<Locale, MagicLinkTranslation> = {
     footerNote: "You're receiving this because you requested a sign-in link at DisputeDesk.",
     copyright: "© 2026 DisputeDesk. All rights reserved.",
   },
-  "de-DE": {
+  de: {
     subject: "Dein DisputeDesk-Anmeldelink",
     heading: "Bei DisputeDesk anmelden",
     content: "Klicke auf die Schaltfläche unten, um dich sofort anzumelden. Dieser Link läuft in 1 Stunde ab und kann nur einmal verwendet werden.",
@@ -243,7 +243,7 @@ const MAGIC_LINK_TRANSLATIONS: Record<Locale, MagicLinkTranslation> = {
     footerNote: "Du erhältst diese E-Mail, weil du einen Anmeldelink bei DisputeDesk angefordert hast.",
     copyright: "© 2026 DisputeDesk. Alle Rechte vorbehalten.",
   },
-  "fr-FR": {
+  fr: {
     subject: "Votre lien de connexion DisputeDesk",
     heading: "Se connecter à DisputeDesk",
     content: "Cliquez sur le bouton ci-dessous pour vous connecter instantanément. Ce lien expire dans 1 heure et ne peut être utilisé qu'une seule fois.",
@@ -253,7 +253,7 @@ const MAGIC_LINK_TRANSLATIONS: Record<Locale, MagicLinkTranslation> = {
     footerNote: "Vous recevez cet e-mail car vous avez demandé un lien de connexion sur DisputeDesk.",
     copyright: "© 2026 DisputeDesk. Tous droits réservés.",
   },
-  "es-ES": {
+  es: {
     subject: "Tu enlace de acceso a DisputeDesk",
     heading: "Iniciar sesión en DisputeDesk",
     content: "Haz clic en el botón de abajo para iniciar sesión al instante. Este enlace caduca en 1 hora y solo puede usarse una vez.",
@@ -263,7 +263,7 @@ const MAGIC_LINK_TRANSLATIONS: Record<Locale, MagicLinkTranslation> = {
     footerNote: "Recibes este correo porque solicitaste un enlace de acceso en DisputeDesk.",
     copyright: "© 2026 DisputeDesk. Todos los derechos reservados.",
   },
-  "pt-BR": {
+  pt: {
     subject: "Seu link de acesso ao DisputeDesk",
     heading: "Entrar no DisputeDesk",
     content: "Clique no botão abaixo para entrar instantaneamente. Este link expira em 1 hora e só pode ser usado uma vez.",
@@ -273,7 +273,7 @@ const MAGIC_LINK_TRANSLATIONS: Record<Locale, MagicLinkTranslation> = {
     footerNote: "Você está recebendo este e-mail porque solicitou um link de acesso no DisputeDesk.",
     copyright: "© 2026 DisputeDesk. Todos os direitos reservados.",
   },
-  "sv-SE": {
+  sv: {
     subject: "Din inloggningslänk till DisputeDesk",
     heading: "Logga in på DisputeDesk",
     content: "Klicka på knappen nedan för att logga in direkt. Den här länken går ut om 1 timme och kan bara användas en gång.",
@@ -376,7 +376,7 @@ interface ConfirmationTranslation {
 }
 
 const CONFIRMATION_TRANSLATIONS: Record<Locale, ConfirmationTranslation> = {
-  "en-US": {
+  en: {
     subject: "Confirm your DisputeDesk account",
     heading: "You're almost there",
     greeting: "Hi {firstName},",
@@ -387,7 +387,7 @@ const CONFIRMATION_TRANSLATIONS: Record<Locale, ConfirmationTranslation> = {
     footerNote: "You're receiving this because you created an account at DisputeDesk.",
     copyright: "© 2026 DisputeDesk. All rights reserved.",
   },
-  "de-DE": {
+  de: {
     subject: "Bestätige dein DisputeDesk-Konto",
     heading: "Fast geschafft",
     greeting: "Hallo {firstName},",
@@ -398,7 +398,7 @@ const CONFIRMATION_TRANSLATIONS: Record<Locale, ConfirmationTranslation> = {
     footerNote: "Du erhältst diese E-Mail, weil du ein Konto bei DisputeDesk erstellt hast.",
     copyright: "© 2026 DisputeDesk. Alle Rechte vorbehalten.",
   },
-  "fr-FR": {
+  fr: {
     subject: "Confirmez votre compte DisputeDesk",
     heading: "Vous y êtes presque",
     greeting: "Bonjour {firstName},",
@@ -409,7 +409,7 @@ const CONFIRMATION_TRANSLATIONS: Record<Locale, ConfirmationTranslation> = {
     footerNote: "Vous recevez cet e-mail car vous avez créé un compte sur DisputeDesk.",
     copyright: "© 2026 DisputeDesk. Tous droits réservés.",
   },
-  "es-ES": {
+  es: {
     subject: "Confirma tu cuenta de DisputeDesk",
     heading: "Ya casi está",
     greeting: "Hola {firstName},",
@@ -420,7 +420,7 @@ const CONFIRMATION_TRANSLATIONS: Record<Locale, ConfirmationTranslation> = {
     footerNote: "Recibes este correo porque creaste una cuenta en DisputeDesk.",
     copyright: "© 2026 DisputeDesk. Todos los derechos reservados.",
   },
-  "pt-BR": {
+  pt: {
     subject: "Confirme sua conta DisputeDesk",
     heading: "Quase lá",
     greeting: "Olá {firstName},",
@@ -431,7 +431,7 @@ const CONFIRMATION_TRANSLATIONS: Record<Locale, ConfirmationTranslation> = {
     footerNote: "Você está recebendo este e-mail porque criou uma conta no DisputeDesk.",
     copyright: "© 2026 DisputeDesk. Todos os direitos reservados.",
   },
-  "sv-SE": {
+  sv: {
     subject: "Bekräfta ditt DisputeDesk-konto",
     heading: "Du är nästan klar",
     greeting: "Hej {firstName},",
@@ -540,7 +540,7 @@ interface PasswordResetTranslation {
 }
 
 const PASSWORD_RESET_TRANSLATIONS: Record<Locale, PasswordResetTranslation> = {
-  "en-US": {
+  en: {
     subject: "Reset your DisputeDesk password",
     heading: "Reset your password",
     content: "We received a request to reset your password. Click the button below to choose a new one. If you didn't request this, you can safely ignore this email.",
@@ -550,7 +550,7 @@ const PASSWORD_RESET_TRANSLATIONS: Record<Locale, PasswordResetTranslation> = {
     footerNote: "You're receiving this because a password reset was requested for your DisputeDesk account.",
     copyright: "© 2026 DisputeDesk. All rights reserved.",
   },
-  "de-DE": {
+  de: {
     subject: "DisputeDesk-Passwort zurücksetzen",
     heading: "Passwort zurücksetzen",
     content: "Wir haben eine Anfrage zum Zurücksetzen deines Passworts erhalten. Klicke auf die Schaltfläche unten, um ein neues zu wählen. Wenn du diese Anfrage nicht gestellt hast, kannst du diese E-Mail ignorieren.",
@@ -560,7 +560,7 @@ const PASSWORD_RESET_TRANSLATIONS: Record<Locale, PasswordResetTranslation> = {
     footerNote: "Du erhältst diese E-Mail, weil ein Passwortreset für dein DisputeDesk-Konto angefordert wurde.",
     copyright: "© 2026 DisputeDesk. Alle Rechte vorbehalten.",
   },
-  "fr-FR": {
+  fr: {
     subject: "Réinitialiser votre mot de passe DisputeDesk",
     heading: "Réinitialisez votre mot de passe",
     content: "Nous avons reçu une demande de réinitialisation de votre mot de passe. Cliquez sur le bouton ci-dessous pour en choisir un nouveau. Si vous n'avez pas fait cette demande, ignorez cet e-mail.",
@@ -570,7 +570,7 @@ const PASSWORD_RESET_TRANSLATIONS: Record<Locale, PasswordResetTranslation> = {
     footerNote: "Vous recevez cet e-mail car une réinitialisation de mot de passe a été demandée pour votre compte DisputeDesk.",
     copyright: "© 2026 DisputeDesk. Tous droits réservés.",
   },
-  "es-ES": {
+  es: {
     subject: "Restablecer tu contraseña de DisputeDesk",
     heading: "Restablece tu contraseña",
     content: "Recibimos una solicitud para restablecer tu contraseña. Haz clic en el botón de abajo para elegir una nueva. Si no solicitaste esto, puedes ignorar este correo.",
@@ -580,7 +580,7 @@ const PASSWORD_RESET_TRANSLATIONS: Record<Locale, PasswordResetTranslation> = {
     footerNote: "Recibes este correo porque se solicitó un restablecimiento de contraseña para tu cuenta de DisputeDesk.",
     copyright: "© 2026 DisputeDesk. Todos los derechos reservados.",
   },
-  "pt-BR": {
+  pt: {
     subject: "Redefinir sua senha do DisputeDesk",
     heading: "Redefina sua senha",
     content: "Recebemos uma solicitação para redefinir sua senha. Clique no botão abaixo para escolher uma nova. Se não foi você, pode ignorar este e-mail com segurança.",
@@ -590,7 +590,7 @@ const PASSWORD_RESET_TRANSLATIONS: Record<Locale, PasswordResetTranslation> = {
     footerNote: "Você está recebendo este e-mail porque foi solicitada uma redefinição de senha para sua conta DisputeDesk.",
     copyright: "© 2026 DisputeDesk. Todos os direitos reservados.",
   },
-  "sv-SE": {
+  sv: {
     subject: "Återställ ditt DisputeDesk-lösenord",
     heading: "Återställ ditt lösenord",
     content: "Vi fick en begäran om att återställa ditt lösenord. Klicka på knappen nedan för att välja ett nytt. Om du inte begärde detta kan du ignorera det här e-postmeddelandet.",

@@ -69,7 +69,7 @@ export default async function PortalLayout({
   });
   let messages = await getMessages(locale);
   if (!messages || typeof messages !== "object") {
-    messages = (await import("@/messages/en-US.json")).default;
+    messages = (await import("@/messages/en.json")).default;
   }
 
   return (

@@ -31,7 +31,7 @@ export async function sendPublishNotification(
 
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const baseUrl = getPublicSiteBaseUrl();
-  const hubLocale = isLocale(options.locale) ? options.locale : ("en-US" satisfies Locale);
+  const hubLocale = isLocale(options.locale) ? options.locale : ("en" satisfies Locale);
   const pathLocale = messagesLocaleToPath(hubLocale);
   const pathPrefix = pathLocale === "en" ? "" : `/${pathLocale}`;
   const routeBase = options.routeKind || "resources";

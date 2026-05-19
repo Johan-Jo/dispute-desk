@@ -1,20 +1,21 @@
 import type { Locale } from "./locales";
 
 /**
- * Load Polaris translations for the given BCP-47 locale.
- * Polaris ships translations under @shopify/polaris/locales.
+ * Load Polaris translations for the given short-code locale.
+ * Polaris ships translations under @shopify/polaris/locales (mostly
+ * by short code, with Portuguese keyed as `pt-BR` for historical reasons).
  */
 export async function getPolarisTranslations(locale: Locale) {
   switch (locale) {
-    case "sv-SE":
+    case "sv":
       return (await import("@shopify/polaris/locales/sv.json")).default;
-    case "de-DE":
+    case "de":
       return (await import("@shopify/polaris/locales/de.json")).default;
-    case "fr-FR":
+    case "fr":
       return (await import("@shopify/polaris/locales/fr.json")).default;
-    case "es-ES":
+    case "es":
       return (await import("@shopify/polaris/locales/es.json")).default;
-    case "pt-BR":
+    case "pt":
       return (await import("@shopify/polaris/locales/pt-BR.json")).default;
     default:
       return (await import("@shopify/polaris/locales/en.json")).default;

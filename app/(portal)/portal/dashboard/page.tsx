@@ -11,6 +11,7 @@ import {
   Inbox,
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
+import { toBcp47Loose } from "@/lib/i18n/bcp47";
 import { KPICard } from "@/components/ui/kpi-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -178,7 +179,7 @@ export default function DashboardPage() {
               ? "$3,421"
               : loading
                 ? "…"
-                : new Intl.NumberFormat(locale, { style: "currency", currency: "USD" }).format(amountAtRisk)
+                : new Intl.NumberFormat(toBcp47Loose(locale), { style: "currency", currency: "USD" }).format(amountAtRisk)
           }
           change={isDemo ? -15 : undefined}
           changeLabel={isDemo ? t("vsLastMonth") : undefined}
@@ -242,7 +243,7 @@ export default function DashboardPage() {
                       const shortId = d.dispute_gid.split("/").pop() ?? d.id;
                       const customer = d.customer_display_name ?? d.order_name ?? "—";
                       const amountStr = d.amount != null
-                        ? new Intl.NumberFormat(locale, { style: "currency", currency: d.currency_code ?? "USD" }).format(d.amount)
+                        ? new Intl.NumberFormat(toBcp47Loose(locale), { style: "currency", currency: d.currency_code ?? "USD" }).format(d.amount)
                         : "—";
                       const dateStr = d.due_at ? new Date(d.due_at).toLocaleDateString(locale) : "—";
                       return (

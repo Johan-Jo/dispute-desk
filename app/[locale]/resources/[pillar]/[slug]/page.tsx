@@ -6,7 +6,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { Calendar, CheckCircle, Clock, Globe } from "lucide-react";
 import { routing } from "@/i18n/routing";
 import type { PathLocale } from "@/lib/i18n/pathLocales";
-import { pathLocaleToHubLocale } from "@/lib/resources/localeMap";
+import { hubLocaleToPathSegment, pathLocaleToHubLocale } from "@/lib/resources/localeMap";
 import {
   getPublishedLocalizationBySlug,
   findLocalizationBySlugAnyLocale,
@@ -431,7 +431,7 @@ export default async function ResourceArticlePage({ params }: Props) {
           ctaLabel={t("ctaDownloadAppTryFree")}
           ctaHref={getMarketingShopifyAppInstallUrl()}
           secondaryCtaLabel={t("ctaSeePlans")}
-          secondaryCtaHref={`${marketingHomePath(hubLocale)}#pricing`}
+          secondaryCtaHref={`${marketingHomePath(hubLocaleToPathSegment(hubLocale))}#pricing`}
           locale={hubLocale}
           contentId={item.id}
         />
