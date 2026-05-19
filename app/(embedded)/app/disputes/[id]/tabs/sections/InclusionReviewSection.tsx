@@ -144,7 +144,7 @@ export function InclusionReviewSection({
       <BlockStack gap="0">
         <div style={{ padding: 20 }}>
           <BlockStack gap="100">
-            <Text as="h2" variant="headingMd">
+            <Text as="h2" variant="headingLg">
               {t("title")}
             </Text>
             <Text as="p" variant="bodySm" tone="subdued">
@@ -252,18 +252,40 @@ export function InclusionReviewSection({
 
               {rows.map((li, i) => {
                 const isInternalOnly = INTERNAL_ONLY_FIELDS.has(li.field);
-                const showIncludeToggle = group === "notIncluded";
-                const showRestoreToggle = group === "excludedByMerchant";
-                const showDisabledInternalToggle =
-                  group === "keptInternal" && isInternalOnly;
-                const includeDisabled =
-                  showIncludeToggle && !li.canBeForceIncluded;
+                // An "Include in package" button only makes sense on a
+                // not-included row whose data is something the merchant
+                // can actually act on. When canBeForceIncluded is false
+                // (the source lives outside DisputeDesk — payment
+                // gateway, carrier, Shopify risk engine) clicking the
+                // button is a no-op even server-side; the row's
+                // outside-data callout below already explains why. So
+                // we drop the button entirely instead of rendering it
+                // disabled — disabled buttons read as "almost active"
+                // and create UI noise.
+                const showIncludeButton =
+                  group === "notIncluded" && li.canBeForceIncluded;
+                // Kept-internal rows used to render a disabled
+                // "Include in package" stub to communicate "you can't
+                // do this from here." The group header pill
+                // ("Hidden from bank") plus the group helper text
+                // already carry that message; no button needed.
+                const showRestoreButton = group === "excludedByMerchant";
+                const hasAction = showIncludeButton || showRestoreButton;
+                // Suppress unused-var warning on isInternalOnly — it
+                // used to gate the kept-internal stub button above.
+                void isInternalOnly;
                 return (
                   <div
                     key={li.field}
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "22px 1fr auto",
+                      // Collapse the action column when nothing is
+                      // rendered there — keeps the title + body flush
+                      // against the right edge instead of leaving
+                      // dead space.
+                      gridTemplateColumns: hasAction
+                        ? "22px 1fr auto"
+                        : "22px 1fr",
                       gap: 14,
                       alignItems: "start",
                       padding: i === 0 ? "6px 0 12px" : "12px 0",
@@ -308,7 +330,11 @@ export function InclusionReviewSection({
                       >
                         {li.reason}
                       </div>
-                      {includeDisabled ? (
+                      {/* When the row is in the Not-included group but
+                          its data lives outside the merchant's control,
+                          the callout explains why no action is offered.
+                          Replaces the previous disabled-button stub. */}
+                      {group === "notIncluded" && !li.canBeForceIncluded ? (
                         <div
                           style={{
                             display: "inline-flex",
@@ -329,43 +355,29 @@ export function InclusionReviewSection({
                         </div>
                       ) : null}
                     </div>
-                    <div style={{ alignSelf: "start", marginTop: 1 }}>
-                      {showIncludeToggle ? (
-                        <Button
-                          size="slim"
-                          onClick={() => handleToggle(li, "force_include")}
-                          loading={busyField === li.field}
-                          disabled={
-                            includeDisabled ||
-                            (busyField !== null && busyField !== li.field)
-                          }
-                          accessibilityLabel={
-                            includeDisabled
-                              ? t("toggle.disabledNoPayload")
-                              : undefined
-                          }
-                        >
-                          {t("toggle.include")}
-                        </Button>
-                      ) : showRestoreToggle ? (
-                        <Button
-                          size="slim"
-                          onClick={() => handleToggle(li, null)}
-                          loading={busyField === li.field}
-                          disabled={busyField !== null && busyField !== li.field}
-                        >
-                          {t("toggle.restore")}
-                        </Button>
-                      ) : showDisabledInternalToggle ? (
-                        <Button
-                          size="slim"
-                          disabled
-                          accessibilityLabel={t("toggle.disabledInternalOnly")}
-                        >
-                          {t("toggle.include")}
-                        </Button>
-                      ) : null}
-                    </div>
+                    {hasAction ? (
+                      <div style={{ alignSelf: "start", marginTop: 1 }}>
+                        {showIncludeButton ? (
+                          <Button
+                            size="slim"
+                            onClick={() => handleToggle(li, "force_include")}
+                            loading={busyField === li.field}
+                            disabled={busyField !== null && busyField !== li.field}
+                          >
+                            {t("toggle.include")}
+                          </Button>
+                        ) : showRestoreButton ? (
+                          <Button
+                            size="slim"
+                            onClick={() => handleToggle(li, null)}
+                            loading={busyField === li.field}
+                            disabled={busyField !== null && busyField !== li.field}
+                          >
+                            {t("toggle.restore")}
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
