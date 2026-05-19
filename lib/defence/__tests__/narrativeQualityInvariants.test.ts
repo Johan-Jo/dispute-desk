@@ -605,3 +605,64 @@ describe("Invariant 8 — Evidence Basis never echoes raw gateway codes or fulfi
     expect(rowsFulfilled[0].value).not.toMatch(/FULFILLED/);
   });
 });
+
+/**
+ * Invariant 9 — Case Details cover table per-family row deny list.
+ *
+ * `Fulfillment status: UNFULFILLED` on the bank-facing cover table is
+ * a self-inflicted weakness for a Visa 10.4 fraud rebuttal — the
+ * issuer reads it and asks "if you didn't ship it, what is there to
+ * refute?" The fraud argument hinges on cardholder authentication,
+ * not delivery. The row is suppressed for the `unauthorized_fraud`
+ * family. Other families keep every row because fulfillment IS the
+ * argument there (INR proves it shipped; product-not-as-described
+ * proves it arrived).
+ */
+describe("Invariant 9 — Case Details deny list by reason family", () => {
+  it("drops Fulfillment status row for unauthorized_fraud family", async () => {
+    const { buildCaseDetailsRows } = await import("../render/caseDetails");
+    const rows = buildCaseDetailsRows({
+      disputeIdShort: "abc123",
+      merchantName: "Test Shop",
+      cardNetwork: "Visa",
+      transactionDateDisplay: "2026-05-17",
+      amountDisplay: "USD 432.90",
+      reasonCodeDisplay: "Visa 10.4",
+      orderName: "#1078",
+      fulfillmentStatus: "UNFULFILLED",
+      familyKey: "unauthorized_fraud",
+    });
+    const labels = rows.map(([label]) => label);
+    expect(labels).not.toContain("Fulfillment status");
+    // Other rows still present.
+    expect(labels).toContain("Dispute ID");
+    expect(labels).toContain("Merchant name");
+    expect(labels).toContain("Reason code");
+  });
+
+  it("keeps Fulfillment status row for item_not_received family", async () => {
+    const { buildCaseDetailsRows } = await import("../render/caseDetails");
+    const rows = buildCaseDetailsRows({
+      orderName: "#1078",
+      fulfillmentStatus: "FULFILLED",
+      familyKey: "item_not_received",
+    });
+    const labels = rows.map(([label]) => label);
+    expect(labels).toContain("Fulfillment status");
+    // The value renders as-is — INR cases NEED to show fulfilment.
+    const fulfillmentRow = rows.find(
+      ([label]) => label === "Fulfillment status",
+    );
+    expect(fulfillmentRow?.[1]).toBe("FULFILLED");
+  });
+
+  it("keeps every row when familyKey is null (legacy behaviour)", async () => {
+    const { buildCaseDetailsRows } = await import("../render/caseDetails");
+    const rows = buildCaseDetailsRows({
+      fulfillmentStatus: "UNFULFILLED",
+      familyKey: null,
+    });
+    const labels = rows.map(([label]) => label);
+    expect(labels).toContain("Fulfillment status");
+  });
+});

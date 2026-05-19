@@ -236,7 +236,10 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
 
   // Case Details rows come from the shared builder so the PDF and
   // this HTML view show the same fields in the same order — no
-  // parallel implementation.
+  // parallel implementation. `familyKey` drives the per-family row
+  // deny list (e.g. fraud disputes hide Fulfillment status so an
+  // UNFULFILLED value can't reach the bank-facing table and
+  // undermine the authentication argument).
   const caseRows = buildCaseDetailsRows({
     disputeIdShort: disputeIdShort(dispute?.disputeGid),
     merchantName: dispute?.merchantName ?? dispute?.shopName ?? null,
@@ -251,6 +254,9 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
     paymentGateway: dispute?.paymentGateway ?? null,
     financialStatus: dispute?.financialStatus ?? null,
     fulfillmentStatus: dispute?.fulfillmentStatus ?? null,
+    familyKey: moduleKey
+      ? familyKeyForModule(moduleKey as ReasonCodeModuleKey)
+      : null,
   });
 
   return (

@@ -499,6 +499,7 @@ export async function handleBuildDefencePackage(
       promptVersion: narrativeRes.promptVersion,
       modelUsed: narrativeRes.modelUsed,
       reasonCodeModuleKey: reasonCodeModule.key,
+      reasonCodeFamilyKey: reasonCodeFamily.key,
       evidenceHash: pkg.evidence_hash,
       generatedBy: pkg.generated_by as "system" | "merchant" | "admin",
     },

@@ -36,6 +36,7 @@ import type {
   ManualEvidenceRecord,
   NarrativeSectionKey,
   PackageMode,
+  ReasonCodeFamilyKey,
   ReasonCodeModuleKey,
 } from "../types";
 
@@ -53,6 +54,12 @@ export interface DefencePackageMeta {
    *  v2.2+. */
   claimType?: string | null;
   reasonCodeModuleKey?: ReasonCodeModuleKey;
+  /** Reason-code family key (e.g. "unauthorized_fraud"). Drives the
+   *  Case Details row deny list — fraud-family disputes don't render
+   *  the Fulfillment status row on the bank-facing cover table because
+   *  surfacing UNFULFILLED there weakens the authentication argument.
+   *  See `lib/defence/render/caseDetails.ts`. */
+  reasonCodeFamilyKey?: ReasonCodeFamilyKey | null;
   shopName: string;
   merchantName: string | null;
   amountDisplay: string | null;
@@ -186,6 +193,11 @@ function CaseDetailsTable({ meta }: { meta: DefencePackageMeta }) {
     paymentGateway: meta.paymentGateway,
     financialStatus: meta.financialStatus,
     fulfillmentStatus: meta.fulfillmentStatus,
+    // Drives the row deny list — unauthorized_fraud disputes drop
+    // the Fulfillment status row so an UNFULFILLED value can't
+    // reach the bank-facing table and undermine the authentication
+    // argument.
+    familyKey: meta.reasonCodeFamilyKey ?? null,
   });
   return (
     <View minPresenceAhead={120}>
