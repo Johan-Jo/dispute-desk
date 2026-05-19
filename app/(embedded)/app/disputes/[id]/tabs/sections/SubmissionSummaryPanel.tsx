@@ -48,21 +48,61 @@ function isSavedState(s: PresentationStatus): boolean {
   );
 }
 
+/**
+ * Subsection accent — a small color-coded dot sits to the left of the
+ * heading so the merchant can scan the six buckets at a glance.
+ * Colors line up with the rest of the dispute-detail palette:
+ *   - bank_argument / positive    → green
+ *   - context_only                → neutral grey
+ *   - internal_only               → amber
+ *   - not_included                → red
+ *   - structured / pdf            → indigo (neutral "what we sent")
+ */
+type AccentTone =
+  | "indigo"
+  | "indigoStrong"
+  | "green"
+  | "neutral"
+  | "amber"
+  | "critical";
+
+const ACCENT_COLOR: Record<AccentTone, string> = {
+  indigo: "#C7D2FE",
+  indigoStrong: "#6366F1",
+  green: "#22C55E",
+  neutral: "#9CA3AF",
+  amber: "#F59E0B",
+  critical: "#EF4444",
+};
+
 /** Subsection wrapper — consistent label + helper + body layout. */
 function Subsection({
   label,
   helper,
   children,
   count,
+  accent,
 }: {
   label: string;
   helper: string;
   count?: number | null;
+  accent: AccentTone;
   children: React.ReactNode;
 }) {
   return (
     <BlockStack gap="150">
       <InlineStack gap="200" blockAlign="center">
+        <span
+          aria-hidden
+          style={{
+            display: "inline-block",
+            width: 8,
+            height: 8,
+            borderRadius: 9999,
+            background: ACCENT_COLOR[accent],
+            flex: "0 0 8px",
+          }}
+        />
         <Text as="h4" variant="headingSm">
           {label}
         </Text>
@@ -135,6 +175,7 @@ export function SubmissionSummaryPanel({
         <Subsection
           label={t("shopifyFieldsLabel")}
           helper={t("shopifyFieldsHelper")}
+          accent="indigo"
         >
           <BlockStack gap="050">
             {summary.shopifyStructuredFields.map((f) => (
@@ -155,6 +196,7 @@ export function SubmissionSummaryPanel({
           label={t("includedInPackageLabel")}
           helper={t("includedInPackageHelper")}
           count={summary.factsInPdf.length}
+          accent="indigoStrong"
         >
           {summary.factsInPdf.length === 0 ? (
             <Text as="p" variant="bodySm" tone="subdued">
@@ -188,6 +230,7 @@ export function SubmissionSummaryPanel({
           label={t("bankArgumentLabel")}
           helper={t("bankArgumentHelper")}
           count={bankArgumentRows.length}
+          accent="green"
         >
           {bankArgumentRows.length === 0 ? (
             <Text as="p" variant="bodySm" tone="subdued">
@@ -210,6 +253,7 @@ export function SubmissionSummaryPanel({
             label={t("contextOnlyLabel")}
             helper={t("contextOnlyHelper")}
             count={contextOnlyRows.length}
+            accent="neutral"
           >
             <BlockStack gap="050">
               {contextOnlyRows.map((r) => (
@@ -227,6 +271,7 @@ export function SubmissionSummaryPanel({
             label={t("keptInternalLabel")}
             helper={t("keptInternalHelper")}
             count={internalRows.length}
+            accent="amber"
           >
             <BlockStack gap="050">
               {internalRows.map((r) => (
@@ -248,6 +293,7 @@ export function SubmissionSummaryPanel({
             label={t("notIncludedLabel")}
             helper={t("notIncludedHelper")}
             count={notIncludedTotal}
+            accent="critical"
           >
             <BlockStack gap="050">
               {counts.failedUpload > 0 ? (

@@ -1103,19 +1103,68 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             <BlockStack gap="300">
               <Text as="h3" variant="headingSm">{t("coverage.title")}</Text>
 
-              {/* Metric rows */}
-              <BlockStack gap="150">
-                <Text as="p" variant="bodySm">{t("coverage.sectionsFound", { count: sectionsFound })}</Text>
-                <Text as="p" variant="bodySm">{t("coverage.includedInPackage", { count: includedInPackage })}</Text>
-                <Text as="p" variant="bodySm" fontWeight={usedAsPositive > 0 ? "semibold" : undefined}>
-                  {t("coverage.usedAsPositiveBankArgument", { count: usedAsPositive })}
-                </Text>
-                {keptInternal > 0 && (
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {t("coverage.keptInternal", { count: keptInternal })}
-                  </Text>
-                )}
-              </BlockStack>
+              {/* 2x2 tile grid. The "Used as positive bank argument"
+                  tile is the truthful punchline — when it's zero, the
+                  whole case-strength rating follows from there, so it
+                  gets a tinted background (green when > 0, amber when
+                  the case has no decisive bank-facing evidence). */}
+              {(() => {
+                const bankTileEmpty = usedAsPositive === 0;
+                const bankTileBg = bankTileEmpty ? "#FFFBEB" : "#F0FDF4";
+                const bankTileBorder = bankTileEmpty ? "#FDE68A" : "#86EFAC";
+                const bankTileNumColor = bankTileEmpty ? "#92400E" : "#065F46";
+                const bankTileLabelColor = bankTileEmpty ? "#78350F" : "#065F46";
+
+                const tile = (
+                  num: number,
+                  label: string,
+                  bg = "#F6F8FB",
+                  border = "#E1E3E5",
+                  numColor = "#1A1A1A",
+                  labelColor = "#5C5F62",
+                ) => (
+                  <div
+                    style={{
+                      background: bg,
+                      border: `1px solid ${border}`,
+                      borderRadius: 8,
+                      padding: "12px 14px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 2,
+                    }}
+                  >
+                    <Text as="span" variant="heading2xl">
+                      <span style={{ color: numColor }}>{num}</span>
+                    </Text>
+                    <Text as="span" variant="bodySm">
+                      <span style={{ color: labelColor }}>{label}</span>
+                    </Text>
+                  </div>
+                );
+
+                return (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                      gap: 12,
+                    }}
+                  >
+                    {tile(sectionsFound, t("coverage.tileSectionsFound"))}
+                    {tile(includedInPackage, t("coverage.tileIncludedInPackage"))}
+                    {tile(
+                      usedAsPositive,
+                      t("coverage.tileUsedAsBankArgument"),
+                      bankTileBg,
+                      bankTileBorder,
+                      bankTileNumColor,
+                      bankTileLabelColor,
+                    )}
+                    {tile(keptInternal, t("coverage.tileKeptInternal"))}
+                  </div>
+                );
+              })()}
 
               {/* Missing decisive evidence — only renders for fraud
                   cases with zero positive bank argument rows. */}
