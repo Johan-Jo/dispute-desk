@@ -266,7 +266,7 @@ describe("Invariant 5 — HTML view chronology mirrors the PDF (no parallel synt
     expect(src).toMatch(/timelineEvents:\s*orderContext\.timelineEvents/);
   });
 
-  it("the DisputeContextLike type carries timelineEvents", async () => {
+  it("the DisputeContextLike type carries timelineEvents and consumes the shared builder", async () => {
     const { readFileSync } = await import("node:fs");
     const path = await import("node:path");
     const fp = path.resolve(
@@ -278,9 +278,13 @@ describe("Invariant 5 — HTML view chronology mirrors the PDF (no parallel synt
     expect(src).toMatch(
       /timelineEvents\?:\s*Array<\{\s*at:\s*string;\s*text:\s*string\s*\}>/,
     );
-    // The local `chronologyEvents` must short-circuit on rich data.
-    expect(src).toMatch(/dispute\?\.\s*timelineEvents/);
-    expect(src).toMatch(/Path 1:.*rich timeline/);
+    // The HTML view MUST import the shared chronology builder — no
+    // parallel implementation allowed.
+    expect(src).toMatch(/buildChronologyEvents/);
+    expect(src).toMatch(/from\s+["']@\/lib\/defence\/chronology["']/);
+    // And it MUST call the shared builder rather than inlining the
+    // priority logic.
+    expect(src).toMatch(/buildChronologyEvents\(\s*\{/);
   });
 
   it("ReviewSubmitTab threads timelineEvents into the HTML view dispute prop", async () => {
@@ -292,5 +296,110 @@ describe("Invariant 5 — HTML view chronology mirrors the PDF (no parallel synt
     );
     const src = readFileSync(fp, "utf8");
     expect(src).toMatch(/timelineEvents:\s*data\.dispute\.timelineEvents/);
+  });
+
+  it("the PDF renderer also consumes the shared builder (no duplicate logic)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const path = await import("node:path");
+    const fp = path.resolve(
+      process.cwd(),
+      "lib/defence/pdf/DefencePackageDocument.tsx",
+    );
+    const src = readFileSync(fp, "utf8");
+    expect(src).toMatch(/buildChronologyEvents/);
+    expect(src).toMatch(/from\s+["']\.\.\/chronology["']/);
+    // And the old inline `function chronologyEvents(...)` must be gone.
+    expect(src).not.toMatch(/^function chronologyEvents\(/m);
+  });
+});
+
+describe("Invariant 6 — shared chronology builder behaves correctly on both paths", () => {
+  it("returns the rich timeline (sorted) when timelineEvents is non-empty", async () => {
+    const { buildChronologyEvents } = await import("../chronology");
+    const events = buildChronologyEvents(
+      {
+        timelineEvents: [
+          { at: "2026-05-17T21:44:43Z", text: "C" },
+          { at: "2026-05-17T21:44:36Z", text: "A" },
+          { at: "2026-05-17T21:44:42Z", text: "B" },
+        ],
+        transactionDate: "2026-05-17T21:44:36Z",
+        orderName: "#1078",
+        cardNetwork: "visa",
+        cardLast4: "0259",
+      },
+      [],
+    );
+    expect(events.map((e) => e.text)).toEqual(["A", "B", "C"]);
+  });
+
+  it("falls back to synthetic 2-event path when timelineEvents is empty/null", async () => {
+    const { buildChronologyEvents } = await import("../chronology");
+    const events = buildChronologyEvents(
+      {
+        timelineEvents: null,
+        transactionDate: "2026-05-17T21:44:36Z",
+        orderName: "#1078",
+        cardNetwork: "Visa",
+        cardLast4: "0259",
+      },
+      [],
+    );
+    expect(events.length).toBe(2);
+    expect(events[0].text).toMatch(/Order placed.*#1078/);
+    expect(events[1].text).toMatch(/Authorisation captured.*Visa ending in 0259/);
+  });
+
+  it("rich path takes precedence even when transactionDate is also set", async () => {
+    const { buildChronologyEvents } = await import("../chronology");
+    const events = buildChronologyEvents(
+      {
+        timelineEvents: [
+          { at: "2026-05-17T22:00:00Z", text: "captured" },
+        ],
+        transactionDate: "2026-05-17T21:44:36Z",
+        orderName: "#1078",
+      },
+      [],
+    );
+    // Rich path wins — no synthetic fallback events get appended.
+    expect(events).toHaveLength(1);
+    expect(events[0].text).toBe("captured");
+  });
+
+  it("synthetic fallback adds a customer_communication event when fact carries lastMessageAt", async () => {
+    const { buildChronologyEvents } = await import("../chronology");
+    const events = buildChronologyEvents(
+      {
+        timelineEvents: null,
+        transactionDate: "2026-05-17T21:44:36Z",
+      },
+      [
+        {
+          id: "fc",
+          category: "customer_communication",
+          label: "x",
+          value: {
+            lastMessageAt: "2026-05-18T09:00:00Z",
+            customerConfirmsOrder: true,
+          },
+          source: "shopify_order",
+          sourceRef: null,
+          strength: "supporting",
+          bankEligible: true,
+          merchantVisible: true,
+          internalOnly: false,
+          includeInBankNarrative: true,
+          submissionRisk: false,
+          confidence: null,
+        },
+      ],
+    );
+    expect(events.some((e) => /order receipt confirmed/i.test(e.text))).toBe(true);
+  });
+
+  it("returns empty array when no inputs at all", async () => {
+    const { buildChronologyEvents } = await import("../chronology");
+    expect(buildChronologyEvents({}, [])).toEqual([]);
   });
 });

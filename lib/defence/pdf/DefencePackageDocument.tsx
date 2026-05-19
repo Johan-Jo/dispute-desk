@@ -24,6 +24,10 @@ import React from "react";
 import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { styles } from "./styles";
 import { buildEvidenceBasisRows } from "./evidenceBasisRows";
+import {
+  buildChronologyEvents,
+  type ChronologyEvent,
+} from "../chronology";
 import type {
   ComposedDocumentBlock,
   EvidenceFact,
@@ -202,43 +206,9 @@ function CaseDetailsTable({ meta }: { meta: DefencePackageMeta }) {
 }
 
 /* ── Chronology bullets (deterministic, from meta) ──────────────────── */
-
-interface ChronologyEvent {
-  at: string;
-  text: string;
-}
-
-function chronologyEvents(
-  meta: DefencePackageMeta,
-  facts: EvidenceFact[],
-): ChronologyEvent[] {
-  if (Array.isArray(meta.timelineEvents) && meta.timelineEvents.length > 0) {
-    return [...meta.timelineEvents].sort((a, b) => a.at.localeCompare(b.at));
-  }
-  const events: ChronologyEvent[] = [];
-  if (meta.transactionDate) {
-    events.push({
-      at: meta.transactionDate,
-      text: `Order placed on the merchant's storefront${meta.orderName ? ` (${meta.orderName})` : ""}.`,
-    });
-    events.push({
-      at: meta.transactionDate,
-      text: `Authorisation captured against the cardholder's ${meta.cardNetwork ?? "card"}${meta.cardLast4 ? ` ending in ${meta.cardLast4}` : ""}.`,
-    });
-  }
-  for (const f of facts) {
-    if (f.category === "customer_communication") {
-      const at = typeof f.value.lastMessageAt === "string" ? (f.value.lastMessageAt as string) : null;
-      if (at) {
-        events.push({
-          at,
-          text: `Customer correspondence with the merchant${f.value.customerConfirmsOrder === true ? " — order receipt confirmed by the customer" : ""}.`,
-        });
-      }
-    }
-  }
-  return events.sort((a, b) => a.at.localeCompare(b.at));
-}
+/* Event-building logic lives in `lib/defence/chronology.ts` — shared
+ * with the embedded HTML view so both surfaces render the same bullets
+ * for the same pack. This component is the @react-pdf renderer only. */
 
 function ChronologyBullets({ events }: { events: ChronologyEvent[] }) {
   if (events.length === 0) return null;
@@ -440,7 +410,7 @@ export function DefencePackageDocument({
   data: DefencePackageDocumentData;
 }) {
   const { meta, composedBlocks, approvedFacts, manualEvidence } = data;
-  const chronology = chronologyEvents(meta, approvedFacts);
+  const chronology = buildChronologyEvents(meta, approvedFacts);
   const lineItems = lineItemsFromFacts(approvedFacts, meta);
   const chronologyBlock = findBlock(composedBlocks, "chronologyArgument");
 

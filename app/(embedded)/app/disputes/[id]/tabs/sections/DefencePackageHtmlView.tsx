@@ -37,6 +37,10 @@ import type {
   PackageMode,
 } from "@/lib/defence/types";
 import { isSectionDeniedForModule } from "@/lib/defence/sectionVisibility";
+import {
+  buildChronologyEvents,
+  type ChronologyEvent,
+} from "@/lib/defence/chronology";
 
 // ─── Section thesis library (mirrors PDF) ─────────────────────────────
 const GENERIC_THESIS: Record<NarrativeSectionKey, string> = {
@@ -313,67 +317,28 @@ function renderFactValue(fact: EvidenceFact): string {
   }
 }
 
-interface ChronologyEvent {
-  at: string;
-  text: string;
-}
-
 /**
- * Build the chronology bullet list.
- *
- * Priority order matches the PDF (`lib/defence/pdf/DefencePackageDocument.tsx`
- * `chronologyEvents()`):
- *
- *   1. dispute.timelineEvents — the rich Shopify Order.events captured
- *      by orderSource.ts. The PDF threads the SAME array through
- *      meta.timelineEvents. When present, this is the canonical
- *      chronology and the synthetic fallback is skipped.
- *   2. Synthetic fallback — derive 2 events from dispute.transactionDate
- *      (order placed + authorisation captured). Only fires for packs
- *      built before the orderSource events capture was added.
- *
- * Both surfaces (PDF + HTML view) MUST produce identical output for
- * the same pack — the only way to guarantee that is to read the
- * same underlying array. Investigated 2026-05-19: the workspace API
- * had been omitting timelineEvents from the response (commit 822c8c8
- * wired most of orderContext but skipped this field). Now exposed.
+ * Chronology rendering is now a thin wrapper over the shared
+ * `buildChronologyEvents()` in `lib/defence/chronology.ts`. Both the
+ * PDF and this HTML view import from there — there is no parallel
+ * implementation anywhere. The wrapper exists only to map this
+ * file's `DisputeContextLike` (a UI prop type) to the
+ * `ChronologyContext` shape the shared builder expects.
  */
 function chronologyEvents(
   dispute: DisputeContextLike | undefined,
   facts: EvidenceFact[],
 ): ChronologyEvent[] {
-  // Path 1: rich timeline from the pack's access_log section. Sorted
-  // ascending so the bullets render in chronological order.
-  const rich = dispute?.timelineEvents;
-  if (Array.isArray(rich) && rich.length > 0) {
-    return [...rich].sort((a, b) => a.at.localeCompare(b.at));
-  }
-
-  // Path 2: synthetic fallback. Only fires when the pack's access_log
-  // section is missing or empty (old packs pre-orderSource capture).
-  const events: ChronologyEvent[] = [];
-  if (dispute?.transactionDate) {
-    events.push({
-      at: dispute.transactionDate,
-      text: `Order placed on the merchant's storefront${dispute.orderName ? ` (${dispute.orderName})` : ""}.`,
-    });
-    events.push({
-      at: dispute.transactionDate,
-      text: `Authorisation captured against the cardholder's ${dispute.cardNetwork ?? "card"}${dispute.cardLast4 ? ` ending in ${dispute.cardLast4}` : ""}.`,
-    });
-  }
-  for (const f of facts) {
-    if (f.category === "customer_communication") {
-      const at = typeof f.value.lastMessageAt === "string" ? (f.value.lastMessageAt as string) : null;
-      if (at) {
-        events.push({
-          at,
-          text: `Customer correspondence with the merchant${f.value.customerConfirmsOrder === true ? " — order receipt confirmed by the customer" : ""}.`,
-        });
-      }
-    }
-  }
-  return events.sort((a, b) => a.at.localeCompare(b.at));
+  return buildChronologyEvents(
+    {
+      timelineEvents: dispute?.timelineEvents ?? null,
+      transactionDate: dispute?.transactionDate ?? null,
+      orderName: dispute?.orderName ?? null,
+      cardNetwork: dispute?.cardNetwork ?? null,
+      cardLast4: dispute?.cardLast4 ?? null,
+    },
+    facts,
+  );
 }
 
 // ─── Component ───────────────────────────────────────────────────────
