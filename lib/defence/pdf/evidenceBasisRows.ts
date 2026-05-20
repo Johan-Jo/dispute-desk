@@ -144,11 +144,12 @@ function renderValue(fact: EvidenceFact): string {
           )
         : [];
       if (facts.length > 0) {
-        // Show the first 2 phrases inline so the cell stays scannable;
-        // the full list reaches the bank through the LLM narrative.
-        const preview = facts.slice(0, 2).join("; ");
-        const more = facts.length > 2 ? ` (+${facts.length - 2} more)` : "";
-        return `Shopify recommended ACCEPT — ${preview}${more}`;
+        // Print every signal Shopify returned — the bank reviewer
+        // needs to see them all; a "+N more" suffix hides the
+        // signals that justify the verdict. The source-collector
+        // caps positiveFacts at MAX_POSITIVE_FACTS_CITED upstream,
+        // so the list cannot grow unbounded.
+        return `Shopify recommended ACCEPT — ${facts.join("; ")}`;
       }
       // Fallback for legacy facts that only carried the count.
       const count =
