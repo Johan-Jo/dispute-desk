@@ -193,14 +193,25 @@ Shopify session (offline or online) is the source of truth for the
 authenticated shop. This avoids complexity around claim issuance and
 keeps the auth surface small.
 
+## Dispute event flow
+
+Since 2026-05-20 the `disputes/create` and `disputes/update` webhooks process **directly** — they no longer enqueue a `sync_disputes` job for the whole shop. Target p50 <500 ms; cron is hourly reconciliation only. See `docs/runbooks/webhook-delivery.md` for the full pipeline + diagnostic flowchart.
+
+Two layers of idempotency guarantee at-most-once effects across both observers (webhook + cron):
+
+- **Layer A — delivery:** `webhook_events.(shop_id, X-Shopify-Webhook-Id)` unique. Catches Shopify retries.
+- **Layer B — effect:** `audit_events.(dispute_id, dispute_event_key)` unique. Catches cron + webhook independently observing the same state change.
+
+Per-dispute state propagation is shared between the two paths via `lib/disputes/applyDisputeSnapshot.ts` (diff engine) and `lib/disputes/disputeEffectsDispatcher.ts` (downstream effects). Both webhook and cron normalize their input through `lib/disputes/disputeSnapshot.ts` before calling the engine, so the engine is source-agnostic.
+
 ## Async Job Architecture
 
-All heavy operations run as async jobs to avoid serverless function
+Other heavy operations still run as async jobs to avoid serverless function
 timeouts:
 
 | Job type | Trigger | Handler |
 |----------|---------|---------|
-| `sync_disputes` | Cron (every 2–5 min) or manual | Fetch disputes from Shopify, upsert, trigger automation pipeline |
+| `sync_disputes` | Hourly cron `/api/cron/sync-disputes` (reconciliation) | Page through Shopify disputes, run `applyDisputeSnapshot` per dispute, dispatch effects |
 | `build_pack` | Automation pipeline or manual | Collect sources, score completeness, evaluate auto-save gate |
 | `render_pdf` | Manual request | Render PDF, upload to Storage |
 | `save_to_shopify` | Auto-save gate or manual approve | Push evidence to Shopify via GraphQL |

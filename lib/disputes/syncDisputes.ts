@@ -1,8 +1,18 @@
 /**
- * Dispute sync service.
+ * Dispute sync service — webhook-primary, hourly reconciliation safety net.
  *
- * Fetches all disputes from Shopify for a given shop, upserts into
- * the disputes table, and optionally triggers the automation pipeline.
+ * Since 2026-05-20, the disputes/create and disputes/update webhooks are the
+ * primary path for state propagation (<2s p50). This service runs hourly to
+ * catch up on anything the webhook missed (delivery failures, schema-
+ * validation errors).
+ *
+ * Per-dispute processing is delegated to the shared engine:
+ *   - `normalizeGraphQLDispute()` → DisputeSnapshot
+ *   - `applyDisputeSnapshot()`    → upsert + dispute_events + monotonic guards
+ *   - `dispatchDisputeEffects()`  → pipeline + emails under Layer B dedup
+ *
+ * Shop-level bookkeeping (audit row, recordReconcileOutcome, unknown-reason
+ * auto-heal) remains here because it's not per-dispute.
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
@@ -13,23 +23,12 @@ import {
   type DisputeListResponse,
 } from "@/lib/shopify/queries/disputes";
 import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
-import { runAutomationPipeline } from "@/lib/automation/pipeline";
-import { evaluateRules } from "@/lib/rules/evaluateRules";
-import { normalizeMode, type AutomationMode } from "@/lib/rules/normalizeMode";
 import { ALL_DISPUTE_REASONS } from "@/lib/rules/disputeReasons";
 import { sendUnknownReasonAlert } from "@/lib/email/sendUnknownReasonAlert";
-import { sendNewDisputeAlert } from "@/lib/email/sendNewDisputeAlert";
-import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
-import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
-import {
-  DISPUTE_OPENED,
-  STATUS_CHANGED,
-  DUE_DATE_CHANGED,
-  OUTCOME_DETECTED,
-  DISPUTE_CLOSED,
-  SUBMISSION_CONFIRMED,
-} from "@/lib/disputeEvents/eventTypes";
 import { recordReconcileOutcome } from "./reconcileSchedule";
+import { normalizeGraphQLDispute } from "./disputeSnapshot";
+import { applyDisputeSnapshot } from "./applyDisputeSnapshot";
+import { dispatchDisputeEffects } from "./disputeEffectsDispatcher";
 
 const KNOWN_REASONS = new Set<string>(ALL_DISPUTE_REASONS);
 
@@ -197,251 +196,97 @@ export async function syncDisputes(
     for (const edge of edges) {
       const d = edge.node;
       try {
-        // Check if row already exists (include fields for change detection).
-        // `new_dispute_alert_sent_at` is the dedupe guard for the new-dispute
-        // email: even if this SELECT flakes and `existing` comes back null,
-        // the guard below only fires the alert when the column is still NULL.
-        const { data: existing, error: existingErr } = await sb
-          .from("disputes")
-          .select(
-            "id, status, due_at, submitted_at, final_outcome, submission_state, new_dispute_alert_sent_at",
-          )
-          .eq("shop_id", shopId)
-          .eq("dispute_gid", d.id)
-          .maybeSingle();
+        // Per-dispute redaction snapshot for the disputes.raw_snapshot column
+        // (the shared engine doesn't touch this field; we still store it for
+        // forensic + admin tooling).
+        const redactedSnapshot = redactPII(d);
 
-        // A transient PostgREST error would silently return `{ data: null }`
-        // and trick the code into treating a known dispute as brand new,
-        // re-firing the alert + rule_applied + pipeline. Bail instead.
-        if (existingErr) {
+        // Normalize the GraphQL node and run the shared diff engine.
+        const snapshot = normalizeGraphQLDispute(d);
+        if (!snapshot) {
           result.errors.push(
-            `${d.id}: existence check failed — ${existingErr.message}`,
+            `${d.id}: graphql snapshot failed schema validation`,
           );
           continue;
         }
+        // Customer display data (denormalized columns on disputes) only flows
+        // through the cron path; the webhook payload doesn't carry it. Pass
+        // these as side-channel patches AFTER applyDisputeSnapshot returns.
+        const customerDisplayName =
+          [d.disputeEvidence?.customerFirstName, d.disputeEvidence?.customerLastName]
+            .filter(Boolean)
+            .join(" ")
+            .trim() ||
+          d.disputeEvidence?.shippingAddress?.name?.trim() ||
+          d.disputeEvidence?.billingAddress?.name?.trim() ||
+          null;
+        const customerEmail =
+          d.disputeEvidence?.customerEmailAddress?.trim() || null;
 
-        const row = {
-          shop_id: shopId,
-          dispute_gid: d.id,
-          dispute_evidence_gid: d.disputeEvidence?.id ?? null,
-          order_gid: d.order?.id ?? null,
-          order_name: d.order?.name ?? null,
-          customer_display_name:
-            [d.disputeEvidence?.customerFirstName, d.disputeEvidence?.customerLastName]
-              .filter(Boolean).join(" ").trim() ||
-            d.disputeEvidence?.shippingAddress?.name?.trim() ||
-            d.disputeEvidence?.billingAddress?.name?.trim() ||
-            null,
-          customer_email: d.disputeEvidence?.customerEmailAddress?.trim() || null,
-          phase: d.type?.toLowerCase() ?? null,
-          status: d.status?.toLowerCase() ?? null,
-          reason: d.reasonDetails?.reason ?? null,
-          amount: d.amount ? parseFloat(d.amount.amount) : null,
-          currency_code: d.amount?.currencyCode ?? null,
-          initiated_at: d.initiatedAt,
-          due_at: d.evidenceDueBy,
-          last_synced_at: new Date().toISOString(),
-          raw_snapshot: redactPII(d),
-        };
+        const applyResult = await applyDisputeSnapshot({
+          shopId,
+          source: "cron",
+          snapshot,
+        });
 
-        const { data: upserted, error: upsertErr } = await sb
-          .from("disputes")
-          .upsert(row, { onConflict: "shop_id,dispute_gid" })
-          .select("id")
-          .single();
-
-        if (upsertErr) {
-          result.errors.push(`${d.id}: ${upsertErr.message}`);
+        if (applyResult.outcome === "error") {
+          for (const w of applyResult.guardWarnings) {
+            result.errors.push(`${d.id}: ${w}`);
+          }
+          after = edge.cursor;
+          continue;
+        }
+        if (
+          applyResult.outcome === "skipped_unknown_shop" ||
+          applyResult.outcome === "skipped_stale" ||
+          applyResult.outcome === "skipped_monotonic_guard"
+        ) {
+          for (const w of applyResult.guardWarnings) {
+            result.errors.push(`${d.id}: ${w}`);
+          }
+          after = edge.cursor;
           continue;
         }
 
         result.synced++;
-        const disputeId = upserted?.id;
-        const nowIso = new Date().toISOString();
-        const newStatus = d.status?.toLowerCase() ?? null;
+        if (applyResult.created) result.created++;
+        else result.updated++;
 
-        if (existing) {
-          result.updated++;
+        // Patch denormalized display columns + raw_snapshot (cron-only).
+        if (applyResult.localDisputeId) {
+          await sb
+            .from("disputes")
+            .update({
+              customer_display_name: customerDisplayName,
+              customer_email: customerEmail,
+              raw_snapshot: redactedSnapshot,
+            })
+            .eq("id", applyResult.localDisputeId);
+        }
 
-          // Detect status changes
-          if (disputeId && existing.status !== newStatus && newStatus) {
-            void emitDisputeEvent({
-              disputeId,
-              shopId,
-              eventType: STATUS_CHANGED,
-              description: `${existing.status ?? "unknown"} → ${newStatus}`,
-              eventAt: nowIso,
-              actorType: "shopify",
-              sourceType: "shopify_sync",
-              metadataJson: {
-                old_status: existing.status,
-                new_status: newStatus,
-              },
-              dedupeKey: `${disputeId}:${STATUS_CHANGED}:${existing.status}_${newStatus}`,
-            });
+        // Existing legacy probes for the reason auto-heal + first-win
+        // branches need the shopify-shaped node — keep them addressable by
+        // re-using `d` directly below.
+        const existing: { id: string } | null = applyResult.created
+          ? null
+          : applyResult.localDisputeId
+          ? { id: applyResult.localDisputeId }
+          : null;
+        const existingErr: { message: string } | null = null;
 
-            // Terminal outcome
-            const terminalStatuses = ["won", "lost", "charge_refunded", "accepted"];
-            if (terminalStatuses.includes(newStatus) && !existing.final_outcome) {
-              const amount = d.amount ? parseFloat(d.amount.amount) : 0;
-              const outcomeMap: Record<string, string> = {
-                won: "won", lost: "lost",
-                charge_refunded: "refunded", accepted: "accepted",
-              };
-              void emitDisputeEvent({
-                disputeId,
-                shopId,
-                eventType: OUTCOME_DETECTED,
-                description: `Outcome: ${outcomeMap[newStatus] ?? newStatus}`,
-                eventAt: d.finalizedOn ?? nowIso,
-                actorType: "shopify",
-                sourceType: "shopify_sync",
-                metadataJson: {
-                  final_outcome: outcomeMap[newStatus],
-                  amount,
-                  currency_code: d.amount?.currencyCode,
-                },
-                dedupeKey: `${disputeId}:${OUTCOME_DETECTED}:${outcomeMap[newStatus]}`,
-              });
-              void emitDisputeEvent({
-                disputeId,
-                shopId,
-                eventType: DISPUTE_CLOSED,
-                eventAt: d.finalizedOn ?? nowIso,
-                actorType: "shopify",
-                sourceType: "shopify_sync",
-                dedupeKey: `${disputeId}:${DISPUTE_CLOSED}`,
-              });
-              await sb
-                .from("disputes")
-                .update({ closed_at: d.finalizedOn ?? nowIso })
-                .eq("id", disputeId);
-            }
-          }
-
-          // Detect due date changes. Compare by epoch ms, not raw strings:
-          // Shopify returns "2026-04-28T19:00:00-04:00" while we store the
-          // same instant as "2026-04-28T23:00:00+00:00", so a string !=
-          // fires on every sync even when the deadline never moved.
-          if (disputeId && d.evidenceDueBy) {
-            const oldMs = existing.due_at ? new Date(existing.due_at).getTime() : null;
-            const newMs = new Date(d.evidenceDueBy).getTime();
-            const changed = Number.isFinite(newMs) && oldMs !== newMs;
-            if (changed) {
-              void emitDisputeEvent({
-                disputeId,
-                shopId,
-                eventType: DUE_DATE_CHANGED,
-                description: `Due date changed to ${new Date(newMs).toISOString()}`,
-                eventAt: nowIso,
-                actorType: "shopify",
-                sourceType: "shopify_sync",
-                metadataJson: {
-                  old_due_at: existing.due_at,
-                  new_due_at: d.evidenceDueBy,
-                },
-                // Dedupe on the canonical instant (epoch ms) so the same
-                // deadline never produces two events just because Shopify
-                // returned a different tz offset representation.
-                dedupeKey: `${disputeId}:${DUE_DATE_CHANGED}:${newMs}`,
-              });
-            }
-          }
-
-          // Detect confirmed submission via Shopify evidenceSentOn
-          if (
-            disputeId &&
-            d.evidenceSentOn &&
-            existing.submission_state !== "submitted_confirmed" &&
-            !existing.submitted_at
-          ) {
-            await sb
-              .from("disputes")
-              .update({
-                submission_state: "submitted_confirmed",
-                submitted_at: d.evidenceSentOn,
-              })
-              .eq("id", disputeId);
-            void emitDisputeEvent({
-              disputeId,
-              shopId,
-              eventType: SUBMISSION_CONFIRMED,
-              description: "Representment submission confirmed by Shopify",
-              eventAt: d.evidenceSentOn,
-              actorType: "shopify",
-              sourceType: "shopify_sync",
-              dedupeKey: `${disputeId}:${SUBMISSION_CONFIRMED}:${d.evidenceSentOn}`,
-            });
-          }
-
-          if (disputeId) void updateNormalizedStatus(disputeId);
-        } else {
-          result.created++;
-
-          // Emit dispute_opened for new disputes
-          if (disputeId) {
-            void emitDisputeEvent({
-              disputeId,
-              shopId,
-              eventType: DISPUTE_OPENED,
-              description: `${d.type ?? "Dispute"} opened — ${d.reasonDetails?.reason ?? "unknown reason"}`,
-              eventAt: d.initiatedAt ?? nowIso,
-              actorType: "shopify",
-              sourceType: "shopify_sync",
-              metadataJson: {
-                reason: d.reasonDetails?.reason,
-                phase: d.type?.toLowerCase(),
-                amount: d.amount ? parseFloat(d.amount.amount) : null,
-                currency_code: d.amount?.currencyCode,
-              },
-              dedupeKey: `${disputeId}:${DISPUTE_OPENED}`,
-            });
-
-            // If already terminal on first sync
-            const terminalStatuses = ["won", "lost", "charge_refunded", "accepted"];
-            if (newStatus && terminalStatuses.includes(newStatus)) {
-              const outcomeMap: Record<string, string> = {
-                won: "won", lost: "lost",
-                charge_refunded: "refunded", accepted: "accepted",
-              };
-              void emitDisputeEvent({
-                disputeId,
-                shopId,
-                eventType: OUTCOME_DETECTED,
-                eventAt: d.finalizedOn ?? nowIso,
-                actorType: "shopify",
-                sourceType: "shopify_sync",
-                metadataJson: { final_outcome: outcomeMap[newStatus] },
-                dedupeKey: `${disputeId}:${OUTCOME_DETECTED}:${outcomeMap[newStatus]}`,
-              });
-              await sb
-                .from("disputes")
-                .update({ closed_at: d.finalizedOn ?? nowIso })
-                .eq("id", disputeId);
-            }
-
-            // If Shopify already has evidenceSentOn
-            if (d.evidenceSentOn) {
-              await sb
-                .from("disputes")
-                .update({
-                  submission_state: "submitted_confirmed",
-                  submitted_at: d.evidenceSentOn,
-                })
-                .eq("id", disputeId);
-              void emitDisputeEvent({
-                disputeId,
-                shopId,
-                eventType: SUBMISSION_CONFIRMED,
-                eventAt: d.evidenceSentOn,
-                actorType: "shopify",
-                sourceType: "shopify_sync",
-                dedupeKey: `${disputeId}:${SUBMISSION_CONFIRMED}:${d.evidenceSentOn}`,
-              });
-            }
-
-            void updateNormalizedStatus(disputeId);
-          }
+        // Dispatch the downstream effects under Layer B effect dedup. When
+        // triggerAutomation=false (legacy test callers, cron worker probes),
+        // skip the DISPUTE_OPENED pipeline branch — the dispute_events ledger
+        // entry is already written by applyDisputeSnapshot above.
+        if (existing === null || existing !== null) {
+          // Always pass through; the dispatcher itself routes per event.
+          await dispatchDisputeEffects({
+            shopId,
+            result: applyResult,
+            source: "cron",
+            skipAutomation: !triggerAutomation,
+            correlationId: opts?.correlationId,
+          });
         }
 
         // Track first chargeback win — sets shops.first_win_at once.
@@ -470,7 +315,7 @@ export async function syncDisputes(
           if (isNewUnknownReason) {
             await sb.from("audit_events").insert({
               shop_id: shopId,
-              dispute_id: upserted?.id ?? null,
+              dispute_id: applyResult.localDisputeId,
               actor_type: "system",
               event_type: "unknown_dispute_reason",
               event_payload: {
@@ -490,116 +335,8 @@ export async function syncDisputes(
             });
           }
         }
-
-        // For new disputes: resolve automation mode, run the pack pipeline
-        // (when enabled), then fire the mode-aware alert email unless the
-        // review flow deferred it (see below). The "response ready" review
-        // variant is sent only after the build job runs and the pack is
-        // parked for review — not while the async build is still running.
-        //
-        // The alert is dedupe-guarded by an atomic UPDATE on
-        // disputes.new_dispute_alert_sent_at so it only ever fires once.
-        if (!existing && upserted) {
-          const phaseForRules =
-            phaseLower === "inquiry" || phaseLower === "chargeback"
-              ? phaseLower
-              : null;
-
-          // Resolve mode up-front so the email we send matches the action
-          // the pipeline will take. Default to "review" if evaluation fails —
-          // never silently drop the notification.
-          let resolvedMode: AutomationMode = "review";
-          let evalResult: Awaited<ReturnType<typeof evaluateRules>> | null = null;
-          try {
-            evalResult = await evaluateRules({
-              id: upserted.id,
-              shop_id: shopId,
-              reason: d.reasonDetails?.reason ?? null,
-              status: d.status?.toLowerCase() ?? null,
-              amount: d.amount ? parseFloat(d.amount.amount) : null,
-              phase: phaseForRules,
-            });
-            resolvedMode = normalizeMode(evalResult.action.mode);
-          } catch (err) {
-            result.errors.push(
-              `rules(${d.id}): ${err instanceof Error ? err.message : String(err)}`
-            );
-          }
-
-          let pipelineResult: Awaited<ReturnType<typeof runAutomationPipeline>> | null =
-            null;
-
-          // Run the pipeline before the new-dispute email so we can skip the
-          // sync-time send when review automation enqueued a build (email is
-          // sent from evaluateAndMaybeAutoSave when the pack is ready).
-          if (triggerAutomation && evalResult) {
-            try {
-              if (resolvedMode === "review") {
-                await sb
-                  .from("disputes")
-                  .update({ needs_review: true, updated_at: new Date().toISOString() })
-                  .eq("id", upserted.id);
-              }
-              pipelineResult = await runAutomationPipeline({
-                id: upserted.id,
-                shop_id: shopId,
-                reason: d.reasonDetails?.reason ?? null,
-                phase: phaseForRules,
-                pack_template_id:
-                  evalResult.packTemplateId ??
-                  evalResult.action.pack_template_id ??
-                  null,
-              });
-            } catch (err) {
-              result.errors.push(
-                `automation(${d.id}): ${err instanceof Error ? err.message : String(err)}`
-              );
-            }
-          }
-
-          // Defer the new-dispute email to the pipeline's terminal
-          // decision whenever a build was enqueued — for BOTH auto and
-          // review modes. This guarantees the auto variant ("we submitted
-          // it") only ever fires when the pipeline actually decided to
-          // auto-save; an auto-mode dispute that ends up parked or blocked
-          // (Moderate strength, Weak strength, autoSaveGate failure)
-          // receives the review variant instead. See
-          // `claimAndSendDeferredNewDisputeAlert`.
-          const deferNewDisputeEmail =
-            pipelineResult?.action === "pack_enqueued";
-
-          if (!deferNewDisputeEmail) {
-            // No pack will be built (auto-build disabled, quota
-            // exceeded, feature gated, an existing pack already covered
-            // this dispute, or rules evaluation threw). The auto variant
-            // promises "we submitted it on your behalf" which is only
-            // ever true after the pipeline's auto-save branch runs —
-            // none of those branches will run here. Send the review
-            // variant so the merchant is told accurately that they need
-            // to review and submit, regardless of the resolved rule mode.
-            const variantToSend: AutomationMode = "review";
-            const { data: claimed } = await sb
-              .from("disputes")
-              .update({ new_dispute_alert_sent_at: new Date().toISOString() })
-              .eq("id", upserted.id)
-              .is("new_dispute_alert_sent_at", null)
-              .select("id");
-            if (claimed && claimed.length > 0) {
-              void sendNewDisputeAlert({
-                shopId,
-                disputeId: upserted.id,
-                reason: d.reasonDetails?.reason ?? null,
-                phase: d.type?.toLowerCase() ?? null,
-                amount: d.amount ? parseFloat(d.amount.amount) : null,
-                currencyCode: d.amount?.currencyCode ?? null,
-                dueAt: d.evidenceDueBy ?? null,
-                orderName: d.order?.name ?? null,
-                resolvedMode: variantToSend,
-                shopifyDisputeEvidenceGid: d.disputeEvidence?.id ?? null,
-              });
-            }
-          }
-        }
+        void existing;
+        void existingErr;
       } catch (err) {
         result.errors.push(
           `${d.id}: ${err instanceof Error ? err.message : String(err)}`

@@ -1,18 +1,22 @@
 /**
- * Tests for `handleDisputeWebhook` — the shared logic behind the
- * disputes/create + disputes/update webhook routes.
+ * Tests for handleDisputeWebhook (webhook-primary direct processing).
  *
- * Closes the webhook handler test gap. Mocks the Supabase service
- * client, the HMAC verifier, and the job enqueuer so the focus is on
- * branch coverage:
+ * The handler is the seam between the HTTP route and the shared engine
+ * (`applyDisputeSnapshot`) + dispatcher. We mock the engine, the dispatcher,
+ * the idempotency helper, and the HMAC verifier so the test focus stays on
+ * the handler's branching contract:
  *
- *   - 401 when HMAC verification fails
- *   - 400 when shop domain is missing from BOTH header + payload
- *   - 200 (skipped) for unknown shops — Shopify must not retry these
- *   - 200 (skipped) when an in-flight sync_disputes job already exists
- *     (idempotency)
- *   - 200 + jobId when a fresh sync_disputes is enqueued
- *   - Header > payload precedence for shopDomain resolution
+ *   - 401 on HMAC failure
+ *   - 400 on missing shop domain (both header and payload)
+ *   - 400 on invalid JSON body
+ *   - 200 + skipped:"unknown_shop" — Shopify must not retry
+ *   - 200 + skipped:"duplicate_event" via Layer A delivery dedup
+ *   - 200 + skipped:"schema_validation_failed" + outcome marked
+ *     "error_schema_validation" (no retry storm; cron reconciles)
+ *   - 200 + outcome:"applied" + dispatcher called on a fresh delivery
+ *   - 500 when applyDisputeSnapshot throws — outcome marked "error"
+ *   - markProcessed always carries the latency (processingMs)
+ *   - The raw body is NEVER stored — only the structured excerpt
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -23,170 +27,244 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/webhooks/verify", () => ({
   verifyShopifyWebhook: vi.fn(),
 }));
-vi.mock("@/lib/jobs/claimJobs", () => ({
-  enqueueJob: vi.fn(),
+vi.mock("@/lib/webhooks/eventIdempotency", () => ({
+  checkAndClaim: vi.fn(),
+  markProcessed: vi.fn(),
+  buildSafePayloadExcerpt: vi.fn(),
+}));
+vi.mock("@/lib/disputes/applyDisputeSnapshot", () => ({
+  applyDisputeSnapshot: vi.fn(),
+}));
+vi.mock("@/lib/disputes/disputeEffectsDispatcher", () => ({
+  dispatchDisputeEffects: vi.fn(),
 }));
 
+import { handleDisputeWebhook } from "@/lib/webhooks/handleDisputeWebhook";
 import { getServiceClient } from "@/lib/supabase/server";
 import { verifyShopifyWebhook } from "@/lib/webhooks/verify";
-import { enqueueJob } from "@/lib/jobs/claimJobs";
-import { handleDisputeWebhook } from "@/lib/webhooks/handleDisputeWebhook";
+import {
+  checkAndClaim,
+  markProcessed,
+  buildSafePayloadExcerpt,
+} from "@/lib/webhooks/eventIdempotency";
+import { applyDisputeSnapshot } from "@/lib/disputes/applyDisputeSnapshot";
+import { dispatchDisputeEffects } from "@/lib/disputes/disputeEffectsDispatcher";
 
-const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockVerify = vi.mocked(verifyShopifyWebhook);
-const mockEnqueue = vi.mocked(enqueueJob);
+const mockGetServiceClient = vi.mocked(getServiceClient);
+const mockCheckAndClaim = vi.mocked(checkAndClaim);
+const mockMarkProcessed = vi.mocked(markProcessed);
+const mockBuildExcerpt = vi.mocked(buildSafePayloadExcerpt);
+const mockApply = vi.mocked(applyDisputeSnapshot);
+const mockDispatch = vi.mocked(dispatchDisputeEffects);
 
-interface MockState {
-  /** Shop row returned for `.select("id").eq("shop_domain", X).maybeSingle()`. */
-  shop?: { id: string } | null;
-  shopError?: { message: string } | null;
-  /** Existing in-flight sync_disputes job, if any. */
-  existingJob?: { id: string } | null;
-}
-
-function setupSupabase(state: MockState): void {
-  let callIdx = 0;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const fromImpl = (table: string): any => {
+function setupShopLookup(shop: { id: string } | null) {
+  const fromImpl = vi.fn().mockImplementation((table: string) => {
     if (table === "shops") {
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({
-          data: state.shop ?? null,
-          error: state.shopError ?? null,
-        }),
-      };
-    }
-    if (table === "jobs") {
-      callIdx++;
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        in: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({
-          data: state.existingJob ?? null,
-          error: null,
-        }),
+        maybeSingle: vi.fn().mockResolvedValue({ data: shop, error: null }),
       };
     }
     throw new Error(`unexpected table: ${table}`);
-  };
-
+  });
   mockGetServiceClient.mockReturnValue({ from: fromImpl } as never);
-  void callIdx;
 }
 
-const RAW_BODY = '{"id":12345,"myshopify_domain":"demo.myshopify.com"}';
+const RAW_BODY = JSON.stringify({
+  id: 12345,
+  admin_graphql_api_id: "gid://shopify/DisputeEvidence/12345",
+  status: "needs_response",
+  myshopify_domain: "demo.myshopify.com",
+});
 
-describe("handleDisputeWebhook", () => {
+const HEADERS = {
+  hmac: "valid-hmac",
+  shopDomain: "demo.myshopify.com",
+  webhookId: "evt-uuid-1",
+  topic: "disputes/create",
+};
+
+describe("handleDisputeWebhook (webhook-primary)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockEnqueue.mockResolvedValue("job-uuid-1");
+    mockBuildExcerpt.mockReturnValue({ id: 12345, status: "needs_response" });
+    mockCheckAndClaim.mockResolvedValue({
+      status: "fresh",
+      eventRowId: "row-1",
+    });
+    mockApply.mockResolvedValue({
+      outcome: "applied",
+      localDisputeId: "dispute-1",
+      events: [],
+      guardWarnings: [],
+      created: false,
+    });
+    mockDispatch.mockResolvedValue({
+      effectsAttempted: 0,
+      effectsRan: 0,
+      effectsSkipped: 0,
+      errors: [],
+    });
   });
 
   it("returns 401 when HMAC verification fails", async () => {
     mockVerify.mockReturnValue(false);
-    const r = await handleDisputeWebhook(RAW_BODY, "bad-hmac", "demo.myshopify.com", null);
+    const r = await handleDisputeWebhook({ rawBody: RAW_BODY, headers: HEADERS });
     expect(r.status).toBe(401);
-    expect(r.body).toMatchObject({ error: "Unauthorized" });
-    expect(mockGetServiceClient).not.toHaveBeenCalled();
+    expect(mockCheckAndClaim).not.toHaveBeenCalled();
   });
 
-  it("returns 401 when the HMAC header is null", async () => {
-    mockVerify.mockReturnValue(false);
-    const r = await handleDisputeWebhook(RAW_BODY, null, "demo.myshopify.com", null);
-    expect(r.status).toBe(401);
-    // verify is called with empty string when header is null (per the impl)
-    expect(mockVerify).toHaveBeenCalledWith(RAW_BODY, "");
-  });
-
-  it("returns 400 when shop domain is missing from BOTH header and payload", async () => {
+  it("returns 400 on invalid JSON", async () => {
     mockVerify.mockReturnValue(true);
-    const r = await handleDisputeWebhook(RAW_BODY, "ok-hmac", null, null);
+    const r = await handleDisputeWebhook({
+      rawBody: "<<not json>>",
+      headers: HEADERS,
+    });
+    expect(r.status).toBe(400);
+    expect(r.body).toMatchObject({ error: "Invalid JSON" });
+  });
+
+  it("returns 400 when shop domain is missing from both header and payload", async () => {
+    mockVerify.mockReturnValue(true);
+    const r = await handleDisputeWebhook({
+      rawBody: JSON.stringify({ id: 1 }),
+      headers: { ...HEADERS, shopDomain: null },
+    });
     expect(r.status).toBe(400);
     expect(r.body).toMatchObject({ error: "Missing shop domain" });
   });
 
-  it("returns 200 + skipped:unknown_shop when the shop is not in our DB (Shopify shouldn't retry)", async () => {
+  it("returns 200 + skipped:unknown_shop when the shop row is missing (Shopify should not retry)", async () => {
     mockVerify.mockReturnValue(true);
-    setupSupabase({ shop: null });
-    const r = await handleDisputeWebhook(RAW_BODY, "ok-hmac", "ghost.myshopify.com", null);
-    expect(r.status).toBe(200);
-    expect(r.body).toMatchObject({ ok: true, skipped: "unknown_shop" });
-    expect(mockEnqueue).not.toHaveBeenCalled();
-  });
-
-  it("returns 200 + skipped:unknown_shop when the shop lookup errors (Shopify shouldn't retry)", async () => {
-    mockVerify.mockReturnValue(true);
-    setupSupabase({ shop: null, shopError: { message: "transient" } });
-    const r = await handleDisputeWebhook(RAW_BODY, "ok-hmac", "demo.myshopify.com", null);
+    setupShopLookup(null);
+    const r = await handleDisputeWebhook({ rawBody: RAW_BODY, headers: HEADERS });
     expect(r.status).toBe(200);
     expect(r.body).toMatchObject({ skipped: "unknown_shop" });
+    expect(mockCheckAndClaim).not.toHaveBeenCalled();
   });
 
-  it("idempotent: returns 200 + skipped:job_already_queued when a sync_disputes is already in flight", async () => {
+  it("returns 200 + skipped:duplicate_event via Layer A dedup", async () => {
     mockVerify.mockReturnValue(true);
-    setupSupabase({
-      shop: { id: "shop-1" },
-      existingJob: { id: "existing-job" },
+    setupShopLookup({ id: "shop-1" });
+    mockCheckAndClaim.mockResolvedValue({
+      status: "duplicate",
+      eventRowId: null,
     });
-    const r = await handleDisputeWebhook(RAW_BODY, "ok-hmac", "demo.myshopify.com", null);
+
+    const r = await handleDisputeWebhook({ rawBody: RAW_BODY, headers: HEADERS });
+
     expect(r.status).toBe(200);
-    expect(r.body).toMatchObject({ ok: true, skipped: "job_already_queued" });
-    expect(mockEnqueue).not.toHaveBeenCalled();
+    expect(r.body).toMatchObject({ skipped: "duplicate_event" });
+    expect(mockApply).not.toHaveBeenCalled();
+    expect(mockDispatch).not.toHaveBeenCalled();
   });
 
-  it("happy path: returns 200 + jobId and enqueues sync_disputes for the resolved shop", async () => {
+  it("normalization failure → 200 + outcome error_schema_validation (no retry storm)", async () => {
     mockVerify.mockReturnValue(true);
-    setupSupabase({ shop: { id: "shop-1" }, existingJob: null });
-    mockEnqueue.mockResolvedValue("fresh-job-uuid");
+    setupShopLookup({ id: "shop-1" });
 
-    const r = await handleDisputeWebhook(RAW_BODY, "ok-hmac", "demo.myshopify.com", null);
-    expect(r.status).toBe(200);
-    expect(r.body).toMatchObject({ ok: true, jobId: "fresh-job-uuid" });
-    expect(mockEnqueue).toHaveBeenCalledWith({
-      shopId: "shop-1",
-      jobType: "sync_disputes",
-      entityId: "shop-1",
-      priority: 50,
+    // Payload missing both id and admin_graphql_api_id — normalizer returns null.
+    const r = await handleDisputeWebhook({
+      rawBody: JSON.stringify({ status: "needs_response" }),
+      headers: HEADERS,
     });
-  });
 
-  it("prefers shopDomain from the header over the payload (security: header is signed, payload isn't)", async () => {
-    mockVerify.mockReturnValue(true);
-    setupSupabase({ shop: { id: "shop-from-header" }, existingJob: null });
-
-    await handleDisputeWebhook(
-      RAW_BODY,
-      "ok-hmac",
-      "header.myshopify.com",
-      "payload.myshopify.com",
-    );
-
-    // The shops query was called — assert it queried by the HEADER value.
-    // Our setupSupabase doesn't capture the eq() args, but the lookup
-    // returning shop-from-header confirms the path took the header.
-    expect(mockEnqueue).toHaveBeenCalledWith(
-      expect.objectContaining({ shopId: "shop-from-header" }),
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ skipped: "schema_validation_failed" });
+    expect(mockMarkProcessed).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "error_schema_validation" }),
     );
   });
 
-  it("falls back to shopDomain from payload when the header is null", async () => {
+  it("happy path: applies snapshot, dispatches effects, marks processed with latency", async () => {
     mockVerify.mockReturnValue(true);
-    setupSupabase({ shop: { id: "shop-from-payload" }, existingJob: null });
+    setupShopLookup({ id: "shop-1" });
 
-    await handleDisputeWebhook(
-      RAW_BODY,
-      "ok-hmac",
-      null,
-      "payload.myshopify.com",
+    const r = await handleDisputeWebhook({ rawBody: RAW_BODY, headers: HEADERS });
+
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({
+      outcome: "applied",
+      disputeId: "dispute-1",
+    });
+    expect(mockApply).toHaveBeenCalledWith(
+      expect.objectContaining({ shopId: "shop-1", source: "webhook" }),
     );
+    expect(mockDispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ shopId: "shop-1", source: "webhook" }),
+    );
+    expect(mockMarkProcessed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventRowId: "row-1",
+        outcome: "applied",
+        processingMs: expect.any(Number),
+      }),
+    );
+  });
 
-    expect(mockEnqueue).toHaveBeenCalledWith(
-      expect.objectContaining({ shopId: "shop-from-payload" }),
+  it("apply throws → 500 + outcome marked error (Shopify retries safely)", async () => {
+    mockVerify.mockReturnValue(true);
+    setupShopLookup({ id: "shop-1" });
+    mockApply.mockRejectedValue(new Error("transient db error"));
+
+    const r = await handleDisputeWebhook({ rawBody: RAW_BODY, headers: HEADERS });
+
+    expect(r.status).toBe(500);
+    expect(mockMarkProcessed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        outcome: "error",
+        errorMessage: expect.stringContaining("transient db error"),
+      }),
+    );
+  });
+
+  it("falls back to a synthetic event id when X-Shopify-Webhook-Id is missing (still claims a row)", async () => {
+    mockVerify.mockReturnValue(true);
+    setupShopLookup({ id: "shop-1" });
+
+    await handleDisputeWebhook({
+      rawBody: RAW_BODY,
+      headers: { ...HEADERS, webhookId: null },
+    });
+
+    const claimCall = mockCheckAndClaim.mock.calls[0]?.[0];
+    expect(claimCall?.eventId).toMatch(/^fallback:disputes\/create:/);
+  });
+
+  it("passes only the structured excerpt (NOT the raw body) to checkAndClaim", async () => {
+    mockVerify.mockReturnValue(true);
+    setupShopLookup({ id: "shop-1" });
+
+    await handleDisputeWebhook({ rawBody: RAW_BODY, headers: HEADERS });
+
+    const claimCall = mockCheckAndClaim.mock.calls[0]?.[0];
+    expect(claimCall?.payloadExcerpt).toEqual({
+      id: 12345,
+      status: "needs_response",
+    });
+    expect(JSON.stringify(claimCall ?? {})).not.toContain(RAW_BODY);
+  });
+
+  it("skipped_stale propagates outcome to markProcessed", async () => {
+    mockVerify.mockReturnValue(true);
+    setupShopLookup({ id: "shop-1" });
+    mockApply.mockResolvedValue({
+      outcome: "skipped_stale",
+      localDisputeId: "dispute-1",
+      events: [],
+      guardWarnings: ["stale snapshot"],
+      created: false,
+    });
+
+    const r = await handleDisputeWebhook({ rawBody: RAW_BODY, headers: HEADERS });
+
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ outcome: "skipped_stale" });
+    expect(mockDispatch).not.toHaveBeenCalled();
+    expect(mockMarkProcessed).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: "skipped_stale" }),
     );
   });
 });

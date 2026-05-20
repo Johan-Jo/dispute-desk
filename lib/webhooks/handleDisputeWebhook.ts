@@ -1,72 +1,230 @@
 /**
- * Shared logic for disputes/create and disputes/update webhook handlers.
- * Verifies HMAC, resolves shop, optionally enqueues sync_disputes (with idempotency).
+ * Shared direct-processing pipeline for disputes/create + disputes/update.
+ *
+ * Pipeline order (each step short-circuits on failure):
+ *   1. Verify HMAC.
+ *   2. Resolve shop by domain (header preferred — header is signed, body isn't).
+ *      Unknown shop → 200 + skipped:"unknown_shop" so Shopify does not retry.
+ *   3. Layer A delivery dedup: claim the (shop_id, X-Shopify-Webhook-Id) row
+ *      in webhook_events. Duplicate → 200 + skipped:"duplicate_event".
+ *   4. Normalize the REST payload into a DisputeSnapshot. Strict Zod —
+ *      malformed → 200 + outcome:"error_schema_validation" so Shopify stops
+ *      retrying and the hourly cron picks it up.
+ *   5. applyDisputeSnapshot → upsert + dispute_events + monotonic guards.
+ *   6. dispatchDisputeEffects → pipeline / email under Layer B effect dedup.
+ *   7. Mark the webhook_events row processed with outcome + latency.
+ *
+ * Returns 200 in almost every case — webhooks are not the place to ask
+ * Shopify for retries. The exception is step (1) failures (401) and
+ * unexpected exceptions in steps 5+ (500, which Shopify retries safely
+ * because all downstream effects are idempotent).
  */
 
 import { verifyShopifyWebhook } from "@/lib/webhooks/verify";
 import { getServiceClient } from "@/lib/supabase/server";
-import { enqueueJob } from "@/lib/jobs/claimJobs";
+import {
+  checkAndClaim,
+  markProcessed,
+  buildSafePayloadExcerpt,
+  type WebhookOutcome,
+} from "@/lib/webhooks/eventIdempotency";
+import { normalizeDisputeWebhookPayload } from "@/lib/disputes/disputeSnapshot";
+import { applyDisputeSnapshot } from "@/lib/disputes/applyDisputeSnapshot";
+import { dispatchDisputeEffects } from "@/lib/disputes/disputeEffectsDispatcher";
 
 export interface DisputeWebhookResult {
   status: number;
   body: Record<string, unknown>;
 }
 
-/**
- * Handle an incoming dispute webhook (create or update).
- * Returns status and body for the HTTP response.
- */
-export async function handleDisputeWebhook(
-  rawBody: string,
-  hmacHeader: string | null,
-  shopDomainFromHeader: string | null,
-  shopDomainFromPayload: string | null | undefined
-): Promise<DisputeWebhookResult> {
-  const hmac = hmacHeader ?? "";
+export interface DisputeWebhookHeaders {
+  hmac: string | null;
+  shopDomain: string | null;
+  webhookId: string | null;
+  topic: string;
+}
 
-  if (!verifyShopifyWebhook(rawBody, hmac)) {
+export interface HandleDisputeWebhookArgs {
+  rawBody: string;
+  headers: DisputeWebhookHeaders;
+  /** Best-effort shop fallback parsed from the body when the header is absent. */
+  shopDomainFromPayload?: string | null;
+}
+
+export async function handleDisputeWebhook(
+  args: HandleDisputeWebhookArgs,
+): Promise<DisputeWebhookResult> {
+  const started = Date.now();
+  const { rawBody, headers } = args;
+  const topic = headers.topic;
+
+  if (!verifyShopifyWebhook(rawBody, headers.hmac ?? "")) {
     return { status: 401, body: { error: "Unauthorized" } };
   }
 
-  const shopDomain =
-    shopDomainFromHeader ??
-    (typeof shopDomainFromPayload === "string" ? shopDomainFromPayload : null);
+  let payload: Record<string, unknown> | null = null;
+  try {
+    const parsed = JSON.parse(rawBody);
+    payload =
+      parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : null;
+  } catch {
+    return { status: 400, body: { error: "Invalid JSON" } };
+  }
 
+  const shopDomain =
+    headers.shopDomain ??
+    (typeof args.shopDomainFromPayload === "string"
+      ? args.shopDomainFromPayload
+      : null);
   if (!shopDomain) {
     return { status: 400, body: { error: "Missing shop domain" } };
   }
 
   const db = getServiceClient();
-  const { data: shop, error: shopError } = await db
+  const { data: shop } = await db
     .from("shops")
     .select("id")
     .eq("shop_domain", shopDomain)
     .maybeSingle();
 
-  if (shopError || !shop) {
-    // Return 200 so Shopify does not retry for unknown/uninstalled shops
-    return { status: 200, body: { ok: true, skipped: "unknown_shop" } };
+  if (!shop) {
+    // Don't have the shop — don't claim a webhook_events row either
+    // (FK would reject it). Return 200 so Shopify does not retry.
+    return {
+      status: 200,
+      body: { ok: true, skipped: "unknown_shop" },
+    };
   }
 
-  const { data: existing } = await db
-    .from("jobs")
-    .select("id")
-    .eq("shop_id", shop.id)
-    .eq("job_type", "sync_disputes")
-    .in("status", ["queued", "running"])
-    .limit(1)
-    .maybeSingle();
+  // Pull a stable id from the payload for the audit excerpt + the
+  // webhook_events.shopify_object_id index. Used by /admin/webhooks to link
+  // a delivery row to the dispute.
+  const adminGid =
+    typeof payload?.["admin_graphql_api_id"] === "string"
+      ? (payload?.["admin_graphql_api_id"] as string)
+      : null;
+  const numericId = payload?.["id"];
+  const shopifyObjectId =
+    adminGid ??
+    (typeof numericId === "string" || typeof numericId === "number"
+      ? String(numericId)
+      : null);
 
-  if (existing) {
-    return { status: 200, body: { ok: true, skipped: "job_already_queued" } };
+  const eventId =
+    headers.webhookId ??
+    // Fallback when Shopify omits the header (unlikely in production but
+    // possible in test deliveries from the partner dashboard).
+    `fallback:${topic}:${shopifyObjectId ?? "?"}:${started}`;
+
+  const excerpt = buildSafePayloadExcerpt(payload);
+
+  let eventRowId: string | null = null;
+  try {
+    const claim = await checkAndClaim({
+      shopId: shop.id,
+      eventId,
+      topic,
+      shopifyObjectId,
+      payloadExcerpt: excerpt,
+    });
+    if (claim.status === "duplicate") {
+      return {
+        status: 200,
+        body: { ok: true, skipped: "duplicate_event" },
+      };
+    }
+    eventRowId = claim.eventRowId;
+  } catch (err) {
+    // Couldn't even claim the row — surface 500 so Shopify retries.
+    return {
+      status: 500,
+      body: {
+        error: "webhook_claim_failed",
+        message: err instanceof Error ? err.message : String(err),
+      },
+    };
   }
 
-  const jobId = await enqueueJob({
-    shopId: shop.id,
-    jobType: "sync_disputes",
-    entityId: shop.id,
-    priority: 50,
-  });
+  const finalizeOutcome = async (
+    outcome: WebhookOutcome,
+    errorMessage: string | null = null,
+  ): Promise<void> => {
+    if (!eventRowId) return;
+    await markProcessed({
+      eventRowId,
+      outcome,
+      processingMs: Date.now() - started,
+      errorMessage,
+    });
+  };
 
-  return { status: 200, body: { ok: true, jobId } };
+  const snapshot = normalizeDisputeWebhookPayload(payload);
+  if (!snapshot) {
+    await finalizeOutcome("error_schema_validation");
+    return {
+      status: 200,
+      body: { ok: true, skipped: "schema_validation_failed" },
+    };
+  }
+
+  try {
+    const result = await applyDisputeSnapshot({
+      shopId: shop.id,
+      source: "webhook",
+      snapshot,
+    });
+
+    if (result.outcome === "skipped_stale" || result.outcome === "skipped_monotonic_guard") {
+      await finalizeOutcome(result.outcome);
+      return {
+        status: 200,
+        body: { ok: true, outcome: result.outcome, warnings: result.guardWarnings },
+      };
+    }
+    if (result.outcome === "skipped_unchanged") {
+      await finalizeOutcome("skipped_unchanged");
+      return {
+        status: 200,
+        body: { ok: true, outcome: "skipped_unchanged" },
+      };
+    }
+    if (result.outcome === "error") {
+      await finalizeOutcome(
+        "error",
+        result.guardWarnings.join("; ") || "apply_failed",
+      );
+      return {
+        status: 500,
+        body: { error: "apply_failed", warnings: result.guardWarnings },
+      };
+    }
+
+    // outcome === "applied"
+    await dispatchDisputeEffects({
+      shopId: shop.id,
+      result,
+      source: "webhook",
+    });
+
+    await finalizeOutcome("applied");
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        outcome: "applied",
+        disputeId: result.localDisputeId,
+        events: result.events.map((e) => e.type),
+      },
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    await finalizeOutcome("error", msg);
+    // 500 → Shopify retries; idempotency layers make it safe.
+    return {
+      status: 500,
+      body: { error: "processing_failed", message: msg },
+    };
+  }
 }

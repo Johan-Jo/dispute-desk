@@ -4,19 +4,23 @@
  * The cron at /api/cron/sync-disputes claims shops by next_reconcile_at.
  * After a sync runs we adjust the interval based on what was found:
  *
- *  - drift detected (created or updated rows) → halve the interval, floor 15m
- *  - clean reconcile (no drift, no errors)    → multiply by 1.5, ceiling 24h
+ *  - drift detected (created or updated rows) → halve the interval, floor 1h
+ *  - clean reconcile (no drift, no errors)    → multiply by 1.5, ceiling 6h
  *  - errors present                            → leave interval alone (the
  *    circuit-breaker handles repeated failures separately)
  *
- * Active shops settle near 15-30 min, dormant shops drift toward 24h.
- * No per-shop cron entries; cadence is just a number on the shop row.
+ * Since 2026-05-20 the disputes/create + disputes/update webhooks are the
+ * primary state-propagation path. Cron is reconciliation only, so the
+ * cadence range was widened: floor 1h (was 15m), ceiling 6h (was 24h). The
+ * floor stays well under Shopify's 48h retry envelope so a missed webhook
+ * is still caught within an hour. The ceiling caps how stale a dormant shop
+ * can get in case both layers fail silently.
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
 
-const MIN_INTERVAL_S = 15 * 60; // 15 min
-const MAX_INTERVAL_S = 24 * 60 * 60; // 24 h
+const MIN_INTERVAL_S = 60 * 60; // 1 h — primary path is webhooks
+const MAX_INTERVAL_S = 6 * 60 * 60; // 6 h — bounded safety net
 const DRIFT_DIVISOR = 2;
 const CLEAN_MULTIPLIER = 1.5;
 

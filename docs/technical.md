@@ -473,11 +473,55 @@ worker endpoint (`/api/jobs/worker`).
 
 The worker route declares `export const maxDuration = 300` so that the bulk `backfill_shop_daily_metrics` handler — which loops through 90 UTC days × ~700ms/day ≈ 63s — completes inside one invocation rather than fanning out as 90 separate jobs (which would queue serially against the per-shop concurrency cap and stretch a backfill over ~3 hours).
 
-### sync-disputes cron — due-queue + adaptive cadence
+### Dispute event flow — webhook-primary, cron reconciliation
 
-**Time-to-discovery for a new dispute is sub-minute, not the reconcile interval.** Shopify pushes `disputes/create` the instant a chargeback opens; the webhook handler enqueues a `sync_disputes` job; the worker (`*/2 * * * *`) processes it within 2 minutes worst case. The reconcile cron does NOT gate discovery — it is a backstop for missed webhooks (Shopify retries delivery for 48h, but if every retry fails or the handler returns non-2xx, reconcile is what eventually catches the drift). At a 1-hour reconcile interval, a stuck dispute is still found well inside any chargeback evidence-due window (typically 7-14 days).
+**Time-to-state for a new dispute is sub-2-seconds at p50.** Since 2026-05-20 the `disputes/create` and `disputes/update` webhooks **process directly** rather than enqueueing a `sync_disputes` job. The handler at `/api/webhooks/disputes-*` parses the payload, runs the shared diff engine (`applyDisputeSnapshot`), and dispatches downstream effects (pipeline, alert email) under two layers of idempotency. The hourly cron (`0 * * * *`) reconciles anything the webhook missed (delivery failures, payloads that fail schema validation).
 
-Webhooks (`disputes/create`, `disputes/update`) drive primary sync; the cron at `/api/cron/sync-disputes` is a **reconciliation safety net** for missed webhooks. It does NOT loop over every shop on every tick — that pattern doesn't scale past a few thousand tenants. Instead it claims a bounded batch of *due* shops via the `claim_due_shops` SQL function (migration `20260502120000_shop_reconcile_schedule.sql`).
+**Pipeline** (`lib/webhooks/handleDisputeWebhook.ts`):
+
+```
+HMAC verify
+  → JSON parse
+  → shop lookup            (unknown_shop → 200, no retry)
+  → Layer A delivery dedup (webhook_events.event_id unique)
+  → normalize payload      (Zod; failure → error_schema_validation, cron picks up)
+  → applyDisputeSnapshot   (upsert + monotonic guards + dispute_events ledger)
+  → dispatchDisputeEffects (pipeline + emails under Layer B effect dedup)
+  → markProcessed          (outcome + latency on the webhook_events row)
+```
+
+**Two-layer idempotency:**
+
+| Layer | Table | Keyed by | Catches |
+|-------|-------|----------|---------|
+| A — Delivery | `webhook_events` | `(shop_id, X-Shopify-Webhook-Id)` | Shopify retries (same delivery, second attempt) |
+| B — Effect   | `audit_events.dispute_event_key` (unique index) | Per-effect deterministic key, e.g. `<disputeId>:STATUS_CHANGED:<from>_<to>:effect:send_new_dispute_alert` | Cron + webhook independently observing the same Shopify state change |
+
+Both are required; neither is sufficient alone. Delivery dedup alone fails when the cron reconciliation also "discovers" the same state change.
+
+**Shared diff engine — `applyDisputeSnapshot`:**
+
+- Resolves the dispute by `(shop_id, dispute_gid)`.
+- Monotonic guards: stale snapshot rejected (`shopifyUpdatedAt < existing.shopify_updated_at`); `evidence_sent_on` walk-back logged + preserved; terminal-state downgrade logged + status not overwritten.
+- Upserts the disputes row; on insert, optionally backfills the `dispute_evidence_gid` via a targeted `dispute(id:)` GraphQL fetch.
+- Emits per-change `dispute_events` ledger entries (already idempotent via `dedupe_key`).
+- Returns an `events: DisputeTransitionEvent[]` array that downstream effects key off.
+
+**Shared dispatcher — `dispatchDisputeEffects`:**
+
+- `DISPUTE_OPENED` → `evaluateRules` → `runAutomationPipeline` → maybe send review alert (deferred when a build was enqueued).
+- `SUBMISSION_CONFIRMED` → `claimAndSendDeferredNewDisputeAlert` (auto variant).
+- `STATUS_CHANGED` / `OUTCOME_DETECTED` / `DUE_DATE_CHANGED` / `DISPUTE_CLOSED` → no per-event downstream effect today; the ledger entry from the diff engine is sufficient.
+
+Each effect is wrapped in `withEffectDedup`, which writes the `audit_events` claim row first. Unique-violation (Postgres 23505) → effect skipped (`already_applied`). Otherwise the effect runs.
+
+**Safe payload excerpts:** `webhook_events.payload_excerpt` stores only allowlisted fields from `lib/webhooks/eventIdempotency.ts#buildSafePayloadExcerpt` (id, status, reason, amounts, dates). The raw body is never persisted.
+
+**Schema drift:** an HMAC-valid payload that fails Zod normalization is recorded with `outcome: "error_schema_validation"`, the route returns 200 (no retry storm), and the hourly cron picks the dispute up. Track these via `/admin/webhooks`.
+
+### sync-disputes cron — hourly reconciliation safety net
+
+The cron at `/api/cron/sync-disputes` is a **reconciliation safety net** — it does NOT loop over every shop on every tick. Instead it claims a bounded batch of *due* shops via the `claim_due_shops` SQL function (migration `20260502120000_shop_reconcile_schedule.sql`).
 
 **Schedule columns on `shops`:**
 
@@ -508,11 +552,11 @@ The cron route (`CLAIM_BATCH = 200`) is bounded regardless of tenant count. At 1
 
 **Adaptive cadence** (`lib/disputes/reconcileSchedule.ts`): after each `syncDisputes` run, `recordReconcileOutcome()` adjusts the shop's interval:
 
-- drift detected (`created > 0 || updated > 0`) → halve, floor 15 min
-- clean reconcile (no drift, no errors) → multiply by 1.5, ceiling 24 h
+- drift detected (`created > 0 || updated > 0`) → halve, floor 1 h
+- clean reconcile (no drift, no errors) → multiply by 1.5, ceiling 6 h
 - errors present → leave interval alone (the circuit-breaker handles repeated failures)
 
-Active shops settle near 15-30 min, dormant shops drift toward 24 h. Webhook-driven syncs do NOT call `recordReconcileOutcome` — only the cron reconciliation path adapts cadence (otherwise normal webhook activity would constantly halve the interval and defeat the purpose).
+Active shops settle near 1-2 h, dormant shops drift toward 6 h. Bounds widened on 2026-05-20 with the move to webhook-primary processing — the floor was 15 min back when cron was the latency path. Webhook-driven syncs do NOT call `recordReconcileOutcome` (otherwise normal webhook activity would constantly halve the interval and defeat the purpose).
 
 **Per-shop guards (kept from earlier fix):**
 

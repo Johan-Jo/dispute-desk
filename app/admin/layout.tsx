@@ -29,6 +29,7 @@ import {
   X,
   Radar,
   ShieldCheck,
+  Webhook,
 } from "lucide-react";
 import { ToastProvider } from "@/components/admin/Toast";
 
@@ -59,6 +60,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Disputes", href: "/admin/disputes", icon: Shield },
   { label: "Shops", href: "/admin/shops", icon: Store },
   { label: "Jobs", href: "/admin/jobs", icon: Cog },
+  { label: "Webhooks", href: "/admin/webhooks", icon: Webhook },
   { label: "Templates", href: "/admin/templates", icon: FileText, group: "Template Ops" },
   { label: "Reason Mapping", href: "/admin/reason-mapping", icon: GitBranch, group: "Template Ops" },
   { label: "Template Health", href: "/admin/template-health", icon: Activity, group: "Template Ops" },
