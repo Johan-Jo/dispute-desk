@@ -132,18 +132,232 @@ const STRINGS: Record<Locale, LocaleStrings> = {
       resultLine: "Result: Closed · No defence submitted",
     },
   },
-  // Non-English locales fall back to English copy for now. Locale keys
-  // present so resolveLocale never hits undefined.
-  es: null as unknown as LocaleStrings,
-  pt: null as unknown as LocaleStrings,
-  fr: null as unknown as LocaleStrings,
-  de: null as unknown as LocaleStrings,
-  sv: null as unknown as LocaleStrings,
+  de: {
+    shared: {
+      reason: "Grund",
+      order: "Bestellung",
+      footer:
+        "Sie erhalten diese Nachricht, weil Ausgangs­benachrichtigungen für Ihr DisputeDesk-Team aktiviert sind. Verwalten Sie Ihre Präferenzen in der eingebetteten App unter den Team-Einstellungen.",
+    },
+    won: {
+      subject: ({ shortId, orderName }) =>
+        `Sie haben den Rückbuchungs­fall zu ${orderName ?? `Streitfall ${shortId}`} gewonnen`,
+      heading: "Sie haben diesen Rückbuchungs­fall gewonnen",
+      body: [
+        "Gute Nachrichten — das Kartennetzwerk hat Ihr Verteidigungspaket akzeptiert und in diesem Streitfall zu Ihren Gunsten entschieden.",
+        "Der strittige Betrag bleibt bei Ihnen, und etwaige vorläufige Belastungen sollten von Ihrem Zahlungs­abwickler gemäß dessen üblichem Auszahlungs­takt zurück­gebucht werden.",
+        "Der Fall bleibt in DisputeDesk gespeichert — einschließlich der eingereichten Beweise, der Zeitlinie und des Ergebnisses —, damit Ihr Team analysieren kann, was funktioniert hat, und das Muster für künftige Streitfälle wiederverwenden kann.",
+      ],
+      amountLabel: "Geschützter Betrag",
+      cta: "Gewonnenen Fall ansehen",
+      resultLine: "Ergebnis: Verteidigung akzeptiert · Mittel behalten",
+    },
+    lost: {
+      subject: ({ shortId, orderName }) =>
+        `Rückbuchungs­fall verloren — ${orderName ?? `Streitfall ${shortId}`}`,
+      heading: "Dieser Rückbuchungs­fall wurde nicht gewonnen",
+      body: [
+        "Das Kartennetzwerk hat sich auf die Seite des Karten­inhabers gestellt, und der strittige Betrag wurde von Ihrer Auszahlung abgezogen.",
+        "Diese Entscheidung ist für diesen Streitfall endgültig, es ist keine weitere Maßnahme erforderlich. Der Fall bleibt in DisputeDesk mit den eingereichten Beweisen, der Zeitlinie und dem Ergebnis verfügbar, damit Ihr Team prüfen kann, was passiert ist, und künftige Verteidigungen stärken kann.",
+      ],
+      amountLabel: "Verlorener Betrag",
+      cta: "Fall überprüfen",
+      resultLine: "Ergebnis: Karten­inhaber gewonnen · Mittel abgezogen",
+    },
+    accepted: {
+      subject: ({ shortId, orderName }) =>
+        `Rückbuchungs­fall geschlossen — ${orderName ?? `Streitfall ${shortId}`}`,
+      heading: "Dieser Rückbuchungs­fall wurde geschlossen",
+      body: [
+        "Dieser Streitfall wurde ohne eingereichte Verteidigungs­antwort geschlossen. Der strittige Betrag wurde an den Karten­inhaber abgeführt.",
+        "Für diesen Fall ist keine weitere Maßnahme erforderlich. DisputeDesk bewahrt den Datensatz auf, damit Ihr Team die Zeitlinie einsehen, verfügbare Beweise prüfen und die Bearbeitung künftiger Streitfälle verbessern kann.",
+      ],
+      amountLabel: "An Karten­inhaber abgeführter Betrag",
+      cta: "Akteneintrag ansehen",
+      resultLine: "Ergebnis: Geschlossen · Keine Verteidigung eingereicht",
+    },
+  },
+  es: {
+    shared: {
+      reason: "Motivo",
+      order: "Pedido",
+      footer:
+        "Recibe este correo porque las notificaciones de resultado están activadas para su equipo de DisputeDesk. Gestione sus preferencias en la app integrada en Configuración del equipo.",
+    },
+    won: {
+      subject: ({ shortId, orderName }) =>
+        `Ha ganado la contracargo de ${orderName ?? `la disputa ${shortId}`}`,
+      heading: "Ha ganado este contracargo",
+      body: [
+        "Buenas noticias: la red de tarjetas aceptó su paquete de defensa y resolvió esta disputa a su favor.",
+        "El importe disputado permanece con usted, y cualquier cargo provisional debería ser revertido por su procesador según sus tiempos habituales de liquidación.",
+        "El registro del caso permanece en DisputeDesk, incluidas las pruebas presentadas, la cronología y el resultado, para que su equipo pueda revisar qué funcionó y reutilizar el patrón en futuras disputas.",
+      ],
+      amountLabel: "Importe protegido",
+      cta: "Ver caso ganador",
+      resultLine: "Resultado: Defensa aceptada · Fondos retenidos",
+    },
+    lost: {
+      subject: ({ shortId, orderName }) =>
+        `Este contracargo se perdió — ${orderName ?? `disputa ${shortId}`}`,
+      heading: "Este contracargo no se ganó",
+      body: [
+        "La red de tarjetas se puso del lado del titular de la tarjeta, y el importe disputado se ha deducido de su pago.",
+        "Esta decisión es definitiva para esta disputa, por lo que no hay más acciones a realizar. El caso permanecerá en DisputeDesk con las pruebas presentadas, la cronología y el resultado para que su equipo pueda revisar qué ocurrió e identificar formas de fortalecer futuras defensas.",
+      ],
+      amountLabel: "Importe perdido",
+      cta: "Revisar el caso",
+      resultLine: "Resultado: Titular de la tarjeta ganó · Fondos deducidos",
+    },
+    accepted: {
+      subject: ({ shortId, orderName }) =>
+        `Contracargo cerrado en ${orderName ?? `disputa ${shortId}`}`,
+      heading: "Este contracargo se ha cerrado",
+      body: [
+        "Esta disputa se ha cerrado sin una respuesta de defensa presentada. El importe disputado se ha liquidado con el titular de la tarjeta.",
+        "No hay nada más que hacer en este caso, pero DisputeDesk mantendrá el registro disponible para que su equipo pueda revisar la cronología, ver qué pruebas estaban disponibles y mejorar la gestión de futuras disputas.",
+      ],
+      amountLabel: "Importe liquidado con el titular de la tarjeta",
+      cta: "Ver registro del caso",
+      resultLine: "Resultado: Cerrado · Sin defensa presentada",
+    },
+  },
+  pt: {
+    shared: {
+      reason: "Motivo",
+      order: "Pedido",
+      footer:
+        "Você recebe este e-mail porque as notificações de resultado estão ativadas para sua equipe DisputeDesk. Gerencie suas preferências no app incorporado em Configurações da equipe.",
+    },
+    won: {
+      subject: ({ shortId, orderName }) =>
+        `Você venceu o chargeback de ${orderName ?? `disputa ${shortId}`}`,
+      heading: "Você venceu este chargeback",
+      body: [
+        "Boas notícias — a rede de cartões aceitou seu pacote de defesa e decidiu esta disputa a seu favor.",
+        "O valor disputado permanece com você, e qualquer débito provisório deve ser revertido pelo seu processador de acordo com o ciclo normal de pagamento.",
+        "O registro do caso permanece no DisputeDesk, incluindo as provas enviadas, a linha do tempo e o resultado, para que sua equipe possa revisar o que funcionou e reutilizar o padrão em disputas futuras.",
+      ],
+      amountLabel: "Valor protegido",
+      cta: "Ver caso vencedor",
+      resultLine: "Resultado: Defesa aceita · Fundos retidos",
+    },
+    lost: {
+      subject: ({ shortId, orderName }) =>
+        `Este chargeback foi perdido — ${orderName ?? `disputa ${shortId}`}`,
+      heading: "Este chargeback não foi vencido",
+      body: [
+        "A rede de cartões ficou do lado do titular do cartão, e o valor disputado foi deduzido do seu pagamento.",
+        "Esta decisão é final para esta disputa, portanto não há mais ações a tomar. O caso permanecerá no DisputeDesk com as provas enviadas, a linha do tempo e o resultado, para que sua equipe possa revisar o que aconteceu e identificar maneiras de fortalecer defesas futuras.",
+      ],
+      amountLabel: "Valor perdido",
+      cta: "Revisar o caso",
+      resultLine: "Resultado: Titular do cartão venceu · Fundos deduzidos",
+    },
+    accepted: {
+      subject: ({ shortId, orderName }) =>
+        `Chargeback encerrado em ${orderName ?? `disputa ${shortId}`}`,
+      heading: "Este chargeback foi encerrado",
+      body: [
+        "Esta disputa foi encerrada sem uma resposta de defesa enviada. O valor disputado foi liquidado com o titular do cartão.",
+        "Não há mais nada a fazer neste caso, mas o DisputeDesk manterá o registro disponível para que sua equipe possa revisar a linha do tempo, ver quais provas estavam disponíveis e melhorar o tratamento de futuras disputas.",
+      ],
+      amountLabel: "Valor liquidado com o titular do cartão",
+      cta: "Ver registro do caso",
+      resultLine: "Resultado: Encerrado · Sem defesa enviada",
+    },
+  },
+  fr: {
+    shared: {
+      reason: "Motif",
+      order: "Commande",
+      footer:
+        "Vous recevez ce courriel parce que les notifications de résultat sont activées pour votre équipe DisputeDesk. Gérez vos préférences dans l'app intégrée sous Paramètres de l'équipe.",
+    },
+    won: {
+      subject: ({ shortId, orderName }) =>
+        `Vous avez gagné le litige sur ${orderName ?? `le différend ${shortId}`}`,
+      heading: "Vous avez gagné ce litige",
+      body: [
+        "Bonne nouvelle — le réseau de cartes a accepté votre dossier de défense et tranché ce différend en votre faveur.",
+        "Le montant contesté reste à vous, et tout débit provisoire devrait être annulé par votre processeur selon son calendrier de versement habituel.",
+        "Le dossier reste dans DisputeDesk, y compris les preuves soumises, la chronologie et le résultat, pour que votre équipe puisse examiner ce qui a fonctionné et réutiliser le schéma pour les futurs différends.",
+      ],
+      amountLabel: "Montant protégé",
+      cta: "Voir l'affaire gagnée",
+      resultLine: "Résultat : Défense acceptée · Fonds conservés",
+    },
+    lost: {
+      subject: ({ shortId, orderName }) =>
+        `Ce litige a été perdu — ${orderName ?? `différend ${shortId}`}`,
+      heading: "Ce litige n'a pas été gagné",
+      body: [
+        "Le réseau de cartes s'est rangé du côté du titulaire de la carte, et le montant contesté a été déduit de votre versement.",
+        "Cette décision est finale pour ce différend, il n'y a donc aucune action supplémentaire à entreprendre. L'affaire restera dans DisputeDesk avec les preuves soumises, la chronologie et le résultat, pour que votre équipe puisse examiner ce qui s'est passé et identifier des moyens de renforcer les défenses futures.",
+      ],
+      amountLabel: "Montant perdu",
+      cta: "Examiner l'affaire",
+      resultLine: "Résultat : Titulaire de la carte gagné · Fonds déduits",
+    },
+    accepted: {
+      subject: ({ shortId, orderName }) =>
+        `Litige clôturé sur ${orderName ?? `différend ${shortId}`}`,
+      heading: "Ce litige a été clôturé",
+      body: [
+        "Ce différend a été clôturé sans réponse de défense soumise. Le montant contesté a été réglé avec le titulaire de la carte.",
+        "Il n'y a rien de plus à faire sur cette affaire, mais DisputeDesk conservera l'enregistrement disponible pour que votre équipe puisse examiner la chronologie, voir quelles preuves étaient disponibles et améliorer le traitement des futurs différends.",
+      ],
+      amountLabel: "Montant réglé avec le titulaire de la carte",
+      cta: "Voir le dossier",
+      resultLine: "Résultat : Clôturé · Aucune défense soumise",
+    },
+  },
+  sv: {
+    shared: {
+      reason: "Orsak",
+      order: "Order",
+      footer:
+        "Du får detta e-postmeddelande eftersom resultat­meddelanden är aktiverade för ditt DisputeDesk-team. Hantera dina inställningar i den inbäddade appen under Team-inställningar.",
+    },
+    won: {
+      subject: ({ shortId, orderName }) =>
+        `Du vann återkravet på ${orderName ?? `tvist ${shortId}`}`,
+      heading: "Du vann detta återkrav",
+      body: [
+        "Goda nyheter — kortnätverket accepterade ditt försvarspaket och avgjorde denna tvist till din fördel.",
+        "Det tvistade beloppet stannar hos dig, och eventuella tillfälliga debiteringar bör återföras av din betalnings­leverantör enligt deras normala utbetalnings­schema.",
+        "Ärendet stannar i DisputeDesk — inklusive de inskickade bevisen, tidslinjen och utfallet — så att ditt team kan granska vad som fungerade och återanvända mönstret för framtida tvister.",
+      ],
+      amountLabel: "Skyddat belopp",
+      cta: "Visa vunnet ärende",
+      resultLine: "Resultat: Försvar accepterat · Medel behållna",
+    },
+    lost: {
+      subject: ({ shortId, orderName }) =>
+        `Detta återkrav förlorades — ${orderName ?? `tvist ${shortId}`}`,
+      heading: "Detta återkrav vanns inte",
+      body: [
+        "Kortnätverket ställde sig på korthållarens sida, och det tvistade beloppet har dragits från din utbetalning.",
+        "Detta beslut är slutgiltigt för denna tvist, så det finns inga ytterligare åtgärder att vidta. Ärendet kommer att finnas kvar i DisputeDesk med de inskickade bevisen, tidslinjen och utfallet så att ditt team kan granska vad som hände och identifiera sätt att stärka framtida försvar.",
+      ],
+      amountLabel: "Förlorat belopp",
+      cta: "Granska ärendet",
+      resultLine: "Resultat: Korthållare vann · Medel dragna",
+    },
+    accepted: {
+      subject: ({ shortId, orderName }) =>
+        `Återkrav avslutat på ${orderName ?? `tvist ${shortId}`}`,
+      heading: "Detta återkrav har avslutats",
+      body: [
+        "Denna tvist har nu avslutats utan ett inlämnat försvars­svar. Det tvistade beloppet har reglerats med korthållaren.",
+        "Det finns inget mer att göra i detta ärende, men DisputeDesk bevarar ärendet så att ditt team kan granska tidslinjen, se vilka bevis som var tillgängliga och förbättra hanteringen av framtida tvister.",
+      ],
+      amountLabel: "Belopp reglerat med korthållare",
+      cta: "Visa ärende­post",
+      resultLine: "Resultat: Avslutat · Inget försvar inlämnat",
+    },
+  },
 };
-// Backfill non-en locales with en strings until proper translations land.
-for (const k of ["es", "pt", "fr", "de", "sv"] as const) {
-  STRINGS[k] = STRINGS.en;
-}
 
 function resolveLocale(storeLocale: string | null): Locale {
   if (!storeLocale) return "en";

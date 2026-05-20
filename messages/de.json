@@ -815,6 +815,52 @@
       "windowClosedError": "Shopify hat die Streitbeweise bereits an die Bank weitergeleitet, daher können keine neuen Dateien mehr hinzugefügt werden."
     },
     "reviewTab": {
+      "inclusion": {
+        "title": "Einschluss­prüfung",
+        "subtitle": "Prüfen Sie vor dem Speichern, was die Bank erreicht. Das Verteidigungspaket ist der einzige bankgerichtete Kanal — DisputeDesk sendet keine strukturierten Beweisfelder an Shopify.",
+        "groups": {
+          "usedAsBankArgument": "Als positives Bankargument verwendet",
+          "contextOnly": "Nur Kontext",
+          "keptInternal": "Intern gehalten",
+          "notIncluded": "Nicht enthalten",
+          "excludedByMerchant": "Von Ihnen ausgeschlossen"
+        },
+        "groupHelpers": {
+          "usedAsBankArgument": "Beweise, die das Verteidigungs­narrativ als entscheidenden Beleg zitiert. Schreibgeschützt — Hinzufügen oder Entfernen entscheidender Beweise erfordert eine Änderung der zugrunde liegenden Daten.",
+          "contextOnly": "Hintergrund­kontext im Paket. Schreibgeschützt — das System entscheidet, ob ein Posten als entscheidender Beleg gewertet wird.",
+          "keptInternal": "Signale, die den Fall schwächen könnten, wenn sie der Bank vorgelegt würden. Eine Hochstufung erfordert eine ausdrückliche Risikobestätigung.",
+          "notIncluded": "Posten in den Akten, aber nicht im Paket. Sichere Zeilen können erzwungen einbezogen werden, um sie als unterstützenden Kontext hinzuzufügen (niemals als entscheidenden Beleg).",
+          "excludedByMerchant": "Posten, die Sie ausdrücklich ausgeschlossen haben. Übersteuerung aufheben, um den natürlichen Zustand wiederherzustellen."
+        },
+        "groupTags": {
+          "usedAsBankArgument": "Starkes Argument",
+          "contextOnly": "Unterstützend",
+          "keptInternal": "Vor Bank verborgen",
+          "notIncluded": "Ausgeschlossen",
+          "excludedByMerchant": "Ausgeschlossen"
+        },
+        "outsideDataCallout": "Daten liegen außerhalb von DisputeDesk — beim Zahlungs-Gateway, beim Spediteur oder bei Shopifys Risiko-Engine.",
+        "toggle": {
+          "include": "Ins Paket aufnehmen",
+          "restore": "Standard wiederherstellen",
+          "override": "Übersteuern (Risiko prüfen)",
+          "disabledInternalOnly": "Ein nur internes Signal an die Bank zu eskalieren erfordert ausdrückliche Risikobestätigung.",
+          "disabledNoPayload": "Nichts einzuschließen — die Daten hinter dieser Zeile stammen aus einer Quelle außerhalb von DisputeDesks Kontrolle (das Zahlungs-Gateway, der Spediteur oder Shopifys Risiko-Engine)."
+        },
+        "overrideModal": {
+          "title": "Dieses Signal trotzdem einschließen?",
+          "intro": "Sie sind dabei, \"{field}\" zum bankgerichteten Verteidigungspaket hinzuzufügen. Dieses Signal wird standardmäßig intern gehalten, weil der Bankprüfer es typischerweise als Betrugsindikator liest, nicht als unterstützenden Beweis.",
+          "riskTitle": "Dies kann Ihre Verteidigung schwächen",
+          "riskBody": "Ein negatives oder mehrdeutiges Signal vorzuzeigen — wie eine fehlgeschlagene AVS-Prüfung, eine IP-Abweichung oder einen Erstkunden bei einem Betrugsfall — lädt den Aussteller dazu ein, es gegen Sie zu werten. Wir empfehlen dies nicht, es sei denn, Sie haben spezifischen externen Kontext (zum Beispiel: Der Karteninhaber hat die Bestellung über einen anderen Kanal bestätigt, nachdem eine Gateway-Prüfung fehlgeschlagen ist), den Sie neben dem Beweis erklären können.",
+          "auditNote": "Ihre Entscheidung wird dauerhaft im Prüfprotokoll des Streitfalls festgehalten.",
+          "confirm": "Ich verstehe das Risiko — trotzdem einschließen",
+          "cancel": "Abbrechen"
+        },
+        "emptyGroup": "—",
+        "emptyAll": "Für diesen Streitfall sind noch keine Beweis­zeilen verfügbar. Erstellen oder regenerieren Sie das Verteidigungspaket, um diesen Abschnitt zu befüllen.",
+        "errorOverride": "Einschluss konnte nicht aktualisiert werden ({code}). Bitte erneut versuchen.",
+        "errorOverrideNeedsConfirmation": "Dieses Signal erfordert ausdrückliche Risikobestätigung, bevor es zur Bank-Übermittlung hinzugefügt werden kann."
+      },
       "sections": {
         "status": {
           "submitted": "Evidence submitted to Shopify",
