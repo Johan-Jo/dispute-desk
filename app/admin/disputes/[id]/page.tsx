@@ -64,6 +64,11 @@ const DOT_COLORS: Record<string, string> = {
   admin_override: "bg-purple-500",
   support_note_added: "bg-indigo-500",
   dispute_resynced: "bg-teal-500",
+  // Phase 2 merchant overrides. The "with_warning" variant is the
+  // forensic signal — colour it amber so it stands out from routine
+  // include/exclude toggles when ops scans a long timeline.
+  evidence_inclusion_overridden: "bg-gray-500",
+  evidence_inclusion_overridden_with_warning: "bg-amber-500",
 };
 
 export default function AdminDisputeDetailPage() {
