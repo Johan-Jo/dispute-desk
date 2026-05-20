@@ -845,8 +845,18 @@
         "toggle": {
           "include": "Incluir no pacote",
           "restore": "Restaurar padrão",
-          "disabledInternalOnly": "Promover um sinal apenas interno para o banco exige um fluxo de confirmação ainda não disponível.",
+          "override": "Substituir (analisar risco)",
+          "disabledInternalOnly": "Promover um sinal apenas interno para o banco exige reconhecimento explícito do risco.",
           "disabledNoPayload": "Nada para incluir — os dados desta linha vêm de uma fonte fora do controle do DisputeDesk (o gateway de pagamento, a transportadora ou o motor de risco do Shopify)."
+        },
+        "overrideModal": {
+          "title": "Incluir este sinal mesmo assim?",
+          "intro": "Você está prestes a adicionar \"{field}\" ao pacote de defesa enviado ao banco. Este sinal é mantido interno por padrão porque o revisor do banco geralmente o lê como um indicador de fraude, não como prova de apoio.",
+          "riskTitle": "Isso pode enfraquecer sua defesa",
+          "riskBody": "Apresentar um sinal negativo ou ambíguo — como uma verificação AVS falhada, uma incompatibilidade de IP ou um cliente novo em uma reclamação de fraude — convida o emissor a pesá-lo contra você. Não recomendamos isso a menos que você tenha contexto externo específico (por exemplo: o titular do cartão confirmou o pedido por outro canal após uma verificação de gateway falhada) que possa explicar junto com a prova.",
+          "auditNote": "Sua decisão é registrada permanentemente na trilha de auditoria da disputa.",
+          "confirm": "Compreendo o risco — incluir mesmo assim",
+          "cancel": "Cancelar"
         },
         "groupHelpers": {
           "usedAsBankArgument": "Provas que a narrativa de defesa cita como prova decisiva. Somente leitura — adicionar ou remover provas decisivas exige alterar o conteúdo subjacente.",

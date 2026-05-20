@@ -845,8 +845,18 @@
         "toggle": {
           "include": "Inclure dans le dossier",
           "restore": "Restaurer par défaut",
-          "disabledInternalOnly": "Promouvoir un signal uniquement interne vers la banque nécessite un flux de confirmation pas encore disponible.",
+          "override": "Outrepasser (examiner le risque)",
+          "disabledInternalOnly": "Promouvoir un signal uniquement interne vers la banque nécessite une reconnaissance explicite du risque.",
           "disabledNoPayload": "Rien à inclure — les données derrière cette ligne proviennent d’une source hors du contrôle de DisputeDesk (la passerelle de paiement, le transporteur, ou le moteur de risque de Shopify)."
+        },
+        "overrideModal": {
+          "title": "Inclure ce signal malgré tout ?",
+          "intro": "Vous êtes sur le point d’ajouter \"{field}\" au dossier de défense envoyé à la banque. Ce signal est gardé en interne par défaut car l’examinateur de la banque le lit généralement comme un indicateur de fraude, non comme une preuve à l’appui.",
+          "riskTitle": "Cela peut affaiblir votre défense",
+          "riskBody": "Mettre en avant un signal négatif ou ambigu — comme un échec AVS, une incohérence d’IP, ou un client nouveau dans un litige pour fraude — invite l’émetteur à le retenir contre vous. Nous ne recommandons pas cela à moins d’avoir un contexte externe spécifique (par exemple : le titulaire de la carte a confirmé la commande via un autre canal après l’échec de la vérification de la passerelle) que vous pouvez expliquer à côté de la preuve.",
+          "auditNote": "Votre décision est enregistrée définitivement dans la piste d’audit du litige.",
+          "confirm": "Je comprends le risque — inclure quand même",
+          "cancel": "Annuler"
         },
         "groupHelpers": {
           "usedAsBankArgument": "Preuves que le narratif de défense cite comme preuve décisive. Lecture seule — ajouter ou retirer des preuves décisives nécessite de modifier la charge utile sous-jacente.",

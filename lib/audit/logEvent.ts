@@ -30,6 +30,14 @@ export type EventType =
   // Payload: { field, action: "force_include" | "force_exclude" | "clear",
   // priorState?: "force_include" | "force_exclude" | null }.
   | "evidence_inclusion_overridden"
+  // Phase 2 (2026-05-20). Distinct event type for the case where the
+  // merchant force-included an INTERNAL_ONLY_FIELDS signal AFTER
+  // explicitly acknowledging the bank-facing risk via the warning
+  // modal. Always carries `riskAcknowledged: true`, `modalShown`,
+  // `confirmedAt` in addition to the standard payload. Logged
+  // separately so ops can grep this event type when reviewing lost
+  // disputes — every explicit risk override is permanently traceable.
+  | "evidence_inclusion_overridden_with_warning"
   // Auto-build of an evidence_pack was enqueued by the system. Existing
   // direct audit_events inserts in lib/automation/pipeline.ts and the
   // new defence-package-deadline-rebuild cron use this event type.

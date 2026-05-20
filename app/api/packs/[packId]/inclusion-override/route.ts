@@ -15,6 +15,13 @@ interface OverrideRequestBody {
   field: string;
   /** Use `null` (or omit) to clear an existing override. */
   value?: OverrideValue;
+  /** Phase 2 (2026-05-20): when `true`, the merchant has acknowledged
+   *  the bank-facing risk of force-including an internal-only signal
+   *  via the warning modal. Lifts the OVERRIDE_NEEDS_CONFIRMATION 409
+   *  gate. Must be `true` to bypass — anything else (false, undefined)
+   *  routes through the Phase 1 guard. Audited as a distinct event
+   *  type so the override is traceable. */
+  acknowledgedRisk?: boolean;
 }
 
 /**
@@ -22,17 +29,22 @@ interface OverrideRequestBody {
  *
  * Records a merchant inclusion override for a single evidence field on
  * an evidence pack. Persists to `pack_json.inclusionOverrides` (keyed
- * by field) and logs an `evidence_inclusion_overridden` audit event.
+ * by field) and logs an audit event.
  *
- * **Phase 1 guard:** `force_include` is REJECTED with 409
- * `OVERRIDE_NEEDS_CONFIRMATION` for fields in `INTERNAL_ONLY_FIELDS` —
- * promoting a negative/ambiguous signal to bank-facing requires a
- * warning + confirmation flow that's out of scope for Phase 1.
+ * **Phase 1 + Phase 2 gate:** `force_include` for fields in
+ * `INTERNAL_ONLY_FIELDS` returns 409 `OVERRIDE_NEEDS_CONFIRMATION`
+ * UNLESS the request body includes `acknowledgedRisk: true` (Phase 2,
+ * 2026-05-20). When acknowledged, the override is persisted AND a
+ * distinct `evidence_inclusion_overridden_with_warning` audit event is
+ * logged carrying `{ riskAcknowledged: true, modalShown: "phase2_v1" }`
+ * so the merchant's explicit choice is permanently recorded.
  *
  * **Override semantics are enforced at the derivation layer**
  * (lib/argument/evidenceLineItem.ts). The route only persists the
- * intent — the derivation respects safety rules even if a malicious
- * override slipped through (defence in depth).
+ * intent — the derivation refuses to elevate the row to bank_argument
+ * even when force_include lands on an internal-only field. The
+ * acknowledgement gate is about traceability, not about silently
+ * promoting risk to a positive signal.
  *
  * Plan: C:\Users\johan\.claude\plans\do-a-plan-for-scalable-parrot.md §10
  */
@@ -54,6 +66,7 @@ export async function POST(
   if (parsed instanceof NextResponse) return parsed;
   const { field } = parsed;
   const value: OverrideValue = parsed.value ?? null;
+  const acknowledgedRisk = parsed.acknowledgedRisk === true;
 
   if (!field || typeof field !== "string") {
     return NextResponse.json(
@@ -74,11 +87,15 @@ export async function POST(
     );
   }
 
-  // Phase 1 safety guard — internal-only fields cannot be force-included.
-  if (value === "force_include" && INTERNAL_ONLY_FIELDS.has(field)) {
+  // Phase 1 + 2 safety guard — internal-only fields require explicit
+  // risk acknowledgement (Phase 2, 2026-05-20). Without it the request
+  // is rejected with the same 409 the frontend already handles.
+  const isInternalOnlyForceInclude =
+    value === "force_include" && INTERNAL_ONLY_FIELDS.has(field);
+  if (isInternalOnlyForceInclude && !acknowledgedRisk) {
     return NextResponse.json(
       {
-        error: "Force-including an internal-only signal requires a confirmation flow not available in Phase 1.",
+        error: "Force-including an internal-only signal requires explicit risk acknowledgement.",
         code: "OVERRIDE_NEEDS_CONFIRMATION",
       },
       { status: 409 },
@@ -152,17 +169,34 @@ export async function POST(
     );
   }
 
+  // Audit. When the merchant explicitly acknowledged the bank-facing
+  // risk on an internal-only signal, log a distinct event type so the
+  // override is permanently traceable. Reviewing the case later, ops
+  // can grep `evidence_inclusion_overridden_with_warning` to see every
+  // explicit risk acknowledgement.
+  const eventType: "evidence_inclusion_overridden" | "evidence_inclusion_overridden_with_warning" =
+    isInternalOnlyForceInclude && acknowledgedRisk
+      ? "evidence_inclusion_overridden_with_warning"
+      : "evidence_inclusion_overridden";
+
   await logAuditEvent({
     shopId: pack.shop_id,
     disputeId: pack.dispute_id,
     packId,
     actorType: "merchant",
-    eventType: "evidence_inclusion_overridden",
+    eventType,
     eventPayload: {
       field,
       label: targetRow.label,
       action: value === null ? "clear" : value,
       priorState: priorValue,
+      ...(isInternalOnlyForceInclude && acknowledgedRisk
+        ? {
+            riskAcknowledged: true,
+            modalShown: "phase2_v1",
+            confirmedAt: new Date().toISOString(),
+          }
+        : {}),
     },
   });
 
@@ -171,5 +205,6 @@ export async function POST(
     field,
     value,
     priorValue,
+    acknowledgedRisk: isInternalOnlyForceInclude && acknowledgedRisk,
   });
 }

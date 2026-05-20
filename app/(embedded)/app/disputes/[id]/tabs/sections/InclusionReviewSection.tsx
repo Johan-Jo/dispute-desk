@@ -31,6 +31,7 @@ import {
   Banner,
   Card,
   InlineStack,
+  Modal,
   Text,
   Button,
 } from "@shopify/polaris";
@@ -75,6 +76,7 @@ interface Props {
   onToggleInclusionOverride: (
     field: string,
     value: "force_include" | "force_exclude" | null,
+    options?: { acknowledgedRisk?: boolean },
   ) => Promise<void>;
 }
 
@@ -86,6 +88,11 @@ export function InclusionReviewSection({
   const t = useTranslations("disputes.reviewTab.inclusion");
   const [busyField, setBusyField] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Phase 2 warning-modal state. Holds the line item the merchant
+  // clicked Override on; modal renders when non-null. Closing clears
+  // the state. The actual override fires from `confirmOverride` so the
+  // post-confirm refetch waits for the API round-trip.
+  const [pendingOverride, setPendingOverride] = useState<EvidenceLineItem | null>(null);
 
   const groups = useMemo(() => {
     const map: Record<Group, EvidenceLineItem[]> = {
@@ -105,23 +112,42 @@ export function InclusionReviewSection({
   const handleToggle = useCallback(
     async (li: EvidenceLineItem, target: "force_include" | "force_exclude" | null) => {
       if (!packId) return;
+      // Phase 2 — internal-only force_include opens the warning modal
+      // instead of failing. Cleared overrides + force_exclude + safe
+      // force_include all proceed directly.
+      if (target === "force_include" && INTERNAL_ONLY_FIELDS.has(li.field)) {
+        setPendingOverride(li);
+        setErrorMessage(null);
+        return;
+      }
       setBusyField(li.field);
       setErrorMessage(null);
       try {
-        // Pre-flight client-side guard for internal-only rows — mirrors
-        // the server's Phase 1 OVERRIDE_NEEDS_CONFIRMATION rejection so
-        // the merchant doesn't trigger a round-trip for a doomed call.
-        if (target === "force_include" && INTERNAL_ONLY_FIELDS.has(li.field)) {
-          setErrorMessage(t("errorOverrideNeedsConfirmation"));
-          return;
-        }
         await onToggleInclusionOverride(li.field, target);
       } finally {
         setBusyField(null);
       }
     },
-    [packId, onToggleInclusionOverride, t],
+    [packId, onToggleInclusionOverride],
   );
+
+  /** Phase 2 confirm path. Closes the modal, fires the override with
+   *  `acknowledgedRisk: true`, and refetches. The audit row will be
+   *  `evidence_inclusion_overridden_with_warning`. */
+  const confirmOverride = useCallback(async () => {
+    if (!pendingOverride || !packId) return;
+    const li = pendingOverride;
+    setPendingOverride(null);
+    setBusyField(li.field);
+    setErrorMessage(null);
+    try {
+      await onToggleInclusionOverride(li.field, "force_include", {
+        acknowledgedRisk: true,
+      });
+    } finally {
+      setBusyField(null);
+    }
+  }, [pendingOverride, packId, onToggleInclusionOverride]);
 
   if (!packId) return null;
   if (lineItems.length === 0) {
@@ -264,16 +290,15 @@ export function InclusionReviewSection({
                 // and create UI noise.
                 const showIncludeButton =
                   group === "notIncluded" && li.canBeForceIncluded;
-                // Kept-internal rows used to render a disabled
-                // "Include in package" stub to communicate "you can't
-                // do this from here." The group header pill
-                // ("Hidden from bank") plus the group helper text
-                // already carry that message; no button needed.
+                // Phase 2 (2026-05-20). Kept-internal rows now expose
+                // an "Override" button that opens the warning modal.
+                // Only fires for rows the merchant can actually act on
+                // (`canBeForceIncluded`) — when the data lives outside
+                // DisputeDesk's control there's nothing to override.
+                const showOverrideButton =
+                  group === "keptInternal" && li.canBeForceIncluded && isInternalOnly;
                 const showRestoreButton = group === "excludedByMerchant";
-                const hasAction = showIncludeButton || showRestoreButton;
-                // Suppress unused-var warning on isInternalOnly — it
-                // used to gate the kept-internal stub button above.
-                void isInternalOnly;
+                const hasAction = showIncludeButton || showRestoreButton || showOverrideButton;
                 return (
                   <div
                     key={li.field}
@@ -366,6 +391,17 @@ export function InclusionReviewSection({
                           >
                             {t("toggle.include")}
                           </Button>
+                        ) : showOverrideButton ? (
+                          <Button
+                            size="slim"
+                            tone="critical"
+                            variant="secondary"
+                            onClick={() => handleToggle(li, "force_include")}
+                            loading={busyField === li.field}
+                            disabled={busyField !== null && busyField !== li.field}
+                          >
+                            {t("toggle.override")}
+                          </Button>
                         ) : showRestoreButton ? (
                           <Button
                             size="slim"
@@ -385,6 +421,52 @@ export function InclusionReviewSection({
           );
         })}
       </BlockStack>
+      {/* Phase 2 warning modal — opens when the merchant clicks
+          Override on a kept-internal row. The actual override only
+          fires from `confirmOverride`, which sets `acknowledgedRisk`
+          on the API call so the audit row is the distinct
+          `evidence_inclusion_overridden_with_warning` type. */}
+      <Modal
+        open={pendingOverride !== null}
+        onClose={() => setPendingOverride(null)}
+        title={t("overrideModal.title")}
+        primaryAction={{
+          content: t("overrideModal.confirm"),
+          destructive: true,
+          onAction: () => {
+            void confirmOverride();
+          },
+        }}
+        secondaryActions={[
+          {
+            content: t("overrideModal.cancel"),
+            onAction: () => setPendingOverride(null),
+          },
+        ]}
+      >
+        <Modal.Section>
+          <BlockStack gap="300">
+            <Text as="p" variant="bodyMd">
+              {t("overrideModal.intro", {
+                field: pendingOverride?.label ?? "",
+              })}
+            </Text>
+            <Text as="p" variant="bodyMd" tone="subdued">
+              {pendingOverride?.reason ?? ""}
+            </Text>
+            <Banner tone="warning" title={t("overrideModal.riskTitle")}>
+              <BlockStack gap="200">
+                <Text as="p" variant="bodySm">
+                  {t("overrideModal.riskBody")}
+                </Text>
+                <Text as="p" variant="bodySm">
+                  {t("overrideModal.auditNote")}
+                </Text>
+              </BlockStack>
+            </Banner>
+          </BlockStack>
+        </Modal.Section>
+      </Modal>
     </Card>
   );
 }

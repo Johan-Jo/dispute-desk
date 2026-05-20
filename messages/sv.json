@@ -846,8 +846,18 @@
         "toggle": {
           "include": "Inkludera i paket",
           "restore": "Återställ standard",
-          "disabledInternalOnly": "Att lyfta en enbart intern signal till banken kräver ett bekräftelseflöde som inte är tillgängligt ännu.",
+          "override": "Åsidosätt (granska risk)",
+          "disabledInternalOnly": "Att lyfta en enbart intern signal till banken kräver uttrycklig riskbekräftelse.",
           "disabledNoPayload": "Inget att inkludera — datan bakom denna rad kommer från en källa utanför DisputeDesks kontroll (betalningsgatewayen, transportören eller Shopifys riskmotor)."
+        },
+        "overrideModal": {
+          "title": "Inkludera denna signal ändå?",
+          "intro": "Du är på väg att lägga till \"{field}\" i det bankriktade försvarspaketet. Denna signal hålls internt som standard eftersom bankgranskaren vanligtvis läser den som en bedrägeriindikator, inte som stödjande bevis.",
+          "riskTitle": "Detta kan försvaga ditt försvar",
+          "riskBody": "Att lyfta fram en negativ eller tvetydig signal — som ett misslyckat AVS-kontroll, en IP-felmatchning eller en förstagångskund i ett bedrägerifall — bjuder in utgivaren att väga den mot dig. Vi rekommenderar inte detta om du inte har specifik extern kontext (till exempel: kortinnehavaren bekräftade beställningen via en annan kanal efter ett misslyckat gateway-kontroll) som du kan förklara vid sidan av beviset.",
+          "auditNote": "Ditt beslut registreras permanent i tvistens granskningsspår.",
+          "confirm": "Jag förstår risken — inkludera ändå",
+          "cancel": "Avbryt"
         },
         "groupHelpers": {
           "usedAsBankArgument": "Bevis som försvarsnarrativet citerar som avgörande bevis. Skrivskyddat — att lägga till eller ta bort avgörande bevis kräver att den underliggande datan ändras.",

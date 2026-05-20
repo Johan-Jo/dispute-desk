@@ -741,17 +741,30 @@ export function useDisputeWorkspace(disputeId: string) {
    *    - null: clear an existing override and restore the natural state.
    *
    *  Phase 1: the API rejects `force_include` for internal-only fields
-   *  (returns 409 OVERRIDE_NEEDS_CONFIRMATION). The UI must surface
-   *  the disabled state proactively to avoid the round-trip. */
+   *  (returns 409 OVERRIDE_NEEDS_CONFIRMATION). Phase 2 (2026-05-20):
+   *  callers can pass `acknowledgedRisk: true` to bypass the 409 after
+   *  showing the merchant the warning modal. The API records a
+   *  distinct `evidence_inclusion_overridden_with_warning` audit event
+   *  in that case. */
   const toggleInclusionOverride = useCallback(
-    async (field: string, value: "force_include" | "force_exclude" | null) => {
+    async (
+      field: string,
+      value: "force_include" | "force_exclude" | null,
+      options?: { acknowledgedRisk?: boolean },
+    ) => {
       if (!data?.pack) return;
       const res = await fetch(
         `/api/packs/${data.pack.id}/inclusion-override`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ field, value }),
+          body: JSON.stringify({
+            field,
+            value,
+            ...(options?.acknowledgedRisk
+              ? { acknowledgedRisk: true }
+              : {}),
+          }),
         },
       );
       // Refetch even on failure so the UI reflects the unchanged
