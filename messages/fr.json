@@ -868,7 +868,11 @@
         "emptyGroup": "—",
         "emptyAll": "Aucune ligne de preuve n’est encore disponible pour ce litige. Générez ou reconstruisez le dossier de défense pour remplir cette section.",
         "errorOverride": "Impossible de mettre à jour l’inclusion ({code}). Veuillez réessayer.",
-        "errorOverrideNeedsConfirmation": "Ce signal nécessite un flux de confirmation pas encore disponible. La Phase 2 ajoutera l’avertissement et la piste d’audit de la dérogation.",
+        "errorOverrideNeedsConfirmation": "Ce signal nécessite une reconnaissance explicite du risque avant d'être ajouté à la soumission à la banque.",
+        "overrideCaption": {
+          "label": "Vous avez outrepassé ceci le {date}",
+          "tooltip": "Cette ligne était gardée en interne par défaut. Vous avez explicitement choisi de l'inclure dans la soumission à la banque après avoir reconnu le risque. La décision est consignée dans la piste d'audit du litige."
+        },
         "groupTags": {
           "usedAsBankArgument": "Argument décisif",
           "contextOnly": "Contexte",

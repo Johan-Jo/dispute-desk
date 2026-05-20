@@ -719,6 +719,45 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   // Internal-only signals, anchored to fields.
   const internalSignalsByField = buildInternalSignalsByField(payloadByField);
 
+  // Override audit history per field. Surfaces the latest
+  // evidence_inclusion_overridden_with_warning event for each field so
+  // the Inclusion Review row can render an "You overrode this on
+  // Month DD" caption. Only acknowledged-risk overrides are surfaced;
+  // routine include/exclude toggles aren't auditable as policy
+  // decisions and don't deserve a caption.
+  type OverrideAuditEntry = {
+    field: string;
+    action: "force_include" | "force_exclude" | "clear" | null;
+    confirmedAt: string;
+    actorType: string | null;
+  };
+  const overrideHistoryByField = new Map<string, OverrideAuditEntry>();
+  if (packRow?.id) {
+    const { data: auditRows } = await sb
+      .from("audit_events")
+      .select("event_type, event_payload, actor_type, created_at")
+      .eq("pack_id", packRow.id)
+      .eq("event_type", "evidence_inclusion_overridden_with_warning")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    for (const r of (auditRows ?? []) as Array<{
+      event_payload: { field?: string; action?: string; confirmedAt?: string } | null;
+      actor_type: string | null;
+      created_at: string;
+    }>) {
+      const field = r.event_payload?.field;
+      if (typeof field !== "string") continue;
+      // First match wins per field (we ordered desc by created_at).
+      if (overrideHistoryByField.has(field)) continue;
+      overrideHistoryByField.set(field, {
+        field,
+        action: (r.event_payload?.action ?? null) as OverrideAuditEntry["action"],
+        confirmedAt: r.event_payload?.confirmedAt ?? r.created_at,
+        actorType: r.actor_type,
+      });
+    }
+  }
+
   const evidenceLineItems: EvidenceLineItem[] = packRow
     ? deriveEvidenceLineItems({
         checklist: reconciledChecklistV2,
@@ -731,6 +770,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         inclusionOverrides,
         reasonFamily: resolveReasonFamily(row.reason),
         internalSignalsByField,
+        overrideHistoryByField,
       })
     : [];
 

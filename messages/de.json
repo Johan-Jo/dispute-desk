@@ -859,7 +859,11 @@
         "emptyGroup": "—",
         "emptyAll": "Für diesen Streitfall sind noch keine Beweis­zeilen verfügbar. Erstellen oder regenerieren Sie das Verteidigungspaket, um diesen Abschnitt zu befüllen.",
         "errorOverride": "Einschluss konnte nicht aktualisiert werden ({code}). Bitte erneut versuchen.",
-        "errorOverrideNeedsConfirmation": "Dieses Signal erfordert ausdrückliche Risikobestätigung, bevor es zur Bank-Übermittlung hinzugefügt werden kann."
+        "errorOverrideNeedsConfirmation": "Dieses Signal erfordert ausdrückliche Risikobestätigung, bevor es zur Bank-Übermittlung hinzugefügt werden kann.",
+        "overrideCaption": {
+          "label": "Sie haben dies am {date} übersteuert",
+          "tooltip": "Diese Zeile wurde standardmäßig intern gehalten. Sie haben ausdrücklich entschieden, sie in die Bank-Übermittlung aufzunehmen, nachdem Sie das Risiko bestätigt haben. Die Entscheidung ist im Prüfprotokoll des Streitfalls festgehalten."
+        }
       },
       "sections": {
         "status": {

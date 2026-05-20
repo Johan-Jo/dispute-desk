@@ -109,6 +109,27 @@ export interface EvidenceLineItem {
    *  components that want to flag the row without changing its
    *  submission state. */
   internalSignals?: InternalSignalWarning[];
+  /** Most recent acknowledged-risk override on this field, if any.
+   *  Surfaces the merchant's explicit risk acknowledgement on the
+   *  Inclusion Review row as a caption ("You overrode this on Month
+   *  DD"). Only set when an `evidence_inclusion_overridden_with_warning`
+   *  audit row exists for this field — routine include/exclude
+   *  toggles do not produce an override history entry. */
+  overrideHistory?: OverrideHistoryEntry;
+}
+
+/** Audit-derived record of the merchant's most recent acknowledged
+ *  override on a field. Comes from the workspace API's lookup of
+ *  `evidence_inclusion_overridden_with_warning` audit events. */
+export interface OverrideHistoryEntry {
+  /** "force_include" or "force_exclude" or "clear" — matches the
+   *  `action` enum in the audit row. */
+  action: "force_include" | "force_exclude" | "clear" | null;
+  /** ISO timestamp when the merchant confirmed the risk acknowledgement
+   *  via the warning modal. */
+  confirmedAt: string;
+  /** Actor type from the audit row — typically "merchant". */
+  actorType: string | null;
 }
 
 export interface DeriveEvidenceLineItemsInput {
@@ -129,6 +150,12 @@ export interface DeriveEvidenceLineItemsInput {
    *  `deriveInternalOnlySignals` so the dedicated Internal-only Signals
    *  UI section and the line items stay consistent. */
   internalSignalsByField?: Map<string, InternalSignalWarning[]>;
+  /** Optional map of acknowledged-risk override audit entries, keyed
+   *  by field. Populated by the workspace API from
+   *  `evidence_inclusion_overridden_with_warning` audit rows. The
+   *  derivation just attaches the entry to the matching line item —
+   *  no behavioural change, purely a display surface. */
+  overrideHistoryByField?: Map<string, OverrideHistoryEntry>;
 }
 
 /* ── Source inference ────────────────────────────────────────────── */
@@ -898,6 +925,7 @@ export function deriveEvidenceLineItems(
     const submittedToShopify = includedInDefencePackage && packSavedToShopify;
 
     const internalSignals = input.internalSignalsByField?.get(item.field);
+    const overrideHistory = input.overrideHistoryByField?.get(item.field);
 
     // canBeForceIncluded — true only when clicking "Include in package"
     // would actually surface a row. Already-included rows (bank_argument
@@ -945,6 +973,7 @@ export function deriveEvidenceLineItems(
       ...(internalSignals && internalSignals.length > 0
         ? { internalSignals }
         : {}),
+      ...(overrideHistory ? { overrideHistory } : {}),
     });
   }
 

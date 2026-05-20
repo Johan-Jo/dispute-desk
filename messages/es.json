@@ -868,7 +868,11 @@
         "emptyGroup": "—",
         "emptyAll": "Todavía no hay filas de pruebas disponibles para esta disputa. Genera o reconstruye el paquete de defensa para poblar esta sección.",
         "errorOverride": "No se pudo actualizar la inclusión ({code}). Inténtalo de nuevo.",
-        "errorOverrideNeedsConfirmation": "Esta señal requiere un flujo de confirmación que aún no está disponible. La Fase 2 añadirá el aviso y el registro de auditoría de la anulación.",
+        "errorOverrideNeedsConfirmation": "Esta señal requiere reconocimiento explícito del riesgo antes de añadirla a la presentación al banco.",
+        "overrideCaption": {
+          "label": "Anulaste esto el {date}",
+          "tooltip": "Esta fila se mantenía interna por defecto. Decidiste explícitamente incluirla en la presentación al banco tras reconocer el riesgo. La decisión queda registrada en el rastro de auditoría de la disputa."
+        },
         "groupTags": {
           "usedAsBankArgument": "Argumento decisivo",
           "contextOnly": "De apoyo",

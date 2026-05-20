@@ -54,6 +54,21 @@ const GROUP_ORDER: Group[] = [
   "excludedByMerchant",
 ];
 
+/** Render an audit-confirm timestamp as "Mon DD" for the caption.
+ *  Falls back to the raw ISO if the date is unparseable. */
+function formatOverrideDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+    }).format(d);
+  } catch {
+    return iso.slice(0, 10);
+  }
+}
+
 function groupFor(li: EvidenceLineItem): Group | null {
   if (li.submissionMethod === "excluded") return "excludedByMerchant";
   if (li.usedAsPositiveBankEvidence) return "usedAsBankArgument";
@@ -377,6 +392,47 @@ export function InclusionReviewSection({
                         >
                           <InfoGlyph />
                           <span>{t("outsideDataCallout")}</span>
+                        </div>
+                      ) : null}
+                      {/* Phase 2 audit caption. When the merchant
+                          previously force-included this internal-only
+                          signal via the warning modal, surface a small
+                          dated caption — both as honest disclosure to
+                          the merchant (they can see their own decision
+                          later) AND so a reviewer revisiting the case
+                          knows the override was an explicit choice,
+                          not an accident. Only renders for rows whose
+                          most recent override was a force_include;
+                          force_exclude / clear actions are routine and
+                          don't earn a caption. */}
+                      {li.overrideHistory &&
+                      li.overrideHistory.action === "force_include" ? (
+                        <div
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            marginTop: 8,
+                            padding: "5px 9px",
+                            background: "#FFF7DB",
+                            border: "1px solid #FFEDB3",
+                            borderRadius: 6,
+                            fontSize: 11.5,
+                            color: "#7A5A00",
+                            lineHeight: "16px",
+                          }}
+                          title={t("overrideCaption.tooltip")}
+                        >
+                          <span aria-hidden style={{ fontSize: 11 }}>
+                            ⚠
+                          </span>
+                          <span>
+                            {t("overrideCaption.label", {
+                              date: formatOverrideDate(
+                                li.overrideHistory.confirmedAt,
+                              ),
+                            })}
+                          </span>
                         </div>
                       ) : null}
                     </div>

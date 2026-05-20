@@ -868,7 +868,11 @@
         "emptyGroup": "—",
         "emptyAll": "Nenhuma linha de prova está disponível ainda para esta disputa. Gere ou reconstrua o pacote de defesa para preencher esta seção.",
         "errorOverride": "Não foi possível atualizar a inclusão ({code}). Tente novamente.",
-        "errorOverrideNeedsConfirmation": "Este sinal exige um fluxo de confirmação ainda não disponível. A Fase 2 adicionará o aviso e o registro de auditoria da substituição.",
+        "errorOverrideNeedsConfirmation": "Este sinal exige reconhecimento explícito do risco antes de ser adicionado ao envio ao banco.",
+        "overrideCaption": {
+          "label": "Você substituiu isso em {date}",
+          "tooltip": "Esta linha era mantida interna por padrão. Você decidiu explicitamente incluí-la no envio ao banco após reconhecer o risco. A decisão fica registrada na trilha de auditoria da disputa."
+        },
         "groupTags": {
           "usedAsBankArgument": "Argumento decisivo",
           "contextOnly": "Apoio",
