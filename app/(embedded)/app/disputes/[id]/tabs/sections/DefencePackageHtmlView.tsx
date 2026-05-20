@@ -17,7 +17,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import {
   BlockStack,
   Box,
@@ -398,14 +398,29 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
             <Text as="p" variant="bodyMd">(No bank-eligible facts available.)</Text>
           ) : (
             <Box background="bg-surface-secondary" borderRadius="200" padding="300">
-              <BlockStack gap="100">
+              {/* Two-column grid: fixed-width label column + flexible
+                  value column that wraps naturally. The prior
+                  InlineStack with align="space-between" pushed the
+                  label hard-left and the value hard-right, producing
+                  a giant empty gap on short rows and an awkward right-
+                  aligned wrap on long rows (e.g. the fraud-screening
+                  row that now lists every Shopify ACCEPT signal). */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "minmax(180px, 220px) 1fr",
+                  columnGap: 16,
+                  rowGap: 8,
+                  alignItems: "start",
+                }}
+              >
                 {evidenceBasis.map((r, i) => (
-                  <InlineStack key={i} gap="400" align="space-between" wrap={false}>
+                  <Fragment key={i}>
                     <Text as="span" variant="bodySm" fontWeight="semibold">{r.label}</Text>
                     <Text as="span" variant="bodySm">{r.value}</Text>
-                  </InlineStack>
+                  </Fragment>
                 ))}
-              </BlockStack>
+              </div>
             </Box>
           )}
         </BlockStack>
