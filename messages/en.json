@@ -1654,6 +1654,8 @@
     "emailSaveError": "Failed to save email. Please try again.",
     "notifNewDispute": "New dispute alerts",
     "notifNewDisputeDesc": "Get notified when a new dispute needs your attention. If your rules send a dispute to review, the email is sent after automated evidence is collected.",
+    "notifOutcome": "Outcome posted",
+    "notifOutcomeDesc": "Get an email the moment the card network posts a final decision — won, lost, or closed without contest.",
     "notifBeforeDue": "Before due date",
     "notifBeforeDueDesc": "Reminder 24 hours before dispute deadline",
     "notifEvidenceReady": "Evidence ready",

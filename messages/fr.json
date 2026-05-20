@@ -1704,6 +1704,8 @@
     "emailSaveError": "Impossible d'enregistrer l'e-mail. Veuillez réessayer.",
     "notifNewDispute": "Nouveaux litiges",
     "notifNewDisputeDesc": "Soyez notifié lorsqu'un nouveau litige requiert votre attention. Si vos règles l'envoient en validation, l'e-mail part après la collecte automatique des preuves.",
+    "notifOutcome": "Résultat publié",
+    "notifOutcomeDesc": "Recevez un e-mail dès que le réseau de cartes publie une décision finale — gagné, perdu ou clôturé sans contestation.",
     "notifBeforeDue": "Avant l'échéance",
     "notifBeforeDueDesc": "Rappel 24 heures avant la date limite",
     "notifEvidenceReady": "Preuves prêtes",

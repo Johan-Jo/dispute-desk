@@ -1704,6 +1704,8 @@
     "emailSaveError": "No se pudo guardar el correo electrónico. Inténtelo de nuevo.",
     "notifNewDispute": "Nuevas disputas",
     "notifNewDisputeDesc": "Recibe un aviso cuando una disputa nueva requiera tu atención. Si tus reglas la envían a revisión, el correo se envía tras recopilar la evidencia automáticamente.",
+    "notifOutcome": "Resultado publicado",
+    "notifOutcomeDesc": "Recibe un correo en el momento en que la red de tarjetas emita una decisión final — ganada, perdida o cerrada sin disputa.",
     "notifBeforeDue": "Antes del vencimiento",
     "notifBeforeDueDesc": "Recordatorio 24 horas antes del plazo de la disputa",
     "notifEvidenceReady": "Evidencia lista",

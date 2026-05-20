@@ -1705,6 +1705,8 @@
     "emailSaveError": "Kunde inte spara e-post. Försök igen.",
     "notifNewDispute": "Nya tvister",
     "notifNewDisputeDesc": "Få avisering när en ny tvist behöver din uppmärksamhet. Om dina regler skickar den till granskning skickas mejlet när automatiska bevis har samlats in.",
+    "notifOutcome": "Resultat publicerat",
+    "notifOutcomeDesc": "Få ett mejl i det ögonblick kortnätverket fattar ett slutligt beslut — vunnen, förlorad eller avslutad utan bestridande.",
     "notifBeforeDue": "Innan förfallodatum",
     "notifBeforeDueDesc": "Påminnelse 24 timmar innan tvisttiden löper ut",
     "notifEvidenceReady": "Bevis klart",

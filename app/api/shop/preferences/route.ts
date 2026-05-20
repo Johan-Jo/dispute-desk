@@ -9,12 +9,23 @@ export interface NotificationPreferences {
   newDispute: boolean;
   beforeDue: boolean;
   evidenceReady: boolean;
+  /** Monthly chargeback exposure digest. Opt-out (default true). The
+   *  GET handler previously stripped this from the response even
+   *  though the embedded settings page read it; fixed 2026-05-20. */
+  monthlyDigest: boolean;
+  /** Outcome-posted email — fires when Shopify reports the dispute
+   *  closed (won / lost / accepted). Opt-out (default true). Added
+   *  alongside the outcome email helper at
+   *  lib/email/sendOutcomePostedAlert.ts. */
+  outcome: boolean;
 }
 
 const DEFAULTS: NotificationPreferences = {
   newDispute: true,
   beforeDue: true,
   evidenceReady: false,
+  monthlyDigest: true,
+  outcome: true,
 };
 
 /**
@@ -42,6 +53,8 @@ export async function GET(req: NextRequest) {
     newDispute: notifs?.newDispute ?? DEFAULTS.newDispute,
     beforeDue: notifs?.beforeDue ?? DEFAULTS.beforeDue,
     evidenceReady: notifs?.evidenceReady ?? DEFAULTS.evidenceReady,
+    monthlyDigest: notifs?.monthlyDigest ?? DEFAULTS.monthlyDigest,
+    outcome: notifs?.outcome ?? DEFAULTS.outcome,
   };
 
   const teamEmail = (team?.payload as Record<string, unknown>)?.teamEmail as string | undefined;

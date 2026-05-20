@@ -1595,6 +1595,8 @@
     "emailSaveError": "E-Mail konnte nicht gespeichert werden. Bitte erneut versuchen.",
     "notifNewDispute": "Neue Streitfälle",
     "notifNewDisputeDesc": "Benachrichtigung, wenn ein neuer Streitfall Ihre Aufmerksamkeit braucht. Bei Routing zur Prüfung erfolgt die E-Mail nach automatischer Beweisaufnahme.",
+    "notifOutcome": "Ergebnis gemeldet",
+    "notifOutcomeDesc": "Erhalten Sie eine E-Mail, sobald das Kartennetzwerk eine endgültige Entscheidung gemeldet hat — gewonnen, verloren oder ohne Einspruch geschlossen.",
     "notifBeforeDue": "Vor Fälligkeit",
     "notifBeforeDueDesc": "Erinnerung 24 Stunden vor dem Abgabetermin",
     "notifEvidenceReady": "Beweise bereit",

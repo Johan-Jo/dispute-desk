@@ -38,6 +38,10 @@ interface NotificationPrefs {
   beforeDue: boolean;
   evidenceReady: boolean;
   monthlyDigest: boolean;
+  /** Outcome-posted email — fires when Shopify reports the dispute
+   *  closed (won / lost / accepted). Default-on, opt-out. Surfaced
+   *  in Team settings as of 2026-05-20. */
+  outcome: boolean;
 }
 
 interface AutomationSettings {
@@ -62,6 +66,9 @@ export default function EmbeddedSettingsPage() {
   const [notifNewDispute, setNotifNewDispute] = useState(true);
   const [notifBeforeDue, setNotifBeforeDue] = useState(true);
   const [notifEvidenceReady, setNotifEvidenceReady] = useState(false);
+  // Outcome-posted email — default ON (opt-out semantics matching the
+  // helper at lib/email/sendOutcomePostedAlert.ts:206).
+  const [notifOutcome, setNotifOutcome] = useState(true);
   // Monthly Chargeback Exposure digest. Default ON — opt-out only.
   const [notifMonthlyDigest, setNotifMonthlyDigest] = useState(true);
 
@@ -101,6 +108,9 @@ export default function EmbeddedSettingsPage() {
           // semantics. The cron also treats `undefined` as enabled, so
           // the UI default mirrors server behavior.
           setNotifMonthlyDigest(n.monthlyDigest ?? true);
+          // Same opt-out semantics for the outcome email — the helper
+          // sends unless explicitly `outcome === false`.
+          setNotifOutcome(n.outcome ?? true);
         }
         if (prefs.teamEmail) {
           setTeamEmail(prefs.teamEmail);
@@ -298,6 +308,20 @@ export default function EmbeddedSettingsPage() {
                       label=""
                       checked={notifNewDispute}
                       onChange={(v) => { setNotifNewDispute(v); void persistNotification("newDispute", v); }}
+                      labelHidden
+                    />
+                  </InlineStack>
+                </div>
+                <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
+                  <InlineStack align="space-between" blockAlign="center">
+                    <BlockStack gap="050">
+                      <Text as="span" variant="bodyMd" fontWeight="medium">{t("notifOutcome")}</Text>
+                      <Text as="span" variant="bodySm" tone="subdued">{t("notifOutcomeDesc")}</Text>
+                    </BlockStack>
+                    <Checkbox
+                      label=""
+                      checked={notifOutcome}
+                      onChange={(v) => { setNotifOutcome(v); void persistNotification("outcome", v); }}
                       labelHidden
                     />
                   </InlineStack>

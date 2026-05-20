@@ -1704,6 +1704,8 @@
     "emailSaveError": "Não foi possível salvar o e-mail. Tente novamente.",
     "notifNewDispute": "Novas disputas",
     "notifNewDisputeDesc": "Seja notificado quando uma nova disputa precisar de atenção. Se suas regras enviarem para revisão, o e-mail é enviado após a coleta automática de evidências.",
+    "notifOutcome": "Resultado publicado",
+    "notifOutcomeDesc": "Receba um e-mail no momento em que a rede de cartões emitir uma decisão final — vencida, perdida ou encerrada sem contestação.",
     "notifBeforeDue": "Antes do prazo",
     "notifBeforeDueDesc": "Lembrete 24 horas antes do prazo da disputa",
     "notifEvidenceReady": "Evidência pronta",
