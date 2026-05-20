@@ -312,7 +312,42 @@ function reasonFor(
     const specific = specificInternalReason(field, payload);
     if (specific) return specific;
   }
+  // Payload-aware specificity for fraud_risk_screening: the merchant
+  // and the bank reviewer both deserve to see exactly which signals
+  // Shopify returned, not a generic "recommended ACCEPT" line.
+  if (
+    field === "fraud_risk_screening" &&
+    (method === "bank_argument" || method === "context_only")
+  ) {
+    const specific = fraudScreeningReasonWithSignals(payload, method);
+    if (specific) return specific;
+  }
   return REASON_OVERRIDES[field]?.[method] ?? REASON_FOR_METHOD[method];
+}
+
+/**
+ * Builds the row reason for fraud_risk_screening with the actual
+ * Shopify positiveFacts inlined. Returns null when the payload doesn't
+ * carry usable signals — callers fall back to the static
+ * REASON_OVERRIDES entry.
+ */
+function fraudScreeningReasonWithSignals(
+  payload: unknown,
+  method: "bank_argument" | "context_only",
+): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const p = payload as Record<string, unknown>;
+  const facts = Array.isArray(p.positiveFacts)
+    ? (p.positiveFacts as unknown[]).filter(
+        (x): x is string => typeof x === "string",
+      )
+    : [];
+  if (facts.length === 0) return null;
+  const signals = facts.join("; ");
+  if (method === "bank_argument") {
+    return `Shopify's own pre-authorization fraud screening recommended ACCEPT for this order — cited as supporting context in the bank argument. Signals: ${signals}.`;
+  }
+  return `Shopify's own pre-authorization fraud screening reviewed this order at checkout and recommended ACCEPT. Signals: ${signals}.`;
 }
 
 /**
