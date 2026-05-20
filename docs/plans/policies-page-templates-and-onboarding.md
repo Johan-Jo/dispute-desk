@@ -1,6 +1,19 @@
 # Plan: Policies Page — Suggested Templates & First-Visit Onboarding
 
-**Current state (as of implementation):** The Policies page has five policy types (Terms, Refund, Shipping, Privacy, Contact). A Policy Library with template cards, “Use Template” and “Upload Your Own,” and Settings → Policy templates (explicit language choice for template text: en, de, fr, es, pt, sv) are implemented. Migrations 025–027; see `docs/technical.md` (Policy Templates & Store Policy Upload).
+> **Status (2026-05-20): SHIPPED.** All seven sections of the plan body landed during the onboarding redesign rollout. Verified via end-to-end code audit:
+> - **§2 template content**: 5 templates × 6 locales in `content/policy-templates/{en,de,es,fr,pt,sv}/*.md` (refund, shipping, terms, privacy, contact-customer-service).
+> - **§3 redesigned empty-state UX**: `app/(portal)/portal/policies/page.tsx:490-563` renders the "Define your policies" headline + template library grid when `hasPolicies === false`. Title/subtitle keys `defineTitle` / `defineSubtitle` flip on the same condition (line 461).
+> - **§4 upload API**: `app/api/policies/upload/route.ts` writes to `policy_snapshots` after storing files in Supabase Storage.
+> - **§5 wizard alignment**: `app/(portal)/portal/setup/[step]/page.tsx:20-22` deep-links to `/portal/policies` with the "Define your store policies" ask text.
+> - **§6 i18n**: 7 canonical keys (`defineTitle`, `policyLibraryTitle`, `useTemplate`, `uploadYourOwn`, `bestFor`, `defineSubtitle`, `applied`) mirrored across all 6 locale files.
+>
+> One minor TODO remains at `app/(portal)/portal/policies/page.tsx:68` ("Re-wire portal auto-complete for new wizard steps"). The wizard advances via explicit "Save & Continue" today; auto-detection on policy add is a nicety, not a gap.
+>
+> **Original plan body retained below for historical context.**
+
+---
+
+**Current state (as of implementation):** The Policies page has five policy types (Terms, Refund, Shipping, Privacy, Contact). A Policy Library with template cards, "Use Template" and "Upload Your Own," and Settings → Policy templates (explicit language choice for template text: en, de, fr, es, pt, sv) are implemented. Migrations 025–027; see `docs/technical.md` (Policy Templates & Store Policy Upload).
 
 ---
 
