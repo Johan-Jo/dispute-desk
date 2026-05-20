@@ -144,6 +144,19 @@ export default function EvidenceTab({ workspace }: Props) {
     !isWindowClosed &&
     clientState.dismissedRebuildOutcomeAt !== rebuildOutcomeAt;
 
+  // When the rebuild outcome is "saved" AND the Shopify window is still
+  // open, the two banners say overlapping things (both green, both
+  // confirming the package is on the Shopify dispute). Merge them into
+  // one block so the merchant doesn't read two stacked green banners as
+  // two separate events. The merged banner keeps the outcome's title +
+  // dismissible chrome and adds the window-state body underneath.
+  const showWindowOpen =
+    isWindowOpen && !derived.isRegenerating && !isWindowClosed;
+  const shouldMergeSavedWithWindow =
+    showRebuildOutcomeBanner &&
+    rebuildOutcome === "saved" &&
+    showWindowOpen;
+
   let rebuildOutcomeBanner: ReactElement | null = null;
   if (showRebuildOutcomeBanner && rebuildOutcome) {
     const key = `disputes.evidenceTab.rebuildOutcomeBanner.${rebuildOutcome}`;
@@ -160,6 +173,9 @@ export default function EvidenceTab({ workspace }: Props) {
         onDismiss={() => actions.dismissRebuildOutcome(rebuildOutcomeAt)}
       >
         <p>{t(`rebuildOutcomeBanner.${rebuildOutcome}.body`)}</p>
+        {shouldMergeSavedWithWindow ? (
+          <p>{t("windowOpenBanner.body")}</p>
+        ) : null}
       </Banner>
     );
     // Silence the unused-key lint warning — the actual translation key
@@ -168,7 +184,7 @@ export default function EvidenceTab({ workspace }: Props) {
   }
 
   const windowOpenBanner =
-    isWindowOpen && !derived.isRegenerating && !isWindowClosed ? (
+    showWindowOpen && !shouldMergeSavedWithWindow ? (
       <Banner tone="success" title={t("windowOpenBanner.title")}>
         <p>{t("windowOpenBanner.body")}</p>
       </Banner>
