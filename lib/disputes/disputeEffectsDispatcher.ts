@@ -16,10 +16,15 @@
  *     deferred alert when a build is enqueued.
  *   - SUBMISSION_CONFIRMED: claim & send the deferred new-dispute alert
  *     ("auto" variant — we successfully submitted on your behalf).
- *   - STATUS_CHANGED, OUTCOME_DETECTED, DUE_DATE_CHANGED, DISPUTE_CLOSED:
- *     no per-event effects today; the dispute_events ledger entry is
- *     already written by the diff engine. We still pass them through
- *     `withEffectDedup` so they show up in audit_events for observability.
+ *   - OUTCOME_DETECTED: send outcome-posted email (won / lost / accepted
+ *     variant). Triggered the moment Shopify's `finalized_on` flips
+ *     null → timestamp. Effect-level dedup ensures the email fires
+ *     exactly once even if cron + webhook both observe the transition.
+ *   - STATUS_CHANGED, DUE_DATE_CHANGED, DISPUTE_CLOSED: no per-event
+ *     effects today; the dispute_events ledger entry is already
+ *     written by the diff engine. (DISPUTE_CLOSED always fires
+ *     alongside OUTCOME_DETECTED, so the email is keyed off the
+ *     latter to avoid double-firing.)
  *
  * Errors in one effect MUST NOT block the rest. We catch + log per effect.
  */
@@ -33,6 +38,10 @@ import {
   sendNewDisputeAlert,
   claimAndSendDeferredNewDisputeAlert,
 } from "@/lib/email/sendNewDisputeAlert";
+import {
+  sendOutcomePostedAlert,
+  type OutcomeVariant,
+} from "@/lib/email/sendOutcomePostedAlert";
 import { withEffectDedup } from "./dispatchOnce";
 import { keyForEffect } from "./disputeEventKey";
 import type {
@@ -103,12 +112,16 @@ async function dispatchEvent(
     case "SUBMISSION_CONFIRMED":
       await dispatchSubmissionConfirmed(args, event, summary);
       return;
-    case "STATUS_CHANGED":
     case "OUTCOME_DETECTED":
+      await dispatchOutcomeDetected(args, event, summary);
+      return;
+    case "STATUS_CHANGED":
     case "DUE_DATE_CHANGED":
     case "DISPUTE_CLOSED":
       // No per-event downstream effect today. The dispute_events ledger
       // entry is already written by the diff engine. Skip silently.
+      // DISPUTE_CLOSED always fires alongside OUTCOME_DETECTED — the
+      // email handler is keyed off the latter so we don't double-fire.
       return;
   }
 }
@@ -267,6 +280,67 @@ async function dispatchSubmissionConfirmed(
       // checks `new_dispute_alert_sent_at` so re-entry is safe; we still
       // wrap it for observability.
       await claimAndSendDeferredNewDisputeAlert(event.disputeId, "auto");
+    },
+  });
+
+  if (dedup.ran) summary.effectsRan++;
+  else summary.effectsSkipped++;
+}
+
+/** Maps the raw `final_outcome` string from `disputes` (won / lost /
+ *  refunded / accepted) to the email variant. Unknown values collapse
+ *  to "accepted" — the neutral "closed without contest" variant — so
+ *  the merchant still gets a notification even if Shopify ships a new
+ *  outcome string we don't recognise. */
+function outcomeVariantFor(finalOutcome: string | null | undefined): OutcomeVariant {
+  if (finalOutcome === "won") return "won";
+  if (finalOutcome === "lost") return "lost";
+  // "refunded" / "accepted" / any future terminal value → accepted.
+  return "accepted";
+}
+
+async function dispatchOutcomeDetected(
+  args: DispatchArgs,
+  event: DisputeTransitionEvent,
+  summary: DispatchSummary,
+): Promise<void> {
+  summary.effectsAttempted++;
+  const effectName = "outcome_posted_alert";
+  const eventKey = keyForEffect(event, effectName);
+  const variant = outcomeVariantFor(event.context.finalOutcome);
+
+  const dedup = await withEffectDedup({
+    shopId: args.shopId,
+    disputeId: event.disputeId,
+    eventKey,
+    effectName,
+    context: {
+      source: args.source,
+      correlation_id: args.correlationId ?? null,
+      final_outcome: event.context.finalOutcome ?? null,
+      variant,
+    },
+    client: args.client,
+    effect: async () => {
+      const sb = args.client ?? getServiceClient();
+      // Look up order_name for a more useful subject line. The event
+      // context doesn't carry it, but the row does.
+      const { data: row } = await sb
+        .from("disputes")
+        .select("order_name")
+        .eq("id", event.disputeId)
+        .maybeSingle();
+      const orderName =
+        (row as { order_name?: string | null } | null)?.order_name ?? null;
+      await sendOutcomePostedAlert({
+        shopId: args.shopId,
+        disputeId: event.disputeId,
+        outcome: variant,
+        reason: event.context.reason,
+        amount: event.context.amount,
+        currencyCode: event.context.currency,
+        orderName,
+      });
     },
   });
 
