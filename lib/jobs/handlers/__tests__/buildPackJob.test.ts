@@ -203,12 +203,13 @@ describe("handleBuildPack", () => {
     // there is no merchant-actionable evidence path here).
     expect(mockEvaluateAndMaybeAutoSave).not.toHaveBeenCalled();
 
-    // Deferred new-dispute email does NOT fire from buildPackJob's
-    // failed branch — the merchant will receive it via the next
-    // rebuild attempt's success path. Failed builds intentionally
-    // suppress the email to avoid notifying merchants about a system
-    // error that has no merchant action.
-    expect(mockDeferredAlert).not.toHaveBeenCalled();
+    // Deferred new-dispute email DOES fire from buildPackJob's failed
+    // branch (review variant). The dispatcher deferred this email at
+    // sync-time because the pipeline enqueued a build; when the build
+    // resolves as failed, the merchant still needs to know a dispute
+    // came in — otherwise they get total silence (which is what
+    // happened to order #1080 on 2026-05-20 before this fix).
+    expect(mockDeferredAlert).toHaveBeenCalledWith("dispute-1", "review");
   });
 
   it("buildPack threw: flips status to failed, fires deferred review alert, and rethrows", async () => {

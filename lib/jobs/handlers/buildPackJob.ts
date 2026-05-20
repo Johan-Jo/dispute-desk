@@ -123,6 +123,22 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
       void updateNormalizedStatus(packRow.dispute_id);
     }
 
+    // On a failed build (non-throw — return result with status="failed"),
+    // still fire the deferred new-dispute alert (review variant). The
+    // dispatcher deferred this email at sync-time because the pipeline
+    // enqueued a build; when the build resolves as failed, the merchant
+    // STILL needs to know a dispute came in. Without this call the merchant
+    // got total silence on order #1080. Mirror of the catch-block behavior
+    // for thrown failures further below.
+    if (!buildSucceeded && packRow?.dispute_id) {
+      void claimAndSendDeferredNewDisputeAlert(
+        packRow.dispute_id,
+        "review",
+      ).catch(() => {
+        /* non-fatal */
+      });
+    }
+
     // Skip auto-save evaluation + manual-evidence email on a failed build:
     // there is no merchant-actionable evidence path to recommend until the
     // build is rerun successfully.

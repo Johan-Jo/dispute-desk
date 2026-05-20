@@ -221,6 +221,11 @@ export async function applyDisputeSnapshot(
   if (!existing && args.fetchDisputeDetail) {
     try {
       const fallback = await args.fetchDisputeDetail(snapshot.disputeGid);
+      console.log("[applyDispute] fetchDisputeDetail fallback", {
+        disputeGid: snapshot.disputeGid,
+        fallback,
+        beforeBackfill: { disputeEvidenceGid, orderName, orderGid },
+      });
       if (fallback) {
         if (!disputeEvidenceGid && fallback.disputeEvidenceGid) {
           disputeEvidenceGid = fallback.disputeEvidenceGid;
@@ -232,6 +237,11 @@ export async function applyDisputeSnapshot(
           orderGid = fallback.orderGid;
         }
       }
+      console.log("[applyDispute] post-backfill", {
+        disputeEvidenceGid,
+        orderName,
+        orderGid,
+      });
     } catch (err) {
       guardWarnings.push(
         `fetchDisputeDetail failed: ${err instanceof Error ? err.message : String(err)}`,
