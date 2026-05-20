@@ -67,6 +67,18 @@ interface DefencePackageRow {
   facts_json: EvidenceFact[] | null;
 }
 
+/** Mirrors `PresentationStatus` from app/api/disputes/[id]/workspace/route.ts.
+ *  Kept as a string literal union here to avoid a server-side import in
+ *  this client component. */
+export type PresentationStatusLike =
+  | "DRAFT"
+  | "SAVED_TO_SHOPIFY"
+  | "AWAITING_SHOPIFY_AUTO_SUBMISSION"
+  | "SUBMITTED_TO_NETWORK"
+  | "CLOSED_WON"
+  | "CLOSED_LOST"
+  | "CLOSED_UNKNOWN";
+
 interface Props {
   packId: string | null;
   /** Used to render the inline HTML defence view + the days-remaining
@@ -81,6 +93,16 @@ interface Props {
   /** Direct deep-link to the dispute in Shopify Admin. Rendered as a
    *  Link in the submitted state. */
   shopifyAdminUrl?: string | null;
+  /** Server-derived presentation status (workspace API). Drives the
+   *  Regenerate gate after the card network has the evidence, and the
+   *  outcome-expected countdown. Optional — when absent the card falls
+   *  back to the pre-2026-05-20 behaviour driven only by
+   *  `submittedToShopifyAt`. */
+  presentationStatus?: PresentationStatusLike;
+  /** Shopify's `evidenceSentOn` — the moment Shopify forwarded the
+   *  evidence to the card network. Persisted as `disputes.submitted_at`.
+   *  Drives the outcome-expected countdown. Optional. */
+  evidenceSentOn?: string | null;
 }
 
 /** Days-remaining math, mirrors lib/disputeListHelpers getUrgency
@@ -106,6 +128,32 @@ function daysRemainingFrom(dueAt: string | null | undefined): {
     return { label: `Due in ${days} day${days === 1 ? "" : "s"}`, tone: "warning" };
   }
   return { label: `Due in ${days} days`, tone: "info" };
+}
+
+/** Card-network review window — both Visa and Mastercard reserve up to
+ *  ~45 days to post an outcome after evidence is forwarded. 30 days is
+ *  the typical pragmatic median; we present it as "by [date]" without
+ *  promising a guarantee. */
+const NETWORK_REVIEW_WINDOW_DAYS = 30;
+
+function outcomeExpectedFrom(evidenceSentOn: string | null | undefined): {
+  label: string;
+  isoDate: string;
+} | null {
+  if (!evidenceSentOn) return null;
+  const sentAt = new Date(evidenceSentOn);
+  if (Number.isNaN(sentAt.getTime())) return null;
+  const expectedBy = new Date(sentAt.getTime() + NETWORK_REVIEW_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const label = (() => {
+    try {
+      return new Intl.DateTimeFormat(undefined, {
+        dateStyle: "long",
+      }).format(expectedBy);
+    } catch {
+      return expectedBy.toISOString().slice(0, 10);
+    }
+  })();
+  return { label, isoDate: expectedBy.toISOString() };
 }
 
 function StatusBadge({ status }: { status: Status }) {
@@ -145,12 +193,32 @@ export function CompleteDefencePackageCard({
   dispute,
   submittedToShopifyAt,
   shopifyAdminUrl,
+  presentationStatus,
+  evidenceSentOn,
 }: Props) {
+  // Network-submitted: Shopify has forwarded the evidence to the card
+  // network. Distinct from "saved to Shopify" — the bank now holds the
+  // evidence and Shopify can no longer swap the saved PDF on the
+  // dispute. Regenerate must be locked here.
+  const isNetworkSubmitted = presentationStatus === "SUBMITTED_TO_NETWORK";
+  // Closed: terminal outcome posted. Regenerate is meaningless after
+  // the dispute has settled.
+  const isClosed =
+    presentationStatus === "CLOSED_WON" ||
+    presentationStatus === "CLOSED_LOST" ||
+    presentationStatus === "CLOSED_UNKNOWN";
+
   // Countdown is only relevant before submission — once the bank has
   // the package, "due in N days" stops being a useful state.
   const countdown = useMemo(
     () => (submittedToShopifyAt ? null : daysRemainingFrom(dispute?.dueAt)),
     [dispute?.dueAt, submittedToShopifyAt],
+  );
+  // Outcome-expected window: only meaningful when the card network has
+  // the evidence. ~30 days from the moment Shopify forwarded.
+  const outcomeExpected = useMemo(
+    () => (isNetworkSubmitted ? outcomeExpectedFrom(evidenceSentOn) : null),
+    [isNetworkSubmitted, evidenceSentOn],
   );
   const [latest, setLatest] = useState<DefencePackageRow | null>(null);
   const [bankFacing, setBankFacing] = useState<DefencePackageRow | null>(null);
@@ -363,7 +431,11 @@ export function CompleteDefencePackageCard({
   //                           this draft was generated, so the next
   //                           regenerate picks up newer LLM guidance.
   //
-  // When neither holds, the Regenerate overflow stays hidden.
+  // Hard lock: once the card network has the evidence
+  // (`presentationStatus === "SUBMITTED_TO_NETWORK"`) or the dispute is
+  // closed, Regenerate is meaningless — Shopify can no longer swap the
+  // forwarded PDF, and a draft would just sit unused. The lock fires
+  // even if the prompt version has advanced.
   const submittedRowIsStale = row.status === "submitted" && (
     (latest?.status ?? null) === "stale" ||
     (typeof row.prompt_version === "number" &&
@@ -371,10 +443,12 @@ export function CompleteDefencePackageCard({
       row.prompt_version < currentPromptVersion)
   );
   const canRegenerate =
-    row.status === "draft" ||
-    row.status === "stale" ||
-    row.status === "failed" ||
-    submittedRowIsStale;
+    !isNetworkSubmitted &&
+    !isClosed &&
+    (row.status === "draft" ||
+      row.status === "stale" ||
+      row.status === "failed" ||
+      submittedRowIsStale);
 
   const formattedSubmittedAt = submittedToShopifyAt
     ? (() => {
@@ -410,18 +484,34 @@ export function CompleteDefencePackageCard({
               See the action row further down for the matching button hierarchy. */}
           {isSubmittedToBank ? (
             <BlockStack gap="300">
-              {/* Section A — Submitted package. Always renders when
-                  the bank already has a version. Green/success tone
-                  answers "what has already happened?" */}
-              <Banner tone="success" title="Submitted package">
+              {/* Section A — Submitted package. Title + body adapt to
+                  the real network state when presentationStatus is
+                  available:
+                    - SUBMITTED_TO_NETWORK → "Forwarded to card network"
+                    - SAVED_TO_SHOPIFY / AWAITING_AUTO_SUBMISSION →
+                      "Saved to Shopify (awaiting forwarding)"
+                    - CLOSED_* → "Outcome posted"
+                  When presentationStatus is absent (legacy mount), the
+                  copy falls back to the pre-2026-05-20 "Submitted
+                  package" phrasing. */}
+              <Banner
+                tone="success"
+                title={
+                  isClosed
+                    ? "Outcome posted"
+                    : isNetworkSubmitted
+                      ? "Forwarded to the card network"
+                      : "Saved to Shopify"
+                }
+              >
                 <BlockStack gap="100">
                   {bankFacing ? (
                     <Text as="p" variant="bodySm">
-                      The bank currently has defence package v
-                      {bankFacing.version}
-                      {formattedSubmittedAt
-                        ? `. Submitted on ${formattedSubmittedAt}.`
-                        : "."}
+                      {isNetworkSubmitted
+                        ? `Defence package v${bankFacing.version} has been forwarded by Shopify to the card network${formattedSubmittedAt ? `. Saved to Shopify on ${formattedSubmittedAt}.` : "."} The card network's decision is final once posted — Shopify can no longer swap the forwarded PDF.`
+                        : isClosed
+                          ? `Defence package v${bankFacing.version} was submitted${formattedSubmittedAt ? ` on ${formattedSubmittedAt}` : ""}. The dispute has been closed by the card network.`
+                          : `Defence package v${bankFacing.version} is saved to Shopify${formattedSubmittedAt ? ` (${formattedSubmittedAt})` : ""}. Shopify has not yet forwarded it to the card network — if you regenerate, the new PDF will replace this saved version cleanly.`}
                     </Text>
                   ) : (
                     <Text as="p" variant="bodySm">
@@ -443,12 +533,26 @@ export function CompleteDefencePackageCard({
                 </BlockStack>
               </Banner>
 
-              {/* Section B — New draft available. Renders only when a
-                  newer, unsubmitted draft exists. Info/blue tone
-                  answers "what do I do next?" The buttons sit below
-                  with a clear primary action (Approve) and demoted
-                  Regenerate. */}
-              {hasUnsubmittedDraft && latest && bankFacing ? (
+              {/* Outcome-expected countdown — only when the card
+                  network has the evidence. Sets expectation without
+                  promising the network's exact turnaround. */}
+              {outcomeExpected ? (
+                <Banner tone="info" title="Card network reviewing">
+                  <Text as="p" variant="bodySm">
+                    Visa and Mastercard typically post an outcome within
+                    {" "}{NETWORK_REVIEW_WINDOW_DAYS} days of forwarding. Expect a
+                    decision around <strong>{outcomeExpected.label}</strong>.
+                    DisputeDesk will update this card as soon as the
+                    outcome arrives.
+                  </Text>
+                </Banner>
+              ) : null}
+
+              {/* Section B — New draft available. Suppressed when the
+                  card network already has the evidence (regenerating is
+                  meaningless: Shopify can't replace the forwarded PDF)
+                  or when the dispute has closed. */}
+              {hasUnsubmittedDraft && latest && bankFacing && !isNetworkSubmitted && !isClosed ? (
                 <Banner tone="info" title={`Draft v${latest.version} is ready for review`}>
                   <Text as="p" variant="bodySm">
                     Draft v{latest.version} has been generated but has not

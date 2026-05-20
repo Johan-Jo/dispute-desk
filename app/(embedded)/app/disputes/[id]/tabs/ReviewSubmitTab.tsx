@@ -72,6 +72,8 @@ export default function ReviewSubmitTab({ workspace }: Props) {
         packId={data?.pack?.id ?? null}
         submittedToShopifyAt={view.submittedAt}
         shopifyAdminUrl={view.shopifyAdminUrl}
+        presentationStatus={data?.presentationStatus}
+        evidenceSentOn={data?.dispute?.submittedAt ?? null}
         dispute={
           data?.dispute
             ? {
