@@ -309,6 +309,10 @@ function reasonFor(
   // section by `lib/argument/internalSignals.ts` — keeping the two
   // surfaces in lockstep.
   if (method === "internal_only") {
+    if (field === "customer_account_info") {
+      const specific = customerAccountInternalReason(payload);
+      if (specific) return specific;
+    }
     const specific = specificInternalReason(field, payload);
     if (specific) return specific;
   }
@@ -368,16 +372,22 @@ function fraudScreeningReasonWithSignals(
  * customerSince). Returns null when no payload is present — callers
  * fall back to the static REASON_OVERRIDES entry.
  *
- * Three cases drive the merchant- and bank-facing prose:
- *   1. Returning customer with prior orders and no prior disputes →
- *      this is the strongest case for this row; cite the count and
- *      the dispute-free history.
- *   2. Returning customer but with prior chargebacks → context only;
- *      the bank reviewer must see the prior-history caveat.
- *   3. New customer (no prior orders) → "first order on this account";
- *      a real signal the bank can weigh (a brand-new account is
- *      neither inherently fraudulent nor exonerating), but never
- *      decisive.
+ * Two cases reach the bank-facing methods (bank_argument /
+ * context_only):
+ *   1. Returning customer (>=1 prior order) with no prior disputes →
+ *      cite the count and the dispute-free history. This is genuinely
+ *      supportive on a fraud rebuttal.
+ *   2. Returning customer with prior chargebacks → context only with
+ *      an explicit caveat so the bank reviewer reads it correctly.
+ *
+ * First-time customers (prior === 0) do NOT reach this helper on a
+ * fraud dispute — the derivation routes them to `internal_only` via
+ * `isNegativeOrAmbiguous`, because "new account" on an unauthorized-
+ * transaction rebuttal is a fraud INDICATOR, not supporting evidence.
+ * Surfacing it would invite the bank to weigh it AGAINST the merchant.
+ * Non-fraud reason codes (INR, subscription canceled, etc.) still
+ * route through this helper because new-customer status is neutral
+ * there — the helper handles that case too.
  */
 function customerAccountReasonFromPayload(
   payload: unknown,
@@ -398,23 +408,54 @@ function customerAccountReasonFromPayload(
   if (prior !== null && prior >= 1 && disputeFree) {
     const word = prior === 1 ? "order" : "orders";
     if (method === "bank_argument") {
-      return `Customer has ${prior} prior undisputed ${word} on this account${sinceLabel ? ` (customer since ${sinceLabel})` : ""}. Cited as supporting context — established account history is consistent with the cardholder having authorized this transaction.`;
+      return `Returning customer with ${prior} prior undisputed ${word} on this account${sinceLabel ? ` (customer since ${sinceLabel})` : ""}. Cited as supporting context — an established dispute-free order history is consistent with the cardholder having authorized this transaction.`;
     }
-    return `Customer has ${prior} prior undisputed ${word} on this account${sinceLabel ? ` (customer since ${sinceLabel})` : ""}. Included as context — corroborates the account is established, but not decisive on its own.`;
+    return `Returning customer with ${prior} prior undisputed ${word} on this account${sinceLabel ? ` (customer since ${sinceLabel})` : ""}. Included as context — the established history corroborates the account is legitimate, but is not decisive on its own.`;
   }
 
   if (prior !== null && prior >= 1 && !disputeFree) {
-    return `Customer has ${prior} prior ${prior === 1 ? "order" : "orders"} on this account but the account also has prior chargebacks. Included as context only — the prior-dispute history caveats how much weight this carries.`;
+    return `Returning customer with ${prior} prior ${prior === 1 ? "order" : "orders"} on this account, but the account also has prior chargebacks. Included as context only — the prior-dispute history caveats how much weight the bank reviewer should give this row.`;
   }
 
-  // New customer (no prior orders) or payload doesn't carry counts.
+  // First-time customer on a NON-fraud reason code (fraud codes don't
+  // reach this branch — see the function header). Honest plain text.
   if (prior === 0) {
     if (sinceLabel) {
-      return `This is the customer's first order on this account (account created ${sinceLabel}). Included as context — a new account is neither inherently fraudulent nor exonerating, but the bank reviewer can weigh it alongside the payment-authentication signals.`;
+      return `First-time customer (account created ${sinceLabel}, no prior orders). Included as context only — there is no prior order history to corroborate this transaction.`;
     }
-    return `This is the customer's first order on file. Included as context — new-customer status is neither inherently fraudulent nor exonerating; the payment-authentication signals carry the argument.`;
+    return `First-time customer with no prior orders on this account. Included as context only — there is no prior order history to corroborate this transaction.`;
   }
 
+  return null;
+}
+
+/**
+ * Merchant-facing reason text shown when customer_account_info is
+ * kept internal because the payload is weakening on a fraud dispute
+ * (first-time customer, or returning customer with prior chargebacks).
+ * Never reaches the bank.
+ */
+function customerAccountInternalReason(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const p = payload as Record<string, unknown>;
+  const prior =
+    typeof p.priorUndisputedOrders === "number"
+      ? p.priorUndisputedOrders
+      : typeof p.totalOrders === "number"
+        ? p.totalOrders
+        : null;
+  const sinceRaw = typeof p.customerSince === "string" ? p.customerSince : null;
+  const sinceLabel = formatCustomerSince(sinceRaw);
+
+  if (prior === 0 || prior === null) {
+    if (sinceLabel) {
+      return `This is a first-time customer (account created ${sinceLabel}, no prior orders). Kept internal on a fraud dispute — surfacing "new account" to the bank reads as a fraud indicator, not as supporting evidence.`;
+    }
+    return `This is a first-time customer with no prior orders on this account. Kept internal on a fraud dispute — surfacing "new account" to the bank reads as a fraud indicator, not as supporting evidence.`;
+  }
+  if (p.disputeFreeHistory === false) {
+    return `The customer has prior orders on this account, but the account also has prior chargebacks. Kept internal on a fraud dispute — citing an account with a chargeback history would weaken the response.`;
+  }
   return null;
 }
 
@@ -534,6 +575,13 @@ function readString(v: unknown): string | null {
  *     unconditionally — they ride a separate channel
  *   - `avs_cvv_match` when BOTH codes are non-match (i.e. the payment
  *     authentication failed), per user-spec §H
+ *   - `customer_account_info` when the customer has ZERO prior orders
+ *     AND the dispute is a fraud claim. A brand-new account on an
+ *     unauthorized-transaction rebuttal is a fraud INDICATOR, not
+ *     supporting evidence; surfacing it to the bank invites the
+ *     reviewer to weigh it AGAINST the merchant. For non-fraud claims
+ *     (INR, subscription, etc.) new-customer status is genuinely
+ *     neutral, so the gate is fraud-scoped.
  *
  * Used as a belt-and-suspenders check so even if an inclusion override
  * slips past the API guard, the derivation refuses to elevate. Also
@@ -543,6 +591,7 @@ function readString(v: unknown): string | null {
 function isNegativeOrAmbiguous(
   field: string,
   payload: Record<string, unknown> | null,
+  reasonFamily: ReasonFamily,
 ): boolean {
   if (INTERNAL_ONLY_FIELDS.has(field)) return true;
   if (!payload) return false;
@@ -556,6 +605,23 @@ function isNegativeOrAmbiguous(
     const cvvFail = cvvPresent && !CVV_MATCH_CODES.has(cvv.toUpperCase());
     // Both codes present AND both fail → unambiguously negative.
     if (avsPresent && cvvPresent && avsFail && cvvFail) return true;
+  }
+
+  if (field === "customer_account_info" && reasonFamily === "fraud") {
+    const prior =
+      typeof payload.priorUndisputedOrders === "number"
+        ? payload.priorUndisputedOrders
+        : typeof payload.totalOrders === "number"
+          ? payload.totalOrders
+          : null;
+    // Treat first-order accounts (and missing-history payloads) as a
+    // fraud-indicator signal — keep internal so the bank doesn't read
+    // "new customer" as a reason to side with the cardholder.
+    if (prior === 0 || prior === null) return true;
+    // Returning customer but the account has prior chargebacks — also
+    // a fraud-weakening signal. Account history with disputes carries
+    // the OPPOSITE inference from a clean history.
+    if (payload.disputeFreeHistory === false) return true;
   }
 
   return false;
@@ -601,6 +667,7 @@ interface ResolutionContext {
   contributesStrongOrModerate: boolean;
   naturalCategory: EvidenceCategory;
   factLookup: FactLookup | undefined;
+  reasonFamily: ReasonFamily;
 }
 
 function resolveSubmissionMethod(ctx: ResolutionContext): SubmissionMethod {
@@ -621,7 +688,7 @@ function resolveSubmissionMethod(ctx: ResolutionContext): SubmissionMethod {
   //   3. Otherwise — context_only. The override NEVER itself elevates
   //      strength or sets usedAsPositiveBankEvidence=true.
   if (ctx.override === "force_include") {
-    const unsafe = ctx.internalFlag || isNegativeOrAmbiguous(ctx.field, ctx.payload);
+    const unsafe = ctx.internalFlag || isNegativeOrAmbiguous(ctx.field, ctx.payload, ctx.reasonFamily);
     if (!unsafe) {
       if (ctx.naturalCategory === "strong" || ctx.naturalCategory === "moderate") {
         return "bank_argument";
@@ -649,7 +716,7 @@ function resolveSubmissionMethod(ctx: ResolutionContext): SubmissionMethod {
   // Negative-or-ambiguous payloads on otherwise-bank-facing fields
   // (e.g. avs_cvv_match with both codes failing) — surface as
   // internal_only so the row doesn't read as a positive bank argument.
-  if (ctx.status === "available" && isNegativeOrAmbiguous(ctx.field, ctx.payload)) {
+  if (ctx.status === "available" && isNegativeOrAmbiguous(ctx.field, ctx.payload, ctx.reasonFamily)) {
     return "internal_only";
   }
 
@@ -709,7 +776,7 @@ export function deriveEvidenceLineItems(
 
     const payload = payloadObjectFor(payloadByField, item.field);
     const internalFlag = INTERNAL_ONLY_FIELDS.has(item.field);
-    const negativeOrAmbiguous = isNegativeOrAmbiguous(item.field, payload);
+    const negativeOrAmbiguous = isNegativeOrAmbiguous(item.field, payload, input.reasonFamily);
     const override = inclusionOverrides.get(item.field);
     const failed = attachmentUploadFailures.has(item.field);
     const excluded = excludedFields.has(item.field);
@@ -733,6 +800,7 @@ export function deriveEvidenceLineItems(
       contributesStrongOrModerate: hasContribution,
       naturalCategory,
       factLookup: lookup,
+      reasonFamily: input.reasonFamily,
     });
 
     // Strength contribution. Internal-only fields are always rendered

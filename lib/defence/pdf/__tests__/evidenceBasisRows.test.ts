@@ -125,7 +125,7 @@ describe("buildEvidenceBasisRows", () => {
     );
   });
 
-  it("renders new-customer state when there are no prior orders", () => {
+  it("uses a defensive fallback when a bank-eligible fact has no count (legacy bypass)", () => {
     const rows = buildEvidenceBasisRows([
       fact({
         category: "prior_customer_history",
@@ -133,7 +133,11 @@ describe("buildEvidenceBasisRows", () => {
         value: { priorOrderCount: 0 },
       }),
     ]);
-    expect(rows[0].value).toBe("First order on this account");
+    // First-time customers are categorized as supporting by the
+    // canonical categorizer and never reach buildEvidenceBasisRows in
+    // production. The fallback string keeps the cell debuggable if a
+    // legacy fact slips through.
+    expect(rows[0].value).toBe("Prior account history on file");
   });
 
   it("empty input → empty rows", () => {

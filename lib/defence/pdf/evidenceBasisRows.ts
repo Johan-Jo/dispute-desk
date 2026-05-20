@@ -107,10 +107,12 @@ function renderValue(fact: EvidenceFact): string {
     }
     case "prior_customer_history":
     case "account_history": {
-      // Payload-aware. Saying "Confirmed" with no prior-order count was
-      // dishonest for a brand-new customer (totalOrders=0) — there is
-      // no history to confirm. Now the cell reflects what's actually on
-      // the account so the bank reviewer reads a truthful row.
+      // Only bank-eligible facts reach this renderer (filtered upstream
+      // in buildEvidenceBasisRows). For customer_account_info that
+      // means `categorizeEvidenceField` returned "strong" / "moderate"
+      // — i.e. the customer has >=1 prior order. First-time-customer
+      // facts are categorized as supporting and never bank-eligible,
+      // so they never appear here.
       const count = typeof v?.priorOrderCount === "number" ? v.priorOrderCount : 0;
       const disputeFree = v?.disputeFreeHistory !== false;
       if (count >= 1 && disputeFree) {
@@ -119,7 +121,10 @@ function renderValue(fact: EvidenceFact): string {
       if (count >= 1 && !disputeFree) {
         return `${count} prior order${count === 1 ? "" : "s"} (account has prior chargebacks)`;
       }
-      return "First order on this account";
+      // Defensive fallback for legacy / hand-rolled facts that bypassed
+      // the categorizer gate. The earlier "Confirmed" string was vague;
+      // be explicit so a bad row is debuggable instead of silently misleading.
+      return "Prior account history on file";
     }
     case "policy_refund":
     case "policy_shipping":
