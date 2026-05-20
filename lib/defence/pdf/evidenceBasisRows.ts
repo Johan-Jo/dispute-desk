@@ -107,8 +107,19 @@ function renderValue(fact: EvidenceFact): string {
     }
     case "prior_customer_history":
     case "account_history": {
+      // Payload-aware. Saying "Confirmed" with no prior-order count was
+      // dishonest for a brand-new customer (totalOrders=0) — there is
+      // no history to confirm. Now the cell reflects what's actually on
+      // the account so the bank reviewer reads a truthful row.
       const count = typeof v?.priorOrderCount === "number" ? v.priorOrderCount : 0;
-      return count > 0 ? `${count} prior order${count === 1 ? "" : "s"}` : "Confirmed";
+      const disputeFree = v?.disputeFreeHistory !== false;
+      if (count >= 1 && disputeFree) {
+        return `${count} prior undisputed order${count === 1 ? "" : "s"}`;
+      }
+      if (count >= 1 && !disputeFree) {
+        return `${count} prior order${count === 1 ? "" : "s"} (account has prior chargebacks)`;
+      }
+      return "First order on this account";
     }
     case "policy_refund":
     case "policy_shipping":

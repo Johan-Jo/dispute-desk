@@ -101,7 +101,7 @@ describe("buildEvidenceBasisRows", () => {
     expect(rows[0].value).toContain("Signature on delivery");
   });
 
-  it("renders prior customer count", () => {
+  it("renders prior customer count (no prior chargebacks)", () => {
     const rows = buildEvidenceBasisRows([
       fact({
         category: "prior_customer_history",
@@ -109,7 +109,31 @@ describe("buildEvidenceBasisRows", () => {
         value: { priorOrderCount: 4 },
       }),
     ]);
-    expect(rows[0].value).toBe("4 prior orders");
+    expect(rows[0].value).toBe("4 prior undisputed orders");
+  });
+
+  it("renders prior customer count with a prior-chargeback caveat", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        category: "prior_customer_history",
+        label: "Customer history",
+        value: { priorOrderCount: 2, disputeFreeHistory: false },
+      }),
+    ]);
+    expect(rows[0].value).toBe(
+      "2 prior orders (account has prior chargebacks)",
+    );
+  });
+
+  it("renders new-customer state when there are no prior orders", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        category: "prior_customer_history",
+        label: "Customer history",
+        value: { priorOrderCount: 0 },
+      }),
+    ]);
+    expect(rows[0].value).toBe("First order on this account");
   });
 
   it("empty input → empty rows", () => {

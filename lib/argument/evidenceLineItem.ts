@@ -322,6 +322,18 @@ function reasonFor(
     const specific = fraudScreeningReasonWithSignals(payload, method);
     if (specific) return specific;
   }
+  // Payload-aware specificity for customer_account_info: "context not
+  // decisive" is too generic — the reason WHY this is supporting
+  // depends entirely on the payload (new customer vs. returning vs.
+  // returning-with-prior-chargebacks). The bank reviewer reads the row
+  // very differently in each case.
+  if (
+    field === "customer_account_info" &&
+    (method === "bank_argument" || method === "context_only")
+  ) {
+    const specific = customerAccountReasonFromPayload(payload, method);
+    if (specific) return specific;
+  }
   return REASON_OVERRIDES[field]?.[method] ?? REASON_FOR_METHOD[method];
 }
 
@@ -348,6 +360,86 @@ function fraudScreeningReasonWithSignals(
     return `Shopify's own pre-authorization fraud screening recommended ACCEPT for this order — cited as supporting context in the bank argument. Signals: ${signals}.`;
   }
   return `Shopify's own pre-authorization fraud screening reviewed this order at checkout and recommended ACCEPT. Signals: ${signals}.`;
+}
+
+/**
+ * Builds the row reason for customer_account_info from the actual
+ * payload (totalOrders, priorUndisputedOrders, disputeFreeHistory,
+ * customerSince). Returns null when no payload is present — callers
+ * fall back to the static REASON_OVERRIDES entry.
+ *
+ * Three cases drive the merchant- and bank-facing prose:
+ *   1. Returning customer with prior orders and no prior disputes →
+ *      this is the strongest case for this row; cite the count and
+ *      the dispute-free history.
+ *   2. Returning customer but with prior chargebacks → context only;
+ *      the bank reviewer must see the prior-history caveat.
+ *   3. New customer (no prior orders) → "first order on this account";
+ *      a real signal the bank can weigh (a brand-new account is
+ *      neither inherently fraudulent nor exonerating), but never
+ *      decisive.
+ */
+function customerAccountReasonFromPayload(
+  payload: unknown,
+  method: "bank_argument" | "context_only",
+): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const p = payload as Record<string, unknown>;
+  const prior =
+    typeof p.priorUndisputedOrders === "number"
+      ? p.priorUndisputedOrders
+      : typeof p.totalOrders === "number"
+        ? p.totalOrders
+        : null;
+  const disputeFree = p.disputeFreeHistory !== false;
+  const sinceRaw = typeof p.customerSince === "string" ? p.customerSince : null;
+  const sinceLabel = formatCustomerSince(sinceRaw);
+
+  if (prior !== null && prior >= 1 && disputeFree) {
+    const word = prior === 1 ? "order" : "orders";
+    if (method === "bank_argument") {
+      return `Customer has ${prior} prior undisputed ${word} on this account${sinceLabel ? ` (customer since ${sinceLabel})` : ""}. Cited as supporting context — established account history is consistent with the cardholder having authorized this transaction.`;
+    }
+    return `Customer has ${prior} prior undisputed ${word} on this account${sinceLabel ? ` (customer since ${sinceLabel})` : ""}. Included as context — corroborates the account is established, but not decisive on its own.`;
+  }
+
+  if (prior !== null && prior >= 1 && !disputeFree) {
+    return `Customer has ${prior} prior ${prior === 1 ? "order" : "orders"} on this account but the account also has prior chargebacks. Included as context only — the prior-dispute history caveats how much weight this carries.`;
+  }
+
+  // New customer (no prior orders) or payload doesn't carry counts.
+  if (prior === 0) {
+    if (sinceLabel) {
+      return `This is the customer's first order on this account (account created ${sinceLabel}). Included as context — a new account is neither inherently fraudulent nor exonerating, but the bank reviewer can weigh it alongside the payment-authentication signals.`;
+    }
+    return `This is the customer's first order on file. Included as context — new-customer status is neither inherently fraudulent nor exonerating; the payment-authentication signals carry the argument.`;
+  }
+
+  return null;
+}
+
+const MONTHS_LONG = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+/** Format an ISO timestamp as "Month YYYY" for prose. Returns null on
+ *  garbage input so callers can drop the parenthetical. */
+function formatCustomerSince(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${MONTHS_LONG[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
 /**
