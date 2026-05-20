@@ -57,7 +57,7 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // promptBodies were rewritten to lead with the claim category instead
 // of the network's environment classification. Same cache-invalidation
 // pattern as the 2→3 bump above.
-const PROMPT_VERSION = 7;
+const PROMPT_VERSION = 8;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted

@@ -28,6 +28,7 @@ export const visa_10_4_fraud: ReasonCodeGuidance = {
     "Prioritise payment authentication signals: AVS+CVV match, 3-D Secure authentication (only if an approved fact explicitly supports it), and successful authorization.",
     "Where approved facts support it, mention billing alignment, prior customer history, and customer communication that pre-dated the dispute.",
     "When a fraud_screening fact is in approvedFacts, cite Shopify's pre-authorization screening as supporting context with SPECIFIC signals, not a count. The fact's `value.positiveFacts` array carries the actual phrases Shopify returned (e.g. 'Card Verification Value (CVV) is correct', 'Billing street address matches credit card's registered address', 'IP address used to place the order isn\\'t a high risk internet connection (web proxy)'). Cite at least 2 of those phrases verbatim or in close paraphrase so the bank reviewer can audit what the screening actually flagged. Example phrasing: 'Shopify's own pre-authorization fraud screening reviewed this transaction at checkout and recommended ACCEPT, noting [phrase 1], [phrase 2], and [phrase 3].' DO NOT write 'N positive signals' or 'multiple positive signals' without naming them — the reviewer cannot audit a count. Never quote the numeric risk score or the taxonomy words 'risk_level' / 'recommendation' as a heading — paraphrase only the recommendation as 'ACCEPT' / 'low-risk'. Treat this as supporting corroboration of the authentication argument, never as the primary basis.",
+    "When an ip_location fact is in approvedFacts (it appears only when the collector pre-gated for a clean match: same country/city as billing, no VPN/proxy/datacenter signal, IP history consistent), cite it as supporting context grounded in WHAT MATCHED. Acceptable phrasing: 'The order IP geolocated to the same country as the billing and shipping address, with no VPN, proxy, or datacenter signals — consistent with a cardholder placing the order from their usual location.' DO NOT quote the raw IP address, the city name, the ISP/ASN, coordinates, or the IPinfo provider name. The bank cannot audit a raw IP; they CAN audit a country/region-match outcome. Treat this as supporting corroboration of the authentication argument, never as primary or decisive evidence — IP geolocation is descriptive, not contractual.",
     "The policyArgument section is OMITTED for this reason code. Refund, shipping, and cancellation policy disclosure does not refute an unauthorized-transaction claim — the dispute is about cardholder authentication, not the merchant's terms. Always return an empty string for policyArgument and add it to omittedSections with reason 'Policy disclosure is not relevant to an unauthorized-transaction claim. The argument hinges on cardholder authentication signals, not the merchant's published terms.' Do NOT cite policy_refund, policy_shipping, policy_cancellation, or policy_acceptance facts in any section.",
     "Do NOT cite Shopify's fulfillmentStatus value (UNFULFILLED / FULFILLED / PARTIAL) anywhere in the narrative. fulfillmentStatus is an order-system state, not bank-facing evidence — naming it (especially UNFULFILLED) in a fraud rebuttal invites the bank to ask whether goods shipped, which is irrelevant to the authentication argument. If the order_record fact is cited, ground the argument in channel/timestamp/order details only, never the fulfillment status string.",
     "Do NOT argue that the customer received the goods unless a delivery_proof fact with proofType='delivered'/'signature' or a service_access fact with serviceDelivered=true is in approvedFacts.",
@@ -45,7 +46,6 @@ export const visa_10_4_fraud: ReasonCodeGuidance = {
     "prior_customer_history",
   ],
   avoid: [
-    "ip_location",
     "device_session",
     // NOTE: `fraud_screening` was previously avoided. Removed
     // 2026-05-19 because the source-collector
@@ -58,6 +58,16 @@ export const visa_10_4_fraud: ReasonCodeGuidance = {
     // issuer weighs in a fraud rebuttal. Still capped at MODERATE
     // by the canonical-evidence registry — never elevated to
     // STRONG (Shopify's facts are descriptive, not contractual).
+    //
+    // NOTE: `ip_location` was previously avoided. Removed 2026-05-20
+    // for the same reason — the source-collector
+    // (`lib/packs/sources/deviceLocationSource.ts`) gates emission
+    // on a clean payload (location match, no VPN/proxy/hosting, IP
+    // history consistent). When the row reaches the LLM it's already
+    // bank-safe by construction. Avoiding it across the board meant
+    // discarding a legitimate positive corroborator on every fraud
+    // dispute that had a clean IP match.
+    //
     // Policy facts are not bank-facing evidence for unauthorized-fraud
     // claims; the policyArgument section is omitted entirely for this
     // reason code (see promptBody rule).
@@ -97,6 +107,10 @@ export const visa_10_4_fraud: ReasonCodeGuidance = {
     // Shopify's own analysis returned ACCEPT (gated by
     // fraudRiskSource). See `avoid` list comment above.
     "fraud_screening",
+    // IP location — only ever cited when the collector's
+    // bankEligible gate passed (clean match, no VPN/proxy/hosting,
+    // consistent IP history). See `avoid` list comment above.
+    "ip_location",
   ],
-  version: 5,
+  version: 6,
 };

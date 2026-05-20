@@ -424,11 +424,29 @@ export function categorizeEvidenceField(
   }
 
   // ── ip_location_check ──
+  // Trust the collector's pre-computed `bankEligible` flag. It's
+  // already true ONLY when all three positive conditions hold:
+  //   - locationMatch ∈ {same_city, same_country}
+  //   - no VPN / proxy / hosting in ipinfo.privacy
+  //   - ipConsistencyLevel ∈ {consistent, first_seen}
+  // See lib/packs/sources/deviceLocationSource.ts → computeBankEligible.
+  //
+  // Same-city is the strongest variant (city-level geolocation matching
+  // billing) → moderate. Same-country with the rest of the gate clean
+  // → supporting (still bank-facing, just less decisive). When the
+  // collector says not eligible, the row stays supporting so it never
+  // reaches a bank-facing surface via natural categorization — the
+  // `isNegativeOrAmbiguous` guard in the line-item resolver routes it
+  // to `internal_only` for negative payloads.
+  //
+  // (Prior to 2026-05-20 this branch checked locationMatch === "match"
+  // || "country_match" — values the collector never emits since the
+  // 2026-04-21 rename to same_city / same_country. The branch was dead
+  // code; everything fell through to "supporting".)
   if (fieldKey === "ip_location_check") {
-    if (p.bankEligible === false) return "supporting";
-    const privacy = (p.ipinfo as { privacy?: { vpn?: boolean; proxy?: boolean; hosting?: boolean } } | undefined)?.privacy;
-    if (privacy?.vpn || privacy?.proxy || privacy?.hosting) return "supporting";
-    if (p.locationMatch === "match" || p.locationMatch === "country_match") return "moderate";
+    if (p.bankEligible !== true) return "supporting";
+    if (p.locationMatch === "same_city") return "moderate";
+    if (p.locationMatch === "same_country") return "supporting";
     return "supporting";
   }
 

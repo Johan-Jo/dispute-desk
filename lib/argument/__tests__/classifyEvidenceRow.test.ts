@@ -160,28 +160,36 @@ describe("classifyEvidenceRow — shipping/delivery proofType", () => {
 });
 
 describe("classifyEvidenceRow — ip_location_check", () => {
-  it("clean match → moderate", () => {
+  // Updated 2026-05-20 — the categorizer now reads the collector's
+  // pre-computed `bankEligible` flag and the canonical
+  // `same_city / same_country` locationMatch values. The prior tests
+  // used `"match"`, which the collector never emits since the
+  // 2026-04-21 rename (deviceLocationSource.ts:25). That dead-code
+  // path made every IP check fall through to "supporting" regardless
+  // of payload — bug masked by the field-level INTERNAL_ONLY_FIELDS
+  // guard, which we removed today.
+  it("clean same-city match → moderate", () => {
     expect(
       classifyEvidenceRow({
         fieldKey: "ip_location_check",
         status: "available",
         payload: {
           bankEligible: true,
-          locationMatch: "match",
+          locationMatch: "same_city",
           ipinfo: { privacy: { vpn: false, proxy: false, hosting: false } },
         },
       }).category,
     ).toBe("moderate");
   });
-  it("VPN flag → supporting", () => {
+  it("clean same-country match → supporting (bank-facing but not decisive)", () => {
     expect(
       classifyEvidenceRow({
         fieldKey: "ip_location_check",
         status: "available",
         payload: {
           bankEligible: true,
-          locationMatch: "match",
-          ipinfo: { privacy: { vpn: true } },
+          locationMatch: "same_country",
+          ipinfo: { privacy: { vpn: false, proxy: false, hosting: false } },
         },
       }).category,
     ).toBe("supporting");

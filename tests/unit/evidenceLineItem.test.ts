@@ -153,6 +153,145 @@ describe("Test 7 — IP/location mismatch is internal-only by default", () => {
   });
 });
 
+describe("Test 7b — clean IP/location match promotes to bank-facing (2026-05-20)", () => {
+  it("ip_location_check with same_country + no VPN + bankEligible=true resolves to bank_argument", async () => {
+    const mod = await import("@/lib/argument/evidenceLineItem");
+    const { deriveEvidenceLineItems } = mod as {
+      deriveEvidenceLineItems: (args: unknown) => Array<{
+        field: string;
+        submissionMethod: string;
+        includedInBankArgument: boolean;
+        usedAsPositiveBankEvidence: boolean;
+      }>;
+    };
+    const checklist = [
+      {
+        field: "ip_location_check",
+        label: "IP location vs billing country",
+        status: "available" as const,
+      },
+    ];
+    const payloadByField = new Map<string, unknown>([
+      [
+        "ip_location_check",
+        {
+          locationMatch: "same_country",
+          bankEligible: true,
+          ipinfo: { privacy: { vpn: false, proxy: false, hosting: false } },
+          ipConsistencyLevel: "consistent",
+          riskLevel: "low",
+        },
+      ],
+    ]);
+    const facts = [
+      {
+        id: "ip1",
+        category: "ip_location",
+        label: "IP location vs billing country",
+        value: { fieldKey: "ip_location_check", locationMatch: "same_country" },
+        source: "ipinfo_io",
+        sourceRef: null,
+        strength: "supporting",
+        bankEligible: true,
+        merchantVisible: true,
+        internalOnly: false,
+        includeInBankNarrative: true,
+        submissionRisk: false,
+        confidence: null,
+      },
+    ];
+    // For a same_country payload categoryFor returns "supporting", so
+    // the row lands in context_only (not bank_argument). Same-city
+    // would return "moderate" → bank_argument. Both prove the field is
+    // no longer blanket internal-only.
+    const lineItems = deriveEvidenceLineItems({
+      checklist,
+      facts,
+      payloadByField,
+      contributions: { strong: [], moderate: [] },
+      packSavedToShopify: true,
+      excludedFields: new Set<string>(),
+      attachmentUploadFailures: new Map<string, string>(),
+      inclusionOverrides: new Map(),
+      reasonFamily: "fraud",
+    });
+    const ipRow = lineItems.find((li) => li.field === "ip_location_check");
+    expect(ipRow?.submissionMethod).toBe("context_only");
+  });
+
+  it("ip_location_check with same_city + clean privacy + strong contribution resolves to bank_argument", async () => {
+    const mod = await import("@/lib/argument/evidenceLineItem");
+    const { deriveEvidenceLineItems } = mod as {
+      deriveEvidenceLineItems: (args: unknown) => Array<{
+        field: string;
+        submissionMethod: string;
+        usedAsPositiveBankEvidence: boolean;
+      }>;
+    };
+    const checklist = [
+      {
+        field: "ip_location_check",
+        label: "IP location",
+        status: "available" as const,
+      },
+    ];
+    const payloadByField = new Map<string, unknown>([
+      [
+        "ip_location_check",
+        {
+          locationMatch: "same_city",
+          bankEligible: true,
+          ipinfo: { privacy: { vpn: false, proxy: false, hosting: false } },
+          ipConsistencyLevel: "consistent",
+          riskLevel: "low",
+        },
+      ],
+    ]);
+    const facts = [
+      {
+        id: "ip1",
+        category: "ip_location",
+        label: "IP location",
+        value: { fieldKey: "ip_location_check", locationMatch: "same_city" },
+        source: "ipinfo_io",
+        sourceRef: null,
+        strength: "moderate",
+        bankEligible: true,
+        merchantVisible: true,
+        internalOnly: false,
+        includeInBankNarrative: true,
+        submissionRisk: false,
+        confidence: null,
+      },
+    ];
+    const contributions = {
+      strong: [],
+      moderate: [
+        {
+          signalId: "ip_location",
+          category: "moderate" as const,
+          label: "IP location",
+          evidenceFieldKey: "ip_location_check",
+        },
+      ],
+    };
+    const lineItems = deriveEvidenceLineItems({
+      checklist,
+      facts,
+      payloadByField,
+      contributions,
+      packSavedToShopify: true,
+      excludedFields: new Set<string>(),
+      attachmentUploadFailures: new Map<string, string>(),
+      inclusionOverrides: new Map(),
+      reasonFamily: "fraud",
+    });
+    const ipRow = lineItems.find((li) => li.field === "ip_location_check");
+    expect(ipRow?.submissionMethod).toBe("bank_argument");
+    expect(ipRow?.usedAsPositiveBankEvidence).toBe(true);
+  });
+});
+
 describe("Test 8 — failed AVS/CVV is internal-only by default", () => {
   it("avs_cvv_match with both codes failing resolves to internal_only", async () => {
     const mod = await import("@/lib/argument/evidenceLineItem");

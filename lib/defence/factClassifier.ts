@@ -91,7 +91,6 @@ export interface ClassifyFactsInput {
 /* ── Field-key → fact category map ── */
 
 export const SUBMISSION_RISK_FIELDS = new Set([
-  "ip_location_check",
   "device_session_consistency",
   // NOTE: fraud_risk_screening was previously in this set. Removed
   // 2026-05-19 because the source-collector
@@ -105,19 +104,37 @@ export const SUBMISSION_RISK_FIELDS = new Set([
   // is bank-safe by construction. Treating it as
   // submission-risk/internal-only here would silently drop the
   // strongest pre-authorization corroboration Shopify gives us.
+  //
+  // NOTE: ip_location_check was previously in this set. Removed
+  // 2026-05-20 because the source-collector
+  // (`lib/packs/sources/deviceLocationSource.ts`) pre-computes a
+  // `bankEligible: boolean` that is true ONLY when ALL three positive
+  // conditions hold: (1) locationMatch ∈ {same_city, same_country},
+  // (2) no VPN/proxy/hosting flag in ipinfo.privacy, and (3) IP
+  // consistency is "consistent" or "first_seen". Negative payloads
+  // still ride the safe rail via `isNegativeOrAmbiguous` in
+  // `lib/argument/evidenceLineItem.ts`. Blanket internal-only hid
+  // every clean IP match — supporting evidence we were discarding.
 ]);
 
 /** Field keys whose facts must never appear in bank-facing surfaces by
  *  default. The LLM payload filter excludes them; `submission_risk=true`
  *  is set on the persisted row for the same reason. */
 export const INTERNAL_ONLY_FIELDS = new Set([
-  "ip_location_check",
   "device_session_consistency",
   // fraud_risk_screening removed 2026-05-19 — see SUBMISSION_RISK_FIELDS
   // note above. The source-collector enforces the safety contract;
   // duplicating it here meant the LLM never saw the favourable
   // ACCEPT/LOW/NONE signal even when it was the cleanest piece of
   // pre-auth evidence available.
+  //
+  // ip_location_check removed 2026-05-20 — same pattern. The source
+  // collector (`lib/packs/sources/deviceLocationSource.ts`) emits a
+  // pre-computed `bankEligible` flag that is true ONLY for clean
+  // matches (same country/city, no VPN/proxy/hosting, consistent IP
+  // history). Negative payloads are caught by `isNegativeOrAmbiguous`
+  // in the line-item resolver. The blanket internal-only gate was
+  // discarding a valid positive fraud signal.
 ]);
 
 /**

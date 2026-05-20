@@ -168,28 +168,42 @@ describe("avs_cvv_match", () => {
 });
 
 describe("ip_location_check", () => {
-  it("location match + no privacy flags → moderate", () => {
-    expect(categorizeEvidenceField("ip_location_check", {
-      bankEligible: true,
-      locationMatch: "match",
-      ipinfo: { privacy: { vpn: false, proxy: false, hosting: false } },
-    })).toBe("moderate");
+  // Updated 2026-05-20. The categorizer reads the canonical collector
+  // values (same_city / same_country) — the prior tests used "match",
+  // a value the collector hasn't emitted since the 2026-04-21 rename
+  // (see lib/packs/sources/deviceLocationSource.ts).
+  it("clean same-city match → moderate", () => {
+    expect(
+      categorizeEvidenceField("ip_location_check", {
+        bankEligible: true,
+        locationMatch: "same_city",
+        ipinfo: { privacy: { vpn: false, proxy: false, hosting: false } },
+      }),
+    ).toBe("moderate");
   });
 
-  it("VPN flag → supporting (downgraded)", () => {
-    expect(categorizeEvidenceField("ip_location_check", {
-      bankEligible: true,
-      locationMatch: "match",
-      ipinfo: { privacy: { vpn: true } },
-    })).toBe("supporting");
+  it("clean same-country match → supporting (bank-facing, not decisive)", () => {
+    expect(
+      categorizeEvidenceField("ip_location_check", {
+        bankEligible: true,
+        locationMatch: "same_country",
+        ipinfo: { privacy: { vpn: false, proxy: false, hosting: false } },
+      }),
+    ).toBe("supporting");
   });
 
   it("bankEligible false → supporting", () => {
-    expect(categorizeEvidenceField("ip_location_check", { bankEligible: false })).toBe("supporting");
+    expect(
+      categorizeEvidenceField("ip_location_check", { bankEligible: false }),
+    ).toBe("supporting");
   });
 
-  it("no location data → supporting", () => {
-    expect(categorizeEvidenceField("ip_location_check", { locationMatch: "no_match" })).toBe("supporting");
+  it("different country → supporting (will be routed to internal_only by isNegativeOrAmbiguous)", () => {
+    expect(
+      categorizeEvidenceField("ip_location_check", {
+        locationMatch: "different_country",
+      }),
+    ).toBe("supporting");
   });
 });
 

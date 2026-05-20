@@ -16,6 +16,10 @@ const CATEGORY_ORDER: EvidenceFactCategory[] = [
   "payment_authentication",
   "payment_auth",
   "billing_match",
+  // ip_location is bank-facing when the collector's `bankEligible`
+  // gate is satisfied (clean match, no VPN/proxy/hosting, consistent
+  // IP). Ordered here alongside the other identity signals.
+  "ip_location",
   "delivery_proof",
   "shipping_tracking",
   "digital_access_log",
@@ -34,7 +38,6 @@ const CATEGORY_ORDER: EvidenceFactCategory[] = [
   "duplicate_explanation",
   "manual_evidence",
   // Buckets that should never reach this list under default classification:
-  "ip_location",
   "device_session",
   "fraud_screening",
 ];
@@ -142,6 +145,22 @@ function renderValue(fact: EvidenceFact): string {
       return v?.refundStatus === "processed" ? "Refund processed" : "On record";
     case "duplicate_explanation":
       return "Distinct transaction";
+    case "ip_location": {
+      // Only bank-eligible facts reach this renderer (filtered upstream
+      // in buildEvidenceBasisRows). For ip_location that means the
+      // collector's pre-computed `bankEligible` was true — i.e. the
+      // location matched, no VPN/proxy/hosting, and the IP history is
+      // consistent. Cell text is deliberately country-grained, never
+      // city or coordinate — same rule the collector follows.
+      const match = typeof v?.locationMatch === "string" ? v.locationMatch : null;
+      if (match === "same_city") {
+        return "IP geolocation matches the billing/shipping region";
+      }
+      if (match === "same_country") {
+        return "IP geolocation matches the billing/shipping country";
+      }
+      return "IP geolocation consistent with the cardholder's location";
+    }
     case "manual_evidence":
       return typeof v?.fileType === "string" ? `Uploaded (${v.fileType})` : "Uploaded";
     case "fraud_screening": {

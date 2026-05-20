@@ -54,7 +54,15 @@ describe("classifyFacts", () => {
     expect(auth?.value.cvvResult).toBe("M");
   });
 
-  it("IP location check is classified as internal-only and submission-risk", () => {
+  it("negative IP location payload (different country) never reaches bank-facing surfaces", () => {
+    // Updated 2026-05-20. ip_location_check is no longer blanket
+    // internal-only — the collector's `bankEligible` flag decides.
+    // For a negative payload (different country, or VPN/proxy/hosting
+    // detected, or inconsistent IP history) the collector sets
+    // bankEligible=false, the categorizer returns "supporting", and
+    // the resulting fact has bankEligible=false + includeInBankNarrative=false
+    // so it never reaches the LLM payload, the PDF Evidence Basis,
+    // or the bank-facing argument.
     const result = classifyFacts(
       baseInput({
         sections: [
@@ -67,18 +75,60 @@ describe("classifyFacts", () => {
             fieldsProvided: ["billing_address_match"],
           }),
           section({
-            data: { locationMatch: "no_match" },
+            data: {
+              locationMatch: "different_country",
+              bankEligible: false,
+              ipinfo: { privacy: { vpn: false, proxy: false, hosting: false } },
+            },
             fieldsProvided: ["ip_location_check"],
           }),
         ],
       }),
     );
-    const ipFact = result.internalOnly.find((f) => f.category === "ip_location");
+    const ipFact = [...result.approved, ...result.internalOnly, ...result.submissionRisk].find(
+      (f) => f.category === "ip_location",
+    );
     expect(ipFact).toBeDefined();
-    expect(ipFact?.submissionRisk).toBe(true);
     expect(ipFact?.bankEligible).toBe(false);
-    // Must not appear in approved.
-    expect(result.approved.find((f) => f.category === "ip_location")).toBeUndefined();
+    expect(ipFact?.includeInBankNarrative).toBe(false);
+  });
+
+  it("clean IP location payload (same country + no privacy flags) is bank-eligible supporting evidence", () => {
+    // 2026-05-20 — positive promotion. A clean IP match reaches the
+    // approved bucket as bank-eligible supporting evidence so the
+    // narrative writer can cite it as corroborating the cardholder's
+    // location. Pinned to MODERATE for same_city, SUPPORTING for
+    // same_country — never STRONG (IP is descriptive, not contractual).
+    const result = classifyFacts(
+      baseInput({
+        sections: [
+          section({
+            data: { avsResultCode: "Y", cvvResultCode: "M" },
+            fieldsProvided: ["avs_cvv_match"],
+          }),
+          section({
+            data: { match: true },
+            fieldsProvided: ["billing_address_match"],
+          }),
+          section({
+            data: {
+              locationMatch: "same_city",
+              bankEligible: true,
+              ipinfo: { privacy: { vpn: false, proxy: false, hosting: false } },
+              ipConsistencyLevel: "consistent",
+              riskLevel: "low",
+            },
+            fieldsProvided: ["ip_location_check"],
+          }),
+        ],
+      }),
+    );
+    const ipFact = result.approved.find((f) => f.category === "ip_location");
+    expect(ipFact).toBeDefined();
+    expect(ipFact?.bankEligible).toBe(true);
+    expect(ipFact?.includeInBankNarrative).toBe(true);
+    expect(ipFact?.strength).toBe("moderate");
+    expect(ipFact?.value.locationMatch).toBe("same_city");
   });
 
   it("fraud_risk_screening reaches approved facts (citable when source-gated)", () => {

@@ -167,6 +167,10 @@ const REASON_FOR_METHOD: Record<SubmissionMethod, string> = {
 
 const REASON_OVERRIDES: Record<string, Partial<Record<SubmissionMethod, string>>> = {
   ip_location_check: {
+    bank_argument:
+      "The order IP geolocated to the same location as the billing/shipping address, with no VPN, proxy, or datacenter signals. Cited as supporting context — consistent with the cardholder placing the order from their usual location.",
+    context_only:
+      "The order IP geolocated to the same country as the billing/shipping address, with no VPN, proxy, or datacenter signals. Included as context — corroborates the cardholder's location but is not decisive on its own.",
     internal_only:
       "This signal is ambiguous or unfavorable and could weaken the fraud response.",
     not_included:
@@ -338,6 +342,16 @@ function reasonFor(
     const specific = customerAccountReasonFromPayload(payload, method);
     if (specific) return specific;
   }
+  // Payload-aware specificity for ip_location_check: surface WHAT
+  // matched (same city vs. same country) rather than the generic
+  // "consistent with the cardholder's location" line.
+  if (
+    field === "ip_location_check" &&
+    (method === "bank_argument" || method === "context_only")
+  ) {
+    const specific = ipLocationReasonFromPayload(payload, method);
+    if (specific) return specific;
+  }
   return REASON_OVERRIDES[field]?.[method] ?? REASON_FOR_METHOD[method];
 }
 
@@ -427,6 +441,40 @@ function customerAccountReasonFromPayload(
   }
 
   return null;
+}
+
+/**
+ * Builds the row reason for ip_location_check from the actual payload
+ * (locationMatch, ipinfo.country). Returns null when the payload
+ * doesn't carry usable signals — callers fall back to the static
+ * REASON_OVERRIDES entry.
+ *
+ * The collector pre-gates emission on a clean payload, so by the time
+ * this fires we know: locationMatch ∈ {same_city, same_country}, no
+ * VPN/proxy/hosting, IP history consistent. Phrasing surfaces the
+ * country/region match grain without exposing the raw IP, city, ISP
+ * or coordinates — same rule the LLM narrative obeys.
+ */
+function ipLocationReasonFromPayload(
+  payload: unknown,
+  method: "bank_argument" | "context_only",
+): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const p = payload as Record<string, unknown>;
+  const match = typeof p.locationMatch === "string" ? p.locationMatch : null;
+  if (match !== "same_city" && match !== "same_country") return null;
+
+  if (match === "same_city") {
+    if (method === "bank_argument") {
+      return "The order IP geolocated to the same region as the billing and shipping address, with no VPN, proxy, or datacenter signals. Cited as supporting context — consistent with the cardholder placing the order from their usual location.";
+    }
+    return "The order IP geolocated to the same region as the billing and shipping address, with no VPN, proxy, or datacenter signals. Included as context — corroborates the cardholder's location but is not decisive on its own.";
+  }
+  // same_country
+  if (method === "bank_argument") {
+    return "The order IP geolocated to the same country as the billing and shipping address, with no VPN, proxy, or datacenter signals. Cited as supporting context — consistent with a cardholder-originated transaction.";
+  }
+  return "The order IP geolocated to the same country as the billing and shipping address, with no VPN, proxy, or datacenter signals. Included as context — corroborates the cardholder's location but is not decisive on its own.";
 }
 
 /**
@@ -622,6 +670,21 @@ function isNegativeOrAmbiguous(
     // a fraud-weakening signal. Account history with disputes carries
     // the OPPOSITE inference from a clean history.
     if (payload.disputeFreeHistory === false) return true;
+  }
+
+  if (field === "ip_location_check") {
+    // Belt-and-suspenders. The collector already pre-computes
+    // `bankEligible: boolean` covering the same three conditions —
+    // location match, no privacy flags, IP consistency. We restate the
+    // negative cases here so a payload that bypasses the collector
+    // (legacy row, hand-rolled fixture) can't slip through as
+    // bank-facing.
+    if (payload.bankEligible === false) return true;
+    const match = readString(payload.locationMatch);
+    if (match === "different_country" || match === "different_region") return true;
+    const privacy = (payload.ipinfo as { privacy?: { vpn?: boolean; proxy?: boolean; hosting?: boolean } } | undefined)?.privacy;
+    if (privacy?.vpn === true || privacy?.proxy === true || privacy?.hosting === true) return true;
+    if (payload.riskLevel === "high") return true;
   }
 
   return false;
