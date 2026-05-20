@@ -211,14 +211,26 @@ export async function applyDisputeSnapshot(
     );
   }
 
-  // For new disputes, optionally resolve missing disputeEvidenceGid via a
-  // targeted GraphQL fallback. The webhook payload doesn't carry it.
+  // For new disputes, optionally resolve missing display + identity fields
+  // via a targeted GraphQL fallback. The REST webhook payload carries the
+  // dispute fields but NOT order.name, customer details, or the
+  // ShopifyPaymentsDisputeEvidence sub-object GID.
   let disputeEvidenceGid = snapshot.disputeEvidenceGid;
-  if (!existing && !disputeEvidenceGid && args.fetchDisputeDetail) {
+  let orderName = snapshot.orderName ?? null;
+  let orderGid = snapshot.orderGid ?? null;
+  if (!existing && args.fetchDisputeDetail) {
     try {
       const fallback = await args.fetchDisputeDetail(snapshot.disputeGid);
-      if (fallback?.disputeEvidenceGid) {
-        disputeEvidenceGid = fallback.disputeEvidenceGid;
+      if (fallback) {
+        if (!disputeEvidenceGid && fallback.disputeEvidenceGid) {
+          disputeEvidenceGid = fallback.disputeEvidenceGid;
+        }
+        if (!orderName && fallback.orderName) {
+          orderName = fallback.orderName;
+        }
+        if (!orderGid && fallback.orderGid) {
+          orderGid = fallback.orderGid;
+        }
       }
     } catch (err) {
       guardWarnings.push(
@@ -240,7 +252,7 @@ export async function applyDisputeSnapshot(
   const upsertRow: Record<string, unknown> = {
     shop_id: shopId,
     dispute_gid: snapshot.disputeGid,
-    order_gid: snapshot.orderGid ?? null,
+    order_gid: orderGid,
     phase,
     status: newStatus,
     reason: snapshot.reason ?? null,
@@ -253,6 +265,9 @@ export async function applyDisputeSnapshot(
   };
   if (disputeEvidenceGid) {
     upsertRow.dispute_evidence_gid = disputeEvidenceGid;
+  }
+  if (orderName) {
+    upsertRow.order_name = orderName;
   }
 
   // Guard: terminal-downgrade — don't overwrite a terminal status with a

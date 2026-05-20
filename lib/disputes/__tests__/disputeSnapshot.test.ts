@@ -22,7 +22,7 @@ describe("normalizeDisputeWebhookPayload", () => {
   it("maps a full REST webhook payload to a DisputeSnapshot", () => {
     const out = normalizeDisputeWebhookPayload({
       id: 12345,
-      admin_graphql_api_id: "gid://shopify/DisputeEvidence/12345",
+      admin_graphql_api_id: "gid://shopify/ShopifyPaymentsDispute/12345",
       order_id: 9876,
       order_admin_graphql_api_id: "gid://shopify/Order/9876",
       type: "CHARGEBACK",
@@ -39,10 +39,11 @@ describe("normalizeDisputeWebhookPayload", () => {
     });
 
     expect(out).toEqual<DisputeSnapshot>({
-      disputeGid: "gid://shopify/DisputeEvidence/12345",
+      disputeGid: "gid://shopify/ShopifyPaymentsDispute/12345",
       numericDisputeId: 12345,
       orderGid: "gid://shopify/Order/9876",
       orderId: 9876,
+      orderName: null,
       status: "needs_response",
       reason: "fraudulent",
       networkReasonCode: "10.4",
@@ -66,7 +67,7 @@ describe("normalizeDisputeWebhookPayload", () => {
       status: "needs_response",
     });
 
-    expect(out?.disputeGid).toBe("gid://shopify/DisputeEvidence/4242");
+    expect(out?.disputeGid).toBe("gid://shopify/ShopifyPaymentsDispute/4242");
     expect(out?.numericDisputeId).toBe(4242);
   });
 
@@ -104,7 +105,7 @@ describe("normalizeDisputeWebhookPayload", () => {
 describe("normalizeGraphQLDispute", () => {
   it("maps a full GraphQL dispute node to a DisputeSnapshot", () => {
     const out = normalizeGraphQLDispute({
-      id: "gid://shopify/DisputeEvidence/12345",
+      id: "gid://shopify/ShopifyPaymentsDispute/12345",
       type: "CHARGEBACK",
       status: "NEEDS_RESPONSE",
       reasonDetails: { reason: "fraudulent" },
@@ -117,6 +118,7 @@ describe("normalizeGraphQLDispute", () => {
       order: {
         id: "gid://shopify/Order/9876",
         legacyResourceId: "9876",
+        name: "#7079",
       },
       disputeEvidence: {
         id: "gid://shopify/ShopifyPaymentsDisputeEvidence/777",
@@ -124,10 +126,11 @@ describe("normalizeGraphQLDispute", () => {
     });
 
     expect(out).toEqual<DisputeSnapshot>({
-      disputeGid: "gid://shopify/DisputeEvidence/12345",
+      disputeGid: "gid://shopify/ShopifyPaymentsDispute/12345",
       numericDisputeId: "12345",
       orderGid: "gid://shopify/Order/9876",
       orderId: "9876",
+      orderName: "#7079",
       status: "needs_response",
       reason: "fraudulent",
       networkReasonCode: null,
@@ -163,7 +166,7 @@ describe("parity: webhook + GraphQL of the same dispute", () => {
   it("produce equivalent snapshots in the diff-relevant fields", () => {
     const webhookSnapshot = normalizeDisputeWebhookPayload({
       id: 12345,
-      admin_graphql_api_id: "gid://shopify/DisputeEvidence/12345",
+      admin_graphql_api_id: "gid://shopify/ShopifyPaymentsDispute/12345",
       order_admin_graphql_api_id: "gid://shopify/Order/9876",
       order_id: 9876,
       type: "CHARGEBACK",
@@ -177,7 +180,7 @@ describe("parity: webhook + GraphQL of the same dispute", () => {
     });
 
     const graphqlSnapshot = normalizeGraphQLDispute({
-      id: "gid://shopify/DisputeEvidence/12345",
+      id: "gid://shopify/ShopifyPaymentsDispute/12345",
       type: "CHARGEBACK",
       status: "NEEDS_RESPONSE",
       reasonDetails: { reason: "fraudulent" },

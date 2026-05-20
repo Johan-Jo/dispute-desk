@@ -15,12 +15,20 @@
 import { z } from "zod";
 
 export interface DisputeSnapshot {
-  /** GraphQL Admin id, e.g. "gid://shopify/DisputeEvidence/12345". */
+  /** GraphQL Admin id, e.g. "gid://shopify/ShopifyPaymentsDispute/12345". */
   disputeGid: string;
   /** Numeric REST id from the webhook payload (string or number). */
   numericDisputeId?: string | number | null;
   orderGid?: string | null;
   orderId?: string | number | null;
+  /**
+   * Order display name (e.g. "#7079"). Only populated from the GraphQL path
+   * today — the REST webhook payload doesn't carry it. The webhook path
+   * backfills via fetchDisputeDetail; the diff engine writes it into
+   * `disputes.order_name` so the UI + new-dispute email show a real value
+   * instead of an em-dash.
+   */
+  orderName?: string | null;
   /** Raw Shopify status, lowercased: needs_response, under_review, won, lost, ... */
   status?: string | null;
   /** Raw reason text Shopify returned, e.g. "fraudulent". */
@@ -100,6 +108,7 @@ const graphqlDisputeSchema = z
       .object({
         id: z.string().nullable().optional(),
         legacyResourceId: z.string().nullable().optional(),
+        name: z.string().nullable().optional(),
       })
       .nullable()
       .optional(),
@@ -136,10 +145,16 @@ export function normalizeDisputeWebhookPayload(
   // route the snapshot to a row, so this counts as schema drift.
   if (!numericId && !adminGid) return null;
 
+  // Shopify omits admin_graphql_api_id on the dispute webhook payload, so we
+  // synthesize the GID from the numeric id. The canonical entity is
+  // `ShopifyPaymentsDispute` (matches the cron / GraphQL path). `DisputeEvidence`
+  // is a different sub-object — using it here splits the (shop_id, dispute_gid)
+  // unique key and creates phantom dispute rows that can't be reconciled with
+  // the cron-inserted ones.
   const disputeGid =
     adminGid ??
     (numericId !== null
-      ? `gid://shopify/DisputeEvidence/${String(numericId)}`
+      ? `gid://shopify/ShopifyPaymentsDispute/${String(numericId)}`
       : null);
   if (!disputeGid) return null;
 
@@ -148,6 +163,9 @@ export function normalizeDisputeWebhookPayload(
     numericDisputeId: numericId,
     orderGid: p.order_admin_graphql_api_id ?? null,
     orderId: p.order_id ?? null,
+    // REST webhook payload never carries order.name; webhook path resolves it
+    // via fetchDisputeDetail (GraphQL).
+    orderName: null,
     status: lowerOrNull(p.status),
     reason: p.reason ?? null,
     networkReasonCode: p.network_reason_code ?? null,
@@ -186,6 +204,7 @@ export function normalizeGraphQLDispute(
     numericDisputeId: extractNumericIdFromGid(d.id),
     orderGid: d.order?.id ?? null,
     orderId: d.order?.legacyResourceId ?? null,
+    orderName: d.order?.name ?? null,
     status: lowerOrNull(d.status),
     reason: d.reasonDetails?.reason ?? null,
     networkReasonCode: null,

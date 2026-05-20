@@ -28,9 +28,18 @@ import {
   buildSafePayloadExcerpt,
   type WebhookOutcome,
 } from "@/lib/webhooks/eventIdempotency";
-import { normalizeDisputeWebhookPayload } from "@/lib/disputes/disputeSnapshot";
+import {
+  normalizeDisputeWebhookPayload,
+  type DisputeSnapshot,
+} from "@/lib/disputes/disputeSnapshot";
 import { applyDisputeSnapshot } from "@/lib/disputes/applyDisputeSnapshot";
 import { dispatchDisputeEffects } from "@/lib/disputes/disputeEffectsDispatcher";
+import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
+import {
+  DISPUTE_DETAIL_QUERY,
+  type DisputeDetailResponse,
+} from "@/lib/shopify/queries/disputes";
+import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
 
 export interface DisputeWebhookResult {
   status: number;
@@ -174,6 +183,7 @@ export async function handleDisputeWebhook(
       shopId: shop.id,
       source: "webhook",
       snapshot,
+      fetchDisputeDetail: makeFetchDisputeDetail(shop.id, shopDomain),
     });
 
     if (result.outcome === "skipped_stale" || result.outcome === "skipped_monotonic_guard") {
@@ -227,4 +237,56 @@ export async function handleDisputeWebhook(
       body: { error: "processing_failed", message: msg },
     };
   }
+}
+
+/**
+ * Build a fetchDisputeDetail closure for applyDisputeSnapshot. Resolves the
+ * shop's offline access token, fetches `dispute(id:)` via GraphQL, and
+ * returns the fields the REST webhook payload doesn't carry:
+ *   - disputeEvidenceGid (the ShopifyPaymentsDisputeEvidence sub-object)
+ *   - orderGid + orderName (the GraphQL order node)
+ *
+ * Used only on new-dispute inserts (existing-row updates skip the call).
+ * Failures are non-fatal — the diff engine records a guardWarning and
+ * proceeds; the hourly cron path patches the row later.
+ */
+function makeFetchDisputeDetail(
+  shopId: string,
+  shopDomain: string,
+): (gid: string) => Promise<Partial<DisputeSnapshot> | null> {
+  return async (disputeGid: string) => {
+    const db = getServiceClient();
+    const { data: session } = await db
+      .from("shop_sessions")
+      .select("access_token_encrypted")
+      .eq("shop_id", shopId)
+      .eq("session_type", "offline")
+      .is("user_id", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!session?.access_token_encrypted) return null;
+
+    let accessToken: string;
+    try {
+      const payload = deserializeEncrypted(session.access_token_encrypted);
+      accessToken = decrypt(payload);
+    } catch {
+      accessToken = session.access_token_encrypted;
+    }
+
+    const gql = await requestShopifyGraphQL<DisputeDetailResponse>({
+      session: { shopDomain, accessToken },
+      query: DISPUTE_DETAIL_QUERY,
+      variables: { id: disputeGid },
+    });
+    const dispute = gql.data?.dispute;
+    if (!dispute) return null;
+
+    return {
+      disputeEvidenceGid: dispute.disputeEvidence?.id ?? null,
+      orderGid: dispute.order?.id ?? null,
+      orderName: dispute.order?.name ?? null,
+    };
+  };
 }
