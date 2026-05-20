@@ -162,6 +162,66 @@ describe("normalizeGraphQLDispute", () => {
   });
 });
 
+/**
+ * Real-payload fixture captured from a production disputes/create delivery
+ * (webhook_events row b9edb47e, dispute 10563485753, 2026-05-20). The exact
+ * scalar shape Shopify ships — we keep it verbatim so a future Shopify
+ * payload shape change is detected as a regression here before it ships.
+ */
+const REAL_WEBHOOK_PAYLOAD = {
+  id: 10563485753,
+  // Shopify does NOT include admin_graphql_api_id on the dispute payload.
+  // The normalizer MUST synthesize a ShopifyPaymentsDispute GID, NOT a
+  // DisputeEvidence one — the latter caused the 2026-05-20 phantom-row
+  // incident where the webhook insert split the (shop_id, dispute_gid)
+  // unique key from the cron-inserted row.
+  amount: "25.93",
+  currency: "USD",
+  evidence_due_by: "2026-05-27T19:00:00-04:00",
+  evidence_sent_on: null,
+  finalized_on: null,
+  initiated_at: "2026-05-20T18:30:39-04:00",
+  network_reason_code: "10.4",
+  order_id: 6446376124473,
+  reason: "fraudulent",
+  status: "needs_response",
+  type: "chargeback",
+};
+
+describe("regression: real Shopify webhook payload (captured 2026-05-20)", () => {
+  it("synthesizes the canonical ShopifyPaymentsDispute GID — NOT DisputeEvidence", () => {
+    const out = normalizeDisputeWebhookPayload(REAL_WEBHOOK_PAYLOAD);
+    expect(out?.disputeGid).toBe(
+      "gid://shopify/ShopifyPaymentsDispute/10563485753",
+    );
+    // Belt-and-suspenders: explicitly assert it is NOT the entity that
+    // caused the 2026-05-20 incident. If a future refactor flips this back,
+    // CI will catch it.
+    expect(out?.disputeGid).not.toMatch(/DisputeEvidence/);
+  });
+
+  it("the webhook-synthesized GID matches what the GraphQL path would emit for the same dispute", () => {
+    const webhookSnapshot = normalizeDisputeWebhookPayload(REAL_WEBHOOK_PAYLOAD);
+    // What Shopify's `dispute(id:)` query returns as the top-level id.
+    const graphqlSnapshot = normalizeGraphQLDispute({
+      id: "gid://shopify/ShopifyPaymentsDispute/10563485753",
+      type: "CHARGEBACK",
+      status: "NEEDS_RESPONSE",
+      reasonDetails: { reason: "fraudulent" },
+    });
+    expect(webhookSnapshot?.disputeGid).toBe(graphqlSnapshot?.disputeGid);
+  });
+
+  it("normalizer drops fields not in the schema and never returns admin_graphql_api_id back", () => {
+    const out = normalizeDisputeWebhookPayload(REAL_WEBHOOK_PAYLOAD);
+    expect(out).not.toBeNull();
+    // Spot-check: no Shopify-shaped property names should appear on the snapshot.
+    const keys = Object.keys(out as unknown as Record<string, unknown>);
+    expect(keys).not.toContain("admin_graphql_api_id");
+    expect(keys).not.toContain("evidence_due_by"); // we use evidenceDueBy
+  });
+});
+
 describe("parity: webhook + GraphQL of the same dispute", () => {
   it("produce equivalent snapshots in the diff-relevant fields", () => {
     const webhookSnapshot = normalizeDisputeWebhookPayload({
