@@ -69,6 +69,14 @@ export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
           shippingAddress {
             countryCode
           }
+          # Customer join keys for v1.5 of order_risk_history view.
+          # Both are nullable on the Order type — Shopify allows guest
+          # checkouts (no Customer record) and email can be redacted.
+          # The normalizer treats either-or-null as fine.
+          customer {
+            id
+            email
+          }
           shopifyProtect {
             status
           }
@@ -178,6 +186,7 @@ export interface RawBackfillOrder {
     shopMoney: { amount: string; currencyCode: string };
   } | null;
   shippingAddress: { countryCode: string | null } | null;
+  customer: { id: string | null; email: string | null } | null;
   fulfillments: Array<{
     createdAt: string | null;
     displayStatus: string | null;
@@ -290,6 +299,12 @@ export interface ShopifyOrderRow {
   country: string | null;
   is_cross_border: boolean | null;
   distance_bucket: string | null;
+  /** Customer email at the time of latest ingest. Mutable — see
+   *  migration 20260520184853_shopify_orders_customer_columns.sql. */
+  customer_email: string | null;
+  /** Customer Shopify GID (gid://shopify/Customer/123). Mutable;
+   *  preferred join key when both are present. */
+  customer_shopify_id: string | null;
   payment_gateway: string | null;
   financial_status: string | null;
   fulfillment_status: string | null;
@@ -517,6 +532,8 @@ export function normalizeBackfillOrder(
     country,
     is_cross_border: isCrossBorder,
     distance_bucket: null,
+    customer_email: raw.customer?.email ?? null,
+    customer_shopify_id: raw.customer?.id ?? null,
     payment_gateway: raw.paymentGatewayNames?.[0] ?? null,
     financial_status: raw.displayFinancialStatus ?? null,
     fulfillment_status: raw.displayFulfillmentStatus ?? null,

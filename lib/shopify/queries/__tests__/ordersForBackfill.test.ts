@@ -33,6 +33,7 @@ const rawOrder = (overrides: Partial<RawBackfillOrder> = {}): RawBackfillOrder =
       shopMoney: { amount: "120.50", currencyCode: "USD" },
     },
     shippingAddress: { countryCode: "US" },
+    customer: null,
     fulfillments: null,
     shopifyProtect: null,
     transactions: null,
@@ -300,6 +301,47 @@ describe("normalizeBackfillOrder", () => {
       storeCountryCode: "US",
     });
     expect(order.distance_bucket).toBeNull();
+  });
+
+  it("captures customer_email and customer_shopify_id from the customer field (v1.5)", () => {
+    const { order } = normalizeBackfillOrder(
+      shopId,
+      rawOrder({
+        customer: {
+          id: "gid://shopify/Customer/42",
+          email: "buyer@example.com",
+        },
+      }),
+      { storeCountryCode: "US" },
+    );
+    expect(order.customer_email).toBe("buyer@example.com");
+    expect(order.customer_shopify_id).toBe("gid://shopify/Customer/42");
+  });
+
+  it("leaves customer columns null on guest checkouts (customer field null)", () => {
+    const { order } = normalizeBackfillOrder(shopId, rawOrder({ customer: null }), {
+      storeCountryCode: "US",
+    });
+    expect(order.customer_email).toBeNull();
+    expect(order.customer_shopify_id).toBeNull();
+  });
+
+  it("tolerates partial customer payloads (id or email missing individually)", () => {
+    const { order: emailOnly } = normalizeBackfillOrder(
+      shopId,
+      rawOrder({ customer: { id: null, email: "anon@example.com" } }),
+      { storeCountryCode: "US" },
+    );
+    expect(emailOnly.customer_email).toBe("anon@example.com");
+    expect(emailOnly.customer_shopify_id).toBeNull();
+
+    const { order: gidOnly } = normalizeBackfillOrder(
+      shopId,
+      rawOrder({ customer: { id: "gid://shopify/Customer/99", email: null } }),
+      { storeCountryCode: "US" },
+    );
+    expect(gidOnly.customer_email).toBeNull();
+    expect(gidOnly.customer_shopify_id).toBe("gid://shopify/Customer/99");
   });
 
   it("derives fulfilled_at from the earliest fulfillment createdAt", () => {

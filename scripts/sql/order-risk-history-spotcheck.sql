@@ -67,3 +67,32 @@ select
   sum(case when has_chargeback then 1 else 0 end) as became_chargebacks
 from order_risk_history
 where risk_level_initial = 'HIGH';
+
+-- 5) v1.5: customer-aggregate sanity. How many orders have the
+-- customer_email join key populated? (Pre-v1.5 backfilled orders
+-- will be null; v1.5+ ingests will populate the column.)
+select
+  'customer_email_coverage' as check_name,
+  count(*) as total_orders,
+  count(*) filter (where customer_email is not null) as with_customer_email,
+  count(*) filter (where customer_shopify_id is not null) as with_customer_gid
+from order_risk_history;
+
+-- 6) v1.5: top 10 customers by prior_high_risk_orders_for_customer.
+-- These are the customers whose orders have repeatedly been flagged
+-- HIGH-risk by Shopify before this order. Useful for v2 UI design —
+-- "this customer has N prior HIGH-risk orders" panel content.
+-- Requires non-null customer_email + at least one prior HIGH-risk.
+select
+  'top_customers_by_prior_high_risk' as check_name,
+  customer_email,
+  count(*) as order_count,
+  max(prior_high_risk_orders_for_customer) as max_prior_high,
+  max(prior_undisputed_orders_for_customer) as max_prior_undisputed,
+  max(prior_chargebacks_for_customer) as max_prior_chargebacks
+from order_risk_history
+where customer_email is not null
+  and prior_high_risk_orders_for_customer >= 1
+group by customer_email
+order by max(prior_high_risk_orders_for_customer) desc, customer_email
+limit 10;
