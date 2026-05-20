@@ -475,7 +475,7 @@ The worker route declares `export const maxDuration = 300` so that the bulk `bac
 
 ### Dispute event flow — webhook-primary, cron reconciliation
 
-**This is core revenue path.** If the webhook handler regresses, merchants stop getting accurate alerts and the automation pipeline builds packs against incomplete data. Six regression tests in `release:verify` pin the invariants:
+**Three flows form the core revenue path** — webhook → build_pack → save_to_shopify — and each has load-bearing regression tests in `release:verify`. The dispute event flow has six:
 
 | Test | What it pins | If it ever fails |
 |------|--------------|------------------|
@@ -487,6 +487,26 @@ The worker route declares `export const maxDuration = 300` so that the bulk `bac
 | `handleDisputeWebhook.test.ts > passes fetchDisputeDetail to applyDisputeSnapshot (the GraphQL backfill seam)` | The handler actually wires the backfill closure into the engine call (this is the seam the 2026-05-20 incident broke) | The empty-pack bug returns even with the other tests still green |
 
 Never delete these without an explicit follow-up commit explaining what replaced them. Hand-rolled JSON test fixtures are NOT a substitute for the real-payload fixture in `disputeSnapshot.test.ts` — that fixture is byte-for-byte what Shopify shipped to us on 2026-05-20 and should be updated only when Shopify's wire format actually changes (verify against a fresh `webhook_events.payload_excerpt` row before edits).
+
+**build_pack — load-bearing regression tests:**
+
+| Test | What it pins | If it ever fails |
+|------|--------------|------------------|
+| `buildPackOrderGidNull.test.ts > does NOT attempt the Shopify ORDER_DETAIL_QUERY when order_gid is null` | The build doesn't make a no-op GraphQL call when there's no GID to query | We start firing wasted Shopify requests with null variables |
+| `buildPackOrderGidNull.test.ts > emits the order_gid_null_at_build audit event so the cause is grep-able` | The silent-failure path that caused the #1079 incident now leaves a distinct audit signal | Future debugging reverts to "score 0% with 1 item collected — why?" |
+| `buildPackOrderGidNull.test.ts > the audit event payload includes dispute_id + pack_id for diagnostic linking` | Ops can join the audit row to the dispute + pack without scanning the live tables | Slower incident triage |
+| `buildPackOrderGidNull.test.ts > marks the pack failed with order_fetch_failed (clear merchant UX)` | Empty packs route through the existing failure UX instead of looking like normal empty packs | Merchants see "score 0%" and think their evidence is missing, not that the data plumbing is broken |
+| `buildPackOrderGidNull.test.ts > the persisted failure_reason explains that order_gid was null` | The persisted reason links to docs/runbooks/webhook-delivery.md | Operator can't trace the root cause from the DB record alone |
+| `buildPackFailedState.test.ts > persists null/0 evidence-derived fields when order fetch fails` | Failed packs don't carry stale scored values — the P0 invariant for the failure UX | Merchant sees stale "82% completeness" on a failed pack |
+
+**save_to_shopify — load-bearing regression tests:**
+
+| Test | What it pins | If it ever fails |
+|------|--------------|------------------|
+| `composeShopifyMutationPayload.test.ts > NEVER populates any legacy text field` | The 4-field post-retirement contract holds — no `refundPolicyDisclosure`, `cancellationRebuttal`, etc. leak back in | Bank-facing submission carries legacy text that contradicts the PDF; could weaken merchant cases |
+| `composeShopifyMutationPayload.test.ts > splits displayName into firstName / lastName on whitespace` | The customer name parsing matches what Shopify expects | Merchant names lose surname in the bank submission |
+| `saveToShopify.contract.test.ts > emits exactly the 4-field payload for a fully-populated dispute` | The Object.keys output is exactly the 5 keys (4 fields + `submitEvidence`) the submission contract permits | Schema drift in the submission payload |
+| `saveToShopifyWindowGuards.test.ts > skip when submitted_confirmed` (early + late) | Once Shopify has forwarded evidence to the bank, we never overwrite it | A regenerate after `evidenceSentOn` arrives would clobber the bank's copy of our PDF |
 
 **Time-to-state for a new dispute is sub-2-seconds at p50.** Since 2026-05-20 the `disputes/create` and `disputes/update` webhooks **process directly** rather than enqueueing a `sync_disputes` job. The handler at `/api/webhooks/disputes-*` parses the payload, runs the shared diff engine (`applyDisputeSnapshot`), and dispatches downstream effects (pipeline, alert email) under two layers of idempotency. The hourly cron (`0 * * * *`) reconciles anything the webhook missed (delivery failures, payloads that fail schema validation).
 

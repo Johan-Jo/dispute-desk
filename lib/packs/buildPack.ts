@@ -133,6 +133,29 @@ export async function buildPack(
   // in console.warn and is lost when Vercel runtime logs roll over.
   let order: OrderDetailNode | null = null;
   let orderFetchError: { message: string; durationMs: number; gid: string } | null = null;
+  // 2026-05-20 incident regression: if the dispute row landed without
+  // order_gid (e.g. a webhook insert that skipped the GraphQL backfill),
+  // every order-dependent collector returns [] and the pack ends up at
+  // score 0 with no explanation. Record the gap loudly so the audit
+  // trail self-explains instead of looking like a normal empty pack.
+  if (!dispute.order_gid) {
+    orderFetchError = {
+      message:
+        "dispute.order_gid is null — order-dependent collectors will skip. " +
+        "This usually means a webhook insert wasn't backfilled via " +
+        "fetchDisputeDetail. See docs/runbooks/webhook-delivery.md.",
+      durationMs: 0,
+      gid: "",
+    };
+    await logAuditEvent({
+      shopId: pack.shop_id,
+      disputeId: dispute.id,
+      packId,
+      actorType: "system",
+      eventType: "order_gid_null_at_build",
+      eventPayload: { dispute_id: dispute.id, pack_id: packId },
+    });
+  }
   if (dispute.order_gid) {
     const fetchStart = Date.now();
     try {

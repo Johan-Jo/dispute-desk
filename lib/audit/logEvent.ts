@@ -50,6 +50,7 @@ export type EventType =
   | "cardholder_acknowledgement_confirmed"
   | "submitted_with_warnings"
   | "order_fetch_failed"
+  | "order_gid_null_at_build"
   | "risk_assessment_persisted"
   // Conditional file evidence layer (Phase 3 of
   // docs/plans/conditional_file_evidence_layer.plan.md). Both events
