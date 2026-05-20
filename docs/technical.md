@@ -475,6 +475,19 @@ The worker route declares `export const maxDuration = 300` so that the bulk `bac
 
 ### Dispute event flow — webhook-primary, cron reconciliation
 
+**This is core revenue path.** If the webhook handler regresses, merchants stop getting accurate alerts and the automation pipeline builds packs against incomplete data. Six regression tests in `release:verify` pin the invariants:
+
+| Test | What it pins | If it ever fails |
+|------|--------------|------------------|
+| `disputeSnapshot.test.ts > synthesizes the canonical ShopifyPaymentsDispute GID` | The dispute_gid prefix Shopify uses for `ShopifyPaymentsDispute` is the one we synthesize | The 2026-05-20 phantom-row bug is back — webhook + cron rows split on the (shop_id, dispute_gid) unique key |
+| `disputeSnapshot.test.ts > the webhook-synthesized GID matches what the GraphQL path would emit` | Real cross-path parity — not "both my snapshots match each other" | Webhook-inserted disputes can't be reconciled with cron-inserted ones |
+| `disputeSnapshot.test.ts > normalizer drops fields not in the schema` | Future Shopify-side schema additions don't accidentally leak into snapshot output | PII / unrelated fields start landing in disputes rows |
+| `applyDisputeSnapshot.test.ts > fetchDisputeDetail backfills order_gid + order_name` | The diff engine writes the GraphQL-backfilled fields into the upsert row — not just `disputeEvidenceGid` | `build_pack` runs with `order_gid = NULL`, source collectors return empty, pack scores 0 |
+| `applyDisputeSnapshot.test.ts > WITHOUT fetchDisputeDetail, sparse REST snapshot lands with order_gid / order_name NULL` | Pins the failure mode: documents *why* the backfill is mandatory on the webhook path | Future readers think the backfill is optional |
+| `handleDisputeWebhook.test.ts > passes fetchDisputeDetail to applyDisputeSnapshot (the GraphQL backfill seam)` | The handler actually wires the backfill closure into the engine call (this is the seam the 2026-05-20 incident broke) | The empty-pack bug returns even with the other tests still green |
+
+Never delete these without an explicit follow-up commit explaining what replaced them. Hand-rolled JSON test fixtures are NOT a substitute for the real-payload fixture in `disputeSnapshot.test.ts` — that fixture is byte-for-byte what Shopify shipped to us on 2026-05-20 and should be updated only when Shopify's wire format actually changes (verify against a fresh `webhook_events.payload_excerpt` row before edits).
+
 **Time-to-state for a new dispute is sub-2-seconds at p50.** Since 2026-05-20 the `disputes/create` and `disputes/update` webhooks **process directly** rather than enqueueing a `sync_disputes` job. The handler at `/api/webhooks/disputes-*` parses the payload, runs the shared diff engine (`applyDisputeSnapshot`), and dispatches downstream effects (pipeline, alert email) under two layers of idempotency. The hourly cron (`0 * * * *`) reconciles anything the webhook missed (delivery failures, payloads that fail schema validation).
 
 **Pipeline** (`lib/webhooks/handleDisputeWebhook.ts`):

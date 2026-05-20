@@ -204,6 +204,24 @@ describe("handleDisputeWebhook (webhook-primary)", () => {
     );
   });
 
+  /**
+   * The "seam" test. Bug 2 from the 2026-05-20 incident: the webhook handler
+   * built and tested the GraphQL-backfill hook (fetchDisputeDetail) but never
+   * wired it into the applyDisputeSnapshot call. Both sides looked healthy
+   * in isolation; the seam between them had no test. This assertion fails
+   * loudly if the wiring breaks again.
+   */
+  it("passes fetchDisputeDetail to applyDisputeSnapshot (the GraphQL backfill seam)", async () => {
+    mockVerify.mockReturnValue(true);
+    setupShopLookup({ id: "shop-1" });
+
+    await handleDisputeWebhook({ rawBody: RAW_BODY, headers: HEADERS });
+
+    const applyCall = mockApply.mock.calls[0]?.[0];
+    expect(applyCall).toBeDefined();
+    expect(typeof applyCall?.fetchDisputeDetail).toBe("function");
+  });
+
   it("apply throws → 500 + outcome marked error (Shopify retries safely)", async () => {
     mockVerify.mockReturnValue(true);
     setupShopLookup({ id: "shop-1" });

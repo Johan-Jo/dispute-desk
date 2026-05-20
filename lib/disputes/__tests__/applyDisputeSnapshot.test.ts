@@ -577,4 +577,85 @@ describe("applyDisputeSnapshot", () => {
         "gid://shopify/ShopifyPaymentsDisputeEvidence/from-graphql",
     });
   });
+
+  /**
+   * Regression for the 2026-05-20 empty-pack incident.
+   *
+   * The webhook REST payload carries `order_id` (a number) but NOT
+   * `order.admin_graphql_api_id` (the GID), `order.name`, or the
+   * dispute-evidence sub-object GID. Every `build_pack` source collector
+   * starts from `dispute.order_gid` — if it's NULL when build_pack runs,
+   * the pack lands with score 0 / stub sections only.
+   *
+   * The diff engine MUST take the values returned by fetchDisputeDetail
+   * and write them into the upsert row. This test pins that the wider set
+   * of fields (not just disputeEvidenceGid) all reach the row.
+   */
+  it("fetchDisputeDetail backfills order_gid + order_name (NOT just disputeEvidenceGid)", async () => {
+    const { client, upsertCalls } = setupClient({ existing: null });
+    const fetchDisputeDetail = vi.fn().mockResolvedValue({
+      disputeEvidenceGid:
+        "gid://shopify/ShopifyPaymentsDisputeEvidence/from-graphql",
+      orderGid: "gid://shopify/Order/6446376124473",
+      orderName: "#1079",
+    });
+
+    await applyDisputeSnapshot({
+      shopId: "shop-1",
+      source: "webhook",
+      // Simulate the live webhook scenario: REST payload only carries
+      // numeric order_id, no orderGid / orderName / disputeEvidenceGid.
+      snapshot: {
+        ...BASE_SNAPSHOT,
+        disputeEvidenceGid: null,
+        orderGid: null,
+        orderName: null,
+        orderId: 6446376124473,
+      },
+      fetchDisputeDetail,
+      client,
+    });
+
+    const upsert = upsertCalls[0] ?? {};
+    expect(upsert).toMatchObject({
+      dispute_evidence_gid:
+        "gid://shopify/ShopifyPaymentsDisputeEvidence/from-graphql",
+      order_gid: "gid://shopify/Order/6446376124473",
+      order_name: "#1079",
+    });
+  });
+
+  /**
+   * Pair-test for the seam: WITHOUT fetchDisputeDetail provided, an insert
+   * driven by the sparse REST webhook payload must land with order_gid and
+   * order_name NULL. This pins the "if you don't backfill, you get nothing"
+   * invariant — so anyone reading the test learns that the GraphQL fetch
+   * isn't optional on the webhook path.
+   */
+  it("WITHOUT fetchDisputeDetail, sparse REST snapshot lands with order_gid / order_name NULL", async () => {
+    const { client, upsertCalls } = setupClient({ existing: null });
+
+    await applyDisputeSnapshot({
+      shopId: "shop-1",
+      source: "webhook",
+      snapshot: {
+        ...BASE_SNAPSHOT,
+        disputeEvidenceGid: null,
+        orderGid: null,
+        orderName: null,
+        orderId: 6446376124473,
+      },
+      client,
+    });
+
+    const upsert = upsertCalls[0] ?? {};
+    expect(upsert).toMatchObject({
+      order_gid: null,
+      // order_name is omitted from the upsert row (only written when truthy)
+      // so the dispute_evidence_gid is also absent. This is the live
+      // failure mode: build_pack runs against a row with no order_gid.
+    });
+    expect("order_name" in upsert).toBe(false);
+    expect("dispute_evidence_gid" in upsert).toBe(false);
+  });
 });
