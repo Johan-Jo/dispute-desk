@@ -52,8 +52,19 @@ type Locale = "en" | "es" | "pt" | "fr" | "de" | "sv";
 interface VariantStrings {
   subject: (p: { shortId: string; orderName: string | null }) => string;
   heading: string;
-  body: string;
+  /** Body paragraphs, joined into `<p>` blocks in render. Splitting at the
+   *  data layer keeps the prose readable in source and lets each variant
+   *  control its own paragraphing without HTML escaping tricks. */
+  body: string[];
+  /** Label of the amount row — context-specific so a "won" email surfaces
+   *  "Amount protected" vs. a "lost" email's "Amount lost." Aligns with
+   *  the variant's emotional register. */
+  amountLabel: string;
   cta: string;
+  /** One-line summary rendered as a small caption inside the card,
+   *  below the CTA — gives the merchant a scannable "what just
+   *  happened" line they can take in at a glance. Optional. */
+  resultLine?: string;
 }
 
 interface LocaleStrings {
@@ -62,7 +73,6 @@ interface LocaleStrings {
   accepted: VariantStrings;
   shared: {
     reason: string;
-    amount: string;
     order: string;
     footer: string;
   };
@@ -76,34 +86,50 @@ const STRINGS: Record<Locale, LocaleStrings> = {
   en: {
     shared: {
       reason: "Reason",
-      amount: "Amount",
       order: "Order",
       footer:
         "You're receiving this because outcome notifications are enabled for your DisputeDesk team. Manage your preferences in the embedded app under Team settings.",
     },
+    // Three emotional registers, deliberately distinct:
+    //   - won: celebratory + confident
+    //   - lost: calm + factual, no blame language
+    //   - accepted: operational + neutral; no jargon
     won: {
       subject: ({ shortId, orderName }) =>
         `You won the chargeback on ${orderName ?? `dispute ${shortId}`}`,
       heading: "You won this chargeback",
-      body:
-        "The card network has accepted your defence package. The disputed amount stays with you and the temporary debit has been reversed by your processor.",
-      cta: "View the dispute",
+      body: [
+        "Good news — the card network accepted your defence package and ruled this dispute in your favour.",
+        "The disputed amount remains with you, and any temporary debit should be reversed by your processor according to their normal payout timing.",
+        "Your case record stays in DisputeDesk, including the evidence submitted, timeline, and outcome, so your team can review what worked and reuse the pattern for future disputes.",
+      ],
+      amountLabel: "Amount protected",
+      cta: "View winning case",
+      resultLine: "Result: Defence accepted · Funds retained",
     },
     lost: {
       subject: ({ shortId, orderName }) =>
-        `Chargeback outcome posted on ${orderName ?? `dispute ${shortId}`}`,
-      heading: "This chargeback was lost",
-      body:
-        "The card network sided with the cardholder. The funds have been deducted from your payout. This is the issuer's final decision — there's nothing further to do on this dispute, but the case data stays in DisputeDesk so you can review what was submitted and use the patterns to strengthen future defences.",
-      cta: "Review what was submitted",
+        `This chargeback was lost — ${orderName ?? `dispute ${shortId}`}`,
+      heading: "This chargeback was not won",
+      body: [
+        "The card network sided with the cardholder, and the disputed amount has been deducted from your payout.",
+        "This decision is final for this dispute, so there is no further action to take. The case will remain in DisputeDesk with the submitted evidence, timeline, and outcome so your team can review what happened and identify ways to strengthen future defences.",
+      ],
+      amountLabel: "Amount lost",
+      cta: "Review the case",
+      resultLine: "Result: Cardholder won · Funds deducted",
     },
     accepted: {
       subject: ({ shortId, orderName }) =>
         `Chargeback closed on ${orderName ?? `dispute ${shortId}`}`,
       heading: "This chargeback has closed",
-      body:
-        "The dispute has reached its terminal state without a contested response. The funds settled with the cardholder. The case stays in DisputeDesk for your records.",
-      cta: "View the dispute",
+      body: [
+        "This dispute has now closed without a submitted defence response. The disputed amount has settled with the cardholder.",
+        "There is nothing further to do on this case, but DisputeDesk will keep the record available so your team can review the timeline, see what evidence was available, and improve future dispute handling.",
+      ],
+      amountLabel: "Amount settled with cardholder",
+      cta: "View case record",
+      resultLine: "Result: Closed · No defence submitted",
     },
   },
   // Non-English locales fall back to English copy for now. Locale keys
@@ -259,22 +285,31 @@ export async function sendOutcomePostedAlert(
         </td>
       </tr></table>
 
-      <h1 style="font-size:20px;font-weight:600;color:${accent};margin:0 0 8px">
+      <h1 style="font-size:20px;font-weight:600;color:${accent};margin:0 0 12px">
         ${variant.heading}
       </h1>
-      <p style="font-size:14px;color:#202223;margin:0 0 18px;line-height:1.5">
-        ${variant.body}
-      </p>
+      ${variant.body
+        .map(
+          (p) =>
+            `<p style="font-size:14px;color:#202223;margin:0 0 12px;line-height:1.55">${p}</p>`,
+        )
+        .join("")}
 
-      <table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:13px" role="presentation">
-        <tr><td style="padding:6px 0;color:#5C5F62;width:30%">${s.shared.order}</td><td style="padding:6px 0;color:#202223">${orderNameDisplay}</td></tr>
+      <table style="width:100%;border-collapse:collapse;margin:18px 0 20px;font-size:13px" role="presentation">
+        <tr><td style="padding:6px 0;color:#5C5F62;width:38%">${s.shared.order}</td><td style="padding:6px 0;color:#202223">${orderNameDisplay}</td></tr>
         <tr><td style="padding:6px 0;color:#5C5F62">${s.shared.reason}</td><td style="padding:6px 0;color:#202223">${reason}</td></tr>
-        <tr><td style="padding:6px 0;color:#5C5F62">${s.shared.amount}</td><td style="padding:6px 0;color:#202223">${amountStr}</td></tr>
+        <tr><td style="padding:6px 0;color:#5C5F62">${variant.amountLabel}</td><td style="padding:6px 0;color:#202223;font-weight:600">${amountStr}</td></tr>
       </table>
 
       <a href="${disputeUrl}" style="display:inline-block;background:#1D4ED8;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:500">
         ${variant.cta}
       </a>
+
+      ${
+        variant.resultLine
+          ? `<p style="font-size:12px;color:${accent};margin:16px 0 0;line-height:1.5;font-weight:500;letter-spacing:0.01em">${variant.resultLine}</p>`
+          : ""
+      }
     </div>
     <p style="font-size:11px;color:#8A8A8A;text-align:center;margin:8px 0 0;line-height:1.5">
       ${s.shared.footer}
