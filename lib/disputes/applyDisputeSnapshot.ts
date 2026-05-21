@@ -221,11 +221,6 @@ export async function applyDisputeSnapshot(
   if (!existing && args.fetchDisputeDetail) {
     try {
       const fallback = await args.fetchDisputeDetail(snapshot.disputeGid);
-      console.log("[applyDispute] fetchDisputeDetail fallback", {
-        disputeGid: snapshot.disputeGid,
-        fallback,
-        beforeBackfill: { disputeEvidenceGid, orderName, orderGid },
-      });
       if (fallback) {
         if (!disputeEvidenceGid && fallback.disputeEvidenceGid) {
           disputeEvidenceGid = fallback.disputeEvidenceGid;
@@ -237,11 +232,6 @@ export async function applyDisputeSnapshot(
           orderGid = fallback.orderGid;
         }
       }
-      console.log("[applyDispute] post-backfill", {
-        disputeEvidenceGid,
-        orderName,
-        orderGid,
-      });
     } catch (err) {
       guardWarnings.push(
         `fetchDisputeDetail failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -257,12 +247,18 @@ export async function applyDisputeSnapshot(
   const newStatus = snapshot.status ?? null;
   const phase = snapshot.type ?? null;
 
-  // Compute the upsert row. We preserve dispute_evidence_gid if the snapshot
-  // doesn't include one (webhook path); never overwrite a real GID with null.
+  // Compute the upsert row. dispute_evidence_gid, order_gid, and order_name
+  // are all CONDITIONAL — they come from the GraphQL backfill (or a prior
+  // backfill on an existing row), NOT from the REST webhook payload. Writing
+  // them as null on the update path would clobber a correct value the create
+  // path wrote 500ms earlier when Shopify ships disputes/create + disputes/
+  // update back-to-back (the 2026-05-20 #1081 incident: create populated
+  // order_gid via fetchDisputeDetail, update arrived right after, !existing
+  // was false so the backfill was skipped, the unconditional upsert wrote
+  // `order_gid: null` and overwrote the create's value).
   const upsertRow: Record<string, unknown> = {
     shop_id: shopId,
     dispute_gid: snapshot.disputeGid,
-    order_gid: orderGid,
     phase,
     status: newStatus,
     reason: snapshot.reason ?? null,
@@ -278,6 +274,9 @@ export async function applyDisputeSnapshot(
   }
   if (orderName) {
     upsertRow.order_name = orderName;
+  }
+  if (orderGid) {
+    upsertRow.order_gid = orderGid;
   }
 
   // Guard: terminal-downgrade — don't overwrite a terminal status with a

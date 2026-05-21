@@ -632,7 +632,7 @@ describe("applyDisputeSnapshot", () => {
    * invariant — so anyone reading the test learns that the GraphQL fetch
    * isn't optional on the webhook path.
    */
-  it("WITHOUT fetchDisputeDetail, sparse REST snapshot lands with order_gid / order_name NULL", async () => {
+  it("WITHOUT fetchDisputeDetail, sparse REST snapshot omits order_gid / order_name / dispute_evidence_gid from upsert", async () => {
     const { client, upsertCalls } = setupClient({ existing: null });
 
     await applyDisputeSnapshot({
@@ -649,12 +649,68 @@ describe("applyDisputeSnapshot", () => {
     });
 
     const upsert = upsertCalls[0] ?? {};
-    expect(upsert).toMatchObject({
-      order_gid: null,
-      // order_name is omitted from the upsert row (only written when truthy)
-      // so the dispute_evidence_gid is also absent. This is the live
-      // failure mode: build_pack runs against a row with no order_gid.
+    // All three backfill-only fields are OMITTED from the upsert (not
+    // written as null). This is critical for the update path: when a
+    // disputes/update follows a disputes/create with the same dispute, the
+    // second upsert must NOT clobber the order_gid the first wrote. See
+    // the dedicated regression test below.
+    expect("order_gid" in upsert).toBe(false);
+    expect("order_name" in upsert).toBe(false);
+    expect("dispute_evidence_gid" in upsert).toBe(false);
+  });
+
+  /**
+   * Regression for the 2026-05-21 order #1081 incident.
+   *
+   * Shopify ships disputes/create + disputes/update back-to-back (~500ms
+   * apart). The CREATE webhook triggers fetchDisputeDetail and populates
+   * order_gid via the GraphQL backfill. The UPDATE webhook arrives second,
+   * finds an existing row → skips the backfill (gated on !existing) →
+   * but still upserts with snapshot.orderGid (NULL from REST payload).
+   * The previous unconditional `order_gid: orderGid` line then clobbered
+   * the create path's correctly-populated value.
+   *
+   * Symptom: order_name + dispute_evidence_gid landed (those were already
+   * conditional), but order_gid landed null. build_pack ran against the
+   * NULL row → empty pack → merchant got a deceptive empty result.
+   *
+   * Fix: order_gid is now conditional, like the other backfill fields.
+   */
+  it("update-path: existing row's order_gid is NOT overwritten when the snapshot has no orderGid (2026-05-21 #1081 regression)", async () => {
+    const { client, upsertCalls } = setupClient({
+      existing: {
+        id: "dispute-1",
+        status: "needs_response",
+        due_at: "2026-05-26T12:00:00Z",
+        submitted_at: null,
+        final_outcome: null,
+        submission_state: "not_saved",
+        new_dispute_alert_sent_at: null,
+        shopify_updated_at: null,
+        dispute_evidence_gid: "gid://shopify/ShopifyPaymentsDisputeEvidence/already-set",
+      },
+      upsertedId: "dispute-1",
     });
+
+    // Simulate the disputes/update webhook arriving right after the create:
+    // existing row found, snapshot from REST payload has no backfill fields.
+    await applyDisputeSnapshot({
+      shopId: "shop-1",
+      source: "webhook",
+      snapshot: {
+        ...BASE_SNAPSHOT,
+        disputeEvidenceGid: null,
+        orderGid: null,
+        orderName: null,
+      },
+      client,
+    });
+
+    const upsert = upsertCalls[0] ?? {};
+    // The fix: these fields are OMITTED from the upsert row, so Postgres
+    // leaves the existing values untouched. The bug was writing null and
+    // clobbering them.
+    expect("order_gid" in upsert).toBe(false);
     expect("order_name" in upsert).toBe(false);
     expect("dispute_evidence_gid" in upsert).toBe(false);
   });

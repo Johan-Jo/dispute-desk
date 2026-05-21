@@ -281,30 +281,12 @@ function makeFetchDisputeDetail(
       variables: { id: disputeGid },
     });
     const dispute = gql.data?.dispute;
-    if (!dispute) {
-      console.warn(
-        "[webhook-backfill] dispute(id:) returned null",
-        { disputeGid, hasErrors: !!gql.errors, errors: gql.errors },
-      );
-      return null;
-    }
+    if (!dispute) return null;
 
-    const result = {
+    return {
       disputeEvidenceGid: dispute.disputeEvidence?.id ?? null,
       orderGid: dispute.order?.id ?? null,
       orderName: dispute.order?.name ?? null,
     };
-    console.log(
-      "[webhook-backfill] dispute(id:) response → snapshot patch",
-      {
-        disputeGid,
-        orderPresent: !!dispute.order,
-        orderIdRaw: dispute.order?.id,
-        orderNameRaw: dispute.order?.name,
-        disputeEvidenceIdRaw: dispute.disputeEvidence?.id,
-        result,
-      },
-    );
-    return result;
   };
 }
