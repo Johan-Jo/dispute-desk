@@ -388,12 +388,15 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
           </BlockStack>
         )}
 
-        {/* Evidence Basis (deterministic, from approved facts) */}
+        {/* Evidence Basis (deterministic, from approved facts).
+            Caption removed — mirrors the bank PDF so the merchant
+            preview reflects exactly what the reviewer sees. The prior
+            "Approved bank-facing facts used to ground this package"
+            line leaked internal terminology onto the bank submission;
+            keeping the same removal here means the preview is no
+            longer a richer view than what we send. */}
         <BlockStack gap="200">
           <Text as="h3" variant="headingMd">Evidence Basis</Text>
-          <Text as="p" tone="subdued" variant="bodySm">
-            Approved bank-facing facts used to ground this package.
-          </Text>
           {evidenceBasis.length === 0 ? (
             <Text as="p" variant="bodyMd">(No bank-eligible facts available.)</Text>
           ) : (

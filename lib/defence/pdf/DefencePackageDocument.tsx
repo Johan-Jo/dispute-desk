@@ -285,9 +285,14 @@ function EvidenceBasis({ approvedFacts }: { approvedFacts: EvidenceFact[] }) {
   return (
     <View minPresenceAhead={120}>
       <Text style={styles.h1}>Evidence Basis</Text>
-      <Text style={styles.mutedNote}>
-        Approved bank-facing facts used to ground this package.
-      </Text>
+      {/* No caption: the heading + Signal/Detail table is self-
+          explanatory. The prior "Approved bank-facing facts used to
+          ground this package" caption leaked our internal terminology
+          (approval workflow, the existence of a parallel "non-bank-
+          facing" data layer) onto the bank PDF — both invite the
+          reviewer's curiosity in directions that work against us. Per
+          the bank-non-disclosure rule, never expose internal
+          structures or scoring concepts on the submission. */}
       <View style={styles.table}>
         <View style={styles.tableHeader} wrap={false}>
           <Text style={styles.tableHeaderCell}>Signal</Text>
