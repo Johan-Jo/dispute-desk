@@ -721,16 +721,20 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
   );
 
   // ── Missing or weak evidence ──
-  const missingOrWeak: MissingItemViewModel[] = derived.missingItems.map(
-    (m) => ({
+  // Optional-priority items are intentionally hidden from the merchant UI
+  // (decision 2026-05-21 — dev mode, no prod merchants). The underlying
+  // checklist still carries them so the pack builder, scoring, and
+  // coverage gate are untouched; only the merchant-facing list is filtered.
+  const missingOrWeak: MissingItemViewModel[] = derived.missingItems
+    .filter((m) => m.priority !== "optional")
+    .map((m) => ({
       id: `missing:${m.field}`,
       field: m.field,
       title: m.label,
       whyItMatters: m.impact,
       required: m.priority === "critical",
       actionInstruction: m.ctaLabel || null,
-    }),
-  );
+    }));
 
   // ── Internal-only signals ──
   // Minimal classifier reading existing payloads. Surfaces AVS/CVV

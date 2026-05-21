@@ -487,18 +487,24 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           signal, so it must not render as a red "Missing" card with no
           actionable CTA. Mirrors the §3 Missing-or-weak filter
           (deriveMissingItems → collectionType === "manual"). */
+  // `priority === "optional"` items are intentionally hidden from the
+  // merchant UI (decision 2026-05-21 — dev mode, no prod merchants).
+  // The underlying checklist still carries them so pack builder,
+  // scoring, and coverage gate are untouched; only the merchant-facing
+  // surfaces filter them out.
   const visibleChecklist = effectiveChecklist.filter((c) => {
     if (c.status === "unavailable") return false;
     if (c.status === "missing" && !canMerchantUpload(c)) return false;
+    if ((c.priority as string) === "optional") return false;
     return true;
   });
-  type Bucket = { key: "critical" | "recommended" | "optional"; label: string; items: ChecklistItemV2[]; complete: number };
-  const buckets: Bucket[] = (["critical", "recommended", "optional"] as const).map((key) => {
+  type Bucket = { key: "critical" | "recommended"; label: string; items: ChecklistItemV2[]; complete: number };
+  const buckets: Bucket[] = (["critical", "recommended"] as const).map((key) => {
     const items = visibleChecklist.filter((c) => (c.priority as string) === key);
     const complete = items.filter((c) => c.status === "available" || c.status === "waived").length;
     return {
       key,
-      label: key === "critical" ? "Critical evidence" : key === "recommended" ? "Supporting evidence" : "Optional",
+      label: key === "critical" ? "Critical evidence" : "Supporting evidence",
       items,
       complete,
     };
