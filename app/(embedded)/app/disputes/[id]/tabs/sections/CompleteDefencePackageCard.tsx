@@ -625,9 +625,36 @@ export function CompleteDefencePackageCard({
             </Banner>
           )}
 
-          {row.status === "stale" && (
-            <Banner tone="warning" title="Stale — new evidence available">
-              <p>This draft no longer reflects the latest evidence on file. Regenerate to refresh.</p>
+          {/* Stale-vs-regenerating split: the same `stale` status applies
+              whether the merchant hasn't acted yet OR they just clicked
+              Regenerate and the build chain is still running. The original
+              copy ("Regenerate to refresh") was useless in the latter case
+              — they'd already clicked. We now distinguish the two:
+                - busy === "regen" → just-clicked, show progress copy
+                - status === "stale" without busy → action prompt
+              Once buildDefencePackageJob finishes, `latest` becomes the new
+              `draft` v2 and `row.status` is no longer "stale", so this whole
+              block stops rendering. */}
+          {row.status === "stale" && busy === "regen" && (
+            <Banner tone="info" title="Building your new defence package…">
+              <p>
+                We&rsquo;re rebuilding the evidence pack and drafting a fresh
+                narrative + PDF based on the latest data. This usually takes
+                2&ndash;3 minutes. The page will update automatically when
+                the new version is ready — feel free to keep this tab open
+                or come back later.
+              </p>
+            </Banner>
+          )}
+          {row.status === "stale" && busy !== "regen" && (
+            <Banner tone="warning" title="New evidence available — refresh this draft">
+              <p>
+                Recent updates (uploads, status changes, or new auto-collected
+                signals) aren&rsquo;t reflected in this draft yet. Click
+                Regenerate below to build a new version that includes them
+                — the rebuild takes 2&ndash;3 minutes and runs in the
+                background.
+              </p>
             </Banner>
           )}
 
