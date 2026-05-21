@@ -57,7 +57,10 @@ describe("buildEvidenceBasisRows", () => {
         },
       }),
     ]);
-    expect(rows[0].value).toContain("billing address matched");
+    // Case-insensitive — the renderer capitalizes the leading
+    // character at the boundary; the underlying summary is what this
+    // test cares about.
+    expect(rows[0].value).toMatch(/billing address matched/i);
     expect(rows[0].value).toContain("card verification code matched");
     expect(rows[0].value).toContain("3DS");
     // Belt-and-suspenders: raw codes must never leak.
@@ -72,7 +75,10 @@ describe("buildEvidenceBasisRows", () => {
     const rows = buildEvidenceBasisRows([
       fact({ value: { avsResult: "Y", cvvResult: "M", threeDS: true } }),
     ]);
-    expect(rows[0].value).toContain("billing address matched");
+    // Case-insensitive — the renderer capitalizes the leading
+    // character at the boundary; the underlying translation is what
+    // this test cares about.
+    expect(rows[0].value).toMatch(/billing address matched/i);
     expect(rows[0].value).toContain("CVV matched");
     expect(rows[0].value).toContain("3DS");
     expect(rows[0].value).not.toMatch(/\bAVS Y\b/);
@@ -142,6 +148,27 @@ describe("buildEvidenceBasisRows", () => {
 
   it("empty input → empty rows", () => {
     expect(buildEvidenceBasisRows([])).toEqual([]);
+  });
+
+  it("capitalizes the first character of every cell value", () => {
+    // The classifier produces phrases that read naturally inside the
+    // LLM narrative ("the billing address matched…"), but in the PDF's
+    // Evidence Basis table each cell is a sentence-equivalent and must
+    // start with a capital letter. The renderer normalizes at the
+    // boundary, so this holds regardless of which category emits the
+    // string.
+    const rows = buildEvidenceBasisRows([
+      fact({
+        value: {
+          verificationSummary:
+            "the billing address matched the issuer's records",
+        },
+      }),
+    ]);
+    expect(rows[0].value.charAt(0)).toBe(
+      rows[0].value.charAt(0).toUpperCase(),
+    );
+    expect(rows[0].value.startsWith("The billing address matched")).toBe(true);
   });
 
   it("excludes submissionRisk facts even when bankEligible+includeInBankNarrative are true", () => {

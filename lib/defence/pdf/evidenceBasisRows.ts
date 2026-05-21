@@ -201,6 +201,18 @@ function renderValue(fact: EvidenceFact): string {
   }
 }
 
+// Capitalize the first character of an Evidence Basis cell value. The
+// upstream classifier produces phrases that read naturally mid-sentence
+// inside the LLM narrative ("the billing address matched…"), but the
+// PDF table cell is its own sentence-equivalent and must start with a
+// capital letter. Applied at the renderer boundary so every category's
+// cell text obeys the rule without touching the narrative-facing
+// source strings.
+function capitalizeFirst(s: string): string {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 export function buildEvidenceBasisRows(facts: EvidenceFact[]): EvidenceBasisRow[] {
   const filtered = facts.filter(
     (f) => f.bankEligible && f.includeInBankNarrative && !f.submissionRisk,
@@ -214,6 +226,6 @@ export function buildEvidenceBasisRows(facts: EvidenceFact[]): EvidenceBasisRow[
     factId: f.id,
     category: f.category,
     label: f.label,
-    value: renderValue(f),
+    value: capitalizeFirst(renderValue(f)),
   }));
 }
