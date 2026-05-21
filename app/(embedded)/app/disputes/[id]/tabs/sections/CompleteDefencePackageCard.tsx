@@ -700,11 +700,20 @@ export function CompleteDefencePackageCard({
                       A defence package has been submitted to the bank.
                     </Text>
                   )}
-                  {!submitPending && shopifyAdminUrl ? (
-                    <InlineStack gap="200" blockAlign="center">
-                      <Button url={shopifyAdminUrl} target="_blank" external>
-                        Open in Shopify Admin
-                      </Button>
+                  {!submitPending && (shopifyAdminUrl || previewHref) ? (
+                    <InlineStack gap="200" blockAlign="center" align="space-between">
+                      {shopifyAdminUrl ? (
+                        <Button url={shopifyAdminUrl} target="_blank" external>
+                          Open in Shopify Admin
+                        </Button>
+                      ) : <span />}
+                      {previewHref ? (
+                        <Button url={previewHref} target="_blank" external>
+                          {hasUnsubmittedDraft && latest
+                            ? `Review draft v${latest.version} PDF`
+                            : "View PDF"}
+                        </Button>
+                      ) : null}
                     </InlineStack>
                   ) : null}
                 </BlockStack>
@@ -896,17 +905,24 @@ export function CompleteDefencePackageCard({
                   approve / submit. previewHref tracks displayRow which
                   now follows the latest-first priority — so this
                   always opens the version the merchant is reading
-                  inline below. */}
-              <Button
-                url={previewHref ?? undefined}
-                target="_blank"
-                external
-                disabled={!previewHref || busy !== null}
-              >
-                {hasUnsubmittedDraft && latest
-                  ? `Review draft v${latest.version} PDF`
-                  : "View PDF"}
-              </Button>
+                  inline below.
+
+                  Suppressed when the submitted-package banner is
+                  showing (it already renders a View PDF button on the
+                  right side of the green banner) to avoid two
+                  identical buttons stacked vertically. */}
+              {!(isSubmittedToBank && !submitPending) && (
+                <Button
+                  url={previewHref ?? undefined}
+                  target="_blank"
+                  external
+                  disabled={!previewHref || busy !== null}
+                >
+                  {hasUnsubmittedDraft && latest
+                    ? `Review draft v${latest.version} PDF`
+                    : "View PDF"}
+                </Button>
+              )}
             </ButtonGroup>
 
             {/* TERTIARY (overflow): Regenerate. Hidden behind "More
