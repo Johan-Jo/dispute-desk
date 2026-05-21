@@ -154,12 +154,21 @@ describe("collectFraudRiskEvidence", () => {
     expect(sections).toHaveLength(1);
     const data = sections[0].data as {
       positiveFacts: string[];
+      negativeFacts: string[];
       isNegativeVerdict?: boolean;
       riskLevel: string;
       recommendation: string;
     };
     expect(data.isNegativeVerdict).toBe(true);
     expect(data.positiveFacts).toEqual([]);
+    // The NEGATIVE-sentiment fact from POSITIVE_ROW is surfaced here so
+    // the merchant can read WHY Shopify scored the order as HIGH risk.
+    // The factClassifier still drops the row because positiveFacts is
+    // empty — the categorizer returns "invalid" — so these strings
+    // never reach the LLM or the bank submission.
+    expect(data.negativeFacts).toEqual([
+      "Distance from billing to shipping > 1000km",
+    ]);
     expect(data.riskLevel).toBe("HIGH");
     expect(data.recommendation).toBe("INVESTIGATE");
   });
@@ -175,9 +184,16 @@ describe("collectFraudRiskEvidence", () => {
     );
     const sections = await collectFraudRiskEvidence(CTX_FRAUD);
     expect(sections).toHaveLength(1);
-    const data = sections[0].data as { isNegativeVerdict?: boolean; positiveFacts: string[] };
+    const data = sections[0].data as {
+      isNegativeVerdict?: boolean;
+      positiveFacts: string[];
+      negativeFacts: string[];
+    };
     expect(data.isNegativeVerdict).toBe(true);
     expect(data.positiveFacts).toEqual([]);
+    expect(data.negativeFacts).toEqual([
+      "Distance from billing to shipping > 1000km",
+    ]);
   });
 
   it("emits a section when risk_level=NONE + recommendation=ACCEPT + positive facts", async () => {
@@ -230,10 +246,14 @@ describe("collectFraudRiskEvidence", () => {
     const data = sections[0].data as {
       isNegativeVerdict?: boolean;
       positiveFacts: string[];
+      negativeFacts: string[];
       recommendation: string;
     };
     expect(data.isNegativeVerdict).toBe(true);
     expect(data.positiveFacts).toEqual([]);
+    expect(data.negativeFacts).toEqual([
+      "Distance from billing to shipping > 1000km",
+    ]);
     expect(data.recommendation).toBe("REJECT");
   });
 
@@ -257,6 +277,7 @@ describe("collectFraudRiskEvidence", () => {
     const data = sections[0].data as {
       isNegativeVerdict?: boolean;
       positiveFacts: string[];
+      negativeFacts: string[];
       recommendation: string;
     };
     expect(data.isNegativeVerdict).toBe(true);
@@ -266,6 +287,72 @@ describe("collectFraudRiskEvidence", () => {
     // skips the row and it NEVER reaches the LLM payload or the bank
     // submission. The merchant sees it; the bank does not.
     expect(data.positiveFacts).toEqual([]);
+    // The NEGATIVE-sentiment fact is surfaced on the merchant side so
+    // the "Kept internal" row can explain the verdict. This data is
+    // merchant-UI-only — see the negativeFacts contract on
+    // FraudRiskScreeningData.
+    expect(data.negativeFacts).toEqual([
+      "Distance from billing to shipping > 1000km",
+    ]);
+  });
+
+  it("surfaces real Shopify CANCEL reasoning in negativeFacts (2026-05-21 captured payload)", async () => {
+    // Real payload captured from the live order on 2026-05-21 that
+    // produced a Shopify CANCEL recommendation. Locks in two-fact
+    // explanation: shipping/IP distance + billing/order country mismatch.
+    // Confirms NEUTRAL facts ("Location of IP address is Rio de Janeiro")
+    // are NOT surfaced — they are descriptive, not reasoning.
+    mockGetClient.mockReturnValue(
+      buildSb([
+        {
+          ...POSITIVE_ROW,
+          risk_level: "NONE",
+          recommendation: "CANCEL",
+          facts_json: [
+            {
+              sentiment: "NEGATIVE",
+              description:
+                "Shipping address is 6709 km from location of IP address",
+            },
+            {
+              sentiment: "NEGATIVE",
+              description:
+                "The billing address is listed as United States, but the order was placed from Brazil",
+            },
+            {
+              sentiment: "NEUTRAL",
+              description:
+                "Location of IP address used to place the order is Rio de Janeiro, Rio de Janeiro, Brazil",
+            },
+            {
+              sentiment: "POSITIVE",
+              description: "Card Verification Value (CVV) is correct",
+            },
+            {
+              sentiment: "POSITIVE",
+              description:
+                "Billing street address matches credit card's registered address",
+            },
+          ],
+          fact_sentiments: null,
+        },
+      ]) as never,
+    );
+    const sections = await collectFraudRiskEvidence(CTX_FRAUD);
+    expect(sections).toHaveLength(1);
+    const data = sections[0].data as {
+      negativeFacts: string[];
+      positiveFacts: string[];
+      isNegativeVerdict?: boolean;
+    };
+    expect(data.isNegativeVerdict).toBe(true);
+    expect(data.positiveFacts).toEqual([]);
+    expect(data.negativeFacts).toEqual([
+      "Shipping address is 6709 km from location of IP address",
+      "The billing address is listed as United States, but the order was placed from Brazil",
+    ]);
+    // NEUTRAL not surfaced.
+    expect(data.negativeFacts.join("|")).not.toContain("Rio de Janeiro");
   });
 
   it("emits an internal-only section when there are zero POSITIVE-sentiment facts", async () => {
@@ -282,9 +369,15 @@ describe("collectFraudRiskEvidence", () => {
     );
     const sections = await collectFraudRiskEvidence(CTX_FRAUD);
     expect(sections).toHaveLength(1);
-    const data = sections[0].data as { isNegativeVerdict?: boolean; positiveFacts: string[] };
+    const data = sections[0].data as {
+      isNegativeVerdict?: boolean;
+      positiveFacts: string[];
+      negativeFacts: string[];
+    };
     expect(data.isNegativeVerdict).toBe(true);
     expect(data.positiveFacts).toEqual([]);
+    // The single NEGATIVE fact is surfaced; the NEUTRAL one is dropped.
+    expect(data.negativeFacts).toEqual(["Negative fact B"]);
     // Original behavior preserved here too — we just stop returning [].
     expect(sections[0].fieldsProvided).toEqual(["fraud_risk_screening"]);
   });

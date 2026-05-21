@@ -1705,6 +1705,27 @@ The merchant-facing strength reason (rendered inside the Case Summary card's "Wh
 
 **v2 escape hatch (not implemented):** when 3-D Secure liability shift is verified (`tdsVerified === true` from manual confirmation), the cap should be skipped — the network has explicitly transferred liability and pre-auth risk score is no longer the dominant signal. Marked as a TODO in `lib/automation/riskWeakness.ts`.
 
+### Pre-authorization Fraud Screening — internal-only path (negative-verdict surfacing)
+
+The `fraudRiskSource` collector (`lib/packs/sources/fraudRiskSource.ts`) splits Shopify's pre-authorization risk assessment into two payload shapes, both emitted with `fieldsProvided: ["fraud_risk_screening"]`. Which shape lands on the dispute depends on what Shopify returned at checkout:
+
+| Shopify verdict | Payload shape | Where it shows up |
+|---|---|---|
+| `ACCEPT` / `NONE` recommendation + LOW/NONE risk + ≥1 POSITIVE-sentiment fact | `{ positiveFacts: [...up to 3], negativeFacts: [], isNegativeVerdict: undefined }` | Cited as **supporting/moderate evidence** in the bank rebuttal |
+| `INVESTIGATE` / `REJECT` / `CANCEL` recommendation, or MEDIUM/HIGH risk_level, or any case with zero POSITIVE facts | `{ positiveFacts: [], negativeFacts: [...up to MAX_NEGATIVE_FACTS_CITED], isNegativeVerdict: true }` | **"Kept internal only"** on Overview — visible to the merchant, never sent to the bank |
+
+**Why we surface `negativeFacts` at all.** The merchant deserves to know *why* Shopify recommended against the order ("Shipping address is 6709 km from IP location", "Billing country mismatch"), not just the verdict label. Pre-fix (commit history before 2026-05-21), the collector returned `[]` on the negative path and the merchant saw nothing — looked like fraud screening never ran. The internal-only branch surfaces the row with the negative facts inlined into the row reason text (`lib/argument/evidenceLineItem.ts` → `specificInternalReason("fraud_risk_screening", ...)`).
+
+**Safety contract — `negativeFacts` cannot leak to the bank or the LLM.** Defense-in-depth across three layers:
+
+1. **`negativeFacts` is only populated when `positiveFacts.length === 0`.** Set by the collector, never mixed.
+2. **Categorizer returns `"invalid"`** for `fraud_risk_screening` with empty `positiveFacts` (`lib/argument/canonicalEvidence.ts`). The `factClassifier` skips invalid categories, so no fact lands in `defence_packages.facts_json` for this row.
+3. **LLM payload extractor (`lib/defence/factClassifier.ts` → `extractValue`)** only ever reads `positiveFacts` for the `fraud_risk_screening` case, never `negativeFacts`. Even if step 2 were bypassed by a future change, step 3 still blocks the leak.
+
+Regression coverage: `lib/packs/sources/__tests__/fraudRiskSource.test.ts` covers each verdict path and asserts the captured-payload negative-fact list. `tests/unit/evidenceLineItem.test.ts` covers the reason-text inlining (CANCEL with two negative facts → reason mentions both). Both must stay green on each release — the contract is load-bearing.
+
+**Help article:** `lib/help/articles.ts` slug `fraud-risk-screening`, body in `messages/{locale}.json` under `help.articles.fraudRiskScreening`. Documents the categories Shopify evaluates (payment verification, geographic consistency, IP reputation, attempt pattern, email/phone, cross-store risk, order timing) and the routing rules for each verdict.
+
 ### Customer IP Collection
 
 `ORDER_DETAIL_QUERY` fetches `clientIp` (often null on many stores due to Shopify privacy restrictions). When present, the `paymentSource.ts` collector provides a `customer_ip` field. Shopify's `ShopifyPaymentsDisputeEvidenceUpdateInput` does **not** have a dedicated `customerPurchaseIp` field (verified via introspection 2026-04-21; earlier codebase claim was stale). When IP evidence exists the save-to-Shopify job appends `Customer purchase IP: <ip>` to `accessActivityLog` so the IP still reaches the bank in the "Activity logs" field. Priority: `recommended` for fraud disputes.

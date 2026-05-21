@@ -54,6 +54,15 @@ const SHOPIFY_PROVIDER = "shopify";
  *  a sprawling list that bores the reviewer. Tunable. */
 export const MAX_POSITIVE_FACTS_CITED = 3;
 
+/** Cap on the negative-sentiment facts surfaced on the internal-only
+ *  branch. These NEVER reach the bank or the LLM — the categorizer
+ *  returns "invalid" for fraud_risk_screening with empty positiveFacts
+ *  (see `lib/argument/canonicalEvidence.ts`) so the row is skipped by
+ *  the factClassifier. The negative-fact list is merchant-UI-only and
+ *  exists so the "Kept internal" row can explain WHY Shopify
+ *  recommended CANCEL/REJECT/INVESTIGATE. */
+export const MAX_NEGATIVE_FACTS_CITED = 3;
+
 interface RiskAssessmentRow {
   id: string;
   provider: string | null;
@@ -71,6 +80,11 @@ interface PositiveFact {
   sentiment: "POSITIVE";
 }
 
+interface NegativeFact {
+  description: string;
+  sentiment: "NEGATIVE";
+}
+
 export interface FraudRiskScreeningData extends Record<string, unknown> {
   /** Source provider — always "shopify" given the eligibility gate. */
   provider: string;
@@ -84,6 +98,30 @@ export interface FraudRiskScreeningData extends Record<string, unknown> {
    *  MAX_POSITIVE_FACTS_CITED. Order preserves Shopify's response.
    *  Empty array on the internal-only path (a non-ACCEPT verdict). */
   positiveFacts: string[];
+  /**
+   * Negative-sentiment fact descriptions Shopify returned alongside an
+   * unfavourable verdict (capped at MAX_NEGATIVE_FACTS_CITED). Populated
+   * ONLY on the internal-only path so the merchant can read WHY Shopify
+   * recommended CANCEL/REJECT/INVESTIGATE — e.g. "Shipping address is
+   * 6709 km from IP address". Order preserves Shopify's response.
+   *
+   * **Safety contract:** these strings are merchant-UI-only and are
+   * NEVER cited to the bank or fed to the LLM. The guarantee is
+   * structural:
+   *   1. `negativeFacts` is only set when `isNegativeVerdict === true`,
+   *      which implies `positiveFacts.length === 0`.
+   *   2. The canonical-evidence categorizer returns `"invalid"` for
+   *      fraud_risk_screening payloads with empty `positiveFacts`
+   *      (`lib/argument/canonicalEvidence.ts`), so the factClassifier
+   *      skips the row entirely.
+   *   3. The LLM payload extractor (`lib/defence/factClassifier.ts`
+   *      `extractValue`) only ever reads `positiveFacts`, never
+   *      `negativeFacts`.
+   * Even if step 2 fails, step 3 still blocks the leak.
+   *
+   * Empty array on the ACCEPT path (no negative facts to cite anyway).
+   */
+  negativeFacts: string[];
   /** When the assessment was generated (Shopify's `assessed_at`). */
   assessedAt: string | null;
   /**
@@ -168,6 +206,7 @@ export async function collectFraudRiskEvidence(
       positiveFacts: positiveFacts
         .slice(0, MAX_POSITIVE_FACTS_CITED)
         .map((f) => f.description),
+      negativeFacts: [],
       assessedAt: shopifyRow.assessed_at,
     };
     return [
@@ -188,15 +227,29 @@ export async function collectFraudRiskEvidence(
   // it to the bank would weaken the case, but hiding it entirely is
   // dishonest UX (looks like we never checked).
   //
+  // Surface the NEGATIVE-sentiment facts that drove the verdict so the
+  // merchant sees WHY Shopify recommended against the order ("Shipping
+  // address is 6709 km from IP location" etc.) instead of a blank
+  // "kept internal" row. These strings are merchant-UI-only and are
+  // structurally blocked from the bank/LLM — see the negativeFacts
+  // safety contract in FraudRiskScreeningData.
+  //
   // The LLM safety contract is preserved by the canonicalEvidence
   // categorizer: `fraud_risk_screening` with empty positiveFacts
   // categorizes as `"invalid"`, which the factClassifier skips →
   // no fact in defence_packages.facts_json → no bank-facing leakage.
+  const negativeFacts = extractNegativeFacts(
+    shopifyRow.facts_json,
+    shopifyRow.fact_sentiments,
+  );
   const negativeData: FraudRiskScreeningData = {
     provider: SHOPIFY_PROVIDER,
     riskLevel,
     recommendation,
     positiveFacts: [],
+    negativeFacts: negativeFacts
+      .slice(0, MAX_NEGATIVE_FACTS_CITED)
+      .map((f) => f.description),
     assessedAt: shopifyRow.assessed_at,
     isNegativeVerdict: true,
   };
@@ -259,6 +312,49 @@ function extractPositiveFacts(
       if (sentiment !== "POSITIVE") continue;
       const description = stringDescription(raw.description);
       if (description) out.push({ description, sentiment: "POSITIVE" });
+    }
+    return out;
+  }
+
+  return out;
+}
+
+/**
+ * Walk the (facts_json, fact_sentiments) pair and return only the
+ * NEGATIVE-sentiment facts. Mirrors `extractPositiveFacts` shape-for-
+ * shape so future Shopify response variations are handled uniformly.
+ *
+ * NEUTRAL facts are intentionally dropped: they're descriptive scaffolding
+ * ("Location of IP address is Rio de Janeiro"), not reasons. Citing them
+ * as "why Shopify said cancel" would mislead the merchant.
+ */
+function extractNegativeFacts(
+  factsJson: unknown,
+  factSentiments: unknown,
+): NegativeFact[] {
+  const out: NegativeFact[] = [];
+
+  // Shape (a): parallel arrays.
+  if (Array.isArray(factsJson) && Array.isArray(factSentiments)) {
+    for (let i = 0; i < factsJson.length; i++) {
+      const sentiment = String(factSentiments[i] ?? "").toUpperCase();
+      if (sentiment !== "NEGATIVE") continue;
+      const description = stringDescription(factsJson[i]);
+      if (description) out.push({ description, sentiment: "NEGATIVE" });
+    }
+    return out;
+  }
+
+  // Shape (b) / (c): array of objects with sentiment inline.
+  if (Array.isArray(factsJson)) {
+    for (const raw of factsJson) {
+      if (!isPlainObject(raw)) continue;
+      const sentiment = String(
+        (raw.sentiment as unknown) ?? "",
+      ).toUpperCase();
+      if (sentiment !== "NEGATIVE") continue;
+      const description = stringDescription(raw.description);
+      if (description) out.push({ description, sentiment: "NEGATIVE" });
     }
     return out;
   }

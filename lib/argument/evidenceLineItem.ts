@@ -618,21 +618,37 @@ function specificInternalReason(field: string, payload: unknown): string | null 
     // never sent to the bank — citing "Shopify recommended cancel" in a
     // rebuttal would tank the response by acknowledging our own
     // platform thought the order was risky.
+    //
+    // When Shopify returned NEGATIVE-sentiment facts, inline them so the
+    // merchant reads WHY the verdict landed where it did (e.g. shipping
+    // far from IP, billing country mismatch). The negativeFacts payload
+    // is merchant-UI-only — the canonicalEvidence categorizer returns
+    // "invalid" for empty positiveFacts so the row never reaches the
+    // LLM or the bank submission.
     const recommendation =
       typeof p.recommendation === "string" ? p.recommendation.toUpperCase() : null;
     const riskLevel =
       typeof p.riskLevel === "string" ? p.riskLevel.toUpperCase() : null;
+    const negativeFacts = Array.isArray(p.negativeFacts)
+      ? (p.negativeFacts as unknown[]).filter(
+          (x): x is string => typeof x === "string" && x.trim().length > 0,
+        )
+      : [];
+    const whyClause =
+      negativeFacts.length > 0
+        ? ` Shopify flagged: ${negativeFacts.join("; ")}.`
+        : "";
     if (recommendation === "CANCEL") {
-      return "Shopify's pre-authorization screening recommended CANCEL for this order. Kept internal — citing a negative verdict from your own fraud system would weaken the bank response.";
+      return `Shopify's pre-authorization screening recommended CANCEL for this order.${whyClause} Kept internal — citing a negative verdict from your own fraud system would weaken the bank response.`;
     }
     if (recommendation === "REJECT") {
-      return "Shopify's pre-authorization screening recommended REJECT for this order. Kept internal — citing a negative verdict from your own fraud system would weaken the bank response.";
+      return `Shopify's pre-authorization screening recommended REJECT for this order.${whyClause} Kept internal — citing a negative verdict from your own fraud system would weaken the bank response.`;
     }
     if (recommendation === "INVESTIGATE") {
-      return "Shopify's pre-authorization screening recommended INVESTIGATE for this order. Kept internal — citing an inconclusive verdict from your own fraud system would weaken the bank response.";
+      return `Shopify's pre-authorization screening recommended INVESTIGATE for this order.${whyClause} Kept internal — citing an inconclusive verdict from your own fraud system would weaken the bank response.`;
     }
     if (riskLevel === "HIGH" || riskLevel === "MEDIUM") {
-      return `Shopify's pre-authorization screening scored this order as ${riskLevel} risk. Kept internal — citing your own fraud system's elevated risk score would weaken the bank response.`;
+      return `Shopify's pre-authorization screening scored this order as ${riskLevel} risk.${whyClause} Kept internal — citing your own fraud system's elevated risk score would weaken the bank response.`;
     }
   }
 

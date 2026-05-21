@@ -364,6 +364,67 @@ describe("Test 7c — fraud_risk_screening with negative verdict surfaces as int
     expect(row?.reason).toMatch(/CANCEL/);
   });
 
+  it("CANCEL with negativeFacts → reason text inlines the Shopify reasoning (2026-05-21 captured payload)", async () => {
+    // Locks in the merchant-facing WHY: when the fraudRiskSource captures
+    // NEGATIVE-sentiment facts off the live Shopify response, those facts
+    // must appear in the row reason so the merchant sees what drove the
+    // verdict — not just the verdict label. Payload below is the real
+    // captured shape from the 2026-05-21 CANCEL incident.
+    const mod = await import("@/lib/argument/evidenceLineItem");
+    const { deriveEvidenceLineItems } = mod as {
+      deriveEvidenceLineItems: (args: unknown) => Array<{
+        field: string;
+        submissionMethod: string;
+        reason: string;
+      }>;
+    };
+    const checklist = [
+      {
+        field: "fraud_risk_screening",
+        label: "Pre-authorization fraud screening",
+        status: "available",
+      },
+    ];
+    const payloadByField = new Map<string, unknown>([
+      [
+        "fraud_risk_screening",
+        {
+          provider: "shopify",
+          riskLevel: "NONE",
+          recommendation: "CANCEL",
+          positiveFacts: [],
+          negativeFacts: [
+            "Shipping address is 6709 km from location of IP address",
+            "The billing address is listed as United States, but the order was placed from Brazil",
+          ],
+          isNegativeVerdict: true,
+        },
+      ],
+    ]);
+    const lineItems = deriveEvidenceLineItems({
+      checklist,
+      facts: [],
+      payloadByField,
+      contributions: { strong: [], moderate: [] },
+      packSavedToShopify: false,
+      excludedFields: new Set(),
+      attachmentUploadFailures: new Map(),
+      inclusionOverrides: new Map(),
+      reasonFamily: "fraud",
+    });
+    const row = lineItems.find((li) => li.field === "fraud_risk_screening");
+    expect(row?.submissionMethod).toBe("internal_only");
+    // Verdict label still in the text.
+    expect(row?.reason).toMatch(/CANCEL/);
+    // Negative facts inlined.
+    expect(row?.reason).toContain("Shipping address is 6709 km");
+    expect(row?.reason).toContain(
+      "The billing address is listed as United States, but the order was placed from Brazil",
+    );
+    // "Kept internal" framing preserved.
+    expect(row?.reason).toMatch(/Kept internal/);
+  });
+
   it("REJECT recommendation also resolves to internal_only with verdict-specific reason text", async () => {
     const mod = await import("@/lib/argument/evidenceLineItem");
     const { deriveEvidenceLineItems } = mod as {
