@@ -7,6 +7,11 @@ export interface ShopDetails {
   phone: string;
   /** Full primary domain URL, e.g. https://example.com or https://example.myshopify.com */
   primaryDomain: string;
+  /** ISO-4217 alpha-3 currency code, e.g. "USD". Null when Shopify
+   *  omits it (shouldn't happen — every shop has a primary currency —
+   *  but we treat it as nullable so a future schema drift doesn't
+   *  break the rest of `ShopDetails`). */
+  currencyCode: string | null;
   address: {
     address1: string;
     address2: string;
@@ -28,6 +33,7 @@ const SHOP_DETAILS_QUERY = `
       name
       email
       contactEmail
+      currencyCode
       primaryDomain { url }
       shopAddress {
         address1
@@ -47,6 +53,7 @@ interface ShopQueryData {
     name: string;
     email: string;
     contactEmail: string | null;
+    currencyCode: string | null;
     primaryDomain: { url: string };
     shopAddress: {
       address1: string | null;
@@ -98,6 +105,7 @@ export async function fetchShopDetails(shopInternalId: string): Promise<ShopDeta
     email: shop.contactEmail ?? shop.email,
     phone: addr?.phone ?? "",
     primaryDomain: shop.primaryDomain.url,
+    currencyCode: shop.currencyCode ?? null,
     address: {
       address1: addr?.address1 ?? "",
       address2: addr?.address2 ?? "",

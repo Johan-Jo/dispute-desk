@@ -22,6 +22,17 @@ export interface MetricsOptions {
   periodFrom?: string;
   /** Period end (ISO). Defaults to now. */
   periodTo?: string;
+  /** ISO-4217 currency code to prefer as the display currency for
+   *  the Recovered / Lost / At Risk tiles. Typically the shop's
+   *  Shopify presentment currency (`shops.currency_code`). When
+   *  supplied AND at least one dispute in the window is denominated
+   *  in this currency, the metrics layer uses it instead of the
+   *  most-frequent-currency heuristic. When supplied but no matching
+   *  dispute exists (e.g. shop is USD but every chargeback is EUR),
+   *  the heuristic still wins — showing "$0 recovered" when the
+   *  merchant has €9k in plays is worse than showing the wrong
+   *  symbol. */
+  preferredCurrency?: string | null;
 }
 
 export interface DisputeMetrics {
@@ -115,7 +126,7 @@ export async function computeDisputeMetrics(
   opts: MetricsOptions,
 ): Promise<DisputeMetrics> {
   const sb = getServiceClient();
-  const { shopId, periodFrom, periodTo } = opts;
+  const { shopId, periodFrom, periodTo, preferredCurrency } = opts;
   const periodEnd = periodTo ?? new Date().toISOString();
 
   // ── Fetch current period disputes ─────────────────────────────────────
@@ -147,18 +158,36 @@ export async function computeDisputeMetrics(
   // ── Currency (picked before amount sums so we can scope them) ─────────
   // The dashboard quotes a single currency symbol per tile. Mixing
   // currencies into one sum is wrong regardless of which symbol you
-  // print, so we pick the most-frequent currency_code in the window
-  // and confine `amountAtRisk` / `amountRecovered` / `amountLost` to
-  // disputes denominated in that currency. Disputes in other
-  // currencies count toward `otherCurrencyCounts` so the UI can hint
-  // they exist without rolling them into the sum.
+  // print, so we confine `amountAtRisk` / `amountRecovered` /
+  // `amountLost` to one currency. Picking order:
+  //
+  //   1. `preferredCurrency` (the shop's Shopify presentment currency
+  //      from `shops.currency_code`) — but only if at least one
+  //      dispute in the window is denominated in it. Falling back
+  //      avoids "$0 recovered" when the merchant has real plays in a
+  //      different currency.
+  //   2. Most-frequent `currency_code` in the window (legacy).
+  //   3. `"USD"` (no disputes — empty dashboard).
+  //
+  // Disputes in other currencies count toward `otherCurrencyCounts`
+  // so the UI can hint they exist without rolling them into the sum.
   const currencyCounts: Record<string, number> = {};
   for (const d of list) {
     const c = String(d.currency_code ?? "USD");
     currencyCounts[c] = (currencyCounts[c] ?? 0) + 1;
   }
-  const currencyCode = Object.entries(currencyCounts)
+  const mostFrequent = Object.entries(currencyCounts)
     .sort((a, b) => b[1] - a[1])[0]?.[0] ?? "USD";
+  const preferredHasMatches =
+    preferredCurrency != null && (currencyCounts[preferredCurrency] ?? 0) > 0;
+  // Special case: empty dispute set → honor the shop's preferred
+  // currency so an empty dashboard still shows the right symbol.
+  const currencyCode =
+    preferredHasMatches
+      ? preferredCurrency!
+      : list.length === 0 && preferredCurrency
+        ? preferredCurrency
+        : mostFrequent;
   const otherCurrencyCounts: Record<string, number> = {};
   for (const [code, count] of Object.entries(currencyCounts)) {
     if (code !== currencyCode) otherCurrencyCounts[code] = count;

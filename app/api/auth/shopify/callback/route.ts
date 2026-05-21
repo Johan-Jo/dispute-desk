@@ -12,6 +12,7 @@ import {
   resetBackfillIfScopeUpgraded,
 } from "@/lib/disputes/backfillOrders";
 import { fetchShopDetails } from "@/lib/shopify/shopDetails";
+import { persistShopCurrency } from "@/lib/shopify/persistShopCurrency";
 import { sendWelcomeEmail } from "@/lib/email/sendWelcome";
 import { sendAdminSignupNotification } from "@/lib/email/sendAdminNotification";
 import { normalizeLocale } from "@/lib/i18n/locales";
@@ -140,6 +141,17 @@ export async function GET(req: NextRequest) {
         .catch((err) => {
           console.warn("[webhooks] Dispute webhook registration failed:", err?.message ?? err);
         });
+
+      // Populate shops.currency_code from the Shop GraphQL object.
+      // Fire-and-forget — drives dashboard display currency, but a
+      // miss falls back to the legacy heuristic so OAuth latency is
+      // unaffected.
+      persistShopCurrency(shopInternalId).catch((err) => {
+        console.warn(
+          "[shops] currency persist failed:",
+          err instanceof Error ? err.message : err,
+        );
+      });
 
       // Kick off the 90-day chargeback-rate backfill. Idempotent: the
       // helper skips when shop_daily_metrics already has rows for this

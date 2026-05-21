@@ -3,6 +3,7 @@ import { verifyShopifyWebhook } from "@/lib/webhooks/verify";
 import { getServiceClient } from "@/lib/supabase/server";
 import { loadSession } from "@/lib/shopify/sessionStorage";
 import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
+import { persistShopCurrency } from "@/lib/shopify/persistShopCurrency";
 
 /**
  * POST /api/webhooks/shop-update
@@ -26,10 +27,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing shop domain" }, { status: 400 });
   }
 
+  // The shop/update payload includes the shop's primary currency
+  // directly (`currency`), so we update from the payload synchronously
+  // here. If the field is absent we fall back to a GraphQL fetch
+  // below.
+  const payloadCurrency =
+    typeof payload?.currency === "string" && /^[A-Z]{3}$/.test(payload.currency)
+      ? payload.currency
+      : null;
+
   const db = getServiceClient();
+  const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (payloadCurrency) update.currency_code = payloadCurrency;
   await db
     .from("shops")
-    .update({ updated_at: new Date().toISOString() })
+    .update(update)
     .eq("shop_domain", shopDomain);
 
   // Re-register dispute webhooks (e.g. if subscriptions were dropped after reinstall)
@@ -60,6 +72,17 @@ export async function POST(req: NextRequest) {
             err?.message ?? err
           );
         });
+    }
+
+    // Backstop: if the webhook payload didn't carry `currency`, fall
+    // back to a GraphQL fetch so the row still converges to truth.
+    if (!payloadCurrency) {
+      persistShopCurrency(shop.id).catch((err) => {
+        console.warn(
+          "[shops] shop/update currency persist failed:",
+          err instanceof Error ? err.message : err,
+        );
+      });
     }
   }
 

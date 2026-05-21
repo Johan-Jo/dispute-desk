@@ -1068,16 +1068,25 @@ Snapshot columns on `disputes` for fast rendering without recalculating from eve
 
 ### Shared metrics layer
 
-- `lib/disputes/metrics.ts` — `computeDisputeMetrics({ shopId?, periodFrom?, periodTo? })`. Single source of truth for both merchant and admin dashboards. Shop-scoped when shopId provided, cross-shop when omitted. Admin-only fields (overriddenCount, syncIssueCount, disputesWithNotesCount) populated only for cross-shop queries.
+- `lib/disputes/metrics.ts` — `computeDisputeMetrics({ shopId?, periodFrom?, periodTo?, preferredCurrency? })`. Single source of truth for both merchant and admin dashboards. Shop-scoped when shopId provided, cross-shop when omitted. Admin-only fields (overriddenCount, syncIssueCount, disputesWithNotesCount) populated only for cross-shop queries.
 
 #### Multi-currency: primary-currency scoping
 
-`amountAtRisk`, `amountRecovered`, and `amountLost` are sums of money — and **adding $100 + €100 is not 200 of any real currency.** The dashboard quotes one currency symbol per tile, so the metrics layer picks one currency as the "primary" and scopes the sums to disputes denominated in it:
+`amountAtRisk`, `amountRecovered`, and `amountLost` are sums of money — and **adding $100 + €100 is not 200 of any real currency.** The dashboard quotes one currency symbol per tile, so the metrics layer picks one currency as the "primary" and scopes the sums to disputes denominated in it. The picking order:
 
-1. The primary `currencyCode` is the most-frequent `currency_code` across disputes in the window (defaults to `USD` when the window is empty).
-2. `amountAtRisk` / `amountRecovered` / `amountLost` sum **only** disputes whose `currency_code === currencyCode`. Disputes in other currencies are excluded from these totals.
-3. Disputes in other currencies are surfaced via `otherCurrencyCounts: Record<string, number>` so consumers can hint at the omission instead of silently dropping rows. The embedded dashboard renders this as a subdued "+ N in EUR, M in SEK" line under each currency tile (`dashboard.otherCurrencyHint` / `dashboard.otherCurrencyEntry` i18n keys).
-4. Period-over-period amount deltas (`amountAtRiskChange`, `amountRecoveredChange`) apply the same primary-currency filter to the prior period, so the comparison stays apples-to-apples.
+1. **`preferredCurrency` from the caller** — typically the shop's Shopify presentment currency (`shops.currency_code`). The dashboard route reads this column and passes it in. Used as primary **only when** at least one dispute in the window matches it (so a shop set to USD with EUR-only chargebacks doesn't get a misleading "$0 recovered"). When the dispute window is empty, the preferred currency is honored as well so the blank dashboard still shows the right symbol.
+2. **Most-frequent `currency_code` across disputes in the window** — legacy heuristic, kept as fallback. Wins when `preferredCurrency` is null or has zero matches.
+3. **`"USD"`** — when both inputs are unavailable (no disputes, no shop currency).
+
+Once the primary is picked:
+
+- `amountAtRisk` / `amountRecovered` / `amountLost` sum **only** disputes whose `currency_code === currencyCode`. Disputes in other currencies are excluded from these totals.
+- Disputes in other currencies are surfaced via `otherCurrencyCounts: Record<string, number>` so consumers can hint at the omission instead of silently dropping rows. The embedded dashboard renders this as a subdued "+ N in EUR, M in SEK" line under each currency tile (`dashboard.otherCurrencyHint` / `dashboard.otherCurrencyEntry` i18n keys).
+- Period-over-period amount deltas (`amountAtRiskChange`, `amountRecoveredChange`) apply the same primary-currency filter to the prior period, so the comparison stays apples-to-apples.
+
+##### `shops.currency_code` — source of truth for `preferredCurrency`
+
+The `shops.currency_code` column (ISO-4217 alpha-3) is populated from the Shopify Admin `shop { currencyCode }` query at OAuth install (both `/api/auth/shopify/callback` and `/api/auth/shopify/token-exchange`) via the `persistShopCurrency` helper, and refreshed on every `shop/update` webhook — directly from the webhook payload's `currency` field, with a GraphQL fallback when absent. Pre-existing installs were backfilled from the most-frequent dispute currency (`scripts/sql/backfill-shops-currency.sql`); a shop with no disputes stays null until the next shop/update webhook fires.
 
 Counts (`activeDisputes`, `disputesWon`, etc.) and rates (`winRate`, `recoveryRate`) are currency-agnostic and remain un-scoped. Per-currency conversion to a single display currency is intentionally **not** done — chargeback amounts are denominated in the cardholder's currency, FX rates would be a fresh source of truthiness drift, and the merchant ops use-case is "which currency is at risk and how much" rather than "what's the global P&L." If you later need a single global figure, build a separate display-currency-converted view rather than mutating these sums.
 

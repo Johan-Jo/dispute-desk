@@ -33,10 +33,22 @@ export async function GET(req: NextRequest) {
   const period = (req.nextUrl.searchParams.get("period") ?? "30d") as PeriodKey;
   const periodFrom = sinceDate(period);
 
-  // ── Shared metrics (period-scoped — drives Performance overview) ──────
-  const m = await computeDisputeMetrics({ shopId, periodFrom });
-
   const sb = getServiceClient();
+
+  // Shop's Shopify presentment currency (populated at OAuth install
+  // and refreshed via shop/update webhook). Used as the preferred
+  // display currency for the Recovered / Lost / At Risk tiles — see
+  // `MetricsOptions.preferredCurrency`.
+  const { data: shopRow } = await sb
+    .from("shops")
+    .select("currency_code")
+    .eq("id", shopId)
+    .maybeSingle();
+  const preferredCurrency =
+    (shopRow?.currency_code as string | null | undefined) ?? null;
+
+  // ── Shared metrics (period-scoped — drives Performance overview) ──────
+  const m = await computeDisputeMetrics({ shopId, periodFrom, preferredCurrency });
 
   // ── Operational breakdown (all-time, open disputes only) ──────────────
   // The top operational summary (Action Needed / Ready to Submit / Waiting

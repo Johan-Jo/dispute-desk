@@ -346,6 +346,73 @@ describe("computeDisputeMetrics — counts and rates", () => {
     expect(m.amountAtRisk).toBe(150);
     expect(m.otherCurrencyCounts).toEqual({});
   });
+
+  it("prefers `preferredCurrency` when the shop has matching disputes (shop currency wins over most-frequent)", async () => {
+    // Most-frequent currency in the window is EUR (2 disputes vs 1 USD).
+    // But the shop's Shopify presentment currency is USD — so as long
+    // as at least one dispute is denominated in USD, USD wins.
+    mockSupabase({
+      current: [
+        { normalized_status: "new", currency_code: "EUR", amount: 100, outcome_amount_recovered: 0 },
+        { normalized_status: "new", currency_code: "EUR", amount: 50,  outcome_amount_recovered: 0 },
+        { normalized_status: "new", currency_code: "USD", amount: 200, outcome_amount_recovered: 0 },
+      ],
+    });
+
+    const m = await computeDisputeMetrics({
+      shopId: "s1",
+      preferredCurrency: "USD",
+    });
+    expect(m.currencyCode).toBe("USD");
+    // Only the USD dispute is summed into amountAtRisk:
+    expect(m.amountAtRisk).toBe(200);
+    // EUR disputes surface as "other":
+    expect(m.otherCurrencyCounts).toEqual({ EUR: 2 });
+  });
+
+  it("falls back to most-frequent when `preferredCurrency` has zero matching disputes", async () => {
+    // Shop is configured as USD but every dispute is in EUR. Showing
+    // "$0 recovered" would be misleading — fall back to EUR so the
+    // merchant sees what they actually have in play.
+    mockSupabase({
+      current: [
+        { normalized_status: "new", currency_code: "EUR", amount: 100 },
+        { normalized_status: "new", currency_code: "EUR", amount: 50 },
+      ],
+    });
+
+    const m = await computeDisputeMetrics({
+      shopId: "s1",
+      preferredCurrency: "USD",
+    });
+    expect(m.currencyCode).toBe("EUR");
+    expect(m.amountAtRisk).toBe(150);
+  });
+
+  it("honors `preferredCurrency` on an empty dispute set (so the empty dashboard shows the right symbol)", async () => {
+    mockSupabase({ current: [] });
+    const m = await computeDisputeMetrics({
+      shopId: "s1",
+      preferredCurrency: "EUR",
+    });
+    expect(m.currencyCode).toBe("EUR");
+    expect(m.amountAtRisk).toBe(0);
+  });
+
+  it("ignores a null `preferredCurrency` and keeps the legacy heuristic intact", async () => {
+    mockSupabase({
+      current: [
+        { normalized_status: "new", currency_code: "EUR", amount: 100 },
+        { normalized_status: "new", currency_code: "USD", amount: 50 },
+      ],
+    });
+
+    const m = await computeDisputeMetrics({
+      shopId: "s1",
+      preferredCurrency: null,
+    });
+    expect(m.currencyCode).toBe("EUR"); // most-frequent
+  });
 });
 
 describe("computeDisputeMetrics — period-over-period", () => {

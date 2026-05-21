@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { storeSession, loadSession } from "@/lib/shopify/sessionStorage";
 import { verifySessionToken } from "@/lib/shopify/sessionToken";
 import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
+import { persistShopCurrency } from "@/lib/shopify/persistShopCurrency";
 
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY ?? "";
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET ?? "";
@@ -124,6 +125,16 @@ export async function GET(req: NextRequest) {
         .catch((err) => {
           console.warn("[webhooks] Dispute webhook registration failed:", err?.message ?? err);
         });
+
+      // Populate shops.currency_code on first install via this path.
+      // Fire-and-forget; failure is non-fatal (metrics layer falls
+      // back to most-frequent dispute currency).
+      persistShopCurrency(shopInternalId).catch((err) => {
+        console.warn(
+          "[shops] currency persist failed:",
+          err instanceof Error ? err.message : err,
+        );
+      });
     } catch (err) {
       console.error("[token-exchange] Unhandled error:", err);
       return errorPage(err instanceof Error ? err.message : "Token exchange failed.");
