@@ -742,34 +742,39 @@ export function CompleteDefencePackageCard({
                 <Banner tone="info" title={`Draft v${latest.version} is ready for review`}>
                   {/* Right-aligned action lives inside the banner frame
                       so the CTA is anchored to the message it relates
-                      to. Mirrors the submitted-package banner's
-                      Open/View pair (above) which uses the same
-                      InlineStack align="space-between" pattern. The
-                      duplicate of this button in the action row below
-                      is suppressed when this banner is rendering it,
-                      to avoid two identical green CTAs stacked. */}
-                  <InlineStack gap="200" blockAlign="center" align="space-between" wrap={false}>
-                    <Text as="p" variant="bodySm">
-                      Draft v{latest.version} has been generated but has not
-                      been sent to Shopify yet. Review it below.{" "}
-                      {latest.status === "draft"
-                        ? `If it looks correct, approve v${latest.version} before resubmitting to Shopify.`
-                        : `If it looks correct, resubmit it to Shopify — that will replace v${bankFacing.version}.`}
-                    </Text>
+                      to. The left text uses flex:1 so it consumes all
+                      available width and pushes the button flush to
+                      the banner's right edge — InlineStack's
+                      space-between alone leaves a gap when the text is
+                      shorter than the row width. The duplicate of this
+                      button in the action row below is suppressed when
+                      this banner is rendering it. */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <Text as="p" variant="bodySm">
+                        Draft v{latest.version} has been generated but has not
+                        been sent to Shopify yet. Review it below.{" "}
+                        {latest.status === "draft"
+                          ? `If it looks correct, approve v${latest.version} before resubmitting to Shopify.`
+                          : `If it looks correct, resubmit it to Shopify — that will replace v${bankFacing.version}.`}
+                      </Text>
+                    </div>
                     {canSubmit && !canFinalize ? (
-                      <Button
-                        variant="primary"
-                        tone="success"
-                        onClick={onSubmit}
-                        disabled={busy !== null}
-                        loading={busy === "submit"}
-                      >
-                        {isSubmittedToBank
-                          ? "Resubmit to Shopify"
-                          : "Submit to Shopify"}
-                      </Button>
+                      <div style={{ flexShrink: 0 }}>
+                        <Button
+                          variant="primary"
+                          tone="success"
+                          onClick={onSubmit}
+                          disabled={busy !== null}
+                          loading={busy === "submit"}
+                        >
+                          {isSubmittedToBank
+                            ? "Resubmit to Shopify"
+                            : "Submit to Shopify"}
+                        </Button>
+                      </div>
                     ) : null}
-                  </InlineStack>
+                  </div>
                 </Banner>
               ) : null}
             </BlockStack>
