@@ -636,13 +636,21 @@ export function CompleteDefencePackageCard({
               `draft` v2 and `row.status` is no longer "stale", so this whole
               block stops rendering. */}
           {row.status === "stale" && busy === "regen" && (
-            <Banner tone="info" title="Building your new defence package…">
+            <Banner
+              tone="info"
+              title="Building your new defence package…"
+              action={{
+                content: loading ? "Checking…" : "Check for update",
+                onAction: () => void load(),
+                loading,
+              }}
+            >
               <p>
                 We&rsquo;re rebuilding the evidence pack and drafting a fresh
                 narrative + PDF based on the latest data. This usually takes
-                2&ndash;3 minutes. The page will update automatically when
-                the new version is ready — feel free to keep this tab open
-                or come back later.
+                2&ndash;3 minutes. Click <strong>Check for update</strong>{" "}
+                in a couple of minutes to see if the new version is ready —
+                or leave this tab open and come back later.
               </p>
             </Banner>
           )}
