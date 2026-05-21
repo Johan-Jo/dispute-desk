@@ -22,7 +22,6 @@ import {
   ButtonGroup,
   Card,
   InlineStack,
-  Link,
   Popover,
   Spinner,
   Text,
@@ -91,7 +90,7 @@ interface Props {
    *  an Open-in-Shopify link replaces it. */
   submittedToShopifyAt?: string | null;
   /** Direct deep-link to the dispute in Shopify Admin. Rendered as a
-   *  Link in the submitted state. */
+   *  Button in the submitted state. */
   shopifyAdminUrl?: string | null;
   /** Server-derived presentation status (workspace API). Drives the
    *  Regenerate gate after the card network has the evidence, and the
@@ -103,6 +102,14 @@ interface Props {
    *  evidence to the card network. Persisted as `disputes.submitted_at`.
    *  Drives the outcome-expected countdown. Optional. */
   evidenceSentOn?: string | null;
+  /** Fires after a successful Submit/Finalize POST. Lets the parent
+   *  workspace flip its `justSubmitted` flag and re-fetch the workspace
+   *  endpoint immediately, so the card re-renders against fresh data
+   *  instead of the stale snapshot it had before the POST. Without this
+   *  the merchant sees the page snap back to "Submit to Shopify" and
+   *  thinks the click did nothing — the save-to-shopify job runs
+   *  asynchronously and may take 5–30s to stamp `saved_to_shopify_at`. */
+  onSubmitted?: () => void;
 }
 
 /** Days-remaining math, mirrors lib/disputeListHelpers getUrgency
@@ -195,6 +202,7 @@ export function CompleteDefencePackageCard({
   shopifyAdminUrl,
   presentationStatus,
   evidenceSentOn,
+  onSubmitted,
 }: Props) {
   // Network-submitted: Shopify has forwarded the evidence to the card
   // network. Distinct from "saved to Shopify" — the bank now holds the
@@ -226,6 +234,14 @@ export function CompleteDefencePackageCard({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"regen" | "finalize" | "submit" | null>(null);
+  // True between a successful submit POST (job enqueued) and the moment
+  // the parent passes a real `submittedToShopifyAt` (job ran and stamped
+  // `evidence_packs.saved_to_shopify_at`). During this gap the parent's
+  // optimistic timestamp comes from `useReviewView`'s `new Date()`
+  // fallback, so `isSubmittedToBank` is true but the bank doesn't
+  // actually have the package yet. Drives a "Saving to Shopify…" banner
+  // override so we don't claim "Saved" before the job persists.
+  const [submitPending, setSubmitPending] = useState(false);
   // "More actions" popover open/closed state. Holds Regenerate (a
   // less-common destructive action) so it doesn't sit visually equal
   // to the primary Approve / Resubmit buttons.
@@ -350,6 +366,29 @@ export function CompleteDefencePackageCard({
     void load();
   }, [load]);
 
+  // Clear the optimistic "Saving to Shopify…" banner once the
+  // save-to-shopify job has completed: that's when the latest
+  // defence_packages row flips to status='submitted' (set in the same
+  // transaction that stamps `evidence_packs.saved_to_shopify_at`).
+  // Without this, the banner would stay forever even after the bank
+  // has the package.
+  useEffect(() => {
+    if (submitPending && latest?.status === "submitted") {
+      setSubmitPending(false);
+    }
+  }, [submitPending, latest?.status]);
+
+  // Safety net: if the save-to-shopify job never finishes (worker
+  // down, network errors, etc.) the optimistic banner would otherwise
+  // pretend submission is in flight forever. Cap at 90s, then fall
+  // back to whatever the workspace data says. The merchant can retry
+  // from the now-uncovered Submit/Resubmit button.
+  useEffect(() => {
+    if (!submitPending) return;
+    const t = window.setTimeout(() => setSubmitPending(false), 90_000);
+    return () => window.clearTimeout(t);
+  }, [submitPending]);
+
   // Defence-in-depth: middleware injects `x-shop-id` from the
   // shopify_shop_id cookie for embedded requests, but we also pass
   // `?shop_id=` so the route works even on edges where the cookie
@@ -407,14 +446,6 @@ export function CompleteDefencePackageCard({
   const previewHref = displayRow?.pdf_path
     ? `/api/defence-packages/${displayRow.id}/preview${shopIdQs}`
     : null;
-  // Separate URL that always points at the bank-facing snapshot,
-  // never the unsubmitted draft. Surfaces under "Submitted package"
-  // as "View submitted vX PDF" so the merchant can verify what the
-  // bank actually has independently of what they're about to send.
-  const bankFacingHref =
-    bankFacing && bankFacing.pdf_path
-      ? `/api/defence-packages/${bankFacing.id}/preview${shopIdQs}`
-      : null;
 
   /** True when the merchant clicked Regenerate AND no newer-version
    *  draft has landed yet. Drives the "Building…" banner. We also cap
@@ -475,7 +506,14 @@ export function CompleteDefencePackageCard({
     try {
       const res = await fetch(`/api/defence-packages/${latest.id}/finalize${shopIdQs}`, { method: "POST" });
       if (!res.ok) {
-        setError(`Finalize failed (${res.status})`);
+        let detail = `Finalize failed (${res.status})`;
+        try {
+          const body = (await res.json()) as { error?: unknown };
+          if (typeof body.error === "string") detail = body.error;
+        } catch {
+          // Non-JSON body — keep the fallback.
+        }
+        setError(detail);
       }
       await load();
     } finally {
@@ -490,13 +528,33 @@ export function CompleteDefencePackageCard({
     try {
       const res = await fetch(`/api/defence-packages/${latest.id}/submit${shopIdQs}`, { method: "POST" });
       if (!res.ok) {
-        setError(`Submit failed (${res.status})`);
+        // Surface the route's structured error message when present so
+        // the merchant sees "Cannot submit a package in status=draft"
+        // instead of an opaque HTTP code. Falls back to the bare status.
+        let detail = `Submit failed (${res.status})`;
+        try {
+          const body = (await res.json()) as { error?: unknown };
+          if (typeof body.error === "string") detail = body.error;
+        } catch {
+          // Non-JSON body — keep the fallback.
+        }
+        setError(detail);
+        return;
       }
+      // POST accepted: the save-to-shopify job is enqueued but won't
+      // have run yet. Notify the parent so it flips justSubmitted (which
+      // drives derived.isReadOnly → useReviewView state="submitted" →
+      // this card re-renders into the "Saved to Shopify" layout) AND
+      // kicks an immediate workspace fetch. The hook's 4s poll then
+      // replaces the placeholder timestamp with the real
+      // `saved_to_shopify_at` once the job persists.
+      setSubmitPending(true);
+      onSubmitted?.();
       await load();
     } finally {
       setBusy(null);
     }
-  }, [latest, load, shopIdQs]);
+  }, [latest, load, onSubmitted, shopIdQs]);
 
   if (!packId) return null;
   if (loading) {
@@ -611,17 +669,25 @@ export function CompleteDefencePackageCard({
                   copy falls back to the pre-2026-05-20 "Submitted
                   package" phrasing. */}
               <Banner
-                tone="success"
+                tone={submitPending ? "info" : "success"}
                 title={
-                  isClosed
-                    ? "Outcome posted"
-                    : isNetworkSubmitted
-                      ? "Forwarded to the card network"
-                      : "Saved to Shopify"
+                  submitPending
+                    ? "Saving to Shopify…"
+                    : isClosed
+                      ? "Outcome posted"
+                      : isNetworkSubmitted
+                        ? "Forwarded to the card network"
+                        : "Saved to Shopify"
                 }
               >
                 <BlockStack gap="100">
-                  {bankFacing ? (
+                  {submitPending ? (
+                    <Text as="p" variant="bodySm">
+                      DisputeDesk has accepted your submission and is uploading the
+                      defence package to Shopify. This usually completes in under
+                      30 seconds — this banner will update automatically.
+                    </Text>
+                  ) : bankFacing ? (
                     <Text as="p" variant="bodySm">
                       {isNetworkSubmitted
                         ? `Defence package v${bankFacing.version} has been forwarded by Shopify to the card network${formattedSubmittedAt ? `. Saved to Shopify on ${formattedSubmittedAt}.` : "."} The card network's decision is final once posted — Shopify can no longer swap the forwarded PDF.`
@@ -634,18 +700,13 @@ export function CompleteDefencePackageCard({
                       A defence package has been submitted to the bank.
                     </Text>
                   )}
-                  <InlineStack gap="200" blockAlign="center">
-                    {bankFacingHref && bankFacing ? (
-                      <Link url={bankFacingHref} external>
-                        View submitted v{bankFacing.version} PDF
-                      </Link>
-                    ) : null}
-                    {shopifyAdminUrl ? (
-                      <Link url={shopifyAdminUrl} external>
+                  {!submitPending && shopifyAdminUrl ? (
+                    <InlineStack gap="200" blockAlign="center">
+                      <Button url={shopifyAdminUrl} target="_blank" external>
                         Open in Shopify Admin
-                      </Link>
-                    ) : null}
-                  </InlineStack>
+                      </Button>
+                    </InlineStack>
+                  ) : null}
                 </BlockStack>
               </Banner>
 
