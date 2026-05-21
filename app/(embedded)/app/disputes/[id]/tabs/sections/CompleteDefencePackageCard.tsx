@@ -231,6 +231,60 @@ export function CompleteDefencePackageCard({
   // to the primary Approve / Resubmit buttons.
   const [moreActionsOpen, setMoreActionsOpen] = useState(false);
 
+  // Tracks "regenerate has been requested, the rebuild is in flight
+  // server-side but no new draft row exists yet." Separate from `busy`
+  // (which only tracks the *HTTP request* to /regenerate — that returns
+  // in ms once the job is enqueued, long before the actual rebuild
+  // finishes 2-3 min later).
+  //
+  // Without this state, the warning banner ("Click Regenerate below")
+  // re-appears the instant the POST returns — confusing UX because the
+  // merchant already clicked Regenerate and is now told to click it
+  // again. Persisted in sessionStorage (keyed by packId) so a page
+  // reload mid-rebuild doesn't drop the in-progress state.
+  //
+  // Shape: { fromVersion: number, requestedAt: number }
+  //   - fromVersion: the latest.version at the time the user clicked.
+  //     The build is done when `latest.version > fromVersion`.
+  //   - requestedAt: epoch ms — used to time out the banner after
+  //     REBUILD_TIMEOUT_MS in case the job genuinely fails and no new
+  //     version ever lands. Without the cap the banner would lie forever.
+  const [pendingRegen, setPendingRegen] = useState<{
+    fromVersion: number;
+    requestedAt: number;
+  } | null>(null);
+
+  const pendingRegenStorageKey = useMemo(
+    () => (packId ? `dd:pendingRegen:${packId}` : null),
+    [packId],
+  );
+
+  // Hydrate from sessionStorage on mount so a tab reload during the
+  // 2-3 min rebuild window keeps showing "Building…" instead of
+  // snapping back to the "click Regenerate" warning.
+  useEffect(() => {
+    if (!pendingRegenStorageKey) return;
+    try {
+      const raw = window.sessionStorage.getItem(pendingRegenStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        fromVersion?: unknown;
+        requestedAt?: unknown;
+      };
+      if (
+        typeof parsed.fromVersion === "number" &&
+        typeof parsed.requestedAt === "number"
+      ) {
+        setPendingRegen({
+          fromVersion: parsed.fromVersion,
+          requestedAt: parsed.requestedAt,
+        });
+      }
+    } catch {
+      // sessionStorage unavailable (SSR / private mode) — silently skip.
+    }
+  }, [pendingRegenStorageKey]);
+
   const load = useCallback(async () => {
     if (!packId) {
       setLoading(false);
@@ -238,7 +292,12 @@ export function CompleteDefencePackageCard({
     }
     setLoading(true);
     try {
-      const res = await fetch(`/api/packs/${packId}/defence-packages`);
+      // Cache-busting timestamp so repeated "Check for update" presses
+      // don't get a 304 from any intermediate cache layer — we want
+      // each click to actually re-query the source.
+      const res = await fetch(
+        `/api/packs/${packId}/defence-packages?t=${Date.now()}`,
+      );
       if (!res.ok) {
         setError(`Could not load defence package (${res.status})`);
         setLatest(null);
@@ -257,6 +316,26 @@ export function CompleteDefencePackageCard({
             : null,
         );
         setError(null);
+
+        // The rebuild is "done" once a NEW row (higher version) lands.
+        // Clear the pendingRegen flag so the warning banner can come
+        // back IF the new draft itself goes stale later.
+        if (
+          json.latest &&
+          pendingRegenStorageKey
+        ) {
+          setPendingRegen((current) => {
+            if (current && json.latest!.version > current.fromVersion) {
+              try {
+                window.sessionStorage.removeItem(pendingRegenStorageKey);
+              } catch {
+                // ignore
+              }
+              return null;
+            }
+            return current;
+          });
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "unknown error");
@@ -265,7 +344,7 @@ export function CompleteDefencePackageCard({
     } finally {
       setLoading(false);
     }
-  }, [packId]);
+  }, [packId, pendingRegenStorageKey]);
 
   useEffect(() => {
     void load();
@@ -337,6 +416,21 @@ export function CompleteDefencePackageCard({
       ? `/api/defence-packages/${bankFacing.id}/preview${shopIdQs}`
       : null;
 
+  /** True when the merchant clicked Regenerate AND no newer-version
+   *  draft has landed yet. Drives the "Building…" banner. We also cap
+   *  this at 15 minutes since requestedAt — if the rebuild genuinely
+   *  fails the banner gracefully falls back to the warning copy
+   *  instead of lying forever. Normal rebuild time is 2-3 min, so
+   *  15 min is a comfortable ceiling. The local `busy === "regen"`
+   *  flag (HTTP-request-in-flight) is also OR-ed in so we don't have
+   *  a one-tick gap between the POST resolving and pendingRegen being
+   *  set. */
+  const REBUILD_TIMEOUT_MS = 15 * 60 * 1000;
+  const rebuildInFlight =
+    busy === "regen" ||
+    (pendingRegen !== null &&
+      Date.now() - pendingRegen.requestedAt < REBUILD_TIMEOUT_MS);
+
   const onRegenerate = useCallback(async () => {
     if (!latest) return;
     setError(null);
@@ -345,12 +439,34 @@ export function CompleteDefencePackageCard({
       const res = await fetch(`/api/defence-packages/${latest.id}/regenerate${shopIdQs}`, { method: "POST" });
       if (!res.ok) {
         setError(`Regenerate failed (${res.status})`);
+        return;
+      }
+      // Capture the version we just kicked off a rebuild for. The
+      // "Building…" banner stays visible until `latest.version` exceeds
+      // this — i.e. until the new draft row lands. Persist in
+      // sessionStorage so a page reload mid-rebuild doesn't drop the
+      // in-progress state.
+      const pending = {
+        fromVersion: latest.version,
+        requestedAt: Date.now(),
+      };
+      setPendingRegen(pending);
+      if (pendingRegenStorageKey) {
+        try {
+          window.sessionStorage.setItem(
+            pendingRegenStorageKey,
+            JSON.stringify(pending),
+          );
+        } catch {
+          // sessionStorage unavailable — banner still works for this
+          // tab via the in-memory state.
+        }
       }
       await load();
     } finally {
       setBusy(null);
     }
-  }, [latest, load, shopIdQs]);
+  }, [latest, load, shopIdQs, pendingRegenStorageKey]);
 
   const onFinalize = useCallback(async () => {
     if (!latest) return;
@@ -627,15 +743,21 @@ export function CompleteDefencePackageCard({
 
           {/* Stale-vs-regenerating split: the same `stale` status applies
               whether the merchant hasn't acted yet OR they just clicked
-              Regenerate and the build chain is still running. The original
-              copy ("Regenerate to refresh") was useless in the latter case
-              — they'd already clicked. We now distinguish the two:
-                - busy === "regen" → just-clicked, show progress copy
-                - status === "stale" without busy → action prompt
-              Once buildDefencePackageJob finishes, `latest` becomes the new
-              `draft` v2 and `row.status` is no longer "stale", so this whole
-              block stops rendering. */}
-          {row.status === "stale" && busy === "regen" && (
+              Regenerate and the build chain is still running 2-3 min
+              behind the scenes. The original `busy === "regen"`
+              detection only covered the HTTP request itself (returns in
+              ms), so the warning banner flashed back the instant the
+              POST returned — confusing UX, the merchant just clicked
+              Regenerate and was now being told to click it again.
+              `pendingRegen` tracks the server-side rebuild window: set
+              when the regenerate POST succeeds, cleared when
+              `latest.version` exceeds the version we kicked off from.
+              Persisted in sessionStorage so a tab reload mid-rebuild
+              keeps the in-progress banner. The 15-minute timeout is a
+              safety net — if the rebuild genuinely fails and no new
+              version ever lands, we fall back to the warning banner
+              instead of lying forever. */}
+          {row.status === "stale" && rebuildInFlight && (
             <Banner
               tone="info"
               title="Building your new defence package…"
@@ -654,7 +776,7 @@ export function CompleteDefencePackageCard({
               </p>
             </Banner>
           )}
-          {row.status === "stale" && busy !== "regen" && (
+          {row.status === "stale" && !rebuildInFlight && (
             <Banner tone="warning" title="New evidence available — refresh this draft">
               <p>
                 Recent updates (uploads, status changes, or new auto-collected
@@ -751,17 +873,20 @@ export function CompleteDefencePackageCard({
                 <ActionList
                   items={[
                     {
-                      content:
-                        busy === "regen"
-                          ? "Regenerating…"
-                          : "Regenerate draft from scratch",
-                      helpText:
-                        "Throws away the current draft and rebuilds the narrative + PDF against the latest evidence. The bank-facing submitted version is not touched.",
+                      content: rebuildInFlight
+                        ? "Regenerating…"
+                        : "Regenerate draft from scratch",
+                      helpText: rebuildInFlight
+                        ? "Already rebuilding — usually takes 2–3 minutes. The page checks for the new version when you reload or use the Check for update button above."
+                        : "Throws away the current draft and rebuilds the narrative + PDF against the latest evidence. The bank-facing submitted version is not touched.",
                       onAction: () => {
                         setMoreActionsOpen(false);
                         void onRegenerate();
                       },
-                      disabled: busy !== null,
+                      // Disable while a rebuild is in flight (server-side job
+                      // still running) — double-clicking Regenerate would
+                      // queue a redundant job and consume credits.
+                      disabled: busy !== null || rebuildInFlight,
                     },
                   ]}
                 />
