@@ -140,6 +140,7 @@ interface MockState {
   usageCount?: number;
   existingUsageEvent?: Record<string, unknown> | null;
   insertError?: { message: string } | null;
+  cycleStart?: string | null;
 }
 
 function setupSupabase(state: MockState): {
@@ -182,10 +183,20 @@ function setupSupabase(state: MockState): {
       return {
         select: vi.fn((_cols, opts) => {
           if (opts?.head) {
+            // Supabase `head:true, count:'exact'` returns the row count
+            // in `count` and leaves `data` null. The production code
+            // (post-fix) reads `count`; the chain also supports
+            // `.gte("created_at", cycleStart)` for cycle scoping.
+            const headResponse = {
+              data: null,
+              count: state.usageCount ?? 0,
+              error: null,
+            };
             return {
-              eq: vi.fn().mockResolvedValue({
-                data: state.usageCount ?? 0,
-                error: null,
+              eq: vi.fn().mockReturnValue({
+                gte: vi.fn().mockResolvedValue(headResponse),
+                then: (resolve: (value: typeof headResponse) => unknown) =>
+                  resolve(headResponse),
               }),
             };
           }
@@ -198,6 +209,19 @@ function setupSupabase(state: MockState): {
           };
         }),
         insert: insertSpy,
+      };
+    }
+    if (table === "plan_entitlements") {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data:
+            state.cycleStart === undefined
+              ? null
+              : { billing_cycle_started_at: state.cycleStart },
+          error: null,
+        }),
       };
     }
     if (table === "pack_credits_ledger") {
@@ -244,6 +268,23 @@ describe("checkPackQuota", () => {
     setupSupabase({ shopPlan: null, remainingPacks: 1 });
     const r = await checkPackQuota("shop-1");
     expect(r.plan).toBe("free");
+  });
+
+  // Regression: the previous implementation read `data` from a
+  // `head:true, count:'exact'` query, where `data` is always null —
+  // so the merchant-facing "N of <limit> packs used" counter was
+  // permanently stuck at 0 even after pack consumption (real-world
+  // case: surasvenne.myshopify.com on Growth, 4 consumed, UI showed 0).
+  it("reports the consumed usage count, not zero, on paid plans", async () => {
+    setupSupabase({
+      shopPlan: "growth",
+      remainingPacks: 96,
+      usageCount: 4,
+      cycleStart: "2026-05-15T23:07:00Z",
+    });
+    const r = await checkPackQuota("shop-1");
+    expect(r.used).toBe(4);
+    expect(r.limit).toBe(100);
   });
 });
 

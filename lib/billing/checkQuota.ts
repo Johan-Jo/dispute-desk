@@ -29,12 +29,30 @@ export async function checkPackQuota(shopId: string): Promise<QuotaResult> {
 
   const remaining = await getBalance(shopId);
 
-  const { data: usageData } = await sb
+  // Scope "used" to the current billing cycle on paid plans so the UI's
+  // "N of <packsPerMonth> packs used" counter resets each renewal.
+  // Free / Sandbox uses a lifetime allowance, so it stays unscoped.
+  // (Previously this read `data` from a `head:true` count query, which
+  // is always null — so the counter was permanently stuck at 0.)
+  let cycleStart: string | null = null;
+  if (plan.packsLifetime == null) {
+    const { data: entitlement } = await sb
+      .from("plan_entitlements")
+      .select("billing_cycle_started_at")
+      .eq("shop_id", shopId)
+      .maybeSingle();
+    cycleStart = (entitlement as { billing_cycle_started_at: string | null } | null)
+      ?.billing_cycle_started_at ?? null;
+  }
+
+  let usageQuery = sb
     .from("pack_usage_events")
     .select("id", { count: "exact", head: true })
     .eq("shop_id", shopId);
+  if (cycleStart) usageQuery = usageQuery.gte("created_at", cycleStart);
+  const { count: usageCount } = await usageQuery;
 
-  const used = (usageData as unknown as number) ?? 0;
+  const used = usageCount ?? 0;
 
   const limit = plan.packsLifetime ?? plan.packsPerMonth;
 
