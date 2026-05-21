@@ -42,6 +42,7 @@ import { classifyEvidenceRow } from "@/lib/argument/categoryBadge";
 import { canMerchantUpload, type useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { LiabilityShiftPanel } from "@/components/liability-shift/LiabilityShiftPanel";
 import { SubmissionSummaryPanel } from "./sections/SubmissionSummaryPanel";
+import { MERCHANT_UI_HIDDEN_FIELDS } from "@/lib/automation/merchantUiHiddenFields";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -487,24 +488,24 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           signal, so it must not render as a red "Missing" card with no
           actionable CTA. Mirrors the §3 Missing-or-weak filter
           (deriveMissingItems → collectionType === "manual"). */
-  // `priority === "optional"` items are intentionally hidden from the
-  // merchant UI (decision 2026-05-21 — dev mode, no prod merchants).
-  // The underlying checklist still carries them so pack builder,
-  // scoring, and coverage gate are untouched; only the merchant-facing
-  // surfaces filter them out.
+  // `MERCHANT_UI_HIDDEN_FIELDS` (currently customer_communication +
+  // supporting_documents) are hidden from every merchant-facing list
+  // (decision 2026-05-21 — dev mode, no prod merchants). The underlying
+  // checklist still carries them so pack builder, scoring, and coverage
+  // gate are untouched; only the merchant-facing surfaces filter them.
   const visibleChecklist = effectiveChecklist.filter((c) => {
     if (c.status === "unavailable") return false;
     if (c.status === "missing" && !canMerchantUpload(c)) return false;
-    if ((c.priority as string) === "optional") return false;
+    if (MERCHANT_UI_HIDDEN_FIELDS.has(c.field)) return false;
     return true;
   });
-  type Bucket = { key: "critical" | "recommended"; label: string; items: ChecklistItemV2[]; complete: number };
-  const buckets: Bucket[] = (["critical", "recommended"] as const).map((key) => {
+  type Bucket = { key: "critical" | "recommended" | "optional"; label: string; items: ChecklistItemV2[]; complete: number };
+  const buckets: Bucket[] = (["critical", "recommended", "optional"] as const).map((key) => {
     const items = visibleChecklist.filter((c) => (c.priority as string) === key);
     const complete = items.filter((c) => c.status === "available" || c.status === "waived").length;
     return {
       key,
-      label: key === "critical" ? "Critical evidence" : "Supporting evidence",
+      label: key === "critical" ? "Critical evidence" : key === "recommended" ? "Supporting evidence" : "Optional",
       items,
       complete,
     };
@@ -731,6 +732,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           .filter((c) => CANONICAL_EVIDENCE[c.field])
           .filter((c) => c.status !== "unavailable")
           .filter((c) => !(c.status === "missing" && !canMerchantUpload(c)))
+          // Hide merchant-UI-hidden fields when they're not yet collected.
+          // If they end up uploaded, classifyEvidenceRow will mark them
+          // collected and they'll surface as real evidence — but until
+          // then, no "Missing / Add this evidence" nag.
+          .filter((c) => !(MERCHANT_UI_HIDDEN_FIELDS.has(c.field) && c.status !== "available"))
           .map((c) => {
             const spec = CANONICAL_EVIDENCE[c.field]!;
             const payload =

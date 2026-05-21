@@ -29,6 +29,7 @@ import type {
   WorkspaceData,
 } from "../workspace-components/types";
 import type { CaseStrengthLevel } from "@/lib/argument/types";
+import { MERCHANT_UI_HIDDEN_FIELDS } from "@/lib/automation/merchantUiHiddenFields";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -721,12 +722,15 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
   );
 
   // ── Missing or weak evidence ──
-  // Optional-priority items are intentionally hidden from the merchant UI
-  // (decision 2026-05-21 — dev mode, no prod merchants). The underlying
-  // checklist still carries them so the pack builder, scoring, and
-  // coverage gate are untouched; only the merchant-facing list is filtered.
+  // The two freeform manual-upload fields (customer_communication and
+  // supporting_documents) are intentionally hidden from every merchant-
+  // facing list (decision 2026-05-21 — dev mode, no prod merchants).
+  // The underlying checklist still carries them so the pack builder,
+  // scoring, coverage gate, and bank-facing rebuttal are untouched;
+  // only the merchant UI filters them out. Hide-list shared from
+  // lib/automation/completeness.ts so all three tabs agree.
   const missingOrWeak: MissingItemViewModel[] = derived.missingItems
-    .filter((m) => m.priority !== "optional")
+    .filter((m) => !MERCHANT_UI_HIDDEN_FIELDS.has(m.field))
     .map((m) => ({
       id: `missing:${m.field}`,
       field: m.field,

@@ -38,6 +38,7 @@ import {
 import { useTranslations } from "next-intl";
 import { INTERNAL_ONLY_FIELDS } from "@/lib/defence/factClassifier";
 import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
+import { MERCHANT_UI_HIDDEN_FIELDS } from "@/lib/automation/merchantUiHiddenFields";
 
 type Group =
   | "usedAsBankArgument"
@@ -118,6 +119,20 @@ export function InclusionReviewSection({
       excludedByMerchant: [],
     };
     for (const li of lineItems) {
+      // Hide the freeform manual-upload buckets from the merchant UI
+      // when they aren't already in the pack (decision 2026-05-21 —
+      // dev mode, no prod merchants). If a merchant ever does upload
+      // one and it makes it into the pack, it still surfaces in
+      // usedAsBankArgument / contextOnly / keptInternal / excludedByMerchant.
+      if (
+        MERCHANT_UI_HIDDEN_FIELDS.has(li.field) &&
+        !li.includedInDefencePackage &&
+        !li.usedAsPositiveBankEvidence &&
+        li.submissionMethod !== "internal_only" &&
+        li.submissionMethod !== "excluded"
+      ) {
+        continue;
+      }
       const g = groupFor(li);
       if (g) map[g].push(li);
     }
