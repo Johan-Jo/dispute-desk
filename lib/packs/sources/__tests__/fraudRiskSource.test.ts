@@ -140,7 +140,7 @@ describe("collectFraudRiskEvidence", () => {
     expect(sections).toEqual([]);
   });
 
-  it("returns [] when risk_level is HIGH (negative leakage prevented)", async () => {
+  it("emits an internal-only section when risk_level is HIGH (kept off bank submission, surfaced to merchant)", async () => {
     mockGetClient.mockReturnValue(
       buildSb([
         {
@@ -151,10 +151,20 @@ describe("collectFraudRiskEvidence", () => {
       ]) as never,
     );
     const sections = await collectFraudRiskEvidence(CTX_FRAUD);
-    expect(sections).toEqual([]);
+    expect(sections).toHaveLength(1);
+    const data = sections[0].data as {
+      positiveFacts: string[];
+      isNegativeVerdict?: boolean;
+      riskLevel: string;
+      recommendation: string;
+    };
+    expect(data.isNegativeVerdict).toBe(true);
+    expect(data.positiveFacts).toEqual([]);
+    expect(data.riskLevel).toBe("HIGH");
+    expect(data.recommendation).toBe("INVESTIGATE");
   });
 
-  it("returns [] when risk_level is MEDIUM", async () => {
+  it("emits an internal-only section when risk_level is MEDIUM", async () => {
     mockGetClient.mockReturnValue(
       buildSb([
         {
@@ -163,7 +173,11 @@ describe("collectFraudRiskEvidence", () => {
         },
       ]) as never,
     );
-    expect(await collectFraudRiskEvidence(CTX_FRAUD)).toEqual([]);
+    const sections = await collectFraudRiskEvidence(CTX_FRAUD);
+    expect(sections).toHaveLength(1);
+    const data = sections[0].data as { isNegativeVerdict?: boolean; positiveFacts: string[] };
+    expect(data.isNegativeVerdict).toBe(true);
+    expect(data.positiveFacts).toEqual([]);
   });
 
   it("emits a section when risk_level=NONE + recommendation=ACCEPT + positive facts", async () => {
@@ -201,7 +215,7 @@ describe("collectFraudRiskEvidence", () => {
     expect(sections).toHaveLength(1);
   });
 
-  it("returns [] when recommendation is REJECT or INVESTIGATE even if LOW", async () => {
+  it("emits an internal-only section when recommendation is REJECT (carries the verdict, not the facts)", async () => {
     mockGetClient.mockReturnValue(
       buildSb([
         {
@@ -211,10 +225,50 @@ describe("collectFraudRiskEvidence", () => {
         },
       ]) as never,
     );
-    expect(await collectFraudRiskEvidence(CTX_FRAUD)).toEqual([]);
+    const sections = await collectFraudRiskEvidence(CTX_FRAUD);
+    expect(sections).toHaveLength(1);
+    const data = sections[0].data as {
+      isNegativeVerdict?: boolean;
+      positiveFacts: string[];
+      recommendation: string;
+    };
+    expect(data.isNegativeVerdict).toBe(true);
+    expect(data.positiveFacts).toEqual([]);
+    expect(data.recommendation).toBe("REJECT");
   });
 
-  it("returns [] when there are zero POSITIVE-sentiment facts", async () => {
+  it("emits an internal-only section when recommendation is CANCEL (2026-05-21 #1081 incident regression)", async () => {
+    // The exact scenario from the live #1081 dispute: clean facts on paper
+    // but Shopify recommended CANCEL because of cross-order risk history.
+    // Pre-fix, the collector returned [] and the merchant saw nothing on
+    // the Overview — looked like fraud screening never ran. Post-fix, the
+    // row lands in "Kept internal" so the merchant knows we checked.
+    mockGetClient.mockReturnValue(
+      buildSb([
+        {
+          ...POSITIVE_ROW,
+          risk_level: "NONE",
+          recommendation: "CANCEL",
+        },
+      ]) as never,
+    );
+    const sections = await collectFraudRiskEvidence(CTX_FRAUD);
+    expect(sections).toHaveLength(1);
+    const data = sections[0].data as {
+      isNegativeVerdict?: boolean;
+      positiveFacts: string[];
+      recommendation: string;
+    };
+    expect(data.isNegativeVerdict).toBe(true);
+    expect(data.recommendation).toBe("CANCEL");
+    // CRITICAL: positiveFacts is empty — the canonicalEvidence categorizer
+    // returns "invalid" for empty positiveFacts, so the factClassifier
+    // skips the row and it NEVER reaches the LLM payload or the bank
+    // submission. The merchant sees it; the bank does not.
+    expect(data.positiveFacts).toEqual([]);
+  });
+
+  it("emits an internal-only section when there are zero POSITIVE-sentiment facts", async () => {
     mockGetClient.mockReturnValue(
       buildSb([
         {
@@ -226,7 +280,13 @@ describe("collectFraudRiskEvidence", () => {
         },
       ]) as never,
     );
-    expect(await collectFraudRiskEvidence(CTX_FRAUD)).toEqual([]);
+    const sections = await collectFraudRiskEvidence(CTX_FRAUD);
+    expect(sections).toHaveLength(1);
+    const data = sections[0].data as { isNegativeVerdict?: boolean; positiveFacts: string[] };
+    expect(data.isNegativeVerdict).toBe(true);
+    expect(data.positiveFacts).toEqual([]);
+    // Original behavior preserved here too — we just stop returning [].
+    expect(sections[0].fieldsProvided).toEqual(["fraud_risk_screening"]);
   });
 
   it("emits a section for FRAUDULENT with capped positive facts", async () => {

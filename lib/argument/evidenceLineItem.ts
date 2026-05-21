@@ -612,6 +612,30 @@ function specificInternalReason(field: string, payload: unknown): string | null 
     }
   }
 
+  if (field === "fraud_risk_screening") {
+    // Surface the actual Shopify verdict so the merchant knows we
+    // checked AND what came back. The verdict itself is intentionally
+    // never sent to the bank — citing "Shopify recommended cancel" in a
+    // rebuttal would tank the response by acknowledging our own
+    // platform thought the order was risky.
+    const recommendation =
+      typeof p.recommendation === "string" ? p.recommendation.toUpperCase() : null;
+    const riskLevel =
+      typeof p.riskLevel === "string" ? p.riskLevel.toUpperCase() : null;
+    if (recommendation === "CANCEL") {
+      return "Shopify's pre-authorization screening recommended CANCEL for this order. Kept internal — citing a negative verdict from your own fraud system would weaken the bank response.";
+    }
+    if (recommendation === "REJECT") {
+      return "Shopify's pre-authorization screening recommended REJECT for this order. Kept internal — citing a negative verdict from your own fraud system would weaken the bank response.";
+    }
+    if (recommendation === "INVESTIGATE") {
+      return "Shopify's pre-authorization screening recommended INVESTIGATE for this order. Kept internal — citing an inconclusive verdict from your own fraud system would weaken the bank response.";
+    }
+    if (riskLevel === "HIGH" || riskLevel === "MEDIUM") {
+      return `Shopify's pre-authorization screening scored this order as ${riskLevel} risk. Kept internal — citing your own fraud system's elevated risk score would weaken the bank response.`;
+    }
+  }
+
   return null;
 }
 
@@ -712,6 +736,23 @@ function isNegativeOrAmbiguous(
     const privacy = (payload.ipinfo as { privacy?: { vpn?: boolean; proxy?: boolean; hosting?: boolean } } | undefined)?.privacy;
     if (privacy?.vpn === true || privacy?.proxy === true || privacy?.hosting === true) return true;
     if (payload.riskLevel === "high") return true;
+  }
+
+  if (field === "fraud_risk_screening") {
+    // The source collector emits a section in two flavors:
+    //   - ACCEPT path: positiveFacts non-empty + isNegativeVerdict undefined → bank-facing
+    //   - Negative path: positiveFacts === [] AND isNegativeVerdict === true → internal-only
+    // The explicit flag is the primary signal; positiveFacts.length is a
+    // belt-and-suspenders backstop for older payloads that pre-date the flag.
+    if (payload.isNegativeVerdict === true) return true;
+    const positiveFacts = payload.positiveFacts;
+    if (Array.isArray(positiveFacts) && positiveFacts.length === 0) {
+      // No positive facts to cite. If the collector ran and we have a
+      // recommendation, that recommendation is non-ACCEPT — treat as
+      // negative regardless of the flag being set.
+      const recommendation = readString(payload.recommendation);
+      if (recommendation !== null && recommendation !== "") return true;
+    }
   }
 
   return false;

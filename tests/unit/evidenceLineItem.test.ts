@@ -292,6 +292,168 @@ describe("Test 7b — clean IP/location match promotes to bank-facing (2026-05-2
   });
 });
 
+describe("Test 7c — fraud_risk_screening with negative verdict surfaces as internal_only (2026-05-21 #1081 regression)", () => {
+  /**
+   * Live #1081 scenario: same card / IP / billing address as a recently-
+   * disputed order, Shopify returned CANCEL recommendation pre-charge.
+   * Before this commit the source collector silently dropped the
+   * negative-verdict row, so the merchant saw nothing on the Overview —
+   * looked like fraud screening never ran. Post-fix, the row lands in
+   * "Kept internal" with an honest message.
+   *
+   * The LLM-safety contract is preserved by the canonicalEvidence
+   * categorizer (returns "invalid" for fraud_risk_screening with empty
+   * positiveFacts) — the factClassifier skips invalid categories so the
+   * fact NEVER appears in defence_packages.facts_json or the bank
+   * submission. This test pins both halves: visible to merchant,
+   * invisible to bank.
+   */
+  it("CANCEL recommendation + empty positiveFacts → submissionMethod=internal_only, usedAsPositiveBankEvidence=false", async () => {
+    const mod = await import("@/lib/argument/evidenceLineItem");
+    const { deriveEvidenceLineItems } = mod as {
+      deriveEvidenceLineItems: (args: unknown) => Array<{
+        field: string;
+        submissionMethod: string;
+        includedInBankArgument: boolean;
+        includedInDefencePackage: boolean;
+        usedAsPositiveBankEvidence: boolean;
+        reason: string;
+      }>;
+    };
+    const checklist = [
+      {
+        field: "fraud_risk_screening",
+        label: "Pre-authorization fraud screening",
+        status: "available" as const,
+      },
+    ];
+    const payloadByField = new Map<string, unknown>([
+      [
+        "fraud_risk_screening",
+        {
+          provider: "shopify",
+          riskLevel: "NONE",
+          recommendation: "CANCEL",
+          positiveFacts: [],
+          isNegativeVerdict: true,
+        },
+      ],
+    ]);
+    // factsJson is empty — by design. The categorizer returns "invalid"
+    // for this payload so the factClassifier doesn't emit a fact. The
+    // line item resolver should STILL surface the row to the merchant.
+    const lineItems = deriveEvidenceLineItems({
+      checklist,
+      facts: [],
+      payloadByField,
+      contributions: { strong: [], moderate: [] },
+      packSavedToShopify: true,
+      excludedFields: new Set<string>(),
+      attachmentUploadFailures: new Map<string, string>(),
+      inclusionOverrides: new Map(),
+      reasonFamily: "fraud",
+    });
+    const row = lineItems.find((li) => li.field === "fraud_risk_screening");
+    expect(row).toBeDefined();
+    expect(row?.submissionMethod).toBe("internal_only");
+    expect(row?.includedInBankArgument).toBe(false);
+    expect(row?.includedInDefencePackage).toBe(false);
+    expect(row?.usedAsPositiveBankEvidence).toBe(false);
+    // Reason text names the actual verdict so the merchant sees what
+    // Shopify returned, not a generic "informational only" line.
+    expect(row?.reason).toMatch(/CANCEL/);
+  });
+
+  it("REJECT recommendation also resolves to internal_only with verdict-specific reason text", async () => {
+    const mod = await import("@/lib/argument/evidenceLineItem");
+    const { deriveEvidenceLineItems } = mod as {
+      deriveEvidenceLineItems: (args: unknown) => Array<{
+        field: string;
+        submissionMethod: string;
+        reason: string;
+      }>;
+    };
+    const checklist = [
+      {
+        field: "fraud_risk_screening",
+        label: "Pre-authorization fraud screening",
+        status: "available" as const,
+      },
+    ];
+    const payloadByField = new Map<string, unknown>([
+      [
+        "fraud_risk_screening",
+        {
+          provider: "shopify",
+          riskLevel: "LOW",
+          recommendation: "REJECT",
+          positiveFacts: [],
+          isNegativeVerdict: true,
+        },
+      ],
+    ]);
+    const lineItems = deriveEvidenceLineItems({
+      checklist,
+      facts: [],
+      payloadByField,
+      contributions: { strong: [], moderate: [] },
+      packSavedToShopify: true,
+      excludedFields: new Set<string>(),
+      attachmentUploadFailures: new Map<string, string>(),
+      inclusionOverrides: new Map(),
+      reasonFamily: "fraud",
+    });
+    const row = lineItems.find((li) => li.field === "fraud_risk_screening");
+    expect(row?.submissionMethod).toBe("internal_only");
+    expect(row?.reason).toMatch(/REJECT/);
+  });
+
+  it("HIGH risk_level (even with empty positiveFacts and no explicit isNegativeVerdict flag) still surfaces as internal_only", async () => {
+    // Belt-and-suspenders: legacy / hand-rolled payloads that didn't set
+    // isNegativeVerdict still get routed correctly via the elevated-risk
+    // signal in the reason helper.
+    const mod = await import("@/lib/argument/evidenceLineItem");
+    const { deriveEvidenceLineItems } = mod as {
+      deriveEvidenceLineItems: (args: unknown) => Array<{
+        field: string;
+        submissionMethod: string;
+        reason: string;
+      }>;
+    };
+    const checklist = [
+      {
+        field: "fraud_risk_screening",
+        label: "Pre-authorization fraud screening",
+        status: "available" as const,
+      },
+    ];
+    const payloadByField = new Map<string, unknown>([
+      [
+        "fraud_risk_screening",
+        {
+          provider: "shopify",
+          riskLevel: "HIGH",
+          recommendation: "INVESTIGATE",
+          positiveFacts: [],
+        },
+      ],
+    ]);
+    const lineItems = deriveEvidenceLineItems({
+      checklist,
+      facts: [],
+      payloadByField,
+      contributions: { strong: [], moderate: [] },
+      packSavedToShopify: true,
+      excludedFields: new Set<string>(),
+      attachmentUploadFailures: new Map<string, string>(),
+      inclusionOverrides: new Map(),
+      reasonFamily: "fraud",
+    });
+    const row = lineItems.find((li) => li.field === "fraud_risk_screening");
+    expect(row?.submissionMethod).toBe("internal_only");
+  });
+});
+
 describe("Test 8 — failed AVS/CVV is internal-only by default", () => {
   it("avs_cvv_match with both codes failing resolves to internal_only", async () => {
     const mod = await import("@/lib/argument/evidenceLineItem");

@@ -74,15 +74,28 @@ interface PositiveFact {
 export interface FraudRiskScreeningData extends Record<string, unknown> {
   /** Source provider — always "shopify" given the eligibility gate. */
   provider: string;
-  /** Risk level as Shopify reported it. Always "LOW" given the gate. */
+  /** Risk level as Shopify reported it. LOW / NONE on the positive path;
+   *  anything else (HIGH, MEDIUM) on the internal-only path. */
   riskLevel: string;
-  /** Recommendation as Shopify reported it. ACCEPT or NONE. */
+  /** Recommendation as Shopify reported it. ACCEPT/NONE on the positive
+   *  path; CANCEL/INVESTIGATE/REJECT on the internal-only path. */
   recommendation: string;
   /** Positive-sentiment fact descriptions, capped at
-   *  MAX_POSITIVE_FACTS_CITED. Order preserves Shopify's response. */
+   *  MAX_POSITIVE_FACTS_CITED. Order preserves Shopify's response.
+   *  Empty array on the internal-only path (a non-ACCEPT verdict). */
   positiveFacts: string[];
   /** When the assessment was generated (Shopify's `assessed_at`). */
   assessedAt: string | null;
+  /**
+   * True when Shopify ran the screening AND returned an unfavorable
+   * verdict (non-ACCEPT recommendation, or HIGH/MEDIUM risk_level). The
+   * line-item resolver routes these rows to `internal_only` so the
+   * merchant sees "we checked, kept the verdict off the bank submission"
+   * instead of nothing at all. The LLM payload filter still skips this
+   * data because the canonicalEvidence categorizer returns `"invalid"`
+   * for fraud_risk_screening with no positiveFacts.
+   */
+  isNegativeVerdict?: boolean;
 }
 
 export async function collectFraudRiskEvidence(
@@ -125,38 +138,75 @@ export async function collectFraudRiskEvidence(
   );
   if (!shopifyRow) return [];
 
-  // Eligibility gate. See file header rule #2 — risk_level LOW or
-  // NONE are both merchant-accept verdicts on Shopify's taxonomy; the
-  // recommendation field is the authoritative bank-facing signal.
+  // Eligibility gate. See file header rule #2 — the positive (bank-
+  // facing) path requires LOW/NONE risk_level + ACCEPT/NONE
+  // recommendation + ≥1 POSITIVE fact. Anything else falls into the
+  // internal-only branch below: we still emit a section so the merchant
+  // sees "we checked, the verdict was unfavorable" instead of nothing
+  // at all, but the line-item resolver routes it to "Kept internal"
+  // and the canonicalEvidence categorizer returns `"invalid"` for the
+  // empty positiveFacts payload — guaranteeing the data NEVER reaches
+  // the LLM or the bank submission.
   const riskLevel = (shopifyRow.risk_level ?? "").toUpperCase();
   const recommendation = (shopifyRow.recommendation ?? "").toUpperCase();
-  if (riskLevel !== "LOW" && riskLevel !== "NONE") return [];
-  if (recommendation !== "ACCEPT" && recommendation !== "NONE") return [];
 
-  // Rule #3 — extract ONLY positive-sentiment facts.
   const positiveFacts = extractPositiveFacts(
     shopifyRow.facts_json,
     shopifyRow.fact_sentiments,
   );
-  if (positiveFacts.length === 0) return [];
 
-  const data: FraudRiskScreeningData = {
+  const isAcceptPath =
+    (riskLevel === "LOW" || riskLevel === "NONE") &&
+    (recommendation === "ACCEPT" || recommendation === "NONE") &&
+    positiveFacts.length > 0;
+
+  if (isAcceptPath) {
+    const data: FraudRiskScreeningData = {
+      provider: SHOPIFY_PROVIDER,
+      riskLevel,
+      recommendation,
+      positiveFacts: positiveFacts
+        .slice(0, MAX_POSITIVE_FACTS_CITED)
+        .map((f) => f.description),
+      assessedAt: shopifyRow.assessed_at,
+    };
+    return [
+      {
+        type: "other",
+        label: "Pre-authorization fraud screening",
+        source: "shopify_order_risk_assessments",
+        fieldsProvided: ["fraud_risk_screening"],
+        data,
+      },
+    ];
+  }
+
+  // Internal-only path. Shopify ran the screening and returned an
+  // unfavorable verdict (or there are no positive facts to cite, which
+  // amounts to the same thing). Emit a section with positiveFacts:[]
+  // so the row shows up in "Kept internal" on the Overview — citing
+  // it to the bank would weaken the case, but hiding it entirely is
+  // dishonest UX (looks like we never checked).
+  //
+  // The LLM safety contract is preserved by the canonicalEvidence
+  // categorizer: `fraud_risk_screening` with empty positiveFacts
+  // categorizes as `"invalid"`, which the factClassifier skips →
+  // no fact in defence_packages.facts_json → no bank-facing leakage.
+  const negativeData: FraudRiskScreeningData = {
     provider: SHOPIFY_PROVIDER,
     riskLevel,
     recommendation,
-    positiveFacts: positiveFacts
-      .slice(0, MAX_POSITIVE_FACTS_CITED)
-      .map((f) => f.description),
+    positiveFacts: [],
     assessedAt: shopifyRow.assessed_at,
+    isNegativeVerdict: true,
   };
-
   return [
     {
       type: "other",
       label: "Pre-authorization fraud screening",
       source: "shopify_order_risk_assessments",
       fieldsProvided: ["fraud_risk_screening"],
-      data,
+      data: negativeData,
     },
   ];
 }
