@@ -82,6 +82,13 @@ export const billingSubscribeSchema = z.object({
 export const billingTopUpSchema = z.object({
   shop_id: shopIdParam,
   sku: z.enum(["topup_25", "topup_100"]),
+  // Carried through Shopify's one-time-charge approval redirect so
+  // the callback can rebuild the embedded App Bridge URL. Without
+  // these, the post-approval redirect lands on the bare web URL,
+  // App Bridge can't bootstrap, and the Admin nav chrome vanishes.
+  // Null-tolerant for the same reason as billingSubscribeSchema.
+  host: z.string().nullable().optional(),
+  shop: z.string().nullable().optional(),
 });
 
 export const reorderSchema = z.object({

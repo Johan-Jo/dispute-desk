@@ -2946,8 +2946,11 @@ Guards at: `POST /api/disputes/:id/packs` (quota), `POST /api/rules` (feature),
 
 1. `POST /api/billing/subscribe` → `appSubscriptionCreate` → merchant redirected to Shopify approval
 2. `GET /api/billing/callback` → **verifies the charge with Shopify**, then upgrades `shops.plan` + grants credits
-3. `GET /api/billing/topup-callback` → **verifies the one-time charge with Shopify**, then grants top-up credits
-4. `GET /api/billing/usage?shop_id=...` → returns plan, monthly usage, and `shop_domain`
+3. `POST /api/billing/topup` → `appPurchaseOneTimeCreate` → merchant redirected to Shopify approval
+4. `GET /api/billing/topup-callback` → **verifies the one-time charge with Shopify**, then grants top-up credits
+5. `GET /api/billing/usage?shop_id=...` → returns plan, monthly usage, and `shop_domain`
+
+Both `POST /api/billing/subscribe` and `POST /api/billing/topup` accept optional `host` and `shop` body params. The client reads them from `window.location.search` (App Bridge populates these on every embedded page load) and the route bakes them into the Shopify `returnUrl`. Without this, Shopify's post-approval redirect lands on the bare `disputedesk.app/app/billing` URL outside the Admin iframe — App Bridge can't bootstrap and the `s-app-nav` chrome vanishes. Both callbacks then re-attach `host`/`shop` to the final redirect URL so the merchant lands back inside Shopify Admin.
 
 If the store session is invalid (e.g. missing shop domain) or the shop is not connected, subscribe returns 400 or 404 with an error message. The billing UI (portal and embedded) shows this message and an **Open in Shopify Admin** link so the merchant can open the app from Shopify Admin to restore a valid session (after using **Clear shop & reconnect** in the sidebar if needed).
 

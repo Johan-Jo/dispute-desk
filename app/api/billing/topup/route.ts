@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   };
   const validated = await validateBody(body, billingTopUpSchema);
   if ("error" in validated) return validated.error;
-  const { shop_id, sku } = validated.data;
+  const { shop_id, sku, host, shop } = validated.data;
 
   const topUp = getTopUp(sku);
   if (!topUp) {
@@ -80,7 +80,16 @@ export async function POST(req: NextRequest) {
     process.env.SHOPIFY_BILLING_TEST === "true" ||
     process.env.NODE_ENV !== "production";
   const appUrl = process.env.SHOPIFY_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
-  const returnUrl = `${appUrl}/api/billing/topup-callback?shop_id=${shop_id}&sku=${sku}`;
+  const callbackUrl = new URL(`${appUrl}/api/billing/topup-callback`);
+  callbackUrl.searchParams.set("shop_id", shop_id);
+  callbackUrl.searchParams.set("sku", sku);
+  // Carry host/shop through Shopify's approval redirect so the
+  // callback can hand a fully-embedded URL back to the merchant.
+  // Without this the redirect lands on the bare web URL, breaking
+  // out of the Admin iframe and stripping the s-app-nav chrome.
+  if (host) callbackUrl.searchParams.set("host", host);
+  if (shop) callbackUrl.searchParams.set("shop", shop);
+  const returnUrl = callbackUrl.toString();
 
   const result = await requestShopifyGraphQL<{
     appPurchaseOneTimeCreate: {

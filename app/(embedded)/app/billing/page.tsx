@@ -824,10 +824,15 @@ function BillingPageInner() {
                   setTopupError(null);
                   setTopupInFlight(topUp.sku);
                   try {
+                    const urlParams = new URLSearchParams(window.location.search);
                     const res = await fetch("/api/billing/topup", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ sku: topUp.sku }),
+                      body: JSON.stringify({
+                        sku: topUp.sku,
+                        host: urlParams.get("host") ?? undefined,
+                        shop: urlParams.get("shop") ?? undefined,
+                      }),
                     });
                     const data = (await res.json()) as {
                       confirmationUrl?: string;
