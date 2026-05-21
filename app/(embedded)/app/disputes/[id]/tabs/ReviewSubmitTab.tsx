@@ -74,6 +74,14 @@ export default function ReviewSubmitTab({ workspace }: Props) {
         shopifyAdminUrl={view.shopifyAdminUrl}
         presentationStatus={data?.presentationStatus}
         evidenceSentOn={data?.dispute?.submittedAt ?? null}
+        onSubmitted={() => {
+          // Flip derived.isReadOnly immediately so the card re-renders
+          // into the "Saved to Shopify" layout without waiting for the
+          // 4s workspace poll. Kick a fetch in parallel so the real
+          // `saved_to_shopify_at` arrives as soon as the job persists.
+          actions.markJustSubmitted();
+          void actions.fetchAll();
+        }}
         dispute={
           data?.dispute
             ? {

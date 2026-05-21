@@ -4162,6 +4162,18 @@ Both validators (`validateNarrative` + `validateComposedDocument`) accept `extra
 
 - **API routes**: 12 routes total — merchant-facing under `/api/defence-packages/[id]/*`, admin-facing under `/api/admin/defence-package/*`.
 
+#### Submit-pending UX (2026-05-21)
+
+`/api/defence-packages/:id/submit` enqueues a `save_to_shopify` job and returns immediately — the actual Shopify save runs 5–30s later in the worker. `CompleteDefencePackageCard` masks that async gap with an optimistic pending state so the merchant gets immediate, accurate feedback after clicking Submit:
+
+1. On a 2xx POST, the card sets a local `submitPending` flag and calls the new `onSubmitted?: () => void` prop. `ReviewSubmitTab` wires it to `actions.markJustSubmitted()` (flips `derived.isReadOnly` → `useReviewView` returns `state: "submitted"`) plus an immediate `actions.fetchAll()` so the workspace data refreshes against the latest DB state without waiting for the 4s poll tick.
+2. `useReviewView` falls back to `new Date().toISOString()` for `submittedAt` whenever `isReadOnly` is true but `pack.savedToShopifyAt` is still null. This lets `isSubmittedToBank` flip to true and re-render the card into the submitted layout against the optimistic timestamp.
+3. While `submitPending`, the card replaces the green "Saved to Shopify" success banner with a blue "Saving to Shopify…" info banner and suppresses the "View submitted PDF" / "Open in Shopify Admin" links — those resources don't exist on Shopify yet. The `useDisputeWorkspace` 4s poll picks up the real `saved_to_shopify_at` once the job persists.
+4. `submitPending` clears when the local `latest` row flips to `status="submitted"` (the save-to-shopify job sets this in the same transaction that stamps the pack timestamp) OR after a 90s safety timeout, so a stuck worker can't pretend submission is in flight forever.
+5. Submit/Finalize errors now extract `body.error` from the route's JSON response when present, so the merchant sees "Cannot submit a package in status=draft" rather than a bare `Submit failed (409)`.
+
+Failure-mode prevented: pre-fix, the card only refetched `/api/packs/:packId/defence-packages` after submit. That endpoint's `latest` row stays in `status="final"` until the save-to-shopify job runs, and `submittedToShopifyAt` (sourced from `pack.savedToShopifyAt` via the separate workspace endpoint) stayed null. So the card re-rendered identically to its pre-click state — merchants believed their click did nothing and double-submitted or walked away. The new optimistic flow gives them a visible state transition within ~100ms of the POST returning.
+
 ### Audit events
 
 Extended `EventType` union in `lib/audit/logEvent.ts` with 13 literals: `defence_package_draft_generated`, `defence_package_regenerated`, `defence_package_finalized`, `defence_package_submitted`, `defence_package_stale`, `defence_package_failed`, `defence_package_skipped`, `defence_package_superseded`, `defence_package_validation_failed`, `manual_evidence_added_to_package`, `llm_narrative_generated`, `llm_narrative_failed`, `defence_pdf_render_failed`.

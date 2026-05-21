@@ -782,6 +782,18 @@ export function useDisputeWorkspace(disputeId: string) {
   // CompleteDefencePackageCard's own Regenerate button which calls
   // /api/defence-packages/[id]/regenerate.
 
+  /** Flip `justSubmitted` from a child that owns its own submit POST
+   *  (e.g. CompleteDefencePackageCard's defence-package submit, which
+   *  hits /api/defence-packages/:id/submit instead of the pack-level
+   *  save-to-shopify route). Pairs with an immediate `fetchAll` so the
+   *  4s poll picks up `pack.savedToShopifyAt` once the job runs. Without
+   *  this, the card would re-render against stale workspace data and the
+   *  merchant would see the "Submit to Shopify" button reappear as if
+   *  the click did nothing. */
+  const markJustSubmitted = useCallback(() => {
+    setClientState((s) => ({ ...s, justSubmitted: true }));
+  }, []);
+
   const submitToShopify = useCallback(
     async (overrideReason?: string, overrideNote?: string) => {
       if (!data?.pack) return;
@@ -1036,6 +1048,7 @@ export function useDisputeWorkspace(disputeId: string) {
       toggleInclusionOverride,
       submitCardholderAcknowledgement,
       submitToShopify,
+      markJustSubmitted,
       exportPdf,
       downloadPdf,
       syncDispute,
