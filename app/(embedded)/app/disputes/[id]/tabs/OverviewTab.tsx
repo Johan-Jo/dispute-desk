@@ -116,6 +116,74 @@ const HERO_TONE_BY_VARIANT: Record<
 
 /* ── Pure helpers ── */
 
+/**
+ * One cell of the Evidence-coverage legend strip (4 cells side by side
+ * across the bottom of the card). Renders a coloured dot, "X of N",
+ * a label, and a one-line helper. Borders are drawn on the right so
+ * the cells stitch into a single dividerless row inside the card.
+ */
+function LegendCell({
+  dot,
+  count,
+  total,
+  ofTotalLabel,
+  label,
+  helper,
+  borderRight,
+}: {
+  dot: string;
+  count: number;
+  total: number;
+  ofTotalLabel: string;
+  label: string;
+  helper: string;
+  borderRight?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        padding: "14px 14px 14px 32px",
+        borderRight: borderRight ? "1px solid #E1E3E5" : "0",
+        position: "relative",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: 14,
+          top: 18,
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          background: dot,
+        }}
+      />
+      <div style={{ display: "flex", alignItems: "baseline", gap: 6, lineHeight: 1, marginBottom: 4 }}>
+        <span
+          style={{
+            fontSize: 20,
+            fontWeight: 700,
+            color: "#202223",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {count}
+        </span>
+        <span style={{ fontSize: 11, color: "#6D7175", fontVariantNumeric: "tabular-nums" }}>
+          {ofTotalLabel}
+        </span>
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: "#202223", marginBottom: 2 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 12, color: "#6D7175", lineHeight: 1.4 }}>
+        {helper}
+      </div>
+    </div>
+  );
+}
+
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
   try {
@@ -1150,138 +1218,168 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         );
       })()}
 
-      {/* O4: Evidence coverage — five separate metrics, sourced from
-          `data.evidenceLineItems`. The "8/8 collected" headline is gone:
-          completeness is NOT the same as case strength. The merchant
-          sees what was found, what reached the package, what
-          contributes to the bank argument, what stayed internal, and
-          which decisive signals are still missing. */}
+      {/* O4: Evidence coverage — single-glance stacked bar that splits
+          the evidence sections by disposition (positive argument /
+          context only / kept internal / not included). Replaces the
+          earlier 2×2 tile grid; same line-item source, same numbers,
+          but you can see at a glance how much of what was found made
+          it into the bank-facing argument. The four buckets line up
+          1:1 with the SubmissionSummaryPanel cells below — this card
+          is the summary, that card is the drill-down. */}
       {(() => {
         const lineItems = data?.evidenceLineItems ?? [];
-        const sectionsFound = lineItems.filter((li) => li.hasEvidence).length;
-        const includedInPackage = lineItems.filter((li) => li.includedInDefencePackage).length;
-        const usedAsPositive = lineItems.filter((li) => li.usedAsPositiveBankEvidence).length;
-        const keptInternal = lineItems.filter((li) => li.submissionMethod === "internal_only").length;
+        const positiveCount = lineItems.filter((li) => li.usedAsPositiveBankEvidence).length;
+        const contextCount = lineItems.filter(
+          (li) => li.submissionMethod === "context_only",
+        ).length;
+        const internalCount = lineItems.filter(
+          (li) => li.submissionMethod === "internal_only",
+        ).length;
+        const excludedCount = lineItems.filter(
+          (li) =>
+            li.submissionMethod === "excluded" ||
+            li.submissionMethod === "waived" ||
+            li.submissionMethod === "failed_upload" ||
+            li.submissionMethod === "not_supported" ||
+            li.submissionMethod === "not_included",
+        ).length;
+        const totalFound = positiveCount + contextCount + internalCount + excludedCount;
+        const includedInPackage = positiveCount + contextCount;
 
-        // Family-specific decisive triplet for "missing decisive evidence".
-        // Currently fraud-specific copy lives in the i18n file; other
-        // families render the generic "all decisive evidence present"
-        // string when nothing is missing.
-        const isFraud = /(fraudulent|unrecognized)/i.test(dispute.reason ?? "");
-        const missingDecisive =
-          isFraud && usedAsPositive === 0
-            ? t("coverage.missingDecisiveFraud")
-            : null;
-
-        // One-line truthful summary sentence. Wired through ICU so it
-        // composes "We found N evidence sections [and saved the
-        // defence package to Shopify]. [Weak-clause when applicable.]"
-        const isSaved =
-          presentationStatus === "SAVED_TO_SHOPIFY" ||
-          presentationStatus === "AWAITING_SHOPIFY_AUTO_SUBMISSION" ||
-          presentationStatus === "SUBMITTED_TO_NETWORK";
-        const family = isFraud ? "fraud" : "general";
-        const savedClause = isSaved
-          ? t("coverage.savedClauseSaved")
-          : "none";
-        const weakClause =
-          heroVariant === "hard_to_win"
-            ? t("coverage.weakClauseHardToWin", { family })
-            : "none";
-        const summary = t("coverage.summarySentence", {
-          found: sectionsFound,
-          savedClause,
-          weakClause,
-        });
+        const DISP = {
+          positive: "#22C55E",
+          context: "#9CA3AF",
+          internal: "#F59E0B",
+          excluded: "#EF4444",
+        } as const;
 
         return (
-          <div data-help-guide="detail-overview-evidence" style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
-            <BlockStack gap="300">
-              <Text as="h3" variant="headingSm">{t("coverage.title")}</Text>
+          <div
+            data-help-guide="detail-overview-evidence"
+            style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}
+          >
+            <BlockStack gap="200">
+              <InlineStack align="space-between" blockAlign="center" wrap={false}>
+                <Text as="h3" variant="headingSm">{t("coverage.title")}</Text>
+                <Text as="span" variant="bodyXs" tone="subdued">
+                  {t("coverage.subtitle")}
+                </Text>
+              </InlineStack>
 
-              {/* 2x2 tile grid. The "Used as positive bank argument"
-                  tile is the truthful punchline — when it's zero, the
-                  whole case-strength rating follows from there, so it
-                  gets a tinted background (green when > 0, amber when
-                  the case has no decisive bank-facing evidence). */}
-              {(() => {
-                const bankTileEmpty = usedAsPositive === 0;
-                const bankTileBg = bankTileEmpty ? "#FFFBEB" : "#F0FDF4";
-                const bankTileBorder = bankTileEmpty ? "#FDE68A" : "#86EFAC";
-                const bankTileNumColor = bankTileEmpty ? "#92400E" : "#065F46";
-                const bankTileLabelColor = bankTileEmpty ? "#78350F" : "#065F46";
-
-                const tile = (
-                  num: number,
-                  label: string,
-                  bg = "#F6F8FB",
-                  border = "#E1E3E5",
-                  numColor = "#1A1A1A",
-                  labelColor = "#5C5F62",
-                ) => (
-                  <div
-                    style={{
-                      background: bg,
-                      border: `1px solid ${border}`,
-                      borderRadius: 8,
-                      padding: "12px 14px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 2,
-                    }}
-                  >
-                    <Text as="span" variant="heading2xl">
-                      <span style={{ color: numColor }}>{num}</span>
-                    </Text>
-                    <Text as="span" variant="bodySm">
-                      <span style={{ color: labelColor }}>{label}</span>
-                    </Text>
-                  </div>
-                );
-
-                return (
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                      gap: 12,
-                    }}
-                  >
-                    {tile(sectionsFound, t("coverage.tileSectionsFound"))}
-                    {tile(includedInPackage, t("coverage.tileIncludedInPackage"))}
-                    {tile(
-                      usedAsPositive,
-                      t("coverage.tileUsedAsBankArgument"),
-                      bankTileBg,
-                      bankTileBorder,
-                      bankTileNumColor,
-                      bankTileLabelColor,
-                    )}
-                    {tile(keptInternal, t("coverage.tileKeptInternal"))}
-                  </div>
-                );
-              })()}
-
-              {/* Missing decisive evidence — only renders for fraud
-                  cases with zero positive bank argument rows. */}
-              {missingDecisive && (
-                <div style={{ paddingTop: 12, borderTop: "1px solid #E1E3E5" }}>
-                  <BlockStack gap="050">
-                    <Text as="span" variant="bodySm" fontWeight="semibold">
-                      {t("coverage.missingDecisiveLabel")}
-                    </Text>
-                    <Text as="span" variant="bodySm" tone="subdued">
-                      {missingDecisive}
-                    </Text>
-                  </BlockStack>
-                </div>
-              )}
-
-              {/* Truthful one-line summary. */}
-              <div style={{ paddingTop: 12, borderTop: "1px solid #E1E3E5" }}>
-                <Text as="p" variant="bodySm" tone="subdued">{summary}</Text>
+              {/* Headline: "N / M  evidence sections included in the
+                  defence package · K cited as positive arguments" */}
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+                <span
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 700,
+                    letterSpacing: "-0.01em",
+                    lineHeight: 1,
+                    color: "#202223",
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  {includedInPackage}
+                  <span style={{ color: "#6D7175", fontWeight: 500 }}>
+                    {" / "}
+                    {totalFound}
+                  </span>
+                </span>
+                <span style={{ color: "#6D7175", fontSize: 13 }}>
+                  {t("coverage.headlineSub", { positive: positiveCount })}
+                </span>
               </div>
+
+              {/* Stacked disposition bar. Each segment is flex-sized by
+                  count so a bucket with 0 items collapses out of the
+                  visual without leaving a stub. */}
+              {totalFound > 0 ? (
+                <div
+                  role="img"
+                  aria-label={t("coverage.barAria", {
+                    positive: positiveCount,
+                    context: contextCount,
+                    internal: internalCount,
+                    excluded: excludedCount,
+                    total: totalFound,
+                  })}
+                  style={{
+                    display: "flex",
+                    height: 14,
+                    width: "100%",
+                    gap: 2,
+                    borderRadius: 999,
+                    overflow: "hidden",
+                    background: "#F6F6F7",
+                    marginTop: 4,
+                  }}
+                >
+                  {positiveCount > 0 ? (
+                    <div style={{ flex: positiveCount, background: DISP.positive }} />
+                  ) : null}
+                  {contextCount > 0 ? (
+                    <div style={{ flex: contextCount, background: DISP.context }} />
+                  ) : null}
+                  {internalCount > 0 ? (
+                    <div style={{ flex: internalCount, background: DISP.internal }} />
+                  ) : null}
+                  {excludedCount > 0 ? (
+                    <div style={{ flex: excludedCount, background: DISP.excluded, opacity: 0.55 }} />
+                  ) : null}
+                </div>
+              ) : null}
             </BlockStack>
+
+            {/* Legend strip — flush to the card's outer edges so the
+                top divider lines up with the card border. Each cell
+                shows a coloured dot, the per-bucket count "X of N",
+                a one-line label, and a one-line helper that matches
+                the dot's meaning. */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                gap: 0,
+                margin: "16px -20px -20px",
+                borderTop: "1px solid #E1E3E5",
+              }}
+            >
+              <LegendCell
+                dot={DISP.positive}
+                count={positiveCount}
+                total={totalFound}
+                ofTotalLabel={t("coverage.legendOfTotal", { total: totalFound })}
+                label={t("coverage.legendPositiveLabel")}
+                helper={t("coverage.legendPositiveHelper")}
+                borderRight
+              />
+              <LegendCell
+                dot={DISP.context}
+                count={contextCount}
+                total={totalFound}
+                ofTotalLabel={t("coverage.legendOfTotal", { total: totalFound })}
+                label={t("coverage.legendContextLabel")}
+                helper={t("coverage.legendContextHelper")}
+                borderRight
+              />
+              <LegendCell
+                dot={DISP.internal}
+                count={internalCount}
+                total={totalFound}
+                ofTotalLabel={t("coverage.legendOfTotal", { total: totalFound })}
+                label={t("coverage.legendInternalLabel")}
+                helper={t("coverage.legendInternalHelper")}
+                borderRight
+              />
+              <LegendCell
+                dot={DISP.excluded}
+                count={excludedCount}
+                total={totalFound}
+                ofTotalLabel={t("coverage.legendOfTotal", { total: totalFound })}
+                label={t("coverage.legendExcludedLabel")}
+                helper={t("coverage.legendExcludedHelper")}
+              />
+            </div>
           </div>
         );
       })()}

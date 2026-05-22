@@ -1,29 +1,38 @@
 /**
  * SubmissionSummaryPanel — "What was/will be saved to Shopify".
  *
- * Single source of truth for the six-subsection submission summary on
- * the Overview tab. Everything in this component derives from the same
+ * Single source of truth for the submission summary on the Overview
+ * tab. Everything in this component derives from the same
  * `EvidenceLineItem[]` + `SubmissionSummary` that the rest of the
  * dispute-detail UI reads — no parallel logic, no inferred counts.
  *
  * The component is read-only. Header tense switches between
  * "What will be saved" (DRAFT) and "What was saved" (post-save).
  *
- * Subsections (each renders iff its count > 0, except #1):
- *   1. Saved as structured Shopify fields  — customer name + email
- *      (always renders; these are the only structured fields sent)
- *   2. Included in the defence package     — `factsInPdf`
- *   3. Used as positive bank argument      — usedAsPositiveBankEvidence rows
- *   4. Context only                        — context_only rows
- *   5. Kept internal                       — internal_only rows
- *   6. Not included                        — excluded + waived + failed_upload +
- *                                            not_supported counts
+ * Layout (matches the Dispute Page Overview design):
+ *   - Header: title + subtitle line.
+ *   - Inline "Structured fields" strip on tinted background — the
+ *     three shopifyStructuredFields collapsed to a single row
+ *     ("Customer: <name> · Email: <email>"). These are the only
+ *     structured fields DisputeDesk sends; everything else travels
+ *     inside the PDF.
+ *   - 2×2 disposition grid that mirrors the Evidence coverage legend
+ *     above: Positive arguments (green) · Context only (neutral) ·
+ *     Kept internal (amber) · Not included (red). Each cell lists the
+ *     evidence rows in that bucket; the "Not included" cell collapses
+ *     excluded / waived / failed_upload / not_supported into a single
+ *     count line.
+ *
+ * The "Included in defence package" wrapper that used to render
+ * around §2 (factsInPdf) is gone — it was redundant with the Positive
+ * arguments cell, and the Evidence coverage card above already shows
+ * the included-in-package headline.
  */
 
 "use client";
 
 import { useMemo } from "react";
-import { BlockStack, Card, InlineStack, Text, Badge } from "@shopify/polaris";
+import { BlockStack, Card, Text } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import type {
   PresentationStatus,
@@ -49,72 +58,111 @@ function isSavedState(s: PresentationStatus): boolean {
 }
 
 /**
- * Subsection accent — a small color-coded dot sits to the left of the
- * heading so the merchant can scan the six buckets at a glance.
- * Colors line up with the rest of the dispute-detail palette:
- *   - bank_argument / positive    → green
- *   - context_only                → neutral grey
- *   - internal_only               → amber
- *   - not_included                → red
- *   - structured / pdf            → indigo (neutral "what we sent")
+ * Disposition swatches — line up 1:1 with the Evidence coverage
+ * legend cells in OverviewTab so the two cards read as summary +
+ * detail of the same model.
  */
-type AccentTone =
-  | "indigo"
-  | "indigoStrong"
-  | "green"
-  | "neutral"
-  | "amber"
-  | "critical";
-
-const ACCENT_COLOR: Record<AccentTone, string> = {
-  indigo: "#C7D2FE",
-  indigoStrong: "#6366F1",
-  green: "#22C55E",
-  neutral: "#9CA3AF",
-  amber: "#F59E0B",
-  critical: "#EF4444",
+type Disposition = "positive" | "context" | "internal" | "excluded";
+const DISP_COLOR: Record<Disposition, string> = {
+  positive: "#22C55E",
+  context: "#9CA3AF",
+  internal: "#F59E0B",
+  excluded: "#EF4444",
 };
 
-/** Subsection wrapper — consistent label + helper + body layout. */
-function Subsection({
-  label,
-  helper,
-  children,
-  count,
-  accent,
-}: {
-  label: string;
-  helper: string;
-  count?: number | null;
-  accent: AccentTone;
-  children: React.ReactNode;
-}) {
+interface DispositionCellProps {
+  disposition: Disposition;
+  title: string;
+  countLine: string;
+  /** Rows to list. Empty array renders nothing inside the cell. */
+  rows?: Array<{ field: string; label: string; note?: string }>;
+  /**
+   * Single text node to render instead of `rows` — used by the "Not
+   * included" cell which collapses excluded/waived/failed/unsupported
+   * counts into one line.
+   */
+  body?: React.ReactNode;
+  borderRight?: boolean;
+  borderBottom?: boolean;
+}
+
+function DispositionCell({
+  disposition,
+  title,
+  countLine,
+  rows,
+  body,
+  borderRight,
+  borderBottom,
+}: DispositionCellProps) {
+  const muted = disposition === "excluded";
   return (
-    <BlockStack gap="150">
-      <InlineStack gap="200" blockAlign="center">
-        <span
-          aria-hidden
+    <div
+      style={{
+        padding: "14px 18px 14px 34px",
+        borderRight: borderRight ? "1px solid #E1E3E5" : "0",
+        borderBottom: borderBottom ? "1px solid #E1E3E5" : "0",
+        position: "relative",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          position: "absolute",
+          top: 17,
+          left: 18,
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          background: DISP_COLOR[disposition],
+        }}
+      />
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
+        <h4
           style={{
-            display: "inline-block",
-            width: 8,
-            height: 8,
-            borderRadius: 9999,
-            background: ACCENT_COLOR[accent],
-            flex: "0 0 8px",
+            fontSize: 13,
+            fontWeight: 600,
+            color: "#202223",
+            margin: 0,
+            lineHeight: 1.3,
           }}
-        />
-        <Text as="h4" variant="headingSm">
-          {label}
-        </Text>
-        {typeof count === "number" && count > 0 ? (
-          <Badge>{`${count}`}</Badge>
-        ) : null}
-      </InlineStack>
-      <Text as="p" variant="bodySm" tone="subdued">
-        {helper}
-      </Text>
-      {children}
-    </BlockStack>
+        >
+          {title}
+        </h4>
+        <span style={{ fontSize: 11, color: "#6D7175", fontVariantNumeric: "tabular-nums" }}>
+          {countLine}
+        </span>
+      </div>
+      {body ? (
+        <div style={{ fontSize: 13, color: muted ? "#6D7175" : "#202223", lineHeight: 1.45 }}>
+          {body}
+        </div>
+      ) : rows && rows.length > 0 ? (
+        <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+          {rows.map((r) => (
+            <li
+              key={r.field}
+              style={{
+                fontSize: 13,
+                lineHeight: 1.45,
+                color: muted ? "#6D7175" : "#202223",
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 6,
+                alignItems: "baseline",
+              }}
+            >
+              <span style={{ fontWeight: 500 }}>{r.label}</span>
+              {r.note ? (
+                <span style={{ color: "#6D7175", fontSize: 12, fontStyle: "italic" }}>
+                  {r.note}
+                </span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }
 
@@ -143,172 +191,160 @@ export function SubmissionSummaryPanel({
   const notIncludedTotal =
     counts.excluded + counts.waived + counts.failedUpload + counts.notSupported;
 
+  /**
+   * Collapse the three shopifyStructuredFields (first name / last
+   * name / email) into a single inline KV strip. The first two are
+   * joined as the customer's full name; missing values render as "—".
+   */
+  const firstName =
+    summary.shopifyStructuredFields.find((f) => f.field === "customer_first_name")?.value ?? null;
+  const lastName =
+    summary.shopifyStructuredFields.find((f) => f.field === "customer_last_name")?.value ?? null;
+  const email =
+    summary.shopifyStructuredFields.find((f) => f.field === "customer_email")?.value ?? null;
+  const customerName = [firstName, lastName].filter(Boolean).join(" ").trim();
+  const dash = t("shopifyFieldsNoneOnFile");
+
+  /**
+   * Compose the rows for the four disposition cells. The internal
+   * row carries a small italic note clarifying why it stayed
+   * internal — matches the design's "internal-only signal for banks"
+   * caption.
+   */
+  const internalNote = t("internalSignalNote");
+  const internalDispRows = internalRows.map((r) => ({
+    field: r.field,
+    label: r.label,
+    note: internalNote,
+  }));
+
+  /**
+   * Build a single human-readable line for the "Not included" cell.
+   * Same content as the prior multi-line block, just collapsed:
+   * "Upload failed for N items. M items excluded by you. K items
+   * marked not applicable. L items with no bank-facing slot." Each
+   * sub-clause only appears when its count > 0.
+   */
+  const notIncludedClauses: string[] = [];
+  if (counts.failedUpload > 0) {
+    notIncludedClauses.push(t("notIncludedFailedUpload", { count: counts.failedUpload }));
+  }
+  if (counts.excluded > 0) {
+    notIncludedClauses.push(t("notIncludedExcluded", { count: counts.excluded }));
+  }
+  if (counts.waived > 0) {
+    notIncludedClauses.push(t("notIncludedWaived", { count: counts.waived }));
+  }
+  if (counts.notSupported > 0) {
+    notIncludedClauses.push(t("notIncludedNotSupported", { count: counts.notSupported }));
+  }
+
   return (
-    <Card>
-      <BlockStack gap="400">
-        <BlockStack gap="100">
-          <Text as="h2" variant="headingMd">
-            {saved ? t("titlePostSave") : t("titlePreSave")}
-          </Text>
-          <Text as="p" variant="bodySm" tone="subdued">
-            {saved ? t("subtitlePostSave") : t("subtitlePreSave")}
-          </Text>
-        </BlockStack>
-
-        {/* §1 Structured Shopify fields — always renders.
-            Values render as a clean stack with no per-field label;
-            the section's `shopifyFieldsHelper` already tells the
-            merchant what the three rows are ("Customer name and
-            email — the only structured fields DisputeDesk sends.").
-            The order is stable (first name, last name, email) so
-            the values are self-describing. */}
-        <Subsection
-          label={t("shopifyFieldsLabel")}
-          helper={t("shopifyFieldsHelper")}
-          accent="indigo"
-        >
-          <BlockStack gap="050">
-            {summary.shopifyStructuredFields.map((f) => (
-              <Text
-                key={f.field}
-                as="span"
-                variant="bodySm"
-                tone={f.value ? undefined : "subdued"}
-              >
-                {f.value ?? t("shopifyFieldsNoneOnFile")}
-              </Text>
-            ))}
-          </BlockStack>
-        </Subsection>
-
-        {/* §2 Included in defence package — facts inside the PDF. */}
-        <Subsection
-          label={t("includedInPackageLabel")}
-          helper={t("includedInPackageHelper")}
-          count={summary.factsInPdf.length}
-          accent="indigoStrong"
-        >
-          {summary.factsInPdf.length === 0 ? (
-            <Text as="p" variant="bodySm" tone="subdued">
-              {t("includedInPackageEmpty")}
-            </Text>
-          ) : (
-            <BlockStack gap="050">
-              {summary.pdfFileName ? (
-                <Text as="p" variant="bodyXs" tone="subdued">
-                  {t("includedInPackagePdfLine", {
-                    pdfFileName: summary.pdfFileName,
-                  })}
-                </Text>
-              ) : null}
-              {/* Just the human-readable label per fact. The internal
-                  category key (e.g. `payment_authentication`) used to
-                  render in a trailing column — leaked engineering
-                  detail with no merchant value. */}
-              {summary.factsInPdf.map((f) => (
-                <Text key={f.field} as="span" variant="bodySm">
-                  {f.label}
-                </Text>
-              ))}
-            </BlockStack>
-          )}
-        </Subsection>
-
-        {/* §3 Used as positive bank argument. */}
-        <Subsection
-          label={t("bankArgumentLabel")}
-          helper={t("bankArgumentHelper")}
-          count={bankArgumentRows.length}
-          accent="green"
-        >
-          {bankArgumentRows.length === 0 ? (
-            <Text as="p" variant="bodySm" tone="subdued">
-              {t("bankArgumentEmpty")}
-            </Text>
-          ) : (
-            <BlockStack gap="050">
-              {bankArgumentRows.map((r) => (
-                <Text key={r.field} as="span" variant="bodySm">
-                  {r.label}
-                </Text>
-              ))}
-            </BlockStack>
-          )}
-        </Subsection>
-
-        {/* §4 Context only — only renders when populated. */}
-        {contextOnlyRows.length > 0 ? (
-          <Subsection
-            label={t("contextOnlyLabel")}
-            helper={t("contextOnlyHelper")}
-            count={contextOnlyRows.length}
-            accent="neutral"
-          >
-            <BlockStack gap="050">
-              {contextOnlyRows.map((r) => (
-                <Text key={r.field} as="span" variant="bodySm">
-                  {r.label}
-                </Text>
-              ))}
-            </BlockStack>
-          </Subsection>
-        ) : null}
-
-        {/* §5 Kept internal — only renders when populated. */}
-        {internalRows.length > 0 ? (
-          <Subsection
-            label={t("keptInternalLabel")}
-            helper={t("keptInternalHelper")}
-            count={internalRows.length}
-            accent="amber"
-          >
-            <BlockStack gap="050">
-              {internalRows.map((r) => (
-                <Text key={r.field} as="span" variant="bodySm">
-                  {r.label}
-                </Text>
-              ))}
-              <Text as="p" variant="bodyXs" tone="subdued">
-                {t("keptInternalSeeEvidenceTab")}
-              </Text>
-            </BlockStack>
-          </Subsection>
-        ) : null}
-
-        {/* §6 Not included — collapsed counts for excluded/waived/
-            failed_upload/not_supported. Only renders when any > 0. */}
-        {notIncludedTotal > 0 ? (
-          <Subsection
-            label={t("notIncludedLabel")}
-            helper={t("notIncludedHelper")}
-            count={notIncludedTotal}
-            accent="critical"
-          >
-            <BlockStack gap="050">
-              {counts.failedUpload > 0 ? (
-                <Text as="span" variant="bodySm" tone="critical">
-                  {t("notIncludedFailedUpload", { count: counts.failedUpload })}
-                </Text>
-              ) : null}
-              {counts.excluded > 0 ? (
-                <Text as="span" variant="bodySm">
-                  {t("notIncludedExcluded", { count: counts.excluded })}
-                </Text>
-              ) : null}
-              {counts.waived > 0 ? (
-                <Text as="span" variant="bodySm">
-                  {t("notIncludedWaived", { count: counts.waived })}
-                </Text>
-              ) : null}
-              {counts.notSupported > 0 ? (
-                <Text as="span" variant="bodySm">
-                  {t("notIncludedNotSupported", { count: counts.notSupported })}
-                </Text>
-              ) : null}
-            </BlockStack>
-          </Subsection>
-        ) : null}
+    <Card padding="500">
+      <BlockStack gap="100">
+        <Text as="h2" variant="headingMd">
+          {saved ? t("titlePostSave") : t("titlePreSave")}
+        </Text>
+        <Text as="p" variant="bodySm" tone="subdued">
+          {t("subtitleCompact")}
+        </Text>
       </BlockStack>
+
+      {/* Structured fields inline strip — single tinted row that flows
+          edge-to-edge of the card. The strip is "lede + 2 KV pairs",
+          not a sub-card, to keep the merchant from confusing identity
+          plumbing with evidence content. */}
+      <div
+        style={{
+          margin: "14px -20px 0",
+          padding: "12px 20px",
+          borderTop: "1px solid #E1E3E5",
+          background: "#FAFBFB",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "6px 28px",
+          fontSize: 13,
+          alignItems: "baseline",
+        }}
+      >
+        <span
+          style={{
+            color: "#6D7175",
+            fontSize: 11.5,
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            fontWeight: 600,
+          }}
+        >
+          {t("structuredFieldsLede")}
+        </span>
+        <InlineKV k={t("structuredFieldsCustomer")} v={customerName || dash} />
+        <InlineKV k={t("structuredFieldsEmail")} v={email ?? dash} />
+      </div>
+
+      {/* 2×2 disposition grid — flush to the card edges. Borders are
+          drawn cell-side so the four cells stitch together cleanly,
+          matching the Evidence coverage legend strip above. */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          gap: 0,
+          margin: "0 -20px -20px",
+          borderTop: "1px solid #E1E3E5",
+        }}
+      >
+        <DispositionCell
+          disposition="positive"
+          title={t("bankArgumentLabel")}
+          countLine={t("dispositionPositiveCount", { count: bankArgumentRows.length })}
+          rows={bankArgumentRows.map((r) => ({ field: r.field, label: r.label }))}
+          borderRight
+          borderBottom
+        />
+        <DispositionCell
+          disposition="context"
+          title={t("contextOnlyLabel")}
+          countLine={t("dispositionContextCount", { count: contextOnlyRows.length })}
+          rows={contextOnlyRows.map((r) => ({ field: r.field, label: r.label }))}
+          borderBottom
+        />
+        <DispositionCell
+          disposition="internal"
+          title={t("keptInternalLabel")}
+          countLine={t("dispositionInternalCount", { count: internalRows.length })}
+          rows={internalDispRows}
+          borderRight
+        />
+        <DispositionCell
+          disposition="excluded"
+          title={t("notIncludedLabel")}
+          countLine={t("dispositionExcludedCount", { count: notIncludedTotal })}
+          body={
+            notIncludedClauses.length === 0
+              ? t("notIncludedEmpty")
+              : notIncludedClauses.join(" ")
+          }
+        />
+      </div>
     </Card>
+  );
+}
+
+function InlineKV({ k, v }: { k: string; v: string }) {
+  return (
+    <span style={{ display: "inline-flex", gap: 8, alignItems: "baseline" }}>
+      <span style={{ color: "#6D7175", fontSize: 12 }}>{k}</span>
+      <span
+        style={{
+          color: "#202223",
+          fontWeight: 500,
+          fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+          fontSize: 12.5,
+        }}
+      >
+        {v}
+      </span>
+    </span>
   );
 }
