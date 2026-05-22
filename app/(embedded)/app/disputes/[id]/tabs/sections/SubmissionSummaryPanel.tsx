@@ -63,10 +63,14 @@ function isSavedState(s: PresentationStatus): boolean {
  * detail of the same model.
  */
 type Disposition = "positive" | "context" | "internal" | "excluded";
+// Disposition swatches kept in lockstep with OverviewTab's DISP map —
+// positive (`#059669`) + internal (`#D97706`) use the darker Hero
+// tones so the dots here don't read as a second slightly-different
+// green/amber against the same screen.
 const DISP_COLOR: Record<Disposition, string> = {
-  positive: "#22C55E",
+  positive: "#059669",
   context: "#9CA3AF",
-  internal: "#F59E0B",
+  internal: "#D97706",
   excluded: "#EF4444",
 };
 

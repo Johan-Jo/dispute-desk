@@ -1278,10 +1278,17 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         const totalFound = positiveCount + contextCount + internalCount + excludedCount;
         const includedInPackage = positiveCount + contextCount;
 
+        // Disposition swatches. Positive + internal use the darker
+        // tones from the Hero palette (`#059669` and `#D97706`) so
+        // the bar segments line up with the success / warning icons
+        // and pills elsewhere on this tab. Earlier values
+        // (`#22C55E` / `#F59E0B`) were the brighter Tailwind 500
+        // shades and stacked two slightly different greens / ambers
+        // on the same screen.
         const DISP = {
-          positive: "#22C55E",
+          positive: "#059669",
           context: "#9CA3AF",
-          internal: "#F59E0B",
+          internal: "#D97706",
           excluded: "#EF4444",
         } as const;
 

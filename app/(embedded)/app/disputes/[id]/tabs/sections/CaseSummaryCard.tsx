@@ -128,25 +128,19 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
         padding: 20,
       }}
     >
-      {/* Lead block: "Case summary" caption + strength badge / headline
-          / Status / Automation row. Uses flex with `space-between` so
-          the right group hugs the card edge on wide layouts and wraps
-          underneath on narrow viewports. */}
-      <p
-        style={{
-          fontSize: 12,
-          color: "#6D7175",
-          margin: "0 0 4px",
-          lineHeight: 1.4,
-        }}
-      >
-        {t("title")}
-      </p>
+      {/* Lead block: three vertically-stacked label+content groups
+          arranged in a single row.
+            - Left  : "Case summary" caption · strength badge + headline
+            - Right : "Status" caption · pill ; "Automation" caption · pill
+          Each group renders the label as a small subdued caption above
+          its main element — same pattern, just three groups in a row.
+          Wraps on narrow viewports so the right pair drops underneath
+          the headline instead of clipping. */}
       <div
         style={{
           display: "flex",
-          alignItems: "center",
-          gap: 12,
+          alignItems: "flex-start",
+          gap: 24,
           justifyContent: "space-between",
           flexWrap: "wrap",
         }}
@@ -154,66 +148,101 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
+            flexDirection: "column",
+            gap: 4,
+            minWidth: 0,
           }}
         >
-          {/* Pill-shaped strength badge — the dominant visual element
-              in the lead row. Slightly larger padding than the
-              right-side Status/Automation pills to match the design. */}
-          <span
+          <p
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              padding: "4px 12px",
-              borderRadius: 999,
-              fontSize: 13,
-              fontWeight: 600,
-              background: strengthColors.bg,
-              color: strengthColors.color,
+              fontSize: 12,
+              color: "#6D7175",
+              margin: 0,
+              lineHeight: 1.4,
             }}
           >
-            {tStrength(display)}
-          </span>
-          <span style={{ fontSize: 16, fontWeight: 600, color: "#202223" }}>
-            {nextStepCopy(props.nextStep, tNext)}
-          </span>
+            {t("title")}
+          </p>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            {/* Pill-shaped strength badge — the dominant visual element
+                in the lead row. Slightly larger padding than the
+                right-side Status/Automation pills to match the design. */}
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "4px 12px",
+                borderRadius: 999,
+                fontSize: 13,
+                fontWeight: 600,
+                background: strengthColors.bg,
+                color: strengthColors.color,
+              }}
+            >
+              {tStrength(display)}
+            </span>
+            <span style={{ fontSize: 16, fontWeight: 600, color: "#202223" }}>
+              {nextStepCopy(props.nextStep, tNext)}
+            </span>
+          </div>
         </div>
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            gap: 16,
-            fontSize: 12,
-            color: "#6D7175",
+            alignItems: "flex-start",
+            gap: 24,
             flexWrap: "wrap",
           }}
         >
-          <span
+          <div
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
             }}
           >
-            {t("statusLabel")}{" "}
+            <p
+              style={{
+                fontSize: 12,
+                color: "#6D7175",
+                margin: 0,
+                lineHeight: 1.4,
+              }}
+            >
+              {t("statusLabel")}
+            </p>
             <Pill bg={statusColors.bg} color={statusColors.color}>
               {tStatus(props.status)}
             </Pill>
-          </span>
-          <span
+          </div>
+          <div
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
             }}
           >
-            {t("automationLabel")}{" "}
+            <p
+              style={{
+                fontSize: 12,
+                color: "#6D7175",
+                margin: 0,
+                lineHeight: 1.4,
+              }}
+            >
+              {t("automationLabel")}
+            </p>
             <Pill bg={autoColors.bg} color={autoColors.color}>
               {tAuto(props.automationMode)}
             </Pill>
-          </span>
+          </div>
         </div>
       </div>
 

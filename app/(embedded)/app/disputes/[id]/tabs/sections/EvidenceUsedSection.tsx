@@ -48,13 +48,16 @@ const EXCLUDED_SUBMISSION_METHODS = new Set([
 
 type Disposition = "positive" | "context" | "internal" | "excluded";
 
+// Kept in lockstep with OverviewTab's DISP map + SubmissionSummaryPanel's
+// DISP_COLOR — positive and internal use the darker Hero tones so the
+// chips read as the same green/amber family as the rest of the tab.
 const DISPOSITION_COLORS: Record<
   Disposition,
   { dot: string; chipBg: string; chipText: string }
 > = {
-  positive: { dot: "#22C55E", chipBg: "#DCFCE7", chipText: "#065F46" },
+  positive: { dot: "#059669", chipBg: "#DCFCE7", chipText: "#065F46" },
   context: { dot: "#9CA3AF", chipBg: "#F3F4F6", chipText: "#374151" },
-  internal: { dot: "#F59E0B", chipBg: "#FEF3C7", chipText: "#78350F" },
+  internal: { dot: "#D97706", chipBg: "#FEF3C7", chipText: "#78350F" },
   excluded: { dot: "#EF4444", chipBg: "#FEE2E2", chipText: "#991B1B" },
 };
 

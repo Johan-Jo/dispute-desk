@@ -210,11 +210,18 @@ export default function EvidenceTab({ workspace }: Props) {
     void key;
   }
 
+  // Use the same dark-green BannerStack chrome the Review & Submit
+  // tab's "Saved to Shopify" banner uses, so both pages render this
+  // success state with one visual vocabulary. Non-dismissible — the
+  // window-open state is a status fact, not a one-off notice the
+  // merchant should clear.
   const windowOpenBanner =
     showWindowOpen && !shouldMergeSavedWithWindow ? (
-      <Banner tone="success" title={t("windowOpenBanner.title")}>
-        <p>{t("windowOpenBanner.body")}</p>
-      </Banner>
+      <SavedToShopifyBanner
+        title={t("windowOpenBanner.title")}
+        primaryBody={t("windowOpenBanner.body")}
+        secondaryBody={null}
+      />
     ) : null;
 
   // ── No-pack state ──
