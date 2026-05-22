@@ -969,7 +969,7 @@ export function CompleteDefencePackageCard({
                                                 "Resubmit to Shopify"
                     - Neither (e.g. already submitted, no newer
                       draft) → no primary button. */}
-              {canFinalize && latest && !bannerHostsActions && (
+              {canFinalize && latest && !bannerHostsActions && !submitPending && (
                 <Button
                   variant="primary"
                   onClick={onFinalize}
@@ -981,7 +981,7 @@ export function CompleteDefencePackageCard({
                     : `Approve v${latest.version}`}
                 </Button>
               )}
-              {canSubmit && !canFinalize && !bannerHostsActions && (
+              {canSubmit && !canFinalize && !bannerHostsActions && !submitPending && (
                 <Button
                   variant="primary"
                   tone="success"
@@ -1029,7 +1029,7 @@ export function CompleteDefencePackageCard({
                 existing gate — draft / stale / failed status) and the
                 draft-review banner above isn't already hosting this
                 same popover. */}
-            {canRegenerate && !bannerHostsActions && (
+            {canRegenerate && !bannerHostsActions && !submitPending && (
               <Popover
                 active={moreActionsOpen}
                 onClose={() => setMoreActionsOpen(false)}
