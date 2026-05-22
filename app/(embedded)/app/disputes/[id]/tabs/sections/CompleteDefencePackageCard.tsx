@@ -743,12 +743,22 @@ export function CompleteDefencePackageCard({
                       space-between alone leaves a gap when the text is
                       shorter than the row width. The duplicate of this
                       button in the action row below is suppressed when
-                      this banner is rendering it. */}
+                      this banner is rendering it.
+
+                      Body copy combines the two facts that previously
+                      lived in separate info banners: (1) the draft
+                      exists and needs review/approval, and (2) the
+                      bank currently has v{bankFacing.version}, so the
+                      draft will REPLACE that version on resubmit. The
+                      second fact used to render in a duplicate info
+                      banner above the inline preview; folding it here
+                      keeps a single status statement. */}
                   <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <Text as="p" variant="bodySm">
                         Draft v{latest.version} has been generated but has not
-                        been sent to Shopify yet. Review it below.{" "}
+                        been sent to Shopify yet — the bank currently has
+                        v{bankFacing.version}. Review it below.{" "}
                         {latest.status === "draft"
                           ? `If it looks correct, approve v${latest.version} before resubmitting to Shopify.`
                           : `If it looks correct, resubmit it to Shopify — that will replace v${bankFacing.version}.`}
@@ -1012,17 +1022,14 @@ export function CompleteDefencePackageCard({
           ABOVE the preview names which version the merchant is
           reading so they can't conflate v5's clean prose with v1's
           stale prose. */}
-      {hasUnsubmittedDraft && latest && bankFacing && !submitPending ? (
-        <Banner
-          tone="info"
-          title={`You are reviewing draft v${latest.version}`}
-        >
-          <p>
-            This is the version that will replace v{bankFacing.version} if
-            you resubmit. The bank currently has v{bankFacing.version}.
-          </p>
-        </Banner>
-      ) : null}
+      {/* The "You are reviewing draft vX" info banner previously sat
+          here, between the action row and the inline preview. It said
+          the same thing as the "Draft vX is ready for review" banner
+          inside the card (the bank has v{bankFacing.version}, this
+          draft replaces it on resubmit), so two stacked info banners
+          read as one repeated thought. The unique fact ("the bank
+          currently has v{N}") is now folded into the upper banner's
+          body copy. */}
       {displayRow?.narrative_json && displayRow?.facts_json && (
         <DefencePackageHtmlView row={displayRow} dispute={dispute} />
       )}

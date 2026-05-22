@@ -63,11 +63,21 @@ export function CardholderAcknowledgementCard({ workspace }: Props) {
   const hasFinalOutcome = Boolean(data?.dispute?.finalOutcome);
   if (isWindowClosed || hasFinalOutcome) return null;
 
-  // If customer_communication already resolves to a strong/positive
-  // bank-facing row, the merchant has already provided this evidence —
-  // no need to surface the input again.
+  // Hide the CTA once the merchant has provided cardholder
+  // communication in any form. We use `hasEvidence` (true whenever
+  // the row resolves to status "available") rather than
+  // `usedAsPositiveBankEvidence` because the categorizer may keep
+  // the row at "supporting" when the discriminator
+  // (`customerConfirmsOrder === true`) doesn't propagate or the
+  // payload doesn't match the strong-row preconditions. In that
+  // case the CTA was still showing up after the merchant had
+  // already submitted an acknowledgement and the package had been
+  // re-saved to Shopify — inviting them to repeat work that was
+  // already done. Hiding on `hasEvidence` covers both the strong
+  // path (positive bank argument) and the supporting path (text on
+  // file but not decisive).
   const ccRow = data?.evidenceLineItems?.find((li) => li.field === "customer_communication");
-  if (ccRow?.usedAsPositiveBankEvidence) return null;
+  if (ccRow?.hasEvidence) return null;
 
   // Hide the whole card while a rebuild is in flight (after the
   // merchant just submitted an acknowledgement, OR while any other
