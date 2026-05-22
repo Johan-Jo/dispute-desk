@@ -1,17 +1,25 @@
 /**
  * CaseSummaryCard — Section 1 of EvidenceTab.
  *
- * Hero layout: the strength badge is the dominant visual element, with
- * Status + Automation pushed to the right of the same row. The "Next
- * step" sentence reads as a standalone subtitle. Why-this-strength and
- * What-would-make-it-stronger collapse into one labelled region.
+ * Matches the Dispute Page Evidence Tab design verbatim — pill-shaped
+ * (radius-999) strength badge on the left grouped with the next-step
+ * headline; on the right, two `Label [pill]` pairs (Status,
+ * Automation). A top divider separates the lead row from the
+ * "Why this strength" explanation block; the merchant-facing
+ * automation copy (e.g. "Review required before submission.") renders
+ * as a small subdued meta line at the bottom of the why-block.
+ *
+ * Polaris `<Card>` and `<Badge>` are intentionally not used here:
+ * Badge renders rounded-rect chips that do not match the design's
+ * full-pill (radius-999) shape, and Card adds padding/shadow that
+ * doesn't line up with the unified card-on-card visual the rest of
+ * the redesigned tab uses.
  *
  * NO percentages. NO progress bars. NO predictive copy.
  */
 
 "use client";
 
-import { Card, BlockStack, InlineStack, Text, Badge } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import type {
   CaseSummaryViewModel,
@@ -29,23 +37,22 @@ function toDisplayStrength(level: CaseStrengthLevel): DisplayStrength {
   return "weak";
 }
 
-function strengthTone(
-  strength: DisplayStrength,
-): "success" | "attention" | "warning" {
-  if (strength === "strong") return "success";
-  if (strength === "moderate") return "attention";
-  return "warning";
-}
+const STRENGTH_PILL: Record<DisplayStrength, { bg: string; color: string }> = {
+  strong: { bg: "#D1FAE5", color: "#065F46" },
+  moderate: { bg: "#FEF3C7", color: "#92400E" },
+  weak: { bg: "#FEE2E2", color: "#991B1B" },
+};
 
-function statusTone(status: CaseStatus): "success" | "attention" | "info" {
-  if (status === "submitted") return "success";
-  if (status === "needs_attention") return "attention";
-  return "info";
-}
+const STATUS_PILL: Record<CaseStatus, { bg: string; color: string }> = {
+  submitted: { bg: "#D1FAE5", color: "#065F46" },
+  needs_attention: { bg: "#FEF3C7", color: "#92400E" },
+  in_progress: { bg: "#DBEAFE", color: "#1E40AF" },
+};
 
-function automationTone(mode: AutomationMode): "info" | "attention" {
-  return mode === "automatic" ? "info" : "attention";
-}
+const AUTOMATION_PILL: Record<AutomationMode, { bg: string; color: string }> = {
+  automatic: { bg: "#D1FAE5", color: "#065F46" },
+  review_required: { bg: "#FEF3C7", color: "#92400E" },
+};
 
 function nextStepCopy(
   step: NextStep,
@@ -57,14 +64,50 @@ function nextStepCopy(
   return t("reviewMissing");
 }
 
+/**
+ * Pill-shaped status chip — full-radius (999), small uppercase-cased
+ * body. Used for the Status and Automation chips on the right side of
+ * the lead row.
+ */
+function Pill({
+  bg,
+  color,
+  children,
+}: {
+  bg: string;
+  color: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "2px 10px",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 600,
+        background: bg,
+        color,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function CaseSummaryCard(props: CaseSummaryViewModel) {
   const t = useTranslations("disputes.evidenceTab.sections.summary");
   const tStrength = useTranslations("disputes.caseStrength");
-  const tStatus = useTranslations("disputes.evidenceTab.sections.summary.status");
+  const tStatus = useTranslations(
+    "disputes.evidenceTab.sections.summary.status",
+  );
   const tAuto = useTranslations(
     "disputes.evidenceTab.sections.summary.automationMode",
   );
-  const tNext = useTranslations("disputes.evidenceTab.sections.summary.nextStep");
+  const tNext = useTranslations(
+    "disputes.evidenceTab.sections.summary.nextStep",
+  );
   const tAutoCopy = useTranslations("disputes.evidenceTab.automation");
 
   const display = toDisplayStrength(props.strength);
@@ -72,72 +115,200 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
     props.strength !== "strong" &&
     (Boolean(props.strengthReason) || Boolean(props.improvementHint));
 
+  const strengthColors = STRENGTH_PILL[display];
+  const statusColors = STATUS_PILL[props.status];
+  const autoColors = AUTOMATION_PILL[props.automationMode];
+
   return (
-    <Card>
-      <BlockStack gap="500">
-        <BlockStack gap="200">
-          <Text as="span" variant="bodySm" tone="subdued">
-            {t("title")}
-          </Text>
-          <InlineStack align="space-between" blockAlign="center" gap="300" wrap>
-            <InlineStack gap="200" blockAlign="center">
-              <Badge tone={strengthTone(display)} size="large">
-                {tStrength(display)}
-              </Badge>
-              <Text as="h2" variant="headingMd">
-                {nextStepCopy(props.nextStep, tNext)}
-              </Text>
-            </InlineStack>
-            <InlineStack gap="200" blockAlign="center" wrap>
-              <InlineStack gap="100" blockAlign="center">
-                <Text as="span" variant="bodySm" tone="subdued">
-                  {t("statusLabel")}
-                </Text>
-                <Badge tone={statusTone(props.status)}>
-                  {tStatus(props.status)}
-                </Badge>
-              </InlineStack>
-              <InlineStack gap="100" blockAlign="center">
-                <Text as="span" variant="bodySm" tone="subdued">
-                  {t("automationLabel")}
-                </Text>
-                <Badge tone={automationTone(props.automationMode)}>
-                  {tAuto(props.automationMode)}
-                </Badge>
-              </InlineStack>
-            </InlineStack>
-          </InlineStack>
-        </BlockStack>
+    <div
+      style={{
+        background: "#fff",
+        border: "1px solid #E1E3E5",
+        borderRadius: 12,
+        padding: 20,
+      }}
+    >
+      {/* Lead block: "Case summary" caption + strength badge / headline
+          / Status / Automation row. Uses flex with `space-between` so
+          the right group hugs the card edge on wide layouts and wraps
+          underneath on narrow viewports. */}
+      <p
+        style={{
+          fontSize: 12,
+          color: "#6D7175",
+          margin: "0 0 4px",
+          lineHeight: 1.4,
+        }}
+      >
+        {t("title")}
+      </p>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          {/* Pill-shaped strength badge — the dominant visual element
+              in the lead row. Slightly larger padding than the
+              right-side Status/Automation pills to match the design. */}
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "4px 12px",
+              borderRadius: 999,
+              fontSize: 13,
+              fontWeight: 600,
+              background: strengthColors.bg,
+              color: strengthColors.color,
+            }}
+          >
+            {tStrength(display)}
+          </span>
+          <span style={{ fontSize: 16, fontWeight: 600, color: "#202223" }}>
+            {nextStepCopy(props.nextStep, tNext)}
+          </span>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            fontSize: 12,
+            color: "#6D7175",
+            flexWrap: "wrap",
+          }}
+        >
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            {t("statusLabel")}{" "}
+            <Pill bg={statusColors.bg} color={statusColors.color}>
+              {tStatus(props.status)}
+            </Pill>
+          </span>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            {t("automationLabel")}{" "}
+            <Pill bg={autoColors.bg} color={autoColors.color}>
+              {tAuto(props.automationMode)}
+            </Pill>
+          </span>
+        </div>
+      </div>
 
-        {showExplanation ? (
-          <BlockStack gap="200">
-            <Text as="h3" variant="headingSm">
-              {t("whyLabel")}
-            </Text>
-            {props.strengthReason ? (
-              <Text as="p" variant="bodyMd">
-                {props.strengthReason}
-              </Text>
-            ) : null}
-            {props.improvementHint ? (
-              <BlockStack gap="050">
-                <Text as="span" variant="bodySm" tone="subdued">
-                  {t("improveLabel")}
-                </Text>
-                <Text as="p" variant="bodyMd">
-                  {props.improvementHint}
-                </Text>
-              </BlockStack>
-            ) : null}
-          </BlockStack>
-        ) : null}
-
-        <Text as="p" variant="bodySm" tone="subdued">
+      {/* "Why this strength" block — only renders when the case is
+          not already strong and the backend produced at least one of
+          strengthReason / improvementHint. Separated from the lead
+          row by a top divider, matching the design's `.CS-why`
+          border-top rule. The automation copy (e.g. "Review required
+          before submission.") is folded into this block as a small
+          subdued meta line, since the design groups them together
+          rather than placing the meta line at the card's bottom. */}
+      {showExplanation ? (
+        <div
+          style={{
+            marginTop: 16,
+            paddingTop: 16,
+            borderTop: "1px solid #E1E3E5",
+          }}
+        >
+          <h3
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#202223",
+              margin: "0 0 6px",
+              lineHeight: 1.4,
+            }}
+          >
+            {t("whyLabel")}
+          </h3>
+          {props.strengthReason ? (
+            <p
+              style={{
+                fontSize: 13,
+                color: "#4B5563",
+                lineHeight: 1.55,
+                margin: 0,
+              }}
+            >
+              {props.strengthReason}
+            </p>
+          ) : null}
+          {props.improvementHint ? (
+            <div style={{ marginTop: 8 }}>
+              <p
+                style={{
+                  fontSize: 12,
+                  color: "#6D7175",
+                  margin: "0 0 2px",
+                  lineHeight: 1.4,
+                }}
+              >
+                {t("improveLabel")}
+              </p>
+              <p
+                style={{
+                  fontSize: 13,
+                  color: "#4B5563",
+                  lineHeight: 1.55,
+                  margin: 0,
+                }}
+              >
+                {props.improvementHint}
+              </p>
+            </div>
+          ) : null}
+          <p
+            style={{
+              fontSize: 12,
+              color: "#6D7175",
+              margin: "10px 0 0",
+              lineHeight: 1.4,
+            }}
+          >
+            {props.automationMode === "automatic"
+              ? tAutoCopy("automatic")
+              : tAutoCopy("reviewRequired")}
+          </p>
+        </div>
+      ) : (
+        <p
+          style={{
+            fontSize: 12,
+            color: "#6D7175",
+            margin: "16px 0 0",
+            paddingTop: 16,
+            borderTop: "1px solid #E1E3E5",
+            lineHeight: 1.4,
+          }}
+        >
           {props.automationMode === "automatic"
             ? tAutoCopy("automatic")
             : tAutoCopy("reviewRequired")}
-        </Text>
-      </BlockStack>
-    </Card>
+        </p>
+      )}
+    </div>
   );
 }
