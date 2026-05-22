@@ -245,6 +245,15 @@ export default function EvidenceTab({ workspace }: Props) {
 
   return (
     <BlockStack gap="500">
+      {/* §1 — Case summary lives at the very top of the tab so the
+              dominant strength + status + automation chips set context
+              before the merchant reads any banner. Previously the
+              banner stack rendered above the summary card, which
+              pushed the case-strength "moderate / strong / weak" pill
+              below the fold on dense flows (post-save success banner
+              + rebuild outcome + window-open notice). */}
+      <CaseSummaryCard {...sections.caseSummary} />
+
       {failedBanner}
       {windowClosedBanner}
       {regeneratingBanner}
@@ -253,9 +262,6 @@ export default function EvidenceTab({ workspace }: Props) {
       {windowOpenBanner}
       {noPackBanner}
       {uploadSuccessBanner}
-
-      {/* §1 — Case summary */}
-      <CaseSummaryCard {...sections.caseSummary} />
 
       {/* §2 — Cardholder acknowledgement CTA — promoted above the
               evidence card so the high-impact "decisive evidence for

@@ -35,7 +35,16 @@ import type {
   InternalSignalViewModel,
 } from "../useEvidenceSections";
 import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
+import { MERCHANT_UI_HIDDEN_FIELDS } from "@/lib/automation/merchantUiHiddenFields";
 import { EvidenceRow, InternalSignalRow } from "./EvidenceRow";
+
+const EXCLUDED_SUBMISSION_METHODS = new Set([
+  "excluded",
+  "waived",
+  "failed_upload",
+  "not_supported",
+  "not_included",
+]);
 
 type Disposition = "positive" | "context" | "internal" | "excluded";
 
@@ -176,6 +185,35 @@ export function EvidenceUsedSection({
     buckets[bucketForRow(item, li)].push(item);
   }
 
+  // Surface line items that fall in an excluded-family submission
+  // method but DON'T have a matching EvidenceRowViewModel — usually
+  // because the row has no `hasEvidence` checklist entry to build the
+  // view-model from (e.g. billing_address_match when the gateway
+  // returned no AVS result). Without this, the Overview's "Evidence
+  // coverage" card and the Submission summary count those rows in
+  // their "Not included" buckets while this section omitted them,
+  // and the merchant saw 3 Not included on Overview but only 2 here.
+  //
+  // Honors MERCHANT_UI_HIDDEN_FIELDS (customer_communication +
+  // supporting_documents) — same filter the Evidence tab's missing
+  // section uses, so a hidden field doesn't reappear here as
+  // "Not included".
+  const fieldsAlreadyBucketed = new Set<string>(items.map((i) => i.field));
+  for (const li of lineItems) {
+    if (fieldsAlreadyBucketed.has(li.field)) continue;
+    if (MERCHANT_UI_HIDDEN_FIELDS.has(li.field)) continue;
+    if (!EXCLUDED_SUBMISSION_METHODS.has(li.submissionMethod)) continue;
+    buckets.excluded.push({
+      id: `line-only:${li.field}`,
+      field: li.field,
+      title: li.label,
+      strength: "supporting",
+      whyThisMatters: li.reason ?? "",
+      source: "shopify",
+      includedAs: "not_included",
+    });
+  }
+
   const positiveFields = buckets.positive.map((r) => r.title);
   const explainer =
     buckets.positive.length > 0
@@ -203,11 +241,11 @@ export function EvidenceUsedSection({
       <div style={{ marginBottom: 16 }}>
         <h2
           style={{
-            fontSize: 14,
+            fontSize: 18,
             fontWeight: 600,
             color: "#202223",
             margin: 0,
-            lineHeight: 1.4,
+            lineHeight: 1.3,
           }}
         >
           {t("title")}
