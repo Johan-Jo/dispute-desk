@@ -64,10 +64,15 @@ const DISPOSITION_COLORS: Record<
 function bucketForRow(
   row: EvidenceRowViewModel,
   lineItem: EvidenceLineItem | undefined,
-): "positive" | "context" | "excluded" {
+): "positive" | "context" | "excluded" | null {
   if (lineItem) {
     if (lineItem.usedAsPositiveBankEvidence) return "positive";
     if (lineItem.includedInDefencePackage) return "context";
+    // Internal-only rows are represented by the `internalSignals`
+    // bucket (classifier-derived view) — surfacing them again in the
+    // excluded bucket caused the IP & Location row to render twice
+    // ("Kept internal" + "On file — not included"). Drop them here.
+    if (lineItem.submissionMethod === "internal_only") return null;
     return "excluded";
   }
   // Fallback when evidenceLineItems hasn't loaded yet — match the
@@ -185,7 +190,9 @@ export function EvidenceUsedSection({
   > = { positive: [], context: [], excluded: [] };
   for (const item of items) {
     const li = lineItemsByField.get(item.field);
-    buckets[bucketForRow(item, li)].push(item);
+    const bucket = bucketForRow(item, li);
+    if (bucket === null) continue;
+    buckets[bucket].push(item);
   }
 
   // Surface line items that fall in an excluded-family submission
