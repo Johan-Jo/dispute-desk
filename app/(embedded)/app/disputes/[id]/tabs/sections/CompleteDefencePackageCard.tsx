@@ -20,12 +20,12 @@ import {
   BlockStack,
   Button,
   ButtonGroup,
-  Card,
   InlineStack,
   Popover,
   Spinner,
   Text,
 } from "@shopify/polaris";
+import type { CSSProperties } from "react";
 import type {
   DefenceNarrativeOutput,
   EvidenceFact,
@@ -559,12 +559,12 @@ export function CompleteDefencePackageCard({
   if (!packId) return null;
   if (loading) {
     return (
-      <Card>
+      <div style={DEFENCE_CARD_STYLE}>
         <BlockStack gap="300">
-          <Text as="h2" variant="headingSm">Complete Defence Package</Text>
+          <h2 style={CARD_TITLE_STYLE}>Complete Defence Package</h2>
           <Spinner accessibilityLabel="Loading defence package" size="small" />
         </BlockStack>
-      </Card>
+      </div>
     );
   }
   // Feature flag off OR build hasn't run yet — hide the card entirely.
@@ -639,17 +639,17 @@ export function CompleteDefencePackageCard({
 
   return (
     <>
-      <Card>
+      <div style={DEFENCE_CARD_STYLE}>
         <BlockStack gap="400">
-          <BlockStack gap="100">
-            <Text as="h2" variant="headingSm">Complete Defence Package</Text>
-            <Text as="p" tone="subdued" variant="bodySm">
+          <div>
+            <h2 style={CARD_TITLE_STYLE}>Complete Defence Package</h2>
+            <p style={CARD_HELP_STYLE}>
               DisputeDesk prepares a bank-facing PDF that combines approved Shopify
               evidence, payment signals, fulfilment proof, customer communication,
               policies, and any merchant-supplied documents into one structured
               defence package.
-            </Text>
-          </BlockStack>
+            </p>
+          </div>
 
           {/* Workflow layout. Three states:
               A. Never submitted               → status / mode / deadline strip, then action row
@@ -668,56 +668,43 @@ export function CompleteDefencePackageCard({
                   When presentationStatus is absent (legacy mount), the
                   copy falls back to the pre-2026-05-20 "Submitted
                   package" phrasing. */}
-              <Banner
-                tone={submitPending ? "info" : "success"}
-                title={
-                  submitPending
-                    ? "Saving to Shopify…"
-                    : isClosed
+              {submitPending ? (
+                <Banner tone="info" title="Saving to Shopify…">
+                  <Text as="p" variant="bodySm">
+                    DisputeDesk has accepted your submission and is uploading the
+                    defence package to Shopify. This usually completes in under
+                    30 seconds — this banner will update automatically.
+                  </Text>
+                </Banner>
+              ) : (
+                <SavedToShopifyPackageBanner
+                  title={
+                    isClosed
                       ? "Outcome posted"
                       : isNetworkSubmitted
                         ? "Forwarded to the card network"
                         : "Saved to Shopify"
-                }
-              >
-                <BlockStack gap="100">
-                  {submitPending ? (
-                    <Text as="p" variant="bodySm">
-                      DisputeDesk has accepted your submission and is uploading the
-                      defence package to Shopify. This usually completes in under
-                      30 seconds — this banner will update automatically.
-                    </Text>
-                  ) : bankFacing ? (
-                    <Text as="p" variant="bodySm">
-                      {isNetworkSubmitted
+                  }
+                  version={bankFacing?.version ?? null}
+                  timestamp={formattedSubmittedAt}
+                  body={
+                    bankFacing
+                      ? isNetworkSubmitted
                         ? `Defence package v${bankFacing.version} has been forwarded by Shopify to the card network${formattedSubmittedAt ? `. Saved to Shopify on ${formattedSubmittedAt}.` : "."} The card network's decision is final once posted — Shopify can no longer swap the forwarded PDF.`
                         : isClosed
                           ? `Defence package v${bankFacing.version} was submitted${formattedSubmittedAt ? ` on ${formattedSubmittedAt}` : ""}. The dispute has been closed by the card network.`
-                          : `Defence package v${bankFacing.version} is saved to Shopify${formattedSubmittedAt ? ` (${formattedSubmittedAt})` : ""}. Shopify has not yet forwarded it to the card network — if you regenerate, the new PDF will replace this saved version cleanly.`}
-                    </Text>
-                  ) : (
-                    <Text as="p" variant="bodySm">
-                      A defence package has been submitted to the bank.
-                    </Text>
-                  )}
-                  {!submitPending && (shopifyAdminUrl || previewHref) ? (
-                    <InlineStack gap="200" blockAlign="center" align="space-between">
-                      {shopifyAdminUrl ? (
-                        <Button url={shopifyAdminUrl} target="_blank" external>
-                          Open in Shopify Admin
-                        </Button>
-                      ) : <span />}
-                      {previewHref ? (
-                        <Button url={previewHref} target="_blank" external>
-                          {hasUnsubmittedDraft && latest
-                            ? `Review draft v${latest.version} PDF`
-                            : "View PDF"}
-                        </Button>
-                      ) : null}
-                    </InlineStack>
-                  ) : null}
-                </BlockStack>
-              </Banner>
+                          : `Defence package v${bankFacing.version} is saved to Shopify${formattedSubmittedAt ? ` (${formattedSubmittedAt})` : ""}. Shopify has not yet forwarded it to the card network — if you regenerate, the new PDF will replace this saved version cleanly.`
+                      : "A defence package has been submitted to the bank."
+                  }
+                  shopifyAdminUrl={shopifyAdminUrl ?? null}
+                  previewHref={previewHref}
+                  previewLabel={
+                    hasUnsubmittedDraft && latest
+                      ? `Review draft v${latest.version} PDF`
+                      : "View PDF"
+                  }
+                />
+              )}
 
               {/* Outcome-expected countdown — only when the card
                   network has the evidence. Sets expectation without
@@ -1013,7 +1000,7 @@ export function CompleteDefencePackageCard({
             </Banner>
           )}
         </BlockStack>
-      </Card>
+      </div>
 
       {/* Inline HTML defence view — visually mirrors the PDF document
           section-for-section. Hidden when the package has no narrative
@@ -1040,5 +1027,172 @@ export function CompleteDefencePackageCard({
         <DefencePackageHtmlView row={displayRow} dispute={dispute} />
       )}
     </>
+  );
+}
+
+/* ── Design chrome (Dispute Page Review Submit v2) ─────────────── */
+
+const DEFENCE_CARD_STYLE: CSSProperties = {
+  background: "#fff",
+  border: "1px solid #E1E3E5",
+  borderRadius: 12,
+  padding: 20,
+};
+
+const CARD_TITLE_STYLE: CSSProperties = {
+  fontSize: 15,
+  fontWeight: 600,
+  color: "#202223",
+  margin: "0 0 6px",
+  lineHeight: 1.4,
+};
+
+const CARD_HELP_STYLE: CSSProperties = {
+  fontSize: 13,
+  color: "#6D7175",
+  margin: "0 0 16px",
+  lineHeight: 1.55,
+  maxWidth: 760,
+};
+
+/**
+ * SavedToShopifyPackageBanner — design's `.BannerStack` for the
+ * Complete Defence Package card. Solid-green header strip carries the
+ * title + (optional) version chip + (optional) timestamp on the
+ * right; light-green body holds the explanation paragraph and an
+ * action row separated from the prose by a soft green top border.
+ *
+ * The version chip + timestamp are right-anchored on the header strip
+ * via `margin-left: auto`; either can be null without breaking the
+ * layout. Action buttons render only when their corresponding URLs
+ * are non-null — when both are null the action row is suppressed.
+ */
+function SavedToShopifyPackageBanner({
+  title,
+  version,
+  timestamp,
+  body,
+  shopifyAdminUrl,
+  previewHref,
+  previewLabel,
+}: {
+  title: string;
+  version: number | null;
+  timestamp: string | null;
+  body: string;
+  shopifyAdminUrl: string | null;
+  previewHref: string | null;
+  previewLabel: string;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column" }} role="status">
+      <div
+        style={{
+          background: "#008060",
+          color: "#fff",
+          borderRadius: "8px 8px 0 0",
+          padding: "12px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+        }}
+      >
+        <span
+          aria-hidden
+          style={{
+            width: 20,
+            height: 20,
+            flexShrink: 0,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden
+            style={{ width: 18, height: 18 }}
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.78-9.72a.75.75 0 0 0-1.06-1.06L9 10.94 7.28 9.22a.75.75 0 1 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.06 0l4.25-4.25Z"
+            />
+          </svg>
+        </span>
+        <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.4 }}>
+          {title}
+        </span>
+        {(version !== null || timestamp) && (
+          <span
+            style={{
+              marginLeft: "auto",
+              fontSize: 12,
+              fontWeight: 500,
+              color: "rgba(255,255,255,0.88)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            {version !== null ? (
+              <span
+                style={{
+                  background: "rgba(255,255,255,0.18)",
+                  color: "#fff",
+                  padding: "1px 8px",
+                  borderRadius: 999,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: "0.02em",
+                }}
+              >
+                v{version}
+              </span>
+            ) : null}
+            {timestamp ? <span>{timestamp}</span> : null}
+          </span>
+        )}
+      </div>
+      <div
+        style={{
+          background: "#F0FDF4",
+          border: "1px solid #86EFAC",
+          borderTop: 0,
+          borderRadius: "0 0 8px 8px",
+          padding: "14px 16px",
+          fontSize: 13,
+          color: "#14532D",
+          lineHeight: 1.55,
+        }}
+      >
+        <p style={{ margin: 0 }}>{body}</p>
+        {shopifyAdminUrl || previewHref ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              flexWrap: "wrap",
+              marginTop: 12,
+              paddingTop: 12,
+              borderTop: "1px solid #BBF7D0",
+            }}
+          >
+            {shopifyAdminUrl ? (
+              <Button url={shopifyAdminUrl} target="_blank" external>
+                Open in Shopify Admin
+              </Button>
+            ) : null}
+            <span style={{ flex: 1 }} />
+            {previewHref ? (
+              <Button url={previewHref} target="_blank" external>
+                {previewLabel}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
