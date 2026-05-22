@@ -641,8 +641,11 @@
           "explainerHasBankFacing": "Bevis som används som argument mot banken: {fields}.",
           "explainerNoBankFacing": "Inga avgörande bevis för banken finns tillgängliga för detta ärende. Försvarspaketet kan fortfarande innehålla orderkontext och stödjande dokumentation, men ingen stark bedrägerisignal.",
           "groupUsedInBankArgument": "Används som positivt bankargument",
+          "groupUsedInBankArgumentCaption": "Anges i PDF:en som avgörande bevis.",
           "groupContextOnly": "Endast kontext",
           "groupContextOnlyCaption": "Ingår i försvarspaketet som bakgrund, men används inte som avgörande bevis.",
+          "groupKeptInternal": "Hålls internt",
+          "groupKeptInternalCaption": "Dessa signaler påverkar vår bedömning men skickas inte till Shopify — de kan försvaga svaret som riktas till banken.",
           "groupNotIncluded": "I ärendet — ej inkluderat",
           "groupNotIncludedCaption": "Dessa signaler finns på ordern men ingår inte i argumentet som riktas till banken."
         },
@@ -667,41 +670,19 @@
             "waiveCancel": "Cancel",
             "waiveConfirm": "Mark as not applicable"
           }
-        },
-        "internalOnly": {
-          "title": "Internal-only signals",
-          "disclaimer": "These signals inform our assessment but are not submitted to Shopify.",
-          "emptyState": "No internal-only signals. All relevant evidence is included in your defense."
         }
       },
       "row": {
-        "whyThisMatters": "Why this matters",
-        "source": "Source",
-        "includedAs": "Included as",
-        "includedAsFormField": "Sent as Shopify field",
-        "includedAsFormFieldExplanation": "Submitted as structured evidence through Shopify (e.g. tracking, customer details, uploaded files).",
-        "includedAsRebuttalText": "Included in defense",
-        "includedAsRebuttalTextExplanation": "Included in the bank-facing rebuttal narrative.",
-        "includedAsNotIncluded": "Internal only",
-        "includedAsNotIncludedExplanation": "Not included in the bank submission. Used internally or excluded to avoid weakening the case.",
-        "notSubmittedReason": "Not submitted to Shopify to avoid weakening the case.",
+        "source": "Källa",
         "sourceShopify": "Shopify",
-        "sourceMerchant": "Merchant upload",
-        "sourceDerived": "Derived",
+        "sourceMerchant": "Handlarens uppladdning",
+        "sourceDerived": "Härlett",
         "sourceStorePolicy": "Butikspolicy",
-        "packageStatus": {
-          "included": "Inkluderat i försvarspaket",
-          "internal_only": "Endast internt",
-          "not_included": "Ej inkluderat",
-          "not_supported": "Stöds ej",
-          "excluded": "Uteslutet",
-          "failed_upload": "Uppladdning misslyckades",
-          "waived": "Markerat som ej tillämpligt"
-        },
-        "bankArgumentStatus": {
-          "used": "Använt som bankargument",
-          "context_only": "Endast kontext",
-          "not_used": "Ej använt i bankargument"
+        "strength": {
+          "strong": "Stark",
+          "moderate": "Måttlig",
+          "supporting": "Stödjande",
+          "none": "Ingen"
         }
       },
       "automation": {
@@ -761,6 +742,9 @@
       "cardholderAck": {
         "title": "Lägg till bekräftelse från kortinnehavaren",
         "subtitle": "Om du har ett e-postmeddelande, en chatt eller annat meddelande där kortinnehavaren bekräftar att de lade och mottog denna order, klistra in det här. Bekräftelse från kortinnehavaren är avgörande bevis i bedrägeritvister — den lyfter kundkommunikation från stödjande kontext till ett positivt bankargument.",
+        "ctaEyebrow": "Föreslaget nästa steg · hög effekt",
+        "ctaButton": "Lägg till bekräftelse från kortinnehavaren",
+        "ctaMeta": "Tar ~1 minut · klistra in från e-post eller chatt",
         "textareaLabel": "Meddelande från kortinnehavaren",
         "textareaPlaceholder": "Klistra in e-postmeddelandet, chatten eller meddelandet från kortinnehavaren. Inkludera datum och annan kontext som kopplar det till denna order.",
         "textareaHint": "Minst 20 tecken. Texten inkluderas ordagrant i försvarspaketets PDF.",

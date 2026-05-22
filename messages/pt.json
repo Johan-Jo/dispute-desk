@@ -640,8 +640,11 @@
           "explainerHasBankFacing": "Provas usadas como argumento ao banco: {fields}.",
           "explainerNoBankFacing": "Não há provas decisivas voltadas ao banco disponíveis para esta disputa. O pacote de defesa ainda pode incluir o contexto do pedido e documentação de apoio, mas nenhum sinal forte de fraude.",
           "groupUsedInBankArgument": "Usado como argumento positivo ao banco",
+          "groupUsedInBankArgumentCaption": "Citado no PDF como prova decisiva.",
           "groupContextOnly": "Apenas contexto",
           "groupContextOnlyCaption": "Incluído no pacote de defesa como referência, mas não usado como prova decisiva.",
+          "groupKeptInternal": "Mantido interno",
+          "groupKeptInternalCaption": "Estes sinais informam nossa avaliação, mas não são enviados ao Shopify — podem enfraquecer a resposta voltada ao banco.",
           "groupNotIncluded": "Registrado — não incluído",
           "groupNotIncludedCaption": "Estes sinais existem no pedido, mas não fazem parte do argumento voltado ao banco."
         },
@@ -666,41 +669,19 @@
             "waiveCancel": "Cancel",
             "waiveConfirm": "Mark as not applicable"
           }
-        },
-        "internalOnly": {
-          "title": "Internal-only signals",
-          "disclaimer": "These signals inform our assessment but are not submitted to Shopify.",
-          "emptyState": "No internal-only signals. All relevant evidence is included in your defense."
         }
       },
       "row": {
-        "whyThisMatters": "Why this matters",
-        "source": "Source",
-        "includedAs": "Included as",
-        "includedAsFormField": "Sent as Shopify field",
-        "includedAsFormFieldExplanation": "Submitted as structured evidence through Shopify (e.g. tracking, customer details, uploaded files).",
-        "includedAsRebuttalText": "Included in defense",
-        "includedAsRebuttalTextExplanation": "Included in the bank-facing rebuttal narrative.",
-        "includedAsNotIncluded": "Internal only",
-        "includedAsNotIncludedExplanation": "Not included in the bank submission. Used internally or excluded to avoid weakening the case.",
-        "notSubmittedReason": "Not submitted to Shopify to avoid weakening the case.",
+        "source": "Fonte",
         "sourceShopify": "Shopify",
-        "sourceMerchant": "Merchant upload",
-        "sourceDerived": "Derived",
+        "sourceMerchant": "Upload do lojista",
+        "sourceDerived": "Derivado",
         "sourceStorePolicy": "Política da loja",
-        "packageStatus": {
-          "included": "Incluído no pacote de defesa",
-          "internal_only": "Apenas interno",
-          "not_included": "Não incluído",
-          "not_supported": "Não suportado",
-          "excluded": "Excluído",
-          "failed_upload": "Falha no upload",
-          "waived": "Marcado como não aplicável"
-        },
-        "bankArgumentStatus": {
-          "used": "Usado como argumento ao banco",
-          "context_only": "Apenas contexto",
-          "not_used": "Não usado no argumento ao banco"
+        "strength": {
+          "strong": "Forte",
+          "moderate": "Moderada",
+          "supporting": "De apoio",
+          "none": "Nenhuma"
         }
       },
       "automation": {
@@ -760,6 +741,9 @@
       "cardholderAck": {
         "title": "Adicionar reconhecimento do titular do cartão",
         "subtitle": "Se você tem um e-mail, chat ou outra mensagem em que o titular do cartão confirma ter feito e recebido este pedido, cole aqui. O reconhecimento do titular é prova decisiva em disputas de fraude — eleva a comunicação com o cliente de contexto de apoio a um argumento positivo ao banco.",
+        "ctaEyebrow": "Próximo passo sugerido · alto impacto",
+        "ctaButton": "Adicionar reconhecimento do titular",
+        "ctaMeta": "Leva ~1 minuto · cole do e-mail ou chat",
         "textareaLabel": "Mensagem do titular do cartão",
         "textareaPlaceholder": "Cole o e-mail, chat ou mensagem do titular do cartão. Inclua a data e qualquer contexto que vincule a mensagem a este pedido.",
         "textareaHint": "Mínimo de 20 caracteres. O texto é incluído literalmente no PDF do pacote de defesa.",

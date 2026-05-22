@@ -1944,7 +1944,15 @@ Rule: every section must explain *why* something matters and guide the user towa
 
 ### Evidence tab structure (4-section IA, 2026-05-02)
 
-**Status:** active. Supersedes the *decision-driven analysis* layout below (retained for context). The 1737-LOC `EvidenceTab.tsx` was replaced with a thin orchestrator that delegates to four labelled sections fed by a pure-derivation hook (`useEvidenceSections`). Backend logic — scoring, classification, payload generation — was **not** touched. The hook reads existing workspace data and produces a typed view-model; no new fetches, no new fields, no new API.
+**Status:** active. Supersedes the *decision-driven analysis* layout below (retained for context). Thin-orchestrator EvidenceTab delegates to sections fed by `useEvidenceSections`. Backend logic — scoring, classification, payload generation — was **not** touched. The hook reads existing workspace data and produces a typed view-model; no new fetches, no new fields, no new API.
+
+**Evidence Tab redesign (2026-05-22).** Composition + visual treatment updated to match `Dispute Page Evidence Tab.html`:
+- The previous separate **`InternalOnlySignalsSection`** card was folded INTO the unified Evidence card as the third disposition bucket ("Kept internal"). Internal signals now surface exactly once across the tab, where they belong by disposition.
+- The previous **three-pill row layout** (Strength · Package status · Bank argument status) is collapsed to **one pill** (strength only). The section chip header now carries the disposition, so per-row package/bank-argument badges were tautological.
+- **`CardholderAcknowledgementCard`** is promoted as a tinted-blue CTA placed directly under the Case Summary. Same hide gates (closed / window-closed / customer_communication already positive), same form when expanded — only the collapsed entry-point chrome is amplified ("Suggested next step · high impact" eyebrow, blue button, meta caption).
+- New disposition swatches match the Overview redesign 1:1 — green positive · neutral context · amber internal · red excluded — so the two tabs read as one system.
+- Implementation files: `EvidenceUsedSection.tsx`, `EvidenceRow.tsx` (now exports `EvidenceRow` + `InternalSignalRow`), `CardholderAcknowledgementCard.tsx`, `EvidenceTab.tsx`. The standalone `InternalOnlySignalsSection.tsx` was deleted.
+- New i18n keys: `sections.used.{groupUsedInBankArgumentCaption,groupKeptInternal,groupKeptInternalCaption}`, `row.strength.{strong,moderate,supporting,none}`, `cardholderAck.{ctaEyebrow,ctaButton,ctaMeta}`. Translated across en/de/es/fr/pt/sv (and the German `cardholderAck` block was backfilled — it was missing entirely). Dead keys removed: `sections.internalOnly.*`, `row.includedAs*`, `row.notSubmittedReason`, `row.packageStatus.*`, `row.bankArgumentStatus.*`, `row.whyThisMatters`.
 
 **Hard rules (enforced by the hook + components):**
 - **No percentages anywhere.** No "83% evidence collected", no coverage bars, no progress meters.
@@ -1983,10 +1991,10 @@ Rule: every section must explain *why* something matters and guide the user towa
 **Build / load / no-pack states:** surfaced as Polaris `Banner`s above the four sections — `isFailed → critical`, `isBuilding → info`, `pack === null → warning`. **Upload confirmation (2026-05):** after a successful `actions.uploadEvidence` call, `clientState.uploadSuccessNotice` holds the file name and checklist label; `EvidenceTab.tsx` renders a dismissible **success** `Banner` (`disputes.evidenceTab.uploadSuccessTitle` / `uploadSuccessBody`), auto-clears after 12 seconds, and `actions.dismissUploadSuccessNotice` clears it on dismiss — so merchants are not left wondering when an item disappears from **Missing or weak evidence** once the refreshed checklist marks it collected. The four sections still render below the banner stack with whatever data is available.
 
 **Files of record:**
-- `app/(embedded)/app/disputes/[id]/tabs/EvidenceTab.tsx` (composition only, ~120 LOC)
-- `app/(embedded)/app/disputes/[id]/tabs/useEvidenceSections.ts` (pure derivation hook)
-- `app/(embedded)/app/disputes/[id]/tabs/sections/{CaseSummaryCard,EvidenceUsedSection,EvidenceRow,RowStatusChip,MissingOrWeakSection,InternalOnlySignalsSection}.tsx`
-- i18n keys: `disputes.{caseStrength,itemStrength}` and `disputes.evidenceTab.{sections,row,automation,uploadSuccessTitle,uploadSuccessBody}` across all 12 locale files. English first; other locales mirror English copy until translated.
+- `app/(embedded)/app/disputes/[id]/tabs/EvidenceTab.tsx` (composition only)
+- `app/(embedded)/app/disputes/[id]/tabs/useEvidenceSections.ts` (pure derivation hook — still emits `internalOnly`, now consumed by `EvidenceUsedSection` rather than a dedicated section)
+- `app/(embedded)/app/disputes/[id]/tabs/sections/{CaseSummaryCard,EvidenceUsedSection,EvidenceRow,MissingOrWeakSection,CardholderAcknowledgementCard}.tsx`
+- i18n keys: `disputes.{caseStrength,itemStrength}` and `disputes.evidenceTab.{sections,row,automation,uploadSuccessTitle,uploadSuccessBody,cardholderAck}` across the 6 active locales (en/de/es/fr/pt/sv).
 
 ---
 

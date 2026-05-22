@@ -1,31 +1,24 @@
 /**
- * EvidenceRow — per-item row used by EvidenceUsedSection.
+ * EvidenceRow — per-item row used by the unified evidence card.
  *
- * Layout:
- *   [title + attachment badge] [Strength · Package status · Bank argument status]
- *   <one-line reason>
- *   <"Why this matters" descriptor>
+ * Compact two-column layout: a body block (title + reason + source)
+ * on the left and a single strength pill on the right. The previous
+ * three-pill layout (strength · package status · bank argument status)
+ * was redundant — the disposition section header already names the
+ * bucket the row sits in, so per-row status restated the same fact
+ * three times. Pinned by `app/(embedded)/app/disputes/[id]/tabs/sections/EvidenceUsedSection.tsx`.
  *
- * The three structured status indicators are gated on EvidenceLineItem
- * booleans, NOT on the legacy `strength` field:
- *
- *   1. Strength contribution (Strong / Moderate / Supporting / Internal only / None)
- *   2. Package status — gated on `includedInDefencePackage`
- *   3. Bank argument status — gated on `usedAsPositiveBankEvidence` /
- *      `includedInBankArgument` / `includedInDefencePackage`
- *
- * When `lineItem` is undefined (transient render window before the
- * workspace API returns), the row falls back to the legacy single-badge
- * layout via `whyThisMatters`.
+ * Rows separate visually via a dashed top border on every row except
+ * the first in its section, matching the redesign's `.EvRow` rule.
  */
 
 "use client";
 
-import { BlockStack, InlineStack, Text, Badge } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import type {
   EvidenceRowViewModel,
   EvidenceSource,
+  InternalSignalViewModel,
 } from "../useEvidenceSections";
 import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
 
@@ -48,51 +41,128 @@ const TARGET_FIELD_LABEL: Record<string, string> = {
   uncategorizedFile: "Other evidence",
 };
 
-/** Strength badge tone map. */
-function strengthBadgeTone(
+type PillVariant = "strong" | "moderate" | "supporting" | "none";
+
+const PILL_STYLES: Record<PillVariant, { bg: string; color: string }> = {
+  strong: { bg: "#D1FAE5", color: "#065F46" },
+  moderate: { bg: "#FEF3C7", color: "#92400E" },
+  supporting: { bg: "#E5E7EB", color: "#374151" },
+  none: { bg: "#F3F4F6", color: "#6B7280" },
+};
+
+function strengthPill(
   strength: EvidenceLineItem["strengthContribution"],
-): { tone?: "success" | "warning" | "attention"; label: string } {
+  t: ReturnType<typeof useTranslations>,
+): { variant: PillVariant; label: string } {
   switch (strength) {
     case "strong":
-      return { tone: "success", label: "Strong" };
+      return { variant: "strong", label: t("strength.strong") };
     case "moderate":
-      return { tone: "warning", label: "Moderate" };
+      return { variant: "moderate", label: t("strength.moderate") };
     case "supporting":
-      return { label: "Supporting" };
+      return { variant: "supporting", label: t("strength.supporting") };
     case "internal_only":
-      return { tone: "attention", label: "Internal only" };
+      // Internal-only rows reach this component via InternalSignalRow,
+      // not the regular path. If one slips through (defensive), label
+      // as Supporting — the section chip already says "Kept internal".
+      return { variant: "supporting", label: t("strength.supporting") };
     default:
-      return { label: "None" };
+      return { variant: "none", label: t("strength.none") };
   }
 }
 
-/** Package status label key — gates on the boolean, falls back to the
- *  submissionMethod-specific reason when not in the package. */
-function packageStatusKey(li: EvidenceLineItem): string {
-  if (li.includedInDefencePackage) return "included";
-  // Surface the WHY when the row is NOT in the package.
-  switch (li.submissionMethod) {
-    case "internal_only":
-      return "internal_only";
-    case "excluded":
-      return "excluded";
-    case "waived":
-      return "waived";
-    case "failed_upload":
-      return "failed_upload";
-    case "not_supported":
-      return "not_supported";
-    default:
-      return "not_included";
-  }
+function Pill({ variant, label }: { variant: PillVariant; label: string }) {
+  const style = PILL_STYLES[variant];
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        flexShrink: 0,
+        padding: "3px 10px",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 600,
+        whiteSpace: "nowrap",
+        alignSelf: "start",
+        background: style.bg,
+        color: style.color,
+      }}
+    >
+      {label}
+    </span>
+  );
 }
 
-/** Bank argument status label key. */
-function bankArgumentStatusKey(li: EvidenceLineItem): string {
-  if (li.usedAsPositiveBankEvidence) return "used";
-  // Row is in the package but not a positive argument → context only.
-  if (li.includedInDefencePackage) return "context_only";
-  return "not_used";
+/**
+ * Shared row chrome — grid with body + pill column, dashed separator
+ * between rows in the same section. Both the regular EvidenceRow and
+ * the InternalSignalRow render through this.
+ */
+function RowFrame({
+  title,
+  desc,
+  sourceLine,
+  attachmentChip,
+  pill,
+}: {
+  title: string;
+  desc: string | null;
+  sourceLine: string;
+  attachmentChip?: React.ReactNode;
+  pill: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr auto",
+        gap: 12,
+        padding: "12px 0",
+        borderTop: "1px dashed #EBEBEB",
+        alignItems: "start",
+      }}
+      data-evidence-row
+    >
+      <div>
+        <p
+          style={{
+            fontSize: 14,
+            fontWeight: 600,
+            color: "#202223",
+            lineHeight: 1.4,
+            margin: 0,
+          }}
+        >
+          {title}
+          {attachmentChip ? <> {attachmentChip}</> : null}
+        </p>
+        {desc ? (
+          <p
+            style={{
+              fontSize: 12.5,
+              color: "#4B5563",
+              lineHeight: 1.5,
+              margin: "4px 0 0",
+            }}
+          >
+            {desc}
+          </p>
+        ) : null}
+        <p
+          style={{
+            fontSize: 11,
+            color: "#6D7175",
+            margin: "6px 0 0",
+            letterSpacing: "0.01em",
+          }}
+        >
+          {sourceLine}
+        </p>
+      </div>
+      {pill}
+    </div>
+  );
 }
 
 export function EvidenceRow({
@@ -104,76 +174,69 @@ export function EvidenceRow({
 }) {
   const t = useTranslations("disputes.evidenceTab.row");
 
-  const strength = lineItem
-    ? strengthBadgeTone(lineItem.strengthContribution)
-    : strengthBadgeTone(
-        // Legacy fallback when the workspace API hasn't yet returned
-        // evidenceLineItems. Map the legacy ItemStrength → contribution
-        // values so the badge is still informative.
-        item.strength === "supporting"
-          ? "supporting"
-          : item.strength === "moderate"
-            ? "moderate"
-            : "strong",
-      );
-  const packageKey = lineItem ? packageStatusKey(lineItem) : null;
-  const bankKey = lineItem ? bankArgumentStatusKey(lineItem) : null;
+  const pill = strengthPill(
+    lineItem
+      ? lineItem.strengthContribution
+      : item.strength === "supporting"
+        ? "supporting"
+        : item.strength === "moderate"
+          ? "moderate"
+          : "strong",
+    t,
+  );
 
-  // Map package-status key to a Polaris badge tone. `included` is the
-  // success state; everything else is neutral except `failed_upload`
-  // which is critical and `internal_only` which is informational.
-  const packageTone: "success" | "attention" | "critical" | undefined = (() => {
-    if (packageKey === "included") return "success";
-    if (packageKey === "failed_upload") return "critical";
-    if (packageKey === "internal_only") return "attention";
-    return undefined;
-  })();
+  const attachmentChip = item.nativeAttachment ? (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "1px 8px",
+        marginLeft: 6,
+        borderRadius: 999,
+        fontSize: 11,
+        fontWeight: 600,
+        background: "#DCFCE7",
+        color: "#065F46",
+      }}
+    >
+      {`📎 ${
+        TARGET_FIELD_LABEL[item.nativeAttachment.targetField] ??
+        item.nativeAttachment.targetField
+      }`}
+    </span>
+  ) : null;
 
   return (
-    <BlockStack gap="100">
-      <InlineStack
-        align="space-between"
-        blockAlign="start"
-        gap="300"
-        wrap
-      >
-        <InlineStack gap="200" blockAlign="center" wrap>
-          <Text as="h4" variant="headingSm">
-            {item.title}
-          </Text>
-          {item.nativeAttachment ? (
-            <Badge tone="success">
-              {`📎 Attached to ${
-                TARGET_FIELD_LABEL[item.nativeAttachment.targetField] ??
-                item.nativeAttachment.targetField
-              }`}
-            </Badge>
-          ) : null}
-        </InlineStack>
-        <InlineStack gap="200" blockAlign="center" wrap>
-          <Badge tone={strength.tone}>{strength.label}</Badge>
-          {packageKey ? (
-            <Badge tone={packageTone}>{t(`packageStatus.${packageKey}`)}</Badge>
-          ) : null}
-          {bankKey ? (
-            <Badge tone={bankKey === "used" ? "success" : undefined}>
-              {t(`bankArgumentStatus.${bankKey}`)}
-            </Badge>
-          ) : null}
-        </InlineStack>
-      </InlineStack>
+    <RowFrame
+      title={item.title}
+      desc={lineItem?.reason ?? item.whyThisMatters}
+      sourceLine={`${t("source")} · ${sourceLabel(item.source, t)}`}
+      attachmentChip={attachmentChip}
+      pill={<Pill variant={pill.variant} label={pill.label} />}
+    />
+  );
+}
 
-      {/* One-line reason from the line item — explains WHY this row is
-          in its current state. Falls back to whyThisMatters when no
-          line item is available (legacy path). */}
-      <Text as="p" variant="bodySm">
-        {lineItem?.reason ?? item.whyThisMatters}
-      </Text>
-
-      {/* Source descriptor (kept compact). */}
-      <Text as="span" variant="bodyXs" tone="subdued">
-        {`${t("source")} · ${sourceLabel(item.source, t)}`}
-      </Text>
-    </BlockStack>
+/**
+ * Internal-only signal rendered in the "Kept internal" disposition
+ * bucket. Same chrome as `EvidenceRow` for visual consistency, but
+ * the data source is the classifier-derived `InternalSignalViewModel`
+ * (title + explanation; no per-field strength or attachment) so the
+ * pill is hard-coded to "Supporting" — the bucket chip already
+ * carries the "Kept internal" tone.
+ */
+export function InternalSignalRow({
+  signal,
+}: {
+  signal: InternalSignalViewModel;
+}) {
+  const t = useTranslations("disputes.evidenceTab.row");
+  return (
+    <RowFrame
+      title={signal.title}
+      desc={signal.explanation}
+      sourceLine={`${t("source")} · ${t("sourceDerived")}`}
+      pill={<Pill variant="supporting" label={t("strength.supporting")} />}
+    />
   );
 }

@@ -781,8 +781,11 @@
           "explainerHasBankFacing": "Bank-facing evidence used in the defence argument: {fields}.",
           "explainerNoBankFacing": "No decisive bank-facing evidence is available for this dispute. The defence package may still include order context and supporting documentation, but no strong fraud signal is present.",
           "groupUsedInBankArgument": "Used as positive bank argument",
+          "groupUsedInBankArgumentCaption": "Cited in the PDF as decisive proof.",
           "groupContextOnly": "Context only",
           "groupContextOnlyCaption": "Included in the defence package as background, but not relied on as decisive proof.",
+          "groupKeptInternal": "Kept internal",
+          "groupKeptInternalCaption": "These signals inform our assessment but are not submitted to Shopify — they could weaken the bank-facing response.",
           "groupNotIncluded": "On file — not included",
           "groupNotIncludedCaption": "These signals exist on the order but are not part of the bank-facing argument."
         },
@@ -807,41 +810,19 @@
             "waiveCancel": "Cancel",
             "waiveConfirm": "Mark as not applicable"
           }
-        },
-        "internalOnly": {
-          "title": "Internal-only signals",
-          "disclaimer": "These signals inform our assessment but are not submitted to Shopify.",
-          "emptyState": "No internal-only signals. All relevant evidence is included in your defense."
         }
       },
       "row": {
-        "whyThisMatters": "Why this matters",
         "source": "Source",
-        "includedAs": "Included as",
-        "includedAsFormField": "Sent as Shopify field",
-        "includedAsFormFieldExplanation": "Submitted as structured evidence through Shopify (e.g. tracking, customer details, uploaded files).",
-        "includedAsRebuttalText": "Included in defense",
-        "includedAsRebuttalTextExplanation": "Included in the bank-facing rebuttal narrative.",
-        "includedAsNotIncluded": "Internal only",
-        "includedAsNotIncludedExplanation": "Not included in the bank submission. Used internally or excluded to avoid weakening the case.",
-        "notSubmittedReason": "Not submitted to Shopify to avoid weakening the case.",
         "sourceShopify": "Shopify",
         "sourceMerchant": "Merchant upload",
         "sourceDerived": "Derived",
         "sourceStorePolicy": "Store policy",
-        "packageStatus": {
-          "included": "Included in defence package",
-          "internal_only": "Internal only",
-          "not_included": "Not included",
-          "not_supported": "Not supported",
-          "excluded": "Excluded",
-          "failed_upload": "Upload failed",
-          "waived": "Marked not applicable"
-        },
-        "bankArgumentStatus": {
-          "used": "Used as bank argument",
-          "context_only": "Context only",
-          "not_used": "Not used in bank argument"
+        "strength": {
+          "strong": "Strong",
+          "moderate": "Moderate",
+          "supporting": "Supporting",
+          "none": "None"
         }
       },
       "automation": {
@@ -892,6 +873,9 @@
       "cardholderAck": {
         "title": "Add cardholder acknowledgement",
         "subtitle": "If you have an email, chat, or other message in which the cardholder confirms they placed and received this order, paste it here. Cardholder acknowledgement is decisive evidence for fraud disputes — it elevates customer communication from supporting context to a positive bank argument.",
+        "ctaEyebrow": "Suggested next step · high impact",
+        "ctaButton": "Add cardholder acknowledgement",
+        "ctaMeta": "Takes ~1 minute · paste from email or chat",
         "textareaLabel": "Cardholder message",
         "textareaPlaceholder": "Paste the email, chat, or message from the cardholder. Include the date and any context that ties it to this order.",
         "textareaHint": "Minimum 20 characters. The text is included verbatim in the defence package PDF.",

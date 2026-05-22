@@ -1,20 +1,27 @@
 /**
- * EvidenceTab — four-section IA composition.
+ * EvidenceTab — Evidence Tab redesign composition.
  *
- * Replaces the legacy 1737-LOC tab with a thin orchestrator that
- * delegates to four labelled sections fed by `useEvidenceSections`.
- * The hook is the single source of truth for view-model shape;
- * no scoring, no classification, no payload mutation happens here.
+ * Thin orchestrator delegating to view-model sections fed by
+ * `useEvidenceSections`. The hook is the single source of truth for
+ * shape; no scoring, no classification, no payload mutation here.
  *
- * The four sections (in order):
- *   1. Case summary           — strength / status / automation / next step
- *   2. Evidence used in defense — all supporting signals (submitted or not)
- *   3. Missing or weak evidence — actionable gaps; collapses if empty
- *   4. Internal-only signals    — always rendered with empty-state copy
+ * Section order (matches `Dispute Page Evidence Tab.html`):
+ *   1. Case summary
+ *   2. Cardholder acknowledgement CTA — promoted blue card placed
+ *      immediately under the summary so a high-impact action sits in
+ *      eye-line. Self-hides for closed / window-closed disputes and
+ *      when customer_communication is already a positive bank argument.
+ *   3. Evidence in your defence package — unified card with up to four
+ *      disposition sections (positive / context / internal / excluded).
+ *      The previous "Internal-only signals" card is folded in as the
+ *      third disposition bucket so internal signals appear exactly
+ *      once across the tab.
+ *   4. Missing or weak evidence — actionable gaps; collapses if empty.
  *
- * Build/load/failed states and upload success are surfaced as Polaris
- * Banners ABOVE the sections. Forbidden in this tab: percentages, predictive copy,
- * "Likely outcome", "Prepared for you", "83% evidence collected".
+ * Build/load/failed/upload-success states are surfaced as Polaris
+ * Banners ABOVE the sections. Forbidden in this tab: percentages,
+ * predictive copy, "Likely outcome", "Prepared for you", "83% evidence
+ * collected".
  */
 
 "use client";
@@ -28,7 +35,6 @@ import { useEvidenceSections } from "./useEvidenceSections";
 import { CaseSummaryCard } from "./sections/CaseSummaryCard";
 import { EvidenceUsedSection } from "./sections/EvidenceUsedSection";
 import { MissingOrWeakSection } from "./sections/MissingOrWeakSection";
-import { InternalOnlySignalsSection } from "./sections/InternalOnlySignalsSection";
 import { RegeneratePromptModal } from "./sections/RegeneratePromptModal";
 import { CardholderAcknowledgementCard } from "./sections/CardholderAcknowledgementCard";
 
@@ -230,30 +236,34 @@ export default function EvidenceTab({ workspace }: Props) {
       {/* §1 — Case summary */}
       <CaseSummaryCard {...sections.caseSummary} />
 
-      {/* §2 — Evidence in your defence package.
-              Three buckets driven by EvidenceLineItem booleans:
+      {/* §2 — Cardholder acknowledgement CTA — promoted above the
+              evidence card so the high-impact "decisive evidence for
+              fraud disputes" action sits at the top of the work area.
+              The card self-hides when the dispute is closed, when
+              Shopify has already forwarded to the bank, or when
+              customer_communication is already a positive bank
+              argument — so its prominence never contradicts the
+              actual case state. */}
+      <CardholderAcknowledgementCard workspace={workspace} />
+
+      {/* §3 — Evidence in your defence package.
+              Unified card with up to four disposition sections, each
+              flagged by a coloured chip header:
                 - Used as positive bank argument
                 - Context only (in PDF but not relied on as proof)
+                - Kept internal (assessment-only; not submitted)
                 - On file — not included
-              The explainer text is conditional on whether any row is
-              actually `usedAsPositiveBankEvidence`. */}
+              Internal signals (previously surfaced as a separate
+              "Internal-only signals" card below) are passed through as
+              the third disposition bucket so the merchant sees one
+              source of truth. */}
       <EvidenceUsedSection
         items={sections.usedInDefense}
         lineItems={data?.evidenceLineItems ?? []}
+        internalSignals={sections.internalOnly}
       />
 
-      {/* Cardholder acknowledgement — merchant pastes a confirming
-              message from the cardholder + ticks the attestation
-              checkbox. Server records the confirmation, patches
-              checklist_v2, enqueues a build_pack rebuild, and (for
-              window-open disputes) opens RegeneratePromptModal so the
-              new PDF reaches Shopify. Hides itself when the dispute is
-              closed, already submitted to bank, or when
-              customer_communication is already a positive bank
-              argument. */}
-      <CardholderAcknowledgementCard workspace={workspace} />
-
-      {/* §3 — Missing or weak evidence (collapses when empty)
+      {/* §4 — Missing or weak evidence (collapses when empty)
               Inline actions: Upload evidence + Mark as not applicable.
               Both delegate to existing workspace actions; no new
               backend calls. `focusField` + `onFocusCleared` drive the
@@ -272,11 +282,6 @@ export default function EvidenceTab({ workspace }: Props) {
           void actions.waiveItem(field, reason);
         }}
       />
-
-      {/* §4 — Internal-only signals (ALWAYS rendered; empty-state copy
-              when no signals — gives the merchant a definitive answer
-              to "is anything being held back?") */}
-      <InternalOnlySignalsSection items={sections.internalOnly} />
 
       {/* Resubmission Window — confirmation modal opens after an
           upload succeeds with promptRebuild=true. Confirm calls

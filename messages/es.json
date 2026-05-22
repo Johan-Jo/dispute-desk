@@ -640,8 +640,11 @@
           "explainerHasBankFacing": "Pruebas usadas como argumento ante el banco: {fields}.",
           "explainerNoBankFacing": "No hay pruebas decisivas dirigidas al banco disponibles para esta disputa. El paquete de defensa puede seguir incluyendo el contexto del pedido y documentación de respaldo, pero ninguna señal de fraude sólida.",
           "groupUsedInBankArgument": "Usado como argumento positivo ante el banco",
+          "groupUsedInBankArgumentCaption": "Citado en el PDF como prueba decisiva.",
           "groupContextOnly": "Solo contexto",
           "groupContextOnlyCaption": "Incluido en el paquete de defensa como referencia, pero no usado como prueba decisiva.",
+          "groupKeptInternal": "Mantenido interno",
+          "groupKeptInternalCaption": "Estas señales informan nuestra evaluación pero no se envían a Shopify — podrían debilitar la respuesta dirigida al banco.",
           "groupNotIncluded": "Registrado — no incluido",
           "groupNotIncludedCaption": "Estas señales existen en el pedido pero no forman parte del argumento dirigido al banco."
         },
@@ -666,41 +669,19 @@
             "waiveCancel": "Cancel",
             "waiveConfirm": "Mark as not applicable"
           }
-        },
-        "internalOnly": {
-          "title": "Internal-only signals",
-          "disclaimer": "These signals inform our assessment but are not submitted to Shopify.",
-          "emptyState": "No internal-only signals. All relevant evidence is included in your defense."
         }
       },
       "row": {
-        "whyThisMatters": "Why this matters",
-        "source": "Source",
-        "includedAs": "Included as",
-        "includedAsFormField": "Sent as Shopify field",
-        "includedAsFormFieldExplanation": "Submitted as structured evidence through Shopify (e.g. tracking, customer details, uploaded files).",
-        "includedAsRebuttalText": "Included in defense",
-        "includedAsRebuttalTextExplanation": "Included in the bank-facing rebuttal narrative.",
-        "includedAsNotIncluded": "Internal only",
-        "includedAsNotIncludedExplanation": "Not included in the bank submission. Used internally or excluded to avoid weakening the case.",
-        "notSubmittedReason": "Not submitted to Shopify to avoid weakening the case.",
+        "source": "Fuente",
         "sourceShopify": "Shopify",
-        "sourceMerchant": "Merchant upload",
-        "sourceDerived": "Derived",
+        "sourceMerchant": "Carga del comerciante",
+        "sourceDerived": "Derivado",
         "sourceStorePolicy": "Política de tienda",
-        "packageStatus": {
-          "included": "Incluido en paquete de defensa",
-          "internal_only": "Solo interno",
-          "not_included": "No incluido",
-          "not_supported": "No compatible",
-          "excluded": "Excluido",
-          "failed_upload": "Subida fallida",
-          "waived": "Marcado como no aplicable"
-        },
-        "bankArgumentStatus": {
-          "used": "Usado como argumento ante el banco",
-          "context_only": "Solo contexto",
-          "not_used": "No usado en argumento ante el banco"
+        "strength": {
+          "strong": "Sólida",
+          "moderate": "Moderada",
+          "supporting": "De apoyo",
+          "none": "Ninguna"
         }
       },
       "automation": {
@@ -760,6 +741,9 @@
       "cardholderAck": {
         "title": "Añadir reconocimiento del titular de la tarjeta",
         "subtitle": "Si tienes un correo, chat u otro mensaje en el que el titular de la tarjeta confirma que realizó y recibió este pedido, pégalo aquí. El reconocimiento del titular es prueba decisiva en disputas de fraude — eleva la comunicación con el cliente de contexto de apoyo a un argumento positivo ante el banco.",
+        "ctaEyebrow": "Próximo paso sugerido · alto impacto",
+        "ctaButton": "Añadir reconocimiento del titular",
+        "ctaMeta": "Tarda ~1 minuto · pega desde el correo o chat",
         "textareaLabel": "Mensaje del titular de la tarjeta",
         "textareaPlaceholder": "Pega el correo, chat o mensaje del titular de la tarjeta. Incluye la fecha y cualquier contexto que lo vincule a este pedido.",
         "textareaHint": "Mínimo 20 caracteres. El texto se incluye textualmente en el PDF del paquete de defensa.",

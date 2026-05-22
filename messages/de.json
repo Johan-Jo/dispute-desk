@@ -734,8 +734,11 @@
           "explainerHasBankFacing": "Bank-relevante Beweise im Verteidigungsargument: {fields}.",
           "explainerNoBankFacing": "Für diesen Fall liegen keine entscheidenden bank-relevanten Beweise vor. Das Verteidigungspaket kann weiterhin Bestellkontext und unterstützende Unterlagen enthalten, aber kein starkes Betrugssignal.",
           "groupUsedInBankArgument": "Als positives Bankargument verwendet",
+          "groupUsedInBankArgumentCaption": "Im PDF als entscheidender Beleg angeführt.",
           "groupContextOnly": "Nur Kontext",
           "groupContextOnlyCaption": "Im Verteidigungspaket als Hintergrund enthalten, aber nicht als entscheidender Beweis herangezogen.",
+          "groupKeptInternal": "Intern gehalten",
+          "groupKeptInternalCaption": "Diese Signale fließen in unsere Bewertung ein, werden aber nicht an Shopify übermittelt — sie könnten die bank-relevante Antwort schwächen.",
           "groupNotIncluded": "In der Akte — nicht enthalten",
           "groupNotIncludedCaption": "Diese Signale liegen zur Bestellung vor, sind aber nicht Teil des bank-relevanten Arguments."
         },
@@ -760,28 +763,20 @@
             "waiveCancel": "Cancel",
             "waiveConfirm": "Mark as not applicable"
           }
-        },
-        "internalOnly": {
-          "title": "Internal-only signals",
-          "disclaimer": "These signals inform our assessment but are not submitted to Shopify.",
-          "emptyState": "No internal-only signals. All relevant evidence is included in your defense."
         }
       },
       "row": {
-        "whyThisMatters": "Why this matters",
-        "source": "Source",
-        "includedAs": "Included as",
-        "includedAsFormField": "Sent as Shopify field",
-        "includedAsFormFieldExplanation": "Submitted as structured evidence through Shopify (e.g. tracking, customer details, uploaded files).",
-        "includedAsRebuttalText": "Included in defense",
-        "includedAsRebuttalTextExplanation": "Included in the bank-facing rebuttal narrative.",
-        "includedAsNotIncluded": "Internal only",
-        "includedAsNotIncludedExplanation": "Not included in the bank submission. Used internally or excluded to avoid weakening the case.",
-        "notSubmittedReason": "Not submitted to Shopify to avoid weakening the case.",
+        "source": "Quelle",
         "sourceShopify": "Shopify",
-        "sourceMerchant": "Merchant upload",
-        "sourceDerived": "Derived",
-        "sourceStorePolicy": "Geschäftsbedingungen"
+        "sourceMerchant": "Händler-Upload",
+        "sourceDerived": "Abgeleitet",
+        "sourceStorePolicy": "Geschäftsbedingungen",
+        "strength": {
+          "strong": "Stark",
+          "moderate": "Mittel",
+          "supporting": "Unterstützend",
+          "none": "Keine"
+        }
       },
       "automation": {
         "automatic": "DisputeDesk will handle this automatically based on the evidence shown above.",
@@ -827,6 +822,27 @@
           "title": "Neuerstellung des Verteidigungspakets fehlgeschlagen",
           "body": "Die letzte Neuerstellung wurde nicht abgeschlossen. Das zuvor gespeicherte Paket bleibt im Streitfall. Versuchen Sie es erneut oder kontaktieren Sie den Support, falls der Fehler weiterhin auftritt."
         }
+      },
+      "cardholderAck": {
+        "title": "Karteninhaber-Bestätigung hinzufügen",
+        "subtitle": "Wenn Sie eine E-Mail, einen Chat oder eine andere Nachricht haben, in der der Karteninhaber bestätigt, dass er diese Bestellung aufgegeben und erhalten hat, fügen Sie sie hier ein. Eine Karteninhaber-Bestätigung ist ein entscheidender Beleg in Betrugsstreitfällen — sie hebt die Kundenkommunikation von unterstützendem Kontext zu einem positiven Bankargument.",
+        "ctaEyebrow": "Empfohlener nächster Schritt · hohe Wirkung",
+        "ctaButton": "Karteninhaber-Bestätigung hinzufügen",
+        "ctaMeta": "Dauert ~1 Minute · aus E-Mail oder Chat einfügen",
+        "textareaLabel": "Karteninhaber-Nachricht",
+        "textareaPlaceholder": "Fügen Sie die E-Mail, den Chat oder die Nachricht des Karteninhabers ein. Geben Sie das Datum und alle Kontextangaben an, die sie mit dieser Bestellung verknüpfen.",
+        "textareaHint": "Mindestens 20 Zeichen. Der Text wird wortgetreu in das Verteidigungspaket-PDF aufgenommen.",
+        "checkboxLabel": "Ich bestätige, dass diese Nachricht vom Karteninhaber stammt und nachweist, dass er die strittige Bestellung aufgegeben und/oder erhalten hat.",
+        "checkboxHelper": "Mit dem Anhaken bestätigen Sie, dass der Karteninhaber diese Nachricht verfasst hat. DisputeDesk vermerkt die Bestätigung im Audit-Protokoll des Streitfalls.",
+        "submit": "Bestätigung speichern",
+        "submitting": "Wird gespeichert…",
+        "successTitle": "Karteninhaber-Bestätigung gespeichert",
+        "successBody": "Die Kundenkommunikation ist jetzt als entscheidender Beleg markiert. DisputeDesk erstellt das Verteidigungspaket neu — Sie können das Ergebnis gleich überprüfen.",
+        "errorTooShort": "Bitte fügen Sie mindestens 20 Zeichen der Nachricht des Karteninhabers ein.",
+        "errorConfirmationRequired": "Bitte bestätigen Sie vor dem Speichern, dass die Nachricht vom Karteninhaber stammt.",
+        "errorWindowClosed": "Shopify hat den Streitfall bereits an die Bank weitergeleitet, daher können keine neuen Bestätigungen mehr hinzugefügt werden.",
+        "errorGeneric": "Bestätigung konnte nicht gespeichert werden ({code}). Bitte versuchen Sie es erneut.",
+        "charCount": "{count}/{max}"
       },
       "regenerateModal": {
         "title": "Verteidigungspaket mit diesem neuen Beleg neu erstellen?",

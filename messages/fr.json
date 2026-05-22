@@ -640,8 +640,11 @@
           "explainerHasBankFacing": "Preuves utilisées comme argument auprès de la banque : {fields}.",
           "explainerNoBankFacing": "Aucune preuve décisive destinée à la banque n’est disponible pour ce litige. Le dossier de défense peut tout de même inclure le contexte de commande et des pièces justificatives, mais aucun signal de fraude solide.",
           "groupUsedInBankArgument": "Utilisé comme argument positif auprès de la banque",
+          "groupUsedInBankArgumentCaption": "Cité dans le PDF comme preuve décisive.",
           "groupContextOnly": "Contexte uniquement",
           "groupContextOnlyCaption": "Inclus dans le dossier de défense à titre de contexte, mais non utilisé comme preuve décisive.",
+          "groupKeptInternal": "Gardé en interne",
+          "groupKeptInternalCaption": "Ces signaux éclairent notre évaluation mais ne sont pas transmis à Shopify — ils pourraient affaiblir la réponse adressée à la banque.",
           "groupNotIncluded": "Au dossier — non inclus",
           "groupNotIncludedCaption": "Ces signaux figurent dans la commande mais ne font pas partie de l’argumentation transmise à la banque."
         },
@@ -666,41 +669,19 @@
             "waiveCancel": "Cancel",
             "waiveConfirm": "Mark as not applicable"
           }
-        },
-        "internalOnly": {
-          "title": "Internal-only signals",
-          "disclaimer": "These signals inform our assessment but are not submitted to Shopify.",
-          "emptyState": "No internal-only signals. All relevant evidence is included in your defense."
         }
       },
       "row": {
-        "whyThisMatters": "Why this matters",
         "source": "Source",
-        "includedAs": "Included as",
-        "includedAsFormField": "Sent as Shopify field",
-        "includedAsFormFieldExplanation": "Submitted as structured evidence through Shopify (e.g. tracking, customer details, uploaded files).",
-        "includedAsRebuttalText": "Included in defense",
-        "includedAsRebuttalTextExplanation": "Included in the bank-facing rebuttal narrative.",
-        "includedAsNotIncluded": "Internal only",
-        "includedAsNotIncludedExplanation": "Not included in the bank submission. Used internally or excluded to avoid weakening the case.",
-        "notSubmittedReason": "Not submitted to Shopify to avoid weakening the case.",
         "sourceShopify": "Shopify",
-        "sourceMerchant": "Merchant upload",
-        "sourceDerived": "Derived",
+        "sourceMerchant": "Téléversement marchand",
+        "sourceDerived": "Dérivé",
         "sourceStorePolicy": "Politique de boutique",
-        "packageStatus": {
-          "included": "Inclus dans le dossier de défense",
-          "internal_only": "Uniquement interne",
-          "not_included": "Non inclus",
-          "not_supported": "Non pris en charge",
-          "excluded": "Exclu",
-          "failed_upload": "Échec de l’envoi",
-          "waived": "Marqué non applicable"
-        },
-        "bankArgumentStatus": {
-          "used": "Utilisé comme argument auprès de la banque",
-          "context_only": "Contexte uniquement",
-          "not_used": "Non utilisé dans l’argument auprès de la banque"
+        "strength": {
+          "strong": "Solide",
+          "moderate": "Modérée",
+          "supporting": "De soutien",
+          "none": "Aucune"
         }
       },
       "automation": {
@@ -760,6 +741,9 @@
       "cardholderAck": {
         "title": "Ajouter la reconnaissance du titulaire de la carte",
         "subtitle": "Si vous avez un email, un chat ou un autre message dans lequel le titulaire de la carte confirme qu’il a passé et reçu cette commande, collez-le ici. La reconnaissance du titulaire est une preuve décisive pour les litiges de fraude — elle élève la communication client du contexte de soutien à un argument positif auprès de la banque.",
+        "ctaEyebrow": "Prochaine étape suggérée · fort impact",
+        "ctaButton": "Ajouter la reconnaissance du titulaire",
+        "ctaMeta": "~1 minute · collez depuis un email ou un chat",
         "textareaLabel": "Message du titulaire de la carte",
         "textareaPlaceholder": "Collez l’email, le chat ou le message du titulaire de la carte. Incluez la date et tout contexte qui le rattache à cette commande.",
         "textareaHint": "Minimum 20 caractères. Le texte est inclus tel quel dans le PDF du dossier de défense.",
