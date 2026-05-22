@@ -683,7 +683,8 @@
         "notIncludedFailedUpload": "Upload failed for {count, plural, =1 {1 item} other {# items}}.",
         "notIncludedExcluded": "{count, plural, =1 {1 item} other {# items}} excluded by you.",
         "notIncludedWaived": "{count, plural, =1 {1 item} other {# items}} marked not applicable.",
-        "notIncludedNotSupported": "{count, plural, =1 {1 item} other {# items}} with no bank-facing slot."
+        "notIncludedNotSupported": "{count, plural, =1 {1 item} other {# items}} with no bank-facing slot.",
+        "notIncludedOnOrder": "{count, plural, =1 {1 item} other {# items}} on file but not part of the bank-facing argument."
       },
       "coverage": {
         "title": "Evidence coverage",

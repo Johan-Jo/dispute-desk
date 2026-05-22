@@ -636,7 +636,8 @@
         "notIncludedFailedUpload": "Upload fehlgeschlagen für {count, plural, =1 {1 Element} other {# Elemente}}.",
         "notIncludedExcluded": "{count, plural, =1 {1 Element} other {# Elemente}} von Ihnen ausgeschlossen.",
         "notIncludedWaived": "{count, plural, =1 {1 Element} other {# Elemente}} als nicht zutreffend markiert.",
-        "notIncludedNotSupported": "{count, plural, =1 {1 Element} other {# Elemente}} ohne entsprechendes Bank-Feld."
+        "notIncludedNotSupported": "{count, plural, =1 {1 Element} other {# Elemente}} ohne entsprechendes Bank-Feld.",
+        "notIncludedOnOrder": "{count, plural, =1 {1 Element} other {# Elemente}} in der Akte, aber nicht Teil des bank-relevanten Arguments."
       },
       "coverage": {
         "title": "Beweisabdeckung",

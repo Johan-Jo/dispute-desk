@@ -933,7 +933,8 @@
         "notIncludedFailedUpload": "Échec d’envoi pour {count, plural, =1 {1 élément} other {# éléments}}.",
         "notIncludedExcluded": "{count, plural, =1 {1 élément exclu} other {# éléments exclus}} par vous.",
         "notIncludedWaived": "{count, plural, =1 {1 élément marqué} other {# éléments marqués}} non applicable.",
-        "notIncludedNotSupported": "{count, plural, =1 {1 élément} other {# éléments}} sans emplacement destiné à la banque."
+        "notIncludedNotSupported": "{count, plural, =1 {1 élément} other {# éléments}} sans emplacement destiné à la banque.",
+        "notIncludedOnOrder": "{count, plural, =1 {1 élément} other {# éléments}} au dossier mais hors de l'argumentation destinée à la banque."
       },
       "coverage": {
         "title": "Couverture des preuves",

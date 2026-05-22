@@ -933,7 +933,8 @@
         "notIncludedFailedUpload": "Upload falhou para {count, plural, =1 {1 item} other {# itens}}.",
         "notIncludedExcluded": "{count, plural, =1 {1 item excluído} other {# itens excluídos}} por você.",
         "notIncludedWaived": "{count, plural, =1 {1 item marcado} other {# itens marcados}} como não aplicável.",
-        "notIncludedNotSupported": "{count, plural, =1 {1 item} other {# itens}} sem espaço para envio ao banco."
+        "notIncludedNotSupported": "{count, plural, =1 {1 item} other {# itens}} sem espaço para envio ao banco.",
+        "notIncludedOnOrder": "{count, plural, =1 {1 item} other {# itens}} no pedido mas fora do argumento dirigido ao banco."
       },
       "coverage": {
         "title": "Cobertura de provas",

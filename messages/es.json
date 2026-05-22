@@ -933,7 +933,8 @@
         "notIncludedFailedUpload": "Subida fallida para {count, plural, =1 {1 elemento} other {# elementos}}.",
         "notIncludedExcluded": "{count, plural, =1 {1 elemento excluido} other {# elementos excluidos}} por ti.",
         "notIncludedWaived": "{count, plural, =1 {1 elemento marcado} other {# elementos marcados}} como no aplicable.",
-        "notIncludedNotSupported": "{count, plural, =1 {1 elemento} other {# elementos}} sin espacio para envío al banco."
+        "notIncludedNotSupported": "{count, plural, =1 {1 elemento} other {# elementos}} sin espacio para envío al banco.",
+        "notIncludedOnOrder": "{count, plural, =1 {1 elemento} other {# elementos}} en el pedido pero no parte del argumento dirigido al banco."
       },
       "coverage": {
         "title": "Cobertura de pruebas",

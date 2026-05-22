@@ -934,7 +934,8 @@
         "notIncludedFailedUpload": "Uppladdning misslyckades för {count, plural, =1 {1 objekt} other {# objekt}}.",
         "notIncludedExcluded": "{count, plural, =1 {1 objekt} other {# objekt}} uteslutna av dig.",
         "notIncludedWaived": "{count, plural, =1 {1 objekt} other {# objekt}} markerade som ej tillämpliga.",
-        "notIncludedNotSupported": "{count, plural, =1 {1 objekt} other {# objekt}} utan bankriktad plats."
+        "notIncludedNotSupported": "{count, plural, =1 {1 objekt} other {# objekt}} utan bankriktad plats.",
+        "notIncludedOnOrder": "{count, plural, =1 {1 objekt} other {# objekt}} i ärendet men inte del av argumentet riktat till banken."
       },
       "coverage": {
         "title": "Bevistäckning",

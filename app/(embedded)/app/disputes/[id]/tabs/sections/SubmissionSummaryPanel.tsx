@@ -188,8 +188,22 @@ export function SubmissionSummaryPanel({
   );
 
   const { counts } = summary;
-  const notIncludedTotal =
-    counts.excluded + counts.waived + counts.failedUpload + counts.notSupported;
+  // Derive notIncludedTotal from `lineItems` (the same source the
+  // Evidence-coverage "Not included" segment counts), not from
+  // `summary.counts` — the API's `counts` shape doesn't track the
+  // `not_included` submissionMethod bucket, so summing only
+  // excluded/waived/failedUpload/notSupported undercounts.
+  // Symptom: the coverage card said "3 Not included" while this
+  // panel said "0 marked N/A" against the same data, because the 3
+  // rows had submissionMethod === "not_included".
+  const notIncludedTotal = lineItems.filter(
+    (li) =>
+      li.submissionMethod === "excluded" ||
+      li.submissionMethod === "waived" ||
+      li.submissionMethod === "failed_upload" ||
+      li.submissionMethod === "not_supported" ||
+      li.submissionMethod === "not_included",
+  ).length;
 
   /**
    * Collapse the three shopifyStructuredFields (first name / last
@@ -224,7 +238,18 @@ export function SubmissionSummaryPanel({
    * "Upload failed for N items. M items excluded by you. K items
    * marked not applicable. L items with no bank-facing slot." Each
    * sub-clause only appears when its count > 0.
+   *
+   * `not_included` (the 5th excluded-family bucket: signals that exist
+   * on the order but aren't part of the bank-facing argument and
+   * weren't actively excluded by anyone) doesn't have a dedicated
+   * count in the API's summary.counts, so we count it locally and
+   * append a sub-clause when present. Without this the header could
+   * read "Not included 3" while the body collapsed to "Nothing
+   * excluded" — exactly the discrepancy reported against this panel.
    */
+  const notIncludedOnOrderCount = lineItems.filter(
+    (li) => li.submissionMethod === "not_included",
+  ).length;
   const notIncludedClauses: string[] = [];
   if (counts.failedUpload > 0) {
     notIncludedClauses.push(t("notIncludedFailedUpload", { count: counts.failedUpload }));
@@ -237,6 +262,11 @@ export function SubmissionSummaryPanel({
   }
   if (counts.notSupported > 0) {
     notIncludedClauses.push(t("notIncludedNotSupported", { count: counts.notSupported }));
+  }
+  if (notIncludedOnOrderCount > 0) {
+    notIncludedClauses.push(
+      t("notIncludedOnOrder", { count: notIncludedOnOrderCount }),
+    );
   }
 
   return (
