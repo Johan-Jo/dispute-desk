@@ -898,6 +898,24 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           unavailable_from_source: "Not available from source",
         };
 
+        // EvidenceLineItem.source is the *actual* provenance (e.g.
+        // `merchant_upload` for the cardholder-acknowledgement flow on
+        // customer_communication) while `item.source` on the checklist
+        // is the *expected* origin (auto_shopify for the same field).
+        // For collected rows we want to surface what really happened —
+        // a merchant who uploaded a cardholder acknowledgement should
+        // not see "From Shopify order data" against it.
+        //
+        // Mapping intentionally narrow: only the two EvidenceSource
+        // values that flip the displayed caption away from the
+        // checklist default land here. The remaining sources
+        // (`shopify`, `derived`) keep the checklist mapping.
+        const LINE_ITEM_SOURCE_NOTE: Partial<
+          Record<NonNullable<ReturnType<typeof lineItemsByField.get>>["source"], string>
+        > = {
+          merchant_upload: SOURCE_NOTE.manual_upload,
+        };
+
         type Row = (typeof collectedRows)[number];
 
         // Internal-only check used by both the pill resolver and the
@@ -1025,6 +1043,20 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             return base;
           })();
 
+          // For collected rows, the line item's source is the actual
+          // provenance (e.g. merchant_upload for a cardholder
+          // acknowledgement on customer_communication). Use it to
+          // override the checklist's expected-source caption so the
+          // merchant doesn't see "From Shopify order data" against
+          // evidence they uploaded themselves. Falls through to the
+          // checklist mapping for system-collected rows.
+          const lineItemSourceNote =
+            lineItem &&
+            classification.status !== "missing" &&
+            classification.status !== "waived" &&
+            !isInternalOnly
+              ? (LINE_ITEM_SOURCE_NOTE[lineItem.source] ?? null)
+              : null;
           const sourceNote =
             classification.status === "not_applicable" && item.unavailableReason
               ? item.unavailableReason
@@ -1034,7 +1066,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                   ? lineItem.reason
                   : isPendingSystemSignal
                     ? t("rowSourceCaptionPendingSystem")
-                    : (SOURCE_NOTE[item.source ?? ""] ?? null);
+                    : (lineItemSourceNote ?? SOURCE_NOTE[item.source ?? ""] ?? null);
           const isNeutral =
             classification.status === "not_applicable" ||
             classification.status === "waived";
