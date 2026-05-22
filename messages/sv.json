@@ -931,11 +931,11 @@
         "dispositionInternalCount": "{count, plural, =0 {0 · kan försvaga svaret} =1 {1 · kan försvaga svaret} other {# · kan försvaga svaret}}",
         "dispositionExcludedCount": "{count, plural, =0 {0 · markerade ej tillämpliga} =1 {1 · markerat ej tillämpligt} other {# · markerade ej tillämpliga}}",
         "notIncludedEmpty": "Inget uteslutet.",
-        "notIncludedFailedUpload": "Uppladdning misslyckades för {count, plural, =1 {1 objekt} other {# objekt}}.",
-        "notIncludedExcluded": "{count, plural, =1 {1 objekt} other {# objekt}} uteslutna av dig.",
-        "notIncludedWaived": "{count, plural, =1 {1 objekt} other {# objekt}} markerade som ej tillämpliga.",
-        "notIncludedNotSupported": "{count, plural, =1 {1 objekt} other {# objekt}} utan bankriktad plats.",
-        "notIncludedOnOrder": "{count, plural, =1 {1 objekt} other {# objekt}} i ärendet men inte del av argumentet riktat till banken."
+        "notIncludedRowFailedUpload": "uppladdning misslyckades",
+        "notIncludedRowExcluded": "uteslutet av dig",
+        "notIncludedRowWaived": "markerat som ej tillämpligt",
+        "notIncludedRowNotSupported": "ingen bankriktad plats",
+        "notIncludedRowOnOrder": "i ärendet men inte del av argumentet riktat till banken"
       },
       "coverage": {
         "title": "Bevistäckning",

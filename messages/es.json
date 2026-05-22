@@ -930,11 +930,11 @@
         "dispositionInternalCount": "{count, plural, =0 {0 · podría debilitar la respuesta} =1 {1 · podría debilitar la respuesta} other {# · podrían debilitar la respuesta}}",
         "dispositionExcludedCount": "{count, plural, =0 {0 · marcado N/D} =1 {1 · marcado N/D} other {# · marcados N/D}}",
         "notIncludedEmpty": "Nada excluido.",
-        "notIncludedFailedUpload": "Subida fallida para {count, plural, =1 {1 elemento} other {# elementos}}.",
-        "notIncludedExcluded": "{count, plural, =1 {1 elemento excluido} other {# elementos excluidos}} por ti.",
-        "notIncludedWaived": "{count, plural, =1 {1 elemento marcado} other {# elementos marcados}} como no aplicable.",
-        "notIncludedNotSupported": "{count, plural, =1 {1 elemento} other {# elementos}} sin espacio para envío al banco.",
-        "notIncludedOnOrder": "{count, plural, =1 {1 elemento} other {# elementos}} en el pedido pero no parte del argumento dirigido al banco."
+        "notIncludedRowFailedUpload": "subida fallida",
+        "notIncludedRowExcluded": "excluido por ti",
+        "notIncludedRowWaived": "marcado como no aplicable",
+        "notIncludedRowNotSupported": "sin espacio para envío al banco",
+        "notIncludedRowOnOrder": "en el pedido pero no parte del argumento dirigido al banco"
       },
       "coverage": {
         "title": "Cobertura de pruebas",

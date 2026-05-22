@@ -633,11 +633,11 @@
         "dispositionInternalCount": "{count, plural, =0 {0 · könnte Antwort schwächen} =1 {1 · könnte Antwort schwächen} other {# · könnten Antwort schwächen}}",
         "dispositionExcludedCount": "{count, plural, =0 {0 · als nicht zutreffend markiert} =1 {1 · als nicht zutreffend markiert} other {# · als nicht zutreffend markiert}}",
         "notIncludedEmpty": "Nichts ausgeschlossen.",
-        "notIncludedFailedUpload": "Upload fehlgeschlagen für {count, plural, =1 {1 Element} other {# Elemente}}.",
-        "notIncludedExcluded": "{count, plural, =1 {1 Element} other {# Elemente}} von Ihnen ausgeschlossen.",
-        "notIncludedWaived": "{count, plural, =1 {1 Element} other {# Elemente}} als nicht zutreffend markiert.",
-        "notIncludedNotSupported": "{count, plural, =1 {1 Element} other {# Elemente}} ohne entsprechendes Bank-Feld.",
-        "notIncludedOnOrder": "{count, plural, =1 {1 Element} other {# Elemente}} in der Akte, aber nicht Teil des bank-relevanten Arguments."
+        "notIncludedRowFailedUpload": "Upload fehlgeschlagen",
+        "notIncludedRowExcluded": "von Ihnen ausgeschlossen",
+        "notIncludedRowWaived": "als nicht zutreffend markiert",
+        "notIncludedRowNotSupported": "kein entsprechendes Bank-Feld",
+        "notIncludedRowOnOrder": "in der Akte, aber nicht Teil des bank-relevanten Arguments"
       },
       "coverage": {
         "title": "Beweisabdeckung",

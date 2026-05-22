@@ -930,11 +930,11 @@
         "dispositionInternalCount": "{count, plural, =0 {0 · pourrait affaiblir la réponse} =1 {1 · pourrait affaiblir la réponse} other {# · pourraient affaiblir la réponse}}",
         "dispositionExcludedCount": "{count, plural, =0 {0 · marqué N/A} =1 {1 · marqué N/A} other {# · marqués N/A}}",
         "notIncludedEmpty": "Aucune exclusion.",
-        "notIncludedFailedUpload": "Échec d’envoi pour {count, plural, =1 {1 élément} other {# éléments}}.",
-        "notIncludedExcluded": "{count, plural, =1 {1 élément exclu} other {# éléments exclus}} par vous.",
-        "notIncludedWaived": "{count, plural, =1 {1 élément marqué} other {# éléments marqués}} non applicable.",
-        "notIncludedNotSupported": "{count, plural, =1 {1 élément} other {# éléments}} sans emplacement destiné à la banque.",
-        "notIncludedOnOrder": "{count, plural, =1 {1 élément} other {# éléments}} au dossier mais hors de l'argumentation destinée à la banque."
+        "notIncludedRowFailedUpload": "échec d’envoi",
+        "notIncludedRowExcluded": "exclu par vous",
+        "notIncludedRowWaived": "marqué non applicable",
+        "notIncludedRowNotSupported": "sans emplacement destiné à la banque",
+        "notIncludedRowOnOrder": "au dossier mais hors de l’argumentation destinée à la banque"
       },
       "coverage": {
         "title": "Couverture des preuves",

@@ -188,22 +188,10 @@ export function SubmissionSummaryPanel({
   );
 
   const { counts } = summary;
-  // Derive notIncludedTotal from `lineItems` (the same source the
-  // Evidence-coverage "Not included" segment counts), not from
-  // `summary.counts` — the API's `counts` shape doesn't track the
-  // `not_included` submissionMethod bucket, so summing only
-  // excluded/waived/failedUpload/notSupported undercounts.
-  // Symptom: the coverage card said "3 Not included" while this
-  // panel said "0 marked N/A" against the same data, because the 3
-  // rows had submissionMethod === "not_included".
-  const notIncludedTotal = lineItems.filter(
-    (li) =>
-      li.submissionMethod === "excluded" ||
-      li.submissionMethod === "waived" ||
-      li.submissionMethod === "failed_upload" ||
-      li.submissionMethod === "not_supported" ||
-      li.submissionMethod === "not_included",
-  ).length;
+  // `notIncludedRows` (built below) is the canonical source for both
+  // the cell's row list AND its count — derived directly from
+  // lineItems so it stays consistent with the Evidence-coverage card,
+  // which counts the same five submissionMethod buckets.
 
   /**
    * Collapse the three shopifyStructuredFields (first name / last
@@ -233,41 +221,47 @@ export function SubmissionSummaryPanel({
   }));
 
   /**
-   * Build a single human-readable line for the "Not included" cell.
-   * Same content as the prior multi-line block, just collapsed:
-   * "Upload failed for N items. M items excluded by you. K items
-   * marked not applicable. L items with no bank-facing slot." Each
-   * sub-clause only appears when its count > 0.
-   *
-   * `not_included` (the 5th excluded-family bucket: signals that exist
-   * on the order but aren't part of the bank-facing argument and
-   * weren't actively excluded by anyone) doesn't have a dedicated
-   * count in the API's summary.counts, so we count it locally and
-   * append a sub-clause when present. Without this the header could
-   * read "Not included 3" while the body collapsed to "Nothing
-   * excluded" — exactly the discrepancy reported against this panel.
+   * Rows for the "Not included" cell — actual line items instead of
+   * an aggregate count clause. Mirrors the other three cells so the
+   * merchant can see WHICH fields fall here, not just how many. Each
+   * row carries a small italic note naming the sub-reason
+   * (waived / excluded by you / failed upload / no bank-facing slot
+   * / on file but not part of the argument). Without this the cell
+   * showed "Not included 3 · marked N/A" with no way to identify
+   * which three rows it meant.
    */
-  const notIncludedOnOrderCount = lineItems.filter(
-    (li) => li.submissionMethod === "not_included",
-  ).length;
-  const notIncludedClauses: string[] = [];
-  if (counts.failedUpload > 0) {
-    notIncludedClauses.push(t("notIncludedFailedUpload", { count: counts.failedUpload }));
-  }
-  if (counts.excluded > 0) {
-    notIncludedClauses.push(t("notIncludedExcluded", { count: counts.excluded }));
-  }
-  if (counts.waived > 0) {
-    notIncludedClauses.push(t("notIncludedWaived", { count: counts.waived }));
-  }
-  if (counts.notSupported > 0) {
-    notIncludedClauses.push(t("notIncludedNotSupported", { count: counts.notSupported }));
-  }
-  if (notIncludedOnOrderCount > 0) {
-    notIncludedClauses.push(
-      t("notIncludedOnOrder", { count: notIncludedOnOrderCount }),
-    );
-  }
+  const notIncludedRows = lineItems
+    .filter(
+      (li) =>
+        li.submissionMethod === "excluded" ||
+        li.submissionMethod === "waived" ||
+        li.submissionMethod === "failed_upload" ||
+        li.submissionMethod === "not_supported" ||
+        li.submissionMethod === "not_included",
+    )
+    .map((li) => ({
+      field: li.field,
+      label: li.label,
+      note: (() => {
+        switch (li.submissionMethod) {
+          case "failed_upload":
+            return t("notIncludedRowFailedUpload");
+          case "excluded":
+            return t("notIncludedRowExcluded");
+          case "waived":
+            return t("notIncludedRowWaived");
+          case "not_supported":
+            return t("notIncludedRowNotSupported");
+          default:
+            return t("notIncludedRowOnOrder");
+        }
+      })(),
+    }));
+  const notIncludedTotal = notIncludedRows.length;
+  // `summary.counts` is still read below for the `factsInPdf` /
+  // structured-fields blocks; keep the destructured reference here
+  // so the local `counts` binding isn't removed elsewhere.
+  void counts;
 
   return (
     <Card padding="500">
@@ -350,11 +344,8 @@ export function SubmissionSummaryPanel({
           disposition="excluded"
           title={t("notIncludedLabel")}
           countLine={t("dispositionExcludedCount", { count: notIncludedTotal })}
-          body={
-            notIncludedClauses.length === 0
-              ? t("notIncludedEmpty")
-              : notIncludedClauses.join(" ")
-          }
+          rows={notIncludedRows}
+          body={notIncludedTotal === 0 ? t("notIncludedEmpty") : undefined}
         />
       </div>
     </Card>
