@@ -55,7 +55,6 @@ export function CardholderAcknowledgementCard({ workspace }: Props) {
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successOpen, setSuccessOpen] = useState(false);
 
   // Hide for terminal / window-closed states. The merchant cannot
   // change anything bank-facing once Shopify forwards.
@@ -69,9 +68,20 @@ export function CardholderAcknowledgementCard({ workspace }: Props) {
   // no need to surface the input again.
   const ccRow = data?.evidenceLineItems?.find((li) => li.field === "customer_communication");
   if (ccRow?.usedAsPositiveBankEvidence) return null;
-  // Build state isn't a hard hide, but disable the submit when a build
-  // is already running so we don't queue two on top of each other.
+
+  // Hide the whole card while a rebuild is in flight (after the
+  // merchant just submitted an acknowledgement, OR while any other
+  // workspace action is regenerating the pack). The consolidated
+  // green "regenerating" banner upstream carries the status — keeping
+  // the CTA visible at the same time would invite a second submission
+  // and contradict the banner. Once the rebuild completes, either:
+  //   - the new customer_communication line item resolves as positive
+  //     bank evidence → the `ccRow?.usedAsPositiveBankEvidence` gate
+  //     above keeps the card hidden, or
+  //   - the merchant's input didn't qualify → the card re-appears so
+  //     they can try again with a different message.
   const buildInFlight = derived.isBuilding || derived.isRegenerating;
+  if (buildInFlight) return null;
 
   const trimmed = text.trim();
   const canSubmit = confirmed && trimmed.length >= MIN_LEN && !submitting && !buildInFlight;
@@ -94,7 +104,16 @@ export function CardholderAcknowledgementCard({ workspace }: Props) {
         }
         return;
       }
-      setSuccessOpen(true);
+      // Submission succeeded → the parent fetchAll() inside
+      // submitCardholderAcknowledgement has already flipped the pack
+      // into `rebuildPending` / `queued`, which makes
+      // `derived.isRegenerating` true on the next render. The
+      // buildInFlight gate at the top of the component will then
+      // collapse this card entirely while the consolidated green
+      // regenerating banner upstream carries the status. We still
+      // reset local form state in case the card re-appears (e.g. the
+      // text didn't elevate customer_communication to positive bank
+      // evidence and the merchant wants to try again).
       setText("");
       setConfirmed(false);
       setExpanded(false);
@@ -110,16 +129,6 @@ export function CardholderAcknowledgementCard({ workspace }: Props) {
   // submit row read like a regular form, not a glossy promo.
   if (!expanded) {
     return (
-      <>
-        {successOpen ? (
-          <Banner
-            tone="success"
-            title={t("successTitle")}
-            onDismiss={() => setSuccessOpen(false)}
-          >
-            <p>{t("successBody")}</p>
-          </Banner>
-        ) : null}
         <div
           role="region"
           aria-label={t("ctaEyebrow")}
@@ -240,7 +249,6 @@ export function CardholderAcknowledgementCard({ workspace }: Props) {
             </div>
           </div>
         </div>
-      </>
     );
   }
 

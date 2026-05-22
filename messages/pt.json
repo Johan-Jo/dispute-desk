@@ -701,7 +701,7 @@
       },
       "regeneratingBanner": {
         "title": "Regenerando o pacote de defesa",
-        "body": "Seu pacote atualmente salvo permanece na disputa do Shopify. O DisputeDesk está regenerando o resumo das provas, o argumento de defesa e o PDF — quando pronto, a nova versão substituirá a atual."
+        "body": "Sua alteração foi salva. O DisputeDesk está regenerando o resumo das provas, o argumento de defesa e o PDF — quando pronto, a nova versão substituirá a atualmente salva na disputa do Shopify."
       },
       "rebuildOutcomeBanner": {
         "saved": {
@@ -751,8 +751,6 @@
         "checkboxHelper": "Ao marcar esta caixa, você atesta que o titular do cartão escreveu esta mensagem. O DisputeDesk registra a confirmação no histórico de auditoria da disputa.",
         "submit": "Salvar reconhecimento",
         "submitting": "Salvando…",
-        "successTitle": "Reconhecimento do titular salvo",
-        "successBody": "A comunicação com o cliente agora está marcada como prova decisiva. O DisputeDesk está regenerando o pacote de defesa — você poderá revisar o resultado em instantes.",
         "errorTooShort": "Cole pelo menos 20 caracteres da mensagem do titular do cartão.",
         "errorConfirmationRequired": "Confirme que a mensagem é do titular do cartão antes de salvar.",
         "errorWindowClosed": "O Shopify já encaminhou esta disputa ao banco, então novos reconhecimentos não podem mais ser adicionados.",

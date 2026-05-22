@@ -701,7 +701,7 @@
       },
       "regeneratingBanner": {
         "title": "Regenerando el paquete de defensa",
-        "body": "Su paquete actualmente guardado permanece en la disputa de Shopify. DisputeDesk está regenerando el resumen de pruebas, el alegato de defensa y el PDF — una vez listo, la nueva versión reemplazará a la actual."
+        "body": "Tu cambio está guardado. DisputeDesk está regenerando el resumen de pruebas, el alegato de defensa y el PDF — una vez listo, la nueva versión reemplazará a la actual guardada en la disputa de Shopify."
       },
       "rebuildOutcomeBanner": {
         "saved": {
@@ -751,8 +751,6 @@
         "checkboxHelper": "Al marcar esta casilla atestiguas que el titular de la tarjeta redactó este mensaje. DisputeDesk registra la confirmación en el historial de auditoría de la disputa.",
         "submit": "Guardar reconocimiento",
         "submitting": "Guardando…",
-        "successTitle": "Reconocimiento del titular guardado",
-        "successBody": "La comunicación con el cliente queda marcada como prueba decisiva. DisputeDesk está regenerando el paquete de defensa — podrás revisar el resultado en un momento.",
         "errorTooShort": "Pega al menos 20 caracteres del mensaje del titular de la tarjeta.",
         "errorConfirmationRequired": "Confirma que el mensaje proviene del titular de la tarjeta antes de guardar.",
         "errorWindowClosed": "Shopify ya reenvió esta disputa al banco, por lo que ya no se pueden añadir nuevos reconocimientos.",

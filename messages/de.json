@@ -795,7 +795,7 @@
       },
       "regeneratingBanner": {
         "title": "Verteidigungspaket wird neu erstellt",
-        "body": "Ihr aktuell gespeichertes Paket bleibt auf dem Shopify-Streitfall. DisputeDesk erstellt die Beweiszusammenfassung, das Verteidigungsnarrativ und die PDF neu — sobald fertig, ersetzt die neue Version die aktuelle."
+        "body": "Ihre Änderung ist gespeichert. DisputeDesk erstellt die Beweiszusammenfassung, das Verteidigungsnarrativ und die PDF neu — sobald fertig, ersetzt die neue Version die aktuell auf dem Shopify-Streitfall gespeicherte."
       },
       "rebuildOutcomeBanner": {
         "saved": {
@@ -836,8 +836,6 @@
         "checkboxHelper": "Mit dem Anhaken bestätigen Sie, dass der Karteninhaber diese Nachricht verfasst hat. DisputeDesk vermerkt die Bestätigung im Audit-Protokoll des Streitfalls.",
         "submit": "Bestätigung speichern",
         "submitting": "Wird gespeichert…",
-        "successTitle": "Karteninhaber-Bestätigung gespeichert",
-        "successBody": "Die Kundenkommunikation ist jetzt als entscheidender Beleg markiert. DisputeDesk erstellt das Verteidigungspaket neu — Sie können das Ergebnis gleich überprüfen.",
         "errorTooShort": "Bitte fügen Sie mindestens 20 Zeichen der Nachricht des Karteninhabers ein.",
         "errorConfirmationRequired": "Bitte bestätigen Sie vor dem Speichern, dass die Nachricht vom Karteninhaber stammt.",
         "errorWindowClosed": "Shopify hat den Streitfall bereits an die Bank weitergeleitet, daher können keine neuen Bestätigungen mehr hinzugefügt werden.",

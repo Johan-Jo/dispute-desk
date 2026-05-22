@@ -101,11 +101,22 @@ export default function EvidenceTab({ workspace }: Props) {
     </Banner>
   ) : null;
 
+  // Single in-flight banner for any rebuild that follows a merchant
+  // action (cardholder acknowledgement save, evidence upload, waive,
+  // inclusion override, manual Regenerate). The previous Polaris
+  // `tone="info"` Banner overlapped with the per-card success notice
+  // (e.g. "Cardholder acknowledgement saved") so two stacked banners
+  // said the same thing. Now this banner alone — in the same green
+  // `BannerStack` chrome as the saved-to-Shopify outcome — carries
+  // both the affirmation and the rebuild status. Non-dismissible
+  // because dismissing wouldn't stop the underlying job.
   const regeneratingBanner =
     !isWindowClosed && derived.isRegenerating ? (
-      <Banner tone="info" title={t("regeneratingBanner.title")}>
-        <p>{t("regeneratingBanner.body")}</p>
-      </Banner>
+      <SavedToShopifyBanner
+        title={t("regeneratingBanner.title")}
+        primaryBody={t("regeneratingBanner.body")}
+        secondaryBody={null}
+      />
     ) : null;
 
   // ── In-progress banner (first-time build only) ──
@@ -337,7 +348,14 @@ function SavedToShopifyBanner({
   title: string;
   primaryBody: string;
   secondaryBody: string | null;
-  onDismiss: () => void;
+  /**
+   * When omitted, no dismiss button renders — used by the in-flight
+   * "regenerating" variant where dismissing wouldn't stop the
+   * underlying job. The dark-green chrome stays the same so both
+   * banners read as one visual system; copy alone tells the merchant
+   * whether the package is settled or still rebuilding.
+   */
+  onDismiss?: () => void;
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
@@ -379,31 +397,33 @@ function SavedToShopifyBanner({
         <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.4 }}>
           {title}
         </span>
-        <button
-          type="button"
-          onClick={onDismiss}
-          aria-label="Dismiss"
-          style={{
-            appearance: "none",
-            background: "transparent",
-            border: 0,
-            color: "inherit",
-            cursor: "pointer",
-            padding: 4,
-            borderRadius: 6,
-            lineHeight: 0,
-            marginLeft: "auto",
-          }}
-        >
-          <svg
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden
-            style={{ width: 16, height: 16 }}
+        {onDismiss ? (
+          <button
+            type="button"
+            onClick={onDismiss}
+            aria-label="Dismiss"
+            style={{
+              appearance: "none",
+              background: "transparent",
+              border: 0,
+              color: "inherit",
+              cursor: "pointer",
+              padding: 4,
+              borderRadius: 6,
+              lineHeight: 0,
+              marginLeft: "auto",
+            }}
           >
-            <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-          </svg>
-        </button>
+            <svg
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden
+              style={{ width: 16, height: 16 }}
+            >
+              <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+            </svg>
+          </button>
+        ) : null}
       </div>
       <div
         style={{

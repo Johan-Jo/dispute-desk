@@ -701,7 +701,7 @@
       },
       "regeneratingBanner": {
         "title": "Régénération du dossier de défense",
-        "body": "Votre dossier actuellement enregistré reste sur le litige Shopify. DisputeDesk régénère le résumé des preuves, l'argumentaire de défense et le PDF — une fois prêt, la nouvelle version remplacera l'actuelle."
+        "body": "Votre modification est enregistrée. DisputeDesk régénère le résumé des preuves, l'argumentaire de défense et le PDF — une fois prêt, la nouvelle version remplacera celle actuellement enregistrée sur le litige Shopify."
       },
       "rebuildOutcomeBanner": {
         "saved": {
@@ -751,8 +751,6 @@
         "checkboxHelper": "En cochant cette case, vous attestez que le titulaire de la carte a rédigé ce message. DisputeDesk enregistre la confirmation dans la piste d’audit du litige.",
         "submit": "Enregistrer la reconnaissance",
         "submitting": "Enregistrement…",
-        "successTitle": "Reconnaissance du titulaire enregistrée",
-        "successBody": "La communication client est désormais marquée comme preuve décisive. DisputeDesk est en train de régénérer le dossier de défense — vous pourrez examiner le résultat dans un instant.",
         "errorTooShort": "Veuillez coller au moins 20 caractères du message du titulaire de la carte.",
         "errorConfirmationRequired": "Veuillez confirmer que le message provient du titulaire de la carte avant d’enregistrer.",
         "errorWindowClosed": "Shopify a déjà transféré ce litige à la banque, donc aucune nouvelle reconnaissance ne peut être ajoutée.",

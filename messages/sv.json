@@ -702,7 +702,7 @@
       },
       "regeneratingBanner": {
         "title": "Försvarspaketet regenereras",
-        "body": "Ditt nuvarande sparade paket finns kvar på Shopify-tvisten. DisputeDesk regenererar bevisöversikten, försvarsberättelsen och PDF:en — när det är klart ersätter den nya versionen den nuvarande."
+        "body": "Din ändring är sparad. DisputeDesk regenererar bevisöversikten, försvarsberättelsen och PDF:en — när det är klart ersätter den nya versionen den som nu är sparad på Shopify-tvisten."
       },
       "rebuildOutcomeBanner": {
         "saved": {
@@ -752,8 +752,6 @@
         "checkboxHelper": "Genom att kryssa i denna ruta intygar du att kortinnehavaren skrev detta meddelande. DisputeDesk registrerar bekräftelsen i tvistens granskningslogg.",
         "submit": "Spara bekräftelse",
         "submitting": "Sparar…",
-        "successTitle": "Kortinnehavarens bekräftelse sparad",
-        "successBody": "Kundkommunikation är nu markerad som avgörande bevis. DisputeDesk regenererar försvarspaketet — du kan granska resultatet om en stund.",
         "errorTooShort": "Klistra in minst 20 tecken av kortinnehavarens meddelande.",
         "errorConfirmationRequired": "Bekräfta att meddelandet är från kortinnehavaren innan du sparar.",
         "errorWindowClosed": "Shopify har redan vidarebefordrat denna tvist till banken, så nya bekräftelser kan inte längre läggas till.",

@@ -841,8 +841,8 @@
         "bodyNoDate": "Shopify has already forwarded this dispute evidence to the issuing bank. New files can no longer be added to the bank-facing defense package."
       },
       "regeneratingBanner": {
-        "title": "Regenerating defense package",
-        "body": "Your current saved package remains on the Shopify dispute. DisputeDesk is regenerating the evidence summary, defense narrative, and PDF — once ready, the new version will replace the current one."
+        "title": "Rebuilding the defence package",
+        "body": "Your update is saved. DisputeDesk is regenerating the evidence summary, defence narrative, and PDF — once ready, the new version will replace the current one saved on the Shopify dispute."
       },
       "rebuildOutcomeBanner": {
         "saved": {
@@ -883,8 +883,6 @@
         "checkboxHelper": "By checking this box you attest that the cardholder authored this message. DisputeDesk records the confirmation in the dispute's audit trail.",
         "submit": "Save acknowledgement",
         "submitting": "Saving…",
-        "successTitle": "Cardholder acknowledgement saved",
-        "successBody": "Customer communication is now marked as decisive evidence. DisputeDesk is rebuilding the defence package — you can review the result in a moment.",
         "errorTooShort": "Please paste at least 20 characters of the cardholder's message.",
         "errorConfirmationRequired": "Please confirm the message is from the cardholder before saving.",
         "errorWindowClosed": "Shopify has already forwarded this dispute to the bank, so new acknowledgements can no longer be added.",
