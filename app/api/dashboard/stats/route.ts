@@ -39,31 +39,66 @@ export async function GET(req: NextRequest) {
   // and refreshed via shop/update webhook). Used as the preferred
   // display currency for the Recovered / Lost / At Risk tiles — see
   // `MetricsOptions.preferredCurrency`.
-  const { data: shopRow } = await sb
-    .from("shops")
-    .select("currency_code")
-    .eq("id", shopId)
-    .maybeSingle();
-  const preferredCurrency =
-    (shopRow?.currency_code as string | null | undefined) ?? null;
+  // Runs in parallel with the heavy disputes/events scans below; the
+  // metrics call needs `preferredCurrency`, so its Promise wraps the
+  // shop lookup + computeDisputeMetrics into one sequenced unit.
+  const metricsP = (async () => {
+    const { data: shopRow } = await sb
+      .from("shops")
+      .select("currency_code")
+      .eq("id", shopId)
+      .maybeSingle();
+    const preferredCurrency =
+      (shopRow?.currency_code as string | null | undefined) ?? null;
+    return computeDisputeMetrics({ shopId, periodFrom, preferredCurrency });
+  })();
 
-  // ── Shared metrics (period-scoped — drives Performance overview) ──────
-  const m = await computeDisputeMetrics({ shopId, periodFrom, preferredCurrency });
-
-  // ── Operational breakdown (all-time, open disputes only) ──────────────
-  // The top operational summary (Action Needed / Ready to Submit / Waiting
-  // on Issuer / Closed) must reflect *current* workload, not what was
-  // created during the selected period — otherwise a dispute opened 40
-  // days ago and now waiting on the issuer disappears from the count.
-  const { data: opRows } = await sb
+  // ── Operational + submission breakdowns (combined scan) ──────────────
+  // Both the operational summary (Action Needed / Ready to Submit /
+  // Waiting on Issuer / Closed) and the submission-state breakdown
+  // scan the same `disputes` table with overlapping filters. One scan
+  // pulls the union of needed columns and both aggregates run client-
+  // side. Closed counts must reflect *current* workload, not just the
+  // selected period, so this stays unfiltered by created_at.
+  const breakdownP = sb
     .from("disputes")
-    .select("id, normalized_status, closed_at")
+    .select("id, normalized_status, closed_at, submission_state")
     .eq("shop_id", shopId);
 
+  // ── Recent activity (last 10 events) ─────────────────────────────────
+  const activityP = sb
+    .from("dispute_events")
+    .select("id, dispute_id, event_type, description, event_at, actor_type")
+    .eq("shop_id", shopId)
+    .eq("visibility", "merchant_and_internal")
+    .order("event_at", { ascending: false })
+    .limit(10);
+
+  // ── Evidence packs count ──────────────────────────────────────────────
+  const packCountP = sb
+    .from("evidence_packs")
+    .select("id", { count: "exact", head: true })
+    .eq("shop_id", shopId);
+
+  // ── Legacy chart fields (backward compat) ─────────────────────────────
+  // Only the columns the legacy computations actually use. `id`/`amount`
+  // were dropped from the select — the route never reads them.
+  let legacyQuery = sb
+    .from("disputes")
+    .select("status, created_at, due_at, reason")
+    .eq("shop_id", shopId);
+  if (periodFrom) legacyQuery = legacyQuery.gte("created_at", periodFrom);
+  const legacyP = legacyQuery;
+
+  const [m, breakdownRes, activityRes, packCountRes, legacyRes] =
+    await Promise.all([metricsP, breakdownP, activityP, packCountP, legacyP]);
+
+  const allDisputeRows = breakdownRes.data ?? [];
   const operationalBreakdown: Record<string, number> = {};
+  const submissionBreakdown: Record<string, number> = {};
   let operationalClosedCount = 0;
   const actionNeededIds: string[] = [];
-  for (const r of opRows ?? []) {
+  for (const r of allDisputeRows) {
     const row = r as Record<string, unknown>;
     if (row.closed_at) {
       operationalClosedCount += 1;
@@ -74,34 +109,16 @@ export async function GET(req: NextRequest) {
     if (ns === "new" || ns === "action_needed" || ns === "needs_review") {
       actionNeededIds.push(String(row.id));
     }
+    const ss = (row.submission_state as string) ?? "not_saved";
+    submissionBreakdown[ss] = (submissionBreakdown[ss] ?? 0) + 1;
   }
   const actionNeededDisputeId =
     actionNeededIds.length === 1 ? actionNeededIds[0] : null;
 
-  // ── Submission state breakdown ────────────────────────────────────────
-  const { data: subRows } = await sb
-    .from("disputes")
-    .select("submission_state")
-    .eq("shop_id", shopId)
-    .is("closed_at", null);
-
-  const submissionBreakdown: Record<string, number> = {};
-  for (const r of subRows ?? []) {
-    const ss = (r as Record<string, unknown>).submission_state as string ?? "not_saved";
-    submissionBreakdown[ss] = (submissionBreakdown[ss] ?? 0) + 1;
-  }
-
-  // ── Recent activity (last 10 events) ─────────────────────────────────
-  const { data: activityRows } = await sb
-    .from("dispute_events")
-    .select("id, dispute_id, event_type, description, event_at, actor_type")
-    .eq("shop_id", shopId)
-    .eq("visibility", "merchant_and_internal")
-    .order("event_at", { ascending: false })
-    .limit(10);
-
-  // Enrich with order name for display
-  const disputeIds = [...new Set((activityRows ?? []).map((e) => (e as Record<string, unknown>).dispute_id as string))];
+  const activityRows = activityRes.data ?? [];
+  // Enrich with order name for display. Depends on the activity result,
+  // so runs after the Promise.all.
+  const disputeIds = [...new Set(activityRows.map((e) => (e as Record<string, unknown>).dispute_id as string))];
   const disputeNames: Record<string, string> = {};
   if (disputeIds.length > 0) {
     const { data: nameRows } = await sb
@@ -114,7 +131,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const recentActivity = (activityRows ?? []).map((e) => {
+  const recentActivity = activityRows.map((e) => {
     const row = e as Record<string, unknown>;
     return {
       id: row.id,
@@ -127,21 +144,9 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  // ── Evidence packs count ──────────────────────────────────────────────
-  const { count: packCount } = await sb
-    .from("evidence_packs")
-    .select("id", { count: "exact", head: true })
-    .eq("shop_id", shopId);
-
-  // ── Legacy chart fields (backward compat) ─────────────────────────────
+  const packCount = packCountRes.count ?? 0;
   const since = periodFrom ? new Date(periodFrom) : new Date(0);
-  let legacyQuery = sb
-    .from("disputes")
-    .select("id, status, amount, created_at, due_at, reason")
-    .eq("shop_id", shopId);
-  if (periodFrom) legacyQuery = legacyQuery.gte("created_at", periodFrom);
-  const { data: legacyDisputes } = await legacyQuery;
-  const legacyList = legacyDisputes ?? [];
+  const legacyList = legacyRes.data ?? [];
 
   const totalDisputes = legacyList.length;
   const revenueRecovered = m.amountRecovered > 0 ? `$${m.amountRecovered.toFixed(0)}` : "$0";
@@ -186,23 +191,34 @@ export async function GET(req: NextRequest) {
     winRateTrend.push(r > 0 ? Math.round((w / r) * 100) : 0);
   }
 
-  return NextResponse.json({
-    // ── Shared metrics (new) ──
-    ...m,
-    packCount: packCount ?? 0,
+  return NextResponse.json(
+    {
+      // ── Shared metrics (new) ──
+      ...m,
+      packCount,
 
-    // ── New dashboard fields ──
-    operationalBreakdown,
-    operationalClosedCount,
-    actionNeededDisputeId,
-    submissionBreakdown,
-    recentActivity,
+      // ── New dashboard fields ──
+      operationalBreakdown,
+      operationalClosedCount,
+      actionNeededDisputeId,
+      submissionBreakdown,
+      recentActivity,
 
-    // ── Legacy fields (backward compat) ──
-    totalDisputes,
-    revenueRecovered,
-    avgResponseTime,
-    winRateTrend,
-    disputeCategories,
-  });
+      // ── Legacy fields (backward compat) ──
+      totalDisputes,
+      revenueRecovered,
+      avgResponseTime,
+      winRateTrend,
+      disputeCategories,
+    },
+    {
+      headers: {
+        // Short per-user cache. Dashboard staleness budget is generous —
+        // a 15s fresh window with stale-while-revalidate up to 60s means
+        // bounces back to /app feel instant while a manual Sync Now or
+        // webhook-driven event surfaces within a minute.
+        "Cache-Control": "private, max-age=15, stale-while-revalidate=60",
+      },
+    },
+  );
 }
