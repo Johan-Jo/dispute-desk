@@ -624,6 +624,20 @@ export function CompleteDefencePackageCard({
       row.status === "failed" ||
       submittedRowIsStale);
 
+  // True when the "Draft vX is ready for review" banner is going to
+  // render — that banner now hosts Approve / Resubmit / More actions
+  // so the merchant doesn't bounce between the banner and a detached
+  // action row below the inline preview. The same expression gates
+  // the banner itself a few lines down; precomputing it here lets the
+  // lower action row suppress duplicates cleanly.
+  const bannerHostsActions =
+    hasUnsubmittedDraft &&
+    !!latest &&
+    !!bankFacing &&
+    !isNetworkSubmitted &&
+    !isClosed &&
+    !submitPending;
+
   const formattedSubmittedAt = submittedToShopifyAt
     ? (() => {
         try {
@@ -735,15 +749,14 @@ export function CompleteDefencePackageCard({
                   flips the latest row to status='submitted'. */}
               {hasUnsubmittedDraft && latest && bankFacing && !isNetworkSubmitted && !isClosed && !submitPending ? (
                 <Banner tone="info" title={`Draft v${latest.version} is ready for review`}>
-                  {/* Right-aligned action lives inside the banner frame
-                      so the CTA is anchored to the message it relates
-                      to. The left text uses flex:1 so it consumes all
-                      available width and pushes the button flush to
-                      the banner's right edge — InlineStack's
-                      space-between alone leaves a gap when the text is
-                      shorter than the row width. The duplicate of this
-                      button in the action row below is suppressed when
-                      this banner is rendering it.
+                  {/* Banner hosts the workflow's primary action AND the
+                      Regenerate overflow, so the merchant doesn't have
+                      to scan between the banner copy and a detached
+                      action row below the inline preview. Layout: body
+                      copy on top, action row underneath. The lower
+                      action row inside the card suppresses Approve /
+                      Resubmit / More actions while this banner is
+                      showing them — see the gates on each button.
 
                       Body copy combines the two facts that previously
                       lived in separate info banners: (1) the draft
@@ -753,19 +766,27 @@ export function CompleteDefencePackageCard({
                       second fact used to render in a duplicate info
                       banner above the inline preview; folding it here
                       keeps a single status statement. */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <Text as="p" variant="bodySm">
-                        Draft v{latest.version} has been generated but has not
-                        been sent to Shopify yet — the bank currently has
-                        v{bankFacing.version}. Review it below.{" "}
-                        {latest.status === "draft"
-                          ? `If it looks correct, approve v${latest.version} before resubmitting to Shopify.`
-                          : `If it looks correct, resubmit it to Shopify — that will replace v${bankFacing.version}.`}
-                      </Text>
-                    </div>
-                    {canSubmit && !canFinalize ? (
-                      <div style={{ flexShrink: 0 }}>
+                  <BlockStack gap="200">
+                    <Text as="p" variant="bodySm">
+                      Draft v{latest.version} has been generated but has not
+                      been sent to Shopify yet — the bank currently has
+                      v{bankFacing.version}. Review it below.{" "}
+                      {latest.status === "draft"
+                        ? `If it looks correct, approve v${latest.version} before resubmitting to Shopify.`
+                        : `If it looks correct, resubmit it to Shopify — that will replace v${bankFacing.version}.`}
+                    </Text>
+                    <InlineStack gap="200" blockAlign="center" wrap={false}>
+                      {canFinalize && (
+                        <Button
+                          variant="primary"
+                          onClick={onFinalize}
+                          disabled={busy !== null}
+                          loading={busy === "finalize"}
+                        >
+                          {`Approve draft v${latest.version}`}
+                        </Button>
+                      )}
+                      {canSubmit && !canFinalize ? (
                         <Button
                           variant="primary"
                           tone="success"
@@ -777,9 +798,42 @@ export function CompleteDefencePackageCard({
                             ? "Resubmit to Shopify"
                             : "Submit to Shopify"}
                         </Button>
-                      </div>
-                    ) : null}
-                  </div>
+                      ) : null}
+                      {canRegenerate && (
+                        <Popover
+                          active={moreActionsOpen}
+                          onClose={() => setMoreActionsOpen(false)}
+                          activator={
+                            <Button
+                              onClick={() => setMoreActionsOpen((v) => !v)}
+                              disclosure
+                              disabled={busy !== null}
+                            >
+                              More actions
+                            </Button>
+                          }
+                        >
+                          <ActionList
+                            items={[
+                              {
+                                content: rebuildInFlight
+                                  ? "Regenerating…"
+                                  : "Regenerate draft from scratch",
+                                helpText: rebuildInFlight
+                                  ? "Already rebuilding — usually takes 2–3 minutes. The page checks for the new version when you reload or use the Check for update button above."
+                                  : "Throws away the current draft and rebuilds the narrative + PDF against the latest evidence. The bank-facing submitted version is not touched.",
+                                onAction: () => {
+                                  setMoreActionsOpen(false);
+                                  void onRegenerate();
+                                },
+                                disabled: busy !== null || rebuildInFlight,
+                              },
+                            ]}
+                          />
+                        </Popover>
+                      )}
+                    </InlineStack>
+                  </BlockStack>
                 </Banner>
               ) : null}
             </BlockStack>
@@ -898,7 +952,14 @@ export function CompleteDefencePackageCard({
               The labels intentionally avoid lifecycle jargon
               ("Finalize") because non-technical merchants ask "finalize
               what?" Approve communicates the action clearly.
-              See the brief in commit message for the full rationale. */}
+
+              While the "Draft vX is ready for review" banner above is
+              showing (the `bannerHostsActions` gate), Approve /
+              Resubmit / More actions are hosted IN the banner instead
+              of this row — so the merchant has a single place to act.
+              View PDF stays here because the merchant still wants a
+              preview button when there's no draft banner (clean-submit
+              flow). */}
           <InlineStack gap="200" blockAlign="center" wrap={false}>
             <ButtonGroup>
               {/* PRIMARY: the next step in the workflow, exactly one
@@ -908,7 +969,7 @@ export function CompleteDefencePackageCard({
                                                 "Resubmit to Shopify"
                     - Neither (e.g. already submitted, no newer
                       draft) → no primary button. */}
-              {canFinalize && latest && (
+              {canFinalize && latest && !bannerHostsActions && (
                 <Button
                   variant="primary"
                   onClick={onFinalize}
@@ -920,7 +981,7 @@ export function CompleteDefencePackageCard({
                     : `Approve v${latest.version}`}
                 </Button>
               )}
-              {canSubmit && !canFinalize && !(hasUnsubmittedDraft && latest && bankFacing && !isNetworkSubmitted && !isClosed) && (
+              {canSubmit && !canFinalize && !bannerHostsActions && (
                 <Button
                   variant="primary"
                   tone="success"
@@ -965,8 +1026,10 @@ export function CompleteDefencePackageCard({
                 action.
 
                 Only renders when canRegenerate is true (matches the
-                existing gate — draft / stale / failed status). */}
-            {canRegenerate && (
+                existing gate — draft / stale / failed status) and the
+                draft-review banner above isn't already hosting this
+                same popover. */}
+            {canRegenerate && !bannerHostsActions && (
               <Popover
                 active={moreActionsOpen}
                 onClose={() => setMoreActionsOpen(false)}
