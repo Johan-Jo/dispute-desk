@@ -11,7 +11,7 @@
 
 import { Suspense, useState, useEffect, useCallback } from "react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Page,
   Layout,
@@ -28,6 +28,8 @@ import {
   useBreakpoints,
 } from "@shopify/polaris";
 
+import { TOP_UPS } from "@/lib/billing/plans";
+
 interface PlanInfo {
   id: string;
   name: string;
@@ -43,11 +45,18 @@ interface UsageInfo {
   packsRemaining: number | null;
 }
 
+interface TopupInfo {
+  packs: number;
+  expiresAt: string | null;
+  purchasedAt: string;
+  reference: string | null;
+}
+
 const PLAN_FEATURE_KEYS: Record<string, string[]> = {
   free: ["billing.freeFeature1", "billing.freeFeature2", "billing.freeFeature3", "billing.freeFeature4"],
   starter: ["billing.realStarterFeature1", "billing.realStarterFeature2", "billing.realStarterFeature3", "billing.realStarterFeature4", "billing.realStarterFeature5"],
   growth: ["billing.growthFeature1", "billing.growthFeature2", "billing.growthFeature3", "billing.growthFeature4", "billing.growthFeature5"],
-  scale: ["billing.scaleFeature1", "billing.scaleFeature2", "billing.scaleFeature3", "billing.scaleFeature4", "billing.scaleFeature5"],
+  scale: ["billing.scaleFeature1", "billing.scaleFeature2", "billing.scaleFeature3", "billing.scaleFeature4"],
 };
 
 const PLAN_IDS = ["free", "starter", "growth", "scale"] as const;
@@ -70,7 +79,7 @@ const PLAN_SHORT_FEATURES: Record<string, string> = {
   free: "3 exported packs · Draft building · Activity log",
   starter: "20 packs/month · Basic rules · Email support",
   growth: "100 packs/month · Advanced rules · Auto-save",
-  scale: "400 packs/month · Multi-store · Priority support",
+  scale: "400 packs/month · Advanced exports · Priority support",
 };
 
 type PlanQuery = (typeof PLAN_IDS)[number];
@@ -89,6 +98,15 @@ function getNextPlan(currentId: string): string | null {
   const tier = PLAN_TIER[currentId] ?? 0;
   if (tier >= 3) return null;
   return PLAN_IDS[tier + 1];
+}
+
+/** Short-date for top-up expiry rows. Uses the merchant's locale so
+ *  "Jun 20, 2026" reads naturally in French/German/etc. */
+function formatExpiry(iso: string | null, locale: string): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" });
 }
 
 const styles = {
@@ -284,6 +302,21 @@ const styles = {
     border: "1px solid #E1E3E5",
     background: "#FFFFFF",
   } as React.CSSProperties,
+  extraCreditsBox: {
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 8,
+    border: "1px solid #E1E3E5",
+    background: "#F7F8FB",
+  } as React.CSSProperties,
+  extraCreditsRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingTop: 4,
+    paddingBottom: 4,
+  } as React.CSSProperties,
   discountOverlay: {
     position: "fixed",
     inset: 0,
@@ -334,6 +367,7 @@ function CheckCircleSvg() {
 
 function BillingPageInner() {
   const t = useTranslations();
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
@@ -347,6 +381,7 @@ function BillingPageInner() {
 
   const [plan, setPlan] = useState<PlanInfo | null>(null);
   const [usage, setUsage] = useState<UsageInfo | null>(null);
+  const [topups, setTopups] = useState<TopupInfo[]>([]);
   /** Set from /api/billing/usage. When false, the CTA labels say
    *  "Upgrade to <plan>" instead of "Start 14-Day Trial" and the
    *  trial-note paragraph drops the "14-day trial" sentence — the
@@ -385,6 +420,7 @@ function BillingPageInner() {
     const data = await res.json();
     setPlan(data.plan);
     setUsage(data.usage);
+    setTopups(Array.isArray(data.topups) ? (data.topups as TopupInfo[]) : []);
     setTrialEligible(Boolean(data.trialEligible));
     setLoading(false);
   }, []);
@@ -621,6 +657,40 @@ function BillingPageInner() {
               </div>
             )}
 
+            {/* Active top-ups — credits the merchant bought on top of the
+             *  monthly allowance. Listed individually so they can see what
+             *  they purchased and the expiry date. Top-up packs expire 30
+             *  days from purchase (TOPUP_EXPIRY_DAYS), independent of the
+             *  billing cycle. The ledger does not track per-bundle
+             *  consumption, so we show the granted amount, not "remaining
+             *  in this bundle" — copy reflects that. */}
+            {topups.length > 0 && (
+              <div style={styles.extraCreditsBox}>
+                <Text as="p" variant="bodySm" fontWeight="semibold">
+                  {t("billing.extraCreditsTitle", {
+                    total: topups.reduce((sum, tu) => sum + tu.packs, 0),
+                  })}
+                </Text>
+                <div style={{ marginTop: 8 }}>
+                  {topups.map((tu, i) => {
+                    const expiry = formatExpiry(tu.expiresAt, locale);
+                    return (
+                      <div key={`${tu.purchasedAt}-${i}`} style={styles.extraCreditsRow}>
+                        <Text as="span" variant="bodySm">
+                          {t("billing.extraCreditsBundle", { packs: tu.packs })}
+                        </Text>
+                        <Text as="span" variant="bodySm" tone="subdued">
+                          {expiry
+                            ? t("billing.extraCreditsExpires", { date: expiry })
+                            : t("billing.extraCreditsNoExpiry")}
+                        </Text>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Next plan recommendation banner */}
             {nextPlanId && nextPlanPrice && (
               <div
@@ -795,7 +865,7 @@ function BillingPageInner() {
 
         {/* Top-ups section — two distinct cards, packs label + price
          *  stacked, with a clear "Buy" CTA on each. Replaces the
-         *  earlier one-line button that crammed "+25 packs — $19"
+         *  earlier one-line button that crammed pack count and price
          *  into a single label. */}
         <Card>
           <BlockStack gap="400">
@@ -810,14 +880,11 @@ function BillingPageInner() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: smDown ? "1fr" : "1fr 1fr",
+                gridTemplateColumns: smDown ? "1fr" : `repeat(${TOP_UPS.length}, 1fr)`,
                 gap: 12,
               }}
             >
-              {[
-                { sku: "topup_25", packsKey: "billing.topUp25Packs", price: "$19" },
-                { sku: "topup_100", packsKey: "billing.topUp100Packs", price: "$59" },
-              ].map((topUp) => {
+              {TOP_UPS.map((topUp) => {
                 const inFlight = topupInFlight === topUp.sku;
                 const disabled = topupInFlight !== null;
                 const onBuy = async () => {
@@ -857,10 +924,10 @@ function BillingPageInner() {
                   <div key={topUp.sku} style={styles.topUpCard}>
                     <div>
                       <Text as="p" variant="headingMd" fontWeight="semibold">
-                        {t(topUp.packsKey)}
+                        {topUp.label}
                       </Text>
                       <Text as="p" variant="bodyLg" tone="subdued">
-                        {topUp.price}
+                        {`$${topUp.priceUsd}`}
                       </Text>
                     </div>
                     <Button

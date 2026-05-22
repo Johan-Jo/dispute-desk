@@ -398,7 +398,6 @@ export function MarketingLandingPageClient({
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.scaleF2")}</li>
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.scaleF3")}</li>
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.scaleF4")}</li>
-                <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.scaleF5")}</li>
               </ul>
               <Button variant="secondary" className="w-full" onClick={handlePricingCta}>{t("pricing.startTrial")}</Button>
             </div>

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { CheckCircle, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDemoMode } from "@/lib/demo-mode";
 import { useActiveShopId } from "@/lib/portal/activeShopContext";
-import { PLANS, type PlanId } from "@/lib/billing/plans";
+import { PLANS, TOP_UPS, type PlanId } from "@/lib/billing/plans";
 import { DemoNotice } from "@/components/ui/demo-notice";
 
 interface PlanInfo {
@@ -25,6 +25,20 @@ interface UsageInfo {
   packsRemaining: number | null;
 }
 
+interface TopupInfo {
+  packs: number;
+  expiresAt: string | null;
+  purchasedAt: string;
+  reference: string | null;
+}
+
+function formatExpiry(iso: string | null, locale: string): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" });
+}
+
 const DEMO_PLAN_IDS: PlanId[] = ["free", "starter", "growth", "scale"];
 const DEMO_CURRENT_PLAN: PlanId = "starter";
 
@@ -32,11 +46,6 @@ const DEMO_INVOICES = [
   { id: "INV-001", date: "Feb 1, 2026", amount: "$29.00", status: "Paid" },
   { id: "INV-002", date: "Jan 1, 2026", amount: "$29.00", status: "Paid" },
   { id: "INV-003", date: "Dec 1, 2025", amount: "$29.00", status: "Paid" },
-];
-
-const TOP_UPS = [
-  { sku: "topup_25", label: "+25 packs", price: "$19" },
-  { sku: "topup_100", label: "+100 packs", price: "$59" },
 ];
 
 function UsageMeter({ label, used, limit, unit }: { label: string; used: number; limit: number | string; unit: string }) {
@@ -187,10 +196,12 @@ export default function BillingPage() {
   const isDemo = useDemoMode();
   const [plan, setPlan] = useState<PlanInfo | null>(null);
   const [usage, setUsage] = useState<UsageInfo | null>(null);
+  const [topups, setTopups] = useState<TopupInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<string | null>(null);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
+  const locale = useLocale();
   const shopId = useActiveShopId() ?? "";
 
   const fetchUsage = useCallback(async () => {
@@ -200,6 +211,7 @@ export default function BillingPage() {
     const data = await res.json();
     setPlan(data.plan);
     setUsage(data.usage);
+    setTopups(Array.isArray(data.topups) ? (data.topups as TopupInfo[]) : []);
     setLoading(false);
   }, [shopId, isDemo]);
 
@@ -296,6 +308,34 @@ export default function BillingPage() {
         ) : (
           <p className="text-sm text-[#667085]">{t("noPackCredits")}</p>
         )}
+
+        {topups.length > 0 && (
+          <div className="mt-4 rounded-lg border border-[#E5E7EB] bg-[#F7F8FA] p-3">
+            <p className="text-sm font-semibold text-[#0B1220]">
+              {t("extraCreditsTitle", {
+                total: topups.reduce((sum, tu) => sum + tu.packs, 0),
+              })}
+            </p>
+            <ul className="mt-2 space-y-1">
+              {topups.map((tu, i) => {
+                const expiry = formatExpiry(tu.expiresAt, locale);
+                return (
+                  <li
+                    key={`${tu.purchasedAt}-${i}`}
+                    className="flex items-center justify-between gap-3 text-sm"
+                  >
+                    <span className="text-[#0B1220]">{t("extraCreditsBundle", { packs: tu.packs })}</span>
+                    <span className="text-[#667085]">
+                      {expiry
+                        ? t("extraCreditsExpires", { date: expiry })
+                        : t("extraCreditsNoExpiry")}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -338,22 +378,22 @@ export default function BillingPage() {
         <h3 className="font-semibold text-[#0B1220] mb-2">{t("topUps")}</h3>
         <p className="text-sm text-[#667085] mb-3">{t("topUpsDesc")}</p>
         <div className="flex gap-3">
-          {TOP_UPS.map((t) => (
+          {TOP_UPS.map((topUp) => (
             <button
-              key={t.sku}
+              key={topUp.sku}
               onClick={async () => {
                 const res = await fetch("/api/billing/topup", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ shop_id: shopId, sku: t.sku }),
+                  body: JSON.stringify({ shop_id: shopId, sku: topUp.sku }),
                 });
                 const data = await res.json();
                 if (data.confirmationUrl) window.location.href = data.confirmationUrl;
               }}
               className="bg-white rounded-lg px-4 py-2 border border-[#E5E7EB] hover:border-[#1D4ED8] transition-colors text-sm"
             >
-              <span className="font-medium text-[#0B1220]">{t.label}</span>{" "}
-              <span className="text-[#667085]">{t.price}</span>
+              <span className="font-medium text-[#0B1220]">{topUp.label}</span>{" "}
+              <span className="text-[#667085]">{`$${topUp.priceUsd}`}</span>
             </button>
           ))}
         </div>

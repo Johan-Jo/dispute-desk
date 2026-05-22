@@ -2915,7 +2915,9 @@ The embedded billing page (`app/(embedded)/app/billing/page.tsx`) uses custom Ta
 - **Single card container** with header ("Plan management" + "Apply discount" button), current plan section (icon, name, price, usage), and a "Next plan" recommendation banner with inline upgrade CTA.
 - **Collapsible 4-column plan grid** toggled by "Show/Hide all plans". The Growth card is fully inverted (solid blue `#1D4ED8` background, white text) with a floating "Popular" pill badge.
 - **Discount modal** triggered from header for discount code entry.
-- **Top-ups section** as a separate card below the main container.
+- **Active top-ups list** beneath the plan-usage bar. `/api/billing/usage` returns every unexpired `pack_credits_ledger` row with `source='topup'`; the UI lists each bundle as `+N packs · expires <date>` so merchants can see exactly what they bought and when it expires. The ledger does not attribute consumption to a specific bundle, so the surface shows the granted amount per bundle (not "remaining in this bundle"); combined remaining lives on the cycle gauge.
+- **Top-ups purchase section** as a separate card below the main container. Renders all SKUs from `TOP_UPS` (currently `+10/$19`, `+50/$79`, `+200/$249`); the grid auto-sizes by `TOP_UPS.length`.
+- **Plan usage counter** ("N of 100 packs used") reflects this billing cycle. `checkPackQuota()` reads `pack_usage_events` filtered by `plan_entitlements.billing_cycle_started_at` on paid plans, so the counter resets each renewal. Free stays lifetime-scoped (`packsLifetime`). Prior to 2026-05-21 the counter was permanently stuck at zero because the head/count query destructured `data` instead of `count`.
 - **Downgrade modal** uses Polaris `<Modal>` for Shopify consistency.
 
 ### Enforcement
@@ -2958,7 +2960,7 @@ If the store session is invalid (e.g. missing shop domain) or the shop is not co
 
 Both billing callbacks query Shopify GraphQL `node($id)` for the charge GID **before** granting credits or
 upgrading a plan. Without this gate, the query-string `charge_id` is forgeable — anyone could craft
-`/api/billing/topup-callback?shop_id=…&sku=topup_25&charge_id=anything` and walk away with free credits.
+`/api/billing/topup-callback?shop_id=…&sku=topup_10&charge_id=anything` and walk away with free credits.
 
 Helper: `lib/shopify/queries/appChargeStatus.ts` exports `verifyAppCharge({ shopId, chargeId, chargeType, expectedAmountUsd })`.
 It returns `{ verified: false, reason }` instead of throwing, so callers branch on `verified`.

@@ -86,8 +86,9 @@ describe("plans — getPlan", () => {
 
 describe("plans — getTopUp", () => {
   it("returns the top-up for a known sku", () => {
-    expect(getTopUp("topup_25")?.packs).toBe(25);
-    expect(getTopUp("topup_100")?.priceUsd).toBe(59);
+    expect(getTopUp("topup_10")?.packs).toBe(10);
+    expect(getTopUp("topup_50")?.priceUsd).toBe(79);
+    expect(getTopUp("topup_200")?.packs).toBe(200);
   });
 
   it("returns undefined for unknown sku", () => {
@@ -384,15 +385,15 @@ describe("getBalance + grantCredits", () => {
     await grantCredits({
       shopId: "shop-1",
       source: "topup",
-      packs: 25,
-      reference: "topup_25",
+      packs: 10,
+      reference: "topup_10",
     });
     expect(ledgerInsertSpy).toHaveBeenCalledWith({
       shop_id: "shop-1",
       source: "topup",
-      packs: 25,
+      packs: 10,
       expires_at: null,
-      reference: "topup_25",
+      reference: "topup_10",
     });
   });
 

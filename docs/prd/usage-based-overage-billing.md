@@ -13,7 +13,7 @@ DisputeDesk currently sells fixed monthly quotas: Starter 20 packs, Growth 100 p
 
 1. `lib/billing/checkQuota.ts` returns `{ allowed: false, reason: "Pack limit reached." }`.
 2. `lib/automation/pipeline.ts:190–206` calls `recordBlockedAutoBuild()` — every subsequent dispute is **silently parked** awaiting manual top-up or upgrade.
-3. The merchant must (a) click into the embedded billing page, (b) choose between `+25 packs ($19)` or `+100 packs ($59)` one-time charges, (c) approve in Shopify, and (d) come back to the queue to manually rebuild parked disputes.
+3. The merchant must (a) click into the embedded billing page, (b) choose between `+10 packs ($19)`, `+50 packs ($79)`, or `+200 packs ($249)` one-time charges, (c) approve in Shopify, and (d) come back to the queue to manually rebuild parked disputes.
 
 This is the wrong shape for our customer. Chargebacks arrive on a Poisson distribution — a merchant can sit at 60% of quota for three weeks, then catch a Friday-evening fraud spike that puts them 40 disputes over the line on a Saturday morning when no one is watching the embedded UI. By the time someone notices the top-up prompt on Monday, the merchant has missed the bank submission window on several disputes.
 
@@ -50,7 +50,7 @@ This PRD specifies that mechanism.
 | `appSubscriptionCreate` mutation (single recurring line item) | ✅ | `lib/shopify/mutations/appSubscriptionCreate.ts`, called from `app/api/billing/subscribe/route.ts:102–109` |
 | `app_subscriptions/update` webhook | ✅ | Shipped in [`billing-lifecycle-and-merchant-comms.md`](./billing-lifecycle-and-merchant-comms.md) Phase 2 |
 | Monthly credit renewal cron | ✅ | Same PRD, Phase 3 — reuses cycle anchor |
-| Manual top-up purchase (`+25` / `+100`) | ✅ | `appPurchaseOneTimeCreate`; `lib/billing/plans.ts` `TOP_UPS` |
+| Manual top-up purchase (`+10` / `+50` / `+200`) | ✅ | `appPurchaseOneTimeCreate`; `lib/billing/plans.ts` `TOP_UPS` |
 | `pack_credits_ledger` (source-tagged credits) | ✅ | `supabase/migrations/015_pack_credits.sql` |
 | `pack_usage_events` (consumption log) | ✅ | Same migration |
 | `pack_balance` view | ✅ | Same migration |

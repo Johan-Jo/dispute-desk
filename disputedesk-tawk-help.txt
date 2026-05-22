@@ -913,7 +913,7 @@ DisputeDesk offers four plans to match your needs:
 | Auto-Build Packs           | No        | Yes       | Yes       | Yes       |
 | Automation Rules           | 0         | 5         | Unlimited | Unlimited |
 | Auto-Save                  | No        | Yes       | Yes       | Yes       |
-| Multi-Store Priority       | No        | No        | No        | Yes       |
+| Priority Support           | No        | No        | No        | Yes       |
 | Trial Period               | —         | 14 days   | 14 days   | 14 days   |
 
 All paid plans include a 14-day free trial. No credit card required to start.
@@ -996,7 +996,7 @@ TRIAL: 14 days free, then $129/month
 30. SCALE PLAN
 ================================================================================
 
-The Scale plan is for high-volume merchants and multi-store operations.
+The Scale plan is for high-volume merchants.
 
 PRICE: $299/month
 
@@ -1005,12 +1005,13 @@ WHAT'S INCLUDED:
   - Auto-build packs
   - Unlimited automation rules
   - Auto-save with full gate control
-  - Multi-store priority support
+  - Advanced exports + audit trail
+  - SLA options
+  - Priority support
   - Full dashboard, dispute sync, help center
 
 BEST FOR:
   - High-volume stores with many disputes
-  - Multi-store merchants
   - Stores receiving 100+ disputes per month
   - Merchants who need priority support
 
@@ -1024,11 +1025,12 @@ TRIAL: 14 days free, then $299/month
 If you run out of packs before your billing cycle renews, you can purchase
 top-ups:
 
-  +25 PACKS: $19 (one-time purchase)
-  +100 PACKS: $59 (one-time purchase)
+  +10 PACKS: $19 (one-time purchase)
+  +50 PACKS: $79 (one-time purchase)
+  +200 PACKS: $249 (one-time purchase)
 
-Top-up packs do not expire at the end of your billing cycle. They are used
-after your monthly allocation is exhausted.
+Top-up packs expire 30 days after purchase, independent of your billing
+cycle. They are used after your monthly allocation is exhausted.
 
 HOW TO PURCHASE:
   1. Go to Billing
@@ -1780,8 +1782,9 @@ ISSUE: "My uploaded files aren't showing in the pack"
 ================================================================================
 
 ISSUE: "I'm out of packs but my billing cycle hasn't renewed"
-  Solution: Purchase a top-up (+25 packs for $19 or +100 packs for $59).
-  Top-up packs are available immediately and don't expire.
+  Solution: Purchase a top-up (+10 packs for $19, +50 for $79, or +200 for $249).
+  Top-up packs are available immediately and expire 30 days from purchase,
+  independent of your billing cycle.
 
 ISSUE: "My trial ended and I lost access to features"
   Solution: Subscribe to a paid plan to restore access. Your data is preserved
@@ -1965,7 +1968,8 @@ A: Each evidence pack built (whether auto or manual) counts as one pack
    against your quota. Failed builds do not count.
 
 Q: Do unused packs roll over?
-A: Monthly pack allowances do not roll over. Top-up packs do not expire.
+A: Monthly pack allowances do not roll over. Top-up packs expire 30 days
+   after purchase, independent of your billing cycle.
 
 Q: Can I change plans mid-cycle?
 A: Yes. Upgrades take effect immediately. Downgrades take effect at the end

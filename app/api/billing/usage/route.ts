@@ -30,10 +30,35 @@ export async function GET(req: NextRequest) {
 
   const planId = shop?.plan ?? "free";
   const plan = getPlan(planId);
-  const [quota, trialEligibility] = await Promise.all([
+  const [quota, trialEligibility, topupRows] = await Promise.all([
     checkPackQuota(shopId),
     checkTrialEligibility(shopId),
+    // Active top-up bundles — currently unexpired, source='topup', positive
+    // packs. Surfaced in the billing UI so merchants can see what they
+    // bought and when it expires. (Without this, top-ups are invisible
+    // beyond the email + transient success banner.)
+    sb
+      .from("pack_credits_ledger")
+      .select("packs, expires_at, created_at, reference")
+      .eq("shop_id", shopId)
+      .eq("source", "topup")
+      .gt("packs", 0)
+      .or("expires_at.is.null,expires_at.gt." + new Date().toISOString())
+      .order("expires_at", { ascending: true })
+      .then((res) => res.data ?? []),
   ]);
+
+  const topups = (topupRows as Array<{
+    packs: number;
+    expires_at: string | null;
+    created_at: string;
+    reference: string | null;
+  }>).map((row) => ({
+    packs: row.packs,
+    expiresAt: row.expires_at,
+    purchasedAt: row.created_at,
+    reference: row.reference,
+  }));
 
   return NextResponse.json({
     plan: {
@@ -49,6 +74,7 @@ export async function GET(req: NextRequest) {
       packsLimit: quota.limit,
       packsRemaining: quota.remaining,
     },
+    topups,
     trialEligible: trialEligibility.eligible,
     shop_domain: (shop as { shop_domain?: string } | null)?.shop_domain ?? null,
   });

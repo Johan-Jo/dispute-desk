@@ -66,7 +66,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     rules: true,
     maxRules: null,
     trialDays: TRIAL_DAYS,
-    features: ["scaleFeature1", "scaleFeature2", "scaleFeature3", "scaleFeature4", "scaleFeature5"],
+    features: ["scaleFeature1", "scaleFeature2", "scaleFeature3", "scaleFeature4"],
   },
 };
 
@@ -78,8 +78,9 @@ export interface TopUp {
 }
 
 export const TOP_UPS: TopUp[] = [
-  { sku: "topup_25", label: "+25 packs", packs: 25, priceUsd: 19 },
-  { sku: "topup_100", label: "+100 packs", packs: 100, priceUsd: 59 },
+  { sku: "topup_10", label: "+10 packs", packs: 10, priceUsd: 19 },
+  { sku: "topup_50", label: "+50 packs", packs: 50, priceUsd: 79 },
+  { sku: "topup_200", label: "+200 packs", packs: 200, priceUsd: 249 },
 ];
 
 /** Top-up packs expire 30 days from purchase, independent of the

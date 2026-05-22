@@ -81,7 +81,7 @@ export const billingSubscribeSchema = z.object({
 
 export const billingTopUpSchema = z.object({
   shop_id: shopIdParam,
-  sku: z.enum(["topup_25", "topup_100"]),
+  sku: z.enum(["topup_10", "topup_50", "topup_200"]),
   // Carried through Shopify's one-time-charge approval redirect so
   // the callback can rebuild the embedded App Bridge URL. Without
   // these, the post-approval redirect lands on the bare web URL,

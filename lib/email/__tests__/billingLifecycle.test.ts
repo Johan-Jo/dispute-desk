@@ -398,9 +398,9 @@ describe("sendTopupPurchasedEmail", () => {
     );
     const out = await sendTopupPurchasedEmail({
       shopId: "shop-1",
-      packs: 100,
+      packs: 50,
       expiresAt: "2026-07-15T00:00:00Z",
-      reference: "topup_topup_100_xyz",
+      reference: "topup_topup_50_xyz",
     });
     expect("sent" in out && out.sent).toBe(true);
   });
@@ -415,9 +415,9 @@ describe("sendTopupPurchasedEmail", () => {
     );
     const out = await sendTopupPurchasedEmail({
       shopId: "shop-1",
-      packs: 100,
+      packs: 50,
       expiresAt: "2026-07-15T00:00:00Z",
-      reference: "topup_topup_100_xyz",
+      reference: "topup_topup_50_xyz",
     });
     expect("skipped" in out && out.skipped).toBe("already_sent");
   });

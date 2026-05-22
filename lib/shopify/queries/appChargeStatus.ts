@@ -6,7 +6,7 @@
  * parameter is real before granting credits or upgrading a plan.
  * Without this gate, anyone could craft a URL like
  *
- *   /api/billing/topup-callback?shop_id=<real>&sku=topup_25&charge_id=anything
+ *   /api/billing/topup-callback?shop_id=<real>&sku=topup_10&charge_id=anything
  *
  * and walk away with free credits.
  *

@@ -60,7 +60,7 @@ describe("GET /api/billing/topup-callback", () => {
     });
 
     const res = await GET(
-      makeReq({ shop_id: "shop-1", sku: "topup_25", charge_id: "111" }),
+      makeReq({ shop_id: "shop-1", sku: "topup_10", charge_id: "111" }),
     );
 
     expect(res.status).toBe(307);
@@ -83,7 +83,7 @@ describe("GET /api/billing/topup-callback", () => {
     });
 
     const res = await GET(
-      makeReq({ shop_id: "shop-1", sku: "topup_25", charge_id: "111" }),
+      makeReq({ shop_id: "shop-1", sku: "topup_10", charge_id: "111" }),
     );
 
     expect(res.status).toBe(307);
@@ -91,7 +91,7 @@ describe("GET /api/billing/topup-callback", () => {
       expect.objectContaining({
         shopId: "shop-1",
         source: "topup",
-        reference: "topup_topup_25_111",
+        reference: "topup_topup_10_111",
       }),
     );
     const auditRow = inserts.find(
@@ -122,14 +122,14 @@ describe("GET /api/billing/topup-callback", () => {
     mockVerify.mockResolvedValue({
       verified: true,
       status: "ACTIVE",
-      rawAmountUsd: 59,
+      rawAmountUsd: 79,
       shopifyChargeGid: "gid://shopify/AppPurchaseOneTime/222",
       test: false,
     });
 
     const before = Date.now();
     await GET(
-      makeReq({ shop_id: "shop-1", sku: "topup_100", charge_id: "222" }),
+      makeReq({ shop_id: "shop-1", sku: "topup_50", charge_id: "222" }),
     );
     const after = Date.now();
 
@@ -149,7 +149,7 @@ describe("GET /api/billing/topup-callback", () => {
     const { sb } = makeSb();
     mockGetServiceClient.mockReturnValue(sb as unknown as ReturnType<typeof getServiceClient>);
 
-    const res = await GET(makeReq({ shop_id: "shop-1", sku: "topup_25" }));
+    const res = await GET(makeReq({ shop_id: "shop-1", sku: "topup_10" }));
 
     expect(res.status).toBe(307);
     expect(mockVerify).not.toHaveBeenCalled();
