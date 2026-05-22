@@ -604,6 +604,67 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </div>
       </div>
 
+      {/* Monitoring banner — placed directly under the hero so the
+          merchant sees the "we're still watching" reassurance immediately
+          after the saved-to-Shopify confirmation. Custom card styling
+          (instead of Polaris <Banner>) keeps the visual rhythm with the
+          hero + content cards: same border-radius, same padding scale,
+          tighter info-blue palette. Suppressed once Shopify has forwarded
+          to the card network or the dispute is closed. */}
+      {(presentationStatus === "DRAFT" ||
+        presentationStatus === "SAVED_TO_SHOPIFY" ||
+        presentationStatus === "AWAITING_SHOPIFY_AUTO_SUBMISSION") && (
+        <div
+          style={{
+            background: "#EFF6FF",
+            border: "1px solid #BFDBFE",
+            borderRadius: 12,
+            padding: 16,
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 12,
+          }}
+        >
+          <span
+            style={{
+              width: 20,
+              height: 20,
+              color: "#1D4ED8",
+              flexShrink: 0,
+              marginTop: 2,
+              display: "inline-flex",
+            }}
+          >
+            <Icon source={ShieldCheckMarkIcon} />
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: "#1E3A8A",
+                margin: 0,
+                lineHeight: 1.4,
+              }}
+            >
+              {t("monitoring.title")}
+            </p>
+            <p
+              style={{
+                fontSize: 13,
+                color: "#1E40AF",
+                margin: "4px 0 0",
+                lineHeight: 1.5,
+              }}
+            >
+              {dispute.dueAt
+                ? t("monitoring.bodyWithDeadline", { deadline: formatDate(dispute.dueAt) })
+                : t("monitoring.bodyNoDeadline")}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* O2: Timeline — step titles colored per state (green/blue/gray) per Figma */}
       <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
         <BlockStack gap="300">
@@ -1088,26 +1149,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           </div>
         );
       })()}
-
-      {/* O3.5: Monitoring banner — informs the merchant that
-          DisputeDesk auto-refreshes the defence package as Shopify
-          reports new order activity (shipping tracking, delivery
-          confirmation, AVS/CVV codes, etc.). Backed by the
-          `defence-package-deadline-rebuild` cron. Only renders while
-          a rebuild could still change the outcome — suppressed once
-          Shopify has forwarded to the card network or the dispute is
-          closed. */}
-      {(presentationStatus === "DRAFT" ||
-        presentationStatus === "SAVED_TO_SHOPIFY" ||
-        presentationStatus === "AWAITING_SHOPIFY_AUTO_SUBMISSION") && (
-        <Banner tone="info" title={t("monitoring.title")}>
-          <Text as="p" variant="bodySm">
-            {dispute.dueAt
-              ? t("monitoring.bodyWithDeadline", { deadline: formatDate(dispute.dueAt) })
-              : t("monitoring.bodyNoDeadline")}
-          </Text>
-        </Banner>
-      )}
 
       {/* O4: Evidence coverage — five separate metrics, sourced from
           `data.evidenceLineItems`. The "8/8 collected" headline is gone:
