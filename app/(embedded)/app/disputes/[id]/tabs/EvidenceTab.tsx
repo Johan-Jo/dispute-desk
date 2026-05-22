@@ -166,24 +166,34 @@ export default function EvidenceTab({ workspace }: Props) {
   let rebuildOutcomeBanner: ReactElement | null = null;
   if (showRebuildOutcomeBanner && rebuildOutcome) {
     const key = `disputes.evidenceTab.rebuildOutcomeBanner.${rebuildOutcome}`;
-    const tone =
-      rebuildOutcome === "saved"
-        ? "success"
-        : rebuildOutcome === "failed"
-          ? "critical"
-          : "warning";
-    rebuildOutcomeBanner = (
-      <Banner
-        tone={tone}
-        title={t(`rebuildOutcomeBanner.${rebuildOutcome}.title`)}
-        onDismiss={() => actions.dismissRebuildOutcome(rebuildOutcomeAt)}
-      >
-        <p>{t(`rebuildOutcomeBanner.${rebuildOutcome}.body`)}</p>
-        {shouldMergeSavedWithWindow ? (
-          <p>{t("windowOpenBanner.body")}</p>
-        ) : null}
-      </Banner>
-    );
+    // "Saved to Shopify" outcome gets the design's custom banner-stack
+    // chrome (dark-green header strip + light-green tinted body). The
+    // other outcomes (`failed`, `blocked_*`) still ride Polaris Banner
+    // — they're rare, and the design doesn't specify their treatment.
+    if (rebuildOutcome === "saved") {
+      rebuildOutcomeBanner = (
+        <SavedToShopifyBanner
+          title={t(`rebuildOutcomeBanner.${rebuildOutcome}.title`)}
+          primaryBody={t(`rebuildOutcomeBanner.${rebuildOutcome}.body`)}
+          secondaryBody={
+            shouldMergeSavedWithWindow ? t("windowOpenBanner.body") : null
+          }
+          onDismiss={() => actions.dismissRebuildOutcome(rebuildOutcomeAt)}
+        />
+      );
+    } else {
+      const tone =
+        rebuildOutcome === "failed" ? ("critical" as const) : ("warning" as const);
+      rebuildOutcomeBanner = (
+        <Banner
+          tone={tone}
+          title={t(`rebuildOutcomeBanner.${rebuildOutcome}.title`)}
+          onDismiss={() => actions.dismissRebuildOutcome(rebuildOutcomeAt)}
+        >
+          <p>{t(`rebuildOutcomeBanner.${rebuildOutcome}.body`)}</p>
+        </Banner>
+      );
+    }
     // Silence the unused-key lint warning — the actual translation key
     // is built dynamically above; keeping `key` referenced for grep.
     void key;
@@ -299,5 +309,119 @@ export default function EvidenceTab({ workspace }: Props) {
         onCancel={() => actions.dismissRegeneratePrompt()}
       />
     </BlockStack>
+  );
+}
+
+/**
+ * SavedToShopifyBanner — custom banner-stack chrome for the "saved"
+ * rebuild outcome. Matches the Dispute Page Evidence Tab design's
+ * `.BannerStack`: a dark-green header strip carrying the title +
+ * circular check icon + dismiss button, sharing rounded corners with
+ * a light-green tinted body block underneath. Polaris `Banner` was
+ * close but couldn't reproduce the two-tone stack — the header strip
+ * needs `#008060` background with white text, the body needs the
+ * lighter `#F0FDF4` fill with `#86EFAC` border, and the corners only
+ * round at the outer four (top-left/right on the strip,
+ * bottom-left/right on the body) so the two pieces visually stitch.
+ *
+ * Both body paragraphs are rendered when `secondaryBody` is non-null;
+ * the design lays them out as two paragraphs with a small gap (not as
+ * a single flowing paragraph) so each sentence reads cleanly.
+ */
+function SavedToShopifyBanner({
+  title,
+  primaryBody,
+  secondaryBody,
+  onDismiss,
+}: {
+  title: string;
+  primaryBody: string;
+  secondaryBody: string | null;
+  onDismiss: () => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      <div
+        role="status"
+        style={{
+          background: "#008060",
+          color: "#fff",
+          borderRadius: "8px 8px 0 0",
+          padding: "12px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+        }}
+      >
+        <span
+          aria-hidden
+          style={{
+            width: 20,
+            height: 20,
+            flexShrink: 0,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden
+            style={{ width: 18, height: 18 }}
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.78-9.72a.75.75 0 0 0-1.06-1.06L9 10.94 7.28 9.22a.75.75 0 1 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.06 0l4.25-4.25Z"
+            />
+          </svg>
+        </span>
+        <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.4 }}>
+          {title}
+        </span>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Dismiss"
+          style={{
+            appearance: "none",
+            background: "transparent",
+            border: 0,
+            color: "inherit",
+            cursor: "pointer",
+            padding: 4,
+            borderRadius: 6,
+            lineHeight: 0,
+            marginLeft: "auto",
+          }}
+        >
+          <svg
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden
+            style={{ width: 16, height: 16 }}
+          >
+            <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+          </svg>
+        </button>
+      </div>
+      <div
+        style={{
+          background: "#F0FDF4",
+          border: "1px solid #86EFAC",
+          borderTop: 0,
+          borderRadius: "0 0 8px 8px",
+          padding: "12px 16px",
+          fontSize: 13,
+          color: "#14532D",
+          lineHeight: 1.5,
+        }}
+      >
+        <p style={{ margin: 0 }}>{primaryBody}</p>
+        {secondaryBody ? (
+          <p style={{ margin: "6px 0 0" }}>{secondaryBody}</p>
+        ) : null}
+      </div>
+    </div>
   );
 }
