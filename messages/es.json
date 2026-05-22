@@ -687,6 +687,7 @@
         "sourceShopify": "Shopify",
         "sourceMerchant": "Merchant upload",
         "sourceDerived": "Derived",
+        "sourceStorePolicy": "Política de tienda",
         "packageStatus": {
           "included": "Incluido en paquete de defensa",
           "internal_only": "Solo interno",

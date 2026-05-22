@@ -688,6 +688,7 @@
         "sourceShopify": "Shopify",
         "sourceMerchant": "Merchant upload",
         "sourceDerived": "Derived",
+        "sourceStorePolicy": "Butikspolicy",
         "packageStatus": {
           "included": "Inkluderat i försvarspaket",
           "internal_only": "Endast internt",

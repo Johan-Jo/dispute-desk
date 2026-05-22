@@ -757,7 +757,8 @@
         "notSubmittedReason": "Not submitted to Shopify to avoid weakening the case.",
         "sourceShopify": "Shopify",
         "sourceMerchant": "Merchant upload",
-        "sourceDerived": "Derived"
+        "sourceDerived": "Derived",
+        "sourceStorePolicy": "Geschäftsbedingungen"
       },
       "automation": {
         "automatic": "DisputeDesk will handle this automatically based on the evidence shown above.",
