@@ -737,8 +737,16 @@ export function CompleteDefencePackageCard({
               {/* Section B — New draft available. Suppressed when the
                   card network already has the evidence (regenerating is
                   meaningless: Shopify can't replace the forwarded PDF)
-                  or when the dispute has closed. */}
-              {hasUnsubmittedDraft && latest && bankFacing && !isNetworkSubmitted && !isClosed ? (
+                  or when the dispute has closed.
+
+                  Also suppressed during the optimistic "Saving to
+                  Shopify…" window (`submitPending`): the merchant just
+                  clicked Resubmit, so prompting them to review-and-
+                  resubmit again would look like the click did nothing.
+                  The "Saving to Shopify…" banner above carries the
+                  status during this gap until the save-to-shopify job
+                  flips the latest row to status='submitted'. */}
+              {hasUnsubmittedDraft && latest && bankFacing && !isNetworkSubmitted && !isClosed && !submitPending ? (
                 <Banner tone="info" title={`Draft v${latest.version} is ready for review`}>
                   {/* Right-aligned action lives inside the banner frame
                       so the CTA is anchored to the message it relates
@@ -1017,7 +1025,7 @@ export function CompleteDefencePackageCard({
           ABOVE the preview names which version the merchant is
           reading so they can't conflate v5's clean prose with v1's
           stale prose. */}
-      {hasUnsubmittedDraft && latest && bankFacing ? (
+      {hasUnsubmittedDraft && latest && bankFacing && !submitPending ? (
         <Banner
           tone="info"
           title={`You are reviewing draft v${latest.version}`}
