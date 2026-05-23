@@ -121,6 +121,16 @@ The "Top parser misses" table is the early-warning surface. Healthy state shows 
 
 Every row joins live data — `shopify_orders` (refreshed by orders/* webhooks + daily reconciliation cron), `shopify_order_risk_signals` (refreshed alongside every order ingest), and `fraud_intel_parse_misses` (refreshed every parse). No caching; reload reflects current state.
 
+### Coverage on new installs
+
+Every new merchant install kicks off a backfill that walks **the full historical Shopify order window** (anchored at `2010-01-01`), populating `shopify_orders`, `shopify_order_risk_assessments`, and `shopify_order_risk_signals` from day one. This is gated by Shopify's `read_all_orders` Protected Customer Data scope, which Shopify Partners approved for DisputeDesk on **2026-05-10**.
+
+A 60-day fallback window exists in code for defensive degradation only — it kicks in if Shopify ever revokes the `read_all_orders` grant. To confirm a specific shop's scope tier, check the `historical_import_scope_granted` column on `shops`:
+- `read_all_orders` — full history walked.
+- `default_window` — degraded to the trailing 60 days (Shopify-side constraint on the bare `read_orders` scope).
+
+If you see a shop stuck on `default_window`, the merchant needs to re-OAuth so the install picks up the wider grant. The in-app re-OAuth banner fires automatically when this condition is detected.
+
 ---
 
 ## Billing Dashboard

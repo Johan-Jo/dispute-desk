@@ -937,7 +937,11 @@ Pure helpers (`aggregateOrderCounts`) are unit-tested in `lib/disputes/__tests__
 
 Fire-and-forget — they run in workers, not on the OAuth request path. Idempotent: skips when a backfill job is already queued/running or when `historical_import_status = 'complete'`.
 
-The new scope `read_all_orders` was added to `shopify.app.toml` and `.env.example` (the drift-guard test enforces both stay in sync). Until Partners-side approval for Protected Customer Data lands, `classifyScopeGrant` resolves the offline session's actual granted scopes string and falls back to the default 60-day window automatically — the code path is scope-aware so we ship without blocking on App Review.
+The new scope `read_all_orders` was added to `shopify.app.toml` and `.env.example` (the drift-guard test enforces both stay in sync). Shopify Partners approved DisputeDesk for the `read_all_orders` Protected Customer Data scope on **2026-05-10**, so every new install today walks **the full historical window** (anchored at `2010-01-01` — pre-dates Shopify itself, covers any plausible order).
+
+The 60-day fallback exists only as a defensive degradation path: `classifyScopeGrant` inspects the offline session's actually-granted scopes string after OAuth and narrows the window automatically if Shopify ever revokes the protected-data approval (re-review, policy change, partner-account issue). The 60-day ceiling is a Shopify-side constraint imposed on the bare `read_orders` scope — apps can't bypass it by paginating, the API simply returns nothing past the cutoff. Practical state today: 100% of every new install's order history flows into the fraud-intelligence tables.
+
+To confirm which tier a given shop is on, check `shops.historical_import_scope_granted`: `'read_all_orders'` = full history; `'default_window'` = degraded to 60 days.
 
 ### Embedded dashboard panel (`app/(embedded)/app/DashboardFraudIntelligence.tsx`)
 
