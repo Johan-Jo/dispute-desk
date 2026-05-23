@@ -15,6 +15,7 @@ import {
 import { replacePackBasedAutomationRules } from "@/lib/rules/replacePackAutomationRules";
 import type { Rule } from "@/lib/rules/types";
 import { checkFeatureAccess } from "@/lib/billing/checkQuota";
+import { isDemoRequest } from "@/lib/demo/isDemoMode";
 
 export const runtime = "nodejs";
 
@@ -87,6 +88,10 @@ export async function GET(req: NextRequest) {
  * Replaces setup-managed rules (and legacy preset rows) with the payload.
  */
 export async function POST(req: NextRequest) {
+  if (isDemoRequest(req)) {
+    return NextResponse.json({ ok: true, demo: true, simulated: true });
+  }
+
   let body: unknown;
   try {
     body = await req.json();

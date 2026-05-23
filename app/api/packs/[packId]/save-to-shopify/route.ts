@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
+import { isDemoRequest } from "@/lib/demo/isDemoMode";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,17 @@ export async function POST(
   { params }: { params: Promise<{ packId: string }> }
 ) {
   const { packId } = await params;
+
+  // Demo-mode defense-in-depth: refuse to enqueue any Shopify mutation
+  // when the request is flagged demo (?demo=true / x-dd-demo header / env).
+  // The client-side interceptor already short-circuits this URL, so this
+  // branch only matters when an explicit `?demo=true` link is opened by
+  // a real merchant — we want to return a simulated success, never touch
+  // their data, and never call Shopify.
+  if (isDemoRequest(req)) {
+    return NextResponse.json({ ok: true, demo: true, simulated: true });
+  }
+
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
     return NextResponse.json(

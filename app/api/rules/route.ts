@@ -4,6 +4,7 @@ import { checkFeatureAccess } from "@/lib/billing/checkQuota";
 import { validateBody, ruleCreateSchema } from "@/lib/middleware/validate";
 import { normalizeMode } from "@/lib/rules/normalizeMode";
 import { extractShopId } from "@/lib/middleware/extractShopId";
+import { isDemoRequest } from "@/lib/demo/isDemoMode";
 
 export const runtime = "nodejs";
 
@@ -36,6 +37,9 @@ export async function GET(req: NextRequest) {
  * Create a new rule. Requires Starter or Pro plan.
  */
 export async function POST(req: NextRequest) {
+  if (isDemoRequest(req)) {
+    return NextResponse.json({ ok: true, demo: true, simulated: true, id: "demo-rule-simulated" });
+  }
   const raw = await req.json();
   const body =
     raw && typeof raw === "object"

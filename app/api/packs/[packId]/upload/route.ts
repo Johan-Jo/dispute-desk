@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
+import { isDemoRequest } from "@/lib/demo/isDemoMode";
 import {
   deriveCompletenessMetrics,
   MANUAL_UPLOAD_FIELD,
@@ -50,6 +51,9 @@ export async function POST(
   { params }: { params: Promise<{ packId: string }> }
 ) {
   const { packId } = await params;
+  if (isDemoRequest(req)) {
+    return NextResponse.json({ ok: true, demo: true, simulated: true });
+  }
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
     return NextResponse.json(

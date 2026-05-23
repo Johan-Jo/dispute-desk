@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
+import { isDemoRequest } from "@/lib/demo/isDemoMode";
 
 export const runtime = "nodejs";
 
@@ -51,6 +52,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (isDemoRequest(req)) {
+    return NextResponse.json({ ok: true, demo: true, simulated: true, id });
+  }
   const ctx = shopContextOrUnauthorized(req);
   if (ctx instanceof NextResponse) return ctx;
   const body = await req.json();
@@ -85,6 +89,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (isDemoRequest(req)) {
+    return NextResponse.json({ ok: true, demo: true, simulated: true, deleted: false, id });
+  }
   const ctx = shopContextOrUnauthorized(req);
   if (ctx instanceof NextResponse) return ctx;
   const sb = getServiceClient();

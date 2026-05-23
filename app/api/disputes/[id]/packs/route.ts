@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { checkPackQuota } from "@/lib/billing/checkQuota";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
+import { isDemoRequest } from "@/lib/demo/isDemoMode";
 
 /**
  * POST /api/disputes/:id/packs
@@ -16,6 +17,14 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: disputeId } = await params;
+  if (isDemoRequest(req)) {
+    return NextResponse.json({
+      ok: true,
+      demo: true,
+      simulated: true,
+      pack: { id: "demo-pack-7f8247d3", status: "ready" },
+    });
+  }
   const shopId = extractShopId(req);
   if (!shopId || shopId === "demo") {
     return NextResponse.json(

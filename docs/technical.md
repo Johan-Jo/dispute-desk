@@ -4331,3 +4331,24 @@ Extended `EventType` union in `lib/audit/logEvent.ts` with 13 literals: `defence
 ### Submission integration
 
 `lib/jobs/handlers/saveToShopifyJob.ts` checks for the latest `defence_packages` row for the dispute when the flag is on. If a row exists, it must be `status=final` — anything else is a hard block. When `final`, the `uncategorizedFile` buffer source is swapped to the defence package PDF (via a fresh `kind:"pdf"` short-link pointing at the defence row id). On verify-ok, the row is marked `status=submitted` with `shopify_response` set. Structured text fields and per-evidence-field `*File` slots gated by `FILE_EVIDENCE_ATTACHMENTS_ENABLED` are unaffected.
+
+## Demo Mode (App Store screenshots / product video)
+
+Demo mode renders a scripted healthy-merchant experience across the embedded surface (`/app/*`) for App Store screenshots and product video capture. It is implemented as a client-side fetch interceptor — no real Shopify call, no Supabase write, no automation pipeline runs.
+
+**Activation** — either:
+- `?demo=true` query param on any `/app/*` URL (open `/app?demo=true`), or
+- `NEXT_PUBLIC_DISPUTEDESK_DEMO_MODE=true` env at build time (staging only — never set in production).
+
+`lib/withShopParams.ts` was extended to preserve `demo` alongside `shop` / `host` / `locale`, so in-app navigation (`<Link href={withShopParams(...)}>`) keeps the flag set across Dashboard → Dispute detail → Automation → Insights.
+
+**Files:**
+- `lib/demo/isDemoMode.ts` — `isDemoMode(searchParams?)` (client/SSR-safe) and `isDemoRequest(req)` (server-side, checks `?demo=` query and `x-dd-demo` header).
+- `lib/demo/demoData.ts` — typed fixtures for `DashboardStats`, recent disputes (`Dispute[]`), `WorkspaceData` (one demo dispute `7F8247D3` / order `#1091`), insights (`InsightsResponse`), automation (`activePacks` + `pack_modes`), rules, setup state, billing usage. Shapes mirror the real API responses so `tsc` catches drift.
+- `lib/demo/demoFetch.ts` — `installDemoFetchInterceptor()` wraps `window.fetch`. Known read endpoints (`/api/dashboard/stats`, `/api/disputes`, `/api/disputes/[id]/workspace`, `/api/setup/automation`, `/api/rules`, `/api/dashboard/insights/initial-analysis`, `/api/setup/state`, `/api/billing/usage`) return demo JSON. Known mutation endpoints (`save-to-shopify`, `regenerate`, `upload`, `waive`, `render-pdf`, `cardholder-acknowledgement`, build pack, sync, automation/rules write paths, onboarding) return `{ ok: true, demo: true, simulated: true }` and dispatch a `dd:demo-mutation` CustomEvent. Anything else falls through to the real `fetch`.
+- `components/demo/DemoModeProvider.tsx` — wires the interceptor + a subtle "Demo" corner badge + a toast on `dd:demo-mutation`. Badge can be suppressed for screenshots with `?demo=true&demoBadge=off`. Mounted from `app/(embedded)/app/layout.tsx`.
+- **Server defense-in-depth:** `isDemoRequest(req)` short-circuits POST/PATCH on the highest-risk mutation routes (`save-to-shopify`, `regenerate`, `upload`, `disputes/[id]/packs`, `setup/automation`, `rules`, `rules/[id]`) so a `?demo=true` URL pasted by a real merchant never touches their data even if the client-side interceptor didn't load (e.g. JS disabled, direct cURL).
+
+**Demo dispute:** `DEMO_DISPUTE_ID = "demo-7f8247d3-0000-0000-0000-000000000001"`. The workspace fixture provides Strong AVS+CVV (payment_auth strong), Strong signature-on-delivery (delivery strong), AVS-matched billing — enough decisive fraud-family signals that `calculateCaseStrength` derives `overall: "strong"` for the header pill.
+
+**Not in demo:** real Shopify mutations, real Supabase writes, real automation rule changes, real evidence uploads, real PDF renders, dispute sync. The toast surfaces the no-op so the operator running screenshots knows the click was caught.
