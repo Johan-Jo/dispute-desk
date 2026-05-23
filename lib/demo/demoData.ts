@@ -109,24 +109,6 @@ const DEMO_ACTIVITY: ActivityItem[] = [
     eventAt: "2026-05-20T08:50:00Z",
     actorType: "system",
   },
-  {
-    id: "demo-act-09",
-    disputeId: "demo-1086",
-    orderName: "#1086",
-    eventType: "won",
-    description: null,
-    eventAt: "2026-05-19T19:31:00Z",
-    actorType: "system",
-  },
-  {
-    id: "demo-act-10",
-    disputeId: "demo-1086",
-    orderName: "#1086",
-    eventType: "evidence_saved_to_shopify",
-    description: "5 evidence fields sent to Shopify",
-    eventAt: "2026-05-19T08:14:00Z",
-    actorType: "automation",
-  },
 ];
 
 export function getDemoDashboardStats(_period: PeriodKey): DashboardStats {
