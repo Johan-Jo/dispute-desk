@@ -18,19 +18,14 @@ export async function AppNavSidebar() {
   const headerStore = await headers();
   const locale = headerStore.get("x-shopify-locale") ?? "";
 
-  // TEMP (demo mode): when the request carried `?demo=true`, middleware sets
-  // `x-dd-demo: 1` so we can re-append it to every <s-link>. Shopify Admin's
-  // sidebar rewrites the iframe URL on click and strips our query string,
-  // which kills demo mode mid-navigation; sessionStorage stickiness isn't
-  // reliable across all browsers/iframes during screenshot capture. Remove
-  // this block (and the matching middleware block in middleware.ts) when
-  // demo mode is no longer needed for App Store recordings.
-  const demoActive = headerStore.get("x-dd-demo") === "1";
-
+  // TEMP (demo mode — App Store screenshots): hardcoded `demo=true` on
+  // every <s-link> below so navigation reliably stays in demo regardless
+  // of sessionStorage / cookies / middleware behavior. Remove the
+  // `demo=true` from each href to revert.
   const qs = new URLSearchParams();
   if (locale) qs.set("locale", locale);
-  if (demoActive) qs.set("demo", "true");
-  const lq = qs.toString() ? `?${qs.toString()}` : "";
+  qs.set("demo", "true");
+  const lq = `?${qs.toString()}`;
 
   // Shopify Admin's <s-app-nav> only renders the link label — child elements
   // like <s-icon> are stripped, so we cannot add per-item icons today

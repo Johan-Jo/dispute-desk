@@ -421,16 +421,6 @@ export async function middleware(req: NextRequest) {
     // Forward locale param as header so embedded layout can use it on the first
     // request (cookie is set in the response and isn't available until next request).
     if (localeParam) requestHeaders.set("x-shopify-locale", localeParam);
-    // TEMP (demo mode): forward `?demo=true` as a header so `AppNavSidebar`
-    // (a server component with no access to query params) can hardcode the
-    // flag onto every <s-link>. Lets demo mode survive Shopify Admin sidebar
-    // navigation when sessionStorage isn't reliable. Remove together with
-    // the matching block in AppNavSidebar.tsx when demo mode ships behind a
-    // proper flag or is no longer needed for App Store screenshots.
-    const demoParam = req.nextUrl.searchParams.get("demo");
-    if (demoParam && /^(true|1|yes)$/i.test(demoParam)) {
-      requestHeaders.set("x-dd-demo", "1");
-    }
 
     if (pathname === "/app/session-required") {
       const res = NextResponse.next({ request: { headers: requestHeaders } });
