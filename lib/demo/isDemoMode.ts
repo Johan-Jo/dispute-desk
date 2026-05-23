@@ -17,6 +17,7 @@ import type { NextRequest } from "next/server";
 
 export const DEMO_SHOP_ID = "demo";
 export const DEMO_QUERY_KEY = "demo";
+const DEMO_SESSION_KEY = "dd_demo_mode";
 
 function truthy(v: unknown): boolean {
   if (v == null) return false;
@@ -24,29 +25,90 @@ function truthy(v: unknown): boolean {
   return s === "true" || s === "1" || s === "yes";
 }
 
+function offSentinel(v: unknown): boolean {
+  if (v == null) return false;
+  const s = String(v).toLowerCase();
+  return s === "off" || s === "false" || s === "0" || s === "no";
+}
+
 function envFlagEnabled(): boolean {
   if (typeof process === "undefined") return false;
   return truthy(process.env.NEXT_PUBLIC_DISPUTEDESK_DEMO_MODE);
 }
 
+function readSession(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.sessionStorage.getItem(DEMO_SESSION_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeSession(active: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (active) window.sessionStorage.setItem(DEMO_SESSION_KEY, "1");
+    else window.sessionStorage.removeItem(DEMO_SESSION_KEY);
+  } catch {
+    // ignore — sessionStorage may be blocked by browser settings
+  }
+}
+
 /**
  * Client-side demo-mode check. Reads the current URL's query string in
- * the browser, falls back to the build-time env flag. Safe to call in
- * SSR (returns env-flag-only — no window access).
+ * the browser, falls back to sessionStorage (sticky across in-app
+ * navigation that drops query params — Shopify Admin's `<s-app-nav>`
+ * sidebar rewrites the iframe URL without carrying our `demo` flag),
+ * then to the build-time env flag.
+ *
+ * Side effect: when `?demo=true` is present we persist to sessionStorage
+ * so subsequent calls (after the sidebar nav strips the query) still
+ * return true. When `?demo=off` is present we clear it — an explicit
+ * exit. Safe to call in SSR (returns env-flag-only — no window access).
  */
 export function isDemoMode(searchParams?: URLSearchParams | null): boolean {
-  if (searchParams && truthy(searchParams.get(DEMO_QUERY_KEY))) return true;
+  // 1. Explicit OFF wins over everything else (so an operator can exit
+  //    cleanly without clearing storage by hand).
+  if (searchParams && offSentinel(searchParams.get(DEMO_QUERY_KEY))) {
+    writeSession(false);
+    return envFlagEnabled();
+  }
 
+  // 2. Query param ON — persist for the rest of the session.
+  if (searchParams && truthy(searchParams.get(DEMO_QUERY_KEY))) {
+    writeSession(true);
+    return true;
+  }
+
+  // 3. window.location fallback (used in SSR-rendered components that
+  //    don't have a useSearchParams hook).
   if (typeof window !== "undefined") {
     try {
       const sp = new URLSearchParams(window.location.search);
-      if (truthy(sp.get(DEMO_QUERY_KEY))) return true;
+      if (offSentinel(sp.get(DEMO_QUERY_KEY))) {
+        writeSession(false);
+        return envFlagEnabled();
+      }
+      if (truthy(sp.get(DEMO_QUERY_KEY))) {
+        writeSession(true);
+        return true;
+      }
     } catch {
       // ignore
     }
   }
 
+  // 4. Sticky session.
+  if (readSession()) return true;
+
+  // 5. Build-time env flag.
   return envFlagEnabled();
+}
+
+/** Clear the sticky demo-mode flag from sessionStorage. */
+export function clearDemoMode(): void {
+  writeSession(false);
 }
 
 /**

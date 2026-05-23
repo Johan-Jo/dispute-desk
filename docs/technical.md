@@ -4340,7 +4340,9 @@ Demo mode renders a scripted healthy-merchant experience across the embedded sur
 - `?demo=true` query param on any `/app/*` URL (open `/app?demo=true`), or
 - `NEXT_PUBLIC_DISPUTEDESK_DEMO_MODE=true` env at build time (staging only — never set in production).
 
-`lib/withShopParams.ts` was extended to preserve `demo` alongside `shop` / `host` / `locale`, so in-app navigation (`<Link href={withShopParams(...)}>`) keeps the flag set across Dashboard → Dispute detail → Automation → Insights.
+**Stickiness across navigation.** The first time `?demo=true` is seen, `isDemoMode()` persists `dd_demo_mode=1` to `sessionStorage`; subsequent calls return true even without the query param. This is what carries demo mode through the Shopify Admin `<s-app-nav>` sidebar — which rewrites the iframe URL on click and drops any query string we put on `<Link>` hrefs. `lib/withShopParams.ts` still carries `demo` for in-page `<Link>`s as a belt-and-suspenders measure, but the sticky session is the load-bearing mechanism. To exit demo mode cleanly: `?demo=off` (or call `clearDemoMode()`).
+
+**Banners suppressed in demo.** The dashboard's scope-upgrade nudge (`DashboardScopeUpgradeBanner`) reads `currentScopeGrant` from `/api/dashboard/insights/initial-analysis`; the demo fixture returns `"read_all_orders"` so the banner stays hidden. Add similar fields to the demo insights response when introducing new banners that gate on backend signals.
 
 **Files:**
 - `lib/demo/isDemoMode.ts` — `isDemoMode(searchParams?)` (client/SSR-safe) and `isDemoRequest(req)` (server-side, checks `?demo=` query and `x-dd-demo` header).

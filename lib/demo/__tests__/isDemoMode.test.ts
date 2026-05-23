@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { isDemoMode, isDemoRequest, DEMO_QUERY_KEY } from "../isDemoMode";
+import { isDemoMode, isDemoRequest, clearDemoMode, DEMO_QUERY_KEY } from "../isDemoMode";
 
 describe("isDemoMode", () => {
   const originalEnv = process.env.NEXT_PUBLIC_DISPUTEDESK_DEMO_MODE;
@@ -33,6 +33,62 @@ describe("isDemoMode", () => {
   it("falls back to the env flag", () => {
     process.env.NEXT_PUBLIC_DISPUTEDESK_DEMO_MODE = "true";
     expect(isDemoMode(new URLSearchParams(""))).toBe(true);
+  });
+});
+
+describe("isDemoMode — sticky session", () => {
+  const originalEnv = process.env.NEXT_PUBLIC_DISPUTEDESK_DEMO_MODE;
+  let store: Record<string, string>;
+  let originalWindow: unknown;
+
+  beforeEach(() => {
+    delete process.env.NEXT_PUBLIC_DISPUTEDESK_DEMO_MODE;
+    store = {};
+    originalWindow = (globalThis as { window?: unknown }).window;
+    (globalThis as { window: unknown }).window = {
+      sessionStorage: {
+        getItem: (k: string) => (k in store ? store[k] : null),
+        setItem: (k: string, v: string) => {
+          store[k] = v;
+        },
+        removeItem: (k: string) => {
+          delete store[k];
+        },
+      },
+      location: { search: "" },
+    };
+  });
+
+  afterEach(() => {
+    if (originalEnv === undefined) delete process.env.NEXT_PUBLIC_DISPUTEDESK_DEMO_MODE;
+    else process.env.NEXT_PUBLIC_DISPUTEDESK_DEMO_MODE = originalEnv;
+    if (originalWindow === undefined) {
+      delete (globalThis as { window?: unknown }).window;
+    } else {
+      (globalThis as { window: unknown }).window = originalWindow;
+    }
+  });
+
+  it("?demo=true persists across subsequent calls without the param", () => {
+    expect(isDemoMode(new URLSearchParams("demo=true"))).toBe(true);
+    expect(isDemoMode(new URLSearchParams(""))).toBe(true);
+    expect(store["dd_demo_mode"]).toBe("1");
+  });
+
+  it("?demo=off clears the sticky flag and disables demo", () => {
+    isDemoMode(new URLSearchParams("demo=true"));
+    expect(store["dd_demo_mode"]).toBe("1");
+
+    expect(isDemoMode(new URLSearchParams("demo=off"))).toBe(false);
+    expect(store["dd_demo_mode"]).toBeUndefined();
+    expect(isDemoMode(new URLSearchParams(""))).toBe(false);
+  });
+
+  it("clearDemoMode() removes the session flag", () => {
+    isDemoMode(new URLSearchParams("demo=true"));
+    clearDemoMode();
+    expect(store["dd_demo_mode"]).toBeUndefined();
+    expect(isDemoMode(new URLSearchParams(""))).toBe(false);
   });
 });
 
