@@ -5,6 +5,7 @@ import { verifyHmac, exchangeCodeForToken, decodeOAuthState } from "@/lib/shopif
 import { getServiceClient } from "@/lib/supabase/server";
 import { storeSession } from "@/lib/shopify/sessionStorage";
 import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
+import { registerOrderWebhooks } from "@/lib/shopify/registerOrderWebhooks";
 import { registerWebPixel } from "@/lib/liabilityShift/sessions/registerWebPixel";
 import { enqueueShopDailyMetricsBackfill } from "@/lib/disputes/backfillShopDailyMetrics";
 import {
@@ -140,6 +141,22 @@ export async function GET(req: NextRequest) {
         })
         .catch((err) => {
           console.warn("[webhooks] Dispute webhook registration failed:", err?.message ?? err);
+        });
+
+      // PR-A: register orders/create + orders/updated webhooks so we
+      // capture every order's pre-auth risk assessment in real time,
+      // not just the historical backfill window.
+      registerOrderWebhooks({
+        shopDomain: shop,
+        accessToken: tokenResult.accessToken,
+      })
+        .then((result) => {
+          if (!result.ok && result.errors.length) {
+            console.warn("[webhooks] Order webhook registration:", result.errors);
+          }
+        })
+        .catch((err) => {
+          console.warn("[webhooks] Order webhook registration failed:", err?.message ?? err);
         });
 
       // Populate shops.currency_code from the Shop GraphQL object.

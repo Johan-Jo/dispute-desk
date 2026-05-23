@@ -61,6 +61,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Shops", href: "/admin/shops", icon: Store },
   { label: "Jobs", href: "/admin/jobs", icon: Cog },
   { label: "Webhooks", href: "/admin/webhooks", icon: Webhook },
+  { label: "Fraud Intel", href: "/admin/fraud-intel", icon: ShieldCheck },
   { label: "Templates", href: "/admin/templates", icon: FileText, group: "Template Ops" },
   { label: "Reason Mapping", href: "/admin/reason-mapping", icon: GitBranch, group: "Template Ops" },
   { label: "Template Health", href: "/admin/template-health", icon: Activity, group: "Template Ops" },

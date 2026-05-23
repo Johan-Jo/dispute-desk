@@ -1,6 +1,6 @@
-# Runbook — Dispute Webhook Delivery
+# Runbook — Webhook Delivery (Disputes + Orders)
 
-Owns end-to-end behavior of the `disputes/create` and `disputes/update` webhooks. Use when:
+Owns end-to-end behavior of the `disputes/create`, `disputes/update`, `orders/create`, and `orders/updated` webhooks. Use when:
 
 - New disputes aren't appearing in `/portal/disputes` or `/app/disputes` within seconds of opening in Shopify.
 - `/admin/webhooks` shows a non-zero "Cron-only catch-ups" stat.
@@ -74,10 +74,42 @@ Shopify's Partner dashboard provides "Replay" for the last 48h of deliveries. To
 
 ## Re-subscription
 
-Webhook topics are subscribed during OAuth in `lib/shopify/registerDisputeWebhooks.ts`. To force re-subscription:
+Webhook topics are subscribed during OAuth:
+- `lib/shopify/registerDisputeWebhooks.ts` — `disputes/create` + `disputes/update`.
+- `lib/shopify/registerOrderWebhooks.ts` — `orders/create` + `orders/updated`. `orders/delete` is intentionally NOT subscribed; deleted orders remain in `shopify_orders` as historical commercial events.
+
+To force re-subscription:
 
 1. Uninstall + reinstall the app in the dev store, OR
-2. Manually re-run `registerDisputeWebhooks()` via an admin tool — the registration is idempotent (Shopify dedups by `topic + endpoint`).
+2. Manually re-run `registerDisputeWebhooks()` / `registerOrderWebhooks()` via an admin tool — both registrations are idempotent (Shopify dedups by `topic + endpoint`).
+
+## Orders webhook ingest (Phase 2 fraud intel)
+
+The `orders/create` + `orders/updated` handlers funnel through `lib/webhooks/handleOrderWebhook.ts`. Same idempotency model as disputes (Layer A delivery dedup via `webhook_events`), but the persist path adds a **risk-payload-hash dedup gate**:
+
+- `lib/fraudIntel/riskPayloadHash.ts` computes a deterministic SHA-256 over the canonicalized risk JSON (`recommendation` + per-assessment `riskLevel` + `provider` + sorted `facts[]`).
+- The shared `persistOrders` writer (`lib/shopify/persistOrders.ts`) appends a new `shopify_order_risk_assessments` row ONLY when the hash differs from the latest stored row for `(shop, order)`.
+- Otherwise the webhook returns 200 + `outcome:"skipped_unchanged"` and only mutable columns on `shopify_orders` move.
+
+Without this gate, every fulfillment / tag / note / address edit would inflate assessment history. The `webhook_events.outcome = 'skipped_unchanged'` rate on `orders/updated` deliveries should sit at roughly 80-90% in steady state — the majority of edits don't touch risk.
+
+### Daily reconciliation
+
+`/api/cron/orders-reconciliation` runs daily at 01:15 UTC. For each active shop with `historical_import_status = 'complete'`:
+1. Fetches the trailing 26h window of order GIDs from Shopify.
+2. Diffs against `shopify_orders.shopify_order_id`.
+3. Enqueues `reconcile_missing_order` jobs (max 100/shop/run) for any missing GID.
+
+**Circuit breaker.** `shops.reconciliation_failure_streak` increments on each failed run for a shop and resets to 0 on next success. After 5 consecutive failures the cron skips that shop and emits a single `orders_reconciliation_circuit_breaker_tripped` audit_events row. Prevents a broken shop (revoked token, billing lapsed) from looping the cron indefinitely.
+
+### Diagnosing missing orders
+
+If a merchant reports an order missing from `/admin/fraud-intel`:
+
+1. **Check the webhook delivery.** `/admin/webhooks` filtered by `topic=orders/create` + the shop's domain. Row missing → Shopify never delivered, or delivered but our shop lookup rejected it.
+2. **Check `webhook_events.outcome`** for the corresponding `event_id`. `applied` means we wrote the row; `skipped_unchanged` is rare on orders/create (only happens if the same order GID was reconciled before the webhook arrived); `error` carries the failure reason.
+3. **Check the reconciliation cron.** Look at the most recent `/api/cron/orders-reconciliation` execution. If `shopsSkippedCircuitBreaker > 0`, query `shops.reconciliation_failure_streak` for the affected shop and unblock manually.
+4. **Last resort: query Shopify directly.** Use the order GID against `ORDER_FOR_INGEST_QUERY` to confirm the order exists. If it does, run the `reconcile_missing_order` job manually via the admin jobs panel.
 
 ## Privacy rule
 
@@ -87,6 +119,7 @@ If you need to debug the raw payload for a single incident, capture it transient
 
 ## Related files
 
+### Disputes pipeline
 - `lib/webhooks/handleDisputeWebhook.ts` — pipeline orchestrator
 - `lib/webhooks/eventIdempotency.ts` — Layer A claim + allowlist
 - `lib/disputes/disputeSnapshot.ts` — normalizers (REST + GraphQL)
@@ -97,3 +130,18 @@ If you need to debug the raw payload for a single incident, capture it transient
 - `supabase/migrations/20260520120000_webhook_events.sql`
 - `supabase/migrations/20260520120100_disputes_shopify_updated_at.sql`
 - `supabase/migrations/20260520120200_audit_events_dispute_event_key.sql`
+
+### Orders pipeline (Phase 2 fraud intel)
+- `lib/webhooks/handleOrderWebhook.ts` — pipeline orchestrator
+- `lib/shopify/orderIngest.ts` — fetch + normalize + persist orchestrator
+- `lib/shopify/queries/orderForIngest.ts` — single-order GraphQL projection
+- `lib/shopify/persistOrders.ts` — shared insert/update + hash-dedup writer
+- `lib/fraudIntel/riskPayloadHash.ts` — canonical hash gate
+- `lib/fraudIntel/signalWriter.ts` — structured-over-parsed signal-row writer
+- `lib/fraudIntel/factParser.ts` — pure parser for Shopify risk facts
+- `app/api/cron/orders-reconciliation/route.ts` — daily sweep
+- `lib/jobs/handlers/reconcileMissingOrderJob.ts` — per-order reconcile
+- `app/admin/fraud-intel/page.tsx` — v0 intelligence surface
+- `supabase/migrations/20260523111200_risk_assessments_payload_hash.sql`
+- `supabase/migrations/20260523111300_shops_reconciliation_failure_streak.sql`
+- `supabase/migrations/20260523111400_shopify_order_risk_signals.sql`

@@ -43,6 +43,7 @@ import {
   readTrackingMetafields,
   type RawShopifyMetafield,
 } from "@/lib/shopify/trackingApps";
+import { computeRiskPayloadHash } from "@/lib/fraudIntel/riskPayloadHash";
 
 export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
   query ShopOrdersForBackfill($first: Int!, $after: String, $query: String) {
@@ -60,6 +61,11 @@ export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
           displayFulfillmentStatus
           test
           paymentGatewayNames
+          # PR-C: structured signal — Order.clientIp is the only place
+          # Shopify exposes the customer's IP. The parser cannot recover
+          # this from fact strings, so it MUST be projected. Nullable
+          # for offline POS / abandoned-checkout-recovered orders.
+          clientIp
           totalPriceSet {
             shopMoney {
               amount
@@ -68,6 +74,13 @@ export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
           }
           shippingAddress {
             countryCode
+          }
+          # PR-C: structured signals for AVS / Card BIN / wallet detection.
+          # zip is required to derive AVS-zip-match correlations against
+          # the parser-extracted "AVS street match" signals.
+          billingAddress {
+            countryCode
+            zip
           }
           # Customer join keys for v1.5 of order_risk_history view.
           # Both are nullable on the Order type — Shopify allows guest
@@ -86,11 +99,25 @@ export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
           # maybe a capture or refund). The receipt is gateway-defined
           # JSON (per lib/packs/sources/threeDSecureSource.ts) — we
           # only trust the shape for Shopify Payments.
+          # PR-C: paymentDetails is the structured-signal source for
+          # avs_address_result, avs_zip_result, cvv_result, card_bin,
+          # card_brand (company), wallet_type. Always preferred over
+          # parser-extracted equivalents (see lib/fraudIntel writer).
           transactions(first: 5) {
             kind
             status
             gateway
             receiptJson
+            paymentDetails {
+              __typename
+              ... on CardPaymentDetails {
+                avsResultCode
+                cvvResultCode
+                bin
+                company
+                wallet
+              }
+            }
           }
           # Tracking-app metafields. When the merchant has AfterShip /
           # Shipway / ParcelPanel / Wonderment / TrackingMore installed
@@ -99,9 +126,10 @@ export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
           # metafields under their own namespace. We read them for
           # free — no merchant action, no third-party API key. The
           # unified reader lives in lib/shopify/trackingApps.ts.
-          # first=20 captures multiple keys per namespace; the reader
-          # picks the priority namespace.
-          metafields(first: 20) {
+          # first=8 covers the priority namespace per tracking app (PR-C
+          # reduced this from 20 to free ~12 cost points/order, which
+          # offsets the +5 added by clientIp + paymentDetails).
+          metafields(first: 8) {
             edges {
               node {
                 namespace
@@ -157,12 +185,26 @@ export interface RawRiskAssessment {
   }> | null;
 }
 
-/** Raw transaction shape — just the fields needed for 3DS parsing. */
+/** Raw transaction shape — fields needed for 3DS parsing + PR-C signals. */
 export interface RawBackfillTransaction {
   kind: string | null;
   status: string | null;
   gateway: string | null;
   receiptJson: string | Record<string, unknown> | null;
+  paymentDetails?: RawPaymentDetails | null;
+}
+
+/** Raw paymentDetails union — only CardPaymentDetails carries the
+ *  signals we want. Non-card payment methods (Shop Pay, Apple Pay,
+ *  gift card, manual) are typed as the base interface; the writer
+ *  treats them as null. */
+export interface RawPaymentDetails {
+  __typename?: string | null;
+  avsResultCode?: string | null;
+  cvvResultCode?: string | null;
+  bin?: string | null;
+  company?: string | null;
+  wallet?: string | null;
 }
 
 /** Raw metafield connection edge as Shopify returns it. */
@@ -182,10 +224,16 @@ export interface RawBackfillOrder {
   displayFulfillmentStatus: string | null;
   test: boolean;
   paymentGatewayNames: string[] | null;
+  /** PR-C — client IP. Nullable for offline POS, abandoned-checkout
+   *  recovered orders, B2B drafts, etc. */
+  clientIp?: string | null;
   totalPriceSet: {
     shopMoney: { amount: string; currencyCode: string };
   } | null;
   shippingAddress: { countryCode: string | null } | null;
+  /** PR-C — billing address for AVS correlation (zip) + cross-border
+   *  detection. */
+  billingAddress?: { countryCode: string | null; zip: string | null } | null;
   customer: { id: string | null; email: string | null } | null;
   fulfillments: Array<{
     createdAt: string | null;
@@ -261,6 +309,12 @@ export async function fetchOrdersBackfillPage(
       query: queryString,
     },
     correlationId: args.correlationId ?? `orders-backfill`,
+    // PR-C: pin English so risk facts return in a stable language.
+    // The parser in PR-D matches on English phrasing — without this
+    // pin, a shop's Admin language would drift the fact strings
+    // (German "Verdächtig" vs English "Suspicious") and silently
+    // break parsing.
+    locale: "en",
   });
 
   assertNotAuthInvalid(session.shopDomain, "offline", {
@@ -333,6 +387,11 @@ export interface ShopifyOrderRiskAssessmentRow {
   recommendation: string | null;
   facts_json: Array<{ description: string | null; sentiment: string | null }> | null;
   assessed_at: string | null;
+  /** Deterministic SHA-256 over the canonical risk payload — see
+   *  lib/fraudIntel/riskPayloadHash.ts. Populated for all post-PR-A
+   *  rows so the writer can dedup orders/updated webhook fires. Nullable
+   *  only for pre-PR-A rows that pre-date the column. */
+  risk_payload_hash: string | null;
 }
 
 /**
@@ -546,6 +605,19 @@ export function normalizeBackfillOrder(
     ...flattenTrackingForRow(raw),
   };
 
+  // Compute the canonical hash once per order. All assessment rows
+  // for the same Shopify response carry the same hash, since they
+  // represent the same risk payload snapshot. The dedup writer in
+  // persistOrders.ts uses the hash to decide whether to append.
+  const payloadHash = computeRiskPayloadHash({
+    recommendation: raw.risk?.recommendation ?? null,
+    assessments: (raw.risk?.assessments ?? []).map((a) => ({
+      riskLevel: a.riskLevel ?? null,
+      provider: a.provider?.title ?? null,
+      facts: a.facts ?? null,
+    })),
+  });
+
   const assessments: ShopifyOrderRiskAssessmentRow[] = (
     raw.risk?.assessments ?? []
   )
@@ -558,6 +630,7 @@ export function normalizeBackfillOrder(
       recommendation: raw.risk?.recommendation ?? null,
       facts_json: a.facts ?? null,
       assessed_at: raw.processedAt ?? raw.createdAt,
+      risk_payload_hash: payloadHash,
     }));
 
   return { order, assessments };

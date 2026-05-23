@@ -10,6 +10,7 @@ import { handleBackfillShopDailyMetrics } from "@/lib/jobs/handlers/backfillShop
 import { handleBackfillShopOrders } from "@/lib/jobs/handlers/backfillOrdersJob";
 import { handleSnapshotFraudDailyMetrics } from "@/lib/jobs/handlers/snapshotFraudDailyMetricsJob";
 import { handleBackfillFraudDailyMetrics } from "@/lib/jobs/handlers/backfillFraudDailyMetricsJob";
+import { handleReconcileMissingOrder } from "@/lib/jobs/handlers/reconcileMissingOrderJob";
 
 export const runtime = "nodejs";
 // Backfill jobs walk 90 UTC days × ~700ms/day ≈ 63s. Other handlers
@@ -77,6 +78,9 @@ async function runWorker(req: NextRequest) {
           break;
         case "backfill_fraud_daily_metrics":
           await handleBackfillFraudDailyMetrics(job);
+          break;
+        case "reconcile_missing_order":
+          await handleReconcileMissingOrder(job);
           break;
         default:
           throw new Error(`Unknown job type: ${job.jobType}`);

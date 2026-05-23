@@ -90,6 +90,39 @@ Stale jobs (stuck in "running" for too long) are highlighted with a yellow backg
 
 ---
 
+## Fraud Intel
+
+**Path:** `/admin/fraud-intel`
+
+Cross-shop intelligence built on Shopify's pre-authorization risk signals. Surfaces correlations between specific signals (AVS outcome, payment-attempt count, IP↔ship distance, proxy detection, cross-border) and actual chargeback outcomes — the dataset that informs the eventual per-order risk-augmentation API.
+
+### What you see
+
+- **KPI strip** — Orders in window, disputes in window, and parser misses (90 days). A high parse-miss count (>100) warns that Shopify may have reworded a risk signal.
+- **Dispute rate by AVS outcome** — Bucketed by Shopify's AVS result codes (Y / A / Z / N / U / …). The `unknown` bucket is wallet checkouts, gift cards, manual payments, or any non-card transaction where AVS isn't applicable.
+- **Dispute rate by payment-attempt count** — `1`, `2`, `3-4`, `5+`, and `unknown` (signal not reported for the order). Parsed from Shopify risk facts.
+- **Dispute rate by IP ↔ shipping distance** — `0-50`, `50-200`, `200-1000`, `1000+` km, and `missing`. Parsed from Shopify risk facts.
+- **Dispute rate by proxy_detected × is_cross_border** — Combinations of `proxy / no_proxy / not_reported` and `same / cross / cross_unknown` country.
+- **Top parser misses** — Shopify fact strings the parser didn't match in the last 90 days. A new top entry usually means Shopify reworded a signal — bump `PARSER_VERSION` in `lib/fraudIntel/factParser.ts` and add a regex.
+
+### Sample-size gate
+
+Any bucket with fewer than **30 orders** renders `insufficient sample (N=<count>)` instead of a percentage. The gate prevents misleading rates from small populations (one shop with 12 orders showing "100% dispute rate on proxy" from a single incident).
+
+### Window
+
+Trailing **90 days** (`created_at_shopify`). Unindexed correlations stay fast at this scope; the materialized rollup table is deferred until the v0 cuts prove out.
+
+### Watching for parser drift
+
+The "Top parser misses" table is the early-warning surface. Healthy state shows few or zero entries. If a fact phrasing appears with `Count` > ~10 over 90 days, Shopify has reworded a signal — open `lib/fraudIntel/factParser.ts`, add the new phrasing as a `(sentiment, regex)` tuple, bump `PARSER_VERSION`, run `npm test`, and re-deploy.
+
+### Data freshness
+
+Every row joins live data — `shopify_orders` (refreshed by orders/* webhooks + daily reconciliation cron), `shopify_order_risk_signals` (refreshed alongside every order ingest), and `fraud_intel_parse_misses` (refreshed every parse). No caching; reload reflects current state.
+
+---
+
 ## Billing Dashboard
 
 **Path:** `/admin/billing`

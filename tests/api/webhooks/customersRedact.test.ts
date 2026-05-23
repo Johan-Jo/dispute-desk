@@ -85,6 +85,38 @@ function setupSupabase(opts: {
     if (table === "audit_events") {
       return { insert: auditInsert };
     }
+    if (table === "shopify_orders") {
+      // PR-D: customers-redact now looks up the customer's orders so
+      // it can wipe client_ip + ip_country on shopify_order_risk_signals.
+      // For these tests we return an empty list — the redact still
+      // succeeds, just with signals_scrubbed=0.
+      const chain = {
+        select: vi.fn(),
+        eq: vi.fn(),
+        then: undefined as unknown,
+      };
+      chain.select = vi.fn().mockReturnValue(chain);
+      // First .eq returns the chain (await-able as a thenable after
+      // chained calls). Final .eq awaits to the empty result.
+      let eqCount = 0;
+      chain.eq = vi.fn().mockImplementation(() => {
+        eqCount++;
+        if (eqCount >= 2) {
+          return Promise.resolve({ data: [], error: null });
+        }
+        return chain;
+      });
+      return chain;
+    }
+    if (table === "shopify_order_risk_signals") {
+      return {
+        update: vi.fn(() => ({
+          eq: vi.fn().mockReturnThis(),
+          in: vi.fn().mockReturnThis(),
+          select: vi.fn().mockResolvedValue({ data: [], error: null }),
+        })),
+      };
+    }
     throw new Error(`unexpected table: ${table}`);
   };
 

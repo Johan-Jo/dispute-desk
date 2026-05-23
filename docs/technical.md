@@ -929,7 +929,13 @@ Pure helpers (`aggregateOrderCounts`) are unit-tested in `lib/disputes/__tests__
 
 ### Install hook
 
-`/api/auth/shopify/callback` (offline phase) fires `enqueueShopOrdersBackfill(shopInternalId)` alongside the existing `enqueueShopDailyMetricsBackfill`. Fire-and-forget — backfill runs in the worker, not on the OAuth request path. Idempotent: skips when a backfill job is already queued/running or when `historical_import_status = 'complete'`.
+`/api/auth/shopify/callback` (offline phase) fires three webhook registrations + two backfill enqueues:
+- `registerDisputeWebhooks` — dispute lifecycle (Phase 1).
+- `registerOrderWebhooks` — orders/create + orders/updated (Phase 2 — PR-A). Real-time ingest of every Shopify order's pre-auth risk signals.
+- `enqueueShopDailyMetricsBackfill` — chargeback-rate snapshots.
+- `enqueueShopOrdersBackfill` — historical fraud-intel backfill.
+
+Fire-and-forget — they run in workers, not on the OAuth request path. Idempotent: skips when a backfill job is already queued/running or when `historical_import_status = 'complete'`.
 
 The new scope `read_all_orders` was added to `shopify.app.toml` and `.env.example` (the drift-guard test enforces both stay in sync). Until Partners-side approval for Protected Customer Data lands, `classifyScopeGrant` resolves the offline session's actual granted scopes string and falls back to the default 60-day window automatically — the code path is scope-aware so we ship without blocking on App Review.
 
@@ -996,6 +1002,125 @@ Rule-engine layer in `lib/insights/checkpoints.ts` that turns the already-comput
 **RECHECK_RULES**: Card networks refresh these thresholds periodically (VAMP changed materially in April 2025 and again April 2026). Schedule a quarterly source-recheck and update the constants in `lib/insights/checkpoints.ts` if any threshold moves. Last verified date is held in the file header.
 
 Tests: `lib/insights/__tests__/checkpoints.test.ts` — 19 cases covering boundary transitions, sort order, the top-5 cap, and a surasvenne dev-shop sanity test (must never emit a `breach` for realistic dev-shop numbers).
+
+## Shopify Fraud Intelligence — Phase 2 (Structured Risk Signals)
+
+Phase 2 turns Shopify's free-text risk facts into queryable columns so we can correlate pre-auth signals against actual chargeback outcomes. Phase 1 already captures `risk_level_initial` and `facts_json` on every backfilled order; Phase 2 adds (a) real-time per-order webhook ingest so coverage isn't biased toward orders that disputed, and (b) a structured-signal table parsed off the same facts.
+
+The merchant-facing product framing: a **per-shop risk memory layer** that learns over time which Shopify pre-auth signals predict chargebacks for THIS shop — eventually enabling statements like "Shopify rated this LOW, but your history says similar orders disputed 3.4× more often." Phase 2 is the data foundation; the eventual API + per-order augmentation falls out of getting the structure right.
+
+### Coverage path — orders/* webhook ingest (PR-A)
+
+`registerOrderWebhooks` subscribes `orders/create` + `orders/updated` during the OAuth callback. `orders/delete` is intentionally NOT subscribed — deleted orders remain in `shopify_orders` as historical commercial events. GDPR scrub for customer PII runs via the existing `customers/redact` handler (extended in PR-D to also wipe `shopify_order_risk_signals.client_ip` + `ip_country`).
+
+Webhook routes:
+- `app/api/webhooks/orders-create/route.ts`
+- `app/api/webhooks/orders-updated/route.ts`
+
+Both delegate to the shared `lib/webhooks/handleOrderWebhook.ts` pipeline (mirrors `handleDisputeWebhook`):
+1. Verify HMAC. 401 on failure.
+2. Resolve shop by signed `X-Shopify-Shop-Domain` header (body fallback). Unknown shop → 200 + `skipped: unknown_shop`.
+3. Layer A delivery dedup via `(shop_id, X-Shopify-Webhook-Id)`.
+4. Derive the Order GID and call `normalizeOrderIngest(shopId, orderGid)` — GraphQL fetch + normalize + persist.
+5. Map writer outcome to webhook outcome (`applied | skipped_unchanged | error`).
+
+Webhook handler always **fetches via GraphQL** (the same wide projection as backfill) rather than parsing the REST payload. Single normalizer, single source-of-truth shape. ~15 query points per webhook is negligible.
+
+**Risk-payload dedup (load-bearing for orders/updated noise).** Every `orders/updated` fire — fulfillment moves, tag edits, note edits, address corrections — would otherwise append a fresh row to `shopify_order_risk_assessments`. The PR-A migration adds `risk_payload_hash` to that table; `lib/fraudIntel/riskPayloadHash.ts` computes a deterministic SHA-256 over the canonicalized risk payload (sorted-key, sentiment-uppercased, facts sorted by description+sentiment). The shared `persistOrders` writer (in `lib/shopify/persistOrders.ts`) consults the latest stored hash for `(shop, order)` and **only appends a new assessment row when the hash differs**. Otherwise the webhook returns `skipped_unchanged` and only mutable columns on `shopify_orders` move.
+
+`persistOrders` was extracted from `lib/disputes/backfillOrders.ts` so the orders/* webhook ingest path, the daily reconciliation cron (PR-B), and the historical backfill all share the same insert/update + hash-dedup writer.
+
+### Daily reconciliation cron (PR-B)
+
+`/api/cron/orders-reconciliation` runs daily at 01:15 UTC. For each active shop with `historical_import_status = 'complete'`:
+1. Fetches the trailing 26-hour window of order GIDs from Shopify (the 26h absorbs cron-run skew).
+2. Diffs against `shopify_orders.shopify_order_id`.
+3. Enqueues `reconcile_missing_order` jobs (priority 70, max 100/shop/run) for each missing GID. Handler is `lib/jobs/handlers/reconcileMissingOrderJob.ts`, which calls `normalizeOrderIngest` — same fetch/normalize/hash-gated persist path as the webhook.
+
+**Circuit breaker.** `shops.reconciliation_failure_streak` (added in `20260523111300_shops_reconciliation_failure_streak.sql`) increments on each failed cron run for a shop and resets to 0 on next success. After 5 consecutive failures the cron skips that shop and emits a single `orders_reconciliation_circuit_breaker_tripped` audit_events row. Prevents a broken shop (revoked token, billing lapsed) from looping the cron indefinitely.
+
+### Widened GraphQL projection (PR-C)
+
+`ORDERS_FOR_BACKFILL_QUERY` + `ORDER_FOR_INGEST_QUERY` were both widened to project:
+- `Order.clientIp` — customer IP (the only Shopify source for it).
+- `Order.billingAddress { countryCode zip }` — AVS-zip correlation + cross-border detection.
+- `Order.transactions(first: 5).paymentDetails` with `... on CardPaymentDetails { avsResultCode cvvResultCode bin company wallet }` — structured AVS/CVV/BIN/brand/wallet signals.
+
+The English locale is **pinned at the call site** (`requestShopifyGraphQL({ locale: "en" })`) on both the backfill and ingest paths. Without the pin, a shop's Admin language would localize the risk fact strings (German "Verdächtig" vs English "Suspicious") and silently break the parser (PR-D).
+
+To absorb the +5 cost points added by `clientIp` + `paymentDetails`, `metafields(first: 20)` was reduced to `metafields(first: 8)` (recovers ~12 points). The tracking-app reader (`lib/shopify/trackingApps.ts`) uses 3–4 keys per priority namespace, so 8 edges per order remain plenty.
+
+`ORDER_FOR_INGEST_QUERY` is registered with the production GraphQL registry so the daily drift checker covers it.
+
+### Structured signals table (PR-D)
+
+`supabase/migrations/20260523111400_shopify_order_risk_signals.sql` adds two tables:
+
+**`shopify_order_risk_signals`** — one row per `(shop_id, shopify_order_id)`, latest parsed signal snapshot. Historical raw assessments remain in `shopify_order_risk_assessments` (hash-gated append).
+
+Columns:
+- **Structured-from-GraphQL** (always preferred over parsed): `client_ip inet`, `avs_address_result text`, `avs_zip_result text`, `cvv_result text`, `card_bin text`, `card_brand text`, `wallet_type text`.
+- **Parsed-from-facts** (only when no structured equivalent): `payment_attempt_count int`, `proxy_detected boolean`, `multiple_cards_tried boolean`, `billing_country_matches_ip boolean`, `ip_country text`, `ip_ship_distance_km int`, `fraud_cluster_match boolean`.
+- **Provenance**: `source_assessment_id uuid` (FK to `shopify_order_risk_assessments.id`), `source_assessment_created_at timestamptz`, `parser_version int`, `parsed_at timestamptz`, `parse_miss_reason text`.
+
+Service-role only RLS. Hot-path indexes on `(shop_id, proxy_detected)`, `(shop_id, payment_attempt_count)`, `(shop_id, ip_ship_distance_km)`, `(shop_id, avs_address_result)`.
+
+**Null vs unknown convention** (codified so PR-E doesn't silently drop rows):
+- `NULL` = "Shopify didn't report this signal for this order" (wallet checkout, offline POS, payment method without AVS, etc.). Missing signals are themselves meaningful for friendly-fraud correlation.
+- `parse_miss_reason = 'unmatched_phrases'` = parser was invoked but failed to match any of the present facts. Distinguishes Shopify reword events from data-genuinely-absent.
+
+**`fraud_intel_parse_misses`** — surface table for fact strings the parser didn't match. Drives the `/admin/fraud-intel` ops widget so we can monitor parser drift when Shopify rewords a signal.
+
+#### Parser (`lib/fraudIntel/factParser.ts`)
+
+Pure function `parseRiskFacts(facts)` → `{ signals, misses }`. Regex-per-template with `(sentiment, regex)` tuples so a NEGATIVE-tagged "proxy detected" doesn't false-match against a POSITIVE-tagged "no proxy" fact (sentiment-gated rules cut false-match rates).
+
+Exported `PARSER_VERSION` constant — bumped on every regex change so future analytics can dis-aggregate by parser revision. Unknown phrasing returns `null` for that field and records a miss; never throws.
+
+CI gate: `factParser.test.ts` asserts ≥95% coverage on a canonical 14-fixture set hand-curated from Shopify's current phrasings. The drift-watch widget on `/admin/fraud-intel` complements this by surfacing live unmatched strings.
+
+#### Writer (`lib/fraudIntel/signalWriter.ts`)
+
+`buildSignalRow` (pure) + `upsertSignalRow` (writes). Load-bearing precedence contract: **structured-from-GraphQL fields ALWAYS win over parser output**. The builder takes GraphQL `paymentDetails.{avsResultCode, cvvResultCode, bin, company, wallet}` and `Order.clientIp` first; the parser equivalents (AVS / CVV / BIN / brand / wallet — currently empty) are dropped on the floor. Tested explicitly in `signalWriter.test.ts` so a future widening of the parser can't silently pollute these columns.
+
+Wired into:
+- `lib/shopify/orderIngest.normalizeOrderIngest` — runs after `persistOrders`.
+- `lib/disputes/backfillOrders.backfillShopOrders` — per-page loop after `persistOrders`.
+
+Signal-row write failures are logged but never break the ingest contract — the raw `facts_json` is still captured on `shopify_order_risk_assessments`, and the hydration script can backfill later.
+
+#### Hydration (`scripts/hydrate-risk-signals.mjs`)
+
+One-shot backfill that walks the latest assessment per `(shop, order)`, parses, upserts the signal row. Idempotent. Note: structured-from-GraphQL fields (`client_ip`, `paymentDetails`) are NOT recovered because they were never persisted in the assessments table; future ingests (webhook, cron, backfill) overwrite the same row with structured values from the widened projection (PR-C).
+
+#### GDPR scrub extension
+
+`customers/redact` now also wipes `client_ip` + `ip_country` on `shopify_order_risk_signals` for orders belonging to the redact target. Matched via `shopify_orders.customer_email` (the canonical join key). Best-effort — failures don't block the rest of the redact.
+
+### Admin Intelligence v0 (PR-E)
+
+`/admin/fraud-intel` is a server-component page (service-role queries direct against `shopify_orders` ⋈ `shopify_order_risk_signals`) that surfaces five v0 cuts:
+1. Dispute rate by AVS outcome bucket (incl. explicit `unknown`).
+2. Dispute rate by `payment_attempt_count` bucket.
+3. Dispute rate by `ip_ship_distance_km` bucket.
+4. Dispute rate by `proxy_detected × is_cross_border`.
+5. Parser drift watch — top unmatched fact strings (90d).
+
+**Sample-size gate.** Any bucket with `N < 30` orders renders `insufficient sample (N=<count>)` instead of a percentage. Same gate applies when filtering to a single shop. Prevents one merchant with 12 orders showing "100% dispute rate on proxy" from a single incident.
+
+Window: trailing 90 days (bounded so unindexed correlations stay fast). No caching, no materialized view yet — the rollup table is deferred until the v0 cuts prove out. PR-F would mirror `shop_fraud_daily_metrics`.
+
+### Verification
+
+1. `npm run release:verify` (lint + tsc + vitest + build).
+2. `npm run db:migrate` after each PR-A / PR-B / PR-D migration. Same-session.
+3. Future `scripts/verify-fraud-intel-ingest.mjs` (not in this PR) — runs against prod Supabase:
+   - ≥95% of orders created in the last 7 days have a `shopify_orders` row (coverage gate).
+   - ≥90% of `shopify_order_risk_assessments` rows have a corresponding `shopify_order_risk_signals` row (parser coverage gate).
+   - Every active shop has exactly 2 order webhook subscriptions.
+   - Zero shops have `reconciliation_failure_streak >= 5` (circuit-breaker health).
+   - `shopify_order_risk_assessments` rows-per-order/day ≤ 1.5 on average (dedup gate).
+4. Prod manual test: place a test order via Shopify Bogus Gateway, observe within 5 seconds the `webhook_events` row, `shopify_orders` row, and `shopify_order_risk_signals` row. Edit the order tag in Admin → confirm `orders/updated` fires + NO new `shopify_order_risk_assessments` row appended (dedup proof, outcome logged `skipped_unchanged`).
 
 ### Scope-upgrade nudge (`DashboardScopeUpgradeBanner`)
 

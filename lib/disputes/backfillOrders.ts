@@ -39,9 +39,9 @@ import { getShopBackgroundSession } from "@/lib/shopify/sessions/getShopBackgrou
 import {
   fetchOrdersBackfillPage,
   normalizeBackfillOrder,
-  type ShopifyOrderRow,
-  type ShopifyOrderRiskAssessmentRow,
 } from "@/lib/shopify/queries/ordersForBackfill";
+import { persistOrders } from "@/lib/shopify/persistOrders";
+import { upsertSignalRow } from "@/lib/fraudIntel/signalWriter";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { enqueueJob } from "@/lib/jobs/claimJobs";
 
@@ -244,6 +244,22 @@ export async function backfillShopOrders(
         normalized.map((n) => n.order),
         normalized.flatMap((n) => n.assessments),
       );
+      // PR-D: parse + upsert the signal row per order. Done inside
+      // the page loop so failures are isolated; the page total is
+      // unaffected even if one signal write errors.
+      for (const raw of page.orders) {
+        try {
+          await upsertSignalRow({
+            shopId,
+            shopifyOrderId: raw.id,
+            raw,
+          });
+        } catch (err) {
+          console.warn(
+            `[fraudIntel] signal-row upsert failed for ${raw.id}: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+      }
       processed += page.orders.length;
       const { error: progErr } = await sb
         .from("shops")
@@ -295,93 +311,9 @@ export async function backfillShopOrders(
   }
 }
 
-async function persistOrders(
-  shopId: string,
-  orders: ShopifyOrderRow[],
-  assessments: ShopifyOrderRiskAssessmentRow[],
-): Promise<void> {
-  if (orders.length === 0 && assessments.length === 0) return;
-  const sb = getServiceClient();
-
-  // Partition incoming orders into inserts (new) vs updates
-  // (existing). We can't use Supabase's bulk upsert here because the
-  // immutability trigger would reject any (legal-but-redundant) write
-  // to risk_*_initial on existing rows once we ever revise the
-  // assessment elsewhere — staying explicit avoids that hazard
-  // entirely.
-  const ids = orders.map((o) => o.shopify_order_id);
-  let existingSet = new Set<string>();
-  if (ids.length > 0) {
-    const { data: existing, error } = await sb
-      .from("shopify_orders")
-      .select("shopify_order_id")
-      .eq("shop_id", shopId)
-      .in("shopify_order_id", ids);
-    if (error) {
-      throw new Error(`shopify_orders existence lookup failed: ${error.message}`);
-    }
-    existingSet = new Set((existing ?? []).map((r) => r.shopify_order_id));
-  }
-
-  const inserts = orders.filter((o) => !existingSet.has(o.shopify_order_id));
-  const updates = orders.filter((o) => existingSet.has(o.shopify_order_id));
-
-  if (inserts.length > 0) {
-    const { error } = await sb.from("shopify_orders").insert(inserts);
-    if (error) {
-      throw new Error(`shopify_orders insert failed: ${error.message}`);
-    }
-  }
-
-  // Mutable-column UPDATE for existing rows. risk_*_initial is
-  // intentionally excluded — the trigger would reject any attempt to
-  // change it, and re-asserting the same value is wasted work.
-  const nowIso = new Date().toISOString();
-  for (const o of updates) {
-    const { error } = await sb
-      .from("shopify_orders")
-      .update({
-        processed_at: o.processed_at,
-        cancelled_at: o.cancelled_at,
-        fulfilled_at: o.fulfilled_at,
-        country: o.country,
-        is_cross_border: o.is_cross_border,
-        payment_gateway: o.payment_gateway,
-        financial_status: o.financial_status,
-        fulfillment_status: o.fulfillment_status,
-        cancel_reason: o.cancel_reason,
-        fraud_protection_level: o.fraud_protection_level,
-        three_ds_authenticated: o.three_ds_authenticated,
-        delivery_status: o.delivery_status,
-        delivered_at_tracking: o.delivered_at_tracking,
-        signed_by_name: o.signed_by_name,
-        tracking_source: o.tracking_source,
-        updated_at: nowIso,
-      })
-      .eq("shop_id", shopId)
-      .eq("shopify_order_id", o.shopify_order_id);
-    if (error) {
-      throw new Error(
-        `shopify_orders update failed for ${o.shopify_order_id}: ${error.message}`,
-      );
-    }
-  }
-
-  if (assessments.length > 0) {
-    // Append-only history: every page's assessments insert with a
-    // fresh snapshot_at default. The unique constraint on
-    // (shop, order, provider, snapshot_at) protects against
-    // duplicates within the same millisecond.
-    const { error } = await sb
-      .from("shopify_order_risk_assessments")
-      .insert(assessments);
-    if (error) {
-      throw new Error(
-        `shopify_order_risk_assessments insert failed: ${error.message}`,
-      );
-    }
-  }
-}
+// `persistOrders` was extracted to `lib/shopify/persistOrders.ts` (PR-A)
+// so the orders/* webhook ingest path and the reconciliation cron share
+// the same insert/update + risk-payload-hash dedup writer.
 
 /**
  * Resets `historical_import_status` to `not_started` when the newly

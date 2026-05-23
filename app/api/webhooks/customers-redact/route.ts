@@ -123,7 +123,32 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 3. Compliance audit row — does NOT include the customer's email
+  // 3. PR-D: scrub PII from shopify_order_risk_signals for any order
+  //    belonging to this customer. We can't match by customer_email
+  //    on the signals table directly (it has no customer column), so
+  //    we join via disputes (already anonymized above) AND via
+  //    shopify_orders.customer_email which is the canonical join key.
+  //    Best-effort — failures don't block the rest of the redact.
+  let signalsScrubbed = 0;
+  if (customerEmail) {
+    const { data: orderRows } = await db
+      .from("shopify_orders")
+      .select("shopify_order_id")
+      .eq("shop_id", shop.id)
+      .eq("customer_email", customerEmail);
+    const orderIds = (orderRows ?? []).map((r) => r.shopify_order_id);
+    if (orderIds.length > 0) {
+      const { data: updated } = await db
+        .from("shopify_order_risk_signals")
+        .update({ client_ip: null, ip_country: null })
+        .eq("shop_id", shop.id)
+        .in("shopify_order_id", orderIds)
+        .select("id");
+      if (updated) signalsScrubbed = updated.length;
+    }
+  }
+
+  // 4. Compliance audit row — does NOT include the customer's email
   //    or name (would defeat the redact). We log only the Shopify
   //    customer ID reference + the counts of what we anonymized.
   await db.from("audit_events").insert({
@@ -135,6 +160,7 @@ export async function POST(req: NextRequest) {
       customer_id: payload.customer?.id ?? null,
       disputes_anonymized: disputesAnonymized,
       packs_scrubbed: packsScrubbed,
+      signals_scrubbed: signalsScrubbed,
     },
   });
 
@@ -142,5 +168,6 @@ export async function POST(req: NextRequest) {
     ok: true,
     disputes_anonymized: disputesAnonymized,
     packs_scrubbed: packsScrubbed,
+    signals_scrubbed: signalsScrubbed,
   });
 }
