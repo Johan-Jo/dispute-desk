@@ -1,5 +1,3 @@
-import { isDemoMode } from "@/lib/demo/isDemoMode";
-
 /**
  * Build the Shopify Admin URL for a dispute's evidence page.
  *
@@ -14,17 +12,11 @@ import { isDemoMode } from "@/lib/demo/isDemoMode";
  * When `disputeEvidenceGid` is absent (e.g. first sync before Shopify emits
  * the evidence record), returns null so callers can hide the CTA rather than
  * linking to a broken page.
- *
- * Demo mode: returns null so callers hide the CTA rather than break out of
- * the iframe to a real Shopify Admin URL that 404s. `isDemoMode()` is
- * SSR-safe (returns false when window is undefined), so server callers
- * (e.g. email senders) are unaffected.
  */
 export function getShopifyDisputeUrl(
   shopDomain: string,
   disputeEvidenceGid: string | null | undefined,
 ): string | null {
-  if (isDemoMode()) return null;
   const evidenceId = disputeEvidenceGid?.split("/").pop();
   if (!evidenceId) return null;
   const handle = shopDomain

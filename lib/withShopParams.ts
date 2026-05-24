@@ -24,12 +24,10 @@ export function withShopParams(
   const host = sp.get("host");
   const locale = sp.get("locale");
   const ddDebug = sp.get("dd_debug");
-  const demo = sp.get("demo");
   if (shop) params.set("shop", shop);
   if (host) params.set("host", host);
   if (locale) params.set("locale", locale);
   if (ddDebug) params.set("dd_debug", ddDebug);
-  if (demo) params.set("demo", demo);
 
   const qs = params.toString();
   return qs ? `${basePath}?${qs}` : basePath;

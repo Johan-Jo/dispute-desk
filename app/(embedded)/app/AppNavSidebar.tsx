@@ -17,15 +17,7 @@ export async function AppNavSidebar() {
   const t = await getTranslations();
   const headerStore = await headers();
   const locale = headerStore.get("x-shopify-locale") ?? "";
-
-  // TEMP (demo mode — App Store screenshots): hardcoded `demo=true` on
-  // every <s-link> below so navigation reliably stays in demo regardless
-  // of sessionStorage / cookies / middleware behavior. Remove the
-  // `demo=true` from each href to revert.
-  const qs = new URLSearchParams();
-  if (locale) qs.set("locale", locale);
-  qs.set("demo", "true");
-  const lq = `?${qs.toString()}`;
+  const lq = locale ? `?locale=${encodeURIComponent(locale)}` : "";
 
   // Shopify Admin's <s-app-nav> only renders the link label — child elements
   // like <s-icon> are stripped, so we cannot add per-item icons today
