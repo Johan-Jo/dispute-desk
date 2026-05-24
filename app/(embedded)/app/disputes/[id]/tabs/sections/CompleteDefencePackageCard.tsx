@@ -115,7 +115,10 @@ interface Props {
 
 /** Days-remaining math, mirrors lib/disputeListHelpers getUrgency
  *  thresholds (≤48h = critical, ≤7d = warning). */
-function daysRemainingFrom(dueAt: string | null | undefined): {
+function daysRemainingFrom(
+  dueAt: string | null | undefined,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): {
   label: string;
   tone: "critical" | "warning" | "info";
 } | null {
@@ -123,19 +126,19 @@ function daysRemainingFrom(dueAt: string | null | undefined): {
   const hoursLeft = (new Date(dueAt).getTime() - Date.now()) / (1000 * 60 * 60);
   if (Number.isNaN(hoursLeft)) return null;
   if (hoursLeft < 0) {
-    return { label: "Deadline passed", tone: "critical" };
+    return { label: t("deadlinePassed"), tone: "critical" };
   }
   if (hoursLeft <= 24) {
-    return { label: "Due today", tone: "critical" };
+    return { label: t("dueToday"), tone: "critical" };
   }
   if (hoursLeft <= 48) {
-    return { label: "Due in 1 day", tone: "critical" };
+    return { label: t("dueInOneDay"), tone: "critical" };
   }
   const days = Math.round(hoursLeft / 24);
   if (hoursLeft <= 168) {
-    return { label: `Due in ${days} day${days === 1 ? "" : "s"}`, tone: "warning" };
+    return { label: t("dueInNDays", { days }), tone: "warning" };
   }
-  return { label: `Due in ${days} days`, tone: "info" };
+  return { label: t("dueInNDays", { days }), tone: "info" };
 }
 
 /** Card-network review window — both Visa and Mastercard reserve up to
@@ -221,7 +224,7 @@ export function CompleteDefencePackageCard({
   // Countdown is only relevant before submission — once the bank has
   // the package, "due in N days" stops being a useful state.
   const countdown = useMemo(
-    () => (submittedToShopifyAt ? null : daysRemainingFrom(dispute?.dueAt)),
+    () => (submittedToShopifyAt ? null : daysRemainingFrom(dispute?.dueAt, t)),
     [dispute?.dueAt, submittedToShopifyAt],
   );
   // Outcome-expected window: only meaningful when the card network has
@@ -356,7 +359,7 @@ export function CompleteDefencePackageCard({
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "unknown error");
+      setError(err instanceof Error ? err.message : t("unknownError"));
       setLatest(null);
       setBankFacing(null);
     } finally {

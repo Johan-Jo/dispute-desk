@@ -1241,7 +1241,26 @@
       "submitAnyway": "Submit now anyway",
       "autoSubmitPausedTitle": "Auto-submit paused — your review needed",
       "autoSubmitPausedBody": "DisputeDesk builds your defense automatically, but only auto-submits when the pack meets your auto-submit threshold. This pack didn't clear the bar, so we stopped and handed it to you.",
-      "whyPrefix": "Why:"
+      "whyPrefix": "Why:",
+      "addThisEvidence": "Add this evidence",
+      "submittedOn": "Submitted {date}",
+      "submissionDeadlineIn": "Submission deadline in {days, plural, =1 {1 day} other {# days}} ({date}){urgent, select, yes { — urgent} other {}}",
+      "submissionDeadlineOverdue": "Submission deadline: Overdue ({date})",
+      "noDeadlineSet": "No deadline set",
+      "evidenceEvaluationHelper": "This case is evaluated based on the strongest available evidence. Some additional evidence is not included but is not required for a successful outcome.",
+      "failureCopy": {
+        "order_fetch_failed": {
+          "title": "We couldn't retrieve the Shopify order data",
+          "body": "This pack couldn't be built because we weren't able to load the underlying order from Shopify. This is a system issue on our end — not missing evidence on yours."
+        }
+      },
+      "failureCopyFallback": {
+        "title": "We couldn't finish building this pack",
+        "body": "Something went wrong while assembling the evidence pack. This is a system issue, not a missing-evidence issue."
+      },
+      "retryHelp": "Try rebuilding. If it keeps failing, contact support and reference this dispute.",
+      "retryBuild": "Retry build",
+      "setUpPolicies": "Set up policies for future cases"
     },
     "evidenceTabExtra": {
       "buildFailedTitle": "Evidence pack build failed",
@@ -1264,12 +1283,34 @@
       "checkForUpdate": "Check for update",
       "checking": "Checking…",
       "newEvidenceAvailableTitle": "New evidence available — refresh this draft",
-      "couldNotLoadTitle": "Could not load defence package"
+      "couldNotLoadTitle": "Could not load defence package",
+      "deadlinePassed": "Deadline passed",
+      "dueToday": "Due today",
+      "dueInOneDay": "Due in 1 day",
+      "dueInNDays": "Due in {days, plural, =1 {1 day} other {# days}}",
+      "unknownError": "unknown error"
     },
     "defencePackageHtml": {
       "orderLineItems": "Order Line Items",
       "evidenceBasis": "Evidence Basis",
       "noBankEligibleFacts": "(No bank-eligible facts available.)"
+    },
+    "overviewPill": {
+      "missing": "Missing",
+      "not_applicable": "Not applicable",
+      "waived": "Waived",
+      "internal_only": "Internal only",
+      "invalid": "Invalid"
+    },
+    "reasonFamilyLabel": {
+      "fraud": "fraud",
+      "delivery": "delivery",
+      "product": "product-conformity",
+      "refund": "refund",
+      "subscription": "subscription",
+      "billing": "billing",
+      "digital": "digital-good",
+      "general": "dispute"
     }
   },
   "disputeReasons": {

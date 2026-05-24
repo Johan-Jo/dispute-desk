@@ -89,38 +89,44 @@ interface FieldAction {
   skipLabel: string;
 }
 
+// i18n-allow-block: these are the English fallback values used only
+// when `disputes.fieldAction.<field>.*` is missing from the active
+// locale. The render path in `deriveMissingItems` calls the next-intl
+// translator first and falls back to these strings as a defence-in-
+// depth measure. Keep them in sync with `messages/en.json
+// disputes.fieldAction.*` (the canonical source).
 const FIELD_ACTIONS: Record<string, FieldAction> = {
   supporting_documents: {
     actionType: "upload",
-    ctaLabel: "Upload file",
-    acceptedFormats: "Screenshot, PDF, or document",
-    skipLabel: "Skip for now",
+    ctaLabel: "Upload file", // i18n-allow
+    acceptedFormats: "Screenshot, PDF, or document", // i18n-allow
+    skipLabel: "Skip for now", // i18n-allow
   },
   customer_communication: {
     actionType: "paste",
-    ctaLabel: "Paste conversation or upload screenshot",
-    acceptedFormats: "Pasted text, screenshot, or PDF",
-    skipLabel: "Skip for now",
+    ctaLabel: "Paste conversation or upload screenshot", // i18n-allow
+    acceptedFormats: "Pasted text, screenshot, or PDF", // i18n-allow
+    skipLabel: "Skip for now", // i18n-allow
   },
   product_description: {
     actionType: "upload",
-    ctaLabel: "Upload product listing screenshot",
-    acceptedFormats: "Screenshot or PDF of product page",
-    skipLabel: "Skip for now",
+    ctaLabel: "Upload product listing screenshot", // i18n-allow
+    acceptedFormats: "Screenshot or PDF of product page", // i18n-allow
+    skipLabel: "Skip for now", // i18n-allow
   },
   duplicate_explanation: {
     actionType: "paste",
-    ctaLabel: "Upload transaction records",
-    acceptedFormats: "Screenshot, PDF, or pasted text",
-    skipLabel: "Skip for now",
+    ctaLabel: "Upload transaction records", // i18n-allow
+    acceptedFormats: "Screenshot, PDF, or pasted text", // i18n-allow
+    skipLabel: "Skip for now", // i18n-allow
   },
 };
 
 const DEFAULT_ACTION: FieldAction = {
   actionType: "upload",
-  ctaLabel: "Upload proof",
-  acceptedFormats: "Screenshot, PDF, or document",
-  skipLabel: "Skip for now",
+  ctaLabel: "Upload proof", // i18n-allow
+  acceptedFormats: "Screenshot, PDF, or document", // i18n-allow
+  skipLabel: "Skip for now", // i18n-allow
 };
 
 /* Set of evidence fields the merchant can directly act on (upload or

@@ -364,7 +364,7 @@ function composeStrengthReasonI18n(args: {
   return {
     key: "disputes.strengthReason.weak.supportingOnly",
     params: {
-      familyKey: `disputes.familyLabel.${family}`,
+      familyKey: `disputes.reasonFamilyLabel.${family}`,
       decisiveKey: `disputes.decisiveFamilies.${family}`,
     },
   };

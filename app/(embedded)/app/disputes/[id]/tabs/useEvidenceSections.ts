@@ -415,7 +415,7 @@ function classifyAvsCvv(payload: unknown): InternalSignalViewModel | null {
   if (cvvMismatch) parts.push(`CVV code ${cvv}`);
   return {
     id: "internal:avs_cvv_mismatch",
-    title: "Card security check did not fully pass",
+    title: "Card security check did not fully pass", // i18n-allow TODO(i18n): thread translator into classifyAvsCvv
     explanation: `The payment gateway returned a non-match (${parts.join(", ")}). Used internally for assessment; not surfaced to the bank to avoid weakening the response.`,
   };
 }
@@ -495,7 +495,7 @@ export function classifyBillingAddressMismatch(
 
   return {
     id: "internal:billing_address_mismatch",
-    title: "Billing and shipping addresses do not match",
+    title: "Billing and shipping addresses do not match", // i18n-allow TODO(i18n): thread translator into classifyBillingShippingMismatch
     explanation: `${detail} Used internally for assessment; not surfaced to the bank to avoid weakening the response.`,
   };
 }
@@ -517,7 +517,7 @@ function classifyIpLocation(payload: unknown): InternalSignalViewModel | null {
   if (countryMismatch) {
     return {
       id: "internal:ip_country_mismatch",
-      title: "IP geolocation mismatch",
+      title: "IP geolocation mismatch", // i18n-allow TODO(i18n)
       explanation:
         "The customer's IP address resolved to a different country than the shipping address. Used internally for assessment; not submitted to Shopify to avoid weakening the case.",
     };
@@ -525,7 +525,7 @@ function classifyIpLocation(payload: unknown): InternalSignalViewModel | null {
   if (highRisk) {
     return {
       id: "internal:ip_high_risk",
-      title: "IP routes through VPN, proxy, or data center",
+      title: "IP routes through VPN, proxy, or data center", // i18n-allow TODO(i18n)
       explanation:
         "Network-level privacy signals make the geolocation unreliable. Used internally for assessment; not submitted to Shopify to avoid weakening the case.",
     };

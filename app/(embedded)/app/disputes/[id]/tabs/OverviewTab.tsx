@@ -46,22 +46,6 @@ import { MERCHANT_UI_HIDDEN_FIELDS } from "@/lib/automation/merchantUiHiddenFiel
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
-/* ── Failure copy (merchant-safe) ── */
-
-const FAILURE_COPY: Record<string, { title: string; body: string }> = {
-  order_fetch_failed: {
-    title: "We couldn’t retrieve the Shopify order data",
-    body:
-      "This pack couldn’t be built because we weren’t able to load the underlying order from Shopify. " +
-      "This is a system issue on our end — not missing evidence on yours.",
-  },
-};
-
-const FAILURE_FALLBACK = {
-  title: "We couldn’t finish building this pack",
-  body: "Something went wrong while assembling the evidence pack. This is a system issue, not a missing-evidence issue.",
-};
-
 /* ── 1:1 mappings from backend categorical → display labels ── */
 
 /**
@@ -220,6 +204,10 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // matches the modal verbatim.
   const tEvidence = useTranslations("disputes.evidenceTab");
   const tExtra = useTranslations("disputes.overviewExtra");
+  const tSignal = useTranslations("disputes.signalLabel");
+  const tSource = useTranslations("disputes.sourceCaption");
+  const tItemStrength = useTranslations("disputes.itemStrength");
+  const tPill = useTranslations("disputes.overviewPill");
   const { data, derived, actions, clientState } = workspace;
 
   if (!data) return null;
@@ -240,14 +228,20 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
   /* ── F1: Failure short-circuit ── */
   if (derived.isFailed) {
-    const copy = (derived.failureCode && FAILURE_COPY[derived.failureCode]) || FAILURE_FALLBACK;
+    const failureCode = derived.failureCode;
+    const titleKey = failureCode && (failureCode === "order_fetch_failed")
+      ? `failureCopy.${failureCode}.title`
+      : "failureCopyFallback.title";
+    const bodyKey = failureCode && (failureCode === "order_fetch_failed")
+      ? `failureCopy.${failureCode}.body`
+      : "failureCopyFallback.body";
     return (
       <BlockStack gap="400">
-        <Banner tone="critical" title={copy.title}>
+        <Banner tone="critical" title={tExtra(titleKey)}>
           <BlockStack gap="300">
-            <Text as="p" variant="bodyMd">{copy.body}</Text>
+            <Text as="p" variant="bodyMd">{tExtra(bodyKey)}</Text>
             <Text as="p" variant="bodySm" tone="subdued">
-              Try rebuilding. If it keeps failing, contact support and reference this dispute.
+              {tExtra("retryHelp")}
             </Text>
             <InlineStack gap="200">
               <Button
@@ -256,7 +250,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 disabled={clientState.retrying}
                 loading={clientState.retrying}
               >
-                Retry build
+                {tExtra("retryBuild")}
               </Button>
             </InlineStack>
           </BlockStack>
@@ -605,7 +599,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const POLICY_FIELDS = new Set(["refund_policy", "shipping_policy", "cancellation_policy"]);
   const hasMissingPolicy = missingItems.some((m) => POLICY_FIELDS.has(m.field));
   const policyCta = submitted && hasMissingPolicy
-    ? { label: "Set up policies for future cases", url: withShopParams("/app/policies", searchParams) }
+    ? { label: tExtra("setUpPolicies"), url: withShopParams("/app/policies", searchParams) }
     : null;
 
   return (
@@ -800,14 +794,14 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             )}
             <Text as="p" variant="bodySm" tone="subdued">
               {submitted
-                ? `Submitted ${formatDate(submittedAt)}`
+                ? tExtra("submittedOn", { date: formatDate(submittedAt) })
                 : deadlineDays !== null && deadlineDays > 0
-                  ? `Submission deadline in ${deadlineDays} day${deadlineDays === 1 ? "" : "s"} (${formatDate(dispute.dueAt)})${deadlineUrgent ? " — urgent" : ""}`
+                  ? tExtra("submissionDeadlineIn", { days: deadlineDays, date: formatDate(dispute.dueAt), urgent: deadlineUrgent ? "yes" : "no" })
                   : deadlineDays !== null && deadlineDays <= 0
-                    ? `Submission deadline: Overdue (${formatDate(dispute.dueAt)})`
-                    : "No deadline set"}
+                    ? tExtra("submissionDeadlineOverdue", { date: formatDate(dispute.dueAt) })
+                    : tExtra("noDeadlineSet")}
             </Text>
-            <Text as="p" variant="bodySm" tone="subdued">{EVIDENCE_EVALUATION_HELPER}</Text>
+            <Text as="p" variant="bodySm" tone="subdued">{tExtra("evidenceEvaluationHelper")}</Text>
           </BlockStack>
         </div>
       )}
@@ -890,11 +884,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         if (!hasAnything) return null;
 
         const SOURCE_NOTE: Record<string, string> = {
-          auto_shopify: "From Shopify order data",
-          auto_policy: "From store policies",
-          auto_ipinfo: "From IP intelligence",
-          manual_upload: "Uploaded manually",
-          unavailable_from_source: "Not available from source",
+          auto_shopify: tSource("auto_shopify"),
+          auto_policy: tSource("auto_policy"),
+          auto_ipinfo: tSource("auto_ipinfo"),
+          manual_upload: tSource("manual_upload"),
+          unavailable_from_source: tSource("unavailable_from_source"),
         };
 
         // EvidenceLineItem.source is the *actual* provenance (e.g.
@@ -957,31 +951,31 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         const pillFor = (row: Row): { label: string; bg: string; color: string } => {
           const { classification } = row;
           if (classification.status === "missing") {
-            return { label: "Missing", bg: "#FEE2E2", color: "#991B1B" };
+            return { label: tPill("missing"), bg: "#FEE2E2", color: "#991B1B" };
           }
           if (classification.status === "not_applicable") {
-            return { label: "Not applicable", bg: "#F3F4F6", color: "#4B5563" };
+            return { label: tPill("not_applicable"), bg: "#F3F4F6", color: "#4B5563" };
           }
           if (classification.status === "waived") {
-            return { label: "Waived", bg: "#E5E7EB", color: "#374151" };
+            return { label: tPill("waived"), bg: "#E5E7EB", color: "#374151" };
           }
           // Internal-only — system withheld this signal from the
           // bank-facing argument because the payload is negative or
           // ambiguous. Same amber palette as the Internal-only Signals
           // section on the Evidence tab.
           if (isInternalOnlyRow(row)) {
-            return { label: "Internal only", bg: "#FEF3C7", color: "#78350F" };
+            return { label: tPill("internal_only"), bg: "#FEF3C7", color: "#78350F" };
           }
           // Collected — strength label.
           switch (classification.category) {
             case "strong":
-              return { label: "Strong", bg: "#D1FAE5", color: "#065F46" };
+              return { label: tItemStrength("strong"), bg: "#D1FAE5", color: "#065F46" };
             case "moderate":
-              return { label: "Moderate", bg: "#FEF3C7", color: "#92400E" };
+              return { label: tItemStrength("moderate"), bg: "#FEF3C7", color: "#92400E" };
             case "invalid":
-              return { label: "Invalid", bg: "#FEE2E2", color: "#991B1B" };
+              return { label: tPill("invalid"), bg: "#FEE2E2", color: "#991B1B" };
             default:
-              return { label: "Supporting", bg: "#E5E7EB", color: "#374151" };
+              return { label: tItemStrength("supporting"), bg: "#E5E7EB", color: "#374151" };
           }
         };
 
@@ -1154,7 +1148,14 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                     lineHeight: 1.4,
                   }}
                 >
-                  {spec.label}
+                  {(() => {
+                    try {
+                      const k = tSignal(spec.signalId);
+                      return k && k !== spec.signalId ? k : spec.label;
+                    } catch {
+                      return spec.label;
+                    }
+                  })()}
                 </p>
                 {sourceNote && (
                   <p
@@ -1191,7 +1192,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                       size="slim"
                       onClick={() => actions.navigateToEvidence(item.field)}
                     >
-                      Add this evidence
+                      {tExtra("addThisEvidence")}
                     </Button>
                   </div>
                 )}

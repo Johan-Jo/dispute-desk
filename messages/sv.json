@@ -627,7 +627,7 @@
       "supplementary_documents": "Kompletterande dokument",
       "fraud_screening": "Bedrägerikontroll före auktorisering"
     },
-    "familyLabel": {
+    "reasonFamilyLabel": {
       "fraud": "bedrägeri",
       "delivery": "leverans",
       "product": "produktbeskrivning",
@@ -856,7 +856,33 @@
       "autoSubmitPausedBody": "DisputeDesk bygger ditt försvar automatiskt, men skickar bara in när paketet uppfyller din tröskel för automatisk inskickning. Detta paket klarade inte ribban, så vi stannade och lämnade över till dig.",
       "whyPrefix": "Anledning:",
       "submitToShopify": "Skicka in till Shopify",
-      "viewInShopify": "Visa i Shopify Admin"
+      "viewInShopify": "Visa i Shopify Admin",
+      "addThisEvidence": "Lägg till detta bevis",
+      "submittedOn": "Inskickat {date}",
+      "submissionDeadlineIn": "Sista inlämningsdatum om {days, plural, =1 {1 dag} other {# dagar}} ({date}){urgent, select, yes { — brådskande} other {}}",
+      "submissionDeadlineOverdue": "Sista inlämningsdatum: Försenat ({date})",
+      "noDeadlineSet": "Ingen tidsfrist satt",
+      "evidenceEvaluationHelper": "Detta ärende bedöms baserat på de starkaste tillgängliga bevisen. Vissa ytterligare bevis ingår inte men krävs inte för ett framgångsrikt utfall.",
+      "failureCopy": {
+        "order_fetch_failed": {
+          "title": "Vi kunde inte hämta Shopify-orderdata",
+          "body": "Detta paket kunde inte byggas eftersom vi inte kunde ladda den underliggande ordern från Shopify. Detta är ett systemproblem på vår sida — inte saknade bevis på din."
+        }
+      },
+      "failureCopyFallback": {
+        "title": "Vi kunde inte slutföra bygget av detta paket",
+        "body": "Något gick fel när bevispaketet sammanställdes. Detta är ett systemproblem, inte ett problem med saknade bevis."
+      },
+      "retryHelp": "Försök bygga om. Om det fortsätter att misslyckas, kontakta supporten och referera till denna tvist.",
+      "retryBuild": "Försök bygga om",
+      "setUpPolicies": "Konfigurera policys för framtida ärenden"
+    },
+    "overviewPill": {
+      "missing": "Saknas",
+      "not_applicable": "Ej tillämpligt",
+      "waived": "Undantaget",
+      "internal_only": "Endast internt",
+      "invalid": "Ogiltigt"
     },
     "evidenceTabExtra": {
       "buildFailedTitle": "Bygget av bevispaketet misslyckades",
@@ -879,7 +905,12 @@
       "checkForUpdate": "Sök efter uppdatering",
       "checking": "Söker…",
       "newEvidenceAvailableTitle": "Nya bevis tillgängliga — uppdatera detta utkast",
-      "couldNotLoadTitle": "Kunde inte ladda försvarspaket"
+      "couldNotLoadTitle": "Kunde inte ladda försvarspaket",
+      "deadlinePassed": "Tidsfrist passerad",
+      "dueToday": "Förfaller idag",
+      "dueInOneDay": "Förfaller om 1 dag",
+      "dueInNDays": "Förfaller om {days, plural, =1 {1 dag} other {# dagar}}",
+      "unknownError": "okänt fel"
     },
     "defencePackageHtml": {
       "orderLineItems": "Orderartiklar",

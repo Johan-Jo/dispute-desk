@@ -184,6 +184,25 @@ function findViolations(file) {
         text: value,
       });
     }
+
+    // (C) Object-literal user-facing field: `label: "Foo bar"`,
+    // `title: "Foo bar"`, etc. Catches helper functions like
+    // `caseStrengthPillColors()` that build pill objects with raw
+    // English labels. Same allowlist as JSX props.
+    const objFieldRe = /\b([a-zA-Z]+)\s*:\s*(["'])([^"'\n]+?)\2/g;
+    while ((m = objFieldRe.exec(line)) !== null) {
+      const key = m[1];
+      const value = m[3];
+      if (!USER_FACING_PROPS.has(key)) continue;
+      if (!isLikelyEnglish(value)) continue;
+      violations.push({
+        file,
+        line: i + 1,
+        col: m.index + 1,
+        kind: `obj:${key}`,
+        text: value,
+      });
+    }
   }
 
   return violations;

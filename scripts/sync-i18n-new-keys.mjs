@@ -21,7 +21,7 @@ const en = JSON.parse(fs.readFileSync(path.join(repoRoot, "messages/en.json"), "
 
 const NEW_DISPUTES_NAMESPACES = [
   "signalLabel",
-  "familyLabel",
+  "reasonFamilyLabel",
   "decisiveHint",
   "decisiveFamilies",
   "strengthReason",
@@ -37,6 +37,7 @@ const NEW_DISPUTES_NAMESPACES = [
   "evidenceTabExtra",
   "completeDefencePackage",
   "defencePackageHtml",
+  "overviewPill",
 ];
 
 const TOP_LEVEL_NEW_KEYS = [
@@ -72,12 +73,46 @@ for (const locale of LOCALES) {
   let added = 0;
 
   if (!data.disputes) data.disputes = {};
+  // Deep-merge: when a namespace already exists in the target locale,
+  // walk it and only add MISSING sub-keys. Never overwrites existing
+  // translations. Recurses through nested objects too.
+  const deepFill = (src, dst) => {
+    let count = 0;
+    if (src == null || typeof src !== "object" || Array.isArray(src)) return 0;
+    for (const [k, v] of Object.entries(src)) {
+      if (v != null && typeof v === "object" && !Array.isArray(v)) {
+        if (dst[k] == null || typeof dst[k] !== "object" || Array.isArray(dst[k])) {
+          dst[k] = JSON.parse(JSON.stringify(v));
+          count += 1;
+        } else {
+          count += deepFill(v, dst[k]);
+        }
+      } else {
+        if (!(k in dst)) {
+          dst[k] = v;
+          count += 1;
+        }
+      }
+    }
+    return count;
+  };
   for (const ns of NEW_DISPUTES_NAMESPACES) {
     const enValue = en.disputes?.[ns];
     if (enValue === undefined) continue;
     if (data.disputes[ns] === undefined) {
       data.disputes[ns] = JSON.parse(JSON.stringify(enValue));
       added += 1;
+    } else if (
+      typeof enValue === "object" && !Array.isArray(enValue) &&
+      typeof data.disputes[ns] === "object" && !Array.isArray(data.disputes[ns])
+    ) {
+      added += deepFill(enValue, data.disputes[ns]);
+    } else if (typeof enValue === "object" && typeof data.disputes[ns] !== "object") {
+      // Collision: target has a scalar where the new namespace expects
+      // an object. Don't clobber — log and skip so the human can
+      // resolve. (Happens when an older locale shipped a flat string
+      // key with the same name as the new nested namespace.)
+      console.warn(`  ${locale}: skipping disputes.${ns} — existing scalar collides with new namespace`);
     }
   }
 
