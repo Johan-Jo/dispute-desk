@@ -46,6 +46,7 @@ interface Props {
 
 export default function EvidenceTab({ workspace }: Props) {
   const t = useTranslations("disputes.evidenceTab");
+  const tExtra = useTranslations("disputes.evidenceTabExtra");
   const locale = useLocale();
   const { data, derived, clientState, actions } = workspace;
   const sections = useEvidenceSections(workspace);
@@ -65,7 +66,7 @@ export default function EvidenceTab({ workspace }: Props) {
   // Distinct from evidence gaps: the build itself errored. Short,
   // honest copy — never a stack trace, never the raw failureReason.
   const failedBanner = derived.isFailed ? (
-    <Banner tone="critical" title="Evidence pack build failed">
+    <Banner tone="critical" title={tExtra("buildFailedTitle")}>
       <p>
         We couldn&apos;t build this evidence pack. Try resyncing the dispute or
         regenerating the pack from the dispute header.
@@ -125,8 +126,8 @@ export default function EvidenceTab({ workspace }: Props) {
   // the Shopify dispute, which is the truth in that case.
   const buildingBanner =
     derived.isBuilding && !derived.isRegenerating && !isWindowClosed ? (
-      <Banner tone="info" title="Building evidence pack">
-        <p>The pack is being assembled. Refresh shortly to see updates.</p>
+      <Banner tone="info" title={tExtra("buildingTitle")}>
+        <p>{tExtra("buildingBody")}</p>
       </Banner>
     ) : null;
 
@@ -229,8 +230,8 @@ export default function EvidenceTab({ workspace }: Props) {
   // empty-state forms; this banner is the merchant-facing prompt.
   const noPackBanner =
     !data?.pack && !derived.isBuilding && !derived.isFailed ? (
-      <Banner tone="warning" title="No evidence pack yet">
-        <p>Generate an evidence pack from the dispute header to see your defense.</p>
+      <Banner tone="warning" title={tExtra("noPackTitle")}>
+        <p>{tExtra("noPackBody")}</p>
       </Banner>
     ) : null;
 

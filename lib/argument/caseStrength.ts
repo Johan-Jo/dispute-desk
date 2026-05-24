@@ -32,6 +32,7 @@ import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type {
   CaseStrengthResult,
   CaseStrengthLevel,
+  I18nToken,
   ImprovementSignal,
 } from "./types";
 import {
@@ -43,6 +44,28 @@ import {
   type SignalId,
 } from "./canonicalEvidence";
 import { resolveReasonFamily, type ReasonFamily } from "./reasonFamily";
+
+/** Canonical signal → i18n key for the merchant-facing label. The
+ *  English string still lives in the registry for tests and server
+ *  rendering, but UI render sites must use this map to look up the
+ *  translated label via `t("disputes.signalLabel.<signalId>")`. */
+const SIGNAL_LABEL_KEY: Record<SignalId, string> = {
+  payment_auth: "disputes.signalLabel.payment_auth",
+  billing_match: "disputes.signalLabel.billing_match",
+  delivery: "disputes.signalLabel.delivery",
+  ip_location: "disputes.signalLabel.ip_location",
+  device_session: "disputes.signalLabel.device_session",
+  communication: "disputes.signalLabel.communication",
+  account_history: "disputes.signalLabel.account_history",
+  order_record: "disputes.signalLabel.order_record",
+  product_listing: "disputes.signalLabel.product_listing",
+  policy_refund: "disputes.signalLabel.policy_refund",
+  policy_shipping: "disputes.signalLabel.policy_shipping",
+  policy_cancellation: "disputes.signalLabel.policy_cancellation",
+  duplicate_explanation: "disputes.signalLabel.duplicate_explanation",
+  supplementary_documents: "disputes.signalLabel.supplementary_documents",
+  fraud_screening: "disputes.signalLabel.fraud_screening",
+};
 
 /* ── Per-family merchant-facing copy (template strings only — no
  *     scoring logic) ── */
@@ -253,6 +276,100 @@ function composeStrengthReason(args: {
   return `This is weak because the defence package contains mostly supporting documentation, but no decisive ${familyLabel} evidence. ${decisive.charAt(0).toUpperCase()}${decisive.slice(1)} would strengthen the case.`;
 }
 
+/** i18n-token sibling of `composeStrengthReason`. Emits a structured
+ *  `{ key, params }` token where label params are themselves i18n keys
+ *  the UI must resolve first, then plug into the outer sentence via
+ *  `t(...)` with the pre-translated label string.
+ *
+ *  The shape mirrors the English composition exactly so the UI can
+ *  render the same sentence in any locale. Labels are referenced by
+ *  signalId — UI looks them up in `SIGNAL_LABEL_KEY`. */
+function composeStrengthReasonI18n(args: {
+  overall: CaseStrengthLevel;
+  family: ReasonFamily;
+  strong: ContributionRow[];
+  moderate: ContributionRow[];
+  isFraudAvsOnlyStrong?: boolean;
+}): I18nToken {
+  const { overall, family, strong, moderate, isFraudAvsOnlyStrong } = args;
+
+  if (overall === "insufficient") {
+    return { key: `disputes.strengthReason.${family}.insufficient` };
+  }
+
+  if (overall === "strong") {
+    if (strong.length >= 2) {
+      return {
+        key: "disputes.strengthReason.strong.multi",
+        params: {
+          labelKey1: SIGNAL_LABEL_KEY[strong[0].signalId],
+          labelKey2: SIGNAL_LABEL_KEY[strong[1].signalId],
+          labelKey3: strong[2] ? SIGNAL_LABEL_KEY[strong[2].signalId] : "",
+          count: strong.length,
+        },
+      };
+    }
+    if (strong[0]) {
+      return {
+        key: "disputes.strengthReason.strong.single",
+        params: { labelKey: SIGNAL_LABEL_KEY[strong[0].signalId] },
+      };
+    }
+    return { key: "disputes.strengthReason.strong.fallback" };
+  }
+
+  if (overall === "moderate") {
+    if (isFraudAvsOnlyStrong) {
+      return { key: "disputes.strengthReason.moderate.fraudAvsOnly" };
+    }
+    if (strong[0] && moderate[0]) {
+      return {
+        key: "disputes.strengthReason.moderate.strongAndModerate",
+        params: {
+          strongLabelKey: SIGNAL_LABEL_KEY[strong[0].signalId],
+          moderateLabelKey: SIGNAL_LABEL_KEY[moderate[0].signalId],
+        },
+      };
+    }
+    if (strong[0]) {
+      return {
+        key: "disputes.strengthReason.moderate.strongOnly",
+        params: { labelKey: SIGNAL_LABEL_KEY[strong[0].signalId] },
+      };
+    }
+    return { key: `disputes.strengthReason.${family}.moderate` };
+  }
+
+  // overall === "weak"
+  if (strong.length === 1 && moderate.length === 0) {
+    return {
+      key: "disputes.strengthReason.weak.strongAlone",
+      params: {
+        labelKey: SIGNAL_LABEL_KEY[strong[0].signalId],
+        hintKey: `disputes.decisiveHint.${family}`,
+      },
+    };
+  }
+  if (strong.length === 0 && moderate.length >= 1) {
+    return {
+      key: "disputes.strengthReason.weak.moderateOnly",
+      params: {
+        labelKey1: SIGNAL_LABEL_KEY[moderate[0].signalId],
+        labelKey2: moderate[1] ? SIGNAL_LABEL_KEY[moderate[1].signalId] : "",
+        hintKey: `disputes.decisiveHint.${family}`,
+      },
+    };
+  }
+  // strong=0 AND moderate=0 — true "weak" with only supporting context.
+  return {
+    key: "disputes.strengthReason.weak.supportingOnly",
+    params: {
+      familyKey: `disputes.familyLabel.${family}`,
+      decisiveKey: `disputes.decisiveFamilies.${family}`,
+    },
+  };
+}
+
 /* ── Public API ── */
 
 /**
@@ -367,12 +484,20 @@ export function calculateCaseStrength(
       supportedClaims: 0,
       totalClaims: 0,
       improvementHint: null,
+      improvementHintI18n: null,
       heroVariant: earlyCovered ? "covered" : "hard_to_win",
       strengthReason: earlyCovered
         ? COVERED_STRENGTH_REASON
         : earlyFatal
           ? (fatalLoss?.message ?? STRENGTH_REASONS[family].weak)
           : STRENGTH_REASONS[family].insufficient,
+      strengthReasonI18n: earlyCovered
+        ? { key: "disputes.strengthReason.covered" }
+        : earlyFatal
+          ? (fatalLoss?.reason
+              ? { key: `disputes.strengthReason.fatalLoss.${fatalLoss.reason}` }
+              : { key: `disputes.strengthReason.${family}.weak` })
+          : { key: `disputes.strengthReason.${family}.insufficient` },
       coverage: coverage ?? undefined,
       fatalLoss: fatalLoss ?? undefined,
       // No checklist → no scoring → the risk-weakness cap is a no-op
@@ -534,15 +659,30 @@ export function calculateCaseStrength(
 
   // Improvement hint (highest-default-category missing actionable).
   let improvementHint: string | null = null;
+  let improvementHintI18n: I18nToken | null = null;
   if (overall !== "strong" && missingActionableTopField) {
     const label = CANONICAL_EVIDENCE[missingActionableTopField.field]?.label ?? missingActionableTopField.field;
     improvementHint = `Add ${label.toLowerCase()} to strengthen your case.`;
+    const spec = CANONICAL_EVIDENCE[missingActionableTopField.field];
+    if (spec) {
+      improvementHintI18n = {
+        key: "disputes.improvementHint",
+        params: { labelKey: SIGNAL_LABEL_KEY[spec.signalId] },
+      };
+    }
   }
 
   // Compose strengthReason from the actual contributions instead of a
   // static per-family table. Guarantees the hero copy never claims a
   // signal is "missing" when it's already in the contribution list.
   const strengthReason = composeStrengthReason({
+    overall,
+    family,
+    strong: strongRows,
+    moderate: moderateRows,
+    isFraudAvsOnlyStrong,
+  });
+  const strengthReasonI18nToken = composeStrengthReasonI18n({
     overall,
     family,
     strong: strongRows,
@@ -591,6 +731,13 @@ export function calculateCaseStrength(
     : isFatalLoss
       ? (fatalLoss?.message ?? STRENGTH_REASONS[family].weak)
       : strengthReason;
+  const finalStrengthReasonI18n: I18nToken = isCovered
+    ? { key: "disputes.strengthReason.covered" }
+    : isFatalLoss
+      ? (fatalLoss?.reason
+          ? { key: `disputes.strengthReason.fatalLoss.${fatalLoss.reason}` }
+          : { key: `disputes.strengthReason.${family}.weak` })
+      : strengthReasonI18nToken;
 
   return {
     overall,
@@ -602,8 +749,10 @@ export function calculateCaseStrength(
     supportedClaims: 0,
     totalClaims: 0,
     improvementHint: isCovered || isFatalLoss ? null : improvementHint,
+    improvementHintI18n: isCovered || isFatalLoss ? null : improvementHintI18n,
     heroVariant,
     strengthReason: finalStrengthReason,
+    strengthReasonI18n: finalStrengthReasonI18n,
     coverage: coverage ?? undefined,
     fatalLoss: fatalLoss ?? undefined,
     riskWeakness: riskWeakness ?? undefined,

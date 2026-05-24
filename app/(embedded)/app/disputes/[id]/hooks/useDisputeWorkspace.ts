@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type {
   WorkspaceData,
   ChecklistItemV2,
@@ -238,6 +238,17 @@ function deriveEvidenceWithStrength(
 
 function deriveMissingItems(
   checklist: ChecklistItemV2[],
+  translators: {
+    whyText: (field: string) => string;
+    sourceCaption: (field: string) => string;
+    fieldActionCta: (field: string) => string;
+    fieldActionFormats: (field: string) => string;
+    fieldActionSkip: (field: string) => string;
+    impactFallback: string;
+    sourceFallback: string;
+    recCritical: string;
+    recOptional: string;
+  },
 ): MissingItemWithContext[] {
   return checklist
     .filter((c) => c.status === "missing")
@@ -255,14 +266,14 @@ function deriveMissingItems(
         field: c.field,
         label: c.label,
         priority: c.priority,
-        impact: WHY_TEXT[c.field] ?? "Strengthens your dispute response",
-        source: SOURCE_MAP[c.field] ?? "Upload or provide manually",
+        impact: translators.whyText(c.field) || WHY_TEXT[c.field] || translators.impactFallback,
+        source: translators.sourceCaption(c.field) || SOURCE_MAP[c.field] || translators.sourceFallback,
         effort: EFFORT_MAP[c.field] ?? ("medium" as const),
-        recommendation: c.priority === "critical" ? "Would strengthen your case" : "Recommended if available",
+        recommendation: c.priority === "critical" ? translators.recCritical : translators.recOptional,
         actionType: action.actionType,
-        ctaLabel: action.ctaLabel,
-        acceptedFormats: action.acceptedFormats,
-        skipLabel: action.skipLabel,
+        ctaLabel: translators.fieldActionCta(c.field) || action.ctaLabel,
+        acceptedFormats: translators.fieldActionFormats(c.field) || action.acceptedFormats,
+        skipLabel: translators.fieldActionSkip(c.field) || action.skipLabel,
       };
     });
 }
@@ -382,6 +393,12 @@ export interface DerivedState {
 
 export function useDisputeWorkspace(disputeId: string) {
   const locale = useLocale();
+  const tSource = useTranslations("disputes.sourceCaption");
+  const tWhy = useTranslations("disputes.whyText");
+  const tFieldAction = useTranslations("disputes.fieldAction");
+  const tWorkspace = useTranslations("disputes.workspaceHook");
+  const tRec = useTranslations("disputes.recommendation");
+  const tDisputes = useTranslations("disputes");
 
   const [data, setData] = useState<WorkspaceData | null>(null);
   const [clientState, setClientState] = useState<WorkspaceClientState>({
@@ -917,7 +934,30 @@ export function useDisputeWorkspace(disputeId: string) {
     );
 
     const categories = deriveCategories(items);
-    const missingItems = deriveMissingItems(effectiveChecklist);
+    const safeT = (t: ReturnType<typeof useTranslations>, key: string): string => {
+      try {
+        const v = t(key);
+        return v === key ? "" : v;
+      } catch {
+        return "";
+      }
+    };
+    const safeTNested = (
+      t: ReturnType<typeof useTranslations>,
+      field: string,
+      sub: string,
+    ): string => safeT(t, `${field}.${sub}`);
+    const missingItems = deriveMissingItems(effectiveChecklist, {
+      whyText: (field) => safeT(tWhy, field),
+      sourceCaption: (field) => safeT(tSource, field),
+      fieldActionCta: (field) => safeTNested(tFieldAction, field, "ctaLabel") || safeTNested(tFieldAction, "default", "ctaLabel"),
+      fieldActionFormats: (field) => safeTNested(tFieldAction, field, "acceptedFormats") || safeTNested(tFieldAction, "default", "acceptedFormats"),
+      fieldActionSkip: (field) => safeTNested(tFieldAction, field, "skipLabel") || safeTNested(tFieldAction, "default", "skipLabel"),
+      impactFallback: safeT(tWorkspace, "impactFallback") || "Strengthens your dispute response",
+      sourceFallback: safeT(tWorkspace, "sourceFallback") || "Upload or provide manually",
+      recCritical: safeT(tWorkspace, "recCritical") || "Would strengthen your case",
+      recOptional: safeT(tWorkspace, "recOptional") || "Recommended if available",
+    });
 
     // Readiness. A pack is "saved" when its status reflects a successful
     // save OR it carries a saved_to_shopify_at timestamp. The timestamp is
@@ -959,7 +999,54 @@ export function useDisputeWorkspace(disputeId: string) {
           shopifyProtectStatus: data.pack.coverage.shopifyProtectStatus,
         }
       : undefined;
-    const caseStrength = calculateCaseStrength(effectiveChecklist, data.dispute.reason, payloadSource, coverageInput);
+    const caseStrengthRaw = calculateCaseStrength(effectiveChecklist, data.dispute.reason, payloadSource, coverageInput);
+    // Resolve i18n tokens into locale-appropriate strings so downstream
+    // UI consumers (OverviewTab, CaseSummaryCard) can keep reading
+    // `caseStrength.strengthReason` / `improvementHint` as today.
+    const caseStrength = (() => {
+      const reasonToken = caseStrengthRaw.strengthReasonI18n;
+      const hintToken = caseStrengthRaw.improvementHintI18n;
+      const resolveTopLevel = (key: string, params?: Record<string, string | number>): string | null => {
+        try {
+          // Use the global translator off `tRec` parent to resolve any
+          // top-level `disputes.*` key. We accept the bound scope cost
+          // because we want any of: signalLabel.*, strengthReason.*,
+          // improvementHint, decisiveHint.*, etc.
+          // Strip the leading "disputes." prefix and use a fresh
+          // translator at "disputes" namespace.
+          // Note: next-intl scopes are static per-hook-call, so we
+          // create a workaround: read via a parent-scoped translator
+          // that's injected below.
+          return tDisputes(key.startsWith("disputes.") ? key.slice("disputes.".length) : key, params as never) as string;
+        } catch {
+          return null;
+        }
+      };
+      const resolveLabel = (params?: Record<string, string | number>): Record<string, string | number> => {
+        if (!params) return {};
+        const out: Record<string, string | number> = { ...params };
+        for (const [k, v] of Object.entries(params)) {
+          if (typeof v !== "string") continue;
+          if (!v.startsWith("disputes.")) continue;
+          const resolved = resolveTopLevel(v);
+          if (resolved != null) out[k] = resolved;
+        }
+        return out;
+      };
+      let strengthReason = caseStrengthRaw.strengthReason;
+      if (reasonToken) {
+        const resolvedParams = resolveLabel(reasonToken.params);
+        const translated = resolveTopLevel(reasonToken.key, resolvedParams);
+        if (translated && translated !== reasonToken.key) strengthReason = translated;
+      }
+      let improvementHint = caseStrengthRaw.improvementHint;
+      if (hintToken) {
+        const resolvedParams = resolveLabel(hintToken.params);
+        const translated = resolveTopLevel(hintToken.key, resolvedParams);
+        if (translated && translated !== hintToken.key) improvementHint = translated;
+      }
+      return { ...caseStrengthRaw, strengthReason, improvementHint };
+    })();
     const contributions = computeContributions(effectiveChecklist, payloadSource);
     const whyWins = generateWhyWins(effectiveChecklist, caseStrength.overall);
     const risk = generateRiskExplanation(effectiveChecklist, caseStrength.overall);
@@ -976,14 +1063,36 @@ export function useDisputeWorkspace(disputeId: string) {
     // Recommendation copy — produced by the shared backend module
     // `lib/argument/recommendation.ts`. Plan v3 §3.A.6: the UI must
     // not synthesise these strings inline.
+    //
+    // i18n (2026-05-24): the lib emits structured tokens
+    // (`textI18n`, `helperI18n`) alongside the legacy English fields.
+    // We resolve the tokens via the next-intl translator so the UI
+    // gets locale-appropriate copy; the legacy English strings stay
+    // available as a server-side / test fallback.
     const isReadOnly = (isSaved ?? false) || clientState.justSubmitted;
-    const { text: recommendationText, helperText: recommendationHelperText } =
-      generateRecommendation({
-        submitted: isReadOnly,
-        strength: caseStrength.overall,
-        topMissing: missingItems[0] ?? null,
-        submittedAt: pack?.savedToShopifyAt ?? null,
-      });
+    const recOutput = generateRecommendation({
+      submitted: isReadOnly,
+      strength: caseStrength.overall,
+      topMissing: missingItems[0] ?? null,
+      submittedAt: pack?.savedToShopifyAt ?? null,
+    });
+    const renderToken = (t: ReturnType<typeof useTranslations>, token: { key: string; params?: Record<string, string | number> } | null | undefined, fallback: string): string => {
+      if (!token) return fallback;
+      // Strip the leading `disputes.recommendation.` prefix so we can
+      // call the scoped translator.
+      const PREFIX = "disputes.recommendation.";
+      const key = token.key.startsWith(PREFIX) ? token.key.slice(PREFIX.length) : token.key;
+      try {
+        const out = t(key, token.params as never);
+        return typeof out === "string" && out !== key ? out : fallback;
+      } catch {
+        return fallback;
+      }
+    };
+    const recommendationText = renderToken(tRec, recOutput.textI18n, recOutput.text);
+    const recommendationHelperText = recOutput.helperI18n
+      ? renderToken(tRec, recOutput.helperI18n, recOutput.helperText ?? "")
+      : recOutput.helperText;
 
     return {
       effectiveChecklist: items,

@@ -13,6 +13,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   ActionList,
   Badge,
@@ -204,6 +205,7 @@ export function CompleteDefencePackageCard({
   evidenceSentOn,
   onSubmitted,
 }: Props) {
+  const t = useTranslations("disputes.completeDefencePackage");
   // Network-submitted: Shopify has forwarded the evidence to the card
   // network. Distinct from "saved to Shopify" — the bank now holds the
   // evidence and Shopify can no longer swap the saved PDF on the
@@ -561,7 +563,7 @@ export function CompleteDefencePackageCard({
     return (
       <div style={DEFENCE_CARD_STYLE}>
         <BlockStack gap="300">
-          <h2 style={CARD_TITLE_STYLE}>Complete Defence Package</h2>
+          <h2 style={CARD_TITLE_STYLE}>{t("headingMain")}</h2>
           <Spinner accessibilityLabel="Loading defence package" size="small" />
         </BlockStack>
       </div>
@@ -656,7 +658,7 @@ export function CompleteDefencePackageCard({
       <div style={DEFENCE_CARD_STYLE}>
         <BlockStack gap="400">
           <div>
-            <h2 style={CARD_TITLE_STYLE}>Complete Defence Package</h2>
+            <h2 style={CARD_TITLE_STYLE}>{t("headingMain")}</h2>
             <p style={CARD_HELP_STYLE}>
               DisputeDesk prepares a bank-facing PDF that combines approved Shopify
               evidence, payment signals, fulfilment proof, customer communication,
@@ -683,7 +685,7 @@ export function CompleteDefencePackageCard({
                   copy falls back to the pre-2026-05-20 "Submitted
                   package" phrasing. */}
               {submitPending ? (
-                <Banner tone="info" title="Saving to Shopify…">
+                <Banner tone="info" title={t("savingTitle")}>
                   <Text as="p" variant="bodySm">
                     DisputeDesk has accepted your submission and is uploading the
                     defence package to Shopify. This usually completes in under
@@ -724,7 +726,7 @@ export function CompleteDefencePackageCard({
                   network has the evidence. Sets expectation without
                   promising the network's exact turnaround. */}
               {outcomeExpected ? (
-                <Banner tone="info" title="Card network reviewing">
+                <Banner tone="info" title={t("cardNetworkReviewingTitle")}>
                   <Text as="p" variant="bodySm">
                     Visa and Mastercard typically post an outcome within
                     {" "}{NETWORK_REVIEW_WINDOW_DAYS} days of forwarding. Expect a
@@ -865,7 +867,7 @@ export function CompleteDefencePackageCard({
           )}
 
           {row.status === "skipped" && row.failure_code === "covered_shopify" && (
-            <Banner tone="info" title="Covered by Shopify Protect">
+            <Banner tone="info" title={t("coveredByShopifyProtectTitle")}>
               <p>
                 This dispute is covered by Shopify Protect. No bank-facing defence
                 package is required.
@@ -874,7 +876,7 @@ export function CompleteDefencePackageCard({
           )}
 
           {row.status === "skipped" && row.failure_code === "no_bank_eligible_facts" && (
-            <Banner tone="warning" title="Not enough bank-facing evidence">
+            <Banner tone="warning" title={t("notEnoughEvidenceTitle")}>
               <p>
                 The classifier did not find any bank-eligible approved facts for
                 this dispute. Upload additional supporting documents or wait for
@@ -884,7 +886,7 @@ export function CompleteDefencePackageCard({
           )}
 
           {row.status === "failed" && (
-            <Banner tone="critical" title="Validation failed">
+            <Banner tone="critical" title={t("validationFailedTitle")}>
               <BlockStack gap="200">
                 <p>{row.failure_reason ?? "Validation found unsupported claims in the generated narrative."}</p>
                 {row.validation_errors?.length > 0 && (
@@ -917,24 +919,18 @@ export function CompleteDefencePackageCard({
           {row.status === "stale" && rebuildInFlight && (
             <Banner
               tone="info"
-              title="Building your new defence package…"
+              title={t("buildingNewPackageTitle")}
               action={{
-                content: loading ? "Checking…" : "Check for update",
+                content: loading ? t("checking") : t("checkForUpdate"),
                 onAction: () => void load(),
                 loading,
               }}
             >
-              <p>
-                We&rsquo;re rebuilding the evidence pack and drafting a fresh
-                narrative + PDF based on the latest data. This usually takes
-                2&ndash;3 minutes. Click <strong>Check for update</strong>{" "}
-                in a couple of minutes to see if the new version is ready —
-                or leave this tab open and come back later.
-              </p>
+              <p>{t("buildingNewPackageBody")}</p>
             </Banner>
           )}
           {row.status === "stale" && !rebuildInFlight && (
-            <Banner tone="warning" title="New evidence available — refresh this draft">
+            <Banner tone="warning" title={t("newEvidenceAvailableTitle")}>
               <p>
                 Recent updates (uploads, status changes, or new auto-collected
                 signals) aren&rsquo;t reflected in this draft yet. Click
@@ -1068,7 +1064,7 @@ export function CompleteDefencePackageCard({
           </InlineStack>
 
           {error && (
-            <Banner tone="warning" title="Could not load defence package">
+            <Banner tone="warning" title={t("couldNotLoadTitle")}>
               <p>{error}</p>
             </Banner>
           )}

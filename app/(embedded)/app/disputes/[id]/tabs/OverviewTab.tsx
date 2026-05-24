@@ -219,6 +219,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // waive modal copy; reuse them here so the Overview row caption
   // matches the modal verbatim.
   const tEvidence = useTranslations("disputes.evidenceTab");
+  const tExtra = useTranslations("disputes.overviewExtra");
   const { data, derived, actions, clientState } = workspace;
 
   if (!data) return null;
@@ -614,19 +615,17 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
       {/* F2: Auto-save denied banner — preserved from existing logic */}
       {autoSaveBlock && (
-        <Banner tone="warning" title="Auto-submit paused — your review needed">
+        <Banner tone="warning" title={tExtra("autoSubmitPausedTitle")}>
           <BlockStack gap="200">
             <Text as="p" variant="bodyMd">
-              DisputeDesk builds your defense automatically, but only auto-submits when the
-              pack meets your auto-submit threshold. This pack didn’t clear the bar, so
-              we stopped and handed it to you.
+              {tExtra("autoSubmitPausedBody")}
             </Text>
             {autoSaveBlock.reasons.length > 0 && (
-              <Text as="p" variant="bodySm">Why: {autoSaveBlock.reasons.join(" • ")}</Text>
+              <Text as="p" variant="bodySm">{tExtra("whyPrefix")} {autoSaveBlock.reasons.join(" • ")}</Text>
             )}
             <InlineStack gap="200">
-              <Button onClick={goToEvidence}>Add missing evidence</Button>
-              <Button variant="primary" onClick={goToReview}>Submit now anyway</Button>
+              <Button onClick={goToEvidence}>{tExtra("addMissingEvidence")}</Button>
+              <Button variant="primary" onClick={goToReview}>{tExtra("submitAnyway")}</Button>
             </InlineStack>
           </BlockStack>
         </Banner>
@@ -736,7 +735,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       {/* O2: Timeline — step titles colored per state (green/blue/gray) per Figma */}
       <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
         <BlockStack gap="300">
-          <Text as="h3" variant="headingSm">What happens now</Text>
+          <Text as="h3" variant="headingSm">{tExtra("whatHappensNow")}</Text>
           <BlockStack gap="300">
             {timeline.map((step, i) => {
               const isLast = i === timeline.length - 1;
@@ -1220,9 +1219,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
             <BlockStack gap="300">
               <BlockStack gap="100">
-                <Text as="h3" variant="headingSm">Evidence collected</Text>
+                <Text as="h3" variant="headingSm">{tExtra("evidenceCollected")}</Text>
                 <Text as="p" variant="bodySm" tone="subdued">
-                  Ordered by how much each item strengthens the case. Strongest first.
+                  {tExtra("evidenceOrderingHelper")}
                 </Text>
               </BlockStack>
 
@@ -1439,7 +1438,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         <InlineStack gap="200" blockAlign="center" wrap={false}>
           <BlockStack gap="050">
             <InlineStack gap="200" blockAlign="center">
-              <Text as="p" variant="bodyMd" fontWeight="semibold">Automation rule:</Text>
+              <Text as="p" variant="bodyMd" fontWeight="semibold">{tExtra("automationRule")}</Text>
               <Badge tone={appliedRule?.mode === "auto" ? "success" : appliedRule?.mode === "review" ? "attention" : undefined}>
                 {appliedModeLabel}
               </Badge>
@@ -1447,7 +1446,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             <Text as="p" variant="bodySm" tone="subdued">{appliedModeHelp}</Text>
           </BlockStack>
           <div style={{ marginLeft: "auto" }}>
-            <Button url={rulesUrl}>Change rule</Button>
+            <Button url={rulesUrl}>{tExtra("changeRule")}</Button>
           </div>
         </InlineStack>
       </div>
@@ -1456,9 +1455,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       <InlineStack gap="200" align="end">
         {!submitted && (
           <>
-            <Button onClick={goToEvidence} icon={AlertCircleIcon}>Edit evidence</Button>
+            <Button onClick={goToEvidence} icon={AlertCircleIcon}>{tExtra("editEvidence")}</Button>
             <Button variant="primary" onClick={goToReview} icon={ShieldCheckMarkIcon} size="large">
-              Submit to Shopify
+              {tExtra("submitToShopify")}
             </Button>
           </>
         )}
@@ -1467,7 +1466,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             {policyCta && <Button url={policyCta.url}>{policyCta.label}</Button>}
             {shopifyAdminUrl && (
               <Button variant="primary" url={shopifyAdminUrl} target="_blank" size="large">
-                View in Shopify Admin
+                {tExtra("viewInShopify")}
               </Button>
             )}
           </>

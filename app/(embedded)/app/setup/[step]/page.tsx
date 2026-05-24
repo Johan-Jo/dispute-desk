@@ -85,10 +85,11 @@ function StepPageInner() {
 }
 
 export default function SetupStepPage() {
+  const t = useTranslations("setup");
   return (
     <Suspense
       fallback={
-        <Page title="Setup Wizard">
+        <Page title={t("wizardTitle")}>
           <Layout>
             <Layout.Section>
               <Card>

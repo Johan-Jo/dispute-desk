@@ -11,6 +11,7 @@
 "use client";
 
 import { BlockStack, Banner, Spinner } from "@shopify/polaris";
+import { useTranslations } from "next-intl";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { useReviewView } from "./useReviewView";
 import { CompleteDefencePackageCard } from "./sections/CompleteDefencePackageCard";
@@ -25,6 +26,7 @@ interface Props {
 export default function ReviewSubmitTab({ workspace }: Props) {
   const { data, derived, clientState, actions } = workspace;
   const view = useReviewView(workspace);
+  const tExtra = useTranslations("disputes.evidenceTabExtra");
 
   // ── Loading state ──
   if (clientState.loading && !data) {
@@ -37,7 +39,7 @@ export default function ReviewSubmitTab({ workspace }: Props) {
 
   // ── Failed / building / no-pack banners ──
   const failedBanner = derived.isFailed ? (
-    <Banner tone="critical" title="Evidence pack build failed">
+    <Banner tone="critical" title={tExtra("buildFailedTitle")}>
       <p>
         We couldn&apos;t build this evidence pack. Try resyncing the dispute or
         regenerating the pack from the dispute header.
@@ -46,15 +48,15 @@ export default function ReviewSubmitTab({ workspace }: Props) {
   ) : null;
 
   const buildingBanner = derived.isBuilding ? (
-    <Banner tone="info" title="Building evidence pack">
-      <p>The pack is being assembled. Refresh shortly to see updates.</p>
+    <Banner tone="info" title={tExtra("buildingTitle")}>
+      <p>{tExtra("buildingBody")}</p>
     </Banner>
   ) : null;
 
   const noPackBanner =
     !data?.pack && !derived.isBuilding && !derived.isFailed ? (
-      <Banner tone="warning" title="No evidence pack yet">
-        <p>Generate an evidence pack from the dispute header before you can review and submit.</p>
+      <Banner tone="warning" title={tExtra("noPackTitle")}>
+        <p>{tExtra("noPackBodyReview")}</p>
       </Banner>
     ) : null;
 

@@ -35,6 +35,9 @@ const c = {
 const STEPS = [
   { name: "Lint", cmd: "npm", args: ["run", "lint"] },
   { name: "TypeScript", cmd: "npx", args: ["tsc", "--noEmit"] },
+  // i18n guardrail — blocks hardcoded English in embedded routes.
+  // See scripts/verify-i18n.mjs for the rules + escape hatches.
+  { name: "i18n", cmd: "node", args: ["scripts/verify-i18n.mjs"] },
   // verbose reporter so each test name streams — user can follow progress
   { name: "Vitest", cmd: "npx", args: ["vitest", "run", "--reporter=verbose"] },
   { name: "Build", cmd: "npm", args: ["run", "build"] },

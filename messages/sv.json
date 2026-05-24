@@ -575,9 +575,9 @@
     "colAmount": "Amount",
     "colDueDate": "Due date",
     "colOutcome": "Outcome",
-    "strengthStrong": "Strong",
-    "strengthModerate": "Moderate",
-    "strengthWeak": "Weak",
+    "strengthStrong": "Stark",
+    "strengthModerate": "Måttlig",
+    "strengthWeak": "Svag",
     "strengthDetailSignals": "{count} strong signals",
     "strengthDetailMixed": "{strong} strong + {moderate} moderate",
     "strengthDetailInsufficient": "Insufficient evidence",
@@ -601,14 +601,290 @@
       "closed": "Closed"
     },
     "caseStrength": {
-      "strong": "Strong",
-      "moderate": "Moderate",
-      "weak": "Weak"
+      "strong": "Stark",
+      "moderate": "Måttlig",
+      "weak": "Svag"
     },
     "itemStrength": {
-      "strong": "Strong",
-      "moderate": "Moderate",
-      "supporting": "Supporting"
+      "strong": "Stark",
+      "moderate": "Måttlig",
+      "supporting": "Stödjande"
+    },
+    "signalLabel": {
+      "payment_auth": "Betalningsautentisering",
+      "billing_match": "Faktureringsadress matchar",
+      "delivery": "Leveransbekräftelse",
+      "ip_location": "IP & platskonsistens",
+      "device_session": "Enhets- och sessionssignaler",
+      "communication": "Kundkommunikation",
+      "account_history": "Kundens kontohistorik",
+      "order_record": "Orderpost",
+      "product_listing": "Produktinformation",
+      "policy_refund": "Återbetalningspolicy",
+      "policy_shipping": "Fraktpolicy",
+      "policy_cancellation": "Avbokningspolicy",
+      "duplicate_explanation": "Förklaring av dubbeldebitering",
+      "supplementary_documents": "Kompletterande dokument",
+      "fraud_screening": "Bedrägerikontroll före auktorisering"
+    },
+    "familyLabel": {
+      "fraud": "bedrägeri",
+      "delivery": "leverans",
+      "product": "produktbeskrivning",
+      "refund": "återbetalning",
+      "subscription": "prenumeration",
+      "billing": "fakturering",
+      "digital": "digital vara",
+      "general": "tvist"
+    },
+    "decisiveHint": {
+      "fraud": "leveransbekräftelse, signatur, eller enhets-/sessionskonsistens",
+      "delivery": "leveranssignatur eller matchande fakturerings-/IP-signaler",
+      "product": "produktinformation som annonserad och din återbetalningspolicy",
+      "refund": "dokumenterad återbetalning eller kundkommunikation",
+      "subscription": "avbokningspolicy och kommunikationstidslinje",
+      "billing": "transaktionsregister och AVS+CVV-verifiering",
+      "digital": "åtkomstloggar som bevisar att kunden använde den digitala varan",
+      "general": "ytterligare avgörande bevis"
+    },
+    "decisiveFamilies": {
+      "fraud": "betalningsverifiering, bekräftad leverans, eller tydligt köperkännande från kunden",
+      "delivery": "leveranssignatur, leveransbevis till kortinnehavarens verifierade adress, eller kundens bekräftelse av mottagande",
+      "product": "produktinformation som annonserad, återbetalningspolicy, eller kundkorrespondens",
+      "refund": "dokumenterad återbetalning, återbetalningstidslinje, eller kundkorrespondens",
+      "subscription": "avbokningspolicy, avbokningstidslinje, eller kundkorrespondens",
+      "billing": "transaktionsregister, AVS/CVV-verifiering, eller 3-D Secure-autentisering",
+      "digital": "åtkomstloggar som visar att kunden använde den digitala varan",
+      "general": "avgörande bevis specifikt för denna tvist"
+    },
+    "strengthReason": {
+      "covered": "Denna tvist är skyddad av Shopifys betalningsskydd. Ingen åtgärd krävs från dig.",
+      "strong": {
+        "multi": "{label1}, {label2}{label3, select, empty {} other {, och {label3}}} stöder alla detta försvar avgörande.",
+        "single": "{label} stöder detta försvar avgörande.",
+        "fallback": "Stark bevisning stöder detta försvar avgörande."
+      },
+      "moderate": {
+        "fraudAvsOnly": "Betalningsautentisering stöder detta försvar, men ytterligare avgörande bevis såsom leveransbekräftelse, enhets-/sessionskonsistens eller kundbekräftelse skulle förbättra ärendet.",
+        "strongAndModerate": "{strongLabel} och {moderateLabel} stöder detta försvar; ytterligare avgörande bevis skulle stärka ärendet.",
+        "strongOnly": "{label} stöder detta försvar, med måttligt stöd; ytterligare avgörande bevis skulle stärka ärendet."
+      },
+      "weak": {
+        "strongAlone": "{label} stöder detta försvar, men ytterligare avgörande bevis (såsom {hint}) skulle stärka ärendet.",
+        "moderateOnly": "{label1}{label2, select, empty {} other { och {label2}}} ger delvis stöd. En stark signal såsom {hint} skulle avsevärt stärka ärendet.",
+        "supportingOnly": "Detta är svagt eftersom försvarspaketet huvudsakligen innehåller stödjande dokumentation, men inga avgörande {family}-bevis. {decisive} skulle stärka ärendet."
+      },
+      "fraud": {
+        "strong": "Betalningsverifiering och köpbeteende stöder starkt detta försvar.",
+        "moderate": "Grundläggande auktoriseringsbevis finns, men ärendet kan stärkas.",
+        "weak": "Viktiga betalningsverifieringsbevis saknas.",
+        "insufficient": "Inga bevis finns för att stödja detta försvar."
+      },
+      "delivery": {
+        "strong": "Försändelse och leverans är bekräftade av transportören.",
+        "moderate": "Fraktbevis finns, men fullständig leveransbekräftelse skulle stärka ärendet.",
+        "weak": "Leveransbevis saknas — kritiskt för denna tvisttyp.",
+        "insufficient": "Inga uppfyllelsebevis finns."
+      },
+      "product": {
+        "strong": "Produktbeskrivning och policyinformation är väl dokumenterade.",
+        "moderate": "Viss produktöverensstämmelse finns, men luckor återstår.",
+        "weak": "Bevis på produktbeskrivning saknas — kritiskt för denna tvisttyp.",
+        "insufficient": "Inga bevis på produktöverensstämmelse finns."
+      },
+      "refund": {
+        "strong": "Återbetalningshantering är dokumenterad.",
+        "moderate": "Viss återbetalningsbevisning finns, men fullständig dokumentation skulle hjälpa.",
+        "weak": "Återbetalningsbevisen är ofullständiga.",
+        "insufficient": "Inga återbetalningsbevis finns."
+      },
+      "subscription": {
+        "strong": "Prenumerationsvillkor och avbokningstidslinje är dokumenterade.",
+        "moderate": "Viss prenumerationsbevisning finns, men luckor i tidslinjen återstår.",
+        "weak": "Avbokningspolicy eller tidslinjebevis saknas.",
+        "insufficient": "Inga prenumerationsrelaterade bevis finns."
+      },
+      "billing": {
+        "strong": "Transaktionsregister bekräftar korrekt fakturering.",
+        "moderate": "Viss faktureringsbevisning finns, men avstämningen kan vara starkare.",
+        "weak": "Bevis på faktureringsriktighet är ofullständiga.",
+        "insufficient": "Inga faktureringsbevis finns."
+      },
+      "digital": {
+        "strong": "Digital åtkomst och användning är bekräftade av loggar.",
+        "moderate": "Viss åtkomstbevisning finns, men loggarna kan vara mer fullständiga.",
+        "weak": "Bevis på digital åtkomst saknas — kritiskt för denna tvisttyp.",
+        "insufficient": "Inga bevis på digital leverans finns."
+      },
+      "general": {
+        "strong": "Grundläggande bevis stöder detta försvar starkt.",
+        "moderate": "Bevisen stöder försvaret, men vissa luckor återstår.",
+        "weak": "Viktiga bevis saknas.",
+        "insufficient": "Inga bevis finns."
+      },
+      "fatalLoss": {
+        "refund_issued": "En återbetalning har redan utfärdats för denna order — banken kommer att behandla detta som ett erkännande av ansvar, så ärendet kan inte vinnas som det är.",
+        "inr_no_fulfillment": "Ordern uppfylldes aldrig och tvistorsaken är att artikeln inte mottagits — det finns ingen faktisk grund att försvara debiteringen."
+      }
+    },
+    "improvementHint": "Lägg till {label} för att stärka ditt ärende.",
+    "recommendation": {
+      "submitted": {
+        "strongOrModerate": "Rekommendation: Ingen ytterligare åtgärd krävs. Ditt försvar har skickats in framgångsrikt. Vi meddelar dig när banken svarar.",
+        "weakOrInsufficient": "Rekommendation: Övervaka detta ärende. Överväg att stärka bevisen för framtida tvister."
+      },
+      "notSubmitted": {
+        "strong": "Rekommendation: Skicka in nu — dina bevis är tillräckligt starka för att försvara denna debitering.",
+        "moderateWithMissing": "Rekommendation: Du kan skicka in, men att lägga till {label} skulle förbättra dina chanser betydligt.",
+        "moderateNoMissing": "Rekommendation: Du kan skicka in nu, men lite extra bevis skulle förbättra dina chanser.",
+        "weakWithMissing": "Rekommendation: Lägg till {label} innan inskickning — ärendet kommer sannolikt inte att vinna som det är.",
+        "weakNoMissing": "Rekommendation: Stärk bevisen innan inskickning — ärendet kommer sannolikt inte att vinna som det är."
+      },
+      "helperWithDays": "{days, plural, =0 {Inskickat idag} =1 {1 dag sedan inskickning} other {# dagar sedan inskickning}}. Den utfärdande banken svarar vanligtvis inom 30–75 dagar.",
+      "helperNoDate": "Den utfärdande banken svarar vanligtvis inom 30–75 dagar."
+    },
+    "sourceCaption": {
+      "order_confirmation": "Från Shopify-orderdata",
+      "billing_address_match": "Från Shopify-orderdata",
+      "avs_cvv_match": "Från betalningsgateway",
+      "shipping_tracking": "Från Shopify-uppfyllelsedata",
+      "delivery_proof": "Från transportörspårning",
+      "customer_communication": "Från orderanteckningar eller uppladdning",
+      "refund_policy": "Från butikens policysida",
+      "shipping_policy": "Från butikens policysida",
+      "cancellation_policy": "Från butikens policysida",
+      "product_description": "Ladda upp produktinformation",
+      "activity_log": "Från Shopify-kunddata",
+      "supporting_documents": "Ladda upp manuellt",
+      "duplicate_explanation": "Ladda upp transaktionsregister",
+      "tds_authentication": "Från betalningsgateway",
+      "ip_location_check": "Från IP-information",
+      "device_session_consistency": "Från enhetens fingeravtryck",
+      "fraud_risk_screening": "Från Shopifys riskmotor",
+      "customer_account_info": "Från Shopify-kunddata",
+      "default": "Från butiksdata"
+    },
+    "fieldAction": {
+      "default": {
+        "ctaLabel": "Ladda upp bevis",
+        "acceptedFormats": "Skärmdump, PDF eller dokument",
+        "skipLabel": "Hoppa över för nu"
+      },
+      "supporting_documents": {
+        "ctaLabel": "Ladda upp fil",
+        "acceptedFormats": "Skärmdump, PDF eller dokument",
+        "skipLabel": "Hoppa över för nu"
+      },
+      "customer_communication": {
+        "ctaLabel": "Klistra in konversation eller ladda upp skärmdump",
+        "acceptedFormats": "Inklistrad text, skärmdump eller PDF",
+        "skipLabel": "Hoppa över för nu"
+      },
+      "product_description": {
+        "ctaLabel": "Ladda upp skärmdump av produktinformation",
+        "acceptedFormats": "Skärmdump eller PDF av produktsidan",
+        "skipLabel": "Hoppa över för nu"
+      },
+      "duplicate_explanation": {
+        "ctaLabel": "Ladda upp transaktionsregister",
+        "acceptedFormats": "Skärmdump, PDF eller inklistrad text",
+        "skipLabel": "Hoppa över för nu"
+      }
+    },
+    "whyText": {
+      "order_confirmation": "Bevisar att transaktionen är legitim — grunden för varje tviststvar",
+      "shipping_tracking": "Visar att transportören bekräftat försändelsen — krävs för att vinna 'ej mottaget'-tvister",
+      "delivery_proof": "Bekräftar att kunden mottog paketet — det starkaste beviset mot 'ej mottaget'-krav",
+      "billing_address_match": "Matchar faktureringsadressen till ordern — kritiskt för bedrägeritvister",
+      "avs_cvv_match": "Visar att kortets säkerhetskontroller godkändes — banker väger detta tungt i bedrägerifall",
+      "product_description": "Bevisar att produkten matchade vad som annonserades — viktigt försvar för 'inte som beskrivet'-tvister",
+      "refund_policy": "Visar att kunden godkände dina återbetalningsvillkor — skyddar mot ångerkrav",
+      "shipping_policy": "Dokumenterar dina fraktåtaganden — stöder tidslinjetvister för leverans",
+      "cancellation_policy": "Bevisar att kunden informerats om avbokningsregler före köp",
+      "customer_communication": "Visar att du försökt lösa problemet — banker föredrar köpmän som engagerar sig",
+      "duplicate_explanation": "Förklarar varför debiteringarna inte är dubbla — krävs för dubbelttvistsvar",
+      "supporting_documents": "Ytterligare bevis som stärker ditt ärende",
+      "activity_log": "Kontoaktivitet som bevisar legitimt kundengagemang"
+    },
+    "targetField": {
+      "SHIPPING_DOCUMENTATION": "Fraktdokumentation",
+      "CUSTOMER_COMMUNICATION": "Kundkommunikation",
+      "PROOF_OF_SERVICE": "Tjänstebevis",
+      "REFUND_POLICY": "Återbetalningspolicy",
+      "CANCELLATION_POLICY": "Avbokningspolicy",
+      "UNCATEGORIZED_FILE": "Annat bevis"
+    },
+    "workspaceHook": {
+      "impactFallback": "Stärker ditt tvistsvar",
+      "sourceFallback": "Ladda upp eller tillhandahåll manuellt",
+      "recCritical": "Skulle stärka ditt ärende",
+      "recOptional": "Rekommenderas om tillgängligt"
+    },
+    "workspaceShell": {
+      "tabs": {
+        "overview": "Översikt",
+        "evidence": "Bevis",
+        "reviewSubmit": "Granska & Skicka in"
+      },
+      "strengthLabel": {
+        "strong": "Starkt ärende",
+        "moderate": "Måttligt ärende",
+        "weak": "Svagt ärende"
+      },
+      "statusPill": {
+        "submitted": "Inskickat",
+        "needsAction": "Kräver åtgärd"
+      },
+      "facts": {
+        "amount": "Belopp",
+        "customer": "Kund",
+        "dateFiled": "Inlämningsdatum",
+        "disputeReason": "Tvistorsak"
+      },
+      "disputeSectionsAria": "Tvistssektioner"
+    },
+    "overviewExtra": {
+      "evidenceCollected": "Insamlade bevis",
+      "evidenceOrderingHelper": "Sorterade efter hur mycket varje objekt stärker ärendet. Starkast först.",
+      "whatHappensNow": "Vad händer nu",
+      "automationRule": "Automatiseringsregel:",
+      "changeRule": "Ändra regel",
+      "editEvidence": "Redigera bevis",
+      "addMissingEvidence": "Lägg till saknade bevis",
+      "submitAnyway": "Skicka in ändå",
+      "autoSubmitPausedTitle": "Automatisk inskickning pausad — din granskning behövs",
+      "autoSubmitPausedBody": "DisputeDesk bygger ditt försvar automatiskt, men skickar bara in när paketet uppfyller din tröskel för automatisk inskickning. Detta paket klarade inte ribban, så vi stannade och lämnade över till dig.",
+      "whyPrefix": "Anledning:",
+      "submitToShopify": "Skicka in till Shopify",
+      "viewInShopify": "Visa i Shopify Admin"
+    },
+    "evidenceTabExtra": {
+      "buildFailedTitle": "Bygget av bevispaketet misslyckades",
+      "buildingTitle": "Bygger bevispaket",
+      "buildingBody": "Paketet sammanställs. Uppdatera snart för att se uppdateringar.",
+      "noPackTitle": "Inget bevispaket ännu",
+      "noPackBody": "Generera ett bevispaket från tvistrubriken för att se ditt försvar.",
+      "noPackBodyReview": "Generera ett bevispaket från tvistrubriken innan du kan granska och skicka in."
+    },
+    "completeDefencePackage": {
+      "headingMain": "Komplett försvarspaket",
+      "headingPanel": "Komplett försvarspaket",
+      "savingTitle": "Sparar till Shopify…",
+      "cardNetworkReviewingTitle": "Kortnätverket granskar",
+      "coveredByShopifyProtectTitle": "Täcks av Shopify Protect",
+      "notEnoughEvidenceTitle": "Otillräckliga bankvända bevis",
+      "validationFailedTitle": "Validering misslyckades",
+      "buildingNewPackageTitle": "Bygger ditt nya försvarspaket…",
+      "buildingNewPackageBody": "Vi bygger om bevispaketet och skriver en ny berättelse + PDF baserat på de senaste uppgifterna. Detta tar vanligtvis 2–3 minuter. Klicka på Sök efter uppdatering om ett par minuter för att se om den nya versionen är klar — eller lämna denna flik öppen och kom tillbaka senare.",
+      "checkForUpdate": "Sök efter uppdatering",
+      "checking": "Söker…",
+      "newEvidenceAvailableTitle": "Nya bevis tillgängliga — uppdatera detta utkast",
+      "couldNotLoadTitle": "Kunde inte ladda försvarspaket"
+    },
+    "defencePackageHtml": {
+      "orderLineItems": "Orderartiklar",
+      "evidenceBasis": "Bevisgrund",
+      "noBankEligibleFacts": "(Inga bankberättigade fakta tillgängliga.)"
     },
     "evidenceTab": {
       "sections": {
@@ -1332,6 +1608,7 @@
     "winRateTrend": "Trend för vinstfrekvens",
     "byReason": "Tvister per anledning",
     "noData": "Inga data för denna period.",
+    "weeklyChargebackRateAria": "Veckovis chargeback-frekvens, senaste 8 veckorna",
     "activeDisputes": "Aktiva tvister",
     "amountRecovered": "Återvunnet belopp",
     "amountLost": "Förlorat belopp",
@@ -1599,7 +1876,8 @@
   "settings": {
     "title": "Inställningar",
     "subtitle": "Hantera ditt konto, automatisering och inställningar",
-    "automationSection": "Automation",
+    "automationSection": "Automatisering",
+    "automationSectionHelp": "Avancerade standardvärden — för policykonfiguration, se Automatisering",
     "profileSection": "Profil",
     "notificationsSection": "Aviseringar",
     "dangerZone": "Riskzon",
@@ -1754,6 +2032,8 @@
   "team": {
     "title": "Team",
     "subtitle": "Hantera vem som har åtkomst till denna butik",
+    "description": "Bjud in teammedlemmar och konfigurera notiser för nya tvister, förfallodagar och bevis redo för granskning. Använd portalen för fullständig teamhantering.",
+    "openInPortal": "Öppna team i portalen",
     "inviteMember": "Bjud in medlem",
     "member": "Medlem",
     "role": "Roll",

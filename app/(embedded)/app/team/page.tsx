@@ -4,18 +4,18 @@ import { useTranslations } from "next-intl";
 import { Page, Card, Text, BlockStack, Button } from "@shopify/polaris";
 
 export default function EmbeddedTeamPage() {
-  const t = useTranslations("nav");
+  const tNav = useTranslations("nav");
+  const t = useTranslations("team");
 
   return (
-    <Page title={t("team")} backAction={{ content: t("overview"), url: "/app" }}>
+    <Page title={tNav("team")} backAction={{ content: tNav("overview"), url: "/app" }}>
       <Card>
         <BlockStack gap="400">
           <Text as="p" variant="bodyMd" tone="subdued">
-            Invite team members and configure notifications for new disputes, due dates, and
-            evidence ready for review. Use the portal for full team management.
+            {t("description")}
           </Text>
           <Button url="/portal/team" variant="primary">
-            Open team in portal
+            {t("openInPortal")}
           </Button>
         </BlockStack>
       </Card>

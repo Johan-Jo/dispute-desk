@@ -606,6 +606,282 @@
       "moderate": "Moderate",
       "weak": "Weak"
     },
+    "signalLabel": {
+      "payment_auth": "Payment authentication",
+      "billing_match": "Billing address match",
+      "delivery": "Delivery confirmation",
+      "ip_location": "IP & location consistency",
+      "device_session": "Device & session signals",
+      "communication": "Customer communication",
+      "account_history": "Customer account history",
+      "order_record": "Order record",
+      "product_listing": "Product listing",
+      "policy_refund": "Refund policy",
+      "policy_shipping": "Shipping policy",
+      "policy_cancellation": "Cancellation policy",
+      "duplicate_explanation": "Duplicate-charge explanation",
+      "supplementary_documents": "Supplementary documents",
+      "fraud_screening": "Pre-authorization fraud screening"
+    },
+    "familyLabel": {
+      "fraud": "fraud",
+      "delivery": "delivery",
+      "product": "product-conformity",
+      "refund": "refund",
+      "subscription": "subscription",
+      "billing": "billing",
+      "digital": "digital-good",
+      "general": "dispute"
+    },
+    "decisiveHint": {
+      "fraud": "delivery confirmation, signature on file, or device-session consistency",
+      "delivery": "carrier signature confirmation or matching billing/IP signals",
+      "product": "the product listing as advertised and your refund policy disclosure",
+      "refund": "documented refund processing or merchant communication",
+      "subscription": "the cancellation policy and customer communication timeline",
+      "billing": "transaction records and AVS+CVV verification",
+      "digital": "access logs proving the customer used the digital good",
+      "general": "additional decisive evidence"
+    },
+    "decisiveFamilies": {
+      "fraud": "payment verification, confirmed delivery, or a clear customer purchase acknowledgement",
+      "delivery": "carrier signature confirmation, proof of delivery to the cardholder's verified address, or customer acknowledgement of receipt",
+      "product": "the product listing as advertised, refund policy disclosure, or customer correspondence",
+      "refund": "documented refund processing, refund timeline, or customer correspondence",
+      "subscription": "cancellation policy disclosure, cancellation timeline, or customer correspondence",
+      "billing": "transaction records, AVS/CVV verification, or 3-D Secure authentication",
+      "digital": "access logs showing the customer used the digital good",
+      "general": "decisive evidence specific to this dispute reason"
+    },
+    "strengthReason": {
+      "covered": "This dispute is protected under Shopify's payment protection. No action is required from you.",
+      "strong": {
+        "multi": "{label1}, {label2}{label3, select, empty {} other {, and {label3}}} all support this defense decisively.",
+        "single": "{label} supports this defense decisively.",
+        "fallback": "Strong evidence supports this defense decisively."
+      },
+      "moderate": {
+        "fraudAvsOnly": "Payment authentication supports this defense, but additional decisive evidence such as delivery confirmation, device/session consistency, or customer confirmation would improve the case.",
+        "strongAndModerate": "{strongLabel} and {moderateLabel} support this defense; additional decisive evidence would strengthen the case.",
+        "strongOnly": "{label} supports this defense, with moderate corroboration; additional decisive evidence would strengthen the case."
+      },
+      "weak": {
+        "strongAlone": "{label} supports this defense, but additional decisive evidence (such as {hint}) would strengthen the case.",
+        "moderateOnly": "{label1}{label2, select, empty {} other { and {label2}}} provide partial support. A strong signal such as {hint} would significantly strengthen the case.",
+        "supportingOnly": "This is weak because the defence package contains mostly supporting documentation, but no decisive {family} evidence. {decisive} would strengthen the case."
+      },
+      "fraud": {
+        "strong": "Payment verification and purchase behavior strongly support this defense.",
+        "moderate": "Core authorization evidence is present, but the case could be strengthened.",
+        "weak": "Key payment verification evidence is missing.",
+        "insufficient": "No evidence available to support this defense."
+      },
+      "delivery": {
+        "strong": "Shipment and delivery are confirmed by carrier records.",
+        "moderate": "Shipping evidence exists, but full delivery confirmation would strengthen the case.",
+        "weak": "Delivery evidence is missing — this is critical for this dispute type.",
+        "insufficient": "No fulfillment evidence available."
+      },
+      "product": {
+        "strong": "Product description and policy disclosure are well documented.",
+        "moderate": "Some product conformity evidence exists, but gaps remain.",
+        "weak": "Product description evidence is missing — critical for this dispute type.",
+        "insufficient": "No product conformity evidence available."
+      },
+      "refund": {
+        "strong": "Refund processing is documented.",
+        "moderate": "Some refund evidence exists, but complete documentation would help.",
+        "weak": "Refund evidence is incomplete.",
+        "insufficient": "No refund evidence available."
+      },
+      "subscription": {
+        "strong": "Subscription terms and cancellation timeline are documented.",
+        "moderate": "Some subscription evidence exists, but timeline gaps remain.",
+        "weak": "Cancellation policy or timeline evidence is missing.",
+        "insufficient": "No subscription-related evidence available."
+      },
+      "billing": {
+        "strong": "Transaction records confirm correct billing.",
+        "moderate": "Some billing evidence exists, but reconciliation could be stronger.",
+        "weak": "Billing accuracy evidence is incomplete.",
+        "insufficient": "No billing evidence available."
+      },
+      "digital": {
+        "strong": "Digital access and usage are confirmed by logs.",
+        "moderate": "Some access evidence exists, but logs could be more complete.",
+        "weak": "Digital access evidence is missing — critical for this dispute type.",
+        "insufficient": "No digital delivery evidence available."
+      },
+      "general": {
+        "strong": "Core evidence strongly supports this defense.",
+        "moderate": "Evidence supports the defense, but some gaps remain.",
+        "weak": "Key evidence is missing.",
+        "insufficient": "No evidence available."
+      },
+      "fatalLoss": {
+        "refund_issued": "A refund was already issued for this order — the bank will treat this as a confession of liability, so the case cannot win as-is.",
+        "inr_no_fulfillment": "The order was never fulfilled and the dispute reason is item-not-received — there is no factual basis to defend the charge."
+      }
+    },
+    "improvementHint": "Add {label} to strengthen your case.",
+    "recommendation": {
+      "submitted": {
+        "strongOrModerate": "Recommendation: No further action is required. Your defense has been successfully submitted. We will notify you when the bank responds.",
+        "weakOrInsufficient": "Recommendation: Monitor this case. Consider strengthening evidence for future disputes."
+      },
+      "notSubmitted": {
+        "strong": "Recommendation: Submit now — your evidence is strong enough to defend this charge.",
+        "moderateWithMissing": "Recommendation: You can submit, but adding {label} would meaningfully improve your odds.",
+        "moderateNoMissing": "Recommendation: You can submit now, but a small amount of additional evidence would improve your odds.",
+        "weakWithMissing": "Recommendation: Add {label} before submitting — the case is currently unlikely to win as-is.",
+        "weakNoMissing": "Recommendation: Strengthen the evidence before submitting — the case is currently unlikely to win as-is."
+      },
+      "helperWithDays": "{days, plural, =0 {Submitted today} =1 {1 day since submission} other {# days since submission}}. The issuing bank typically responds within 30–75 days.",
+      "helperNoDate": "The issuing bank typically responds within 30–75 days."
+    },
+    "sourceCaption": {
+      "order_confirmation": "From Shopify order data",
+      "billing_address_match": "From Shopify order data",
+      "avs_cvv_match": "From payment gateway",
+      "shipping_tracking": "From Shopify fulfillment data",
+      "delivery_proof": "From carrier tracking",
+      "customer_communication": "From order notes or upload",
+      "refund_policy": "From store policies page",
+      "shipping_policy": "From store policies page",
+      "cancellation_policy": "From store policies page",
+      "product_description": "Upload product listing",
+      "activity_log": "From Shopify customer data",
+      "supporting_documents": "Upload manually",
+      "duplicate_explanation": "Upload transaction records",
+      "tds_authentication": "From payment gateway",
+      "ip_location_check": "From IP intelligence",
+      "device_session_consistency": "From device fingerprint",
+      "fraud_risk_screening": "From Shopify risk engine",
+      "customer_account_info": "From Shopify customer data",
+      "default": "From store data"
+    },
+    "fieldAction": {
+      "default": {
+        "ctaLabel": "Upload proof",
+        "acceptedFormats": "Screenshot, PDF, or document",
+        "skipLabel": "Skip for now"
+      },
+      "supporting_documents": {
+        "ctaLabel": "Upload file",
+        "acceptedFormats": "Screenshot, PDF, or document",
+        "skipLabel": "Skip for now"
+      },
+      "customer_communication": {
+        "ctaLabel": "Paste conversation or upload screenshot",
+        "acceptedFormats": "Pasted text, screenshot, or PDF",
+        "skipLabel": "Skip for now"
+      },
+      "product_description": {
+        "ctaLabel": "Upload product listing screenshot",
+        "acceptedFormats": "Screenshot or PDF of product page",
+        "skipLabel": "Skip for now"
+      },
+      "duplicate_explanation": {
+        "ctaLabel": "Upload transaction records",
+        "acceptedFormats": "Screenshot, PDF, or pasted text",
+        "skipLabel": "Skip for now"
+      }
+    },
+    "whyText": {
+      "order_confirmation": "Proves the transaction is legitimate — the foundation of every dispute response",
+      "shipping_tracking": "Shows the carrier confirmed shipment — required to win 'item not received' disputes",
+      "delivery_proof": "Confirms the customer received the package — strongest evidence against 'not received' claims",
+      "billing_address_match": "Matches the billing address to the order — critical for fraud disputes",
+      "avs_cvv_match": "Shows the card security checks passed — banks weigh this heavily in fraud cases",
+      "product_description": "Proves the product matched what was advertised — key defense for 'not as described' disputes",
+      "refund_policy": "Shows the customer agreed to your refund terms — protects against buyer's remorse claims",
+      "shipping_policy": "Documents your shipping commitments — supports delivery timeline disputes",
+      "cancellation_policy": "Proves the customer was informed of cancellation rules before purchase",
+      "customer_communication": "Shows you attempted to resolve the issue — banks favor merchants who engage",
+      "duplicate_explanation": "Explains why the charges are not duplicates — required for duplicate dispute responses",
+      "supporting_documents": "Additional proof that strengthens your case",
+      "activity_log": "Account activity that proves legitimate customer engagement"
+    },
+    "targetField": {
+      "SHIPPING_DOCUMENTATION": "Shipping documentation",
+      "CUSTOMER_COMMUNICATION": "Customer communication",
+      "PROOF_OF_SERVICE": "Proof of service",
+      "REFUND_POLICY": "Refund policy",
+      "CANCELLATION_POLICY": "Cancellation policy",
+      "UNCATEGORIZED_FILE": "Other evidence"
+    },
+    "workspaceHook": {
+      "impactFallback": "Strengthens your dispute response",
+      "sourceFallback": "Upload or provide manually",
+      "recCritical": "Would strengthen your case",
+      "recOptional": "Recommended if available"
+    },
+    "workspaceShell": {
+      "tabs": {
+        "overview": "Overview",
+        "evidence": "Evidence",
+        "reviewSubmit": "Review & Submit"
+      },
+      "strengthLabel": {
+        "strong": "Strong case",
+        "moderate": "Moderate case",
+        "weak": "Weak case"
+      },
+      "statusPill": {
+        "submitted": "Submitted",
+        "needsAction": "Needs action"
+      },
+      "facts": {
+        "amount": "Amount",
+        "customer": "Customer",
+        "dateFiled": "Date filed",
+        "disputeReason": "Dispute reason"
+      },
+      "disputeSectionsAria": "Dispute sections"
+    },
+    "overviewExtra": {
+      "evidenceCollected": "Evidence collected",
+      "evidenceOrderingHelper": "Ordered by how much each item strengthens the case. Strongest first.",
+      "whatHappensNow": "What happens now",
+      "automationRule": "Automation rule:",
+      "changeRule": "Change rule",
+      "editEvidence": "Edit evidence",
+      "submitToShopify": "Submit to Shopify",
+      "viewInShopify": "View in Shopify Admin",
+      "addMissingEvidence": "Add missing evidence",
+      "submitAnyway": "Submit now anyway",
+      "autoSubmitPausedTitle": "Auto-submit paused — your review needed",
+      "autoSubmitPausedBody": "DisputeDesk builds your defense automatically, but only auto-submits when the pack meets your auto-submit threshold. This pack didn't clear the bar, so we stopped and handed it to you.",
+      "whyPrefix": "Why:"
+    },
+    "evidenceTabExtra": {
+      "buildFailedTitle": "Evidence pack build failed",
+      "buildingTitle": "Building evidence pack",
+      "buildingBody": "The pack is being assembled. Refresh shortly to see updates.",
+      "noPackTitle": "No evidence pack yet",
+      "noPackBody": "Generate an evidence pack from the dispute header to see your defense.",
+      "noPackBodyReview": "Generate an evidence pack from the dispute header before you can review and submit."
+    },
+    "completeDefencePackage": {
+      "headingMain": "Complete Defence Package",
+      "headingPanel": "Complete Defence Package",
+      "savingTitle": "Saving to Shopify…",
+      "cardNetworkReviewingTitle": "Card network reviewing",
+      "coveredByShopifyProtectTitle": "Covered by Shopify Protect",
+      "notEnoughEvidenceTitle": "Not enough bank-facing evidence",
+      "validationFailedTitle": "Validation failed",
+      "buildingNewPackageTitle": "Building your new defence package…",
+      "buildingNewPackageBody": "We're rebuilding the evidence pack and drafting a fresh narrative + PDF based on the latest data. This usually takes 2–3 minutes. Click Check for update in a couple of minutes to see if the new version is ready — or leave this tab open and come back later.",
+      "checkForUpdate": "Check for update",
+      "checking": "Checking…",
+      "newEvidenceAvailableTitle": "New evidence available — refresh this draft",
+      "couldNotLoadTitle": "Could not load defence package"
+    },
+    "defencePackageHtml": {
+      "orderLineItems": "Order Line Items",
+      "evidenceBasis": "Evidence Basis",
+      "noBankEligibleFacts": "(No bank-eligible facts available.)"
+    },
     "itemStrength": {
       "strong": "Strong",
       "moderate": "Moderate",
@@ -1334,6 +1610,7 @@
     "winRateTrend": "Win Rate Trend",
     "byReason": "Disputes by Reason",
     "noData": "No data for this period.",
+    "weeklyChargebackRateAria": "Weekly chargeback rate, last 8 weeks",
     "activeDisputes": "Active Disputes",
     "amountRecovered": "Amount Recovered",
     "amountLost": "Amount Lost",
@@ -1602,6 +1879,7 @@
     "title": "Settings",
     "subtitle": "Manage your DisputeDesk configuration and preferences",
     "automationSection": "Automation",
+    "automationSectionHelp": "Advanced defaults — for policy configuration, see Automation",
     "profileSection": "Profile",
     "notificationsSection": "Notifications",
     "dangerZone": "Danger Zone",
@@ -1760,6 +2038,8 @@
   "team": {
     "title": "Team",
     "subtitle": "Manage who has access to this store",
+    "description": "Invite team members and configure notifications for new disputes, due dates, and evidence ready for review. Use the portal for full team management.",
+    "openInPortal": "Open team in portal",
     "inviteMember": "Invite member",
     "member": "Member",
     "role": "Role",

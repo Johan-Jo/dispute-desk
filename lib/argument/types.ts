@@ -12,6 +12,17 @@
 
 export type CaseStrengthLevel = "strong" | "moderate" | "weak" | "insufficient";
 
+/** A localizable token. UI calls `t(key, params)` to render.
+ *  `params` values are either pre-localized strings (e.g. from
+ *  another `t()` lookup) or simple primitives. Lib functions never
+ *  emit free English text alongside this — UIs that need English
+ *  for tests/regex can still use the deprecated `strengthReason`
+ *  string field, but new render sites should use the token field. */
+export interface I18nToken {
+  key: string;
+  params?: Record<string, string | number>;
+}
+
 /* ── Evidence flags + data (moved from responseEngine.ts on 2026-05-16) ── */
 
 export interface EvidenceFlags {
@@ -105,9 +116,19 @@ export interface CaseStrengthResult {
   supportingCount: number;
   supportedClaims: number;
   totalClaims: number;
-  /** Merchant-facing explanation of why this strength was assigned. */
+  /** Merchant-facing explanation of why this strength was assigned.
+   *  Legacy English field — kept for tests and server consumers.
+   *  Embedded UI must use `strengthReasonI18n` instead. */
   strengthReason?: string;
+  /** i18n token for `strengthReason`. UI translates via `t(key, params)`.
+   *  When `params` contains a `*labelKey*` / `*hintKey*` / `*familyKey*`
+   *  / `*decisiveKey*`, the UI must resolve those keys to localized
+   *  strings FIRST, then pass the resolved strings as the params to
+   *  the outer `t()` call. */
+  strengthReasonI18n?: I18nToken;
   improvementHint: string | null;
+  /** i18n token sibling of `improvementHint`. */
+  improvementHintI18n?: I18nToken | null;
   /** Hero label hint. Lets the UI distinguish:
    *   - `likely_to_win` — overall === "strong"
    *   - `could_win` — overall === "moderate" via the standard formula

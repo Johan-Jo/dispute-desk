@@ -10,11 +10,11 @@ import OverviewTab from "./tabs/OverviewTab";
 import EvidenceTab from "./tabs/EvidenceTab";
 import ReviewSubmitTab from "./tabs/ReviewSubmitTab";
 
-const STRENGTH_LABEL: Record<string, string> = {
-  strong: "Strong case",
-  moderate: "Moderate case",
-  weak: "Weak case",
-  insufficient: "Weak case",
+const STRENGTH_LABEL_KEY: Record<string, string> = {
+  strong: "disputes.workspaceShell.strengthLabel.strong",
+  moderate: "disputes.workspaceShell.strengthLabel.moderate",
+  weak: "disputes.workspaceShell.strengthLabel.weak",
+  insufficient: "disputes.workspaceShell.strengthLabel.weak",
 };
 
 /** Figma-style flat pill — `px-2 py-0.5 rounded-md text-xs font-semibold`
@@ -53,9 +53,9 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
   const { data, derived, clientState, actions } = workspace;
 
   const tabs: Array<{ id: string; label: string; panelId: string }> = [
-    { id: "overview", label: "Overview", panelId: "overview-panel" },
-    { id: "evidence", label: "Evidence", panelId: "evidence-panel" },
-    { id: "submit", label: "Review & Submit", panelId: "submit-panel" },
+    { id: "overview", label: t("disputes.workspaceShell.tabs.overview"), panelId: "overview-panel" },
+    { id: "evidence", label: t("disputes.workspaceShell.tabs.evidence"), panelId: "evidence-panel" },
+    { id: "submit", label: t("disputes.workspaceShell.tabs.reviewSubmit"), panelId: "submit-panel" },
   ];
 
   if (clientState.loading || !data) {
@@ -80,13 +80,14 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
   const headerTitle = `Dispute #${dispute.id.slice(0, 8).toUpperCase()} — ${reasonLabel}`;
 
   const strengthKey = derived.caseStrength.overall;
-  const strengthText = STRENGTH_LABEL[strengthKey] ?? "Weak case";
+  const strengthLabelKey = STRENGTH_LABEL_KEY[strengthKey] ?? "disputes.workspaceShell.strengthLabel.weak";
+  const strengthText = t(strengthLabelKey);
 
   const facts: Array<{ label: string; value: string }> = [
-    { label: "Amount", value: `${dispute.currency} ${dispute.amount}` },
-    { label: "Customer", value: dispute.customerName || "—" },
-    { label: "Date filed", value: formatDate(dispute.openedAt) },
-    { label: "Dispute reason", value: reasonLabel },
+    { label: t("disputes.workspaceShell.facts.amount"), value: `${dispute.currency} ${dispute.amount}` },
+    { label: t("disputes.workspaceShell.facts.customer"), value: dispute.customerName || "—" },
+    { label: t("disputes.workspaceShell.facts.dateFiled"), value: formatDate(dispute.openedAt) },
+    { label: t("disputes.workspaceShell.facts.disputeReason"), value: reasonLabel },
   ];
 
   return (
@@ -134,7 +135,7 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
                     color: submitted ? "#065F46" : "#991B1B",
                   }}
                 >
-                  {submitted ? "Submitted" : "Needs action"}
+                  {submitted ? t("disputes.workspaceShell.statusPill.submitted") : t("disputes.workspaceShell.statusPill.needsAction")}
                 </span>
                 {(() => {
                   const c = strengthPillColors(strengthKey);
@@ -172,7 +173,7 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
         <div>
           <div
             role="tablist"
-            aria-label="Dispute sections"
+            aria-label={t("disputes.workspaceShell.disputeSectionsAria")}
             style={{
               background: "#ffffff",
               border: "1px solid #E1E3E5",

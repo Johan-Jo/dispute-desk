@@ -50,14 +50,14 @@ const PILL_STYLE: CSSProperties = {
   alignItems: "center",
 };
 
-function caseStrengthPillColors(s: FigmaCaseStrength): {
+function caseStrengthPillColors(s: FigmaCaseStrength, t: Translate): {
   bg: string;
   color: string;
   label: string;
 } {
-  if (s === "strong") return { bg: "#D1FAE5", color: "#065F46", label: "Strong" };
-  if (s === "moderate") return { bg: "#FEF3C7", color: "#92400E", label: "Moderate" };
-  return { bg: "#FEE2E2", color: "#991B1B", label: "Weak" };
+  if (s === "strong") return { bg: "#D1FAE5", color: "#065F46", label: t("disputes.strengthStrong") };
+  if (s === "moderate") return { bg: "#FEF3C7", color: "#92400E", label: t("disputes.strengthModerate") };
+  return { bg: "#FEE2E2", color: "#991B1B", label: t("disputes.strengthWeak") };
 }
 
 /** Subtitle color tied to strength so the detail-line ("2 strong
@@ -225,10 +225,10 @@ export function DesktopDisputesTable({
                     <span
                       style={{
                         ...PILL_STYLE,
-                        ...caseStrengthPillColors(strength),
+                        ...caseStrengthPillColors(strength, t),
                       }}
                     >
-                      {caseStrengthPillColors(strength).label}
+                      {caseStrengthPillColors(strength, t).label}
                     </span>
                     {detail && (
                       <div

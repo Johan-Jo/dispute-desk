@@ -560,11 +560,12 @@ function Sparkline({
   height?: number;
   width?: number;
 }) {
+  const t = useTranslations("fraudIntel");
   const numbers = points.map((p) => p.rate).filter((r): r is number => r !== null);
   if (numbers.length === 0) {
     return (
       <div style={{ fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>
-        No data
+        {t("noData")}
       </div>
     );
   }
@@ -600,7 +601,7 @@ function Sparkline({
       height={height}
       viewBox={`0 0 ${width} ${height}`}
       role="img"
-      aria-label="Weekly chargeback rate, last 8 weeks"
+      aria-label={t("weeklyChargebackRateAria")}
     >
       <path
         d={segs.join(" ")}

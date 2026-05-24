@@ -46,14 +46,14 @@ const PILL_STYLE: CSSProperties = {
   alignItems: "center",
 };
 
-function caseStrengthPillColors(s: FigmaCaseStrength): {
+function caseStrengthPillColors(s: FigmaCaseStrength, t: Translate): {
   bg: string;
   color: string;
   label: string;
 } {
-  if (s === "strong") return { bg: "#D1FAE5", color: "#065F46", label: "Strong" };
-  if (s === "moderate") return { bg: "#FEF3C7", color: "#92400E", label: "Moderate" };
-  return { bg: "#FEE2E2", color: "#991B1B", label: "Weak" };
+  if (s === "strong") return { bg: "#D1FAE5", color: "#065F46", label: t("disputes.strengthStrong") };
+  if (s === "moderate") return { bg: "#FEF3C7", color: "#92400E", label: t("disputes.strengthModerate") };
+  return { bg: "#FEE2E2", color: "#991B1B", label: t("disputes.strengthWeak") };
 }
 
 /** Subtitle color tied to strength (red/yellow/green pattern, same
@@ -131,8 +131,8 @@ export function MobileDisputeCard({
         <div style={{ flex: 1, minWidth: 0 }}>
           {strength && (
             <div style={{ marginBottom: 8 }}>
-              <span style={{ ...PILL_STYLE, ...caseStrengthPillColors(strength) }}>
-                {caseStrengthPillColors(strength).label}
+              <span style={{ ...PILL_STYLE, ...caseStrengthPillColors(strength, t) }}>
+                {caseStrengthPillColors(strength, t).label}
               </span>
               {detail && (
                 <div

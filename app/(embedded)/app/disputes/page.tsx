@@ -156,7 +156,7 @@ export default function DisputesListPage() {
   const [phaseFilter, setPhaseFilter] = useState<string[]>([]);
   const [normalizedStatusFilter, setNormalizedStatusFilter] = useState<string[]>([]);
   const [outcomeFilter, setOutcomeFilter] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<TabId>("active");
+  const [activeTab, setActiveTab] = useState<TabId>("all");
   const [queryValue, setQueryValue] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, total_pages: 0 });
@@ -175,7 +175,7 @@ export default function DisputesListPage() {
     setPage(1);
     if (value === "all") {
       setNormalizedStatusFilter([]);
-      setActiveTab("active");
+      setActiveTab("all");
       return;
     }
     if (value === "closed") {

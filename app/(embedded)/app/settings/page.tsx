@@ -394,7 +394,7 @@ export default function EmbeddedSettingsPage() {
                 </div>
                 <BlockStack gap="050">
                   <Text as="h2" variant="headingMd">{t("automationSection")}</Text>
-                  <Text as="span" variant="bodySm" tone="subdued">Advanced defaults — for policy configuration, see Automation</Text>
+                  <Text as="span" variant="bodySm" tone="subdued">{t("automationSectionHelp")}</Text>
                 </BlockStack>
               </InlineStack>
               <Divider />

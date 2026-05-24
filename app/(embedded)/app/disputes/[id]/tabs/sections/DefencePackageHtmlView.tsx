@@ -18,6 +18,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   BlockStack,
   Box,
@@ -212,6 +213,7 @@ function chronologyEvents(
 // ─── Component ───────────────────────────────────────────────────────
 
 export function DefencePackageHtmlView({ row, dispute }: Props) {
+  const t = useTranslations("disputes.defencePackageHtml");
   // No narrative → render nothing (e.g., skipped / failed packages).
   if (!row.narrative_json || !row.facts_json) {
     return null;
@@ -374,7 +376,7 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
         {/* Order Line Items (deterministic) */}
         {lineItems.length > 0 && (
           <BlockStack gap="200">
-            <Text as="h3" variant="headingMd">Order Line Items</Text>
+            <Text as="h3" variant="headingMd">{t("orderLineItems")}</Text>
             <BlockStack gap="100">
               {lineItems.map((it, i) => (
                 <InlineStack key={i} gap="400" align="space-between" wrap={false}>
@@ -396,9 +398,9 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
             keeping the same removal here means the preview is no
             longer a richer view than what we send. */}
         <BlockStack gap="200">
-          <Text as="h3" variant="headingMd">Evidence Basis</Text>
+          <Text as="h3" variant="headingMd">{t("evidenceBasis")}</Text>
           {evidenceBasis.length === 0 ? (
-            <Text as="p" variant="bodyMd">(No bank-eligible facts available.)</Text>
+            <Text as="p" variant="bodyMd">{t("noBankEligibleFacts")}</Text>
           ) : (
             <Box background="bg-surface-secondary" borderRadius="200" padding="300">
               {/* Two-column grid: fixed-width label column + flexible
