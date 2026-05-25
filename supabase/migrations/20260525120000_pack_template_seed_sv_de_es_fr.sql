@@ -43,7 +43,7 @@ INSERT INTO pack_template_i18n (template_id, locale, name, short_description, wo
  'Använd när Shopify saknar spårning — du laddar upp det du har.'),
 ('a0000000-0000-0000-0000-000000000004', 'sv',
  'Produkt ej enligt beskrivning — Kvalitetsproblem',
- 'För ärenden där kunden påstår att produkten inte motsvarar beskrivningen. Hämtar orderdetaljer, utdrag ur återbetalningspolicy och kundkorrespondens från Shopify; ber handlaren ladda upp produktfoton och skärmdumpar av produktsidan som visar att annonsen var korrekt.',
+ 'För ärenden där kunden påstår att produkten inte motsvarar beskrivningen. Hämtar orderdetaljer, utdrag ur chargebackpolicy och kundkorrespondens från Shopify; ber handlaren ladda upp produktfoton och skärmdumpar av produktsidan som visar att annonsen var korrekt.',
  'Ärenden där kunder påstår att produkten skiljer sig från det som annonserades.',
  NULL),
 ('a0000000-0000-0000-0000-000000000005', 'sv',
@@ -52,9 +52,9 @@ INSERT INTO pack_template_i18n (template_id, locale, name, short_description, wo
  'Ärenden om återkommande debiteringar efter att kunden påstår att de har avslutat sin prenumeration.',
  NULL),
 ('a0000000-0000-0000-0000-000000000006', 'sv',
- 'Återbetalning / Kredit ej behandlad — Standard',
- 'För ärenden där kunden påstår att en utlovad återbetalning inte har gjorts. Hämtar ordern, Shopifys återbetalningspost (order.refunds), utdrag ur återbetalningspolicy och eventuell Shopify-korrespondens automatiskt; ber handlaren ladda upp externt kreditbevis enbart om krediten utfärdades utanför Shopify.',
- 'Ärenden där kunden påstår att en återbetalning utlovats men inte mottagits.',
+ 'Chargeback / Kredit ej behandlad — Standard',
+ 'För ärenden där kunden påstår att en utlovad chargeback inte har gjorts. Hämtar ordern, Shopifys chargebackpost (order.refunds), utdrag ur chargebackpolicy och eventuell Shopify-korrespondens automatiskt; ber handlaren ladda upp externt kreditbevis enbart om krediten utfärdades utanför Shopify.',
+ 'Ärenden där kunden påstår att en chargeback utlovats men inte mottagits.',
  NULL),
 ('a0000000-0000-0000-0000-000000000007', 'sv',
  'Dubbeldebitering / Felaktigt belopp',
@@ -63,7 +63,7 @@ INSERT INTO pack_template_i18n (template_id, locale, name, short_description, wo
  NULL),
 ('a0000000-0000-0000-0000-000000000008', 'sv',
  'Digitala varor / Tjänst levererad',
- 'För ärenden om digitala produkter eller tjänster. Hämtar ordern och utdrag ur återbetalningspolicy från Shopify; ber handlaren ladda upp leveransmejl, åtkomstloggar och licensaktiveringsbevis eftersom inget av detta har en Shopify-källa.',
+ 'För ärenden om digitala produkter eller tjänster. Hämtar ordern och utdrag ur chargebackpolicy från Shopify; ber handlaren ladda upp leveransmejl, åtkomstloggar och licensaktiveringsbevis eftersom inget av detta har en Shopify-källa.',
  'Ärenden som rör digitala nedladdningar, SaaS-åtkomst eller onlinetjänster.',
  NULL),
 ('a0000000-0000-0000-0000-000000000009', 'sv',
@@ -89,7 +89,7 @@ INSERT INTO pack_template_i18n (template_id, locale, name, short_description, wo
 ('a0000000-0000-0000-0000-000000000013', 'sv',
  'Produkt ej acceptabel — Förfrågan',
  'Kort svar för förfrågningar om kvalitet eller "ej enligt beskrivning". Fokuserar på vad kunden köpte och eventuellt returerbjudande du har lämnat.',
- 'Klagomålsskede där en fullständig retur- eller återbetalningskonversation kan lösa saken.',
+ 'Klagomålsskede där en fullständig retur- eller chargebackskonversation kan lösa saken.',
  NULL),
 ('a0000000-0000-0000-0000-000000000014', 'sv',
  'Prenumeration avslutad — Förfrågan',
@@ -97,9 +97,9 @@ INSERT INTO pack_template_i18n (template_id, locale, name, short_description, wo
  'Förfrågan om återkommande debiteringar innan ett formellt chargeback-ärende öppnas.',
  NULL),
 ('a0000000-0000-0000-0000-000000000015', 'sv',
- 'Återbetalning / Kredit ej behandlad — Förfrågan',
- 'Snabbt svar om återbetalningsstatus. Talar om för banken om en återbetalning är på väg, redan behandlad eller inte aktuell.',
- 'Kunden påstår att en återbetalning utlovats men inte mottagits — oftast en bokföringsfråga.',
+ 'Chargeback / Kredit ej behandlad — Förfrågan',
+ 'Snabbt svar om chargebacksstatus. Talar om för banken om en chargeback är på väg, redan behandlad eller inte aktuell.',
+ 'Kunden påstår att en chargeback utlovats men inte mottagits — oftast en bokföringsfråga.',
  NULL),
 ('a0000000-0000-0000-0000-000000000016', 'sv',
  'Dubbeldebitering / Felaktigt belopp — Förfrågan',
@@ -140,7 +140,7 @@ INSERT INTO pack_template_section_i18n (template_section_id, locale, title) VALU
 -- Template 4: Not as Described — Quality Issues
 ('b0000000-0004-0000-0000-000000000001', 'sv', 'Orderuppgifter'),
 ('b0000000-0004-0000-0000-000000000002', 'sv', 'Produktbevis'),
-('b0000000-0004-0000-0000-000000000003', 'sv', 'Retur- och återbetalningspolicy'),
+('b0000000-0004-0000-0000-000000000003', 'sv', 'Retur- och chargebackpolicy'),
 ('b0000000-0004-0000-0000-000000000004', 'sv', 'Kundkommunikation'),
 -- Template 5: Subscription Canceled — Comprehensive
 ('b0000000-0005-0000-0000-000000000001', 'sv', 'Orderuppgifter'),
@@ -149,8 +149,8 @@ INSERT INTO pack_template_section_i18n (template_section_id, locale, title) VALU
 ('b0000000-0005-0000-0000-000000000004', 'sv', 'Kundkommunikation'),
 -- Template 6: Refund / Credit Not Processed
 ('b0000000-0006-0000-0000-000000000001', 'sv', 'Orderuppgifter'),
-('b0000000-0006-0000-0000-000000000002', 'sv', 'Återbetalningspost'),
-('b0000000-0006-0000-0000-000000000003', 'sv', 'Återbetalningspolicy'),
+('b0000000-0006-0000-0000-000000000002', 'sv', 'Chargebackpost'),
+('b0000000-0006-0000-0000-000000000003', 'sv', 'Chargebackpolicy'),
 ('b0000000-0006-0000-0000-000000000004', 'sv', 'Kundkommunikation'),
 -- Template 7: Duplicate / Incorrect Amount
 ('b0000000-0007-0000-0000-000000000001', 'sv', 'Orderuppgifter'),
@@ -176,7 +176,7 @@ INSERT INTO pack_template_section_i18n (template_section_id, locale, title) VALU
 -- Template 14: Subscription Inquiry
 ('b0000000-0014-0000-0000-000000000001', 'sv', 'Prenumerationsstatus'),
 -- Template 15: Refund Inquiry
-('b0000000-0015-0000-0000-000000000001', 'sv', 'Återbetalningsstatus'),
+('b0000000-0015-0000-0000-000000000001', 'sv', 'Chargebackstatus'),
 -- Template 16: Duplicate Inquiry
 ('b0000000-0016-0000-0000-000000000001', 'sv', 'Transaktionsposter'),
 -- Template 17: Policy Inquiry
@@ -225,7 +225,7 @@ JOIN (VALUES
   ('b0000000-0003-0000-0000-000000000002', 'shipping_method_note', 'sv', 'Notering: förklara fraktmetoden som använts', 'Beskriv fraktmetoden och varför fullständig spårning kan saknas.'),
   -- Template 3, section 3: Policies & Terms
   ('b0000000-0003-0000-0000-000000000003', 'shipping_policy', 'sv', 'Fraktpolicy', 'Publicerat utdrag ur fraktpolicyn från handlarbutiken.'),
-  ('b0000000-0003-0000-0000-000000000003', 'refund_policy', 'sv', 'Återbetalningspolicy', 'Publicerat utdrag ur återbetalningspolicyn från handlarbutiken.'),
+  ('b0000000-0003-0000-0000-000000000003', 'refund_policy', 'sv', 'Chargebackpolicy', 'Publicerat utdrag ur chargebackpolicyn från handlarbutiken.'),
 
   -- Template 4, section 1: Order Basics
   ('b0000000-0004-0000-0000-000000000001', 'order_confirmation', 'sv', 'Orderbekräftelse', 'Orderdetaljer, artiklar och produkttitel från Shopify-ordern.'),
@@ -233,8 +233,8 @@ JOIN (VALUES
   ('b0000000-0004-0000-0000-000000000002', 'product_page_screenshot', 'sv', 'Skärmdump av produktsida', 'Ladda upp en skärmdump av produktsidan som den såg ut vid köptillfället.'),
   ('b0000000-0004-0000-0000-000000000002', 'product_photos', 'sv', 'Produktfoton', 'Ladda upp foton av den faktiskt skickade produkten (kvalitetskontrollbilder).'),
   -- Template 4, section 3: Returns & Refund Policy
-  ('b0000000-0004-0000-0000-000000000003', 'refund_policy', 'sv', 'Retur- och återbetalningspolicy', 'Publicerat utdrag ur återbetalningspolicyn från handlarbutiken.'),
-  ('b0000000-0004-0000-0000-000000000003', 'return_offered_note', 'sv', 'Notering: erbjöds en retur eller ett byte?', 'Dokumentera om du erbjöd retur, byte eller delvis återbetalning.'),
+  ('b0000000-0004-0000-0000-000000000003', 'refund_policy', 'sv', 'Retur- och chargebackpolicy', 'Publicerat utdrag ur chargebackpolicyn från handlarbutiken.'),
+  ('b0000000-0004-0000-0000-000000000003', 'return_offered_note', 'sv', 'Notering: erbjöds en retur eller ett byte?', 'Dokumentera om du erbjöd retur, byte eller delvis chargeback.'),
   -- Template 4, section 4: Customer Communication
   ('b0000000-0004-0000-0000-000000000004', 'customer_communication', 'sv', 'Kundkorrespondens', 'Meddelanden och ordernoteringar om kvalitetsklagomålet, från Shopify.'),
 
@@ -247,20 +247,20 @@ JOIN (VALUES
   ('b0000000-0005-0000-0000-000000000002', 'cancellation_status_note', 'sv', 'Notering: status för avbokningsbegäran', 'Dokumentera om en avbokning togs emot och när, eller att ingen avbokning skickades in.'),
   -- Template 5, section 3: Policies & Terms
   ('b0000000-0005-0000-0000-000000000003', 'cancellation_policy', 'sv', 'Avbokningspolicy', 'Publicerat utdrag ur avbokningspolicyn från handlarbutiken.'),
-  ('b0000000-0005-0000-0000-000000000003', 'refund_policy', 'sv', 'Återbetalningspolicy', 'Publicerat utdrag ur återbetalningspolicyn från handlarbutiken.'),
+  ('b0000000-0005-0000-0000-000000000003', 'refund_policy', 'sv', 'Chargebackpolicy', 'Publicerat utdrag ur chargebackpolicyn från handlarbutiken.'),
   -- Template 5, section 4: Customer Communication
   ('b0000000-0005-0000-0000-000000000004', 'customer_communication', 'sv', 'Kundkorrespondens', 'Meddelanden och ordernoteringar om avbokningen, från Shopify.'),
 
   -- Template 6, section 1: Order Basics
   ('b0000000-0006-0000-0000-000000000001', 'order_confirmation', 'sv', 'Orderbekräftelse', 'Orderdetaljer och totaler från Shopify-ordern.'),
   -- Template 6, section 2: Refund Record
-  ('b0000000-0006-0000-0000-000000000002', 'refund_record', 'sv', 'Shopifys återbetalningspost', 'Återbetalningshistorik inbäddad i Shopify-ordern (datum, belopp, notering) — om en återbetalning finns på ordern inkluderar vi den.'),
+  ('b0000000-0006-0000-0000-000000000002', 'refund_record', 'sv', 'Shopifys chargebackpost', 'Chargebackhistorik inbäddad i Shopify-ordern (datum, belopp, notering) — om en chargeback finns på ordern inkluderar vi den.'),
   ('b0000000-0006-0000-0000-000000000002', 'credit_statement', 'sv', 'Extern kredit / butikskreditpost', 'Ladda upp bevis på eventuell kredit som utfärdats utanför Shopify (butikskredit, presentkort, kredit utanför plattformen).'),
-  ('b0000000-0006-0000-0000-000000000002', 'processing_timeline_note', 'sv', 'Notering: tidslinje för återbetalning', 'Förklara typisk handläggningstid för återbetalningar och om ärendet ligger inom det fönstret.'),
+  ('b0000000-0006-0000-0000-000000000002', 'processing_timeline_note', 'sv', 'Notering: tidslinje för chargeback', 'Förklara typisk handläggningstid för chargebackar och om ärendet ligger inom det fönstret.'),
   -- Template 6, section 3: Refund Policy
-  ('b0000000-0006-0000-0000-000000000003', 'refund_policy', 'sv', 'Återbetalnings- / returpolicy', 'Publicerat utdrag ur återbetalningspolicyn från handlarbutiken.'),
+  ('b0000000-0006-0000-0000-000000000003', 'refund_policy', 'sv', 'Chargebacks- / returpolicy', 'Publicerat utdrag ur chargebackpolicyn från handlarbutiken.'),
   -- Template 6, section 4: Customer Communication
-  ('b0000000-0006-0000-0000-000000000004', 'customer_communication', 'sv', 'Kundkorrespondens om återbetalningen', 'Meddelanden och ordernoteringar som rör återbetalningen, från Shopify.'),
+  ('b0000000-0006-0000-0000-000000000004', 'customer_communication', 'sv', 'Kundkorrespondens om chargebacken', 'Meddelanden och ordernoteringar som rör chargebacken, från Shopify.'),
 
   -- Template 7, section 1: Order Basics
   ('b0000000-0007-0000-0000-000000000001', 'order_confirmation', 'sv', 'Orderbekräftelse', 'Orderdetaljer, totaler och skapandedatum från Shopify-ordern.'),
@@ -277,10 +277,10 @@ JOIN (VALUES
   ('b0000000-0008-0000-0000-000000000002', 'access_logs', 'sv', 'Åtkomst- eller nedladdningsloggar', 'Ladda upp serverloggar som visar att kunden öppnade eller laddade ner den digitala produkten.'),
   ('b0000000-0008-0000-0000-000000000002', 'license_activation', 'sv', 'Aktiveringspost för licensnyckel', 'Ladda upp posten som visar att licensnyckeln aktiverades av kunden.'),
   -- Template 8, section 3: Terms & Policies
-  ('b0000000-0008-0000-0000-000000000003', 'refund_policy', 'sv', 'Policy för digital leverans / återbetalning', 'Publicerat utdrag ur återbetalningspolicyn från handlarbutiken (täcker villkor om icke-återbetalningsbara digitala varor när det är tillämpligt).'),
+  ('b0000000-0008-0000-0000-000000000003', 'refund_policy', 'sv', 'Policy för digital leverans / chargeback', 'Publicerat utdrag ur chargebackpolicyn från handlarbutiken (täcker villkor om icke-chargebacksbara digitala varor när det är tillämpligt).'),
 
   -- Template 9, section 1: Store Policies
-  ('b0000000-0009-0000-0000-000000000001', 'refund_policy', 'sv', 'Återbetalnings- / returpolicy', 'Publicerat utdrag ur återbetalningspolicyn från handlarbutiken.'),
+  ('b0000000-0009-0000-0000-000000000001', 'refund_policy', 'sv', 'Chargebacks- / returpolicy', 'Publicerat utdrag ur chargebackpolicyn från handlarbutiken.'),
   ('b0000000-0009-0000-0000-000000000001', 'cancellation_policy', 'sv', 'Avbokningspolicy', 'Publicerat utdrag ur avbokningspolicyn från handlarbutiken.'),
   ('b0000000-0009-0000-0000-000000000001', 'shipping_policy', 'sv', 'Fraktpolicy', 'Publicerat utdrag ur fraktpolicyn från handlarbutiken.'),
   -- Template 9, section 2: Customer Acceptance
@@ -293,7 +293,7 @@ JOIN (VALUES
   ('b0000000-0010-0000-0000-000000000002', 'shipping_tracking', 'sv', 'Fraktspårning (om tillämpligt)', 'Transportörens spårning från Shopify-leveransen, om ordern har skickats.'),
   ('b0000000-0010-0000-0000-000000000002', 'delivery_proof', 'sv', 'Leveransbekräftelse', 'Leveransstatus från transportören enligt Shopify-leveransen, när det är tillgängligt.'),
   -- Template 10, section 3: Policies & Terms
-  ('b0000000-0010-0000-0000-000000000003', 'refund_policy', 'sv', 'Återbetalningspolicy', 'Publicerat utdrag ur återbetalningspolicyn från handlarbutiken.'),
+  ('b0000000-0010-0000-0000-000000000003', 'refund_policy', 'sv', 'Chargebackpolicy', 'Publicerat utdrag ur chargebackpolicyn från handlarbutiken.'),
   ('b0000000-0010-0000-0000-000000000003', 'shipping_policy', 'sv', 'Fraktpolicy', 'Publicerat utdrag ur fraktpolicyn från handlarbutiken.'),
   ('b0000000-0010-0000-0000-000000000003', 'cancellation_policy', 'sv', 'Avbokningspolicy', 'Publicerat utdrag ur avbokningspolicyn från handlarbutiken.'),
   -- Template 10, section 4: Customer Communication
@@ -316,9 +316,9 @@ JOIN (VALUES
   ('b0000000-0014-0000-0000-000000000001', 'usage_activity', 'sv', 'Senaste aktiviteten', 'Senaste inloggning eller tjänsteanvändning, om tillämpligt.'),
   ('b0000000-0014-0000-0000-000000000001', 'cancellation_status_note', 'sv', 'Avbokningsstatus', 'Om en avbokningsbegäran togs emot och när.'),
   -- Template 15: Refund Inquiry
-  ('b0000000-0015-0000-0000-000000000001', 'processing_timeline_note', 'sv', 'Återbetalningsstatus', 'Aktuell status: behandlad, pågående eller inte tillämplig.'),
-  ('b0000000-0015-0000-0000-000000000001', 'refund_policy', 'sv', 'Sammanfattning av återbetalningspolicy', 'Kort notering om din återbetalningspolicy.'),
-  ('b0000000-0015-0000-0000-000000000001', 'customer_emails', 'sv', 'Kundkorrespondens', 'Senaste meddelanden med kunden om återbetalningen.'),
+  ('b0000000-0015-0000-0000-000000000001', 'processing_timeline_note', 'sv', 'Chargebackstatus', 'Aktuell status: behandlad, pågående eller inte tillämplig.'),
+  ('b0000000-0015-0000-0000-000000000001', 'refund_policy', 'sv', 'Sammanfattning av chargebackpolicy', 'Kort notering om din chargebackpolicy.'),
+  ('b0000000-0015-0000-0000-000000000001', 'customer_emails', 'sv', 'Kundkorrespondens', 'Senaste meddelanden med kunden om chargebacken.'),
   -- Template 16: Duplicate Inquiry
   ('b0000000-0016-0000-0000-000000000001', 'payment_records', 'sv', 'Transaktionslista', 'Alla debiteringar på denna order som visar att varje debitering är separat.'),
   ('b0000000-0016-0000-0000-000000000001', 'order_itemization', 'sv', 'Specifikation av ordern', 'Orderrader och totalbelopp för debiteringen i fråga.'),

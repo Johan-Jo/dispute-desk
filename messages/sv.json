@@ -622,7 +622,7 @@
       "account_history": "Kundens kontohistorik",
       "order_record": "Orderpost",
       "product_listing": "Produktinformation",
-      "policy_refund": "Återbetalningspolicy",
+      "policy_refund": "Chargebackpolicy",
       "policy_shipping": "Fraktpolicy",
       "policy_cancellation": "Avbokningspolicy",
       "duplicate_explanation": "Förklaring av dubbeldebitering",
@@ -633,7 +633,7 @@
       "fraud": "bedrägeri",
       "delivery": "leverans",
       "product": "produktbeskrivning",
-      "refund": "återbetalning",
+      "refund": "chargeback",
       "subscription": "prenumeration",
       "billing": "fakturering",
       "digital": "digital vara",
@@ -642,8 +642,8 @@
     "decisiveHint": {
       "fraud": "leveransbekräftelse, signatur, eller enhets-/sessionskonsistens",
       "delivery": "leveranssignatur eller matchande fakturerings-/IP-signaler",
-      "product": "produktinformation som annonserad och din återbetalningspolicy",
-      "refund": "dokumenterad återbetalning eller kundkommunikation",
+      "product": "produktinformation som annonserad och din chargebackpolicy",
+      "refund": "dokumenterad chargeback eller kundkommunikation",
       "subscription": "avbokningspolicy och kommunikationstidslinje",
       "billing": "transaktionsregister och AVS+CVV-verifiering",
       "digital": "åtkomstloggar som bevisar att kunden använde den digitala varan",
@@ -652,8 +652,8 @@
     "decisiveFamilies": {
       "fraud": "betalningsverifiering, bekräftad leverans, eller tydligt köperkännande från kunden",
       "delivery": "leveranssignatur, leveransbevis till kortinnehavarens verifierade adress, eller kundens bekräftelse av mottagande",
-      "product": "produktinformation som annonserad, återbetalningspolicy, eller kundkorrespondens",
-      "refund": "dokumenterad återbetalning, återbetalningstidslinje, eller kundkorrespondens",
+      "product": "produktinformation som annonserad, chargebackpolicy, eller kundkorrespondens",
+      "refund": "dokumenterad chargeback, chargebacktidslinje, eller kundkorrespondens",
       "subscription": "avbokningspolicy, avbokningstidslinje, eller kundkorrespondens",
       "billing": "transaktionsregister, AVS/CVV-verifiering, eller 3-D Secure-autentisering",
       "digital": "åtkomstloggar som visar att kunden använde den digitala varan",
@@ -695,10 +695,10 @@
         "insufficient": "Inga bevis på produktöverensstämmelse finns."
       },
       "refund": {
-        "strong": "Återbetalningshantering är dokumenterad.",
-        "moderate": "Viss återbetalningsbevisning finns, men fullständig dokumentation skulle hjälpa.",
-        "weak": "Återbetalningsbevisen är ofullständiga.",
-        "insufficient": "Inga återbetalningsbevis finns."
+        "strong": "Chargebackhantering är dokumenterad.",
+        "moderate": "Viss chargebackbevisning finns, men fullständig dokumentation skulle hjälpa.",
+        "weak": "Chargebackbevisen är ofullständiga.",
+        "insufficient": "Inga chargebackbevis finns."
       },
       "subscription": {
         "strong": "Prenumerationsvillkor och avbokningstidslinje är dokumenterade.",
@@ -725,7 +725,7 @@
         "insufficient": "Inga bevis finns."
       },
       "fatalLoss": {
-        "refund_issued": "En återbetalning har redan utfärdats för denna order — banken kommer att behandla detta som ett erkännande av ansvar, så ärendet kan inte vinnas som det är.",
+        "refund_issued": "En chargeback har redan utfärdats för denna order — banken kommer att behandla detta som ett erkännande av ansvar, så ärendet kan inte vinnas som det är.",
         "inr_no_fulfillment": "Ordern uppfylldes aldrig och tvistorsaken är att artikeln inte mottagits — det finns ingen faktisk grund att försvara debiteringen."
       }
     },
@@ -805,7 +805,7 @@
       "billing_address_match": "Matchar faktureringsadressen till ordern — kritiskt för bedrägeritvister",
       "avs_cvv_match": "Visar att kortets säkerhetskontroller godkändes — banker väger detta tungt i bedrägerifall",
       "product_description": "Bevisar att produkten matchade vad som annonserades — viktigt försvar för 'inte som beskrivet'-tvister",
-      "refund_policy": "Visar att kunden godkände dina återbetalningsvillkor — skyddar mot ångerkrav",
+      "refund_policy": "Visar att kunden godkände dina chargebackvillkor — skyddar mot ångerkrav",
       "shipping_policy": "Dokumenterar dina fraktåtaganden — stöder tidslinjetvister för leverans",
       "cancellation_policy": "Bevisar att kunden informerats om avbokningsregler före köp",
       "customer_communication": "Visar att du försökt lösa problemet — banker föredrar köpmän som engagerar sig",
@@ -817,7 +817,7 @@
       "SHIPPING_DOCUMENTATION": "Fraktdokumentation",
       "CUSTOMER_COMMUNICATION": "Kundkommunikation",
       "PROOF_OF_SERVICE": "Tjänstebevis",
-      "REFUND_POLICY": "Återbetalningspolicy",
+      "REFUND_POLICY": "Chargebackpolicy",
       "CANCELLATION_POLICY": "Avbokningspolicy",
       "UNCATEGORIZED_FILE": "Annat bevis"
     },
@@ -841,7 +841,7 @@
       },
       "merchantReasonLabel": {
         "BANK_CANNOT_PROCESS": "Banken kan inte behandla",
-        "CREDIT_NOT_PROCESSED": "Återbetalning / Kredit ej behandlad",
+        "CREDIT_NOT_PROCESSED": "Chargeback / Kredit ej behandlad",
         "CUSTOMER_INITIATED": "Initierad av kund",
         "DEBIT_NOT_AUTHORIZED": "Debitering ej auktoriserad",
         "DUPLICATE": "Dubbeldebitering",
@@ -1083,7 +1083,7 @@
         },
         "blocked_fatal_loss": {
           "title": "Försvarspaketet regenererades — omsparning blockerad",
-          "body": "Regenereringen upptäckte ett strukturellt förlorande villkor (till exempel en utfärdad återbetalning) och sparades inte om till Shopify. Det tidigare sparade paketet ligger kvar på tvisten."
+          "body": "Regenereringen upptäckte ett strukturellt förlorande villkor (till exempel en utfärdad chargeback) och sparades inte om till Shopify. Det tidigare sparade paketet ligger kvar på tvisten."
         },
         "blocked_covered": {
           "title": "Shopify Protect täcker nu denna tvist",
@@ -1341,7 +1341,7 @@
           },
           "refundPolicy": {
             "contextOnly": "Dokumenterar handlarens policy men bevisar inte i sig att kunden auktoriserade den här bedrägeritvisten.",
-            "notIncluded": "Din återbetalningspolicy finns inte registrerad för den här utcheckningen."
+            "notIncluded": "Din chargebackpolicy finns inte registrerad för den här utcheckningen."
           },
           "shippingPolicy": {
             "contextOnly": "Dokumenterar leveransåtaganden; endast stödjande kontext.",
@@ -1552,7 +1552,7 @@
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banken kan inte behandla",
-    "CREDIT_NOT_PROCESSED": "Återbetalning / Kredit ej behandlad",
+    "CREDIT_NOT_PROCESSED": "Chargeback / Kredit ej behandlad",
     "CUSTOMER_INITIATED": "Initierad av kund",
     "DEBIT_NOT_AUTHORIZED": "Debitering ej auktoriserad",
     "DUPLICATE": "Dubbeldebitering",
@@ -1568,7 +1568,7 @@
   },
   "disputeFamilies": {
     "Technical": "Teknisk",
-    "Refund": "Återbetalning",
+    "Refund": "Chargeback",
     "General": "Allmän",
     "Authorization": "Auktorisering",
     "Billing": "Fakturering",
@@ -1581,7 +1581,7 @@
   "packs": {
     "section": {
       "order": "Beställning {orderName}",
-      "refundHistory": "Återbetalningshistorik",
+      "refundHistory": "Chargebackhistorik",
       "customerActivityLog": "Kundens aktivitetslogg",
       "customerAccountDetails": "Kundkontoinformation",
       "shopifyProtect": "Shopify Protect-täckning",
@@ -1594,7 +1594,7 @@
       "paymentVerification": "Betalningsverifiering",
       "paymentVerificationAvsCvv": "Betalningsverifiering (AVS/CVV)",
       "storePolicies": "Butikspolicyer ({count})",
-      "refundPolicy": "Återbetalningspolicy",
+      "refundPolicy": "Chargebackpolicy",
       "shippingPolicy": "Leveranspolicy",
       "cancellationPolicy": "Avbokningspolicy",
       "threeDSecure": "3-D Secure-autentisering",
@@ -1603,7 +1603,7 @@
         "shipping": "Frakt",
         "tracking": "Spårning",
         "policy": "Policy",
-        "refund_policy": "Återbetalningspolicy",
+        "refund_policy": "Chargebackpolicy",
         "shipping_policy": "Leveranspolicy",
         "cancellation_policy": "Avbokningspolicy",
         "comms": "Kommunikation",
@@ -1737,7 +1737,7 @@
     "collectorFraudScreening": "Shopifys bedrägerikontroll",
     "collectorIpLocation": "IP-platskontroll",
     "collectorBillingAddressMatch": "Matchning av fakturerings-/leveransadress",
-    "collectorRefundRecord": "Shopify-återbetalningspost",
+    "collectorRefundRecord": "Shopify-chargebackpost",
     "collectorPriorCustomer": "Återkommande kund-signal",
     "statusDraftLabel": "Utkast",
     "statusQueuedLabel": "I kö",
@@ -1795,11 +1795,11 @@
       "PRODUCT_NOT_RECEIVED": "Produkt ej mottagen",
       "NOT_AS_DESCRIBED": "Produkt ej enligt beskrivning",
       "SUBSCRIPTION": "Prenumeration avslutad",
-      "REFUND": "Återbetalning / Kredit ej behandlad",
+      "REFUND": "Chargeback / Kredit ej behandlad",
       "DUPLICATE": "Dubbeldebitering",
       "DIGITAL": "Digitala varor eller tjänst",
       "GENERAL": "Generellt eller specialfall",
-      "CREDIT_NOT_PROCESSED": "Återbetalning / Kredit ej behandlad",
+      "CREDIT_NOT_PROCESSED": "Chargeback / Kredit ej behandlad",
       "SUBSCRIPTION_CANCELED": "Prenumeration avslutad",
       "PRODUCT_UNACCEPTABLE": "Produkt ej enligt beskrivning",
       "NONCOMPLIANT": "Ej regelenlig",
@@ -1853,7 +1853,7 @@
     "whyBillingAddressMatch": "Matchar faktureringsadressen mot beställningen — avgörande för bedrägeritvister",
     "whyAvsCvvMatch": "Visar att kortets säkerhetskontroller godkändes — banker väger detta tungt i bedrägerifall",
     "whyProductDescription": "Bevisar att produkten motsvarade det som marknadsfördes — central försvarslinje för 'inte som beskrivet'-tvister",
-    "whyRefundPolicy": "Visar att kunden godkände dina återbetalningsvillkor — skyddar mot ångerköpsanspråk",
+    "whyRefundPolicy": "Visar att kunden godkände dina chargebackvillkor — skyddar mot ångerköpsanspråk",
     "whyShippingPolicy": "Dokumenterar dina leveransåtaganden — stödjer tvister om leveranstider",
     "whyCancellationPolicy": "Bevisar att kunden informerats om avbokningsregler före köp",
     "whyCustomerCommunication": "Visar att du försökt lösa problemet — banker gynnar handlare som engagerar sig",
@@ -2273,8 +2273,8 @@
     "soc2Desc": "Årliga säkerhetsgranskningar av tredje part",
     "gdpr": "Redo för GDPR och CCPA",
     "gdprDesc": "Fullständig efterlevnad av dataskyddsförordningar",
-    "notifMonthlyDigest": "Månatlig återkrediteringssammanfattning",
-    "notifMonthlyDigestDesc": "Ett månadsmejl som sammanfattar din återkrediteringsexponering, din position gentemot kortnätsreglerna och förändringarna."
+    "notifMonthlyDigest": "Månatlig chargebacksammanfattning",
+    "notifMonthlyDigestDesc": "Ett månadsmejl som sammanfattar din chargebackexponering, din position gentemot kortnätsreglerna och förändringarna."
   },
   "connect": {
     "title": "Connection Readiness",
@@ -2356,7 +2356,7 @@
     "addPolicy": "Lägg till policy",
     "updated": "Uppdaterad",
     "termsOfService": "Användarvillkor",
-    "refundPolicy": "Återbetalningspolicy",
+    "refundPolicy": "Chargebackpolicy",
     "privacyPolicy": "Integritetspolicy",
     "shippingPolicy": "Fraktpolicy",
     "contactPolicy": "Kontaktinformation och kundservicepolicy",
@@ -2373,7 +2373,7 @@
     "download": "Ladda ner",
     "edit": "Redigera",
     "defineTitle": "Definiera dina butikspolicyer",
-    "defineSubtitle": "Policyer inkluderas i bevis. Definiera villkor, återbetalning, frakt, integritet och kontakt.",
+    "defineSubtitle": "Policyer inkluderas i bevis. Definiera villkor, chargeback, frakt, integritet och kontakt.",
     "suggestedTemplates": "Föreslagna mallar",
     "useTemplate": "Använd mall",
     "uploadYourOwn": "Ladda upp egen",
@@ -2387,7 +2387,7 @@
     "uploadSuccess": "Policy uppladdad.",
     "uploadError": "Uppladdning misslyckades. Försök igen.",
     "missingPolicy": "Saknar du en policy? Använd våra mallar eller ladda upp egen.",
-    "refundTemplateDesc": "Standardvillkor för retur och återbetalning för bevis.",
+    "refundTemplateDesc": "Standardvillkor för retur och chargeback för bevis.",
     "shippingTemplateDesc": "Fraktider, transportörer och leveransvillkor.",
     "termsTemplateDesc": "Betalning, avbokningar och tvister.",
     "templateDisclaimer": "Mallar är utgångspunkter, inte juridisk rådgivning. Granska med juridik innan publicering.",
@@ -2650,7 +2650,7 @@
       },
       "disputeDetailPage": {
         "title": "Tvistdetaljsida",
-        "body": "Öppna en tvist från listan för den fullständiga vyn.\n\nInnehåll:\n- KPI-rad: belopp, status, förfallodatum och återstående tid.\n- Hanteras av DisputeDesk: återbetalningsflödet förbereds i appen.\n- Tviststatus: fem steg (Skapad → Paket → Sparad → Granskning → Utfall). Stegen uppdateras när paket byggs och sparas till Shopify; slutstatus (vunnen, förlorad m.m.) markerar alla steg som klara.\n- Kund och order: profil- och orderdata från Shopify med länkar.\n- Kompletterande bevis: när minst ett paket sparats i Shopify (manuellt eller via automation), använd Öppna bevispaket för att ladda upp filer på paketsidan. Tills dess förklarar rutan att uppladdning aktiveras efter sparning i Shopify.\n- Tidslinje: senaste Shopify-ordenhändelser plus DisputeDesk-händelser.\n- Bevispaket: alla paket med fullständighet och länkar.\n\nAnvänd Skapa paket, Synka om och Öppna tvist i Shopify. Byte av appens språk kan påverka tidslinjetexter om Shopify returnerar lokaliserade händelser."
+        "body": "Öppna en tvist från listan för den fullständiga vyn.\n\nInnehåll:\n- KPI-rad: belopp, status, förfallodatum och återstående tid.\n- Hanteras av DisputeDesk: chargebackflödet förbereds i appen.\n- Tviststatus: fem steg (Skapad → Paket → Sparad → Granskning → Utfall). Stegen uppdateras när paket byggs och sparas till Shopify; slutstatus (vunnen, förlorad m.m.) markerar alla steg som klara.\n- Kund och order: profil- och orderdata från Shopify med länkar.\n- Kompletterande bevis: när minst ett paket sparats i Shopify (manuellt eller via automation), använd Öppna bevispaket för att ladda upp filer på paketsidan. Tills dess förklarar rutan att uppladdning aktiveras efter sparning i Shopify.\n- Tidslinje: senaste Shopify-ordenhändelser plus DisputeDesk-händelser.\n- Bevispaket: alla paket med fullständighet och länkar.\n\nAnvänd Skapa paket, Synka om och Öppna tvist i Shopify. Byte av appens språk kan påverka tidslinjetexter om Shopify returnerar lokaliserade händelser."
       },
       "syncingDisputes": {
         "title": "Synkronisera tvister från Shopify",
@@ -2690,7 +2690,7 @@
       },
       "defenseLetterRebuttal": {
         "title": "Försvarsbreve och automatisk motsvarotext",
-        "body": "På fliken **Bevis** är **Försvarsbreve** det utkast till berättelse som DisputeDesk bifogar när du sparar bevis till Shopify (tillsammans med de strukturerade fälten och eventuella säkra fillänkar).\n\n**Vilka tvister som använder den strukturerade utgivarberättelsen**\n\nFör dessa Shopify-orsaksfamiljer följer brevet ett fast sexdelat flöde: inledning (chargeback-tvist och begäran om återföring), transaktionslegitimitet (när betalningssignaler finns), rader om betalningsverifiering (endast för data som faktiskt finns i paketet), kund och kassa (när orderbekräftelse finns), enhet och plats (när IP-berikelse finns, med neutral formulering om land skiljer sig från leverans), och avslutning (begäran om återföring).\n\n- Bedrägeri\n- Ej igenkänd\n- Produkt inte mottagen\n- Duplicerad\n- Allmän\n\n**Betalningsrader**\n\nMeningar om auktorisering och capture visas endast när paketet stöder dem. AVS- och CVV-rader använder endast starka matchningskoder (Y respektive M); andra koder ger ingen generisk AVS/CVV-mening, så att brevet inte överdriver.\n\n**Vilka tvister som behåller ett annat argument**\n\nKredit ej behandlad, uppsagd prenumeration, oacceptabel produkt och digitala tvister behåller familjpecifika argument (t.ex. genomförd återbetalning, tidslinje för uppsägning eller produktöverensstämmelse) i stället för legitimitetsmallen i bedrägeristil.\n\n**Datakälla**\n\nTexten byggs från ditt bevispaket (order, betalningsverifikation, IP-kontroll, checklista). Den exponerar inte interna poäng, flaggor för bankklarhet eller rå JSON. När du ändrar bevis eller regenererar paketet, regenerera argumentet om brevet ska uppdateras."
+        "body": "På fliken **Bevis** är **Försvarsbreve** det utkast till berättelse som DisputeDesk bifogar när du sparar bevis till Shopify (tillsammans med de strukturerade fälten och eventuella säkra fillänkar).\n\n**Vilka tvister som använder den strukturerade utgivarberättelsen**\n\nFör dessa Shopify-orsaksfamiljer följer brevet ett fast sexdelat flöde: inledning (chargeback-tvist och begäran om återföring), transaktionslegitimitet (när betalningssignaler finns), rader om betalningsverifiering (endast för data som faktiskt finns i paketet), kund och kassa (när orderbekräftelse finns), enhet och plats (när IP-berikelse finns, med neutral formulering om land skiljer sig från leverans), och avslutning (begäran om återföring).\n\n- Bedrägeri\n- Ej igenkänd\n- Produkt inte mottagen\n- Duplicerad\n- Allmän\n\n**Betalningsrader**\n\nMeningar om auktorisering och capture visas endast när paketet stöder dem. AVS- och CVV-rader använder endast starka matchningskoder (Y respektive M); andra koder ger ingen generisk AVS/CVV-mening, så att brevet inte överdriver.\n\n**Vilka tvister som behåller ett annat argument**\n\nKredit ej behandlad, uppsagd prenumeration, oacceptabel produkt och digitala tvister behåller familjpecifika argument (t.ex. genomförd chargeback, tidslinje för uppsägning eller produktöverensstämmelse) i stället för legitimitetsmallen i bedrägeristil.\n\n**Datakälla**\n\nTexten byggs från ditt bevispaket (order, betalningsverifikation, IP-kontroll, checklista). Den exponerar inte interna poäng, flaggor för bankklarhet eller rå JSON. När du ändrar bevis eller regenererar paketet, regenerera argumentet om brevet ska uppdateras."
       },
       "evidencePackTemplates": {
         "title": "Använda bevispaketmallar",
@@ -2698,7 +2698,7 @@
       },
       "definingStorePolicies": {
         "title": "Definiera dina butikspolicyer",
-        "body": "Butikspolicyer inkluderas automatiskt i bevispaket. DisputeDesk använder dem för att stärka ditt ärende vid chargebacks.\n\nTyper som stöds: Användarvillkor, Återbetalningspolicy, Fraktpolicy, Integritetspolicy och Kontakt- och kundservicepolicy.\n\nPolicysidan (portalen) visar avsnittet «Rekommenderade butikspolicyer» med mallkort. För varje policy kan du:\n\n1. Använda mall: klicka på «Använd mall» för att öppna ett startdokument på ditt valda språk. Redigera innehållet för din butik (platshållare fylls i när möjligt). Du kan kopiera, ladda ner eller «Spara och tillämpa». Mallar är startpunkter, inte juridisk rådgivning — låt ditt juridiska team granska dem.\n\n2. Ladda upp egen: om du redan har en policy som PDF eller Word, använd «Ladda upp» eller «Ladda upp egen». Format: PDF och DOCX, max 10 MB.\n\nFör redan definierade policyer visar varje rad Redigera, Förhandsgranska och Ladda ner. Använd Redigera för att ändra policytexten i samma dialog (för policyer sparade från mall); spara med «Spara och tillämpa». För uppladdade filer öppnar Redigera mallen så att du kan ersätta med redigerbar text.\n\nRensa alla policyer: för att ta bort alla policyer för butiken och granska på nytt, klicka på «Rensa alla policyer» (uppe till höger när minst en policy finns). Efter bekräftelse tas alla policydokument bort; du kan lägga till dem igen med mallar eller uppladdningar.\n\nMallspråk för policyer: under Inställningar (avsnitt Policymallar) väljer du språk för malltexten (t.ex. Engelska eller Deutsch). Du kan använda engelska även om gränssnittet är på ett annat språk.\n\nVarje rad visar om policyn är definierad. Uppdaterade policyer förbättrar beviskvaliteten."
+        "body": "Butikspolicyer inkluderas automatiskt i bevispaket. DisputeDesk använder dem för att stärka ditt ärende vid chargebacks.\n\nTyper som stöds: Användarvillkor, Chargebackpolicy, Fraktpolicy, Integritetspolicy och Kontakt- och kundservicepolicy.\n\nPolicysidan (portalen) visar avsnittet «Rekommenderade butikspolicyer» med mallkort. För varje policy kan du:\n\n1. Använda mall: klicka på «Använd mall» för att öppna ett startdokument på ditt valda språk. Redigera innehållet för din butik (platshållare fylls i när möjligt). Du kan kopiera, ladda ner eller «Spara och tillämpa». Mallar är startpunkter, inte juridisk rådgivning — låt ditt juridiska team granska dem.\n\n2. Ladda upp egen: om du redan har en policy som PDF eller Word, använd «Ladda upp» eller «Ladda upp egen». Format: PDF och DOCX, max 10 MB.\n\nFör redan definierade policyer visar varje rad Redigera, Förhandsgranska och Ladda ner. Använd Redigera för att ändra policytexten i samma dialog (för policyer sparade från mall); spara med «Spara och tillämpa». För uppladdade filer öppnar Redigera mallen så att du kan ersätta med redigerbar text.\n\nRensa alla policyer: för att ta bort alla policyer för butiken och granska på nytt, klicka på «Rensa alla policyer» (uppe till höger när minst en policy finns). Efter bekräftelse tas alla policydokument bort; du kan lägga till dem igen med mallar eller uppladdningar.\n\nMallspråk för policyer: under Inställningar (avsnitt Policymallar) väljer du språk för malltexten (t.ex. Engelska eller Deutsch). Du kan använda engelska även om gränssnittet är på ett annat språk.\n\nVarje rad visar om policyn är definierad. Uppdaterade policyer förbättrar beviskvaliteten."
       },
       "configuringAutomation": {
         "title": "Tvistdirigering och automation",
@@ -2758,27 +2758,27 @@
       },
       "packBestPractices": {
         "title": "Bästa praxis för bevispaket",
-        "body": "Att vinna en tvist handlar om att ge utfärdaren tillräckligt med avgörande bevis för att flytta nålen. Detta är vad som fungerar:\n\n**1. Inkludera alltid spårning med leveransbevis.** För Produkt inte mottagen-anspråk är spårning som visar leverans — helst med signatur — det enskilt mest verkningsfulla beviset.\n\n**2. Inkludera AVS + CVV-matchning för bedrägerianspråk.** Båda måste matcha. Endast AVS eller endast CVV är medelstarkt; båda tillsammans är starkt.\n\n**3. Referera till dina policyer med tidsstämplar.** Koppla köparens kassatidsstämpel till policyversionen de accepterade. \"Kunden godkände återbetalningspolicyn kl. 14:32 UTC den 4 mars\" är avgörande; \"återbetalningspolicyn finns på vår webbplats\" är det inte.\n\n**4. Visa tidigare obestridda beställningar.** En historik av framgångsrika köp av samma kund/kort/e-post försvagar bedrägerianspråk avsevärt.\n\n**5. Inkludera uttrycklig kundkommunikation när det finns.** E-post, chattranskript eller orderanteckningar där köparen bekräftar leverans, användning eller nöjdhet är avgörande.\n\n**6. Visa digital åtkomst för digitala varor.** Inloggningstidsstämplar, nedladdningshändelser eller funktionsanvändning är starka bevis på att kunden mottog produkten.\n\n**7. Undvik känslomässigt språk.** Håll dig till fakta. \"Köparen mottog varorna den 5 mars (signatur i arkiv)\" slår \"köparen försöker uppenbarligen lura oss\".\n\n**8. Förlita dig inte på insamlat ≠ starkt.** En grön insamlad-bricka betyder att fältet var ifyllt, inte att utfärdaren kommer att finna det övertygande. Kontrollera styrkebrickan innan du skickar in — se Rubrik för bevisstyrka.\n\n**9. Håll berättelser under 1 sida.** Utfärdare tillbringar sekunder per ärende. Led med de starkaste 2–3 fakta och rebuttalen.\n\n**10. Bevaka din vinstfrekvens.** DisputeDesk visar vinstfrekvens per anledning och familj. Om en kategori ständigt förlorar, titta på vilka bevis som samlas in vs. skickas in och justera spelboken."
+        "body": "Att vinna en tvist handlar om att ge utfärdaren tillräckligt med avgörande bevis för att flytta nålen. Detta är vad som fungerar:\n\n**1. Inkludera alltid spårning med leveransbevis.** För Produkt inte mottagen-anspråk är spårning som visar leverans — helst med signatur — det enskilt mest verkningsfulla beviset.\n\n**2. Inkludera AVS + CVV-matchning för bedrägerianspråk.** Båda måste matcha. Endast AVS eller endast CVV är medelstarkt; båda tillsammans är starkt.\n\n**3. Referera till dina policyer med tidsstämplar.** Koppla köparens kassatidsstämpel till policyversionen de accepterade. \"Kunden godkände chargebackpolicyn kl. 14:32 UTC den 4 mars\" är avgörande; \"chargebackpolicyn finns på vår webbplats\" är det inte.\n\n**4. Visa tidigare obestridda beställningar.** En historik av framgångsrika köp av samma kund/kort/e-post försvagar bedrägerianspråk avsevärt.\n\n**5. Inkludera uttrycklig kundkommunikation när det finns.** E-post, chattranskript eller orderanteckningar där köparen bekräftar leverans, användning eller nöjdhet är avgörande.\n\n**6. Visa digital åtkomst för digitala varor.** Inloggningstidsstämplar, nedladdningshändelser eller funktionsanvändning är starka bevis på att kunden mottog produkten.\n\n**7. Undvik känslomässigt språk.** Håll dig till fakta. \"Köparen mottog varorna den 5 mars (signatur i arkiv)\" slår \"köparen försöker uppenbarligen lura oss\".\n\n**8. Förlita dig inte på insamlat ≠ starkt.** En grön insamlad-bricka betyder att fältet var ifyllt, inte att utfärdaren kommer att finna det övertygande. Kontrollera styrkebrickan innan du skickar in — se Rubrik för bevisstyrka.\n\n**9. Håll berättelser under 1 sida.** Utfärdare tillbringar sekunder per ärende. Led med de starkaste 2–3 fakta och rebuttalen.\n\n**10. Bevaka din vinstfrekvens.** DisputeDesk visar vinstfrekvens per anledning och familj. Om en kategori ständigt förlorar, titta på vilka bevis som samlas in vs. skickas in och justera spelboken."
       },
       "policyTypesExplained": {
-        "title": "Policytyper: leverans, återbetalning, villkor, integritet",
-        "body": "DisputeDesk behandlar policyer som förstklassiga bevis. Varje policytyp stärker en annan kategori av tvist.\n\n**Leveranspolicy**\nVad att inkludera: leveranstider (t.ex. 3–5 arbetsdagar inrikes), transportörlista, spårningsåtagande, internationell hantering, process för förlorade paket.\nNär den stärker bevis: Produkt inte mottagen, sen leverans, anspråk om fel adress. Para ihop med transportörens spårningsbevis.\n\n**Återbetalningspolicy**\nVad att inkludera: returperiod (t.ex. 30 dagar), återbetalningstid, lageravgifter, villkor (oöppnat, originalförpackning), undantag (slutförsäljning, ömtåligt).\nNär den stärker bevis: återbetalning inte behandlad, prenumerationsavbokningar, ångerköpsanspråk inramade som bedrägeri. Utfärdare vill se att kunden godkänt specifika villkor med en tidsstämpel.\n\n**Användarvillkor**\nVad att inkludera: kontovillkor, acceptabel användning, tvistlösningsklausul, tillämplig lag.\nNär de stärker bevis: prenumerationstvister, anspråk om digitala varor (\"Jag gick inte med på detta\"), återkommande debiteringar. Villkoren kopplar kunden till relationen.\n\n**Integritetspolicy**\nVad att inkludera: omfattning av datainsamling, lagring, delning med tredje part, kundrättigheter (åtkomst, radering).\nNär den stärker bevis: används sällan direkt i chargeback-bevis, men refereras när tvisten berör kontoåtkomst eller anspråk om obehörig användning.\n\n**Tips**\nDisputeDesk använder policytexten — inte bara en länk — för att bygga bevis. Ladda upp den faktiska policyn (TXT, Markdown eller länken plus en ögonblicksbild) så att AI:n kan citera den relevanta klausulen i rebuttalen."
+        "title": "Policytyper: leverans, chargeback, villkor, integritet",
+        "body": "DisputeDesk behandlar policyer som förstklassiga bevis. Varje policytyp stärker en annan kategori av tvist.\n\n**Leveranspolicy**\nVad att inkludera: leveranstider (t.ex. 3–5 arbetsdagar inrikes), transportörlista, spårningsåtagande, internationell hantering, process för förlorade paket.\nNär den stärker bevis: Produkt inte mottagen, sen leverans, anspråk om fel adress. Para ihop med transportörens spårningsbevis.\n\n**Chargebackpolicy**\nVad att inkludera: returperiod (t.ex. 30 dagar), chargebacktid, lageravgifter, villkor (oöppnat, originalförpackning), undantag (slutförsäljning, ömtåligt).\nNär den stärker bevis: chargeback inte behandlad, prenumerationsavbokningar, ångerköpsanspråk inramade som bedrägeri. Utfärdare vill se att kunden godkänt specifika villkor med en tidsstämpel.\n\n**Användarvillkor**\nVad att inkludera: kontovillkor, acceptabel användning, tvistlösningsklausul, tillämplig lag.\nNär de stärker bevis: prenumerationstvister, anspråk om digitala varor (\"Jag gick inte med på detta\"), återkommande debiteringar. Villkoren kopplar kunden till relationen.\n\n**Integritetspolicy**\nVad att inkludera: omfattning av datainsamling, lagring, delning med tredje part, kundrättigheter (åtkomst, radering).\nNär den stärker bevis: används sällan direkt i chargeback-bevis, men refereras när tvisten berör kontoåtkomst eller anspråk om obehörig användning.\n\n**Tips**\nDisputeDesk använder policytexten — inte bara en länk — för att bygga bevis. Ladda upp den faktiska policyn (TXT, Markdown eller länken plus en ögonblicksbild) så att AI:n kan citera den relevanta klausulen i rebuttalen."
       },
       "policyVariables": {
         "title": "Använda policyvariabler i paket",
-        "body": "Referera till dina butikspolicyer i bevispaketens berättelser med hjälp av policyvariabler. DisputeDesk infogar policytexten (eller en klickbar länk) automatiskt när paketet byggs.\n\n**Tillgängliga variabler**\n- `{{policy.shipping}}` — din leveranspolicy\n- `{{policy.refund}}` — din återbetalnings-/returpolicy\n- `{{policy.terms}}` — dina användarvillkor\n- `{{policy.privacy}}` — din integritetspolicy\n\n**Så fungerar det**\nNär DisputeDesk bygger ett paket och stöter på en policyvariabel hämtar det från de policyer du laddat upp i Inställningar → Policyer. Om du laddat upp en TXT- eller Markdown-fil löses variabeln till det relevanta utdraget. Om du bara laddat upp en URL löses variabeln till en klickbar länk.\n\n**Exempel**\nI en paketberättelse för en Produkt inte mottagen-tvist:\n\n> Som anges i vår leveranspolicy levereras alla beställningar inom 3–5 arbetsdagar med spårning. Kunden accepterade dessa villkor i kassan den `{{order.created_at}}`. Spårning bekräftar leverans den 5 mars — se `{{tracking.url}}`.\n\n**Tips**\n- Para ihop `{{policy.refund}}` med `{{order.created_at}}` för att förankra policyn till köparens kassatidsstämpel. Utfärdare finner detta mycket mer övertygande än en generisk \"se vår policy\"-rad.\n- Om en policy inte är uppladdad utelämnar variabeln tyst den omgivande meningen — referera inte till policyer du ännu inte laddat upp.\n- Uppdatera policyer i Inställningar → Policyer så använder DisputeDesk den nya texten vid nästa paketbygge. Du behöver inte redigera varje paket."
+        "body": "Referera till dina butikspolicyer i bevispaketens berättelser med hjälp av policyvariabler. DisputeDesk infogar policytexten (eller en klickbar länk) automatiskt när paketet byggs.\n\n**Tillgängliga variabler**\n- `{{policy.shipping}}` — din leveranspolicy\n- `{{policy.refund}}` — din chargebacks-/returpolicy\n- `{{policy.terms}}` — dina användarvillkor\n- `{{policy.privacy}}` — din integritetspolicy\n\n**Så fungerar det**\nNär DisputeDesk bygger ett paket och stöter på en policyvariabel hämtar det från de policyer du laddat upp i Inställningar → Policyer. Om du laddat upp en TXT- eller Markdown-fil löses variabeln till det relevanta utdraget. Om du bara laddat upp en URL löses variabeln till en klickbar länk.\n\n**Exempel**\nI en paketberättelse för en Produkt inte mottagen-tvist:\n\n> Som anges i vår leveranspolicy levereras alla beställningar inom 3–5 arbetsdagar med spårning. Kunden accepterade dessa villkor i kassan den `{{order.created_at}}`. Spårning bekräftar leverans den 5 mars — se `{{tracking.url}}`.\n\n**Tips**\n- Para ihop `{{policy.refund}}` med `{{order.created_at}}` för att förankra policyn till köparens kassatidsstämpel. Utfärdare finner detta mycket mer övertygande än en generisk \"se vår policy\"-rad.\n- Om en policy inte är uppladdad utelämnar variabeln tyst den omgivande meningen — referera inte till policyer du ännu inte laddat upp.\n- Uppdatera policyer i Inställningar → Policyer så använder DisputeDesk den nya texten vid nästa paketbygge. Du behöver inte redigera varje paket."
       },
       "policyBestPractices": {
         "title": "Bästa policypraxis som vinner tvister",
-        "body": "Starka policyer, förankrade i köparens kassatidsstämpel, är några av de mest avgörande bevisen som finns. Så här gör du dina anmärkningsvärda.\n\n**1. Ladda upp den faktiska policytexten — inte bara en länk.** En live-URL kan ändras. En TXT- eller Markdown-fil uppladdad till DisputeDesk bevarar den exakta version köparen accepterade i kassan. Utfärdare vill se versionen, inte den nuvarande webbplatsen.\n\n**2. Tidsstämpla varje policy.** När du uppdaterar en policy, versionera den. \"Återbetalningspolicy v3 — gäller från 1 mars\" låter rebuttalen säga \"kunden accepterade v3 i kassan den 5 mars.\"\n\n**3. Var specifik om tidsramar.** \"Återbetalningar behandlas inom 5 arbetsdagar efter mottagen retur\" slår \"återbetalningar behandlas snabbt.\" Specificitet läses som ett verkligt åtagande, inte standardtext.\n\n**4. Inkludera uttryckligt godkännande i kassan.** Visa en kryssruta i ditt kassaflöde som säger \"Jag godkänner återbetalningspolicyn\" med tidsstämpel. Detta är det enskilt starkaste policybeviset som finns.\n\n**5. Täck de förutsägbara felfallen.** Förlorat i transit, sen leverans, fel adress, återbetalningstid, prenumerationsavbokning, åtkomst till digitala varor. Om din policy är tyst om tvistanledningen läser utfärdaren tystnad som tvetydighet.\n\n**6. Matcha policyspråket till tvistanledningen.** Leveranspolicy → Produkt inte mottagen. Återbetalningspolicy → Återbetalning inte behandlad. Villkor → Prenumeration avbokad. DisputeDesk väljer automatiskt rätt policyvariabel baserat på tvistfamiljen.\n\n**7. Göm inte policyer bakom ett klick.** Policyer länkade i liten sidfotstext är svagare än policyer som visas i kassan. Utfärdare känner till skillnaden.\n\n**8. Håll dem läsbara.** Vanlig svenska vinner. Policyer fyllda med juridisk jargong är tekniskt giltiga men svårare att citera i en rebuttal.\n\n**9. Uppdatera policyer minst årligen.** Föråldrade policyer (senast uppdaterade 2019) är mindre övertygande än aktuella.\n\n**10. Testa variablerna.** Efter att du laddat upp en policy, bygg ett testpaket och bekräfta att variabeln löses korrekt i förhandsvisningen."
+        "body": "Starka policyer, förankrade i köparens kassatidsstämpel, är några av de mest avgörande bevisen som finns. Så här gör du dina anmärkningsvärda.\n\n**1. Ladda upp den faktiska policytexten — inte bara en länk.** En live-URL kan ändras. En TXT- eller Markdown-fil uppladdad till DisputeDesk bevarar den exakta version köparen accepterade i kassan. Utfärdare vill se versionen, inte den nuvarande webbplatsen.\n\n**2. Tidsstämpla varje policy.** När du uppdaterar en policy, versionera den. \"Chargebackpolicy v3 — gäller från 1 mars\" låter rebuttalen säga \"kunden accepterade v3 i kassan den 5 mars.\"\n\n**3. Var specifik om tidsramar.** \"Chargebackar behandlas inom 5 arbetsdagar efter mottagen retur\" slår \"chargebackar behandlas snabbt.\" Specificitet läses som ett verkligt åtagande, inte standardtext.\n\n**4. Inkludera uttryckligt godkännande i kassan.** Visa en kryssruta i ditt kassaflöde som säger \"Jag godkänner chargebackpolicyn\" med tidsstämpel. Detta är det enskilt starkaste policybeviset som finns.\n\n**5. Täck de förutsägbara felfallen.** Förlorat i transit, sen leverans, fel adress, chargebacktid, prenumerationsavbokning, åtkomst till digitala varor. Om din policy är tyst om tvistanledningen läser utfärdaren tystnad som tvetydighet.\n\n**6. Matcha policyspråket till tvistanledningen.** Leveranspolicy → Produkt inte mottagen. Chargebackpolicy → Chargeback inte behandlad. Villkor → Prenumeration avbokad. DisputeDesk väljer automatiskt rätt policyvariabel baserat på tvistfamiljen.\n\n**7. Göm inte policyer bakom ett klick.** Policyer länkade i liten sidfotstext är svagare än policyer som visas i kassan. Utfärdare känner till skillnaden.\n\n**8. Håll dem läsbara.** Vanlig svenska vinner. Policyer fyllda med juridisk jargong är tekniskt giltiga men svårare att citera i en rebuttal.\n\n**9. Uppdatera policyer minst årligen.** Föråldrade policyer (senast uppdaterade 2019) är mindre övertygande än aktuella.\n\n**10. Testa variablerna.** Efter att du laddat upp en policy, bygg ett testpaket och bekräfta att variabeln löses korrekt i förhandsvisningen."
       },
       "evidenceStrengthRubric": {
         "title": "Rubrik för bevisstyrka (Starkt / Medelstarkt / Stödjande / Ogiltigt)",
-        "body": "Varje rad i ditt bevispaket har en styrkebricka. Brickan speglar vad datan faktiskt bevisar för utfärdaren — inte huruvida raden samlades in. **Insamlat ≠ Starkt. Stödjande ≠ dåligt.** Grönt (Starkt) betyder \"detta förbättrar materiellt sannolikheten att vinna.\"\n\n**🟢 Starkt**\nBeviset i sig självt flyttar materiellt ärendet till din fördel.\n1. **Betalningsautentisering (AVS + CVV).** Starkt endast när AVS matchar OCH CVV matchar. Visar att köparen sannolikt hade tillgång till korrekta faktura-/kortuppgifter.\n2. **Leveransbevis med signatur.** Starkt när transportören registrerar en signatur (signature_confirmed). Direkt bevis på att varorna nådde mottagaren.\n3. **Signerat avtal eller kontrakt.** Starkt när ett signerat kundavtal har laddats upp. Visar uttryckligt kunddeltagande.\n4. **Konto-/inloggningsaktivitet med tydlig sessionskonsistens.** Starkt när kunden loggat in, beställt från en konsekvent enhet/session/IP, och det inte finns någon misstänkt avvikelse.\n5. **Tidigare transaktionshistorik utan tvister.** Starkt när samma kund/kort/e-post/adress tidigare beställt utan tvister.\n6. **Uttrycklig kundkommunikation.** Starkt när kunden skriftligen bekräftar köpet, leveransen, användningen eller nöjdheten.\n7. **Digital åtkomst / användningsbevis.** Starkt när kunden öppnat, laddat ner, aktiverat, loggat in på eller använt produkten/tjänsten. Särskilt kraftfullt för digitala tvister och tjänstetvister.\n8. **Godkännande av återbetalnings-/avbokningspolicy.** Starkt endast när kunden uttryckligen accepterade policyn i kassan med en tidsstämpel kopplad till beställningen. Ren textinformation gör det INTE Starkt.\n9. **Leverans till verifierad fakturerings- eller kundadress.** Starkt när spårning bekräftar leverans till fakturerings- eller verifierad kundadress utan avvikelse.\n\n**🟡 Medelstarkt**\nAnvändbart, men inte avgörande på egen hand.\n- AVS matchar ELLER CVV matchar, men inte båda.\n- Leverans bekräftad utan signatur (delivered_confirmed).\n- Ren IP-/platsmatchning (inga VPN-, proxy- eller hostingflaggor).\n- Policytext visad men inte uttryckligen accepterad i kassan.\n- Kundkonto finns men inget starkt sessionsbevis.\n- Orderbekräftelse via e-post har skickats.\n- Uppfyllelse/spårning finns men leveransbeviset är ofullständigt.\n\n**⚪ Stödjande**\nKontext som kompletterar paketet men inte flyttar nålen på egen hand.\n- Beställningspost.\n- Aktivitetslogg utan avgörande sessionsbevis.\n- Återbetalnings- / leverans- / avbokningspolicytext.\n- Kundinformation / kontaktuppgifter.\n- Manuella skärmdumpar och uppladdade dokument utan tydligt avgörande innehåll.\n- IP-data med partiell matchning eller VPN- / proxy- / hostingosäkerhet.\n\n**🔴 Ogiltigt**\nReserverat för bevis som är uttryckligen skadliga eller oanvändbara. \"Ogiltigt\" visas aldrig bara för att nyttolasten saknas.\n- Både AVS och CVV misslyckas.\n- Spårning visar endast etikett, aldrig levererat.\n- Leverans till orelaterad adress.\n- IP omöjlig / skadligt avvikande.\n- Policy inte tillämplig på denna tvisttyp.\n- Dokumentet relaterar inte till beställningen.\n- Bevisen motsäger ärendet.\n\n**Hur denna rubrik driver din ärendestyrka**\n\nÖversiktens huvudkort beräknas från de signalspecifika omdömena ovan:\n- **Troligt att vinna** (grön): 2 eller fler Starka signaler.\n- **Kan vinna** (gul): 1 Stark + minst 1 Medelstark, ELLER 2+ Medelstarka signaler.\n- **Behöver stärkas** (gul): Endast för Bedräglig transaktion / Obehörig transaktion-tvister — Betalningsautentisering (AVS+CVV) är Stark men ingen annan avgörande signal är insamlad. Paketet är räddningsbart; att lägga till leveransbekräftelse, enhets-/sessionskonsistens eller uttrycklig kundbekräftelse skulle tippa det till Troligt att vinna.\n- **Svårt att vinna** (röd): Ingen Stark signal OCH färre än 2 Medelstarka signaler.\n\n**Bedrägerispecifik regel:** För Bedräglig transaktion / Obehörig transaktion-tvister är AVS+CVV-matchning den avgörande signalen. Med AVS+CVV Stark visas ärendet aldrig som röd \"Svårt att vinna\" — det är minst \"Behöver stärkas\". Att para ihop AVS+CVV Stark med leveransbekräftelse (signature_confirmed eller delivered_confirmed), enhets-/sessionskonsistens eller kundbekräftad kommunikation tippar ärendet till \"Troligt att vinna\".\n\nStödjande bevis höjer aldrig huvudkortet, men de stärker ditt totala paket och ger sammanhang för utfärdaren. Att lägga till en enda Stark signal har vanligtvis större effekt än att lägga till många Stödjande objekt."
+        "body": "Varje rad i ditt bevispaket har en styrkebricka. Brickan speglar vad datan faktiskt bevisar för utfärdaren — inte huruvida raden samlades in. **Insamlat ≠ Starkt. Stödjande ≠ dåligt.** Grönt (Starkt) betyder \"detta förbättrar materiellt sannolikheten att vinna.\"\n\n**🟢 Starkt**\nBeviset i sig självt flyttar materiellt ärendet till din fördel.\n1. **Betalningsautentisering (AVS + CVV).** Starkt endast när AVS matchar OCH CVV matchar. Visar att köparen sannolikt hade tillgång till korrekta faktura-/kortuppgifter.\n2. **Leveransbevis med signatur.** Starkt när transportören registrerar en signatur (signature_confirmed). Direkt bevis på att varorna nådde mottagaren.\n3. **Signerat avtal eller kontrakt.** Starkt när ett signerat kundavtal har laddats upp. Visar uttryckligt kunddeltagande.\n4. **Konto-/inloggningsaktivitet med tydlig sessionskonsistens.** Starkt när kunden loggat in, beställt från en konsekvent enhet/session/IP, och det inte finns någon misstänkt avvikelse.\n5. **Tidigare transaktionshistorik utan tvister.** Starkt när samma kund/kort/e-post/adress tidigare beställt utan tvister.\n6. **Uttrycklig kundkommunikation.** Starkt när kunden skriftligen bekräftar köpet, leveransen, användningen eller nöjdheten.\n7. **Digital åtkomst / användningsbevis.** Starkt när kunden öppnat, laddat ner, aktiverat, loggat in på eller använt produkten/tjänsten. Särskilt kraftfullt för digitala tvister och tjänstetvister.\n8. **Godkännande av chargebacks-/avbokningspolicy.** Starkt endast när kunden uttryckligen accepterade policyn i kassan med en tidsstämpel kopplad till beställningen. Ren textinformation gör det INTE Starkt.\n9. **Leverans till verifierad fakturerings- eller kundadress.** Starkt när spårning bekräftar leverans till fakturerings- eller verifierad kundadress utan avvikelse.\n\n**🟡 Medelstarkt**\nAnvändbart, men inte avgörande på egen hand.\n- AVS matchar ELLER CVV matchar, men inte båda.\n- Leverans bekräftad utan signatur (delivered_confirmed).\n- Ren IP-/platsmatchning (inga VPN-, proxy- eller hostingflaggor).\n- Policytext visad men inte uttryckligen accepterad i kassan.\n- Kundkonto finns men inget starkt sessionsbevis.\n- Orderbekräftelse via e-post har skickats.\n- Uppfyllelse/spårning finns men leveransbeviset är ofullständigt.\n\n**⚪ Stödjande**\nKontext som kompletterar paketet men inte flyttar nålen på egen hand.\n- Beställningspost.\n- Aktivitetslogg utan avgörande sessionsbevis.\n- Chargebacks- / leverans- / avbokningspolicytext.\n- Kundinformation / kontaktuppgifter.\n- Manuella skärmdumpar och uppladdade dokument utan tydligt avgörande innehåll.\n- IP-data med partiell matchning eller VPN- / proxy- / hostingosäkerhet.\n\n**🔴 Ogiltigt**\nReserverat för bevis som är uttryckligen skadliga eller oanvändbara. \"Ogiltigt\" visas aldrig bara för att nyttolasten saknas.\n- Både AVS och CVV misslyckas.\n- Spårning visar endast etikett, aldrig levererat.\n- Leverans till orelaterad adress.\n- IP omöjlig / skadligt avvikande.\n- Policy inte tillämplig på denna tvisttyp.\n- Dokumentet relaterar inte till beställningen.\n- Bevisen motsäger ärendet.\n\n**Hur denna rubrik driver din ärendestyrka**\n\nÖversiktens huvudkort beräknas från de signalspecifika omdömena ovan:\n- **Troligt att vinna** (grön): 2 eller fler Starka signaler.\n- **Kan vinna** (gul): 1 Stark + minst 1 Medelstark, ELLER 2+ Medelstarka signaler.\n- **Behöver stärkas** (gul): Endast för Bedräglig transaktion / Obehörig transaktion-tvister — Betalningsautentisering (AVS+CVV) är Stark men ingen annan avgörande signal är insamlad. Paketet är räddningsbart; att lägga till leveransbekräftelse, enhets-/sessionskonsistens eller uttrycklig kundbekräftelse skulle tippa det till Troligt att vinna.\n- **Svårt att vinna** (röd): Ingen Stark signal OCH färre än 2 Medelstarka signaler.\n\n**Bedrägerispecifik regel:** För Bedräglig transaktion / Obehörig transaktion-tvister är AVS+CVV-matchning den avgörande signalen. Med AVS+CVV Stark visas ärendet aldrig som röd \"Svårt att vinna\" — det är minst \"Behöver stärkas\". Att para ihop AVS+CVV Stark med leveransbekräftelse (signature_confirmed eller delivered_confirmed), enhets-/sessionskonsistens eller kundbekräftad kommunikation tippar ärendet till \"Troligt att vinna\".\n\nStödjande bevis höjer aldrig huvudkortet, men de stärker ditt totala paket och ger sammanhang för utfärdaren. Att lägga till en enda Stark signal har vanligtvis större effekt än att lägga till många Stödjande objekt."
       },
       "fraudRiskScreening": {
         "title": "Shopifys förauktoriseringsbedrägerikontroll (vad den kontrollerar och hur vi använder den)",
-        "body": "Varje Shopify Payments-beställning poängsätts i kassan av Shopifys egen förauktoriseringsbedrägerikontroll — *innan* kortet debiteras. DisputeDesk läser det resultatet och visar det på tvistens översikt så att du ser vad Shopify tyckte om beställningen vid tillfället.\n\n**De två utfallen**\n\nShopify returnerar en av två saker tillsammans med en lista av signaler:\n\n- En **risknivå** — `LOW`, `NONE`, `MEDIUM` eller `HIGH`.\n- En **rekommendation** — `ACCEPT`, `NONE`, `INVESTIGATE`, `REJECT` eller `CANCEL`.\n\nRekommendationen är det auktoritativa, bankvända omdömet. `risk_level` är stöddetalj.\n\n**Hur DisputeDesk använder varje omdöme**\n\n| Shopify sa | Var det dyker upp | Varför |\n| --- | --- | --- |\n| `ACCEPT` / `NONE`-rekommendation med ≥1 positiv signal | Citeras som **stödjande bevis** i bankrebuttalen | Shopifys eget system granskade beställningen i kassan och gav den ett rent omdöme — det är värt att citera för utfärdaren. |\n| `INVESTIGATE`, `REJECT`, `CANCEL`-rekommendation, eller `MEDIUM` / `HIGH`-risknivå | **Hålls endast internt** — synligt för dig, skickas aldrig till banken | Att citera ditt eget bedrägerisystem som säger \"vi tyckte detta var riskabelt\" skulle undergräva rebuttalen. Vi visar ändå omdömet så att du vet att vi kollade. |\n\n**Vad Shopify faktiskt kontrollerar**\n\nShopify returnerar en lista av signaler (\"fakta\") där var och en taggas POSITIVE, NEUTRAL eller NEGATIVE. De vanligaste kategorierna:\n\n| Kategori | Signaler Shopify rapporterar | POSITIVE ser ut som | NEGATIVE ser ut som |\n| --- | --- | --- | --- |\n| **Betalningsverifiering** | CVV-matchning, AVS-gatumatchning, AVS-postnummermatchning | \"CVV är korrekt\"; \"Fakturagatuadress matchar kortets registrerade adress\"; \"Fakturapostnummer matchar\" | \"CVV matchar inte\"; \"AVS-fakturaadress matchar inte\" |\n| **Geografisk konsistens** | Avstånd fakturering ↔ IP, avstånd fakturering ↔ leverans, beställningens placeringsland vs. faktureringsland | \"Faktureringsland matchar IP-land\"; \"Beställning placerad från typisk region\" | \"Leveransadress är 6709 km från IP-plats\"; \"Faktureringsadress är listad som USA, men beställningen gjordes från Brasilien\" |\n| **IP-rykte** | VPN, anonym proxy, webbproxy, hosting-/datacenterdetektering | \"IP-adressen som användes är inte en högriskinternetanslutning\" | \"IP går via VPN eller anonym proxy\" |\n| **Försöksmönster** | Antal betalningsförsök på beställningen, antal olika kort som prövats | \"Det fanns 1 betalningsförsök\"; \"Betalning gjordes med 1 kreditkort\" | \"Flera betalningsförsök med olika kort\" |\n| **E-post & telefon** | E-postrykte, e-postdomänens ålder, telefonens giltighet | \"Verifierad e-postdomän\"; \"Telefonnummer är giltigt\" | \"E-post kopplad till tidigare tvister\" |\n| **Risk mellan butiker** | Shopifys globala riskgraf — har detta kort / adress / e-post orsakat chargebacks i andra Shopify-butiker? | (visas sällan positivt — vanligtvis \"INGEN hittad\") | \"Kortet har tidigare chargebacks i andra Shopify-butiker\"; \"Adressen är förknippad med risk i andra Shopify-butiker\" |\n| **Beställningstid & frekvens** | Tid på dagen vs. typiska mönster, beställningshastighet från samma IP/e-post | \"Beställning placerad under typiska shoppingtider\" | \"Flera beställningar från samma IP under kort tid\" |\n\n**Varför ett enda NEGATIVT faktum kan vända omdömet**\n\nShopify viktar signaler efter allvar, inte efter antal. En beställning kan ha åtta POSITIVA fakta (CVV-matchning, AVS-matchning, ingen proxy, etc.) och ändå få en `CANCEL`-rekommendation om ett enda NEGATIVT faktum är tungt nog — ett gap på 6 000 km mellan leverans/IP och en avvikelse i faktureringsland är två av systemets tyngsta signaler. Det är en finess: Shopify är inriktat på att stoppa misstänkta beställningar.\n\n**Varför vi inte citerar NEGATIVA fakta till banken**\n\nOm Shopifys kontroll rekommenderar `CANCEL` skulle det vara att erkänna för utfärdaren att ditt eget bedrägerisystem tyckte beställningen var riskabel — och utfärdaren kommer att väga detta *emot* dig, inte för dig. Regeln är strikt: endast fakta med POSITIV sentiment på ett `ACCEPT`-omdöme når bankinskickningen. NEGATIVA och NEUTRALA fakta hålls i DisputeDesks gränssnitt så att du ser hela bilden, skrivs aldrig till rebuttalbrevet eller bifogas som bevis.\n\n**Vad \"Hålls internt\" faktiskt säger**\n\nNär Shopify gav ett negativt omdöme visar översiktsraden omdömesetiketten *och* de specifika fakta som drev det (när Shopify tillhandahöll dem). Exempel:\n\n> Shopifys förauktoriseringskontroll rekommenderade CANCEL för denna beställning. Shopify flaggade: Leveransadress är 6709 km från IP-adressens plats; Faktureringsadressen är listad som USA, men beställningen gjordes från Brasilien. Hålls internt — att citera ett negativt omdöme från ditt eget bedrägerisystem skulle försvaga banksvaret.\n\nDet ger dig den handlarinterna förklaringen utan att lägga den framför bankgranskaren.\n\n**När raden saknas helt**\n\nOm du inte ser en rad för Förauktoriseringsbedrägerikontroll alls på översikten är det nästan alltid en av följande:\n\n- Beställningen betalades via en gateway som inte är Shopify Payments (endast Shopify Payments kör denna kontroll; poäng från tredjepartsappar citeras avsiktligt inte).\n- Beställningen är äldre än DisputeDesks bakgrundsfyllning av beställningar eller bedömningen finns inte registrerad än.\n- Tvistanledningen är inte i bedrägerifamiljen (`FRAUDULENT`, `UNRECOGNIZED`) — för andra anledningskoder (PNR, dubblett, återbetalning ej behandlad) är kontrollen inte relevant och undertrycks.\n\n**Läsning av översikten vs. inkluderingsgranskningen**\n\nÖversikten visar den *bankvända* läsningen: grön sektion om citerad, \"Hålls endast internt\"-sektion om undanhållen. Fliken Inkluderingsgranskning på Bevis visar råraden med fullständig anledningstext. Båda hämtar från samma nyttolast."
+        "body": "Varje Shopify Payments-beställning poängsätts i kassan av Shopifys egen förauktoriseringsbedrägerikontroll — *innan* kortet debiteras. DisputeDesk läser det resultatet och visar det på tvistens översikt så att du ser vad Shopify tyckte om beställningen vid tillfället.\n\n**De två utfallen**\n\nShopify returnerar en av två saker tillsammans med en lista av signaler:\n\n- En **risknivå** — `LOW`, `NONE`, `MEDIUM` eller `HIGH`.\n- En **rekommendation** — `ACCEPT`, `NONE`, `INVESTIGATE`, `REJECT` eller `CANCEL`.\n\nRekommendationen är det auktoritativa, bankvända omdömet. `risk_level` är stöddetalj.\n\n**Hur DisputeDesk använder varje omdöme**\n\n| Shopify sa | Var det dyker upp | Varför |\n| --- | --- | --- |\n| `ACCEPT` / `NONE`-rekommendation med ≥1 positiv signal | Citeras som **stödjande bevis** i bankrebuttalen | Shopifys eget system granskade beställningen i kassan och gav den ett rent omdöme — det är värt att citera för utfärdaren. |\n| `INVESTIGATE`, `REJECT`, `CANCEL`-rekommendation, eller `MEDIUM` / `HIGH`-risknivå | **Hålls endast internt** — synligt för dig, skickas aldrig till banken | Att citera ditt eget bedrägerisystem som säger \"vi tyckte detta var riskabelt\" skulle undergräva rebuttalen. Vi visar ändå omdömet så att du vet att vi kollade. |\n\n**Vad Shopify faktiskt kontrollerar**\n\nShopify returnerar en lista av signaler (\"fakta\") där var och en taggas POSITIVE, NEUTRAL eller NEGATIVE. De vanligaste kategorierna:\n\n| Kategori | Signaler Shopify rapporterar | POSITIVE ser ut som | NEGATIVE ser ut som |\n| --- | --- | --- | --- |\n| **Betalningsverifiering** | CVV-matchning, AVS-gatumatchning, AVS-postnummermatchning | \"CVV är korrekt\"; \"Fakturagatuadress matchar kortets registrerade adress\"; \"Fakturapostnummer matchar\" | \"CVV matchar inte\"; \"AVS-fakturaadress matchar inte\" |\n| **Geografisk konsistens** | Avstånd fakturering ↔ IP, avstånd fakturering ↔ leverans, beställningens placeringsland vs. faktureringsland | \"Faktureringsland matchar IP-land\"; \"Beställning placerad från typisk region\" | \"Leveransadress är 6709 km från IP-plats\"; \"Faktureringsadress är listad som USA, men beställningen gjordes från Brasilien\" |\n| **IP-rykte** | VPN, anonym proxy, webbproxy, hosting-/datacenterdetektering | \"IP-adressen som användes är inte en högriskinternetanslutning\" | \"IP går via VPN eller anonym proxy\" |\n| **Försöksmönster** | Antal betalningsförsök på beställningen, antal olika kort som prövats | \"Det fanns 1 betalningsförsök\"; \"Betalning gjordes med 1 kreditkort\" | \"Flera betalningsförsök med olika kort\" |\n| **E-post & telefon** | E-postrykte, e-postdomänens ålder, telefonens giltighet | \"Verifierad e-postdomän\"; \"Telefonnummer är giltigt\" | \"E-post kopplad till tidigare tvister\" |\n| **Risk mellan butiker** | Shopifys globala riskgraf — har detta kort / adress / e-post orsakat chargebacks i andra Shopify-butiker? | (visas sällan positivt — vanligtvis \"INGEN hittad\") | \"Kortet har tidigare chargebacks i andra Shopify-butiker\"; \"Adressen är förknippad med risk i andra Shopify-butiker\" |\n| **Beställningstid & frekvens** | Tid på dagen vs. typiska mönster, beställningshastighet från samma IP/e-post | \"Beställning placerad under typiska shoppingtider\" | \"Flera beställningar från samma IP under kort tid\" |\n\n**Varför ett enda NEGATIVT faktum kan vända omdömet**\n\nShopify viktar signaler efter allvar, inte efter antal. En beställning kan ha åtta POSITIVA fakta (CVV-matchning, AVS-matchning, ingen proxy, etc.) och ändå få en `CANCEL`-rekommendation om ett enda NEGATIVT faktum är tungt nog — ett gap på 6 000 km mellan leverans/IP och en avvikelse i faktureringsland är två av systemets tyngsta signaler. Det är en finess: Shopify är inriktat på att stoppa misstänkta beställningar.\n\n**Varför vi inte citerar NEGATIVA fakta till banken**\n\nOm Shopifys kontroll rekommenderar `CANCEL` skulle det vara att erkänna för utfärdaren att ditt eget bedrägerisystem tyckte beställningen var riskabel — och utfärdaren kommer att väga detta *emot* dig, inte för dig. Regeln är strikt: endast fakta med POSITIV sentiment på ett `ACCEPT`-omdöme når bankinskickningen. NEGATIVA och NEUTRALA fakta hålls i DisputeDesks gränssnitt så att du ser hela bilden, skrivs aldrig till rebuttalbrevet eller bifogas som bevis.\n\n**Vad \"Hålls internt\" faktiskt säger**\n\nNär Shopify gav ett negativt omdöme visar översiktsraden omdömesetiketten *och* de specifika fakta som drev det (när Shopify tillhandahöll dem). Exempel:\n\n> Shopifys förauktoriseringskontroll rekommenderade CANCEL för denna beställning. Shopify flaggade: Leveransadress är 6709 km från IP-adressens plats; Faktureringsadressen är listad som USA, men beställningen gjordes från Brasilien. Hålls internt — att citera ett negativt omdöme från ditt eget bedrägerisystem skulle försvaga banksvaret.\n\nDet ger dig den handlarinterna förklaringen utan att lägga den framför bankgranskaren.\n\n**När raden saknas helt**\n\nOm du inte ser en rad för Förauktoriseringsbedrägerikontroll alls på översikten är det nästan alltid en av följande:\n\n- Beställningen betalades via en gateway som inte är Shopify Payments (endast Shopify Payments kör denna kontroll; poäng från tredjepartsappar citeras avsiktligt inte).\n- Beställningen är äldre än DisputeDesks bakgrundsfyllning av beställningar eller bedömningen finns inte registrerad än.\n- Tvistanledningen är inte i bedrägerifamiljen (`FRAUDULENT`, `UNRECOGNIZED`) — för andra anledningskoder (PNR, dubblett, chargeback ej behandlad) är kontrollen inte relevant och undertrycks.\n\n**Läsning av översikten vs. inkluderingsgranskningen**\n\nÖversikten visar den *bankvända* läsningen: grön sektion om citerad, \"Hålls endast internt\"-sektion om undanhållen. Fliken Inkluderingsgranskning på Bevis visar råraden med fullständig anledningstext. Båda hämtar från samma nyttolast."
       },
       "templateSetupWizard": {
         "title": "Mallkonfigurationsguide",
@@ -2794,7 +2794,7 @@
       },
       "understandingChargebacks": {
         "title": "Förstå chargebacks",
-        "body": "En chargeback är en formell tvist där kundens bank har återfört transaktionen.\n\nVad som händer under en chargeback:\n- Banken återför medlen från handlarens konto.\n- Du har ett begränsat fönster (vanligtvis 7–21 dagar) att skicka in bevis.\n- Om du inte svarar förlorar du tvisten automatiskt.\n\nHur DisputeDesk hanterar chargebacks:\n- Chargebacks visas med en 'Chargeback'-bricka och högre brådska.\n- DisputeDesk bygger automatiskt bevispaket med hjälp av beställningsdata, spårningsinfo och kundkommunikation.\n- Bevis sparas i Shopify, där de vidarebefordras till kortnätverket.\n\nBevis som hjälper dig vinna chargebacks:\n- Leveransbevis (spårningsnummer, leveransbekräftelse)\n- Orderbekräftelse och kundkommunikation\n- Butikspolicyer (återbetalning, leverans, användarvillkor)\n- Bedrägerikontrolldata (AVS-matchning, CVV-verifiering)\n\nTidsramar är avgörande. DisputeDesk övervakar deadlines och säkerställer att bevis är förberedda långt innan förfallodatum."
+        "body": "En chargeback är en formell tvist där kundens bank har återfört transaktionen.\n\nVad som händer under en chargeback:\n- Banken återför medlen från handlarens konto.\n- Du har ett begränsat fönster (vanligtvis 7–21 dagar) att skicka in bevis.\n- Om du inte svarar förlorar du tvisten automatiskt.\n\nHur DisputeDesk hanterar chargebacks:\n- Chargebacks visas med en 'Chargeback'-bricka och högre brådska.\n- DisputeDesk bygger automatiskt bevispaket med hjälp av beställningsdata, spårningsinfo och kundkommunikation.\n- Bevis sparas i Shopify, där de vidarebefordras till kortnätverket.\n\nBevis som hjälper dig vinna chargebacks:\n- Leveransbevis (spårningsnummer, leveransbekräftelse)\n- Orderbekräftelse och kundkommunikation\n- Butikspolicyer (chargeback, leverans, användarvillkor)\n- Bedrägerikontrolldata (AVS-matchning, CVV-verifiering)\n\nTidsramar är avgörande. DisputeDesk övervakar deadlines och säkerställer att bevis är förberedda långt innan förfallodatum."
       },
       "lifecycleOverview": {
         "title": "Hur DisputeDesk hanterar tvistens livscykel",
@@ -3243,7 +3243,7 @@
     "catPNR": "Produkt ej mottagen",
     "catNotAsDescribed": "Inte som beskrivet",
     "catSubscription": "Prenumeration",
-    "catRefund": "Återbetalning",
+    "catRefund": "Chargeback",
     "catDuplicate": "Bearbetningsfel",
     "catDigital": "Digitala varor",
     "catGeneral": "Allmänt",
@@ -3269,12 +3269,12 @@
     "tpl4BestFor": "Prenumerationstjänster med tydliga villkor",
     "tpl5Name": "Digitala varor — Nedladdningsbevis",
     "tpl5BestFor": "Digitala produkter med åtkomstloggar",
-    "tpl6Name": "Återbetalning redan behandlad",
-    "tpl6BestFor": "Dubbelärende efter utförd återbetalning",
+    "tpl6Name": "Chargeback redan behandlad",
+    "tpl6BestFor": "Dubbelärende efter utförd chargeback",
     "tpl7Name": "Allmän förfrågan — Grundläggande",
     "tpl7BestFor": "Allmänna tvister som inte passar andra kategorier",
     "tpl8Name": "Bearbetningsfel — Dubbeldebitering",
-    "tpl8BestFor": "Oavsiktliga dubbeldebiteringar med återbetalningsbevis",
+    "tpl8BestFor": "Oavsiktliga dubbeldebiteringar med chargebackbevis",
     "evTracking": "Spårning",
     "evPolicyLinks": "Policylänkar",
     "evCustomerComms": "Kundkommunikation",
@@ -3288,7 +3288,7 @@
     "evAccessLogs": "Åtkomstloggar",
     "evIPData": "IP-data",
     "evDownloadProof": "Nedladdningsbevis",
-    "evRefundProof": "Återbetalningsbevis",
+    "evRefundProof": "Chargebackbevis",
     "evBankRecords": "Bankdokument",
     "evOrderDetails": "Beställningsdetaljer",
     "evErrorLogs": "Felloggar",
@@ -3354,7 +3354,7 @@
       "desc_pnr": "Kunden hävdar att produkten aldrig levererades",
       "desc_not_as_described": "Problem med produktkvalitet eller produktbeskrivning",
       "desc_subscription": "Kunden hävdar att prenumerationen redan var uppsagd",
-      "desc_refund": "Kunden hävdar att utlovad återbetalning inte genomfördes",
+      "desc_refund": "Kunden hävdar att utlovad chargeback inte genomfördes",
       "desc_duplicate": "Kunden debiterades flera gånger",
       "desc_digital": "Tvister som rör digitala produkter eller tjänster",
       "desc_general": "Övriga tvisttyper som kräver noggrann granskning",
@@ -3362,7 +3362,7 @@
       "handling_pnr": "Spårningsdata, leveransbevis och fraktpolicy",
       "handling_not_as_described": "Produktdetaljer, foton och returpolicy",
       "handling_subscription": "Prenumerationsvillkor, uppsägningsloggar och användningsdata",
-      "handling_refund": "Återbetalningspolicy och transaktionshistorik",
+      "handling_refund": "Chargebackpolicy och transaktionshistorik",
       "handling_duplicate": "Transaktionshistorik och orderuppgifter",
       "handling_digital": "Åtkomstloggar, leveransbekräftelse och användningshistorik",
       "handling_general": "Omfattande bevisföring med manuell granskning",
@@ -3370,7 +3370,7 @@
       "family_pnr": "Produkt ej mottagen",
       "family_not_as_described": "Produkt oacceptabel / Inte som beskrivet",
       "family_subscription": "Prenumeration avslutad",
-      "family_refund": "Återbetalning / Kredit ej behandlad",
+      "family_refund": "Chargeback / Kredit ej behandlad",
       "family_duplicate": "Dubbeldebitering",
       "family_digital": "Digitala varor och tjänster",
       "family_general": "Allmänna eller specialfall",
@@ -3424,7 +3424,7 @@
     },
     "complete": {
       "title": "Allt är klart!",
-      "subtitle": "DisputeDesk är redo att hantera dina återbetalningar automatiskt.",
+      "subtitle": "DisputeDesk är redo att hantera dina chargebackar automatiskt.",
       "readyHeading": "Vad som har konfigurerats",
       "highlight1": "Tvister synkroniseras automatiskt från Shopify",
       "highlight2": "Affärspolicyer tillagda i bevisen",
@@ -3648,9 +3648,9 @@
       "shippingLabel": "URL för fraktpolicy",
       "shippingPlaceholder": "https://dinbutik.com/frakt",
       "shippingHelper": "Krävs för tvister om 'Vara ej mottagen'",
-      "returnsLabel": "URL för retur- / återbetalningspolicy",
+      "returnsLabel": "URL för retur- / chargebackpolicy",
       "returnsPlaceholder": "https://dinbutik.com/retur",
-      "returnsHelper": "Krävs för tvister om 'Oacceptabel vara' och återbetalningar",
+      "returnsHelper": "Krävs för tvister om 'Oacceptabel vara' och chargebackar",
       "termsLabel": "URL för användarvillkor",
       "termsPlaceholder": "https://dinbutik.com/villkor",
       "termsHelper": "Valfritt — inkluderas i alla bevispaket när tillgängligt",
@@ -3668,8 +3668,8 @@
       "templatesAvailable": "3 tillgängliga",
       "shippingTemplateName": "Frakt & leveransmall",
       "shippingTemplateDesc": "Handläggningstider, fraktzoner, spårning",
-      "returnsTemplateName": "Retur & återbetalningsmall",
-      "returnsTemplateDesc": "Returperiod, villkor, återbetalningsprocess",
+      "returnsTemplateName": "Retur & chargebackmall",
+      "returnsTemplateDesc": "Returperiod, villkor, chargebackprocess",
       "termsTemplateName": "Användarvillkorsmall",
       "termsTemplateDesc": "Användningsvillkor, ansvar, tvistlösning",
       "autoIncludeTitle": "Policylänkar inkluderas automatiskt",
@@ -3705,8 +3705,8 @@
       "uploadFileBtn": "Ladda upp fil",
       "shippingTitle": "Frakt- & leveranspolicy",
       "shippingDesc": "Handläggningstider, fraktzoner, spårning och leveransförväntningar",
-      "refundsTitle": "Retur- & återbetalningspolicy",
-      "refundsDesc": "Returperiod, villkor, återbetalningsprocess och returavgifter",
+      "refundsTitle": "Retur- & chargebackpolicy",
+      "refundsDesc": "Returperiod, villkor, chargebackprocess och returavgifter",
       "termsTitle": "Användarvillkor",
       "termsDesc": "Användningsrätt, kontoregler, förbjudet beteende och juridisk information",
       "privacyTitle": "Integritetspolicy",
@@ -3755,7 +3755,7 @@
       "editorMarkdownHint": "Använd # för rubriker, - för listor, **fetstil** för betoning",
       "editorPlaceholder": "Börja redigera din policymall...",
       "shippingSections": "Handläggningstider,Fraktzoner,Spårningsinformation,Leveransförväntningar,Förlorade/Skadade artiklar",
-      "refundsSections": "Returfönster,Returvillkor,Återbetalningsprocess,Återlagringsavgifter,Byten",
+      "refundsSections": "Returfönster,Returvillkor,Chargebackprocess,Återlagringsavgifter,Byten",
       "termsSections": "Godkännande av villkor,Användarlicens,Förbjudna användningar,Ansvarsbegränsningar,Ändringar",
       "privacySections": "Information vi samlar in,Hur vi använder din information,Datalagring,Delning med tredje part,Användarrättigheter"
     },
@@ -3812,7 +3812,7 @@
         },
         "policies": {
           "title": "Butikspolicyer",
-          "description": "Frakt, retur, återbetalning, användarvillkor"
+          "description": "Frakt, retur, chargeback, användarvillkor"
         },
         "communication": {
           "title": "Kundkommunikation",
@@ -3905,7 +3905,7 @@
       "reasonHelpPnr": "Kunden säger att beställningen aldrig kom fram.",
       "reasonHelpSub": "Problem med prenumerationsfakturering eller avbokning.",
       "reasonHelpUnacceptable": "Varan skiljer sig från listningen eller är defekt.",
-      "reasonHelpCredit": "Återbetalning eller butikskredit ej mottagen.",
+      "reasonHelpCredit": "Chargeback eller butikskredit ej mottagen.",
       "reasonHelpDuplicate": "Kunden debiterad mer än en gång.",
       "reasonHelpGeneral": "Allt annat som inte passar anledningarna ovan.",
       "sectionByReason": "Hantering per tvistorsak",
@@ -3977,7 +3977,7 @@
     "familyPnr": "Produkt ej mottagen",
     "familyNotAsDescribed": "Produkt ej enligt beskrivning",
     "familySubscription": "Prenumeration avslutad",
-    "familyRefund": "Återbetalning / Kredit ej behandlad",
+    "familyRefund": "Chargeback / Kredit ej behandlad",
     "familyDuplicate": "Dubbeldebitering",
     "familyGeneral": "Generellt eller specialfall",
     "modeAutomated": "Automatisk",
@@ -4374,7 +4374,7 @@
     "correlationObservationInverted": "Ovanligt — i din butik har högriskordrar omvandlats till tvister i liknande eller lägre takt än godkända ordrar. Detta kan inträffa när tvistsamlingen är liten eller när tvister drivs av efterköpsproblem (leverans, produkt) snarare än bedrägerisignaler.",
     "correlationObservationNeedHigh": "Inte tillräckligt med högriskordrar observerade ännu för att räkna fram en meningsfull samvariation. Konverteringskvoter visas här när volymen ökar.",
     "correlationObservationNeedSafe": "Inte tillräckligt med lågrisk- eller godkända ordrar observerade ännu för att beräkna en meningsfull samvariationsbaslinje.",
-    "pageTitleV2": "Återkrediteringsexponering",
+    "pageTitleV2": "Chargebackexponering",
     "heroNumberLabel": "Analyserade historiska Shopify-ordrar",
     "heroMiniBarLabel": "Fördelning av riskklassificering",
     "section30dTitle": "Senaste 30 dagarna",
@@ -4407,10 +4407,10 @@
     "scopeUpgradeBody": "DisputeDesk stödjer nu analys av hela din orderhistorik, inte bara de senaste 60 dagarna. Återauktorisera för att utöka riskanalysen med säsongsvariation, långa trender och korrelation mellan risk och tvist.",
     "scopeUpgradeCta": "Återauktorisera på Shopify",
     "kpiAcceptanceRateInfo": "Andelen analyserade order som Shopify accepterade vid kassan — det vill säga som bedrägeriskanningen inte blockerade. Order med pågående analys räknas inte.",
-    "kpiHighRiskRateInfo": "Andelen order som Shopify klassade som HÖG risk i bedrägerianalysen. Ett högre värde innebär ökad exponering för återkrediteringar.",
+    "kpiHighRiskRateInfo": "Andelen order som Shopify klassade som HÖG risk i bedrägerianalysen. Ett högre värde innebär ökad exponering för chargebacks.",
     "kpiFraudDisputeRateInfo": "Andelen order som blev en bedrägeritvist från Shopify Payments (orsak = FRAUDULENT) under perioden.",
     "kpi3dsAuthInfo": "Andelen kortköp via Shopify Payments där 3-D Secure-autentiseringen slutfördes. Autentiserade betalningar flyttar ansvaret för bedrägeritvister till utgivaren.",
-    "kpiProtectCoverageInfo": "Av de order som Shopify Protect kunde teckna, andelen som markerats PROTECTED. Skyddade order når dig inte som återkrediteringar.",
+    "kpiProtectCoverageInfo": "Av de order som Shopify Protect kunde teckna, andelen som markerats PROTECTED. Skyddade order når dig inte som chargebacks.",
     "kpiMedianFulfillmentInfo": "Mediantid mellan lagd order och utskick, för order som hanterats under perioden. Snabbare hantering förbättrar generellt kundsignalerna.",
     "kpiHighRiskFulfilledInfo": "Av order som Shopify klassat som HÖG risk, andelen som ändå skickades. Ett högt värde innebär att du bär den bedrägeririsk som Shopify flaggade.",
     "kpiConfirmedDeliveryInfo": "Av skickade order, andelen där transportören rapporterat levererad status. Bekräftad leverans av transportören är stark bevisning i tvist.",
@@ -4421,29 +4421,29 @@
     "checkpointsSubtitle": "Var du befinner dig i förhållande till kortnätsreglerna och din egen 30-dagars baslinje.",
     "checkpointSourcePrefix": "Källa",
     "checkpoint_chargeback_rate_vs_vamp_healthy_title": "Under Visas övervakningsband.",
-    "checkpoint_chargeback_rate_vs_vamp_healthy_body": "Din 90-dagars återkrediteringsfrekvens är {current}. Visas VAMP Excessive-tröskel är {vampExcessive}; det operativa 'närmar sig'-bandet börjar kring {vampApproaching}.",
+    "checkpoint_chargeback_rate_vs_vamp_healthy_body": "Din 90-dagars chargebackfrekvens är {current}. Visas VAMP Excessive-tröskel är {vampExcessive}; det operativa 'närmar sig'-bandet börjar kring {vampApproaching}.",
     "checkpoint_chargeback_rate_vs_vamp_consider_title": "Närmar sig Visas VAMP-tröskel.",
-    "checkpoint_chargeback_rate_vs_vamp_consider_body": "Din 90-dagars återkrediteringsfrekvens är {current} — inom bandet {vampApproaching}–{vampExcessive}. Acquirers betalar 8 USD per ifrågasatt transaktion när Excessive-nivån ({vampExcessive}) nås.",
+    "checkpoint_chargeback_rate_vs_vamp_consider_body": "Din 90-dagars chargebackfrekvens är {current} — inom bandet {vampApproaching}–{vampExcessive}. Acquirers betalar 8 USD per ifrågasatt transaktion när Excessive-nivån ({vampExcessive}) nås.",
     "checkpoint_chargeback_rate_vs_vamp_breach_title": "Över Visas VAMP Excessive-tröskel.",
-    "checkpoint_chargeback_rate_vs_vamp_breach_body": "Din 90-dagars återkrediteringsfrekvens är {current}, på eller över Visas Excessive-tröskel ({vampExcessive}). Acquirers betalar 8 USD per ifrågasatt transaktion på denna nivå.",
+    "checkpoint_chargeback_rate_vs_vamp_breach_body": "Din 90-dagars chargebackfrekvens är {current}, på eller över Visas Excessive-tröskel ({vampExcessive}). Acquirers betalar 8 USD per ifrågasatt transaktion på denna nivå.",
     "checkpoint_chargeback_rate_vs_ecm_healthy_title": "Under Mastercards ECM-tröskel.",
-    "checkpoint_chargeback_rate_vs_ecm_healthy_body": "Din 90-dagars återkrediteringsfrekvens är {current}, klart under Mastercards ECM-kvot på {ecmRatio} (kräver dessutom {ecmCount}+ återkrediteringar/månad).",
+    "checkpoint_chargeback_rate_vs_ecm_healthy_body": "Din 90-dagars chargebackfrekvens är {current}, klart under Mastercards ECM-kvot på {ecmRatio} (kräver dessutom {ecmCount}+ chargebacks/månad).",
     "checkpoint_chargeback_rate_vs_ecm_consider_title": "Närmar sig Mastercards ECM-tröskel.",
-    "checkpoint_chargeback_rate_vs_ecm_consider_body": "Din 90-dagars återkrediteringsfrekvens är {current}. Mastercards ECM aktiveras vid {ecmRatio}-kvot och {ecmCount}+ återkrediteringar/månad (snitt: ~{monthlyEstimate}).",
+    "checkpoint_chargeback_rate_vs_ecm_consider_body": "Din 90-dagars chargebackfrekvens är {current}. Mastercards ECM aktiveras vid {ecmRatio}-kvot och {ecmCount}+ chargebacks/månad (snitt: ~{monthlyEstimate}).",
     "checkpoint_chargeback_rate_vs_ecm_breach_title": "Över Mastercards ECM-trösklar.",
-    "checkpoint_chargeback_rate_vs_ecm_breach_body": "Din 90-dagars återkrediteringsfrekvens är {current} och du har ~{monthlyEstimate} återkrediteringar/månad. Båda ECM-kriterierna ({ecmRatio}-kvot, {ecmCount}+/månad) är uppfyllda.",
+    "checkpoint_chargeback_rate_vs_ecm_breach_body": "Din 90-dagars chargebackfrekvens är {current} och du har ~{monthlyEstimate} chargebacks/månad. Båda ECM-kriterierna ({ecmRatio}-kvot, {ecmCount}+/månad) är uppfyllda.",
     "checkpoint_high_risk_fulfilled_consider_title": "{current} av HÖG-risk-order skickades.",
     "checkpoint_high_risk_fulfilled_consider_body": "Varje skickad HÖG-risk-order är absorberad exponering — Shopifys riskmodell flaggade men blockerade inte. Skapa en Shopify Flow-regel som håller leveransen när en order är Hög-risk och överstiger ett värde du själv väljer.",
     "checkpoint_signature_capture_low_consider_title": "Signatur registrerad på {current} av bekräftade leveranser.",
-    "checkpoint_signature_capture_low_consider_body": "Transportör-attesterad signaturbekräftelse är det starkaste leveransbeviset vid bedrägeri-kodade återkrediteringar. Att kräva signatur på leveranser av högre värde stärker tvistförsvaret betydligt.",
+    "checkpoint_signature_capture_low_consider_body": "Transportör-attesterad signaturbekräftelse är det starkaste leveransbeviset vid bedrägeri-kodade chargebacks. Att kräva signatur på leveranser av högre värde stärker tvistförsvaret betydligt.",
     "checkpoint_threeds_auth_healthy_title": "3-DS-autentisering på {current} av kvalificerade kortbetalningar.",
-    "checkpoint_threeds_auth_healthy_body": "Autentiserade betalningar flyttar ansvaret för bedrägeri-återkrediteringar till utgivaren (Visas liability shift). Din täckning är operativt stark på denna nivå.",
+    "checkpoint_threeds_auth_healthy_body": "Autentiserade betalningar flyttar ansvaret för bedrägeri-chargebacks till utgivaren (Visas liability shift). Din täckning är operativt stark på denna nivå.",
     "checkpoint_threeds_auth_info_title": "3-DS-autentisering på {current} av kvalificerade kortbetalningar.",
-    "checkpoint_threeds_auth_info_body": "Visas liability shift flyttar ansvaret för bedrägeri-återkrediteringar till utgivaren för autentiserade betalningar. Täckning över 25% är operativt stark.",
+    "checkpoint_threeds_auth_info_body": "Visas liability shift flyttar ansvaret för bedrägeri-chargebacks till utgivaren för autentiserade betalningar. Täckning över 25% är operativt stark.",
     "checkpoint_threeds_auth_consider_title": "3-DS-autentisering på {current} av kvalificerade kortbetalningar.",
-    "checkpoint_threeds_auth_consider_body": "Autentiserade betalningar flyttar ansvaret för bedrägeri-återkrediteringar till utgivaren. Så låg täckning gör att de flesta CNP-bedrägeritvister endast kan återvinnas via bevispaket.",
+    "checkpoint_threeds_auth_consider_body": "Autentiserade betalningar flyttar ansvaret för bedrägeri-chargebacks till utgivaren. Så låg täckning gör att de flesta CNP-bedrägeritvister endast kan återvinnas via bevispaket.",
     "checkpoint_protect_coverage_low_info_title": "Shopify Protect-täckning på {current}.",
-    "checkpoint_protect_coverage_low_info_body": "Tecknade order når dig inte som återkrediteringar. Lägre täckning betyder att en större andel tvister måste försvaras av dig själv med bevispaket.",
+    "checkpoint_protect_coverage_low_info_body": "Tecknade order når dig inte som chargebacks. Lägre täckning betyder att en större andel tvister måste försvaras av dig själv med bevispaket.",
     "checkpoint_fulfillment_baseline_degraded_consider_title": "Median utskickstid försämrad till {current}.",
     "checkpoint_fulfillment_baseline_degraded_consider_body": "Upp {delta} jämfört med föregående 30 dagar ({prior}). Snabbare hantering stärker generellt kundsignalerna — en faktor som regelbundet åberopas i tvister.",
     "checkpoint_fulfillment_baseline_improved_healthy_title": "Median utskickstid förbättrad till {current}.",
@@ -4502,7 +4502,7 @@
     "chooseEvidenceAutoLabel": "Auto-insamlat från Shopify",
     "chooseEvidenceAutoText": "Beställningsdetaljer, spårning och fakturering hämtas från din butik när en tvist matchar denna mall.",
     "chooseEvidencePoliciesLabel": "Anges i Policyer",
-    "chooseEvidencePoliciesText": "Återbetalning, villkor och andra butikspolicyer du anger i Policyer används automatiskt när vi bygger ett paket. Ange dem en gång; vi tillämpar dem på varje matchande tvist.",
+    "chooseEvidencePoliciesText": "Chargeback, villkor och andra butikspolicyer du anger i Policyer används automatiskt när vi bygger ett paket. Ange dem en gång; vi tillämpar dem på varje matchande tvist.",
     "chooseEvidencePoliciesHint": "Ange en gång i Policyer; vi använder dem när paket byggs.",
     "policySetLabel": "Policy angiven",
     "policyNotSetLabel": "Inte angiven",
@@ -4525,7 +4525,7 @@
     "sourceManual": "Tillagt manuellt per tvist",
     "sourceManualDetail": "Ditt team lägger till detta när de granskar varje tvist.",
     "upload": "Upload",
-    "reusablePolicyHint": "Ange dina återbetalnings- och avbokningspolicyer i Policyer; vi använder dem automatiskt när paket byggs.",
+    "reusablePolicyHint": "Ange dina chargebacks- och avbokningspolicyer i Policyer; vi använder dem automatiskt när paket byggs.",
     "reusablePolicyLinkBack": "När vi bygger ett paket länkar vi till policyn som används så att du kan spåra den tillbaka.",
     "openPolicies": "Öppna Policyer",
     "suggestUsePolicy": "Vi föreslår att du använder din {policyName}.",
@@ -4534,7 +4534,7 @@
     "setPolicyOrUpload": "Ange en policy eller ladda upp ett dokument.",
     "setInPolicies": "Ange i Policyer",
     "uploadFile": "Ladda upp fil",
-    "policyNameRefunds": "Återbetalningspolicy",
+    "policyNameRefunds": "Chargebackpolicy",
     "policyNameTerms": "Användarvillkor",
     "policyNameShipping": "Leveranspolicy",
     "usingThisPolicy": "Använder den här policyn",
@@ -4593,7 +4593,7 @@
     "evidenceOrderConfirmationDesc": "Visar vad kunden köpte och när.",
     "evidenceTracking": "Leverans- och spårningsinformation",
     "evidenceTrackingDesc": "Bevisar att varan skickades och levererades till kunden.",
-    "evidenceRefundPolicy": "Återbetalnings- eller avbokningspolicy",
+    "evidenceRefundPolicy": "Chargebacks- eller avbokningspolicy",
     "evidenceRefundPolicyDesc": "Visar policyn som kunden godkände före köpet.",
     "evidenceCustomerComms": "Kundkommunikation",
     "evidenceCustomerCommsDesc": "Visar försök att lösa problemet direkt med kunden.",
