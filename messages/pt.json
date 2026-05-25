@@ -71,16 +71,16 @@
     "dismiss": "Dismiss"
   },
   "status": {
-    "needsResponse": "Aguardando resposta",
+    "needsResponse": "Requer resposta",
     "underReview": "Em análise",
     "won": "Ganho",
     "lost": "Perdido",
     "unknown": "Desconhecido",
     "savedToShopify": "Salvo no Shopify",
-    "needsReview": "Precisa de Revisão",
-    "building": "Gerando...",
+    "needsReview": "Requer revisão",
+    "building": "Gerando…",
     "blocked": "Bloqueado",
-    "readyToSave": "Pronto para Salvar",
+    "readyToSave": "Pronto para salvar",
     "draft": "Rascunho",
     "queued": "Na fila",
     "failed": "Falhou",
@@ -115,8 +115,8 @@
     "activeDisputes": "Disputas ativas",
     "evidencePacks": "Pacotes de evidência",
     "amountAtRisk": "Valor em risco",
-    "chargebackRate": "Taxa de chargebacks (30d)",
-    "chargebackRateSubtext": "{numerator} chargebacks / {denominator} pedidos",
+    "chargebackRate": "Taxa de estornos (30d)",
+    "chargebackRateSubtext": "{numerator} estornos / {denominator} pedidos",
     "chargebackRateUnavailable": "Calculando…",
     "chargebackRateLowVolume": "Volume baixo — a taxa pode oscilar",
     "chargebackRateThresholdHealthy": "Saudável",
@@ -601,16 +601,16 @@
       "closed": "Closed"
     },
     "caseStrength": {
-      "strong": "Strong",
-      "moderate": "Moderate",
-      "weak": "Weak"
+      "strong": "Caso forte",
+      "moderate": "Caso com suporte parcial",
+      "weak": "Caso fraco"
     },
     "itemStrength": {
-      "strong": "Strong",
-      "moderate": "Moderate",
-      "supporting": "Supporting",
-      "internal_only": "Internal only",
-      "none": "None"
+      "strong": "Forte",
+      "moderate": "Moderada",
+      "supporting": "Suporte",
+      "internal_only": "Apenas interno",
+      "none": "Nenhum"
     },
     "evidenceTab": {
       "sections": {
@@ -960,28 +960,28 @@
             "likely_to_win": "Caso forte para contestar",
             "could_win": "Revisar antes de contestar",
             "needs_strengthening": "Revisar antes de contestar",
-            "hard_to_win": "Documentação completa, defesa fraca",
+            "hard_to_win": "Documentação completa, caso fraco",
             "covered": "Coberto pelo Shopify Protect"
           },
           "saved": {
-            "likely_to_win": "Defesa forte salva no Shopify",
-            "could_win": "Defesa moderada salva no Shopify",
-            "needs_strengthening": "Defesa moderada salva no Shopify",
-            "hard_to_win": "Defesa fraca salva no Shopify",
+            "likely_to_win": "Caso forte salvo no Shopify",
+            "could_win": "Caso com suporte parcial salvo no Shopify",
+            "needs_strengthening": "Caso com suporte parcial salvo no Shopify",
+            "hard_to_win": "Caso fraco salvo no Shopify",
             "covered": "Coberto pelo Shopify Protect"
           },
           "awaiting": {
-            "likely_to_win": "Defesa forte encaminhada ao Shopify",
-            "could_win": "Defesa moderada encaminhada ao Shopify",
-            "needs_strengthening": "Defesa moderada encaminhada ao Shopify",
-            "hard_to_win": "Defesa fraca encaminhada ao Shopify",
+            "likely_to_win": "Caso forte encaminhado ao Shopify",
+            "could_win": "Caso com suporte parcial encaminhado ao Shopify",
+            "needs_strengthening": "Caso com suporte parcial encaminhado ao Shopify",
+            "hard_to_win": "Caso fraco encaminhado ao Shopify",
             "covered": "Coberto pelo Shopify Protect"
           },
           "submitted_to_network": {
-            "likely_to_win": "Defesa forte enviada à rede de cartões",
-            "could_win": "Defesa moderada enviada à rede de cartões",
-            "needs_strengthening": "Defesa moderada enviada à rede de cartões",
-            "hard_to_win": "Defesa fraca enviada à rede de cartões",
+            "likely_to_win": "Caso forte enviado à rede de cartões",
+            "could_win": "Caso com suporte parcial enviado à rede de cartões",
+            "needs_strengthening": "Caso com suporte parcial enviado à rede de cartões",
+            "hard_to_win": "Caso fraco enviado à rede de cartões",
             "covered": "Coberto pelo Shopify Protect"
           },
           "closed": {
@@ -1222,7 +1222,7 @@
       },
       "strengthLabel": {
         "strong": "Caso forte",
-        "moderate": "Caso moderado",
+        "moderate": "Caso com suporte parcial",
         "weak": "Caso fraco"
       },
       "merchantReasonLabel": {
@@ -1231,7 +1231,7 @@
         "CUSTOMER_INITIATED": "Disputa iniciada pelo cliente",
         "DEBIT_NOT_AUTHORIZED": "Débito não autorizado",
         "DUPLICATE": "Cobrança duplicada",
-        "FRAUDULENT": "Transação não autorizada",
+        "FRAUDULENT": "Cliente nega a compra",
         "GENERAL": "Disputa geral",
         "INCORRECT_ACCOUNT_DETAILS": "Dados da conta incorretos",
         "INSUFFICIENT_FUNDS": "Fundos insuficientes",
@@ -1366,20 +1366,20 @@
     }
   },
   "disputeReasons": {
-    "BANK_CANNOT_PROCESS": "Banco Não Pode Processar",
-    "CREDIT_NOT_PROCESSED": "Crédito Não Processado",
-    "CUSTOMER_INITIATED": "Iniciado pelo Cliente",
-    "DEBIT_NOT_AUTHORIZED": "Débito Não Autorizado",
-    "DUPLICATE": "Duplicado",
-    "FRAUDULENT": "Fraudulento",
+    "BANK_CANNOT_PROCESS": "Banco não pode processar",
+    "CREDIT_NOT_PROCESSED": "Reembolso não processado",
+    "CUSTOMER_INITIATED": "Iniciado pelo cliente",
+    "DEBIT_NOT_AUTHORIZED": "Débito não autorizado",
+    "DUPLICATE": "Cobrança duplicada",
+    "FRAUDULENT": "Transação fraudulenta",
     "GENERAL": "Geral",
-    "INCORRECT_ACCOUNT_DETAILS": "Dados da Conta Incorretos",
-    "INSUFFICIENT_FUNDS": "Fundos Insuficientes",
-    "NONCOMPLIANT": "Não Conforme",
-    "PRODUCT_NOT_RECEIVED": "Produto Não Recebido",
-    "PRODUCT_UNACCEPTABLE": "Produto Inaceitável",
-    "SUBSCRIPTION_CANCELED": "Assinatura Cancelada",
-    "UNRECOGNIZED": "Não Reconhecido"
+    "INCORRECT_ACCOUNT_DETAILS": "Dados da conta incorretos",
+    "INSUFFICIENT_FUNDS": "Fundos insuficientes",
+    "NONCOMPLIANT": "Não conforme",
+    "PRODUCT_NOT_RECEIVED": "Produto não recebido",
+    "PRODUCT_UNACCEPTABLE": "Produto não corresponde à descrição",
+    "SUBSCRIPTION_CANCELED": "Assinatura cancelada",
+    "UNRECOGNIZED": "Cobrança não reconhecida"
   },
   "disputeFamilies": {
     "Technical": "Técnico",
@@ -1608,15 +1608,15 @@
       "FRAUDULENT": "Transação fraudulenta",
       "PNR": "Produto não recebido",
       "PRODUCT_NOT_RECEIVED": "Produto não recebido",
-      "NOT_AS_DESCRIBED": "Produto não conforme a descrição",
+      "NOT_AS_DESCRIBED": "Produto não corresponde à descrição",
       "SUBSCRIPTION": "Assinatura",
       "REFUND": "Reembolso não processado",
       "DUPLICATE": "Cobrança duplicada",
-      "DIGITAL": "Bens digitais ou serviço",
+      "DIGITAL": "Produto ou serviço digital",
       "GENERAL": "Geral",
       "CREDIT_NOT_PROCESSED": "Reembolso não processado",
       "SUBSCRIPTION_CANCELED": "Assinatura cancelada",
-      "PRODUCT_UNACCEPTABLE": "Produto não conforme",
+      "PRODUCT_UNACCEPTABLE": "Produto não corresponde à descrição",
       "NONCOMPLIANT": "Não conforme",
       "UNRECOGNIZED": "Cobrança não reconhecida",
       "DEBIT_NOT_AUTHORIZED": "Débito não autorizado",

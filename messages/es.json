@@ -601,16 +601,16 @@
       "closed": "Closed"
     },
     "caseStrength": {
-      "strong": "Strong",
-      "moderate": "Moderate",
-      "weak": "Weak"
+      "strong": "Caso sólido",
+      "moderate": "Caso parcialmente respaldado",
+      "weak": "Caso débil"
     },
     "itemStrength": {
-      "strong": "Strong",
-      "moderate": "Moderate",
-      "supporting": "Supporting",
-      "internal_only": "Internal only",
-      "none": "None"
+      "strong": "Sólido",
+      "moderate": "Moderado",
+      "supporting": "De apoyo",
+      "internal_only": "Solo interno",
+      "none": "Ninguno"
     },
     "evidenceTab": {
       "sections": {
@@ -960,28 +960,28 @@
             "likely_to_win": "Caso sólido para impugnar",
             "could_win": "Revisar antes de impugnar",
             "needs_strengthening": "Revisar antes de impugnar",
-            "hard_to_win": "Documentación completa, defensa débil",
+            "hard_to_win": "Documentación completa, caso débil",
             "covered": "Cubierto por Shopify Protect"
           },
           "saved": {
-            "likely_to_win": "Defensa sólida guardada en Shopify",
-            "could_win": "Defensa moderada guardada en Shopify",
-            "needs_strengthening": "Defensa moderada guardada en Shopify",
-            "hard_to_win": "Defensa débil guardada en Shopify",
+            "likely_to_win": "Caso sólido guardado en Shopify",
+            "could_win": "Caso parcialmente respaldado guardado en Shopify",
+            "needs_strengthening": "Caso parcialmente respaldado guardado en Shopify",
+            "hard_to_win": "Caso débil guardado en Shopify",
             "covered": "Cubierto por Shopify Protect"
           },
           "awaiting": {
-            "likely_to_win": "Defensa sólida reenviada a Shopify",
-            "could_win": "Defensa moderada reenviada a Shopify",
-            "needs_strengthening": "Defensa moderada reenviada a Shopify",
-            "hard_to_win": "Defensa débil reenviada a Shopify",
+            "likely_to_win": "Caso sólido reenviado a Shopify",
+            "could_win": "Caso parcialmente respaldado reenviado a Shopify",
+            "needs_strengthening": "Caso parcialmente respaldado reenviado a Shopify",
+            "hard_to_win": "Caso débil reenviado a Shopify",
             "covered": "Cubierto por Shopify Protect"
           },
           "submitted_to_network": {
-            "likely_to_win": "Defensa sólida enviada a la red de tarjetas",
-            "could_win": "Defensa moderada enviada a la red de tarjetas",
-            "needs_strengthening": "Defensa moderada enviada a la red de tarjetas",
-            "hard_to_win": "Defensa débil enviada a la red de tarjetas",
+            "likely_to_win": "Caso sólido enviado a la red de tarjetas",
+            "could_win": "Caso parcialmente respaldado enviado a la red de tarjetas",
+            "needs_strengthening": "Caso parcialmente respaldado enviado a la red de tarjetas",
+            "hard_to_win": "Caso débil enviado a la red de tarjetas",
             "covered": "Cubierto por Shopify Protect"
           },
           "closed": {
@@ -1222,7 +1222,7 @@
       },
       "strengthLabel": {
         "strong": "Caso sólido",
-        "moderate": "Caso moderado",
+        "moderate": "Caso parcialmente respaldado",
         "weak": "Caso débil"
       },
       "merchantReasonLabel": {
@@ -1231,13 +1231,13 @@
         "CUSTOMER_INITIATED": "Disputa iniciada por el cliente",
         "DEBIT_NOT_AUTHORIZED": "Débito no autorizado",
         "DUPLICATE": "Cargo duplicado",
-        "FRAUDULENT": "Transacción no autorizada",
+        "FRAUDULENT": "El cliente no reconoce el cargo",
         "GENERAL": "Disputa general",
         "INCORRECT_ACCOUNT_DETAILS": "Datos de cuenta incorrectos",
         "INSUFFICIENT_FUNDS": "Fondos insuficientes",
         "NONCOMPLIANT": "Transacción no conforme",
-        "PRODUCT_NOT_RECEIVED": "Artículo no recibido",
-        "PRODUCT_UNACCEPTABLE": "Artículo no como se describe",
+        "PRODUCT_NOT_RECEIVED": "Producto no recibido",
+        "PRODUCT_UNACCEPTABLE": "Producto no coincide con la descripción",
         "SUBSCRIPTION_CANCELED": "Suscripción cancelada",
         "UNRECOGNIZED": "Cargo no reconocido",
         "fallback": "Disputa"
@@ -1367,19 +1367,19 @@
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "El banco no puede procesar",
-    "CREDIT_NOT_PROCESSED": "Crédito no procesado",
+    "CREDIT_NOT_PROCESSED": "Reembolso no procesado",
     "CUSTOMER_INITIATED": "Iniciado por el cliente",
     "DEBIT_NOT_AUTHORIZED": "Débito no autorizado",
-    "DUPLICATE": "Duplicado",
-    "FRAUDULENT": "Fraudulento",
+    "DUPLICATE": "Cargo duplicado",
+    "FRAUDULENT": "Transacción fraudulenta",
     "GENERAL": "General",
     "INCORRECT_ACCOUNT_DETAILS": "Datos de cuenta incorrectos",
     "INSUFFICIENT_FUNDS": "Fondos insuficientes",
     "NONCOMPLIANT": "No conforme",
     "PRODUCT_NOT_RECEIVED": "Producto no recibido",
-    "PRODUCT_UNACCEPTABLE": "Producto inaceptable",
+    "PRODUCT_UNACCEPTABLE": "Producto no coincide con la descripción",
     "SUBSCRIPTION_CANCELED": "Suscripción cancelada",
-    "UNRECOGNIZED": "No reconocido"
+    "UNRECOGNIZED": "Cargo no reconocido"
   },
   "disputeFamilies": {
     "Technical": "Técnico",
@@ -1608,7 +1608,7 @@
       "FRAUDULENT": "Transacción fraudulenta",
       "PNR": "Producto no recibido",
       "PRODUCT_NOT_RECEIVED": "Producto no recibido",
-      "NOT_AS_DESCRIBED": "Producto no como se describe",
+      "NOT_AS_DESCRIBED": "Producto no coincide con la descripción",
       "SUBSCRIPTION": "Suscripción",
       "REFUND": "Reembolso no procesado",
       "DUPLICATE": "Cargo duplicado",
@@ -1616,7 +1616,7 @@
       "GENERAL": "General",
       "CREDIT_NOT_PROCESSED": "Reembolso no procesado",
       "SUBSCRIPTION_CANCELED": "Suscripción cancelada",
-      "PRODUCT_UNACCEPTABLE": "Producto no conforme",
+      "PRODUCT_UNACCEPTABLE": "Producto no coincide con la descripción",
       "NONCOMPLIANT": "No conforme",
       "UNRECOGNIZED": "Cargo no reconocido",
       "DEBIT_NOT_AUTHORIZED": "Débito no autorizado",

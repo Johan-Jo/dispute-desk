@@ -602,9 +602,9 @@
       "created": "Created"
     },
     "caseStrength": {
-      "strong": "Strong",
-      "moderate": "Moderate",
-      "weak": "Weak"
+      "strong": "Strong case",
+      "moderate": "Partially supported case",
+      "weak": "Weak case"
     },
     "signalLabel": {
       "payment_auth": "Payment authentication",
@@ -830,7 +830,7 @@
       },
       "strengthLabel": {
         "strong": "Strong case",
-        "moderate": "Moderate case",
+        "moderate": "Partially supported case",
         "weak": "Weak case"
       },
       "statusPill": {
@@ -1063,28 +1063,28 @@
             "likely_to_win": "Strong case to challenge",
             "could_win": "Review before challenging",
             "needs_strengthening": "Review before challenging",
-            "hard_to_win": "Complete documentation, weak defence",
+            "hard_to_win": "Complete documentation, weak case",
             "covered": "Covered by Shopify Protect"
           },
           "saved": {
-            "likely_to_win": "Strong defence saved to Shopify",
-            "could_win": "Moderate defence saved to Shopify",
-            "needs_strengthening": "Moderate defence saved to Shopify",
-            "hard_to_win": "Weak defence saved to Shopify",
+            "likely_to_win": "Strong case saved to Shopify",
+            "could_win": "Partially supported case saved to Shopify",
+            "needs_strengthening": "Partially supported case saved to Shopify",
+            "hard_to_win": "Weak case saved to Shopify",
             "covered": "Covered by Shopify Protect"
           },
           "awaiting": {
-            "likely_to_win": "Strong defence forwarded to Shopify",
-            "could_win": "Moderate defence forwarded to Shopify",
-            "needs_strengthening": "Moderate defence forwarded to Shopify",
-            "hard_to_win": "Weak defence forwarded to Shopify",
+            "likely_to_win": "Strong case forwarded to Shopify",
+            "could_win": "Partially supported case forwarded to Shopify",
+            "needs_strengthening": "Partially supported case forwarded to Shopify",
+            "hard_to_win": "Weak case forwarded to Shopify",
             "covered": "Covered by Shopify Protect"
           },
           "submitted_to_network": {
-            "likely_to_win": "Strong defence sent to the card network",
-            "could_win": "Moderate defence sent to the card network",
-            "needs_strengthening": "Moderate defence sent to the card network",
-            "hard_to_win": "Weak defence sent to the card network",
+            "likely_to_win": "Strong case sent to the card network",
+            "could_win": "Partially supported case sent to the card network",
+            "needs_strengthening": "Partially supported case sent to the card network",
+            "hard_to_win": "Weak case sent to the card network",
             "covered": "Covered by Shopify Protect"
           },
           "closed": {
@@ -1366,20 +1366,20 @@
     }
   },
   "disputeReasons": {
-    "BANK_CANNOT_PROCESS": "Bank Cannot Process",
-    "CREDIT_NOT_PROCESSED": "Credit Not Processed",
-    "CUSTOMER_INITIATED": "Customer Initiated",
-    "DEBIT_NOT_AUTHORIZED": "Debit Not Authorized",
-    "DUPLICATE": "Duplicate",
-    "FRAUDULENT": "Fraudulent",
+    "BANK_CANNOT_PROCESS": "Bank cannot process",
+    "CREDIT_NOT_PROCESSED": "Refund / credit not processed",
+    "CUSTOMER_INITIATED": "Customer initiated",
+    "DEBIT_NOT_AUTHORIZED": "Debit not authorized",
+    "DUPLICATE": "Duplicate charge",
+    "FRAUDULENT": "Fraudulent transaction",
     "GENERAL": "General",
-    "INCORRECT_ACCOUNT_DETAILS": "Incorrect Account Details",
-    "INSUFFICIENT_FUNDS": "Insufficient Funds",
+    "INCORRECT_ACCOUNT_DETAILS": "Incorrect account details",
+    "INSUFFICIENT_FUNDS": "Insufficient funds",
     "NONCOMPLIANT": "Noncompliant",
-    "PRODUCT_NOT_RECEIVED": "Product Not Received",
-    "PRODUCT_UNACCEPTABLE": "Product Unacceptable",
-    "SUBSCRIPTION_CANCELED": "Subscription Canceled",
-    "UNRECOGNIZED": "Unrecognized"
+    "PRODUCT_NOT_RECEIVED": "Product not received",
+    "PRODUCT_UNACCEPTABLE": "Product not as described",
+    "SUBSCRIPTION_CANCELED": "Subscription canceled",
+    "UNRECOGNIZED": "Unrecognized charge"
   },
   "disputeFamilies": {
     "Technical": "Technical",
@@ -1537,7 +1537,7 @@
       "PRODUCT_NOT_RECEIVED": "Product not received",
       "NOT_AS_DESCRIBED": "Product not as described",
       "SUBSCRIPTION": "Subscription",
-      "REFUND": "Refund not processed",
+      "REFUND": "Refund / credit not processed",
       "DUPLICATE": "Duplicate charge",
       "DIGITAL": "Digital goods or service",
       "GENERAL": "General",

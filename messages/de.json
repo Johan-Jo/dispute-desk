@@ -76,7 +76,7 @@
     "won": "Gewonnen",
     "lost": "Verloren",
     "unknown": "Unbekannt",
-    "savedToShopify": "Bei Shopify gespeichert",
+    "savedToShopify": "In Shopify gespeichert",
     "needsReview": "Prüfung erforderlich",
     "building": "Wird erstellt...",
     "blocked": "Blockiert",
@@ -199,7 +199,7 @@
     "attentionCount": "{count} benötigen Aufmerksamkeit",
     "actionNeeded": "Handlung erforderlich",
     "readyToSubmit": "Bereit zum Einreichen",
-    "savedToShopify": "Bei Shopify gespeichert",
+    "savedToShopify": "In Shopify gespeichert",
     "waitingOnIssuer": "Warte auf Herausgeber",
     "closedInPeriod": "Geschlossen",
     "reviewActionNeeded": "{count} Fälle prüfen, die Handlung erfordern",
@@ -601,14 +601,14 @@
       "closed": "Closed"
     },
     "caseStrength": {
-      "strong": "Strong",
-      "moderate": "Moderate",
-      "weak": "Weak"
+      "strong": "Starker Fall",
+      "moderate": "Teilweise gestützter Fall",
+      "weak": "Schwacher Fall"
     },
     "itemStrength": {
-      "strong": "Strong",
-      "moderate": "Moderate",
-      "supporting": "Supporting",
+      "strong": "Stark",
+      "moderate": "Mittel",
+      "supporting": "Unterstützend",
       "internal_only": "Nur intern",
       "none": "Keine"
     },
@@ -661,28 +661,28 @@
             "likely_to_win": "Starker Fall zum Anfechten",
             "could_win": "Vor dem Anfechten prüfen",
             "needs_strengthening": "Vor dem Anfechten prüfen",
-            "hard_to_win": "Vollständige Dokumentation, schwache Verteidigung",
+            "hard_to_win": "Vollständige Dokumentation, schwacher Fall",
             "covered": "Durch Shopify Protect abgedeckt"
           },
           "saved": {
-            "likely_to_win": "Starke Verteidigung bei Shopify gespeichert",
-            "could_win": "Moderate Verteidigung bei Shopify gespeichert",
-            "needs_strengthening": "Moderate Verteidigung bei Shopify gespeichert",
-            "hard_to_win": "Schwache Verteidigung bei Shopify gespeichert",
+            "likely_to_win": "Starker Fall in Shopify gespeichert",
+            "could_win": "Teilweise gestützter Fall in Shopify gespeichert",
+            "needs_strengthening": "Teilweise gestützter Fall in Shopify gespeichert",
+            "hard_to_win": "Schwacher Fall in Shopify gespeichert",
             "covered": "Durch Shopify Protect abgedeckt"
           },
           "awaiting": {
-            "likely_to_win": "Starke Verteidigung an Shopify weitergeleitet",
-            "could_win": "Moderate Verteidigung an Shopify weitergeleitet",
-            "needs_strengthening": "Moderate Verteidigung an Shopify weitergeleitet",
-            "hard_to_win": "Schwache Verteidigung an Shopify weitergeleitet",
+            "likely_to_win": "Starker Fall an Shopify weitergeleitet",
+            "could_win": "Teilweise gestützter Fall an Shopify weitergeleitet",
+            "needs_strengthening": "Teilweise gestützter Fall an Shopify weitergeleitet",
+            "hard_to_win": "Schwacher Fall an Shopify weitergeleitet",
             "covered": "Durch Shopify Protect abgedeckt"
           },
           "submitted_to_network": {
-            "likely_to_win": "Starke Verteidigung an das Kartennetzwerk gesendet",
-            "could_win": "Moderate Verteidigung an das Kartennetzwerk gesendet",
-            "needs_strengthening": "Moderate Verteidigung an das Kartennetzwerk gesendet",
-            "hard_to_win": "Schwache Verteidigung an das Kartennetzwerk gesendet",
+            "likely_to_win": "Starker Fall an das Kartennetzwerk gesendet",
+            "could_win": "Teilweise gestützter Fall an das Kartennetzwerk gesendet",
+            "needs_strengthening": "Teilweise gestützter Fall an das Kartennetzwerk gesendet",
+            "hard_to_win": "Schwacher Fall an das Kartennetzwerk gesendet",
             "covered": "Durch Shopify Protect abgedeckt"
           },
           "closed": {
@@ -1222,7 +1222,7 @@
       },
       "strengthLabel": {
         "strong": "Starker Fall",
-        "moderate": "Mittelstarker Fall",
+        "moderate": "Teilweise gestützter Fall",
         "weak": "Schwacher Fall"
       },
       "merchantReasonLabel": {
@@ -1231,13 +1231,13 @@
         "CUSTOMER_INITIATED": "Vom Kunden initiierter Streitfall",
         "DEBIT_NOT_AUTHORIZED": "Abbuchung nicht autorisiert",
         "DUPLICATE": "Doppelte Abbuchung",
-        "FRAUDULENT": "Nicht autorisierte Transaktion",
+        "FRAUDULENT": "Kunde bestreitet den Kauf",
         "GENERAL": "Allgemeiner Streitfall",
         "INCORRECT_ACCOUNT_DETAILS": "Falsche Kontodaten",
         "INSUFFICIENT_FUNDS": "Unzureichende Deckung",
         "NONCOMPLIANT": "Nicht regelkonforme Transaktion",
         "PRODUCT_NOT_RECEIVED": "Ware nicht erhalten",
-        "PRODUCT_UNACCEPTABLE": "Ware nicht wie beschrieben",
+        "PRODUCT_UNACCEPTABLE": "Produkt entspricht nicht der Beschreibung",
         "SUBSCRIPTION_CANCELED": "Abonnement gekündigt",
         "UNRECOGNIZED": "Unbekannte Belastung",
         "fallback": "Streitfall"
@@ -1367,19 +1367,19 @@
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank kann nicht verarbeiten",
-    "CREDIT_NOT_PROCESSED": "Gutschrift nicht verarbeitet",
+    "CREDIT_NOT_PROCESSED": "Rückerstattung nicht bearbeitet",
     "CUSTOMER_INITIATED": "Vom Kunden initiiert",
     "DEBIT_NOT_AUTHORIZED": "Lastschrift nicht autorisiert",
-    "DUPLICATE": "Duplikat",
-    "FRAUDULENT": "Betrügerisch",
+    "DUPLICATE": "Doppelte Belastung",
+    "FRAUDULENT": "Betrügerische Transaktion",
     "GENERAL": "Allgemein",
     "INCORRECT_ACCOUNT_DETAILS": "Falsche Kontodaten",
     "INSUFFICIENT_FUNDS": "Unzureichende Mittel",
     "NONCOMPLIANT": "Nicht konform",
     "PRODUCT_NOT_RECEIVED": "Produkt nicht erhalten",
-    "PRODUCT_UNACCEPTABLE": "Produkt nicht akzeptabel",
+    "PRODUCT_UNACCEPTABLE": "Produkt entspricht nicht der Beschreibung",
     "SUBSCRIPTION_CANCELED": "Abonnement gekündigt",
-    "UNRECOGNIZED": "Nicht erkannt"
+    "UNRECOGNIZED": "Unerkannte Belastung"
   },
   "disputeFamilies": {
     "Technical": "Technisch",
@@ -1614,9 +1614,9 @@
       "DUPLICATE": "Doppelte Belastung",
       "DIGITAL": "Digitale Güter oder Dienstleistung",
       "GENERAL": "Allgemein",
-      "CREDIT_NOT_PROCESSED": "Rückerstattung nicht verarbeitet",
+      "CREDIT_NOT_PROCESSED": "Rückerstattung nicht bearbeitet",
       "SUBSCRIPTION_CANCELED": "Abonnement gekündigt",
-      "PRODUCT_UNACCEPTABLE": "Produkt nicht wie beschrieben",
+      "PRODUCT_UNACCEPTABLE": "Produkt entspricht nicht der Beschreibung",
       "NONCOMPLIANT": "Nicht konform",
       "UNRECOGNIZED": "Unerkannte Belastung",
       "DEBIT_NOT_AUTHORIZED": "Lastschrift nicht autorisiert",

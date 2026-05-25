@@ -115,8 +115,8 @@
     "activeDisputes": "Litiges actifs",
     "evidencePacks": "Dossiers de preuves",
     "amountAtRisk": "Montant à risque",
-    "chargebackRate": "Taux de litiges (30 j)",
-    "chargebackRateSubtext": "{numerator} chargebacks / {denominator} commandes",
+    "chargebackRate": "Taux de rétrofacturations (30 j)",
+    "chargebackRateSubtext": "{numerator} rétrofacturations / {denominator} commandes",
     "chargebackRateUnavailable": "Calcul en cours…",
     "chargebackRateLowVolume": "Faible volume — le taux peut varier",
     "chargebackRateThresholdHealthy": "Sain",
@@ -601,16 +601,16 @@
       "closed": "Closed"
     },
     "caseStrength": {
-      "strong": "Strong",
-      "moderate": "Moderate",
-      "weak": "Weak"
+      "strong": "Dossier solide",
+      "moderate": "Dossier partiellement étayé",
+      "weak": "Dossier faible"
     },
     "itemStrength": {
-      "strong": "Strong",
-      "moderate": "Moderate",
-      "supporting": "Supporting",
-      "internal_only": "Internal only",
-      "none": "None"
+      "strong": "Solide",
+      "moderate": "Modéré",
+      "supporting": "Complémentaire",
+      "internal_only": "Interne uniquement",
+      "none": "Aucun"
     },
     "evidenceTab": {
       "sections": {
@@ -960,28 +960,28 @@
             "likely_to_win": "Dossier solide à contester",
             "could_win": "À examiner avant de contester",
             "needs_strengthening": "À examiner avant de contester",
-            "hard_to_win": "Documentation complète, défense faible",
+            "hard_to_win": "Documentation complète, dossier faible",
             "covered": "Couvert par Shopify Protect"
           },
           "saved": {
-            "likely_to_win": "Défense solide enregistrée dans Shopify",
-            "could_win": "Défense modérée enregistrée dans Shopify",
-            "needs_strengthening": "Défense modérée enregistrée dans Shopify",
-            "hard_to_win": "Défense faible enregistrée dans Shopify",
+            "likely_to_win": "Dossier solide enregistré dans Shopify",
+            "could_win": "Dossier partiellement étayé enregistré dans Shopify",
+            "needs_strengthening": "Dossier partiellement étayé enregistré dans Shopify",
+            "hard_to_win": "Dossier faible enregistré dans Shopify",
             "covered": "Couvert par Shopify Protect"
           },
           "awaiting": {
-            "likely_to_win": "Défense solide transférée à Shopify",
-            "could_win": "Défense modérée transférée à Shopify",
-            "needs_strengthening": "Défense modérée transférée à Shopify",
-            "hard_to_win": "Défense faible transférée à Shopify",
+            "likely_to_win": "Dossier solide transféré à Shopify",
+            "could_win": "Dossier partiellement étayé transféré à Shopify",
+            "needs_strengthening": "Dossier partiellement étayé transféré à Shopify",
+            "hard_to_win": "Dossier faible transféré à Shopify",
             "covered": "Couvert par Shopify Protect"
           },
           "submitted_to_network": {
-            "likely_to_win": "Défense solide envoyée au réseau de cartes",
-            "could_win": "Défense modérée envoyée au réseau de cartes",
-            "needs_strengthening": "Défense modérée envoyée au réseau de cartes",
-            "hard_to_win": "Défense faible envoyée au réseau de cartes",
+            "likely_to_win": "Dossier solide envoyé au réseau de cartes",
+            "could_win": "Dossier partiellement étayé envoyé au réseau de cartes",
+            "needs_strengthening": "Dossier partiellement étayé envoyé au réseau de cartes",
+            "hard_to_win": "Dossier faible envoyé au réseau de cartes",
             "covered": "Couvert par Shopify Protect"
           },
           "closed": {
@@ -1222,7 +1222,7 @@
       },
       "strengthLabel": {
         "strong": "Dossier solide",
-        "moderate": "Dossier moyen",
+        "moderate": "Dossier partiellement étayé",
         "weak": "Dossier faible"
       },
       "merchantReasonLabel": {
@@ -1231,7 +1231,7 @@
         "CUSTOMER_INITIATED": "Litige initié par le client",
         "DEBIT_NOT_AUTHORIZED": "Débit non autorisé",
         "DUPLICATE": "Débit en double",
-        "FRAUDULENT": "Transaction non autorisée",
+        "FRAUDULENT": "Le client conteste l'achat",
         "GENERAL": "Litige général",
         "INCORRECT_ACCOUNT_DETAILS": "Coordonnées bancaires incorrectes",
         "INSUFFICIENT_FUNDS": "Fonds insuffisants",
@@ -1367,19 +1367,19 @@
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "La banque ne peut pas traiter",
-    "CREDIT_NOT_PROCESSED": "Crédit non traité",
+    "CREDIT_NOT_PROCESSED": "Remboursement non traité",
     "CUSTOMER_INITIATED": "Initié par le client",
     "DEBIT_NOT_AUTHORIZED": "Débit non autorisé",
-    "DUPLICATE": "Doublon",
-    "FRAUDULENT": "Frauduleux",
+    "DUPLICATE": "Double facturation",
+    "FRAUDULENT": "Transaction frauduleuse",
     "GENERAL": "Général",
-    "INCORRECT_ACCOUNT_DETAILS": "Coordonnées bancaires incorrectes",
+    "INCORRECT_ACCOUNT_DETAILS": "Détails du compte incorrects",
     "INSUFFICIENT_FUNDS": "Fonds insuffisants",
     "NONCOMPLIANT": "Non conforme",
     "PRODUCT_NOT_RECEIVED": "Produit non reçu",
-    "PRODUCT_UNACCEPTABLE": "Produit inacceptable",
+    "PRODUCT_UNACCEPTABLE": "Produit non conforme à la description",
     "SUBSCRIPTION_CANCELED": "Abonnement annulé",
-    "UNRECOGNIZED": "Non reconnu"
+    "UNRECOGNIZED": "Charge non reconnue"
   },
   "disputeFamilies": {
     "Technical": "Technique",
@@ -1616,7 +1616,7 @@
       "GENERAL": "Général",
       "CREDIT_NOT_PROCESSED": "Remboursement non traité",
       "SUBSCRIPTION_CANCELED": "Abonnement annulé",
-      "PRODUCT_UNACCEPTABLE": "Produit non conforme",
+      "PRODUCT_UNACCEPTABLE": "Produit non conforme à la description",
       "NONCOMPLIANT": "Non conforme",
       "UNRECOGNIZED": "Charge non reconnue",
       "DEBIT_NOT_AUTHORIZED": "Débit non autorisé",

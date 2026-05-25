@@ -48,6 +48,11 @@ const STEPS = [
   // i18n migration removed the silent en fallback in getMessages.ts,
   // so a missing key would render the raw key path in production.
   { name: "i18n: parity", cmd: "node", args: ["scripts/verify-i18n-parity.mjs"] },
+  // i18n term-equivalence guardrail — catches "same concept, different
+  // translation across namespaces" bugs (e.g. FRAUDULENT rendered as
+  // Bedräglig in one namespace and Obehörig transaktion in another).
+  // Group definitions live in scripts/i18n/term-equivalences.json.
+  { name: "i18n: equivalences", cmd: "node", args: ["scripts/verify-i18n-equivalences.mjs"] },
   // verbose reporter so each test name streams — user can follow progress
   { name: "Vitest", cmd: "npx", args: ["vitest", "run", "--reporter=verbose"] },
   { name: "Build", cmd: "npm", args: ["run", "build"] },

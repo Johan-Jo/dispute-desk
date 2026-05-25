@@ -1,0 +1,109 @@
+{
+  "$comment": "Concept → list of i18n key paths that MUST resolve to the same string per locale. The CI guardrail (scripts/verify-i18n-equivalences.mjs) flags divergence. This is the structural defence against the kind of bug the user caught on 2026-05-25: 'Bedräglig' in one namespace, 'Bedräglig transaktion' in another, and 'Obehörig transaktion' (my mistake) in a third — all three describing the same FRAUDULENT concept.",
+
+  "case_strength_strong": {
+    "description": "Strong case-strength label, used as a pill / header subtitle. ONE string per locale.",
+    "paths": [
+      "disputes.caseStrength.strong",
+      "disputes.workspaceShell.strengthLabel.strong"
+    ]
+  },
+  "case_strength_moderate": {
+    "description": "Moderate case-strength label. The 2026-05-25 corrections set this to e.g. 'Delvis stärkt ärende' (sv).",
+    "paths": [
+      "disputes.caseStrength.moderate",
+      "disputes.workspaceShell.strengthLabel.moderate"
+    ]
+  },
+  "case_strength_weak": {
+    "description": "Weak case-strength label.",
+    "paths": [
+      "disputes.caseStrength.weak",
+      "disputes.workspaceShell.strengthLabel.weak"
+    ]
+  },
+
+  "reason_FRAUDULENT_canonical": {
+    "description": "Canonical reason label for the FRAUDULENT code — used in the terse-reason and pack-type namespaces. NOT the merchant-facing soft variant (that lives in merchantReasonLabel).",
+    "paths": [
+      "disputeReasons.FRAUDULENT",
+      "packs.disputeTypeLabel.FRAUDULENT",
+      "packs.disputeTypeLabel.FRAUD"
+    ]
+  },
+  "reason_PRODUCT_NOT_RECEIVED_canonical": {
+    "paths": [
+      "disputeReasons.PRODUCT_NOT_RECEIVED",
+      "packs.disputeTypeLabel.PRODUCT_NOT_RECEIVED",
+      "packs.disputeTypeLabel.PNR"
+    ]
+  },
+  "reason_PRODUCT_UNACCEPTABLE_canonical": {
+    "paths": [
+      "disputeReasons.PRODUCT_UNACCEPTABLE",
+      "packs.disputeTypeLabel.PRODUCT_UNACCEPTABLE",
+      "packs.disputeTypeLabel.NOT_AS_DESCRIBED"
+    ]
+  },
+  "reason_CREDIT_NOT_PROCESSED_canonical": {
+    "paths": [
+      "disputeReasons.CREDIT_NOT_PROCESSED",
+      "packs.disputeTypeLabel.CREDIT_NOT_PROCESSED",
+      "packs.disputeTypeLabel.REFUND"
+    ]
+  },
+  "reason_DUPLICATE_canonical": {
+    "paths": [
+      "disputeReasons.DUPLICATE",
+      "packs.disputeTypeLabel.DUPLICATE"
+    ]
+  },
+  "reason_SUBSCRIPTION_CANCELED_canonical": {
+    "paths": [
+      "disputeReasons.SUBSCRIPTION_CANCELED",
+      "packs.disputeTypeLabel.SUBSCRIPTION_CANCELED"
+    ]
+  },
+  "reason_BANK_CANNOT_PROCESS_canonical": {
+    "paths": [
+      "disputeReasons.BANK_CANNOT_PROCESS",
+      "packs.disputeTypeLabel.BANK_CANNOT_PROCESS"
+    ]
+  },
+  "reason_CUSTOMER_INITIATED_canonical": {
+    "paths": [
+      "disputeReasons.CUSTOMER_INITIATED",
+      "packs.disputeTypeLabel.CUSTOMER_INITIATED"
+    ]
+  },
+  "reason_DEBIT_NOT_AUTHORIZED_canonical": {
+    "paths": [
+      "disputeReasons.DEBIT_NOT_AUTHORIZED",
+      "packs.disputeTypeLabel.DEBIT_NOT_AUTHORIZED"
+    ]
+  },
+  "reason_INCORRECT_ACCOUNT_DETAILS_canonical": {
+    "paths": [
+      "disputeReasons.INCORRECT_ACCOUNT_DETAILS",
+      "packs.disputeTypeLabel.INCORRECT_ACCOUNT_DETAILS"
+    ]
+  },
+  "reason_INSUFFICIENT_FUNDS_canonical": {
+    "paths": [
+      "disputeReasons.INSUFFICIENT_FUNDS",
+      "packs.disputeTypeLabel.INSUFFICIENT_FUNDS"
+    ]
+  },
+  "reason_NONCOMPLIANT_canonical": {
+    "paths": [
+      "disputeReasons.NONCOMPLIANT",
+      "packs.disputeTypeLabel.NONCOMPLIANT"
+    ]
+  },
+  "reason_UNRECOGNIZED_canonical": {
+    "paths": [
+      "disputeReasons.UNRECOGNIZED",
+      "packs.disputeTypeLabel.UNRECOGNIZED"
+    ]
+  }
+}

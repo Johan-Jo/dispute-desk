@@ -71,24 +71,24 @@
     "connectStoreCTA": "Connect store"
   },
   "status": {
-    "needsResponse": "Behöver svar",
+    "needsResponse": "Kräver åtgärd",
     "underReview": "Under granskning",
     "won": "Vunnen",
     "lost": "Förlorad",
     "unknown": "Okänd",
-    "savedToShopify": "Sparad till Shopify",
-    "needsReview": "Behöver granskning",
-    "building": "Bygger...",
+    "savedToShopify": "Sparad i Shopify",
+    "needsReview": "Kräver granskning",
+    "building": "Genererar…",
     "blocked": "Blockerad",
-    "readyToSave": "Redo att spara",
+    "readyToSave": "Klar att spara",
     "draft": "Utkast",
     "queued": "I kö",
-    "failed": "Misslyckad",
-    "ready": "Redo",
-    "complete": "Klar",
+    "failed": "Misslyckades",
+    "ready": "Klar",
+    "complete": "Slutförd",
     "inProgress": "Pågår",
     "active": "Aktiv",
-    "pending": "Väntande"
+    "pending": "Väntar"
   },
   "dashboard": {
     "title": "DisputeDesk",
@@ -97,8 +97,8 @@
     "activeDisputes": "Aktiva tvister",
     "evidencePacks": "Bevispaket",
     "amountAtRisk": "Belopp i riskzonen",
-    "chargebackRate": "Återkravsfrekvens (30d)",
-    "chargebackRateSubtext": "{numerator} återkrav / {denominator} ordrar",
+    "chargebackRate": "Chargeback-frekvens (30d)",
+    "chargebackRateSubtext": "{numerator} chargebacks / {denominator} ordrar",
     "chargebackRateUnavailable": "Beräknar…",
     "chargebackRateLowVolume": "Låg volym — frekvensen kan svänga",
     "chargebackRateThresholdHealthy": "Hälsosam",
@@ -601,9 +601,9 @@
       "closed": "Closed"
     },
     "caseStrength": {
-      "strong": "Stark",
-      "moderate": "Måttlig",
-      "weak": "Svag"
+      "strong": "Starkt ärende",
+      "moderate": "Delvis stärkt ärende",
+      "weak": "Svagt ärende"
     },
     "itemStrength": {
       "strong": "Stark",
@@ -836,22 +836,22 @@
       },
       "strengthLabel": {
         "strong": "Starkt ärende",
-        "moderate": "Medelstarkt ärende",
+        "moderate": "Delvis stärkt ärende",
         "weak": "Svagt ärende"
       },
       "merchantReasonLabel": {
         "BANK_CANNOT_PROCESS": "Banken kunde inte behandla",
-        "CREDIT_NOT_PROCESSED": "Återbetalning ej genomförd",
+        "CREDIT_NOT_PROCESSED": "Kunden säger att återbetalningen inte behandlats",
         "CUSTOMER_INITIATED": "Kundinitierad tvist",
         "DEBIT_NOT_AUTHORIZED": "Debitering ej auktoriserad",
-        "DUPLICATE": "Dubbelbetalning",
-        "FRAUDULENT": "Obehörig transaktion",
+        "DUPLICATE": "Kunden säger att betalningen debiterats två gånger",
+        "FRAUDULENT": "Kunden nekar till köpet",
         "GENERAL": "Allmän tvist",
         "INCORRECT_ACCOUNT_DETAILS": "Felaktiga kontouppgifter",
         "INSUFFICIENT_FUNDS": "Otillräckliga medel",
         "NONCOMPLIANT": "Ej regelenlig transaktion",
-        "PRODUCT_NOT_RECEIVED": "Vara ej mottagen",
-        "PRODUCT_UNACCEPTABLE": "Vara stämmer inte med beskrivning",
+        "PRODUCT_NOT_RECEIVED": "Kunden säger att produkten inte mottagits",
+        "PRODUCT_UNACCEPTABLE": "Kunden säger att produkten inte motsvarar beskrivningen",
         "SUBSCRIPTION_CANCELED": "Prenumeration avbruten",
         "UNRECOGNIZED": "Okänd debitering",
         "fallback": "Tvist"
@@ -1316,28 +1316,28 @@
             "likely_to_win": "Starkt ärende att bestrida",
             "could_win": "Granska före bestridande",
             "needs_strengthening": "Granska före bestridande",
-            "hard_to_win": "Fullständig dokumentation, svagt försvar",
+            "hard_to_win": "Fullständig dokumentation, svagt ärende",
             "covered": "Täcks av Shopify Protect"
           },
           "saved": {
-            "likely_to_win": "Starkt försvar sparat i Shopify",
-            "could_win": "Medelstarkt försvar sparat i Shopify",
-            "needs_strengthening": "Medelstarkt försvar sparat i Shopify",
-            "hard_to_win": "Svagt försvar sparat i Shopify",
+            "likely_to_win": "Starkt ärende sparat i Shopify",
+            "could_win": "Delvis stärkt ärende sparat i Shopify",
+            "needs_strengthening": "Delvis stärkt ärende sparat i Shopify",
+            "hard_to_win": "Svagt ärende sparat i Shopify",
             "covered": "Täcks av Shopify Protect"
           },
           "awaiting": {
-            "likely_to_win": "Starkt försvar vidarebefordrat till Shopify",
-            "could_win": "Medelstarkt försvar vidarebefordrat till Shopify",
-            "needs_strengthening": "Medelstarkt försvar vidarebefordrat till Shopify",
-            "hard_to_win": "Svagt försvar vidarebefordrat till Shopify",
+            "likely_to_win": "Starkt ärende vidarebefordrat till Shopify",
+            "could_win": "Delvis stärkt ärende vidarebefordrat till Shopify",
+            "needs_strengthening": "Delvis stärkt ärende vidarebefordrat till Shopify",
+            "hard_to_win": "Svagt ärende vidarebefordrat till Shopify",
             "covered": "Täcks av Shopify Protect"
           },
           "submitted_to_network": {
-            "likely_to_win": "Starkt försvar skickat till kortnätverket",
-            "could_win": "Medelstarkt försvar skickat till kortnätverket",
-            "needs_strengthening": "Medelstarkt försvar skickat till kortnätverket",
-            "hard_to_win": "Svagt försvar skickat till kortnätverket",
+            "likely_to_win": "Starkt ärende skickat till kortnätverket",
+            "could_win": "Delvis stärkt ärende skickat till kortnätverket",
+            "needs_strengthening": "Delvis stärkt ärende skickat till kortnätverket",
+            "hard_to_win": "Svagt ärende skickat till kortnätverket",
             "covered": "Täcks av Shopify Protect"
           },
           "closed": {
@@ -1367,19 +1367,19 @@
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banken kan inte behandla",
-    "CREDIT_NOT_PROCESSED": "Kredit ej behandlad",
+    "CREDIT_NOT_PROCESSED": "Återbetalning inte behandlad",
     "CUSTOMER_INITIATED": "Initierad av kund",
     "DEBIT_NOT_AUTHORIZED": "Debitering ej auktoriserad",
-    "DUPLICATE": "Dubblett",
-    "FRAUDULENT": "Bedräglig",
+    "DUPLICATE": "Dubbel debitering",
+    "FRAUDULENT": "Bedräglig transaktion",
     "GENERAL": "Allmän",
     "INCORRECT_ACCOUNT_DETAILS": "Felaktiga kontouppgifter",
     "INSUFFICIENT_FUNDS": "Otillräckliga medel",
-    "NONCOMPLIANT": "Ej regelefterlevande",
-    "PRODUCT_NOT_RECEIVED": "Produkt ej mottagen",
-    "PRODUCT_UNACCEPTABLE": "Produkt oacceptabel",
+    "NONCOMPLIANT": "Ej regelenlig",
+    "PRODUCT_NOT_RECEIVED": "Produkt inte mottagen",
+    "PRODUCT_UNACCEPTABLE": "Produkten motsvarar inte beskrivningen",
     "SUBSCRIPTION_CANCELED": "Prenumeration avbruten",
-    "UNRECOGNIZED": "Okänd"
+    "UNRECOGNIZED": "Okänd debitering"
   },
   "disputeFamilies": {
     "Technical": "Teknisk",
@@ -1606,17 +1606,17 @@
     "disputeTypeLabel": {
       "FRAUD": "Bedräglig transaktion",
       "FRAUDULENT": "Bedräglig transaktion",
-      "PNR": "Produkt ej mottagen",
-      "PRODUCT_NOT_RECEIVED": "Produkt ej mottagen",
-      "NOT_AS_DESCRIBED": "Produkt inte som beskrivet",
+      "PNR": "Produkt inte mottagen",
+      "PRODUCT_NOT_RECEIVED": "Produkt inte mottagen",
+      "NOT_AS_DESCRIBED": "Produkten motsvarar inte beskrivningen",
       "SUBSCRIPTION": "Prenumeration",
-      "REFUND": "Återbetalning ej genomförd",
+      "REFUND": "Återbetalning inte behandlad",
       "DUPLICATE": "Dubbel debitering",
       "DIGITAL": "Digitala varor eller tjänst",
       "GENERAL": "Allmänt",
-      "CREDIT_NOT_PROCESSED": "Återbetalning ej behandlad",
+      "CREDIT_NOT_PROCESSED": "Återbetalning inte behandlad",
       "SUBSCRIPTION_CANCELED": "Prenumeration avbruten",
-      "PRODUCT_UNACCEPTABLE": "Produkt ej som beskriven",
+      "PRODUCT_UNACCEPTABLE": "Produkten motsvarar inte beskrivningen",
       "NONCOMPLIANT": "Ej regelenlig",
       "UNRECOGNIZED": "Okänd debitering",
       "DEBIT_NOT_AUTHORIZED": "Debitering ej auktoriserad",
@@ -3926,7 +3926,7 @@
       "won": "Vunnen",
       "lost": "Förlorad",
       "accepted_not_contested": "Accepterad",
-      "closed_other": "Stängd"
+      "closed_other": "Avslutad"
     },
     "submissionStates": {
       "not_saved": "Bevis ännu ej sparat",
@@ -3943,7 +3943,7 @@
       "refunded": "Återbetald",
       "canceled": "Avbruten",
       "expired": "Utgången",
-      "closed_other": "Stängd",
+      "closed_other": "Avslutad",
       "unknown": "Okänd"
     },
     "eventDescriptions": {
