@@ -1257,6 +1257,68 @@
       "windowClosedError": "Shopify has already forwarded this dispute evidence to the bank, so new files can no longer be added."
     },
     "reviewTab": {
+      "chrome": {
+        "loadingReview": "Loading review",
+        "buildFailedBody": "We couldn't build this evidence pack. Try resyncing the dispute or regenerating the pack from the dispute header."
+      },
+      "package": {
+        "loadingAccessibilityLabel": "Loading defence package",
+        "cardHelp": "DisputeDesk prepares a bank-facing PDF that combines approved Shopify evidence, payment signals, fulfilment proof, customer communication, policies, and any merchant-supplied documents into one structured defence package.",
+        "savingBody": "DisputeDesk has accepted your submission and is uploading the defence package to Shopify. This usually completes in under 30 seconds — this banner will update automatically.",
+        "savedTitles": {
+          "outcomePosted": "Outcome posted",
+          "forwardedToNetwork": "Forwarded to the card network",
+          "savedToShopify": "Saved to Shopify"
+        },
+        "savedBody": {
+          "forwardedWithDate": "Defence package v{version} has been forwarded by Shopify to the card network. Saved to Shopify on {date}. The card network's decision is final once posted — Shopify can no longer swap the forwarded PDF.",
+          "forwardedNoDate": "Defence package v{version} has been forwarded by Shopify to the card network. The card network's decision is final once posted — Shopify can no longer swap the forwarded PDF.",
+          "closedWithDate": "Defence package v{version} was submitted on {date}. The dispute has been closed by the card network.",
+          "closedNoDate": "Defence package v{version} was submitted. The dispute has been closed by the card network.",
+          "savedWithDate": "Defence package v{version} is saved to Shopify ({date}). Shopify has not yet forwarded it to the card network — if you regenerate, the new PDF will replace this saved version cleanly.",
+          "savedNoDate": "Defence package v{version} is saved to Shopify. Shopify has not yet forwarded it to the card network — if you regenerate, the new PDF will replace this saved version cleanly.",
+          "fallback": "A defence package has been submitted to the bank."
+        },
+        "openInShopifyAdmin": "Open in Shopify Admin",
+        "viewPdf": "View PDF",
+        "reviewDraftPdf": "Review draft v{version} PDF",
+        "cardNetworkReviewingBody": "Visa and Mastercard typically post an outcome within {days} days of forwarding. Expect a decision around {date}. DisputeDesk will update this card as soon as the outcome arrives.",
+        "draftBannerTitle": "Draft v{version} is ready for review",
+        "draftBannerBodyDraft": "Draft v{version} has been generated but has not been sent to Shopify yet — the bank currently has v{bankVersion}. Review it below. If it looks correct, approve v{version} before resubmitting to Shopify.",
+        "draftBannerBodyFinal": "Draft v{version} has been generated but has not been sent to Shopify yet — the bank currently has v{bankVersion}. Review it below. If it looks correct, resubmit it to Shopify — that will replace v{bankVersion}.",
+        "approveDraft": "Approve draft v{version}",
+        "approveVersion": "Approve v{version}",
+        "submitToShopify": "Submit to Shopify",
+        "resubmitToShopify": "Resubmit to Shopify",
+        "moreActions": "More actions",
+        "regenerating": "Regenerating…",
+        "regenerateFromScratch": "Regenerate draft from scratch",
+        "regenerateHelpInFlight": "Already rebuilding — usually takes 2–3 minutes. The page checks for the new version when you reload or use the Check for update button above.",
+        "regenerateHelp": "Throws away the current draft and rebuilds the narrative + PDF against the latest evidence. The bank-facing submitted version is not touched.",
+        "metaStatus": "Status",
+        "metaMode": "Mode",
+        "metaGenerated": "Generated",
+        "metaDeadline": "Deadline",
+        "coveredByShopifyProtectBody": "This dispute is covered by Shopify Protect. No bank-facing defence package is required.",
+        "notEnoughEvidenceBody": "The classifier did not find any bank-eligible approved facts for this dispute. Upload additional supporting documents or wait for the next sync to include freshly collected evidence.",
+        "validationFailedFallback": "Validation found unsupported claims in the generated narrative.",
+        "newEvidenceAvailableBody": "Recent updates (uploads, status changes, or new auto-collected signals) aren't reflected in this draft yet. Click Regenerate below to build a new version that includes them — the rebuild takes 2–3 minutes and runs in the background.",
+        "errors": {
+          "couldNotLoad": "Could not load defence package ({status})",
+          "finalizeFailed": "Finalize failed ({status})",
+          "submitFailed": "Submit failed ({status})",
+          "regenerateFailed": "Regenerate failed ({status})"
+        },
+        "statusLabels": {
+          "draft": "Draft",
+          "stale": "Stale",
+          "ready": "Ready to submit",
+          "submitted": "Submitted",
+          "superseded": "Superseded",
+          "validationFailed": "Validation failed",
+          "skipped": "Skipped"
+        }
+      },
       "inclusion": {
         "title": "Inclusion review",
         "subtitle": "Verify what reaches the bank before saving. The defence package is the only bank-facing channel — DisputeDesk does not send structured evidence fields to Shopify.",

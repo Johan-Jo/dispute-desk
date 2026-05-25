@@ -762,6 +762,68 @@
       }
     },
     "reviewTab": {
+      "chrome": {
+        "loadingReview": "Cargando revisión",
+        "buildFailedBody": "No pudimos construir este paquete de evidencia. Intenta resincronizar el contracargo o regenerar el paquete desde el encabezado del caso."
+      },
+      "package": {
+        "loadingAccessibilityLabel": "Cargando paquete de evidencia",
+        "cardHelp": "DisputeDesk prepara un PDF dirigido al banco que combina la evidencia aprobada de Shopify, las señales de pago, las pruebas de cumplimiento, la comunicación con el cliente, las políticas y cualquier documento aportado por el comerciante en un paquete de evidencia estructurado.",
+        "savingBody": "DisputeDesk ha aceptado tu envío y está subiendo el paquete de evidencia a Shopify. Esto suele completarse en menos de 30 segundos — este aviso se actualizará automáticamente.",
+        "savedTitles": {
+          "outcomePosted": "Resultado publicado",
+          "forwardedToNetwork": "Reenviado a la red de tarjetas",
+          "savedToShopify": "Guardado en Shopify"
+        },
+        "savedBody": {
+          "forwardedWithDate": "El paquete de evidencia v{version} ha sido reenviado por Shopify a la red de tarjetas. Guardado en Shopify el {date}. La decisión de la red de tarjetas es final una vez publicada — Shopify ya no puede sustituir el PDF reenviado.",
+          "forwardedNoDate": "El paquete de evidencia v{version} ha sido reenviado por Shopify a la red de tarjetas. La decisión de la red de tarjetas es final una vez publicada — Shopify ya no puede sustituir el PDF reenviado.",
+          "closedWithDate": "El paquete de evidencia v{version} fue enviado el {date}. El contracargo ha sido cerrado por la red de tarjetas.",
+          "closedNoDate": "El paquete de evidencia v{version} fue enviado. El contracargo ha sido cerrado por la red de tarjetas.",
+          "savedWithDate": "El paquete de evidencia v{version} está guardado en Shopify ({date}). Shopify aún no lo ha reenviado a la red de tarjetas — si regeneras, el nuevo PDF reemplazará esta versión guardada de forma limpia.",
+          "savedNoDate": "El paquete de evidencia v{version} está guardado en Shopify. Shopify aún no lo ha reenviado a la red de tarjetas — si regeneras, el nuevo PDF reemplazará esta versión guardada de forma limpia.",
+          "fallback": "Se ha enviado un paquete de evidencia al banco."
+        },
+        "openInShopifyAdmin": "Abrir en Shopify Admin",
+        "viewPdf": "Ver PDF",
+        "reviewDraftPdf": "Revisar el PDF del borrador v{version}",
+        "cardNetworkReviewingBody": "Visa y Mastercard suelen publicar un resultado en un plazo de {days} días desde el reenvío. Espera una decisión alrededor del {date}. DisputeDesk actualizará esta tarjeta en cuanto llegue el resultado.",
+        "draftBannerTitle": "El borrador v{version} está listo para revisión",
+        "draftBannerBodyDraft": "El borrador v{version} se ha generado pero aún no se ha enviado a Shopify — el banco tiene actualmente la v{bankVersion}. Revísalo abajo. Si es correcto, aprueba la v{version} antes de reenviarlo a Shopify.",
+        "draftBannerBodyFinal": "El borrador v{version} se ha generado pero aún no se ha enviado a Shopify — el banco tiene actualmente la v{bankVersion}. Revísalo abajo. Si es correcto, reenvíalo a Shopify — eso reemplazará la v{bankVersion}.",
+        "approveDraft": "Aprobar borrador v{version}",
+        "approveVersion": "Aprobar v{version}",
+        "submitToShopify": "Enviar a Shopify",
+        "resubmitToShopify": "Reenviar a Shopify",
+        "moreActions": "Más acciones",
+        "regenerating": "Regenerando…",
+        "regenerateFromScratch": "Regenerar borrador desde cero",
+        "regenerateHelpInFlight": "Ya se está reconstruyendo — suele tardar de 2 a 3 minutos. La página comprueba si hay una nueva versión cuando recargas o usas el botón Buscar actualización de arriba.",
+        "regenerateHelp": "Descarta el borrador actual y reconstruye la narrativa + PDF con la evidencia más reciente. La versión enviada al banco no se ve afectada.",
+        "metaStatus": "Estado",
+        "metaMode": "Modo",
+        "metaGenerated": "Generado",
+        "metaDeadline": "Plazo",
+        "coveredByShopifyProtectBody": "Este contracargo está cubierto por Shopify Protect. No se requiere paquete de evidencia para el banco.",
+        "notEnoughEvidenceBody": "El clasificador no encontró hechos aprobados para el banco en este contracargo. Sube documentos de respaldo adicionales o espera la próxima sincronización para incluir evidencia recién recopilada.",
+        "validationFailedFallback": "La validación encontró afirmaciones no respaldadas en la narrativa generada.",
+        "newEvidenceAvailableBody": "Las actualizaciones recientes (subidas, cambios de estado o nuevas señales recopiladas automáticamente) aún no se reflejan en este borrador. Haz clic en Regenerar abajo para construir una nueva versión que las incluya — la reconstrucción tarda de 2 a 3 minutos y se ejecuta en segundo plano.",
+        "errors": {
+          "couldNotLoad": "No se pudo cargar el paquete de evidencia ({status})",
+          "finalizeFailed": "Error al aprobar ({status})",
+          "submitFailed": "Error al enviar ({status})",
+          "regenerateFailed": "Error al regenerar ({status})"
+        },
+        "statusLabels": {
+          "draft": "Borrador",
+          "stale": "Obsoleto",
+          "ready": "Listo para enviar",
+          "submitted": "Enviado",
+          "superseded": "Sustituido",
+          "validationFailed": "Falló la validación",
+          "skipped": "Omitido"
+        }
+      },
       "sections": {
         "status": {
           "submitted": "Evidencia enviada a Shopify",
@@ -1317,9 +1379,9 @@
       "unknownError": "error desconocido"
     },
     "defencePackageHtml": {
-      "orderLineItems": "Artículos del pedido",
-      "evidenceBasis": "Base de evidencia",
-      "noBankEligibleFacts": "(No hay datos elegibles para el banco disponibles.)"
+      "orderLineItems": "Order Line Items",
+      "evidenceBasis": "Evidence Basis",
+      "noBankEligibleFacts": "(No bank-eligible facts available.)"
     },
     "overviewPill": {
       "missing": "Missing",

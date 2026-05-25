@@ -762,6 +762,68 @@
       }
     },
     "reviewTab": {
+      "chrome": {
+        "loadingReview": "Carregando revisão",
+        "buildFailedBody": "Não conseguimos construir este pacote de evidências. Tente ressincronizar o estorno ou regenerar o pacote pelo cabeçalho do caso."
+      },
+      "package": {
+        "loadingAccessibilityLabel": "Carregando pacote de evidências",
+        "cardHelp": "O DisputeDesk prepara um PDF voltado ao banco que combina evidências aprovadas do Shopify, sinais de pagamento, comprovantes de cumprimento, comunicação com o cliente, políticas e quaisquer documentos fornecidos pelo lojista em um pacote de evidências estruturado.",
+        "savingBody": "O DisputeDesk aceitou o seu envio e está fazendo upload do pacote de evidências para o Shopify. Isso geralmente é concluído em menos de 30 segundos — este aviso será atualizado automaticamente.",
+        "savedTitles": {
+          "outcomePosted": "Resultado publicado",
+          "forwardedToNetwork": "Encaminhado para a rede de cartões",
+          "savedToShopify": "Salvo no Shopify"
+        },
+        "savedBody": {
+          "forwardedWithDate": "O pacote de evidências v{version} foi encaminhado pelo Shopify à rede de cartões. Salvo no Shopify em {date}. A decisão da rede de cartões é final após publicação — o Shopify não pode mais substituir o PDF encaminhado.",
+          "forwardedNoDate": "O pacote de evidências v{version} foi encaminhado pelo Shopify à rede de cartões. A decisão da rede de cartões é final após publicação — o Shopify não pode mais substituir o PDF encaminhado.",
+          "closedWithDate": "O pacote de evidências v{version} foi enviado em {date}. O estorno foi encerrado pela rede de cartões.",
+          "closedNoDate": "O pacote de evidências v{version} foi enviado. O estorno foi encerrado pela rede de cartões.",
+          "savedWithDate": "O pacote de evidências v{version} está salvo no Shopify ({date}). O Shopify ainda não o encaminhou à rede de cartões — se você regenerar, o novo PDF substituirá esta versão salva de forma limpa.",
+          "savedNoDate": "O pacote de evidências v{version} está salvo no Shopify. O Shopify ainda não o encaminhou à rede de cartões — se você regenerar, o novo PDF substituirá esta versão salva de forma limpa.",
+          "fallback": "Um pacote de evidências foi enviado ao banco."
+        },
+        "openInShopifyAdmin": "Abrir no Shopify Admin",
+        "viewPdf": "Ver PDF",
+        "reviewDraftPdf": "Revisar PDF do rascunho v{version}",
+        "cardNetworkReviewingBody": "Visa e Mastercard normalmente publicam um resultado em até {days} dias após o encaminhamento. Espere uma decisão por volta de {date}. O DisputeDesk atualizará este cartão assim que o resultado chegar.",
+        "draftBannerTitle": "O rascunho v{version} está pronto para revisão",
+        "draftBannerBodyDraft": "O rascunho v{version} foi gerado mas ainda não foi enviado ao Shopify — o banco possui atualmente a v{bankVersion}. Revise-o abaixo. Se estiver correto, aprove a v{version} antes de reenviar ao Shopify.",
+        "draftBannerBodyFinal": "O rascunho v{version} foi gerado mas ainda não foi enviado ao Shopify — o banco possui atualmente a v{bankVersion}. Revise-o abaixo. Se estiver correto, reenvie-o ao Shopify — isso substituirá a v{bankVersion}.",
+        "approveDraft": "Aprovar rascunho v{version}",
+        "approveVersion": "Aprovar v{version}",
+        "submitToShopify": "Enviar ao Shopify",
+        "resubmitToShopify": "Reenviar ao Shopify",
+        "moreActions": "Mais ações",
+        "regenerating": "Regenerando…",
+        "regenerateFromScratch": "Regenerar rascunho do zero",
+        "regenerateHelpInFlight": "Já está sendo reconstruído — geralmente leva de 2 a 3 minutos. A página verifica a nova versão quando você recarrega ou usa o botão Verificar atualização acima.",
+        "regenerateHelp": "Descarta o rascunho atual e reconstrói a narrativa + PDF com base nas evidências mais recentes. A versão enviada ao banco não é alterada.",
+        "metaStatus": "Status",
+        "metaMode": "Modo",
+        "metaGenerated": "Gerado",
+        "metaDeadline": "Prazo",
+        "coveredByShopifyProtectBody": "Este estorno é coberto pelo Shopify Protect. Não é necessário pacote de evidências voltado ao banco.",
+        "notEnoughEvidenceBody": "O classificador não encontrou fatos aprovados elegíveis ao banco para este estorno. Faça upload de documentos de apoio adicionais ou aguarde a próxima sincronização para incluir evidências recém-coletadas.",
+        "validationFailedFallback": "A validação encontrou alegações não comprovadas na narrativa gerada.",
+        "newEvidenceAvailableBody": "Atualizações recentes (uploads, mudanças de status ou novos sinais coletados automaticamente) ainda não estão refletidas neste rascunho. Clique em Regenerar abaixo para construir uma nova versão que as inclua — a reconstrução leva de 2 a 3 minutos e roda em segundo plano.",
+        "errors": {
+          "couldNotLoad": "Não foi possível carregar o pacote de evidências ({status})",
+          "finalizeFailed": "Falha ao aprovar ({status})",
+          "submitFailed": "Falha ao enviar ({status})",
+          "regenerateFailed": "Falha ao regenerar ({status})"
+        },
+        "statusLabels": {
+          "draft": "Rascunho",
+          "stale": "Desatualizado",
+          "ready": "Pronto para enviar",
+          "submitted": "Enviado",
+          "superseded": "Substituído",
+          "validationFailed": "Falha na validação",
+          "skipped": "Ignorado"
+        }
+      },
       "sections": {
         "status": {
           "submitted": "Evidências enviadas ao Shopify",
@@ -1317,9 +1379,9 @@
       "unknownError": "erro desconhecido"
     },
     "defencePackageHtml": {
-      "orderLineItems": "Itens do pedido",
-      "evidenceBasis": "Base das evidências",
-      "noBankEligibleFacts": "(Nenhum dado elegível para o banco disponível.)"
+      "orderLineItems": "Order Line Items",
+      "evidenceBasis": "Evidence Basis",
+      "noBankEligibleFacts": "(No bank-eligible facts available.)"
     },
     "overviewPill": {
       "missing": "Missing",

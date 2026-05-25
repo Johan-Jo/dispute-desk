@@ -168,6 +168,7 @@ function outcomeExpectedFrom(evidenceSentOn: string | null | undefined): {
 }
 
 function StatusBadge({ status }: { status: Status }) {
+  const tPkg = useTranslations("disputes.reviewTab.package");
   const tone =
     status === "final" || status === "submitted"
       ? "success"
@@ -180,18 +181,18 @@ function StatusBadge({ status }: { status: Status }) {
             : "info";
   const label =
     status === "draft"
-      ? "Draft"
+      ? tPkg("statusLabels.draft")
       : status === "stale"
-        ? "Stale"
+        ? tPkg("statusLabels.stale")
         : status === "final"
-          ? "Ready to submit"
+          ? tPkg("statusLabels.ready")
           : status === "submitted"
-            ? "Submitted"
+            ? tPkg("statusLabels.submitted")
             : status === "superseded"
-              ? "Superseded"
+              ? tPkg("statusLabels.superseded")
               : status === "failed"
-                ? "Validation failed"
-                : "Skipped";
+                ? tPkg("statusLabels.validationFailed")
+                : tPkg("statusLabels.skipped");
   return (
     <Text as="span" variant="bodySm" tone={tone === "subdued" ? "subdued" : undefined}>
       {label}
@@ -209,6 +210,7 @@ export function CompleteDefencePackageCard({
   onSubmitted,
 }: Props) {
   const t = useTranslations("disputes.completeDefencePackage");
+  const tPkg = useTranslations("disputes.reviewTab.package");
   // Network-submitted: Shopify has forwarded the evidence to the card
   // network. Distinct from "saved to Shopify" — the bank now holds the
   // evidence and Shopify can no longer swap the saved PDF on the
@@ -320,7 +322,7 @@ export function CompleteDefencePackageCard({
         `/api/packs/${packId}/defence-packages?t=${Date.now()}`,
       );
       if (!res.ok) {
-        setError(`Could not load defence package (${res.status})`);
+        setError(tPkg("errors.couldNotLoad", { status: res.status }));
         setLatest(null);
         setBankFacing(null);
       } else {
@@ -365,7 +367,7 @@ export function CompleteDefencePackageCard({
     } finally {
       setLoading(false);
     }
-  }, [packId, pendingRegenStorageKey]);
+  }, [packId, pendingRegenStorageKey, t, tPkg]);
 
   useEffect(() => {
     void load();
@@ -474,7 +476,7 @@ export function CompleteDefencePackageCard({
     try {
       const res = await fetch(`/api/defence-packages/${latest.id}/regenerate${shopIdQs}`, { method: "POST" });
       if (!res.ok) {
-        setError(`Regenerate failed (${res.status})`);
+        setError(tPkg("errors.regenerateFailed", { status: res.status }));
         return;
       }
       // Capture the version we just kicked off a rebuild for. The
@@ -511,7 +513,7 @@ export function CompleteDefencePackageCard({
     try {
       const res = await fetch(`/api/defence-packages/${latest.id}/finalize${shopIdQs}`, { method: "POST" });
       if (!res.ok) {
-        let detail = `Finalize failed (${res.status})`;
+        let detail = tPkg("errors.finalizeFailed", { status: res.status });
         try {
           const body = (await res.json()) as { error?: unknown };
           if (typeof body.error === "string") detail = body.error;
@@ -536,7 +538,7 @@ export function CompleteDefencePackageCard({
         // Surface the route's structured error message when present so
         // the merchant sees "Cannot submit a package in status=draft"
         // instead of an opaque HTTP code. Falls back to the bare status.
-        let detail = `Submit failed (${res.status})`;
+        let detail = tPkg("errors.submitFailed", { status: res.status });
         try {
           const body = (await res.json()) as { error?: unknown };
           if (typeof body.error === "string") detail = body.error;
@@ -567,7 +569,7 @@ export function CompleteDefencePackageCard({
       <div style={DEFENCE_CARD_STYLE}>
         <BlockStack gap="300">
           <h2 style={CARD_TITLE_STYLE}>{t("headingMain")}</h2>
-          <Spinner accessibilityLabel="Loading defence package" size="small" />
+          <Spinner accessibilityLabel={tPkg("loadingAccessibilityLabel")} size="small" />
         </BlockStack>
       </div>
     );
@@ -662,12 +664,7 @@ export function CompleteDefencePackageCard({
         <BlockStack gap="400">
           <div>
             <h2 style={CARD_TITLE_STYLE}>{t("headingMain")}</h2>
-            <p style={CARD_HELP_STYLE}>
-              DisputeDesk prepares a bank-facing PDF that combines approved Shopify
-              evidence, payment signals, fulfilment proof, customer communication,
-              policies, and any merchant-supplied documents into one structured
-              defence package.
-            </p>
+            <p style={CARD_HELP_STYLE}>{tPkg("cardHelp")}</p>
           </div>
 
           {/* Workflow layout. Three states:
@@ -690,38 +687,58 @@ export function CompleteDefencePackageCard({
               {submitPending ? (
                 <Banner tone="info" title={t("savingTitle")}>
                   <Text as="p" variant="bodySm">
-                    DisputeDesk has accepted your submission and is uploading the
-                    defence package to Shopify. This usually completes in under
-                    30 seconds — this banner will update automatically.
+                    {tPkg("savingBody")}
                   </Text>
                 </Banner>
               ) : (
                 <SavedToShopifyPackageBanner
                   title={
                     isClosed
-                      ? "Outcome posted"
+                      ? tPkg("savedTitles.outcomePosted")
                       : isNetworkSubmitted
-                        ? "Forwarded to the card network"
-                        : "Saved to Shopify"
+                        ? tPkg("savedTitles.forwardedToNetwork")
+                        : tPkg("savedTitles.savedToShopify")
                   }
                   version={bankFacing?.version ?? null}
                   timestamp={formattedSubmittedAt}
                   body={
                     bankFacing
                       ? isNetworkSubmitted
-                        ? `Defence package v${bankFacing.version} has been forwarded by Shopify to the card network${formattedSubmittedAt ? `. Saved to Shopify on ${formattedSubmittedAt}.` : "."} The card network's decision is final once posted — Shopify can no longer swap the forwarded PDF.`
+                        ? formattedSubmittedAt
+                          ? tPkg("savedBody.forwardedWithDate", {
+                              version: bankFacing.version,
+                              date: formattedSubmittedAt,
+                            })
+                          : tPkg("savedBody.forwardedNoDate", {
+                              version: bankFacing.version,
+                            })
                         : isClosed
-                          ? `Defence package v${bankFacing.version} was submitted${formattedSubmittedAt ? ` on ${formattedSubmittedAt}` : ""}. The dispute has been closed by the card network.`
-                          : `Defence package v${bankFacing.version} is saved to Shopify${formattedSubmittedAt ? ` (${formattedSubmittedAt})` : ""}. Shopify has not yet forwarded it to the card network — if you regenerate, the new PDF will replace this saved version cleanly.`
-                      : "A defence package has been submitted to the bank."
+                          ? formattedSubmittedAt
+                            ? tPkg("savedBody.closedWithDate", {
+                                version: bankFacing.version,
+                                date: formattedSubmittedAt,
+                              })
+                            : tPkg("savedBody.closedNoDate", {
+                                version: bankFacing.version,
+                              })
+                          : formattedSubmittedAt
+                            ? tPkg("savedBody.savedWithDate", {
+                                version: bankFacing.version,
+                                date: formattedSubmittedAt,
+                              })
+                            : tPkg("savedBody.savedNoDate", {
+                                version: bankFacing.version,
+                              })
+                      : tPkg("savedBody.fallback")
                   }
                   shopifyAdminUrl={shopifyAdminUrl ?? null}
                   previewHref={previewHref}
                   previewLabel={
                     hasUnsubmittedDraft && latest
-                      ? `Review draft v${latest.version} PDF`
-                      : "View PDF"
+                      ? tPkg("reviewDraftPdf", { version: latest.version })
+                      : tPkg("viewPdf")
                   }
+                  openInShopifyLabel={tPkg("openInShopifyAdmin")}
                 />
               )}
 
@@ -731,11 +748,10 @@ export function CompleteDefencePackageCard({
               {outcomeExpected ? (
                 <Banner tone="info" title={t("cardNetworkReviewingTitle")}>
                   <Text as="p" variant="bodySm">
-                    Visa and Mastercard typically post an outcome within
-                    {" "}{NETWORK_REVIEW_WINDOW_DAYS} days of forwarding. Expect a
-                    decision around <strong>{outcomeExpected.label}</strong>.
-                    DisputeDesk will update this card as soon as the
-                    outcome arrives.
+                    {tPkg("cardNetworkReviewingBody", {
+                      days: NETWORK_REVIEW_WINDOW_DAYS,
+                      date: outcomeExpected.label,
+                    })}
                   </Text>
                 </Banner>
               ) : null}
@@ -753,7 +769,7 @@ export function CompleteDefencePackageCard({
                   status during this gap until the save-to-shopify job
                   flips the latest row to status='submitted'. */}
               {hasUnsubmittedDraft && latest && bankFacing && !isNetworkSubmitted && !isClosed && !submitPending ? (
-                <Banner tone="info" title={`Draft v${latest.version} is ready for review`}>
+                <Banner tone="info" title={tPkg("draftBannerTitle", { version: latest.version })}>
                   {/* Banner hosts the workflow's primary action AND the
                       Regenerate overflow, so the merchant doesn't have
                       to scan between the banner copy and a detached
@@ -773,12 +789,15 @@ export function CompleteDefencePackageCard({
                       keeps a single status statement. */}
                   <BlockStack gap="200">
                     <Text as="p" variant="bodySm">
-                      Draft v{latest.version} has been generated but has not
-                      been sent to Shopify yet — the bank currently has
-                      v{bankFacing.version}. Review it below.{" "}
                       {latest.status === "draft"
-                        ? `If it looks correct, approve v${latest.version} before resubmitting to Shopify.`
-                        : `If it looks correct, resubmit it to Shopify — that will replace v${bankFacing.version}.`}
+                        ? tPkg("draftBannerBodyDraft", {
+                            version: latest.version,
+                            bankVersion: bankFacing.version,
+                          })
+                        : tPkg("draftBannerBodyFinal", {
+                            version: latest.version,
+                            bankVersion: bankFacing.version,
+                          })}
                     </Text>
                     <InlineStack gap="200" blockAlign="center" wrap={false}>
                       {canFinalize && (
@@ -788,7 +807,7 @@ export function CompleteDefencePackageCard({
                           disabled={busy !== null}
                           loading={busy === "finalize"}
                         >
-                          {`Approve draft v${latest.version}`}
+                          {tPkg("approveDraft", { version: latest.version })}
                         </Button>
                       )}
                       {canSubmit && !canFinalize ? (
@@ -800,8 +819,8 @@ export function CompleteDefencePackageCard({
                           loading={busy === "submit"}
                         >
                           {isSubmittedToBank
-                            ? "Resubmit to Shopify"
-                            : "Submit to Shopify"}
+                            ? tPkg("resubmitToShopify")
+                            : tPkg("submitToShopify")}
                         </Button>
                       ) : null}
                       {canRegenerate && (
@@ -814,7 +833,7 @@ export function CompleteDefencePackageCard({
                               disclosure
                               disabled={busy !== null}
                             >
-                              More actions
+                              {tPkg("moreActions")}
                             </Button>
                           }
                         >
@@ -822,11 +841,11 @@ export function CompleteDefencePackageCard({
                             items={[
                               {
                                 content: rebuildInFlight
-                                  ? "Regenerating…"
-                                  : "Regenerate draft from scratch",
+                                  ? tPkg("regenerating")
+                                  : tPkg("regenerateFromScratch"),
                                 helpText: rebuildInFlight
-                                  ? "Already rebuilding — usually takes 2–3 minutes. The page checks for the new version when you reload or use the Check for update button above."
-                                  : "Throws away the current draft and rebuilds the narrative + PDF against the latest evidence. The bank-facing submitted version is not touched.",
+                                  ? tPkg("regenerateHelpInFlight")
+                                  : tPkg("regenerateHelp"),
                                 onAction: () => {
                                   setMoreActionsOpen(false);
                                   void onRegenerate();
@@ -845,22 +864,22 @@ export function CompleteDefencePackageCard({
           ) : (
             <InlineStack gap="400" align="space-between">
               <BlockStack gap="050">
-                <Text as="span" variant="bodySm" tone="subdued">Status</Text>
+                <Text as="span" variant="bodySm" tone="subdued">{tPkg("metaStatus")}</Text>
                 <StatusBadge status={row.status} />
               </BlockStack>
               <BlockStack gap="050">
-                <Text as="span" variant="bodySm" tone="subdued">Mode</Text>
+                <Text as="span" variant="bodySm" tone="subdued">{tPkg("metaMode")}</Text>
                 <Text as="span" variant="bodySm">{row.package_mode ?? "—"}</Text>
               </BlockStack>
               <BlockStack gap="050">
-                <Text as="span" variant="bodySm" tone="subdued">Generated</Text>
+                <Text as="span" variant="bodySm" tone="subdued">{tPkg("metaGenerated")}</Text>
                 <Text as="span" variant="bodySm">
                   {new Date(row.generated_at).toLocaleString()}
                 </Text>
               </BlockStack>
               {countdown && (
                 <BlockStack gap="050">
-                  <Text as="span" variant="bodySm" tone="subdued">Deadline</Text>
+                  <Text as="span" variant="bodySm" tone="subdued">{tPkg("metaDeadline")}</Text>
                   <Badge tone={countdown.tone === "info" ? undefined : countdown.tone}>
                     {countdown.label}
                   </Badge>
@@ -871,27 +890,20 @@ export function CompleteDefencePackageCard({
 
           {row.status === "skipped" && row.failure_code === "covered_shopify" && (
             <Banner tone="info" title={t("coveredByShopifyProtectTitle")}>
-              <p>
-                This dispute is covered by Shopify Protect. No bank-facing defence
-                package is required.
-              </p>
+              <p>{tPkg("coveredByShopifyProtectBody")}</p>
             </Banner>
           )}
 
           {row.status === "skipped" && row.failure_code === "no_bank_eligible_facts" && (
             <Banner tone="warning" title={t("notEnoughEvidenceTitle")}>
-              <p>
-                The classifier did not find any bank-eligible approved facts for
-                this dispute. Upload additional supporting documents or wait for
-                the next sync to include freshly collected evidence.
-              </p>
+              <p>{tPkg("notEnoughEvidenceBody")}</p>
             </Banner>
           )}
 
           {row.status === "failed" && (
             <Banner tone="critical" title={t("validationFailedTitle")}>
               <BlockStack gap="200">
-                <p>{row.failure_reason ?? "Validation found unsupported claims in the generated narrative."}</p>
+                <p>{row.failure_reason ?? tPkg("validationFailedFallback")}</p>
                 {row.validation_errors?.length > 0 && (
                   <ul style={{ marginLeft: 16, fontSize: 12 }}>
                     {row.validation_errors.slice(0, 5).map((e, i) => (
@@ -934,13 +946,7 @@ export function CompleteDefencePackageCard({
           )}
           {row.status === "stale" && !rebuildInFlight && (
             <Banner tone="warning" title={t("newEvidenceAvailableTitle")}>
-              <p>
-                Recent updates (uploads, status changes, or new auto-collected
-                signals) aren&rsquo;t reflected in this draft yet. Click
-                Regenerate below to build a new version that includes them
-                — the rebuild takes 2&ndash;3 minutes and runs in the
-                background.
-              </p>
+              <p>{tPkg("newEvidenceAvailableBody")}</p>
             </Banner>
           )}
 
@@ -976,8 +982,8 @@ export function CompleteDefencePackageCard({
                   loading={busy === "finalize"}
                 >
                   {isSubmittedToBank
-                    ? `Approve draft v${latest.version}`
-                    : `Approve v${latest.version}`}
+                    ? tPkg("approveDraft", { version: latest.version })
+                    : tPkg("approveVersion", { version: latest.version })}
                 </Button>
               )}
               {canSubmit && !canFinalize && !bannerHostsActions && !submitPending && (
@@ -989,8 +995,8 @@ export function CompleteDefencePackageCard({
                   loading={busy === "submit"}
                 >
                   {isSubmittedToBank
-                    ? "Resubmit to Shopify"
-                    : "Submit to Shopify"}
+                    ? tPkg("resubmitToShopify")
+                    : tPkg("submitToShopify")}
                 </Button>
               )}
 
@@ -1012,8 +1018,8 @@ export function CompleteDefencePackageCard({
                   disabled={!previewHref || busy !== null}
                 >
                   {hasUnsubmittedDraft && latest
-                    ? `Review draft v${latest.version} PDF`
-                    : "View PDF"}
+                    ? tPkg("reviewDraftPdf", { version: latest.version })
+                    : tPkg("viewPdf")}
                 </Button>
               )}
             </ButtonGroup>
@@ -1038,7 +1044,7 @@ export function CompleteDefencePackageCard({
                     disclosure
                     disabled={busy !== null}
                   >
-                    More actions
+                    {tPkg("moreActions")}
                   </Button>
                 }
               >
@@ -1046,11 +1052,11 @@ export function CompleteDefencePackageCard({
                   items={[
                     {
                       content: rebuildInFlight
-                        ? "Regenerating…"
-                        : "Regenerate draft from scratch",
+                        ? tPkg("regenerating")
+                        : tPkg("regenerateFromScratch"),
                       helpText: rebuildInFlight
-                        ? "Already rebuilding — usually takes 2–3 minutes. The page checks for the new version when you reload or use the Check for update button above."
-                        : "Throws away the current draft and rebuilds the narrative + PDF against the latest evidence. The bank-facing submitted version is not touched.",
+                        ? tPkg("regenerateHelpInFlight")
+                        : tPkg("regenerateHelp"),
                       onAction: () => {
                         setMoreActionsOpen(false);
                         void onRegenerate();
@@ -1144,6 +1150,7 @@ function SavedToShopifyPackageBanner({
   shopifyAdminUrl,
   previewHref,
   previewLabel,
+  openInShopifyLabel,
 }: {
   title: string;
   version: number | null;
@@ -1152,6 +1159,7 @@ function SavedToShopifyPackageBanner({
   shopifyAdminUrl: string | null;
   previewHref: string | null;
   previewLabel: string;
+  openInShopifyLabel: string;
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column" }} role="status">
@@ -1250,7 +1258,7 @@ function SavedToShopifyPackageBanner({
           >
             {shopifyAdminUrl ? (
               <Button url={shopifyAdminUrl} target="_blank" external>
-                Open in Shopify Admin
+                {openInShopifyLabel}
               </Button>
             ) : null}
             <span style={{ flex: 1 }} />

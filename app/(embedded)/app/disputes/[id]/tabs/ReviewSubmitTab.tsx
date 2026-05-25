@@ -27,12 +27,13 @@ export default function ReviewSubmitTab({ workspace }: Props) {
   const { data, derived, clientState, actions } = workspace;
   const view = useReviewView(workspace);
   const tExtra = useTranslations("disputes.evidenceTabExtra");
+  const tChrome = useTranslations("disputes.reviewTab.chrome");
 
   // ── Loading state ──
   if (clientState.loading && !data) {
     return (
       <BlockStack gap="400" align="center">
-        <Spinner accessibilityLabel="Loading review" />
+        <Spinner accessibilityLabel={tChrome("loadingReview")} />
       </BlockStack>
     );
   }
@@ -40,10 +41,7 @@ export default function ReviewSubmitTab({ workspace }: Props) {
   // ── Failed / building / no-pack banners ──
   const failedBanner = derived.isFailed ? (
     <Banner tone="critical" title={tExtra("buildFailedTitle")}>
-      <p>
-        We couldn&apos;t build this evidence pack. Try resyncing the dispute or
-        regenerating the pack from the dispute header.
-      </p>
+      <p>{tChrome("buildFailedBody")}</p>
     </Banner>
   ) : null;
 

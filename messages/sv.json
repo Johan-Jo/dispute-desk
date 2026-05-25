@@ -964,9 +964,9 @@
       "unknownError": "okänt fel"
     },
     "defencePackageHtml": {
-      "orderLineItems": "Orderartiklar",
-      "evidenceBasis": "Bevisgrund",
-      "noBankEligibleFacts": "(Inga bankberättigade fakta tillgängliga.)"
+      "orderLineItems": "Order Line Items",
+      "evidenceBasis": "Evidence Basis",
+      "noBankEligibleFacts": "(No bank-eligible facts available.)"
     },
     "evidenceTab": {
       "sections": {
@@ -1118,6 +1118,68 @@
       }
     },
     "reviewTab": {
+      "chrome": {
+        "loadingReview": "Läser in granskning",
+        "buildFailedBody": "Vi kunde inte bygga detta bevispaket. Försök att synkronisera ärendet på nytt eller generera om paketet från ärendehuvudet."
+      },
+      "package": {
+        "loadingAccessibilityLabel": "Läser in försvarspaket",
+        "cardHelp": "DisputeDesk förbereder en bankvänd PDF som kombinerar godkända Shopify-bevis, betalningssignaler, leveransbevis, kundkommunikation, policyer och eventuella handlarinlämnade dokument till ett strukturerat försvarspaket.",
+        "savingBody": "DisputeDesk har tagit emot din inskickning och laddar upp försvarspaketet till Shopify. Detta brukar slutföras på under 30 sekunder — detta meddelande uppdateras automatiskt.",
+        "savedTitles": {
+          "outcomePosted": "Resultat publicerat",
+          "forwardedToNetwork": "Vidarebefordrat till kortnätverket",
+          "savedToShopify": "Sparat i Shopify"
+        },
+        "savedBody": {
+          "forwardedWithDate": "Försvarspaket v{version} har vidarebefordrats av Shopify till kortnätverket. Sparat i Shopify den {date}. Kortnätverkets beslut är slutgiltigt när det publicerats — Shopify kan inte längre byta ut den vidarebefordrade PDF:en.",
+          "forwardedNoDate": "Försvarspaket v{version} har vidarebefordrats av Shopify till kortnätverket. Kortnätverkets beslut är slutgiltigt när det publicerats — Shopify kan inte längre byta ut den vidarebefordrade PDF:en.",
+          "closedWithDate": "Försvarspaket v{version} skickades in den {date}. Chargebacken har stängts av kortnätverket.",
+          "closedNoDate": "Försvarspaket v{version} skickades in. Chargebacken har stängts av kortnätverket.",
+          "savedWithDate": "Försvarspaket v{version} är sparat i Shopify ({date}). Shopify har ännu inte vidarebefordrat det till kortnätverket — om du genererar om kommer den nya PDF:en att ersätta denna sparade version rent.",
+          "savedNoDate": "Försvarspaket v{version} är sparat i Shopify. Shopify har ännu inte vidarebefordrat det till kortnätverket — om du genererar om kommer den nya PDF:en att ersätta denna sparade version rent.",
+          "fallback": "Ett försvarspaket har skickats till banken."
+        },
+        "openInShopifyAdmin": "Öppna i Shopify Admin",
+        "viewPdf": "Visa PDF",
+        "reviewDraftPdf": "Granska PDF för utkast v{version}",
+        "cardNetworkReviewingBody": "Visa och Mastercard publicerar vanligtvis ett resultat inom {days} dagar efter vidarebefordran. Förvänta dig ett beslut kring {date}. DisputeDesk uppdaterar detta kort så snart resultatet kommer.",
+        "draftBannerTitle": "Utkast v{version} är redo för granskning",
+        "draftBannerBodyDraft": "Utkast v{version} har genererats men har inte skickats till Shopify ännu — banken har för närvarande v{bankVersion}. Granska det nedan. Om det ser korrekt ut, godkänn v{version} innan du skickar om till Shopify.",
+        "draftBannerBodyFinal": "Utkast v{version} har genererats men har inte skickats till Shopify ännu — banken har för närvarande v{bankVersion}. Granska det nedan. Om det ser korrekt ut, skicka om det till Shopify — det kommer att ersätta v{bankVersion}.",
+        "approveDraft": "Godkänn utkast v{version}",
+        "approveVersion": "Godkänn v{version}",
+        "submitToShopify": "Skicka till Shopify",
+        "resubmitToShopify": "Skicka om till Shopify",
+        "moreActions": "Fler åtgärder",
+        "regenerating": "Genererar om…",
+        "regenerateFromScratch": "Generera om utkast från början",
+        "regenerateHelpInFlight": "Bygger redan om — tar vanligtvis 2–3 minuter. Sidan letar efter den nya versionen när du laddar om eller använder knappen Sök efter uppdatering ovan.",
+        "regenerateHelp": "Slänger det aktuella utkastet och bygger om berättelsen + PDF mot de senaste bevisen. Den bankvända inskickade versionen påverkas inte.",
+        "metaStatus": "Status",
+        "metaMode": "Läge",
+        "metaGenerated": "Genererat",
+        "metaDeadline": "Tidsfrist",
+        "coveredByShopifyProtectBody": "Detta ärende täcks av Shopify Protect. Inget bankvänt försvarspaket krävs.",
+        "notEnoughEvidenceBody": "Klassificeraren hittade inga bankgodkända fakta för detta ärende. Ladda upp ytterligare stödjande dokument eller vänta på nästa synkronisering för att inkludera nyligen insamlade bevis.",
+        "validationFailedFallback": "Valideringen hittade ostödda påståenden i den genererade berättelsen.",
+        "newEvidenceAvailableBody": "Senaste uppdateringar (uppladdningar, statusändringar eller nya automatiskt insamlade signaler) återspeglas inte i detta utkast ännu. Klicka på Generera om nedan för att bygga en ny version som inkluderar dem — ombygget tar 2–3 minuter och körs i bakgrunden.",
+        "errors": {
+          "couldNotLoad": "Det gick inte att läsa in försvarspaketet ({status})",
+          "finalizeFailed": "Godkännande misslyckades ({status})",
+          "submitFailed": "Inskickning misslyckades ({status})",
+          "regenerateFailed": "Omgenerering misslyckades ({status})"
+        },
+        "statusLabels": {
+          "draft": "Utkast",
+          "stale": "Föråldrat",
+          "ready": "Redo att skicka",
+          "submitted": "Inskickat",
+          "superseded": "Ersatt",
+          "validationFailed": "Validering misslyckades",
+          "skipped": "Överhoppat"
+        }
+      },
       "sections": {
         "status": {
           "submitted": "Bevis inskickade till Shopify",

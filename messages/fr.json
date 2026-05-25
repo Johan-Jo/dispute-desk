@@ -762,6 +762,68 @@
       }
     },
     "reviewTab": {
+      "chrome": {
+        "loadingReview": "Chargement de la revue",
+        "buildFailedBody": "Nous n'avons pas pu construire ce dossier de preuves. Essayez de resynchroniser la rétrofacturation ou de regénérer le dossier depuis l'en-tête."
+      },
+      "package": {
+        "loadingAccessibilityLabel": "Chargement du dossier de preuves",
+        "cardHelp": "DisputeDesk prépare un PDF destiné à la banque qui combine les preuves Shopify approuvées, les signaux de paiement, les preuves d'exécution, les communications client, les politiques et tout document fourni par le marchand en un dossier de preuves structuré.",
+        "savingBody": "DisputeDesk a accepté votre soumission et téléverse le dossier de preuves vers Shopify. Cela se termine généralement en moins de 30 secondes — ce message se mettra à jour automatiquement.",
+        "savedTitles": {
+          "outcomePosted": "Résultat publié",
+          "forwardedToNetwork": "Transmis au réseau de cartes",
+          "savedToShopify": "Enregistré dans Shopify"
+        },
+        "savedBody": {
+          "forwardedWithDate": "Le dossier de preuves v{version} a été transmis par Shopify au réseau de cartes. Enregistré dans Shopify le {date}. La décision du réseau de cartes est définitive une fois publiée — Shopify ne peut plus remplacer le PDF transmis.",
+          "forwardedNoDate": "Le dossier de preuves v{version} a été transmis par Shopify au réseau de cartes. La décision du réseau de cartes est définitive une fois publiée — Shopify ne peut plus remplacer le PDF transmis.",
+          "closedWithDate": "Le dossier de preuves v{version} a été soumis le {date}. La rétrofacturation a été clôturée par le réseau de cartes.",
+          "closedNoDate": "Le dossier de preuves v{version} a été soumis. La rétrofacturation a été clôturée par le réseau de cartes.",
+          "savedWithDate": "Le dossier de preuves v{version} est enregistré dans Shopify ({date}). Shopify ne l'a pas encore transmis au réseau de cartes — si vous regénérez, le nouveau PDF remplacera proprement cette version enregistrée.",
+          "savedNoDate": "Le dossier de preuves v{version} est enregistré dans Shopify. Shopify ne l'a pas encore transmis au réseau de cartes — si vous regénérez, le nouveau PDF remplacera proprement cette version enregistrée.",
+          "fallback": "Un dossier de preuves a été soumis à la banque."
+        },
+        "openInShopifyAdmin": "Ouvrir dans Shopify Admin",
+        "viewPdf": "Voir le PDF",
+        "reviewDraftPdf": "Examiner le PDF de l'ébauche v{version}",
+        "cardNetworkReviewingBody": "Visa et Mastercard publient généralement un résultat dans les {days} jours suivant la transmission. Attendez-vous à une décision aux alentours du {date}. DisputeDesk mettra à jour cette carte dès que le résultat sera disponible.",
+        "draftBannerTitle": "L'ébauche v{version} est prête pour examen",
+        "draftBannerBodyDraft": "L'ébauche v{version} a été générée mais n'a pas encore été envoyée à Shopify — la banque possède actuellement la v{bankVersion}. Examinez-la ci-dessous. Si elle est correcte, approuvez la v{version} avant de la soumettre à nouveau à Shopify.",
+        "draftBannerBodyFinal": "L'ébauche v{version} a été générée mais n'a pas encore été envoyée à Shopify — la banque possède actuellement la v{bankVersion}. Examinez-la ci-dessous. Si elle est correcte, soumettez-la à nouveau à Shopify — cela remplacera la v{bankVersion}.",
+        "approveDraft": "Approuver l'ébauche v{version}",
+        "approveVersion": "Approuver v{version}",
+        "submitToShopify": "Soumettre à Shopify",
+        "resubmitToShopify": "Soumettre à nouveau à Shopify",
+        "moreActions": "Plus d'actions",
+        "regenerating": "Régénération…",
+        "regenerateFromScratch": "Régénérer l'ébauche depuis zéro",
+        "regenerateHelpInFlight": "Reconstruction déjà en cours — cela prend généralement 2 à 3 minutes. La page vérifie la nouvelle version lorsque vous rechargez ou utilisez le bouton Vérifier les mises à jour ci-dessus.",
+        "regenerateHelp": "Abandonne l'ébauche actuelle et reconstruit l'argumentation et le PDF à partir des preuves les plus récentes. La version soumise à la banque n'est pas affectée.",
+        "metaStatus": "Statut",
+        "metaMode": "Mode",
+        "metaGenerated": "Généré",
+        "metaDeadline": "Échéance",
+        "coveredByShopifyProtectBody": "Cette rétrofacturation est couverte par Shopify Protect. Aucun dossier de preuves destiné à la banque n'est requis.",
+        "notEnoughEvidenceBody": "Le classifieur n'a trouvé aucun fait approuvé éligible pour la banque dans cette rétrofacturation. Téléversez des documents justificatifs supplémentaires ou attendez la prochaine synchronisation pour inclure les preuves nouvellement collectées.",
+        "validationFailedFallback": "La validation a trouvé des affirmations non étayées dans l'argumentation générée.",
+        "newEvidenceAvailableBody": "Les mises à jour récentes (téléversements, changements de statut ou nouveaux signaux collectés automatiquement) ne sont pas encore reflétées dans cette ébauche. Cliquez sur Régénérer ci-dessous pour construire une nouvelle version qui les inclut — la reconstruction prend 2 à 3 minutes et s'exécute en arrière-plan.",
+        "errors": {
+          "couldNotLoad": "Impossible de charger le dossier de preuves ({status})",
+          "finalizeFailed": "Échec de l'approbation ({status})",
+          "submitFailed": "Échec de la soumission ({status})",
+          "regenerateFailed": "Échec de la régénération ({status})"
+        },
+        "statusLabels": {
+          "draft": "Ébauche",
+          "stale": "Obsolète",
+          "ready": "Prêt à soumettre",
+          "submitted": "Soumis",
+          "superseded": "Remplacé",
+          "validationFailed": "Échec de la validation",
+          "skipped": "Ignoré"
+        }
+      },
       "sections": {
         "status": {
           "submitted": "Preuves soumises à Shopify",
@@ -1317,9 +1379,9 @@
       "unknownError": "erreur inconnue"
     },
     "defencePackageHtml": {
-      "orderLineItems": "Articles de la commande",
-      "evidenceBasis": "Fondements des preuves",
-      "noBankEligibleFacts": "(Aucun fait admissible pour la banque disponible.)"
+      "orderLineItems": "Order Line Items",
+      "evidenceBasis": "Evidence Basis",
+      "noBankEligibleFacts": "(No bank-eligible facts available.)"
     },
     "overviewPill": {
       "missing": "Missing",

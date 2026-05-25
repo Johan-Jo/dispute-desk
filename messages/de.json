@@ -900,6 +900,68 @@
       "windowClosedError": "Shopify hat die Streitbeweise bereits an die Bank weitergeleitet, daher können keine neuen Dateien mehr hinzugefügt werden."
     },
     "reviewTab": {
+      "chrome": {
+        "loadingReview": "Prüfung wird geladen",
+        "buildFailedBody": "Wir konnten dieses Beweispaket nicht erstellen. Versuchen Sie, den Fall erneut zu synchronisieren oder das Paket über die Fallkopfzeile neu zu generieren."
+      },
+      "package": {
+        "loadingAccessibilityLabel": "Beweispaket wird geladen",
+        "cardHelp": "DisputeDesk erstellt ein bankgerichtetes PDF, das genehmigte Shopify-Beweise, Zahlungssignale, Erfüllungsnachweise, Kundenkommunikation, Richtlinien und alle vom Händler bereitgestellten Dokumente in einem strukturierten Beweispaket zusammenfasst.",
+        "savingBody": "DisputeDesk hat Ihre Einreichung angenommen und lädt das Beweispaket zu Shopify hoch. Dies dauert in der Regel weniger als 30 Sekunden — dieser Hinweis wird automatisch aktualisiert.",
+        "savedTitles": {
+          "outcomePosted": "Ergebnis eingetragen",
+          "forwardedToNetwork": "An das Kartennetzwerk weitergeleitet",
+          "savedToShopify": "In Shopify gespeichert"
+        },
+        "savedBody": {
+          "forwardedWithDate": "Beweispaket v{version} wurde von Shopify an das Kartennetzwerk weitergeleitet. In Shopify gespeichert am {date}. Die Entscheidung des Kartennetzwerks ist nach der Eintragung endgültig — Shopify kann das weitergeleitete PDF nicht mehr ersetzen.",
+          "forwardedNoDate": "Beweispaket v{version} wurde von Shopify an das Kartennetzwerk weitergeleitet. Die Entscheidung des Kartennetzwerks ist nach der Eintragung endgültig — Shopify kann das weitergeleitete PDF nicht mehr ersetzen.",
+          "closedWithDate": "Beweispaket v{version} wurde am {date} eingereicht. Die Rückbuchung wurde vom Kartennetzwerk abgeschlossen.",
+          "closedNoDate": "Beweispaket v{version} wurde eingereicht. Die Rückbuchung wurde vom Kartennetzwerk abgeschlossen.",
+          "savedWithDate": "Beweispaket v{version} ist in Shopify gespeichert ({date}). Shopify hat es noch nicht an das Kartennetzwerk weitergeleitet — wenn Sie es neu generieren, ersetzt das neue PDF diese gespeicherte Version sauber.",
+          "savedNoDate": "Beweispaket v{version} ist in Shopify gespeichert. Shopify hat es noch nicht an das Kartennetzwerk weitergeleitet — wenn Sie es neu generieren, ersetzt das neue PDF diese gespeicherte Version sauber.",
+          "fallback": "Ein Beweispaket wurde an die Bank übermittelt."
+        },
+        "openInShopifyAdmin": "In Shopify Admin öffnen",
+        "viewPdf": "PDF anzeigen",
+        "reviewDraftPdf": "Entwurf v{version} als PDF prüfen",
+        "cardNetworkReviewingBody": "Visa und Mastercard tragen ein Ergebnis in der Regel innerhalb von {days} Tagen nach Weiterleitung ein. Erwarten Sie eine Entscheidung etwa am {date}. DisputeDesk aktualisiert diese Karte, sobald das Ergebnis vorliegt.",
+        "draftBannerTitle": "Entwurf v{version} ist bereit zur Prüfung",
+        "draftBannerBodyDraft": "Entwurf v{version} wurde erstellt, aber noch nicht an Shopify gesendet — die Bank hat derzeit v{bankVersion}. Prüfen Sie ihn unten. Wenn alles korrekt aussieht, genehmigen Sie v{version}, bevor Sie ihn erneut an Shopify übermitteln.",
+        "draftBannerBodyFinal": "Entwurf v{version} wurde erstellt, aber noch nicht an Shopify gesendet — die Bank hat derzeit v{bankVersion}. Prüfen Sie ihn unten. Wenn alles korrekt aussieht, übermitteln Sie ihn erneut an Shopify — dies ersetzt v{bankVersion}.",
+        "approveDraft": "Entwurf v{version} genehmigen",
+        "approveVersion": "v{version} genehmigen",
+        "submitToShopify": "An Shopify übermitteln",
+        "resubmitToShopify": "Erneut an Shopify übermitteln",
+        "moreActions": "Weitere Aktionen",
+        "regenerating": "Wird neu generiert…",
+        "regenerateFromScratch": "Entwurf von Grund auf neu generieren",
+        "regenerateHelpInFlight": "Wird bereits neu erstellt — dauert in der Regel 2–3 Minuten. Die Seite prüft beim Neuladen oder über die Schaltfläche „Auf Updates prüfen“ oben auf eine neue Version.",
+        "regenerateHelp": "Verwirft den aktuellen Entwurf und erstellt das Narrativ + PDF anhand der neuesten Beweise neu. Die bankgerichtete eingereichte Version wird nicht angetastet.",
+        "metaStatus": "Status",
+        "metaMode": "Modus",
+        "metaGenerated": "Erstellt",
+        "metaDeadline": "Frist",
+        "coveredByShopifyProtectBody": "Diese Rückbuchung ist durch Shopify Protect abgedeckt. Es wird kein bankgerichtetes Beweispaket benötigt.",
+        "notEnoughEvidenceBody": "Der Klassifikator hat keine bankfähigen genehmigten Fakten für diese Rückbuchung gefunden. Laden Sie zusätzliche Belege hoch oder warten Sie auf die nächste Synchronisierung, um neu erfasste Beweise einzubeziehen.",
+        "validationFailedFallback": "Die Validierung hat nicht belegbare Behauptungen im generierten Narrativ gefunden.",
+        "newEvidenceAvailableBody": "Aktuelle Aktualisierungen (Uploads, Statusänderungen oder neue automatisch erfasste Signale) sind in diesem Entwurf noch nicht berücksichtigt. Klicken Sie unten auf Neu generieren, um eine neue Version mit diesen Daten zu erstellen — der Neuaufbau dauert 2–3 Minuten und läuft im Hintergrund.",
+        "errors": {
+          "couldNotLoad": "Beweispaket konnte nicht geladen werden ({status})",
+          "finalizeFailed": "Genehmigung fehlgeschlagen ({status})",
+          "submitFailed": "Übermittlung fehlgeschlagen ({status})",
+          "regenerateFailed": "Neugenerierung fehlgeschlagen ({status})"
+        },
+        "statusLabels": {
+          "draft": "Entwurf",
+          "stale": "Veraltet",
+          "ready": "Bereit zum Übermitteln",
+          "submitted": "Übermittelt",
+          "superseded": "Ersetzt",
+          "validationFailed": "Validierung fehlgeschlagen",
+          "skipped": "Übersprungen"
+        }
+      },
       "inclusion": {
         "title": "Einschluss­prüfung",
         "subtitle": "Prüfen Sie vor dem Speichern, was die Bank erreicht. Das Verteidigungspaket ist der einzige bankgerichtete Kanal — DisputeDesk sendet keine strukturierten Beweisfelder an Shopify.",
@@ -1317,9 +1379,9 @@
       "unknownError": "unbekannter Fehler"
     },
     "defencePackageHtml": {
-      "orderLineItems": "Bestellpositionen",
-      "evidenceBasis": "Beweisgrundlage",
-      "noBankEligibleFacts": "(Keine bankfähigen Fakten verfügbar.)"
+      "orderLineItems": "Order Line Items",
+      "evidenceBasis": "Evidence Basis",
+      "noBankEligibleFacts": "(No bank-eligible facts available.)"
     },
     "overviewPill": {
       "missing": "Missing",
