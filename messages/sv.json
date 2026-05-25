@@ -1303,22 +1303,22 @@
           },
           "saved": {
             "likely_to_win": "Starkt försvar sparat i Shopify",
-            "could_win": "Måttligt försvar sparat i Shopify",
-            "needs_strengthening": "Måttligt försvar sparat i Shopify",
+            "could_win": "Medelstarkt försvar sparat i Shopify",
+            "needs_strengthening": "Medelstarkt försvar sparat i Shopify",
             "hard_to_win": "Svagt försvar sparat i Shopify",
             "covered": "Täcks av Shopify Protect"
           },
           "awaiting": {
             "likely_to_win": "Starkt försvar vidarebefordrat till Shopify",
-            "could_win": "Måttligt försvar vidarebefordrat till Shopify",
-            "needs_strengthening": "Måttligt försvar vidarebefordrat till Shopify",
+            "could_win": "Medelstarkt försvar vidarebefordrat till Shopify",
+            "needs_strengthening": "Medelstarkt försvar vidarebefordrat till Shopify",
             "hard_to_win": "Svagt försvar vidarebefordrat till Shopify",
             "covered": "Täcks av Shopify Protect"
           },
           "submitted_to_network": {
             "likely_to_win": "Starkt försvar skickat till kortnätverket",
-            "could_win": "Måttligt försvar skickat till kortnätverket",
-            "needs_strengthening": "Måttligt försvar skickat till kortnätverket",
+            "could_win": "Medelstarkt försvar skickat till kortnätverket",
+            "needs_strengthening": "Medelstarkt försvar skickat till kortnätverket",
             "hard_to_win": "Svagt försvar skickat till kortnätverket",
             "covered": "Täcks av Shopify Protect"
           },
