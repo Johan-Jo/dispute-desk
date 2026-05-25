@@ -1,24 +1,15 @@
 #!/usr/bin/env node
 /**
- * Find keys where a non-en locale's value exactly equals the en value.
- * These are likely English placeholders left over from the fill-script
- * backfill (2026-05-24) — not real translations.
- *
- * Caveats:
- *   - Some keys legitimately have the same value across locales
- *     (proper nouns, brand names, "OK", "PDF", etc.). The script
- *     filters out short values (≤2 chars), ASCII-only single-word
- *     values that look like enum tags, and common loanwords.
- *   - Manual review still required — the output is a punch list, not
- *     a definitive bug list.
+ * Per-locale dump: writes /tmp/placeholders-{locale}.txt for each
+ * non-en locale, listing every key path where the locale value still
+ * equals the English source. Used to feed translation agents one
+ * locale at a time.
  */
-
 import fs from "node:fs";
 import path from "node:path";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
-const LOCALES = ["sv", "de", "es", "fr", "pt"];
-
+const LOCALES = ["de", "es", "fr", "pt"];
 const en = JSON.parse(fs.readFileSync(path.join(repoRoot, "messages/en.json"), "utf8"));
 
 const loanwords = new Set([
@@ -47,14 +38,10 @@ function lookup(obj, dotted) {
   return n;
 }
 
-/** Heuristic: a value is "likely English copy" (so a match across
- *  locales is suspicious) if it has multiple words, contains spaces,
- *  and isn't a brand/acronym. */
 function looksLikeEnglishCopy(s) {
   if (typeof s !== "string") return false;
   if (s.length <= 2) return false;
   if (loanwords.has(s.trim())) return false;
-  // Multi-word required
   const words = s.match(/[A-Za-z][A-Za-z'-]*/g) ?? [];
   if (words.length < 2) return false;
   return /\s/.test(s);
@@ -62,7 +49,6 @@ function looksLikeEnglishCopy(s) {
 
 const enKeys = [...leafs(en)];
 
-const byLocale = {};
 for (const locale of LOCALES) {
   const cat = JSON.parse(fs.readFileSync(path.join(repoRoot, `messages/${locale}.json`), "utf8"));
   const hits = [];
@@ -73,20 +59,9 @@ for (const locale of LOCALES) {
       hits.push({ path: p, value: v });
     }
   }
-  byLocale[locale] = hits;
+  const out = process.argv[2] || "/tmp";
+  const outPath = path.join(out, `placeholders-${locale}.tsv`);
+  const lines = hits.map((h) => `${h.path}\t${JSON.stringify(h.value)}`);
+  fs.writeFileSync(outPath, lines.join("\n") + "\n");
+  console.log(`${locale}: wrote ${hits.length} entries to ${outPath}`);
 }
-
-let total = 0;
-for (const locale of LOCALES) {
-  const hits = byLocale[locale];
-  if (hits.length === 0) {
-    console.log(`${locale}: no English placeholders found`);
-    continue;
-  }
-  console.log(`\n${locale}: ${hits.length} suspected English placeholder(s)`);
-  total += hits.length;
-  for (const h of hits) {
-    console.log(`  ${h.path.padEnd(70)} ${JSON.stringify(h.value)}`);
-  }
-}
-console.log(`\ntotal: ${total} placeholder hits across ${LOCALES.length} locales`);
