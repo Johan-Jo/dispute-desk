@@ -602,7 +602,7 @@
     },
     "caseStrength": {
       "strong": "Starkt ärende",
-      "moderate": "Delvis stärkt ärende",
+      "moderate": "Medelstarkt ärende",
       "weak": "Svagt ärende"
     },
     "itemStrength": {
@@ -836,7 +836,7 @@
       },
       "strengthLabel": {
         "strong": "Starkt ärende",
-        "moderate": "Delvis stärkt ärende",
+        "moderate": "Medelstarkt ärende",
         "weak": "Svagt ärende"
       },
       "merchantReasonLabel": {
@@ -1506,22 +1506,22 @@
           },
           "saved": {
             "likely_to_win": "Starkt ärende sparat i Shopify",
-            "could_win": "Delvis stärkt ärende sparat i Shopify",
-            "needs_strengthening": "Delvis stärkt ärende sparat i Shopify",
+            "could_win": "Medelstarkt ärende sparat i Shopify",
+            "needs_strengthening": "Medelstarkt ärende sparat i Shopify",
             "hard_to_win": "Svagt ärende sparat i Shopify",
             "covered": "Täcks av Shopify Protect"
           },
           "awaiting": {
             "likely_to_win": "Starkt ärende vidarebefordrat till Shopify",
-            "could_win": "Delvis stärkt ärende vidarebefordrat till Shopify",
-            "needs_strengthening": "Delvis stärkt ärende vidarebefordrat till Shopify",
+            "could_win": "Medelstarkt ärende vidarebefordrat till Shopify",
+            "needs_strengthening": "Medelstarkt ärende vidarebefordrat till Shopify",
             "hard_to_win": "Svagt ärende vidarebefordrat till Shopify",
             "covered": "Täcks av Shopify Protect"
           },
           "submitted_to_network": {
             "likely_to_win": "Starkt ärende skickat till kortnätverket",
-            "could_win": "Delvis stärkt ärende skickat till kortnätverket",
-            "needs_strengthening": "Delvis stärkt ärende skickat till kortnätverket",
+            "could_win": "Medelstarkt ärende skickat till kortnätverket",
+            "needs_strengthening": "Medelstarkt ärende skickat till kortnätverket",
             "hard_to_win": "Svagt ärende skickat till kortnätverket",
             "covered": "Täcks av Shopify Protect"
           },

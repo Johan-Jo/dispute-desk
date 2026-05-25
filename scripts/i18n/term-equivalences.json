@@ -9,7 +9,7 @@
     ]
   },
   "case_strength_moderate": {
-    "description": "Moderate case-strength label. The 2026-05-25 corrections set this to e.g. 'Delvis stärkt ärende' (sv).",
+    "description": "Moderate case-strength label. The 2026-05-25 corrections set this to e.g. 'Medelstarkt ärende' (sv).",
     "paths": [
       "disputes.caseStrength.moderate",
       "disputes.workspaceShell.strengthLabel.moderate"
