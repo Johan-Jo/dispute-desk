@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
-const LOCALES = ["de", "es", "fr", "pt"];
+const LOCALES = ["de", "es", "fr", "pt", "sv"];
 const en = JSON.parse(fs.readFileSync(path.join(repoRoot, "messages/en.json"), "utf8"));
 
 const loanwords = new Set([
