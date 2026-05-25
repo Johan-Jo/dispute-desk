@@ -35,6 +35,7 @@ import type {
  *  locale-correct strings. */
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 import type { CaseStrengthLevel } from "@/lib/argument/types";
+import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
 import type { Localized } from "@/lib/i18n/localized";
 import { resolveToken } from "@/lib/i18n/resolveToken";
 import { MERCHANT_UI_HIDDEN_FIELDS } from "@/lib/automation/merchantUiHiddenFields";
@@ -605,6 +606,19 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
   // Root translator for token resolution (signal labels, etc.). Tokens
   // encode absolute key paths so the translator must NOT be scoped.
   const tRoot = useTranslations();
+  /** Resolve the canonical signal label for a field key. Falls back
+   *  to the lib-emitted legacy English when the field is not in the
+   *  canonical registry. */
+  const fieldLabel = (field: string, legacy: string): string => {
+    const labelKey = CANONICAL_EVIDENCE[field]?.labelKey;
+    if (!labelKey) return legacy;
+    try {
+      const resolved = tRoot(labelKey);
+      return resolved === labelKey ? legacy : resolved;
+    } catch {
+      return legacy;
+    }
+  };
 
   // Defensive empty-state when workspace data hasn't loaded yet. The
   // upstream tab is responsible for showing a loading state; this hook
@@ -736,7 +750,7 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
   for (const item of derived.effectiveChecklist) {
     if (item.status !== "available") continue;
     if (usedInDefense.some((row) => row.field === item.field)) continue;
-    usedInDefense.push(buildRow("supporting", item.field, item.label, "supporting"));
+    usedInDefense.push(buildRow("supporting", item.field, fieldLabel(item.field, item.label), "supporting"));
   }
 
   usedInDefense.sort(

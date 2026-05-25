@@ -39,6 +39,33 @@ import type {
   SubmissionSummary,
 } from "../../workspace-components/types";
 import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
+import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
+
+/**
+ * Resolve a translated row label from a canonical evidence field key.
+ * Lib-emitted English labels (`ChecklistItemV2.label`, `EvidenceLineItem.label`)
+ * are still propagated through the pipeline; this helper does the
+ * structural-i18n translation at the leaf render boundary so non-English
+ * locales see translated copy instead of the English baked into the
+ * pack-template seed data.
+ *
+ * Falls back to the legacy English label when the field is unknown to
+ * the canonical registry (the few non-canonical rows live in fixtures
+ * and tests, never in real merchant data).
+ */
+function useFieldLabel() {
+  const t = useTranslations();
+  return (field: string, legacy: string): string => {
+    const labelKey = CANONICAL_EVIDENCE[field]?.labelKey;
+    if (!labelKey) return legacy;
+    try {
+      const resolved = t(labelKey);
+      return resolved === labelKey ? legacy : resolved;
+    } catch {
+      return legacy;
+    }
+  };
+}
 
 interface Props {
   summary: SubmissionSummary;
@@ -176,6 +203,7 @@ export function SubmissionSummaryPanel({
   presentationStatus,
 }: Props) {
   const t = useTranslations("disputes.overview.submissionSummary");
+  const fieldLabel = useFieldLabel();
   const saved = isSavedState(presentationStatus);
 
   const bankArgumentRows = useMemo(
@@ -220,7 +248,7 @@ export function SubmissionSummaryPanel({
   const internalNote = t("internalSignalNote");
   const internalDispRows = internalRows.map((r) => ({
     field: r.field,
-    label: r.label,
+    label: fieldLabel(r.field, r.label),
     note: internalNote,
   }));
 
@@ -245,7 +273,7 @@ export function SubmissionSummaryPanel({
     )
     .map((li) => ({
       field: li.field,
-      label: li.label,
+      label: fieldLabel(li.field, li.label),
       note: (() => {
         switch (li.submissionMethod) {
           case "failed_upload":
@@ -326,7 +354,7 @@ export function SubmissionSummaryPanel({
           disposition="positive"
           title={t("bankArgumentLabel")}
           countLine={t("dispositionPositiveCount", { count: bankArgumentRows.length })}
-          rows={bankArgumentRows.map((r) => ({ field: r.field, label: r.label }))}
+          rows={bankArgumentRows.map((r) => ({ field: r.field, label: fieldLabel(r.field, r.label) }))}
           borderRight
           borderBottom
         />
@@ -334,7 +362,7 @@ export function SubmissionSummaryPanel({
           disposition="context"
           title={t("contextOnlyLabel")}
           countLine={t("dispositionContextCount", { count: contextOnlyRows.length })}
-          rows={contextOnlyRows.map((r) => ({ field: r.field, label: r.label }))}
+          rows={contextOnlyRows.map((r) => ({ field: r.field, label: fieldLabel(r.field, r.label) }))}
           borderBottom
         />
         <DispositionCell

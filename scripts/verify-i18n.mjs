@@ -63,6 +63,13 @@ const LIB_USER_FACING_FILES = [
   "lib/argument/recommendation.ts",
   "lib/argument/caseStrength.ts",
   "lib/argument/canonicalEvidence.ts",
+  // Completeness templates — REASON_TEMPLATES_V2 entries that flow
+  // into `ChecklistItemV2.label` and end up rendered to merchants in
+  // the SubmissionSummaryPanel + supporting-evidence rows. This is the
+  // gap the 2026-05-25 sweep caught: pack-template labels stayed in
+  // English even when the rest of the UI was translated, because the
+  // labels live on lib-side data structures rather than i18n keys.
+  "lib/automation/completeness.ts",
 ];
 
 const ALLOW_FILES = new Set([
