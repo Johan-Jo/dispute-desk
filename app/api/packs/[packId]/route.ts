@@ -87,17 +87,21 @@ async function fetchTemplateItems(
           }>;
         }>;
       };
-      const secLocale = secAny.pack_template_section_i18n?.find(
-        (r) => r.locale === locale,
-      );
+      const secLocale =
+        secAny.pack_template_section_i18n?.find((r) => r.locale === locale) ??
+        secAny.pack_template_section_i18n?.find((r) =>
+          r.locale.startsWith(locale + "-"),
+        );
       const sectionTitle = secLocale?.title ?? secAny.title_default;
 
       const rawItems = secAny.pack_template_items ?? [];
       const sorted = [...rawItems].sort((a, b) => a.sort - b.sort);
       for (const it of sorted) {
-        const itLocale = it.pack_template_item_i18n?.find(
-          (r) => r.locale === locale,
-        );
+        const itLocale =
+          it.pack_template_item_i18n?.find((r) => r.locale === locale) ??
+          it.pack_template_item_i18n?.find((r) =>
+            r.locale.startsWith(locale + "-"),
+          );
         items.push({
           section_title: sectionTitle,
           key: it.key,
@@ -165,6 +169,8 @@ async function resolveTemplateName(
   const list = rows ?? [];
   const exact = list.find((r) => r.locale === locale);
   if (exact) return exact.name;
+  const prefix = list.find((r) => r.locale.startsWith(locale + "-"));
+  if (prefix) return prefix.name;
   const english = list.find((r) => r.locale === "en-US");
   if (english) return english.name;
   return list[0]?.name ?? null;
@@ -223,9 +229,11 @@ async function localizeChecklist(
       label_default: string;
       pack_template_item_i18n?: Array<{ locale: string; label: string }>;
     };
-    const localized = r.pack_template_item_i18n?.find(
-      (x) => x.locale === locale,
-    );
+    const localized =
+      r.pack_template_item_i18n?.find((x) => x.locale === locale) ??
+      r.pack_template_item_i18n?.find((x) =>
+        x.locale.startsWith(locale + "-"),
+      );
     const label = localized?.label ?? r.label_default;
     byKey.set(r.key, label);
     // Also index by label_default so fallback labels that don't
