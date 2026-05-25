@@ -24,44 +24,72 @@
   },
 
   "reason_FRAUDULENT_canonical": {
-    "description": "Canonical reason label for the FRAUDULENT code — used in the terse-reason and pack-type namespaces. NOT the merchant-facing soft variant (that lives in merchantReasonLabel).",
+    "description": "Canonical reason label for the FRAUDULENT code. Driven from coverage.familyFraud (the Coverage page is the source of truth for reason-code phrasing — `npm run i18n:sync-reason-labels` propagates it).",
     "paths": [
+      "coverage.familyFraud",
       "disputeReasons.FRAUDULENT",
       "packs.disputeTypeLabel.FRAUDULENT",
-      "packs.disputeTypeLabel.FRAUD"
+      "packs.disputeTypeLabel.FRAUD",
+      "disputes.workspaceShell.merchantReasonLabel.FRAUDULENT"
     ]
   },
   "reason_PRODUCT_NOT_RECEIVED_canonical": {
     "paths": [
+      "coverage.familyPnr",
       "disputeReasons.PRODUCT_NOT_RECEIVED",
       "packs.disputeTypeLabel.PRODUCT_NOT_RECEIVED",
-      "packs.disputeTypeLabel.PNR"
+      "packs.disputeTypeLabel.PNR",
+      "disputes.workspaceShell.merchantReasonLabel.PRODUCT_NOT_RECEIVED"
     ]
   },
   "reason_PRODUCT_UNACCEPTABLE_canonical": {
     "paths": [
+      "coverage.familyNotAsDescribed",
       "disputeReasons.PRODUCT_UNACCEPTABLE",
       "packs.disputeTypeLabel.PRODUCT_UNACCEPTABLE",
-      "packs.disputeTypeLabel.NOT_AS_DESCRIBED"
+      "packs.disputeTypeLabel.NOT_AS_DESCRIBED",
+      "disputes.workspaceShell.merchantReasonLabel.PRODUCT_UNACCEPTABLE"
     ]
   },
   "reason_CREDIT_NOT_PROCESSED_canonical": {
     "paths": [
+      "coverage.familyRefund",
       "disputeReasons.CREDIT_NOT_PROCESSED",
       "packs.disputeTypeLabel.CREDIT_NOT_PROCESSED",
-      "packs.disputeTypeLabel.REFUND"
+      "packs.disputeTypeLabel.REFUND",
+      "disputes.workspaceShell.merchantReasonLabel.CREDIT_NOT_PROCESSED"
     ]
   },
   "reason_DUPLICATE_canonical": {
     "paths": [
+      "coverage.familyDuplicate",
       "disputeReasons.DUPLICATE",
-      "packs.disputeTypeLabel.DUPLICATE"
+      "packs.disputeTypeLabel.DUPLICATE",
+      "disputes.workspaceShell.merchantReasonLabel.DUPLICATE"
     ]
   },
   "reason_SUBSCRIPTION_CANCELED_canonical": {
     "paths": [
+      "coverage.familySubscription",
       "disputeReasons.SUBSCRIPTION_CANCELED",
-      "packs.disputeTypeLabel.SUBSCRIPTION_CANCELED"
+      "packs.disputeTypeLabel.SUBSCRIPTION_CANCELED",
+      "disputes.workspaceShell.merchantReasonLabel.SUBSCRIPTION_CANCELED"
+    ]
+  },
+  "reason_UNRECOGNIZED_canonical": {
+    "paths": [
+      "coverage.familyUnrecognized",
+      "disputeReasons.UNRECOGNIZED",
+      "packs.disputeTypeLabel.UNRECOGNIZED",
+      "disputes.workspaceShell.merchantReasonLabel.UNRECOGNIZED"
+    ]
+  },
+  "reason_GENERAL_canonical": {
+    "paths": [
+      "coverage.familyGeneral",
+      "disputeReasons.GENERAL",
+      "packs.disputeTypeLabel.GENERAL",
+      "disputes.workspaceShell.merchantReasonLabel.GENERAL"
     ]
   },
   "reason_BANK_CANNOT_PROCESS_canonical": {

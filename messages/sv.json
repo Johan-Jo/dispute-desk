@@ -576,7 +576,7 @@
     "colDueDate": "Förfallodatum",
     "colOutcome": "Outcome",
     "strengthStrong": "Stark",
-    "strengthModerate": "Måttlig",
+    "strengthModerate": "Medelstark",
     "strengthWeak": "Svag",
     "strengthDetailSignals": "{count} starka signaler",
     "strengthDetailMixed": "{strong} starka + {moderate} medelstarka",
@@ -607,10 +607,10 @@
     },
     "itemStrength": {
       "strong": "Stark",
-      "moderate": "Måttlig",
+      "moderate": "Medelstark",
       "supporting": "Stödjande",
       "internal_only": "Endast internt",
-      "none": "None"
+      "none": "Ingen"
     },
     "signalLabel": {
       "payment_auth": "Betalningsautentisering",
@@ -669,7 +669,7 @@
       "moderate": {
         "fraudAvsOnly": "Betalningsautentisering stöder detta försvar, men ytterligare avgörande bevis såsom leveransbekräftelse, enhets-/sessionskonsistens eller kundbekräftelse skulle förbättra ärendet.",
         "strongAndModerate": "{strongLabel} och {moderateLabel} stöder detta försvar; ytterligare avgörande bevis skulle stärka ärendet.",
-        "strongOnly": "{label} stöder detta försvar, med måttligt stöd; ytterligare avgörande bevis skulle stärka ärendet."
+        "strongOnly": "{label} stöder detta försvar, med visst stöd; ytterligare avgörande bevis skulle stärka ärendet."
       },
       "weak": {
         "strongAlone": "{label} stöder detta försvar, men ytterligare avgörande bevis (såsom {hint}) skulle stärka ärendet.",
@@ -840,20 +840,20 @@
         "weak": "Svagt ärende"
       },
       "merchantReasonLabel": {
-        "BANK_CANNOT_PROCESS": "Banken kunde inte behandla",
-        "CREDIT_NOT_PROCESSED": "Kunden säger att återbetalningen inte behandlats",
-        "CUSTOMER_INITIATED": "Kundinitierad tvist",
+        "BANK_CANNOT_PROCESS": "Banken kan inte behandla",
+        "CREDIT_NOT_PROCESSED": "Återbetalning / Kredit ej behandlad",
+        "CUSTOMER_INITIATED": "Initierad av kund",
         "DEBIT_NOT_AUTHORIZED": "Debitering ej auktoriserad",
-        "DUPLICATE": "Kunden säger att betalningen debiterats två gånger",
-        "FRAUDULENT": "Kunden nekar till köpet",
-        "GENERAL": "Allmän tvist",
+        "DUPLICATE": "Dubbeldebitering",
+        "FRAUDULENT": "Bedrägeri / Ej auktoriserad",
+        "GENERAL": "Generellt eller specialfall",
         "INCORRECT_ACCOUNT_DETAILS": "Felaktiga kontouppgifter",
         "INSUFFICIENT_FUNDS": "Otillräckliga medel",
-        "NONCOMPLIANT": "Ej regelenlig transaktion",
-        "PRODUCT_NOT_RECEIVED": "Kunden säger att produkten inte mottagits",
-        "PRODUCT_UNACCEPTABLE": "Kunden säger att produkten inte motsvarar beskrivningen",
-        "SUBSCRIPTION_CANCELED": "Prenumeration avbruten",
-        "UNRECOGNIZED": "Okänd debitering",
+        "NONCOMPLIANT": "Ej regelenlig",
+        "PRODUCT_NOT_RECEIVED": "Produkt ej mottagen",
+        "PRODUCT_UNACCEPTABLE": "Produkt ej enligt beskrivning",
+        "SUBSCRIPTION_CANCELED": "Prenumeration avslutad",
+        "UNRECOGNIZED": "Okänd betalning",
         "fallback": "Tvist"
       },
       "statusPill": {
@@ -1038,7 +1038,7 @@
         "sourceStorePolicy": "Butikspolicy",
         "strength": {
           "strong": "Stark",
-          "moderate": "Måttlig",
+          "moderate": "Medelstark",
           "supporting": "Stödjande",
           "none": "Ingen"
         }
@@ -1367,19 +1367,19 @@
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banken kan inte behandla",
-    "CREDIT_NOT_PROCESSED": "Återbetalning inte behandlad",
+    "CREDIT_NOT_PROCESSED": "Återbetalning / Kredit ej behandlad",
     "CUSTOMER_INITIATED": "Initierad av kund",
     "DEBIT_NOT_AUTHORIZED": "Debitering ej auktoriserad",
-    "DUPLICATE": "Dubbel debitering",
-    "FRAUDULENT": "Bedräglig transaktion",
-    "GENERAL": "Allmän",
+    "DUPLICATE": "Dubbeldebitering",
+    "FRAUDULENT": "Bedrägeri / Ej auktoriserad",
+    "GENERAL": "Generellt eller specialfall",
     "INCORRECT_ACCOUNT_DETAILS": "Felaktiga kontouppgifter",
     "INSUFFICIENT_FUNDS": "Otillräckliga medel",
     "NONCOMPLIANT": "Ej regelenlig",
-    "PRODUCT_NOT_RECEIVED": "Produkt inte mottagen",
-    "PRODUCT_UNACCEPTABLE": "Produkten motsvarar inte beskrivningen",
-    "SUBSCRIPTION_CANCELED": "Prenumeration avbruten",
-    "UNRECOGNIZED": "Okänd debitering"
+    "PRODUCT_NOT_RECEIVED": "Produkt ej mottagen",
+    "PRODUCT_UNACCEPTABLE": "Produkt ej enligt beskrivning",
+    "SUBSCRIPTION_CANCELED": "Prenumeration avslutad",
+    "UNRECOGNIZED": "Okänd betalning"
   },
   "disputeFamilies": {
     "Technical": "Teknisk",
@@ -1604,21 +1604,21 @@
     "statusReady": "Klar för granskning — kontrollera dina bevis och slutför inlämningen i Shopify Admin.",
     "statusSubmitted": "Inskickad — denna tvist har skickats för granskning.",
     "disputeTypeLabel": {
-      "FRAUD": "Bedräglig transaktion",
-      "FRAUDULENT": "Bedräglig transaktion",
-      "PNR": "Produkt inte mottagen",
-      "PRODUCT_NOT_RECEIVED": "Produkt inte mottagen",
-      "NOT_AS_DESCRIBED": "Produkten motsvarar inte beskrivningen",
-      "SUBSCRIPTION": "Prenumeration",
-      "REFUND": "Återbetalning inte behandlad",
-      "DUPLICATE": "Dubbel debitering",
+      "FRAUD": "Bedrägeri / Ej auktoriserad",
+      "FRAUDULENT": "Bedrägeri / Ej auktoriserad",
+      "PNR": "Produkt ej mottagen",
+      "PRODUCT_NOT_RECEIVED": "Produkt ej mottagen",
+      "NOT_AS_DESCRIBED": "Produkt ej enligt beskrivning",
+      "SUBSCRIPTION": "Prenumeration avslutad",
+      "REFUND": "Återbetalning / Kredit ej behandlad",
+      "DUPLICATE": "Dubbeldebitering",
       "DIGITAL": "Digitala varor eller tjänst",
-      "GENERAL": "Allmänt",
-      "CREDIT_NOT_PROCESSED": "Återbetalning inte behandlad",
-      "SUBSCRIPTION_CANCELED": "Prenumeration avbruten",
-      "PRODUCT_UNACCEPTABLE": "Produkten motsvarar inte beskrivningen",
+      "GENERAL": "Generellt eller specialfall",
+      "CREDIT_NOT_PROCESSED": "Återbetalning / Kredit ej behandlad",
+      "SUBSCRIPTION_CANCELED": "Prenumeration avslutad",
+      "PRODUCT_UNACCEPTABLE": "Produkt ej enligt beskrivning",
       "NONCOMPLIANT": "Ej regelenlig",
-      "UNRECOGNIZED": "Okänd debitering",
+      "UNRECOGNIZED": "Okänd betalning",
       "DEBIT_NOT_AUTHORIZED": "Debitering ej auktoriserad",
       "CUSTOMER_INITIATED": "Initierad av kund",
       "BANK_CANNOT_PROCESS": "Banken kan inte behandla",
@@ -4184,7 +4184,7 @@
     "correlationSubtitle": "Hur ofta varje Shopify-risknivå i din butik faktiskt blev en tvist. Observerat, inte förutsagt.",
     "correlationInsufficient": "Otillräckligt urval",
     "correlationObservationStrong": "I din butik blev ordrar som Shopify klassade som högrisk till tvister cirka {ratio} gånger oftare än ordrar som Shopify godkände eller bedömde som låg risk. En stark observerad samvariation — högriskordrar är värda manuell granskning.",
-    "correlationObservationMild": "I din butik blev ordrar som Shopify klassade som högrisk till tvister cirka {ratio} gånger oftare än ordrar som Shopify godkände eller bedömde som låg risk. Signalen är måttlig, inte överväldigande.",
+    "correlationObservationMild": "I din butik blev ordrar som Shopify klassade som högrisk till tvister cirka {ratio} gånger oftare än ordrar som Shopify godkände eller bedömde som låg risk. Signalen är medelstark, inte överväldigande.",
     "correlationObservationFlat": "I din butik har högrisk- och lågriskordrar hittills blivit tvister i liknande utsträckning. Shopifys klassificering har ännu inte gett stark prediktiv separation för ditt dataset.",
     "correlationObservationInverted": "Ovanligt — i din butik har högriskordrar omvandlats till tvister i liknande eller lägre takt än godkända ordrar. Detta kan inträffa när tvistsamlingen är liten eller när tvister drivs av efterköpsproblem (leverans, produkt) snarare än bedrägerisignaler.",
     "correlationObservationNeedHigh": "Inte tillräckligt med högriskordrar observerade ännu för att räkna fram en meningsfull samvariation. Konverteringskvoter visas här när volymen ökar.",
