@@ -37,6 +37,46 @@ import {
 } from "@/lib/defence/factClassifier";
 import type { CaseStrengthContribution } from "./caseStrength";
 import type { ReasonFamily } from "./reasonFamily";
+import type { I18nToken } from "@/lib/i18n/token";
+import enMessages from "@/messages/en.json";
+
+/**
+ * Resolve an `I18nToken` to its English string using `messages/en.json`.
+ * Used to populate the legacy `EvidenceLineItem.reason` field for
+ * non-UI consumers (emails, PDFs, tests) that still read resolved
+ * English copy. UI render sites should resolve `reasonToken` via the
+ * active translator instead so non-English locales display correctly.
+ */
+function resolveTokenEn(token: I18nToken): string {
+  const parts = token.key.split(".");
+  let node: unknown = enMessages as unknown;
+  for (const p of parts) {
+    if (node && typeof node === "object" && p in (node as Record<string, unknown>)) {
+      node = (node as Record<string, unknown>)[p];
+    } else {
+      return token.key;
+    }
+  }
+  if (typeof node !== "string") return token.key;
+  let out = node;
+  if (token.params) {
+    for (const [k, v] of Object.entries(token.params)) {
+      if (typeof v === "object" && v !== null && (v as { type?: string }).type === "i18n-key") {
+        // Nested key params — rare in this surface. Resolve recursively.
+        const inner = resolveTokenEn({
+          key: (v as { key: string }).key,
+          params: (v as { params?: Record<string, string | number> }).params as
+            | Record<string, string | number>
+            | undefined,
+        });
+        out = out.replace(new RegExp(`\\{${k}\\}`, "g"), inner);
+      } else {
+        out = out.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
+      }
+    }
+  }
+  return out;
+}
 
 export type StrengthContribution =
   | "strong"
@@ -96,7 +136,17 @@ export interface EvidenceLineItem {
   submittedToShopify: boolean;
   submissionMethod: SubmissionMethod;
   isNegativeOrAmbiguous: boolean;
+  /** Legacy English reason string — resolved from `reasonToken` at
+   *  derivation time. Kept as a back-compat shim for non-UI consumers
+   *  (emails, PDFs, tests asserting on shape). UI surfaces that render
+   *  in-locale should resolve `reasonToken` through next-intl instead. */
   reason: string;
+  /** Structural-i18n token form of the reason copy. Resolve via
+   *  `resolveToken(useTranslations(), li.reasonToken)` at the leaf JSX
+   *  boundary. The token shape supports params (e.g. `{ prior, sinceLabel,
+   *  signals, facts }`) so dynamic payload-aware helpers translate
+   *  correctly without exposing raw English to non-English locales. */
+  reasonToken: I18nToken;
   /** True when a `force_include` would actually surface something
    *  bank-facing. False when the row has no payload to elevate (e.g.
    *  AVS codes the gateway never returned, delivery proof for an
@@ -180,113 +230,99 @@ function inferSource(field: string): EvidenceSource {
 }
 
 /* ── Reason copy ─────────────────────────────────────────────────── */
+/**
+ * Reason copy lives in `messages/{locale}.json` under
+ * `disputes.reviewTab.inclusion.reasons.*`. The lib emits structural
+ * `I18nToken` objects; the leaf JSX renderer resolves them via
+ * `resolveToken(useTranslations(), li.reasonToken)`. Non-UI consumers
+ * (emails, PDFs, tests asserting on shape) read `li.reason`, which is
+ * the resolved English equivalent.
+ *
+ * NEVER hardcode the resolved English here — every new reason needs a
+ * matching `messages/en.json` key AND translations in all locales
+ * (sv/de/es/fr/pt). The `find-english-placeholders.mjs` scanner CI
+ * gate catches missing translations.
+ */
 
-const REASON_FOR_METHOD: Record<SubmissionMethod, string> = {
-  bank_argument: "Used as positive bank-facing evidence.",
-  context_only: "Included in the defence package as context, not as decisive proof.",
-  internal_only: "Used internally for assessment; not surfaced to the bank.",
-  not_included: "Field is on file but no usable evidence payload was emitted.",
-  not_supported: "No bank-facing slot exists for this field.",
-  excluded: "Excluded by merchant from the bank submission.",
-  failed_upload: "Upload failed; the file did not reach the defence package.",
-  waived: "Marked not applicable by the merchant.",
+const REASONS_NS = "disputes.reviewTab.inclusion.reasons";
+
+const REASON_FOR_METHOD: Record<SubmissionMethod, I18nToken> = {
+  bank_argument: { key: `${REASONS_NS}.method.bank_argument` },
+  context_only: { key: `${REASONS_NS}.method.context_only` },
+  internal_only: { key: `${REASONS_NS}.method.internal_only` },
+  not_included: { key: `${REASONS_NS}.method.not_included` },
+  not_supported: { key: `${REASONS_NS}.method.not_supported` },
+  excluded: { key: `${REASONS_NS}.method.excluded` },
+  failed_upload: { key: `${REASONS_NS}.method.failed_upload` },
+  waived: { key: `${REASONS_NS}.method.waived` },
 };
 
-const REASON_OVERRIDES: Record<string, Partial<Record<SubmissionMethod, string>>> = {
+const REASON_OVERRIDES: Record<string, Partial<Record<SubmissionMethod, I18nToken>>> = {
   ip_location_check: {
-    bank_argument:
-      "The order IP geolocated to the same location as the billing/shipping address, with no VPN, proxy, or datacenter signals. Cited as supporting context — consistent with the cardholder placing the order from their usual location.",
-    context_only:
-      "The order IP geolocated to the same country as the billing/shipping address, with no VPN, proxy, or datacenter signals. Included as context — corroborates the cardholder's location but is not decisive on its own.",
-    internal_only:
-      "This signal is ambiguous or unfavorable and could weaken the fraud response.",
-    not_included:
-      "IP and location data are not available for this order.",
+    bank_argument: { key: `${REASONS_NS}.ipLocation.bankArgumentDefault` },
+    context_only: { key: `${REASONS_NS}.ipLocation.contextOnlyDefault` },
+    internal_only: { key: `${REASONS_NS}.ipLocation.internalAmbiguous` },
+    not_included: { key: `${REASONS_NS}.ipLocation.notIncluded` },
   },
   device_session_consistency: {
-    internal_only:
-      "Device/session signals can weaken the fraud response when inconclusive; kept internal.",
-    not_included:
-      "Device and session signals are not available for this order.",
+    internal_only: { key: `${REASONS_NS}.deviceSession.internal` },
+    not_included: { key: `${REASONS_NS}.deviceSession.notIncluded` },
   },
   fraud_risk_screening: {
-    bank_argument:
-      "Shopify's own pre-authorization fraud screening recommended ACCEPT for this order — cited as supporting context in the bank argument.",
-    context_only:
-      "Shopify's own pre-authorization fraud screening reviewed this order at checkout and recommended ACCEPT.",
-    internal_only:
-      "Pre-authorization risk scoring is informational only; not surfaced to the bank.",
-    not_included:
-      "Shopify did not return a qualifying pre-authorization risk assessment for this order.",
+    bank_argument: { key: `${REASONS_NS}.fraudScreening.bankArgument` },
+    context_only: { key: `${REASONS_NS}.fraudScreening.contextOnly` },
+    internal_only: { key: `${REASONS_NS}.fraudScreening.internal` },
+    not_included: { key: `${REASONS_NS}.fraudScreening.notIncluded` },
   },
   refund_policy: {
-    context_only:
-      "Documents merchant policy, but does not by itself prove authorization for this fraud dispute.",
-    not_included:
-      "Your refund policy text is not on file for this checkout.",
+    context_only: { key: `${REASONS_NS}.refundPolicy.contextOnly` },
+    not_included: { key: `${REASONS_NS}.refundPolicy.notIncluded` },
   },
   shipping_policy: {
-    context_only:
-      "Documents shipping commitments; supporting context only.",
-    not_included:
-      "Your shipping policy text is not on file for this checkout.",
+    context_only: { key: `${REASONS_NS}.shippingPolicy.contextOnly` },
+    not_included: { key: `${REASONS_NS}.shippingPolicy.notIncluded` },
   },
   cancellation_policy: {
-    context_only:
-      "Documents cancellation rules; supporting context only.",
-    not_included:
-      "Your cancellation policy text is not on file for this checkout.",
+    context_only: { key: `${REASONS_NS}.cancellationPolicy.contextOnly` },
+    not_included: { key: `${REASONS_NS}.cancellationPolicy.notIncluded` },
   },
   order_confirmation: {
-    context_only:
-      "Confirms order details, but does not prove the customer authorized the transaction.",
-    not_included:
-      "The order confirmation data could not be loaded from Shopify.",
+    context_only: { key: `${REASONS_NS}.orderConfirmation.contextOnly` },
+    not_included: { key: `${REASONS_NS}.orderConfirmation.notIncluded` },
   },
   avs_cvv_match: {
-    bank_argument: "Payment verification supports cardholder identity.",
-    not_included:
-      "The payment processor did not return AVS or CVV verification codes for this transaction. Nothing to include — these codes come from the payment gateway at checkout, not after the fact.",
+    bank_argument: { key: `${REASONS_NS}.avsCvv.bankArgument` },
+    not_included: { key: `${REASONS_NS}.avsCvv.notIncluded` },
   },
   billing_address_match: {
-    not_included:
-      "The payment gateway did not return an AVS match result for this transaction. The billing address is on file, but no match/mismatch decision is available.",
+    not_included: { key: `${REASONS_NS}.billingAddress.notIncluded` },
   },
   shipping_tracking: {
-    not_included:
-      "The order has not shipped yet, so no carrier tracking is available. Once you ship the order this row will populate automatically.",
+    not_included: { key: `${REASONS_NS}.shippingTracking.notIncluded` },
   },
   delivery_proof: {
-    not_included:
-      "Delivery has not been confirmed yet. Once the carrier marks the order delivered (or you upload a signature/photo) this row will populate automatically.",
+    not_included: { key: `${REASONS_NS}.deliveryProof.notIncluded` },
   },
   tds_authentication: {
-    not_included:
-      "The payment receipt does not include 3-D Secure authentication data for this transaction.",
+    not_included: { key: `${REASONS_NS}.tdsAuthentication.notIncluded` },
   },
   customer_communication: {
-    not_included:
-      "No customer correspondence is on file for this order. Upload a transcript from your helpdesk to add one.",
+    not_included: { key: `${REASONS_NS}.customerCommunication.notIncluded` },
   },
   customer_account_info: {
-    not_included:
-      "Customer account history is not available for this order.",
+    not_included: { key: `${REASONS_NS}.customerAccount.notIncluded` },
   },
   activity_log: {
-    not_included:
-      "Customer activity history is not available for this order.",
+    not_included: { key: `${REASONS_NS}.activityLog.notIncluded` },
   },
   supporting_documents: {
-    not_included:
-      "No supplementary documents have been uploaded yet. Add one from the Evidence tab to include it.",
+    not_included: { key: `${REASONS_NS}.supportingDocuments.notIncluded` },
   },
   product_description: {
-    not_included:
-      "Product description text is not on file for this order.",
+    not_included: { key: `${REASONS_NS}.productDescription.notIncluded` },
   },
   duplicate_explanation: {
-    not_included:
-      "No duplicate-charge explanation has been provided yet.",
+    not_included: { key: `${REASONS_NS}.duplicateExplanation.notIncluded` },
   },
 };
 
@@ -331,7 +367,7 @@ function reasonFor(
   field: string,
   method: SubmissionMethod,
   payload: unknown,
-): string {
+): I18nToken {
   // Payload-aware specificity for internal-only signals: the merchant
   // gets to see WHY a signal was kept internal (e.g. "IP country
   // mismatch" vs "VPN/proxy detected") instead of the generic
@@ -383,15 +419,15 @@ function reasonFor(
 }
 
 /**
- * Builds the row reason for fraud_risk_screening with the actual
- * Shopify positiveFacts inlined. Returns null when the payload doesn't
- * carry usable signals — callers fall back to the static
- * REASON_OVERRIDES entry.
+ * Builds the row reason token for fraud_risk_screening with the actual
+ * Shopify positiveFacts inlined as a param. Returns null when the
+ * payload doesn't carry usable signals — callers fall back to the
+ * static REASON_OVERRIDES entry.
  */
 function fraudScreeningReasonWithSignals(
   payload: unknown,
   method: "bank_argument" | "context_only",
-): string | null {
+): I18nToken | null {
   if (!payload || typeof payload !== "object") return null;
   const p = payload as Record<string, unknown>;
   const facts = Array.isArray(p.positiveFacts)
@@ -402,9 +438,15 @@ function fraudScreeningReasonWithSignals(
   if (facts.length === 0) return null;
   const signals = facts.join("; ");
   if (method === "bank_argument") {
-    return `Shopify's own pre-authorization fraud screening recommended ACCEPT for this order — cited as supporting context in the bank argument. Signals: ${signals}.`;
+    return {
+      key: `${REASONS_NS}.fraudScreening.bankArgumentWithSignals`,
+      params: { signals },
+    };
   }
-  return `Shopify's own pre-authorization fraud screening reviewed this order at checkout and recommended ACCEPT. Signals: ${signals}.`;
+  return {
+    key: `${REASONS_NS}.fraudScreening.contextOnlyWithSignals`,
+    params: { signals },
+  };
 }
 
 /**
@@ -433,7 +475,7 @@ function fraudScreeningReasonWithSignals(
 function customerAccountReasonFromPayload(
   payload: unknown,
   method: "bank_argument" | "context_only",
-): string | null {
+): I18nToken | null {
   if (!payload || typeof payload !== "object") return null;
   const p = payload as Record<string, unknown>;
   const prior =
@@ -447,24 +489,34 @@ function customerAccountReasonFromPayload(
   const sinceLabel = formatCustomerSince(sinceRaw);
 
   if (prior !== null && prior >= 1 && disputeFree) {
-    const word = prior === 1 ? "order" : "orders";
-    if (method === "bank_argument") {
-      return `Returning customer with ${prior} prior undisputed ${word} on this account${sinceLabel ? ` (customer since ${sinceLabel})` : ""}. Cited as supporting context — an established dispute-free order history is consistent with the cardholder having authorized this transaction.`;
-    }
-    return `Returning customer with ${prior} prior undisputed ${word} on this account${sinceLabel ? ` (customer since ${sinceLabel})` : ""}. Included as context — the established history corroborates the account is legitimate, but is not decisive on its own.`;
+    const isSingular = prior === 1;
+    const hasSince = sinceLabel != null;
+    const variantStem =
+      method === "bank_argument" ? "returningBank" : "returningContext";
+    const numberSuffix = isSingular ? "Singular" : "Plural";
+    const sinceSuffix = hasSince ? "Since" : "";
+    const key = `${REASONS_NS}.customerAccount.${variantStem}${numberSuffix}${sinceSuffix}`;
+    const params: Record<string, string | number> = { prior };
+    if (hasSince) params.sinceLabel = sinceLabel;
+    return { key, params };
   }
 
   if (prior !== null && prior >= 1 && !disputeFree) {
-    return `Returning customer with ${prior} prior ${prior === 1 ? "order" : "orders"} on this account, but the account also has prior chargebacks. Included as context only — the prior-dispute history caveats how much weight the bank reviewer should give this row.`;
+    const isSingular = prior === 1;
+    const key = `${REASONS_NS}.customerAccount.returningWithDisputes${isSingular ? "Singular" : "Plural"}`;
+    return { key, params: { prior } };
   }
 
   // First-time customer on a NON-fraud reason code (fraud codes don't
   // reach this branch — see the function header). Honest plain text.
   if (prior === 0) {
     if (sinceLabel) {
-      return `First-time customer (account created ${sinceLabel}, no prior orders). Included as context only — there is no prior order history to corroborate this transaction.`;
+      return {
+        key: `${REASONS_NS}.customerAccount.firstTimeSince`,
+        params: { sinceLabel },
+      };
     }
-    return `First-time customer with no prior orders on this account. Included as context only — there is no prior order history to corroborate this transaction.`;
+    return { key: `${REASONS_NS}.customerAccount.firstTime` };
   }
 
   return null;
@@ -485,23 +537,27 @@ function customerAccountReasonFromPayload(
 function ipLocationReasonFromPayload(
   payload: unknown,
   method: "bank_argument" | "context_only",
-): string | null {
+): I18nToken | null {
   if (!payload || typeof payload !== "object") return null;
   const p = payload as Record<string, unknown>;
   const match = typeof p.locationMatch === "string" ? p.locationMatch : null;
   if (match !== "same_city" && match !== "same_country") return null;
 
   if (match === "same_city") {
-    if (method === "bank_argument") {
-      return "The order IP geolocated to the same region as the billing and shipping address, with no VPN, proxy, or datacenter signals. Cited as supporting context — consistent with the cardholder placing the order from their usual location.";
-    }
-    return "The order IP geolocated to the same region as the billing and shipping address, with no VPN, proxy, or datacenter signals. Included as context — corroborates the cardholder's location but is not decisive on its own.";
+    return {
+      key:
+        method === "bank_argument"
+          ? `${REASONS_NS}.ipLocation.sameCityBank`
+          : `${REASONS_NS}.ipLocation.sameCityContext`,
+    };
   }
   // same_country
-  if (method === "bank_argument") {
-    return "The order IP geolocated to the same country as the billing and shipping address, with no VPN, proxy, or datacenter signals. Cited as supporting context — consistent with a cardholder-originated transaction.";
-  }
-  return "The order IP geolocated to the same country as the billing and shipping address, with no VPN, proxy, or datacenter signals. Included as context — corroborates the cardholder's location but is not decisive on its own.";
+  return {
+    key:
+      method === "bank_argument"
+        ? `${REASONS_NS}.ipLocation.sameCountryBank`
+        : `${REASONS_NS}.ipLocation.sameCountryContext`,
+  };
 }
 
 /**
@@ -510,7 +566,7 @@ function ipLocationReasonFromPayload(
  * (first-time customer, or returning customer with prior chargebacks).
  * Never reaches the bank.
  */
-function customerAccountInternalReason(payload: unknown): string | null {
+function customerAccountInternalReason(payload: unknown): I18nToken | null {
   if (!payload || typeof payload !== "object") return null;
   const p = payload as Record<string, unknown>;
   const prior =
@@ -524,12 +580,15 @@ function customerAccountInternalReason(payload: unknown): string | null {
 
   if (prior === 0 || prior === null) {
     if (sinceLabel) {
-      return `This is a first-time customer (account created ${sinceLabel}, no prior orders). Kept internal on a fraud dispute — surfacing "new account" to the bank reads as a fraud indicator, not as supporting evidence.`;
+      return {
+        key: `${REASONS_NS}.customerAccount.internalFirstTimeSince`,
+        params: { sinceLabel },
+      };
     }
-    return `This is a first-time customer with no prior orders on this account. Kept internal on a fraud dispute — surfacing "new account" to the bank reads as a fraud indicator, not as supporting evidence.`;
+    return { key: `${REASONS_NS}.customerAccount.internalFirstTime` };
   }
   if (p.disputeFreeHistory === false) {
-    return `The customer has prior orders on this account, but the account also has prior chargebacks. Kept internal on a fraud dispute — citing an account with a chargeback history would weaken the response.`;
+    return { key: `${REASONS_NS}.customerAccount.internalWithDisputes` };
   }
   return null;
 }
@@ -567,7 +626,7 @@ function formatCustomerSince(iso: string | null): string | null {
  * so the Inclusion Review row and the Internal-only Signals card on
  * the Evidence tab say the same thing for the same payload.
  */
-function specificInternalReason(field: string, payload: unknown): string | null {
+function specificInternalReason(field: string, payload: unknown): I18nToken | null {
   if (!payload || typeof payload !== "object") return null;
   const p = payload as Record<string, unknown>;
 
@@ -576,16 +635,16 @@ function specificInternalReason(field: string, payload: unknown): string | null 
       typeof p.locationMatch === "string" ? p.locationMatch : null;
     const riskLevel = typeof p.riskLevel === "string" ? p.riskLevel : null;
     if (locationMatch === "different_country") {
-      return "The customer's IP address resolved to a different country than the shipping address. Kept internal so the bank doesn't read it as a fraud weakness.";
+      return { key: `${REASONS_NS}.ipLocation.internalDifferentCountry` };
     }
     if (locationMatch === "different_region") {
-      return "The customer's IP region differs from the shipping address region. Kept internal so the bank doesn't read it as a fraud weakness.";
+      return { key: `${REASONS_NS}.ipLocation.internalDifferentRegion` };
     }
     if (riskLevel === "high") {
-      return "The IP routes through a VPN, proxy, or data center, which makes the geolocation unreliable. Kept internal because the bank could read it as a fraud weakness.";
+      return { key: `${REASONS_NS}.ipLocation.internalHighRisk` };
     }
     if (p.bankEligible === false) {
-      return "The upstream collector marked this signal as not bank-eligible — kept internal.";
+      return { key: `${REASONS_NS}.ipLocation.internalNotBankEligible` };
     }
   }
 
@@ -596,19 +655,19 @@ function specificInternalReason(field: string, payload: unknown): string | null 
     // on AVS/CVV, but the merchant deserves to see what was actually
     // returned by the gateway.
     if (avs === "N" && cvv === "N") {
-      return "Both the billing address (AVS) and the card verification code (CVV) failed to match the issuer's records. Kept internal — citing this to the bank would undermine the fraud response.";
+      return { key: `${REASONS_NS}.avsCvv.internalBothFail` };
     }
     if (avs === "N") {
-      return "The billing address (AVS) did not match the issuer's records. Kept internal — citing this to the bank would undermine the fraud response.";
+      return { key: `${REASONS_NS}.avsCvv.internalAvsFail` };
     }
     if (cvv === "N") {
-      return "The card verification code (CVV) did not match the issuer's records. Kept internal — citing this to the bank would undermine the fraud response.";
+      return { key: `${REASONS_NS}.avsCvv.internalCvvFail` };
     }
   }
 
   if (field === "device_session_consistency") {
     if (p.consistent === false) {
-      return "Device or session signals were inconsistent between checkout and prior activity. Kept internal because the bank could read it as a fraud weakness.";
+      return { key: `${REASONS_NS}.deviceSession.internalInconsistent` };
     }
   }
 
@@ -634,21 +693,27 @@ function specificInternalReason(field: string, payload: unknown): string | null 
           (x): x is string => typeof x === "string" && x.trim().length > 0,
         )
       : [];
-    const whyClause =
-      negativeFacts.length > 0
-        ? ` Shopify flagged: ${negativeFacts.join("; ")}.`
-        : "";
+    const hasFacts = negativeFacts.length > 0;
+    const factsJoined = hasFacts ? negativeFacts.join("; ") : "";
+    const withSuffix = hasFacts ? "WithFacts" : "";
+    const buildToken = (stem: string): I18nToken => {
+      const key = `${REASONS_NS}.fraudScreening.${stem}${withSuffix}`;
+      return hasFacts ? { key, params: { facts: factsJoined } } : { key };
+    };
     if (recommendation === "CANCEL") {
-      return `Shopify's pre-authorization screening recommended CANCEL for this order.${whyClause} Kept internal — citing a negative verdict from your own fraud system would weaken the bank response.`;
+      return buildToken("internalCancel");
     }
     if (recommendation === "REJECT") {
-      return `Shopify's pre-authorization screening recommended REJECT for this order.${whyClause} Kept internal — citing a negative verdict from your own fraud system would weaken the bank response.`;
+      return buildToken("internalReject");
     }
     if (recommendation === "INVESTIGATE") {
-      return `Shopify's pre-authorization screening recommended INVESTIGATE for this order.${whyClause} Kept internal — citing an inconclusive verdict from your own fraud system would weaken the bank response.`;
+      return buildToken("internalInvestigate");
     }
-    if (riskLevel === "HIGH" || riskLevel === "MEDIUM") {
-      return `Shopify's pre-authorization screening scored this order as ${riskLevel} risk.${whyClause} Kept internal — citing your own fraud system's elevated risk score would weaken the bank response.`;
+    if (riskLevel === "HIGH") {
+      return buildToken("internalRiskHigh");
+    }
+    if (riskLevel === "MEDIUM") {
+      return buildToken("internalRiskMedium");
     }
   }
 
@@ -1030,7 +1095,10 @@ export function deriveEvidenceLineItems(
       submittedToShopify,
       submissionMethod,
       isNegativeOrAmbiguous: negativeOrAmbiguous,
-      reason: reasonFor(item.field, submissionMethod, payload),
+      ...(() => {
+        const token = reasonFor(item.field, submissionMethod, payload);
+        return { reason: resolveTokenEn(token), reasonToken: token };
+      })(),
       canBeForceIncluded,
       ...(internalSignals && internalSignals.length > 0
         ? { internalSignals }

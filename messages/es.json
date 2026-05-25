@@ -928,7 +928,124 @@
           "notIncluded": "Excluido",
           "excludedByMerchant": "Excluido"
         },
-        "outsideDataCallout": "Los datos están fuera de DisputeDesk: en la pasarela de pago, el transportista o el motor de riesgo de Shopify."
+        "outsideDataCallout": "Los datos están fuera de DisputeDesk: en la pasarela de pago, el transportista o el motor de riesgo de Shopify.",
+        "reasons": {
+          "method": {
+            "bank_argument": "Usado como evidencia positiva orientada al banco.",
+            "context_only": "Incluido en el paquete de evidencia como contexto, no como prueba decisiva.",
+            "internal_only": "Usado internamente para la evaluación; no se expone al banco.",
+            "not_included": "El campo está en el archivo pero no se generó ninguna carga de evidencia utilizable.",
+            "not_supported": "No existe un espacio orientado al banco para este campo.",
+            "excluded": "Excluido por el comerciante de la presentación al banco.",
+            "failed_upload": "La carga falló; el archivo no llegó al paquete de evidencia.",
+            "waived": "Marcado como no aplicable por el comerciante."
+          },
+          "ipLocation": {
+            "bankArgumentDefault": "La IP del pedido se geolocalizó en la misma ubicación que la dirección de facturación/envío, sin señales de VPN, proxy ni centro de datos. Citado como contexto de apoyo: coherente con que el titular de la tarjeta realizó el pedido desde su ubicación habitual.",
+            "contextOnlyDefault": "La IP del pedido se geolocalizó en el mismo país que la dirección de facturación/envío, sin señales de VPN, proxy ni centro de datos. Incluido como contexto: corrobora la ubicación del titular de la tarjeta pero no es decisivo por sí solo.",
+            "internalAmbiguous": "Esta señal es ambigua o desfavorable y podría debilitar la respuesta de fraude.",
+            "notIncluded": "Los datos de IP y ubicación no están disponibles para este pedido.",
+            "sameCityBank": "La IP del pedido se geolocalizó en la misma región que la dirección de facturación y envío, sin señales de VPN, proxy ni centro de datos. Citado como contexto de apoyo: coherente con que el titular de la tarjeta realizó el pedido desde su ubicación habitual.",
+            "sameCityContext": "La IP del pedido se geolocalizó en la misma región que la dirección de facturación y envío, sin señales de VPN, proxy ni centro de datos. Incluido como contexto: corrobora la ubicación del titular de la tarjeta pero no es decisivo por sí solo.",
+            "sameCountryBank": "La IP del pedido se geolocalizó en el mismo país que la dirección de facturación y envío, sin señales de VPN, proxy ni centro de datos. Citado como contexto de apoyo: coherente con una transacción originada por el titular de la tarjeta.",
+            "sameCountryContext": "La IP del pedido se geolocalizó en el mismo país que la dirección de facturación y envío, sin señales de VPN, proxy ni centro de datos. Incluido como contexto: corrobora la ubicación del titular de la tarjeta pero no es decisivo por sí solo.",
+            "internalDifferentCountry": "La dirección IP del cliente se resolvió en un país distinto al de la dirección de envío. Se mantiene interna para que el banco no lo lea como una debilidad de fraude.",
+            "internalDifferentRegion": "La región de IP del cliente difiere de la región de la dirección de envío. Se mantiene interna para que el banco no lo lea como una debilidad de fraude.",
+            "internalHighRisk": "La IP pasa por VPN, proxy o centro de datos, lo que hace que la geolocalización no sea fiable. Se mantiene interna porque el banco podría leerlo como una debilidad de fraude.",
+            "internalNotBankEligible": "El recolector aguas arriba marcó esta señal como no apta para el banco: se mantiene interna."
+          },
+          "deviceSession": {
+            "internal": "Las señales de dispositivo/sesión pueden debilitar la respuesta de fraude cuando no son concluyentes; se mantienen internas.",
+            "notIncluded": "Las señales de dispositivo y sesión no están disponibles para este pedido.",
+            "internalInconsistent": "Las señales de dispositivo o sesión fueron inconsistentes entre el pago y la actividad anterior. Se mantiene interna porque el banco podría leerlo como una debilidad de fraude."
+          },
+          "fraudScreening": {
+            "bankArgument": "El propio cribado antifraude de preautorización de Shopify recomendó ACCEPT para este pedido: citado como contexto de apoyo en el argumento al banco.",
+            "contextOnly": "El propio cribado antifraude de preautorización de Shopify revisó este pedido en el pago y recomendó ACCEPT.",
+            "bankArgumentWithSignals": "El propio cribado antifraude de preautorización de Shopify recomendó ACCEPT para este pedido: citado como contexto de apoyo en el argumento al banco. Señales: {signals}.",
+            "contextOnlyWithSignals": "El propio cribado antifraude de preautorización de Shopify revisó este pedido en el pago y recomendó ACCEPT. Señales: {signals}.",
+            "internal": "La puntuación de riesgo de preautorización es solo informativa; no se expone al banco.",
+            "notIncluded": "Shopify no devolvió una evaluación de riesgo de preautorización válida para este pedido.",
+            "internalCancel": "El cribado de preautorización de Shopify recomendó CANCEL para este pedido. Se mantiene interno: citar un veredicto negativo del propio sistema antifraude debilitaría la respuesta al banco.",
+            "internalCancelWithFacts": "El cribado de preautorización de Shopify recomendó CANCEL para este pedido. Shopify señaló: {facts}. Se mantiene interno: citar un veredicto negativo del propio sistema antifraude debilitaría la respuesta al banco.",
+            "internalReject": "El cribado de preautorización de Shopify recomendó REJECT para este pedido. Se mantiene interno: citar un veredicto negativo del propio sistema antifraude debilitaría la respuesta al banco.",
+            "internalRejectWithFacts": "El cribado de preautorización de Shopify recomendó REJECT para este pedido. Shopify señaló: {facts}. Se mantiene interno: citar un veredicto negativo del propio sistema antifraude debilitaría la respuesta al banco.",
+            "internalInvestigate": "El cribado de preautorización de Shopify recomendó INVESTIGATE para este pedido. Se mantiene interno: citar un veredicto no concluyente del propio sistema antifraude debilitaría la respuesta al banco.",
+            "internalInvestigateWithFacts": "El cribado de preautorización de Shopify recomendó INVESTIGATE para este pedido. Shopify señaló: {facts}. Se mantiene interno: citar un veredicto no concluyente del propio sistema antifraude debilitaría la respuesta al banco.",
+            "internalRiskHigh": "El cribado de preautorización de Shopify puntuó este pedido como riesgo HIGH. Se mantiene interno: citar una puntuación de riesgo elevada del propio sistema antifraude debilitaría la respuesta al banco.",
+            "internalRiskHighWithFacts": "El cribado de preautorización de Shopify puntuó este pedido como riesgo HIGH. Shopify señaló: {facts}. Se mantiene interno: citar una puntuación de riesgo elevada del propio sistema antifraude debilitaría la respuesta al banco.",
+            "internalRiskMedium": "El cribado de preautorización de Shopify puntuó este pedido como riesgo MEDIUM. Se mantiene interno: citar una puntuación de riesgo elevada del propio sistema antifraude debilitaría la respuesta al banco.",
+            "internalRiskMediumWithFacts": "El cribado de preautorización de Shopify puntuó este pedido como riesgo MEDIUM. Shopify señaló: {facts}. Se mantiene interno: citar una puntuación de riesgo elevada del propio sistema antifraude debilitaría la respuesta al banco."
+          },
+          "refundPolicy": {
+            "contextOnly": "Documenta la política del comerciante, pero por sí sola no prueba la autorización de esta disputa por fraude.",
+            "notIncluded": "Tu política de reembolsos no está en el archivo para este pago."
+          },
+          "shippingPolicy": {
+            "contextOnly": "Documenta los compromisos de envío; solo contexto de apoyo.",
+            "notIncluded": "Tu política de envíos no está en el archivo para este pago."
+          },
+          "cancellationPolicy": {
+            "contextOnly": "Documenta las reglas de cancelación; solo contexto de apoyo.",
+            "notIncluded": "Tu política de cancelación no está en el archivo para este pago."
+          },
+          "orderConfirmation": {
+            "contextOnly": "Confirma los detalles del pedido, pero no prueba que el cliente autorizara la transacción.",
+            "notIncluded": "No se pudieron cargar los datos de confirmación del pedido desde Shopify."
+          },
+          "avsCvv": {
+            "bankArgument": "La verificación de pago respalda la identidad del titular de la tarjeta.",
+            "notIncluded": "El procesador de pagos no devolvió códigos de verificación AVS ni CVV para esta transacción. Nada que incluir: estos códigos vienen de la pasarela de pago en el momento del pago, no después.",
+            "internalBothFail": "Tanto la dirección de facturación (AVS) como el código de verificación de la tarjeta (CVV) no coincidieron con los registros del emisor. Se mantiene interno: citarlo al banco socavaría la respuesta de fraude.",
+            "internalAvsFail": "La dirección de facturación (AVS) no coincidió con los registros del emisor. Se mantiene interno: citarlo al banco socavaría la respuesta de fraude.",
+            "internalCvvFail": "El código de verificación de la tarjeta (CVV) no coincidió con los registros del emisor. Se mantiene interno: citarlo al banco socavaría la respuesta de fraude."
+          },
+          "billingAddress": {
+            "notIncluded": "La pasarela de pago no devolvió un resultado de coincidencia AVS para esta transacción. La dirección de facturación está en el archivo, pero no hay una decisión de coincidencia/no coincidencia disponible."
+          },
+          "shippingTracking": {
+            "notIncluded": "El pedido aún no se ha enviado, por lo que no hay seguimiento del transportista disponible. Cuando envíes el pedido, esta fila se rellenará automáticamente."
+          },
+          "deliveryProof": {
+            "notIncluded": "La entrega aún no se ha confirmado. Cuando el transportista marque el pedido como entregado (o subas una firma/foto), esta fila se rellenará automáticamente."
+          },
+          "tdsAuthentication": {
+            "notIncluded": "El recibo de pago no incluye datos de autenticación 3-D Secure para esta transacción."
+          },
+          "customerCommunication": {
+            "notIncluded": "No hay correspondencia con el cliente en el archivo para este pedido. Sube una transcripción desde tu helpdesk para añadir una."
+          },
+          "customerAccount": {
+            "notIncluded": "El historial de la cuenta del cliente no está disponible para este pedido.",
+            "returningBankSingular": "Cliente recurrente con {prior} pedido anterior no disputado en esta cuenta. Citado como contexto de apoyo: un historial de pedidos sin disputas establecido es coherente con que el titular de la tarjeta autorizara esta transacción.",
+            "returningBankSingularSince": "Cliente recurrente con {prior} pedido anterior no disputado en esta cuenta (cliente desde {sinceLabel}). Citado como contexto de apoyo: un historial de pedidos sin disputas establecido es coherente con que el titular de la tarjeta autorizara esta transacción.",
+            "returningBankPlural": "Cliente recurrente con {prior} pedidos anteriores no disputados en esta cuenta. Citado como contexto de apoyo: un historial de pedidos sin disputas establecido es coherente con que el titular de la tarjeta autorizara esta transacción.",
+            "returningBankPluralSince": "Cliente recurrente con {prior} pedidos anteriores no disputados en esta cuenta (cliente desde {sinceLabel}). Citado como contexto de apoyo: un historial de pedidos sin disputas establecido es coherente con que el titular de la tarjeta autorizara esta transacción.",
+            "returningContextSingular": "Cliente recurrente con {prior} pedido anterior no disputado en esta cuenta. Incluido como contexto: el historial establecido corrobora que la cuenta es legítima, pero no es decisivo por sí solo.",
+            "returningContextSingularSince": "Cliente recurrente con {prior} pedido anterior no disputado en esta cuenta (cliente desde {sinceLabel}). Incluido como contexto: el historial establecido corrobora que la cuenta es legítima, pero no es decisivo por sí solo.",
+            "returningContextPlural": "Cliente recurrente con {prior} pedidos anteriores no disputados en esta cuenta. Incluido como contexto: el historial establecido corrobora que la cuenta es legítima, pero no es decisivo por sí solo.",
+            "returningContextPluralSince": "Cliente recurrente con {prior} pedidos anteriores no disputados en esta cuenta (cliente desde {sinceLabel}). Incluido como contexto: el historial establecido corrobora que la cuenta es legítima, pero no es decisivo por sí solo.",
+            "returningWithDisputesSingular": "Cliente recurrente con {prior} pedido anterior en esta cuenta, pero la cuenta también tiene contracargos previos. Incluido solo como contexto: el historial de disputas previas matiza cuánto peso debería dar el revisor del banco a esta fila.",
+            "returningWithDisputesPlural": "Cliente recurrente con {prior} pedidos anteriores en esta cuenta, pero la cuenta también tiene contracargos previos. Incluido solo como contexto: el historial de disputas previas matiza cuánto peso debería dar el revisor del banco a esta fila.",
+            "firstTime": "Cliente nuevo sin pedidos anteriores en esta cuenta. Incluido solo como contexto: no hay historial de pedidos previo que corrobore esta transacción.",
+            "firstTimeSince": "Cliente nuevo (cuenta creada el {sinceLabel}, sin pedidos anteriores). Incluido solo como contexto: no hay historial de pedidos previo que corrobore esta transacción.",
+            "internalFirstTime": "Es un cliente nuevo sin pedidos anteriores en esta cuenta. Se mantiene interno en una disputa por fraude: exponer \"cuenta nueva\" ante el banco se lee como indicador de fraude, no como evidencia de apoyo.",
+            "internalFirstTimeSince": "Es un cliente nuevo (cuenta creada el {sinceLabel}, sin pedidos anteriores). Se mantiene interno en una disputa por fraude: exponer \"cuenta nueva\" ante el banco se lee como indicador de fraude, no como evidencia de apoyo.",
+            "internalWithDisputes": "El cliente tiene pedidos anteriores en esta cuenta, pero la cuenta también tiene contracargos previos. Se mantiene interno en una disputa por fraude: citar una cuenta con historial de contracargos debilitaría la respuesta."
+          },
+          "activityLog": {
+            "notIncluded": "El historial de actividad del cliente no está disponible para este pedido."
+          },
+          "supportingDocuments": {
+            "notIncluded": "Aún no se han subido documentos complementarios. Añade uno desde la pestaña Evidencia para incluirlo."
+          },
+          "productDescription": {
+            "notIncluded": "La descripción del producto no está en el archivo para este pedido."
+          },
+          "duplicateExplanation": {
+            "notIncluded": "Aún no se ha facilitado una explicación de cargo duplicado."
+          }
+        }
       }
     },
     "overview": {
@@ -1321,6 +1438,12 @@
       "evidenceOrderingHelper": "Ordenado según cuánto fortalece cada elemento el caso. Las más fuertes primero.",
       "whatHappensNow": "Qué sucede ahora",
       "automationRule": "Regla de automatización:",
+      "appliedMode": {
+        "automatic": "Automático",
+        "reviewBeforeSubmit": "Revisar antes de enviar",
+        "automaticHelp": "DisputeDesk preparó el paquete de evidencia y lo envió automáticamente.",
+        "reviewBeforeSubmitHelp": "DisputeDesk preparó el paquete de evidencia para ti. Revísalo y envíalo antes de la fecha límite."
+      },
       "changeRule": "Cambiar regla",
       "editEvidence": "Editar evidencia",
       "submitToShopify": "Enviar a Shopify",

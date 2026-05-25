@@ -36,6 +36,8 @@ import type {
 } from "../useEvidenceSections";
 import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
 import { MERCHANT_UI_HIDDEN_FIELDS } from "@/lib/automation/merchantUiHiddenFields";
+import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
+import { resolveToken } from "@/lib/i18n/resolveToken";
 import { EvidenceRow, InternalSignalRow } from "./EvidenceRow";
 
 const EXCLUDED_SUBMISSION_METHODS = new Set([
@@ -177,6 +179,19 @@ export function EvidenceUsedSection({
   internalSignals: InternalSignalViewModel[];
 }) {
   const t = useTranslations("disputes.evidenceTab.sections.used");
+  // Root (unscoped) translator for token resolution of
+  // EvidenceLineItem.reasonToken in the line-only fallback rows below.
+  const tRoot = useTranslations();
+  const fieldLabel = (field: string, legacy: string): string => {
+    const labelKey = CANONICAL_EVIDENCE[field]?.labelKey;
+    if (!labelKey) return legacy;
+    try {
+      const resolved = tRoot(labelKey);
+      return resolved === labelKey ? legacy : resolved;
+    } catch {
+      return legacy;
+    }
+  };
 
   const lineItemsByField = useMemo(() => {
     const m = new Map<string, EvidenceLineItem>();
@@ -216,9 +231,9 @@ export function EvidenceUsedSection({
     buckets.excluded.push({
       id: `line-only:${li.field}`,
       field: li.field,
-      title: li.label,
+      title: fieldLabel(li.field, li.label),
       strength: "supporting",
-      whyThisMatters: li.reason ?? "",
+      whyThisMatters: li.reasonToken ? resolveToken(tRoot, li.reasonToken) : (li.reason ?? ""),
       source: "shopify",
       includedAs: "not_included",
     });

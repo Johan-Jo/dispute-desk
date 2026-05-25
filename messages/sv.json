@@ -873,6 +873,12 @@
       "evidenceOrderingHelper": "Sorterade efter hur mycket varje objekt stärker ärendet. Starkast först.",
       "whatHappensNow": "Vad händer nu",
       "automationRule": "Automatiseringsregel:",
+      "appliedMode": {
+        "automatic": "Automatisk",
+        "reviewBeforeSubmit": "Granska före inskick",
+        "automaticHelp": "DisputeDesk förberedde bevispaketet och skickade in det automatiskt.",
+        "reviewBeforeSubmitHelp": "DisputeDesk har förberett bevispaketet åt dig. Granska och skicka in före tidsfristen."
+      },
       "changeRule": "Ändra regel",
       "editEvidence": "Redigera bevis",
       "addMissingEvidence": "Lägg till saknade bevis",
@@ -1284,7 +1290,124 @@
           "notIncluded": "Uteslutet",
           "excludedByMerchant": "Uteslutet"
         },
-        "outsideDataCallout": "Datan ligger utanför DisputeDesk — i betalningsgatewayen, hos transportören eller i Shopifys riskmotor."
+        "outsideDataCallout": "Datan ligger utanför DisputeDesk — i betalningsgatewayen, hos transportören eller i Shopifys riskmotor.",
+        "reasons": {
+          "method": {
+            "bank_argument": "Används som positivt bankriktat bevis.",
+            "context_only": "Ingår i bevispaketet som kontext, inte som avgörande bevis.",
+            "internal_only": "Används internt för bedömning; visas inte för banken.",
+            "not_included": "Fältet finns registrerat men ingen användbar evidensdata kunde tas fram.",
+            "not_supported": "Det finns ingen bankriktad plats för det här fältet.",
+            "excluded": "Uteslutet av handlaren från bank-inlämningen.",
+            "failed_upload": "Uppladdningen misslyckades; filen nådde inte bevispaketet.",
+            "waived": "Markerad som inte tillämplig av handlaren."
+          },
+          "ipLocation": {
+            "bankArgumentDefault": "Beställnings-IP geolokaliserades till samma plats som fakturerings-/leveransadressen, utan VPN-, proxy- eller datacentersignaler. Anges som stödjande kontext — i linje med att kortinnehavaren la beställningen från sin vanliga plats.",
+            "contextOnlyDefault": "Beställnings-IP geolokaliserades till samma land som fakturerings-/leveransadressen, utan VPN-, proxy- eller datacentersignaler. Ingår som kontext — styrker kortinnehavarens plats men är inte avgörande i sig.",
+            "internalAmbiguous": "Signalen är tvetydig eller ofördelaktig och kan försvaga svaret på bedrägeriärendet.",
+            "notIncluded": "IP- och platsdata är inte tillgängliga för den här beställningen.",
+            "sameCityBank": "Beställnings-IP geolokaliserades till samma region som fakturerings- och leveransadressen, utan VPN-, proxy- eller datacentersignaler. Anges som stödjande kontext — i linje med att kortinnehavaren la beställningen från sin vanliga plats.",
+            "sameCityContext": "Beställnings-IP geolokaliserades till samma region som fakturerings- och leveransadressen, utan VPN-, proxy- eller datacentersignaler. Ingår som kontext — styrker kortinnehavarens plats men är inte avgörande i sig.",
+            "sameCountryBank": "Beställnings-IP geolokaliserades till samma land som fakturerings- och leveransadressen, utan VPN-, proxy- eller datacentersignaler. Anges som stödjande kontext — i linje med en transaktion som kortinnehavaren själv genomfört.",
+            "sameCountryContext": "Beställnings-IP geolokaliserades till samma land som fakturerings- och leveransadressen, utan VPN-, proxy- eller datacentersignaler. Ingår som kontext — styrker kortinnehavarens plats men är inte avgörande i sig.",
+            "internalDifferentCountry": "Kundens IP-adress löstes till ett annat land än leveransadressen. Hålls internt så att banken inte tolkar det som en bedrägerisvaghet.",
+            "internalDifferentRegion": "Kundens IP-region skiljer sig från leveransadressens region. Hålls internt så att banken inte tolkar det som en bedrägerisvaghet.",
+            "internalHighRisk": "IP-adressen går via VPN, proxy eller datacenter, vilket gör geolokaliseringen otillförlitlig. Hålls internt eftersom banken kan tolka det som en bedrägerisvaghet.",
+            "internalNotBankEligible": "Den uppströms insamlaren markerade signalen som inte bank-berättigad — hålls intern."
+          },
+          "deviceSession": {
+            "internal": "Enhets-/sessionssignaler kan försvaga svaret på bedrägeriärendet när de är osäkra; hålls interna.",
+            "notIncluded": "Enhets- och sessionssignaler är inte tillgängliga för den här beställningen.",
+            "internalInconsistent": "Enhets- eller sessionssignalerna var inkonsekventa mellan utcheckningen och tidigare aktivitet. Hålls interna eftersom banken kan tolka det som en bedrägerisvaghet."
+          },
+          "fraudScreening": {
+            "bankArgument": "Shopifys egen förauktoriseringskontroll mot bedrägeri rekommenderade ACCEPT för den här beställningen — anges som stödjande kontext i bankargumentet.",
+            "contextOnly": "Shopifys egen förauktoriseringskontroll mot bedrägeri granskade beställningen vid utcheckningen och rekommenderade ACCEPT.",
+            "bankArgumentWithSignals": "Shopifys egen förauktoriseringskontroll mot bedrägeri rekommenderade ACCEPT för den här beställningen — anges som stödjande kontext i bankargumentet. Signaler: {signals}.",
+            "contextOnlyWithSignals": "Shopifys egen förauktoriseringskontroll mot bedrägeri granskade beställningen vid utcheckningen och rekommenderade ACCEPT. Signaler: {signals}.",
+            "internal": "Förauktoriseringsbaserad riskbedömning är endast informativ; visas inte för banken.",
+            "notIncluded": "Shopify returnerade ingen giltig förauktoriseringsbaserad riskbedömning för den här beställningen.",
+            "internalCancel": "Shopifys förauktoriseringskontroll rekommenderade CANCEL för den här beställningen. Hålls intern — att åberopa ett negativt utlåtande från ditt eget bedrägerisystem skulle försvaga banksvaret.",
+            "internalCancelWithFacts": "Shopifys förauktoriseringskontroll rekommenderade CANCEL för den här beställningen. Shopify flaggade: {facts}. Hålls intern — att åberopa ett negativt utlåtande från ditt eget bedrägerisystem skulle försvaga banksvaret.",
+            "internalReject": "Shopifys förauktoriseringskontroll rekommenderade REJECT för den här beställningen. Hålls intern — att åberopa ett negativt utlåtande från ditt eget bedrägerisystem skulle försvaga banksvaret.",
+            "internalRejectWithFacts": "Shopifys förauktoriseringskontroll rekommenderade REJECT för den här beställningen. Shopify flaggade: {facts}. Hålls intern — att åberopa ett negativt utlåtande från ditt eget bedrägerisystem skulle försvaga banksvaret.",
+            "internalInvestigate": "Shopifys förauktoriseringskontroll rekommenderade INVESTIGATE för den här beställningen. Hålls intern — att åberopa ett osäkert utlåtande från ditt eget bedrägerisystem skulle försvaga banksvaret.",
+            "internalInvestigateWithFacts": "Shopifys förauktoriseringskontroll rekommenderade INVESTIGATE för den här beställningen. Shopify flaggade: {facts}. Hålls intern — att åberopa ett osäkert utlåtande från ditt eget bedrägerisystem skulle försvaga banksvaret.",
+            "internalRiskHigh": "Shopifys förauktoriseringskontroll bedömde beställningen som HIGH risk. Hålls intern — att åberopa förhöjd risk från ditt eget bedrägerisystem skulle försvaga banksvaret.",
+            "internalRiskHighWithFacts": "Shopifys förauktoriseringskontroll bedömde beställningen som HIGH risk. Shopify flaggade: {facts}. Hålls intern — att åberopa förhöjd risk från ditt eget bedrägerisystem skulle försvaga banksvaret.",
+            "internalRiskMedium": "Shopifys förauktoriseringskontroll bedömde beställningen som MEDIUM risk. Hålls intern — att åberopa förhöjd risk från ditt eget bedrägerisystem skulle försvaga banksvaret.",
+            "internalRiskMediumWithFacts": "Shopifys förauktoriseringskontroll bedömde beställningen som MEDIUM risk. Shopify flaggade: {facts}. Hålls intern — att åberopa förhöjd risk från ditt eget bedrägerisystem skulle försvaga banksvaret."
+          },
+          "refundPolicy": {
+            "contextOnly": "Dokumenterar handlarens policy men bevisar inte i sig att kunden auktoriserade den här bedrägeritvisten.",
+            "notIncluded": "Din återbetalningspolicy finns inte registrerad för den här utcheckningen."
+          },
+          "shippingPolicy": {
+            "contextOnly": "Dokumenterar leveransåtaganden; endast stödjande kontext.",
+            "notIncluded": "Din leveranspolicy finns inte registrerad för den här utcheckningen."
+          },
+          "cancellationPolicy": {
+            "contextOnly": "Dokumenterar avbokningsregler; endast stödjande kontext.",
+            "notIncluded": "Din avbokningspolicy finns inte registrerad för den här utcheckningen."
+          },
+          "orderConfirmation": {
+            "contextOnly": "Bekräftar beställningens detaljer men bevisar inte att kunden auktoriserade transaktionen.",
+            "notIncluded": "Beställningsbekräftelsens data kunde inte hämtas från Shopify."
+          },
+          "avsCvv": {
+            "bankArgument": "Betalningsverifieringen styrker kortinnehavarens identitet.",
+            "notIncluded": "Betalningsprocessorn returnerade inga AVS- eller CVV-verifieringskoder för den här transaktionen. Inget att inkludera — dessa koder kommer från betalningsgatewayen vid utcheckningen, inte i efterhand.",
+            "internalBothFail": "Både faktureringsadressen (AVS) och kortverifieringskoden (CVV) misslyckades med att matcha utgivarens uppgifter. Hålls intern — att åberopa detta för banken skulle undergräva svaret på bedrägeriärendet.",
+            "internalAvsFail": "Faktureringsadressen (AVS) matchade inte utgivarens uppgifter. Hålls intern — att åberopa detta för banken skulle undergräva svaret på bedrägeriärendet.",
+            "internalCvvFail": "Kortverifieringskoden (CVV) matchade inte utgivarens uppgifter. Hålls intern — att åberopa detta för banken skulle undergräva svaret på bedrägeriärendet."
+          },
+          "billingAddress": {
+            "notIncluded": "Betalningsgatewayen returnerade inget AVS-matchresultat för den här transaktionen. Faktureringsadressen finns registrerad, men inget match/icke-match-beslut är tillgängligt."
+          },
+          "shippingTracking": {
+            "notIncluded": "Beställningen har inte skickats än, så ingen spårning från transportören finns tillgänglig. När du skickar beställningen fylls den här raden i automatiskt."
+          },
+          "deliveryProof": {
+            "notIncluded": "Leveransen har inte bekräftats än. När transportören markerar beställningen som levererad (eller du laddar upp signatur/foto) fylls den här raden i automatiskt."
+          },
+          "tdsAuthentication": {
+            "notIncluded": "Betalningskvittot innehåller inte 3-D Secure-autentiseringsdata för den här transaktionen."
+          },
+          "customerCommunication": {
+            "notIncluded": "Ingen kundkommunikation finns registrerad för den här beställningen. Ladda upp en transkription från din helpdesk för att lägga till en."
+          },
+          "customerAccount": {
+            "notIncluded": "Kundkontohistorik är inte tillgänglig för den här beställningen.",
+            "returningBankSingular": "Återkommande kund med {prior} tidigare otvistad beställning på det här kontot. Anges som stödjande kontext — en etablerad tvistfri beställningshistorik är förenlig med att kortinnehavaren auktoriserade transaktionen.",
+            "returningBankSingularSince": "Återkommande kund med {prior} tidigare otvistad beställning på det här kontot (kund sedan {sinceLabel}). Anges som stödjande kontext — en etablerad tvistfri beställningshistorik är förenlig med att kortinnehavaren auktoriserade transaktionen.",
+            "returningBankPlural": "Återkommande kund med {prior} tidigare otvistade beställningar på det här kontot. Anges som stödjande kontext — en etablerad tvistfri beställningshistorik är förenlig med att kortinnehavaren auktoriserade transaktionen.",
+            "returningBankPluralSince": "Återkommande kund med {prior} tidigare otvistade beställningar på det här kontot (kund sedan {sinceLabel}). Anges som stödjande kontext — en etablerad tvistfri beställningshistorik är förenlig med att kortinnehavaren auktoriserade transaktionen.",
+            "returningContextSingular": "Återkommande kund med {prior} tidigare otvistad beställning på det här kontot. Ingår som kontext — den etablerade historiken styrker att kontot är legitimt, men är inte avgörande i sig.",
+            "returningContextSingularSince": "Återkommande kund med {prior} tidigare otvistad beställning på det här kontot (kund sedan {sinceLabel}). Ingår som kontext — den etablerade historiken styrker att kontot är legitimt, men är inte avgörande i sig.",
+            "returningContextPlural": "Återkommande kund med {prior} tidigare otvistade beställningar på det här kontot. Ingår som kontext — den etablerade historiken styrker att kontot är legitimt, men är inte avgörande i sig.",
+            "returningContextPluralSince": "Återkommande kund med {prior} tidigare otvistade beställningar på det här kontot (kund sedan {sinceLabel}). Ingår som kontext — den etablerade historiken styrker att kontot är legitimt, men är inte avgörande i sig.",
+            "returningWithDisputesSingular": "Återkommande kund med {prior} tidigare beställning på det här kontot, men kontot har också tidigare chargebacks. Ingår endast som kontext — den tidigare tvisthistoriken nyanserar hur mycket vikt bankhandläggaren bör lägga vid den här raden.",
+            "returningWithDisputesPlural": "Återkommande kund med {prior} tidigare beställningar på det här kontot, men kontot har också tidigare chargebacks. Ingår endast som kontext — den tidigare tvisthistoriken nyanserar hur mycket vikt bankhandläggaren bör lägga vid den här raden.",
+            "firstTime": "Förstagångskund utan tidigare beställningar på det här kontot. Ingår endast som kontext — det finns ingen tidigare beställningshistorik som styrker den här transaktionen.",
+            "firstTimeSince": "Förstagångskund (konto skapat {sinceLabel}, inga tidigare beställningar). Ingår endast som kontext — det finns ingen tidigare beställningshistorik som styrker den här transaktionen.",
+            "internalFirstTime": "Det här är en förstagångskund utan tidigare beställningar på det här kontot. Hålls intern i en bedrägeritvist — att lyfta fram \"nytt konto\" för banken läses som en bedrägeriindikator, inte som stödjande bevis.",
+            "internalFirstTimeSince": "Det här är en förstagångskund (konto skapat {sinceLabel}, inga tidigare beställningar). Hålls intern i en bedrägeritvist — att lyfta fram \"nytt konto\" för banken läses som en bedrägeriindikator, inte som stödjande bevis.",
+            "internalWithDisputes": "Kunden har tidigare beställningar på det här kontot, men kontot har också tidigare chargebacks. Hålls intern i en bedrägeritvist — att åberopa ett konto med chargeback-historik skulle försvaga svaret."
+          },
+          "activityLog": {
+            "notIncluded": "Kundens aktivitetshistorik är inte tillgänglig för den här beställningen."
+          },
+          "supportingDocuments": {
+            "notIncluded": "Inga kompletterande dokument har laddats upp än. Lägg till ett från fliken Bevis för att inkludera det."
+          },
+          "productDescription": {
+            "notIncluded": "Produktbeskrivningen finns inte registrerad för den här beställningen."
+          },
+          "duplicateExplanation": {
+            "notIncluded": "Ingen förklaring av dubbeldebitering har angetts än."
+          }
+        }
       }
     },
     "overview": {

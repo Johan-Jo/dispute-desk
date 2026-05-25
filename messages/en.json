@@ -867,6 +867,12 @@
       "evidenceOrderingHelper": "Ordered by how much each item strengthens the case. Strongest first.",
       "whatHappensNow": "What happens now",
       "automationRule": "Automation rule:",
+      "appliedMode": {
+        "automatic": "Automatic",
+        "reviewBeforeSubmit": "Review before submit",
+        "automaticHelp": "DisputeDesk prepared the evidence pack and submitted it automatically.",
+        "reviewBeforeSubmitHelp": "DisputeDesk prepared the evidence pack for you. Review it and submit before the deadline."
+      },
       "changeRule": "Change rule",
       "editEvidence": "Edit evidence",
       "submitToShopify": "Submit to Shopify",
@@ -1367,6 +1373,123 @@
         "overrideCaption": {
           "label": "You overrode this on {date}",
           "tooltip": "This row was kept internal by default. You explicitly chose to include it in the bank submission after acknowledging the risk. The decision is recorded in the dispute audit trail."
+        },
+        "reasons": {
+          "method": {
+            "bank_argument": "Used as positive bank-facing evidence.",
+            "context_only": "Included in the defence package as context, not as decisive proof.",
+            "internal_only": "Used internally for assessment; not surfaced to the bank.",
+            "not_included": "Field is on file but no usable evidence payload was emitted.",
+            "not_supported": "No bank-facing slot exists for this field.",
+            "excluded": "Excluded by merchant from the bank submission.",
+            "failed_upload": "Upload failed; the file did not reach the defence package.",
+            "waived": "Marked not applicable by the merchant."
+          },
+          "ipLocation": {
+            "bankArgumentDefault": "The order IP geolocated to the same location as the billing/shipping address, with no VPN, proxy, or datacenter signals. Cited as supporting context — consistent with the cardholder placing the order from their usual location.",
+            "contextOnlyDefault": "The order IP geolocated to the same country as the billing/shipping address, with no VPN, proxy, or datacenter signals. Included as context — corroborates the cardholder's location but is not decisive on its own.",
+            "internalAmbiguous": "This signal is ambiguous or unfavorable and could weaken the fraud response.",
+            "notIncluded": "IP and location data are not available for this order.",
+            "sameCityBank": "The order IP geolocated to the same region as the billing and shipping address, with no VPN, proxy, or datacenter signals. Cited as supporting context — consistent with the cardholder placing the order from their usual location.",
+            "sameCityContext": "The order IP geolocated to the same region as the billing and shipping address, with no VPN, proxy, or datacenter signals. Included as context — corroborates the cardholder's location but is not decisive on its own.",
+            "sameCountryBank": "The order IP geolocated to the same country as the billing and shipping address, with no VPN, proxy, or datacenter signals. Cited as supporting context — consistent with a cardholder-originated transaction.",
+            "sameCountryContext": "The order IP geolocated to the same country as the billing and shipping address, with no VPN, proxy, or datacenter signals. Included as context — corroborates the cardholder's location but is not decisive on its own.",
+            "internalDifferentCountry": "The customer's IP address resolved to a different country than the shipping address. Kept internal so the bank doesn't read it as a fraud weakness.",
+            "internalDifferentRegion": "The customer's IP region differs from the shipping address region. Kept internal so the bank doesn't read it as a fraud weakness.",
+            "internalHighRisk": "The IP routes through a VPN, proxy, or data center, which makes the geolocation unreliable. Kept internal because the bank could read it as a fraud weakness.",
+            "internalNotBankEligible": "The upstream collector marked this signal as not bank-eligible — kept internal."
+          },
+          "deviceSession": {
+            "internal": "Device/session signals can weaken the fraud response when inconclusive; kept internal.",
+            "notIncluded": "Device and session signals are not available for this order.",
+            "internalInconsistent": "Device or session signals were inconsistent between checkout and prior activity. Kept internal because the bank could read it as a fraud weakness."
+          },
+          "fraudScreening": {
+            "bankArgument": "Shopify's own pre-authorization fraud screening recommended ACCEPT for this order — cited as supporting context in the bank argument.",
+            "contextOnly": "Shopify's own pre-authorization fraud screening reviewed this order at checkout and recommended ACCEPT.",
+            "bankArgumentWithSignals": "Shopify's own pre-authorization fraud screening recommended ACCEPT for this order — cited as supporting context in the bank argument. Signals: {signals}.",
+            "contextOnlyWithSignals": "Shopify's own pre-authorization fraud screening reviewed this order at checkout and recommended ACCEPT. Signals: {signals}.",
+            "internal": "Pre-authorization risk scoring is informational only; not surfaced to the bank.",
+            "notIncluded": "Shopify did not return a qualifying pre-authorization risk assessment for this order.",
+            "internalCancel": "Shopify's pre-authorization screening recommended CANCEL for this order. Kept internal — citing a negative verdict from your own fraud system would weaken the bank response.",
+            "internalCancelWithFacts": "Shopify's pre-authorization screening recommended CANCEL for this order. Shopify flagged: {facts}. Kept internal — citing a negative verdict from your own fraud system would weaken the bank response.",
+            "internalReject": "Shopify's pre-authorization screening recommended REJECT for this order. Kept internal — citing a negative verdict from your own fraud system would weaken the bank response.",
+            "internalRejectWithFacts": "Shopify's pre-authorization screening recommended REJECT for this order. Shopify flagged: {facts}. Kept internal — citing a negative verdict from your own fraud system would weaken the bank response.",
+            "internalInvestigate": "Shopify's pre-authorization screening recommended INVESTIGATE for this order. Kept internal — citing an inconclusive verdict from your own fraud system would weaken the bank response.",
+            "internalInvestigateWithFacts": "Shopify's pre-authorization screening recommended INVESTIGATE for this order. Shopify flagged: {facts}. Kept internal — citing an inconclusive verdict from your own fraud system would weaken the bank response.",
+            "internalRiskHigh": "Shopify's pre-authorization screening scored this order as HIGH risk. Kept internal — citing your own fraud system's elevated risk score would weaken the bank response.",
+            "internalRiskHighWithFacts": "Shopify's pre-authorization screening scored this order as HIGH risk. Shopify flagged: {facts}. Kept internal — citing your own fraud system's elevated risk score would weaken the bank response.",
+            "internalRiskMedium": "Shopify's pre-authorization screening scored this order as MEDIUM risk. Kept internal — citing your own fraud system's elevated risk score would weaken the bank response.",
+            "internalRiskMediumWithFacts": "Shopify's pre-authorization screening scored this order as MEDIUM risk. Shopify flagged: {facts}. Kept internal — citing your own fraud system's elevated risk score would weaken the bank response."
+          },
+          "refundPolicy": {
+            "contextOnly": "Documents merchant policy, but does not by itself prove authorization for this fraud dispute.",
+            "notIncluded": "Your refund policy text is not on file for this checkout."
+          },
+          "shippingPolicy": {
+            "contextOnly": "Documents shipping commitments; supporting context only.",
+            "notIncluded": "Your shipping policy text is not on file for this checkout."
+          },
+          "cancellationPolicy": {
+            "contextOnly": "Documents cancellation rules; supporting context only.",
+            "notIncluded": "Your cancellation policy text is not on file for this checkout."
+          },
+          "orderConfirmation": {
+            "contextOnly": "Confirms order details, but does not prove the customer authorized the transaction.",
+            "notIncluded": "The order confirmation data could not be loaded from Shopify."
+          },
+          "avsCvv": {
+            "bankArgument": "Payment verification supports cardholder identity.",
+            "notIncluded": "The payment processor did not return AVS or CVV verification codes for this transaction. Nothing to include — these codes come from the payment gateway at checkout, not after the fact.",
+            "internalBothFail": "Both the billing address (AVS) and the card verification code (CVV) failed to match the issuer's records. Kept internal — citing this to the bank would undermine the fraud response.",
+            "internalAvsFail": "The billing address (AVS) did not match the issuer's records. Kept internal — citing this to the bank would undermine the fraud response.",
+            "internalCvvFail": "The card verification code (CVV) did not match the issuer's records. Kept internal — citing this to the bank would undermine the fraud response."
+          },
+          "billingAddress": {
+            "notIncluded": "The payment gateway did not return an AVS match result for this transaction. The billing address is on file, but no match/mismatch decision is available."
+          },
+          "shippingTracking": {
+            "notIncluded": "The order has not shipped yet, so no carrier tracking is available. Once you ship the order this row will populate automatically."
+          },
+          "deliveryProof": {
+            "notIncluded": "Delivery has not been confirmed yet. Once the carrier marks the order delivered (or you upload a signature/photo) this row will populate automatically."
+          },
+          "tdsAuthentication": {
+            "notIncluded": "The payment receipt does not include 3-D Secure authentication data for this transaction."
+          },
+          "customerCommunication": {
+            "notIncluded": "No customer correspondence is on file for this order. Upload a transcript from your helpdesk to add one."
+          },
+          "customerAccount": {
+            "notIncluded": "Customer account history is not available for this order.",
+            "returningBankSingular": "Returning customer with {prior} prior undisputed order on this account. Cited as supporting context — an established dispute-free order history is consistent with the cardholder having authorized this transaction.",
+            "returningBankSingularSince": "Returning customer with {prior} prior undisputed order on this account (customer since {sinceLabel}). Cited as supporting context — an established dispute-free order history is consistent with the cardholder having authorized this transaction.",
+            "returningBankPlural": "Returning customer with {prior} prior undisputed orders on this account. Cited as supporting context — an established dispute-free order history is consistent with the cardholder having authorized this transaction.",
+            "returningBankPluralSince": "Returning customer with {prior} prior undisputed orders on this account (customer since {sinceLabel}). Cited as supporting context — an established dispute-free order history is consistent with the cardholder having authorized this transaction.",
+            "returningContextSingular": "Returning customer with {prior} prior undisputed order on this account. Included as context — the established history corroborates the account is legitimate, but is not decisive on its own.",
+            "returningContextSingularSince": "Returning customer with {prior} prior undisputed order on this account (customer since {sinceLabel}). Included as context — the established history corroborates the account is legitimate, but is not decisive on its own.",
+            "returningContextPlural": "Returning customer with {prior} prior undisputed orders on this account. Included as context — the established history corroborates the account is legitimate, but is not decisive on its own.",
+            "returningContextPluralSince": "Returning customer with {prior} prior undisputed orders on this account (customer since {sinceLabel}). Included as context — the established history corroborates the account is legitimate, but is not decisive on its own.",
+            "returningWithDisputesSingular": "Returning customer with {prior} prior order on this account, but the account also has prior chargebacks. Included as context only — the prior-dispute history caveats how much weight the bank reviewer should give this row.",
+            "returningWithDisputesPlural": "Returning customer with {prior} prior orders on this account, but the account also has prior chargebacks. Included as context only — the prior-dispute history caveats how much weight the bank reviewer should give this row.",
+            "firstTime": "First-time customer with no prior orders on this account. Included as context only — there is no prior order history to corroborate this transaction.",
+            "firstTimeSince": "First-time customer (account created {sinceLabel}, no prior orders). Included as context only — there is no prior order history to corroborate this transaction.",
+            "internalFirstTime": "This is a first-time customer with no prior orders on this account. Kept internal on a fraud dispute — surfacing \"new account\" to the bank reads as a fraud indicator, not as supporting evidence.",
+            "internalFirstTimeSince": "This is a first-time customer (account created {sinceLabel}, no prior orders). Kept internal on a fraud dispute — surfacing \"new account\" to the bank reads as a fraud indicator, not as supporting evidence.",
+            "internalWithDisputes": "The customer has prior orders on this account, but the account also has prior chargebacks. Kept internal on a fraud dispute — citing an account with a chargeback history would weaken the response."
+          },
+          "activityLog": {
+            "notIncluded": "Customer activity history is not available for this order."
+          },
+          "supportingDocuments": {
+            "notIncluded": "No supplementary documents have been uploaded yet. Add one from the Evidence tab to include it."
+          },
+          "productDescription": {
+            "notIncluded": "Product description text is not on file for this order."
+          },
+          "duplicateExplanation": {
+            "notIncluded": "No duplicate-charge explanation has been provided yet."
+          }
         }
       },
       "sections": {

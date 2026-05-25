@@ -39,6 +39,8 @@ import { useTranslations } from "next-intl";
 import { INTERNAL_ONLY_FIELDS } from "@/lib/defence/factClassifier";
 import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
 import { MERCHANT_UI_HIDDEN_FIELDS } from "@/lib/automation/merchantUiHiddenFields";
+import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
+import { resolveToken } from "@/lib/i18n/resolveToken";
 
 type Group =
   | "usedAsBankArgument"
@@ -96,12 +98,39 @@ interface Props {
   ) => Promise<void>;
 }
 
+/**
+ * Resolve a translated row label from a canonical evidence field key.
+ * Mirrors the helper in `SubmissionSummaryPanel.tsx` and
+ * `useEvidenceSections.ts` — the lib-emitted English `EvidenceLineItem.label`
+ * is still propagated through the pipeline so this surface does the
+ * structural-i18n translation at the leaf render boundary. Falls back
+ * to the legacy English label when the field is unknown to the
+ * canonical registry.
+ */
+function useFieldLabel() {
+  const t = useTranslations();
+  return (field: string, legacy: string): string => {
+    const labelKey = CANONICAL_EVIDENCE[field]?.labelKey;
+    if (!labelKey) return legacy;
+    try {
+      const resolved = t(labelKey);
+      return resolved === labelKey ? legacy : resolved;
+    } catch {
+      return legacy;
+    }
+  };
+}
+
 export function InclusionReviewSection({
   packId,
   lineItems,
   onToggleInclusionOverride,
 }: Props) {
   const t = useTranslations("disputes.reviewTab.inclusion");
+  // Root translator (no scope) for token resolution — `EvidenceLineItem.reasonToken`
+  // encodes absolute key paths, so a scoped translator would mis-resolve.
+  const tRoot = useTranslations();
+  const fieldLabel = useFieldLabel();
   const [busyField, setBusyField] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // Phase 2 warning-modal state. Holds the line item the merchant
@@ -373,7 +402,7 @@ export function InclusionReviewSection({
                           lineHeight: "18px",
                         }}
                       >
-                        {li.label}
+                        {fieldLabel(li.field, li.label)}
                       </div>
                       <div
                         style={{
@@ -383,7 +412,7 @@ export function InclusionReviewSection({
                           marginTop: 3,
                         }}
                       >
-                        {li.reason}
+                        {resolveToken(tRoot, li.reasonToken)}
                       </div>
                       {/* When the row is in the Not-included group but
                           its data lives outside the merchant's control,
@@ -519,11 +548,13 @@ export function InclusionReviewSection({
           <BlockStack gap="300">
             <Text as="p" variant="bodyMd">
               {t("overrideModal.intro", {
-                field: pendingOverride?.label ?? "",
+                field: pendingOverride
+                  ? fieldLabel(pendingOverride.field, pendingOverride.label)
+                  : "",
               })}
             </Text>
             <Text as="p" variant="bodyMd" tone="subdued">
-              {pendingOverride?.reason ?? ""}
+              {pendingOverride ? resolveToken(tRoot, pendingOverride.reasonToken) : ""}
             </Text>
             <Banner tone="warning" title={t("overrideModal.riskTitle")}>
               <BlockStack gap="200">

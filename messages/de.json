@@ -1010,6 +1010,123 @@
         "overrideCaption": {
           "label": "Sie haben dies am {date} übersteuert",
           "tooltip": "Diese Zeile wurde standardmäßig intern gehalten. Sie haben ausdrücklich entschieden, sie in die Bank-Übermittlung aufzunehmen, nachdem Sie das Risiko bestätigt haben. Die Entscheidung ist im Prüfprotokoll des Streitfalls festgehalten."
+        },
+        "reasons": {
+          "method": {
+            "bank_argument": "Als positiver, bankgerichteter Beweis verwendet.",
+            "context_only": "Als Kontext im Beweispaket enthalten, nicht als entscheidender Beweis.",
+            "internal_only": "Intern für die Bewertung verwendet; nicht an die Bank weitergegeben.",
+            "not_included": "Das Feld ist erfasst, aber es konnte keine verwertbare Beweisdaten ermittelt werden.",
+            "not_supported": "Für dieses Feld gibt es keinen bankgerichteten Platz.",
+            "excluded": "Vom Händler aus der Bank-Übermittlung ausgeschlossen.",
+            "failed_upload": "Der Upload ist fehlgeschlagen; die Datei hat das Beweispaket nicht erreicht.",
+            "waived": "Vom Händler als nicht zutreffend markiert."
+          },
+          "ipLocation": {
+            "bankArgumentDefault": "Die Bestell-IP wurde am selben Ort wie die Rechnungs-/Lieferadresse geortet, ohne VPN-, Proxy- oder Rechenzentrumssignale. Als unterstützender Kontext angeführt — passend dazu, dass der Karteninhaber die Bestellung von seinem üblichen Standort aus aufgegeben hat.",
+            "contextOnlyDefault": "Die Bestell-IP wurde im selben Land wie die Rechnungs-/Lieferadresse geortet, ohne VPN-, Proxy- oder Rechenzentrumssignale. Als Kontext enthalten — bestätigt den Standort des Karteninhabers, ist allein aber nicht entscheidend.",
+            "internalAmbiguous": "Dieses Signal ist mehrdeutig oder ungünstig und könnte die Antwort auf den Betrugsstreitfall schwächen.",
+            "notIncluded": "IP- und Standortdaten sind für diese Bestellung nicht verfügbar.",
+            "sameCityBank": "Die Bestell-IP wurde in derselben Region wie die Rechnungs- und Lieferadresse geortet, ohne VPN-, Proxy- oder Rechenzentrumssignale. Als unterstützender Kontext angeführt — passend dazu, dass der Karteninhaber die Bestellung von seinem üblichen Standort aus aufgegeben hat.",
+            "sameCityContext": "Die Bestell-IP wurde in derselben Region wie die Rechnungs- und Lieferadresse geortet, ohne VPN-, Proxy- oder Rechenzentrumssignale. Als Kontext enthalten — bestätigt den Standort des Karteninhabers, ist allein aber nicht entscheidend.",
+            "sameCountryBank": "Die Bestell-IP wurde im selben Land wie die Rechnungs- und Lieferadresse geortet, ohne VPN-, Proxy- oder Rechenzentrumssignale. Als unterstützender Kontext angeführt — passend zu einer vom Karteninhaber selbst veranlassten Transaktion.",
+            "sameCountryContext": "Die Bestell-IP wurde im selben Land wie die Rechnungs- und Lieferadresse geortet, ohne VPN-, Proxy- oder Rechenzentrumssignale. Als Kontext enthalten — bestätigt den Standort des Karteninhabers, ist allein aber nicht entscheidend.",
+            "internalDifferentCountry": "Die IP-Adresse des Kunden wurde in einem anderen Land als die Lieferadresse aufgelöst. Wird intern gehalten, damit die Bank dies nicht als Betrugsschwäche liest.",
+            "internalDifferentRegion": "Die IP-Region des Kunden weicht von der Region der Lieferadresse ab. Wird intern gehalten, damit die Bank dies nicht als Betrugsschwäche liest.",
+            "internalHighRisk": "Die IP läuft über VPN, Proxy oder ein Rechenzentrum, was die Geolokalisierung unzuverlässig macht. Wird intern gehalten, weil die Bank dies als Betrugsschwäche lesen könnte.",
+            "internalNotBankEligible": "Der vorgelagerte Collector hat das Signal als nicht bankfähig markiert — wird intern gehalten."
+          },
+          "deviceSession": {
+            "internal": "Geräte-/Sitzungssignale können die Antwort auf den Betrugsstreitfall schwächen, wenn sie nicht eindeutig sind; werden intern gehalten.",
+            "notIncluded": "Geräte- und Sitzungssignale sind für diese Bestellung nicht verfügbar.",
+            "internalInconsistent": "Geräte- oder Sitzungssignale waren zwischen Checkout und früherer Aktivität inkonsistent. Wird intern gehalten, weil die Bank dies als Betrugsschwäche lesen könnte."
+          },
+          "fraudScreening": {
+            "bankArgument": "Shopifys eigene Vorautorisierungs-Betrugsprüfung empfahl ACCEPT für diese Bestellung — als unterstützender Kontext im Bankargument angeführt.",
+            "contextOnly": "Shopifys eigene Vorautorisierungs-Betrugsprüfung hat diese Bestellung beim Checkout geprüft und ACCEPT empfohlen.",
+            "bankArgumentWithSignals": "Shopifys eigene Vorautorisierungs-Betrugsprüfung empfahl ACCEPT für diese Bestellung — als unterstützender Kontext im Bankargument angeführt. Signale: {signals}.",
+            "contextOnlyWithSignals": "Shopifys eigene Vorautorisierungs-Betrugsprüfung hat diese Bestellung beim Checkout geprüft und ACCEPT empfohlen. Signale: {signals}.",
+            "internal": "Vorautorisierungs-Risikobewertung ist nur informativ; wird nicht an die Bank weitergegeben.",
+            "notIncluded": "Shopify hat für diese Bestellung keine qualifizierte Vorautorisierungs-Risikobewertung zurückgegeben.",
+            "internalCancel": "Shopifys Vorautorisierungsprüfung empfahl CANCEL für diese Bestellung. Wird intern gehalten — sich auf ein negatives Urteil des eigenen Betrugssystems zu berufen, würde die Bankantwort schwächen.",
+            "internalCancelWithFacts": "Shopifys Vorautorisierungsprüfung empfahl CANCEL für diese Bestellung. Shopify hat markiert: {facts}. Wird intern gehalten — sich auf ein negatives Urteil des eigenen Betrugssystems zu berufen, würde die Bankantwort schwächen.",
+            "internalReject": "Shopifys Vorautorisierungsprüfung empfahl REJECT für diese Bestellung. Wird intern gehalten — sich auf ein negatives Urteil des eigenen Betrugssystems zu berufen, würde die Bankantwort schwächen.",
+            "internalRejectWithFacts": "Shopifys Vorautorisierungsprüfung empfahl REJECT für diese Bestellung. Shopify hat markiert: {facts}. Wird intern gehalten — sich auf ein negatives Urteil des eigenen Betrugssystems zu berufen, würde die Bankantwort schwächen.",
+            "internalInvestigate": "Shopifys Vorautorisierungsprüfung empfahl INVESTIGATE für diese Bestellung. Wird intern gehalten — sich auf ein nicht eindeutiges Urteil des eigenen Betrugssystems zu berufen, würde die Bankantwort schwächen.",
+            "internalInvestigateWithFacts": "Shopifys Vorautorisierungsprüfung empfahl INVESTIGATE für diese Bestellung. Shopify hat markiert: {facts}. Wird intern gehalten — sich auf ein nicht eindeutiges Urteil des eigenen Betrugssystems zu berufen, würde die Bankantwort schwächen.",
+            "internalRiskHigh": "Shopifys Vorautorisierungsprüfung hat diese Bestellung als HIGH-Risiko bewertet. Wird intern gehalten — sich auf einen erhöhten Risikowert des eigenen Betrugssystems zu berufen, würde die Bankantwort schwächen.",
+            "internalRiskHighWithFacts": "Shopifys Vorautorisierungsprüfung hat diese Bestellung als HIGH-Risiko bewertet. Shopify hat markiert: {facts}. Wird intern gehalten — sich auf einen erhöhten Risikowert des eigenen Betrugssystems zu berufen, würde die Bankantwort schwächen.",
+            "internalRiskMedium": "Shopifys Vorautorisierungsprüfung hat diese Bestellung als MEDIUM-Risiko bewertet. Wird intern gehalten — sich auf einen erhöhten Risikowert des eigenen Betrugssystems zu berufen, würde die Bankantwort schwächen.",
+            "internalRiskMediumWithFacts": "Shopifys Vorautorisierungsprüfung hat diese Bestellung als MEDIUM-Risiko bewertet. Shopify hat markiert: {facts}. Wird intern gehalten — sich auf einen erhöhten Risikowert des eigenen Betrugssystems zu berufen, würde die Bankantwort schwächen."
+          },
+          "refundPolicy": {
+            "contextOnly": "Dokumentiert die Händlerrichtlinie, beweist aber für sich allein nicht die Autorisierung dieses Betrugsstreitfalls.",
+            "notIncluded": "Ihre Rückerstattungsrichtlinie ist für diesen Checkout nicht hinterlegt."
+          },
+          "shippingPolicy": {
+            "contextOnly": "Dokumentiert Versandzusagen; nur unterstützender Kontext.",
+            "notIncluded": "Ihre Versandrichtlinie ist für diesen Checkout nicht hinterlegt."
+          },
+          "cancellationPolicy": {
+            "contextOnly": "Dokumentiert Stornierungsregeln; nur unterstützender Kontext.",
+            "notIncluded": "Ihre Stornierungsrichtlinie ist für diesen Checkout nicht hinterlegt."
+          },
+          "orderConfirmation": {
+            "contextOnly": "Bestätigt die Bestelldetails, beweist aber nicht, dass der Kunde die Transaktion autorisiert hat.",
+            "notIncluded": "Die Bestellbestätigungsdaten konnten nicht aus Shopify geladen werden."
+          },
+          "avsCvv": {
+            "bankArgument": "Die Zahlungsverifizierung stützt die Identität des Karteninhabers.",
+            "notIncluded": "Der Zahlungsprozessor hat für diese Transaktion keine AVS- oder CVV-Verifizierungscodes zurückgegeben. Nichts hinzuzufügen — diese Codes kommen vom Zahlungs-Gateway beim Checkout, nicht im Nachhinein.",
+            "internalBothFail": "Sowohl die Rechnungsadresse (AVS) als auch der Kartenprüfwert (CVV) konnten nicht mit den Daten des Ausstellers abgeglichen werden. Wird intern gehalten — dies gegenüber der Bank anzuführen, würde die Antwort auf den Betrugsstreitfall untergraben.",
+            "internalAvsFail": "Die Rechnungsadresse (AVS) stimmte nicht mit den Daten des Ausstellers überein. Wird intern gehalten — dies gegenüber der Bank anzuführen, würde die Antwort auf den Betrugsstreitfall untergraben.",
+            "internalCvvFail": "Der Kartenprüfwert (CVV) stimmte nicht mit den Daten des Ausstellers überein. Wird intern gehalten — dies gegenüber der Bank anzuführen, würde die Antwort auf den Betrugsstreitfall untergraben."
+          },
+          "billingAddress": {
+            "notIncluded": "Das Zahlungs-Gateway hat für diese Transaktion kein AVS-Abgleichsergebnis zurückgegeben. Die Rechnungsadresse ist hinterlegt, aber es liegt keine Match-/Mismatch-Entscheidung vor."
+          },
+          "shippingTracking": {
+            "notIncluded": "Die Bestellung wurde noch nicht versendet, daher ist keine Sendungsverfolgung des Spediteurs verfügbar. Sobald Sie die Bestellung versenden, wird diese Zeile automatisch gefüllt."
+          },
+          "deliveryProof": {
+            "notIncluded": "Die Zustellung wurde noch nicht bestätigt. Sobald der Spediteur die Bestellung als zugestellt markiert (oder Sie eine Unterschrift/ein Foto hochladen), wird diese Zeile automatisch gefüllt."
+          },
+          "tdsAuthentication": {
+            "notIncluded": "Die Zahlungsquittung enthält für diese Transaktion keine 3-D-Secure-Authentifizierungsdaten."
+          },
+          "customerCommunication": {
+            "notIncluded": "Für diese Bestellung liegt keine Kundenkommunikation vor. Laden Sie ein Transkript aus Ihrem Helpdesk hoch, um eines hinzuzufügen."
+          },
+          "customerAccount": {
+            "notIncluded": "Die Kontohistorie des Kunden ist für diese Bestellung nicht verfügbar.",
+            "returningBankSingular": "Wiederkehrender Kunde mit {prior} früheren unbestrittenen Bestellung auf diesem Konto. Als unterstützender Kontext angeführt — eine etablierte streitfreie Bestellhistorie passt dazu, dass der Karteninhaber diese Transaktion autorisiert hat.",
+            "returningBankSingularSince": "Wiederkehrender Kunde mit {prior} früheren unbestrittenen Bestellung auf diesem Konto (Kunde seit {sinceLabel}). Als unterstützender Kontext angeführt — eine etablierte streitfreie Bestellhistorie passt dazu, dass der Karteninhaber diese Transaktion autorisiert hat.",
+            "returningBankPlural": "Wiederkehrender Kunde mit {prior} früheren unbestrittenen Bestellungen auf diesem Konto. Als unterstützender Kontext angeführt — eine etablierte streitfreie Bestellhistorie passt dazu, dass der Karteninhaber diese Transaktion autorisiert hat.",
+            "returningBankPluralSince": "Wiederkehrender Kunde mit {prior} früheren unbestrittenen Bestellungen auf diesem Konto (Kunde seit {sinceLabel}). Als unterstützender Kontext angeführt — eine etablierte streitfreie Bestellhistorie passt dazu, dass der Karteninhaber diese Transaktion autorisiert hat.",
+            "returningContextSingular": "Wiederkehrender Kunde mit {prior} früheren unbestrittenen Bestellung auf diesem Konto. Als Kontext enthalten — die etablierte Historie bestätigt, dass das Konto legitim ist, ist allein aber nicht entscheidend.",
+            "returningContextSingularSince": "Wiederkehrender Kunde mit {prior} früheren unbestrittenen Bestellung auf diesem Konto (Kunde seit {sinceLabel}). Als Kontext enthalten — die etablierte Historie bestätigt, dass das Konto legitim ist, ist allein aber nicht entscheidend.",
+            "returningContextPlural": "Wiederkehrender Kunde mit {prior} früheren unbestrittenen Bestellungen auf diesem Konto. Als Kontext enthalten — die etablierte Historie bestätigt, dass das Konto legitim ist, ist allein aber nicht entscheidend.",
+            "returningContextPluralSince": "Wiederkehrender Kunde mit {prior} früheren unbestrittenen Bestellungen auf diesem Konto (Kunde seit {sinceLabel}). Als Kontext enthalten — die etablierte Historie bestätigt, dass das Konto legitim ist, ist allein aber nicht entscheidend.",
+            "returningWithDisputesSingular": "Wiederkehrender Kunde mit {prior} früheren Bestellung auf diesem Konto, aber das Konto hat auch frühere Rückbuchungen. Nur als Kontext enthalten — die frühere Streithistorie nuanciert, wie viel Gewicht der Bank-Sachbearbeiter dieser Zeile beimessen sollte.",
+            "returningWithDisputesPlural": "Wiederkehrender Kunde mit {prior} früheren Bestellungen auf diesem Konto, aber das Konto hat auch frühere Rückbuchungen. Nur als Kontext enthalten — die frühere Streithistorie nuanciert, wie viel Gewicht der Bank-Sachbearbeiter dieser Zeile beimessen sollte.",
+            "firstTime": "Erstkunde ohne frühere Bestellungen auf diesem Konto. Nur als Kontext enthalten — es gibt keine frühere Bestellhistorie, die diese Transaktion bestätigen würde.",
+            "firstTimeSince": "Erstkunde (Konto erstellt am {sinceLabel}, keine früheren Bestellungen). Nur als Kontext enthalten — es gibt keine frühere Bestellhistorie, die diese Transaktion bestätigen würde.",
+            "internalFirstTime": "Dies ist ein Erstkunde ohne frühere Bestellungen auf diesem Konto. Wird in einem Betrugsstreitfall intern gehalten — \"neues Konto\" gegenüber der Bank zu thematisieren wird als Betrugsindikator gelesen, nicht als unterstützender Beweis.",
+            "internalFirstTimeSince": "Dies ist ein Erstkunde (Konto erstellt am {sinceLabel}, keine früheren Bestellungen). Wird in einem Betrugsstreitfall intern gehalten — \"neues Konto\" gegenüber der Bank zu thematisieren wird als Betrugsindikator gelesen, nicht als unterstützender Beweis.",
+            "internalWithDisputes": "Der Kunde hat frühere Bestellungen auf diesem Konto, aber das Konto hat auch frühere Rückbuchungen. Wird in einem Betrugsstreitfall intern gehalten — sich auf ein Konto mit Rückbuchungshistorie zu berufen, würde die Antwort schwächen."
+          },
+          "activityLog": {
+            "notIncluded": "Die Aktivitätshistorie des Kunden ist für diese Bestellung nicht verfügbar."
+          },
+          "supportingDocuments": {
+            "notIncluded": "Es wurden noch keine ergänzenden Dokumente hochgeladen. Fügen Sie eines im Reiter Beweise hinzu, um es einzuschließen."
+          },
+          "productDescription": {
+            "notIncluded": "Die Produktbeschreibung ist für diese Bestellung nicht hinterlegt."
+          },
+          "duplicateExplanation": {
+            "notIncluded": "Es wurde noch keine Erklärung für eine Doppelabbuchung angegeben."
+          }
         }
       },
       "sections": {
@@ -1321,6 +1438,12 @@
       "evidenceOrderingHelper": "Sortiert nach Wirkung auf die Fallstärke. Stärkste zuerst.",
       "whatHappensNow": "Was passiert jetzt",
       "automationRule": "Automatisierungsregel:",
+      "appliedMode": {
+        "automatic": "Automatisch",
+        "reviewBeforeSubmit": "Vor dem Einreichen prüfen",
+        "automaticHelp": "DisputeDesk hat das Beweispaket vorbereitet und automatisch eingereicht.",
+        "reviewBeforeSubmitHelp": "DisputeDesk hat das Beweispaket für Sie vorbereitet. Prüfen Sie es und reichen Sie vor der Frist ein."
+      },
       "changeRule": "Regel ändern",
       "editEvidence": "Beweise bearbeiten",
       "submitToShopify": "An Shopify einreichen",

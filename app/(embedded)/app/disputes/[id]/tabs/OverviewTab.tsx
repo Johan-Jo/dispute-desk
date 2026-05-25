@@ -38,6 +38,7 @@ import { EVIDENCE_EVALUATION_HELPER } from "@/lib/argument/evidenceStatus";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type { PresentationStatus } from "../workspace-components/types";
 import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
+import { resolveToken } from "@/lib/i18n/resolveToken";
 import { classifyEvidenceRow } from "@/lib/argument/categoryBadge";
 import { canMerchantUpload, type useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { LiabilityShiftPanel } from "@/components/liability-shift/LiabilityShiftPanel";
@@ -208,6 +209,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const tSource = useTranslations("disputes.sourceCaption");
   const tItemStrength = useTranslations("disputes.itemStrength");
   const tPill = useTranslations("disputes.overviewPill");
+  // Root (unscoped) translator for token resolution — used to resolve
+  // EvidenceLineItem.reasonToken at the internal-only row caption boundary.
+  const tRoot = useTranslations();
   const { data, derived, actions, clientState } = workspace;
 
   if (!data) return null;
@@ -585,10 +589,12 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const disputeFamily = mapReasonToRulesFamily(dispute.reason);
   const rulesUrl = withShopParams(`/app/rules?family=${disputeFamily}`, searchParams);
   const appliedMode = appliedRule?.mode ?? "review";
-  const appliedModeLabel = appliedMode === "auto" ? "Automatic" : "Review before submit";
+  const appliedModeLabel = appliedMode === "auto"
+    ? tExtra("appliedMode.automatic")
+    : tExtra("appliedMode.reviewBeforeSubmit");
   const appliedModeHelp = appliedMode === "auto"
-    ? "DisputeDesk prepared the evidence pack and submitted it automatically."
-    : "DisputeDesk prepared the evidence pack for you. Review it and submit before the deadline.";
+    ? tExtra("appliedMode.automaticHelp")
+    : tExtra("appliedMode.reviewBeforeSubmitHelp");
 
   const goToReview = () => actions.setActiveTab(2);
   const goToEvidence = () => actions.setActiveTab(1);
@@ -1057,8 +1063,8 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               ? item.unavailableReason
               : waiveCaption
                 ? waiveCaption
-                : isInternalOnly && lineItem?.reason
-                  ? lineItem.reason
+                : isInternalOnly && lineItem?.reasonToken
+                  ? resolveToken(tRoot, lineItem.reasonToken)
                   : isPendingSystemSignal
                     ? t("rowSourceCaptionPendingSystem")
                     : (lineItemSourceNote ?? SOURCE_NOTE[item.source ?? ""] ?? null);

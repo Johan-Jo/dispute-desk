@@ -21,6 +21,8 @@ import type {
   InternalSignalViewModel,
 } from "../useEvidenceSections";
 import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
+import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
+import { resolveToken } from "@/lib/i18n/resolveToken";
 
 function sourceLabel(
   source: EvidenceSource,
@@ -173,6 +175,23 @@ export function EvidenceRow({
   lineItem?: EvidenceLineItem;
 }) {
   const t = useTranslations("disputes.evidenceTab.row");
+  // Root (unscoped) translator for token resolution — used to resolve
+  // lineItem.reasonToken (encodes absolute key paths) and the canonical
+  // signal label fallback below.
+  const tRoot = useTranslations();
+  const titleLabel = (() => {
+    const labelKey = lineItem ? CANONICAL_EVIDENCE[lineItem.field]?.labelKey : null;
+    if (!labelKey) return item.title;
+    try {
+      const resolved = tRoot(labelKey);
+      return resolved === labelKey ? item.title : resolved;
+    } catch {
+      return item.title;
+    }
+  })();
+  const reasonLine = lineItem?.reasonToken
+    ? resolveToken(tRoot, lineItem.reasonToken)
+    : (lineItem?.reason ?? item.whyThisMatters);
 
   const pill = strengthPill(
     lineItem
@@ -208,8 +227,8 @@ export function EvidenceRow({
 
   return (
     <RowFrame
-      title={item.title}
-      desc={lineItem?.reason ?? item.whyThisMatters}
+      title={titleLabel}
+      desc={reasonLine}
       sourceLine={`${t("source")} · ${sourceLabel(item.source, t)}`}
       attachmentChip={attachmentChip}
       pill={<Pill variant={pill.variant} label={pill.label} />}
