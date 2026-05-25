@@ -1009,127 +1009,127 @@
     },
     "noDisputesHint": "Disputes are shown for the store selected in the sidebar. If you use multiple stores, switch to the correct one, then click Sync Now.",
     "signalLabel": {
-      "payment_auth": "Payment authentication",
-      "billing_match": "Billing address match",
-      "delivery": "Delivery confirmation",
-      "ip_location": "IP & location consistency",
-      "device_session": "Device & session signals",
-      "communication": "Customer communication",
-      "account_history": "Customer account history",
-      "order_record": "Order record",
-      "product_listing": "Product listing",
-      "policy_refund": "Refund policy",
-      "policy_shipping": "Shipping policy",
-      "policy_cancellation": "Cancellation policy",
-      "duplicate_explanation": "Duplicate-charge explanation",
-      "supplementary_documents": "Supplementary documents",
-      "fraud_screening": "Pre-authorization fraud screening"
+      "payment_auth": "Zahlungsauthentifizierung",
+      "billing_match": "Übereinstimmung der Rechnungsadresse",
+      "delivery": "Lieferbestätigung",
+      "ip_location": "IP- und Standortübereinstimmung",
+      "device_session": "Geräte- und Sitzungssignale",
+      "communication": "Kundenkommunikation",
+      "account_history": "Kundenkonto-Historie",
+      "order_record": "Bestelldatensatz",
+      "product_listing": "Produktinformation",
+      "policy_refund": "Rückerstattungsrichtlinie",
+      "policy_shipping": "Versandrichtlinie",
+      "policy_cancellation": "Stornierungsrichtlinie",
+      "duplicate_explanation": "Erklärung zur Doppelbelastung",
+      "supplementary_documents": "Ergänzende Unterlagen",
+      "fraud_screening": "Betrugsprüfung vor Autorisierung"
     },
     "decisiveHint": {
-      "fraud": "delivery confirmation, signature on file, or device-session consistency",
-      "delivery": "carrier signature confirmation or matching billing/IP signals",
-      "product": "the product listing as advertised and your refund policy disclosure",
-      "refund": "documented refund processing or merchant communication",
-      "subscription": "the cancellation policy and customer communication timeline",
-      "billing": "transaction records and AVS+CVV verification",
-      "digital": "access logs proving the customer used the digital good",
-      "general": "additional decisive evidence"
+      "fraud": "Lieferbestätigung, Unterschrift bei Empfang oder Geräte-/Sitzungskonsistenz",
+      "delivery": "Empfangsbestätigung des Versanddienstleisters oder übereinstimmende Rechnungs-/IP-Signale",
+      "product": "die Produktbeschreibung wie beworben und Ihre Rückerstattungsrichtlinie",
+      "refund": "dokumentierte Rückerstattungsbearbeitung oder Händlerkommunikation",
+      "subscription": "die Stornierungsrichtlinie und der Zeitplan der Kundenkommunikation",
+      "billing": "Transaktionsaufzeichnungen und AVS+CVV-Verifizierung",
+      "digital": "Zugriffsprotokolle, die belegen, dass der Kunde das digitale Gut genutzt hat",
+      "general": "weitere entscheidende Beweise"
     },
     "decisiveFamilies": {
-      "fraud": "payment verification, confirmed delivery, or a clear customer purchase acknowledgement",
-      "delivery": "carrier signature confirmation, proof of delivery to the cardholder's verified address, or customer acknowledgement of receipt",
-      "product": "the product listing as advertised, refund policy disclosure, or customer correspondence",
-      "refund": "documented refund processing, refund timeline, or customer correspondence",
-      "subscription": "cancellation policy disclosure, cancellation timeline, or customer correspondence",
-      "billing": "transaction records, AVS/CVV verification, or 3-D Secure authentication",
-      "digital": "access logs showing the customer used the digital good",
-      "general": "decisive evidence specific to this dispute reason"
+      "fraud": "Zahlungsverifizierung, bestätigte Lieferung oder eine klare Kaufbestätigung des Kunden",
+      "delivery": "Empfangsbestätigung des Versanddienstleisters, Liefernachweis an die verifizierte Adresse des Karteninhabers oder Kundenbestätigung des Empfangs",
+      "product": "die Produktbeschreibung wie beworben, Offenlegung der Rückerstattungsrichtlinie oder Kundenkorrespondenz",
+      "refund": "dokumentierte Rückerstattungsbearbeitung, Rückerstattungszeitplan oder Kundenkorrespondenz",
+      "subscription": "Offenlegung der Stornierungsrichtlinie, Stornierungszeitplan oder Kundenkorrespondenz",
+      "billing": "Transaktionsaufzeichnungen, AVS/CVV-Verifizierung oder 3-D-Secure-Authentifizierung",
+      "digital": "Zugriffsprotokolle, die belegen, dass der Kunde das digitale Gut genutzt hat",
+      "general": "entscheidende Beweise für diesen Streitfall-Grund"
     },
     "strengthReason": {
-      "covered": "This dispute is protected under Shopify's payment protection. No action is required from you.",
+      "covered": "Dieser Streitfall ist durch Shopifys Zahlungsschutz abgedeckt. Sie müssen nichts tun.",
       "strong": {
-        "multi": "{label1}, {label2}{label3, select, empty {} other {, and {label3}}} all support this defense decisively.",
-        "single": "{label} supports this defense decisively.",
-        "fallback": "Strong evidence supports this defense decisively."
+        "multi": "{label1}, {label2}{label3, select, empty {} other {, und {label3}}} stützen diesen Fall entscheidend.",
+        "single": "{label} stützt diesen Fall entscheidend.",
+        "fallback": "Starke Beweise stützen diesen Fall entscheidend."
       },
       "moderate": {
-        "fraudAvsOnly": "Payment authentication supports this defense, but additional decisive evidence such as delivery confirmation, device/session consistency, or customer confirmation would improve the case.",
-        "strongAndModerate": "{strongLabel} and {moderateLabel} support this defense; additional decisive evidence would strengthen the case.",
-        "strongOnly": "{label} supports this defense, with moderate corroboration; additional decisive evidence would strengthen the case."
+        "fraudAvsOnly": "Die Zahlungsauthentifizierung stützt diesen Fall, aber zusätzliche entscheidende Beweise wie Lieferbestätigung, Geräte-/Sitzungskonsistenz oder Kundenbestätigung würden den Fall verbessern.",
+        "strongAndModerate": "{strongLabel} und {moderateLabel} stützen diesen Fall; zusätzliche entscheidende Beweise würden den Fall stärken.",
+        "strongOnly": "{label} stützt diesen Fall mit moderater Bestätigung; zusätzliche entscheidende Beweise würden den Fall stärken."
       },
       "weak": {
-        "strongAlone": "{label} supports this defense, but additional decisive evidence (such as {hint}) would strengthen the case.",
-        "moderateOnly": "{label1}{label2, select, empty {} other { and {label2}}} provide partial support. A strong signal such as {hint} would significantly strengthen the case.",
-        "supportingOnly": "This is weak because the defence package contains mostly supporting documentation, but no decisive {family} evidence. {decisive} would strengthen the case."
+        "strongAlone": "{label} stützt diesen Fall, aber zusätzliche entscheidende Beweise (wie {hint}) würden den Fall stärken.",
+        "moderateOnly": "{label1}{label2, select, empty {} other { und {label2}}} bieten teilweise Unterstützung. Ein starkes Signal wie {hint} würde den Fall erheblich stärken.",
+        "supportingOnly": "Der Fall ist schwach, weil das Beweispaket hauptsächlich unterstützende Dokumentation enthält, aber keine entscheidenden Beweise für {family}. {decisive} würde den Fall stärken."
       },
       "fraud": {
-        "strong": "Payment verification and purchase behavior strongly support this defense.",
-        "moderate": "Core authorization evidence is present, but the case could be strengthened.",
-        "weak": "Key payment verification evidence is missing.",
-        "insufficient": "No evidence available to support this defense."
+        "strong": "Zahlungsverifizierung und Kaufverhalten stützen diesen Fall stark.",
+        "moderate": "Grundlegende Autorisierungsbeweise sind vorhanden, der Fall könnte aber gestärkt werden.",
+        "weak": "Wichtige Beweise zur Zahlungsverifizierung fehlen.",
+        "insufficient": "Keine Beweise zur Stützung dieses Falls verfügbar."
       },
       "delivery": {
-        "strong": "Shipment and delivery are confirmed by carrier records.",
-        "moderate": "Shipping evidence exists, but full delivery confirmation would strengthen the case.",
-        "weak": "Delivery evidence is missing — this is critical for this dispute type.",
-        "insufficient": "No fulfillment evidence available."
+        "strong": "Versand und Lieferung sind durch Versanddienstleister-Aufzeichnungen bestätigt.",
+        "moderate": "Versandnachweise sind vorhanden, aber die vollständige Lieferbestätigung würde den Fall stärken.",
+        "weak": "Lieferbeweise fehlen — dies ist für diesen Streitfall-Typ entscheidend.",
+        "insufficient": "Keine Versand- oder Lieferbeweise verfügbar."
       },
       "product": {
-        "strong": "Product description and policy disclosure are well documented.",
-        "moderate": "Some product conformity evidence exists, but gaps remain.",
-        "weak": "Product description evidence is missing — critical for this dispute type.",
-        "insufficient": "No product conformity evidence available."
+        "strong": "Produktbeschreibung und Richtlinien-Offenlegung sind gut dokumentiert.",
+        "moderate": "Einige Produktkonformitäts-Beweise sind vorhanden, aber Lücken bleiben.",
+        "weak": "Beweise zur Produktbeschreibung fehlen — entscheidend für diesen Streitfall-Typ.",
+        "insufficient": "Keine Produktkonformitäts-Beweise verfügbar."
       },
       "refund": {
-        "strong": "Refund processing is documented.",
-        "moderate": "Some refund evidence exists, but complete documentation would help.",
-        "weak": "Refund evidence is incomplete.",
-        "insufficient": "No refund evidence available."
+        "strong": "Die Rückerstattungsbearbeitung ist dokumentiert.",
+        "moderate": "Einige Rückerstattungsbeweise sind vorhanden, aber vollständige Dokumentation würde helfen.",
+        "weak": "Rückerstattungsbeweise sind unvollständig.",
+        "insufficient": "Keine Rückerstattungsbeweise verfügbar."
       },
       "subscription": {
-        "strong": "Subscription terms and cancellation timeline are documented.",
-        "moderate": "Some subscription evidence exists, but timeline gaps remain.",
-        "weak": "Cancellation policy or timeline evidence is missing.",
-        "insufficient": "No subscription-related evidence available."
+        "strong": "Abonnementbedingungen und Stornierungszeitplan sind dokumentiert.",
+        "moderate": "Einige Abonnementbeweise sind vorhanden, aber Lücken im Zeitplan bleiben.",
+        "weak": "Beweise zur Stornierungsrichtlinie oder zum Zeitplan fehlen.",
+        "insufficient": "Keine abonnementbezogenen Beweise verfügbar."
       },
       "billing": {
-        "strong": "Transaction records confirm correct billing.",
-        "moderate": "Some billing evidence exists, but reconciliation could be stronger.",
-        "weak": "Billing accuracy evidence is incomplete.",
-        "insufficient": "No billing evidence available."
+        "strong": "Transaktionsaufzeichnungen bestätigen die korrekte Abrechnung.",
+        "moderate": "Einige Abrechnungsbeweise sind vorhanden, aber der Abgleich könnte stärker sein.",
+        "weak": "Beweise zur Abrechnungsgenauigkeit sind unvollständig.",
+        "insufficient": "Keine Abrechnungsbeweise verfügbar."
       },
       "digital": {
-        "strong": "Digital access and usage are confirmed by logs.",
-        "moderate": "Some access evidence exists, but logs could be more complete.",
-        "weak": "Digital access evidence is missing — critical for this dispute type.",
-        "insufficient": "No digital delivery evidence available."
+        "strong": "Digitaler Zugriff und Nutzung sind durch Protokolle bestätigt.",
+        "moderate": "Einige Zugriffsbeweise sind vorhanden, aber Protokolle könnten vollständiger sein.",
+        "weak": "Beweise für digitalen Zugriff fehlen — entscheidend für diesen Streitfall-Typ.",
+        "insufficient": "Keine Beweise für digitale Lieferung verfügbar."
       },
       "general": {
-        "strong": "Core evidence strongly supports this defense.",
-        "moderate": "Evidence supports the defense, but some gaps remain.",
-        "weak": "Key evidence is missing.",
-        "insufficient": "No evidence available."
+        "strong": "Kernbeweise stützen diesen Fall stark.",
+        "moderate": "Beweise stützen den Fall, aber einige Lücken bleiben.",
+        "weak": "Wichtige Beweise fehlen.",
+        "insufficient": "Keine Beweise verfügbar."
       },
       "fatalLoss": {
-        "refund_issued": "A refund was already issued for this order — the bank will treat this as a confession of liability, so the case cannot win as-is.",
-        "inr_no_fulfillment": "The order was never fulfilled and the dispute reason is item-not-received — there is no factual basis to defend the charge."
+        "refund_issued": "Für diese Bestellung wurde bereits eine Rückerstattung ausgestellt — die Bank wird dies als Schuldeingeständnis werten, daher kann der Fall in dieser Form nicht gewonnen werden.",
+        "inr_no_fulfillment": "Die Bestellung wurde nie ausgeführt und der Streitfallgrund ist ‚Produkt nicht erhalten' — es gibt keine sachliche Grundlage zur Verteidigung der Belastung."
       }
     },
     "improvementHint": "Fügen Sie {label} hinzu, um Ihren Fall zu stärken.",
     "recommendation": {
       "submitted": {
-        "strongOrModerate": "Recommendation: No further action is required. Your defense has been successfully submitted. We will notify you when the bank responds.",
-        "weakOrInsufficient": "Recommendation: Monitor this case. Consider strengthening evidence for future disputes."
+        "strongOrModerate": "Empfehlung: Keine weitere Aktion erforderlich. Ihr Fall wurde erfolgreich eingereicht. Wir benachrichtigen Sie, sobald die Bank antwortet.",
+        "weakOrInsufficient": "Empfehlung: Beobachten Sie diesen Fall. Erwägen Sie, Beweise für zukünftige Streitfälle zu stärken."
       },
       "notSubmitted": {
-        "strong": "Recommendation: Submit now — your evidence is strong enough to defend this charge.",
-        "moderateWithMissing": "Recommendation: You can submit, but adding {label} would meaningfully improve your odds.",
-        "moderateNoMissing": "Recommendation: You can submit now, but a small amount of additional evidence would improve your odds.",
-        "weakWithMissing": "Recommendation: Add {label} before submitting — the case is currently unlikely to win as-is.",
-        "weakNoMissing": "Recommendation: Strengthen the evidence before submitting — the case is currently unlikely to win as-is."
+        "strong": "Empfehlung: Jetzt einreichen — Ihre Beweise sind stark genug, um diese Belastung zu verteidigen.",
+        "moderateWithMissing": "Empfehlung: Sie können einreichen, aber das Hinzufügen von {label} würde Ihre Erfolgsaussichten erheblich verbessern.",
+        "moderateNoMissing": "Empfehlung: Sie können jetzt einreichen, aber etwas zusätzliche Beweise würden Ihre Erfolgsaussichten verbessern.",
+        "weakWithMissing": "Empfehlung: Fügen Sie {label} vor dem Einreichen hinzu — der Fall ist derzeit kaum zu gewinnen.",
+        "weakNoMissing": "Empfehlung: Stärken Sie die Beweise vor dem Einreichen — der Fall ist derzeit kaum zu gewinnen."
       },
-      "helperWithDays": "{days, plural, =0 {Submitted today} =1 {1 day since submission} other {# days since submission}}. The issuing bank typically responds within 30–75 days.",
-      "helperNoDate": "The issuing bank typically responds within 30–75 days."
+      "helperWithDays": "{days, plural, =0 {Heute eingereicht} =1 {1 Tag seit der Einreichung} other {# Tage seit der Einreichung}}. Die ausstellende Bank antwortet normalerweise innerhalb von 30–75 Tagen.",
+      "helperNoDate": "Die ausstellende Bank antwortet normalerweise innerhalb von 30–75 Tagen."
     },
     "sourceCaption": {
       "order_confirmation": "From Shopify order data",
@@ -1329,14 +1329,14 @@
       "invalid": "Invalid"
     },
     "reasonFamilyLabel": {
-      "fraud": "fraud",
-      "delivery": "delivery",
-      "product": "product-conformity",
-      "refund": "refund",
-      "subscription": "subscription",
-      "billing": "billing",
-      "digital": "digital-good",
-      "general": "dispute"
+      "fraud": "Betrug",
+      "delivery": "Lieferung",
+      "product": "Produktkonformität",
+      "refund": "Rückerstattung",
+      "subscription": "Abonnement",
+      "billing": "Abrechnung",
+      "digital": "digitales Gut",
+      "general": "Streitfall"
     },
     "internalSignals": {
       "avsCodePrefix": "AVS code {code}",
