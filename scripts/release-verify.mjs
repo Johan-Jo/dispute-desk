@@ -37,7 +37,12 @@ const STEPS = [
   { name: "TypeScript", cmd: "npx", args: ["tsc", "--noEmit"] },
   // i18n guardrail — blocks hardcoded English in embedded routes.
   // See scripts/verify-i18n.mjs for the rules + escape hatches.
-  { name: "i18n", cmd: "node", args: ["scripts/verify-i18n.mjs"] },
+  { name: "i18n: hardcoded", cmd: "node", args: ["scripts/verify-i18n.mjs"] },
+  // i18n key-resolution guardrail — blocks t() calls that reference
+  // keys missing from messages/en.json (the bug that produces UI
+  // rendering raw key paths like "disputes.sourceCaption.auto_shopify")
+  // AND bans lazy `// i18n-allow TODO` markers.
+  { name: "i18n: keys", cmd: "node", args: ["scripts/verify-i18n-keys.mjs"] },
   // verbose reporter so each test name streams — user can follow progress
   { name: "Vitest", cmd: "npx", args: ["vitest", "run", "--reporter=verbose"] },
   { name: "Build", cmd: "npm", args: ["run", "build"] },

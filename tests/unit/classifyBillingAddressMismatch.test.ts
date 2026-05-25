@@ -2,6 +2,21 @@ import { describe, it, expect } from "vitest";
 import { classifyBillingAddressMismatch } from "@/app/(embedded)/app/disputes/[id]/tabs/useEvidenceSections";
 import type { EvidenceItemWithStrength } from "@/app/(embedded)/app/disputes/[id]/workspace-components/types";
 
+/** Fake translator that returns the key + serialized params so tests
+ *  can assert on the structural shape without depending on locale
+ *  content. Mirrors the production translator's call signature. */
+function fakeT(key: string, params?: Record<string, string | number>): string {
+  if (key === "internalSignals.billingAddress.title") return "Billing and shipping addresses do not match";
+  if (key === "internalSignals.billingAddress.countryDetail") {
+    return `Billing country ${params?.billingCountry} differs from shipping country ${params?.shippingCountry}.`;
+  }
+  if (key === "internalSignals.billingAddress.cityDetail") return "Billing city differs from shipping city.";
+  if (key === "internalSignals.billingAddress.explanation") {
+    return `${params?.detail} Used internally for assessment; not surfaced to the bank to avoid weakening the response.`;
+  }
+  return key;
+}
+
 function orderRow(
   payload: Record<string, unknown> | null,
 ): EvidenceItemWithStrength {
@@ -44,7 +59,7 @@ describe("classifyBillingAddressMismatch", () => {
         billingAddress: { city: "NYC", countryCode: "US" },
         shippingAddress: { city: "LA", countryCode: "US" },
       }),
-    ]);
+    ], fakeT);
     expect(result).toBeNull();
   });
 
@@ -55,7 +70,7 @@ describe("classifyBillingAddressMismatch", () => {
         billingAddress: { city: "Berlin", countryCode: "DE" },
         shippingAddress: { city: "Berlin", countryCode: "US" },
       }),
-    ]);
+    ], fakeT);
     expect(result).not.toBeNull();
     expect(result?.id).toBe("internal:billing_address_mismatch");
     expect(result?.explanation).toContain("DE");
@@ -70,7 +85,7 @@ describe("classifyBillingAddressMismatch", () => {
         billingAddress: { city: "NYC", countryCode: "US" },
         shippingAddress: { city: "LA", countryCode: "US" },
       }),
-    ]);
+    ], fakeT);
     expect(result).not.toBeNull();
     expect(result?.title).toMatch(/do not match/i);
   });
@@ -82,7 +97,7 @@ describe("classifyBillingAddressMismatch", () => {
         billingAddress: { city: "NYC", countryCode: null },
         shippingAddress: { city: "LA", countryCode: "US" },
       }),
-    ]);
+    ], fakeT);
     expect(result).toBeNull();
   });
 
@@ -90,7 +105,7 @@ describe("classifyBillingAddressMismatch", () => {
     const result = classifyBillingAddressMismatch([
       billingRow("missing"),
       orderRow({ billingAddress: null, shippingAddress: null }),
-    ]);
+    ], fakeT);
     expect(result).toBeNull();
   });
 
@@ -98,7 +113,7 @@ describe("classifyBillingAddressMismatch", () => {
     const result = classifyBillingAddressMismatch([
       billingRow("missing"),
       orderRow(null),
-    ]);
+    ], fakeT);
     expect(result).toBeNull();
   });
 });

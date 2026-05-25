@@ -38,6 +38,7 @@ const NEW_DISPUTES_NAMESPACES = [
   "completeDefencePackage",
   "defencePackageHtml",
   "overviewPill",
+  "internalSignals",
 ];
 
 const TOP_LEVEL_NEW_KEYS = [
@@ -45,6 +46,7 @@ const TOP_LEVEL_NEW_KEYS = [
   ["team.openInPortal"],
   ["settings.automationSectionHelp"],
   ["fraudIntel.weeklyChargebackRateAria"],
+  ["fraudIntel.noData"],
 ];
 
 function getByPath(obj, p) {

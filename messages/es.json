@@ -1147,7 +1147,12 @@
       "device_session_consistency": "From device fingerprint",
       "fraud_risk_screening": "From Shopify risk engine",
       "customer_account_info": "From Shopify customer data",
-      "default": "From store data"
+      "default": "From store data",
+      "auto_shopify": "From Shopify order data",
+      "auto_policy": "From store policies",
+      "auto_ipinfo": "From IP intelligence",
+      "manual_upload": "Uploaded manually",
+      "unavailable_from_source": "Not available from source"
     },
     "fieldAction": {
       "default": {
@@ -1311,6 +1316,32 @@
       "billing": "billing",
       "digital": "digital-good",
       "general": "dispute"
+    },
+    "internalSignals": {
+      "avsCodePrefix": "AVS code {code}",
+      "cvvCodePrefix": "CVV code {code}",
+      "avsCvvMismatch": {
+        "title": "Card security check did not fully pass",
+        "explanation": "The payment gateway returned a non-match ({codes}). Used internally for assessment; not surfaced to the bank to avoid weakening the response."
+      },
+      "billingAddress": {
+        "title": "Billing and shipping addresses do not match",
+        "countryDetail": "Billing country {billingCountry} differs from shipping country {shippingCountry}.",
+        "cityDetail": "Billing city differs from shipping city.",
+        "explanation": "{detail} Used internally for assessment; not surfaced to the bank to avoid weakening the response."
+      },
+      "ipCountryMismatch": {
+        "title": "IP geolocation mismatch",
+        "explanation": "The customer's IP address resolved to a different country than the shipping address. Used internally for assessment; not submitted to Shopify to avoid weakening the case."
+      },
+      "ipHighRisk": {
+        "title": "IP routes through VPN, proxy, or data center",
+        "explanation": "Network-level privacy signals make the geolocation unreliable. Used internally for assessment; not submitted to Shopify to avoid weakening the case."
+      },
+      "ipBankIneligible": {
+        "title": "IP/location signal kept internal",
+        "explanation": "This signal informs the assessment but the upstream collector marked it as not bank-eligible. Not submitted to Shopify."
+      }
     }
   },
   "disputeReasons": {
@@ -4164,7 +4195,9 @@
       "info": "Informativo",
       "consider": "A considerar",
       "breach": "Umbral superado"
-    }
+    },
+    "weeklyChargebackRateAria": "Weekly chargeback rate, last 8 weeks",
+    "noData": "No data"
   },
   "consent": {
     "ariaLabel": "Opciones de cookies y privacidad",

@@ -56,12 +56,12 @@ const AUTOMATION_PILL: Record<AutomationMode, { bg: string; color: string }> = {
 
 function nextStepCopy(
   step: NextStep,
-  t: ReturnType<typeof useTranslations>,
+  tNext: ReturnType<typeof useTranslations>,
 ): string {
-  if (step.kind === "ready_no_action") return t("readyNoAction");
-  if (step.kind === "submit_now") return t("submitNow");
-  if (step.kind === "submitted_no_action") return t("submittedNoAction");
-  return t("reviewMissing");
+  if (step.kind === "ready_no_action") return tNext("readyNoAction");
+  if (step.kind === "submit_now") return tNext("submitNow");
+  if (step.kind === "submitted_no_action") return tNext("submittedNoAction");
+  return tNext("reviewMissing");
 }
 
 /**

@@ -744,6 +744,11 @@
       "helperNoDate": "Den utfärdande banken svarar vanligtvis inom 30–75 dagar."
     },
     "sourceCaption": {
+      "auto_shopify": "Från Shopify-orderdata",
+      "auto_policy": "Från butikens policysida",
+      "auto_ipinfo": "Från IP-information",
+      "manual_upload": "Uppladdat manuellt",
+      "unavailable_from_source": "Inte tillgängligt från källan",
       "order_confirmation": "Från Shopify-orderdata",
       "billing_address_match": "Från Shopify-orderdata",
       "avs_cvv_match": "Från betalningsgateway",
@@ -883,6 +888,32 @@
       "waived": "Undantaget",
       "internal_only": "Endast internt",
       "invalid": "Ogiltigt"
+    },
+    "internalSignals": {
+      "avsCodePrefix": "AVS-kod {code}",
+      "cvvCodePrefix": "CVV-kod {code}",
+      "avsCvvMismatch": {
+        "title": "Kortsäkerhetskontroll passerade inte fullständigt",
+        "explanation": "Betalningsgatewayen returnerade en icke-matchning ({codes}). Används internt för bedömning; visas inte för banken för att undvika att försvaga svaret."
+      },
+      "billingAddress": {
+        "title": "Fakturerings- och leveransadresser stämmer inte överens",
+        "countryDetail": "Faktureringsland {billingCountry} skiljer sig från leveransland {shippingCountry}.",
+        "cityDetail": "Faktureringsstad skiljer sig från leveransstad.",
+        "explanation": "{detail} Används internt för bedömning; visas inte för banken för att undvika att försvaga svaret."
+      },
+      "ipCountryMismatch": {
+        "title": "IP-geolokalisering matchar inte",
+        "explanation": "Kundens IP-adress löstes till ett annat land än leveransadressen. Används internt för bedömning; skickas inte till Shopify för att undvika att försvaga ärendet."
+      },
+      "ipHighRisk": {
+        "title": "IP routas via VPN, proxy eller datacenter",
+        "explanation": "Integritetssignaler på nätverksnivå gör geolokaliseringen otillförlitlig. Används internt för bedömning; skickas inte till Shopify för att undvika att försvaga ärendet."
+      },
+      "ipBankIneligible": {
+        "title": "IP-/platssignal hålls intern",
+        "explanation": "Denna signal påverkar bedömningen men uppströmskollektorn markerade den som ej bank-berättigad. Skickas inte till Shopify."
+      }
     },
     "evidenceTabExtra": {
       "buildFailedTitle": "Bygget av bevispaketet misslyckades",
@@ -4003,6 +4034,8 @@
     "windowAll": "Hela perioden",
     "queuedTitle": "Förbereder din översikt över bedrägeririsk",
     "queuedBody": "Vi har köat en analys av din orderhistorik. Detta startar oftast inom några minuter — uppdatera om en stund för att se framstegen.",
+    "noData": "Inga data",
+    "weeklyChargebackRateAria": "Veckovis chargeback-frekvens, senaste 8 veckorna",
     "analyzingTitle": "Analyserar din orderhistorik",
     "analyzingBody": "Vi har analyserat {count} ordrar hittills. Riskanalysen låses upp så fort vi är klara.",
     "failedTitle": "Vi stötte på problem när vi analyserade dina ordrar",

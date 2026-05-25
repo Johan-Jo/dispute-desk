@@ -740,6 +740,11 @@
       "helperNoDate": "The issuing bank typically responds within 30–75 days."
     },
     "sourceCaption": {
+      "auto_shopify": "From Shopify order data",
+      "auto_policy": "From store policies",
+      "auto_ipinfo": "From IP intelligence",
+      "manual_upload": "Uploaded manually",
+      "unavailable_from_source": "Not available from source",
       "order_confirmation": "From Shopify order data",
       "billing_address_match": "From Shopify order data",
       "avs_cvv_match": "From payment gateway",
@@ -879,6 +884,32 @@
       "waived": "Waived",
       "internal_only": "Internal only",
       "invalid": "Invalid"
+    },
+    "internalSignals": {
+      "avsCodePrefix": "AVS code {code}",
+      "cvvCodePrefix": "CVV code {code}",
+      "avsCvvMismatch": {
+        "title": "Card security check did not fully pass",
+        "explanation": "The payment gateway returned a non-match ({codes}). Used internally for assessment; not surfaced to the bank to avoid weakening the response."
+      },
+      "billingAddress": {
+        "title": "Billing and shipping addresses do not match",
+        "countryDetail": "Billing country {billingCountry} differs from shipping country {shippingCountry}.",
+        "cityDetail": "Billing city differs from shipping city.",
+        "explanation": "{detail} Used internally for assessment; not surfaced to the bank to avoid weakening the response."
+      },
+      "ipCountryMismatch": {
+        "title": "IP geolocation mismatch",
+        "explanation": "The customer's IP address resolved to a different country than the shipping address. Used internally for assessment; not submitted to Shopify to avoid weakening the case."
+      },
+      "ipHighRisk": {
+        "title": "IP routes through VPN, proxy, or data center",
+        "explanation": "Network-level privacy signals make the geolocation unreliable. Used internally for assessment; not submitted to Shopify to avoid weakening the case."
+      },
+      "ipBankIneligible": {
+        "title": "IP/location signal kept internal",
+        "explanation": "This signal informs the assessment but the upstream collector marked it as not bank-eligible. Not submitted to Shopify."
+      }
     },
     "evidenceTabExtra": {
       "buildFailedTitle": "Evidence pack build failed",
@@ -4168,6 +4199,8 @@
     "windowAll": "All time",
     "queuedTitle": "Preparing your fraud-risk overview",
     "queuedBody": "We've queued up an analysis of your historical orders. This usually starts within a few minutes — refresh in a bit to see progress.",
+    "noData": "No data",
+    "weeklyChargebackRateAria": "Weekly chargeback rate, last 8 weeks",
     "analyzingTitle": "Analyzing your order history",
     "analyzingBody": "We've analyzed {count} orders so far. The risk overview unlocks the moment we finish.",
     "failedTitle": "We hit a snag analyzing your orders",

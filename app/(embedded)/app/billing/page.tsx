@@ -965,7 +965,7 @@ function BillingPageInner() {
           }}
           secondaryActions={[
             {
-              content: t("billing.cancel") ?? "Cancel",
+              content: t("common.cancel"),
               onAction: () => setShowDiscountModal(false),
             },
           ]}

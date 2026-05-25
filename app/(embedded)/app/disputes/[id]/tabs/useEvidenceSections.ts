@@ -23,11 +23,17 @@
 
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import type {
   EvidenceItemWithStrength,
   WorkspaceData,
 } from "../workspace-components/types";
+
+/** Minimal translator shape — accepts a key and optional params. Lets
+ *  the pure helpers below stay React-free while still producing
+ *  locale-correct strings. */
+type Translate = (key: string, params?: Record<string, string | number>) => string;
 import type { CaseStrengthLevel } from "@/lib/argument/types";
 import { MERCHANT_UI_HIDDEN_FIELDS } from "@/lib/automation/merchantUiHiddenFields";
 
@@ -400,7 +406,7 @@ function readString(v: unknown): string | null {
 const AVS_MATCH_CODES = new Set(["Y", "A"]);
 const CVV_MATCH_CODES = new Set(["M"]);
 
-function classifyAvsCvv(payload: unknown): InternalSignalViewModel | null {
+function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel | null {
   if (!isPlainObject(payload)) return null;
   const avs = readString(payload.avsResultCode);
   const cvv = readString(payload.cvvResultCode);
@@ -411,12 +417,12 @@ function classifyAvsCvv(payload: unknown): InternalSignalViewModel | null {
   if (!avsMismatch && !cvvMismatch) return null;
 
   const parts: string[] = [];
-  if (avsMismatch) parts.push(`AVS code ${avs}`);
-  if (cvvMismatch) parts.push(`CVV code ${cvv}`);
+  if (avsMismatch) parts.push(t("internalSignals.avsCodePrefix", { code: avs ?? "" }));
+  if (cvvMismatch) parts.push(t("internalSignals.cvvCodePrefix", { code: cvv ?? "" }));
   return {
     id: "internal:avs_cvv_mismatch",
-    title: "Card security check did not fully pass", // i18n-allow TODO(i18n): thread translator into classifyAvsCvv
-    explanation: `The payment gateway returned a non-match (${parts.join(", ")}). Used internally for assessment; not surfaced to the bank to avoid weakening the response.`,
+    title: t("internalSignals.avsCvvMismatch.title"),
+    explanation: t("internalSignals.avsCvvMismatch.explanation", { codes: parts.join(", ") }),
   };
 }
 
@@ -444,6 +450,7 @@ function classifyAvsCvv(payload: unknown): InternalSignalViewModel | null {
  */
 export function classifyBillingAddressMismatch(
   effectiveChecklist: EvidenceItemWithStrength[],
+  t: Translate,
 ): InternalSignalViewModel | null {
   // If billing_address_match is already available, the collector confirmed
   // a match — nothing to surface internally.
@@ -490,17 +497,17 @@ export function classifyBillingAddressMismatch(
   if (!countryMismatch && !cityMismatch) return null;
 
   const detail = countryMismatch
-    ? `Billing country ${billingCountry} differs from shipping country ${shippingCountry}.`
-    : `Billing city differs from shipping city.`;
+    ? t("internalSignals.billingAddress.countryDetail", { billingCountry, shippingCountry })
+    : t("internalSignals.billingAddress.cityDetail");
 
   return {
     id: "internal:billing_address_mismatch",
-    title: "Billing and shipping addresses do not match", // i18n-allow TODO(i18n): thread translator into classifyBillingShippingMismatch
-    explanation: `${detail} Used internally for assessment; not surfaced to the bank to avoid weakening the response.`,
+    title: t("internalSignals.billingAddress.title"),
+    explanation: t("internalSignals.billingAddress.explanation", { detail }),
   };
 }
 
-function classifyIpLocation(payload: unknown): InternalSignalViewModel | null {
+function classifyIpLocation(payload: unknown, t: Translate): InternalSignalViewModel | null {
   if (!isPlainObject(payload)) return null;
   const locationMatch = readString(payload.locationMatch);
   const riskLevel = readString(payload.riskLevel);
@@ -517,30 +524,28 @@ function classifyIpLocation(payload: unknown): InternalSignalViewModel | null {
   if (countryMismatch) {
     return {
       id: "internal:ip_country_mismatch",
-      title: "IP geolocation mismatch", // i18n-allow TODO(i18n)
-      explanation:
-        "The customer's IP address resolved to a different country than the shipping address. Used internally for assessment; not submitted to Shopify to avoid weakening the case.",
+      title: t("internalSignals.ipCountryMismatch.title"),
+      explanation: t("internalSignals.ipCountryMismatch.explanation"),
     };
   }
   if (highRisk) {
     return {
       id: "internal:ip_high_risk",
-      title: "IP routes through VPN, proxy, or data center", // i18n-allow TODO(i18n)
-      explanation:
-        "Network-level privacy signals make the geolocation unreliable. Used internally for assessment; not submitted to Shopify to avoid weakening the case.",
+      title: t("internalSignals.ipHighRisk.title"),
+      explanation: t("internalSignals.ipHighRisk.explanation"),
     };
   }
   // explicitlyInternal but no specific reason — generic internal note.
   return {
     id: "internal:ip_bank_ineligible",
-    title: "IP/location signal kept internal",
-    explanation:
-      "This signal informs the assessment but the upstream collector marked it as not bank-eligible. Not submitted to Shopify.",
+    title: t("internalSignals.ipBankIneligible.title"),
+    explanation: t("internalSignals.ipBankIneligible.explanation"),
   };
 }
 
 function deriveInternalOnlySignals(
   effectiveChecklist: EvidenceItemWithStrength[],
+  t: Translate,
 ): InternalSignalViewModel[] {
   const out: InternalSignalViewModel[] = [];
   // Index payloads by field for quick lookup. The checklist iteration
@@ -551,13 +556,13 @@ function deriveInternalOnlySignals(
     if (item.payload) byField.set(item.field, item.payload);
   }
 
-  const avs = classifyAvsCvv(byField.get("avs_cvv_match"));
+  const avs = classifyAvsCvv(byField.get("avs_cvv_match"), t);
   if (avs) out.push(avs);
 
-  const billing = classifyBillingAddressMismatch(effectiveChecklist);
+  const billing = classifyBillingAddressMismatch(effectiveChecklist, t);
   if (billing) out.push(billing);
 
-  const ip = classifyIpLocation(byField.get("ip_location_check"));
+  const ip = classifyIpLocation(byField.get("ip_location_check"), t);
   if (ip) out.push(ip);
 
   // fraud_risk_screening is NO LONGER an internal-only signal as of
@@ -594,6 +599,7 @@ function deriveInternalOnlySignals(
 
 export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewModel {
   const { data, derived, clientState } = workspace;
+  const tInternal = useTranslations("disputes");
 
   // Defensive empty-state when workspace data hasn't loaded yet. The
   // upstream tab is responsible for showing a loading state; this hook
@@ -753,7 +759,7 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
   // (VPN/proxy/data-center), and any payload explicitly flagged
   // bankEligible:false. Conservative — absence of data is never a
   // negative signal.
-  const internalOnly = deriveInternalOnlySignals(derived.effectiveChecklist);
+  const internalOnly = deriveInternalOnlySignals(derived.effectiveChecklist, tInternal);
 
   return {
     caseSummary,
