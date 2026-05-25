@@ -67,7 +67,7 @@ export async function collectCoverageEvidence(
   return [
     {
       type: "other",
-      label: "Shopify Protect coverage",
+      labelToken: { key: "packs.section.shopifyProtect" },
       source: "shopify_order",
       // Not in canonicalEvidence — coverage overrides the strength
       // model rather than feeding into it. Kept as a fieldsProvided

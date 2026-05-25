@@ -290,7 +290,12 @@ function buildReason(
   category: EvidenceCategory,
 ): string {
   const spec = CANONICAL_EVIDENCE[candidate.evidenceFieldKey];
-  const label = candidate.label?.trim() || spec?.label || candidate.evidenceFieldKey;
+  // The reason string is diagnostic-only — it never reaches a merchant
+  // surface — so we can compose it from the candidate's stored label
+  // (set by the upstream collector) or the spec's signalId as a
+  // language-neutral fallback. Lib code never emits resolved English
+  // for user-facing copy.
+  const label = candidate.label?.trim() || spec?.signalId || candidate.evidenceFieldKey;
   const strength = category === "strong" ? "strong" : "moderate";
   return `${label} — ${strength} signal; attached natively to amplify visibility in the bank's review.`;
 }

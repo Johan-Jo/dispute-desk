@@ -113,7 +113,7 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
   const display = toDisplayStrength(props.strength);
   const showExplanation =
     props.strength !== "strong" &&
-    (Boolean(props.strengthReason) || Boolean(props.improvementHint));
+    (Boolean(props.strengthReasonText) || Boolean(props.improvementHintText));
 
   const strengthColors = STRENGTH_PILL[display];
   const statusColors = STATUS_PILL[props.status];
@@ -273,7 +273,7 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
           >
             {t("whyLabel")}
           </h3>
-          {props.strengthReason ? (
+          {props.strengthReasonText ? (
             <p
               style={{
                 fontSize: 13,
@@ -282,10 +282,10 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
                 margin: 0,
               }}
             >
-              {props.strengthReason}
+              {props.strengthReasonText}
             </p>
           ) : null}
-          {props.improvementHint ? (
+          {props.improvementHintText ? (
             <div style={{ marginTop: 8 }}>
               <p
                 style={{
@@ -305,7 +305,7 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
                   margin: 0,
                 }}
               >
-                {props.improvementHint}
+                {props.improvementHintText}
               </p>
             </div>
           ) : null}

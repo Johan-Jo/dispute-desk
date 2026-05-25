@@ -48,6 +48,40 @@ import {
 import { enrichDisputeWithNetworkReasonCode } from "@/lib/disputes/enrichNetworkReasonCode";
 import { evaluateQualification } from "@/lib/liabilityShift/evaluateQualification";
 import type { EvidenceSection, BuildContext } from "./types";
+import { readSectionLabel } from "./sectionLabel";
+import enMessages from "@/messages/en.json";
+
+/** Lookup helper for synthesizing the audit-event and DB `label`
+ *  columns. The persisted JSON `pack_json.sections[].labelToken` is
+ *  the canonical source; we additionally write the English-resolved
+ *  string into the legacy `label` columns so existing analytics
+ *  pipelines continue to read meaningful text. */
+function lookupEn(key: string): string {
+  const parts = key.split(".");
+  let node: unknown = enMessages;
+  for (const p of parts) {
+    if (node && typeof node === "object" && p in (node as Record<string, unknown>)) {
+      node = (node as Record<string, unknown>)[p];
+    } else {
+      return key;
+    }
+  }
+  return typeof node === "string" ? node : key;
+}
+
+function enTranslate(key: string, params?: Record<string, string | number>): string {
+  let msg = lookupEn(key);
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      msg = msg.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
+    }
+  }
+  return msg;
+}
+
+function sectionLabelEn(section: EvidenceSection): string {
+  return readSectionLabel(section, enTranslate);
+}
 import type { OrderContext } from "@/lib/automation/completeness";
 
 function decryptAccessToken(encrypted: string): string {
@@ -338,10 +372,11 @@ export async function buildPack(
   // their evidence item without scanning the array.
   let itemsCreated = 0;
   for (const section of allSections) {
+    const labelEn = sectionLabelEn(section);
     const { error: itemErr } = await sb.from("evidence_items").insert({
       pack_id: packId,
       type: section.type,
-      label: section.label,
+      label: labelEn,
       source: section.source,
       payload: { ...section.data, fieldsProvided: section.fieldsProvided },
     });
@@ -356,7 +391,8 @@ export async function buildPack(
         eventType: "item_added",
         eventPayload: {
           type: section.type,
-          label: section.label,
+          label: labelEn,
+          labelToken: section.labelToken,
           source: section.source,
         },
       });
@@ -633,7 +669,13 @@ export async function buildPack(
     disputeReason: dispute.reason,
     sections: allSections.map((s) => ({
       type: s.type,
-      label: s.label,
+      labelToken: s.labelToken,
+      // Legacy English `label` is written alongside `labelToken` so
+      // pre-Phase-4 consumers (analytics queries, the defence pipeline,
+      // SQL dashboards) continue to read meaningful text without a
+      // migration. New code reads `labelToken` via
+      // `lib/packs/sectionLabel.ts`.
+      label: sectionLabelEn(s),
       source: s.source,
       fieldsProvided: s.fieldsProvided,
       data: s.data,

@@ -219,6 +219,8 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     (data.presentationStatus as PresentationStatus | undefined) ?? "DRAFT";
   const {
     caseStrength,
+    strengthReasonText,
+    improvementHintText,
     effectiveChecklist,
     isReadOnly,
     recommendationText,
@@ -321,7 +323,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const strengthLabel = resolveHeroTitle();
 
   function resolveHeroSubtitle(): string | null {
-    const reason = (caseStrength.strengthReason ?? "").trim();
+    const reason = (strengthReasonText ?? "").trim();
     const savedDate = formatDate(submittedAt);
     const deadline = dispute.dueAt ? formatDate(dispute.dueAt) : null;
     switch (presentationStatus) {
@@ -780,7 +782,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           suppressed once the pack is submitted because the merchant
           can no longer act on it — the card collapses to the
           submission/deadline line plus the evaluation helper. */}
-      {((!submitted && (recommendationText || caseStrength.improvementHint)) || dispute.dueAt || submitted) && (
+      {((!submitted && (recommendationText || improvementHintText)) || dispute.dueAt || submitted) && (
         <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
           <BlockStack gap="200">
             {!submitted && recommendationText && (
@@ -789,8 +791,8 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             {!submitted && recommendationHelperText && (
               <Text as="p" variant="bodySm" tone="subdued">{recommendationHelperText}</Text>
             )}
-            {!submitted && caseStrength.improvementHint && (
-              <Text as="p" variant="bodySm" tone="subdued">{caseStrength.improvementHint}</Text>
+            {!submitted && improvementHintText && (
+              <Text as="p" variant="bodySm" tone="subdued">{improvementHintText}</Text>
             )}
             <Text as="p" variant="bodySm" tone="subdued">
               {submitted
@@ -1149,11 +1151,16 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                   }}
                 >
                   {(() => {
+                    // signalLabel.<signalId> is now the canonical key
+                    // (no more spec.label fallback). When the lookup
+                    // returns the key path verbatim, fall back to the
+                    // raw signalId so the row still renders something
+                    // identifiable.
                     try {
                       const k = tSignal(spec.signalId);
-                      return k && k !== spec.signalId ? k : spec.label;
+                      return k && k !== spec.signalId ? k : spec.signalId;
                     } catch {
-                      return spec.label;
+                      return spec.signalId;
                     }
                   })()}
                 </p>

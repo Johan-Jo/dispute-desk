@@ -1376,6 +1376,38 @@
     "Subscription": "Subscription"
   },
   "packs": {
+    "section": {
+      "order": "Order {orderName}",
+      "refundHistory": "Refund history",
+      "customerActivityLog": "Customer activity log",
+      "customerAccountDetails": "Customer account details",
+      "shopifyProtect": "Shopify Protect coverage",
+      "customerCommunication": "Customer communication",
+      "ipLocationCheck": "IP & location check",
+      "fraudRiskScreening": "Pre-authorization fraud screening",
+      "fulfillments": "Fulfillments ({count})",
+      "manualUploads": "Manual uploads ({count})",
+      "manualUploadLiteral": "{text}",
+      "paymentVerification": "Payment verification",
+      "paymentVerificationAvsCvv": "Payment verification (AVS/CVV)",
+      "storePolicies": "Store policies ({count})",
+      "refundPolicy": "Refund policy",
+      "shippingPolicy": "Shipping policy",
+      "cancellationPolicy": "Cancellation policy",
+      "threeDSecure": "3-D Secure authentication",
+      "legacy": {
+        "order": "Order details",
+        "shipping": "Shipping",
+        "tracking": "Tracking",
+        "policy": "Policy",
+        "refund_policy": "Refund policy",
+        "shipping_policy": "Shipping policy",
+        "cancellation_policy": "Cancellation policy",
+        "comms": "Communication",
+        "other": "Additional evidence",
+        "access_log": "Activity log"
+      }
+    },
     "title": "Packs",
     "subtitle": "Evidence packs generated for your disputes",
     "allStatuses": "All statuses",

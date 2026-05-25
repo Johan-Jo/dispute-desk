@@ -12,16 +12,14 @@
 
 export type CaseStrengthLevel = "strong" | "moderate" | "weak" | "insufficient";
 
-/** A localizable token. UI calls `t(key, params)` to render.
- *  `params` values are either pre-localized strings (e.g. from
- *  another `t()` lookup) or simple primitives. Lib functions never
- *  emit free English text alongside this — UIs that need English
- *  for tests/regex can still use the deprecated `strengthReason`
- *  string field, but new render sites should use the token field. */
-export interface I18nToken {
-  key: string;
-  params?: Record<string, string | number>;
-}
+/** A localizable token. Canonical shape lives in `lib/i18n/token.ts`;
+ *  re-exported here for back-compat with the argument-engine consumers
+ *  that already import `I18nToken` from this file. The shared type
+ *  supports nested-key params (`I18nKeyParam`) so message templates
+ *  like "{primary} and {secondary} support this defense" can splice
+ *  translated labels in any locale. */
+import type { I18nToken } from "@/lib/i18n/token";
+export type { I18nToken };
 
 /* ── Evidence flags + data (moved from responseEngine.ts on 2026-05-16) ── */
 
@@ -116,19 +114,16 @@ export interface CaseStrengthResult {
   supportingCount: number;
   supportedClaims: number;
   totalClaims: number;
-  /** Merchant-facing explanation of why this strength was assigned.
-   *  Legacy English field — kept for tests and server consumers.
-   *  Embedded UI must use `strengthReasonI18n` instead. */
-  strengthReason?: string;
-  /** i18n token for `strengthReason`. UI translates via `t(key, params)`.
-   *  When `params` contains a `*labelKey*` / `*hintKey*` / `*familyKey*`
-   *  / `*decisiveKey*`, the UI must resolve those keys to localized
-   *  strings FIRST, then pass the resolved strings as the params to
-   *  the outer `t()` call. */
-  strengthReasonI18n?: I18nToken;
-  improvementHint: string | null;
-  /** i18n token sibling of `improvementHint`. */
-  improvementHintI18n?: I18nToken | null;
+  /** Token for the merchant-facing "why this strength" sentence. The
+   *  consumer resolves it via `resolveToken(rootTranslator, …)` to
+   *  produce a `Localized` string. Nested-key params (e.g. signal
+   *  labels) are wrapped as `I18nKeyParam` so the resolver translates
+   *  them before splicing into the outer template. */
+  strengthReasonI18n: I18nToken;
+  /** Token for the improvement-hint sentence. null when overall is
+   *  already strong, no actionable missing field exists, or the case
+   *  is covered / fatal-loss. */
+  improvementHintI18n: I18nToken | null;
   /** Hero label hint. Lets the UI distinguish:
    *   - `likely_to_win` — overall === "strong"
    *   - `could_win` — overall === "moderate" via the standard formula
@@ -157,13 +152,14 @@ export interface CaseStrengthResult {
   };
   /** Fatal-loss gate state (PRD §5). When `triggered === true`,
    *  `overall` is capped at "weak", `heroVariant` becomes "hard_to_win",
-   *  and `strengthReason` is replaced with the fatal-loss copy. The
-   *  pipeline blocks auto-submission for these cases regardless of the
-   *  underlying evidence. */
+   *  and `strengthReasonI18n` is replaced with the fatal-loss token.
+   *  The pipeline blocks auto-submission for these cases regardless
+   *  of the underlying evidence. */
   fatalLoss?: {
     triggered: boolean;
     reason: "refund_issued" | "inr_no_fulfillment" | null;
-    message: string | null;
+    /** Merchant-facing message token. Resolved via `resolveToken`. */
+    messageToken: I18nToken | null;
   };
   /** Risk-weakness gate state (fraud-risk Phase 2). When
    *  `triggered === true` AND not pre-empted by coverage or fatal-loss,

@@ -72,10 +72,10 @@ export async function collectPolicyEvidence(
   // owns that signal, and they intentionally produce empty output from
   // the Shopify serializer so they don't double-emit into Shopify
   // (see the empty-string filter in buildEvidenceInputFromRaw).
-  const PER_TYPE_LABEL: Record<string, string> = {
-    refunds: "Refund Policy",
-    shipping: "Shipping Policy",
-    terms: "Cancellation Policy",
+  const PER_TYPE_LABEL_KEY: Record<string, string> = {
+    refunds: "packs.section.refundPolicy",
+    shipping: "packs.section.shippingPolicy",
+    terms: "packs.section.cancellationPolicy",
   };
   const perTypeSections: EvidenceSection[] = [];
   for (const [type, policy] of latest) {
@@ -83,7 +83,7 @@ export async function collectPolicyEvidence(
     if (!field) continue;
     perTypeSections.push({
       type: field,
-      label: PER_TYPE_LABEL[type] ?? field,
+      labelToken: { key: PER_TYPE_LABEL_KEY[type] ?? `packs.section.legacy.${field}` },
       source: "policy_snapshots",
       fieldsProvided: [],
       data: {
@@ -104,7 +104,10 @@ export async function collectPolicyEvidence(
   return [
     {
       type: "policy",
-      label: `Store Policies (${policyEntries.length})`,
+      labelToken: {
+        key: "packs.section.storePolicies",
+        params: { count: policyEntries.length },
+      },
       source: "policy_snapshots",
       fieldsProvided,
       data: { policies: policyEntries },

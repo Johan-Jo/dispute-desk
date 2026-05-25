@@ -251,7 +251,6 @@ export interface WorkspaceData {
 
 export interface EvidenceCategory {
   key: string;
-  label: string;
   fields: string[];
 }
 
@@ -265,17 +264,14 @@ export interface EvidenceItemWithStrength extends ChecklistItemV2 {
   payload: Record<string, unknown> | null;
 }
 
-// i18n-allow-block: `label` here is an English fallback. The render
-// site must translate via `t(`disputes.evidenceCategoryLabel.${cat.key}`)
-// using the canonical `key` field. Kept for backwards-compat with any
-// code that still reads `label` directly.
+// Render sites translate via `t("disputes.evidenceCategoryLabel." + cat.key)`.
 export const EVIDENCE_CATEGORIES: EvidenceCategory[] = [
-  { key: "order", label: "Order Facts", fields: ["order_confirmation", "billing_address_match"] }, // i18n-allow
-  { key: "payment", label: "Payment Verification", fields: ["avs_cvv_match"] }, // i18n-allow
-  { key: "fulfillment", label: "Fulfillment & Delivery", fields: ["shipping_tracking", "delivery_proof"] }, // i18n-allow
-  { key: "communication", label: "Customer Communication", fields: ["customer_communication"] }, // i18n-allow
-  { key: "policy", label: "Policies & Disclosures", fields: ["refund_policy", "shipping_policy", "cancellation_policy"] }, // i18n-allow
-  { key: "identity", label: "Customer Identity & History", fields: ["activity_log"] }, // i18n-allow
-  { key: "merchant", label: "Merchant Evidence", fields: ["supporting_documents", "product_description", "duplicate_explanation"] }, // i18n-allow
+  { key: "order", fields: ["order_confirmation", "billing_address_match"] },
+  { key: "payment", fields: ["avs_cvv_match"] },
+  { key: "fulfillment", fields: ["shipping_tracking", "delivery_proof"] },
+  { key: "communication", fields: ["customer_communication"] },
+  { key: "policy", fields: ["refund_policy", "shipping_policy", "cancellation_policy"] },
+  { key: "identity", fields: ["activity_log"] },
+  { key: "merchant", fields: ["supporting_documents", "product_description", "duplicate_explanation"] },
 ];
 

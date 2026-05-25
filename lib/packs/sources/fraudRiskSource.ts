@@ -212,7 +212,7 @@ export async function collectFraudRiskEvidence(
     return [
       {
         type: "other",
-        label: "Pre-authorization fraud screening",
+        labelToken: { key: "packs.section.fraudRiskScreening" },
         source: "shopify_order_risk_assessments",
         fieldsProvided: ["fraud_risk_screening"],
         data,
@@ -256,7 +256,7 @@ export async function collectFraudRiskEvidence(
   return [
     {
       type: "other",
-      label: "Pre-authorization fraud screening",
+      labelToken: { key: "packs.section.fraudRiskScreening" },
       source: "shopify_order_risk_assessments",
       fieldsProvided: ["fraud_risk_screening"],
       data: negativeData,

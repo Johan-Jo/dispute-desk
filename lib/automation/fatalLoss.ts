@@ -22,6 +22,7 @@
  * unaffected.
  */
 
+import type { I18nToken } from "@/lib/i18n/token";
 import type { OrderDetailNode } from "@/lib/shopify/queries/orders";
 
 export type FatalLossReason =
@@ -31,12 +32,13 @@ export type FatalLossReason =
 export interface FatalLossSummary {
   triggered: boolean;
   reason: FatalLossReason | null;
-  /** Merchant-facing one-liner explaining why the case is unwinnable.
-   *  Surfaced as `caseStrength.strengthReason` when triggered. */
-  message: string | null;
+  /** Merchant-facing token explaining why the case is unwinnable.
+   *  Surfaced as `caseStrength.strengthReasonI18n` when triggered.
+   *  Bank-rebuttal-safe — never surfaces in submitted text. */
+  messageToken: I18nToken | null;
 }
 
-const NOT_TRIGGERED: FatalLossSummary = { triggered: false, reason: null, message: null };
+const NOT_TRIGGERED: FatalLossSummary = { triggered: false, reason: null, messageToken: null };
 
 /** Shopify dispute reason codes that indicate Item Not Received. */
 const INR_REASON_CODES = new Set<string>([
@@ -45,14 +47,11 @@ const INR_REASON_CODES = new Set<string>([
   "ITEM_NOT_RECEIVED",
 ]);
 
-/** Per-reason merchant-facing copy. Bank-rebuttal-safe — never surfaces in
- *  the submitted text path; only renders in the merchant UI's hero. */
-const MESSAGES: Record<FatalLossReason, string> = {
-  refund_issued:
-    "A refund covering this charge has already been issued — disputing the chargeback after a refund is unlikely to succeed.",
-  inr_no_fulfillment:
-    "This dispute references an order that was never fulfilled — there is no shipping evidence available to defend an item-not-received claim.",
-};
+/** Per-reason merchant-facing token. The translator owns the locale
+ *  copy — see `messages/*.json` `disputes.strengthReason.fatalLoss.*`. */
+function messageTokenFor(reason: FatalLossReason): I18nToken {
+  return { key: `disputes.strengthReason.fatalLoss.${reason}` };
+}
 
 /**
  * Detect fatal-loss conditions from the order + dispute context.
@@ -82,7 +81,7 @@ export function detectFatalLoss(
       return {
         triggered: true,
         reason: "refund_issued",
-        message: MESSAGES.refund_issued,
+        messageToken: messageTokenFor("refund_issued"),
       };
     }
   }
@@ -98,7 +97,7 @@ export function detectFatalLoss(
       return {
         triggered: true,
         reason: "inr_no_fulfillment",
-        message: MESSAGES.inr_no_fulfillment,
+        messageToken: messageTokenFor("inr_no_fulfillment"),
       };
     }
   }

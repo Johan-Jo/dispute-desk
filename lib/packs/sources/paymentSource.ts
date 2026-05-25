@@ -88,7 +88,7 @@ function collectCardEvidence(
     // Non-card payment exists — record status as not_applicable
     return {
       type: "other",
-      label: "Payment Verification",
+      labelToken: { key: "packs.section.paymentVerification" },
       source: "shopify_transactions",
       fieldsProvided: ["avs_cvv_match"],
       data: {
@@ -125,7 +125,7 @@ function collectCardEvidence(
 
   return {
     type: "other",
-    label: "Payment Verification (AVS/CVV)",
+    labelToken: { key: "packs.section.paymentVerificationAvsCvv" },
     source: "shopify_transactions",
     fieldsProvided: ["avs_cvv_match"],
     data,

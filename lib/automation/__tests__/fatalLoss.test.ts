@@ -24,7 +24,7 @@ describe("detectFatalLoss — refund_issued trigger", () => {
     const r = detectFatalLoss(order, "FRAUDULENT", 100);
     expect(r.triggered).toBe(true);
     expect(r.reason).toBe("refund_issued");
-    expect(r.message).toMatch(/refund/i);
+    expect(r.messageToken?.key).toBe("disputes.strengthReason.fatalLoss.refund_issued");
   });
 
   it("fires when totalRefunded exceeds disputed amount", () => {
@@ -79,7 +79,7 @@ describe("detectFatalLoss — inr_no_fulfillment trigger", () => {
     const r = detectFatalLoss(order, "PRODUCT_NOT_RECEIVED", 100);
     expect(r.triggered).toBe(true);
     expect(r.reason).toBe("inr_no_fulfillment");
-    expect(r.message).toMatch(/fulfilled|shipping/i);
+    expect(r.messageToken?.key).toBe("disputes.strengthReason.fatalLoss.inr_no_fulfillment");
   });
 
   it("fires for legacy ITEM_NOT_RECEIVED reason code", () => {

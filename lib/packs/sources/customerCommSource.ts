@@ -114,7 +114,7 @@ export async function collectCustomerCommEvidence(
   return [
     {
       type: "comms",
-      label: "Customer communication",
+      labelToken: { key: "packs.section.customerCommunication" },
       source: "shopify_timeline",
       fieldsProvided: ["customer_communication"],
       data: {

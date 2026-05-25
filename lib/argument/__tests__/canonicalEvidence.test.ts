@@ -17,10 +17,10 @@ import {
 } from "../canonicalEvidence";
 
 describe("canonical evidence registry — invariants", () => {
-  it("every entry has a signalId, label, category, and explicit excludedFromStrength flag", () => {
+  it("every entry has a signalId, labelKey, category, and explicit excludedFromStrength flag", () => {
     for (const [field, spec] of Object.entries(CANONICAL_EVIDENCE)) {
       expect(spec.signalId, field).toBeTruthy();
-      expect(spec.label, field).toBeTruthy();
+      expect(spec.labelKey, field).toMatch(/^disputes\./);
       expect(["strong", "moderate", "supporting"], field).toContain(spec.category);
       expect(typeof spec.excludedFromStrength, field).toBe("boolean");
     }

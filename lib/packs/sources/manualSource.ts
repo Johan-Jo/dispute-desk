@@ -101,7 +101,10 @@ export async function collectManualEvidence(
   return [
     {
       type: "other",
-      label: `Manual Uploads (${items.length})`,
+      labelToken: {
+        key: "packs.section.manualUploads",
+        params: { count: items.length },
+      },
       source: "manual_upload",
       fieldsProvided: [MANUAL_UPLOAD_FIELD, "customer_communication"],
       data: {

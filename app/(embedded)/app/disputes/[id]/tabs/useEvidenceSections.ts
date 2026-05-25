@@ -35,6 +35,8 @@ import type {
  *  locale-correct strings. */
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 import type { CaseStrengthLevel } from "@/lib/argument/types";
+import type { Localized } from "@/lib/i18n/localized";
+import { resolveToken } from "@/lib/i18n/resolveToken";
 import { MERCHANT_UI_HIDDEN_FIELDS } from "@/lib/automation/merchantUiHiddenFields";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -90,19 +92,19 @@ export interface CaseSummaryViewModel {
   automationMode: AutomationMode;
   nextStep: NextStep;
   /** Merchant-facing one-line summary of why the case is at this
-   *  strength (from `caseStrength.strengthReason`). Surfaces context
-   *  the merchant can't deduce from the badge alone — e.g. for the
-   *  fraud "moderate-from-AVS-only" path it explains that one
-   *  decisive signal exists but more would help. Null when not
-   *  meaningful (e.g. covered cases). */
-  strengthReason: string | null;
+   *  strength (resolved from `caseStrength.strengthReasonI18n`).
+   *  Surfaces context the merchant can't deduce from the badge alone —
+   *  e.g. for the fraud "moderate-from-AVS-only" path it explains that
+   *  one decisive signal exists but more would help. Empty `Localized`
+   *  string when not meaningful (e.g. covered cases). */
+  strengthReasonText: Localized;
   /** Concrete suggestion for the highest-leverage missing item
-   *  (from `caseStrength.improvementHint`). Renders as a subtle
-   *  call-to-action so the merchant sees a specific path to a
+   *  (resolved from `caseStrength.improvementHintI18n`). Renders as a
+   *  subtle call-to-action so the merchant sees a specific path to a
    *  stronger case. Null when overall is already strong, when no
    *  actionable missing field stands out, or when the case is
    *  covered / fatal-loss. */
-  improvementHint: string | null;
+  improvementHintText: Localized | null;
 }
 
 export interface EvidenceRowViewModel {
@@ -600,6 +602,9 @@ function deriveInternalOnlySignals(
 export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewModel {
   const { data, derived, clientState } = workspace;
   const tInternal = useTranslations("disputes");
+  // Root translator for token resolution (signal labels, etc.). Tokens
+  // encode absolute key paths so the translator must NOT be scoped.
+  const tRoot = useTranslations();
 
   // Defensive empty-state when workspace data hasn't loaded yet. The
   // upstream tab is responsible for showing a loading state; this hook
@@ -612,8 +617,8 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
         status: "in_progress",
         automationMode: "review_required",
         nextStep: { kind: "review_missing" },
-        strengthReason: null,
-        improvementHint: null,
+        strengthReasonText: derived.strengthReasonText,
+        improvementHintText: derived.improvementHintText,
       },
       usedInDefense: [],
       missingOrWeak: [],
@@ -650,8 +655,8 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
       readiness: derived.readiness,
       automationMode,
     }),
-    strengthReason: derived.caseStrength.strengthReason ?? null,
-    improvementHint: derived.caseStrength.improvementHint ?? null,
+    strengthReasonText: derived.strengthReasonText,
+    improvementHintText: derived.improvementHintText,
   };
 
   // ── Evidence used in defense ──
@@ -705,10 +710,14 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
   }
 
   for (const c of derived.contributions.strong) {
-    usedInDefense.push(buildRow("strong", c.evidenceFieldKey, c.label, "strong"));
+    usedInDefense.push(
+      buildRow("strong", c.evidenceFieldKey, resolveToken(tRoot, c.labelToken), "strong"),
+    );
   }
   for (const c of derived.contributions.moderate) {
-    usedInDefense.push(buildRow("moderate", c.evidenceFieldKey, c.label, "moderate"));
+    usedInDefense.push(
+      buildRow("moderate", c.evidenceFieldKey, resolveToken(tRoot, c.labelToken), "moderate"),
+    );
   }
   // Supporting items — items that exist in the checklist as available
   // but did not reach moderate or strong category. They still support

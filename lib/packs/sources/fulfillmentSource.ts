@@ -167,7 +167,10 @@ export async function collectFulfillmentEvidence(
   return [
     {
       type: "shipping",
-      label: `Fulfillments (${order.fulfillments.length})`,
+      labelToken: {
+        key: "packs.section.fulfillments",
+        params: { count: order.fulfillments.length },
+      },
       source: "shopify_fulfillments",
       fieldsProvided,
       data: {

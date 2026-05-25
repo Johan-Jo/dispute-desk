@@ -1013,7 +1013,12 @@ export function deriveEvidenceLineItems(
     out.push({
       id: `line:${item.field}`,
       field: item.field,
-      label: item.label || spec.label,
+      // `item.label` carries the English checklist label from the
+      // backend completeness evaluator — kept as-is until the
+      // ChecklistItemV2 label flips to a token in a later refactor.
+      // Fallback to the field key (not `spec.label`, which no longer
+      // exists post-Phase 3).
+      label: item.label || item.field,
       source: inferSource(item.field),
       hasEvidence,
       strengthContribution,

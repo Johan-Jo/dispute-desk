@@ -27,24 +27,12 @@ import {
 import { generateWhyWins } from "@/lib/argument/whyThisCaseWins";
 import { generateRiskExplanation } from "@/lib/argument/riskExplanation";
 import { generateRecommendation } from "@/lib/argument/recommendation";
+import { asLocalized, type Localized } from "@/lib/i18n/localized";
+import { resolveToken } from "@/lib/i18n/resolveToken";
 
 /* ── WHY text for evidence items ── */
 
-const WHY_TEXT: Record<string, string> = {
-  order_confirmation: "Proves the transaction is legitimate \u2014 the foundation of every dispute response",
-  shipping_tracking: "Shows the carrier confirmed shipment \u2014 required to win \u2018item not received\u2019 disputes",
-  delivery_proof: "Confirms the customer received the package \u2014 strongest evidence against \u2018not received\u2019 claims",
-  billing_address_match: "Matches the billing address to the order \u2014 critical for fraud disputes",
-  avs_cvv_match: "Shows the card security checks passed \u2014 banks weigh this heavily in fraud cases",
-  product_description: "Proves the product matched what was advertised \u2014 key defense for \u2018not as described\u2019 disputes",
-  refund_policy: "Shows the customer agreed to your refund terms \u2014 protects against buyer\u2019s remorse claims",
-  shipping_policy: "Documents your shipping commitments \u2014 supports delivery timeline disputes",
-  cancellation_policy: "Proves the customer was informed of cancellation rules before purchase",
-  customer_communication: "Shows you attempted to resolve the issue \u2014 banks favor merchants who engage",
-  duplicate_explanation: "Explains why the charges are not duplicates \u2014 required for duplicate dispute responses",
-  supporting_documents: "Additional proof that strengthens your case",
-  activity_log: "Account activity that proves legitimate customer engagement",
-};
+// WHY_TEXT was deleted in Phase 5 \u2014 see comment block on EFFORT_MAP.
 
 /* ── Missing item context ── */
 
@@ -64,29 +52,12 @@ const EFFORT_MAP: Record<string, "low" | "medium" | "high"> = {
   duplicate_explanation: "medium",
 };
 
-const SOURCE_MAP: Record<string, string> = {
-  order_confirmation: "From Shopify order data",
-  billing_address_match: "From Shopify order data",
-  avs_cvv_match: "From payment gateway",
-  shipping_tracking: "From Shopify fulfillment data",
-  delivery_proof: "From carrier tracking",
-  customer_communication: "From order notes or upload",
-  refund_policy: "From store policies page",
-  shipping_policy: "From store policies page",
-  cancellation_policy: "From store policies page",
-  product_description: "Upload product listing",
-  activity_log: "From Shopify customer data",
-  supporting_documents: "Upload manually",
-  duplicate_explanation: "Upload transaction records",
-};
+// SOURCE_MAP deleted in Phase 5: see comment on EFFORT_MAP.
 
 /* ── Per-field action metadata for merchant-addable items ── */
 
 interface FieldAction {
   actionType: "upload" | "paste" | "note";
-  ctaLabel: string;
-  acceptedFormats: string;
-  skipLabel: string;
 }
 
 // i18n-allow-block: these are the English fallback values used only
@@ -95,39 +66,15 @@ interface FieldAction {
 // translator first and falls back to these strings as a defence-in-
 // depth measure. Keep them in sync with `messages/en.json
 // disputes.fieldAction.*` (the canonical source).
+// Per-field action type only. CTA text comes from i18n.
 const FIELD_ACTIONS: Record<string, FieldAction> = {
-  supporting_documents: {
-    actionType: "upload",
-    ctaLabel: "Upload file", // i18n-allow
-    acceptedFormats: "Screenshot, PDF, or document", // i18n-allow
-    skipLabel: "Skip for now", // i18n-allow
-  },
-  customer_communication: {
-    actionType: "paste",
-    ctaLabel: "Paste conversation or upload screenshot", // i18n-allow
-    acceptedFormats: "Pasted text, screenshot, or PDF", // i18n-allow
-    skipLabel: "Skip for now", // i18n-allow
-  },
-  product_description: {
-    actionType: "upload",
-    ctaLabel: "Upload product listing screenshot", // i18n-allow
-    acceptedFormats: "Screenshot or PDF of product page", // i18n-allow
-    skipLabel: "Skip for now", // i18n-allow
-  },
-  duplicate_explanation: {
-    actionType: "paste",
-    ctaLabel: "Upload transaction records", // i18n-allow
-    acceptedFormats: "Screenshot, PDF, or pasted text", // i18n-allow
-    skipLabel: "Skip for now", // i18n-allow
-  },
+  supporting_documents: { actionType: "upload" },
+  customer_communication: { actionType: "paste" },
+  product_description: { actionType: "upload" },
+  duplicate_explanation: { actionType: "paste" },
 };
 
-const DEFAULT_ACTION: FieldAction = {
-  actionType: "upload",
-  ctaLabel: "Upload proof", // i18n-allow
-  acceptedFormats: "Screenshot, PDF, or document", // i18n-allow
-  skipLabel: "Skip for now", // i18n-allow
-};
+const DEFAULT_ACTION: FieldAction = { actionType: "upload" };
 
 /* Set of evidence fields the merchant can directly act on (upload or
  * paste). Derived from `FIELD_ACTIONS` so the allowlist stays in sync
@@ -272,14 +219,14 @@ function deriveMissingItems(
         field: c.field,
         label: c.label,
         priority: c.priority,
-        impact: translators.whyText(c.field) || WHY_TEXT[c.field] || translators.impactFallback,
-        source: translators.sourceCaption(c.field) || SOURCE_MAP[c.field] || translators.sourceFallback,
+        impact: translators.whyText(c.field) || translators.impactFallback,
+        source: translators.sourceCaption(c.field) || translators.sourceFallback,
         effort: EFFORT_MAP[c.field] ?? ("medium" as const),
         recommendation: c.priority === "critical" ? translators.recCritical : translators.recOptional,
         actionType: action.actionType,
-        ctaLabel: translators.fieldActionCta(c.field) || action.ctaLabel,
-        acceptedFormats: translators.fieldActionFormats(c.field) || action.acceptedFormats,
-        skipLabel: translators.fieldActionSkip(c.field) || action.skipLabel,
+        ctaLabel: translators.fieldActionCta(c.field),
+        acceptedFormats: translators.fieldActionFormats(c.field),
+        skipLabel: translators.fieldActionSkip(c.field),
       };
     });
 }
@@ -369,6 +316,15 @@ export interface DerivedState {
   blockerCount: number;
   warningCount: number;
   caseStrength: CaseStrengthResult;
+  /** Resolved `Localized` text for the "why this strength" sentence.
+   *  Produced by `resolveToken(rootTranslator, caseStrength.strengthReasonI18n)`
+   *  at the hook boundary. UI consumes this directly — never reads the
+   *  raw token. */
+  strengthReasonText: Localized;
+  /** Resolved `Localized` text for the improvement hint. null when the
+   *  case is already strong, no actionable missing field exists, or
+   *  the case is covered / fatal-loss. */
+  improvementHintText: Localized | null;
   whyWins: WhyWinsResult;
   risk: RiskResult;
   improvement: ImprovementSignal | null;
@@ -376,8 +332,8 @@ export interface DerivedState {
   /** Backend-derived merchant-facing recommendation. Plan v3 §3.A.6.
    *  OverviewTab renders these strings verbatim — never reconstructs
    *  the recommendation logic in JSX. */
-  recommendationText: string;
-  recommendationHelperText: string | null;
+  recommendationText: Localized;
+  recommendationHelperText: Localized | null;
   /** "What supports your case" rows. Plan v3 §P2.6: one row per
    *  canonical signalId with effective category `strong` or
    *  `moderate`. The Overview UI iterates this directly — no UI
@@ -403,8 +359,9 @@ export function useDisputeWorkspace(disputeId: string) {
   const tWhy = useTranslations("disputes.whyText");
   const tFieldAction = useTranslations("disputes.fieldAction");
   const tWorkspace = useTranslations("disputes.workspaceHook");
-  const tRec = useTranslations("disputes.recommendation");
-  const tDisputes = useTranslations("disputes");
+  // Root translator used by `resolveToken` — tokens encode absolute
+  // key paths, so the translator must NOT be scoped.
+  const tRoot = useTranslations();
 
   const [data, setData] = useState<WorkspaceData | null>(null);
   const [clientState, setClientState] = useState<WorkspaceClientState>({
@@ -907,12 +864,26 @@ export function useDisputeWorkspace(disputeId: string) {
         readiness: "blocked" as SubmissionReadiness,
         blockerCount: 0,
         warningCount: 0,
-        caseStrength: { overall: "insufficient", score: 0, coveragePercent: 0, strongCount: 0, moderateCount: 0, supportingCount: 0, supportedClaims: 0, totalClaims: 0, improvementHint: null, heroVariant: "hard_to_win" },
+        caseStrength: {
+          overall: "insufficient",
+          score: 0,
+          coveragePercent: 0,
+          strongCount: 0,
+          moderateCount: 0,
+          supportingCount: 0,
+          supportedClaims: 0,
+          totalClaims: 0,
+          improvementHintI18n: null,
+          strengthReasonI18n: { key: "disputes.strengthReason.general.insufficient" },
+          heroVariant: "hard_to_win",
+        },
+        strengthReasonText: asLocalized(""),
+        improvementHintText: null,
         whyWins: { strengths: [], weaknesses: [], overall: "insufficient" },
         risk: { expectedOutcome: "insufficient", risks: [] },
         improvement: null,
         nextAction: { label: "Loading...", description: "", severity: "info" },
-        recommendationText: "",
+        recommendationText: asLocalized(""),
         recommendationHelperText: null,
         contributions: { strong: [], moderate: [] },
         isReadOnly: false,
@@ -1005,54 +976,16 @@ export function useDisputeWorkspace(disputeId: string) {
           shopifyProtectStatus: data.pack.coverage.shopifyProtectStatus,
         }
       : undefined;
-    const caseStrengthRaw = calculateCaseStrength(effectiveChecklist, data.dispute.reason, payloadSource, coverageInput);
-    // Resolve i18n tokens into locale-appropriate strings so downstream
-    // UI consumers (OverviewTab, CaseSummaryCard) can keep reading
-    // `caseStrength.strengthReason` / `improvementHint` as today.
-    const caseStrength = (() => {
-      const reasonToken = caseStrengthRaw.strengthReasonI18n;
-      const hintToken = caseStrengthRaw.improvementHintI18n;
-      const resolveTopLevel = (key: string, params?: Record<string, string | number>): string | null => {
-        try {
-          // Use the global translator off `tRec` parent to resolve any
-          // top-level `disputes.*` key. We accept the bound scope cost
-          // because we want any of: signalLabel.*, strengthReason.*,
-          // improvementHint, decisiveHint.*, etc.
-          // Strip the leading "disputes." prefix and use a fresh
-          // translator at "disputes" namespace.
-          // Note: next-intl scopes are static per-hook-call, so we
-          // create a workaround: read via a parent-scoped translator
-          // that's injected below.
-          return tDisputes(key.startsWith("disputes.") ? key.slice("disputes.".length) : key, params as never) as string;
-        } catch {
-          return null;
-        }
-      };
-      const resolveLabel = (params?: Record<string, string | number>): Record<string, string | number> => {
-        if (!params) return {};
-        const out: Record<string, string | number> = { ...params };
-        for (const [k, v] of Object.entries(params)) {
-          if (typeof v !== "string") continue;
-          if (!v.startsWith("disputes.")) continue;
-          const resolved = resolveTopLevel(v);
-          if (resolved != null) out[k] = resolved;
-        }
-        return out;
-      };
-      let strengthReason = caseStrengthRaw.strengthReason;
-      if (reasonToken) {
-        const resolvedParams = resolveLabel(reasonToken.params);
-        const translated = resolveTopLevel(reasonToken.key, resolvedParams);
-        if (translated && translated !== reasonToken.key) strengthReason = translated;
-      }
-      let improvementHint = caseStrengthRaw.improvementHint;
-      if (hintToken) {
-        const resolvedParams = resolveLabel(hintToken.params);
-        const translated = resolveTopLevel(hintToken.key, resolvedParams);
-        if (translated && translated !== hintToken.key) improvementHint = translated;
-      }
-      return { ...caseStrengthRaw, strengthReason, improvementHint };
-    })();
+    const caseStrength = calculateCaseStrength(effectiveChecklist, data.dispute.reason, payloadSource, coverageInput);
+    // Resolve the strength tokens into branded `Localized` strings at
+    // the hook boundary. UI consumers receive already-translated text
+    // through `strengthReasonText` / `improvementHintText`; the raw
+    // tokens stay on `caseStrength.*I18n` for any consumer that needs
+    // them (tests, server callers).
+    const strengthReasonText: Localized = resolveToken(tRoot, caseStrength.strengthReasonI18n);
+    const improvementHintText: Localized | null = caseStrength.improvementHintI18n
+      ? resolveToken(tRoot, caseStrength.improvementHintI18n)
+      : null;
     const contributions = computeContributions(effectiveChecklist, payloadSource);
     const whyWins = generateWhyWins(effectiveChecklist, caseStrength.overall);
     const risk = generateRiskExplanation(effectiveChecklist, caseStrength.overall);
@@ -1068,13 +1001,9 @@ export function useDisputeWorkspace(disputeId: string) {
 
     // Recommendation copy — produced by the shared backend module
     // `lib/argument/recommendation.ts`. Plan v3 §3.A.6: the UI must
-    // not synthesise these strings inline.
-    //
-    // i18n (2026-05-24): the lib emits structured tokens
-    // (`textI18n`, `helperI18n`) alongside the legacy English fields.
-    // We resolve the tokens via the next-intl translator so the UI
-    // gets locale-appropriate copy; the legacy English strings stay
-    // available as a server-side / test fallback.
+    // not synthesise these strings inline. The lib emits token-only
+    // output (`textI18n`, `helperI18n`); we resolve at the hook
+    // boundary so the UI receives branded `Localized` strings.
     const isReadOnly = (isSaved ?? false) || clientState.justSubmitted;
     const recOutput = generateRecommendation({
       submitted: isReadOnly,
@@ -1082,23 +1011,10 @@ export function useDisputeWorkspace(disputeId: string) {
       topMissing: missingItems[0] ?? null,
       submittedAt: pack?.savedToShopifyAt ?? null,
     });
-    const renderToken = (t: ReturnType<typeof useTranslations>, token: { key: string; params?: Record<string, string | number> } | null | undefined, fallback: string): string => {
-      if (!token) return fallback;
-      // Strip the leading `disputes.recommendation.` prefix so we can
-      // call the scoped translator.
-      const PREFIX = "disputes.recommendation.";
-      const key = token.key.startsWith(PREFIX) ? token.key.slice(PREFIX.length) : token.key;
-      try {
-        const out = t(key, token.params as never);
-        return typeof out === "string" && out !== key ? out : fallback;
-      } catch {
-        return fallback;
-      }
-    };
-    const recommendationText = renderToken(tRec, recOutput.textI18n, recOutput.text);
-    const recommendationHelperText = recOutput.helperI18n
-      ? renderToken(tRec, recOutput.helperI18n, recOutput.helperText ?? "")
-      : recOutput.helperText;
+    const recommendationText: Localized = resolveToken(tRoot, recOutput.textI18n);
+    const recommendationHelperText: Localized | null = recOutput.helperI18n
+      ? resolveToken(tRoot, recOutput.helperI18n)
+      : null;
 
     return {
       effectiveChecklist: items,
@@ -1109,6 +1025,8 @@ export function useDisputeWorkspace(disputeId: string) {
       blockerCount,
       warningCount,
       caseStrength,
+      strengthReasonText,
+      improvementHintText,
       whyWins,
       risk,
       improvement,

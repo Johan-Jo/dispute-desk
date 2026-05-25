@@ -28,11 +28,11 @@
  *     re-derives via `categoryFor()` on every call. (P2.4a)
  */
 
+import type { I18nKeyParam, I18nToken } from "@/lib/i18n/token";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type {
   CaseStrengthResult,
   CaseStrengthLevel,
-  I18nToken,
   ImprovementSignal,
 } from "./types";
 import {
@@ -45,250 +45,58 @@ import {
 } from "./canonicalEvidence";
 import { resolveReasonFamily, type ReasonFamily } from "./reasonFamily";
 
-/** Canonical signal → i18n key for the merchant-facing label. The
- *  English string still lives in the registry for tests and server
- *  rendering, but UI render sites must use this map to look up the
- *  translated label via `t("disputes.signalLabel.<signalId>")`. */
-const SIGNAL_LABEL_KEY: Record<SignalId, string> = {
-  payment_auth: "disputes.signalLabel.payment_auth",
-  billing_match: "disputes.signalLabel.billing_match",
-  delivery: "disputes.signalLabel.delivery",
-  ip_location: "disputes.signalLabel.ip_location",
-  device_session: "disputes.signalLabel.device_session",
-  communication: "disputes.signalLabel.communication",
-  account_history: "disputes.signalLabel.account_history",
-  order_record: "disputes.signalLabel.order_record",
-  product_listing: "disputes.signalLabel.product_listing",
-  policy_refund: "disputes.signalLabel.policy_refund",
-  policy_shipping: "disputes.signalLabel.policy_shipping",
-  policy_cancellation: "disputes.signalLabel.policy_cancellation",
-  duplicate_explanation: "disputes.signalLabel.duplicate_explanation",
-  supplementary_documents: "disputes.signalLabel.supplementary_documents",
-  fraud_screening: "disputes.signalLabel.fraud_screening",
-};
+/** Signal → i18n key lookup. Reads the canonical registry directly so
+ *  there is no second source of truth. A signalId always corresponds
+ *  to at least one canonical spec; we just need any spec for that
+ *  signal to recover the labelKey. */
+function signalLabelKey(signalId: SignalId): string {
+  for (const spec of Object.values(CANONICAL_EVIDENCE)) {
+    if (spec.signalId === signalId) return spec.labelKey;
+  }
+  return `disputes.signalLabel.${signalId}`;
+}
 
-/* ── Per-family merchant-facing copy (template strings only — no
- *     scoring logic) ── */
-
-const STRENGTH_REASONS: Record<ReasonFamily, Record<CaseStrengthLevel, string>> = {
-  fraud: {
-    strong: "Payment verification and purchase behavior strongly support this defense.",
-    moderate: "Core authorization evidence is present, but the case could be strengthened.",
-    weak: "Key payment verification evidence is missing.",
-    insufficient: "No evidence available to support this defense.",
-  },
-  delivery: {
-    strong: "Shipment and delivery are confirmed by carrier records.",
-    moderate: "Shipping evidence exists, but full delivery confirmation would strengthen the case.",
-    weak: "Delivery evidence is missing — this is critical for this dispute type.",
-    insufficient: "No fulfillment evidence available.",
-  },
-  product: {
-    strong: "Product description and policy disclosure are well documented.",
-    moderate: "Some product conformity evidence exists, but gaps remain.",
-    weak: "Product description evidence is missing — critical for this dispute type.",
-    insufficient: "No product conformity evidence available.",
-  },
-  refund: {
-    strong: "Refund processing is documented.",
-    moderate: "Some refund evidence exists, but complete documentation would help.",
-    weak: "Refund evidence is incomplete.",
-    insufficient: "No refund evidence available.",
-  },
-  subscription: {
-    strong: "Subscription terms and cancellation timeline are documented.",
-    moderate: "Some subscription evidence exists, but timeline gaps remain.",
-    weak: "Cancellation policy or timeline evidence is missing.",
-    insufficient: "No subscription-related evidence available.",
-  },
-  billing: {
-    strong: "Transaction records confirm correct billing.",
-    moderate: "Some billing evidence exists, but reconciliation could be stronger.",
-    weak: "Billing accuracy evidence is incomplete.",
-    insufficient: "No billing evidence available.",
-  },
-  digital: {
-    strong: "Digital access and usage are confirmed by logs.",
-    moderate: "Some access evidence exists, but logs could be more complete.",
-    weak: "Digital access evidence is missing — critical for this dispute type.",
-    insufficient: "No digital delivery evidence available.",
-  },
-  general: {
-    strong: "Core evidence strongly supports this defense.",
-    moderate: "Evidence supports the defense, but some gaps remain.",
-    weak: "Key evidence is missing.",
-    insufficient: "No evidence available.",
-  },
-};
-
-/* ── strengthReason composition ──
+/* ── strengthReason token composition ──
  *
- * The hero copy must agree with the canonical contribution result. A
- * static `STRENGTH_REASONS[family][overall]` lookup cannot — it returns
- * "Key payment verification evidence is missing." even when AVS+CVV is
- * the one Strong contribution we collected. Compose the sentence from
- * the actual rows instead so the hero, "What supports your case", and
- * "Evidence collected" are guaranteed to agree.
+ * Lib emits structured `I18nToken`s only — never English. The hero
+ * copy MUST agree with the canonical contribution result, so the
+ * composition reads the actual `ContributionRow`s instead of falling
+ * through a static per-family table.
+ *
+ * Label params are wrapped as `I18nKeyParam` so the resolver translates
+ * each signal label before splicing it into the outer template. Param
+ * names match the placeholders in `messages/*.json` exactly
+ * (`label1`/`label2`/`label3`, `strongLabel`/`moderateLabel`, `label`,
+ * `hint`, `family`, `decisive`).
+ *
+ * The `select`-with-`"empty"` discriminator pattern handles the
+ * optional third / second label: when not present we pass the literal
+ * string `"empty"` so the template renders nothing for that branch.
  */
 
 interface ContributionRow {
   signalId: SignalId;
   category: "strong" | "moderate";
-  label: string;
 }
 
-/** Per-family hint about decisive evidence the merchant could still
- *  add. Used in composed strings — never claims something is "missing"
- *  if it's already present. */
-function decisiveHintFor(family: ReasonFamily): string {
-  switch (family) {
-    case "fraud":
-      return "delivery confirmation, signature on file, or device-session consistency";
-    case "delivery":
-      return "carrier signature confirmation or matching billing/IP signals";
-    case "product":
-      return "the product listing as advertised and your refund policy disclosure";
-    case "refund":
-      return "documented refund processing or merchant communication";
-    case "subscription":
-      return "the cancellation policy and customer communication timeline";
-    case "billing":
-      return "transaction records and AVS+CVV verification";
-    case "digital":
-      return "access logs proving the customer used the digital good";
-    case "general":
-    default:
-      return "additional decisive evidence";
-  }
+/** Build an I18nKeyParam that references a signal's localized label. */
+function labelParam(signalId: SignalId): I18nKeyParam {
+  return { type: "i18n-key", key: signalLabelKey(signalId) };
 }
 
-/** Per-family "decisive triplet" used in the WEAK reason composition.
- *  The user spec calls out the fraud triplet explicitly: payment
- *  verification, confirmed delivery, customer purchase acknowledgement.
- *  Other families use parallel construction. Plan v2 §11. */
-function decisiveFamiliesFor(family: ReasonFamily): string {
-  switch (family) {
-    case "fraud":
-      return "payment verification, confirmed delivery, or a clear customer purchase acknowledgement";
-    case "delivery":
-      return "carrier signature confirmation, proof of delivery to the cardholder's verified address, or customer acknowledgement of receipt";
-    case "product":
-      return "the product listing as advertised, refund policy disclosure, or customer correspondence";
-    case "refund":
-      return "documented refund processing, refund timeline, or customer correspondence";
-    case "subscription":
-      return "cancellation policy disclosure, cancellation timeline, or customer correspondence";
-    case "billing":
-      return "transaction records, AVS/CVV verification, or 3-D Secure authentication";
-    case "digital":
-      return "access logs showing the customer used the digital good";
-    case "general":
-    default:
-      return "decisive evidence specific to this dispute reason";
-  }
+/** Build an I18nKeyParam for the per-family decisive-hint copy. */
+function hintParam(family: ReasonFamily): I18nKeyParam {
+  return { type: "i18n-key", key: `disputes.decisiveHint.${family}` };
 }
 
-/** Family label used in the WEAK reason sentence ("no decisive {family}
- *  evidence"). Mirrors the merchant-facing phrasing of the dispute reason. */
-function familyLabelFor(family: ReasonFamily): string {
-  switch (family) {
-    case "fraud":
-      return "fraud";
-    case "delivery":
-      return "delivery";
-    case "product":
-      return "product-conformity";
-    case "refund":
-      return "refund";
-    case "subscription":
-      return "subscription";
-    case "billing":
-      return "billing";
-    case "digital":
-      return "digital-good";
-    case "general":
-    default:
-      return "dispute";
-  }
-}
-
-function joinLabels(labels: string[], conj: "and" | "with" = "and"): string {
-  if (labels.length === 0) return "";
-  if (labels.length === 1) return labels[0];
-  if (labels.length === 2) return `${labels[0]} ${conj} ${labels[1]}`;
-  return `${labels.slice(0, -1).join(", ")}, ${conj} ${labels[labels.length - 1]}`;
-}
-
-function composeStrengthReason(args: {
-  overall: CaseStrengthLevel;
-  family: ReasonFamily;
-  strong: ContributionRow[];
-  moderate: ContributionRow[];
-  /** Set when fraud-specific scoring upgraded a case from weak to
-   *  moderate solely on avs_cvv_match Strong. Triggers the user-
-   *  authored "Payment authentication supports this defense …" copy. */
-  isFraudAvsOnlyStrong?: boolean;
-}): string {
-  const { overall, family, strong, moderate, isFraudAvsOnlyStrong } = args;
-
-  if (overall === "insufficient") {
-    return STRENGTH_REASONS[family].insufficient;
-  }
-
-  if (overall === "strong") {
-    const labels = strong.map((c) => c.label);
-    return labels.length >= 2
-      ? `${joinLabels(labels.slice(0, 3))} all support this defense decisively.`
-      : `${labels[0] ?? "Strong evidence"} supports this defense decisively.`;
-  }
-
-  if (overall === "moderate") {
-    // Fraud + avs_cvv_match-Strong-alone: this is the canonical
-    // "Needs strengthening" case. Tell the merchant what would tip it
-    // into Strong.
-    if (isFraudAvsOnlyStrong) {
-      return "Payment authentication supports this defense, but additional decisive evidence such as delivery confirmation, device/session consistency, or customer confirmation would improve the case.";
-    }
-    const strongLabel = strong[0]?.label;
-    const moderateLabel = moderate[0]?.label;
-    if (strongLabel && moderateLabel) {
-      return `${strongLabel} and ${moderateLabel} support this defense; additional decisive evidence would strengthen the case.`;
-    }
-    if (strongLabel) {
-      return `${strongLabel} supports this defense, with moderate corroboration; additional decisive evidence would strengthen the case.`;
-    }
-    return STRENGTH_REASONS[family].moderate;
-  }
-
-  // overall === "weak"
-  if (strong.length === 1 && moderate.length === 0) {
-    return `${strong[0].label} supports this defense, but additional decisive evidence (such as ${decisiveHintFor(family)}) would strengthen the case.`;
-  }
-  if (strong.length === 0 && moderate.length >= 1) {
-    const labels = moderate.slice(0, 2).map((c) => c.label);
-    return `${joinLabels(labels)} provide partial support. A strong signal such as ${decisiveHintFor(family)} would significantly strengthen the case.`;
-  }
-  // strong=0 AND moderate=0 — true "weak" with only supporting context.
-  // Compose a truthful sentence that names what's missing using the
-  // family-specific decisive triplet. Plan v2 §11.
-  const familyLabel = familyLabelFor(family);
-  const decisive = decisiveFamiliesFor(family);
-  return `This is weak because the defence package contains mostly supporting documentation, but no decisive ${familyLabel} evidence. ${decisive.charAt(0).toUpperCase()}${decisive.slice(1)} would strengthen the case.`;
-}
-
-/** i18n-token sibling of `composeStrengthReason`. Emits a structured
- *  `{ key, params }` token where label params are themselves i18n keys
- *  the UI must resolve first, then plug into the outer sentence via
- *  `t(...)` with the pre-translated label string.
- *
- *  The shape mirrors the English composition exactly so the UI can
- *  render the same sentence in any locale. Labels are referenced by
- *  signalId — UI looks them up in `SIGNAL_LABEL_KEY`. */
 function composeStrengthReasonI18n(args: {
   overall: CaseStrengthLevel;
   family: ReasonFamily;
   strong: ContributionRow[];
   moderate: ContributionRow[];
+  /** Set when fraud-specific scoring upgraded a case from weak to
+   *  moderate solely on avs_cvv_match Strong. Triggers the canonical
+   *  "Needs strengthening" copy. */
   isFraudAvsOnlyStrong?: boolean;
 }): I18nToken {
   const { overall, family, strong, moderate, isFraudAvsOnlyStrong } = args;
@@ -302,9 +110,9 @@ function composeStrengthReasonI18n(args: {
       return {
         key: "disputes.strengthReason.strong.multi",
         params: {
-          labelKey1: SIGNAL_LABEL_KEY[strong[0].signalId],
-          labelKey2: SIGNAL_LABEL_KEY[strong[1].signalId],
-          labelKey3: strong[2] ? SIGNAL_LABEL_KEY[strong[2].signalId] : "",
+          label1: labelParam(strong[0].signalId),
+          label2: labelParam(strong[1].signalId),
+          label3: strong[2] ? labelParam(strong[2].signalId) : "empty",
           count: strong.length,
         },
       };
@@ -312,7 +120,7 @@ function composeStrengthReasonI18n(args: {
     if (strong[0]) {
       return {
         key: "disputes.strengthReason.strong.single",
-        params: { labelKey: SIGNAL_LABEL_KEY[strong[0].signalId] },
+        params: { label: labelParam(strong[0].signalId) },
       };
     }
     return { key: "disputes.strengthReason.strong.fallback" };
@@ -326,15 +134,15 @@ function composeStrengthReasonI18n(args: {
       return {
         key: "disputes.strengthReason.moderate.strongAndModerate",
         params: {
-          strongLabelKey: SIGNAL_LABEL_KEY[strong[0].signalId],
-          moderateLabelKey: SIGNAL_LABEL_KEY[moderate[0].signalId],
+          strongLabel: labelParam(strong[0].signalId),
+          moderateLabel: labelParam(moderate[0].signalId),
         },
       };
     }
     if (strong[0]) {
       return {
         key: "disputes.strengthReason.moderate.strongOnly",
-        params: { labelKey: SIGNAL_LABEL_KEY[strong[0].signalId] },
+        params: { label: labelParam(strong[0].signalId) },
       };
     }
     return { key: `disputes.strengthReason.${family}.moderate` };
@@ -345,8 +153,8 @@ function composeStrengthReasonI18n(args: {
     return {
       key: "disputes.strengthReason.weak.strongAlone",
       params: {
-        labelKey: SIGNAL_LABEL_KEY[strong[0].signalId],
-        hintKey: `disputes.decisiveHint.${family}`,
+        label: labelParam(strong[0].signalId),
+        hint: hintParam(family),
       },
     };
   }
@@ -354,9 +162,9 @@ function composeStrengthReasonI18n(args: {
     return {
       key: "disputes.strengthReason.weak.moderateOnly",
       params: {
-        labelKey1: SIGNAL_LABEL_KEY[moderate[0].signalId],
-        labelKey2: moderate[1] ? SIGNAL_LABEL_KEY[moderate[1].signalId] : "",
-        hintKey: `disputes.decisiveHint.${family}`,
+        label1: labelParam(moderate[0].signalId),
+        label2: moderate[1] ? labelParam(moderate[1].signalId) : "empty",
+        hint: hintParam(family),
       },
     };
   }
@@ -364,8 +172,8 @@ function composeStrengthReasonI18n(args: {
   return {
     key: "disputes.strengthReason.weak.supportingOnly",
     params: {
-      familyKey: `disputes.reasonFamilyLabel.${family}`,
-      decisiveKey: `disputes.decisiveFamilies.${family}`,
+      family: { type: "i18n-key", key: `disputes.reasonFamilyLabel.${family}` },
+      decisive: { type: "i18n-key", key: `disputes.decisiveFamilies.${family}` },
     },
   };
 }
@@ -414,22 +222,22 @@ export interface CaseCoverageInput {
 }
 
 /** Optional Fatal-loss Gate input (PRD §5). Caps `overall` at "weak"
- *  and replaces `strengthReason` with the fatal-loss copy. Coverage
- *  beats fatal-loss (a covered case is never "fatal"; Shopify pays).
- *  Otherwise this triggers regardless of the underlying evidence. */
+ *  and replaces `strengthReasonI18n` with the fatal-loss token.
+ *  Coverage beats fatal-loss (a covered case is never "fatal"; Shopify
+ *  pays). Otherwise this triggers regardless of the underlying evidence. */
 export interface CaseFatalLossInput {
   triggered: boolean;
   reason: "refund_issued" | "inr_no_fulfillment" | null;
-  message: string | null;
+  /** Merchant-facing message token. Resolved by the consumer. */
+  messageToken: I18nToken | null;
 }
 
 /** Optional Risk-weakness Gate input (fraud-risk Phase 2). When
  *  triggered AND not pre-empted by coverage or fatal-loss, CAPS
  *  `overall` at "moderate" — never elevates. The cap is a ceiling, so
  *  if the underlying scoring already produced "moderate" / "weak" the
- *  cap is a no-op. The merchant-facing message replaces
- *  `strengthReason` ONLY when the cap actually fires (i.e. scoring
- *  would have been "strong"). */
+ *  cap is a no-op. Currently no UI surface consumes the message; the
+ *  diagnostic fields persist for audit. */
 export interface CaseRiskWeaknessInput {
   triggered: boolean;
   reason: "high_risk_fulfilled" | null;
@@ -441,8 +249,9 @@ export interface CaseRiskWeaknessInput {
   };
 }
 
-const COVERED_STRENGTH_REASON =
-  "This dispute is protected under Shopify's payment protection. No action is required from you.";
+const COVERED_STRENGTH_REASON_TOKEN: I18nToken = {
+  key: "disputes.strengthReason.covered",
+};
 
 export function calculateCaseStrength(
   checklist: ChecklistItemV2[],
@@ -483,20 +292,15 @@ export function calculateCaseStrength(
       supportingCount: 0,
       supportedClaims: 0,
       totalClaims: 0,
-      improvementHint: null,
       improvementHintI18n: null,
       heroVariant: earlyCovered ? "covered" : "hard_to_win",
-      strengthReason: earlyCovered
-        ? COVERED_STRENGTH_REASON
-        : earlyFatal
-          ? (fatalLoss?.message ?? STRENGTH_REASONS[family].weak)
-          : STRENGTH_REASONS[family].insufficient,
       strengthReasonI18n: earlyCovered
-        ? { key: "disputes.strengthReason.covered" }
+        ? COVERED_STRENGTH_REASON_TOKEN
         : earlyFatal
-          ? (fatalLoss?.reason
-              ? { key: `disputes.strengthReason.fatalLoss.${fatalLoss.reason}` }
-              : { key: `disputes.strengthReason.${family}.weak` })
+          ? (fatalLoss?.messageToken
+              ?? (fatalLoss?.reason
+                ? { key: `disputes.strengthReason.fatalLoss.${fatalLoss.reason}` }
+                : { key: `disputes.strengthReason.${family}.weak` }))
           : { key: `disputes.strengthReason.${family}.insufficient` },
       coverage: coverage ?? undefined,
       fatalLoss: fatalLoss ?? undefined,
@@ -515,9 +319,10 @@ export function calculateCaseStrength(
     supporting: 1,
     invalid: 0,
   };
-  // Per-signal accumulator: best category + label of the first
-  // contributing evidence field (used for strengthReason composition).
-  type SignalAcc = { category: EvidenceCategory; label: string };
+  // Per-signal accumulator: best category seen (per-signalId dedup).
+  // The signalId itself is enough for strength-reason composition —
+  // the token layer resolves the label.
+  type SignalAcc = { category: EvidenceCategory };
   const bestBySignalDetailed = new Map<SignalId, SignalAcc>();
 
   let registeredItems = 0; // canonical fields visible in the checklist
@@ -540,7 +345,7 @@ export function calculateCaseStrength(
       if (!affectsStrength(category)) continue;
       const prev = bestBySignalDetailed.get(spec.signalId);
       if (!prev || RANK[category] > RANK[prev.category]) {
-        bestBySignalDetailed.set(spec.signalId, { category, label: spec.label });
+        bestBySignalDetailed.set(spec.signalId, { category });
       }
     } else if (isMissing && (item.collectionType === "manual" || !item.collectionType)) {
       // Track the highest-default-category missing actionable field for
@@ -562,9 +367,9 @@ export function calculateCaseStrength(
   const moderateRows: ContributionRow[] = [];
   for (const [signalId, acc] of bestBySignalDetailed) {
     if (acc.category === "strong") {
-      strongRows.push({ signalId, category: "strong", label: acc.label });
+      strongRows.push({ signalId, category: "strong" });
     } else if (acc.category === "moderate") {
-      moderateRows.push({ signalId, category: "moderate", label: acc.label });
+      moderateRows.push({ signalId, category: "moderate" });
     }
   }
   const strongCount = strongRows.length;
@@ -658,16 +463,13 @@ export function calculateCaseStrength(
     : 0;
 
   // Improvement hint (highest-default-category missing actionable).
-  let improvementHint: string | null = null;
   let improvementHintI18n: I18nToken | null = null;
   if (overall !== "strong" && missingActionableTopField) {
-    const label = CANONICAL_EVIDENCE[missingActionableTopField.field]?.label ?? missingActionableTopField.field;
-    improvementHint = `Add ${label.toLowerCase()} to strengthen your case.`;
     const spec = CANONICAL_EVIDENCE[missingActionableTopField.field];
     if (spec) {
       improvementHintI18n = {
         key: "disputes.improvementHint",
-        params: { labelKey: SIGNAL_LABEL_KEY[spec.signalId] },
+        params: { label: labelParam(spec.signalId) },
       };
     }
   }
@@ -675,13 +477,6 @@ export function calculateCaseStrength(
   // Compose strengthReason from the actual contributions instead of a
   // static per-family table. Guarantees the hero copy never claims a
   // signal is "missing" when it's already in the contribution list.
-  const strengthReason = composeStrengthReason({
-    overall,
-    family,
-    strong: strongRows,
-    moderate: moderateRows,
-    isFraudAvsOnlyStrong,
-  });
   const strengthReasonI18nToken = composeStrengthReasonI18n({
     overall,
     family,
@@ -726,17 +521,13 @@ export function calculateCaseStrength(
     heroVariant = isFraudAvsOnlyStrong ? "needs_strengthening" : "could_win";
   } else heroVariant = "hard_to_win";
 
-  const finalStrengthReason = isCovered
-    ? COVERED_STRENGTH_REASON
-    : isFatalLoss
-      ? (fatalLoss?.message ?? STRENGTH_REASONS[family].weak)
-      : strengthReason;
   const finalStrengthReasonI18n: I18nToken = isCovered
-    ? { key: "disputes.strengthReason.covered" }
+    ? COVERED_STRENGTH_REASON_TOKEN
     : isFatalLoss
-      ? (fatalLoss?.reason
-          ? { key: `disputes.strengthReason.fatalLoss.${fatalLoss.reason}` }
-          : { key: `disputes.strengthReason.${family}.weak` })
+      ? (fatalLoss?.messageToken
+          ?? (fatalLoss?.reason
+            ? { key: `disputes.strengthReason.fatalLoss.${fatalLoss.reason}` }
+            : { key: `disputes.strengthReason.${family}.weak` }))
       : strengthReasonI18nToken;
 
   return {
@@ -748,10 +539,8 @@ export function calculateCaseStrength(
     supportingCount,
     supportedClaims: 0,
     totalClaims: 0,
-    improvementHint: isCovered || isFatalLoss ? null : improvementHint,
     improvementHintI18n: isCovered || isFatalLoss ? null : improvementHintI18n,
     heroVariant,
-    strengthReason: finalStrengthReason,
     strengthReasonI18n: finalStrengthReasonI18n,
     coverage: coverage ?? undefined,
     fatalLoss: fatalLoss ?? undefined,
@@ -771,8 +560,9 @@ export interface CaseStrengthContribution {
    *  `strong` or `moderate` — supporting and invalid never reach
    *  these lists. */
   category: "strong" | "moderate";
-  /** Merchant-facing label from the canonical registry. */
-  label: string;
+  /** i18n token for the merchant-facing label. UI consumers resolve
+   *  via `resolveToken(rootTranslator, labelToken)`. */
+  labelToken: I18nToken;
   /** The first contributing `evidenceFieldKey` (when a single
    *  signalId is reachable through multiple keys). Used by deep-link
    *  CTAs. */
@@ -819,7 +609,7 @@ export function computeContributions(
     const row: CaseStrengthContribution = {
       signalId,
       category: acc.category as "strong" | "moderate",
-      label: spec?.label ?? acc.field,
+      labelToken: { key: spec?.labelKey ?? signalLabelKey(signalId) },
       evidenceFieldKey: acc.field,
     };
     if (acc.category === "strong") strong.push(row);
@@ -860,7 +650,11 @@ export function calculateImprovement(
 
   if (!bestField || !bestCategory) return null;
 
-  const label = CANONICAL_EVIDENCE[bestField]?.label ?? bestField;
+  // `action` is currently consumed only by internal diagnostics; the
+  // merchant-facing improvement copy is rendered via
+  // `improvementHintI18n`. Emit a non-localized debug string here so
+  // the diagnostic stays readable.
+  const labelKey = CANONICAL_EVIDENCE[bestField]?.labelKey ?? bestField;
   const current = calculateCaseStrength(checklist, reason, payloadSource);
   if (current.overall === "strong") return null;
 
@@ -879,7 +673,7 @@ export function calculateImprovement(
   return {
     currentStrength: current.overall,
     potentialStrength: potential,
-    action: `Add ${label}`,
+    action: `Add ${labelKey}`,
     field: bestField,
   };
 }

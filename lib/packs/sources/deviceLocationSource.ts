@@ -362,7 +362,7 @@ export async function collectDeviceLocationEvidence(
   return [
     {
       type: "other",
-      label: "IP & Location Check",
+      labelToken: { key: "packs.section.ipLocationCheck" },
       source: ipinfo ? "ipinfo_io" : "order_client_ip",
       fieldsProvided: ["ip_location_check"],
       data,

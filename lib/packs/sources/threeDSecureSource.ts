@@ -100,7 +100,7 @@ export async function collectThreeDSecureEvidence(
   return [
     {
       type: "other",
-      label: "3-D Secure authentication",
+      labelToken: { key: "packs.section.threeDSecure" },
       source: "shopify_transactions",
       fieldsProvided: ["tds_authentication"],
       data,

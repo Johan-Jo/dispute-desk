@@ -67,7 +67,8 @@
     "hoursAgo": "hace {n}h",
     "daysAgo": "hace {n}d",
     "demoNotice": "You're viewing sample data. Connect your Shopify store to manage real data.",
-    "connectStoreCTA": "Connect store"
+    "connectStoreCTA": "Connect store",
+    "dismiss": "Dismiss"
   },
   "status": {
     "needsResponse": "Requiere respuesta",
@@ -607,7 +608,9 @@
     "itemStrength": {
       "strong": "Strong",
       "moderate": "Moderate",
-      "supporting": "Supporting"
+      "supporting": "Supporting",
+      "internal_only": "Internal only",
+      "none": "None"
     },
     "evidenceTab": {
       "sections": {
@@ -1112,7 +1115,7 @@
         "inr_no_fulfillment": "The order was never fulfilled and the dispute reason is item-not-received — there is no factual basis to defend the charge."
       }
     },
-    "improvementHint": "Add {label} to strengthen your case.",
+    "improvementHint": "Agregue {label} para fortalecer su caso.",
     "recommendation": {
       "submitted": {
         "strongOrModerate": "Recommendation: No further action is required. Your defense has been successfully submitted. We will notify you when the bank responds.",
@@ -1373,6 +1376,38 @@
     "Subscription": "Suscripción"
   },
   "packs": {
+    "section": {
+      "order": "Pedido {orderName}",
+      "refundHistory": "Historial de reembolsos",
+      "customerActivityLog": "Registro de actividad del cliente",
+      "customerAccountDetails": "Detalles de la cuenta del cliente",
+      "shopifyProtect": "Cobertura de Shopify Protect",
+      "customerCommunication": "Comunicación con el cliente",
+      "ipLocationCheck": "Verificación de IP y ubicación",
+      "fraudRiskScreening": "Detección de riesgo de fraude previa a la autorización",
+      "fulfillments": "Envíos ({count})",
+      "manualUploads": "Cargas manuales ({count})",
+      "manualUploadLiteral": "{text}",
+      "paymentVerification": "Verificación de pago",
+      "paymentVerificationAvsCvv": "Verificación de pago (AVS/CVV)",
+      "storePolicies": "Políticas de la tienda ({count})",
+      "refundPolicy": "Política de reembolsos",
+      "shippingPolicy": "Política de envíos",
+      "cancellationPolicy": "Política de cancelación",
+      "threeDSecure": "Autenticación 3-D Secure",
+      "legacy": {
+        "order": "Detalles del pedido",
+        "shipping": "Envío",
+        "tracking": "Seguimiento",
+        "policy": "Política",
+        "refund_policy": "Política de reembolsos",
+        "shipping_policy": "Política de envíos",
+        "cancellation_policy": "Política de cancelación",
+        "comms": "Comunicación",
+        "other": "Pruebas adicionales",
+        "access_log": "Registro de actividad"
+      }
+    },
     "title": "Paquetes de evidencia",
     "subtitle": "Ver y gestionar paquetes de evidencia",
     "packTitle": "Paquete {id}",
@@ -1675,7 +1710,8 @@
     "avgTimeToSubmit": "Tiempo Promedio de Envío",
     "avgTimeToClose": "Tiempo Promedio de Cierre",
     "outcomeBreakdown": "Desglose de Resultados",
-    "statusDistribution": "Distribución de Estado"
+    "statusDistribution": "Distribución de Estado",
+    "weeklyChargebackRateAria": "Weekly chargeback rate, last 8 weeks"
   },
   "billing": {
     "title": "Facturación",
@@ -2063,7 +2099,12 @@
     "permFilesDesc": "Subir documentos de evidencia a Shopify",
     "ctaAuthorize": "Autorizar cuenta",
     "ctaContinue": "Continuar con la configuración →",
-    "footer": "Solo tú tendrás acceso. Puedes revocar los permisos en cualquier momento desde Shopify Admin → Apps."
+    "footer": "Solo tú tendrás acceso. Puedes revocar los permisos en cualquier momento desde Shopify Admin → Apps.",
+    "readinessNote": "Once connected, DisputeDesk will begin syncing your disputes and configuring coverage for both inquiries and chargebacks.",
+    "whatWeNeed": "What we need from Shopify",
+    "whatWeNeedIntro": "DisputeDesk needs the following access. We use it only to manage disputes and evidence; all access is read-only except when we upload evidence for you.",
+    "uploadEvidence": "Dispute evidence (read and write) — to submit evidence and documents to Shopify on your behalf",
+    "storeDomainHelp": "Enter the subdomain only (e.g. my-store). Your full URL is my-store.myshopify.com."
   },
   "selectStore": {
     "noStores": "Sin tiendas conectadas",
@@ -2820,7 +2861,13 @@
       "scaleRoi": "Recupera ~$28.800/mes por $299. Competidores con comisión por éxito cobran ~$7.200 por la misma recuperación.",
       "roiFootnote": "Las ilustraciones de ROI asumen una tasa de victoria del 60% y un valor medio de disputa de $120. Las comisiones por éxito de los competidores (20–25%) se basan en precios publicados a 2026-05.",
       "topUpsTitle": "¿Necesitas más paquetes?",
-      "topUpsDesc": "Compra recargas en cualquier momento. Los créditos se agregan inmediatamente al pagar."
+      "topUpsDesc": "Compra recargas en cualquier momento. Los créditos se agregan inmediatamente al pagar.",
+      "installTitle": "Install DisputeDesk",
+      "installSubtitle": "Enter your Shopify store to get started",
+      "shopPlaceholder": "yourstore.myshopify.com",
+      "shopError": "Enter a valid store name, e.g. yourstore or yourstore.myshopify.com",
+      "installButton": "Install",
+      "installHint": "You'll be redirected to Shopify to authorize the app. Free plan — no credit card required."
     },
     "footer": {
       "tagline": "Tu centro de comando para disputas de Shopify.",
@@ -3675,7 +3722,24 @@
       "badgeReview": "Revisión",
       "activatedPackagesTitle": "Packs activados",
       "activatedPackagesListIntro": "Estos packs de pruebas están ACTIVOS en tu biblioteca (paso Packs de pruebas).",
-      "activatedPackagesEmpty": "Aún no hay packs activados. Instala una plantilla en el paso de packs y actívala para verla aquí."
+      "activatedPackagesEmpty": "Aún no hay packs activados. Instala una plantilla en el paso de packs y actívala para verla aquí.",
+      "packHandlingIntro": "Choose how each active pack should behave when a new dispute arrives.",
+      "packHandlingHelper": "Packs you activated in the previous step appear here automatically. Set whether each one should run automatically or go through manual review first.",
+      "packHandlingSectionTitle": "Active packs and handling mode",
+      "packHandlingPriorityHint": "Rule order defines application priority.",
+      "segmentManual": "Manual review",
+      "segmentAuto": "Automatic",
+      "segmentManualHint": "Requires a check before submission",
+      "segmentAutoHint": "Creates and routes the pack automatically",
+      "badgeActiveRow": "Active",
+      "badgeDraftRow": "Draft",
+      "badgeRecommendedRow": "Recommended",
+      "packAutoDisabledHint": "This pack needs an installed template to enable automatic handling.",
+      "emptyPacksTitle": "No active packs yet",
+      "emptyPacksBody": "Activate packs in the previous step to configure rules here.",
+      "backToPacksCta": "Back to Packs",
+      "saveErrorGeneric": "Could not save. Try again.",
+      "pack_auto_requires_template": "Automatic handling requires a template linked to this pack."
     },
     "teamNotifications": {
       "title": "Equipo y notificaciones",

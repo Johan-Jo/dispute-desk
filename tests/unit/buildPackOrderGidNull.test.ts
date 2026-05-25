@@ -91,7 +91,11 @@ vi.mock("@/lib/automation/riskWeakness", () => ({
 vi.mock("@/lib/argument/caseStrength", () => ({
   calculateCaseStrength: vi
     .fn()
-    .mockReturnValue({ overall: "weak", strengthReason: "no evidence" }),
+    .mockReturnValue({
+      overall: "weak",
+      strengthReasonI18n: { key: "disputes.strengthReason.general.weak" },
+      improvementHintI18n: null,
+    }),
 }));
 vi.mock("@/lib/automation/completeness", () => ({
   evaluateCompleteness: vi.fn().mockReturnValue({

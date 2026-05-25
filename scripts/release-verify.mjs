@@ -43,6 +43,11 @@ const STEPS = [
   // rendering raw key paths like "disputes.sourceCaption.auto_shopify")
   // AND bans lazy `// i18n-allow TODO` markers.
   { name: "i18n: keys", cmd: "node", args: ["scripts/verify-i18n-keys.mjs"] },
+  // i18n locale-parity guardrail — blocks merges that leave non-en
+  // locales missing leaf strings present in en.json. The structural-
+  // i18n migration removed the silent en fallback in getMessages.ts,
+  // so a missing key would render the raw key path in production.
+  { name: "i18n: parity", cmd: "node", args: ["scripts/verify-i18n-parity.mjs"] },
   // verbose reporter so each test name streams — user can follow progress
   { name: "Vitest", cmd: "npx", args: ["vitest", "run", "--reporter=verbose"] },
   { name: "Build", cmd: "npm", args: ["run", "build"] },

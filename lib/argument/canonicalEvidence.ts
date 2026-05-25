@@ -19,6 +19,8 @@
  *   - **Deduplication uses `signalId`**, not `evidenceFieldKey`. (P2.4)
  */
 
+import type { I18nKey } from "@/lib/i18n/token";
+
 /** Strict 4-state category. `invalid` items never enter the system. */
 export type EvidenceCategory = "strong" | "moderate" | "supporting" | "invalid";
 
@@ -77,8 +79,10 @@ export interface PersistedCategory {
 export interface CanonicalSpec {
   /** Cross-field signal grouping for dedup. */
   signalId: SignalId;
-  /** Merchant-facing label. */
-  label: string;
+  /** i18n key for the merchant-facing label. Consumers wrap it as
+   *  `{ key: spec.labelKey }` (or `I18nKeyParam`) and let the translator
+   *  resolve into the user's locale. Lib code never emits English. */
+  labelKey: I18nKey;
   /** Default category. May be downgraded by conditional rules. */
   category: EvidenceCategory;
   /** True when this signal can never elevate case strength
@@ -127,7 +131,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   // ── Payment authentication ──
   avs_cvv_match: {
     signalId: "payment_auth",
-    label: "Payment authentication",
+    labelKey: "disputes.signalLabel.payment_auth",
     category: "strong",
     supportingOnly: false,
     excludedFromStrength: false,
@@ -135,7 +139,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   },
   tds_authentication: {
     signalId: "payment_auth",
-    label: "3-D Secure authentication",
+    labelKey: "disputes.signalLabel.payment_auth",
     category: "strong",
     supportingOnly: false,
     excludedFromStrength: false,
@@ -149,7 +153,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     // assertion the way an AVS=Y match on the gateway receipt is.
     // Categorizer below short-circuits any upgrade attempt.
     signalId: "fraud_screening",
-    label: "Pre-authorization fraud screening",
+    labelKey: "disputes.signalLabel.fraud_screening",
     category: "moderate",
     supportingOnly: false,
     excludedFromStrength: false,
@@ -159,7 +163,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   // ── Billing match ──
   billing_address_match: {
     signalId: "billing_match",
-    label: "Billing address match",
+    labelKey: "disputes.signalLabel.billing_match",
     category: "strong",
     supportingOnly: false,
     excludedFromStrength: false,
@@ -169,7 +173,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   // ── Delivery (proofType-conditional) ──
   delivery_proof: {
     signalId: "delivery",
-    label: "Delivery confirmation",
+    labelKey: "disputes.signalLabel.delivery",
     category: "moderate",
     supportingOnly: false,
     excludedFromStrength: false,
@@ -178,7 +182,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   },
   shipping_tracking: {
     signalId: "delivery",
-    label: "Shipping tracking",
+    labelKey: "disputes.signalLabel.delivery",
     category: "moderate",
     supportingOnly: false,
     excludedFromStrength: false,
@@ -189,7 +193,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   // ── IP / device (always at most moderate) ──
   ip_location_check: {
     signalId: "ip_location",
-    label: "IP & location consistency",
+    labelKey: "disputes.signalLabel.ip_location",
     category: "moderate",
     supportingOnly: false,
     excludedFromStrength: false,
@@ -197,7 +201,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   },
   device_session_consistency: {
     signalId: "device_session",
-    label: "Device & session signals",
+    labelKey: "disputes.signalLabel.device_session",
     category: "moderate",
     supportingOnly: false,
     excludedFromStrength: false,
@@ -210,7 +214,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   //     when payload carries the discriminator. ──
   customer_communication: {
     signalId: "communication",
-    label: "Customer communication",
+    labelKey: "disputes.signalLabel.communication",
     category: "supporting",
     supportingOnly: false,
     excludedFromStrength: false,
@@ -219,7 +223,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   },
   customer_account_info: {
     signalId: "account_history",
-    label: "Customer account history",
+    labelKey: "disputes.signalLabel.account_history",
     category: "supporting",
     supportingOnly: false,
     excludedFromStrength: false,
@@ -227,7 +231,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   },
   activity_log: {
     signalId: "account_history",
-    label: "Customer activity log",
+    labelKey: "disputes.signalLabel.account_history",
     category: "supporting",
     supportingOnly: false,
     excludedFromStrength: false,
@@ -236,7 +240,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   },
   supporting_documents: {
     signalId: "supplementary_documents",
-    label: "Supplementary documents",
+    labelKey: "disputes.signalLabel.supplementary_documents",
     category: "supporting",
     supportingOnly: false,
     excludedFromStrength: false,
@@ -245,7 +249,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   },
   refund_policy: {
     signalId: "policy_refund",
-    label: "Refund policy",
+    labelKey: "disputes.signalLabel.policy_refund",
     category: "supporting",
     supportingOnly: false,
     excludedFromStrength: false,
@@ -254,7 +258,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   },
   shipping_policy: {
     signalId: "policy_shipping",
-    label: "Shipping policy",
+    labelKey: "disputes.signalLabel.policy_shipping",
     category: "supporting",
     supportingOnly: false,
     excludedFromStrength: false,
@@ -263,7 +267,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   },
   cancellation_policy: {
     signalId: "policy_cancellation",
-    label: "Cancellation policy",
+    labelKey: "disputes.signalLabel.policy_cancellation",
     category: "supporting",
     supportingOnly: false,
     excludedFromStrength: false,
@@ -276,21 +280,21 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   //     are always supporting per the rubric's GRAY list. ──
   order_confirmation: {
     signalId: "order_record",
-    label: "Order record",
+    labelKey: "disputes.signalLabel.order_record",
     category: "supporting",
     supportingOnly: true,
     excludedFromStrength: true,
   },
   product_description: {
     signalId: "product_listing",
-    label: "Product listing",
+    labelKey: "disputes.signalLabel.product_listing",
     category: "supporting",
     supportingOnly: true,
     excludedFromStrength: true,
   },
   duplicate_explanation: {
     signalId: "duplicate_explanation",
-    label: "Duplicate-charge explanation",
+    labelKey: "disputes.signalLabel.duplicate_explanation",
     category: "supporting",
     supportingOnly: true,
     excludedFromStrength: true,

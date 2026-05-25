@@ -1,26 +1,20 @@
 /**
  * Recommendation engine — produces the merchant-facing
- * "Recommendation:" sentence + optional helper line displayed on the
+ * "Recommendation:" token + optional helper token displayed on the
  * dispute Overview tab.
  *
  * Plan v3 §3.A.6 puts this logic in `lib/` so it lives next to the
  * rest of the argument engine, not inside a UI component. The only
- * consumer is `useDisputeWorkspace.ts`, which exposes the strings as
- * `derived.recommendationText` and `derived.recommendationHelperText`
- * for the OverviewTab to render verbatim.
+ * consumer is `useDisputeWorkspace.ts`, which resolves the tokens via
+ * `resolveToken` and exposes the resulting `Localized` strings as
+ * `derived.recommendationText` and `derived.recommendationHelperText`.
  *
- * i18n (2026-05-24): outputs are now structured tokens
- * (`{ key, params }`) consumed by `useTranslations()` at render. The
- * legacy English-string fields (`text`, `helperText`) are still emitted
- * for back-compat (existing tests + any server consumers) but they MUST
- * NOT be rendered to merchants — the UI reads `textI18n` / `helperI18n`
- * and translates them.
- *
- * Inputs are pure derived state (no React, no DOM). Same input →
- * same output, like every other backend builder in `lib/`.
+ * No English strings are emitted from this module — UI rendering is
+ * the sole responsibility of the translator layer.
  */
 
-import type { CaseStrengthLevel, I18nToken, MissingItemWithContext } from "./types";
+import type { I18nKeyParam, I18nToken } from "@/lib/i18n/token";
+import type { CaseStrengthLevel, MissingItemWithContext } from "./types";
 
 /** Calendar-day distance between an ISO timestamp and now (local time). */
 function calendarDaysSince(iso: string): number {
@@ -36,22 +30,35 @@ export interface GenerateRecommendationInput {
   submitted: boolean;
   /** Categorical strength from `calculateCaseStrength`. */
   strength: CaseStrengthLevel;
-  /** Top missing item (highest priority), or null when none. */
+  /** Top missing item (highest priority), or null when none. The
+   *  resolver uses `topMissing.labelToken` (set by Phase 3) when
+   *  present; otherwise falls back to the raw `label` for back-compat
+   *  with consumers that haven't been migrated yet. */
   topMissing: MissingItemWithContext | null;
   /** ISO timestamp of pack save_to_shopify, when submitted. */
   submittedAt: string | null;
 }
 
 export interface RecommendationOutput {
-  /** Legacy English string. Kept for tests and any server consumers.
-   *  NEVER render this directly in the embedded UI — use `textI18n`. */
-  text: string;
-  /** Legacy English helper line. Kept for tests. NEVER render in UI. */
-  helperText: string | null;
-  /** i18n token for `text`. Consume via `t(key, params)`. */
+  /** Token for the recommendation sentence. Consume via
+   *  `resolveToken(rootTranslator, textI18n)`. */
   textI18n: I18nToken;
-  /** i18n token for `helperText`. null when no helper is shown. */
+  /** Token for the helper line. null when no helper is shown. */
   helperI18n: I18nToken | null;
+}
+
+/** Build the missing-label param. Prefers the structured token when
+ *  the consumer is past Phase 3; falls back to the literal label
+ *  otherwise. Lowercased so the sentence reads naturally. */
+function missingLabelParam(topMissing: MissingItemWithContext): I18nKeyParam | string {
+  // Forward-compat path: once `MissingItemWithContext` carries a
+  // `labelToken`, recommend.ts wraps it as an I18nKeyParam so the
+  // outer template gets a translated label spliced in.
+  const maybeToken = (topMissing as MissingItemWithContext & { labelToken?: { key: string } }).labelToken;
+  if (maybeToken && typeof maybeToken.key === "string") {
+    return { type: "i18n-key", key: maybeToken.key };
+  }
+  return topMissing.label.toLowerCase();
 }
 
 export function generateRecommendation(
@@ -59,67 +66,40 @@ export function generateRecommendation(
 ): RecommendationOutput {
   const { submitted, strength, topMissing, submittedAt } = args;
 
-  let text: string;
   let textI18n: I18nToken;
-  let helperText: string | null = null;
   let helperI18n: I18nToken | null = null;
 
   if (submitted) {
-    if (strength === "strong" || strength === "moderate") {
-      text =
-        "Recommendation: No further action is required. Your defense has been successfully submitted. We will notify you when the bank responds.";
-      textI18n = { key: "disputes.recommendation.submitted.strongOrModerate" };
-    } else {
-      text =
-        "Recommendation: Monitor this case. Consider strengthening evidence for future disputes.";
-      textI18n = { key: "disputes.recommendation.submitted.weakOrInsufficient" };
-    }
+    textI18n =
+      strength === "strong" || strength === "moderate"
+        ? { key: "disputes.recommendation.submitted.strongOrModerate" }
+        : { key: "disputes.recommendation.submitted.weakOrInsufficient" };
     if (submittedAt) {
       const daysElapsed = calendarDaysSince(submittedAt);
-      const dayLabel =
-        daysElapsed === 0
-          ? "Submitted today"
-          : `${daysElapsed} day${daysElapsed === 1 ? "" : "s"} since submission`;
-      helperText = `${dayLabel}. The issuing bank typically responds within 30–75 days.`;
       helperI18n = {
         key: "disputes.recommendation.helperWithDays",
         params: { days: daysElapsed },
       };
     } else {
-      helperText = "The issuing bank typically responds within 30–75 days.";
       helperI18n = { key: "disputes.recommendation.helperNoDate" };
     }
   } else if (strength === "strong") {
-    text =
-      "Recommendation: Submit now — your evidence is strong enough to defend this charge.";
     textI18n = { key: "disputes.recommendation.notSubmitted.strong" };
   } else if (strength === "moderate") {
-    if (topMissing) {
-      const label = topMissing.label.toLowerCase();
-      text = `Recommendation: You can submit, but adding ${label} would meaningfully improve your odds.`;
-      textI18n = {
-        key: "disputes.recommendation.notSubmitted.moderateWithMissing",
-        params: { label },
-      };
-    } else {
-      text =
-        "Recommendation: You can submit now, but a small amount of additional evidence would improve your odds.";
-      textI18n = { key: "disputes.recommendation.notSubmitted.moderateNoMissing" };
-    }
+    textI18n = topMissing
+      ? {
+          key: "disputes.recommendation.notSubmitted.moderateWithMissing",
+          params: { label: missingLabelParam(topMissing) },
+        }
+      : { key: "disputes.recommendation.notSubmitted.moderateNoMissing" };
   } else {
-    if (topMissing) {
-      const label = topMissing.label.toLowerCase();
-      text = `Recommendation: Add ${label} before submitting — the case is currently unlikely to win as-is.`;
-      textI18n = {
-        key: "disputes.recommendation.notSubmitted.weakWithMissing",
-        params: { label },
-      };
-    } else {
-      text =
-        "Recommendation: Strengthen the evidence before submitting — the case is currently unlikely to win as-is.";
-      textI18n = { key: "disputes.recommendation.notSubmitted.weakNoMissing" };
-    }
+    textI18n = topMissing
+      ? {
+          key: "disputes.recommendation.notSubmitted.weakWithMissing",
+          params: { label: missingLabelParam(topMissing) },
+        }
+      : { key: "disputes.recommendation.notSubmitted.weakNoMissing" };
   }
 
-  return { text, helperText, textI18n, helperI18n };
+  return { textI18n, helperI18n };
 }

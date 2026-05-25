@@ -54,7 +54,10 @@ export async function collectOrderEvidence(
   const sections: EvidenceSection[] = [
     {
       type: "order",
-      label: `Order ${order.name}`,
+      labelToken: {
+        key: "packs.section.order",
+        params: { orderName: order.name },
+      },
       source: "shopify_order",
       fieldsProvided,
       data: {
@@ -90,7 +93,7 @@ export async function collectOrderEvidence(
   if (order.refunds.length > 0) {
     sections.push({
       type: "order",
-      label: "Refund History",
+      labelToken: { key: "packs.section.refundHistory" },
       source: "shopify_order",
       fieldsProvided: [],
       data: {
@@ -116,7 +119,7 @@ export async function collectOrderEvidence(
 
     sections.push({
       type: "access_log",
-      label: "Customer activity log",
+      labelToken: { key: "packs.section.customerActivityLog" },
       source: "shopify_order",
       fieldsProvided: ["activity_log"],
       data: {
@@ -144,7 +147,7 @@ export async function collectOrderEvidence(
     const totalOrders = Number(order.customer.numberOfOrders ?? 0);
     sections.push({
       type: "other",
-      label: "Customer account details",
+      labelToken: { key: "packs.section.customerAccountDetails" },
       source: "shopify_order",
       fieldsProvided: ["customer_account_info"],
       data: {

@@ -12,6 +12,9 @@
 import { describe, it, expect } from "vitest";
 import { calculateCaseStrength } from "@/lib/argument/caseStrength";
 import type { EvidencePayloadSource } from "@/lib/argument/caseStrength";
+import { resolveToken } from "@/lib/i18n/resolveToken";
+import type { I18nToken } from "@/lib/i18n/token";
+import enMessages from "@/messages/en.json";
 import {
   weakFraudFixture,
   policiesOnlyFraudFixture,
@@ -25,6 +28,39 @@ function payloadSource(map: Map<string, unknown>): EvidencePayloadSource {
     obj[k] = { payload: v as Record<string, unknown> };
   }
   return { kind: "byField", map: obj };
+}
+
+/** Walk the dotted key into the en messages catalog. */
+function lookupEn(key: string): string {
+  const parts = key.split(".");
+  let node: unknown = enMessages;
+  for (const p of parts) {
+    if (node && typeof node === "object" && p in (node as Record<string, unknown>)) {
+      node = (node as Record<string, unknown>)[p];
+    } else {
+      return key;
+    }
+  }
+  return typeof node === "string" ? node : key;
+}
+
+/** Minimal translator that mimics next-intl's substitution for plain
+ *  `{name}` placeholders — enough for the strength-reason templates.
+ *  ICU select/plural is not handled; tests that need it should hit
+ *  next-intl directly. */
+function enTranslator(key: string, params?: Record<string, string | number>): string {
+  let msg = lookupEn(key);
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      msg = msg.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
+    }
+  }
+  return msg;
+}
+
+/** Resolve an I18nToken against `messages/en.json`. */
+function resolveTokenWithEn(token: I18nToken): string {
+  return resolveToken(enTranslator, token);
 }
 
 describe("Test 1 — weak fraud case with 8/8 sections collected remains Weak", () => {
@@ -853,10 +889,11 @@ describe("Test 16 — PDF inclusion ≠ bank argument inclusion (context_only ca
 });
 
 describe("Test 17 — strength reason mentions missing payment verification for fraud no-AVS", () => {
-  it("strengthReason references payment authentication / verification for the weak fraud fixture", () => {
+  it("strengthReasonI18n resolves to copy referencing payment authentication / verification for the weak fraud fixture", () => {
     const f = weakFraudFixture();
     const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField));
-    expect(result.strengthReason).toMatch(/payment (verification|authentication)/i);
+    const resolved = resolveTokenWithEn(result.strengthReasonI18n);
+    expect(resolved).toMatch(/payment (verification|authentication)/i);
   });
 });
 
@@ -864,7 +901,8 @@ describe("Test 18 — strength reason mentions missing confirmed delivery when a
   it("the redesigned WEAK reason names delivery confirmation", () => {
     const f = weakFraudFixture();
     const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField));
-    expect(result.strengthReason).toMatch(/delivery/i);
+    const resolved = resolveTokenWithEn(result.strengthReasonI18n);
+    expect(resolved).toMatch(/delivery/i);
   });
 });
 
@@ -872,7 +910,8 @@ describe("Test 19 — strength reason mentions missing customer purchase acknowl
   it("the redesigned WEAK reason names customer acknowledgement / communication", () => {
     const f = weakFraudFixture();
     const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField));
-    expect(result.strengthReason).toMatch(/(customer|acknowledg|communication)/i);
+    const resolved = resolveTokenWithEn(result.strengthReasonI18n);
+    expect(resolved).toMatch(/(customer|acknowledg|communication)/i);
   });
 });
 

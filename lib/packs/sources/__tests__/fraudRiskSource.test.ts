@@ -388,7 +388,7 @@ describe("collectFraudRiskEvidence", () => {
     expect(sections).toHaveLength(1);
     const s = sections[0];
     expect(s.fieldsProvided).toEqual(["fraud_risk_screening"]);
-    expect(s.label).toBe("Pre-authorization fraud screening");
+    expect(s.labelToken).toEqual({ key: "packs.section.fraudRiskScreening" });
     const data = s.data as {
       provider: string;
       riskLevel: string;

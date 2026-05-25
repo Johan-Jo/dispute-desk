@@ -366,8 +366,35 @@ function extractValue(
   }
 }
 
+/** English labels for the LLM context. The canonical registry stopped
+ *  carrying English in Phase 3 because merchant-UI labels must be
+ *  translated; the bank-rebuttal LLM, however, always speaks English
+ *  to a bank reviewer, so the prompt context needs concrete English
+ *  identifiers. Keep this map in sync with `messages/en.json`
+ *  `disputes.signalLabel.*` — the strings match by construction. */
+const FIELD_LABEL_EN: Record<string, string> = {
+  avs_cvv_match: "Payment authentication",
+  tds_authentication: "3-D Secure authentication",
+  fraud_risk_screening: "Pre-authorization fraud screening",
+  billing_address_match: "Billing address match",
+  delivery_proof: "Delivery confirmation",
+  shipping_tracking: "Shipping tracking",
+  ip_location_check: "IP & location consistency",
+  device_session_consistency: "Device & session signals",
+  customer_communication: "Customer communication",
+  customer_account_info: "Customer account history",
+  activity_log: "Customer activity log",
+  supporting_documents: "Supplementary documents",
+  refund_policy: "Refund policy",
+  shipping_policy: "Shipping policy",
+  cancellation_policy: "Cancellation policy",
+  order_confirmation: "Order record",
+  product_description: "Product listing",
+  duplicate_explanation: "Duplicate-charge explanation",
+};
+
 function labelForField(fieldKey: string): string {
-  return CANONICAL_EVIDENCE[fieldKey]?.label ?? fieldKey;
+  return FIELD_LABEL_EN[fieldKey] ?? fieldKey;
 }
 
 /* ── Package mode derivation ── */

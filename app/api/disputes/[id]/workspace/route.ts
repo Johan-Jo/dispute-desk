@@ -654,7 +654,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   const RANK_CONTRIB: Record<string, number> = { strong: 3, moderate: 2, supporting: 1, invalid: 0 };
   const bestBySignal = new Map<
     string,
-    { category: "strong" | "moderate"; label: string; evidenceFieldKey: string }
+    { category: "strong" | "moderate"; labelKey: string; evidenceFieldKey: string }
   >();
   for (const item of reconciledChecklistV2) {
     if (item.status !== "available" && item.status !== "waived") continue;
@@ -669,7 +669,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     if (!prev || RANK_CONTRIB[cat] > RANK_CONTRIB[prev.category]) {
       bestBySignal.set(spec.signalId, {
         category: cat,
-        label: spec.label,
+        labelKey: spec.labelKey,
         evidenceFieldKey: item.field,
       });
     }
@@ -680,7 +680,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     const entry: CaseStrengthContribution = {
       signalId: signalId as CaseStrengthContribution["signalId"],
       category: acc.category,
-      label: acc.label,
+      labelToken: { key: acc.labelKey },
       evidenceFieldKey: acc.evidenceFieldKey,
     };
     if (acc.category === "strong") strongContribs.push(entry);
