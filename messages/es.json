@@ -1214,15 +1214,33 @@
       "recOptional": "Recommended if available"
     },
     "workspaceShell": {
+      "headerTitle": "Disputa #{id} — {reason}",
       "tabs": {
-        "overview": "Overview",
-        "evidence": "Evidence",
-        "reviewSubmit": "Review & Submit"
+        "overview": "Resumen",
+        "evidence": "Evidencia",
+        "reviewSubmit": "Revisar y enviar"
       },
       "strengthLabel": {
-        "strong": "Strong case",
-        "moderate": "Moderate case",
-        "weak": "Weak case"
+        "strong": "Caso sólido",
+        "moderate": "Caso moderado",
+        "weak": "Caso débil"
+      },
+      "merchantReasonLabel": {
+        "BANK_CANNOT_PROCESS": "El banco no pudo procesar",
+        "CREDIT_NOT_PROCESSED": "Reembolso no procesado",
+        "CUSTOMER_INITIATED": "Disputa iniciada por el cliente",
+        "DEBIT_NOT_AUTHORIZED": "Débito no autorizado",
+        "DUPLICATE": "Cargo duplicado",
+        "FRAUDULENT": "Transacción no autorizada",
+        "GENERAL": "Disputa general",
+        "INCORRECT_ACCOUNT_DETAILS": "Datos de cuenta incorrectos",
+        "INSUFFICIENT_FUNDS": "Fondos insuficientes",
+        "NONCOMPLIANT": "Transacción no conforme",
+        "PRODUCT_NOT_RECEIVED": "Artículo no recibido",
+        "PRODUCT_UNACCEPTABLE": "Artículo no como se describe",
+        "SUBSCRIPTION_CANCELED": "Suscripción cancelada",
+        "UNRECOGNIZED": "Cargo no reconocido",
+        "fallback": "Disputa"
       },
       "statusPill": {
         "submitted": "Submitted",

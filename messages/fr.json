@@ -1214,15 +1214,33 @@
       "recOptional": "Recommended if available"
     },
     "workspaceShell": {
+      "headerTitle": "Litige #{id} — {reason}",
       "tabs": {
-        "overview": "Overview",
-        "evidence": "Evidence",
-        "reviewSubmit": "Review & Submit"
+        "overview": "Aperçu",
+        "evidence": "Preuves",
+        "reviewSubmit": "Vérifier et soumettre"
       },
       "strengthLabel": {
-        "strong": "Strong case",
-        "moderate": "Moderate case",
-        "weak": "Weak case"
+        "strong": "Dossier solide",
+        "moderate": "Dossier moyen",
+        "weak": "Dossier faible"
+      },
+      "merchantReasonLabel": {
+        "BANK_CANNOT_PROCESS": "La banque n'a pas pu traiter",
+        "CREDIT_NOT_PROCESSED": "Remboursement non traité",
+        "CUSTOMER_INITIATED": "Litige initié par le client",
+        "DEBIT_NOT_AUTHORIZED": "Débit non autorisé",
+        "DUPLICATE": "Débit en double",
+        "FRAUDULENT": "Transaction non autorisée",
+        "GENERAL": "Litige général",
+        "INCORRECT_ACCOUNT_DETAILS": "Coordonnées bancaires incorrectes",
+        "INSUFFICIENT_FUNDS": "Fonds insuffisants",
+        "NONCOMPLIANT": "Transaction non conforme",
+        "PRODUCT_NOT_RECEIVED": "Article non reçu",
+        "PRODUCT_UNACCEPTABLE": "Article non conforme à la description",
+        "SUBSCRIPTION_CANCELED": "Abonnement annulé",
+        "UNRECOGNIZED": "Débit non reconnu",
+        "fallback": "Litige"
       },
       "statusPill": {
         "submitted": "Submitted",

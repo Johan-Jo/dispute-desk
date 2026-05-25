@@ -822,6 +822,7 @@
       "recOptional": "Recommended if available"
     },
     "workspaceShell": {
+      "headerTitle": "Dispute #{id} — {reason}",
       "tabs": {
         "overview": "Overview",
         "evidence": "Evidence",
@@ -841,6 +842,23 @@
         "customer": "Customer",
         "dateFiled": "Date filed",
         "disputeReason": "Dispute reason"
+      },
+      "merchantReasonLabel": {
+        "BANK_CANNOT_PROCESS": "Bank could not process",
+        "CREDIT_NOT_PROCESSED": "Refund not processed",
+        "CUSTOMER_INITIATED": "Customer-initiated dispute",
+        "DEBIT_NOT_AUTHORIZED": "Debit not authorized",
+        "DUPLICATE": "Duplicate charge",
+        "FRAUDULENT": "Unauthorized transaction",
+        "GENERAL": "General dispute",
+        "INCORRECT_ACCOUNT_DETAILS": "Incorrect account details",
+        "INSUFFICIENT_FUNDS": "Insufficient funds",
+        "NONCOMPLIANT": "Noncompliant transaction",
+        "PRODUCT_NOT_RECEIVED": "Item not received",
+        "PRODUCT_UNACCEPTABLE": "Item not as described",
+        "SUBSCRIPTION_CANCELED": "Subscription canceled",
+        "UNRECOGNIZED": "Unrecognized charge",
+        "fallback": "Dispute"
       },
       "disputeSectionsAria": "Dispute sections"
     },

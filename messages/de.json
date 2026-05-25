@@ -1214,15 +1214,33 @@
       "recOptional": "Recommended if available"
     },
     "workspaceShell": {
+      "headerTitle": "Streitfall #{id} — {reason}",
       "tabs": {
-        "overview": "Overview",
-        "evidence": "Evidence",
-        "reviewSubmit": "Review & Submit"
+        "overview": "Übersicht",
+        "evidence": "Beweise",
+        "reviewSubmit": "Prüfen & Einreichen"
       },
       "strengthLabel": {
-        "strong": "Strong case",
-        "moderate": "Moderate case",
-        "weak": "Weak case"
+        "strong": "Starker Fall",
+        "moderate": "Mittelstarker Fall",
+        "weak": "Schwacher Fall"
+      },
+      "merchantReasonLabel": {
+        "BANK_CANNOT_PROCESS": "Bank kann nicht verarbeiten",
+        "CREDIT_NOT_PROCESSED": "Erstattung nicht verarbeitet",
+        "CUSTOMER_INITIATED": "Vom Kunden initiierter Streitfall",
+        "DEBIT_NOT_AUTHORIZED": "Abbuchung nicht autorisiert",
+        "DUPLICATE": "Doppelte Abbuchung",
+        "FRAUDULENT": "Nicht autorisierte Transaktion",
+        "GENERAL": "Allgemeiner Streitfall",
+        "INCORRECT_ACCOUNT_DETAILS": "Falsche Kontodaten",
+        "INSUFFICIENT_FUNDS": "Unzureichende Deckung",
+        "NONCOMPLIANT": "Nicht regelkonforme Transaktion",
+        "PRODUCT_NOT_RECEIVED": "Ware nicht erhalten",
+        "PRODUCT_UNACCEPTABLE": "Ware nicht wie beschrieben",
+        "SUBSCRIPTION_CANCELED": "Abonnement gekündigt",
+        "UNRECOGNIZED": "Unbekannte Belastung",
+        "fallback": "Streitfall"
       },
       "statusPill": {
         "submitted": "Submitted",

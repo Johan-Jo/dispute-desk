@@ -828,6 +828,7 @@
       "recOptional": "Rekommenderas om tillgängligt"
     },
     "workspaceShell": {
+      "headerTitle": "Tvist #{id} — {reason}",
       "tabs": {
         "overview": "Översikt",
         "evidence": "Bevis",
@@ -835,8 +836,25 @@
       },
       "strengthLabel": {
         "strong": "Starkt ärende",
-        "moderate": "Måttligt ärende",
+        "moderate": "Medelstarkt ärende",
         "weak": "Svagt ärende"
+      },
+      "merchantReasonLabel": {
+        "BANK_CANNOT_PROCESS": "Banken kunde inte behandla",
+        "CREDIT_NOT_PROCESSED": "Återbetalning ej genomförd",
+        "CUSTOMER_INITIATED": "Kundinitierad tvist",
+        "DEBIT_NOT_AUTHORIZED": "Debitering ej auktoriserad",
+        "DUPLICATE": "Dubbelbetalning",
+        "FRAUDULENT": "Obehörig transaktion",
+        "GENERAL": "Allmän tvist",
+        "INCORRECT_ACCOUNT_DETAILS": "Felaktiga kontouppgifter",
+        "INSUFFICIENT_FUNDS": "Otillräckliga medel",
+        "NONCOMPLIANT": "Ej regelenlig transaktion",
+        "PRODUCT_NOT_RECEIVED": "Vara ej mottagen",
+        "PRODUCT_UNACCEPTABLE": "Vara stämmer inte med beskrivning",
+        "SUBSCRIPTION_CANCELED": "Prenumeration avbruten",
+        "UNRECOGNIZED": "Okänd debitering",
+        "fallback": "Tvist"
       },
       "statusPill": {
         "submitted": "Inskickat",

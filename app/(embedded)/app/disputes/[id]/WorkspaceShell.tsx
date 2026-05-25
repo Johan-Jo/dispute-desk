@@ -1,10 +1,9 @@
 "use client";
 
 import { Page, Spinner, BlockStack } from "@shopify/polaris";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { withShopParams } from "@/lib/withShopParams";
-import { merchantDisputeReasonLabel } from "@/lib/rules/disputeReasons";
 import { useDisputeWorkspace } from "./hooks/useDisputeWorkspace";
 import OverviewTab from "./tabs/OverviewTab";
 import EvidenceTab from "./tabs/EvidenceTab";
@@ -37,10 +36,18 @@ const PILL_STYLE = {
   alignItems: "center",
 };
 
-function formatDate(iso: string | null): string {
+/** BCP-47 mapping for `toLocaleDateString`. Short-code locales like
+ *  `sv` work for date formatting; passing the active locale keeps month
+ *  names in the merchant's language. Falls back to `undefined` (host)
+ *  on unrecognized inputs. */
+function formatDate(iso: string | null, locale: string): string {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    return new Date(iso).toLocaleDateString(locale || undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   } catch {
     return "—";
   }
@@ -48,9 +55,28 @@ function formatDate(iso: string | null): string {
 
 export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
   const t = useTranslations();
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const workspace = useDisputeWorkspace(disputeId);
   const { data, derived, clientState, actions } = workspace;
+
+  /** Resolve a Shopify dispute reason code to its merchant-facing
+   *  translated label. Replaces the lib-side `merchantDisputeReasonLabel`
+   *  for UI use — the lib still owns the bank-rebuttal English path. */
+  const reasonLabelFor = (reason: string | null | undefined): string => {
+    if (!reason) return t("disputes.workspaceShell.merchantReasonLabel.fallback");
+    const key = reason.toUpperCase().replace(/\s+/g, "_");
+    try {
+      const resolved = t(`disputes.workspaceShell.merchantReasonLabel.${key}`);
+      const fallbackPath = "disputes.workspaceShell.merchantReasonLabel.fallback";
+      if (resolved === `disputes.workspaceShell.merchantReasonLabel.${key}`) {
+        return t(fallbackPath);
+      }
+      return resolved;
+    } catch {
+      return t("disputes.workspaceShell.merchantReasonLabel.fallback");
+    }
+  };
 
   const tabs: Array<{ id: string; label: string; panelId: string }> = [
     { id: "overview", label: t("disputes.workspaceShell.tabs.overview"), panelId: "overview-panel" },
@@ -76,8 +102,11 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
 
   const dispute = data.dispute;
   const submitted = derived.isReadOnly;
-  const reasonLabel = merchantDisputeReasonLabel(dispute.reason);
-  const headerTitle = `Dispute #${dispute.id.slice(0, 8).toUpperCase()} — ${reasonLabel}`;
+  const reasonLabel = reasonLabelFor(dispute.reason);
+  const headerTitle = t("disputes.workspaceShell.headerTitle", {
+    id: dispute.id.slice(0, 8).toUpperCase(),
+    reason: reasonLabel,
+  });
 
   const strengthKey = derived.caseStrength.overall;
   const strengthLabelKey = STRENGTH_LABEL_KEY[strengthKey] ?? "disputes.workspaceShell.strengthLabel.weak";
@@ -86,7 +115,7 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
   const facts: Array<{ label: string; value: string }> = [
     { label: t("disputes.workspaceShell.facts.amount"), value: `${dispute.currency} ${dispute.amount}` },
     { label: t("disputes.workspaceShell.facts.customer"), value: dispute.customerName || "—" },
-    { label: t("disputes.workspaceShell.facts.dateFiled"), value: formatDate(dispute.openedAt) },
+    { label: t("disputes.workspaceShell.facts.dateFiled"), value: formatDate(dispute.openedAt, locale) },
     { label: t("disputes.workspaceShell.facts.disputeReason"), value: reasonLabel },
   ];
 
