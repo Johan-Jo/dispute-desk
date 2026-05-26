@@ -782,7 +782,7 @@
       },
       "package": {
         "loadingAccessibilityLabel": "Chargement du dossier de preuves",
-        "cardHelp": "DisputeDesk prépare un PDF destiné à la banque qui combine les preuves Shopify approuvées, les signaux de paiement, les preuves d'exécution, les communications client, les politiques et tout document fourni par le marchand en un dossier de preuves structuré.",
+        "cardHelp": "DisputeDesk prépare un PDF destiné à la banque qui combine les preuves Shopify approuvées, les signaux de paiement, les preuves d'exécution, les communications client, les politiques et tout document fourni par le marchand en un dossier de preuves structuré. Si vous ne soumettez pas avant l'échéance, DisputeDesk enregistre le dossier dans Shopify à la date d'échéance et Shopify le transmet automatiquement au réseau de cartes.",
         "savingBody": "DisputeDesk a accepté votre soumission et téléverse le dossier de preuves vers Shopify. Cela se termine généralement en moins de 30 secondes — ce message se mettra à jour automatiquement.",
         "savedTitles": {
           "outcomePosted": "Résultat publié",

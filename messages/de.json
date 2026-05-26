@@ -920,7 +920,7 @@
       },
       "package": {
         "loadingAccessibilityLabel": "Beweispaket wird geladen",
-        "cardHelp": "DisputeDesk erstellt ein bankgerichtetes PDF, das genehmigte Shopify-Beweise, Zahlungssignale, Erfüllungsnachweise, Kundenkommunikation, Richtlinien und alle vom Händler bereitgestellten Dokumente in einem strukturierten Beweispaket zusammenfasst.",
+        "cardHelp": "DisputeDesk erstellt ein bankgerichtetes PDF, das genehmigte Shopify-Beweise, Zahlungssignale, Erfüllungsnachweise, Kundenkommunikation, Richtlinien und alle vom Händler bereitgestellten Dokumente in einem strukturierten Beweispaket zusammenfasst. Wenn Sie vor der Frist nicht einreichen, speichert DisputeDesk das Paket am Fälligkeitstag in Shopify und Shopify übermittelt es automatisch an das Kartennetzwerk.",
         "savingBody": "DisputeDesk hat Ihre Einreichung angenommen und lädt das Beweispaket zu Shopify hoch. Dies dauert in der Regel weniger als 30 Sekunden — dieser Hinweis wird automatisch aktualisiert.",
         "savedTitles": {
           "outcomePosted": "Ergebnis eingetragen",

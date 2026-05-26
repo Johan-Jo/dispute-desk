@@ -782,7 +782,7 @@
       },
       "package": {
         "loadingAccessibilityLabel": "Cargando paquete de evidencia",
-        "cardHelp": "DisputeDesk prepara un PDF dirigido al banco que combina la evidencia aprobada de Shopify, las señales de pago, las pruebas de cumplimiento, la comunicación con el cliente, las políticas y cualquier documento aportado por el comerciante en un paquete de evidencia estructurado.",
+        "cardHelp": "DisputeDesk prepara un PDF dirigido al banco que combina la evidencia aprobada de Shopify, las señales de pago, las pruebas de cumplimiento, la comunicación con el cliente, las políticas y cualquier documento aportado por el comerciante en un paquete de evidencia estructurado. Si no envías antes de la fecha límite, DisputeDesk guardará el paquete en Shopify en la fecha de vencimiento y Shopify lo enviará automáticamente a la red de tarjetas.",
         "savingBody": "DisputeDesk ha aceptado tu envío y está subiendo el paquete de evidencia a Shopify. Esto suele completarse en menos de 30 segundos — este aviso se actualizará automáticamente.",
         "savedTitles": {
           "outcomePosted": "Resultado publicado",

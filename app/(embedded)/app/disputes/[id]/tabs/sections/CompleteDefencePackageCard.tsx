@@ -1108,7 +1108,7 @@ export function CompleteDefencePackageCard({
 /* ── Design chrome (Dispute Page Review Submit v2) ─────────────── */
 
 const DEFENCE_CARD_STYLE: CSSProperties = {
-  background: "#fff",
+  background: "#F6F6F7",
   border: "1px solid #E1E3E5",
   borderRadius: 12,
   padding: 20,

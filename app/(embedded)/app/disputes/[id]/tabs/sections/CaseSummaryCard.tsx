@@ -82,13 +82,16 @@ function nextStepCopy(
   tNext: ReturnType<typeof useTranslations>,
   locale: string,
 ): string {
-  const t = tNext as unknown as LooseTranslate;
-  if (step.kind === "submitted_no_action") return t("submittedNoAction");
-  if (step.kind === "review_missing") return t("reviewMissing");
+  // Verifier-friendly explicit calls so scripts/verify-i18n-keys.mjs can
+  // statically resolve the namespace (it doesn't follow aliased
+  // translator vars through helper functions).
+  if (step.kind === "submitted_no_action") return tNext("submittedNoAction");
+  if (step.kind === "review_missing") return tNext("reviewMissing");
 
+  const loose = tNext as unknown as LooseTranslate;
   const dueDate = formatDueDate(step.dueAt, locale);
-  if (dueDate) return t(`${step.kind}.WithDate`, { dueDate });
-  return t(`${step.kind}.NoDate`);
+  if (dueDate) return loose(`${step.kind}.WithDate`, { dueDate });
+  return loose(`${step.kind}.NoDate`);
 }
 
 /**
