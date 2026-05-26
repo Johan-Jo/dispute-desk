@@ -208,12 +208,26 @@ Commit + push to master.
 - [ ] Monitor `/api/health` daily for 3 days; watch dispute-sync cron output for errors.
 - [ ] Confirm new daily backup (cron `/api/cron/db-backup`) lands in R2 and references the new project.
 
-## 3. Decommission (after holdback)
+## 3. Repurpose old project as dev (chosen path)
 
-Two paths — decide in a follow-up PR; do NOT decide on cutover day.
+Decision (recorded 2026-05-26): the old project becomes the dev database.
+This saves the Phase 1 schema-reproduction work because all migrations,
+storage buckets, RLS policies, and trigger functions are already in place.
 
-- **Decommission**: Supabase Dashboard → old project → Pause / Delete. Take a final snapshot and store offline first.
-- **Repurpose as dev**: wipe data, rotate `TOKEN_ENCRYPTION_KEY_V1`, update env-identity to recognize the old ref as the dev ref. Carries the risk that you forget some tenant data was on it — usually cleaner to start dev from a fresh empty project.
+Do NOT start this section until the holdback period (§2) is clean — once
+the wipe + key rotation runs, the old project can no longer decrypt prod
+offline tokens, and the only way back to prod is the Pro project.
+
+Full conversion runbook: [`supabase-dev-project-setup.md`](supabase-dev-project-setup.md).
+That runbook covers:
+
+1. Take a final dump of the old project before the wipe (historical archive).
+2. `TRUNCATE` every `public.*` table.
+3. Rotate the database password, encryption key, service-role, anon, and Auth hook secret.
+4. Empty the storage buckets (the wipe removes the rows in `storage.objects`, not the files).
+5. Reconnect from `.env.local` with the new dev keys.
+6. Encryption-key isolation drill: confirm any prod-era encrypted token fails to decrypt with the dev key.
+7. Create dev admin user.
 
 ## 4. Rollback (if Step 6 or 7 fails)
 
@@ -227,5 +241,18 @@ Two paths — decide in a follow-up PR; do NOT decide on cutover day.
 
 1. **Storage file migration**: migrate files now (Step 5) or defer until first re-upload? Dev-mode scale makes "defer" reasonable.
 2. **Auth user re-auth**: old auth.users don't migrate to new project automatically. With minimal real user count, magic-link re-auth on next visit is acceptable. Confirm before cutover.
-3. **Old project fate**: decide in a Section 3 follow-up. Cutover doesn't force the decision.
-4. **TOKEN_ENCRYPTION_KEY_V1**: keep same key on new project so existing Shopify offline tokens decrypt. **Rotate only if you also re-issue all shop sessions** (forcing every merchant to reinstall — heavy).
+3. **TOKEN_ENCRYPTION_KEY_V1**: keep same key on new project so existing Shopify offline tokens decrypt. **Rotate only if you also re-issue all shop sessions** (forcing every merchant to reinstall — heavy).
+
+(Decided: old project becomes dev after cutover — see §3.)
+
+## Project identifiers — pre-cutover
+
+Recorded here so future Claude sessions can reason about the cutover without
+re-asking. None of these change code constants until the cutover-day PR.
+
+| Role | Project ref | Project URL |
+|---|---|---|
+| Current prod (Free tier, becomes dev after cutover) | `sddzuglxdnkhcnjmcpbj` | `https://sddzuglxdnkhcnjmcpbj.supabase.co` |
+| New prod (Pro tier, becomes prod at cutover) | `aokhplydttxtebvbeuzc` | `https://aokhplydttxtebvbeuzc.supabase.co` |
+
+Project refs are public identifiers — safe to commit.

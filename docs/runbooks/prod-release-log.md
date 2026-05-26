@@ -43,3 +43,12 @@ Companion files:
 -->
 
 <!-- First real entry will be the Supabase Pro migration cutover. -->
+
+### PLANNED — Supabase Pro migration cutover
+
+- **Old prod ref:** `sddzuglxdnkhcnjmcpbj` (Free tier; becomes dev after cutover per `supabase-pro-migration.md` §3)
+- **New prod ref:** `aokhplydttxtebvbeuzc` (Pro tier)
+- **Runbook:** [`supabase-pro-migration.md`](supabase-pro-migration.md)
+- **Status:** schema replay + non-schema settings in progress on the new project. Code-constant PR not yet prepared (cutover-day work).
+- **Outstanding before cutover:** schema replay confirmed (`npx supabase db push`), buckets verified, Auth URL config set on new project, Vercel env vars staged but not yet swapped.
+- **This stub will be replaced by the real entry at cutover time** with: timestamp, operator, verifier output, health endpoint response, sentinel-table row counts.
