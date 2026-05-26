@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "dev:clean": "node -e \"try { require('fs').rmSync('.next', { recursive: true, force: true }); } catch (e) {}\" && next dev",
-    "shopify:dev": "node -e \"require('dotenv').config({ path: '.env.local' }); const cid = process.env.SHOPIFY_API_KEY; if (!cid) throw new Error('SHOPIFY_API_KEY missing in .env.local'); require('child_process').execSync('npx shopify app dev --client-id ' + cid, { stdio: 'inherit', shell: true });\"",
+    "shopify:dev": "node -e \"require('dotenv').config({ path: '.env.local' }); const cid = process.env.SHOPIFY_API_KEY; if (!cid) throw new Error('SHOPIFY_API_KEY missing in .env.local'); require('child_process').execSync('npx shopify@3.94.3 app dev --client-id ' + cid + ' --config=dev', { stdio: 'inherit', shell: true });\"",
+    "shopify:deploy:dev": "node scripts/guard-shopify-config.mjs dev && npx shopify@3.94.3 app deploy --config=dev --allow-updates",
+    "shopify:deploy:prod": "node scripts/guard-shopify-config.mjs prod && npx shopify@3.94.3 app deploy --config=prod --allow-updates",
     "prebuild": "node scripts/verify-env-identity.mjs && node scripts/build-pdf-worker.mjs",
     "build": "next build",
     "start": "next start",

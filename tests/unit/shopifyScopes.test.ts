@@ -6,7 +6,7 @@ function parseTomlScopes(toml: string): string {
   // Minimal parser: finds the [access_scopes] section and extracts
   // scopes = "..." — avoids pulling in a TOML dep for one test.
   const sectionMatch = toml.match(/\[access_scopes\]([\s\S]*?)(?=\n\[|\n*$)/);
-  if (!sectionMatch) throw new Error("[access_scopes] section not found in shopify.app.toml");
+  if (!sectionMatch) throw new Error("[access_scopes] section not found in shopify.app.prod.toml");
   const scopesLine = sectionMatch[1].match(/^\s*scopes\s*=\s*"([^"]+)"/m);
   if (!scopesLine) throw new Error("scopes key not found under [access_scopes]");
   return scopesLine[1];
@@ -24,10 +24,14 @@ function normalize(scopes: string): string[] {
 
 describe("Shopify scopes drift guard", () => {
   const repoRoot = resolve(__dirname, "..", "..");
-  const tomlScopes = parseTomlScopes(readFileSync(resolve(repoRoot, "shopify.app.toml"), "utf8"));
+  // After the dev/prod split, shopify.app.toml was renamed to
+  // shopify.app.prod.toml (Phase 3 of dev-prod-environment-split.plan.md).
+  // .env.example is the committed reference for prod-typical env, so it
+  // must match the prod TOML's scope set.
+  const tomlScopes = parseTomlScopes(readFileSync(resolve(repoRoot, "shopify.app.prod.toml"), "utf8"));
   const envScopes = parseEnvExampleScopes(readFileSync(resolve(repoRoot, ".env.example"), "utf8"));
 
-  it(".env.example SHOPIFY_SCOPES matches shopify.app.toml [access_scopes].scopes", () => {
+  it(".env.example SHOPIFY_SCOPES matches shopify.app.prod.toml [access_scopes].scopes", () => {
     // Managed install grants the TOML scope set; buildAuthUrl uses SHOPIFY_SCOPES
     // from env. A mismatch breaks install and is a known cause of the post-install
     // white-screen / redirect loop.

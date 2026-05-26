@@ -1,0 +1,65 @@
+# Shopify App Configuration — DisputeDesk-Dev (dev Partners app)
+#
+# This file targets the DEV Shopify Partners app. Use with the
+# `dev` config alias:
+#
+#   npx shopify@3.94.3 app config use dev          # switch active
+#   npm run shopify:deploy:dev                      # push to Partners
+#
+# The PROD config lives in shopify.app.prod.toml — never edit this
+# file to point at the prod client_id, and never edit the prod file
+# to point at the dev URL. scripts/guard-shopify-config.mjs enforces
+# the boundary before deploy.
+#
+# CLIENT_ID placeholder: this file is committed with a TBD value
+# until the dev Partners app is created via
+# `npx shopify@3.94.3 app config link --config=dev`. The CLI fills
+# in client_id automatically when the dev app is created/linked.
+
+client_id = "TBD-after-shopify-app-config-link"
+name = "DisputeDesk-Dev"
+application_url = "https://dev.disputedesk.app"
+embedded = true
+
+[auth]
+redirect_urls = [
+  "https://dev.disputedesk.app/api/auth/shopify/callback",
+]
+
+[access_scopes]
+# Dev app intentionally omits `read_all_orders` until Protected
+# Customer Data approval is granted for the dev app (3-7 business
+# days). Reads against orders fall back to the 60-day window during
+# the approval wait — sufficient for day-to-day development.
+#
+# All other prod scopes are mirrored verbatim so feature work that
+# touches Shopify APIs behaves the same on dev and prod, with the
+# single exception above.
+scopes = "read_customer_events,read_customers,read_fulfillments,read_orders,read_products,read_shipping,read_shopify_payments_dispute_evidences,read_shopify_payments_dispute_file_uploads,read_shopify_payments_disputes,write_pixels,write_shopify_payments_dispute_evidences,write_shopify_payments_dispute_file_uploads"
+
+[webhooks]
+api_version = "2026-01"
+
+  [[webhooks.subscriptions]]
+  topics = ["app/uninstalled"]
+  uri = "/api/webhooks/app-uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = ["shop/update"]
+  uri = "/api/webhooks/shop-update"
+
+  [[webhooks.subscriptions]]
+  topics = ["app_subscriptions/update"]
+  uri = "/api/webhooks/app-subscriptions-update"
+
+  # GDPR mandatory webhooks (App Store requirement) — same handlers
+  # as prod, served by the dev Vercel deploy at dev.disputedesk.app.
+  [webhooks.privacy_compliance]
+  customer_data_request_url = "https://dev.disputedesk.app/api/webhooks/customers-data-request"
+  customer_deletion_url     = "https://dev.disputedesk.app/api/webhooks/customers-redact"
+  shop_deletion_url         = "https://dev.disputedesk.app/api/webhooks/shop-redact"
+
+# disputes/create and disputes/update registered at runtime (OAuth) — same as prod.
+
+[pos]
+embedded = false
