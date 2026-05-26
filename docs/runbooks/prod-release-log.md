@@ -53,6 +53,14 @@ Companion files:
 - **Initial dev scope set:** minimal (`read_customer_events`, `read_customers`, `read_fulfillments`, `read_orders`, `read_products`, `read_shipping`, `write_pixels`) — Shopify rejected the dispute-related and `read_all_orders` scopes at create time because they require per-app approval. Approval requests must be submitted in Partners → DisputeDesk-Dev → API access for: `read_all_orders`, `read_shopify_payments_disputes`, `read_shopify_payments_dispute_evidences`, `read_shopify_payments_dispute_file_uploads`, `write_shopify_payments_dispute_evidences`, `write_shopify_payments_dispute_file_uploads`.
 - **CLI overwrote `shopify.app.dev.toml`** with its own canonical fields + an auto-default `api_version = "2026-07"`. Re-patched locally to restore the pinned `api_version = "2026-01"`, the `[[webhooks.subscriptions]]` blocks, the `[webhooks.privacy_compliance]` block, and `[pos] embedded = false`. Next `npm run shopify:deploy:dev` pushes those to Partners.
 
+### 2026-05-26 — `read_all_orders` granted on DisputeDesk-Dev
+
+- **Operator:** Johan
+- **Path:** Partners → DisputeDesk-Dev → API access requests → Protected customer data access → Manage → Step 1 saved (Other reason: "Automated chargeback evidence packs: order/fulfillment data assembled to defend merchant disputes"). Then *Read all orders* request in the additional-scopes list, justification referencing prod ticket 64535407.
+- **Result:** Granted immediately ("Your app can access the full order history for a store"). Self-attest path for dev apps installed on dev stores — no human review queue.
+- **Code change:** added `read_all_orders` back to `shopify.app.dev.toml` `[access_scopes].scopes`. Will push to Partners via `npm run shopify:deploy:dev` once the dev Vercel project is live.
+- **Outstanding:** five Shopify Payments dispute scopes (`read_shopify_payments_disputes` + four `_evidences`/`_file_uploads` read+write) — not in self-serve UI. Need a Partner Support ticket via https://partners.shopify.com/current/help referencing prod ticket 64535407. Until granted, dispute-specific flows can't be exercised on the dev app.
+
 ### PLANNED — Supabase Pro migration cutover
 
 - **Old prod ref:** `sddzuglxdnkhcnjmcpbj` (Free tier; becomes dev after cutover per `supabase-pro-migration.md` §3)
