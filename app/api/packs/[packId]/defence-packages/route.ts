@@ -33,30 +33,43 @@ export async function GET(
     .single();
   if (!pack) return NextResponse.json({ error: "Pack not found" }, { status: 404 });
 
-  const { data } = await sb
-    .from("defence_packages")
-    .select(
-      "id, version, status, package_mode, generated_at, generated_by, pdf_path, evidence_hash, llm_model, prompt_family, prompt_version, reason_code_module, validation_status, validation_errors, failure_code, failure_reason, submitted_at, narrative_json, facts_json",
-    )
-    .eq("source_pack_id", packId)
-    .eq("shop_id", shopId)
-    .order("version", { ascending: false });
+  // Fetch only the two rows the client actually consumes:
+  //   - `latest`:     highest-version row (drives draft preview + actions).
+  //   - `bankFacing`: the row in status='submitted' (drives the "Saved to
+  //                   Shopify" banner). At most one per pack — submitted
+  //                   is terminal per the defence_packages immutability
+  //                   trigger, and save_to_shopify only flips one row.
+  //
+  // Previously this route selected every version with `narrative_json`
+  // + `facts_json` included — a regenerated dispute at v5 paid for 5×
+  // full LLM narratives + per-fact rows over the wire, only to use
+  // `data[0]` and `data.find(status='submitted')`. Two narrow queries
+  // hit the existing `(source_pack_id, version desc)` and `(status)`
+  // indexes and return a single row each, dropping payload by N×.
+  const SELECT_COLS =
+    "id, version, status, package_mode, generated_at, generated_by, pdf_path, evidence_hash, llm_model, prompt_family, prompt_version, reason_code_module, validation_status, validation_errors, failure_code, failure_reason, submitted_at, narrative_json, facts_json";
 
-  // `bankFacing` is the row whose PDF the bank actually has — the one
-  // with `status = "submitted"`. There is at most one per pack (the
-  // finalize route supersedes the prior `final` row but never touches
-  // `submitted` rows, and save_to_shopify flips the row to `submitted`
-  // immutably). When `latest.id !== bankFacing.id`, a newer draft has
-  // been generated but not yet sent — the embedded card must render
-  // `bankFacing` under the "Submitted to bank" banner to avoid showing
-  // body copy that the bank does not have.
-  const bankFacing =
-    (data ?? []).find((r) => r.status === "submitted") ?? null;
+  const [latestRes, bankFacingRes] = await Promise.all([
+    sb
+      .from("defence_packages")
+      .select(SELECT_COLS)
+      .eq("source_pack_id", packId)
+      .eq("shop_id", shopId)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    sb
+      .from("defence_packages")
+      .select(SELECT_COLS)
+      .eq("source_pack_id", packId)
+      .eq("shop_id", shopId)
+      .eq("status", "submitted")
+      .maybeSingle(),
+  ]);
 
   return NextResponse.json({
-    latest: data?.[0] ?? null,
-    bankFacing,
-    all: data ?? [],
+    latest: latestRes.data ?? null,
+    bankFacing: bankFacingRes.data ?? null,
     // Surfaces "is regenerating worthwhile?" for the embedded card.
     // When the submitted row's prompt_version lags behind the current
     // code, a fresh draft will pick up new prompt guidance / module
