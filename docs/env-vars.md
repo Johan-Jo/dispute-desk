@@ -83,3 +83,20 @@ node scripts/verify-env-identity.mjs
 The runtime check (`lib/env/runtime-identity.ts`) runs once per server
 process via `instrumentation.ts` and refuses to serve traffic if any
 required secret is missing or shaped wrong.
+
+## Local secret file layout
+
+Two gitignored files (`.env*.local` rule already excludes both):
+
+| File | Loaded by | Contents |
+|---|---|---|
+| `.env.local` | `npm run dev`, vitest, every default tool | Dev-pointing creds. The default everyday env. |
+| `.env.production.local` | Scripts that explicitly `dotenv.config({ path: ".env.production.local" })` | Prod creds for manual cutover / migration / `db:push:prod` only. Never loaded by `npm run dev`. |
+
+Scripts that need prod creds (e.g. `scripts/verify-supabase-migration.mjs`,
+the future `scripts/db-push-prod.mjs`) opt in explicitly so a typo in a
+day-to-day command can't accidentally read prod creds.
+
+Never copy `.env.production.local` content into chat, PRs, or commit messages.
+The project ref + Vercel project ID are public; everything else (anon key
+included) is treated as a secret in transit.
