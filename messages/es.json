@@ -632,8 +632,22 @@
             "review_required": "Revisión requerida"
           },
           "nextStep": {
-            "readyNoAction": "Listo — no se requiere acción",
-            "submitNow": "Enviar ahora",
+            "ready_auto": {
+              "WithDate": "Lo enviaremos el {dueDate}",
+              "NoDate": "Lo enviaremos antes de la fecha límite"
+            },
+            "ready_review": {
+              "WithDate": "Listo — revisa y envía, o lo enviaremos el {dueDate}",
+              "NoDate": "Listo — revisa y envía, o lo enviaremos antes de la fecha límite"
+            },
+            "ready_with_warnings_auto": {
+              "WithDate": "Listo con advertencias — enviando el {dueDate} salvo que lo cambies",
+              "NoDate": "Listo con advertencias — enviando antes de la fecha límite salvo que lo cambies"
+            },
+            "ready_with_warnings_review": {
+              "WithDate": "Listo con advertencias — revisa antes del {dueDate}",
+              "NoDate": "Listo con advertencias — revisa antes de la fecha límite"
+            },
             "reviewMissing": "Revisa la evidencia faltante a continuación",
             "submittedNoAction": "Enviado — no se requiere ninguna otra acción"
           }

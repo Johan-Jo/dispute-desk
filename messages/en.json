@@ -1133,8 +1133,22 @@
             "review_required": "Review required"
           },
           "nextStep": {
-            "readyNoAction": "Ready — no action needed",
-            "submitNow": "Submit now",
+            "ready_auto": {
+              "WithDate": "We'll submit on {dueDate}",
+              "NoDate": "We'll submit before the deadline"
+            },
+            "ready_review": {
+              "WithDate": "Ready — review and submit, or we'll send on {dueDate}",
+              "NoDate": "Ready — review and submit, or we'll send before the deadline"
+            },
+            "ready_with_warnings_auto": {
+              "WithDate": "Ready with warnings — submitting on {dueDate} unless you change it",
+              "NoDate": "Ready with warnings — submitting before the deadline unless you change it"
+            },
+            "ready_with_warnings_review": {
+              "WithDate": "Ready with warnings — review before {dueDate}",
+              "NoDate": "Ready with warnings — review before the deadline"
+            },
             "reviewMissing": "Review missing evidence below",
             "submittedNoAction": "Submitted — no further action required"
           }

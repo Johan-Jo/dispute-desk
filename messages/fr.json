@@ -632,8 +632,22 @@
             "review_required": "Vérification requise"
           },
           "nextStep": {
-            "readyNoAction": "Prêt — aucune action requise",
-            "submitNow": "Soumettre maintenant",
+            "ready_auto": {
+              "WithDate": "Nous soumettrons le {dueDate}",
+              "NoDate": "Nous soumettrons avant l'échéance"
+            },
+            "ready_review": {
+              "WithDate": "Prêt — vérifiez et soumettez, ou nous l'enverrons le {dueDate}",
+              "NoDate": "Prêt — vérifiez et soumettez, ou nous l'enverrons avant l'échéance"
+            },
+            "ready_with_warnings_auto": {
+              "WithDate": "Prêt avec avertissements — envoi le {dueDate} sauf modification de votre part",
+              "NoDate": "Prêt avec avertissements — envoi avant l'échéance sauf modification de votre part"
+            },
+            "ready_with_warnings_review": {
+              "WithDate": "Prêt avec avertissements — à vérifier avant le {dueDate}",
+              "NoDate": "Prêt avec avertissements — à vérifier avant l'échéance"
+            },
             "reviewMissing": "Vérifiez les preuves manquantes ci-dessous",
             "submittedNoAction": "Soumis — aucune action supplémentaire requise"
           }

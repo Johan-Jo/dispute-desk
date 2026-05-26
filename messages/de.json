@@ -770,8 +770,22 @@
             "review_required": "Prüfung erforderlich"
           },
           "nextStep": {
-            "readyNoAction": "Bereit — keine Aktion erforderlich",
-            "submitNow": "Jetzt einreichen",
+            "ready_auto": {
+              "WithDate": "Wir reichen am {dueDate} ein",
+              "NoDate": "Wir reichen vor Ablauf der Frist ein"
+            },
+            "ready_review": {
+              "WithDate": "Bereit — prüfen und einreichen, oder wir senden am {dueDate}",
+              "NoDate": "Bereit — prüfen und einreichen, oder wir senden vor Ablauf der Frist"
+            },
+            "ready_with_warnings_auto": {
+              "WithDate": "Bereit mit Hinweisen — Einreichung am {dueDate}, sofern Sie nichts ändern",
+              "NoDate": "Bereit mit Hinweisen — Einreichung vor Ablauf der Frist, sofern Sie nichts ändern"
+            },
+            "ready_with_warnings_review": {
+              "WithDate": "Bereit mit Hinweisen — Prüfung bis {dueDate}",
+              "NoDate": "Bereit mit Hinweisen — Prüfung vor Ablauf der Frist"
+            },
             "reviewMissing": "Fehlende Beweise unten prüfen",
             "submittedNoAction": "Eingereicht — keine weitere Aktion erforderlich"
           }

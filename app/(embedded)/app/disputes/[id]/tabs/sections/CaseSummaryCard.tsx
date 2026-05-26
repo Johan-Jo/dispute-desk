@@ -20,7 +20,7 @@
 
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import type {
   CaseSummaryViewModel,
   CaseStatus,
@@ -54,14 +54,41 @@ const AUTOMATION_PILL: Record<AutomationMode, { bg: string; color: string }> = {
   review_required: { bg: "#FEF3C7", color: "#92400E" },
 };
 
+/**
+ * Format a due-date for inline use inside next-step copy. Uses the
+ * active next-intl locale so the date matches the rest of the UI. Falls
+ * back to a sentinel the caller swaps for "the deadline" copy.
+ */
+function formatDueDate(dueAt: string | null, locale: string): string | null {
+  if (!dueAt) return null;
+  const d = new Date(dueAt);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+  }).format(d);
+}
+
+/** next-intl ships strict per-key typings that don't model nested
+ *  variant suffixes well. Widen to a generic translator at the boundary
+ *  so we can interpolate `{dueDate}` from a runtime-computed key. */
+type LooseTranslate = (
+  key: string,
+  params?: Record<string, string | number>,
+) => string;
+
 function nextStepCopy(
   step: NextStep,
   tNext: ReturnType<typeof useTranslations>,
+  locale: string,
 ): string {
-  if (step.kind === "ready_no_action") return tNext("readyNoAction");
-  if (step.kind === "submit_now") return tNext("submitNow");
-  if (step.kind === "submitted_no_action") return tNext("submittedNoAction");
-  return tNext("reviewMissing");
+  const t = tNext as unknown as LooseTranslate;
+  if (step.kind === "submitted_no_action") return t("submittedNoAction");
+  if (step.kind === "review_missing") return t("reviewMissing");
+
+  const dueDate = formatDueDate(step.dueAt, locale);
+  if (dueDate) return t(`${step.kind}.WithDate`, { dueDate });
+  return t(`${step.kind}.NoDate`);
 }
 
 /**
@@ -109,6 +136,7 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
     "disputes.evidenceTab.sections.summary.nextStep",
   );
   const tAutoCopy = useTranslations("disputes.evidenceTab.automation");
+  const locale = useLocale();
 
   const display = toDisplayStrength(props.strength);
   const showExplanation =
@@ -189,7 +217,7 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
               {tStrength(display)}
             </span>
             <span style={{ fontSize: 16, fontWeight: 600, color: "#202223" }}>
-              {nextStepCopy(props.nextStep, tNext)}
+              {nextStepCopy(props.nextStep, tNext, locale)}
             </span>
           </div>
         </div>

@@ -485,6 +485,10 @@ The worker route declares `export const maxDuration = 300` so that the bulk `bac
 | `applyDisputeSnapshot.test.ts > fetchDisputeDetail backfills order_gid + order_name` | The diff engine writes the GraphQL-backfilled fields into the upsert row — not just `disputeEvidenceGid` | `build_pack` runs with `order_gid = NULL`, source collectors return empty, pack scores 0 |
 | `applyDisputeSnapshot.test.ts > WITHOUT fetchDisputeDetail, sparse REST snapshot lands with order_gid / order_name NULL` | Pins the failure mode: documents *why* the backfill is mandatory on the webhook path | Future readers think the backfill is optional |
 | `handleDisputeWebhook.test.ts > passes fetchDisputeDetail to applyDisputeSnapshot (the GraphQL backfill seam)` | The handler actually wires the backfill closure into the engine call (this is the seam the 2026-05-20 incident broke) | The empty-pack bug returns even with the other tests still green |
+| `disputeCustomerBackfill.regression.test.ts > brand-new dispute: fetchDisputeDetail returns customer name + email → upsert row carries them` | Webhook ingest writes `customer_display_name` + `customer_email` into the upsert row (not just the cron path patching them an hour later) | The 2026-05-25 #5DF25744 bug returns: every new dispute shows "Customer: —" on the embedded card until the next cron tick |
+| `disputeCustomerBackfill.regression.test.ts > backfill returns null fields → upsert row omits the columns (does NOT write null)` | The conditional-write pattern protects the create's value from a back-to-back update clobber (same protection as `order_gid`) | A second webhook arrives 500ms after create and overwrites `customer_display_name` with null |
+| `newDisputeAlertFallback.regression.test.ts > teamEmail missing → falls back to Shopify shop.email and SENDS` | `sendNewDisputeAlert` falls back to the Shopify shop contact email when the merchant has not completed Settings → Team, so new-dispute alerts STILL reach the merchant during onboarding | The 2026-05-25 #5DF25744 bug returns: `new_dispute_alert_sent_at` is claimed but no email is actually delivered |
+| `newDisputeAlertFallback.regression.test.ts > teamEmail missing AND fetchShopDetails returns null → skips send (no silent claim)` | When both team email and Shopify fallback are unavailable, send is skipped with a warning log — silent drops are forbidden | A regression introduces a silent return path that doesn't log, hiding the failure |
 
 Never delete these without an explicit follow-up commit explaining what replaced them. Hand-rolled JSON test fixtures are NOT a substitute for the real-payload fixture in `disputeSnapshot.test.ts` — that fixture is byte-for-byte what Shopify shipped to us on 2026-05-20 and should be updated only when Shopify's wire format actually changes (verify against a fresh `webhook_events.payload_excerpt` row before edits).
 
@@ -2096,10 +2100,12 @@ Rule: every section must explain *why* something matters and guide the user towa
    - Case-strength chip (`caseStrength.overall` verbatim; `insufficient → Weak` is display-only).
    - Status chip — `Submitted | Needs attention | In progress`, derived from `derived.isReadOnly`, `derived.isFailed`, and `derived.readiness`.
    - Automation chip — `Automatic | Review required` from `data.appliedRule.mode` (the canonical two-mode rule from `feedback_two_automation_modes.md`; `null` defaults to Review-required).
-   - Next-step sentence — one of four fixed copies driven by `readiness × automationMode`, now rendered as the hero-row heading (no preceding "Next step" caption — the sentence is self-explanatory):
-     - `ready_no_action` → "Ready — no action needed" (`readiness === "ready"` AND automation = automatic).
-     - `submit_now` → "Submit now" (`readiness === "ready_with_warnings"` OR `ready` + review mode).
-     - `review_missing` → "Review missing evidence below" (`readiness === "blocked"`).
+   - Next-step sentence — deadline-anchored copy driven by `readiness × automationMode`, rendered as the hero-row heading. Every non-blocked, non-submitted variant surfaces the auto-submit promise enforced by `/api/cron/defence-package-deadline-submit` (which auto-finalises and submits any non-blocked case with a validated defence package on the due date, regardless of automation mode). The previous fixed copy ("Submit now", "Ready — no action needed") read like a CTA the merchant couldn't take from this tab and hid the deadline safety net; the current six copies are anchored to `data.dispute.dueAt` and fall back to a "before the deadline" phrasing when the due date isn't known yet. Each `kind` has paired `WithDate` / `NoDate` entries under `disputes.evidenceTab.sections.summary.nextStep` interpolating `{dueDate}` via `Intl.DateTimeFormat`:
+     - `ready_auto` → "We'll submit on {dueDate}" (`readiness === "ready"` AND automation = automatic).
+     - `ready_review` → "Ready — review and submit, or we'll send on {dueDate}" (`readiness === "ready"` AND automation = review).
+     - `ready_with_warnings_auto` → "Ready with warnings — submitting on {dueDate} unless you change it".
+     - `ready_with_warnings_review` → "Ready with warnings — review before {dueDate}".
+     - `review_missing` → "Review missing evidence below" (`readiness === "blocked"`; no date — the cron skips blocked cases).
      - `submitted_no_action` → "Submitted — no further action required" (`isReadOnly === true`).
    - Plus the merchant-facing automation copy sourced from `disputes.evidenceTab.automation.{automatic|reviewRequired}`.
 

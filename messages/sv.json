@@ -994,8 +994,22 @@
             "review_required": "Granskning krävs"
           },
           "nextStep": {
-            "readyNoAction": "Klar — ingen åtgärd krävs",
-            "submitNow": "Skicka in nu",
+            "ready_auto": {
+              "WithDate": "Vi skickar in den {dueDate}",
+              "NoDate": "Vi skickar in före tidsfristen"
+            },
+            "ready_review": {
+              "WithDate": "Klar — granska och skicka in, annars skickar vi den {dueDate}",
+              "NoDate": "Klar — granska och skicka in, annars skickar vi före tidsfristen"
+            },
+            "ready_with_warnings_auto": {
+              "WithDate": "Klar med varningar — skickas in {dueDate} om du inte ändrar något",
+              "NoDate": "Klar med varningar — skickas in före tidsfristen om du inte ändrar något"
+            },
+            "ready_with_warnings_review": {
+              "WithDate": "Klar med varningar — granska före {dueDate}",
+              "NoDate": "Klar med varningar — granska före tidsfristen"
+            },
             "reviewMissing": "Granska saknade bevis nedan",
             "submittedNoAction": "Inskickad — inga fler åtgärder krävs"
           }

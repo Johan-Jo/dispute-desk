@@ -72,16 +72,23 @@ export type EvidenceSubmissionDestination =
   | "not_included";
 
 /**
- * Four merchant-facing next-step copies. Each maps 1:1 to a stable
- * i18n key and is selected by the readiness + automation state.
- *   - ready_no_action     → "Ready — no action needed"
- *   - submit_now          → "Submit now"
- *   - review_missing      → "Review missing evidence below"
- *   - submitted_no_action → "Submitted — no further action required"
+ * Merchant-facing next-step copies. Each maps 1:1 to a stable i18n key
+ * and is selected by the readiness + automation state. The deadline-
+ * submit cron (`/api/cron/defence-package-deadline-submit`) guarantees
+ * auto-submission on the due date for any non-blocked case with a
+ * validated defence package, so review-mode copy must surface that
+ * safety net rather than read as a Submit-button CTA.
+ *
+ * `dueAt` is threaded through the `ready_*` and `ready_with_warnings_*`
+ * variants so the rendered copy can show the date the cron will fire.
+ * When unknown (rare — Shopify webhook hasn't delivered the deadline
+ * yet) the renderer falls back to "before the deadline".
  */
 export type NextStep =
-  | { kind: "ready_no_action" }
-  | { kind: "submit_now" }
+  | { kind: "ready_auto"; dueAt: string | null }
+  | { kind: "ready_review"; dueAt: string | null }
+  | { kind: "ready_with_warnings_auto"; dueAt: string | null }
+  | { kind: "ready_with_warnings_review"; dueAt: string | null }
   | { kind: "review_missing" }
   | { kind: "submitted_no_action" };
 
@@ -188,28 +195,37 @@ function deriveAutomationMode(
 /**
  * Decision table:
  *
- *   isReadOnly === true                                   → submitted_no_action
- *   readiness === "blocked"                               → review_missing
- *   readiness === "ready_with_warnings"                   → submit_now
- *   readiness === "ready" + automationMode === "automatic" → ready_no_action
- *   readiness === "ready" + automationMode === "review"    → submit_now
- *   anything else (loading, unknown)                      → review_missing
+ *   isReadOnly === true                                            → submitted_no_action
+ *   readiness === "blocked"                                        → review_missing
+ *   readiness === "ready"               + mode === "automatic"     → ready_auto
+ *   readiness === "ready"               + mode === "review"        → ready_review
+ *   readiness === "ready_with_warnings" + mode === "automatic"     → ready_with_warnings_auto
+ *   readiness === "ready_with_warnings" + mode === "review"        → ready_with_warnings_review
+ *   anything else (loading, unknown)                               → review_missing
  *
- * The automation mode disambiguates `ready`: in auto mode the merchant
- * has nothing left to do; in review mode they must click submit.
+ * All non-blocked, non-submitted variants carry `dueAt` so the renderer
+ * can surface the deadline-cron promise ("Auto-submits on …"). The cron
+ * (`/api/cron/defence-package-deadline-submit`) fires on the due date
+ * for every non-blocked case with a validated defence package — review
+ * mode is "we'll send it for you unless you act earlier", not a CTA.
  */
 function deriveNextStep(args: {
   isReadOnly: boolean;
   readiness: string;
   automationMode: AutomationMode;
+  dueAt: string | null;
 }): NextStep {
   if (args.isReadOnly) return { kind: "submitted_no_action" };
   if (args.readiness === "blocked") return { kind: "review_missing" };
-  if (args.readiness === "ready_with_warnings") return { kind: "submit_now" };
+  if (args.readiness === "ready_with_warnings") {
+    return args.automationMode === "automatic"
+      ? { kind: "ready_with_warnings_auto", dueAt: args.dueAt }
+      : { kind: "ready_with_warnings_review", dueAt: args.dueAt };
+  }
   if (args.readiness === "ready") {
     return args.automationMode === "automatic"
-      ? { kind: "ready_no_action" }
-      : { kind: "submit_now" };
+      ? { kind: "ready_auto", dueAt: args.dueAt }
+      : { kind: "ready_review", dueAt: args.dueAt };
   }
   return { kind: "review_missing" };
 }
@@ -668,6 +684,7 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
       isReadOnly: derived.isReadOnly,
       readiness: derived.readiness,
       automationMode,
+      dueAt: data.dispute.dueAt,
     }),
     strengthReasonText: derived.strengthReasonText,
     improvementHintText: derived.improvementHintText,
