@@ -68,6 +68,7 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
   const [teamEmail, setTeamEmail] = useState("");
   const [teamEmailSource, setTeamEmailSource] = useState<"shopify" | "saved" | "edited">("shopify");
   const [teamEmailTouched, setTeamEmailTouched] = useState(false);
+  const [shopId, setShopId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +84,8 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
 
         const state = stateRes.ok ? await stateRes.json() : null;
         const automation = automationRes.ok ? await automationRes.json() : {};
+
+        if (state?.shopId) setShopId(state.shopId);
 
         // Threshold lives on the automation step; fall back to a legacy
         // store_profile value for stores onboarded before the wizard split.
@@ -172,22 +175,23 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
         return false;
       }
 
-      // Persist the team email payload first so the worker can read it
-      // for evidence + high-value alerts immediately after activation.
-      const teamRes = await fetch("/api/setup/step", {
-        method: "POST",
+      // Persist the team email + notification defaults via the canonical
+      // preferences route. The wizard's "team" bucket was removed from
+      // StepId when the wizard collapsed to 6 steps, so /api/setup/step
+      // now rejects stepId:"team" with 400. /api/shop/preferences writes
+      // into shop_setup.steps.team.payload — the same shape email helpers
+      // and the high-value alert pipeline already read from.
+      if (!shopId) return false;
+      const teamRes = await fetch("/api/shop/preferences", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          stepId: "team",
-          payload: {
-            teamEmail: teamEmail.trim(),
-            // Default notification preferences — keep evidence/review
-            // alerts on by default; merchants can opt out from Settings.
-            notifications: {
-              newDispute: true,
-              beforeDue: true,
-              evidenceReady: true,
-            },
+          shop_id: shopId,
+          teamEmail: teamEmail.trim(),
+          notifications: {
+            newDispute: true,
+            beforeDue: true,
+            evidenceReady: true,
           },
         }),
       });
@@ -212,7 +216,7 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
       });
       return res.ok;
     };
-  }, [onSaveRef, activePacks, teamEmail]);
+  }, [onSaveRef, activePacks, teamEmail, shopId]);
 
   if (loading) {
     return (
