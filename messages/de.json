@@ -1518,7 +1518,11 @@
     "defencePackageHtml": {
       "orderLineItems": "Order Line Items",
       "evidenceBasis": "Evidence Basis",
-      "noBankEligibleFacts": "(No bank-eligible facts available.)"
+      "noBankEligibleFacts": "(No bank-eligible facts available.)",
+      "previewTitle": "Vorschau des Beweispakets",
+      "chargebackOverline": "CHARGEBACK-WIDERSPRUCH",
+      "preparedFor": "Erstellt für {merchant}",
+      "defaultMerchant": "den Händler"
     },
     "overviewPill": {
       "missing": "Missing",

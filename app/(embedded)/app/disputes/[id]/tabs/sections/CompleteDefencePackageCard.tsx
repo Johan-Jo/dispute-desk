@@ -1115,11 +1115,13 @@ const DEFENCE_CARD_STYLE: CSSProperties = {
 };
 
 const CARD_TITLE_STYLE: CSSProperties = {
-  fontSize: 15,
+  // Bumped from 15 → 20px (Polaris headingLg) so the action card heading
+  // sits above the lower preview-card heading in the visual hierarchy.
+  fontSize: 20,
   fontWeight: 600,
   color: "#202223",
   margin: "0 0 6px",
-  lineHeight: 1.4,
+  lineHeight: 1.3,
 };
 
 const CARD_HELP_STYLE: CSSProperties = {
@@ -1127,7 +1129,8 @@ const CARD_HELP_STYLE: CSSProperties = {
   color: "#6D7175",
   margin: "0 0 16px",
   lineHeight: 1.55,
-  maxWidth: 760,
+  // No maxWidth — let the copy flow to the card edge. Previous 760px cap
+  // left dead space on the right at typical embedded-app widths.
 };
 
 /**

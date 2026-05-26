@@ -966,7 +966,11 @@
     "defencePackageHtml": {
       "orderLineItems": "Order Line Items",
       "evidenceBasis": "Evidence Basis",
-      "noBankEligibleFacts": "(No bank-eligible facts available.)"
+      "noBankEligibleFacts": "(No bank-eligible facts available.)",
+      "previewTitle": "Defence Package Preview",
+      "chargebackOverline": "CHARGEBACK REPRESENTMENT",
+      "preparedFor": "Prepared for {merchant}",
+      "defaultMerchant": "the merchant"
     },
     "itemStrength": {
       "strong": "Strong",

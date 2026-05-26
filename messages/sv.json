@@ -972,7 +972,11 @@
     "defencePackageHtml": {
       "orderLineItems": "Order Line Items",
       "evidenceBasis": "Evidence Basis",
-      "noBankEligibleFacts": "(No bank-eligible facts available.)"
+      "noBankEligibleFacts": "(No bank-eligible facts available.)",
+      "previewTitle": "Förhandsvisning av försvarspaket",
+      "chargebackOverline": "CHARGEBACK-FÖRSVAR",
+      "preparedFor": "Förberett för {merchant}",
+      "defaultMerchant": "handlaren"
     },
     "evidenceTab": {
       "sections": {

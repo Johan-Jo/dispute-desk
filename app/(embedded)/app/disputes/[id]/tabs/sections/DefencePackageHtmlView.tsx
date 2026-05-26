@@ -266,14 +266,16 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
       <BlockStack gap="400">
         <BlockStack gap="100">
           <Text as="span" variant="bodySm" tone="subdued">
-            CHARGEBACK REPRESENTMENT
+            {t("chargebackOverline")}
           </Text>
-          <Text as="h2" variant="headingLg">
-            Complete Defence Package
+          <Text as="h2" variant="headingMd">
+            {t("previewTitle")}
           </Text>
           <Text as="p" tone="subdued" variant="bodySm">
-            Prepared for{" "}
-            {dispute?.merchantName ?? dispute?.shopName ?? "the merchant"}
+            {t("preparedFor", {
+              merchant:
+                dispute?.merchantName ?? dispute?.shopName ?? t("defaultMerchant"),
+            })}
           </Text>
         </BlockStack>
 
