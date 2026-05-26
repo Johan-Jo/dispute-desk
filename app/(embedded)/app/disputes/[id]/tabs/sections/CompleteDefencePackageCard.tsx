@@ -45,7 +45,7 @@ type Status =
   | "failed"
   | "skipped";
 
-interface DefencePackageRow {
+export interface DefencePackageRow {
   id: string;
   version: number;
   status: Status;
@@ -111,6 +111,21 @@ interface Props {
    *  thinks the click did nothing — the save-to-shopify job runs
    *  asynchronously and may take 5–30s to stamp `saved_to_shopify_at`. */
   onSubmitted?: () => void;
+  /** Defence package rows lifted from the workspace endpoint. The
+   *  card no longer owns its own fetch — switching tabs used to
+   *  unmount/remount this component, which re-paid the round-trip on
+   *  every visit and made the Review & Submit tab feel slow. Both
+   *  rows are kept fresh by the workspace hook's 4s poll. */
+  defencePackage?: {
+    latest: DefencePackageRow | null;
+    bankFacing: DefencePackageRow | null;
+    currentPromptVersion: number | null;
+  };
+  /** Triggers a workspace refresh. Bound to the parent's
+   *  `actions.fetchAll`. Used by the "Check for update" action on the
+   *  "Building new package" banner and after Regenerate / Finalize /
+   *  Submit POSTs so the card re-renders against fresh data. */
+  onRefresh?: () => void | Promise<void>;
 }
 
 /** Days-remaining math, mirrors lib/disputeListHelpers getUrgency
@@ -208,6 +223,8 @@ export function CompleteDefencePackageCard({
   presentationStatus,
   evidenceSentOn,
   onSubmitted,
+  defencePackage,
+  onRefresh,
 }: Props) {
   const t = useTranslations("disputes.completeDefencePackage");
   const tPkg = useTranslations("disputes.reviewTab.package");
@@ -235,12 +252,26 @@ export function CompleteDefencePackageCard({
     () => (isNetworkSubmitted ? outcomeExpectedFrom(evidenceSentOn) : null),
     [isNetworkSubmitted, evidenceSentOn],
   );
-  const [latest, setLatest] = useState<DefencePackageRow | null>(null);
-  const [bankFacing, setBankFacing] = useState<DefencePackageRow | null>(null);
-  const [currentPromptVersion, setCurrentPromptVersion] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Defence package rows come from the workspace endpoint (lifted up
+  // 2026-05-25). Pre-lift, this card owned its own fetch and re-paid
+  // a round-trip every time the merchant switched to Review & Submit.
+  // Now switching tabs is instant — the data is already in memory and
+  // the workspace's 4s poll keeps it fresh.
+  //
+  // The card hasn't received its first defencePackage update yet when
+  // `defencePackage === undefined`. That's only true on the very first
+  // workspace fetch before any payload arrives — we treat it like the
+  // pre-2026-05-25 "loading" state.
+  const latest = defencePackage?.latest ?? null;
+  const bankFacing = defencePackage?.bankFacing ?? null;
+  const currentPromptVersion = defencePackage?.currentPromptVersion ?? null;
+  const loading = defencePackage === undefined;
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"regen" | "finalize" | "submit" | null>(null);
+  // Manual-refresh in-flight state for the "Check for update" action on
+  // the "Building new package" banner. Tracks the parent's `onRefresh`
+  // promise so the button shows a spinner during the refetch.
+  const [refreshing, setRefreshing] = useState(false);
   // True between a successful submit POST (job enqueued) and the moment
   // the parent passes a real `submittedToShopifyAt` (job ran and stamped
   // `evidence_packs.saved_to_shopify_at`). During this gap the parent's
@@ -308,70 +339,39 @@ export function CompleteDefencePackageCard({
     }
   }, [pendingRegenStorageKey]);
 
-  const load = useCallback(async () => {
-    if (!packId) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
+  // Manual refresh trigger for explicit "Check for update" presses on
+  // the "Building new package" banner. Delegates to the parent's
+  // `onRefresh` (= `actions.fetchAll`), which re-fetches the workspace
+  // endpoint and re-populates `defencePackage` via props. Pre-lift this
+  // ran a card-local `load()`; the parent's refetch covers it now.
+  const refresh = useCallback(async () => {
+    if (!onRefresh) return;
+    setRefreshing(true);
     try {
-      // Cache-busting timestamp so repeated "Check for update" presses
-      // don't get a 304 from any intermediate cache layer — we want
-      // each click to actually re-query the source.
-      const res = await fetch(
-        `/api/packs/${packId}/defence-packages?t=${Date.now()}`,
-      );
-      if (!res.ok) {
-        setError(tPkg("errors.couldNotLoad", { status: res.status }));
-        setLatest(null);
-        setBankFacing(null);
-      } else {
-        const json = (await res.json()) as {
-          latest: DefencePackageRow | null;
-          bankFacing?: DefencePackageRow | null;
-          serverState?: { currentPromptVersion?: number | null };
-        };
-        setLatest(json.latest);
-        setBankFacing(json.bankFacing ?? null);
-        setCurrentPromptVersion(
-          typeof json.serverState?.currentPromptVersion === "number"
-            ? json.serverState.currentPromptVersion
-            : null,
-        );
-        setError(null);
-
-        // The rebuild is "done" once a NEW row (higher version) lands.
-        // Clear the pendingRegen flag so the warning banner can come
-        // back IF the new draft itself goes stale later.
-        if (
-          json.latest &&
-          pendingRegenStorageKey
-        ) {
-          setPendingRegen((current) => {
-            if (current && json.latest!.version > current.fromVersion) {
-              try {
-                window.sessionStorage.removeItem(pendingRegenStorageKey);
-              } catch {
-                // ignore
-              }
-              return null;
-            }
-            return current;
-          });
-        }
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("unknownError"));
-      setLatest(null);
-      setBankFacing(null);
+      await onRefresh();
     } finally {
-      setLoading(false);
+      setRefreshing(false);
     }
-  }, [packId, pendingRegenStorageKey, t, tPkg]);
+  }, [onRefresh]);
 
+  // Clear the pendingRegen flag once a new defence_packages row
+  // (higher version) arrives via the workspace poll. Pre-lift this
+  // lived inside `load()`; now that the card no longer owns fetching,
+  // the cleanup runs as a side-effect of latest.version changing.
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!latest || !pendingRegenStorageKey) return;
+    setPendingRegen((current) => {
+      if (current && latest.version > current.fromVersion) {
+        try {
+          window.sessionStorage.removeItem(pendingRegenStorageKey);
+        } catch {
+          // sessionStorage unavailable — ignore.
+        }
+        return null;
+      }
+      return current;
+    });
+  }, [latest?.version, pendingRegenStorageKey]);
 
   // Clear the optimistic "Saving to Shopify…" banner once the
   // save-to-shopify job has completed: that's when the latest
@@ -500,11 +500,11 @@ export function CompleteDefencePackageCard({
           // tab via the in-memory state.
         }
       }
-      await load();
+      await onRefresh?.();
     } finally {
       setBusy(null);
     }
-  }, [latest, load, shopIdQs, pendingRegenStorageKey]);
+  }, [latest, onRefresh, shopIdQs, pendingRegenStorageKey, tPkg]);
 
   const onFinalize = useCallback(async () => {
     if (!latest) return;
@@ -522,11 +522,11 @@ export function CompleteDefencePackageCard({
         }
         setError(detail);
       }
-      await load();
+      await onRefresh?.();
     } finally {
       setBusy(null);
     }
-  }, [latest, load, shopIdQs]);
+  }, [latest, onRefresh, shopIdQs, tPkg]);
 
   const onSubmit = useCallback(async () => {
     if (!latest) return;
@@ -557,11 +557,11 @@ export function CompleteDefencePackageCard({
       // `saved_to_shopify_at` once the job persists.
       setSubmitPending(true);
       onSubmitted?.();
-      await load();
+      await onRefresh?.();
     } finally {
       setBusy(null);
     }
-  }, [latest, load, onSubmitted, shopIdQs]);
+  }, [latest, onRefresh, onSubmitted, shopIdQs, tPkg]);
 
   if (!packId) return null;
   if (loading) {
@@ -936,9 +936,9 @@ export function CompleteDefencePackageCard({
               tone="info"
               title={t("buildingNewPackageTitle")}
               action={{
-                content: loading ? t("checking") : t("checkForUpdate"),
-                onAction: () => void load(),
-                loading,
+                content: refreshing ? t("checking") : t("checkForUpdate"),
+                onAction: () => void refresh(),
+                loading: refreshing,
               }}
             >
               <p>{t("buildingNewPackageBody")}</p>

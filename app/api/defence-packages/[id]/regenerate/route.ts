@@ -106,8 +106,9 @@ export async function POST(
   return NextResponse.json({
     ok: true,
     // The next draft's id/version aren't known until the pack rebuild
-    // completes and maybeEnqueueDefencePackage inserts the row.
-    // Client polls /api/packs/:packId/defence-packages to discover it.
+    // completes and maybeEnqueueDefencePackage inserts the row. The
+    // client picks it up via the workspace endpoint's `defencePackage`
+    // field, refreshed by the workspace hook's 4s poll.
     queued: true,
     previousPackageId: id,
     previousVersion: existing.version,

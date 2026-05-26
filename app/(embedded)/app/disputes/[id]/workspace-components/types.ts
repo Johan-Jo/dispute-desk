@@ -247,6 +247,21 @@ export interface WorkspaceData {
     scopesGranted: boolean;
     missingScopes: string[];
   };
+  /** Defence package rows for the embedded ReviewSubmitTab. Folded
+   *  into the workspace endpoint (2026-05-25) so
+   *  `CompleteDefencePackageCard` no longer pays a separate fetch
+   *  round-trip every time the merchant switches to Review & Submit.
+   *  Both rows are kept fresh by the workspace's existing 4s poll.
+   *
+   *  Rows are typed as `unknown` here so this shared module doesn't
+   *  need to import the defence narrative / facts types; the card
+   *  narrows to its local `DefencePackageRow` at the consumption
+   *  site. */
+  defencePackage?: {
+    latest: unknown | null;
+    bankFacing: unknown | null;
+    currentPromptVersion: number | null;
+  };
 }
 
 export interface EvidenceCategory {

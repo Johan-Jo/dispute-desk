@@ -14,7 +14,10 @@ import { BlockStack, Banner, Spinner } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { useReviewView } from "./useReviewView";
-import { CompleteDefencePackageCard } from "./sections/CompleteDefencePackageCard";
+import {
+  CompleteDefencePackageCard,
+  type DefencePackageRow,
+} from "./sections/CompleteDefencePackageCard";
 import { InclusionReviewSection } from "./sections/InclusionReviewSection";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -74,6 +77,24 @@ export default function ReviewSubmitTab({ workspace }: Props) {
         shopifyAdminUrl={view.shopifyAdminUrl}
         presentationStatus={data?.presentationStatus}
         evidenceSentOn={data?.dispute?.submittedAt ?? null}
+        // Defence package rows lifted from the workspace endpoint
+        // (2026-05-25). Pre-lift the card owned its own fetch and
+        // re-paid a round-trip every time the merchant switched to
+        // this tab. Now switching tabs is instant — the rows are
+        // already in memory and the workspace's 4s poll keeps them
+        // fresh. The workspace endpoint types these as `unknown` so
+        // the shared module doesn't depend on defence-narrative
+        // types; the card owns the row shape and we narrow here.
+        defencePackage={
+          data?.defencePackage
+            ? {
+                latest: (data.defencePackage.latest as DefencePackageRow | null) ?? null,
+                bankFacing: (data.defencePackage.bankFacing as DefencePackageRow | null) ?? null,
+                currentPromptVersion: data.defencePackage.currentPromptVersion,
+              }
+            : undefined
+        }
+        onRefresh={() => actions.fetchAll()}
         onSubmitted={() => {
           // Flip derived.isReadOnly immediately so the card re-renders
           // into the "Saved to Shopify" layout without waiting for the

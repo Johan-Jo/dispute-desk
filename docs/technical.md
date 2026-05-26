@@ -4318,6 +4318,18 @@ Both validators (`validateNarrative` + `validateComposedDocument`) accept `extra
 
 - **API routes**: 12 routes total — merchant-facing under `/api/defence-packages/[id]/*`, admin-facing under `/api/admin/defence-package/*`.
 
+#### Defence package data lifted to workspace endpoint (2026-05-25)
+
+`CompleteDefencePackageCard` no longer owns its own `GET /api/packs/:packId/defence-packages` fetch. Pre-fix the card ran a `useEffect`-driven `load()` on mount, and tab switching unmounted/remounted the card — every time the merchant clicked Review & Submit the round-trip ran again, making the upper card feel slow even though the JSONB response (`narrative_json` + `facts_json`) had already been fetched seconds earlier on the Overview tab.
+
+The card now consumes a `defencePackage: { latest, bankFacing, currentPromptVersion }` prop sourced from the workspace endpoint (`GET /api/disputes/:id/workspace`). The workspace's existing 4s poll keeps the rows fresh; switching tabs becomes instant because the data is already in memory. The standalone `/api/packs/[packId]/defence-packages` route was deleted in the same change — nothing else consumed it.
+
+Two narrow queries hit the existing `defence_packages_source_pack_idx (source_pack_id)` and `defence_packages_status_idx (status)` indexes:
+- `latest`: highest-version row (drives draft preview + actions),
+- `bankFacing`: the row in `status='submitted'` (drives the "Saved to Shopify" banner).
+
+`facts_json` for the workspace's `deriveEvidenceLineItems` derivation is now reused from `latest.facts_json` — no separate single-column fetch. The card's "Check for update" button on the "Building new package" banner is wired to `actions.fetchAll()` instead of the deleted card-local `load()`. `pendingRegen` sessionStorage + the "regenerate kicked off but new draft hasn't landed" UX is preserved, with the version-bump cleanup moved into a `useEffect` keyed on `latest?.version` (was inline in `load()` pre-lift).
+
 #### Submit-pending UX (2026-05-21)
 
 `/api/defence-packages/:id/submit` enqueues a `save_to_shopify` job and returns immediately — the actual Shopify save runs 5–30s later in the worker. `CompleteDefencePackageCard` masks that async gap with an optimistic pending state so the merchant gets immediate, accurate feedback after clicking Submit:
@@ -4328,7 +4340,7 @@ Both validators (`validateNarrative` + `validateComposedDocument`) accept `extra
 4. `submitPending` clears when the local `latest` row flips to `status="submitted"` (the save-to-shopify job sets this in the same transaction that stamps the pack timestamp) OR after a 90s safety timeout, so a stuck worker can't pretend submission is in flight forever.
 5. Submit/Finalize errors now extract `body.error` from the route's JSON response when present, so the merchant sees "Cannot submit a package in status=draft" rather than a bare `Submit failed (409)`.
 
-Failure-mode prevented: pre-fix, the card only refetched `/api/packs/:packId/defence-packages` after submit. That endpoint's `latest` row stays in `status="final"` until the save-to-shopify job runs, and `submittedToShopifyAt` (sourced from `pack.savedToShopifyAt` via the separate workspace endpoint) stayed null. So the card re-rendered identically to its pre-click state — merchants believed their click did nothing and double-submitted or walked away. The new optimistic flow gives them a visible state transition within ~100ms of the POST returning.
+Failure-mode prevented: pre-fix, the card only refetched the (now-deleted) `/api/packs/:packId/defence-packages` endpoint after submit. That endpoint's `latest` row stays in `status="final"` until the save-to-shopify job runs, and `submittedToShopifyAt` (sourced from `pack.savedToShopifyAt` via the separate workspace endpoint) stayed null. So the card re-rendered identically to its pre-click state — merchants believed their click did nothing and double-submitted or walked away. The new optimistic flow gives them a visible state transition within ~100ms of the POST returning.
 
 ### Audit events
 

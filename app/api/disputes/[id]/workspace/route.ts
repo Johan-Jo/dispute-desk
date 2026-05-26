@@ -24,6 +24,7 @@ import {
   type CaseStrengthContribution,
 } from "@/lib/argument/caseStrength";
 import type { EvidenceFact } from "@/lib/defence/types";
+import { CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
 
 /** Merchant-facing dispute submission state derived from the underlying
  *  DB enums + Shopify forwarding signal. See plan §"presentationStatus". */
@@ -618,23 +619,53 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     if (item.payload) payloadByField.set(field, item.payload);
   }
 
-  // Reuse the most recent defence_packages.facts_json when present.
-  // When absent (no defence package built yet), facts is empty — the
-  // line items still resolve via the canonical categorizer, just without
-  // fact-anchored bank-narrative flags.
-  let factsJson: EvidenceFact[] = [];
+  // Defence package rows the embedded ReviewSubmitTab needs. The card
+  // used to own its own `GET /api/packs/:packId/defence-packages` fetch
+  // that ran on every tab mount — switching tabs unmounted/remounted
+  // the card and re-paid the round-trip. Folding the two-row fetch
+  // into this composite endpoint lets the workspace's existing 4s
+  // poll keep the card fresh without an extra HTTP call, and the tab
+  // switch becomes instant because the data is already in memory.
+  //
+  // Two rows are fetched (same as the deprecated standalone route):
+  //   - `latest`:     highest-version row (drives draft preview + actions).
+  //   - `bankFacing`: the row in status='submitted' (drives the "Saved to
+  //                   Shopify" banner). At most one per pack.
+  //
+  // `factsJson` for the evidence-line-item derivation below comes from
+  // `latest.facts_json` — no separate single-column query needed.
+  const DEFENCE_SELECT_COLS =
+    "id, version, status, package_mode, generated_at, generated_by, pdf_path, evidence_hash, llm_model, prompt_family, prompt_version, reason_code_module, validation_status, validation_errors, failure_code, failure_reason, submitted_at, narrative_json, facts_json";
+  let defencePackageLatest: Record<string, unknown> | null = null;
+  let defencePackageBankFacing: Record<string, unknown> | null = null;
   if (packRow?.id) {
-    const { data: defenceRow } = await sb
-      .from("defence_packages")
-      .select("facts_json")
-      .eq("source_pack_id", packRow.id)
-      .eq("shop_id", row.shop_id)
-      .order("version", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (Array.isArray(defenceRow?.facts_json)) {
-      factsJson = defenceRow!.facts_json as EvidenceFact[];
-    }
+    const [latestRes, bankFacingRes] = await Promise.all([
+      sb
+        .from("defence_packages")
+        .select(DEFENCE_SELECT_COLS)
+        .eq("source_pack_id", packRow.id)
+        .eq("shop_id", row.shop_id)
+        .order("version", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      sb
+        .from("defence_packages")
+        .select(DEFENCE_SELECT_COLS)
+        .eq("source_pack_id", packRow.id)
+        .eq("shop_id", row.shop_id)
+        .eq("status", "submitted")
+        .maybeSingle(),
+    ]);
+    defencePackageLatest = (latestRes.data as Record<string, unknown> | null) ?? null;
+    defencePackageBankFacing = (bankFacingRes.data as Record<string, unknown> | null) ?? null;
+  }
+  // Reuse the latest row's facts_json for the line-item derivation
+  // below. When absent (no defence package built yet), facts is empty —
+  // the line items still resolve via the canonical categorizer, just
+  // without fact-anchored bank-narrative flags.
+  let factsJson: EvidenceFact[] = [];
+  if (Array.isArray((defencePackageLatest as { facts_json?: unknown } | null)?.facts_json)) {
+    factsJson = (defencePackageLatest as { facts_json: EvidenceFact[] }).facts_json;
   }
 
   // Compute strong/moderate contributions for the line-item resolver.
@@ -842,5 +873,14 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       issuerClaim: issuerClaimText,
     },
     fileEvidence,
+    // Defence package data for the embedded ReviewSubmitTab. Folded
+    // into the workspace endpoint so the card no longer needs its own
+    // fetch-on-mount — switching tabs is now instant and the existing
+    // 4s workspace poll keeps the rows fresh.
+    defencePackage: {
+      latest: defencePackageLatest,
+      bankFacing: defencePackageBankFacing,
+      currentPromptVersion: CURRENT_PROMPT_VERSION,
+    },
   });
 }
