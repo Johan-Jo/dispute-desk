@@ -21,13 +21,20 @@
 import { Resend } from "resend";
 import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 import { getServiceClient } from "@/lib/supabase/server";
+import { fetchShopDetails } from "@/lib/shopify/shopDetails";
 import type { AutomationMode } from "@/lib/rules/normalizeMode";
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL =
-  process.env.EMAIL_FROM ?? "DisputeDesk <notifications@mail.disputedesk.app>";
-const REPLY_TO =
-  process.env.EMAIL_REPLY_TO ?? "DisputeDesk <notifications@mail.disputedesk.app>";
+// Env vars are read lazily so tests can stub `process.env.RESEND_API_KEY`
+// in beforeEach() and have the new value picked up — the previous module-
+// level `const` captured the value at import time, which made test stubs
+// silently no-op against the real env.
+const getResendApiKey = (): string | undefined => process.env.RESEND_API_KEY;
+const getFromEmail = (): string =>
+  process.env.EMAIL_FROM ??
+  "DisputeDesk <notifications@mail.disputedesk.app>";
+const getReplyTo = (): string =>
+  process.env.EMAIL_REPLY_TO ??
+  "DisputeDesk <notifications@mail.disputedesk.app>";
 
 export interface NewDisputeAlertContext {
   shopId: string;
@@ -459,7 +466,8 @@ function getShopifyAdminUrl(
 export async function sendNewDisputeAlert(
   ctx: NewDisputeAlertContext,
 ): Promise<void> {
-  if (!RESEND_API_KEY) return;
+  const resendApiKey = getResendApiKey();
+  if (!resendApiKey) return;
 
   try {
     const sb = getServiceClient();
@@ -481,8 +489,39 @@ export async function sendNewDisputeAlert(
     } | null;
     if (notifications?.newDispute === false) return;
 
-    const teamEmail = teamPayload?.teamEmail as string | undefined;
-    if (!teamEmail) return;
+    // Resolve the recipient. The merchant's configured team email wins; when
+    // it's unset (Settings → Team not yet completed) we fall back to the
+    // Shopify shop's contact/owner email via the Admin API. Without the
+    // fallback the 2026-05-25 #5DF25744 incident reproduces — the alert is
+    // silently skipped on shops that haven't completed onboarding yet.
+    const configuredTeamEmail = teamPayload?.teamEmail as string | undefined;
+    let recipient: string | null =
+      configuredTeamEmail && configuredTeamEmail.trim().length > 0
+        ? configuredTeamEmail
+        : null;
+    if (!recipient) {
+      try {
+        const shopDetails = await fetchShopDetails(ctx.shopId);
+        const fallbackEmail = shopDetails?.email?.trim();
+        if (fallbackEmail) {
+          recipient = fallbackEmail;
+        }
+      } catch (err) {
+        console.warn(
+          "[email] New dispute alert: Shopify-owner fallback failed:",
+          err instanceof Error ? err.message : err,
+        );
+      }
+    }
+    if (!recipient) {
+      // Silent drops are forbidden by contract — leave a breadcrumb so the
+      // next incident isn't another "we thought it had sent" surprise.
+      console.warn(
+        "[email] New dispute alert skipped: no team email and no Shopify-owner fallback",
+        { shopId: ctx.shopId, disputeId: ctx.disputeId },
+      );
+      return;
+    }
 
     const storeLocale = (
       steps?.store_profile?.payload?.storeLocale as string | undefined
@@ -648,13 +687,13 @@ ${variant.cta.replace(" →", "")}: ${disputeUrl}${
 ---
 ${shared.footer}`;
 
-    const resend = new Resend(RESEND_API_KEY);
+    const resend = new Resend(resendApiKey);
     await resend.emails.send({
-      from: FROM_EMAIL,
-      replyTo: REPLY_TO,
-      to: teamEmail.includes(",")
-        ? teamEmail.split(",").map((e) => e.trim())
-        : teamEmail,
+      from: getFromEmail(),
+      replyTo: getReplyTo(),
+      to: recipient.includes(",")
+        ? recipient.split(",").map((e) => e.trim())
+        : recipient,
       subject,
       html,
       text,

@@ -218,7 +218,18 @@ export async function applyDisputeSnapshot(
   let disputeEvidenceGid = snapshot.disputeEvidenceGid;
   let orderName = snapshot.orderName ?? null;
   let orderGid = snapshot.orderGid ?? null;
-  if (!existing && args.fetchDisputeDetail) {
+  let customerDisplayName = snapshot.customerDisplayName ?? null;
+  let customerEmail = snapshot.customerEmail ?? null;
+  // Skip the network call when the snapshot already carries every backfill
+  // field — saves a Shopify roundtrip on the cron path and makes the
+  // regression-test assertion (`fetchDisputeDetail not called`) pass.
+  const needsBackfill =
+    !disputeEvidenceGid ||
+    !orderName ||
+    !orderGid ||
+    !customerDisplayName ||
+    !customerEmail;
+  if (!existing && args.fetchDisputeDetail && needsBackfill) {
     try {
       const fallback = await args.fetchDisputeDetail(snapshot.disputeGid);
       if (fallback) {
@@ -230,6 +241,12 @@ export async function applyDisputeSnapshot(
         }
         if (!orderGid && fallback.orderGid) {
           orderGid = fallback.orderGid;
+        }
+        if (!customerDisplayName && fallback.customerDisplayName) {
+          customerDisplayName = fallback.customerDisplayName;
+        }
+        if (!customerEmail && fallback.customerEmail) {
+          customerEmail = fallback.customerEmail;
         }
       }
     } catch (err) {
@@ -277,6 +294,12 @@ export async function applyDisputeSnapshot(
   }
   if (orderGid) {
     upsertRow.order_gid = orderGid;
+  }
+  if (customerDisplayName) {
+    upsertRow.customer_display_name = customerDisplayName;
+  }
+  if (customerEmail) {
+    upsertRow.customer_email = customerEmail;
   }
 
   // Guard: terminal-downgrade — don't overwrite a terminal status with a

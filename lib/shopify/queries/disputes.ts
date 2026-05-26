@@ -72,6 +72,8 @@ export const DISPUTE_DETAIL_QUERY = `
         accessActivityLog
         cancellationPolicyDisclosure
         cancellationRebuttal
+        customerFirstName
+        customerLastName
         customerEmailAddress
         refundPolicyDisclosure
         refundRefusalExplanation
@@ -153,6 +155,8 @@ export interface DisputeDetailNode {
     accessActivityLog: string | null;
     cancellationPolicyDisclosure: string | null;
     cancellationRebuttal: string | null;
+    customerFirstName: string | null;
+    customerLastName: string | null;
     customerEmailAddress: string | null;
     refundPolicyDisclosure: string | null;
     refundRefusalExplanation: string | null;

@@ -245,6 +245,10 @@ export async function handleDisputeWebhook(
  * returns the fields the REST webhook payload doesn't carry:
  *   - disputeEvidenceGid (the ShopifyPaymentsDisputeEvidence sub-object)
  *   - orderGid + orderName (the GraphQL order node)
+ *   - customerDisplayName + customerEmail (the disputeEvidence customer
+ *     fields — denormalized onto `disputes.customer_*` so the embedded
+ *     dispute card shows a real customer immediately instead of an em-dash
+ *     until the hourly cron tick)
  *
  * Used only on new-dispute inserts (existing-row updates skip the call).
  * Failures are non-fatal — the diff engine records a guardWarning and
@@ -283,10 +287,19 @@ function makeFetchDisputeDetail(
     const dispute = gql.data?.dispute;
     if (!dispute) return null;
 
+    const ev = dispute.disputeEvidence;
+    const customerDisplayName = ev
+      ? [ev.customerFirstName, ev.customerLastName]
+          .filter(Boolean)
+          .join(" ") || null
+      : null;
+
     return {
-      disputeEvidenceGid: dispute.disputeEvidence?.id ?? null,
+      disputeEvidenceGid: ev?.id ?? null,
       orderGid: dispute.order?.id ?? null,
       orderName: dispute.order?.name ?? null,
+      customerDisplayName,
+      customerEmail: ev?.customerEmailAddress ?? null,
     };
   };
 }

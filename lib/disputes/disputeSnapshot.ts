@@ -29,6 +29,16 @@ export interface DisputeSnapshot {
    * instead of an em-dash.
    */
   orderName?: string | null;
+  /**
+   * Denormalized customer name (first + last) and email. Same situation as
+   * `orderName`: the REST webhook payload doesn't carry them, the GraphQL
+   * path does (via `disputeEvidence.customerFirstName/LastName/EmailAddress`).
+   * The webhook backfill resolves them on brand-new inserts so the embedded
+   * card doesn't show "Customer: —" until the hourly cron tick patches the
+   * row. The 2026-05-25 #5DF25744 incident pinned this regression.
+   */
+  customerDisplayName?: string | null;
+  customerEmail?: string | null;
   /** Raw Shopify status, lowercased: needs_response, under_review, won, lost, ... */
   status?: string | null;
   /** Raw reason text Shopify returned, e.g. "fraudulent". */
@@ -115,6 +125,9 @@ const graphqlDisputeSchema = z
     disputeEvidence: z
       .object({
         id: z.string().nullable().optional(),
+        customerFirstName: z.string().nullable().optional(),
+        customerLastName: z.string().nullable().optional(),
+        customerEmailAddress: z.string().nullable().optional(),
       })
       .nullable()
       .optional(),
@@ -166,6 +179,9 @@ export function normalizeDisputeWebhookPayload(
     // REST webhook payload never carries order.name; webhook path resolves it
     // via fetchDisputeDetail (GraphQL).
     orderName: null,
+    // Same story for customer name + email — REST never carries them.
+    customerDisplayName: null,
+    customerEmail: null,
     status: lowerOrNull(p.status),
     reason: p.reason ?? null,
     networkReasonCode: p.network_reason_code ?? null,
@@ -199,12 +215,21 @@ export function normalizeGraphQLDispute(
   if (!parsed.success) return null;
   const d = parsed.data;
 
+  const ev = d.disputeEvidence;
+  const customerDisplayName = ev
+    ? [ev.customerFirstName, ev.customerLastName].filter(Boolean).join(" ") ||
+      null
+    : null;
+  const customerEmail = ev?.customerEmailAddress ?? null;
+
   return {
     disputeGid: d.id,
     numericDisputeId: extractNumericIdFromGid(d.id),
     orderGid: d.order?.id ?? null,
     orderId: d.order?.legacyResourceId ?? null,
     orderName: d.order?.name ?? null,
+    customerDisplayName,
+    customerEmail,
     status: lowerOrNull(d.status),
     reason: d.reasonDetails?.reason ?? null,
     networkReasonCode: null,
