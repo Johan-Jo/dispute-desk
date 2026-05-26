@@ -281,6 +281,10 @@ The **Resources Hub** is the localized **marketing / SEO** surface for long-form
 | Admin | `/admin/resources/*` | Dashboard, content list, calendar, queue, backlog, settings. Figma-based redesign (CH-2+). |
 | In-app help (embedded) | `/app/help`, `/app/help/[slug]` | Separate copy from `lib/help/embedded` — **not** the CMS hub |
 
+### Empty-hub behavior (SEO)
+
+Hub-index pages (`/<locale>/resources`, `/templates`, `/glossary`, `/case-studies`) **return 404 when the requested locale has zero published localizations** for that route kind. Previously they rendered an empty grid at 200 OK, which Google catalogues as "crawled — currently not indexed" and pollutes the indexable URL count. The 404 is enforced in each hub `page.tsx` (resources also requires `!isFiltered` so search/pillar filters keep their 200 OK with an empty result set — that's a user query, not missing content). The sitemap (`pushStaticEntries` in `app/sitemap.ts`) likewise skips these URLs.
+
 ### Marketing home: Resources Hub article strip
 
 Between the **Pricing** section and the **ROI Snapshot**, the marketing home page renders 3 published hub articles for the current locale.
@@ -3911,11 +3915,16 @@ In `vercel.json`:
 
 `app/sitemap.ts` (Next.js metadata API) generates a dynamic XML sitemap:
 - All published `content_localizations` with `hreflang` alternates per locale.
-- Static pages: root, resources, glossary, templates, case studies.
+- Static hub-index pages: root, resources, glossary, templates, case studies.
 - Locale URL prefixes: en-US = root, de-DE = `/de`, fr-FR = `/fr`, es-ES = `/es`, pt-BR = `/pt`, sv-SE = `/sv`.
 - Prefixed locale home uses the bare prefix (e.g. `/sv`, not `/sv/`) — trailing slash 308-redirects would make Google flag sitemap entries as "Page with redirect" in GSC.
+- **Empty hubs are suppressed:** `pushStaticEntries` skips locales that have zero published localizations for the route kind, and skips a route kind entirely when no locale has any rows (e.g. `glossary` / `case-studies` are absent from the sitemap until the first row is published). The hreflang `alternates.languages` map likewise only lists locales with content. Submitting `/de/case-studies` with zero `de-DE` rows would render an empty grid at 200 OK and trigger GSC "crawled, currently not indexed" — see `publishedCountsByLocale`.
 
-**hreflang is sitemap-only:** `i18n/routing.ts` sets `alternateLinks: false` so next-intl does NOT emit a `Link: rel=alternate; hreflang=…` response header. The middleware-generated alternates assume path-identical slugs across locales, but Resources Hub articles use per-locale slugs (DE slug differs from ES slug). Emitting path-identical alternates would advertise URLs that 308-redirect. The sitemap's per-article `alternates.languages` map — built from each locale's own `content_localizations.slug` — is the single source of truth for hreflang.
+**hreflang lives in both the sitemap AND on the page:** `i18n/routing.ts` sets `alternateLinks: false` so next-intl does NOT emit a `Link: rel=alternate; hreflang=…` response header. The middleware-generated alternates assume path-identical slugs across locales, but Resources Hub articles use per-locale slugs (DE slug differs from ES slug). Emitting path-identical alternates would advertise URLs that 308-redirect. Instead:
+1. **Sitemap** carries `alternates.languages` per article, built from each locale's own `content_localizations.slug`.
+2. **Each article page** (`app/[locale]/{resources,templates,glossary,case-studies}/.../page.tsx`) sets `metadata.alternates.languages` in `generateMetadata` via `getSiblingLocaleUrls()`. Without on-page hreflang, Google's near-duplicate detection sees the 6 translated bodies of the same `content_item` as competing for the same query and refuses to index 5 of them.
+
+The two paths use the same set of sibling rows and filter logic (`is_excluded_from_sitemap`, `redirect_to_localization_id`, `quality_status`).
 
 ### Robots.txt
 

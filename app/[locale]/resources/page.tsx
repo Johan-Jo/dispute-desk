@@ -157,6 +157,14 @@ export default async function ResourcesHubPage({ params, searchParams }: Props) 
     total = 0;
   }
 
+  // 404 when this locale has zero published resources at all (no filters) —
+  // an empty hub page at 200 OK triggers GSC "crawled, currently not indexed".
+  // Filtered "no results" stays at 200 because the filter combination is a
+  // user query, not a missing-content signal.
+  if (total === 0 && !isFiltered) {
+    notFound();
+  }
+
   const totalPages = isFiltered
     ? totalHubPagesFiltered(total)
     : totalHubPagesUnfiltered(total);

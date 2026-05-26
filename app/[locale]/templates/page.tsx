@@ -1,5 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { hasLocale } from "next-intl";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, FileText, Clock, Calendar } from "lucide-react";
@@ -45,7 +46,7 @@ function formatDate(iso: string | null | undefined, pathLocale: PathLocale) {
 
 export default async function TemplatesHubPage({ params }: Props) {
   const { locale: loc } = await params;
-  if (!hasLocale(routing.locales, loc)) return null;
+  if (!hasLocale(routing.locales, loc)) notFound();
   setRequestLocale(loc);
   const pathLocale = loc as PathLocale;
   const hubLocale = pathLocaleToHubLocale(pathLocale);
@@ -65,6 +66,8 @@ export default async function TemplatesHubPage({ params }: Props) {
   } catch {
     rows = [];
   }
+  // 404 when this locale has zero published templates — see case-studies/page.tsx.
+  if (rows.length === 0) notFound();
 
   return (
     <div className="min-h-screen bg-white">
@@ -102,73 +105,51 @@ export default async function TemplatesHubPage({ params }: Props) {
           }}
         />
 
-        {rows.length === 0 ? (
-          <div className="text-center py-16 rounded-xl border border-[#E1E3E5] bg-[#FAFAFA]">
-            <div className="w-16 h-16 bg-[#F6F8FB] rounded-full flex items-center justify-center mx-auto mb-4">
-              <FileText className="w-8 h-8 text-[#667085]" aria-hidden />
-            </div>
-            <h3 className="text-lg font-semibold text-[#0B1220] mb-2">
-              {t("noResults")}
-            </h3>
-            <p className="text-sm text-[#667085] mb-6 max-w-md mx-auto">
-              {t("templateEmptyHint")}
-            </p>
-            <Link
-              href={`${basePath}/resources`}
-              className="inline-block px-6 py-2.5 bg-[#1D4ED8] text-white rounded-lg text-sm font-medium hover:bg-[#1e40af] transition-colors"
-            >
-              {t("hubNav.resources")}
-            </Link>
-          </div>
-        ) : (
-          <>
-            <p className="text-sm text-[#667085] mb-6">
-              {t("resultsCount", { count: rows.length })}
-            </p>
-            <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-              {rows.map((row) => (
-                <li key={row.id}>
-                  <Link
-                    href={`${basePath}/templates/${row.slug}`}
-                    className="block h-full bg-white rounded-lg border border-[#E1E3E5] p-6 hover:border-[#1D4ED8] hover:shadow-lg transition-all group"
-                  >
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium mb-4 border bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]">
-                      {t("types.template")}
-                    </span>
-                    <h3 className="text-lg font-bold text-[#0B1220] mb-3 group-hover:text-[#1D4ED8] transition-colors leading-snug line-clamp-2">
-                      {row.title}
-                    </h3>
-                    <p className="text-sm text-[#667085] mb-4 leading-relaxed line-clamp-3">
-                      {row.excerpt}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-[#667085]">
-                      {"reading_time_minutes" in row &&
-                        row.reading_time_minutes != null && (
-                          <span className="inline-flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5" aria-hidden />
-                            {t("readTime", {
-                              minutes: row.reading_time_minutes,
-                            })}
-                          </span>
-                        )}
+        <p className="text-sm text-[#667085] mb-6">
+          {t("resultsCount", { count: rows.length })}
+        </p>
+        <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          {rows.map((row) => (
+            <li key={row.id}>
+              <Link
+                href={`${basePath}/templates/${row.slug}`}
+                className="block h-full bg-white rounded-lg border border-[#E1E3E5] p-6 hover:border-[#1D4ED8] hover:shadow-lg transition-all group"
+              >
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium mb-4 border bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]">
+                  {t("types.template")}
+                </span>
+                <h3 className="text-lg font-bold text-[#0B1220] mb-3 group-hover:text-[#1D4ED8] transition-colors leading-snug line-clamp-2">
+                  {row.title}
+                </h3>
+                <p className="text-sm text-[#667085] mb-4 leading-relaxed line-clamp-3">
+                  {row.excerpt}
+                </p>
+                <div className="flex flex-wrap items-center gap-4 text-xs text-[#667085]">
+                  {"reading_time_minutes" in row &&
+                    row.reading_time_minutes != null && (
                       <span className="inline-flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5" aria-hidden />
-                        {formatDate(
-                          row.last_updated_at ?? row.publish_at,
-                          pathLocale
-                        )}
+                        <Clock className="w-3.5 h-3.5" aria-hidden />
+                        {t("readTime", {
+                          minutes: row.reading_time_minutes,
+                        })}
                       </span>
-                    </div>
-                    <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#1D4ED8] group-hover:gap-2 transition-all">
-                      {t("viewTemplate")}
-                      <ArrowRight className="w-4 h-4" aria-hidden />
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
+                    )}
+                  <span className="inline-flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" aria-hidden />
+                    {formatDate(
+                      row.last_updated_at ?? row.publish_at,
+                      pathLocale
+                    )}
+                  </span>
+                </div>
+                <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#1D4ED8] group-hover:gap-2 transition-all">
+                  {t("viewTemplate")}
+                  <ArrowRight className="w-4 h-4" aria-hidden />
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
 
         {/* CTA */}
         <div className="bg-white rounded-xl border border-[#E1E3E5] p-6 sm:p-8 mb-8">

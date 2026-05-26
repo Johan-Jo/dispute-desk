@@ -19,6 +19,33 @@ const LOCALE_PREFIXES: Record<string, string> = {
   "sv-SE": "/sv",
 };
 
+/** Route kinds whose hub-index page lives under `/<route>` on the marketing site. */
+type HubRouteKind = "resources" | "templates" | "glossary" | "case-studies";
+
+/**
+ * Per-locale, per-route count of published localizations. Used to suppress
+ * empty hub-index URLs from the sitemap — submitting `/de/case-studies` when
+ * `case-studies` has zero `de-DE` rows triggers GSC "crawled, currently not
+ * indexed" because the page renders an empty grid (200 OK with no content).
+ */
+async function publishedCountsByLocale(
+  sb: ReturnType<typeof getServiceClient>,
+  routeKind: HubRouteKind,
+): Promise<Map<string, number>> {
+  const { data, error } = await sb
+    .from("content_localizations")
+    .select("locale, content_items!inner(workflow_status)")
+    .eq("route_kind", routeKind)
+    .eq("is_published", true)
+    .eq("content_items.workflow_status", "published");
+  const counts = new Map<string, number>();
+  if (error || !data) return counts;
+  for (const row of data as Array<{ locale: string }>) {
+    counts.set(row.locale, (counts.get(row.locale) ?? 0) + 1);
+  }
+  return counts;
+}
+
 function localeUrl(path: string, locale: string): string {
   const prefix = LOCALE_PREFIXES[locale] ?? "";
   // Home path under a prefixed locale must NOT carry a trailing slash
@@ -31,32 +58,41 @@ function localeUrl(path: string, locale: string): string {
 }
 
 /**
- * Build a full hreflang languages map for a path that is identical across all
- * locales (i.e. static hub pages where the path doesn't change, only the prefix).
- * Includes x-default pointing to the English (prefix-less) URL.
- */
-function staticLanguages(path: string): Record<string, string> {
-  const languages: Record<string, string> = {};
-  for (const locale of LOCALES) {
-    languages[locale.toLowerCase()] = localeUrl(path, locale);
-  }
-  // x-default: the non-prefixed English URL is our canonical fallback.
-  languages["x-default"] = `${BASE_URL}${path}`;
-  return languages;
-}
-
-/**
  * Push one <url> entry per locale for a static page. Each entry carries the
- * full hreflang set (including x-default) so Google sees every locale URL
+ * hreflang set (including x-default) so Google sees every locale URL
  * as a first-class sitemap entry rather than just an alternate.
+ *
+ * When `localeFilter` is provided, only locales whose count is > 0 get a
+ * <url> entry AND only those locales appear in the hreflang alternates set.
+ * Submitting empty hub URLs (e.g. `/de/case-studies` with zero `de-DE` rows)
+ * causes GSC to crawl an empty grid page and refuse to index it.
  */
 function pushStaticEntries(
   entries: MetadataRoute.Sitemap,
   path: string,
   priority: number,
+  localeFilter?: Map<string, number>,
 ): void {
-  const languages = staticLanguages(path);
-  for (const locale of LOCALES) {
+  const eligible = localeFilter
+    ? LOCALES.filter((l) => (localeFilter.get(l) ?? 0) > 0)
+    : LOCALES;
+  if (eligible.length === 0) return;
+
+  const languages: Record<string, string> = {};
+  for (const locale of eligible) {
+    languages[locale.toLowerCase()] = localeUrl(path, locale);
+  }
+  // x-default: prefer the unprefixed English URL when English is eligible,
+  // otherwise fall back to the first available locale so Google still has a
+  // canonical anchor.
+  if (languages["en-us"]) {
+    languages["x-default"] = `${BASE_URL}${path}`;
+  } else {
+    const first = Object.values(languages)[0];
+    if (first) languages["x-default"] = first;
+  }
+
+  for (const locale of eligible) {
     entries.push({
       url: localeUrl(path, locale),
       lastModified: new Date(),
@@ -96,19 +132,43 @@ async function buildLocaleAlternates(
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = [];
 
+  let sb: ReturnType<typeof getServiceClient> | null = null;
+  let resourcesCounts: Map<string, number> | undefined;
+  let templatesCounts: Map<string, number> | undefined;
+  let glossaryCounts: Map<string, number> | undefined;
+  let caseStudiesCounts: Map<string, number> | undefined;
+  try {
+    sb = getServiceClient();
+    [resourcesCounts, templatesCounts, glossaryCounts, caseStudiesCounts] =
+      await Promise.all([
+        publishedCountsByLocale(sb, "resources"),
+        publishedCountsByLocale(sb, "templates"),
+        publishedCountsByLocale(sb, "glossary"),
+        publishedCountsByLocale(sb, "case-studies"),
+      ]);
+  } catch (err) {
+    console.error("[sitemap] Failed to load hub counts:", err);
+  }
+
   // ── Static hub pages — one <url> entry per locale ──────────────────────────
+  // Marketing home is always available (renders from i18n messages, not DB).
   pushStaticEntries(entries, "/", 1.0);
-  pushStaticEntries(entries, "/resources", 0.9);
-  pushStaticEntries(entries, "/glossary", 0.7);
-  pushStaticEntries(entries, "/templates", 0.7);
-  pushStaticEntries(entries, "/case-studies", 0.7);
+  // Section hubs: skip locales (and route kinds entirely) when zero published
+  // localizations exist — empty pages get rejected as "crawled, not indexed".
+  pushStaticEntries(entries, "/resources", 0.9, resourcesCounts);
+  pushStaticEntries(entries, "/glossary", 0.7, glossaryCounts);
+  pushStaticEntries(entries, "/templates", 0.7, templatesCounts);
+  pushStaticEntries(entries, "/case-studies", 0.7, caseStudiesCounts);
+
+  if (!sb) {
+    return entries;
+  }
+  const sbClient = sb;
 
   try {
-    const sb = getServiceClient();
-
     // ── Resources articles ──────────────────────────────────────────────────
     {
-      const { data: items } = await sb
+      const { data: items } = await sbClient
         .from("content_items")
         .select("id, updated_at, primary_pillar, is_hub_article")
         .eq("workflow_status", "published");
@@ -117,7 +177,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         // Only include localizations that belong to the "resources" route so
         // that template / glossary / case-study articles are not accidentally
         // mapped to /resources/ paths.
-        const { data: locsRaw } = await sb
+        const { data: locsRaw } = await sbClient
           .from("content_localizations")
           .select(
             "locale, slug, redirect_to_localization_id, is_excluded_from_sitemap, quality_status"
@@ -165,7 +225,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // ── Templates ───────────────────────────────────────────────────────────
     {
-      const { data: locsRaw } = await sb
+      const { data: locsRaw } = await sbClient
         .from("content_localizations")
         .select(
           "locale, slug, content_item_id, redirect_to_localization_id, is_excluded_from_sitemap, quality_status, content_items!inner(updated_at, workflow_status)"
@@ -179,7 +239,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       for (const loc of locs) {
         if (!loc.slug) continue;
         const languages = await buildLocaleAlternates(
-          sb,
+          sbClient,
           loc.content_item_id,
           "templates",
           (s) => `/templates/${s}`,
@@ -201,7 +261,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // ── Glossary entries ────────────────────────────────────────────────────
     {
-      const { data: locsRaw } = await sb
+      const { data: locsRaw } = await sbClient
         .from("content_localizations")
         .select(
           "locale, slug, content_item_id, redirect_to_localization_id, is_excluded_from_sitemap, quality_status, content_items!inner(updated_at, workflow_status)"
@@ -215,7 +275,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       for (const loc of locs) {
         if (!loc.slug) continue;
         const languages = await buildLocaleAlternates(
-          sb,
+          sbClient,
           loc.content_item_id,
           "glossary",
           (s) => `/glossary/${s}`,
@@ -237,7 +297,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // ── Case studies ────────────────────────────────────────────────────────
     {
-      const { data: locsRaw } = await sb
+      const { data: locsRaw } = await sbClient
         .from("content_localizations")
         .select(
           "locale, slug, content_item_id, redirect_to_localization_id, is_excluded_from_sitemap, quality_status, content_items!inner(updated_at, workflow_status)"
@@ -251,7 +311,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       for (const loc of locs) {
         if (!loc.slug) continue;
         const languages = await buildLocaleAlternates(
-          sb,
+          sbClient,
           loc.content_item_id,
           "case-studies",
           (s) => `/case-studies/${s}`,

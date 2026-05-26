@@ -255,6 +255,52 @@ export async function getAlternatePublishedResourceSlug(args: {
   return { slug: target.slug, pillar: item.primary_pillar };
 }
 
+/**
+ * Sibling localizations for an article, keyed by lowercase BCP-47 locale tag,
+ * plus an `x-default` entry. Used to populate `<link rel="alternate" hreflang>`
+ * tags on article pages so Google can cluster the translated bodies of the same
+ * `content_item` (which is what makes them indexable as separate URLs rather
+ * than being deduped as near-duplicates).
+ */
+export async function getSiblingLocaleUrls(args: {
+  contentItemId: string;
+  routeKind: string;
+  buildPath: (locale: HubContentLocale, slug: string) => string;
+  baseUrl: string;
+}): Promise<Record<string, string>> {
+  const sb = getServiceClient();
+  const { data, error } = await sb
+    .from("content_localizations")
+    .select("locale, slug, is_excluded_from_sitemap, redirect_to_localization_id, quality_status")
+    .eq("content_item_id", args.contentItemId)
+    .eq("route_kind", args.routeKind)
+    .eq("is_published", true);
+
+  if (error || !data) return {};
+
+  const out: Record<string, string> = {};
+  for (const row of data) {
+    if (!row.slug) continue;
+    // Skip rows that the sitemap also excludes (redirects, thin, manual exclusions).
+    if (row.is_excluded_from_sitemap) continue;
+    if (row.redirect_to_localization_id) continue;
+    if (row.quality_status === "thin" || row.quality_status === "rewrite_pending") {
+      continue;
+    }
+    const tag = row.locale.toLowerCase();
+    out[tag] = `${args.baseUrl}${args.buildPath(row.locale as HubContentLocale, row.slug)}`;
+  }
+  // x-default points at the English row when available — otherwise the first
+  // sibling (typically the source locale of the article).
+  if (out["en-us"]) {
+    out["x-default"] = out["en-us"];
+  } else {
+    const first = Object.values(out)[0];
+    if (first) out["x-default"] = first;
+  }
+  return out;
+}
+
 type RelatedRow = {
   id: string;
   content_item_id: string;

@@ -11,6 +11,7 @@ import {
   getPublishedLocalizationBySlug,
   findLocalizationBySlugAnyLocale,
   getRelatedResources,
+  getSiblingLocaleUrls,
 } from "@/lib/resources/queries";
 import {
   buildRedirectPath,
@@ -145,6 +146,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const base = getPublicBaseUrl();
   const pathPrefix = loc === "en" ? "" : `/${loc}`;
   const path = `${pathPrefix}/resources/${pillar}/${slug}`;
+
+  // Sibling localizations → hreflang alternates. Without these, Google sees
+  // the 6 translated bodies of the same content_item as near-duplicates and
+  // refuses to index 5 of them.
+  const languages = base
+    ? await getSiblingLocaleUrls({
+        contentItemId: row.item.id,
+        routeKind: "resources",
+        baseUrl: base,
+        buildPath: (siblingLocale, siblingSlug) => {
+          const seg = hubLocaleToPathSegment(siblingLocale);
+          const prefix = seg === "en" ? "" : `/${seg}`;
+          return `${prefix}/resources/${row.item.primary_pillar}/${siblingSlug}`;
+        },
+      })
+    : {};
+
   return {
     title: L.meta_title || L.title,
     description: L.meta_description || L.excerpt,
@@ -156,7 +174,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         ? { images: [row.item.featured_image_url] }
         : {}),
     },
-    alternates: base ? { canonical: `${base}${path}` } : undefined,
+    alternates: base
+      ? {
+          canonical: `${base}${path}`,
+          ...(Object.keys(languages).length > 0 ? { languages } : {}),
+        }
+      : undefined,
   };
 }
 
