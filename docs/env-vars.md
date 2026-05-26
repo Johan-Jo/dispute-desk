@@ -32,7 +32,7 @@ combinations refuse to boot.
 | `SUPABASE_URL` | dev project (same as above) | prod project (same) | Mirror of `NEXT_PUBLIC_SUPABASE_URL` |
 | `SUPABASE_ANON_KEY` | dev project | prod project | Supabase Dashboard → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | dev project | prod project | Supabase Dashboard → API. **Server only.** |
-| `SHOPIFY_API_KEY` | dev Partners app `client_id` | `84f40ec77c9ba18e9eabc1657d9b6af8` | Shopify Partners → app → Configuration |
+| `SHOPIFY_API_KEY` | `bbb7c00568ffb57fecd789fa0580e309` (DisputeDesk-Dev, created 2026-05-26 via Shopify CLI) | `84f40ec77c9ba18e9eabc1657d9b6af8` | Shopify Partners → app → Configuration |
 | `SHOPIFY_CLIENT_ID` | (alias of `SHOPIFY_API_KEY`) | (alias) | Consolidate during Phase 2. |
 | `SHOPIFY_API_SECRET` | dev Partners app secret | prod app secret | Per-app HMAC; never share. |
 | `SHOPIFY_SCOPES` | match `shopify.app.dev.toml` | match `shopify.app.prod.toml` | OAuth consent surface. |

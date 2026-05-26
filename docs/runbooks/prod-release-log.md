@@ -44,6 +44,15 @@ Companion files:
 
 <!-- First real entry will be the Supabase Pro migration cutover. -->
 
+### 2026-05-26 — Dev Shopify Partners app created: DisputeDesk-Dev
+
+- **Operator:** Johan
+- **Action:** `npx shopify@3.94.3 app config link --config=dev` → "Yes, create new app" → name `DisputeDesk-Dev`, org `Veridor Works` (same org as prod `DisputeDesk`).
+- **New dev `client_id`:** `bbb7c00568ffb57fecd789fa0580e309` (public identifier).
+- **Prod app untouched.** No deploys ran against the prod app.
+- **Initial dev scope set:** minimal (`read_customer_events`, `read_customers`, `read_fulfillments`, `read_orders`, `read_products`, `read_shipping`, `write_pixels`) — Shopify rejected the dispute-related and `read_all_orders` scopes at create time because they require per-app approval. Approval requests must be submitted in Partners → DisputeDesk-Dev → API access for: `read_all_orders`, `read_shopify_payments_disputes`, `read_shopify_payments_dispute_evidences`, `read_shopify_payments_dispute_file_uploads`, `write_shopify_payments_dispute_evidences`, `write_shopify_payments_dispute_file_uploads`.
+- **CLI overwrote `shopify.app.dev.toml`** with its own canonical fields + an auto-default `api_version = "2026-07"`. Re-patched locally to restore the pinned `api_version = "2026-01"`, the `[[webhooks.subscriptions]]` blocks, the `[webhooks.privacy_compliance]` block, and `[pos] embedded = false`. Next `npm run shopify:deploy:dev` pushes those to Partners.
+
 ### PLANNED — Supabase Pro migration cutover
 
 - **Old prod ref:** `sddzuglxdnkhcnjmcpbj` (Free tier; becomes dev after cutover per `supabase-pro-migration.md` §3)
