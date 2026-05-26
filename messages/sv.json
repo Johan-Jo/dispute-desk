@@ -1148,7 +1148,7 @@
       },
       "package": {
         "loadingAccessibilityLabel": "Läser in försvarspaket",
-        "cardHelp": "DisputeDesk förbereder en bankvänd PDF som kombinerar godkända Shopify-bevis, betalningssignaler, leveransbevis, kundkommunikation, policyer och eventuella handlarinlämnade dokument till ett strukturerat försvarspaket. Om du inte skickar in före deadline sparar DisputeDesk paketet i Shopify på förfallodagen och Shopify skickar det automatiskt till kortnätverket.",
+        "cardHelp": "DisputeDesk förbereder en bankvänd PDF som kombinerar godkända Shopify-bevis, betalningssignaler, leveransbevis, kundkommunikation, policyer och eventuella handlarinlämnade dokument till ett strukturerat försvarspaket. <b>Om du inte skickar in före deadline sparar DisputeDesk paketet i Shopify på förfallodagen och Shopify skickar det automatiskt till kortnätverket.</b>",
         "savingBody": "DisputeDesk har tagit emot din inskickning och laddar upp försvarspaketet till Shopify. Detta brukar slutföras på under 30 sekunder — detta meddelande uppdateras automatiskt.",
         "savedTitles": {
           "outcomePosted": "Resultat publicerat",

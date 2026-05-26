@@ -782,7 +782,7 @@
       },
       "package": {
         "loadingAccessibilityLabel": "Carregando pacote de evidências",
-        "cardHelp": "O DisputeDesk prepara um PDF voltado ao banco que combina evidências aprovadas do Shopify, sinais de pagamento, comprovantes de cumprimento, comunicação com o cliente, políticas e quaisquer documentos fornecidos pelo lojista em um pacote de evidências estruturado. Se você não enviar antes do prazo, o DisputeDesk salvará o pacote no Shopify na data de vencimento e o Shopify o enviará automaticamente para a rede de cartões.",
+        "cardHelp": "O DisputeDesk prepara um PDF voltado ao banco que combina evidências aprovadas do Shopify, sinais de pagamento, comprovantes de cumprimento, comunicação com o cliente, políticas e quaisquer documentos fornecidos pelo lojista em um pacote de evidências estruturado. <b>Se você não enviar antes do prazo, o DisputeDesk salvará o pacote no Shopify na data de vencimento e o Shopify o enviará automaticamente para a rede de cartões.</b>",
         "savingBody": "O DisputeDesk aceitou o seu envio e está fazendo upload do pacote de evidências para o Shopify. Isso geralmente é concluído em menos de 30 segundos — este aviso será atualizado automaticamente.",
         "savedTitles": {
           "outcomePosted": "Resultado publicado",

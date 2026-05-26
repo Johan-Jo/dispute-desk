@@ -664,7 +664,11 @@ export function CompleteDefencePackageCard({
         <BlockStack gap="400">
           <div>
             <h2 style={CARD_TITLE_STYLE}>{t("headingMain")}</h2>
-            <p style={CARD_HELP_STYLE}>{tPkg("cardHelp")}</p>
+            <p style={CARD_HELP_STYLE}>
+              {tPkg.rich("cardHelp", {
+                b: (chunks) => <strong>{chunks}</strong>,
+              })}
+            </p>
           </div>
 
           {/* Workflow layout. Three states:

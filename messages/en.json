@@ -1287,7 +1287,7 @@
       },
       "package": {
         "loadingAccessibilityLabel": "Loading defence package",
-        "cardHelp": "DisputeDesk prepares a bank-facing PDF that combines approved Shopify evidence, payment signals, fulfilment proof, customer communication, policies, and any merchant-supplied documents into one structured defence package. If you don't submit before the deadline, DisputeDesk will save the package to Shopify on the due date and Shopify will auto-submit it to the card network.",
+        "cardHelp": "DisputeDesk prepares a bank-facing PDF that combines approved Shopify evidence, payment signals, fulfilment proof, customer communication, policies, and any merchant-supplied documents into one structured defence package. <b>If you don't submit before the deadline, DisputeDesk will save the package to Shopify on the due date and Shopify will auto-submit it to the card network.</b>",
         "savingBody": "DisputeDesk has accepted your submission and is uploading the defence package to Shopify. This usually completes in under 30 seconds — this banner will update automatically.",
         "savedTitles": {
           "outcomePosted": "Outcome posted",
