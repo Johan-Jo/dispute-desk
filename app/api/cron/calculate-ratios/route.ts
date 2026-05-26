@@ -4,6 +4,7 @@ import {
   calculateRatiosForMonth,
   monthStart,
 } from "@/lib/liabilityShift/ratios/calculate";
+import { cronEnvGate } from "@/lib/cron/envGate";
 
 export const runtime = "nodejs";
 // Vercel free plan caps maxDuration at 60s; we expect this to finish
@@ -25,14 +26,8 @@ export const maxDuration = 300;
  * cron routes; manual triggers must include it explicitly.
  */
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization") ?? "";
-  const expected = process.env.CRON_SECRET;
-  if (expected && authHeader !== `Bearer ${expected}`) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 },
-    );
-  }
+  const gate = cronEnvGate(req);
+  if (gate) return gate;
 
   const sb = getServiceClient();
   const { data: shops, error } = await sb

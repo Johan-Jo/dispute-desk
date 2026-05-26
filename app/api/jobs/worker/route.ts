@@ -11,14 +11,13 @@ import { handleBackfillShopOrders } from "@/lib/jobs/handlers/backfillOrdersJob"
 import { handleSnapshotFraudDailyMetrics } from "@/lib/jobs/handlers/snapshotFraudDailyMetricsJob";
 import { handleBackfillFraudDailyMetrics } from "@/lib/jobs/handlers/backfillFraudDailyMetricsJob";
 import { handleReconcileMissingOrder } from "@/lib/jobs/handlers/reconcileMissingOrderJob";
+import { cronEnvGate } from "@/lib/cron/envGate";
 
 export const runtime = "nodejs";
 // Backfill jobs walk 90 UTC days × ~700ms/day ≈ 63s. Other handlers
 // typically finish in <10s. 300s leaves headroom for retries on slow
 // Shopify responses without leaking into the worker's 2-min cadence.
 export const maxDuration = 300;
-
-const CRON_SECRET = process.env.CRON_SECRET;
 
 /**
  * POST|GET /api/jobs/worker
@@ -28,13 +27,8 @@ const CRON_SECRET = process.env.CRON_SECRET;
  * Claims queued jobs and executes handlers.
  */
 async function runWorker(req: NextRequest) {
-  const secret =
-    req.headers.get("x-cron-secret") ??
-    req.headers.get("authorization")?.replace("Bearer ", "") ??
-    req.nextUrl.searchParams.get("secret");
-  if (!CRON_SECRET || secret !== CRON_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const gate = cronEnvGate(req);
+  if (gate) return gate;
 
   const workerId = `worker-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const claimed = await claimJobs(workerId, 5);

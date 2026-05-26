@@ -448,6 +448,24 @@ AI-powered pipeline that converts archive items into multilingual article drafts
 - `content_revisions`: `change_summary`, `edit_distance`, `tokens_used`.
 - `getGenerationStats()` query in `admin-queries.ts`.
 
+## Environment Identity & Cron Gate (Phase 0 of dev/prod split)
+
+Three modules enforce the dev/prod boundary at build time, server boot, and on every cron invocation. Plan: [`docs/plans/dev-prod-environment-split.plan.md`](plans/dev-prod-environment-split.plan.md). Env-var reference: [`docs/env-vars.md`](env-vars.md).
+
+- **`lib/env/build-identity.ts`** — pure function, public-env only, throws on dangerous combinations (e.g. `APP_ENV=production` with non-prod `NEXT_PUBLIC_APP_URL`; `APP_ENV=development` pointed at the prod Supabase project ref). Imported by `scripts/verify-env-identity.mjs`. No secret access.
+- **`lib/env/runtime-identity.ts`** — runs once per server process via `lib/env/bootstrap.ts` (memoized). Validates required-secret presence + shape (`TOKEN_ENCRYPTION_KEY_V1` must be exactly 64 hex). **Never prints, hashes, or derives identifiers from secret values** — variable names + boolean presence only. Invoked from `instrumentation.ts` at Node-runtime cold start.
+- **`scripts/verify-env-identity.mjs`** — CLI mirror used by `npm run release:verify` (first step) and by `package.json#prebuild` so every `npm run build` (including Vercel's) fails fast on misconfig. Tolerant of an unset `APP_ENV` so the verifier doesn't break builds before Phase 0 step 10 sets the var on Vercel.
+
+**Cron gate** — every `app/api/cron/**/route.ts` and `app/api/jobs/worker/route.ts` MUST call `cronEnvGate(req)` before doing any work. The gate:
+
+- Returns `204 No Content` when `CRON_ENABLED !== "true"` — dev default, so cron paths are a no-op without any per-route changes.
+- Returns `401` when `CRON_SECRET` is unset or doesn't match the request.
+- Accepts auth via `Authorization: Bearer`, `x-cron-secret` header, or `?secret=` query — the superset of every pre-gate auth shape across the existing routes.
+
+A vitest case (`lib/cron/__tests__/envGate.test.ts`) enumerates every cron route file and fails the build if any file does not import + call `cronEnvGate`.
+
+**Identity probe** — `GET /api/health` returns non-secret fingerprints (`appEnv`, `appUrl`, `supabaseProjectRefFp`, `shopifyClientIdFp`, `cronEnabled`, `gitSha`, `apiVersion`, `vercelEnv`, `deploymentId`, `processStartedAt`). Used by the post-deploy checklist to confirm a deployment is wired to the intended environment.
+
 ## Async Jobs
 
 ### Architecture

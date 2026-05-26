@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executePublishQueueTick } from "@/lib/resources/cron/publishQueueTick";
-
-const CRON_SECRET = process.env.CRON_SECRET;
+import { cronEnvGate } from "@/lib/cron/envGate";
 
 async function runPublish(req: NextRequest) {
-  const secret =
-    req.headers.get("x-cron-secret") ??
-    req.headers.get("authorization")?.replace("Bearer ", "") ??
-    req.nextUrl.searchParams.get("secret");
-  if (!CRON_SECRET || secret !== CRON_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const gate = cronEnvGate(req);
+  if (gate) return gate;
 
   const result = await executePublishQueueTick();
 

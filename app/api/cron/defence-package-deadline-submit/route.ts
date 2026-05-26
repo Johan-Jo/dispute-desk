@@ -29,11 +29,10 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { isDefencePackageBuilderEnabled } from "@/lib/featureFlags";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { sendDefenceDeadlineFallbackAlert } from "@/lib/email/sendDefenceDeadlineFallbackAlert";
+import { cronEnvGate } from "@/lib/cron/envGate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const CRON_SECRET = process.env.CRON_SECRET;
 
 interface Summary {
   flagOn: boolean;
@@ -46,12 +45,8 @@ interface Summary {
 }
 
 export async function GET(req: NextRequest) {
-  const secret =
-    req.headers.get("authorization")?.replace("Bearer ", "") ??
-    req.nextUrl.searchParams.get("secret");
-  if (!CRON_SECRET || secret !== CRON_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const gate = cronEnvGate(req);
+  if (gate) return gate;
 
   const summary: Summary = {
     flagOn: isDefencePackageBuilderEnabled(),

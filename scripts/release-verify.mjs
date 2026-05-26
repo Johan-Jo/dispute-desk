@@ -33,6 +33,10 @@ const c = {
 };
 
 const STEPS = [
+  // Env identity — verifies dangerous dev/prod env combinations early so
+  // misconfig fails before the heavier steps. Tolerant when APP_ENV is
+  // unset (Phase 0 pre-activation); strict once APP_ENV is set.
+  { name: "Env identity", cmd: "node", args: ["scripts/verify-env-identity.mjs"] },
   { name: "Lint", cmd: "npm", args: ["run", "lint"] },
   { name: "TypeScript", cmd: "npx", args: ["tsc", "--noEmit"] },
   // i18n guardrail — blocks hardcoded English in embedded routes.
