@@ -3133,6 +3133,7 @@ Guards at: `POST /api/disputes/:id/packs` (quota), `POST /api/rules` (feature),
 3. `POST /api/billing/topup` → `appPurchaseOneTimeCreate` → merchant redirected to Shopify approval
 4. `GET /api/billing/topup-callback` → **verifies the one-time charge with Shopify**, then grants top-up credits
 5. `GET /api/billing/usage?shop_id=...` → returns plan, monthly usage, and `shop_domain`
+6. `POST /api/billing/cancel` → `appSubscriptionCancel` on every active subscription, then writes `shops.plan = "free"` + `plan_entitlements.subscription_state = "cancelled"` inline (no Shopify confirmation flow — cancel takes effect immediately).
 
 Both `POST /api/billing/subscribe` and `POST /api/billing/topup` accept optional `host` and `shop` body params. The client reads them from `window.location.search` (App Bridge populates these on every embedded page load) and the route bakes them into the Shopify `returnUrl`. Without this, Shopify's post-approval redirect lands on the bare `disputedesk.app/app/billing` URL outside the Admin iframe — App Bridge can't bootstrap and the `s-app-nav` chrome vanishes. Both callbacks then re-attach `host`/`shop` to the final redirect URL so the merchant lands back inside Shopify Admin.
 
@@ -3172,6 +3173,53 @@ Failed verification writes audit `billing_verification_failed` (subscription) or
 `pack_credits_ledger` has no unique index on `reference`. A duplicate callback hit (e.g. merchant
 double-clicking the approval URL) could grant twice. Out of scope for the App Store readiness sprint;
 a future migration adding `unique(reference)` is the durable fix.
+
+### Plan downgrade to Free (`POST /api/billing/cancel`)
+
+Shopify App Store review (2026-05) requires that merchants be able to
+revert from a paid plan to the Free plan without contacting support
+or reinstalling the app. The fix:
+
+1. **UI (`app/(embedded)/app/billing/page.tsx`)** — the Free card's CTA
+   now resolves to a clickable *"Downgrade to Free (Sandbox)"* button
+   whenever the merchant is on a paid plan. Previously the card was
+   excluded from `isDowngrade` via `planId !== "free"`, which fell
+   through to the disabled "Get started" branch. The downgrade
+   confirmation Modal routes the free target through `handleCancelToFree`
+   instead of `handleUpgrade`.
+2. **Route (`app/api/billing/cancel/route.ts`)** —
+   - Lists `currentAppInstallation.activeSubscriptions` (the canonical
+     source — we don't trust `plan_entitlements` because the
+     reconciler may be behind).
+   - For each active subscription, runs the new
+     `appSubscriptionCancel` mutation
+     (`lib/shopify/mutations/appSubscriptionCancel.ts`) with
+     `prorate: false`. Shopify keeps merchant access through the
+     current cycle end.
+   - On success: updates `shops.plan = "free"`, upserts
+     `plan_entitlements` with `subscription_state = "cancelled"` +
+     `plan_key = "free"`, audits `billing_cancelled` with the
+     cancelled subscription IDs. The hourly reconciler later confirms
+     the same end state idempotently.
+   - On `userErrors`: audits `billing_cancel_failed` and returns 422.
+3. **One-time fresh-start grant.** The Free plan is
+   `packsLifetime: 3` measured against all-time `pack_usage_events`.
+   Without intervention, a merchant who used ≥ 3 packs on a paid
+   plan would be at the Free cap the instant they downgrade. To
+   prevent that lock-out the cancel route writes a single
+   `admin_adjustment` ledger row of size `(usage_count + 3)` —
+   `pack_balance` nets credits against all historical usage, so the
+   merchant ends up with **exactly 3 packs** of remaining balance,
+   regardless of prior consumption. Deduped by
+   `reference = "downgrade_to_free_${shop_id}"`, so a second cancel
+   or a replay does not re-grant. One fresh-start per shop, ever —
+   re-subscribing and re-cancelling does NOT mint a second batch,
+   closing the obvious abuse loop.
+
+The `/api/billing/subscribe` validation schema still rejects
+`plan_id: "free"` — it's only for paid-plan creates. The Free path is
+explicitly a separate endpoint because there is no "$0 confirmation
+URL" in Shopify's billing API.
 
 ### Billing deep link (`/app/billing?plan=…`)
 
