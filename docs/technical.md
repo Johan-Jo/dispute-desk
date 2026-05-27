@@ -54,6 +54,33 @@ protected-customer-data restriction on the DraftOrder object. The app must
 also have **Protected Customer Data** access declared in the Partner
 Dashboard (API access requests section). See `scripts/shopify/README.md`.
 
+### Protected customer fields we deliberately do NOT select
+
+Shopify treats customer **name**, **email**, **phone**, and **address**
+as protected customer fields. Apps may only request a protected field if
+they can demonstrate the field is needed for app functionality
+(App Store Review §3-style review feedback, 2026-05).
+
+DisputeDesk's posture per field:
+
+| Field   | Selected? | Why                                                                                      |
+|---------|-----------|------------------------------------------------------------------------------------------|
+| name    | yes       | Shown on the bank-facing defence package and the merchant's dispute card.                |
+| email   | yes       | Used to match customer activity for AVS / account-history evidence.                      |
+| address | yes       | Required to corroborate shipping evidence (`shippingAddress` matches `trackingInfo`).    |
+| phone   | **no**    | Not used in evidence packs, rebuttal text, scoring, or merchant UI. Removed 2026-05-27. |
+
+The phone field was selected on `Dispute.disputeEvidence.shippingAddress.phone`
+and `…billingAddress.phone` by `DISPUTE_PROFILE_QUERY` in
+`lib/shopify/queries/disputes.ts` and surfaced in the portal dispute
+detail page (`app/(portal)/portal/disputes/[id]/page.tsx`). Shopify App
+Store review flagged it as unjustified; we removed the selection, the
+DTO field on `/api/disputes/[id]/profile`, the render sites, and the
+`customer.phone` i18n key from all locales. No collector, automation
+gate, or scoring rule referenced phone, so the removal is functionally
+inert. Re-adding the field requires a new app-functionality
+justification.
+
 ### API Version
 
 Pinned to `2026-01` via `SHOPIFY_API_VERSION` env var. Default in code

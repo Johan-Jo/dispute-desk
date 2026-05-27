@@ -357,7 +357,6 @@
     "daysRemaining": "{count}d remaining",
     "name": "Name",
     "email": "Email",
-    "phone": "Phone",
     "address": "Address",
     "orderId": "Order ID",
     "date": "Date",
