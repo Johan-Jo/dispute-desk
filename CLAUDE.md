@@ -44,7 +44,7 @@ npm run lint             # ESLint (eslint.config.mjs; see README Database migrat
 npm run build            # Production build
 npm run test:e2e         # Playwright E2E
 node scripts/smoke-test.mjs  # E2E smoke test (requires live Supabase)
-npm run seed:synthetic-disputes  # Seed fake disputes for UI dev
+npm run seed:dev:synthetic-disputes  # Seed fake disputes for UI dev (requires APP_ENV=development)
 ```
 
 **Before declaring a task done (agents):** Run **`npm test`** (`vitest run`) and **`npx tsc --noEmit`**; for UI/routes/schema changes also **`npm run build`**. Fix failures before saying the work is complete—do not rely on “should be fine” without a green run.

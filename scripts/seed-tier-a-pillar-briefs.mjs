@@ -25,6 +25,11 @@ import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 import { fileURLToPath } from "url";
 import { resolve } from "path";
+import { requireProdAllowed } from "./internal/seed-guard.mjs";
+
+// PROD_SAFE: idempotent insert into content_archive_items. Requires
+// explicit --allow-prod when APP_ENV=production.
+requireProdAllowed();
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 config({ path: resolve(__dirname, "../.env.local") });

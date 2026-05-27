@@ -11,6 +11,11 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import { getAdminToken } from "./admin-token.mjs";
+import { requireDev } from "../internal/seed-guard.mjs";
+
+// Dev-only: writes orders/fulfillments to a Shopify test store. Refuses
+// to run outside APP_ENV=development.
+requireDev();
 
 // --- Env ---------------------------------------------------------------------
 
