@@ -460,6 +460,34 @@ function BillingPageInner() {
     [t]
   );
 
+  // Downgrade to Free goes through a dedicated cancel endpoint — there
+  // is no Shopify "subscribe to $0" confirmation flow. The endpoint
+  // cancels the active app subscription and writes plan_entitlements
+  // back to free inline so the page refreshes to the free state
+  // without waiting for the hourly reconciler.
+  const handleCancelToFree = useCallback(async () => {
+    setUpgradeError(null);
+    setUpgrading("free");
+    try {
+      const res = await fetch("/api/billing/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data?.ok) {
+        await fetchUsage();
+        return;
+      }
+      const message = typeof data?.error === "string" ? data.error : t("billing.upgradeFailed");
+      setUpgradeError(message);
+    } catch {
+      setUpgradeError(t("billing.upgradeFailed"));
+    } finally {
+      setUpgrading(null);
+    }
+  }, [t, fetchUsage]);
+
   /** Deep link from marketing: `/app/billing?plan=…` */
   useEffect(() => {
     if (loading || !plan || !planParam) return;
@@ -761,7 +789,12 @@ function BillingPageInner() {
                   const currentTier = PLAN_TIER[plan?.id ?? "free"];
                   const cardTier = PLAN_TIER[planId];
                   const isUpgrade = cardTier > currentTier;
-                  const isDowngrade = cardTier < currentTier && planId !== "free";
+                  // Free MUST be a valid downgrade target. Excluding it
+                  // (`planId !== "free"`) was the bug Shopify App Store
+                  // review flagged 2026-05: a merchant on a paid plan
+                  // saw a disabled "Get started" button on the Free card
+                  // and could not revert without contacting support.
+                  const isDowngrade = cardTier < currentTier;
 
                   return (
                     <div
@@ -995,7 +1028,11 @@ function BillingPageInner() {
             onAction: async () => {
               const target = downgradeTarget;
               setDowngradeTarget(null);
-              await handleUpgrade(target);
+              if (target === "free") {
+                await handleCancelToFree();
+              } else {
+                await handleUpgrade(target);
+              }
             },
           }}
           secondaryActions={[
