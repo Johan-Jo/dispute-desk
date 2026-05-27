@@ -168,7 +168,11 @@ export interface DisputeDetailResponse {
   dispute: DisputeDetailNode;
 }
 
-/** Fetches dispute with full order/customer/address for profile display. */
+/** Fetches dispute with full order/customer/address for profile display.
+ *  Note: `phone` is intentionally NOT selected on either address. Shopify
+ *  App Store review (2026-05) flagged customer phone as protected data that
+ *  may only be accessed when the app demonstrably needs it; DisputeDesk
+ *  does not use phone in evidence packs, rebuttal text, or merchant UI. */
 export const DISPUTE_PROFILE_QUERY = `
   query DisputeProfile($id: ID!) {
     dispute(id: $id) {
@@ -187,7 +191,6 @@ export const DISPUTE_PROFILE_QUERY = `
           country
           countryCode
           zip
-          phone
         }
         billingAddress {
           name
@@ -199,7 +202,6 @@ export const DISPUTE_PROFILE_QUERY = `
           country
           countryCode
           zip
-          phone
         }
       }
       order {
@@ -239,7 +241,6 @@ export interface DisputeProfileAddress {
   country: string | null;
   countryCode: string | null;
   zip: string | null;
-  phone: string | null;
 }
 
 export interface DisputeProfileEvidence {

@@ -36,7 +36,6 @@ interface ProfileAddress {
   country?: string | null;
   countryCode?: string | null;
   zip?: string | null;
-  phone?: string | null;
 }
 
 interface DisputeProfile {
@@ -46,7 +45,6 @@ interface DisputeProfile {
   total?: { amount: string; currencyCode: string };
   customerName: string | null;
   email: string | null;
-  phone: string | null;
   displayAddress: ProfileAddress | null;
   shippingAddress: ProfileAddress | null;
   billingAddress: ProfileAddress | null;
@@ -71,7 +69,7 @@ interface Pack {
 
 const DEMO_DISPUTES: Record<string, {
   dispute: Dispute;
-  customer: { name: string; email: string; phone: string; address: string };
+  customer: { name: string; email: string; address: string };
   order: { id: string; date: string; items: string; shipping: string; tracking: string };
   timeline: { date: string; event: string; detail: string }[];
 }> = {
@@ -82,7 +80,7 @@ const DEMO_DISPUTES: Record<string, {
       status: "needs_response", reason: "fraudulent", amount: 145.00, currency_code: "USD",
       initiated_at: "2026-02-20", due_at: "2026-03-05", last_synced_at: "2026-02-24",
     },
-    customer: { name: "John Smith", email: "john.smith@example.com", phone: "+1 (555) 123-4567", address: "123 Main St, New York, NY 10001" },
+    customer: { name: "John Smith", email: "john.smith@example.com", address: "123 Main St, New York, NY 10001" },
     order: { id: "#1234", date: "2026-02-15", items: "Premium Wireless Headphones x1", shipping: "USPS Priority Mail", tracking: "9400111899223456789012" },
     timeline: [
       { date: "2026-02-20", event: "disputeCreated", detail: "chargebackInitiated" },
@@ -98,7 +96,7 @@ const DEMO_DISPUTES: Record<string, {
       status: "under_review", reason: "productNotReceived", amount: 89.50, currency_code: "USD",
       initiated_at: "2026-02-21", due_at: "2026-03-06", last_synced_at: "2026-02-24",
     },
-    customer: { name: "Sarah Johnson", email: "sarah.j@example.com", phone: "+1 (555) 234-5678", address: "456 Oak Ave, Los Angeles, CA 90001" },
+    customer: { name: "Sarah Johnson", email: "sarah.j@example.com", address: "456 Oak Ave, Los Angeles, CA 90001" },
     order: { id: "#1235", date: "2026-02-10", items: "Organic Skincare Set x1", shipping: "FedEx Ground", tracking: "7489102948573920184" },
     timeline: [
       { date: "2026-02-21", event: "disputeCreated", detail: "customerClaimsNotReceived" },
@@ -112,7 +110,7 @@ const DEMO_DISPUTES: Record<string, {
       status: "needs_response", reason: "productUnacceptable", amount: 234.00, currency_code: "USD",
       initiated_at: "2026-02-22", due_at: "2026-03-07", last_synced_at: "2026-02-24",
     },
-    customer: { name: "Mike Davis", email: "mike.d@example.com", phone: "+1 (555) 345-6789", address: "789 Elm St, Chicago, IL 60601" },
+    customer: { name: "Mike Davis", email: "mike.d@example.com", address: "789 Elm St, Chicago, IL 60601" },
     order: { id: "#1236", date: "2026-02-12", items: "Smart Watch Pro x1", shipping: "UPS 2-Day", tracking: "1Z999AA10123456784" },
     timeline: [
       { date: "2026-02-22", event: "disputeCreated", detail: "customerClaimsQualityIssues" },
@@ -125,7 +123,7 @@ const DEMO_DISPUTES: Record<string, {
       status: "won", reason: "creditNotProcessed", amount: 167.25, currency_code: "USD",
       initiated_at: "2026-02-23", due_at: "2026-03-08", last_synced_at: "2026-02-24",
     },
-    customer: { name: "Emma Wilson", email: "emma@example.com", phone: "+1 (555) 456-7890", address: "321 Pine Rd, Seattle, WA 98101" },
+    customer: { name: "Emma Wilson", email: "emma@example.com", address: "321 Pine Rd, Seattle, WA 98101" },
     order: { id: "#1237", date: "2026-02-14", items: "Desk Lamp x1", shipping: "USPS Ground", tracking: "9405511899223456789013" },
     timeline: [
       { date: "2026-02-23", event: "disputeCreated", detail: "creditNotProcessed" },
@@ -140,7 +138,7 @@ const DEMO_DISPUTES: Record<string, {
       status: "under_review", reason: "fraudulent", amount: 299.99, currency_code: "USD",
       initiated_at: "2026-02-23", due_at: "2026-03-08", last_synced_at: "2026-02-24",
     },
-    customer: { name: "Alex Brown", email: "alex@example.com", phone: "+1 (555) 567-8901", address: "555 Cedar Ln, Denver, CO 80201" },
+    customer: { name: "Alex Brown", email: "alex@example.com", address: "555 Cedar Ln, Denver, CO 80201" },
     order: { id: "#1238", date: "2026-02-16", items: "Wireless Speaker x1", shipping: "FedEx Express", tracking: "7489102948573920185" },
     timeline: [
       { date: "2026-02-23", event: "disputeCreated", detail: "chargebackInitiated" },
@@ -154,7 +152,7 @@ const DEMO_DISPUTES: Record<string, {
       status: "lost", reason: "subscriptionCanceled", amount: 75.00, currency_code: "USD",
       initiated_at: "2026-02-24", due_at: "2026-03-09", last_synced_at: "2026-02-24",
     },
-    customer: { name: "Lisa Anderson", email: "lisa@example.com", phone: "+1 (555) 678-9012", address: "777 Birch St, Austin, TX 78701" },
+    customer: { name: "Lisa Anderson", email: "lisa@example.com", address: "777 Birch St, Austin, TX 78701" },
     order: { id: "#1239", date: "2026-02-18", items: "Subscription Box x1", shipping: "USPS First Class", tracking: "9400111899223456789014" },
     timeline: [
       { date: "2026-02-24", event: "disputeCreated", detail: "subscriptionCanceled" },
@@ -322,7 +320,6 @@ function DemoDisputeDetail({ disputeId }: { disputeId: string }) {
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between"><dt className="text-[#667085]">{t("name")}</dt><dd className="text-[#0B1220] font-medium">{customer.name}</dd></div>
             <div className="flex justify-between"><dt className="text-[#667085]">{t("email")}</dt><dd className="text-[#0B1220]">{customer.email}</dd></div>
-            <div className="flex justify-between"><dt className="text-[#667085]">{t("phone")}</dt><dd className="text-[#0B1220]">{customer.phone}</dd></div>
             <div className="flex justify-between"><dt className="text-[#667085]">{t("address")}</dt><dd className="text-[#0B1220] text-right max-w-[200px]">{customer.address}</dd></div>
           </dl>
         </div>
@@ -537,7 +534,6 @@ export default function DisputeDetailPage() {
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between gap-2"><dt className="text-[#667085] shrink-0">{t("name")}</dt><dd className="text-[#0B1220] font-medium text-right">{profile?.customerName ?? dispute.customer_display_name ?? dispute.order_name ?? "—"}</dd></div>
               <div className="flex justify-between gap-2"><dt className="text-[#667085] shrink-0">{t("email")}</dt><dd className="text-[#0B1220] text-right break-all">{profile?.email ?? "—"}</dd></div>
-              <div className="flex justify-between gap-2"><dt className="text-[#667085] shrink-0">{t("phone")}</dt><dd className="text-[#0B1220] text-right">{profile?.phone ?? "—"}</dd></div>
               <div className="flex justify-between gap-2"><dt className="text-[#667085] shrink-0">{t("address")}</dt><dd className="text-[#0B1220] text-right max-w-[220px]">{formatAddress(profile?.displayAddress ?? profile?.shippingAddress)}</dd></div>
               {profile?.shippingAddress && profile.shippingAddress !== profile.displayAddress && (
                 <div className="flex justify-between gap-2 pt-2 border-t border-[#E5E7EB]"><dt className="text-[#667085] shrink-0">{t("shipping")}</dt><dd className="text-[#0B1220] text-right max-w-[220px]">{formatAddress(profile.shippingAddress)}</dd></div>
