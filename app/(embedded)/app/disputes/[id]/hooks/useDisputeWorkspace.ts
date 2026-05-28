@@ -410,8 +410,29 @@ export function useDisputeWorkspace(disputeId: string) {
     // and it runs from buildDefencePackageJob (enqueued via the pack
     // build path, not from the workspace hook).
 
-    // Stop polling if not building
-    const isActive = json.pack?.status === "queued" || json.pack?.status === "building";
+    // Polling cadence:
+    //   - pack queued/building → 4 s (active build, want fast updates)
+    //   - pack ready but defence-package facts haven't landed yet → keep polling
+    //     at 4 s. The defence-package job runs ~30–90 s after build_pack
+    //     finishes (LLM call); without this branch the hook would freeze the
+    //     UI on the fact-less first response and never pick up the facts.
+    //     Heuristic: presentationStatus === "DRAFT" + zero positive facts
+    //     means the LLM step hasn't materialised yet. Once any positive
+    //     fact lands, OR the pack is saved/submitted, we relax to background.
+    //   - otherwise → stop the active interval, but the visibilitychange
+    //     listener below re-fetches whenever the merchant returns to the tab
+    //     so a long-running build that finishes while the tab is hidden
+    //     still updates immediately on focus.
+    const positiveFactCount =
+      json.submissionSummary?.counts?.usedAsPositiveBankArgument ?? 0;
+    const stillWaitingForFacts =
+      json.pack?.status === "ready" &&
+      json.presentationStatus === "DRAFT" &&
+      positiveFactCount === 0;
+    const isActive =
+      json.pack?.status === "queued" ||
+      json.pack?.status === "building" ||
+      stillWaitingForFacts;
     if (!isActive && pollRef.current) {
       clearInterval(pollRef.current);
       pollRef.current = undefined;
@@ -421,8 +442,25 @@ export function useDisputeWorkspace(disputeId: string) {
   useEffect(() => {
     fetchAll();
     pollRef.current = setInterval(fetchAll, 4000);
+    // Re-fetch on tab/iframe focus. Shopify Admin keeps the embedded
+    // iframe alive across nav and even some refresh patterns, so a
+    // merchant returning to a dispute can otherwise stare at state
+    // that's hours stale. Listening to both `focus` and
+    // `visibilitychange` covers desktop tabs (focus) and mobile /
+    // iframe-switched contexts (visibilitychange) — Safari fires only
+    // one of the two depending on how the user re-enters.
+    const onFocus = () => {
+      void fetchAll();
+    };
+    const onVisible = () => {
+      if (!document.hidden) void fetchAll();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [fetchAll]);
 
