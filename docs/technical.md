@@ -1016,6 +1016,14 @@ Color severity is intentionally softened: HIGH risk is amber-orange (`#F97316`),
 
 API: `GET /api/dashboard/insights/initial-analysis` bundles everything the banner + page need — historical totals, 90d fraud-rollup percentages, 90d chargeback rate + classified health, risk breakdown, and import state. Single endpoint, single fetch per surface.
 
+### Plan Recommendation (post-install fitting)
+
+Merchants land on Free by default (`lib/billing/checkQuota.ts` null-coalesces `shop.plan` to `"free"`). Once the 90-day historical import completes and `shop.plan IN (null, "free")`, the insights endpoint returns a `recommendation` object computed by `lib/billing/recommendPlan.ts` — a pure function over chargeback volume.
+
+**Tier thresholds** (monthly chargebacks): `0 → free`, `1–14 → starter`, `15–70 → growth`, `71+ → scale`. Sized to `max(chargebackOrders90d / 3, chargebackOrders30d)` so a quiet 60 days followed by a noisy 30 doesn't undersize the recommendation — under-sizing means the merchant hits the pack cap mid-month. A spike is declared (and the `spike_observed` reason emitted) when `30d count > 1.5 × smoothed 90d/3` AND `30d count ≥ 3` (absolute floor — without it, 1→2 chargebacks trips a meaningless "spike"). Reason discriminators: `no_history | low_volume | volume_fits | spike_observed`. `partialHistory` mirrors `historicalImportScopeGranted === "default_window"` so the UI can flag the recommendation as based on Shopify's ~60-day default window.
+
+Surfaced on `/app/insights/initial-analysis` via `PlanRecommendationCard` (sits above the hero on Free shops only; suppressed once the merchant upgrades). CTA goes through the existing `/api/billing/subscribe` flow — standard 14-day trial, no special trial mechanics for recommendation-accepted upgrades. Tests: `lib/billing/__tests__/recommendPlan.test.ts` — 11 cases covering boundaries (14/15, 70/71), spike + spike-floor, empty-shop vs zero-chargebacks distinction, and partial-history flagging. PR 2 will add the persistent `plan_recommendations` table, dashboard banner, and monthly recompute cron.
+
 ### Operational Checkpoints
 
 Rule-engine layer in `lib/insights/checkpoints.ts` that turns the already-computed page metrics into a sorted, capped list of sourced observations. Every rule emits a severity in `{healthy | info | consider | breach}`; the UI sorts by severity (most urgent first, ties resolve by declaration order) and caps at 5 visible.

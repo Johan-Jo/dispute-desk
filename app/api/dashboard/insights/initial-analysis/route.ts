@@ -23,6 +23,7 @@ import {
   classifyScopeGrant,
   enqueueShopOrdersBackfill,
 } from "@/lib/disputes/backfillOrders";
+import { recommendPlan, type PlanRecommendation } from "@/lib/billing/recommendPlan";
 
 export const runtime = "nodejs";
 
@@ -93,6 +94,12 @@ interface InsightsResponse {
   historicalImportCompletedAt: string | null;
   currentScopeGrant: "default_window" | "read_all_orders";
   dismissedBanners: Record<string, string>;
+
+  /** Plan recommendation derived from chargeback volume. Present only
+   *  when historicalImportStatus === "complete" AND shop is on Free
+   *  (null plan or "free"). Risk Intel page renders the recommendation
+   *  card from this; PR 2 will add the dashboard banner. */
+  recommendation: PlanRecommendation | null;
 }
 
 interface PeriodWindow {
@@ -372,7 +379,7 @@ export async function GET(req: NextRequest) {
   const { data: shopRow } = await sb
     .from("shops")
     .select(
-      "historical_import_status, historical_import_orders_total, historical_import_since_date, historical_import_scope_granted, historical_import_completed_at, dismissed_banners",
+      "plan, historical_import_status, historical_import_orders_total, historical_import_since_date, historical_import_scope_granted, historical_import_completed_at, dismissed_banners",
     )
     .eq("id", shopId)
     .single();
@@ -578,6 +585,24 @@ export async function GET(req: NextRequest) {
     currentScopeGrant,
     dismissedBanners:
       (shopRow?.dismissed_banners as Record<string, string> | null) ?? {},
+
+    // Recommendation is computed only when the import has completed AND
+    // the merchant is still on Free. Paid-plan shops don't see an
+    // "upgrade to X" card on their own data — that would be noise.
+    recommendation:
+      status === "complete" &&
+      ((shopRow?.plan as string | null) ?? "free") === "free"
+        ? recommendPlan({
+            chargebackOrders90d: win90.chargebackOrders,
+            chargebackOrders30d: current30d.chargebackOrders,
+            ordersAnalyzed: ordersTotal,
+            historicalScopeGranted:
+              (shopRow?.historical_import_scope_granted as
+                | "default_window"
+                | "read_all_orders"
+                | null) ?? null,
+          })
+        : null,
   };
 
   return NextResponse.json(response);

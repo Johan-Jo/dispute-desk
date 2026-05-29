@@ -2066,7 +2066,28 @@
     "extraCreditsTitle": "Créditos extras ({total} packs)",
     "extraCreditsBundle": "+{packs} pacotes",
     "extraCreditsExpires": "expira em {date}",
-    "extraCreditsNoExpiry": "sem expiração"
+    "extraCreditsNoExpiry": "sem expiração",
+    "recommendation": {
+      "cardTitle": "Recomendado para sua loja: {plan}",
+      "subtitle": "Baseado em {orders} pedidos e {chargebacks} estornos nos últimos 90 dias.",
+      "partialHistoryNote": "Baseado em histórico parcial — a Shopify só concedeu acesso a cerca de 60 dias de pedidos. Conceda acesso completo para uma recomendação mais precisa.",
+      "monthlyVolume": "≈ {rate} estornos por mês",
+      "headroomNote": "{multiplier}× de folga para picos",
+      "reason_no_history": "Ainda não há histórico de pedidos suficiente para recomendar um plano. Vamos verificar novamente após os primeiros pedidos.",
+      "reason_low_volume": "Free ainda cabe — sem estornos nos últimos 90 dias. Faça upgrade quando seu volume aumentar.",
+      "reason_volume_fits": "{plan} cobre seu volume mensal com folga para picos.",
+      "reason_spike_observed": "Seus últimos 30 dias estão acima da média de 90 dias. {plan} oferece folga caso a alta continue.",
+      "compareHeader": "Como os planos se encaixam no seu volume",
+      "compareCapPerMonth": "{count} pacotes/mês",
+      "compareCapLifetime": "{count} pacotes vitalícios",
+      "compareFitRecommended": "Recomendado",
+      "compareFitBelow": "Abaixo do seu volume",
+      "compareFitTight": "Apertado — sem folga",
+      "compareFitGenerous": "Mais do que precisa",
+      "ctaStartTrial": "Iniciar avaliação de 14 dias — {plan}",
+      "ctaSeePlans": "Ver todos os planos",
+      "ctaStaysFreeFooter": "Você fica no Free até aceitar. Revisamos isso mensalmente."
+    }
   },
   "rules": {
     "title": "Regras",

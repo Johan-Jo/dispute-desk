@@ -2066,7 +2066,28 @@
     "extraCreditsTitle": "Extra credits ({total} packs)",
     "extraCreditsBundle": "+{packs} packs",
     "extraCreditsExpires": "expires {date}",
-    "extraCreditsNoExpiry": "no expiry"
+    "extraCreditsNoExpiry": "no expiry",
+    "recommendation": {
+      "cardTitle": "Recommended for your store: {plan}",
+      "subtitle": "Based on {orders} orders and {chargebacks} chargebacks in the last 90 days.",
+      "partialHistoryNote": "Based on partial history — Shopify only granted access to ~60 days of orders. Grant full history for a more accurate fit.",
+      "monthlyVolume": "≈ {rate} chargebacks per month",
+      "headroomNote": "{multiplier}× headroom for spikes",
+      "reason_no_history": "Not enough order history yet to size a plan. We'll re-check after your first orders come in.",
+      "reason_low_volume": "Free still fits — you have no chargebacks in the last 90 days. Upgrade when your volume rises.",
+      "reason_volume_fits": "{plan} covers your monthly volume with room for spikes.",
+      "reason_spike_observed": "Your last 30 days are above your 90-day average. {plan} gives you headroom in case the surge holds.",
+      "compareHeader": "How the plans fit your volume",
+      "compareCapPerMonth": "{count} packs/month",
+      "compareCapLifetime": "{count} lifetime packs",
+      "compareFitRecommended": "Recommended",
+      "compareFitBelow": "Below your volume",
+      "compareFitTight": "Tight — no headroom",
+      "compareFitGenerous": "More than you need",
+      "ctaStartTrial": "Start 14-day {plan} trial",
+      "ctaSeePlans": "See all plans",
+      "ctaStaysFreeFooter": "You stay on Free until you accept. We re-check this monthly."
+    }
   },
   "rules": {
     "title": "Rules",
