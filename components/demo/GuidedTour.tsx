@@ -115,7 +115,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     step: 8,
     title: "Built from your real order history",
-    body: "DisputeDesk analyzed your last 90 days of Shopify orders to calibrate every defence pack. Risk patterns, delivery signals, payment verification rates — all already understood before your next dispute lands. That's why the packs above are ready in seconds, not days. Install DisputeDesk to do this on your own store.",
+    body: "DisputeDesk reads your last 90 days of Shopify orders to calibrate every defence pack — risk, delivery, and payment signals understood before the next dispute lands. That's why packs are ready in seconds.",
     path: "/demo/insights/initial-analysis",
     selector: '[data-tour="insights-hero"]',
     nextPath: null,
@@ -518,7 +518,7 @@ export function GuidedTourCallout() {
                 onClick={() => setInstallModalOpen(true)}
                 className="inline-flex items-center gap-1.5 h-10 px-5 rounded-lg text-sm font-semibold bg-[#1D4ED8] text-white hover:bg-[#1E40AF] transition-colors"
               >
-                Install DisputeDesk
+                DisputeDesk is free to try!
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             ) : (
