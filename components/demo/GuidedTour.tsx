@@ -201,11 +201,31 @@ function useTargetRect(selector: string | null, deps: unknown[]): TargetRect | n
     const measure = () => {
       const el = document.querySelector(selector) as HTMLElement | null;
       if (!el) {
-        setRect(null);
+        setRect((prev) => (prev === null ? prev : null));
         return false;
       }
       const r = el.getBoundingClientRect();
-      setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+      // Round to whole pixels and skip updates when nothing has changed
+      // — prevents the ring from jittering as sub-pixel layout values
+      // wobble during Polaris re-flows after data loads.
+      const next = {
+        top: Math.round(r.top),
+        left: Math.round(r.left),
+        width: Math.round(r.width),
+        height: Math.round(r.height),
+      };
+      setRect((prev) => {
+        if (
+          prev &&
+          prev.top === next.top &&
+          prev.left === next.left &&
+          prev.width === next.width &&
+          prev.height === next.height
+        ) {
+          return prev;
+        }
+        return next;
+      });
       return true;
     };
 
@@ -401,6 +421,7 @@ export function GuidedTourCallout() {
             <rect width="100%" height="100%" fill="white" />
             {hasTarget && (
               <rect
+                key={`${step.step}-cutout`}
                 x={targetLeft}
                 y={targetTop}
                 width={targetWidth}
@@ -427,10 +448,14 @@ export function GuidedTourCallout() {
       </svg>
 
       {/* Glowing ring around the target — separate from the overlay so
-          it sits above the cutout and animates smoothly. */}
+          it sits above the cutout. Position SNAPS to each rect change
+          (no transition on top/left/width/height) so the ring never
+          visibly drifts when the underlying page layout shifts after
+          data load. Only opacity is animated, for a clean fade-in. */}
       {hasTarget && (
         <div
-          className="fixed z-50 pointer-events-none transition-all duration-300"
+          key={`${step.step}-ring`}
+          className="fixed z-50 pointer-events-none"
           style={{
             top: targetTop,
             left: targetLeft,
@@ -438,9 +463,16 @@ export function GuidedTourCallout() {
             height: targetHeight,
             borderRadius: 8,
             boxShadow: "0 0 0 4px #7C3AED, 0 0 0 8px rgba(124, 58, 237, 0.3), 0 8px 32px rgba(124, 58, 237, 0.4)",
+            animation: "dd-ring-fade-in 180ms ease-out",
           }}
         />
       )}
+      <style>{`
+        @keyframes dd-ring-fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `}</style>
 
       {/* Callout card */}
       <div
