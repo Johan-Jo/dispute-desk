@@ -2768,7 +2768,7 @@
       },
       "upgradingPlan": {
         "title": "So upgraden Sie Ihren Plan",
-        "body": "Zum Upgrade:\n\n1. Gehen Sie zur Abrechnungsseite.\n2. Wählen Sie den gewünschten Plan.\n3. Klicken Sie \"Upgraden\".\n4. Genehmigen Sie in Shopify.\n\nBezahlpläne enthalten 7 Tage Testphase.\n\n**Von der Marketing-Website:** Schaltflächen im Preisbereich verlinken auf die Abrechnung mit `?plan=…`, damit die passende Stufe gewählt oder das Upgrade gestartet wird. Öffnen Sie DisputeDesk über **Shopify Admin → Apps → DisputeDesk**, damit Ihre Shopsitzung gültig ist; andernfalls werden Sie ggf. aufgefordert, die App zuerst im Admin zu öffnen."
+        "body": "Zum Upgrade:\n\n1. Gehen Sie zur Abrechnungsseite.\n2. Wählen Sie den gewünschten Plan.\n3. Klicken Sie \"Upgraden\".\n4. Genehmigen Sie in Shopify.\n\nBezahlpläne enthalten 7 Tage Testphase.\n\n**Von der Marketing-Website:** Schaltflächen im Preisbereich verlinken auf die Abrechnung mit `?plan=…`, damit die passende Stufe gewählt oder das Upgrade gestartet wird. Öffnen Sie DisputeDesk über **Shopify Admin → Apps → DisputeDesk**, damit Ihre Shopsitzung gültig ist; andernfalls werden Sie ggf. aufgefordert, die App zuerst im Admin zu öffnen.\n\n**Unsicher, welcher Tarif?** Sobald DisputeDesk die Bestellhistorie Ihres Shops analysiert hat, schlägt es den Tarif vor, der zu Ihrem Rückbuchungsvolumen passt – mit Puffer für umsatzstarke Monate. Sie sehen das auf der Seite **Erstanalyse** und als Banner auf Ihrem Dashboard. Es ist nur ein Vorschlag: Sie bleiben auf Free, bis Sie zustimmen, und wir prüfen es monatlich, wenn sich Ihr Volumen ändert."
       },
       "packLimits": {
         "title": "Paketlimits und Kontingente verstehen",

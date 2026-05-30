@@ -2768,7 +2768,7 @@
       },
       "upgradingPlan": {
         "title": "Cómo actualizar su plan",
-        "body": "Para actualizar:\n\n1. Vaya a la página de Facturación.\n2. Elija el plan deseado.\n3. Haga clic en \"Actualizar\".\n4. Apruebe en Shopify.\n\nLos planes de pago incluyen 7 días de prueba gratis.\n\n**Desde el sitio de marketing:** los botones de precios enlazan a Facturación con `?plan=…` para el nivel correcto o para iniciar la mejora. Abra DisputeDesk desde **Shopify Admin → Aplicaciones → DisputeDesk** para tener sesión válida; si no, puede que deba abrir la app desde Admin primero."
+        "body": "Para actualizar:\n\n1. Vaya a la página de Facturación.\n2. Elija el plan deseado.\n3. Haga clic en \"Actualizar\".\n4. Apruebe en Shopify.\n\nLos planes de pago incluyen 7 días de prueba gratis.\n\n**Desde el sitio de marketing:** los botones de precios enlazan a Facturación con `?plan=…` para el nivel correcto o para iniciar la mejora. Abra DisputeDesk desde **Shopify Admin → Aplicaciones → DisputeDesk** para tener sesión válida; si no, puede que deba abrir la app desde Admin primero.\n\n**¿No sabes qué plan elegir?** Cuando DisputeDesk termina de analizar el historial de pedidos de tu tienda, sugiere el plan que se ajusta a tu volumen de contracargos, con margen para los meses de mayor actividad. Lo verás en la página **Análisis inicial** y como un banner en tu panel. Es solo una sugerencia: sigues en Free hasta que aceptes, y lo revisamos cada mes a medida que cambia tu volumen."
       },
       "packLimits": {
         "title": "Entender los límites de paquetes",
