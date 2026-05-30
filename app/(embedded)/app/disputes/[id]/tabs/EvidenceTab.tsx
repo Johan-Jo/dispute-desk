@@ -260,7 +260,9 @@ export default function EvidenceTab({ workspace }: Props) {
               pushed the case-strength "moderate / strong / weak" pill
               below the fold on dense flows (post-save success banner
               + rebuild outcome + window-open notice). */}
-      <CaseSummaryCard {...sections.caseSummary} />
+      <div data-tour="evidence-summary">
+        <CaseSummaryCard {...sections.caseSummary} />
+      </div>
 
       {failedBanner}
       {windowClosedBanner}
@@ -292,11 +294,13 @@ export default function EvidenceTab({ workspace }: Props) {
               "Internal-only signals" card below) are passed through as
               the third disposition bucket so the merchant sees one
               source of truth. */}
-      <EvidenceUsedSection
-        items={sections.usedInDefense}
-        lineItems={data?.evidenceLineItems ?? []}
-        internalSignals={sections.internalOnly}
-      />
+      <div data-tour="evidence-used">
+        <EvidenceUsedSection
+          items={sections.usedInDefense}
+          lineItems={data?.evidenceLineItems ?? []}
+          internalSignals={sections.internalOnly}
+        />
+      </div>
 
       {/* §4 — Missing or weak evidence (collapses when empty)
               Inline actions: Upload evidence + Mark as not applicable.
