@@ -135,15 +135,18 @@ export function GuidedTourCallout() {
   if (step.path !== pathname) return null;
 
   const handleNext = () => {
+    const next = TOUR_STEPS.find((s) => s.step === step.step + 1);
+    // Advance the visible step number FIRST so re-render under the new
+    // pathname doesn't fall back to an earlier step. The auto-advance
+    // useEffect only moves forward, never back, so this is safe.
+    if (next) setStep(next.step);
     if (step.nextPath && step.nextPath !== pathname) {
       router.push(step.nextPath);
     }
-    const next = TOUR_STEPS.find((s) => s.step === step.step + 1);
-    if (next) setStep(next.step);
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center px-4 pointer-events-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 pointer-events-none">
       <div className="bg-white border border-[#E5E7EB] rounded-2xl shadow-2xl p-10 pointer-events-auto w-full max-w-2xl">
         <div className="flex items-start justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">

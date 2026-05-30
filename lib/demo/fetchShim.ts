@@ -16,6 +16,7 @@
 
 import { DEMO_DISPUTES } from "./fixtures/disputes";
 import { DEMO_DASHBOARD_STATS_REAL, DEMO_RECENT_ACTIVITY_REAL } from "./fixtures/realDashboardStats";
+import { buildWorkspaceData } from "./fixtures/workspaceData";
 
 const ORIGINAL_FETCH = typeof window !== "undefined" ? window.fetch.bind(window) : null;
 
@@ -139,7 +140,7 @@ const HANDLERS: Handler[] = [
     },
   },
 
-  // ── Dispute detail — supports any of the 6 fixture IDs
+  // ── Dispute detail (legacy demo route) — supports any of the 6 fixture IDs
   {
     match: (u) => /^\/api\/disputes\/dp-\d+$/.test(u.pathname),
     respond: (u) => {
@@ -148,6 +149,46 @@ const HANDLERS: Handler[] = [
       if (!d) return jsonResponse({ error: "not found" }, 404);
       return jsonResponse(d);
     },
+  },
+
+  // ── Dispute workspace — drives the real WorkspaceShell (3-tab Polaris UI)
+  // The hook fetches /api/disputes/[id]/workspace?locale=en and feeds the
+  // response through useDisputeWorkspace. See lib/demo/fixtures/workspaceData.ts.
+  {
+    match: (u) => /^\/api\/disputes\/dp-\d+\/workspace$/.test(u.pathname),
+    respond: (u) => {
+      const id = u.pathname.split("/").slice(-2, -1)[0];
+      const data = buildWorkspaceData(id);
+      if (!data) return jsonResponse({ error: "Dispute not found" }, 404);
+      return jsonResponse(data);
+    },
+  },
+
+  // ── Pack-level no-op endpoints (regenerate / save / waive / etc).
+  // Real workspace hook POSTs to many /api/packs/[id]/* endpoints. None of
+  // them need to do anything in demo — return ok so the UI's optimistic
+  // updates land cleanly.
+  {
+    match: (u) => /^\/api\/packs\/[^/]+\//.test(u.pathname),
+    respond: () => jsonResponse({ ok: true }),
+  },
+
+  // ── Defence package endpoints (regenerate / finalize / submit / preview)
+  {
+    match: (u) => /^\/api\/defence-packages\/[^/]+\//.test(u.pathname),
+    respond: () => jsonResponse({ ok: true }),
+  },
+
+  // ── Dispute-scoped packs endpoint (used by workspace hook to enqueue rebuild)
+  {
+    match: (u) => /^\/api\/disputes\/dp-\d+\/packs$/.test(u.pathname),
+    respond: () => jsonResponse({ ok: true, packId: "pack-demo" }),
+  },
+
+  // ── Dispute-scoped sync trigger (per-dispute, distinct from /api/disputes/sync)
+  {
+    match: (u) => /^\/api\/disputes\/dp-\d+\/sync$/.test(u.pathname),
+    respond: () => jsonResponse({ ok: true }),
   },
 
   // ── Recent activity feed (used by some dashboard widgets)
