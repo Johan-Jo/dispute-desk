@@ -351,7 +351,31 @@ export function buildWorkspaceData(disputeId: string) {
       missingScopes: [],
     },
     defencePackage: {
-      latest: null,
+      // Minimal but complete DefencePackageRow so CompleteDefencePackageCard
+      // mounts. Shape mirrors the interface defined in
+      // app/(embedded)/app/disputes/[id]/tabs/sections/CompleteDefencePackageCard.tsx.
+      // Skip for covered/blocked disputes — card hides itself for those.
+      latest: isCovered || isBlocked ? null : {
+        id: `pkg-${fixture.id}`,
+        version: 1,
+        status: "draft",
+        package_mode: "full",
+        generated_at: rebase("2026-01-13T11:30:00Z"),
+        generated_by: "system",
+        pdf_path: `/api/packs/pack-${fixture.id}/download`,
+        evidence_hash: `hash-${fixture.id}`,
+        llm_model: "claude-opus-4-7",
+        prompt_family: "fraud_v3",
+        prompt_version: 1,
+        reason_code_module: reasonUpper.toLowerCase(),
+        validation_status: "ok",
+        validation_errors: [],
+        failure_code: null,
+        failure_reason: null,
+        submitted_at: null,
+        narrative_json: null,
+        facts_json: null,
+      },
       bankFacing: null,
       currentPromptVersion: 1,
     },
