@@ -42,8 +42,13 @@ interface DisputeDeskNavItem {
   matchPrefix: string;
 }
 
-// Mirrors the real embedded nav defined in
-// app/(embedded)/app/AppNavSidebar.tsx — same items, same order.
+// Demo-focused subset of the real embedded nav (defined in
+// app/(embedded)/app/AppNavSidebar.tsx). Policies, Billing, Settings,
+// and Help are hidden in the demo — they're either merchant-config
+// pages (Settings, Policies) that don't tell the value story, or
+// orthogonal flows (Billing, Help) that distract from the tour path.
+// The pages themselves still exist under /demo/* for direct linking,
+// just not surfaced in the sidebar.
 const DISPUTEDESK_ITEMS: DisputeDeskNavItem[] = [
   { label: "Dashboard", href: "/demo", matchPrefix: "/demo" },
   { label: "Disputes", href: "/demo/disputes", matchPrefix: "/demo/disputes" },
@@ -51,10 +56,6 @@ const DISPUTEDESK_ITEMS: DisputeDeskNavItem[] = [
   { label: "Automation", href: "/demo/rules", matchPrefix: "/demo/rules" },
   { label: "Playbooks", href: "/demo/packs", matchPrefix: "/demo/packs" },
   { label: "Insights", href: "/demo/insights/initial-analysis", matchPrefix: "/demo/insights" },
-  { label: "Policies", href: "/demo/policies", matchPrefix: "/demo/policies" },
-  { label: "Billing", href: "/demo/billing", matchPrefix: "/demo/billing" },
-  { label: "Settings", href: "/demo/settings", matchPrefix: "/demo/settings" },
-  { label: "Help", href: "/demo/help", matchPrefix: "/demo/help" },
 ];
 
 export function InertSidebar() {

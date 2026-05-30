@@ -203,29 +203,69 @@ const HANDLERS: Handler[] = [
     respond: () => jsonResponse({ ok: true, synced: 0 }),
   },
 
-  // ── Rules list — empty (no custom rules in demo)
+  // ── Rules list — one rule per dispute family covering both phases,
+  //    so the Coverage page renders all 7 families as fully configured.
+  //    Rule shape per RuleInput in lib/coverage/deriveLifecycleCoverage.ts.
   {
     match: (u) => u.pathname === "/api/rules",
-    respond: () => jsonResponse([]),
+    respond: () => jsonResponse([
+      { id: "rule-fraud", enabled: true, priority: 1, match: { reason: ["FRAUDULENT", "UNRECOGNIZED"], phase: ["inquiry", "chargeback"] }, action: { mode: "automated", pack_template_id: "tpl-fraud" } },
+      { id: "rule-pnr", enabled: true, priority: 2, match: { reason: ["PRODUCT_NOT_RECEIVED"], phase: ["inquiry", "chargeback"] }, action: { mode: "automated", pack_template_id: "tpl-pnr" } },
+      { id: "rule-nad", enabled: true, priority: 3, match: { reason: ["PRODUCT_UNACCEPTABLE", "NOT_AS_DESCRIBED"], phase: ["inquiry", "chargeback"] }, action: { mode: "review_first", pack_template_id: "tpl-nad" } },
+      { id: "rule-sub", enabled: true, priority: 4, match: { reason: ["SUBSCRIPTION_CANCELED"], phase: ["inquiry", "chargeback"] }, action: { mode: "automated", pack_template_id: "tpl-sub" } },
+      { id: "rule-refund", enabled: true, priority: 5, match: { reason: ["CREDIT_NOT_PROCESSED"], phase: ["inquiry", "chargeback"] }, action: { mode: "review_first", pack_template_id: "tpl-refund" } },
+      { id: "rule-dup", enabled: true, priority: 6, match: { reason: ["DUPLICATE"], phase: ["inquiry", "chargeback"] }, action: { mode: "automated", pack_template_id: "tpl-dup" } },
+      { id: "rule-general", enabled: true, priority: 7, match: { reason: ["GENERAL"], phase: ["inquiry", "chargeback"] }, action: { mode: "review_first", pack_template_id: "tpl-general" } },
+    ]),
   },
 
-  // ── Packs library — four templates the merchant could install
+  // ── Packs library — ACTIVE packs per family. dispute_type uses
+  //    canonical Shopify reason codes (matched in deriveLifecycleCoverage's
+  //    packMatchesFamily). status must be uppercase ACTIVE — the coverage
+  //    page filters on p.status === "ACTIVE".
   {
     match: (u) => u.pathname === "/api/packs",
     respond: () => jsonResponse({
       packs: [
-        { id: "pk-fraud", name: "Fraudulent — verified cardholder", dispute_type: "fraudulent", status: "active", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z" },
-        { id: "pk-pnr", name: "Product not received — tracked delivery", dispute_type: "product_not_received", status: "active", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z" },
-        { id: "pk-sub", name: "Subscription canceled — policy + history", dispute_type: "subscription_canceled", status: "active", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z" },
-        { id: "pk-dup", name: "Duplicate charge — payment reconciliation", dispute_type: "duplicate", status: "draft", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z" },
+        { id: "pk-fraud", name: "Fraudulent — verified cardholder", dispute_type: "FRAUDULENT", status: "ACTIVE", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z", template_id: "tpl-fraud" },
+        { id: "pk-pnr", name: "Product not received — tracked delivery", dispute_type: "PRODUCT_NOT_RECEIVED", status: "ACTIVE", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z", template_id: "tpl-pnr" },
+        { id: "pk-nad", name: "Product not as described — listing snapshot", dispute_type: "PRODUCT_UNACCEPTABLE", status: "ACTIVE", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z", template_id: "tpl-nad" },
+        { id: "pk-sub", name: "Subscription canceled — policy + history", dispute_type: "SUBSCRIPTION_CANCELED", status: "ACTIVE", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z", template_id: "tpl-sub" },
+        { id: "pk-refund", name: "Credit not processed — refund timeline", dispute_type: "CREDIT_NOT_PROCESSED", status: "ACTIVE", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z", template_id: "tpl-refund" },
+        { id: "pk-dup", name: "Duplicate charge — payment reconciliation", dispute_type: "DUPLICATE", status: "ACTIVE", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z", template_id: "tpl-dup" },
+        { id: "pk-general", name: "General — best-effort evidence pack", dispute_type: "GENERAL", status: "ACTIVE", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z", template_id: "tpl-general" },
       ],
     }),
   },
 
-  // ── Reason mappings — empty so coverage page doesn't crash
+  // ── Reason mappings — one per family per phase. template_id must be
+  //    non-null so deriveLifecycleCoverage treats the phase as configured.
   {
     match: (u) => u.pathname === "/api/reason-mappings",
-    respond: () => jsonResponse({ mappings: [] }),
+    respond: () => {
+      const families: Array<[string, string]> = [
+        ["FRAUDULENT", "tpl-fraud"],
+        ["UNRECOGNIZED", "tpl-fraud"],
+        ["PRODUCT_NOT_RECEIVED", "tpl-pnr"],
+        ["PRODUCT_UNACCEPTABLE", "tpl-nad"],
+        ["SUBSCRIPTION_CANCELED", "tpl-sub"],
+        ["CREDIT_NOT_PROCESSED", "tpl-refund"],
+        ["DUPLICATE", "tpl-dup"],
+        ["GENERAL", "tpl-general"],
+      ];
+      const phases: Array<"inquiry" | "chargeback"> = ["inquiry", "chargeback"];
+      const mappings = families.flatMap(([reason, templateId]) =>
+        phases.map((phase) => ({
+          reason_code: reason,
+          dispute_phase: phase,
+          template_id: templateId,
+          template_name: reason.replace(/_/g, " ").toLowerCase(),
+          family: reason.toLowerCase(),
+          is_active: true,
+        })),
+      );
+      return jsonResponse({ mappings });
+    },
   },
 
   // ── Setup automation — empty active packs + empty modes
