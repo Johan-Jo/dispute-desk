@@ -259,7 +259,17 @@ export function GuidedTourCallout() {
       if (cancelled) return;
       const el = document.querySelector(step.selector!) as HTMLElement | null;
       if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+        // Scroll so the target sits ~80px from the top of the viewport
+        // — keeps the spotlit element high enough that the callout
+        // below (which can be ~300px tall) stays fully on-screen.
+        // Falls back to scrollIntoView for short pages where the
+        // manual offset would over-scroll.
+        const rect = el.getBoundingClientRect();
+        const TOP_MARGIN = 80;
+        const scrollContainer =
+          document.scrollingElement ?? document.documentElement;
+        const targetScroll = scrollContainer.scrollTop + rect.top - TOP_MARGIN;
+        scrollContainer.scrollTo({ top: Math.max(0, targetScroll), behavior: "smooth" });
         scrolledForStepRef.current = step.step;
         return;
       }
@@ -320,18 +330,34 @@ export function GuidedTourCallout() {
   const targetWidth = hasTarget ? rect!.width + PADDING * 2 : 0;
   const targetHeight = hasTarget ? rect!.height + PADDING * 2 : 0;
 
-  // Callout placement: prefer below the target; if it'd overflow the
-  // viewport, place above. If no target, center on the screen.
+  // Callout placement: prefer below the target; if it'd overflow,
+  // try above; if that also overflows, pin to whichever edge gives
+  // more room. Vertical position is always clamped to the viewport
+  // with a 16px margin so the callout never drifts off-screen.
   const CALLOUT_MAX_WIDTH = 480;
   const CALLOUT_ESTIMATED_HEIGHT = 280;
+  const VIEWPORT_MARGIN = 16;
   const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 800;
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
-  const calloutBelow = hasTarget && targetTop + targetHeight + CALLOUT_ESTIMATED_HEIGHT + 24 < viewportHeight;
-  const calloutTop = !hasTarget
-    ? viewportHeight / 2 - CALLOUT_ESTIMATED_HEIGHT / 2
-    : calloutBelow
-      ? targetTop + targetHeight + 16
-      : targetTop - CALLOUT_ESTIMATED_HEIGHT - 16;
+  const fitsBelow = hasTarget && targetTop + targetHeight + 16 + CALLOUT_ESTIMATED_HEIGHT + VIEWPORT_MARGIN < viewportHeight;
+  const fitsAbove = hasTarget && targetTop - 16 - CALLOUT_ESTIMATED_HEIGHT - VIEWPORT_MARGIN > 0;
+  let calloutTop: number;
+  if (!hasTarget) {
+    calloutTop = viewportHeight / 2 - CALLOUT_ESTIMATED_HEIGHT / 2;
+  } else if (fitsBelow) {
+    calloutTop = targetTop + targetHeight + 16;
+  } else if (fitsAbove) {
+    calloutTop = targetTop - CALLOUT_ESTIMATED_HEIGHT - 16;
+  } else {
+    // Tall target — pin callout to the bottom of the viewport with
+    // 16px margin. Better to overlap the target than to disappear.
+    calloutTop = viewportHeight - CALLOUT_ESTIMATED_HEIGHT - VIEWPORT_MARGIN;
+  }
+  // Final clamp so callout always sits in [VIEWPORT_MARGIN, viewportHeight - CALLOUT_ESTIMATED_HEIGHT - VIEWPORT_MARGIN]
+  calloutTop = Math.max(
+    VIEWPORT_MARGIN,
+    Math.min(viewportHeight - CALLOUT_ESTIMATED_HEIGHT - VIEWPORT_MARGIN, calloutTop),
+  );
   const calloutLeftCentered = !hasTarget
     ? viewportWidth / 2 - CALLOUT_MAX_WIDTH / 2
     : Math.max(16, Math.min(viewportWidth - CALLOUT_MAX_WIDTH - 16, targetLeft + targetWidth / 2 - CALLOUT_MAX_WIDTH / 2));
