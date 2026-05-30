@@ -769,14 +769,16 @@ export default function InitialAnalysisPage() {
 
         {/* ── Hero ─────────────────────────────────────────────────── */}
         <Layout.Section>
-          <HeroDisplay
-            ordersAnalyzed={data.ordersAnalyzed}
-            highRiskPct={data.highRiskPct}
-            fulfilledHighRiskPct={data.fulfilledHighRiskPct}
-            miniBarData={distSegments}
-            miniBarTotal={riskTotal}
-            t={t}
-          />
+          <div data-tour="insights-hero">
+            <HeroDisplay
+              ordersAnalyzed={data.ordersAnalyzed}
+              highRiskPct={data.highRiskPct}
+              fulfilledHighRiskPct={data.fulfilledHighRiskPct}
+              miniBarData={distSegments}
+              miniBarTotal={riskTotal}
+              t={t}
+            />
+          </div>
         </Layout.Section>
 
         {/* ── 30d KPIs, split into three thematic groups ──────────────

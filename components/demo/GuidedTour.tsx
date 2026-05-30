@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback } f
 import { useRouter, usePathname } from "next/navigation";
 import { X, ArrowRight } from "lucide-react";
 import { cn } from "@/components/ui/utils";
+import { InstallModal } from "./InstallModal";
 
 /**
  * Spotlight guided tour.
@@ -43,18 +44,44 @@ export interface TourStep {
 }
 
 export const TOUR_STEPS: TourStep[] = [
-  // ─── Hero dispute detail — Overview tab (3 steps) ────────────────────────
+  // ─── Dashboard intro (3 steps) ───────────────────────────────────────────
   {
     step: 1,
-    title: "DisputeDesk detects the dispute",
-    body: "When a customer files a chargeback in Shopify Payments, DisputeDesk receives the webhook within seconds and starts collecting evidence automatically.",
+    title: "Your dispute command center",
+    body: "Every Shopify chargeback shows up here automatically — synced through DisputeDesk's webhook the moment a customer files. No manual import, no missed cases.",
+    path: "/demo",
+    selector: '[data-help-guide="dashboard-attention-banner"]',
+    nextPath: "/demo",
+  },
+  {
+    step: 2,
+    title: "Performance at a glance",
+    body: "Active disputes, win rate, recovered revenue, amount at risk. Track the operations queue and the financial picture side by side — built from the same normalized dispute history that drives every other surface.",
+    path: "/demo",
+    selector: '[data-tour="dashboard-kpis"]',
+    nextPath: "/demo",
+  },
+  {
+    step: 3,
+    title: "Recent disputes — your work queue",
+    body: "The cases that need you next, sorted by urgency. Click any row to open the workspace and see what DisputeDesk built. Let's go look at one.",
+    path: "/demo",
+    selector: '[data-tour="dashboard-recent-disputes"]',
+    nextPath: "/demo/disputes/dp-2401",
+  },
+
+  // ─── Hero dispute detail — Overview tab (3 steps) ────────────────────────
+  {
+    step: 4,
+    title: "DisputeDesk built this for you",
+    body: "Within 4 seconds of the webhook, DisputeDesk pulled order, payment, fulfillment, and customer history. The pack is ready — you didn't lift a finger.",
     path: "/demo/disputes/dp-2401",
     selector: '[data-help-guide="detail-header"]',
     preClickSelector: '[data-help-guide="detail-tab-overview"]',
     nextPath: "/demo/disputes/dp-2401",
   },
   {
-    step: 2,
+    step: 5,
     title: "Case strength at a glance",
     body: "Strong, Moderate, or Weak — based on AVS/CVV matches, 3-D Secure status, fulfillment data, and customer history. This case is Strong, so DisputeDesk can auto-submit once you approve.",
     path: "/demo/disputes/dp-2401",
@@ -63,64 +90,43 @@ export const TOUR_STEPS: TourStep[] = [
     nextPath: "/demo/disputes/dp-2401",
   },
   {
-    step: 3,
-    title: "Evidence collected automatically",
-    body: "8 evidence signals were pulled from Shopify Payments, AfterShip, IPinfo, and the customer's order history — in 4 seconds, with zero merchant input.",
+    step: 6,
+    title: "Evidence, auto-collected",
+    body: "8 evidence signals pulled from Shopify Payments, AfterShip, IPinfo, and the customer's order history — with zero merchant input. Now let's see what gets sent to the bank.",
     path: "/demo/disputes/dp-2401",
     selector: '[data-help-guide="detail-overview-evidence"]',
     preClickSelector: '[data-help-guide="detail-tab-overview"]',
     nextPath: "/demo/disputes/dp-2401",
   },
 
-  // ─── Hero dispute detail — Evidence tab (2 steps) ────────────────────────
-  {
-    step: 4,
-    title: "Every piece of evidence, scored",
-    body: "Each item is graded by how the card networks weigh it. Strong rows (green) make up your bank argument; moderate rows (amber) add context; weak rows stay internal so they can't hurt you.",
-    path: "/demo/disputes/dp-2401",
-    selector: '[data-tour="evidence-used"]',
-    preClickSelector: '[data-help-guide="detail-tab-evidence"]',
-    nextPath: "/demo/disputes/dp-2401",
-  },
-
   // ─── Hero dispute detail — Review & Submit tab (2 steps) ─────────────────
   // Tab id is `submit` (not `review`) — see WorkspaceShell.tsx tabs array.
   {
-    step: 5,
-    title: "The defence package",
-    body: "DisputeDesk generates a bank-optimised PDF and maps each evidence field to the correct Shopify evidence slot. You review before submission — or let auto-mode handle Strong cases.",
+    step: 7,
+    title: "Bank-optimised defence package",
+    body: "A PDF that mirrors what a fraud analyst would write — built from your real evidence, mapped to the correct Shopify evidence slots. You review before submission, or let auto-mode handle Strong cases for you.",
     path: "/demo/disputes/dp-2401",
     selector: '[data-tour="review-defence-package"]',
     preClickSelector: '[data-help-guide="detail-tab-submit"]',
     nextPath: "/demo/disputes/dp-2401",
   },
   {
-    step: 6,
-    title: "Final inclusion review",
-    body: "Every row that goes to the bank is listed here. You can override DisputeDesk's calls if you have additional context. The defence package is regenerated on every change.",
+    step: 8,
+    title: "Every row, accountable",
+    body: "DisputeDesk shows you exactly what's going to the bank and why — strong arguments, supporting context, and what stays internal. Override anything if you have extra context. Regenerate on demand.",
     path: "/demo/disputes/dp-2401",
     selector: '[data-tour="review-inclusion"]',
     preClickSelector: '[data-help-guide="detail-tab-submit"]',
-    nextPath: "/demo/disputes",
+    nextPath: "/demo/insights/initial-analysis",
   },
 
-  // ─── Disputes list (1 step) ──────────────────────────────────────────────
+  // ─── Insights — the closer ───────────────────────────────────────────────
   {
-    step: 7,
-    title: "All your disputes, one queue",
-    body: "Strong cases ready to submit. Covered cases (Shopify Protect). Fatal-loss cases blocked. Weak cases parked for your input. You always know what needs you.",
-    path: "/demo/disputes",
-    selector: '[data-help-guide="disputes-table"]',
-    nextPath: "/demo/install",
-  },
-
-  // ─── Install conversion (1 step) ─────────────────────────────────────────
-  {
-    step: 8,
-    title: "Install DisputeDesk on your store",
-    body: "14-day free trial. No success fees. Connect in two clicks from the Shopify App Store.",
-    path: "/demo/install",
-    selector: null, // centered modal — install page has its own CTA
+    step: 9,
+    title: "Built from your real order history",
+    body: "DisputeDesk analyzed your last 90 days of Shopify orders to calibrate every defence pack. Risk patterns, delivery signals, payment verification rates — all already understood before your next dispute lands. That's why the packs above are ready in seconds, not days.",
+    path: "/demo/insights/initial-analysis",
+    selector: '[data-tour="insights-hero"]',
     nextPath: null,
     isFinalStep: true,
   },
@@ -239,6 +245,7 @@ export function GuidedTourCallout() {
   const { currentStep, setStep, dismissed, dismiss } = useGuidedTour();
   const preClickedRef = useRef<string | null>(null);
   const scrolledForStepRef = useRef<number | null>(null);
+  const [installModalOpen, setInstallModalOpen] = useState(false);
   // SSR + client read different window/document state (rect positions,
   // viewportHeight, target presence) so the rendered HTML can't match
   // hydration. Defer the entire overlay to post-mount on the client.
@@ -463,15 +470,14 @@ export function GuidedTourCallout() {
               Skip the tour
             </button>
             {step.isFinalStep ? (
-              <a
-                href={process.env.NEXT_PUBLIC_SHOPIFY_APP_STORE_URL?.trim() || "https://disputedesk.app/install"}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => setInstallModalOpen(true)}
                 className="inline-flex items-center gap-1.5 h-10 px-5 rounded-lg text-sm font-semibold bg-[#1D4ED8] text-white hover:bg-[#1E40AF] transition-colors"
               >
                 Install DisputeDesk
                 <ArrowRight className="w-3.5 h-3.5" />
-              </a>
+              </button>
             ) : (
               <button
                 type="button"
@@ -485,6 +491,8 @@ export function GuidedTourCallout() {
           </div>
         </div>
       </div>
+
+      <InstallModal open={installModalOpen} onClose={() => setInstallModalOpen(false)} />
     </>
   );
 }

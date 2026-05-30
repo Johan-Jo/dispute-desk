@@ -407,13 +407,15 @@ export default function EmbeddedDashboardPage() {
         </Layout.Section>
 
         <Layout.Section>
-          <DashboardKpis stats={stats} loading={statsLoading} period={period} onPeriodChange={setPeriod} />
+          <div data-tour="dashboard-kpis">
+            <DashboardKpis stats={stats} loading={statsLoading} period={period} onPeriodChange={setPeriod} />
+          </div>
         </Layout.Section>
 
         {/* Recent disputes — moved up per the Tier 2 plan. Operational
             queue belongs above intelligence; the merchant's next
             action is usually on a dispute row, not on a metric. */}
-        {recentDisputesPreview}
+        <div data-tour="dashboard-recent-disputes">{recentDisputesPreview}</div>
 
         {/* Operational insights — drill-down intelligence. Compact
             strip; full breakdown lives on /app/insights/initial-analysis. */}
