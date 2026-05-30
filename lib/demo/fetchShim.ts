@@ -111,6 +111,125 @@ const HANDLERS: Handler[] = [
     match: (u) => u.pathname === "/api/disputes/sync",
     respond: () => jsonResponse({ ok: true, synced: 0 }),
   },
+
+  // ── Rules list — empty (no custom rules in demo)
+  {
+    match: (u) => u.pathname === "/api/rules",
+    respond: () => jsonResponse([]),
+  },
+
+  // ── Packs library — four templates the merchant could install
+  {
+    match: (u) => u.pathname === "/api/packs",
+    respond: () => jsonResponse({
+      packs: [
+        { id: "pk-fraud", name: "Fraudulent — verified cardholder", dispute_type: "fraudulent", status: "active", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z" },
+        { id: "pk-pnr", name: "Product not received — tracked delivery", dispute_type: "product_not_received", status: "active", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z" },
+        { id: "pk-sub", name: "Subscription canceled — policy + history", dispute_type: "subscription_canceled", status: "active", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z" },
+        { id: "pk-dup", name: "Duplicate charge — payment reconciliation", dispute_type: "duplicate", status: "draft", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z" },
+      ],
+    }),
+  },
+
+  // ── Reason mappings — empty so coverage page doesn't crash
+  {
+    match: (u) => u.pathname === "/api/reason-mappings",
+    respond: () => jsonResponse({ mappings: [] }),
+  },
+
+  // ── Setup automation — empty active packs + empty modes
+  {
+    match: (u) => u.pathname === "/api/setup/automation",
+    respond: () => jsonResponse({
+      activePacks: [],
+      installedTemplateIds: [],
+      pack_modes: {},
+      packAutomation: true,
+    }),
+  },
+
+  // ── Templates library — empty so the install modal opens cleanly
+  {
+    match: (u) => u.pathname === "/api/templates",
+    respond: () => jsonResponse({ templates: [] }),
+  },
+
+  // ── Automation settings — demo defaults (auto-build on, review mode)
+  {
+    match: (u) => u.pathname === "/api/automation/settings",
+    respond: () => jsonResponse({
+      shop_id: "demo",
+      auto_build_enabled: true,
+      auto_save_enabled: false,
+      auto_save_min_score: 80,
+      enforce_no_blockers: true,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-15T10:00:00Z",
+    }),
+  },
+
+  // ── Billing usage — Growth plan, 34/100 packs used
+  {
+    match: (u) => u.pathname === "/api/billing/usage",
+    respond: () => jsonResponse({
+      plan: {
+        id: "growth",
+        name: "Growth",
+        price: 129,
+        packsPerMonth: 100,
+        autoPack: true,
+        rules: true,
+      },
+      usage: { packsUsed: 34, packsLimit: 100, packsRemaining: 66 },
+      topups: [],
+      trialEligible: false,
+      shop_domain: "demo-store.myshopify.com",
+    }),
+  },
+
+  // ── Insights initial analysis — minimal shape, enough to render
+  {
+    match: (u) => u.pathname === "/api/dashboard/insights/initial-analysis",
+    respond: () => jsonResponse({
+      ordersAnalyzed: 1432,
+      historicalImportStatus: "complete",
+      deliveryOps: {
+        trackingCoverage: 92,
+        avgFulfillmentHours: 18,
+        signedDeliveryRate: 38,
+        deliveryFailureRate: 1.2,
+      },
+      paymentVerification: {
+        avs3dsBoth: 71,
+        cvvAvailability: 88,
+      },
+      fraudRisk: {
+        sessionCoverage: 86,
+        riskClassifications: { low: 1120, medium: 248, high: 64 },
+        chargebacksByRisk: { low: 1, medium: 3, high: 2 },
+      },
+      operationalCheckpoints: {
+        webhooksHealthy: true,
+        shopifyProtectActive: true,
+        threeDsEnabled: true,
+      },
+      liabilityShift: {
+        coveragePercent: 71,
+        recoveredCount: 14,
+        recoveredAmount: 4287.5,
+        currency: "USD",
+      },
+      chargebackRate: 0.42,
+      chargebackBand: "healthy",
+      sparkline: [3, 5, 4, 6, 4, 3, 5, 4, 6, 5, 4, 6],
+    }),
+  },
+
+  // ── Feedback submit — pretend success
+  {
+    match: (u) => u.pathname === "/api/feedback",
+    respond: () => jsonResponse({ ok: true }),
+  },
 ];
 
 /**
