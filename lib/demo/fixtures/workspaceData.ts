@@ -97,6 +97,54 @@ function buildChecklist(disputeId: string) {
   });
 }
 
+/** Realistic per-field payload shapes that satisfy
+ *  `categorizeEvidenceField` in lib/argument/canonicalEvidence.ts —
+ *  drives the client's `calculateCaseStrength` so the hero variant
+ *  computes correctly (likely_to_win / could_win / hard_to_win).
+ *
+ *  Without these, the embedded UI sees evidence items but classifies
+ *  them as `invalid` (no AVS code) or `supporting` (no signature) and
+ *  the overall strength bottoms out at "weak".
+ */
+const STRONG_PAYLOADS: Record<string, Record<string, unknown>> = {
+  avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M", fieldsProvided: ["avs_cvv_match"] },
+  billing_address_match: { match: true, fieldsProvided: ["billing_address_match"] },
+  shipping_tracking: { proofType: "signature_confirmed", deliveredToVerifiedAddress: true, fieldsProvided: ["shipping_tracking"] },
+  delivery_proof: { proofType: "signature_confirmed", deliveredToVerifiedAddress: true, fieldsProvided: ["delivery_proof"] },
+  refund_policy: { acceptedAtCheckout: true, acceptanceTimestamp: "2026-01-09T14:20:00Z", fieldsProvided: ["refund_policy"] },
+  shipping_policy: { acceptedAtCheckout: true, acceptanceTimestamp: "2026-01-09T14:20:00Z", fieldsProvided: ["shipping_policy"] },
+  cancellation_policy: { acceptedAtCheckout: true, acceptanceTimestamp: "2026-01-09T14:20:00Z", fieldsProvided: ["cancellation_policy"] },
+  activity_log: { decisiveSessionProof: true, digitalAccessUsed: true, fieldsProvided: ["activity_log"] },
+  customer_communication: { customerConfirmsOrder: true, fieldsProvided: ["customer_communication"] },
+  customer_account_info: { priorUndisputedOrders: 4, totalOrders: 5, disputeFreeHistory: true, fieldsProvided: ["customer_account_info"] },
+  order_confirmation: { fieldsProvided: ["order_confirmation"] },
+  supporting_documents: { signedContract: true, fieldsProvided: ["supporting_documents"] },
+  product_description: { fieldsProvided: ["product_description"] },
+  duplicate_explanation: { fieldsProvided: ["duplicate_explanation"] },
+};
+
+/** Weak/ambiguous payload variants — used by dp-2406 (weak case demo)
+ *  so the UI categorizes its evidence as `supporting`/`invalid`,
+ *  driving `overall: "weak"` → heroVariant `hard_to_win`. */
+const WEAK_PAYLOADS: Record<string, Record<string, unknown>> = {
+  // No AVS code → invalid
+  avs_cvv_match: { fieldsProvided: ["avs_cvv_match"] },
+  // No `match: true` flag → invalid
+  billing_address_match: { fieldsProvided: ["billing_address_match"] },
+  // No proofType → invalid (label_created default)
+  shipping_tracking: { fieldsProvided: ["shipping_tracking"] },
+  delivery_proof: { fieldsProvided: ["delivery_proof"] },
+  order_confirmation: { fieldsProvided: ["order_confirmation"] },
+};
+
+function payloadFor(disputeId: string, field: string): Record<string, unknown> {
+  const fixture = DEMO_DISPUTES.find((d) => d.id === disputeId);
+  if (fixture?.strength === "weak") {
+    return WEAK_PAYLOADS[field] ?? { fieldsProvided: [field] };
+  }
+  return STRONG_PAYLOADS[field] ?? { fieldsProvided: [field] };
+}
+
 function buildEvidenceItems(disputeId: string) {
   const present = FIELDS_PRESENT_BY_DISPUTE[disputeId] ?? [];
   return present.map((field, idx) => ({
@@ -104,7 +152,7 @@ function buildEvidenceItems(disputeId: string) {
     type: field,
     label: FIELD_META[field].label,
     source: "auto_shopify",
-    payload: { fieldsProvided: [field] },
+    payload: payloadFor(disputeId, field),
     created_at: rebase("2026-01-13T10:00:00Z"),
   }));
 }

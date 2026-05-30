@@ -237,9 +237,44 @@ export function GuidedTourCallout() {
   const pathname = usePathname();
   const { currentStep, setStep, dismissed, dismiss } = useGuidedTour();
   const preClickedRef = useRef<string | null>(null);
+  const scrolledForStepRef = useRef<number | null>(null);
 
   const step = TOUR_STEPS.find((s) => s.step === currentStep);
   const stepActiveOnThisPage = !!step && step.path === pathname && !dismissed;
+
+  // Auto-scroll the target into view when the step changes. Runs once
+  // per step (tracked via scrolledForStepRef) so re-renders from rect
+  // updates don't keep yanking the page back. The retry loop waits for
+  // the target to mount (handles tab-switch + Polaris's deferred render).
+  useEffect(() => {
+    if (!stepActiveOnThisPage || !step?.selector) {
+      scrolledForStepRef.current = null;
+      return;
+    }
+    if (scrolledForStepRef.current === step.step) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    const trigger = () => {
+      if (cancelled) return;
+      const el = document.querySelector(step.selector!) as HTMLElement | null;
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+        scrolledForStepRef.current = step.step;
+        return;
+      }
+      if (attempts++ < 30) {
+        setTimeout(trigger, 100);
+      }
+    };
+    // Give pre-click (tab switch) a beat to render, then scroll.
+    const delay = step.preClickSelector ? 200 : 0;
+    const timer = setTimeout(trigger, delay);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [stepActiveOnThisPage, step]);
 
   // Pre-click the tab button for steps that target a different tab.
   // Runs whenever the active step / pathname changes.
