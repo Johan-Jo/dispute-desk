@@ -54,12 +54,18 @@ export function decideAlert(input: AlertDecisionInput): AlertDecision {
     return baseDecision("digest", "below_confidence_gate", null);
   }
 
-  if (analysis.category === "migration_intent" && analysis.signal_score >= 8) {
+  // Thresholds lowered 2026-05-30 (was migration≥8 / transparency≥8 /
+  // reserve_fear≥9 / competitor≥8). At observed volume nothing cleared the
+  // old bar for a week despite a healthy pipeline. Dedup cooldowns
+  // (CATEGORY_COOLDOWN_HOURS / CLUSTER_COOLDOWN_HOURS) and the circuit
+  // breaker still cap email volume, so a lower entry bar surfaces real pain
+  // without flooding.
+  if (analysis.category === "migration_intent" && analysis.signal_score >= 6) {
     return baseDecision("immediate", "migration_intent", null);
   }
   if (
     analysis.category === "transparency_frustration" &&
-    analysis.signal_score >= 8
+    analysis.signal_score >= 6
   ) {
     return baseDecision(
       "immediate",
@@ -67,12 +73,12 @@ export function decideAlert(input: AlertDecisionInput): AlertDecision {
       CATEGORY_COOLDOWN_HOURS
     );
   }
-  if (analysis.category === "reserve_fear" && analysis.signal_score >= 9) {
+  if (analysis.category === "reserve_fear" && analysis.signal_score >= 7) {
     return baseDecision("immediate", "reserve_fear", CATEGORY_COOLDOWN_HOURS);
   }
   if (
     analysis.category === "competitor_frustration" &&
-    analysis.signal_score >= 8
+    analysis.signal_score >= 6
   ) {
     return baseDecision(
       "immediate",

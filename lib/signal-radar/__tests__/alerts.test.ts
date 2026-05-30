@@ -16,8 +16,8 @@ function input(over: Partial<Parameters<typeof decideAlert>[0]["analysis"]> = {}
 }
 
 describe("decideAlert", () => {
-  it("fires immediate for transparency_frustration with score >= 8", () => {
-    const d = decideAlert(input());
+  it("fires immediate for transparency_frustration with score >= 6", () => {
+    const d = decideAlert(input({ signal_score: 6 }));
     expect(d.kind).toBe("immediate");
     expect(d.category_dedup_key).toBe(
       "immediate:transparency_frustration:reddit:r/shopify"
@@ -26,9 +26,14 @@ describe("decideAlert", () => {
     expect(d.category_cooldown_hours).toBe(4);
   });
 
-  it("fires migration_intent at score 8 with no category cooldown", () => {
+  it("transparency_frustration below 6 is digest", () => {
+    const d = decideAlert(input({ signal_score: 5 }));
+    expect(d.kind).toBe("digest");
+  });
+
+  it("fires migration_intent at score 6 with no category cooldown", () => {
     const d = decideAlert(
-      input({ category: "migration_intent", signal_score: 8 })
+      input({ category: "migration_intent", signal_score: 6 })
     );
     expect(d.kind).toBe("immediate");
     expect(d.category_cooldown_hours).toBeNull();
@@ -36,16 +41,16 @@ describe("decideAlert", () => {
     expect(d.reason).toBe("migration_intent");
   });
 
-  it("requires score >= 9 for reserve_fear", () => {
-    const lower = decideAlert(input({ category: "reserve_fear", signal_score: 8 }));
+  it("requires score >= 7 for reserve_fear", () => {
+    const lower = decideAlert(input({ category: "reserve_fear", signal_score: 6 }));
     expect(lower.kind).toBe("digest");
-    const higher = decideAlert(input({ category: "reserve_fear", signal_score: 9 }));
+    const higher = decideAlert(input({ category: "reserve_fear", signal_score: 7 }));
     expect(higher.kind).toBe("immediate");
   });
 
-  it("fires immediate for competitor_frustration at score >= 8", () => {
+  it("fires immediate for competitor_frustration at score >= 6", () => {
     const d = decideAlert(
-      input({ category: "competitor_frustration", signal_score: 8 })
+      input({ category: "competitor_frustration", signal_score: 6 })
     );
     expect(d.kind).toBe("immediate");
   });

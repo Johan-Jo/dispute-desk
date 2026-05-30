@@ -5,6 +5,11 @@ import { ingestLoop } from "@/lib/signal-radar/ingest-loop";
 import { getEnabledAdapters } from "@/lib/signal-radar/sources";
 import { getServiceClient } from "@/lib/supabase/server";
 
+// NOTE: this route keeps its own insert+after() flow (rather than calling
+// runTrackedIngest) because it must return the run_id to the browser BEFORE
+// the long ingest runs — the UI polls refresh-status with that id. The cron
+// path has no client to poll, so it uses the simpler synchronous helper.
+
 export const runtime = "nodejs";
 export const maxDuration = 300;
 

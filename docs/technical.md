@@ -4244,12 +4244,14 @@ Filters: skip `[deleted]`/`[removed]`, skip `collapsed=true`, skip `score < 1`, 
 
 **App Store sentiment-polarity gate** (`lib/signal-radar/sources/app-store.ts`): reviews with `rating >= 4` are dropped at ingest. Positive reviews on chargeback apps (e.g. "5/5 — Disputifier's support resolved my chargeback alert") were misclassified as `support_failure` / `competitor_frustration` because the classifier sees "support" + "chargeback" keywords without sentiment context. Only 1-3 star reviews ingest — those are the actual pain signal.
 
-**Alerts** (`lib/signal-radar/alerts.ts`): pure `decideAlert()` rules:
-- `migration_intent` AND `signal_score >= 8` → immediate, **no** category cooldown, but cluster cooldown 24h still applies, hard cap 5/day
-- `transparency_frustration` AND `signal_score >= 8` → immediate, 4h category cooldown + 24h cluster cooldown
-- `reserve_fear` AND `signal_score >= 9` → immediate, 4h category cooldown + 24h cluster cooldown
-- `competitor_frustration` AND `signal_score >= 8` → immediate, 4h category cooldown + 24h cluster cooldown
+**Alerts** (`lib/signal-radar/alerts.ts`): pure `decideAlert()` rules (thresholds lowered 2026-05-30 — see note below):
+- `migration_intent` AND `signal_score >= 6` → immediate, **no** category cooldown, but cluster cooldown 24h still applies, hard cap 5/day
+- `transparency_frustration` AND `signal_score >= 6` → immediate, 4h category cooldown + 24h cluster cooldown
+- `reserve_fear` AND `signal_score >= 7` → immediate, 4h category cooldown + 24h cluster cooldown
+- `competitor_frustration` AND `signal_score >= 6` → immediate, 4h category cooldown + 24h cluster cooldown
 - everything else → digest (digest is no-op in M1; rolls up in M3)
+
+> **Threshold history**: the bar was originally migration/transparency/competitor `>= 8` and reserve_fear `>= 9`. At observed prod volume nothing cleared it for a full week (2026-05-23 → 30) despite a healthy ingest/classify pipeline, so it was lowered to the values above on 2026-05-30. The dedup cooldowns (`CATEGORY_COOLDOWN_HOURS=4` / `CLUSTER_COOLDOWN_HOURS=24`), migration daily cap (5), and circuit breaker (10 immediates/hr) still bound email volume — the lower entry bar surfaces real pain without flooding.
 
 **Source-confidence gate**: `source_confidence_score < 5` always falls through to digest, regardless of category — vague low-confidence rants don't fire immediates. Both dedup keys (`category` and `cluster`) are stored on every `signal_alerts` row. Global circuit breaker: > 10 immediate alerts in any 1h window suppresses further immediates.
 
@@ -4271,6 +4273,8 @@ Stream queries live in `lib/signal-radar/queries.ts` — `fetchKpiCounts`, `fetc
 **What's NOT in M1**: save/dismiss/reviewed buttons, daily digest, Shopify Community/App Store ingesters, vocabulary persistence, content-opportunities tab, weekly intelligence report, per-admin alert preferences, outreach automation. The product direction is **intelligence synthesis, not social-media monitoring**.
 
 **Cron schedule** (`vercel.json`): `/api/cron/signal-radar-reddit` hourly (`0 * * * *`), `/api/cron/signal-radar-classify` every 5 min (`*/5 * * * *`). Both authed via `Authorization: Bearer ${CRON_SECRET}` (or `?secret=` query fallback).
+
+**Cron run tracking** (added 2026-05-30): the hourly ingest cron records its lifecycle in `signal_radar_ingest_runs` (`trigger='cron'`) via `runTrackedIngest()` in `lib/signal-radar/run-tracking.ts` — the single tracked ingest entry point shared with the manual-refresh route. Previously the cron called `ingestLoop` directly and left the table empty, so the dashboard "last refresh" status bar (`refresh-status-bar.tsx`) looked dead even while ingest was healthy (it falls back to the most recent run row, regardless of trigger, when no `run_id` is supplied). `runTrackedIngest` never throws on an adapter outage — it records `status='error'` + `error_message` and returns. The manual route keeps its own `insert + after()` flow because it must return `run_id` to the browser *before* the long ingest runs; the cron has no client to poll.
 
 **Env vars**: production needs *one of* `APIFY_API_TOKEN` (preferred, paid) OR `REDDIT_PROXY_URL`+`REDDIT_PROXY_SECRET` (free Cloudflare Worker) — without either, every Reddit fetch from Vercel will 403. Optional: `APIFY_REDDIT_ACTOR_ID`, `REDDIT_USER_AGENT`, `SIGNAL_RADAR_MODEL`. Reuses `OPENAI_API_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`, `ADMIN_NOTIFY_EMAIL`, `CRON_SECRET`.
 
