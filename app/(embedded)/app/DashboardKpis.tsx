@@ -581,10 +581,16 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
             <Text as="h2" variant="headingMd">{t("dashboard.performanceOverview")}</Text>
             <PeriodSelector period={period} onChange={onPeriodChange} t={t} />
           </div>
-          {/* min 180px so 5 tiles wrapping into one row don't squeeze
-              the chargeback tile below its label's natural width and
-              force "Chargeback" to break mid-word. */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+          {/* Fixed 5-column grid so the 5 KPI tiles always sit on one
+              line on desktop. Previously this was auto-fit with a 180px
+              min, which (incorrectly) wrapped the chargeback tile to
+              a second row whenever the container couldn't fit 5×180+gaps
+              — which happened at common embedded-iframe widths even
+              though the full row would have rendered fine at 5×~180px.
+              `minmax(0, 1fr)` lets the cells shrink instead of forcing
+              a wrap. smDown branch above handles mobile with its own
+              hero-and-grid layout, so this branch is desktop-only. */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "12px" }}>
             {desktopCards.map((card) => (
               <DesktopKpiTile key={card.label} card={card} vsLabel={vsLabel} loading={loading} />
             ))}
