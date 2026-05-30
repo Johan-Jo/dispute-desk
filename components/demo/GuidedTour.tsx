@@ -316,11 +316,20 @@ export function GuidedTourCallout() {
   }, [stepActiveOnThisPage, step]);
 
   // Auto-advance the visible step when the user navigates to a page the tour expects.
+  // Only moves FORWARD (never resets to an earlier step) so the user's
+  // explicit Next/Skip clicks always win.
   useEffect(() => {
     if (dismissed) return;
-    const matchingStep = TOUR_STEPS.find((s) => s.path === pathname);
-    if (matchingStep && matchingStep.step > currentStep) {
-      setStep(matchingStep.step);
+    // Find ALL steps whose path matches the current pathname, pick the
+    // one closest to (but not before) currentStep so multi-step pages
+    // resume at the right anchor.
+    const candidates = TOUR_STEPS.filter((s) => s.path === pathname);
+    if (candidates.length === 0) return;
+    // Prefer a step >= currentStep; otherwise fall back to the first
+    // candidate (means user jumped via URL, not Next).
+    const next = candidates.find((s) => s.step >= currentStep) ?? candidates[0];
+    if (next.step > currentStep) {
+      setStep(next.step);
     }
   }, [pathname, dismissed, currentStep, setStep]);
 
@@ -403,7 +412,18 @@ export function GuidedTourCallout() {
             )}
           </mask>
         </defs>
-        <rect width="100%" height="100%" fill="rgba(11, 18, 32, 0.7)" mask="url(#dd-tour-mask)" />
+        {/* Dim the page only when we have a target to spotlight.
+            Without a target the dark overlay would hide whatever's
+            loading underneath (e.g. WorkspaceShell's spinner) and
+            make the tour look broken to the user. Once the target
+            mounts, the spotlight + dim returns instantly. */}
+        <rect
+          width="100%"
+          height="100%"
+          fill={hasTarget ? "rgba(11, 18, 32, 0.7)" : "rgba(11, 18, 32, 0)"}
+          mask="url(#dd-tour-mask)"
+          style={{ transition: "fill 200ms ease-out" }}
+        />
       </svg>
 
       {/* Glowing ring around the target — separate from the overlay so
