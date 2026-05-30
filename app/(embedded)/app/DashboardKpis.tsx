@@ -351,8 +351,13 @@ function ChargebackKpiTile({
               color: "#6D7175",
               margin: 0,
               lineHeight: 1.35,
+              // `overflowWrap: "anywhere"` was too aggressive — it
+              // broke mid-word at narrow widths so "Chargeback" rendered
+              // as "Charge-/back" in the 5-tile grid. `break-word` only
+              // breaks when no other option exists, preserving the
+              // word at every viewport size that has room for it.
               wordBreak: "normal",
-              overflowWrap: "anywhere",
+              overflowWrap: "break-word",
             }}
           >
             {t("dashboard.chargebackRate")}
@@ -576,7 +581,10 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
             <Text as="h2" variant="headingMd">{t("dashboard.performanceOverview")}</Text>
             <PeriodSelector period={period} onChange={onPeriodChange} t={t} />
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "12px" }}>
+          {/* min 180px so 5 tiles wrapping into one row don't squeeze
+              the chargeback tile below its label's natural width and
+              force "Chargeback" to break mid-word. */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
             {desktopCards.map((card) => (
               <DesktopKpiTile key={card.label} card={card} vsLabel={vsLabel} loading={loading} />
             ))}
