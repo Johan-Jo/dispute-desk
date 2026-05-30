@@ -84,13 +84,14 @@ export const TOUR_STEPS: TourStep[] = [
   },
 
   // ─── Hero dispute detail — Review & Submit tab (2 steps) ─────────────────
+  // Tab id is `submit` (not `review`) — see WorkspaceShell.tsx tabs array.
   {
     step: 5,
     title: "The defence package",
     body: "DisputeDesk generates a bank-optimised PDF and maps each evidence field to the correct Shopify evidence slot. You review before submission — or let auto-mode handle Strong cases.",
     path: "/demo/disputes/dp-2401",
     selector: '[data-tour="review-defence-package"]',
-    preClickSelector: '[data-help-guide="detail-tab-review"]',
+    preClickSelector: '[data-help-guide="detail-tab-submit"]',
     nextPath: "/demo/disputes/dp-2401",
   },
   {
@@ -99,7 +100,7 @@ export const TOUR_STEPS: TourStep[] = [
     body: "Every row that goes to the bank is listed here. You can override DisputeDesk's calls if you have additional context. The defence package is regenerated on every change.",
     path: "/demo/disputes/dp-2401",
     selector: '[data-tour="review-inclusion"]',
-    preClickSelector: '[data-help-guide="detail-tab-review"]',
+    preClickSelector: '[data-help-guide="detail-tab-submit"]',
     nextPath: "/demo/disputes",
   },
 
