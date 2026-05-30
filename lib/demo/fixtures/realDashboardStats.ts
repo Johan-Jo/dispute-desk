@@ -73,11 +73,14 @@ export const DEMO_DASHBOARD_STATS_REAL = {
 
   // Charts
   winRateTrend: [72, 78, 80, 84, 85, 87],
+  // Labels must be `packs.disputeTypeLabel.*` keys (uppercase Shopify
+  // reason codes), not pretty English strings — DashboardInsights
+  // translates them via `tPacks(disputeTypeLabel.${label})`.
   disputeCategories: [
-    { label: "Fraudulent", value: 2 },
-    { label: "Product not received", value: 2 },
-    { label: "Subscription canceled", value: 1 },
-    { label: "Credit not processed", value: 1 },
+    { label: "FRAUDULENT", value: 2 },
+    { label: "PRODUCT_NOT_RECEIVED", value: 2 },
+    { label: "SUBSCRIPTION_CANCELED", value: 1 },
+    { label: "CREDIT_NOT_PROCESSED", value: 1 },
   ],
 
   recentActivity: [

@@ -143,22 +143,22 @@ export function GuidedTourCallout() {
   };
 
   return (
-    <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 w-full max-w-md px-4 pointer-events-none">
-      <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-2xl p-5 pointer-events-auto">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
+    <div className="fixed inset-0 z-40 flex items-center justify-center px-4 pointer-events-none">
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl shadow-2xl p-10 pointer-events-auto w-full max-w-2xl">
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
               {TOUR_STEPS.map((s) => (
                 <div
                   key={s.step}
                   className={cn(
-                    "h-1.5 rounded-full transition-all",
-                    s.step === currentStep ? "w-6 bg-[#7C3AED]" : s.step < currentStep ? "w-1.5 bg-[#7C3AED]/40" : "w-1.5 bg-[#E5E7EB]",
+                    "h-2 rounded-full transition-all",
+                    s.step === currentStep ? "w-8 bg-[#7C3AED]" : s.step < currentStep ? "w-2 bg-[#7C3AED]/40" : "w-2 bg-[#E5E7EB]",
                   )}
                 />
               ))}
             </div>
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#7C3AED] ml-1">
+            <span className="text-sm font-semibold uppercase tracking-wider text-[#7C3AED] ml-1">
               Step {currentStep} of {TOUR_STEPS.length}
             </span>
           </div>
@@ -168,16 +168,16 @@ export function GuidedTourCallout() {
             aria-label="Dismiss tour"
             className="text-[#9CA3AF] hover:text-[#0B1220] transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
-        <h3 className="text-base font-semibold text-[#0B1220] mb-1.5">{step.title}</h3>
-        <p className="text-sm text-[#4B5563] leading-relaxed mb-4">{step.body}</p>
-        <div className="flex items-center justify-between gap-3">
+        <h3 className="text-2xl font-semibold text-[#0B1220] mb-3">{step.title}</h3>
+        <p className="text-base text-[#4B5563] leading-relaxed mb-8">{step.body}</p>
+        <div className="flex items-center justify-between gap-4">
           <button
             type="button"
             onClick={dismiss}
-            className="text-xs text-[#6B7280] hover:text-[#0B1220] transition-colors"
+            className="text-sm text-[#6B7280] hover:text-[#0B1220] transition-colors"
           >
             Skip the tour
           </button>
@@ -186,19 +186,19 @@ export function GuidedTourCallout() {
               href={process.env.NEXT_PUBLIC_SHOPIFY_APP_STORE_URL?.trim() || "https://disputedesk.app/install"}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg text-sm font-medium bg-[#1D4ED8] text-white hover:bg-[#1E40AF] transition-colors"
+              className="inline-flex items-center gap-2 h-11 px-6 rounded-lg text-base font-medium bg-[#1D4ED8] text-white hover:bg-[#1E40AF] transition-colors"
             >
               Install DisputeDesk
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-4 h-4" />
             </a>
           ) : (
             <button
               type="button"
               onClick={handleNext}
-              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg text-sm font-medium bg-[#0B1220] text-white hover:bg-[#1F2937] transition-colors"
+              className="inline-flex items-center gap-2 h-11 px-6 rounded-lg text-base font-medium bg-[#0B1220] text-white hover:bg-[#1F2937] transition-colors"
             >
               Next
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-4 h-4" />
             </button>
           )}
         </div>

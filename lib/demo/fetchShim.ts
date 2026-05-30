@@ -62,31 +62,81 @@ const HANDLERS: Handler[] = [
   // ── Disputes list
   {
     match: (u) => u.pathname === "/api/disputes",
-    respond: () => jsonResponse({
-      disputes: DEMO_DISPUTES.map((d) => ({
-        id: d.id,
-        dispute_gid: `gid://shopify/DisputeEvidence/${d.id}`,
-        order_gid: `gid://shopify/Order/${d.orderName.replace("#", "")}`,
-        order_name: d.orderName,
-        customer_display_name: d.customerName,
-        amount: d.amount,
-        currency_code: d.currency,
-        reason: d.reasonFamily,
-        phase: "chargeback",
-        status: d.status,
-        normalized_status: d.status,
-        submission_state: d.status === "submitted" ? "submitted" : "not_submitted",
-        due_at: d.dueAt,
-        opened_at: d.openedAt,
-        submitted_at: null,
-        closed_at: null,
-        final_outcome: null,
-        outcome_amount_recovered: null,
-        outcome_amount_lost: null,
-        last_event_at: d.timeline[d.timeline.length - 1]?.at ?? d.openedAt,
-      })),
-      pagination: { page: 1, per_page: 25, total: DEMO_DISPUTES.length, total_pages: 1 },
-    }),
+    respond: () => {
+      // Anchor dates relative to NOW so urgency badges look right
+      // regardless of when the demo is viewed. Fixture stores days-from-
+      // anchor offsets; rebase each dispute against today.
+      const now = Date.now();
+      const FIXTURE_ANCHOR = new Date("2026-01-15T10:00:00Z").getTime();
+      const rebase = (iso: string) => new Date(now + (new Date(iso).getTime() - FIXTURE_ANCHOR)).toISOString();
+
+      // Strength snapshot per fixture dispute. Map our `strength` field
+      // to the `caseStrength` shape the embedded list expects (drives
+      // the pill + "N strong signals" subtitle in DesktopDisputesTable).
+      const strengthFor = (d: typeof DEMO_DISPUTES[number]) => {
+        if (d.strength === "strong") {
+          const strongCount = d.evidence.filter((e) => e.group === "strong").length;
+          const moderateCount = d.evidence.filter((e) => e.group === "moderate").length;
+          return { overall: "strong" as const, strongCount, moderateCount, supportingCount: d.evidence.length };
+        }
+        if (d.strength === "moderate") {
+          return { overall: "moderate" as const, strongCount: 0, moderateCount: d.evidence.filter((e) => e.group !== "supplemental").length, supportingCount: d.evidence.length };
+        }
+        if (d.strength === "weak") {
+          return { overall: "weak" as const, strongCount: 0, moderateCount: 0, supportingCount: d.evidence.length };
+        }
+        // covered + fatal_loss render no strength pill — match prod where
+        // the underlying pack was never built.
+        return null;
+      };
+
+      return jsonResponse({
+        disputes: DEMO_DISPUTES.map((d) => {
+          // Map fixture-local statuses to real normalizedStatuses keys
+          // (see messages/en.json normalizedStatuses). `covered` and
+          // `blocked` aren't real normalized statuses — they're demo
+          // flags that drive banner rendering — so emit `needs_review`
+          // and `action_needed` respectively to keep the i18n lookup
+          // sane.
+          const normalizedStatus =
+            d.status === "covered" ? "needs_review" :
+            d.status === "blocked" ? "action_needed" :
+            d.status;
+          return {
+            id: d.id,
+            dispute_gid: `gid://shopify/DisputeEvidence/${d.id}`,
+            order_gid: `gid://shopify/Order/${d.orderName.replace("#", "")}`,
+            order_name: d.orderName,
+            customer_display_name: d.customerName,
+            amount: d.amount,
+            currency_code: d.currency,
+            // i18n keys under `disputeReasons.*` use the Shopify uppercase
+            // reason codes (FRAUDULENT, PRODUCT_NOT_RECEIVED, etc) — see
+            // messages/en.json. Fixture stores them lower-cased for code
+            // ergonomics; upper-case at the shim boundary so the embedded
+            // translateReason() lookup hits a real key.
+            reason: d.reasonFamily.toUpperCase(),
+            phase: "chargeback",
+            status: normalizedStatus,
+            normalized_status: normalizedStatus,
+            submission_state: d.status === "submitted" ? "submitted" : "not_submitted",
+            due_at: rebase(d.dueAt),
+            initiated_at: rebase(d.openedAt),
+            opened_at: rebase(d.openedAt),
+            needs_review: d.status === "needs_review",
+            last_synced_at: new Date(now).toISOString(),
+            submitted_at: null,
+            closed_at: null,
+            final_outcome: null,
+            outcome_amount_recovered: null,
+            outcome_amount_lost: null,
+            last_event_at: rebase(d.timeline[d.timeline.length - 1]?.at ?? d.openedAt),
+            caseStrength: strengthFor(d),
+          };
+        }),
+        pagination: { page: 1, per_page: 25, total: DEMO_DISPUTES.length, total_pages: 1 },
+      });
+    },
   },
 
   // ── Dispute detail — supports any of the 6 fixture IDs
