@@ -74,18 +74,25 @@ const FIELDS_PRESENT_BY_DISPUTE: Record<string, FieldName[]> = {
 // ── Builders ────────────────────────────────────────────────────────────────
 
 function buildChecklist(disputeId: string) {
-  const present = new Set(FIELDS_PRESENT_BY_DISPUTE[disputeId] ?? []);
-  return FIELD_ORDER.map((field) => {
+  // Only emit `available` items — embedded UI's deriveMissingItems
+  // helper calls `t("disputes.fieldAction.<field>.ctaLabel")` for any
+  // `missing` row, but i18n only defines fieldAction for 4 fields
+  // (supporting_documents, customer_communication, product_description,
+  // duplicate_explanation). A `missing` row for any other field
+  // crashes the page. Demo shows fully-built packs only — merchant
+  // input flow lives on the weak dispute (dp-2406) which renders a
+  // different surface.
+  const present = FIELDS_PRESENT_BY_DISPUTE[disputeId] ?? [];
+  return present.map((field) => {
     const meta = FIELD_META[field];
-    const isPresent = present.has(field);
     return {
       field,
       label: meta.label,
-      status: isPresent ? "available" : "missing",
+      status: "available",
       priority: meta.priority,
       blocking: false,
-      source: isPresent ? "auto_shopify" : "manual_upload",
-      collectionType: isPresent ? "auto" : "manual",
+      source: "auto_shopify",
+      collectionType: "auto",
     };
   });
 }
@@ -103,29 +110,31 @@ function buildEvidenceItems(disputeId: string) {
 }
 
 function buildEvidenceLineItems(disputeId: string) {
-  return FIELD_ORDER.map((field) => {
+  // Only emit line items for fields the dispute has — same reason as
+  // buildChecklist (the missing-row path needs fieldAction i18n keys
+  // that don't exist for every field in our list).
+  const present = FIELDS_PRESENT_BY_DISPUTE[disputeId] ?? [];
+  return present.map((field) => {
     const meta = FIELD_META[field];
-    const present = (FIELDS_PRESENT_BY_DISPUTE[disputeId] ?? []).includes(field);
-    const isStrong = present && (field === "avs_cvv_match" || field === "delivery_proof" || field === "shipping_tracking");
-    const isModerate = present && !isStrong;
+    const isStrong = field === "avs_cvv_match" || field === "delivery_proof" || field === "shipping_tracking";
     return {
       id: `li-${disputeId}-${field}`,
       field,
       label: meta.label,
-      source: present ? "shopify" : "merchant_upload",
-      hasEvidence: present,
-      strengthContribution: isStrong ? "strong" : isModerate ? "moderate" : "none",
-      bankEligible: present,
+      source: "shopify",
+      hasEvidence: true,
+      strengthContribution: isStrong ? "strong" : "moderate",
+      bankEligible: true,
       merchantVisible: true,
-      includedInDefencePackage: present,
-      includedInBankArgument: present && (isStrong || isModerate),
-      usedAsPositiveBankEvidence: present && (isStrong || isModerate),
+      includedInDefencePackage: true,
+      includedInBankArgument: true,
+      usedAsPositiveBankEvidence: true,
       submittedToShopify: false,
-      submissionMethod: present ? "bank_argument" : "not_included",
+      submissionMethod: "bank_argument",
       isNegativeOrAmbiguous: false,
-      reason: present ? `Captured from Shopify on ${new Date(rebase("2026-01-13T10:00:00Z")).toLocaleDateString("en-US")}` : "Not captured",
-      reasonToken: { key: present ? "auto_captured" : "not_captured", params: {} },
-      canBeForceIncluded: !present,
+      reason: `Captured from Shopify on ${new Date(rebase("2026-01-13T10:00:00Z")).toLocaleDateString("en-US")}`,
+      reasonToken: { key: "auto_captured", params: {} },
+      canBeForceIncluded: false,
     };
   });
 }
