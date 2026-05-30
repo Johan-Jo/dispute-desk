@@ -99,7 +99,7 @@ export const TOUR_STEPS: TourStep[] = [
     nextPath: "/demo/disputes/dp-2401",
   },
 
-  // ─── Hero dispute detail — Review & Submit tab (2 steps) ─────────────────
+  // ─── Hero dispute detail — Review & Submit tab (1 step) ──────────────────
   // Tab id is `submit` (not `review`) — see WorkspaceShell.tsx tabs array.
   {
     step: 7,
@@ -108,23 +108,14 @@ export const TOUR_STEPS: TourStep[] = [
     path: "/demo/disputes/dp-2401",
     selector: '[data-tour="review-defence-package"]',
     preClickSelector: '[data-help-guide="detail-tab-submit"]',
-    nextPath: "/demo/disputes/dp-2401",
-  },
-  {
-    step: 8,
-    title: "Every row, accountable",
-    body: "DisputeDesk shows you exactly what's going to the bank and why — strong arguments, supporting context, and what stays internal. Override anything if you have extra context. Regenerate on demand.",
-    path: "/demo/disputes/dp-2401",
-    selector: '[data-tour="review-inclusion"]',
-    preClickSelector: '[data-help-guide="detail-tab-submit"]',
     nextPath: "/demo/insights/initial-analysis",
   },
 
-  // ─── Insights — the closer ───────────────────────────────────────────────
+  // ─── Insights — the closer + install CTA ────────────────────────────────
   {
-    step: 9,
+    step: 8,
     title: "Built from your real order history",
-    body: "DisputeDesk analyzed your last 90 days of Shopify orders to calibrate every defence pack. Risk patterns, delivery signals, payment verification rates — all already understood before your next dispute lands. That's why the packs above are ready in seconds, not days.",
+    body: "DisputeDesk analyzed your last 90 days of Shopify orders to calibrate every defence pack. Risk patterns, delivery signals, payment verification rates — all already understood before your next dispute lands. That's why the packs above are ready in seconds, not days. Install DisputeDesk to do this on your own store.",
     path: "/demo/insights/initial-analysis",
     selector: '[data-tour="insights-hero"]',
     nextPath: null,
