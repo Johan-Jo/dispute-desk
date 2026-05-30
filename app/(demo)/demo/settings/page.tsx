@@ -1,7 +1,7 @@
-import { DemoSettings } from "@/components/demo/DemoSettings";
+import EmbeddedSettingsPage from "@/app/(embedded)/app/settings/page";
 
 export const dynamic = "force-static";
 
 export default function DemoSettingsPage() {
-  return <DemoSettings />;
+  return <EmbeddedSettingsPage />;
 }
