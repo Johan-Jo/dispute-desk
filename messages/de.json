@@ -2086,7 +2086,10 @@
       "compareFitGenerous": "Mehr als nötig",
       "ctaStartTrial": "14-Tage-Testversion {plan} starten",
       "ctaSeePlans": "Alle Pläne ansehen",
-      "ctaStaysFreeFooter": "Sie bleiben auf Free, bis Sie zustimmen. Wir prüfen das monatlich."
+      "ctaStaysFreeFooter": "Sie bleiben auf Free, bis Sie zustimmen. Wir prüfen das monatlich.",
+      "bannerTitle": "{plan} passt zu Ihrem Rückbuchungsvolumen",
+      "bannerBody": "Sie bearbeiten etwa {rate} Rückbuchungen pro Monat – mehr als der Free-Tarif abdeckt. Sehen Sie, wie {plan} passt.",
+      "bannerCta": "Empfehlung ansehen"
     }
   },
   "rules": {

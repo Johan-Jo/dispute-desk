@@ -2086,7 +2086,10 @@
       "compareFitGenerous": "Más de lo que necesitas",
       "ctaStartTrial": "Iniciar prueba de 14 días — {plan}",
       "ctaSeePlans": "Ver todos los planes",
-      "ctaStaysFreeFooter": "Sigues en Free hasta que aceptes. Lo revisamos cada mes."
+      "ctaStaysFreeFooter": "Sigues en Free hasta que aceptes. Lo revisamos cada mes.",
+      "bannerTitle": "{plan} se ajusta a tu volumen de contracargos",
+      "bannerBody": "Gestionas alrededor de {rate} contracargos al mes, más de lo que cubre el plan Free. Mira cómo encaja {plan}.",
+      "bannerCta": "Ver recomendación"
     }
   },
   "rules": {

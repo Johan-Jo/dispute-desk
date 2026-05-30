@@ -24,6 +24,7 @@ import {
   enqueueShopOrdersBackfill,
 } from "@/lib/disputes/backfillOrders";
 import { recommendPlan, type PlanRecommendation } from "@/lib/billing/recommendPlan";
+import { upsertPlanRecommendation } from "@/lib/billing/persistRecommendation";
 
 export const runtime = "nodejs";
 
@@ -110,7 +111,14 @@ interface PeriodWindow {
   fraudDisputeRatePct: number | null;
   shopifyProtectCoveragePct: number | null;
   chargebackRatePct: number | null;
+  /** Order denominator for the window (sum of daily `order_count`).
+   *  Despite the legacy name this is the ORDER count, used by the
+   *  chargeback-health verdict's "enough orders to judge" gate. */
   chargebackOrders: number;
+  /** Actual chargeback count for the window (sum of daily
+   *  `chargeback_count`). This — NOT `chargebackOrders` — is the
+   *  monthly-volume signal the plan recommender sizes on. */
+  chargebackCount: number;
   /** % of Shopify Payments orders that completed 3-D Secure
    *  authentication. Numerator: orders with three_ds_authenticated=true.
    *  Denominator: orders with payment_gateway='shopify_payments'.
@@ -318,6 +326,7 @@ function aggregateWindow(
     shopifyProtectCoveragePct: rate(fullyProtectedValue, eligibleProtectedValue),
     chargebackRatePct: rate(cbCount, cbOrders),
     chargebackOrders: cbOrders,
+    chargebackCount: cbCount,
     ...tdsAndFul,
   };
 }
@@ -593,8 +602,11 @@ export async function GET(req: NextRequest) {
       status === "complete" &&
       ((shopRow?.plan as string | null) ?? "free") === "free"
         ? recommendPlan({
-            chargebackOrders90d: win90.chargebackOrders,
-            chargebackOrders30d: current30d.chargebackOrders,
+            // Use the chargeback COUNT, not `chargebackOrders` (which is
+            // the order denominator) — the recommender sizes on monthly
+            // chargeback volume.
+            chargebackOrders90d: win90.chargebackCount,
+            chargebackOrders30d: current30d.chargebackCount,
             ordersAnalyzed: ordersTotal,
             historicalScopeGranted:
               (shopRow?.historical_import_scope_granted as
@@ -604,6 +616,20 @@ export async function GET(req: NextRequest) {
           })
         : null,
   };
+
+  // Persist the recommendation so the dashboard banner + monthly cron
+  // share one source of truth. Fire-and-forget: a write failure must
+  // never degrade the page response, and the monthly cron will heal it.
+  if (response.recommendation) {
+    upsertPlanRecommendation(sb, shopId, response.recommendation).catch(
+      (err) => {
+        console.warn(
+          "[insights] plan recommendation persist failed:",
+          err instanceof Error ? err.message : err,
+        );
+      },
+    );
+  }
 
   return NextResponse.json(response);
 }

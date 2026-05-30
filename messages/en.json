@@ -2086,7 +2086,10 @@
       "compareFitGenerous": "More than you need",
       "ctaStartTrial": "Start 14-day {plan} trial",
       "ctaSeePlans": "See all plans",
-      "ctaStaysFreeFooter": "You stay on Free until you accept. We re-check this monthly."
+      "ctaStaysFreeFooter": "You stay on Free until you accept. We re-check this monthly.",
+      "bannerTitle": "{plan} fits your chargeback volume",
+      "bannerBody": "You're handling about {rate} chargebacks a month — more than Free covers. See how {plan} fits.",
+      "bannerCta": "View recommendation"
     }
   },
   "rules": {

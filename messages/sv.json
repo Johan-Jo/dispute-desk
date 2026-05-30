@@ -2086,7 +2086,10 @@
       "compareFitGenerous": "Mer än du behöver",
       "ctaStartTrial": "Starta 14 dagars provperiod — {plan}",
       "ctaSeePlans": "Visa alla planer",
-      "ctaStaysFreeFooter": "Du stannar på Free tills du accepterar. Vi kollar igen varje månad."
+      "ctaStaysFreeFooter": "Du stannar på Free tills du accepterar. Vi kollar igen varje månad.",
+      "bannerTitle": "{plan} matchar din återkravsvolym",
+      "bannerBody": "Du hanterar omkring {rate} återkrav per månad – mer än vad Free täcker. Se hur {plan} passar.",
+      "bannerCta": "Visa rekommendation"
     }
   },
   "rules": {

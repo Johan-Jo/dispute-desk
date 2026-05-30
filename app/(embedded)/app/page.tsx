@@ -45,6 +45,7 @@ import { DashboardAttentionBanner } from "./DashboardAttentionBanner";
 import { DashboardInsights } from "./DashboardInsights";
 import { DashboardOperationalInsightsStrip } from "./DashboardOperationalInsightsStrip";
 import { DashboardScopeUpgradeBanner } from "./DashboardScopeUpgradeBanner";
+import { DashboardPlanRecommendationBanner } from "./DashboardPlanRecommendationBanner";
 
 // ─── OutcomeBreakdown ─────────────────────────────────────────────────────
 
@@ -392,6 +393,10 @@ export default function EmbeddedDashboardPage() {
 
         <Layout.Section>
           <DashboardScopeUpgradeBanner />
+        </Layout.Section>
+
+        <Layout.Section>
+          <DashboardPlanRecommendationBanner />
         </Layout.Section>
 
         {/* Operations pipeline — workflow status + period KPIs together

@@ -2086,7 +2086,10 @@
       "compareFitGenerous": "Mais do que precisa",
       "ctaStartTrial": "Iniciar avaliação de 14 dias — {plan}",
       "ctaSeePlans": "Ver todos os planos",
-      "ctaStaysFreeFooter": "Você fica no Free até aceitar. Revisamos isso mensalmente."
+      "ctaStaysFreeFooter": "Você fica no Free até aceitar. Revisamos isso mensalmente.",
+      "bannerTitle": "{plan} combina com seu volume de estornos",
+      "bannerBody": "Você lida com cerca de {rate} estornos por mês — mais do que o plano Free cobre. Veja como o {plan} se encaixa.",
+      "bannerCta": "Ver recomendação"
     }
   },
   "rules": {

@@ -2086,7 +2086,10 @@
       "compareFitGenerous": "Plus que nécessaire",
       "ctaStartTrial": "Démarrer l'essai 14 jours — {plan}",
       "ctaSeePlans": "Voir tous les plans",
-      "ctaStaysFreeFooter": "Vous restez sur Free jusqu'à acceptation. Nous revérifions chaque mois."
+      "ctaStaysFreeFooter": "Vous restez sur Free jusqu'à acceptation. Nous revérifions chaque mois.",
+      "bannerTitle": "{plan} correspond à votre volume de rétrofacturations",
+      "bannerBody": "Vous traitez environ {rate} rétrofacturations par mois, plus que ne couvre l'offre Free. Découvrez en quoi {plan} vous convient.",
+      "bannerCta": "Voir la recommandation"
     }
   },
   "rules": {
