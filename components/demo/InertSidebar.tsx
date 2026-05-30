@@ -11,7 +11,6 @@ import {
   Tag,
   FileText,
   BarChart3,
-  Blocks,
   Settings as SettingsIcon,
   Shield,
   ChevronRight,
@@ -124,22 +123,7 @@ export function InertSidebar() {
         </nav>
       </div>
 
-      {/* Other inert apps */}
-      <nav className="px-1 pb-2">
-        {["Loox Reviews", "AfterShip", "Klaviyo"].map((label) => (
-          <button
-            key={label}
-            type="button"
-            onClick={handleInert(label)}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] text-[#303030] hover:bg-[#F1F2F4] transition-colors text-left"
-          >
-            <Blocks className="w-4 h-4 text-[#616161]" />
-            <span>{label}</span>
-          </button>
-        ))}
-      </nav>
-
-      <div className="mt-auto border-t border-[#E1E3E5] py-2">
+<div className="mt-auto border-t border-[#E1E3E5] py-2">
         <button
           type="button"
           onClick={handleInert("Settings")}
