@@ -5,6 +5,7 @@ import { grantCredits } from "@/lib/billing/consumePack";
 import { checkTrialEligibility } from "@/lib/billing/trialEligibility";
 import { verifyAppCharge } from "@/lib/shopify/queries/appChargeStatus";
 import { sendTrialStartedEmail } from "@/lib/email/billingLifecycle";
+import { buildEmbeddedReturnUrl } from "@/lib/embedded/embeddedAppUrl";
 
 export const runtime = "nodejs";
 
@@ -30,9 +31,26 @@ export async function GET(req: NextRequest) {
   const appUrl = process.env.SHOPIFY_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
   const host = sp.get("host") ?? "";
   const shop = sp.get("shop") ?? "";
-  const billingUrl = new URL(`${appUrl}/app/billing`);
-  if (host) billingUrl.searchParams.set("host", host);
-  if (shop) billingUrl.searchParams.set("shop", shop);
+
+  // Redirect into the embedded Admin URL (admin.shopify.com/store/<handle>/apps/<api_key>/app/billing)
+  // so App Bridge re-bootstraps and the s-app-nav chrome renders.
+  // Without this the post-approval page loads at disputedesk.app/app/billing
+  // outside the Admin iframe and the embedded layout is lost
+  // (2026-05-27 regression). Falls back to the bare app URL when the
+  // store handle can't be derived from host/shop.
+  const embeddedUrl = buildEmbeddedReturnUrl({
+    host: host || null,
+    shop: shop || null,
+    appPath: "/app/billing",
+  });
+  const billingUrl = embeddedUrl
+    ? new URL(embeddedUrl)
+    : (() => {
+        const u = new URL(`${appUrl}/app/billing`);
+        if (host) u.searchParams.set("host", host);
+        if (shop) u.searchParams.set("shop", shop);
+        return u;
+      })();
 
   if (!chargeId) {
     await sb.from("audit_events").insert({

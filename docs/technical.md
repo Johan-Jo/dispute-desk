@@ -54,6 +54,33 @@ protected-customer-data restriction on the DraftOrder object. The app must
 also have **Protected Customer Data** access declared in the Partner
 Dashboard (API access requests section). See `scripts/shopify/README.md`.
 
+### Protected customer fields we deliberately do NOT select
+
+Shopify treats customer **name**, **email**, **phone**, and **address**
+as protected customer fields. Apps may only request a protected field if
+they can demonstrate the field is needed for app functionality
+(App Store Review §3-style review feedback, 2026-05).
+
+DisputeDesk's posture per field:
+
+| Field   | Selected? | Why                                                                                      |
+|---------|-----------|------------------------------------------------------------------------------------------|
+| name    | yes       | Shown on the bank-facing defence package and the merchant's dispute card.                |
+| email   | yes       | Used to match customer activity for AVS / account-history evidence.                      |
+| address | yes       | Required to corroborate shipping evidence (`shippingAddress` matches `trackingInfo`).    |
+| phone   | **no**    | Not used in evidence packs, rebuttal text, scoring, or merchant UI. Removed 2026-05-27. |
+
+The phone field was selected on `Dispute.disputeEvidence.shippingAddress.phone`
+and `…billingAddress.phone` by `DISPUTE_PROFILE_QUERY` in
+`lib/shopify/queries/disputes.ts` and surfaced in the portal dispute
+detail page (`app/(portal)/portal/disputes/[id]/page.tsx`). Shopify App
+Store review flagged it as unjustified; we removed the selection, the
+DTO field on `/api/disputes/[id]/profile`, the render sites, and the
+`customer.phone` i18n key from all locales. No collector, automation
+gate, or scoring rule referenced phone, so the removal is functionally
+inert. Re-adding the field requires a new app-functionality
+justification.
+
 ### API Version
 
 Pinned to `2026-01` via `SHOPIFY_API_VERSION` env var. Default in code
@@ -3142,8 +3169,11 @@ Guards at: `POST /api/disputes/:id/packs` (quota), `POST /api/rules` (feature),
 3. `POST /api/billing/topup` → `appPurchaseOneTimeCreate` → merchant redirected to Shopify approval
 4. `GET /api/billing/topup-callback` → **verifies the one-time charge with Shopify**, then grants top-up credits
 5. `GET /api/billing/usage?shop_id=...` → returns plan, monthly usage, and `shop_domain`
+6. `POST /api/billing/cancel` → `appSubscriptionCancel` on every active subscription, then writes `shops.plan = "free"` + `plan_entitlements.subscription_state = "cancelled"` inline (no Shopify confirmation flow — cancel takes effect immediately).
 
-Both `POST /api/billing/subscribe` and `POST /api/billing/topup` accept optional `host` and `shop` body params. The client reads them from `window.location.search` (App Bridge populates these on every embedded page load) and the route bakes them into the Shopify `returnUrl`. Without this, Shopify's post-approval redirect lands on the bare `disputedesk.app/app/billing` URL outside the Admin iframe — App Bridge can't bootstrap and the `s-app-nav` chrome vanishes. Both callbacks then re-attach `host`/`shop` to the final redirect URL so the merchant lands back inside Shopify Admin.
+Both `POST /api/billing/subscribe` and `POST /api/billing/topup` accept optional `host` and `shop` body params. The client reads them from `window.location.search` (App Bridge populates these on every embedded page load) and the route bakes them into the Shopify `returnUrl`. Without this, Shopify's post-approval redirect lands on the bare `disputedesk.app/app/billing` URL outside the Admin iframe — App Bridge can't bootstrap and the `s-app-nav` chrome vanishes.
+
+The callbacks then redirect via `buildEmbeddedReturnUrl()` (`lib/embedded/embeddedAppUrl.ts`) which constructs the full embedded URL `https://admin.shopify.com/store/<handle>/apps/<api_key>/app/billing?host=…&shop=…` instead of the bare app URL. The helper derives `<handle>` by base64-decoding `host` (`<shop>.myshopify.com/admin` or `admin.shopify.com/store/<handle>`) with a `shop` fallback. Falls back to the bare app URL when the handle can't be derived. Without this redirect, merchants returned from the Shopify charge approval to a page outside the Admin iframe and saw the s-app-nav rendered as plain text (2026-05-27 regression — initial `host`/`shop` carrying was not enough; the final redirect URL also has to be the embedded form, not the app's own domain).
 
 If the store session is invalid (e.g. missing shop domain) or the shop is not connected, subscribe returns 400 or 404 with an error message. The billing UI (portal and embedded) shows this message and an **Open in Shopify Admin** link so the merchant can open the app from Shopify Admin to restore a valid session (after using **Clear shop & reconnect** in the sidebar if needed).
 
@@ -3181,6 +3211,53 @@ Failed verification writes audit `billing_verification_failed` (subscription) or
 `pack_credits_ledger` has no unique index on `reference`. A duplicate callback hit (e.g. merchant
 double-clicking the approval URL) could grant twice. Out of scope for the App Store readiness sprint;
 a future migration adding `unique(reference)` is the durable fix.
+
+### Plan downgrade to Free (`POST /api/billing/cancel`)
+
+Shopify App Store review (2026-05) requires that merchants be able to
+revert from a paid plan to the Free plan without contacting support
+or reinstalling the app. The fix:
+
+1. **UI (`app/(embedded)/app/billing/page.tsx`)** — the Free card's CTA
+   now resolves to a clickable *"Downgrade to Free (Sandbox)"* button
+   whenever the merchant is on a paid plan. Previously the card was
+   excluded from `isDowngrade` via `planId !== "free"`, which fell
+   through to the disabled "Get started" branch. The downgrade
+   confirmation Modal routes the free target through `handleCancelToFree`
+   instead of `handleUpgrade`.
+2. **Route (`app/api/billing/cancel/route.ts`)** —
+   - Lists `currentAppInstallation.activeSubscriptions` (the canonical
+     source — we don't trust `plan_entitlements` because the
+     reconciler may be behind).
+   - For each active subscription, runs the new
+     `appSubscriptionCancel` mutation
+     (`lib/shopify/mutations/appSubscriptionCancel.ts`) with
+     `prorate: false`. Shopify keeps merchant access through the
+     current cycle end.
+   - On success: updates `shops.plan = "free"`, upserts
+     `plan_entitlements` with `subscription_state = "cancelled"` +
+     `plan_key = "free"`, audits `billing_cancelled` with the
+     cancelled subscription IDs. The hourly reconciler later confirms
+     the same end state idempotently.
+   - On `userErrors`: audits `billing_cancel_failed` and returns 422.
+3. **One-time fresh-start grant.** The Free plan is
+   `packsLifetime: 3` measured against all-time `pack_usage_events`.
+   Without intervention, a merchant who used ≥ 3 packs on a paid
+   plan would be at the Free cap the instant they downgrade. To
+   prevent that lock-out the cancel route writes a single
+   `admin_adjustment` ledger row of size `(usage_count + 3)` —
+   `pack_balance` nets credits against all historical usage, so the
+   merchant ends up with **exactly 3 packs** of remaining balance,
+   regardless of prior consumption. Deduped by
+   `reference = "downgrade_to_free_${shop_id}"`, so a second cancel
+   or a replay does not re-grant. One fresh-start per shop, ever —
+   re-subscribing and re-cancelling does NOT mint a second batch,
+   closing the obvious abuse loop.
+
+The `/api/billing/subscribe` validation schema still rejects
+`plan_id: "free"` — it's only for paid-plan creates. The Free path is
+explicitly a separate endpoint because there is no "$0 confirmation
+URL" in Shopify's billing API.
 
 ### Billing deep link (`/app/billing?plan=…`)
 

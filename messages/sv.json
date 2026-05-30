@@ -356,7 +356,6 @@
     "daysRemaining": "{count}d kvar",
     "name": "Namn",
     "email": "E-post",
-    "phone": "Telefon",
     "address": "Adress",
     "orderId": "Order-ID",
     "date": "Datum",

@@ -83,10 +83,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         ev?.billingAddress?.name?.trim() ||
         null,
       email: ev?.customerEmailAddress?.trim() || null,
-      phone:
-        ev?.shippingAddress?.phone?.trim() ||
-        ev?.billingAddress?.phone?.trim() ||
-        null,
       shippingAddress: ev?.shippingAddress ?? null,
       billingAddress: ev?.billingAddress ?? null,
       displayAddress: ev?.shippingAddress ?? null,

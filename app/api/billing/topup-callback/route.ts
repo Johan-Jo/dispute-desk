@@ -4,6 +4,7 @@ import { getTopUp, TOPUP_EXPIRY_DAYS } from "@/lib/billing/plans";
 import { grantCredits } from "@/lib/billing/consumePack";
 import { verifyAppCharge } from "@/lib/shopify/queries/appChargeStatus";
 import { sendTopupPurchasedEmail } from "@/lib/email/billingLifecycle";
+import { buildEmbeddedReturnUrl } from "@/lib/embedded/embeddedAppUrl";
 
 export const runtime = "nodejs";
 
@@ -28,9 +29,23 @@ export async function GET(req: NextRequest) {
   const appUrl = process.env.SHOPIFY_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
   const host = sp.get("host") ?? "";
   const shop = sp.get("shop") ?? "";
-  const billingUrl = new URL(`${appUrl}/app/billing`);
-  if (host) billingUrl.searchParams.set("host", host);
-  if (shop) billingUrl.searchParams.set("shop", shop);
+
+  // Redirect into the embedded Admin URL so App Bridge re-bootstraps
+  // after Shopify's post-approval redirect. See subscription callback
+  // for the full rationale (2026-05-27 regression).
+  const embeddedUrl = buildEmbeddedReturnUrl({
+    host: host || null,
+    shop: shop || null,
+    appPath: "/app/billing",
+  });
+  const billingUrl = embeddedUrl
+    ? new URL(embeddedUrl)
+    : (() => {
+        const u = new URL(`${appUrl}/app/billing`);
+        if (host) u.searchParams.set("host", host);
+        if (shop) u.searchParams.set("shop", shop);
+        return u;
+      })();
 
   if (!chargeId || !topUp) {
     billingUrl.searchParams.set("topup_failed", "missing_charge_or_sku");
