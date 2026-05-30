@@ -238,9 +238,16 @@ export function GuidedTourCallout() {
   const { currentStep, setStep, dismissed, dismiss } = useGuidedTour();
   const preClickedRef = useRef<string | null>(null);
   const scrolledForStepRef = useRef<number | null>(null);
+  // SSR + client read different window/document state (rect positions,
+  // viewportHeight, target presence) so the rendered HTML can't match
+  // hydration. Defer the entire overlay to post-mount on the client.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const step = TOUR_STEPS.find((s) => s.step === currentStep);
-  const stepActiveOnThisPage = !!step && step.path === pathname && !dismissed;
+  const stepActiveOnThisPage = mounted && !!step && step.path === pathname && !dismissed;
 
   // Auto-scroll the target into view when the step changes. Runs once
   // per step (tracked via scrolledForStepRef) so re-renders from rect

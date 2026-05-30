@@ -180,8 +180,8 @@ function buildEvidenceLineItems(disputeId: string) {
       submittedToShopify: false,
       submissionMethod: "bank_argument",
       isNegativeOrAmbiguous: false,
-      reason: `Captured from Shopify on ${new Date(rebase("2026-01-13T10:00:00Z")).toLocaleDateString("en-US")}`,
-      reasonToken: { key: "auto_captured", params: {} },
+      reason: "Cited as a positive bank argument",
+      reasonToken: { key: "disputes.reviewTab.inclusion.reasons.method.bank_argument", params: {} },
       canBeForceIncluded: false,
     };
   });
