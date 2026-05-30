@@ -541,12 +541,17 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
   );
 
   return (
-    <div style={{
+    // No outer card wrapper on desktop — the 5 KPI tiles already have
+    // their own card styling each, and a wrapper card would inset them
+    // by its padding so they don't align with the OperationalSummary
+    // tiles above (which sit at the full content width). Mobile keeps
+    // the wrapper because its hero+grid layout reads better contained.
+    <div style={smDown ? {
       background: "#fff",
       borderRadius: "12px",
       border: "1px solid #E5E7EB",
-      padding: smDown ? "16px" : "20px",
-    }}>
+      padding: "16px",
+    } : undefined}>
       {smDown ? (
         <BlockStack gap="300">
           <Text as="h2" variant="headingMd">{t("dashboard.performanceOverview")}</Text>
