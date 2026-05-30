@@ -42,6 +42,25 @@ function extractSupabaseRef(url) {
 
 // ─── Build-identity rules (public env) ──────────────────────────────────────
 
+// Vercel PREVIEW deployments intentionally lack Production-scoped secrets.
+// The dev/prod split narrowed SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_URL,
+// the Shopify secret, etc. to the Production scope only, so a preview build of
+// any non-production branch sees APP_ENV=production (set on all scopes) with the
+// secrets/ref unset — and hard-fails this gate. Those builds are throwaway and
+// never serve real traffic, so failing them only floods the dashboard with red
+// "Error" deployments. Skip the strict checks for previews.
+//
+// This does NOT relax the real guard: production- AND development-TARGET builds
+// run with VERCEL_ENV=production and fall through to full enforcement below, and
+// local `release:verify` runs with VERCEL_ENV unset (also strict). Only Vercel
+// previews (VERCEL_ENV=preview) are exempt.
+if (env.VERCEL_ENV === "preview") {
+  console.log(
+    "[env-identity] VERCEL_ENV=preview — skipping strict identity checks (preview builds intentionally lack Production-scoped secrets).",
+  );
+  process.exit(0);
+}
+
 const appEnv = env.APP_ENV;
 // Tolerant Phase-0 rollout: when APP_ENV is unset the verifier emits an
 // informational note and skips the rest of the checks. Once the operator
