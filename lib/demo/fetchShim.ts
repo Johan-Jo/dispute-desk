@@ -384,8 +384,13 @@ const HANDLERS: Handler[] = [
         historicalImportStatus: "complete",
         historicalImportOrdersTotal: 1432,
         historicalImportSinceDate: "2025-10-17T00:00:00Z",
-        historicalImportScopeGranted: "default_window",
+        historicalImportScopeGranted: "read_all_orders",
         historicalImportCompletedAt: "2026-01-15T08:30:00Z",
+        // Hide the "Unlock your full order history" upsell banner —
+        // demo store is on read_all_orders so the banner self-hides
+        // (see DashboardScopeUpgradeBanner.tsx:77).
+        currentScopeGrant: "read_all_orders",
+        dismissedBanners: {},
         recommendation: null,
       });
     },
