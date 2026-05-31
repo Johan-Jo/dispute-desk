@@ -264,32 +264,32 @@ export function v1_tierMinimumWords(
 
   if (wc >= min) return null;
 
-  // Path B-lite floors:
-  //   < 300w → HARD (article is unusable at any tier)
-  //   300–499w → SOFT (under-developed; retry hint pushes for expansion)
-  //   500–599w → SOFT (borderline; editorial review decides)
-  //   600w to tier-min → SOFT (acceptable assembly, just below aspirational depth)
-  // Word-count alone is not enough to reject a Tier A article above 300w —
-  // the qualitative validators (V3 schema leakage, V5 archetype must-haves,
-  // V6 internal links, etc.) catch real failures.
-  const STUB_HARD_FLOOR = 300;
-  const UNDER_DEVELOPED_THRESHOLD = 500;
+  // Tier-relative floors. The hard floor scales with the tier minimum so that a
+  // genuinely under-tier article is *rejected*, not merely warned about:
+  //   < 60% of tier-min → HARD (too far below floor to ship; force a retry/reject)
+  //   60% of tier-min .. tier-min → SOFT (close enough that editorial review decides)
+  // The absolute 300w stub floor remains a lower bound (covers Tier C, whose
+  // 60% is 480 — well above 300). Historically this was a flat 300w hard floor,
+  // which let 380w cluster/pillar drafts publish as soft warnings; the qualitative
+  // validators (schema leakage, archetype must-haves, internal links) do not catch
+  // missing depth, so word count must enforce the tier floor itself.
+  const STUB_HARD_FLOOR = Math.max(300, Math.floor(min * 0.6));
   const severity: ValidatorSeverity = wc < STUB_HARD_FLOOR ? "hard" : "soft";
 
   let retryHint: string;
-  if (wc < STUB_HARD_FLOOR) {
-    retryHint = `The previous article was only ${wc} words — that is a stub, not an article. Develop the strongest messy scenario from the source material in full. Walk the operational workflow end-to-end. Compare evidence strength comparatively. Each major section should carry operational weight, not be a one-line summary. Aim for 600–900 words of substantive depth.`;
-  } else if (wc < UNDER_DEVELOPED_THRESHOLD) {
-    retryHint = `The previous article was only ${wc} words. Expand by developing the strongest messy scenario from the source material in full (not summarized), walking the Shopify workflow end-to-end, and comparing evidence strength comparatively. Do not add generic padding — add operational depth. At least one section should be 3–5 paragraphs.`;
+  if (wc < 300) {
+    retryHint = `The previous article was only ${wc} words — that is a stub, not an article. Develop the strongest messy scenario from the source material in full. Walk the operational workflow end-to-end. Compare evidence strength comparatively. Each major section should carry operational weight, not be a one-line summary. The tier-${tier} minimum is ${min} words.`;
+  } else if (wc < STUB_HARD_FLOOR) {
+    retryHint = `The previous article was only ${wc} words; the tier-${tier} minimum is ${min} words and this is well below it. Expand by developing the strongest messy scenario from the source material in full (not summarized), walking the Shopify workflow end-to-end, and comparing evidence strength comparatively. Do not add generic padding — add operational depth. Several sections should run 3–5 paragraphs.`;
   } else {
-    retryHint = `The previous article was ${wc} words; aim for 600–900 words of operational depth. Do not pad — develop one section more fully (the strongest messy scenario, the workflow walk-through, or the evidence comparison) without inventing new substance.`;
+    retryHint = `The previous article was ${wc} words; aim for the tier-${tier} minimum of ${min} words. Do not pad — develop one or two sections more fully (the strongest messy scenario, the workflow walk-through, or the evidence comparison) without inventing new substance.`;
   }
 
   return {
     id: "V1_tier_minimum_words",
     severity,
     message: `Article body is ${wc} words; tier ${tier} minimum is ${min}.${
-      wc < UNDER_DEVELOPED_THRESHOLD ? " (under-developed)" : ""
+      wc < STUB_HARD_FLOOR ? " (under-developed)" : ""
     }`,
     retryHint,
   };

@@ -34,6 +34,7 @@
     "seed:content:shopify-chargeback-cluster": "node scripts/seed-shopify-chargeback-cluster.mjs",
     "seed:content:tier-a-pillars": "node scripts/seed-tier-a-pillar-briefs.mjs",
     "run:autopilot-once": "node scripts/run-autopilot-once.mjs",
+    "hub:expand": "node scripts/expand-thin-article.mjs",
     "db:migrate": "npx supabase db push",
     "db:migrate:script": "node scripts/run-migration.mjs",
     "db:push:prod": "node scripts/db-push-prod.mjs",
