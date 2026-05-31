@@ -96,17 +96,17 @@ function briefToValidatorContext(brief: GenerationBrief): ValidatorBriefContext 
  * A/B comparison via the expand-thin route's ?provider= param).
  */
 function generationProvider(override?: "openai" | "claude" | null): "openai" | "claude" {
-  if (override === "claude" || override === "openai") {
-    if (override === "claude" && !(process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY)) {
-      return "openai";
-    }
-    return override;
-  }
+  const hasClaude = !!(process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY);
+  if (override === "openai") return "openai";
+  if (override === "claude") return hasClaude ? "claude" : "openai";
   const envChoice = process.env.GENERATION_PROVIDER?.toLowerCase();
-  if (envChoice === "claude" && (process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY)) {
-    return "claude";
-  }
-  return "openai";
+  if (envChoice === "openai") return "openai"; // explicit opt-out
+  if (envChoice === "claude") return hasClaude ? "claude" : "openai";
+  // Default (chosen 2026-05-31): Claude/Sonnet when an Anthropic key is present.
+  // gpt-4o would not write to tier-floor depth even with explicit retry hints
+  // (it stalled at ~300w on a 1500-floor cluster; Sonnet produced ~1800w on the
+  // same brief). Falls back to OpenAI only when no Anthropic key is configured.
+  return hasClaude ? "claude" : "openai";
 }
 
 export async function generateForLocale(
@@ -294,13 +294,14 @@ async function callClaudeChat(
   }
 }
 
-/** Provider selector for Pass 2 only. Pass 1 always uses OpenAI. */
+/** Provider selector for Pass 2 only. Pass 1 always uses OpenAI. Defaults to
+ *  Claude/Sonnet when an Anthropic key is present (see generationProvider). */
 function passTwoProvider(): "openai" | "claude" {
+  const hasClaude = !!(process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY);
   const envChoice = process.env.GENERATION_PASS_TWO_PROVIDER?.toLowerCase();
-  if (envChoice === "claude" && (process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY)) {
-    return "claude";
-  }
-  return "openai";
+  if (envChoice === "openai") return "openai";
+  if (envChoice === "claude") return hasClaude ? "claude" : "openai";
+  return hasClaude ? "claude" : "openai";
 }
 
 function buildTwoPassContext(brief: GenerationBrief, locale: string): TwoPassBriefContext {
