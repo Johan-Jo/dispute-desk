@@ -7,6 +7,8 @@
 3. **Verify before “done”:** `npm test` and `npx tsc --noEmit` (and `npm run build` when touching UI/routes/schema).
 4. **Plan mode is absolute.** When plan mode activates — for any reason, at any time — **immediately stop all write operations**. No edits, no bash commands that modify files, no git operations, no tool calls that change state. Read-only actions only. Do not attempt to “finish up” current work. Do not rationalize continuing. Stop, acknowledge plan mode, and follow the plan workflow. This applies even if plan mode activates mid-task due to background agent completion or other system events.
 5. **Structural i18n: no English in `lib/`, no English in `pack_json`.** Library code (`lib/**`) emits `I18nToken`s for user-facing copy — never resolved English strings. Persisted pack data carries `labelToken`, not `label`. UI leaf renderers that consume library-emitted copy accept the branded `Localized` type so a raw English literal cannot satisfy the prop type. The single resolution path is `lib/i18n/resolveToken.ts` driven by a root translator (`useTranslations()` / `getTranslations({ locale })`). The legacy English-fallback path in `getMessages.ts` is gone; missing keys are a build failure via `scripts/verify-i18n-parity.mjs`.
+6. **Every cron route calls `cronEnvGate(req)` first.** Any new file under `app/api/cron/**/route.ts` (or `app/api/jobs/worker/route.ts`) MUST `import { cronEnvGate } from "@/lib/cron/envGate"` and call it before doing any work. A vitest case enumerates the cron routes and fails the build on any offender. The gate handles both the env toggle (`CRON_ENABLED`) and `CRON_SECRET` auth (Authorization Bearer / `x-cron-secret` header / `?secret=` query). Never reimplement the auth inline. Reference: `docs/technical.md` § *Environment Identity & Cron Gate* and `docs/plans/dev-prod-environment-split.plan.md` §6.2.
+7. **Never run bare `shopify app deploy`.** Always go through the wrapper scripts: `npm run shopify:deploy:dev` or `npm run shopify:deploy:prod`. Each wrapper invokes `scripts/guard-shopify-config.mjs <dev|prod>` first to refuse the deploy if the corresponding `shopify.app.{dev,prod}.toml` has a dangerous value (e.g. dev TOML pointing at the prod URL, prod TOML pointing at the dev `client_id`). `shopify.app.toml` no longer exists — config aliases (`shopify app config use dev` / `prod`) drive everything. Pin to `shopify@3.94.3` via `npx shopify@3.94.3 …` because v4 needs Node ≥22.12 and this repo runs on 22.4.1. Reference: `docs/plans/dev-prod-environment-split.plan.md` §8.
 
 ## What It Is
 Automation-first Shopify chargeback evidence app. Connects to Shopify, auto-syncs disputes, auto-builds evidence packs, and auto-saves them back to Shopify. Merchants submit via Shopify Admin — DisputeDesk does NOT programmatically submit to card networks.
@@ -42,7 +44,7 @@ npm run lint             # ESLint (eslint.config.mjs; see README Database migrat
 npm run build            # Production build
 npm run test:e2e         # Playwright E2E
 node scripts/smoke-test.mjs  # E2E smoke test (requires live Supabase)
-npm run seed:synthetic-disputes  # Seed fake disputes for UI dev
+npm run seed:dev:synthetic-disputes  # Seed fake disputes for UI dev (requires APP_ENV=development)
 ```
 
 **Before declaring a task done (agents):** Run **`npm test`** (`vitest run`) and **`npx tsc --noEmit`**; for UI/routes/schema changes also **`npm run build`**. Fix failures before saying the work is complete—do not rely on “should be fine” without a green run.

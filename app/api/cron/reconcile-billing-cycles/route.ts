@@ -21,6 +21,7 @@ import {
   selectShopsToReconcile,
   type ReconcileShopOutcome,
 } from "@/lib/billing/reconcileBillingCycle";
+import { cronEnvGate } from "@/lib/cron/envGate";
 
 export const runtime = "nodejs";
 // Vercel cron functions inherit the default 60s budget. The
@@ -30,13 +31,8 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET;
-  const secret =
-    req.headers.get("authorization")?.replace("Bearer ", "") ??
-    req.nextUrl.searchParams.get("secret");
-  if (!cronSecret || secret !== cronSecret) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const gate = cronEnvGate(req);
+  if (gate) return gate;
 
   const startedAt = Date.now();
   const shopIds = await selectShopsToReconcile();

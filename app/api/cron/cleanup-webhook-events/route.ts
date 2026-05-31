@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { cronEnvGate } from "@/lib/cron/envGate";
 
 export const runtime = "nodejs";
-
-const CRON_SECRET = process.env.CRON_SECRET;
 
 /**
  * GET /api/cron/cleanup-webhook-events
@@ -17,13 +16,8 @@ const CRON_SECRET = process.env.CRON_SECRET;
  * touched by this job.
  */
 export async function GET(req: NextRequest) {
-  const secret =
-    req.headers.get("authorization")?.replace("Bearer ", "") ??
-    req.nextUrl.searchParams.get("secret");
-
-  if (!CRON_SECRET || secret !== CRON_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const gate = cronEnvGate(req);
+  if (gate) return gate;
 
   const sb = getServiceClient();
   const cutoff = new Date();

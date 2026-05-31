@@ -23,6 +23,8 @@ import {
   classifyScopeGrant,
   enqueueShopOrdersBackfill,
 } from "@/lib/disputes/backfillOrders";
+import { recommendPlan, type PlanRecommendation } from "@/lib/billing/recommendPlan";
+import { upsertPlanRecommendation } from "@/lib/billing/persistRecommendation";
 
 export const runtime = "nodejs";
 
@@ -93,6 +95,12 @@ interface InsightsResponse {
   historicalImportCompletedAt: string | null;
   currentScopeGrant: "default_window" | "read_all_orders";
   dismissedBanners: Record<string, string>;
+
+  /** Plan recommendation derived from chargeback volume. Present only
+   *  when historicalImportStatus === "complete" AND shop is on Free
+   *  (null plan or "free"). Risk Intel page renders the recommendation
+   *  card from this; PR 2 will add the dashboard banner. */
+  recommendation: PlanRecommendation | null;
 }
 
 interface PeriodWindow {
@@ -103,7 +111,14 @@ interface PeriodWindow {
   fraudDisputeRatePct: number | null;
   shopifyProtectCoveragePct: number | null;
   chargebackRatePct: number | null;
+  /** Order denominator for the window (sum of daily `order_count`).
+   *  Despite the legacy name this is the ORDER count, used by the
+   *  chargeback-health verdict's "enough orders to judge" gate. */
   chargebackOrders: number;
+  /** Actual chargeback count for the window (sum of daily
+   *  `chargeback_count`). This — NOT `chargebackOrders` — is the
+   *  monthly-volume signal the plan recommender sizes on. */
+  chargebackCount: number;
   /** % of Shopify Payments orders that completed 3-D Secure
    *  authentication. Numerator: orders with three_ds_authenticated=true.
    *  Denominator: orders with payment_gateway='shopify_payments'.
@@ -311,6 +326,7 @@ function aggregateWindow(
     shopifyProtectCoveragePct: rate(fullyProtectedValue, eligibleProtectedValue),
     chargebackRatePct: rate(cbCount, cbOrders),
     chargebackOrders: cbOrders,
+    chargebackCount: cbCount,
     ...tdsAndFul,
   };
 }
@@ -372,7 +388,7 @@ export async function GET(req: NextRequest) {
   const { data: shopRow } = await sb
     .from("shops")
     .select(
-      "historical_import_status, historical_import_orders_total, historical_import_since_date, historical_import_scope_granted, historical_import_completed_at, dismissed_banners",
+      "plan, historical_import_status, historical_import_orders_total, historical_import_since_date, historical_import_scope_granted, historical_import_completed_at, dismissed_banners",
     )
     .eq("id", shopId)
     .single();
@@ -578,7 +594,42 @@ export async function GET(req: NextRequest) {
     currentScopeGrant,
     dismissedBanners:
       (shopRow?.dismissed_banners as Record<string, string> | null) ?? {},
+
+    // Recommendation is computed only when the import has completed AND
+    // the merchant is still on Free. Paid-plan shops don't see an
+    // "upgrade to X" card on their own data — that would be noise.
+    recommendation:
+      status === "complete" &&
+      ((shopRow?.plan as string | null) ?? "free") === "free"
+        ? recommendPlan({
+            // Use the chargeback COUNT, not `chargebackOrders` (which is
+            // the order denominator) — the recommender sizes on monthly
+            // chargeback volume.
+            chargebackOrders90d: win90.chargebackCount,
+            chargebackOrders30d: current30d.chargebackCount,
+            ordersAnalyzed: ordersTotal,
+            historicalScopeGranted:
+              (shopRow?.historical_import_scope_granted as
+                | "default_window"
+                | "read_all_orders"
+                | null) ?? null,
+          })
+        : null,
   };
+
+  // Persist the recommendation so the dashboard banner + monthly cron
+  // share one source of truth. Fire-and-forget: a write failure must
+  // never degrade the page response, and the monthly cron will heal it.
+  if (response.recommendation) {
+    upsertPlanRecommendation(sb, shopId, response.recommendation).catch(
+      (err) => {
+        console.warn(
+          "[insights] plan recommendation persist failed:",
+          err instanceof Error ? err.message : err,
+        );
+      },
+    );
+  }
 
   return NextResponse.json(response);
 }

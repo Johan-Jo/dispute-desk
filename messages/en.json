@@ -2065,7 +2065,31 @@
     "extraCreditsTitle": "Extra credits ({total} packs)",
     "extraCreditsBundle": "+{packs} packs",
     "extraCreditsExpires": "expires {date}",
-    "extraCreditsNoExpiry": "no expiry"
+    "extraCreditsNoExpiry": "no expiry",
+    "recommendation": {
+      "cardTitle": "Recommended for your store: {plan}",
+      "subtitle": "Based on {orders} orders and {chargebacks} chargebacks in the last 90 days.",
+      "partialHistoryNote": "Based on partial history — Shopify only granted access to ~60 days of orders. Grant full history for a more accurate fit.",
+      "monthlyVolume": "≈ {rate} chargebacks per month",
+      "headroomNote": "{multiplier}× headroom for spikes",
+      "reason_no_history": "Not enough order history yet to size a plan. We'll re-check after your first orders come in.",
+      "reason_low_volume": "Free still fits — you have no chargebacks in the last 90 days. Upgrade when your volume rises.",
+      "reason_volume_fits": "{plan} covers your monthly volume with room for spikes.",
+      "reason_spike_observed": "Your last 30 days are above your 90-day average. {plan} gives you headroom in case the surge holds.",
+      "compareHeader": "How the plans fit your volume",
+      "compareCapPerMonth": "{count} packs/month",
+      "compareCapLifetime": "{count} lifetime packs",
+      "compareFitRecommended": "Recommended",
+      "compareFitBelow": "Below your volume",
+      "compareFitTight": "Tight — no headroom",
+      "compareFitGenerous": "More than you need",
+      "ctaStartTrial": "Start 14-day {plan} trial",
+      "ctaSeePlans": "See all plans",
+      "ctaStaysFreeFooter": "You stay on Free until you accept. We re-check this monthly.",
+      "bannerTitle": "{plan} fits your chargeback volume",
+      "bannerBody": "You're handling about {rate} chargebacks a month — more than Free covers. See how {plan} fits.",
+      "bannerCta": "View recommendation"
+    }
   },
   "rules": {
     "title": "Rules",
@@ -2754,7 +2778,7 @@
       },
       "upgradingPlan": {
         "title": "How to upgrade your plan",
-        "body": "To upgrade your DisputeDesk plan:\n\n1. Go to the Billing page.\n2. Review the plan comparison table.\n3. Click \"Upgrade to [Plan]\" on the plan you want.\n4. You'll be redirected to Shopify to approve the recurring charge.\n5. After approval, your plan is activated immediately.\n\nPaid plans include a 7-day free trial. You won't be charged until the trial period ends.\n\nIf you need to downgrade, contact support. Downgrades take effect at the end of your current billing cycle, and your data is always retained.\n\nYour plan determines your monthly pack quota and which features are available (auto-pack, custom rules, priority support).\n\n**From the marketing site:** Buttons on the public pricing section link to Billing with `?plan=…` so the right tier is selected or the upgrade flow starts. Open DisputeDesk from **Shopify Admin → Apps → DisputeDesk** so your store session is valid; if you are not in the embedded app, you may be prompted to open it from Admin first."
+        "body": "To upgrade your DisputeDesk plan:\n\n1. Go to the Billing page.\n2. Review the plan comparison table.\n3. Click \"Upgrade to [Plan]\" on the plan you want.\n4. You'll be redirected to Shopify to approve the recurring charge.\n5. After approval, your plan is activated immediately.\n\nPaid plans include a 7-day free trial. You won't be charged until the trial period ends.\n\nIf you need to downgrade, contact support. Downgrades take effect at the end of your current billing cycle, and your data is always retained.\n\nYour plan determines your monthly pack quota and which features are available (auto-pack, custom rules, priority support).\n\n**From the marketing site:** Buttons on the public pricing section link to Billing with `?plan=…` so the right tier is selected or the upgrade flow starts. Open DisputeDesk from **Shopify Admin → Apps → DisputeDesk** so your store session is valid; if you are not in the embedded app, you may be prompted to open it from Admin first.\n\n**Not sure which plan?** Once DisputeDesk finishes analysing your store's order history, it suggests the plan that fits your chargeback volume — with headroom for busy months. You'll see this on the **Initial Analysis** page and as a banner on your dashboard. It's only a suggestion: you stay on Free until you accept, and we re-check it every month as your volume changes."
       },
       "packLimits": {
         "title": "Understanding pack limits and quotas",

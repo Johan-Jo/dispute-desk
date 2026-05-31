@@ -2065,7 +2065,31 @@
     "extraCreditsTitle": "Zusätzliches Guthaben ({total} Packs)",
     "extraCreditsBundle": "+{packs} Packs",
     "extraCreditsExpires": "läuft am {date} ab",
-    "extraCreditsNoExpiry": "ohne Ablauf"
+    "extraCreditsNoExpiry": "ohne Ablauf",
+    "recommendation": {
+      "cardTitle": "Empfohlen für Ihren Shop: {plan}",
+      "subtitle": "Basierend auf {orders} Bestellungen und {chargebacks} Rückbuchungen der letzten 90 Tage.",
+      "partialHistoryNote": "Basierend auf unvollständiger Historie — Shopify hat nur Zugriff auf ca. 60 Tage Bestelldaten gewährt. Erteilen Sie vollen Zugriff für eine genauere Empfehlung.",
+      "monthlyVolume": "≈ {rate} Rückbuchungen pro Monat",
+      "headroomNote": "{multiplier}× Puffer für Spitzen",
+      "reason_no_history": "Noch nicht genug Bestellhistorie, um einen Plan zu empfehlen. Wir prüfen erneut, sobald die ersten Bestellungen eingehen.",
+      "reason_low_volume": "Free reicht noch — keine Rückbuchungen in den letzten 90 Tagen. Upgraden Sie, wenn Ihr Volumen steigt.",
+      "reason_volume_fits": "{plan} deckt Ihr monatliches Volumen mit Puffer für Spitzen.",
+      "reason_spike_observed": "Ihre letzten 30 Tage liegen über dem 90-Tage-Durchschnitt. {plan} bietet Puffer, falls der Anstieg anhält.",
+      "compareHeader": "So passen die Pläne zu Ihrem Volumen",
+      "compareCapPerMonth": "{count} Pakete/Monat",
+      "compareCapLifetime": "{count} lebenslange Pakete",
+      "compareFitRecommended": "Empfohlen",
+      "compareFitBelow": "Unter Ihrem Volumen",
+      "compareFitTight": "Knapp — kein Puffer",
+      "compareFitGenerous": "Mehr als nötig",
+      "ctaStartTrial": "14-Tage-Testversion {plan} starten",
+      "ctaSeePlans": "Alle Pläne ansehen",
+      "ctaStaysFreeFooter": "Sie bleiben auf Free, bis Sie zustimmen. Wir prüfen das monatlich.",
+      "bannerTitle": "{plan} passt zu Ihrem Rückbuchungsvolumen",
+      "bannerBody": "Sie bearbeiten etwa {rate} Rückbuchungen pro Monat – mehr als der Free-Tarif abdeckt. Sehen Sie, wie {plan} passt.",
+      "bannerCta": "Empfehlung ansehen"
+    }
   },
   "rules": {
     "title": "Regeln",
@@ -2743,7 +2767,7 @@
       },
       "upgradingPlan": {
         "title": "So upgraden Sie Ihren Plan",
-        "body": "Zum Upgrade:\n\n1. Gehen Sie zur Abrechnungsseite.\n2. Wählen Sie den gewünschten Plan.\n3. Klicken Sie \"Upgraden\".\n4. Genehmigen Sie in Shopify.\n\nBezahlpläne enthalten 7 Tage Testphase.\n\n**Von der Marketing-Website:** Schaltflächen im Preisbereich verlinken auf die Abrechnung mit `?plan=…`, damit die passende Stufe gewählt oder das Upgrade gestartet wird. Öffnen Sie DisputeDesk über **Shopify Admin → Apps → DisputeDesk**, damit Ihre Shopsitzung gültig ist; andernfalls werden Sie ggf. aufgefordert, die App zuerst im Admin zu öffnen."
+        "body": "Zum Upgrade:\n\n1. Gehen Sie zur Abrechnungsseite.\n2. Wählen Sie den gewünschten Plan.\n3. Klicken Sie \"Upgraden\".\n4. Genehmigen Sie in Shopify.\n\nBezahlpläne enthalten 7 Tage Testphase.\n\n**Von der Marketing-Website:** Schaltflächen im Preisbereich verlinken auf die Abrechnung mit `?plan=…`, damit die passende Stufe gewählt oder das Upgrade gestartet wird. Öffnen Sie DisputeDesk über **Shopify Admin → Apps → DisputeDesk**, damit Ihre Shopsitzung gültig ist; andernfalls werden Sie ggf. aufgefordert, die App zuerst im Admin zu öffnen.\n\n**Unsicher, welcher Tarif?** Sobald DisputeDesk die Bestellhistorie Ihres Shops analysiert hat, schlägt es den Tarif vor, der zu Ihrem Rückbuchungsvolumen passt – mit Puffer für umsatzstarke Monate. Sie sehen das auf der Seite **Erstanalyse** und als Banner auf Ihrem Dashboard. Es ist nur ein Vorschlag: Sie bleiben auf Free, bis Sie zustimmen, und wir prüfen es monatlich, wenn sich Ihr Volumen ändert."
       },
       "packLimits": {
         "title": "Paketlimits und Kontingente verstehen",

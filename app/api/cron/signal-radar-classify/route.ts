@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { classifyDrain } from "@/lib/signal-radar/classify-drain";
 import { getSignalRadarSettings } from "@/lib/signal-radar/settings";
+import { cronEnvGate } from "@/lib/cron/envGate";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-const CRON_SECRET = process.env.CRON_SECRET;
-
 export async function GET(req: NextRequest) {
-  const secret =
-    req.headers.get("authorization")?.replace("Bearer ", "") ??
-    req.nextUrl.searchParams.get("secret");
-
-  if (!CRON_SECRET || secret !== CRON_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const gate = cronEnvGate(req);
+  if (gate) return gate;
 
   const settings = await getSignalRadarSettings();
   if (!settings.classify_cron_enabled) {

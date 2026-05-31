@@ -2065,7 +2065,31 @@
     "extraCreditsTitle": "Créditos extras ({total} packs)",
     "extraCreditsBundle": "+{packs} pacotes",
     "extraCreditsExpires": "expira em {date}",
-    "extraCreditsNoExpiry": "sem expiração"
+    "extraCreditsNoExpiry": "sem expiração",
+    "recommendation": {
+      "cardTitle": "Recomendado para sua loja: {plan}",
+      "subtitle": "Baseado em {orders} pedidos e {chargebacks} estornos nos últimos 90 dias.",
+      "partialHistoryNote": "Baseado em histórico parcial — a Shopify só concedeu acesso a cerca de 60 dias de pedidos. Conceda acesso completo para uma recomendação mais precisa.",
+      "monthlyVolume": "≈ {rate} estornos por mês",
+      "headroomNote": "{multiplier}× de folga para picos",
+      "reason_no_history": "Ainda não há histórico de pedidos suficiente para recomendar um plano. Vamos verificar novamente após os primeiros pedidos.",
+      "reason_low_volume": "Free ainda cabe — sem estornos nos últimos 90 dias. Faça upgrade quando seu volume aumentar.",
+      "reason_volume_fits": "{plan} cobre seu volume mensal com folga para picos.",
+      "reason_spike_observed": "Seus últimos 30 dias estão acima da média de 90 dias. {plan} oferece folga caso a alta continue.",
+      "compareHeader": "Como os planos se encaixam no seu volume",
+      "compareCapPerMonth": "{count} pacotes/mês",
+      "compareCapLifetime": "{count} pacotes vitalícios",
+      "compareFitRecommended": "Recomendado",
+      "compareFitBelow": "Abaixo do seu volume",
+      "compareFitTight": "Apertado — sem folga",
+      "compareFitGenerous": "Mais do que precisa",
+      "ctaStartTrial": "Iniciar avaliação de 14 dias — {plan}",
+      "ctaSeePlans": "Ver todos os planos",
+      "ctaStaysFreeFooter": "Você fica no Free até aceitar. Revisamos isso mensalmente.",
+      "bannerTitle": "{plan} combina com seu volume de estornos",
+      "bannerBody": "Você lida com cerca de {rate} estornos por mês — mais do que o plano Free cobre. Veja como o {plan} se encaixa.",
+      "bannerCta": "Ver recomendação"
+    }
   },
   "rules": {
     "title": "Regras",
@@ -2743,7 +2767,7 @@
       },
       "upgradingPlan": {
         "title": "Como fazer upgrade do seu plano",
-        "body": "Para fazer upgrade do seu plano DisputeDesk:\n\n1. Vá à página de Cobrança.\n2. Revise a tabela de comparação de planos.\n3. Clique em \"Fazer upgrade para [Plano]\" no plano desejado.\n4. Você será redirecionado ao Shopify para aprovar a cobrança recorrente.\n5. Após a aprovação, seu plano é ativado imediatamente.\n\nPlanos pagos incluem 7 dias de teste gratuito. Você não será cobrado até o fim do período de teste.\n\nSe precisar fazer downgrade, entre em contato com o suporte. Downgrades entram em vigor ao final do ciclo de cobrança atual, e seus dados são sempre mantidos.\n\nSeu plano determina sua cota mensal de pacotes e quais recursos estão disponíveis (pacote automático, regras personalizadas, suporte prioritário).\n\n**Do site de marketing:** os botões da seção de preços abrem Cobrança com `?plan=…` para o nível certo ou para iniciar o upgrade. Abra o DisputeDesk em **Shopify Admin → Apps → DisputeDesk** para ter sessão válida; caso contrário, pode ser preciso abrir o app pelo Admin primeiro."
+        "body": "Para fazer upgrade do seu plano DisputeDesk:\n\n1. Vá à página de Cobrança.\n2. Revise a tabela de comparação de planos.\n3. Clique em \"Fazer upgrade para [Plano]\" no plano desejado.\n4. Você será redirecionado ao Shopify para aprovar a cobrança recorrente.\n5. Após a aprovação, seu plano é ativado imediatamente.\n\nPlanos pagos incluem 7 dias de teste gratuito. Você não será cobrado até o fim do período de teste.\n\nSe precisar fazer downgrade, entre em contato com o suporte. Downgrades entram em vigor ao final do ciclo de cobrança atual, e seus dados são sempre mantidos.\n\nSeu plano determina sua cota mensal de pacotes e quais recursos estão disponíveis (pacote automático, regras personalizadas, suporte prioritário).\n\n**Do site de marketing:** os botões da seção de preços abrem Cobrança com `?plan=…` para o nível certo ou para iniciar o upgrade. Abra o DisputeDesk em **Shopify Admin → Apps → DisputeDesk** para ter sessão válida; caso contrário, pode ser preciso abrir o app pelo Admin primeiro.\n\n**Não sabe qual plano escolher?** Quando o DisputeDesk termina de analisar o histórico de pedidos da sua loja, ele sugere o plano que combina com seu volume de estornos — com folga para os meses mais movimentados. Você verá isso na página **Análise inicial** e como um banner no seu painel. É apenas uma sugestão: você fica no Free até aceitar, e revisamos isso todo mês conforme seu volume muda."
       },
       "packLimits": {
         "title": "Entendendo limites e cotas de pacotes",

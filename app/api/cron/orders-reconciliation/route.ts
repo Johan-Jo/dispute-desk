@@ -28,8 +28,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { enqueueJob } from "@/lib/jobs/claimJobs";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { loadSession } from "@/lib/shopify/sessionStorage";
-
-const CRON_SECRET = process.env.CRON_SECRET;
+import { cronEnvGate } from "@/lib/cron/envGate";
 
 const MAX_ENQUEUES_PER_SHOP = 100;
 const CIRCUIT_BREAKER_THRESHOLD = 5;
@@ -48,13 +47,8 @@ const RECENT_ORDER_IDS_QUERY = /* GraphQL */ `
 `;
 
 export async function GET(req: NextRequest) {
-  const secret =
-    req.headers.get("authorization")?.replace("Bearer ", "") ??
-    req.nextUrl.searchParams.get("secret");
-
-  if (!CRON_SECRET || secret !== CRON_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const gate = cronEnvGate(req);
+  if (gate) return gate;
 
   const sb = getServiceClient();
 

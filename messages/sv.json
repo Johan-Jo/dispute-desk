@@ -2065,7 +2065,31 @@
     "extraCreditsTitle": "Extra krediter ({total} paket)",
     "extraCreditsBundle": "+{packs} paket",
     "extraCreditsExpires": "går ut {date}",
-    "extraCreditsNoExpiry": "ingen utgång"
+    "extraCreditsNoExpiry": "ingen utgång",
+    "recommendation": {
+      "cardTitle": "Rekommenderat för din butik: {plan}",
+      "subtitle": "Baserat på {orders} ordrar och {chargebacks} återkrav under de senaste 90 dagarna.",
+      "partialHistoryNote": "Baserat på partiell historik — Shopify har bara gett åtkomst till cirka 60 dagars orderdata. Ge full åtkomst för en mer precis rekommendation.",
+      "monthlyVolume": "≈ {rate} återkrav per månad",
+      "headroomNote": "{multiplier}× marginal för toppar",
+      "reason_no_history": "Inte tillräckligt med orderhistorik för att rekommendera en plan ännu. Vi tittar igen när dina första ordrar kommer in.",
+      "reason_low_volume": "Free räcker fortfarande — inga återkrav under de senaste 90 dagarna. Uppgradera när din volym ökar.",
+      "reason_volume_fits": "{plan} täcker din månadsvolym med marginal för toppar.",
+      "reason_spike_observed": "Dina senaste 30 dagar ligger över 90-dagarsgenomsnittet. {plan} ger dig marginal om uppgången håller i sig.",
+      "compareHeader": "Så passar planerna din volym",
+      "compareCapPerMonth": "{count} paket/månad",
+      "compareCapLifetime": "{count} paket totalt",
+      "compareFitRecommended": "Rekommenderas",
+      "compareFitBelow": "Under din volym",
+      "compareFitTight": "Snålt — ingen marginal",
+      "compareFitGenerous": "Mer än du behöver",
+      "ctaStartTrial": "Starta 14 dagars provperiod — {plan}",
+      "ctaSeePlans": "Visa alla planer",
+      "ctaStaysFreeFooter": "Du stannar på Free tills du accepterar. Vi kollar igen varje månad.",
+      "bannerTitle": "{plan} matchar din återkravsvolym",
+      "bannerBody": "Du hanterar omkring {rate} återkrav per månad – mer än vad Free täcker. Se hur {plan} passar.",
+      "bannerCta": "Visa rekommendation"
+    }
   },
   "rules": {
     "title": "Regler",
@@ -2743,7 +2767,7 @@
       },
       "upgradingPlan": {
         "title": "Hur du uppgraderar din plan",
-        "body": "För att uppgradera:\n\n1. Gå till Faktureringssidan.\n2. Granska planjämförelsetabellen.\n3. Klicka \"Uppgradera till [Plan]\".\n4. Du omdirigeras till Shopify för att godkänna debiteringen.\n5. Efter godkännande aktiveras din plan omedelbart.\n\nBetalplaner inkluderar 7 dagars gratis provperiod.\n\n**Från marknadssidan:** Knappar i prissektionen länkar till Fakturering med `?plan=…` så rätt nivå väljs eller uppgraderingsflödet startar. Öppna DisputeDesk från **Shopify Admin → Appar → DisputeDesk** så att butikssessionen är giltig; annars kan du behöva öppna appen därifrån först."
+        "body": "För att uppgradera:\n\n1. Gå till Faktureringssidan.\n2. Granska planjämförelsetabellen.\n3. Klicka \"Uppgradera till [Plan]\".\n4. Du omdirigeras till Shopify för att godkänna debiteringen.\n5. Efter godkännande aktiveras din plan omedelbart.\n\nBetalplaner inkluderar 7 dagars gratis provperiod.\n\n**Från marknadssidan:** Knappar i prissektionen länkar till Fakturering med `?plan=…` så rätt nivå väljs eller uppgraderingsflödet startar. Öppna DisputeDesk från **Shopify Admin → Appar → DisputeDesk** så att butikssessionen är giltig; annars kan du behöva öppna appen därifrån först.\n\n**Osäker på vilken plan?** När DisputeDesk har analyserat butikens orderhistorik föreslår det den plan som matchar din återkravsvolym – med marginal för månader med hög aktivitet. Du ser det på sidan **Inledande analys** och som en banner på din instrumentpanel. Det är bara ett förslag: du stannar på Free tills du accepterar, och vi kontrollerar det varje månad när din volym ändras."
       },
       "packLimits": {
         "title": "Förstå paketgränser och kvoter",

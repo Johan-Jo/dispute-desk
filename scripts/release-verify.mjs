@@ -33,6 +33,10 @@ const c = {
 };
 
 const STEPS = [
+  // Env identity — verifies dangerous dev/prod env combinations early so
+  // misconfig fails before the heavier steps. Tolerant when APP_ENV is
+  // unset (Phase 0 pre-activation); strict once APP_ENV is set.
+  { name: "Env identity", cmd: "node", args: ["scripts/verify-env-identity.mjs"] },
   { name: "Lint", cmd: "npm", args: ["run", "lint"] },
   { name: "TypeScript", cmd: "npx", args: ["tsc", "--noEmit"] },
   // i18n guardrail — blocks hardcoded English in embedded routes.
@@ -55,6 +59,12 @@ const STEPS = [
   { name: "i18n: equivalences", cmd: "node", args: ["scripts/verify-i18n-equivalences.mjs"] },
   // verbose reporter so each test name streams — user can follow progress
   { name: "Vitest", cmd: "npx", args: ["vitest", "run", "--reporter=verbose"] },
+  // Migration parity — confirms the set of files under supabase/migrations/
+  // matches what's applied on the linked Supabase project (the operator's
+  // dev project under normal workflow). Skips gracefully when CLI isn't
+  // linked / not logged in, so CI doesn't fail just because Supabase auth
+  // isn't configured.
+  { name: "Migration parity", cmd: "node", args: ["scripts/verify-migration-parity.mjs"] },
   { name: "Build", cmd: "npm", args: ["run", "build"] },
 ];
 

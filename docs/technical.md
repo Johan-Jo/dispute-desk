@@ -475,6 +475,24 @@ AI-powered pipeline that converts archive items into multilingual article drafts
 - `content_revisions`: `change_summary`, `edit_distance`, `tokens_used`.
 - `getGenerationStats()` query in `admin-queries.ts`.
 
+## Environment Identity & Cron Gate (Phase 0 of dev/prod split)
+
+Three modules enforce the dev/prod boundary at build time, server boot, and on every cron invocation. Plan: [`docs/plans/dev-prod-environment-split.plan.md`](plans/dev-prod-environment-split.plan.md). Env-var reference: [`docs/env-vars.md`](env-vars.md).
+
+- **`lib/env/build-identity.ts`** — pure function, public-env only, throws on dangerous combinations (e.g. `APP_ENV=production` with non-prod `NEXT_PUBLIC_APP_URL`; `APP_ENV=development` pointed at the prod Supabase project ref). Imported by `scripts/verify-env-identity.mjs`. No secret access.
+- **`lib/env/runtime-identity.ts`** — runs once per server process via `lib/env/bootstrap.ts` (memoized). Validates required-secret presence + shape (`TOKEN_ENCRYPTION_KEY_V1` must be exactly 64 hex). **Never prints, hashes, or derives identifiers from secret values** — variable names + boolean presence only. Invoked from `instrumentation.ts` at Node-runtime cold start.
+- **`scripts/verify-env-identity.mjs`** — CLI mirror used by `npm run release:verify` (first step) and by `package.json#prebuild` so every `npm run build` (including Vercel's) fails fast on misconfig. Tolerant of an unset `APP_ENV` so the verifier doesn't break builds before Phase 0 step 10 sets the var on Vercel.
+
+**Cron gate** — every `app/api/cron/**/route.ts` and `app/api/jobs/worker/route.ts` MUST call `cronEnvGate(req)` before doing any work. The gate:
+
+- Returns `204 No Content` when `CRON_ENABLED !== "true"` — dev default, so cron paths are a no-op without any per-route changes.
+- Returns `401` when `CRON_SECRET` is unset or doesn't match the request.
+- Accepts auth via `Authorization: Bearer`, `x-cron-secret` header, or `?secret=` query — the superset of every pre-gate auth shape across the existing routes.
+
+A vitest case (`lib/cron/__tests__/envGate.test.ts`) enumerates every cron route file and fails the build if any file does not import + call `cronEnvGate`.
+
+**Identity probe** — `GET /api/health` returns non-secret fingerprints (`appEnv`, `appUrl`, `supabaseProjectRefFp`, `shopifyClientIdFp`, `cronEnabled`, `gitSha`, `apiVersion`, `vercelEnv`, `deploymentId`, `processStartedAt`). Used by the post-deploy checklist to confirm a deployment is wired to the intended environment.
+
 ## Async Jobs
 
 ### Architecture
@@ -1024,6 +1042,24 @@ Hierarchy (operational behavior is the hero, Shopify's classification is support
 Color severity is intentionally softened: HIGH risk is amber-orange (`#F97316`), not red. True red (`#DC2626`) is reserved for actual network-threshold breaches (the gauge "elevated" band, breach-severity checkpoint rows).
 
 API: `GET /api/dashboard/insights/initial-analysis` bundles everything the banner + page need — historical totals, 90d fraud-rollup percentages, 90d chargeback rate + classified health, risk breakdown, and import state. Single endpoint, single fetch per surface.
+
+### Plan Recommendation (post-install fitting)
+
+Merchants land on Free by default (`lib/billing/checkQuota.ts` null-coalesces `shop.plan` to `"free"`). Once the 90-day historical import completes and `shop.plan IN (null, "free")`, the insights endpoint returns a `recommendation` object computed by `lib/billing/recommendPlan.ts` — a pure function over chargeback volume.
+
+**Tier thresholds** (monthly chargebacks): `0 → free`, `1–14 → starter`, `15–70 → growth`, `71+ → scale`. Sized to `max(chargebackOrders90d / 3, chargebackOrders30d)` so a quiet 60 days followed by a noisy 30 doesn't undersize the recommendation — under-sizing means the merchant hits the pack cap mid-month. A spike is declared (and the `spike_observed` reason emitted) when `30d count > 1.5 × smoothed 90d/3` AND `30d count ≥ 3` (absolute floor — without it, 1→2 chargebacks trips a meaningless "spike"). Reason discriminators: `no_history | low_volume | volume_fits | spike_observed`. `partialHistory` mirrors `historicalImportScopeGranted === "default_window"` so the UI can flag the recommendation as based on Shopify's ~60-day default window.
+
+Surfaced on `/app/insights/initial-analysis` via `PlanRecommendationCard` (sits above the hero on Free shops only; suppressed once the merchant upgrades). CTA goes through the existing `/api/billing/subscribe` flow — standard 14-day trial, no special trial mechanics for recommendation-accepted upgrades. Tests: `lib/billing/__tests__/recommendPlan.test.ts` — 11 cases covering boundaries (14/15, 70/71), spike + spike-floor, empty-shop vs zero-chargebacks distinction, and partial-history flagging.
+
+**Volume signal (correctness note).** The recommender sizes on the **chargeback count** (`PeriodWindow.chargebackCount`, summed from `shop_daily_metrics.chargeback_count`), NOT `PeriodWindow.chargebackOrders` (the order denominator the chargeback-health verdict uses). An early wiring of the insights endpoint passed the order count by mistake, which would have over-recommended every shop with ≥71 orders/month into Scale — fixed when PR 2 unified the input gathering in `lib/billing/persistRecommendation.ts`.
+
+**Persistence + dashboard surfacing (PR 2).** The recommendation is persisted to `plan_recommendations` (one row per shop; server-only, RLS with no policies). Two writers keep it fresh and never disagree because both sum the same `chargeback_count` source:
+- the insights endpoint upserts on page view (fire-and-forget — a write failure never degrades the page);
+- the monthly cron `app/api/cron/plan-recommendations/route.ts` (05:00 UTC on the 1st, ahead of the monthly digest) recomputes for every shop with `plan IN (null, "free")` and a completed import. Calls `cronEnvGate(req)` first per the cron non-negotiable.
+
+Input gathering + upsert live in `lib/billing/persistRecommendation.ts` (`gatherRecommendationInputs`, `upsertPlanRecommendation`). The upsert deliberately omits the dismissal columns so PostgREST `merge-duplicates` preserves them across recomputes.
+
+The embedded dashboard renders `DashboardPlanRecommendationBanner` (below the scope-upgrade banner). It reads `GET /api/billing/plan-recommendation`, which folds the dismissal rule into a `show` flag via the pure `shouldShowRecommendationBanner(recommendedPlan, dismissedPlan)`. **Dismissal is keyed to the plan, not a timestamp**: dismissing a "Starter" nudge (`POST /api/billing/plan-recommendation/dismiss`, which records the *server-read* recommended plan in `dismissed_plan`) hides the banner only while the recommendation stays "starter"; if volume grows and the recommendation escalates to "growth", the dismissal no longer matches and the banner re-surfaces. The banner CTA navigates to the Risk Intelligence page where the full comparison card + subscribe CTA live (no duplicated subscribe flow). Tests: `lib/billing/__tests__/persistRecommendation.test.ts` — the show/hide + escalation matrix.
 
 ### Operational Checkpoints
 
@@ -4208,12 +4244,14 @@ Filters: skip `[deleted]`/`[removed]`, skip `collapsed=true`, skip `score < 1`, 
 
 **App Store sentiment-polarity gate** (`lib/signal-radar/sources/app-store.ts`): reviews with `rating >= 4` are dropped at ingest. Positive reviews on chargeback apps (e.g. "5/5 — Disputifier's support resolved my chargeback alert") were misclassified as `support_failure` / `competitor_frustration` because the classifier sees "support" + "chargeback" keywords without sentiment context. Only 1-3 star reviews ingest — those are the actual pain signal.
 
-**Alerts** (`lib/signal-radar/alerts.ts`): pure `decideAlert()` rules:
-- `migration_intent` AND `signal_score >= 8` → immediate, **no** category cooldown, but cluster cooldown 24h still applies, hard cap 5/day
-- `transparency_frustration` AND `signal_score >= 8` → immediate, 4h category cooldown + 24h cluster cooldown
-- `reserve_fear` AND `signal_score >= 9` → immediate, 4h category cooldown + 24h cluster cooldown
-- `competitor_frustration` AND `signal_score >= 8` → immediate, 4h category cooldown + 24h cluster cooldown
+**Alerts** (`lib/signal-radar/alerts.ts`): pure `decideAlert()` rules (thresholds lowered 2026-05-30 — see note below):
+- `migration_intent` AND `signal_score >= 6` → immediate, **no** category cooldown, but cluster cooldown 24h still applies, hard cap 5/day
+- `transparency_frustration` AND `signal_score >= 6` → immediate, 4h category cooldown + 24h cluster cooldown
+- `reserve_fear` AND `signal_score >= 7` → immediate, 4h category cooldown + 24h cluster cooldown
+- `competitor_frustration` AND `signal_score >= 6` → immediate, 4h category cooldown + 24h cluster cooldown
 - everything else → digest (digest is no-op in M1; rolls up in M3)
+
+> **Threshold history**: the bar was originally migration/transparency/competitor `>= 8` and reserve_fear `>= 9`. At observed prod volume nothing cleared it for a full week (2026-05-23 → 30) despite a healthy ingest/classify pipeline, so it was lowered to the values above on 2026-05-30. The dedup cooldowns (`CATEGORY_COOLDOWN_HOURS=4` / `CLUSTER_COOLDOWN_HOURS=24`), migration daily cap (5), and circuit breaker (10 immediates/hr) still bound email volume — the lower entry bar surfaces real pain without flooding.
 
 **Source-confidence gate**: `source_confidence_score < 5` always falls through to digest, regardless of category — vague low-confidence rants don't fire immediates. Both dedup keys (`category` and `cluster`) are stored on every `signal_alerts` row. Global circuit breaker: > 10 immediate alerts in any 1h window suppresses further immediates.
 
@@ -4235,6 +4273,8 @@ Stream queries live in `lib/signal-radar/queries.ts` — `fetchKpiCounts`, `fetc
 **What's NOT in M1**: save/dismiss/reviewed buttons, daily digest, Shopify Community/App Store ingesters, vocabulary persistence, content-opportunities tab, weekly intelligence report, per-admin alert preferences, outreach automation. The product direction is **intelligence synthesis, not social-media monitoring**.
 
 **Cron schedule** (`vercel.json`): `/api/cron/signal-radar-reddit` hourly (`0 * * * *`), `/api/cron/signal-radar-classify` every 5 min (`*/5 * * * *`). Both authed via `Authorization: Bearer ${CRON_SECRET}` (or `?secret=` query fallback).
+
+**Cron run tracking** (added 2026-05-30): the hourly ingest cron records its lifecycle in `signal_radar_ingest_runs` (`trigger='cron'`) via `runTrackedIngest()` in `lib/signal-radar/run-tracking.ts` — the single tracked ingest entry point shared with the manual-refresh route. Previously the cron called `ingestLoop` directly and left the table empty, so the dashboard "last refresh" status bar (`refresh-status-bar.tsx`) looked dead even while ingest was healthy (it falls back to the most recent run row, regardless of trigger, when no `run_id` is supplied). `runTrackedIngest` never throws on an adapter outage — it records `status='error'` + `error_message` and returns. The manual route keeps its own `insert + after()` flow because it must return `run_id` to the browser *before* the long ingest runs; the cron has no client to poll.
 
 **Env vars**: production needs *one of* `APIFY_API_TOKEN` (preferred, paid) OR `REDDIT_PROXY_URL`+`REDDIT_PROXY_SECRET` (free Cloudflare Worker) — without either, every Reddit fetch from Vercel will 403. Optional: `APIFY_REDDIT_ACTOR_ID`, `REDDIT_USER_AGENT`, `SIGNAL_RADAR_MODEL`. Reuses `OPENAI_API_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`, `ADMIN_NOTIFY_EMAIL`, `CRON_SECRET`.
 

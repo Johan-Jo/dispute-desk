@@ -16,6 +16,13 @@ import { readFileSync, mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 import { createRequire } from "module";
 import { getAdminToken } from "./shopify/admin-token.mjs";
+import { requireDev } from "./internal/seed-guard.mjs";
+
+// Dev-only: places real (test-mode) orders on a Shopify store. Refuse
+// to run anywhere else — placing test-mode orders against the prod app
+// would create real disputes in the prod merchant's dashboard.
+requireDev();
+
 const require = createRequire(import.meta.url);
 
 const CARD_NUMBER = "4000000000000259";

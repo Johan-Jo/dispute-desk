@@ -5,9 +5,17 @@
  * Usage:
  *   node scripts/seed-resources-hub.mjs           # skip if launch slug + archive already exist
  *   node scripts/seed-resources-hub.mjs --force # delete all hub rows (FK order) then seed fresh
+ *
+ * PROD_SAFE: idempotent on re-run (skips existing rows). When APP_ENV=production,
+ * requires explicit `--allow-prod` flag to publish content live.
  */
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
+import { requireProdAllowed } from "./internal/seed-guard.mjs";
+
+// Content publishing: idempotent, prod-safe in principle, but never run
+// against prod by accident — requires explicit --allow-prod flag.
+requireProdAllowed();
 import {
   getTopChargebackManagementToolsArticleEntry,
   TOP_CHARGEBACK_LEGACY_SLUGS,

@@ -2065,7 +2065,31 @@
     "extraCreditsTitle": "Crédits supplémentaires ({total} packs)",
     "extraCreditsBundle": "+{packs} dossiers",
     "extraCreditsExpires": "expire le {date}",
-    "extraCreditsNoExpiry": "sans expiration"
+    "extraCreditsNoExpiry": "sans expiration",
+    "recommendation": {
+      "cardTitle": "Recommandé pour votre boutique : {plan}",
+      "subtitle": "Basé sur {orders} commandes et {chargebacks} rétrofacturations sur les 90 derniers jours.",
+      "partialHistoryNote": "Basé sur un historique partiel — Shopify n'a accordé l'accès qu'à environ 60 jours de commandes. Accordez l'accès complet pour une recommandation plus précise.",
+      "monthlyVolume": "≈ {rate} rétrofacturations par mois",
+      "headroomNote": "{multiplier}× de marge pour les pics",
+      "reason_no_history": "Pas encore assez d'historique de commandes pour recommander un plan. Nous reverrons après vos premières commandes.",
+      "reason_low_volume": "Free convient encore — aucune rétrofacturation sur les 90 derniers jours. Passez à un plan supérieur quand votre volume augmentera.",
+      "reason_volume_fits": "{plan} couvre votre volume mensuel avec de la marge pour les pics.",
+      "reason_spike_observed": "Vos 30 derniers jours sont au-dessus de la moyenne sur 90 jours. {plan} vous donne de la marge si la hausse se maintient.",
+      "compareHeader": "Comment les plans s'adaptent à votre volume",
+      "compareCapPerMonth": "{count} packs/mois",
+      "compareCapLifetime": "{count} packs à vie",
+      "compareFitRecommended": "Recommandé",
+      "compareFitBelow": "En dessous de votre volume",
+      "compareFitTight": "Juste — sans marge",
+      "compareFitGenerous": "Plus que nécessaire",
+      "ctaStartTrial": "Démarrer l'essai 14 jours — {plan}",
+      "ctaSeePlans": "Voir tous les plans",
+      "ctaStaysFreeFooter": "Vous restez sur Free jusqu'à acceptation. Nous revérifions chaque mois.",
+      "bannerTitle": "{plan} correspond à votre volume de rétrofacturations",
+      "bannerBody": "Vous traitez environ {rate} rétrofacturations par mois, plus que ne couvre l'offre Free. Découvrez en quoi {plan} vous convient.",
+      "bannerCta": "Voir la recommandation"
+    }
   },
   "rules": {
     "title": "Règles",
@@ -2743,7 +2767,7 @@
       },
       "upgradingPlan": {
         "title": "Comment mettre à niveau votre plan",
-        "body": "Pour mettre à niveau :\n\n1. Allez à la page Facturation.\n2. Choisissez le plan souhaité.\n3. Cliquez \"Mettre à niveau\".\n4. Approuvez dans Shopify.\n\nLes plans payants incluent 7 jours d'essai gratuit.\n\n**Depuis le site marketing :** les boutons de la section tarifs ouvrent la facturation avec `?plan=…` pour préselectionner le palier ou lancer la mise à niveau. Ouvrez DisputeDesk depuis **Shopify Admin → Applications → DisputeDesk** pour une session valide ; sinon vous devrez peut-être ouvrir l’application depuis l’admin d’abord."
+        "body": "Pour mettre à niveau :\n\n1. Allez à la page Facturation.\n2. Choisissez le plan souhaité.\n3. Cliquez \"Mettre à niveau\".\n4. Approuvez dans Shopify.\n\nLes plans payants incluent 7 jours d'essai gratuit.\n\n**Depuis le site marketing :** les boutons de la section tarifs ouvrent la facturation avec `?plan=…` pour préselectionner le palier ou lancer la mise à niveau. Ouvrez DisputeDesk depuis **Shopify Admin → Applications → DisputeDesk** pour une session valide ; sinon vous devrez peut-être ouvrir l’application depuis l’admin d’abord.\n\n**Vous hésitez sur l’offre ?** Une fois que DisputeDesk a analysé l’historique des commandes de votre boutique, il suggère l’offre adaptée à votre volume de rétrofacturations, avec une marge pour les mois chargés. Vous le verrez sur la page **Analyse initiale** et sous forme de bannière sur votre tableau de bord. Ce n’est qu’une suggestion : vous restez sur Free jusqu’à acceptation, et nous la revérifions chaque mois à mesure que votre volume évolue."
       },
       "packLimits": {
         "title": "Comprendre les limites de dossiers",

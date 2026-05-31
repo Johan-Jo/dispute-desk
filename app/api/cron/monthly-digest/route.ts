@@ -3,8 +3,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { sendMonthlyChargebackDigest } from "@/lib/email/sendMonthlyChargebackDigest";
 import type { DigestPeriodMetrics } from "@/lib/email/sendMonthlyChargebackDigest";
 import { gatherDisputeActivity } from "@/lib/email/digestDisputeActivity";
-
-const CRON_SECRET = process.env.CRON_SECRET;
+import { cronEnvGate } from "@/lib/cron/envGate";
 
 export const runtime = "nodejs";
 // Some shops are large enough that gathering metrics + sending takes
@@ -28,12 +27,8 @@ export const maxDuration = 300;
  * Default ON (sent unless explicitly `false`).
  */
 export async function GET(req: NextRequest) {
-  const secret =
-    req.headers.get("authorization")?.replace("Bearer ", "") ??
-    req.nextUrl.searchParams.get("secret");
-  if (!CRON_SECRET || secret !== CRON_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const gate = cronEnvGate(req);
+  if (gate) return gate;
 
   const sb = getServiceClient();
   const now = new Date();

@@ -20,16 +20,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkShopifyReasonEnumDrift } from "@/lib/shopify/checkReasonEnumDrift";
 import { checkShopifyQueryFieldDrift } from "@/lib/shopify/checkQueryFieldDrift";
+import { cronEnvGate } from "@/lib/cron/envGate";
 
 export async function GET(req: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET;
-  const secret =
-    req.headers.get("authorization")?.replace("Bearer ", "") ??
-    req.nextUrl.searchParams.get("secret");
-
-  if (!cronSecret || secret !== cronSecret) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const gate = cronEnvGate(req);
+  if (gate) return gate;
 
   // Run independently — a failure in one must not mask the other.
   const enumResult = await checkShopifyReasonEnumDrift();

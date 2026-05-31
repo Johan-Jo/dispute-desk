@@ -18,7 +18,10 @@ npm-debug.log*
 debug-*.log
 
 # vitest coverage reports (Phase 1.2 — `npm run test:coverage`)
-coverage/
+# Leading slash anchors to repo root so nested `coverage/` paths
+# (e.g. `app/(demo)/demo/coverage/` and `app/(embedded)/app/coverage/`)
+# stay tracked.
+/coverage/
 
 # playwright
 /test-results/

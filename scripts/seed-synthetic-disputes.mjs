@@ -3,14 +3,19 @@
  * Use for UI/dev testing only. Not mirrored. For real test data, see docs/testing-store-mirror.md.
  *
  * Usage:
- *   npm run seed:synthetic-disputes
+ *   npm run seed:dev:synthetic-disputes
  *   node scripts/seed-synthetic-disputes.mjs --shop dev-store.myshopify.com [--count 30]
  *   node scripts/seed-synthetic-disputes.mjs --shop-id <uuid> [--count 20]
  *   node scripts/seed-synthetic-disputes.mjs --shop dev-store.myshopify.com --ensure-shop
  *   node scripts/seed-synthetic-disputes.mjs --shop dev-store.myshopify.com --cleanup
  *
  * Reads SUPABASE_URL_POSTGRES from .env.local.
+ *
+ * Refuses to run unless APP_ENV=development (dev-only synthetic data).
  */
+
+import { requireDev } from "./internal/seed-guard.mjs";
+requireDev();
 
 import pg from "pg";
 import { readFileSync, existsSync } from "fs";

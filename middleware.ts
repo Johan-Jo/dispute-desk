@@ -66,6 +66,12 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Demo subdomain / route group: public, fully static, no auth, no i18n, no App Bridge.
+  // Early return so none of the marketing/auth/Shopify branches below touch it.
+  if (pathname === "/demo" || pathname.startsWith("/demo/")) {
+    return nextWithAppBridge(req, "0");
+  }
+
   // --- Embedded app entry: Shopify loads application_url (/) in iframe; redirect to /app with same query ---
   if (pathname === "/" && req.nextUrl.searchParams.has("shop")) {
     const appUrl = new URL("/app", req.url);

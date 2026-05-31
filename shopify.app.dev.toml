@@ -1,0 +1,76 @@
+# Shopify App Configuration — DisputeDesk-Dev (dev Partners app)
+#
+# Created via `npx shopify@3.94.3 app config link --config=dev` on
+# 2026-05-26. The CLI writes the canonical fields (client_id, name,
+# application_url, [build]); we hand-add the webhook subscriptions,
+# privacy_compliance block, [pos], and the pinned api_version below.
+#
+# Use with the `dev` config alias:
+#   npm run shopify:deploy:dev                    # push to Partners (wraps guard)
+#   npx shopify@3.94.3 app config use dev         # set as default
+#
+# Reference: docs/plans/dev-prod-environment-split.plan.md §8.
+
+client_id = "bbb7c00568ffb57fecd789fa0580e309"
+application_url = "https://dev.disputedesk.app"
+embedded = true
+name = "DisputeDesk-Dev"
+
+[access_scopes]
+# Scope-by-scope status on DisputeDesk-Dev:
+#
+#   - read_all_orders         — GRANTED 2026-05-26 (self-attest in
+#                                Partners API access; dev-store install
+#                                doesn't require Shopify Support review).
+#   - read_shopify_payments_disputes + 4 dispute evidence/file_upload
+#     scopes                  — NOT in self-serve UI; require a Partner
+#                                Support ticket referencing prod ticket
+#                                64535407 (where these were granted on
+#                                the prod app on 2026-03-04). Add to
+#                                this string when ticket clears.
+#
+# Until the dispute scopes come through, dispute-specific flows can't
+# be exercised on the dev app; everything else (order sync, webhooks,
+# embedded UI, billing, content, Resources Hub) works on the current
+# set.
+scopes = "read_all_orders,read_customer_events,read_customers,read_fulfillments,read_orders,read_products,read_shipping,write_pixels"
+
+[auth]
+redirect_urls = [
+  "https://dev.disputedesk.app/api/auth/shopify/callback",
+]
+
+[webhooks]
+# Pinned to 2026-01 to match prod (the Admin GraphQL pin in lib/shopify/).
+# The CLI auto-populated 2026-07 when it created the dev app — overriding
+# that so dev and prod use the same Admin API contract.
+api_version = "2026-01"
+
+  [[webhooks.subscriptions]]
+  topics = ["app/uninstalled"]
+  uri = "/api/webhooks/app-uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = ["shop/update"]
+  uri = "/api/webhooks/shop-update"
+
+  [[webhooks.subscriptions]]
+  topics = ["app_subscriptions/update"]
+  uri = "/api/webhooks/app-subscriptions-update"
+
+  # GDPR mandatory webhooks (App Store requirement) — same handlers
+  # as prod, served by the dev Vercel deploy at dev.disputedesk.app.
+  [webhooks.privacy_compliance]
+  customer_data_request_url = "https://dev.disputedesk.app/api/webhooks/customers-data-request"
+  customer_deletion_url     = "https://dev.disputedesk.app/api/webhooks/customers-redact"
+  shop_deletion_url         = "https://dev.disputedesk.app/api/webhooks/shop-redact"
+
+# disputes/create and disputes/update registered at runtime (OAuth) — same as prod,
+# once Shopify Payments protected scopes are granted on the dev app.
+
+[pos]
+embedded = false
+
+[build]
+include_config_on_deploy = true
+automatically_update_urls_on_dev = true

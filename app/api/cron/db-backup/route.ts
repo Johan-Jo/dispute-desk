@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { Client } from "pg";
 import { gzipSync } from "node:zlib";
 import { AwsClient } from "aws4fetch";
+import { cronEnvGate } from "@/lib/cron/envGate";
 
 export const runtime = "nodejs";
 // Vercel Pro: 300s ceiling. Free: 60s. The dump for our current
 // row volume runs in under 30s.
 export const maxDuration = 300;
-
-const CRON_SECRET = process.env.CRON_SECRET;
 
 /**
  * GET /api/cron/db-backup
@@ -38,13 +37,8 @@ const CRON_SECRET = process.env.CRON_SECRET;
  * that's actually expensive to lose. Code/schema lives in git.
  */
 export async function GET(req: NextRequest) {
-  const secret =
-    req.headers.get("authorization")?.replace("Bearer ", "") ??
-    req.nextUrl.searchParams.get("secret");
-
-  if (!CRON_SECRET || secret !== CRON_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const gate = cronEnvGate(req);
+  if (gate) return gate;
 
   // Required env vars. Use the direct DB URL (IPv6-capable) since
   // we're in Vercel, not the pooler — same one as SUPABASE_URL_POSTGRES.

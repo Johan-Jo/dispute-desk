@@ -39,10 +39,15 @@ const CLEAN_FIELD_RESULT = {
 
 describe("GET /api/cron/check-shopify-reasons", () => {
   const ORIGINAL_CRON_SECRET = process.env.CRON_SECRET;
+  const ORIGINAL_CRON_ENABLED = process.env.CRON_ENABLED;
 
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.CRON_SECRET = "test-secret";
+    // cronEnvGate short-circuits with 204 when CRON_ENABLED !== "true",
+    // so route tests need to opt into the enabled state to exercise the
+    // handler body.
+    process.env.CRON_ENABLED = "true";
     // Default both helpers to clean so tests that only care about one
     // path don't need to wire the other.
     mockField.mockResolvedValue(CLEAN_FIELD_RESULT);
@@ -50,6 +55,7 @@ describe("GET /api/cron/check-shopify-reasons", () => {
 
   afterAll(() => {
     process.env.CRON_SECRET = ORIGINAL_CRON_SECRET;
+    process.env.CRON_ENABLED = ORIGINAL_CRON_ENABLED;
   });
 
   it("returns 401 when the Authorization header is missing", async () => {
