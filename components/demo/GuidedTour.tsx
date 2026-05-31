@@ -335,6 +335,16 @@ function useTargetRect(
         : finder
           ? finder()
           : null;
+      // Debug — expose finder result so we can diagnose missing anchors
+      // in the live demo. Read in DevTools: `window.__ddTour.lastEl`.
+      if (typeof window !== "undefined") {
+        (window as unknown as Record<string, unknown>).__ddTour = {
+          selector,
+          hasFinder: !!finder,
+          lastEl: el,
+          lastTime: Date.now(),
+        };
+      }
       if (!el) {
         // Once the target has been found at least once for this step,
         // losing it (e.g. brief layout flicker, page transition) keeps
