@@ -481,6 +481,20 @@ async function generateLocaleWithValidators(
 
     if (!result.content) {
       lastError = result.error;
+      // A null result is usually a transient generation failure (Claude has no
+      // JSON response_format, so Sonnet occasionally emits unparseable JSON;
+      // also empty responses / 5xx). Re-roll with an explicit JSON nudge rather
+      // than failing the locale outright. Only give up on non-retryable config
+      // errors (missing API key).
+      const retryable =
+        /non-JSON|Empty response|invalid response structure|API error 5\d\d|429|rate limit|timeout/i.test(
+          result.error ?? ""
+        );
+      if (retryable && attempt < MAX_VALIDATOR_RETRIES) {
+        extraInstructions =
+          "Return ONLY a single valid, parseable JSON object matching the schema — no prose, no explanation, no markdown code fences. Ensure all strings are properly escaped.";
+        continue;
+      }
       break;
     }
 
