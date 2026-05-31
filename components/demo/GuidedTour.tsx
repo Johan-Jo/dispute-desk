@@ -69,7 +69,7 @@ function findKpiCardByHeading(headingText: string): HTMLElement | null {
       node = node.parentElement;
     }
     // Fallback: closest Polaris-Card, else heading's parent.
-    return (h.closest(".Polaris-Card") as HTMLElement | null) ?? h.parentElement;
+    return (h.closest(".Polaris-LegacyCard") as HTMLElement | null) ?? h.parentElement;
   }
   return null;
 }
@@ -133,13 +133,13 @@ export const TOUR_STEPS: TourStep[] = [
     path: "/demo",
     selector: null,
     // Recent Disputes wrapper is a Polaris-Card. Find by h2, then
-    // walk up to .Polaris-Card.
+    // walk up to .Polaris-LegacyCard.
     findElement: () => {
       if (typeof document === "undefined") return null;
       const headings = document.querySelectorAll("h2");
       for (const h of Array.from(headings)) {
         if (h.textContent?.trim() === "Recent Disputes") {
-          return h.closest(".Polaris-Card") as HTMLElement | null;
+          return h.closest(".Polaris-LegacyCard") as HTMLElement | null;
         }
       }
       return null;
@@ -211,7 +211,7 @@ export const TOUR_STEPS: TourStep[] = [
       if (typeof document === "undefined") return null;
       const inner = document.querySelector('[class*="heroCard"]') as HTMLElement | null;
       if (!inner) return null;
-      return inner.closest(".Polaris-Card") as HTMLElement | null ?? inner;
+      return inner.closest(".Polaris-LegacyCard") as HTMLElement | null ?? inner;
     },
     nextPath: null,
     isFinalStep: true,
