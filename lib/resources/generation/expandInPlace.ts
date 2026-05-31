@@ -94,6 +94,12 @@ export interface ExpandOptions {
    * are refreshed but stay unpublished/thin-flagged until promoted.
    */
   publish?: boolean;
+  /**
+   * Restrict regeneration to these locales (default: all HUB_CONTENT_LOCALES).
+   * The client paces one locale per call to stay under the OpenAI TPM cap —
+   * generating all 6 in one call runs them in parallel and 429s on low tiers.
+   */
+  locales?: string[];
 }
 
 function wordCountOf(mainHtml: string | undefined): number {
@@ -146,8 +152,12 @@ export async function regenerateArticleInPlace(
   } else {
     brief = reconstructBriefFromItem(item as ContentItemRow, existingByLocale.get("en-US"));
   }
-  // Always rebuild the full locale set so missing locales are backfilled.
-  brief.targetLocales = [...HUB_CONTENT_LOCALES];
+  // Regenerate the requested locales (default: all 6, backfilling any missing).
+  const requested =
+    opts.locales && opts.locales.length > 0
+      ? opts.locales.filter((l) => (HUB_CONTENT_LOCALES as readonly string[]).includes(l))
+      : [...HUB_CONTENT_LOCALES];
+  brief.targetLocales = requested;
 
   const routeKind = routeKindForContentType(brief.contentType);
   const cmsSettings = await getCmsSettings();
