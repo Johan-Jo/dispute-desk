@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 
 const SCRIPT = resolve(__dirname, "..", "..", "scripts", "verify-env-identity.mjs");
 
-const KNOWN_PROD_SUPABASE_PROJECT_REF = "sddzuglxdnkhcnjmcpbj";
+const KNOWN_PROD_SUPABASE_PROJECT_REF = "aokhplydttxtebvbeuzc";
 const KNOWN_PROD_SHOPIFY_CLIENT_ID = "84f40ec77c9ba18e9eabc1657d9b6af8";
 const PROD_APP_URL = "https://disputedesk.app";
 const DEV_APP_URL = "https://dev.disputedesk.app";
@@ -108,7 +108,7 @@ describe("verify-env-identity.mjs CLI — refuses deliberately broken combos", (
       NEXT_PUBLIC_SUPABASE_URL: "https://someotherprojectref.supabase.co",
     });
     expect(r.code).toBe(1);
-    expect(r.out).toMatch(/expected "sddzuglxdnkhcnjmcpbj"/);
+    expect(r.out).toMatch(/expected "aokhplydttxtebvbeuzc"/);
   });
 
   it("refuses dev pointed at the prod app URL", () => {

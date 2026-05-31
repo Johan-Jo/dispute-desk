@@ -45,8 +45,8 @@ import { config as loadEnv } from "dotenv";
 // THE CUTOVER COMMIT. The script then accepts both during the cutover
 // holdback period, and you can drop the old one in a follow-up.
 const KNOWN_PROD_PROJECT_REFS = [
-  "sddzuglxdnkhcnjmcpbj", // current prod (Free tier, pre-cutover)
-  // "aokhplydttxtebvbeuzc", // future prod (Pro tier, post-cutover)
+  "aokhplydttxtebvbeuzc", // current prod (Pro tier, post-2026-05-28 cutover)
+  "sddzuglxdnkhcnjmcpbj", // legacy prod (Free tier, now the dev project) — drop in a follow-up
 ];
 
 const RELEASE_LOG = "docs/runbooks/prod-release-log.md";

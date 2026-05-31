@@ -18,7 +18,9 @@
  * Reference: docs/plans/dev-prod-environment-split.plan.md §6.1a, §6.1b, §6.4.
  */
 
-const KNOWN_PROD_SUPABASE_PROJECT_REF = "sddzuglxdnkhcnjmcpbj";
+// Swapped from legacy Free ref `sddzuglxdnkhcnjmcpbj` → Pro ref during the
+// 2026-05-28 cutover. Keep in sync with lib/env/build-identity.ts.
+const KNOWN_PROD_SUPABASE_PROJECT_REF = "aokhplydttxtebvbeuzc";
 const KNOWN_PROD_SHOPIFY_CLIENT_ID = "84f40ec77c9ba18e9eabc1657d9b6af8";
 const PROD_APP_URL = "https://disputedesk.app";
 const HEX_64 = /^[0-9a-fA-F]{64}$/;

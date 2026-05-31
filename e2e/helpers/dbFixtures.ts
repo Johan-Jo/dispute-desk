@@ -58,11 +58,11 @@ export function openSb(): SbConn {
     );
   }
 
-  // DisputeDesk has one Supabase project (`sddzuglxdnkhcnjmcpbj`) that
-  // backs dev, E2E, and prod. Until we provision a separate test
-  // project, opt-in via `E2E_ALLOW_PROD_DB=true` so that nobody
-  // accidentally seeds fixtures while the dashboard is being demoed.
-  const PROD_REF = "sddzuglxdnkhcnjmcpbj";
+  // Post 2026-05-28 Free→Pro cutover the production project is
+  // `aokhplydttxtebvbeuzc` (the old `sddzuglxdnkhcnjmcpbj` is now dev/E2E).
+  // Guard against accidentally seeding fixtures into prod; opt-in via
+  // `E2E_ALLOW_PROD_DB=true` to override.
+  const PROD_REF = "aokhplydttxtebvbeuzc";
   if (
     url.includes(PROD_REF) &&
     process.env.E2E_ALLOW_PROD_DB !== "true"

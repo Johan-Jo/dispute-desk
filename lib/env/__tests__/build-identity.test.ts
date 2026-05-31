@@ -148,7 +148,7 @@ describe("buildIdentitySummary", () => {
     const s = buildIdentitySummary(validProd());
     expect(s).toContain("APP_ENV=production");
     expect(s).toContain("disputedesk.app");
-    expect(s).toContain("supabaseRefFp=sddzuglx");
+    expect(s).toContain("supabaseRefFp=aokhplyd");
     expect(s).toContain("shopifyClientIdFp=84f40ec7");
     expect(s).not.toContain(KNOWN_PROD_SHOPIFY_CLIENT_ID); // full id not echoed
   });

@@ -13,7 +13,11 @@
  * Reference: docs/plans/dev-prod-environment-split.plan.md §6.1a.
  */
 
-export const KNOWN_PROD_SUPABASE_PROJECT_REF = "sddzuglxdnkhcnjmcpbj";
+// Production Supabase project ref. Swapped from the legacy Free-tier ref
+// `sddzuglxdnkhcnjmcpbj` to the Pro-tier ref `aokhplydttxtebvbeuzc` during the
+// 2026-05-28 Free→Pro cutover (the deferred "code-constant" step noted in
+// docs/runbooks/prod-release-log.md). The old ref is now the *dev* project.
+export const KNOWN_PROD_SUPABASE_PROJECT_REF = "aokhplydttxtebvbeuzc";
 export const KNOWN_PROD_SHOPIFY_CLIENT_ID =
   "84f40ec77c9ba18e9eabc1657d9b6af8";
 export const PROD_APP_URL = "https://disputedesk.app";
