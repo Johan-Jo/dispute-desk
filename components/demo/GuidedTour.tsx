@@ -304,18 +304,28 @@ interface TargetRect {
 /** Hook: poll for an element matching `selector` OR `finder` and return
  *  its bounding rect (live, updates on resize/scroll). Returns null
  *  when neither resolves. */
+interface TargetState {
+  rect: TargetRect | null;
+  /** True once polling has been running long enough that we should
+   *  stop hiding the dim overlay. Allows the centered-modal fallback
+   *  to look correct even when the finder never resolves. */
+  gaveUp: boolean;
+}
+
 function useTargetRect(
   selector: string | null,
   finder: (() => HTMLElement | null) | null,
   deps: unknown[],
-): TargetRect | null {
-  const [rect, setRect] = useState<TargetRect | null>(null);
+): TargetState {
+  const [state, setState] = useState<TargetState>({ rect: null, gaveUp: false });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!selector && !finder) {
-      setRect(null);
+      setState({ rect: null, gaveUp: false });
       return;
     }
+    // Reset gaveUp when step changes (deps change).
+    setState((s) => ({ rect: null, gaveUp: false }));
     let cancelled = false;
     let raf: number | undefined;
 
@@ -326,7 +336,7 @@ function useTargetRect(
           ? finder()
           : null;
       if (!el) {
-        setRect((prev) => (prev === null ? prev : null));
+        setState((prev) => (prev.rect === null ? prev : { ...prev, rect: null }));
         return false;
       }
       const r = el.getBoundingClientRect();
@@ -339,17 +349,17 @@ function useTargetRect(
         width: Math.round(r.width),
         height: Math.round(r.height),
       };
-      setRect((prev) => {
+      setState((prev) => {
         if (
-          prev &&
-          prev.top === next.top &&
-          prev.left === next.left &&
-          prev.width === next.width &&
-          prev.height === next.height
+          prev.rect &&
+          prev.rect.top === next.top &&
+          prev.rect.left === next.left &&
+          prev.rect.width === next.width &&
+          prev.rect.height === next.height
         ) {
           return prev;
         }
-        return next;
+        return { rect: next, gaveUp: false };
       });
       return true;
     };
@@ -359,7 +369,15 @@ function useTargetRect(
     let attempts = 0;
     const tryMeasure = () => {
       if (cancelled) return;
-      if (measure() || attempts++ > 60) return;
+      if (measure() || attempts++ > 60) {
+        if (!measure()) {
+          // Mark as gave-up so the centered-modal fallback renders
+          // WITH the dim overlay (which is the correct presentation
+          // for a step that explicitly has no anchor).
+          setState((prev) => (prev.gaveUp ? prev : { ...prev, gaveUp: true }));
+        }
+        return;
+      }
       raf = requestAnimationFrame(tryMeasure);
     };
     tryMeasure();
@@ -372,16 +390,24 @@ function useTargetRect(
     // Re-measure every 500ms in case Polaris layouts shift after data load.
     const interval = setInterval(measure, 500);
 
+    // Belt-and-braces: after 3 seconds, force gaveUp=true even if the
+    // measure call is still returning false. Prevents an indefinite
+    // transparent overlay if the target genuinely never mounts.
+    const giveUpTimer = setTimeout(() => {
+      setState((prev) => (prev.gaveUp ? prev : { ...prev, gaveUp: true }));
+    }, 3000);
+
     return () => {
       cancelled = true;
       if (raf) cancelAnimationFrame(raf);
       window.removeEventListener("scroll", onChange, { capture: true });
       window.removeEventListener("resize", onChange);
       clearInterval(interval);
+      clearTimeout(giveUpTimer);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selector, ...deps]);
-  return rect;
+  return state;
 }
 
 export function GuidedTourCallout() {
@@ -482,7 +508,7 @@ export function GuidedTourCallout() {
     }
   }, [pathname, dismissed, currentStep, setStep]);
 
-  const rect = useTargetRect(
+  const { rect, gaveUp } = useTargetRect(
     stepActiveOnThisPage ? step?.selector ?? null : null,
     stepActiveOnThisPage ? step?.findElement ?? null : null,
     [currentStep],
@@ -580,7 +606,13 @@ export function GuidedTourCallout() {
           width="100%"
           height="100%"
           fill={
-            (step.selector || step.findElement) && !hasTarget
+            // Transparent only while actively waiting for an anchor
+            // (selector/finder requested but not yet resolved and
+            // haven't given up). Otherwise: full dim — applies to
+            // centered-modal steps (no anchor requested), resolved
+            // anchors (hasTarget=true), AND anchored steps that
+            // timed out (gaveUp=true).
+            (step.selector || step.findElement) && !hasTarget && !gaveUp
               ? "rgba(11, 18, 32, 0)"
               : "rgba(11, 18, 32, 0.7)"
           }
