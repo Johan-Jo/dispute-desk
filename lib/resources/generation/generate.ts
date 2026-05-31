@@ -89,74 +89,95 @@ function briefToValidatorContext(brief: GenerationBrief): ValidatorBriefContext 
   };
 }
 
+/**
+ * Provider selector for the single-call generation path. Defaults to OpenAI;
+ * set GENERATION_PROVIDER=claude (with ANTHROPIC_API_KEY) to assemble articles
+ * on Claude instead. An explicit per-call override beats the env (used for
+ * A/B comparison via the expand-thin route's ?provider= param).
+ */
+function generationProvider(override?: "openai" | "claude" | null): "openai" | "claude" {
+  if (override === "claude" || override === "openai") {
+    if (override === "claude" && !(process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY)) {
+      return "openai";
+    }
+    return override;
+  }
+  const envChoice = process.env.GENERATION_PROVIDER?.toLowerCase();
+  if (envChoice === "claude" && (process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY)) {
+    return "claude";
+  }
+  return "openai";
+}
+
 export async function generateForLocale(
   brief: GenerationBrief,
   locale: string,
   resolvedPrompts: ResolvedGenerationPrompts,
   context: GenerationContext,
-  options?: { extraUserInstructions?: string }
+  options?: { extraUserInstructions?: string; provider?: "openai" | "claude" | null }
 ): Promise<GenerationResult> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return { locale, content: null, error: "OPENAI_API_KEY not configured", tokensUsed: 0 };
-  }
-
   let userPrompt = buildUserPrompt(brief, locale, resolvedPrompts, context);
   if (options?.extraUserInstructions?.trim()) {
     userPrompt += `\n\n${options.extraUserInstructions.trim()}`;
   }
 
-  try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: resolvedPrompts.systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: brief.contentType === "legal_update" ? 0.3 : 0.4,
-        // Non-English locales need ~40-60% more tokens than English for the same word count.
-        // 4096 caused self-truncation in DE/FR/ES/PT/SV, producing shorter articles.
-        // 12000 was too tight for Tier A (3500-5000w + JSON wrapping → 8000+ tokens).
-        // gpt-4o caps at 16384; we use the full ceiling for Tier A headroom.
-        max_tokens: 16384,
-        response_format: { type: "json_object" },
-      }),
-    });
+  const temperature = brief.contentType === "legal_update" ? 0.3 : 0.4;
+  const provider = generationProvider(options?.provider ?? null);
 
-    if (!res.ok) {
-      const errBody = await res.text();
-      return { locale, content: null, error: `OpenAI API error ${res.status}: ${errBody.slice(0, 200)}`, tokensUsed: 0 };
+  let raw: string | null = null;
+  let tokensUsed = 0;
+  let error: string | null = null;
+
+  if (provider === "claude") {
+    ({ raw, tokensUsed, error } = await callClaudeChat(resolvedPrompts.systemPrompt, userPrompt, temperature));
+  } else {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return { locale, content: null, error: "OPENAI_API_KEY not configured", tokensUsed: 0 };
     }
-
-    const data = await res.json();
-    const tokensUsed = data.usage?.total_tokens ?? 0;
-    const raw = data.choices?.[0]?.message?.content;
-
-    if (!raw) {
-      return { locale, content: null, error: "Empty response from model", tokensUsed };
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: MODEL,
+          messages: [
+            { role: "system", content: resolvedPrompts.systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          temperature,
+          // Non-English locales need ~40-60% more tokens than English for the same word count.
+          // gpt-4o caps at 16384; we use the full ceiling for Tier A headroom.
+          max_tokens: 16384,
+          response_format: { type: "json_object" },
+        }),
+      });
+      if (!res.ok) {
+        const errBody = await res.text();
+        return { locale, content: null, error: `OpenAI API error ${res.status}: ${errBody.slice(0, 200)}`, tokensUsed: 0 };
+      }
+      const data = await res.json();
+      tokensUsed = data.usage?.total_tokens ?? 0;
+      raw = data.choices?.[0]?.message?.content ?? null;
+    } catch (err) {
+      return { locale, content: null, error: err instanceof Error ? err.message : "Unknown generation error", tokensUsed: 0 };
     }
-
-    const parsed = JSON.parse(raw) as GeneratedContent;
-
-    if (!parsed.title || !parsed.body_json?.mainHtml) {
-      return { locale, content: null, error: "Invalid response structure — missing title or mainHtml", tokensUsed };
-    }
-
-    return { locale, content: parsed, error: null, tokensUsed };
-  } catch (err) {
-    return {
-      locale,
-      content: null,
-      error: err instanceof Error ? err.message : "Unknown generation error",
-      tokensUsed: 0,
-    };
   }
+
+  if (!raw) {
+    return { locale, content: null, error: error ?? "Empty response from model", tokensUsed };
+  }
+
+  let parsed: GeneratedContent;
+  try {
+    parsed = JSON.parse(raw) as GeneratedContent;
+  } catch {
+    return { locale, content: null, error: "Model returned non-JSON", tokensUsed };
+  }
+  if (!parsed.title || !parsed.body_json?.mainHtml) {
+    return { locale, content: null, error: "Invalid response structure — missing title or mainHtml", tokensUsed };
+  }
+  return { locale, content: parsed, error: null, tokensUsed };
 }
 
 /**
@@ -232,7 +253,8 @@ async function callClaudeChat(
     model,
     system: systemPrompt,
     messages: [{ role: "user", content: userPrompt }],
-    max_tokens: 8192,
+    // Headroom for tier-floor articles (clusters ~1500w, pillars 3000w+) plus JSON wrapping.
+    max_tokens: 16000,
   };
   if (supportsTemperature) requestBody.temperature = temperature;
 
@@ -390,6 +412,8 @@ export interface GenerateAllLocalesOptions {
   isSlugTaken: (locale: string, slug: string) => Promise<boolean>;
   /** Test override: provide a fake embedding client. Defaults to OpenAI client when env enables. */
   embeddingClient?: EmbeddingClient | null;
+  /** Per-call provider override for the single-call path (A/B). Defaults to env (GENERATION_PROVIDER). */
+  provider?: "openai" | "claude" | null;
 }
 
 async function generateLocaleWithValidators(
@@ -443,7 +467,7 @@ async function generateLocaleWithValidators(
           locale,
           resolvedPrompts,
           ctx,
-          extraInstructions ? { extraUserInstructions: extraInstructions } : undefined
+          { extraUserInstructions: extraInstructions || undefined, provider: opts.provider ?? null }
         );
     totalTokens += result.tokensUsed;
 
