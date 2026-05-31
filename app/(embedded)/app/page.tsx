@@ -366,15 +366,17 @@ export default function EmbeddedDashboardPage() {
 
   const recentDisputesPreview = (
     <Layout.Section>
-      <Suspense fallback={
-        <Card>
-          <BlockStack gap="400" inlineAlign="center">
-            <Spinner size="small" />
-          </BlockStack>
-        </Card>
-      }>
-        <DashboardRecentDisputesPreview />
-      </Suspense>
+      <div data-tour="dashboard-recent-disputes">
+        <Suspense fallback={
+          <Card>
+            <BlockStack gap="400" inlineAlign="center">
+              <Spinner size="small" />
+            </BlockStack>
+          </Card>
+        }>
+          <DashboardRecentDisputesPreview />
+        </Suspense>
+      </div>
     </Layout.Section>
   );
 
@@ -407,6 +409,12 @@ export default function EmbeddedDashboardPage() {
         </Layout.Section>
 
         <Layout.Section>
+          {/* data-tour attribute goes on a wrapper INSIDE Layout.Section.
+              Layout's grid logic needs direct Layout.Section children to
+              compute column widths; wrapping the Section in a div breaks
+              that contract and the wrapped Section renders narrower than
+              its siblings. The wrapper is still inside Layout.Section so
+              the tour selector still works. */}
           <div data-tour="dashboard-kpis">
             <DashboardKpis stats={stats} loading={statsLoading} period={period} onPeriodChange={setPeriod} />
           </div>
@@ -415,7 +423,7 @@ export default function EmbeddedDashboardPage() {
         {/* Recent disputes — moved up per the Tier 2 plan. Operational
             queue belongs above intelligence; the merchant's next
             action is usually on a dispute row, not on a metric. */}
-        <div data-tour="dashboard-recent-disputes">{recentDisputesPreview}</div>
+        {recentDisputesPreview}
 
         {/* Operational insights — drill-down intelligence. Compact
             strip; full breakdown lives on /app/insights/initial-analysis. */}

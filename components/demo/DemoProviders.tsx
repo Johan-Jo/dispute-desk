@@ -25,7 +25,18 @@ interface DemoProvidersProps {
 export function DemoProviders({ children, messages }: DemoProvidersProps) {
   return (
     <NextIntlClientProvider locale="en" messages={messages} timeZone="UTC">
-      <AppProvider i18n={enTranslations}>{children}</AppProvider>
+      <AppProvider i18n={enTranslations}>
+        {/* Demo override: Polaris-Page caps at ~998px (built for narrow
+            Shopify Admin iframes). The public demo runs at full
+            viewport width, so lift the cap. The previous attempt at
+            this broke inner Card layouts because of a stray `<div>`
+            wrapping a Layout.Section in page.tsx — that's now fixed,
+            so cap removal is safe. */}
+        <style>{`
+          .Polaris-Page { max-width: none !important; }
+        `}</style>
+        {children}
+      </AppProvider>
     </NextIntlClientProvider>
   );
 }
