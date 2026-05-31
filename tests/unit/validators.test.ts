@@ -67,39 +67,55 @@ describe("htmlToText + wordCount", () => {
 /* ── V1 word count ──────────────────────────────────────────────── */
 
 describe("V1 — tier minimum word count", () => {
-  it("Tier A short article fails as SOFT (gpt-4o length-compliance pragmatic relaxation)", () => {
-    const c = makeCandidate({
-      body_json: { mainHtml: "<p>" + "word ".repeat(800) + "</p>", keyTakeaways: [], faq: [], disclaimer: "" },
-    });
-    const f = v1_tierMinimumWords(c, makeBrief({ contentType: "pillar_page" }));
+  // Hard floor is tier-relative: max(300, floor(tierMin * 0.6)).
+  // → Tier A (3000) hard <1800 · Tier B (1500) hard <900 · Tier C (800) hard <480.
+  const bodyOf = (n: number) => ({
+    mainHtml: "<p>" + "word ".repeat(n) + "</p>",
+    keyTakeaways: [] as string[],
+    faq: [],
+    disclaimer: "",
+  });
+
+  it("Tier A well below floor fails HARD (800w < 1800 hard threshold)", () => {
+    const f = v1_tierMinimumWords(makeCandidate({ body_json: bodyOf(800) }), makeBrief({ contentType: "pillar_page" }));
     expect(f).not.toBeNull();
-    expect(f!.severity).toBe("soft");
+    expect(f!.severity).toBe("hard");
     expect(f!.message).toMatch(/tier A minimum/i);
   });
 
-  it("Tier B short article fails as SOFT", () => {
-    const c = makeCandidate({
-      body_json: { mainHtml: "<p>" + "word ".repeat(500) + "</p>", keyTakeaways: [], faq: [], disclaimer: "" },
-    });
-    const f = v1_tierMinimumWords(c, makeBrief({ contentType: "cluster_article" }));
+  it("Tier A just below floor fails SOFT (2000w ≥ 1800 hard threshold, < 3000 floor)", () => {
+    const f = v1_tierMinimumWords(makeCandidate({ body_json: bodyOf(2000) }), makeBrief({ contentType: "pillar_page" }));
     expect(f).not.toBeNull();
     expect(f!.severity).toBe("soft");
   });
 
+  it("Tier B well below floor fails HARD (500w < 900 hard threshold)", () => {
+    const f = v1_tierMinimumWords(makeCandidate({ body_json: bodyOf(500) }), makeBrief({ contentType: "cluster_article" }));
+    expect(f).not.toBeNull();
+    expect(f!.severity).toBe("hard");
+  });
+
+  it("Tier B just below floor fails SOFT (1000w ≥ 900 hard threshold, < 1500 floor)", () => {
+    const f = v1_tierMinimumWords(makeCandidate({ body_json: bodyOf(1000) }), makeBrief({ contentType: "cluster_article" }));
+    expect(f).not.toBeNull();
+    expect(f!.severity).toBe("soft");
+  });
+
+  it("Tier C below 480 fails HARD; 480–799 fails SOFT", () => {
+    const hard = v1_tierMinimumWords(makeCandidate({ body_json: bodyOf(400) }), makeBrief({ contentType: "template" }));
+    expect(hard!.severity).toBe("hard");
+    const soft = v1_tierMinimumWords(makeCandidate({ body_json: bodyOf(600) }), makeBrief({ contentType: "template" }));
+    expect(soft!.severity).toBe("soft");
+  });
+
   it("Tier A long article passes", () => {
-    const c = makeCandidate({
-      body_json: { mainHtml: "<p>" + "word ".repeat(3500) + "</p>", keyTakeaways: [], faq: [], disclaimer: "" },
-    });
-    const f = v1_tierMinimumWords(c, makeBrief({ contentType: "pillar_page" }));
+    const f = v1_tierMinimumWords(makeCandidate({ body_json: bodyOf(3500) }), makeBrief({ contentType: "pillar_page" }));
     expect(f).toBeNull();
   });
 
   it("explicit tier override beats content_type inference", () => {
-    const c = makeCandidate({
-      body_json: { mainHtml: "<p>" + "word ".repeat(1100) + "</p>", keyTakeaways: [], faq: [], disclaimer: "" },
-    });
     // tier=C floor 800 → 1100w passes
-    const f = v1_tierMinimumWords(c, makeBrief({ contentType: "cluster_article", tier: "C" }));
+    const f = v1_tierMinimumWords(makeCandidate({ body_json: bodyOf(1100) }), makeBrief({ contentType: "cluster_article", tier: "C" }));
     expect(f).toBeNull();
   });
 });
