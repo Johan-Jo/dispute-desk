@@ -83,23 +83,33 @@ async function resolveTargets() {
 const is429 = (locResult) => typeof locResult?.error === "string" && /\b429\b|rate limit/i.test(locResult.error);
 
 async function regenLocale(itemId, locale) {
-  // Up to 3 attempts, escalating backoff on 429.
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const res = await fetch(
-      `${base}/api/cron/expand-thin?contentItemId=${itemId}&locale=${locale}&publish=${publish}`,
-      { headers: { Authorization: `Bearer ${cronSecret}` } }
-    );
-    const body = await res.json().catch(() => null);
-    if (!res.ok || !body) return { locale, status: "failed", error: `HTTP ${res.status}` };
-    const lr = (body.perLocale ?? [])[0] ?? { status: "failed", error: body.error ?? "no result" };
-    if (lr.status !== "failed") return lr;
-    if (is429(lr) && attempt < 3) {
+  // Up to 4 attempts, escalating backoff on 429 or transient network errors.
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    let lr;
+    try {
+      const res = await fetch(
+        `${base}/api/cron/expand-thin?contentItemId=${itemId}&locale=${locale}&publish=${publish}`,
+        { headers: { Authorization: `Bearer ${cronSecret}` } }
+      );
+      const body = await res.json().catch(() => null);
+      if (!res.ok || !body) {
+        lr = { status: "failed", error: `HTTP ${res.status}` };
+      } else {
+        lr = (body.perLocale ?? [])[0] ?? { status: "failed", error: body.error ?? "no result" };
+      }
+    } catch (e) {
+      // Network drop (ECONNRESET / fetch failed) — retryable, don't crash the run.
+      lr = { status: "failed", error: `network: ${e instanceof Error ? e.message : String(e)}` };
+    }
+    if (lr.status !== "failed") return { locale, ...lr };
+    const retryable = is429(lr) || /network|fetch failed|ECONNRESET|HTTP 5\d\d|HTTP 429/i.test(lr.error || "");
+    if (retryable && attempt < 4) {
       const wait = attempt * 30000;
-      process.stdout.write(`(429, retry in ${wait / 1000}s) `);
+      process.stdout.write(`(retry in ${wait / 1000}s) `);
       await sleep(wait);
       continue;
     }
-    return lr;
+    return { locale, ...lr };
   }
   return { locale, status: "failed", error: "exhausted retries" };
 }
