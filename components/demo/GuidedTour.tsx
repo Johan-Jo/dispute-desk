@@ -235,13 +235,25 @@ export const TOUR_STEPS: TourStep[] = [
     // get a spotlight even if class names differ.
     findElement: () => {
       if (typeof document === "undefined") return null;
+      // Try heroCard class first (CSS-module hashed).
       const inner = document.querySelector('[class*="heroCard"]') as HTMLElement | null;
-      if (!inner) return null;
-      const legacy = inner.closest(".Polaris-LegacyCard") as HTMLElement | null;
-      if (legacy) return legacy;
-      const card = inner.closest(".Polaris-Card") as HTMLElement | null;
-      if (card) return card;
-      return inner;
+      if (inner) {
+        return (inner.closest(".Polaris-LegacyCard") as HTMLElement | null)
+          ?? (inner.closest(".Polaris-Card") as HTMLElement | null)
+          ?? inner;
+      }
+      // Fallback 1: find the "1,432" / "Historical Shopify orders analyzed"
+      // section by hunting for its label text.
+      const allEls = document.querySelectorAll("div");
+      for (const el of Array.from(allEls)) {
+        const text = el.textContent?.toLowerCase() ?? "";
+        if (text.includes("historical shopify orders analyzed") && el.children.length > 0) {
+          const card = el.closest(".Polaris-LegacyCard") as HTMLElement | null;
+          if (card) return card;
+        }
+      }
+      // Fallback 2: the first Polaris-LegacyCard on the page.
+      return document.querySelector(".Polaris-LegacyCard") as HTMLElement | null;
     },
     nextPath: null,
     isFinalStep: true,
