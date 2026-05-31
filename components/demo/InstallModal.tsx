@@ -113,7 +113,7 @@ export function InstallModal({ open, onClose }: InstallModalProps) {
           </Button>
         </div>
         {shopError && <p className="text-sm text-[#EF4444] mt-2">{shopError}</p>}
-        <p className="text-xs text-[#94A3B8] mt-3">You&apos;ll be redirected to Shopify to authorize the app. Free plan — no credit card required.</p>
+        <p className="text-xs text-[#94A3B8] mt-5">You&apos;ll be redirected to Shopify to authorize the app. Free plan — no credit card required.</p>
       </div>
     </div>
   );

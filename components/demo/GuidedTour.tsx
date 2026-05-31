@@ -49,6 +49,36 @@ export interface TourStep {
   isFinalStep?: boolean;
 }
 
+/** Find a "card" element by walking up from a heading match until we
+ *  hit an ancestor with the expected inline-style background colour.
+ *  Used to spotlight embedded cards that lack stable CSS hooks —
+ *  walking by visible style signature is more refactor-resilient
+ *  than counting parent levels (which depends on internal Polaris
+ *  nesting). Returns the heading's parent as a fallback when no
+ *  matching ancestor exists. */
+function findCardByHeading(headingText: string, bgColor: string): HTMLElement | null {
+  if (typeof document === "undefined") return null;
+  const headings = document.querySelectorAll("h2");
+  for (const h of Array.from(headings)) {
+    if (h.textContent?.trim() !== headingText) continue;
+    // Walk up the tree looking for the wrapper card.
+    let node: HTMLElement | null = h.parentElement;
+    const targetBg = bgColor.toLowerCase();
+    while (node && node !== document.body) {
+      const bg = (node.style.background || node.style.backgroundColor || "").toLowerCase();
+      // Inline styles can be hex (#F6F6F7) or rgb (rgb(246, 246, 247)).
+      if (bg.includes(targetBg) || bg.includes("rgb(246, 246, 247)")) {
+        return node;
+      }
+      node = node.parentElement;
+    }
+    // Fallback: return the immediate parent so we still highlight
+    // something rather than nothing.
+    return h.parentElement;
+  }
+  return null;
+}
+
 
 export const TOUR_STEPS: TourStep[] = [
   // ─── Dashboard intro (3 steps) ───────────────────────────────────────────
@@ -117,19 +147,13 @@ export const TOUR_STEPS: TourStep[] = [
     body: "A PDF that mirrors what a fraud analyst would write — built from your real evidence, mapped to the correct Shopify evidence slots. You review before submission, or let auto-mode handle Strong cases for you.",
     path: "/demo/disputes/dp-2401",
     selector: null,
-    // The defence package card has no stable CSS hook (inline styles
-    // only). Find it by its h2 "Complete Defence Package" then walk
-    // up to its parent div — that's the grey-card wrapper.
-    findElement: () => {
-      if (typeof document === "undefined") return null;
-      const headings = document.querySelectorAll("h2");
-      for (const h of Array.from(headings)) {
-        if (h.textContent?.trim() === "Complete Defence Package") {
-          return h.parentElement as HTMLElement | null;
-        }
-      }
-      return null;
-    },
+    // Find the h2 "Complete Defence Package", then walk up until we
+    // hit the grey card wrapper (inline style background:#F6F6F7 set
+    // by DEFENCE_CARD_STYLE in CompleteDefencePackageCard.tsx). Walking
+    // a fixed N parents up is brittle — it depends on BlockStack's
+    // internal nesting which can change. Walking by inline-style
+    // signature is robust to refactors.
+    findElement: () => findCardByHeading("Complete Defence Package", "#F6F6F7"),
     preClickSelector: '[data-help-guide="detail-tab-submit"]',
     nextPath: "/demo/insights/initial-analysis",
   },
@@ -141,6 +165,17 @@ export const TOUR_STEPS: TourStep[] = [
     body: "DisputeDesk reads your last 90 days of Shopify orders to calibrate every defence pack — risk, delivery, and payment signals understood before the next dispute lands. That's why packs are ready in seconds.",
     path: "/demo/insights/initial-analysis",
     selector: null,
+    // Find the Insights HeroDisplay card. The Hero number ("1,432") is
+    // wrapped by a unique CSS-module class `heroCard` — match by class
+    // prefix since the module hashes the suffix at build time. Walk up
+    // to the enclosing Polaris-Card so the spotlight covers the whole
+    // card, not just the inner grid.
+    findElement: () => {
+      if (typeof document === "undefined") return null;
+      const inner = document.querySelector('[class*="heroCard"]') as HTMLElement | null;
+      if (!inner) return null;
+      return inner.closest(".Polaris-Card") as HTMLElement | null ?? inner;
+    },
     nextPath: null,
     isFinalStep: true,
   },
