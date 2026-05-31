@@ -49,6 +49,38 @@ export interface TourStep {
   isFinalStep?: boolean;
 }
 
+/** Find a card wrapper by h2 text PREFIX (handles slight wording
+ *  differences). Tries multiple ancestor selectors in order, falls
+ *  back to the h2's grandparent so we always return something. */
+function findCardByHeadingPrefix(textPrefix: string): HTMLElement | null {
+  if (typeof document === "undefined") return null;
+  const headings = document.querySelectorAll("h2");
+  for (const h of Array.from(headings)) {
+    const text = h.textContent?.trim() ?? "";
+    if (!text.toLowerCase().startsWith(textPrefix.toLowerCase())) continue;
+    // Try each Polaris card class.
+    const legacy = h.closest(".Polaris-LegacyCard") as HTMLElement | null;
+    if (legacy) return legacy;
+    const card = h.closest(".Polaris-Card") as HTMLElement | null;
+    if (card) return card;
+    // Walk up looking for an element that has a border-radius (the
+    // signature of a card-style div, regardless of wrapper component).
+    let node: HTMLElement | null = h.parentElement;
+    let attempts = 0;
+    while (node && node !== document.body && attempts++ < 6) {
+      const rect = node.getBoundingClientRect();
+      const cs = window.getComputedStyle(node);
+      if (cs.borderRadius && cs.borderRadius !== "0px" && rect.width > 200) {
+        return node;
+      }
+      node = node.parentElement;
+    }
+    // Last resort: heading's grandparent (gives a smaller spotlight).
+    return h.parentElement?.parentElement ?? h.parentElement;
+  }
+  return null;
+}
+
 /** Find the KPI card wrapper (DashboardKpis outer div with white
  *  background + 1px border). Walks up from the Performance overview
  *  h2 until it finds an ancestor with a border-radius set inline
@@ -132,18 +164,12 @@ export const TOUR_STEPS: TourStep[] = [
     body: "The cases that need you next, sorted by urgency. Click any row to open the workspace and see what DisputeDesk built. Let's go look at one.",
     path: "/demo",
     selector: null,
-    // Recent Disputes wrapper is a Polaris-Card. Find by h2, then
-    // walk up to .Polaris-LegacyCard.
-    findElement: () => {
-      if (typeof document === "undefined") return null;
-      const headings = document.querySelectorAll("h2");
-      for (const h of Array.from(headings)) {
-        if (h.textContent?.trim() === "Recent Disputes") {
-          return h.closest(".Polaris-LegacyCard") as HTMLElement | null;
-        }
-      }
-      return null;
-    },
+    // Recent Disputes wrapper. Try multiple selectors in order:
+    //   1. Direct Polaris-LegacyCard ancestor (current Polaris)
+    //   2. Polaris-Card (newer Polaris alias, just in case)
+    //   3. The h2's grandparent (always works as a last resort —
+    //      gives a smaller highlight but better than nothing)
+    findElement: () => findCardByHeadingPrefix("Recent"),
     nextPath: "/demo/disputes/dp-2401",
   },
 
@@ -202,16 +228,20 @@ export const TOUR_STEPS: TourStep[] = [
     body: "DisputeDesk reads your last 90 days of Shopify orders to calibrate every defence pack — risk, delivery, and payment signals understood before the next dispute lands. That's why packs are ready in seconds.",
     path: "/demo/insights/initial-analysis",
     selector: null,
-    // Find the Insights HeroDisplay card. The Hero number ("1,432") is
-    // wrapped by a unique CSS-module class `heroCard` — match by class
-    // prefix since the module hashes the suffix at build time. Walk up
-    // to the enclosing Polaris-Card so the spotlight covers the whole
-    // card, not just the inner grid.
+    // Find the Insights HeroDisplay card. The Hero uses a CSS-module
+    // class `heroCard` — match by class substring since the module
+    // hashes the suffix at build time. Walk up through both Polaris
+    // card classes, falling back to the inner element so we always
+    // get a spotlight even if class names differ.
     findElement: () => {
       if (typeof document === "undefined") return null;
       const inner = document.querySelector('[class*="heroCard"]') as HTMLElement | null;
       if (!inner) return null;
-      return inner.closest(".Polaris-LegacyCard") as HTMLElement | null ?? inner;
+      const legacy = inner.closest(".Polaris-LegacyCard") as HTMLElement | null;
+      if (legacy) return legacy;
+      const card = inner.closest(".Polaris-Card") as HTMLElement | null;
+      if (card) return card;
+      return inner;
     },
     nextPath: null,
     isFinalStep: true,
