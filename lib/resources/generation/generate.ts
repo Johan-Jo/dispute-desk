@@ -254,7 +254,7 @@ async function callClaudeChat(
     system: systemPrompt,
     messages: [{ role: "user", content: userPrompt }],
     // Headroom for tier-floor articles (clusters ~1500w, pillars 3000w+) plus JSON wrapping.
-    max_tokens: 16000,
+    max_tokens: 24000,
   };
   if (supportsTemperature) requestBody.temperature = temperature;
 
@@ -283,11 +283,18 @@ async function callClaudeChat(
     );
     const raw = block?.text;
     if (!raw) return { raw: null, tokensUsed, error: "Empty response from Claude" };
-    // Claude sometimes wraps JSON in ```json fences; strip them.
-    const cleaned = raw
+    // Anthropic has no JSON response_format, so Sonnet may wrap the object in
+    // ```json fences or a short preamble ("Here is the article:"). Strip fences,
+    // then slice to the outermost { ... } so a stray preamble can't break parse.
+    let cleaned = raw
       .replace(/^\s*```(?:json)?\s*/i, "")
       .replace(/\s*```\s*$/i, "")
       .trim();
+    const first = cleaned.indexOf("{");
+    const last = cleaned.lastIndexOf("}");
+    if (first > 0 && last > first) {
+      cleaned = cleaned.slice(first, last + 1);
+    }
     return { raw: cleaned, tokensUsed, error: null };
   } catch (err) {
     return { raw: null, tokensUsed: 0, error: err instanceof Error ? err.message : "Unknown error" };
