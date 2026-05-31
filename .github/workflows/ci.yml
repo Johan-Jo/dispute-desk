@@ -10,7 +10,7 @@ name: CI
 #   - 4 grep guards   (no matches)
 on:
   push:
-    branches: [master]
+    branches: [master, develop]
   pull_request:
   workflow_dispatch:
 
