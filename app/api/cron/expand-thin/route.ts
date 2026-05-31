@@ -22,12 +22,16 @@ async function run(req: NextRequest) {
   const url = new URL(req.url);
   const contentItemId = url.searchParams.get("contentItemId");
   const publish = url.searchParams.get("publish") === "true";
+  // Optional locale filter (single or comma-separated). The client paces one
+  // locale per call to stay under the OpenAI TPM cap.
+  const localeParam = url.searchParams.get("locale");
+  const locales = localeParam ? localeParam.split(",").map((l) => l.trim()).filter(Boolean) : undefined;
 
   if (!contentItemId) {
     return NextResponse.json({ error: "Missing contentItemId" }, { status: 400 });
   }
 
-  const result = await regenerateArticleInPlace(contentItemId, { publish });
+  const result = await regenerateArticleInPlace(contentItemId, { publish, locales });
   const status = result.error && result.perLocale.length === 0 ? 500 : 200;
   return NextResponse.json(result, { status });
 }
