@@ -22,7 +22,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { getCmsSettings } from "@/lib/resources/admin-queries";
 import { resolveGenerationPrompts } from "./prompts";
 import type { GenerationBrief, GenerationContext } from "./prompts";
-import { generateAllLocales, isGenerationEnabled } from "./generate";
+import { generateAllLocales, generateForLocale, isGenerationEnabled } from "./generate";
 import { routeKindForContentType } from "./contentRouteKind";
 import { fetchSimilarPublishedArticles } from "./similarArticles";
 import { estimateReadingTimeMinutes } from "@/lib/resources/readingTime";
@@ -100,6 +100,8 @@ export interface ExpandOptions {
    * generating all 6 in one call runs them in parallel and 429s on low tiers.
    */
   locales?: string[];
+  /** Single-call generation provider override (A/B). Defaults to env GENERATION_PROVIDER. */
+  provider?: "openai" | "claude" | null;
 }
 
 function wordCountOf(mainHtml: string | undefined): number {
@@ -183,7 +185,11 @@ export async function regenerateArticleInPlace(
     return (data ?? []).some((r) => r.content_item_id !== contentItemId);
   };
 
-  const results = await generateAllLocales(brief, resolvedPrompts, { contextByLocale, isSlugTaken });
+  const results = await generateAllLocales(brief, resolvedPrompts, {
+    contextByLocale,
+    isSlugTaken,
+    provider: opts.provider ?? null,
+  });
 
   const perLocale: ExpandLocaleOutcome[] = [];
   let tokensUsed = 0;
@@ -258,4 +264,78 @@ export async function regenerateArticleInPlace(
     tokensUsed,
     error: anyFailed ? "One or more locales failed to regenerate (see perLocale)." : null,
   };
+}
+
+export interface ComparisonDraft {
+  provider: "openai" | "claude";
+  title: string | null;
+  words: number;
+  html: string | null;
+  excerpt: string | null;
+  tokensUsed: number;
+  error: string | null;
+}
+
+/**
+ * Head-to-head model comparison for ONE locale: runs the EXACT same brief,
+ * system prompt, user prompt and peer context through both providers (single
+ * attempt each — raw writing, no validator retries, no DB write) so the two
+ * drafts can be compared apples-to-apples. The only variable is the model.
+ */
+export async function generateComparisonForLocale(
+  contentItemId: string,
+  locale: string
+): Promise<{ contentItemId: string; locale: string; drafts: ComparisonDraft[]; error: string | null }> {
+  if (!isGenerationEnabled()) {
+    return { contentItemId, locale, drafts: [], error: "Generation is not enabled." };
+  }
+  const sb = getServiceClient();
+
+  const { data: item } = await sb
+    .from("content_items")
+    .select("id, content_type, primary_pillar, target_keyword, search_intent, is_hub_article")
+    .eq("id", contentItemId)
+    .maybeSingle();
+  if (!item) return { contentItemId, locale, drafts: [], error: "content_item not found" };
+
+  const { data: existing } = await sb
+    .from("content_localizations")
+    .select("id, locale, slug, title, excerpt")
+    .eq("content_item_id", contentItemId);
+  const existingLocs = (existing ?? []) as ExistingLoc[];
+  const selfLocIds = new Set(existingLocs.map((l) => l.id));
+  const existingByLocale = new Map(existingLocs.map((l) => [l.locale, l]));
+
+  let brief: GenerationBrief | null = null;
+  const { data: archiveRow } = await sb
+    .from("content_archive_items")
+    .select("*")
+    .eq("created_from_archive_to_content_item_id", contentItemId)
+    .maybeSingle();
+  brief = archiveRow
+    ? archiveRowToBrief(archiveRow as Record<string, unknown>)
+    : reconstructBriefFromItem(item as ContentItemRow, existingByLocale.get("en-US"));
+  brief.targetLocales = [locale];
+
+  const routeKind = routeKindForContentType(brief.contentType);
+  const resolvedPrompts = resolveGenerationPrompts(await getCmsSettings());
+  const peers = await fetchSimilarPublishedArticles(brief, locale, routeKind);
+  const ctx: GenerationContext = { similarArticles: peers.filter((p) => !selfLocIds.has(p.id)) };
+
+  const drafts: ComparisonDraft[] = [];
+  // Sequential (not parallel) so the two calls never contend on a shared limit.
+  for (const provider of ["openai", "claude"] as const) {
+    const r = await generateForLocale(brief, locale, resolvedPrompts, ctx, { provider });
+    drafts.push({
+      provider,
+      title: r.content?.title ?? null,
+      words: wordCountOf(r.content?.body_json?.mainHtml),
+      html: r.content?.body_json?.mainHtml ?? null,
+      excerpt: r.content?.excerpt ?? null,
+      tokensUsed: r.tokensUsed,
+      error: r.error,
+    });
+  }
+
+  return { contentItemId, locale, drafts, error: null };
 }
