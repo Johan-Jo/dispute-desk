@@ -33,6 +33,12 @@ export interface TourStep {
   /** CSS selector for the element to highlight. Null = centered modal
    *  (no highlight, dimmed background, callout in the middle). */
   selector: string | null;
+  /** Optional custom finder for elements that can't be matched by a
+   *  CSS selector (e.g. find by heading text). Used when the
+   *  embedded code doesn't expose a stable selector for the section
+   *  we want to spotlight. Runs after the selector check; both are
+   *  retried via the same polling loop. */
+  findElement?: () => HTMLElement | null;
   /** Selector to click before showing the step. Used to switch tabs
    *  inside WorkspaceShell. Null = no click. */
   preClickSelector?: string | null;
@@ -42,6 +48,7 @@ export interface TourStep {
   /** Whether the Next button reads "Install →" instead. */
   isFinalStep?: boolean;
 }
+
 
 export const TOUR_STEPS: TourStep[] = [
   // ─── Dashboard intro (3 steps) ───────────────────────────────────────────
@@ -109,10 +116,20 @@ export const TOUR_STEPS: TourStep[] = [
     title: "Bank-optimised defence package",
     body: "A PDF that mirrors what a fraud analyst would write — built from your real evidence, mapped to the correct Shopify evidence slots. You review before submission, or let auto-mode handle Strong cases for you.",
     path: "/demo/disputes/dp-2401",
-    // Centered modal — defence package card isn't tagged in embedded.
-    // Pre-click still switches to the Submit tab so the merchant sees
-    // the card in the background.
     selector: null,
+    // The defence package card has no stable CSS hook (inline styles
+    // only). Find it by its h2 "Complete Defence Package" then walk
+    // up to its parent div — that's the grey-card wrapper.
+    findElement: () => {
+      if (typeof document === "undefined") return null;
+      const headings = document.querySelectorAll("h2");
+      for (const h of Array.from(headings)) {
+        if (h.textContent?.trim() === "Complete Defence Package") {
+          return h.parentElement as HTMLElement | null;
+        }
+      }
+      return null;
+    },
     preClickSelector: '[data-help-guide="detail-tab-submit"]',
     nextPath: "/demo/insights/initial-analysis",
   },
@@ -182,13 +199,18 @@ interface TargetRect {
   height: number;
 }
 
-/** Hook: poll for an element matching `selector` and return its bounding
- *  rect (live, updates on resize/scroll). Returns null when not found. */
-function useTargetRect(selector: string | null, deps: unknown[]): TargetRect | null {
+/** Hook: poll for an element matching `selector` OR `finder` and return
+ *  its bounding rect (live, updates on resize/scroll). Returns null
+ *  when neither resolves. */
+function useTargetRect(
+  selector: string | null,
+  finder: (() => HTMLElement | null) | null,
+  deps: unknown[],
+): TargetRect | null {
   const [rect, setRect] = useState<TargetRect | null>(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!selector) {
+    if (!selector && !finder) {
       setRect(null);
       return;
     }
@@ -196,7 +218,11 @@ function useTargetRect(selector: string | null, deps: unknown[]): TargetRect | n
     let raf: number | undefined;
 
     const measure = () => {
-      const el = document.querySelector(selector) as HTMLElement | null;
+      const el = selector
+        ? document.querySelector(selector) as HTMLElement | null
+        : finder
+          ? finder()
+          : null;
       if (!el) {
         setRect((prev) => (prev === null ? prev : null));
         return false;
@@ -279,7 +305,7 @@ export function GuidedTourCallout() {
   // updates don't keep yanking the page back. The retry loop waits for
   // the target to mount (handles tab-switch + Polaris's deferred render).
   useEffect(() => {
-    if (!stepActiveOnThisPage || !step?.selector) {
+    if (!stepActiveOnThisPage || !step || (!step.selector && !step.findElement)) {
       scrolledForStepRef.current = null;
       return;
     }
@@ -289,7 +315,11 @@ export function GuidedTourCallout() {
     let attempts = 0;
     const trigger = () => {
       if (cancelled) return;
-      const el = document.querySelector(step.selector!) as HTMLElement | null;
+      const el = step.selector
+        ? document.querySelector(step.selector) as HTMLElement | null
+        : step.findElement
+          ? step.findElement()
+          : null;
       if (el) {
         // Scroll so the target sits ~80px from the top of the viewport
         // — keeps the spotlit element high enough that the callout
@@ -350,7 +380,11 @@ export function GuidedTourCallout() {
     }
   }, [pathname, dismissed, currentStep, setStep]);
 
-  const rect = useTargetRect(stepActiveOnThisPage ? step?.selector ?? null : null, [currentStep]);
+  const rect = useTargetRect(
+    stepActiveOnThisPage ? step?.selector ?? null : null,
+    stepActiveOnThisPage ? step?.findElement ?? null : null,
+    [currentStep],
+  );
 
   const handleNext = useCallback(() => {
     if (!step) return;
@@ -444,7 +478,7 @@ export function GuidedTourCallout() {
           width="100%"
           height="100%"
           fill={
-            step.selector && !hasTarget
+            (step.selector || step.findElement) && !hasTarget
               ? "rgba(11, 18, 32, 0)"
               : "rgba(11, 18, 32, 0.7)"
           }
