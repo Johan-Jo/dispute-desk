@@ -38,3 +38,56 @@ export async function sendAdminSignupNotification(
 
   await sendAdminEmail({ subject, html, text, logTag: "admin-signup" });
 }
+
+export interface AdminInstallNotificationOptions {
+  /** The shop's myshopify domain — always available at install time. */
+  shopDomain: string;
+  /** Shop owner / contact email, when resolvable from the Shopify Admin API. */
+  email?: string;
+  /** Store name, when resolvable. */
+  shopName?: string;
+  /** OAuth entry point that created the shop: "portal" or "embedded". */
+  source?: string;
+}
+
+/**
+ * Notify the admin that a NEW shop installed the app — fired once, at the
+ * moment the `shops` row is first created in the OAuth callback, regardless
+ * of OAuth source (portal vs embedded App Store install). This is the
+ * source-independent counterpart to {@link sendAdminSignupNotification},
+ * which only covers the portal path. Non-blocking — never throws.
+ */
+export async function sendAdminInstallNotification(
+  options: AdminInstallNotificationOptions
+): Promise<void> {
+  const shopName = options.shopName?.trim() || "—";
+  const email = options.email?.trim() || "—";
+  const source = options.source?.trim() || "—";
+  const timestamp = new Date().toUTCString();
+  const subject = `New DisputeDesk install: ${options.shopDomain}`;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>${subject}</title></head>
+<body style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;padding:32px 16px;">
+  <p style="margin:0 0 8px;font-size:18px;font-weight:700;">New merchant installed DisputeDesk</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:16px;font-size:14px;color:#374151;border-collapse:collapse;">
+    <tr><td style="padding:4px 16px 4px 0;font-weight:600;">Shop</td><td style="padding:4px 0;">${options.shopDomain}</td></tr>
+    <tr><td style="padding:4px 16px 4px 0;font-weight:600;">Store name</td><td style="padding:4px 0;">${shopName}</td></tr>
+    <tr><td style="padding:4px 16px 4px 0;font-weight:600;">Owner email</td><td style="padding:4px 0;">${email}</td></tr>
+    <tr><td style="padding:4px 16px 4px 0;font-weight:600;">Source</td><td style="padding:4px 0;">${source}</td></tr>
+    <tr><td style="padding:4px 16px 4px 0;font-weight:600;">Time</td><td style="padding:4px 0;">${timestamp}</td></tr>
+  </table>
+</body>
+</html>`;
+
+  const text =
+    `New merchant installed DisputeDesk\n\n` +
+    `Shop: ${options.shopDomain}\n` +
+    `Store name: ${shopName}\n` +
+    `Owner email: ${email}\n` +
+    `Source: ${source}\n` +
+    `Time: ${timestamp}`;
+
+  await sendAdminEmail({ subject, html, text, logTag: "admin-install" });
+}

@@ -15,7 +15,10 @@ import {
 import { fetchShopDetails } from "@/lib/shopify/shopDetails";
 import { persistShopCurrency } from "@/lib/shopify/persistShopCurrency";
 import { sendWelcomeEmail } from "@/lib/email/sendWelcome";
-import { sendAdminSignupNotification } from "@/lib/email/sendAdminNotification";
+import {
+  sendAdminSignupNotification,
+  sendAdminInstallNotification,
+} from "@/lib/email/sendAdminNotification";
 import { normalizeLocale } from "@/lib/i18n/locales";
 import type { Locale } from "@/lib/i18n/locales";
 
@@ -94,6 +97,10 @@ export async function GET(req: NextRequest) {
       .single();
 
     let shopInternalId: string;
+    // True only when this OAuth callback creates the shops row for the first
+    // time — i.e. a brand-new merchant install. Gates the admin install
+    // notification so re-installs / re-OAuth don't re-notify.
+    let isNewShop = false;
 
     if (existingShop) {
       shopInternalId = existingShop.id;
@@ -117,6 +124,7 @@ export async function GET(req: NextRequest) {
         );
       }
       shopInternalId = newShop.id;
+      isNewShop = true;
     }
 
     if (phase === "offline") {
@@ -129,6 +137,31 @@ export async function GET(req: NextRequest) {
         scopes: tokenResult.scope,
         expiresAt: null,
       });
+
+      // Admin install notification — fires once per NEW merchant, on the
+      // offline OAuth phase (the first phase of every install, portal AND
+      // embedded). Source-independent so an App Store install can no longer
+      // go unannounced (unlike sendAdminSignupNotification, which is gated on
+      // source === "portal"). Fire-and-forget: never blocks OAuth, and the
+      // helper itself swallows errors. fetchShopDetails works here because the
+      // offline session was just stored above.
+      if (isNewShop) {
+        fetchShopDetails(shopInternalId)
+          .then((details) =>
+            sendAdminInstallNotification({
+              shopDomain: shop,
+              email: details?.email,
+              shopName: details?.name,
+              source,
+            }),
+          )
+          .catch((err) => {
+            console.warn(
+              "[email:admin-install] notification failed:",
+              err instanceof Error ? err.message : err,
+            );
+          });
+      }
 
       registerDisputeWebhooks({
         shopDomain: shop,
