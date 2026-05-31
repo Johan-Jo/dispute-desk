@@ -520,7 +520,7 @@ export function GuidedTourCallout() {
     }
   }, [pathname, dismissed, currentStep, setStep]);
 
-  const { rect, gaveUp } = useTargetRect(
+  const { rect } = useTargetRect(
     stepActiveOnThisPage ? step?.selector ?? null : null,
     stepActiveOnThisPage ? step?.findElement ?? null : null,
     [currentStep],
@@ -617,17 +617,15 @@ export function GuidedTourCallout() {
         <rect
           width="100%"
           height="100%"
-          fill={
-            // Transparent only while actively waiting for an anchor
-            // (selector/finder requested but not yet resolved and
-            // haven't given up). Otherwise: full dim — applies to
-            // centered-modal steps (no anchor requested), resolved
-            // anchors (hasTarget=true), AND anchored steps that
-            // timed out (gaveUp=true).
-            (step.selector || step.findElement) && !hasTarget && !gaveUp
-              ? "rgba(11, 18, 32, 0)"
-              : "rgba(11, 18, 32, 0.7)"
-          }
+          // Always dim while a step is rendering. The previous
+          // conditional that kept the overlay transparent while
+          // waiting for an anchor caused too many edge cases
+          // (rapid Next-clicks, page transitions, finders that
+          // never resolve). Net effect of dimming unconditionally:
+          // a brief loading spinner is hidden during page
+          // transitions, which is a far smaller cost than missing
+          // dim across multiple steps.
+          fill="rgba(11, 18, 32, 0.7)"
           mask="url(#dd-tour-mask)"
           style={{ transition: "fill 200ms ease-out" }}
         />
