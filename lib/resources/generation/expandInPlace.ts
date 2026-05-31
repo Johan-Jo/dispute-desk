@@ -239,6 +239,7 @@ export async function regenerateArticleInPlace(
         reading_time_minutes: estimateReadingTimeMinutes(r.content.body_json?.mainHtml),
         translation_status: "complete",
         is_published: opts.publish === true,
+        last_updated_at: nowIso,
       });
       perLocale.push({ locale: r.locale, status: error ? "failed" : "inserted", words, error: error?.message ?? null });
     }
