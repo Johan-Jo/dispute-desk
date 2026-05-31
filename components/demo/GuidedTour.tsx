@@ -49,6 +49,31 @@ export interface TourStep {
   isFinalStep?: boolean;
 }
 
+/** Find the KPI card wrapper (DashboardKpis outer div with white
+ *  background + 1px border). Walks up from the Performance overview
+ *  h2 until it finds an ancestor with a border-radius set inline
+ *  (the wrapper's `borderRadius: 12px`). Fallback: closest Polaris-Card
+ *  if it's inside one, else the h2's grandparent. */
+function findKpiCardByHeading(headingText: string): HTMLElement | null {
+  if (typeof document === "undefined") return null;
+  const headings = document.querySelectorAll("h2");
+  for (const h of Array.from(headings)) {
+    if (h.textContent?.trim() !== headingText) continue;
+    // Walk up looking for the outer div with border-radius set inline.
+    let node: HTMLElement | null = h.parentElement;
+    let attempts = 0;
+    while (node && node !== document.body && attempts++ < 8) {
+      if (node.style.borderRadius && node.style.border) {
+        return node;
+      }
+      node = node.parentElement;
+    }
+    // Fallback: closest Polaris-Card, else heading's parent.
+    return (h.closest(".Polaris-Card") as HTMLElement | null) ?? h.parentElement;
+  }
+  return null;
+}
+
 /** Find a "card" element by walking up from a heading match until we
  *  hit an ancestor with the expected inline-style background colour.
  *  Used to spotlight embedded cards that lack stable CSS hooks —
@@ -95,10 +120,10 @@ export const TOUR_STEPS: TourStep[] = [
     title: "Performance at a glance",
     body: "Active disputes, win rate, recovered revenue, amount at risk. Track the operations queue and the financial picture side by side — built from the same normalized dispute history that drives every other surface.",
     path: "/demo",
-    // No anchor: dashboard-kpis isn't tagged in embedded code so the
-    // tour shows a centered modal here. Adding data-tour attributes
-    // to embedded files would drift the demo from production code.
     selector: null,
+    // KPI card wrapper: walk up from the Performance overview h2 to
+    // the outer div with the white background + border styling.
+    findElement: () => findKpiCardByHeading("Performance overview"),
     nextPath: "/demo",
   },
   {
@@ -107,6 +132,18 @@ export const TOUR_STEPS: TourStep[] = [
     body: "The cases that need you next, sorted by urgency. Click any row to open the workspace and see what DisputeDesk built. Let's go look at one.",
     path: "/demo",
     selector: null,
+    // Recent Disputes wrapper is a Polaris-Card. Find by h2, then
+    // walk up to .Polaris-Card.
+    findElement: () => {
+      if (typeof document === "undefined") return null;
+      const headings = document.querySelectorAll("h2");
+      for (const h of Array.from(headings)) {
+        if (h.textContent?.trim() === "Recent Disputes") {
+          return h.closest(".Polaris-Card") as HTMLElement | null;
+        }
+      }
+      return null;
+    },
     nextPath: "/demo/disputes/dp-2401",
   },
 
