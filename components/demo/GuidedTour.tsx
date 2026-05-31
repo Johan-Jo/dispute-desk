@@ -227,11 +227,11 @@ export const TOUR_STEPS: TourStep[] = [
     title: "Built from your real order history",
     body: "DisputeDesk reads your last 90 days of Shopify orders to calibrate every defence pack — risk, delivery, and payment signals understood before the next dispute lands. That's why packs are ready in seconds.",
     path: "/demo/insights/initial-analysis",
-    // First Polaris-LegacyCard on the page IS the Insights hero —
-    // the plan-recommendation card (which would sit above it) is null
-    // in our fixture, so the hero is always position 1. Simpler than
-    // a custom finder.
-    selector: ".Polaris-LegacyCard",
+    // Insights page uses Polaris's NEW Card (not LegacyCard) which
+    // doesn't expose a stable class. The HeroDisplay inner div uses a
+    // CSS-module class containing "heroCard" — match by substring
+    // since the module hashes the suffix.
+    selector: '[class*="heroCard"]',
     nextPath: null,
     isFinalStep: true,
   },
