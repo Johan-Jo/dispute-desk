@@ -227,34 +227,11 @@ export const TOUR_STEPS: TourStep[] = [
     title: "Built from your real order history",
     body: "DisputeDesk reads your last 90 days of Shopify orders to calibrate every defence pack — risk, delivery, and payment signals understood before the next dispute lands. That's why packs are ready in seconds.",
     path: "/demo/insights/initial-analysis",
-    selector: null,
-    // Find the Insights HeroDisplay card. The Hero uses a CSS-module
-    // class `heroCard` — match by class substring since the module
-    // hashes the suffix at build time. Walk up through both Polaris
-    // card classes, falling back to the inner element so we always
-    // get a spotlight even if class names differ.
-    findElement: () => {
-      if (typeof document === "undefined") return null;
-      // Try heroCard class first (CSS-module hashed).
-      const inner = document.querySelector('[class*="heroCard"]') as HTMLElement | null;
-      if (inner) {
-        return (inner.closest(".Polaris-LegacyCard") as HTMLElement | null)
-          ?? (inner.closest(".Polaris-Card") as HTMLElement | null)
-          ?? inner;
-      }
-      // Fallback 1: find the "1,432" / "Historical Shopify orders analyzed"
-      // section by hunting for its label text.
-      const allEls = document.querySelectorAll("div");
-      for (const el of Array.from(allEls)) {
-        const text = el.textContent?.toLowerCase() ?? "";
-        if (text.includes("historical shopify orders analyzed") && el.children.length > 0) {
-          const card = el.closest(".Polaris-LegacyCard") as HTMLElement | null;
-          if (card) return card;
-        }
-      }
-      // Fallback 2: the first Polaris-LegacyCard on the page.
-      return document.querySelector(".Polaris-LegacyCard") as HTMLElement | null;
-    },
+    // First Polaris-LegacyCard on the page IS the Insights hero —
+    // the plan-recommendation card (which would sit above it) is null
+    // in our fixture, so the hero is always position 1. Simpler than
+    // a custom finder.
+    selector: ".Polaris-LegacyCard",
     nextPath: null,
     isFinalStep: true,
   },
@@ -347,16 +324,6 @@ function useTargetRect(
         : finder
           ? finder()
           : null;
-      // Debug — expose finder result so we can diagnose missing anchors
-      // in the live demo. Read in DevTools: `window.__ddTour.lastEl`.
-      if (typeof window !== "undefined") {
-        (window as unknown as Record<string, unknown>).__ddTour = {
-          selector,
-          hasFinder: !!finder,
-          lastEl: el,
-          lastTime: Date.now(),
-        };
-      }
       if (!el) {
         // Once the target has been found at least once for this step,
         // losing it (e.g. brief layout flicker, page transition) keeps
