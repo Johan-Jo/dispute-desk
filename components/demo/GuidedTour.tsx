@@ -388,15 +388,14 @@ function useTargetRect(
     // Re-measure every 500ms in case Polaris layouts shift after data load.
     const interval = setInterval(measure, 500);
 
-    // Force gaveUp=true after 800ms regardless. 3s was too long for a
-    // rapid Next-click cadence — the user advanced past a step before
-    // the timer fired, so the dim never kicked in for that step.
-    // 800ms gives the page enough time to lay out a real anchor while
-    // still hitting the centered-modal fallback for missing ones
-    // before the user notices the missing dim.
+    // Force gaveUp=true after 2.5s. With the dim now unconditional,
+    // gaveUp only affects internal state — not visible behavior — so
+    // we can afford a longer timeout to give the Insights page's
+    // fetch round-trip time to land the LegacyCard before the
+    // fallback path kicks in.
     const giveUpTimer = setTimeout(() => {
       setState((prev) => (prev.gaveUp ? prev : { ...prev, gaveUp: true }));
-    }, 800);
+    }, 2500);
 
     return () => {
       cancelled = true;
