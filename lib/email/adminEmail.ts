@@ -56,13 +56,25 @@ export async function sendAdminEmail(options: SendAdminEmailOptions): Promise<vo
 
   try {
     const resend = new Resend(RESEND_API_KEY);
-    await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
       subject: options.subject,
       html: options.html,
       text: options.text,
     });
+    // Resend's SDK does NOT throw on API-level rejections (rate limit,
+    // unverified domain, invalid recipient, etc.) — it returns the failure
+    // in `error`. Without this branch those misses were completely silent:
+    // no throw, no log. Surface them as console.error so a "no email"
+    // symptom is always diagnosable from Vercel logs.
+    if (error) {
+      console.error(`${tag} send rejected by Resend:`, error);
+      return;
+    }
+    // Success marker — a positive trace that the send fired, so an admin
+    // can confirm delivery attempts (and the Resend message id) in logs.
+    console.info(`${tag} sent to ${to} (id: ${data?.id ?? "unknown"})`);
   } catch (err) {
     console.error(`${tag} send failed:`, err);
   }
