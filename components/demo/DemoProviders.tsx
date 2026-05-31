@@ -25,7 +25,19 @@ interface DemoProvidersProps {
 export function DemoProviders({ children, messages }: DemoProvidersProps) {
   return (
     <NextIntlClientProvider locale="en" messages={messages} timeZone="UTC">
-      <AppProvider i18n={enTranslations}>{children}</AppProvider>
+      <AppProvider i18n={enTranslations}>
+        {/* Demo override: Polaris-Page defaults to ~998px max-width,
+            which leaves a lot of empty space on either side of every
+            tile row inside the AdminShell's 1480px content area. The
+            real embedded surface inherits its width from the Shopify
+            Admin iframe (also narrow), but the public demo has the
+            full viewport. Lift the cap so the 5 KPI tiles + the
+            disputes table fill the AdminShell content width. */}
+        <style>{`
+          .Polaris-Page { max-width: none !important; }
+        `}</style>
+        {children}
+      </AppProvider>
     </NextIntlClientProvider>
   );
 }
