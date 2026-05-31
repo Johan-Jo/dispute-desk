@@ -199,9 +199,9 @@ describe("generateAllLocales — validator retry loop", () => {
       meta_title: "SEO",
       meta_description: "Desc",
       body_json: {
-        // 450 words — above the 300w stub-hard-floor and below the
-        // 500w under-developed soft threshold (so V1 fires soft).
-        mainHtml: "<h2>One</h2><p>" + "details ".repeat(450) + "</p>",
+        // 1000 words — above the tier-relative hard floor for Tier B
+        // (max(300, 1500*0.6) = 900) and below the 1500 floor, so V1 fires SOFT.
+        mainHtml: "<h2>One</h2><p>" + "details ".repeat(1000) + "</p>",
         keyTakeaways: [],
         faq: [],
         disclaimer: "d",
@@ -221,7 +221,7 @@ describe("generateAllLocales — validator retry loop", () => {
       embeddingClient: null,
     });
 
-    // Tier B + ~450 words → V1 soft (under tier B floor 1500 but above 300w hard floor),
+    // Tier B + ~1000 words → V1 soft (under tier B floor 1500 but above the 900 hard floor),
     // V4 soft (no Shopify in opening). Both soft; accepted with warnings.
     expect(results[0].content).not.toBeNull();
     expect(results[0].validatorWarnings ?? []).toEqual(

@@ -16,6 +16,7 @@ import {
   autopilotInitialWorkflowStatus,
   shouldSkipAutopilotPublish,
 } from "./tierAutopilotPolicy";
+import { shouldHoldForIncompleteLocales } from "./localeCompleteness";
 import { fetchSimilarPublishedArticles } from "./similarArticles";
 import {
   drainPublishQueueAfterAutopilotEnqueue,
@@ -58,7 +59,7 @@ function parseArchiveNotesBriefFields(notes: string | null | undefined): Partial
   }
 }
 
-function archiveRowToBrief(data: Record<string, unknown>): GenerationBrief {
+export function archiveRowToBrief(data: Record<string, unknown>): GenerationBrief {
   const locs = data.target_locale_set as string[] | undefined;
   const fromNotes = parseArchiveNotesBriefFields((data.notes as string | null) ?? null);
   const pageRoleCol = data.page_role as string | null | undefined;
@@ -225,8 +226,15 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     is_hub_article: brief.isHubArticle ?? null,
     autopilot_approved: true, // already passed the picker by the time we land here
   };
+  // Partial-locale guard: if any locale was rejected, never auto-publish the
+  // successful subset — hold the whole item for human review so a merchant
+  // never lands on a half-localized article with a broken language switcher.
+  const holdForIncompleteLocales =
+    options.autopilot && shouldHoldForIncompleteLocales(results);
   const initialStatus = options.autopilot
-    ? autopilotInitialWorkflowStatus(tierSignals)
+    ? holdForIncompleteLocales
+      ? "in-editorial-review"
+      : autopilotInitialWorkflowStatus(tierSignals)
     : brief.contentType === "legal_update"
       ? "in-legal-review"
       : "drafting";
@@ -320,7 +328,8 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
 
   // PR 5: Tier A holds at in-editorial-review — skip publish-queue enqueue so
   // the publish cron does not auto-promote the pillar before a human reviews it.
-  if (options.autopilot && shouldSkipAutopilotPublish(tierSignals)) {
+  // Incomplete locale sets are held the same way (see holdForIncompleteLocales).
+  if (options.autopilot && (shouldSkipAutopilotPublish(tierSignals) || holdForIncompleteLocales)) {
     return { contentItemId, results, error: null };
   }
 
