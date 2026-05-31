@@ -430,15 +430,24 @@ export function GuidedTourCallout() {
             )}
           </mask>
         </defs>
-        {/* Dim the page only when we have a target to spotlight.
-            Without a target the dark overlay would hide whatever's
-            loading underneath (e.g. WorkspaceShell's spinner) and
-            make the tour look broken to the user. Once the target
-            mounts, the spotlight + dim returns instantly. */}
+        {/* Dim the page whenever a step is showing. Two no-dim cases:
+            1. Step has a selector but the target hasn't mounted yet
+               (waiting for WorkspaceShell to finish loading) — stay
+               transparent so the loading state shows through.
+            2. Step has selector: null (intentional centered modal) —
+               dim normally; the callout is meant to read against a
+               dark page.
+            So: dim ON when (no selector requested) OR (selector
+            resolved). Dim OFF only when selector requested + still
+            polling for it. */}
         <rect
           width="100%"
           height="100%"
-          fill={hasTarget ? "rgba(11, 18, 32, 0.7)" : "rgba(11, 18, 32, 0)"}
+          fill={
+            step.selector && !hasTarget
+              ? "rgba(11, 18, 32, 0)"
+              : "rgba(11, 18, 32, 0.7)"
+          }
           mask="url(#dd-tour-mask)"
           style={{ transition: "fill 200ms ease-out" }}
         />
