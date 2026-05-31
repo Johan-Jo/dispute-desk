@@ -47,9 +47,7 @@ import { InfoIcon } from "@shopify/polaris-icons";
 import styles from "./initial-analysis.module.css";
 import { OperationalCheckpoints } from "./OperationalCheckpoints";
 import { LiabilityShiftImpact } from "./LiabilityShiftImpact";
-import { PlanRecommendationCard } from "./PlanRecommendationCard";
 import { evaluateCheckpoints } from "@/lib/insights/checkpoints";
-import type { PlanRecommendation } from "@/lib/billing/recommendPlan";
 
 interface InsightsResponse {
   available: boolean;
@@ -90,8 +88,6 @@ interface InsightsResponse {
   historicalImportSinceDate: string | null;
   historicalImportScopeGranted: "default_window" | "read_all_orders" | null;
   historicalImportCompletedAt: string | null;
-
-  recommendation: PlanRecommendation | null;
 }
 
 interface PeriodWindow {
@@ -754,31 +750,16 @@ export default function InitialAnalysisPage() {
       subtitle={t("fraudIntel.pageSubtitle")}
     >
       <Layout>
-        {/* ── Plan recommendation (Free shops only; sits above hero
-            so it's the first thing the merchant sees once the
-            analysis completes) ─────────────────────────────────── */}
-        {data.recommendation ? (
-          <Layout.Section>
-            <PlanRecommendationCard
-              recommendation={data.recommendation}
-              ordersAnalyzed={data.ordersAnalyzed}
-              chargebackOrders90d={data.chargebackOrders90d}
-            />
-          </Layout.Section>
-        ) : null}
-
         {/* ── Hero ─────────────────────────────────────────────────── */}
         <Layout.Section>
-          <div data-tour="insights-hero">
-            <HeroDisplay
-              ordersAnalyzed={data.ordersAnalyzed}
-              highRiskPct={data.highRiskPct}
-              fulfilledHighRiskPct={data.fulfilledHighRiskPct}
-              miniBarData={distSegments}
-              miniBarTotal={riskTotal}
-              t={t}
-            />
-          </div>
+          <HeroDisplay
+            ordersAnalyzed={data.ordersAnalyzed}
+            highRiskPct={data.highRiskPct}
+            fulfilledHighRiskPct={data.fulfilledHighRiskPct}
+            miniBarData={distSegments}
+            miniBarTotal={riskTotal}
+            t={t}
+          />
         </Layout.Section>
 
         {/* ── 30d KPIs, split into three thematic groups ──────────────

@@ -45,7 +45,6 @@ import { DashboardAttentionBanner } from "./DashboardAttentionBanner";
 import { DashboardInsights } from "./DashboardInsights";
 import { DashboardOperationalInsightsStrip } from "./DashboardOperationalInsightsStrip";
 import { DashboardScopeUpgradeBanner } from "./DashboardScopeUpgradeBanner";
-import { DashboardPlanRecommendationBanner } from "./DashboardPlanRecommendationBanner";
 
 // ─── OutcomeBreakdown ─────────────────────────────────────────────────────
 
@@ -366,17 +365,15 @@ export default function EmbeddedDashboardPage() {
 
   const recentDisputesPreview = (
     <Layout.Section>
-      <div data-tour="dashboard-recent-disputes">
-        <Suspense fallback={
-          <Card>
-            <BlockStack gap="400" inlineAlign="center">
-              <Spinner size="small" />
-            </BlockStack>
-          </Card>
-        }>
-          <DashboardRecentDisputesPreview />
-        </Suspense>
-      </div>
+      <Suspense fallback={
+        <Card>
+          <BlockStack gap="400" inlineAlign="center">
+            <Spinner size="small" />
+          </BlockStack>
+        </Card>
+      }>
+        <DashboardRecentDisputesPreview />
+      </Suspense>
     </Layout.Section>
   );
 
@@ -397,10 +394,6 @@ export default function EmbeddedDashboardPage() {
           <DashboardScopeUpgradeBanner />
         </Layout.Section>
 
-        <Layout.Section>
-          <DashboardPlanRecommendationBanner />
-        </Layout.Section>
-
         {/* Operations pipeline — workflow status + period KPIs together
             so the merchant sees current state next to performance over
             the same window. */}
@@ -409,15 +402,7 @@ export default function EmbeddedDashboardPage() {
         </Layout.Section>
 
         <Layout.Section>
-          {/* data-tour attribute goes on a wrapper INSIDE Layout.Section.
-              Layout's grid logic needs direct Layout.Section children to
-              compute column widths; wrapping the Section in a div breaks
-              that contract and the wrapped Section renders narrower than
-              its siblings. The wrapper is still inside Layout.Section so
-              the tour selector still works. */}
-          <div data-tour="dashboard-kpis">
-            <DashboardKpis stats={stats} loading={statsLoading} period={period} onPeriodChange={setPeriod} />
-          </div>
+          <DashboardKpis stats={stats} loading={statsLoading} period={period} onPeriodChange={setPeriod} />
         </Layout.Section>
 
         {/* Recent disputes — moved up per the Tier 2 plan. Operational

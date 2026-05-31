@@ -351,13 +351,8 @@ function ChargebackKpiTile({
               color: "#6D7175",
               margin: 0,
               lineHeight: 1.35,
-              // `overflowWrap: "anywhere"` was too aggressive — it
-              // broke mid-word at narrow widths so "Chargeback" rendered
-              // as "Charge-/back" in the 5-tile grid. `break-word` only
-              // breaks when no other option exists, preserving the
-              // word at every viewport size that has room for it.
               wordBreak: "normal",
-              overflowWrap: "break-word",
+              overflowWrap: "anywhere",
             }}
           >
             {t("dashboard.chargebackRate")}
@@ -541,17 +536,12 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
   );
 
   return (
-    // No outer card wrapper on desktop — the 5 KPI tiles already have
-    // their own card styling each, and a wrapper card would inset them
-    // by its padding so they don't align with the OperationalSummary
-    // tiles above (which sit at the full content width). Mobile keeps
-    // the wrapper because its hero+grid layout reads better contained.
-    <div style={smDown ? {
+    <div style={{
       background: "#fff",
       borderRadius: "12px",
       border: "1px solid #E5E7EB",
-      padding: "16px",
-    } : undefined}>
+      padding: smDown ? "16px" : "20px",
+    }}>
       {smDown ? (
         <BlockStack gap="300">
           <Text as="h2" variant="headingMd">{t("dashboard.performanceOverview")}</Text>
@@ -586,16 +576,7 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
             <Text as="h2" variant="headingMd">{t("dashboard.performanceOverview")}</Text>
             <PeriodSelector period={period} onChange={onPeriodChange} t={t} />
           </div>
-          {/* Fixed 5-column grid so the 5 KPI tiles always sit on one
-              line on desktop. Previously this was auto-fit with a 180px
-              min, which (incorrectly) wrapped the chargeback tile to
-              a second row whenever the container couldn't fit 5×180+gaps
-              — which happened at common embedded-iframe widths even
-              though the full row would have rendered fine at 5×~180px.
-              `minmax(0, 1fr)` lets the cells shrink instead of forcing
-              a wrap. smDown branch above handles mobile with its own
-              hero-and-grid layout, so this branch is desktop-only. */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "12px" }}>
             {desktopCards.map((card) => (
               <DesktopKpiTile key={card.label} card={card} vsLabel={vsLabel} loading={loading} />
             ))}

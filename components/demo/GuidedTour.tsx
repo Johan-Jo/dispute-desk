@@ -58,7 +58,10 @@ export const TOUR_STEPS: TourStep[] = [
     title: "Performance at a glance",
     body: "Active disputes, win rate, recovered revenue, amount at risk. Track the operations queue and the financial picture side by side — built from the same normalized dispute history that drives every other surface.",
     path: "/demo",
-    selector: '[data-tour="dashboard-kpis"]',
+    // No anchor: dashboard-kpis isn't tagged in embedded code so the
+    // tour shows a centered modal here. Adding data-tour attributes
+    // to embedded files would drift the demo from production code.
+    selector: null,
     nextPath: "/demo",
   },
   {
@@ -66,7 +69,7 @@ export const TOUR_STEPS: TourStep[] = [
     title: "Recent disputes — your work queue",
     body: "The cases that need you next, sorted by urgency. Click any row to open the workspace and see what DisputeDesk built. Let's go look at one.",
     path: "/demo",
-    selector: '[data-tour="dashboard-recent-disputes"]',
+    selector: null,
     nextPath: "/demo/disputes/dp-2401",
   },
 
@@ -106,7 +109,10 @@ export const TOUR_STEPS: TourStep[] = [
     title: "Bank-optimised defence package",
     body: "A PDF that mirrors what a fraud analyst would write — built from your real evidence, mapped to the correct Shopify evidence slots. You review before submission, or let auto-mode handle Strong cases for you.",
     path: "/demo/disputes/dp-2401",
-    selector: '[data-tour="review-defence-package"]',
+    // Centered modal — defence package card isn't tagged in embedded.
+    // Pre-click still switches to the Submit tab so the merchant sees
+    // the card in the background.
+    selector: null,
     preClickSelector: '[data-help-guide="detail-tab-submit"]',
     nextPath: "/demo/insights/initial-analysis",
   },
@@ -117,7 +123,7 @@ export const TOUR_STEPS: TourStep[] = [
     title: "Built from your real order history",
     body: "DisputeDesk reads your last 90 days of Shopify orders to calibrate every defence pack — risk, delivery, and payment signals understood before the next dispute lands. That's why packs are ready in seconds.",
     path: "/demo/insights/initial-analysis",
-    selector: '[data-tour="insights-hero"]',
+    selector: null,
     nextPath: null,
     isFinalStep: true,
   },
