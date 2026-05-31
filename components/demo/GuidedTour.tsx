@@ -336,7 +336,16 @@ function useTargetRect(
           ? finder()
           : null;
       if (!el) {
-        setState((prev) => (prev.rect === null ? prev : { ...prev, rect: null }));
+        // Once the target has been found at least once for this step,
+        // losing it (e.g. brief layout flicker, page transition) keeps
+        // gaveUp=true so the dim stays visible instead of going
+        // transparent waiting for the element to come back.
+        setState((prev) => {
+          if (prev.rect === null && prev.gaveUp) return prev;
+          if (prev.rect === null) return prev;
+          // Was previously visible, now gone → keep dim on by flipping gaveUp.
+          return { rect: null, gaveUp: true };
+        });
         return false;
       }
       const r = el.getBoundingClientRect();
@@ -390,12 +399,15 @@ function useTargetRect(
     // Re-measure every 500ms in case Polaris layouts shift after data load.
     const interval = setInterval(measure, 500);
 
-    // Belt-and-braces: after 3 seconds, force gaveUp=true even if the
-    // measure call is still returning false. Prevents an indefinite
-    // transparent overlay if the target genuinely never mounts.
+    // Force gaveUp=true after 800ms regardless. 3s was too long for a
+    // rapid Next-click cadence — the user advanced past a step before
+    // the timer fired, so the dim never kicked in for that step.
+    // 800ms gives the page enough time to lay out a real anchor while
+    // still hitting the centered-modal fallback for missing ones
+    // before the user notices the missing dim.
     const giveUpTimer = setTimeout(() => {
       setState((prev) => (prev.gaveUp ? prev : { ...prev, gaveUp: true }));
-    }, 3000);
+    }, 800);
 
     return () => {
       cancelled = true;
