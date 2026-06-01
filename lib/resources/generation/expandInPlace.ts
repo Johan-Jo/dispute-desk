@@ -27,6 +27,7 @@ import { routeKindForContentType } from "./contentRouteKind";
 import { fetchSimilarPublishedArticles } from "./similarArticles";
 import { estimateReadingTimeMinutes } from "@/lib/resources/readingTime";
 import { archiveRowToBrief } from "./pipeline";
+import { assessGeneratedSimilarity } from "./similarity";
 import { HUB_CONTENT_LOCALES } from "@/lib/resources/constants";
 
 export interface ContentItemRow {
@@ -75,7 +76,7 @@ export function reconstructBriefFromItem(
 
 export interface ExpandLocaleOutcome {
   locale: string;
-  status: "updated" | "inserted" | "failed";
+  status: "updated" | "inserted" | "failed" | "skipped";
   words?: number;
   error?: string | null;
 }
@@ -171,6 +172,48 @@ export async function regenerateArticleInPlace(
     contextByLocale[loc] = { similarArticles: peers.filter((p) => !selfLocIds.has(p.id)) };
   }
 
+  // PRE-FLIGHT DEDUP (cost guard): if a locale's EXISTING article is already a
+  // near-duplicate of a published peer (title/title+excerpt Jaccard), the
+  // post-generation similarity validator would reject the regeneration anyway —
+  // so DON'T pay to generate it. Skip + flag 'merge' for human consolidation.
+  // No LLM call, no API cost (Jaccard is deterministic). Locales with no
+  // existing row (backfill) can't be pre-checked and fall through to generation.
+  const skipped: ExpandLocaleOutcome[] = [];
+  const localesToGenerate: string[] = [];
+  for (const loc of brief.targetLocales) {
+    const ex = existingByLocale.get(loc);
+    const peers = contextByLocale[loc]?.similarArticles ?? [];
+    if (ex && peers.length > 0) {
+      const sim = assessGeneratedSimilarity(
+        { title: ex.title, excerpt: ex.excerpt ?? "", slug: ex.slug },
+        peers,
+        false
+      );
+      if (!sim.ok) {
+        skipped.push({ locale: loc, status: "skipped", error: `pre-flight dedup (${sim.reason}): ${sim.detail}` });
+        continue;
+      }
+    }
+    localesToGenerate.push(loc);
+  }
+  if (skipped.length > 0) {
+    // Flag for merge so the drain/cron won't re-pick these as 'expand'.
+    await sb
+      .from("content_localizations")
+      .update({ migration_action: "merge" })
+      .eq("content_item_id", contentItemId)
+      .in("locale", skipped.map((s) => s.locale));
+  }
+  brief.targetLocales = localesToGenerate;
+  if (localesToGenerate.length === 0) {
+    return {
+      contentItemId,
+      perLocale: skipped,
+      tokensUsed: 0,
+      error: "All requested locales skipped as near-duplicates (flagged merge) — no generation spend.",
+    };
+  }
+
   // Slug collision check that ignores this item's own rows.
   const isSlugTaken = async (locale: string, slug: string): Promise<boolean> => {
     const s = slug.trim();
@@ -261,10 +304,11 @@ export async function regenerateArticleInPlace(
     .update({ generated_at: nowIso, generation_tokens: tokensUsed, updated_at: nowIso })
     .eq("id", contentItemId);
 
-  const anyFailed = perLocale.some((p) => p.status === "failed");
+  const allOutcomes = [...perLocale, ...skipped];
+  const anyFailed = allOutcomes.some((p) => p.status === "failed");
   return {
     contentItemId,
-    perLocale,
+    perLocale: allOutcomes,
     tokensUsed,
     error: anyFailed ? "One or more locales failed to regenerate (see perLocale)." : null,
   };
