@@ -61,12 +61,17 @@ import {
 export const DEFAULT_BATCH_MODEL = "claude-sonnet-4-6";
 const BATCH_MAX_TOKENS = 24000;
 
-/** custom_id codec — itemId is a UUID (no "::"), so a "::" delimiter is safe. */
+/**
+ * custom_id codec. Anthropic requires custom_id to match ^[a-zA-Z0-9_-]{1,64}$
+ * (no colons), so the delimiter is "__": UUIDs and BCP-47 locale codes contain
+ * no underscores, so the first "__" unambiguously splits item from locale.
+ * Length: 36 (uuid) + 2 + ≤5 (locale) = ≤43, well under 64.
+ */
 export function encodeKey(contentItemId: string, locale: string): string {
-  return `${contentItemId}::${locale}`;
+  return `${contentItemId}__${locale}`;
 }
 export function decodeKey(key: string): { contentItemId: string; locale: string } {
-  const idx = key.indexOf("::");
+  const idx = key.indexOf("__");
   if (idx < 0) return { contentItemId: key, locale: "" };
   return { contentItemId: key.slice(0, idx), locale: key.slice(idx + 2) };
 }
