@@ -1,6 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { reconstructBriefFromItem } from "@/lib/resources/generation/expandInPlace";
+import { reconstructBriefFromItem, tierFloorFor } from "@/lib/resources/generation/expandInPlace";
 import { HUB_CONTENT_LOCALES } from "@/lib/resources/constants";
+
+describe("tierFloorFor", () => {
+  it("returns per-type floors (pillar/hub 3000, cluster 1500, template 800)", () => {
+    expect(tierFloorFor("pillar_page", null)).toBe(3000);
+    expect(tierFloorFor("cluster_article", true)).toBe(3000); // hub article
+    expect(tierFloorFor("cluster_article", null)).toBe(1500);
+    expect(tierFloorFor("legal_update", null)).toBe(1500);
+    expect(tierFloorFor("template", null)).toBe(800);
+    expect(tierFloorFor("checklist", null)).toBe(800);
+  });
+});
 
 const item = {
   id: "item-1",
