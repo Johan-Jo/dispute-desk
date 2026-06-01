@@ -77,7 +77,7 @@ function isEmbeddingValidatorEnabled(): boolean {
   return process.env.GENERATION_EMBEDDINGS_ENABLED === "true";
 }
 
-function briefToValidatorContext(brief: GenerationBrief): ValidatorBriefContext {
+export function briefToValidatorContext(brief: GenerationBrief): ValidatorBriefContext {
   return {
     contentType: brief.contentType,
     primaryPillar: brief.primaryPillar,
