@@ -119,8 +119,13 @@ export async function getBatchResults(batchId: string): Promise<BatchResultLine[
     .map((l) => JSON.parse(l) as BatchResultLine);
 }
 
-/** Extract the JSON-bearing text from a succeeded batch message (same brace-slice
- *  cleanup as the sync Claude path: strip fences/preamble, slice to outer braces). */
+/**
+ * Extract the JSON-bearing text from a succeeded batch message. Requests use an
+ * assistant-turn "{" prefill (see batchExpand), so the reply is the CONTINUATION
+ * of a JSON object (normally no leading "{"). Strip any stray fence, restore the
+ * leading "{" unless the model echoed it, then slice to the last "}" to drop any
+ * trailing prose.
+ */
 export function extractJsonFromBatchMessage(line: BatchResultLine): string | null {
   if (line.result.type !== "succeeded") return null;
   const block = line.result.message.content.find((b) => b.type === "text");
@@ -130,8 +135,9 @@ export function extractJsonFromBatchMessage(line: BatchResultLine): string | nul
     .replace(/^\s*```(?:json)?\s*/i, "")
     .replace(/\s*```\s*$/i, "")
     .trim();
-  const first = cleaned.indexOf("{");
+  if (!cleaned) return null;
+  if (!cleaned.startsWith("{")) cleaned = `{${cleaned}`;
   const last = cleaned.lastIndexOf("}");
-  if (first > 0 && last > first) cleaned = cleaned.slice(first, last + 1);
+  if (last > 0) cleaned = cleaned.slice(0, last + 1);
   return cleaned || null;
 }
