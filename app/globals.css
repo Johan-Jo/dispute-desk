@@ -1065,23 +1065,123 @@ body {
    Web adaptation of the print pages — single scroll, dossier styling.
    ════════════════════════════════════════════════════════════════════════ */
 .dd-pbreader {
-  background: var(--pb-paper);
+  background: #e7e0d0;
   color: var(--pb-ink);
 }
-.dd-pbreader .pb-page {
-  max-width: 760px;
+
+/* Sticky reading toolbar (download PDF + install CTA). */
+.dd-pbreader .pb-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: saturate(140%) blur(6px);
+  border-bottom: 1px solid rgba(244, 238, 226, 0.12);
+}
+.dd-pbreader .pb-toolbar-inner {
+  max-width: 820px;
   margin: 0 auto;
-  padding: 56px 28px;
-  border-bottom: 1px solid var(--pb-line-ink);
+  padding: 11px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.dd-pbreader .pb-toolbar-title {
+  font-family: var(--pb-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(244, 238, 226, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dd-pbreader .pb-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.dd-pbreader .pb-toolbar-btn {
+  font-family: var(--pb-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  padding: 8px 14px;
+  background: transparent;
+  color: var(--pb-cream);
+  border: 1px solid rgba(244, 238, 226, 0.25);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.dd-pbreader .pb-toolbar-btn:hover {
+  background: rgba(244, 238, 226, 0.1);
+  border-color: rgba(244, 238, 226, 0.45);
+}
+.dd-pbreader .pb-toolbar-cta {
+  font-family: var(--font-inter), Inter, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  background: var(--pb-blue-600);
+  color: #fff;
+  border-radius: 3px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.dd-pbreader .pb-toolbar-cta:hover {
+  background: var(--pb-blue-700);
+}
+@media (max-width: 560px) {
+  .dd-pbreader .pb-toolbar-title {
+    display: none;
+  }
+  .dd-pbreader .pb-toolbar-inner {
+    justify-content: flex-end;
+  }
+}
+
+/* The document is one cohesive paper "sheet" centered on the desk. */
+.dd-pbreader .pb-doc {
+  max-width: 820px;
+  margin: 0 auto;
+  background: var(--pb-paper);
+  box-shadow: 0 1px 0 rgba(11, 18, 32, 0.04), 0 24px 60px -28px rgba(11, 18, 32, 0.4);
+}
+.dd-pbreader .pb-page {
+  padding: 0;
+  border-bottom: none;
+}
+.dd-pbreader .pb-page .pb-inner {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 60px 40px;
+}
+/* Soft § divider between paper sections instead of a hard full-width rule. */
+.dd-pbreader .pb-page + .pb-page:not(.pb-dark) .pb-inner {
+  border-top: 1px solid var(--pb-line-ink);
+}
+.dd-pbreader .pb-cover-page .pb-inner,
+.dd-pbreader .pb-page.pb-dark .pb-inner {
+  max-width: 680px;
+  padding: 72px 40px;
 }
 .dd-pbreader .pb-page.pb-dark {
   background: linear-gradient(160deg, var(--pb-bg-start), #334155);
   color: var(--pb-cream);
-  max-width: none;
 }
-.dd-pbreader .pb-page.pb-dark .pb-inner {
-  max-width: 760px;
-  margin: 0 auto;
+.dd-pbreader .pb-cover-page {
+  background: linear-gradient(160deg, var(--pb-bg-start), #2c3f59);
+}
+@media (max-width: 600px) {
+  .dd-pbreader .pb-page .pb-inner,
+  .dd-pbreader .pb-cover-page .pb-inner,
+  .dd-pbreader .pb-page.pb-dark .pb-inner {
+    padding: 44px 22px;
+  }
 }
 .dd-pbreader .pb-run-head {
   display: flex;
@@ -1374,32 +1474,142 @@ body {
   font-size: 17px;
   color: var(--pb-cream);
 }
-.dd-pbreader .pb-cta-box {
-  border: 1.5px solid var(--pb-blue-400);
+/* Horizontal scroll for the comparison table on narrow screens. */
+.dd-pbreader .pb-table-wrap {
+  overflow-x: auto;
+  margin: 8px 0 18px;
+  -webkit-overflow-scrolling: touch;
+}
+.dd-pbreader .pb-table-wrap table.pb-cmp {
+  margin: 0;
+  min-width: 520px;
+}
+
+/* ── Strong final CTA (dark page) ─────────────────────────────────────── */
+.dd-pbreader .pb-final-cta {
+  margin-top: 26px;
   background: rgba(96, 165, 250, 0.08);
-  padding: 26px 28px;
-  margin-top: 18px;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  border-radius: 6px;
+  padding: 40px 36px;
+  text-align: center;
 }
-.dd-pbreader .pb-cta-box h3 {
-  font-family: var(--pb-serif);
-  font-size: 23px;
-  color: var(--pb-cream);
-  margin: 0 0 8px;
-}
-.dd-pbreader .pb-cta-box .pb-links {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 16px;
-}
-.dd-pbreader .pb-cta-box .pb-links a {
+.dd-pbreader .pb-final-cta .pb-final-eyebrow {
   font-family: var(--pb-mono);
-  font-size: 13px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
   color: var(--pb-blue-400);
+  margin-bottom: 14px;
+}
+.dd-pbreader .pb-final-cta .pb-final-h {
+  font-family: var(--pb-serif);
+  font-weight: 600;
+  font-size: clamp(26px, 3.6vw, 34px);
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+  color: var(--pb-cream);
+  margin: 0 0 14px;
+}
+.dd-pbreader .pb-final-cta .pb-final-h em {
+  font-style: italic;
+  color: var(--pb-blue-400);
+}
+.dd-pbreader .pb-final-cta .pb-final-sub {
+  font-size: 16px;
+  line-height: 1.6;
+  color: rgba(244, 238, 226, 0.86);
+  max-width: 540px;
+  margin: 0 auto 26px;
+}
+.dd-pbreader .pb-final-cta .pb-final-sub strong {
+  color: var(--pb-cream);
+}
+.dd-pbreader .pb-final-cta .pb-final-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.dd-pbreader .pb-final-cta .pb-btn-primary {
+  font-family: var(--font-inter), Inter, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 15px 28px;
+  background: var(--pb-blue-600);
+  color: #fff;
+  border-radius: 4px;
   text-decoration: none;
-  border-bottom: 1px solid rgba(96, 165, 250, 0.4);
-  padding-bottom: 3px;
-  display: inline-block;
+  transition: background 0.15s, transform 0.05s;
+}
+.dd-pbreader .pb-final-cta .pb-btn-primary:hover {
+  background: var(--pb-blue-700);
+}
+.dd-pbreader .pb-final-cta .pb-btn-primary:active {
+  transform: translateY(1px);
+}
+.dd-pbreader .pb-final-cta .pb-btn-secondary {
+  font-family: var(--font-inter), Inter, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 15px 24px;
+  background: transparent;
+  color: var(--pb-cream);
+  border: 1px solid rgba(244, 238, 226, 0.35);
+  border-radius: 4px;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.dd-pbreader .pb-final-cta .pb-btn-secondary:hover {
+  background: rgba(244, 238, 226, 0.08);
+  border-color: rgba(244, 238, 226, 0.55);
+}
+.dd-pbreader .pb-final-cta .pb-final-note {
+  font-size: 13px;
+  color: rgba(244, 238, 226, 0.6);
+  margin: 22px 0 0;
+}
+
+/* ── Print: clean PDF from the document, chrome stripped ──────────────── */
+@media print {
+  .pb-no-print {
+    display: none !important;
+  }
+  .dd-pbreader {
+    background: #fff;
+  }
+  .dd-pbreader .pb-doc {
+    max-width: none;
+    margin: 0;
+    box-shadow: none;
+  }
+  .dd-pbreader .pb-page {
+    page-break-after: always;
+    break-after: page;
+  }
+  .dd-pbreader .pb-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+  .dd-pbreader .pb-page .pb-inner,
+  .dd-pbreader .pb-cover-page .pb-inner,
+  .dd-pbreader .pb-page.pb-dark .pb-inner {
+    max-width: none;
+    padding: 48px 56px;
+  }
+  .dd-pbreader .pb-page + .pb-page:not(.pb-dark) .pb-inner {
+    border-top: none;
+  }
+  /* Keep dark pages legible in print (force background graphics). */
+  .dd-pbreader .pb-page.pb-dark,
+  .dd-pbreader .pb-cover-page {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @page {
+    size: letter;
+    margin: 0;
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════════════
