@@ -189,6 +189,9 @@ export async function regenerateArticleInPlace(
     contextByLocale,
     isSlugTaken,
     provider: opts.provider ?? null,
+    // Keep each HTTP request under the 300s function limit; the client re-calls
+    // failed locales, so retries are spread across requests, not stacked.
+    maxRetries: 1,
   });
 
   const perLocale: ExpandLocaleOutcome[] = [];

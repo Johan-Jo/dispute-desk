@@ -70,14 +70,29 @@ const explicitIds = args.filter((a) => /^[0-9a-f-]{36}$/i.test(a));
 const sb = createClient(url, key);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function resolveTargets() {
-  if (explicitIds.length > 0) return explicitIds;
-  const { data, error } = await sb.from("content_localizations").select("content_item_id").eq("migration_action", "expand");
+// Returns Map(content_item_id -> [locales]) to rebuild.
+// Default: every localization flagged migration_action='expand', grouped by item,
+// so only the still-thin locales are rebuilt (healthy ones are never re-rolled).
+// --locale overrides the locale set; explicit UUID args target those items.
+async function resolveTargetMap() {
+  const m = new Map();
+  if (explicitIds.length > 0) {
+    for (const id of explicitIds) m.set(id, locales);
+    return m;
+  }
+  const { data, error } = await sb
+    .from("content_localizations")
+    .select("content_item_id, locale")
+    .eq("migration_action", "expand");
   if (error) {
     console.error("Failed to query expand targets:", error.message);
     process.exit(1);
   }
-  return [...new Set((data ?? []).map((r) => r.content_item_id))];
+  for (const r of data ?? []) {
+    if (!m.has(r.content_item_id)) m.set(r.content_item_id, []);
+    m.get(r.content_item_id).push(r.locale);
+  }
+  return m;
 }
 
 const is429 = (locResult) => typeof locResult?.error === "string" && /\b429\b|rate limit/i.test(locResult.error);
@@ -102,9 +117,16 @@ async function regenLocale(itemId, locale) {
       lr = { status: "failed", error: `network: ${e instanceof Error ? e.message : String(e)}` };
     }
     if (lr.status !== "failed") return { locale, ...lr };
-    const retryable = is429(lr) || /network|fetch failed|ECONNRESET|HTTP 5\d\d|HTTP 429/i.test(lr.error || "");
+    // Retry transient failures AND single-attempt generation misses (non-JSON /
+    // validator rejection) — the route uses a low per-call retry budget, so a
+    // re-call gives the model a fresh shot in its own 300s window.
+    const retryable =
+      is429(lr) ||
+      /network|fetch failed|ECONNRESET|HTTP 5\d\d|HTTP 429|non-JSON|rejected after|Empty response|invalid response/i.test(
+        lr.error || ""
+      );
     if (retryable && attempt < 4) {
-      const wait = attempt * 30000;
+      const wait = is429(lr) || /HTTP 5\d\d|network|fetch failed/i.test(lr.error || "") ? attempt * 20000 : 3000;
       process.stdout.write(`(retry in ${wait / 1000}s) `);
       await sleep(wait);
       continue;
@@ -115,21 +137,24 @@ async function regenLocale(itemId, locale) {
 }
 
 async function main() {
-  const targets = (await resolveTargets()).slice(0, limit);
+  const map = await resolveTargetMap();
+  const entries = [...map.entries()].slice(0, limit);
+  const totalLocales = entries.reduce((n, [, locs]) => n + (localeArg ? locales.length : locs.length), 0);
   console.log(`Target: ${base}/api/cron/expand-thin`);
-  console.log(`publish=${publish}  locales=[${locales.join(",")}]  items=${targets.length}  pace=${paceMs}ms\n`);
-  if (targets.length === 0) return console.log("Nothing to do.");
+  console.log(`publish=${publish}  items=${entries.length}  locales=${totalLocales}  pace=${paceMs}ms\n`);
+  if (entries.length === 0) return console.log("Nothing to do.");
   if (dryRun) {
-    targets.forEach((id) => console.log(`  • ${id}`));
+    entries.forEach(([id, locs]) => console.log(`  • ${id}  [${(localeArg ? locales : locs).join(",")}]`));
     return console.log("\n(dry run — nothing generated)");
   }
 
   let okItems = 0;
   let failItems = 0;
-  for (const [i, id] of targets.entries()) {
-    console.log(`[${i + 1}/${targets.length}] ${id}`);
+  for (const [i, [id, locs]] of entries.entries()) {
+    const itemLocales = localeArg ? locales : locs;
+    console.log(`[${i + 1}/${entries.length}] ${id}  (${itemLocales.join(",")})`);
     let itemOk = true;
-    for (const [j, loc] of locales.entries()) {
+    for (const [j, loc] of itemLocales.entries()) {
       process.stdout.write(`    ${loc} … `);
       const lr = await regenLocale(id, loc);
       if (lr.status === "failed") {
@@ -138,7 +163,7 @@ async function main() {
       } else {
         console.log(`✓ ${lr.status}${lr.words ? ` (${lr.words}w)` : ""}`);
       }
-      if (j < locales.length - 1) await sleep(paceMs);
+      if (j < itemLocales.length - 1) await sleep(paceMs);
     }
     itemOk ? (okItems += 1) : (failItems += 1);
   }

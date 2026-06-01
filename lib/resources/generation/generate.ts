@@ -422,6 +422,9 @@ export interface GenerateAllLocalesOptions {
   embeddingClient?: EmbeddingClient | null;
   /** Per-call provider override for the single-call path (A/B). Defaults to env (GENERATION_PROVIDER). */
   provider?: "openai" | "claude" | null;
+  /** Per-call validator/JSON retry budget. Lower it to keep one request under the
+   *  300s function limit (the caller re-invokes on failure). Defaults to MAX_VALIDATOR_RETRIES. */
+  maxRetries?: number;
 }
 
 async function generateLocaleWithValidators(
@@ -456,6 +459,11 @@ async function generateLocaleWithValidators(
   let lastSoftWarnings: ValidatorFailure[] = [];
   let extraInstructions: string | undefined;
   let passOneMaterial: PassOneSourceMaterial | null = null;
+  // Per-call retry budget. The in-place rebuild lowers this so a single HTTP
+  // request finishes well under the 300s function limit (each Sonnet attempt
+  // can take 60-120s); the client re-calls on failure, spreading retries across
+  // separate requests instead of stacking them into one 504-prone call.
+  const maxRetries = opts.maxRetries ?? MAX_VALIDATOR_RETRIES;
 
   if (useTwoPass) {
     const p1 = await generatePassOne(brief, locale);
@@ -466,8 +474,8 @@ async function generateLocaleWithValidators(
     passOneMaterial = p1.material;
   }
 
-  // Initial attempt + up to MAX_VALIDATOR_RETRIES retries.
-  for (let attempt = 0; attempt <= MAX_VALIDATOR_RETRIES; attempt += 1) {
+  // Initial attempt + up to maxRetries retries.
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
     const result = useTwoPass && passOneMaterial
       ? await generatePassTwo(brief, locale, passOneMaterial, extraInstructions)
       : await generateForLocale(
@@ -490,7 +498,7 @@ async function generateLocaleWithValidators(
         /non-JSON|Empty response|invalid response structure|API error 5\d\d|429|rate limit|timeout/i.test(
           result.error ?? ""
         );
-      if (retryable && attempt < MAX_VALIDATOR_RETRIES) {
+      if (retryable && attempt < maxRetries) {
         extraInstructions =
           "Return ONLY a single valid, parseable JSON object matching the schema — no prose, no explanation, no markdown code fences. Ensure all strings are properly escaped.";
         continue;
@@ -552,7 +560,7 @@ async function generateLocaleWithValidators(
 
     lastSoftWarnings = soft;
 
-    if (attempt >= MAX_VALIDATOR_RETRIES) {
+    if (attempt >= maxRetries) {
       const summary = hard.map((f) => `${f.id}: ${f.message}`).join("; ");
       return {
         locale,
