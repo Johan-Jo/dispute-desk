@@ -3,10 +3,12 @@ import { encodeKey, decodeKey, DEFAULT_BATCH_MODEL } from "@/lib/resources/gener
 import { extractJsonFromBatchMessage, type BatchResultLine } from "@/lib/resources/generation/batchClient";
 
 describe("custom_id codec", () => {
-  it("round-trips a UUID + hyphenated locale", () => {
+  it("round-trips a UUID + hyphenated locale (underscore delimiter, no colons)", () => {
     const id = "d3ec0c17-8449-4555-ac63-190cc07e29a7";
     const key = encodeKey(id, "de-DE");
-    expect(key).toBe(`${id}::de-DE`);
+    expect(key).toBe(`${id}__de-DE`);
+    // Anthropic custom_id must match ^[a-zA-Z0-9_-]{1,64}$ — assert it does.
+    expect(key).toMatch(/^[a-zA-Z0-9_-]{1,64}$/);
     expect(decodeKey(key)).toEqual({ contentItemId: id, locale: "de-DE" });
   });
 
