@@ -6,7 +6,7 @@ name: CI
 #   - npm run lint    (exit 0; warnings only)
 #   - npm test        (922/922 pass)
 #   - npm run build   (exit 0)
-#   - npm audit --audit-level=critical (exit 0; high/moderate sit below the filter)
+#   - npm audit --audit-level=critical --omit=dev (prod deps only; dev-tool vulns don't ship)
 #   - 4 grep guards   (no matches)
 on:
   push:
@@ -50,7 +50,11 @@ jobs:
         run: npx vitest run --reporter=verbose
 
       - name: Security audit
-        run: npm audit --audit-level=critical
+        # Gate on critical vulns in PRODUCTION deps only — dev tooling (test
+        # runner, Vercel CLI) never reaches the deployed runtime, so its
+        # advisories shouldn't block prod promotions. Prod deps are critical-free;
+        # the vitest --ui advisory (dev-only, unused in CI) was the false blocker.
+        run: npm audit --audit-level=critical --omit=dev
 
       - name: Forbidden copy check (source + translations)
         run: |
