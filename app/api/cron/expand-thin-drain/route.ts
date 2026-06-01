@@ -48,12 +48,26 @@ async function run(req: NextRequest) {
 
   const result = await regenerateArticleInPlace(itemId, { publish: true, locales });
 
+  // SAFETY: each flagged locale gets exactly ONE attempt per flagging. Success
+  // clears the flag via publish; on failure we clear it here too, so a
+  // deterministically-failing item can never be re-picked and re-charged on a
+  // loop. Failures are surfaced in the response/logs for a deliberate re-flag.
+  const failed = result.perLocale.filter((p) => p.status === "failed").map((p) => p.locale);
+  if (failed.length > 0) {
+    await sb
+      .from("content_localizations")
+      .update({ migration_action: null })
+      .eq("content_item_id", itemId)
+      .in("locale", failed);
+  }
+
   return NextResponse.json({
     done: false,
     remainingFlagged: data.length >= 50 ? "50+" : data.length,
     contentItemId: itemId,
     locales,
     perLocale: result.perLocale,
+    failedClearedToAvoidLoopCharge: failed,
     error: result.error,
   });
 }

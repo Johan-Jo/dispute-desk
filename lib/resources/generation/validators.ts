@@ -541,6 +541,28 @@ const STOPWORDS_FOR_SLUG_CHECK = new Set([
   "is",
 ]);
 
+/**
+ * Brand names and cross-language loanwords that legitimately appear in
+ * non-English slugs/titles — they must NOT count as "English tokens" in the
+ * V8 slug-locale check (e.g. "shopify" is a proper noun in every language;
+ * "chargeback" / "paypal" / "visa" are widely used loanwords in ecommerce copy).
+ */
+const SLUG_ALLOWED_LOANWORDS = new Set([
+  "shopify",
+  "chargeback",
+  "chargebacks",
+  "paypal",
+  "visa",
+  "mastercard",
+  "amex",
+  "stripe",
+  "klarna",
+  "ecommerce",
+  "app",
+  "saas",
+  "b2b",
+]);
+
 export function v8_slugLocale(
   candidate: ValidatorCandidate,
   brief: ValidatorBriefContext,
@@ -566,7 +588,7 @@ export function v8_slugLocale(
     .split(/\s+/)
     .filter((w) => w.length > 3 && !STOPWORDS_FOR_SLUG_CHECK.has(w));
 
-  const matches = englishSources.filter((w) => slugTokens.has(w));
+  const matches = englishSources.filter((w) => slugTokens.has(w) && !SLUG_ALLOWED_LOANWORDS.has(w));
   if (matches.length === 0) return null;
 
   return {
