@@ -27,18 +27,24 @@ describe("extractJsonFromBatchMessage", () => {
     result: { type: "succeeded", message: { content: [{ type: "text", text }] } },
   });
 
-  it("returns the raw JSON object unchanged", () => {
+  it("restores the leading '{' on a prefill continuation", () => {
+    // With the assistant-turn "{" prefill, the reply starts mid-object.
+    const out = extractJsonFromBatchMessage(succeeded('"title":"Hi"}'));
+    expect(out).toBe('{"title":"Hi"}');
+  });
+
+  it("does not double-brace when the model echoes the '{'", () => {
     const out = extractJsonFromBatchMessage(succeeded('{"title":"Hi"}'));
     expect(out).toBe('{"title":"Hi"}');
   });
 
-  it("strips markdown code fences", () => {
-    const out = extractJsonFromBatchMessage(succeeded('```json\n{"title":"Hi"}\n```'));
+  it("drops trailing prose after the closing brace", () => {
+    const out = extractJsonFromBatchMessage(succeeded('"title":"Hi"} — hope that helps!'));
     expect(out).toBe('{"title":"Hi"}');
   });
 
-  it("slices a leading preamble down to the outer braces", () => {
-    const out = extractJsonFromBatchMessage(succeeded('Here is the article:\n{"title":"Hi"}'));
+  it("strips a stray closing code fence", () => {
+    const out = extractJsonFromBatchMessage(succeeded('"title":"Hi"}\n```'));
     expect(out).toBe('{"title":"Hi"}');
   });
 
