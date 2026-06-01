@@ -117,12 +117,17 @@ async function regenLocale(itemId, locale) {
       lr = { status: "failed", error: `network: ${e instanceof Error ? e.message : String(e)}` };
     }
     if (lr.status !== "failed") return { locale, ...lr };
-    // Retry ONLY true transient infra errors (network drop / 502-503-504 / 429).
-    // Do NOT client-retry non-JSON or validator rejections: the server already
-    // re-rolls those internally (maxRetries), so a client re-call would multiply
-    // server retries (4x3=12 full generations) and burn credits. Content-level
-    // failures fail fast here; the drain clears their flag.
-    const retryable = is429(lr) || /network|fetch failed|ECONNRESET|HTTP 50[234]|HTTP 429|rate limit/i.test(lr.error || "");
+    // Retry ONLY true transient infra errors that did NOT consume a generation:
+    // network drop / 502 / 503 / 429. Do NOT client-retry:
+    //   - non-JSON or validator rejections: the server already re-rolls those
+    //     internally (maxRetries), so a client re-call multiplies server retries
+    //     (4x3=12 full generations) and burns credits.
+    //   - HTTP 504 (Vercel function maxDuration=300s exceeded): the generation
+    //     already RAN server-side (Sonnet was billed) but the function was killed
+    //     before it could return/save. Retrying just re-burns the same slow
+    //     generation 4x and still times out. Fail fast; the locale keeps its
+    //     'expand' flag and is picked up by a later/targeted pass.
+    const retryable = is429(lr) || /network|fetch failed|ECONNRESET|HTTP 50[23]\b|HTTP 429|rate limit/i.test(lr.error || "");
     if (retryable && attempt < 4) {
       const wait = attempt * 20000;
       process.stdout.write(`(infra retry in ${wait / 1000}s) `);
