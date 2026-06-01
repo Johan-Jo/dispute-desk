@@ -294,6 +294,35 @@ The `/contact` page integrates Cal.com scheduling via **`@calcom/embed-react`** 
 
 - **Env:** `CAL_API_KEY` — Cal.com API key (server-only, available for future API calls such as webhook verification or booking queries). The client-side embed uses the public event slug and does not require the API key.
 
+## Inbound GTM — Playbook lead funnel
+
+The lead-capture funnel for the inbound motion (LinkedIn/long-tail content → lead magnet → email capture → nurture → demo). It trades the **Liability-Shift Playbook** for an email, then runs a 5-email nurture sequence over 14 days.
+
+### Surfaces
+
+| Area | Route | Notes |
+|------|-------|--------|
+| Lead-capture landing page | `/playbook` (+ `/de/playbook`, …) | `app/[locale]/playbook/page.tsx` → `PlaybookLandingClient`. Full marketing shell (`MarketingSiteHeader`/`Footer`). Two capture forms (hero + final), each tagged `source` (`hero`\|`final`). **Chrome is translated across all 6 locales** (`playbook` namespace). |
+| Playbook web reader | `/playbook/read` | `app/[locale]/playbook/read/page.tsx` → `PlaybookReader`. 8-section editorial doc rendered from `lib/marketing/playbook/playbookContent.ts`. **English-only content** (TS module, outside `messages/` → exempt from i18n parity). Indexable. |
+| Nurture sequence viewer (internal) | `/playbook/sequence` | `NurtureSequenceViewer` — expandable view of all 5 emails for the team to review copy. `robots: noindex`. |
+
+Middleware routes `/playbook`, `/playbook/read`, `/playbook/sequence` through `intlMiddleware` (same branch as `/` and `/contact`) so the default-locale (unprefixed English) URLs get a locale context.
+
+### Pipeline
+
+1. **Capture** — `POST /api/playbook/lead` `{ email, source, locale, utm, _honey }`. Honeypot + 10s IP rate-limit + email regex (mirrors `/api/contact`). Upserts `playbook_leads` (on email conflict, ignore — never restarts the sequence), then sends the **welcome email** (nurture step 1) synchronously via Resend. Returns `{ ok, readUrl }` so the success state deep-links to `/playbook/read`. Resend failure is non-fatal (lead is captured; the cron does not resend step 1).
+2. **Nurture** — `GET /api/cron/playbook-nurture` (daily 13:00 UTC, `vercel.json`). `cronEnvGate(req)` first. For each `active` lead whose next step is due (`sendAfterDays` ≤ days since `created_at`), sends that one email and advances `nurture_step`. Idempotent: the step gate prevents double-sends, and at most one email per lead per run (a back-dated lead is never blasted with the whole sequence). On send failure, `nurture_step` is left unchanged so the next run retries.
+3. **Unsubscribe** — `GET /api/playbook/unsubscribe?token=…`. Stateless HMAC token over the email (`signUnsubToken`/`verifyUnsubToken` in `lib/marketing/playbook/leads.ts`, secret = `CRON_SECRET`). Sets `status='unsubscribed'`; the cron skips those. Always renders a friendly page (never leaks list membership). Linked in every nurture-email footer.
+
+### Data & content
+
+- **`playbook_leads`** (`supabase/migrations/20260601120000_playbook_leads.sql`) — server-only (RLS, no policies). `nurture_step` = index (1..5) of the last email sent (1 = welcome). Unique on `lower(email)`.
+- **`lib/marketing/playbook/nurtureSequence.ts`** — the 5 emails (D0/D2/D5/D9/D14), English-only. **Single source of truth** for the welcome send, the cron, and the internal viewer.
+- **`renderNurtureEmail.ts`** — table-based HTML in the dossier palette (broad email-client compat, same approach as `lib/email/templates.ts`).
+- **`playbookContent.ts`** — the 8-page Playbook body.
+
+The funnel is built in the existing **editorial-dossier** brand (slate + cream paper, Crimson Pro/Instrument Serif, `§` markers, blue accent). Styles live under `.dd-playbook` / `.dd-pbreader` / `.nm-root` scopes in `app/globals.css`, reusing the dossier tokens. **No Brazil/PT-BR framing** (intentional GTM decision); FPT region eligibility is a neutral factual note only.
+
 ## Resources Hub (public marketing)
 
 The **Resources Hub** is the localized **marketing / SEO** surface for long-form content (articles, templates, case studies, glossary, blog). It is **not** part of the embedded Shopify app.

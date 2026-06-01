@@ -159,6 +159,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   pushStaticEntries(entries, "/glossary", 0.7, glossaryCounts);
   pushStaticEntries(entries, "/templates", 0.7, templatesCounts);
   pushStaticEntries(entries, "/case-studies", 0.7, caseStudiesCounts);
+  // Inbound GTM lead-capture funnel: the landing page is localized (chrome
+  // translated across all locales); the Playbook reader is English-only content
+  // but still indexable, so it gets a single unprefixed entry.
+  pushStaticEntries(entries, "/playbook", 0.8);
+  entries.push({
+    url: `${BASE_URL}/playbook/read`,
+    lastModified: new Date(),
+    changeFrequency: "monthly",
+    priority: 0.7,
+  });
 
   if (!sb) {
     return entries;
