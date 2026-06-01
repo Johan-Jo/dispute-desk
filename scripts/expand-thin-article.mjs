@@ -117,17 +117,15 @@ async function regenLocale(itemId, locale) {
       lr = { status: "failed", error: `network: ${e instanceof Error ? e.message : String(e)}` };
     }
     if (lr.status !== "failed") return { locale, ...lr };
-    // Retry transient failures AND single-attempt generation misses (non-JSON /
-    // validator rejection) — the route uses a low per-call retry budget, so a
-    // re-call gives the model a fresh shot in its own 300s window.
-    const retryable =
-      is429(lr) ||
-      /network|fetch failed|ECONNRESET|HTTP 5\d\d|HTTP 429|non-JSON|rejected after|Empty response|invalid response/i.test(
-        lr.error || ""
-      );
+    // Retry ONLY true transient infra errors (network drop / 502-503-504 / 429).
+    // Do NOT client-retry non-JSON or validator rejections: the server already
+    // re-rolls those internally (maxRetries), so a client re-call would multiply
+    // server retries (4x3=12 full generations) and burn credits. Content-level
+    // failures fail fast here; the drain clears their flag.
+    const retryable = is429(lr) || /network|fetch failed|ECONNRESET|HTTP 50[234]|HTTP 429|rate limit/i.test(lr.error || "");
     if (retryable && attempt < 4) {
-      const wait = is429(lr) || /HTTP 5\d\d|network|fetch failed/i.test(lr.error || "") ? attempt * 20000 : 3000;
-      process.stdout.write(`(retry in ${wait / 1000}s) `);
+      const wait = attempt * 20000;
+      process.stdout.write(`(infra retry in ${wait / 1000}s) `);
       await sleep(wait);
       continue;
     }

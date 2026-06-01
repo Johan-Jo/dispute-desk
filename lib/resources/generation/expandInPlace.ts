@@ -45,6 +45,14 @@ export interface ExistingLoc {
   slug: string;
   title: string;
   excerpt: string | null;
+  body_json?: { mainHtml?: string } | null;
+}
+
+/** Tier word-count floor (mirrors validators/audit): pillar/hub 3000, cluster/case/legal 1500, else 800. */
+export function tierFloorFor(contentType: string, isHubArticle: boolean | null | undefined): number {
+  if (isHubArticle || contentType === "pillar_page") return 3000;
+  if (["cluster_article", "case_study", "legal_update"].includes(contentType)) return 1500;
+  return 800;
 }
 
 /**
@@ -136,7 +144,7 @@ export async function regenerateArticleInPlace(
 
   const { data: existing } = await sb
     .from("content_localizations")
-    .select("id, locale, slug, title, excerpt")
+    .select("id, locale, slug, title, excerpt, body_json")
     .eq("content_item_id", contentItemId);
   const existingLocs = (existing ?? []) as ExistingLoc[];
   const existingByLocale = new Map(existingLocs.map((l) => [l.locale, l]));
@@ -178,11 +186,27 @@ export async function regenerateArticleInPlace(
   // so DON'T pay to generate it. Skip + flag 'merge' for human consolidation.
   // No LLM call, no API cost (Jaccard is deterministic). Locales with no
   // existing row (backfill) can't be pre-checked and fall through to generation.
+  const floor = tierFloorFor(brief.contentType, brief.isHubArticle ?? null);
   const skipped: ExpandLocaleOutcome[] = [];
+  const atFloorLocales: string[] = [];
+  const dupLocales: string[] = [];
   const localesToGenerate: string[] = [];
   for (const loc of brief.targetLocales) {
     const ex = existingByLocale.get(loc);
     const peers = contextByLocale[loc]?.similarArticles ?? [];
+    // AT-FLOOR GUARD: never regenerate a locale already at/above its tier floor —
+    // protects every caller (drain/client/route) from re-doing fine content even
+    // if the selector over-flagged. No LLM call.
+    if (ex) {
+      const exWords = wordCountOf(ex.body_json?.mainHtml);
+      if (exWords >= floor) {
+        skipped.push({ locale: loc, status: "skipped", words: exWords, error: `already at floor (${exWords} >= ${floor})` });
+        atFloorLocales.push(loc);
+        continue;
+      }
+    }
+    // PRE-FLIGHT DEDUP: existing article already a near-duplicate of a published
+    // peer → the post-gen similarity validator would reject it; skip + flag merge.
     if (ex && peers.length > 0) {
       const sim = assessGeneratedSimilarity(
         { title: ex.title, excerpt: ex.excerpt ?? "", slug: ex.slug },
@@ -191,18 +215,21 @@ export async function regenerateArticleInPlace(
       );
       if (!sim.ok) {
         skipped.push({ locale: loc, status: "skipped", error: `pre-flight dedup (${sim.reason}): ${sim.detail}` });
+        dupLocales.push(loc);
         continue;
       }
     }
     localesToGenerate.push(loc);
   }
-  if (skipped.length > 0) {
-    // Flag for merge so the drain/cron won't re-pick these as 'expand'.
-    await sb
-      .from("content_localizations")
-      .update({ migration_action: "merge" })
-      .eq("content_item_id", contentItemId)
-      .in("locale", skipped.map((s) => s.locale));
+  // Clear the flag on already-at-floor locales (done, no action); flag dedup skips
+  // 'merge' so the drain stops re-picking them and they surface for consolidation.
+  if (atFloorLocales.length > 0) {
+    await sb.from("content_localizations").update({ migration_action: null })
+      .eq("content_item_id", contentItemId).in("locale", atFloorLocales);
+  }
+  if (dupLocales.length > 0) {
+    await sb.from("content_localizations").update({ migration_action: "merge" })
+      .eq("content_item_id", contentItemId).in("locale", dupLocales);
   }
   brief.targetLocales = localesToGenerate;
   if (localesToGenerate.length === 0) {
@@ -348,7 +375,7 @@ export async function generateComparisonForLocale(
 
   const { data: existing } = await sb
     .from("content_localizations")
-    .select("id, locale, slug, title, excerpt")
+    .select("id, locale, slug, title, excerpt, body_json")
     .eq("content_item_id", contentItemId);
   const existingLocs = (existing ?? []) as ExistingLoc[];
   const selfLocIds = new Set(existingLocs.map((l) => l.id));
