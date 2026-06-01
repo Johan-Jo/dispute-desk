@@ -1,5 +1,8 @@
+"use client";
+
 import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
 import { MarketingSiteFooter } from "@/components/marketing/MarketingSiteFooter";
+import { SHOPIFY_INSTALL_URL } from "@/lib/marketing/shopifyInstallUrl";
 import {
   PLAYBOOK_SECTIONS,
   PLAYBOOK_META,
@@ -69,28 +72,30 @@ function Block({ block }: { block: PlaybookBlock }) {
       );
     case "table":
       return (
-        <table className="pb-cmp">
-          <thead>
-            <tr>
-              <th>{block.head[0] || " "}</th>
-              <th>{block.head[1]}</th>
-              <th className="pb-vs">{block.head[2]}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {block.rows.map((row, i) => (
-              <tr key={i}>
-                <td className="pb-rowlab">{row.label}</td>
-                <td>{row.visa}</td>
-                <td>{row.mc}</td>
+        <div className="pb-table-wrap">
+          <table className="pb-cmp">
+            <thead>
+              <tr>
+                <th>{block.head[0] || " "}</th>
+                <th>{block.head[1]}</th>
+                <th className="pb-vs">{block.head[2]}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {block.rows.map((row, i) => (
+                <tr key={i}>
+                  <td className="pb-rowlab">{row.label}</td>
+                  <td>{row.visa}</td>
+                  <td>{row.mc}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       );
     case "steps":
       return (
-        <div>
+        <div className="pb-steps">
           {block.steps.map((s, i) => (
             <div className="pb-test-step" key={i}>
               <div className="pb-ts-num">{s.num}</div>
@@ -113,74 +118,86 @@ function Block({ block }: { block: PlaybookBlock }) {
 }
 
 function Section({ section }: { section: PlaybookSection }) {
-  const inner = (
-    <>
-      {section.runHead && (
-        <div className="pb-run-head">
-          <span className="pb-b">{PLAYBOOK_META.title}</span>
-          <span>{section.runHead}</span>
-        </div>
-      )}
-      {section.kicker && <div className="pb-kicker">{section.kicker}</div>}
-      {section.eyebrow && (
-        <div className="pb-r-eyebrow">
-          <span>§</span> {section.eyebrow.replace(/^§\s*/, "")}
-        </div>
-      )}
-      {section.coverTitle ? (
-        <h1
-          className="pb-title"
-          dangerouslySetInnerHTML={{ __html: section.heading }}
-        />
-      ) : (
-        <h2 className="pb-h">{section.heading}</h2>
-      )}
-      {section.blocks.map((block, i) => (
-        <Block key={i} block={block} />
-      ))}
-
-      {/* Cover gets the meta grid; the final dark page gets the CTA box. */}
-      {section.id === "cover" && (
-        <div className="pb-cover-meta">
-          <div>
-            <div className="pb-l">For</div>
-            <div className="pb-v">Shopify merchants fighting 15–60 disputes / mo</div>
-          </div>
-          <div>
-            <div className="pb-l">Reading time</div>
-            <div className="pb-v">12 minutes that change your win rate</div>
-          </div>
-          <div>
-            <div className="pb-l">Covers</div>
-            <div className="pb-v">Visa CE 3.0 · Mastercard FPT · self-audit</div>
-          </div>
-          <div>
-            <div className="pb-l">Edition</div>
-            <div className="pb-v">{PLAYBOOK_META.edition}</div>
-          </div>
-        </div>
-      )}
-      {section.id === "next-step" && (
-        <div className="pb-cta-box">
-          <h3>Two ways to put this to work</h3>
-          <p>
-            <strong>Book a free dispute teardown.</strong> Bring 2–3 of your real
-            disputes. In 20 minutes we&apos;ll run them through the test live and show you
-            which are liability-shift eligible — yours to keep whether or not you use
-            DisputeDesk.
-          </p>
-          <div className="pb-links">
-            <a href={CAL_URL}>cal.com/disputedesk — book a dispute teardown</a>
-            <a href="/">disputedesk.app — install free on Shopify</a>
-          </div>
-        </div>
-      )}
-    </>
-  );
+  const isCover = section.id === "cover";
+  const isFinal = section.id === "next-step";
 
   return (
-    <section className={`pb-page${section.dark ? " pb-dark" : ""}`} id={section.id}>
-      {section.dark ? <div className="pb-inner">{inner}</div> : inner}
+    <section
+      className={`pb-page${section.dark ? " pb-dark" : ""}${isCover ? " pb-cover-page" : ""}`}
+      id={section.id}
+    >
+      <div className="pb-inner">
+        {section.runHead && (
+          <div className="pb-run-head">
+            <span className="pb-b">{PLAYBOOK_META.title}</span>
+            <span>{section.runHead}</span>
+          </div>
+        )}
+        {section.kicker && <div className="pb-kicker">{section.kicker}</div>}
+        {section.eyebrow && (
+          <div className="pb-r-eyebrow">
+            <span>§</span> {section.eyebrow.replace(/^§\s*/, "")}
+          </div>
+        )}
+        {section.coverTitle ? (
+          <h1
+            className="pb-title"
+            dangerouslySetInnerHTML={{ __html: section.heading }}
+          />
+        ) : (
+          <h2 className="pb-h">{section.heading}</h2>
+        )}
+        {section.blocks.map((block, i) => (
+          <Block key={i} block={block} />
+        ))}
+
+        {isCover && (
+          <div className="pb-cover-meta">
+            <div>
+              <div className="pb-l">For</div>
+              <div className="pb-v">Shopify merchants fighting 15–60 disputes / mo</div>
+            </div>
+            <div>
+              <div className="pb-l">Reading time</div>
+              <div className="pb-v">12 minutes that change your win rate</div>
+            </div>
+            <div>
+              <div className="pb-l">Covers</div>
+              <div className="pb-v">Visa CE 3.0 · Mastercard FPT · self-audit</div>
+            </div>
+            <div>
+              <div className="pb-l">Edition</div>
+              <div className="pb-v">{PLAYBOOK_META.edition}</div>
+            </div>
+          </div>
+        )}
+
+        {isFinal && (
+          <div className="pb-final-cta">
+            <div className="pb-final-eyebrow">§ Put it to work — free</div>
+            <h3 className="pb-final-h">
+              Run this on your real disputes — <em>automatically</em>.
+            </h3>
+            <p className="pb-final-sub">
+              DisputeDesk checks every Shopify dispute against the CE&nbsp;3.0 and FPT
+              rulebooks for you, tells you which ones qualify and why, then builds the
+              evidence pack. <strong>Free to install. No credit card to start.</strong>
+            </p>
+            <div className="pb-final-actions">
+              <a className="pb-btn-primary" href={SHOPIFY_INSTALL_URL}>
+                Install DisputeDesk free →
+              </a>
+              <a className="pb-btn-secondary" href={CAL_URL}>
+                Book a free dispute teardown
+              </a>
+            </div>
+            <p className="pb-final-note">
+              Free plan available · install in ~10 minutes · the issuer always decides —
+              we&apos;re honest about that.
+            </p>
+          </div>
+        )}
+      </div>
     </section>
   );
 }
@@ -188,11 +205,38 @@ function Section({ section }: { section: PlaybookSection }) {
 export function PlaybookReader({ base }: { base: string }) {
   return (
     <div className="dd-pbreader">
-      <MarketingSiteHeader />
-      {PLAYBOOK_SECTIONS.map((section) => (
-        <Section key={section.id} section={section} />
-      ))}
-      <MarketingSiteFooter base={base} />
+      <div className="pb-no-print">
+        <MarketingSiteHeader />
+      </div>
+
+      {/* Sticky reading toolbar: download (print to PDF) + jump-to-CTA. */}
+      <div className="pb-toolbar pb-no-print">
+        <div className="pb-toolbar-inner">
+          <span className="pb-toolbar-title">§ The Liability-Shift Playbook</span>
+          <div className="pb-toolbar-actions">
+            <button
+              type="button"
+              className="pb-toolbar-btn"
+              onClick={() => window.print()}
+            >
+              ↓ Download as PDF
+            </button>
+            <a className="pb-toolbar-cta" href={SHOPIFY_INSTALL_URL}>
+              Install free →
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <main className="pb-doc">
+        {PLAYBOOK_SECTIONS.map((section) => (
+          <Section key={section.id} section={section} />
+        ))}
+      </main>
+
+      <div className="pb-no-print">
+        <MarketingSiteFooter base={base} />
+      </div>
     </div>
   );
 }
