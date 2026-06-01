@@ -189,9 +189,9 @@ export async function regenerateArticleInPlace(
     contextByLocale,
     isSlugTaken,
     provider: opts.provider ?? null,
-    // Keep each HTTP request under the 300s function limit; the client re-calls
-    // failed locales, so retries are spread across requests, not stacked.
-    maxRetries: 1,
+    // 3 attempts (initial + 2) balances flaky Sonnet JSON against the 300s
+    // function limit; the caller (drain cron / client) re-invokes on any miss.
+    maxRetries: 2,
   });
 
   const perLocale: ExpandLocaleOutcome[] = [];
