@@ -17,7 +17,10 @@ export const maxDuration = 300;
  * 2 minutes; it no-ops cheaply once the flag set is empty. cronEnvGate handles
  * CRON_ENABLED + CRON_SECRET. See docs/technical.md § Thin-content gate.
  */
-const BATCH = 3;
+// ONE locale per run: a single locale (with maxRetries=2 = up to 3 attempts at
+// ~90s) fits comfortably under the 300s limit. BATCH>1 ran locales in parallel
+// and got killed mid-flight at 300s, leaving rows neither rebuilt nor cleared.
+const BATCH = 1;
 
 async function run(req: NextRequest) {
   const gate = cronEnvGate(req);
