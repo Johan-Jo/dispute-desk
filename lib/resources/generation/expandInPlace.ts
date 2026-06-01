@@ -118,6 +118,76 @@ function wordCountOf(mainHtml: string | undefined): number {
   return mainHtml.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
 }
 
+/** Structural shape of an accepted generation draft (matches GeneratedContent). */
+export interface RegenDraft {
+  title: string;
+  excerpt: string;
+  slug: string;
+  meta_title: string;
+  meta_description: string;
+  body_json: { mainHtml?: string; [k: string]: unknown };
+}
+
+/**
+ * Persist one regenerated locale in place (UPDATE keeping the slug) or backfill
+ * (INSERT) a missing one. Shared by the sync drain (regenerateArticleInPlace)
+ * and the batch ingest path so both write identically — same publish patch,
+ * reading-time recompute, and translation_status. Returns the per-locale outcome.
+ */
+export async function saveRegeneratedLocale(
+  sb: ReturnType<typeof getServiceClient>,
+  args: {
+    contentItemId: string;
+    locale: string;
+    content: RegenDraft;
+    existingLoc: ExistingLoc | undefined;
+    routeKind: string;
+    publish: boolean;
+    nowIso: string;
+  }
+): Promise<{ locale: string; status: "updated" | "inserted" | "failed"; words: number; error: string | null }> {
+  const { contentItemId, locale, content, existingLoc, routeKind, publish, nowIso } = args;
+  const words = wordCountOf(content.body_json?.mainHtml);
+  const publishPatch = publish
+    ? { is_published: true, quality_status: null, is_excluded_from_sitemap: false, migration_action: null }
+    : {};
+
+  if (existingLoc) {
+    const { error } = await sb
+      .from("content_localizations")
+      .update({
+        title: content.title,
+        excerpt: content.excerpt,
+        body_json: content.body_json,
+        meta_title: content.meta_title,
+        meta_description: content.meta_description,
+        reading_time_minutes: estimateReadingTimeMinutes(content.body_json?.mainHtml),
+        translation_status: "complete",
+        last_updated_at: nowIso,
+        updated_at: nowIso,
+        ...publishPatch,
+      })
+      .eq("id", existingLoc.id);
+    return { locale, status: error ? "failed" : "updated", words, error: error?.message ?? null };
+  }
+  const { error } = await sb.from("content_localizations").insert({
+    content_item_id: contentItemId,
+    locale,
+    route_kind: routeKind,
+    title: content.title,
+    slug: content.slug,
+    excerpt: content.excerpt,
+    body_json: content.body_json,
+    meta_title: content.meta_title,
+    meta_description: content.meta_description,
+    reading_time_minutes: estimateReadingTimeMinutes(content.body_json?.mainHtml),
+    translation_status: "complete",
+    is_published: publish === true,
+    last_updated_at: nowIso,
+  });
+  return { locale, status: error ? "failed" : "inserted", words, error: error?.message ?? null };
+}
+
 export async function regenerateArticleInPlace(
   contentItemId: string,
   opts: ExpandOptions = {}
@@ -274,48 +344,17 @@ export async function regenerateArticleInPlace(
       perLocale.push({ locale: r.locale, status: "failed", error: r.error });
       continue;
     }
-    const words = wordCountOf(r.content.body_json?.mainHtml);
-    const existingLoc = existingByLocale.get(r.locale);
-    const publishPatch = opts.publish
-      ? { is_published: true, quality_status: null, is_excluded_from_sitemap: false, migration_action: null }
-      : {};
-
-    if (existingLoc) {
-      // Keep the existing slug to preserve the public URL + hreflang siblings.
-      const { error } = await sb
-        .from("content_localizations")
-        .update({
-          title: r.content.title,
-          excerpt: r.content.excerpt,
-          body_json: r.content.body_json,
-          meta_title: r.content.meta_title,
-          meta_description: r.content.meta_description,
-          reading_time_minutes: estimateReadingTimeMinutes(r.content.body_json?.mainHtml),
-          translation_status: "complete",
-          last_updated_at: nowIso,
-          updated_at: nowIso,
-          ...publishPatch,
-        })
-        .eq("id", existingLoc.id);
-      perLocale.push({ locale: r.locale, status: error ? "failed" : "updated", words, error: error?.message ?? null });
-    } else {
-      const { error } = await sb.from("content_localizations").insert({
-        content_item_id: contentItemId,
-        locale: r.locale,
-        route_kind: routeKind,
-        title: r.content.title,
-        slug: r.content.slug,
-        excerpt: r.content.excerpt,
-        body_json: r.content.body_json,
-        meta_title: r.content.meta_title,
-        meta_description: r.content.meta_description,
-        reading_time_minutes: estimateReadingTimeMinutes(r.content.body_json?.mainHtml),
-        translation_status: "complete",
-        is_published: opts.publish === true,
-        last_updated_at: nowIso,
-      });
-      perLocale.push({ locale: r.locale, status: error ? "failed" : "inserted", words, error: error?.message ?? null });
-    }
+    // Keep the existing slug to preserve the public URL + hreflang siblings.
+    const outcome = await saveRegeneratedLocale(sb, {
+      contentItemId,
+      locale: r.locale,
+      content: r.content,
+      existingLoc: existingByLocale.get(r.locale),
+      routeKind,
+      publish: opts.publish === true,
+      nowIso,
+    });
+    perLocale.push(outcome);
   }
 
   await sb.from("content_revisions").insert({
