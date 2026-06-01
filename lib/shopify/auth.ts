@@ -124,6 +124,9 @@ export function encodeOAuthState(data: {
   phase: string;
   source: string;
   returnTo: string;
+  /** Plan chosen on the marketing pricing page, carried through OAuth so the
+   *  callback can deep-link the merchant to the in-app upgrade screen. */
+  plan?: string;
 }): string {
   const payload = Buffer.from(JSON.stringify(data)).toString("base64url");
   const sig = crypto
@@ -142,6 +145,7 @@ export function decodeOAuthState(state: string): {
   phase: string;
   source: string;
   returnTo: string;
+  plan?: string;
 } | null {
   const dotIdx = state.lastIndexOf(".");
   if (dotIdx === -1) return null;
