@@ -10,6 +10,13 @@ describe("isMarketingIntlRoute", () => {
     expect(isMarketingIntlRoute("/de/privacy")).toBe(true);
   });
 
+  it("treats the playbook lead funnel as marketing (so the language switcher works)", () => {
+    expect(isMarketingIntlRoute("/playbook")).toBe(true);
+    expect(isMarketingIntlRoute("/playbook/read")).toBe(true);
+    expect(isMarketingIntlRoute("/playbook/sequence")).toBe(true);
+    expect(isMarketingIntlRoute("/de/playbook")).toBe(true);
+  });
+
   it("excludes app surfaces", () => {
     expect(isMarketingIntlRoute("/portal/dashboard")).toBe(false);
     expect(isMarketingIntlRoute("/app")).toBe(false);

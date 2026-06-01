@@ -110,6 +110,9 @@ export async function middleware(req: NextRequest) {
   if (
     pathname === "/" ||
     pathname === "/contact" ||
+    pathname === "/playbook" ||
+    pathname === "/playbook/read" ||
+    pathname === "/playbook/sequence" ||
     localePathRegex.test(pathname) ||
     hubPublicPathRegex.test(pathname) ||
     enPrefixedHubPathRegex.test(pathname)
@@ -152,6 +155,10 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/api/auth") ||
       pathname === "/api/chat" ||
       pathname === "/api/contact" ||
+      // Inbound GTM lead funnel: public lead capture + unsubscribe (no Shopify
+      // session). The route handlers do their own honeypot + rate-limit.
+      pathname === "/api/playbook/lead" ||
+      pathname === "/api/playbook/unsubscribe" ||
       pathname === "/api/health" ||
       pathname.startsWith("/api/health/") ||
       pathname === "/api/indexnow" ||
