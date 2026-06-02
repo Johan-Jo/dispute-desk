@@ -1,5 +1,5 @@
 import type { SignalSourceAdapter } from "./types";
-import { redditAdapter } from "./reddit";
+import { redditAdapter, getProxySecret } from "./reddit";
 import { apifyAdapter, getApifyToken } from "./apify";
 import { shopifyCommunityAdapter } from "./shopify-community";
 import { appStoreAdapter } from "./app-store";
@@ -16,18 +16,13 @@ import {
  *   - shopifyCommunityAdapter — community.shopify.com (Discourse JSON, free,
  *     no IP block; highest-signal source).
  *
- * Reddit selection (priority order, first match wins) — matches .env.example
- * and apify.ts, which both declare Apify the PRIMARY production source and the
- * Cloudflare Worker proxy a free FALLBACK:
- *   1. APIFY_API_TOKEN/APIFY_API_KEY set → Apify Reddit Scraper. **Preferred**
- *      (handles IP rotation / anti-bot).
- *   2. else → redditAdapter, which internally uses the Cloudflare Worker proxy
- *      when REDDIT_PROXY_URL + secret are set, otherwise direct Reddit
- *      (residential / local dev only; 403s on Vercel/Cloudflare datacenter IPs).
- *
- * NOTE: this was previously proxy-first. That order silently shadowed a
- * configured Apify token and, when Reddit began 403-blocking the proxy's edge
- * IP (2026-05-28), took Reddit ingestion down entirely with no fallback.
+ * Reddit selection (priority order, first match wins):
+ *   1. REDDIT_PROXY_URL + REDDIT_PROXY_SECRET set → direct Reddit via the
+ *      free Cloudflare Worker proxy. **Preferred** — free, reliable.
+ *   2. APIFY_API_TOKEN/APIFY_API_KEY set → Apify Reddit Scraper (paid
+ *      fallback, only used if no proxy is configured).
+ *   3. neither → direct Reddit (works on residential IPs / local dev,
+ *      403s on Vercel datacenter IPs).
  */
 /** Synchronous adapter list — does NOT read settings (used as a fallback). */
 export function getDefaultAdapters(): SignalSourceAdapter[] {
@@ -37,7 +32,10 @@ export function getDefaultAdapters(): SignalSourceAdapter[] {
     hackerNewsAdapter,
   ];
 
-  if (getApifyToken()) {
+  const hasProxy = Boolean(process.env.REDDIT_PROXY_URL && getProxySecret());
+  if (hasProxy) {
+    adapters.push(redditAdapter);
+  } else if (getApifyToken()) {
     adapters.push(apifyAdapter);
   } else {
     adapters.push(redditAdapter);
@@ -68,15 +66,22 @@ export async function getEnabledAdapters(): Promise<SignalSourceAdapter[]> {
   if (settings.hackernews_enabled) adapters.push(hackerNewsAdapter);
 
   if (settings.reddit_enabled) {
-    if (getApifyToken()) adapters.push(apifyAdapter);
+    const hasProxy = Boolean(
+      process.env.REDDIT_PROXY_URL && getProxySecret()
+    );
+    if (hasProxy) adapters.push(redditAdapter);
+    else if (getApifyToken()) adapters.push(apifyAdapter);
     else adapters.push(redditAdapter);
   }
 
   return adapters;
 }
 
-/** Backward-compat — returns just the Reddit adapter (Apify primary). */
+/** Backward-compat — returns just the Reddit adapter. */
 export function getRedditAdapter(): SignalSourceAdapter {
+  if (process.env.REDDIT_PROXY_URL && getProxySecret()) {
+    return redditAdapter;
+  }
   if (getApifyToken()) return apifyAdapter;
   return redditAdapter;
 }
