@@ -285,7 +285,13 @@ export async function buildBatchRequests(opts: BuildBatchOptions = {}): Promise<
           model,
           max_tokens: BATCH_MAX_TOKENS,
           system: resolvedPrompts.systemPrompt,
-          messages: [{ role: "user", content: userPrompt }],
+          // Assistant-turn JSON prefill (same as the sync path): seed "{" so the
+          // model continues a JSON object and can't emit prose/fences — the fix
+          // for non-JSON batch failures. extractJsonFromBatchMessage restores the "{".
+          messages: [
+            { role: "user", content: userPrompt },
+            { role: "assistant", content: "{" },
+          ],
           temperature,
         },
       });

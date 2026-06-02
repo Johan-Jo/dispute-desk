@@ -252,7 +252,16 @@ async function callClaudeChat(
   const requestBody: Record<string, unknown> = {
     model,
     system: systemPrompt,
-    messages: [{ role: "user", content: userPrompt }],
+    // Assistant-turn JSON prefill: seed the reply with "{" so Claude is forced to
+    // continue a JSON object from token 1 — it can't emit a prose preamble or a
+    // ```json fence. This is the fix for the "model returned non-JSON" failures
+    // on long non-English articles (Anthropic has no JSON response_format). The
+    // returned text is the CONTINUATION (no leading "{"), so the parser below
+    // restores it.
+    messages: [
+      { role: "user", content: userPrompt },
+      { role: "assistant", content: "{" },
+    ],
     // Headroom for tier-floor articles (clusters ~1500w, pillars 3000w+) plus JSON wrapping.
     max_tokens: 24000,
   };
@@ -283,18 +292,17 @@ async function callClaudeChat(
     );
     const raw = block?.text;
     if (!raw) return { raw: null, tokensUsed, error: "Empty response from Claude" };
-    // Anthropic has no JSON response_format, so Sonnet may wrap the object in
-    // ```json fences or a short preamble ("Here is the article:"). Strip fences,
-    // then slice to the outermost { ... } so a stray preamble can't break parse.
+    // The reply is the CONTINUATION of the "{" prefill, so it normally starts
+    // mid-object (e.g. `"title": …}`). Strip any stray fence, then restore the
+    // leading "{" (unless the model echoed it) and slice to the last "}" to drop
+    // any trailing prose.
     let cleaned = raw
       .replace(/^\s*```(?:json)?\s*/i, "")
       .replace(/\s*```\s*$/i, "")
       .trim();
-    const first = cleaned.indexOf("{");
+    if (!cleaned.startsWith("{")) cleaned = `{${cleaned}`;
     const last = cleaned.lastIndexOf("}");
-    if (first > 0 && last > first) {
-      cleaned = cleaned.slice(first, last + 1);
-    }
+    if (last > 0) cleaned = cleaned.slice(0, last + 1);
     return { raw: cleaned, tokensUsed, error: null };
   } catch (err) {
     return { raw: null, tokensUsed: 0, error: err instanceof Error ? err.message : "Unknown error" };

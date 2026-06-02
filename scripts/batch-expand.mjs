@@ -52,7 +52,10 @@ const publish = flags.has("--publish");
 const localeArg = getArg("--locale", "");
 const limit = getArg("--limit", "");
 const model = getArg("--model", "");
-const maxRounds = parseInt(getArg("--max-rounds", "3"), 10);
+// Default 1: do NOT auto-re-batch failures. Re-batching re-bills generations,
+// and a persistent failure (bad brief, validator it can't satisfy) just burns
+// credits N times. Opt in explicitly (--max-rounds=2+) only after a clean run.
+const maxRounds = parseInt(getArg("--max-rounds", "1"), 10);
 const pollSecs = parseInt(getArg("--poll-secs", "30"), 10);
 const maxWaitMins = parseInt(getArg("--max-wait-mins", "60"), 10);
 const itemIds = args.filter((a) => /^[0-9a-f-]{36}$/i.test(a));
