@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
 import { MarketingSiteFooter } from "@/components/marketing/MarketingSiteFooter";
 import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
-import { SHOPIFY_INSTALL_URL } from "@/lib/marketing/shopifyInstallUrl";
 
 type RoiMode = "conservative" | "base" | "aggressive";
 
@@ -35,7 +34,6 @@ const ROI_DATA: Record<RoiMode, { segments: { segment: string; popular?: boolean
   },
 };
 
-const IS_APP_STORE_SET = !!process.env.NEXT_PUBLIC_SHOPIFY_APP_STORE_URL?.trim();
 
 // Render the hero headline with the final sentence italicized + gradient-clipped
 // (e.g. "Win more chargebacks. Keep more revenue." → italic emphasis on the second sentence).
@@ -105,13 +103,10 @@ export function MarketingLandingPageClient({
   };
 
   const handlePricingCta = (plan?: string) => {
+    // Always open the direct-install pop-up (shop domain → OAuth), bypassing
+    // the Shopify App Store page. This also lets us carry the chosen plan
+    // through install (see handleInstallSubmit).
     setSelectedPlan(plan ?? null);
-    if (IS_APP_STORE_SET) {
-      // App Store listings strip custom query params, so we can't carry the
-      // plan there. The merchant picks the plan again in-app after install.
-      window.location.href = SHOPIFY_INSTALL_URL;
-      return;
-    }
     setShowInstall(true);
   };
 

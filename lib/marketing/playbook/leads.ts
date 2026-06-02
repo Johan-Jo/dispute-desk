@@ -11,6 +11,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { Resend } from "resend";
 import { getPublicSiteBaseUrl } from "@/lib/email/publicSiteUrl";
+import { getMarketingShopifyAppInstallUrl } from "@/lib/marketing/shopifyInstallUrl";
 
 const FROM_EMAIL =
   process.env.EMAIL_FROM ?? "DisputeDesk <notifications@mail.disputedesk.app>";
@@ -71,9 +72,15 @@ export function calTeardownUrl(): string {
   return `https://cal.com/${CAL_HANDLE}`;
 }
 
-/** Shopify install / app URL. */
+/**
+ * Install CTA URL for nurture emails — the on-site pricing section, where the
+ * merchant picks a plan and the direct-install pop-up (shop domain → OAuth)
+ * opens. Uses the canonical marketing install helper so emails stay consistent
+ * with the site's own install buttons. The helper returns an absolute
+ * `${origin}/#pricing`.
+ */
 export function installUrl(): string {
-  return `${getPublicSiteBaseUrl()}/`;
+  return getMarketingShopifyAppInstallUrl();
 }
 
 /** Unsubscribe URL for a given email. */
