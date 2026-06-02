@@ -340,6 +340,10 @@ The **Resources Hub** is the localized **marketing / SEO** surface for long-form
 | Admin | `/admin/resources/*` | Dashboard, content list, calendar, queue, backlog, settings. Figma-based redesign (CH-2+). |
 | In-app help (embedded) | `/app/help`, `/app/help/[slug]` | Separate copy from `lib/help/embedded` — **not** the CMS hub |
 
+### Article page chrome (parity)
+
+Hub **article** pages (`/<locale>/resources/[pillar]/[slug]` and `/<locale>/templates/[slug]`) render the same chrome so navigation never disappears mid-hub: `MarketingSiteHeader` + `ArticleStickyBar` inside a `min-h-screen` shell, then breadcrumbs, an article header (content-type badge via `contentTypeBadgeClass`, title, excerpt, meta row of author / `last_updated_at` / read-time / locale), `BodyBlocks`, the `CtaCard`, and a related-content grid. Templates have **no `primary_pillar`**, so the templates page sources related cards from `listPublishedByRoute("templates", …)` (filtering out the current item) under the `resources.relatedTemplates` heading, instead of the pillar-scoped `getRelatedResources()` the resources page uses. Templates also have **no `featured_image_url`** (all rows NULL), so neither the hero (`ArticleHeroImage`) nor card images render on that route — the resources page still conditionally renders the hero when an item has one. Both pages share `getPublishedLocalizationBySlug` + the cross-locale/`findLocalizationBySlugAnyLocale` redirect fallback.
+
 ### Empty-hub behavior (SEO)
 
 Hub-index pages (`/<locale>/resources`, `/templates`, `/glossary`, `/case-studies`) **return 404 when the requested locale has zero published localizations** for that route kind. Previously they rendered an empty grid at 200 OK, which Google catalogues as "crawled — currently not indexed" and pollutes the indexable URL count. The 404 is enforced in each hub `page.tsx` (resources also requires `!isFiltered` so search/pillar filters keep their 200 OK with an empty result set — that's a user query, not missing content). The sitemap (`pushStaticEntries` in `app/sitemap.ts`) likewise skips these URLs.
