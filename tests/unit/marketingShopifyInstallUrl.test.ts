@@ -21,12 +21,15 @@ describe("getMarketingShopifyAppInstallUrl", () => {
     else process.env.PUBLIC_CANONICAL_URL = prevCanonical;
   });
 
-  it("uses App Store URL when NEXT_PUBLIC_SHOPIFY_APP_STORE_URL is set", () => {
+  it("always uses /#pricing, even when NEXT_PUBLIC_SHOPIFY_APP_STORE_URL is set", () => {
+    // We deliberately route install CTAs to the on-site direct-install pop-up
+    // (shop domain → OAuth) and never to the App Store listing, so the env var
+    // is intentionally ignored.
     process.env.NEXT_PUBLIC_SHOPIFY_APP_STORE_URL = "https://apps.shopify.com/disputedesk";
-    expect(getMarketingShopifyAppInstallUrl()).toBe("https://apps.shopify.com/disputedesk");
+    expect(getMarketingShopifyAppInstallUrl()).toBe("https://disputedesk.app/#pricing");
   });
 
-  it("falls back to /#pricing on public origin when App Store URL unset", () => {
+  it("uses /#pricing on public origin when App Store URL unset", () => {
     expect(getMarketingShopifyAppInstallUrl()).toBe(
       "https://disputedesk.app/#pricing"
     );
