@@ -11,6 +11,7 @@ import {
   unsubscribeUrl,
   sendPlaybookEmail,
 } from "@/lib/marketing/playbook/leads";
+import { sendAdminPlaybookLeadNotification } from "@/lib/email/sendAdminNotification";
 
 export const runtime = "nodejs";
 
@@ -144,6 +145,12 @@ export async function POST(req: NextRequest) {
       html: rendered.html,
       text: rendered.text,
     });
+
+    // Notify the team a new lead came in (fire-and-forget; swallows its own
+    // errors). New leads only, so re-submits never re-notify.
+    void sendAdminPlaybookLeadNotification({ email, source, locale, utm }).catch(
+      (err) => console.error("[playbook/lead] admin notify threw:", err),
+    );
   }
 
   return NextResponse.json({ ok: true, readUrl });
