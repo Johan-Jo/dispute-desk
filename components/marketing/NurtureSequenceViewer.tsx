@@ -104,8 +104,20 @@ function EmailCard({
                     <p key={i}>{b.c}</p>
                   ),
                 )}
-                <div className="nm-cta">{email.cta.label} →</div>
-                <div className="nm-cta-url">{email.cta.href}</div>
+                <div className="nm-cta">{email.primaryCta.label} →</div>
+                <div className="nm-cta-url">
+                  {email.primaryCta.kind} · {email.primaryCta.href}
+                </div>
+                {email.secondaryCta && (
+                  <>
+                    <div className="nm-cta nm-cta-secondary">
+                      {email.secondaryCta.label} →
+                    </div>
+                    <div className="nm-cta-url">
+                      {email.secondaryCta.kind} · {email.secondaryCta.href}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

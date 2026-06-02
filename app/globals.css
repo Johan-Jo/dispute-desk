@@ -1959,6 +1959,12 @@ body {
   padding: 11px 20px;
   border-radius: 2px;
 }
+.nm-cta-secondary {
+  background: transparent;
+  color: var(--nm-blue-600);
+  border: 1px solid var(--nm-blue-600);
+  margin-top: 12px;
+}
 .nm-cta-url {
   font-family: var(--nm-mono);
   font-size: 11px;

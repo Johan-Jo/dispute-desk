@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
 import { MarketingSiteFooter } from "@/components/marketing/MarketingSiteFooter";
 import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
-import { SHOPIFY_INSTALL_URL } from "@/lib/marketing/shopifyInstallUrl";
 
 type RoiMode = "conservative" | "base" | "aggressive";
 
@@ -35,7 +34,6 @@ const ROI_DATA: Record<RoiMode, { segments: { segment: string; popular?: boolean
   },
 };
 
-const IS_APP_STORE_SET = !!process.env.NEXT_PUBLIC_SHOPIFY_APP_STORE_URL?.trim();
 
 // Render the hero headline with the final sentence italicized + gradient-clipped
 // (e.g. "Win more chargebacks. Keep more revenue." → italic emphasis on the second sentence).
@@ -95,17 +93,20 @@ export function MarketingLandingPageClient({
   const [showInstall, setShowInstall] = useState(false);
   const [shopInput, setShopInput] = useState("");
   const [shopError, setShopError] = useState<string | null>(null);
+  // The plan the visitor clicked (null = generic "Get Started" / Free). Carried
+  // through OAuth so the callback deep-links to the in-app upgrade screen.
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
   const closeInstall = () => {
     setShowInstall(false);
     setShopError(null);
   };
 
-  const handlePricingCta = () => {
-    if (IS_APP_STORE_SET) {
-      window.location.href = SHOPIFY_INSTALL_URL;
-      return;
-    }
+  const handlePricingCta = (plan?: string) => {
+    // Always open the direct-install pop-up (shop domain → OAuth), bypassing
+    // the Shopify App Store page. This also lets us carry the chosen plan
+    // through install (see handleInstallSubmit).
+    setSelectedPlan(plan ?? null);
     setShowInstall(true);
   };
 
@@ -115,7 +116,11 @@ export function MarketingLandingPageClient({
       setShopError(t("pricing.shopError"));
       return;
     }
-    window.location.href = `/api/auth/shopify?shop=${encodeURIComponent(domain)}`;
+    const planQuery =
+      selectedPlan && selectedPlan !== "free"
+        ? `&plan=${encodeURIComponent(selectedPlan)}`
+        : "";
+    window.location.href = `/api/auth/shopify?shop=${encodeURIComponent(domain)}${planQuery}`;
   };
 
   useEffect(() => {
@@ -191,7 +196,7 @@ export function MarketingLandingPageClient({
                 <Button
                   variant="primary"
                   size="lg"
-                  onClick={handlePricingCta}
+                  onClick={() => handlePricingCta()}
                   className="w-full sm:w-auto bg-white text-[#0B1220] hover:bg-slate-100 border-2 border-white shadow-xl shadow-black/25 focus:ring-white/60 [&_svg]:text-[#0B1220]"
                 >
                   {t("hero.installFree")}
@@ -354,7 +359,7 @@ export function MarketingLandingPageClient({
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.freeF3")}</li>
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.freeF4")}</li>
               </ul>
-              <Button variant="secondary" className="w-full" onClick={handlePricingCta}>{t("pricing.getStarted")}</Button>
+              <Button variant="secondary" className="w-full" onClick={() => handlePricingCta("free")}>{t("pricing.getStarted")}</Button>
             </div>
 
             {/* Starter */}
@@ -369,7 +374,7 @@ export function MarketingLandingPageClient({
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.starterF4")}</li>
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.starterF5")}</li>
               </ul>
-              <Button variant="secondary" className="w-full" onClick={handlePricingCta}>{t("pricing.startTrial")}</Button>
+              <Button variant="secondary" className="w-full" onClick={() => handlePricingCta("starter")}>{t("pricing.startTrial")}</Button>
             </div>
 
             {/* Growth */}
@@ -385,7 +390,7 @@ export function MarketingLandingPageClient({
                 <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />{t("pricing.growthF4")}</li>
                 <li className="flex items-start gap-2 text-sm"><Check className="w-4 h-4 flex-shrink-0 mt-0.5" />{t("pricing.growthF5")}</li>
               </ul>
-              <Button variant="secondary" className="w-full bg-white text-[#1D4ED8] hover:bg-[#F6F8FB]" onClick={handlePricingCta}>{t("pricing.startTrial")}</Button>
+              <Button variant="secondary" className="w-full bg-white text-[#1D4ED8] hover:bg-[#F6F8FB]" onClick={() => handlePricingCta("growth")}>{t("pricing.startTrial")}</Button>
             </div>
 
             {/* Scale */}
@@ -399,7 +404,7 @@ export function MarketingLandingPageClient({
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.scaleF3")}</li>
                 <li className="flex items-start gap-2 text-sm text-[#64748B]"><Check className="w-4 h-4 text-[#22C55E] flex-shrink-0 mt-0.5" />{t("pricing.scaleF4")}</li>
               </ul>
-              <Button variant="secondary" className="w-full" onClick={handlePricingCta}>{t("pricing.startTrial")}</Button>
+              <Button variant="secondary" className="w-full" onClick={() => handlePricingCta("scale")}>{t("pricing.startTrial")}</Button>
             </div>
           </div>
 
