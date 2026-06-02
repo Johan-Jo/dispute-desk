@@ -43,11 +43,35 @@ export function renderNurtureEmail(
     )
     .join("");
 
+  // Primary CTA = a filled button. Secondary = an outlined button below it,
+  // with a small "or" divider so the two actions read as distinct choices and
+  // the merchant always knows whether a button installs the app or books a call.
+  const primaryBtn = `
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:22px 0 0 0;">
+                <tr>
+                  <td style="background-color:${BLUE};border-radius:4px;">
+                    <a href="${email.primaryCta.href}" style="display:inline-block;padding:14px 26px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;font-family:Arial,Helvetica,sans-serif;">${escapeHtml(email.primaryCta.label)} &rarr;</a>
+                  </td>
+                </tr>
+              </table>`;
+  const secondaryBtn = email.secondaryCta
+    ? `
+              <p style="margin:12px 0 0 0;font-size:13px;color:${MUTED};font-family:Arial,Helvetica,sans-serif;">or</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 0 0;">
+                <tr>
+                  <td style="border:1px solid ${BLUE};border-radius:4px;">
+                    <a href="${email.secondaryCta.href}" style="display:inline-block;padding:11px 22px;font-size:14px;font-weight:600;color:${BLUE};text-decoration:none;font-family:Arial,Helvetica,sans-serif;">${escapeHtml(email.secondaryCta.label)} &rarr;</a>
+                  </td>
+                </tr>
+              </table>`
+    : "";
+  const ctaBlock = `${primaryBtn}${secondaryBtn}`;
+
   const signBlock = email.body.find((b) => b.t === "sign");
   const signLines = signBlock
     ? signBlock.c.split("\n").map((line, i) =>
         i === 0
-          ? `<p style="margin:18px 0 0 0;font-size:15px;color:${INK_2};font-family:Georgia,'Times New Roman',serif;">${escapeHtml(line)}</p>`
+          ? `<p style="margin:24px 0 0 0;font-size:15px;color:${INK_2};font-family:Georgia,'Times New Roman',serif;">${escapeHtml(line)}</p>`
           : `<p style="margin:10px 0 0 0;font-size:14px;font-style:italic;color:${MUTED};font-family:Georgia,'Times New Roman',serif;">${escapeHtml(line)}</p>`,
       ).join("")
     : "";
@@ -83,14 +107,8 @@ export function renderNurtureEmail(
               <p style="margin:0 0 22px 0;font-size:22px;font-weight:600;color:${INK};line-height:1.2;font-family:Georgia,'Times New Roman',serif;">${escapeHtml(email.subject)}</p>
               ${paragraphs}
 
-              <!-- CTA button -->
-              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:22px 0 8px 0;">
-                <tr>
-                  <td style="background-color:${BLUE};border-radius:3px;">
-                    <a href="${email.cta.href}" style="display:inline-block;padding:13px 24px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;font-family:Arial,Helvetica,sans-serif;">${escapeHtml(email.cta.label)} &rarr;</a>
-                  </td>
-                </tr>
-              </table>
+              <!-- CTA buttons (primary + optional secondary) -->
+              ${ctaBlock}
 
               ${signLines}
             </td>
@@ -117,7 +135,12 @@ export function renderNurtureEmail(
   const textBody = email.body
     .map((b) => b.c)
     .join("\n\n");
-  const text = `${email.subject}\n\n${textBody}\n\n${email.cta.label}: ${email.cta.href}\n\n---\nYou're receiving this because you downloaded the Liability-Shift Playbook.\nUnsubscribe: ${unsubscribeUrl}\n© 2026 DisputeDesk`;
+  const ctaText =
+    `${email.primaryCta.label}: ${email.primaryCta.href}` +
+    (email.secondaryCta
+      ? `\n\nor — ${email.secondaryCta.label}: ${email.secondaryCta.href}`
+      : "");
+  const text = `${email.subject}\n\n${textBody}\n\n${ctaText}\n\n---\nYou're receiving this because you downloaded the Liability-Shift Playbook.\nUnsubscribe: ${unsubscribeUrl}\n© 2026 DisputeDesk`;
 
   return { subject: email.subject, html, text };
 }
