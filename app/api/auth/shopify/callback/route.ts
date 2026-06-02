@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const { phase, source, returnTo } = oauthState;
+  const { phase, source, returnTo, plan } = oauthState;
 
   // Resolve locale for emails: dd_locale cookie → Accept-Language → en
   const cookieStore = await cookies();
@@ -292,7 +292,10 @@ export async function GET(req: NextRequest) {
         return res;
       }
 
-      const onlineAuthUrl = `${APP_URL}/api/auth/shopify?shop=${shop}&phase=online`;
+      // Carry the chosen plan into the online phase so the final embedded
+      // redirect can deep-link the merchant to the in-app upgrade screen.
+      const planQuery = plan ? `&plan=${encodeURIComponent(plan)}` : "";
+      const onlineAuthUrl = `${APP_URL}/api/auth/shopify?shop=${shop}&phase=online${planQuery}`;
       return NextResponse.redirect(onlineAuthUrl);
     }
 
@@ -319,7 +322,15 @@ export async function GET(req: NextRequest) {
     // callback loads inside the Shopify Admin iframe. Instead, return a small
     // HTML page that uses `window.top.location` to break out of the iframe.
     const storeHandle = shop.replace(".myshopify.com", "");
-    const embeddedUrl = `https://admin.shopify.com/store/${storeHandle}/apps/${process.env.SHOPIFY_API_KEY}`;
+    // When the merchant chose a paid plan on the marketing pricing page, deep-link
+    // them straight to the in-app upgrade screen (the embedded root reads
+    // `ddredirect` and client-navigates, carrying host/shop). Shopify's billing
+    // approval still requires a merchant click — we can't pre-charge during
+    // install — but this lands them on the right plan instead of silently on Free.
+    const ddredirect = plan
+      ? `?ddredirect=${encodeURIComponent(`/billing?plan=${plan}`)}`
+      : "";
+    const embeddedUrl = `https://admin.shopify.com/store/${storeHandle}/apps/${process.env.SHOPIFY_API_KEY}${ddredirect}`;
     const html = `<!DOCTYPE html><html><head><script>window.top.location.href=${JSON.stringify(embeddedUrl)};</script></head><body></body></html>`;
     const res = new NextResponse(html, {
       status: 200,

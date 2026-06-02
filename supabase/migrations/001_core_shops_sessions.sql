@@ -8,6 +8,10 @@ create table shops (
   shop_id       text,
   installed_at  timestamptz not null default now(),
   uninstalled_at timestamptz,
+  -- NOTE: this original plan check ('free','starter','pro') is SUPERSEDED by
+  -- migration 015_pack_credits.sql, which drops shops_plan_check and re-adds it
+  -- as ('free','starter','growth','scale') to match lib/billing/plans.ts. The
+  -- live constraint on every environment is the 015 version — 'pro' is dead.
   plan          text not null default 'free' check (plan in ('free','starter','pro')),
   retention_days int not null default 365,
   created_at    timestamptz not null default now(),
