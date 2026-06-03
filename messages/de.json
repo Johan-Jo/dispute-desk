@@ -3051,6 +3051,14 @@
       "dossierStamp": "Versiegelt",
       "waxFiled": "Eingereicht"
     },
+    "videoSection": {
+      "eyebrow": "Demo ansehen",
+      "title": "So erstellt DisputeDesk ein Beweispaket",
+      "subtitle": "Zwei Minuten: von einer neuen Shopify-Reklamation zu einem versiegelten, bankfertigen Beweispaket – automatisch.",
+      "ariaLabel": "Produktdemo-Video",
+      "playLabel": "DisputeDesk-Demovideo abspielen",
+      "thumbnailAlt": "DisputeDesk-Produktdemo"
+    },
     "howItWorks": {
       "title": "So funktioniert's",
       "subtitle": "Drei einfache Schritte für besseres Dispute-Management",

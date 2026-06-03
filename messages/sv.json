@@ -3051,6 +3051,14 @@
       "dossierStamp": "Förseglat",
       "waxFiled": "Anmält"
     },
+    "videoSection": {
+      "eyebrow": "Se demon",
+      "title": "Se DisputeDesk bygga ett bevispaket",
+      "subtitle": "Två minuter: från en ny Shopify-tvist till ett förseglat, bankfärdigt bevispaket – automatiskt.",
+      "ariaLabel": "Produktdemovideo",
+      "playLabel": "Spela upp DisputeDesks demovideo",
+      "thumbnailAlt": "DisputeDesk-produktdemo"
+    },
     "howItWorks": {
       "title": "Så fungerar det",
       "subtitle": "Tre enkla steg till bättre disputhantering",

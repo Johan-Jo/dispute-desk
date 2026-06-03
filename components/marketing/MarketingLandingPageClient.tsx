@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
 import { MarketingSiteFooter } from "@/components/marketing/MarketingSiteFooter";
+import { HeroVideo } from "@/components/marketing/HeroVideo";
 import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
 
 type RoiMode = "conservative" | "base" | "aggressive";
@@ -311,6 +312,9 @@ export function MarketingLandingPageClient({
           </div>
         </div>
       </section>
+
+      {/* Product demo video — lazy YouTube facade below How It Works */}
+      <HeroVideo />
 
       {/* Security */}
       <section id="security" className="py-12 sm:py-16 lg:py-20 bg-[#F6F8FB]">
