@@ -29,6 +29,10 @@ const YOUTUBE_FRAME_SRC =
   "https://www.youtube.com https://www.youtube-nocookie.com";
 const YOUTUBE_IMG_SRC = "https://i.ytimg.com";
 
+/** Google Fonts: stylesheet host + font-file host (hero editorial typefaces). */
+const GFONTS_STYLE_SRC = "https://fonts.googleapis.com";
+const GFONTS_FONT_SRC = "https://fonts.gstatic.com";
+
 /** Hub hero / cards: Supabase Storage + common stock CDNs (next/image remotePatterns). */
 const IMG_SRC_HUB =
   "img-src 'self' data: https://cdn.shopify.com https://*.supabase.co https://images.pexels.com https://images.unsplash.com";
@@ -120,10 +124,10 @@ const nextConfig = {
             "default-src 'self'",
             `frame-src 'self' https://vercel.live ${TAWK_FRAME_SRC} ${CAL_FRAME_SRC} ${YOUTUBE_FRAME_SRC}`,
             `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live ${GA_SCRIPT_SRC} ${TAWK_SCRIPT_SRC} ${CAL_SCRIPT_SRC}`,
-            "style-src 'self' 'unsafe-inline'",
+            `style-src 'self' 'unsafe-inline' ${GFONTS_STYLE_SRC}`,
             `${IMG_SRC_HUB} ${TAWK_IMG_SRC} ${YOUTUBE_IMG_SRC}`,
             `connect-src 'self' https://*.supabase.co ${GA_CONNECT_SRC} ${TAWK_CONNECT_SRC} ${CAL_CONNECT_SRC}`,
-            `font-src 'self' ${TAWK_FONT_SRC}`,
+            `font-src 'self' ${TAWK_FONT_SRC} ${GFONTS_FONT_SRC}`,
           ].join("; "),
         },
       ],
@@ -137,12 +141,12 @@ const nextConfig = {
           value: [
             "frame-ancestors https://*.myshopify.com https://admin.shopify.com",
             "default-src 'self'",
-            `frame-src 'self' ${TAWK_FRAME_SRC}`,
+            `frame-src 'self' ${TAWK_FRAME_SRC} ${YOUTUBE_FRAME_SRC}`,
             `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.shopify.com ${GA_SCRIPT_SRC} ${TAWK_SCRIPT_SRC}`,
-            "style-src 'self' 'unsafe-inline' https://cdn.shopify.com",
-            `${IMG_SRC_HUB} ${TAWK_IMG_SRC}`,
+            `style-src 'self' 'unsafe-inline' https://cdn.shopify.com ${GFONTS_STYLE_SRC}`,
+            `${IMG_SRC_HUB} ${TAWK_IMG_SRC} ${YOUTUBE_IMG_SRC}`,
             `connect-src 'self' https://*.myshopify.com https://*.supabase.co wss://*.shopifycloud.com ${GA_CONNECT_SRC} ${TAWK_CONNECT_SRC}`,
-            `font-src 'self' https://cdn.shopify.com ${TAWK_FONT_SRC}`,
+            `font-src 'self' https://cdn.shopify.com ${TAWK_FONT_SRC} ${GFONTS_FONT_SRC}`,
           ].join("; "),
         },
       ],
@@ -156,12 +160,12 @@ const nextConfig = {
           value: [
             "frame-ancestors https://*.myshopify.com https://admin.shopify.com",
             "default-src 'self'",
-            `frame-src 'self' ${TAWK_FRAME_SRC}`,
+            `frame-src 'self' ${TAWK_FRAME_SRC} ${YOUTUBE_FRAME_SRC}`,
             `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.shopify.com ${GA_SCRIPT_SRC} ${TAWK_SCRIPT_SRC}`,
-            "style-src 'self' 'unsafe-inline' https://cdn.shopify.com",
-            `${IMG_SRC_HUB} ${TAWK_IMG_SRC}`,
+            `style-src 'self' 'unsafe-inline' https://cdn.shopify.com ${GFONTS_STYLE_SRC}`,
+            `${IMG_SRC_HUB} ${TAWK_IMG_SRC} ${YOUTUBE_IMG_SRC}`,
             `connect-src 'self' https://*.myshopify.com https://*.supabase.co wss://*.shopifycloud.com ${GA_CONNECT_SRC} ${TAWK_CONNECT_SRC}`,
-            `font-src 'self' https://cdn.shopify.com ${TAWK_FONT_SRC}`,
+            `font-src 'self' https://cdn.shopify.com ${TAWK_FONT_SRC} ${GFONTS_FONT_SRC}`,
           ].join("; "),
         },
       ],
@@ -175,12 +179,12 @@ const nextConfig = {
           value: [
             "frame-ancestors https://*.myshopify.com https://admin.shopify.com",
             "default-src 'self'",
-            `frame-src 'self' ${TAWK_FRAME_SRC}`,
+            `frame-src 'self' ${TAWK_FRAME_SRC} ${YOUTUBE_FRAME_SRC}`,
             `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.shopify.com ${GA_SCRIPT_SRC} ${TAWK_SCRIPT_SRC}`,
-            "style-src 'self' 'unsafe-inline' https://cdn.shopify.com",
-            `${IMG_SRC_HUB} ${TAWK_IMG_SRC}`,
+            `style-src 'self' 'unsafe-inline' https://cdn.shopify.com ${GFONTS_STYLE_SRC}`,
+            `${IMG_SRC_HUB} ${TAWK_IMG_SRC} ${YOUTUBE_IMG_SRC}`,
             `connect-src 'self' https://*.myshopify.com https://*.supabase.co wss://*.shopifycloud.com ${GA_CONNECT_SRC} ${TAWK_CONNECT_SRC}`,
-            `font-src 'self' https://cdn.shopify.com ${TAWK_FONT_SRC}`,
+            `font-src 'self' https://cdn.shopify.com ${TAWK_FONT_SRC} ${GFONTS_FONT_SRC}`,
           ].join("; "),
         },
       ],
