@@ -3056,6 +3056,14 @@
       "dossierStamp": "Sealed",
       "waxFiled": "Filed"
     },
+    "videoSection": {
+      "eyebrow": "Watch the demo",
+      "title": "See DisputeDesk build an evidence pack",
+      "subtitle": "Two minutes: from a new Shopify dispute to a sealed, bank-ready evidence pack — automatically.",
+      "ariaLabel": "Product demo video",
+      "playLabel": "Play the DisputeDesk demo video",
+      "thumbnailAlt": "DisputeDesk product demo"
+    },
     "howItWorks": {
       "title": "How it works",
       "subtitle": "Three simple steps to better dispute management",

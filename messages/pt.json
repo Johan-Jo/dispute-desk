@@ -3051,6 +3051,14 @@
       "dossierStamp": "Selado",
       "waxFiled": "Arquivado"
     },
+    "videoSection": {
+      "eyebrow": "Ver a demo",
+      "title": "Veja o DisputeDesk montar um pacote de provas",
+      "subtitle": "Dois minutos: de uma nova contestação na Shopify a um pacote de provas selado e pronto para o banco — automaticamente.",
+      "ariaLabel": "Vídeo de demonstração do produto",
+      "playLabel": "Reproduzir o vídeo de demonstração do DisputeDesk",
+      "thumbnailAlt": "Demonstração do produto DisputeDesk"
+    },
     "howItWorks": {
       "title": "Como funciona",
       "subtitle": "Três passos simples para uma melhor gestão de disputas",

@@ -3051,6 +3051,14 @@
       "dossierStamp": "Scellé",
       "waxFiled": "Déposé"
     },
+    "videoSection": {
+      "eyebrow": "Voir la démo",
+      "title": "DisputeDesk construit un dossier de preuves",
+      "subtitle": "Deux minutes : d’un nouveau litige Shopify à un dossier de preuves scellé et prêt pour la banque, automatiquement.",
+      "ariaLabel": "Vidéo de démonstration du produit",
+      "playLabel": "Lire la vidéo de démonstration de DisputeDesk",
+      "thumbnailAlt": "Démonstration du produit DisputeDesk"
+    },
     "howItWorks": {
       "title": "Comment ça marche",
       "subtitle": "Trois étapes simples pour une meilleure gestion des litiges",

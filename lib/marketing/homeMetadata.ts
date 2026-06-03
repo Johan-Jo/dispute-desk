@@ -52,11 +52,20 @@ export async function buildMarketingHomeMetadata(
       url: canonicalUrl,
       locale: messagesLocale,
       alternateLocale: LOCALE_LIST.filter((l) => l !== messagesLocale),
+      images: [
+        {
+          url: "/og/disputedesk-og.png",
+          width: 1200,
+          height: 630,
+          alt: "DisputeDesk — Evidence-grade chargeback dispute packs for Shopify merchants.",
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
+      images: ["/og/disputedesk-og.png"],
     },
     robots: { index: true, follow: true },
   };

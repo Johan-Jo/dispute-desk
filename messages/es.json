@@ -3051,6 +3051,14 @@
       "dossierStamp": "Sellado",
       "waxFiled": "Registrado"
     },
+    "videoSection": {
+      "eyebrow": "Ver la demo",
+      "title": "Mira cómo DisputeDesk crea un paquete de pruebas",
+      "subtitle": "Dos minutos: de una nueva disputa en Shopify a un paquete de pruebas sellado y listo para el banco, automáticamente.",
+      "ariaLabel": "Vídeo de demostración del producto",
+      "playLabel": "Reproducir el vídeo de demostración de DisputeDesk",
+      "thumbnailAlt": "Demostración del producto DisputeDesk"
+    },
     "howItWorks": {
       "title": "Cómo funciona",
       "subtitle": "Tres simples pasos para una mejor gestión de disputas",
