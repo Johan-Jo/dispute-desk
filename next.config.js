@@ -24,8 +24,9 @@ const CAL_SCRIPT_SRC = "https://app.cal.com";
 const CAL_FRAME_SRC = "https://app.cal.com";
 const CAL_CONNECT_SRC = "https://app.cal.com";
 
-/** YouTube hero demo (privacy-enhanced nocookie player + thumbnail CDN). */
-const YOUTUBE_FRAME_SRC = "https://www.youtube-nocookie.com";
+/** YouTube hero demo (standard + nocookie player iframe + thumbnail CDN). */
+const YOUTUBE_FRAME_SRC =
+  "https://www.youtube.com https://www.youtube-nocookie.com";
 const YOUTUBE_IMG_SRC = "https://i.ytimg.com";
 
 /** Hub hero / cards: Supabase Storage + common stock CDNs (next/image remotePatterns). */

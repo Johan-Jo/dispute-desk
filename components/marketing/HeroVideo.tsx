@@ -1,24 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 const VIDEO_ID = "k7TY52tFr5I";
 
 /**
- * Lazy YouTube facade for the marketing hero. Renders the video thumbnail with a
- * play button on first paint (no YouTube scripts loaded), then swaps in the
- * privacy-enhanced nocookie iframe on click. Framed in the cream "dossier paper"
- * aesthetic so it sits naturally below the editorial hero. Copy is i18n-driven.
+ * Product demo video for the marketing hero. Renders the standard YouTube embed
+ * iframe directly (YouTube serves its own poster frame + play button, so there
+ * is no separate thumbnail fetch that can be hotlink-blocked). Framed in the
+ * cream "dossier paper" aesthetic below the editorial hero. Copy is i18n-driven.
  */
 export function HeroVideo() {
   const t = useTranslations("marketing");
-  const [playing, setPlaying] = useState(false);
-  // Some networks/referrer rules reject maxresdefault; fall back to hqdefault
-  // (always present) on the first load error.
-  const [thumb, setThumb] = useState(
-    `https://i.ytimg.com/vi/${VIDEO_ID}/maxresdefault.jpg`,
-  );
 
   return (
     <section
@@ -53,44 +46,14 @@ export function HeroVideo() {
 
         <div className="mt-8 rounded-2xl bg-[var(--dd-paper)] p-2 sm:p-3 shadow-2xl shadow-black/40 ring-1 ring-black/10">
           <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
-            {playing ? (
-              <iframe
-                className="absolute inset-0 h-full w-full"
-                src={`https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&rel=0&modestbranding=1`}
-                title={t("videoSection.title")}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={() => setPlaying(true)}
-                className="group absolute inset-0 h-full w-full cursor-pointer"
-                aria-label={t("videoSection.playLabel")}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={thumb}
-                  alt={t("videoSection.thumbnailAlt")}
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                  onError={() =>
-                    setThumb(`https://i.ytimg.com/vi/${VIDEO_ID}/hqdefault.jpg`)
-                  }
-                />
-                <span className="absolute inset-0 bg-black/25 transition-colors group-hover:bg-black/10" />
-                <span className="absolute left-1/2 top-1/2 flex h-16 w-16 sm:h-20 sm:w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-red-600 shadow-xl transition-transform group-hover:scale-110">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="ml-1 h-7 w-7 sm:h-9 sm:w-9 fill-white"
-                    aria-hidden
-                  >
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                </span>
-              </button>
-            )}
+            <iframe
+              className="absolute inset-0 h-full w-full"
+              src={`https://www.youtube.com/embed/${VIDEO_ID}?rel=0&modestbranding=1`}
+              title={t("videoSection.title")}
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
           </div>
         </div>
       </div>
