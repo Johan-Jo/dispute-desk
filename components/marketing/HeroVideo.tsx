@@ -14,9 +14,11 @@ const VIDEO_ID = "k7TY52tFr5I";
 export function HeroVideo() {
   const t = useTranslations("marketing");
   const [playing, setPlaying] = useState(false);
-
-  // maxresdefault falls back to hqdefault automatically for older uploads.
-  const thumb = `https://i.ytimg.com/vi/${VIDEO_ID}/maxresdefault.jpg`;
+  // Some networks/referrer rules reject maxresdefault; fall back to hqdefault
+  // (always present) on the first load error.
+  const [thumb, setThumb] = useState(
+    `https://i.ytimg.com/vi/${VIDEO_ID}/maxresdefault.jpg`,
+  );
 
   return (
     <section
@@ -72,6 +74,10 @@ export function HeroVideo() {
                   alt={t("videoSection.thumbnailAlt")}
                   className="h-full w-full object-cover"
                   loading="lazy"
+                  referrerPolicy="no-referrer"
+                  onError={() =>
+                    setThumb(`https://i.ytimg.com/vi/${VIDEO_ID}/hqdefault.jpg`)
+                  }
                 />
                 <span className="absolute inset-0 bg-black/25 transition-colors group-hover:bg-black/10" />
                 <span className="absolute left-1/2 top-1/2 flex h-16 w-16 sm:h-20 sm:w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-red-600 shadow-xl transition-transform group-hover:scale-110">
