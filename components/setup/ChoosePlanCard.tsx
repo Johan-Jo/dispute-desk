@@ -245,15 +245,15 @@ export function ChoosePlanCard({ onContinueFree }: { onContinueFree: () => void 
         </Text>
       )}
 
+      {/* Single CTA only. We intentionally do NOT render a secondary
+       *  "Continue on Free" escape link under a paid selection — offering a
+       *  free out beneath the trial button undercuts the paid path. Merchants
+       *  who want Free choose the Free row above, which flips this CTA to
+       *  "Continue on Free". */}
       <BlockStack gap="200">
         <Button variant="primary" size="large" fullWidth loading={submitting} onClick={handleStart}>
           {ctaLabel}
         </Button>
-        {selected !== "free" && (
-          <Button variant="plain" fullWidth onClick={onContinueFree} disabled={submitting}>
-            {t("setup.complete.continueFree")}
-          </Button>
-        )}
       </BlockStack>
     </BlockStack>
   );
