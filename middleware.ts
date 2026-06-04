@@ -253,9 +253,37 @@ export async function middleware(req: NextRequest) {
     let shopDomain = req.cookies.get("shopify_shop")?.value;
     let shopId = req.cookies.get("shopify_shop_id")?.value;
 
+    // Systemic stale-cookie guard. `shopify_shop_id` is sameSite=none;
+    // partitioned (CHIPS) and SURVIVES uninstall/reinstall. After a shop row is
+    // wiped+recreated (fresh-install flow, or any deletion), the browser keeps
+    // sending the DELETED shop id — which poisons every embedded route that
+    // trusts it (readiness shows "not connected", /api/setup/step 500s on the
+    // shops FK, /api/billing/subscribe 404s "Reconnect this store"). Validate
+    // the cookie id against the DB ONCE here: if no shops row has it, treat the
+    // cookie as absent (so the ?shop=/?host=/Referer domain resolution below
+    // takes over) AND clear it on the response so the browser stops sending the
+    // dead id and every route self-heals on the next request — instead of
+    // patching each route individually.
+    let clearStaleShopCookies = false;
+    if (shopId) {
+      const { getServiceClient } = await import("@/lib/supabase/server");
+      const { data: shopRow } = await getServiceClient()
+        .from("shops")
+        .select("id")
+        .eq("id", shopId)
+        .maybeSingle();
+      if (!shopRow) {
+        clearStaleShopCookies = true;
+        shopId = undefined;
+        shopDomain = undefined;
+      }
+    }
+
     // If the caller passed ?shop= and it disagrees with the cookie, the cookie
     // is stale (other-store tab). Refuse rather than return cross-shop data —
     // the client should reload /app so the /app/* stale-cookie guard re-auths.
+    // (A dead-id cookie was already cleared above, so this only fires on a
+    // live-but-different-shop cookie.)
     const apiShopParam = req.nextUrl.searchParams.get("shop");
     if (!shopIdentityMatches(shopDomain, apiShopParam)) {
       return NextResponse.json(
@@ -386,14 +414,35 @@ export async function middleware(req: NextRequest) {
       }
     }
 
+    // Clears the dead shopify_shop / shopify_shop_id cookies on a response so
+    // the browser stops sending the stale id. Must use the same attributes the
+    // OAuth callback set them with (sameSite=none; partitioned; secure) or the
+    // browser keeps the old cookie.
+    const expireStaleCookies = (res: NextResponse): NextResponse => {
+      if (!clearStaleShopCookies) return res;
+      for (const name of ["shopify_shop", "shopify_shop_id"]) {
+        res.cookies.set(name, "", {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+          partitioned: true,
+          path: "/",
+          maxAge: 0,
+        });
+      }
+      return res;
+    };
+
     if (!shopDomain || !shopId) {
-      return NextResponse.json(
-        {
-          error:
-            "Unauthorized. Install or re-open the app from Shopify Admin.",
-          code: "SESSION_REQUIRED",
-        },
-        { status: 401 }
+      return expireStaleCookies(
+        NextResponse.json(
+          {
+            error:
+              "Unauthorized. Install or re-open the app from Shopify Admin.",
+            code: "SESSION_REQUIRED",
+          },
+          { status: 401 }
+        )
       );
     }
 
@@ -410,9 +459,11 @@ export async function middleware(req: NextRequest) {
     requestHeaders.set("x-shop-domain", shopDomain);
     requestHeaders.set("x-shop-id", shopId);
     requestHeaders.set(APP_BRIDGE_HEADER, "0");
-    return NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    return expireStaleCookies(
+      NextResponse.next({
+        request: { headers: requestHeaders },
+      })
+    );
   }
 
   // --- Portal routes: require Supabase Auth ---

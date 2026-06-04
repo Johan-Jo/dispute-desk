@@ -9,7 +9,15 @@ import { NextRequest } from "next/server";
 // Shopify-asserted `?shop=<domain>` for `/api/setup/readiness` ONLY.
 
 const mockGetUser = vi.fn().mockResolvedValue({ data: { user: null } });
+// Domain-resolution lookup: shops.select().eq("shop_domain", …).maybeSingle()
 const mockShopMaybeSingle = vi.fn();
+// Cookie-validation lookup: shops.select().eq("id", …).maybeSingle().
+// Defaults to "row exists" so a present cookie id is treated as live (and
+// NOT cleared) unless a test opts into a stale id.
+const mockShopIdMaybeSingle = vi.fn().mockResolvedValue({
+  data: { id: "cookie-shop" },
+  error: null,
+});
 
 vi.mock("@supabase/ssr", () => ({
   createServerClient: () => ({ auth: { getUser: mockGetUser } }),
@@ -19,7 +27,12 @@ vi.mock("@/lib/supabase/server", () => ({
   getServiceClient: () => ({
     from: () => ({
       select: () => ({
-        eq: () => ({ maybeSingle: mockShopMaybeSingle }),
+        // Route by the filter column: "id" = cookie validation, anything else
+        // (shop_domain) = domain resolution.
+        eq: (col: string) => ({
+          maybeSingle:
+            col === "id" ? mockShopIdMaybeSingle : mockShopMaybeSingle,
+        }),
       }),
     }),
   }),
@@ -61,6 +74,12 @@ describe("middleware /api/setup/readiness domain fallback (no cookie)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetUser.mockResolvedValue({ data: { user: null } });
+    // Default: a present cookie id IS a live shop row (so it isn't cleared).
+    // Tests exercising a stale cookie override this to return no row.
+    mockShopIdMaybeSingle.mockResolvedValue({
+      data: { id: "cookie-shop" },
+      error: null,
+    });
   });
 
   it("OVERRIDES a stale shopify_shop_id cookie with the live shop resolved by domain", async () => {
@@ -68,6 +87,7 @@ describe("middleware /api/setup/readiness domain fallback (no cookie)", () => {
     // shopify_shop_id cookie pointing at a deleted/old shop (survives
     // uninstall/reinstall). Without the override, evaluateReadiness(staleId)
     // finds no session and reports a connected shop as "not connected".
+    mockShopIdMaybeSingle.mockResolvedValue({ data: null, error: null }); // stale id: no row
     mockShopMaybeSingle.mockResolvedValue({
       data: { id: "live-shop-uuid" },
       error: null,
@@ -159,6 +179,7 @@ describe("middleware /api/setup/readiness domain fallback (no cookie)", () => {
     // /api/setup/step carries no ?shop=/?host= in its URL. With a stale
     // shopify_shop_id cookie, the shop_setup INSERT used to 500 on the FK.
     // Middleware must resolve the live shop from the Referer's host.
+    mockShopIdMaybeSingle.mockResolvedValue({ data: null, error: null }); // stale id: no row
     mockShopMaybeSingle.mockResolvedValue({
       data: { id: "live-shop-uuid" },
       error: null,
@@ -184,6 +205,7 @@ describe("middleware /api/setup/readiness domain fallback (no cookie)", () => {
   it("does NOT override from Referer when the shopify_shop cookie domain disagrees", async () => {
     // Cross-shop guard: a forged Referer for shop B must not redirect a write
     // when the cookie asserts shop A.
+    mockShopIdMaybeSingle.mockResolvedValue({ data: null, error: null }); // stale id: no row
     const req = new NextRequest(new URL("http://localhost/api/setup/step"), {
       method: "POST",
       headers: new Headers({
@@ -209,5 +231,36 @@ describe("middleware /api/setup/readiness domain fallback (no cookie)", () => {
     );
     expect(res.status).toBe(401);
     expect(mockShopMaybeSingle).not.toHaveBeenCalled();
+  });
+
+  // --- Systemic stale-cookie clear (self-heals EVERY embedded route) ---
+
+  it("clears a dead shopify_shop_id cookie on the response (any embedded route)", async () => {
+    mockShopIdMaybeSingle.mockResolvedValue({ data: null, error: null }); // dead id
+    // /api/disputes is NOT domain-resolvable, so it 401s — but the dead cookie
+    // must be expired so the browser stops sending it and re-auths next load.
+    const req = new NextRequest(new URL("http://localhost/api/disputes"), {
+      headers: new Headers(),
+    });
+    req.cookies.set("shopify_shop", "sharpdesk.myshopify.com");
+    req.cookies.set("shopify_shop_id", "stale-deleted-shop-uuid");
+    const res = await middleware(req);
+    expect(res.status).toBe(401);
+    const setCookie = res.headers.get("set-cookie") ?? "";
+    expect(setCookie).toContain("shopify_shop_id=");
+    expect(setCookie.toLowerCase()).toContain("max-age=0");
+  });
+
+  it("does NOT clear a live shopify_shop_id cookie", async () => {
+    // Default mock: the cookie id resolves to a live row.
+    const req = new NextRequest(new URL("http://localhost/api/disputes"), {
+      headers: new Headers(),
+    });
+    req.cookies.set("shopify_shop", "sharpdesk.myshopify.com");
+    req.cookies.set("shopify_shop_id", "live-cookie-id");
+    const res = await middleware(req);
+    // Passes through; no stale-cookie Set-Cookie.
+    const setCookie = res.headers.get("set-cookie") ?? "";
+    expect(setCookie).not.toContain("max-age=0");
   });
 });
