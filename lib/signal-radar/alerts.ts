@@ -13,7 +13,7 @@ export type AlertKind = "immediate" | "digest" | "none";
 export interface AlertDecisionInput {
   analysis: Pick<
     SignalAnalysisOutput,
-    "category" | "signal_score" | "source_confidence_score"
+    "category" | "signal_score" | "source_confidence_score" | "dispute_relevance"
   >;
   platform: string;
   subreddit: string | null;
@@ -83,6 +83,23 @@ export function decideAlert(input: AlertDecisionInput): AlertDecision {
     return baseDecision(
       "immediate",
       "competitor_frustration",
+      CATEGORY_COOLDOWN_HOURS
+    );
+  }
+
+  // Dispute-pain catch-all (added 2026-06-04). The four category rules above
+  // target switching / competitor intent, but DisputeDesk's core ICP — a
+  // merchant actively in chargeback/dispute pain — usually classifies as
+  // operational_overload / evidence_confusion / general_discussion, which
+  // never alerted. Fire on ANY dispute-relevant, high-signal item regardless of
+  // category. merchant_relevance is already enforced by the caller and
+  // confidence ≥ 5 by the gate above, so this is "a real merchant, in dispute
+  // pain, strong signal". Per-category cooldown + cluster cooldown + circuit
+  // breaker still bound volume.
+  if (analysis.dispute_relevance && analysis.signal_score >= 7) {
+    return baseDecision(
+      "immediate",
+      "dispute_pain_high_signal",
       CATEGORY_COOLDOWN_HOURS
     );
   }
