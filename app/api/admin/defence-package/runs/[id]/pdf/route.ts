@@ -66,12 +66,19 @@ export async function GET(
     .from(bucket)
     .download(pkg.pdf_path as string);
   if (downloadErr || !blob) {
+    // Don't echo `downloadErr.message`: supabase-js embeds the internal
+    // storage URL in it. Log server-side, return a generic message.
+    console.error("[admin-defence-pdf] storage download failed", {
+      bucket,
+      pdfPath: pkg.pdf_path,
+      message: downloadErr?.message,
+    });
     return NextResponse.json(
       {
-        error: `PDF download failed: ${downloadErr?.message ?? "unknown"}`,
-        code: "DOWNLOAD_FAILED",
+        error: "PDF is no longer available.",
+        code: "PDF_UNAVAILABLE",
       },
-      { status: 500 },
+      { status: 404 },
     );
   }
 

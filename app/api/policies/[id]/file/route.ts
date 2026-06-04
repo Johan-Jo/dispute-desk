@@ -79,12 +79,18 @@ export async function GET(
     .from("policy-uploads")
     .download(snapshot.storage_path);
   if (downloadErr || !blob) {
+    // supabase-js embeds the internal storage URL in `downloadErr.message`;
+    // never surface it to the merchant. Log server-side, return generic copy.
+    console.error("[policy-file] storage download failed", {
+      storagePath: snapshot.storage_path,
+      message: downloadErr?.message,
+    });
     return NextResponse.json(
       {
-        error: `Policy download failed: ${downloadErr?.message ?? "unknown"}`,
-        code: "DOWNLOAD_FAILED",
+        error: "This file is no longer available.",
+        code: "FILE_UNAVAILABLE",
       },
-      { status: 500 },
+      { status: 404 },
     );
   }
 
