@@ -2089,7 +2089,12 @@
       "bannerTitle": "{plan} combina com seu volume de estornos",
       "bannerBody": "Você lida com cerca de {rate} estornos por mês — mais do que o plano Free cobre. Veja como o {plan} se encaixa.",
       "bannerCta": "Ver recomendação"
-    }
+    },
+    "freeShort": "3 pacotes exportados · Criação de rascunhos · Registro de atividades",
+    "starterShort": "20 pacotes/mês · Regras básicas · Suporte por e-mail",
+    "growthShort": "100 pacotes/mês · Regras avançadas · Salvamento automático",
+    "scaleShort": "400 pacotes/mês · Exportações avançadas · Suporte prioritário",
+    "perMonthSuffix": "/mês"
   },
   "rules": {
     "title": "Regras",
@@ -3492,7 +3497,13 @@
       "infoDesc": "Novas disputas são sincronizadas automaticamente do Shopify. O DisputeDesk monta o pacote de evidências e salva no seu caso de disputa no Admin do Shopify. Você revisa o pacote lá e envia para a rede de cartões quando estiver pronto.",
       "goToDashboard": "Ir ao painel",
       "analysisTitle": "Estamos analisando seus pedidos históricos",
-      "analysisDesc": "O DisputeDesk está revisando seus pedidos anteriores do Shopify para criar um panorama de risco da sua loja. Você receberá um e-mail com os resultados assim que a análise terminar — normalmente em algumas horas."
+      "analysisDesc": "O DisputeDesk está revisando seus pedidos anteriores do Shopify para criar um panorama de risco da sua loja. Você receberá um e-mail com os resultados assim que a análise terminar — normalmente em algumas horas.",
+      "choosePlanTitle": "Escolha seu plano",
+      "choosePlanSubtitle": "Escolha o plano ideal para o seu volume de disputas. Você pode mudar a qualquer momento.",
+      "choosePlanSubtitleTrial": "Comece com um teste gratuito de 14 dias. Cancele a qualquer momento antes do fim, sem cobrança.",
+      "startTrial": "Iniciar teste gratuito de 14 dias",
+      "continueFree": "Continuar no Free",
+      "trialNote": "14 dias grátis e depois o preço mensal do seu plano. Inclui {packs} pacotes/mês."
     },
     "connection": {
       "title": "Conexão e Prontidão",

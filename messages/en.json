@@ -2089,7 +2089,12 @@
       "bannerTitle": "{plan} fits your chargeback volume",
       "bannerBody": "You're handling about {rate} chargebacks a month — more than Free covers. See how {plan} fits.",
       "bannerCta": "View recommendation"
-    }
+    },
+    "freeShort": "3 exported packs · Draft building · Activity log",
+    "starterShort": "20 packs/month · Basic rules · Email support",
+    "growthShort": "100 packs/month · Advanced rules · Auto-save",
+    "scaleShort": "400 packs/month · Advanced exports · Priority support",
+    "perMonthSuffix": "/mo"
   },
   "rules": {
     "title": "Rules",
@@ -3664,7 +3669,13 @@
       "infoDesc": "New disputes sync from Shopify automatically. DisputeDesk builds the evidence pack and saves it back to your dispute in Shopify Admin. You review the pack there and submit it to the card network when you're ready.",
       "goToDashboard": "Go to Dashboard",
       "analysisTitle": "We're analyzing your historical orders",
-      "analysisDesc": "DisputeDesk is reviewing your past Shopify orders to build a risk snapshot for your store. You'll get an email with the results as soon as the analysis is done — typically within a few hours."
+      "analysisDesc": "DisputeDesk is reviewing your past Shopify orders to build a risk snapshot for your store. You'll get an email with the results as soon as the analysis is done — typically within a few hours.",
+      "choosePlanTitle": "Choose your plan",
+      "choosePlanSubtitle": "Pick the plan that fits your dispute volume. You can change it anytime.",
+      "choosePlanSubtitleTrial": "Start with a 14-day free trial. Cancel anytime before it ends and you won't be charged.",
+      "startTrial": "Start 14-day free trial",
+      "continueFree": "Continue on Free",
+      "trialNote": "14 days free, then your plan's monthly price. Includes {packs} packs/month."
     },
     "undoSkip": "Undo skip",
     "back": "← Back",

@@ -2089,7 +2089,12 @@
       "bannerTitle": "{plan} se ajusta a tu volumen de contracargos",
       "bannerBody": "Gestionas alrededor de {rate} contracargos al mes, más de lo que cubre el plan Free. Mira cómo encaja {plan}.",
       "bannerCta": "Ver recomendación"
-    }
+    },
+    "freeShort": "3 paquetes exportados · Creación de borradores · Registro de actividad",
+    "starterShort": "20 paquetes/mes · Reglas básicas · Soporte por correo",
+    "growthShort": "100 paquetes/mes · Reglas avanzadas · Guardado automático",
+    "scaleShort": "400 paquetes/mes · Exportaciones avanzadas · Soporte prioritario",
+    "perMonthSuffix": "/mes"
   },
   "rules": {
     "title": "Reglas",
@@ -3500,7 +3505,13 @@
       "infoDesc": "Las nuevas disputas se sincronizan automáticamente desde Shopify. DisputeDesk crea el paquete de evidencia y lo guarda en tu disputa en el Admin de Shopify. Tú revisas el paquete allí y lo envías a la red de tarjetas cuando estés listo.",
       "goToDashboard": "Ir al panel",
       "analysisTitle": "Estamos analizando tus pedidos históricos",
-      "analysisDesc": "DisputeDesk está revisando tus pedidos anteriores de Shopify para crear una instantánea de riesgo de tu tienda. Recibirás un correo con los resultados en cuanto termine el análisis — normalmente en unas horas."
+      "analysisDesc": "DisputeDesk está revisando tus pedidos anteriores de Shopify para crear una instantánea de riesgo de tu tienda. Recibirás un correo con los resultados en cuanto termine el análisis — normalmente en unas horas.",
+      "choosePlanTitle": "Elige tu plan",
+      "choosePlanSubtitle": "Elige el plan que se ajuste a tu volumen de disputas. Puedes cambiarlo cuando quieras.",
+      "choosePlanSubtitleTrial": "Empieza con una prueba gratuita de 14 días. Cancela en cualquier momento antes de que termine y no se te cobrará.",
+      "startTrial": "Iniciar prueba gratuita de 14 días",
+      "continueFree": "Continuar con Free",
+      "trialNote": "14 días gratis y luego el precio mensual de tu plan. Incluye {packs} paquetes/mes."
     },
     "connection": {
       "title": "Conexión y preparación",

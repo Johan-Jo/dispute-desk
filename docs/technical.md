@@ -3209,6 +3209,8 @@ Guards at: `POST /api/disputes/:id/packs` (quota), `POST /api/rules` (feature),
 
 Both `POST /api/billing/subscribe` and `POST /api/billing/topup` accept optional `host` and `shop` body params. The client reads them from `window.location.search` (App Bridge populates these on every embedded page load) and the route bakes them into the Shopify `returnUrl`. Without this, Shopify's post-approval redirect lands on the bare `disputedesk.app/app/billing` URL outside the Admin iframe — App Bridge can't bootstrap and the `s-app-nav` chrome vanishes.
 
+**Top-frame redirect to the Shopify approval page (`lib/shopify/redirectTopLevel.ts`).** After `subscribe`/`topup` returns a `confirmationUrl` on `admin.shopify.com`, the client must navigate the **top** window to it. Doing `window.top.location.href = url` directly works only inside a synchronous user gesture; from a `fetch()` callback Chrome blocks it as a cross-origin top-frame navigation without user activation (`"Unsafe attempt to initiate navigation … neither same-origin … nor has it received a user gesture"`). This app boots App Bridge web components (`<meta name="shopify-api-key">` in `app/(embedded)/layout.tsx`), which intercepts `open(url, "_top")` and relays it to the parent admin frame over postMessage — not subject to the user-activation rule. `redirectTopLevel(url)` prefers that path inside the iframe and falls back to raw `window.top` navigation when App Bridge isn't present. **All confirmation-URL redirects go through this helper** (billing page upgrade + top-up, `PlanRecommendationCard`, the post-wizard `ChoosePlanCard`). This was the root cause of the 2026-06 "Upgrade could not be started" symptom on fresh installs — see *Install → plan selection (post-wizard)* below.
+
 The callbacks then redirect via `buildEmbeddedReturnUrl()` (`lib/embedded/embeddedAppUrl.ts`) which constructs the full embedded URL `https://admin.shopify.com/store/<handle>/apps/<api_key>/app/billing?host=…&shop=…` instead of the bare app URL. The helper derives `<handle>` by base64-decoding `host` (`<shop>.myshopify.com/admin` or `admin.shopify.com/store/<handle>`) with a `shop` fallback. Falls back to the bare app URL when the handle can't be derived. Without this redirect, merchants returned from the Shopify charge approval to a page outside the Admin iframe and saw the s-app-nav rendered as plain text (2026-05-27 regression — initial `host`/`shop` carrying was not enough; the final redirect URL also has to be the embedded form, not the app's own domain).
 
 If the store session is invalid (e.g. missing shop domain) or the shop is not connected, subscribe returns 400 or 404 with an error message. The billing UI (portal and embedded) shows this message and an **Open in Shopify Admin** link so the merchant can open the app from Shopify Admin to restore a valid session (after using **Clear shop & reconnect** in the sidebar if needed).
@@ -3302,11 +3304,27 @@ The embedded Billing page (`app/(embedded)/app/billing/page.tsx`) accepts an opt
 | Value | Behavior |
 |-------|----------|
 | `free` | Expands the plan comparison, scrolls to the Free tier (`#billing-plan-free`). |
-| `starter`, `growth`, `scale` | If the shop’s current plan tier is **below** the target tier, triggers the same upgrade path as **Upgrade** on the page (`POST /api/billing/subscribe`). If already on that tier or higher, the query is stripped only. |
+| `starter`, `growth`, `scale` | Expands the plan comparison and scrolls the matching tier card (`#billing-plan-<tier>`) into view. The merchant clicks the card's CTA to subscribe — the deep link **never auto-fires** `POST /api/billing/subscribe`. |
 
-Implementation uses `sessionStorage` keys `dd_billing_plan_query_{plan}` so React Strict Mode does not double-invoke subscription; the URL is cleaned with `router.replace` after handling.
+The deep link **only surfaces** the right plan; it does not auto-start a subscription. Auto-firing the upgrade from a `useEffect` (no user gesture) produced a cross-origin top-frame redirect to Shopify's approval page that Chrome blocks inside the Admin iframe — the merchant never reached the approval screen and saw a stale "Upgrade could not be started" banner. Implementation uses `sessionStorage` keys `dd_billing_plan_query_{plan}` so React Strict Mode does not double-handle; the URL is cleaned with `router.replace` after handling.
 
-**Marketing site:** The homepage pricing grid (`components/marketing/MarketingLandingPageClient.tsx`) links each CTA to `/app/billing?plan=…` for the matching tier. Merchants need a **Shopify embedded session** (app opened from Admin) for billing to apply; without it, middleware may redirect to `/app/session-required` with a return URL—same as any other `/app/*` request without session cookies.
+**Marketing site:** The homepage pricing grid (`components/marketing/MarketingLandingPageClient.tsx`) links each CTA to `/api/auth/shopify?shop=…&plan=…`. The OAuth callback carries `plan` into the **onboarding wizard** (not `/app/billing`) — see below.
+
+### Install → plan selection (post-wizard)
+
+When a merchant installs from the marketing pricing page with a chosen plan, plan selection is the **final step after the onboarding wizard finalizes**, on the completion screen — not an instant redirect to billing.
+
+Flow:
+
+1. **Marketing CTA** → `/api/auth/shopify?shop=<domain>&plan=<plan>`. The plan rides through the OAuth state token (offline → online phase).
+2. **OAuth callback** (`app/api/auth/shopify/callback/route.ts`) deep-links into the app with `?ddredirect=/setup?plan=<plan>` (previously `/billing?plan=<plan>`).
+3. **Embedded root** (`app/(embedded)/app/page.tsx`) carries `plan` through the `ddredirect` hop (added to the carry-list) to `/app/setup`.
+4. **Wizard welcome** (`app/(embedded)/app/setup/page.tsx`) stashes `plan` in `sessionStorage` under `dd_install_plan` (`lib/setup/installPlan.ts`). It rides in sessionStorage rather than a query param because the wizard's per-step navigation only propagates an allowlist of params (`withShopParams`, the `ddredirect` carry-list) — `plan` would otherwise be dropped between steps.
+5. **Completion screen** (`app/(embedded)/app/setup/complete/page.tsx`) renders `ChoosePlanCard` (`components/setup/ChoosePlanCard.tsx`): compact plan cards pre-selecting the stashed plan (default Starter), with **Start 14-day trial** (→ `POST /api/billing/subscribe` → `redirectTopLevel(confirmationUrl)`) or **Continue on Free** (→ dashboard). The stash is cleared once consumed.
+
+No backend/billing changes: reuses `GET /api/billing/usage` (trial eligibility) and `POST /api/billing/subscribe`. No new wizard stepper step and no `shop_setup` migration — the confirmation lives on the post-wizard screen, so existing merchants' onboarding state is untouched. Because the trial start is a real button click, the App Bridge top-frame redirect is not sandbox-blocked.
+
+Merchants still need a **Shopify embedded session** (app opened from Admin) for billing to apply; without it, middleware may redirect to `/app/session-required` with a return URL — same as any other `/app/*` request without session cookies.
 
 ## Hardening
 

@@ -302,7 +302,9 @@ export default function EmbeddedDashboardPage() {
     const prefix = target.startsWith("/app/") || target === "/app" ? "" : "/app";
     const full = `${prefix}${target}`;
     const carry = new URLSearchParams();
-    for (const key of ["host", "shop", "embedded", "locale", "id_token"]) {
+    // `plan` carries the marketing-selected plan into the wizard; /app/setup
+    // stashes it in sessionStorage so it survives to the completion screen.
+    for (const key of ["host", "shop", "embedded", "locale", "id_token", "plan"]) {
       const v = searchParams.get(key);
       if (v) carry.set(key, v);
     }

@@ -2089,7 +2089,12 @@
       "bannerTitle": "{plan} passt zu Ihrem Rückbuchungsvolumen",
       "bannerBody": "Sie bearbeiten etwa {rate} Rückbuchungen pro Monat – mehr als der Free-Tarif abdeckt. Sehen Sie, wie {plan} passt.",
       "bannerCta": "Empfehlung ansehen"
-    }
+    },
+    "freeShort": "3 exportierte Pakete · Entwurfserstellung · Aktivitätsprotokoll",
+    "starterShort": "20 Pakete/Monat · Basisregeln · E-Mail-Support",
+    "growthShort": "100 Pakete/Monat · Erweiterte Regeln · Auto-Speichern",
+    "scaleShort": "400 Pakete/Monat · Erweiterte Exporte · Priorisierter Support",
+    "perMonthSuffix": "/Mon."
   },
   "rules": {
     "title": "Regeln",
@@ -3500,7 +3505,13 @@
       "infoDesc": "Neue Streitfälle werden automatisch aus Shopify synchronisiert. DisputeDesk erstellt das Beweispaket und speichert es wieder im Shopify Admin bei Ihrem Streitfall. Sie prüfen das Paket dort und reichen es bei der Kartennetzwerk ein, wenn Sie bereit sind.",
       "goToDashboard": "Zum Dashboard",
       "analysisTitle": "Wir analysieren Ihre bisherigen Bestellungen",
-      "analysisDesc": "DisputeDesk überprüft Ihre bisherigen Shopify-Bestellungen, um einen Risiko-Snapshot für Ihren Shop zu erstellen. Sie erhalten eine E-Mail mit den Ergebnissen, sobald die Analyse abgeschlossen ist — in der Regel innerhalb weniger Stunden."
+      "analysisDesc": "DisputeDesk überprüft Ihre bisherigen Shopify-Bestellungen, um einen Risiko-Snapshot für Ihren Shop zu erstellen. Sie erhalten eine E-Mail mit den Ergebnissen, sobald die Analyse abgeschlossen ist — in der Regel innerhalb weniger Stunden.",
+      "choosePlanTitle": "Wähle deinen Tarif",
+      "choosePlanSubtitle": "Wähle den Tarif, der zu deinem Streitfallvolumen passt. Du kannst ihn jederzeit ändern.",
+      "choosePlanSubtitleTrial": "Starte mit einer 14-tägigen kostenlosen Testphase. Kündige jederzeit vor Ablauf, ohne dass Kosten entstehen.",
+      "startTrial": "14 Tage kostenlos testen",
+      "continueFree": "Mit Free fortfahren",
+      "trialNote": "14 Tage kostenlos, danach der monatliche Tarifpreis. Enthält {packs} Pakete/Monat."
     },
     "connection": {
       "title": "Verbindung und Bereitschaft",

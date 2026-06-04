@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
+import { INSTALL_PLAN_STORAGE_KEY } from "@/lib/setup/installPlan";
 
 /* ── Inline SVG icons matching the screenshot ── */
 
@@ -60,6 +62,22 @@ export default function SetupWelcomePage() {
   const t = useTranslations("setup");
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Stash the marketing-selected plan (carried here via ?plan= from the OAuth
+  // install deep-link) so it survives the wizard navigation — the per-step
+  // param allowlists (`withShopParams`, the ddredirect carry-list) intentionally
+  // don't propagate arbitrary params. The completion screen reads it back and
+  // pre-selects that plan, then clears the key.
+  useEffect(() => {
+    const plan = searchParams.get("plan");
+    if (plan && typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem(INSTALL_PLAN_STORAGE_KEY, plan.toLowerCase().trim());
+      } catch {
+        /* sessionStorage unavailable (private mode / sandbox) — non-fatal */
+      }
+    }
+  }, [searchParams]);
 
   const handleGetStarted = () => {
     router.push(withShopParams("/app/setup/connection", searchParams));

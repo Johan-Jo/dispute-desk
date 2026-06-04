@@ -2089,7 +2089,12 @@
       "bannerTitle": "{plan} correspond à votre volume de rétrofacturations",
       "bannerBody": "Vous traitez environ {rate} rétrofacturations par mois, plus que ne couvre l'offre Free. Découvrez en quoi {plan} vous convient.",
       "bannerCta": "Voir la recommandation"
-    }
+    },
+    "freeShort": "3 dossiers exportés · Création de brouillons · Journal d'activité",
+    "starterShort": "20 dossiers/mois · Règles de base · Assistance par e-mail",
+    "growthShort": "100 dossiers/mois · Règles avancées · Sauvegarde automatique",
+    "scaleShort": "400 dossiers/mois · Exports avancés · Assistance prioritaire",
+    "perMonthSuffix": "/mois"
   },
   "rules": {
     "title": "Règles",
@@ -3500,7 +3505,13 @@
       "infoDesc": "Les nouveaux litiges se synchronisent automatiquement depuis Shopify. DisputeDesk crée le dossier de preuves et l'enregistre dans votre litige dans l'Admin Shopify. Vous examinez le dossier là-bas et le soumettez au réseau de cartes quand vous êtes prêt.",
       "goToDashboard": "Aller au tableau de bord",
       "analysisTitle": "Nous analysons votre historique de commandes",
-      "analysisDesc": "DisputeDesk examine vos commandes Shopify passées pour créer un aperçu des risques de votre boutique. Vous recevrez un e-mail avec les résultats dès la fin de l'analyse — généralement en quelques heures."
+      "analysisDesc": "DisputeDesk examine vos commandes Shopify passées pour créer un aperçu des risques de votre boutique. Vous recevrez un e-mail avec les résultats dès la fin de l'analyse — généralement en quelques heures.",
+      "choosePlanTitle": "Choisissez votre forfait",
+      "choosePlanSubtitle": "Choisissez le forfait adapté à votre volume de litiges. Vous pouvez en changer à tout moment.",
+      "choosePlanSubtitleTrial": "Commencez par un essai gratuit de 14 jours. Annulez à tout moment avant la fin, sans être facturé.",
+      "startTrial": "Démarrer l'essai gratuit de 14 jours",
+      "continueFree": "Continuer avec Free",
+      "trialNote": "14 jours gratuits, puis le prix mensuel de votre forfait. Inclut {packs} dossiers/mois."
     },
     "connection": {
       "title": "Connexion et disponibilité",

@@ -18,6 +18,7 @@
 
 import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
+import { redirectTopLevel } from "@/lib/shopify/redirectTopLevel";
 import {
   Card,
   BlockStack,
@@ -94,7 +95,7 @@ export function PlanRecommendationCard({
       });
       const data = await res.json();
       if (data.confirmationUrl) {
-        window.top!.location.href = data.confirmationUrl;
+        redirectTopLevel(data.confirmationUrl);
         return;
       }
       setError(typeof data.error === "string" ? data.error : t("billing.upgradeFailed"));
