@@ -654,7 +654,16 @@ export async function middleware(req: NextRequest) {
     // uninstall because the app/uninstalled webhook is server-to-server and
     // can't clear browser cookies. If the session is gone, clear the stale
     // cookie and restart OAuth so the callback stores fresh sessions.
-    if (shopParam) {
+    //
+    // EXCEPT during the post-OAuth grace window: a fresh install/reconnect just
+    // ran the callback (which set dd_oauth_in_progress + new cookies and stored
+    // sessions). An immediate iframe page load can still carry the OLD cookie
+    // for a beat, or the just-written session may not be visible to this read
+    // yet. Clearing + re-OAuthing here bounces the iframe to /api/auth/shopify,
+    // which frames accounts.shopify.com → "refused to connect" and a re-OAuth
+    // loop. The grace marker is single-use (~60s); skip the check while it's
+    // present and let the shell render with the freshly-set cookie.
+    if (shopParam && !oauthInProgress) {
       try {
         const checkUrl = new URL("/api/auth/shopify/session-exists", req.url);
         checkUrl.searchParams.set("shop", shopDomain);
