@@ -77,6 +77,11 @@ export const billingSubscribeSchema = z.object({
   // confirmation. Accept null and treat it as "not provided."
   host: z.string().nullable().optional(),
   shop: z.string().nullable().optional(),
+  // Where to land the merchant after Shopify approves the charge. The
+  // callback validates this against an allow-list (never an open redirect);
+  // onboarding sends "/app" (dashboard), plan-management omits it and the
+  // callback defaults to "/app/billing".
+  return_to: z.string().nullable().optional(),
 });
 
 export const billingTopUpSchema = z.object({

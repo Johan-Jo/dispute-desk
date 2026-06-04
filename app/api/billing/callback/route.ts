@@ -32,21 +32,32 @@ export async function GET(req: NextRequest) {
   const host = sp.get("host") ?? "";
   const shop = sp.get("shop") ?? "";
 
-  // Redirect into the embedded Admin URL (admin.shopify.com/store/<handle>/apps/<api_key>/app/billing)
+  // Post-approval destination. Onboarding's trial flow passes
+  // return_to="/app" so a NEW merchant lands on the dashboard, not the plan
+  // page. Plan-management upgrades omit it and default to "/app/billing" so an
+  // existing merchant sees their updated plan. Validated against an allow-list
+  // so the query param can never become an open redirect.
+  const ALLOWED_RETURN_PATHS = new Set(["/app", "/app/billing"]);
+  const requestedReturn = sp.get("return_to") ?? "";
+  const appPath = ALLOWED_RETURN_PATHS.has(requestedReturn)
+    ? requestedReturn
+    : "/app/billing";
+
+  // Redirect into the embedded Admin URL (admin.shopify.com/store/<handle>/apps/<api_key>/app/...)
   // so App Bridge re-bootstraps and the s-app-nav chrome renders.
-  // Without this the post-approval page loads at disputedesk.app/app/billing
+  // Without this the post-approval page loads at disputedesk.app/app/...
   // outside the Admin iframe and the embedded layout is lost
   // (2026-05-27 regression). Falls back to the bare app URL when the
   // store handle can't be derived from host/shop.
   const embeddedUrl = buildEmbeddedReturnUrl({
     host: host || null,
     shop: shop || null,
-    appPath: "/app/billing",
+    appPath,
   });
   const billingUrl = embeddedUrl
     ? new URL(embeddedUrl)
     : (() => {
-        const u = new URL(`${appUrl}/app/billing`);
+        const u = new URL(`${appUrl}${appPath}`);
         if (host) u.searchParams.set("host", host);
         if (shop) u.searchParams.set("shop", shop);
         return u;

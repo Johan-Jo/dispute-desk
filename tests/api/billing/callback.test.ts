@@ -94,6 +94,34 @@ describe("GET /api/billing/callback", () => {
     expect(types).not.toContain("billing_activated");
   });
 
+  it("lands on /app when return_to=/app (onboarding trial)", async () => {
+    const { sb } = makeSb();
+    mockGetServiceClient.mockReturnValue(sb as unknown as ReturnType<typeof getServiceClient>);
+    // Declined path (no charge_id) still builds the same redirect URL.
+    const res = await GET(
+      makeReq({ shop_id: "shop-1", plan_id: "scale", return_to: "/app" }),
+    );
+    const loc = res.headers.get("location") ?? "";
+    expect(loc).toMatch(/\/app(\?|$)/);
+    expect(loc).not.toContain("/app/billing");
+  });
+
+  it("defaults to /app/billing for a non-allow-listed return_to", async () => {
+    const { sb } = makeSb();
+    mockGetServiceClient.mockReturnValue(sb as unknown as ReturnType<typeof getServiceClient>);
+    const res = await GET(
+      makeReq({ shop_id: "shop-1", plan_id: "scale", return_to: "/app/settings" }),
+    );
+    expect(res.headers.get("location") ?? "").toContain("/app/billing");
+  });
+
+  it("defaults to /app/billing when return_to is absent (upgrade)", async () => {
+    const { sb } = makeSb();
+    mockGetServiceClient.mockReturnValue(sb as unknown as ReturnType<typeof getServiceClient>);
+    const res = await GET(makeReq({ shop_id: "shop-1", plan_id: "scale" }));
+    expect(res.headers.get("location") ?? "").toContain("/app/billing");
+  });
+
   it("upgrades plan + grants credits when verify succeeds", async () => {
     const { sb, inserts, upserts, updates } = makeSb();
     mockGetServiceClient.mockReturnValue(sb as unknown as ReturnType<typeof getServiceClient>);
