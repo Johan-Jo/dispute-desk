@@ -61,6 +61,15 @@ export default async function RootLayout({
       <body className={inter.className}>
         {children}
         {!loadAppBridge && <TawkChatWidget />}
+        {!loadAppBridge && (
+          // Ahrefs Web Analytics — marketing/portal only, never the embedded Shopify app.
+          <Script
+            id="ahrefs-analytics"
+            src="https://analytics.ahrefs.com/analytics.js"
+            data-key="OetfOtBJBCqnq9C2FZeFMQ"
+            strategy="afterInteractive"
+          />
+        )}
         <Script
           id="ga-consent-bootstrap"
           strategy="beforeInteractive"
