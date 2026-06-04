@@ -2464,6 +2464,8 @@ Store policies are included in evidence packs. Five policy types are supported: 
   - `GET /api/admin/defence-package/runs/:id/pdf` (admin run-detail preview; replaced the 600s signed-URL pattern)
   See `app/api/packs/[packId]/download/route.ts` for the reference implementation.
 
+  **Error hardening (do not regress).** When the server-side `storage.download()` fails, these four routes MUST NOT echo `downloadErr.message` to the client: supabase-js embeds the full internal storage object URL (project ref + path) inside that message, and surfacing it to a merchant leaks the Supabase URL. The routes log the real error via `console.error` and return a generic `{ error: "This PDF is no longer available.", code: "PDF_UNAVAILABLE" }` with a `404`. A dangling `pdf_path` (DB row present, storage object missing — e.g. the 2026-05-28 cutover that restored rows but not objects) presents as exactly this case. Recovery tool for cutover-orphaned objects: `scripts/recover-defence-pdfs.mjs` (copies missing objects from the legacy project storage into prod by `pdf_path`).
+
 ### Dynamic Import Pattern (aligned with Estimate Pro)
 
 `@react-pdf/renderer` has native dependencies (`yoga-layout`) that hang webpack if statically imported. The solution (matching the proven Estimate Pro pattern) uses a dedicated runtime module:

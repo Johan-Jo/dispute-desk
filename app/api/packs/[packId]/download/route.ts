@@ -52,9 +52,15 @@ export async function GET(
     .from("evidence-packs")
     .download(pack.pdf_path);
   if (downloadErr || !blob) {
+    // supabase-js embeds the internal storage URL in `downloadErr.message`;
+    // never surface it to the merchant. Log server-side, return generic copy.
+    console.error("[pack-download] storage download failed", {
+      pdfPath: pack.pdf_path,
+      message: downloadErr?.message,
+    });
     return NextResponse.json(
-      { error: `PDF download failed: ${downloadErr?.message ?? "unknown"}` },
-      { status: 500 },
+      { error: "This PDF is no longer available.", code: "PDF_UNAVAILABLE" },
+      { status: 404 },
     );
   }
 
