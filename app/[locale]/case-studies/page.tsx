@@ -6,7 +6,10 @@ import type { Metadata } from "next";
 import { routing } from "@/i18n/routing";
 import type { PathLocale } from "@/lib/i18n/pathLocales";
 import { pathLocaleToHubLocale } from "@/lib/resources/localeMap";
-import { listPublishedByRoute } from "@/lib/resources/queries";
+import {
+  getNonEmptyHubsForLocale,
+  listPublishedByRoute,
+} from "@/lib/resources/queries";
 import { getPublicBaseUrl } from "@/lib/resources/url";
 import { ResourceBreadcrumbs } from "@/components/resources/ResourceBreadcrumbs";
 import { HubSectionNav } from "@/components/resources/HubSectionNav";
@@ -49,6 +52,14 @@ export default async function CaseStudiesPage({ params }: Props) {
   // 200 OK triggers GSC "crawled, currently not indexed" and pollutes the index.
   if (rows.length === 0) notFound();
 
+  let presentHubs: Awaited<ReturnType<typeof getNonEmptyHubsForLocale>> =
+    new Set();
+  try {
+    presentHubs = await getNonEmptyHubsForLocale(hubLocale);
+  } catch {
+    presentHubs = new Set();
+  }
+
   return (
     <div className={`${MARKETING_PAGE_CONTAINER_CLASS} py-12`}>
       <ResourceBreadcrumbs
@@ -60,6 +71,7 @@ export default async function CaseStudiesPage({ params }: Props) {
       <HubSectionNav
         basePath={basePath}
         active="case-studies"
+        present={presentHubs}
         labels={{
           resources: t("hubNav.resources"),
           templates: t("hubNav.templates"),

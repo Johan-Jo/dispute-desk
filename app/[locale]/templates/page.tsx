@@ -8,7 +8,10 @@ import { routing } from "@/i18n/routing";
 import type { PathLocale } from "@/lib/i18n/pathLocales";
 import { pathLocaleToMessages } from "@/lib/i18n/pathLocales";
 import { pathLocaleToHubLocale } from "@/lib/resources/localeMap";
-import { listPublishedByRoute } from "@/lib/resources/queries";
+import {
+  getNonEmptyHubsForLocale,
+  listPublishedByRoute,
+} from "@/lib/resources/queries";
 import { getPublicBaseUrl } from "@/lib/resources/url";
 import { getMarketingShopifyAppInstallUrl } from "@/lib/marketing/shopifyInstallUrl";
 import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
@@ -69,6 +72,16 @@ export default async function TemplatesHubPage({ params }: Props) {
   // 404 when this locale has zero published templates — see case-studies/page.tsx.
   if (rows.length === 0) notFound();
 
+  // Only show section tabs for hubs that actually have content in this locale,
+  // so the nav never links to an empty (404ing) hub.
+  let presentHubs: Awaited<ReturnType<typeof getNonEmptyHubsForLocale>> =
+    new Set();
+  try {
+    presentHubs = await getNonEmptyHubsForLocale(hubLocale);
+  } catch {
+    presentHubs = new Set();
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <MarketingSiteHeader />
@@ -97,6 +110,7 @@ export default async function TemplatesHubPage({ params }: Props) {
         <HubSectionNav
           basePath={basePath}
           active="templates"
+          present={presentHubs}
           labels={{
             resources: t("hubNav.resources"),
             templates: t("hubNav.templates"),
