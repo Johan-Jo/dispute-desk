@@ -110,6 +110,9 @@ export function ChoosePlanCard({ onContinueFree }: { onContinueFree: () => void 
           plan_id: selected,
           host: sp.get("host") ?? undefined,
           shop: sp.get("shop") ?? undefined,
+          // First-time onboarding: after Shopify approves the charge, land the
+          // merchant on the dashboard (not the plan-management page).
+          return_to: "/app",
         }),
       });
       const data = await res.json();

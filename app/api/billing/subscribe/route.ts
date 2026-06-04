@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
   };
   const validated = await validateBody(body, billingSubscribeSchema);
   if ("error" in validated) return validated.error;
-  const { shop_id, plan_id, host, shop } = validated.data;
+  const { shop_id, plan_id, host, shop, return_to } = validated.data;
 
   const plan = getPlan(plan_id);
 
@@ -157,6 +157,9 @@ export async function POST(req: NextRequest) {
   );
   if (host) callbackUrl.searchParams.set("host", host);
   if (shop) callbackUrl.searchParams.set("shop", shop);
+  // Where the callback should land the merchant post-approval (validated
+  // against an allow-list there). Onboarding sends "/app".
+  if (return_to) callbackUrl.searchParams.set("return_to", return_to);
   const returnUrl = callbackUrl.toString();
 
   const result = await requestShopifyGraphQL<AppSubscriptionCreateResult>({
