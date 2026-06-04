@@ -155,6 +155,49 @@ describe("middleware /api/setup/readiness domain fallback (no cookie)", () => {
     expect(res.status).toBe(401);
   });
 
+  it("resolves a setup-step POST from the Referer host and overrides a stale cookie", async () => {
+    // /api/setup/step carries no ?shop=/?host= in its URL. With a stale
+    // shopify_shop_id cookie, the shop_setup INSERT used to 500 on the FK.
+    // Middleware must resolve the live shop from the Referer's host.
+    mockShopMaybeSingle.mockResolvedValue({
+      data: { id: "live-shop-uuid" },
+      error: null,
+    });
+    const req = new NextRequest(new URL("http://localhost/api/setup/step"), {
+      method: "POST",
+      headers: new Headers({
+        referer:
+          "https://disputedesk.app/app/setup/store_profile?host=YWRtaW4uc2hvcGlmeS5jb20vc3RvcmUvc2hhcnBkZXNr",
+      }),
+    });
+    req.cookies.set("shopify_shop", "sharpdesk.myshopify.com");
+    req.cookies.set("shopify_shop_id", "stale-deleted-shop-uuid");
+    const res = await middleware(req);
+    expect(res.status).not.toBe(401);
+    expect(mockShopMaybeSingle).toHaveBeenCalledTimes(1);
+    const fwdShopId =
+      res.headers.get("x-middleware-request-x-shop-id") ??
+      res.headers.get("x-shop-id");
+    expect(fwdShopId).toBe("live-shop-uuid");
+  });
+
+  it("does NOT override from Referer when the shopify_shop cookie domain disagrees", async () => {
+    // Cross-shop guard: a forged Referer for shop B must not redirect a write
+    // when the cookie asserts shop A.
+    const req = new NextRequest(new URL("http://localhost/api/setup/step"), {
+      method: "POST",
+      headers: new Headers({
+        referer:
+          "https://disputedesk.app/app/setup/store_profile?host=YWRtaW4uc2hvcGlmeS5jb20vc3RvcmUvc2hhcnBkZXNr",
+      }),
+    });
+    req.cookies.set("shopify_shop", "otherstore.myshopify.com");
+    req.cookies.set("shopify_shop_id", "stale-deleted-shop-uuid");
+    const res = await middleware(req);
+    // No override — the shop lookup never runs.
+    expect(mockShopMaybeSingle).not.toHaveBeenCalled();
+  });
+
   it("does NOT apply the domain fallback to other portal APIs", async () => {
     // /api/disputes carries the same ?shop= but must stay 401 — the fallback
     // is scoped strictly to /api/setup/readiness.
