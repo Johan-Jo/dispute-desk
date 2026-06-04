@@ -263,4 +263,23 @@ describe("middleware /api/setup/readiness domain fallback (no cookie)", () => {
     const setCookie = res.headers.get("set-cookie") ?? "";
     expect(setCookie).not.toContain("max-age=0");
   });
+
+  it("does NOT clear or even check the cookie during the post-OAuth grace window", async () => {
+    // A fresh install/reconnect just ran the callback (sets dd_oauth_in_progress
+    // + new cookies). An in-flight request may still carry the OLD deleted id;
+    // clearing it here would race the fresh cookie and bounce the shell into
+    // /api/auth/shopify (which frames accounts.shopify.com → "refused to
+    // connect"). During grace we must NOT validate/clear the cookie.
+    mockShopIdMaybeSingle.mockResolvedValue({ data: null, error: null }); // would be "dead" if checked
+    const req = new NextRequest(new URL("http://localhost/api/disputes"), {
+      headers: new Headers(),
+    });
+    req.cookies.set("shopify_shop", "sharpdesk.myshopify.com");
+    req.cookies.set("shopify_shop_id", "old-deleted-id");
+    req.cookies.set("dd_oauth_in_progress", "1");
+    const res = await middleware(req);
+    const setCookie = res.headers.get("set-cookie") ?? "";
+    expect(setCookie).not.toContain("max-age=0"); // not cleared
+    expect(mockShopIdMaybeSingle).not.toHaveBeenCalled(); // skipped the DB check
+  });
 });
