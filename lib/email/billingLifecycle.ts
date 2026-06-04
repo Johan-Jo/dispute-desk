@@ -32,6 +32,7 @@ import { Resend } from "resend";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getPlan, type PlanId } from "@/lib/billing/plans";
 import { getEmbeddedAppUrl } from "./publicSiteUrl";
+import { brandHeader, ctaButton, plateLayout } from "./digestShared";
 
 // Env reads happen at call time, not module load — capturing at module
 // scope makes the module's behavior depend on import order in tests
@@ -169,25 +170,20 @@ function renderShell(args: {
 }): { html: string; text: string } {
   const cta =
     args.ctaLabel && args.ctaUrl
-      ? `<p style="margin:24px 0 0;text-align:center;">
-           <a href="${args.ctaUrl}" style="background:#111827;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;display:inline-block;font-weight:600;">${args.ctaLabel}</a>
-         </p>`
+      ? `<div style="margin:28px 0 0">${ctaButton(args.ctaLabel, args.ctaUrl)}</div>`
       : "";
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><title>${args.title}</title></head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#F6F6F7;">
-<span style="display:none;color:transparent;visibility:hidden;">${args.preheader}</span>
-<div style="max-width:560px;margin:0 auto;padding:32px 16px;">
-  <div style="background:#fff;border-radius:12px;border:1px solid #E1E3E5;padding:32px;">
-    <h1 style="margin:0 0 12px;font-size:20px;color:#111827;">${args.title}</h1>
-    <div style="font-size:15px;color:#374151;line-height:1.55;">${args.bodyHtml}</div>
-    ${cta}
-  </div>
-  <p style="font-size:12px;color:#6B7280;text-align:center;margin:16px 0 0;">DisputeDesk · billing notification</p>
-</div>
-</body>
-</html>`;
+
+  const innerHtml = `${brandHeader("billing")}
+    <h1 style="margin:0 0 14px;font-size:22px;font-weight:700;color:#111827;line-height:1.3;letter-spacing:-0.01em">${args.title}</h1>
+    <div style="font-size:15px;color:#374151;line-height:1.6">${args.bodyHtml}</div>
+    ${cta}`;
+
+  const html = plateLayout({
+    innerHtml,
+    previewText: args.preheader,
+    footerText: "DisputeDesk · billing notification",
+  });
+
   const ctaText =
     args.ctaLabel && args.ctaUrl ? `\n\n${args.ctaLabel}: ${args.ctaUrl}` : "";
   // Strip HTML for the text fallback.
