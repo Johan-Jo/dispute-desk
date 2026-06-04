@@ -1,6 +1,7 @@
 import type { SignalSourceAdapter } from "./types";
-import { redditAdapter, getProxySecret } from "./reddit";
-import { apifyAdapter, getApifyToken } from "./apify";
+import { redditAdapter } from "./reddit";
+import { redditSearchAdapter } from "./reddit-search";
+import { apifyAdapter } from "./apify";
 import { shopifyCommunityAdapter } from "./shopify-community";
 import { appStoreAdapter } from "./app-store";
 import { hackerNewsAdapter } from "./hackernews";
@@ -16,32 +17,26 @@ import {
  *   - shopifyCommunityAdapter — community.shopify.com (Discourse JSON, free,
  *     no IP block; highest-signal source).
  *
- * Reddit selection (priority order, first match wins):
- *   1. REDDIT_PROXY_URL + REDDIT_PROXY_SECRET set → direct Reddit via the
- *      free Cloudflare Worker proxy. **Preferred** — free, reliable.
- *   2. APIFY_API_TOKEN/APIFY_API_KEY set → Apify Reddit Scraper (paid
- *      fallback, only used if no proxy is configured).
- *   3. neither → direct Reddit (works on residential IPs / local dev,
- *      403s on Vercel datacenter IPs).
+ * Reddit slot — `getRedditSlotAdapter()`. As of 2026-06 Reddit blocks every
+ * direct path (anonymous `.json`, public `.rss`, and the Data API behind the
+ * moderation-only "Responsible Builder Policy"), so the ONLY working source is
+ * `redditSearchAdapter`: it reads Reddit through a web-search index (Brave API,
+ * or DuckDuckGo locally), so the search provider — not us — touches reddit.com.
+ * The legacy direct `redditAdapter` / paid `apifyAdapter` are kept for
+ * reference but are dead in prod; the search adapter supersedes them.
  */
+function getRedditSlotAdapter(): SignalSourceAdapter {
+  return redditSearchAdapter;
+}
+
 /** Synchronous adapter list — does NOT read settings (used as a fallback). */
 export function getDefaultAdapters(): SignalSourceAdapter[] {
-  const adapters: SignalSourceAdapter[] = [
+  return [
     shopifyCommunityAdapter,
     appStoreAdapter,
     hackerNewsAdapter,
+    getRedditSlotAdapter(),
   ];
-
-  const hasProxy = Boolean(process.env.REDDIT_PROXY_URL && getProxySecret());
-  if (hasProxy) {
-    adapters.push(redditAdapter);
-  } else if (getApifyToken()) {
-    adapters.push(apifyAdapter);
-  } else {
-    adapters.push(redditAdapter);
-  }
-
-  return adapters;
 }
 
 /**
@@ -65,29 +60,19 @@ export async function getEnabledAdapters(): Promise<SignalSourceAdapter[]> {
   if (settings.app_store_enabled) adapters.push(appStoreAdapter);
   if (settings.hackernews_enabled) adapters.push(hackerNewsAdapter);
 
-  if (settings.reddit_enabled) {
-    const hasProxy = Boolean(
-      process.env.REDDIT_PROXY_URL && getProxySecret()
-    );
-    if (hasProxy) adapters.push(redditAdapter);
-    else if (getApifyToken()) adapters.push(apifyAdapter);
-    else adapters.push(redditAdapter);
-  }
+  if (settings.reddit_enabled) adapters.push(getRedditSlotAdapter());
 
   return adapters;
 }
 
-/** Backward-compat — returns just the Reddit adapter. */
+/** Backward-compat — returns just the Reddit slot adapter. */
 export function getRedditAdapter(): SignalSourceAdapter {
-  if (process.env.REDDIT_PROXY_URL && getProxySecret()) {
-    return redditAdapter;
-  }
-  if (getApifyToken()) return apifyAdapter;
-  return redditAdapter;
+  return getRedditSlotAdapter();
 }
 
 export {
   redditAdapter,
+  redditSearchAdapter,
   apifyAdapter,
   shopifyCommunityAdapter,
   appStoreAdapter,
