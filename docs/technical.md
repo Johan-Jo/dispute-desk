@@ -3695,6 +3695,8 @@ Each row shows a status badge (ready / needs_action / syncing). Continue is disa
 
 **API:** `GET /api/setup/readiness` (`app/api/setup/readiness/route.ts`) — returns `ReadinessResult` with rows, `hasBlockers`, `hasPending`, `allReady`. No DB writes — purely derived from session and live API checks.
 
+**Embedded shop-resolution fallback (demo-fallback guard):** `/api/setup/*` is a portal-API prefix, so for an embedded-only install with no `portal_user_shops` link, middleware falls back to `shopId="demo"` whenever the `shopify_shop_id` CHIPS cookie (`sameSite:none; partitioned`) doesn't ride along with the iframe fetch — a real partitioned-cookie timing gap inside the Shopify Admin iframe. `evaluateReadiness("demo")` finds no session → reports a fully-connected shop as "not connected" (all blocking rows `needs_action`, but HTTP 200). To prevent this false negative, `ConnectionStep` forwards the embedded `?shop=<domain>`, and the readiness route resolves the real `shops.id` by `shop_domain` whenever the incoming shopId is missing or `"demo"`. A valid cookie-resolved shopId is never overridden. Regression: `tests/api/setup/readiness.test.ts` ("resolves real shop by domain when middleware injected demo"). Incident: Sharp desk reinstall, 2026-06-04.
+
 ### Step 2: Store Profile (`StoreProfileStep`)
 
 **Purpose:** Collect only the signals that personalize downstream recommendations — store type and proof capability. Everything else (review threshold, automation mode per family, evidence-source overrides) lives on the steps where it's actually configured, to avoid duplication and double-asking the merchant.
