@@ -59,11 +59,23 @@ export async function GET(
     .from(bucket)
     .download(row.pdf_path as string);
   if (downloadErr || !blob) {
+    // Never echo `downloadErr.message` to the client: supabase-js puts the
+    // full internal storage object URL (project ref + path) in the error
+    // message, and that URL must never reach a merchant. Log it server-side
+    // for diagnostics and return a generic, safe message.
+    console.error("[defence-preview] storage download failed", {
+      id,
+      shopId,
+      bucket,
+      pdfPath: row.pdf_path,
+      message: downloadErr?.message,
+    });
     return NextResponse.json(
       {
-        error: `PDF download failed: ${downloadErr?.message ?? "unknown"}`,
+        error: "This PDF is no longer available.",
+        code: "PDF_UNAVAILABLE",
       },
-      { status: 500 },
+      { status: 404 },
     );
   }
 
