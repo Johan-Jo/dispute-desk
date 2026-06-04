@@ -1,5 +1,15 @@
 # Supabase dev project — repurposing the existing project
 
+> ⚠️ **SUPERSEDED (2026-06-04) — historical record only.** This runbook's plan
+> ("repurpose the old free-tier prod project `sddzuglxdnkhcnjmcpbj` as dev") was
+> **not** the path taken. A **fresh** dev project `vrpkgudqmpyunekrkpnc` was stood
+> up instead (see [`prod-release-log.md`](prod-release-log.md)), and that is the
+> live dev database today — it backs `dev.disputedesk.app` and the `disputedesk-dev`
+> Vercel project. `sddzuglxdnkhcnjmcpbj` is now an **idle old-prod leftover** slated
+> for deletion. Treat every `sddzuglx…`-as-dev reference below as the abandoned plan,
+> not current truth. Authoritative refs live in [`CLAUDE.md`](../../CLAUDE.md) and
+> [`branching-and-deploys.md`](../branching-and-deploys.md).
+
 **Goal.** After the [Pro migration cutover](supabase-pro-migration.md) moves
 production to the new Pro project, the existing project (`sddzuglxdnkhcnjmcpbj`)
 becomes the dev database. Its schema, RLS, RPCs, storage buckets, and trigger

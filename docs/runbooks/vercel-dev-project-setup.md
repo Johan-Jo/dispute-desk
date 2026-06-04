@@ -65,7 +65,7 @@ but the dev-project-specific values are:
 |---|---|---|
 | `APP_ENV` | `development` | constant |
 | `NEXT_PUBLIC_APP_URL` | `https://dev.disputedesk.app` | constant |
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://sddzuglxdnkhcnjmcpbj.supabase.co` (existing project, repurposed as dev after Pro cutover — see [`supabase-dev-project-setup.md`](supabase-dev-project-setup.md)) | from Supabase Dashboard |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://vrpkgudqmpyunekrkpnc.supabase.co` (the dev project actually provisioned — NOT the old `sddzuglx…` ref the original plan assumed; see [`supabase-dev-project-setup.md`](supabase-dev-project-setup.md)) | from Supabase Dashboard |
 | `SUPABASE_URL` | mirror of above | same |
 | `SUPABASE_ANON_KEY` | **fresh** dev anon (after key rotation in dev-conversion §3.4) | Supabase Dashboard → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | **fresh** dev secret key | same |
@@ -122,7 +122,7 @@ End-to-end check that dev is wired and isolated:
 - [ ] Trigger a deploy on the `develop` branch (push any small change or use Vercel Dashboard → Deployments → Redeploy).
 - [ ] Wait for build to finish — `prebuild` will run `verify-env-identity.mjs` which now activates strict checks because `APP_ENV=development` is set.
 - [ ] If build fails on env-identity, paste the error — it'll tell you exactly which variable mismatch caused the refusal.
-- [ ] After successful deploy, hit `https://dev.disputedesk.app/api/health` and confirm: `appEnv=development`, `supabaseProjectRefFp` matches first 8 chars of `sddzuglxdnkhcnjmcpbj` (= `sddzuglx`), `supabaseIsKnownProd=false`, `cronEnabled=false`.
+- [ ] After successful deploy, hit `https://dev.disputedesk.app/api/health` and confirm: `appEnv=development`, `supabaseProjectRefFp` matches first 8 chars of `vrpkgudqmpyunekrkpnc` (= `vrpkgudq`), `supabaseIsKnownProd=false`, `cronEnabled=false`.
 - [ ] Hit `https://disputedesk.app/api/health` (prod) and confirm it's unchanged: `appEnv=production`, prod project fingerprint.
 - [ ] Confirm no Vercel preview deploys on the prod project (`dispute-desk`) still reference dev/prod secrets — `vercel env ls preview --scope=estimatepro` should now show only feature-flag values, not service-role / encryption / cron secrets.
 

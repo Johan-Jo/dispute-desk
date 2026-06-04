@@ -6,7 +6,7 @@ The pipeline that keeps **dev** and **prod** clean and makes "what am I deployin
 
 | Branch | Vercel project | Domain | Supabase project | Purpose |
 |---|---|---|---|---|
-| `develop` | `disputedesk-dev` | `dev.disputedesk.app` | `sddzuglxdnkhcnjmcpbj` (old Free, now **dev**) | Staging — integrate + test here |
+| `develop` | `disputedesk-dev` | `dev.disputedesk.app` | `vrpkgudqmpyunekrkpnc` (Free, **dev**) | Staging — integrate + test here |
 | `master` | `dispute-desk` | `disputedesk.app` | `aokhplydttxtebvbeuzc` (Pro, **prod**) | Production — real merchants |
 
 Both mappings are configured at the Vercel level (each project's Git settings point at its branch). A push to `develop` auto-deploys staging; a push to `master` auto-deploys prod.
