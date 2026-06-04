@@ -7,15 +7,25 @@
  */
 "use client";
 
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { Page, Card, BlockStack, Text, Button, Spinner } from "@shopify/polaris";
+import { Suspense, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Page, Card, BlockStack, Text, Box, Spinner } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
+import { ChoosePlanCard } from "@/components/setup/ChoosePlanCard";
 
 function CompletePageInner() {
   const t = useTranslations("setup");
+  const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Both the plan-confirm CTA ("Continue on Free") and a completed paid
+  // subscription land the merchant on the dashboard. (For a paid plan the
+  // subscription redirect goes to Shopify's approval page first, then back
+  // into the app via the billing callback.)
+  const goToDashboard = useCallback(() => {
+    router.push(withShopParams("/app", searchParams));
+  }, [router, searchParams]);
 
   const highlights = [
     { icon: "⟳", label: t("complete.highlight1") },
@@ -171,15 +181,18 @@ function CompletePageInner() {
               </BlockStack>
             </div>
 
-            {/* CTA */}
-            <Button
-              variant="primary"
-              size="large"
-              url={withShopParams("/app", searchParams)}
-              fullWidth
+            {/* Final step: confirm plan & start trial (or continue on Free).
+             *  Lives here — after the wizard finalizes — so the Shopify
+             *  billing-approval redirect runs from a real button click. */}
+            <Box
+              padding="400"
+              background="bg-surface-secondary"
+              borderRadius="200"
+              borderWidth="025"
+              borderColor="border"
             >
-              {t("complete.goToDashboard")}
-            </Button>
+              <ChoosePlanCard onContinueFree={goToDashboard} />
+            </Box>
           </BlockStack>
         </Card>
       </div>

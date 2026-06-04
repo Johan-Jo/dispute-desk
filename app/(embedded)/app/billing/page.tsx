@@ -29,6 +29,7 @@ import {
 } from "@shopify/polaris";
 
 import { TOP_UPS } from "@/lib/billing/plans";
+import { redirectTopLevel } from "@/lib/shopify/redirectTopLevel";
 
 interface PlanInfo {
   id: string;
@@ -446,7 +447,7 @@ function BillingPageInner() {
         });
         const data = await res.json();
         if (data.confirmationUrl) {
-          window.top!.location.href = data.confirmationUrl;
+          redirectTopLevel(data.confirmationUrl);
           return;
         }
         const message = typeof data.error === "string" ? data.error : t("billing.upgradeFailed");
@@ -488,7 +489,16 @@ function BillingPageInner() {
     }
   }, [t, fetchUsage]);
 
-  /** Deep link from marketing: `/app/billing?plan=…` */
+  /** Deep link from marketing/nav: `/app/billing?plan=…`
+   *
+   *  We expand the plan grid and scroll the chosen plan into view, but we
+   *  NEVER auto-start the subscription. Auto-firing handleUpgrade from this
+   *  effect (no user gesture) produced a cross-origin top-frame redirect to
+   *  Shopify's approval page that Chrome blocks inside the Admin iframe — the
+   *  "Upgrade could not be started" symptom. Plan selection during install now
+   *  happens on the post-wizard completion screen (a real button click); this
+   *  effect is left only to surface the right plan when a merchant navigates
+   *  here directly. The merchant clicks the plan's CTA to proceed. */
   useEffect(() => {
     if (loading || !plan || !planParam) return;
 
@@ -503,29 +513,16 @@ function BillingPageInner() {
       router.replace(pathname, { scroll: false });
     };
 
-    if (planParam === "free") {
-      setShowAllPlans(true);
-      requestAnimationFrame(() => {
-        document.getElementById("billing-plan-free")?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
+    setShowAllPlans(true);
+    const targetId = planParam === "free" ? "billing-plan-free" : `billing-plan-${planParam}`;
+    requestAnimationFrame(() => {
+      document.getElementById(targetId)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
       });
-      stripPlanQuery();
-      return;
-    }
-
-    const currentTier = PLAN_TIER[plan.id] ?? 0;
-    const targetTier = PLAN_TIER[planParam] ?? 0;
-    if (currentTier >= targetTier) {
-      stripPlanQuery();
-      return;
-    }
-
-    void handleUpgrade(planParam).finally(() => {
-      stripPlanQuery();
     });
-  }, [loading, plan, planParam, handleUpgrade, pathname, router, searchParams]);
+    stripPlanQuery();
+  }, [loading, plan, planParam, pathname, router, searchParams]);
 
   if (loading) {
     return (
@@ -799,7 +796,7 @@ function BillingPageInner() {
                   return (
                     <div
                       key={planId}
-                      id={planId === "free" ? "billing-plan-free" : undefined}
+                      id={`billing-plan-${planId}`}
                       style={styles.planCard(isPopular)}
                     >
                       {/* Popular badge */}
@@ -939,7 +936,7 @@ function BillingPageInner() {
                       error?: string;
                     };
                     if (data.confirmationUrl) {
-                      window.top!.location.href = data.confirmationUrl;
+                      redirectTopLevel(data.confirmationUrl);
                       return;
                     }
                     const message =

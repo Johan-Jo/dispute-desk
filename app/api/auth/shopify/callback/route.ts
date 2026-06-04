@@ -323,12 +323,15 @@ export async function GET(req: NextRequest) {
     // HTML page that uses `window.top.location` to break out of the iframe.
     const storeHandle = shop.replace(".myshopify.com", "");
     // When the merchant chose a paid plan on the marketing pricing page, deep-link
-    // them straight to the in-app upgrade screen (the embedded root reads
-    // `ddredirect` and client-navigates, carrying host/shop). Shopify's billing
-    // approval still requires a merchant click — we can't pre-charge during
-    // install — but this lands them on the right plan instead of silently on Free.
+    // them into the onboarding wizard carrying `plan`. The embedded root reads
+    // `ddredirect`, carries `plan` through to /app/setup, which stashes it in
+    // sessionStorage so it survives the wizard. Plan selection is then the FINAL
+    // step — confirmed on the post-wizard completion screen — instead of an
+    // instant /billing auto-upgrade (which Chrome blocked: a cross-origin
+    // top-frame redirect from a fetch callback with no user gesture). Shopify's
+    // billing approval still requires a merchant click; we can't pre-charge.
     const ddredirect = plan
-      ? `?ddredirect=${encodeURIComponent(`/billing?plan=${plan}`)}`
+      ? `?ddredirect=${encodeURIComponent(`/setup?plan=${plan}`)}`
       : "";
     const embeddedUrl = `https://admin.shopify.com/store/${storeHandle}/apps/${process.env.SHOPIFY_API_KEY}${ddredirect}`;
     const html = `<!DOCTYPE html><html><head><script>window.top.location.href=${JSON.stringify(embeddedUrl)};</script></head><body></body></html>`;

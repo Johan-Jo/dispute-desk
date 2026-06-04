@@ -2089,7 +2089,12 @@
       "bannerTitle": "{plan} matchar din återkravsvolym",
       "bannerBody": "Du hanterar omkring {rate} återkrav per månad – mer än vad Free täcker. Se hur {plan} passar.",
       "bannerCta": "Visa rekommendation"
-    }
+    },
+    "freeShort": "3 exporterade paket · Utkastbyggande · Aktivitetslogg",
+    "starterShort": "20 paket/månad · Grundläggande regler · E-postsupport",
+    "growthShort": "100 paket/månad · Avancerade regler · Autospara",
+    "scaleShort": "400 paket/månad · Avancerade exporter · Prioriterad support",
+    "perMonthSuffix": "/mån"
   },
   "rules": {
     "title": "Regler",
@@ -3483,7 +3488,13 @@
       "infoDesc": "Nya tvister synkas automatiskt från Shopify. DisputeDesk bygger bevispaketet och sparar det tillbaka i din tvist i Shopify Admin. Du granskar paketet där och skickar in det till kortnätverket när du är redo.",
       "analysisTitle": "Vi analyserar dina tidigare beställningar",
       "analysisDesc": "DisputeDesk granskar dina tidigare Shopify-beställningar för att skapa en risköversikt för din butik. Du får ett mejl med resultatet så snart analysen är klar — vanligtvis inom några timmar.",
-      "goToDashboard": "Gå till instrumentpanelen"
+      "goToDashboard": "Gå till instrumentpanelen",
+      "choosePlanTitle": "Välj din plan",
+      "choosePlanSubtitle": "Välj den plan som passar din tvistevolym. Du kan ändra den när som helst.",
+      "choosePlanSubtitleTrial": "Börja med en 14 dagars gratis provperiod. Avsluta när som helst innan den tar slut så debiteras du inte.",
+      "startTrial": "Starta 14 dagars gratis provperiod",
+      "continueFree": "Fortsätt med Free",
+      "trialNote": "14 dagar gratis, sedan planens månadspris. Inkluderar {packs} paket/månad."
     },
     "undoSkip": "Ångra hoppa",
     "back": "← Tillbaka",
