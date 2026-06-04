@@ -1,10 +1,37 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Spinner } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import type { StepId } from "@/lib/setup/types";
 import type { ReadinessResult, ReadinessRow, ReadinessStatus } from "@/lib/setup/readiness";
+
+/**
+ * Resolve the merchant's myshopify domain in the embedded iframe. The
+ * `shopify_shop_id` cookie is httpOnly+partitioned and not readable here, and
+ * `window.location.search` can be stripped of `?shop=` by App Bridge after
+ * client navigation. Prefer the Next route `?shop=`, then fall back to decoding
+ * the App Bridge `host` param (base64 of `admin.shopify.com/store/<handle>`),
+ * which is always present in the embedded URL.
+ */
+function resolveShopDomain(params: URLSearchParams): string | null {
+  const shop = params.get("shop");
+  if (shop && /\.myshopify\.com$/i.test(shop)) return shop;
+
+  const host = params.get("host");
+  if (host) {
+    try {
+      const decoded = atob(host.replace(/-/g, "+").replace(/_/g, "/"));
+      // decoded looks like "admin.shopify.com/store/<handle>"
+      const handle = decoded.split("/store/")[1]?.split(/[/?#]/)[0];
+      if (handle) return `${handle}.myshopify.com`;
+    } catch {
+      /* malformed host — fall through */
+    }
+  }
+  return null;
+}
 
 interface ConnectionStepProps {
   stepId: StepId;
@@ -83,20 +110,26 @@ const OAUTH_ACTION_ROWS: ReadonlySet<string> = new Set([
 
 export function ConnectionStep({ onSaveRef, onCanContinueChange }: ConnectionStepProps) {
   const t = useTranslations("setup.connection");
+  const searchParams = useSearchParams();
   const [readiness, setReadiness] = useState<ReadinessResult | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchReadiness = useCallback(async () => {
     setLoading(true);
     try {
-      // Forward the embedded `?shop=<domain>` so the server can resolve the
-      // real shop even when the `shopify_shop_id` CHIPS cookie didn't ride
-      // along with this iframe fetch (partitioned-cookie timing). Without it
-      // middleware falls back to shopId="demo" and reports a connected shop
-      // as "not connected".
-      const shop = new URLSearchParams(window.location.search).get("shop");
+      // Forward the embedded shop domain so middleware can resolve the real
+      // shop even when the `shopify_shop_id` CHIPS cookie isn't sent with this
+      // iframe fetch (httpOnly + partitioned). Resolved from the Next route
+      // `?shop=` with a `host`-decode fallback — without it the request 401s in
+      // middleware and the connection step shows a false "not connected".
+      const shop = resolveShopDomain(searchParams);
+      const host = searchParams.get("host");
+      const qs = new URLSearchParams();
+      if (shop) qs.set("shop", shop);
+      if (host) qs.set("host", host);
+      const query = qs.toString();
       const res = await fetch(
-        shop ? `/api/setup/readiness?shop=${encodeURIComponent(shop)}` : "/api/setup/readiness",
+        query ? `/api/setup/readiness?${query}` : "/api/setup/readiness",
         { credentials: "include" },
       );
       if (res.ok) {
@@ -107,19 +140,18 @@ export function ConnectionStep({ onSaveRef, onCanContinueChange }: ConnectionSte
     } finally {
       setLoading(false);
     }
-  }, [onCanContinueChange]);
+  }, [onCanContinueChange, searchParams]);
 
   /** Trigger OAuth re-authentication for connection/scope issues. */
   const handleReconnect = useCallback(() => {
-    const domain = readiness?.shopDomain
-      ?? new URLSearchParams(window.location.search).get("shop");
+    const domain = readiness?.shopDomain ?? resolveShopDomain(searchParams);
     if (domain) {
       window.top!.location.href =
         `/api/auth/shopify?shop=${encodeURIComponent(domain)}`;
     } else {
       window.location.reload();
     }
-  }, [readiness?.shopDomain]);
+  }, [readiness?.shopDomain, searchParams]);
 
   useEffect(() => {
     fetchReadiness();
