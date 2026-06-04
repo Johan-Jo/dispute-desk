@@ -89,7 +89,15 @@ export function ConnectionStep({ onSaveRef, onCanContinueChange }: ConnectionSte
   const fetchReadiness = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/setup/readiness");
+      // Forward the embedded `?shop=<domain>` so the server can resolve the
+      // real shop even when the `shopify_shop_id` CHIPS cookie didn't ride
+      // along with this iframe fetch (partitioned-cookie timing). Without it
+      // middleware falls back to shopId="demo" and reports a connected shop
+      // as "not connected".
+      const shop = new URLSearchParams(window.location.search).get("shop");
+      const res = await fetch(
+        shop ? `/api/setup/readiness?shop=${encodeURIComponent(shop)}` : "/api/setup/readiness",
+      );
       if (res.ok) {
         const data: ReadinessResult = await res.json();
         setReadiness(data);
