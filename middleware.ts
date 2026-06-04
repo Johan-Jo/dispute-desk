@@ -280,13 +280,27 @@ export async function middleware(req: NextRequest) {
     // connection-status booleans (no merchant data, no tokens) — NEVER widen this
     // to /api/disputes, /api/packs, etc., which would let any caller read another
     // shop's data by guessing its myshopify domain.
-    if (
-      (!shopDomain || !shopId) &&
-      pathname.startsWith("/api/setup/readiness") &&
-      apiShopParam
-    ) {
-      const candidate = apiShopParam.trim().toLowerCase();
-      if (/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(candidate)) {
+    if ((!shopDomain || !shopId) && pathname.startsWith("/api/setup/readiness")) {
+      // Prefer `?shop=`; fall back to decoding the App Bridge `?host=`
+      // (base64 of `admin.shopify.com/store/<handle>`), which survives App
+      // Bridge client navigation better than `shop`.
+      let candidate = (apiShopParam ?? "").trim().toLowerCase();
+      if (!candidate) {
+        const hostParam = req.nextUrl.searchParams.get("host");
+        if (hostParam) {
+          try {
+            // Edge runtime: use atob (Web API), not Node Buffer.
+            const decoded = atob(
+              hostParam.replace(/-/g, "+").replace(/_/g, "/"),
+            );
+            const handle = decoded.split("/store/")[1]?.split(/[/?#]/)[0];
+            if (handle) candidate = `${handle}.myshopify.com`;
+          } catch {
+            /* malformed host — leave candidate empty */
+          }
+        }
+      }
+      if (candidate && /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(candidate)) {
         const { getServiceClient } = await import("@/lib/supabase/server");
         const { data: shopRow } = await getServiceClient()
           .from("shops")

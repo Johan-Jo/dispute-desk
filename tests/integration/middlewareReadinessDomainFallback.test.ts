@@ -96,6 +96,30 @@ describe("middleware /api/setup/readiness domain fallback (no cookie)", () => {
     expect(mockShopMaybeSingle).not.toHaveBeenCalled();
   });
 
+  it("resolves the shop from the App Bridge ?host= when ?shop= is absent", async () => {
+    mockShopMaybeSingle.mockResolvedValue({
+      data: { id: "real-shop-uuid" },
+      error: null,
+    });
+    // base64 of "admin.shopify.com/store/sharpdesk"
+    const host = "YWRtaW4uc2hvcGlmeS5jb20vc3RvcmUvc2hhcnBkZXNr";
+    const res = await middleware(readinessReq(`?host=${host}`));
+    expect(res.status).not.toBe(401);
+    expect(mockShopMaybeSingle).toHaveBeenCalledTimes(1);
+    const fwdShopId =
+      res.headers.get("x-middleware-request-x-shop-id") ??
+      res.headers.get("x-shop-id");
+    expect(fwdShopId).toBe("real-shop-uuid");
+  });
+
+  it("401s for a ?host= that decodes to an unknown store (no row)", async () => {
+    mockShopMaybeSingle.mockResolvedValue({ data: null, error: null });
+    // base64 of "admin.shopify.com/store/evilshop"
+    const host = "YWRtaW4uc2hvcGlmeS5jb20vc3RvcmUvZXZpbHNob3A=";
+    const res = await middleware(readinessReq(`?host=${host}`));
+    expect(res.status).toBe(401);
+  });
+
   it("does NOT apply the domain fallback to other portal APIs", async () => {
     // /api/disputes carries the same ?shop= but must stay 401 — the fallback
     // is scoped strictly to /api/setup/readiness.
