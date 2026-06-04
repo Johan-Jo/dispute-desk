@@ -270,17 +270,20 @@ export async function middleware(req: NextRequest) {
     // Portal fallback: these APIs can use Supabase Auth + active_shop (see lib/middleware/portalApiPrefixes.ts)
     const isPortalApi = isPortalApiPath(pathname);
 
-    // Embedded fallback — SETUP READINESS ONLY. The `shopify_shop_id` cookie is
-    // `sameSite=none; partitioned` (CHIPS) and inside the Shopify Admin iframe it
-    // is sometimes not sent with the readiness fetch, leaving an installed,
-    // fully-connected shop unable to resolve and 401'ing the connection step.
-    // When the request carries the Shopify-asserted `?shop=<domain>` (already
-    // cross-checked against any present cookie above), resolve the real shop row
-    // by domain. Scoped strictly to `/api/setup/readiness`, which returns only
+    // Embedded resolution — SETUP READINESS ONLY. For the readiness check we
+    // ALWAYS resolve the live shop from the Shopify-asserted `?shop=`/`?host=`
+    // domain and let it OVERRIDE the `shopify_shop_id` cookie, because that
+    // cookie can be stale: it is `sameSite=none; partitioned` (CHIPS), survives
+    // uninstall/reinstall, and after a shop row is recreated (or wiped) it can
+    // point at a deleted/old shop id. Trusting the stale id makes
+    // evaluateReadiness() find no session and report a fully-connected shop as
+    // "not connected" (red rows, HTTP 200 — no error). The domain was already
+    // cross-checked against any present `shopify_shop` cookie above (SHOP_MISMATCH).
+    // Scoped strictly to `/api/setup/readiness`, which returns only
     // connection-status booleans (no merchant data, no tokens) — NEVER widen this
     // to /api/disputes, /api/packs, etc., which would let any caller read another
     // shop's data by guessing its myshopify domain.
-    if ((!shopDomain || !shopId) && pathname.startsWith("/api/setup/readiness")) {
+    if (pathname.startsWith("/api/setup/readiness")) {
       // Prefer `?shop=`; fall back to decoding the App Bridge `?host=`
       // (base64 of `admin.shopify.com/store/<handle>`), which survives App
       // Bridge client navigation better than `shop`.
@@ -308,6 +311,8 @@ export async function middleware(req: NextRequest) {
           .eq("shop_domain", candidate)
           .maybeSingle();
         if (shopRow?.id) {
+          // Override any (possibly stale) cookie-resolved shopId with the
+          // current row for this Shopify-asserted domain.
           shopId = shopRow.id;
           shopDomain = candidate;
         }

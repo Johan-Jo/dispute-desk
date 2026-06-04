@@ -45,10 +45,45 @@ function readinessReq(query: string): NextRequest {
   );
 }
 
+function readinessReqWithCookies(
+  query: string,
+  cookies: Record<string, string>,
+): NextRequest {
+  const req = new NextRequest(
+    new URL(`http://localhost/api/setup/readiness${query}`),
+    { headers: new Headers() },
+  );
+  for (const [k, v] of Object.entries(cookies)) req.cookies.set(k, v);
+  return req;
+}
+
 describe("middleware /api/setup/readiness domain fallback (no cookie)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetUser.mockResolvedValue({ data: { user: null } });
+  });
+
+  it("OVERRIDES a stale shopify_shop_id cookie with the live shop resolved by domain", async () => {
+    // Reproduces the Sharp desk incident: the browser still carries a
+    // shopify_shop_id cookie pointing at a deleted/old shop (survives
+    // uninstall/reinstall). Without the override, evaluateReadiness(staleId)
+    // finds no session and reports a connected shop as "not connected".
+    mockShopMaybeSingle.mockResolvedValue({
+      data: { id: "live-shop-uuid" },
+      error: null,
+    });
+    const res = await middleware(
+      readinessReqWithCookies("?shop=sharpdesk.myshopify.com", {
+        shopify_shop: "sharpdesk.myshopify.com",
+        shopify_shop_id: "stale-deleted-shop-uuid",
+      }),
+    );
+    expect(res.status).not.toBe(401);
+    expect(mockShopMaybeSingle).toHaveBeenCalledTimes(1);
+    const fwdShopId =
+      res.headers.get("x-middleware-request-x-shop-id") ??
+      res.headers.get("x-shop-id");
+    expect(fwdShopId).toBe("live-shop-uuid");
   });
 
   it("resolves the shop by ?shop= domain and lets the request through", async () => {
