@@ -187,8 +187,44 @@ When the Admin iframe reloads the app at `/app?shop=…&host=…&embedded=1`,
 as a single-use ticket) even when the `shopify_shop` cookie hasn't yet
 committed in the new frame context. This closes a narrow race where Set-Cookie
 headers from the callback have not yet landed when Shopify Admin loads the
-next frame. All other middleware guards (HMAC, stale-cookie shop-mismatch,
-session-exists readback) remain unchanged.
+next frame. HMAC and the stale-cookie shop-mismatch guard are unchanged.
+
+**CHIPS-cookie-not-sent → DB-backed cookie restoration (`accounts.shopify.com`
+loop fix, 2026-06-04).** The grace marker alone is insufficient: it is
+single-use (consumed on the FIRST `/app/*` request) and the Admin iframe
+*intermittently* fails to send the `partitioned` `shopify_shop` cookie on
+**any** in-app navigation — not just the immediate post-callback frame, and
+even for a fully-installed, connected shop. The old `/app/*` `!shopDomain`
+branch then redirected to `/api/auth/shopify`, which loads
+`accounts.shopify.com` **inside** the Admin iframe; Shopify's accounts page
+sets `X-Frame-Options: deny`, so the iframe shows "accounts.shopify.com
+refused to connect" and re-OAuths on every page load — a hard loop. Fix: in
+that branch, before re-OAuthing, middleware checks the DB — if a `shops` row
+**and** an offline `shop_sessions` row already exist for `?shop=<domain>`, the
+merchant is connected, so it **re-sets `shopify_shop` / `shopify_shop_id`**
+(with the same partitioned attrs) and renders the shell. It only OAuths when
+there is genuinely no session. An unknown shop still 307s to OAuth; no `?shop=`
+still goes to `/app/session-required`. This is the authoritative fix for the
+embedded-app "white screen / refused to connect" class.
+
+**Grace-windowed session-exists / stale-cookie clears.** Two middleware paths
+clear the cookies + re-OAuth when a session looks absent: the `/app/*`
+page-guard `session-exists` readback, and the systemic stale-cookie validator
+(below). Both are now gated on `!dd_oauth_in_progress` — during the
+post-install grace window a just-written session may not be visible to an
+immediate read, and clearing+re-OAuthing there would re-enter the loop above.
+
+**Systemic stale-cookie self-heal.** `shopify_shop_id` survives
+uninstall/reinstall (CHIPS cookies aren't cleared by the server-to-server
+`app/uninstalled` webhook), so after a shop row is wiped + recreated the
+browser keeps sending a **deleted** shop id — which poisons every embedded
+route keyed off it (readiness reports "not connected"; `/api/setup/step` 500s
+on the `shops` FK; `/api/billing/subscribe` 404s "Reconnect this store"). On
+every `/api/*` embedded request (outside the grace window) middleware validates
+the cookie id against `shops`; if no row matches, it treats the cookie as
+absent (so `?shop=`/`?host=`/Referer domain resolution takes over) **and emits
+`Set-Cookie` to expire both cookies** so the browser stops sending the dead id
+and every route self-heals. Live cookie ids are untouched.
 
 **Stale-cookie guard (multi-store):** These cookies are scoped to the
 DisputeDesk host, not per-shop, so opening two different Shopify Admin tabs
@@ -2503,7 +2539,7 @@ Store policies are included in evidence packs. Five policy types are supported: 
 
 Most `/api/*` routes require a shop context. Middleware (`middleware.ts`) resolves it in two ways:
 
-1. **Embedded app:** `shopify_shop` and `shopify_shop_id` cookies (set after OAuth when the app is opened from Shopify Admin). These cookies use `sameSite: "none"` so the browser sends them in the cross-origin iframe. If missing, the request gets `401` with message "Unauthorized. Install or re-open the app from Shopify Admin." and `code: SESSION_REQUIRED`.
+1. **Embedded app:** `shopify_shop` and `shopify_shop_id` cookies (set after OAuth when the app is opened from Shopify Admin). These cookies use `sameSite: "none"; partitioned` so the browser sends them in the cross-origin iframe. If missing, the request gets `401` with message "Unauthorized. Install or re-open the app from Shopify Admin." and `code: SESSION_REQUIRED` — **except** for `/api/setup/readiness` and the `/app/*` page guard, which fall back to resolving the live shop by the Shopify-asserted `?shop=`/`?host=` (or Referer) and, for pages, re-set the cookies from the DB session rather than 401/looping. See *Embedded session cookies* above for the CHIPS-cookie / `accounts.shopify.com`-loop handling.
 
 2. **Portal fallback:** For certain API prefixes, if Shopify cookies are absent, middleware accepts **Supabase Auth** plus the active-shop cookie (`dd_active_shop` or `active_shop_id`). It verifies the user has that shop in `portal_user_shops`, then sets `x-shop-id` / `x-shop-domain` (domain as `"portal"`) and allows the request. This allows the portal disputes page (and setup, integrations, sample files) to work without embedded-app cookies.
 
