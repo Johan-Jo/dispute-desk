@@ -28,7 +28,7 @@ combinations refuse to boot.
 | Variable | Dev | Prod | Source of truth |
 |---|---|---|---|
 | `NEXT_PUBLIC_APP_URL` | `https://dev.disputedesk.app` | `https://disputedesk.app` | DNS + Vercel project alias |
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://sddzuglxdnkhcnjmcpbj.supabase.co` (existing project, becomes dev after Pro cutover) | `https://aokhplydttxtebvbeuzc.supabase.co` (new Pro project, becomes prod at cutover) | Supabase Dashboard |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://vrpkgudqmpyunekrkpnc.supabase.co` (dedicated dev project) | `https://aokhplydttxtebvbeuzc.supabase.co` (Pro prod project) | Supabase Dashboard |
 | `SUPABASE_URL` | dev project (same as above) | prod project (same) | Mirror of `NEXT_PUBLIC_SUPABASE_URL` |
 | `SUPABASE_ANON_KEY` | dev project | prod project | Supabase Dashboard → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | dev project | prod project | Supabase Dashboard → API. **Server only.** |

@@ -59,7 +59,8 @@ export function openSb(): SbConn {
   }
 
   // Post 2026-05-28 Free→Pro cutover the production project is
-  // `aokhplydttxtebvbeuzc` (the old `sddzuglxdnkhcnjmcpbj` is now dev/E2E).
+  // `aokhplydttxtebvbeuzc`. Dev/E2E runs on `vrpkgudqmpyunekrkpnc`; the old
+  // `sddzuglxdnkhcnjmcpbj` ref is an idle leftover (not dev).
   // Guard against accidentally seeding fixtures into prod; opt-in via
   // `E2E_ALLOW_PROD_DB=true` to override.
   const PROD_REF = "aokhplydttxtebvbeuzc";

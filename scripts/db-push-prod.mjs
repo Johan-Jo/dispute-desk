@@ -46,7 +46,10 @@ import { config as loadEnv } from "dotenv";
 // holdback period, and you can drop the old one in a follow-up.
 const KNOWN_PROD_PROJECT_REFS = [
   "aokhplydttxtebvbeuzc", // current prod (Pro tier, post-2026-05-28 cutover)
-  "sddzuglxdnkhcnjmcpbj", // legacy prod (Free tier, now the dev project) — drop in a follow-up
+  // Legacy Free-tier prod ref `sddzuglxdnkhcnjmcpbj` dropped 2026-06-04 —
+  // the cutover holdback period is long over and that project is now an idle
+  // leftover, NOT dev (dev runs on `vrpkgudqmpyunekrkpnc`). Keeping it here
+  // would wrongly let a prod migration push target the dead project.
 ];
 
 const RELEASE_LOG = "docs/runbooks/prod-release-log.md";

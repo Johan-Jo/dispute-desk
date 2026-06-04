@@ -1,5 +1,7 @@
 # PRD — Dev/Prod Environment Separation (v3, pre-launch)
 
+> 📌 **Historical PRD (2026-05-13) — outcome note.** This plan assumed the single Supabase project `sddzuglxdnkhcnjmcpbj` would split into dev/prod. What actually shipped: prod moved to the Pro project `aokhplydttxtebvbeuzc`, and dev was stood up as a **fresh** project `vrpkgudqmpyunekrkpnc` (not a repurpose of the old ref). `sddzuglxdnkhcnjmcpbj` is now an idle leftover. Treat `sddzuglx…` references below as the planning baseline; current truth lives in [`CLAUDE.md`](../../CLAUDE.md).
+
 **Status:** Draft v3 (with corrections applied) · **Owner:** Johan · **Date:** 2026-05-13
 
 > **North star.** Make it impossible for development work to touch real merchants, real Shopify installs, real evidence files, real secrets, or real cron jobs. Everything else is secondary and deferrable.

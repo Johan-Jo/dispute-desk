@@ -219,9 +219,10 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          # The shared Supabase project (sddzuglxdnkhcnjmcpbj) backs dev/E2E/prod.
-          # dbFixtures.openSb() refuses to seed against it unless this opt-in is
-          # set. Fixtures are cleaned up via delete_e2e_fixture_dispute() in
+          # E2E seeds against whatever Supabase project the CI secrets point at.
+          # dbFixtures.openSb() refuses to seed against the prod ref
+          # (aokhplydttxtebvbeuzc) unless this opt-in is set. Fixtures are
+          # cleaned up via delete_e2e_fixture_dispute() in
           # finally, and `npm run cleanup:e2e-orphans` is the recovery path if
           # a run crashes between seed and cleanup.
           E2E_ALLOW_PROD_DB: "true"

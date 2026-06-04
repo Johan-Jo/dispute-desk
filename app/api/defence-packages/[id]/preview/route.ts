@@ -8,7 +8,7 @@
  * Supabase URL, never a signing token.
  *
  * Why proxy and not 302 to a signed URL:
- *   - A redirect would expose `sddzuglxdnkhcnjmcpbj.supabase.co` plus
+ *   - A redirect would expose the raw `*.supabase.co` storage host plus
  *     a JWT-style signing token in the browser address bar / referrer
  *     header. Even short-TTL tokens are still credentials and must
  *     never leak.

@@ -1,5 +1,7 @@
 # Production Current-State Snapshot
 
+> 📌 **Historical snapshot — do not update.** This records prod state as of 2026-05-13, *before* the Free→Pro cutover. At that date prod ran on `sddzuglxdnkhcnjmcpbj`. Current prod is now `aokhplydttxtebvbeuzc` and dev is `vrpkgudqmpyunekrkpnc` (see [`CLAUDE.md`](../../CLAUDE.md)). Every `sddzuglx…` ref below is the *then-current* prod, preserved as-is.
+
 **Captured:** 2026-05-13
 **Captured by:** Johan (via Claude Code assist)
 **Repo SHA at capture:** `545f4114a066c4473d9898d864cb2e47e59fd5f9`

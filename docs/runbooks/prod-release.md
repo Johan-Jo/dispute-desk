@@ -75,7 +75,7 @@ real-prod signal — wait one tick before declaring success.
 ## Common pitfalls
 
 - **Forgetting to set `APP_ENV=production` before `db:push:prod`** → the script aborts loudly. Re-run with the env var.
-- **Wrong Supabase project linked** → script reads `supabase/.temp/linked-project.json` and refuses if the ref isn't in `KNOWN_PROD_PROJECT_REFS` (currently `sddzuglxdnkhcnjmcpbj`; rotates at Pro cutover). Re-link with `npx supabase link --project-ref <prod-ref>`.
+- **Wrong Supabase project linked** → script reads `supabase/.temp/linked-project.json` and refuses if the ref isn't in `KNOWN_PROD_PROJECT_REFS` (currently `aokhplydttxtebvbeuzc`, the Pro prod ref). Re-link with `npx supabase link --project-ref aokhplydttxtebvbeuzc`.
 - **Running from a non-master branch** → script warns but allows; you almost always want to push from master.
 - **`prod-release-log.md` not updated** → script appends automatically on both start and finish. If you see a "STARTED" entry without a matching "SUCCEEDED" or "FAILED", the push didn't complete — investigate via Supabase Dashboard before retrying.
 

@@ -820,7 +820,7 @@ Migrations live in `supabase/migrations/`. **Primary workflow** is the **Supabas
 
 ### Supabase CLI (recommended)
 
-- **One-time:** `npx supabase login` then `npx supabase link --project-ref <ref>` (ref from `SUPABASE_URL` / Dashboard, e.g. `sddzuglxdnkhcnjmcpbj`). Enter the database password when prompted; link state stays local (see `.gitignore` for `supabase/.temp/`).
+- **One-time:** `npx supabase login` then `npx supabase link --project-ref <ref>` (ref from `SUPABASE_URL` / Dashboard — prod is `aokhplydttxtebvbeuzc`, dev is `vrpkgudqmpyunekrkpnc`). Enter the database password when prompted; link state stays local (see `.gitignore` for `supabase/.temp/`).
 - **Apply migrations:** `npm run db:migrate` (alias for `npx supabase db push`) to push any new SQL files not yet applied remotely.
 - **Existing DB:** If the database was created outside the CLI (e.g. Dashboard SQL or an old script), the CLI may have no migration history. Run `npx supabase migration repair <001> <002> … --status applied` once to mark already-applied files without re-running SQL; then `db push` applies only new migrations.
 - **Without CLI link:** `npm run db:migrate:script` runs `scripts/run-migration.mjs`, which uses a local `_migrations` table and requires `SUPABASE_URL_POSTGRES` (or `SUPABASE_URL` + `SUPABASE_DB_PASSWORD`). Prefer the CLI when possible so there is a single source of truth with hosted Supabase.
@@ -902,7 +902,7 @@ npx supabase db query --linked --output table "select shop_domain, plan from sho
 
 `004_audit_events.sql` made `audit_events` strictly append-only via two BEFORE triggers (`trg_audit_no_update`, `trg_audit_no_delete`) plus NO ACTION foreign keys to `disputes` and `evidence_packs`. The combination is intentional for prod data — audit history is unforgeable, and accidental deletes of a parent dispute fail loudly. But it also meant **once any audit event referenced a dispute or pack, that dispute/pack was undeletable** — including the seeded rows from the E2E fixture helper at [`e2e/helpers/dbFixtures.ts`](../e2e/helpers/dbFixtures.ts).
 
-Because the DisputeDesk codebase shares one Supabase project across dev / E2E / prod (`sddzuglxdnkhcnjmcpbj`), every E2E run that hit `POST /api/packs/:id/save-to-shopify` (which writes audit events) was leaking the fixture dispute, pack, and audit rows into the live merchant dashboard — visible as ghost "Active disputes: 36" with empty order/customer cells. The original `cleanup()` swallowed FK violations silently, which masked the leak for weeks. **30 orphans** were discovered on 2026-05-09 and wiped via migration `20260509130000`.
+At the time of this 2026-05-09 incident the codebase shared one Supabase project across dev / E2E / prod (`sddzuglxdnkhcnjmcpbj`, then prod), so every E2E run that hit `POST /api/packs/:id/save-to-shopify` (which writes audit events) was leaking the fixture dispute, pack, and audit rows into the live merchant dashboard — visible as ghost "Active disputes: 36" with empty order/customer cells. (Dev and prod were later split: prod = `aokhplydttxtebvbeuzc`, dev = `vrpkgudqmpyunekrkpnc`.) The original `cleanup()` swallowed FK violations silently, which masked the leak for weeks. **30 orphans** were discovered on 2026-05-09 and wiped via migration `20260509130000`.
 
 The fix layers three guarantees:
 
@@ -3347,7 +3347,7 @@ PDFs deleted from storage. Audit events never deleted.
 
 **Scope.** All stateful data lives in Supabase (Postgres + Storage). Vercel is stateless — recovery is `vercel rollback <deployment-url>` or a redeploy from git. This section covers the Supabase side.
 
-**Authoritative copy.** The production Supabase project `sddzuglxdnkhcnjmcpbj` is the single source of truth for shops, disputes, evidence_packs, audit_events, jobs, and the pack PDFs in the `evidence-packs` storage bucket. DisputeDesk does **not** maintain an off-platform mirror — recovery depends on Supabase's managed backups.
+**Authoritative copy.** The production Supabase project `aokhplydttxtebvbeuzc` (Pro tier, post-2026-05-28 cutover) is the single source of truth for shops, disputes, evidence_packs, audit_events, jobs, and the pack PDFs in the `evidence-packs` storage bucket. DisputeDesk does **not** maintain an off-platform mirror — recovery depends on Supabase's managed backups.
 
 **Backup mechanism.** Provider-managed automated backups (frequency and retention window depend on the project's current Supabase tier — confirm in **Dashboard → Project Settings → Database → Backups**). Pro and above include point-in-time recovery; Free is daily-snapshot only. Backups are encrypted at rest by the provider.
 
@@ -3380,7 +3380,7 @@ These are targets, not SLAs. The actual restore drill has not been measured agai
 - **No automated restore drills.** The "verified restorable backup" check in `prod-current-state-snapshot.md` § 1 is currently a one-time gate, not a recurring test. Quarterly cadence is the right floor.
 - **No documented row count baselines.** Recovery step 5 ("spot-check") has no reference table. After the next quarterly drill, capture the row counts and pin them in `prod-current-state-snapshot.md` § 2 as the "expected at restore" baseline.
 - **No in-app read-only flag.** Step 2 of the runbook ("freeze writes") relies on disabling crons + invalidating offline sessions; a `DD_READ_ONLY=1` env flag checked in middleware would collapse this to a one-line redeploy.
-- **HaveIBeenPwned password toggle not enabled (Supabase Auth → Sign In / Providers → Email → "Prevent use of leaked passwords").** The toggle is **Pro-plan only** on Supabase; project `sddzuglxdnkhcnjmcpbj` is on Free. Compensating control: keep **Minimum password length ≥ 8** and a non-empty **Password requirements** option on the same screen. Re-enable the HIBP toggle when the project is upgraded to Pro (same upgrade that unlocks PITR backups — see disaster-recovery section above).
+- **HaveIBeenPwned password toggle (Supabase Auth → Sign In / Providers → Email → "Prevent use of leaked passwords").** The toggle is **Pro-plan only** on Supabase. The current prod project `aokhplydttxtebvbeuzc` is on **Pro** (post-2026-05-28 cutover), so this toggle should be **enabled** — verify it on the prod project. (Historically this was blocked when prod ran on the Free-tier `sddzuglxdnkhcnjmcpbj`; the compensating control then was **Minimum password length ≥ 8** plus a non-empty **Password requirements** option, which remain good baseline settings.)
 
 **Public-facing copy.** Merchants see one line on [data-retention](app/(marketing)/data-retention/page.tsx#L99-L108): *"Our managed database provider takes encrypted backups for disaster recovery. Backups are retained for a rolling window consistent with the provider's standard policy."* That is intentionally vague — sharing exact RPO/RTO targets externally is a commitment, not a description.
 

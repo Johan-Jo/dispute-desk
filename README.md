@@ -96,7 +96,7 @@ cp .env.example .env.local
 
 # 3. Apply Supabase migrations (Supabase CLI — same as in docs/technical.md)
 npx supabase login   # one-time
-npx supabase link --project-ref sddzuglxdnkhcnjmcpbj   # one-time per clone (database password from dashboard)
+npx supabase link --project-ref aokhplydttxtebvbeuzc   # prod ref; one-time per clone (database password from dashboard). Dev project is vrpkgudqmpyunekrkpnc.
 npm run db:migrate   # alias for `npx supabase db push`
 # Edge case without CLI link: `npm run db:migrate:script` (needs Postgres URI in .env.local — see .env.example)
 

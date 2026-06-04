@@ -6,6 +6,12 @@ the new Pro project is the canonical production. The old Free project becomes
 read-only for a holdback period and is then decommissioned (or repurposed as
 the dev project — to be decided in a follow-up).
 
+> **Follow-up resolved (2026-06-04):** the old Free project `sddzuglxdnkhcnjmcpbj`
+> was **not** repurposed as dev. A fresh dev project `vrpkgudqmpyunekrkpnc` was
+> stood up instead (backs `dev.disputedesk.app`); `sddzuglxdnkhcnjmcpbj` is now an
+> idle leftover slated for deletion. References below to "old → dev" are the
+> superseded plan. Current truth: [`CLAUDE.md`](../../CLAUDE.md).
+
 This supersedes Phase 1 of [`dev-prod-environment-split.plan.md`](../plans/dev-prod-environment-split.plan.md)
 for the production side: the dev project becomes a separate workstream
 addressed after this cutover.

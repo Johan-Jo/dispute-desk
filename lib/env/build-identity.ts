@@ -16,7 +16,9 @@
 // Production Supabase project ref. Swapped from the legacy Free-tier ref
 // `sddzuglxdnkhcnjmcpbj` to the Pro-tier ref `aokhplydttxtebvbeuzc` during the
 // 2026-05-28 Free→Pro cutover (the deferred "code-constant" step noted in
-// docs/runbooks/prod-release-log.md). The old ref is now the *dev* project.
+// docs/runbooks/prod-release-log.md). Dev runs on a separate fresh project
+// `vrpkgudqmpyunekrkpnc`; the old `sddzuglxdnkhcnjmcpbj` ref is now an idle
+// leftover, not dev (the "becomes dev" plan was never executed).
 export const KNOWN_PROD_SUPABASE_PROJECT_REF = "aokhplydttxtebvbeuzc";
 export const KNOWN_PROD_SHOPIFY_CLIENT_ID =
   "84f40ec77c9ba18e9eabc1657d9b6af8";
