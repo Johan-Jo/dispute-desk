@@ -623,6 +623,62 @@ export async function middleware(req: NextRequest) {
       }
 
       if (shopParam) {
+        // The shopify_shop cookie is `sameSite=none; partitioned` (CHIPS) and
+        // the Shopify Admin iframe intermittently does NOT send it on in-app
+        // navigations — even for a freshly installed, fully-connected shop. The
+        // old behaviour blindly re-OAuthed here, which loads /api/auth/shopify
+        // → accounts.shopify.com INSIDE the iframe → "refused to connect" (the
+        // X-Frame-Options: deny loop). Before re-OAuthing, check the DB: if a
+        // shop row + offline session already exist for ?shop=, the merchant IS
+        // connected — re-set the cookies (the browser just didn't send them) and
+        // let the embedded shell render. Only OAuth when there is genuinely no
+        // session.
+        const candidate = shopParam.trim().toLowerCase();
+        if (/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(candidate)) {
+          try {
+            const { getServiceClient } = await import("@/lib/supabase/server");
+            const db = getServiceClient();
+            const { data: shopRow } = await db
+              .from("shops")
+              .select("id")
+              .eq("shop_domain", candidate)
+              .maybeSingle();
+            if (shopRow?.id) {
+              const { data: sessionRow } = await db
+                .from("shop_sessions")
+                .select("id")
+                .eq("shop_id", shopRow.id)
+                .eq("session_type", "offline")
+                .is("user_id", null)
+                .maybeSingle();
+              if (sessionRow?.id) {
+                // Connected — restore the cookies and render the shell.
+                const res = NextResponse.next({ request: { headers: requestHeaders } });
+                const cookieOpts = {
+                  httpOnly: true,
+                  secure: true,
+                  sameSite: "none" as const,
+                  partitioned: true,
+                  maxAge: 60 * 60 * 24 * 30,
+                  path: "/",
+                };
+                res.cookies.set("shopify_shop", candidate, cookieOpts);
+                res.cookies.set("shopify_shop_id", shopRow.id, cookieOpts);
+                if (localeParam) {
+                  res.cookies.set("dd_locale", localeParam, {
+                    path: "/",
+                    maxAge: 60 * 60 * 24 * 365,
+                    sameSite: "lax",
+                  });
+                }
+                return res;
+              }
+            }
+          } catch {
+            /* DB hiccup — fall through to OAuth */
+          }
+        }
+
         const authUrl = new URL("/api/auth/shopify", req.url);
         authUrl.searchParams.set("shop", shopParam);
         if (hostParam) authUrl.searchParams.set("host", hostParam);
