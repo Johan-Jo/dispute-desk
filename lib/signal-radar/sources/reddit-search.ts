@@ -1,4 +1,4 @@
-import { applyIngestGates } from "./utils";
+import { applyIngestGates, passesShopifyPainGate } from "./utils";
 import type {
   IngestedItem,
   IngestResult,
@@ -56,11 +56,13 @@ const RESULTS_PER_QUERY = 20;
 
 /**
  * Hours (UTC) at which the Brave path runs. The ingest cron fires hourly, but
- * Brave's free tier is 2,000 queries/month: 7 queries × 4 runs/day × 30 days =
- * 840/month, comfortably under budget. DuckDuckGo (keyless, local) ignores this
- * gate. `freshness=pm` (past month) means 4 runs/day never miss a fresh thread.
+ * Brave's FREE tier is 1,000 queries/month, so we cap runs: 7 queries × 3
+ * runs/day × 30 days = 630/month, leaving ~370 headroom for operator "Refresh
+ * now" clicks (which force-fetch) and the odd test. DuckDuckGo (keyless, local)
+ * ignores this gate. `freshness=pm` (past month) + cross-run dedup means 3
+ * runs/day never miss a fresh thread (worst-case alert latency ~8h).
  */
-const BRAVE_RUN_HOURS_UTC = new Set([0, 6, 12, 18]);
+const BRAVE_RUN_HOURS_UTC = new Set([0, 8, 16]);
 
 const DEFAULT_USER_AGENT =
   "DisputeDesk-SignalRadar/1.0 (admin-only Shopify-merchant intelligence; contact: oi@johan.com.br)";
@@ -274,6 +276,15 @@ export function hitToItem(hit: SearchHit, nowIso: string): IngestedItem | null {
     implicitShopifyContext,
   });
   if (rejected) return null;
+
+  // Pain-term HARD gate — search-adapter-specific. The shared gate leaves
+  // pain filtering to the classifier because subreddit *listings* are lossy,
+  // but here we explicitly SEARCHED for pain terms, so a result with zero
+  // dispute/chargeback/reserve/payout vocabulary in its title+snippet is
+  // off-topic Shopify chatter (stock picks, inventory sync, "is SHOP a buy")
+  // that Brave's relevance ranking dragged in. Dropping it at ingest keeps the
+  // lead streams dense and saves classifier spend.
+  if (!passesShopifyPainGate(`${title}\n${content}`)) return null;
   return {
     platform: "reddit",
     contentType: "submission",
@@ -313,8 +324,11 @@ export const redditSearchAdapter: SignalSourceAdapter = {
     const errors: string[] = [];
 
     // Conserve Brave's free quota: only run on the scheduled hours. DDG is
-    // keyless/local and ignores the gate.
-    if (provider === "brave") {
+    // keyless/local and ignores the gate. `SIGNAL_RADAR_FORCE_FETCH=1` bypasses
+    // it — set by the manual "Refresh now" route (an operator click should
+    // always fetch, whatever the hour) and by local tests.
+    const forceFetch = process.env.SIGNAL_RADAR_FORCE_FETCH === "1";
+    if (provider === "brave" && !forceFetch) {
       const hour = new Date().getUTCHours();
       if (!BRAVE_RUN_HOURS_UTC.has(hour)) {
         console.info(

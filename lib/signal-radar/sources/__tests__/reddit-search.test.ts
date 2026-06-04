@@ -108,4 +108,18 @@ describe("hitToItem", () => {
       )
     ).toBeNull();
   });
+
+  it("drops on-topic-subreddit Shopify chatter with no dispute vocabulary (pain gate)", () => {
+    // Brave's relevance ranking drags in popular Shopify content (stock picks,
+    // inventory sync) that mentions "shopify" but no chargeback/dispute/reserve
+    // term — the search-adapter pain gate must drop it even from r/shopify.
+    const stockHit: SearchHit = {
+      title: "Is Shopify actually a buy after the selloff? : r/shopify",
+      url: "https://www.reddit.com/r/shopify/comments/buy123/is_shopify_a_buy/",
+      snippet:
+        "Shopify provides complete business infrastructure; the platform combines inventory management and shipping services.",
+      publishedIso: null,
+    };
+    expect(hitToItem(stockHit, NOW)).toBeNull();
+  });
 });

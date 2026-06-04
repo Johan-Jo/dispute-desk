@@ -53,6 +53,9 @@ export async function POST(req: NextRequest) {
 
   after(async () => {
     const sbAfter = getServiceClient();
+    // An operator clicking "Refresh now" expects a fetch regardless of the
+    // hour, so bypass the Reddit-search Brave hour-gate for this manual run.
+    process.env.SIGNAL_RADAR_FORCE_FETCH = "1";
     try {
       const result = await ingestLoop(await getEnabledAdapters());
       await sbAfter
