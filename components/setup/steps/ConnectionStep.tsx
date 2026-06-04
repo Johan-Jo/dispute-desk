@@ -97,6 +97,7 @@ export function ConnectionStep({ onSaveRef, onCanContinueChange }: ConnectionSte
       const shop = new URLSearchParams(window.location.search).get("shop");
       const res = await fetch(
         shop ? `/api/setup/readiness?shop=${encodeURIComponent(shop)}` : "/api/setup/readiness",
+        { credentials: "include" },
       );
       if (res.ok) {
         const data: ReadinessResult = await res.json();

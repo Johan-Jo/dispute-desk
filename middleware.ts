@@ -270,6 +270,36 @@ export async function middleware(req: NextRequest) {
     // Portal fallback: these APIs can use Supabase Auth + active_shop (see lib/middleware/portalApiPrefixes.ts)
     const isPortalApi = isPortalApiPath(pathname);
 
+    // Embedded fallback — SETUP READINESS ONLY. The `shopify_shop_id` cookie is
+    // `sameSite=none; partitioned` (CHIPS) and inside the Shopify Admin iframe it
+    // is sometimes not sent with the readiness fetch, leaving an installed,
+    // fully-connected shop unable to resolve and 401'ing the connection step.
+    // When the request carries the Shopify-asserted `?shop=<domain>` (already
+    // cross-checked against any present cookie above), resolve the real shop row
+    // by domain. Scoped strictly to `/api/setup/readiness`, which returns only
+    // connection-status booleans (no merchant data, no tokens) — NEVER widen this
+    // to /api/disputes, /api/packs, etc., which would let any caller read another
+    // shop's data by guessing its myshopify domain.
+    if (
+      (!shopDomain || !shopId) &&
+      pathname.startsWith("/api/setup/readiness") &&
+      apiShopParam
+    ) {
+      const candidate = apiShopParam.trim().toLowerCase();
+      if (/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(candidate)) {
+        const { getServiceClient } = await import("@/lib/supabase/server");
+        const { data: shopRow } = await getServiceClient()
+          .from("shops")
+          .select("id")
+          .eq("shop_domain", candidate)
+          .maybeSingle();
+        if (shopRow?.id) {
+          shopId = shopRow.id;
+          shopDomain = candidate;
+        }
+      }
+    }
+
     if ((!shopDomain || !shopId) && isPortalApi) {
       const activeShopId =
         req.cookies.get("dd_active_shop")?.value ??
