@@ -270,40 +270,65 @@ export async function middleware(req: NextRequest) {
     // Portal fallback: these APIs can use Supabase Auth + active_shop (see lib/middleware/portalApiPrefixes.ts)
     const isPortalApi = isPortalApiPath(pathname);
 
-    // Embedded resolution — SETUP READINESS ONLY. For the readiness check we
+    // Embedded resolution — ALL `/api/setup/*` ROUTES. For the setup wizard we
     // ALWAYS resolve the live shop from the Shopify-asserted `?shop=`/`?host=`
     // domain and let it OVERRIDE the `shopify_shop_id` cookie, because that
     // cookie can be stale: it is `sameSite=none; partitioned` (CHIPS), survives
     // uninstall/reinstall, and after a shop row is recreated (or wiped) it can
-    // point at a deleted/old shop id. Trusting the stale id makes
-    // evaluateReadiness() find no session and report a fully-connected shop as
-    // "not connected" (red rows, HTTP 200 — no error). The domain was already
-    // cross-checked against any present `shopify_shop` cookie above (SHOP_MISMATCH).
-    // Scoped strictly to `/api/setup/readiness`, which returns only
-    // connection-status booleans (no merchant data, no tokens) — NEVER widen this
-    // to /api/disputes, /api/packs, etc., which would let any caller read another
-    // shop's data by guessing its myshopify domain.
-    if (pathname.startsWith("/api/setup/readiness")) {
-      // Prefer `?shop=`; fall back to decoding the App Bridge `?host=`
-      // (base64 of `admin.shopify.com/store/<handle>`), which survives App
-      // Bridge client navigation better than `shop`.
+    // point at a deleted/old shop id. A stale id makes readiness report a
+    // connected shop as "not connected" (red, HTTP 200) AND makes the
+    // `/api/setup/step` insert into shop_setup fail the shops FK (HTTP 500 —
+    // "Save & Continue" silently stalls). The domain is cross-checked against
+    // any present `shopify_shop` cookie above (SHOP_MISMATCH). Setup routes are
+    // the wizard for the currently-open embedded shop and carry no merchant
+    // data keyed off this resolution — NEVER widen this to /api/disputes,
+    // /api/packs, etc., which would let any caller read another shop's data by
+    // guessing its myshopify domain.
+    //
+    // POSTs (e.g. /api/setup/step) don't repeat `?shop=`/`?host=` in their URL,
+    // so fall back to the embedded page URL carried in the Referer header.
+    if (pathname.startsWith("/api/setup/")) {
+      // 1) `?shop=` on the request URL.
       let candidate = (apiShopParam ?? "").trim().toLowerCase();
+      // 2) `?host=` on the request URL (base64 admin.shopify.com/store/<handle>).
+      const handleFromHost = (raw: string | null): string | null => {
+        if (!raw) return null;
+        try {
+          const decoded = atob(raw.replace(/-/g, "+").replace(/_/g, "/"));
+          const handle = decoded.split("/store/")[1]?.split(/[/?#]/)[0];
+          return handle ? `${handle}.myshopify.com` : null;
+        } catch {
+          return null;
+        }
+      };
       if (!candidate) {
-        const hostParam = req.nextUrl.searchParams.get("host");
-        if (hostParam) {
+        candidate = handleFromHost(req.nextUrl.searchParams.get("host")) ?? "";
+      }
+      // 3) Referer's `shop`/`host` (embedded page URL behind a POST).
+      if (!candidate) {
+        const referer = req.headers.get("referer");
+        if (referer) {
           try {
-            // Edge runtime: use atob (Web API), not Node Buffer.
-            const decoded = atob(
-              hostParam.replace(/-/g, "+").replace(/_/g, "/"),
-            );
-            const handle = decoded.split("/store/")[1]?.split(/[/?#]/)[0];
-            if (handle) candidate = `${handle}.myshopify.com`;
+            const refUrl = new URL(referer);
+            candidate =
+              (refUrl.searchParams.get("shop") ?? "").trim().toLowerCase() ||
+              (handleFromHost(refUrl.searchParams.get("host")) ?? "");
           } catch {
-            /* malformed host — leave candidate empty */
+            /* malformed referer — ignore */
           }
         }
       }
-      if (candidate && /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(candidate)) {
+      // Cross-shop guard: if a `shopify_shop` domain cookie is present, the
+      // resolved candidate must match it (the SHOP_MISMATCH guard above only
+      // covers the `?shop=` URL param, not the Referer fallback). This stops a
+      // forged Referer from redirecting a write to another shop's setup.
+      const cookieShop = req.cookies.get("shopify_shop")?.value?.toLowerCase();
+      const candidateMatchesCookie = !cookieShop || cookieShop === candidate;
+      if (
+        candidate &&
+        candidateMatchesCookie &&
+        /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(candidate)
+      ) {
         const { getServiceClient } = await import("@/lib/supabase/server");
         const { data: shopRow } = await getServiceClient()
           .from("shops")
