@@ -264,8 +264,17 @@ export async function middleware(req: NextRequest) {
     // takes over) AND clear it on the response so the browser stops sending the
     // dead id and every route self-heals on the next request — instead of
     // patching each route individually.
+    // Skip the stale-cookie check entirely during the post-OAuth grace window.
+    // A fresh install/reconnect just ran the callback, which sets new
+    // shopify_shop / shopify_shop_id cookies — but an in-flight request can
+    // still carry the OLD (now-deleted) cookie value for a beat. Clearing it
+    // here would race the fresh cookie and bounce the embedded shell back into
+    // /api/auth/shopify (which tries to frame accounts.shopify.com → "refused
+    // to connect"). The marker is single-use (~60s) and the new cookie wins
+    // once committed, so just let this window pass untouched.
+    const oauthGrace = req.cookies.get("dd_oauth_in_progress")?.value;
     let clearStaleShopCookies = false;
-    if (shopId) {
+    if (shopId && !oauthGrace) {
       const { getServiceClient } = await import("@/lib/supabase/server");
       const { data: shopRow } = await getServiceClient()
         .from("shops")
