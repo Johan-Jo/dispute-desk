@@ -113,7 +113,7 @@ Locale-language only. Non-en-US slugs use native words transliterated to ASCII �
 OUTPUT FORMAT
 Return valid JSON with this exact structure:
 {
-  "title": "Article title (no banned openers — see above)",
+  "title": "Article title — MAX 60 CHARACTERS (SEO limit; longer titles get truncated and read as keyword-stuffing). Concise and specific; no banned openers (see above). Do NOT pack multiple sub-topics into the title.",
   "excerpt": "1–2 sentence summary, max 300 chars",
   "slug": "url-friendly-slug-max-80-chars-in-article-language-ascii-only",
   "meta_title": "SEO title (max 60 chars)",
@@ -164,7 +164,12 @@ export const DEFAULT_LOCALE_INSTRUCTIONS: Record<string, string> = {
   "fr-FR": "Write in French (formal vous-form). Regulatory sensitivity. 'Rétrofacturation' for chargeback.",
   "es-ES": "Write in Spanish. Professional tone. Aware of Latin American market differences. 'Contracargo' for chargeback.",
   "pt-BR": "Write in Brazilian Portuguese. Professional tone. 'Estorno' or 'chargeback' (widely used in BR).",
-  "sv-SE": "Write in Swedish. Semi-formal, concise Nordic style. 'Återbetalningskrav' for chargeback.",
+  // Swedish keeps 'chargeback' as a loanword — that is the established term across
+  // the product UI (messages/sv.json: "{numerator} chargebacks / {denominator} ordrar").
+  // Do NOT use 'Återbetalningskrav' (a literal translation that contradicts the UI and
+  // breaks one-concept-one-term consistency). de/es/fr/pt DO translate it (see above),
+  // each matching its own UI catalog.
+  "sv-SE": "Write in Swedish. Semi-formal, concise Nordic style. Use the English loanword 'chargeback' (plural 'chargebacks') — do NOT translate it to 'Återbetalningskrav'. This matches the established Swedish UI term.",
 };
 
 /** @deprecated Use DEFAULT_LOCALE_INSTRUCTIONS */

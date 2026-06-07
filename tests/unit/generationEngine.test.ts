@@ -33,7 +33,7 @@ function richBody(): string {
   const opening =
     "Shopify Payments forwards a chargeback into the Disputes section in Shopify Admin within 24 hours of the issuer filing it.";
   const filler = "operational details about evidence packs and dispute timing ".repeat(180);
-  return `<h2>Section</h2><p>${opening}</p><h2>More</h2><p>${filler}</p>`;
+  return `<h2>Section</h2><p>${opening}</p><h2>More</h2><p>${filler}close the loop before the deadline.</p>`;
 }
 
 describe("generateAllLocales — validator retry loop", () => {
@@ -111,7 +111,8 @@ describe("generateAllLocales — validator retry loop", () => {
     };
     const distinct = {
       ...tooClose,
-      title: "Representment deadlines and evidence ordering for Shopify merchants",
+      // ≤ 60 chars so V11 (title length) does not reject this fixture.
+      title: "Representment deadlines for Shopify merchants",
       excerpt: "A separate angle on assembling proof under network timelines.",
       slug: "safe-slug-2",
     };
@@ -201,7 +202,8 @@ describe("generateAllLocales — validator retry loop", () => {
       body_json: {
         // 1000 words — above the tier-relative hard floor for Tier B
         // (max(300, 1500*0.6) = 900) and below the 1500 floor, so V1 fires SOFT.
-        mainHtml: "<h2>One</h2><p>" + "details ".repeat(1000) + "</p>",
+        // Ends on a complete sentence so V10 (incomplete-body) does not hard-fail.
+        mainHtml: "<h2>One</h2><p>" + "details ".repeat(1000) + "and a closing sentence.</p>",
         keyTakeaways: [],
         faq: [],
         disclaimer: "d",
