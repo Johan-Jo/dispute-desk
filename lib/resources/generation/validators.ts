@@ -574,7 +574,11 @@ export function v8_slugLocale(
     candidate.slug
       .toLowerCase()
       .split(/[-_]+/)
-      .filter((t) => t.length > 3)
+      // length > 3 skips short connectors; exclude all-digit tokens (years like
+      // "2026", model numbers) — they are language-neutral and legitimately
+      // appear in slugs of every locale, so they must never count as an
+      // "English token" (this caused false V8 rejections on non-English locales).
+      .filter((t) => t.length > 3 && !/^\d+$/.test(t))
   );
   if (slugTokens.size === 0) return null;
 
