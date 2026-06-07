@@ -8,6 +8,7 @@ import { getCmsSettings } from "@/lib/resources/admin-queries";
 import { resolvePrimaryPillarForGeneration } from "@/lib/resources/pillars";
 import { ensurePublishPrerequisites } from "./publishPrerequisites";
 import { generateAllLocales, isGenerationEnabled } from "./generate";
+import { submitBacklogBatch } from "./batchExpand";
 import { resolveGenerationPrompts } from "./prompts";
 import type { GenerationBrief, GenerationContext } from "./prompts";
 import type { GenerationResult } from "./generate";
@@ -133,6 +134,17 @@ export interface PipelineOptions {
    * Default `true` (scheduled cron). Manual admin runs pass `false` so only this article’s locales publish in-request.
    */
   autopilotDrainBacklog?: boolean;
+  /**
+   * English-first generation. When true, the synchronous request generates and
+   * publishes ONLY the source locale (en-US), then submits the remaining target
+   * locales to the async Anthropic batch path (drained + published later by the
+   * batch-expand cron). This keeps a single article well under Vercel's 300s
+   * function limit — generating all 6 locales synchronously was 504-ing, so no
+   * article was ever saved. The set this article is responsible for is remembered
+   * on `content_archive_items.target_locale_set` (durable post-conversion), so the
+   * batch step recovers the missing locales from there. Default off (full sync).
+   */
+  englishFirstAsyncRest?: boolean;
 }
 
 export async function runGenerationPipeline(archiveItemId: string, options: PipelineOptions = {}): Promise<PipelineResult> {
@@ -153,6 +165,17 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
   const routeKind = routeKindForContentType(brief.contentType);
   const cmsSettings = await getCmsSettings();
   const resolvedPrompts = resolveGenerationPrompts(cmsSettings);
+
+  // English-first: generate + publish only the source locale synchronously and
+  // hand the rest to the async batch (see PipelineOptions.englishFirstAsyncRest).
+  // `fullTargetLocales` is the set this article must eventually cover; it stays
+  // recoverable from content_archive_items.target_locale_set for the batch step.
+  const fullTargetLocales = brief.targetLocales;
+  const englishFirstSourceLocale = fullTargetLocales[0] ?? "en-US";
+  const englishFirst = options.englishFirstAsyncRest === true && fullTargetLocales.length > 1;
+  if (englishFirst) {
+    brief.targetLocales = [englishFirstSourceLocale];
+  }
 
   const contextByLocale: Record<string, GenerationContext> = {};
   for (const loc of brief.targetLocales) {
@@ -303,6 +326,39 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     if (locError) {
       console.error("[generation] Failed to insert localizations:", locError.message);
       return { contentItemId, results, error: `Failed to insert localizations: ${locError.message}` };
+    }
+  }
+
+  // English-first: the remaining target locales are generated off-request by the
+  // async Anthropic batch (batch-expand cron drains + publishes each as it lands).
+  // Non-blocking: a submit failure leaves the article live in en-US only and is
+  // recoverable by re-running the batch-expand submit for this item.
+  if (englishFirst) {
+    const remainingLocales = fullTargetLocales.filter((l) => l !== englishFirstSourceLocale);
+    if (remainingLocales.length > 0) {
+      try {
+        const submitted = await submitBacklogBatch({
+          itemIds: [contentItemId],
+          locales: remainingLocales,
+          applyGuards: false,
+        });
+        if (submitted.batchId) {
+          // Recorded so the autopilot-batch-drain cron can ingest + publish the
+          // remaining locales once the batch ends, then clear this.
+          await sb
+            .from("content_items")
+            .update({ pending_batch_id: submitted.batchId })
+            .eq("id", contentItemId);
+        }
+        console.log(
+          `[generation] English-first: submitted batch ${submitted.batchId ?? "(none)"} for ${submitted.requested} locale(s) on ${contentItemId}`
+        );
+      } catch (e) {
+        console.error(
+          "[generation] English-first batch submit failed (en-US is live; rest will backfill on retry):",
+          e instanceof Error ? e.message : String(e)
+        );
+      }
     }
   }
 

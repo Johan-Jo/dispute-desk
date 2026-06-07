@@ -70,6 +70,7 @@ describe("executeAutopilotTick", () => {
     expect(mockPipeline).toHaveBeenCalledWith("archive-1", {
       autopilot: true,
       autopilotDrainBacklog: false,
+      englishFirstAsyncRest: true,
     });
   });
 
@@ -84,6 +85,7 @@ describe("executeAutopilotTick", () => {
     expect(mockPipeline).toHaveBeenCalledWith("archive-1", {
       autopilot: true,
       autopilotDrainBacklog: true,
+      englishFirstAsyncRest: true,
     });
   });
 });
