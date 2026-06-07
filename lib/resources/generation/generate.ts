@@ -249,19 +249,20 @@ async function callClaudeChat(
   // Opus 4.x dropped `temperature` (400s with "deprecated"). Send it for
   // Sonnet / Haiku / older models only.
   const supportsTemperature = !/^claude-opus-4/.test(model);
+  // We previously seeded an assistant-turn "{" prefill to force JSON from token 1.
+  // Claude 4.x models (claude-sonnet-4-6 and newer) REJECT assistant prefill with
+  // a 400 ("This model does not support assistant message prefill. The conversation
+  // must end with a user message."), which silently broke every autopilot
+  // generation after the 2026-05-31 OpenAI→Claude swap. Instead we end on a user
+  // turn and instruct JSON-only output in the prompt; the parser below tolerates a
+  // ```json fence or stray prose either way.
+  const jsonOnlyInstruction =
+    "\n\nReturn ONLY the JSON object. Start your reply with `{` and end with `}`. " +
+    "Do not include any prose, explanation, or Markdown code fences.";
   const requestBody: Record<string, unknown> = {
     model,
     system: systemPrompt,
-    // Assistant-turn JSON prefill: seed the reply with "{" so Claude is forced to
-    // continue a JSON object from token 1 — it can't emit a prose preamble or a
-    // ```json fence. This is the fix for the "model returned non-JSON" failures
-    // on long non-English articles (Anthropic has no JSON response_format). The
-    // returned text is the CONTINUATION (no leading "{"), so the parser below
-    // restores it.
-    messages: [
-      { role: "user", content: userPrompt },
-      { role: "assistant", content: "{" },
-    ],
+    messages: [{ role: "user", content: `${userPrompt}${jsonOnlyInstruction}` }],
     // Headroom for tier-floor articles (clusters ~1500w, pillars 3000w+) plus JSON wrapping.
     max_tokens: 24000,
   };
@@ -292,10 +293,9 @@ async function callClaudeChat(
     );
     const raw = block?.text;
     if (!raw) return { raw: null, tokensUsed, error: "Empty response from Claude" };
-    // The reply is the CONTINUATION of the "{" prefill, so it normally starts
-    // mid-object (e.g. `"title": …}`). Strip any stray fence, then restore the
-    // leading "{" (unless the model echoed it) and slice to the last "}" to drop
-    // any trailing prose.
+    // Without the prefill the reply normally starts with "{". Strip any stray
+    // ```json fence, restore a leading "{" if the model dropped it, and slice to
+    // the last "}" to drop any trailing prose.
     let cleaned = raw
       .replace(/^\s*```(?:json)?\s*/i, "")
       .replace(/\s*```\s*$/i, "")
