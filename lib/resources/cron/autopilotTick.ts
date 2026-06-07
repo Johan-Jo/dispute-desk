@@ -149,6 +149,12 @@ export async function executeAutopilotTick(opts: AutopilotTickOptions = {}): Pro
       autopilot: true,
       /** Manual admin (`bypassRateLimit`) should only publish this article’s locales; cron drains backlog. */
       autopilotDrainBacklog: !opts.bypassRateLimit,
+      /**
+       * Generate + publish en-US synchronously, hand the other 5 locales to the
+       * async batch. Generating all 6 synchronously exceeded Vercel's 300s limit
+       * and 504'd, so no article landed. The batch-expand cron fills the rest.
+       */
+      englishFirstAsyncRest: true,
     });
     generated.push({
       archiveItemId,
