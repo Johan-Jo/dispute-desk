@@ -1,23 +1,24 @@
 /**
  * Drains in-flight Anthropic Message Batches submitted by the English-first
- * autopilot path (see PipelineOptions.englishFirstAsyncRest in
- * lib/resources/generation/pipeline.ts).
+ * autopilot (submitArticleAsBatch in lib/resources/generation/pipeline.ts).
  *
- * The autopilot tick generates + publishes en-US synchronously (to stay under
- * Vercel's 300s function limit) and submits the remaining target locales as one
- * async batch, recording its id on `content_items.pending_batch_id`. This drain
- * polls each pending batch; once it has ended, it ingests the results through the
- * SAME validators as the sync path and publishes the new locales (`publish:true`),
- * then clears `pending_batch_id`.
+ * English-first flow: Claude generates ONLY en-US (one async batch request — no
+ * 300s timeout, 50% cheaper, single attempt). This drain polls that batch; once
+ * ended it ingests en-US through the validators, publishes it, promotes the held
+ * item to `published`, and then produces every OTHER locale via DeepL
+ * (translateArticleLocales) from the published English — publishing each. English
+ * is never blocked on translations; a DeepL failure leaves the article live in
+ * English only and the next tick re-attempts.
  *
- * Idempotent: ingest UPDATEs/INSERTs localization rows (no dupes), publish is a
- * no-op transition on already-published rows, and the id is cleared only after a
- * successful ingest so a transient failure simply retries next tick.
+ * Idempotent: ingest + DeepL UPDATE/INSERT localization rows (no dupes), publish
+ * is a no-op on already-published rows, and pending_batch_id is cleared only after
+ * a successful ingest so a transient failure simply retries next tick.
  */
 import { getServiceClient } from "@/lib/supabase/server";
 import { getBatch, getBatchResults } from "@/lib/resources/generation/batchClient";
 import { ingestBatchResults, type IngestOutcome } from "@/lib/resources/generation/batchExpand";
 import { publishContentItemThroughQueue } from "@/lib/resources/cron/publishQueueTick";
+import { translateArticleLocales, type LocaleTranslationOutcome } from "@/lib/resources/generation/translateViaDeepL";
 
 /** Cap items processed per tick so a backlog of pending batches can't blow the function budget. */
 const MAX_ITEMS_PER_TICK = 5;
@@ -33,6 +34,8 @@ export type AutopilotBatchDrainResult = {
     /** True when the held item was promoted to workflow_status='published' this tick. */
     promoted?: boolean;
     outcomes?: IngestOutcome[];
+    /** Per-locale DeepL translation outcomes (English-first: the non-English locales). */
+    translated?: LocaleTranslationOutcome[];
     error?: string;
   }>;
 };
@@ -110,8 +113,21 @@ export async function drainAutopilotBatches(): Promise<AutopilotBatchDrainResult
         }
       }
 
+      // English-first: now that en-US is published, produce the other locales via
+      // DeepL (English-first model — Claude only writes English). Each is inserted
+      // + published. Publish-EN-first: a DeepL failure leaves the article live in
+      // English only; the next drain tick re-attempts (idempotent per locale).
+      let translated;
+      if (promoted) {
+        try {
+          translated = await translateArticleLocales(contentItemId, { publish: true });
+        } catch (e) {
+          console.error(`[autopilot-batch-drain] DeepL translate failed for ${contentItemId}:`, e instanceof Error ? e.message : String(e));
+        }
+      }
+
       result.ingested += 1;
-      result.items.push({ contentItemId, batchId, status: "ingested", promoted, outcomes });
+      result.items.push({ contentItemId, batchId, status: "ingested", promoted, outcomes, translated: translated?.outcomes });
     } catch (e) {
       result.items.push({
         contentItemId,
