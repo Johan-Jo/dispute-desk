@@ -134,17 +134,122 @@ export interface PipelineOptions {
    * Default `true` (scheduled cron). Manual admin runs pass `false` so only this article’s locales publish in-request.
    */
   autopilotDrainBacklog?: boolean;
-  /**
-   * English-first generation. When true, the synchronous request generates and
-   * publishes ONLY the source locale (en-US), then submits the remaining target
-   * locales to the async Anthropic batch path (drained + published later by the
-   * batch-expand cron). This keeps a single article well under Vercel's 300s
-   * function limit — generating all 6 locales synchronously was 504-ing, so no
-   * article was ever saved. The set this article is responsible for is remembered
-   * on `content_archive_items.target_locale_set` (durable post-conversion), so the
-   * batch step recovers the missing locales from there. Default off (full sync).
-   */
-  englishFirstAsyncRest?: boolean;
+}
+
+export interface BatchSubmitResult {
+  contentItemId: string | null;
+  batchId: string | null;
+  requestedLocales: number;
+  error: string | null;
+}
+
+/**
+ * All-async generation: create the content_item shell (NO synchronous LLM call)
+ * and submit ALL target locales to the Anthropic Message Batches API. The drain
+ * cron (`/api/cron/autopilot-batch-drain`) ingests + publishes each locale as the
+ * batch completes.
+ *
+ * Why this exists: the synchronous path issued a NON-streaming Claude request with
+ * max_tokens 24000. A single long article completion blocks the whole request and
+ * exceeds Vercel's 300s function limit (Anthropic requires streaming at high
+ * max_tokens) — so the autopilot cron 504'd and saved nothing, even for one
+ * locale. The batch API has no 300s limit, is 50% cheaper, and the batch builder
+ * runs each locale as a SINGLE attempt (no validator-retry re-billing). The
+ * submit itself is a fast POST, so this function returns in well under the limit.
+ *
+ * The article is held at `in-editorial-review` until the batch drains; the public
+ * hub renders per-locale on `is_published`, so nothing is visible until a locale
+ * is actually ingested + published.
+ */
+export async function submitArticleAsBatch(archiveItemId: string): Promise<BatchSubmitResult> {
+  if (!isGenerationEnabled()) {
+    return { contentItemId: null, batchId: null, requestedLocales: 0, error: "Generation is not enabled." };
+  }
+
+  const loaded = await loadArchiveForGeneration(archiveItemId);
+  if (!loaded.ok) {
+    return { contentItemId: loaded.linkedContentItemId, batchId: null, requestedLocales: 0, error: loaded.error };
+  }
+
+  const brief = loaded.brief;
+  const sb = getServiceClient();
+
+  const primaryPillar = resolvePrimaryPillarForGeneration({
+    primaryPillar: brief.primaryPillar,
+    proposedTitle: brief.proposedTitle,
+    targetKeyword: brief.targetKeyword,
+    summary: brief.summary,
+  });
+
+  let publishPrereq: Awaited<ReturnType<typeof ensurePublishPrerequisites>>;
+  try {
+    publishPrereq = await ensurePublishPrerequisites();
+  } catch (e) {
+    return { contentItemId: null, batchId: null, requestedLocales: 0, error: `Publish prerequisites failed: ${e instanceof Error ? e.message : String(e)}` };
+  }
+
+  // Held until the batch drains; per-locale publish happens in the drain cron.
+  const { data: newItem, error: itemError } = await sb
+    .from("content_items")
+    .insert({
+      content_type: brief.contentType,
+      primary_pillar: primaryPillar,
+      topic: brief.targetKeyword,
+      target_keyword: brief.targetKeyword,
+      search_intent: brief.searchIntent,
+      priority: "medium",
+      workflow_status: "in-editorial-review",
+      generated_at: new Date().toISOString(),
+      author_id: publishPrereq.authorId,
+      primary_cta_id: publishPrereq.primaryCtaId,
+    })
+    .select("id")
+    .single();
+
+  if (itemError || !newItem) {
+    return { contentItemId: null, batchId: null, requestedLocales: 0, error: `Failed to create content item: ${itemError?.message}` };
+  }
+  const contentItemId = newItem.id as string;
+
+  const tagRows = publishPrereq.tagIds.map((tag_id) => ({ content_item_id: contentItemId, tag_id }));
+  const { error: tagErr } = await sb.from("content_item_tags").insert(tagRows);
+  if (tagErr) {
+    await sb.from("content_items").delete().eq("id", contentItemId);
+    return { contentItemId: null, batchId: null, requestedLocales: 0, error: `Failed to attach tags: ${tagErr.message}` };
+  }
+
+  // Mark converted so the batch ingest can recover the brief (incl. target_locale_set)
+  // from the archive row, and the picker never re-selects this archive.
+  const { error: archiveErr } = await sb
+    .from("content_archive_items")
+    .update({
+      created_from_archive_to_content_item_id: contentItemId,
+      status: "converted",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", archiveItemId);
+  if (archiveErr) {
+    console.error("[generation] Failed to mark archive as converted:", archiveErr.message);
+  }
+
+  // Submit ALL target locales as one batch. applyGuards:false — there are no
+  // existing localizations to compare against on a brand-new item.
+  try {
+    const submitted = await submitBacklogBatch({
+      itemIds: [contentItemId],
+      locales: brief.targetLocales,
+      applyGuards: false,
+    });
+    if (submitted.batchId) {
+      await sb.from("content_items").update({ pending_batch_id: submitted.batchId }).eq("id", contentItemId);
+    }
+    console.log(`[generation] All-async: submitted batch ${submitted.batchId ?? "(none)"} for ${submitted.requested} locale(s) on ${contentItemId}`);
+    return { contentItemId, batchId: submitted.batchId, requestedLocales: submitted.requested, error: submitted.batchId ? null : "Batch builder produced zero requests" };
+  } catch (e) {
+    // Item shell exists but no batch — the drain cron's reconciliation (pending
+    // null + held) won't pick it up, so surface the error for a manual re-submit.
+    return { contentItemId, batchId: null, requestedLocales: 0, error: `Batch submit failed: ${e instanceof Error ? e.message : String(e)}` };
+  }
 }
 
 export async function runGenerationPipeline(archiveItemId: string, options: PipelineOptions = {}): Promise<PipelineResult> {
@@ -165,17 +270,6 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
   const routeKind = routeKindForContentType(brief.contentType);
   const cmsSettings = await getCmsSettings();
   const resolvedPrompts = resolveGenerationPrompts(cmsSettings);
-
-  // English-first: generate + publish only the source locale synchronously and
-  // hand the rest to the async batch (see PipelineOptions.englishFirstAsyncRest).
-  // `fullTargetLocales` is the set this article must eventually cover; it stays
-  // recoverable from content_archive_items.target_locale_set for the batch step.
-  const fullTargetLocales = brief.targetLocales;
-  const englishFirstSourceLocale = fullTargetLocales[0] ?? "en-US";
-  const englishFirst = options.englishFirstAsyncRest === true && fullTargetLocales.length > 1;
-  if (englishFirst) {
-    brief.targetLocales = [englishFirstSourceLocale];
-  }
 
   const contextByLocale: Record<string, GenerationContext> = {};
   for (const loc of brief.targetLocales) {
@@ -326,39 +420,6 @@ export async function runGenerationPipeline(archiveItemId: string, options: Pipe
     if (locError) {
       console.error("[generation] Failed to insert localizations:", locError.message);
       return { contentItemId, results, error: `Failed to insert localizations: ${locError.message}` };
-    }
-  }
-
-  // English-first: the remaining target locales are generated off-request by the
-  // async Anthropic batch (batch-expand cron drains + publishes each as it lands).
-  // Non-blocking: a submit failure leaves the article live in en-US only and is
-  // recoverable by re-running the batch-expand submit for this item.
-  if (englishFirst) {
-    const remainingLocales = fullTargetLocales.filter((l) => l !== englishFirstSourceLocale);
-    if (remainingLocales.length > 0) {
-      try {
-        const submitted = await submitBacklogBatch({
-          itemIds: [contentItemId],
-          locales: remainingLocales,
-          applyGuards: false,
-        });
-        if (submitted.batchId) {
-          // Recorded so the autopilot-batch-drain cron can ingest + publish the
-          // remaining locales once the batch ends, then clear this.
-          await sb
-            .from("content_items")
-            .update({ pending_batch_id: submitted.batchId })
-            .eq("id", contentItemId);
-        }
-        console.log(
-          `[generation] English-first: submitted batch ${submitted.batchId ?? "(none)"} for ${submitted.requested} locale(s) on ${contentItemId}`
-        );
-      } catch (e) {
-        console.error(
-          "[generation] English-first batch submit failed (en-US is live; rest will backfill on retry):",
-          e instanceof Error ? e.message : String(e)
-        );
-      }
     }
   }
 
