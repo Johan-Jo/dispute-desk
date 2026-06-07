@@ -553,6 +553,18 @@ describe("V8 — slug locale enforcement", () => {
     );
     expect(f).toBeNull();
   });
+
+  it("does not flag a year/number token (e.g. 2026) as an English token", () => {
+    // Regression: "2026" appears in both the English keyword and the localized
+    // slug, but it is language-neutral — it must NOT trigger a V8 rejection.
+    const c = makeCandidate({ slug: "estorno-guia-operacional-2026" });
+    const f = v8_slugLocale(
+      c,
+      makeBrief({ proposedTitle: "Chargeback operational guide 2026", targetKeyword: "chargeback 2026" }),
+      "pt-BR"
+    );
+    expect(f).toBeNull();
+  });
 });
 
 /* ── V9 — uniform pacing detector ────────────────────────────── */
