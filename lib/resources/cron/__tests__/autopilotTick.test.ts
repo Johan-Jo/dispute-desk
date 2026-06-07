@@ -9,14 +9,14 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/lib/resources/generation/pipeline", () => ({
-  runGenerationPipeline: vi.fn(),
+  submitArticleAsBatch: vi.fn(),
 }));
 
 vi.mock("@/lib/resources/generation/generate", () => ({
   isGenerationEnabled: vi.fn(),
 }));
 
-const mockPipeline = vi.mocked(pipeline.runGenerationPipeline);
+const mockSubmitBatch = vi.mocked(pipeline.submitArticleAsBatch);
 const mockGenEnabled = vi.mocked(generate.isGenerationEnabled);
 
 function mockSupabaseForOneArchive(settingsJson: Record<string, unknown>) {
@@ -51,15 +51,15 @@ describe("executeAutopilotTick", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGenEnabled.mockReturnValue(true);
-    mockPipeline.mockResolvedValue({
+    mockSubmitBatch.mockResolvedValue({
       contentItemId: "ci-1",
-      results: [],
+      batchId: "msgbatch_test",
+      requestedLocales: 6,
       error: null,
-      publishQueueDrain: { ok: true, processed: 0, results: [] },
     });
   });
 
-  it("passes autopilotDrainBacklog false when bypassRateLimit (manual admin)", async () => {
+  it("submits the picked archive item as an async batch (manual admin)", async () => {
     mockSupabaseForOneArchive({
       autopilotEnabled: true,
       autopilotArticlesPerDay: 1,
@@ -67,14 +67,12 @@ describe("executeAutopilotTick", () => {
 
     await executeAutopilotTick({ bypassRateLimit: true, overrideCount: 1 });
 
-    expect(mockPipeline).toHaveBeenCalledWith("archive-1", {
-      autopilot: true,
-      autopilotDrainBacklog: false,
-      englishFirstAsyncRest: true,
-    });
+    // All-async: the tick submits the article to the Anthropic batch (no sync
+    // generation, no pipeline options) — the drain cron ingests + publishes.
+    expect(mockSubmitBatch).toHaveBeenCalledWith("archive-1");
   });
 
-  it("passes autopilotDrainBacklog true for scheduled cron (no bypass)", async () => {
+  it("submits the picked archive item as an async batch (scheduled cron)", async () => {
     mockSupabaseForOneArchive({
       autopilotEnabled: true,
       autopilotArticlesPerDay: 1,
@@ -82,10 +80,6 @@ describe("executeAutopilotTick", () => {
 
     await executeAutopilotTick();
 
-    expect(mockPipeline).toHaveBeenCalledWith("archive-1", {
-      autopilot: true,
-      autopilotDrainBacklog: true,
-      englishFirstAsyncRest: true,
-    });
+    expect(mockSubmitBatch).toHaveBeenCalledWith("archive-1");
   });
 });

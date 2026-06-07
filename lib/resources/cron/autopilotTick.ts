@@ -1,6 +1,6 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import { isBacklogRankUnavailableError } from "@/lib/resources/isBacklogRankUnavailableError";
-import { runGenerationPipeline } from "@/lib/resources/generation/pipeline";
+import { submitArticleAsBatch } from "@/lib/resources/generation/pipeline";
 import { isGenerationEnabled } from "@/lib/resources/generation/generate";
 import { isArchiveAutopilotEligible } from "@/lib/resources/generation/tierAutopilotPolicy";
 import type { PublishQueueTickResult } from "@/lib/resources/cron/publishQueueTick";
@@ -145,22 +145,17 @@ export async function executeAutopilotTick(opts: AutopilotTickOptions = {}): Pro
     triedThisTick.add(archiveItemId);
     attempts += 1;
 
-    const result = await runGenerationPipeline(archiveItemId, {
-      autopilot: true,
-      /** Manual admin (`bypassRateLimit`) should only publish this article’s locales; cron drains backlog. */
-      autopilotDrainBacklog: !opts.bypassRateLimit,
-      /**
-       * Generate + publish en-US synchronously, hand the other 5 locales to the
-       * async batch. Generating all 6 synchronously exceeded Vercel's 300s limit
-       * and 504'd, so no article landed. The batch-expand cron fills the rest.
-       */
-      englishFirstAsyncRest: true,
-    });
+    // All-async: create the content_item shell and submit ALL locales to the
+    // Anthropic batch (no synchronous LLM call). The submit is a fast POST, so the
+    // tick never approaches the 300s limit; the autopilot-batch-drain cron ingests
+    // + publishes each locale as the batch completes. The synchronous path issued
+    // a non-streaming max_tokens:24000 Claude request that blocked past 300s and
+    // 504'd, saving nothing — even for a single locale.
+    const result = await submitArticleAsBatch(archiveItemId);
     generated.push({
       archiveItemId,
       contentItemId: result.contentItemId,
       error: result.error,
-      publishQueueDrain: result.publishQueueDrain,
     });
   }
 
