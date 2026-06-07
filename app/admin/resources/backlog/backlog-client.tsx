@@ -148,6 +148,25 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
     };
   }, [items]);
 
+  async function persistOrder(ordered: BacklogItem[]) {
+    // Persist the FULL backlog order — backlog_rank is global, and the autopilot
+    // picks by `backlog_rank asc`. Without this the move only updated local state
+    // and reverted on reload.
+    try {
+      const res = await fetch("/api/admin/resources/archive-items/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderedIds: ordered.map((i) => i.id) }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast("error", data.error ?? "Failed to save order");
+      }
+    } catch {
+      toast("error", "Network error saving order");
+    }
+  }
+
   function moveItem(index: number, direction: -1 | 1) {
     const to = index + direction;
     if (to < 0 || to >= filtered.length) return;
@@ -157,6 +176,8 @@ export function BacklogClient({ initialItems }: BacklogClientProps) {
     if (fromIdx === -1 || toIdx === -1) return;
     [next[fromIdx], next[toIdx]] = [next[toIdx], next[fromIdx]];
     setItems(next);
+    // Persist the new global order so it survives reload + drives the autopilot pick.
+    void persistOrder(next);
   }
 
   const hasActiveFilters = priorityFilter !== "all" || statusFilter !== "all";
