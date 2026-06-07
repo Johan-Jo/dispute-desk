@@ -39,6 +39,7 @@ import {
   type TwoPassBriefContext,
 } from "./twoPassPrompts";
 import { DEFAULT_LOCALE_INSTRUCTIONS } from "./prompts";
+import { ARTICLE_OUTPUT_CONFIG } from "./articleJsonSchema";
 
 const MODEL = process.env.GENERATION_MODEL ?? "gpt-4o";
 // Bumped 2 → 3 after observing repeat schema-leakage cases where the model
@@ -249,22 +250,21 @@ async function callClaudeChat(
   // Opus 4.x dropped `temperature` (400s with "deprecated"). Send it for
   // Sonnet / Haiku / older models only.
   const supportsTemperature = !/^claude-opus-4/.test(model);
-  // We previously seeded an assistant-turn "{" prefill to force JSON from token 1.
-  // Claude 4.x models (claude-sonnet-4-6 and newer) REJECT assistant prefill with
-  // a 400 ("This model does not support assistant message prefill. The conversation
-  // must end with a user message."), which silently broke every autopilot
-  // generation after the 2026-05-31 OpenAI→Claude swap. Instead we end on a user
-  // turn and instruct JSON-only output in the prompt; the parser below tolerates a
-  // ```json fence or stray prose either way.
-  const jsonOnlyInstruction =
-    "\n\nReturn ONLY the JSON object. Start your reply with `{` and end with `}`. " +
-    "Do not include any prose, explanation, or Markdown code fences.";
+  // JSON is guaranteed by Anthropic structured outputs (output_config.format),
+  // NOT by prompt instructions. History: we first used an assistant-turn "{"
+  // prefill (Claude 4.x rejects it with a 400), then a prompt "return only JSON"
+  // nudge — but Sonnet did not reliably escape double-quotes inside the article
+  // HTML, so JSON.parse failed on long articles ("model returned non-JSON").
+  // output_config.format makes the API itself emit schema-valid, properly-escaped
+  // JSON — no prefill, no escaping bugs, no retries. The conversation still ends
+  // on a user turn (structured outputs are incompatible with prefill anyway).
   const requestBody: Record<string, unknown> = {
     model,
     system: systemPrompt,
-    messages: [{ role: "user", content: `${userPrompt}${jsonOnlyInstruction}` }],
+    messages: [{ role: "user", content: userPrompt }],
     // Headroom for tier-floor articles (clusters ~1500w, pillars 3000w+) plus JSON wrapping.
     max_tokens: 24000,
+    output_config: ARTICLE_OUTPUT_CONFIG,
   };
   if (supportsTemperature) requestBody.temperature = temperature;
 

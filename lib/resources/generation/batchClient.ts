@@ -21,6 +21,8 @@ export interface BatchRequestParams {
   system: string;
   messages: Array<{ role: "user" | "assistant"; content: string }>;
   temperature?: number;
+  /** Anthropic structured outputs — guarantees schema-valid JSON (see articleJsonSchema). */
+  output_config?: unknown;
 }
 
 export interface BatchRequest {
