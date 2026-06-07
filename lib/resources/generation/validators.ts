@@ -31,7 +31,9 @@ export type ValidatorId =
   | "V6_no_internal_links"
   | "V7_embedding_similarity"
   | "V8_slug_locale"
-  | "V9_uniform_pacing";
+  | "V9_uniform_pacing"
+  | "V10_incomplete_body"
+  | "V11_title_length";
 
 export type ValidatorSeverity = "hard" | "soft";
 
@@ -648,6 +650,73 @@ export function v9_uniformPacing(candidate: ValidatorCandidate): ValidatorFailur
   };
 }
 
+/* ── V10 — Incomplete / truncated body (hard) ─────────────────────── */
+
+/**
+ * Rejects an article whose `mainHtml` ends mid-sentence. Structured outputs
+ * (output_config.format) occasionally make Sonnet END THE BODY EARLY to satisfy
+ * the JSON schema — it stops writing prose mid-sentence, then closes the JSON
+ * with the remaining fields (keyTakeaways/faq/disclaimer). The result is valid
+ * JSON with `stop_reason: end_turn`, so nothing upstream catches it — observed:
+ * an article ending `<p>The merchant's evidence answered ` with no closing tag.
+ *
+ * A complete body's last visible text ends with terminal punctuation (`.`, `!`,
+ * `?`, `:`), a closing quote/paren after punctuation, or a list/heading. A body
+ * that ends on a bare word — or has an unclosed final `<p>` — is incomplete.
+ *
+ * Single-attempt pipeline (no retries): a hard failure here simply means the
+ * locale is not published, rather than re-billing a regeneration.
+ */
+export function v10_incompleteBody(candidate: ValidatorCandidate): ValidatorFailure | null {
+  const html = (candidate.body_json.mainHtml ?? "").trim();
+  if (!html) return null; // V1 handles empty/too-short
+
+  // 1. Unclosed final paragraph: more <p> opens than </p> closes.
+  const opens = (html.match(/<p\b[^>]*>/gi) ?? []).length;
+  const closes = (html.match(/<\/p>/gi) ?? []).length;
+  const unclosedParagraph = opens > closes;
+
+  // 2. Last visible text ends mid-sentence. Strip tags, look at the final char.
+  const text = htmlToText(html);
+  // Terminal: sentence punctuation, optionally followed by a closing quote/paren/bracket.
+  const endsComplete = /[.!?:][")'\]”»]?$/.test(text);
+
+  if (!unclosedParagraph && endsComplete) return null;
+
+  const tail = text.slice(-80);
+  return {
+    id: "V10_incomplete_body",
+    severity: "hard",
+    message: `Article body appears truncated — ends mid-sentence${unclosedParagraph ? " with an unclosed <p>" : ""}: "…${tail}".`,
+    retryHint:
+      "The article body ended mid-sentence (the model stopped writing prose early to close the JSON). Write the COMPLETE article: every paragraph must be a full sentence ending in proper punctuation, every <p> must be closed, and the final section must reach a natural conclusion. Do not abandon a sentence to finish the JSON structure — finish the prose first.",
+  };
+}
+
+/* ── V11 — Title length / keyword-stuffing (hard, en-US source only) ── */
+
+/**
+ * Rejects an over-long `title`. Google displays ~50–60 characters / ~600px of a
+ * title tag; longer titles get truncated in SERPs and read as keyword-stuffing.
+ * Enforced on the en-US SOURCE title only — non-English titles are DeepL
+ * translations of it and can legitimately run longer (German/French expansion);
+ * gating those would reject correct translations. The generation prompt also
+ * instructs ≤ 60 chars; this is the deterministic backstop.
+ */
+export const TITLE_MAX_CHARS = 60;
+
+export function v11_titleLength(candidate: ValidatorCandidate, locale: string): ValidatorFailure | null {
+  if (locale !== "en-US") return null;
+  const t = (candidate.title ?? "").trim();
+  if (t.length <= TITLE_MAX_CHARS) return null;
+  return {
+    id: "V11_title_length",
+    severity: "hard",
+    message: `Title is ${t.length} characters (max ${TITLE_MAX_CHARS} for SEO): "${t}".`,
+    retryHint: `The title is ${t.length} characters — Google truncates titles past ~60 characters and over-long titles read as keyword-stuffing. Rewrite the title to ${TITLE_MAX_CHARS} characters or fewer. Pick ONE specific angle; do not chain multiple sub-topics with commas/colons (e.g. not "Chargeback Lifecycle, Costs, and How to Fight Back: 2026 Merchant Playbook"). Keep it concise and specific.`,
+  };
+}
+
 /* ── V7 — Embedding semantic similarity ───────────────────────────── */
 
 export interface EmbeddingClient {
@@ -791,6 +860,12 @@ export async function runAllValidators(
 
   const v9 = v9_uniformPacing(candidate);
   if (v9) failures.push(v9);
+
+  const v10 = v10_incompleteBody(candidate);
+  if (v10) failures.push(v10);
+
+  const v11 = v11_titleLength(candidate, locale);
+  if (v11) failures.push(v11);
 
   const v7 = await v7_embeddingSimilarity(
     candidate,

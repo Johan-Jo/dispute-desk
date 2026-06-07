@@ -15,6 +15,8 @@ import {
   v7_embeddingSimilarity,
   v8_slugLocale,
   v9_uniformPacing,
+  v10_incompleteBody,
+  v11_titleLength,
   wordCount,
   type EmbeddingClient,
   type ValidatorBriefContext,
@@ -567,6 +569,88 @@ describe("V8 — slug locale enforcement", () => {
   });
 });
 
+/* ── V10 — incomplete / truncated body ───────────────────────── */
+
+describe("V10 — incomplete body", () => {
+  it("flags a body that ends mid-sentence with an unclosed <p> (real incident)", () => {
+    const c = makeCandidate({
+      body_json: {
+        mainHtml:
+          "<h2>The messy case</h2><p>The issuer ruled against the merchant; the delivery confirmation didn't resolve the account takeover question.</p>" +
+          "<p>The merchant's evidence answered ",
+        keyTakeaways: ["A"],
+        faq: [],
+        disclaimer: "info",
+      },
+    });
+    const f = v10_incompleteBody(c);
+    expect(f?.id).toBe("V10_incomplete_body");
+    expect(f?.severity).toBe("hard");
+  });
+
+  it("flags a body ending on a bare word even with balanced tags", () => {
+    const c = makeCandidate({
+      body_json: {
+        mainHtml: "<h2>S</h2><p>This sentence simply stops without any terminal</p>",
+        keyTakeaways: ["A"],
+        faq: [],
+        disclaimer: "info",
+      },
+    });
+    expect(v10_incompleteBody(c)?.id).toBe("V10_incomplete_body");
+  });
+
+  it("passes a body that ends with a complete sentence", () => {
+    const c = makeCandidate({
+      body_json: {
+        mainHtml:
+          "<h2>S</h2><p>Shopify forwards the dispute within 24 hours.</p><p>Respond before the deadline to keep the case alive.</p>",
+        keyTakeaways: ["A"],
+        faq: [],
+        disclaimer: "info",
+      },
+    });
+    expect(v10_incompleteBody(c)).toBeNull();
+  });
+
+  it("passes a body ending with a closing quote after punctuation", () => {
+    const c = makeCandidate({
+      body_json: {
+        mainHtml: '<h2>S</h2><p>The cardholder said “I never received it.”</p>',
+        keyTakeaways: ["A"],
+        faq: [],
+        disclaimer: "info",
+      },
+    });
+    expect(v10_incompleteBody(c)).toBeNull();
+  });
+});
+
+/* ── V11 — title length ──────────────────────────────────────── */
+
+describe("V11 — title length (SEO)", () => {
+  it("rejects an en-US title over 60 characters (real incident)", () => {
+    const c = makeCandidate({
+      title: "Chargeback Lifecycle, Costs, and How to Fight Back: 2026 Merchant Playbook",
+    });
+    const f = v11_titleLength(c, "en-US");
+    expect(f?.id).toBe("V11_title_length");
+    expect(f?.severity).toBe("hard");
+  });
+
+  it("passes an en-US title at/under 60 characters", () => {
+    const c = makeCandidate({ title: "How Shopify merchants fight fraud chargebacks" }); // 45 chars
+    expect(v11_titleLength(c, "en-US")).toBeNull();
+  });
+
+  it("does not gate non-English titles (DeepL translations can run longer)", () => {
+    const c = makeCandidate({
+      title: "Rückbuchung – Lebenszyklus, Kosten und Gegenmaßnahmen: Leitfaden für Händler 2026",
+    });
+    expect(v11_titleLength(c, "de-DE")).toBeNull();
+  });
+});
+
 /* ── V9 — uniform pacing detector ────────────────────────────── */
 
 describe("V9 — uniform pacing", () => {
@@ -656,7 +740,7 @@ describe("runAllValidators + retry feedback", () => {
         mainHtml:
           "<h2>Section One</h2><p>Shopify Admin path here. " +
           "operational specifics about chargebacks and evidence ".repeat(900) +
-          "</p>",
+          "and a final complete sentence.</p>",
         keyTakeaways: [],
         faq: [],
         disclaimer: "",
