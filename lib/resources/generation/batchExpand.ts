@@ -279,19 +279,20 @@ export async function buildBatchRequests(opts: BuildBatchOptions = {}): Promise<
       const extra = opts.extraByKey?.[key];
       if (extra?.trim()) userPrompt += `\n\n${extra.trim()}`;
       const temperature = ctx.brief.contentType === "legal_update" ? 0.3 : 0.4;
+      // Claude 4.x (claude-sonnet-4-6+) rejects assistant-turn prefill with a 400,
+      // so we end on a user turn and instruct JSON-only output in the prompt
+      // instead. extractJsonFromBatchMessage tolerates a fence / leading "{" either
+      // way. (Same fix as the sync path in generate.ts.)
+      const jsonOnlyUserPrompt =
+        `${userPrompt}\n\nReturn ONLY the JSON object. Start your reply with \`{\` and ` +
+        "end with `}`. Do not include any prose, explanation, or Markdown code fences.";
       requests.push({
         custom_id: key,
         params: {
           model,
           max_tokens: BATCH_MAX_TOKENS,
           system: resolvedPrompts.systemPrompt,
-          // Assistant-turn JSON prefill (same as the sync path): seed "{" so the
-          // model continues a JSON object and can't emit prose/fences — the fix
-          // for non-JSON batch failures. extractJsonFromBatchMessage restores the "{".
-          messages: [
-            { role: "user", content: userPrompt },
-            { role: "assistant", content: "{" },
-          ],
+          messages: [{ role: "user", content: jsonOnlyUserPrompt }],
           temperature,
         },
       });

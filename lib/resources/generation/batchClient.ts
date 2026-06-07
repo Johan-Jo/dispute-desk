@@ -120,11 +120,11 @@ export async function getBatchResults(batchId: string): Promise<BatchResultLine[
 }
 
 /**
- * Extract the JSON-bearing text from a succeeded batch message. Requests use an
- * assistant-turn "{" prefill (see batchExpand), so the reply is the CONTINUATION
- * of a JSON object (normally no leading "{"). Strip any stray fence, restore the
- * leading "{" unless the model echoed it, then slice to the last "}" to drop any
- * trailing prose.
+ * Extract the JSON-bearing text from a succeeded batch message. The reply
+ * normally starts with "{" (we instruct JSON-only output rather than prefilling,
+ * since Claude 4.x rejects assistant prefill). Strip any stray fence, restore a
+ * leading "{" if the model dropped it, then slice to the last "}" to drop any
+ * trailing prose. Tolerant of both shapes so older results still parse.
  */
 export function extractJsonFromBatchMessage(line: BatchResultLine): string | null {
   if (line.result.type !== "succeeded") return null;

@@ -27,8 +27,8 @@ describe("extractJsonFromBatchMessage", () => {
     result: { type: "succeeded", message: { content: [{ type: "text", text }] } },
   });
 
-  it("restores the leading '{' on a prefill continuation", () => {
-    // With the assistant-turn "{" prefill, the reply starts mid-object.
+  it("restores a missing leading '{'", () => {
+    // Defensive: if the model ever drops the opening brace, the extractor restores it.
     const out = extractJsonFromBatchMessage(succeeded('"title":"Hi"}'));
     expect(out).toBe('{"title":"Hi"}');
   });
