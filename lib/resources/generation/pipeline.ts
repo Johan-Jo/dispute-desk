@@ -232,12 +232,16 @@ export async function submitArticleAsBatch(archiveItemId: string): Promise<Batch
     console.error("[generation] Failed to mark archive as converted:", archiveErr.message);
   }
 
-  // Submit ALL target locales as one batch. applyGuards:false — there are no
-  // existing localizations to compare against on a brand-new item.
+  // English-first: Claude generates ONLY en-US (one batch request); the other
+  // locales are produced by DeepL from the published English in the drain cron
+  // (translateArticleLocales). Native multi-locale Claude generation drifted on
+  // terminology and truncated long bodies — DeepL is cheaper and deterministic.
+  // applyGuards:false — there are no existing localizations on a brand-new item.
+  const sourceLocale = brief.targetLocales.includes("en-US") ? "en-US" : (brief.targetLocales[0] ?? "en-US");
   try {
     const submitted = await submitBacklogBatch({
       itemIds: [contentItemId],
-      locales: brief.targetLocales,
+      locales: [sourceLocale],
       applyGuards: false,
     });
     if (submitted.batchId) {
