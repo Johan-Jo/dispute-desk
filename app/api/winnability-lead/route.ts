@@ -119,6 +119,8 @@ export async function POST(req: NextRequest) {
   const hot = body.winnability === "win" && ratio != null && ratio >= 0.9;
 
   // Best-effort delivery — log and continue on any failure so /test stays instant.
+  // The response carries `emailed`/`reason` for observability (the client ignores
+  // the body; a curl/probe can read whether delivery actually succeeded).
   if (!RESEND_API_KEY) {
     console.warn("[winnability-lead] RESEND_API_KEY not set — lead not emailed", {
       email,
@@ -126,7 +128,7 @@ export async function POST(req: NextRequest) {
       verdict,
       ratio,
     });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, emailed: false, reason: "RESEND_API_KEY not set" });
   }
 
   const answerLines = ["reason", "returning", "window", "anchor"]
@@ -167,9 +169,19 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) {
-    console.error("[winnability-lead] Resend error:", error);
-    // Still report success — the merchant should always see their result.
+    // JSON.stringify so the full Resend payload (name/message/statusCode) lands
+    // in the logs — the bare object stringifies to "[object Object]" otherwise.
+    console.error("[winnability-lead] Resend error:", JSON.stringify(error));
+    // Still 2xx — the merchant should always see their result — but report the
+    // failure + reason so a probe can see delivery actually failed.
+    return NextResponse.json({
+      ok: true,
+      emailed: false,
+      reason: error.message ?? error.name ?? "send failed",
+      to: TO_EMAIL,
+      from: FROM_EMAIL,
+    });
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, emailed: true, to: TO_EMAIL });
 }
