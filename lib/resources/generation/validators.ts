@@ -151,8 +151,13 @@ const EXPLANATORY_HEADING_PATTERNS: RegExp[] = [
  * structural sameness the user is targeting. Hard-fails any of these patterns.
  */
 const SCHEMA_LEAKED_HEADING_PATTERNS: RegExp[] = [
-  // Old (v1) schema field names
-  /\bfailure modes?\b/i,
+  // Old (v1) schema field names. "failure modes?" is anchored so it only fires on
+  // the BARE schema-category heading ("Failure Modes", "Critical Failure Modes"),
+  // NOT when the phrase sits inside a legitimate descriptive heading ("Operational
+  // failure modes that lose winnable cases") — the system prompt explicitly asks
+  // for operational failure modes, so that good form must survive. The other
+  // phrases keep their original \b-matching (they don't collide with natural prose).
+  /^(?:\w+\s+){0,2}failure modes?$/i,
   /\bevidence hierarch/i,
   /\bmessy examples?\b/i,
   /\breal[- ]world scenarios?\b/i,

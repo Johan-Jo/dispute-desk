@@ -247,7 +247,7 @@ export async function submitArticleAsBatch(archiveItemId: string): Promise<Batch
     if (submitted.batchId) {
       await sb.from("content_items").update({ pending_batch_id: submitted.batchId }).eq("id", contentItemId);
     }
-    console.log(`[generation] All-async: submitted batch ${submitted.batchId ?? "(none)"} for ${submitted.requested} locale(s) on ${contentItemId}`);
+    console.log(`[generation] English-first: submitted en-US batch ${submitted.batchId ?? "(none)"} (${submitted.requested} locale) on ${contentItemId}`);
     return { contentItemId, batchId: submitted.batchId, requestedLocales: submitted.requested, error: submitted.batchId ? null : "Batch builder produced zero requests" };
   } catch (e) {
     // Item shell exists but no batch — the drain cron's reconciliation (pending
