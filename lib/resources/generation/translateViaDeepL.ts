@@ -32,16 +32,43 @@ const CHARGEBACK_TERM: Record<string, { s: string; p: string }> = {
 };
 
 /** Opaque sentinel — must contain NO translatable substring (an earlier token with
- *  "CHARGEBACK" inside was partially translated). */
+ *  "CHARGEBACK" inside was partially translated). Applied to ALL locales (chargeback
+ *  is glossary-locked everywhere). */
 const subSource = (s: string | null | undefined): string =>
   (s ?? "").replace(/chargebacks/gi, "QZXTERMZZS").replace(/chargeback/gi, "QZXTERMZZ");
 
+/**
+ * Industry terms kept as the English loanword for SPECIFIC locales (no established
+ * translation; the literal translation reads wrong). Per-locale because the policy
+ * differs — e.g. "friendly fraud" stays English in Swedish only (like 'chargeback'),
+ * while de/es/fr/pt use their own translation. Each entry: the phrase + an opaque
+ * sentinel token (no translatable substring) so DeepL leaves it alone; restored to
+ * the English phrase after translation.
+ */
+const KEEP_ENGLISH_TERMS: Record<string, Array<{ re: RegExp; token: string; english: string }>> = {
+  "sv-SE": [
+    { re: /friendly fraud/gi, token: "QZXFFTERMZZ", english: "Friendly Fraud" },
+  ],
+};
+
 function makeRestore(locale: string): (s: string | null | undefined) => string {
   const term = CHARGEBACK_TERM[locale];
-  return (s) =>
-    (s ?? "")
+  const keep = KEEP_ENGLISH_TERMS[locale] ?? [];
+  return (s) => {
+    let out = (s ?? "")
       .replace(/qzxtermzzs/gi, term.p)
       .replace(/qzxtermzz/gi, term.s);
+    for (const k of keep) out = out.replace(new RegExp(k.token, "gi"), k.english);
+    return out;
+  };
+}
+
+/** Apply the per-locale keep-English sentinel protection on top of the shared chargeback sub. */
+function protectForLocale(locale: string, s: string): string {
+  const keep = KEEP_ENGLISH_TERMS[locale] ?? [];
+  let out = s;
+  for (const k of keep) out = out.replace(k.re, k.token);
+  return out;
 }
 
 const capFirst = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
@@ -140,13 +167,15 @@ export async function translateArticleLocales(
   for (const locale of locales) {
     const targetLang = DEEPL_LANG[locale];
     const restore = makeRestore(locale);
+    // Per-locale keep-English protection (e.g. 'friendly fraud' stays English in sv).
+    const pl = (s: string) => protectForLocale(locale, s);
     try {
-      const plain = [enTitle, enExcerpt, enMetaTitle, enMetaDesc, enDisclaimer, ...kt];
-      faq.forEach((f) => { plain.push(f.q); plain.push(f.a); });
+      const plain = [pl(enTitle), pl(enExcerpt), pl(enMetaTitle), pl(enMetaDesc), pl(enDisclaimer), ...kt.map(pl)];
+      faq.forEach((f) => { plain.push(pl(f.q)); plain.push(pl(f.a)); });
 
       // Serialize the two DeepL calls (concurrent tripped the free-tier rate limit).
       const tPlain = await deeplTranslate(key, plain, targetLang, false);
-      const tHtml = await deeplTranslate(key, [enHtml], targetLang, true);
+      const tHtml = await deeplTranslate(key, [pl(enHtml)], targetLang, true);
 
       let i = 0;
       const title = capFirst(restore(tPlain[i++]));

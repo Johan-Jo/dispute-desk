@@ -10,7 +10,7 @@ const enSource = {
   route_kind: "resources",
   content_items: { content_type: "cluster_article" },
   body_json: {
-    mainHtml: '<h2>Intro</h2><p>A chargeback is a forced reversal. Issue a refund instead when appropriate.</p>',
+    mainHtml: '<h2>Intro</h2><p>A chargeback is a forced reversal. Friendly fraud is a common cause. Issue a refund instead when appropriate.</p>',
     keyTakeaways: ["Respond to the chargeback before the deadline."],
     faq: [{ q: "What is a chargeback?", a: "A forced reversal of a card payment." }],
     disclaimer: "Informational only.",
@@ -91,6 +91,25 @@ describe("translateArticleLocales (DeepL English-first translation)", () => {
     expect(res.outcomes[0].status).toBe("inserted");
     const row = writes.find((w) => w.op === "insert")!.row;
     expect(String(row.title)).toBe("Contracargo: ciclo de vida"); // restored + capitalized
+  });
+
+  it("keeps 'Friendly Fraud' as English in Swedish (not a literal translation)", async () => {
+    const res = await translateArticleLocales("item-1", { locales: ["sv-SE"], publish: true });
+    expect(res.outcomes[0].status).toBe("inserted");
+    const row = writes.find((w) => w.op === "insert")!.row;
+    const html = String((row.body_json as { mainHtml: string }).mainHtml);
+    // The English industry term survives in sv; no opaque token leaks through.
+    expect(html).toContain("Friendly Fraud");
+    expect(html).not.toMatch(/qzxff/i);
+  });
+
+  it("does NOT keep 'friendly fraud' English in es-ES (only sv is keep-English)", async () => {
+    const res = await translateArticleLocales("item-1", { locales: ["es-ES"], publish: true });
+    expect(res.outcomes[0].status).toBe("inserted");
+    const row = writes.find((w) => w.op === "insert")!.row;
+    // es has no keep-English entry, so no friendly-fraud token is applied; the
+    // phrase passes through to DeepL normally (mock echoes it). No token leak.
+    expect(JSON.stringify(row)).not.toMatch(/qzxff/i);
   });
 
   it("fails gracefully when DEEPL_API_KEY is missing", async () => {
