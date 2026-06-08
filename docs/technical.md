@@ -360,6 +360,19 @@ Middleware routes `/playbook`, `/playbook/read`, `/playbook/sequence` through `i
 
 The funnel is built in the existing **editorial-dossier** brand (slate + cream paper, Crimson Pro/Instrument Serif, `§` markers, blue accent). Styles live under `.dd-playbook` / `.dd-pbreader` / `.nm-root` scopes in `app/globals.css`, reusing the dossier tokens. **No Brazil/PT-BR framing** (intentional GTM decision); FPT region eligibility is a neutral factual note only.
 
+### Winnability Test (5-minute lead magnet) — `/test`
+
+The interactive lead magnet that finally makes "→ disputedesk.app/test" deliver (design spec: `DP-TEST-01`). A merchant answers **6 questions about one real dispute** and gets two verdicts on one screen: **was this winnable under Visa Compelling Evidence 3.0?** and **how close is my chargeback ratio to the high-risk line?** The email gate sits *after* the answers and *before* the verdict — they've invested 5 minutes, so the ask converts.
+
+| Area | Route | Notes |
+|------|-------|--------|
+| The test | `/test` | `app/(marketing)/test/page.tsx` → `WinnabilityTest`. **Standalone full-bleed page** (no marketing header/footer), **English-only** like the legal pages — served from `app/(marketing)/`, **not** through next-intl, so it's exempt from i18n parity. Middleware routes `/test` in the same English-only branch as `/privacy`, `/terms`, etc. |
+| Lead capture | `POST /api/winnability-lead` | `{ email, store, answers, winnability, ratio, ts }`. 10s IP rate-limit + email regex (mirrors `/api/contact`). Emails the **fully-qualified lead** to `LEADS_FORM_TO ?? CONTACT_FORM_TO ?? support@disputedesk.app` via Resend, with a 🔥 **HOT LEAD** flag when the verdict is `win` + ratio ≥ 0.9% (call within the hour). Best-effort: always returns `{ ok: true }` so the merchant sees their verdict instantly even if email fails. |
+
+- **Scoring** (`components/marketing/WinnabilityTest.tsx`, client-side) — winnability is a CE 3.0 gate: friendly-fraud reason → returning customer → 120–365 day window → the **IP/device anchor** (the decider; name/email/address do **not** qualify). Outcomes: `win` / `borderline` (any "not sure") / `no` / `other` (INR/quality route to a different lane). The **ratio gauge** is `disputes ÷ orders`: green < 0.65%, amber 0.65–0.9%, red ≥ 0.9% (Visa Dispute Monitoring Program). Each state has its own honest CTA pointing at a real destination (`/#pricing` free-trial popup, `/demo`, `/en/contact`, `/en/playbook`).
+- **Fonts** loaded via `next/font` (Crimson Pro / Inter / Spline Sans Mono) exposed as `--font-dd-*` CSS variables; all visual styles are scoped under `.dd-wt` (verbatim port of the prototype CSS) so nothing leaks site-wide. In-progress state persists to `localStorage` (`dd_winnability_v1`) so a reload resumes.
+- **CTA chain:** once live, article + post first-comments flip from `→ disputedesk.app` to `→ disputedesk.app/test`, and the "free 5-minute test" wording becomes true.
+
 ## Resources Hub (public marketing)
 
 The **Resources Hub** is the localized **marketing / SEO** surface for long-form content (articles, templates, case studies, glossary, blog). It is **not** part of the embedded Shopify app.

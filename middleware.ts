@@ -120,13 +120,14 @@ export async function middleware(req: NextRequest) {
     return intlMiddleware(requestWithAppBridge(req, "0"));
   }
 
-  // --- Legal/support pages (English-only, served from app/(marketing)/) ---
+  // --- Legal/support pages + /test lead magnet (English-only, served from app/(marketing)/) ---
   if (
     pathname === "/privacy" ||
     pathname === "/terms" ||
     pathname === "/security" ||
     pathname === "/data-retention" ||
-    pathname === "/support"
+    pathname === "/support" ||
+    pathname === "/test"
   ) {
     return nextWithAppBridge(req, "0");
   }
@@ -159,6 +160,8 @@ export async function middleware(req: NextRequest) {
       // session). The route handlers do their own honeypot + rate-limit.
       pathname === "/api/playbook/lead" ||
       pathname === "/api/playbook/unsubscribe" ||
+      // Winnability Test (/test) lead capture — public, no Shopify session.
+      pathname === "/api/winnability-lead" ||
       pathname === "/api/health" ||
       pathname.startsWith("/api/health/") ||
       pathname === "/api/indexnow" ||
