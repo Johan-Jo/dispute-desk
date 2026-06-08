@@ -264,6 +264,12 @@ describe("V3 — generic AI openings", () => {
       "Why Merchants Misread Shopify Protect Coverage",
       "When the Issuer Cares More About Delivery Than Authorization",
       "The 10-Day Clock and Where It Quietly Slips",
+      // Regression: a descriptive heading that contains "failure modes" is GOOD —
+      // the system prompt asks for operational failure modes. Only the BARE schema
+      // category ("Failure Modes") should be rejected. This exact heading blocked
+      // a real Friendly Fraud article (2026-06-08) as a V3 false positive.
+      "Operational failure modes that lose winnable cases",
+      "Failure modes in the dispute lifecycle",
     ];
     for (const heading of goodHeadings) {
       const c = makeCandidate({
