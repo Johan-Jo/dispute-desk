@@ -160,6 +160,8 @@ export async function middleware(req: NextRequest) {
       // session). The route handlers do their own honeypot + rate-limit.
       pathname === "/api/playbook/lead" ||
       pathname === "/api/playbook/unsubscribe" ||
+      // Winnability Test (/test) lead capture — public, no Shopify session.
+      pathname === "/api/winnability-lead" ||
       pathname === "/api/health" ||
       pathname.startsWith("/api/health/") ||
       pathname === "/api/indexnow" ||
