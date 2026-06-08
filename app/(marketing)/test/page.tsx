@@ -11,6 +11,7 @@ export const metadata: Metadata = {
       "A free 5-minute test for Shopify merchants. Get an instant winnability verdict plus your chargeback-ratio risk gauge.",
   },
   robots: { index: true, follow: true },
+  icons: { icon: [{ url: "/winnability-shield.svg", type: "image/svg+xml" }] },
 };
 
 /**

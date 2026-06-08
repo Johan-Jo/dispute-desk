@@ -252,17 +252,20 @@ function gaugeSVG(pct: number | null, band: RatioBand) {
 }
 
 const Shield = () => (
-  <svg className="shield-sm" width="22" height="22" viewBox="0 0 100 104" fill="none">
+  // Solid filled shield + white check — the brand app-icon treatment. Reads
+  // clearly at small sizes (the thin blue outline was nearly invisible on the
+  // cream topbar).
+  <svg className="shield-sm" width="28" height="29" viewBox="0 0 100 104" fill="none" aria-label="DisputeDesk">
     <path
       d="M50 5 L88 19 C88 19 88 52 88 56 C88 80 71 95 50 101 C29 95 12 80 12 56 C12 52 12 19 12 19 Z"
+      fill="#1d4ed8"
       stroke="#1d4ed8"
-      strokeWidth="9"
-      fill="none"
+      strokeWidth="6"
       strokeLinejoin="round"
     />
     <path
       d="M34 53 L45 65 L68 39"
-      stroke="#1d4ed8"
+      stroke="#ffffff"
       strokeWidth="9"
       fill="none"
       strokeLinecap="round"
@@ -710,7 +713,7 @@ const CSS = `
 .dd-wt .topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px;
   padding: 16px 22px; border-bottom: 1px solid var(--line-ink); }
 .dd-wt .brand { display: flex; align-items: center; gap: 11px; }
-.dd-wt .brand .name { font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; color: var(--ink-2); }
+.dd-wt .brand .name { font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: 0.14em; color: var(--ink); }
 .dd-wt .step-count { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--ink-4); }
 .dd-wt .progress { height: 3px; background: rgba(11,18,32,0.08); }
 .dd-wt .progress > i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--blue-600), var(--blue-400));
