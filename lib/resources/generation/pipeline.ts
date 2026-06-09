@@ -232,22 +232,25 @@ export async function submitArticleAsBatch(archiveItemId: string): Promise<Batch
     console.error("[generation] Failed to mark archive as converted:", archiveErr.message);
   }
 
-  // English-first: Claude generates ONLY en-US (one batch request); the other
-  // locales are produced by DeepL from the published English in the drain cron
-  // (translateArticleLocales). Native multi-locale Claude generation drifted on
-  // terminology and truncated long bodies — DeepL is cheaper and deterministic.
-  // applyGuards:false — there are no existing localizations on a brand-new item.
-  const sourceLocale = brief.targetLocales.includes("en-US") ? "en-US" : (brief.targetLocales[0] ?? "en-US");
+  // Native multi-locale: Claude generates ALL target locales in one batch (no
+  // DeepL). The earlier "English-first + DeepL" model was adopted because native
+  // multi-locale drifted on terminology and truncated long bodies — but the
+  // truncation was structured outputs (now removed; see articleEnvelope.ts), and
+  // batch has no 300s limit, so native all-locale is both cheaper than DeepL
+  // (~$0.40/article, no quota wall) and natively written per locale. Each locale
+  // clears the floor gate independently; a failed locale parks (it is not DeepL-
+  // backfilled anymore). applyGuards:false — brand-new item, no existing rows.
+  const targetLocales = brief.targetLocales.length > 0 ? brief.targetLocales : ["en-US"];
   try {
     const submitted = await submitBacklogBatch({
       itemIds: [contentItemId],
-      locales: [sourceLocale],
+      locales: targetLocales,
       applyGuards: false,
     });
     if (submitted.batchId) {
       await sb.from("content_items").update({ pending_batch_id: submitted.batchId }).eq("id", contentItemId);
     }
-    console.log(`[generation] English-first: submitted en-US batch ${submitted.batchId ?? "(none)"} (${submitted.requested} locale) on ${contentItemId}`);
+    console.log(`[generation] native multi-locale: submitted batch ${submitted.batchId ?? "(none)"} (${submitted.requested} locales) on ${contentItemId}`);
     return { contentItemId, batchId: submitted.batchId, requestedLocales: submitted.requested, error: submitted.batchId ? null : "Batch builder produced zero requests" };
   } catch (e) {
     // Item shell exists but no batch — the drain cron's reconciliation (pending

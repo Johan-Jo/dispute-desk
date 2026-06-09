@@ -162,7 +162,7 @@ export const DEFAULT_LOCALE_INSTRUCTIONS: Record<string, string> = {
   // Do NOT use 'Återbetalningskrav' (a literal translation that contradicts the UI and
   // breaks one-concept-one-term consistency). de/es/fr/pt DO translate it (see above),
   // each matching its own UI catalog.
-  "sv-SE": "Write in Swedish. Semi-formal, concise Nordic style. Use the English loanword 'chargeback' (plural 'chargebacks') — do NOT translate it to 'Återbetalningskrav'. This matches the established Swedish UI term.",
+  "sv-SE": "Write in Swedish. Semi-formal, professional Nordic tone. Match the depth and length of a strong English article — do NOT compress or shorten. Use the English loanword 'chargeback' (plural 'chargebacks') — do NOT translate it to 'Återbetalningskrav'. This matches the established Swedish UI term.",
 };
 
 /** @deprecated Use DEFAULT_LOCALE_INSTRUCTIONS */
@@ -409,7 +409,9 @@ export function buildUserPrompt(
       : `
 
 SLUG (required for LOCALE ${locale}):
-- The JSON "slug" field must be written entirely in the **same language as the article body** (not English). Use native words only, lowercase, ASCII letters/digits/hyphens.
+- The "slug" field must be written entirely in the **same language as the article body** (not English). Use native words only, lowercase, ASCII letters/digits/hyphens.
+- TRANSLATE every descriptive word to ${locale}: words like "monitoring", "acquirer", "program", "guide", "explained", "complete", "fraud", "evidence" must be the native ${locale} equivalent. Keep ONLY acronyms (e.g. VAMP, ECM, AVS, CVV) and brand names (Visa, Mastercard, Shopify) unchanged. A slug containing any English descriptive word will be rejected.
+- Do NOT spell out an acronym's English expansion in the slug — use the acronym itself plus native words. Example: for "Visa Acquirer Monitoring Program (VAMP)" the slug uses "visa-vamp" + native ${locale} words, NEVER "visa-acquirer-monitoring-program".
 - ${localeSlugGoodBad(locale)}
 `;
 
@@ -428,5 +430,5 @@ TOPIC: ${brief.proposedTitle}
 ${brief.targetKeyword ? `TARGET KEYWORD: ${brief.targetKeyword}` : ""}
 ${brief.summary ? `CONTEXT: ${brief.summary}` : ""}
 ${filteredNotes ? `ADDITIONAL NOTES: ${filteredNotes}` : ""}${overlapBlock}${suffixBlock}
-Generate the article now. Return ONLY valid JSON matching the specified output format.`;
+Generate the article now, following exactly the output format specified in this prompt.`;
 }
