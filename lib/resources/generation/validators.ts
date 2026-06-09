@@ -568,6 +568,17 @@ const SLUG_ALLOWED_LOANWORDS = new Set([
   "app",
   "saas",
   "b2b",
+  // Card-network program / standard acronyms — proper nouns that stay as-is in
+  // every language (like "chargeback"). Without these, V8 wrongly rejects valid
+  // non-English slugs for articles about Visa/Mastercard monitoring programs.
+  "vamp", // Visa Acquirer Monitoring Program
+  "vfmp", // Visa Fraud Monitoring Program
+  "vdmp", // Visa Dispute Monitoring Program
+  "ecm", // Mastercard Excessive Chargeback Merchant
+  "ecp", // Excessive Chargeback Program
+  "avs", // Address Verification System
+  "cvv", // Card Verification Value
+  "emv", // EMV chip standard
 ]);
 
 export function v8_slugLocale(
