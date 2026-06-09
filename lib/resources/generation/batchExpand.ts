@@ -30,7 +30,7 @@ import {
   type GenerationContext,
 } from "./prompts";
 import { routeKindForContentType } from "./contentRouteKind";
-import { ARTICLE_OUTPUT_CONFIG } from "./articleJsonSchema";
+import { ENVELOPE_OUTPUT_INSTRUCTION, parseArticleEnvelope } from "./articleEnvelope";
 import { fetchSimilarPublishedArticles } from "./similarArticles";
 import { archiveRowToBrief } from "./pipeline";
 import {
@@ -55,7 +55,6 @@ import { briefToValidatorContext, isGenerationEnabled } from "./generate";
 import { HUB_CONTENT_LOCALES } from "@/lib/resources/constants";
 import {
   submitBatch,
-  extractJsonFromBatchMessage,
   type BatchRequest,
   type BatchResultLine,
 } from "./batchClient";
@@ -280,11 +279,14 @@ export async function buildBatchRequests(opts: BuildBatchOptions = {}): Promise<
       let userPrompt = buildUserPrompt(ctx.brief, locale, resolvedPrompts, ctxForLocale);
       const extra = opts.extraByKey?.[key];
       if (extra?.trim()) userPrompt += `\n\n${extra.trim()}`;
+      // The body is emitted as free-form HTML inside an <article> envelope — NOT
+      // inside a JSON field. Structured outputs (output_config) put the long body
+      // inside a JSON object the model had to close, and it routinely ended the
+      // body early to do so (truncated, sub-floor articles — 278439d9). With the
+      // body outside JSON and written last, the model writes to a natural end and
+      // there are no in-HTML quotes to escape. See articleEnvelope.ts.
+      userPrompt += `\n\n${ENVELOPE_OUTPUT_INSTRUCTION}`;
       const temperature = ctx.brief.contentType === "legal_update" ? 0.3 : 0.4;
-      // JSON is guaranteed by structured outputs (output_config.format), not by a
-      // prompt nudge — Sonnet did not reliably escape quotes inside the article
-      // HTML, which failed JSON.parse on long articles. Same fix as the sync path
-      // in generate.ts; structured outputs work in the Batches API (no beta header).
       requests.push({
         custom_id: key,
         params: {
@@ -293,7 +295,6 @@ export async function buildBatchRequests(opts: BuildBatchOptions = {}): Promise<
           system: resolvedPrompts.systemPrompt,
           messages: [{ role: "user", content: userPrompt }],
           temperature,
-          output_config: ARTICLE_OUTPUT_CONFIG,
         },
       });
     }
@@ -378,16 +379,10 @@ export async function ingestBatchResults(
         outcomes.push({ ...base, status: "failed", error: `batch result ${line.result.type}`, retryFeedback: null });
         continue;
       }
-      const rawJson = extractJsonFromBatchMessage(line);
-      if (!rawJson) {
-        outcomes.push({ ...base, status: "failed", error: "empty/non-text batch message", retryFeedback: JSON_RETRY_HINT });
-        continue;
-      }
-      let parsed: RegenDraft;
-      try {
-        parsed = JSON.parse(rawJson) as RegenDraft;
-      } catch {
-        outcomes.push({ ...base, status: "failed", error: "model returned non-JSON", retryFeedback: JSON_RETRY_HINT });
+      const rawText = line.result.message.content.find((b) => b.type === "text")?.text ?? null;
+      const parsed = parseArticleEnvelope(rawText) as RegenDraft | null;
+      if (!parsed) {
+        outcomes.push({ ...base, status: "failed", error: "could not parse <meta>/<article> envelope", retryFeedback: JSON_RETRY_HINT });
         continue;
       }
       if (!parsed.title || !parsed.body_json?.mainHtml) {

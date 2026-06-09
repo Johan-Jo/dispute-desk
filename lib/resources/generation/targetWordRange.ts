@@ -164,11 +164,9 @@ export function resolveTargetWordRange(brief: TargetWordRangeBriefInput): string
 }
 
 export const LENGTH_GUIDANCE_BLOCK = `Length guidance:
-- Write to the shortest length that fully satisfies the search intent for this tier.
-- Do not pad the article to reach a word count, but do not under-deliver either — Tier A authority articles must reach genuine depth.
-- Remove repetition, generic filler, and unnecessary recap sections.
-- Target range for this page type: {{targetWordRange}}
-- It is acceptable to finish below the range when the topic is fully covered clearly and specifically; it is NOT acceptable for a Tier A article to end short of substantive coverage.`;
+- Target range for this article: {{targetWordRange}}. The finished article MUST reach at least the lower bound of that range — for EVERY tier. Coming in under it is a failure: the article is rejected and not published.
+- Reach the length through depth and coverage, never padding: more distinct operational ground, the chosen illustration developed in full, additional failure modes, the tradeoffs worked through.
+- Remove repetition, generic filler, and unnecessary recap sections. If you are landing short, you have under-covered the topic — add substance, do not pad or restate.`;
 
 /** Appended for non-English locales so translations are not systematically shorter than English. */
 export const NON_ENGLISH_LENGTH_SUPPLEMENT = `
