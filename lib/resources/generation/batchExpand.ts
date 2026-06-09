@@ -45,7 +45,7 @@ import { assessGeneratedSimilarity, getSimilarityRetryInstruction } from "./simi
 import { repairTruncatedBody } from "./repairBody";
 import {
   runAllValidators,
-  hardFailures,
+  publishBlockers,
   softFailures,
   formatValidatorRetryFeedback,
   makeOpenAIEmbeddingClient,
@@ -438,12 +438,16 @@ export async function ingestBatchResults(
       );
       failures = [...failures, ...editorial.failures];
 
-      const hard = hardFailures(failures);
-      if (hard.length > 0) {
+      // Hard floor gate: never auto-publish a stub. publishBlockers = hard
+      // failures PLUS an under-tier-floor (V1) failure at any severity. A blocked
+      // locale is NOT published; it parks (the drain records the reason on the
+      // held item so it surfaces in admin for a human-gated regen).
+      const blockers = publishBlockers(failures);
+      if (blockers.length > 0) {
         outcomes.push({
           ...base,
           status: "rejected",
-          error: hard.map((f) => `${f.id}: ${f.message}`).join("; ").slice(0, 300),
+          error: blockers.map((f) => `${f.id}: ${f.message}`).join("; ").slice(0, 300),
           retryFeedback: formatValidatorRetryFeedback(failures),
         });
         continue;
