@@ -67,7 +67,7 @@ describe("winnability result email", () => {
   });
 
   it("renders a verdict + ratio for every state without throwing", () => {
-    const cases = [
+    const cases: Record<string, string | number>[] = [
       { reason: "ff", returning: "yes", window: "yes", anchor: "yes", disputes: 12, orders: 900 },
       { reason: "ff", returning: "yes", window: "unsure", anchor: "yes", disputes: 7, orders: 1000 },
       { reason: "ff", returning: "yes", window: "yes", anchor: "none", disputes: 3, orders: 1000 },
