@@ -113,6 +113,22 @@ export async function drainAutopilotBatches(): Promise<AutopilotBatchDrainResult
         }
       }
 
+      // Hard floor gate / validator park: if NO locale published, the draft was
+      // blocked (under tier floor or other hard failure). Do NOT silently drop it
+      // — record why on the held item so it surfaces in admin (in-editorial-review)
+      // for a human-gated regen, instead of a dead-end like the old behavior.
+      if (!anyPublished) {
+        const reason = outcomes
+          .filter((o) => o.status === "rejected" || o.status === "failed")
+          .map((o) => `${o.locale}: ${o.error ?? "rejected"}`)
+          .join(" | ")
+          .slice(0, 500);
+        await sb
+          .from("content_items")
+          .update({ rejection_reason: reason || "Generation blocked by validators (no locale published)." })
+          .eq("id", contentItemId);
+      }
+
       // English-first: now that en-US is published, produce the other locales via
       // DeepL (English-first model — Claude only writes English). Each is inserted
       // + published. Publish-EN-first: a DeepL failure leaves the article live in

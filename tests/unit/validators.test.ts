@@ -3,6 +3,7 @@ import {
   cosineSimilarity,
   formatValidatorRetryFeedback,
   hardFailures,
+  publishBlockers,
   htmlToText,
   runAllValidators,
   softFailures,
@@ -780,5 +781,38 @@ describe("runAllValidators + retry feedback", () => {
     ] as const;
     expect(hardFailures([...failures]).length).toBe(1);
     expect(softFailures([...failures]).length).toBe(1);
+  });
+});
+
+describe("publishBlockers — hard floor gate", () => {
+  it("blocks publish on a SOFT under-floor (V1) failure — a stub never auto-publishes", () => {
+    const failures = [
+      { id: "V1_tier_minimum_words", severity: "soft", message: "1050 words; min 1500", retryHint: "y" },
+    ] as const;
+    expect(hardFailures([...failures]).length).toBe(0); // V1 is soft on its own
+    const blockers = publishBlockers([...failures]);
+    expect(blockers.length).toBe(1);
+    expect(blockers[0].id).toBe("V1_tier_minimum_words");
+  });
+
+  it("does not double-count a HARD under-floor failure", () => {
+    const failures = [
+      { id: "V1_tier_minimum_words", severity: "hard", message: "400 words; min 1500", retryHint: "y" },
+    ] as const;
+    expect(publishBlockers([...failures]).length).toBe(1);
+  });
+
+  it("passes a full-length article with only soft non-floor warnings", () => {
+    const failures = [
+      { id: "V9_uniform_pacing", severity: "soft", message: "x", retryHint: "y" },
+    ] as const;
+    expect(publishBlockers([...failures]).length).toBe(0);
+  });
+
+  it("still blocks on unrelated hard failures", () => {
+    const failures = [
+      { id: "V10_incomplete_body", severity: "hard", message: "x", retryHint: "y" },
+    ] as const;
+    expect(publishBlockers([...failures]).length).toBe(1);
   });
 });

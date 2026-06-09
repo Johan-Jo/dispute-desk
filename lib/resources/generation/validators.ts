@@ -568,6 +568,17 @@ const SLUG_ALLOWED_LOANWORDS = new Set([
   "app",
   "saas",
   "b2b",
+  // Card-network program / standard acronyms — proper nouns that stay as-is in
+  // every language (like "chargeback"). Without these, V8 wrongly rejects valid
+  // non-English slugs for articles about Visa/Mastercard monitoring programs.
+  "vamp", // Visa Acquirer Monitoring Program
+  "vfmp", // Visa Fraud Monitoring Program
+  "vdmp", // Visa Dispute Monitoring Program
+  "ecm", // Mastercard Excessive Chargeback Merchant
+  "ecp", // Excessive Chargeback Program
+  "avs", // Address Verification System
+  "cvv", // Card Verification Value
+  "emv", // EMV chip standard
 ]);
 
 export function v8_slugLocale(
@@ -901,4 +912,24 @@ export function hardFailures(failures: ValidatorFailure[]): ValidatorFailure[] {
 
 export function softFailures(failures: ValidatorFailure[]): ValidatorFailure[] {
   return failures.filter((f) => f.severity === "soft");
+}
+
+/**
+ * Hard floor gate for AUTO-publish (autopilot). Failures here must block an
+ * automatic publish and park the item for human review instead.
+ *
+ * This is `hardFailures` PLUS the tier word-count floor (V1) at ANY severity: an
+ * under-floor article is a stub and must never auto-publish — that's the SEO
+ * non-negotiable. V1's soft band (60–100% of floor) still drives the editorial
+ * UI and the sync-path retry threshold unchanged; this only governs the
+ * publish/park decision, so the global validator semantics and their tests are
+ * untouched. A parked locale is not a silent drop — the caller records the
+ * reason on the held content item so it surfaces in admin.
+ */
+export function publishBlockers(failures: ValidatorFailure[]): ValidatorFailure[] {
+  const hard = hardFailures(failures);
+  const underFloor = failures.find(
+    (f) => f.id === "V1_tier_minimum_words" && !hard.some((h) => h.id === f.id)
+  );
+  return underFloor ? [...hard, underFloor] : hard;
 }
