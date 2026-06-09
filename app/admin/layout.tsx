@@ -31,6 +31,7 @@ import {
   ShieldCheck,
   Webhook,
   Mail,
+  Gauge,
 } from "lucide-react";
 import { ToastProvider } from "@/components/admin/Toast";
 
@@ -73,6 +74,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Resources", href: "/admin/resources", icon: BookOpen },
   { label: "Signal Radar", href: "/admin/signal-radar", icon: Radar },
   { label: "Playbook Leads", href: "/admin/playbook-leads", icon: Mail, group: "Growth" },
+  { label: "Winnability Leads", href: "/admin/winnability-leads", icon: Gauge, group: "Growth" },
   { label: "Help", href: "/admin/help", icon: HelpCircle },
 ];
 

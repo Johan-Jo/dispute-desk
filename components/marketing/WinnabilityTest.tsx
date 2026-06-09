@@ -2,6 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Crimson_Pro, Inter, Spline_Sans_Mono } from "next/font/google";
+import {
+  WINNABILITY_URLS,
+  scoreWinnability,
+  scoreRatio,
+  ctaFor,
+  VERDICT_BAND,
+  RATIO_BAND_COLOR,
+  RATIO_BAND_TEXT,
+  RATIO_BAND_DESC,
+  type RatioBand,
+} from "@/lib/marketing/winnability/scoring";
 
 // Matches the prototype's Google Fonts: Crimson Pro (serif), Inter (sans),
 // Spline Sans Mono (mono). Loaded via next/font and exposed as CSS variables.
@@ -42,16 +53,9 @@ const mono = Spline_Sans_Mono({
 
 const LS = "dd_winnability_v1";
 
-// Real destinations (from the DisputeDesk codebase). The install CTA deliberately
-// routes to the on-site direct-install / free-trial popup at /#pricing (NOT the
-// App Store) — see lib/marketing/shopifyInstallUrl.ts.
-const URLS = {
-  freeTrial: "/#pricing",
-  demo: "/demo",
-  contact: "/en/contact",
-  playbook: "/en/playbook",
-  video: "https://www.youtube.com/watch?v=k7TY52tFr5I",
-};
+// Verdict + ratio scoring, CTA and band copy all live in the shared module so
+// the on-screen result and the emailed result can never diverge.
+const URLS = WINNABILITY_URLS;
 
 type Tag = "win" | "kill" | "sure" | "other";
 type Opt = { v: string; label: string; tag: Tag };
@@ -126,15 +130,6 @@ const QUESTIONS: Question[] = [
 type Answers = Record<string, string | number>;
 type State = { screen: number; answers: Answers; email: string; store: string };
 
-type Reason = ["ok" | "no", string];
-type WinResult = {
-  state: "win" | "borderline" | "no" | "other";
-  headline: string;
-  reasons: Reason[];
-  lane: "ff" | "fraud" | "other";
-};
-type RatioBand = "green" | "amber" | "red" | "unknown";
-
 function loadState(): State {
   if (typeof window !== "undefined") {
     try {
@@ -147,72 +142,8 @@ function loadState(): State {
   return { screen: 0, answers: {}, email: "", store: "" };
 }
 
-function scoreWinnability(a: Answers): WinResult {
-  // Non-friendly-fraud reasons route out of the CE 3.0 lane.
-  if (a.reason === "fraud")
-    return {
-      state: "no",
-      headline: "Don’t fight this one.",
-      reasons: [
-        ["no", "This is genuine fraud — the customer didn’t make the purchase"],
-        ["no", "Contesting true fraud hurts your win rate and your standing"],
-      ],
-      lane: "fraud",
-    };
-  if (a.reason === "inr" || a.reason === "nad")
-    return {
-      state: "other",
-      headline: "Different rulebook.",
-      reasons: [
-        ["no", "This isn’t a friendly-fraud / “don’t recognise” dispute"],
-        ["ok", "It can still be winnable — but on delivery / description evidence, not CE 3.0"],
-      ],
-      lane: "other",
-    };
-
-  // Friendly-fraud lane.
-  const kills: Reason[] = [];
-  const wins: Reason[] = [];
-  let unsure = false;
-
-  if (a.returning === "yes") wins.push(["ok", "Returning customer with prior clean orders"]);
-  else if (a.returning === "no") kills.push(["no", "No prior order — CE 3.0 needs a transaction history"]);
-  else unsure = true;
-
-  if (a.window === "yes") wins.push(["ok", "A prior order falls inside the 120–365 day window"]);
-  else if (a.window === "no") kills.push(["no", "Prior order is outside the eligible look-back window"]);
-  else unsure = true;
-
-  if (a.anchor === "yes") wins.push(["ok", "You have the IP / device anchor — the decisive match"]);
-  else if (a.anchor === "weak") kills.push(["no", "Only name/email/address match — not enough for CE 3.0"]);
-  else if (a.anchor === "none") kills.push(["no", "No IP / device captured — the anchor is missing"]);
-
-  if (kills.length === 0 && !unsure) {
-    return { state: "win", headline: "This one’s winnable.", reasons: wins, lane: "ff" };
-  }
-  if (kills.length === 0 && unsure) {
-    return {
-      state: "borderline",
-      headline: "Closer than you think.",
-      reasons: wins.concat([
-        ["no", "A couple of unknowns to confirm — that gap is what loses winnable disputes"],
-      ]),
-      lane: "ff",
-    };
-  }
-  return { state: "no", headline: "Not this one — here’s why.", reasons: kills.concat(wins), lane: "ff" };
-}
-
-function scoreRatio(a: Answers): { pct: number | null; band: RatioBand } {
-  const d = Number(a.disputes) || 0;
-  const o = Number(a.orders) || 0;
-  if (o <= 0) return { pct: null, band: "unknown" };
-  const pct = (d / o) * 100;
-  let band: RatioBand = "green";
-  if (pct >= 0.9) band = "red";
-  else if (pct >= 0.65) band = "amber";
-  return { pct, band };
-}
+// scoreWinnability / scoreRatio now live in lib/marketing/winnability/scoring.ts
+// (shared with the result email so the two can never diverge).
 
 function gaugeSVG(pct: number | null, band: RatioBand) {
   const size = 150,
@@ -542,70 +473,18 @@ export function WinnabilityTest() {
   function renderResult() {
     const w = scoreWinnability(state.answers);
     const ratio = scoreRatio(state.answers);
-    const bandColor = { green: "#1f7a4d", amber: "#b06d12", red: "#8a2a1f", unknown: "#64748b" }[ratio.band];
-    const bandText = {
-      green: "Safe — for now",
-      amber: "Approaching the line",
-      red: "In the danger zone",
-      unknown: "Add numbers to see",
-    }[ratio.band];
-    const bandDesc = {
-      green: "Comfortably under the ~0.9% threshold. Keep winning the winnable ones.",
-      amber: "This is where most merchants sit — and don’t realise it. Worth acting before it climbs.",
-      red: "At or over the line. You may already be on a monitoring program. Act now.",
-      unknown: "We couldn’t compute a ratio from your numbers.",
-    }[ratio.band];
+    const bandColor = RATIO_BAND_COLOR[ratio.band];
+    const bandText = RATIO_BAND_TEXT[ratio.band];
+    const bandDesc = RATIO_BAND_DESC[ratio.band];
+    const verdictStyle = VERDICT_BAND[w.state];
 
-    const verdictStyle = {
-      win: ["rgba(31,122,77,0.16)", "#1f7a4d", "Winnable"],
-      borderline: ["rgba(176,109,18,0.18)", "#b06d12", "Borderline"],
-      no: ["rgba(138,42,31,0.18)", "#8a2a1f", "Not winnable"],
-      other: ["rgba(37,99,235,0.14)", "#1d4ed8", "Different lane"],
-    }[w.state];
-
-    // CTA per state — each points at a real page that delivers on the promise.
-    type Cta = { h: string; p: string; primary: { label: string; href: string }; secondary?: { label: string; href: string } };
-    let cta: Cta;
-    if (w.state === "win")
-      cta = {
-        h: "Let’s win it.",
-        p: "You’ve got the anchor. DisputeDesk builds the evidence pack and files it for you — start free, no card.",
-        primary: { label: "Start free — fight this dispute →", href: URLS.freeTrial },
-        secondary: { label: "Or have us review it with you", href: URLS.contact },
-      };
-    else if (w.state === "borderline")
-      cta = {
-        h: "Let’s confirm it.",
-        p: "A couple of unknowns to nail down. Send us the details — chat, email, or a quick call — and we’ll tell you definitively.",
-        primary: { label: "Get it checked →", href: URLS.contact },
-        secondary: { label: "Or see how DisputeDesk works", href: URLS.demo },
-      };
-    else if (w.state === "other")
-      cta = {
-        h: "Still worth a look.",
-        p: "Item-not-received and quality disputes win on different evidence — and DisputeDesk builds those packs too. See it, or send us this one.",
-        primary: { label: "Watch the 2-min demo →", href: URLS.demo },
-        secondary: { label: "Or send us this dispute", href: URLS.contact },
-      };
-    else if (w.lane === "fraud")
-      cta = {
-        h: "This one’s not yours to fight.",
-        p: "Genuine fraud should be refunded — contesting it hurts your standing. But strong checkout data helps you spot and stop the next one.",
-        primary: { label: "See how DisputeDesk helps →", href: URLS.demo },
-        secondary: { label: "Talk it through with us", href: URLS.contact },
-      };
-    else
-      cta = {
-        h: "Make the next one winnable.",
-        p: "The fix is upstream: DisputeDesk captures IP + device on every order automatically, so your next dispute has the anchor this one was missing.",
-        primary: { label: "Start free — start capturing →", href: URLS.freeTrial },
-        secondary: { label: "Or read the 2-minute setup", href: URLS.playbook },
-      };
+    // CTA per state — same shared map the result email uses, so they match.
+    const cta = ctaFor(w);
 
     return (
       <div className="pane">
-        <div className="verdict-band" style={{ background: verdictStyle[0], color: verdictStyle[1] }}>
-          ● {verdictStyle[2]}
+        <div className="verdict-band" style={{ background: verdictStyle.bg, color: verdictStyle.color }}>
+          ● {verdictStyle.label}
         </div>
         <h1 className="big" style={{ fontSize: 34 }}>
           {w.headline}

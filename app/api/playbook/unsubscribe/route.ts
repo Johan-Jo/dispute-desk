@@ -45,13 +45,21 @@ export async function GET(req: NextRequest) {
 
   try {
     const sb = getServiceClient();
-    await sb
-      .from("playbook_leads")
-      .update({
-        status: "unsubscribed",
-        unsubscribed_at: new Date().toISOString(),
-      })
-      .eq("email", email);
+    const unsubscribedAt = new Date().toISOString();
+    // This endpoint is the single unsubscribe surface for both inbound GTM
+    // lead tables (the playbook nurture footer AND the Winnability Test result
+    // email both link here). Mark the email unsubscribed in whichever it
+    // appears — both updates are no-ops if the email isn't present.
+    await Promise.all([
+      sb
+        .from("playbook_leads")
+        .update({ status: "unsubscribed", unsubscribed_at: unsubscribedAt })
+        .eq("email", email),
+      sb
+        .from("winnability_leads")
+        .update({ status: "unsubscribed", unsubscribed_at: unsubscribedAt })
+        .eq("email", email),
+    ]);
   } catch (err) {
     console.error("[playbook/unsubscribe] db threw:", err);
     // Still show success — re-clicking is harmless and idempotent.

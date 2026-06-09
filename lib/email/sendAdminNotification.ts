@@ -149,3 +149,91 @@ export async function sendAdminPlaybookLeadNotification(
 
   await sendAdminEmail({ subject, html, text, logTag: "admin-playbook-lead" });
 }
+
+export interface AdminWinnabilityLeadNotificationOptions {
+  /** Lead's email address. */
+  email: string;
+  /** Store URL the merchant optionally typed. */
+  store?: string | null;
+  /** Verdict label, e.g. "Winnable" | "Borderline" | "Not winnable" | "Different lane". */
+  verdictLabel: string;
+  /** Chargeback ratio percent (null if not computable). */
+  ratioPct?: number | null;
+  /** Ratio band: "green" | "amber" | "red" | "unknown". */
+  ratioBand?: string;
+  /** Disputes / orders per month, for the volume line. */
+  disputesPerMonth?: number | null;
+  ordersPerMonth?: number | null;
+  /** Pre-formatted answer lines (one per question). */
+  answerLines?: string[];
+}
+
+/**
+ * Notify the team (defaults to ADMIN_NOTIFY_EMAIL / oi@johan.com.br) that a
+ * merchant finished the 5-Minute Winnability Test. This is the same admin-alert
+ * mechanism the Playbook (LinkedIn) capture uses — fired on every completion.
+ *
+ * A "Winnable + red ratio" lead is a hot prospect worth calling within the
+ * hour, so we flag it in the subject + body. Non-blocking — never throws.
+ */
+export async function sendAdminWinnabilityLeadNotification(
+  options: AdminWinnabilityLeadNotificationOptions,
+): Promise<void> {
+  const store = options.store?.trim() || "—";
+  const ratioPct =
+    typeof options.ratioPct === "number" ? `${options.ratioPct.toFixed(2)}%` : "—";
+  const band = options.ratioBand?.trim() || "—";
+  const disputes = options.disputesPerMonth ?? "—";
+  const orders = options.ordersPerMonth ?? "—";
+  const hot =
+    options.verdictLabel.toLowerCase() === "winnable" &&
+    typeof options.ratioPct === "number" &&
+    options.ratioPct >= 0.9;
+  const timestamp = new Date().toUTCString();
+  const subject = `${hot ? "🔥 " : ""}New Winnability lead: ${options.verdictLabel} · ${options.email}`;
+
+  const answersHtml = (options.answerLines ?? [])
+    .map(
+      (line) =>
+        `<tr><td style="padding:2px 0;color:#475569;">${line.replace(/</g, "&lt;")}</td></tr>`,
+    )
+    .join("");
+
+  const hotBanner = hot
+    ? `<p style="margin:0 0 12px;padding:10px 14px;background:#FEF2F2;color:#991B1B;font-weight:700;border-radius:6px;">🔥 HOT LEAD — Winnable verdict + red ratio. Call within the hour.</p>`
+    : "";
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>${subject}</title></head>
+<body style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;padding:32px 16px;">
+  ${hotBanner}
+  <p style="margin:0 0 8px;font-size:18px;font-weight:700;">New Winnability Test lead</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:16px;font-size:14px;color:#374151;border-collapse:collapse;">
+    <tr><td style="padding:4px 16px 4px 0;font-weight:600;">Email</td><td style="padding:4px 0;">${options.email}</td></tr>
+    <tr><td style="padding:4px 16px 4px 0;font-weight:600;">Store</td><td style="padding:4px 0;">${store}</td></tr>
+    <tr><td style="padding:4px 16px 4px 0;font-weight:600;">Verdict</td><td style="padding:4px 0;">${options.verdictLabel}</td></tr>
+    <tr><td style="padding:4px 16px 4px 0;font-weight:600;">Ratio</td><td style="padding:4px 0;">${ratioPct} (${band})</td></tr>
+    <tr><td style="padding:4px 16px 4px 0;font-weight:600;">Volume</td><td style="padding:4px 0;">${disputes} disputes / ${orders} orders per month</td></tr>
+    <tr><td style="padding:4px 16px 4px 0;font-weight:600;">Time</td><td style="padding:4px 0;">${timestamp}</td></tr>
+  </table>
+  ${
+    answersHtml
+      ? `<p style="margin:18px 0 4px;font-weight:600;color:#374151;">Answers</p><table role="presentation" cellpadding="0" cellspacing="0" style="font-size:13px;">${answersHtml}</table>`
+      : ""
+  }
+</body></html>`;
+
+  const text =
+    `${hot ? "🔥 HOT LEAD — Winnable + red ratio. Call within the hour.\n\n" : ""}` +
+    `New Winnability Test lead\n\n` +
+    `Email: ${options.email}\n` +
+    `Store: ${store}\n` +
+    `Verdict: ${options.verdictLabel}\n` +
+    `Ratio: ${ratioPct} (${band})\n` +
+    `Volume: ${disputes} disputes / ${orders} orders per month\n` +
+    `Time: ${timestamp}` +
+    (options.answerLines?.length ? `\n\nAnswers:\n${options.answerLines.join("\n")}` : "");
+
+  await sendAdminEmail({ subject, html, text, logTag: "admin-winnability-lead" });
+}

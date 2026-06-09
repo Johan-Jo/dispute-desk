@@ -1,27 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
+import { getServiceClient } from "@/lib/supabase/server";
+import { getPublicSiteBaseUrl } from "@/lib/email/publicSiteUrl";
+import { unsubscribeUrl } from "@/lib/marketing/playbook/leads";
+import { buildWinnabilityResultEmail } from "@/lib/marketing/winnability/resultEmail";
+import {
+  scoreWinnability,
+  scoreRatio,
+  VERDICT_BAND,
+  type WinnabilityAnswers,
+} from "@/lib/marketing/winnability/scoring";
+import { sendAdminWinnabilityLeadNotification } from "@/lib/email/sendAdminNotification";
 
 export const runtime = "nodejs";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const TO_EMAIL =
-  process.env.LEADS_FORM_TO ??
-  process.env.CONTACT_FORM_TO ??
-  "support@disputedesk.app";
 const FROM_EMAIL =
   process.env.EMAIL_FROM ?? "DisputeDesk <notifications@mail.disputedesk.app>";
 
 /**
  * POST /api/winnability-lead
  *
- * Lead-capture endpoint for the 5-minute Winnability Test (/test).
- * Every submission is a fully-qualified lead — it carries the merchant's
- * winnability verdict, chargeback-ratio band, dispute volume and store URL.
- * A "Winnable + red ratio" lead is a hot prospect worth calling within the hour.
+ * Lead-capture endpoint for the 5-Minute Winnability Test (/test, DP-TEST-01).
+ * On every completion this does three things (none block the merchant's result):
  *
- * Wiring point referenced by the design's `submitLead()`: emails the lead to
- * the sales/support inbox via Resend (same infra as /api/contact). Failures
- * are swallowed so the merchant always sees their result instantly.
+ *   1. Persist the lead to `winnability_leads` (verdict, ratio, answers) →
+ *      surfaced at /admin/winnability-leads. Re-takes update to the latest.
+ *   2. Email the MERCHANT their result (the DP-RESULT-EMAIL design). This is the
+ *      ONLY email a test-taker gets — they are NOT enrolled in the playbook
+ *      CE 3.0 nurture (that chain stays exclusive to the /playbook funnel).
+ *   3. Notify the team (→ ADMIN_NOTIFY_EMAIL / oi@johan.com.br) via the same
+ *      admin-alert mechanism the playbook (LinkedIn) capture uses.
+ *
+ * Always returns 2xx so the merchant sees their verdict instantly, but the body
+ * carries `{ ok, emailed, reason }` so a probe can tell whether the merchant
+ * result email actually sent (a 2xx does not prove delivery).
  */
 
 type LeadPayload = {
@@ -49,7 +62,7 @@ function isRateLimited(ip: string): boolean {
 }
 
 // Human-readable labels for the captured answers (mirrors the question model
-// in components/marketing/WinnabilityTest.tsx).
+// in components/marketing/WinnabilityTest.tsx) — used in the admin notification.
 const ANSWER_LABELS: Record<string, Record<string, string>> = {
   reason: {
     ff: '"Don\'t recognise this charge" / unauthorised (Visa 10.4)',
@@ -74,18 +87,15 @@ const ANSWER_LABELS: Record<string, Record<string, string>> = {
   },
 };
 
-const VERDICT_LABEL: Record<string, string> = {
-  win: "WINNABLE",
-  borderline: "BORDERLINE",
-  no: "NOT WINNABLE",
-  other: "DIFFERENT LANE",
-};
-
-function ratioBand(ratio: number | null | undefined): string {
-  if (ratio == null) return "unknown";
-  if (ratio >= 0.9) return "RED — danger zone";
-  if (ratio >= 0.65) return "AMBER — approaching the line";
-  return "GREEN — safe for now";
+function answerLines(answers: WinnabilityAnswers): string[] {
+  return ["reason", "returning", "window", "anchor"]
+    .map((id) => {
+      const v = answers[id];
+      if (v == null) return null;
+      const label = ANSWER_LABELS[id]?.[String(v)] ?? String(v);
+      return `${id}: ${label}`;
+    })
+    .filter((x): x is string => x !== null);
 }
 
 export async function POST(req: NextRequest) {
@@ -106,82 +116,95 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const email = body.email?.trim();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  const rawEmail = body.email?.trim();
+  if (!rawEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)) {
     return NextResponse.json({ error: "Invalid email." }, { status: 400 });
   }
+  const email = rawEmail.toLowerCase();
+  const store = body.store?.trim() || null;
+  const answers: WinnabilityAnswers = body.answers ?? {};
 
-  const store = body.store?.trim() || "—";
-  const answers = body.answers ?? {};
-  const verdict = VERDICT_LABEL[body.winnability ?? ""] ?? "—";
-  const ratio = typeof body.ratio === "number" ? body.ratio : null;
-  const band = ratioBand(ratio);
-  const hot = body.winnability === "win" && ratio != null && ratio >= 0.9;
+  // Compute verdict + ratio server-side from the answers (single source of
+  // truth — never trust the client's `winnability`/`ratio` fields).
+  const w = scoreWinnability(answers);
+  const ratio = scoreRatio(answers);
+  const verdictLabel = VERDICT_BAND[w.state].label;
+  const disputes =
+    answers.disputes != null && answers.disputes !== "" ? Number(answers.disputes) : null;
+  const orders =
+    answers.orders != null && answers.orders !== "" ? Number(answers.orders) : null;
 
-  // Best-effort delivery — log and continue on any failure so /test stays instant.
-  // The response carries `emailed`/`reason` for observability (the client ignores
-  // the body; a curl/probe can read whether delivery actually succeeded).
+  // 1) Persist (best-effort — never blocks the result).
+  try {
+    const sb = getServiceClient();
+    const { error } = await sb.from("winnability_leads").upsert(
+      {
+        email,
+        store,
+        verdict: w.state,
+        lane: w.lane,
+        ratio_pct: ratio.pct,
+        ratio_band: ratio.band,
+        disputes_per_month: Number.isFinite(disputes) ? disputes : null,
+        orders_per_month: Number.isFinite(orders) ? orders : null,
+        answers,
+        status: "active",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "email" },
+    );
+    if (error) console.error("[winnability-lead] upsert error:", error);
+  } catch (err) {
+    console.error("[winnability-lead] db threw:", err);
+  }
+
+  // 3) Admin notification to the team (fire-and-forget; never throws).
+  void sendAdminWinnabilityLeadNotification({
+    email,
+    store,
+    verdictLabel,
+    ratioPct: ratio.pct,
+    ratioBand: ratio.band,
+    disputesPerMonth: disputes,
+    ordersPerMonth: orders,
+    answerLines: answerLines(answers),
+  }).catch((err) => console.error("[winnability-lead] admin notify threw:", err));
+
+  // 2) Merchant result email (the one the test promises). Best-effort: report
+  //    the outcome in the response but never fail the request.
   if (!RESEND_API_KEY) {
-    console.warn("[winnability-lead] RESEND_API_KEY not set — lead not emailed", {
-      email,
-      store,
-      verdict,
-      ratio,
-    });
+    console.warn("[winnability-lead] RESEND_API_KEY not set — result email skipped");
     return NextResponse.json({ ok: true, emailed: false, reason: "RESEND_API_KEY not set" });
   }
 
-  const answerLines = ["reason", "returning", "window", "anchor"]
-    .map((id) => {
-      const v = answers[id];
-      if (v == null) return null;
-      const label = ANSWER_LABELS[id]?.[String(v)] ?? String(v);
-      return `  • ${id}: ${label}`;
-    })
-    .filter(Boolean)
-    .join("\n");
-
-  const disputes = answers.disputes ?? "—";
-  const orders = answers.orders ?? "—";
-
-  const text = [
-    hot ? "🔥 HOT LEAD — Winnable verdict + red ratio. Call within the hour.\n" : "",
-    `Email:   ${email}`,
-    `Store:   ${store}`,
-    "",
-    `Verdict: ${verdict}`,
-    `Ratio:   ${ratio == null ? "—" : ratio.toFixed(2) + "%"}  (${band})`,
-    `Volume:  ${disputes} disputes / ${orders} orders per month`,
-    "",
-    "Answers:",
-    answerLines || "  (none)",
-    "",
-    `Taken:   ${body.ts ?? "—"}`,
-  ].join("\n");
-
-  const resend = new Resend(RESEND_API_KEY);
-  const { error } = await resend.emails.send({
-    from: FROM_EMAIL,
-    to: TO_EMAIL,
-    replyTo: email,
-    subject: `${hot ? "🔥 " : ""}[Winnability Test] ${verdict} · ${email}`,
-    text,
+  const baseUrl = getPublicSiteBaseUrl();
+  const { subject, html, text } = buildWinnabilityResultEmail({
+    answers,
+    baseUrl,
+    unsubscribeUrl: unsubscribeUrl(email),
   });
 
-  if (error) {
-    // JSON.stringify so the full Resend payload (name/message/statusCode) lands
-    // in the logs — the bare object stringifies to "[object Object]" otherwise.
-    console.error("[winnability-lead] Resend error:", JSON.stringify(error));
-    // Still 2xx — the merchant should always see their result — but report the
-    // failure + reason so a probe can see delivery actually failed.
-    return NextResponse.json({
-      ok: true,
-      emailed: false,
-      reason: error.message ?? error.name ?? "send failed",
-      to: TO_EMAIL,
+  try {
+    const resend = new Resend(RESEND_API_KEY);
+    const { error } = await resend.emails.send({
       from: FROM_EMAIL,
+      to: email,
+      subject,
+      html,
+      text,
     });
+    if (error) {
+      console.error("[winnability-lead] Resend error:", JSON.stringify(error));
+      return NextResponse.json({
+        ok: true,
+        emailed: false,
+        reason: error.message ?? error.name ?? "send failed",
+      });
+    }
+  } catch (err) {
+    console.error("[winnability-lead] send threw:", err);
+    return NextResponse.json({ ok: true, emailed: false, reason: "send threw" });
   }
 
-  return NextResponse.json({ ok: true, emailed: true, to: TO_EMAIL });
+  return NextResponse.json({ ok: true, emailed: true, to: email });
 }
