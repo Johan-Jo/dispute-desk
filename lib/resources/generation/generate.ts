@@ -39,6 +39,7 @@ import {
   type TwoPassBriefContext,
 } from "./twoPassPrompts";
 import { DEFAULT_LOCALE_INSTRUCTIONS } from "./prompts";
+import { repairTruncatedBody } from "./repairBody";
 import { ARTICLE_OUTPUT_CONFIG } from "./articleJsonSchema";
 
 const MODEL = process.env.GENERATION_MODEL ?? "gpt-4o";
@@ -535,6 +536,13 @@ async function generateLocaleWithValidators(
         message: `${jaccardGuard.reason}: ${jaccardGuard.detail}`,
         retryHint: getSimilarityRetryInstruction(),
       });
+    }
+
+    // Repair a body left truncated at the tail before validation — salvages an
+    // otherwise-complete article instead of triggering a (re-billed) retry.
+    const repaired = repairTruncatedBody(result.content.body_json.mainHtml);
+    if (repaired.changed) {
+      result.content.body_json.mainHtml = repaired.html;
     }
 
     const candidate: ValidatorCandidate = {

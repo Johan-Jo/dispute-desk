@@ -42,6 +42,7 @@ import {
   type RegenDraft,
 } from "./expandInPlace";
 import { assessGeneratedSimilarity, getSimilarityRetryInstruction } from "./similarity";
+import { repairTruncatedBody } from "./repairBody";
 import {
   runAllValidators,
   hardFailures,
@@ -392,6 +393,15 @@ export async function ingestBatchResults(
       if (!parsed.title || !parsed.body_json?.mainHtml) {
         outcomes.push({ ...base, status: "failed", error: "invalid response structure", retryFeedback: JSON_RETRY_HINT });
         continue;
+      }
+
+      // Repair a body the model left truncated at the tail (dangling/unclosed
+      // trailing element) BEFORE validation — salvages an otherwise-complete
+      // article instead of hard-rejecting it into an expensive regeneration.
+      const repaired = repairTruncatedBody(parsed.body_json.mainHtml);
+      if (repaired.changed) {
+        parsed.body_json.mainHtml = repaired.html;
+        console.log(`[batch-ingest] repaired truncated body on ${contentItemId}/${locale}: ${repaired.notes.join(", ")}`);
       }
 
       const peers = ctx.contextByLocale[locale]?.similarArticles ?? [];
