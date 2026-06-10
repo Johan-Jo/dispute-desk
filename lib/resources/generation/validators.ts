@@ -579,9 +579,6 @@ const SLUG_ALLOWED_LOANWORDS = new Set([
   "avs", // Address Verification System
   "cvv", // Card Verification Value
   "emv", // EMV chip standard
-  // Dispute-domain loanwords used as-is across languages (like "chargeback").
-  "representment", // re-presenting a transaction to fight a chargeback
-  "interchange", // interchange fee
 ]);
 
 export function v8_slugLocale(

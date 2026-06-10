@@ -43,6 +43,7 @@ import {
 } from "./expandInPlace";
 import { assessGeneratedSimilarity, getSimilarityRetryInstruction } from "./similarity";
 import { repairTruncatedBody } from "./repairBody";
+import { applyTermLock } from "./termLock";
 import {
   runAllValidators,
   publishBlockers,
@@ -397,6 +398,14 @@ export async function ingestBatchResults(
       if (repaired.changed) {
         parsed.body_json.mainHtml = repaired.html;
         console.log(`[batch-ingest] repaired truncated body on ${contentItemId}/${locale}: ${repaired.notes.join(", ")}`);
+      }
+
+      // Terminology lock: force KEEP-ENGLISH terms to the correct loanword for this
+      // locale (e.g. sv-SE "återbetalningskrav" → "chargeback") — native generation
+      // drifts despite the prompt rule, so this is the deterministic backstop.
+      const locked = applyTermLock(parsed, locale);
+      if (locked.changed) {
+        console.log(`[batch-ingest] term-lock on ${contentItemId}/${locale}: ${locked.replacements} replacement(s)`);
       }
 
       const peers = ctx.contextByLocale[locale]?.similarArticles ?? [];

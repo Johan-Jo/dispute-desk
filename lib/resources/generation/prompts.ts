@@ -410,8 +410,9 @@ export function buildUserPrompt(
 
 SLUG (required for LOCALE ${locale}):
 - The "slug" field must be written entirely in the **same language as the article body** (not English). Use native words only, lowercase, ASCII letters/digits/hyphens.
-- TRANSLATE every descriptive word to ${locale}: words like "monitoring", "acquirer", "program", "guide", "explained", "complete", "fraud", "evidence" must be the native ${locale} equivalent. Keep ONLY acronyms (e.g. VAMP, ECM, AVS, CVV) and brand names (Visa, Mastercard, Shopify) unchanged. A slug containing any English descriptive word will be rejected.
+- TRANSLATE every descriptive word to ${locale}: words like "monitoring", "acquirer", "program", "guide", "explained", "complete", "fraud", "evidence", "representment", "interchange" must be the native ${locale} equivalent. Keep ONLY acronyms (e.g. VAMP, ECM, AVS, CVV) and brand names (Visa, Mastercard, Shopify) unchanged. A slug containing any English descriptive word will be rejected.
 - Do NOT spell out an acronym's English expansion in the slug — use the acronym itself plus native words. Example: for "Visa Acquirer Monitoring Program (VAMP)" the slug uses "visa-vamp" + native ${locale} words, NEVER "visa-acquirer-monitoring-program".
+- This terminology rule applies to the ARTICLE BODY too, not only the slug: translate dispute/payment terms ("representment", "interchange", "monitoring", "acquirer") into ${locale}. Keep in English ONLY acronyms and brand names. (The "chargeback" loanword follows the rule in the LOCALE note above.)
 - ${localeSlugGoodBad(locale)}
 `;
 
