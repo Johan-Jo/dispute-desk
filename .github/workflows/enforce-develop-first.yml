@@ -1,0 +1,24 @@
+name: enforce-develop-first
+# Hard guardrail: master (prod) may ONLY receive changes that came through
+# develop (staging). Any pull request into master whose source branch is not
+# `develop` fails this check, and the check is REQUIRED on master — so a feature
+# branch can never be merged straight to prod. Promote to develop first, then
+# open a develop -> master PR.
+on:
+  pull_request:
+    branches:
+      - master
+jobs:
+  develop-first-guard:
+    name: develop-first-guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require PR head to be develop
+        run: |
+          HEAD="${{ github.head_ref }}"
+          echo "PR head branch: $HEAD -> base: master"
+          if [ "$HEAD" != "develop" ]; then
+            echo "::error::master may only be merged from 'develop'. This PR's head is '$HEAD'. Promote the change to develop first, then open a develop -> master PR."
+            exit 1
+          fi
+          echo "OK: develop -> master is allowed."
