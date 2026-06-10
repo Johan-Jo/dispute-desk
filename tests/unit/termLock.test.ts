@@ -27,10 +27,10 @@ describe("applyTermLock — sv-SE chargeback", () => {
     expect(a.body_json.mainHtml).toBe("<p>chargebacksfrekvens och chargebacket</p>");
   });
 
-  it("fixes the slug (ASCII form)", () => {
+  it("fixes the slug (ASCII form): chargeback kept English, representment translated", () => {
     const a = art({ slug: "aterbetalningskrav-representment-spelbok" });
     applyTermLock(a, "sv-SE");
-    expect(a.slug).toBe("chargeback-representment-spelbok");
+    expect(a.slug).toBe("chargeback-bestridande-spelbok");
   });
 
   it("fixes title, excerpt, meta, faq, keyTakeaways", () => {
