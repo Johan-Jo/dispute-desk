@@ -162,6 +162,9 @@ export async function middleware(req: NextRequest) {
       pathname === "/api/playbook/unsubscribe" ||
       // Winnability Test (/test) lead capture — public, no Shopify session.
       pathname === "/api/winnability-lead" ||
+      // Public Resources Hub endpoints (e.g. the language switcher's
+      // alternate-locale-slug lookup) — read-only, no Shopify session.
+      pathname.startsWith("/api/public/") ||
       pathname === "/api/health" ||
       pathname.startsWith("/api/health/") ||
       pathname === "/api/indexnow" ||
