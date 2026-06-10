@@ -49,6 +49,21 @@ describe("applyTermLock — sv-SE chargeback", () => {
     expect(a.body_json.faq[0].a).toBe("Ett chargeback.");
   });
 
+  it("translates 'representment' to the native term (de — always capitalized)", () => {
+    const a = art({ slug: "rueckbuchung-representment-anleitung", body_json: { mainHtml: "<p>Eine representment ist nötig. Representment hilft.</p>", keyTakeaways: [], faq: [], disclaimer: "" } });
+    const r = applyTermLock(a, "de-DE");
+    expect(r.changed).toBe(true);
+    expect(a.body_json.mainHtml).toBe("<p>Eine Wiedervorlage ist nötig. Wiedervorlage hilft.</p>");
+    expect(a.slug).toBe("rueckbuchung-wiedervorlage-anleitung");
+  });
+
+  it("translates 'representment' to the native term (pt — case-preserving)", () => {
+    const a = art({ slug: "chargeback-representment-guia", body_json: { mainHtml: "<p>O representment e a Representment.</p>", keyTakeaways: [], faq: [], disclaimer: "" } });
+    applyTermLock(a, "pt-BR");
+    expect(a.body_json.mainHtml).toBe("<p>O reapresentação e a Reapresentação.</p>");
+    expect(a.slug).toBe("chargeback-reapresentacao-guia");
+  });
+
   it("is a no-op for en-US and other locales with no rules", () => {
     const a = art({ body_json: { mainHtml: "<p>chargeback återbetalningskrav</p>", keyTakeaways: [], faq: [], disclaimer: "" } });
     const r = applyTermLock(a, "en-US");
