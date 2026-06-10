@@ -64,6 +64,13 @@ describe("applyTermLock — sv-SE chargeback", () => {
     expect(a.slug).toBe("chargeback-reapresentacao-guia");
   });
 
+  it("sv-SE: keeps chargeback English AND translates representment → bestridande", () => {
+    const a = art({ slug: "aterbetalningskrav-representment-spelbok", body_json: { mainHtml: "<p>Ett återbetalningskrav och en representment.</p>", keyTakeaways: [], faq: [], disclaimer: "" } });
+    applyTermLock(a, "sv-SE");
+    expect(a.body_json.mainHtml).toBe("<p>Ett chargeback och en bestridande.</p>");
+    expect(a.slug).toBe("chargeback-bestridande-spelbok");
+  });
+
   it("is a no-op for en-US and other locales with no rules", () => {
     const a = art({ body_json: { mainHtml: "<p>chargeback återbetalningskrav</p>", keyTakeaways: [], faq: [], disclaimer: "" } });
     const r = applyTermLock(a, "en-US");

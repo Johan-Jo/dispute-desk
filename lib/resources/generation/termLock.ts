@@ -45,7 +45,9 @@ export const TRANSLATE_BY_LOCALE: Record<string, TranslateRule[]> = {
   "pt-BR": [
     { english: /representment/gi, native: "reapresentação", slugEnglish: "representment", slugNative: "reapresentacao" },
   ],
-  // sv-SE intentionally omitted until the Swedish term is confirmed.
+  "sv-SE": [
+    { english: /representment/gi, native: "bestridande", slugEnglish: "representment", slugNative: "bestridande" },
+  ],
 };
 
 export const KEEP_ENGLISH_BY_LOCALE: Record<string, TermRule[]> = {
