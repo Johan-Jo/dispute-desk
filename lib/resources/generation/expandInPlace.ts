@@ -148,8 +148,12 @@ export async function saveRegeneratedLocale(
 ): Promise<{ locale: string; status: "updated" | "inserted" | "failed"; words: number; error: string | null }> {
   const { contentItemId, locale, content, existingLoc, routeKind, publish, nowIso } = args;
   const words = wordCountOf(content.body_json?.mainHtml);
+  // publish_at must be set whenever we publish — the hub listing sorts by it
+  // (nulls last), so a published localization with a null publish_at is invisible
+  // on its locale hub. publish.ts sets it on the canonical path; this batch/regen
+  // path must too, or non-English locales never surface in the listing.
   const publishPatch = publish
-    ? { is_published: true, quality_status: null, is_excluded_from_sitemap: false, migration_action: null }
+    ? { is_published: true, publish_at: nowIso, quality_status: null, is_excluded_from_sitemap: false, migration_action: null }
     : {};
 
   if (existingLoc) {
@@ -183,6 +187,7 @@ export async function saveRegeneratedLocale(
     reading_time_minutes: estimateReadingTimeMinutes(content.body_json?.mainHtml),
     translation_status: "complete",
     is_published: publish === true,
+    publish_at: publish === true ? nowIso : null,
     last_updated_at: nowIso,
   });
   return { locale, status: error ? "failed" : "inserted", words, error: error?.message ?? null };
