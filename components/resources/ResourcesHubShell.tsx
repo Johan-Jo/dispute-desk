@@ -477,8 +477,6 @@ export async function ResourcesHubShell({
               </Link>
             </div>
           </div>
-
-          <p className="text-xs text-gray-400 text-center">{t("designRef")}</p>
         </div>
 
       <MarketingSiteFooter base={base} />
