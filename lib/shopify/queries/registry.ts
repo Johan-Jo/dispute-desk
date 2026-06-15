@@ -31,6 +31,7 @@ import { ORDER_FOR_INGEST_QUERY } from "./orderForIngest";
 import { ORDERS_FOR_SNAPSHOT_QUERY } from "./ordersForSnapshot";
 import { APP_CHARGE_STATUS_QUERY } from "./appChargeStatus";
 import { ACTIVE_SUBSCRIPTIONS_QUERY } from "./activeSubscriptions";
+import { SHOP_POLICIES_QUERY } from "./shopPolicies";
 import {
   DISPUTE_LIST_QUERY,
   DISPUTE_DETAIL_QUERY,
@@ -140,6 +141,18 @@ export const PRODUCTION_GRAPHQL: ProductionGraphQL[] = [
     name: "ACTIVE_SUBSCRIPTIONS_QUERY",
     type: "query",
     body: ACTIVE_SUBSCRIPTIONS_QUERY,
+    stubVariables: {},
+    dryRun: true,
+  },
+  {
+    // Published store policies — source of truth for policy evidence.
+    // Drift on Shop.shopPolicies / ShopPolicy fields (or the
+    // ShopPolicyType enum) would silently stop policies from being
+    // ingested, leaving disputes without their strongest disclosure
+    // evidence. No variables — the query takes none.
+    name: "SHOP_POLICIES_QUERY",
+    type: "query",
+    body: SHOP_POLICIES_QUERY,
     stubVariables: {},
     dryRun: true,
   },

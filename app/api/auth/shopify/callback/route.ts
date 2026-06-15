@@ -14,6 +14,7 @@ import {
 } from "@/lib/disputes/backfillOrders";
 import { fetchShopDetails } from "@/lib/shopify/shopDetails";
 import { persistShopCurrency } from "@/lib/shopify/persistShopCurrency";
+import { ingestShopifyPolicies } from "@/lib/policies/ingestShopifyPolicies";
 import { sendWelcomeEmail } from "@/lib/email/sendWelcome";
 import {
   sendAdminSignupNotification,
@@ -199,6 +200,18 @@ export async function GET(req: NextRequest) {
       persistShopCurrency(shopInternalId).catch((err) => {
         console.warn(
           "[shops] currency persist failed:",
+          err instanceof Error ? err.message : err,
+        );
+      });
+
+      // Auto-ingest the merchant's PUBLISHED store policies (Shop.shopPolicies)
+      // into policy_snapshots as `shopify_published` evidence. Zero merchant
+      // effort: the policy step is pre-filled with the live, citable versions.
+      // Fire-and-forget — runs after storeSession (needs the offline session),
+      // idempotent (dedup on content hash), and graceful on failure.
+      ingestShopifyPolicies(shopInternalId).catch((err) => {
+        console.warn(
+          "[policies] published-policy ingest failed:",
           err instanceof Error ? err.message : err,
         );
       });

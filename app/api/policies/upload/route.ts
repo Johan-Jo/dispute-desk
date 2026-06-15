@@ -82,6 +82,8 @@ export async function POST(req: NextRequest) {
     .insert({
       shop_id: shopId,
       policy_type: policyType,
+      // Merchant uploaded their own policy file — citable evidence.
+      source: "uploaded",
       storage_path: storagePath,
       captured_at: new Date().toISOString(),
     })

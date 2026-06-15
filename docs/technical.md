@@ -952,6 +952,7 @@ npx supabase db query --linked --output table "select shop_domain, plan from sho
 | 20260501100000_shop_daily_metrics.sql | `shop_daily_metrics(shop_id, date, order_count, dispute_count, chargeback_count, inquiry_count, last_synced_at)` — daily snapshot powering the dashboard chargeback-rate KPI and the admin Risk profile (PRD §5/§8/§9). Service-role-only RLS, mirrors the convention in `audit_events`. |
 | 20260509130000_audit_events_cleanup_guc_and_orphan_wipe.sql | Relaxes the `audit_events` BEFORE-DELETE/UPDATE trigger to honour an `app.allow_audit_mutation = 'on'` session GUC, and wipes the 30 orphan E2E fixture disputes that had accumulated on the production project. See *E2E fixtures and audit immutability* below. |
 | 20260509140000_e2e_fixture_cleanup_rpc.sql | `delete_e2e_fixture_dispute(uuid)` SECURITY DEFINER RPC — the only path E2E `cleanup()` and `npm run cleanup:e2e-orphans` use to delete audit/jobs/pack/dispute rows for fixture disputes. Refuses any `dispute_gid` that doesn't match the test pattern. |
+| 20260615120000_policy_snapshots_source_disclosure.sql | `policy_snapshots`: `source` (`shopify_published`/`uploaded`/`external_url`/`template`), `published_url`, `shopify_policy_id`, `policy_updated_at`; widen `policy_type` to allow `subscription`. Backs the published-on-store source-of-truth model (see *Policies — published-on-store source of truth*). |
 
 ### E2E fixtures and audit immutability
 
@@ -2511,9 +2512,19 @@ Store policies are included in evidence packs. Five policy types are supported: 
 - `POST /api/policies/upload` — FormData: `file`, `shop_id`, `policy_type`. Accepted types: `refunds`, `shipping`, `terms`, `privacy`, `contact`. Allowed document formats: PDF, DOCX, DOC, TXT, Markdown (`.md`), max 10 MB. Validation accepts either allowed MIME types or allowed file extensions (browser-safe fallback for text uploads). Files go to Supabase Storage bucket `policy-uploads` at `{shop_id}/{policy_type}/{timestamp}.{ext}`. Creates signed URL (1 year) and inserts into `policy_snapshots`.
 - `GET /api/policies/content?shop_id=...&policy_type=...` — Returns `{ content: string | null }` for the latest snapshot’s `extracted_text` (for editing). Requires portal user with access to the shop.
 - `DELETE /api/policies` — Body: `{ shop_id }`. Removes all policy snapshots for the shop. Requires portal user with access to the shop. Used to clear policies for re-review.
-- `POST /api/policies/apply` — JSON: `{ shop_id, policy_type, content }`. Saves template text as a file, stores it in `policy_snapshots.extracted_text` for the Edit flow, and creates a snapshot row (used when the merchant edits a template in the modal and clicks “Save & Apply”).
+- `POST /api/policies/apply` — JSON: `{ shop_id, policy_type, content }`. Saves a **template draft** (`source = 'template'`) so the merchant can preview/edit one of our library templates. **Template drafts are NOT bank evidence** (see *Policies — published-on-store source of truth* below); the collector excludes them.
+- `POST /api/policies/refresh` — JSON: `{ shop_id }`. Re-reads the merchant's **published** Shopify policies (`Shop.shopPolicies`) and upserts them as `shopify_published` snapshots. Powers the onboarding "Refresh from store" action after a merchant publishes a policy. Idempotent (dedup on content hash).
 
 **Evidence pack mapping:** The policy source collector (`lib/packs/sources/policySource.ts`) maps `terms` → `cancellation_policy`, `refunds` → `refund_policy`, `shipping` → `shipping_policy` for Shopify evidence fields. Privacy and contact snapshots are stored and shown on the Policies page but are not yet mapped to Shopify dispute evidence fields.
+
+### Policies — published-on-store source of truth
+
+A store policy only has weight with a bank if it was **published and visible to the customer**, with a live URL we can cite — Shopify's `refundPolicyDisclosure` evidence asks *"where did the customer see this policy?"*. The system therefore treats **published-on-store** as the source of truth and only cites policies that are *citable*.
+
+- **Auto-ingest** — `lib/policies/ingestShopifyPolicies.ts` reads `Shop.shopPolicies` (query in `lib/shopify/queries/shopPolicies.ts`, registered for drift checks) and stores each as a `policy_snapshots` row with `source = 'shopify_published'`, the live `published_url`, `shopify_policy_id`, and `policy_updated_at`. `ShopPolicyType` maps: `REFUND_POLICY→refunds`, `SHIPPING_POLICY→shipping`, `TERMS_OF_SERVICE→terms`, `PRIVACY_POLICY→privacy`, `CONTACT_INFORMATION→contact`, `SUBSCRIPTION_POLICY→subscription`; `LEGAL_NOTICE`/`TERMS_OF_SALE` are ignored. `body` is HTML → stripped to text. Dedup on content hash so re-runs don't churn rows.
+- **Trigger points** — (1) OAuth callback offline phase (fire-and-forget, after `storeSession`); (2) pack build, as a defensive refresh at the top of `collectPolicyEvidence`; (3) the `/api/policies/refresh` button.
+- **`policy_snapshots.source`** — `shopify_published` | `uploaded` | `external_url` | `template`. The collector treats `shopify_published`/`uploaded`/`external_url` as **citable evidence** and **excludes `template`** drafts (a DB-only template has no storefront URL to cite). The PDF renders the live `published_url` as a *"Published at {url}"* disclosure line.
+- **Onboarding** — `BusinessPoliciesStep` shows a "published on your store" status banner (auto-ingested, with live links + "Refresh from store"). The template flow reframes the CTA to **"Open Shopify policy editor"** (deep-link to `/settings/legal`): publish there, then refresh to capture the live version. Templates are a setup aid that funnels toward publishing — not something we cite directly.
 
 ## PDF Rendering & Storage
 
