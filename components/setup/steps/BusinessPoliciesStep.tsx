@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Link, FileText, Upload, Zap, CheckCircle2, ArrowLeft, X, Layers, Info } from "lucide-react";
+import { Link, FileText, Upload, Zap, CheckCircle2, ArrowLeft, X, Layers, Info, RefreshCw, ExternalLink } from "lucide-react";
 import type { StepId } from "@/lib/setup/types";
 
 type PolicyKey = "shipping" | "refunds" | "terms" | "privacy";
@@ -73,6 +73,16 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
   const [uploadedFiles, setUploadedFiles] = useState<Partial<Record<PolicyKey, { id: string; url: string }>>>({});
   const [uploadLoading, setUploadLoading] = useState<Partial<Record<PolicyKey, boolean>>>({});
 
+  // Published-on-store policies, auto-ingested from Shopify on install.
+  // These are the citable bank evidence (source = 'shopify_published').
+  type PublishedPolicy = {
+    policy_type: string;
+    source: string;
+    published_url: string | null;
+  };
+  const [published, setPublished] = useState<PublishedPolicy[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
   const [previewKey, setPreviewKey] = useState<PolicyKey | null>(null);
   const [previewContent, setPreviewContent] = useState("");
   const [previewOriginal, setPreviewOriginal] = useState("");
@@ -102,6 +112,20 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
       .then((data) => {
         if (!data?.shopId) return;
         setResolvedShopId(data.shopId);
+
+        // Load auto-ingested published policies for the status banner.
+        fetch(`/api/policies?shop_id=${data.shopId}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((pd) => {
+            if (Array.isArray(pd?.policies)) {
+              setPublished(
+                pd.policies.filter(
+                  (p: PublishedPolicy) => p.source === "shopify_published",
+                ),
+              );
+            }
+          })
+          .catch(() => {});
 
         // Restore previously saved form state
         const saved = data.steps?.policies?.payload;
@@ -274,6 +298,69 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
     [templateLang, resolvedShopId]
   );
 
+  const handleRefreshPublished = useCallback(async () => {
+    if (!resolvedShopId || refreshing) return;
+    setRefreshing(true);
+    try {
+      await fetch("/api/policies/refresh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shop_id: resolvedShopId }),
+      });
+      const r = await fetch(`/api/policies?shop_id=${resolvedShopId}`);
+      if (r.ok) {
+        const pd = await r.json();
+        if (Array.isArray(pd?.policies)) {
+          setPublished(
+            pd.policies.filter(
+              (p: PublishedPolicy) => p.source === "shopify_published",
+            ),
+          );
+        }
+      }
+    } catch {
+      // graceful — the banner just keeps its current state
+    } finally {
+      setRefreshing(false);
+    }
+  }, [resolvedShopId, refreshing]);
+
+  // Deep-link to Shopify's policy editor so the merchant can publish a
+  // policy (then "Refresh from store" captures the live version).
+  //
+  // The store handle is resolved from the App Bridge `?host=` param
+  // (base64 of "admin.shopify.com/store/<handle>") when present, falling
+  // back to the shop cookie / `?shop=` domain. We extract ONLY the bare
+  // handle so the URL can't double up the "/store/<handle>" segment when
+  // opened from inside the embedded iframe. The canonical policies editor
+  // path is `/settings/policies` (NOT `/settings/legal`, which 404s).
+  const shopifyPolicyEditorUrl = useCallback((): string | null => {
+    let handle: string | null = null;
+
+    const host = new URLSearchParams(window.location.search).get("host");
+    if (host) {
+      try {
+        const decoded = atob(host); // "admin.shopify.com/store/<handle>"
+        handle = decoded.split("/store/")[1]?.split(/[/?#]/)[0] ?? null;
+      } catch {
+        // malformed host — fall through to the domain-based fallback
+      }
+    }
+
+    if (!handle) {
+      const rawDomain =
+        document.cookie.match(/shopify_shop=([^;]+)/)?.[1] ??
+        new URLSearchParams(window.location.search).get("shop");
+      const domain = rawDomain ? decodeURIComponent(rawDomain) : null;
+      handle = domain
+        ? domain.replace(/^https?:\/\//, "").replace(".myshopify.com", "")
+        : null;
+    }
+
+    if (!handle) return null;
+    return `https://admin.shopify.com/store/${handle}/settings/policies`;
+  }, []);
+
   const ALL_TEMPLATE_LANGS = ["en", "de", "fr", "es", "pt", "sv"] as const;
 
   return (
@@ -284,6 +371,50 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
         </div>
         <h2 className="leading-[34px] text-[#202223] mb-2" style={{ fontWeight: 700, fontSize: 26 }}>{t("title")}</h2>
         <p className="leading-[24px] text-[#6D7175]" style={{ fontSize: 15 }}>{t("flowSelectSubtitle")}</p>
+      </div>
+
+      {/* ── Published-on-store status (auto-ingested from Shopify) ── */}
+      <div className="mb-8 border border-[#BBF7D0] bg-[#F0FDF4] rounded-[12px] p-5">
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="w-5 h-5 text-[#22C55E] flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-[#15803D] mb-1" style={{ fontWeight: 700, fontSize: 16 }}>
+              {published.length > 0
+                ? t("publishedCountTitle", { count: published.length })
+                : t("publishedNoneTitle")}
+            </p>
+            <p className="text-[#166534]" style={{ fontSize: 14 }}>
+              {published.length > 0 ? t("publishedDesc") : t("publishedNoneDesc")}
+            </p>
+            {published.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {published.map((p) => (
+                  <a
+                    key={p.policy_type}
+                    href={p.published_url ?? "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#BBF7D0] rounded-[8px] text-[#15803D] hover:bg-[#ECFDF5] transition-colors"
+                    style={{ fontSize: 13, fontWeight: 600 }}
+                  >
+                    {p.policy_type}
+                    {p.published_url && <ExternalLink className="w-3 h-3" />}
+                  </a>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handleRefreshPublished}
+              disabled={refreshing || !resolvedShopId}
+              className="inline-flex items-center gap-1.5 mt-3 text-[#15803D] hover:text-[#166534] disabled:opacity-50"
+              style={{ fontSize: 13, fontWeight: 600 }}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+              {t("refreshFromStore")}
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-col items-center mb-8">
@@ -561,9 +692,21 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
           <div className="bg-[#FFF4E5] border border-[#FFCC80] rounded-lg p-4">
             <div className="flex items-start gap-3">
               <Info className="w-5 h-5 text-[#B95000] flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-[#202223] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{t("customizeAfterGenerationTitle")}</p>
-                <p className="text-[#6D7175]" style={{ fontSize: 14 }}>{t("customizeAfterGenerationDesc")}</p>
+              <div className="flex-1">
+                <p className="text-[#202223] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{t("publishToCountTitle")}</p>
+                <p className="text-[#6D7175] mb-3" style={{ fontSize: 14 }}>{t("publishToCountDesc")}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = shopifyPolicyEditorUrl();
+                    if (url) window.open(url, "_blank", "noopener,noreferrer");
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1D4ED8] hover:bg-[#1e40af] text-white rounded-lg transition-colors"
+                  style={{ fontSize: 14, fontWeight: 600 }}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  {t("publishOnStoreBtn")}
+                </button>
               </div>
             </div>
           </div>

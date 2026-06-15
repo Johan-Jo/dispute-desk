@@ -1603,6 +1603,7 @@
       "customerAccountDetails": "Detalles de la cuenta del cliente",
       "shopifyProtect": "Cobertura de Shopify Protect",
       "customerCommunication": "Comunicación con el cliente",
+      "gorgiasCommunication": "Conversación del servicio de asistencia",
       "ipLocationCheck": "Verificación de IP y ubicación",
       "fraudRiskScreening": "Detección de riesgo de fraude previa a la autorización",
       "fulfillments": "Envíos ({count})",
@@ -2712,7 +2713,7 @@
       },
       "howPacksBuilt": {
         "title": "Cómo se crean los paquetes automáticamente",
-        "body": "DisputeDesk recopila automáticamente evidencia de múltiples fuentes:\n\n- Datos del pedido: artículos, montos, dirección (solo ciudad).\n- Envío y seguimiento: transportista, números de seguimiento, estado de entrega.\n- Políticas de la tienda: envío, reembolso, términos.\n\nEl paquete se estructura según el motivo de la disputa.\n\n**Plantillas de biblioteca:** Instalar una plantilla en Paquetes añade un paquete a su **biblioteca** (narrativas y secciones). Es independiente de cada **generación automática por disputa**, que usa el pipeline de recolectores anterior; la estructura de la biblioteca aún no se fusiona automáticamente en el build."
+        "body": "DisputeDesk recopila automáticamente evidencia de múltiples fuentes:\n\n- Datos del pedido: artículos, montos, dirección (solo ciudad).\n- Envío y seguimiento: transportista, números de seguimiento, estado de entrega.\n- Políticas de la tienda: envío, reembolso, términos.\n- Conversaciones de soporte: cuando conecta Gorgias (Configuración → Fuentes de evidencia), las conversaciones del servicio de asistencia del cliente se asocian por correo electrónico y se adjuntan automáticamente como evidencia de apoyo. Las notas internas nunca se incluyen.\n\nEl paquete se estructura según el motivo de la disputa.\n\n**Plantillas de biblioteca:** Instalar una plantilla en Paquetes añade un paquete a su **biblioteca** (narrativas y secciones). Es independiente de cada **generación automática por disputa**, que usa el pipeline de recolectores anterior; la estructura de la biblioteca aún no se fusiona automáticamente en el build."
       },
       "generatingPackManually": {
         "title": "Crear un paquete manualmente",
@@ -3782,7 +3783,15 @@
       "previewTemplateBtn": "Vista previa de plantilla",
       "templateLoadError": "No se pudo cargar la plantilla. Inténtalo de nuevo.",
       "customizeAfterGenerationTitle": "Personaliza después de generar",
-      "customizeAfterGenerationDesc": "Las plantillas se generarán y publicarán en tu tienda. Puedes editarlas en cualquier momento desde Shopify Admin o la configuración de DisputeDesk.",
+      "customizeAfterGenerationDesc": "Las plantillas son un punto de partida. Edítalas para que reflejen tu negocio y luego publícalas en tu tienda para que cuenten como evidencia.",
+      "publishedCountTitle": "{count} {count, plural, one {política publicada} other {políticas publicadas}} de la tienda encontradas",
+      "publishedDesc": "Capturamos automáticamente las políticas publicadas en tu tienda. Se citan en tu evidencia: los bancos pueden ver la página activa que vieron tus clientes.",
+      "publishedNoneTitle": "Aún no se detectaron políticas publicadas",
+      "publishedNoneDesc": "No encontramos políticas publicadas en tu tienda. Agrégalas abajo o publícalas en Shopify y actualiza: solo las políticas publicadas cuentan como evidencia.",
+      "refreshFromStore": "Actualizar desde la tienda",
+      "publishToCountTitle": "Publícala para que cuente como evidencia",
+      "publishToCountDesc": "Una plantilla solo fortalece las disputas cuando está publicada en tu tienda, donde los clientes (y los bancos) pueden verla. Cópiala en el editor de políticas de Shopify y luego actualiza para capturar la versión activa.",
+      "publishOnStoreBtn": "Abrir el editor de políticas de Shopify",
       "mixedBestTitle": "Lo mejor de ambos mundos",
       "mixedBestDesc": "Vincula las políticas que ya tienes y deja que DisputeDesk genere las que te faltan.",
       "ownAutoIncludedTitle": "Tus políticas se incluyen automáticamente",
@@ -4911,5 +4920,10 @@
     "finalHEm": "sí puedes",
     "finalAlt": "¿Prefieres un recorrido en vivo?",
     "finalAltLink": "Reserva un análisis de disputas gratis →"
+  },
+  "scopeReauth": {
+    "title": "Aprobar nuevos permisos",
+    "body": "DisputeDesk necesita un permiso adicional para seguir creando tu evidencia. Apruébalo una vez en Shopify: no es necesario reinstalar.",
+    "cta": "Aprobar en Shopify"
   }
 }

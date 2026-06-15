@@ -1603,6 +1603,7 @@
       "customerAccountDetails": "Détails du compte client",
       "shopifyProtect": "Couverture Shopify Protect",
       "customerCommunication": "Communication avec le client",
+      "gorgiasCommunication": "Conversation du service d'assistance",
       "ipLocationCheck": "Vérification IP et localisation",
       "fraudRiskScreening": "Évaluation du risque de fraude avant autorisation",
       "fulfillments": "Expéditions ({count})",
@@ -2712,7 +2713,7 @@
       },
       "howPacksBuilt": {
         "title": "Comment les dossiers sont créés automatiquement",
-        "body": "DisputeDesk collecte automatiquement des preuves de plusieurs sources :\n\n- Données de commande : articles, montants, adresse (ville uniquement).\n- Expédition et suivi : transporteur, numéros de suivi, statut de livraison.\n- Politiques de la boutique : expédition, remboursement, conditions.\n\nLe dossier est structuré selon le motif du litige.\n\n**Modèles de bibliothèque :** Installer un modèle sous Packs ajoute un dossier à votre **bibliothèque** (récits, sections). C'est distinct de chaque **génération automatique par litige**, qui utilise le pipeline de collecte ci-dessus ; la structure de votre bibliothèque n'est pas encore fusionnée automatiquement dans le build."
+        "body": "DisputeDesk collecte automatiquement des preuves de plusieurs sources :\n\n- Données de commande : articles, montants, adresse (ville uniquement).\n- Expédition et suivi : transporteur, numéros de suivi, statut de livraison.\n- Politiques de la boutique : expédition, remboursement, conditions.\n- Conversations d'assistance : lorsque vous connectez Gorgias (Configuration → Sources de preuves), les conversations du service client sont associées par e-mail et jointes automatiquement comme preuve à l'appui. Les notes internes ne sont jamais incluses.\n\nLe dossier est structuré selon le motif du litige.\n\n**Modèles de bibliothèque :** Installer un modèle sous Packs ajoute un dossier à votre **bibliothèque** (récits, sections). C'est distinct de chaque **génération automatique par litige**, qui utilise le pipeline de collecte ci-dessus ; la structure de votre bibliothèque n'est pas encore fusionnée automatiquement dans le build."
       },
       "generatingPackManually": {
         "title": "Créer un dossier manuellement",
@@ -3782,7 +3783,15 @@
       "previewTemplateBtn": "Aperçu du modèle",
       "templateLoadError": "Le modèle n'a pas pu être chargé. Veuillez réessayer.",
       "customizeAfterGenerationTitle": "Personnaliser après génération",
-      "customizeAfterGenerationDesc": "Les modèles seront générés et publiés dans votre boutique. Vous pouvez les modifier à tout moment depuis Shopify Admin ou les paramètres DisputeDesk.",
+      "customizeAfterGenerationDesc": "Les modèles sont un point de départ. Adaptez-les à votre activité, puis publiez-les sur votre boutique pour qu'ils comptent comme preuve.",
+      "publishedCountTitle": "{count} {count, plural, one {politique publiée} other {politiques publiées}} de la boutique trouvées",
+      "publishedDesc": "Nous avons automatiquement capturé les politiques publiées sur votre boutique. Elles sont citées dans vos preuves — les banques voient la page en ligne que vos clients ont consultée.",
+      "publishedNoneTitle": "Aucune politique publiée détectée pour l'instant",
+      "publishedNoneDesc": "Nous n'avons trouvé aucune politique publiée sur votre boutique. Ajoutez-les ci-dessous, ou publiez-les sur Shopify puis actualisez — seules les politiques publiées comptent comme preuve.",
+      "refreshFromStore": "Actualiser depuis la boutique",
+      "publishToCountTitle": "Publiez-la pour qu'elle compte comme preuve",
+      "publishToCountDesc": "Un modèle ne renforce les litiges qu'une fois publié sur votre boutique, où les clients (et les banques) peuvent le voir. Copiez-le dans l'éditeur de politiques Shopify, puis actualisez pour capturer la version en ligne.",
+      "publishOnStoreBtn": "Ouvrir l'éditeur de politiques Shopify",
       "mixedBestTitle": "Le meilleur des deux mondes",
       "mixedBestDesc": "Liez les politiques que vous avez déjà et laissez DisputeDesk générer celles qui manquent.",
       "ownAutoIncludedTitle": "Vos politiques sont incluses automatiquement",
@@ -4911,5 +4920,10 @@
     "finalHEm": "que vous pouvez",
     "finalAlt": "Vous préférez une démonstration en direct ?",
     "finalAltLink": "Réservez une analyse de litige gratuite →"
+  },
+  "scopeReauth": {
+    "title": "Approuver les nouvelles autorisations",
+    "body": "DisputeDesk a besoin d'une autorisation supplémentaire pour continuer à constituer vos preuves. Approuvez-la une fois sur Shopify — aucune réinstallation requise.",
+    "cta": "Approuver sur Shopify"
   }
 }

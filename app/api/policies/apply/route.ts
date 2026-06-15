@@ -8,7 +8,14 @@ const MAX_CONTENT_LENGTH = 500 * 1024; // 500 KB
  * POST /api/policies/apply
  *
  * Body: JSON { shop_id, policy_type, content }.
- * Saves the template content as a text file, uploads to policy-uploads, and creates a policy_snapshot.
+ * Saves a TEMPLATE DRAFT — the merchant previewed/edited one of our
+ * library templates. Stored as `source = 'template'`, which the
+ * evidence collector (lib/packs/sources/policySource.ts) deliberately
+ * EXCLUDES from bank evidence: a DB-only template has no storefront URL
+ * to cite. The merchant must publish it on their store (then we
+ * re-capture it via ingestShopifyPolicies as `shopify_published`)
+ * before it counts. This endpoint keeps the preview/edit-before-copy
+ * UX working; it no longer writes bank-facing evidence.
  */
 export async function POST(req: NextRequest) {
   let body: { shop_id?: string; policy_type?: string; content?: string };
@@ -72,6 +79,8 @@ export async function POST(req: NextRequest) {
     .insert({
       shop_id: shopId,
       policy_type: policyType,
+      // Template draft — NOT bank evidence. See route docblock.
+      source: "template",
       storage_path: storagePath,
       extracted_text: content,
       captured_at: new Date().toISOString(),

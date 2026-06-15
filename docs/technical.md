@@ -880,9 +880,20 @@ Migrations live in `supabase/migrations/`. **Primary workflow** is the **Supabas
 - **Existing DB:** If the database was created outside the CLI (e.g. Dashboard SQL or an old script), the CLI may have no migration history. Run `npx supabase migration repair <001> <002> … --status applied` once to mark already-applied files without re-running SQL; then `db push` applies only new migrations.
 - **Without CLI link:** `npm run db:migrate:script` runs `scripts/run-migration.mjs`, which uses a local `_migrations` table and requires `SUPABASE_URL_POSTGRES` (or `SUPABASE_URL` + `SUPABASE_DB_PASSWORD`). Prefer the CLI when possible so there is a single source of truth with hosted Supabase.
 
+### Supabase DB target safety (dev vs prod) — read first
+
+The Supabase CLI's linked project is a **single invisible global pointer** (`supabase/.temp/linked-project.json`) that `db push` / `db query --linked` inherit silently. On **2026-06-15** it was pointed at **prod** while we believed we were on **dev**, so a migration + many diagnostic queries hit the wrong database and produced confidently-wrong conclusions for hours. Treat a wrong-DB write as a Sev-1.
+
+Refs (source of truth = `CLAUDE.md`): **prod = `aokhplydttxtebvbeuzc`, dev = `vrpkgudqmpyunekrkpnc`**.
+
+- **Migrations**: never run the raw `supabase db push`. Use `npm run db:migrate:dev` / `npm run db:migrate:prod`. Both run `scripts/guard-db-target.mjs <env>` first, which reads the linked ref and **refuses unless it matches that env's known ref** — so a dev/prod mix-up fails hard with the re-link command, never a silent wrong push. Bare `npm run db:migrate` is intentionally blocked (errors demanding an explicit target).
+- **Ad-hoc `db query --linked`**: the guard doesn't wrap raw queries, so **`cat supabase/.temp/linked-project.json` and confirm the ref before running** — a diagnostic against the wrong DB is how the incident started.
+- **Re-link** to the intended project with `npx supabase link --project-ref <ref>` (a separate step before the migrate command; let it settle before running the guard).
+- The **dev app reads its DB from the dev Vercel project's `SUPABASE_URL`** (`vrpkgudqmpyunekrkpnc`), independent of whatever the CLI is linked to — so the live app and a CLI query can silently diverge. `vercel env pull` the app's real env when verifying live behavior.
+
 ### Ad-hoc SQL / ops queries (canonical path)
 
-**Use this for one-shot reads, diagnostics, and targeted cleanups** — anything that is not a migration and not application code. It runs SQL via the Supabase Management API against the linked project, so it needs no DB password and does not depend on `SUPABASE_URL_POSTGRES` being in sync (that env var rots when the DB password is rotated in the dashboard).
+**Use this for one-shot reads, diagnostics, and targeted cleanups** — anything that is not a migration and not application code. It runs SQL via the Supabase Management API against the linked project, so it needs no DB password and does not depend on `SUPABASE_URL_POSTGRES` being in sync (that env var rots when the DB password is rotated in the dashboard). **First confirm which project is linked (see *Supabase DB target safety* above).**
 
 ```bash
 # Inline query — service-role-equivalent privilege
@@ -952,6 +963,7 @@ npx supabase db query --linked --output table "select shop_domain, plan from sho
 | 20260501100000_shop_daily_metrics.sql | `shop_daily_metrics(shop_id, date, order_count, dispute_count, chargeback_count, inquiry_count, last_synced_at)` — daily snapshot powering the dashboard chargeback-rate KPI and the admin Risk profile (PRD §5/§8/§9). Service-role-only RLS, mirrors the convention in `audit_events`. |
 | 20260509130000_audit_events_cleanup_guc_and_orphan_wipe.sql | Relaxes the `audit_events` BEFORE-DELETE/UPDATE trigger to honour an `app.allow_audit_mutation = 'on'` session GUC, and wipes the 30 orphan E2E fixture disputes that had accumulated on the production project. See *E2E fixtures and audit immutability* below. |
 | 20260509140000_e2e_fixture_cleanup_rpc.sql | `delete_e2e_fixture_dispute(uuid)` SECURITY DEFINER RPC — the only path E2E `cleanup()` and `npm run cleanup:e2e-orphans` use to delete audit/jobs/pack/dispute rows for fixture disputes. Refuses any `dispute_gid` that doesn't match the test pattern. |
+| 20260615120000_policy_snapshots_source_disclosure.sql | `policy_snapshots`: `source` (`shopify_published`/`uploaded`/`external_url`/`template`), `published_url`, `shopify_policy_id`, `policy_updated_at`; widen `policy_type` to allow `subscription`. Backs the published-on-store source-of-truth model (see *Policies — published-on-store source of truth*). |
 
 ### E2E fixtures and audit immutability
 
@@ -1297,6 +1309,18 @@ Re-OAuth banner for installs that pre-date the `read_all_orders` grant (Shopify 
 Clicking the CTA navigates the **top frame** (`window.top.location.href`) to `/api/auth/shopify?phase=offline&shop=<domain>`. The Shopify consent screen would be blocked by `X-Frame-Options` inside the embedded iframe, so the breakout is required.
 
 After re-OAuth, `resetBackfillIfScopeUpgraded` (in `lib/disputes/backfillOrders.ts`) fires in the callback. It detects the upgrade (new scopes include `read_all_orders`, prior backfill ran under `default_window`, `historical_import_status='complete'`) and resets the import state to `not_started`. The standard `enqueueShopOrdersBackfill` call that follows then runs a fresh wider-window backfill. Idempotent — no-op on first install, re-installs without scope change, and in-flight backfills (those let their own first-run bookkeeping pick up the new scopes).
+
+### Generic scope re-auth (`ScopeReauthBanner`)
+
+The installed base doesn't auto-re-prompt when the app adds a new OAuth scope — Shopify only shows the consent screen when an OAuth flow runs and detects a mismatch, and the app never re-initiates OAuth for already-installed shops on its own. So adding a scope (e.g. `read_legal_policies` for published-policy ingest) would otherwise leave every existing shop's token stuck on the old grant, with the new feature silently broken and **no way short of uninstall/reinstall** to fix it.
+
+`ScopeReauthBanner` (rendered app-wide from `EmbeddedAppChrome`) closes that gap generically:
+- `lib/shopify/scopes.ts` is the single comparison point: `getRequiredScopes()` parses `SHOPIFY_SCOPES` (the exact `scope=` sent in the OAuth URL), and `findMissingScopes(granted)` diffs it against the shop's granted offline-session scopes.
+- `needsReauth` + `missingScopes` are returned by **`/api/setup/readiness`** (not a separate route). That endpoint is the one middleware already resolves correctly for the embedded iframe via the `/api/setup/*` shop-domain resolution — a plain client `fetch` from the iframe carries no `x-shop-id` header (middleware injects it server-side) and the portal cookies aren't set in the embedded context, so a generic `/api/shop/*` route would 401 with `SESSION_REQUIRED`. The banner passes through whatever `?shop=`/`?host=` the iframe URL carries. `read_all_orders` is **excluded** (dedicated nudge above) to avoid stacked banners.
+- When `needsReauth`, the banner shows an "Approve on Shopify" CTA that breaks out of the iframe (`window.top.location.href`) to `/api/auth/shopify?phase=offline&shop=<domain>`. The merchant approves the new permission in Shopify's consent screen — **no reinstall** — and the OAuth callback overwrites the offline session with the wider grant. The banner is non-dismissible: a missing required scope leaves a feature broken, so the nudge persists until granted.
+- This is scope-agnostic: every future scope addition surfaces here automatically once it lands in `SHOPIFY_SCOPES` + the app TOMLs (a vitest drift guard keeps those in lockstep).
+
+> **Rollout checklist when adding a scope:** (1) add it to `shopify.app.{dev,prod}.toml` `[access_scopes]`, `.env.example`, and Vercel `SHOPIFY_SCOPES`; (2) `npm run shopify:deploy:{dev,prod}` so the **Partners app** declares it (this is what makes the scope grantable — env alone is not enough); (3) existing merchants then see `ScopeReauthBanner` and approve in one click.
 
 Banner dismissal: localStorage flag `dd_scope_upgrade_banner_dismissed`. Per-device "remind me later" — no server-side state.
 
@@ -1750,6 +1774,7 @@ When the gate decision is `block`, the pipeline writes the gate's `reasons` to b
 | Payment Source | `lib/packs/sources/paymentSource.ts` | Card evidence (AVS/CVV/BIN/wallet), risk assessments, customer IP |
 | 3-D Secure Source | `lib/packs/sources/threeDSecureSource.ts` | 3DS authentication signal, best-effort read from Shopify Payments `receiptJson` |
 | Coverage Source | `lib/packs/sources/coverageSource.ts` | Shopify Protect status — Coverage Gate input |
+| Gorgias Source | `lib/packs/sources/gorgiasCommSource.ts` | Helpdesk conversation history pulled from a connected Gorgias account |
 
 ### Pack Status Flow
 
@@ -1825,6 +1850,26 @@ The auto-collector is downgraded one tier (Moderate, not Strong) on purpose: the
 **Path-stability evidence (2026-04-26).** Verified across 18 SUCCESS transactions on 2026-01 (10 via `orders(query:"financial_status:paid")`, 8 via dispute-tied real orders): `three_d_secure` was located at `latest_charge.payment_method_details.card.three_d_secure` on every single transaction, and the dynamic recursive walker (`scripts/test-3ds-extraction.mjs`) agreed with the hardcoded modern path on every receipt. The legacy charge-level path (`payment_method_details.card.three_d_secure` at the receipt root) never resolved in the sample — it remains in the collector as defensive insurance only. The populated-object case (`authenticated: true`) was *not* observed in the sample (Stripe test cards do not trigger real 3DS challenges), so the live verification confirms field/path stability but not the live-extraction path. The REST endpoint `/admin/api/{ver}/orders/{id}/transactions.json` returned identical receipt shapes — kept as a future GraphQL-removal fallback, not currently wired in.
 
 **Re-running the verification.** `node scripts/test-3ds-extraction.mjs [shopId] [orderLimit]` runs the recursive walker + REST cross-check + structured reliability report against any shop with an offline session. Re-run after any Shopify API version bump or whenever 3DS scoring behavior is questioned.
+
+### Gorgias Communication Collection
+
+`gorgiasCommSource.ts` pulls the disputing customer's customer-service conversations from a connected **Gorgias** helpdesk and snapshots them into the evidence pack — the same pattern Chargeflow's Gorgias app uses (conversation history → chargeback evidence). This is **Phase 1**: a per-merchant *private app* (HTTP Basic auth, email + API key), read-only, pulled on demand at pack-build time. No OAuth/App-Store listing and no webhooks (those are a separate Phase 2 that add discoverability/UX only — **zero** new evidence capability).
+
+**Connection (already shipped):** `app/api/integrations/gorgias/{connect,test,disconnect}/route.ts` capture the subdomain/email/API key, live-test against `GET /api/tickets?limit=1`, AES-256-GCM-encrypt the credentials into `integration_secrets`, and track status in `integrations` (`type = "gorgias"`). The connect UX lives in `components/setup/modals/ConnectGorgiasModal.tsx` (setup wizard, `EvidenceSourcesStep`).
+
+**REST client (`lib/integrations/gorgias/client.ts`):** Basic-auth client against `https://{subdomain}.gorgias.com/api`. Cursor pagination (offset/page was deprecated by Gorgias), bounded by `maxPages` so a chatty customer can't trigger unbounded fan-out. 429 / transient 5xx are retried with bounded backoff honouring `Retry-After`. JSON is parsed defensively (Gorgias fields are frequently null; the channel set is open-ended). The 40 req/20s API-key rate limit is tight, so the collector prefers the **embedded `messages[]` array** already on each ticket and only falls back to `GET /api/messages?ticket_id=` when absent.
+
+**Matching:** the order's customer email (`ctx.order.email`) → `GET /api/customers?email=` (match verified case-insensitively client-side, since the filter's strictness is undocumented) → `GET /api/tickets?customer_id=&trashed=false` → messages.
+
+**Self-incrimination guard (critical):** only `public === true` messages are emitted; internal agent notes (`public:false` or `channel === "internal-note"`) are dropped — an internal note like "just refund this sketchy customer" would be a confession if it reached the pack. Trashed and spam tickets are excluded.
+
+**Snapshot, not live-link:** Gorgias permanently purges trashed tickets (~30 days) and GDPR-deletes customer profiles, so the message text (`stripped_text` → `body_text`), timestamp, direction (`from_agent`), channel, and CSAT score are frozen into the section `data` at build time rather than referenced live at submission.
+
+**Emission + classification:** one `EvidenceSection` (`type: "comms"`, `source: "gorgias"`, `labelToken: packs.section.gorgiasCommunication`) contributing the **existing** canonical field `customer_communication` — no new `signalId`, so `canonicalEvidence.ts` needs no change and the scorer de-dups against `customerCommSource` (Shopify timeline) by shared `signalId: "communication"`. It classifies as **`supporting`** by default and only upgrades to `strong` when `data.customerConfirmsOrder === true`; **Phase 1 never sets that automatically** (no fragile keyword detection) — explicit-admission handling is a deliberate future step.
+
+**Out of scope (Phase 1):** OAuth2 / public App Store listing / webhooks (Phase 2); attachment byte re-hosting (Phase 1.5 — text snapshot only); no new DB migration (`integrations` + `integration_secrets` already exist).
+
+**Verification posture:** no Gorgias sandbox was available, so the client and collector are covered by mocked-client unit tests (`lib/integrations/gorgias/__tests__/client.test.ts`, `lib/packs/sources/__tests__/gorgiasCommSource.test.ts`) — including the internal-note filter and the default-`supporting` classification. **Live end-to-end (resolve a real customer by email, pull real tickets, confirm classification) is a flagged follow-up gated on a sandbox.**
 
 ### Coverage Gate (Shopify Protect)
 
@@ -2490,9 +2535,19 @@ Store policies are included in evidence packs. Five policy types are supported: 
 - `POST /api/policies/upload` — FormData: `file`, `shop_id`, `policy_type`. Accepted types: `refunds`, `shipping`, `terms`, `privacy`, `contact`. Allowed document formats: PDF, DOCX, DOC, TXT, Markdown (`.md`), max 10 MB. Validation accepts either allowed MIME types or allowed file extensions (browser-safe fallback for text uploads). Files go to Supabase Storage bucket `policy-uploads` at `{shop_id}/{policy_type}/{timestamp}.{ext}`. Creates signed URL (1 year) and inserts into `policy_snapshots`.
 - `GET /api/policies/content?shop_id=...&policy_type=...` — Returns `{ content: string | null }` for the latest snapshot’s `extracted_text` (for editing). Requires portal user with access to the shop.
 - `DELETE /api/policies` — Body: `{ shop_id }`. Removes all policy snapshots for the shop. Requires portal user with access to the shop. Used to clear policies for re-review.
-- `POST /api/policies/apply` — JSON: `{ shop_id, policy_type, content }`. Saves template text as a file, stores it in `policy_snapshots.extracted_text` for the Edit flow, and creates a snapshot row (used when the merchant edits a template in the modal and clicks “Save & Apply”).
+- `POST /api/policies/apply` — JSON: `{ shop_id, policy_type, content }`. Saves a **template draft** (`source = 'template'`) so the merchant can preview/edit one of our library templates. **Template drafts are NOT bank evidence** (see *Policies — published-on-store source of truth* below); the collector excludes them.
+- `POST /api/policies/refresh` — JSON: `{ shop_id }`. Re-reads the merchant's **published** Shopify policies (`Shop.shopPolicies`) and upserts them as `shopify_published` snapshots. Powers the onboarding "Refresh from store" action after a merchant publishes a policy. Idempotent (dedup on content hash).
 
 **Evidence pack mapping:** The policy source collector (`lib/packs/sources/policySource.ts`) maps `terms` → `cancellation_policy`, `refunds` → `refund_policy`, `shipping` → `shipping_policy` for Shopify evidence fields. Privacy and contact snapshots are stored and shown on the Policies page but are not yet mapped to Shopify dispute evidence fields.
+
+### Policies — published-on-store source of truth
+
+A store policy only has weight with a bank if it was **published and visible to the customer**, with a live URL we can cite — Shopify's `refundPolicyDisclosure` evidence asks *"where did the customer see this policy?"*. The system therefore treats **published-on-store** as the source of truth and only cites policies that are *citable*.
+
+- **Auto-ingest** — `lib/policies/ingestShopifyPolicies.ts` reads `Shop.shopPolicies` (query in `lib/shopify/queries/shopPolicies.ts`, registered for drift checks) and stores each as a `policy_snapshots` row with `source = 'shopify_published'`, the live `published_url`, `shopify_policy_id`, and `policy_updated_at`. `ShopPolicyType` maps: `REFUND_POLICY→refunds`, `SHIPPING_POLICY→shipping`, `TERMS_OF_SERVICE→terms`, `PRIVACY_POLICY→privacy`, `CONTACT_INFORMATION→contact`, `SUBSCRIPTION_POLICY→subscription`; `LEGAL_NOTICE`/`TERMS_OF_SALE` are ignored. `body` is HTML → stripped to text. Dedup on content hash so re-runs don't churn rows.
+- **Trigger points** — (1) OAuth callback offline phase (fire-and-forget, after `storeSession`); (2) pack build, as a defensive refresh at the top of `collectPolicyEvidence`; (3) the `/api/policies/refresh` button.
+- **`policy_snapshots.source`** — `shopify_published` | `uploaded` | `external_url` | `template`. The collector treats `shopify_published`/`uploaded`/`external_url` as **citable evidence** and **excludes `template`** drafts (a DB-only template has no storefront URL to cite). The PDF renders the live `published_url` as a *"Published at {url}"* disclosure line.
+- **Onboarding** — `BusinessPoliciesStep` shows a "published on your store" status banner (auto-ingested, with live links + "Refresh from store"). The template flow reframes the CTA to **"Open Shopify policy editor"** (deep-link to `admin.shopify.com/store/{handle}/settings/policies`; handle resolved from the App Bridge `?host=` param to avoid path-doubling inside the iframe): publish there, then refresh to capture the live version. Requires the `read_legal_policies` OAuth scope. Templates are a setup aid that funnels toward publishing — not something we cite directly.
 
 ## PDF Rendering & Storage
 

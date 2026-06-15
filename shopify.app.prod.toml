@@ -42,11 +42,16 @@ redirect_urls = [
 #   * 2026-05-14 — adds read_customer_events + write_pixels for LSE-4.
 #     SHOPIFY_SCOPES env on Vercel must be updated in the same deploy
 #     to the 13-scope set so OAuth consent matches Partners.
+#   * 2026-06-15 — adds read_legal_policies so the app can read the
+#     merchant's published store policies (Shop.shopPolicies) for the
+#     published-on-store policy-evidence model. Standard self-serve
+#     scope (no Partner approval). SHOPIFY_SCOPES env on Vercel must be
+#     updated in the same deploy so OAuth consent matches Partners.
 #
 # Seed scripts under scripts/shopify/ run via SHOPIFY_SEED_CLIENT_ID
 # (a separate Partners app) and carry the broader write set there
 # — never on the production app.
-scopes = "read_all_orders,read_customer_events,read_customers,read_fulfillments,read_orders,read_products,read_shipping,read_shopify_payments_dispute_evidences,read_shopify_payments_dispute_file_uploads,read_shopify_payments_disputes,write_pixels,write_shopify_payments_dispute_evidences,write_shopify_payments_dispute_file_uploads"
+scopes = "read_all_orders,read_customer_events,read_customers,read_fulfillments,read_legal_policies,read_orders,read_products,read_shipping,read_shopify_payments_dispute_evidences,read_shopify_payments_dispute_file_uploads,read_shopify_payments_disputes,write_pixels,write_shopify_payments_dispute_evidences,write_shopify_payments_dispute_file_uploads"
 
 [webhooks]
 api_version = "2026-01"

@@ -1603,6 +1603,7 @@
       "customerAccountDetails": "Detalhes da conta do cliente",
       "shopifyProtect": "Cobertura do Shopify Protect",
       "customerCommunication": "Comunicação com o cliente",
+      "gorgiasCommunication": "Conversa da central de atendimento",
       "ipLocationCheck": "Verificação de IP e localização",
       "fraudRiskScreening": "Triagem de risco de fraude pré-autorização",
       "fulfillments": "Envios ({count})",
@@ -2712,7 +2713,7 @@
       },
       "howPacksBuilt": {
         "title": "Como os pacotes de evidências são gerados automaticamente",
-        "body": "Quando o DisputeDesk gera um pacote de evidências, ele coleta evidências automaticamente de múltiplas fontes:\n\n- Dados do pedido: itens, valores, endereço de cobrança (apenas cidade — dados pessoais são removidos), tempo de cadastro do cliente e histórico de reembolsos.\n- Entrega e rastreamento: transportadora, números de rastreamento, URLs de rastreamento e status de entrega.\n- Políticas da loja: cópias das suas políticas de envio, reembolso, termos e cancelamento.\n\nO pacote é estruturado conforme o motivo da disputa. Por exemplo, uma disputa por \"Produto não recebido\" priorizará evidências de envio e rastreamento, enquanto uma disputa por \"Fraude\" enfatizará verificação do pedido e do cliente.\n\nApós a coleta, o DisputeDesk calcula uma pontuação de completude e identifica bloqueios (evidências obrigatórias ausentes). Você pode então enviar arquivos adicionais para fortalecer o pacote.\n\n**Modelos na biblioteca:** Instalar um modelo na página Pacotes adiciona um pacote à sua **biblioteca** (narrativas, seções e edição). Isso é separado de cada **geração automática por disputa**, que usa o pipeline de coletores acima. A geração automática ainda não incorpora automaticamente o layout do modelo da sua biblioteca."
+        "body": "Quando o DisputeDesk gera um pacote de evidências, ele coleta evidências automaticamente de múltiplas fontes:\n\n- Dados do pedido: itens, valores, endereço de cobrança (apenas cidade — dados pessoais são removidos), tempo de cadastro do cliente e histórico de reembolsos.\n- Entrega e rastreamento: transportadora, números de rastreamento, URLs de rastreamento e status de entrega.\n- Políticas da loja: cópias das suas políticas de envio, reembolso, termos e cancelamento.\n- Conversas de atendimento: ao conectar o Gorgias (Configuração → Fontes de evidência), as conversas de atendimento ao cliente são associadas por e-mail e anexadas automaticamente como evidência de apoio. Notas internas nunca são incluídas.\n\nO pacote é estruturado conforme o motivo da disputa. Por exemplo, uma disputa por \"Produto não recebido\" priorizará evidências de envio e rastreamento, enquanto uma disputa por \"Fraude\" enfatizará verificação do pedido e do cliente.\n\nApós a coleta, o DisputeDesk calcula uma pontuação de completude e identifica bloqueios (evidências obrigatórias ausentes). Você pode então enviar arquivos adicionais para fortalecer o pacote.\n\n**Modelos na biblioteca:** Instalar um modelo na página Pacotes adiciona um pacote à sua **biblioteca** (narrativas, seções e edição). Isso é separado de cada **geração automática por disputa**, que usa o pipeline de coletores acima. A geração automática ainda não incorpora automaticamente o layout do modelo da sua biblioteca."
       },
       "generatingPackManually": {
         "title": "Gerando um pacote manualmente",
@@ -3774,7 +3775,15 @@
       "previewTemplateBtn": "Visualizar modelo",
       "templateLoadError": "Falha ao carregar o modelo. Tente novamente.",
       "customizeAfterGenerationTitle": "Personalize após gerar",
-      "customizeAfterGenerationDesc": "Os modelos serão gerados e publicados na sua loja. Você pode editá-los a qualquer momento no Shopify Admin ou nas configurações do DisputeDesk.",
+      "customizeAfterGenerationDesc": "Os modelos são um ponto de partida. Edite-os para refletir o seu negócio e depois publique-os na sua loja para que contem como evidência.",
+      "publishedCountTitle": "{count} {count, plural, one {política publicada} other {políticas publicadas}} da loja encontradas",
+      "publishedDesc": "Capturamos automaticamente as políticas publicadas na sua loja. Elas são citadas na sua evidência — os bancos veem a página ativa que os seus clientes viram.",
+      "publishedNoneTitle": "Nenhuma política publicada detectada ainda",
+      "publishedNoneDesc": "Não encontramos políticas publicadas na sua loja. Adicione-as abaixo ou publique-as no Shopify e atualize — apenas políticas publicadas contam como evidência.",
+      "refreshFromStore": "Atualizar da loja",
+      "publishToCountTitle": "Publique-a para que conte como evidência",
+      "publishToCountDesc": "Um modelo só fortalece disputas quando está publicado na sua loja, onde os clientes (e os bancos) podem vê-lo. Copie-o para o editor de políticas do Shopify e depois atualize para capturar a versão ativa.",
+      "publishOnStoreBtn": "Abrir o editor de políticas do Shopify",
       "mixedBestTitle": "O melhor dos dois mundos",
       "mixedBestDesc": "Vincule as políticas que você já tem e deixe o DisputeDesk gerar as que faltam.",
       "ownAutoIncludedTitle": "Suas políticas são incluídas automaticamente",
@@ -4911,5 +4920,10 @@
     "finalHEm": "você pode",
     "finalAlt": "Prefere um tour ao vivo?",
     "finalAltLink": "Agende uma análise de disputa gratuita →"
+  },
+  "scopeReauth": {
+    "title": "Aprovar novas permissões",
+    "body": "O DisputeDesk precisa de uma permissão adicional para continuar a criar a sua evidência. Aprove-a uma vez no Shopify — não é necessário reinstalar.",
+    "cta": "Aprovar no Shopify"
   }
 }
