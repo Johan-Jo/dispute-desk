@@ -45,6 +45,26 @@ describe("findMissingScopes", () => {
   it("treats a missing grant as all-required-missing", () => {
     expect(findMissingScopes(null, ["read_orders"])).toEqual(["read_orders"]);
   });
+
+  it("a granted write_X satisfies a required read_X (Shopify write-implies-read)", () => {
+    // Regression for the prod 2026-06-15 infinite approve loop: SHOPIFY_SCOPES
+    // requested read_shopify_payments_dispute_{evidences,file_uploads} but
+    // Shopify granted the write_ siblings only. Strict containment looped.
+    const granted =
+      "read_legal_policies,write_shopify_payments_dispute_evidences,write_shopify_payments_dispute_file_uploads";
+    const required = [
+      "read_legal_policies",
+      "read_shopify_payments_dispute_evidences",
+      "read_shopify_payments_dispute_file_uploads",
+    ];
+    expect(findMissingScopes(granted, required)).toEqual([]);
+  });
+
+  it("read_X does NOT satisfy a required write_X (no reverse implication)", () => {
+    expect(findMissingScopes("read_orders", ["write_orders"])).toEqual([
+      "write_orders",
+    ]);
+  });
 });
 
 describe("getRequiredScopes", () => {
