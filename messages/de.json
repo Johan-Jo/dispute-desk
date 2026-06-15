@@ -4920,5 +4920,10 @@
     "finalHEm": "die du kannst",
     "finalAlt": "Lieber eine Live-Tour?",
     "finalAltLink": "Kostenlose Dispute-Analyse buchen →"
+  },
+  "scopeReauth": {
+    "title": "Neue Berechtigungen genehmigen",
+    "body": "DisputeDesk benötigt eine zusätzliche Berechtigung, um deine Nachweise weiter zu erstellen. Genehmige sie einmal in Shopify – keine Neuinstallation erforderlich.",
+    "cta": "In Shopify genehmigen"
   }
 }

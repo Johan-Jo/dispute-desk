@@ -4919,5 +4919,10 @@
     "finalHEm": "you can",
     "finalAlt": "Prefer a live walkthrough?",
     "finalAltLink": "Book a free dispute teardown →"
+  },
+  "scopeReauth": {
+    "title": "Approve new permissions",
+    "body": "DisputeDesk needs an additional permission to keep building your evidence. Approve it once on Shopify — no reinstall required.",
+    "cta": "Approve on Shopify"
   }
 }

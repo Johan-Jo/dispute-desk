@@ -4920,5 +4920,10 @@
     "finalHEm": "sí puedes",
     "finalAlt": "¿Prefieres un recorrido en vivo?",
     "finalAltLink": "Reserva un análisis de disputas gratis →"
+  },
+  "scopeReauth": {
+    "title": "Aprobar nuevos permisos",
+    "body": "DisputeDesk necesita un permiso adicional para seguir creando tu evidencia. Apruébalo una vez en Shopify: no es necesario reinstalar.",
+    "cta": "Aprobar en Shopify"
   }
 }
