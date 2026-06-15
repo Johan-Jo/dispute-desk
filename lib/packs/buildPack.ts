@@ -29,6 +29,7 @@ import { collectFulfillmentEvidence } from "./sources/fulfillmentSource";
 import { collectPolicyEvidence } from "./sources/policySource";
 import { collectManualEvidence } from "./sources/manualSource";
 import { collectCustomerCommEvidence } from "./sources/customerCommSource";
+import { collectGorgiasCommEvidence } from "./sources/gorgiasCommSource";
 import { collectPaymentEvidence } from "./sources/paymentSource";
 import { collectThreeDSecureEvidence } from "./sources/threeDSecureSource";
 import { collectFraudRiskEvidence } from "./sources/fraudRiskSource";
@@ -335,6 +336,7 @@ export async function buildPack(
     collectFulfillmentEvidence(ctx),
     collectPolicyEvidence(ctx),
     collectCustomerCommEvidence(ctx),
+    collectGorgiasCommEvidence(ctx),
     collectManualEvidence(ctx),
     collectPaymentEvidence(ctx),
     collectThreeDSecureEvidence(ctx),

@@ -1603,6 +1603,7 @@
       "customerAccountDetails": "Customer account details",
       "shopifyProtect": "Shopify Protect coverage",
       "customerCommunication": "Customer communication",
+      "gorgiasCommunication": "Helpdesk conversation",
       "ipLocationCheck": "IP & location check",
       "fraudRiskScreening": "Pre-authorization fraud screening",
       "fulfillments": "Fulfillments ({count})",
@@ -2711,7 +2712,7 @@
       },
       "howPacksBuilt": {
         "title": "How evidence packs are built automatically",
-        "body": "When DisputeDesk builds an evidence pack, it automatically collects evidence from multiple sources:\n\n- Order data: line items, amounts, billing address (city-level only — PII is redacted), customer tenure, and refund history.\n- Fulfillment & tracking: carrier name, tracking numbers, tracking URLs, and delivery status.\n- Store policies: snapshots of your shipping, refund, terms, and cancellation policies.\n\nThe pack is structured by dispute reason. For example, a \"Product not received\" dispute will prioritize shipping and tracking evidence, while a \"Fraudulent\" dispute will emphasize order and customer verification.\n\nAfter collection, DisputeDesk calculates a completeness score and identifies any blockers (missing required evidence). You can then upload additional files to strengthen the pack.\n\n**Library pack templates:** Installing a template from the Packs page adds a pack to your **library** for narratives, sections, and editing. That is separate from each **automated per-dispute build**, which uses the collectors pipeline above. The automated build does not currently merge your library template structure into the pack automatically."
+        "body": "When DisputeDesk builds an evidence pack, it automatically collects evidence from multiple sources:\n\n- Order data: line items, amounts, billing address (city-level only — PII is redacted), customer tenure, and refund history.\n- Fulfillment & tracking: carrier name, tracking numbers, tracking URLs, and delivery status.\n- Store policies: snapshots of your shipping, refund, terms, and cancellation policies.\n- Helpdesk conversations: when you connect Gorgias (Setup → Evidence sources), the customer's customer-service conversations are matched by email and attached automatically as supporting evidence. Internal agent notes are never included.\n\nThe pack is structured by dispute reason. For example, a \"Product not received\" dispute will prioritize shipping and tracking evidence, while a \"Fraudulent\" dispute will emphasize order and customer verification.\n\nAfter collection, DisputeDesk calculates a completeness score and identifies any blockers (missing required evidence). You can then upload additional files to strengthen the pack.\n\n**Library pack templates:** Installing a template from the Packs page adds a pack to your **library** for narratives, sections, and editing. That is separate from each **automated per-dispute build**, which uses the collectors pipeline above. The automated build does not currently merge your library template structure into the pack automatically."
       },
       "generatingPackManually": {
         "title": "Generating a pack manually",

@@ -1603,6 +1603,7 @@
       "customerAccountDetails": "Detalles de la cuenta del cliente",
       "shopifyProtect": "Cobertura de Shopify Protect",
       "customerCommunication": "Comunicación con el cliente",
+      "gorgiasCommunication": "Conversación del servicio de asistencia",
       "ipLocationCheck": "Verificación de IP y ubicación",
       "fraudRiskScreening": "Detección de riesgo de fraude previa a la autorización",
       "fulfillments": "Envíos ({count})",
@@ -2712,7 +2713,7 @@
       },
       "howPacksBuilt": {
         "title": "Cómo se crean los paquetes automáticamente",
-        "body": "DisputeDesk recopila automáticamente evidencia de múltiples fuentes:\n\n- Datos del pedido: artículos, montos, dirección (solo ciudad).\n- Envío y seguimiento: transportista, números de seguimiento, estado de entrega.\n- Políticas de la tienda: envío, reembolso, términos.\n\nEl paquete se estructura según el motivo de la disputa.\n\n**Plantillas de biblioteca:** Instalar una plantilla en Paquetes añade un paquete a su **biblioteca** (narrativas y secciones). Es independiente de cada **generación automática por disputa**, que usa el pipeline de recolectores anterior; la estructura de la biblioteca aún no se fusiona automáticamente en el build."
+        "body": "DisputeDesk recopila automáticamente evidencia de múltiples fuentes:\n\n- Datos del pedido: artículos, montos, dirección (solo ciudad).\n- Envío y seguimiento: transportista, números de seguimiento, estado de entrega.\n- Políticas de la tienda: envío, reembolso, términos.\n- Conversaciones de soporte: cuando conecta Gorgias (Configuración → Fuentes de evidencia), las conversaciones del servicio de asistencia del cliente se asocian por correo electrónico y se adjuntan automáticamente como evidencia de apoyo. Las notas internas nunca se incluyen.\n\nEl paquete se estructura según el motivo de la disputa.\n\n**Plantillas de biblioteca:** Instalar una plantilla en Paquetes añade un paquete a su **biblioteca** (narrativas y secciones). Es independiente de cada **generación automática por disputa**, que usa el pipeline de recolectores anterior; la estructura de la biblioteca aún no se fusiona automáticamente en el build."
       },
       "generatingPackManually": {
         "title": "Crear un paquete manualmente",
