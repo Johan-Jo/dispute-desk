@@ -327,12 +327,38 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
 
   // Deep-link to Shopify's policy editor so the merchant can publish a
   // policy (then "Refresh from store" captures the live version).
+  //
+  // The store handle is resolved from the App Bridge `?host=` param
+  // (base64 of "admin.shopify.com/store/<handle>") when present, falling
+  // back to the shop cookie / `?shop=` domain. We extract ONLY the bare
+  // handle so the URL can't double up the "/store/<handle>" segment when
+  // opened from inside the embedded iframe. The canonical policies editor
+  // path is `/settings/policies` (NOT `/settings/legal`, which 404s).
   const shopifyPolicyEditorUrl = useCallback((): string | null => {
-    const domain = document.cookie.match(/shopify_shop=([^;]+)/)?.[1]
-      ?? new URLSearchParams(window.location.search).get("shop");
-    if (!domain) return null;
-    const handle = domain.replace(".myshopify.com", "");
-    return `https://admin.shopify.com/store/${handle}/settings/legal`;
+    let handle: string | null = null;
+
+    const host = new URLSearchParams(window.location.search).get("host");
+    if (host) {
+      try {
+        const decoded = atob(host); // "admin.shopify.com/store/<handle>"
+        handle = decoded.split("/store/")[1]?.split(/[/?#]/)[0] ?? null;
+      } catch {
+        // malformed host — fall through to the domain-based fallback
+      }
+    }
+
+    if (!handle) {
+      const rawDomain =
+        document.cookie.match(/shopify_shop=([^;]+)/)?.[1] ??
+        new URLSearchParams(window.location.search).get("shop");
+      const domain = rawDomain ? decodeURIComponent(rawDomain) : null;
+      handle = domain
+        ? domain.replace(/^https?:\/\//, "").replace(".myshopify.com", "")
+        : null;
+    }
+
+    if (!handle) return null;
+    return `https://admin.shopify.com/store/${handle}/settings/policies`;
   }, []);
 
   const ALL_TEMPLATE_LANGS = ["en", "de", "fr", "es", "pt", "sv"] as const;

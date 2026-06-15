@@ -89,6 +89,7 @@ write_shopify_payments_dispute_file_uploads
 write_shopify_payments_dispute_evidences
 read_customer_events           # LSE-4 Web Pixel — read customer events
 write_pixels                   # LSE-4 — required to call webPixelCreate during OAuth
+read_legal_policies            # Read Shop.shopPolicies (published-on-store policy evidence)
 ```
 
 The `.env` `SHOPIFY_SCOPES` value must match `shopify.app.toml`'s `[access_scopes].scopes` exactly. Mismatches cause silent OAuth consent-screen drift.
