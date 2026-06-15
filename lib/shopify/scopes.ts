@@ -35,7 +35,31 @@ export function getRequiredScopes(): string[] {
 }
 
 /**
- * Scopes the app requires but the granted set does not include.
+ * Does the granted set satisfy a single required scope?
+ *
+ * Shopify CONSOLIDATES read/write pairs: granting `write_X` implies
+ * `read_X`, and Shopify returns only the `write_X` spelling in the
+ * granted set — it never echoes the implied `read_X`. So a required
+ * `read_X` is satisfied by a granted `read_X` OR a granted `write_X`.
+ * (The reverse does NOT hold: `read_X` does not imply `write_X`.)
+ *
+ * Without this, requiring `read_shopify_payments_dispute_evidences`
+ * while Shopify grants `write_shopify_payments_dispute_evidences` makes
+ * the scope look permanently missing → the re-auth banner re-fires after
+ * every approval → infinite approve loop (observed on prod 2026-06-15).
+ */
+function isScopeSatisfied(required: string, granted: Set<string>): boolean {
+  if (granted.has(required)) return true;
+  if (required.startsWith("read_")) {
+    const writeEquivalent = "write_" + required.slice("read_".length);
+    if (granted.has(writeEquivalent)) return true;
+  }
+  return false;
+}
+
+/**
+ * Scopes the app requires but the granted set does not satisfy (honoring
+ * Shopify's write-implies-read consolidation, see isScopeSatisfied).
  * Returns [] when the grant already covers everything required (or when
  * required scopes can't be resolved — fail open so we never nag on a
  * misconfigured env).
@@ -46,5 +70,5 @@ export function findMissingScopes(
 ): string[] {
   if (!requiredScopes.length) return [];
   const granted = new Set(parseScopes(grantedScopes));
-  return requiredScopes.filter((s) => !granted.has(s));
+  return requiredScopes.filter((s) => !isScopeSatisfied(s, granted));
 }
