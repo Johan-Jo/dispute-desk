@@ -5,11 +5,14 @@
  *
  * When the app adds a new OAuth scope, already-installed shops keep
  * their old grant until an OAuth flow re-runs (Shopify only re-prompts
- * on a scope mismatch). This banner compares the shop's granted scopes
- * against the app's required scopes (SHOPIFY_SCOPES) via
- * /api/shop/scope-status, and when any are missing, shows an "approve
- * new permissions" CTA that breaks out of the Admin iframe into the
- * Shopify consent screen. The merchant approves once — no uninstall.
+ * on a scope mismatch). This banner reads `needsReauth` from
+ * /api/setup/readiness — the one endpoint middleware already resolves
+ * correctly for the embedded iframe (via the /api/setup/* shop-domain
+ * resolution; a plain fetch from the iframe carries no x-shop-id, and
+ * portal cookies aren't set here, so a generic /api/shop/* route 401s).
+ * When a required scope is missing it shows an "approve new permissions"
+ * CTA that breaks out of the Admin iframe into the Shopify consent
+ * screen. The merchant approves once — no uninstall.
  *
  * Unlike the legacy read_all_orders-specific banner, this is scope-
  * agnostic: every future scope addition surfaces here automatically.
@@ -33,8 +36,14 @@ export function ScopeReauthBanner() {
   useEffect(() => {
     let cancelled = false;
     const shop = searchParams.get("shop");
-    const qs = shop ? `?shop=${encodeURIComponent(shop)}` : "";
-    fetch(`/api/shop/scope-status${qs}`)
+    const host = searchParams.get("host");
+    // Pass through whatever Shopify-asserted identity the iframe URL
+    // carries so /api/setup/* middleware can resolve the shop server-side.
+    const params = new URLSearchParams();
+    if (shop) params.set("shop", shop);
+    if (host) params.set("host", host);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    fetch(`/api/setup/readiness${qs}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((d) => {
         if (cancelled || !d) return;
