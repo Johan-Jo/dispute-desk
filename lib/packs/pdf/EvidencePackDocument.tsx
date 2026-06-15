@@ -261,6 +261,7 @@ function PolicySection({ data }: { data: Record<string, unknown> }) {
     | Array<{
         policyType: string;
         url?: string;
+        publishedUrl?: string | null;
         capturedAt: string;
         textPreview?: string;
         textLength: number;
@@ -272,7 +273,12 @@ function PolicySection({ data }: { data: Record<string, unknown> }) {
   return (
     <View>
       <Text style={styles.sectionTitle}>Store Policies</Text>
-      {policies.map((p, i) => (
+      {policies.map((p, i) => {
+        // Prefer the live published URL (the citable "where the customer
+        // saw it" — answers Shopify's refundPolicyDisclosure). Fall back
+        // to the legacy `url` for older snapshots.
+        const disclosureUrl = p.publishedUrl ?? p.url;
+        return (
         <View key={i} style={{ marginBottom: 10 }}>
           <Text style={styles.sectionSubtitle}>
             {p.policyType.charAt(0).toUpperCase() + p.policyType.slice(1)}{" "}
@@ -282,10 +288,10 @@ function PolicySection({ data }: { data: Record<string, unknown> }) {
             <Text style={styles.kvLabel}>Captured</Text>
             <Text style={styles.kvValue}>{formatDate(p.capturedAt)}</Text>
           </View>
-          {p.url && (
+          {disclosureUrl && (
             <View style={styles.kvRow}>
-              <Text style={styles.kvLabel}>URL</Text>
-              <Text style={styles.kvValue}>{p.url}</Text>
+              <Text style={styles.kvLabel}>Published at</Text>
+              <Text style={styles.kvValue}>{disclosureUrl}</Text>
             </View>
           )}
           {p.textPreview && (
@@ -295,7 +301,8 @@ function PolicySection({ data }: { data: Record<string, unknown> }) {
             </Text>
           )}
         </View>
-      ))}
+        );
+      })}
     </View>
   );
 }

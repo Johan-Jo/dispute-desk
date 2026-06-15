@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   // replaces direct URL exposure; we return only the id + metadata.
   const { data, error } = await sb
     .from("policy_snapshots")
-    .select("id, policy_type, captured_at, storage_path")
+    .select("id, policy_type, captured_at, storage_path, source, published_url")
     .eq("shop_id", shopId)
     .order("captured_at", { ascending: false });
 
@@ -36,6 +36,8 @@ export async function GET(req: NextRequest) {
     policy_type: string;
     captured_at: string;
     storage_path: string | null;
+    source: string | null;
+    published_url: string | null;
   };
   const byType = new Map<string, Row>();
   for (const row of (data ?? []) as Row[]) {
@@ -46,11 +48,15 @@ export async function GET(req: NextRequest) {
 
   // Surface a stable proxy URL the portal can pass to window.open.
   // The proxy authorizes the request via portal session, so the URL
-  // alone is not enough to read the file.
+  // alone is not enough to read the file. `published_url` is the public
+  // storefront URL (same as the footer link) — safe to return, unlike
+  // the old signed `url`. `source` lets the UI show provenance.
   const policies = Array.from(byType.values()).map((row) => ({
     id: row.id,
     policy_type: row.policy_type,
     captured_at: row.captured_at,
+    source: row.source ?? "uploaded",
+    published_url: row.published_url ?? null,
     file_url: row.storage_path ? `/api/policies/${row.id}/file` : null,
   }));
 
