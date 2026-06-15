@@ -880,9 +880,20 @@ Migrations live in `supabase/migrations/`. **Primary workflow** is the **Supabas
 - **Existing DB:** If the database was created outside the CLI (e.g. Dashboard SQL or an old script), the CLI may have no migration history. Run `npx supabase migration repair <001> <002> … --status applied` once to mark already-applied files without re-running SQL; then `db push` applies only new migrations.
 - **Without CLI link:** `npm run db:migrate:script` runs `scripts/run-migration.mjs`, which uses a local `_migrations` table and requires `SUPABASE_URL_POSTGRES` (or `SUPABASE_URL` + `SUPABASE_DB_PASSWORD`). Prefer the CLI when possible so there is a single source of truth with hosted Supabase.
 
+### Supabase DB target safety (dev vs prod) — read first
+
+The Supabase CLI's linked project is a **single invisible global pointer** (`supabase/.temp/linked-project.json`) that `db push` / `db query --linked` inherit silently. On **2026-06-15** it was pointed at **prod** while we believed we were on **dev**, so a migration + many diagnostic queries hit the wrong database and produced confidently-wrong conclusions for hours. Treat a wrong-DB write as a Sev-1.
+
+Refs (source of truth = `CLAUDE.md`): **prod = `aokhplydttxtebvbeuzc`, dev = `vrpkgudqmpyunekrkpnc`**.
+
+- **Migrations**: never run the raw `supabase db push`. Use `npm run db:migrate:dev` / `npm run db:migrate:prod`. Both run `scripts/guard-db-target.mjs <env>` first, which reads the linked ref and **refuses unless it matches that env's known ref** — so a dev/prod mix-up fails hard with the re-link command, never a silent wrong push. Bare `npm run db:migrate` is intentionally blocked (errors demanding an explicit target).
+- **Ad-hoc `db query --linked`**: the guard doesn't wrap raw queries, so **`cat supabase/.temp/linked-project.json` and confirm the ref before running** — a diagnostic against the wrong DB is how the incident started.
+- **Re-link** to the intended project with `npx supabase link --project-ref <ref>` (a separate step before the migrate command; let it settle before running the guard).
+- The **dev app reads its DB from the dev Vercel project's `SUPABASE_URL`** (`vrpkgudqmpyunekrkpnc`), independent of whatever the CLI is linked to — so the live app and a CLI query can silently diverge. `vercel env pull` the app's real env when verifying live behavior.
+
 ### Ad-hoc SQL / ops queries (canonical path)
 
-**Use this for one-shot reads, diagnostics, and targeted cleanups** — anything that is not a migration and not application code. It runs SQL via the Supabase Management API against the linked project, so it needs no DB password and does not depend on `SUPABASE_URL_POSTGRES` being in sync (that env var rots when the DB password is rotated in the dashboard).
+**Use this for one-shot reads, diagnostics, and targeted cleanups** — anything that is not a migration and not application code. It runs SQL via the Supabase Management API against the linked project, so it needs no DB password and does not depend on `SUPABASE_URL_POSTGRES` being in sync (that env var rots when the DB password is rotated in the dashboard). **First confirm which project is linked (see *Supabase DB target safety* above).**
 
 ```bash
 # Inline query — service-role-equivalent privilege
