@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, FileText, Upload, Zap, CheckCircle2, ArrowLeft, X, Layers, Info, RefreshCw, ExternalLink } from "lucide-react";
+import { redirectTopLevel } from "@/lib/shopify/redirectTopLevel";
 import type { StepId } from "@/lib/setup/types";
 
 type PolicyKey = "shipping" | "refunds" | "terms" | "privacy";
@@ -325,28 +326,41 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
     }
   }, [resolvedShopId, refreshing]);
 
-  // Deep-link to Shopify's policy editor so the merchant can publish a
-  // policy (then "Refresh from store" captures the live version).
-  //
-  // The store handle is resolved from the App Bridge `?host=` param
-  // (base64 of "admin.shopify.com/store/<handle>") when present, falling
-  // back to the shop cookie / `?shop=` domain. We extract ONLY the bare
-  // handle so the URL can't double up the "/store/<handle>" segment when
-  // opened from inside the embedded iframe. The canonical policies editor
+  // Open Shopify's policy editor so the merchant can publish a policy
+  // (then "Refresh from store" captures the live version). The canonical
   // path is `/settings/policies` (NOT `/settings/legal`, which 404s).
-  const shopifyPolicyEditorUrl = useCallback((): string | null => {
-    let handle: string | null = null;
+  //
+  // Navigation MUST go through redirectTopLevel (App Bridge's open/_top
+  // relay), not window.open — inside the embedded iframe App Bridge
+  // intercepts navigation, and a window.open of an absolute
+  // admin.shopify.com URL gets resolved relative to the current admin
+  // path, doubling the "/store/<handle>" segment (observed 404:
+  // `…/store/sharpdesk/store/sharpdesk/settings/policies`). App Bridge
+  // resolves an admin-RELATIVE path (`/settings/policies`) against the
+  // current store, so pass the relative path when App Bridge is present
+  // and only build the absolute URL as the standalone fallback.
+  const openShopifyPolicyEditor = useCallback((): void => {
+    const hasAppBridge =
+      typeof (window as { shopify?: unknown }).shopify !== "undefined";
 
+    if (hasAppBridge) {
+      // App Bridge scopes admin-relative paths to the current store.
+      redirectTopLevel("/settings/policies");
+      return;
+    }
+
+    // Standalone fallback: resolve the store handle and build an absolute
+    // URL. Handle comes from the App Bridge `?host=` param (base64 of
+    // "admin.shopify.com/store/<handle>") or the shop cookie / `?shop=`.
+    let handle: string | null = null;
     const host = new URLSearchParams(window.location.search).get("host");
     if (host) {
       try {
-        const decoded = atob(host); // "admin.shopify.com/store/<handle>"
-        handle = decoded.split("/store/")[1]?.split(/[/?#]/)[0] ?? null;
+        handle = atob(host).split("/store/")[1]?.split(/[/?#]/)[0] ?? null;
       } catch {
-        // malformed host — fall through to the domain-based fallback
+        /* malformed host — fall through */
       }
     }
-
     if (!handle) {
       const rawDomain =
         document.cookie.match(/shopify_shop=([^;]+)/)?.[1] ??
@@ -356,9 +370,11 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
         ? domain.replace(/^https?:\/\//, "").replace(".myshopify.com", "")
         : null;
     }
-
-    if (!handle) return null;
-    return `https://admin.shopify.com/store/${handle}/settings/policies`;
+    if (handle) {
+      redirectTopLevel(
+        `https://admin.shopify.com/store/${handle}/settings/policies`,
+      );
+    }
   }, []);
 
   const ALL_TEMPLATE_LANGS = ["en", "de", "fr", "es", "pt", "sv"] as const;
@@ -697,10 +713,7 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
                 <p className="text-[#6D7175] mb-3" style={{ fontSize: 14 }}>{t("publishToCountDesc")}</p>
                 <button
                   type="button"
-                  onClick={() => {
-                    const url = shopifyPolicyEditorUrl();
-                    if (url) window.open(url, "_blank", "noopener,noreferrer");
-                  }}
+                  onClick={openShopifyPolicyEditor}
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1D4ED8] hover:bg-[#1e40af] text-white rounded-lg transition-colors"
                   style={{ fontSize: 14, fontWeight: 600 }}
                 >
