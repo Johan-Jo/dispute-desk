@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Page, Layout } from "@shopify/polaris";
 import { BillingBanner } from "@/components/billing/billing-banner";
+import { ScopeReauthBanner } from "@/app/(embedded)/app/ScopeReauthBanner";
 import styles from "./embedded-app-chrome.module.css";
 
 /** Drives BillingBanner's visual-verification preview from the URL
@@ -113,6 +114,7 @@ export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
         <Page>
           <Layout>
             <Layout.Section>
+              <ScopeReauthBanner />
               <BillingBanner preview={bannerPreview} ctaHref="/app/billing" />
             </Layout.Section>
           </Layout>
@@ -229,6 +231,7 @@ export function EmbeddedAppChrome({ children }: { children: React.ReactNode }) {
         <Page>
           <Layout>
             <Layout.Section>
+              <ScopeReauthBanner />
               <BillingBanner preview={bannerPreview} ctaHref="/app/billing" />
             </Layout.Section>
           </Layout>

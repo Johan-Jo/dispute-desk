@@ -4920,5 +4920,10 @@
     "finalHEm": "du kan",
     "finalAlt": "Föredrar du en live-genomgång?",
     "finalAltLink": "Boka en kostnadsfri tvistgenomgång →"
+  },
+  "scopeReauth": {
+    "title": "Godkänn nya behörigheter",
+    "body": "DisputeDesk behöver en ytterligare behörighet för att fortsätta bygga din bevisning. Godkänn den en gång i Shopify – ingen ominstallation krävs.",
+    "cta": "Godkänn i Shopify"
   }
 }

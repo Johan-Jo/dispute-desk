@@ -4920,5 +4920,10 @@
     "finalHEm": "que vous pouvez",
     "finalAlt": "Vous préférez une démonstration en direct ?",
     "finalAltLink": "Réservez une analyse de litige gratuite →"
+  },
+  "scopeReauth": {
+    "title": "Approuver les nouvelles autorisations",
+    "body": "DisputeDesk a besoin d'une autorisation supplémentaire pour continuer à constituer vos preuves. Approuvez-la une fois sur Shopify — aucune réinstallation requise.",
+    "cta": "Approuver sur Shopify"
   }
 }

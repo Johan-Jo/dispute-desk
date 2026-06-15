@@ -1299,6 +1299,18 @@ Clicking the CTA navigates the **top frame** (`window.top.location.href`) to `/a
 
 After re-OAuth, `resetBackfillIfScopeUpgraded` (in `lib/disputes/backfillOrders.ts`) fires in the callback. It detects the upgrade (new scopes include `read_all_orders`, prior backfill ran under `default_window`, `historical_import_status='complete'`) and resets the import state to `not_started`. The standard `enqueueShopOrdersBackfill` call that follows then runs a fresh wider-window backfill. Idempotent — no-op on first install, re-installs without scope change, and in-flight backfills (those let their own first-run bookkeeping pick up the new scopes).
 
+### Generic scope re-auth (`ScopeReauthBanner`)
+
+The installed base doesn't auto-re-prompt when the app adds a new OAuth scope — Shopify only shows the consent screen when an OAuth flow runs and detects a mismatch, and the app never re-initiates OAuth for already-installed shops on its own. So adding a scope (e.g. `read_legal_policies` for published-policy ingest) would otherwise leave every existing shop's token stuck on the old grant, with the new feature silently broken and **no way short of uninstall/reinstall** to fix it.
+
+`ScopeReauthBanner` (rendered app-wide from `EmbeddedAppChrome`) closes that gap generically:
+- `lib/shopify/scopes.ts` is the single comparison point: `getRequiredScopes()` parses `SHOPIFY_SCOPES` (the exact `scope=` sent in the OAuth URL), and `findMissingScopes(granted)` diffs it against the shop's granted offline-session scopes.
+- `GET /api/shop/scope-status` returns `{ needsReauth, missingScopes }` for the resolved shop (same `?shop=<domain>` embedded fallback as `/api/setup/readiness`). It **excludes `read_all_orders`**, which has its own dedicated nudge above, so a shop never gets two stacked banners.
+- When `needsReauth`, the banner shows an "Approve on Shopify" CTA that breaks out of the iframe (`window.top.location.href`) to `/api/auth/shopify?phase=offline&shop=<domain>`. The merchant approves the new permission in Shopify's consent screen — **no reinstall** — and the OAuth callback overwrites the offline session with the wider grant. The banner is non-dismissible: a missing required scope leaves a feature broken, so the nudge persists until granted.
+- This is scope-agnostic: every future scope addition surfaces here automatically once it lands in `SHOPIFY_SCOPES` + the app TOMLs (a vitest drift guard keeps those in lockstep).
+
+> **Rollout checklist when adding a scope:** (1) add it to `shopify.app.{dev,prod}.toml` `[access_scopes]`, `.env.example`, and Vercel `SHOPIFY_SCOPES`; (2) `npm run shopify:deploy:{dev,prod}` so the **Partners app** declares it (this is what makes the scope grantable — env alone is not enough); (3) existing merchants then see `ScopeReauthBanner` and approve in one click.
+
 Banner dismissal: localStorage flag `dd_scope_upgrade_banner_dismissed`. Per-device "remind me later" — no server-side state.
 
 ## Dispute History & Timeline (Phase 1)

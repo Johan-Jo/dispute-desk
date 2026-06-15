@@ -4920,5 +4920,10 @@
     "finalHEm": "você pode",
     "finalAlt": "Prefere um tour ao vivo?",
     "finalAltLink": "Agende uma análise de disputa gratuita →"
+  },
+  "scopeReauth": {
+    "title": "Aprovar novas permissões",
+    "body": "O DisputeDesk precisa de uma permissão adicional para continuar a criar a sua evidência. Aprove-a uma vez no Shopify — não é necessário reinstalar.",
+    "cta": "Aprovar no Shopify"
   }
 }
