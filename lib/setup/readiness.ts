@@ -6,6 +6,7 @@
 
 import { loadSession } from "@/lib/shopify/sessionStorage";
 import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
+import { findMissingScopes } from "@/lib/shopify/scopes";
 import { getServiceClient } from "@/lib/supabase/server";
 
 export type ReadinessStatus = "ready" | "needs_action" | "syncing";
@@ -31,6 +32,11 @@ export interface ReadinessResult {
   hasPending: boolean;
   allReady: boolean;
   shopDomain?: string;
+  /** Scopes the app now requires but this shop's offline session hasn't
+   *  granted yet — drives the generic re-auth banner for the installed
+   *  base. Excludes `read_all_orders` (its own dedicated nudge). */
+  missingScopes: string[];
+  needsReauth: boolean;
 }
 
 const REQUIRED_DISPUTE_SCOPE = "read_shopify_payments_disputes";
@@ -118,5 +124,21 @@ export async function evaluateReadiness(shopId: string): Promise<ReadinessResult
   const hasPending = rows.some((r) => !r.blocking && r.status !== "ready");
   const allReady = rows.every((r) => r.status === "ready");
 
-  return { rows, hasBlockers, hasPending, allReady, shopDomain };
+  // Generic scope reconciliation for the installed base. read_all_orders
+  // has its own dedicated nudge (DashboardScopeUpgradeBanner) with
+  // backfill-reset semantics, so exclude it here to avoid stacked banners.
+  const missingScopes = sessionValid
+    ? findMissingScopes(session!.scopes).filter((s) => s !== "read_all_orders")
+    : [];
+  const needsReauth = missingScopes.length > 0;
+
+  return {
+    rows,
+    hasBlockers,
+    hasPending,
+    allReady,
+    shopDomain,
+    missingScopes,
+    needsReauth,
+  };
 }

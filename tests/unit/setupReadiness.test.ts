@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   createMockSupabaseClient,
   setTableResult,
@@ -136,5 +136,64 @@ describe("evaluateReadiness", () => {
 
     const storeData = result.rows.find((r) => r.id === "store_data");
     expect(storeData?.status).toBe("syncing");
+  });
+
+  describe("scope reconciliation (needsReauth)", () => {
+    const prevScopes = process.env.SHOPIFY_SCOPES;
+    beforeEach(() => {
+      mockRegisterWebhooks.mockResolvedValue({ ok: true, created: [], existing: [] } as any);
+      setupSupabaseWithShop("test.myshopify.com");
+    });
+    afterEach(() => {
+      process.env.SHOPIFY_SCOPES = prevScopes;
+    });
+
+    it("flags needsReauth when a required scope is not granted", async () => {
+      process.env.SHOPIFY_SCOPES = "read_orders,read_legal_policies";
+      mockLoadSession.mockResolvedValue({
+        accessToken: "tok",
+        shopDomain: "test.myshopify.com",
+        scopes: "read_orders",
+      } as any);
+
+      const result = await evaluateReadiness("shop-1");
+      expect(result.missingScopes).toEqual(["read_legal_policies"]);
+      expect(result.needsReauth).toBe(true);
+    });
+
+    it("does not flag needsReauth when the grant is current", async () => {
+      process.env.SHOPIFY_SCOPES = "read_orders,read_legal_policies";
+      mockLoadSession.mockResolvedValue({
+        accessToken: "tok",
+        shopDomain: "test.myshopify.com",
+        scopes: "read_orders,read_legal_policies",
+      } as any);
+
+      const result = await evaluateReadiness("shop-1");
+      expect(result.needsReauth).toBe(false);
+      expect(result.missingScopes).toEqual([]);
+    });
+
+    it("excludes read_all_orders (its own dedicated banner)", async () => {
+      process.env.SHOPIFY_SCOPES = "read_all_orders,read_legal_policies";
+      mockLoadSession.mockResolvedValue({
+        accessToken: "tok",
+        shopDomain: "test.myshopify.com",
+        scopes: "read_legal_policies",
+      } as any);
+
+      const result = await evaluateReadiness("shop-1");
+      expect(result.missingScopes).toEqual([]);
+      expect(result.needsReauth).toBe(false);
+    });
+
+    it("never flags when no session exists", async () => {
+      process.env.SHOPIFY_SCOPES = "read_orders,read_legal_policies";
+      mockLoadSession.mockResolvedValue(null);
+
+      const result = await evaluateReadiness("shop-1");
+      expect(result.needsReauth).toBe(false);
+      expect(result.missingScopes).toEqual([]);
+    });
   });
 });
