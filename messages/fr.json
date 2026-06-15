@@ -1603,6 +1603,7 @@
       "customerAccountDetails": "Détails du compte client",
       "shopifyProtect": "Couverture Shopify Protect",
       "customerCommunication": "Communication avec le client",
+      "gorgiasCommunication": "Conversation du service d'assistance",
       "ipLocationCheck": "Vérification IP et localisation",
       "fraudRiskScreening": "Évaluation du risque de fraude avant autorisation",
       "fulfillments": "Expéditions ({count})",
@@ -2712,7 +2713,7 @@
       },
       "howPacksBuilt": {
         "title": "Comment les dossiers sont créés automatiquement",
-        "body": "DisputeDesk collecte automatiquement des preuves de plusieurs sources :\n\n- Données de commande : articles, montants, adresse (ville uniquement).\n- Expédition et suivi : transporteur, numéros de suivi, statut de livraison.\n- Politiques de la boutique : expédition, remboursement, conditions.\n\nLe dossier est structuré selon le motif du litige.\n\n**Modèles de bibliothèque :** Installer un modèle sous Packs ajoute un dossier à votre **bibliothèque** (récits, sections). C'est distinct de chaque **génération automatique par litige**, qui utilise le pipeline de collecte ci-dessus ; la structure de votre bibliothèque n'est pas encore fusionnée automatiquement dans le build."
+        "body": "DisputeDesk collecte automatiquement des preuves de plusieurs sources :\n\n- Données de commande : articles, montants, adresse (ville uniquement).\n- Expédition et suivi : transporteur, numéros de suivi, statut de livraison.\n- Politiques de la boutique : expédition, remboursement, conditions.\n- Conversations d'assistance : lorsque vous connectez Gorgias (Configuration → Sources de preuves), les conversations du service client sont associées par e-mail et jointes automatiquement comme preuve à l'appui. Les notes internes ne sont jamais incluses.\n\nLe dossier est structuré selon le motif du litige.\n\n**Modèles de bibliothèque :** Installer un modèle sous Packs ajoute un dossier à votre **bibliothèque** (récits, sections). C'est distinct de chaque **génération automatique par litige**, qui utilise le pipeline de collecte ci-dessus ; la structure de votre bibliothèque n'est pas encore fusionnée automatiquement dans le build."
       },
       "generatingPackManually": {
         "title": "Créer un dossier manuellement",

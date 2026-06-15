@@ -1603,6 +1603,7 @@
       "customerAccountDetails": "Kundkontoinformation",
       "shopifyProtect": "Shopify Protect-täckning",
       "customerCommunication": "Kundkommunikation",
+      "gorgiasCommunication": "Helpdesk-konversation",
       "ipLocationCheck": "IP- och platskontroll",
       "fraudRiskScreening": "Bedrägeririskbedömning före auktorisering",
       "fulfillments": "Leveranser ({count})",
@@ -2712,7 +2713,7 @@
       },
       "howPacksBuilt": {
         "title": "Hur bevispaket byggs automatiskt",
-        "body": "När DisputeDesk bygger ett bevispaket samlar det automatiskt bevis från flera källor:\n\n- Orderdata: rader, belopp, faktureringsadress (stadsnivå — personuppgifter redigeras), kundhistorik.\n- Leverans och spårning: transportör, spårningsnummer, leveransstatus.\n- Butikspolicyer: ögonblicksbilder av dina frakt-, retur-, villkors- och avbokningspolicyer.\n\nPaketet struktureras efter tvistorsak. Till exempel prioriterar en \"Produkt ej mottagen\"-tvist frakt- och spårningsbevis.\n\n**Biblioteksmallar:** Att installera en mall under Paket lägger till ett paket i ditt **bibliotek** (texter och avsnitt). Det är skilt från varje **automatisk per-tvist-byggnad**, som använder insamlarpipelinen ovan; bibliotekets layout slås ännu inte automatiskt in i bygget."
+        "body": "När DisputeDesk bygger ett bevispaket samlar det automatiskt bevis från flera källor:\n\n- Orderdata: rader, belopp, faktureringsadress (stadsnivå — personuppgifter redigeras), kundhistorik.\n- Leverans och spårning: transportör, spårningsnummer, leveransstatus.\n- Butikspolicyer: ögonblicksbilder av dina frakt-, retur-, villkors- och avbokningspolicyer.\n- Helpdesk-konversationer: när du ansluter Gorgias (Konfiguration → Beviskällor) matchas kundens kundtjänstkonversationer via e-post och bifogas automatiskt som stödjande bevis. Interna anteckningar inkluderas aldrig.\n\nPaketet struktureras efter tvistorsak. Till exempel prioriterar en \"Produkt ej mottagen\"-tvist frakt- och spårningsbevis.\n\n**Biblioteksmallar:** Att installera en mall under Paket lägger till ett paket i ditt **bibliotek** (texter och avsnitt). Det är skilt från varje **automatisk per-tvist-byggnad**, som använder insamlarpipelinen ovan; bibliotekets layout slås ännu inte automatiskt in i bygget."
       },
       "generatingPackManually": {
         "title": "Skapa ett paket manuellt",

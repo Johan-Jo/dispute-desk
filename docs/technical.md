@@ -1750,6 +1750,7 @@ When the gate decision is `block`, the pipeline writes the gate's `reasons` to b
 | Payment Source | `lib/packs/sources/paymentSource.ts` | Card evidence (AVS/CVV/BIN/wallet), risk assessments, customer IP |
 | 3-D Secure Source | `lib/packs/sources/threeDSecureSource.ts` | 3DS authentication signal, best-effort read from Shopify Payments `receiptJson` |
 | Coverage Source | `lib/packs/sources/coverageSource.ts` | Shopify Protect status — Coverage Gate input |
+| Gorgias Source | `lib/packs/sources/gorgiasCommSource.ts` | Helpdesk conversation history pulled from a connected Gorgias account |
 
 ### Pack Status Flow
 
@@ -1825,6 +1826,26 @@ The auto-collector is downgraded one tier (Moderate, not Strong) on purpose: the
 **Path-stability evidence (2026-04-26).** Verified across 18 SUCCESS transactions on 2026-01 (10 via `orders(query:"financial_status:paid")`, 8 via dispute-tied real orders): `three_d_secure` was located at `latest_charge.payment_method_details.card.three_d_secure` on every single transaction, and the dynamic recursive walker (`scripts/test-3ds-extraction.mjs`) agreed with the hardcoded modern path on every receipt. The legacy charge-level path (`payment_method_details.card.three_d_secure` at the receipt root) never resolved in the sample — it remains in the collector as defensive insurance only. The populated-object case (`authenticated: true`) was *not* observed in the sample (Stripe test cards do not trigger real 3DS challenges), so the live verification confirms field/path stability but not the live-extraction path. The REST endpoint `/admin/api/{ver}/orders/{id}/transactions.json` returned identical receipt shapes — kept as a future GraphQL-removal fallback, not currently wired in.
 
 **Re-running the verification.** `node scripts/test-3ds-extraction.mjs [shopId] [orderLimit]` runs the recursive walker + REST cross-check + structured reliability report against any shop with an offline session. Re-run after any Shopify API version bump or whenever 3DS scoring behavior is questioned.
+
+### Gorgias Communication Collection
+
+`gorgiasCommSource.ts` pulls the disputing customer's customer-service conversations from a connected **Gorgias** helpdesk and snapshots them into the evidence pack — the same pattern Chargeflow's Gorgias app uses (conversation history → chargeback evidence). This is **Phase 1**: a per-merchant *private app* (HTTP Basic auth, email + API key), read-only, pulled on demand at pack-build time. No OAuth/App-Store listing and no webhooks (those are a separate Phase 2 that add discoverability/UX only — **zero** new evidence capability).
+
+**Connection (already shipped):** `app/api/integrations/gorgias/{connect,test,disconnect}/route.ts` capture the subdomain/email/API key, live-test against `GET /api/tickets?limit=1`, AES-256-GCM-encrypt the credentials into `integration_secrets`, and track status in `integrations` (`type = "gorgias"`). The connect UX lives in `components/setup/modals/ConnectGorgiasModal.tsx` (setup wizard, `EvidenceSourcesStep`).
+
+**REST client (`lib/integrations/gorgias/client.ts`):** Basic-auth client against `https://{subdomain}.gorgias.com/api`. Cursor pagination (offset/page was deprecated by Gorgias), bounded by `maxPages` so a chatty customer can't trigger unbounded fan-out. 429 / transient 5xx are retried with bounded backoff honouring `Retry-After`. JSON is parsed defensively (Gorgias fields are frequently null; the channel set is open-ended). The 40 req/20s API-key rate limit is tight, so the collector prefers the **embedded `messages[]` array** already on each ticket and only falls back to `GET /api/messages?ticket_id=` when absent.
+
+**Matching:** the order's customer email (`ctx.order.email`) → `GET /api/customers?email=` (match verified case-insensitively client-side, since the filter's strictness is undocumented) → `GET /api/tickets?customer_id=&trashed=false` → messages.
+
+**Self-incrimination guard (critical):** only `public === true` messages are emitted; internal agent notes (`public:false` or `channel === "internal-note"`) are dropped — an internal note like "just refund this sketchy customer" would be a confession if it reached the pack. Trashed and spam tickets are excluded.
+
+**Snapshot, not live-link:** Gorgias permanently purges trashed tickets (~30 days) and GDPR-deletes customer profiles, so the message text (`stripped_text` → `body_text`), timestamp, direction (`from_agent`), channel, and CSAT score are frozen into the section `data` at build time rather than referenced live at submission.
+
+**Emission + classification:** one `EvidenceSection` (`type: "comms"`, `source: "gorgias"`, `labelToken: packs.section.gorgiasCommunication`) contributing the **existing** canonical field `customer_communication` — no new `signalId`, so `canonicalEvidence.ts` needs no change and the scorer de-dups against `customerCommSource` (Shopify timeline) by shared `signalId: "communication"`. It classifies as **`supporting`** by default and only upgrades to `strong` when `data.customerConfirmsOrder === true`; **Phase 1 never sets that automatically** (no fragile keyword detection) — explicit-admission handling is a deliberate future step.
+
+**Out of scope (Phase 1):** OAuth2 / public App Store listing / webhooks (Phase 2); attachment byte re-hosting (Phase 1.5 — text snapshot only); no new DB migration (`integrations` + `integration_secrets` already exist).
+
+**Verification posture:** no Gorgias sandbox was available, so the client and collector are covered by mocked-client unit tests (`lib/integrations/gorgias/__tests__/client.test.ts`, `lib/packs/sources/__tests__/gorgiasCommSource.test.ts`) — including the internal-note filter and the default-`supporting` classification. **Live end-to-end (resolve a real customer by email, pull real tickets, confirm classification) is a flagged follow-up gated on a sandbox.**
 
 ### Coverage Gate (Shopify Protect)
 
