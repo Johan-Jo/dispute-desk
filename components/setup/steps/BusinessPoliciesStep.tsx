@@ -327,31 +327,23 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
   }, [resolvedShopId, refreshing]);
 
   // Open Shopify's policy editor so the merchant can publish a policy
-  // (then "Refresh from store" captures the live version). The canonical
-  // path is `/settings/policies` (NOT `/settings/legal`, which 404s).
+  // (then "Refresh from store" captures the live version). The correct
+  // path is `/settings/legal` — confirmed by the maintainer against a
+  // live store: https://admin.shopify.com/store/<handle>/settings/legal
   //
-  // Navigation MUST go through redirectTopLevel (App Bridge's open/_top
-  // relay), not window.open — inside the embedded iframe App Bridge
-  // intercepts navigation, and a window.open of an absolute
-  // admin.shopify.com URL gets resolved relative to the current admin
-  // path, doubling the "/store/<handle>" segment (observed 404:
-  // `…/store/sharpdesk/store/sharpdesk/settings/policies`). App Bridge
-  // resolves an admin-RELATIVE path (`/settings/policies`) against the
-  // current store, so pass the relative path when App Bridge is present
-  // and only build the absolute URL as the standalone fallback.
+  // MUST pass an ABSOLUTE admin.shopify.com URL to redirectTopLevel.
+  // redirectTopLevel does a plain top-frame nav (`window.open(_top)` /
+  // `window.top.location.href`) — it is NOT App Bridge's ADMIN_PATH
+  // redirect, so a relative path resolves against THIS app's origin
+  // (`disputedesk.app/settings/legal` → 404, observed on prod). And
+  // `window.open(_blank)` of an absolute admin URL from the iframe gets
+  // mangled by App Bridge into a doubled `/store/<handle>/store/<handle>`
+  // path (also a 404). The only correct form is the full absolute admin
+  // URL via redirectTopLevel.
   const openShopifyPolicyEditor = useCallback((): void => {
-    const hasAppBridge =
-      typeof (window as { shopify?: unknown }).shopify !== "undefined";
-
-    if (hasAppBridge) {
-      // App Bridge scopes admin-relative paths to the current store.
-      redirectTopLevel("/settings/policies");
-      return;
-    }
-
-    // Standalone fallback: resolve the store handle and build an absolute
-    // URL. Handle comes from the App Bridge `?host=` param (base64 of
-    // "admin.shopify.com/store/<handle>") or the shop cookie / `?shop=`.
+    // Resolve the store handle from Shopify's own `?host=` assertion
+    // (base64 of "admin.shopify.com/store/<handle>"), falling back to the
+    // shop cookie / `?shop=` domain.
     let handle: string | null = null;
     const host = new URLSearchParams(window.location.search).get("host");
     if (host) {
@@ -370,11 +362,10 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
         ? domain.replace(/^https?:\/\//, "").replace(".myshopify.com", "")
         : null;
     }
-    if (handle) {
-      redirectTopLevel(
-        `https://admin.shopify.com/store/${handle}/settings/policies`,
-      );
-    }
+    if (!handle) return;
+    redirectTopLevel(
+      `https://admin.shopify.com/store/${handle}/settings/legal`,
+    );
   }, []);
 
   const ALL_TEMPLATE_LANGS = ["en", "de", "fr", "es", "pt", "sv"] as const;
