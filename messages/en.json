@@ -4101,7 +4101,53 @@
       "shippingSections": "Processing Times,Shipping Zones,Tracking Information,Delivery Expectations,Lost/Damaged Items",
       "refundsSections": "Return Window,Return Conditions,Refund Process,Restocking Fees,Exchanges",
       "termsSections": "Agreement to Terms,Use License,Prohibited Uses,Limitations of Liability,Revisions",
-      "privacySections": "Information We Collect,How We Use Your Information,Data Storage,Third-Party Sharing,User Rights"
+      "privacySections": "Information We Collect,How We Use Your Information,Data Storage,Third-Party Sharing,User Rights",
+      "yourStore": "your store",
+      "connected": "Connected",
+      "syncing": "Syncing…",
+      "lastSynced": "Last synced {time}",
+      "syncedAgo": "Synced {time}",
+      "notSyncedYet": "Not synced yet",
+      "liveSummaryTitle": "{live} of {total} policies live on your store",
+      "liveSummaryDesc": "Only policies <strong>published on your storefront</strong> can be cited in a chargeback response — banks open the same live page your customer saw at the time of the order. A policy that isn’t live doesn’t count.",
+      "liveOfTotalShort": "{live} / {total} live",
+      "storePolicies": "Store policies",
+      "capturedFromShopify": "Captured from Shopify",
+      "required": "Required",
+      "optional": "Optional",
+      "liveOnStore": "Live on store",
+      "notPublished": "Not published",
+      "live": "Live",
+      "publishInShopify": "Publish in Shopify",
+      "step1": "Create & publish in Shopify",
+      "step2": "Refresh to capture as evidence",
+      "publishFlowBody": "Banks can only cite a policy they can open on your live storefront at the time of the order. Create this policy in Shopify’s policy editor and publish it — then come back and refresh so DisputeDesk captures the live page as evidence.",
+      "openShopifyEditor": "Open Shopify policy editor",
+      "publishFlowNote": "After you publish in Shopify, come back and <strong>Refresh from store</strong> — we’ll capture the live page and mark this policy as evidence.",
+      "footerNote": "DisputeDesk re-checks your store automatically and attaches every live policy to the matching evidence pack. You write and publish the policy text in Shopify; this page keeps your evidence in sync.",
+      "onboardingTitle": "Your store policies",
+      "onboardingSubtitle": "We checked <store></store> for published policies. Here’s what banks can already see.",
+      "liveOfTotal": "{live} of {total} policies live",
+      "publishMissing": "Publish missing in Shopify",
+      "onboardingFooter": "You can manage all policies anytime from <strong>Policies</strong> in DisputeDesk.",
+      "row": {
+        "refunds": {
+          "title": "Returns & refunds policy",
+          "desc": "Return window, conditions, refund process"
+        },
+        "shipping": {
+          "title": "Shipping & delivery policy",
+          "desc": "Processing times, tracking, delivery expectations — banks ask for this on “item not received”."
+        },
+        "privacy": {
+          "title": "Privacy policy",
+          "desc": "Data collection, usage, storage, and user rights"
+        },
+        "terms": {
+          "title": "Terms of service",
+          "desc": "Usage rights, account terms, and legal disclaimers"
+        }
+      }
     },
     "packs": {
       "title": "Install Evidence Pack Templates",

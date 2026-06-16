@@ -3826,7 +3826,53 @@
       "shippingSections": "Handläggningstider,Fraktzoner,Spårningsinformation,Leveransförväntningar,Förlorade/Skadade artiklar",
       "refundsSections": "Returfönster,Returvillkor,Chargebackprocess,Återlagringsavgifter,Byten",
       "termsSections": "Godkännande av villkor,Användarlicens,Förbjudna användningar,Ansvarsbegränsningar,Ändringar",
-      "privacySections": "Information vi samlar in,Hur vi använder din information,Datalagring,Delning med tredje part,Användarrättigheter"
+      "privacySections": "Information vi samlar in,Hur vi använder din information,Datalagring,Delning med tredje part,Användarrättigheter",
+      "yourStore": "din butik",
+      "connected": "Ansluten",
+      "syncing": "Synkroniserar…",
+      "lastSynced": "Senast synkroniserad {time}",
+      "syncedAgo": "Synkroniserad {time}",
+      "notSyncedYet": "Inte synkroniserad än",
+      "liveSummaryTitle": "{live} av {total} policyer live i din butik",
+      "liveSummaryDesc": "Endast policyer som är <strong>publicerade i din butik</strong> kan citeras i ett återkravssvar — banker öppnar samma live-sida som din kund såg vid beställningstillfället. En policy som inte är live räknas inte.",
+      "liveOfTotalShort": "{live} / {total} live",
+      "storePolicies": "Butikspolicyer",
+      "capturedFromShopify": "Hämtat från Shopify",
+      "required": "Obligatorisk",
+      "optional": "Valfri",
+      "liveOnStore": "Live i butiken",
+      "notPublished": "Inte publicerad",
+      "live": "Live",
+      "publishInShopify": "Publicera i Shopify",
+      "step1": "Skapa & publicera i Shopify",
+      "step2": "Uppdatera för att fånga som bevis",
+      "publishFlowBody": "Banker kan bara citera en policy som de kan öppna i din live-butik vid beställningstillfället. Skapa den här policyn i Shopifys policyredigerare och publicera den — kom sedan tillbaka och uppdatera så att DisputeDesk fångar live-sidan som bevis.",
+      "openShopifyEditor": "Öppna Shopifys policyredigerare",
+      "publishFlowNote": "Efter att du publicerat i Shopify, kom tillbaka och klicka på <strong>Uppdatera från butiken</strong> — vi fångar live-sidan och markerar denna policy som bevis.",
+      "footerNote": "DisputeDesk kontrollerar din butik automatiskt igen och bifogar varje live-policy till matchande bevispaket. Du skriver och publicerar policytexten i Shopify; den här sidan håller dina bevis synkroniserade.",
+      "onboardingTitle": "Dina butikspolicyer",
+      "onboardingSubtitle": "Vi kontrollerade <store></store> efter publicerade policyer. Här är vad banker redan kan se.",
+      "liveOfTotal": "{live} av {total} policyer live",
+      "publishMissing": "Publicera saknade i Shopify",
+      "onboardingFooter": "Du kan hantera alla policyer när som helst från <strong>Policyer</strong> i DisputeDesk.",
+      "row": {
+        "refunds": {
+          "title": "Retur- & återbetalningspolicy",
+          "desc": "Returfönster, villkor, återbetalningsprocess"
+        },
+        "shipping": {
+          "title": "Frakt- & leveranspolicy",
+          "desc": "Behandlingstider, spårning, leveransförväntningar — banker frågar efter detta vid ”vara ej mottagen”."
+        },
+        "privacy": {
+          "title": "Integritetspolicy",
+          "desc": "Datainsamling, användning, lagring och användarrättigheter"
+        },
+        "terms": {
+          "title": "Användarvillkor",
+          "desc": "Användningsrättigheter, kontovillkor och juridiska friskrivningar"
+        }
+      }
     },
     "packs": {
       "title": "Installera bevispaketmallar",

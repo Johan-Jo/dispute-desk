@@ -3813,7 +3813,53 @@
       "shippingSections": "Bearbeitungszeiten,Versandzonen,Sendungsverfolgung,Liefererwartungen,Verlorene/Beschädigte Artikel",
       "refundsSections": "Rückgabefrist,Rückgabebedingungen,Erstattungsprozess,Wiedereinlagerungsgebühren,Umtausch",
       "termsSections": "Zustimmung zu den Bedingungen,Nutzungslizenz,Verbotene Nutzungen,Haftungsbeschränkungen,Änderungen",
-      "privacySections": "Informationen die wir erheben,Wie wir Ihre Informationen verwenden,Datenspeicherung,Weitergabe an Dritte,Nutzerrechte"
+      "privacySections": "Informationen die wir erheben,Wie wir Ihre Informationen verwenden,Datenspeicherung,Weitergabe an Dritte,Nutzerrechte",
+      "yourStore": "deinen Shop",
+      "connected": "Verbunden",
+      "syncing": "Synchronisierung…",
+      "lastSynced": "Zuletzt synchronisiert {time}",
+      "syncedAgo": "Synchronisiert {time}",
+      "notSyncedYet": "Noch nicht synchronisiert",
+      "liveSummaryTitle": "{live} von {total} Richtlinien live in deinem Shop",
+      "liveSummaryDesc": "Nur Richtlinien, die <strong>in deinem Shop veröffentlicht</strong> sind, können in einer Chargeback-Antwort zitiert werden — Banken öffnen dieselbe Live-Seite, die dein Kunde zum Zeitpunkt der Bestellung gesehen hat. Eine nicht live geschaltete Richtlinie zählt nicht.",
+      "liveOfTotalShort": "{live} / {total} live",
+      "storePolicies": "Shop-Richtlinien",
+      "capturedFromShopify": "Aus Shopify erfasst",
+      "required": "Erforderlich",
+      "optional": "Optional",
+      "liveOnStore": "Live im Shop",
+      "notPublished": "Nicht veröffentlicht",
+      "live": "Live",
+      "publishInShopify": "In Shopify veröffentlichen",
+      "step1": "In Shopify erstellen & veröffentlichen",
+      "step2": "Aktualisieren, um als Nachweis zu erfassen",
+      "publishFlowBody": "Banken können nur eine Richtlinie zitieren, die sie zum Zeitpunkt der Bestellung in deinem Live-Shop öffnen können. Erstelle diese Richtlinie im Shopify-Richtlinieneditor und veröffentliche sie — komm dann zurück und aktualisiere, damit DisputeDesk die Live-Seite als Nachweis erfasst.",
+      "openShopifyEditor": "Shopify-Richtlinieneditor öffnen",
+      "publishFlowNote": "Nachdem du in Shopify veröffentlicht hast, komm zurück und <strong>Aus dem Shop aktualisieren</strong> — wir erfassen die Live-Seite und markieren diese Richtlinie als Nachweis.",
+      "footerNote": "DisputeDesk prüft deinen Shop automatisch erneut und fügt jede Live-Richtlinie dem passenden Nachweispaket bei. Du schreibst und veröffentlichst den Richtlinientext in Shopify; diese Seite hält deine Nachweise synchron.",
+      "onboardingTitle": "Deine Shop-Richtlinien",
+      "onboardingSubtitle": "Wir haben <store></store> auf veröffentlichte Richtlinien geprüft. Das können Banken bereits sehen.",
+      "liveOfTotal": "{live} von {total} Richtlinien live",
+      "publishMissing": "Fehlende in Shopify veröffentlichen",
+      "onboardingFooter": "Du kannst alle Richtlinien jederzeit unter <strong>Richtlinien</strong> in DisputeDesk verwalten.",
+      "row": {
+        "refunds": {
+          "title": "Rückgabe- & Erstattungsrichtlinie",
+          "desc": "Rückgabefrist, Bedingungen, Erstattungsprozess"
+        },
+        "shipping": {
+          "title": "Versand- & Lieferrichtlinie",
+          "desc": "Bearbeitungszeiten, Sendungsverfolgung, Liefererwartungen — Banken fragen danach bei „Artikel nicht erhalten“."
+        },
+        "privacy": {
+          "title": "Datenschutzrichtlinie",
+          "desc": "Datenerfassung, -nutzung, -speicherung und Nutzerrechte"
+        },
+        "terms": {
+          "title": "Nutzungsbedingungen",
+          "desc": "Nutzungsrechte, Kontobedingungen und rechtliche Hinweise"
+        }
+      }
     },
     "packs": {
       "title": "Beweispaket-Vorlagen installieren",

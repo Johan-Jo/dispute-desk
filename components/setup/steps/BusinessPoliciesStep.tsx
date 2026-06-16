@@ -2,22 +2,42 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Link, FileText, Upload, Zap, CheckCircle2, ArrowLeft, X, Layers, Info, RefreshCw, ExternalLink } from "lucide-react";
+import {
+  CheckCircle2,
+  AlertCircle,
+  MinusCircle,
+  RefreshCw,
+  ExternalLink,
+  ChevronRight,
+  Truck,
+  Undo2,
+  Lock,
+  ScrollText,
+  FileText,
+  Store,
+  Info,
+} from "lucide-react";
 import { redirectTopLevel } from "@/lib/shopify/redirectTopLevel";
 import type { StepId } from "@/lib/setup/types";
 
-type PolicyKey = "shipping" | "refunds" | "terms" | "privacy";
-type FlowType = "own" | "template" | "mixed";
-type MixedOption = "url" | "upload" | "template";
-type OwnOption = "url" | "upload";
+type PolicyKey = "refunds" | "shipping" | "privacy" | "terms";
 
-const POLICY_KEYS: PolicyKey[] = ["shipping", "refunds", "terms", "privacy"];
+/** The 4 core policies, in the design's row order. */
+const POLICY_ORDER: PolicyKey[] = ["refunds", "shipping", "privacy", "terms"];
 
-const POLICY_PATHS: Record<PolicyKey, string> = {
-  shipping: "/policies/shipping-policy",
-  refunds: "/policies/refund-policy",
-  terms: "/policies/terms-of-service",
-  privacy: "/policies/privacy-policy",
+const POLICY_ICON: Record<PolicyKey, typeof Truck> = {
+  refunds: Undo2,
+  shipping: Truck,
+  privacy: Lock,
+  terms: ScrollText,
+};
+
+/** Required policies are the two banks ask for most (shipping + refunds). */
+const REQUIRED: Record<PolicyKey, boolean> = {
+  refunds: true,
+  shipping: true,
+  privacy: false,
+  terms: false,
 };
 
 interface BusinessPoliciesStepProps {
@@ -25,281 +45,78 @@ interface BusinessPoliciesStepProps {
   onSaveRef: React.MutableRefObject<(() => Promise<boolean>) | null>;
 }
 
-function getShopOriginFallback(): string | null {
-  const domain = document.cookie.match(/shopify_shop=([^;]+)/)?.[1];
-  if (domain) return `https://${domain}`;
-  const shopParam = new URLSearchParams(window.location.search).get("shop");
-  if (shopParam) return `https://${shopParam}`;
-  return null;
+interface PolicyRow {
+  policy_type: string;
+  source: string;
+  published_url: string | null;
+  captured_at: string | null;
 }
 
-const LANG_LABELS: Record<string, string> = {
-  en: "English",
-  de: "Deutsch",
-  fr: "Français",
-  es: "Español",
-  pt: "Português",
-  sv: "Svenska",
-};
-
-const TEMPLATE_LANGS = new Set(["en", "de", "fr", "es", "pt", "sv"]);
-
-function interfaceToTemplateLang(locale: string): string {
-  const short = locale.split("-")[0]?.toLowerCase() ?? "en";
-  return TEMPLATE_LANGS.has(short) ? short : "en";
+/** Localized "x ago" via Intl.RelativeTimeFormat — no hardcoded English. */
+function relativeTime(iso: string | null, locale: string): string | null {
+  if (!iso) return null;
+  const then = Date.parse(iso);
+  if (Number.isNaN(then)) return null;
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  const diffSec = Math.round((then - Date.now()) / 1000); // negative = past
+  const mins = Math.round(diffSec / 60);
+  if (mins > -1) return rtf.format(0, "minute"); // "now"
+  if (mins > -60) return rtf.format(mins, "minute");
+  const hrs = Math.round(mins / 60);
+  if (hrs > -24) return rtf.format(hrs, "hour");
+  return rtf.format(Math.round(hrs / 24), "day");
 }
 
 export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStepProps) {
   const t = useTranslations("setup.policies");
-  const tCommon = useTranslations("common");
-  const uiLocale = useLocale();
-  const [selectedFlow, setSelectedFlow] = useState<FlowType | null>(null);
-  const [resolvedShopId, setResolvedShopId] = useState<string | null>(null);
-  const [templateLang, setTemplateLang] = useState<string>(() => interfaceToTemplateLang(uiLocale));
-  const [langSaving, setLangSaving] = useState(false);
+  const locale = useLocale();
 
-  const [ownUrls, setOwnUrls] = useState<Record<PolicyKey, string>>({
-    shipping: "", refunds: "", terms: "", privacy: "",
-  });
-  const [ownOptions, setOwnOptions] = useState<Record<PolicyKey, OwnOption>>({
-    shipping: "url", refunds: "url", terms: "url", privacy: "url",
-  });
-
-  const [mixedOptions, setMixedOptions] = useState<Record<PolicyKey, MixedOption>>({
-    shipping: "url", refunds: "url", terms: "url", privacy: "url",
-  });
-  const [mixedUrls, setMixedUrls] = useState<Record<PolicyKey, string>>({
-    shipping: "", refunds: "", terms: "", privacy: "",
-  });
-  const [uploadedFiles, setUploadedFiles] = useState<Partial<Record<PolicyKey, { id: string; url: string }>>>({});
-  const [uploadLoading, setUploadLoading] = useState<Partial<Record<PolicyKey, boolean>>>({});
-
-  // Published-on-store policies, auto-ingested from Shopify on install.
-  // These are the citable bank evidence (source = 'shopify_published').
-  type PublishedPolicy = {
-    policy_type: string;
-    source: string;
-    published_url: string | null;
-  };
-  const [published, setPublished] = useState<PublishedPolicy[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const [previewKey, setPreviewKey] = useState<PolicyKey | null>(null);
-  const [previewContent, setPreviewContent] = useState("");
-  const [previewOriginal, setPreviewOriginal] = useState("");
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewEditing, setPreviewEditing] = useState(false);
-  const [templateDrafts, setTemplateDrafts] = useState<Partial<Record<PolicyKey, string>>>({});
-  const [templateSelections, setTemplateSelections] = useState<Record<PolicyKey, boolean>>({
-    shipping: true,
-    refunds: true,
-    terms: false,
-    privacy: false,
-  });
-
+  // Onboarding renders the condensed variant; the standalone Policies page
+  // renders the full one. Detected from the URL so the generic step-component
+  // map in app/(embedded)/app/setup/[step]/page.tsx needs no prop plumbing.
+  const [isOnboarding, setIsOnboarding] = useState(false);
   useEffect(() => {
-    const fallbackOrigin = getShopOriginFallback();
-    if (fallbackOrigin) {
-      const base = fallbackOrigin.replace(/\/$/, "");
-      const prefilled = Object.fromEntries(
-        POLICY_KEYS.map((k) => [k, `${base}${POLICY_PATHS[k]}`])
-      ) as Record<PolicyKey, string>;
-      setOwnUrls(prefilled);
-      setMixedUrls(prefilled);
-    }
-
-    fetch("/api/setup/state")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!data?.shopId) return;
-        setResolvedShopId(data.shopId);
-
-        // Load auto-ingested published policies for the status banner.
-        fetch(`/api/policies?shop_id=${data.shopId}`)
-          .then((r) => (r.ok ? r.json() : null))
-          .then((pd) => {
-            if (Array.isArray(pd?.policies)) {
-              setPublished(
-                pd.policies.filter(
-                  (p: PublishedPolicy) => p.source === "shopify_published",
-                ),
-              );
-            }
-          })
-          .catch(() => {});
-
-        // Restore previously saved form state
-        const saved = data.steps?.policies?.payload;
-        if (saved) {
-          if (saved.flow) setSelectedFlow(saved.flow as FlowType);
-          if (saved.ownOptions) setOwnOptions(saved.ownOptions as Record<PolicyKey, OwnOption>);
-          if (saved.ownUrls) setOwnUrls(saved.ownUrls as Record<PolicyKey, string>);
-          if (saved.mixedOptions) setMixedOptions(saved.mixedOptions as Record<PolicyKey, MixedOption>);
-          if (saved.mixedUrls) setMixedUrls(saved.mixedUrls as Record<PolicyKey, string>);
-          if (saved.uploadedFiles) setUploadedFiles(saved.uploadedFiles as Partial<Record<PolicyKey, { id: string; url: string }>>);
-          if (saved.templateSelections) setTemplateSelections(saved.templateSelections as Record<PolicyKey, boolean>);
-        }
-
-        fetch(`/api/shop/policy-template-lang?shop_id=${data.shopId}`)
-          .then((r) => (r.ok ? r.json() : null))
-          .then((langData) => {
-            if (!langData) return;
-            if (langData.policy_template_lang) setTemplateLang(langData.policy_template_lang);
-          })
-          .catch(() => {});
-        return fetch(`/api/shop/details?shop_id=${data.shopId}`)
-          .then((r) => (r.ok ? r.json() : null))
-          .then((details) => {
-            if (!details?.primaryDomain) return;
-            const base = details.primaryDomain.replace(/\/$/, "");
-            if (fallbackOrigin && base === fallbackOrigin.replace(/\/$/, "")) return;
-            // Only prefill URLs if not already restored from saved state
-            if (!saved?.ownUrls) {
-              const prefilled = Object.fromEntries(
-                POLICY_KEYS.map((k) => [k, `${base}${POLICY_PATHS[k]}`])
-              ) as Record<PolicyKey, string>;
-              setOwnUrls(prefilled);
-              setMixedUrls(prefilled);
-            }
-          });
-      })
-      .catch(() => {});
+    setIsOnboarding(window.location.pathname.includes("/setup"));
   }, []);
 
-  const openPreview = useCallback(
-    async (key: PolicyKey) => {
-      setPreviewKey(key);
-      setPreviewEditing(false);
-      setPreviewContent("");
-      setPreviewOriginal("");
-      setPreviewLoading(true);
-      try {
-        const qs = resolvedShopId ? `?shop_id=${resolvedShopId}` : "";
-        const res = await fetch(`/api/policy-templates/${key}/content${qs}`);
-        if (res.ok) {
-          const { body } = (await res.json()) as { body?: string };
-          const resolvedBody = templateDrafts[key] ?? (body ?? "");
-          setPreviewContent(resolvedBody);
-          setPreviewOriginal(resolvedBody);
-        } else {
-          const fallback = templateDrafts[key] ?? t("templateLoadError");
-          setPreviewContent(fallback);
-          setPreviewOriginal(fallback);
-        }
-      } catch {
-        const fallback = templateDrafts[key] ?? t("templateLoadError");
-        setPreviewContent(fallback);
-        setPreviewOriginal(fallback);
-      }
-      setPreviewLoading(false);
-    },
-    [resolvedShopId, t, templateDrafts]
-  );
+  const [resolvedShopId, setResolvedShopId] = useState<string | null>(null);
+  const [shopDomain, setShopDomain] = useState<string | null>(null);
+  const [rows, setRows] = useState<Record<PolicyKey, PolicyRow | null>>({
+    refunds: null,
+    shipping: null,
+    privacy: null,
+    terms: null,
+  });
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [expanded, setExpanded] = useState<PolicyKey | null>(null);
 
-  const handleFileUpload = useCallback(
-    async (key: PolicyKey, file: File) => {
-      setUploadLoading((prev) => ({ ...prev, [key]: true }));
-      const form = new FormData();
-      form.append("file", file);
-      form.append("policy_type", key);
-      if (resolvedShopId) form.append("shop_id", resolvedShopId);
-      try {
-        const res = await fetch("/api/policies/upload", { method: "POST", body: form });
-        if (res.ok) {
-          const { id, url } = (await res.json()) as { id: string; url: string };
-          setUploadedFiles((prev) => ({ ...prev, [key]: { id, url } }));
-        }
-      } catch {}
-      setUploadLoading((prev) => ({ ...prev, [key]: false }));
-    },
-    [resolvedShopId]
-  );
-
-  useEffect(() => {
-    onSaveRef.current = async () => {
-      if (!selectedFlow) return false;
-
-      const templateKeys: PolicyKey[] =
-        selectedFlow === "template"
-          ? POLICY_KEYS.filter((k) => templateSelections[k])
-          : selectedFlow === "mixed"
-          ? POLICY_KEYS.filter((k) => mixedOptions[k] === "template")
-          : [];
-
-      for (const key of templateKeys) {
-        let body = templateDrafts[key] ?? "";
-        if (!body) {
-          const qs = resolvedShopId ? `?shop_id=${resolvedShopId}` : "";
-          const contentRes = await fetch(`/api/policy-templates/${key}/content${qs}`);
-          if (!contentRes.ok) return false;
-          const contentJson = (await contentRes.json()) as { body?: string };
-          body = contentJson.body ?? "";
-        }
-        const applyRes = await fetch("/api/policies/apply", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ shop_id: resolvedShopId, policy_type: key, content: body }),
-        });
-        if (!applyRes.ok) return false;
-      }
-
-      const res = await fetch("/api/setup/step", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stepId,
-          payload: { flow: selectedFlow, ownOptions, ownUrls, mixedOptions, mixedUrls, uploadedFiles, templateSelections },
-        }),
-      });
-      return res.ok;
+  const applyPolicies = useCallback((policies: PolicyRow[]) => {
+    const next: Record<PolicyKey, PolicyRow | null> = {
+      refunds: null,
+      shipping: null,
+      privacy: null,
+      terms: null,
     };
-  }, [stepId, onSaveRef, selectedFlow, ownOptions, ownUrls, mixedOptions, mixedUrls, uploadedFiles, resolvedShopId, templateDrafts, templateSelections]);
-
-  const meta: Record<PolicyKey, { title: string; desc: string }> = {
-    shipping: { title: t("shippingTitle"), desc: t("shippingDesc") },
-    refunds:  { title: t("refundsTitle"),  desc: t("refundsDesc") },
-    terms:    { title: t("termsTitle"),    desc: t("termsDesc") },
-    privacy:  { title: t("privacyTitle"), desc: t("privacyDesc") },
-  };
-
-  const policyIsRequired: Record<PolicyKey, boolean> = {
-    shipping: true,
-    refunds: true,
-    terms: false,
-    privacy: false,
-  };
-
-  const ownPolicySupportCopy: Record<PolicyKey, string> = {
-    shipping: t("ownShippingSupport"),
-    refunds: t("ownRefundsSupport"),
-    terms: t("ownTermsSupport"),
-    privacy: t("ownPrivacySupport"),
-  };
-
-  const handleLangChange = useCallback(
-    async (nextLang: string) => {
-      if (nextLang === templateLang || !resolvedShopId) return;
-      setLangSaving(true);
-      const previous = templateLang;
-      setTemplateLang(nextLang);
-      setTemplateDrafts({});
-      try {
-        const res = await fetch("/api/shop/policy-template-lang", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ shop_id: resolvedShopId, policy_template_lang: nextLang }),
-        });
-        if (!res.ok) setTemplateLang(previous);
-      } catch {
-        setTemplateLang(previous);
-      } finally {
-        setLangSaving(false);
+    for (const p of policies) {
+      if ((POLICY_ORDER as string[]).includes(p.policy_type)) {
+        next[p.policy_type as PolicyKey] = p;
       }
+    }
+    setRows(next);
+  }, []);
+
+  const loadPolicies = useCallback(
+    async (shopId: string) => {
+      const r = await fetch(`/api/policies?shop_id=${shopId}`);
+      if (!r.ok) return;
+      const data = await r.json();
+      if (Array.isArray(data?.policies)) applyPolicies(data.policies);
     },
-    [templateLang, resolvedShopId]
+    [applyPolicies],
   );
 
-  const handleRefreshPublished = useCallback(async () => {
+  const refresh = useCallback(async () => {
     if (!resolvedShopId || refreshing) return;
     setRefreshing(true);
     try {
@@ -308,651 +125,420 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ shop_id: resolvedShopId }),
       });
-      const r = await fetch(`/api/policies?shop_id=${resolvedShopId}`);
-      if (r.ok) {
-        const pd = await r.json();
-        if (Array.isArray(pd?.policies)) {
-          setPublished(
-            pd.policies.filter(
-              (p: PublishedPolicy) => p.source === "shopify_published",
-            ),
-          );
-        }
-      }
+      await loadPolicies(resolvedShopId);
+      setLastSynced(new Date().toISOString());
     } catch {
-      // graceful — the banner just keeps its current state
+      /* graceful — keep current state */
     } finally {
       setRefreshing(false);
     }
-  }, [resolvedShopId, refreshing]);
+  }, [resolvedShopId, refreshing, loadPolicies]);
 
-  // Open Shopify's policy editor so the merchant can publish a policy
-  // (then "Refresh from store" captures the live version). The correct
-  // path is `/settings/legal` — confirmed by the maintainer against a
-  // live store: https://admin.shopify.com/store/<handle>/settings/legal
-  //
-  // MUST pass an ABSOLUTE admin.shopify.com URL to redirectTopLevel.
-  // redirectTopLevel does a plain top-frame nav (`window.open(_top)` /
-  // `window.top.location.href`) — it is NOT App Bridge's ADMIN_PATH
-  // redirect, so a relative path resolves against THIS app's origin
-  // (`disputedesk.app/settings/legal` → 404, observed on prod). And
-  // `window.open(_blank)` of an absolute admin URL from the iframe gets
-  // mangled by App Bridge into a doubled `/store/<handle>/store/<handle>`
-  // path (also a 404). The only correct form is the full absolute admin
-  // URL via redirectTopLevel.
-  const openShopifyPolicyEditor = useCallback((): void => {
-    // Resolve the store handle from Shopify's own `?host=` assertion
-    // (base64 of "admin.shopify.com/store/<handle>"), falling back to the
-    // shop cookie / `?shop=` domain.
+  // Initial load: resolve the shop, auto-sync from Shopify on mount, then read.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/setup/state")
+      .then((r) => (r.ok ? r.json() : null))
+      .then(async (data) => {
+        if (cancelled || !data?.shopId) return;
+        setResolvedShopId(data.shopId);
+        try {
+          await fetch("/api/policies/refresh", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ shop_id: data.shopId }),
+          });
+        } catch {
+          /* refresh is best-effort; fall through to read whatever exists */
+        }
+        if (cancelled) return;
+        await loadPolicies(data.shopId);
+        if (!cancelled) setLastSynced(new Date().toISOString());
+
+        fetch(`/api/shop/details?shop_id=${data.shopId}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((details) => {
+            if (cancelled || !details?.primaryDomain) return;
+            setShopDomain(
+              details.primaryDomain.replace(/^https?:\/\//, "").replace(/\/$/, ""),
+            );
+          })
+          .catch(() => {});
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [loadPolicies]);
+
+  // Nothing to persist — this surface is a read-only status view whose only
+  // actions forward to Shopify. The save callback marks the step reviewed so
+  // the wizard "Save & Continue" / page "Save" buttons resolve cleanly. The
+  // policies step never blocks onboarding (merchants can finish later).
+  useEffect(() => {
+    onSaveRef.current = async () => {
+      try {
+        const res = await fetch("/api/setup/step", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ stepId, payload: { reviewed: true } }),
+        });
+        return res.ok;
+      } catch {
+        return false;
+      }
+    };
+  }, [stepId, onSaveRef]);
+
+  // Open Shopify's policy editor (the only place a policy becomes valid
+  // evidence). MUST be an ABSOLUTE admin URL via redirectTopLevel — a
+  // relative path resolves against this app's origin (→ 404), and
+  // window.open(_blank) of an absolute admin URL gets doubled by App Bridge.
+  // Correct path is /settings/legal (confirmed against a live store).
+  const openShopifyPolicyEditor = useCallback(() => {
     let handle: string | null = null;
     const host = new URLSearchParams(window.location.search).get("host");
     if (host) {
       try {
         handle = atob(host).split("/store/")[1]?.split(/[/?#]/)[0] ?? null;
       } catch {
-        /* malformed host — fall through */
+        /* malformed host */
       }
     }
     if (!handle) {
-      const rawDomain =
+      const raw =
         document.cookie.match(/shopify_shop=([^;]+)/)?.[1] ??
         new URLSearchParams(window.location.search).get("shop");
-      const domain = rawDomain ? decodeURIComponent(rawDomain) : null;
+      const domain = raw ? decodeURIComponent(raw) : null;
       handle = domain
         ? domain.replace(/^https?:\/\//, "").replace(".myshopify.com", "")
         : null;
     }
     if (!handle) return;
-    redirectTopLevel(
-      `https://admin.shopify.com/store/${handle}/settings/legal`,
-    );
+    redirectTopLevel(`https://admin.shopify.com/store/${handle}/settings/legal`);
   }, []);
 
-  const ALL_TEMPLATE_LANGS = ["en", "de", "fr", "es", "pt", "sv"] as const;
+  const liveCount = POLICY_ORDER.filter(
+    (k) => rows[k]?.source === "shopify_published",
+  ).length;
+  const total = POLICY_ORDER.length;
+  const pct = Math.round((liveCount / total) * 100);
+  const displayDomain = shopDomain ?? t("yourStore");
+  const syncedLabel = relativeTime(lastSynced, locale);
 
-  return (
-    <div className="max-w-3xl mx-auto">
-      <div className="flex flex-col items-center text-center mb-6">
-        <div className="w-16 h-16 rounded-[14px] bg-[#D89A2B] flex items-center justify-center mb-5">
-          <FileText className="w-7 h-7 text-white" />
+  const meta = (k: PolicyKey) => ({
+    title: t(`row.${k}.title`),
+    desc: t(`row.${k}.desc`),
+  });
+
+  // ── Condensed onboarding variant ──────────────────────────────────────
+  if (isOnboarding) {
+    return (
+      <div className="max-w-[600px] mx-auto">
+        <div className="flex flex-col items-center text-center mb-[22px]">
+          <span className="inline-flex items-center justify-center w-[54px] h-[54px] rounded-[13px] bg-[#D89A2B] text-white mb-[14px]">
+            <FileText className="w-6 h-6" />
+          </span>
+          <h2 className="text-[#202223] mb-1.5" style={{ fontWeight: 700, fontSize: 22 }}>
+            {t("onboardingTitle")}
+          </h2>
+          <p className="text-[#6D7175] max-w-[420px]" style={{ fontSize: 14, lineHeight: 1.55 }}>
+            {t.rich("onboardingSubtitle", {
+              store: () => <strong className="text-[#43474A]">{displayDomain}</strong>,
+            })}
+          </p>
         </div>
-        <h2 className="leading-[34px] text-[#202223] mb-2" style={{ fontWeight: 700, fontSize: 26 }}>{t("title")}</h2>
-        <p className="leading-[24px] text-[#6D7175]" style={{ fontSize: 15 }}>{t("flowSelectSubtitle")}</p>
-      </div>
 
-      {/* ── Published-on-store status (auto-ingested from Shopify) ── */}
-      <div className="mb-8 border border-[#BBF7D0] bg-[#F0FDF4] rounded-[12px] p-5">
-        <div className="flex items-start gap-3">
-          <CheckCircle2 className="w-5 h-5 text-[#22C55E] flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-[#15803D] mb-1" style={{ fontWeight: 700, fontSize: 16 }}>
-              {published.length > 0
-                ? t("publishedCountTitle", { count: published.length })
-                : t("publishedNoneTitle")}
-            </p>
-            <p className="text-[#166534]" style={{ fontSize: 14 }}>
-              {published.length > 0 ? t("publishedDesc") : t("publishedNoneDesc")}
-            </p>
-            {published.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {published.map((p) => (
-                  <a
-                    key={p.policy_type}
-                    href={p.published_url ?? "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#BBF7D0] rounded-[8px] text-[#15803D] hover:bg-[#ECFDF5] transition-colors"
-                    style={{ fontSize: 13, fontWeight: 600 }}
-                  >
-                    {p.policy_type}
-                    {p.published_url && <ExternalLink className="w-3 h-3" />}
-                  </a>
-                ))}
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={handleRefreshPublished}
-              disabled={refreshing || !resolvedShopId}
-              className="inline-flex items-center gap-1.5 mt-3 text-[#15803D] hover:text-[#166534] disabled:opacity-50"
-              style={{ fontSize: 13, fontWeight: 600 }}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-              {t("refreshFromStore")}
-            </button>
+        {/* status band */}
+        <div className="bg-[#F8F8F9] border border-[#ECEDEE] rounded-[11px] px-[18px] py-4 mb-4">
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-[#202223]" style={{ fontWeight: 700, fontSize: 14 }}>
+              {t("liveOfTotal", { live: liveCount, total })}
+            </span>
+            <span className="text-[#8C9196]" style={{ fontSize: 12 }}>
+              {refreshing ? t("syncing") : syncedLabel ? t("syncedAgo", { time: syncedLabel }) : ""}
+            </span>
+          </div>
+          <div className="h-2 rounded-full bg-[#E7E8EA] overflow-hidden">
+            <div className="h-full bg-[#1D4ED8] rounded-full transition-all" style={{ width: `${pct}%` }} />
           </div>
         </div>
-      </div>
 
-      <div className="flex flex-col items-center mb-8">
-        <p className="text-[#6D7175] mb-2" style={{ fontSize: 13 }}>{t("languageLabel")}</p>
-        <div className="inline-flex flex-wrap justify-center rounded-[10px] border border-[#E1E3E5] bg-white p-1 gap-0.5" role="group">
-          {ALL_TEMPLATE_LANGS.map((lang) => (
-            <button
-              key={lang}
-              type="button"
-              onClick={() => handleLangChange(lang)}
-              disabled={langSaving}
-              className={`px-4 py-2 rounded-[8px] transition-colors ${
-                templateLang === lang
-                  ? "bg-[#1D4ED8] text-white"
-                  : "text-[#202223] hover:bg-[#F3F4F6]"
-              }`}
-              style={{ fontSize: 14, fontWeight: 600 }}
-            >
-              {LANG_LABELS[lang]}
-            </button>
-          ))}
-        </div>
-        <p className="text-[#8C9196] mt-2 text-center" style={{ fontSize: 12 }}>{t("languageHint")}</p>
-        <p className="text-[#8C9196] mt-1 text-center max-w-md" style={{ fontSize: 12 }}>{t("legalReviewNotice")}</p>
-      </div>
-
-      {/* ── Flow selection ── */}
-      {!selectedFlow && (
-        <div>
-          <div className="grid grid-cols-3 gap-4 mb-8">
-            <button
-              onClick={() => setSelectedFlow("own")}
-              className="bg-white border border-[#E1E3E5] hover:border-[#1D4ED8] rounded-[16px] px-8 py-7 text-center transition-all group flex flex-col items-center min-h-[172px]"
-            >
-              <div className="w-14 h-14 rounded-[12px] bg-[#F3F4F6] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-7">
-                <Link className="w-7 h-7 text-[#8C9196] group-hover:text-[#1D4ED8]" />
-              </div>
-              <h3 className="leading-[24px] text-[#202223] mb-1.5" style={{ fontWeight: 700, fontSize: 16 }}>{t("ownFlowTitle")}</h3>
-              <p className="leading-[20px] text-[#6D7175]" style={{ fontSize: 14 }}>{t("ownFlowShortDesc")}</p>
-            </button>
-
-            <button
-              onClick={() => setSelectedFlow("template")}
-              className="bg-white border border-[#E1E3E5] hover:border-[#1D4ED8] rounded-[16px] px-8 py-7 text-center transition-all group flex flex-col items-center min-h-[172px]"
-            >
-              <div className="w-14 h-14 rounded-[12px] bg-[#F3F4F6] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-7">
-                <Zap className="w-7 h-7 text-[#8C9196] group-hover:text-[#1D4ED8]" />
-              </div>
-              <h3 className="leading-[24px] text-[#202223] mb-1.5" style={{ fontWeight: 700, fontSize: 16 }}>{t("templateFlowTitle")}</h3>
-              <p className="leading-[20px] text-[#6D7175]" style={{ fontSize: 14 }}>{t("templateFlowShortDesc")}</p>
-            </button>
-
-            <button
-              onClick={() => setSelectedFlow("mixed")}
-              className="bg-white border border-[#E1E3E5] hover:border-[#1D4ED8] rounded-[16px] px-8 py-7 text-center transition-all group flex flex-col items-center min-h-[172px]"
-            >
-              <div className="w-14 h-14 rounded-[12px] bg-[#F3F4F6] group-hover:bg-[#EFF6FF] flex items-center justify-center transition-colors mb-7">
-                <Layers className="w-7 h-7 text-[#8C9196] group-hover:text-[#1D4ED8]" />
-              </div>
-              <h3 className="leading-[24px] text-[#202223] mb-1.5" style={{ fontWeight: 700, fontSize: 16 }}>{t("mixedFlowTitle")}</h3>
-              <p className="leading-[20px] text-[#6D7175]" style={{ fontSize: 14 }}>{t("mixedFlowShortDesc")}</p>
-            </button>
-          </div>
-
-          <div className="flex items-start gap-3 p-6 border border-[#E5E7EB] rounded-[12px] bg-[#F3F4F6]">
-            <Info className="w-5 h-5 text-[#8C9196] flex-shrink-0 mt-[1px]" />
-            <div>
-              <p className="leading-[24px] text-[#202223] mb-1" style={{ fontWeight: 700, fontSize: 16 }}>{t("whyPoliciesTitle")}</p>
-              <p className="leading-[22px] text-[#6D7175]" style={{ fontSize: 14 }}>{t("whyPoliciesDesc")}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Own flow ── */}
-      {selectedFlow === "own" && (
-        <div className="space-y-6">
-          <button
-            onClick={() => setSelectedFlow(null)}
-            className="flex items-center gap-2 text-sm text-[#1D4ED8] hover:text-[#1e40af] font-medium"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            {t("backToSelection")}
-          </button>
-
-          <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg p-5">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 bg-[#1D4ED8] rounded-full flex items-center justify-center flex-shrink-0">
-                <Link className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-[#1E40AF] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{t("ownBannerTitle")}</p>
-                <p className="text-[#1E40AF]" style={{ fontSize: 14 }}>{t("ownBannerDesc")}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {POLICY_KEYS.map((key) => (
-              <div key={key} className="border border-[#E1E3E5] rounded-lg p-5">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <p className="text-[#202223] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>
-                      {meta[key].title}{policyIsRequired[key] ? " *" : ""}
-                    </p>
-                    <p className="text-[#6D7175]" style={{ fontSize: 12 }}>{ownPolicySupportCopy[key]}</p>
-                  </div>
-                  <span
-                    className={`px-2 py-1 rounded text-xs flex-shrink-0 ${
-                      policyIsRequired[key] ? "bg-[#DCFCE7] text-[#059669]" : "bg-[#F1F2F4] text-[#6D7175]"
-                    }`}
-                    style={{ fontWeight: 600 }}
-                  >
-                    {policyIsRequired[key] ? t("requiredLabel") : t("optionalLabel")}
+        {/* compact list */}
+        <div className="flex flex-col gap-2 mb-[18px]">
+          {POLICY_ORDER.map((k) => {
+            const Icon = POLICY_ICON[k];
+            const isLive = rows[k]?.source === "shopify_published";
+            const required = REQUIRED[k];
+            return (
+              <div
+                key={k}
+                className={`flex items-center gap-[11px] px-[14px] py-[11px] rounded-[9px] border ${
+                  !isLive && required ? "border-[#FBE6C8] bg-[#FFFCF7]" : "border-[#EDEEEF]"
+                }`}
+              >
+                <span
+                  className="inline-flex items-center justify-center w-[30px] h-[30px] rounded-[7px]"
+                  style={{
+                    background: isLive ? "#FBF1DF" : required ? "#FBEEDD" : "#F1F2F4",
+                    color: isLive ? "#B5821C" : required ? "#C2791B" : "#8C9196",
+                  }}
+                >
+                  <Icon className="w-[15px] h-[15px]" />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-[#202223]" style={{ fontSize: 13.5, fontWeight: 500 }}>
+                    {meta(k).title}
                   </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <button
-                    onClick={() => setOwnOptions((prev) => ({ ...prev, [key]: "url" }))}
-                    className={`px-3 py-2.5 border rounded-lg text-xs transition-all flex items-center justify-center gap-1.5 ${
-                      ownOptions[key] === "url"
-                        ? "border-[#1D4ED8] bg-[#EFF6FF] text-[#1D4ED8]"
-                        : "border-[#E1E3E5] text-[#6D7175] hover:border-[#C9CCCF]"
-                    }`}
-                    style={{ fontWeight: 600 }}
-                  >
-                    <Link className="w-3.5 h-3.5" />
-                    {t("linkUrlBtn")}
-                  </button>
-                  <button
-                    onClick={() => setOwnOptions((prev) => ({ ...prev, [key]: "upload" }))}
-                    className={`px-3 py-2.5 border rounded-lg text-xs transition-all flex items-center justify-center gap-1.5 ${
-                      ownOptions[key] === "upload"
-                        ? "border-[#1D4ED8] bg-[#EFF6FF] text-[#1D4ED8]"
-                        : "border-[#E1E3E5] text-[#6D7175] hover:border-[#C9CCCF]"
-                    }`}
-                    style={{ fontWeight: 600 }}
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    {t("uploadFileBtn")}
-                  </button>
-                </div>
-
-                {ownOptions[key] === "url" ? (
-                  <input
-                    type="url"
-                    value={ownUrls[key]}
-                    onChange={(e) => setOwnUrls((prev) => ({ ...prev, [key]: e.target.value }))}
-                    placeholder={`https://yourstore.myshopify.com${POLICY_PATHS[key]}`}
-                    className="w-full px-4 py-2.5 border border-[#C9CCCF] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent"
-                  />
-                ) : uploadedFiles[key] ? (
-                  <div className="flex items-center gap-3 p-3 bg-[#F0FDF4] border border-[#BBF7D0] rounded-lg">
-                    <CheckCircle2 className="w-5 h-5 text-[#22C55E] flex-shrink-0" />
-                    <p className="text-[#15803D] flex-1 truncate" style={{ fontSize: 14 }}>
-                      {uploadedFiles[key]!.url.split("/").pop()}
-                    </p>
-                    <button
-                      onClick={() => setUploadedFiles((prev) => { const n = { ...prev }; delete n[key]; return n; })}
-                      className="text-xs text-[#6D7175] hover:text-[#202223]"
+                  {!isLive && required && (
+                    <span
+                      className="ml-1.5 text-[#B45309] bg-[#FBEAD3] px-1.5 rounded-[5px]"
+                      style={{ fontSize: 10.5, fontWeight: 600 }}
                     >
-                      {t("removeUpload")}
-                    </button>
-                  </div>
+                      {t("required")}
+                    </span>
+                  )}
+                </div>
+                {isLive ? (
+                  <span className="inline-flex items-center gap-1.5 text-[#15803D]" style={{ fontSize: 12, fontWeight: 600 }}>
+                    <CheckCircle2 className="w-4 h-4" />
+                    {t("live")}
+                  </span>
+                ) : required ? (
+                  <span className="inline-flex items-center gap-1.5 text-[#B45309]" style={{ fontSize: 12, fontWeight: 600 }}>
+                    <AlertCircle className="w-4 h-4" />
+                    {t("notPublished")}
+                  </span>
                 ) : (
-                  <label className="block border-2 border-dashed border-[#C9CCCF] rounded-lg p-6 text-center hover:border-[#1D4ED8] hover:bg-[#F7F8FA] transition-all cursor-pointer">
-                    <Upload className="w-8 h-8 text-[#6D7175] mx-auto mb-2" />
-                    <p className="text-[#202223] mb-1" style={{ fontWeight: 500, fontSize: 14 }}>{t("uploadCta")}</p>
-                    <p className="text-[#6D7175]" style={{ fontSize: 12 }}>{t("uploadHintExtended")}</p>
-                    {uploadLoading[key] && (
-                      <p className="text-[#1D4ED8] mt-2" style={{ fontSize: 12 }}>Uploading…</p>
-                    )}
-                    <input
-                      type="file"
-                      accept=".pdf,.docx,.doc,.txt,.md"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFileUpload(key, file);
-                      }}
-                    />
-                  </label>
+                  <span className="inline-flex items-center gap-1.5 text-[#8C9196]" style={{ fontSize: 12, fontWeight: 600 }}>
+                    <MinusCircle className="w-4 h-4" />
+                    {t("notPublished")}
+                  </span>
                 )}
               </div>
-            ))}
-          </div>
-
-          <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-[#1D4ED8] flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-[#1E40AF] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{t("ownAutoIncludedTitle")}</p>
-                <p className="text-[#1E40AF]" style={{ fontSize: 14 }}>{t("ownAutoIncludedDesc")}</p>
-              </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
-      )}
 
-      {/* ── Template flow ── */}
-      {selectedFlow === "template" && (
-        <div className="space-y-6">
+        {/* actions */}
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setSelectedFlow(null)}
-            className="flex items-center gap-2 text-sm text-[#1D4ED8] hover:text-[#1e40af] font-medium"
+            type="button"
+            onClick={openShopifyPolicyEditor}
+            className="inline-flex items-center justify-center gap-1.5 flex-1 py-3 bg-[#1D4ED8] hover:bg-[#1e40af] border-none rounded-[9px] text-white transition-colors"
+            style={{ fontSize: 14, fontWeight: 600 }}
           >
-            <ArrowLeft className="w-4 h-4" />
-            {t("backToOptions")}
+            <ExternalLink className="w-4 h-4" />
+            {t("publishMissing")}
           </button>
-
-          <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg p-5">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 bg-[#1D4ED8] rounded-full flex items-center justify-center flex-shrink-0">
-                <Zap className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-[#1E40AF] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{t("templateBannerTitle")}</p>
-                <p className="text-[#1E40AF]" style={{ fontSize: 14 }}>{t("templateBannerDesc")}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {POLICY_KEYS.map((key) => (
-              <div key={key} className="border border-[#E1E3E5] rounded-lg p-4 hover:border-[#1D4ED8] transition-colors">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-start gap-3">
-                    <FileText className={`w-5 h-5 flex-shrink-0 mt-0.5 ${policyIsRequired[key] ? "text-[#1D4ED8]" : "text-[#6D7175]"}`} />
-                    <div>
-                      <p className="text-[#202223] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{meta[key].title}</p>
-                      <p className="text-[#6D7175]" style={{ fontSize: 14 }}>{meta[key].desc}</p>
-                    </div>
-                  </div>
-                  <span
-                    className={`px-2 py-1 rounded text-xs flex-shrink-0 ${
-                      policyIsRequired[key] ? "bg-[#DCFCE7] text-[#059669]" : "bg-[#F1F2F4] text-[#6D7175]"
-                    }`}
-                    style={{ fontWeight: 600 }}
-                  >
-                    {policyIsRequired[key] ? t("requiredLabel") : t("optionalLabel")}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => openPreview(key)}
-                    className="w-full px-4 py-2 bg-[#F7F8FA] hover:bg-[#E1E3E5] border border-[#E1E3E5] text-sm text-[#202223] rounded-lg transition-colors"
-                    style={{ fontWeight: 600 }}
-                  >
-                    {t("previewTemplateBtn")}
-                  </button>
-                  <button
-                    onClick={() =>
-                      setTemplateSelections((prev) => ({
-                        ...prev,
-                        [key]: !prev[key],
-                      }))
-                    }
-                    className={`w-full px-4 py-2 border text-sm rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                      templateSelections[key]
-                        ? "bg-[#22C55E] border-[#22C55E] text-white"
-                        : "bg-[#1D4ED8] border-[#1D4ED8] text-white hover:bg-[#1e40af]"
-                    }`}
-                    style={{ fontWeight: 600 }}
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    {templateSelections[key] ? `${t("applied")} ✓` : t("useTemplate")}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-[#FFF4E5] border border-[#FFCC80] rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-[#B95000] flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-[#202223] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{t("publishToCountTitle")}</p>
-                <p className="text-[#6D7175] mb-3" style={{ fontSize: 14 }}>{t("publishToCountDesc")}</p>
-                <button
-                  type="button"
-                  onClick={openShopifyPolicyEditor}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1D4ED8] hover:bg-[#1e40af] text-white rounded-lg transition-colors"
-                  style={{ fontSize: 14, fontWeight: 600 }}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  {t("publishOnStoreBtn")}
-                </button>
-              </div>
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={refresh}
+            disabled={refreshing || !resolvedShopId}
+            className="inline-flex items-center gap-1.5 px-[18px] py-3 bg-white border border-[#DADCE0] rounded-[9px] text-[#43474A] hover:bg-[#F7F8FA] disabled:opacity-50 transition-colors"
+            style={{ fontSize: 14, fontWeight: 600 }}
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+            {t("refreshFromStore")}
+          </button>
         </div>
-      )}
+        <p className="mt-3.5 text-center text-[#A4A8AB]" style={{ fontSize: 12 }}>
+          {t.rich("onboardingFooter", {
+            strong: (c) => <strong className="text-[#8C9196]">{c}</strong>,
+          })}
+        </p>
+      </div>
+    );
+  }
 
-      {/* ── Mixed flow ── */}
-      {selectedFlow === "mixed" && (
-        <div className="space-y-6">
-          <button
-            onClick={() => setSelectedFlow(null)}
-            className="flex items-center gap-2 text-sm text-[#1D4ED8] hover:text-[#1e40af] font-medium"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            {t("backToOptions")}
-          </button>
-
-          <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg p-5">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 bg-[#1D4ED8] rounded-full flex items-center justify-center flex-shrink-0">
-                <Layers className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-[#1E40AF] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{t("mixedBannerTitle")}</p>
-                <p className="text-[#1E40AF]" style={{ fontSize: 14 }}>{t("mixedBannerDesc")}</p>
-              </div>
-            </div>
-          </div>
-
-          {POLICY_KEYS.map((key) => (
-            <div key={key} className="border border-[#E1E3E5] rounded-lg p-5">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <p className="text-[#202223] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>
-                    {meta[key].title}{policyIsRequired[key] ? " *" : ""}
-                  </p>
-                  <p className="text-[#6D7175]" style={{ fontSize: 12 }}>{ownPolicySupportCopy[key]}</p>
-                </div>
-                <span
-                  className={`px-2 py-1 rounded text-xs flex-shrink-0 ${
-                    policyIsRequired[key] ? "bg-[#DCFCE7] text-[#059669]" : "bg-[#F1F2F4] text-[#6D7175]"
-                  }`}
-                  style={{ fontWeight: 600 }}
-                >
-                  {policyIsRequired[key] ? t("requiredLabel") : t("optionalLabel")}
+  // ── Full Policies page variant ────────────────────────────────────────
+  return (
+    <div className="max-w-[740px] mx-auto">
+      {/* Summary / sync card */}
+      <div className="bg-white border border-[#E1E3E5] rounded-[12px] px-[22px] py-5 mb-4" style={{ boxShadow: "0 1px 2px rgba(13,16,20,0.04)" }}>
+        <div className="flex items-center justify-between gap-4 pb-4 border-b border-[#F1F1F2]">
+          <div className="flex items-center gap-[11px]">
+            <span className="inline-flex items-center justify-center w-[38px] h-[38px] rounded-[9px] bg-[#F0FDF4] text-[#16A34A]">
+              <Store className="w-[19px] h-[19px]" />
+            </span>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[#202223]" style={{ fontSize: 14, fontWeight: 600 }}>{displayDomain}</span>
+                <span className="inline-flex items-center gap-1 text-[#15803D]" style={{ fontSize: 12, fontWeight: 600 }}>
+                  <span className="w-[7px] h-[7px] rounded-full bg-[#22C55E]" />
+                  {t("connected")}
                 </span>
               </div>
+              <span className="text-[#8C9196]" style={{ fontSize: 12.5 }}>
+                {refreshing ? t("syncing") : syncedLabel ? t("lastSynced", { time: syncedLabel }) : t("notSyncedYet")}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={refresh}
+            disabled={refreshing || !resolvedShopId}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-[#DADCE0] bg-white rounded-[8px] text-[#43474A] hover:bg-[#F7F8FA] disabled:opacity-50 transition-colors"
+            style={{ fontSize: 13, fontWeight: 600 }}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            {t("refreshFromStore")}
+          </button>
+        </div>
 
-              <div className="grid grid-cols-3 gap-2 mb-3">
-                {(["url", "upload", "template"] as MixedOption[]).map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => setMixedOptions((prev) => ({ ...prev, [key]: opt }))}
-                    className={`px-3 py-2.5 border rounded-lg text-xs transition-all flex items-center justify-center gap-1.5 ${
-                      mixedOptions[key] === opt
-                        ? "border-[#1D4ED8] bg-[#EFF6FF] text-[#1D4ED8]"
-                        : "border-[#E1E3E5] text-[#6D7175] hover:border-[#C9CCCF]"
-                    }`}
-                    style={{ fontWeight: 600 }}
+        <div className="pt-4">
+          <h2 className="text-[#202223] mb-1.5" style={{ fontSize: 18, fontWeight: 700 }}>
+            {t("liveSummaryTitle", { live: liveCount, total })}
+          </h2>
+          <p className="text-[#6D7175] max-w-[560px] mb-3.5" style={{ fontSize: 13.5, lineHeight: 1.55 }}>
+            {t.rich("liveSummaryDesc", {
+              strong: (c) => <strong className="text-[#43474A]">{c}</strong>,
+            })}
+          </p>
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-2 rounded-full bg-[#EDEEEF] overflow-hidden max-w-[380px]">
+              <div className="h-full bg-[#1D4ED8] rounded-full transition-all" style={{ width: `${pct}%` }} />
+            </div>
+            <span className="text-[#6D7175]" style={{ fontSize: 12.5, fontWeight: 600 }}>
+              {t("liveOfTotalShort", { live: liveCount, total })}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Policy status list */}
+      <div className="bg-white border border-[#E1E3E5] rounded-[12px] overflow-hidden" style={{ boxShadow: "0 1px 2px rgba(13,16,20,0.04)" }}>
+        <div className="flex items-center justify-between px-[22px] py-3.5 border-b border-[#F1F1F2]">
+          <span className="text-[#202223]" style={{ fontSize: 13, fontWeight: 700 }}>{t("storePolicies")}</span>
+          <span className="text-[#8C9196]" style={{ fontSize: 12 }}>{t("capturedFromShopify")}</span>
+        </div>
+
+        {POLICY_ORDER.map((k, i) => {
+          const Icon = POLICY_ICON[k];
+          const row = rows[k];
+          const isLive = row?.source === "shopify_published";
+          const required = REQUIRED[k];
+          const last = i === POLICY_ORDER.length - 1;
+          const isExpanded = expanded === k;
+          return (
+            <div key={k}>
+              <div
+                className={`flex items-center justify-between gap-4 px-[22px] py-[18px] ${last && !isExpanded ? "" : "border-b border-[#F4F4F5]"}`}
+                style={!isLive && required ? { background: "#FEFBF6" } : undefined}
+              >
+                <div className="flex items-start gap-[13px] min-w-0">
+                  <span
+                    className="inline-flex items-center justify-center w-10 h-10 rounded-[9px] flex-shrink-0"
+                    style={{
+                      background: isLive ? "#FBF1DF" : required ? "#FBEEDD" : "#F1F2F4",
+                      color: isLive ? "#B5821C" : required ? "#C2791B" : "#8C9196",
+                    }}
                   >
-                    {opt === "url" && <Link className="w-3.5 h-3.5" />}
-                    {opt === "upload" && <Upload className="w-3.5 h-3.5" />}
-                    {opt === "template" && <Zap className="w-3.5 h-3.5" />}
-                    {opt === "url" ? t("linkUrlBtn") : opt === "upload" ? t("uploadFileBtn") : t("optionTemplate")}
-                  </button>
-                ))}
+                    <Icon className="w-5 h-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-[#202223]" style={{ fontSize: 14.5, fontWeight: 600 }}>{meta(k).title}</span>
+                      <span className="text-[#6D7175] bg-[#F1F2F4] px-[7px] rounded-[5px]" style={{ fontSize: 11, fontWeight: 600 }}>
+                        {required ? t("required") : t("optional")}
+                      </span>
+                    </div>
+                    <p className="text-[#8C9196] m-0" style={{ fontSize: 12.5 }}>{meta(k).desc}</p>
+                    {isLive && row?.published_url && (
+                      <a
+                        href={row.published_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-[#1D4ED8] mt-1.5 no-underline hover:underline"
+                        style={{ fontSize: 12.5, fontWeight: 500 }}
+                      >
+                        {row.published_url.replace(/^https?:\/\//, "")}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3.5 flex-shrink-0">
+                  {isLive ? (
+                    <>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#E7F6EC] text-[#15803D]" style={{ fontSize: 12, fontWeight: 600 }}>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        {t("liveOnStore")}
+                      </span>
+                      <ChevronRight className="w-[15px] h-[15px] text-[#B5B8BB]" />
+                    </>
+                  ) : (
+                    <>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FBEFE2] text-[#B45309]" style={{ fontSize: 12, fontWeight: 600 }}>
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        {t("notPublished")}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setExpanded(isExpanded ? null : k)}
+                        className={`inline-flex items-center gap-1.5 px-[13px] py-2 rounded-[8px] transition-colors ${
+                          required
+                            ? "bg-[#1D4ED8] hover:bg-[#1e40af] border-none text-white"
+                            : "bg-white border border-[#1D4ED8] text-[#1D4ED8] hover:bg-[#EFF6FF]"
+                        }`}
+                        style={{ fontSize: 13, fontWeight: 600 }}
+                      >
+                        {required && <ExternalLink className="w-3.5 h-3.5" />}
+                        {t("publishInShopify")}
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
-              {mixedOptions[key] === "url" && (
-                <input
-                  type="url"
-                  value={mixedUrls[key]}
-                  onChange={(e) => setMixedUrls((prev) => ({ ...prev, [key]: e.target.value }))}
-                  placeholder={`https://yourstore.myshopify.com${POLICY_PATHS[key]}`}
-                  className="w-full px-4 py-2.5 border border-[#C9CCCF] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent"
-                />
-              )}
-
-              {mixedOptions[key] === "upload" && (
-                uploadedFiles[key] ? (
-                  <div className="flex items-center gap-3 p-3 bg-[#F0FDF4] border border-[#BBF7D0] rounded-lg">
-                    <CheckCircle2 className="w-5 h-5 text-[#22C55E] flex-shrink-0" />
-                    <p className="text-[#15803D] flex-1 truncate" style={{ fontSize: 14 }}>
-                      {uploadedFiles[key]!.url.split("/").pop()}
+              {/* Expanded publish flow (forward-to-Shopify only) */}
+              {isExpanded && !isLive && (
+                <div className={`bg-[#FAFAFB] ${last ? "" : "border-b border-[#F4F4F5]"}`}>
+                  <div className="flex items-center gap-0 px-[22px] py-4 border-b border-[#F1F1F2]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-[22px] h-[22px] rounded-full bg-[#1D4ED8] text-white flex items-center justify-center" style={{ fontSize: 12, fontWeight: 700 }}>1</span>
+                      <span className="text-[#202223]" style={{ fontSize: 12.5, fontWeight: 600 }}>{t("step1")}</span>
+                    </div>
+                    <div className="flex-1 h-px bg-[#E1E3E5] mx-4" />
+                    <div className="flex items-center gap-2">
+                      <span className="w-[22px] h-[22px] rounded-full bg-white text-[#8C9196] flex items-center justify-center" style={{ fontSize: 12, fontWeight: 700, border: "1.5px solid #C9CCCF" }}>2</span>
+                      <span className="text-[#8C9196]" style={{ fontSize: 12.5, fontWeight: 500 }}>{t("step2")}</span>
+                    </div>
+                  </div>
+                  <div className="px-[22px] py-5">
+                    <p className="text-[#43474A] max-w-[560px] mb-4" style={{ fontSize: 13.5, lineHeight: 1.6 }}>
+                      {t("publishFlowBody")}
                     </p>
                     <button
-                      onClick={() => setUploadedFiles((prev) => { const n = { ...prev }; delete n[key]; return n; })}
-                      className="text-xs text-[#6D7175] hover:text-[#202223]"
+                      type="button"
+                      onClick={openShopifyPolicyEditor}
+                      className="inline-flex items-center gap-1.5 px-[18px] py-2.5 bg-[#1D4ED8] hover:bg-[#1e40af] border-none rounded-[8px] text-white transition-colors"
+                      style={{ fontSize: 14, fontWeight: 600 }}
                     >
-                      {t("removeUpload")}
+                      <ExternalLink className="w-4 h-4" />
+                      {t("openShopifyEditor")}
                     </button>
                   </div>
-                ) : (
-                  <label className="block border-2 border-dashed border-[#C9CCCF] rounded-lg p-6 text-center hover:border-[#1D4ED8] hover:bg-[#F7F8FA] transition-all cursor-pointer">
-                    <Upload className="w-8 h-8 text-[#6D7175] mx-auto mb-2" />
-                    <p className="text-[#202223] mb-1" style={{ fontWeight: 500, fontSize: 14 }}>{t("uploadCta")}</p>
-                    <p className="text-[#6D7175]" style={{ fontSize: 12 }}>{t("uploadHintExtended")}</p>
-                    {uploadLoading[key] && (
-                      <p className="text-[#1D4ED8] mt-2" style={{ fontSize: 12 }}>Uploading…</p>
-                    )}
-                    <input
-                      type="file"
-                      accept=".pdf,.docx,.doc,.txt,.md"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFileUpload(key, file);
-                      }}
-                    />
-                  </label>
-                )
-              )}
-
-              {mixedOptions[key] === "template" && (
-                <div className="space-y-3">
-                  <div className="bg-[#F7F8FA] rounded-lg p-3 text-xs text-[#6D7175]">
-                    {meta[key].desc}
-                  </div>
-                  <button
-                    onClick={() => openPreview(key)}
-                    className="w-full px-4 py-2 bg-[#F7F8FA] hover:bg-[#E1E3E5] border border-[#E1E3E5] text-sm text-[#202223] rounded-lg transition-colors"
-                    style={{ fontWeight: 600 }}
-                  >
-                    {t("previewTemplateBtn")}
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-
-          <div className="bg-[#F7F8FA] border border-[#E1E3E5] rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-[#6D7175] flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-[#202223] mb-1" style={{ fontWeight: 600, fontSize: 16 }}>{t("mixedBestTitle")}</p>
-                <p className="text-[#6D7175]" style={{ fontSize: 14 }}>{t("mixedBestDesc")}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Preview modal ── */}
-      {previewKey && (
-        <div className="fixed inset-0 bg-[#0B1220]/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#E1E3E5]">
-              <div>
-                <h3 className="text-[#202223]" style={{ fontWeight: 600, fontSize: 18 }}>{meta[previewKey].title}</h3>
-                <p className="text-[#6D7175] mt-0.5" style={{ fontSize: 12 }}>{t("templatePreviewTitle")}</p>
-              </div>
-              <button
-                onClick={() => setPreviewKey(null)}
-                className="p-2 hover:bg-[#F7F8FA] rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-[#6D7175]" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-6 py-6">
-              {previewLoading ? (
-                <div className="flex items-center justify-center h-32 text-sm text-[#6D7175]">
-                  Loading template…
-                </div>
-              ) : previewEditing ? (
-                <textarea
-                  value={previewContent}
-                  onChange={(e) => setPreviewContent(e.target.value)}
-                  className="w-full min-h-[50vh] p-4 border border-[#E1E3E5] rounded-lg text-sm text-[#202223] leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] focus:border-transparent resize-y"
-                />
-              ) : (
-                <div className="prose prose-sm max-w-none">
-                  <div className="text-sm text-[#202223] leading-relaxed whitespace-pre-wrap">
-                    {previewContent}
+                  <div className="flex items-start gap-2.5 px-[22px] py-3 bg-[#FFF8EE] border-t border-[#FBE6C8]">
+                    <RefreshCw className="w-[15px] h-[15px] text-[#B45309] mt-0.5" />
+                    <p className="text-[#92591A] m-0" style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+                      {t.rich("publishFlowNote", {
+                        strong: (c) => <strong>{c}</strong>,
+                      })}
+                    </p>
                   </div>
                 </div>
               )}
             </div>
+          );
+        })}
+      </div>
 
-            <div className="flex items-center justify-between px-6 py-4 border-t border-[#E1E3E5] bg-[#F7F8FA]">
-              <p className="text-[#6D7175]" style={{ fontSize: 12 }}>{t("previewEditNote")}</p>
-              <div className="flex gap-3">
-                {previewEditing ? (
-                  <>
-                    <button
-                      onClick={() => {
-                        setPreviewContent(previewOriginal);
-                        setPreviewEditing(false);
-                      }}
-                      className="px-4 py-2 border border-[#E1E3E5] rounded-lg text-sm font-medium text-[#202223] hover:bg-white transition-colors"
-                    >
-                      {tCommon("cancel")}
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (previewKey) {
-                          setTemplateDrafts((prev) => ({ ...prev, [previewKey]: previewContent }));
-                          setPreviewOriginal(previewContent);
-                        }
-                        setPreviewEditing(false);
-                      }}
-                      className="px-4 py-2 bg-[#1D4ED8] hover:bg-[#1e40af] text-white rounded-lg text-sm font-medium transition-colors"
-                    >
-                      {tCommon("save")}
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setPreviewEditing(true)}
-                    className="px-4 py-2 border border-[#E1E3E5] rounded-lg text-sm font-medium text-[#202223] hover:bg-white transition-colors"
-                  >
-                    {t("editTemplateBtn")}
-                  </button>
-                )}
-                <button
-                  onClick={() => setPreviewKey(null)}
-                  className="px-4 py-2 border border-[#E1E3E5] rounded-lg text-sm font-medium text-[#202223] hover:bg-white transition-colors"
-                >
-                  {t("closeBtn")}
-                </button>
-                {(selectedFlow === "mixed" || selectedFlow === "template") && previewKey && (
-                  <button
-                    onClick={() => {
-                      if (selectedFlow === "mixed") {
-                        setMixedOptions((prev) => ({ ...prev, [previewKey]: "template" }));
-                      } else {
-                        setTemplateSelections((prev) => ({ ...prev, [previewKey]: true }));
-                      }
-                      setPreviewKey(null);
-                    }}
-                    className="px-4 py-2 bg-[#1D4ED8] hover:bg-[#1e40af] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    {t("selectTemplateBtn")}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* Footer note */}
+      <div className="flex items-start gap-2.5 mt-3.5 px-4 py-3.5 border border-[#EDEEEF] rounded-[10px] bg-[#FAFAFB]">
+        <Info className="w-[17px] h-[17px] text-[#8C9196] mt-0.5" />
+        <p className="text-[#6D7175] m-0" style={{ fontSize: 12.5, lineHeight: 1.55 }}>{t("footerNote")}</p>
+      </div>
     </div>
   );
 }
