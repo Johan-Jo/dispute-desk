@@ -3805,7 +3805,53 @@
       "shippingSections": "Prazos de processamento,Zonas de envio,Informações de rastreamento,Expectativas de entrega,Itens perdidos/danificados",
       "refundsSections": "Prazo de devolução,Condições de devolução,Processo de reembolso,Taxas de reposição,Trocas",
       "termsSections": "Aceitação dos termos,Licença de uso,Usos proibidos,Limitações de responsabilidade,Revisões",
-      "privacySections": "Informações que coletamos,Como usamos suas informações,Armazenamento de dados,Compartilhamento com terceiros,Direitos do usuário"
+      "privacySections": "Informações que coletamos,Como usamos suas informações,Armazenamento de dados,Compartilhamento com terceiros,Direitos do usuário",
+      "yourStore": "a sua loja",
+      "connected": "Conectado",
+      "syncing": "A sincronizar…",
+      "lastSynced": "Última sincronização {time}",
+      "syncedAgo": "Sincronizado {time}",
+      "notSyncedYet": "Ainda não sincronizado",
+      "liveSummaryTitle": "{live} de {total} políticas ativas na sua loja",
+      "liveSummaryDesc": "Apenas as políticas <strong>publicadas na sua loja</strong> podem ser citadas numa resposta a um estorno — os bancos abrem a mesma página ativa que o seu cliente viu no momento do pedido. Uma política que não está ativa não conta.",
+      "liveOfTotalShort": "{live} / {total} ativas",
+      "storePolicies": "Políticas da loja",
+      "capturedFromShopify": "Capturado do Shopify",
+      "required": "Obrigatória",
+      "optional": "Opcional",
+      "liveOnStore": "Ativa na loja",
+      "notPublished": "Não publicada",
+      "live": "Ativa",
+      "publishInShopify": "Publicar no Shopify",
+      "step1": "Criar e publicar no Shopify",
+      "step2": "Atualizar para capturar como evidência",
+      "publishFlowBody": "Os bancos só podem citar uma política que consigam abrir na sua loja ativa no momento do pedido. Crie esta política no editor de políticas do Shopify e publique-a — depois volte e atualize para que o DisputeDesk capture a página ativa como evidência.",
+      "openShopifyEditor": "Abrir o editor de políticas do Shopify",
+      "publishFlowNote": "Depois de publicar no Shopify, volte e clique em <strong>Atualizar da loja</strong> — vamos capturar a página ativa e marcar esta política como evidência.",
+      "footerNote": "O DisputeDesk verifica a sua loja automaticamente e anexa cada política ativa ao pacote de evidências correspondente. Você escreve e publica o texto da política no Shopify; esta página mantém a sua evidência sincronizada.",
+      "onboardingTitle": "As políticas da sua loja",
+      "onboardingSubtitle": "Verificámos <store></store> em busca de políticas publicadas. Eis o que os bancos já conseguem ver.",
+      "liveOfTotal": "{live} de {total} políticas ativas",
+      "publishMissing": "Publicar as em falta no Shopify",
+      "onboardingFooter": "Pode gerir todas as políticas a qualquer momento em <strong>Políticas</strong> no DisputeDesk.",
+      "row": {
+        "refunds": {
+          "title": "Política de devoluções e reembolsos",
+          "desc": "Prazo de devolução, condições, processo de reembolso"
+        },
+        "shipping": {
+          "title": "Política de envio e entrega",
+          "desc": "Tempos de processamento, rastreamento, expectativas de entrega — os bancos pedem isto em «artigo não recebido»."
+        },
+        "privacy": {
+          "title": "Política de privacidade",
+          "desc": "Recolha, utilização e armazenamento de dados e direitos do utilizador"
+        },
+        "terms": {
+          "title": "Termos de serviço",
+          "desc": "Direitos de utilização, termos da conta e avisos legais"
+        }
+      }
     },
     "packs": {
       "title": "Instalar Modelos de Pacotes de Evidências",
