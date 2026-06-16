@@ -3813,7 +3813,53 @@
       "shippingSections": "Délais de traitement,Zones de livraison,Suivi de colis,Attentes de livraison,Articles perdus/endommagés",
       "refundsSections": "Délai de retour,Conditions de retour,Processus de remboursement,Frais de restockage,Échanges",
       "termsSections": "Acceptation des conditions,Licence d'utilisation,Usages interdits,Limitations de responsabilité,Révisions",
-      "privacySections": "Informations collectées,Utilisation de vos informations,Stockage des données,Partage avec des tiers,Droits des utilisateurs"
+      "privacySections": "Informations collectées,Utilisation de vos informations,Stockage des données,Partage avec des tiers,Droits des utilisateurs",
+      "yourStore": "votre boutique",
+      "connected": "Connecté",
+      "syncing": "Synchronisation…",
+      "lastSynced": "Dernière synchronisation {time}",
+      "syncedAgo": "Synchronisé {time}",
+      "notSyncedYet": "Pas encore synchronisé",
+      "liveSummaryTitle": "{live} politiques sur {total} actives sur votre boutique",
+      "liveSummaryDesc": "Seules les politiques <strong>publiées sur votre boutique</strong> peuvent être citées dans une réponse à une rétrofacturation — les banques ouvrent la même page en ligne que votre client a vue au moment de la commande. Une politique qui n’est pas en ligne ne compte pas.",
+      "liveOfTotalShort": "{live} / {total} en ligne",
+      "storePolicies": "Politiques de la boutique",
+      "capturedFromShopify": "Capturé depuis Shopify",
+      "required": "Obligatoire",
+      "optional": "Facultatif",
+      "liveOnStore": "En ligne sur la boutique",
+      "notPublished": "Non publiée",
+      "live": "En ligne",
+      "publishInShopify": "Publier dans Shopify",
+      "step1": "Créer et publier dans Shopify",
+      "step2": "Actualiser pour capturer comme preuve",
+      "publishFlowBody": "Les banques ne peuvent citer qu’une politique qu’elles peuvent ouvrir sur votre boutique en ligne au moment de la commande. Créez cette politique dans l’éditeur de politiques de Shopify et publiez-la, puis revenez et actualisez pour que DisputeDesk capture la page en ligne comme preuve.",
+      "openShopifyEditor": "Ouvrir l’éditeur de politiques Shopify",
+      "publishFlowNote": "Après avoir publié dans Shopify, revenez et cliquez sur <strong>Actualiser depuis la boutique</strong> — nous capturerons la page en ligne et marquerons cette politique comme preuve.",
+      "footerNote": "DisputeDesk revérifie votre boutique automatiquement et joint chaque politique en ligne au dossier de preuves correspondant. Vous rédigez et publiez le texte de la politique dans Shopify ; cette page garde vos preuves synchronisées.",
+      "onboardingTitle": "Les politiques de votre boutique",
+      "onboardingSubtitle": "Nous avons vérifié <store></store> pour les politiques publiées. Voici ce que les banques peuvent déjà voir.",
+      "liveOfTotal": "{live} politiques sur {total} en ligne",
+      "publishMissing": "Publier les manquantes dans Shopify",
+      "onboardingFooter": "Vous pouvez gérer toutes les politiques à tout moment depuis <strong>Politiques</strong> dans DisputeDesk.",
+      "row": {
+        "refunds": {
+          "title": "Politique de retours et remboursements",
+          "desc": "Délai de retour, conditions, processus de remboursement"
+        },
+        "shipping": {
+          "title": "Politique d’expédition et de livraison",
+          "desc": "Délais de traitement, suivi, attentes de livraison — les banques le demandent pour « article non reçu »."
+        },
+        "privacy": {
+          "title": "Politique de confidentialité",
+          "desc": "Collecte, utilisation et stockage des données et droits des utilisateurs"
+        },
+        "terms": {
+          "title": "Conditions d’utilisation",
+          "desc": "Droits d’utilisation, conditions du compte et mentions légales"
+        }
+      }
     },
     "packs": {
       "title": "Installer les modèles de dossiers de preuves",
