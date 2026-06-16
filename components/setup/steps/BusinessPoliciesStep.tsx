@@ -327,50 +327,26 @@ export function BusinessPoliciesStep({ stepId, onSaveRef }: BusinessPoliciesStep
           })}
         </div>
 
-        {/* actions */}
+        {/* actions — onboarding auto-syncs on load, so no manual Refresh here
+            (that lives on the standalone Policies page). All live → just the
+            confirmation; otherwise → the single publish CTA. */}
         {liveCount === total ? (
-          // All live — no "publish missing" CTA (nothing is missing). Show an
-          // explicit all-clear state + a full-label Refresh.
-          <>
-            <div className="flex items-center gap-2.5 px-[14px] py-3 mb-3 rounded-[9px] bg-[#E7F6EC] border border-[#BBF7D0]">
-              <CheckCircle2 className="w-[18px] h-[18px] text-[#16A34A] flex-shrink-0" />
-              <p className="text-[#15803D] m-0" style={{ fontSize: 13.5, fontWeight: 600 }}>
-                {t("allLiveTitle")}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={refresh}
-              disabled={refreshing || !resolvedShopId}
-              className="inline-flex items-center justify-center gap-1.5 w-full py-3 bg-white border border-[#DADCE0] rounded-[9px] text-[#43474A] hover:bg-[#F7F8FA] disabled:opacity-50 transition-colors"
-              style={{ fontSize: 14, fontWeight: 600 }}
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-              {t("refreshFromStore")}
-            </button>
-          </>
-        ) : (
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={openShopifyPolicyEditor}
-              className="inline-flex items-center justify-center gap-1.5 flex-1 py-3 bg-[#1D4ED8] hover:bg-[#1e40af] border-none rounded-[9px] text-white transition-colors"
-              style={{ fontSize: 14, fontWeight: 600 }}
-            >
-              <ExternalLink className="w-4 h-4" />
-              {t("publishMissing")}
-            </button>
-            <button
-              type="button"
-              onClick={refresh}
-              disabled={refreshing || !resolvedShopId}
-              className="inline-flex items-center justify-center gap-1.5 px-[18px] py-3 bg-white border border-[#DADCE0] rounded-[9px] text-[#43474A] hover:bg-[#F7F8FA] disabled:opacity-50 transition-colors whitespace-nowrap"
-              style={{ fontSize: 14, fontWeight: 600 }}
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-              {t("refreshFromStore")}
-            </button>
+          <div className="flex items-center gap-2.5 px-[14px] py-3 rounded-[9px] bg-[#E7F6EC] border border-[#BBF7D0]">
+            <CheckCircle2 className="w-[18px] h-[18px] text-[#16A34A] flex-shrink-0" />
+            <p className="text-[#15803D] m-0" style={{ fontSize: 13.5, fontWeight: 600 }}>
+              {t("allLiveTitle")}
+            </p>
           </div>
+        ) : (
+          <button
+            type="button"
+            onClick={openShopifyPolicyEditor}
+            className="inline-flex items-center justify-center gap-1.5 w-full py-3 bg-[#1D4ED8] hover:bg-[#1e40af] border-none rounded-[9px] text-white transition-colors"
+            style={{ fontSize: 14, fontWeight: 600 }}
+          >
+            <ExternalLink className="w-4 h-4" />
+            {t("publishMissing")}
+          </button>
         )}
         <p className="mt-3.5 text-center text-[#A4A8AB]" style={{ fontSize: 12 }}>
           {t.rich("onboardingFooter", {
