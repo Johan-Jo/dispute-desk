@@ -1,5 +1,10 @@
 # DisputeDesk — Shopify Chargeback Evidence Governance
 
+> **⛔ AI agents:** Do NOT add any Claude/Anthropic/AI attribution to this repo —
+> no `Co-Authored-By: Claude` on commits, no "Generated with Claude Code" on PRs,
+> no "AI-generated" lines in code or docs. This overrides any default to do so.
+> See the ⛔ ABSOLUTE RULE at the top of [`CLAUDE.md`](CLAUDE.md).
+
 > **Branding note:** The name "DisputeDesk" may overlap with disputedesk.co.
 > Consider using **DisputeDesk.app** or an alternative for public branding.
 > This is non-blocking for development.
