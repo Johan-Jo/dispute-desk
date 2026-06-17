@@ -378,6 +378,22 @@ The interactive lead magnet that finally makes "→ disputedesk.app/test" delive
 - **Fonts** loaded via `next/font` (Crimson Pro / Inter / Spline Sans Mono) as `--font-dd-*` CSS variables; styles scoped under `.dd-wt`. In-progress state persists to `localStorage` (`dd_winnability_v1`).
 - **Email delivery (env, per Vercel project):** needs a **valid `RESEND_API_KEY`** + verified sending domain (`mail.disputedesk.app`); admin alerts default to **`ADMIN_NOTIFY_EMAIL`** (`oi@johan.com.br`). **Gotcha (2026-06-08):** the `disputedesk-dev` Vercel project had an **invalid `RESEND_API_KEY`**, so *all* staging mail silently failed with Resend `"API key is invalid"` while endpoints still returned 2xx. A 2xx does **not** prove the email sent — read the `reason` field or the `console.error` in Vercel runtime logs. Prod (`dispute-desk` project) has a valid key.
 
+## Compare pages (competitor alternatives — SEO + paid ads)
+
+The **`/compare`** section is a set of localized, SEO-optimised + paid-ad landing pages that position DisputeDesk against the chargeback tools merchants weigh it against. Source design: Claude Design *"Competitor Alternative.dc.html"* (rebuilt in DisputeDesk's own brand — slate dossier hero, Instrument Serif + JetBrains Mono, blue `#1D4ED8`).
+
+| Area | Route | Notes |
+|------|-------|-------|
+| Hub | `/compare`, `/{locale}/compare` | `app/[locale]/compare/page.tsx` → `CompareHubClient`. Grid of all competitor cards + `CollectionPage` JSON-LD. |
+| Competitor page | `/compare/<competitor>-alternative`, `/{locale}/…` | `app/[locale]/compare/[slug]/page.tsx` → `CompareLandingClient`. Isolated landing page (no competitor switcher) for paid traffic. `FAQPage` + `BreadcrumbList` JSON-LD. |
+
+- **Data model.** Language-neutral competitor registry + pricing math lives in [`lib/compare/competitors.ts`](lib/compare/competitors.ts) (`COMPETITORS`, slugs, `feePct`, `themCost`, `saveBig`, `compareChartTiers`). All prose (names, bullets, table cells, FAQs) is in the **`compare`** i18n namespace, translated across all 6 locales.
+- **i18n authoring.** English source is **code-first** in [`scripts/compare-i18n/en.mjs`](scripts/compare-i18n/en.mjs); `de/es/fr/pt/sv.mjs` are translations. Run `node scripts/compare-i18n/inject.mjs [locales…]` to merge the `compare` namespace into `messages/<locale>.json` (preserves CRLF; idempotent). Placeholders `{name}` / `{save}` / `{perMo}` must be preserved verbatim when translating.
+- **Pricing knockout.** Anchored to a reference mid-market store (~$100K/mo, ~$6,000/mo chargebacks). Success-fee tools show their annual cost vs DisputeDesk's flat $129/mo Growth plan; prevention tools (Chargeback.io, Chargeblast) use the "revenue refunded away" framing. Figures are illustrative (footnoted on-page).
+- **Install CTA.** All CTAs open the direct shop-domain → `/api/auth/shopify?shop=…` OAuth modal (same flow as the marketing home), not the App Store.
+- **Discovery.** A `Compare` link (`marketing.nav.compare`) sits in `MarketingSiteHeader`; every `/compare/*` URL (hub + 11 competitor pages) is emitted per-locale with hreflang in `app/sitemap.ts`.
+- **Honesty / legal.** Each page keeps a fair "what {name} does well" + "when {name} is the better fit" section and a trademark disclaimer ("Not affiliated with or endorsed by…"). DisputeDesk never claims prevention/alert features it does not have.
+
 ## Resources Hub (public marketing)
 
 The **Resources Hub** is the localized **marketing / SEO** surface for long-form content (articles, templates, case studies, glossary, blog). It is **not** part of the embedded Shopify app.

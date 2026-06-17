@@ -6,6 +6,7 @@ import {
 } from "@/lib/resources/pillars";
 import { getPublicSiteBaseUrl } from "@/lib/email/publicSiteUrl";
 import { isLocalizationSitemapEligible } from "@/lib/resources/redirects";
+import { COMPETITOR_SLUGS } from "@/lib/compare/competitors";
 
 const BASE_URL = getPublicSiteBaseUrl();
 
@@ -169,6 +170,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: "monthly",
     priority: 0.7,
   });
+
+  // ── Compare hub + competitor alternative pages ─────────────────────────────
+  // Code-defined (not DB), fully localized across every locale, so each gets a
+  // <url> entry per locale with the full hreflang set.
+  pushStaticEntries(entries, "/compare", 0.8);
+  for (const slug of COMPETITOR_SLUGS) {
+    pushStaticEntries(entries, `/compare/${slug}`, 0.8);
+  }
 
   if (!sb) {
     return entries;

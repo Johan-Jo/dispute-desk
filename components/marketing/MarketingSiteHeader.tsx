@@ -33,6 +33,9 @@ function useActiveSection(): string | null {
   if (stripped[0] === "resources" || stripped[0] === "templates" || stripped[0] === "case-studies" || stripped[0] === "glossary") {
     return "resources";
   }
+  if (stripped[0] === "compare") {
+    return "compare";
+  }
   return null;
 }
 
@@ -66,6 +69,12 @@ export function MarketingSiteHeader() {
             className={activeSection === "resources" ? NAV_ACTIVE : NAV_IDLE}
           >
             {t("nav.resources")}
+          </Link>
+          <Link
+            href="/compare"
+            className={activeSection === "compare" ? NAV_ACTIVE : NAV_IDLE}
+          >
+            {t("nav.compare")}
           </Link>
           <a href={`${home}#how-it-works`} className={NAV_IDLE}>
             {t("nav.product")}
@@ -111,6 +120,13 @@ export function MarketingSiteHeader() {
             className={`block py-2 ${activeSection === "resources" ? NAV_ACTIVE : NAV_IDLE}`}
           >
             {t("nav.resources")}
+          </Link>
+          <Link
+            href="/compare"
+            onClick={() => setMobileNav(false)}
+            className={`block py-2 ${activeSection === "compare" ? NAV_ACTIVE : NAV_IDLE}`}
+          >
+            {t("nav.compare")}
           </Link>
           <a
             href={`${home}#how-it-works`}
