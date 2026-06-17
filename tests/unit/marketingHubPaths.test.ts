@@ -16,6 +16,13 @@ describe("isMarketingHubPath", () => {
     expect(isMarketingHubPath("/de/templates/slug")).toBe(true);
   });
 
+  it("matches compare hub + competitor pages (unprefixed, /en, and prefixed)", () => {
+    expect(isMarketingHubPath("/compare")).toBe(true);
+    expect(isMarketingHubPath("/compare/chargeflow-alternative")).toBe(true);
+    expect(isMarketingHubPath("/en/compare")).toBe(true);
+    expect(isMarketingHubPath("/de/compare/disputifier-alternative")).toBe(true);
+  });
+
   it("does not match marketing home or embedded app", () => {
     expect(isMarketingHubPath("/")).toBe(false);
     expect(isMarketingHubPath("/app/disputes")).toBe(false);
