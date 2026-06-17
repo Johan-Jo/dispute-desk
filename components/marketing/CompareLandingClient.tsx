@@ -13,6 +13,7 @@ import {
   getCompetitorById,
   type Competitor,
 } from "@/lib/compare/competitors";
+import { trackStartShopifyInstallAndRedirect } from "@/lib/analytics/startShopifyInstall";
 
 const SLATE_GRADIENT =
   "linear-gradient(135deg, var(--dd-hero-bg-start) 0%, var(--dd-hero-bg-mid) 40%, var(--dd-hero-bg-end) 100%)";
@@ -73,7 +74,12 @@ export function CompareLandingClient({
       setShopError(tm("pricing.shopError"));
       return;
     }
-    window.location.href = `/api/auth/shopify?shop=${encodeURIComponent(domain)}`;
+    // Fire the start_shopify_install GA4/Google Ads conversion (install intent),
+    // then redirect to Shopify OAuth. Redirect is guaranteed even if gtag is blocked.
+    trackStartShopifyInstallAndRedirect(
+      domain,
+      `/api/auth/shopify?shop=${encodeURIComponent(domain)}`,
+    );
   };
 
   useEffect(() => {
