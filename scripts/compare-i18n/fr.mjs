@@ -14,6 +14,7 @@ export default {
     title: "Toutes les comparaisons DisputeDesk, au même endroit",
     subtitle:
       "Découvrez comment DisputeDesk se compare aux outils de rétrofacturation que les marchands Shopify évaluent — honnêtement, côte à côte, avec le vrai calcul des coûts.",
+    articleLink: "Lire le guide : les meilleurs outils de gestion des rétrofacturations pour Shopify",
     sectionAlternatives: "Alternatives",
     sectionAlternativesDesc:
       "Des comparaisons une à une face aux apps et services de rétrofacturation que les marchands mettent en balance avec DisputeDesk.",

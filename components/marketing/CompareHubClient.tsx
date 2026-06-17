@@ -15,6 +15,10 @@ const SERIF = "var(--font-crimson-pro), 'Instrument Serif', Georgia, serif";
 const MONO = "var(--font-jetbrains-mono), 'JetBrains Mono', ui-monospace, monospace";
 const CONTAINER = "max-w-[1200px] mx-auto px-6";
 
+/** Companion roundup article (resolves in every locale under the same slug). */
+const ROUNDUP_ARTICLE_PATH =
+  "/resources/dispute-management-software/top-chargeback-management-tools-shopify";
+
 export function CompareHubClient({ base = "" }: { base?: string }) {
   const t = useTranslations("compare");
 
@@ -43,6 +47,13 @@ export function CompareHubClient({ base = "" }: { base?: string }) {
           <p className="text-[18px] leading-relaxed mt-6 max-w-[640px]" style={{ color: "rgba(244,238,226,0.82)" }}>
             {t("hub.subtitle")}
           </p>
+          <Link
+            href={ROUNDUP_ARTICLE_PATH}
+            className="group inline-flex items-center gap-2 mt-7 no-underline rounded-full border border-white/25 bg-white/10 backdrop-blur-sm px-4 py-2 text-[14px] font-medium text-[#f4eee2] hover:bg-white/15 transition-colors"
+          >
+            {t("hub.articleLink")}
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+          </Link>
         </div>
       </section>
 

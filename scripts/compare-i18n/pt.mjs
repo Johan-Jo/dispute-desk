@@ -13,6 +13,7 @@ export default {
     title: "Todas as comparações do DisputeDesk em um só lugar",
     subtitle:
       "Veja como o DisputeDesk se compara às ferramentas de chargeback com as quais os lojistas Shopify o avaliam — com honestidade, lado a lado e com a conta de preço real.",
+    articleLink: "Leia o guia: as melhores ferramentas de gestão de chargeback para Shopify",
     sectionAlternatives: "Alternativas",
     sectionAlternativesDesc:
       "Comparações diretas com os apps e serviços de chargeback que os lojistas colocam frente a frente com o DisputeDesk.",

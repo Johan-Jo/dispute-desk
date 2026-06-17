@@ -14,6 +14,7 @@ export default {
     title: "Cada comparación de DisputeDesk, en un solo lugar",
     subtitle:
       "Descubre cómo se compara DisputeDesk con las herramientas de contracargos con las que los comerciantes de Shopify lo enfrentan — con honestidad, lado a lado y con las cifras de precios reales.",
+    articleLink: "Lee la guía: las mejores herramientas de gestión de contracargos para Shopify",
     sectionAlternatives: "Alternativas",
     sectionAlternativesDesc:
       "Comparaciones uno a uno frente a las apps y servicios de contracargos que los comerciantes ponen frente a DisputeDesk.",
