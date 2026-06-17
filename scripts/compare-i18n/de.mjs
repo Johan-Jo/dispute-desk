@@ -14,6 +14,7 @@ export default {
     title: "Jeder DisputeDesk-Vergleich, an einem Ort",
     subtitle:
       "Sieh, wie sich DisputeDesk gegen die Chargeback-Tools schlägt, mit denen Shopify-Händler es vergleichen — ehrlich, Seite an Seite, mit der echten Preisrechnung.",
+    articleLink: "Zum Guide: die besten Chargeback-Management-Tools für Shopify",
     sectionAlternatives: "Alternativen",
     sectionAlternativesDesc:
       "Direkte 1:1-Vergleiche mit den Chargeback-Apps und -Diensten, gegen die Händler DisputeDesk abwägen.",

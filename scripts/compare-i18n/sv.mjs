@@ -13,6 +13,7 @@ export default {
     title: "Alla jämförelser av DisputeDesk på ett ställe",
     subtitle:
       "Se hur DisputeDesk står sig mot de verktyg för återkrav som Shopify-handlare jämför det med — ärligt, sida vid sida och med den verkliga prismatten.",
+    articleLink: "Läs guiden: de bästa verktygen för återkravshantering för Shopify",
     sectionAlternatives: "Alternativ",
     sectionAlternativesDesc:
       "Jämförelser ett mot ett mot de appar och tjänster för återkrav som handlare väger DisputeDesk mot.",
