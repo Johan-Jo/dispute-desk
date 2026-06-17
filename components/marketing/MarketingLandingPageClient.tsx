@@ -8,6 +8,7 @@ import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader"
 import { MarketingSiteFooter } from "@/components/marketing/MarketingSiteFooter";
 import { HeroVideo } from "@/components/marketing/HeroVideo";
 import { MARKETING_PAGE_CONTAINER_CLASS } from "@/lib/marketing/pageContainer";
+import { trackStartShopifyInstallAndRedirect } from "@/lib/analytics/startShopifyInstall";
 
 type RoiMode = "conservative" | "base" | "aggressive";
 
@@ -121,7 +122,10 @@ export function MarketingLandingPageClient({
       selectedPlan && selectedPlan !== "free"
         ? `&plan=${encodeURIComponent(selectedPlan)}`
         : "";
-    window.location.href = `/api/auth/shopify?shop=${encodeURIComponent(domain)}${planQuery}`;
+    const redirectUrl = `/api/auth/shopify?shop=${encodeURIComponent(domain)}${planQuery}`;
+    // Fire the start_shopify_install GA4/Google Ads conversion (install intent),
+    // then redirect to Shopify OAuth. Redirect is guaranteed even if gtag is blocked.
+    trackStartShopifyInstallAndRedirect(domain, redirectUrl);
   };
 
   useEffect(() => {
