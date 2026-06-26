@@ -71,7 +71,7 @@ const SHOPIFY_PAIN_TERMS: RegExp[] = [
   /\bINR\b/,
   /\bproduct not received\b/i,
   /\bnot as described\b/i,
-  // Competitor mentions
+  // Competitor mentions (chargeback automation / fraud / representment vendors)
   /\bchargeflow\b/i,
   /\bdisputifier\b/i,
   /\bchargepay\b/i,
@@ -80,6 +80,12 @@ const SHOPIFY_PAIN_TERMS: RegExp[] = [
   /\bsignifyd\b/i,
   /\briskified\b/i,
   /\bnofraud\b/i,
+  /\bwyllo\b/i,
+  /\bchargeback ?brief\b/i,
+  /\bchargeback ?gurus\b/i,
+  /\bkount\b/i,
+  /\bverifi\b/i,
+  /\bethoca\b/i,
   // Generic dispute-tooling intent
   /\bchargeback (app|tool|software|service|management|prevention|automation)\b/i,
   /\bfraud (prevention|detection|filter)\b/i,
