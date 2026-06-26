@@ -109,6 +109,50 @@ describe("hitToItem", () => {
     ).toBeNull();
   });
 
+  // Regression: the "Need A Payment Processor" r/ecommerce thread (2026-06-26)
+  // — a Shopify merchant asking which chargeback-automation platform to use —
+  // was missed because the title carries no "shopify" literal and r/ecommerce
+  // was not implicit-context. Widening implicit-context subs lets it through to
+  // the pain gate, which its chargeback/friendly-fraud vocabulary clears.
+  it("keeps a buyer-intent chargeback-tool thread in r/ecommerce (no 'shopify' in snippet)", () => {
+    const buyerIntentHit: SearchHit = {
+      title: "Need A Payment Processor : r/ecommerce",
+      url: "https://www.reddit.com/r/ecommerce/comments/buyer01/need_a_payment_processor/",
+      snippet:
+        "Chargebacks have been getting worse lately, especially friendly fraud and random customer disputes. Looking into chargeback automation platforms — what's working best in 2026?",
+      publishedIso: null,
+    };
+    const item = hitToItem(buyerIntentHit, NOW);
+    expect(item).not.toBeNull();
+    expect(item!.subreddit).toBe("r/ecommerce");
+  });
+
+  it("keeps a competitor-comparison thread citing newly-listed vendors (Wyllo, chargebackbrief)", () => {
+    const compareHit: SearchHit = {
+      title: "Anyone tried Wyllo or chargebackbrief? : r/smallbusiness",
+      url: "https://www.reddit.com/r/smallbusiness/comments/cmp02/anyone_tried_wyllo/",
+      snippet:
+        "Comparing Wyllo vs chargebackbrief.com for handling disputes on our store.",
+      publishedIso: null,
+    };
+    const item = hitToItem(compareHit, NOW);
+    expect(item).not.toBeNull();
+    expect(item!.subreddit).toBe("r/smallbusiness");
+  });
+
+  it("still drops a generic r/smallbusiness thread with no dispute vocabulary", () => {
+    // Widening implicit-context must NOT open the floodgates: a pricing thread
+    // in r/smallbusiness has zero chargeback/dispute terms and the HARD pain
+    // gate still drops it.
+    const pricingHit: SearchHit = {
+      title: "How should I price my first product? : r/smallbusiness",
+      url: "https://www.reddit.com/r/smallbusiness/comments/price9/how_should_i_price/",
+      snippet: "Trying to figure out margins and pricing for my new ecommerce store.",
+      publishedIso: null,
+    };
+    expect(hitToItem(pricingHit, NOW)).toBeNull();
+  });
+
   it("drops on-topic-subreddit Shopify chatter with no dispute vocabulary (pain gate)", () => {
     // Brave's relevance ranking drags in popular Shopify content (stock picks,
     // inventory sync) that mentions "shopify" but no chargeback/dispute/reserve
