@@ -35,14 +35,28 @@ import type {
 
 /**
  * Search queries. Generic `chargeback` queries pull off-topic subs
- * (r/askcarsales, r/AirBnB — verified), so EVERY query pairs "shopify" with a
- * payment-pain term. We use DOMAIN-level `site:reddit.com` (not path-scoped
- * `site:reddit.com/r/shopify`) because neither Brave nor DuckDuckGo reliably
- * honours a path-scoped `site:` — the subreddit is recovered from each result
- * URL afterwards. Requiring "shopify" also satisfies the Shopify-context gate
- * for results in mixed-context subs (r/Stripe, r/smallbusiness, etc.).
+ * (r/askcarsales, r/AirBnB — verified), so the SHOPIFY-ANCHORED block below
+ * pairs "shopify" with a payment-pain term. We use DOMAIN-level
+ * `site:reddit.com` (not path-scoped `site:reddit.com/r/shopify`) because
+ * neither Brave nor DuckDuckGo reliably honours a path-scoped `site:` — the
+ * subreddit is recovered from each result URL afterwards. Requiring "shopify"
+ * also satisfies the Shopify-context gate for results in mixed-context subs
+ * (r/Stripe, r/smallbusiness, etc.).
+ *
+ * The BUYER-INTENT block (2026-06-26) closes the gap that missed a high-intent
+ * r/ecommerce thread ("Need A Payment Processor" — Shopify merchant asking
+ * which chargeback-automation platform to use, comparing Chargeflow/Justt/
+ * NoFraud/Disputifier). Those queries DON'T anchor on "shopify" because the
+ * word lives in the post body, not the title, and search engines weight titles
+ * heavily — a "shopify"-anchored query never surfaces them. Instead they pair
+ * chargeback/dispute vocabulary with ecommerce/merchant framing or a competitor
+ * name, which is on-topic enough that domain-level `site:reddit.com` stays
+ * dense. Results still pass the Shopify-context gate at ingest: either via the
+ * widened implicit-context subreddits (r/ecommerce, r/smallbusiness,
+ * r/Entrepreneur) or a body "shopify" mention in the snippet.
  */
 const SEARCH_QUERIES: string[] = [
+  // Shopify-anchored (precise; high context confidence)
   "shopify chargeback dispute site:reddit.com",
   "shopify payments reserve held funds site:reddit.com",
   "shopify chargeback won lost evidence site:reddit.com",
@@ -50,14 +64,19 @@ const SEARCH_QUERIES: string[] = [
   "shopify dispute representment friendly fraud site:reddit.com",
   "shopify chargeflow disputifier chargeback site:reddit.com",
   "shopify chargeback protection app site:reddit.com",
+  // Buyer-intent (catches merchants comparing tools without "shopify" in title)
+  "chargeback automation platform ecommerce site:reddit.com",
+  "chargeback management tool win rate ecommerce site:reddit.com",
+  "chargeflow vs disputifier vs justt site:reddit.com",
+  "friendly fraud disputes ecommerce store site:reddit.com",
 ];
 
 const RESULTS_PER_QUERY = 20;
 
 /**
  * Hours (UTC) at which the Brave path runs. The ingest cron fires hourly, but
- * Brave's FREE tier is 1,000 queries/month, so we cap runs: 7 queries × 3
- * runs/day × 30 days = 630/month, leaving ~370 headroom for operator "Refresh
+ * Brave's FREE tier is 2,000 queries/month, so we cap runs: 11 queries × 3
+ * runs/day × 30 days = 990/month, leaving ~1,000 headroom for operator "Refresh
  * now" clicks (which force-fetch) and the odd test. DuckDuckGo (keyless, local)
  * ignores this gate. `freshness=pm` (past month) + cross-run dedup means 3
  * runs/day never miss a fresh thread (worst-case alert latency ~8h).
@@ -80,9 +99,21 @@ function userAgent(): string {
   return process.env.REDDIT_USER_AGENT ?? DEFAULT_USER_AGENT;
 }
 
-/** Implicit-Shopify subreddits — dispute-context by definition (mirror of the
- *  direct adapter's set). Items elsewhere must carry the "shopify" literal. */
-const IMPLICIT_CONTEXT_SUBREDDITS = /^r\/(shopify|chargebacks|Stripe|paypal)$/i;
+/**
+ * Implicit-Shopify subreddits — dispute-context by definition (mirror of the
+ * direct adapter's set). Items elsewhere must carry the "shopify" literal.
+ *
+ * The general-merchant subs (ecommerce, smallbusiness, Entrepreneur) were added
+ * 2026-06-26 alongside the buyer-intent queries: a Shopify merchant comparing
+ * chargeback tools often posts there with "shopify" only in the body, which the
+ * ~200-char search snippet truncates away — so the literal-"shopify" gate would
+ * drop a high-intent lead. Treating these as implicit-context lets the post
+ * through to the still-HARD pain gate (which requires real dispute vocabulary),
+ * so noise stays bounded: a generic "how do I price my product" thread in
+ * r/smallbusiness still has zero chargeback terms and is dropped.
+ */
+const IMPLICIT_CONTEXT_SUBREDDITS =
+  /^r\/(shopify|chargebacks|Stripe|paypal|ecommerce|smallbusiness|Entrepreneur)$/i;
 
 export interface SearchHit {
   title: string;
@@ -332,7 +363,7 @@ export const redditSearchAdapter: SignalSourceAdapter = {
       const hour = new Date().getUTCHours();
       if (!BRAVE_RUN_HOURS_UTC.has(hour)) {
         console.info(
-          `[signal-radar] reddit-search(brave) skipped (hour ${hour} not in {0,6,12,18})`
+          `[signal-radar] reddit-search(brave) skipped (hour ${hour} not in {0,8,16})`
         );
         return { items: [], errors: [] };
       }
