@@ -3122,11 +3122,17 @@
       "topUpsTitle": "Mehr Pakete benötigt?",
       "topUpsDesc": "Kaufen Sie Aufladungspakete jederzeit. Guthaben wird sofort bei Zahlung gutgeschrieben.",
       "installTitle": "DisputeDesk installieren",
-      "installSubtitle": "Geben Sie Ihren Shopify-Shop ein, um loszulegen",
+      "installSubtitle": "Sehen Sie, wo Sie durch Rückbuchungen Geld verlieren — kostenlos.",
       "shopPlaceholder": "yourstore.myshopify.com",
       "shopError": "Geben Sie einen gültigen Shop-Namen ein, z. B. yourstore oder yourstore.myshopify.com",
       "installButton": "Install",
-      "installHint": "Sie werden zu Shopify weitergeleitet, um die App zu autorisieren. Kostenloser Plan — keine Kreditkarte erforderlich."
+      "installHint": "Sie werden zu Shopify weitergeleitet, um die App zu autorisieren. Kostenloser Plan — keine Kreditkarte erforderlich.",
+      "installStepConnect": "Shop verbinden",
+      "installStepAnalysis": "Gratis-Analyse in ~15 Min.",
+      "installStepProtected": "Geschützt + Umsatz zurück",
+      "installReassure": "Sie werden zu Shopify weitergeleitet, um den Zugriff zu genehmigen.",
+      "installTrialNote": "14 Tage gratis testen · keine Karte",
+      "installBadge": "Built for Shopify"
     },
     "footer": {
       "tagline": "Ihr Kommandozentrum für Shopify-Disputes.",

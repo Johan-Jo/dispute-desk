@@ -3122,11 +3122,17 @@
       "topUpsTitle": "Precisa de mais pacotes?",
       "topUpsDesc": "Compre pacotes avulsos a qualquer momento. Os créditos são adicionados imediatamente após o pagamento.",
       "installTitle": "Instalar o DisputeDesk",
-      "installSubtitle": "Informe sua loja Shopify para começar",
+      "installSubtitle": "Veja onde você está perdendo dinheiro com chargebacks — grátis.",
       "shopPlaceholder": "yourstore.myshopify.com",
       "shopError": "Informe um nome de loja válido, ex: sualoja ou sualoja.myshopify.com",
       "installButton": "Install",
-      "installHint": "Você será redirecionado ao Shopify para autorizar o app. Plano grátis — sem cartão de crédito."
+      "installHint": "Você será redirecionado ao Shopify para autorizar o app. Plano grátis — sem cartão de crédito.",
+      "installStepConnect": "Conecte sua loja",
+      "installStepAnalysis": "Análise grátis em ~15 min",
+      "installStepProtected": "Protegido + receita de volta",
+      "installReassure": "Você será redirecionado ao Shopify para aprovar o acesso.",
+      "installTrialNote": "Teste grátis de 14 dias · sem cartão",
+      "installBadge": "Built for Shopify"
     },
     "footer": {
       "tagline": "Seu centro de comando para disputas do Shopify.",

@@ -3122,11 +3122,17 @@
       "topUpsTitle": "Besoin de plus de packs ?",
       "topUpsDesc": "Achetez des recharges à tout moment. Les crédits sont ajoutés immédiatement au paiement.",
       "installTitle": "Installer DisputeDesk",
-      "installSubtitle": "Saisissez votre boutique Shopify pour commencer",
+      "installSubtitle": "Découvrez où vous perdez de l'argent à cause des rétrofacturations — gratuit.",
       "shopPlaceholder": "yourstore.myshopify.com",
       "shopError": "Saisissez un nom de boutique valide, par exemple votreboutique ou votreboutique.myshopify.com",
       "installButton": "Install",
-      "installHint": "Vous serez redirigé vers Shopify pour autoriser l'application. Forfait gratuit — aucune carte de crédit requise."
+      "installHint": "Vous serez redirigé vers Shopify pour autoriser l'application. Forfait gratuit — aucune carte de crédit requise.",
+      "installStepConnect": "Connectez votre boutique",
+      "installStepAnalysis": "Analyse gratuite en ~15 min",
+      "installStepProtected": "Protégé + revenus récupérés",
+      "installReassure": "Vous serez redirigé vers Shopify pour approuver l'accès.",
+      "installTrialNote": "Essai gratuit de 14 jours · sans carte",
+      "installBadge": "Built for Shopify"
     },
     "footer": {
       "tagline": "Votre centre de commande pour les litiges Shopify.",
