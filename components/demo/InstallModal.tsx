@@ -140,7 +140,7 @@ export function InstallModal({ open, onClose }: InstallModalProps) {
               <SearchCheck className="w-[18px] h-[18px]" />
             </div>
             <span className="text-[12.5px] font-semibold text-[#1F2937] leading-[1.35]">
-              Free analysis in ~15 min
+              Free analysis
             </span>
           </div>
           <ArrowRight className="w-4 h-4 text-[#C2CCD9] mt-3 flex-none" strokeWidth={2.5} />
