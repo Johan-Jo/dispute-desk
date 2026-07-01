@@ -3127,11 +3127,17 @@
       "topUpsTitle": "Need more packs?",
       "topUpsDesc": "Purchase top-up bundles any time. Credits are added immediately upon payment.",
       "installTitle": "Install DisputeDesk",
-      "installSubtitle": "Enter your Shopify store to get started",
+      "installSubtitle": "See where you're losing money to chargebacks — free.",
       "shopPlaceholder": "yourstore.myshopify.com",
       "shopError": "Enter a valid store name, e.g. yourstore or yourstore.myshopify.com",
       "installButton": "Install",
-      "installHint": "You'll be redirected to Shopify to authorize the app. Free plan — no credit card required."
+      "installHint": "You'll be redirected to Shopify to authorize the app. Free plan — no credit card required.",
+      "installStepConnect": "Connect your store",
+      "installStepAnalysis": "Free analysis in ~15 min",
+      "installStepProtected": "Protected + revenue back",
+      "installReassure": "You'll be redirected to Shopify to approve access.",
+      "installTrialNote": "14-day free trial · no card",
+      "installBadge": "Built for Shopify"
     },
     "footer": {
       "tagline": "Your command center for Shopify disputes.",
