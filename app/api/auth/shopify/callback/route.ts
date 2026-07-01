@@ -163,7 +163,21 @@ export async function GET(req: NextRequest) {
           );
         });
 
+        // Enrichment (store name / owner email) is best-effort: on a fresh
+        // install this is the FIRST authed call after the token was stored
+        // milliseconds ago, and Shopify commonly 401s that first request
+        // before the token propagates — fetchShopDetails then THROWS. That
+        // throw must NOT suppress the notification: shopDomain alone is
+        // always known and the enriched fields render as "—" when absent.
+        // So swallow the fetch failure to null and always send.
         fetchShopDetails(shopInternalId)
+          .catch((err) => {
+            console.warn(
+              "[email:admin-install] shop-details enrichment failed; sending without it:",
+              err instanceof Error ? err.message : err,
+            );
+            return null;
+          })
           .then((details) =>
             sendAdminInstallNotification({
               shopDomain: shop,
