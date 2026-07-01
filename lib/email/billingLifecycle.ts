@@ -31,6 +31,8 @@
 import { Resend } from "resend";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getPlan, type PlanId } from "@/lib/billing/plans";
+import { claimBillingBlockedEmailSlot } from "@/lib/automation/billingBlockedEmailThrottle";
+import { DISPUTE_ATTENTION_REASONS } from "@/lib/disputes/attentionReasons";
 import { getEmbeddedAppUrl } from "./publicSiteUrl";
 import { brandHeader, ctaButton, plateLayout } from "./digestShared";
 
@@ -62,7 +64,15 @@ type SbClient = ReturnType<typeof getServiceClient>;
  *  resulting audit row. */
 export type LifecycleEmailOutcome =
   | { sent: true; logTag: string }
-  | { skipped: "already_sent" | "no_team_email" | "opted_out" | "no_setup" | "email_disabled" }
+  | {
+      skipped:
+        | "already_sent"
+        | "no_team_email"
+        | "opted_out"
+        | "no_setup"
+        | "email_disabled"
+        | "throttled";
+    }
   | { error: string };
 
 interface TeamContext {
@@ -548,6 +558,68 @@ export async function sendTopupPurchasedEmail(args: {
     "topup_purchased",
     outcome,
     { reference: args.reference, packs: args.packs, expires_at: args.expiresAt },
+  );
+  return outcome;
+}
+
+/* ── 8. Free tier out of packs ──────────────────────────────── */
+
+/**
+ * A free shop exhausted its lifetime pack floor and hit the wall on a
+ * manual pack build. The in-app `free_out_of_packs` banner always
+ * shows; this email is the "come back before your deadline" nudge for
+ * merchants who close the tab.
+ *
+ * Unlike the state-transition lifecycle emails above, the free tier has
+ * no billing cycle, so idempotency is delegated to the shared
+ * `claimBillingBlockedEmailSlot` throttle — the SAME guard the paid
+ * auto-build path uses (1 email per dispute ever, 6h per-shop cooldown
+ * for the same reason, always send when the dispute deadline is within
+ * 72h). We key the slot on `QUOTA_EXCEEDED` so a free shop that later
+ * upgrades and hits the paid quota wall doesn't get a duplicate email
+ * for the same dispute.
+ */
+export async function sendFreeOutOfPacksEmail(args: {
+  shopId: string;
+  disputeId: string;
+  disputeDueAt?: string | null;
+}): Promise<LifecycleEmailOutcome> {
+  const sb = getServiceClient();
+
+  const slot = await claimBillingBlockedEmailSlot({
+    shopId: args.shopId,
+    disputeId: args.disputeId,
+    reason: DISPUTE_ATTENTION_REASONS.QUOTA_EXCEEDED,
+    disputeDueAt: args.disputeDueAt ?? null,
+  });
+  if (!slot.allowed) return { skipped: "throttled" };
+
+  const ctx = await resolveTeamContext(sb, args.shopId);
+  if ("skipped" in ctx || "error" in ctx) return ctx;
+
+  const { html, text } = renderShell({
+    preheader: "You're out of free submissions — upgrade to keep responding",
+    title: "You've used your free submissions",
+    bodyHtml: `<p>Drafts are still unlimited — but submitting evidence to the bank needs a credit, and you've used all your free submissions.</p>
+<p>A recovered chargeback is usually worth far more than a $29/mo plan, so a single won dispute pays for months of submissions. Upgrade now to keep responding before your deadline.</p>`,
+    ctaLabel: "Upgrade plan",
+    ctaUrl: billingUrl(ctx.shopDomain),
+  });
+
+  const outcome = await sendViaResend({
+    subject: "You're out of free submissions — upgrade to keep responding",
+    html,
+    text,
+    to: ctx.to,
+    logTag: "free_out_of_packs",
+  });
+  await logEmailAudit(
+    sb,
+    args.shopId,
+    "billing_email_sent",
+    "free_out_of_packs",
+    outcome,
+    { dispute_id: args.disputeId },
   );
   return outcome;
 }

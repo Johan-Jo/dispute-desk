@@ -3363,6 +3363,16 @@ component (`billing.banners.freeOutOfPacks.*`, ROI-framed, CTA → `/app/billing
 `?banner_preview=free_out_of_packs`. Paid shops reaching 0 are unaffected — they route through
 `low_credits`/`subscription_expired` via their billing cycle.
 
+**Wall email (`free_out_of_packs`).** The banner covers a merchant who's looking at the app; a
+merchant who closes the tab mid-dispute gets nothing from it. The auto-build pipeline's
+billing-blocked email never fires for free shops (auto-build is off on free), so
+`POST /api/disputes/:id/packs` sends `sendFreeOutOfPacksEmail()`
+(`lib/email/billingLifecycle.ts`) fire-and-forget from its `upgrade_required` branch — **only when
+`quota.plan === "free"`**. It reuses the shared `claimBillingBlockedEmailSlot` throttle (1 email per
+dispute ever, 6h per-shop same-reason cooldown, always send when the dispute deadline is within
+72h), keyed on `QUOTA_EXCEEDED` so a later upgrade-to-paid doesn't double-email the same dispute.
+Respects the merchant's `notifications.billing` opt-out via `resolveTeamContext`.
+
 ### Shopify Billing Flow
 
 1. `POST /api/billing/subscribe` → `appSubscriptionCreate` → merchant redirected to Shopify approval
