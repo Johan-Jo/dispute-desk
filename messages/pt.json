@@ -2054,6 +2054,11 @@
         "title": "Quase sem packs",
         "body": "Você está abaixo de 10% da sua cota mensal de packs. Compre um top-up ou faça upgrade do plano para manter o auto-build rodando pelo resto do ciclo.",
         "cta": "Comprar top-up"
+      },
+      "freeOutOfPacks": {
+        "title": "Você usou seus envios gratuitos",
+        "body": "Os rascunhos continuam ilimitados, mas enviar evidências exige um crédito. Um chargeback recuperado costuma valer muito mais que um plano de US$ 29, então uma disputa ganha se paga por meses. Faça upgrade para continuar respondendo antes do seu prazo.",
+        "cta": "Fazer upgrade do plano"
       }
     },
     "topupSuccessTitle": "{count} packs adicionados",

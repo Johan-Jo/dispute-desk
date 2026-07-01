@@ -2054,6 +2054,11 @@
         "title": "Almost out of packs",
         "body": "You're below 10% of your monthly pack allotment. Buy a top-up or upgrade your plan to keep auto-build running for the rest of the cycle.",
         "cta": "Buy top-up"
+      },
+      "freeOutOfPacks": {
+        "title": "You've used your free submissions",
+        "body": "Drafts are still unlimited — but submitting evidence needs a credit. A recovered chargeback is usually worth far more than a $29 plan, so one won dispute pays for months. Upgrade to keep responding before your deadline.",
+        "cta": "Upgrade plan"
       }
     },
     "topupSuccessTitle": "{count} packs added",

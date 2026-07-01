@@ -2054,6 +2054,11 @@
         "title": "Casi sin packs",
         "body": "Tienes menos del 10 % de tu asignación mensual de packs. Compra un top-up o haz upgrade del plan para mantener auto-build activo el resto del ciclo.",
         "cta": "Comprar top-up"
+      },
+      "freeOutOfPacks": {
+        "title": "Ya usaste tus envíos gratis",
+        "body": "Los borradores siguen siendo ilimitados, pero enviar evidencia requiere un crédito. Un contracargo recuperado suele valer mucho más que un plan de $29, así que una disputa ganada se paga durante meses. Haz upgrade para seguir respondiendo antes de tu fecha límite.",
+        "cta": "Actualizar plan"
       }
     },
     "topupSuccessTitle": "{count} packs añadidos",

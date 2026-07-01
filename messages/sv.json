@@ -2054,6 +2054,11 @@
         "title": "Nästan slut på packs",
         "body": "Du har mindre än 10 % av din månadskvot kvar. Köp en top-up eller uppgradera planen för att hålla auto-build igång resten av cykeln.",
         "cta": "Köp top-up"
+      },
+      "freeOutOfPacks": {
+        "title": "Du har använt dina kostnadsfria inlämningar",
+        "body": "Utkast är fortfarande obegränsade — men att lämna in bevis kräver en kredit. En återvunnen chargeback är oftast värd långt mer än en plan för 29 $, så en vunnen tvist betalar sig i månader. Uppgradera för att fortsätta svara före din deadline.",
+        "cta": "Uppgradera plan"
       }
     },
     "topupSuccessTitle": "{count} packs tillagda",

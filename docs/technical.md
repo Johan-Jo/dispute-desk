@@ -3353,6 +3353,16 @@ balance** and hits the `upgrade_required` block on its first pack build.
 Free stays manual (`autoPack: false`, `rules: false`); the grant only unblocks manual
 build/export/submit up to N.
 
+**Wall banner (`free_out_of_packs`).** When a free shop exhausts its lifetime packs it needs a
+conversion prompt, but the `low_credits` billing banner only fires for paid plans
+(`monthlyPackLimit > 0`), so a free shop at 0 would otherwise see nothing. `bannerState.ts` adds a
+`free_out_of_packs` variant: fires when `planId === "free"` AND `monthlyPackLimit == null` AND
+`remainingPacks != null && <= 0`. It is **non-dismissible** (it is the actionable wall, and free is
+lifetime — no cycle to reset a dismissal against) and renders via the existing `BillingBanner`
+component (`billing.banners.freeOutOfPacks.*`, ROI-framed, CTA → `/app/billing`). Preview it with
+`?banner_preview=free_out_of_packs`. Paid shops reaching 0 are unaffected — they route through
+`low_credits`/`subscription_expired` via their billing cycle.
+
 ### Shopify Billing Flow
 
 1. `POST /api/billing/subscribe` → `appSubscriptionCreate` → merchant redirected to Shopify approval

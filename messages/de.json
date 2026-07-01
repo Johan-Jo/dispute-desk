@@ -2054,6 +2054,11 @@
         "title": "Fast keine Packs mehr",
         "body": "Sie haben weniger als 10 % Ihres monatlichen Pack-Kontingents übrig. Kaufen Sie ein Top-up oder upgraden Sie, um Auto-Build für den Rest des Zyklus aktiv zu halten.",
         "cta": "Top-up kaufen"
+      },
+      "freeOutOfPacks": {
+        "title": "Ihre kostenlosen Einreichungen sind aufgebraucht",
+        "body": "Entwürfe bleiben unbegrenzt — aber das Einreichen von Beweisen benötigt ein Guthaben. Ein zurückgewonnener Chargeback ist meist weit mehr wert als ein 29-$-Plan, eine gewonnene Reklamation zahlt sich also über Monate aus. Upgraden Sie, um vor Ihrer Frist weiter zu reagieren.",
+        "cta": "Plan upgraden"
       }
     },
     "topupSuccessTitle": "{count} Packs hinzugefügt",

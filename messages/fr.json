@@ -2054,6 +2054,11 @@
         "title": "Presque à court de packs",
         "body": "Il vous reste moins de 10 % de votre allocation mensuelle de packs. Achetez un top-up ou passez à un plan supérieur pour maintenir auto-build actif jusqu'à la fin du cycle.",
         "cta": "Acheter un top-up"
+      },
+      "freeOutOfPacks": {
+        "title": "Vous avez utilisé vos soumissions gratuites",
+        "body": "Les brouillons restent illimités, mais soumettre des preuves nécessite un crédit. Un rejet de débit récupéré vaut généralement bien plus qu'un plan à 29 $, un litige gagné se rembourse donc sur plusieurs mois. Passez à un plan supérieur pour continuer à répondre avant votre échéance.",
+        "cta": "Changer de plan"
       }
     },
     "topupSuccessTitle": "{count} packs ajoutés",

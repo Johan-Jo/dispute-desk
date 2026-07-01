@@ -24,7 +24,12 @@ import { InfoBanner } from "@/components/ui/info-banner";
 import { Button } from "@/components/ui/button";
 
 interface BillingBannerResponse {
-  variant: "subscription_expired" | "grace" | "low_credits" | "none";
+  variant:
+    | "subscription_expired"
+    | "grace"
+    | "low_credits"
+    | "free_out_of_packs"
+    | "none";
   dismissible: boolean;
   forCycleEnd: string | null;
   context: Record<string, unknown>;
@@ -44,7 +49,11 @@ interface BillingBannerProps {
    *  variant is requested, so leaking this into a production code
    *  path is visible. Driven from the URL `?banner_preview=…` so the
    *  user can verify without code changes. */
-  preview?: "grace" | "subscription_expired" | "low_credits";
+  preview?:
+    | "grace"
+    | "subscription_expired"
+    | "low_credits"
+    | "free_out_of_packs";
 }
 
 export function BillingBanner({
@@ -107,6 +116,7 @@ export function BillingBanner({
     subscription_expired: { ui: "danger", key: "expired" },
     grace: { ui: "warning", key: "grace" },
     low_credits: { ui: "info", key: "lowCredits" },
+    free_out_of_packs: { ui: "info", key: "freeOutOfPacks" },
   } as const;
   const v = variantUiMap[state.variant];
 
