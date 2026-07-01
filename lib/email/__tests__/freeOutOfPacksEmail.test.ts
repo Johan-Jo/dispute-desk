@@ -45,9 +45,10 @@ afterEach(() => {
 });
 
 /** Minimal Supabase mock: shop_setup (team email + opt-out), shops
- *  (domain), audit_events (insert sink). */
+ *  (domain + locale), audit_events (insert sink). */
 function buildSb(opts: {
   teamPayload?: Record<string, unknown> | null;
+  locale?: string;
 }) {
   const steps =
     opts.teamPayload === null
@@ -68,11 +69,17 @@ function buildSb(opts: {
         };
       }
       if (table === "shops") {
+        // Serves both resolveTeamContext (.single, shop_domain) and
+        // getBillingTranslator (.maybeSingle, locale).
         return {
           select: () => ({
             eq: () => ({
               single: vi.fn().mockResolvedValue({
                 data: { shop_domain: "shop.myshopify.com" },
+                error: null,
+              }),
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { locale: opts.locale ?? "en" },
                 error: null,
               }),
             }),
@@ -151,6 +158,18 @@ describe("sendFreeOutOfPacksEmail", () => {
 
     expect(r).toEqual({ skipped: "no_team_email" });
     expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it("localizes the email from shops.locale (de → German copy)", async () => {
+    mockClaim.mockResolvedValue({ allowed: true });
+    mockGetClient.mockReturnValue(buildSb({ locale: "de" }) as never);
+
+    await sendFreeOutOfPacksEmail({ shopId: "shop-1", disputeId: "dispute-1" });
+
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    const sent = sendMock.mock.calls[0][0] as { subject: string; html: string };
+    expect(sent.subject).toContain("kostenlosen Einreichungen");
+    expect(sent.html).toContain("Plan upgraden");
   });
 
   it("passes the dispute deadline through to the throttle (72h override)", async () => {

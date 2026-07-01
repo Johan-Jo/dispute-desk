@@ -3373,6 +3373,18 @@ dispute ever, 6h per-shop same-reason cooldown, always send when the dispute dea
 72h), keyed on `QUOTA_EXCEEDED` so a later upgrade-to-paid doesn't double-email the same dispute.
 Respects the merchant's `notifications.billing` opt-out via `resolveTeamContext`.
 
+**Localization of billing emails.** All `lib/email/billingLifecycle.ts` senders (the 7 lifecycle
+emails + the free-tier wall) are localized. Copy lives under the `email.billing.*` namespace in
+`messages/{locale}.json` across all 6 locales. Because these fire from crons/webhooks with **no
+request context**, the locale is read from the DB (`shops.locale`, persisted on OAuth
+install/re-auth in the shopify callback) — not a cookie/header — via `getBillingTranslator(sb,
+shopId)`, which builds a `createTranslator` for the shop's locale plus a locale-aware
+`Intl.DateTimeFormat` date formatter. Message bodies are stored as plain text (paragraphs split on
+a blank line, `**bold**` for emphasis) rather than inline HTML, because next-intl's ICU parser
+treats `<tag>` as rich-text markup and throws; `renderShell` converts that to `<p>`/`<strong>` plus
+a clean text fallback. ICU escaping caveat: apostrophes in a message that carries a `{param}` must
+be doubled (`''`); a message with no params uses a single `'`.
+
 ### Shopify Billing Flow
 
 1. `POST /api/billing/subscribe` → `appSubscriptionCreate` → merchant redirected to Shopify approval

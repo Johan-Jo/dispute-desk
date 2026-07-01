@@ -106,17 +106,21 @@ export async function GET(req: NextRequest) {
 
     if (existingShop) {
       shopInternalId = existingShop.id;
+      // Refresh the persisted locale on every re-auth so DB-driven,
+      // request-less senders (billing cron/webhook emails) address the
+      // merchant in their current language.
       await db
         .from("shops")
         .update({
           uninstalled_at: null,
+          locale,
           updated_at: new Date().toISOString(),
         })
         .eq("id", shopInternalId);
     } else {
       const { data: newShop, error } = await db
         .from("shops")
-        .insert({ shop_domain: shop })
+        .insert({ shop_domain: shop, locale })
         .select("id")
         .single();
       if (error || !newShop) {

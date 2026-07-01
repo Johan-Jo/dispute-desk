@@ -1,4 +1,65 @@
 {
+  "email": {
+    "billing": {
+      "trialStarted": {
+        "subject": "DisputeDesk {planName} trial activated",
+        "preheader": "Your DisputeDesk {planName} trial is live",
+        "title": "Welcome to {planName}",
+        "body": "Your trial is active. You have **14 days + 25 trial packs** to put auto-build through its paces.\n\nTrial ends **{trialEnd}**. We''ll send a heads-up three days before it ends so you can keep the automation running.\n\nAlready connected? Open a dispute to see auto-build kick in on the next chargeback.",
+        "cta": "Open DisputeDesk",
+        "trialDeadlineFallback": "the trial deadline"
+      },
+      "firstPaidCycle": {
+        "subject": "{planName} is active — {packs} packs unlocked",
+        "preheader": "{planName} is active — first {packs} packs are unlocked",
+        "title": "You''re on {planName}",
+        "body": "Your first ${price} charge cleared and your first month of **{packs} packs** is available. Cycle ends {cycleEnd}.\n\nAuto-build is on for every new dispute that lands inside the cycle. Top-ups are available if you need more.",
+        "cta": "Open billing"
+      },
+      "cycleRenewed": {
+        "subject": "{packs} packs unlocked for the new cycle",
+        "preheader": "{packs} fresh packs are ready",
+        "title": "Your cycle renewed",
+        "body": "**{packs} packs** are now available on your {planName} plan. Cycle ends {cycleEnd}.\n\nTop-ups added during the cycle still expire 30 days from their original purchase, independent of this renewal.",
+        "cta": "View usage"
+      },
+      "graceEntered": {
+        "subject": "Payment failed — please update card",
+        "preheader": "Card declined — auto-build still runs for 3 days",
+        "title": "Payment failed — short grace period",
+        "body": "Shopify couldn't charge your card for the latest DisputeDesk cycle. Shopify will keep retrying for the next 3 days.\n\n**Auto-build still runs during grace**, so your disputes keep getting packs built. After 3 days without a successful charge, auto-build pauses and you'll need to update payment in Shopify Admin to reactivate.",
+        "cta": "Update payment in Shopify"
+      },
+      "subscriptionExpired": {
+        "subject": "DisputeDesk auto-build paused — reactivate to resume",
+        "preheader": "Auto-build paused — historical disputes still accessible",
+        "title": "Auto-build paused",
+        "body": "Your DisputeDesk subscription is no longer active, so auto-build is paused for new disputes.\n\n**You still have full access** to every past dispute, evidence pack, and audit timeline — billing only gates new automation, never historical reads. Reactivate any time to resume.",
+        "cta": "Reactivate"
+      },
+      "cancelled": {
+        "subject": "DisputeDesk subscription cancelled",
+        "preheader": "Sorry to see you go — your packs and history are preserved",
+        "title": "Subscription cancelled",
+        "body": "Your DisputeDesk subscription is cancelled. Auto-build is off, but every dispute, evidence pack, and audit row you've ever generated is preserved and remains viewable.\n\nResubscribe at any time and your packs pick up from your current cycle's allotment.",
+        "cta": "Reactivate"
+      },
+      "topupPurchased": {
+        "subject": "{packs} top-up packs added to your account",
+        "preheader": "{packs} extra packs added",
+        "title": "{packs} top-up packs added",
+        "body": "Your top-up cleared. **{packs} extra packs** are now available alongside your monthly allotment.\n\nTop-up packs expire 30 days from purchase, independent of your billing cycle — these expire **{expiresAt}**.",
+        "cta": "View usage"
+      },
+      "freeOutOfPacks": {
+        "subject": "You're out of free submissions — upgrade to keep responding",
+        "preheader": "You're out of free submissions — upgrade to keep responding",
+        "title": "You've used your free submissions",
+        "body": "Drafts are still unlimited — but submitting evidence to the bank needs a credit, and you've used all your free submissions.\n\nA recovered chargeback is usually worth far more than a $29/mo plan, so a single won dispute pays for months of submissions. Upgrade now to keep responding before your deadline.",
+        "cta": "Upgrade plan"
+      }
+    }
+  },
   "nav": {
     "overview": "Overview",
     "dashboard": "Dashboard",

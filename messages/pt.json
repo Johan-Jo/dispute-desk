@@ -1,4 +1,65 @@
 {
+  "email": {
+    "billing": {
+      "trialStarted": {
+        "subject": "Teste do DisputeDesk {planName} ativado",
+        "preheader": "Seu teste do DisputeDesk {planName} está ativo",
+        "title": "Boas-vindas ao {planName}",
+        "body": "Seu teste está ativo. Você tem **14 dias + 25 pacotes de teste** para colocar o auto-build à prova.\n\nO teste termina em **{trialEnd}**. Avisaremos três dias antes do fim para você manter a automação rodando.\n\nJá conectou? Abra uma disputa para ver o auto-build agir no próximo chargeback.",
+        "cta": "Abrir DisputeDesk",
+        "trialDeadlineFallback": "o fim do teste"
+      },
+      "firstPaidCycle": {
+        "subject": "{planName} está ativo — {packs} pacotes liberados",
+        "preheader": "{planName} está ativo — os primeiros {packs} pacotes estão liberados",
+        "title": "Você está no {planName}",
+        "body": "Sua primeira cobrança de ${price} foi aprovada e seu primeiro mês com **{packs} pacotes** está disponível. O ciclo termina em {cycleEnd}.\n\nO auto-build está ativo para cada nova disputa dentro do ciclo. Recargas estão disponíveis se você precisar de mais.",
+        "cta": "Abrir cobrança"
+      },
+      "cycleRenewed": {
+        "subject": "{packs} pacotes liberados para o novo ciclo",
+        "preheader": "{packs} pacotes novos estão prontos",
+        "title": "Seu ciclo foi renovado",
+        "body": "**{packs} pacotes** já estão disponíveis no seu plano {planName}. O ciclo termina em {cycleEnd}.\n\nRecargas adicionadas durante o ciclo continuam expirando 30 dias após a compra original, independentemente desta renovação.",
+        "cta": "Ver uso"
+      },
+      "graceEntered": {
+        "subject": "Pagamento falhou — atualize seu cartão",
+        "preheader": "Cartão recusado — o auto-build continua rodando por 3 dias",
+        "title": "Pagamento falhou — período de tolerância curto",
+        "body": "A Shopify não conseguiu cobrar seu cartão no último ciclo do DisputeDesk. A Shopify continuará tentando pelos próximos 3 dias.\n\n**O auto-build continua rodando durante a tolerância**, então suas disputas seguem recebendo pacotes. Após 3 dias sem uma cobrança bem-sucedida, o auto-build é pausado e você precisará atualizar o pagamento no Shopify Admin para reativá-lo.",
+        "cta": "Atualizar pagamento na Shopify"
+      },
+      "subscriptionExpired": {
+        "subject": "Auto-build do DisputeDesk pausado — reative para continuar",
+        "preheader": "Auto-build pausado — disputas anteriores continuam acessíveis",
+        "title": "Auto-build pausado",
+        "body": "Sua assinatura do DisputeDesk não está mais ativa, então o auto-build está pausado para novas disputas.\n\n**Você continua com acesso total** a cada disputa anterior, pacote de evidências e linha do tempo de auditoria — a cobrança só limita a nova automação, nunca a leitura do histórico. Reative quando quiser.",
+        "cta": "Reativar"
+      },
+      "cancelled": {
+        "subject": "Assinatura do DisputeDesk cancelada",
+        "preheader": "Que pena que você vai — seus pacotes e histórico são preservados",
+        "title": "Assinatura cancelada",
+        "body": "Sua assinatura do DisputeDesk está cancelada. O auto-build está desligado, mas cada disputa, pacote de evidências e registro de auditoria que você já gerou é preservado e continua visível.\n\nAssine novamente quando quiser e seus pacotes retomam a partir da cota do seu ciclo atual.",
+        "cta": "Reativar"
+      },
+      "topupPurchased": {
+        "subject": "{packs} pacotes de recarga adicionados à sua conta",
+        "preheader": "{packs} pacotes extras adicionados",
+        "title": "{packs} pacotes de recarga adicionados",
+        "body": "Sua recarga foi aprovada. **{packs} pacotes extras** já estão disponíveis junto à sua cota mensal.\n\nPacotes de recarga expiram 30 dias após a compra, independentemente do seu ciclo de cobrança — estes expiram em **{expiresAt}**.",
+        "cta": "Ver uso"
+      },
+      "freeOutOfPacks": {
+        "subject": "Seus envios gratuitos acabaram — faça upgrade para continuar respondendo",
+        "preheader": "Seus envios gratuitos acabaram — faça upgrade para continuar respondendo",
+        "title": "Você usou seus envios gratuitos",
+        "body": "Os rascunhos continuam ilimitados — mas enviar evidências ao banco exige um crédito, e você usou todos os seus envios gratuitos.\n\nUm chargeback recuperado costuma valer muito mais que um plano de US$ 29/mês, então uma única disputa ganha se paga por meses. Faça upgrade agora para continuar respondendo antes do seu prazo.",
+        "cta": "Fazer upgrade do plano"
+      }
+    }
+  },
   "nav": {
     "overview": "Visão Geral",
     "disputes": "Disputas",
