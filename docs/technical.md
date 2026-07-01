@@ -3330,6 +3330,29 @@ log + continue (a billing-side fluke should not break a successful build).
 Guards at: `POST /api/disputes/:id/packs` (quota), `POST /api/rules` (feature),
 `runAutomationPipeline()` (both).
 
+### Free-tier lifetime grant
+
+The Free plan (`plans.ts` → `PLANS.free`, `packsLifetime: FREE_LIFETIME_PACKS = 5`) is the
+default install state and the cancel/downgrade target. Its usable balance comes entirely from a
+single `pack_credits_ledger` row with `source = 'free_lifetime'`, `expires_at = null` (the
+`pack_balance` view treats null as non-expiring). Without that row a free shop has a **0-pack
+balance** and hits the `upgrade_required` block on its first pack build.
+
+- **On install:** `app/api/auth/shopify/callback/route.ts` calls `grantFreeLifetimeCredits(shopId)`
+  (`lib/billing/grantFreeLifetime.ts`) inside the `isNewShop` branch of the offline OAuth phase,
+  fire-and-forget alongside webhook/currency/policy tasks. The helper is **idempotent** — it guards
+  on an existing `free_lifetime` row (and uses `reference = free-lifetime:<shopId>`), so re-install
+  / re-OAuth never double-grants.
+- **Backfill:** migration `20260701120000_backfill_free_lifetime_credits.sql` inserts one
+  `free_lifetime` row (packs = 5) per shop missing one (`where not exists …`). Idempotent, safe to
+  re-run; retires the manual `scripts/sql/unblock-*.sql` pattern for free shops.
+- **N = 5** must stay reconciled across `FREE_LIFETIME_PACKS`, the backfill SQL literal, all six
+  locale copy strings (`billing.freeFeature2` / `freeShort` / `pricing.freeF3` / `trialInfo`), and
+  the App Store listing card.
+
+Free stays manual (`autoPack: false`, `rules: false`); the grant only unblocks manual
+build/export/submit up to N.
+
 ### Shopify Billing Flow
 
 1. `POST /api/billing/subscribe` → `appSubscriptionCreate` → merchant redirected to Shopify approval

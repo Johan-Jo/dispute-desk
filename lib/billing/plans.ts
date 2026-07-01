@@ -2,7 +2,7 @@ export type PlanId = "free" | "starter" | "growth" | "scale";
 
 export const TRIAL_DAYS = 14;
 export const TRIAL_INCLUDED_PACKS = 25;
-export const FREE_LIFETIME_PACKS = 3;
+export const FREE_LIFETIME_PACKS = 5;
 
 export interface PlanDefinition {
   id: PlanId;
@@ -21,7 +21,7 @@ export interface PlanDefinition {
 export const PLANS: Record<PlanId, PlanDefinition> = {
   free: {
     id: "free",
-    name: "Free (Sandbox)",
+    name: "Free",
     price: 0,
     packsPerMonth: 0,
     packsLifetime: FREE_LIFETIME_PACKS,
