@@ -3122,11 +3122,17 @@
       "topUpsTitle": "¿Necesitas más paquetes?",
       "topUpsDesc": "Compra recargas en cualquier momento. Los créditos se agregan inmediatamente al pagar.",
       "installTitle": "Instalar DisputeDesk",
-      "installSubtitle": "Ingresa tu tienda Shopify para comenzar",
+      "installSubtitle": "Descubre dónde pierdes dinero por contracargos — gratis.",
       "shopPlaceholder": "yourstore.myshopify.com",
       "shopError": "Ingresa un nombre de tienda válido, p. ej. tutienda o tutienda.myshopify.com",
       "installButton": "Install",
-      "installHint": "Serás redirigido a Shopify para autorizar la app. Plan gratis — no se requiere tarjeta de crédito."
+      "installHint": "Serás redirigido a Shopify para autorizar la app. Plan gratis — no se requiere tarjeta de crédito.",
+      "installStepConnect": "Conecta tu tienda",
+      "installStepAnalysis": "Análisis gratis en ~15 min",
+      "installStepProtected": "Protegido + ingresos recuperados",
+      "installReassure": "Te redirigiremos a Shopify para aprobar el acceso.",
+      "installTrialNote": "Prueba gratis de 14 días · sin tarjeta",
+      "installBadge": "Built for Shopify"
     },
     "footer": {
       "tagline": "Tu centro de comando para disputas de Shopify.",

@@ -3122,11 +3122,17 @@
       "topUpsTitle": "Behöver du fler paket?",
       "topUpsDesc": "Köp tilläggspaket när som helst. Krediter läggs till direkt vid betalning.",
       "installTitle": "Installera DisputeDesk",
-      "installSubtitle": "Ange din Shopify-butik för att komma igång",
+      "installSubtitle": "Se var du förlorar pengar på återkrav — gratis.",
       "shopPlaceholder": "yourstore.myshopify.com",
       "shopError": "Ange ett giltigt butiksnamn, t.ex. dinbutik eller dinbutik.myshopify.com",
       "installButton": "Install",
-      "installHint": "Du omdirigeras till Shopify för att auktorisera appen. Gratisplan — inget kreditkort krävs."
+      "installHint": "Du omdirigeras till Shopify för att auktorisera appen. Gratisplan — inget kreditkort krävs.",
+      "installStepConnect": "Anslut din butik",
+      "installStepAnalysis": "Gratis analys på ~15 min",
+      "installStepProtected": "Skyddad + intäkter tillbaka",
+      "installReassure": "Du omdirigeras till Shopify för att godkänna åtkomst.",
+      "installTrialNote": "14 dagars gratis testperiod · inget kort",
+      "installBadge": "Built for Shopify"
     },
     "footer": {
       "tagline": "Ditt kommandocenter för Shopify-tvister.",
