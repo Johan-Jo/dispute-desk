@@ -1,4 +1,65 @@
 {
+  "email": {
+    "billing": {
+      "trialStarted": {
+        "subject": "DisputeDesk {planName}-Testphase aktiviert",
+        "preheader": "Ihre DisputeDesk {planName}-Testphase ist live",
+        "title": "Willkommen bei {planName}",
+        "body": "Ihre Testphase ist aktiv. Sie haben **14 Tage + 25 Testpakete**, um Auto-Build auf Herz und Nieren zu prüfen.\n\nDie Testphase endet am **{trialEnd}**. Wir melden uns drei Tage vorher, damit die Automatisierung nahtlos weiterläuft.\n\nSchon verbunden? Öffnen Sie einen Fall und sehen Sie Auto-Build beim nächsten Chargeback in Aktion.",
+        "cta": "DisputeDesk öffnen",
+        "trialDeadlineFallback": "das Ende der Testphase"
+      },
+      "firstPaidCycle": {
+        "subject": "{planName} ist aktiv — {packs} Pakete freigeschaltet",
+        "preheader": "{planName} ist aktiv — die ersten {packs} Pakete sind freigeschaltet",
+        "title": "Sie sind auf {planName}",
+        "body": "Ihre erste Abbuchung über ${price} war erfolgreich und Ihr erster Monat mit **{packs} Paketen** ist verfügbar. Der Zyklus endet am {cycleEnd}.\n\nAuto-Build ist für jeden neuen Fall innerhalb des Zyklus aktiv. Aufladungen sind verfügbar, falls Sie mehr benötigen.",
+        "cta": "Abrechnung öffnen"
+      },
+      "cycleRenewed": {
+        "subject": "{packs} Pakete für den neuen Zyklus freigeschaltet",
+        "preheader": "{packs} frische Pakete sind bereit",
+        "title": "Ihr Zyklus wurde erneuert",
+        "body": "**{packs} Pakete** sind jetzt in Ihrem {planName}-Plan verfügbar. Der Zyklus endet am {cycleEnd}.\n\nWährend des Zyklus hinzugefügte Aufladungen verfallen weiterhin 30 Tage nach dem ursprünglichen Kauf, unabhängig von dieser Erneuerung.",
+        "cta": "Nutzung ansehen"
+      },
+      "graceEntered": {
+        "subject": "Zahlung fehlgeschlagen — bitte Karte aktualisieren",
+        "preheader": "Karte abgelehnt — Auto-Build läuft noch 3 Tage weiter",
+        "title": "Zahlung fehlgeschlagen — kurze Kulanzfrist",
+        "body": "Shopify konnte Ihre Karte für den letzten DisputeDesk-Zyklus nicht belasten. Shopify versucht es die nächsten 3 Tage weiter.\n\n**Auto-Build läuft während der Kulanzfrist weiter**, sodass für Ihre Fälle weiterhin Pakete erstellt werden. Nach 3 Tagen ohne erfolgreiche Abbuchung wird Auto-Build pausiert und Sie müssen die Zahlung im Shopify Admin aktualisieren, um es zu reaktivieren.",
+        "cta": "Zahlung in Shopify aktualisieren"
+      },
+      "subscriptionExpired": {
+        "subject": "DisputeDesk Auto-Build pausiert — zum Fortsetzen reaktivieren",
+        "preheader": "Auto-Build pausiert — vergangene Fälle bleiben zugänglich",
+        "title": "Auto-Build pausiert",
+        "body": "Ihr DisputeDesk-Abonnement ist nicht mehr aktiv, daher ist Auto-Build für neue Fälle pausiert.\n\n**Sie haben weiterhin vollen Zugriff** auf jeden vergangenen Fall, jedes Beweispaket und jede Audit-Timeline — die Abrechnung begrenzt nur neue Automatisierung, niemals den Lesezugriff auf die Historie. Jederzeit reaktivierbar.",
+        "cta": "Reaktivieren"
+      },
+      "cancelled": {
+        "subject": "DisputeDesk-Abonnement gekündigt",
+        "preheader": "Schade, dass Sie gehen — Ihre Pakete und Historie bleiben erhalten",
+        "title": "Abonnement gekündigt",
+        "body": "Ihr DisputeDesk-Abonnement ist gekündigt. Auto-Build ist aus, aber jeder Fall, jedes Beweispaket und jede Audit-Zeile, die Sie je erstellt haben, bleibt erhalten und einsehbar.\n\nAbonnieren Sie jederzeit erneut und Ihre Pakete knüpfen an das Kontingent Ihres aktuellen Zyklus an.",
+        "cta": "Reaktivieren"
+      },
+      "topupPurchased": {
+        "subject": "{packs} Aufladungspakete zu Ihrem Konto hinzugefügt",
+        "preheader": "{packs} zusätzliche Pakete hinzugefügt",
+        "title": "{packs} Aufladungspakete hinzugefügt",
+        "body": "Ihre Aufladung war erfolgreich. **{packs} zusätzliche Pakete** sind jetzt zusätzlich zu Ihrem monatlichen Kontingent verfügbar.\n\nAufladungspakete verfallen 30 Tage nach dem Kauf, unabhängig von Ihrem Abrechnungszyklus — diese verfallen am **{expiresAt}**.",
+        "cta": "Nutzung ansehen"
+      },
+      "freeOutOfPacks": {
+        "subject": "Ihre kostenlosen Einreichungen sind aufgebraucht — upgraden Sie, um weiter zu reagieren",
+        "preheader": "Ihre kostenlosen Einreichungen sind aufgebraucht — upgraden Sie, um weiter zu reagieren",
+        "title": "Ihre kostenlosen Einreichungen sind aufgebraucht",
+        "body": "Entwürfe bleiben unbegrenzt — aber das Einreichen von Beweisen bei der Bank benötigt ein Guthaben, und Sie haben alle kostenlosen Einreichungen verbraucht.\n\nEin zurückgewonnener Chargeback ist meist weit mehr wert als ein Plan für $29/Monat, eine einzige gewonnene Reklamation zahlt sich also über Monate aus. Upgraden Sie jetzt, um vor Ihrer Frist weiter zu reagieren.",
+        "cta": "Plan upgraden"
+      }
+    }
+  },
   "nav": {
     "overview": "Übersicht",
     "disputes": "Streitfälle",
@@ -1953,7 +2014,7 @@
     "packsRemaining": "{count} verbleibend",
     "noPackCredits": "Keine Paketkredite mehr. Upgraden oder Aufladung kaufen.",
     "plans": "Verfügbare Pläne",
-    "free": "Kostenlos (Sandbox)",
+    "free": "Kostenlos",
     "starter": "Starter",
     "growth": "Growth",
     "scale": "Scale",
@@ -2005,7 +2066,7 @@
     "entFeature5": "Individuelle Integrationen",
     "entFeature6": "SLA-Garantie",
     "freeFeature1": "Unbegrenztes Entwurfserstellen",
-    "freeFeature2": "3 exportierte Pakete (lebenslang)",
+    "freeFeature2": "5 kostenlose Einreichungen",
     "freeFeature3": "Einfaches Aktivitätsprotokoll",
     "freeFeature4": "PDF-Export",
     "realStarterFeature1": "20 Pakete/Monat",
@@ -2054,6 +2115,11 @@
         "title": "Fast keine Packs mehr",
         "body": "Sie haben weniger als 10 % Ihres monatlichen Pack-Kontingents übrig. Kaufen Sie ein Top-up oder upgraden Sie, um Auto-Build für den Rest des Zyklus aktiv zu halten.",
         "cta": "Top-up kaufen"
+      },
+      "freeOutOfPacks": {
+        "title": "Ihre kostenlosen Einreichungen sind aufgebraucht",
+        "body": "Entwürfe bleiben unbegrenzt — aber das Einreichen von Beweisen benötigt ein Guthaben. Ein zurückgewonnener Chargeback ist meist weit mehr wert als ein 29-$-Plan, eine gewonnene Reklamation zahlt sich also über Monate aus. Upgraden Sie, um vor Ihrer Frist weiter zu reagieren.",
+        "cta": "Plan upgraden"
       }
     },
     "topupSuccessTitle": "{count} Packs hinzugefügt",
@@ -2091,7 +2157,7 @@
       "bannerBody": "Sie bearbeiten etwa {rate} Rückbuchungen pro Monat – mehr als der Free-Tarif abdeckt. Sehen Sie, wie {plan} passt.",
       "bannerCta": "Empfehlung ansehen"
     },
-    "freeShort": "3 exportierte Pakete · Entwurfserstellung · Aktivitätsprotokoll",
+    "freeShort": "Unbegrenzte Entwürfe · 5 kostenlose Einreichungen · Aktivitätsprotokoll",
     "starterShort": "20 Pakete/Monat · Basisregeln · E-Mail-Support",
     "growthShort": "100 Pakete/Monat · Erweiterte Regeln · Auto-Speichern",
     "scaleShort": "400 Pakete/Monat · Erweiterte Exporte · Priorisierter Support",
@@ -3088,12 +3154,12 @@
     },
     "pricing": {
       "title": "Planbare Preise für Dispute-Operations",
-      "subtitle": "Free ist zur Evaluation. Bezahlpläne sind für den Betrieb — mit klaren Paketlimits und einfachen Aufladungen. Kein versteckter Prozentsatz.",
-      "trialInfo": "Bezahlpläne beinhalten eine 14-tägige Testversion mit 25 Paketen. Free beinhaltet 3 Pakete insgesamt (Lebensdauer).",
-      "freeName": "Kostenlos (Sandbox)",
+      "subtitle": "Kostenlos starten — unbegrenzt Entwürfe erstellen und 5 Beweispakete gratis einreichen. Bezahlpläne bieten Automatisierung, Regeln und mehr Volumen mit einfachen Aufladungen. Kein versteckter Prozentsatz.",
+      "trialInfo": "Bezahlpläne beinhalten eine 14-tägige Testversion mit 25 Paketen. Kostenlos beinhaltet 5 Einreichungen insgesamt (lebenslang).",
+      "freeName": "Kostenlos",
       "freeF1": "Unbegrenzte Entwürfe",
       "freeF2": "Beweispaket-Builder",
-      "freeF3": "3 exportierte Pakete (Lebensdauer)",
+      "freeF3": "5 kostenlose Einreichungen",
       "freeF4": "Basis-Aktivitätsprotokoll",
       "getStarted": "Jetzt starten",
       "starterName": "Starter",

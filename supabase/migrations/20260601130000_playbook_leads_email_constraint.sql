@@ -12,7 +12,28 @@
 -- installs get it from the base migration) and on DBs that still carry the
 -- legacy functional index.
 
-drop index if exists public.playbook_leads_email_key;
+-- Only drop the index if it is a *plain* index. On DBs where the base
+-- migration already created `email` as a UNIQUE CONSTRAINT, the index of
+-- the same name is owned by that constraint and `DROP INDEX` errors with
+-- 2BP01 ("cannot drop index ... because constraint ... requires it").
+-- Guard on the absence of a matching constraint so this stays a true no-op
+-- there (the constraint is exactly what we want in that case).
+do $$
+begin
+  if exists (
+    select 1
+    from pg_indexes
+    where schemaname = 'public'
+      and indexname = 'playbook_leads_email_key'
+  ) and not exists (
+    select 1
+    from pg_constraint
+    where conname = 'playbook_leads_email_key'
+      and conrelid = 'public.playbook_leads'::regclass
+  ) then
+    execute 'drop index public.playbook_leads_email_key';
+  end if;
+end $$;
 
 do $$
 begin

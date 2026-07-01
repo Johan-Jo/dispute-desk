@@ -29,8 +29,14 @@
  */
 
 import { Resend } from "resend";
+import { createTranslator } from "next-intl";
 import { getServiceClient } from "@/lib/supabase/server";
 import { getPlan, type PlanId } from "@/lib/billing/plans";
+import { claimBillingBlockedEmailSlot } from "@/lib/automation/billingBlockedEmailThrottle";
+import { DISPUTE_ATTENTION_REASONS } from "@/lib/disputes/attentionReasons";
+import { getMessages } from "@/lib/i18n/getMessages";
+import { normalizeLocale, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locales";
+import { toBcp47 } from "@/lib/i18n/bcp47";
 import { getEmbeddedAppUrl } from "./publicSiteUrl";
 import { brandHeader, ctaButton, plateLayout } from "./digestShared";
 
@@ -62,7 +68,15 @@ type SbClient = ReturnType<typeof getServiceClient>;
  *  resulting audit row. */
 export type LifecycleEmailOutcome =
   | { sent: true; logTag: string }
-  | { skipped: "already_sent" | "no_team_email" | "opted_out" | "no_setup" | "email_disabled" }
+  | {
+      skipped:
+        | "already_sent"
+        | "no_team_email"
+        | "opted_out"
+        | "no_setup"
+        | "email_disabled"
+        | "throttled";
+    }
   | { error: string };
 
 interface TeamContext {
@@ -125,6 +139,60 @@ async function resolveTeamContext(
   return { to, shopDomain, shopName: shopDomain };
 }
 
+/** A namespaced translator for the `email.billing` message tree plus a
+ *  locale-aware absolute-date formatter. Built from `shops.locale`, so
+ *  request-less senders (billing cron/webhook) still localize. */
+interface BillingT {
+  /** Namespaced (`email.billing`) translator. Typed loosely because the
+   *  message tree is loaded at runtime from a locale JSON, not the
+   *  compile-time `IntlMessages` shape createTranslator infers. */
+  t: (key: string, values?: Record<string, string | number>) => string;
+  /** Format an ISO timestamp as an absolute date in the shop's locale. */
+  formatDate: (iso: string) => string;
+}
+
+/**
+ * Resolve the shop's persisted locale and return a translator scoped to
+ * `email.billing`. Falls back to the default locale when the shop row or
+ * its `locale` column is missing. `shops.locale` is written at OAuth
+ * install/re-auth time (see the shopify callback route).
+ */
+async function getBillingTranslator(
+  sb: SbClient,
+  shopId: string,
+): Promise<BillingT> {
+  const { data: shop } = await sb
+    .from("shops")
+    .select("locale")
+    .eq("id", shopId)
+    .maybeSingle();
+  const locale: Locale =
+    normalizeLocale((shop?.locale as string | null) ?? null) ?? DEFAULT_LOCALE;
+
+  const messages = await getMessages(locale);
+  // The runtime-loaded catalog isn't the compile-time IntlMessages shape
+  // createTranslator infers, so build the translator against a loosely
+  // typed factory and expose a plain (key, values) => string signature.
+  const create = createTranslator as unknown as (opts: {
+    locale: string;
+    messages: Record<string, unknown>;
+    namespace: string;
+  }) => (key: string, values?: Record<string, string | number>) => string;
+  const t = create({ locale, messages, namespace: "email.billing" });
+
+  const bcp47 = toBcp47(locale);
+  const formatDate = (iso: string): string => {
+    const d = new Date(iso);
+    if (!Number.isFinite(d.getTime())) return iso;
+    return new Intl.DateTimeFormat(bcp47, {
+      dateStyle: "long",
+      timeZone: "UTC",
+    }).format(d);
+  };
+
+  return { t, formatDate };
+}
+
 async function sendViaResend(args: {
   subject: string;
   html: string;
@@ -161,10 +229,45 @@ function billingUrl(shopDomain: string): string {
   return getEmbeddedAppUrl(shopDomain, "billing");
 }
 
+/** Minimal HTML escape for message-sourced copy before we inject our
+ *  own `<p>` / `<strong>` markup. Keeps a stray `<` in translated copy
+ *  from becoming a broken tag. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/**
+ * Bodies are stored as plain, translator-safe text in messages/*.json:
+ * paragraphs separated by a blank line (`\n\n`) and emphasis marked with
+ * `**bold**` (markdown-style). We can't use inline `<p>`/`<strong>` in the
+ * message strings because next-intl's ICU parser treats `<tag>` as rich-text
+ * markup and throws unless a tag handler is supplied. Converting here keeps
+ * the message catalog free of HTML AND gives a clean text fallback.
+ */
+function bodyToHtml(body: string): string {
+  return body
+    .split(/\n{2,}/)
+    .map((para) => {
+      const withStrong = escapeHtml(para).replace(
+        /\*\*([^*]+)\*\*/g,
+        "<strong>$1</strong>",
+      );
+      return `<p style="margin:0 0 14px">${withStrong}</p>`;
+    })
+    .join("");
+}
+
+function bodyToText(body: string): string {
+  return body.replace(/\*\*([^*]+)\*\*/g, "$1").trim();
+}
+
 function renderShell(args: {
   preheader: string;
   title: string;
-  bodyHtml: string;
+  body: string;
   ctaLabel?: string;
   ctaUrl?: string;
 }): { html: string; text: string } {
@@ -174,8 +277,8 @@ function renderShell(args: {
       : "";
 
   const innerHtml = `${brandHeader("billing")}
-    <h1 style="margin:0 0 14px;font-size:22px;font-weight:700;color:#111827;line-height:1.3;letter-spacing:-0.01em">${args.title}</h1>
-    <div style="font-size:15px;color:#374151;line-height:1.6">${args.bodyHtml}</div>
+    <h1 style="margin:0 0 14px;font-size:22px;font-weight:700;color:#111827;line-height:1.3;letter-spacing:-0.01em">${escapeHtml(args.title)}</h1>
+    <div style="font-size:15px;color:#374151;line-height:1.6">${bodyToHtml(args.body)}</div>
     ${cta}`;
 
   const html = plateLayout({
@@ -186,14 +289,7 @@ function renderShell(args: {
 
   const ctaText =
     args.ctaLabel && args.ctaUrl ? `\n\n${args.ctaLabel}: ${args.ctaUrl}` : "";
-  // Strip HTML for the text fallback.
-  const bodyText = args.bodyHtml
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-  const text = `${args.title}\n\n${bodyText}${ctaText}`;
+  const text = `${args.title}\n\n${bodyToText(args.body)}${ctaText}`;
   return { html, text };
 }
 
@@ -215,23 +311,23 @@ export async function sendTrialStartedEmail(
   const ctx = await resolveTeamContext(sb, shopId);
   if ("skipped" in ctx || "error" in ctx) return ctx;
 
+  const { t, formatDate } = await getBillingTranslator(sb, shopId);
   const plan = getPlan((claimed.plan_key as PlanId) ?? "free");
   const trialEnd = claimed.trial_ends_at
-    ? new Date(claimed.trial_ends_at as string).toUTCString()
-    : "the trial deadline";
+    ? formatDate(claimed.trial_ends_at as string)
+    : t("trialStarted.trialDeadlineFallback");
+  const vars = { planName: plan.name, trialEnd };
 
   const { html, text } = renderShell({
-    preheader: `Your DisputeDesk ${plan.name} trial is live`,
-    title: `Welcome to ${plan.name}`,
-    bodyHtml: `<p>Your trial is active. You have <strong>14 days + 25 trial packs</strong> to put auto-build through its paces.</p>
-<p>Trial ends <strong>${trialEnd}</strong>. We'll send a heads-up three days before it ends so you can keep the automation running.</p>
-<p>Already connected? Open a dispute to see auto-build kick in on the next chargeback.</p>`,
-    ctaLabel: "Open DisputeDesk",
+    preheader: t("trialStarted.preheader", vars),
+    title: t("trialStarted.title", vars),
+    body: t("trialStarted.body", vars),
+    ctaLabel: t("trialStarted.cta"),
     ctaUrl: billingUrl(ctx.shopDomain),
   });
 
   const outcome = await sendViaResend({
-    subject: `DisputeDesk ${plan.name} trial activated`,
+    subject: t("trialStarted.subject", vars),
     html,
     text,
     to: ctx.to,
@@ -260,18 +356,24 @@ export async function sendFirstPaidCycleEmail(
   const ctx = await resolveTeamContext(sb, shopId);
   if ("skipped" in ctx || "error" in ctx) return ctx;
 
+  const { t, formatDate } = await getBillingTranslator(sb, shopId);
   const plan = getPlan((claimed.plan_key as PlanId) ?? "free");
+  const vars = {
+    planName: plan.name,
+    packs: plan.packsPerMonth,
+    price: plan.price,
+    cycleEnd: formatDate(cycleEndIso),
+  };
   const { html, text } = renderShell({
-    preheader: `${plan.name} is active — first ${plan.packsPerMonth} packs are unlocked`,
-    title: `You're on ${plan.name}`,
-    bodyHtml: `<p>Your first $${plan.price} charge cleared and your first month of <strong>${plan.packsPerMonth} packs</strong> is available. Cycle ends ${new Date(cycleEndIso).toUTCString()}.</p>
-<p>Auto-build is on for every new dispute that lands inside the cycle. Top-ups are available if you need more.</p>`,
-    ctaLabel: "Open billing",
+    preheader: t("firstPaidCycle.preheader", vars),
+    title: t("firstPaidCycle.title", vars),
+    body: t("firstPaidCycle.body", vars),
+    ctaLabel: t("firstPaidCycle.cta"),
     ctaUrl: billingUrl(ctx.shopDomain),
   });
 
   const outcome = await sendViaResend({
-    subject: `${plan.name} is active — ${plan.packsPerMonth} packs unlocked`,
+    subject: t("firstPaidCycle.subject", vars),
     html,
     text,
     to: ctx.to,
@@ -305,20 +407,24 @@ export async function sendCycleRenewedEmail(args: {
 
   const ctx = await resolveTeamContext(sb, shopId);
   if ("skipped" in ctx || "error" in ctx) return ctx;
+  const { t, formatDate } = await getBillingTranslator(sb, shopId);
   const plan = getPlan((claimed.plan_key as PlanId) ?? "free");
-  const cycleEnd = new Date(args.cycleEndIso).toUTCString();
+  const vars = {
+    packs: args.packsGranted,
+    planName: plan.name,
+    cycleEnd: formatDate(args.cycleEndIso),
+  };
 
   const { html, text } = renderShell({
-    preheader: `${args.packsGranted} fresh packs are ready`,
-    title: "Your cycle renewed",
-    bodyHtml: `<p><strong>${args.packsGranted} packs</strong> are now available on your ${plan.name} plan. Cycle ends ${cycleEnd}.</p>
-<p>Top-ups added during the cycle still expire 30 days from their original purchase, independent of this renewal.</p>`,
-    ctaLabel: "View usage",
+    preheader: t("cycleRenewed.preheader", vars),
+    title: t("cycleRenewed.title", vars),
+    body: t("cycleRenewed.body", vars),
+    ctaLabel: t("cycleRenewed.cta"),
     ctaUrl: billingUrl(ctx.shopDomain),
   });
 
   const outcome = await sendViaResend({
-    subject: `${args.packsGranted} packs unlocked for the new cycle`,
+    subject: t("cycleRenewed.subject", vars),
     html,
     text,
     to: ctx.to,
@@ -363,17 +469,17 @@ export async function sendGraceEnteredEmail(
   const ctx = await resolveTeamContext(sb, shopId);
   if ("skipped" in ctx || "error" in ctx) return ctx;
 
+  const { t } = await getBillingTranslator(sb, shopId);
   const { html, text } = renderShell({
-    preheader: "Card declined — auto-build still runs for 3 days",
-    title: "Payment failed — short grace period",
-    bodyHtml: `<p>Shopify couldn't charge your card for the latest DisputeDesk cycle. Shopify will keep retrying for the next 3 days.</p>
-<p><strong>Auto-build still runs during grace</strong>, so your disputes keep getting packs built. After 3 days without a successful charge, auto-build pauses and you'll need to update payment in Shopify Admin to reactivate.</p>`,
-    ctaLabel: "Update payment in Shopify",
+    preheader: t("graceEntered.preheader"),
+    title: t("graceEntered.title"),
+    body: t("graceEntered.body"),
+    ctaLabel: t("graceEntered.cta"),
     ctaUrl: `https://${ctx.shopDomain}/admin/charges`,
   });
 
   const outcome = await sendViaResend({
-    subject: "Payment failed — please update card",
+    subject: t("graceEntered.subject"),
     html,
     text,
     to: ctx.to,
@@ -416,17 +522,17 @@ export async function sendSubscriptionExpiredEmail(
   const ctx = await resolveTeamContext(sb, shopId);
   if ("skipped" in ctx || "error" in ctx) return ctx;
 
+  const { t } = await getBillingTranslator(sb, shopId);
   const { html, text } = renderShell({
-    preheader: "Auto-build paused — historical disputes still accessible",
-    title: "Auto-build paused",
-    bodyHtml: `<p>Your DisputeDesk subscription is no longer active, so auto-build is paused for new disputes.</p>
-<p><strong>You still have full access</strong> to every past dispute, evidence pack, and audit timeline — billing only gates new automation, never historical reads. Reactivate any time to resume.</p>`,
-    ctaLabel: "Reactivate",
+    preheader: t("subscriptionExpired.preheader"),
+    title: t("subscriptionExpired.title"),
+    body: t("subscriptionExpired.body"),
+    ctaLabel: t("subscriptionExpired.cta"),
     ctaUrl: billingUrl(ctx.shopDomain),
   });
 
   const outcome = await sendViaResend({
-    subject: "DisputeDesk auto-build paused — reactivate to resume",
+    subject: t("subscriptionExpired.subject"),
     html,
     text,
     to: ctx.to,
@@ -474,17 +580,17 @@ export async function sendCancellationEmail(
   const ctx = await resolveTeamContext(sb, shopId);
   if ("skipped" in ctx || "error" in ctx) return ctx;
 
+  const { t } = await getBillingTranslator(sb, shopId);
   const { html, text } = renderShell({
-    preheader: "Sorry to see you go — your packs and history are preserved",
-    title: "Subscription cancelled",
-    bodyHtml: `<p>Your DisputeDesk subscription is cancelled. Auto-build is off, but every dispute, evidence pack, and audit row you've ever generated is preserved and remains viewable.</p>
-<p>Resubscribe at any time and your packs pick up from your current cycle's allotment.</p>`,
-    ctaLabel: "Reactivate",
+    preheader: t("cancelled.preheader"),
+    title: t("cancelled.title"),
+    body: t("cancelled.body"),
+    ctaLabel: t("cancelled.cta"),
     ctaUrl: billingUrl(ctx.shopDomain),
   });
 
   const outcome = await sendViaResend({
-    subject: "DisputeDesk subscription cancelled",
+    subject: t("cancelled.subject"),
     html,
     text,
     to: ctx.to,
@@ -524,18 +630,18 @@ export async function sendTopupPurchasedEmail(args: {
   const ctx = await resolveTeamContext(sb, args.shopId);
   if ("skipped" in ctx || "error" in ctx) return ctx;
 
-  const expiresLabel = new Date(args.expiresAt).toUTCString();
+  const { t, formatDate } = await getBillingTranslator(sb, args.shopId);
+  const vars = { packs: args.packs, expiresAt: formatDate(args.expiresAt) };
   const { html, text } = renderShell({
-    preheader: `${args.packs} extra packs added`,
-    title: `${args.packs} top-up packs added`,
-    bodyHtml: `<p>Your top-up cleared. <strong>${args.packs} extra packs</strong> are now available alongside your monthly allotment.</p>
-<p>Top-up packs expire 30 days from purchase, independent of your billing cycle — these expire <strong>${expiresLabel}</strong>.</p>`,
-    ctaLabel: "View usage",
+    preheader: t("topupPurchased.preheader", vars),
+    title: t("topupPurchased.title", vars),
+    body: t("topupPurchased.body", vars),
+    ctaLabel: t("topupPurchased.cta"),
     ctaUrl: billingUrl(ctx.shopDomain),
   });
 
   const outcome = await sendViaResend({
-    subject: `${args.packs} top-up packs added to your account`,
+    subject: t("topupPurchased.subject", vars),
     html,
     text,
     to: ctx.to,
@@ -548,6 +654,68 @@ export async function sendTopupPurchasedEmail(args: {
     "topup_purchased",
     outcome,
     { reference: args.reference, packs: args.packs, expires_at: args.expiresAt },
+  );
+  return outcome;
+}
+
+/* ── 8. Free tier out of packs ──────────────────────────────── */
+
+/**
+ * A free shop exhausted its lifetime pack floor and hit the wall on a
+ * manual pack build. The in-app `free_out_of_packs` banner always
+ * shows; this email is the "come back before your deadline" nudge for
+ * merchants who close the tab.
+ *
+ * Unlike the state-transition lifecycle emails above, the free tier has
+ * no billing cycle, so idempotency is delegated to the shared
+ * `claimBillingBlockedEmailSlot` throttle — the SAME guard the paid
+ * auto-build path uses (1 email per dispute ever, 6h per-shop cooldown
+ * for the same reason, always send when the dispute deadline is within
+ * 72h). We key the slot on `QUOTA_EXCEEDED` so a free shop that later
+ * upgrades and hits the paid quota wall doesn't get a duplicate email
+ * for the same dispute.
+ */
+export async function sendFreeOutOfPacksEmail(args: {
+  shopId: string;
+  disputeId: string;
+  disputeDueAt?: string | null;
+}): Promise<LifecycleEmailOutcome> {
+  const sb = getServiceClient();
+
+  const slot = await claimBillingBlockedEmailSlot({
+    shopId: args.shopId,
+    disputeId: args.disputeId,
+    reason: DISPUTE_ATTENTION_REASONS.QUOTA_EXCEEDED,
+    disputeDueAt: args.disputeDueAt ?? null,
+  });
+  if (!slot.allowed) return { skipped: "throttled" };
+
+  const ctx = await resolveTeamContext(sb, args.shopId);
+  if ("skipped" in ctx || "error" in ctx) return ctx;
+
+  const { t } = await getBillingTranslator(sb, args.shopId);
+  const { html, text } = renderShell({
+    preheader: t("freeOutOfPacks.preheader"),
+    title: t("freeOutOfPacks.title"),
+    body: t("freeOutOfPacks.body"),
+    ctaLabel: t("freeOutOfPacks.cta"),
+    ctaUrl: billingUrl(ctx.shopDomain),
+  });
+
+  const outcome = await sendViaResend({
+    subject: t("freeOutOfPacks.subject"),
+    html,
+    text,
+    to: ctx.to,
+    logTag: "free_out_of_packs",
+  });
+  await logEmailAudit(
+    sb,
+    args.shopId,
+    "billing_email_sent",
+    "free_out_of_packs",
+    outcome,
+    { dispute_id: args.disputeId },
   );
   return outcome;
 }

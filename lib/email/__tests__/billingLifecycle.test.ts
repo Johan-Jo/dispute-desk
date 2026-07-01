@@ -74,6 +74,8 @@ interface SbConfig {
   setupSteps?: Record<string, { payload?: Record<string, unknown> }> | null;
   /** Shop domain row. */
   shopDomain?: string;
+  /** Shop locale row (drives billing email language). */
+  locale?: string;
   /** Captured side effects. */
   capture: { auditInserts: Array<Record<string, unknown>> };
 }
@@ -130,11 +132,17 @@ function buildSb(cfg: SbConfig) {
         };
       }
       if (table === "shops") {
+        // resolveTeamContext reads shop_domain via .single(); the new
+        // getBillingTranslator reads locale via .maybeSingle().
         return {
           select: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
               single: vi.fn().mockResolvedValue({
                 data: { shop_domain: cfg.shopDomain ?? "demo.myshopify.com" },
+                error: null,
+              }),
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { locale: cfg.locale ?? "en" },
                 error: null,
               }),
             }),

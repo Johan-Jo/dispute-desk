@@ -9,15 +9,16 @@ import { ScopeReauthBanner } from "@/app/(embedded)/app/ScopeReauthBanner";
 import styles from "./embedded-app-chrome.module.css";
 
 /** Drives BillingBanner's visual-verification preview from the URL
- *  (`?banner_preview=grace|subscription_expired|low_credits`). Returns
- *  undefined for any other value so production traffic is unaffected. */
+ *  (`?banner_preview=grace|subscription_expired|low_credits|free_out_of_packs`).
+ *  Returns undefined for any other value so production traffic is unaffected. */
 function useBannerPreview() {
   const params = useSearchParams();
   const raw = params?.get("banner_preview") ?? null;
   if (
     raw === "grace" ||
     raw === "subscription_expired" ||
-    raw === "low_credits"
+    raw === "low_credits" ||
+    raw === "free_out_of_packs"
   ) {
     return raw;
   }

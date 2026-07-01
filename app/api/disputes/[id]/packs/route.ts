@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { checkPackQuota } from "@/lib/billing/checkQuota";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
+import { sendFreeOutOfPacksEmail } from "@/lib/email/billingLifecycle";
 
 /**
  * POST /api/disputes/:id/packs
@@ -30,7 +31,7 @@ export async function POST(
 
   const { data: dispute } = await db
     .from("disputes")
-    .select("id, shop_id, reason")
+    .select("id, shop_id, reason, due_at")
     .eq("id", disputeId)
     .eq("shop_id", shopId)
     .single();
@@ -41,6 +42,23 @@ export async function POST(
 
   const quota = await checkPackQuota(dispute.shop_id);
   if (!quota.allowed) {
+    // Free shops hit this wall on their first manual build after
+    // exhausting the lifetime pack floor. The auto-build pipeline's
+    // billing-blocked email never fires for them (auto-build is off on
+    // free), so send the "out of free submissions" nudge here —
+    // throttled + deadline-aware inside the helper, so repeated build
+    // attempts don't spam. Fire-and-forget: never blocks the 403.
+    // Paid shops reach 0 via their cycle and are notified through the
+    // pipeline instead, so restrict this to the free plan.
+    if (quota.plan === "free") {
+      void sendFreeOutOfPacksEmail({
+        shopId: dispute.shop_id,
+        disputeId: dispute.id,
+        disputeDueAt: (dispute.due_at as string | null) ?? null,
+      }).catch(() => {
+        /* non-fatal — the 403 + in-app banner still inform the merchant */
+      });
+    }
     return NextResponse.json(
       { error: quota.reason, upgrade_required: true, usage: quota },
       { status: 403 }
