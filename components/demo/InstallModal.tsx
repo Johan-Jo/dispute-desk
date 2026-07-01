@@ -94,7 +94,7 @@ export function InstallModal({ open, onClose }: InstallModalProps) {
       onClick={close}
     >
       <div
-        className="relative w-full max-w-[452px] bg-white rounded-2xl shadow-[0_28px_70px_rgba(15,23,42,0.32)] px-[30px] pt-[30px] pb-6"
+        className="relative w-full max-w-[560px] bg-white rounded-2xl shadow-[0_28px_70px_rgba(15,23,42,0.32)] px-8 sm:px-10 pt-8 pb-7"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -125,37 +125,31 @@ export function InstallModal({ open, onClose }: InstallModalProps) {
         </div>
 
         {/* Steps */}
-        <div className="flex items-start justify-between my-5 px-2.5 py-4 bg-[#F6F9FD] border border-[#EAF0F8] rounded-xl">
+        <div className="flex items-start justify-between gap-2 my-6 px-5 py-4 bg-[#F6F9FD] border border-[#EAF0F8] rounded-xl">
           <div className="flex-1 flex flex-col items-center gap-2 text-center">
-            <div className="w-9 h-9 rounded-[10px] bg-[#E7F0FE] text-[#1F6FEB] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-[10px] bg-[#E7F0FE] text-[#1F6FEB] flex items-center justify-center">
               <PlugZap className="w-[18px] h-[18px]" />
             </div>
-            <span className="text-xs font-semibold text-[#1F2937] leading-[1.35]">
-              Connect
-              <br />
-              your store
+            <span className="text-[12.5px] font-semibold text-[#1F2937] leading-[1.35]">
+              Connect your store
             </span>
           </div>
-          <ArrowRight className="w-[15px] h-[15px] text-[#C2CCD9] mt-[11px]" strokeWidth={2.5} />
+          <ArrowRight className="w-4 h-4 text-[#C2CCD9] mt-3 flex-none" strokeWidth={2.5} />
           <div className="flex-1 flex flex-col items-center gap-2 text-center">
-            <div className="w-9 h-9 rounded-[10px] bg-[#E3F7EF] text-[#0A8A5B] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-[10px] bg-[#E3F7EF] text-[#0A8A5B] flex items-center justify-center">
               <SearchCheck className="w-[18px] h-[18px]" />
             </div>
-            <span className="text-xs font-semibold text-[#1F2937] leading-[1.35]">
-              Free analysis
-              <br />
-              in ~15 min
+            <span className="text-[12.5px] font-semibold text-[#1F2937] leading-[1.35]">
+              Free analysis in ~15 min
             </span>
           </div>
-          <ArrowRight className="w-[15px] h-[15px] text-[#C2CCD9] mt-[11px]" strokeWidth={2.5} />
+          <ArrowRight className="w-4 h-4 text-[#C2CCD9] mt-3 flex-none" strokeWidth={2.5} />
           <div className="flex-1 flex flex-col items-center gap-2 text-center">
-            <div className="w-9 h-9 rounded-[10px] bg-[#E7F0FE] text-[#1F6FEB] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-[10px] bg-[#E7F0FE] text-[#1F6FEB] flex items-center justify-center">
               <ShieldCheck className="w-[18px] h-[18px]" />
             </div>
-            <span className="text-xs font-semibold text-[#1F2937] leading-[1.35]">
-              Protected +
-              <br />
-              revenue back
+            <span className="text-[12.5px] font-semibold text-[#1F2937] leading-[1.35]">
+              Protected + revenue back
             </span>
           </div>
         </div>
