@@ -149,7 +149,7 @@ export function InstallModal({ open, onClose }: InstallModalProps) {
               <ShieldCheck className="w-[18px] h-[18px]" />
             </div>
             <span className="text-[12.5px] font-semibold text-[#1F2937] leading-[1.35]">
-              Protected + revenue back
+              Protected
             </span>
           </div>
         </div>
