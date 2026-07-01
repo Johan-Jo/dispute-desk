@@ -21,11 +21,14 @@ export function PackLimitBanner({ remaining, onUpgrade, onTopUp }: PackLimitBann
       <AlertTriangle className="h-5 w-5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
       <div className="flex-1">
         <p className="text-sm font-medium text-[#92400E]">
-          Pack limit reached
+          Out of pack credits
         </p>
         <p className="text-sm text-[#92400E]/80 mt-1">
-          You have no remaining pack credits. Drafts are still unlimited&nbsp;&mdash;
-          but exporting or submitting requires credits.
+          Drafts are still unlimited&nbsp;&mdash; but submitting this evidence
+          needs a credit. A recovered chargeback is typically worth far more
+          than a $29 plan or a top-up, so one won dispute pays for months of
+          submissions. Upgrade in two clicks to keep responding before your
+          deadline.
         </p>
         <div className="flex gap-2 mt-3">
           {onUpgrade && (

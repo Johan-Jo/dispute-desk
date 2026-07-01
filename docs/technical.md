@@ -3330,6 +3330,61 @@ log + continue (a billing-side fluke should not break a successful build).
 Guards at: `POST /api/disputes/:id/packs` (quota), `POST /api/rules` (feature),
 `runAutomationPipeline()` (both).
 
+### Free-tier lifetime grant
+
+The Free plan (`plans.ts` → `PLANS.free`, `packsLifetime: FREE_LIFETIME_PACKS = 5`) is the
+default install state and the cancel/downgrade target. Its usable balance comes entirely from a
+single `pack_credits_ledger` row with `source = 'free_lifetime'`, `expires_at = null` (the
+`pack_balance` view treats null as non-expiring). Without that row a free shop has a **0-pack
+balance** and hits the `upgrade_required` block on its first pack build.
+
+- **On install:** `app/api/auth/shopify/callback/route.ts` calls `grantFreeLifetimeCredits(shopId)`
+  (`lib/billing/grantFreeLifetime.ts`) inside the `isNewShop` branch of the offline OAuth phase,
+  fire-and-forget alongside webhook/currency/policy tasks. The helper is **idempotent** — it guards
+  on an existing `free_lifetime` row (and uses `reference = free-lifetime:<shopId>`), so re-install
+  / re-OAuth never double-grants.
+- **Backfill:** migration `20260701120000_backfill_free_lifetime_credits.sql` inserts one
+  `free_lifetime` row (packs = 5) per shop missing one (`where not exists …`). Idempotent, safe to
+  re-run; retires the manual `scripts/sql/unblock-*.sql` pattern for free shops.
+- **N = 5** must stay reconciled across `FREE_LIFETIME_PACKS`, the backfill SQL literal, all six
+  locale copy strings (`billing.freeFeature2` / `freeShort` / `pricing.freeF3` / `trialInfo`), and
+  the App Store listing card.
+
+Free stays manual (`autoPack: false`, `rules: false`); the grant only unblocks manual
+build/export/submit up to N.
+
+**Wall banner (`free_out_of_packs`).** When a free shop exhausts its lifetime packs it needs a
+conversion prompt, but the `low_credits` billing banner only fires for paid plans
+(`monthlyPackLimit > 0`), so a free shop at 0 would otherwise see nothing. `bannerState.ts` adds a
+`free_out_of_packs` variant: fires when `planId === "free"` AND `monthlyPackLimit == null` AND
+`remainingPacks != null && <= 0`. It is **non-dismissible** (it is the actionable wall, and free is
+lifetime — no cycle to reset a dismissal against) and renders via the existing `BillingBanner`
+component (`billing.banners.freeOutOfPacks.*`, ROI-framed, CTA → `/app/billing`). Preview it with
+`?banner_preview=free_out_of_packs`. Paid shops reaching 0 are unaffected — they route through
+`low_credits`/`subscription_expired` via their billing cycle.
+
+**Wall email (`free_out_of_packs`).** The banner covers a merchant who's looking at the app; a
+merchant who closes the tab mid-dispute gets nothing from it. The auto-build pipeline's
+billing-blocked email never fires for free shops (auto-build is off on free), so
+`POST /api/disputes/:id/packs` sends `sendFreeOutOfPacksEmail()`
+(`lib/email/billingLifecycle.ts`) fire-and-forget from its `upgrade_required` branch — **only when
+`quota.plan === "free"`**. It reuses the shared `claimBillingBlockedEmailSlot` throttle (1 email per
+dispute ever, 6h per-shop same-reason cooldown, always send when the dispute deadline is within
+72h), keyed on `QUOTA_EXCEEDED` so a later upgrade-to-paid doesn't double-email the same dispute.
+Respects the merchant's `notifications.billing` opt-out via `resolveTeamContext`.
+
+**Localization of billing emails.** All `lib/email/billingLifecycle.ts` senders (the 7 lifecycle
+emails + the free-tier wall) are localized. Copy lives under the `email.billing.*` namespace in
+`messages/{locale}.json` across all 6 locales. Because these fire from crons/webhooks with **no
+request context**, the locale is read from the DB (`shops.locale`, persisted on OAuth
+install/re-auth in the shopify callback) — not a cookie/header — via `getBillingTranslator(sb,
+shopId)`, which builds a `createTranslator` for the shop's locale plus a locale-aware
+`Intl.DateTimeFormat` date formatter. Message bodies are stored as plain text (paragraphs split on
+a blank line, `**bold**` for emphasis) rather than inline HTML, because next-intl's ICU parser
+treats `<tag>` as rich-text markup and throws; `renderShell` converts that to `<p>`/`<strong>` plus
+a clean text fallback. ICU escaping caveat: apostrophes in a message that carries a `{param}` must
+be doubled (`''`); a message with no params uses a single `'`.
+
 ### Shopify Billing Flow
 
 1. `POST /api/billing/subscribe` → `appSubscriptionCreate` → merchant redirected to Shopify approval

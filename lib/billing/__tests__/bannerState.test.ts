@@ -4,7 +4,9 @@
  * dismissal-per-cycle rules are spec-load-bearing: a regression here
  * means a merchant either sees a stale yellow banner after they paid
  * the cycle off, OR misses a red banner because we silently picked
- * blue instead.
+ * blue instead. The free-tier wall (`free_out_of_packs`) is equally
+ * load-bearing: without it a free shop at 0 packs sees NO banner and
+ * hits a silent dead end at the exact moment we want to convert.
  */
 
 import { describe, it, expect } from "vitest";
@@ -25,6 +27,7 @@ describe("computeBillingBannerState — variant precedence", () => {
       graceBannerDismissedCycle: null,
       remainingPacks: 0,
       monthlyPackLimit: 75,
+      planId: "growth",
     });
     expect(s.variant).toBe("subscription_expired");
     expect(s.dismissible).toBe(false);
@@ -39,6 +42,7 @@ describe("computeBillingBannerState — variant precedence", () => {
       graceBannerDismissedCycle: null,
       remainingPacks: 75,
       monthlyPackLimit: 75,
+      planId: "growth",
     });
     expect(s.variant).toBe("subscription_expired");
     expect(s.dismissible).toBe(false);
@@ -52,6 +56,7 @@ describe("computeBillingBannerState — variant precedence", () => {
       graceBannerDismissedCycle: null,
       remainingPacks: 50,
       monthlyPackLimit: 75,
+      planId: "growth",
     });
     expect(s.variant).toBe("grace");
     expect(s.dismissible).toBe(true);
@@ -66,6 +71,7 @@ describe("computeBillingBannerState — variant precedence", () => {
       graceBannerDismissedCycle: CYCLE_END,
       remainingPacks: 50,
       monthlyPackLimit: 75,
+      planId: "growth",
     });
     expect(s.variant).toBe("none");
   });
@@ -78,6 +84,7 @@ describe("computeBillingBannerState — variant precedence", () => {
       graceBannerDismissedCycle: "2026-06-01T00:00:00Z",
       remainingPacks: 50,
       monthlyPackLimit: 75,
+      planId: "growth",
     });
     expect(s.variant).toBe("grace");
   });
@@ -92,6 +99,7 @@ describe("computeBillingBannerState — low credits", () => {
       graceBannerDismissedCycle: null,
       remainingPacks: 7, // 7/75 = 9.3% < 10%
       monthlyPackLimit: 75,
+      planId: "growth",
     });
     expect(s.variant).toBe("low_credits");
     expect(s.dismissible).toBe(true);
@@ -108,6 +116,7 @@ describe("computeBillingBannerState — low credits", () => {
       graceBannerDismissedCycle: null,
       remainingPacks: 1,
       monthlyPackLimit: 25,
+      planId: "starter",
     });
     expect(s.variant).toBe("low_credits");
   });
@@ -120,6 +129,7 @@ describe("computeBillingBannerState — low credits", () => {
       graceBannerDismissedCycle: null,
       remainingPacks: 8, // 8/75 = 10.67% > 10%
       monthlyPackLimit: 75,
+      planId: "growth",
     });
     expect(s.variant).toBe("none");
   });
@@ -132,6 +142,7 @@ describe("computeBillingBannerState — low credits", () => {
       graceBannerDismissedCycle: null,
       remainingPacks: 1,
       monthlyPackLimit: 75,
+      planId: "growth",
     });
     expect(s.variant).toBe("none");
   });
@@ -144,18 +155,22 @@ describe("computeBillingBannerState — low credits", () => {
       graceBannerDismissedCycle: null,
       remainingPacks: 1,
       monthlyPackLimit: 75,
+      planId: "growth",
     });
     expect(s.variant).toBe("low_credits");
   });
 
-  it("does NOT fire on free plan (no monthly limit)", () => {
+  it("does NOT fire the low_credits variant on free plan (no monthly limit)", () => {
+    // The free plan carries no monthly limit, so the ratio-based
+    // low_credits branch can't apply. A free shop WITH packs left → none.
     const s = computeBillingBannerState({
       subscriptionState: "active",
       billingCycleEndsAt: null,
       lowCreditsBannerDismissedCycle: null,
       graceBannerDismissedCycle: null,
-      remainingPacks: 0,
+      remainingPacks: 3,
       monthlyPackLimit: null,
+      planId: "free",
     });
     expect(s.variant).toBe("none");
   });
@@ -169,8 +184,81 @@ describe("computeBillingBannerState — low credits", () => {
       graceBannerDismissedCycle: null,
       remainingPacks: 0,
       monthlyPackLimit: 75,
+      planId: "growth",
     });
     expect(s.variant).toBe("subscription_expired");
+  });
+});
+
+describe("computeBillingBannerState — free-tier wall", () => {
+  it("free plan at 0 packs → free_out_of_packs (sticky, not dismissible)", () => {
+    const s = computeBillingBannerState({
+      subscriptionState: "active",
+      billingCycleEndsAt: null,
+      lowCreditsBannerDismissedCycle: null,
+      graceBannerDismissedCycle: null,
+      remainingPacks: 0,
+      monthlyPackLimit: null,
+      planId: "free",
+    });
+    expect(s.variant).toBe("free_out_of_packs");
+    expect(s.dismissible).toBe(false);
+    expect(s.forCycleEnd).toBeNull();
+  });
+
+  it("free plan with packs remaining → none", () => {
+    const s = computeBillingBannerState({
+      subscriptionState: "active",
+      billingCycleEndsAt: null,
+      lowCreditsBannerDismissedCycle: null,
+      graceBannerDismissedCycle: null,
+      remainingPacks: 2,
+      monthlyPackLimit: null,
+      planId: "free",
+    });
+    expect(s.variant).toBe("none");
+  });
+
+  it("negative remaining (over-consumed) still fires the wall", () => {
+    const s = computeBillingBannerState({
+      subscriptionState: "active",
+      billingCycleEndsAt: null,
+      lowCreditsBannerDismissedCycle: null,
+      graceBannerDismissedCycle: null,
+      remainingPacks: -1,
+      monthlyPackLimit: null,
+      planId: "free",
+    });
+    expect(s.variant).toBe("free_out_of_packs");
+  });
+
+  it("does NOT fire when remainingPacks is null (no balance row yet)", () => {
+    const s = computeBillingBannerState({
+      subscriptionState: "active",
+      billingCycleEndsAt: null,
+      lowCreditsBannerDismissedCycle: null,
+      graceBannerDismissedCycle: null,
+      remainingPacks: null,
+      monthlyPackLimit: null,
+      planId: "free",
+    });
+    expect(s.variant).toBe("none");
+  });
+
+  it("a paid plan at 0 packs does NOT get the free wall", () => {
+    // A paid shop reaching 0 is handled by low_credits/expired via its
+    // cycle; the free wall is free-only. Here monthlyPackLimit is set,
+    // so this is the low_credits path (0/75 < 10%).
+    const s = computeBillingBannerState({
+      subscriptionState: "active",
+      billingCycleEndsAt: CYCLE_END,
+      lowCreditsBannerDismissedCycle: null,
+      graceBannerDismissedCycle: null,
+      remainingPacks: 0,
+      monthlyPackLimit: 75,
+      planId: "growth",
+    });
+    expect(s.variant).toBe("low_credits");
   });
 });
 
