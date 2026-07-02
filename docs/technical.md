@@ -631,6 +631,41 @@ worker endpoint (`/api/jobs/worker`).
 5. Retry: 3 attempts, 30s × attempt backoff on failure.
 6. UI polls `GET /api/jobs/:id` every 3 seconds until terminal state.
 
+#### Stale-lock reclaim (`20260702150000_claim_jobs_stale_lock_reclaim.sql`)
+
+`claim_jobs` takes a `p_lock_timeout_seconds int default 600` (passed as
+`600` from `lib/jobs/claimJobs.ts` — 2× the worker's `maxDuration=300`).
+**Before** the normal claim loop, it reclaims any job stuck in
+`status='running'` with `locked_at` older than that window — the mark of a
+dead worker (OOM / 300s timeout / redeploy mid-run):
+
+- **attempts remaining** (`attempts < max_attempts`) → back to `queued`;
+  **exhausted** → parked `failed`. `attempts` is incremented at *claim*
+  time, so a running job already counted its attempt — reclaim does not
+  re-increment, keeping the retry bound honest (`max_attempts` distinct
+  claims, then `failed`).
+- Reclaim runs first so the zombie leaves `running` **before** the per-shop
+  `count(running)` concurrency check — the freed slot is usable by a queued
+  successor in the same call.
+- `entity_id` (the Shopify pagination cursor for `backfill_shop_orders`) is
+  preserved, so a reclaimed backfill resumes from exactly where it stalled.
+  Safe because `persistOrders` and `upsertSignalRow` are idempotent — a
+  re-run page never double-imports.
+- Each reclaim writes one append-only `audit_events` row
+  (`event_type='job_lock_reclaimed'`, `reason='lock_expired'`, job/shop ids,
+  `prior_locked_by`/`prior_locked_at`, attempt counters) for worker-death
+  observability.
+
+**Why this exists:** before this migration, `claim_jobs` only ever selected
+`queued` rows while the concurrency cap counted `running` rows — so a single
+crashed job froze in `running` and permanently occupied a shop's only slot,
+wedging its entire pipeline forever (cay-collective, 2026-07-02: an
+8-month historical-order dead band because a `backfill_shop_orders` job died
+mid-page and was never recovered). Fleet sweep for wedged shops:
+`scripts/sql/sweep-stale-running-jobs.sql`; behavior test (5 scenarios,
+transactional): `scripts/sql/test-claim-jobs-reclaim.sql`. See
+`docs/plans/stuck-backfill-job-and-gap-recovery.plan.md`.
+
 The worker route declares `export const maxDuration = 300` so that the bulk `backfill_shop_daily_metrics` handler — which loops through 90 UTC days × ~700ms/day ≈ 63s — completes inside one invocation rather than fanning out as 90 separate jobs (which would queue serially against the per-shop concurrency cap and stretch a backfill over ~3 hours).
 
 ### Dispute event flow — webhook-primary, cron reconciliation
@@ -960,6 +995,7 @@ npx supabase db query --linked --output table "select shop_domain, plan from sho
 | 006_rls_policies.sql | RLS policies (service role access) |
 | 007_jobs.sql | jobs table for async work |
 | 008_claim_jobs_rpc.sql | claim_jobs() RPC with SKIP LOCKED |
+| 20260702150000_claim_jobs_stale_lock_reclaim.sql | claim_jobs() reclaims stale `running` locks before the claim loop (adds `p_lock_timeout_seconds`) |
 | 009_portal.sql | portal_user_profiles + portal_user_shops + RLS |
 | 010_automation.sql | shop_settings + evidence_packs automation fields |
 | 011_rules_name.sql | rules.name column |
@@ -3605,7 +3641,7 @@ When adding a new table with a service-role policy, always write it as `for all 
 Supabase advisors flag `function_search_path_mutable` because an unpinned `search_path` lets a caller shadow built-in names (`now()`, table refs) via temp objects. The migration pins:
 
 - `set_updated_at`, `submission_logs_set_updated_at`, `dispute_qualifications_set_updated_at`, `reject_dispute_event_mutation`, `reject_audit_mutation`, `shopify_orders_lock_initial_risk` → `search_path = ''` (only `pg_catalog` refs)
-- `ensure_shop_settings(uuid)`, `claim_jobs(text, integer, integer)` → `search_path = public, pg_temp` (touch public tables; explicit list satisfies the lint and still resolves unqualified names)
+- `ensure_shop_settings(uuid)`, `claim_jobs(text, integer, integer, integer)` → `search_path = public, pg_temp` (touch public tables; explicit list satisfies the lint and still resolves unqualified names). Note: `20260702150000_claim_jobs_stale_lock_reclaim.sql` drops the old 3-arg `claim_jobs` and recreates it 4-arg, re-pinning this `search_path` itself.
 
 New functions should pick one of these patterns explicitly.
 
