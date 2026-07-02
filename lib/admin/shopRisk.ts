@@ -64,6 +64,13 @@ export interface ShopRiskProfile {
   totalDisputes: PeriodWithChange;
   /** Orders in the period (snapshot-fed). */
   totalOrders: PeriodWithChange;
+  /** Earliest day the daily-metrics rollup covers (YYYY-MM-DD), or
+   *  null when there are no snapshot rows. */
+  ordersCoverageStart: string | null;
+  /** True when the selected window reaches back before
+   *  `ordersCoverageStart` — i.e. order/rate numbers are partial
+   *  because the rollup doesn't span the full window. */
+  ordersCoveragePartial: boolean;
 
   /** Sum of `amount` for disputes whose normalized_status is active.
    *  Always all-time — the merchant's current at-risk dollar value
@@ -274,6 +281,13 @@ export async function getShopRiskProfile(
       lastSyncedAt = r.last_synced_at;
     }
   }
+  // Earliest snapshot day actually present. When the window reaches
+  // back before this (the daily rollup doesn't cover the full order
+  // history), order-derived numbers are partial — the UI shows a
+  // "since {date}" caveat so 2,276 isn't misread as the true total.
+  const ordersCoverageStart = snapRows[0]?.date ?? null;
+  const ordersCoveragePartial =
+    ordersCoverageStart !== null && ordersCoverageStart > fromDate;
 
   // ── Prior-window order count for trend delta ─
   let previousOrderCount: number | null = null;
@@ -494,6 +508,8 @@ export async function getShopRiskProfile(
           ? null
           : Math.round(((currentOrderCount - previousOrderCount) / previousOrderCount) * 100),
     },
+    ordersCoverageStart,
+    ordersCoveragePartial,
     amountAtRisk,
     currencyCode,
     reasonBreakdown,
