@@ -155,6 +155,21 @@ async function dispatchDisputeOpened(
       const phaseForRules =
         phase === "inquiry" || phase === "chargeback" ? phase : null;
 
+      // Historical import: a first sync discovered a dispute Shopify had
+      // already resolved (or already evidence-submitted) days/months ago.
+      // There is nothing live to act on — running the automation pipeline on
+      // a terminal dispute is wasted work and could wrongly park it for
+      // review. Burn the `new_dispute_alert_sent_at` claim (so any code path
+      // that would otherwise send the "ready for review" alert no-ops) and
+      // return without emailing. The dispute row + dispute_events ledger are
+      // already written by applyDisputeSnapshot. This is the gate that stops
+      // a first full sync of an established shop from blasting one email per
+      // historical dispute.
+      if (event.historicalImport) {
+        await claimNewDisputeAlertColumn(args, event);
+        return;
+      }
+
       // Evaluate the rule even when skipAutomation is true — the result
       // controls UI mode display, but we don't fire the pipeline.
       let resolvedMode: AutomationMode = "review";
@@ -230,16 +245,10 @@ async function sendOpenedAlertReviewVariant(
   args: DispatchArgs,
   event: DisputeTransitionEvent,
 ): Promise<void> {
-  const sb = args.client ?? getServiceClient();
-  const { data: claimed } = await sb
-    .from("disputes")
-    .update({ new_dispute_alert_sent_at: new Date().toISOString() })
-    .eq("id", event.disputeId)
-    .is("new_dispute_alert_sent_at", null)
-    .select("id, order_name");
-  if (!claimed || claimed.length === 0) return;
+  const claimed = await claimNewDisputeAlertColumn(args, event);
+  if (!claimed) return;
 
-  const orderName = (claimed[0] as { order_name?: string | null })?.order_name ?? null;
+  const orderName = claimed.orderName;
   void sendNewDisputeAlert({
     shopId: args.shopId,
     disputeId: event.disputeId,
@@ -254,12 +263,44 @@ async function sendOpenedAlertReviewVariant(
   });
 }
 
+/**
+ * Atomically claim `disputes.new_dispute_alert_sent_at` (null → now). Returns
+ * the claimed row's order_name when THIS caller won the claim, or null when
+ * the column was already set (someone else claimed, or a historical-import
+ * pre-claim). Used both to send the review-variant alert exactly once and to
+ * silently burn the claim for historical imports so no downstream deferred
+ * alert can fire.
+ */
+async function claimNewDisputeAlertColumn(
+  args: DispatchArgs,
+  event: DisputeTransitionEvent,
+): Promise<{ orderName: string | null } | null> {
+  const sb = args.client ?? getServiceClient();
+  const { data: claimed } = await sb
+    .from("disputes")
+    .update({ new_dispute_alert_sent_at: new Date().toISOString() })
+    .eq("id", event.disputeId)
+    .is("new_dispute_alert_sent_at", null)
+    .select("id, order_name");
+  if (!claimed || claimed.length === 0) return null;
+  return {
+    orderName:
+      (claimed[0] as { order_name?: string | null })?.order_name ?? null,
+  };
+}
+
 async function dispatchSubmissionConfirmed(
   args: DispatchArgs,
   event: DisputeTransitionEvent,
   summary: DispatchSummary,
 ): Promise<void> {
   summary.effectsAttempted++;
+  // Historical import: evidence was submitted before we ever saw the dispute.
+  // Nothing to notify the merchant about — skip the email.
+  if (event.historicalImport) {
+    summary.effectsSkipped++;
+    return;
+  }
   const effectName = "submission_confirmed_alert";
   const eventKey = keyForEffect(event, effectName);
 
@@ -305,6 +346,13 @@ async function dispatchOutcomeDetected(
   summary: DispatchSummary,
 ): Promise<void> {
   summary.effectsAttempted++;
+  // Historical import: the dispute resolved before we ever saw it. Discovering
+  // a years-old won/lost dispute on a first sync must NOT email the merchant
+  // "you won / this chargeback was lost" — that's the flood this gate stops.
+  if (event.historicalImport) {
+    summary.effectsSkipped++;
+    return;
+  }
   const effectName = "outcome_posted_alert";
   const eventKey = keyForEffect(event, effectName);
   const variant = outcomeVariantFor(event.context.finalOutcome);

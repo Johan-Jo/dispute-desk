@@ -708,9 +708,17 @@ Both are required; neither is sufficient alone. Delivery dedup alone fails when 
 
 - `DISPUTE_OPENED` → `evaluateRules` → `runAutomationPipeline` → maybe send review alert (deferred when a build was enqueued).
 - `SUBMISSION_CONFIRMED` → `claimAndSendDeferredNewDisputeAlert` (auto variant).
-- `STATUS_CHANGED` / `OUTCOME_DETECTED` / `DUE_DATE_CHANGED` / `DISPUTE_CLOSED` → no per-event downstream effect today; the ledger entry from the diff engine is sufficient.
+- `OUTCOME_DETECTED` → `sendOutcomePostedAlert` (won / lost / accepted variant).
+- `STATUS_CHANGED` / `DUE_DATE_CHANGED` / `DISPUTE_CLOSED` → no per-event downstream effect today; the ledger entry from the diff engine is sufficient. (`DISPUTE_CLOSED` always fires alongside `OUTCOME_DETECTED`, so the email is keyed off the latter to avoid double-firing.)
 
 Each effect is wrapped in `withEffectDedup`, which writes the `audit_events` claim row first. Unique-violation (Postgres 23505) → effect skipped (`already_applied`). Otherwise the effect runs.
+
+**Historical-import email suppression (first-sync flood guard).** When a shop's dispute history is synced for the first time, `applyDisputeSnapshot` inserts every historical dispute as brand-new. For disputes Shopify had *already resolved* (terminal status at insert) or *already evidence-submitted*, the created-branch events are flagged `historicalImport: true` (set in `applyDisputeSnapshot`). The dispatcher then:
+
+- `DISPUTE_OPENED` (historical) → burns the `new_dispute_alert_sent_at` claim and returns **without** running the pipeline or sending the "ready for review" alert.
+- `OUTCOME_DETECTED` / `SUBMISSION_CONFIRMED` (historical) → skipped, **no** "you won / lost / we submitted" email.
+
+Rationale: discovering a dispute that closed months ago is not a live transition — the merchant must not receive one email per historical dispute. Regression: 2026-07-02 `cay-collective` first full sync imported 65 historical disputes (61 already terminal) and blasted ~100 outcome + review emails. Pinned by `disputeEffectsDispatcher.test.ts` ("historical-import …" cases) + `applyDisputeSnapshot.test.ts` (flag-set assertions). A genuinely live dispute always opens non-terminal/unsubmitted first, so `historicalImport` is `false` on the real-time webhook path and normal alerts still fire.
 
 **Safe payload excerpts:** `webhook_events.payload_excerpt` stores only allowlisted fields from `lib/webhooks/eventIdempotency.ts#buildSafePayloadExcerpt` (id, status, reason, amounts, dates). The raw body is never persisted.
 

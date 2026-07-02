@@ -31,6 +31,9 @@ vi.mock("@/lib/email/sendNewDisputeAlert", () => ({
   sendNewDisputeAlert: vi.fn(),
   claimAndSendDeferredNewDisputeAlert: vi.fn(),
 }));
+vi.mock("@/lib/email/sendOutcomePostedAlert", () => ({
+  sendOutcomePostedAlert: vi.fn(),
+}));
 
 import { dispatchDisputeEffects } from "@/lib/disputes/disputeEffectsDispatcher";
 import { getServiceClient } from "@/lib/supabase/server";
@@ -40,6 +43,7 @@ import {
   sendNewDisputeAlert,
   claimAndSendDeferredNewDisputeAlert,
 } from "@/lib/email/sendNewDisputeAlert";
+import { sendOutcomePostedAlert } from "@/lib/email/sendOutcomePostedAlert";
 import type {
   ApplyDisputeSnapshotResult,
   DisputeTransitionEvent,
@@ -50,6 +54,7 @@ const mockRunPipeline = vi.mocked(runAutomationPipeline);
 const mockEvaluateRules = vi.mocked(evaluateRules);
 const mockSendAlert = vi.mocked(sendNewDisputeAlert);
 const mockClaimDeferred = vi.mocked(claimAndSendDeferredNewDisputeAlert);
+const mockSendOutcome = vi.mocked(sendOutcomePostedAlert);
 
 interface ClientSetup {
   auditInsertResolved?: { error: { code?: string; message?: string } | null };
@@ -285,6 +290,123 @@ describe("dispatchDisputeEffects", () => {
 
     expect(mockClaimDeferred).toHaveBeenCalledWith("dispute-1", "auto");
     expect(summary.errors.join("|")).toMatch(/rules\(dispute-1\)/);
+  });
+
+  // ── Historical-import suppression (first-sync email-flood guard) ────────
+  //
+  // Regression for the cay-collective incident (2026-07-02): the first full
+  // dispute sync of an established shop imported 65 historical disputes, 61
+  // already terminal, and each fired a "you won / this chargeback was lost"
+  // (outcome) + "ready for your review" (opened) email. applyDisputeSnapshot
+  // now flags create-branch events for already-resolved disputes as
+  // historicalImport; the dispatcher must NOT email for them.
+
+  it("historical-import DISPUTE_OPENED → burns the alert claim, no pipeline, no email", async () => {
+    const { client } = buildClient({});
+    mockGetServiceClient.mockReturnValue(client);
+
+    const summary = await dispatchDisputeEffects({
+      shopId: "shop-1",
+      result: appliedResult([{ ...OPENED_EVENT, historicalImport: true }]),
+      source: "cron",
+      client,
+    });
+
+    // Effect still "ran" (claimed the dedup row) but no work leaked out.
+    expect(summary.effectsRan).toBe(1);
+    expect(mockEvaluateRules).not.toHaveBeenCalled();
+    expect(mockRunPipeline).not.toHaveBeenCalled();
+    expect(mockSendAlert).not.toHaveBeenCalled();
+    expect(mockClaimDeferred).not.toHaveBeenCalled();
+  });
+
+  it("historical-import OUTCOME_DETECTED → no 'you won/lost' email", async () => {
+    const { client } = buildClient({});
+    mockGetServiceClient.mockReturnValue(client);
+
+    const summary = await dispatchDisputeEffects({
+      shopId: "shop-1",
+      result: appliedResult([
+        {
+          type: "OUTCOME_DETECTED",
+          disputeId: "dispute-1",
+          shopId: "shop-1",
+          eventAt: "2024-08-27T04:29:52Z",
+          eventKey: "dispute-1:OUTCOME_DETECTED:won",
+          newStatus: "won",
+          context: { ...OPENED_EVENT.context, finalOutcome: "won" },
+          historicalImport: true,
+        },
+      ]),
+      source: "cron",
+      client,
+    });
+
+    expect(summary.effectsSkipped).toBe(1);
+    expect(mockSendOutcome).not.toHaveBeenCalled();
+  });
+
+  it("historical-import SUBMISSION_CONFIRMED → no deferred auto alert", async () => {
+    const { client } = buildClient({});
+    mockGetServiceClient.mockReturnValue(client);
+
+    await dispatchDisputeEffects({
+      shopId: "shop-1",
+      result: appliedResult([
+        { ...SUBMISSION_CONFIRMED_EVENT, historicalImport: true },
+      ]),
+      source: "cron",
+      client,
+    });
+
+    expect(mockClaimDeferred).not.toHaveBeenCalled();
+  });
+
+  it("NON-historical OUTCOME_DETECTED still emails (guard is scoped to imports)", async () => {
+    // A real, live outcome transition on an already-known dispute must keep
+    // notifying — the dispatcher looks up order_name then sends the alert.
+    const outcomeClient = {
+      from: (table: string) => {
+        if (table === "audit_events") {
+          return { insert: vi.fn().mockResolvedValue({ error: null }) };
+        }
+        if (table === "disputes") {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi
+                  .fn()
+                  .mockResolvedValue({ data: { order_name: "#3018" }, error: null }),
+              }),
+            }),
+          };
+        }
+        throw new Error(`unexpected table: ${table}`);
+      },
+    } as unknown as never;
+    mockGetServiceClient.mockReturnValue(outcomeClient);
+
+    await dispatchDisputeEffects({
+      shopId: "shop-1",
+      result: appliedResult([
+        {
+          type: "OUTCOME_DETECTED",
+          disputeId: "dispute-1",
+          shopId: "shop-1",
+          eventAt: "2026-07-02T13:00:00Z",
+          eventKey: "dispute-1:OUTCOME_DETECTED:won",
+          newStatus: "won",
+          context: { ...OPENED_EVENT.context, finalOutcome: "won" },
+          // historicalImport intentionally omitted → live transition.
+        },
+      ]),
+      source: "webhook",
+      client: outcomeClient,
+    });
+
+    expect(mockSendOutcome).toHaveBeenCalledWith(
+      expect.objectContaining({ disputeId: "dispute-1", outcome: "won" }),
+    );
   });
 
   it("skipAutomation=true skips runAutomationPipeline but STILL evaluates rules + sends review alert (matches legacy syncDisputes triggerAutomation=false behaviour)", async () => {
