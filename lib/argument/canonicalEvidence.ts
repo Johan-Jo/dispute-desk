@@ -42,6 +42,9 @@ export type SignalId =
   | "policy_cancellation"
   | "duplicate_explanation"
   | "supplementary_documents"
+  // Refund record — proof a refund was actually issued for the order.
+  // Decisive for CREDIT_NOT_PROCESSED ("you didn't refund me") disputes.
+  | "refund"
   // Pre-authorization fraud screening (Phase 1 of fraud-risk plan).
   // Distinct from `payment_auth` so dedup doesn't collapse it into
   // AVS/CVV — the screening is a separate signal that complements,
@@ -255,6 +258,22 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     excludedFromStrength: false,
     fileEligible: true,
     note: "Strong when payload.acceptedAtCheckout === true with a payload.acceptanceTimestamp linking to the order (rubric #8). Otherwise supporting (text only).",
+  },
+  refund_record: {
+    signalId: "refund",
+    labelKey: "disputes.signalLabel.refund_record",
+    category: "moderate",
+    supportingOnly: false,
+    excludedFromStrength: false,
+    note: "Proof a refund was actually issued on the order. Strong when payload.refundStatus === 'processed' with a refunded amount > 0 — decisive for CREDIT_NOT_PROCESSED ('you didn't refund me') disputes. Moderate otherwise. Distinct from refund_policy (the policy text) — this is the transaction record.",
+  },
+  no_return_initiated: {
+    signalId: "refund",
+    labelKey: "disputes.signalLabel.no_return_initiated",
+    category: "moderate",
+    supportingOnly: false,
+    excludedFromStrength: false,
+    note: "Order-level returnStatus === NO_RETURN — the customer never initiated a return. The grounded basis for 'no refund was owed' on a CREDIT_NOT_PROCESSED dispute with no refund issued. Moderate: it supports the not-entitled argument but is not decisive alone (a merchant may owe a refund without a return). Shares signalId 'refund' so it does not double-count against refund_record. The collector only emits this when NO_RETURN AND no refund was issued — never alongside a processed refund (that would be self-contradictory).",
   },
   shipping_policy: {
     signalId: "policy_shipping",
@@ -516,6 +535,24 @@ export function categorizeEvidenceField(
   ) {
     if (p.acceptedAtCheckout === true && p.acceptanceTimestamp) return "strong";
     return "supporting";
+  }
+
+  // ── refund_record ──
+  // A refund actually issued on the order. Strong when the refund is
+  // processed for a positive amount — this is the decisive fact for a
+  // "credit not processed" dispute (the customer claims no refund; the
+  // record proves otherwise). A pending/zero refund is not decisive.
+  if (fieldKey === "refund_record") {
+    const amount =
+      typeof p.amount === "number"
+        ? p.amount
+        : typeof p.amount === "string"
+          ? Number.parseFloat(p.amount)
+          : 0;
+    if (p.refundStatus === "processed" && Number.isFinite(amount) && amount > 0) {
+      return "strong";
+    }
+    return "moderate";
   }
 
   // Unknown conditional field — fall back to the default category.

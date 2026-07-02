@@ -91,12 +91,30 @@ export async function collectOrderEvidence(
   ];
 
   if (order.refunds.length > 0) {
+    // A refund actually issued on the order is the decisive evidence for a
+    // CREDIT_NOT_PROCESSED ("you didn't refund me") dispute. Emit it as the
+    // `refund_record` field so it becomes a citable fact — categorized
+    // strong when a positive amount was processed. `refundStatus:
+    // "processed"` is the load-bearing key the refund_processed predicate
+    // matches on (a refund that exists on the order IS processed; Shopify
+    // doesn't expose pending refunds here). The latest refund carries the
+    // amount/date the narrative cites; totalRefunded is the order total.
+    const totalRefunded = Number.parseFloat(
+      order.totalRefundedSet.shopMoney.amount,
+    );
+    const latest = [...order.refunds].sort((a, b) =>
+      (b.createdAt ?? "").localeCompare(a.createdAt ?? ""),
+    )[0];
     sections.push({
       type: "order",
       labelToken: { key: "packs.section.refundHistory" },
       source: "shopify_order",
-      fieldsProvided: [],
+      fieldsProvided: totalRefunded > 0 ? ["refund_record"] : [],
       data: {
+        refundStatus: totalRefunded > 0 ? "processed" : "none",
+        amount: order.totalRefundedSet.shopMoney.amount,
+        currency: order.totalRefundedSet.shopMoney.currencyCode,
+        refundedAt: latest?.createdAt ?? null,
         refunds: order.refunds.map((r) => ({
           id: r.id,
           createdAt: r.createdAt,
@@ -104,6 +122,29 @@ export async function collectOrderEvidence(
           amount: r.totalRefundedSet.shopMoney.amount,
           currency: r.totalRefundedSet.shopMoney.currencyCode,
         })),
+      },
+    });
+  }
+
+  // No-return-initiated evidence. For a CREDIT_NOT_PROCESSED dispute where
+  // NO refund was issued, `returnStatus === NO_RETURN` is the grounded basis
+  // for "no refund was owed — the customer never initiated a return." Only
+  // emitted when BOTH conditions hold: emitting it alongside a processed
+  // refund would be self-contradictory ("we didn't refund because no return"
+  // next to "we refunded"), and asserting it when a return IS in flight would
+  // be false. Verified live 2026-07: Order.returnStatus is an Admin-2026-01
+  // enum (NO_RETURN | RETURN_REQUESTED | IN_PROGRESS | RETURNED | …).
+  const totalRefundedAll = Number.parseFloat(
+    order.totalRefundedSet.shopMoney.amount,
+  );
+  if (order.returnStatus === "NO_RETURN" && !(totalRefundedAll > 0)) {
+    sections.push({
+      type: "order",
+      labelToken: { key: "packs.section.noReturnInitiated" },
+      source: "shopify_order",
+      fieldsProvided: ["no_return_initiated"],
+      data: {
+        returnStatus: order.returnStatus,
       },
     });
   }

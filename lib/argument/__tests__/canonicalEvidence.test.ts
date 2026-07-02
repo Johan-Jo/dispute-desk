@@ -483,6 +483,12 @@ describe("fileEligible static flag (Phase 1 of conditional file evidence layer)"
     // Pre-authorization fraud screening is a data-only signal — its
     // payload is a list of fact strings, not file-shaped evidence.
     "fraud_risk_screening",
+    // Refund record is a transaction record (status/amount/date), not a
+    // file-shaped upload — it is cited as a fact, not attached as a file.
+    "refund_record",
+    // No-return-initiated is a status flag (returnStatus=NO_RETURN), not a
+    // file-shaped upload.
+    "no_return_initiated",
   ];
 
   it("eligible fields opt in via fileEligible: true", () => {

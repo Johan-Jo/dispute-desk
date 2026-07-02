@@ -1564,8 +1564,20 @@ Classifier: [`lib/disputes/paymentContext.ts`](../lib/disputes/paymentContext.ts
 - **Completeness** already fails safe (card-only `required_if_card_payment` fields resolve to `unavailable`, never `missing`/blocking for a `hasCardPayment=false` order) — pinned by Klarna lock tests in `completeness.test.ts`.
 - **Admin** (`/admin/disputes/[id]`) shows Payment method, Card network (`not applicable` for BNPL), network reason code, and the skipped-section reasons (via the `includeInternal` branch of `/api/disputes/[id]/timeline`).
 
+### Refund record evidence (credit-not-processed win path)
+
+Data-driven addition (mining cay-collective's real outcomes: refund-issued CREDIT_NOT_PROCESSED disputes won **24/24**). The **`refund_record`** evidence field proves a refund was actually issued on the order — decisive when the customer claims "you didn't refund me."
+
+Chain: `orderSource.ts` emits a refund section with `fieldsProvided: ["refund_record"]` + `data.refundStatus: "processed"` (+ amount/currency/date) when `totalRefundedSet > 0` → `factClassifier` (`categoryForField`/`extractValue`) makes a `refund_record` fact, **strong** when `refundStatus === "processed"` with amount > 0 (`categorizeEvidenceField` in `lib/argument/canonicalEvidence.ts`, signalId `refund`) → the `refund_processed` predicate matches `value.refundStatus === "processed"` → the `credit_not_processed_refund_record` **winning strategy** fires and the narrative cites the concrete refund. Previously the refund was fetched but emitted with `fieldsProvided: []`, so no fact existed, the predicate never fired, and the module rule forbade citing an unproven refund — the decisive evidence was dropped. Not `fileEligible` (a transaction record cited as a fact, not a file). i18n label: `disputes.signalLabel.refund_record` (all 6 locales).
+
+### No-return-initiated evidence (credit-not-processed, no-refund branch)
+
+The complement to `refund_record`: when a CREDIT_NOT_PROCESSED dispute has **no refund issued**, the grounded "no refund was owed" argument is *"the customer never initiated a return."* The **`no_return_initiated`** evidence field carries this. Structured signal — no policy comprehension, no LLM, no merchant checkbox: it reads `Order.returnStatus` (Admin 2026-01 enum: `NO_RETURN | RETURN_REQUESTED | IN_PROGRESS | RETURNED | INSPECTION_COMPLETE | RETURN_FAILED`; verified live present + populated 2026-07).
+
+Chain: `orderSource.ts` emits it (`fieldsProvided: ["no_return_initiated"]`, signalId `refund`) **only when `returnStatus === "NO_RETURN"` AND no refund was issued** — never alongside a processed refund (self-contradictory) → `factClassifier` makes a `no_return_initiated` fact (category `no_return_initiated`, moderate) → the `return_not_initiated` predicate → the `credit_not_processed_no_return` strategy frames "no refund owed — customer never returned the goods," tied to the refund/return policy fact when present. Mutually exclusive with `credit_not_processed_refund_record` by construction. **Scope honesty:** this is an *argument-quality* improvement (a grounded fact instead of vague policy language), not an outcome predictor — in cay-collective's data the no-refund+NO_RETURN bucket was already ~86% won and `NO_RETURN` did not separate the wins from the one loss. i18n: `disputes.signalLabel.no_return_initiated` + `packs.section.noReturnInitiated` (all 6 locales).
+
 ### Not done / follow-ups
-No `disputes.payment_method` column (live pack-time classification only; `shopify_orders.payment_method` covers analytics). Klarna/Affirm's exact evidence spec is unverified — refine narrative modules later by mining real won/lost outcomes. No BNPL loss-prediction model.
+No `disputes.payment_method` column (live pack-time classification only; `shopify_orders.payment_method` covers analytics). Klarna/Affirm's exact evidence spec is unverified — refine narrative modules later by mining real won/lost outcomes. No BNPL loss-prediction model. **Data-backed candidate (from outcome mining): Klarna CREDIT_NOT_PROCESSED with refunded == 0 is a likely fatal-loss pattern (can't win "not refunded" with no refund) — consider routing to the fatal-loss gate.**
 
 ## CE 3.0 Qualification Engine (LSE-1)
 
