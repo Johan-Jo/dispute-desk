@@ -64,6 +64,16 @@ export interface DisputeTransitionEvent {
   /** Convenience: status when the event implies one. */
   oldStatus?: string | null;
   newStatus?: string | null;
+  /**
+   * True when this event was produced while first-importing a dispute that
+   * Shopify had ALREADY resolved (terminal status at insert time) or already
+   * marked evidence-submitted. Historical backfill — the dispute did not just
+   * transition, we merely discovered it. The dispatcher suppresses merchant
+   * emails for these so a first sync of an established shop doesn't blast one
+   * "you won / ready for review" email per historical dispute. Ledger rows and
+   * the pipeline row-work still run.
+   */
+  historicalImport?: boolean;
   /** Snapshot fields the dispatcher needs to fire downstream effects. */
   context: {
     reason: string | null;
@@ -345,7 +355,16 @@ export async function applyDisputeSnapshot(
   };
 
   if (!existing) {
-    // Brand-new dispute.
+    // Brand-new dispute. If Shopify already reports it as terminal (won /
+    // lost / accepted / refunded) or already evidence-submitted at first
+    // insert, this is a HISTORICAL import, not a live transition — we're
+    // discovering a dispute that resolved days/months ago. Flag every event
+    // so the dispatcher suppresses merchant emails (the row + ledger still
+    // land). This is what stops a first full sync of an established shop from
+    // sending one "you won / ready for review" email per historical dispute.
+    const isHistoricalImport =
+      (newStatus != null && TERMINAL_STATUSES.has(newStatus)) ||
+      Boolean(snapshot.evidenceSentOn);
     const openedAt = snapshot.initiatedAt ?? nowIso;
     void emitDisputeEvent({
       disputeId,
@@ -371,6 +390,7 @@ export async function applyDisputeSnapshot(
       eventKey: `${disputeId}:DISPUTE_OPENED`,
       newStatus,
       context: ctxBase,
+      historicalImport: isHistoricalImport,
     });
 
     if (newStatus && TERMINAL_STATUSES.has(newStatus)) {
@@ -398,6 +418,7 @@ export async function applyDisputeSnapshot(
         eventKey: `${disputeId}:OUTCOME_DETECTED:${outcome}`,
         newStatus,
         context: { ...ctxBase, finalOutcome: outcome },
+        historicalImport: isHistoricalImport,
       });
     }
 
@@ -425,6 +446,7 @@ export async function applyDisputeSnapshot(
         eventAt: snapshot.evidenceSentOn,
         eventKey: `${disputeId}:SUBMISSION_CONFIRMED:${snapshot.evidenceSentOn}`,
         context: ctxBase,
+        historicalImport: isHistoricalImport,
       });
     }
 
