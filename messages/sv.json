@@ -687,7 +687,9 @@
       "policy_cancellation": "Avbokningspolicy",
       "duplicate_explanation": "Förklaring av dubbeldebitering",
       "supplementary_documents": "Kompletterande dokument",
-      "fraud_screening": "Bedrägerikontroll före auktorisering"
+      "fraud_screening": "Bedrägerikontroll före auktorisering",
+      "refund_record": "Återbetalningsbevis",
+      "no_return_initiated": "Ingen retur påbörjad"
     },
     "reasonFamilyLabel": {
       "fraud": "bedrägeri",
@@ -1660,6 +1662,7 @@
     "section": {
       "order": "Beställning {orderName}",
       "refundHistory": "Chargebackhistorik",
+      "noReturnInitiated": "Ingen retur påbörjad",
       "customerActivityLog": "Kundens aktivitetslogg",
       "customerAccountDetails": "Kundkontoinformation",
       "shopifyProtect": "Shopify Protect-täckning",
