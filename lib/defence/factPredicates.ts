@@ -225,6 +225,13 @@ export const FACT_PREDICATES: Record<FactPredicateId, FactPredicate> = {
       hasCategoryWithValueEquals(facts, ["refund_record"], "refundStatus", "processed"),
   },
 
+  return_not_initiated: {
+    id: "return_not_initiated",
+    description:
+      "no_return_initiated fact present (order returnStatus=NO_RETURN, no refund) — grounds the 'no refund was owed, customer never returned the item' argument",
+    evaluate: (facts) => hasCategory(facts, ["no_return_initiated"]),
+  },
+
   subscription_terms_present: {
     id: "subscription_terms_present",
     description: "subscription_terms category present",

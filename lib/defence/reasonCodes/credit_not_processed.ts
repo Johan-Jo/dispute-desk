@@ -18,9 +18,11 @@ export const credit_not_processed: ReasonCodeGuidance = {
     "Prioritise: refund status, refund timeline, cancellation terms, partial refund records, store credit records, customer communication about the refund.",
     "Do NOT claim a refund was issued unless an approved refund_record fact carries refundStatus='processed'.",
     "If no refund was owed under policy, cite the approved refund policy fact (acceptedAtCheckout=true) explicitly.",
+    "When a no_return_initiated fact is present (no refund was issued AND the customer never initiated a return), you may argue the refund was not owed because the goods were never returned — cite the return status factually.",
   ].join("\n"),
   prioritize: [
     "refund_record",
+    "no_return_initiated",
     "policy_refund",
     "policy_cancellation",
     "customer_communication",
@@ -39,6 +41,7 @@ export const credit_not_processed: ReasonCodeGuidance = {
   criticalCategories: ["refund_record"],
   allowedFactCategories: [
     "refund_record",
+    "no_return_initiated",
     "policy_refund",
     "policy_cancellation",
     "policy_acceptance",

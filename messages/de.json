@@ -1276,7 +1276,9 @@
       "policy_cancellation": "Stornierungsrichtlinie",
       "duplicate_explanation": "Erklärung zur Doppelbelastung",
       "supplementary_documents": "Ergänzende Unterlagen",
-      "fraud_screening": "Betrugsprüfung vor Autorisierung"
+      "fraud_screening": "Betrugsprüfung vor Autorisierung",
+      "refund_record": "Rückerstattungsnachweis",
+      "no_return_initiated": "Keine Rücksendung veranlasst"
     },
     "decisiveHint": {
       "fraud": "Lieferbestätigung, Unterschrift bei Empfang oder Geräte-/Sitzungskonsistenz",
@@ -1660,6 +1662,7 @@
     "section": {
       "order": "Bestellung {orderName}",
       "refundHistory": "Erstattungsverlauf",
+      "noReturnInitiated": "Keine Rücksendung veranlasst",
       "customerActivityLog": "Kundenaktivitätsprotokoll",
       "customerAccountDetails": "Kundenkontodetails",
       "shopifyProtect": "Shopify-Protect-Abdeckung",

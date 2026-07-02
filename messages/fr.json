@@ -1276,7 +1276,9 @@
       "policy_cancellation": "Politique d'annulation",
       "duplicate_explanation": "Explication du double débit",
       "supplementary_documents": "Documents complémentaires",
-      "fraud_screening": "Contrôle anti-fraude pré-autorisation"
+      "fraud_screening": "Contrôle anti-fraude pré-autorisation",
+      "refund_record": "Preuve de remboursement",
+      "no_return_initiated": "Aucun retour initié"
     },
     "decisiveHint": {
       "fraud": "confirmation de livraison, signature au dossier ou cohérence appareil/session",
@@ -1660,6 +1662,7 @@
     "section": {
       "order": "Commande {orderName}",
       "refundHistory": "Historique des remboursements",
+      "noReturnInitiated": "Aucun retour initié",
       "customerActivityLog": "Journal d'activité du client",
       "customerAccountDetails": "Détails du compte client",
       "shopifyProtect": "Couverture Shopify Protect",
