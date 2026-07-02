@@ -28,9 +28,9 @@ import {
   type ChargebackRateResult,
 } from "@/lib/disputes/chargebackRate";
 import {
-  DISPUTE_REASON_FAMILIES,
-  type AllDisputeReasonCode,
-} from "@/lib/rules/disputeReasons";
+  classifyPaymentMethod,
+  classifyReasonFamily,
+} from "./shopRiskClassify";
 import {
   monthlyRevenueForPlan,
   totalInvoicedForPeriod,
@@ -71,11 +71,32 @@ export interface ShopRiskProfile {
   amountAtRisk: number;
   currencyCode: string;
 
-  /** Reason mix in the period. */
+  /** Reason mix in the period, grouped into six curated families.
+   *  Previously only fraud / fulfillment / other — which collapsed
+   *  refund, subscription, billing, etc. into an unhelpful "other"
+   *  bucket. Refund (CREDIT_NOT_PROCESSED) in particular is a large,
+   *  nameable category for BNPL-heavy shops. */
   reasonBreakdown: {
-    fraud: number;
-    fulfillment: number; // "Item not received" + "Quality"
+    fraud: number; // "Fraud" + "Authorization"
+    fulfillment: number; // "Item not received" (Fulfillment)
+    refund: number; // "Refund" (CREDIT_NOT_PROCESSED)
+    quality: number; // "Quality" (item not as described)
+    subscription: number; // "Subscription"
+    other: number; // General / Billing / Technical / Compliance / unknown
+  };
+  /** Dispute mix by payment-method family, joined from
+   *  `shopify_orders.payment_method` via `disputes.order_gid`.
+   *  `unmatched` = disputes whose order isn't in `shopify_orders`
+   *  yet (backfill gap) — surfaced so the split isn't silently
+   *  under-counted. */
+  paymentMethodBreakdown: {
+    card: number;
+    apple_pay: number;
+    google_pay: number;
+    shop_pay: number;
+    klarna: number;
     other: number;
+    unmatched: number;
   };
   /** Outcome mix in the period. `pending` = open / no terminal
    *  outcome yet. */
@@ -108,21 +129,6 @@ export interface ShopRiskProfile {
   /** Approximate total invoiced over the window (monthly × months
    *  in period). Marked `isApproximate: true` — see shopBilling. */
   totalInvoiced: InvoicedAmount;
-}
-
-const FRAUD_FAMILIES = new Set(["Fraud", "Authorization"]);
-const FULFILLMENT_FAMILIES = new Set(["Fulfillment", "Quality"]);
-
-function classifyReasonFamily(
-  reason: string | null | undefined,
-): "fraud" | "fulfillment" | "other" {
-  if (!reason) return "other";
-  const code = reason.toUpperCase().replace(/\s+/g, "_") as AllDisputeReasonCode;
-  const family = DISPUTE_REASON_FAMILIES[code];
-  if (!family) return "other";
-  if (FRAUD_FAMILIES.has(family)) return "fraud";
-  if (FULFILLMENT_FAMILIES.has(family)) return "fulfillment";
-  return "other";
 }
 
 const ACTIVE_NORMALIZED = new Set([
@@ -197,6 +203,7 @@ interface DisputeRow {
   final_outcome: string | null;
   normalized_status: string | null;
   initiated_at: string | null;
+  order_gid: string | null;
 }
 
 export async function getShopRiskProfile(
@@ -235,7 +242,14 @@ export async function getShopRiskProfile(
     priorFromDate = windowStartDate(priorTo, windowDays);
   }
 
-  // ── Chargeback rate (re-uses the existing computeChargebackRate) ─
+  // ── Chargeback rate (denominator + freshness from the snapshot) ─
+  // We keep the snapshot for the order denominator, coverage and
+  // sync freshness, but the numerator is overridden below with the
+  // real chargeback count from the `disputes` table: the snapshot's
+  // `chargeback_count` column is unreliable/unpopulated for many
+  // shops (it read 0 while the shop had live disputes), which made
+  // the rate falsely "0.00% — Healthy". Disputes are the source of
+  // truth for "did a chargeback happen".
   const rate = await computeChargebackRate({
     shopId,
     fromDate: windowDays === null ? undefined : fromDate,
@@ -279,7 +293,7 @@ export async function getShopRiskProfile(
   // ── Disputes for the current window + prior window ─
   const { data: dispRowsRaw } = await sb
     .from("disputes")
-    .select("id, amount, currency_code, reason, phase, final_outcome, normalized_status, initiated_at")
+    .select("id, amount, currency_code, reason, phase, final_outcome, normalized_status, initiated_at, order_gid")
     .eq("shop_id", shopId)
     .gte("initiated_at", `${fromDate}T00:00:00Z`);
   const disputes = (dispRowsRaw ?? []) as DisputeRow[];
@@ -296,12 +310,22 @@ export async function getShopRiskProfile(
   }
 
   // ── Aggregate the current-window dispute set ─
-  const reasonBreakdown = { fraud: 0, fulfillment: 0, other: 0 };
+  const reasonBreakdown = {
+    fraud: 0,
+    fulfillment: 0,
+    refund: 0,
+    quality: 0,
+    subscription: 0,
+    other: 0,
+  };
   const outcomeBreakdown = { won: 0, lost: 0, pending: 0 };
   let inquiryCount = 0;
   let chargebackCount = 0;
   let amountAtRisk = 0;
   const currencyCounts: Record<string, number> = {};
+  // order_gid of every in-window dispute — used to join
+  // `shopify_orders.payment_method` for the method breakdown.
+  const windowOrderGids: string[] = [];
 
   for (const d of disputes) {
     const initiated = String(d.initiated_at ?? "");
@@ -328,10 +352,76 @@ export async function getShopRiskProfile(
 
     const c = String(d.currency_code ?? "USD");
     currencyCounts[c] = (currencyCounts[c] ?? 0) + 1;
+
+    if (d.order_gid) windowOrderGids.push(d.order_gid);
   }
 
   const totalDisputeCount =
-    reasonBreakdown.fraud + reasonBreakdown.fulfillment + reasonBreakdown.other;
+    reasonBreakdown.fraud +
+    reasonBreakdown.fulfillment +
+    reasonBreakdown.refund +
+    reasonBreakdown.quality +
+    reasonBreakdown.subscription +
+    reasonBreakdown.other;
+
+  // ── Payment-method breakdown (join shopify_orders.payment_method) ─
+  // The disputes table has no payment method; it lives on
+  // shopify_orders, joined by order_gid == shopify_order_id (the GID).
+  // Disputes whose order isn't in shopify_orders (backfill gap) count
+  // as `unmatched` so the split is honest rather than under-counted.
+  const paymentMethodBreakdown = {
+    card: 0,
+    apple_pay: 0,
+    google_pay: 0,
+    shop_pay: 0,
+    klarna: 0,
+    other: 0,
+    unmatched: 0,
+  };
+  if (windowOrderGids.length > 0) {
+    const methodByGid = new Map<string, string | null>();
+    // Chunk the IN() list to stay well within URL/statement limits.
+    const CHUNK = 200;
+    for (let i = 0; i < windowOrderGids.length; i += CHUNK) {
+      const chunk = windowOrderGids.slice(i, i + CHUNK);
+      const { data: orderRows } = await sb
+        .from("shopify_orders")
+        .select("shopify_order_id, payment_method")
+        .eq("shop_id", shopId)
+        .in("shopify_order_id", chunk);
+      for (const r of (orderRows ?? []) as Array<{
+        shopify_order_id: string;
+        payment_method: string | null;
+      }>) {
+        methodByGid.set(r.shopify_order_id, r.payment_method);
+      }
+    }
+    for (const gid of windowOrderGids) {
+      if (!methodByGid.has(gid)) {
+        paymentMethodBreakdown.unmatched += 1;
+        continue;
+      }
+      paymentMethodBreakdown[classifyPaymentMethod(methodByGid.get(gid))] += 1;
+    }
+  }
+
+  // ── Override the chargeback-rate numerator with real disputes ─
+  // Numerator = chargeback-phase disputes in the window (inquiries
+  // excluded, matching the snapshot's intended semantics). Denominator
+  // and freshness stay from the snapshot. When the snapshot has no
+  // order denominator we leave the rate null rather than divide by 0.
+  const correctedNumerator = chargebackCount;
+  const correctedRate =
+    rate.available && rate.denominator > 0
+      ? Math.round((correctedNumerator / rate.denominator) * 1000) / 10
+      : null;
+  rate.numerator = correctedNumerator;
+  rate.rate = correctedRate;
+  // rateChange from the snapshot is no longer meaningful once the
+  // numerator source changes; null it so the UI doesn't show a delta
+  // computed from a different numerator basis.
+  rate.rateChange = null;
+
   const winLossDenom = outcomeBreakdown.won + outcomeBreakdown.lost;
   const winRate =
     winLossDenom > 0 ? Math.round((outcomeBreakdown.won / winLossDenom) * 100) : 0;
@@ -407,6 +497,7 @@ export async function getShopRiskProfile(
     amountAtRisk,
     currencyCode,
     reasonBreakdown,
+    paymentMethodBreakdown,
     outcomeBreakdown,
     winRate,
     inquiryCount,

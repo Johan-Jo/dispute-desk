@@ -9,12 +9,16 @@
  *   - Snapshot row: 6 cards (Chargeback rate · Total disputes ·
  *     Total orders · Amount at risk · Total invoiced · Win rate).
  *   - Charts row (2 cols):
- *     · Dispute breakdown — three labeled progress bars
- *       (Fraud / Item not received / Other).
+ *     · Dispute breakdown — six curated progress bars sorted
+ *       largest-first (Fraud / Item not received / Refund /
+ *       Not as described / Subscription / Other).
  *     · Outcomes — three rows with colored 40×40 icon boxes
  *       (Won / Lost / Pending).
+ *   - Disputes by payment method — progress bars joined from
+ *     `shopify_orders.payment_method` (Card / Klarna / wallets),
+ *     with an "unmatched" hint for the backfill gap.
  *   - Trend (90d-shaped) — dual-bar chart per bucket
- *     (disputes red + orders gray).
+ *     (disputes red + orders gray) with rotated MMM-D axis labels.
  *   - Additional Signals — three cards
  *     (Inquiry ratio · Last sync · Data completeness).
  *
@@ -27,8 +31,11 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
+  CreditCard,
   Info,
   Package,
+  RefreshCcw,
+  Repeat,
   XCircle,
 } from "lucide-react";
 
@@ -61,7 +68,23 @@ interface ShopRiskProfileResponse {
   totalOrders: PeriodWithChange;
   amountAtRisk: number;
   currencyCode: string;
-  reasonBreakdown: { fraud: number; fulfillment: number; other: number };
+  reasonBreakdown: {
+    fraud: number;
+    fulfillment: number;
+    refund: number;
+    quality: number;
+    subscription: number;
+    other: number;
+  };
+  paymentMethodBreakdown: {
+    card: number;
+    apple_pay: number;
+    google_pay: number;
+    shop_pay: number;
+    klarna: number;
+    other: number;
+    unmatched: number;
+  };
   outcomeBreakdown: { won: number; lost: number; pending: number };
   winRate: number;
   inquiryCount: number;
@@ -125,6 +148,20 @@ function formatCurrency(amount: number, currencyCode: string): string {
   } catch {
     return `${currencyCode} ${formatNumber(Math.round(amount))}`;
   }
+}
+
+const MONTHS_SHORT = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/** Turn a bucket-start ISO date (YYYY-MM-DD) into a compact "MMM D"
+ *  axis label. Falls back to the raw string if it doesn't parse. */
+function formatBucketLabel(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  const month = MONTHS_SHORT[Number(m[2]) - 1] ?? m[2];
+  return `${month} ${Number(m[3])}`;
 }
 
 function formatRelativeTime(iso: string | null): string {
@@ -219,10 +256,33 @@ export function ShopRiskProfile({ shopId }: Props) {
 
   const periodVerbose = PERIOD_VERBOSE[data.period];
   const band = thresholdTone(data.rate.rate);
+  const rb = data.reasonBreakdown;
   const totalReasons =
-    data.reasonBreakdown.fraud +
-    data.reasonBreakdown.fulfillment +
-    data.reasonBreakdown.other;
+    rb.fraud + rb.fulfillment + rb.refund + rb.quality + rb.subscription + rb.other;
+  // Six curated buckets, rendered largest-first so the dominant
+  // dispute driver leads. Icons/colors are stable per bucket.
+  const reasonRows = [
+    { key: "fraud", label: "Fraud / Unauthorized", count: rb.fraud, icon: <AlertCircle className="w-4 h-4 text-[#DC2626]" />, barClass: "bg-[#DC2626]" },
+    { key: "fulfillment", label: "Item not received", count: rb.fulfillment, icon: <Package className="w-4 h-4 text-[#3B82F6]" />, barClass: "bg-[#3B82F6]" },
+    { key: "refund", label: "Refund not processed", count: rb.refund, icon: <RefreshCcw className="w-4 h-4 text-[#8B5CF6]" />, barClass: "bg-[#8B5CF6]" },
+    { key: "quality", label: "Item not as described", count: rb.quality, icon: <Package className="w-4 h-4 text-[#0EA5E9]" />, barClass: "bg-[#0EA5E9]" },
+    { key: "subscription", label: "Subscription canceled", count: rb.subscription, icon: <Repeat className="w-4 h-4 text-[#EC4899]" />, barClass: "bg-[#EC4899]" },
+    { key: "other", label: "Other", count: rb.other, icon: <AlertCircle className="w-4 h-4 text-[#F59E0B]" />, barClass: "bg-[#F59E0B]" },
+  ].sort((a, b) => b.count - a.count);
+
+  const pm = data.paymentMethodBreakdown;
+  const totalPaymentMethods =
+    pm.card + pm.apple_pay + pm.google_pay + pm.shop_pay + pm.klarna + pm.other;
+  const paymentRows = [
+    { key: "card", label: "Card", count: pm.card, barClass: "bg-[#1D4ED8]" },
+    { key: "klarna", label: "Klarna", count: pm.klarna, barClass: "bg-[#FFB3C7]" },
+    { key: "apple_pay", label: "Apple Pay", count: pm.apple_pay, barClass: "bg-[#0F172A]" },
+    { key: "google_pay", label: "Google Pay", count: pm.google_pay, barClass: "bg-[#22C55E]" },
+    { key: "shop_pay", label: "Shop Pay", count: pm.shop_pay, barClass: "bg-[#5A31F4]" },
+    { key: "other", label: "Other", count: pm.other, barClass: "bg-[#94A3B8]" },
+  ]
+    .filter((r) => r.count > 0)
+    .sort((a, b) => b.count - a.count);
   const totalOutcomes =
     data.outcomeBreakdown.won + data.outcomeBreakdown.lost + data.outcomeBreakdown.pending;
   const lossRate =
@@ -312,16 +372,25 @@ export function ShopRiskProfile({ shopId }: Props) {
 
           <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4">
             <div className="text-xs text-[#64748B] mb-2">Total invoiced</div>
-            <div className="text-xl font-bold text-[#0F172A] mb-1">
-              ${data.totalInvoiced.totalUsd.toLocaleString()}
-            </div>
-            <div className="text-xs text-[#64748B]">
-              {periodVerbose}
-              {/* Approximation hint — see lib/admin/shopBilling.ts */}
-              <span className="ml-1 text-[#94A3B8]" title="Approximate: monthly price × months in window. No invoice history yet.">
-                ≈
-              </span>
-            </div>
+            {data.monthlyRevenue.planId === "free" ? (
+              <>
+                <div className="text-xl font-bold text-[#0F172A] mb-1">Free plan</div>
+                <div className="text-xs text-[#94A3B8]">No subscription revenue</div>
+              </>
+            ) : (
+              <>
+                <div className="text-xl font-bold text-[#0F172A] mb-1">
+                  ${data.totalInvoiced.totalUsd.toLocaleString()}
+                </div>
+                <div className="text-xs text-[#64748B]">
+                  {periodVerbose}
+                  {/* Approximation hint — see lib/admin/shopBilling.ts */}
+                  <span className="ml-1 text-[#94A3B8]" title="Approximate: monthly price × months in window. No invoice history yet.">
+                    ≈
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4">
@@ -338,27 +407,16 @@ export function ShopRiskProfile({ shopId }: Props) {
               Dispute breakdown ({periodVerbose})
             </h3>
             <div className="space-y-3">
-              <BreakdownRow
-                icon={<AlertCircle className="w-4 h-4 text-[#DC2626]" />}
-                label="Fraud / Unauthorized"
-                count={data.reasonBreakdown.fraud}
-                total={totalReasons}
-                barClass="bg-[#DC2626]"
-              />
-              <BreakdownRow
-                icon={<Package className="w-4 h-4 text-[#3B82F6]" />}
-                label="Item not received"
-                count={data.reasonBreakdown.fulfillment}
-                total={totalReasons}
-                barClass="bg-[#3B82F6]"
-              />
-              <BreakdownRow
-                icon={<AlertCircle className="w-4 h-4 text-[#F59E0B]" />}
-                label="Other"
-                count={data.reasonBreakdown.other}
-                total={totalReasons}
-                barClass="bg-[#F59E0B]"
-              />
+              {reasonRows.map((row) => (
+                <BreakdownRow
+                  key={row.key}
+                  icon={row.icon}
+                  label={row.label}
+                  count={row.count}
+                  total={totalReasons}
+                  barClass={row.barClass}
+                />
+              ))}
               {totalReasons === 0 && (
                 <div className="text-sm text-[#64748B]">No disputes in window.</div>
               )}
@@ -401,6 +459,44 @@ export function ShopRiskProfile({ shopId }: Props) {
           </div>
         </div>
 
+        {/* Disputes by payment method — joined from shopify_orders */}
+        <div className="border border-[#E2E8F0] rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-[#64748B]" />
+              Disputes by payment method ({periodVerbose})
+            </h3>
+            {pm.unmatched > 0 && (
+              <span
+                className="text-xs text-[#94A3B8]"
+                title="Disputes whose order isn't in shopify_orders yet (backfill gap). Excluded from the split below."
+              >
+                {pm.unmatched} unmatched
+              </span>
+            )}
+          </div>
+          {totalPaymentMethods > 0 ? (
+            <div className="space-y-3">
+              {paymentRows.map((row) => (
+                <BreakdownRow
+                  key={row.key}
+                  icon={<CreditCard className="w-4 h-4 text-[#64748B]" />}
+                  label={row.label}
+                  count={row.count}
+                  total={totalPaymentMethods}
+                  barClass={row.barClass}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-[#64748B]">
+              {pm.unmatched > 0
+                ? "Payment method unavailable — linked orders not yet synced."
+                : "No disputes in window."}
+            </div>
+          )}
+        </div>
+
         {/* Trend — dual-bar (disputes + orders) per bucket */}
         <div className="border border-[#E2E8F0] rounded-lg p-4 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -419,32 +515,38 @@ export function ShopRiskProfile({ shopId }: Props) {
             </div>
           </div>
 
-          <div className="relative h-48">
-            <div className="absolute inset-0 flex items-end justify-between gap-1">
-              {data.trend.map((point, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full flex items-end justify-center gap-0.5 h-40">
-                    <div
-                      className="w-full bg-[#DC2626] rounded-t transition-all hover:opacity-80"
-                      style={{
-                        height: `${(point.disputeCount / maxDisputes) * 100}%`,
-                      }}
-                      title={`${point.disputeCount} disputes`}
-                    />
-                    <div
-                      className="w-full bg-[#94A3B8] rounded-t transition-all hover:opacity-80"
-                      style={{
-                        height: `${(point.orderCount / maxOrders) * 100}%`,
-                      }}
-                      title={`${point.orderCount} orders`}
-                    />
-                  </div>
-                  <div className="text-[10px] text-[#64748B] text-center whitespace-nowrap transform -rotate-45 origin-top-left mt-2">
-                    {point.bucketStart}
-                  </div>
+          {/* h-40 bars + h-10 label track. The label track is its own
+              row (not absolutely rotated over the bars) so rotated
+              text can't overflow the card or clip at the edges. */}
+          <div className="flex items-stretch justify-between gap-1">
+            {data.trend.map((point, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center min-w-0">
+                <div className="w-full flex items-end justify-center gap-0.5 h-40">
+                  <div
+                    className="w-full bg-[#DC2626] rounded-t transition-all hover:opacity-80"
+                    style={{
+                      height: `${(point.disputeCount / maxDisputes) * 100}%`,
+                    }}
+                    title={`${point.disputeCount} disputes`}
+                  />
+                  <div
+                    className="w-full bg-[#94A3B8] rounded-t transition-all hover:opacity-80"
+                    style={{
+                      height: `${(point.orderCount / maxOrders) * 100}%`,
+                    }}
+                    title={`${point.orderCount} orders`}
+                  />
                 </div>
-              ))}
-            </div>
+                <div className="h-10 w-full flex items-start justify-center overflow-hidden pt-1">
+                  <span
+                    className="text-[10px] text-[#64748B] whitespace-nowrap -rotate-45 origin-center"
+                    title={point.bucketStart}
+                  >
+                    {formatBucketLabel(point.bucketStart)}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
