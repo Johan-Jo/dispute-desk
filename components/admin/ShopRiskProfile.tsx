@@ -66,6 +66,8 @@ interface ShopRiskProfileResponse {
   rate: ChargebackRateResult;
   totalDisputes: PeriodWithChange;
   totalOrders: PeriodWithChange;
+  ordersCoverageStart: string | null;
+  ordersCoveragePartial: boolean;
   amountAtRisk: number;
   currencyCode: string;
   reasonBreakdown: {
@@ -342,14 +344,24 @@ export function ShopRiskProfile({ shopId }: Props) {
             </div>
             <div className="text-xl font-bold text-[#0F172A] mb-1">{formatRate(data.rate)}</div>
             <div className="text-xs text-[#64748B]">
-              {data.rate.numerator} / {formatNumber(data.rate.denominator)}
+              {data.chargebackCount} chargeback{data.chargebackCount === 1 ? "" : "s"} /{" "}
+              {formatNumber(data.rate.denominator)} orders
             </div>
+            {data.inquiryCount > 0 && (
+              <div className="text-[11px] text-[#94A3B8] mt-0.5">
+                + {data.inquiryCount} inquir{data.inquiryCount === 1 ? "y" : "ies"} (excluded)
+              </div>
+            )}
           </div>
 
           <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4">
             <div className="text-xs text-[#64748B] mb-2">Total disputes</div>
             <div className="text-xl font-bold text-[#0F172A] mb-1">
               {data.totalDisputes.count}
+            </div>
+            <div className="text-[11px] text-[#94A3B8] mb-1">
+              {data.chargebackCount} chargeback{data.chargebackCount === 1 ? "" : "s"} ·{" "}
+              {data.inquiryCount} inquir{data.inquiryCount === 1 ? "y" : "ies"}
             </div>
             <ChangeBadge pct={data.totalDisputes.changePercent} inverse />
           </div>
@@ -359,7 +371,16 @@ export function ShopRiskProfile({ shopId }: Props) {
             <div className="text-xl font-bold text-[#0F172A] mb-1">
               {formatNumber(data.totalOrders.count)}
             </div>
-            <ChangeBadge pct={data.totalOrders.changePercent} />
+            {data.ordersCoveragePartial && data.ordersCoverageStart ? (
+              <div
+                className="text-[11px] text-[#94A3B8]"
+                title="The daily-metrics rollup doesn't cover the full selected window, so this count is partial."
+              >
+                since {formatBucketLabel(data.ordersCoverageStart)}
+              </div>
+            ) : (
+              <ChangeBadge pct={data.totalOrders.changePercent} />
+            )}
           </div>
 
           <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4">
@@ -515,9 +536,8 @@ export function ShopRiskProfile({ shopId }: Props) {
             </div>
           </div>
 
-          {/* h-40 bars + h-10 label track. The label track is its own
-              row (not absolutely rotated over the bars) so rotated
-              text can't overflow the card or clip at the edges. */}
+          {/* h-40 bars + horizontal label row underneath. Labels are
+              compact "MMM D" so they fit flat without rotation. */}
           <div className="flex items-stretch justify-between gap-1">
             {data.trend.map((point, i) => (
               <div key={i} className="flex-1 flex flex-col items-center min-w-0">
@@ -537,9 +557,9 @@ export function ShopRiskProfile({ shopId }: Props) {
                     title={`${point.orderCount} orders`}
                   />
                 </div>
-                <div className="h-10 w-full flex items-start justify-center overflow-hidden pt-1">
+                <div className="w-full flex items-start justify-center pt-2">
                   <span
-                    className="text-[10px] text-[#64748B] whitespace-nowrap -rotate-45 origin-center"
+                    className="text-[10px] text-[#64748B] text-center leading-tight"
                     title={point.bucketStart}
                   >
                     {formatBucketLabel(point.bucketStart)}
