@@ -31,6 +31,7 @@ import {
   classifyPaymentMethod,
   classifyReasonFamily,
 } from "./shopRiskClassify";
+import { computeStoreRevenue } from "./storeRevenue";
 import {
   monthlyRevenueForPlan,
   totalInvoicedForPeriod,
@@ -76,7 +77,17 @@ export interface ShopRiskProfile {
    *  Always all-time — the merchant's current at-risk dollar value
    *  isn't period-bound. */
   amountAtRisk: number;
+  /** amountAtRisk split by dispute phase — chargeback exposure vs
+   *  inquiry exposure. */
+  amountAtRiskPhase: { chargeback: number; inquiry: number };
   currencyCode: string;
+
+  /** Merchant's own store revenue (GMV) over the trailing 30 days,
+   *  summed from `shopify_orders.order_total`. Fixed 30-day window —
+   *  NOT tied to the period selector. Distinct from `monthlyRevenue`,
+   *  which is our subscription revenue from the shop. */
+  storeRevenue30d: number;
+  storeRevenueCurrency: string;
 
   /** Reason mix in the period, grouped into six curated families.
    *  Previously only fraud / fulfillment / other — which collapsed
@@ -91,6 +102,12 @@ export interface ShopRiskProfile {
     subscription: number; // "Subscription"
     other: number; // General / Billing / Technical / Compliance / unknown
   };
+  /** Per-phase (chargeback/inquiry) split of each reason bucket, for
+   *  the "(N cb · M inq)" suffix in the UI. */
+  reasonPhase: Record<
+    "fraud" | "fulfillment" | "refund" | "quality" | "subscription" | "other",
+    { chargeback: number; inquiry: number }
+  >;
   /** Dispute mix by payment-method family, joined from
    *  `shopify_orders.payment_method` via `disputes.order_gid`.
    *  `unmatched` = disputes whose order isn't in `shopify_orders`
@@ -112,9 +129,21 @@ export interface ShopRiskProfile {
     lost: number;
     pending: number;
   };
+  /** Per-phase split of each outcome, for the "(N cb · M inq)"
+   *  suffix in the UI. */
+  outcomePhase: Record<
+    "won" | "lost" | "pending",
+    { chargeback: number; inquiry: number }
+  >;
   /** Win rate for the period: won / (won + lost), 0 when neither
    *  is positive. */
   winRate: number;
+  /** Per-phase win rate. `rate` is null when that phase has no
+   *  decided disputes. */
+  winRatePhase: Record<
+    "chargeback" | "inquiry",
+    { won: number; lost: number; rate: number | null }
+  >;
 
   /** Inquiry-to-chargeback signal (period-scoped). */
   inquiryCount: number;
@@ -332,14 +361,39 @@ export async function getShopRiskProfile(
     subscription: 0,
     other: 0,
   };
+  // Parallel per-phase counts for each reason bucket, so the UI can
+  // show a "(N cb · M inq)" split alongside each reason total.
+  const emptyPhaseSplit = () => ({ chargeback: 0, inquiry: 0 });
+  const reasonPhase: Record<keyof typeof reasonBreakdown, { chargeback: number; inquiry: number }> = {
+    fraud: emptyPhaseSplit(),
+    fulfillment: emptyPhaseSplit(),
+    refund: emptyPhaseSplit(),
+    quality: emptyPhaseSplit(),
+    subscription: emptyPhaseSplit(),
+    other: emptyPhaseSplit(),
+  };
   const outcomeBreakdown = { won: 0, lost: 0, pending: 0 };
+  const outcomePhase = {
+    won: emptyPhaseSplit(),
+    lost: emptyPhaseSplit(),
+    pending: emptyPhaseSplit(),
+  };
   let inquiryCount = 0;
   let chargebackCount = 0;
   let amountAtRisk = 0;
+  // Amount at risk split by phase — chargeback exposure is more urgent
+  // than inquiry exposure.
+  const amountAtRiskPhase = { chargeback: 0, inquiry: 0 };
   const currencyCounts: Record<string, number> = {};
   // order_gid of every in-window dispute — used to join
   // `shopify_orders.payment_method` for the method breakdown.
   const windowOrderGids: string[] = [];
+
+  function phaseKey(d: DisputeRow): "chargeback" | "inquiry" | null {
+    if (d.phase === "chargeback") return "chargeback";
+    if (d.phase === "inquiry") return "inquiry";
+    return null;
+  }
 
   for (const d of disputes) {
     const initiated = String(d.initiated_at ?? "");
@@ -348,20 +402,26 @@ export async function getShopRiskProfile(
     // the SQL filter should have excluded them already.
     if (dateIso < fromDate || dateIso > toDate) continue;
 
+    const ph = phaseKey(d);
+
     const fam = classifyReasonFamily(d.reason);
     reasonBreakdown[fam] += 1;
+    if (ph) reasonPhase[fam][ph] += 1;
 
     const outcome = String(d.final_outcome ?? "");
-    if (outcome === "won") outcomeBreakdown.won += 1;
-    else if (outcome === "lost") outcomeBreakdown.lost += 1;
-    else outcomeBreakdown.pending += 1;
+    const outcomeKey =
+      outcome === "won" ? "won" : outcome === "lost" ? "lost" : "pending";
+    outcomeBreakdown[outcomeKey] += 1;
+    if (ph) outcomePhase[outcomeKey][ph] += 1;
 
     if (d.phase === "inquiry") inquiryCount += 1;
     else if (d.phase === "chargeback") chargebackCount += 1;
 
     const ns = String(d.normalized_status ?? "new");
     if (ACTIVE_NORMALIZED.has(ns)) {
-      amountAtRisk += Number(d.amount) || 0;
+      const amt = Number(d.amount) || 0;
+      amountAtRisk += amt;
+      if (ph) amountAtRiskPhase[ph] += amt;
     }
 
     const c = String(d.currency_code ?? "USD");
@@ -440,8 +500,32 @@ export async function getShopRiskProfile(
   const winRate =
     winLossDenom > 0 ? Math.round((outcomeBreakdown.won / winLossDenom) * 100) : 0;
 
+  // Per-phase win rate — inquiries and chargebacks often resolve at
+  // very different rates. `rate` is null when that phase has no
+  // decided (won/lost) disputes, so the UI can render "—".
+  function phaseWinRate(ph: "chargeback" | "inquiry") {
+    const won = outcomePhase.won[ph];
+    const lost = outcomePhase.lost[ph];
+    const denom = won + lost;
+    return {
+      won,
+      lost,
+      rate: denom > 0 ? Math.round((won / denom) * 100) : null,
+    };
+  }
+  const winRatePhase = {
+    chargeback: phaseWinRate("chargeback"),
+    inquiry: phaseWinRate("inquiry"),
+  };
+
   const currencyCode =
     Object.entries(currencyCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "USD";
+
+  // ── Store revenue — trailing 30 days GMV (fixed window, shared
+  // helper; NOT tied to the period selector). ─
+  const storeRev = await computeStoreRevenue(shopId, { endDateIso: toDate });
+  const storeRevenue30d = storeRev.total;
+  const storeRevenueCurrency = storeRev.currency;
 
   // ── Trend (dual-bar disputes + orders) ─
   const effectiveWindowDays =
@@ -511,10 +595,16 @@ export async function getShopRiskProfile(
     ordersCoverageStart,
     ordersCoveragePartial,
     amountAtRisk,
+    amountAtRiskPhase,
     currencyCode,
+    storeRevenue30d,
+    storeRevenueCurrency,
     reasonBreakdown,
+    reasonPhase,
     paymentMethodBreakdown,
     outcomeBreakdown,
+    outcomePhase,
+    winRatePhase,
     winRate,
     inquiryCount,
     chargebackCount,

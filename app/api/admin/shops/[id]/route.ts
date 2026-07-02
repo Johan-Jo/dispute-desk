@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
+import { computeStoreRevenue } from "@/lib/admin/storeRevenue";
 
 export const runtime = "nodejs";
 
@@ -8,10 +9,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const sb = getServiceClient();
 
-  const [shop, disputeCount, packCount] = await Promise.all([
+  const [shop, disputeCount, packCount, storeRevenue] = await Promise.all([
     sb.from("shops").select("*").eq("id", id).single(),
     sb.from("disputes").select("id", { count: "exact", head: true }).eq("shop_id", id),
     sb.from("evidence_packs").select("id", { count: "exact", head: true }).eq("shop_id", id),
+    computeStoreRevenue(id),
   ]);
 
   if (!shop.data) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -20,6 +22,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     shop: shop.data,
     disputes: disputeCount.count ?? 0,
     packs: packCount.count ?? 0,
+    // Merchant's own store revenue (GMV) over trailing 30 days — the
+    // "Monthly Revenue" card shows this, not our subscription revenue.
+    storeRevenue: {
+      total: storeRevenue.total,
+      currency: storeRevenue.currency,
+      orderCount: storeRevenue.orderCount,
+    },
   });
 }
 
