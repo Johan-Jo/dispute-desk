@@ -96,6 +96,7 @@ export async function persistOrders(
         country: o.country,
         is_cross_border: o.is_cross_border,
         payment_gateway: o.payment_gateway,
+        payment_method: o.payment_method,
         financial_status: o.financial_status,
         fulfillment_status: o.fulfillment_status,
         cancel_reason: o.cancel_reason,
