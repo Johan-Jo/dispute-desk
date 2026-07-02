@@ -36,6 +36,7 @@ interface ShopDetail {
   };
   disputes: number;
   packs: number;
+  storeRevenue?: { total: number; currency: string; orderCount: number };
 }
 
 const PLAN_LABEL: Record<string, string> = {
@@ -45,19 +46,25 @@ const PLAN_LABEL: Record<string, string> = {
   scale: "Scale",
 };
 
-const PLAN_PRICE: Record<string, number> = {
-  free: 0,
-  starter: 29,
-  growth: 79,
-  scale: 149,
-};
-
 const PLAN_PILL: Record<string, string> = {
   free: "bg-[#F1F5F9] text-[#475569]",
   starter: "bg-[#D1FAE5] text-[#065F46]",
   growth: "bg-[#DBEAFE] text-[#1E40AF]",
   scale: "bg-[#EDE9FE] text-[#6B21A8]",
 };
+
+/** Format a store-revenue amount in its own currency (no decimals). */
+function formatMoney(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${currency} ${Math.round(amount).toLocaleString()}`;
+  }
+}
 
 export default function AdminShopDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -100,10 +107,9 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
     );
   }
 
-  const { shop, disputes, packs } = data;
+  const { shop, disputes, packs, storeRevenue } = data;
   const planKey = (shop.plan ?? "free").toLowerCase();
   const planLabel = PLAN_LABEL[planKey] ?? planKey;
-  const planPrice = PLAN_PRICE[planKey] ?? 0;
   const planPillClass = PLAN_PILL[planKey] ?? PLAN_PILL.free;
   const isActive = !shop.uninstalled_at;
   const shopAdminUrl = `https://${shop.shop_domain}/admin`;
@@ -185,13 +191,17 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
             <DollarSign className="w-5 h-5 text-[#64748B]" />
             <div className="text-sm text-[#64748B]">Monthly Revenue</div>
           </div>
-          {planPrice > 0 ? (
-            <div className="text-2xl font-bold text-[#0F172A]">${planPrice}</div>
-          ) : (
+          {storeRevenue ? (
             <>
-              <div className="text-2xl font-bold text-[#0F172A]">Free plan</div>
-              <div className="text-xs text-[#94A3B8] mt-1">No subscription revenue</div>
+              <div className="text-2xl font-bold text-[#0F172A]">
+                {formatMoney(storeRevenue.total, storeRevenue.currency)}
+              </div>
+              <div className="text-xs text-[#94A3B8] mt-1">
+                {storeRevenue.orderCount.toLocaleString()} orders · last 30 days
+              </div>
             </>
+          ) : (
+            <div className="text-2xl font-bold text-[#94A3B8]">—</div>
           )}
         </div>
 
