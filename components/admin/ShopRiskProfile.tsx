@@ -70,6 +70,9 @@ interface ShopRiskProfileResponse {
   ordersCoveragePartial: boolean;
   amountAtRisk: number;
   currencyCode: string;
+  amountAtRiskPhase: { chargeback: number; inquiry: number };
+  storeRevenue30d: number;
+  storeRevenueCurrency: string;
   reasonBreakdown: {
     fraud: number;
     fulfillment: number;
@@ -78,6 +81,10 @@ interface ShopRiskProfileResponse {
     subscription: number;
     other: number;
   };
+  reasonPhase: Record<
+    "fraud" | "fulfillment" | "refund" | "quality" | "subscription" | "other",
+    { chargeback: number; inquiry: number }
+  >;
   paymentMethodBreakdown: {
     card: number;
     apple_pay: number;
@@ -88,6 +95,14 @@ interface ShopRiskProfileResponse {
     unmatched: number;
   };
   outcomeBreakdown: { won: number; lost: number; pending: number };
+  outcomePhase: Record<
+    "won" | "lost" | "pending",
+    { chargeback: number; inquiry: number }
+  >;
+  winRatePhase: Record<
+    "chargeback" | "inquiry",
+    { won: number; lost: number; rate: number | null }
+  >;
   winRate: number;
   inquiryCount: number;
   chargebackCount: number;
@@ -150,6 +165,11 @@ function formatCurrency(amount: number, currencyCode: string): string {
   } catch {
     return `${currencyCode} ${formatNumber(Math.round(amount))}`;
   }
+}
+
+/** Compact "N cb · M inq" phase suffix used across the panel. */
+function phaseSuffix(split: { chargeback: number; inquiry: number }): string {
+  return `${split.chargeback} cb · ${split.inquiry} inq`;
 }
 
 const MONTHS_SHORT = [
@@ -263,13 +283,14 @@ export function ShopRiskProfile({ shopId }: Props) {
     rb.fraud + rb.fulfillment + rb.refund + rb.quality + rb.subscription + rb.other;
   // Six curated buckets, rendered largest-first so the dominant
   // dispute driver leads. Icons/colors are stable per bucket.
+  const rp = data.reasonPhase;
   const reasonRows = [
-    { key: "fraud", label: "Fraud / Unauthorized", count: rb.fraud, icon: <AlertCircle className="w-4 h-4 text-[#DC2626]" />, barClass: "bg-[#DC2626]" },
-    { key: "fulfillment", label: "Item not received", count: rb.fulfillment, icon: <Package className="w-4 h-4 text-[#3B82F6]" />, barClass: "bg-[#3B82F6]" },
-    { key: "refund", label: "Refund not processed", count: rb.refund, icon: <RefreshCcw className="w-4 h-4 text-[#8B5CF6]" />, barClass: "bg-[#8B5CF6]" },
-    { key: "quality", label: "Item not as described", count: rb.quality, icon: <Package className="w-4 h-4 text-[#0EA5E9]" />, barClass: "bg-[#0EA5E9]" },
-    { key: "subscription", label: "Subscription canceled", count: rb.subscription, icon: <Repeat className="w-4 h-4 text-[#EC4899]" />, barClass: "bg-[#EC4899]" },
-    { key: "other", label: "Other", count: rb.other, icon: <AlertCircle className="w-4 h-4 text-[#F59E0B]" />, barClass: "bg-[#F59E0B]" },
+    { key: "fraud", label: "Fraud / Unauthorized", count: rb.fraud, phase: rp.fraud, icon: <AlertCircle className="w-4 h-4 text-[#DC2626]" />, barClass: "bg-[#DC2626]" },
+    { key: "fulfillment", label: "Item not received", count: rb.fulfillment, phase: rp.fulfillment, icon: <Package className="w-4 h-4 text-[#3B82F6]" />, barClass: "bg-[#3B82F6]" },
+    { key: "refund", label: "Refund not processed", count: rb.refund, phase: rp.refund, icon: <RefreshCcw className="w-4 h-4 text-[#8B5CF6]" />, barClass: "bg-[#8B5CF6]" },
+    { key: "quality", label: "Item not as described", count: rb.quality, phase: rp.quality, icon: <Package className="w-4 h-4 text-[#0EA5E9]" />, barClass: "bg-[#0EA5E9]" },
+    { key: "subscription", label: "Subscription canceled", count: rb.subscription, phase: rp.subscription, icon: <Repeat className="w-4 h-4 text-[#EC4899]" />, barClass: "bg-[#EC4899]" },
+    { key: "other", label: "Other", count: rb.other, phase: rp.other, icon: <AlertCircle className="w-4 h-4 text-[#F59E0B]" />, barClass: "bg-[#F59E0B]" },
   ].sort((a, b) => b.count - a.count);
 
   const pm = data.paymentMethodBreakdown;
@@ -388,7 +409,13 @@ export function ShopRiskProfile({ shopId }: Props) {
             <div className="text-xl font-bold text-[#DC2626] mb-1">
               {formatCurrency(data.amountAtRisk, data.currencyCode)}
             </div>
-            <div className="text-xs text-[#64748B]">{data.outcomeBreakdown.pending} pending</div>
+            <div className="text-[11px] text-[#94A3B8]">
+              {formatCurrency(data.amountAtRiskPhase.chargeback, data.currencyCode)} cb ·{" "}
+              {formatCurrency(data.amountAtRiskPhase.inquiry, data.currencyCode)} inq
+            </div>
+            <div className="text-xs text-[#64748B] mt-0.5">
+              {data.outcomeBreakdown.pending} pending
+            </div>
           </div>
 
           <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4">
@@ -417,7 +444,17 @@ export function ShopRiskProfile({ shopId }: Props) {
           <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4">
             <div className="text-xs text-[#64748B] mb-2">Win rate</div>
             <div className="text-xl font-bold text-[#065F46] mb-1">{data.winRate}%</div>
-            <div className="text-xs text-[#64748B]">{data.outcomeBreakdown.won} won</div>
+            <div className="text-[11px] text-[#94A3B8]">
+              cb{" "}
+              {data.winRatePhase.chargeback.rate === null
+                ? "—"
+                : `${data.winRatePhase.chargeback.rate}%`}{" "}
+              · inq{" "}
+              {data.winRatePhase.inquiry.rate === null
+                ? "—"
+                : `${data.winRatePhase.inquiry.rate}%`}
+            </div>
+            <div className="text-xs text-[#64748B] mt-0.5">{data.outcomeBreakdown.won} won</div>
           </div>
         </div>
 
@@ -436,6 +473,7 @@ export function ShopRiskProfile({ shopId }: Props) {
                   count={row.count}
                   total={totalReasons}
                   barClass={row.barClass}
+                  suffix={row.count > 0 ? phaseSuffix(row.phase) : undefined}
                 />
               ))}
               {totalReasons === 0 && (
@@ -456,6 +494,7 @@ export function ShopRiskProfile({ shopId }: Props) {
                 helper={`${data.winRate}% win rate`}
                 count={data.outcomeBreakdown.won}
                 countColor="text-[#065F46]"
+                suffix={data.outcomeBreakdown.won > 0 ? phaseSuffix(data.outcomePhase.won) : undefined}
               />
               <OutcomeRow
                 icon={<XCircle className="w-5 h-5 text-[#991B1B]" />}
@@ -464,6 +503,7 @@ export function ShopRiskProfile({ shopId }: Props) {
                 helper={`${lossRate}% loss rate`}
                 count={data.outcomeBreakdown.lost}
                 countColor="text-[#991B1B]"
+                suffix={data.outcomeBreakdown.lost > 0 ? phaseSuffix(data.outcomePhase.lost) : undefined}
               />
               <OutcomeRow
                 icon={<Clock className="w-5 h-5 text-[#92400E]" />}
@@ -472,6 +512,7 @@ export function ShopRiskProfile({ shopId }: Props) {
                 helper="Awaiting decision"
                 count={data.outcomeBreakdown.pending}
                 countColor="text-[#92400E]"
+                suffix={data.outcomeBreakdown.pending > 0 ? phaseSuffix(data.outcomePhase.pending) : undefined}
               />
               {totalOutcomes === 0 && (
                 <div className="text-sm text-[#64748B]">No disputes in window.</div>
@@ -625,12 +666,15 @@ function BreakdownRow({
   count,
   total,
   barClass,
+  suffix,
 }: {
   icon: React.ReactNode;
   label: string;
   count: number;
   total: number;
   barClass: string;
+  /** Optional muted "N cb · M inq" phase split shown next to count. */
+  suffix?: string;
 }) {
   const pct = total > 0 ? (count / total) * 100 : 0;
   return (
@@ -640,7 +684,10 @@ function BreakdownRow({
           {icon}
           <span className="text-sm text-[#0F172A]">{label}</span>
         </div>
-        <span className="text-sm font-semibold text-[#0F172A]">{count}</span>
+        <div className="flex items-baseline gap-2">
+          {suffix && <span className="text-[11px] text-[#94A3B8]">{suffix}</span>}
+          <span className="text-sm font-semibold text-[#0F172A]">{count}</span>
+        </div>
       </div>
       <div className="w-full bg-[#E2E8F0] rounded-full h-2">
         <div
@@ -659,6 +706,7 @@ function OutcomeRow({
   helper,
   count,
   countColor,
+  suffix,
 }: {
   icon: React.ReactNode;
   iconBg: string;
@@ -666,6 +714,8 @@ function OutcomeRow({
   helper: string;
   count: number;
   countColor: string;
+  /** Optional muted "N cb · M inq" phase split. */
+  suffix?: string;
 }) {
   return (
     <div className="flex items-center justify-between">
@@ -680,7 +730,10 @@ function OutcomeRow({
           <div className="text-xs text-[#64748B]">{helper}</div>
         </div>
       </div>
-      <div className={`text-xl font-bold ${countColor}`}>{count}</div>
+      <div className="flex items-baseline gap-2">
+        {suffix && <span className="text-[11px] text-[#94A3B8]">{suffix}</span>}
+        <div className={`text-xl font-bold ${countColor}`}>{count}</div>
+      </div>
     </div>
   );
 }
