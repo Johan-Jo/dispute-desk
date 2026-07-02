@@ -681,7 +681,9 @@
       "policy_cancellation": "Cancellation policy",
       "duplicate_explanation": "Duplicate-charge explanation",
       "supplementary_documents": "Supplementary documents",
-      "fraud_screening": "Pre-authorization fraud screening"
+      "fraud_screening": "Pre-authorization fraud screening",
+      "refund_record": "Refund record",
+      "no_return_initiated": "No return initiated"
     },
     "reasonFamilyLabel": {
       "fraud": "fraud",
@@ -1660,6 +1662,7 @@
     "section": {
       "order": "Order {orderName}",
       "refundHistory": "Refund history",
+      "noReturnInitiated": "No return initiated",
       "customerActivityLog": "Customer activity log",
       "customerAccountDetails": "Customer account details",
       "shopifyProtect": "Shopify Protect coverage",

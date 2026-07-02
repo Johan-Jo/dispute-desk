@@ -1276,7 +1276,9 @@
       "policy_cancellation": "Política de cancelamento",
       "duplicate_explanation": "Explicação da cobrança duplicada",
       "supplementary_documents": "Documentos complementares",
-      "fraud_screening": "Triagem de fraude pré-autorização"
+      "fraud_screening": "Triagem de fraude pré-autorização",
+      "refund_record": "Comprovante de reembolso",
+      "no_return_initiated": "Nenhuma devolução iniciada"
     },
     "decisiveHint": {
       "fraud": "confirmação de entrega, assinatura registrada ou consistência de dispositivo/sessão",
@@ -1660,6 +1662,7 @@
     "section": {
       "order": "Pedido {orderName}",
       "refundHistory": "Histórico de reembolsos",
+      "noReturnInitiated": "Nenhuma devolução iniciada",
       "customerActivityLog": "Registro de atividade do cliente",
       "customerAccountDetails": "Detalhes da conta do cliente",
       "shopifyProtect": "Cobertura do Shopify Protect",

@@ -38,6 +38,13 @@ export const ORDER_DETAIL_QUERY = `
         totalTaxSet { shopMoney { amount currencyCode } }
         totalDiscountsSet { shopMoney { amount currencyCode } }
         totalRefundedSet { shopMoney { amount currencyCode } }
+        # Order-level return status enum (Admin 2026-01): NO_RETURN |
+        # RETURN_REQUESTED | IN_PROGRESS | RETURNED | INSPECTION_COMPLETE |
+        # RETURN_FAILED. NO_RETURN is the load-bearing value — for a
+        # CREDIT_NOT_PROCESSED dispute with no refund issued, it lets the
+        # pack cite "the customer never initiated a return" as the grounded
+        # basis for "no refund was owed". See lib/packs/sources/orderSource.ts.
+        returnStatus
         billingAddress {
           address1
           address2
@@ -337,6 +344,9 @@ export interface OrderDetailNode {
   totalTaxSet: MoneySet;
   totalDiscountsSet: MoneySet;
   totalRefundedSet: MoneySet;
+  /** Order-level return status enum (Admin 2026-01). NO_RETURN when the
+   *  customer never initiated a return. Nullable defensively. */
+  returnStatus: string | null;
   billingAddress: {
     address1: string | null;
     address2: string | null;

@@ -40,6 +40,7 @@ import { product_not_as_described_resolution_attempt } from "./product_not_as_de
 import { product_not_as_described_narrow_fallback } from "./product_not_as_described_narrow_fallback";
 
 import { credit_not_processed_refund_record } from "./credit_not_processed_refund_record";
+import { credit_not_processed_no_return } from "./credit_not_processed_no_return";
 import { credit_not_processed_policy_terms } from "./credit_not_processed_policy_terms";
 import { credit_not_processed_narrow_fallback } from "./credit_not_processed_narrow_fallback";
 
@@ -77,6 +78,7 @@ export const STRATEGIES_BY_FAMILY: Record<ReasonCodeFamilyKey, StrategySubmodule
   ],
   credit_not_processed: [
     credit_not_processed_refund_record,
+    credit_not_processed_no_return,
     credit_not_processed_policy_terms,
     credit_not_processed_narrow_fallback,
   ],

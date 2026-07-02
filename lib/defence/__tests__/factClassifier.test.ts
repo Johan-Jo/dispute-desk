@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { classifyFacts, type ClassifyFactsInput, type PackSectionLike } from "../factClassifier";
-import { resolveReasonCodeModule } from "../reasonCodes/registry";
+import {
+  resolveReasonCodeModule,
+  resolveReasonCodeModuleForContext,
+} from "../reasonCodes/registry";
+import { rankStrategies } from "../strategies/registry";
 
 function baseInput(overrides: Partial<ClassifyFactsInput> = {}): ClassifyFactsInput {
   return {
@@ -27,6 +31,116 @@ function section(overrides: Partial<PackSectionLike>): PackSectionLike {
     ...overrides,
   };
 }
+
+describe("classifyFacts — refund_record (credit-not-processed win path)", () => {
+  it("a processed refund produces a STRONG, bank-eligible refund_record fact + fires refund_processed predicate", () => {
+    const result = classifyFacts(
+      baseInput({
+        reasonCodeModule: resolveReasonCodeModuleForContext(null, "CREDIT_NOT_PROCESSED"),
+        sections: [
+          section({
+            fieldsProvided: ["refund_record"],
+            data: {
+              refundStatus: "processed",
+              amount: "429.00",
+              currency: "USD",
+              refundedAt: "2026-06-02T10:00:00Z",
+            },
+          }),
+        ],
+      }),
+    );
+    const refund = result.approved.find((f) => f.category === "refund_record");
+    expect(refund).toBeDefined();
+    expect(refund?.strength).toBe("strong");
+    expect(refund?.bankEligible).toBe(true);
+    expect(refund?.value.refundStatus).toBe("processed");
+    expect(refund?.value.amount).toBe(429);
+    // The predicate the winning strategy is gated on.
+    expect(result.predicateEvaluations.refund_processed).toBe(true);
+  });
+
+  it("drives the credit_not_processed_refund_record winning strategy", () => {
+    const result = classifyFacts(
+      baseInput({
+        reasonCodeModule: resolveReasonCodeModuleForContext(null, "CREDIT_NOT_PROCESSED"),
+        sections: [
+          section({
+            fieldsProvided: ["refund_record"],
+            data: { refundStatus: "processed", amount: "429.00", currency: "USD" },
+          }),
+        ],
+      }),
+    );
+    const strategies = rankStrategies({
+      familyKey: "credit_not_processed",
+      predicateEvaluations: result.predicateEvaluations,
+      packageMode: result.packageMode,
+    });
+    expect(strategies.map((s) => s.key)).toContain("credit_not_processed_refund_record");
+  });
+
+  it("does NOT fire refund_processed when no refund was issued (amount 0)", () => {
+    const result = classifyFacts(
+      baseInput({
+        reasonCodeModule: resolveReasonCodeModuleForContext(null, "CREDIT_NOT_PROCESSED"),
+        // Collector emits fieldsProvided: [] when totalRefunded is 0, so no
+        // refund_record fact exists — the predicate must stay false.
+        sections: [
+          section({
+            fieldsProvided: [],
+            data: { refundStatus: "none", amount: "0.00" },
+          }),
+        ],
+      }),
+    );
+    expect(result.approved.find((f) => f.category === "refund_record")).toBeUndefined();
+    expect(result.predicateEvaluations.refund_processed).toBe(false);
+  });
+
+  it("no_return_initiated fact fires return_not_initiated predicate + no-return strategy", () => {
+    const result = classifyFacts(
+      baseInput({
+        reasonCodeModule: resolveReasonCodeModuleForContext(null, "CREDIT_NOT_PROCESSED"),
+        sections: [
+          section({
+            fieldsProvided: ["no_return_initiated"],
+            data: { returnStatus: "NO_RETURN", returnInitiated: false },
+          }),
+        ],
+      }),
+    );
+    const fact = result.approved.find((f) => f.category === "no_return_initiated");
+    expect(fact).toBeDefined();
+    expect(fact?.value.returnInitiated).toBe(false);
+    expect(result.predicateEvaluations.return_not_initiated).toBe(true);
+
+    const strategies = rankStrategies({
+      familyKey: "credit_not_processed",
+      predicateEvaluations: result.predicateEvaluations,
+      packageMode: result.packageMode,
+    });
+    expect(strategies.map((s) => s.key)).toContain("credit_not_processed_no_return");
+  });
+
+  it("return_not_initiated stays false when no such fact is present", () => {
+    const result = classifyFacts(
+      baseInput({
+        reasonCodeModule: resolveReasonCodeModuleForContext(null, "CREDIT_NOT_PROCESSED"),
+        sections: [
+          section({ fieldsProvided: ["order_confirmation"], data: { confirmationSent: true } }),
+        ],
+      }),
+    );
+    expect(result.predicateEvaluations.return_not_initiated).toBe(false);
+    const strategies = rankStrategies({
+      familyKey: "credit_not_processed",
+      predicateEvaluations: result.predicateEvaluations,
+      packageMode: result.packageMode,
+    });
+    expect(strategies.map((s) => s.key)).not.toContain("credit_not_processed_no_return");
+  });
+});
 
 describe("classifyFacts", () => {
   it("Visa 10.4 with AVS/CVV match produces a bank-eligible payment_authentication fact", () => {

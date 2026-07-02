@@ -186,6 +186,10 @@ export function categoryForField(fieldKey: string, payload: Record<string, unkno
       return "manual_evidence";
     case "refund_policy":
       return "policy_refund";
+    case "refund_record":
+      return "refund_record";
+    case "no_return_initiated":
+      return "no_return_initiated";
     case "shipping_policy":
       return "policy_shipping";
     case "cancellation_policy":
@@ -297,6 +301,31 @@ function extractValue(
         acceptanceTimestamp:
           typeof p.acceptanceTimestamp === "string" ? p.acceptanceTimestamp : null,
       };
+    case "refund_record": {
+      // `refundStatus` is the load-bearing key: the refund_processed
+      // predicate matches value.refundStatus === "processed". Amount/date
+      // give the narrative a concrete, citable refund fact.
+      const amount =
+        typeof p.amount === "number"
+          ? p.amount
+          : typeof p.amount === "string"
+            ? Number.parseFloat(p.amount)
+            : null;
+      return {
+        refundStatus: typeof p.refundStatus === "string" ? p.refundStatus : null,
+        amount: amount != null && Number.isFinite(amount) ? amount : null,
+        currency: typeof p.currency === "string" ? p.currency : null,
+        refundedAt: typeof p.refundedAt === "string" ? p.refundedAt : null,
+      };
+    }
+    case "no_return_initiated":
+      // `returnInitiated: false` is the load-bearing key the
+      // return_not_initiated predicate matches. The collector only emits
+      // this field when returnStatus === NO_RETURN AND no refund exists.
+      return {
+        returnInitiated: false,
+        returnStatus: typeof p.returnStatus === "string" ? p.returnStatus : null,
+      };
     case "fraud_risk_screening": {
       // Pass the actual positive fact descriptions through to the
       // LLM payload so the narrative can cite specific Shopify
@@ -386,6 +415,8 @@ const FIELD_LABEL_EN: Record<string, string> = {
   activity_log: "Customer activity log",
   supporting_documents: "Supplementary documents",
   refund_policy: "Refund policy",
+  refund_record: "Refund record",
+  no_return_initiated: "No return initiated",
   shipping_policy: "Shipping policy",
   cancellation_policy: "Cancellation policy",
   order_confirmation: "Order record",

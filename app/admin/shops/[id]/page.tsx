@@ -185,7 +185,14 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
             <DollarSign className="w-5 h-5 text-[#64748B]" />
             <div className="text-sm text-[#64748B]">Monthly Revenue</div>
           </div>
-          <div className="text-2xl font-bold text-[#0F172A]">${planPrice}</div>
+          {planPrice > 0 ? (
+            <div className="text-2xl font-bold text-[#0F172A]">${planPrice}</div>
+          ) : (
+            <>
+              <div className="text-2xl font-bold text-[#0F172A]">Free plan</div>
+              <div className="text-xs text-[#94A3B8] mt-1">No subscription revenue</div>
+            </>
+          )}
         </div>
 
         <div className="bg-white border border-[#E2E8F0] rounded-lg p-5">
