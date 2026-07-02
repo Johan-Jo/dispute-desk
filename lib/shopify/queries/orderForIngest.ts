@@ -66,6 +66,13 @@ export const ORDER_FOR_INGEST_QUERY = /* GraphQL */ `
             company
             wallet
           }
+          # Klarna / BNPL / local methods surface here, not on
+          # CardPaymentDetails. Parity with ORDERS_FOR_BACKFILL_QUERY so
+          # normalizeBackfillOrder derives payment_method identically for
+          # webhook ingest and paginated backfill.
+          ... on LocalPaymentMethodsPaymentDetails {
+            paymentMethodName
+          }
         }
       }
       metafields(first: 8) {

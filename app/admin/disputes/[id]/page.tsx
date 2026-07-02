@@ -37,6 +37,14 @@ interface Summary {
   currencyCode: string | null;
   needsAttention: boolean;
   syncHealth: string;
+  networkReasonCode?: string | null;
+  networkReasonCodeConfidence?: string | null;
+  paymentContext?: {
+    family: string;
+    label: string | null;
+    cardNetwork: string | null;
+  } | null;
+  skippedSections?: Array<{ section: string; reason: string }>;
 }
 
 interface Note {
@@ -219,11 +227,53 @@ export default function AdminDisputeDetailPage() {
                     {summary.closedAt ? new Date(summary.closedAt).toLocaleDateString() : "—"}
                   </p>
                 </div>
+                <div>
+                  <p className="text-xs text-[#64748B]">Payment method</p>
+                  <p className="text-sm font-medium text-[#0F172A]">
+                    {summary.paymentContext?.label ??
+                      summary.paymentContext?.family ??
+                      "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-[#64748B]">Card network</p>
+                  <p className="text-sm text-[#0F172A]">
+                    {summary.paymentContext
+                      ? (summary.paymentContext.cardNetwork ?? "not applicable")
+                      : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-[#64748B]">Network reason code</p>
+                  <p className="text-sm text-[#0F172A]">
+                    {summary.networkReasonCode ??
+                      (summary.networkReasonCodeConfidence === "not_card_network"
+                        ? "not applicable"
+                        : "—")}
+                  </p>
+                </div>
               </div>
               {summary.needsAttention && (
                 <div className="mt-4 flex items-center gap-2 text-amber-600 text-sm">
                   <AlertTriangle className="w-4 h-4" />
                   Needs attention — {summary.statusReason}
+                </div>
+              )}
+              {summary.skippedSections && summary.skippedSections.length > 0 && (
+                <div className="mt-4 border-t border-[#E2E8F0] pt-4">
+                  <p className="text-xs font-medium text-[#64748B] mb-2">
+                    Sections not applicable to this payment method
+                  </p>
+                  <ul className="space-y-1">
+                    {summary.skippedSections.map((s) => (
+                      <li key={s.section} className="text-sm text-[#475569]">
+                        <span className="font-medium">
+                          {s.section.replace(/_/g, " ")}:
+                        </span>{" "}
+                        {s.reason}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </div>

@@ -171,11 +171,49 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   }
 
   const d = dispute;
+
+  // Payment-method context for admin visibility. Read from the latest
+  // pack's pack_json (buildPack persists payment_context + skipped_sections
+  // there). Internal/admin only — merchant surface is unchanged. Best-
+  // effort: a dispute with no pack yet simply has null paymentContext.
+  let paymentContext:
+    | { family: string; label: string | null; cardNetwork: string | null }
+    | null = null;
+  let skippedSections: Array<{ section: string; reason: string }> = [];
+  if (includeInternal) {
+    const { data: latestPack } = await sb
+      .from("evidence_packs")
+      .select("pack_json, created_at")
+      .eq("dispute_id", disputeId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const pj = (latestPack?.pack_json ?? null) as Record<string, unknown> | null;
+    const pc = pj?.payment_context as
+      | { family?: string; label?: string | null; cardNetwork?: string | null }
+      | undefined;
+    if (pc?.family) {
+      paymentContext = {
+        family: pc.family,
+        label: pc.label ?? null,
+        cardNetwork: pc.cardNetwork ?? null,
+      };
+    }
+    const ss = pj?.skipped_sections as
+      | Array<{ section: string; reason: string }>
+      | undefined;
+    if (Array.isArray(ss)) skippedSections = ss;
+  }
+
   return NextResponse.json({
     events: mergedEvents,
     summary: {
       normalizedStatus: d.normalized_status ?? null,
       statusReason: d.status_reason ?? null,
+      networkReasonCode: d.network_reason_code ?? null,
+      networkReasonCodeConfidence: d.network_reason_code_confidence ?? null,
+      paymentContext,
+      skippedSections,
       submissionState: d.submission_state ?? "not_saved",
       nextAction: d.next_action_type
         ? { type: d.next_action_type, text: d.next_action_text }

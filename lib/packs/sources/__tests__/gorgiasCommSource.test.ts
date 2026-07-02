@@ -34,6 +34,7 @@ function ctxWithEmail(email: string | null): BuildContext {
     shopDomain: "acme.myshopify.com",
     accessToken: "x",
     order: { email } as unknown as OrderDetailNode,
+    paymentContext: { family: "card", raw: null, label: "Card", cardNetwork: null },
   };
 }
 

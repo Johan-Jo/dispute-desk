@@ -57,6 +57,7 @@ const CTX_FRAUD: BuildContext = {
   shopDomain: "demo.myshopify.com",
   accessToken: "tok",
   order: null,
+  paymentContext: { family: "card", raw: null, label: "Card", cardNetwork: "visa" },
 };
 
 const CTX_NON_FRAUD: BuildContext = {
@@ -99,6 +100,21 @@ describe("collectFraudRiskEvidence", () => {
     const sections = await collectFraudRiskEvidence(CTX_NON_FRAUD);
     expect(sections).toEqual([]);
     // Did not even hit the DB.
+    expect(sb.from).not.toHaveBeenCalled();
+  });
+
+  it("returns [] for BNPL/Klarna even when the reason IS fraud-family (no DB read)", async () => {
+    const sb = buildSb([POSITIVE_ROW]);
+    mockGetClient.mockReturnValue(sb as never);
+
+    // FRAUDULENT reason would normally continue; a Klarna payment must
+    // short-circuit before any card fraud-screening lookup.
+    const klarnaFraudCtx: BuildContext = {
+      ...CTX_FRAUD,
+      paymentContext: { family: "klarna", raw: "klarna", label: "Klarna", cardNetwork: null },
+    };
+    const sections = await collectFraudRiskEvidence(klarnaFraudCtx);
+    expect(sections).toEqual([]);
     expect(sb.from).not.toHaveBeenCalled();
   });
 

@@ -1057,7 +1057,9 @@ Three tables + columns on `shops`:
   - identity: `shopify_order_id`, `shopify_order_number`, `shop_id`
   - timing: `processed_at`, `created_at_shopify`, `cancelled_at`, **`fulfilled_at`** (first fulfillment — load-bearing for "time-to-fulfillment after high-risk classification" intelligence)
   - geography: `country`, **`is_cross_border`**, **`distance_bucket`** (nullable freeform `local|regional|international|long_distance_domestic|…`; persisted at ingest so future cross-border analytics never re-derive from raw addresses)
-  - money: `currency`, `order_total`, `payment_gateway`
+  - money: `currency`, `order_total`, `payment_gateway`, **`payment_method`**
+    - `payment_gateway` is only `paymentGatewayNames[0]` — the top-level gateway, which is `shopify_payments` for virtually every Shopify Payments order and therefore collapses card / Apple Pay / Klarna / other BNPL & local methods into one value.
+    - **`payment_method`** is the actual method family, derived by `pickPaymentMethod` (in `lib/shopify/queries/ordersForBackfill.ts`) from the primary transaction's `paymentDetails` union: `card` | `apple_pay` | `google_pay` | `shop_pay` | a local/BNPL method name | `null`. The local method name is Shopify's `paymentMethodName` verbatim (lower-cased), so BNPL sub-products surface at their real granularity — e.g. Klarna appears as `klarna_pay_later`, `klarna_pay_now`, `klarna_slice_it` (and bare `klarna` on older orders), *not* a single collapsed `klarna`. Group with `payment_method LIKE 'klarna%'` when you want the family total. (Observed on `cay-collective` 2026-07-02: ~50% Klarna across those variants, ~26% card, ~19% Apple Pay, remainder `manual`/`gift_card`/`cash` → `null`.) **Klarna and other BNPL/local methods only surface here** — they come back as `LocalPaymentMethodsPaymentDetails`, *not* `CardPaymentDetails`, yet still report `payment_gateway = shopify_payments`. Mutable (re-ingest updates to the latest observed value); the `risk_*_initial` immutability trigger does not cover it. Both `ORDERS_FOR_BACKFILL_QUERY` and `ORDER_FOR_INGEST_QUERY` select the `LocalPaymentMethodsPaymentDetails { paymentMethodName }` fragment so backfill and webhook ingest derive it identically. Historical rows synced before the column existed are backfilled by `scripts/backfill-payment-method.mjs` (re-reads `paymentDetails` per order; only writes non-null methods, never overwrites with null). Migration: `20260702130000_shopify_orders_payment_method.sql`; index `(shop_id, payment_method) where payment_method is not null`.
   - status: `financial_status`, `fulfillment_status`, `cancel_reason`
   - **immutable risk snapshot:** `risk_level_initial`, `risk_recommendation_initial`, `risk_provider_initial` — enforced by `shopify_orders_lock_initial_risk_trg` (BEFORE UPDATE trigger raises `check_violation` if any of the three previously-set non-null values change). The trigger permits the `null → first-observed` transition, so backfill can populate the snapshot lazily.
   - fraud protection: `fraud_protection_level` (`fully_protected | partially_protected | not_protected | pending | not_eligible | not_available`)
@@ -1517,7 +1519,7 @@ Migration `20260514120000_disputes_network_reason_code.sql` adds three columns t
 | Column | Type | Notes |
 |--------|------|-------|
 | `network_reason_code` | text | e.g. `10.4`, `4837`. Null when card network unknown or enum has no mapping. |
-| `network_reason_code_confidence` | text | Constrained to `direct | derived | inferred | unknown`. |
+| `network_reason_code_confidence` | text | `direct | derived | inferred | unknown | not_card_network`. `not_card_network` is set for BNPL/local methods (Klarna, Affirm) where a card reason code cannot exist — distinct from `unknown` (a card dispute we couldn't resolve). |
 | `network_reason_code_resolved_at` | timestamptz | Last resolver write. |
 
 Index: `(shop_id, network_reason_code)` partial WHERE NOT NULL.
@@ -1538,6 +1540,31 @@ Enrichment failures are non-fatal — a failed persist logs a warning and falls 
 ### Open questions
 
 Tracked in [`docs/epics/EPIC-LSE-0-reason-codes.md`](epics/EPIC-LSE-0-reason-codes.md) §Open questions. The biggest is whether a future Shopify API version exposes a typed `networkReasonCode` field — re-verify on each API version bump.
+
+## Klarna / Affirm (BNPL) — Payment-method-aware dispute handling
+
+BNPL methods (Klarna, Affirm) and other local methods settle **through Shopify Payments** and arrive as normal `ShopifyPaymentsDispute` records — ingestion and submission (`disputeEvidenceUpdate(submitEvidence:true)` → Shopify → Klarna/Affirm) are unchanged. But they are **not card payments**: they carry no card network, no AVS/CVV, no 3-D Secure, and no Visa/Mastercard reason code. The dispute pipeline (CE 3.0, FPT, fraud/3DS evidence) is card-scheme-specific, so BNPL disputes are handled on a parallel **payment-method-family** axis rather than being forced into the card model.
+
+**Discovery of the gap:** the first live merchant (`cay-collective`) had 65/65 disputes on Klarna (reasons `CREDIT_NOT_PROCESSED` / `PRODUCT_NOT_RECEIVED`, never fraud). The card machinery *failed safe* but produced generic packs with silent section-skips.
+
+### Model — two orthogonal dimensions
+- **Card network** (`visa | mastercard | amex | discover | null`) — unchanged; `null` for BNPL.
+- **Payment-method family** (`card | klarna | affirm | bnpl | wallet | local_payment_method | manual | gift_card | other | unknown`) — new dimension. Klarna/Affirm/BNPL/local are the "non-card" set (`isNonCardPaymentFamily`). **`"klarna"`/`"affirm"` are NOT added to `CardNetwork`.**
+
+Classifier: [`lib/disputes/paymentContext.ts`](../lib/disputes/paymentContext.ts) `derivePaymentContext(order)`. Detects Klarna by `klarna*` prefix (observed values: `klarna`, `klarna_pay_later`, `klarna_slice_it`), Affirm by `affirm*` prefix (exact string unverified — the raw `paymentMethodName` is logged so it can be confirmed from a real Affirm order), and treats any unrecognized `LocalPaymentMethodsPaymentDetails` as `local_payment_method` (still non-card-safe). Requires the `LocalPaymentMethodsPaymentDetails { paymentMethodName }` fragment on `ORDER_DETAIL_QUERY` ([`lib/shopify/queries/orders.ts`](../lib/shopify/queries/orders.ts)).
+
+### Behavior for a non-card dispute
+- **Classification** is computed in `buildPack.ts` from the live order and persisted to `pack_json.payment_context` (+ `pack_json.skipped_sections`).
+- **Reason-code resolver** short-circuits to `confidence: "not_card_network"` (not `unknown`).
+- **Reason routing** falls back to the Shopify reason enum: `resolveReasonCodeModuleForContext` maps `PRODUCT_NOT_RECEIVED → inr_product_not_received`, `CREDIT_NOT_PROCESSED → credit_not_processed`, etc., so BNPL disputes reuse the existing delivery-proof / refund-record modules instead of collapsing to `generic_fallback`. Card disputes keep routing on the network code.
+- **Narrative overlay** ([`lib/defence/paymentOverlays.ts`](../lib/defence/paymentOverlays.ts)) adds a BNPL system-prompt block (frame to the actual method; lead with delivery/refund evidence; neutral wording — no "Klarna adjudicator" claim) AND supplies `BNPL_PROHIBITED_CARD_PHRASES` that `validateNarrative` **hard-rejects** (AVS, CVV, 3-D Secure, CE 3.0, FPT, cardholder authentication, issuer fraud score, card-network liability shift, representment, chargeback reason code). Enforced on the narrative, retry, and composed-PDF validation passes.
+- **Intentional skips**: `fraudRiskSource` and `threeDSecureSource` short-circuit for BNPL; the reasons are recorded in `pack_json.skipped_sections` and shown in admin.
+- **CE 3.0 / FPT** remain card-only → `not_applicable` for BNPL (unchanged, correct).
+- **Completeness** already fails safe (card-only `required_if_card_payment` fields resolve to `unavailable`, never `missing`/blocking for a `hasCardPayment=false` order) — pinned by Klarna lock tests in `completeness.test.ts`.
+- **Admin** (`/admin/disputes/[id]`) shows Payment method, Card network (`not applicable` for BNPL), network reason code, and the skipped-section reasons (via the `includeInternal` branch of `/api/disputes/[id]/timeline`).
+
+### Not done / follow-ups
+No `disputes.payment_method` column (live pack-time classification only; `shopify_orders.payment_method` covers analytics). Klarna/Affirm's exact evidence spec is unverified — refine narrative modules later by mining real won/lost outcomes. No BNPL loss-prediction model.
 
 ## CE 3.0 Qualification Engine (LSE-1)
 

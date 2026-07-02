@@ -3,6 +3,7 @@ import {
   pickInitialRisk,
   pickFulfilledAt,
   pickThreeDsAuthenticated,
+  pickPaymentMethod,
   normalizeBackfillOrder,
   type RawBackfillOrder,
   type RawRiskAssessment,
@@ -207,6 +208,135 @@ describe("pickThreeDsAuthenticated", () => {
   });
 });
 
+describe("pickPaymentMethod", () => {
+  it("returns null when no transactions are present", () => {
+    expect(pickPaymentMethod(null)).toBeNull();
+    expect(pickPaymentMethod([])).toBeNull();
+  });
+
+  it("returns the local method name for Klarna/BNPL (the whole point)", () => {
+    expect(
+      pickPaymentMethod([
+        {
+          kind: "SALE",
+          status: "SUCCESS",
+          gateway: "shopify_payments",
+          receiptJson: null,
+          paymentDetails: {
+            __typename: "LocalPaymentMethodsPaymentDetails",
+            paymentMethodName: "klarna",
+          },
+        },
+      ]),
+    ).toBe("klarna");
+  });
+
+  it("lower-cases and trims the local method name", () => {
+    expect(
+      pickPaymentMethod([
+        {
+          kind: "SALE",
+          status: "SUCCESS",
+          gateway: "shopify_payments",
+          receiptJson: null,
+          paymentDetails: {
+            __typename: "LocalPaymentMethodsPaymentDetails",
+            paymentMethodName: "  iDEAL  ",
+          },
+        },
+      ]),
+    ).toBe("ideal");
+  });
+
+  it("returns the wallet for a card+wallet transaction", () => {
+    expect(
+      pickPaymentMethod([
+        {
+          kind: "SALE",
+          status: "SUCCESS",
+          gateway: "shopify_payments",
+          receiptJson: null,
+          paymentDetails: { __typename: "CardPaymentDetails", wallet: "APPLE_PAY" },
+        },
+      ]),
+    ).toBe("apple_pay");
+  });
+
+  it("returns 'card' for a plain card transaction with no wallet", () => {
+    expect(
+      pickPaymentMethod([
+        {
+          kind: "SALE",
+          status: "SUCCESS",
+          gateway: "shopify_payments",
+          receiptJson: null,
+          paymentDetails: { __typename: "CardPaymentDetails", company: "Visa" },
+        },
+      ]),
+    ).toBe("card");
+  });
+
+  it("returns null for unknown payment-detail types (never guesses)", () => {
+    expect(
+      pickPaymentMethod([
+        {
+          kind: "SALE",
+          status: "SUCCESS",
+          gateway: "shopify_payments",
+          receiptJson: null,
+          paymentDetails: { __typename: "GiftCardPaymentDetails" },
+        },
+      ]),
+    ).toBeNull();
+  });
+
+  it("returns null when the primary transaction has no paymentDetails", () => {
+    expect(
+      pickPaymentMethod([
+        { kind: "SALE", status: "SUCCESS", gateway: "manual", receiptJson: null },
+      ]),
+    ).toBeNull();
+  });
+
+  it("prefers the primary sale/auth transaction over a later refund", () => {
+    expect(
+      pickPaymentMethod([
+        {
+          kind: "REFUND",
+          status: "SUCCESS",
+          gateway: "shopify_payments",
+          receiptJson: null,
+          paymentDetails: { __typename: "CardPaymentDetails", wallet: "GOOGLE_PAY" },
+        },
+        {
+          kind: "SALE",
+          status: "SUCCESS",
+          gateway: "shopify_payments",
+          receiptJson: null,
+          paymentDetails: {
+            __typename: "LocalPaymentMethodsPaymentDetails",
+            paymentMethodName: "klarna",
+          },
+        },
+      ]),
+    ).toBe("klarna");
+  });
+
+  it("falls back to the first transaction when no SUCCESS sale/auth exists", () => {
+    expect(
+      pickPaymentMethod([
+        {
+          kind: "SALE",
+          status: "FAILURE",
+          gateway: "shopify_payments",
+          receiptJson: null,
+          paymentDetails: { __typename: "CardPaymentDetails", wallet: "APPLE_PAY" },
+        },
+      ]),
+    ).toBe("apple_pay");
+  });
+});
+
 describe("pickFulfilledAt", () => {
   it("returns null when no fulfillments are present", () => {
     expect(pickFulfilledAt(null)).toBeNull();
@@ -248,6 +378,36 @@ describe("normalizeBackfillOrder", () => {
     expect(order.financial_status).toBe("PAID");
     expect(order.fulfillment_status).toBe("FULFILLED");
     expect(order.payment_gateway).toBe("shopify_payments");
+  });
+
+  it("derives payment_method from the primary transaction (Klarna vs card)", () => {
+    const { order: klarna } = normalizeBackfillOrder(
+      shopId,
+      rawOrder({
+        transactions: [
+          {
+            kind: "SALE",
+            status: "SUCCESS",
+            gateway: "shopify_payments",
+            receiptJson: null,
+            paymentDetails: {
+              __typename: "LocalPaymentMethodsPaymentDetails",
+              paymentMethodName: "klarna",
+            },
+          },
+        ],
+      }),
+      { storeCountryCode: "US" },
+    );
+    // payment_gateway still collapses to shopify_payments; payment_method
+    // is what actually distinguishes Klarna.
+    expect(klarna.payment_gateway).toBe("shopify_payments");
+    expect(klarna.payment_method).toBe("klarna");
+
+    const { order: noTx } = normalizeBackfillOrder(shopId, rawOrder(), {
+      storeCountryCode: "US",
+    });
+    expect(noTx.payment_method).toBeNull();
   });
 
   it("flags cross-border when shipping country differs from store country", () => {

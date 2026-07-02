@@ -26,6 +26,7 @@ function ctxWithProtect(status: ProtectStatus | null): BuildContext {
     shopDomain: "test.myshopify.com",
     accessToken: "x",
     order,
+    paymentContext: { family: "card", raw: null, label: "Card", cardNetwork: null },
   };
 }
 
@@ -103,6 +104,7 @@ describe("collectCoverageEvidence", () => {
       shopDomain: "x",
       accessToken: "y",
       order: null,
+      paymentContext: { family: "unknown", raw: null, label: null, cardNetwork: null },
     };
     expect(await collectCoverageEvidence(ctx)).toEqual([]);
   });
