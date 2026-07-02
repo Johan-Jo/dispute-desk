@@ -23,9 +23,12 @@ import { logAuditEvent } from "@/lib/audit/logEvent";
 import { classifyFacts, type ChecklistItemLike } from "@/lib/defence/factClassifier";
 import {
   resolveReasonCodeModule,
+  resolveReasonCodeModuleForContext,
   familyKeyForModule,
 } from "@/lib/defence/reasonCodes/registry";
 import { getFamily } from "@/lib/defence/reasonCodes/familyRegistry";
+import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
+import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
 import { generateNarrative } from "@/lib/defence/narrativeWriter";
 import {
   validateNarrative,
@@ -139,6 +142,12 @@ export async function handleBuildDefencePackage(
 
   // Resolve reason-code module with optional DB override.
   const reasonCode = dispute?.network_reason_code ?? null;
+  // BNPL/local methods (Klarna, Affirm) carry no network reason code —
+  // route the module off the Shopify reason enum so they reuse the right
+  // reason module instead of generic_fallback. Card path is unchanged.
+  const paymentContext =
+    (packJson.payment_context as { family?: string } | undefined) ?? null;
+  const isNonCardPayment = isNonCardPaymentFamily(paymentContext?.family ?? null);
   const { data: moduleOverride } = await sb
     .from("defence_prompt_modules")
     .select("prompt_body, guidance_json, model, version")
@@ -147,17 +156,17 @@ export async function handleBuildDefencePackage(
     .order("version", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const reasonCodeModule = resolveReasonCodeModule(
-    reasonCode,
-    moduleOverride
-      ? {
-          promptBody: moduleOverride.prompt_body ?? undefined,
-          guidanceJson: (moduleOverride.guidance_json ?? {}) as Record<string, unknown>,
-          model: moduleOverride.model ?? undefined,
-          version: moduleOverride.version ?? undefined,
-        }
-      : undefined,
-  );
+  const moduleOverrideInput = moduleOverride
+    ? {
+        promptBody: moduleOverride.prompt_body ?? undefined,
+        guidanceJson: (moduleOverride.guidance_json ?? {}) as Record<string, unknown>,
+        model: moduleOverride.model ?? undefined,
+        version: moduleOverride.version ?? undefined,
+      }
+    : undefined;
+  const reasonCodeModule = isNonCardPayment
+    ? resolveReasonCodeModuleForContext(reasonCode, dispute?.reason ?? null, moduleOverrideInput)
+    : resolveReasonCodeModule(reasonCode, moduleOverrideInput);
 
   // Resolve the family (Phase 1). One family per module today; the
   // family's overlayPromptBody fills in cross-cutting rules that span
@@ -220,6 +229,12 @@ export async function handleBuildDefencePackage(
     packageMode: classification.packageMode,
   });
 
+  // Payment-method overlay (BNPL / Klarna / Affirm). Non-null only for
+  // non-card disputes; reframes the narrative to the actual method and
+  // supplies the card-term phrases that validateNarrative hard-rejects.
+  const { overlay: paymentOverlay, prohibitedPhrases: paymentProhibited } =
+    paymentOverlayFor(paymentContext?.family ?? null);
+
   // Generate the narrative.
   const narrativeRes = await generateNarrative(
     {
@@ -228,6 +243,7 @@ export async function handleBuildDefencePackage(
       reasonCode,
       reasonCodeModule,
       familyOverlay: reasonCodeFamily.overlayPromptBody || null,
+      paymentOverlay,
       strategies,
       packageMode: classification.packageMode,
       caseStrength: "moderate",
@@ -269,13 +285,19 @@ export async function handleBuildDefencePackage(
   // into the user payload. The LLM treats `retryGuidance` as priority
   // context and corrects much more reliably than expecting it to
   // re-read the rules list on the next regenerate.
+  // Merge family-level banned phrases with payment-method banned phrases
+  // (BNPL disputes must never cite card-network artifacts).
+  const hardPhrases = [
+    ...reasonCodeFamily.prohibitedBankPhrases,
+    ...paymentProhibited,
+  ];
   let validation = validateNarrative({
     narrative: narrativeRes.narrative,
     approvedFacts: classification.approved,
     reasonCodeModule,
     packageMode: classification.packageMode,
     internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
-    extraHardPhrases: reasonCodeFamily.prohibitedBankPhrases,
+    extraHardPhrases: hardPhrases,
     guardedPhrases: reasonCodeFamily.guardedBankPhrases,
   });
   if (!validation.ok) {
@@ -303,6 +325,7 @@ export async function handleBuildDefencePackage(
         reasonCode,
         reasonCodeModule,
         familyOverlay: reasonCodeFamily.overlayPromptBody || null,
+        paymentOverlay,
         strategies,
         packageMode: classification.packageMode,
         caseStrength: "moderate",
@@ -335,7 +358,7 @@ export async function handleBuildDefencePackage(
         reasonCodeModule,
         packageMode: classification.packageMode,
         internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
-        extraHardPhrases: reasonCodeFamily.prohibitedBankPhrases,
+        extraHardPhrases: hardPhrases,
         guardedPhrases: reasonCodeFamily.guardedBankPhrases,
       });
       // Reassign so the rest of the pipeline uses the better output.
@@ -428,7 +451,7 @@ export async function handleBuildDefencePackage(
     blocks: composedBlocks,
     approvedFacts: classification.approved,
     packageMode: classification.packageMode,
-    extraHardPhrases: reasonCodeFamily.prohibitedBankPhrases,
+    extraHardPhrases: hardPhrases,
     guardedPhrases: reasonCodeFamily.guardedBankPhrases,
   });
   if (!composedValidation.ok) {

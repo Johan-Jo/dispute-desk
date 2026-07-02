@@ -22,6 +22,7 @@ import {
   type OrderContextHint,
 } from "./networkReasonCode";
 import type { CardNetwork } from "./reasonCodeCatalog";
+import { derivePaymentContext, isNonCardPaymentFamily } from "./paymentContext";
 
 const CARD_COMPANY_TO_NETWORK: Record<string, CardNetwork> = {
   visa: "visa",
@@ -106,11 +107,18 @@ export async function enrichDisputeWithNetworkReasonCode(
 
   const orderContext = deriveOrderContext(input.order);
 
+  // BNPL/local methods (Klarna, Affirm) have no card network reason code;
+  // flag them so the resolver returns an explicit not_card_network result.
+  const isNonCardPayment = isNonCardPaymentFamily(
+    derivePaymentContext(input.order).family,
+  );
+
   const result = resolveNetworkReasonCode({
     shopifyReason: input.shopifyReason,
     cardNetwork: network,
     receiptJson,
     orderContext,
+    isNonCardPayment,
   });
 
   const sb = getServiceClient();

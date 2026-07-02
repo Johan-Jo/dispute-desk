@@ -11,6 +11,7 @@
 
 import type { I18nToken } from "@/lib/i18n/token";
 import type { OrderDetailNode } from "@/lib/shopify/queries/orders";
+import type { PaymentContext } from "@/lib/disputes/paymentContext";
 
 export interface EvidenceSection {
   type:
@@ -52,4 +53,13 @@ export interface BuildContext {
    * order (orderGid is null) or the fetch failed.
    */
   order: OrderDetailNode | null;
+  /**
+   * Payment-method context derived from `order` (card | klarna | affirm
+   * | bnpl | … ). Lets collectors branch on payment method — e.g. the
+   * fraud-risk and 3-D Secure collectors emit an intentional "not
+   * applicable" marker for BNPL/local methods instead of silently
+   * returning nothing. Always present; defaults to family "unknown"
+   * when there is no order.
+   */
+  paymentContext: PaymentContext;
 }

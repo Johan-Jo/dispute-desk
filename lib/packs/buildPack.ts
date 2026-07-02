@@ -47,6 +47,7 @@ import {
   type RiskWeaknessSummary,
 } from "@/lib/automation/riskWeakness";
 import { enrichDisputeWithNetworkReasonCode } from "@/lib/disputes/enrichNetworkReasonCode";
+import { derivePaymentContext } from "@/lib/disputes/paymentContext";
 import { evaluateQualification } from "@/lib/liabilityShift/evaluateQualification";
 import type { EvidenceSection, BuildContext } from "./types";
 import { readSectionLabel } from "./sectionLabel";
@@ -273,6 +274,18 @@ export async function buildPack(
     }
   }
 
+  // Classify the payment method (card | klarna | affirm | bnpl | … ) from
+  // the live-fetched order. Single source of truth for downstream card-vs-
+  // BNPL branching (collectors, narrative overlay, admin). Logs the raw
+  // paymentMethodName so unrecognized local methods (esp. Affirm's exact
+  // string) can be confirmed from real orders.
+  const paymentContext = derivePaymentContext(order);
+  if (paymentContext.family !== "card" && paymentContext.raw) {
+    console.log(
+      `[buildPack] pack=${packId} payment_family=${paymentContext.family} raw=${paymentContext.raw}`,
+    );
+  }
+
   const ctx: BuildContext = {
     packId,
     disputeId: dispute.id,
@@ -283,6 +296,7 @@ export async function buildPack(
     accessToken: decryptAccessToken(session.access_token_encrypted),
     correlationId: opts?.correlationId,
     order,
+    paymentContext,
   };
 
   // LSE-0: resolve the network reason code (Visa 10.x / 13.x or Mastercard
@@ -504,6 +518,7 @@ export async function buildPack(
     hasCardPayment,
     avsCvvAvailable,
     hasShippingEvidence,
+    paymentFamily: paymentContext.family,
   };
 
   const completeness = evaluateCompleteness(
@@ -663,6 +678,28 @@ export async function buildPack(
     supportingCount: caseStrengthForGate.supportingCount,
   };
 
+  // Card-only sections that don't apply to a non-card (BNPL/local)
+  // payment. Recorded for admin observability — the collectors above
+  // already returned nothing for these; this explains why.
+  const skippedSections: Array<{ section: string; reason: string }> = [];
+  if (
+    paymentContext.family !== "card" &&
+    paymentContext.family !== "unknown" &&
+    paymentContext.cardNetwork === null
+  ) {
+    const method = paymentContext.label ?? paymentContext.family;
+    skippedSections.push(
+      {
+        section: "fraud_risk_screening",
+        reason: `Not applicable — ${method} is not a card payment (no card fraud signals).`,
+      },
+      {
+        section: "three_d_secure",
+        reason: `Not applicable — ${method} has no 3-D Secure authentication.`,
+      },
+    );
+  }
+
   // Build the pack_json
   const packJson = {
     version: 1,
@@ -694,6 +731,21 @@ export async function buildPack(
     case_strength: caseStrengthSummary,
     fatal_loss: fatalLossSummary,
     risk_weakness: riskWeaknessSummary,
+    // Payment-method context (card | klarna | affirm | bnpl | …). Persisted
+    // so the defence-package pipeline (enqueue + build job) can route/overlay
+    // on payment method without re-fetching the order. See
+    // lib/disputes/paymentContext.ts.
+    payment_context: {
+      family: paymentContext.family,
+      raw: paymentContext.raw,
+      label: paymentContext.label,
+      cardNetwork: paymentContext.cardNetwork,
+    },
+    // Card-only evidence sections intentionally skipped for this payment
+    // method, with a human reason. Surfaced in admin so an empty
+    // fraud-screening / 3-D-Secure section reads as "not applicable",
+    // not "broken". See docs/technical.md § Klarna-aware dispute handling.
+    skipped_sections: skippedSections.length > 0 ? skippedSections : undefined,
     collectorErrors: collectorErrors.length > 0 ? collectorErrors : undefined,
   };
 

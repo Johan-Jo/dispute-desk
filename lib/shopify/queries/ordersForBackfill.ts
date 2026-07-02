@@ -117,6 +117,15 @@ export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
                 company
                 wallet
               }
+              # Klarna / BNPL / local methods (iDEAL, Bancontact, …) come
+              # back as LocalPaymentMethodsPaymentDetails, NOT
+              # CardPaymentDetails — paymentMethodName carries the specific
+              # method ("klarna"). Without this fragment every Klarna order
+              # is indistinguishable from a plain card sale, because the
+              # top-level paymentGatewayNames is "shopify_payments" for both.
+              ... on LocalPaymentMethodsPaymentDetails {
+                paymentMethodName
+              }
             }
           }
           # Tracking-app metafields. When the merchant has AfterShip /
@@ -205,6 +214,10 @@ export interface RawPaymentDetails {
   bin?: string | null;
   company?: string | null;
   wallet?: string | null;
+  /** Present only on LocalPaymentMethodsPaymentDetails (Klarna, iDEAL,
+   *  Bancontact, …). The specific local/BNPL method name, e.g.
+   *  "klarna". Null on card/wallet/gift-card transactions. */
+  paymentMethodName?: string | null;
 }
 
 /** Raw metafield connection edge as Shopify returns it. */
@@ -360,6 +373,13 @@ export interface ShopifyOrderRow {
    *  preferred join key when both are present. */
   customer_shopify_id: string | null;
   payment_gateway: string | null;
+  /** Payment-method family derived from the primary transaction's
+   *  paymentDetails union: card | apple_pay | google_pay | shop_pay |
+   *  klarna | <local method name> | null. Distinct from payment_gateway
+   *  (which is the top-level gateway, ~always shopify_payments). Null
+   *  when the method can't be determined — we never guess. See
+   *  pickPaymentMethod. */
+  payment_method: string | null;
   financial_status: string | null;
   fulfillment_status: string | null;
   cancel_reason: string | null;
@@ -461,6 +481,52 @@ export function pickThreeDsAuthenticated(
   const receipt = parseReceiptShape(tx.receiptJson);
   if (!receipt) return null;
   return readThreeDsAuthenticatedFromReceipt(receipt);
+}
+
+/**
+ * Pure helper: derive the payment-method family from an order's
+ * transactions. Reads the primary sale/authorization transaction's
+ * `paymentDetails` union — the ONLY place Shopify distinguishes
+ * card vs. wallet vs. Klarna/BNPL, since `paymentGatewayNames` is
+ * "shopify_payments" for all of them.
+ *
+ * Mapping:
+ *   - LocalPaymentMethodsPaymentDetails -> `paymentMethodName`
+ *     lower-cased (e.g. "klarna", "ideal"). This is how Klarna and
+ *     other local/BNPL methods surface.
+ *   - CardPaymentDetails with a wallet  -> the wallet lower-cased
+ *     ("apple_pay", "google_pay", "shop_pay").
+ *   - CardPaymentDetails without wallet -> "card".
+ *   - anything else / no paymentDetails -> null. We never guess; a
+ *     null method is "unknown", not a negative signal.
+ *
+ * Picks the same primary transaction rule as pickThreeDsAuthenticated
+ * (first SUCCESS sale/auth, else the first transaction) so all derived
+ * per-order fields agree on which transaction they describe.
+ */
+export function pickPaymentMethod(
+  transactions: RawBackfillTransaction[] | null | undefined,
+): string | null {
+  if (!transactions?.length) return null;
+  const tx =
+    transactions.find(
+      (t) =>
+        (t.kind === "SALE" || t.kind === "AUTHORIZATION") &&
+        t.status === "SUCCESS",
+    ) ?? transactions[0];
+  const pd = tx?.paymentDetails;
+  if (!pd) return null;
+
+  const local = pd.paymentMethodName?.trim();
+  if (local) return local.toLowerCase();
+
+  if (pd.__typename === "CardPaymentDetails") {
+    const wallet = pd.wallet?.trim();
+    if (wallet) return wallet.toLowerCase();
+    return "card";
+  }
+
+  return null;
 }
 
 function parseReceiptShape(
@@ -594,6 +660,7 @@ export function normalizeBackfillOrder(
     customer_email: raw.customer?.email ?? null,
     customer_shopify_id: raw.customer?.id ?? null,
     payment_gateway: raw.paymentGatewayNames?.[0] ?? null,
+    payment_method: pickPaymentMethod(raw.transactions ?? null),
     financial_status: raw.displayFinancialStatus ?? null,
     fulfillment_status: raw.displayFulfillmentStatus ?? null,
     cancel_reason: raw.cancelReason ?? null,

@@ -44,6 +44,7 @@ const ctx: BuildContext = {
   shopDomain: "test.myshopify.com",
   accessToken: "x",
   order: null,
+  paymentContext: { family: "unknown", raw: null, label: null, cardNetwork: null },
 };
 
 function row(
