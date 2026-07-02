@@ -22,6 +22,7 @@ function makeCtx(transactions: Partial<OrderTransaction>[]): BuildContext {
     shopDomain: "test.myshopify.com",
     accessToken: "x",
     order,
+    paymentContext: { family: "card", raw: null, label: "Card", cardNetwork: null },
   };
 }
 
@@ -275,6 +276,7 @@ describe("threeDSecureSource — transaction selection", () => {
       shopDomain: "x",
       accessToken: "y",
       order: null,
+      paymentContext: { family: "unknown", raw: null, label: null, cardNetwork: null },
     };
     expect(await collectThreeDSecureEvidence(ctx)).toEqual([]);
   });
