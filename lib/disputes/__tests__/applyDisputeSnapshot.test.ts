@@ -151,6 +151,9 @@ describe("applyDisputeSnapshot", () => {
     expect(result.created).toBe(true);
     expect(result.events).toHaveLength(1);
     expect(result.events[0]?.type).toBe("DISPUTE_OPENED");
+    // A live-opened (non-terminal, unsubmitted) dispute is NOT a historical
+    // import — the merchant SHOULD be emailed.
+    expect(result.events[0]?.historicalImport).toBe(false);
     expect(upsertCalls).toHaveLength(1);
     expect(upsertCalls[0]).toMatchObject({
       shop_id: "shop-1",
@@ -180,6 +183,10 @@ describe("applyDisputeSnapshot", () => {
       "DISPUTE_OPENED",
       "OUTCOME_DETECTED",
     ]);
+    // Fresh insert that's ALREADY terminal = historical import. Both events
+    // must carry the flag so the dispatcher suppresses the "opened" and
+    // "you won" emails (the cay-collective first-sync flood).
+    expect(result.events.every((e) => e.historicalImport === true)).toBe(true);
     expect(updateCalls.find((u) => "closed_at" in u)).toMatchObject({
       closed_at: "2026-05-20T00:00:00Z",
     });
@@ -198,6 +205,9 @@ describe("applyDisputeSnapshot", () => {
     });
 
     expect(result.events.map((e) => e.type)).toContain("SUBMISSION_CONFIRMED");
+    // Evidence already submitted at first insert = historical import; no
+    // "we submitted for you" auto alert should fire.
+    expect(result.events.every((e) => e.historicalImport === true)).toBe(true);
     expect(updateCalls.find((u) => "submission_state" in u)).toMatchObject({
       submission_state: "submitted_confirmed",
       submitted_at: "2026-05-21T12:00:00Z",

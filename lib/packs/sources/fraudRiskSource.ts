@@ -46,6 +46,7 @@
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { isFraudFamilyReason } from "@/lib/disputes/networkReasonCode";
+import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import type { BuildContext, EvidenceSection } from "../types";
 
 const SHOPIFY_PROVIDER = "shopify";
@@ -139,6 +140,13 @@ export interface FraudRiskScreeningData extends Record<string, unknown> {
 export async function collectFraudRiskEvidence(
   ctx: BuildContext,
 ): Promise<EvidenceSection[]> {
+  // Rule #0 — non-card payment (Klarna, Affirm, other BNPL/local). Card
+  // fraud-screening signals (Shopify risk assessments, AVS/CVV/3DS) are a
+  // card construct and carry no weight for a BNPL dispute. Skip
+  // intentionally; buildPack records the skip in pack_json.skipped_sections
+  // so admin shows *why* this section is empty rather than looking broken.
+  if (isNonCardPaymentFamily(ctx.paymentContext.family)) return [];
+
   // Rule #1 — fraud-family reasons only.
   if (!isFraudFamilyReason(ctx.disputeReason)) return [];
 

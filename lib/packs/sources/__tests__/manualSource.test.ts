@@ -48,6 +48,7 @@ const CTX: BuildContext = {
   shopDomain: "demo.myshopify.com",
   accessToken: "tok",
   order: null,
+  paymentContext: { family: "card", raw: null, label: "Card", cardNetwork: null },
 };
 
 beforeEach(() => {

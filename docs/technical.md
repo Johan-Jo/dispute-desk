@@ -317,7 +317,7 @@ All transactional email is sent via **Resend** using branded table-based HTML te
 - **Email trigger points:**
   1. **Welcome — email/password sign-up:** the Send Email hook emails a link to `GET /api/auth/confirm?token_hash=…&type=signup&redirect=…` (and optional `locale`). The confirm route calls `verifyOtp` with `token_hash` (no PKCE). On `type=signup` it sends welcome + admin notification server-side, then redirects. Legacy: `?code=…` still uses PKCE `exchangeCodeForSession` when the link came from Supabase-hosted verify.
   2. **Welcome — Shopify OAuth new user:** `GET /api/auth/shopify/callback` calls `sendWelcomeEmail` + `sendAdminSignupNotification` after creating the Supabase user. **This path only runs when `source === "portal"`** — embedded App Store installs skip it.
-  2a. **New shop install (source-independent):** the callback fires `sendAdminInstallNotification` once, gated on the `shops` row being **created for the first time** in this callback (`isNewShop`), inside the `phase === "offline"` block right after `storeSession` (so `fetchShopDetails` can resolve the owner email/store name). This is the path-independent backstop so an **embedded App Store install** can no longer go unannounced — the 2026-05-31 gap where `6mjjvm-tc.myshopify.com` installed via the App Store and triggered no admin email because notification #2 was gated on `source === "portal"`. Fire-and-forget; re-installs/re-OAuth don't re-notify (the row already exists). Coverage: `lib/email/__tests__/adminInstallNotification.test.ts`.
+  2a. **New shop install (source-independent):** the callback fires `sendAdminInstallNotification` once, gated on the `shops` row being **created for the first time** in this callback (`isNewShop`), inside the `phase === "offline"` block right after `storeSession` (so `fetchShopDetails` can resolve the owner email/store name). This is the path-independent backstop so an **embedded App Store install** can no longer go unannounced — the 2026-05-31 gap where `6mjjvm-tc.myshopify.com` installed via the App Store and triggered no admin email because notification #2 was gated on `source === "portal"`. Fire-and-forget; re-installs/re-OAuth don't re-notify (the row already exists). **Enrichment is best-effort:** on a fresh install `fetchShopDetails` is the first authed Shopify call after the token was stored milliseconds earlier, and Shopify commonly 401s that first request before the token propagates — `fetchShopDetails` then *throws*. That failure is caught to `null` so the notification still fires with the store name / owner email degraded to `—`; it must never suppress the whole email (the 2026-07-01 gap where `caycollectiveteststore.myshopify.com` installed, the row + offline session were created, but the enrichment throw landed in the `.catch` and no email was ever sent). Coverage: `lib/email/__tests__/adminInstallNotification.test.ts`.
 
   **Backfilling a missed install notification.** For a shop that installed *before* this notification existed (or any future gap), `scripts/backfill-install-notification.mjs <shopInternalId>` re-sends the admin email. It targets the **prod** Supabase project via the `NEW_SUPABASE_URL` / `NEW_SUPABASE_SERVICE_ROLE_KEY` entries in `.env.production.local` (so it works from a local checkout whose `.env.local` points at the dev project), reads the owner email from `shop_setup.steps.team.payload.teamEmail` (stored unencrypted — so no prod `TOKEN_ENCRYPTION_KEY_V1` is needed to decrypt the offline session), and sends via the local `RESEND_API_KEY`. The email body mirrors `sendAdminInstallNotification` exactly with `source: "embedded (backfill)"`. Used once on 2026-05-31 to backfill `6mjjvm-tc.myshopify.com` (Resend id `239fd12a-…`).
   3. **Welcome — Shopify OAuth first store (signed-in):** callback sends welcome + admin notification on the first `portal_user_shops` row only.
@@ -631,6 +631,41 @@ worker endpoint (`/api/jobs/worker`).
 5. Retry: 3 attempts, 30s × attempt backoff on failure.
 6. UI polls `GET /api/jobs/:id` every 3 seconds until terminal state.
 
+#### Stale-lock reclaim (`20260702150000_claim_jobs_stale_lock_reclaim.sql`)
+
+`claim_jobs` takes a `p_lock_timeout_seconds int default 600` (passed as
+`600` from `lib/jobs/claimJobs.ts` — 2× the worker's `maxDuration=300`).
+**Before** the normal claim loop, it reclaims any job stuck in
+`status='running'` with `locked_at` older than that window — the mark of a
+dead worker (OOM / 300s timeout / redeploy mid-run):
+
+- **attempts remaining** (`attempts < max_attempts`) → back to `queued`;
+  **exhausted** → parked `failed`. `attempts` is incremented at *claim*
+  time, so a running job already counted its attempt — reclaim does not
+  re-increment, keeping the retry bound honest (`max_attempts` distinct
+  claims, then `failed`).
+- Reclaim runs first so the zombie leaves `running` **before** the per-shop
+  `count(running)` concurrency check — the freed slot is usable by a queued
+  successor in the same call.
+- `entity_id` (the Shopify pagination cursor for `backfill_shop_orders`) is
+  preserved, so a reclaimed backfill resumes from exactly where it stalled.
+  Safe because `persistOrders` and `upsertSignalRow` are idempotent — a
+  re-run page never double-imports.
+- Each reclaim writes one append-only `audit_events` row
+  (`event_type='job_lock_reclaimed'`, `reason='lock_expired'`, job/shop ids,
+  `prior_locked_by`/`prior_locked_at`, attempt counters) for worker-death
+  observability.
+
+**Why this exists:** before this migration, `claim_jobs` only ever selected
+`queued` rows while the concurrency cap counted `running` rows — so a single
+crashed job froze in `running` and permanently occupied a shop's only slot,
+wedging its entire pipeline forever (cay-collective, 2026-07-02: an
+8-month historical-order dead band because a `backfill_shop_orders` job died
+mid-page and was never recovered). Fleet sweep for wedged shops:
+`scripts/sql/sweep-stale-running-jobs.sql`; behavior test (5 scenarios,
+transactional): `scripts/sql/test-claim-jobs-reclaim.sql`. See
+`docs/plans/stuck-backfill-job-and-gap-recovery.plan.md`.
+
 The worker route declares `export const maxDuration = 300` so that the bulk `backfill_shop_daily_metrics` handler — which loops through 90 UTC days × ~700ms/day ≈ 63s — completes inside one invocation rather than fanning out as 90 separate jobs (which would queue serially against the per-shop concurrency cap and stretch a backfill over ~3 hours).
 
 ### Dispute event flow — webhook-primary, cron reconciliation
@@ -708,9 +743,17 @@ Both are required; neither is sufficient alone. Delivery dedup alone fails when 
 
 - `DISPUTE_OPENED` → `evaluateRules` → `runAutomationPipeline` → maybe send review alert (deferred when a build was enqueued).
 - `SUBMISSION_CONFIRMED` → `claimAndSendDeferredNewDisputeAlert` (auto variant).
-- `STATUS_CHANGED` / `OUTCOME_DETECTED` / `DUE_DATE_CHANGED` / `DISPUTE_CLOSED` → no per-event downstream effect today; the ledger entry from the diff engine is sufficient.
+- `OUTCOME_DETECTED` → `sendOutcomePostedAlert` (won / lost / accepted variant).
+- `STATUS_CHANGED` / `DUE_DATE_CHANGED` / `DISPUTE_CLOSED` → no per-event downstream effect today; the ledger entry from the diff engine is sufficient. (`DISPUTE_CLOSED` always fires alongside `OUTCOME_DETECTED`, so the email is keyed off the latter to avoid double-firing.)
 
 Each effect is wrapped in `withEffectDedup`, which writes the `audit_events` claim row first. Unique-violation (Postgres 23505) → effect skipped (`already_applied`). Otherwise the effect runs.
+
+**Historical-import email suppression (first-sync flood guard).** When a shop's dispute history is synced for the first time, `applyDisputeSnapshot` inserts every historical dispute as brand-new. For disputes Shopify had *already resolved* (terminal status at insert) or *already evidence-submitted*, the created-branch events are flagged `historicalImport: true` (set in `applyDisputeSnapshot`). The dispatcher then:
+
+- `DISPUTE_OPENED` (historical) → burns the `new_dispute_alert_sent_at` claim and returns **without** running the pipeline or sending the "ready for review" alert.
+- `OUTCOME_DETECTED` / `SUBMISSION_CONFIRMED` (historical) → skipped, **no** "you won / lost / we submitted" email.
+
+Rationale: discovering a dispute that closed months ago is not a live transition — the merchant must not receive one email per historical dispute. Regression: 2026-07-02 `cay-collective` first full sync imported 65 historical disputes (61 already terminal) and blasted ~100 outcome + review emails. Pinned by `disputeEffectsDispatcher.test.ts` ("historical-import …" cases) + `applyDisputeSnapshot.test.ts` (flag-set assertions). A genuinely live dispute always opens non-terminal/unsubmitted first, so `historicalImport` is `false` on the real-time webhook path and normal alerts still fire.
 
 **Safe payload excerpts:** `webhook_events.payload_excerpt` stores only allowlisted fields from `lib/webhooks/eventIdempotency.ts#buildSafePayloadExcerpt` (id, status, reason, amounts, dates). The raw body is never persisted.
 
@@ -952,6 +995,7 @@ npx supabase db query --linked --output table "select shop_domain, plan from sho
 | 006_rls_policies.sql | RLS policies (service role access) |
 | 007_jobs.sql | jobs table for async work |
 | 008_claim_jobs_rpc.sql | claim_jobs() RPC with SKIP LOCKED |
+| 20260702150000_claim_jobs_stale_lock_reclaim.sql | claim_jobs() reclaims stale `running` locks before the claim loop (adds `p_lock_timeout_seconds`) |
 | 009_portal.sql | portal_user_profiles + portal_user_shops + RLS |
 | 010_automation.sql | shop_settings + evidence_packs automation fields |
 | 011_rules_name.sql | rules.name column |
@@ -1015,7 +1059,7 @@ Three tables + columns on `shops`:
   - geography: `country`, **`is_cross_border`**, **`distance_bucket`** (nullable freeform `local|regional|international|long_distance_domestic|…`; persisted at ingest so future cross-border analytics never re-derive from raw addresses)
   - money: `currency`, `order_total`, `payment_gateway`, **`payment_method`**
     - `payment_gateway` is only `paymentGatewayNames[0]` — the top-level gateway, which is `shopify_payments` for virtually every Shopify Payments order and therefore collapses card / Apple Pay / Klarna / other BNPL & local methods into one value.
-    - **`payment_method`** is the actual method family, derived by `pickPaymentMethod` (in `lib/shopify/queries/ordersForBackfill.ts`) from the primary transaction's `paymentDetails` union: `card` | `apple_pay` | `google_pay` | `shop_pay` | `klarna` | *(any other `LocalPaymentMethodsPaymentDetails.paymentMethodName`, e.g. `ideal`)* | `null`. **Klarna and other BNPL/local methods only surface here** — they come back as `LocalPaymentMethodsPaymentDetails`, *not* `CardPaymentDetails`, yet still report `payment_gateway = shopify_payments`. Mutable (re-ingest updates to the latest observed value); the `risk_*_initial` immutability trigger does not cover it. Both `ORDERS_FOR_BACKFILL_QUERY` and `ORDER_FOR_INGEST_QUERY` select the `LocalPaymentMethodsPaymentDetails { paymentMethodName }` fragment so backfill and webhook ingest derive it identically. Historical rows synced before the column existed are backfilled by `scripts/backfill-payment-method.mjs` (re-reads `paymentDetails` per order; only writes non-null methods, never overwrites with null). Migration: `20260702130000_shopify_orders_payment_method.sql`; index `(shop_id, payment_method) where payment_method is not null`.
+    - **`payment_method`** is the actual method family, derived by `pickPaymentMethod` (in `lib/shopify/queries/ordersForBackfill.ts`) from the primary transaction's `paymentDetails` union: `card` | `apple_pay` | `google_pay` | `shop_pay` | a local/BNPL method name | `null`. The local method name is Shopify's `paymentMethodName` verbatim (lower-cased), so BNPL sub-products surface at their real granularity — e.g. Klarna appears as `klarna_pay_later`, `klarna_pay_now`, `klarna_slice_it` (and bare `klarna` on older orders), *not* a single collapsed `klarna`. Group with `payment_method LIKE 'klarna%'` when you want the family total. (Observed on `cay-collective` 2026-07-02: ~50% Klarna across those variants, ~26% card, ~19% Apple Pay, remainder `manual`/`gift_card`/`cash` → `null`.) **Klarna and other BNPL/local methods only surface here** — they come back as `LocalPaymentMethodsPaymentDetails`, *not* `CardPaymentDetails`, yet still report `payment_gateway = shopify_payments`. Mutable (re-ingest updates to the latest observed value); the `risk_*_initial` immutability trigger does not cover it. Both `ORDERS_FOR_BACKFILL_QUERY` and `ORDER_FOR_INGEST_QUERY` select the `LocalPaymentMethodsPaymentDetails { paymentMethodName }` fragment so backfill and webhook ingest derive it identically. Historical rows synced before the column existed are backfilled by `scripts/backfill-payment-method.mjs` (re-reads `paymentDetails` per order; only writes non-null methods, never overwrites with null). Migration: `20260702130000_shopify_orders_payment_method.sql`; index `(shop_id, payment_method) where payment_method is not null`.
   - status: `financial_status`, `fulfillment_status`, `cancel_reason`
   - **immutable risk snapshot:** `risk_level_initial`, `risk_recommendation_initial`, `risk_provider_initial` — enforced by `shopify_orders_lock_initial_risk_trg` (BEFORE UPDATE trigger raises `check_violation` if any of the three previously-set non-null values change). The trigger permits the `null → first-observed` transition, so backfill can populate the snapshot lazily.
   - fraud protection: `fraud_protection_level` (`fully_protected | partially_protected | not_protected | pending | not_eligible | not_available`)
@@ -1475,7 +1519,7 @@ Migration `20260514120000_disputes_network_reason_code.sql` adds three columns t
 | Column | Type | Notes |
 |--------|------|-------|
 | `network_reason_code` | text | e.g. `10.4`, `4837`. Null when card network unknown or enum has no mapping. |
-| `network_reason_code_confidence` | text | Constrained to `direct | derived | inferred | unknown`. |
+| `network_reason_code_confidence` | text | `direct | derived | inferred | unknown | not_card_network`. `not_card_network` is set for BNPL/local methods (Klarna, Affirm) where a card reason code cannot exist — distinct from `unknown` (a card dispute we couldn't resolve). |
 | `network_reason_code_resolved_at` | timestamptz | Last resolver write. |
 
 Index: `(shop_id, network_reason_code)` partial WHERE NOT NULL.
@@ -1496,6 +1540,31 @@ Enrichment failures are non-fatal — a failed persist logs a warning and falls 
 ### Open questions
 
 Tracked in [`docs/epics/EPIC-LSE-0-reason-codes.md`](epics/EPIC-LSE-0-reason-codes.md) §Open questions. The biggest is whether a future Shopify API version exposes a typed `networkReasonCode` field — re-verify on each API version bump.
+
+## Klarna / Affirm (BNPL) — Payment-method-aware dispute handling
+
+BNPL methods (Klarna, Affirm) and other local methods settle **through Shopify Payments** and arrive as normal `ShopifyPaymentsDispute` records — ingestion and submission (`disputeEvidenceUpdate(submitEvidence:true)` → Shopify → Klarna/Affirm) are unchanged. But they are **not card payments**: they carry no card network, no AVS/CVV, no 3-D Secure, and no Visa/Mastercard reason code. The dispute pipeline (CE 3.0, FPT, fraud/3DS evidence) is card-scheme-specific, so BNPL disputes are handled on a parallel **payment-method-family** axis rather than being forced into the card model.
+
+**Discovery of the gap:** the first live merchant (`cay-collective`) had 65/65 disputes on Klarna (reasons `CREDIT_NOT_PROCESSED` / `PRODUCT_NOT_RECEIVED`, never fraud). The card machinery *failed safe* but produced generic packs with silent section-skips.
+
+### Model — two orthogonal dimensions
+- **Card network** (`visa | mastercard | amex | discover | null`) — unchanged; `null` for BNPL.
+- **Payment-method family** (`card | klarna | affirm | bnpl | wallet | local_payment_method | manual | gift_card | other | unknown`) — new dimension. Klarna/Affirm/BNPL/local are the "non-card" set (`isNonCardPaymentFamily`). **`"klarna"`/`"affirm"` are NOT added to `CardNetwork`.**
+
+Classifier: [`lib/disputes/paymentContext.ts`](../lib/disputes/paymentContext.ts) `derivePaymentContext(order)`. Detects Klarna by `klarna*` prefix (observed values: `klarna`, `klarna_pay_later`, `klarna_slice_it`), Affirm by `affirm*` prefix (exact string unverified — the raw `paymentMethodName` is logged so it can be confirmed from a real Affirm order), and treats any unrecognized `LocalPaymentMethodsPaymentDetails` as `local_payment_method` (still non-card-safe). Requires the `LocalPaymentMethodsPaymentDetails { paymentMethodName }` fragment on `ORDER_DETAIL_QUERY` ([`lib/shopify/queries/orders.ts`](../lib/shopify/queries/orders.ts)).
+
+### Behavior for a non-card dispute
+- **Classification** is computed in `buildPack.ts` from the live order and persisted to `pack_json.payment_context` (+ `pack_json.skipped_sections`).
+- **Reason-code resolver** short-circuits to `confidence: "not_card_network"` (not `unknown`).
+- **Reason routing** falls back to the Shopify reason enum: `resolveReasonCodeModuleForContext` maps `PRODUCT_NOT_RECEIVED → inr_product_not_received`, `CREDIT_NOT_PROCESSED → credit_not_processed`, etc., so BNPL disputes reuse the existing delivery-proof / refund-record modules instead of collapsing to `generic_fallback`. Card disputes keep routing on the network code.
+- **Narrative overlay** ([`lib/defence/paymentOverlays.ts`](../lib/defence/paymentOverlays.ts)) adds a BNPL system-prompt block (frame to the actual method; lead with delivery/refund evidence; neutral wording — no "Klarna adjudicator" claim) AND supplies `BNPL_PROHIBITED_CARD_PHRASES` that `validateNarrative` **hard-rejects** (AVS, CVV, 3-D Secure, CE 3.0, FPT, cardholder authentication, issuer fraud score, card-network liability shift, representment, chargeback reason code). Enforced on the narrative, retry, and composed-PDF validation passes.
+- **Intentional skips**: `fraudRiskSource` and `threeDSecureSource` short-circuit for BNPL; the reasons are recorded in `pack_json.skipped_sections` and shown in admin.
+- **CE 3.0 / FPT** remain card-only → `not_applicable` for BNPL (unchanged, correct).
+- **Completeness** already fails safe (card-only `required_if_card_payment` fields resolve to `unavailable`, never `missing`/blocking for a `hasCardPayment=false` order) — pinned by Klarna lock tests in `completeness.test.ts`.
+- **Admin** (`/admin/disputes/[id]`) shows Payment method, Card network (`not applicable` for BNPL), network reason code, and the skipped-section reasons (via the `includeInternal` branch of `/api/disputes/[id]/timeline`).
+
+### Not done / follow-ups
+No `disputes.payment_method` column (live pack-time classification only; `shopify_orders.payment_method` covers analytics). Klarna/Affirm's exact evidence spec is unverified — refine narrative modules later by mining real won/lost outcomes. No BNPL loss-prediction model.
 
 ## CE 3.0 Qualification Engine (LSE-1)
 
@@ -3332,6 +3401,61 @@ log + continue (a billing-side fluke should not break a successful build).
 Guards at: `POST /api/disputes/:id/packs` (quota), `POST /api/rules` (feature),
 `runAutomationPipeline()` (both).
 
+### Free-tier lifetime grant
+
+The Free plan (`plans.ts` → `PLANS.free`, `packsLifetime: FREE_LIFETIME_PACKS = 5`) is the
+default install state and the cancel/downgrade target. Its usable balance comes entirely from a
+single `pack_credits_ledger` row with `source = 'free_lifetime'`, `expires_at = null` (the
+`pack_balance` view treats null as non-expiring). Without that row a free shop has a **0-pack
+balance** and hits the `upgrade_required` block on its first pack build.
+
+- **On install:** `app/api/auth/shopify/callback/route.ts` calls `grantFreeLifetimeCredits(shopId)`
+  (`lib/billing/grantFreeLifetime.ts`) inside the `isNewShop` branch of the offline OAuth phase,
+  fire-and-forget alongside webhook/currency/policy tasks. The helper is **idempotent** — it guards
+  on an existing `free_lifetime` row (and uses `reference = free-lifetime:<shopId>`), so re-install
+  / re-OAuth never double-grants.
+- **Backfill:** migration `20260701120000_backfill_free_lifetime_credits.sql` inserts one
+  `free_lifetime` row (packs = 5) per shop missing one (`where not exists …`). Idempotent, safe to
+  re-run; retires the manual `scripts/sql/unblock-*.sql` pattern for free shops.
+- **N = 5** must stay reconciled across `FREE_LIFETIME_PACKS`, the backfill SQL literal, all six
+  locale copy strings (`billing.freeFeature2` / `freeShort` / `pricing.freeF3` / `trialInfo`), and
+  the App Store listing card.
+
+Free stays manual (`autoPack: false`, `rules: false`); the grant only unblocks manual
+build/export/submit up to N.
+
+**Wall banner (`free_out_of_packs`).** When a free shop exhausts its lifetime packs it needs a
+conversion prompt, but the `low_credits` billing banner only fires for paid plans
+(`monthlyPackLimit > 0`), so a free shop at 0 would otherwise see nothing. `bannerState.ts` adds a
+`free_out_of_packs` variant: fires when `planId === "free"` AND `monthlyPackLimit == null` AND
+`remainingPacks != null && <= 0`. It is **non-dismissible** (it is the actionable wall, and free is
+lifetime — no cycle to reset a dismissal against) and renders via the existing `BillingBanner`
+component (`billing.banners.freeOutOfPacks.*`, ROI-framed, CTA → `/app/billing`). Preview it with
+`?banner_preview=free_out_of_packs`. Paid shops reaching 0 are unaffected — they route through
+`low_credits`/`subscription_expired` via their billing cycle.
+
+**Wall email (`free_out_of_packs`).** The banner covers a merchant who's looking at the app; a
+merchant who closes the tab mid-dispute gets nothing from it. The auto-build pipeline's
+billing-blocked email never fires for free shops (auto-build is off on free), so
+`POST /api/disputes/:id/packs` sends `sendFreeOutOfPacksEmail()`
+(`lib/email/billingLifecycle.ts`) fire-and-forget from its `upgrade_required` branch — **only when
+`quota.plan === "free"`**. It reuses the shared `claimBillingBlockedEmailSlot` throttle (1 email per
+dispute ever, 6h per-shop same-reason cooldown, always send when the dispute deadline is within
+72h), keyed on `QUOTA_EXCEEDED` so a later upgrade-to-paid doesn't double-email the same dispute.
+Respects the merchant's `notifications.billing` opt-out via `resolveTeamContext`.
+
+**Localization of billing emails.** All `lib/email/billingLifecycle.ts` senders (the 7 lifecycle
+emails + the free-tier wall) are localized. Copy lives under the `email.billing.*` namespace in
+`messages/{locale}.json` across all 6 locales. Because these fire from crons/webhooks with **no
+request context**, the locale is read from the DB (`shops.locale`, persisted on OAuth
+install/re-auth in the shopify callback) — not a cookie/header — via `getBillingTranslator(sb,
+shopId)`, which builds a `createTranslator` for the shop's locale plus a locale-aware
+`Intl.DateTimeFormat` date formatter. Message bodies are stored as plain text (paragraphs split on
+a blank line, `**bold**` for emphasis) rather than inline HTML, because next-intl's ICU parser
+treats `<tag>` as rich-text markup and throws; `renderShell` converts that to `<p>`/`<strong>` plus
+a clean text fallback. ICU escaping caveat: apostrophes in a message that carries a `{param}` must
+be doubled (`''`); a message with no params uses a single `'`.
+
 ### Shopify Billing Flow
 
 1. `POST /api/billing/subscribe` → `appSubscriptionCreate` → merchant redirected to Shopify approval
@@ -3544,7 +3668,7 @@ When adding a new table with a service-role policy, always write it as `for all 
 Supabase advisors flag `function_search_path_mutable` because an unpinned `search_path` lets a caller shadow built-in names (`now()`, table refs) via temp objects. The migration pins:
 
 - `set_updated_at`, `submission_logs_set_updated_at`, `dispute_qualifications_set_updated_at`, `reject_dispute_event_mutation`, `reject_audit_mutation`, `shopify_orders_lock_initial_risk` → `search_path = ''` (only `pg_catalog` refs)
-- `ensure_shop_settings(uuid)`, `claim_jobs(text, integer, integer)` → `search_path = public, pg_temp` (touch public tables; explicit list satisfies the lint and still resolves unqualified names)
+- `ensure_shop_settings(uuid)`, `claim_jobs(text, integer, integer, integer)` → `search_path = public, pg_temp` (touch public tables; explicit list satisfies the lint and still resolves unqualified names). Note: `20260702150000_claim_jobs_stale_lock_reclaim.sql` drops the old 3-arg `claim_jobs` and recreates it 4-arg, re-pinning this `search_path` itself.
 
 New functions should pick one of these patterns explicitly.
 

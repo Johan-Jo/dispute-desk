@@ -111,6 +111,32 @@ describe("resolveNetworkReasonCode — inferred path", () => {
   });
 });
 
+describe("resolveNetworkReasonCode — non-card payment (BNPL/Klarna/Affirm)", () => {
+  it("isNonCardPayment short-circuits to not_card_network, not unknown", () => {
+    const result = resolveNetworkReasonCode({
+      shopifyReason: "CREDIT_NOT_PROCESSED",
+      cardNetwork: null,
+      isNonCardPayment: true,
+    });
+    expect(result.confidence).toBe("not_card_network");
+    expect(result.code).toBeNull();
+    expect(result.network).toBeNull();
+    expect(result.reason).toBe("non_card_payment_method");
+  });
+
+  it("takes precedence even when a Shopify reason could otherwise infer a code", () => {
+    // PRODUCT_NOT_RECEIVED + visa would normally infer 13.1, but a
+    // non-card payment must never be assigned a card network code.
+    const result = resolveNetworkReasonCode({
+      shopifyReason: "PRODUCT_NOT_RECEIVED",
+      cardNetwork: "visa", // defensive: even if a stray network leaks in
+      isNonCardPayment: true,
+    });
+    expect(result.confidence).toBe("not_card_network");
+    expect(result.code).toBeNull();
+  });
+});
+
 describe("resolveNetworkReasonCode — derived path (receiptJson)", () => {
   it("Visa receipt carrying dispute.network_reason_code → derived 10.4", () => {
     const result = resolveNetworkReasonCode({

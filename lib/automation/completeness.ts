@@ -36,6 +36,15 @@ export interface OrderContext {
    * Optional for back-compat; defaults to `false`.
    */
   hasShippingEvidence?: boolean;
+  /**
+   * Payment-method family (card | klarna | affirm | bnpl | … ) from
+   * `derivePaymentContext`. Optional/informational — the requirement
+   * engine keys card-only fields off `hasCardPayment`, so BNPL orders
+   * (hasCardPayment=false) already resolve card fields to `unavailable`,
+   * not `missing`. Carried here for observability + future
+   * payment-method-specific templates.
+   */
+  paymentFamily?: string;
 }
 
 export interface ChecklistItem {

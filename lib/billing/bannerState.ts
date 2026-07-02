@@ -34,6 +34,7 @@ export type BillingBannerVariant =
   | "subscription_expired"
   | "grace"
   | "low_credits"
+  | "free_out_of_packs"
   | "none";
 
 export interface BillingBannerState {
@@ -60,6 +61,10 @@ export interface BannerStateInput {
   remainingPacks: number | null;
   /** From the active plan; null on the free plan (no monthly limit). */
   monthlyPackLimit: number | null;
+  /** The shop's plan id. Distinguishes a free shop (lifetime pack floor,
+   *  no monthly cycle) from a paid shop so the free-tier wall can fire
+   *  when a free shop exhausts its lifetime packs. */
+  planId: string;
 }
 
 /** Threshold below which the low-credits banner appears. PRD §5.6 sets
@@ -130,6 +135,28 @@ export function computeBillingBannerState(
         }
       }
     }
+  }
+
+  // 4. Free-tier wall — a free shop that has exhausted its lifetime pack
+  // floor. Free plans carry no monthly limit (monthlyPackLimit === null),
+  // so the low_credits branch above never fires for them; without this a
+  // free shop at 0 packs would see NO banner. Non-dismissible: it is the
+  // actionable wall (they cannot build/submit more packs), not a nudge —
+  // and free is lifetime, so there is no cycle to reset a dismissal
+  // against. Only fires for the free plan; paid shops reach 0 via their
+  // cycle and get low_credits/expired handling instead.
+  if (
+    input.planId === "free" &&
+    input.monthlyPackLimit == null &&
+    input.remainingPacks != null &&
+    input.remainingPacks <= 0
+  ) {
+    return {
+      variant: "free_out_of_packs",
+      dismissible: false,
+      forCycleEnd: null,
+      context: { remaining: input.remainingPacks, planId: input.planId },
+    };
   }
 
   return {

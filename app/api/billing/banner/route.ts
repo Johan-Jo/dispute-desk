@@ -27,13 +27,18 @@ import type { SubscriptionState } from "@/lib/billing/subscriptionState";
 
 export const runtime = "nodejs";
 
-type PreviewVariant = "grace" | "subscription_expired" | "low_credits";
+type PreviewVariant =
+  | "grace"
+  | "subscription_expired"
+  | "low_credits"
+  | "free_out_of_packs";
 
 function isPreviewVariant(v: unknown): v is PreviewVariant {
   return (
     v === "grace" ||
     v === "subscription_expired" ||
-    v === "low_credits"
+    v === "low_credits" ||
+    v === "free_out_of_packs"
   );
 }
 
@@ -59,13 +64,14 @@ export async function GET(req: NextRequest) {
       event_type: "billing_banner_preview",
       event_payload: { preview, requested_at: new Date().toISOString() },
     });
+    const nonDismissible =
+      preview === "subscription_expired" || preview === "free_out_of_packs";
     const previewState = {
       variant: preview,
-      dismissible: preview !== "subscription_expired",
-      forCycleEnd:
-        preview !== "subscription_expired"
-          ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-          : null,
+      dismissible: !nonDismissible,
+      forCycleEnd: !nonDismissible
+        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        : null,
       context: { preview: true, variant: preview },
     };
     return NextResponse.json({
@@ -111,6 +117,7 @@ export async function GET(req: NextRequest) {
     remainingPacks: (balance?.remaining_packs as number | null) ?? null,
     monthlyPackLimit:
       plan.packsPerMonth > 0 ? plan.packsPerMonth : null,
+    planId: plan.id,
   });
 
   return NextResponse.json({

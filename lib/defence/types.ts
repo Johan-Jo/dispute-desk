@@ -311,6 +311,15 @@ export interface NarrativeInput {
    *  cached system block ONLY when non-empty — keeps the prompt-cache
    *  prefix stable when overlays are still empty in early phases. */
   familyOverlay?: string | null;
+  /** Payment-method overlay (BNPL: Klarna, Affirm, other local methods).
+   *  Cross-cutting guidance layered on top of the reason module when the
+   *  dispute was NOT paid by card: frame to a BNPL/local dispute, lean on
+   *  delivery/refund proof, and NEVER cite card-network artifacts (AVS,
+   *  CVV, 3-D Secure, CE 3.0, FPT, cardholder authentication, issuer
+   *  fraud score, card-network liability shift, representment). Emitted
+   *  as a separate cached system block only when non-empty. See
+   *  lib/defence/paymentOverlays.ts. */
+  paymentOverlay?: string | null;
   /** Phase 3 strategy bundle (selected via predicate gates). Emitted as
    *  a separate cached system block when non-empty; promptBodys are
    *  joined in family-canonical order. */

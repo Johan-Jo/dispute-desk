@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Shield, ArrowRight, Check, Lock, FileText, BarChart3, Zap, RefreshCw, Info, Store, X } from "lucide-react";
+import { Shield, ArrowRight, Check, Lock, FileText, BarChart3, Zap, RefreshCw, Info, Store, X, PlugZap, SearchCheck, ShieldCheck, Globe, CreditCard } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
@@ -547,48 +547,111 @@ export function MarketingLandingPageClient({
           role="dialog"
           aria-modal="true"
           aria-labelledby="install-modal-title"
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0B1220]/70 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0F172A]/[0.58] backdrop-blur-[3px]"
           onClick={closeInstall}
         >
           <div
-            className="relative w-full max-w-lg bg-white rounded-xl border border-[#E5E7EB] shadow-2xl p-6 sm:p-8"
+            className="relative w-full max-w-[560px] bg-white rounded-2xl shadow-[0_28px_70px_rgba(15,23,42,0.32)] px-8 sm:px-10 pt-8 pb-7"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
               onClick={closeInstall}
               aria-label="Close"
-              className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center text-[#64748B] hover:text-[#0B1220] hover:bg-[#F6F8FB] transition-colors"
+              className="absolute top-[18px] right-[18px] w-[30px] h-[30px] rounded-lg flex items-center justify-center text-[#94A3B8] hover:text-[#0F172A] hover:bg-[#F6F8FB] transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-[18px] h-[18px]" />
             </button>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-[#1D4ED8] rounded-lg flex items-center justify-center">
-                <Store className="w-5 h-5 text-white" />
+
+            {/* Header */}
+            <div className="flex items-center gap-[13px]">
+              <div className="w-[46px] h-[46px] flex-none rounded-xl bg-gradient-to-b from-[#3B82F6] to-[#1F6FEB] shadow-[0_4px_12px_rgba(31,111,235,0.35),inset_0_1px_0_rgba(255,255,255,0.4)] flex items-center justify-center text-white">
+                <Store className="w-6 h-6" />
               </div>
               <div>
-                <h3 id="install-modal-title" className="text-lg font-semibold text-[#0B1220]">
+                <h3
+                  id="install-modal-title"
+                  className="text-[23px] font-bold text-[#0F172A] tracking-[-0.02em] leading-tight"
+                >
                   {t("pricing.installTitle")}
                 </h3>
-                <p className="text-sm text-[#64748B]">{t("pricing.installSubtitle")}</p>
+                <p className="text-[13.5px] text-[#5B6472] mt-0.5">{t("pricing.installSubtitle")}</p>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                value={shopInput}
-                onChange={(e) => { setShopInput(e.target.value); setShopError(null); }}
-                onKeyDown={(e) => e.key === "Enter" && handleInstallSubmit()}
-                placeholder={t("pricing.shopPlaceholder")}
-                className="flex-1 px-4 py-2.5 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#0B1220] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/40 focus:border-[#1D4ED8]"
-                autoFocus
-              />
-              <Button variant="primary" onClick={handleInstallSubmit}>
-                {t("pricing.installButton")}
-              </Button>
+
+            {/* Steps */}
+            <div className="flex items-start justify-between gap-2 my-6 px-5 py-4 bg-[#F6F9FD] border border-[#EAF0F8] rounded-xl">
+              <div className="flex-1 flex flex-col items-center gap-2 text-center">
+                <div className="w-10 h-10 rounded-[10px] bg-[#E7F0FE] text-[#1F6FEB] flex items-center justify-center">
+                  <PlugZap className="w-[18px] h-[18px]" />
+                </div>
+                <span className="text-[12.5px] font-semibold text-[#1F2937] leading-[1.35]">{t("pricing.installStepConnect")}</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-[#C2CCD9] mt-3 flex-none" strokeWidth={2.5} />
+              <div className="flex-1 flex flex-col items-center gap-2 text-center">
+                <div className="w-10 h-10 rounded-[10px] bg-[#E3F7EF] text-[#0A8A5B] flex items-center justify-center">
+                  <SearchCheck className="w-[18px] h-[18px]" />
+                </div>
+                <span className="text-[12.5px] font-semibold text-[#1F2937] leading-[1.35]">{t("pricing.installStepAnalysis")}</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-[#C2CCD9] mt-3 flex-none" strokeWidth={2.5} />
+              <div className="flex-1 flex flex-col items-center gap-2 text-center">
+                <div className="w-10 h-10 rounded-[10px] bg-[#E7F0FE] text-[#1F6FEB] flex items-center justify-center">
+                  <ShieldCheck className="w-[18px] h-[18px]" />
+                </div>
+                <span className="text-[12.5px] font-semibold text-[#1F2937] leading-[1.35]">{t("pricing.installStepProtected")}</span>
+              </div>
             </div>
-            {shopError && <p className="text-sm text-[#EF4444] mt-2">{shopError}</p>}
-            <p className="text-xs text-[#94A3B8] mt-3">{t("pricing.installHint")}</p>
+
+            {/* Input + Install */}
+            <div className="flex items-stretch gap-2.5">
+              <div className="flex-1 flex items-center h-12 box-border border-[1.5px] border-[#1F6FEB] rounded-[10px] px-3.5 bg-white shadow-[0_0_0_3px_rgba(31,111,235,0.14)] focus-within:shadow-[0_0_0_3px_rgba(31,111,235,0.24)]">
+                <Globe className="w-[15px] h-[15px] text-[#6B7480] mr-[9px] flex-none" />
+                <input
+                  type="text"
+                  value={shopInput}
+                  onChange={(e) => { setShopInput(e.target.value); setShopError(null); }}
+                  onKeyDown={(e) => e.key === "Enter" && handleInstallSubmit()}
+                  placeholder={t("pricing.shopPlaceholder")}
+                  className="flex-1 min-w-0 bg-transparent border-none outline-none text-[14.5px] text-[#0F172A] placeholder-[#7A8493]"
+                  autoFocus
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleInstallSubmit}
+                className="flex-none h-12 box-border px-6 rounded-[10px] bg-gradient-to-b from-[#3B82F6] to-[#1F6FEB] shadow-[0_4px_12px_rgba(31,111,235,0.32),inset_0_1px_0_rgba(255,255,255,0.35)] text-white text-[15px] font-semibold cursor-pointer hover:brightness-105 transition"
+              >
+                {t("pricing.installButton")}
+              </button>
+            </div>
+            {shopError && <p className="text-[12.5px] text-[#EF4444] mt-2">{shopError}</p>}
+
+            {/* Reassurance */}
+            <div className="flex items-start gap-2 mt-[13px] text-[12.5px] text-[#5B6472] leading-[1.45]">
+              <Lock className="w-3.5 h-3.5 text-[#0A8A5B] mt-px flex-none" />
+              <span>{t("pricing.installReassure")}</span>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center gap-4 mt-4 pt-4 border-t border-[#EEF0F4]">
+              <div className="flex items-center gap-[7px] text-[12.5px] text-[#5B6472]">
+                <CreditCard className="w-[15px] h-[15px] text-[#1F6FEB]" />
+                {t("pricing.installTrialNote")}
+              </div>
+              <div className="flex-1" />
+              <div className="flex items-center gap-[7px] text-[12.5px] font-medium text-[#0B1220] bg-[#D9ECFB] px-3 py-1.5 rounded-full">
+                <svg viewBox="0 0 120 120" width="16" height="16" className="block flex-none">
+                  <polygon points="20,46 60,14 100,46" fill="#1f7cae" />
+                  <polygon points="40,46 60,14 80,46" fill="#9ad4f1" />
+                  <polygon points="47,46 60,25 73,46" fill="#cbe9fb" />
+                  <polygon points="20,46 100,46 60,108" fill="#15598c" />
+                  <polygon points="20,46 60,46 60,108" fill="#0e4a72" />
+                  <polygon points="47,46 73,46 60,108" fill="#114f7c" />
+                </svg>
+                {t("pricing.installBadge")}
+              </div>
+            </div>
           </div>
         </div>
       )}

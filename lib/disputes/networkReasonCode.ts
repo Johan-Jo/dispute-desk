@@ -30,7 +30,12 @@ import {
 
 /* ── Public types ── */
 
-export type ResolveConfidence = "direct" | "derived" | "inferred" | "unknown";
+export type ResolveConfidence =
+  | "direct"
+  | "derived"
+  | "inferred"
+  | "unknown"
+  | "not_card_network";
 
 export type ResolveSource =
   | "shopify_dispute_field" // currently unreachable; reserved for future
@@ -61,6 +66,15 @@ export interface ResolveInput {
   receiptJson?: unknown;
   /** Optional order-shape hints that refine inference. */
   orderContext?: OrderContextHint;
+  /**
+   * True when the order was paid by a non-card method (Klarna, Affirm,
+   * other BNPL/local). Network reason codes are a Visa/Mastercard
+   * construct that doesn't exist for these; when set, the resolver
+   * short-circuits to an explicit `not_card_network` result instead of
+   * the generic `unknown` — so downstream code can tell "we couldn't
+   * resolve a card code" apart from "this isn't a card dispute at all".
+   */
+  isNonCardPayment?: boolean;
 }
 
 export interface ResolveResult {
@@ -139,6 +153,21 @@ const INFERENCE_MAP: Partial<
 /* ── Resolver ── */
 
 export function resolveNetworkReasonCode(input: ResolveInput): ResolveResult {
+  // 0. Non-card payment (Klarna, Affirm, other BNPL/local). Network
+  //    reason codes are a Visa/Mastercard construct that doesn't apply.
+  //    Short-circuit to an explicit result so downstream can distinguish
+  //    "not a card dispute" from "card dispute we couldn't resolve".
+  if (input.isNonCardPayment) {
+    return {
+      code: null,
+      network: null,
+      confidence: "not_card_network",
+      source: "unresolved",
+      entry: null,
+      reason: "non_card_payment_method",
+    };
+  }
+
   // 1. Direct path — currently no Shopify-exposed network reason code.
   //    Architecture left in place so this becomes a one-line change when
   //    Shopify adds the field (see EPIC-LSE-0 open question #1).

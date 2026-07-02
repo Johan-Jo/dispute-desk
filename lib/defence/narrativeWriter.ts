@@ -294,6 +294,16 @@ export async function generateNarrative(
       cache_control: { type: "ephemeral" },
     });
   }
+  // Payment-method overlay (BNPL / Klarna / Affirm). Sits between the
+  // family overlay and the reason module so it can override card-framing
+  // in the module's guidance. Only emitted for non-card disputes.
+  if (input.paymentOverlay && input.paymentOverlay.trim().length > 0) {
+    system.push({
+      type: "text",
+      text: input.paymentOverlay,
+      cache_control: { type: "ephemeral" },
+    });
+  }
   system.push({
     type: "text",
     text: input.reasonCodeModule.promptBody,

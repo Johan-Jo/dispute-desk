@@ -1,4 +1,65 @@
 {
+  "email": {
+    "billing": {
+      "trialStarted": {
+        "subject": "Essai DisputeDesk {planName} activé",
+        "preheader": "Votre essai DisputeDesk {planName} est actif",
+        "title": "Bienvenue sur {planName}",
+        "body": "Votre essai est actif. Vous avez **14 jours + 25 packs d''essai** pour mettre auto-build à l''épreuve.\n\nL''essai se termine le **{trialEnd}**. Nous vous préviendrons trois jours avant la fin pour que l''automatisation continue de tourner.\n\nDéjà connecté ? Ouvrez un litige pour voir auto-build s''activer sur le prochain rejet de débit.",
+        "cta": "Ouvrir DisputeDesk",
+        "trialDeadlineFallback": "la fin de l''essai"
+      },
+      "firstPaidCycle": {
+        "subject": "{planName} est actif — {packs} packs débloqués",
+        "preheader": "{planName} est actif — les premiers {packs} packs sont débloqués",
+        "title": "Vous êtes sur {planName}",
+        "body": "Votre premier prélèvement de ${price} a été validé et votre premier mois avec **{packs} packs** est disponible. Le cycle se termine le {cycleEnd}.\n\nAuto-build est actif pour chaque nouveau litige au sein du cycle. Des recharges sont disponibles si vous en avez besoin.",
+        "cta": "Ouvrir la facturation"
+      },
+      "cycleRenewed": {
+        "subject": "{packs} packs débloqués pour le nouveau cycle",
+        "preheader": "{packs} nouveaux packs sont prêts",
+        "title": "Votre cycle a été renouvelé",
+        "body": "**{packs} packs** sont maintenant disponibles sur votre plan {planName}. Le cycle se termine le {cycleEnd}.\n\nLes recharges ajoutées pendant le cycle expirent toujours 30 jours après leur achat initial, indépendamment de ce renouvellement.",
+        "cta": "Voir l''utilisation"
+      },
+      "graceEntered": {
+        "subject": "Paiement échoué — veuillez mettre à jour votre carte",
+        "preheader": "Carte refusée — auto-build tourne encore 3 jours",
+        "title": "Paiement échoué — courte période de grâce",
+        "body": "Shopify n'a pas pu débiter votre carte pour le dernier cycle DisputeDesk. Shopify réessaiera pendant les 3 prochains jours.\n\n**Auto-build continue de tourner pendant la période de grâce**, donc vos litiges continuent de recevoir des packs. Après 3 jours sans prélèvement réussi, auto-build est mis en pause et vous devrez mettre à jour le paiement dans Shopify Admin pour le réactiver.",
+        "cta": "Mettre à jour le paiement dans Shopify"
+      },
+      "subscriptionExpired": {
+        "subject": "Auto-build DisputeDesk en pause — réactivez pour reprendre",
+        "preheader": "Auto-build en pause — les litiges passés restent accessibles",
+        "title": "Auto-build en pause",
+        "body": "Votre abonnement DisputeDesk n'est plus actif, donc auto-build est en pause pour les nouveaux litiges.\n\n**Vous conservez un accès complet** à chaque litige passé, dossier de preuves et historique d'audit — la facturation ne limite que la nouvelle automatisation, jamais la lecture de l'historique. Réactivez à tout moment.",
+        "cta": "Réactiver"
+      },
+      "cancelled": {
+        "subject": "Abonnement DisputeDesk annulé",
+        "preheader": "Désolé de vous voir partir — vos packs et votre historique sont conservés",
+        "title": "Abonnement annulé",
+        "body": "Votre abonnement DisputeDesk est annulé. Auto-build est désactivé, mais chaque litige, dossier de preuves et ligne d'audit que vous avez jamais généré est conservé et reste consultable.\n\nRéabonnez-vous à tout moment et vos packs reprennent à partir de l'allocation de votre cycle actuel.",
+        "cta": "Réactiver"
+      },
+      "topupPurchased": {
+        "subject": "{packs} packs de recharge ajoutés à votre compte",
+        "preheader": "{packs} packs supplémentaires ajoutés",
+        "title": "{packs} packs de recharge ajoutés",
+        "body": "Votre recharge a été validée. **{packs} packs supplémentaires** sont maintenant disponibles en plus de votre allocation mensuelle.\n\nLes packs de recharge expirent 30 jours après l''achat, indépendamment de votre cycle de facturation — ceux-ci expirent le **{expiresAt}**.",
+        "cta": "Voir l''utilisation"
+      },
+      "freeOutOfPacks": {
+        "subject": "Vous n'avez plus de soumissions gratuites — passez à un plan supérieur pour continuer",
+        "preheader": "Vous n'avez plus de soumissions gratuites — passez à un plan supérieur pour continuer",
+        "title": "Vous avez utilisé vos soumissions gratuites",
+        "body": "Les brouillons restent illimités — mais soumettre des preuves à la banque nécessite un crédit, et vous avez utilisé toutes vos soumissions gratuites.\n\nUn rejet de débit récupéré vaut généralement bien plus qu'un plan à 29 $/mois, un seul litige gagné se rembourse donc sur plusieurs mois. Passez à un plan supérieur maintenant pour continuer à répondre avant votre échéance.",
+        "cta": "Changer de plan"
+      }
+    }
+  },
   "nav": {
     "overview": "Aperçu",
     "disputes": "Litiges",
@@ -1953,7 +2014,7 @@
     "packsRemaining": "{count} restants",
     "noPackCredits": "Plus de crédits packs. Mettez à niveau ou achetez un complément.",
     "plans": "Plans disponibles",
-    "free": "Gratuit (Sandbox)",
+    "free": "Gratuit",
     "starter": "Starter",
     "growth": "Growth",
     "scale": "Scale",
@@ -2005,7 +2066,7 @@
     "entFeature5": "Intégrations personnalisées",
     "entFeature6": "Garantie SLA",
     "freeFeature1": "Création illimitée de brouillons",
-    "freeFeature2": "3 packs exportés (à vie)",
+    "freeFeature2": "5 soumissions de preuves gratuites",
     "freeFeature3": "Journal d'activité de base",
     "freeFeature4": "Export PDF",
     "realStarterFeature1": "20 packs/mois",
@@ -2054,6 +2115,11 @@
         "title": "Presque à court de packs",
         "body": "Il vous reste moins de 10 % de votre allocation mensuelle de packs. Achetez un top-up ou passez à un plan supérieur pour maintenir auto-build actif jusqu'à la fin du cycle.",
         "cta": "Acheter un top-up"
+      },
+      "freeOutOfPacks": {
+        "title": "Vous avez utilisé vos soumissions gratuites",
+        "body": "Les brouillons restent illimités, mais soumettre des preuves nécessite un crédit. Un rejet de débit récupéré vaut généralement bien plus qu'un plan à 29 $, un litige gagné se rembourse donc sur plusieurs mois. Passez à un plan supérieur pour continuer à répondre avant votre échéance.",
+        "cta": "Changer de plan"
       }
     },
     "topupSuccessTitle": "{count} packs ajoutés",
@@ -2091,7 +2157,7 @@
       "bannerBody": "Vous traitez environ {rate} rétrofacturations par mois, plus que ne couvre l'offre Free. Découvrez en quoi {plan} vous convient.",
       "bannerCta": "Voir la recommandation"
     },
-    "freeShort": "3 dossiers exportés · Création de brouillons · Journal d'activité",
+    "freeShort": "Brouillons illimités · 5 soumissions gratuites · Journal d'activité",
     "starterShort": "20 dossiers/mois · Règles de base · Assistance par e-mail",
     "growthShort": "100 dossiers/mois · Règles avancées · Sauvegarde automatique",
     "scaleShort": "400 dossiers/mois · Exports avancés · Assistance prioritaire",
@@ -3088,12 +3154,12 @@
     },
     "pricing": {
       "title": "Tarifs prévisibles pour la gestion des litiges",
-      "subtitle": "Free est pour l'évaluation. Les plans payants sont pour gérer les litiges — avec des limites de packs claires et des recharges simples. Pas de pourcentage caché.",
-      "trialInfo": "Les plans payants incluent un essai de 14 jours avec 25 packs. Free inclut 3 packs au total (à vie).",
-      "freeName": "Gratuit (Bac à sable)",
+      "subtitle": "Commencez gratuitement — créez des brouillons illimités et soumettez 5 dossiers de preuves sans frais. Les plans payants ajoutent l'automatisation, les règles et un volume supérieur avec des recharges simples. Pas de pourcentage caché.",
+      "trialInfo": "Les plans payants incluent un essai de 14 jours avec 25 packs. Gratuit inclut 5 soumissions au total (à vie).",
+      "freeName": "Gratuit",
       "freeF1": "Création de brouillons illimitée",
       "freeF2": "Constructeur de dossiers",
-      "freeF3": "3 dossiers exportés (à vie)",
+      "freeF3": "5 soumissions de preuves gratuites",
       "freeF4": "Journal d'activité basique",
       "getStarted": "Commencer",
       "starterName": "Starter",
@@ -3122,11 +3188,17 @@
       "topUpsTitle": "Besoin de plus de packs ?",
       "topUpsDesc": "Achetez des recharges à tout moment. Les crédits sont ajoutés immédiatement au paiement.",
       "installTitle": "Installer DisputeDesk",
-      "installSubtitle": "Saisissez votre boutique Shopify pour commencer",
+      "installSubtitle": "Découvrez où vous perdez de l'argent à cause des rétrofacturations — gratuit.",
       "shopPlaceholder": "yourstore.myshopify.com",
       "shopError": "Saisissez un nom de boutique valide, par exemple votreboutique ou votreboutique.myshopify.com",
       "installButton": "Install",
-      "installHint": "Vous serez redirigé vers Shopify pour autoriser l'application. Forfait gratuit — aucune carte de crédit requise."
+      "installHint": "Vous serez redirigé vers Shopify pour autoriser l'application. Forfait gratuit — aucune carte de crédit requise.",
+      "installStepConnect": "Connectez votre boutique",
+      "installStepAnalysis": "Analyse gratuite",
+      "installStepProtected": "Protégé",
+      "installReassure": "Vous serez redirigé vers Shopify pour approuver l'accès.",
+      "installTrialNote": "Essai gratuit de 14 jours · sans carte",
+      "installBadge": "Built for Shopify"
     },
     "footer": {
       "tagline": "Votre centre de commande pour les litiges Shopify.",

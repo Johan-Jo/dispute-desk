@@ -139,6 +139,15 @@ export const ORDER_DETAIL_QUERY = `
               expirationYear
               wallet
             }
+            # BNPL / local methods (Klarna, Affirm, iDEAL, …) surface here,
+            # NOT on CardPaymentDetails. Without this fragment the dispute
+            # pack builder cannot tell a Klarna/Affirm order from a card
+            # one (paymentGatewayNames is "shopify_payments" for both).
+            # Parity with ORDERS_FOR_BACKFILL_QUERY. See
+            # lib/disputes/paymentContext.ts (derivePaymentContext).
+            ... on LocalPaymentMethodsPaymentDetails {
+              paymentMethodName
+            }
           }
         }
         customer {
@@ -266,6 +275,17 @@ export interface CardPaymentDetails {
   wallet: string | null;
 }
 
+/**
+ * BNPL / local payment methods (Klarna, Affirm, iDEAL, Bancontact, …).
+ * `paymentMethodName` is Shopify's verbatim method name (e.g. "klarna",
+ * "klarna_pay_later"). Consumed by lib/disputes/paymentContext.ts to
+ * classify the payment-method family without touching the card path.
+ */
+export interface LocalPaymentMethodsPaymentDetails {
+  __typename: "LocalPaymentMethodsPaymentDetails";
+  paymentMethodName: string | null;
+}
+
 export interface OrderTransaction {
   id: string;
   kind: string;
@@ -281,7 +301,11 @@ export interface OrderTransaction {
    * `latest_charge.payment_method_details.card.three_d_secure.authenticated`.
    */
   receiptJson: string | Record<string, unknown> | null;
-  paymentDetails: CardPaymentDetails | { __typename: string } | null;
+  paymentDetails:
+    | CardPaymentDetails
+    | LocalPaymentMethodsPaymentDetails
+    | { __typename: string }
+    | null;
 }
 
 export interface OrderDetailNode {

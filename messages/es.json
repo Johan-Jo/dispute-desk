@@ -1,4 +1,65 @@
 {
+  "email": {
+    "billing": {
+      "trialStarted": {
+        "subject": "Prueba de DisputeDesk {planName} activada",
+        "preheader": "Tu prueba de DisputeDesk {planName} está activa",
+        "title": "Te damos la bienvenida a {planName}",
+        "body": "Tu prueba está activa. Tienes **14 días + 25 packs de prueba** para poner a prueba auto-build.\n\nLa prueba termina el **{trialEnd}**. Te avisaremos tres días antes de que termine para que mantengas la automatización en marcha.\n\n¿Ya conectaste? Abre una disputa para ver auto-build en acción en el próximo contracargo.",
+        "cta": "Abrir DisputeDesk",
+        "trialDeadlineFallback": "el fin de la prueba"
+      },
+      "firstPaidCycle": {
+        "subject": "{planName} está activo — {packs} packs desbloqueados",
+        "preheader": "{planName} está activo — los primeros {packs} packs están desbloqueados",
+        "title": "Estás en {planName}",
+        "body": "Tu primer cargo de ${price} se procesó y tu primer mes con **{packs} packs** está disponible. El ciclo termina el {cycleEnd}.\n\nAuto-build está activo para cada disputa nueva dentro del ciclo. Hay recargas disponibles si necesitas más.",
+        "cta": "Abrir facturación"
+      },
+      "cycleRenewed": {
+        "subject": "{packs} packs desbloqueados para el nuevo ciclo",
+        "preheader": "{packs} packs nuevos están listos",
+        "title": "Tu ciclo se renovó",
+        "body": "**{packs} packs** ya están disponibles en tu plan {planName}. El ciclo termina el {cycleEnd}.\n\nLas recargas añadidas durante el ciclo siguen caducando 30 días después de su compra original, independientemente de esta renovación.",
+        "cta": "Ver uso"
+      },
+      "graceEntered": {
+        "subject": "Pago fallido — actualiza tu tarjeta",
+        "preheader": "Tarjeta rechazada — auto-build sigue funcionando durante 3 días",
+        "title": "Pago fallido — periodo de gracia breve",
+        "body": "Shopify no pudo cobrar tu tarjeta para el último ciclo de DisputeDesk. Shopify seguirá reintentando durante los próximos 3 días.\n\n**Auto-build sigue funcionando durante la gracia**, así que tus disputas siguen recibiendo packs. Tras 3 días sin un cobro exitoso, auto-build se pausa y tendrás que actualizar el pago en Shopify Admin para reactivarlo.",
+        "cta": "Actualizar pago en Shopify"
+      },
+      "subscriptionExpired": {
+        "subject": "Auto-build de DisputeDesk pausado — reactiva para continuar",
+        "preheader": "Auto-build pausado — las disputas anteriores siguen accesibles",
+        "title": "Auto-build pausado",
+        "body": "Tu suscripción a DisputeDesk ya no está activa, así que auto-build está pausado para disputas nuevas.\n\n**Sigues teniendo acceso completo** a cada disputa pasada, pack de evidencia y línea de tiempo de auditoría — la facturación solo limita la automatización nueva, nunca la lectura del historial. Reactívala cuando quieras.",
+        "cta": "Reactivar"
+      },
+      "cancelled": {
+        "subject": "Suscripción a DisputeDesk cancelada",
+        "preheader": "Lamentamos que te vayas — tus packs e historial se conservan",
+        "title": "Suscripción cancelada",
+        "body": "Tu suscripción a DisputeDesk está cancelada. Auto-build está apagado, pero cada disputa, pack de evidencia y registro de auditoría que hayas generado se conserva y sigue siendo visible.\n\nVuelve a suscribirte cuando quieras y tus packs retoman desde la asignación de tu ciclo actual.",
+        "cta": "Reactivar"
+      },
+      "topupPurchased": {
+        "subject": "{packs} packs de recarga añadidos a tu cuenta",
+        "preheader": "{packs} packs adicionales añadidos",
+        "title": "{packs} packs de recarga añadidos",
+        "body": "Tu recarga se procesó. **{packs} packs adicionales** ya están disponibles junto a tu asignación mensual.\n\nLos packs de recarga caducan 30 días después de la compra, independientemente de tu ciclo de facturación — estos caducan el **{expiresAt}**.",
+        "cta": "Ver uso"
+      },
+      "freeOutOfPacks": {
+        "subject": "Se acabaron tus envíos gratis — haz upgrade para seguir respondiendo",
+        "preheader": "Se acabaron tus envíos gratis — haz upgrade para seguir respondiendo",
+        "title": "Ya usaste tus envíos gratis",
+        "body": "Los borradores siguen siendo ilimitados, pero enviar evidencia al banco requiere un crédito, y ya usaste todos tus envíos gratis.\n\nUn contracargo recuperado suele valer mucho más que un plan de $29/mes, así que una sola disputa ganada se paga durante meses. Haz upgrade ahora para seguir respondiendo antes de tu fecha límite.",
+        "cta": "Actualizar plan"
+      }
+    }
+  },
   "nav": {
     "overview": "Resumen",
     "disputes": "Disputas",
@@ -1953,7 +2014,7 @@
     "packsRemaining": "{count} restantes",
     "noPackCredits": "Sin créditos de packs. Actualice o compre un complemento.",
     "plans": "Planes disponibles",
-    "free": "Gratis (Sandbox)",
+    "free": "Gratis",
     "starter": "Starter",
     "growth": "Growth",
     "scale": "Scale",
@@ -2005,7 +2066,7 @@
     "entFeature5": "Integraciones personalizadas",
     "entFeature6": "Garantía SLA",
     "freeFeature1": "Creación ilimitada de borradores",
-    "freeFeature2": "3 packs exportados (de por vida)",
+    "freeFeature2": "5 envíos de evidencia gratis",
     "freeFeature3": "Registro de actividad básico",
     "freeFeature4": "Exportación PDF",
     "realStarterFeature1": "20 packs/mes",
@@ -2054,6 +2115,11 @@
         "title": "Casi sin packs",
         "body": "Tienes menos del 10 % de tu asignación mensual de packs. Compra un top-up o haz upgrade del plan para mantener auto-build activo el resto del ciclo.",
         "cta": "Comprar top-up"
+      },
+      "freeOutOfPacks": {
+        "title": "Ya usaste tus envíos gratis",
+        "body": "Los borradores siguen siendo ilimitados, pero enviar evidencia requiere un crédito. Un contracargo recuperado suele valer mucho más que un plan de $29, así que una disputa ganada se paga durante meses. Haz upgrade para seguir respondiendo antes de tu fecha límite.",
+        "cta": "Actualizar plan"
       }
     },
     "topupSuccessTitle": "{count} packs añadidos",
@@ -2091,7 +2157,7 @@
       "bannerBody": "Gestionas alrededor de {rate} contracargos al mes, más de lo que cubre el plan Free. Mira cómo encaja {plan}.",
       "bannerCta": "Ver recomendación"
     },
-    "freeShort": "3 paquetes exportados · Creación de borradores · Registro de actividad",
+    "freeShort": "Borradores ilimitados · 5 envíos gratis · Registro de actividad",
     "starterShort": "20 paquetes/mes · Reglas básicas · Soporte por correo",
     "growthShort": "100 paquetes/mes · Reglas avanzadas · Guardado automático",
     "scaleShort": "400 paquetes/mes · Exportaciones avanzadas · Soporte prioritario",
@@ -3088,12 +3154,12 @@
     },
     "pricing": {
       "title": "Precios predecibles para gestión de disputas",
-      "subtitle": "Free es para evaluación. Los planes pagos son para gestionar disputas — con límites claros de paquetes y recargas simples. Sin porcentaje oculto.",
-      "trialInfo": "Los planes pagos incluyen una prueba de 14 días con 25 paquetes. Free incluye 3 paquetes en total (de por vida).",
-      "freeName": "Gratis (Sandbox)",
+      "subtitle": "Empieza gratis — crea borradores ilimitados y envía 5 paquetes de evidencia sin costo. Los planes pagos añaden automatización, reglas y mayor volumen con recargas simples. Sin porcentaje oculto.",
+      "trialInfo": "Los planes pagos incluyen una prueba de 14 días con 25 paquetes. Gratis incluye 5 envíos en total (de por vida).",
+      "freeName": "Gratis",
       "freeF1": "Creación ilimitada de borradores",
       "freeF2": "Constructor de paquetes de evidencia",
-      "freeF3": "3 paquetes exportados (de por vida)",
+      "freeF3": "5 envíos de evidencia gratis",
       "freeF4": "Registro de actividad básico",
       "getStarted": "Comenzar",
       "starterName": "Starter",
@@ -3122,11 +3188,17 @@
       "topUpsTitle": "¿Necesitas más paquetes?",
       "topUpsDesc": "Compra recargas en cualquier momento. Los créditos se agregan inmediatamente al pagar.",
       "installTitle": "Instalar DisputeDesk",
-      "installSubtitle": "Ingresa tu tienda Shopify para comenzar",
+      "installSubtitle": "Descubre dónde pierdes dinero por contracargos — gratis.",
       "shopPlaceholder": "yourstore.myshopify.com",
       "shopError": "Ingresa un nombre de tienda válido, p. ej. tutienda o tutienda.myshopify.com",
       "installButton": "Install",
-      "installHint": "Serás redirigido a Shopify para autorizar la app. Plan gratis — no se requiere tarjeta de crédito."
+      "installHint": "Serás redirigido a Shopify para autorizar la app. Plan gratis — no se requiere tarjeta de crédito.",
+      "installStepConnect": "Conecta tu tienda",
+      "installStepAnalysis": "Análisis gratis",
+      "installStepProtected": "Protegido",
+      "installReassure": "Te redirigiremos a Shopify para aprobar el acceso.",
+      "installTrialNote": "Prueba gratis de 14 días · sin tarjeta",
+      "installBadge": "Built for Shopify"
     },
     "footer": {
       "tagline": "Tu centro de comando para disputas de Shopify.",

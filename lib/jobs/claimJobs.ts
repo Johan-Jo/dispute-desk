@@ -2,6 +2,17 @@ import { getServiceClient } from "../supabase/server";
 
 const MAX_CONCURRENT_PER_SHOP = 1;
 
+/**
+ * How long a job may sit in `status = 'running'` before `claim_jobs`
+ * presumes the worker died and reclaims the lock. 600s = 2× the worker's
+ * 300s `maxDuration`, so a healthy job (which self-checkpoints at the
+ * 240s soft budget and re-enqueues) is never mistaken for a zombie.
+ * Anything still `running` past this is genuinely dead (OOM / timeout /
+ * redeploy mid-run). See migration
+ * 20260702150000_claim_jobs_stale_lock_reclaim.sql.
+ */
+const LOCK_TIMEOUT_SECONDS = 600;
+
 export interface ClaimedJob {
   id: string;
   shopId: string;
@@ -48,6 +59,7 @@ export async function claimJobs(
     p_worker_id: workerId,
     p_limit: limit,
     p_max_concurrent: MAX_CONCURRENT_PER_SHOP,
+    p_lock_timeout_seconds: LOCK_TIMEOUT_SECONDS,
   });
 
   if (error) {

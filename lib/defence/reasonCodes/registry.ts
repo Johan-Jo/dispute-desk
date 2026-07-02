@@ -82,6 +82,61 @@ export function resolveReasonCodeModule(
   };
 }
 
+/**
+ * Shopify dispute-reason enum → module key. Used as a fallback routing
+ * key ONLY when there is no network reason code (BNPL/local methods like
+ * Klarna/Affirm, which have no Visa/Mastercard code). Card disputes keep
+ * routing on the network code. Reuses the existing per-reason modules so
+ * a Klarna "item not received" gets the same delivery-proof guidance a
+ * card 13.1 would, minus the card-network framing (added by the payment
+ * overlay). Only the reasons we actually see for BNPL are mapped; the
+ * rest fall through to generic_fallback.
+ */
+const SHOPIFY_REASON_TO_MODULE: ReadonlyMap<string, ReasonCodeModuleKey> =
+  new Map([
+    ["PRODUCT_NOT_RECEIVED", "inr_product_not_received"],
+    ["CREDIT_NOT_PROCESSED", "credit_not_processed"],
+    ["PRODUCT_UNACCEPTABLE", "product_unacceptable"],
+    ["SUBSCRIPTION_CANCELED", "canceled_recurring"],
+    ["DUPLICATE", "duplicate_processing"],
+  ]);
+
+/**
+ * Context-aware module resolution. Prefers the network reason code (card
+ * path, unchanged). When there is no network code AND a Shopify reason
+ * enum is available (the BNPL/local case), routes on the Shopify enum so
+ * Klarna/Affirm disputes reuse the right reason module instead of
+ * collapsing to generic_fallback. Falls through to generic_fallback when
+ * neither yields a match.
+ */
+export function resolveReasonCodeModuleForContext(
+  networkReasonCode: string | null | undefined,
+  shopifyReason: string | null | undefined,
+  dbOverride?: ReasonCodeModuleOverride | null,
+): ReasonCodeGuidance {
+  if (!networkReasonCode && shopifyReason) {
+    const key = SHOPIFY_REASON_TO_MODULE.get(shopifyReason.toUpperCase());
+    if (key) {
+      const base = MODULES[key];
+      if (!dbOverride) return base;
+      return {
+        ...base,
+        promptBody: dbOverride.promptBody ?? base.promptBody,
+        prioritize: dbOverride.guidanceJson?.prioritize ?? base.prioritize,
+        avoid: dbOverride.guidanceJson?.avoid ?? base.avoid,
+        mustNotClaim: dbOverride.guidanceJson?.mustNotClaim ?? base.mustNotClaim,
+        criticalCategories:
+          dbOverride.guidanceJson?.criticalCategories ?? base.criticalCategories,
+        allowedFactCategories:
+          dbOverride.guidanceJson?.allowedFactCategories ??
+          base.allowedFactCategories,
+        version: dbOverride.version ?? base.version,
+      };
+    }
+  }
+  return resolveReasonCodeModule(networkReasonCode, dbOverride);
+}
+
 /** All file-default modules; used by the seed script. */
 export const ALL_REASON_CODE_MODULES: ReasonCodeGuidance[] = [
   visa_10_4_fraud,

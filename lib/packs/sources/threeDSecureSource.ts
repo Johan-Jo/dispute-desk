@@ -34,6 +34,7 @@
 import type {
   OrderTransaction,
 } from "@/lib/shopify/queries/orders";
+import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import type { EvidenceSection, BuildContext } from "../types";
 
 /** Where the 3DS signal came from. */
@@ -62,6 +63,11 @@ const SUPPORTED_GATEWAYS = new Set(["shopify_payments"]);
 export async function collectThreeDSecureEvidence(
   ctx: BuildContext,
 ): Promise<EvidenceSection[]> {
+  // Non-card payment (Klarna, Affirm, other BNPL/local): there is no card,
+  // so 3-D Secure never applies. Skip intentionally; buildPack records the
+  // skip in pack_json.skipped_sections for admin observability.
+  if (isNonCardPaymentFamily(ctx.paymentContext.family)) return [];
+
   const order = ctx.order;
   if (!order) return [];
 

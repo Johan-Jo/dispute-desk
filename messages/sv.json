@@ -1,4 +1,65 @@
 {
+  "email": {
+    "billing": {
+      "trialStarted": {
+        "subject": "DisputeDesk {planName}-provperiod aktiverad",
+        "preheader": "Din DisputeDesk {planName}-provperiod är igång",
+        "title": "Välkommen till {planName}",
+        "body": "Din provperiod är aktiv. Du har **14 dagar + 25 provpaket** för att sätta auto-build på prov.\n\nProvperioden slutar den **{trialEnd}**. Vi hör av oss tre dagar innan den tar slut så att du kan hålla automatiseringen igång.\n\nRedan ansluten? Öppna en tvist för att se auto-build dra igång vid nästa chargeback.",
+        "cta": "Öppna DisputeDesk",
+        "trialDeadlineFallback": "provperiodens slut"
+      },
+      "firstPaidCycle": {
+        "subject": "{planName} är aktiv — {packs} paket upplåsta",
+        "preheader": "{planName} är aktiv — de första {packs} paketen är upplåsta",
+        "title": "Du är på {planName}",
+        "body": "Din första debitering på ${price} gick igenom och din första månad med **{packs} paket** är tillgänglig. Cykeln slutar den {cycleEnd}.\n\nAuto-build är på för varje ny tvist inom cykeln. Tillägg finns tillgängliga om du behöver fler.",
+        "cta": "Öppna fakturering"
+      },
+      "cycleRenewed": {
+        "subject": "{packs} paket upplåsta för den nya cykeln",
+        "preheader": "{packs} nya paket är redo",
+        "title": "Din cykel förnyades",
+        "body": "**{packs} paket** är nu tillgängliga på din {planName}-plan. Cykeln slutar den {cycleEnd}.\n\nTillägg som lagts till under cykeln förfaller fortfarande 30 dagar efter det ursprungliga köpet, oberoende av denna förnyelse.",
+        "cta": "Visa användning"
+      },
+      "graceEntered": {
+        "subject": "Betalning misslyckades — uppdatera ditt kort",
+        "preheader": "Kort nekat — auto-build körs i 3 dagar till",
+        "title": "Betalning misslyckades — kort respitperiod",
+        "body": "Shopify kunde inte debitera ditt kort för den senaste DisputeDesk-cykeln. Shopify fortsätter försöka de närmaste 3 dagarna.\n\n**Auto-build körs fortfarande under respitperioden**, så dina tvister får fortsatt paket byggda. Efter 3 dagar utan en lyckad debitering pausas auto-build och du behöver uppdatera betalningen i Shopify Admin för att återaktivera det.",
+        "cta": "Uppdatera betalning i Shopify"
+      },
+      "subscriptionExpired": {
+        "subject": "DisputeDesk auto-build pausad — återaktivera för att fortsätta",
+        "preheader": "Auto-build pausad — tidigare tvister är fortfarande tillgängliga",
+        "title": "Auto-build pausad",
+        "body": "Din DisputeDesk-prenumeration är inte längre aktiv, så auto-build är pausad för nya tvister.\n\n**Du har fortfarande full åtkomst** till varje tidigare tvist, bevispaket och revisionstidslinje — faktureringen begränsar bara ny automatisering, aldrig läsning av historik. Återaktivera när som helst.",
+        "cta": "Återaktivera"
+      },
+      "cancelled": {
+        "subject": "DisputeDesk-prenumeration avslutad",
+        "preheader": "Tråkigt att du lämnar — dina paket och din historik bevaras",
+        "title": "Prenumeration avslutad",
+        "body": "Din DisputeDesk-prenumeration är avslutad. Auto-build är av, men varje tvist, bevispaket och revisionsrad du någonsin skapat bevaras och går fortfarande att visa.\n\nPrenumerera igen när som helst så återupptar dina paket från din nuvarande cykels kvot.",
+        "cta": "Återaktivera"
+      },
+      "topupPurchased": {
+        "subject": "{packs} tilläggspaket har lagts till på ditt konto",
+        "preheader": "{packs} extra paket tillagda",
+        "title": "{packs} tilläggspaket tillagda",
+        "body": "Ditt tillägg gick igenom. **{packs} extra paket** är nu tillgängliga vid sidan av din månadskvot.\n\nTilläggspaket förfaller 30 dagar efter köpet, oberoende av din faktureringscykel — dessa förfaller den **{expiresAt}**.",
+        "cta": "Visa användning"
+      },
+      "freeOutOfPacks": {
+        "subject": "Dina kostnadsfria inlämningar är slut — uppgradera för att fortsätta svara",
+        "preheader": "Dina kostnadsfria inlämningar är slut — uppgradera för att fortsätta svara",
+        "title": "Du har använt dina kostnadsfria inlämningar",
+        "body": "Utkast är fortfarande obegränsade — men att lämna in bevis till banken kräver en kredit, och du har använt alla dina kostnadsfria inlämningar.\n\nEn återvunnen chargeback är oftast värd långt mer än en plan för $29/mån, så en enda vunnen tvist betalar sig i månader. Uppgradera nu för att fortsätta svara före din deadline.",
+        "cta": "Uppgradera plan"
+      }
+    }
+  },
   "nav": {
     "overview": "Översikt",
     "disputes": "Tvister",
@@ -1953,7 +2014,7 @@
     "packsRemaining": "{count} kvar",
     "noPackCredits": "Inga paketkrediter kvar. Uppgradera eller köp ett tillägg.",
     "plans": "Tillgängliga planer",
-    "free": "Gratis (Sandbox)",
+    "free": "Gratis",
     "starter": "Starter",
     "growth": "Growth",
     "scale": "Scale",
@@ -2005,7 +2066,7 @@
     "entFeature5": "Anpassade integrationer",
     "entFeature6": "SLA-garanti",
     "freeFeature1": "Obegränsat utkastskapande",
-    "freeFeature2": "3 exporterade paket (livstid)",
+    "freeFeature2": "5 kostnadsfria inlämningar",
     "freeFeature3": "Grundläggande aktivitetslogg",
     "freeFeature4": "PDF-export",
     "realStarterFeature1": "20 paket/månad",
@@ -2054,6 +2115,11 @@
         "title": "Nästan slut på packs",
         "body": "Du har mindre än 10 % av din månadskvot kvar. Köp en top-up eller uppgradera planen för att hålla auto-build igång resten av cykeln.",
         "cta": "Köp top-up"
+      },
+      "freeOutOfPacks": {
+        "title": "Du har använt dina kostnadsfria inlämningar",
+        "body": "Utkast är fortfarande obegränsade — men att lämna in bevis kräver en kredit. En återvunnen chargeback är oftast värd långt mer än en plan för 29 $, så en vunnen tvist betalar sig i månader. Uppgradera för att fortsätta svara före din deadline.",
+        "cta": "Uppgradera plan"
       }
     },
     "topupSuccessTitle": "{count} packs tillagda",
@@ -2091,7 +2157,7 @@
       "bannerBody": "Du hanterar omkring {rate} återkrav per månad – mer än vad Free täcker. Se hur {plan} passar.",
       "bannerCta": "Visa rekommendation"
     },
-    "freeShort": "3 exporterade paket · Utkastbyggande · Aktivitetslogg",
+    "freeShort": "Obegränsade utkast · 5 kostnadsfria inlämningar · Aktivitetslogg",
     "starterShort": "20 paket/månad · Grundläggande regler · E-postsupport",
     "growthShort": "100 paket/månad · Avancerade regler · Autospara",
     "scaleShort": "400 paket/månad · Avancerade exporter · Prioriterad support",
@@ -3088,12 +3154,12 @@
     },
     "pricing": {
       "title": "Förutsägbar prissättning för disputhantering",
-      "subtitle": "Free är för utvärdering. Betalplaner är för att driva disputhantering — med tydliga paketgränser och enkla tillägg. Ingen dold procentsats.",
-      "trialInfo": "Betalplaner inkluderar 14 dagars provperiod med 25 paket. Free inkluderar 3 paket totalt (livstid).",
-      "freeName": "Gratis (Sandbox)",
+      "subtitle": "Börja gratis — skapa obegränsat med utkast och lämna in 5 bevispaket utan kostnad. Betalplaner lägger till automatisering, regler och högre volym med enkla tillägg. Ingen dold procentsats.",
+      "trialInfo": "Betalplaner inkluderar 14 dagars provperiod med 25 paket. Gratis inkluderar 5 inlämningar totalt (livstid).",
+      "freeName": "Gratis",
       "freeF1": "Obegränsat skapande av utkast",
       "freeF2": "Bevispaketbyggare",
-      "freeF3": "3 exporterade paket (livstid)",
+      "freeF3": "5 kostnadsfria inlämningar",
       "freeF4": "Grundläggande aktivitetslogg",
       "getStarted": "Kom igång",
       "starterName": "Starter",
@@ -3122,11 +3188,17 @@
       "topUpsTitle": "Behöver du fler paket?",
       "topUpsDesc": "Köp tilläggspaket när som helst. Krediter läggs till direkt vid betalning.",
       "installTitle": "Installera DisputeDesk",
-      "installSubtitle": "Ange din Shopify-butik för att komma igång",
+      "installSubtitle": "Se var du förlorar pengar på återkrav — gratis.",
       "shopPlaceholder": "yourstore.myshopify.com",
       "shopError": "Ange ett giltigt butiksnamn, t.ex. dinbutik eller dinbutik.myshopify.com",
       "installButton": "Install",
-      "installHint": "Du omdirigeras till Shopify för att auktorisera appen. Gratisplan — inget kreditkort krävs."
+      "installHint": "Du omdirigeras till Shopify för att auktorisera appen. Gratisplan — inget kreditkort krävs.",
+      "installStepConnect": "Anslut din butik",
+      "installStepAnalysis": "Gratis analys",
+      "installStepProtected": "Skyddad",
+      "installReassure": "Du omdirigeras till Shopify för att godkänna åtkomst.",
+      "installTrialNote": "14 dagars gratis testperiod · inget kort",
+      "installBadge": "Built for Shopify"
     },
     "footer": {
       "tagline": "Ditt kommandocenter för Shopify-tvister.",

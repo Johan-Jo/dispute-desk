@@ -15,6 +15,7 @@ import {
 import { fetchShopDetails } from "@/lib/shopify/shopDetails";
 import { persistShopCurrency } from "@/lib/shopify/persistShopCurrency";
 import { ingestShopifyPolicies } from "@/lib/policies/ingestShopifyPolicies";
+import { grantFreeLifetimeCredits } from "@/lib/billing/grantFreeLifetime";
 import { sendWelcomeEmail } from "@/lib/email/sendWelcome";
 import {
   sendAdminSignupNotification,
@@ -105,17 +106,21 @@ export async function GET(req: NextRequest) {
 
     if (existingShop) {
       shopInternalId = existingShop.id;
+      // Refresh the persisted locale on every re-auth so DB-driven,
+      // request-less senders (billing cron/webhook emails) address the
+      // merchant in their current language.
       await db
         .from("shops")
         .update({
           uninstalled_at: null,
+          locale,
           updated_at: new Date().toISOString(),
         })
         .eq("id", shopInternalId);
     } else {
       const { data: newShop, error } = await db
         .from("shops")
-        .insert({ shop_domain: shop })
+        .insert({ shop_domain: shop, locale })
         .select("id")
         .single();
       if (error || !newShop) {
@@ -147,7 +152,32 @@ export async function GET(req: NextRequest) {
       // helper itself swallows errors. fetchShopDetails works here because the
       // offline session was just stored above.
       if (isNewShop) {
+        // Free-tier lifetime pack floor — grant N usable packs once per
+        // new shop so the Free plan isn't blocked at its first pack build.
+        // Idempotent (guards on an existing free_lifetime ledger row), so
+        // re-install can't double-grant. Fire-and-forget: never blocks OAuth.
+        grantFreeLifetimeCredits(shopInternalId).catch((err) => {
+          console.warn(
+            "[billing] free_lifetime grant failed:",
+            err instanceof Error ? err.message : err,
+          );
+        });
+
+        // Enrichment (store name / owner email) is best-effort: on a fresh
+        // install this is the FIRST authed call after the token was stored
+        // milliseconds ago, and Shopify commonly 401s that first request
+        // before the token propagates — fetchShopDetails then THROWS. That
+        // throw must NOT suppress the notification: shopDomain alone is
+        // always known and the enriched fields render as "—" when absent.
+        // So swallow the fetch failure to null and always send.
         fetchShopDetails(shopInternalId)
+          .catch((err) => {
+            console.warn(
+              "[email:admin-install] shop-details enrichment failed; sending without it:",
+              err instanceof Error ? err.message : err,
+            );
+            return null;
+          })
           .then((details) =>
             sendAdminInstallNotification({
               shopDomain: shop,
