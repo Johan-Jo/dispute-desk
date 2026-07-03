@@ -3858,6 +3858,11 @@ How it works:
   via `extractShopId`, so no route changes are needed). It also sets
   `x-dd-impersonation-mode`. On `/app/*` it forces `x-dd-load-app-bridge: 0` — there
   is no Shopify Admin host, so App Bridge must not try to initialize.
+- **Cookie attributes:** `dd_impersonation` is `sameSite=lax` (NOT the embedded
+  cookies' `sameSite=none; partitioned` CHIPS attrs) — impersonation always runs
+  in a top-level tab, and a partitioned cookie is unreliably sent on top-level
+  same-origin navigations (a hard nav from a non-upgraded `<s-link>` dropped the
+  header mid-session and made the banner vanish, e.g. on `/app/insights/…`).
 - **Read-only enforcement:** for `/api/*`, a READ-mode request with a non-GET method
   is rejected with `403 IMPERSONATION_READ_ONLY` directly in middleware — the primary
   gate, covering all standard mutations (submit, settings save, billing, job
@@ -3865,10 +3870,14 @@ How it works:
   enqueue in `/api/dashboard/insights/initial-analysis`) checks the header itself and
   suppresses the write; `lib/admin/impersonationGuard.ts` provides
   `assertImpersonationWriteAllowed(req)` for any other such route.
-- **Banner:** the embedded shell (`app/(embedded)/layout.tsx`) reads
+- **Banner + fallback nav:** the embedded shell (`app/(embedded)/layout.tsx`) reads
   `x-dd-impersonation-mode` + `x-shop-domain` and renders a sticky
   `ImpersonationBanner` — blue "READ ONLY" / red "WRITE ENABLED" — with an **Exit**
   button that calls `DELETE /api/admin/impersonate` and returns to `/admin/shops`.
+  Because `<s-app-nav>` can't upgrade without App Bridge (it would render as raw
+  text), the banner also renders a **real fallback nav strip** (plain `<a>` links,
+  i18n labels) and `(embedded)/app/layout.tsx` skips `<s-app-nav>` while
+  impersonating to avoid a duplicate raw-text nav.
 - **Audit:** enter and exit write `admin_impersonation_started` /
   `admin_impersonation_ended` `audit_events` (`actor_type: "system"`, `admin: true`,
   `adminUserId`), visible in `/admin/audit`.
