@@ -83,3 +83,15 @@ Companion files:
 - **Status:** schema replay + non-schema settings in progress on the new project. Code-constant PR not yet prepared (cutover-day work).
 - **Outstanding before cutover:** schema replay confirmed (`npx supabase db push`), buckets verified, Auth URL config set on new project, Vercel env vars staged but not yet swapped.
 - **This stub will be replaced by the real entry at cutover time** with: timestamp, operator, verifier output, health endpoint response, sentinel-table row counts.
+
+
+### 2026-07-03T15:47:05Z — manual prod db push (raw, wrapper bypassed by operator authorization)
+
+- **Target ref:** `aokhplydttxtebvbeuzc` (prod)
+- **Git SHA:** `b781bdb` (master)
+- **Method:** `supabase db push --linked --include-all --yes` (db-push-prod.mjs wrapper requires a TTY; operator explicitly authorized the raw push)
+- **Migrations applied (2):**
+  - 20260701120000_backfill_free_lifetime_credits.sql (pre-existing pending backfill; idempotent insert-only)
+  - 20260703101012_admin_passkeys.sql (admin passkey second factor)
+- **Verified:** admin_passkeys present on prod (9 columns). CLI relinked back to dev (vrpkgudqmpyunekrkpnc) after push.
+- **Trigger:** prod /admin enrollment failed because admin_passkeys did not exist on prod.
