@@ -156,13 +156,24 @@ export async function verifyImpersonation(req: {
   return verifyImpersonationValue(req.cookies.get(IMPERSONATION_COOKIE)?.value);
 }
 
-/** Cookie attributes — must mirror the embedded Shopify cookies (CHIPS). */
+/**
+ * Cookie attributes for the impersonation cookie.
+ *
+ * Impersonation ALWAYS runs in a top-level browser tab (ViewAsMerchant opens
+ * `/app` via `window.open(..., "_blank")`) — never inside the Shopify Admin
+ * iframe. So this must be a normal first-party cookie: `sameSite=lax`, NOT the
+ * embedded cookies' `sameSite=none; partitioned` (CHIPS). A partitioned cookie
+ * is keyed to the embedding context and is unreliably sent on top-level
+ * same-origin navigations (e.g. a hard nav from a non-upgraded `<s-link>`),
+ * which dropped the impersonation header mid-session and made the banner vanish
+ * when navigating to pages like /app/insights/initial-analysis. `lax` is sent
+ * on every top-level navigation to our origin.
+ */
 export function impersonationCookieOptions(maxAge: number) {
   return {
     httpOnly: true,
     secure: true,
-    sameSite: "none" as const,
-    partitioned: true,
+    sameSite: "lax" as const,
     path: "/",
     maxAge,
   };
