@@ -100,3 +100,12 @@ Companion files:
 - **Action:** `UPDATE disputes SET due_at = NULL WHERE due_at < '2000-01-01'` — 20 rows (cay-collective).
 - **Context:** the first cleanup (earlier today) was undone within minutes because Shopify returns epoch evidenceDueBy and the unfixed sync re-wrote it. This re-clean followed the ingestion fix (PR #167, sanitizeDueAt at disputeSnapshot + sync/resync) reaching prod (verified prod on master 7d61a67 via /api/health/build), so the rows now STAY null.
 - **Verified:** epoch_remaining=0, null_due=20, real_due=45. CLI relinked to dev after.
+
+
+### 2026-07-03T19:24:21Z — manual prod data cleanup (stale feature_blocked attention_reason)
+
+- **Target ref:** `aokhplydttxtebvbeuzc` (prod)
+- **Action:** `UPDATE disputes SET attention_reason = NULL, attention_payload = '{}' WHERE attention_reason = 'feature_blocked'`
+- **Scope verified:** 65 rows, 1 shop (cay-collective) — residue from the 2026-07-02 import's tier-gate blocks. feature_blocked is a retired attention reason (auto-build is no longer tier-gated after PR #176).
+- **Result:** 65 cleared; needs_attention preserved at 1 (the genuinely-pending #12121). attention_payload can't be NULL (NOT NULL constraint) — set to '{}'.
+- CLI relinked to dev after.

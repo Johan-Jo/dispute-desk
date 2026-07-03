@@ -98,6 +98,12 @@ export interface TemplateLibraryContentProps {
   layoutMode?: "modal" | "page";
   /** Pre-select a dispute-type filter (e.g. "FRAUD") when opening */
   initialCategory?: string;
+  /** When true, installed templates are created ACTIVE (not DRAFT) so they
+   *  immediately count as coverage. Used by the Automation/Coverage "Install
+   *  Playbook" flows where the merchant expects install = active. Defaults to
+   *  false (the plain library-browse behavior, where activation is a later
+   *  explicit step). */
+  activateOnInstall?: boolean;
 }
 
 export function TemplateLibraryContent({
@@ -109,6 +115,7 @@ export function TemplateLibraryContent({
   isActive = true,
   layoutMode = "modal",
   initialCategory = "",
+  activateOnInstall = false,
 }: TemplateLibraryContentProps) {
   const t = useTranslations("templateLibrary");
 
@@ -192,7 +199,7 @@ export function TemplateLibraryContent({
       const res = await fetch(`/api/templates/${templateId}/install`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shopId }),
+        body: JSON.stringify({ shopId, activate: activateOnInstall }),
       });
       if (res.ok) {
         const pack = await res.json();
@@ -234,7 +241,7 @@ export function TemplateLibraryContent({
         const res = await fetch(`/api/templates/${tpl.id}/install`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ shopId }),
+          body: JSON.stringify({ shopId, activate: activateOnInstall }),
         });
         if (res.ok) {
           const pack = await res.json();
