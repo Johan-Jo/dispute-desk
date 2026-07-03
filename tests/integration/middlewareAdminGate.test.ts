@@ -86,11 +86,15 @@ describe("middleware: /api/admin/* gate", () => {
   });
 
   it("passes through and touches last_login when authed with active grant", async () => {
+    // Non-ceremony /api/admin/* routes now ALSO require a passkey-verified
+    // cookie (see middlewarePasskeyGate.test.ts). The passkey ceremony routes
+    // are allow-listed at session+grant — use one here to assert the
+    // session+grant path itself passes without pulling in passkey cookies.
     mockGetUser.mockResolvedValue({
       data: { user: { id: "user-1", email: "joe@example.com" } },
     });
     mockGrantSelect.mockResolvedValue({ data: { user_id: "user-1" } });
-    const res = await middleware(adminReq("/api/admin/billing"));
+    const res = await middleware(adminReq("/api/admin/passkeys/authenticate"));
     expect(res.status).toBe(200);
     expect(mockRpc).toHaveBeenCalledWith("dd_admin_touch_last_login", {
       p_user_id: "user-1",

@@ -15,6 +15,7 @@ import {
   verifyImpersonation,
   IMPERSONATION_MODE_HEADER,
 } from "@/lib/admin/impersonation";
+import { verifyPasskeyCookie } from "@/lib/admin/passkeyCookie";
 
 /**
  * Cheap format check (JWT = three non-empty base64url parts). Real
@@ -253,6 +254,23 @@ export async function middleware(req: NextRequest) {
           { error: "Forbidden", code: "ADMIN_GRANT_REQUIRED" },
           { status: 403 }
         );
+      }
+
+      // --- Passkey second factor (custom WebAuthn) ---
+      // After session + grant, require a passkey-verified session cookie. The
+      // passkey ceremony endpoints are allow-listed at session+grant (they are
+      // HOW an admin becomes verified); everything else needs the cookie.
+      // Supabase's own WebAuthn MFA is server-side gated off on this org, so we
+      // gate here on our own signed cookie (lib/admin/passkeyCookie.ts).
+      const isPasskeyCeremony = pathname.startsWith("/api/admin/passkeys/");
+      if (!isPasskeyCeremony) {
+        const passkey = await verifyPasskeyCookie(req);
+        if (!passkey || passkey.userId !== user.id) {
+          return NextResponse.json(
+            { error: "Passkey verification required", code: "ADMIN_PASSKEY_REQUIRED" },
+            { status: 403 }
+          );
+        }
       }
 
       await db.rpc("dd_admin_touch_last_login", { p_user_id: user.id });
@@ -606,6 +624,29 @@ export async function middleware(req: NextRequest) {
 
     if (!grant) {
       return NextResponse.redirect(new URL("/admin/login?reason=no_access", req.url));
+    }
+
+    // --- Passkey second factor (custom WebAuthn) ---
+    // The enroll/verify pages are reachable at session+grant (they are HOW an
+    // admin becomes passkey-verified — otherwise they'd be unreachable, a
+    // lock-out). Every other /admin/* page requires the verified-session cookie;
+    // absent it, route to verify (if a passkey exists) or enroll (if none).
+    const isPasskeyPage =
+      pathname === "/admin/enroll-passkey" || pathname === "/admin/verify-passkey";
+    if (!isPasskeyPage) {
+      const passkey = await verifyPasskeyCookie(req);
+      if (!passkey || passkey.userId !== user.id) {
+        const { data: cred } = await db
+          .from("admin_passkeys")
+          .select("id")
+          .eq("user_id", user.id)
+          .limit(1)
+          .maybeSingle();
+        const target = cred ? "/admin/verify-passkey" : "/admin/enroll-passkey";
+        const url = new URL(target, req.url);
+        url.searchParams.set("continue", pathname + req.nextUrl.search);
+        return NextResponse.redirect(url);
+      }
     }
 
     await db.rpc("dd_admin_touch_last_login", { p_user_id: user.id });

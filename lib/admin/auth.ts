@@ -73,3 +73,22 @@ export async function getAdminSessionUser(): Promise<AdminUser | null> {
     created_by: grant.created_by,
   };
 }
+
+// ─── Passkey second factor ─────────────────────────────────────────────────
+
+/**
+ * True when the admin has at least one registered passkey. Drives the
+ * middleware branch: a grant-holding admin with no passkey is routed to the
+ * enrollment flow; one with a passkey (but no verified-session cookie) is routed
+ * to the verify flow. Service-role read — safe to call from middleware.
+ */
+export async function hasPasskeyCredential(userId: string): Promise<boolean> {
+  const db = getServiceClient();
+  const { data } = await db
+    .from("admin_passkeys")
+    .select("id")
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+  return data != null;
+}
