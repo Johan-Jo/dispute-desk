@@ -5,12 +5,16 @@
  * Reference: top bar, sidebar, app nav (Dashboard, Disputes, Evidence Packs, Rules, Plan, Settings). Adapt nav to Polaris/App Bridge.
  */
 import { headers, cookies } from "next/headers";
+import { getTranslations } from "next-intl/server";
 import { Providers } from "./providers";
 import { resolveLocale } from "@/lib/i18n/locales";
 import { getMessages } from "@/lib/i18n/getMessages";
 import { getPolarisTranslations } from "@/lib/i18n/polarisLocales";
 import { TawkToWidget } from "@/components/embedded/TawkToWidget";
-import { ImpersonationBanner } from "@/components/embedded/ImpersonationBanner";
+import {
+  ImpersonationBanner,
+  type ImpersonationNavItem,
+} from "@/components/embedded/ImpersonationBanner";
 import { IMPERSONATION_MODE_HEADER } from "@/lib/admin/impersonation";
 
 export default async function EmbeddedLayout({
@@ -47,6 +51,26 @@ export default async function EmbeddedLayout({
     ? (headerStore.get("x-shop-domain")?.trim() ?? "")
     : "";
 
+  // Under impersonation there's no Shopify Admin host, so <s-app-nav> can't
+  // upgrade — provide a real fallback nav (same items as AppNavSidebar, labels
+  // i18n-resolved) so the admin can navigate the merchant's app.
+  let impersonationNav: ImpersonationNavItem[] = [];
+  if (impersonationMode) {
+    const t = await getTranslations();
+    impersonationNav = [
+      { href: "/app", label: t("nav.dashboard") },
+      { href: "/app/disputes", label: t("nav.disputes") },
+      { href: "/app/coverage", label: t("nav.coverage") },
+      { href: "/app/rules", label: t("nav.automation") },
+      { href: "/app/packs", label: t("nav.playbooks") },
+      { href: "/app/insights/initial-analysis", label: t("nav.insights") },
+      { href: "/app/policies", label: t("nav.policies") },
+      { href: "/app/billing", label: t("nav.billing") },
+      { href: "/app/settings", label: t("nav.settings") },
+      { href: "/app/help", label: t("nav.help") },
+    ];
+  }
+
   const apiKey = process.env.SHOPIFY_API_KEY ?? "";
   return (
     <>
@@ -63,6 +87,7 @@ export default async function EmbeddedLayout({
           <ImpersonationBanner
             shopDomain={impersonationShopDomain}
             mode={impersonationMode}
+            navItems={impersonationNav}
           />
         ) : null}
         {children}
