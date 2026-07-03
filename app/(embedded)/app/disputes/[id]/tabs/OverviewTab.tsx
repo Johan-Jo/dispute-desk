@@ -420,19 +420,46 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   function timelineForPresentation(): TimelineStep[] {
     switch (presentationStatus) {
       case "DRAFT": {
-        const packExists = !!data?.pack;
+        // Three distinct states, not two. Previously `packExists ? done : active`
+        // showed "Building defence package" (active) whenever no pack existed —
+        // even when NO build was ever enqueued, leaving a stuck dispute looking
+        // like it was building forever. Distinguish by pack status + active job:
+        //   - pack ready/draft (a real, built pack) → prepared (done)
+        //   - pack queued/building, or an active build_pack job → building (active)
+        //   - no pack + no active job → not started (a build hasn't run)
+        const packStatus = data?.pack?.status ?? null;
+        const buildInProgress =
+          packStatus === "queued" ||
+          packStatus === "building" ||
+          !!data?.pack?.activeBuildJob;
+        const packPrepared = !!data?.pack && !buildInProgress;
+
+        const firstStep: TimelineStep = buildInProgress
+          ? {
+              state: "active",
+              title: t("timeline.defencePackagePrepared.titleActive"),
+              helper: t("timeline.defencePackagePrepared.helperActive"),
+            }
+          : packPrepared
+            ? {
+                state: "done",
+                title: t("timeline.defencePackagePrepared.titleDone"),
+                helper: t("timeline.defencePackagePrepared.helperDone"),
+              }
+            : {
+                // No pack and nothing building — honest "not started" (reuses
+                // the existing pending copy: "Prepare defence package" /
+                // "Generate the evidence pack to begin") instead of a phantom
+                // "Building defence package".
+                state: "pending",
+                title: t("timeline.defencePackagePrepared.titlePending"),
+                helper: t("timeline.defencePackagePrepared.helperPending"),
+              };
+
         return [
+          firstStep,
           {
-            state: packExists ? "done" : "active",
-            title: packExists
-              ? t("timeline.defencePackagePrepared.titleDone")
-              : t("timeline.defencePackagePrepared.titleActive"),
-            helper: packExists
-              ? t("timeline.defencePackagePrepared.helperDone")
-              : t("timeline.defencePackagePrepared.helperActive"),
-          },
-          {
-            state: packExists ? "active" : "pending",
+            state: packPrepared ? "active" : "pending",
             title: t("timeline.reviewAndSubmit.title"),
             helper: dueDateStr
               ? t("timeline.reviewAndSubmit.helperWithDeadline", { deadline: dueDateStr })
