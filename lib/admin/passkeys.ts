@@ -144,3 +144,75 @@ export async function updatePasskeyCounter(
     .update({ counter, last_used_at: new Date().toISOString() })
     .eq("credential_id", credentialId);
 }
+
+// ── Management (list / rename / revoke) ─────────────────────────────────────
+
+export interface PasskeySummary {
+  id: string;
+  friendlyName: string | null;
+  transports: string[] | null;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
+/** Rows for the manager UI — metadata only, no key material. Newest first. */
+export async function listPasskeySummaries(
+  userId: string,
+): Promise<PasskeySummary[]> {
+  const db = getServiceClient();
+  const { data } = await db
+    .from("admin_passkeys")
+    .select("id, friendly_name, transports, created_at, last_used_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  return (data ?? []).map((r) => ({
+    id: r.id as string,
+    friendlyName: (r.friendly_name as string | null) ?? null,
+    transports: (r.transports as string[] | null) ?? null,
+    createdAt: r.created_at as string,
+    lastUsedAt: (r.last_used_at as string | null) ?? null,
+  }));
+}
+
+export async function countPasskeys(userId: string): Promise<number> {
+  const db = getServiceClient();
+  const { count } = await db
+    .from("admin_passkeys")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+  return count ?? 0;
+}
+
+/** Rename a passkey the caller owns. Returns false if it isn't theirs. */
+export async function renamePasskey(
+  userId: string,
+  id: string,
+  friendlyName: string,
+): Promise<boolean> {
+  const db = getServiceClient();
+  const { data } = await db
+    .from("admin_passkeys")
+    .update({ friendly_name: friendlyName.trim().slice(0, 80) })
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select("id")
+    .maybeSingle();
+  return data != null;
+}
+
+/** Revoke a passkey the caller owns. Returns false if it isn't theirs. */
+export async function revokePasskey(
+  userId: string,
+  id: string,
+): Promise<boolean> {
+  const db = getServiceClient();
+  const { data } = await db
+    .from("admin_passkeys")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select("id")
+    .maybeSingle();
+  return data != null;
+}

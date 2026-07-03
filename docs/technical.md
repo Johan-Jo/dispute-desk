@@ -3918,6 +3918,16 @@ How it works:
   to the enroll flow (documented in the migration).
 - **Enroll copy:** "Add Face ID, Windows Hello, or a security key…" — the biometric
   check stays on-device; the server only verifies a cryptographic assertion.
+- **Manager page (`/admin/passkeys`):** list / rename / revoke registered devices,
+  and "Add this device" (runs the register + re-assert ceremony inline). Backed by
+  `GET /api/admin/passkeys` and `PATCH`/`DELETE /api/admin/passkeys/[id]` — these
+  management endpoints require a passkey-verified session in-handler (the
+  middleware only allow-lists `/api/admin/passkeys/*` at session+grant for the
+  ceremony routes). **Revoking the last passkey is refused (`409 LAST_PASSKEY`)** —
+  add another device first, else you'd bounce to enroll with no way in. Per-device
+  enrollment is intentional: `admin_passkeys` holds one row per device, and
+  iCloud Keychain / Google Password Manager sync a passkey within one ecosystem
+  automatically.
 
 ## Multi-Language (i18n)
 
