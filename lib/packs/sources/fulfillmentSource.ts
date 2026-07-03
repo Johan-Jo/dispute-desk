@@ -137,6 +137,45 @@ function resolveProofType(
   }
 }
 
+/** The best (earliest confirmed) delivery timestamp across all
+ *  fulfillments, in ISO form, or null if none is carrier-confirmed.
+ *  Prefers Shopify's own `deliveredAt`, falling back to a tracking-app
+ *  metafield's `deliveredAtTracking`. Lifted to the top level of the
+ *  section `data` so the fact classifier (which reads `p.deliveredAt`)
+ *  can pass it to the narrative writer — the LLM prompt already asks
+ *  for "delivered {date}" prose when the fact carries a date. Without
+ *  this the date stayed nested under `fulfillments[]` and never
+ *  reached the rebuttal. */
+function resolveDeliveredAt(
+  fulfillments: OrderFulfillment[],
+  order: OrderDetailNode,
+): string | null {
+  let best: string | null = null;
+  for (const f of fulfillments) {
+    const tracking = readTrackingForFulfillment(f, order);
+    const candidate =
+      (typeof f.deliveredAt === "string" ? f.deliveredAt : null) ??
+      (tracking.deliveryStatus === "Delivered" ? tracking.deliveredAtTracking : null);
+    if (!candidate) continue;
+    if (!best || candidate < best) best = candidate;
+  }
+  return best;
+}
+
+/** Signed-by name from any tracking-app metafield, if present — the
+ *  strongest delivery signal. Lifted to top-level so the classified
+ *  fact and the narrative writer can cite it. */
+function resolveSignedByName(
+  fulfillments: OrderFulfillment[],
+  order: OrderDetailNode,
+): string | null {
+  for (const f of fulfillments) {
+    const tracking = readTrackingForFulfillment(f, order);
+    if (tracking.signedByName) return tracking.signedByName;
+  }
+  return null;
+}
+
 export async function collectFulfillmentEvidence(
   ctx: BuildContext,
 ): Promise<EvidenceSection[]> {
@@ -180,6 +219,11 @@ export async function collectFulfillmentEvidence(
         // categorizer. Same value applies to both shipping_tracking
         // and delivery_proof since they share signalId "delivery".
         proofType,
+        // Top-level delivery facts read by factClassifier.extractValue
+        // (`p.deliveredAt` / `p.signedByName`) → narrative writer, which
+        // cites "delivered {date}" / signature in bank-facing prose.
+        deliveredAt: resolveDeliveredAt(order.fulfillments, order),
+        signedByName: resolveSignedByName(order.fulfillments, order),
         fulfillments: order.fulfillments.map((f) => extractTrackingData(f, order)),
       },
     },
