@@ -11,6 +11,11 @@ import { isLocale, type Locale } from "@/lib/i18n/locales";
 import { checkRateLimit } from "@/lib/middleware/rateLimit";
 import { isPortalApiPath } from "@/lib/middleware/portalApiPrefixes";
 import { shopIdentityMatches } from "@/lib/middleware/shopMatch";
+import {
+  verifyImpersonation,
+  IMPERSONATION_MODE_HEADER,
+} from "@/lib/admin/impersonation";
+import { verifyPasskeyCookie } from "@/lib/admin/passkeyCookie";
 
 /**
  * Cheap format check (JWT = three non-empty base64url parts). Real
@@ -251,9 +256,71 @@ export async function middleware(req: NextRequest) {
         );
       }
 
+      // --- Passkey second factor (custom WebAuthn) ---
+      // After session + grant, require a passkey-verified session cookie. The
+      // passkey ceremony endpoints are allow-listed at session+grant (they are
+      // HOW an admin becomes verified); everything else needs the cookie.
+      // Supabase's own WebAuthn MFA is server-side gated off on this org, so we
+      // gate here on our own signed cookie (lib/admin/passkeyCookie.ts).
+      const isPasskeyCeremony = pathname.startsWith("/api/admin/passkeys/");
+      if (!isPasskeyCeremony) {
+        const passkey = await verifyPasskeyCookie(req);
+        if (!passkey || passkey.userId !== user.id) {
+          return NextResponse.json(
+            { error: "Passkey verification required", code: "ADMIN_PASSKEY_REQUIRED" },
+            { status: 403 }
+          );
+        }
+      }
+
       await db.rpc("dd_admin_touch_last_login", { p_user_id: user.id });
 
       return res;
+    }
+
+    // --- SuperAdmin impersonation short-circuit (embedded API) ---
+    // A valid, signed `dd_impersonation` cookie (minted by the grant-gated
+    // /api/admin/impersonate route) lets an admin drive the embedded data APIs
+    // as a merchant WITHOUT a Shopify session. Skip the entire SHOP_MISMATCH /
+    // stale-cookie / SESSION_REQUIRED cascade and inject the shop headers
+    // directly — downstream routes already filter by `x-shop-id`. This runs
+    // AFTER the /api/admin/* block above so the admin's own mint/exit calls are
+    // unaffected. Read mode blocks all mutations (non-GET) right here — the
+    // simplest, most complete gate, needing zero per-route edits.
+    {
+      const imp = await verifyImpersonation(req);
+      if (imp) {
+        if (imp.mode === "read" && req.method !== "GET") {
+          return NextResponse.json(
+            {
+              error:
+                "This is a read-only admin preview. Enable write mode to make changes.",
+              code: "IMPERSONATION_READ_ONLY",
+            },
+            { status: 403 }
+          );
+        }
+        const rl = checkRateLimit(`shop:${imp.shopId}`, 100);
+        if (!rl.allowed) {
+          return NextResponse.json(
+            { error: "Rate limit exceeded. Try again shortly." },
+            {
+              status: 429,
+              headers: {
+                "Retry-After": String(
+                  Math.ceil((rl.resetAt - Date.now()) / 1000)
+                ),
+              },
+            }
+          );
+        }
+        const requestHeaders = new Headers(req.headers);
+        requestHeaders.set("x-shop-domain", imp.shopDomain);
+        requestHeaders.set("x-shop-id", imp.shopId);
+        requestHeaders.set(IMPERSONATION_MODE_HEADER, imp.mode);
+        requestHeaders.set(APP_BRIDGE_HEADER, "0");
+        return NextResponse.next({ request: { headers: requestHeaders } });
+      }
     }
 
     let shopDomain = req.cookies.get("shopify_shop")?.value;
@@ -559,6 +626,29 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/admin/login?reason=no_access", req.url));
     }
 
+    // --- Passkey second factor (custom WebAuthn) ---
+    // The enroll/verify pages are reachable at session+grant (they are HOW an
+    // admin becomes passkey-verified — otherwise they'd be unreachable, a
+    // lock-out). Every other /admin/* page requires the verified-session cookie;
+    // absent it, route to verify (if a passkey exists) or enroll (if none).
+    const isPasskeyPage =
+      pathname === "/admin/enroll-passkey" || pathname === "/admin/verify-passkey";
+    if (!isPasskeyPage) {
+      const passkey = await verifyPasskeyCookie(req);
+      if (!passkey || passkey.userId !== user.id) {
+        const { data: cred } = await db
+          .from("admin_passkeys")
+          .select("id")
+          .eq("user_id", user.id)
+          .limit(1)
+          .maybeSingle();
+        const target = cred ? "/admin/verify-passkey" : "/admin/enroll-passkey";
+        const url = new URL(target, req.url);
+        url.searchParams.set("continue", pathname + req.nextUrl.search);
+        return NextResponse.redirect(url);
+      }
+    }
+
     await db.rpc("dd_admin_touch_last_login", { p_user_id: user.id });
 
     return res;
@@ -585,6 +675,33 @@ export async function middleware(req: NextRequest) {
         });
       }
       return res;
+    }
+
+    // --- SuperAdmin impersonation short-circuit (embedded pages) ---
+    // A valid signed `dd_impersonation` cookie renders the real /app/* UI as a
+    // merchant, with NO Shopify session. Skip the entire OAuth / session-exists
+    // / stale-cookie flow and inject the shop headers so the page + its API
+    // calls resolve to the impersonated shop. There is no Shopify Admin host
+    // here, so DON'T load App Bridge (would try to init and fail); force the
+    // header to "0". The `x-dd-impersonation-*` headers let the embedded layout
+    // render the impersonation banner (server component reads them via headers()).
+    {
+      const imp = await verifyImpersonation(req);
+      if (imp) {
+        requestHeaders.set(APP_BRIDGE_HEADER, "0");
+        requestHeaders.set("x-shop-domain", imp.shopDomain);
+        requestHeaders.set("x-shop-id", imp.shopId);
+        requestHeaders.set(IMPERSONATION_MODE_HEADER, imp.mode);
+        const res = NextResponse.next({ request: { headers: requestHeaders } });
+        if (localeParam) {
+          res.cookies.set("dd_locale", localeParam, {
+            path: "/",
+            maxAge: 60 * 60 * 24 * 365,
+            sameSite: "lax",
+          });
+        }
+        return res;
+      }
     }
 
     const shopDomain = req.cookies.get("shopify_shop")?.value;

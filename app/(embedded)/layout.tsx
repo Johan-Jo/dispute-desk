@@ -10,6 +10,8 @@ import { resolveLocale } from "@/lib/i18n/locales";
 import { getMessages } from "@/lib/i18n/getMessages";
 import { getPolarisTranslations } from "@/lib/i18n/polarisLocales";
 import { TawkToWidget } from "@/components/embedded/TawkToWidget";
+import { ImpersonationBanner } from "@/components/embedded/ImpersonationBanner";
+import { IMPERSONATION_MODE_HEADER } from "@/lib/admin/impersonation";
 
 export default async function EmbeddedLayout({
   children,
@@ -34,6 +36,17 @@ export default async function EmbeddedLayout({
   const polarisTranslations = await getPolarisTranslations(locale);
   const shopifyHost = headerStore.get("x-shopify-host")?.trim() ?? "";
 
+  // SuperAdmin impersonation: middleware sets these headers only for a valid,
+  // signed impersonation cookie. Render the banner + skip App Bridge host wiring.
+  const impersonationModeHeader = headerStore.get(IMPERSONATION_MODE_HEADER);
+  const impersonationMode =
+    impersonationModeHeader === "read" || impersonationModeHeader === "write"
+      ? impersonationModeHeader
+      : null;
+  const impersonationShopDomain = impersonationMode
+    ? (headerStore.get("x-shop-domain")?.trim() ?? "")
+    : "";
+
   const apiKey = process.env.SHOPIFY_API_KEY ?? "";
   return (
     <>
@@ -46,6 +59,12 @@ export default async function EmbeddedLayout({
         }}
       />
       <Providers locale={locale} messages={messages} polarisTranslations={polarisTranslations}>
+        {impersonationMode ? (
+          <ImpersonationBanner
+            shopDomain={impersonationShopDomain}
+            mode={impersonationMode}
+          />
+        ) : null}
         {children}
         <TawkToWidget />
       </Providers>

@@ -32,6 +32,7 @@ import {
   Webhook,
   Mail,
   Gauge,
+  Fingerprint,
 } from "lucide-react";
 import { ToastProvider } from "@/components/admin/Toast";
 
@@ -71,6 +72,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Audit Log", href: "/admin/audit", icon: ScrollText },
   { label: "Billing", href: "/admin/billing", icon: DollarSign },
   { label: "Team", href: "/admin/team", icon: Users },
+  { label: "Passkeys", href: "/admin/passkeys", icon: Fingerprint },
   { label: "Resources", href: "/admin/resources", icon: BookOpen },
   { label: "Signal Radar", href: "/admin/signal-radar", icon: Radar },
   { label: "Playbook Leads", href: "/admin/playbook-leads", icon: Mail, group: "Growth" },
@@ -92,7 +94,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       .catch(() => {});
   }, []);
 
-  if (pathname === "/admin/login") {
+  // Render bare (no admin chrome) for pages an UNVERIFIED admin can reach:
+  // the access-denied login page and the passkey enroll/verify gate. Showing
+  // the sidebar/topbar here would leak the panel to someone who hasn't cleared
+  // the second factor yet.
+  if (
+    pathname === "/admin/login" ||
+    pathname === "/admin/enroll-passkey" ||
+    pathname === "/admin/verify-passkey"
+  ) {
     return <>{children}</>;
   }
 

@@ -14,6 +14,13 @@ export type EventType =
   | "job_failed"
   | "rule_deleted"
   | "admin_override"
+  // SuperAdmin "View as merchant" impersonation. Written by
+  // app/api/admin/impersonate/route.ts (enter/exit) and by write routes
+  // performed while impersonating. Payload carries `{ adminUserId,
+  // adminEmail, mode }` and, for exits, `{ adminUserId }`. actorType is
+  // "system" with `admin: true` — matching the `admin_override` convention.
+  | "admin_impersonation_started"
+  | "admin_impersonation_ended"
   | "billing_activated"
   | "billing_declined"
   | "billing_verification_failed"

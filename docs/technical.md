@@ -3830,6 +3830,104 @@ Internal admins use the **same Supabase Auth session** as the marketing/portal s
 - `PATCH /api/admin/jobs/[id]` — retry or cancel jobs
 - `GET /api/admin/audit` — audit events (JSON or CSV format)
 - `GET /api/admin/billing` — MRR + plan distribution + per-shop usage
+- `POST /api/admin/impersonate` — enter "View as merchant" for one shop (see below)
+- `DELETE /api/admin/impersonate` — exit impersonation (clear the cookie)
+
+### View as merchant (impersonation)
+
+A SuperAdmin can open the **real embedded app** (`/app/*`) as any merchant to see
+exactly what they see — for support, debugging, and QA — without holding a Shopify
+session for that shop. Entry points: the **"View as merchant"** action on
+`/admin/shops` (per row) and on `/admin/shops/[id]` (header). A **read/write
+selector** sits next to it; **read-only is the default**.
+
+How it works:
+- `POST /api/admin/impersonate` (grant-gated by the `/api/admin/*` middleware)
+  validates the shop, signs a short-TTL (30 min) cookie `dd_impersonation` =
+  `{ shopId, shopDomain, mode, adminUserId, iat }`, and returns `/app` — the admin
+  UI opens it in a **new top-level tab** (not inside the admin iframe).
+- The cookie is **HMAC-SHA256 signed with `CRON_SECRET`** and verified in the edge
+  runtime via Web Crypto (`lib/admin/impersonation.ts` — never `node:crypto`). The
+  admin-grant check happens once at mint time; per request the middleware only
+  re-verifies signature + expiry (no DB round-trip). A revoked admin's cookie stops
+  working within the TTL.
+- `middleware.ts` short-circuits **both** the `/app/*` page block and the `/api/*`
+  embedded block when the cookie verifies: it skips the entire Shopify OAuth /
+  session-exists / stale-cookie cascade and injects `x-shop-id` / `x-shop-domain`
+  from the payload (downstream data routes already filter by the `x-shop-id` header
+  via `extractShopId`, so no route changes are needed). It also sets
+  `x-dd-impersonation-mode`. On `/app/*` it forces `x-dd-load-app-bridge: 0` — there
+  is no Shopify Admin host, so App Bridge must not try to initialize.
+- **Read-only enforcement:** for `/api/*`, a READ-mode request with a non-GET method
+  is rejected with `403 IMPERSONATION_READ_ONLY` directly in middleware — the primary
+  gate, covering all standard mutations (submit, settings save, billing, job
+  triggers, rules). The rare **mutating GET** (e.g. the self-heal orders-backfill
+  enqueue in `/api/dashboard/insights/initial-analysis`) checks the header itself and
+  suppresses the write; `lib/admin/impersonationGuard.ts` provides
+  `assertImpersonationWriteAllowed(req)` for any other such route.
+- **Banner:** the embedded shell (`app/(embedded)/layout.tsx`) reads
+  `x-dd-impersonation-mode` + `x-shop-domain` and renders a sticky
+  `ImpersonationBanner` — blue "READ ONLY" / red "WRITE ENABLED" — with an **Exit**
+  button that calls `DELETE /api/admin/impersonate` and returns to `/admin/shops`.
+- **Audit:** enter and exit write `admin_impersonation_started` /
+  `admin_impersonation_ended` `audit_events` (`actor_type: "system"`, `admin: true`,
+  `adminUserId`), visible in `/admin/audit`.
+
+### Passkey second factor (custom WebAuthn — Face ID / Windows Hello)
+
+`/admin` requires a **passkey** in addition to the Supabase session + grant. The
+gate is three conditions: `valid session` **AND** `active grant` **AND**
+`passkey-verified this session`.
+
+**Why custom (not Supabase MFA):** Supabase's built-in WebAuthn factor is
+server-side gated off on this org — `PATCH …/config/auth` returns
+`HTTP 422 "Enabling of MFA with WebAuthn not currently supported"` on **both** the
+Free dev project and the Pro prod project (confirmed 2026-07-03; it is a Supabase
+rollout gate, NOT a plan-tier limit — upgrading would not change it). TOTP is
+available but the requirement was real biometrics, so we implement WebAuthn
+ourselves with `@simplewebauthn`, storing credentials in our own `admin_passkeys`
+table.
+
+How it works:
+- **Credentials:** `admin_passkeys` (migration `20260703101012_admin_passkeys.sql`,
+  service-role-only RLS) stores `credential_id`, COSE `public_key`, `counter`,
+  `transports` per admin. Node helpers in `lib/admin/passkeys.ts`.
+- **"Passkey-verified" state** is a short-TTL (12h) HMAC-signed httpOnly cookie
+  `dd_admin_passkey` — the same edge-safe Web Crypto pattern as
+  `lib/admin/impersonation.ts` (`lib/admin/passkeyCookie.ts`). The middleware
+  verifies its signature at the edge (no DB round-trip) and checks `userId` matches
+  the session user.
+- **Ceremonies** (`nodejs`-runtime routes under `/api/admin/passkeys/*`):
+  `register` (POST challenge / PUT verify attestation → store credential) and
+  `authenticate` (POST challenge / PUT verify assertion → bump counter → mint
+  `dd_admin_passkey`). The per-ceremony challenge is held in a separate short-TTL
+  signed cookie `dd_admin_webauthn_chal` (never trusted from the client body).
+- **Gate (`middleware.ts`):** after session+grant, `/api/admin/*` requires the
+  passkey cookie → else `403 ADMIN_PASSKEY_REQUIRED`; `/admin/*` pages redirect to
+  `/admin/verify-passkey` (has a credential) or `/admin/enroll-passkey` (none).
+  The passkey ceremony routes + enroll/verify pages + `/api/admin/logout` are
+  **allow-listed at session+grant** so an unverified admin can always reach the
+  screens that upgrade them (no lock-out). This means **impersonation
+  (`/api/admin/impersonate`) is now passkey-gated too** — desired hardening.
+- **Relying-Party config is per-environment** (`ADMIN_WEBAUTHN_RP_ID` /
+  `ADMIN_WEBAUTHN_ORIGIN`, else derived from host). dev = `dev.disputedesk.app`,
+  prod = `disputedesk.app`. A passkey enrolled on dev will NOT work on prod
+  (different RP) — enroll separately per environment.
+- **Lock-out escape hatch:** if an admin loses all devices, a service-role
+  operator runs `DELETE FROM admin_passkeys WHERE user_id = '<uuid>'` to reset them
+  to the enroll flow (documented in the migration).
+- **Enroll copy:** "Add Face ID, Windows Hello, or a security key…" — the biometric
+  check stays on-device; the server only verifies a cryptographic assertion.
+- **Manager page (`/admin/passkeys`):** list / rename / revoke registered devices,
+  and "Add this device" (runs the register + re-assert ceremony inline). Backed by
+  `GET /api/admin/passkeys` and `PATCH`/`DELETE /api/admin/passkeys/[id]` — these
+  management endpoints require a passkey-verified session in-handler (the
+  middleware only allow-lists `/api/admin/passkeys/*` at session+grant for the
+  ceremony routes). **Revoking the last passkey is refused (`409 LAST_PASSKEY`)** —
+  add another device first, else you'd bounce to enroll with no way in. Per-device
+  enrollment is intentional: `admin_passkeys` holds one row per device, and
+  iCloud Keychain / Google Password Manager sync a passkey within one ecosystem
+  automatically.
 
 ## Multi-Language (i18n)
 
