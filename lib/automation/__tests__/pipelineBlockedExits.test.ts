@@ -28,7 +28,6 @@ vi.mock("@/lib/automation/settings", () => ({
 }));
 vi.mock("@/lib/billing/checkQuota", () => ({
   checkPackQuota: vi.fn(),
-  checkFeatureAccess: vi.fn(),
 }));
 vi.mock("@/lib/email/sendNewDisputeAlert", () => ({
   claimAndSendDeferredNewDisputeAlert: vi.fn().mockResolvedValue(undefined),
@@ -47,7 +46,7 @@ vi.mock("@/lib/automation/billingBlockedEmailThrottle", () => ({
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { getShopSettings } from "@/lib/automation/settings";
-import { checkPackQuota, checkFeatureAccess } from "@/lib/billing/checkQuota";
+import { checkPackQuota } from "@/lib/billing/checkQuota";
 import { claimAndSendDeferredNewDisputeAlert } from "@/lib/email/sendNewDisputeAlert";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { claimBillingBlockedEmailSlot } from "@/lib/automation/billingBlockedEmailThrottle";
@@ -57,7 +56,6 @@ import { DISPUTE_ATTENTION_REASONS } from "@/lib/disputes/attentionReasons";
 const mockGetClient = vi.mocked(getServiceClient);
 const mockGetShopSettings = vi.mocked(getShopSettings);
 const mockCheckQuota = vi.mocked(checkPackQuota);
-const mockCheckFeatureAccess = vi.mocked(checkFeatureAccess);
 const mockEmail = vi.mocked(claimAndSendDeferredNewDisputeAlert);
 const mockEmit = vi.mocked(emitDisputeEvent);
 const mockClaimSlot = vi.mocked(claimBillingBlockedEmailSlot);
@@ -203,9 +201,57 @@ describe("runAutomationPipeline — blocked-exit visibility", () => {
     expect(mockEmail).toHaveBeenCalledWith("d-1", "review");
   });
 
-  it("feature_blocked → free plan auto-pack feature gate", async () => {
+  it("free plan is NOT tier-blocked — passes the gate when credits remain", async () => {
+    // Regression: free tier previously hit a checkFeatureAccess("autoPack")
+    // tier gate and got "Auto-build is a paid feature" even with credits. Now
+    // auto-build is credit-gated only. With credits remaining, a free shop
+    // passes quota and reaches the pack stage — here an existing pack short-
+    // circuits so we don't need the full build path mocked. The point: no
+    // feature-block audit/event was written.
     const capture: SbCapture = { auditInserts: [], disputeUpdates: [] };
-    mockGetClient.mockReturnValue(buildSb(capture) as never);
+    const sb = {
+      from: vi.fn((table: string) => {
+        if (table === "disputes") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            not: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
+            // First call = terminal-guard lookup (non-terminal).
+            maybeSingle: vi
+              .fn()
+              .mockResolvedValueOnce({
+                data: { final_outcome: null, closed_at: null, normalized_status: "needs_review" },
+                error: null,
+              })
+              .mockResolvedValue({ data: null, error: null }),
+            update: vi.fn().mockImplementation((row) => {
+              capture.disputeUpdates.push(row);
+              return { eq: vi.fn().mockResolvedValue({ data: null, error: null }) };
+            }),
+          };
+        }
+        if (table === "evidence_packs") {
+          // An existing pack → pipeline returns "existing_pack" (clean exit).
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            not: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
+            maybeSingle: vi
+              .fn()
+              .mockResolvedValue({ data: { id: "pack-1", status: "queued" }, error: null }),
+          };
+        }
+        return {
+          insert: vi.fn().mockImplementation(async (row) => {
+            capture.auditInserts.push(row);
+            return { data: null, error: null };
+          }),
+        };
+      }),
+    };
+    mockGetClient.mockReturnValue(sb as never);
     mockGetShopSettings.mockResolvedValue({
       auto_build_enabled: true,
       auto_save_enabled: false,
@@ -217,28 +263,57 @@ describe("runAutomationPipeline — blocked-exit visibility", () => {
       plan: "free",
       used: 0,
       remaining: 3,
-      limit: 3,
-    });
-    mockCheckFeatureAccess.mockReturnValue({
-      allowed: false,
-      reason: "Auto-pack is available on Starter and above.",
+      limit: 5,
     });
 
     const res = await runAutomationPipeline(DISPUTE);
 
-    expect(res.action).toBe("feature_blocked");
-    expect(capture.auditInserts[0]).toMatchObject({
-      event_type: "auto_build_skipped",
-      event_payload: {
-        reason: DISPUTE_ATTENTION_REASONS.FEATURE_BLOCKED,
-        plan: "free",
-      },
-    });
-    expect(capture.disputeUpdates[0]).toMatchObject({
-      attention_reason: DISPUTE_ATTENTION_REASONS.FEATURE_BLOCKED,
-      attention_payload: { plan: "free" },
-    });
-    expect(mockEmail).toHaveBeenCalledWith("d-1", "review");
+    expect(res.action).toBe("existing_pack");
+    // No "paid feature" block was written.
+    expect(
+      capture.auditInserts.some(
+        (a) => (a.event_payload as { reason?: string })?.reason === "feature_blocked",
+      ),
+    ).toBe(false);
+  });
+
+  it("terminal dispute (won/closed) → skipped_terminal with NO side effects", async () => {
+    const capture: SbCapture = { auditInserts: [], disputeUpdates: [] };
+    // Terminal dispute: the guard reads final_outcome/closed_at/normalized_status
+    // from the FIRST disputes lookup.
+    const sb = {
+      from: vi.fn((table: string) => {
+        if (table === "disputes") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { final_outcome: "won", closed_at: null, normalized_status: "won" },
+              error: null,
+            }),
+            update: vi.fn().mockImplementation((row) => {
+              capture.disputeUpdates.push(row);
+              return { eq: vi.fn().mockResolvedValue({ data: null, error: null }) };
+            }),
+          };
+        }
+        return {
+          insert: vi.fn().mockImplementation(async (row) => {
+            capture.auditInserts.push(row);
+            return { data: null, error: null };
+          }),
+        };
+      }),
+    };
+    mockGetClient.mockReturnValue(sb as never);
+
+    const res = await runAutomationPipeline(DISPUTE);
+
+    expect(res.action).toBe("skipped_terminal");
+    // Never emits a blocked event, never spends anything, never flags attention.
+    expect(capture.auditInserts).toHaveLength(0);
+    expect(capture.disputeUpdates).toHaveLength(0);
+    expect(mockEmit).not.toHaveBeenCalled();
   });
 
   it("when throttle denies the slot, audit + dispute event + needs_attention still fire", async () => {

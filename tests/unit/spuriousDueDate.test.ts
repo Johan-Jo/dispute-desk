@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { isSpuriousDueDateEvent } from "@/lib/disputeEvents/spuriousDueDate";
+import {
+  isSpuriousDueDateEvent,
+  isObsoletePackBlockedEvent,
+  isHiddenActivityEvent,
+} from "@/lib/disputeEvents/spuriousDueDate";
 
 describe("isSpuriousDueDateEvent", () => {
   it("keeps non-due-date events", () => {
@@ -51,5 +55,56 @@ describe("isSpuriousDueDateEvent", () => {
     expect(
       isSpuriousDueDateEvent({ event_type: "due_date_changed", metadata_json: null }),
     ).toBe(false);
+  });
+});
+
+describe("isObsoletePackBlockedEvent", () => {
+  it("hides the obsolete tier-gate pack_blocked (reason: feature_blocked)", () => {
+    expect(
+      isObsoletePackBlockedEvent({
+        event_type: "pack_blocked",
+        metadata_json: { reason: "feature_blocked" },
+      }),
+    ).toBe(true);
+  });
+
+  it("keeps legitimate pack_blocked (quota_exceeded / auto_build_off)", () => {
+    expect(
+      isObsoletePackBlockedEvent({
+        event_type: "pack_blocked",
+        metadata_json: { reason: "quota_exceeded" },
+      }),
+    ).toBe(false);
+    expect(
+      isObsoletePackBlockedEvent({
+        event_type: "pack_blocked",
+        metadata_json: { reason: "auto_build_off" },
+      }),
+    ).toBe(false);
+  });
+
+  it("keeps non-pack_blocked events", () => {
+    expect(isObsoletePackBlockedEvent({ event_type: "status_changed" })).toBe(false);
+  });
+});
+
+describe("isHiddenActivityEvent (combined)", () => {
+  it("hides both spurious due-date and obsolete pack_blocked", () => {
+    expect(
+      isHiddenActivityEvent({
+        event_type: "due_date_changed",
+        metadata_json: { old_due_at: null, new_due_at: "1969-12-31T00:00:00Z" },
+      }),
+    ).toBe(true);
+    expect(
+      isHiddenActivityEvent({
+        event_type: "pack_blocked",
+        metadata_json: { reason: "feature_blocked" },
+      }),
+    ).toBe(true);
+  });
+
+  it("keeps everything else", () => {
+    expect(isHiddenActivityEvent({ event_type: "pack_created" })).toBe(false);
   });
 });
