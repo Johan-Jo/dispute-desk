@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { computeDisputeMetrics } from "@/lib/disputes/metrics";
 import { extractShopId } from "@/lib/middleware/extractShopId";
+import { isSpuriousDueDateEvent } from "@/lib/disputeEvents/spuriousDueDate";
 
 export const runtime = "nodejs";
 
@@ -66,13 +67,17 @@ export async function GET(req: NextRequest) {
     .eq("shop_id", shopId);
 
   // ── Recent activity (last 10 events) ─────────────────────────────────
+  // Over-fetch then filter spurious due_date_changed rows (epoch / same-instant
+  // artifacts — see lib/disputeEvents/spuriousDueDate.ts) so the feed isn't
+  // flooded with "Due date changed to 1969-12-31". metadata_json is selected
+  // only for that filter.
   const activityP = sb
     .from("dispute_events")
-    .select("id, dispute_id, event_type, description, event_at, actor_type")
+    .select("id, dispute_id, event_type, description, event_at, actor_type, metadata_json")
     .eq("shop_id", shopId)
     .eq("visibility", "merchant_and_internal")
     .order("event_at", { ascending: false })
-    .limit(10);
+    .limit(40);
 
   // ── Evidence packs count ──────────────────────────────────────────────
   const packCountP = sb
@@ -115,7 +120,16 @@ export async function GET(req: NextRequest) {
   const actionNeededDisputeId =
     actionNeededIds.length === 1 ? actionNeededIds[0] : null;
 
-  const activityRows = activityRes.data ?? [];
+  // Drop spurious due_date_changed events (epoch / same-instant), then cap at
+  // the 10 the feed shows (we over-fetched 40 to survive the filter).
+  const activityRows = (activityRes.data ?? [])
+    .filter(
+      (e) =>
+        !isSpuriousDueDateEvent(
+          e as { event_type?: string | null; metadata_json?: { old_due_at?: string | null; new_due_at?: string | null } | null },
+        ),
+    )
+    .slice(0, 10);
   // Enrich with order name for display. Depends on the activity result,
   // so runs after the Promise.all.
   const disputeIds = [...new Set(activityRows.map((e) => (e as Record<string, unknown>).dispute_id as string))];

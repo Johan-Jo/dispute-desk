@@ -92,3 +92,11 @@ Companion files:
 - **Scope verified before write:** 20 rows, 1 shop (cay-collective) — closed disputes with epoch(-86400)/1969-12-31 due_at from the 2026-07-02 historical import.
 - **Result:** 20 rows nulled; post-check epoch_remaining=0, null_due=20, real_due=45 (65 total). No collateral (only cay-collective affected).
 - **Root cause:** app/api/disputes/[id]/sync/route.ts wrote due_at without ?? null (now guarded); display guard added (lib/disputes/dueDate.ts). CLI relinked to dev after.
+
+
+### 2026-07-03T17:29:46Z — manual prod data re-clean (epoch due_at, post ingestion fix)
+
+- **Target ref:** `aokhplydttxtebvbeuzc` (prod)
+- **Action:** `UPDATE disputes SET due_at = NULL WHERE due_at < '2000-01-01'` — 20 rows (cay-collective).
+- **Context:** the first cleanup (earlier today) was undone within minutes because Shopify returns epoch evidenceDueBy and the unfixed sync re-wrote it. This re-clean followed the ingestion fix (PR #167, sanitizeDueAt at disputeSnapshot + sync/resync) reaching prod (verified prod on master 7d61a67 via /api/health/build), so the rows now STAY null.
+- **Verified:** epoch_remaining=0, null_due=20, real_due=45. CLI relinked to dev after.
