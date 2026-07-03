@@ -6,6 +6,7 @@ import {
   DISPUTE_DETAIL_QUERY,
   type DisputeDetailResponse,
 } from "@/lib/shopify/queries/disputes";
+import { sanitizeDueAt } from "@/lib/disputes/dueDate";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -65,7 +66,8 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
       currency_code: node.amount?.currencyCode ?? null,
       dispute_evidence_gid: node.disputeEvidence?.id ?? null,
       initiated_at: node.initiatedAt ?? null,
-      due_at: node.evidenceDueBy ?? null,
+      // Sanitize Shopify's occasional epoch evidenceDueBy → null (see dueDate.ts).
+      due_at: sanitizeDueAt(node.evidenceDueBy),
       last_synced_at: new Date().toISOString(),
       raw_snapshot: {
         id: node.id,
