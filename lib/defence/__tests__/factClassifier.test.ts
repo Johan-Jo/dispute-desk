@@ -32,6 +32,36 @@ function section(overrides: Partial<PackSectionLike>): PackSectionLike {
   };
 }
 
+describe("classifyFacts — delivery_proof carries the delivery date to the narrative", () => {
+  it("a delivered fulfillment produces a delivery_proof fact carrying deliveredAt + signedByName", () => {
+    // Regression: the delivery date lived nested under data.fulfillments[]
+    // and never reached the fact, so the narrative writer could not cite
+    // "delivered {date}" even though its prompt asks for it. fulfillmentSource
+    // now lifts deliveredAt/signedByName to the top of the section data.
+    const result = classifyFacts(
+      baseInput({
+        reasonCodeModule: resolveReasonCodeModuleForContext(null, "PRODUCT_NOT_RECEIVED"),
+        sections: [
+          section({
+            fieldsProvided: ["delivery_proof"],
+            data: {
+              proofType: "signature_confirmed",
+              carrier: "UPS",
+              deliveredAt: "2026-05-12T14:03:00Z",
+              signedByName: "J. DOE",
+              deliveredToVerifiedAddress: true,
+            },
+          }),
+        ],
+      }),
+    );
+    const delivery = result.approved.find((f) => f.category === "delivery_proof");
+    expect(delivery).toBeDefined();
+    expect(delivery?.value.deliveredAt).toBe("2026-05-12T14:03:00Z");
+    expect(delivery?.value.signedByName).toBe("J. DOE");
+  });
+});
+
 describe("classifyFacts — refund_record (credit-not-processed win path)", () => {
   it("a processed refund produces a STRONG, bank-eligible refund_record fact + fires refund_processed predicate", () => {
     const result = classifyFacts(

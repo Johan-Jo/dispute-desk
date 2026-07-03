@@ -135,6 +135,17 @@ describe("evaluateCompleteness", () => {
     expect(result.blockers).toContain("Refund Record");
   });
 
+  it("CREDIT_NOT_PROCESSED lists delivery_proof as a recommended (non-blocking) item", () => {
+    // A refund dispute is strengthened by proof the customer received and kept
+    // the goods. It must appear on the checklist, but recommended — never a
+    // blocker (refund_record stays the required primary evidence).
+    const result = evaluateCompleteness("CREDIT_NOT_PROCESSED", new Set(), null, KLARNA_CTX);
+    const delivery = result.checklist.find((c) => c.field === "delivery_proof");
+    expect(delivery).toBeDefined();
+    expect(delivery?.required).toBe(false);
+    expect(result.blockers).not.toContain(delivery?.label);
+  });
+
   it("requires avs_cvv_match when card payment exists", () => {
     const fields = new Set(["order_confirmation", "billing_address_match"]);
     const result = evaluateCompleteness("FRAUDULENT", fields, null, FULFILLED_CARD);
