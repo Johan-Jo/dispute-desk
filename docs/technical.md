@@ -3870,6 +3870,14 @@ How it works:
   in a top-level tab, and a partitioned cookie is unreliably sent on top-level
   same-origin navigations (a hard nav from a non-upgraded `<s-link>` dropped the
   header mid-session and made the banner vanish, e.g. on `/app/insights/…`).
+- **Sliding TTL (8h idle cap):** the middleware re-mints the cookie with a fresh
+  `iat` on every impersonated `/app/*` page load, so an actively-used session
+  never expires mid-debugging — the TTL only bites after real inactivity. Losing
+  it mid-session previously rendered a misleading all-zeros merchant dashboard.
+- **Graceful expiry:** when a `dd_impersonation` cookie is present but expired
+  (and there's no real Shopify session), `/app/*` redirects to
+  `/admin/shops?impersonation=expired` and clears the dead cookie — never a fake
+  empty dashboard.
 - **Read-only enforcement:** for `/api/*`, a READ-mode request with a non-GET method
   is rejected with `403 IMPERSONATION_READ_ONLY` directly in middleware — the primary
   gate, covering all standard mutations (submit, settings save, billing, job

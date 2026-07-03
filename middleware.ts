@@ -13,7 +13,11 @@ import { isPortalApiPath } from "@/lib/middleware/portalApiPrefixes";
 import { shopIdentityMatches } from "@/lib/middleware/shopMatch";
 import {
   verifyImpersonation,
+  signImpersonation,
+  impersonationCookieOptions,
   IMPERSONATION_MODE_HEADER,
+  IMPERSONATION_COOKIE,
+  IMPERSONATION_TTL_SECONDS,
 } from "@/lib/admin/impersonation";
 import { verifyPasskeyCookie } from "@/lib/admin/passkeyCookie";
 
@@ -693,6 +697,21 @@ export async function middleware(req: NextRequest) {
         requestHeaders.set("x-shop-id", imp.shopId);
         requestHeaders.set(IMPERSONATION_MODE_HEADER, imp.mode);
         const res = NextResponse.next({ request: { headers: requestHeaders } });
+        // Sliding TTL: re-mint with a fresh iat on every impersonated page load
+        // so an actively-used session never expires mid-debugging (the fixed TTL
+        // only bites after real inactivity). Prevents the "reload after a while →
+        // all-zeros merchant dashboard" failure.
+        res.cookies.set(
+          IMPERSONATION_COOKIE,
+          await signImpersonation({
+            shopId: imp.shopId,
+            shopDomain: imp.shopDomain,
+            mode: imp.mode,
+            adminUserId: imp.adminUserId,
+            iat: Math.floor(Date.now() / 1000),
+          }),
+          impersonationCookieOptions(IMPERSONATION_TTL_SECONDS),
+        );
         if (localeParam) {
           res.cookies.set("dd_locale", localeParam, {
             path: "/",
@@ -708,6 +727,20 @@ export async function middleware(req: NextRequest) {
     const shopParam = req.nextUrl.searchParams.get("shop");
     const oauthInProgress = req.cookies.get("dd_oauth_in_progress")?.value;
     const idTokenParam = req.nextUrl.searchParams.get("id_token");
+
+    // Graceful impersonation expiry: if a dd_impersonation cookie is PRESENT but
+    // no longer valid (expired — verifyImpersonation returned null above) AND
+    // there's no real Shopify session, this is an admin whose impersonation
+    // lapsed. Send them back to /admin/shops instead of rendering a misleading
+    // all-zeros merchant dashboard (the API calls would have no shop context).
+    // Clear the dead cookie on the way out.
+    if (!shopDomain && req.cookies.get(IMPERSONATION_COOKIE)) {
+      const backToAdmin = NextResponse.redirect(
+        new URL("/admin/shops?impersonation=expired", req.url),
+      );
+      backToAdmin.cookies.set(IMPERSONATION_COOKIE, "", impersonationCookieOptions(0));
+      return backToAdmin;
+    }
 
     if (!shopDomain) {
       // Preferred auth path for iOS Shopify mobile app and modern managed
