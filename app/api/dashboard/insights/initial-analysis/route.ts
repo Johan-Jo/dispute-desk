@@ -25,6 +25,7 @@ import {
 } from "@/lib/disputes/backfillOrders";
 import { recommendPlan, type PlanRecommendation } from "@/lib/billing/recommendPlan";
 import { upsertPlanRecommendation } from "@/lib/billing/persistRecommendation";
+import { IMPERSONATION_MODE_HEADER } from "@/lib/admin/impersonation";
 
 export const runtime = "nodejs";
 
@@ -399,7 +400,12 @@ export async function GET(req: NextRequest) {
   const ordersTotal =
     (shopRow?.historical_import_orders_total as number | null) ?? 0;
 
-  if (status === "not_started") {
+  // Suppress the self-heal backfill enqueue during a READ-ONLY admin
+  // impersonation preview — it's a write side-effect on an otherwise-GET
+  // route (the middleware method-gate can't catch a mutating GET).
+  const impersonationRead =
+    req.headers.get(IMPERSONATION_MODE_HEADER) === "read";
+  if (status === "not_started" && !impersonationRead) {
     enqueueShopOrdersBackfill(shopId).catch((err) => {
       console.warn(
         "[insights] self-heal backfill enqueue failed:",

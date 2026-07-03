@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { Store, ExternalLink, Calendar } from "lucide-react";
+import { ViewAsMerchant } from "@/components/admin/ViewAsMerchant";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStatsRow } from "@/components/admin/AdminStatsRow";
 import { AdminFilterBar } from "@/components/admin/AdminFilterBar";
@@ -213,13 +214,16 @@ export default function AdminShopsPage() {
                 </div>
               </td>
               <td className="px-6 py-4 text-right">
-                <Link
-                  href={`/admin/shops/${s.id}`}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#EFF6FF] text-[#1D4ED8] text-sm font-semibold rounded-lg hover:bg-[#DBEAFE] transition-colors"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  View Details
-                </Link>
+                <div className="flex items-center justify-end gap-2">
+                  <ViewAsMerchant shopId={s.id} />
+                  <Link
+                    href={`/admin/shops/${s.id}`}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#EFF6FF] text-[#1D4ED8] text-sm font-semibold rounded-lg hover:bg-[#DBEAFE] transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    View Details
+                  </Link>
+                </div>
               </td>
             </tr>
           );

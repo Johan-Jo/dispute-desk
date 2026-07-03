@@ -21,6 +21,7 @@ import {
   Package,
 } from "lucide-react";
 import { ShopRiskProfile } from "@/components/admin/ShopRiskProfile";
+import { ViewAsMerchant } from "@/components/admin/ViewAsMerchant";
 
 interface ShopDetail {
   shop: {
@@ -158,7 +159,8 @@ export default function AdminShopDetailPage({ params }: { params: Promise<{ id: 
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-start gap-2">
+            <ViewAsMerchant shopId={shop.id} variant="prominent" />
             <a
               href={shopAdminUrl}
               target="_blank"

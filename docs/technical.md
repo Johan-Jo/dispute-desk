@@ -3830,6 +3830,48 @@ Internal admins use the **same Supabase Auth session** as the marketing/portal s
 - `PATCH /api/admin/jobs/[id]` — retry or cancel jobs
 - `GET /api/admin/audit` — audit events (JSON or CSV format)
 - `GET /api/admin/billing` — MRR + plan distribution + per-shop usage
+- `POST /api/admin/impersonate` — enter "View as merchant" for one shop (see below)
+- `DELETE /api/admin/impersonate` — exit impersonation (clear the cookie)
+
+### View as merchant (impersonation)
+
+A SuperAdmin can open the **real embedded app** (`/app/*`) as any merchant to see
+exactly what they see — for support, debugging, and QA — without holding a Shopify
+session for that shop. Entry points: the **"View as merchant"** action on
+`/admin/shops` (per row) and on `/admin/shops/[id]` (header). A **read/write
+selector** sits next to it; **read-only is the default**.
+
+How it works:
+- `POST /api/admin/impersonate` (grant-gated by the `/api/admin/*` middleware)
+  validates the shop, signs a short-TTL (30 min) cookie `dd_impersonation` =
+  `{ shopId, shopDomain, mode, adminUserId, iat }`, and returns `/app` — the admin
+  UI opens it in a **new top-level tab** (not inside the admin iframe).
+- The cookie is **HMAC-SHA256 signed with `CRON_SECRET`** and verified in the edge
+  runtime via Web Crypto (`lib/admin/impersonation.ts` — never `node:crypto`). The
+  admin-grant check happens once at mint time; per request the middleware only
+  re-verifies signature + expiry (no DB round-trip). A revoked admin's cookie stops
+  working within the TTL.
+- `middleware.ts` short-circuits **both** the `/app/*` page block and the `/api/*`
+  embedded block when the cookie verifies: it skips the entire Shopify OAuth /
+  session-exists / stale-cookie cascade and injects `x-shop-id` / `x-shop-domain`
+  from the payload (downstream data routes already filter by the `x-shop-id` header
+  via `extractShopId`, so no route changes are needed). It also sets
+  `x-dd-impersonation-mode`. On `/app/*` it forces `x-dd-load-app-bridge: 0` — there
+  is no Shopify Admin host, so App Bridge must not try to initialize.
+- **Read-only enforcement:** for `/api/*`, a READ-mode request with a non-GET method
+  is rejected with `403 IMPERSONATION_READ_ONLY` directly in middleware — the primary
+  gate, covering all standard mutations (submit, settings save, billing, job
+  triggers, rules). The rare **mutating GET** (e.g. the self-heal orders-backfill
+  enqueue in `/api/dashboard/insights/initial-analysis`) checks the header itself and
+  suppresses the write; `lib/admin/impersonationGuard.ts` provides
+  `assertImpersonationWriteAllowed(req)` for any other such route.
+- **Banner:** the embedded shell (`app/(embedded)/layout.tsx`) reads
+  `x-dd-impersonation-mode` + `x-shop-domain` and renders a sticky
+  `ImpersonationBanner` — blue "READ ONLY" / red "WRITE ENABLED" — with an **Exit**
+  button that calls `DELETE /api/admin/impersonate` and returns to `/admin/shops`.
+- **Audit:** enter and exit write `admin_impersonation_started` /
+  `admin_impersonation_ended` `audit_events` (`actor_type: "system"`, `admin: true`,
+  `adminUserId`), visible in `/admin/audit`.
 
 ## Multi-Language (i18n)
 
