@@ -2838,7 +2838,14 @@ Shop context is provided by either (1) Shopify session cookies (embedded app) or
 - `GET /api/disputes` — list disputes. Supports: `shop_id`, `status`, `phase`, `needs_review`, `due_before`, `normalized_status`, `final_outcome`, `submission_state`, `closed` (true/false), `date_field` (initiated_at|submitted_at|closed_at), `date_from`, `date_to`, `amount_min`, `amount_max`, `sort` (due_at|initiated_at|closed_at|submitted_at|amount), `sort_dir` (asc|desc), `page`, `per_page`.
 - `GET /api/disputes/:id` — single dispute. Response includes `family` (from `DISPUTE_REASON_FAMILIES`) and `handling_mode` (`auto`|`review` — legacy stored values `auto_pack` / `notify` / `manual` are normalized on read via `lib/rules/normalizeMode.ts`).
 - `POST /api/disputes/sync` — run sync for shop (portal: body `{ shop_id }`; runs synchronously, not job)
-- `POST /api/disputes/:id/sync` — re-sync one dispute
+- `POST /api/disputes/:id/sync` — re-sync one dispute. Writes `due_at` /
+  `initiated_at` with `?? null` (a closed dispute has no `evidenceDueBy`; a
+  missing value must be `null`, never an epoch artifact). **Due-date guard:** a
+  2026-07-02 cay-collective historical import wrote `due_at = 1969-12-31` (epoch
+  −86400) for 20 closed disputes instead of null, surfacing as a bogus "Dec 30"
+  deadline. Fixed at the writer + backfilled to null on prod
+  (`scripts/fix-epoch-due-at.mjs`); `lib/disputes/dueDate.ts` `sanitizeDueAt()`
+  is a defensive UI belt that renders any pre-2000 `due_at` as "—".
 - `POST /api/disputes/:id/packs` → 202 `{ packId, jobId }` (creates pack + enqueues build)
 - `GET /api/disputes/:id/packs` → list packs for a dispute
 - `GET /api/packs/:packId` → full pack: items, checklist, audit log, active jobs. If the id is not in `evidence_packs`, falls back to the library `packs` table (e.g. template-installed packs) and returns a compatible shape with empty evidence/jobs.

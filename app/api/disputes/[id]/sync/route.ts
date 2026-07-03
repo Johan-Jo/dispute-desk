@@ -64,8 +64,8 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
       amount: node.amount ? parseFloat(node.amount.amount) : null,
       currency_code: node.amount?.currencyCode ?? null,
       dispute_evidence_gid: node.disputeEvidence?.id ?? null,
-      initiated_at: node.initiatedAt,
-      due_at: node.evidenceDueBy,
+      initiated_at: node.initiatedAt ?? null,
+      due_at: node.evidenceDueBy ?? null,
       last_synced_at: new Date().toISOString(),
       raw_snapshot: {
         id: node.id,
