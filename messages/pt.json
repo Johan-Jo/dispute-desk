@@ -2536,6 +2536,7 @@
     "order": "Pedido",
     "amount": "Valor",
     "reason": "Motivo",
+    "type": "Tipo",
     "status": "Status",
     "deadline": "Prazo",
     "lastSynced": "Última Sincronização",

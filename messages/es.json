@@ -2536,6 +2536,7 @@
     "order": "Pedido",
     "amount": "Monto",
     "reason": "Motivo",
+    "type": "Tipo",
     "status": "Estado",
     "deadline": "Fecha límite",
     "lastSynced": "Última sincronización",
