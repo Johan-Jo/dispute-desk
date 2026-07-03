@@ -22,6 +22,29 @@ import {
   type FigmaDueStatus,
   type FigmaOutcome,
 } from "./disputeListHelpers";
+import { phaseLabel } from "@/lib/disputes/phaseUtils";
+import type { DisputePhase } from "@/lib/rules/disputeReasons";
+
+/** 8-column grid shared by the header + every row. */
+const GRID_COLUMNS = "2.6fr 1fr 1.8fr 1.8fr 1fr 1.4fr 1.6fr 1fr";
+
+/** Short dispute date (from initiated_at). "—" when absent. */
+function formatDisputeDate(iso: string | null, locale: string): string {
+  if (!iso) return "—";
+  const ms = new Date(iso).getTime();
+  if (!Number.isFinite(ms)) return "—";
+  return new Date(iso).toLocaleDateString(locale, {
+    day: "numeric",
+    month: "short",
+    year: "2-digit",
+  });
+}
+
+/** Compact inquiry/chargeback pill. */
+function phasePillColors(phase: DisputePhase | null): { bg: string; color: string } {
+  if (phase === "inquiry") return { bg: "#E0F2FE", color: "#075985" };
+  return { bg: "#FEF3C7", color: "#92400E" }; // chargeback (default)
+}
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
@@ -120,15 +143,17 @@ export function DesktopDisputesTable({
           borderBottom: "1px solid #E1E3E5",
           padding: "12px 16px",
           display: "grid",
-          gridTemplateColumns: "3fr 2fr 2fr 1fr 2fr 1fr",
+          gridTemplateColumns: GRID_COLUMNS,
           gap: 16,
           alignItems: "center",
         }}
       >
         <div style={COL_HEADER_STYLE}>{t("disputes.colOrderCustomer")}</div>
+        <div style={COL_HEADER_STYLE}>{t("table.type")}</div>
         <div style={COL_HEADER_STYLE}>{t("disputes.colCaseStrength")}</div>
         <div style={COL_HEADER_STYLE}>{t("disputes.colNextAction")}</div>
         <div style={COL_HEADER_STYLE}>{t("disputes.colAmount")}</div>
+        <div style={COL_HEADER_STYLE}>{t("table.date")}</div>
         <div style={COL_HEADER_STYLE}>{t("disputes.colDueDate")}</div>
         <div style={COL_HEADER_STYLE}>{t("disputes.colOutcome")}</div>
       </div>
@@ -150,7 +175,7 @@ export function DesktopDisputesTable({
 
           const rowStyle: CSSProperties = {
             display: "grid",
-            gridTemplateColumns: "3fr 2fr 2fr 1fr 2fr 1fr",
+            gridTemplateColumns: GRID_COLUMNS,
             gap: 16,
             alignItems: "center",
             padding: "16px",
@@ -218,6 +243,18 @@ export function DesktopDisputesTable({
                 </div>
               </div>
 
+              {/* Type (inquiry / chargeback) */}
+              <div style={{ minWidth: 0 }}>
+                <span
+                  style={{
+                    ...PILL_STYLE,
+                    ...phasePillColors(d.phase as DisputePhase | null),
+                  }}
+                >
+                  {phaseLabel(d.phase as DisputePhase | null, t)}
+                </span>
+              </div>
+
               {/* Case strength + subtitle */}
               <div style={{ minWidth: 0 }}>
                 {strength ? (
@@ -269,6 +306,11 @@ export function DesktopDisputesTable({
               {/* Amount */}
               <div style={{ fontSize: 14, color: "#202223" }}>
                 {formatCurrency(d.amount, d.currency_code, numberLocale)}
+              </div>
+
+              {/* Date (dispute initiated) */}
+              <div style={{ fontSize: 14, color: "#6D7175" }}>
+                {formatDisputeDate(d.initiated_at, dateLocale)}
               </div>
 
               {/* Due date */}

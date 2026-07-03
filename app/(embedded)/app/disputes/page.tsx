@@ -56,6 +56,9 @@ import {
 
 interface DisputesResponse {
   disputes: Dispute[];
+  aggregates?: {
+    needs_attention: number;
+  };
   pagination: {
     page: number;
     per_page: number;
@@ -160,6 +163,9 @@ export default function DisputesListPage() {
   const [queryValue, setQueryValue] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, total_pages: 0 });
+  // Shop-wide "needs attention" count from the API (matches the dashboard),
+  // independent of the current page/filter — see /api/disputes aggregates.
+  const [needsAttentionCount, setNeedsAttentionCount] = useState(0);
   const [filterPopoverActive, setFilterPopoverActive] = useState(false);
   const [sortPopoverActive, setSortPopoverActive] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("default");
@@ -250,6 +256,7 @@ export default function DisputesListPage() {
       const json: DisputesResponse = await res.json();
       setDisputes(json.disputes ?? []);
       setPagination(json.pagination ?? { total: 0, total_pages: 0 });
+      setNeedsAttentionCount(json.aggregates?.needs_attention ?? 0);
     } finally {
       setLoading(false);
     }
@@ -496,7 +503,7 @@ export default function DisputesListPage() {
               >
                 <KpiCard
                   label={t("disputes.kpiNeedsAction")}
-                  value={String(kpis.needsActionCount)}
+                  value={String(needsAttentionCount)}
                   subtitle={
                     kpis.urgentCount > 0
                       ? t("disputes.kpiNeedsActionUrgent", {

@@ -230,11 +230,15 @@ export function resolveSort(
 ): { sort: string; sort_dir: "asc" | "desc" } {
   if (sortMode === "urgency") return { sort: "due_at", sort_dir: "asc" };
   if (sortMode === "amount") return { sort: "amount", sort_dir: "desc" };
-  if (sortMode === "newest") return { sort: "created_at", sort_dir: "desc" };
+  // "Newest" / default = the real Shopify dispute date (initiated_at), NOT
+  // created_at (our DB import timestamp). A historical import gives every row a
+  // near-identical created_at, so created_at sorting scrambled the order and
+  // surfaced old 2024 disputes first. initiated_at is what the table displays.
+  if (sortMode === "newest") return { sort: "initiated_at", sort_dir: "desc" };
   if (sortMode === "closed_desc") return { sort: "closed_at", sort_dir: "desc" };
-  if (activeTab === "active") return { sort: "created_at", sort_dir: "desc" };
+  if (activeTab === "active") return { sort: "initiated_at", sort_dir: "desc" };
   if (activeTab === "closed") return { sort: "closed_at", sort_dir: "desc" };
-  return { sort: "created_at", sort_dir: "desc" };
+  return { sort: "initiated_at", sort_dir: "desc" };
 }
 
 /* ── Figma list-page helpers (shopify-cases.tsx, 2026-04-28) ── *
