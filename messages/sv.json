@@ -2536,6 +2536,7 @@
     "order": "Beställning",
     "amount": "Belopp",
     "reason": "Orsak",
+    "type": "Typ",
     "status": "Status",
     "deadline": "Tidsfrist",
     "lastSynced": "Senast synkad",

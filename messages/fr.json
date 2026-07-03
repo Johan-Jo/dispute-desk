@@ -2536,6 +2536,7 @@
     "order": "Commande",
     "amount": "Montant",
     "reason": "Motif",
+    "type": "Type",
     "status": "Statut",
     "deadline": "Date limite",
     "lastSynced": "Dernière sync",

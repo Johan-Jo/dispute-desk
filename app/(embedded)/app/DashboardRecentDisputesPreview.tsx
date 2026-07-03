@@ -23,6 +23,8 @@ import {
 } from "@/lib/embedded/recentDisputesTableStyles";
 import { withShopParams } from "@/lib/withShopParams";
 import { sanitizeDueAt } from "@/lib/disputes/dueDate";
+import { phaseBadgeTone, phaseLabel } from "@/lib/disputes/phaseUtils";
+import type { DisputePhase } from "@/lib/rules/disputeReasons";
 import { MobileDisputesList } from "./disputes/MobileDisputesList";
 import type { Dispute } from "./disputes/disputeListHelpers";
 import { safeStatusLabel, useDateLocale } from "./dashboardHelpers";
@@ -33,6 +35,7 @@ interface DisputeRow {
   orderUrl: string | null;
   amount: string;
   reason: string | null;
+  phase: string | null;
   normalizedStatus: string | null;
   dueAt: string | null;
   initiatedAt: string | null;
@@ -52,7 +55,11 @@ export function DashboardRecentDisputesPreview() {
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      fetch("/api/disputes?per_page=8&sort=created_at&sort_dir=desc").then((r) => (r.ok ? r.json() : { disputes: [] })),
+      // Sort by initiated_at (the real Shopify dispute date shown in the table),
+      // NOT created_at (our import timestamp) — a historical import gives every
+      // row a near-identical created_at, so created_at sorting surfaced old 2024
+      // disputes instead of the most recent.
+      fetch("/api/disputes?per_page=8&sort=initiated_at&sort_dir=desc").then((r) => (r.ok ? r.json() : { disputes: [] })),
       fetch("/api/billing/usage").then((r) => (r.ok ? r.json() : {})),
     ]).then(([disputeData, usageData]: [
       { disputes?: Dispute[] },
@@ -75,6 +82,7 @@ export function DashboardRecentDisputesPreview() {
                 }).format(Number(d.amount))
               : "—",
           reason: d.reason ?? null,
+          phase: d.phase ?? null,
           normalizedStatus: d.normalized_status ?? null,
           dueAt: d.due_at ?? null,
           initiatedAt: d.initiated_at ?? null,
@@ -189,6 +197,7 @@ export function DashboardRecentDisputesPreview() {
                 <th style={recentDisputesThStyle}>{t("table.order")}</th>
                 <th style={recentDisputesThStyle}>{t("table.amount")}</th>
                 <th style={recentDisputesThStyle}>{t("table.reason")}</th>
+                <th style={recentDisputesThStyle}>{t("table.type")}</th>
                 <th style={recentDisputesThStyle}>{t("dashboard.statusCol")}</th>
                 <th style={recentDisputesThStyle}>{t("table.date")}</th>
                 <th style={recentDisputesThStyle}>{t("table.deadline")}</th>
@@ -213,16 +222,22 @@ export function DashboardRecentDisputesPreview() {
                   <td style={recentDisputesTdStyle}>
                     <Text as="span" variant="bodySm" tone="subdued">{formatReason(r.reason)}</Text>
                   </td>
+                  <td style={recentDisputesTdStyle}>
+                    <Badge tone={phaseBadgeTone(r.phase as DisputePhase | null)}>
+                      {phaseLabel(r.phase as DisputePhase | null, t)}
+                    </Badge>
+                  </td>
                   <td style={recentDisputesTdStyle}>{normalizedStatusBadge(r.normalizedStatus)}</td>
                   <td style={recentDisputesTdStyle}>
                     <Text as="span" variant="bodySm" tone="subdued">
                       {r.initiatedAt
                         ? new Date(r.initiatedAt).toLocaleString(dateLocale, {
-                            month: "short",
                             day: "numeric",
-                            year: "numeric",
+                            month: "short",
+                            year: "2-digit",
                             hour: "2-digit",
                             minute: "2-digit",
+                            hourCycle: "h23",
                           })
                         : "—"}
                     </Text>
