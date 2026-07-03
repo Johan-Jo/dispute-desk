@@ -83,3 +83,12 @@ Companion files:
 - **Status:** schema replay + non-schema settings in progress on the new project. Code-constant PR not yet prepared (cutover-day work).
 - **Outstanding before cutover:** schema replay confirmed (`npx supabase db push`), buckets verified, Auth URL config set on new project, Vercel env vars staged but not yet swapped.
 - **This stub will be replaced by the real entry at cutover time** with: timestamp, operator, verifier output, health endpoint response, sentinel-table row counts.
+
+
+### 2026-07-03T16:33:46Z — manual prod data fix (epoch due_at cleanup)
+
+- **Target ref:** `aokhplydttxtebvbeuzc` (prod)
+- **Action:** `UPDATE disputes SET due_at = NULL WHERE due_at < '2000-01-01'` (via db query --linked)
+- **Scope verified before write:** 20 rows, 1 shop (cay-collective) — closed disputes with epoch(-86400)/1969-12-31 due_at from the 2026-07-02 historical import.
+- **Result:** 20 rows nulled; post-check epoch_remaining=0, null_due=20, real_due=45 (65 total). No collateral (only cay-collective affected).
+- **Root cause:** app/api/disputes/[id]/sync/route.ts wrote due_at without ?? null (now guarded); display guard added (lib/disputes/dueDate.ts). CLI relinked to dev after.

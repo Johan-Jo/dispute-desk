@@ -22,6 +22,7 @@ import {
   recentDisputesViewDetailsLinkStyle,
 } from "@/lib/embedded/recentDisputesTableStyles";
 import { withShopParams } from "@/lib/withShopParams";
+import { sanitizeDueAt } from "@/lib/disputes/dueDate";
 import { MobileDisputesList } from "./disputes/MobileDisputesList";
 import type { Dispute } from "./disputes/disputeListHelpers";
 import { safeStatusLabel, useDateLocale } from "./dashboardHelpers";
@@ -170,8 +171,11 @@ export function DashboardRecentDisputesPreview() {
   };
 
   const formatShortDate = (iso: string | null) => {
-    if (!iso) return "—";
-    return new Date(iso).toLocaleDateString(dateLocale, { month: "short", day: "numeric" });
+    // Guard against epoch-artifact due dates (see lib/disputes/dueDate.ts) —
+    // a bad import wrote 1969-12-31 for closed disputes with no deadline.
+    const clean = sanitizeDueAt(iso);
+    if (!clean) return "—";
+    return new Date(clean).toLocaleDateString(dateLocale, { month: "short", day: "numeric" });
   };
 
   return (
