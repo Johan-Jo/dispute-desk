@@ -3873,6 +3873,52 @@ How it works:
   `admin_impersonation_ended` `audit_events` (`actor_type: "system"`, `admin: true`,
   `adminUserId`), visible in `/admin/audit`.
 
+### Passkey second factor (custom WebAuthn — Face ID / Windows Hello)
+
+`/admin` requires a **passkey** in addition to the Supabase session + grant. The
+gate is three conditions: `valid session` **AND** `active grant` **AND**
+`passkey-verified this session`.
+
+**Why custom (not Supabase MFA):** Supabase's built-in WebAuthn factor is
+server-side gated off on this org — `PATCH …/config/auth` returns
+`HTTP 422 "Enabling of MFA with WebAuthn not currently supported"` on **both** the
+Free dev project and the Pro prod project (confirmed 2026-07-03; it is a Supabase
+rollout gate, NOT a plan-tier limit — upgrading would not change it). TOTP is
+available but the requirement was real biometrics, so we implement WebAuthn
+ourselves with `@simplewebauthn`, storing credentials in our own `admin_passkeys`
+table.
+
+How it works:
+- **Credentials:** `admin_passkeys` (migration `20260703101012_admin_passkeys.sql`,
+  service-role-only RLS) stores `credential_id`, COSE `public_key`, `counter`,
+  `transports` per admin. Node helpers in `lib/admin/passkeys.ts`.
+- **"Passkey-verified" state** is a short-TTL (12h) HMAC-signed httpOnly cookie
+  `dd_admin_passkey` — the same edge-safe Web Crypto pattern as
+  `lib/admin/impersonation.ts` (`lib/admin/passkeyCookie.ts`). The middleware
+  verifies its signature at the edge (no DB round-trip) and checks `userId` matches
+  the session user.
+- **Ceremonies** (`nodejs`-runtime routes under `/api/admin/passkeys/*`):
+  `register` (POST challenge / PUT verify attestation → store credential) and
+  `authenticate` (POST challenge / PUT verify assertion → bump counter → mint
+  `dd_admin_passkey`). The per-ceremony challenge is held in a separate short-TTL
+  signed cookie `dd_admin_webauthn_chal` (never trusted from the client body).
+- **Gate (`middleware.ts`):** after session+grant, `/api/admin/*` requires the
+  passkey cookie → else `403 ADMIN_PASSKEY_REQUIRED`; `/admin/*` pages redirect to
+  `/admin/verify-passkey` (has a credential) or `/admin/enroll-passkey` (none).
+  The passkey ceremony routes + enroll/verify pages + `/api/admin/logout` are
+  **allow-listed at session+grant** so an unverified admin can always reach the
+  screens that upgrade them (no lock-out). This means **impersonation
+  (`/api/admin/impersonate`) is now passkey-gated too** — desired hardening.
+- **Relying-Party config is per-environment** (`ADMIN_WEBAUTHN_RP_ID` /
+  `ADMIN_WEBAUTHN_ORIGIN`, else derived from host). dev = `dev.disputedesk.app`,
+  prod = `disputedesk.app`. A passkey enrolled on dev will NOT work on prod
+  (different RP) — enroll separately per environment.
+- **Lock-out escape hatch:** if an admin loses all devices, a service-role
+  operator runs `DELETE FROM admin_passkeys WHERE user_id = '<uuid>'` to reset them
+  to the enroll flow (documented in the migration).
+- **Enroll copy:** "Add Face ID, Windows Hello, or a security key…" — the biometric
+  check stays on-device; the server only verifies a cryptographic assertion.
+
 ## Multi-Language (i18n)
 
 ### Stack
