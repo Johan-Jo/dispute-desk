@@ -55,3 +55,29 @@ export function isSpuriousDueDateEvent(e: DueDateEventLike): boolean {
 
   return false;
 }
+
+interface ActivityEventLike {
+  event_type?: string | null;
+  metadata_json?:
+    | { reason?: string | null; old_due_at?: string | null; new_due_at?: string | null }
+    | null;
+}
+
+/**
+ * True when a `pack_blocked` event is the OBSOLETE tier-gate variant
+ * (`reason: "feature_blocked"`). Auto-build is no longer tier-gated — free tier
+ * builds against its credit ledger — so these events (65 written for
+ * cay-collective during the 2026-07-02 historical import: "Auto-build is a paid
+ * feature. Upgrade to Starter…") are stale and misleading. dispute_events is
+ * append-only, so hide them at read time. Legitimate `pack_blocked` events
+ * (quota_exceeded, auto_build_off) still show.
+ */
+export function isObsoletePackBlockedEvent(e: ActivityEventLike): boolean {
+  if (e.event_type !== "pack_blocked") return false;
+  return (e.metadata_json?.reason ?? null) === "feature_blocked";
+}
+
+/** Combined activity-feed hide predicate (spurious due-date + obsolete blocks). */
+export function isHiddenActivityEvent(e: ActivityEventLike): boolean {
+  return isSpuriousDueDateEvent(e) || isObsoletePackBlockedEvent(e);
+}
