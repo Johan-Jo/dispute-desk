@@ -265,6 +265,7 @@ function extractValue(
         proofType: typeof p.proofType === "string" ? p.proofType : null,
         carrier: typeof p.carrier === "string" ? p.carrier : null,
         deliveredAt: typeof p.deliveredAt === "string" ? p.deliveredAt : null,
+        signedByName: typeof p.signedByName === "string" ? p.signedByName : null,
         deliveredToVerifiedAddress: p.deliveredToVerifiedAddress === true,
       };
     case "customer_communication":

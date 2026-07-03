@@ -121,6 +121,12 @@ const REASON_TEMPLATES: Record<string, ReasonTemplate> = {
     { field: "refund_record", label: "Refund Record", requirementMode: "required_always" },
     { field: "refund_policy", label: "Refund / Cancellation Policy", requirementMode: "required_always" },
     { field: "no_return_initiated", label: "Return Status", requirementMode: "recommended" },
+    // Delivery confirmation is SECONDARY evidence for a refund dispute — the
+    // "customer received and kept the goods, so no refund was owed" argument.
+    // Recommended (not required): the refund record is the primary signal, but
+    // when delivery proof exists the case-strength engine already cites it, so
+    // it belongs on the checklist too (recommended_if_fulfilled).
+    { field: "delivery_proof", label: "Delivery Confirmation", requirementMode: "recommended" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended" },
     { field: "supporting_documents", label: "Supporting documents", requirementMode: "optional" },
   ],
