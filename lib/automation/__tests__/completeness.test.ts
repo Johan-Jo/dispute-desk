@@ -122,6 +122,19 @@ describe("evaluateCompleteness", () => {
     expect(cardBlockers).toHaveLength(0);
   });
 
+  it("CREDIT_NOT_PROCESSED uses the refund checklist (not GENERAL fallback)", () => {
+    // Regression: CREDIT_NOT_PROCESSED was missing from REASON_TEMPLATES and
+    // fell back to GENERAL, so a refund dispute with no refund evidence didn't
+    // even list refund_record as a required item. It must now.
+    const result = evaluateCompleteness("CREDIT_NOT_PROCESSED", new Set(), null, KLARNA_CTX);
+    const fieldsInChecklist = result.checklist.map((c) => c.field);
+    expect(fieldsInChecklist).toContain("refund_record");
+    // refund_record is required_always → an empty pack blocks on it.
+    const refundItem = result.checklist.find((c) => c.field === "refund_record");
+    expect(refundItem?.required).toBe(true);
+    expect(result.blockers).toContain("Refund Record");
+  });
+
   it("requires avs_cvv_match when card payment exists", () => {
     const fields = new Set(["order_confirmation", "billing_address_match"]);
     const result = evaluateCompleteness("FRAUDULENT", fields, null, FULFILLED_CARD);
