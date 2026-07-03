@@ -2536,6 +2536,7 @@
     "order": "Bestellung",
     "amount": "Betrag",
     "reason": "Grund",
+    "type": "Typ",
     "status": "Status",
     "deadline": "Frist",
     "lastSynced": "Zuletzt synchronisiert",
