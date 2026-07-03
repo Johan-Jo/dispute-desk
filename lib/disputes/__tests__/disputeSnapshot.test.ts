@@ -164,6 +164,45 @@ describe("normalizeGraphQLDispute", () => {
     expect(normalizeGraphQLDispute(null)).toBeNull();
     expect(normalizeGraphQLDispute("string")).toBeNull();
   });
+
+  it("sanitizes an epoch evidenceDueBy from Shopify to null (no bogus deadline)", () => {
+    // Shopify returns evidenceDueBy = Unix epoch (1970-01-01, or 1969-12-31 in a
+    // +01:00 tz) for some disputes with no real deadline. It must NOT persist as
+    // a "Dec 30" deadline — sanitize to null at ingestion. Regression for the
+    // cay-collective import that surfaced 1969-12-31 deadlines.
+    const out = normalizeGraphQLDispute({
+      id: "gid://shopify/ShopifyPaymentsDispute/999",
+      type: "INQUIRY",
+      status: "NEEDS_RESPONSE",
+      reasonDetails: { reason: "fraudulent" },
+      amount: { amount: "10.00", currencyCode: "USD" },
+      initiatedAt: "2026-05-19T12:00:00Z",
+      evidenceDueBy: "1969-12-31T01:00:00+01:00", // = 1970-01-01T00:00:00Z (epoch)
+      evidenceSentOn: null,
+      finalizedOn: null,
+      updatedAt: "2026-05-19T12:00:01Z",
+      order: { id: "gid://shopify/Order/1", legacyResourceId: "1", name: "#1" },
+    });
+    expect(out?.evidenceDueBy).toBeNull();
+  });
+});
+
+describe("normalizeDisputeWebhookPayload: epoch evidence_due_by", () => {
+  it("sanitizes an epoch evidence_due_by to null", () => {
+    const out = normalizeDisputeWebhookPayload({
+      id: 555,
+      amount: "10.00",
+      currency: "USD",
+      evidence_due_by: "1970-01-01T00:00:00Z",
+      evidence_sent_on: null,
+      finalized_on: null,
+      initiated_at: "2026-05-20T18:30:39Z",
+      reason: "fraudulent",
+      status: "needs_response",
+      type: "chargeback",
+    });
+    expect(out?.evidenceDueBy).toBeNull();
+  });
 });
 
 /**
