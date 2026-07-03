@@ -71,6 +71,24 @@ export interface ChronologyContext {
  * `timelineEvents` (~2025-08), or freshly-built packs where the
  * Shopify Order.events API returned nothing (e.g. POS orders).
  */
+/**
+ * Shopify's Swedish money formatting glues the "kr" symbol onto the
+ * amount *and* appends the ISO code — e.g. "A kr628.00 SEK payment was
+ * processed on Klarna." The doubled currency ("kr…SEK") reads wrong in
+ * bank-facing prose, so we drop the redundant "kr" prefix, leaving
+ * "628.00 SEK". Only strips "kr" when it directly precedes a number that
+ * is *also* suffixed by the ISO code — a plain "kr628.00" with no ISO
+ * code is left untouched (removing the only currency marker would lose
+ * information). Applied to the rich Shopify timeline text verbatim.
+ */
+export function normalizeChronologyText(text: string): string {
+  // "kr628.00 SEK" → "628.00 SEK"; "kr 605,22 SEK" → "605,22 SEK".
+  return text.replace(
+    /\bkr\s?(\d[\d.,\s]*\s+[A-Z]{3})\b/g,
+    "$1",
+  );
+}
+
 export function buildChronologyEvents(
   context: ChronologyContext,
   facts: EvidenceFact[] = [],
@@ -78,7 +96,9 @@ export function buildChronologyEvents(
   // Path 1: rich timeline. Same priority order both surfaces share.
   const rich = context.timelineEvents;
   if (Array.isArray(rich) && rich.length > 0) {
-    return [...rich].sort((a, b) => a.at.localeCompare(b.at));
+    return [...rich]
+      .map((e) => ({ ...e, text: normalizeChronologyText(e.text) }))
+      .sort((a, b) => a.at.localeCompare(b.at));
   }
 
   // Path 2: synthetic fallback. Only fires when the pack lacks captured events.
