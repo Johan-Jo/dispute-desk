@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { computeDisputeMetrics } from "@/lib/disputes/metrics";
 import { extractShopId } from "@/lib/middleware/extractShopId";
-import { isSpuriousDueDateEvent } from "@/lib/disputeEvents/spuriousDueDate";
+import { isHiddenActivityEvent } from "@/lib/disputeEvents/spuriousDueDate";
 
 export const runtime = "nodejs";
 
@@ -125,8 +125,15 @@ export async function GET(req: NextRequest) {
   const activityRows = (activityRes.data ?? [])
     .filter(
       (e) =>
-        !isSpuriousDueDateEvent(
-          e as { event_type?: string | null; metadata_json?: { old_due_at?: string | null; new_due_at?: string | null } | null },
+        !isHiddenActivityEvent(
+          e as {
+            event_type?: string | null;
+            metadata_json?: {
+              reason?: string | null;
+              old_due_at?: string | null;
+              new_due_at?: string | null;
+            } | null;
+          },
         ),
     )
     .slice(0, 10);

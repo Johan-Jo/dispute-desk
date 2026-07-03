@@ -8,7 +8,7 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import { getShopSettings } from "./settings";
 import { evaluateAutoSaveGate } from "./autoSaveGate";
-import { checkPackQuota, checkFeatureAccess } from "@/lib/billing/checkQuota";
+import { checkPackQuota } from "@/lib/billing/checkQuota";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
 import { claimAndSendDeferredNewDisputeAlert } from "@/lib/email/sendNewDisputeAlert";
@@ -171,8 +171,40 @@ async function resolveAutomationTemplate(dispute: Dispute): Promise<string | nul
  * Returns the action taken.
  */
 export async function runAutomationPipeline(dispute: Dispute): Promise<{
-  action: "pack_enqueued" | "skipped_auto_build_off" | "existing_pack" | "quota_exceeded" | "feature_blocked";
+  action:
+    | "pack_enqueued"
+    | "skipped_auto_build_off"
+    | "existing_pack"
+    | "quota_exceeded"
+    | "skipped_terminal";
 }> {
+  // Terminal-status guard: never auto-build (or emit a blocked event, or spend
+  // a credit) for a dispute with nothing left to submit. A closed / won / lost /
+  // accepted dispute has no live deadline — building a pack is wasted work and,
+  // on credit-gated plans, would burn a pack on a resolved case. The
+  // historicalImport guard in the dispatcher covers first-sync; this protects
+  // EVERY caller (manual re-sync, status-change events on resolved disputes).
+  {
+    const sb0 = getServiceClient();
+    const { data: row } = await sb0
+      .from("disputes")
+      .select("final_outcome, closed_at, normalized_status")
+      .eq("id", dispute.id)
+      .maybeSingle();
+    const outcome = (row?.final_outcome as string | null) ?? null;
+    const ns = (row?.normalized_status as string | null) ?? null;
+    const isTerminal =
+      row?.closed_at != null ||
+      (outcome != null && outcome !== "unknown") ||
+      ns === "won" ||
+      ns === "lost" ||
+      ns === "accepted_not_contested" ||
+      ns === "closed_other";
+    if (isTerminal) {
+      return { action: "skipped_terminal" };
+    }
+  }
+
   const settings = await getShopSettings(dispute.shop_id);
 
   if (!settings.auto_build_enabled) {
@@ -205,18 +237,13 @@ export async function runAutomationPipeline(dispute: Dispute): Promise<{
     return { action: "quota_exceeded" };
   }
 
-  const featureCheck = checkFeatureAccess(quota.plan, "autoPack");
-  if (!featureCheck.allowed) {
-    await recordBlockedAutoBuild({
-      shopId: dispute.shop_id,
-      disputeId: dispute.id,
-      reason: DISPUTE_ATTENTION_REASONS.FEATURE_BLOCKED,
-      attentionPayload: { plan: quota.plan },
-      nextActionText:
-        "Auto-build is a paid feature. Upgrade to Starter or above to enable automated dispute packs.",
-    });
-    return { action: "feature_blocked" };
-  }
+  // NOTE: auto-build is NOT tier-gated. Every plan — including Free — can
+  // auto-build; the credit ledger is the only gate. Free ships with 5
+  // free_lifetime credits (FREE_LIFETIME_PACKS), so free-tier shops auto-build
+  // until those 5 are spent, then `checkPackQuota` above returns the proper
+  // "out of pack credits" exit. (Previously a `checkFeatureAccess(plan,
+  // "autoPack")` tier check blocked ALL free shops here — even with credits
+  // available — flooding the feed with "Auto-build is a paid feature".)
 
   const sb = getServiceClient();
 
