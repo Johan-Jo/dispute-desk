@@ -92,7 +92,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       .catch(() => {});
   }, []);
 
-  if (pathname === "/admin/login") {
+  // Render bare (no admin chrome) for pages an UNVERIFIED admin can reach:
+  // the access-denied login page and the passkey enroll/verify gate. Showing
+  // the sidebar/topbar here would leak the panel to someone who hasn't cleared
+  // the second factor yet.
+  if (
+    pathname === "/admin/login" ||
+    pathname === "/admin/enroll-passkey" ||
+    pathname === "/admin/verify-passkey"
+  ) {
     return <>{children}</>;
   }
 
