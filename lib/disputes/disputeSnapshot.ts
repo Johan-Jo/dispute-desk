@@ -13,6 +13,7 @@
  */
 
 import { z } from "zod";
+import { sanitizeDueAt } from "@/lib/disputes/dueDate";
 
 export interface DisputeSnapshot {
   /** GraphQL Admin id, e.g. "gid://shopify/ShopifyPaymentsDispute/12345". */
@@ -186,7 +187,10 @@ export function normalizeDisputeWebhookPayload(
     reason: p.reason ?? null,
     networkReasonCode: p.network_reason_code ?? null,
     initiatedAt: p.initiated_at ?? null,
-    evidenceDueBy: p.evidence_due_by ?? null,
+    // Shopify sometimes returns an epoch `evidenceDueBy` (1970-01-01) for
+    // disputes with no real deadline — sanitize to null so it never persists
+    // as a bogus deadline. See lib/disputes/dueDate.ts.
+    evidenceDueBy: sanitizeDueAt(p.evidence_due_by),
     evidenceSentOn: p.evidence_sent_on ?? null,
     finalizedOn: p.finalized_on ?? null,
     amount: p.amount ?? null,
@@ -234,7 +238,9 @@ export function normalizeGraphQLDispute(
     reason: d.reasonDetails?.reason ?? null,
     networkReasonCode: null,
     initiatedAt: d.initiatedAt ?? null,
-    evidenceDueBy: d.evidenceDueBy ?? null,
+    // Shopify sometimes returns an epoch `evidenceDueBy` (1970-01-01) for
+    // disputes with no real deadline — sanitize to null (see above).
+    evidenceDueBy: sanitizeDueAt(d.evidenceDueBy),
     evidenceSentOn: d.evidenceSentOn ?? null,
     finalizedOn: d.finalizedOn ?? null,
     amount: d.amount?.amount ?? null,

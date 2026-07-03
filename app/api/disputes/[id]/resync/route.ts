@@ -8,6 +8,7 @@ import {
 } from "@/lib/shopify/queries/disputes";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
+import { sanitizeDueAt } from "@/lib/disputes/dueDate";
 import {
   STATUS_CHANGED,
   SUBMISSION_CONFIRMED,
@@ -156,8 +157,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     lockedFields.push("final_outcome", "status");
   }
 
-  if (d.evidenceDueBy && d.evidenceDueBy !== row.due_at) {
-    update.due_at = d.evidenceDueBy;
+  // Sanitize Shopify's occasional epoch evidenceDueBy → null (see dueDate.ts).
+  const cleanDueAt = sanitizeDueAt(d.evidenceDueBy);
+  if (cleanDueAt !== row.due_at) {
+    update.due_at = cleanDueAt;
     refreshedFields.push("due_at");
   }
 
