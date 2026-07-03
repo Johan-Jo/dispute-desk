@@ -110,6 +110,20 @@ const REASON_TEMPLATES: Record<string, ReasonTemplate> = {
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended" },
     { field: "supporting_documents", label: "Supporting documents", requirementMode: "optional" },
   ],
+  // Refund / Credit Not Processed. The dominant Klarna/BNPL reason — the case
+  // hinges on refund evidence, NOT card-fraud signals. Previously absent from
+  // this map, so these disputes fell back to GENERAL and scored "weak, no
+  // refund evidence." refund_record / no_return_initiated are provided by
+  // orderSource.ts; the Klarna narrative overlay (paymentOverlays.ts) already
+  // frames it correctly.
+  CREDIT_NOT_PROCESSED: [
+    { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always" },
+    { field: "refund_record", label: "Refund Record", requirementMode: "required_always" },
+    { field: "refund_policy", label: "Refund / Cancellation Policy", requirementMode: "required_always" },
+    { field: "no_return_initiated", label: "Return Status", requirementMode: "recommended" },
+    { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended" },
+    { field: "supporting_documents", label: "Supporting documents", requirementMode: "optional" },
+  ],
   GENERAL: [
     { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always" },
     { field: "shipping_tracking", label: "Shipping Tracking", requirementMode: "optional" },

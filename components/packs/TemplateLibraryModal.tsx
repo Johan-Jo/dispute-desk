@@ -12,6 +12,11 @@ interface Props {
   onInstalled: (packId: string) => void;
   /** Pre-select a dispute-type filter (e.g. "FRAUD") when opening */
   initialCategory?: string;
+  /** Create installed templates ACTIVE (not DRAFT) so they immediately cover
+   *  the dispute type. Set true from the Automation/Coverage "Install Playbook"
+   *  flows. Defaults true here since every modal caller is a cover-this-type
+   *  action. */
+  activateOnInstall?: boolean;
 }
 
 export function TemplateLibraryModal({
@@ -21,6 +26,7 @@ export function TemplateLibraryModal({
   locale,
   onInstalled,
   initialCategory,
+  activateOnInstall = true,
 }: Props) {
   const t = useTranslations("templateLibrary");
 
@@ -40,6 +46,7 @@ export function TemplateLibraryModal({
         isActive={isOpen}
         layoutMode="modal"
         initialCategory={initialCategory}
+        activateOnInstall={activateOnInstall}
       />
     </Modal>
   );
