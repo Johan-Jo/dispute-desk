@@ -32,6 +32,7 @@ import {
   signImpersonation,
   IMPERSONATION_COOKIE,
   IMPERSONATION_MODE_HEADER,
+  IMPERSONATION_TTL_SECONDS,
 } from "@/lib/admin/impersonation";
 
 async function reqWith(
@@ -52,6 +53,17 @@ async function cookie(mode: "read" | "write"): Promise<string> {
     mode,
     adminUserId: "admin-1",
     iat: Math.floor(Date.now() / 1000),
+  });
+}
+
+/** A validly-signed but EXPIRED impersonation cookie (iat past the TTL). */
+async function expiredCookie(): Promise<string> {
+  return signImpersonation({
+    shopId: "shop-1",
+    shopDomain: "acme.myshopify.com",
+    mode: "read",
+    adminUserId: "admin-1",
+    iat: Math.floor(Date.now() / 1000) - IMPERSONATION_TTL_SECONDS - 60,
   });
 }
 
@@ -94,6 +106,21 @@ describe("middleware: impersonation short-circuit", () => {
     expect(res.headers.get(`x-middleware-request-${IMPERSONATION_MODE_HEADER}`)).toBe(
       "read",
     );
+  });
+
+  it("re-mints the impersonation cookie on /app load (sliding TTL)", async () => {
+    const res = await middleware(await reqWith("/app", "GET", await cookie("read")));
+    expect(res.status).toBe(200);
+    const setCookie = res.headers.get("set-cookie") ?? "";
+    expect(setCookie).toContain(`${IMPERSONATION_COOKIE}=`);
+  });
+
+  it("redirects to /admin/shops when an EXPIRED impersonation cookie hits /app", async () => {
+    const res = await middleware(await reqWith("/app", "GET", await expiredCookie()));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/admin/shops?impersonation=expired");
+    // and clears the dead cookie
+    expect(res.headers.get("set-cookie") ?? "").toContain(`${IMPERSONATION_COOKIE}=;`);
   });
 
   it("does NOT short-circuit /api/admin/* (admin mint/exit stays gated)", async () => {

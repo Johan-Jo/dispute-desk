@@ -24,8 +24,14 @@
 export const IMPERSONATION_COOKIE = "dd_impersonation";
 export const IMPERSONATION_MODE_HEADER = "x-dd-impersonation-mode";
 
-/** Cookie lifetime. Refreshed on mint; expires silently if left idle. */
-export const IMPERSONATION_TTL_SECONDS = 30 * 60;
+/**
+ * Cookie lifetime. This is a SLIDING window: the middleware re-mints the cookie
+ * with a fresh `iat` on every impersonated /app/* page load, so an actively-used
+ * session never expires mid-debugging. The TTL only bites after this long of
+ * genuine INACTIVITY (no navigation). Kept generous because losing it mid-session
+ * previously rendered a misleading all-zeros merchant dashboard.
+ */
+export const IMPERSONATION_TTL_SECONDS = 8 * 60 * 60; // 8h idle cap
 
 export type ImpersonationMode = "read" | "write";
 
