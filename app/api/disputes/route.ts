@@ -133,6 +133,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Authoritative "needs attention" count for the KPI tile — shop-wide, NOT
+  // scoped to the current page/filter. Uses the same `needs_attention` flag the
+  // dashboard + /admin use, so the disputes-page "Needs action" number matches
+  // the dashboard instead of being a client-side count over the loaded page.
+  const { count: needsAttentionCount } = await sb
+    .from("disputes")
+    .select("id", { count: "exact", head: true })
+    .eq("shop_id", shopId)
+    .eq("needs_attention", true);
+
   // Merge `caseStrength` from each dispute's latest non-failed pack so the
   // list page can render the strength pill + "{N} strong signals" subtitle
   // without a per-row N+1.
@@ -278,6 +288,10 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     disputes: disputesWithStrength,
+    aggregates: {
+      // Shop-wide count, independent of the current filter/page.
+      needs_attention: needsAttentionCount ?? 0,
+    },
     pagination: {
       page,
       per_page: perPage,

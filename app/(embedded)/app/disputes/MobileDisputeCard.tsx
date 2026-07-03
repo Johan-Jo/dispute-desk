@@ -23,6 +23,24 @@ import {
   type FigmaOutcome,
   type TabId,
 } from "./disputeListHelpers";
+import { phaseLabel } from "@/lib/disputes/phaseUtils";
+import type { DisputePhase } from "@/lib/rules/disputeReasons";
+
+function phasePillColors(phase: DisputePhase | null): { bg: string; color: string } {
+  if (phase === "inquiry") return { bg: "#E0F2FE", color: "#075985" };
+  return { bg: "#FEF3C7", color: "#92400E" };
+}
+
+function shortDate(iso: string | null, locale: string): string {
+  if (!iso) return "—";
+  const ms = new Date(iso).getTime();
+  if (!Number.isFinite(ms)) return "—";
+  return new Date(iso).toLocaleDateString(locale, {
+    day: "numeric",
+    month: "short",
+    year: "2-digit",
+  });
+}
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
@@ -170,6 +188,11 @@ export function MobileDisputeCard({
           >
             {translateReason(d.reason, t)}
           </p>
+          <div style={{ marginTop: 6 }}>
+            <span style={{ ...PILL_STYLE, ...phasePillColors(d.phase as DisputePhase | null) }}>
+              {phaseLabel(d.phase as DisputePhase | null, t)}
+            </span>
+          </div>
         </div>
         <span
           style={{
@@ -185,11 +208,11 @@ export function MobileDisputeCard({
         </span>
       </div>
 
-      {/* Amount + Due date */}
+      {/* Amount + Date + Due date */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
+          gridTemplateColumns: "1fr 1fr 1fr",
           gap: 12,
           paddingTop: 12,
           borderTop: "1px solid #E1E3E5",
@@ -202,6 +225,14 @@ export function MobileDisputeCard({
           </div>
           <div style={{ fontSize: 14, color: "#202223" }}>
             {formatCurrency(d.amount, d.currency_code, numberLocale)}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 12, color: "#6D7175", marginBottom: 2 }}>
+            {t("table.date")}
+          </div>
+          <div style={{ fontSize: 14, color: "#202223" }}>
+            {shortDate(d.initiated_at, dateLocale)}
           </div>
         </div>
         <div>
