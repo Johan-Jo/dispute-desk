@@ -1547,7 +1547,8 @@
       },
       "retryHelp": "Intenta reconstruir. Si sigue fallando, contacta a soporte y haz referencia a esta disputa.",
       "retryBuild": "Reintentar construcción",
-      "setUpPolicies": "Configura políticas para casos futuros"
+      "setUpPolicies": "Configura políticas para casos futuros",
+      "trackingCarrierFallback": "Transportista"
     },
     "evidenceTabExtra": {
       "buildFailedTitle": "Falló la construcción del paquete de evidencia",
@@ -1628,6 +1629,14 @@
         "title": "Señal de IP/ubicación mantenida interna",
         "explanation": "Esta señal informa la evaluación, pero el recopilador la marcó como no elegible para el banco. No se envía a Shopify."
       }
+    },
+    "deliveryProof": {
+      "signature": "Confirmación de entrega (firma)",
+      "carrierConfirmed": "Confirmación de entrega (transportista)",
+      "shippedUnconfirmed": "Envío y seguimiento",
+      "labelOnly": "Etiqueta de envío creada",
+      "trackingUnconfirmedNote": "Enviado: el transportista aún no ha confirmado la entrega",
+      "trackingLink": "{carrier} · {number}"
     }
   },
   "disputeReasons": {

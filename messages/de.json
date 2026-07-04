@@ -1547,7 +1547,8 @@
       },
       "retryHelp": "Versuchen Sie es erneut. Wenn es weiterhin fehlschlägt, kontaktieren Sie den Support und verweisen Sie auf diesen Streitfall.",
       "retryBuild": "Erneut erstellen",
-      "setUpPolicies": "Richtlinien für künftige Fälle einrichten"
+      "setUpPolicies": "Richtlinien für künftige Fälle einrichten",
+      "trackingCarrierFallback": "Zusteller"
     },
     "evidenceTabExtra": {
       "buildFailedTitle": "Erstellung des Beweispakets fehlgeschlagen",
@@ -1628,6 +1629,14 @@
         "title": "IP-/Standort-Signal nur intern",
         "explanation": "Dieses Signal fließt in die Bewertung ein, wurde aber vom Upstream-Collector als nicht bankfähig markiert. Nicht an Shopify übermittelt."
       }
+    },
+    "deliveryProof": {
+      "signature": "Zustellbestätigung (Unterschrift)",
+      "carrierConfirmed": "Zustellbestätigung (Zusteller)",
+      "shippedUnconfirmed": "Versand & Sendungsverfolgung",
+      "labelOnly": "Versandetikett erstellt",
+      "trackingUnconfirmedNote": "Versandt – der Zusteller hat die Zustellung noch nicht bestätigt",
+      "trackingLink": "{carrier} · {number}"
     }
   },
   "disputeReasons": {

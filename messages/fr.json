@@ -1547,7 +1547,8 @@
       },
       "retryHelp": "Essayez de relancer la construction. Si l'échec persiste, contactez l'assistance en précisant ce litige.",
       "retryBuild": "Relancer la construction",
-      "setUpPolicies": "Configurer les politiques pour les futurs dossiers"
+      "setUpPolicies": "Configurer les politiques pour les futurs dossiers",
+      "trackingCarrierFallback": "Transporteur"
     },
     "evidenceTabExtra": {
       "buildFailedTitle": "Échec de la construction du dossier de preuves",
@@ -1628,6 +1629,14 @@
         "title": "Signal IP/localisation conservé en interne",
         "explanation": "Ce signal alimente l'évaluation mais le collecteur en amont l'a marqué comme non admissible pour la banque. Non soumis à Shopify."
       }
+    },
+    "deliveryProof": {
+      "signature": "Confirmation de livraison (signature)",
+      "carrierConfirmed": "Confirmation de livraison (transporteur)",
+      "shippedUnconfirmed": "Expédition et suivi",
+      "labelOnly": "Étiquette d’expédition créée",
+      "trackingUnconfirmedNote": "Expédié – le transporteur n’a pas encore confirmé la livraison",
+      "trackingLink": "{carrier} · {number}"
     }
   },
   "disputeReasons": {

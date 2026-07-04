@@ -23,6 +23,7 @@ import {
   Banner,
   Icon,
   Divider,
+  Link,
 } from "@shopify/polaris";
 import {
   AlertCircleIcon,
@@ -38,6 +39,10 @@ import { EVIDENCE_EVALUATION_HELPER } from "@/lib/argument/evidenceStatus";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type { PresentationStatus } from "../workspace-components/types";
 import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
+import {
+  buildDeliveryPresentation,
+  type DeliveryPresentation,
+} from "@/lib/argument/deliveryPresentation";
 import { resolveToken } from "@/lib/i18n/resolveToken";
 import { classifyEvidenceRow } from "@/lib/argument/categoryBadge";
 import { canMerchantUpload, type useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
@@ -905,13 +910,60 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               status: c.status,
               payload,
             });
+            // Delivery rows (delivery_proof / shipping_tracking) get a
+            // proof-state-aware label + tracking links so a shipped-but-
+            // not-confirmed order reads as "Shipping & tracking", not the
+            // generic "Delivery confirmation" (which the score contradicts).
+            const deliveryPresentation: DeliveryPresentation | null =
+              spec.signalId === "delivery"
+                ? buildDeliveryPresentation(payload)
+                : null;
             return {
               item: c,
               spec,
               classification,
               lineItem: lineItemsByField.get(c.field),
+              deliveryPresentation,
             };
           });
+
+        // Dedup by signalId — the two delivery field keys (delivery_proof,
+        // shipping_tracking) describe one signal and share a label, so the
+        // list would otherwise show two identical "Delivery confirmation"
+        // cards. Scoring already dedups by signalId; mirror it here for the
+        // display. Keep the strongest / most-informative row per signal:
+        //   1. prefer the collected (non-missing) one,
+        //   2. then the one whose delivery proofType is more decisive
+        //      (a resolved labelKey that isn't the shipped/label fallback),
+        //   3. else first-seen.
+        const dedupedCollectedRows = (() => {
+          const bySignal = new Map<string, (typeof collectedRows)[number]>();
+          const deliveryRank: Record<string, number> = {
+            "disputes.deliveryProof.signature": 3,
+            "disputes.deliveryProof.carrierConfirmed": 2,
+            "disputes.deliveryProof.shippedUnconfirmed": 1,
+            "disputes.deliveryProof.labelOnly": 0,
+          };
+          const scoreOf = (r: (typeof collectedRows)[number]): number => {
+            const collected = r.classification.status !== "missing" ? 100 : 0;
+            const delivery = r.deliveryPresentation
+              ? (deliveryRank[r.deliveryPresentation.labelKey] ?? 0)
+              : 0;
+            return collected + delivery;
+          };
+          const order: string[] = [];
+          for (const r of collectedRows) {
+            const sig = r.spec.signalId;
+            const prev = bySignal.get(sig);
+            if (!prev) {
+              bySignal.set(sig, r);
+              order.push(sig);
+            } else if (scoreOf(r) > scoreOf(prev)) {
+              bySignal.set(sig, r);
+            }
+          }
+          return order.map((sig) => bySignal.get(sig)!);
+        })();
         const manualUploads = (data.attachments ?? []).filter(
           (a) => a.source === "manual_upload",
         );
@@ -976,7 +1028,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           if (classification.category === "moderate") return 1;
           return 2; // supporting (and the rare invalid soft-landed in classifyEvidenceRow)
         };
-        const orderedRows = [...collectedRows].sort(
+        const orderedRows = [...dedupedCollectedRows].sort(
           (a, b) => tierOf(a) - tierOf(b),
         );
 
@@ -1020,7 +1072,8 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         //   leading icon (5x5) · title (14/600) + descriptor (12/subdued)
         //   · trailing pill self-aligned.
         const renderRow = (row: Row) => {
-          const { item, spec, classification, lineItem } = row;
+          const { item, spec, classification, lineItem, deliveryPresentation } =
+            row;
           const isMissing = classification.status === "missing";
           const isInternalOnly = isInternalOnlyRow(row);
           // System-derived row that's currently missing — replace the
@@ -1184,6 +1237,20 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                   }}
                 >
                   {(() => {
+                    // Delivery rows get a proof-state-aware title so a
+                    // shipped-but-unconfirmed order reads as "Shipping &
+                    // tracking", not the generic "Delivery confirmation".
+                    // Only override for COLLECTED rows — a missing delivery
+                    // row should keep the generic signal label as a prompt.
+                    if (deliveryPresentation && !isMissing) {
+                      try {
+                        return resolveToken(tRoot, {
+                          key: deliveryPresentation.labelKey,
+                        });
+                      } catch {
+                        /* fall through to generic label */
+                      }
+                    }
                     // signalLabel.<signalId> is now the canonical key
                     // (no more spec.label fallback). When the lookup
                     // returns the key path verbatim, fall back to the
@@ -1209,6 +1276,45 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                     {sourceNote}
                   </p>
                 )}
+                {/* Tracking links — on a collected delivery row, print the
+                    carrier + tracking number as a clickable link so the
+                    merchant can open the carrier page and see the parcel's
+                    status themselves. Especially important for the
+                    shipped-but-unconfirmed case, where the number is the
+                    only tangible delivery artifact we have. */}
+                {!isMissing &&
+                  deliveryPresentation &&
+                  deliveryPresentation.trackingLinks.length > 0 && (
+                    <div style={{ marginTop: 4 }}>
+                      {deliveryPresentation.trackingLinks.map((tl, i) => {
+                        const labelText = resolveToken(tRoot, {
+                          key: "disputes.deliveryProof.trackingLink",
+                          params: {
+                            carrier: tl.carrier ?? tExtra("trackingCarrierFallback"),
+                            number: tl.number ?? "—",
+                          },
+                        });
+                        return (
+                          <p
+                            key={`${tl.number ?? tl.url ?? "trk"}-${i}`}
+                            style={{
+                              fontSize: 12,
+                              margin: "2px 0 0",
+                              lineHeight: 1.4,
+                            }}
+                          >
+                            {tl.url ? (
+                              <Link url={tl.url} external>
+                                {labelText}
+                              </Link>
+                            ) : (
+                              <span style={{ color: "#6D7175" }}>{labelText}</span>
+                            )}
+                          </p>
+                        );
+                      })}
+                    </div>
+                  )}
                 {/* Internal-only warnings attached to a row whose
                     primary value is still useful (e.g.
                     order_confirmation carrying a billing/shipping
