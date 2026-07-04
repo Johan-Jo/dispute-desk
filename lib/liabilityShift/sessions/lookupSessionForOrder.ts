@@ -20,6 +20,14 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import { decrypt, deserializeEncrypted } from "@/lib/security/encryption";
 
+/** Normalize a Shopify order id to its numeric form. Accepts either a
+ *  GID (`gid://shopify/Order/123`) or a bare numeric string, so the
+ *  webhook write side and the disputed-order read side agree on one key. */
+function normalizeOrderId(id: string): string {
+  const m = /(\d+)\s*$/.exec(id);
+  return m ? m[1] : id;
+}
+
 export interface SessionEnrichment {
   ip: string | null;
   /** Reserved — LSE-4 v1 doesn't capture device fingerprint. */
@@ -38,17 +46,27 @@ const EMPTY: SessionEnrichment = {
 export async function lookupSessionForOrder(input: {
   shopId: string;
   cartToken: string | null | undefined;
+  /** Numeric/GID Shopify order id. The disputed-order path can no longer
+   *  supply `cartToken` (Admin GraphQL dropped Order.cartToken 2026-01),
+   *  so it passes the order id and we match on `shopify_order_id` —
+   *  populated by the orders/create webhook match-back
+   *  (`matchSessionToOrder`). Either key resolves the same session row. */
+  shopifyOrderId?: string | null;
 }): Promise<SessionEnrichment> {
-  if (!input.cartToken) return EMPTY;
+  if (!input.cartToken && !input.shopifyOrderId) return EMPTY;
   const sb = getServiceClient();
-  const { data, error } = await sb
+  let query = sb
     .from("checkout_sessions")
     .select(
       "ip_raw_encrypted, customer_login_state_at_checkout, customer_account_age_days",
     )
-    .eq("shop_id", input.shopId)
-    .eq("cart_token", input.cartToken)
-    .maybeSingle();
+    .eq("shop_id", input.shopId);
+  // Prefer the cart_token join when available (the original key); otherwise
+  // fall back to the webhook-populated shopify_order_id.
+  query = input.cartToken
+    ? query.eq("cart_token", input.cartToken)
+    : query.eq("shopify_order_id", normalizeOrderId(input.shopifyOrderId!));
+  const { data, error } = await query.maybeSingle();
   if (error || !data) return EMPTY;
 
   let ip: string | null = null;

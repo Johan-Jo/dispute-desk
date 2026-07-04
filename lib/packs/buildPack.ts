@@ -740,6 +740,11 @@ export async function buildPack(
       raw: paymentContext.raw,
       label: paymentContext.label,
       cardNetwork: paymentContext.cardNetwork,
+      // Klarna sub-product (pay_now / pay_later / …) from receiptJson.
+      // Persisted so admin analytics can compare dispute rates across
+      // Klarna products (pay_later historically higher-risk). null for
+      // non-Klarna or when the receipt didn't carry the category.
+      klarnaSubProduct: paymentContext.klarnaSubProduct ?? null,
     },
     // Card-only evidence sections intentionally skipped for this payment
     // method, with a human reason. Surfaced in admin so an empty

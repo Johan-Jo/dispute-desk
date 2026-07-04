@@ -25,6 +25,9 @@ vi.mock("@/lib/shopify/orderIngest", () => ({
   normalizeOrderIngest: vi.fn(),
   resolveShopIdByDomain: vi.fn(),
 }));
+vi.mock("@/lib/liabilityShift/sessions/ingest", () => ({
+  matchSessionToOrder: vi.fn(),
+}));
 
 import { handleOrderWebhook } from "@/lib/webhooks/handleOrderWebhook";
 import { verifyShopifyWebhook } from "@/lib/webhooks/verify";
@@ -37,6 +40,7 @@ import {
   normalizeOrderIngest,
   resolveShopIdByDomain,
 } from "@/lib/shopify/orderIngest";
+import { matchSessionToOrder } from "@/lib/liabilityShift/sessions/ingest";
 
 const mockVerify = vi.mocked(verifyShopifyWebhook);
 const mockCheckAndClaim = vi.mocked(checkAndClaim);
@@ -44,6 +48,7 @@ const mockMarkProcessed = vi.mocked(markProcessed);
 const mockBuildExcerpt = vi.mocked(buildSafePayloadExcerpt);
 const mockNormalize = vi.mocked(normalizeOrderIngest);
 const mockResolveShop = vi.mocked(resolveShopIdByDomain);
+const mockMatchSession = vi.mocked(matchSessionToOrder);
 
 const RAW_BODY = JSON.stringify({
   id: 98765,
@@ -67,6 +72,7 @@ describe("handleOrderWebhook (PR-A)", () => {
       eventRowId: "row-orders-1",
     });
     mockResolveShop.mockResolvedValue("shop-1");
+    mockMatchSession.mockResolvedValue({ matched: true });
     mockNormalize.mockResolvedValue({
       status: "applied",
       persistResult: {
@@ -184,5 +190,48 @@ describe("handleOrderWebhook (PR-A)", () => {
 
     const claimCall = mockCheckAndClaim.mock.calls[0]?.[0];
     expect(claimCall?.eventId).toMatch(/^fallback:orders\/create:/);
+  });
+
+  // ── LSE-4 session→order match-back ──
+  it("links the checkout_session by cart_token from the REST payload (numeric order id)", async () => {
+    mockVerify.mockReturnValue(true);
+    const body = JSON.stringify({
+      id: 98765,
+      admin_graphql_api_id: "gid://shopify/Order/98765",
+      myshopify_domain: "demo.myshopify.com",
+      cart_token: "cart-abc-123",
+      processed_at: "2026-07-04T10:00:00Z",
+    });
+
+    await handleOrderWebhook({ rawBody: body, headers: HEADERS });
+
+    expect(mockMatchSession).toHaveBeenCalledWith({
+      shopId: "shop-1",
+      cartToken: "cart-abc-123",
+      shopifyOrderId: "98765", // numeric, normalized from the gid
+      orderPlacedAt: "2026-07-04T10:00:00Z",
+    });
+  });
+
+  it("does NOT call matchSessionToOrder when the payload has no cart_token", async () => {
+    mockVerify.mockReturnValue(true);
+    await handleOrderWebhook({ rawBody: RAW_BODY, headers: HEADERS });
+    expect(mockMatchSession).not.toHaveBeenCalled();
+  });
+
+  it("still applies the order even if the session match-back throws", async () => {
+    mockVerify.mockReturnValue(true);
+    mockMatchSession.mockRejectedValue(new Error("db down"));
+    const body = JSON.stringify({
+      id: 98765,
+      admin_graphql_api_id: "gid://shopify/Order/98765",
+      myshopify_domain: "demo.myshopify.com",
+      cart_token: "cart-xyz",
+    });
+
+    const r = await handleOrderWebhook({ rawBody: body, headers: HEADERS });
+
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ outcome: "applied" });
   });
 });

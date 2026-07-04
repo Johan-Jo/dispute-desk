@@ -31,6 +31,7 @@ import {
   normalizeOrderIngest,
   resolveShopIdByDomain,
 } from "@/lib/shopify/orderIngest";
+import { matchSessionToOrder } from "@/lib/liabilityShift/sessions/ingest";
 
 export interface OrderWebhookResult {
   status: number;
@@ -153,6 +154,41 @@ export async function handleOrderWebhook(
   // Derive the order GID. The payload may carry either the numeric id
   // or the admin_graphql_api_id; the GraphQL fetch needs the GID form.
   const orderGid = adminGid ?? `gid://shopify/Order/${shopifyObjectId}`;
+
+  // LSE-4 session→order match-back. The REST orders/create payload still
+  // carries `cart_token` (Admin GraphQL dropped Order.cartToken in 2026-01,
+  // so this is the only source). Link the checkout_sessions row captured by
+  // the storefront pixel to this order so the disputed order later has an
+  // IP/device anchor for CE 3.0 qualification. Best-effort + non-fatal:
+  // a miss (no session for this cart) or error never blocks order ingest.
+  // Runs before the ingest-outcome branches so a re-fired webhook that
+  // returns `skipped_unchanged` still performs the link.
+  const cartToken =
+    typeof payload?.["cart_token"] === "string"
+      ? (payload["cart_token"] as string)
+      : null;
+  if (cartToken) {
+    const orderPlacedAt =
+      (typeof payload?.["processed_at"] === "string" && payload["processed_at"]) ||
+      (typeof payload?.["created_at"] === "string" && payload["created_at"]) ||
+      new Date().toISOString();
+    try {
+      // Store the numeric order id so the disputed-order read side
+      // (which only has the GID) can match after normalizing.
+      const numericOrderId = /(\d+)\s*$/.exec(shopifyObjectId)?.[1] ?? shopifyObjectId;
+      await matchSessionToOrder({
+        shopId,
+        cartToken,
+        shopifyOrderId: numericOrderId,
+        orderPlacedAt: orderPlacedAt as string,
+      });
+    } catch (err) {
+      console.warn(
+        `[handleOrderWebhook] session match-back failed for order ${shopifyObjectId}:`,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
 
   try {
     const result = await normalizeOrderIngest(shopId, orderGid, {
