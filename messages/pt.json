@@ -1126,7 +1126,9 @@
       "monitoring": {
         "title": "O DisputeDesk está monitorando este pedido",
         "bodyWithDeadline": "Se o rastreamento de envio, a confirmação de entrega, a verificação de pagamento ou outras provas derivadas do sistema ficarem disponíveis antes do seu prazo ({deadline}), o DisputeDesk atualizará o pacote de defesa automaticamente. Nenhuma ação necessária da sua parte.",
-        "bodyNoDeadline": "Se o rastreamento de envio, a confirmação de entrega, a verificação de pagamento ou outras provas derivadas do sistema ficarem disponíveis antes do seu prazo, o DisputeDesk atualizará o pacote de defesa automaticamente. Nenhuma ação necessária da sua parte."
+        "bodyNoDeadline": "Se o rastreamento de envio, a confirmação de entrega, a verificação de pagamento ou outras provas derivadas do sistema ficarem disponíveis antes do seu prazo, o DisputeDesk atualizará o pacote de defesa automaticamente. Nenhuma ação necessária da sua parte.",
+        "bodyDeliveryPending": "A transportadora ainda não confirmou a entrega desta encomenda — abra o link de rastreamento acima para ver todo o trajeto. Se a entrega for confirmada (ou chegar outra evidência, como a verificação de pagamento) antes do seu prazo ({deadline}), o DisputeDesk atualiza o pacote de defesa automaticamente. Nenhuma ação é necessária da sua parte.",
+        "bodyDeliveryPendingNoDeadline": "A transportadora ainda não confirmou a entrega desta encomenda — abra o link de rastreamento acima para ver todo o trajeto. Se a entrega for confirmada (ou chegar outra evidência, como a verificação de pagamento), o DisputeDesk atualiza o pacote de defesa automaticamente. Nenhuma ação é necessária da sua parte."
       },
       "rowSourceCaptionPendingSystem": "Aguardando atividade do pedido — será preenchido automaticamente quando o Shopify informar",
       "timeline": {
@@ -1315,7 +1317,8 @@
       "weak": {
         "strongAlone": "{label} sustenta este caso, mas evidências decisivas adicionais (como {hint}) fortaleceriam o caso.",
         "moderateOnly": "{label1}{label2, select, empty {} other { e {label2}}} oferecem suporte parcial. Um sinal sólido como {hint} fortaleceria significativamente o caso.",
-        "supportingOnly": "O caso é fraco porque o pacote de evidências contém principalmente documentação de suporte, mas nenhuma evidência decisiva de {family}. {decisive} fortaleceria o caso."
+        "supportingOnly": "O caso é fraco porque o pacote de evidências contém principalmente documentação de suporte, mas nenhuma evidência decisiva de {family}. {decisive} fortaleceria o caso.",
+        "deliveryInTransit": "Neste momento é fraco porque a transportadora não confirmou a entrega ao cliente — o rastreamento está ativo mas não mostra entrega. Abra o link de rastreamento para ver todo o trajeto da encomenda. Se a entrega for confirmada mais tarde, o caso será atualizado automaticamente; {decisive} também o reforçaria."
       },
       "fraud": {
         "strong": "A verificação do pagamento e o comportamento de compra sustentam fortemente este caso.",
@@ -1636,7 +1639,8 @@
       "shippedUnconfirmed": "Envio e rastreamento",
       "labelOnly": "Etiqueta de envio criada",
       "trackingUnconfirmedNote": "Enviado — a transportadora ainda não confirmou a entrega",
-      "trackingLink": "{carrier} · {number}"
+      "trackingLink": "{carrier} · {number}",
+      "trackingHint": "Clique para acompanhar esta encomenda na página de rastreamento da transportadora."
     }
   },
   "disputeReasons": {
