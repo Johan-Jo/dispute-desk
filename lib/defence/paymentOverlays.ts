@@ -18,8 +18,12 @@
  * not-received, refund proof for refund-not-processed.
  */
 
-import type { PaymentMethodFamily } from "@/lib/disputes/paymentContext";
+import type {
+  KlarnaSubProduct,
+  PaymentMethodFamily,
+} from "@/lib/disputes/paymentContext";
 import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
+import { buildKlarnaOverlay } from "./klarnaOverlay";
 
 /**
  * Card-network vocabulary that must never appear in a BNPL/local
@@ -80,16 +84,37 @@ reason code.`;
 /**
  * Overlay + hard-banned phrases for a payment-method family. Returns null
  * overlay + empty phrases for card (no overlay needed — the reason module
- * already targets card). Currently one overlay serves all non-card
- * families (Klarna/Affirm/BNPL/local); the label distinction is handled
- * elsewhere (admin, case details).
+ * already targets card).
+ *
+ * For **Klarna**, when the dispute `reason` (and optional sub-product) is
+ * supplied, we return a Klarna-specific, category-aware overlay
+ * (`buildKlarnaOverlay`) that injects Klarna's real evidence expectations
+ * per category (Goods-Not-Received → POD/MPP, Faulty → resolution offered,
+ * etc.). Without a reason, and for Affirm / other BNPL / local methods, we
+ * fall back to the neutral generic BNPL overlay. The hard-banned card
+ * phrases are identical either way.
  */
-export function paymentOverlayFor(family: PaymentMethodFamily | string | null | undefined): {
+export function paymentOverlayFor(
+  family: PaymentMethodFamily | string | null | undefined,
+  klarnaContext?: {
+    shopifyReason?: string | null;
+    subProduct?: KlarnaSubProduct | null;
+  },
+): {
   overlay: string | null;
   prohibitedPhrases: readonly RegExp[];
 } {
-  if (isNonCardPaymentFamily(family)) {
-    return { overlay: BNPL_OVERLAY, prohibitedPhrases: BNPL_PROHIBITED_CARD_PHRASES };
+  if (!isNonCardPaymentFamily(family)) {
+    return { overlay: null, prohibitedPhrases: [] };
   }
-  return { overlay: null, prohibitedPhrases: [] };
+  if (family === "klarna" && klarnaContext) {
+    return {
+      overlay: buildKlarnaOverlay({
+        shopifyReason: klarnaContext.shopifyReason ?? null,
+        subProduct: klarnaContext.subProduct ?? null,
+      }),
+      prohibitedPhrases: BNPL_PROHIBITED_CARD_PHRASES,
+    };
+  }
+  return { overlay: BNPL_OVERLAY, prohibitedPhrases: BNPL_PROHIBITED_CARD_PHRASES };
 }

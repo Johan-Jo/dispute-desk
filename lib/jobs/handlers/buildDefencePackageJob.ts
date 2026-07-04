@@ -28,6 +28,7 @@ import {
 } from "@/lib/defence/reasonCodes/registry";
 import { getFamily } from "@/lib/defence/reasonCodes/familyRegistry";
 import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
+import type { KlarnaSubProduct } from "@/lib/disputes/paymentContext";
 import { klarnaDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategory";
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
 import { generateNarrative } from "@/lib/defence/narrativeWriter";
@@ -233,8 +234,16 @@ export async function handleBuildDefencePackage(
   // Payment-method overlay (BNPL / Klarna / Affirm). Non-null only for
   // non-card disputes; reframes the narrative to the actual method and
   // supplies the card-term phrases that validateNarrative hard-rejects.
+  // For Klarna we pass the dispute reason + sub-product so the overlay is
+  // category-aware (Goods-Not-Received → POD/MPP guidance, etc.).
+  const klarnaSubProduct =
+    (packJson.payment_context as { klarnaSubProduct?: KlarnaSubProduct | null } | undefined)
+      ?.klarnaSubProduct ?? null;
   const { overlay: paymentOverlay, prohibitedPhrases: paymentProhibited } =
-    paymentOverlayFor(paymentContext?.family ?? null);
+    paymentOverlayFor(paymentContext?.family ?? null, {
+      shopifyReason: dispute?.reason ?? null,
+      subProduct: klarnaSubProduct,
+    });
 
   // Generate the narrative.
   const narrativeRes = await generateNarrative(
