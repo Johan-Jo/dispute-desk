@@ -1126,7 +1126,9 @@
       "monitoring": {
         "title": "DisputeDesk surveille cette commande",
         "bodyWithDeadline": "Si le suivi d’expédition, la confirmation de livraison, la vérification de paiement ou d’autres preuves dérivées du système deviennent disponibles avant votre échéance ({deadline}), DisputeDesk mettra à jour automatiquement le dossier de défense. Aucune action requise de votre part.",
-        "bodyNoDeadline": "Si le suivi d’expédition, la confirmation de livraison, la vérification de paiement ou d’autres preuves dérivées du système deviennent disponibles avant votre échéance, DisputeDesk mettra à jour automatiquement le dossier de défense. Aucune action requise de votre part."
+        "bodyNoDeadline": "Si le suivi d’expédition, la confirmation de livraison, la vérification de paiement ou d’autres preuves dérivées du système deviennent disponibles avant votre échéance, DisputeDesk mettra à jour automatiquement le dossier de défense. Aucune action requise de votre part.",
+        "bodyDeliveryPending": "Le transporteur n’a pas encore confirmé la livraison de ce colis — ouvrez le lien de suivi ci-dessus pour voir tout son parcours. Si la livraison est confirmée (ou qu’une autre preuve comme la vérification du paiement arrive) avant votre échéance ({deadline}), DisputeDesk met à jour le dossier de défense automatiquement. Aucune action requise de votre part.",
+        "bodyDeliveryPendingNoDeadline": "Le transporteur n’a pas encore confirmé la livraison de ce colis — ouvrez le lien de suivi ci-dessus pour voir tout son parcours. Si la livraison est confirmée (ou qu’une autre preuve comme la vérification du paiement arrive), DisputeDesk met à jour le dossier de défense automatiquement. Aucune action requise de votre part."
       },
       "rowSourceCaptionPendingSystem": "En attente d’activité sur la commande — se remplit automatiquement dès que Shopify le signale",
       "timeline": {
@@ -1315,7 +1317,8 @@
       "weak": {
         "strongAlone": "{label} appuie ce dossier, mais des preuves décisives supplémentaires (comme {hint}) le renforceraient.",
         "moderateOnly": "{label1}{label2, select, empty {} other { et {label2}}} apportent un appui partiel. Un signal solide tel que {hint} renforcerait considérablement le dossier.",
-        "supportingOnly": "Le dossier est faible car le paquet de preuves contient principalement de la documentation complémentaire, mais aucune preuve décisive de {family}. {decisive} renforcerait le dossier."
+        "supportingOnly": "Le dossier est faible car le paquet de preuves contient principalement de la documentation complémentaire, mais aucune preuve décisive de {family}. {decisive} renforcerait le dossier.",
+        "deliveryInTransit": "Faible pour l’instant car le transporteur n’a pas confirmé la livraison au client — le suivi est actif mais n’indique aucune livraison. Ouvrez le lien de suivi pour voir tout le parcours du colis. Si la livraison est confirmée plus tard, le dossier se mettra à jour automatiquement ; {decisive} le renforcerait également."
       },
       "fraud": {
         "strong": "La vérification du paiement et le comportement d'achat appuient fortement ce dossier.",
@@ -1636,7 +1639,8 @@
       "shippedUnconfirmed": "Expédition et suivi",
       "labelOnly": "Étiquette d’expédition créée",
       "trackingUnconfirmedNote": "Expédié – le transporteur n’a pas encore confirmé la livraison",
-      "trackingLink": "{carrier} · {number}"
+      "trackingLink": "{carrier} · {number}",
+      "trackingHint": "Cliquez pour suivre ce colis sur la page de suivi du transporteur."
     }
   },
   "disputeReasons": {

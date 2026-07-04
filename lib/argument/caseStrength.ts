@@ -44,6 +44,7 @@ import {
   type SignalId,
 } from "./canonicalEvidence";
 import { resolveReasonFamily, type ReasonFamily } from "./reasonFamily";
+import { buildDeliveryPresentation } from "./deliveryPresentation";
 
 /** Signal → i18n key lookup. Reads the canonical registry directly so
  *  there is no second source of truth. A signalId always corresponds
@@ -98,8 +99,13 @@ function composeStrengthReasonI18n(args: {
    *  moderate solely on avs_cvv_match Strong. Triggers the canonical
    *  "Needs strengthening" copy. */
   isFraudAvsOnlyStrong?: boolean;
+  /** Set when a delivery-signal payload carries a tracking number but the
+   *  carrier has not yet confirmed delivery (`delivered_unverified`). The
+   *  weak reason then says "on its way, awaiting carrier confirmation"
+   *  instead of the generic "no delivery evidence". */
+  deliveryInTransit?: boolean;
 }): I18nToken {
-  const { overall, family, strong, moderate, isFraudAvsOnlyStrong } = args;
+  const { overall, family, strong, moderate, isFraudAvsOnlyStrong, deliveryInTransit } = args;
 
   if (overall === "insufficient") {
     return { key: `disputes.strengthReason.${family}.insufficient` };
@@ -169,6 +175,19 @@ function composeStrengthReasonI18n(args: {
     };
   }
   // strong=0 AND moderate=0 — true "weak" with only supporting context.
+  // Shipped-but-in-transit gets a specific reason: the parcel is on its
+  // way and the carrier hasn't confirmed delivery yet, so the case is
+  // weak *right now* but is expected to strengthen once delivery is
+  // confirmed. This is honest and pedagogical rather than the flat
+  // "no decisive delivery evidence".
+  if (deliveryInTransit) {
+    return {
+      key: "disputes.strengthReason.weak.deliveryInTransit",
+      params: {
+        decisive: { type: "i18n-key", key: `disputes.decisiveFamilies.${family}` },
+      },
+    };
+  }
   return {
     key: "disputes.strengthReason.weak.supportingOnly",
     params: {
@@ -329,6 +348,13 @@ export function calculateCaseStrength(
   let presentItems = 0;    // available or waived
   let missingActionableTopField: { field: string; category: EvidenceCategory } | null = null;
   const missingRank = (c: EvidenceCategory): number => (c === "strong" ? 3 : c === "moderate" ? 2 : 0);
+  // Shipped-but-in-transit: a delivery-signal payload that carries a
+  // tracking number but whose proofType is `delivered_unverified` (the
+  // parcel is on its way, the carrier has not yet confirmed delivery).
+  // This is a *more specific* flavour of the "weak, supporting only"
+  // state — the strength reason can then say "on its way, awaiting
+  // carrier confirmation" instead of the generic "no delivery evidence".
+  let deliveryInTransit = false;
 
   for (const item of checklist) {
     const spec = CANONICAL_EVIDENCE[item.field];
@@ -340,7 +366,20 @@ export function calculateCaseStrength(
 
     if (isAvailable) {
       presentItems++;
-      const category = categoryFor({ fieldKey: item.field, payload: payloadFor(payloadSource, item.field) });
+      const payload = payloadFor(payloadSource, item.field);
+      // Detect the shipped-but-in-transit delivery state (tracking exists,
+      // carrier hasn't confirmed delivery) so the strength reason can be
+      // specific rather than the generic "no delivery evidence".
+      if (spec.signalId === "delivery") {
+        const dp = buildDeliveryPresentation(payload);
+        if (
+          dp.labelKey === "disputes.deliveryProof.shippedUnconfirmed" &&
+          dp.trackingLinks.some((t) => t.number || t.url)
+        ) {
+          deliveryInTransit = true;
+        }
+      }
+      const category = categoryFor({ fieldKey: item.field, payload });
       // Supporting and invalid contribute nothing to scoring.
       if (!affectsStrength(category)) continue;
       const prev = bestBySignalDetailed.get(spec.signalId);
@@ -483,6 +522,7 @@ export function calculateCaseStrength(
     strong: strongRows,
     moderate: moderateRows,
     isFraudAvsOnlyStrong,
+    deliveryInTransit,
   });
 
   // UI hero variant. `needs_strengthening` is the fraud-specific
@@ -541,6 +581,9 @@ export function calculateCaseStrength(
     totalClaims: 0,
     improvementHintI18n: isCovered || isFatalLoss ? null : improvementHintI18n,
     heroVariant,
+    // Suppress the in-transit framing when coverage or fatal-loss has
+    // overridden the reason — those states own the merchant message.
+    deliveryInTransit: isCovered || isFatalLoss ? false : deliveryInTransit,
     strengthReasonI18n: finalStrengthReasonI18n,
     coverage: coverage ?? undefined,
     fatalLoss: fatalLoss ?? undefined,

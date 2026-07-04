@@ -730,7 +730,8 @@
       "weak": {
         "strongAlone": "{label} supports this defense, but additional decisive evidence (such as {hint}) would strengthen the case.",
         "moderateOnly": "{label1}{label2, select, empty {} other { and {label2}}} provide partial support. A strong signal such as {hint} would significantly strengthen the case.",
-        "supportingOnly": "This is weak because the defence package contains mostly supporting documentation, but no decisive {family} evidence. {decisive} would strengthen the case."
+        "supportingOnly": "This is weak because the defence package contains mostly supporting documentation, but no decisive {family} evidence. {decisive} would strengthen the case.",
+        "deliveryInTransit": "This is weak right now because the carrier has not confirmed delivery to the customer — the tracking is active but shows no delivery. Open the tracking link to see the parcel’s full journey. If delivery is later confirmed, the case will update automatically; {decisive} would also strengthen it."
       },
       "fraud": {
         "strong": "Payment verification and purchase behavior strongly support this defense.",
@@ -1046,7 +1047,9 @@
       "monitoring": {
         "title": "DisputeDesk is monitoring this order",
         "bodyWithDeadline": "If shipping tracking, delivery confirmation, payment verification, or other system-derived evidence becomes available before your deadline ({deadline}), DisputeDesk will refresh the defence package automatically. No action needed from you.",
-        "bodyNoDeadline": "If shipping tracking, delivery confirmation, payment verification, or other system-derived evidence becomes available before your deadline, DisputeDesk will refresh the defence package automatically. No action needed from you."
+        "bodyNoDeadline": "If shipping tracking, delivery confirmation, payment verification, or other system-derived evidence becomes available before your deadline, DisputeDesk will refresh the defence package automatically. No action needed from you.",
+        "bodyDeliveryPending": "The carrier has not yet confirmed delivery of this parcel — open the tracking link above to see its full journey. If delivery is confirmed (or other evidence like payment verification arrives) before your deadline ({deadline}), DisputeDesk updates the defence package automatically. No action needed from you.",
+        "bodyDeliveryPendingNoDeadline": "The carrier has not yet confirmed delivery of this parcel — open the tracking link above to see its full journey. If delivery is confirmed (or other evidence like payment verification arrives), DisputeDesk updates the defence package automatically. No action needed from you."
       },
       "rowSourceCaptionPendingSystem": "Pending order activity — populates automatically when Shopify reports it",
       "rowWaivedByMerchant": "You marked this not applicable: {reason}.",
@@ -1636,7 +1639,8 @@
       "shippedUnconfirmed": "Shipping & tracking",
       "labelOnly": "Shipping label created",
       "trackingUnconfirmedNote": "Shipped — carrier has not yet confirmed delivery",
-      "trackingLink": "{carrier} · {number}"
+      "trackingLink": "{carrier} · {number}",
+      "trackingHint": "Click to follow this parcel on the carrier’s tracking page."
     }
   },
   "disputeReasons": {

@@ -137,6 +137,12 @@ export interface CaseStrengthResult {
    * `overall` for branching.
    */
   heroVariant: "likely_to_win" | "could_win" | "needs_strengthening" | "hard_to_win" | "covered";
+  /** True when a delivery-signal payload carries a tracking number but
+   *  the carrier has not yet confirmed delivery (`delivered_unverified`).
+   *  Drives the "parcel in transit — awaiting carrier confirmation"
+   *  wording on the strength reason and the monitoring banner. Purely
+   *  descriptive: it does not change `overall` or the counts. */
+  deliveryInTransit?: boolean;
   /** Coverage gate state. When `state === "covered_shopify"`, the
    *  merchant has no workflow — `heroVariant` is forced to `covered`
    *  and `strengthReason` is replaced with the covered copy. */
