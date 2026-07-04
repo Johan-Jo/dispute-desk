@@ -758,9 +758,15 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 lineHeight: 1.5,
               }}
             >
-              {dispute.dueAt
-                ? t("monitoring.bodyWithDeadline", { deadline: formatDate(dispute.dueAt) })
-                : t("monitoring.bodyNoDeadline")}
+              {caseStrength.deliveryInTransit
+                ? dispute.dueAt
+                  ? t("monitoring.bodyDeliveryPending", {
+                      deadline: formatDate(dispute.dueAt),
+                    })
+                  : t("monitoring.bodyDeliveryPendingNoDeadline")
+                : dispute.dueAt
+                  ? t("monitoring.bodyWithDeadline", { deadline: formatDate(dispute.dueAt) })
+                  : t("monitoring.bodyNoDeadline")}
             </p>
           </div>
         </div>
@@ -1313,6 +1319,23 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                           </p>
                         );
                       })}
+                      {/* One-line prompt so the merchant knows the link is
+                          clickable and leads to the carrier's live status —
+                          only when at least one link actually has a URL. */}
+                      {deliveryPresentation.trackingLinks.some((t) => t.url) && (
+                        <p
+                          style={{
+                            fontSize: 12,
+                            color: "#6D7175",
+                            margin: "2px 0 0",
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {resolveToken(tRoot, {
+                            key: "disputes.deliveryProof.trackingHint",
+                          })}
+                        </p>
+                      )}
                     </div>
                   )}
                 {/* Internal-only warnings attached to a row whose
