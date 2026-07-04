@@ -737,7 +737,7 @@
         "strongAlone": "{label} stöder detta försvar, men ytterligare avgörande bevis (såsom {hint}) skulle stärka ärendet.",
         "moderateOnly": "{label1}{label2, select, empty {} other { och {label2}}} ger delvis stöd. En stark signal såsom {hint} skulle avsevärt stärka ärendet.",
         "supportingOnly": "Detta är svagt eftersom försvarspaketet huvudsakligen innehåller stödjande dokumentation, men inga avgörande {family}-bevis. {decisive} skulle stärka ärendet.",
-        "deliveryInTransit": "Detta är svagt just nu eftersom transportören inte har bekräftat leverans till kunden – spårningen är aktiv men visar ingen leverans. Öppna spårningslänken för att se paketets hela resa. Om leverans senare bekräftas uppdateras ärendet automatiskt; {decisive} skulle också stärka det."
+        "deliveryInTransit": "Detta är svagt just nu eftersom transportören inte har bekräftat leverans till kunden – spårningen är aktiv men visar ingen leverans. {decisive} skulle stärka ärendet."
       },
       "fraud": {
         "strong": "Betalningsverifiering och köpbeteende stöder starkt detta försvar.",
@@ -1497,8 +1497,8 @@
         "title": "DisputeDesk övervakar denna order",
         "bodyWithDeadline": "Om leveransspårning, leveransbekräftelse, betalningsverifiering eller andra systemhärledda bevis blir tillgängliga före din deadline ({deadline}) uppdaterar DisputeDesk försvarspaketet automatiskt. Ingen åtgärd krävs från dig.",
         "bodyNoDeadline": "Om leveransspårning, leveransbekräftelse, betalningsverifiering eller andra systemhärledda bevis blir tillgängliga före din deadline uppdaterar DisputeDesk försvarspaketet automatiskt. Ingen åtgärd krävs från dig.",
-        "bodyDeliveryPending": "Transportören har ännu inte bekräftat leverans av paketet – öppna spårningslänken ovan för att se hela resan. Om leverans bekräftas (eller annan bevisning som betalningsverifiering kommer in) före din deadline ({deadline}) uppdaterar DisputeDesk försvarspaketet automatiskt. Ingen åtgärd krävs från dig.",
-        "bodyDeliveryPendingNoDeadline": "Transportören har ännu inte bekräftat leverans av paketet – öppna spårningslänken ovan för att se hela resan. Om leverans bekräftas (eller annan bevisning som betalningsverifiering kommer in) uppdaterar DisputeDesk försvarspaketet automatiskt. Ingen åtgärd krävs från dig."
+        "bodyDeliveryPending": "Öppna spårningslänken ovan för att följa paketets resa. Om leveransen bekräftas före din deadline ({deadline}) – eller om annan bevisning som betalningsverifiering kommer in – uppdaterar DisputeDesk försvarspaketet automatiskt. Ingen åtgärd krävs från dig.",
+        "bodyDeliveryPendingNoDeadline": "Öppna spårningslänken ovan för att följa paketets resa. Om leveransen bekräftas – eller om annan bevisning som betalningsverifiering kommer in – uppdaterar DisputeDesk försvarspaketet automatiskt. Ingen åtgärd krävs från dig."
       },
       "rowSourceCaptionPendingSystem": "Väntar på orderaktivitet — fylls i automatiskt när Shopify rapporterar det",
       "timeline": {
