@@ -97,6 +97,10 @@ export async function evaluateQualification(
     shopId: input.shopId,
     cartToken:
       (input.disputedOrder as { cartToken?: string | null }).cartToken ?? null,
+    // The disputed order no longer carries cartToken (Admin GraphQL dropped
+    // it 2026-01); fall back to matching the session by order id, which the
+    // orders/create webhook stamps onto checkout_sessions.shopify_order_id.
+    shopifyOrderId: input.disputedOrder.id,
   });
   if (sessionEnrichment.ip) disputedQualOrder.ipAddress = sessionEnrichment.ip;
   if (sessionEnrichment.deviceFingerprint) {
