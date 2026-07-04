@@ -28,6 +28,7 @@ import {
 } from "@/lib/defence/reasonCodes/registry";
 import { getFamily } from "@/lib/defence/reasonCodes/familyRegistry";
 import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
+import { klarnaDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategory";
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
 import { generateNarrative } from "@/lib/defence/narrativeWriter";
 import {
@@ -498,7 +499,14 @@ export async function handleBuildDefencePackage(
       disputeGid: dispute?.dispute_gid ?? null,
       orderName: orderContext.orderName,
       reasonCode,
-      reasonCodeDisplay: reasonCodeModule.displayName,
+      // For non-card (Klarna/BNPL) disputes, NEVER print a Visa/Mastercard
+      // reason code — Klarna has no network code and the funding card is
+      // structurally unavailable. Show Klarna's own dispute category
+      // instead (derived from the Shopify reason enum). Card disputes keep
+      // the module's network reference label unchanged.
+      reasonCodeDisplay: isNonCardPayment
+        ? klarnaDisputeCategoryDisplay(dispute?.reason ?? null)
+        : reasonCodeModule.displayName,
       claimType: reasonCodeModule.claimType,
       shopName: merchantDisplayName,
       merchantName: merchantDisplayName,
