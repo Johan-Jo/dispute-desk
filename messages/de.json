@@ -768,8 +768,8 @@
         "title": "DisputeDesk überwacht diese Bestellung",
         "bodyWithDeadline": "Wenn Versand-Tracking, Lieferbestätigung, Zahlungsverifizierung oder andere systemgenerierte Beweise vor Ihrer Frist ({deadline}) verfügbar werden, aktualisiert DisputeDesk das Beweispaket automatisch. Sie müssen nichts tun.",
         "bodyNoDeadline": "Wenn Versand-Tracking, Lieferbestätigung, Zahlungsverifizierung oder andere systemgenerierte Beweise vor Ihrer Frist verfügbar werden, aktualisiert DisputeDesk das Beweispaket automatisch. Sie müssen nichts tun.",
-        "bodyDeliveryPending": "Der Zusteller hat die Zustellung dieses Pakets noch nicht bestätigt – öffnen Sie den Tracking-Link oben, um den gesamten Weg zu sehen. Wird die Zustellung bestätigt (oder treffen andere Nachweise wie eine Zahlungsverifizierung vor Ihrer Frist ({deadline}) ein), aktualisiert DisputeDesk das Verteidigungspaket automatisch. Sie müssen nichts tun.",
-        "bodyDeliveryPendingNoDeadline": "Der Zusteller hat die Zustellung dieses Pakets noch nicht bestätigt – öffnen Sie den Tracking-Link oben, um den gesamten Weg zu sehen. Wird die Zustellung bestätigt (oder treffen andere Nachweise wie eine Zahlungsverifizierung ein), aktualisiert DisputeDesk das Verteidigungspaket automatisch. Sie müssen nichts tun."
+        "bodyDeliveryPending": "Öffnen Sie den Tracking-Link oben, um den Weg des Pakets zu verfolgen. Wird die Zustellung vor Ihrer Frist ({deadline}) bestätigt – oder treffen andere Nachweise wie eine Zahlungsverifizierung ein – aktualisiert DisputeDesk das Verteidigungspaket automatisch. Sie müssen nichts tun.",
+        "bodyDeliveryPendingNoDeadline": "Öffnen Sie den Tracking-Link oben, um den Weg des Pakets zu verfolgen. Wird die Zustellung bestätigt – oder treffen andere Nachweise wie eine Zahlungsverifizierung ein – aktualisiert DisputeDesk das Verteidigungspaket automatisch. Sie müssen nichts tun."
       },
       "rowSourceCaptionPendingSystem": "Wartet auf Bestellaktivität — wird automatisch ergänzt, sobald Shopify sie meldet",
       "timeline": {
@@ -1318,7 +1318,7 @@
         "strongAlone": "{label} stützt diesen Fall, aber zusätzliche entscheidende Beweise (wie {hint}) würden den Fall stärken.",
         "moderateOnly": "{label1}{label2, select, empty {} other { und {label2}}} bieten teilweise Unterstützung. Ein starkes Signal wie {hint} würde den Fall erheblich stärken.",
         "supportingOnly": "Der Fall ist schwach, weil das Beweispaket hauptsächlich unterstützende Dokumentation enthält, aber keine entscheidenden Beweise für {family}. {decisive} würde den Fall stärken.",
-        "deliveryInTransit": "Derzeit schwach, weil der Zusteller die Zustellung an den Kunden nicht bestätigt hat – die Sendungsverfolgung ist aktiv, zeigt aber keine Zustellung. Öffnen Sie den Tracking-Link, um den gesamten Weg des Pakets zu sehen. Wird die Zustellung später bestätigt, aktualisiert sich der Fall automatisch; {decisive} würde ihn zusätzlich stärken."
+        "deliveryInTransit": "Derzeit schwach, weil der Zusteller die Zustellung an den Kunden nicht bestätigt hat – die Sendungsverfolgung ist aktiv, zeigt aber keine Zustellung. {decisive} würde den Fall stärken."
       },
       "fraud": {
         "strong": "Zahlungsverifizierung und Kaufverhalten stützen diesen Fall stark.",
