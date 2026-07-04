@@ -968,7 +968,8 @@
       },
       "retryHelp": "Försök bygga om. Om det fortsätter att misslyckas, kontakta supporten och referera till denna tvist.",
       "retryBuild": "Försök bygga om",
-      "setUpPolicies": "Konfigurera policys för framtida ärenden"
+      "setUpPolicies": "Konfigurera policys för framtida ärenden",
+      "trackingCarrierFallback": "Transportör"
     },
     "overviewPill": {
       "missing": "Saknas",
@@ -1628,7 +1629,15 @@
       "rowWaivedBySystem": "DisputeDesk markerade detta som ej tillämpligt: {reason}.",
       "rowWaivedNoteSuffix": " Anmärkning: {note}"
     },
-    "noDisputesHint": "Tvister visas för butiken som valts i sidofältet. Om du använder flera butiker, växla till rätt butik och klicka sedan på Synka nu."
+    "noDisputesHint": "Tvister visas för butiken som valts i sidofältet. Om du använder flera butiker, växla till rätt butik och klicka sedan på Synka nu.",
+    "deliveryProof": {
+      "signature": "Leveransbekräftelse (signatur)",
+      "carrierConfirmed": "Leveransbekräftelse (transportör)",
+      "shippedUnconfirmed": "Frakt och spårning",
+      "labelOnly": "Fraktetikett skapad",
+      "trackingUnconfirmedNote": "Skickad – transportören har ännu inte bekräftat leveransen",
+      "trackingLink": "{carrier} · {number}"
+    }
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banken kan inte behandla",

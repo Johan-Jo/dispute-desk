@@ -962,7 +962,8 @@
       },
       "retryHelp": "Try rebuilding. If it keeps failing, contact support and reference this dispute.",
       "retryBuild": "Retry build",
-      "setUpPolicies": "Set up policies for future cases"
+      "setUpPolicies": "Set up policies for future cases",
+      "trackingCarrierFallback": "Carrier"
     },
     "overviewPill": {
       "missing": "Missing",
@@ -1628,6 +1629,14 @@
           "confirm": "Submit anyway"
         }
       }
+    },
+    "deliveryProof": {
+      "signature": "Delivery confirmation (signature)",
+      "carrierConfirmed": "Delivery confirmation (carrier)",
+      "shippedUnconfirmed": "Shipping & tracking",
+      "labelOnly": "Shipping label created",
+      "trackingUnconfirmedNote": "Shipped — carrier has not yet confirmed delivery",
+      "trackingLink": "{carrier} · {number}"
     }
   },
   "disputeReasons": {
