@@ -155,19 +155,26 @@ export async function handleOrderWebhook(
   // or the admin_graphql_api_id; the GraphQL fetch needs the GID form.
   const orderGid = adminGid ?? `gid://shopify/Order/${shopifyObjectId}`;
 
-  // LSE-4 session→order match-back. The REST orders/create payload still
-  // carries `cart_token` (Admin GraphQL dropped Order.cartToken in 2026-01,
-  // so this is the only source). Link the checkout_sessions row captured by
-  // the storefront pixel to this order so the disputed order later has an
-  // IP/device anchor for CE 3.0 qualification. Best-effort + non-fatal:
-  // a miss (no session for this cart) or error never blocks order ingest.
+  // LSE-4 session→order match-back. The storefront pixel stores the token
+  // from Shopify's `checkout_started` event into `checkout_sessions.
+  // cart_token` — but that value is the order's **checkout_token**, NOT its
+  // cart_token (verified 2026-07-04: 44/95 sessions match orders on
+  // checkout_token, 0 on cart_token; the two are different Shopify
+  // identifier namespaces). So we join the REST payload's `checkout_token`
+  // against the stored session key. `cart_token` is kept as a fallback for
+  // any pixel variant that captured the true cart token. Admin GraphQL
+  // dropped both fields in 2026-01, so the REST payload is the only source.
+  // Best-effort + non-fatal: a miss or error never blocks order ingest.
   // Runs before the ingest-outcome branches so a re-fired webhook that
   // returns `skipped_unchanged` still performs the link.
-  const cartToken =
-    typeof payload?.["cart_token"] === "string"
+  const sessionKey =
+    (typeof payload?.["checkout_token"] === "string"
+      ? (payload["checkout_token"] as string)
+      : null) ??
+    (typeof payload?.["cart_token"] === "string"
       ? (payload["cart_token"] as string)
-      : null;
-  if (cartToken) {
+      : null);
+  if (sessionKey) {
     const orderPlacedAt =
       (typeof payload?.["processed_at"] === "string" && payload["processed_at"]) ||
       (typeof payload?.["created_at"] === "string" && payload["created_at"]) ||
@@ -178,7 +185,7 @@ export async function handleOrderWebhook(
       const numericOrderId = /(\d+)\s*$/.exec(shopifyObjectId)?.[1] ?? shopifyObjectId;
       await matchSessionToOrder({
         shopId,
-        cartToken,
+        cartToken: sessionKey,
         shopifyOrderId: numericOrderId,
         orderPlacedAt: orderPlacedAt as string,
       });

@@ -193,13 +193,16 @@ describe("handleOrderWebhook (PR-A)", () => {
   });
 
   // ── LSE-4 session→order match-back ──
-  it("links the checkout_session by cart_token from the REST payload (numeric order id)", async () => {
+  it("links the checkout_session by checkout_token from the REST payload (numeric order id)", async () => {
     mockVerify.mockReturnValue(true);
     const body = JSON.stringify({
       id: 98765,
       admin_graphql_api_id: "gid://shopify/Order/98765",
       myshopify_domain: "demo.myshopify.com",
-      cart_token: "cart-abc-123",
+      // The pixel stores the checkout_token into checkout_sessions.cart_token,
+      // so the join key is the order's checkout_token, not its cart_token.
+      checkout_token: "chk-abc-123",
+      cart_token: "cart-hWNE6-ignored",
       processed_at: "2026-07-04T10:00:00Z",
     });
 
@@ -207,13 +210,29 @@ describe("handleOrderWebhook (PR-A)", () => {
 
     expect(mockMatchSession).toHaveBeenCalledWith({
       shopId: "shop-1",
-      cartToken: "cart-abc-123",
+      cartToken: "chk-abc-123", // checkout_token wins over cart_token
       shopifyOrderId: "98765", // numeric, normalized from the gid
       orderPlacedAt: "2026-07-04T10:00:00Z",
     });
   });
 
-  it("does NOT call matchSessionToOrder when the payload has no cart_token", async () => {
+  it("falls back to cart_token when checkout_token is absent", async () => {
+    mockVerify.mockReturnValue(true);
+    const body = JSON.stringify({
+      id: 98765,
+      admin_graphql_api_id: "gid://shopify/Order/98765",
+      myshopify_domain: "demo.myshopify.com",
+      cart_token: "cart-only",
+    });
+
+    await handleOrderWebhook({ rawBody: body, headers: HEADERS });
+
+    expect(mockMatchSession).toHaveBeenCalledWith(
+      expect.objectContaining({ cartToken: "cart-only" }),
+    );
+  });
+
+  it("does NOT call matchSessionToOrder when the payload has no token", async () => {
     mockVerify.mockReturnValue(true);
     await handleOrderWebhook({ rawBody: RAW_BODY, headers: HEADERS });
     expect(mockMatchSession).not.toHaveBeenCalled();
@@ -226,7 +245,7 @@ describe("handleOrderWebhook (PR-A)", () => {
       id: 98765,
       admin_graphql_api_id: "gid://shopify/Order/98765",
       myshopify_domain: "demo.myshopify.com",
-      cart_token: "cart-xyz",
+      checkout_token: "chk-xyz",
     });
 
     const r = await handleOrderWebhook({ rawBody: body, headers: HEADERS });
