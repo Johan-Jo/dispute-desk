@@ -1528,7 +1528,7 @@ Migration `20260514120000_disputes_network_reason_code.sql` adds three columns t
 | Column | Type | Notes |
 |--------|------|-------|
 | `network_reason_code` | text | e.g. `10.4`, `4837`. Null when card network unknown or enum has no mapping. |
-| `network_reason_code_confidence` | text | `direct | derived | inferred | unknown | not_card_network`. `not_card_network` is set for BNPL/local methods (Klarna, Affirm) where a card reason code cannot exist — distinct from `unknown` (a card dispute we couldn't resolve). |
+| `network_reason_code_confidence` | text | `direct | derived | inferred | unknown | not_card_network`. `not_card_network` is set for BNPL/local methods (Klarna, Affirm) where a card reason code cannot exist — distinct from `unknown` (a card dispute we couldn't resolve). **The CHECK constraint originally omitted `not_card_network`** (added to the code during the BNPL work but never migrated) — so every non-card dispute's reason-code write silently failed with a 23514 CHECK violation, leaving `network_reason_code`/`_confidence` NULL on all Klarna disputes. Fixed by `20260705120000_confidence_not_card_network.sql`; the field now self-heals whenever a pack is (re)built. |
 | `network_reason_code_resolved_at` | timestamptz | Last resolver write. |
 
 Index: `(shop_id, network_reason_code)` partial WHERE NOT NULL.
