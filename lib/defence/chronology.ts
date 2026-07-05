@@ -89,6 +89,38 @@ export function normalizeChronologyText(text: string): string {
   );
 }
 
+const CHRONO_MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/**
+ * Format a chronology event's `at` timestamp for display in BOTH the PDF
+ * and the embedded HTML view. Renders a raw ISO string
+ * (`2026-06-06T07:08:42Z`) as a clean, unambiguous, bank-facing UTC
+ * date-time: `Jun 6, 2026, 07:08 UTC`.
+ *
+ * The bullets showed the raw ISO string before (both renderers printed
+ * `e.at` verbatim) — which read as corrupt/machine output to the merchant
+ * and the bank. UTC is kept explicit (not localized to the viewer) so the
+ * PDF and HTML always agree and the bank sees an unambiguous instant.
+ *
+ * Defensive: an unparseable value is returned unchanged rather than
+ * rendering "Invalid Date".
+ */
+export function formatChronologyTimestamp(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const ms = d.getTime();
+  if (!Number.isFinite(ms)) return iso; // leave odd values untouched
+  const yyyy = d.getUTCFullYear();
+  const mon = CHRONO_MONTHS[d.getUTCMonth()];
+  const day = d.getUTCDate();
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${mon} ${day}, ${yyyy}, ${hh}:${mm} UTC`;
+}
+
 export function buildChronologyEvents(
   context: ChronologyContext,
   facts: EvidenceFact[] = [],
