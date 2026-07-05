@@ -632,6 +632,25 @@ describe("computeDisputeMetrics — inquiry/chargeback splits (Dashboard v3)", (
     expect(m.activeSplit.inq).toBe(m.activeDisputes);
   });
 
+  it("closedSplit sums to totalClosed (both window-scoped by closed_at)", async () => {
+    // Regression: the Closed operational card showed headline 2 (window
+    // totalClosed) but a footer of 10 cb · 51 inq (all-time). closedSplit
+    // must be the window-scoped split so cb+inq === totalClosed.
+    const C = "2026-04-10T00:00:00Z";
+    mockSupabase({
+      current: [
+        { id: "1", final_outcome: "won", phase: "chargeback", closed_at: C },
+        { id: "2", final_outcome: "lost", phase: "inquiry", closed_at: C },
+        // an OPEN inquiry (no closed_at) — must NOT count toward closedSplit
+        { id: "3", normalized_status: "waiting_on_issuer", phase: "inquiry" },
+      ],
+    });
+    const m = await computeDisputeMetrics({ shopId: "s1" });
+    expect(m.totalClosed).toBe(2);
+    expect(m.closedSplit).toEqual({ cb: 1, inq: 1 });
+    expect(m.closedSplit.cb + m.closedSplit.inq).toBe(m.totalClosed);
+  });
+
   it("splits outcomeSplit + recoveredSplit by phase (windowed by closed_at)", async () => {
     const C = "2026-04-10T00:00:00Z";
     mockSupabase({
