@@ -55,6 +55,11 @@ export interface DashboardStats {
   outcomeSplit: Record<string, CbInqSplit>;
   operationalSplit: Record<string, CbInqSplit>;
   operationalClosedSplit: CbInqSplit;
+  // Dashboard v3 perf-tile additions
+  winRatePctSplit: CbInqSplit;
+  disputeRate: number | null;
+  disputeRateCbPct: number | null;
+  disputeRateInqPct: number | null;
   statusBreakdown: Record<string, number>;
   outcomeBreakdown: Record<string, number>;
   operationalBreakdown: Record<string, number>;
@@ -106,6 +111,10 @@ export const DEFAULT_STATS: DashboardStats = {
   outcomeSplit: {},
   operationalSplit: {},
   operationalClosedSplit: { cb: 0, inq: 0 },
+  winRatePctSplit: { cb: 0, inq: 0 },
+  disputeRate: null,
+  disputeRateCbPct: null,
+  disputeRateInqPct: null,
   statusBreakdown: {},
   outcomeBreakdown: {},
   operationalBreakdown: {},

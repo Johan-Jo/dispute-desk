@@ -101,6 +101,7 @@ const NULL_CHARGEBACK = {
   rate: null,
   rateChange: null,
   numerator: 0,
+  inquiryNumerator: 0,
   denominator: 0,
   available: false,
   lowVolume: false,
@@ -563,6 +564,7 @@ describe("computeDisputeMetrics — chargeback rate integration", () => {
       rate: 0.7,
       rateChange: 0.1,
       numerator: 7,
+      inquiryNumerator: 23,
       denominator: 1000,
       available: true,
       lowVolume: false,
@@ -578,6 +580,10 @@ describe("computeDisputeMetrics — chargeback rate integration", () => {
     expect(m.chargebackRateAvailable).toBe(true);
     expect(m.chargebackRateLowVolume).toBe(false);
     expect(m.chargebackRateLastSyncedAt).toBe("2026-04-30T12:00:00Z");
+    // Dashboard v3 dispute-rate tile: (cb + inq) / orders, split by phase.
+    expect(m.disputeRateCbPct).toBe(0.7); // 7/1000
+    expect(m.disputeRateInqPct).toBe(2.3); // 23/1000
+    expect(m.disputeRate).toBe(3); // 0.7 + 2.3
   });
 
   it("leaves chargeback rate fields at defaults when shopId is omitted (admin path)", async () => {

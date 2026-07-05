@@ -39,6 +39,10 @@ export interface ChargebackRateResult {
   numerator: number;
   /** Sum of order_count over the window. */
   denominator: number;
+  /** Sum of inquiry_count over the window. Feeds the Dashboard v3
+   *  "Dispute rate" tile's inquiry-vs-chargeback split. Inquiries are
+   *  excluded from the chargeback-rate `numerator` but counted here. */
+  inquiryNumerator: number;
   /** True when at least one snapshot row exists in the window. The
    *  dashboard uses this to distinguish "not yet snapshotted" from
    *  "genuinely zero." */
@@ -83,6 +87,7 @@ interface SnapshotRow {
   date: string;
   order_count: number | null;
   chargeback_count: number | null;
+  inquiry_count: number | null;
   last_synced_at: string | null;
 }
 
@@ -94,7 +99,7 @@ async function readWindow(
   const sb = getServiceClient();
   let q = sb
     .from("shop_daily_metrics")
-    .select("date, order_count, chargeback_count, last_synced_at")
+    .select("date, order_count, chargeback_count, inquiry_count, last_synced_at")
     .eq("shop_id", shopId)
     .lte("date", toDate);
   if (fromDate) q = q.gte("date", fromDate);
@@ -107,6 +112,7 @@ function summarize(
   daysExpected: number,
 ): Omit<ChargebackRateResult, "rateChange"> {
   const numerator = rows.reduce((s, r) => s + (r.chargeback_count ?? 0), 0);
+  const inquiryNumerator = rows.reduce((s, r) => s + (r.inquiry_count ?? 0), 0);
   const denominator = rows.reduce((s, r) => s + (r.order_count ?? 0), 0);
   const lastSyncedAt =
     rows
@@ -121,6 +127,7 @@ function summarize(
   return {
     rate,
     numerator,
+    inquiryNumerator,
     denominator,
     available,
     lowVolume: denominator < LOW_VOLUME_THRESHOLD,
