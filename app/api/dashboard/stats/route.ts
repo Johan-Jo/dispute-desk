@@ -90,15 +90,18 @@ export async function GET(req: NextRequest) {
     .select("id", { count: "exact", head: true })
     .eq("shop_id", shopId);
 
-  // ── Legacy chart fields (backward compat) ─────────────────────────────
-  // Only the columns the legacy computations actually use. `id`/`amount`
-  // were dropped from the select — the route never reads them.
-  let legacyQuery = sb
+  // ── Chart fields (Insights card + Analytics page) ─────────────────────
+  // Fetch ALL of the shop's disputes (no created_at window). Bucketing/
+  // windowing is applied per-metric below using the field that carries
+  // the intent — NEVER created_at, which is the DB insert timestamp and
+  // collapses to a single day for bulk-imported shops (see the period-
+  // windowing note in docs/technical.md). `closed_at` + `final_outcome`
+  // drive the (decision-dated) win-rate trend; `reason` + `phase` drive
+  // the dispute-category snapshot.
+  const legacyP = sb
     .from("disputes")
-    .select("status, created_at, due_at, reason, phase")
+    .select("status, created_at, closed_at, final_outcome, due_at, reason, phase")
     .eq("shop_id", shopId);
-  if (periodFrom) legacyQuery = legacyQuery.gte("created_at", periodFrom);
-  const legacyP = legacyQuery;
 
   const [m, breakdownRes, activityRes, packCountRes, legacyRes] =
     await Promise.all([metricsP, breakdownP, activityP, packCountP, legacyP]);
@@ -212,8 +215,11 @@ export async function GET(req: NextRequest) {
   const avgResponseTime = avgResponseDays >= 1 ? `${avgResponseDays.toFixed(1)}d` : "<1d";
 
   const reasonCounts: Record<string, number> = {};
-  // Per-reason cb·inq split (Dashboard v3). `phase` was added to the legacy
-  // select above so each category row can show its inquiry/chargeback mix.
+  // Dispute categories are a SNAPSHOT of "what kinds of disputes you get"
+  // across the shop's full history — `legacyList` is no longer
+  // created_at-windowed, so a bulk-imported shop's categories no longer
+  // vanish when the selected period misses the import date. Per-reason
+  // cb·inq split (`phase`) surfaces each category's inquiry/chargeback mix.
   const reasonSplit: Record<string, { cb: number; inq: number }> = {};
   for (const d of legacyList) {
     const r = d.reason ?? "UNKNOWN";
@@ -232,17 +238,33 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
 
-  const rangeEnd = new Date();
-  const rangeMs = rangeEnd.getTime() - since.getTime();
+  // Win-rate trend — bucketed by DECISION DATE (`closed_at`) and scored by
+  // `final_outcome`, mirroring the KPI Win Rate's outcome-window model.
+  // Previously bucketed by `created_at`, which put every dispute of a
+  // bulk-imported shop into one bucket (a single filled bar). The window is
+  // the selected period; for "all time" it spans the shop's earliest
+  // decision to now so the 6 bars still spread across real history.
+  const decided = legacyList.filter(
+    (d) => d.closed_at && (d.final_outcome === "won" || d.final_outcome === "lost"),
+  );
+  const decidedTimes = decided.map((d) => new Date(String(d.closed_at)).getTime());
+  const trendStart = periodFrom
+    ? new Date(periodFrom).getTime()
+    : decidedTimes.length
+      ? Math.min(...decidedTimes)
+      : since.getTime();
+  const trendEnd = new Date().getTime();
+  const trendRangeMs = Math.max(1, trendEnd - trendStart);
   const winRateTrend: number[] = [];
   for (let i = 0; i < 6; i++) {
-    const bStart = new Date(since.getTime() + (i * rangeMs) / 6);
-    const bEnd = new Date(since.getTime() + ((i + 1) * rangeMs) / 6);
-    const subset = legacyList.filter(
-      (d) => new Date(d.created_at) >= bStart && new Date(d.created_at) < bEnd,
-    );
-    const w = subset.filter((d) => d.status === "won").length;
-    const l = subset.filter((d) => d.status === "lost").length;
+    const bStart = trendStart + (i * trendRangeMs) / 6;
+    const bEnd = trendStart + ((i + 1) * trendRangeMs) / 6;
+    const subset = decided.filter((d) => {
+      const c = new Date(String(d.closed_at)).getTime();
+      return c >= bStart && (i === 5 ? c <= bEnd : c < bEnd);
+    });
+    const w = subset.filter((d) => d.final_outcome === "won").length;
+    const l = subset.filter((d) => d.final_outcome === "lost").length;
     const r = w + l;
     winRateTrend.push(r > 0 ? Math.round((w / r) * 100) : 0);
   }
