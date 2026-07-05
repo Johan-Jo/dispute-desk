@@ -35,17 +35,16 @@ const mockChargebackRate = vi.mocked(computeChargebackRate);
 type DisputeRow = Record<string, unknown>;
 
 interface ScenarioRows {
-  /** Current-period disputes (or all-time when periodFrom omitted). */
+  /** Disputes for the shop. Production fetches all rows in one query and
+   *  applies the period in-memory (snapshot metrics span all rows; outcome
+   *  metrics are windowed by closed_at). */
   current: DisputeRow[];
-  /** Prior-period disputes (only used when periodFrom is set). */
+  /** Additional rows representing the prior window (closed earlier). Merged
+   *  into the single result set; kept as a separate field only for
+   *  readability in period-over-period tests. */
   previous?: DisputeRow[];
   /** Notes count (admin-only path). */
   notesCount?: number;
-  /** Result of the dedicated closed-in-period count query (windowed by
-   *  closed_at, `head: true`). When omitted, defaults to the number of
-   *  `current` rows with a non-null closed_at — the legacy behaviour, so
-   *  existing scenarios that don't set it keep passing. */
-  closedInPeriodCount?: number;
 }
 
 /** Wires a per-table Supabase mock that returns a sequence of dispute
@@ -55,87 +54,33 @@ interface ScenarioRows {
  *    3. dispute_notes count (admin-only, when shopId omitted)
  *  We track call sequence per-table via call indices. */
 function mockSupabase(rows: ScenarioRows): void {
-  let disputeCallIdx = 0;
-
-  const mockFrom = vi.fn((table: string) => {
-    if (table === "disputes") {
-      const idx = disputeCallIdx++;
-      const data = idx === 0
-        ? rows.current
-        : (rows.previous ?? []);
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
-        lte: vi.fn().mockReturnThis(),
-        lt: vi.fn().mockReturnThis(),
-        // The chain ends with an awaited promise. We resolve with
-        // { data } on whatever the last chained call is.
-        then: undefined as unknown as never,
-        // Each chain method returns `this`; the promise resolves when
-        // the entire chain is awaited. To make that work we make the
-        // returned object thenable.
-      } as unknown as PromiseLike<{ data: DisputeRow[] }> & Record<string, unknown>;
-    }
-    if (table === "dispute_notes") {
-      return {
-        select: vi.fn(() => ({
-          // count head:true variant — returns just count
-        })),
-      };
-    }
-    throw new Error(`unexpected table: ${table}`);
-  });
-
-  // The above sketch with PromiseLike doesn't work cleanly because
-  // the production code uses `.eq().lte()` chains then awaits the
-  // last call. Easier approach: chained methods all return `this`,
-  // and `this` IS thenable (resolves to the data). Implement as a
-  // small Proxy.
-  // A thenable that resolves either with { data } (row queries) or with
-  // { count } (the head:true closed-in-period count query). `select`
-  // inspects its options arg: a `{ head: true }` select flips this into
-  // count mode. All chain methods (including `.not`, used only by the
-  // count query) return `this`.
-  const makeThenable = (data: DisputeRow[], count: number) => {
+  // Production makes ONE disputes query (all rows for the shop — no
+  // created_at window; the period is applied in-memory per metric) plus,
+  // on the admin path, one dispute_notes count query. A chained-thenable
+  // returns `this` for every builder method and resolves to { data } when
+  // awaited.
+  const makeThenable = (data: DisputeRow[]) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const obj: any = {};
-    let headMode = false;
-    obj.select = (_cols?: unknown, opts?: { head?: boolean }) => {
-      if (opts?.head) headMode = true;
-      return obj;
-    };
+    obj.select = () => obj;
     obj.eq = () => obj;
     obj.gte = () => obj;
     obj.lte = () => obj;
     obj.lt = () => obj;
     obj.not = () => obj;
     obj.then = (resolve: (v: unknown) => unknown) =>
-      Promise.resolve(
-        resolve(headMode ? { count, error: null } : { data, error: null }),
-      );
+      Promise.resolve(resolve({ data, error: null }));
     return obj;
   };
 
   const fromImpl = (table: string) => {
     if (table === "disputes") {
-      const idx = disputeCallIdx++;
-      // Call order on the disputes table:
-      //   idx 0            → current period rows
-      //   idx 1 (if prev)  → previous period rows (only when periodFrom set)
-      //   next             → closed-in-period count query (head: true)
-      // The closed-count query is the only head:true select, so it
-      // resolves via `count`; the others via `data`. We pass both and let
-      // makeThenable pick based on the select options.
-      // idx 0 → current rows; idx 1 → previous rows (only consumed when
-      // periodFrom is set). The closed-count query is whichever call uses
-      // a head:true select — makeThenable resolves it via `count` and
-      // ignores whatever `data` we hand it here, so no index branch needed.
-      const data = idx === 0 ? rows.current : (rows.previous ?? []);
-      const closedCount =
-        rows.closedInPeriodCount ??
-        rows.current.filter((d) => d.closed_at != null).length;
-      return makeThenable(data, closedCount);
+      // The `previous` field is retained on ScenarioRows for readability
+      // in period-over-period tests: since production now derives the
+      // prior window from the same all-rows fetch (by closed_at), any
+      // `previous` rows are merged into the single result set here.
+      const all = [...rows.current, ...(rows.previous ?? [])];
+      return makeThenable(all);
     }
     if (table === "dispute_notes") {
       return {
@@ -150,7 +95,6 @@ function mockSupabase(rows: ScenarioRows): void {
   };
 
   mockGetServiceClient.mockReturnValue({ from: fromImpl } as never);
-  void mockFrom; // appease the unused-var lint
 }
 
 const NULL_CHARGEBACK = {
@@ -187,12 +131,15 @@ describe("computeDisputeMetrics — counts and rates", () => {
   });
 
   it("computes winRate from final_outcome won/lost and ignores rows without an outcome", async () => {
+    // Outcome metrics window by closed_at, so decided rows carry a
+    // closed_at. All-time query (no periodFrom) → every closed row counts.
+    const C = "2026-04-10T00:00:00Z";
     mockSupabase({
       current: [
-        { id: "1", final_outcome: "won" },
-        { id: "2", final_outcome: "won" },
-        { id: "3", final_outcome: "won" },
-        { id: "4", final_outcome: "lost" },
+        { id: "1", final_outcome: "won", closed_at: C },
+        { id: "2", final_outcome: "won", closed_at: C },
+        { id: "3", final_outcome: "won", closed_at: C },
+        { id: "4", final_outcome: "lost", closed_at: C },
         { id: "5", final_outcome: null }, // not counted
         { id: "6", final_outcome: undefined }, // not counted
       ],
@@ -216,11 +163,13 @@ describe("computeDisputeMetrics — counts and rates", () => {
   });
 
   it("sums amountRecovered + amountLost and computes recoveryRate", async () => {
+    // Financial outcomes window by closed_at → rows need a closed_at.
+    const C = "2026-04-10T00:00:00Z";
     mockSupabase({
       current: [
-        { outcome_amount_recovered: 300, outcome_amount_lost: 0 },
-        { outcome_amount_recovered: 0, outcome_amount_lost: 100 },
-        { outcome_amount_recovered: 100, outcome_amount_lost: 0 },
+        { outcome_amount_recovered: 300, outcome_amount_lost: 0, closed_at: C },
+        { outcome_amount_recovered: 0, outcome_amount_lost: 100, closed_at: C },
+        { outcome_amount_recovered: 100, outcome_amount_lost: 0, closed_at: C },
       ],
     });
     const m = await computeDisputeMetrics({ shopId: "s1" });
@@ -229,7 +178,7 @@ describe("computeDisputeMetrics — counts and rates", () => {
     expect(m.recoveryRate).toBe(80); // 400/(400+100)
   });
 
-  it("counts totalClosed by closed_at presence", async () => {
+  it("counts totalClosed by closed_at presence (all-time)", async () => {
     mockSupabase({
       current: [
         { closed_at: "2026-04-01T00:00:00Z" },
@@ -241,43 +190,49 @@ describe("computeDisputeMetrics — counts and rates", () => {
     expect(m.totalClosed).toBe(2);
   });
 
-  it("windows totalClosed by closed_at, NOT the created_at-scoped row set (bulk-import regression)", async () => {
+  it("windows totalClosed by closed_at, NOT created_at (bulk-import regression)", async () => {
     // Regression for the cay-collective dashboard bug: an established
-    // shop's history was bulk-imported on a single day, so every
-    // imported dispute shares one created_at. The old code derived
-    // totalClosed from the created_at-windowed `current` rows, which
-    // counted all 61 historical closures as "closed this period" until
-    // the import aged out — then cliffed to 0. The fix runs a dedicated
-    // closed_at-windowed count query (mocked here via closedInPeriodCount)
-    // whose result must win over the created_at-scoped row set.
+    // shop's history was bulk-imported on a single day, so every imported
+    // dispute shares one created_at. The old code derived totalClosed
+    // (and every outcome metric) from a created_at-windowed row set, which
+    // counted all historical closures as "closed this period" until the
+    // import aged out — then cliffed to 0. Now the query fetches all rows
+    // and windows by closed_at in-memory. Only the rows whose closed_at
+    // falls in [periodFrom, now] count.
+    const now = "2026-07-05T00:00:00Z";
     mockSupabase({
-      // The created_at-windowed row set the OTHER metrics use — here it
-      // happens to contain 61 closed rows (all imported same day).
-      current: Array.from({ length: 61 }, (_, i) => ({
-        id: String(i),
-        closed_at: "2026-06-01T00:00:00Z",
-        final_outcome: "won",
-      })),
-      // The dedicated closed_at-windowed count: only 2 actually closed in
-      // the selected window.
-      closedInPeriodCount: 2,
+      current: [
+        // 2 closed inside the window (after periodFrom 2026-06-05)
+        { id: "a", closed_at: "2026-06-18T00:00:00Z", final_outcome: "won" },
+        { id: "b", closed_at: "2026-06-20T00:00:00Z", final_outcome: "won" },
+        // 59 closed BEFORE the window — same shop history, must be excluded
+        ...Array.from({ length: 59 }, (_, i) => ({
+          id: `old-${i}`,
+          closed_at: "2026-04-01T00:00:00Z",
+          final_outcome: "won",
+        })),
+      ],
     });
     const m = await computeDisputeMetrics({
       shopId: "s1",
       periodFrom: "2026-06-05T00:00:00Z",
+      periodTo: now,
     });
-    // Must be the closed_at-windowed 2, not the 61-row created_at set.
+    // Only the 2 closed inside the window — not all 61.
     expect(m.totalClosed).toBe(2);
+    expect(m.disputesWon).toBe(2);
   });
 
   it("computes avgTimeToSubmit in days and rounds to 1 decimal place", async () => {
     const day = 24 * 60 * 60 * 1000;
+    // Timing is scoped to disputes decided in the window (closed_at set).
+    const C = new Date(10 * day).toISOString();
     mockSupabase({
       current: [
         // 3 days
-        { initiated_at: new Date(0).toISOString(), submitted_at: new Date(3 * day).toISOString() },
+        { initiated_at: new Date(0).toISOString(), submitted_at: new Date(3 * day).toISOString(), closed_at: C },
         // 5 days
-        { initiated_at: new Date(0).toISOString(), submitted_at: new Date(5 * day).toISOString() },
+        { initiated_at: new Date(0).toISOString(), submitted_at: new Date(5 * day).toISOString(), closed_at: C },
       ],
     });
     const m = await computeDisputeMetrics({ shopId: "s1" });
@@ -294,24 +249,27 @@ describe("computeDisputeMetrics — counts and rates", () => {
     expect(m.avgTimeToSubmit).toBeNull();
   });
 
-  it("builds statusBreakdown and outcomeBreakdown from the row set", async () => {
+  it("builds statusBreakdown (snapshot, all rows) and outcomeBreakdown (windowed by closed_at)", async () => {
+    const C = "2026-04-10T00:00:00Z";
     mockSupabase({
       current: [
         { normalized_status: "new", final_outcome: null },
         { normalized_status: "new", final_outcome: null },
         { normalized_status: "needs_review", final_outcome: null },
-        { normalized_status: "won", final_outcome: "won" },
-        { normalized_status: "won", final_outcome: "won" },
-        { normalized_status: "lost", final_outcome: "lost" },
+        { normalized_status: "won", final_outcome: "won", closed_at: C },
+        { normalized_status: "won", final_outcome: "won", closed_at: C },
+        { normalized_status: "lost", final_outcome: "lost", closed_at: C },
       ],
     });
     const m = await computeDisputeMetrics({ shopId: "s1" });
+    // statusBreakdown spans ALL disputes (snapshot).
     expect(m.statusBreakdown).toEqual({
       new: 2,
       needs_review: 1,
       won: 2,
       lost: 1,
     });
+    // outcomeBreakdown counts only disputes decided in the window.
     expect(m.outcomeBreakdown).toEqual({
       won: 2,
       lost: 1,
@@ -367,6 +325,7 @@ describe("computeDisputeMetrics — counts and rates", () => {
     // EUR totals (a real bug we shipped to prod before this test) and
     // must instead surface via `otherCurrencyCounts` so the UI can hint
     // that they exist.
+    const C = "2026-04-10T00:00:00Z";
     mockSupabase({
       current: [
         // 2 active EUR — included in amountAtRisk
@@ -375,9 +334,9 @@ describe("computeDisputeMetrics — counts and rates", () => {
         // 1 active SEK — counted in activeDisputes but NOT in amountAtRisk
         { normalized_status: "new", currency_code: "SEK", amount: 999, outcome_amount_recovered: 0, outcome_amount_lost: 0 },
         // 1 closed USD — currency-other, also affects recovered/lost scoping
-        { normalized_status: "won", currency_code: "USD", outcome_amount_recovered: 200, outcome_amount_lost: 0 },
+        { normalized_status: "won", currency_code: "USD", outcome_amount_recovered: 200, outcome_amount_lost: 0, closed_at: C },
         // 1 closed EUR — included in EUR amountRecovered
-        { normalized_status: "won", currency_code: "EUR", outcome_amount_recovered: 80,  outcome_amount_lost: 0 },
+        { normalized_status: "won", currency_code: "EUR", outcome_amount_recovered: 80,  outcome_amount_lost: 0, closed_at: C },
       ],
     });
 
@@ -491,15 +450,15 @@ describe("computeDisputeMetrics — period-over-period", () => {
     expect(m.amountRecoveredChange).toBeNull();
   });
 
-  it("computes activeDisputesChange as a rounded percent vs prior window", async () => {
+  it("treats Active Disputes as a period-independent snapshot (no prior-window delta)", async () => {
+    // Active is a point-in-time snapshot now — it counts all open disputes
+    // regardless of the selected window, and has no meaningful prior-window
+    // comparison, so activeDisputesChange is always null.
     mockSupabase({
       current: [
         { normalized_status: "new", amount: 100 },
         { normalized_status: "new", amount: 100 },
         { normalized_status: "new", amount: 100 },
-      ],
-      previous: [
-        { normalized_status: "new", amount: 50 },
       ],
     });
     const m = await computeDisputeMetrics({
@@ -508,41 +467,52 @@ describe("computeDisputeMetrics — period-over-period", () => {
       periodTo: "2026-04-30T00:00:00Z",
     });
     expect(m.activeDisputes).toBe(3);
-    expect(m.activeDisputesChange).toBe(200); // (3-1)/1 * 100
+    expect(m.activeDisputesChange).toBeNull();
+    expect(m.amountAtRiskChange).toBeNull();
   });
 
-  it("returns winRateChange in percentage points (not percent)", async () => {
+  it("returns winRateChange in percentage points, comparing closed_at windows", async () => {
+    // Current window = April; prior equal-length window = March. Outcomes
+    // are placed via closed_at into the matching window.
+    const APRIL = "2026-04-10T00:00:00Z"; // in [periodFrom, periodTo]
+    const MARCH = "2026-03-10T00:00:00Z"; // in the prior window
     mockSupabase({
       current: [
-        { final_outcome: "won" },
-        { final_outcome: "won" },
-        { final_outcome: "lost" },
-      ], // winRate = 67
+        { final_outcome: "won", closed_at: APRIL },
+        { final_outcome: "won", closed_at: APRIL },
+        { final_outcome: "lost", closed_at: APRIL },
+      ], // April winRate = 67
       previous: [
-        { final_outcome: "won" },
-        { final_outcome: "lost" },
-        { final_outcome: "lost" },
-      ], // winRate = 33
+        { final_outcome: "won", closed_at: MARCH },
+        { final_outcome: "lost", closed_at: MARCH },
+        { final_outcome: "lost", closed_at: MARCH },
+      ], // March winRate = 33
     });
     const m = await computeDisputeMetrics({
       shopId: "s1",
       periodFrom: "2026-04-01T00:00:00Z",
+      periodTo: "2026-04-30T00:00:00Z",
     });
     expect(m.winRate).toBe(67);
     // Δ = 67 - 33 = 34 pp
     expect(m.winRateChange).toBe(34);
   });
 
-  it("returns 100% pctChange when prev=0 and current>0 (avoids divide-by-zero hiding growth)", async () => {
+  it("returns 100% pctChange when prior-window outcomes are 0 and current>0", async () => {
+    // disputesWonChange uses pctChange, which returns 100 when prev=0 and
+    // current>0 (so growth from nothing isn't hidden as a divide-by-zero).
+    const APRIL = "2026-04-10T00:00:00Z";
     mockSupabase({
-      current: [{ normalized_status: "new", amount: 100 }],
-      previous: [],
+      current: [{ final_outcome: "won", closed_at: APRIL }],
+      previous: [], // no outcomes decided in the prior window
     });
     const m = await computeDisputeMetrics({
       shopId: "s1",
       periodFrom: "2026-04-01T00:00:00Z",
+      periodTo: "2026-04-30T00:00:00Z",
     });
-    expect(m.activeDisputesChange).toBe(100);
+    expect(m.disputesWon).toBe(1);
+    expect(m.disputesWonChange).toBe(100);
   });
 });
 

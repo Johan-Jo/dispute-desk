@@ -129,50 +129,65 @@ export async function computeDisputeMetrics(
   const { shopId, periodFrom, periodTo, preferredCurrency } = opts;
   const periodEnd = periodTo ?? new Date().toISOString();
 
-  // ── Fetch current period disputes ─────────────────────────────────────
+  // ── Fetch ALL disputes for the shop (no created_at window) ────────────
+  // The period selector no longer filters this query. `created_at` is the
+  // DB insert timestamp, which for bulk-imported shops (first full sync of
+  // an established shop) is a single day for the entire history — so a
+  // created_at window either captures everything or nothing, and the KPI
+  // tiles stop responding to the selector.
+  //
+  // Instead the period is applied per-metric with the field that actually
+  // carries the intent:
+  //   • Snapshot metrics (Active Disputes, Amount at Risk, status
+  //     breakdown, needs-attention) — NOT windowed. "Open work right now"
+  //     is a point-in-time fact; an active dispute is active regardless of
+  //     when it started.
+  //   • Outcome metrics (Win Rate, won/lost, Amount Recovered/Lost, Closed,
+  //     outcome breakdown) — windowed by `closed_at` ∈ [periodFrom,
+  //     periodEnd]. "Win rate in the last 30 days" means disputes DECIDED
+  //     in that window.
   let q = sb
     .from("disputes")
     .select("id, status, amount, currency_code, phase, needs_review, normalized_status, final_outcome, submission_state, submitted_at, closed_at, initiated_at, outcome_amount_recovered, outcome_amount_lost, has_admin_override, sync_health, needs_attention, last_event_at");
 
   if (shopId) q = q.eq("shop_id", shopId);
-  if (periodFrom) q = q.gte("created_at", periodFrom);
-  q = q.lte("created_at", periodEnd);
 
   const { data } = await q;
   const list = (data ?? []) as Record<string, unknown>[];
 
-  // ── Fetch previous period (for comparison) ────────────────────────────
-  let prevList: Record<string, unknown>[] = [];
-  if (periodFrom) {
-    const periodMs = new Date(periodEnd).getTime() - new Date(periodFrom).getTime();
-    const prevFrom = new Date(new Date(periodFrom).getTime() - periodMs).toISOString();
-    let pq = sb
-      .from("disputes")
-      .select("id, status, amount, normalized_status, final_outcome, outcome_amount_recovered");
-    if (shopId) pq = pq.eq("shop_id", shopId);
-    pq = pq.gte("created_at", prevFrom).lt("created_at", periodFrom);
-    const { data: prev } = await pq;
-    prevList = (prev ?? []) as Record<string, unknown>[];
+  // Outcome window: disputes whose closed_at falls in [periodFrom,
+  // periodEnd]. When periodFrom is omitted ("all time"), every closed
+  // dispute up to periodEnd qualifies.
+  const from = periodFrom ? new Date(periodFrom).getTime() : null;
+  const to = new Date(periodEnd).getTime();
+  const closedInWindow = (d: Record<string, unknown>): boolean => {
+    if (d.closed_at == null) return false;
+    const c = new Date(String(d.closed_at)).getTime();
+    if (Number.isNaN(c)) return false;
+    if (c > to) return false;
+    if (from !== null && c < from) return false;
+    return true;
+  };
+  // The outcome-scoped subset drives every "decided in period" metric.
+  const outcomeList = list.filter(closedInWindow);
+
+  // ── Fetch previous-window outcomes (for period-over-period) ───────────
+  // Prior window is the equal-length span immediately before the current
+  // one; comparison is outcome-based (won / recovered), so it also windows
+  // by closed_at. Active/at-risk are snapshots and have no meaningful
+  // prior-period delta, so those change fields become null (see below).
+  let prevOutcomeList: Record<string, unknown>[] = [];
+  if (periodFrom && from !== null) {
+    const periodMs = to - from;
+    const prevFrom = from - periodMs;
+    prevOutcomeList = list.filter((d) => {
+      if (d.closed_at == null) return false;
+      const c = new Date(String(d.closed_at)).getTime();
+      return !Number.isNaN(c) && c >= prevFrom && c < from;
+    });
   }
 
-  // ── Closed-in-period count (windowed by closed_at, NOT created_at) ─────
-  // "Closed" must mean "disputes that CLOSED in the selected window."
-  // Deriving it from `list` (which is created_at-scoped) breaks for shops
-  // whose history was bulk-imported: every imported dispute shares one
-  // created_at (the import timestamp), so a created_at window counts all
-  // history as "closed this period" until the import ages out, then drops
-  // to a cliff of zero — even though the cases closed on real, varied
-  // historical dates. Filtering on closed_at fixes both the meaning and
-  // the period responsiveness. Separate query so it isn't limited to the
-  // created_at-windowed `list`.
-  let closedQ = sb
-    .from("disputes")
-    .select("id", { count: "exact", head: true })
-    .not("closed_at", "is", null)
-    .lte("closed_at", periodEnd);
-  if (shopId) closedQ = closedQ.eq("shop_id", shopId);
-  if (periodFrom) closedQ = closedQ.gte("closed_at", periodFrom);
-  const { count: closedInPeriodCount } = await closedQ;
+  const closedInPeriodCount = outcomeList.length;
 
   // ── Currency (picked before amount sums so we can scope them) ─────────
   // The dashboard quotes a single currency symbol per tile. Mixing
@@ -226,19 +241,22 @@ export async function computeDisputeMetrics(
     .filter(inPrimaryCurrency)
     .reduce((s, d) => s + (Number(d.amount) || 0), 0);
 
-  // ── Win/Loss (final_outcome based) ────────────────────────────────────
-  const won = list.filter((d) => d.final_outcome === "won");
-  const lost = list.filter((d) => d.final_outcome === "lost");
+  // ── Win/Loss (final_outcome based, windowed by closed_at) ─────────────
+  // Uses `outcomeList` (closed in period), not `list`, so "Win Rate"
+  // reflects disputes DECIDED in the selected window and responds to the
+  // period selector.
+  const won = outcomeList.filter((d) => d.final_outcome === "won");
+  const lost = outcomeList.filter((d) => d.final_outcome === "lost");
   const disputesWon = won.length;
   const disputesLost = lost.length;
   const winLossDenom = disputesWon + disputesLost;
   const winRate = winLossDenom > 0 ? Math.round((disputesWon / winLossDenom) * 100) : 0;
 
-  // ── Financial outcomes (scoped to primary currency) ───────────────────
-  const amountRecovered = list
+  // ── Financial outcomes (windowed by closed_at, primary currency) ──────
+  const amountRecovered = outcomeList
     .filter(inPrimaryCurrency)
     .reduce((s, d) => s + (Number(d.outcome_amount_recovered) || 0), 0);
-  const amountLost = list
+  const amountLost = outcomeList
     .filter(inPrimaryCurrency)
     .reduce((s, d) => s + (Number(d.outcome_amount_lost) || 0), 0);
   const financialTotal = amountRecovered + amountLost;
@@ -246,12 +264,15 @@ export async function computeDisputeMetrics(
     ? Math.round((amountRecovered / financialTotal) * 100)
     : 0;
 
-  // Windowed by closed_at (see the dedicated query above), so imported
-  // history no longer collapses this into a created_at artifact.
-  const totalClosed = closedInPeriodCount ?? 0;
+  // Closed in the selected window (by closed_at). Equal to
+  // outcomeList.length by construction.
+  const totalClosed = closedInPeriodCount;
 
-  // ── Timing ────────────────────────────────────────────────────────────
-  const submittedDisputes = list.filter(
+  // ── Timing (scoped to disputes decided in the window) ─────────────────
+  // Both timings describe completed cases, so they use `outcomeList`
+  // (closed in period) and move with the selector like the other outcome
+  // metrics.
+  const submittedDisputes = outcomeList.filter(
     (d) => d.submitted_at && d.initiated_at,
   );
   const avgTimeToSubmit = submittedDisputes.length > 0
@@ -261,7 +282,7 @@ export async function computeDisputeMetrics(
       }, 0) / submittedDisputes.length / (24 * 60 * 60 * 1000)
     : null;
 
-  const closedDisputes = list.filter((d) => d.closed_at && d.initiated_at);
+  const closedDisputes = outcomeList.filter((d) => d.closed_at && d.initiated_at);
   const avgTimeToClose = closedDisputes.length > 0
     ? closedDisputes.reduce((s, d) => {
         const ms = new Date(String(d.closed_at)).getTime() - new Date(String(d.initiated_at)).getTime();
@@ -276,8 +297,10 @@ export async function computeDisputeMetrics(
     statusBreakdown[ns] = (statusBreakdown[ns] ?? 0) + 1;
   }
 
+  // Outcome breakdown is a "decided in period" metric → windowed by
+  // closed_at (outcomeList), matching Win Rate.
   const outcomeBreakdown: Record<string, number> = {};
-  for (const d of list) {
+  for (const d of outcomeList) {
     if (d.final_outcome) {
       const fo = String(d.final_outcome);
       outcomeBreakdown[fo] = (outcomeBreakdown[fo] ?? 0) + 1;
@@ -290,28 +313,23 @@ export async function computeDisputeMetrics(
   const needsAttentionCount = list.filter((d) => d.needs_attention === true).length;
 
   // ── Period-over-period ────────────────────────────────────────────────
-  // Prior-period AMOUNT sums use the same primary-currency filter as
-  // the current period so the delta compares like-with-like. (Counts
-  // and rates stay un-scoped — they're currency-agnostic.) The prior
-  // window's currency mix may differ; we don't second-guess it, we
-  // just project onto the current primary currency for the comparison.
-  const prevActive = prevList.filter((d) =>
-    ACTIVE_NORMALIZED.includes(String(d.normalized_status ?? "new")),
-  );
-  const prevActiveCount = periodFrom ? prevActive.length : null;
-  const prevAmountAtRisk = periodFrom
-    ? prevActive
-        .filter(inPrimaryCurrency)
-        .reduce((s, d) => s + (Number(d.amount) || 0), 0)
-    : null;
-  const prevWon = prevList.filter((d) => d.final_outcome === "won").length;
-  const prevLost = prevList.filter((d) => d.final_outcome === "lost").length;
+  // Only OUTCOME metrics have a meaningful prior-window delta, and the
+  // prior window is also closed_at-scoped (via `prevOutcomeList`). Active
+  // Disputes and Amount at Risk are point-in-time snapshots — there is no
+  // "prior snapshot" to diff against without historical state we don't
+  // keep — so their change fields are null. Prior AMOUNT sums use the same
+  // primary-currency filter as the current window so the delta compares
+  // like-with-like.
+  const prevActiveCount: number | null = null; // snapshot metric, no delta
+  const prevAmountAtRisk: number | null = null; // snapshot metric, no delta
+  const prevWon = prevOutcomeList.filter((d) => d.final_outcome === "won").length;
+  const prevLost = prevOutcomeList.filter((d) => d.final_outcome === "lost").length;
   const prevDenom = prevWon + prevLost;
   const prevWinRate = periodFrom && prevDenom > 0
     ? Math.round((prevWon / prevDenom) * 100)
     : periodFrom ? 0 : null;
   const prevRecovered = periodFrom
-    ? prevList
+    ? prevOutcomeList
         .filter(inPrimaryCurrency)
         .reduce((s, d) => s + (Number(d.outcome_amount_recovered) || 0), 0)
     : null;
