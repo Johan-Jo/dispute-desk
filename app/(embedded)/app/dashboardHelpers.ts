@@ -46,15 +46,16 @@ export interface DashboardStats {
   // ── Inquiry/chargeback splits (Dashboard v3) ─────────────────────
   // Per-metric cb·inq breakdown so each dashboard card can show a modest
   // "N cb · N inq" line. `*Split` come from computeDisputeMetrics;
-  // operationalSplit / operationalClosedSplit come from the stats route's
-  // operational scan. Every split reconciles with its headline number.
+  // operationalSplit comes from the stats route's operational scan.
+  // closedSplit is window-scoped (from metrics, sums to totalClosed).
+  // Every split reconciles with its headline number.
   activeSplit: CbInqSplit;
   atRiskSplit: CbInqSplit;
   winSplit: CbInqSplit;
   recoveredSplit: CbInqSplit;
+  closedSplit: CbInqSplit;
   outcomeSplit: Record<string, CbInqSplit>;
   operationalSplit: Record<string, CbInqSplit>;
-  operationalClosedSplit: CbInqSplit;
   // Dashboard v3 perf-tile additions
   winRatePctSplit: CbInqSplit;
   disputeRate: number | null;
@@ -108,9 +109,9 @@ export const DEFAULT_STATS: DashboardStats = {
   atRiskSplit: { cb: 0, inq: 0 },
   winSplit: { cb: 0, inq: 0 },
   recoveredSplit: { cb: 0, inq: 0 },
+  closedSplit: { cb: 0, inq: 0 },
   outcomeSplit: {},
   operationalSplit: {},
-  operationalClosedSplit: { cb: 0, inq: 0 },
   winRatePctSplit: { cb: 0, inq: 0 },
   disputeRate: null,
   disputeRateCbPct: null,

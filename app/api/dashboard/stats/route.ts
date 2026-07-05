@@ -108,7 +108,6 @@ export async function GET(req: NextRequest) {
   // Per-normalized-status cb·inq split (Dashboard v3). Same dormant-inquiry
   // exclusion as the counts, so the split reconciles with each bucket total.
   const operationalSplit: Record<string, { cb: number; inq: number }> = {};
-  const operationalClosedSplit = { cb: 0, inq: 0 };
   const submissionBreakdown: Record<string, number> = {};
   let operationalClosedCount = 0;
   const actionNeededIds: string[] = [];
@@ -116,7 +115,9 @@ export async function GET(req: NextRequest) {
     const row = r as Record<string, unknown>;
     if (row.closed_at) {
       operationalClosedCount += 1;
-      operationalClosedSplit[row.phase === "inquiry" ? "inq" : "cb"] += 1;
+      // Note: the Closed card's cb·inq split comes from metrics'
+      // window-scoped `closedSplit` (sums to totalClosed), NOT this
+      // all-time scan — so no per-phase tally is needed here.
       continue;
     }
     // Dormant inquiries (dead, deadline-less Shopify inquiries) are neither
@@ -255,7 +256,6 @@ export async function GET(req: NextRequest) {
       // ── New dashboard fields ──
       operationalBreakdown,
       operationalSplit,
-      operationalClosedSplit,
       operationalClosedCount,
       actionNeededDisputeId,
       submissionBreakdown,
