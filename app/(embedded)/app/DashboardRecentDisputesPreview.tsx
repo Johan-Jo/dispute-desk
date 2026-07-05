@@ -234,7 +234,7 @@ export function DashboardRecentDisputesPreview() {
                         ? new Date(r.initiatedAt).toLocaleString(dateLocale, {
                             day: "numeric",
                             month: "short",
-                            year: "2-digit",
+                            year: "numeric",
                             hour: "2-digit",
                             minute: "2-digit",
                             hourCycle: "h23",

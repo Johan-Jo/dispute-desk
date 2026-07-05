@@ -10,11 +10,9 @@ import {
 import styles from "./dashboard.module.css";
 import {
   useFormatCurrency,
-  type CbInqSplit,
   type DashboardStats,
   type PeriodKey,
 } from "./dashboardHelpers";
-import { CbInqBreakdown, CbInqKey } from "./CbInqBreakdown";
 
 function ChangeIndicator({
   value,
@@ -105,17 +103,6 @@ interface KpiCard {
    *  headline number — e.g. "+ 12 in SEK, 1 in GBP". Empty/omitted
    *  when all disputes share the primary currency. */
   hint?: string | null;
-  /** Optional inquiry/chargeback breakdown footer (Dashboard v3). When
-   *  set, renders a modest "N cb · N inq" line under the change/hint.
-   *  `format` currency-formats the split values (Recovered / At Risk);
-   *  omit for count tiles (Active). `labelFirst`/`hideWhenZero` drive the
-   *  rate footers (Win Rate → "cb 0% · inq 0%", shown even at zero). */
-  breakdown?: {
-    split: CbInqSplit;
-    format?: (v: number) => string;
-    labelFirst?: boolean;
-    hideWhenZero?: boolean;
-  } | null;
 }
 
 function DesktopKpiTile({ card, vsLabel, loading }: { card: KpiCard; vsLabel: string; loading: boolean }) {
@@ -167,27 +154,6 @@ function DesktopKpiTile({ card, vsLabel, loading }: { card: KpiCard; vsLabel: st
           {card.hint}
         </div>
       )}
-      {/* Footer divider is drawn on EVERY tile (design .Perf-foot) so all
-          five cards share one baseline. `marginTop: auto` pins it to the
-          card floor; `minHeight` reserves the row when the breakdown is
-          empty, keeping the dividers aligned. */}
-      <div
-        style={{
-          marginTop: "auto",
-          paddingTop: "9px",
-          borderTop: "1px solid #EEEFF1",
-          minHeight: "18px",
-        }}
-      >
-        {card.breakdown && (
-          <CbInqBreakdown
-            split={card.breakdown.split}
-            formatValue={card.breakdown.format}
-            labelFirst={card.breakdown.labelFirst}
-            hideWhenZero={card.breakdown.hideWhenZero}
-          />
-        )}
-      </div>
     </div>
   );
 }
@@ -227,25 +193,6 @@ function MobileKpiTile({
           {card.hint}
         </div>
       )}
-      {/* Same unconditional footer divider as the desktop tile so the
-          mobile two-up rows share a baseline. */}
-      <div
-        style={{
-          marginTop: "auto",
-          paddingTop: "9px",
-          borderTop: "1px solid #EEEFF1",
-          minHeight: "18px",
-        }}
-      >
-        {card.breakdown && (
-          <CbInqBreakdown
-            split={card.breakdown.split}
-            formatValue={card.breakdown.format}
-            labelFirst={card.breakdown.labelFirst}
-            hideWhenZero={card.breakdown.hideWhenZero}
-          />
-        )}
-      </div>
     </div>
   );
 }
@@ -279,26 +226,21 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     return t("dashboard.otherCurrencyHint", { list: parts.join(", ") });
   })();
 
+  // Performance Overview tiles intentionally carry NO cb·inq footer — the
+  // breakdown lives on the operational cards, dispute categories, and
+  // outcome rows; on the perf tiles it read as clutter.
   const active: KpiCard = {
     icon: AlertCircleIcon,
     label: t("dashboard.activeDisputes"),
     value: String(stats.activeDisputes),
     change: stats.activeDisputesChange,
     changeInverse: true,
-    breakdown: { split: stats.activeSplit },
   };
   const winRate: KpiCard = {
     icon: ChartLineIcon,
     label: t("dashboard.winRate"),
     value: `${stats.winRate}%`,
     change: stats.winRateChange,
-    // Per-phase win rate (cb X% · inq Y%) per Dashboard v3.
-    breakdown: {
-      split: stats.winRatePctSplit,
-      format: (v) => `${v}%`,
-      labelFirst: true,
-      hideWhenZero: false,
-    },
   };
   const recovered: KpiCard = {
     icon: CashDollarIcon,
@@ -306,7 +248,6 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     value: formatCurrency(stats.amountRecovered),
     change: stats.amountRecoveredChange,
     hint: otherCurrencyHint,
-    breakdown: { split: stats.recoveredSplit, format: (v) => formatCurrency(v) },
   };
   const lost: KpiCard = {
     icon: CashDollarIcon,
@@ -322,7 +263,6 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     change: stats.amountAtRiskChange,
     changeInverse: true,
     hint: otherCurrencyHint,
-    breakdown: { split: stats.atRiskSplit, format: (v) => formatCurrency(v) },
   };
 
   // ── Dispute rate (Dashboard v3) ─────────────────────────────────────
@@ -330,22 +270,13 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
   // share of orders, from shop_daily_metrics. Replaces the earlier
   // chargeback-rate tile per the v3 design. cb%/inq% split in the footer.
   // Guard with `!= null` (not `!== null`) so a stale/older API response
-  // that omits these fields renders "—" instead of "undefined%".
+  // that omits the field renders "—" instead of "undefined%".
   const disputeRate: KpiCard = {
     icon: ChartLineIcon,
     label: t("dashboard.disputeRate"),
     value: stats.disputeRate != null ? `${stats.disputeRate}%` : "—",
     change: null,
     hint: t("dashboard.allDisputesOverOrders"),
-    breakdown:
-      stats.disputeRateCbPct != null && stats.disputeRateInqPct != null
-        ? {
-            split: { cb: stats.disputeRateCbPct, inq: stats.disputeRateInqPct },
-            format: (v) => `${v}%`,
-            labelFirst: true,
-            hideWhenZero: false,
-          }
-        : null,
   };
 
   const desktopCards = [active, winRate, recovered, atRisk, disputeRate];
@@ -360,7 +291,6 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
       {smDown ? (
         <BlockStack gap="300">
           <Text as="h2" variant="headingMd">{t("dashboard.performanceOverview")}</Text>
-          <CbInqKey />
           <PeriodSelector period={period} onChange={onPeriodChange} t={t} />
           <div className={styles.mobileStack}>
             {/* Hero: Amount at Risk, full-width */}
@@ -388,10 +318,7 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
       ) : (
         <>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", marginBottom: "20px" }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: "12px", flexWrap: "wrap" }}>
-              <Text as="h2" variant="headingMd">{t("dashboard.performanceOverview")}</Text>
-              <CbInqKey />
-            </div>
+            <Text as="h2" variant="headingMd">{t("dashboard.performanceOverview")}</Text>
             <PeriodSelector period={period} onChange={onPeriodChange} t={t} />
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "12px" }}>
