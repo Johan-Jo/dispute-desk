@@ -126,6 +126,11 @@ function DesktopKpiTile({ card, vsLabel, loading }: { card: KpiCard; vsLabel: st
         borderRadius: "10px",
         border: "1px solid #E5E7EB",
         padding: "16px",
+        // Equal-height flex column so the footer divider sits on the same
+        // baseline across all five tiles regardless of content above it.
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
@@ -162,16 +167,27 @@ function DesktopKpiTile({ card, vsLabel, loading }: { card: KpiCard; vsLabel: st
           {card.hint}
         </div>
       )}
-      {card.breakdown && (
-        <div style={{ marginTop: "10px", paddingTop: "9px", borderTop: "1px solid #EEEFF1" }}>
+      {/* Footer divider is drawn on EVERY tile (design .Perf-foot) so all
+          five cards share one baseline. `marginTop: auto` pins it to the
+          card floor; `minHeight` reserves the row when the breakdown is
+          empty, keeping the dividers aligned. */}
+      <div
+        style={{
+          marginTop: "auto",
+          paddingTop: "9px",
+          borderTop: "1px solid #EEEFF1",
+          minHeight: "18px",
+        }}
+      >
+        {card.breakdown && (
           <CbInqBreakdown
             split={card.breakdown.split}
             formatValue={card.breakdown.format}
             labelFirst={card.breakdown.labelFirst}
             hideWhenZero={card.breakdown.hideWhenZero}
           />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -211,16 +227,25 @@ function MobileKpiTile({
           {card.hint}
         </div>
       )}
-      {card.breakdown && (
-        <div style={{ marginTop: "10px", paddingTop: "9px", borderTop: "1px solid #EEEFF1" }}>
+      {/* Same unconditional footer divider as the desktop tile so the
+          mobile two-up rows share a baseline. */}
+      <div
+        style={{
+          marginTop: "auto",
+          paddingTop: "9px",
+          borderTop: "1px solid #EEEFF1",
+          minHeight: "18px",
+        }}
+      >
+        {card.breakdown && (
           <CbInqBreakdown
             split={card.breakdown.split}
             formatValue={card.breakdown.format}
             labelFirst={card.breakdown.labelFirst}
             hideWhenZero={card.breakdown.hideWhenZero}
           />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -304,14 +329,16 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
   // 5th performance tile: ALL disputes (chargebacks + inquiries) as a
   // share of orders, from shop_daily_metrics. Replaces the earlier
   // chargeback-rate tile per the v3 design. cb%/inq% split in the footer.
+  // Guard with `!= null` (not `!== null`) so a stale/older API response
+  // that omits these fields renders "—" instead of "undefined%".
   const disputeRate: KpiCard = {
     icon: ChartLineIcon,
     label: t("dashboard.disputeRate"),
-    value: stats.disputeRate !== null ? `${stats.disputeRate}%` : "—",
+    value: stats.disputeRate != null ? `${stats.disputeRate}%` : "—",
     change: null,
     hint: t("dashboard.allDisputesOverOrders"),
     breakdown:
-      stats.disputeRateCbPct !== null && stats.disputeRateInqPct !== null
+      stats.disputeRateCbPct != null && stats.disputeRateInqPct != null
         ? {
             split: { cb: stats.disputeRateCbPct, inq: stats.disputeRateInqPct },
             format: (v) => `${v}%`,

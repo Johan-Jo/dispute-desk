@@ -48,7 +48,10 @@ function OperationalCard({ card }: { card: CardSpec }) {
         cursor: card.url ? "pointer" : "default",
         textDecoration: "none",
         color: "inherit",
-        display: "block",
+        // Flex column so the cb·inq footer divider pins to the card floor
+        // and aligns across all four operational cards.
+        display: "flex",
+        flexDirection: "column",
       }}
     >
       <div
@@ -99,17 +102,19 @@ function OperationalCard({ card }: { card: CardSpec }) {
           </span>
         </span>
       ) : null}
-      {card.split.cb > 0 || card.split.inq > 0 ? (
-        <div
-          style={{
-            marginTop: card.cta ? "14px" : "0",
-            paddingTop: "11px",
-            borderTop: "1px solid #EEEFF1",
-          }}
-        >
-          <CbInqBreakdown split={card.split} />
-        </div>
-      ) : null}
+      {/* Footer divider drawn unconditionally (design .Ops-foot) and
+          pinned to the card floor so all four cards share one baseline,
+          whether or not the card has a CTA above it. */}
+      <div
+        style={{
+          marginTop: "auto",
+          paddingTop: "11px",
+          borderTop: "1px solid #EEEFF1",
+          minHeight: "17px",
+        }}
+      >
+        <CbInqBreakdown split={card.split} hideWhenZero={false} />
+      </div>
     </div>
   );
 
