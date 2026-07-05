@@ -48,6 +48,7 @@ import {
 } from "@/lib/automation/riskWeakness";
 import { enrichDisputeWithNetworkReasonCode } from "@/lib/disputes/enrichNetworkReasonCode";
 import { derivePaymentContext } from "@/lib/disputes/paymentContext";
+import { klarnaInquiryTemplateOverride } from "@/lib/packs/klarnaInquiryTemplate";
 import { evaluateQualification } from "@/lib/liabilityShift/evaluateQualification";
 import type { EvidenceSection, BuildContext } from "./types";
 import { readSectionLabel } from "./sectionLabel";
@@ -133,7 +134,7 @@ export async function buildPack(
 
   const { data: dispute } = await sb
     .from("disputes")
-    .select("id, reason, order_gid, dispute_gid, amount")
+    .select("id, reason, order_gid, dispute_gid, amount, phase")
     .eq("id", pack.dispute_id)
     .single();
   if (!dispute) throw new Error(`Dispute not found: ${pack.dispute_id}`);
@@ -427,8 +428,29 @@ export async function buildPack(
   // Items whose collector_key is NULL are merchant-supplied and
   // counted as satisfied by any manual upload (supporting_documents).
   let templateItems: TemplateChecklistItem[] | null = null;
-  const templateId = (pack as { pack_template_id?: string | null })
+  const stampedTemplateId = (pack as { pack_template_id?: string | null })
     .pack_template_id;
+  // Dynamic Klarna inquiry swap: the pipeline stamped a template from
+  // (reason, phase) BEFORE the payment method was known. Now that we've
+  // derived paymentContext from the live order, override to a Klarna-tuned
+  // inquiry template when this is a Klarna inquiry — the card/generic
+  // inquiry variants foreground AVS/CVV etc. that don't apply to Klarna.
+  // Card inquiries and all chargebacks are untouched.
+  const klarnaInquiryTemplateId = klarnaInquiryTemplateOverride({
+    paymentFamily: paymentContext.family,
+    phase: dispute.phase,
+    reason: dispute.reason,
+  });
+  const templateOverride =
+    klarnaInquiryTemplateId && klarnaInquiryTemplateId !== stampedTemplateId
+      ? { from: stampedTemplateId ?? null, to: klarnaInquiryTemplateId, reason: "klarna_inquiry" as const }
+      : null;
+  const templateId = klarnaInquiryTemplateId ?? stampedTemplateId;
+  if (templateOverride) {
+    console.log(
+      `[buildPack] pack=${packId} klarna inquiry template override: ${templateOverride.from ?? "none"} -> ${templateOverride.to}`,
+    );
+  }
   if (templateId) {
     const { data: sections } = await sb
       .from("pack_template_sections")
@@ -746,6 +768,10 @@ export async function buildPack(
       // non-Klarna or when the receipt didn't carry the category.
       klarnaSubProduct: paymentContext.klarnaSubProduct ?? null,
     },
+    // Records a dynamic template swap so admin (source of truth) shows WHY
+    // this pack used a different template than the pipeline stamped. Set
+    // only for the Klarna inquiry override; null otherwise.
+    template_override: templateOverride,
     // Card-only evidence sections intentionally skipped for this payment
     // method, with a human reason. Surfaced in admin so an empty
     // fraud-screening / 3-D-Secure section reads as "not applicable",
