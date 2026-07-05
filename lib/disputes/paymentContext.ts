@@ -54,6 +54,25 @@ export type PaymentMethodFamily =
   | "other"
   | "unknown";
 
+/** Klarna sub-product. Shopify's GraphQL `paymentMethodName` collapses
+ *  every Klarna order to the bare string "klarna", so the real product is
+ *  NOT available there. It IS available in the transaction `receiptJson`
+ *  (Shopify Payments = Stripe under the hood) at
+ *  `payment_method_details.klarna.payment_method_category`. Empirically
+ *  (cay-collective, 500-order probe 2026-07-04) the values seen are
+ *  `pay_later` (77.7%) and `pay_now` (22.3%). `pay_over_time` / `pay_in_*`
+ *  are documented Stripe values kept for forward-compat. Sub-product
+ *  matters because pay_later (consumer credit) correlates with a higher
+ *  chargeback rate than pay_now (immediate debit). `null` when not a
+ *  Klarna order or the receipt didn't carry the category. */
+export type KlarnaSubProduct =
+  | "pay_now"
+  | "pay_later"
+  | "pay_over_time"
+  | "pay_in_installments"
+  | "pay_with_financing"
+  | "other";
+
 export interface PaymentContext {
   family: PaymentMethodFamily;
   /** Raw signal we classified from: the lowercased paymentMethodName for
@@ -64,6 +83,11 @@ export interface PaymentContext {
   label: string | null;
   /** Card network when family === "card", else null. */
   cardNetwork: CardNetwork | null;
+  /** Klarna sub-product from receiptJson (pay_now / pay_later / …), or
+   *  null. Only set when family === "klarna". Optional so existing
+   *  PaymentContext literals (tests, fixtures) remain valid; absence is
+   *  equivalent to null. */
+  klarnaSubProduct?: KlarnaSubProduct | null;
 }
 
 /** Families that are NOT card — card-scheme logic (CE 3.0, FPT, AVS/CVV/
@@ -107,6 +131,61 @@ function klarnaLabel(raw: string): string {
   return map[raw] ?? "Klarna";
 }
 
+/** Map a raw Stripe/Shopify `payment_method_category` string to our
+ *  KlarnaSubProduct enum. Unknown non-empty values → "other" (preserved in
+ *  logs upstream); empty/absent → null. */
+function normalizeKlarnaSubProduct(
+  raw: string | null | undefined,
+): KlarnaSubProduct | null {
+  if (!raw) return null;
+  const v = raw.trim().toLowerCase();
+  if (v === "pay_now" || v === "paynow") return "pay_now";
+  if (v === "pay_later" || v === "paylater") return "pay_later";
+  if (v === "pay_over_time" || v === "payovertime") return "pay_over_time";
+  if (v === "pay_in_installments" || v === "installments") return "pay_in_installments";
+  if (v === "pay_with_financing" || v === "financing") return "pay_with_financing";
+  return "other";
+}
+
+/** Extract the Klarna sub-product from a transaction's receiptJson.
+ *  Shopify's GraphQL `paymentMethodName` collapses to bare "klarna"; the
+ *  real category lives in the Stripe-shaped receipt at
+ *  `payment_method_details.klarna.payment_method_category` (modern shape)
+ *  or under `charges.data[0]` / `latest_charge` (legacy). receiptJson is
+ *  NOT a stable contract (per CLAUDE.md) — parse + walk defensively. */
+export function extractKlarnaSubProduct(
+  receiptJson: string | Record<string, unknown> | null | undefined,
+): KlarnaSubProduct | null {
+  if (receiptJson == null) return null;
+  let receipt: unknown = receiptJson;
+  if (typeof receipt === "string") {
+    try {
+      receipt = JSON.parse(receipt);
+    } catch {
+      return null;
+    }
+  }
+  if (!receipt || typeof receipt !== "object") return null;
+
+  const getPath = (obj: unknown, path: (string | number)[]): unknown => {
+    let cur: unknown = obj;
+    for (const k of path) {
+      if (cur == null || typeof cur !== "object") return undefined;
+      cur = (cur as Record<string | number, unknown>)[k];
+    }
+    return cur;
+  };
+
+  const category =
+    getPath(receipt, ["payment_method_details", "klarna", "payment_method_category"]) ??
+    getPath(receipt, ["latest_charge", "payment_method_details", "klarna", "payment_method_category"]) ??
+    getPath(receipt, ["charges", "data", 0, "payment_method_details", "klarna", "payment_method_category"]);
+
+  return normalizeKlarnaSubProduct(
+    typeof category === "string" ? category : null,
+  );
+}
+
 /**
  * Classify the payment-method context of a dispute's order. Pure — no
  * DB/Shopify calls. Reads the primary transaction's paymentDetails.
@@ -119,6 +198,7 @@ export function derivePaymentContext(
     raw: null,
     label: null,
     cardNetwork: null,
+    klarnaSubProduct: null,
   };
   if (!order) return empty;
 
@@ -141,13 +221,13 @@ export function derivePaymentContext(
   const gatewayFallback = (): PaymentContext => {
     const gateway = tx.gateway?.trim().toLowerCase() || null;
     if (gateway === "gift_card") {
-      return { family: "gift_card", raw: gateway, label: "Gift card", cardNetwork: null };
+      return { family: "gift_card", raw: gateway, label: "Gift card", cardNetwork: null, klarnaSubProduct: null };
     }
     if (gateway === "manual" || gateway === "cash") {
-      return { family: "manual", raw: gateway, label: "Manual / offline", cardNetwork: null };
+      return { family: "manual", raw: gateway, label: "Manual / offline", cardNetwork: null, klarnaSubProduct: null };
     }
     return gateway
-      ? { family: "other", raw: gateway, label: gateway, cardNetwork: null }
+      ? { family: "other", raw: gateway, label: gateway, cardNetwork: null, klarnaSubProduct: null }
       : empty;
   };
 
@@ -165,6 +245,7 @@ export function derivePaymentContext(
         raw: wallet,
         label: `Card (${walletLabel(wallet)})`,
         cardNetwork,
+        klarnaSubProduct: null,
       };
     }
     return {
@@ -172,6 +253,7 @@ export function derivePaymentContext(
       raw: null,
       label: cardNetwork ? `Card (${cardNetwork})` : "Card",
       cardNetwork,
+      klarnaSubProduct: null,
     };
   }
 
@@ -184,14 +266,28 @@ export function derivePaymentContext(
         raw: null,
         label: "Local payment method",
         cardNetwork: null,
+        klarnaSubProduct: null,
       };
     }
     if (name.startsWith("klarna")) {
+      // Shopify's paymentMethodName is just "klarna"; recover the real
+      // sub-product (pay_now / pay_later / …) from the receiptJson. Refine
+      // the label when we know it (e.g. "Klarna — Pay Later").
+      const subProduct = extractKlarnaSubProduct(tx.receiptJson);
+      const subLabel: Record<string, string> = {
+        pay_now: "Klarna — Pay Now",
+        pay_later: "Klarna — Pay Later",
+        pay_over_time: "Klarna — Pay Over Time",
+        pay_in_installments: "Klarna — Installments",
+        pay_with_financing: "Klarna — Financing",
+      };
       return {
         family: "klarna",
         raw: name,
-        label: klarnaLabel(name),
+        label:
+          (subProduct && subLabel[subProduct]) ?? klarnaLabel(name),
         cardNetwork: null,
+        klarnaSubProduct: subProduct,
       };
     }
     if (name.startsWith("affirm")) {
@@ -202,6 +298,7 @@ export function derivePaymentContext(
         raw: name,
         label: "Affirm",
         cardNetwork: null,
+        klarnaSubProduct: null,
       };
     }
     // Recognized-BNPL long tail could go here later. Unknown local method
@@ -212,6 +309,7 @@ export function derivePaymentContext(
       raw: name,
       label: name,
       cardNetwork: null,
+      klarnaSubProduct: null,
     };
   }
 

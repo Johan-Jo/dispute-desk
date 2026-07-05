@@ -31,6 +31,7 @@ import {
   normalizeOrderIngest,
   resolveShopIdByDomain,
 } from "@/lib/shopify/orderIngest";
+import { matchSessionToOrder } from "@/lib/liabilityShift/sessions/ingest";
 
 export interface OrderWebhookResult {
   status: number;
@@ -153,6 +154,48 @@ export async function handleOrderWebhook(
   // Derive the order GID. The payload may carry either the numeric id
   // or the admin_graphql_api_id; the GraphQL fetch needs the GID form.
   const orderGid = adminGid ?? `gid://shopify/Order/${shopifyObjectId}`;
+
+  // LSE-4 session→order match-back. The storefront pixel stores the token
+  // from Shopify's `checkout_started` event into `checkout_sessions.
+  // cart_token` — but that value is the order's **checkout_token**, NOT its
+  // cart_token (verified 2026-07-04: 44/95 sessions match orders on
+  // checkout_token, 0 on cart_token; the two are different Shopify
+  // identifier namespaces). So we join the REST payload's `checkout_token`
+  // against the stored session key. `cart_token` is kept as a fallback for
+  // any pixel variant that captured the true cart token. Admin GraphQL
+  // dropped both fields in 2026-01, so the REST payload is the only source.
+  // Best-effort + non-fatal: a miss or error never blocks order ingest.
+  // Runs before the ingest-outcome branches so a re-fired webhook that
+  // returns `skipped_unchanged` still performs the link.
+  const sessionKey =
+    (typeof payload?.["checkout_token"] === "string"
+      ? (payload["checkout_token"] as string)
+      : null) ??
+    (typeof payload?.["cart_token"] === "string"
+      ? (payload["cart_token"] as string)
+      : null);
+  if (sessionKey) {
+    const orderPlacedAt =
+      (typeof payload?.["processed_at"] === "string" && payload["processed_at"]) ||
+      (typeof payload?.["created_at"] === "string" && payload["created_at"]) ||
+      new Date().toISOString();
+    try {
+      // Store the numeric order id so the disputed-order read side
+      // (which only has the GID) can match after normalizing.
+      const numericOrderId = /(\d+)\s*$/.exec(shopifyObjectId)?.[1] ?? shopifyObjectId;
+      await matchSessionToOrder({
+        shopId,
+        cartToken: sessionKey,
+        shopifyOrderId: numericOrderId,
+        orderPlacedAt: orderPlacedAt as string,
+      });
+    } catch (err) {
+      console.warn(
+        `[handleOrderWebhook] session match-back failed for order ${shopifyObjectId}:`,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
 
   try {
     const result = await normalizeOrderIngest(shopId, orderGid, {
