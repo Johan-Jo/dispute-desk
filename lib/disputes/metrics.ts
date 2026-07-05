@@ -155,6 +155,25 @@ export async function computeDisputeMetrics(
     prevList = (prev ?? []) as Record<string, unknown>[];
   }
 
+  // ── Closed-in-period count (windowed by closed_at, NOT created_at) ─────
+  // "Closed" must mean "disputes that CLOSED in the selected window."
+  // Deriving it from `list` (which is created_at-scoped) breaks for shops
+  // whose history was bulk-imported: every imported dispute shares one
+  // created_at (the import timestamp), so a created_at window counts all
+  // history as "closed this period" until the import ages out, then drops
+  // to a cliff of zero — even though the cases closed on real, varied
+  // historical dates. Filtering on closed_at fixes both the meaning and
+  // the period responsiveness. Separate query so it isn't limited to the
+  // created_at-windowed `list`.
+  let closedQ = sb
+    .from("disputes")
+    .select("id", { count: "exact", head: true })
+    .not("closed_at", "is", null)
+    .lte("closed_at", periodEnd);
+  if (shopId) closedQ = closedQ.eq("shop_id", shopId);
+  if (periodFrom) closedQ = closedQ.gte("closed_at", periodFrom);
+  const { count: closedInPeriodCount } = await closedQ;
+
   // ── Currency (picked before amount sums so we can scope them) ─────────
   // The dashboard quotes a single currency symbol per tile. Mixing
   // currencies into one sum is wrong regardless of which symbol you
@@ -227,7 +246,9 @@ export async function computeDisputeMetrics(
     ? Math.round((amountRecovered / financialTotal) * 100)
     : 0;
 
-  const totalClosed = list.filter((d) => d.closed_at != null).length;
+  // Windowed by closed_at (see the dedicated query above), so imported
+  // history no longer collapses this into a created_at artifact.
+  const totalClosed = closedInPeriodCount ?? 0;
 
   // ── Timing ────────────────────────────────────────────────────────────
   const submittedDisputes = list.filter(
