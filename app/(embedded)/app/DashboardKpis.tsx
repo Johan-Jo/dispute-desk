@@ -15,9 +15,11 @@ import styles from "./dashboard.module.css";
 import {
   useDateLocale,
   useFormatCurrency,
+  type CbInqSplit,
   type DashboardStats,
   type PeriodKey,
 } from "./dashboardHelpers";
+import { CbInqBreakdown, CbInqKey } from "./CbInqBreakdown";
 
 /** Threshold-tone tuple per PRD §8. Same order/colors as the
  *  status hero in OverviewTab so merchants get a consistent
@@ -130,6 +132,11 @@ interface KpiCard {
    *  headline number — e.g. "+ 12 in SEK, 1 in GBP". Empty/omitted
    *  when all disputes share the primary currency. */
   hint?: string | null;
+  /** Optional inquiry/chargeback breakdown footer (Dashboard v3). When
+   *  set, renders a modest "N cb · N inq" line under the change/hint.
+   *  `format` currency-formats the split values (Recovered / At Risk);
+   *  omit for count tiles (Active / Win Rate). */
+  breakdown?: { split: CbInqSplit; format?: (v: number) => string } | null;
 }
 
 function DesktopKpiTile({ card, vsLabel, loading }: { card: KpiCard; vsLabel: string; loading: boolean }) {
@@ -192,6 +199,11 @@ function DesktopKpiTile({ card, vsLabel, loading }: { card: KpiCard; vsLabel: st
           {card.hint}
         </div>
       )}
+      {card.breakdown && (
+        <div style={{ marginTop: "10px", paddingTop: "9px", borderTop: "1px solid #EEEFF1" }}>
+          <CbInqBreakdown split={card.breakdown.split} formatValue={card.breakdown.format} />
+        </div>
+      )}
     </div>
   );
 }
@@ -245,6 +257,11 @@ function MobileKpiTile({
       {card.hint && (
         <div style={{ marginTop: "4px", fontSize: "11px", color: "#6D7175", lineHeight: 1.4 }}>
           {card.hint}
+        </div>
+      )}
+      {card.breakdown && (
+        <div style={{ marginTop: "10px", paddingTop: "9px", borderTop: "1px solid #EEEFF1" }}>
+          <CbInqBreakdown split={card.breakdown.split} formatValue={card.breakdown.format} />
         </div>
       )}
     </div>
@@ -477,12 +494,15 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     value: String(stats.activeDisputes),
     change: stats.activeDisputesChange,
     changeInverse: true,
+    breakdown: { split: stats.activeSplit },
   };
   const winRate: KpiCard = {
     icon: ChartLineIcon,
     label: t("dashboard.winRate"),
     value: `${stats.winRate}%`,
     change: stats.winRateChange,
+    // Win Rate is a ratio, not an additive count — a cb·inq split under a
+    // percentage would misread. The won-case split lives on Recovered/Active.
   };
   const recovered: KpiCard = {
     icon: CashDollarIcon,
@@ -490,6 +510,7 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     value: formatCurrency(stats.amountRecovered),
     change: stats.amountRecoveredChange,
     hint: otherCurrencyHint,
+    breakdown: { split: stats.recoveredSplit, format: (v) => formatCurrency(v) },
   };
   const lost: KpiCard = {
     icon: CashDollarIcon,
@@ -505,6 +526,7 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     change: stats.amountAtRiskChange,
     changeInverse: true,
     hint: otherCurrencyHint,
+    breakdown: { split: stats.atRiskSplit, format: (v) => formatCurrency(v) },
   };
 
   // ── Chargeback rate (PRD §8 / Figma 2026-05-01) ─────────────────────
@@ -545,6 +567,7 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
       {smDown ? (
         <BlockStack gap="300">
           <Text as="h2" variant="headingMd">{t("dashboard.performanceOverview")}</Text>
+          <CbInqKey />
           <PeriodSelector period={period} onChange={onPeriodChange} t={t} />
           <div className={styles.mobileStack}>
             {/* Hero: Amount at Risk, full-width */}
@@ -573,7 +596,10 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
       ) : (
         <>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", marginBottom: "20px" }}>
-            <Text as="h2" variant="headingMd">{t("dashboard.performanceOverview")}</Text>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "12px", flexWrap: "wrap" }}>
+              <Text as="h2" variant="headingMd">{t("dashboard.performanceOverview")}</Text>
+              <CbInqKey />
+            </div>
             <PeriodSelector period={period} onChange={onPeriodChange} t={t} />
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "12px" }}>

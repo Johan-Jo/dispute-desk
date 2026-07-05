@@ -45,6 +45,7 @@ import { DashboardAttentionBanner } from "./DashboardAttentionBanner";
 import { DashboardInsights } from "./DashboardInsights";
 import { DashboardOperationalInsightsStrip } from "./DashboardOperationalInsightsStrip";
 import { DashboardScopeUpgradeBanner } from "./DashboardScopeUpgradeBanner";
+import { CbInqBreakdown } from "./CbInqBreakdown";
 
 // ─── OutcomeBreakdown ─────────────────────────────────────────────────────
 
@@ -77,6 +78,7 @@ function OutcomeBreakdown({ stats, loading }: { stats: DashboardStats; loading: 
         <BlockStack gap="200">
           {entries.map(([outcome, count]) => {
             const pct = Math.round((count / total) * 100);
+            const split = stats.outcomeSplit[outcome];
             return (
               <div key={outcome}>
                 <InlineStack align="space-between" blockAlign="center">
@@ -84,7 +86,10 @@ function OutcomeBreakdown({ stats, loading }: { stats: DashboardStats; loading: 
                     <div style={{ width: 8, height: 8, borderRadius: 4, background: OUTCOME_COLORS[outcome] ?? "#9CA3AF", flexShrink: 0 }} />
                     <Text as="span" variant="bodyMd">{safeOutcomeLabel(tTimeline, outcome)}</Text>
                   </InlineStack>
-                  <Text as="span" variant="bodySm" tone="subdued">{count} ({pct}%)</Text>
+                  <InlineStack gap="300" blockAlign="center">
+                    <CbInqBreakdown split={split} size="xs" />
+                    <Text as="span" variant="bodySm" tone="subdued">{count} ({pct}%)</Text>
+                  </InlineStack>
                 </InlineStack>
                 <div style={{ marginTop: "4px" }}>
                   <ProgressBar progress={pct} size="small" tone={outcome === "won" ? "success" : outcome === "lost" ? "critical" : undefined} />

@@ -6,6 +6,9 @@ export interface KPICardProps {
   change?: number;
   changeLabel?: string;
   icon?: React.ReactNode;
+  /** Optional subdued line below the change indicator — e.g. the
+   *  Dashboard v3 inquiry/chargeback breakdown ("N cb · N inq"). */
+  footer?: React.ReactNode;
 }
 
 export function KPICard({
@@ -14,6 +17,7 @@ export function KPICard({
   change,
   changeLabel,
   icon,
+  footer,
 }: KPICardProps) {
   const isPositive = change !== undefined && change > 0;
   const isNegative = change !== undefined && change < 0;
@@ -51,6 +55,7 @@ export function KPICard({
               )}
             </div>
           )}
+          {footer && <div className="mt-3">{footer}</div>}
         </div>
         {icon && <div className="text-[#4F46E5]">{icon}</div>}
       </div>

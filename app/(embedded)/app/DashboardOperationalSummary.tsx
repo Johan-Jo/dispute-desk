@@ -17,7 +17,8 @@ import {
   ChevronRightIcon,
 } from "@shopify/polaris-icons";
 import { withShopParams } from "@/lib/withShopParams";
-import type { DashboardStats } from "./dashboardHelpers";
+import type { CbInqSplit, DashboardStats } from "./dashboardHelpers";
+import { CbInqBreakdown } from "./CbInqBreakdown";
 
 interface CardSpec {
   key: string;
@@ -30,6 +31,7 @@ interface CardSpec {
   borderColor: string | null;
   cta: { label: string; color: string } | null;
   url: string | null;
+  split: CbInqSplit;
 }
 
 function OperationalCard({ card }: { card: CardSpec }) {
@@ -97,6 +99,17 @@ function OperationalCard({ card }: { card: CardSpec }) {
           </span>
         </span>
       ) : null}
+      {card.split.cb > 0 || card.split.inq > 0 ? (
+        <div
+          style={{
+            marginTop: card.cta ? "14px" : "0",
+            paddingTop: "11px",
+            borderTop: "1px solid #EEEFF1",
+          }}
+        >
+          <CbInqBreakdown split={card.split} />
+        </div>
+      ) : null}
     </div>
   );
 
@@ -128,6 +141,21 @@ export function DashboardOperationalSummary({ stats, loading }: Props) {
     (s.operationalBreakdown["waiting_on_issuer"] ?? 0) +
     (s.operationalBreakdown["submitted_to_bank"] ?? 0);
 
+  // Sum the per-status cb·inq splits into the same buckets the counts use,
+  // so each card's breakdown reconciles with its headline number.
+  const sumSplit = (...keys: string[]): CbInqSplit =>
+    keys.reduce(
+      (acc, k) => {
+        const sp = s.operationalSplit[k];
+        if (sp) {
+          acc.cb += sp.cb;
+          acc.inq += sp.inq;
+        }
+        return acc;
+      },
+      { cb: 0, inq: 0 },
+    );
+
   const cards: CardSpec[] = [
     {
       key: "action_needed",
@@ -139,6 +167,7 @@ export function DashboardOperationalSummary({ stats, loading }: Props) {
       iconColor: "#DC2626",
       borderColor: actionNeeded > 0 ? "#FCA5A5" : null,
       cta: actionNeeded > 0 ? { label: t("reviewCases"), color: "#DC2626" } : null,
+      split: sumSplit("new", "action_needed", "needs_review"),
       url:
         actionNeeded === 1 && s.actionNeededDisputeId
           ? withShopParams(`/app/disputes/${s.actionNeededDisputeId}`, searchParams ?? new URLSearchParams())
@@ -157,6 +186,7 @@ export function DashboardOperationalSummary({ stats, loading }: Props) {
       iconColor: "#D97706",
       borderColor: readyToSubmit > 0 ? "#FDE68A" : null,
       cta: readyToSubmit > 0 ? { label: t("submitNow"), color: "#D97706" } : null,
+      split: sumSplit("ready_to_submit"),
       url: withShopParams(
         "/app/disputes?normalized_status=ready_to_submit",
         searchParams ?? new URLSearchParams(),
@@ -172,6 +202,7 @@ export function DashboardOperationalSummary({ stats, loading }: Props) {
       iconColor: "#005BD3",
       borderColor: null,
       cta: null,
+      split: sumSplit("waiting_on_issuer", "submitted_to_bank"),
       url: withShopParams(
         "/app/disputes?normalized_status=waiting_on_issuer,submitted_to_bank",
         searchParams ?? new URLSearchParams(),
@@ -187,6 +218,7 @@ export function DashboardOperationalSummary({ stats, loading }: Props) {
       iconColor: "#6D7175",
       borderColor: null,
       cta: null,
+      split: s.operationalClosedSplit,
       url: null,
     },
   ];
