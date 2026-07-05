@@ -338,7 +338,11 @@
     "cbLegend": "cb = chargeback",
     "inqLegend": "inq = inquiry",
     "legendInquiry": "Inquiry — no funds withdrawn",
-    "legendChargeback": "Chargeback — funds withdrawn"
+    "legendChargeback": "Chargeback — funds withdrawn",
+    "disputeRate": "Dispute rate",
+    "allDisputesOverOrders": "all disputes ÷ orders",
+    "recoveredShort": "Recovered",
+    "atRiskShort": "At Risk"
   },
   "disputes": {
     "title": "Disputes",

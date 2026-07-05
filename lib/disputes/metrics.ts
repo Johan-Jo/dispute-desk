@@ -124,6 +124,17 @@ export interface DisputeMetrics {
   winSplit: CbInqSplit;
   recoveredSplit: CbInqSplit;
   outcomeSplit: Record<string, CbInqSplit>;
+  /** Per-phase win rate % (won / (won+lost) within each phase), for the
+   *  Win Rate tile's "cb X% · inq Y%" footer. 0 when a phase has no
+   *  decided disputes in the window. */
+  winRatePctSplit: CbInqSplit;
+  /** Dashboard v3 "Dispute rate" tile: ALL disputes (chargebacks +
+   *  inquiries) as a share of orders, from shop_daily_metrics. `rate`
+   *  is null when the snapshot is missing or orders are zero (UI shows
+   *  "—"). `cbPct`/`inqPct` split the rate by phase. */
+  disputeRate: number | null;
+  disputeRateCbPct: number | null;
+  disputeRateInqPct: number | null;
 
   // Period-over-period (null when no comparison available)
   activeDisputesChange: number | null;
@@ -385,6 +396,17 @@ export async function computeDisputeMetrics(
     outcomeList.filter(inPrimaryCurrency),
     "outcome_amount_recovered",
   );
+  // Per-phase win rate % for the Win Rate tile footer (won / (won+lost)
+  // within each phase). 0 when a phase has no decided disputes.
+  const phaseWinPct = (phaseInq: boolean): number => {
+    const w = won.filter((d) => (d.phase === "inquiry") === phaseInq).length;
+    const l = lost.filter((d) => (d.phase === "inquiry") === phaseInq).length;
+    return w + l > 0 ? Math.round((w / (w + l)) * 100) : 0;
+  };
+  const winRatePctSplit: CbInqSplit = {
+    cb: phaseWinPct(false),
+    inq: phaseWinPct(true),
+  };
 
   // ── Period-over-period ────────────────────────────────────────────────
   // Only OUTCOME metrics have a meaningful prior-window delta, and the
@@ -440,6 +462,12 @@ export async function computeDisputeMetrics(
   let chargebackRateLowVolume = false;
   let chargebackRateLastSyncedAt: string | null = null;
 
+  // Dashboard v3 "Dispute rate" tile: ALL disputes ÷ orders, from the
+  // same snapshot read. Split into cb%/inq% by phase.
+  let disputeRate: number | null = null;
+  let disputeRateCbPct: number | null = null;
+  let disputeRateInqPct: number | null = null;
+
   if (shopId) {
     const toDate = defaultWindowEndDate(new Date(periodEnd));
     const fromDate = periodFrom
@@ -457,6 +485,14 @@ export async function computeDisputeMetrics(
     chargebackRateAvailable = cb.available;
     chargebackRateLowVolume = cb.lowVolume;
     chargebackRateLastSyncedAt = cb.lastSyncedAt;
+
+    if (cb.available && cb.denominator > 0) {
+      const round1 = (v: number) => Math.round(v * 1000) / 10;
+      disputeRateCbPct = round1(cb.numerator / cb.denominator);
+      disputeRateInqPct = round1(cb.inquiryNumerator / cb.denominator);
+      disputeRate =
+        Math.round((disputeRateCbPct + disputeRateInqPct) * 10) / 10;
+    }
   }
 
   return {
@@ -483,6 +519,10 @@ export async function computeDisputeMetrics(
     winSplit,
     recoveredSplit,
     outcomeSplit,
+    winRatePctSplit,
+    disputeRate,
+    disputeRateCbPct,
+    disputeRateInqPct,
     activeDisputesChange: pctChange(activeDisputes, prevActiveCount),
     winRateChange: prevWinRate !== null ? winRate - prevWinRate : null,
     amountAtRiskChange: pctChange(amountAtRisk, prevAmountAtRisk),
