@@ -7,6 +7,11 @@
   border: 1px solid #e5e7eb;
   padding: 12px;
   box-sizing: border-box;
+  /* Equal-height flex column so the footer divider (margin-top:auto)
+     pins to the card floor and aligns across the two-up rows. */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 .kpiTileMobile .label {
   font-size: 12px;
