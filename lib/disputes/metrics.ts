@@ -123,6 +123,12 @@ export interface DisputeMetrics {
   atRiskSplit: CbInqSplit;
   winSplit: CbInqSplit;
   recoveredSplit: CbInqSplit;
+  /** Phase split of disputes closed in the window — reconciles with
+   *  `totalClosed` (both are `outcomeList`, closed-in-period by
+   *  closed_at). Distinct from the stats route's all-time
+   *  `operationalClosedSplit`; the Closed operational card must use THIS
+   *  so its footer sums to the window-scoped headline. */
+  closedSplit: CbInqSplit;
   outcomeSplit: Record<string, CbInqSplit>;
   /** Per-phase win rate % (won / (won+lost) within each phase), for the
    *  Win Rate tile's "cb X% · inq Y%" footer. 0 when a phase has no
@@ -392,6 +398,8 @@ export async function computeDisputeMetrics(
   const activeSplit = splitByPhase(active);
   const atRiskSplit = sumByPhase(active.filter(inPrimaryCurrency), "amount");
   const winSplit = splitByPhase(won);
+  // Closed-in-window split — sums to totalClosed (both are outcomeList).
+  const closedSplit = splitByPhase(outcomeList);
   const recoveredSplit = sumByPhase(
     outcomeList.filter(inPrimaryCurrency),
     "outcome_amount_recovered",
@@ -518,6 +526,7 @@ export async function computeDisputeMetrics(
     atRiskSplit,
     winSplit,
     recoveredSplit,
+    closedSplit,
     outcomeSplit,
     winRatePctSplit,
     disputeRate,

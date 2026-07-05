@@ -223,7 +223,10 @@ export function DashboardOperationalSummary({ stats, loading }: Props) {
       iconColor: "#6D7175",
       borderColor: null,
       cta: null,
-      split: s.operationalClosedSplit,
+      // Window-scoped split (closedSplit) so the footer sums to
+      // totalClosed. NOT operationalClosedSplit, which is all-time and
+      // would show 61 under a headline of 2.
+      split: s.closedSplit,
       url: null,
     },
   ];
