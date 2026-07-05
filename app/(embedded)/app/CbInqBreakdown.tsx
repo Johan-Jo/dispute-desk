@@ -30,16 +30,20 @@ export function CbInqBreakdown({
   size = "sm",
   labelFirst = false,
   hideWhenZero = true,
+  hideLabel = false,
 }: {
   split: CbInqSplit | undefined;
   /** When provided, cb/inq are rendered through this (e.g. currency). */
   formatValue?: (v: number) => string;
   size?: "xs" | "sm";
   /** Design v3 renders rate footers as "cb 0% · inq 0%" (abbrev before
-   *  value); count/money footers render "0 cb · 0 inq" (value first). */
+   *  value); count footers render "0 cb · 0 inq" (value first). */
   labelFirst?: boolean;
   /** Rate footers (0% is meaningful) should still render at zero. */
   hideWhenZero?: boolean;
+  /** Design v3 money footers (Recovered / At Risk) show dot + value only,
+   *  no "cb"/"inq" text — e.g. "● $0 · ● $0". */
+  hideLabel?: boolean;
 }) {
   const t = useTranslations("dashboard");
   if (!split) return null;
@@ -59,16 +63,19 @@ export function CbInqBreakdown({
     />
   );
   const val = (v: number) => (formatValue ? formatValue(v) : String(v));
-  const pair = (v: number, label: string) =>
-    labelFirst ? (
+  const pair = (v: number, label: string) => {
+    const value = <b style={{ color: BOLD, fontWeight: 600 }}>{val(v)}</b>;
+    if (hideLabel) return <span>{value}</span>;
+    return labelFirst ? (
       <span>
-        {label} <b style={{ color: BOLD, fontWeight: 600 }}>{val(v)}</b>
+        {label} {value}
       </span>
     ) : (
       <span>
-        <b style={{ color: BOLD, fontWeight: 600 }}>{val(v)}</b> {label}
+        {value} {label}
       </span>
     );
+  };
 
   return (
     <span

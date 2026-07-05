@@ -10,9 +10,11 @@ import {
 import styles from "./dashboard.module.css";
 import {
   useFormatCurrency,
+  type CbInqSplit,
   type DashboardStats,
   type PeriodKey,
 } from "./dashboardHelpers";
+import { CbInqBreakdown, CbInqKey } from "./CbInqBreakdown";
 
 function ChangeIndicator({
   value,
@@ -103,6 +105,17 @@ interface KpiCard {
    *  headline number — e.g. "+ 12 in SEK, 1 in GBP". Empty/omitted
    *  when all disputes share the primary currency. */
   hint?: string | null;
+  /** cb·inq footer (Dashboard v3). Transcribed from the design's
+   *  `.Perf-foot` per tile: count tiles show "0 cb · 0 inq" (labelFirst
+   *  false), rate tiles show "cb 0% · inq 0%" (labelFirst true,
+   *  hideWhenZero false), money tiles show "$0 · $0" (hideLabel true). */
+  breakdown?: {
+    split: CbInqSplit;
+    format?: (v: number) => string;
+    labelFirst?: boolean;
+    hideWhenZero?: boolean;
+    hideLabel?: boolean;
+  } | null;
 }
 
 function DesktopKpiTile({ card, vsLabel, loading }: { card: KpiCard; vsLabel: string; loading: boolean }) {
@@ -154,6 +167,17 @@ function DesktopKpiTile({ card, vsLabel, loading }: { card: KpiCard; vsLabel: st
           {card.hint}
         </div>
       )}
+      {card.breakdown && (
+        <div style={{ marginTop: "auto", paddingTop: "9px", borderTop: "1px solid #EEEFF1" }}>
+          <CbInqBreakdown
+            split={card.breakdown.split}
+            formatValue={card.breakdown.format}
+            labelFirst={card.breakdown.labelFirst}
+            hideWhenZero={card.breakdown.hideWhenZero}
+            hideLabel={card.breakdown.hideLabel}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -193,6 +217,17 @@ function MobileKpiTile({
           {card.hint}
         </div>
       )}
+      {card.breakdown && (
+        <div style={{ marginTop: "auto", paddingTop: "9px", borderTop: "1px solid #EEEFF1" }}>
+          <CbInqBreakdown
+            split={card.breakdown.split}
+            formatValue={card.breakdown.format}
+            labelFirst={card.breakdown.labelFirst}
+            hideWhenZero={card.breakdown.hideWhenZero}
+            hideLabel={card.breakdown.hideLabel}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -226,21 +261,31 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     return t("dashboard.otherCurrencyHint", { list: parts.join(", ") });
   })();
 
-  // Performance Overview tiles intentionally carry NO cb·inq footer — the
-  // breakdown lives on the operational cards, dispute categories, and
-  // outcome rows; on the perf tiles it read as clutter.
+  // Perf-tile footers transcribed literally from Dashboard v3 .Perf-foot:
+  //   Active:       "0 cb · 0 inq"      (count, value-first, with text)
+  //   Win Rate:     "cb 0% · inq 0%"    (rate, label-first, with text)
+  //   Recovered:    "$0 · $0"           (money, no text)
+  //   At Risk:      "$0 · $0"           (money, no text)
+  //   Dispute rate: "cb 0% · inq 0%"    (rate, label-first, with text)
   const active: KpiCard = {
     icon: AlertCircleIcon,
     label: t("dashboard.activeDisputes"),
     value: String(stats.activeDisputes),
     change: stats.activeDisputesChange,
     changeInverse: true,
+    breakdown: { split: stats.activeSplit },
   };
   const winRate: KpiCard = {
     icon: ChartLineIcon,
     label: t("dashboard.winRate"),
     value: `${stats.winRate}%`,
     change: stats.winRateChange,
+    breakdown: {
+      split: stats.winRatePctSplit,
+      format: (v) => `${v}%`,
+      labelFirst: true,
+      hideWhenZero: false,
+    },
   };
   const recovered: KpiCard = {
     icon: CashDollarIcon,
@@ -248,6 +293,11 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     value: formatCurrency(stats.amountRecovered),
     change: stats.amountRecoveredChange,
     hint: otherCurrencyHint,
+    breakdown: {
+      split: stats.recoveredSplit,
+      format: (v) => formatCurrency(v),
+      hideLabel: true,
+    },
   };
   const lost: KpiCard = {
     icon: CashDollarIcon,
@@ -263,12 +313,16 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     change: stats.amountAtRiskChange,
     changeInverse: true,
     hint: otherCurrencyHint,
+    breakdown: {
+      split: stats.atRiskSplit,
+      format: (v) => formatCurrency(v),
+      hideLabel: true,
+    },
   };
 
   // ── Dispute rate (Dashboard v3) ─────────────────────────────────────
   // 5th performance tile: ALL disputes (chargebacks + inquiries) as a
-  // share of orders, from shop_daily_metrics. Replaces the earlier
-  // chargeback-rate tile per the v3 design. cb%/inq% split in the footer.
+  // share of orders, from shop_daily_metrics. cb%/inq% split in the footer.
   // Guard with `!= null` (not `!== null`) so a stale/older API response
   // that omits the field renders "—" instead of "undefined%".
   const disputeRate: KpiCard = {
@@ -277,6 +331,15 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     value: stats.disputeRate != null ? `${stats.disputeRate}%` : "—",
     change: null,
     hint: t("dashboard.allDisputesOverOrders"),
+    breakdown:
+      stats.disputeRateCbPct != null && stats.disputeRateInqPct != null
+        ? {
+            split: { cb: stats.disputeRateCbPct, inq: stats.disputeRateInqPct },
+            format: (v) => `${v}%`,
+            labelFirst: true,
+            hideWhenZero: false,
+          }
+        : null,
   };
 
   const desktopCards = [active, winRate, recovered, atRisk, disputeRate];
@@ -291,6 +354,7 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
       {smDown ? (
         <BlockStack gap="300">
           <Text as="h2" variant="headingMd">{t("dashboard.performanceOverview")}</Text>
+          <CbInqKey />
           <PeriodSelector period={period} onChange={onPeriodChange} t={t} />
           <div className={styles.mobileStack}>
             {/* Hero: Amount at Risk, full-width */}
@@ -318,7 +382,10 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
       ) : (
         <>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", marginBottom: "20px" }}>
-            <Text as="h2" variant="headingMd">{t("dashboard.performanceOverview")}</Text>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "12px", flexWrap: "wrap" }}>
+              <Text as="h2" variant="headingMd">{t("dashboard.performanceOverview")}</Text>
+              <CbInqKey />
+            </div>
             <PeriodSelector period={period} onChange={onPeriodChange} t={t} />
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "12px" }}>
