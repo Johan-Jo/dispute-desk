@@ -113,6 +113,19 @@ export interface ShopRiskProfile {
    *  `unmatched` = disputes whose order isn't in `shopify_orders`
    *  yet (backfill gap) — surfaced so the split isn't silently
    *  under-counted. */
+  /** Klarna sub-product split among the Klarna disputes in the window.
+   *  pay_later (Klarna consumer credit) historically drives more
+   *  chargebacks than pay_now (immediate debit); this surfaces the mix so
+   *  ops can see it at a glance. `klarna_unspecified` = a Klarna dispute
+   *  whose order only recorded the bare `klarna` method (no sub-product
+   *  captured — GraphQL collapses newer orders to `klarna`). Counts sum to
+   *  `paymentMethodBreakdown.klarna`. */
+  klarnaSubProductBreakdown: {
+    pay_later: number;
+    pay_now: number;
+    slice_it: number;
+    klarna_unspecified: number;
+  };
   paymentMethodBreakdown: {
     card: number;
     apple_pay: number;
@@ -452,6 +465,17 @@ export async function getShopRiskProfile(
     other: 0,
     unmatched: 0,
   };
+  // Klarna sub-product split among the Klarna disputes. Derived from the
+  // raw `shopify_orders.payment_method` string (which carries the
+  // sub-product, e.g. `klarna_pay_later`, for orders backfilled/ingested
+  // before GraphQL collapsed it to bare `klarna`). Bare `klarna` →
+  // `klarna_unspecified`.
+  const klarnaSubProductBreakdown = {
+    pay_later: 0,
+    pay_now: 0,
+    slice_it: 0,
+    klarna_unspecified: 0,
+  };
   if (windowOrderGids.length > 0) {
     const methodByGid = new Map<string, string | null>();
     // Chunk the IN() list to stay well within URL/statement limits.
@@ -475,7 +499,16 @@ export async function getShopRiskProfile(
         paymentMethodBreakdown.unmatched += 1;
         continue;
       }
-      paymentMethodBreakdown[classifyPaymentMethod(methodByGid.get(gid))] += 1;
+      const rawMethod = methodByGid.get(gid);
+      const family = classifyPaymentMethod(rawMethod);
+      paymentMethodBreakdown[family] += 1;
+      if (family === "klarna") {
+        const m = (rawMethod ?? "").toLowerCase();
+        if (m === "klarna_pay_later") klarnaSubProductBreakdown.pay_later += 1;
+        else if (m === "klarna_pay_now") klarnaSubProductBreakdown.pay_now += 1;
+        else if (m === "klarna_slice_it") klarnaSubProductBreakdown.slice_it += 1;
+        else klarnaSubProductBreakdown.klarna_unspecified += 1;
+      }
     }
   }
 
@@ -602,6 +635,7 @@ export async function getShopRiskProfile(
     reasonBreakdown,
     reasonPhase,
     paymentMethodBreakdown,
+    klarnaSubProductBreakdown,
     outcomeBreakdown,
     outcomePhase,
     winRatePhase,

@@ -94,6 +94,12 @@ interface ShopRiskProfileResponse {
     other: number;
     unmatched: number;
   };
+  klarnaSubProductBreakdown: {
+    pay_later: number;
+    pay_now: number;
+    slice_it: number;
+    klarna_unspecified: number;
+  };
   outcomeBreakdown: { won: number; lost: number; pending: number };
   outcomePhase: Record<
     "won" | "lost" | "pending",
@@ -296,6 +302,21 @@ export function ShopRiskProfile({ shopId }: Props) {
   const pm = data.paymentMethodBreakdown;
   const totalPaymentMethods =
     pm.card + pm.apple_pay + pm.google_pay + pm.shop_pay + pm.klarna + pm.other;
+
+  // Klarna sub-product split (only meaningful when there are Klarna
+  // disputes). pay_later — Klarna consumer credit — historically drives
+  // more chargebacks than pay_now; surfaced here so the risk mix is visible.
+  const ksp = data.klarnaSubProductBreakdown;
+  const klarnaSubTotal =
+    ksp.pay_later + ksp.pay_now + ksp.slice_it + ksp.klarna_unspecified;
+  const klarnaSubRows = [
+    { key: "pay_later", label: "Pay Later", count: ksp.pay_later, barClass: "bg-[#FFB3C7]" },
+    { key: "pay_now", label: "Pay Now", count: ksp.pay_now, barClass: "bg-[#F472B6]" },
+    { key: "slice_it", label: "Slice It", count: ksp.slice_it, barClass: "bg-[#DB2777]" },
+    { key: "klarna_unspecified", label: "Unspecified", count: ksp.klarna_unspecified, barClass: "bg-[#CBD5E1]" },
+  ]
+    .filter((r) => r.count > 0)
+    .sort((a, b) => b.count - a.count);
   const paymentRows = [
     { key: "card", label: "Card", count: pm.card, barClass: "bg-[#1D4ED8]" },
     { key: "klarna", label: "Klarna", count: pm.klarna, barClass: "bg-[#FFB3C7]" },
@@ -555,6 +576,38 @@ export function ShopRiskProfile({ shopId }: Props) {
               {pm.unmatched > 0
                 ? "Payment method unavailable — linked orders not yet synced."
                 : "No disputes in window."}
+            </div>
+          )}
+
+          {/* Klarna sub-product split — nested under the method card,
+              only when there are Klarna disputes with a captured
+              sub-product. pay_later is the higher-risk product. */}
+          {klarnaSubTotal > 0 && (
+            <div className="mt-4 pt-4 border-t border-[#E2E8F0]">
+              <h4 className="text-xs font-semibold text-[#475569] mb-3 flex items-center gap-2">
+                Klarna sub-product split
+                <span className="font-normal text-[#94A3B8]">
+                  ({klarnaSubTotal} of {pm.klarna} Klarna)
+                </span>
+              </h4>
+              <div className="space-y-3">
+                {klarnaSubRows.map((row) => (
+                  <BreakdownRow
+                    key={row.key}
+                    icon={<CreditCard className="w-4 h-4 text-[#64748B]" />}
+                    label={row.label}
+                    count={row.count}
+                    total={klarnaSubTotal}
+                    barClass={row.barClass}
+                  />
+                ))}
+              </div>
+              {ksp.klarna_unspecified > 0 && (
+                <p className="text-xs text-[#94A3B8] mt-2">
+                  &ldquo;Unspecified&rdquo; = Klarna disputes whose order recorded only the
+                  bare <code>klarna</code> method (sub-product not captured).
+                </p>
+              )}
             </div>
           )}
         </div>
