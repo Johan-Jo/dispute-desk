@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { BlockStack, Card, Spinner, Text } from "@shopify/polaris";
 import type { DashboardStats } from "./dashboardHelpers";
+import { CbInqBreakdown } from "./CbInqBreakdown";
 
 interface Props {
   stats: DashboardStats;
@@ -83,39 +84,47 @@ export function DashboardInsights({ stats, loading }: Props) {
                 </Text>
               ) : (
                 <BlockStack gap="300">
-                  {stats.disputeCategories.map(({ label, value }) => (
-                    <div key={label}>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: "14px",
-                          marginBottom: "4px",
-                        }}
-                      >
-                        <span style={{ color: "#202223" }}>{translateCategory(label)}</span>
-                        <span style={{ color: "#6D7175" }}>{value}%</span>
-                      </div>
-                      <div
-                        style={{
-                          width: "100%",
-                          height: "8px",
-                          background: "#E1E3E5",
-                          borderRadius: "9999px",
-                          overflow: "hidden",
-                        }}
-                      >
+                  {stats.disputeCategories.map(({ label, value, cb, inq }) => {
+                    // Split the bar into a cb (amber) + inq (blue) segment
+                    // proportional to each phase's share of this category,
+                    // scaled to the category's overall `value` width.
+                    const total = cb + inq;
+                    const cbWidth = total > 0 ? (cb / total) * value : 0;
+                    const inqWidth = total > 0 ? (inq / total) * value : value;
+                    return (
+                      <div key={label}>
                         <div
                           style={{
-                            width: `${value}%`,
-                            height: "100%",
-                            background: "#005BD3",
-                            borderRadius: "9999px",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "baseline",
+                            gap: "10px",
+                            fontSize: "14px",
+                            marginBottom: "4px",
                           }}
-                        />
+                        >
+                          <span style={{ color: "#202223" }}>{translateCategory(label)}</span>
+                          <span style={{ display: "inline-flex", alignItems: "baseline", gap: "10px" }}>
+                            <CbInqBreakdown split={{ cb, inq }} size="xs" />
+                            <span style={{ color: "#6D7175" }}>{value}%</span>
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            width: "100%",
+                            height: "8px",
+                            background: "#E1E3E5",
+                            borderRadius: "9999px",
+                            overflow: "hidden",
+                            display: "flex",
+                          }}
+                        >
+                          <div style={{ width: `${cbWidth}%`, height: "100%", background: "#E0A800" }} />
+                          <div style={{ width: `${inqWidth}%`, height: "100%", background: "#4C6EF5" }} />
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </BlockStack>
               )}
             </div>

@@ -36,6 +36,42 @@ export interface MetricsOptions {
   preferredCurrency?: string | null;
 }
 
+/** Inquiry-vs-chargeback split of a count/amount. `phase === "inquiry"`
+ *  → inq; anything else (`"chargeback"` or null) → cb. Single source of
+ *  truth for the classifier, matching `inquiryCount`/`chargebackCount`
+ *  below and `lib/disputes/dormantInquiry.ts`. */
+export interface CbInqSplit {
+  cb: number;
+  inq: number;
+}
+
+/** Count rows per phase. */
+function splitByPhase(rows: Record<string, unknown>[]): CbInqSplit {
+  let cb = 0;
+  let inq = 0;
+  for (const d of rows) {
+    if (d.phase === "inquiry") inq += 1;
+    else cb += 1;
+  }
+  return { cb, inq };
+}
+
+/** Sum a numeric field per phase (for money splits — amountAtRisk /
+ *  amountRecovered). Mirrors the headline sum so cb+inq reconciles. */
+function sumByPhase(
+  rows: Record<string, unknown>[],
+  field: string,
+): CbInqSplit {
+  let cb = 0;
+  let inq = 0;
+  for (const d of rows) {
+    const v = Number(d[field]) || 0;
+    if (d.phase === "inquiry") inq += v;
+    else cb += v;
+  }
+  return { cb, inq };
+}
+
 export interface DisputeMetrics {
   // Counts
   activeDisputes: number;
@@ -76,6 +112,18 @@ export interface DisputeMetrics {
   inquiryCount: number;
   chargebackCount: number;
   needsAttentionCount: number;
+
+  // ── Inquiry/chargeback splits (Dashboard v3) ─────────────────────────
+  // Per-metric cb·inq breakdown for the dashboard's "N cb · N inq" lines.
+  // Same classifier as inquiryCount/chargebackCount and same windowing as
+  // the metric they split (activeSplit/atRiskSplit are snapshots over the
+  // dormant-filtered `active`; winSplit/recoveredSplit/outcomeSplit are
+  // windowed by closed_at via `outcomeList`).
+  activeSplit: CbInqSplit;
+  atRiskSplit: CbInqSplit;
+  winSplit: CbInqSplit;
+  recoveredSplit: CbInqSplit;
+  outcomeSplit: Record<string, CbInqSplit>;
 
   // Period-over-period (null when no comparison available)
   activeDisputesChange: number | null;
@@ -311,10 +359,14 @@ export async function computeDisputeMetrics(
   // Outcome breakdown is a "decided in period" metric → windowed by
   // closed_at (outcomeList), matching Win Rate.
   const outcomeBreakdown: Record<string, number> = {};
+  const outcomeSplit: Record<string, CbInqSplit> = {};
   for (const d of outcomeList) {
     if (d.final_outcome) {
       const fo = String(d.final_outcome);
       outcomeBreakdown[fo] = (outcomeBreakdown[fo] ?? 0) + 1;
+      (outcomeSplit[fo] ??= { cb: 0, inq: 0 })[
+        d.phase === "inquiry" ? "inq" : "cb"
+      ] += 1;
     }
   }
 
@@ -322,6 +374,17 @@ export async function computeDisputeMetrics(
   const inquiryCount = active.filter((d) => d.phase === "inquiry").length;
   const chargebackCount = active.filter((d) => d.phase !== "inquiry").length;
   const needsAttentionCount = list.filter((d) => d.needs_attention === true).length;
+
+  // ── Inquiry/chargeback splits (Dashboard v3) ──────────────────────────
+  // Each split reuses the exact row set the corresponding headline metric
+  // sums, so `cb + inq` always reconciles with the headline number.
+  const activeSplit = splitByPhase(active);
+  const atRiskSplit = sumByPhase(active.filter(inPrimaryCurrency), "amount");
+  const winSplit = splitByPhase(won);
+  const recoveredSplit = sumByPhase(
+    outcomeList.filter(inPrimaryCurrency),
+    "outcome_amount_recovered",
+  );
 
   // ── Period-over-period ────────────────────────────────────────────────
   // Only OUTCOME metrics have a meaningful prior-window delta, and the
@@ -415,6 +478,11 @@ export async function computeDisputeMetrics(
     inquiryCount,
     chargebackCount,
     needsAttentionCount,
+    activeSplit,
+    atRiskSplit,
+    winSplit,
+    recoveredSplit,
+    outcomeSplit,
     activeDisputesChange: pctChange(activeDisputes, prevActiveCount),
     winRateChange: prevWinRate !== null ? winRate - prevWinRate : null,
     amountAtRiskChange: pctChange(amountAtRisk, prevAmountAtRisk),
