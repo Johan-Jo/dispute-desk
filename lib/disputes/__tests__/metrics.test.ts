@@ -41,6 +41,11 @@ interface ScenarioRows {
   previous?: DisputeRow[];
   /** Notes count (admin-only path). */
   notesCount?: number;
+  /** Result of the dedicated closed-in-period count query (windowed by
+   *  closed_at, `head: true`). When omitted, defaults to the number of
+   *  `current` rows with a non-null closed_at — the legacy behaviour, so
+   *  existing scenarios that don't set it keep passing. */
+  closedInPeriodCount?: number;
 }
 
 /** Wires a per-table Supabase mock that returns a sequence of dispute
@@ -87,24 +92,50 @@ function mockSupabase(rows: ScenarioRows): void {
   // last call. Easier approach: chained methods all return `this`,
   // and `this` IS thenable (resolves to the data). Implement as a
   // small Proxy.
-  const makeThenable = (data: DisputeRow[]) => {
+  // A thenable that resolves either with { data } (row queries) or with
+  // { count } (the head:true closed-in-period count query). `select`
+  // inspects its options arg: a `{ head: true }` select flips this into
+  // count mode. All chain methods (including `.not`, used only by the
+  // count query) return `this`.
+  const makeThenable = (data: DisputeRow[], count: number) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const obj: any = {};
-    obj.select = () => obj;
+    let headMode = false;
+    obj.select = (_cols?: unknown, opts?: { head?: boolean }) => {
+      if (opts?.head) headMode = true;
+      return obj;
+    };
     obj.eq = () => obj;
     obj.gte = () => obj;
     obj.lte = () => obj;
     obj.lt = () => obj;
+    obj.not = () => obj;
     obj.then = (resolve: (v: unknown) => unknown) =>
-      Promise.resolve(resolve({ data, error: null }));
+      Promise.resolve(
+        resolve(headMode ? { count, error: null } : { data, error: null }),
+      );
     return obj;
   };
 
   const fromImpl = (table: string) => {
     if (table === "disputes") {
       const idx = disputeCallIdx++;
+      // Call order on the disputes table:
+      //   idx 0            → current period rows
+      //   idx 1 (if prev)  → previous period rows (only when periodFrom set)
+      //   next             → closed-in-period count query (head: true)
+      // The closed-count query is the only head:true select, so it
+      // resolves via `count`; the others via `data`. We pass both and let
+      // makeThenable pick based on the select options.
+      // idx 0 → current rows; idx 1 → previous rows (only consumed when
+      // periodFrom is set). The closed-count query is whichever call uses
+      // a head:true select — makeThenable resolves it via `count` and
+      // ignores whatever `data` we hand it here, so no index branch needed.
       const data = idx === 0 ? rows.current : (rows.previous ?? []);
-      return makeThenable(data);
+      const closedCount =
+        rows.closedInPeriodCount ??
+        rows.current.filter((d) => d.closed_at != null).length;
+      return makeThenable(data, closedCount);
     }
     if (table === "dispute_notes") {
       return {
@@ -207,6 +238,35 @@ describe("computeDisputeMetrics — counts and rates", () => {
       ],
     });
     const m = await computeDisputeMetrics({ shopId: "s1" });
+    expect(m.totalClosed).toBe(2);
+  });
+
+  it("windows totalClosed by closed_at, NOT the created_at-scoped row set (bulk-import regression)", async () => {
+    // Regression for the cay-collective dashboard bug: an established
+    // shop's history was bulk-imported on a single day, so every
+    // imported dispute shares one created_at. The old code derived
+    // totalClosed from the created_at-windowed `current` rows, which
+    // counted all 61 historical closures as "closed this period" until
+    // the import aged out — then cliffed to 0. The fix runs a dedicated
+    // closed_at-windowed count query (mocked here via closedInPeriodCount)
+    // whose result must win over the created_at-scoped row set.
+    mockSupabase({
+      // The created_at-windowed row set the OTHER metrics use — here it
+      // happens to contain 61 closed rows (all imported same day).
+      current: Array.from({ length: 61 }, (_, i) => ({
+        id: String(i),
+        closed_at: "2026-06-01T00:00:00Z",
+        final_outcome: "won",
+      })),
+      // The dedicated closed_at-windowed count: only 2 actually closed in
+      // the selected window.
+      closedInPeriodCount: 2,
+    });
+    const m = await computeDisputeMetrics({
+      shopId: "s1",
+      periodFrom: "2026-06-05T00:00:00Z",
+    });
+    // Must be the closed_at-windowed 2, not the 61-row created_at set.
     expect(m.totalClosed).toBe(2);
   });
 
