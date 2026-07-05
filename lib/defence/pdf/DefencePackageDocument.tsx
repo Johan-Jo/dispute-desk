@@ -26,6 +26,7 @@ import { styles } from "./styles";
 import { buildEvidenceBasisRows } from "./evidenceBasisRows";
 import {
   buildChronologyEvents,
+  formatChronologyTimestamp,
   type ChronologyEvent,
 } from "../chronology";
 import { buildCaseDetailsRows } from "../render/caseDetails";
@@ -235,7 +236,7 @@ function ChronologyBullets({ events }: { events: ChronologyEvent[] }) {
         <View key={`${e.at}-${i}`} style={styles.bulletRow} wrap={false}>
           <Text style={styles.bulletDot}>•</Text>
           <Text style={styles.bulletText}>
-            <Text style={styles.bulletTimestamp}>{e.at}</Text>
+            <Text style={styles.bulletTimestamp}>{formatChronologyTimestamp(e.at)}</Text>
             {"   "}
             {e.text}
           </Text>

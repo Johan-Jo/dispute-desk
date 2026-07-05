@@ -39,6 +39,7 @@ import type {
 import { isSectionDeniedForModule } from "@/lib/defence/sectionVisibility";
 import {
   buildChronologyEvents,
+  formatChronologyTimestamp,
   type ChronologyEvent,
 } from "@/lib/defence/chronology";
 import {
@@ -307,7 +308,7 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
                     {chrono.map((e, i) => (
                       <InlineStack key={`${e.at}-${i}`} gap="200" wrap={false}>
                         <Text as="span" variant="bodySm" fontWeight="semibold">
-                          {e.at}
+                          {formatChronologyTimestamp(e.at)}
                         </Text>
                         <Text as="span" variant="bodySm">{e.text}</Text>
                       </InlineStack>

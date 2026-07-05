@@ -1,8 +1,35 @@
 import { describe, it, expect } from "vitest";
 import {
   buildChronologyEvents,
+  formatChronologyTimestamp,
   normalizeChronologyText,
 } from "../chronology";
+
+describe("formatChronologyTimestamp", () => {
+  it("renders a raw ISO instant as a clean UTC date-time", () => {
+    expect(formatChronologyTimestamp("2026-06-06T07:08:42Z")).toBe(
+      "Jun 6, 2026, 07:08 UTC",
+    );
+  });
+
+  it("pads hours/minutes and keeps UTC regardless of offset in the input", () => {
+    // +02:00 local → 00:19 UTC
+    expect(formatChronologyTimestamp("2026-06-11T02:19:57+02:00")).toBe(
+      "Jun 11, 2026, 00:19 UTC",
+    );
+  });
+
+  it("returns the input unchanged when it is not a parseable date", () => {
+    expect(formatChronologyTimestamp("not-a-date")).toBe("not-a-date");
+    expect(formatChronologyTimestamp("")).toBe("");
+  });
+
+  it("never emits 'Invalid Date'", () => {
+    for (const v of ["", "garbage", "2026-13-99T99:99:99Z"]) {
+      expect(formatChronologyTimestamp(v)).not.toMatch(/Invalid Date/);
+    }
+  });
+});
 
 describe("normalizeChronologyText", () => {
   it("strips the redundant 'kr' prefix when the ISO code is also present", () => {
