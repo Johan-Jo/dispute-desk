@@ -64,6 +64,14 @@ Klarna adjudicates on its **own** categories (not Visa 10.x/13.x). Verified agai
 
 **Shopify-specific nuance:** Klarna offered *via Shopify Payments*, disputed **after 2025-09-26**, flows through the **standard Shopify Payments dispute surface** (appears as a normal `PaymentDispute` / in our pipeline) — "handled the same way as a card transaction dispute." But it still carries **no genuine card network reason code** (our data confirms `not_card_network`). A legacy AT/DE/SE email-based path (7-day window) exists for pre-2025-09-26 disputes.
 
+### Deadlines — OPEN, UNVERIFIED RISK (do not assume it's handled)
+
+The Klarna response windows above (96h fraud / 7d unauthorized / 14d other) are documented for merchants disputing through **Klarna's own portal / API**. DisputeDesk does **not** use them. We read a single `Dispute.evidenceDueBy` from Shopify **verbatim** into `disputes.due_at` (`applyDisputeSnapshot.ts`), the deadline-submit cron (`app/api/cron/defence-package-deadline-submit`) auto-submits on that date at 08:00 UTC, and the embedded UI shows it. **There is no payment-method- or reason-aware deadline logic anywhere.**
+
+For cay-collective's Klarna disputes Shopify assigns a **generic ~18–20 day** `evidenceDueBy` (observed: min ~434h) — far longer than Klarna's documented 96h/7d/14d.
+
+**We have NO evidence this is safe.** DisputeDesk has never actually submitted a single Klarna dispute (verified 2026-07: cay-collective — the only Klarna-heavy merchant — was integrated ~2 days before this writeup; all 54 won / 7 lost disputes are **pre-integration history** with `saved_to_shopify_at IS NULL`, i.e. resolved by the merchant outside DisputeDesk, so they say nothing about our submit path). The open question: does Shopify's generic `evidenceDueBy` already respect Klarna's tighter internal cutoff, or could auto-submitting on the 18-day Shopify date **miss Klarna's real 96h/7d deadline**? **Unknown until a real Klarna dispute flows through our submit pipeline.** Klarna's *fraud* path (96h — the tightest) is the highest-risk case and we have seen **zero** Klarna fraud disputes. Do NOT mark this "handled." When the first Klarna dispute submits through DisputeDesk, verify the Shopify deadline against Klarna's window before trusting auto-submit; consider a conservative internal warning (or earlier auto-submit) for Klarna disputes until confirmed.
+
 **Sources:** [Klarna evidence gathering](https://docs.klarna.com/payments/after-payments/disputes/evidence-gathering/merchant-evidence-gathering/) · [Klarna dispute management](https://docs.klarna.com/acquirer/klarna/after-payments/disputes/disputes-management-v4/dispute-management-overview/) · [Adyen Klarna chargebacks](https://docs.adyen.com/risk-management/chargeback-guidelines/klarna-chargebacks) · [Shopify Help — Klarna](https://help.shopify.com/en/manual/payments/shopify-payments/local-payment-methods/klarna)
 
 ---
