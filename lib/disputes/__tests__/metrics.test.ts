@@ -130,6 +130,26 @@ describe("computeDisputeMetrics — counts and rates", () => {
     expect(m.amountAtRisk).toBe(350);
   });
 
+  it("excludes dormant inquiries (old, deadline-less) from activeDisputes and amountAtRisk", async () => {
+    // cay-collective regression: 2 real active + 3 dormant ghost inquiries
+    // (phase=inquiry, due_at=null, initiated 2025) were counted as 5 active.
+    // The dormant ones must drop out of both the count and amountAtRisk.
+    mockSupabase({
+      current: [
+        // 2 genuinely active — recent inquiries with real deadlines
+        { id: "a", normalized_status: "needs_review", phase: "inquiry", amount: 100, due_at: "2026-07-22T00:00:00Z", initiated_at: "2026-07-04T00:00:00Z" },
+        { id: "b", normalized_status: "needs_review", phase: "inquiry", amount: 50, due_at: "2026-07-08T00:00:00Z", initiated_at: "2026-06-20T00:00:00Z" },
+        // 3 dormant ghosts — old inquiries, null due_at
+        { id: "c", normalized_status: "submitted_to_bank", phase: "inquiry", amount: 868, due_at: null, initiated_at: "2025-05-28T00:00:00Z" },
+        { id: "d", normalized_status: "submitted_to_bank", phase: "inquiry", amount: 1610, due_at: null, initiated_at: "2025-08-13T00:00:00Z" },
+        { id: "e", normalized_status: "submitted_to_bank", phase: "inquiry", amount: 279.9, due_at: null, initiated_at: "2025-09-30T00:00:00Z" },
+      ],
+    });
+    const m = await computeDisputeMetrics({ shopId: "s1" });
+    expect(m.activeDisputes).toBe(2); // not 5
+    expect(m.amountAtRisk).toBe(150); // 100 + 50, ghosts excluded
+  });
+
   it("computes winRate from final_outcome won/lost and ignores rows without an outcome", async () => {
     // Outcome metrics window by closed_at, so decided rows carry a
     // closed_at. All-time query (no periodFrom) → every closed row counts.

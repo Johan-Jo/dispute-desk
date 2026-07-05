@@ -14,6 +14,7 @@ import {
   defaultWindowEndDate,
   windowStartDate,
 } from "./chargebackRate";
+import { isDormantInquiry } from "./dormantInquiry";
 
 export interface MetricsOptions {
   /** Shop ID for shop-scoped metrics. Omit for cross-shop (admin). */
@@ -148,7 +149,7 @@ export async function computeDisputeMetrics(
   //     in that window.
   let q = sb
     .from("disputes")
-    .select("id, status, amount, currency_code, phase, needs_review, normalized_status, final_outcome, submission_state, submitted_at, closed_at, initiated_at, outcome_amount_recovered, outcome_amount_lost, has_admin_override, sync_health, needs_attention, last_event_at");
+    .select("id, status, amount, currency_code, phase, needs_review, normalized_status, final_outcome, submission_state, submitted_at, closed_at, initiated_at, due_at, outcome_amount_recovered, outcome_amount_lost, has_admin_override, sync_health, needs_attention, last_event_at");
 
   if (shopId) q = q.eq("shop_id", shopId);
 
@@ -230,8 +231,18 @@ export async function computeDisputeMetrics(
     String(d.currency_code ?? "USD") === currencyCode;
 
   // ── Active disputes ───────────────────────────────────────────────────
-  const active = list.filter((d) =>
-    ACTIVE_NORMALIZED.includes(String(d.normalized_status ?? "new")),
+  // Excludes dormant inquiries — old Shopify inquiries stuck in
+  // UNDER_REVIEW with no real deadline that Shopify never closes. They'd
+  // otherwise inflate Active Disputes / Amount at Risk indefinitely. See
+  // lib/disputes/dormantInquiry.ts.
+  const active = list.filter(
+    (d) =>
+      ACTIVE_NORMALIZED.includes(String(d.normalized_status ?? "new")) &&
+      !isDormantInquiry({
+        phase: d.phase as string | null,
+        due_at: d.due_at as string | null,
+        initiated_at: d.initiated_at as string | null,
+      }),
   );
   const activeDisputes = active.length;
   // amountAtRisk sums only active disputes in the primary currency.

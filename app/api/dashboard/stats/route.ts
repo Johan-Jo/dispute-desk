@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { computeDisputeMetrics } from "@/lib/disputes/metrics";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { isHiddenActivityEvent } from "@/lib/disputeEvents/spuriousDueDate";
+import { isDormantInquiry } from "@/lib/disputes/dormantInquiry";
 
 export const runtime = "nodejs";
 
@@ -61,9 +62,13 @@ export async function GET(req: NextRequest) {
   // pulls the union of needed columns and both aggregates run client-
   // side. Closed counts must reflect *current* workload, not just the
   // selected period, so this stays unfiltered by created_at.
+  // `phase`, `due_at`, `initiated_at` are pulled so dormant inquiries
+  // (dead Shopify inquiries with no real deadline — see
+  // lib/disputes/dormantInquiry.ts) can be dropped from the operational
+  // counts, matching the Active Disputes tile in computeDisputeMetrics.
   const breakdownP = sb
     .from("disputes")
-    .select("id, normalized_status, closed_at, submission_state")
+    .select("id, normalized_status, closed_at, submission_state, phase, due_at, initiated_at")
     .eq("shop_id", shopId);
 
   // ── Recent activity (last 10 events) ─────────────────────────────────
@@ -107,6 +112,19 @@ export async function GET(req: NextRequest) {
     const row = r as Record<string, unknown>;
     if (row.closed_at) {
       operationalClosedCount += 1;
+      continue;
+    }
+    // Dormant inquiries (dead, deadline-less Shopify inquiries) are neither
+    // closed nor real open workload — drop them from all operational counts
+    // so they don't inflate Waiting on Issuer. Consistent with the Active
+    // Disputes tile.
+    if (
+      isDormantInquiry({
+        phase: row.phase as string | null,
+        due_at: row.due_at as string | null,
+        initiated_at: row.initiated_at as string | null,
+      })
+    ) {
       continue;
     }
     const ns = String(row.normalized_status ?? "new");
