@@ -30,14 +30,57 @@ interface DisputeRow {
   amount: number | null;
   currency_code: string | null;
   status: string | null;
+  phase: string | null;
 }
 
 const DEMO_DISPUTES = [
-  { id: "DP-2401", customer: "John Smith", date: "2024-02-20", amount: "$145.00", status: "needs_evidence" },
-  { id: "DP-2402", customer: "Sarah Johnson", date: "2024-02-21", amount: "$89.50", status: "under_review" },
-  { id: "DP-2403", customer: "Mike Davis", date: "2024-02-22", amount: "$234.00", status: "needs_evidence" },
-  { id: "DP-2404", customer: "Emma Wilson", date: "2024-02-23", amount: "$167.25", status: "won" },
+  { id: "DP-2401", customer: "John Smith", date: "2024-02-20", amount: "$145.00", status: "needs_evidence", phase: "inquiry" },
+  { id: "DP-2402", customer: "Sarah Johnson", date: "2024-02-21", amount: "$89.50", status: "under_review", phase: "chargeback" },
+  { id: "DP-2403", customer: "Mike Davis", date: "2024-02-22", amount: "$234.00", status: "needs_evidence", phase: "inquiry" },
+  { id: "DP-2404", customer: "Emma Wilson", date: "2024-02-23", amount: "$167.25", status: "won", phase: "chargeback" },
 ];
+
+/** Compact "N cb · N inq" line (Dashboard v3), Tailwind version for the
+ *  portal. cb = chargeback (amber), inq = inquiry (blue). */
+function CbInqLine({
+  cb,
+  inq,
+  t,
+  format,
+}: {
+  cb: number;
+  inq: number;
+  t: (k: string) => string;
+  /** When set, cb/inq are amounts formatted through this (e.g. currency). */
+  format?: (v: number) => string;
+}) {
+  if (cb === 0 && inq === 0) return null;
+  const val = (v: number) => (format ? format(v) : String(v));
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[11.5px] text-[#667085] tabular-nums whitespace-nowrap">
+      <span className="w-1.5 h-1.5 rounded-full bg-[#E0A800]" />
+      <span><b className="font-semibold text-[#4B5058]">{val(cb)}</b> {t("cbShort")}</span>
+      <span className="text-[#C9CDD2]">·</span>
+      <span className="w-1.5 h-1.5 rounded-full bg-[#4C6EF5]" />
+      <span><b className="font-semibold text-[#4B5058]">{val(inq)}</b> {t("inqShort")}</span>
+    </span>
+  );
+}
+
+/** Inquiry / Chargeback pill for the portal Recent Disputes table. */
+function PhasePill({ phase, t }: { phase: string | null; t: (k: string) => string }) {
+  const isInq = phase === "inquiry";
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 h-[22px] px-2 rounded-full text-xs font-semibold ${
+        isInq ? "bg-[#E7EDFD] text-[#3B5BDB]" : "bg-[#FBF0D3] text-[#9A7500]"
+      }`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full ${isInq ? "bg-[#4C6EF5]" : "bg-[#E0A800]"}`} />
+      {isInq ? t("inquiryBadge") : t("chargebackBadge")}
+    </span>
+  );
+}
 
 const ACTIVE_STATUSES = ["needs_response", "under_review", "building", "blocked", "ready", "saved_to_shopify"];
 
@@ -70,12 +113,15 @@ export default function DashboardPage() {
   const tc = useTranslations("common");
   const tt = useTranslations("table");
   const ts = useTranslations("status");
+  const td = useTranslations("disputes");
   const locale = useLocale();
   const isDemo = useDemoMode();
   const shopId = useActiveShopId() ?? "";
 
   const [recentDisputes, setRecentDisputes] = useState<DisputeRow[]>([]);
   const [activeCount, setActiveCount] = useState(0);
+  const [activeSplit, setActiveSplit] = useState({ cb: 0, inq: 0 });
+  const [atRiskSplit, setAtRiskSplit] = useState({ cb: 0, inq: 0 });
   const [amountAtRisk, setAmountAtRisk] = useState(0);
   const [winRate, setWinRate] = useState<number | null>(null);
   const [packCount, setPackCount] = useState(0);
@@ -102,14 +148,29 @@ export default function DashboardPage() {
       const lost = disputes.filter((d) => d.status === "lost").length;
       const resolved = won + lost;
 
+      // cb·inq split (Dashboard v3): phase === "inquiry" → inq, else cb.
+      const splitByPhase = (rows: DisputeRow[]) => ({
+        inq: rows.filter((d) => d.phase === "inquiry").length,
+        cb: rows.filter((d) => d.phase !== "inquiry").length,
+      });
+      const atRiskSum = (rows: DisputeRow[], inq: boolean) =>
+        rows
+          .filter((d) => (d.phase === "inquiry") === inq)
+          .reduce((s, d) => s + (d.amount ?? 0), 0);
+
       setRecentDisputes(disputes.slice(0, 5));
       setActiveCount(active.length);
+      setActiveSplit(splitByPhase(active));
+      // At Risk split carries currency amounts, not counts.
+      setAtRiskSplit({ cb: atRiskSum(active, false), inq: atRiskSum(active, true) });
       setAmountAtRisk(totalActiveAmount);
       setWinRate(resolved > 0 ? Math.round((won / resolved) * 100) : null);
       setPackCount(Array.isArray(packsData.packs) ? packsData.packs.length : 0);
     } catch {
       setRecentDisputes([]);
       setActiveCount(0);
+      setActiveSplit({ cb: 0, inq: 0 });
+      setAtRiskSplit({ cb: 0, inq: 0 });
       setAmountAtRisk(0);
       setWinRate(null);
       setPackCount(0);
@@ -157,6 +218,13 @@ export default function DashboardPage() {
           change={isDemo ? -12 : undefined}
           changeLabel={isDemo ? t("vsLastMonth") : undefined}
           icon={<AlertTriangle className="w-6 h-6" />}
+          footer={
+            isDemo ? (
+              <CbInqLine cb={5} inq={18} t={t} />
+            ) : loading ? undefined : (
+              <CbInqLine cb={activeSplit.cb} inq={activeSplit.inq} t={t} />
+            )
+          }
         />
         <KPICard
           label={t("winRate")}
@@ -184,6 +252,17 @@ export default function DashboardPage() {
           change={isDemo ? -15 : undefined}
           changeLabel={isDemo ? t("vsLastMonth") : undefined}
           icon={<DollarSign className="w-6 h-6" />}
+          footer={(() => {
+            const fmt = (v: number) =>
+              new Intl.NumberFormat(toBcp47Loose(locale), {
+                style: "currency",
+                currency: "USD",
+                maximumFractionDigits: 0,
+              }).format(v);
+            if (isDemo) return <CbInqLine cb={2137} inq={1284} t={t} format={fmt} />;
+            if (loading) return undefined;
+            return <CbInqLine cb={atRiskSplit.cb} inq={atRiskSplit.inq} t={t} format={fmt} />;
+          })()}
         />
       </div>
 
@@ -209,6 +288,7 @@ export default function DashboardPage() {
                 <tr>
                   <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("id")}</th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("customer")}</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("type")}</th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("date")}</th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("amount")}</th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-[#667085] uppercase tracking-wider">{tt("status")}</th>
@@ -224,6 +304,7 @@ export default function DashboardPage() {
                         <tr key={d.id} className="hover:bg-[#F7F8FA] transition-colors">
                           <td className="px-6 py-4 font-medium text-[#0B1220]">{d.id}</td>
                           <td className="px-6 py-4 text-[#0B1220]">{d.customer}</td>
+                          <td className="px-6 py-4"><PhasePill phase={d.phase} t={td} /></td>
                           <td className="px-6 py-4 text-[#667085]">{new Date(d.date).toLocaleDateString(locale)}</td>
                           <td className="px-6 py-4 font-medium text-[#0B1220]">{d.amount}</td>
                           <td className="px-6 py-4">
@@ -250,6 +331,7 @@ export default function DashboardPage() {
                         <tr key={d.id} className="hover:bg-[#F7F8FA] transition-colors">
                           <td className="px-6 py-4 font-medium text-[#0B1220]">{shortId}</td>
                           <td className="px-6 py-4 text-[#0B1220]">{customer}</td>
+                          <td className="px-6 py-4"><PhasePill phase={d.phase} t={td} /></td>
                           <td className="px-6 py-4 text-[#667085]">{dateStr}</td>
                           <td className="px-6 py-4 font-medium text-[#0B1220]">{amountStr}</td>
                           <td className="px-6 py-4">

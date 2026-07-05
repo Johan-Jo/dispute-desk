@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
   // were dropped from the select — the route never reads them.
   let legacyQuery = sb
     .from("disputes")
-    .select("status, created_at, due_at, reason")
+    .select("status, created_at, due_at, reason, phase")
     .eq("shop_id", shopId);
   if (periodFrom) legacyQuery = legacyQuery.gte("created_at", periodFrom);
   const legacyP = legacyQuery;
@@ -105,6 +105,10 @@ export async function GET(req: NextRequest) {
 
   const allDisputeRows = breakdownRes.data ?? [];
   const operationalBreakdown: Record<string, number> = {};
+  // Per-normalized-status cb·inq split (Dashboard v3). Same dormant-inquiry
+  // exclusion as the counts, so the split reconciles with each bucket total.
+  const operationalSplit: Record<string, { cb: number; inq: number }> = {};
+  const operationalClosedSplit = { cb: 0, inq: 0 };
   const submissionBreakdown: Record<string, number> = {};
   let operationalClosedCount = 0;
   const actionNeededIds: string[] = [];
@@ -112,6 +116,7 @@ export async function GET(req: NextRequest) {
     const row = r as Record<string, unknown>;
     if (row.closed_at) {
       operationalClosedCount += 1;
+      operationalClosedSplit[row.phase === "inquiry" ? "inq" : "cb"] += 1;
       continue;
     }
     // Dormant inquiries (dead, deadline-less Shopify inquiries) are neither
@@ -129,6 +134,9 @@ export async function GET(req: NextRequest) {
     }
     const ns = String(row.normalized_status ?? "new");
     operationalBreakdown[ns] = (operationalBreakdown[ns] ?? 0) + 1;
+    (operationalSplit[ns] ??= { cb: 0, inq: 0 })[
+      row.phase === "inquiry" ? "inq" : "cb"
+    ] += 1;
     if (ns === "new" || ns === "action_needed" || ns === "needs_review") {
       actionNeededIds.push(String(row.id));
     }
@@ -203,14 +211,22 @@ export async function GET(req: NextRequest) {
   const avgResponseTime = avgResponseDays >= 1 ? `${avgResponseDays.toFixed(1)}d` : "<1d";
 
   const reasonCounts: Record<string, number> = {};
+  // Per-reason cb·inq split (Dashboard v3). `phase` was added to the legacy
+  // select above so each category row can show its inquiry/chargeback mix.
+  const reasonSplit: Record<string, { cb: number; inq: number }> = {};
   for (const d of legacyList) {
     const r = d.reason ?? "UNKNOWN";
     reasonCounts[r] = (reasonCounts[r] ?? 0) + 1;
+    (reasonSplit[r] ??= { cb: 0, inq: 0 })[
+      (d as { phase?: string | null }).phase === "inquiry" ? "inq" : "cb"
+    ] += 1;
   }
   const disputeCategories = Object.entries(reasonCounts)
     .map(([label, count]) => ({
       label,
       value: totalDisputes > 0 ? Math.round((count / totalDisputes) * 100) : 0,
+      cb: reasonSplit[label]?.cb ?? 0,
+      inq: reasonSplit[label]?.inq ?? 0,
     }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
@@ -238,6 +254,8 @@ export async function GET(req: NextRequest) {
 
       // ── New dashboard fields ──
       operationalBreakdown,
+      operationalSplit,
+      operationalClosedSplit,
       operationalClosedCount,
       actionNeededDisputeId,
       submissionBreakdown,

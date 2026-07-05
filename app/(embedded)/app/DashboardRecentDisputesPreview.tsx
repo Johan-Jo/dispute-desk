@@ -258,6 +258,24 @@ export function DashboardRecentDisputesPreview() {
             </tbody>
           </table>
         </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "16px",
+            fontSize: "11.5px",
+            color: "#6D7175",
+          }}
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#4C6EF5" }} />
+            {t("dashboard.legendInquiry")}
+          </span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#E0A800" }} />
+            {t("dashboard.legendChargeback")}
+          </span>
+        </div>
       </BlockStack>
     </Card>
   );

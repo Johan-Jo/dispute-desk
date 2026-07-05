@@ -1,5 +1,8 @@
 import { useCallback, useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import type { CbInqSplit } from "@/lib/disputes/metrics";
+
+export type { CbInqSplit };
 
 export type PeriodKey = "24h" | "7d" | "30d" | "all";
 
@@ -40,6 +43,18 @@ export interface DashboardStats {
   inquiryCount: number;
   chargebackCount: number;
   needsAttentionCount: number;
+  // ── Inquiry/chargeback splits (Dashboard v3) ─────────────────────
+  // Per-metric cb·inq breakdown so each dashboard card can show a modest
+  // "N cb · N inq" line. `*Split` come from computeDisputeMetrics;
+  // operationalSplit / operationalClosedSplit come from the stats route's
+  // operational scan. Every split reconciles with its headline number.
+  activeSplit: CbInqSplit;
+  atRiskSplit: CbInqSplit;
+  winSplit: CbInqSplit;
+  recoveredSplit: CbInqSplit;
+  outcomeSplit: Record<string, CbInqSplit>;
+  operationalSplit: Record<string, CbInqSplit>;
+  operationalClosedSplit: CbInqSplit;
   statusBreakdown: Record<string, number>;
   outcomeBreakdown: Record<string, number>;
   operationalBreakdown: Record<string, number>;
@@ -47,7 +62,7 @@ export interface DashboardStats {
   actionNeededDisputeId: string | null;
   submissionBreakdown: Record<string, number>;
   winRateTrend: number[];
-  disputeCategories: { label: string; value: number }[];
+  disputeCategories: { label: string; value: number; cb: number; inq: number }[];
   recentActivity: ActivityItem[];
 
   // ── Chargeback rate (PRD §8) ─────────────────────────────────────
@@ -84,6 +99,13 @@ export const DEFAULT_STATS: DashboardStats = {
   inquiryCount: 0,
   chargebackCount: 0,
   needsAttentionCount: 0,
+  activeSplit: { cb: 0, inq: 0 },
+  atRiskSplit: { cb: 0, inq: 0 },
+  winSplit: { cb: 0, inq: 0 },
+  recoveredSplit: { cb: 0, inq: 0 },
+  outcomeSplit: {},
+  operationalSplit: {},
+  operationalClosedSplit: { cb: 0, inq: 0 },
   statusBreakdown: {},
   outcomeBreakdown: {},
   operationalBreakdown: {},

@@ -588,3 +588,60 @@ describe("computeDisputeMetrics — chargeback rate integration", () => {
     expect(mockChargebackRate).not.toHaveBeenCalled();
   });
 });
+
+describe("computeDisputeMetrics — inquiry/chargeback splits (Dashboard v3)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockChargebackRate.mockResolvedValue(NULL_CHARGEBACK as never);
+  });
+
+  it("partitions activeSplit + atRiskSplit by phase; cb+inq reconcile with headline", async () => {
+    mockSupabase({
+      current: [
+        { id: "1", normalized_status: "new", phase: "inquiry", amount: 100 },
+        { id: "2", normalized_status: "needs_review", phase: "inquiry", amount: 50 },
+        { id: "3", normalized_status: "waiting_on_issuer", phase: "chargeback", amount: 200 },
+        // null phase counts as chargeback (safer default, matches inquiryCount rule)
+        { id: "4", normalized_status: "action_needed", phase: null, amount: 25 },
+        { id: "5", normalized_status: "won", phase: "chargeback", amount: 999 }, // closed → excluded
+      ],
+    });
+    const m = await computeDisputeMetrics({ shopId: "s1" });
+    expect(m.activeSplit).toEqual({ inq: 2, cb: 2 });
+    expect(m.activeSplit.cb + m.activeSplit.inq).toBe(m.activeDisputes);
+    // atRiskSplit sums amounts per phase (inq: 100+50, cb: 200+25)
+    expect(m.atRiskSplit).toEqual({ inq: 150, cb: 225 });
+    expect(m.atRiskSplit.cb + m.atRiskSplit.inq).toBe(m.amountAtRisk);
+  });
+
+  it("excludes dormant inquiries from activeSplit", async () => {
+    mockSupabase({
+      current: [
+        { id: "a", normalized_status: "needs_review", phase: "inquiry", amount: 100, due_at: "2026-07-22T00:00:00Z", initiated_at: "2026-07-04T00:00:00Z" },
+        { id: "c", normalized_status: "submitted_to_bank", phase: "inquiry", amount: 868, due_at: null, initiated_at: "2025-05-28T00:00:00Z" }, // dormant
+      ],
+    });
+    const m = await computeDisputeMetrics({ shopId: "s1" });
+    expect(m.activeSplit).toEqual({ inq: 1, cb: 0 }); // dormant ghost dropped
+    expect(m.activeSplit.inq).toBe(m.activeDisputes);
+  });
+
+  it("splits outcomeSplit + recoveredSplit by phase (windowed by closed_at)", async () => {
+    const C = "2026-04-10T00:00:00Z";
+    mockSupabase({
+      current: [
+        { id: "1", final_outcome: "won", phase: "inquiry", outcome_amount_recovered: 300, closed_at: C },
+        { id: "2", final_outcome: "won", phase: "chargeback", outcome_amount_recovered: 200, closed_at: C },
+        { id: "3", final_outcome: "lost", phase: "chargeback", outcome_amount_lost: 100, closed_at: C },
+      ],
+    });
+    const m = await computeDisputeMetrics({ shopId: "s1" });
+    expect(m.outcomeSplit.won).toEqual({ inq: 1, cb: 1 });
+    expect(m.outcomeSplit.lost).toEqual({ inq: 0, cb: 1 });
+    // outcomeSplit reconciles with outcomeBreakdown
+    expect(m.outcomeSplit.won.cb + m.outcomeSplit.won.inq).toBe(m.outcomeBreakdown.won);
+    // recoveredSplit sums recovered amounts per phase (recovered > 0 only)
+    expect(m.recoveredSplit).toEqual({ inq: 300, cb: 200 });
+    expect(m.recoveredSplit.cb + m.recoveredSplit.inq).toBe(m.amountRecovered);
+  });
+});
