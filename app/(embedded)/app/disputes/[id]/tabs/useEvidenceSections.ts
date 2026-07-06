@@ -115,31 +115,6 @@ export interface CaseSummaryViewModel {
   improvementHintText: Localized | null;
 }
 
-/**
- * Concrete delivery facts surfaced on the two fulfillment rows
- * (`shipping_tracking` / `delivery_proof`) so the merchant sees WHAT
- * actually happened — carrier, tracking link, shipped/delivered dates,
- * signature — instead of a generic "Delivery confirmation" label twice.
- * Built from the fulfillment section payload via
- * `buildDeliveryFacts`. Present only on delivery rows; undefined
- * elsewhere.
- */
-export interface DeliveryFacts {
-  carrier: string | null;
-  trackingNumber: string | null;
-  trackingUrl: string | null;
-  /** ISO — carrier ship/label date. */
-  shippedAt: string | null;
-  /** ISO — carrier-confirmed delivery date, or null when unconfirmed. */
-  deliveredAt: string | null;
-  /** ISO — carrier estimate; only shown on the unconfirmed row. */
-  estimatedDeliveryAt: string | null;
-  signedByName: string | null;
-  /** The resolved 4-state proof tier, so the renderer can pick the
-   *  right facts line (e.g. "Not delivered" vs "Delivered {date}"). */
-  proofType: "signature_confirmed" | "delivered_confirmed" | "delivered_unverified" | "label_created";
-}
-
 export interface EvidenceRowViewModel {
   id: string;
   field: string;
@@ -152,12 +127,6 @@ export interface EvidenceRowViewModel {
    * deterministic — see EvidenceSubmissionDestination doc.
    */
   includedAs: EvidenceSubmissionDestination;
-  /**
-   * Delivery facts for the two fulfillment rows. When set, EvidenceRow
-   * renders the proof-specific title + a facts line + tracking link and
-   * does NOT fall back to the generic canonical label.
-   */
-  deliveryFacts?: DeliveryFacts;
   /**
    * File evidence layer (Phase 6). Set when the most recent save run
    * uploaded a focused PDF for this field key into a Shopify `*File`
@@ -426,124 +395,6 @@ const WHY_THIS_MATTERS: Record<string, string> = {
 function whyThisMatters(field: string, fallbackLabel: string): string {
   return WHY_THIS_MATTERS[field] ?? `Strengthens the response on ${fallbackLabel}.`;
 }
-
-/* ── Delivery-row presentation ──
- *
- * The fulfillment collector (`lib/packs/sources/fulfillmentSource.ts`)
- * emits BOTH `shipping_tracking` and `delivery_proof` from a single
- * fulfillment section, and both share the generic
- * `disputes.signalLabel.delivery` → "Delivery confirmation" label. On a
- * shipped-but-not-delivered order that renders as two identical
- * "Delivery confirmation" rows that overclaim — the merchant can't tell
- * "shipped" from "delivered", and on an item-not-received dispute the
- * word "confirmation" is actively misleading when the carrier never
- * confirmed delivery.
- *
- * This block reads the section's `proofType` discriminator (written by
- * the collector; verified in prod payloads) and produces a proof-state-
- * specific label + why-context copy + the concrete carrier/tracking/
- * date facts. `delivery_proof` gets a DIFFERENT label from
- * `shipping_tracking` so the two rows read distinctly.
- */
-
-type DeliveryProof = DeliveryFacts["proofType"];
-
-export function resolveProofType(payload: Record<string, unknown> | null): DeliveryProof {
-  const p = typeof payload?.proofType === "string" ? payload.proofType : null;
-  if (
-    p === "signature_confirmed" ||
-    p === "delivered_confirmed" ||
-    p === "delivered_unverified" ||
-    p === "label_created"
-  ) {
-    return p;
-  }
-  return "label_created";
-}
-
-/** Proof-specific label + why-context keys, per row field. The two
- *  fields diverge: `shipping_tracking` always speaks to dispatch;
- *  `delivery_proof` speaks to receipt (and becomes "not confirmed" when
- *  the carrier never confirmed delivery). */
-export function deliveryLabelKey(field: string, proof: DeliveryProof): string {
-  const NS = "disputes.deliveryProof";
-  if (field === "shipping_tracking") {
-    // The tracking row is about dispatch — a signature/carrier-confirmed
-    // parcel still shipped, so the shipped-label reads correctly here.
-    return `${NS}.shippedUnconfirmed`;
-  }
-  // delivery_proof — about receipt.
-  switch (proof) {
-    case "signature_confirmed":
-      return `${NS}.signature`;
-    case "delivered_confirmed":
-      return `${NS}.carrierConfirmed`;
-    case "delivered_unverified":
-    case "label_created":
-    default:
-      return `${NS}.notConfirmed`;
-  }
-}
-
-export function deliveryWhyKey(field: string, proof: DeliveryProof): string {
-  const NS = "disputes.deliveryProof";
-  if (field === "shipping_tracking") return `${NS}.whyShippedUnconfirmed`;
-  switch (proof) {
-    case "signature_confirmed":
-      return `${NS}.whySignature`;
-    case "delivered_confirmed":
-      return `${NS}.whyCarrierConfirmed`;
-    case "label_created":
-      return `${NS}.whyLabelOnly`;
-    case "delivered_unverified":
-    default:
-      return `${NS}.whyNotConfirmed`;
-  }
-}
-
-/** Pull the first renderable tracking reference + dates from the
- *  fulfillment section payload. Mirrors the shape written by
- *  `fulfillmentSource.extractTrackingData`. */
-export function buildDeliveryFacts(payload: Record<string, unknown> | null): DeliveryFacts {
-  const proofType = resolveProofType(payload);
-  const fulfillments = Array.isArray(payload?.fulfillments)
-    ? (payload!.fulfillments as unknown[])
-    : [];
-  let carrier: string | null = null;
-  let trackingNumber: string | null = null;
-  let trackingUrl: string | null = null;
-  let shippedAt: string | null = null;
-  let estimatedDeliveryAt: string | null = null;
-  for (const f of fulfillments) {
-    if (!isPlainObject(f)) continue;
-    shippedAt ??= readString(f.createdAt);
-    estimatedDeliveryAt ??= readString(f.estimatedDeliveryAt);
-    const tracking = Array.isArray(f.tracking) ? f.tracking : [];
-    for (const t of tracking) {
-      if (!isPlainObject(t)) continue;
-      const num = readString(t.number);
-      const url = readString(t.url);
-      const car = readString(t.carrier);
-      if (num || url || car) {
-        trackingNumber ??= num;
-        trackingUrl ??= url && /^https?:\/\//i.test(url) ? url : null;
-        carrier ??= car;
-      }
-    }
-  }
-  return {
-    carrier,
-    trackingNumber,
-    trackingUrl,
-    shippedAt,
-    deliveredAt: readString(payload?.deliveredAt),
-    estimatedDeliveryAt,
-    signedByName: readString(payload?.signedByName),
-    proofType,
-  };
-}
-
-const DELIVERY_FIELDS = new Set(["shipping_tracking", "delivery_proof"]);
 
 /* ── Internal-only signal classifier ──
  *
@@ -872,38 +723,12 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
   ): EvidenceRowViewModel {
     const checklistItem = checklistByField.get(field);
     const native = nativeAttachmentsByField.get(field);
-
-    // Delivery rows: replace the generic "Delivery confirmation" label
-    // with a proof-state-specific title + why-context, and attach the
-    // concrete carrier/tracking/date facts. Both fulfillment fields
-    // share one section payload (carried on either field's checklist
-    // item), so read whichever is present.
-    let title = label;
-    let why = whyThisMatters(field, label);
-    let deliveryFacts: DeliveryFacts | undefined;
-    if (DELIVERY_FIELDS.has(field)) {
-      const payload =
-        (checklistItem?.payload as Record<string, unknown> | null) ?? null;
-      const facts = buildDeliveryFacts(payload);
-      deliveryFacts = facts;
-      const labelKey = deliveryLabelKey(field, facts.proofType);
-      const whyKey = deliveryWhyKey(field, facts.proofType);
-      try {
-        const resolvedLabel = tRoot(labelKey);
-        if (resolvedLabel !== labelKey) title = resolvedLabel;
-        const resolvedWhy = tRoot(whyKey);
-        if (resolvedWhy !== whyKey) why = resolvedWhy;
-      } catch {
-        /* fall back to generic label/why */
-      }
-    }
-
     return {
       id: `${idPrefix}:${field}`,
       field,
-      title,
+      title: label,
       strength,
-      whyThisMatters: why,
+      whyThisMatters: whyThisMatters(field, label),
       source: inferSource(field),
       includedAs: deriveSubmissionDestination({
         field,
@@ -912,7 +737,6 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
         includedShopifyFields,
       }),
       ...(native ? { nativeAttachment: native } : {}),
-      ...(deliveryFacts ? { deliveryFacts } : {}),
     };
   }
 

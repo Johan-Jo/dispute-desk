@@ -166,6 +166,25 @@ export interface EvidenceLineItem {
    *  audit row exists for this field — routine include/exclude
    *  toggles do not produce an override history entry. */
   overrideHistory?: OverrideHistoryEntry;
+  /** Proof-state-specific display label token, resolved by every render
+   *  surface INSTEAD of the generic canonical `labelKey` when present.
+   *  Currently set only on the collapsed delivery row so a shipped-but-
+   *  unconfirmed order reads "Shipping & tracking" and a confirmed one
+   *  reads "Delivery confirmation (signature/carrier)" — never a bare
+   *  "Delivery confirmation" that the score contradicts. */
+  displayLabelToken?: I18nToken;
+  /** Compact one-line concrete facts for the row (carrier · tracking ·
+   *  shipped/delivered dates). Structural: an ordered list of tokens
+   *  the leaf renderer joins with " · ". Present only on the delivery
+   *  row today. `trackingUrl` (below) turns the tracking segment into a
+   *  link. */
+  factsTokens?: I18nToken[];
+  /** Clickable carrier tracking URL for the facts line, when the
+   *  fulfillment payload carried one. */
+  trackingUrl?: string | null;
+  /** Raw tracking number, so a renderer can show it as the link text
+   *  even when it isn't wrapped in a facts token. */
+  trackingNumber?: string | null;
 }
 
 /** Audit-derived record of the merchant's most recent acknowledged
@@ -955,6 +974,234 @@ function resolveSubmissionMethod(ctx: ResolutionContext): SubmissionMethod {
   return "not_included";
 }
 
+/* ── Delivery-row collapse ───────────────────────────────────────────
+ *
+ * The fulfillment collector emits TWO field keys — `shipping_tracking`
+ * and `delivery_proof` — from one fulfillment, both sharing the generic
+ * `disputes.signalLabel.delivery` → "Delivery confirmation" label and
+ * the same `signalId: "delivery"`. Rendered as-is they produce two
+ * identical rows on every surface (Overview summary, Overview strength
+ * list, Evidence tab, Review & Submit tab).
+ *
+ * This collapses them into ONE line item carrying a proof-state-specific
+ * `displayLabelToken` + `factsTokens` + `trackingUrl`, so every surface
+ * that already prefers `displayLabelToken` shows a single, honest row:
+ *
+ *   signature_confirmed  → "Delivery confirmation (signature)"  [strong]
+ *   delivered_confirmed  → "Delivery confirmation (carrier)"    [moderate/strong]
+ *   delivered_unverified → "Shipping & tracking"                [supporting]
+ *   label_created        → "Shipping label created"             [invalid]
+ *
+ * We keep the row with the more decisive proofType (and prefer an
+ * `available` one), drop the other, and preserve the kept row's
+ * submissionMethod / strength / inclusion flags untouched.
+ */
+
+const DELIVERY_FIELDS = new Set(["shipping_tracking", "delivery_proof"]);
+
+type DeliveryProofType =
+  | "signature_confirmed"
+  | "delivered_confirmed"
+  | "delivered_unverified"
+  | "label_created";
+
+const PROOF_RANK: Record<DeliveryProofType, number> = {
+  signature_confirmed: 3,
+  delivered_confirmed: 2,
+  delivered_unverified: 1,
+  label_created: 0,
+};
+
+function readProofType(payload: Record<string, unknown> | null): DeliveryProofType {
+  const p = typeof payload?.proofType === "string" ? payload.proofType : null;
+  if (
+    p === "signature_confirmed" ||
+    p === "delivered_confirmed" ||
+    p === "delivered_unverified" ||
+    p === "label_created"
+  ) {
+    return p;
+  }
+  // Manual upload with a file but no proofType reads as unverified —
+  // mirrors categorizeEvidenceField's default.
+  const looksLikeUpload =
+    typeof payload?.fileName === "string" && (payload.fileName as string).length > 0;
+  return looksLikeUpload ? "delivered_unverified" : "label_created";
+}
+
+function deliveryLabelToken(proof: DeliveryProofType): I18nToken {
+  switch (proof) {
+    case "signature_confirmed":
+      return { key: "disputes.deliveryProof.signature" };
+    case "delivered_confirmed":
+      return { key: "disputes.deliveryProof.carrierConfirmed" };
+    case "delivered_unverified":
+      return { key: "disputes.deliveryProof.shippedUnconfirmed" };
+    case "label_created":
+    default:
+      return { key: "disputes.deliveryProof.labelOnly" };
+  }
+}
+
+/** Proof-state-specific why-context, replacing the generic
+ *  "context, not decisive proof" line on the collapsed delivery row so
+ *  the merchant reads WHY the row lands where it does. */
+function deliveryReasonToken(proof: DeliveryProofType): I18nToken {
+  const NS = "disputes.deliveryProof";
+  switch (proof) {
+    case "signature_confirmed":
+      return { key: `${NS}.whySignature` };
+    case "delivered_confirmed":
+      return { key: `${NS}.whyCarrierConfirmed` };
+    case "label_created":
+      return { key: `${NS}.whyLabelOnly` };
+    case "delivered_unverified":
+    default:
+      return { key: `${NS}.whyShippedUnconfirmed` };
+  }
+}
+
+const SHORT_MONTHS = [
+  "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec",
+];
+
+/** ISO → "Mon D" (UTC). Null on garbage so the segment drops out. */
+function shortDate(iso: unknown): string | null {
+  if (typeof iso !== "string") return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${SHORT_MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
+}
+
+/** Build the compact facts tokens + tracking link from the fulfillment
+ *  section payload. Shape mirrors `fulfillmentSource.extractTrackingData`. */
+function buildDeliveryFacts(
+  proof: DeliveryProofType,
+  payload: Record<string, unknown> | null,
+): { factsTokens: I18nToken[]; trackingUrl: string | null; trackingNumber: string | null } {
+  const p = payload ?? {};
+  const fulfillments = Array.isArray(p.fulfillments) ? p.fulfillments : [];
+  let carrier: string | null = null;
+  let trackingNumber: string | null = null;
+  let trackingUrl: string | null = null;
+  let shippedAt: string | null = null;
+  let estimatedDeliveryAt: string | null = null;
+  for (const f of fulfillments) {
+    if (!f || typeof f !== "object") continue;
+    const ff = f as Record<string, unknown>;
+    if (shippedAt == null && typeof ff.createdAt === "string") shippedAt = ff.createdAt;
+    if (estimatedDeliveryAt == null && typeof ff.estimatedDeliveryAt === "string") {
+      estimatedDeliveryAt = ff.estimatedDeliveryAt;
+    }
+    const tracking = Array.isArray(ff.tracking) ? ff.tracking : [];
+    for (const t of tracking) {
+      if (!t || typeof t !== "object") continue;
+      const tr = t as Record<string, unknown>;
+      const num = typeof tr.number === "string" && tr.number.trim() ? tr.number.trim() : null;
+      const url =
+        typeof tr.url === "string" && /^https?:\/\//i.test(tr.url.trim()) ? tr.url.trim() : null;
+      const car = typeof tr.carrier === "string" && tr.carrier.trim() ? tr.carrier.trim() : null;
+      if (trackingNumber == null) trackingNumber = num;
+      if (trackingUrl == null) trackingUrl = url;
+      if (carrier == null) carrier = car;
+    }
+  }
+  const deliveredAt = typeof p.deliveredAt === "string" ? p.deliveredAt : null;
+  const signedByName = typeof p.signedByName === "string" ? p.signedByName : null;
+
+  const NS = "disputes.deliveryProof";
+  const factsTokens: I18nToken[] = [];
+
+  // Shipped {date} [via {carrier}] — pick the token that fits what we
+  // actually have so we never render a stray "Shipped  via" gap.
+  const shipped = shortDate(shippedAt);
+  if (shipped && carrier) {
+    factsTokens.push({ key: `${NS}.factsShippedVia`, params: { date: shipped, carrier } });
+  } else if (shipped) {
+    factsTokens.push({ key: `${NS}.factsShipped`, params: { date: shipped } });
+  } else if (carrier) {
+    factsTokens.push({ key: `${NS}.factsCarrier`, params: { carrier } });
+  }
+
+  // Delivery segment — proof-state aware.
+  if (proof === "signature_confirmed" && signedByName) {
+    factsTokens.push({ key: `${NS}.factsSignedBy`, params: { name: signedByName } });
+  } else if (
+    (proof === "signature_confirmed" || proof === "delivered_confirmed") &&
+    shortDate(deliveredAt)
+  ) {
+    factsTokens.push({ key: `${NS}.factsDelivered`, params: { date: shortDate(deliveredAt)! } });
+  } else if (proof === "delivered_unverified") {
+    const eta = shortDate(estimatedDeliveryAt);
+    factsTokens.push(
+      eta
+        ? { key: `${NS}.factsNotDeliveredEta`, params: { date: eta } }
+        : { key: `${NS}.factsNotDelivered` },
+    );
+  }
+
+  return { factsTokens, trackingUrl, trackingNumber };
+}
+
+/** Collapse the two delivery rows into one, in place. Returns a new
+ *  array with the redundant delivery row removed and the survivor
+ *  augmented with `displayLabelToken` / `factsTokens` / `trackingUrl`.
+ *  A no-op when zero or one delivery row is present. */
+function collapseDeliveryRows(
+  out: EvidenceLineItem[],
+  payloadByField: Map<string, unknown>,
+): EvidenceLineItem[] {
+  const deliveryRows = out.filter((li) => DELIVERY_FIELDS.has(li.field));
+  if (deliveryRows.length === 0) return out;
+
+  // Read the shared fulfillment payload (either field carries it).
+  const payload =
+    (payloadObjectFor(payloadByField, "delivery_proof") ??
+      payloadObjectFor(payloadByField, "shipping_tracking")) ?? null;
+  const proof = readProofType(payload);
+  const facts = buildDeliveryFacts(proof, payload);
+
+  // Pick the survivor: prefer an `available` row, then higher proof
+  // rank is identical across both (shared payload) so fall back to the
+  // one that's included in the package, else first-seen.
+  const rank = (li: EvidenceLineItem): number => {
+    let r = 0;
+    if (li.hasEvidence) r += 100;
+    if (li.includedInDefencePackage) r += 10;
+    if (li.usedAsPositiveBankEvidence) r += 5;
+    return r;
+  };
+  const survivor = [...deliveryRows].sort((a, b) => rank(b) - rank(a))[0];
+
+  const displayLabelToken = deliveryLabelToken(proof);
+  // Proof-specific why-context replaces the generic reason ONLY when the
+  // row is in the package as context/bank evidence; excluded / waived /
+  // not-included rows keep their status-specific reason (e.g. "you
+  // excluded this") so we don't overwrite a more relevant message.
+  const proofReasonToken = deliveryReasonToken(proof);
+  const useProofReason = (li: EvidenceLineItem): boolean =>
+    li.submissionMethod === "bank_argument" || li.submissionMethod === "context_only";
+  return out
+    .filter((li) => !DELIVERY_FIELDS.has(li.field) || li.field === survivor.field)
+    .map((li) =>
+      li.field === survivor.field
+        ? {
+            ...li,
+            displayLabelToken,
+            factsTokens: facts.factsTokens,
+            trackingUrl: facts.trackingUrl,
+            trackingNumber: facts.trackingNumber,
+            ...(useProofReason(li)
+              ? {
+                  reason: resolveTokenEn(proofReasonToken),
+                  reasonToken: proofReasonToken,
+                }
+              : {}),
+          }
+        : li,
+    );
+}
+
 /* ── Public derivation ───────────────────────────────────────────── */
 
 export function deriveEvidenceLineItems(
@@ -1107,5 +1354,8 @@ export function deriveEvidenceLineItems(
     });
   }
 
-  return out;
+  // Collapse the two delivery field keys into one proof-labeled row so
+  // every render surface shows a single, honest delivery line instead
+  // of "Delivery confirmation" twice.
+  return collapseDeliveryRows(out, payloadByField);
 }
