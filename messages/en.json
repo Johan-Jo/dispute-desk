@@ -1650,7 +1650,19 @@
       "labelOnly": "Shipping label created",
       "trackingUnconfirmedNote": "Shipped — carrier has not yet confirmed delivery",
       "trackingLink": "{carrier} · {number}",
-      "trackingHint": "Click to follow this parcel on the carrier’s tracking page."
+      "trackingHint": "Click to follow this parcel on the carrier’s tracking page.",
+      "notConfirmed": "Delivery status: not confirmed",
+      "whySignature": "Carrier-captured signature on delivery — the strongest proof the customer received the order.",
+      "whyCarrierConfirmed": "The carrier confirmed delivery with a timestamp — strong support that the order arrived.",
+      "whyShippedUnconfirmed": "The order shipped with valid tracking, but the carrier hasn’t confirmed delivery — this supports the case without proving receipt.",
+      "whyNotConfirmed": "The carrier shows the parcel as not delivered — no delivery scan or signature. For a “not received” dispute, this is the gap to close.",
+      "whyLabelOnly": "A shipping label was created but the carrier never scanned the parcel — this doesn’t yet support delivery.",
+      "factsShippedVia": "Shipped {date} via {carrier}",
+      "factsShipped": "Shipped {date}",
+      "factsDelivered": "Delivered {date}",
+      "factsNotDelivered": "Not delivered{eta}",
+      "factsEta": " (est. {date})",
+      "factsSignedBy": "Signed by {name}"
     }
   },
   "disputeReasons": {
