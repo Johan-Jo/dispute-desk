@@ -1161,6 +1161,10 @@
         "body": "Din ändring är sparad. DisputeDesk regenererar bevisöversikten, försvarsberättelsen och PDF:en — när det är klart ersätter den nya versionen den som nu är sparad på Shopify-tvisten."
       },
       "rebuildOutcomeBanner": {
+        "improved": {
+          "title": "Nya bevis hittades – ditt ärende är nu starkare",
+          "body": "DisputeDesk uppdaterade den här tvisten och de nya bevisen (till exempel bekräftad leverans från transportören) stärkte ärendet. Försvarspaketet har uppdaterats automatiskt."
+        },
         "saved": {
           "title": "Nytt försvarspaket sparat till Shopify",
           "body": "Det regenererade paketet har ersatt den tidigare sparade versionen på Shopify-tvisten."

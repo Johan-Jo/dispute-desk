@@ -41,6 +41,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 
 export type RebuildOutcome =
   | "saved"
+  | "improved"
   | "blocked_weak"
   | "blocked_fatal_loss"
   | "blocked_covered"

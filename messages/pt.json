@@ -791,6 +791,10 @@
         "body": "Sua alteração foi salva. O DisputeDesk está regenerando o resumo das provas, o argumento de defesa e o PDF — quando pronto, a nova versão substituirá a atualmente salva na disputa do Shopify."
       },
       "rebuildOutcomeBanner": {
+        "improved": {
+          "title": "Novas provas encontradas — seu caso está mais forte",
+          "body": "A DisputeDesk atualizou esta disputa e as novas provas (como a entrega confirmada pela transportadora) aumentaram a força do caso. O pacote de defesa foi atualizado automaticamente."
+        },
         "saved": {
           "title": "Novo pacote de defesa salvo no Shopify",
           "body": "O pacote regenerado substituiu a versão anteriormente salva na disputa do Shopify."

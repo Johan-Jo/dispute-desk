@@ -23,6 +23,10 @@ export const SUBMISSION_CONFIRMED = "submission_confirmed";
 export const AUTO_BUILD_TRIGGERED = "auto_build_triggered";
 export const AUTO_SAVE_TRIGGERED = "auto_save_triggered";
 export const PARKED_FOR_REVIEW = "parked_for_review";
+/** A rebuild raised the case strength (e.g. weak → moderate after new
+ *  delivery evidence). Drives the merchant "your case got stronger"
+ *  notification + timeline entry. */
+export const CASE_STRENGTHENED = "case_strengthened";
 
 // Merchant actions
 export const MERCHANT_APPROVED_FOR_SAVE = "merchant_approved_for_save";
