@@ -40,6 +40,25 @@ import type {
 } from "../../workspace-components/types";
 import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
 import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
+import { resolveToken } from "@/lib/i18n/resolveToken";
+
+/**
+ * The row label for a line item, preferring its proof-state-specific
+ * `displayLabelToken` (set on the collapsed delivery row) over the
+ * generic canonical label. Falls back to the canonical label, then the
+ * legacy English.
+ */
+function lineItemLabel(
+  li: EvidenceLineItem,
+  t: ReturnType<typeof useTranslations>,
+  fieldLabel: (field: string, legacy: string) => string,
+): string {
+  if (li.displayLabelToken) {
+    const resolved = resolveToken(t, li.displayLabelToken);
+    if (resolved) return resolved;
+  }
+  return fieldLabel(li.field, li.label);
+}
 
 /**
  * Resolve a translated row label from a canonical evidence field key.
@@ -203,8 +222,21 @@ export function SubmissionSummaryPanel({
   presentationStatus,
 }: Props) {
   const t = useTranslations("disputes.overview.submissionSummary");
+  // Root (unscoped) translator for resolving displayLabelToken / facts
+  // tokens, which encode absolute key paths.
+  const tRoot = useTranslations();
   const fieldLabel = useFieldLabel();
   const saved = isSavedState(presentationStatus);
+
+  /** Compact facts note for a row (delivery rows carry factsTokens).
+   *  Joined with " · ". Empty string → no note. */
+  const factsNote = (li: EvidenceLineItem): string | undefined => {
+    if (!li.factsTokens || li.factsTokens.length === 0) return undefined;
+    const parts = li.factsTokens
+      .map((tok) => resolveToken(tRoot, tok))
+      .filter((s) => s && s.trim().length > 0);
+    return parts.length > 0 ? parts.join(" · ") : undefined;
+  };
 
   const bankArgumentRows = useMemo(
     () => lineItems.filter((li) => li.usedAsPositiveBankEvidence),
@@ -248,7 +280,7 @@ export function SubmissionSummaryPanel({
   const internalNote = t("internalSignalNote");
   const internalDispRows = internalRows.map((r) => ({
     field: r.field,
-    label: fieldLabel(r.field, r.label),
+    label: lineItemLabel(r, tRoot, fieldLabel),
     note: internalNote,
   }));
 
@@ -273,7 +305,7 @@ export function SubmissionSummaryPanel({
     )
     .map((li) => ({
       field: li.field,
-      label: fieldLabel(li.field, li.label),
+      label: lineItemLabel(li, tRoot, fieldLabel),
       note: (() => {
         switch (li.submissionMethod) {
           case "failed_upload":
@@ -354,7 +386,11 @@ export function SubmissionSummaryPanel({
           disposition="positive"
           title={t("bankArgumentLabel")}
           countLine={t("dispositionPositiveCount", { count: bankArgumentRows.length })}
-          rows={bankArgumentRows.map((r) => ({ field: r.field, label: fieldLabel(r.field, r.label) }))}
+          rows={bankArgumentRows.map((r) => ({
+            field: r.field,
+            label: lineItemLabel(r, tRoot, fieldLabel),
+            note: factsNote(r),
+          }))}
           borderRight
           borderBottom
         />
@@ -362,7 +398,11 @@ export function SubmissionSummaryPanel({
           disposition="context"
           title={t("contextOnlyLabel")}
           countLine={t("dispositionContextCount", { count: contextOnlyRows.length })}
-          rows={contextOnlyRows.map((r) => ({ field: r.field, label: fieldLabel(r.field, r.label) }))}
+          rows={contextOnlyRows.map((r) => ({
+            field: r.field,
+            label: lineItemLabel(r, tRoot, fieldLabel),
+            note: factsNote(r),
+          }))}
           borderBottom
         />
         <DispositionCell

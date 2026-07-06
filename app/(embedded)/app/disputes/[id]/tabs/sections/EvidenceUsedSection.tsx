@@ -199,11 +199,29 @@ export function EvidenceUsedSection({
     return m;
   }, [lineItems]);
 
+  // The two delivery field keys are collapsed to a single line item
+  // upstream (deriveEvidenceLineItems → collapseDeliveryRows). The
+  // view-model `items` array still carries BOTH, so drop the delivery
+  // row that didn't survive the collapse — i.e. any delivery field
+  // absent from the collapsed lineItems map. Keeps the Evidence tab to
+  // one delivery row, matching every other surface.
+  const DELIVERY_FIELDS = new Set(["shipping_tracking", "delivery_proof"]);
+  const survivingDeliveryField = lineItems.find((li) =>
+    DELIVERY_FIELDS.has(li.field),
+  )?.field;
+
   const buckets: Record<
     "positive" | "context" | "excluded",
     EvidenceRowViewModel[]
   > = { positive: [], context: [], excluded: [] };
   for (const item of items) {
+    if (
+      DELIVERY_FIELDS.has(item.field) &&
+      survivingDeliveryField &&
+      item.field !== survivingDeliveryField
+    ) {
+      continue;
+    }
     const li = lineItemsByField.get(item.field);
     const bucket = bucketForRow(item, li);
     if (bucket === null) continue;

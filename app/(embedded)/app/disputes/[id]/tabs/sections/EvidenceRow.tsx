@@ -16,7 +16,6 @@
 
 import { useTranslations } from "next-intl";
 import type {
-  DeliveryFacts,
   EvidenceRowViewModel,
   EvidenceSource,
   InternalSignalViewModel,
@@ -24,63 +23,6 @@ import type {
 import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
 import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
 import { resolveToken } from "@/lib/i18n/resolveToken";
-
-/** Format an ISO date as a short "Mon D" for the facts line. Returns
- *  null on garbage so the segment is dropped rather than showing NaN. */
-function shortDate(iso: string | null): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  return `${MON[d.getUTCMonth()]} ${d.getUTCDate()}`;
-}
-
-/**
- * One-line concrete delivery facts: carrier + tracking (as a segment),
- * shipped date, and a delivery segment that flips on proofType
- * (Delivered {date} / signature / Not delivered (est. {date})). The
- * tracking number renders as a link in the JSX; this helper returns the
- * non-link text segments plus the tracking href/label separately.
- */
-function buildDeliveryFactsLine(
-  facts: DeliveryFacts,
-  tRoot: ReturnType<typeof useTranslations>,
-): { segments: string[]; trackingLabel: string | null; trackingUrl: string | null } {
-  const NS = "disputes.deliveryProof";
-  const segments: string[] = [];
-  const shipped = shortDate(facts.shippedAt);
-
-  // Shipped {date} [via {carrier}]
-  if (shipped) {
-    segments.push(
-      facts.carrier
-        ? tRoot(`${NS}.factsShippedVia`, { date: shipped, carrier: facts.carrier })
-        : tRoot(`${NS}.factsShipped`, { date: shipped }),
-    );
-  } else if (facts.carrier) {
-    segments.push(facts.carrier);
-  }
-
-  // Delivery segment — proof-state aware.
-  if (facts.proofType === "signature_confirmed" && facts.signedByName) {
-    segments.push(tRoot(`${NS}.factsSignedBy`, { name: facts.signedByName }));
-  } else if (
-    (facts.proofType === "signature_confirmed" ||
-      facts.proofType === "delivered_confirmed") &&
-    facts.deliveredAt
-  ) {
-    const del = shortDate(facts.deliveredAt);
-    if (del) segments.push(tRoot(`${NS}.factsDelivered`, { date: del }));
-  } else if (facts.proofType === "delivered_unverified") {
-    const eta = shortDate(facts.estimatedDeliveryAt);
-    const etaText = eta ? tRoot(`${NS}.factsEta`, { date: eta }) : "";
-    segments.push(tRoot(`${NS}.factsNotDelivered`, { eta: etaText }));
-  }
-
-  const trackingLabel = facts.trackingNumber;
-  const trackingUrl = facts.trackingUrl;
-  return { segments, trackingLabel, trackingUrl };
-}
 
 function sourceLabel(
   source: EvidenceSource,
@@ -253,11 +195,13 @@ export function EvidenceRow({
   // signal label fallback below.
   const tRoot = useTranslations();
   const titleLabel = (() => {
-    // Delivery rows carry a proof-state-specific title in `item.title`
-    // (built by useEvidenceSections). Do NOT re-resolve the generic
-    // canonical label — that's exactly the "Delivery confirmation" ×2
-    // duplication this fix removes.
-    if (item.deliveryFacts) return item.title;
+    // Proof-state-specific label (collapsed delivery row) wins over the
+    // generic canonical label — this removes the duplicate "Delivery
+    // confirmation" title.
+    if (lineItem?.displayLabelToken) {
+      const resolved = resolveToken(tRoot, lineItem.displayLabelToken);
+      if (resolved) return resolved;
+    }
     const labelKey = lineItem ? CANONICAL_EVIDENCE[lineItem.field]?.labelKey : null;
     if (!labelKey) return item.title;
     try {
@@ -267,16 +211,39 @@ export function EvidenceRow({
       return item.title;
     }
   })();
-  // Delivery rows use their proof-specific why-context (item.whyThisMatters);
-  // other rows keep the lineItem reasonToken as before.
-  const reasonLine = item.deliveryFacts
-    ? item.whyThisMatters
-    : lineItem?.reasonToken
-      ? resolveToken(tRoot, lineItem.reasonToken)
-      : (lineItem?.reason ?? item.whyThisMatters);
-  const deliveryFactsLine = item.deliveryFacts
-    ? buildDeliveryFactsLine(item.deliveryFacts, tRoot)
-    : null;
+  const reasonLine = lineItem?.reasonToken
+    ? resolveToken(tRoot, lineItem.reasonToken)
+    : (lineItem?.reason ?? item.whyThisMatters);
+
+  // Compact facts line (delivery rows carry factsTokens on the lineItem).
+  const factsSegments = (lineItem?.factsTokens ?? [])
+    .map((tok) => resolveToken(tRoot, tok))
+    .filter((s) => s && s.trim().length > 0);
+  const trackingUrl = lineItem?.trackingUrl ?? null;
+  const trackingNumber = lineItem?.trackingNumber ?? null;
+  const factsLine =
+    factsSegments.length > 0 || trackingNumber ? (
+      <>
+        {factsSegments.join(" · ")}
+        {trackingNumber ? (
+          <>
+            {factsSegments.length > 0 ? " · " : ""}
+            {trackingUrl ? (
+              <a
+                href={trackingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "#2C6ECB", textDecoration: "none" }}
+              >
+                {trackingNumber} ↗
+              </a>
+            ) : (
+              trackingNumber
+            )}
+          </>
+        ) : null}
+      </>
+    ) : null;
 
   const pill = strengthPill(
     lineItem
@@ -309,30 +276,6 @@ export function EvidenceRow({
       }`}
     </span>
   ) : null;
-
-  const factsLine =
-    deliveryFactsLine && deliveryFactsLine.segments.length > 0 ? (
-      <>
-        {deliveryFactsLine.segments.join(" · ")}
-        {deliveryFactsLine.trackingLabel ? (
-          <>
-            {" · "}
-            {deliveryFactsLine.trackingUrl ? (
-              <a
-                href={deliveryFactsLine.trackingUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "#2C6ECB", textDecoration: "none" }}
-              >
-                {deliveryFactsLine.trackingLabel} ↗
-              </a>
-            ) : (
-              deliveryFactsLine.trackingLabel
-            )}
-          </>
-        ) : null}
-      </>
-    ) : null;
 
   return (
     <RowFrame
