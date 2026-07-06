@@ -85,15 +85,17 @@ describe("buildEvidenceBasisRows", () => {
     expect(rows[0].value).not.toMatch(/\bCVV M\b/);
   });
 
-  it("renders delivery proofType=delivered_confirmed", () => {
+  it("renders delivery proofType=delivered_confirmed with a formatted (not raw ISO) date", () => {
     const rows = buildEvidenceBasisRows([
       fact({
         category: "delivery_proof",
         label: "Delivery",
-        value: { proofType: "delivered_confirmed", deliveredAt: "2026-05-12" },
+        value: { proofType: "delivered_confirmed", deliveredAt: "2026-07-06T18:16:00Z" },
       }),
     ]);
-    expect(rows[0].value).toBe("Delivered 2026-05-12");
+    // Clean bank-facing date, never the raw ISO string.
+    expect(rows[0].value).toBe("Delivered Jul 6, 2026, 18:16 UTC");
+    expect(rows[0].value).not.toContain("T18:16");
   });
 
   it("renders signature on delivery when proofType=signature_confirmed", () => {
