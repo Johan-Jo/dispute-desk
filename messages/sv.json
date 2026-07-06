@@ -1650,7 +1650,19 @@
       "labelOnly": "Fraktetikett skapad",
       "trackingUnconfirmedNote": "Skickad – transportören har ännu inte bekräftat leveransen",
       "trackingLink": "{carrier} · {number}",
-      "trackingHint": "Klicka för att följa paketet på transportörens spårningssida."
+      "trackingHint": "Klicka för att följa paketet på transportörens spårningssida.",
+      "notConfirmed": "Leveransstatus: ej bekräftad",
+      "whySignature": "Signatur som transportören registrerat vid leverans – det starkaste beviset på att kunden fått ordern.",
+      "whyCarrierConfirmed": "Transportören bekräftade leveransen med tidsstämpel – ett starkt stöd för att ordern kom fram.",
+      "whyShippedUnconfirmed": "Ordern skickades med giltig spårning, men transportören har inte bekräftat leveransen – det stöder ärendet utan att bevisa mottagandet.",
+      "whyNotConfirmed": "Transportören visar paketet som ej levererat – ingen leveransskanning eller signatur. I en tvist om ”ej mottaget” är detta luckan att täppa till.",
+      "whyLabelOnly": "En fraktetikett skapades men transportören skannade aldrig paketet – det styrker ännu inte leveransen.",
+      "factsShippedVia": "Skickad {date} med {carrier}",
+      "factsShipped": "Skickad {date}",
+      "factsDelivered": "Levererad {date}",
+      "factsNotDelivered": "Ej levererad{eta}",
+      "factsEta": " (ber. {date})",
+      "factsSignedBy": "Signerad av {name}"
     }
   },
   "disputeReasons": {
