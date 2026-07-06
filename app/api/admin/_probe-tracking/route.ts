@@ -43,7 +43,7 @@ const PROBE_QUERY = /* GraphQL */ `
             deliveredAt
             estimatedDeliveryAt
             trackingInfo(first: 5) { company number url }
-            events(first: 20) {
+            events(first: 30, sortKey: HAPPENED_AT, reverse: true) {
               edges { node { status happenedAt message } }
             }
           }

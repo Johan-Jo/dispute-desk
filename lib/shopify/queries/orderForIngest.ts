@@ -94,7 +94,10 @@ export const ORDER_FOR_INGEST_QUERY = /* GraphQL */ `
         displayStatus
         status
         deliveredAt
-        events(first: 15) {
+        # Newest events first — see ordersForBackfill.ts: a long
+        # return-then-redeliver timeline truncates away the final delivery
+        # under the default oldest-first order.
+        events(first: 30, sortKey: HAPPENED_AT, reverse: true) {
           edges { node { status happenedAt message } }
         }
       }

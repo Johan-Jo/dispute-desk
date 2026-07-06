@@ -43,6 +43,7 @@ import {
   readTrackingMetafields,
   type RawShopifyMetafield,
 } from "@/lib/shopify/trackingApps";
+import { classifyDeliveryTimeline } from "@/lib/shopify/deliveryEventClassifier";
 import { computeRiskPayloadHash } from "@/lib/fraudIntel/riskPayloadHash";
 
 export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
@@ -168,7 +169,15 @@ export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
             displayStatus
             status
             deliveredAt
-            events(first: 15) {
+            # NEWEST events first — a parcel can accumulate 20+ events
+            # (return-to-sender then re-delivery), and the LATEST delivery
+            # event is the one that decides final state. Default order is
+            # oldest-first, which truncates away the final delivery on a
+            # long timeline (real bug: cay-collective #12936 had 22 events;
+            # first:15 oldest-first stopped at a mid-June return and misread
+            # a delivered parcel as Returned). sortKey HAPPENED_AT + reverse
+            # gives the most recent window; the classifier re-sorts anyway.
+            events(first: 30, sortKey: HAPPENED_AT, reverse: true) {
               edges { node { status happenedAt message } }
             }
           }
@@ -629,39 +638,68 @@ export function extractNativeSignature(
 
 /** Pure: derive delivery signals from Shopify-native fulfillment fields
  *  (no tracking app needed). Returns the strongest signal across all
- *  fulfillments:
- *   - deliveredAt (or a "delivered" event) → Delivered + timestamp
- *   - a signature-bearing delivery event   → signed_by_name
- *  Null-shaped when nothing indicates delivery. */
+ *  fulfillments.
+ *
+ *  Delivery is classified from the event MESSAGE TIMELINE, not the status
+ *  enum or `deliveredAt` — carrier integrations (PostNord et al.) sync
+ *  delivery into `events[].message` but leave `deliveredAt` null and the
+ *  event `status` stale (a FAILURE from an earlier return-to-sender
+ *  persists across re-delivery). See lib/shopify/deliveryEventClassifier.
+ *
+ *  `deliveryStatus`:
+ *   - "Delivered"          → latest delivery-relevant event is a final
+ *                            delivery to the recipient (or native deliveredAt).
+ *   - "DeliveredToPickup"  → latest is arrival/collection at a pickup point
+ *                            (weaker — not the customer's own address).
+ *   - "Returned"           → latest is return-to-sender.
+ *   - null                 → nothing delivery-relevant.
+ *  `deliveredAtTracking` is set for "Delivered" (native deliveredAt if
+ *  present, else the delivered event's happenedAt). */
 export function deriveNativeDelivery(raw: RawBackfillOrder): {
   deliveryStatus: string | null;
   deliveredAtTracking: string | null;
   signedByName: string | null;
 } {
+  let bestStatus: string | null = null;
   let deliveredAt: string | null = null;
-  let delivered = false;
   let signedBy: string | null = null;
+  // Rank so the strongest state across fulfillments wins.
+  const rank: Record<string, number> = {
+    Returned: 1,
+    DeliveredToPickup: 2,
+    Delivered: 3,
+  };
+  const rankOf = (s: string | null) => (s ? rank[s] ?? 0 : 0);
+
   for (const f of raw.fulfillments ?? []) {
     const events = (f.events?.edges ?? []).map((e) => e.node);
-    // Native carrier-confirmed delivery timestamp.
+    const timeline = classifyDeliveryTimeline(events);
+
+    let status: string | null = null;
+    let at: string | null = null;
+    // Native deliveredAt is a hard delivery signal when present.
     if (f.deliveredAt) {
-      delivered = true;
-      if (!deliveredAt || f.deliveredAt < deliveredAt) deliveredAt = f.deliveredAt;
+      status = "Delivered";
+      at = f.deliveredAt;
     }
-    // Some carriers set a DELIVERED event without populating deliveredAt.
-    for (const e of events) {
-      const status = (e.status ?? "").toUpperCase();
-      if (status === "DELIVERED") {
-        delivered = true;
-        const ts = e.happenedAt ?? null;
-        if (ts && (!deliveredAt || ts < deliveredAt)) deliveredAt = ts;
-      }
+    if (timeline.finalCategory === "delivered") {
+      status = "Delivered";
+      at = at ?? timeline.finalAt;
+    } else if (timeline.finalCategory === "delivered_to_pickup" && status !== "Delivered") {
+      status = "DeliveredToPickup";
+    } else if (timeline.finalCategory === "returned" && status !== "Delivered") {
+      status = "Returned";
+    }
+
+    if (rankOf(status) > rankOf(bestStatus)) {
+      bestStatus = status;
+      deliveredAt = status === "Delivered" ? at : null;
     }
     // Signature capture — free-text on the event message/status.
     if (!signedBy) signedBy = extractNativeSignature(events);
   }
   return {
-    deliveryStatus: delivered ? "Delivered" : null,
+    deliveryStatus: bestStatus,
     deliveredAtTracking: deliveredAt,
     signedByName: signedBy,
   };

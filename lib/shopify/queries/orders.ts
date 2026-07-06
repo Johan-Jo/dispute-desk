@@ -101,9 +101,13 @@ export const ORDER_DETAIL_QUERY = `
           # the carrier reports one (PostNord et al. put "signed by NAME" in
           # the event message — there is no signature enum status). This is
           # the ONLY signature source for merchants without a tracking app
-          # that writes a signed_by metafield. Consumed by
-          # lib/packs/sources/fulfillmentSource.ts (resolveSignedByName).
-          events(first: 15) {
+          # that writes a signed_by metafield, and — via the message text —
+          # the delivery-status signal (deliveredAt/status enum are
+          # unreliable). Consumed by lib/packs/sources/fulfillmentSource.ts.
+          # NEWEST first (sortKey HAPPENED_AT + reverse): a return-then-
+          # redeliver timeline can exceed the page size, and the LATEST
+          # delivery event decides final state. See ordersForBackfill.ts.
+          events(first: 30, sortKey: HAPPENED_AT, reverse: true) {
             edges { node { status happenedAt message } }
           }
           # NOTE: Fulfillment.metafields is NOT in the Admin GraphQL

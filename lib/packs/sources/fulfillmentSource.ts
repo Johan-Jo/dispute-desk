@@ -29,6 +29,7 @@ import {
   type UnifiedTrackingData,
 } from "@/lib/shopify/trackingApps";
 import { extractNativeSignature } from "@/lib/shopify/queries/ordersForBackfill";
+import { classifyDeliveryTimeline } from "@/lib/shopify/deliveryEventClassifier";
 
 /** Signee name from a fulfillment's native carrier events (message like
  *  "Delivered, signed by ANNA ANDERSSON"). This is the ONLY signature
@@ -39,6 +40,20 @@ function nativeSignedBy(fulfillment: OrderFulfillment): string | null {
   return extractNativeSignature(
     (fulfillment.events?.edges ?? []).map((e) => e.node),
   );
+}
+
+/** Final native delivery state for a fulfillment, classified from the
+ *  carrier event MESSAGE timeline (not the unreliable status enum / null
+ *  deliveredAt). Returns the latest delivery-relevant category + its
+ *  timestamp. See lib/shopify/deliveryEventClassifier for why. */
+function nativeDelivery(fulfillment: OrderFulfillment): {
+  category: "delivered" | "delivered_to_pickup" | "returned" | null;
+  at: string | null;
+} {
+  const t = classifyDeliveryTimeline(
+    (fulfillment.events?.edges ?? []).map((e) => e.node),
+  );
+  return { category: t.finalCategory, at: t.finalAt };
 }
 
 /** Convert a metafield edge connection into the flat array shape the
@@ -128,18 +143,31 @@ function resolveProofType(
       bestTier = Math.max(bestTier, 3) as 0 | 1 | 2 | 3;
       continue;
     }
-    // Delivered with corroborating timestamp from the carrier (either
-    // via Shopify's deliveredAt or via a tracking-app's Delivered
-    // status + delivered_at_tracking).
+    const native = nativeDelivery(f);
+    // A native "returned to sender" is the opposite of delivery evidence —
+    // never let it raise the tier. (rank it 0; the loop simply skips it.)
+    if (native.category === "returned") continue;
+    // Delivered with a corroborating timestamp: Shopify's own deliveredAt,
+    // a tracking-app's Delivered+timestamp, OR a native carrier "delivered"
+    // event message with a happenedAt.
     const carrierConfirmedDelivered =
       tracking.deliveryStatus === "Delivered" &&
       !!tracking.deliveredAtTracking;
-    if (f.deliveredAt || carrierConfirmedDelivered) {
+    const nativeDeliveredConfirmed =
+      native.category === "delivered" && !!native.at;
+    if (f.deliveredAt || carrierConfirmedDelivered || nativeDeliveredConfirmed) {
       bestTier = Math.max(bestTier, 2) as 0 | 1 | 2 | 3;
       continue;
     }
-    // Status flag set but no carrier-confirmed timestamp.
-    if (f.status === "SUCCESS" || f.displayStatus === "DELIVERED") {
+    // Weaker delivery signals → unverified tier: a native "delivered to a
+    // pickup point" (arrived but customer collection unconfirmed), or a
+    // bare Shopify status flag with no carrier-confirmed timestamp.
+    if (
+      native.category === "delivered_to_pickup" ||
+      native.category === "delivered" ||
+      f.status === "SUCCESS" ||
+      f.displayStatus === "DELIVERED"
+    ) {
       bestTier = Math.max(bestTier, 1) as 0 | 1 | 2 | 3;
     }
   }
