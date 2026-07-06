@@ -109,6 +109,7 @@ describe("buildPack — failed-state persistence invariant", () => {
       }
       if (table === "evidence_items") {
         return {
+          delete: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })),
           insert: vi.fn().mockResolvedValue({ data: null, error: null }),
         };
       }

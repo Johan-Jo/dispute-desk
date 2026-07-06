@@ -194,8 +194,15 @@ export default function EvidenceTab({ workspace }: Props) {
         />
       );
     } else {
+      // `improved` is the only positive non-saved outcome — a rebuild
+      // raised the case strength (e.g. delivery confirmed). Green/success
+      // tone. `failed` is critical; the `blocked_*` family stays warning.
       const tone =
-        rebuildOutcome === "failed" ? ("critical" as const) : ("warning" as const);
+        rebuildOutcome === "improved"
+          ? ("success" as const)
+          : rebuildOutcome === "failed"
+            ? ("critical" as const)
+            : ("warning" as const);
       rebuildOutcomeBanner = (
         <Banner
           tone={tone}

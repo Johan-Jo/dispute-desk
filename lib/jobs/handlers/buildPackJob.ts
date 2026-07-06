@@ -9,13 +9,17 @@ import {
   shouldSendEvidenceAlert,
 } from "../../email/sendEvidenceNeededAlert";
 import { claimAndSendDeferredNewDisputeAlert } from "../../email/sendNewDisputeAlert";
+import { sendCaseStrengthenedAlert, type StrengthLevel } from "../../email/sendCaseStrengthenedAlert";
 import { emitDisputeEvent } from "../../disputeEvents/emitEvent";
 import { updateNormalizedStatus } from "../../disputeEvents/updateNormalizedStatus";
+import { stampRebuildOutcome } from "../../automation/rebuildOutcome";
 import {
   PACK_CREATED,
   PACK_BUILD_FAILED,
+  CASE_STRENGTHENED,
 } from "../../disputeEvents/eventTypes";
 import type { ClaimedJob } from "../claimJobs";
+import type { BuildResult } from "../../packs/buildPack";
 
 /**
  * Job handler: build_pack
@@ -121,6 +125,13 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
         });
       }
       void updateNormalizedStatus(packRow.dispute_id);
+
+      // Case-strength improvement (e.g. weak → moderate once delivery is
+      // confirmed). Stamp the in-app banner outcome, record a timeline
+      // event, and email the merchant — gated + deduped inside the helper.
+      if (buildSucceeded && result.strengthImproved) {
+        await notifyCaseStrengthened(db, job.shopId, packId, packRow.dispute_id, result);
+      }
     }
 
     // On a failed build (non-throw — return result with status="failed"),
@@ -283,6 +294,112 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
  * Fire-and-forget: check if this dispute needs manual evidence and email the merchant.
  * Reads store profile, notification prefs, and dispute reason to decide.
  */
+const STRENGTH_RANK: Record<StrengthLevel, number> = {
+  insufficient: 0,
+  weak: 1,
+  moderate: 2,
+  strong: 3,
+};
+
+/**
+ * Notify the merchant that a rebuild raised the case strength.
+ *   1. Stamp the `improved` rebuild outcome → in-app EvidenceTab banner.
+ *   2. Emit a CASE_STRENGTHENED timeline event.
+ *   3. Email the merchant — gated by the `disputeUpdates` notification
+ *      preference and deduped on `disputes.strength_alert_level` so it
+ *      fires only when the strength rises to a NEW high-water mark.
+ * Never throws (fire-and-forget annotations + email); errors are logged.
+ * Not called on first builds — `strengthImproved` requires a prior
+ * strength, so a bulk historical import can never trigger it.
+ */
+async function notifyCaseStrengthened(
+  db: ReturnType<typeof getServiceClient>,
+  shopId: string,
+  packId: string,
+  disputeId: string,
+  result: BuildResult,
+): Promise<void> {
+  const prior = result.priorStrength;
+  const next = result.newStrength;
+  if (!prior || !next) return;
+
+  // 1. In-app banner outcome.
+  await stampRebuildOutcome({
+    packId,
+    outcome: "improved",
+    reason: `strength_${prior}_to_${next}`,
+  }).catch((e) => console.warn("[buildPack] stamp improved failed:", e));
+
+  // 2. Timeline event.
+  void emitDisputeEvent({
+    disputeId,
+    shopId,
+    eventType: CASE_STRENGTHENED,
+    description: `Case strength improved from ${prior} to ${next}`,
+    eventAt: new Date().toISOString(),
+    actorType: "disputedesk_system",
+    sourceType: "pack_engine",
+    metadataJson: { pack_id: packId, prior_strength: prior, new_strength: next },
+    dedupeKey: `${disputeId}:${CASE_STRENGTHENED}:${next}`,
+  });
+
+  // 3. Email — dedupe on the high-water mark, then gate on preference.
+  try {
+    const { data: dispute } = await db
+      .from("disputes")
+      .select("id, reason, amount, currency_code, strength_alert_level")
+      .eq("id", disputeId)
+      .single();
+    if (!dispute) return;
+
+    const alreadyNotified = (dispute.strength_alert_level as StrengthLevel | null) ?? null;
+    if (alreadyNotified && STRENGTH_RANK[next] <= STRENGTH_RANK[alreadyNotified]) {
+      return; // not a new high — don't re-email
+    }
+
+    const { data: setup } = await db
+      .from("shop_setup")
+      .select("steps")
+      .eq("shop_id", shopId)
+      .single();
+    const teamPayload = (setup?.steps as Record<string, { payload?: Record<string, unknown> }>)?.team
+      ?.payload;
+    const notifications = teamPayload?.notifications as
+      | { disputeUpdates?: boolean }
+      | undefined;
+    // Default on — a case getting stronger is high-signal, low-noise.
+    if (notifications?.disputeUpdates === false) return;
+    const to = teamPayload?.teamEmail as string | undefined;
+    if (!to) return;
+
+    const { data: shop } = await db
+      .from("shops")
+      .select("shop_domain")
+      .eq("id", shopId)
+      .single();
+
+    const emailRes = await sendCaseStrengthenedAlert({
+      to,
+      shopName: shop?.shop_domain ?? undefined,
+      shopDomain: shop?.shop_domain ?? null,
+      disputeId,
+      disputeReason: dispute.reason,
+      disputeAmount: dispute.amount != null ? String(dispute.amount) : null,
+      priorStrength: prior,
+      newStrength: next,
+    });
+
+    if (emailRes.ok) {
+      await db
+        .from("disputes")
+        .update({ strength_alert_level: next })
+        .eq("id", disputeId);
+    }
+  } catch (e) {
+    console.warn("[buildPack] case-strengthened email failed:", e);
+  }
+}
+
 async function sendManualEvidenceAlert(
   db: ReturnType<typeof getServiceClient>,
   shopId: string,

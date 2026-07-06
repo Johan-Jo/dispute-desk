@@ -487,6 +487,21 @@ export function calculateCaseStrength(
     } else {
       overall = "weak";
     }
+  } else if (family === "delivery") {
+    // Item-not-received family. Carrier-confirmed delivery to the verified
+    // customer address is the single most decisive fact for an INR claim —
+    // it directly refutes "I never received it". So one STRONG `delivery`
+    // signal reaches Moderate on its own (no second signal required),
+    // rather than falling through to Weak under the strict count formula.
+    // (`delivered_confirmed` → strong requires deliveredToVerifiedAddress,
+    // set by the fulfillment collector for genuine final delivery only, so
+    // pickup/neighbour/returned never trigger this.) Two strong signals
+    // still reach Strong; everything below one strong delivery is Weak.
+    const hasStrongDelivery = strongSignalIds.has("delivery");
+    if (strongCount >= 2) overall = "strong";
+    else if (strongCount === 1 && moderateCount >= 1) overall = "moderate";
+    else if (hasStrongDelivery) overall = "moderate";
+    else overall = "weak";
   } else {
     if (strongCount >= 2) overall = "strong";
     else if (strongCount === 1 && moderateCount >= 1) overall = "moderate";

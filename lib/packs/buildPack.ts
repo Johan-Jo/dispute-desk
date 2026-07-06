@@ -116,7 +116,25 @@ export interface BuildResult {
   sectionsCollected: number;
   itemsCreated: number;
   failureCode: PackFailureCode | null;
+  /** Case strength on the pack BEFORE this build (null on first build). */
+  priorStrength: CaseStrengthLevel | null;
+  /** Case strength on the pack AFTER this build. */
+  newStrength: CaseStrengthLevel | null;
+  /** True when this build raised the case strength vs the prior build
+   *  (e.g. weak → moderate after delivery confirmation). Drives the
+   *  merchant "your case got stronger" banner + email. False on first
+   *  build, downgrades, and no-change. */
+  strengthImproved: boolean;
 }
+
+/** Ordinal rank for case-strength levels, low → high. Used to detect a
+ *  genuine improvement (strictly higher rank) across a rebuild. */
+const STRENGTH_RANK: Record<CaseStrengthLevel, number> = {
+  insufficient: 0,
+  weak: 1,
+  moderate: 2,
+  strong: 3,
+};
 
 export async function buildPack(
   packId: string,
@@ -127,10 +145,18 @@ export async function buildPack(
   // Load pack → dispute → shop + session
   const { data: pack, error: packErr } = await sb
     .from("evidence_packs")
-    .select("id, shop_id, dispute_id, pack_template_id")
+    .select("id, shop_id, dispute_id, pack_template_id, pack_json")
     .eq("id", packId)
     .single();
   if (packErr || !pack) throw new Error(`Pack not found: ${packId}`);
+
+  // Capture the PRIOR case-strength (before this rebuild overwrites
+  // pack_json) so the job handler can detect a real improvement
+  // (e.g. weak → moderate after delivery is confirmed) and notify the
+  // merchant. Null on a first build (no prior pack_json.case_strength).
+  const priorStrengthOverall =
+    ((pack.pack_json as { case_strength?: { overall?: string } } | null)
+      ?.case_strength?.overall as CaseStrengthLevel | undefined) ?? null;
 
   const { data: dispute } = await sb
     .from("disputes")
@@ -378,6 +404,25 @@ export async function buildPack(
       collectorErrors.push(
         r.reason instanceof Error ? r.reason.message : String(r.reason)
       );
+    }
+  }
+
+  // Clear prior evidence_items for this pack before re-inserting. buildPack
+  // runs on every (re)build, and the workspace API resolves each field to
+  // the OLDEST-created evidence_item ("first write wins", ordered
+  // created_at ASC). Without this delete, a rebuild APPENDS a fresh row
+  // while the stale original keeps winning — so corrected data (e.g. a
+  // now-confirmed delivery) never surfaces in the UI no matter how many
+  // times the pack rebuilds. Delete-then-insert makes the rebuild
+  // authoritative. (Incident 2026-07-06: dispute delivery status stuck on
+  // the pre-fix `delivered_unverified` row across repeated rebuilds.)
+  {
+    const { error: clearErr } = await sb
+      .from("evidence_items")
+      .delete()
+      .eq("pack_id", packId);
+    if (clearErr) {
+      collectorErrors.push(`evidence_items clear failed: ${clearErr.message}`);
     }
   }
 
@@ -851,6 +896,15 @@ export async function buildPack(
   // and the auto-save gate. The legacy v1 engine is still computed above
   // for dual-write parity, but its score/blockers must never leak to the
   // merchant-facing activity feed alongside v2's different numbers.
+  const newStrength: CaseStrengthLevel | null = isFailed
+    ? null
+    : caseStrengthSummary.overall;
+  const strengthImproved =
+    !isFailed &&
+    priorStrengthOverall != null &&
+    newStrength != null &&
+    STRENGTH_RANK[newStrength] > STRENGTH_RANK[priorStrengthOverall];
+
   return {
     packId,
     status: packStatus,
@@ -859,6 +913,9 @@ export async function buildPack(
     sectionsCollected: allSections.length,
     itemsCreated,
     failureCode,
+    priorStrength: priorStrengthOverall,
+    newStrength,
+    strengthImproved,
   };
 }
 

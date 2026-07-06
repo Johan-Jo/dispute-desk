@@ -134,6 +134,7 @@ export interface WorkspacePack {
    *  on first-time packs that have never been regenerated. */
   lastRebuildOutcome:
     | "saved"
+    | "improved"
     | "blocked_weak"
     | "blocked_fatal_loss"
     | "blocked_covered"

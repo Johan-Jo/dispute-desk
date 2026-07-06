@@ -199,7 +199,11 @@ describe("buildPack — dispute.order_gid is null (2026-05-20 regression)", () =
         };
       }
       if (table === "evidence_items") {
-        return { insert: vi.fn().mockResolvedValue({ data: null, error: null }) };
+        return {
+          // delete-before-insert (buildPack clears prior items on rebuild)
+          delete: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })),
+          insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
       }
       if (table === "shopify_orders") {
         return {

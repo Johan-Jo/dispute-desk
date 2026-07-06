@@ -1302,6 +1302,10 @@
         "body": "Your update is saved. DisputeDesk is regenerating the evidence summary, defence narrative, and PDF — once ready, the new version will replace the current one saved on the Shopify dispute."
       },
       "rebuildOutcomeBanner": {
+        "improved": {
+          "title": "New evidence found — your case is now stronger",
+          "body": "DisputeDesk refreshed this dispute and the new evidence (such as confirmed carrier delivery) raised the case strength. The defence package has been updated automatically."
+        },
         "saved": {
           "title": "New defence package saved to Shopify",
           "body": "The regenerated package replaced the previously saved version on the Shopify dispute."

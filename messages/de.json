@@ -931,6 +931,10 @@
         "body": "Ihre Änderung ist gespeichert. DisputeDesk erstellt die Beweiszusammenfassung, das Verteidigungsnarrativ und die PDF neu — sobald fertig, ersetzt die neue Version die aktuell auf dem Shopify-Streitfall gespeicherte."
       },
       "rebuildOutcomeBanner": {
+        "improved": {
+          "title": "Neue Nachweise gefunden – Ihr Fall ist jetzt stärker",
+          "body": "DisputeDesk hat diesen Streitfall aktualisiert, und die neuen Nachweise (z. B. eine bestätigte Zustellung durch den Versanddienstleister) haben die Fallstärke erhöht. Das Verteidigungspaket wurde automatisch aktualisiert."
+        },
         "saved": {
           "title": "Neues Verteidigungspaket auf Shopify gespeichert",
           "body": "Das neu erstellte Paket hat die zuvor gespeicherte Version auf dem Shopify-Streitfall ersetzt."
