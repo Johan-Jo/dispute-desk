@@ -11,6 +11,7 @@
  */
 
 import type { EvidenceBasisRow, EvidenceFact, EvidenceFactCategory } from "../types";
+import { formatChronologyTimestamp } from "../chronology";
 
 const CATEGORY_ORDER: EvidenceFactCategory[] = [
   "payment_authentication",
@@ -91,7 +92,10 @@ function renderValue(fact: EvidenceFact): string {
     case "delivery_proof":
     case "shipping_tracking": {
       const proof = typeof v?.proofType === "string" ? (v.proofType as string) : null;
-      const at = typeof v?.deliveredAt === "string" ? (v.deliveredAt as string) : null;
+      const rawAt = typeof v?.deliveredAt === "string" ? (v.deliveredAt as string) : null;
+      // Format the carrier timestamp as a clean bank-facing date instead of
+      // the raw ISO string ("2026-07-06T18:16:00Z" → "Jul 6, 2026, 18:16 UTC").
+      const at = rawAt ? formatChronologyTimestamp(rawAt) : null;
       if (proof === "signature_confirmed") return at ? `Signature on delivery, ${at}` : "Signature on delivery";
       if (proof === "delivered_confirmed") return at ? `Delivered ${at}` : "Delivered";
       if (proof === "delivered_unverified") return "In transit / handed to carrier";
@@ -99,7 +103,8 @@ function renderValue(fact: EvidenceFact): string {
     }
     case "customer_communication":
     case "communication": {
-      const at = typeof v?.lastMessageAt === "string" ? (v.lastMessageAt as string) : null;
+      const rawMsgAt = typeof v?.lastMessageAt === "string" ? (v.lastMessageAt as string) : null;
+      const at = rawMsgAt ? formatChronologyTimestamp(rawMsgAt) : null;
       return v?.customerConfirmsOrder === true
         ? at
           ? `Customer confirmed order, ${at}`

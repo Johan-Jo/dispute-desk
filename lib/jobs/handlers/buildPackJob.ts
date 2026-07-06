@@ -125,13 +125,6 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
         });
       }
       void updateNormalizedStatus(packRow.dispute_id);
-
-      // Case-strength improvement (e.g. weak → moderate once delivery is
-      // confirmed). Stamp the in-app banner outcome, record a timeline
-      // event, and email the merchant — gated + deduped inside the helper.
-      if (buildSucceeded && result.strengthImproved) {
-        await notifyCaseStrengthened(db, job.shopId, packId, packRow.dispute_id, result);
-      }
     }
 
     // On a failed build (non-throw — return result with status="failed"),
@@ -235,6 +228,23 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
       await sendManualEvidenceAlert(db, job.shopId, packId).catch((err) => {
         console.error("[buildPack] Evidence alert failed:", err);
       });
+
+      // Case-strength improvement (e.g. weak → moderate once delivery is
+      // confirmed). Runs LAST so its rebuild-outcome stamp is the final
+      // write to `last_rebuild_at`/`updated_at` on the pack — otherwise the
+      // later evaluateAndMaybeAutoSave pack update bumps `updated_at` past
+      // `last_rebuild_at` and the UI staleness gate suppresses the banner.
+      // Stamps the banner outcome, records a timeline event, and emails the
+      // merchant — all gated + deduped inside the helper.
+      if (result.strengthImproved && packRow?.dispute_id) {
+        await notifyCaseStrengthened(
+          db,
+          job.shopId,
+          packId,
+          packRow.dispute_id,
+          result,
+        ).catch((err) => console.error("[buildPack] notifyCaseStrengthened failed:", err));
+      }
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
