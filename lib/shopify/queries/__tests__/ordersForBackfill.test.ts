@@ -5,6 +5,9 @@ import {
   pickThreeDsAuthenticated,
   pickPaymentMethod,
   normalizeBackfillOrder,
+  deriveNativeDelivery,
+  flattenTrackingForRow,
+  extractNativeSignature,
   type RawBackfillOrder,
   type RawRiskAssessment,
 } from "@/lib/shopify/queries/ordersForBackfill";
@@ -360,6 +363,158 @@ describe("pickFulfilledAt", () => {
         { createdAt: "2026-04-22T10:00:00Z" },
       ]),
     ).toBe("2026-04-22T10:00:00Z");
+  });
+});
+
+describe("extractNativeSignature", () => {
+  it("pulls a signee name from a 'signed by' event message", () => {
+    expect(
+      extractNativeSignature([
+        { status: "DELIVERED", message: "Delivered, signed by ANNA ANDERSSON" },
+      ]),
+    ).toBe("ANNA ANDERSSON");
+  });
+
+  it("matches 'signed for by' phrasing", () => {
+    expect(
+      extractNativeSignature([{ status: null, message: "Signed for by J. Smith." }]),
+    ).toBe("J. Smith");
+  });
+
+  it("returns null when no signature phrasing is present", () => {
+    expect(
+      extractNativeSignature([{ status: "IN_TRANSIT", message: "Out for delivery" }]),
+    ).toBeNull();
+    expect(extractNativeSignature(null)).toBeNull();
+    expect(extractNativeSignature([])).toBeNull();
+  });
+});
+
+describe("deriveNativeDelivery", () => {
+  it("marks Delivered from native deliveredAt with no tracking app", () => {
+    const r = deriveNativeDelivery(
+      rawOrder({
+        fulfillments: [
+          { createdAt: "2026-04-21T10:00:00Z", displayStatus: "DELIVERED", deliveredAt: "2026-04-25T14:00:00Z" },
+        ],
+      }),
+    );
+    expect(r.deliveryStatus).toBe("Delivered");
+    expect(r.deliveredAtTracking).toBe("2026-04-25T14:00:00Z");
+    expect(r.signedByName).toBeNull();
+  });
+
+  it("falls back to a DELIVERED event happenedAt when deliveredAt is absent", () => {
+    const r = deriveNativeDelivery(
+      rawOrder({
+        fulfillments: [
+          {
+            createdAt: "2026-04-21T10:00:00Z",
+            displayStatus: "OUT_FOR_DELIVERY",
+            deliveredAt: null,
+            events: {
+              edges: [
+                { node: { status: "DELIVERED", happenedAt: "2026-04-25T09:30:00Z", message: null } },
+              ],
+            },
+          },
+        ],
+      }),
+    );
+    expect(r.deliveryStatus).toBe("Delivered");
+    expect(r.deliveredAtTracking).toBe("2026-04-25T09:30:00Z");
+  });
+
+  it("extracts the signee from a native delivery event", () => {
+    const r = deriveNativeDelivery(
+      rawOrder({
+        fulfillments: [
+          {
+            createdAt: "2026-04-21T10:00:00Z",
+            displayStatus: "DELIVERED",
+            deliveredAt: "2026-04-25T14:00:00Z",
+            events: {
+              edges: [
+                { node: { status: "DELIVERED", happenedAt: "2026-04-25T14:00:00Z", message: "Signed by Erik Larsson" } },
+              ],
+            },
+          },
+        ],
+      }),
+    );
+    expect(r.signedByName).toBe("Erik Larsson");
+  });
+
+  it("returns nulls for a label-only (undelivered) order", () => {
+    const r = deriveNativeDelivery(
+      rawOrder({
+        fulfillments: [
+          { createdAt: "2026-04-21T10:00:00Z", displayStatus: "LABEL_PRINTED", deliveredAt: null },
+        ],
+      }),
+    );
+    expect(r).toEqual({ deliveryStatus: null, deliveredAtTracking: null, signedByName: null });
+  });
+});
+
+describe("flattenTrackingForRow — native fallback", () => {
+  it("sources delivery from native fields when no tracking-app metafields exist", () => {
+    const row = flattenTrackingForRow(
+      rawOrder({
+        metafields: null,
+        fulfillments: [
+          {
+            createdAt: "2026-04-21T10:00:00Z",
+            displayStatus: "DELIVERED",
+            deliveredAt: "2026-04-25T14:00:00Z",
+            events: {
+              edges: [
+                { node: { status: "DELIVERED", happenedAt: "2026-04-25T14:00:00Z", message: "Delivered, signed by Anna Nilsson" } },
+              ],
+            },
+          },
+        ],
+      }),
+    );
+    expect(row.delivery_status).toBe("Delivered");
+    expect(row.delivered_at_tracking).toBe("2026-04-25T14:00:00Z");
+    expect(row.signed_by_name).toBe("Anna Nilsson");
+    expect(row.tracking_source).toBe("shopify_native");
+  });
+
+  it("leaves all fields null when neither metafields nor native delivery is present", () => {
+    const row = flattenTrackingForRow(
+      rawOrder({
+        metafields: null,
+        fulfillments: [
+          { createdAt: "2026-04-21T10:00:00Z", displayStatus: "LABEL_PRINTED", deliveredAt: null },
+        ],
+      }),
+    );
+    expect(row).toEqual({
+      delivery_status: null,
+      delivered_at_tracking: null,
+      signed_by_name: null,
+      tracking_source: null,
+    });
+  });
+
+  it("prefers a tracking-app metafield source over native when the app supplies status", () => {
+    const row = flattenTrackingForRow(
+      rawOrder({
+        metafields: {
+          edges: [
+            { node: { namespace: "aftership", key: "tracking_status", value: "Delivered" } },
+            { node: { namespace: "aftership", key: "delivered_at", value: "2026-04-24T10:00:00Z" } },
+          ],
+        },
+        fulfillments: [
+          { createdAt: "2026-04-21T10:00:00Z", displayStatus: "DELIVERED", deliveredAt: "2026-04-25T14:00:00Z" },
+        ],
+      }),
+    );
+    expect(row.tracking_source).toBe("aftership");
+    expect(row.delivery_status).toBe("Delivered");
   });
 });
 
