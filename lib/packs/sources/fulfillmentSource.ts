@@ -85,12 +85,18 @@ function extractTrackingData(
   order: OrderDetailNode,
 ) {
   const tracking = readTrackingForFulfillment(fulfillment, order);
+  const native = nativeDelivery(fulfillment);
+  // Native carrier "delivered" event date, when Shopify's own deliveredAt
+  // is null (the common PostNord case — the delivery lives only in the
+  // event message). Only a true final delivery contributes a date here.
+  const nativeDeliveredAt =
+    native.category === "delivered" ? native.at : null;
   return {
     fulfillmentId: fulfillment.id,
     status: fulfillment.status,
     displayStatus: fulfillment.displayStatus,
     createdAt: fulfillment.createdAt,
-    deliveredAt: fulfillment.deliveredAt,
+    deliveredAt: fulfillment.deliveredAt ?? nativeDeliveredAt,
     estimatedDeliveryAt: fulfillment.estimatedDeliveryAt,
     tracking: fulfillment.trackingInfo
       .filter((t) => t.number || t.url)
@@ -103,11 +109,11 @@ function extractTrackingData(
       title: e.node.lineItem.title,
       quantity: e.node.quantity,
     })),
-    // Tracking-app metafield data (when present). signedByName is the
-    // big one — it elevates the proofType to `signature_confirmed`
-    // which is the strongest possible delivery-evidence tier. Falls back
-    // to the native carrier event signature (PostNord et al.) when the
-    // merchant has no signed_by metafield.
+    // Carrier delivery data. Prefers a tracking-app metafield; falls back
+    // to the native carrier event (PostNord et al.) so a merchant with no
+    // tracking app still gets delivery status + date + any signature. Maps
+    // the native category to the same vocabulary the UI expects
+    // ("Delivered" | "DeliveredToPickup" | "Returned").
     carrierTracking: tracking.deliveryStatus
       ? {
           deliveryStatus: tracking.deliveryStatus,
@@ -115,7 +121,19 @@ function extractTrackingData(
           signedByName: tracking.signedByName ?? nativeSignedBy(fulfillment),
           trackingSource: tracking.trackingSource,
         }
-      : null,
+      : native.category
+        ? {
+            deliveryStatus:
+              native.category === "delivered"
+                ? "Delivered"
+                : native.category === "delivered_to_pickup"
+                  ? "DeliveredToPickup"
+                  : "Returned",
+            deliveredAtTracking: nativeDeliveredAt,
+            signedByName: nativeSignedBy(fulfillment),
+            trackingSource: "shopify_native",
+          }
+        : null,
   };
 }
 
@@ -196,9 +214,14 @@ function resolveDeliveredAt(
   let best: string | null = null;
   for (const f of fulfillments) {
     const tracking = readTrackingForFulfillment(f, order);
+    const native = nativeDelivery(f);
     const candidate =
       (typeof f.deliveredAt === "string" ? f.deliveredAt : null) ??
-      (tracking.deliveryStatus === "Delivered" ? tracking.deliveredAtTracking : null);
+      (tracking.deliveryStatus === "Delivered" ? tracking.deliveredAtTracking : null) ??
+      // Native carrier event: use the classified delivery timestamp, but
+      // ONLY for a true final delivery (not a pickup-point / returned
+      // event) — the date must corroborate "delivered to the customer".
+      (native.category === "delivered" ? native.at : null);
     if (!candidate) continue;
     if (!best || candidate < best) best = candidate;
   }
