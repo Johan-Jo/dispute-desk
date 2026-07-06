@@ -43,6 +43,7 @@ import {
   readTrackingMetafields,
   type RawShopifyMetafield,
 } from "@/lib/shopify/trackingApps";
+import { classifyDeliveryTimeline } from "@/lib/shopify/deliveryEventClassifier";
 import { computeRiskPayloadHash } from "@/lib/fraudIntel/riskPayloadHash";
 
 export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
@@ -147,16 +148,38 @@ export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
               }
             }
           }
-          # Fulfillment basics for fulfilled_at + status derivation.
+          # Fulfillment basics for fulfilled_at + status derivation, PLUS
+          # native carrier delivery signals. deliveredAt is Shopify's own
+          # carrier-confirmed delivery timestamp — available for EVERY carrier
+          # (PostNord, Bring, DHL, ...) with NO tracking app required. Without
+          # it, "Confirmed deliveries" could only be sourced from the handful
+          # of apps that write delivery metafields (AfterShip et al.), so
+          # native-carrier merchants read 0%. events carries per-carrier
+          # status transitions; a signature capture (when the carrier reports
+          # one) surfaces in the event message/status.
           # NOTE: Fulfillment.metafields is NOT a field in the Admin GraphQL
           # schema (verified 2026-01) — referencing it caused the orders
-          # backfill to fail with "Field 'metafields' doesn't exist on type
-          # 'Fulfillment'" for every shop. Tracking metafields are read from
-          # the order-level metafields connection above; flattenTrackingForRow
-          # tolerates the missing per-fulfillment data via ?? fallback.
-          fulfillments(first: 1) {
+          # backfill to fail for every shop. Tracking-app metafields are read
+          # from the ORDER-level metafields connection above; native delivery
+          # comes from these fulfillment fields.
+          # first: 5 (was 1) so a multi-shipment order surfaces its delivered
+          # shipments — we take the best (earliest confirmed) delivery.
+          fulfillments(first: 5) {
             createdAt
             displayStatus
+            status
+            deliveredAt
+            # NEWEST events first — a parcel can accumulate 20+ events
+            # (return-to-sender then re-delivery), and the LATEST delivery
+            # event is the one that decides final state. Default order is
+            # oldest-first, which truncates away the final delivery on a
+            # long timeline (real bug: cay-collective #12936 had 22 events;
+            # first:15 oldest-first stopped at a mid-June return and misread
+            # a delivered parcel as Returned). sortKey HAPPENED_AT + reverse
+            # gives the most recent window; the classifier re-sorts anyway.
+            events(first: 30, sortKey: HAPPENED_AT, reverse: true) {
+              edges { node { status happenedAt message } }
+            }
           }
           risk {
             recommendation
@@ -251,6 +274,20 @@ export interface RawBackfillOrder {
   fulfillments: Array<{
     createdAt: string | null;
     displayStatus: string | null;
+    status?: string | null;
+    /** Shopify-native carrier-confirmed delivery timestamp. Present for
+     *  any carrier once the shipment is delivered — NOT dependent on a
+     *  tracking app. Null while in transit / label-only. */
+    deliveredAt?: string | null;
+    events?: {
+      edges: Array<{
+        node: {
+          status: string | null;
+          happenedAt: string | null;
+          message: string | null;
+        };
+      }>;
+    } | null;
   }> | null;
   shopifyProtect: { status: string | null } | null;
   transactions: RawBackfillTransaction[] | null;
@@ -573,14 +610,122 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
-/** Pure: flatten a RawBackfillOrder's order-level metafields into the
- *  four tracking-related columns persisted to shopify_orders.
+/** Regex for signature-capture text in a native carrier delivery event.
+ *  Carriers that report a signee put it in the event `message`, e.g.
+ *  "Delivered, signed by ANNA ANDERSSON" (PostNord) or "Signed for by
+ *  J. Smith". Captures the name after the sign-off phrase. Intentionally
+ *  conservative — a miss just means no signature (never a false name). */
+export const NATIVE_SIGNATURE_RE =
+  /(?:signed(?:\s+for)?\s+by|signature\s*(?:of|:)?)\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.\-' ]{1,60}?)(?:\.|,|$)/i;
+
+/** Extract a signee name from a native carrier fulfillment event's
+ *  free-text message/status. Returns null when no signature phrasing is
+ *  present. Shared by the KPI ingest (deriveNativeDelivery) and the
+ *  per-dispute evidence collector so both agree on what counts as a
+ *  signature. */
+export function extractNativeSignature(
+  events: Array<{ status: string | null; message: string | null }> | null | undefined,
+): string | null {
+  for (const e of events ?? []) {
+    const m =
+      NATIVE_SIGNATURE_RE.exec(e.message ?? "") ??
+      NATIVE_SIGNATURE_RE.exec(e.status ?? "");
+    const name = m?.[1]?.trim();
+    if (name && name.length >= 2) return name;
+  }
+  return null;
+}
+
+/** Pure: derive delivery signals from Shopify-native fulfillment fields
+ *  (no tracking app needed). Returns the strongest signal across all
+ *  fulfillments.
  *
- *  Previously merged per-fulfillment metafields on top of order-level
- *  for per-shipment accuracy, but Fulfillment.metafields is not exposed
- *  by Shopify's Admin GraphQL — referencing it killed the entire
- *  backfill. Order-level metafields are the AfterShip/Shipway/etc.
- *  primary write path anyway when "sync to Shopify" is enabled. */
+ *  Delivery is classified from the event MESSAGE TIMELINE, not the status
+ *  enum or `deliveredAt` — carrier integrations (PostNord et al.) sync
+ *  delivery into `events[].message` but leave `deliveredAt` null and the
+ *  event `status` stale (a FAILURE from an earlier return-to-sender
+ *  persists across re-delivery). See lib/shopify/deliveryEventClassifier.
+ *
+ *  `deliveryStatus`:
+ *   - "Delivered"          → latest delivery-relevant event is a final
+ *                            delivery to the recipient (or native deliveredAt).
+ *   - "DeliveredToPickup"  → latest is arrival/collection at a pickup point
+ *                            (weaker — not the customer's own address).
+ *   - "Returned"           → latest is return-to-sender.
+ *   - null                 → nothing delivery-relevant.
+ *  `deliveredAtTracking` is set for "Delivered" (native deliveredAt if
+ *  present, else the delivered event's happenedAt). */
+export function deriveNativeDelivery(raw: RawBackfillOrder): {
+  deliveryStatus: string | null;
+  deliveredAtTracking: string | null;
+  signedByName: string | null;
+} {
+  let bestStatus: string | null = null;
+  let deliveredAt: string | null = null;
+  let signedBy: string | null = null;
+  // Rank so the strongest state across fulfillments wins.
+  const rank: Record<string, number> = {
+    Returned: 1,
+    DeliveredToPickup: 2,
+    Delivered: 3,
+  };
+  const rankOf = (s: string | null) => (s ? rank[s] ?? 0 : 0);
+
+  for (const f of raw.fulfillments ?? []) {
+    const events = (f.events?.edges ?? []).map((e) => e.node);
+    const timeline = classifyDeliveryTimeline(events);
+
+    let status: string | null = null;
+    let at: string | null = null;
+    // Native deliveredAt is a hard delivery signal when present.
+    if (f.deliveredAt) {
+      status = "Delivered";
+      at = f.deliveredAt;
+    }
+    if (timeline.finalCategory === "delivered") {
+      status = "Delivered";
+      at = at ?? timeline.finalAt;
+    } else if (timeline.finalCategory === "delivered_to_pickup" && status !== "Delivered") {
+      status = "DeliveredToPickup";
+    } else if (timeline.finalCategory === "returned" && status !== "Delivered") {
+      status = "Returned";
+    }
+
+    if (rankOf(status) > rankOf(bestStatus)) {
+      bestStatus = status;
+      deliveredAt = status === "Delivered" ? at : null;
+    }
+    // Signature capture — free-text on the event message/status.
+    if (!signedBy) signedBy = extractNativeSignature(events);
+  }
+  return {
+    deliveryStatus: bestStatus,
+    deliveredAtTracking: deliveredAt,
+    signedByName: signedBy,
+  };
+}
+
+/** Pure: flatten a RawBackfillOrder's delivery signals into the four
+ *  tracking-related columns persisted to shopify_orders.
+ *
+ *  Priority:
+ *   1. Tracking-app metafields (AfterShip / Shipway / Wonderment /
+ *      ParcelPanel / TrackingMore) written to ORDER-level metafields when
+ *      the merchant enabled "sync to Shopify". Richest signal (explicit
+ *      signed-by field on some apps).
+ *   2. Shopify-NATIVE fulfillment delivery (deliveredAt + delivery
+ *      events). Works for EVERY carrier — PostNord, Bring, DHL, etc. —
+ *      with no third-party app. This is the fallback that fixes the
+ *      "Confirmed deliveries 0%" for native-carrier merchants.
+ *
+ *  Fields are merged per-signal: a metafield app might supply status but
+ *  not a signature, while a native event supplies the signature — take
+ *  the best of each. `tracking_source` reflects the app when it claimed
+ *  the status, else "shopify_native".
+ *
+ *  NOTE: Fulfillment.metafields is not exposed by Shopify's Admin GraphQL
+ *  (referencing it kills the backfill), so app metafields are read only at
+ *  the order level; native signals come from the fulfillment fields. */
 export function flattenTrackingForRow(raw: RawBackfillOrder): {
   delivery_status: string | null;
   delivered_at_tracking: string | null;
@@ -594,12 +739,33 @@ export function flattenTrackingForRow(raw: RawBackfillOrder): {
       value: e.node.value,
     }),
   );
-  const merged = readTrackingMetafields(orderMfs);
+  const app = readTrackingMetafields(orderMfs);
+  const native = deriveNativeDelivery(raw);
+
+  const deliveryStatus = app.deliveryStatus ?? native.deliveryStatus;
+  const deliveredAtTracking =
+    app.deliveredAtTracking ?? native.deliveredAtTracking;
+  const signedByName = app.signedByName ?? native.signedByName;
+
+  // Source attribution: the app owns the row if it produced any signal;
+  // otherwise native delivery did. Null only when neither found anything.
+  const appProduced =
+    !!app.deliveryStatus || !!app.deliveredAtTracking || !!app.signedByName;
+  const nativeProduced =
+    !!native.deliveryStatus ||
+    !!native.deliveredAtTracking ||
+    !!native.signedByName;
+  const trackingSource = appProduced
+    ? app.trackingSource
+    : nativeProduced
+      ? "shopify_native"
+      : null;
+
   return {
-    delivery_status: merged.deliveryStatus,
-    delivered_at_tracking: merged.deliveredAtTracking,
-    signed_by_name: merged.signedByName,
-    tracking_source: merged.trackingSource,
+    delivery_status: deliveryStatus,
+    delivered_at_tracking: deliveredAtTracking,
+    signed_by_name: signedByName,
+    tracking_source: trackingSource,
   };
 }
 
