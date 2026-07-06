@@ -97,6 +97,15 @@ export const ORDER_DETAIL_QUERY = `
               }
             }
           }
+          # Native carrier delivery events. Carries the signature name when
+          # the carrier reports one (PostNord et al. put "signed by NAME" in
+          # the event message — there is no signature enum status). This is
+          # the ONLY signature source for merchants without a tracking app
+          # that writes a signed_by metafield. Consumed by
+          # lib/packs/sources/fulfillmentSource.ts (resolveSignedByName).
+          events(first: 15) {
+            edges { node { status happenedAt message } }
+          }
           # NOTE: Fulfillment.metafields is NOT in the Admin GraphQL
           # 2026-01 schema — confirmed via the same incident as
           # Order.cartToken above (2026-05-15, dispute bd425f70). The
@@ -236,6 +245,18 @@ export interface OrderFulfillment {
       };
     }>;
   };
+  /** Native carrier delivery events. `message` carries a "signed by NAME"
+   *  string when the carrier reports a signature (no signature enum
+   *  status exists). Optional/nullable — many carriers report no events. */
+  events?: {
+    edges: Array<{
+      node: {
+        status: string | null;
+        happenedAt: string | null;
+        message: string | null;
+      };
+    }>;
+  } | null;
   /** Per-fulfillment tracking-app metafields. Removed from Admin API
    *  2026-01 — no longer queryable; field is always absent at runtime.
    *  Kept as optional on the type so the consumer in

@@ -28,6 +28,18 @@ import {
   type RawShopifyMetafield,
   type UnifiedTrackingData,
 } from "@/lib/shopify/trackingApps";
+import { extractNativeSignature } from "@/lib/shopify/queries/ordersForBackfill";
+
+/** Signee name from a fulfillment's native carrier events (message like
+ *  "Delivered, signed by ANNA ANDERSSON"). This is the ONLY signature
+ *  source for merchants whose carrier app (e.g. PostNord) does not write
+ *  a signed_by tracking metafield. Mirrors the KPI-ingest derivation so
+ *  disputes and the Insights signed-for KPI agree. */
+function nativeSignedBy(fulfillment: OrderFulfillment): string | null {
+  return extractNativeSignature(
+    (fulfillment.events?.edges ?? []).map((e) => e.node),
+  );
+}
 
 /** Convert a metafield edge connection into the flat array shape the
  *  tracking-apps reader expects. Tolerant of null connections. */
@@ -78,12 +90,14 @@ function extractTrackingData(
     })),
     // Tracking-app metafield data (when present). signedByName is the
     // big one — it elevates the proofType to `signature_confirmed`
-    // which is the strongest possible delivery-evidence tier.
+    // which is the strongest possible delivery-evidence tier. Falls back
+    // to the native carrier event signature (PostNord et al.) when the
+    // merchant has no signed_by metafield.
     carrierTracking: tracking.deliveryStatus
       ? {
           deliveryStatus: tracking.deliveryStatus,
           deliveredAtTracking: tracking.deliveredAtTracking,
-          signedByName: tracking.signedByName,
+          signedByName: tracking.signedByName ?? nativeSignedBy(fulfillment),
           trackingSource: tracking.trackingSource,
         }
       : null,
@@ -106,10 +120,11 @@ function resolveProofType(
 ): DeliveryProofType {
   let bestTier: 0 | 1 | 2 | 3 = 0;
   for (const f of fulfillments) {
-    // Signature confirmation via tracking-app metafield. Per-
-    // fulfillment metafield wins; falls back to order-level.
+    // Signature confirmation — tracking-app metafield first, then the
+    // native carrier event message (PostNord et al.). Either counts as
+    // the strongest delivery evidence tier.
     const tracking = readTrackingForFulfillment(f, order);
-    if (tracking.signedByName) {
+    if (tracking.signedByName || nativeSignedBy(f)) {
       bestTier = Math.max(bestTier, 3) as 0 | 1 | 2 | 3;
       continue;
     }
@@ -172,6 +187,8 @@ function resolveSignedByName(
   for (const f of fulfillments) {
     const tracking = readTrackingForFulfillment(f, order);
     if (tracking.signedByName) return tracking.signedByName;
+    const native = nativeSignedBy(f);
+    if (native) return native;
   }
   return null;
 }

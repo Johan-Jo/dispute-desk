@@ -84,9 +84,19 @@ export const ORDER_FOR_INGEST_QUERY = /* GraphQL */ `
           }
         }
       }
-      fulfillments(first: 1) {
+      # Native carrier delivery signals — MUST mirror ordersForBackfill.ts
+      # so webhook-driven updates (orders/updated fires on fulfillment +
+      # delivery) capture confirmed delivery + signature. deliveredAt works
+      # for every carrier (PostNord, Bring, DHL) with no tracking app;
+      # events carry the signature message when the carrier reports one.
+      fulfillments(first: 5) {
         createdAt
         displayStatus
+        status
+        deliveredAt
+        events(first: 15) {
+          edges { node { status happenedAt message } }
+        }
       }
       risk {
         recommendation
