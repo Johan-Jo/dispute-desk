@@ -13,6 +13,59 @@
  */
 
 import type { EvidenceSection, BuildContext } from "../types";
+import { classifyDeliveryEvent } from "@/lib/shopify/deliveryEventClassifier";
+import type { OrderDetailNode } from "@/lib/shopify/queries/orders";
+
+/**
+ * Extract bank-facing chronology bullets from native carrier fulfillment
+ * events (`Fulfillment.events`). These live on a DIFFERENT Shopify
+ * connection than `Order.events` (which the timeline is otherwise built
+ * from), so delivery milestones — the decisive facts for an item-not-
+ * received dispute — never reached the "Chronology of Events" list.
+ *
+ * We surface only the meaningful transitions (not every carrier scan):
+ *   - final delivery to the recipient        → "Carrier confirmed delivery…"
+ *   - delivery to a pickup point / locker     → "…delivered to a pickup point…"
+ *   - return to sender                        → "…returned to sender…"
+ * The classifier already distinguishes these (and correctly treats a
+ * pickup/neighbour/returned message as NOT final delivery). Each surfaced
+ * event carries its own carrier timestamp so the merge stays chronological.
+ */
+function fulfillmentChronologyEvents(
+  order: OrderDetailNode,
+): Array<{ message: string; createdAt: string }> {
+  // Keep only the LATEST event of each category across all fulfillments —
+  // a carrier log often repeats "in transit"/"returned" scans, and a
+  // parcel can be returned then re-delivered. One bullet per meaningful
+  // milestone (the last time it occurred) keeps the chronology honest and
+  // uncluttered.
+  const latest: Partial<Record<
+    "delivered" | "delivered_to_pickup" | "returned",
+    string
+  >> = {};
+  for (const f of order.fulfillments ?? []) {
+    for (const e of (f.events?.edges ?? []).map((n) => n.node)) {
+      const at = e.happenedAt ?? null;
+      if (!at) continue;
+      const cat = classifyDeliveryEvent(e);
+      if (cat !== "delivered" && cat !== "delivered_to_pickup" && cat !== "returned") {
+        continue;
+      }
+      if (!latest[cat] || at > latest[cat]!) latest[cat] = at;
+    }
+  }
+  const out: Array<{ message: string; createdAt: string }> = [];
+  if (latest.returned) {
+    out.push({ message: "Carrier reported the shipment returned to sender.", createdAt: latest.returned });
+  }
+  if (latest.delivered_to_pickup) {
+    out.push({ message: "Carrier delivered the shipment to a pickup point for collection.", createdAt: latest.delivered_to_pickup });
+  }
+  if (latest.delivered) {
+    out.push({ message: "Carrier confirmed delivery of the shipment to the recipient.", createdAt: latest.delivered });
+  }
+  return out;
+}
 
 function redactAddress(addr: { city: string; provinceCode: string; countryCode: string; zip: string } | null) {
   if (!addr) return null;
@@ -152,11 +205,32 @@ export async function collectOrderEvidence(
   // Activity log: customer tenure + order timeline.
   // Maps to Shopify's accessActivityLog field and satisfies the
   // "activity_log" completeness field.
-  if (order.customer || order.events?.edges?.length) {
-    const timelineEvents = (order.events?.edges ?? []).map((e) => ({
-      message: e.node.message,
-      createdAt: e.node.createdAt,
-    }));
+  const deliveryChronology = fulfillmentChronologyEvents(order);
+  if (order.customer || order.events?.edges?.length || deliveryChronology.length) {
+    const timelineEvents = [
+      ...(order.events?.edges ?? []).map((e) => ({
+        message: e.node.message,
+        createdAt: e.node.createdAt,
+      })),
+      // Native carrier delivery milestones (Fulfillment.events) — decisive
+      // for item-not-received disputes and otherwise absent from the
+      // Order.events-only timeline. The chronology builder sorts by time.
+      ...deliveryChronology,
+    ];
+
+    // Cap at 20 but NEVER drop a delivery milestone — those are the
+    // decisive bullets for an item-not-received dispute. Keep all delivery
+    // events + fill the remaining slots with the most recent order events.
+    const deliverySet = new Set(deliveryChronology);
+    const cappedTimeline =
+      timelineEvents.length <= 20
+        ? timelineEvents
+        : [
+            ...deliveryChronology,
+            ...timelineEvents
+              .filter((e) => !deliverySet.has(e))
+              .slice(-(Math.max(0, 20 - deliveryChronology.length))),
+          ];
 
     sections.push({
       type: "access_log",
@@ -171,7 +245,7 @@ export async function collectOrderEvidence(
               customerNote: order.customer.note,
             }
           : null,
-        timelineEvents: timelineEvents.slice(0, 20),
+        timelineEvents: cappedTimeline,
         timelineEventCount: timelineEvents.length,
       },
     });
