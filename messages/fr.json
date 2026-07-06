@@ -1650,7 +1650,19 @@
       "labelOnly": "Étiquette d’expédition créée",
       "trackingUnconfirmedNote": "Expédié – le transporteur n’a pas encore confirmé la livraison",
       "trackingLink": "{carrier} · {number}",
-      "trackingHint": "Cliquez pour suivre ce colis sur la page de suivi du transporteur."
+      "trackingHint": "Cliquez pour suivre ce colis sur la page de suivi du transporteur.",
+      "notConfirmed": "Statut de livraison : non confirmé",
+      "whySignature": "Signature enregistrée par le transporteur à la livraison : la preuve la plus solide que le client a reçu la commande.",
+      "whyCarrierConfirmed": "Le transporteur a confirmé la livraison avec un horodatage : un appui solide indiquant que la commande est arrivée.",
+      "whyShippedUnconfirmed": "La commande a été expédiée avec un suivi valide, mais le transporteur n’a pas confirmé la livraison : cela appuie le dossier sans prouver la réception.",
+      "whyNotConfirmed": "Le transporteur indique le colis comme non livré : aucun scan de livraison ni signature. Pour un litige « non reçu », c’est la lacune à combler.",
+      "whyLabelOnly": "Une étiquette d’expédition a été créée, mais le transporteur n’a jamais scanné le colis : cela n’appuie pas encore la livraison.",
+      "factsShippedVia": "Expédié le {date} via {carrier}",
+      "factsShipped": "Expédié le {date}",
+      "factsDelivered": "Livré le {date}",
+      "factsNotDelivered": "Non livré{eta}",
+      "factsEta": " (est. {date})",
+      "factsSignedBy": "Signé par {name}"
     }
   },
   "disputeReasons": {

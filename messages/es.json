@@ -1650,7 +1650,19 @@
       "labelOnly": "Etiqueta de envío creada",
       "trackingUnconfirmedNote": "Enviado: el transportista aún no ha confirmado la entrega",
       "trackingLink": "{carrier} · {number}",
-      "trackingHint": "Haz clic para seguir este paquete en la página de seguimiento del transportista."
+      "trackingHint": "Haz clic para seguir este paquete en la página de seguimiento del transportista.",
+      "notConfirmed": "Estado de entrega: sin confirmar",
+      "whySignature": "Firma capturada por el transportista en la entrega: la prueba más sólida de que el cliente recibió el pedido.",
+      "whyCarrierConfirmed": "El transportista confirmó la entrega con fecha y hora: un respaldo sólido de que el pedido llegó.",
+      "whyShippedUnconfirmed": "El pedido se envió con seguimiento válido, pero el transportista no ha confirmado la entrega: esto respalda el caso sin probar la recepción.",
+      "whyNotConfirmed": "El transportista muestra el paquete como no entregado: sin escaneo de entrega ni firma. En una disputa por “no recibido”, esta es la brecha que hay que cerrar.",
+      "whyLabelOnly": "Se creó una etiqueta de envío, pero el transportista nunca escaneó el paquete: esto aún no respalda la entrega.",
+      "factsShippedVia": "Enviado el {date} vía {carrier}",
+      "factsShipped": "Enviado el {date}",
+      "factsDelivered": "Entregado el {date}",
+      "factsNotDelivered": "No entregado{eta}",
+      "factsEta": " (est. {date})",
+      "factsSignedBy": "Firmado por {name}"
     }
   },
   "disputeReasons": {

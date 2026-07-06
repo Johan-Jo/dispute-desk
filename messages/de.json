@@ -1650,7 +1650,19 @@
       "labelOnly": "Versandetikett erstellt",
       "trackingUnconfirmedNote": "Versandt – der Zusteller hat die Zustellung noch nicht bestätigt",
       "trackingLink": "{carrier} · {number}",
-      "trackingHint": "Klicken Sie, um das Paket auf der Sendungsverfolgungsseite des Zustellers zu verfolgen."
+      "trackingHint": "Klicken Sie, um das Paket auf der Sendungsverfolgungsseite des Zustellers zu verfolgen.",
+      "notConfirmed": "Zustellstatus: nicht bestätigt",
+      "whySignature": "Vom Zusteller erfasste Unterschrift bei der Zustellung – der stärkste Nachweis, dass der Kunde die Bestellung erhalten hat.",
+      "whyCarrierConfirmed": "Der Zusteller hat die Zustellung mit Zeitstempel bestätigt – ein starker Beleg dafür, dass die Bestellung angekommen ist.",
+      "whyShippedUnconfirmed": "Die Bestellung wurde mit gültiger Sendungsverfolgung versandt, aber der Zusteller hat die Zustellung nicht bestätigt – das stützt den Fall, beweist den Empfang aber nicht.",
+      "whyNotConfirmed": "Der Zusteller weist das Paket als nicht zugestellt aus – kein Zustellscan und keine Unterschrift. Bei einer „Nicht erhalten“-Reklamation ist das die entscheidende Lücke.",
+      "whyLabelOnly": "Ein Versandetikett wurde erstellt, aber der Zusteller hat das Paket nie gescannt – das belegt die Zustellung noch nicht.",
+      "factsShippedVia": "Versandt am {date} über {carrier}",
+      "factsShipped": "Versandt am {date}",
+      "factsDelivered": "Zugestellt am {date}",
+      "factsNotDelivered": "Nicht zugestellt{eta}",
+      "factsEta": " (vsl. {date})",
+      "factsSignedBy": "Unterschrieben von {name}"
     }
   },
   "disputeReasons": {
