@@ -791,6 +791,10 @@
         "body": "Votre modification est enregistrée. DisputeDesk régénère le résumé des preuves, l'argumentaire de défense et le PDF — une fois prêt, la nouvelle version remplacera celle actuellement enregistrée sur le litige Shopify."
       },
       "rebuildOutcomeBanner": {
+        "improved": {
+          "title": "Nouvelles preuves trouvées — votre dossier est plus solide",
+          "body": "DisputeDesk a actualisé ce litige et les nouvelles preuves (comme une livraison confirmée par le transporteur) ont renforcé le dossier. Le dossier de défense a été mis à jour automatiquement."
+        },
         "saved": {
           "title": "Nouveau dossier de défense enregistré sur Shopify",
           "body": "Le dossier régénéré a remplacé la version précédemment enregistrée sur le litige Shopify."

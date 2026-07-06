@@ -244,6 +244,58 @@ function resolveSignedByName(
   return null;
 }
 
+/** True when the order's shipping address is a legitimate "verified"
+ *  customer address — billing and shipping align on city + country (the
+ *  same match the order collector uses for `billing_address_match`, see
+ *  lib/packs/sources/orderSource.ts). We require both addresses to be
+ *  present and consistent; a cross-border or city mismatch is exactly the
+ *  fraud pattern this flag must NOT vouch for. Conservative: any missing
+ *  field → false. */
+function shippedToVerifiedAddress(order: OrderDetailNode): boolean {
+  const b = order.billingAddress;
+  const s = order.shippingAddress;
+  if (!b || !s) return false;
+  const bCountry = (b.countryCode ?? "").trim().toUpperCase();
+  const sCountry = (s.countryCode ?? "").trim().toUpperCase();
+  const bCity = (b.city ?? "").trim().toLowerCase();
+  const sCity = (s.city ?? "").trim().toLowerCase();
+  if (!bCountry || !sCountry || !bCity || !sCity) return false;
+  return bCountry === sCountry && bCity === sCity;
+}
+
+/** Whether ANY fulfillment reached a true final delivery to the recipient
+ *  (native "delivered" event, Shopify deliveredAt, or a tracking-app
+ *  "Delivered" status). Pickup-point / neighbour / returned do NOT count. */
+function hasFinalDelivery(
+  fulfillments: OrderFulfillment[],
+  order: OrderDetailNode,
+): boolean {
+  for (const f of fulfillments) {
+    if (typeof f.deliveredAt === "string" && f.deliveredAt) return true;
+    if (nativeDelivery(f).category === "delivered") return true;
+    const tracking = readTrackingForFulfillment(f, order);
+    if (tracking.deliveryStatus === "Delivered" && tracking.deliveredAtTracking) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Rubric #9 flag consumed by the canonical categorizer
+ *  (lib/argument/canonicalEvidence.ts): `delivered_confirmed` upgrades to
+ *  STRONG when delivery landed at the verified customer address. True only
+ *  when there is a genuine FINAL delivery AND the shipping address is
+ *  verified (billing/shipping aligned, no cross-border/city mismatch). A
+ *  pickup-point, neighbour, or returned parcel never sets this. This is the
+ *  decisive signal for an item-not-received dispute — the carrier confirms
+ *  the goods reached the customer's own address. */
+function resolveDeliveredToVerifiedAddress(
+  fulfillments: OrderFulfillment[],
+  order: OrderDetailNode,
+): boolean {
+  return hasFinalDelivery(fulfillments, order) && shippedToVerifiedAddress(order);
+}
+
 export async function collectFulfillmentEvidence(
   ctx: BuildContext,
 ): Promise<EvidenceSection[]> {
@@ -292,6 +344,13 @@ export async function collectFulfillmentEvidence(
         // cites "delivered {date}" / signature in bank-facing prose.
         deliveredAt: resolveDeliveredAt(order.fulfillments, order),
         signedByName: resolveSignedByName(order.fulfillments, order),
+        // Rubric #9 — canonical categorizer upgrades delivered_confirmed to
+        // STRONG when true. Set only for a genuine final delivery to the
+        // verified customer address (see resolveDeliveredToVerifiedAddress).
+        deliveredToVerifiedAddress: resolveDeliveredToVerifiedAddress(
+          order.fulfillments,
+          order,
+        ),
         fulfillments: order.fulfillments.map((f) => extractTrackingData(f, order)),
       },
     },

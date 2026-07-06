@@ -130,6 +130,9 @@ describe("handleBuildPack", () => {
       sectionsCollected: 6,
       itemsCreated: 9,
       failureCode: null,
+      priorStrength: null,
+      newStrength: "moderate",
+      strengthImproved: false,
     });
 
     await handleBuildPack(makeJob());
@@ -181,6 +184,9 @@ describe("handleBuildPack", () => {
       sectionsCollected: 0,
       itemsCreated: 0,
       failureCode: "order_fetch_failed",
+      priorStrength: null,
+      newStrength: null,
+      strengthImproved: false,
     });
 
     await handleBuildPack(makeJob());
@@ -266,6 +272,9 @@ describe("handleBuildPack", () => {
       sectionsCollected: 6,
       itemsCreated: 9,
       failureCode: null,
+      priorStrength: null,
+      newStrength: "moderate",
+      strengthImproved: false,
     });
 
     await handleBuildPack(makeJob());
@@ -295,6 +304,9 @@ describe("handleBuildPack", () => {
       sectionsCollected: 6,
       itemsCreated: 9,
       failureCode: null,
+      priorStrength: null,
+      newStrength: "moderate",
+      strengthImproved: false,
     });
     mockConsumePack.mockRejectedValue(new PackLimitReachedError(SHOP_ID, 0));
 
@@ -328,6 +340,9 @@ describe("handleBuildPack", () => {
       sectionsCollected: 6,
       itemsCreated: 9,
       failureCode: null,
+      priorStrength: null,
+      newStrength: "moderate",
+      strengthImproved: false,
     });
     mockConsumePack.mockRejectedValue(new Error("ledger temporarily down"));
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -350,6 +365,9 @@ describe("handleBuildPack", () => {
       sectionsCollected: 0,
       itemsCreated: 0,
       failureCode: "order_fetch_failed",
+      priorStrength: null,
+      newStrength: null,
+      strengthImproved: false,
     });
 
     await handleBuildPack(makeJob());
