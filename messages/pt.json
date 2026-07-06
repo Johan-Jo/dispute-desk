@@ -1660,9 +1660,10 @@
       "factsShippedVia": "Enviado em {date} via {carrier}",
       "factsShipped": "Enviado em {date}",
       "factsDelivered": "Entregue em {date}",
-      "factsNotDelivered": "Não entregue{eta}",
-      "factsEta": " (prev. {date})",
-      "factsSignedBy": "Assinado por {name}"
+      "factsNotDelivered": "Não entregue",
+      "factsSignedBy": "Assinado por {name}",
+      "factsNotDeliveredEta": "Não entregue (prev. {date})",
+      "factsCarrier": "{carrier}"
     }
   },
   "disputeReasons": {

@@ -1660,9 +1660,10 @@
       "factsShippedVia": "Skickad {date} med {carrier}",
       "factsShipped": "Skickad {date}",
       "factsDelivered": "Levererad {date}",
-      "factsNotDelivered": "Ej levererad{eta}",
-      "factsEta": " (ber. {date})",
-      "factsSignedBy": "Signerad av {name}"
+      "factsNotDelivered": "Ej levererad",
+      "factsSignedBy": "Signerad av {name}",
+      "factsNotDeliveredEta": "Ej levererad (ber. {date})",
+      "factsCarrier": "{carrier}"
     }
   },
   "disputeReasons": {

@@ -402,8 +402,26 @@ export function InclusionReviewSection({
                           lineHeight: "18px",
                         }}
                       >
-                        {fieldLabel(li.field, li.label)}
+                        {li.displayLabelToken
+                          ? resolveToken(tRoot, li.displayLabelToken)
+                          : fieldLabel(li.field, li.label)}
                       </div>
+                      {li.factsTokens && li.factsTokens.length > 0 ? (
+                        <div
+                          style={{
+                            fontSize: 12.5,
+                            color: "#202223",
+                            lineHeight: "18px",
+                            marginTop: 3,
+                            fontVariantNumeric: "tabular-nums",
+                          }}
+                        >
+                          {li.factsTokens
+                            .map((tok) => resolveToken(tRoot, tok))
+                            .filter((s) => s && s.trim().length > 0)
+                            .join(" · ")}
+                        </div>
+                      ) : null}
                       <div
                         style={{
                           fontSize: 12.5,

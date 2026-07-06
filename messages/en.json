@@ -1660,9 +1660,10 @@
       "factsShippedVia": "Shipped {date} via {carrier}",
       "factsShipped": "Shipped {date}",
       "factsDelivered": "Delivered {date}",
-      "factsNotDelivered": "Not delivered{eta}",
-      "factsEta": " (est. {date})",
-      "factsSignedBy": "Signed by {name}"
+      "factsNotDelivered": "Not delivered",
+      "factsSignedBy": "Signed by {name}",
+      "factsNotDeliveredEta": "Not delivered (est. {date})",
+      "factsCarrier": "{carrier}"
     }
   },
   "disputeReasons": {
