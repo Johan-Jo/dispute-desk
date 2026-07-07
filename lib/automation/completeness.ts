@@ -400,6 +400,14 @@ const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
     { field: "no_return_initiated", label: "Return Status", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "refund_policy", label: "Refund Policy", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_policy", collectionType: "conditional_auto" },
     { field: "cancellation_policy", label: "Cancellation Policy", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_policy", collectionType: "conditional_auto" },
+    // Delivery/shipping are SECONDARY for a refund dispute — the "customer
+    // received and kept the goods, so no refund was owed" argument — and
+    // also the rows that carry the carrier tracking link. Recommended,
+    // never blocking (refund_record stays primary). Without these rows the
+    // shipping section (incl. the tracking link) has no checklist entry to
+    // render, so the merchant sees no tracking link even when it exists.
+    { field: "shipping_tracking", label: "Shipping Tracking", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
+    { field: "delivery_proof", label: "Delivery Confirmation", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "supporting_documents", label: "Supporting Documents", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
   ],

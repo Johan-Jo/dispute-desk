@@ -147,9 +147,43 @@ describe("evaluateCompleteness", () => {
     const fields = result.checklist.map((c) => c.field);
     expect(fields).toContain("no_return_initiated");
     expect(fields).toContain("refund_record");
+    // Delivery/shipping rows carry the carrier tracking link + the secondary
+    // "goods received, no refund owed" signal. They must be on the checklist
+    // (recommended, non-blocking) so the tracking link renders and the
+    // delivery signal is scored.
+    expect(fields).toContain("shipping_tracking");
+    expect(fields).toContain("delivery_proof");
     // The collected no_return_initiated must be available (scoreable), not missing.
     const noReturn = result.checklist.find((c) => c.field === "no_return_initiated");
     expect(noReturn?.status).toBe("available");
+  });
+
+  it("V2: klarna refund-inquiry DB template (c02) scores the refund + delivery signals it collects", () => {
+    // Regression (2026-07-07, dispute #12121): a Klarna CREDIT_NOT_PROCESSED
+    // *inquiry* makes buildPack stamp the klarna_refund_inquiry DB template
+    // (c02). When a DB template is stamped, V2 scores ONLY that template's items
+    // by collector_key — it does NOT fall through to REASON_TEMPLATES_V2. The
+    // template originally listed only refund_record / refund_policy /
+    // customer_communication, so the collected `no_return_initiated` and the
+    // delivery rows were dropped from the checklist and the case stayed Weak.
+    // Migration 20260707120000 adds them. This pins the shape the template now
+    // must produce: the collected refund signal is `available` (scoreable) and
+    // the delivery rows are present (tracking link renders, also fixes #12809).
+    const c02Items = [
+      { key: "refund_record", label: "Refund status", required: true, collector_key: "refund_record" },
+      { key: "refund_policy", label: "Refund / return policy", required: false, collector_key: "refund_policy" },
+      { key: "customer_emails", label: "Customer correspondence", required: false, collector_key: "customer_communication" },
+      { key: "no_return_initiated", label: "Return status", required: false, collector_key: "no_return_initiated" },
+      { key: "tracking_number", label: "Tracking status", required: false, collector_key: "shipping_tracking" },
+      { key: "delivery_proof", label: "Proof of delivery", required: false, collector_key: "delivery_proof" },
+    ];
+    // What the #12121 pack actually collected.
+    const present = new Set(["no_return_initiated", "shipping_tracking", "delivery_proof", "refund_policy"]);
+    const result = evaluateCompletenessV2("CREDIT_NOT_PROCESSED", present, [], c02Items);
+    const byField = new Map(result.checklist.map((c) => [c.field, c.status]));
+    expect(byField.get("no_return_initiated")).toBe("available");
+    expect(byField.get("shipping_tracking")).toBe("available");
+    expect(byField.get("delivery_proof")).toBe("available");
   });
 
   it("CREDIT_NOT_PROCESSED lists delivery_proof as a recommended (non-blocking) item", () => {
