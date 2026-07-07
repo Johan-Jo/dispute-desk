@@ -163,6 +163,7 @@ const COLLECTOR_KEY_SOURCE: Record<string, FieldSource> = {
   billing_address_match: "shopify_order_auto",
   customer_account_info: "shopify_order_auto",
   refund_record: "shopify_order_auto",
+  no_return_initiated: "shopify_order_auto",
   shipping_tracking: "shopify_shipping",
   delivery_proof: "shopify_shipping",
   refund_policy: "store_policy",

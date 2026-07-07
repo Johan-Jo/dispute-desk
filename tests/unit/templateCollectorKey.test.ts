@@ -26,6 +26,11 @@ const ALLOWED_COLLECTOR_KEYS = new Set([
   "shipping_tracking",
   "delivery_proof",
   "refund_record",
+  // Order-level returnStatus === NO_RETURN — the grounded "no refund was owed"
+  // signal (orderSource fieldsProvided: ["no_return_initiated"]). Added to the
+  // klarna_refund_inquiry template (c02) by 20260707120000 so a Klarna refund
+  // inquiry actually scores the refund-family signal it collects.
+  "no_return_initiated",
   "refund_policy",
   "shipping_policy",
   "cancellation_policy",
