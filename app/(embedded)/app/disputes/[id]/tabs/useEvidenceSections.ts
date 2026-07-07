@@ -73,16 +73,19 @@ export type EvidenceSubmissionDestination =
 
 /**
  * Merchant-facing next-step copies. Each maps 1:1 to a stable i18n key
- * and is selected by the readiness + automation state. The deadline-
- * submit cron (`/api/cron/defence-package-deadline-submit`) guarantees
- * auto-submission on the due date for any non-blocked case with a
- * validated defence package, so review-mode copy must surface that
- * safety net rather than read as a Submit-button CTA.
+ * and is selected by the readiness + automation state.
+ *
+ * Review mode is a HARD gate (2026-07-06): the deadline-submit cron
+ * (`/api/cron/defence-package-deadline-submit`) auto-submits AUTO-mode
+ * disputes only — a `needs_review` dispute is never auto-sent. So
+ * review-mode copy must read as a "you must submit" CTA, NOT a promise
+ * that we'll send it on the deadline. AUTO-mode copy still surfaces the
+ * cron's due-date submission.
  *
  * `dueAt` is threaded through the `ready_*` and `ready_with_warnings_*`
- * variants so the rendered copy can show the date the cron will fire.
- * When unknown (rare — Shopify webhook hasn't delivered the deadline
- * yet) the renderer falls back to "before the deadline".
+ * variants so the rendered copy can show the deadline. When unknown
+ * (rare — Shopify webhook hasn't delivered the deadline yet) the renderer
+ * falls back to "before the deadline".
  */
 export type NextStep =
   | { kind: "ready_auto"; dueAt: string | null }
@@ -198,16 +201,17 @@ function deriveAutomationMode(
  *   isReadOnly === true                                            → submitted_no_action
  *   readiness === "blocked"                                        → review_missing
  *   readiness === "ready"               + mode === "automatic"     → ready_auto
- *   readiness === "ready"               + mode === "review"        → ready_review
+ *   readiness === "ready"               + mode === "review"        → ready_review (merchant must submit; no auto-send)
  *   readiness === "ready_with_warnings" + mode === "automatic"     → ready_with_warnings_auto
  *   readiness === "ready_with_warnings" + mode === "review"        → ready_with_warnings_review
  *   anything else (loading, unknown)                               → review_missing
  *
  * All non-blocked, non-submitted variants carry `dueAt` so the renderer
- * can surface the deadline-cron promise ("Auto-submits on …"). The cron
- * (`/api/cron/defence-package-deadline-submit`) fires on the due date
- * for every non-blocked case with a validated defence package — review
- * mode is "we'll send it for you unless you act earlier", not a CTA.
+ * can surface the deadline. The cron
+ * (`/api/cron/defence-package-deadline-submit`) auto-submits on the due
+ * date for AUTO-mode disputes only. Review mode is a hard gate — the copy
+ * is a "review and submit before the deadline" CTA, and nothing is sent
+ * automatically.
  */
 function deriveNextStep(args: {
   isReadOnly: boolean;

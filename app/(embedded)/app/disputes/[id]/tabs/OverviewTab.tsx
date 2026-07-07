@@ -310,6 +310,21 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const heroVariant: HeroVariant = caseStrength.heroVariant as HeroVariant;
   const heroTone = HERO_TONE_BY_VARIANT[heroVariant];
 
+  // Whether carrier delivery is already CONFIRMED (delivered to recipient
+  // or signed for). Drives the "monitoring" banner so it stops promising a
+  // future delivery-update once delivery has actually landed. Reads the
+  // delivery signal's proofType from the same payload map the evidence
+  // rows use. `delivered_confirmed` / `signature_confirmed` = confirmed;
+  // `delivered_unverified` / `label_created` = not yet.
+  const deliveryConfirmed = (() => {
+    const p =
+      (data.pack?.evidenceItemsByField?.["delivery_proof"]?.payload ??
+        data.pack?.evidenceItemsByField?.["shipping_tracking"]?.payload ??
+        null) as Record<string, unknown> | null;
+    const proof = typeof p?.proofType === "string" ? p.proofType : null;
+    return proof === "delivered_confirmed" || proof === "signature_confirmed";
+  })();
+
   function resolveHeroTitle(): string {
     switch (presentationStatus) {
       case "CLOSED_WON":
@@ -748,7 +763,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 lineHeight: 1.4,
               }}
             >
-              {t("monitoring.title")}
+              {deliveryConfirmed
+                ? t("monitoring.titleDeliveryConfirmed")
+                : t("monitoring.title")}
             </p>
             <p
               style={{
@@ -758,15 +775,21 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 lineHeight: 1.5,
               }}
             >
-              {caseStrength.deliveryInTransit
+              {deliveryConfirmed
                 ? dispute.dueAt
-                  ? t("monitoring.bodyDeliveryPending", {
+                  ? t("monitoring.bodyDeliveryConfirmed", {
                       deadline: formatDate(dispute.dueAt),
                     })
-                  : t("monitoring.bodyDeliveryPendingNoDeadline")
-                : dispute.dueAt
-                  ? t("monitoring.bodyWithDeadline", { deadline: formatDate(dispute.dueAt) })
-                  : t("monitoring.bodyNoDeadline")}
+                  : t("monitoring.bodyDeliveryConfirmedNoDeadline")
+                : caseStrength.deliveryInTransit
+                  ? dispute.dueAt
+                    ? t("monitoring.bodyDeliveryPending", {
+                        deadline: formatDate(dispute.dueAt),
+                      })
+                    : t("monitoring.bodyDeliveryPendingNoDeadline")
+                  : dispute.dueAt
+                    ? t("monitoring.bodyWithDeadline", { deadline: formatDate(dispute.dueAt) })
+                    : t("monitoring.bodyNoDeadline")}
             </p>
           </div>
         </div>

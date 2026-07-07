@@ -707,8 +707,8 @@
               "NoDate": "Nous soumettrons avant l'échéance"
             },
             "ready_review": {
-              "WithDate": "Prêt — vérifiez et soumettez, ou nous l'enverrons le {dueDate}",
-              "NoDate": "Prêt — vérifiez et soumettez, ou nous l'enverrons avant l'échéance"
+              "WithDate": "Prêt — vérifiez et soumettez avant le {dueDate}",
+              "NoDate": "Prêt — vérifiez et soumettez avant l'échéance"
             },
             "ready_with_warnings_auto": {
               "WithDate": "Prêt avec avertissements — envoi le {dueDate} sauf modification de votre part",
@@ -856,7 +856,7 @@
       },
       "package": {
         "loadingAccessibilityLabel": "Chargement du dossier de preuves",
-        "cardHelp": "DisputeDesk prépare un PDF destiné à la banque qui combine les preuves Shopify approuvées, les signaux de paiement, les preuves d'exécution, les communications client, les politiques et tout document fourni par le marchand en un dossier de preuves structuré. <b>Si vous ne soumettez pas avant l'échéance, DisputeDesk enregistre le dossier dans Shopify à la date d'échéance et Shopify le transmet automatiquement au réseau de cartes.</b>",
+        "cardHelp": "DisputeDesk prépare un PDF destiné à la banque qui combine les preuves Shopify approuvées, les signaux de paiement, les preuves d'exécution, les communications client, les politiques et tout document fourni par le marchand en un dossier de preuves structuré. <b>Vérifiez le dossier et soumettez-le avant l'échéance — en mode révision, rien n'est envoyé tant que vous ne soumettez pas.</b>",
         "savingBody": "DisputeDesk a accepté votre soumission et téléverse le dossier de preuves vers Shopify. Cela se termine généralement en moins de 30 secondes — ce message se mettra à jour automatiquement.",
         "savedTitles": {
           "outcomePosted": "Résultat publié",
@@ -1139,6 +1139,9 @@
     "overview": {
       "monitoring": {
         "title": "DisputeDesk surveille cette commande",
+        "titleDeliveryConfirmed": "Livraison confirmée — ajoutée à votre défense",
+        "bodyDeliveryConfirmed": "La livraison par le transporteur a été confirmée et figure dans le dossier de défense. DisputeDesk continue de surveiller l’arrivée d’autres preuves (comme la vérification de paiement) avant votre échéance ({deadline}) et met à jour automatiquement. Aucune action requise de votre part.",
+        "bodyDeliveryConfirmedNoDeadline": "La livraison par le transporteur a été confirmée et figure dans le dossier de défense. DisputeDesk continue de surveiller l’arrivée d’autres preuves (comme la vérification de paiement) avant votre échéance et met à jour automatiquement. Aucune action requise de votre part.",
         "bodyWithDeadline": "Si le suivi d’expédition, la confirmation de livraison, la vérification de paiement ou d’autres preuves dérivées du système deviennent disponibles avant votre échéance ({deadline}), DisputeDesk mettra à jour automatiquement le dossier de défense. Aucune action requise de votre part.",
         "bodyNoDeadline": "Si le suivi d’expédition, la confirmation de livraison, la vérification de paiement ou d’autres preuves dérivées du système deviennent disponibles avant votre échéance, DisputeDesk mettra à jour automatiquement le dossier de défense. Aucune action requise de votre part.",
         "bodyDeliveryPending": "Ouvrez le lien de suivi ci-dessus pour suivre le parcours du colis. Si la livraison est confirmée avant votre échéance ({deadline}) — ou qu’une autre preuve comme la vérification du paiement arrive — DisputeDesk met à jour le dossier de défense automatiquement. Aucune action requise de votre part.",
@@ -4624,7 +4627,7 @@
     "sparklineSubtitle": "Hebdomadaire, 8 dernières semaines",
     "kpi3dsAuth": "Auth. 3-DS",
     "kpi3dsAuthContext": "{num} sur {den} commandes Shopify Payments",
-    "kpiMedianFulfillment": "Délai médian d'expédition",
+    "kpiMedianFulfillment": "Délai commande-expédition",
     "kpiMedianFulfillmentContext": "{count} commandes expédiées",
     "kpiConfirmedDelivery": "Livraisons confirmées",
     "kpiConfirmedDeliveryContext": "{num} sur {den} commandes expédiées",
@@ -4642,7 +4645,7 @@
     "kpiFraudDisputeRateInfo": "Part des commandes devenues une contestation pour fraude Shopify Payments (motif = FRAUDULENT) sur cette période.",
     "kpi3dsAuthInfo": "Part des paiements par carte Shopify Payments où l'authentification 3-D Secure a abouti. Les paiements authentifiés transfèrent la responsabilité des contestations pour fraude à l'émetteur.",
     "kpiProtectCoverageInfo": "Sur les commandes éligibles à Shopify Protect, la part marquée PROTECTED. Les commandes protégées ne vous parviennent pas sous forme de contestations.",
-    "kpiMedianFulfillmentInfo": "Délai médian entre la passation de la commande et l'expédition, pour les commandes traitées sur cette période. Un traitement plus rapide améliore généralement les signaux service client.",
+    "kpiMedianFulfillmentInfo": "Délai médian entre la passation de la commande et son expédition (création de l'étiquette d'envoi). Ce N'EST PAS le délai de livraison : l'acheminement par le transporteur jusqu'au client est plus long. Une expédition plus rapide améliore généralement les signaux service client.",
     "kpiHighRiskFulfilledInfo": "Sur les commandes classées risque ÉLEVÉ par Shopify, la part qui a tout de même été expédiée. Un chiffre élevé indique que vous absorbez le risque de fraude signalé par Shopify.",
     "kpiConfirmedDeliveryInfo": "Sur les commandes expédiées, la part dont le transporteur a confirmé la livraison. Une livraison attestée par le transporteur est une preuve solide en contestation.",
     "kpiSignedForInfo": "Sur les livraisons confirmées, la part dont le transporteur a enregistré une signature. La signature à la réception est la preuve de livraison la plus forte pour les contestations de fraude.",
