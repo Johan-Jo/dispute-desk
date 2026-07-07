@@ -385,6 +385,24 @@ const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "supporting_documents", label: "Supporting Documents", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
   ],
+  // Credit-not-processed ("you owed me a refund and didn't issue it"). The
+  // decisive signals are `refund_record` (proof a refund WAS issued) and
+  // `no_return_initiated` (customer never returned → no refund owed under a
+  // return-conditional policy). Before this entry existed, CREDIT_NOT_PROCESSED
+  // fell through to GENERAL, whose checklist has neither — so those signals
+  // were collected but never reached the scorer, and the refund-family
+  // rollup rule (lib/argument/caseStrength.ts) had nothing to lift. Both
+  // are `recommended` (the collectors emit them automatically from order
+  // data; they never block submission).
+  CREDIT_NOT_PROCESSED: [
+    { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
+    { field: "refund_record", label: "Refund Record", requirementMode: "recommended", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
+    { field: "no_return_initiated", label: "Return Status", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
+    { field: "refund_policy", label: "Refund Policy", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_policy", collectionType: "conditional_auto" },
+    { field: "cancellation_policy", label: "Cancellation Policy", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_policy", collectionType: "conditional_auto" },
+    { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
+    { field: "supporting_documents", label: "Supporting Documents", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
+  ],
   GENERAL: [
     { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "shipping_tracking", label: "Shipping Tracking", requirementMode: "optional", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
