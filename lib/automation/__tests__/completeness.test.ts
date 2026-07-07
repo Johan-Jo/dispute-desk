@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { evaluateCompleteness, type OrderContext } from "../completeness";
+import { evaluateCompleteness, evaluateCompletenessV2, type OrderContext } from "../completeness";
 
 const FULFILLED_CARD: OrderContext = { isFulfilled: true, hasCardPayment: true, avsCvvAvailable: true };
 const UNFULFILLED_CARD: OrderContext = { isFulfilled: false, hasCardPayment: true, avsCvvAvailable: true };
@@ -133,6 +133,23 @@ describe("evaluateCompleteness", () => {
     const refundItem = result.checklist.find((c) => c.field === "refund_record");
     expect(refundItem?.required).toBe(true);
     expect(result.blockers).toContain("Refund Record");
+  });
+
+  it("V2: CREDIT_NOT_PROCESSED checklist includes the refund signals (not GENERAL fallback)", () => {
+    // Regression (2026-07-07): REASON_TEMPLATES_V2 had no CREDIT_NOT_PROCESSED
+    // entry, so the SCORING checklist fell through to GENERAL — which lacks
+    // refund_record and no_return_initiated. Those signals were collected but
+    // never scored, so a "no refund was owed" case (no_return_initiated
+    // present) stayed Weak even with the refund-family rollup rule. The V2
+    // template must carry them.
+    const present = new Set(["order_confirmation", "no_return_initiated", "refund_policy"]);
+    const result = evaluateCompletenessV2("CREDIT_NOT_PROCESSED", present, [], null);
+    const fields = result.checklist.map((c) => c.field);
+    expect(fields).toContain("no_return_initiated");
+    expect(fields).toContain("refund_record");
+    // The collected no_return_initiated must be available (scoreable), not missing.
+    const noReturn = result.checklist.find((c) => c.field === "no_return_initiated");
+    expect(noReturn?.status).toBe("available");
   });
 
   it("CREDIT_NOT_PROCESSED lists delivery_proof as a recommended (non-blocking) item", () => {
