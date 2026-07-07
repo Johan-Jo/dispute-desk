@@ -502,6 +502,24 @@ export function calculateCaseStrength(
     else if (strongCount === 1 && moderateCount >= 1) overall = "moderate";
     else if (hasStrongDelivery) overall = "moderate";
     else overall = "weak";
+  } else if (family === "refund") {
+    // Credit-not-processed family ("you owed me a refund and didn't issue
+    // it"). The decisive fact is whether a refund obligation actually
+    // arose. A `refund` signal (refund_record when a refund WAS processed,
+    // or no_return_initiated when the customer never returned the goods and
+    // no refund was issued) directly answers the claim: either the refund
+    // exists, or none was owed under a return-conditional policy. So one
+    // such signal reaches Moderate on its own, rather than falling to Weak
+    // under the strict count formula. The collector only emits
+    // no_return_initiated when returnStatus === NO_RETURN AND no refund was
+    // issued, so it never contradicts a real refund. Two strong signals
+    // still reach Strong.
+    const hasRefundSignal =
+      strongSignalIds.has("refund") || moderateSignalIds.has("refund");
+    if (strongCount >= 2) overall = "strong";
+    else if (strongCount === 1 && moderateCount >= 1) overall = "moderate";
+    else if (hasRefundSignal) overall = "moderate";
+    else overall = "weak";
   } else {
     if (strongCount >= 2) overall = "strong";
     else if (strongCount === 1 && moderateCount >= 1) overall = "moderate";

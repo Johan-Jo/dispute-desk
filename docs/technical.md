@@ -2086,6 +2086,12 @@ The count-based rollup ([lib/argument/caseStrength.ts](../lib/argument/caseStren
 
 The `delivered_confirmed → strong` upgrade requires `payload.deliveredToVerifiedAddress === true` (rubric #9). That flag is set by the fulfillment collector ([lib/packs/sources/fulfillmentSource.ts](../lib/packs/sources/fulfillmentSource.ts), `resolveDeliveredToVerifiedAddress`) **only** when there is a genuine FINAL delivery (native `deliveredAt` / a native "delivered" event / a tracking-app `Delivered` status — never pickup-point, neighbour, or returned) AND the shipping address is verified (billing/shipping aligned on city + country, no cross-border/city mismatch). Before this, the flag was never set by any collector, so confirmed delivery silently capped at Moderate and single-signal INR cases read as Weak.
 
+#### Credit-not-processed (refund family): no-return / refund-record → Moderate
+
+The rollup is likewise reason-aware for the **refund** family (CREDIT_NOT_PROCESSED — "you owed me a refund and didn't issue it"). A single `refund`-signalId signal reaches **Moderate** on its own: either `refund_record` (a refund WAS processed on the order) or `no_return_initiated` (the customer never returned the goods AND no refund was issued — so no refund obligation arose under a return-conditional policy). The `no_return_initiated` collector only emits when `returnStatus === NO_RETURN` and no refund exists, so it never contradicts a real refund. Two strong signals still reach Strong.
+
+**Why not "strong" from the policy alone:** the decisive strong path would be a checkout-**accepted** refund policy (`acceptedAtCheckout === true` with an `acceptanceTimestamp` — rubric #8), but Shopify's Admin API does not expose per-order policy acceptance, so no collector can set that flag (only published-policy disclosure is available, which is supporting). The refund-family rule is what lifts an otherwise-correct "no refund was owed" case (delivered, no return, no refund) off Weak.
+
 #### Update propagation: improvement banner, email, and nightly refresh
 
 When a **rebuild raises** the case strength (e.g. weak → moderate once delivery is confirmed), `buildPack` returns `{ priorStrength, newStrength, strengthImproved }` (comparing the pre-rebuild `pack_json.case_strength.overall` against the fresh one). `buildPackJob` (`notifyCaseStrengthened`) then:
