@@ -111,80 +111,133 @@ export async function GET(req: NextRequest) {
     byReason[r] = (byReason[r] ?? 0) + 1;
   }
 
-  // 2) REST per-dispute → network_reason_code (card discriminator).
-  //    Card (Visa/MC) disputes carry a network_reason_code; Klarna disputes do not.
-  let withNetworkCode = 0;
+  // 2) REST per-dispute → network_reason_code + full REST payload keys.
+  //    Build a per-dispute record we can cross-tab against the order's payment method.
+  interface DisputeRecord {
+    orderGid: string | null;
+    orderName: string | null;
+    type: string | null;
+    reason: string | null;
+    networkReasonCode: string | null;
+    restKeys: string[];
+  }
+  const records: DisputeRecord[] = [];
   let restErrors = 0;
-  const networkCodeSamples: Array<Record<string, unknown>> = [];
+  let restKeySample: string[] = [];
   for (const d of all) {
     const legacyId = d.id.split("/").pop();
+    let nrc: string | null = null;
+    let restKeys: string[] = [];
     try {
       const res = await fetch(
         `https://${shopDomain}/admin/api/${SHOPIFY_API_VERSION}/shopify_payments/disputes/${legacyId}.json`,
         { headers: { "X-Shopify-Access-Token": token, "Content-Type": "application/json" } },
       );
-      if (!res.ok) {
+      if (res.ok) {
+        const j = (await res.json()) as { dispute?: Record<string, unknown> };
+        nrc = (j.dispute?.network_reason_code as string | null) ?? null;
+        restKeys = j.dispute ? Object.keys(j.dispute) : [];
+        if (restKeySample.length === 0) restKeySample = restKeys;
+      } else {
         restErrors++;
-        continue;
-      }
-      const j = (await res.json()) as { dispute?: { network_reason_code?: string | null } };
-      const nrc = j.dispute?.network_reason_code ?? null;
-      if (nrc) {
-        withNetworkCode++;
-        if (networkCodeSamples.length < 15) {
-          networkCodeSamples.push({
-            id: legacyId,
-            order: d.order?.name,
-            network_reason_code: nrc,
-            type: d.type,
-            reason: d.reasonDetails?.reason,
-          });
-        }
       }
     } catch {
       restErrors++;
     }
+    records.push({
+      orderGid: d.order?.id ?? null,
+      orderName: d.order?.name ?? null,
+      type: d.type,
+      reason: d.reasonDetails?.reason ?? null,
+      networkReasonCode: nrc,
+      restKeys,
+    });
   }
 
-  // 3) Reconcile against our DB.
+  // 3) Join each dispute to its order's payment method (our synced order data).
   const sb = getServiceClient();
+  const orderGids = records.map((r) => r.orderGid).filter((g): g is string => !!g);
+  const { data: orderRows } = await sb
+    .from("shopify_orders")
+    .select("shopify_order_id, payment_method, payment_gateway")
+    .eq("shop_id", CAY_SHOP_ID)
+    .in("shopify_order_id", orderGids);
+  const methodByGid = new Map(
+    (orderRows ?? []).map((o) => [o.shopify_order_id, o.payment_method as string | null]),
+  );
+
+  // 4) THE KEY CROSS-TAB: for disputes WITHOUT a network reason code, what payment
+  //    method funded the order? Hypothesis under test: they are all Klarna pay-later.
+  const withCode = records.filter((r) => r.networkReasonCode);
+  const withoutCode = records.filter((r) => !r.networkReasonCode);
+
+  const bucketMethods = (recs: DisputeRecord[]) => {
+    const m: Record<string, number> = {};
+    for (const r of recs) {
+      const method = (r.orderGid && methodByGid.get(r.orderGid)) || "(order-not-synced)";
+      m[method] = (m[method] ?? 0) + 1;
+    }
+    return m;
+  };
+
+  // Full cross-tab: payment_method × has-network-code.
+  const crossTab: Record<string, { withCode: number; withoutCode: number }> = {};
+  for (const r of records) {
+    const method = (r.orderGid && methodByGid.get(r.orderGid)) || "(order-not-synced)";
+    crossTab[method] ??= { withCode: 0, withoutCode: 0 };
+    if (r.networkReasonCode) crossTab[method].withCode++;
+    else crossTab[method].withoutCode++;
+  }
+
+  // Network-reason-code distribution.
+  const codeDistribution: Record<string, number> = {};
+  for (const r of withCode) {
+    const c = r.networkReasonCode as string;
+    codeDistribution[c] = (codeDistribution[c] ?? 0) + 1;
+  }
+
   const { count: dbCount } = await sb
     .from("disputes")
     .select("id", { count: "exact", head: true })
     .eq("shop_id", CAY_SHOP_ID);
 
-  const { data: dbGids } = await sb
-    .from("disputes")
-    .select("dispute_gid")
-    .eq("shop_id", CAY_SHOP_ID);
-  const known = new Set((dbGids ?? []).map((r) => r.dispute_gid));
-  const unsynced = all
-    .filter((d) => !known.has(d.id))
-    .slice(0, 25)
-    .map((d) => ({
-      id: d.id,
-      type: d.type,
-      reason: d.reasonDetails?.reason,
-      order: d.order?.name,
-      initiatedAt: d.initiatedAt,
-    }));
+  // Answer the hypothesis explicitly.
+  const withoutCodeMethods = bucketMethods(withoutCode);
+  const nonKlarnaWithoutCode = withoutCode.filter((r) => {
+    const method = (r.orderGid && methodByGid.get(r.orderGid)) || "";
+    return !method.startsWith("klarna");
+  });
+  const allWithoutCodeAreKlarna = withoutCode.length > 0 && nonKlarnaWithoutCode.length === 0;
 
   return NextResponse.json({
     shopDomain,
     shopifyDisputeCount: all.length,
-    pagesWalked: page,
-    byType,
-    byReason,
-    disputesWithNetworkReasonCode: withNetworkCode,
-    networkCodeSamples,
-    restLookupErrors: restErrors,
     ourDbDisputeCount: dbCount ?? 0,
     reconciled: all.length === (dbCount ?? 0),
-    delta: all.length - (dbCount ?? 0),
-    unsyncedSample: unsynced,
-    interpretation:
-      withNetworkCode === 0
-        ? "No dispute carries a network_reason_code → none went through the card rails (consistent with 100% Klarna)."
-        : `${withNetworkCode} dispute(s) carry a network_reason_code → these are card-rail disputes; NOT 100% Klarna.`,
+    byType,
+    byReason,
+    restLookupErrors: restErrors,
+    restPayloadKeys: restKeySample,
+    counts: {
+      withNetworkCode: withCode.length,
+      withoutNetworkCode: withoutCode.length,
+    },
+    codeDistribution,
+    crossTab_paymentMethod_x_hasNetworkCode: crossTab,
+    withoutCode_paymentMethods: withoutCodeMethods,
+    withCode_paymentMethods: bucketMethods(withCode),
+    hypothesis_allWithoutCodeAreKlarna: allWithoutCodeAreKlarna,
+    nonKlarnaWithoutCode: nonKlarnaWithoutCode.map((r) => ({
+      order: r.orderName,
+      method: (r.orderGid && methodByGid.get(r.orderGid)) || "(order-not-synced)",
+      reason: r.reason,
+      type: r.type,
+    })),
+    withoutCodeDetail: withoutCode.map((r) => ({
+      order: r.orderName,
+      method: (r.orderGid && methodByGid.get(r.orderGid)) || "(order-not-synced)",
+      reason: r.reason,
+      type: r.type,
+    })),
   });
 }
