@@ -200,7 +200,10 @@ export async function middleware(req: NextRequest) {
       // Without this exemption the middleware returns 401 before the
       // route runs, which is why pixel events never landed before today.
       pathname === "/api/sessions/ingest" ||
-      (process.env.DD_DEBUG_AGENT_LOG === "1" && pathname === "/api/debug/agent-log")
+      (process.env.DD_DEBUG_AGENT_LOG === "1" && pathname === "/api/debug/agent-log") ||
+      // TEMP: read-only cay-collective dispute reconcile diagnostic. Self-gates
+      // on CRON_SECRET inside the route (that is the auth). Remove with the route.
+      pathname === "/api/debug/cay-dispute-reconcile"
     ) {
       return nextWithAppBridge(req, "0");
     }
