@@ -141,6 +141,8 @@ jobs:
   # Specs included:
   #   - e2e/save-to-shopify.spec.ts          (route gates: 401 + 404)
   #   - e2e/save-to-shopify-seeded.spec.ts   (seeded happy path: 202 + jobs row + status flip)
+  #   - e2e/legal-routes.spec.ts             (public legal/support routes render, no auth)
+  #   - e2e/demo-routes.spec.ts              (public /demo routes hydrate w/o client-side exception, no auth)
   # The other e2e specs (portal-sections, portal-setup-checklist,
   # admin-resources-hub) can be added to `npm run test:e2e -- ...` when
   # we want them in CI; keeping the lane narrow until we trust this one.
@@ -226,7 +228,7 @@ jobs:
           # finally, and `npm run cleanup:e2e-orphans` is the recovery path if
           # a run crashes between seed and cleanup.
           E2E_ALLOW_PROD_DB: "true"
-        run: npx playwright test e2e/save-to-shopify.spec.ts e2e/save-to-shopify-seeded.spec.ts e2e/legal-routes.spec.ts --reporter=list
+        run: npx playwright test e2e/save-to-shopify.spec.ts e2e/save-to-shopify-seeded.spec.ts e2e/legal-routes.spec.ts e2e/demo-routes.spec.ts --reporter=list
 
       - name: Upload Playwright report on failure
         if: failure() && steps.gate.outputs.skip != 'true'
