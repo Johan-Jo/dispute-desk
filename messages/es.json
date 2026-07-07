@@ -707,8 +707,8 @@
               "NoDate": "Lo enviaremos antes de la fecha límite"
             },
             "ready_review": {
-              "WithDate": "Listo — revisa y envía, o lo enviaremos el {dueDate}",
-              "NoDate": "Listo — revisa y envía, o lo enviaremos antes de la fecha límite"
+              "WithDate": "Listo — revisa y envía antes del {dueDate}",
+              "NoDate": "Listo — revisa y envía antes de la fecha límite"
             },
             "ready_with_warnings_auto": {
               "WithDate": "Listo con advertencias — enviando el {dueDate} salvo que lo cambies",
@@ -856,7 +856,7 @@
       },
       "package": {
         "loadingAccessibilityLabel": "Cargando paquete de evidencia",
-        "cardHelp": "DisputeDesk prepara un PDF dirigido al banco que combina la evidencia aprobada de Shopify, las señales de pago, las pruebas de cumplimiento, la comunicación con el cliente, las políticas y cualquier documento aportado por el comerciante en un paquete de evidencia estructurado. <b>Si no envías antes de la fecha límite, DisputeDesk guardará el paquete en Shopify en la fecha de vencimiento y Shopify lo enviará automáticamente a la red de tarjetas.</b>",
+        "cardHelp": "DisputeDesk prepara un PDF dirigido al banco que combina la evidencia aprobada de Shopify, las señales de pago, las pruebas de cumplimiento, la comunicación con el cliente, las políticas y cualquier documento aportado por el comerciante en un paquete de evidencia estructurado. <b>Revisa el paquete y envíalo antes de la fecha límite: en modo de revisión no se envía nada a menos que tú lo envíes.</b>",
         "savingBody": "DisputeDesk ha aceptado tu envío y está subiendo el paquete de evidencia a Shopify. Esto suele completarse en menos de 30 segundos — este aviso se actualizará automáticamente.",
         "savedTitles": {
           "outcomePosted": "Resultado publicado",
@@ -1139,6 +1139,9 @@
     "overview": {
       "monitoring": {
         "title": "DisputeDesk está supervisando este pedido",
+        "titleDeliveryConfirmed": "Entrega confirmada: añadida a tu defensa",
+        "bodyDeliveryConfirmed": "La entrega del transportista se ha confirmado y está incluida en el paquete de defensa. DisputeDesk sigue supervisando por si aparecen más pruebas (como la verificación de pago) antes de tu plazo ({deadline}) y se actualiza automáticamente. No necesitas hacer nada.",
+        "bodyDeliveryConfirmedNoDeadline": "La entrega del transportista se ha confirmado y está incluida en el paquete de defensa. DisputeDesk sigue supervisando por si aparecen más pruebas (como la verificación de pago) antes de tu plazo y se actualiza automáticamente. No necesitas hacer nada.",
         "bodyWithDeadline": "Si la información de envío, la confirmación de entrega, la verificación de pago u otras pruebas derivadas del sistema están disponibles antes de tu plazo ({deadline}), DisputeDesk actualizará automáticamente el paquete de defensa. No necesitas hacer nada.",
         "bodyNoDeadline": "Si la información de envío, la confirmación de entrega, la verificación de pago u otras pruebas derivadas del sistema están disponibles antes de tu plazo, DisputeDesk actualizará automáticamente el paquete de defensa. No necesitas hacer nada.",
         "bodyDeliveryPending": "Abre el enlace de seguimiento de arriba para seguir el recorrido del paquete. Si se confirma la entrega antes de tu fecha límite ({deadline}) —o llega otra evidencia como la verificación de pago—, DisputeDesk actualizará el paquete de defensa automáticamente. No necesitas hacer nada.",
@@ -4624,8 +4627,8 @@
     "sparklineSubtitle": "Semanal, últimas 8 semanas",
     "kpi3dsAuth": "Auten. 3-DS",
     "kpi3dsAuthContext": "{num} de {den} pedidos de Shopify Payments",
-    "kpiMedianFulfillment": "Tiempo mediano de cumplimiento",
-    "kpiMedianFulfillmentContext": "{count} pedidos cumplidos",
+    "kpiMedianFulfillment": "Tiempo de pedido a envío",
+    "kpiMedianFulfillmentContext": "{count} pedidos enviados",
     "kpiConfirmedDelivery": "Entregas confirmadas",
     "kpiConfirmedDeliveryContext": "{num} de {den} pedidos cumplidos",
     "kpiSignedFor": "Firmado en la entrega",
@@ -4642,7 +4645,7 @@
     "kpiFraudDisputeRateInfo": "Porcentaje de pedidos que se convirtieron en una disputa por fraude de Shopify Payments (motivo = FRAUDULENT) en este período.",
     "kpi3dsAuthInfo": "Porcentaje de pedidos con tarjeta de Shopify Payments donde la autenticación 3-D Secure se completó correctamente. Los pagos autenticados trasladan la responsabilidad por fraude al emisor.",
     "kpiProtectCoverageInfo": "De los pedidos elegibles para Shopify Protect, el porcentaje marcado como PROTECTED. Los pedidos protegidos no llegan como contracargos.",
-    "kpiMedianFulfillmentInfo": "Tiempo mediano entre la realización del pedido y el cumplimiento, en los pedidos completados en este período. Un cumplimiento más rápido mejora las señales de servicio al cliente.",
+    "kpiMedianFulfillmentInfo": "Tiempo mediano desde que se realiza el pedido hasta que lo envías (creas la etiqueta de envío). NO es el tiempo de entrega: el transporte del transportista hasta el cliente tarda más. Un envío más rápido suele mejorar las señales de servicio al cliente.",
     "kpiHighRiskFulfilledInfo": "De los pedidos clasificados por Shopify como riesgo ALTO, el porcentaje que aun así se cumplió. Un valor alto indica que estás asumiendo el riesgo de fraude que Shopify marcó.",
     "kpiConfirmedDeliveryInfo": "De los pedidos cumplidos, el porcentaje en los que el transportista devolvió un estado de entregado. La entrega confirmada por el transportista es una prueba sólida en disputas.",
     "kpiSignedForInfo": "De las entregas confirmadas, el porcentaje en las que el transportista registró una firma. La firma de recepción es la prueba de entrega más fuerte para contracargos por fraude.",

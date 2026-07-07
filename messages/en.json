@@ -1056,6 +1056,9 @@
     "overview": {
       "monitoring": {
         "title": "DisputeDesk is monitoring this order",
+        "titleDeliveryConfirmed": "Delivery confirmed — added to your defence",
+        "bodyDeliveryConfirmed": "Carrier delivery has been confirmed and is included in the defence package. DisputeDesk keeps monitoring for any further evidence (such as payment verification) before your deadline ({deadline}) and refreshes automatically. No action needed from you.",
+        "bodyDeliveryConfirmedNoDeadline": "Carrier delivery has been confirmed and is included in the defence package. DisputeDesk keeps monitoring for any further evidence (such as payment verification) before your deadline and refreshes automatically. No action needed from you.",
         "bodyWithDeadline": "If shipping tracking, delivery confirmation, payment verification, or other system-derived evidence becomes available before your deadline ({deadline}), DisputeDesk will refresh the defence package automatically. No action needed from you.",
         "bodyNoDeadline": "If shipping tracking, delivery confirmation, payment verification, or other system-derived evidence becomes available before your deadline, DisputeDesk will refresh the defence package automatically. No action needed from you.",
         "bodyDeliveryPending": "Open the tracking link above to follow the parcel’s journey. If delivery is confirmed before your deadline ({deadline}) — or other evidence like payment verification arrives — DisputeDesk updates the defence package automatically. No action needed from you.",
@@ -1218,8 +1221,8 @@
               "NoDate": "We'll submit before the deadline"
             },
             "ready_review": {
-              "WithDate": "Ready — review and submit, or we'll send on {dueDate}",
-              "NoDate": "Ready — review and submit, or we'll send before the deadline"
+              "WithDate": "Ready — review and submit before {dueDate}",
+              "NoDate": "Ready — review and submit before the deadline"
             },
             "ready_with_warnings_auto": {
               "WithDate": "Ready with warnings — submitting on {dueDate} unless you change it",
@@ -1367,7 +1370,7 @@
       },
       "package": {
         "loadingAccessibilityLabel": "Loading defence package",
-        "cardHelp": "DisputeDesk prepares a bank-facing PDF that combines approved Shopify evidence, payment signals, fulfilment proof, customer communication, policies, and any merchant-supplied documents into one structured defence package. <b>If you don't submit before the deadline, DisputeDesk will save the package to Shopify on the due date and Shopify will auto-submit it to the card network.</b>",
+        "cardHelp": "DisputeDesk prepares a bank-facing PDF that combines approved Shopify evidence, payment signals, fulfilment proof, customer communication, policies, and any merchant-supplied documents into one structured defence package. <b>Review the package and submit it before the deadline — in review mode nothing is sent unless you submit.</b>",
         "savingBody": "DisputeDesk has accepted your submission and is uploading the defence package to Shopify. This usually completes in under 30 seconds — this banner will update automatically.",
         "savedTitles": {
           "outcomePosted": "Outcome posted",
@@ -4761,8 +4764,8 @@
     "sparklineSubtitle": "Weekly, last 8 weeks",
     "kpi3dsAuth": "3-DS auth",
     "kpi3dsAuthContext": "{num} of {den} Shopify Payments orders",
-    "kpiMedianFulfillment": "Median time to fulfill",
-    "kpiMedianFulfillmentContext": "{count} orders fulfilled",
+    "kpiMedianFulfillment": "Order-to-shipment time",
+    "kpiMedianFulfillmentContext": "{count} orders shipped",
     "kpiConfirmedDelivery": "Confirmed deliveries",
     "kpiConfirmedDeliveryContext": "{num} of {den} fulfilled orders",
     "kpiSignedFor": "Signed for at delivery",
@@ -4779,7 +4782,7 @@
     "kpiFraudDisputeRateInfo": "Share of orders that became a Shopify Payments fraud dispute (reason = FRAUDULENT) in this window.",
     "kpi3dsAuthInfo": "Share of Shopify Payments card orders where 3-D Secure authentication completed successfully. Authenticated payments shift liability to the issuer for fraud chargebacks.",
     "kpiProtectCoverageInfo": "Of orders Shopify Protect was eligible to underwrite, the share marked PROTECTED. Protected orders do not reach you as chargebacks.",
-    "kpiMedianFulfillmentInfo": "Median time between order placement and fulfillment, across orders fulfilled in this window. Faster fulfillment generally improves customer-service signals.",
+    "kpiMedianFulfillmentInfo": "Median time from order placement until you ship it (create the shipping label). This is NOT delivery time — the carrier's transit to the customer takes longer. Faster shipping generally improves customer-service signals.",
     "kpiHighRiskFulfilledInfo": "Of orders Shopify classified HIGH risk, the share that still reached a fulfilled state. A high number means you are absorbing the fraud risk Shopify flagged.",
     "kpiConfirmedDeliveryInfo": "Of fulfilled orders, the share where the carrier returned a delivered status. Carrier-attested delivery is strong dispute evidence.",
     "kpiSignedForInfo": "Of confirmed deliveries, the share where the carrier recorded a signature. Signature confirmation is the strongest delivery evidence for fraud chargebacks.",

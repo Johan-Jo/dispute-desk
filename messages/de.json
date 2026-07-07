@@ -776,6 +776,9 @@
       },
       "monitoring": {
         "title": "DisputeDesk überwacht diese Bestellung",
+        "titleDeliveryConfirmed": "Zustellung bestätigt – zu Ihrer Verteidigung hinzugefügt",
+        "bodyDeliveryConfirmed": "Die Zustellung durch den Zusteller wurde bestätigt und ist im Verteidigungspaket enthalten. DisputeDesk überwacht weiterhin auf zusätzliche Beweise (z. B. Zahlungsverifizierung) vor Ihrer Frist ({deadline}) und aktualisiert automatisch. Sie müssen nichts tun.",
+        "bodyDeliveryConfirmedNoDeadline": "Die Zustellung durch den Zusteller wurde bestätigt und ist im Verteidigungspaket enthalten. DisputeDesk überwacht weiterhin auf zusätzliche Beweise (z. B. Zahlungsverifizierung) vor Ihrer Frist und aktualisiert automatisch. Sie müssen nichts tun.",
         "bodyWithDeadline": "Wenn Versand-Tracking, Lieferbestätigung, Zahlungsverifizierung oder andere systemgenerierte Beweise vor Ihrer Frist ({deadline}) verfügbar werden, aktualisiert DisputeDesk das Beweispaket automatisch. Sie müssen nichts tun.",
         "bodyNoDeadline": "Wenn Versand-Tracking, Lieferbestätigung, Zahlungsverifizierung oder andere systemgenerierte Beweise vor Ihrer Frist verfügbar werden, aktualisiert DisputeDesk das Beweispaket automatisch. Sie müssen nichts tun.",
         "bodyDeliveryPending": "Öffnen Sie den Tracking-Link oben, um den Weg des Pakets zu verfolgen. Wird die Zustellung vor Ihrer Frist ({deadline}) bestätigt – oder treffen andere Nachweise wie eine Zahlungsverifizierung ein – aktualisiert DisputeDesk das Verteidigungspaket automatisch. Sie müssen nichts tun.",
@@ -847,8 +850,8 @@
               "NoDate": "Wir reichen vor Ablauf der Frist ein"
             },
             "ready_review": {
-              "WithDate": "Bereit — prüfen und einreichen, oder wir senden am {dueDate}",
-              "NoDate": "Bereit — prüfen und einreichen, oder wir senden vor Ablauf der Frist"
+              "WithDate": "Bereit — prüfen und bis {dueDate} einreichen",
+              "NoDate": "Bereit — prüfen und vor Ablauf der Frist einreichen"
             },
             "ready_with_warnings_auto": {
               "WithDate": "Bereit mit Hinweisen — Einreichung am {dueDate}, sofern Sie nichts ändern",
@@ -996,7 +999,7 @@
       },
       "package": {
         "loadingAccessibilityLabel": "Beweispaket wird geladen",
-        "cardHelp": "DisputeDesk erstellt ein bankgerichtetes PDF, das genehmigte Shopify-Beweise, Zahlungssignale, Erfüllungsnachweise, Kundenkommunikation, Richtlinien und alle vom Händler bereitgestellten Dokumente in einem strukturierten Beweispaket zusammenfasst. <b>Wenn Sie vor der Frist nicht einreichen, speichert DisputeDesk das Paket am Fälligkeitstag in Shopify und Shopify übermittelt es automatisch an das Kartennetzwerk.</b>",
+        "cardHelp": "DisputeDesk erstellt ein bankgerichtetes PDF, das genehmigte Shopify-Beweise, Zahlungssignale, Erfüllungsnachweise, Kundenkommunikation, Richtlinien und alle vom Händler bereitgestellten Dokumente in einem strukturierten Beweispaket zusammenfasst. <b>Prüfen Sie das Paket und reichen Sie es vor der Frist ein – im Prüfmodus wird nichts gesendet, solange Sie nicht einreichen.</b>",
         "savingBody": "DisputeDesk hat Ihre Einreichung angenommen und lädt das Beweispaket zu Shopify hoch. Dies dauert in der Regel weniger als 30 Sekunden — dieser Hinweis wird automatisch aktualisiert.",
         "savedTitles": {
           "outcomePosted": "Ergebnis eingetragen",
@@ -4624,8 +4627,8 @@
     "sparklineSubtitle": "Wöchentlich, letzte 8 Wochen",
     "kpi3dsAuth": "3-DS-Auth.",
     "kpi3dsAuthContext": "{num} von {den} Shopify-Payments-Bestellungen",
-    "kpiMedianFulfillment": "Median-Zeit bis zur Erfüllung",
-    "kpiMedianFulfillmentContext": "{count} erfüllte Bestellungen",
+    "kpiMedianFulfillment": "Zeit von Bestellung bis Versand",
+    "kpiMedianFulfillmentContext": "{count} Bestellungen versendet",
     "kpiConfirmedDelivery": "Bestätigte Zustellungen",
     "kpiConfirmedDeliveryContext": "{num} von {den} erfüllten Bestellungen",
     "kpiSignedFor": "Bei Zustellung unterzeichnet",
@@ -4642,7 +4645,7 @@
     "kpiFraudDisputeRateInfo": "Anteil der Bestellungen, aus denen in diesem Zeitraum eine Shopify-Payments-Betrugsanfechtung (Grund = FRAUDULENT) wurde.",
     "kpi3dsAuthInfo": "Anteil der Shopify-Payments-Kartenzahlungen, bei denen die 3-D-Secure-Authentifizierung erfolgreich abgeschlossen wurde. Authentifizierte Zahlungen verlagern die Haftung für Betrugsrückbuchungen auf den Aussteller.",
     "kpiProtectCoverageInfo": "Anteil der durch Shopify Protect förderfähigen Bestellungen, die als PROTECTED gekennzeichnet sind. Geschützte Bestellungen erreichen dich nicht als Rückbuchungen.",
-    "kpiMedianFulfillmentInfo": "Mittlere Zeit zwischen Bestelleingang und Fulfillment für die in diesem Zeitraum abgewickelten Bestellungen. Schnelleres Fulfillment verbessert in der Regel die Service-Signale.",
+    "kpiMedianFulfillmentInfo": "Median-Zeit vom Bestelleingang bis zum Versand (Erstellung des Versandetiketts). Dies ist NICHT die Lieferzeit – der Transport durch den Zusteller zum Kunden dauert länger. Schnellerer Versand verbessert in der Regel die Service-Signale.",
     "kpiHighRiskFulfilledInfo": "Anteil der von Shopify als HOHES Risiko eingestuften Bestellungen, die dennoch ausgeliefert wurden. Ein hoher Wert bedeutet, dass du das von Shopify markierte Betrugsrisiko übernimmst.",
     "kpiConfirmedDeliveryInfo": "Anteil der ausgelieferten Bestellungen, bei denen der Spediteur einen Zustellstatus zurückgemeldet hat. Vom Spediteur bestätigte Zustellungen sind starke Beweise im Streitfall.",
     "kpiSignedForInfo": "Anteil der bestätigten Zustellungen, bei denen der Spediteur eine Unterschrift erfasst hat. Die Empfangsbestätigung ist der stärkste Zustellbeweis bei Betrugsrückbuchungen.",

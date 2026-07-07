@@ -74,10 +74,18 @@ export async function GET(req: NextRequest) {
   const endOfToday = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
 
   // Disputes still awaiting evidence submission, with deadline today.
+  //
+  // Review mode is a HARD gate: a dispute parked for merchant review
+  // (`normalized_status = "needs_review"`) is NEVER auto-submitted on the
+  // deadline. Nothing is sent unless the merchant explicitly submits from
+  // the workspace. This is a deliberate product decision (2026-07-06) —
+  // review mode means "the merchant decides", so `needs_review` is
+  // intentionally EXCLUDED from this list. (Auto mode still auto-submits;
+  // the pipeline only parks to review when a rule says so or strength is
+  // below the auto threshold.) Do NOT re-add `needs_review` here.
   const merchantActionableStatuses = [
     "new",
     "in_progress",
-    "needs_review",
     "ready_to_submit",
     "action_needed",
   ];

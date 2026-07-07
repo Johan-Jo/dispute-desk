@@ -1077,8 +1077,8 @@
               "NoDate": "Vi skickar in före tidsfristen"
             },
             "ready_review": {
-              "WithDate": "Klar — granska och skicka in, annars skickar vi den {dueDate}",
-              "NoDate": "Klar — granska och skicka in, annars skickar vi före tidsfristen"
+              "WithDate": "Klar — granska och skicka in före {dueDate}",
+              "NoDate": "Klar — granska och skicka in före tidsfristen"
             },
             "ready_with_warnings_auto": {
               "WithDate": "Klar med varningar — skickas in {dueDate} om du inte ändrar något",
@@ -1226,7 +1226,7 @@
       },
       "package": {
         "loadingAccessibilityLabel": "Läser in försvarspaket",
-        "cardHelp": "DisputeDesk förbereder en bankvänd PDF som kombinerar godkända Shopify-bevis, betalningssignaler, leveransbevis, kundkommunikation, policyer och eventuella handlarinlämnade dokument till ett strukturerat försvarspaket. <b>Om du inte skickar in före deadline sparar DisputeDesk paketet i Shopify på förfallodagen och Shopify skickar det automatiskt till kortnätverket.</b>",
+        "cardHelp": "DisputeDesk förbereder en bankvänd PDF som kombinerar godkända Shopify-bevis, betalningssignaler, leveransbevis, kundkommunikation, policyer och eventuella handlarinlämnade dokument till ett strukturerat försvarspaket. <b>Granska paketet och skicka in det före deadline – i granskningsläge skickas ingenting om du inte skickar in det.</b>",
         "savingBody": "DisputeDesk har tagit emot din inskickning och laddar upp försvarspaketet till Shopify. Detta brukar slutföras på under 30 sekunder — detta meddelande uppdateras automatiskt.",
         "savedTitles": {
           "outcomePosted": "Resultat publicerat",
@@ -1509,6 +1509,9 @@
     "overview": {
       "monitoring": {
         "title": "DisputeDesk övervakar denna order",
+        "titleDeliveryConfirmed": "Leverans bekräftad – tillagd i ditt försvar",
+        "bodyDeliveryConfirmed": "Leveransen från fraktbolaget är bekräftad och ingår i försvarspaketet. DisputeDesk fortsätter att bevaka om ytterligare bevis (till exempel betalningsverifiering) dyker upp före din deadline ({deadline}) och uppdaterar automatiskt. Ingen åtgärd krävs från dig.",
+        "bodyDeliveryConfirmedNoDeadline": "Leveransen från fraktbolaget är bekräftad och ingår i försvarspaketet. DisputeDesk fortsätter att bevaka om ytterligare bevis (till exempel betalningsverifiering) dyker upp före din deadline och uppdaterar automatiskt. Ingen åtgärd krävs från dig.",
         "bodyWithDeadline": "Om leveransspårning, leveransbekräftelse, betalningsverifiering eller andra systemhärledda bevis blir tillgängliga före din deadline ({deadline}) uppdaterar DisputeDesk försvarspaketet automatiskt. Ingen åtgärd krävs från dig.",
         "bodyNoDeadline": "Om leveransspårning, leveransbekräftelse, betalningsverifiering eller andra systemhärledda bevis blir tillgängliga före din deadline uppdaterar DisputeDesk försvarspaketet automatiskt. Ingen åtgärd krävs från dig.",
         "bodyDeliveryPending": "Öppna spårningslänken ovan för att följa paketets resa. Om leveransen bekräftas före din deadline ({deadline}) – eller om annan bevisning som betalningsverifiering kommer in – uppdaterar DisputeDesk försvarspaketet automatiskt. Ingen åtgärd krävs från dig.",
@@ -4626,8 +4629,8 @@
     "sparklineSubtitle": "Veckovis, senaste 8 veckorna",
     "kpi3dsAuth": "3-DS-aut.",
     "kpi3dsAuthContext": "{num} av {den} Shopify Payments-ordrar",
-    "kpiMedianFulfillment": "Median tid till uppfyllelse",
-    "kpiMedianFulfillmentContext": "{count} uppfyllda ordrar",
+    "kpiMedianFulfillment": "Tid från order till frakt",
+    "kpiMedianFulfillmentContext": "{count} ordrar skickade",
     "kpiConfirmedDelivery": "Bekräftade leveranser",
     "kpiConfirmedDeliveryContext": "{num} av {den} uppfyllda ordrar",
     "kpiSignedFor": "Signerad vid leverans",
@@ -4644,7 +4647,7 @@
     "kpiFraudDisputeRateInfo": "Andelen order som blev en bedrägeritvist från Shopify Payments (orsak = FRAUDULENT) under perioden.",
     "kpi3dsAuthInfo": "Andelen kortköp via Shopify Payments där 3-D Secure-autentiseringen slutfördes. Autentiserade betalningar flyttar ansvaret för bedrägeritvister till utgivaren.",
     "kpiProtectCoverageInfo": "Av de order som Shopify Protect kunde teckna, andelen som markerats PROTECTED. Skyddade order når dig inte som chargebacks.",
-    "kpiMedianFulfillmentInfo": "Mediantid mellan lagd order och utskick, för order som hanterats under perioden. Snabbare hantering förbättrar generellt kundsignalerna.",
+    "kpiMedianFulfillmentInfo": "Mediantid från lagd order tills du skickar den (skapar fraktsedeln). Detta är INTE leveranstiden – fraktbolagets transport till kunden tar längre tid. Snabbare frakt förbättrar generellt kundsignalerna.",
     "kpiHighRiskFulfilledInfo": "Av order som Shopify klassat som HÖG risk, andelen som ändå skickades. Ett högt värde innebär att du bär den bedrägeririsk som Shopify flaggade.",
     "kpiConfirmedDeliveryInfo": "Av skickade order, andelen där transportören rapporterat levererad status. Bekräftad leverans av transportören är stark bevisning i tvist.",
     "kpiSignedForInfo": "Av bekräftade leveranser, andelen där transportören registrerat en signatur. Signaturbekräftelse är det starkaste leveransbeviset vid bedrägeritvister.",
