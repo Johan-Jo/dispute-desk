@@ -9,6 +9,7 @@
  */
 
 import { DEMO_DISPUTES } from "./disputes";
+import type { DashboardStats } from "@/app/(embedded)/app/dashboardHelpers";
 
 const ACTIVE_DISPUTES = DEMO_DISPUTES.filter((d) => d.status !== "covered").length;
 const STRONG_DISPUTES = DEMO_DISPUTES.filter((d) => d.strength === "strong").length;
@@ -16,7 +17,13 @@ const TOTAL_AT_RISK = Math.round(
   DEMO_DISPUTES.filter((d) => d.status !== "covered").reduce((s, d) => s + d.amount, 0) * 100,
 ) / 100;
 
-export const DEMO_DASHBOARD_STATS_REAL = {
+// Annotated as `DashboardStats` on purpose: the dashboard gained `*Split`
+// fields (activeSplit … operationalSplit) after this fixture was written,
+// and because the export was previously untyped those omissions compiled
+// clean but crashed at runtime (`s.operationalSplit["new"]` → "Cannot read
+// properties of undefined"). The annotation makes any future field addition
+// a build failure here instead of a broken demo landing page.
+export const DEMO_DASHBOARD_STATS_REAL: DashboardStats = {
   // Counts
   activeDisputes: ACTIVE_DISPUTES,
   winRate: 87,
@@ -43,6 +50,32 @@ export const DEMO_DASHBOARD_STATS_REAL = {
   inquiryCount: 1,
   chargebackCount: 5,
   needsAttentionCount: 1,
+
+  // ── Inquiry/chargeback splits (Dashboard v3) ─────────────────────
+  // Each split reconciles with its headline number: 5 chargebacks + 1
+  // inquiry across the active window.
+  activeSplit: { cb: 5, inq: 1 },
+  atRiskSplit: { cb: 5, inq: 1 },
+  winSplit: { cb: 13, inq: 1 },
+  recoveredSplit: { cb: 13, inq: 1 },
+  closedSplit: { cb: 16, inq: 1 },
+  outcomeSplit: {
+    won: { cb: 13, inq: 1 },
+    lost: { cb: 2, inq: 0 },
+    accepted: { cb: 1, inq: 0 },
+    refunded: { cb: 0, inq: 0 },
+  },
+  operationalSplit: {
+    new: { cb: 0, inq: 0 },
+    action_needed: { cb: 0, inq: 0 },
+    needs_review: { cb: 1, inq: 0 },
+    ready_to_submit: { cb: 3, inq: 0 },
+    in_progress: { cb: 0, inq: 0 },
+  },
+  winRatePctSplit: { cb: 5, inq: 1 },
+  disputeRate: 0.42,
+  disputeRateCbPct: 0.35,
+  disputeRateInqPct: 0.07,
 
   // Breakdowns
   statusBreakdown: {
@@ -77,10 +110,10 @@ export const DEMO_DASHBOARD_STATS_REAL = {
   // reason codes), not pretty English strings — DashboardInsights
   // translates them via `tPacks(disputeTypeLabel.${label})`.
   disputeCategories: [
-    { label: "FRAUDULENT", value: 2 },
-    { label: "PRODUCT_NOT_RECEIVED", value: 2 },
-    { label: "SUBSCRIPTION_CANCELED", value: 1 },
-    { label: "CREDIT_NOT_PROCESSED", value: 1 },
+    { label: "FRAUDULENT", value: 2, cb: 2, inq: 0 },
+    { label: "PRODUCT_NOT_RECEIVED", value: 2, cb: 2, inq: 0 },
+    { label: "SUBSCRIPTION_CANCELED", value: 1, cb: 0, inq: 1 },
+    { label: "CREDIT_NOT_PROCESSED", value: 1, cb: 1, inq: 0 },
   ],
 
   recentActivity: [
