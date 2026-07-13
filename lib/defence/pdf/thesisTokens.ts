@@ -103,7 +103,7 @@ export const THESIS_TOKENS: Record<ThesisTokenName, ThesisToken> = {
 
   deliveryClause: gated({
     name: "deliveryClause",
-    description: "A natural-language clause about confirmed delivery (proofType=delivered/signature). Null otherwise.",
+    description: "A natural-language clause about confirmed delivery (proofType=delivered_confirmed/signature_confirmed). Null otherwise.",
     predicateId: "delivery_confirmed",
     extract: (facts) => {
       const d =
@@ -113,12 +113,12 @@ export const THESIS_TOKENS: Record<ThesisTokenName, ThesisToken> = {
       const proofType = d.value?.proofType;
       const deliveredAt = typeof d.value?.deliveredAt === "string" ? d.value.deliveredAt : null;
       const carrier = typeof d.value?.carrier === "string" ? d.value.carrier : null;
-      if (proofType === "signature") {
+      if (proofType === "signature_confirmed" || proofType === "signature") {
         return carrier
           ? `delivery was confirmed via carrier signature${deliveredAt ? ` on ${deliveredAt}` : ""} (${carrier})`
           : `delivery was confirmed via carrier signature${deliveredAt ? ` on ${deliveredAt}` : ""}`;
       }
-      // proofType === "delivered"
+      // carrier-confirmed delivery without a captured signature
       return carrier
         ? `delivery was confirmed by the carrier${deliveredAt ? ` on ${deliveredAt}` : ""} (${carrier})`
         : `delivery was confirmed by the carrier${deliveredAt ? ` on ${deliveredAt}` : ""}`;

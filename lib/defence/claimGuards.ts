@@ -59,7 +59,7 @@ export const CLAIM_GUARDS: ClaimGuard[] = [
     appliesToSections: ["fulfillmentArgument", "chronologyArgument", "executiveSummary", "conclusion"],
     predicateId: "delivery_confirmed",
     requiredFact:
-      "delivery_proof or shipping_tracking with proofType='delivered' or 'signature'",
+      "delivery_proof or shipping_tracking with proofType='delivered_confirmed' or 'signature_confirmed'",
   }),
   makeGuard({
     id: "signature_on_delivery",
@@ -67,7 +67,8 @@ export const CLAIM_GUARDS: ClaimGuard[] = [
     pattern: /\bsigned\s+for\b|\bsignature\s+(was\s+)?(captured|obtained|on\s+(file|delivery))\b/i,
     appliesToSections: ["fulfillmentArgument", "chronologyArgument", "executiveSummary", "conclusion"],
     predicateId: "signature_captured",
-    requiredFact: "delivery_proof or shipping_tracking with proofType='signature'",
+    requiredFact:
+      "delivery_proof or shipping_tracking with proofType='signature_confirmed'",
   }),
   makeGuard({
     id: "digital_access",
@@ -88,7 +89,7 @@ export const CLAIM_GUARDS: ClaimGuard[] = [
     appliesToSections: ["fulfillmentArgument", "chronologyArgument", "executiveSummary", "conclusion"],
     predicateId: "customer_received_goods_or_service",
     requiredFact:
-      "delivery_proof/shipping_tracking with proofType=delivered or signature, OR digital_access_log with digitalAccessUsed=true, OR service_access with serviceDelivered=true",
+      "delivery_proof/shipping_tracking with proofType=delivered_confirmed or signature_confirmed, OR digital_access_log with digitalAccessUsed=true, OR service_access with serviceDelivered=true",
   }),
   makeGuard({
     id: "access_granted_claim",
@@ -107,7 +108,7 @@ export const CLAIM_GUARDS: ClaimGuard[] = [
     appliesToSections: ["fulfillmentArgument", "executiveSummary", "conclusion"],
     predicateId: "service_completed_or_delivered",
     requiredFact:
-      "service_access with serviceDelivered=true / serviceCompleted=true, OR delivery_proof with proofType=delivered/signature",
+      "service_access with serviceDelivered=true / serviceCompleted=true, OR delivery_proof with proofType=delivered_confirmed/signature_confirmed",
   }),
   makeGuard({
     id: "customer_communication",
@@ -174,7 +175,7 @@ export const CLAIM_GUARDS: ClaimGuard[] = [
     appliesToSections: ["fulfillmentArgument", "chronologyArgument", "executiveSummary", "conclusion"],
     predicateId: "safe_to_claim_fulfilment",
     requiredFact:
-      "When order.fulfillmentStatus=UNFULFILLED: delivery_proof/shipping_tracking with proofType=delivered or signature, OR digital_access_log with digitalAccessUsed=true, OR service_access with serviceDelivered=true",
+      "When order.fulfillmentStatus=UNFULFILLED: delivery_proof/shipping_tracking with proofType=delivered_confirmed or signature_confirmed, OR digital_access_log with digitalAccessUsed=true, OR service_access with serviceDelivered=true",
   }),
 ];
 

@@ -92,13 +92,36 @@ try {
   fail(`\`supabase migration list --linked\` failed:\n${stderr || err.message}`);
 }
 
-const remoteVersions = new Set(
-  remoteRaw
+// The CLI emits either the human table (one `│ 001 │ …` row per line) or,
+// in JSON output mode, a single `{"migrations":[{"remote":"001",…},…]}`
+// payload. Parse both; only versions applied on the REMOTE count.
+function parseRemoteVersions(raw) {
+  const jsonLine = raw
     .split("\n")
-    .map((l) => l.trim().match(/^[│|]?\s*(\d{14}|\d{3})\s/))
-    .filter(Boolean)
-    .map((m) => m[1]),
-);
+    .map((l) => l.trim())
+    .find((l) => l.startsWith("{") && l.includes('"migrations"'));
+  if (jsonLine) {
+    try {
+      const parsed = JSON.parse(jsonLine);
+      return new Set(
+        (parsed.migrations ?? [])
+          .map((m) => m.remote)
+          .filter((v) => typeof v === "string" && /^(\d{14}|\d{3})$/.test(v)),
+      );
+    } catch {
+      // fall through to table parsing
+    }
+  }
+  return new Set(
+    raw
+      .split("\n")
+      .map((l) => l.trim().match(/^[│|]?\s*(\d{14}|\d{3})\s/))
+      .filter(Boolean)
+      .map((m) => m[1]),
+  );
+}
+
+const remoteVersions = parseRemoteVersions(remoteRaw);
 
 info(`Remote applied versions: ${remoteVersions.size}`);
 

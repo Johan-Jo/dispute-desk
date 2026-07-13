@@ -15,7 +15,7 @@ export const inr_product_not_received: ReasonCodeGuidance = {
   promptBody: [
     "You are writing a bank-facing response to an ITEM NOT RECEIVED CLAIM (cardholder alleges the merchandise/service was not received). The reason code is the issuer/cardholder's CLAIM CATEGORY, not a merchant admission.",
     "Prioritise delivery / access evidence: tracking number, carrier, delivery date and time, signature where present, pickup proof, digital access logs, shipping address that matches what was authorised.",
-    "Do NOT claim delivery unless an approved delivery_proof fact carries proofType='delivered' or proofType='signature'.",
+    "Do NOT claim delivery unless an approved delivery_proof fact carries proofType='delivered_confirmed' or proofType='signature_confirmed'.",
     "Do NOT claim digital access unless an approved digital_access_log or service_access fact is present.",
     "If a tracking number exists but no delivery confirmation, frame the argument around what the tracking does show (handed to carrier, in transit, last scan) without claiming delivery.",
   ].join("\n"),
@@ -50,5 +50,5 @@ export const inr_product_not_received: ReasonCodeGuidance = {
     "policy_shipping",
     "manual_evidence",
   ],
-  version: 2,
+  version: 3,
 };
