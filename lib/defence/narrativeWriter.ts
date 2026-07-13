@@ -157,7 +157,8 @@ Rules:
    When in doubt about whether a fact supports a fulfilment word,
    use the neutral phrasing.
    - "received" / "delivered to the customer" → delivery_proof or
-     shipping_tracking with proofType=delivered or =signature, OR
+     shipping_tracking with proofType=delivered_confirmed or
+     =signature_confirmed, OR
      digital_access_log with digitalAccessUsed=true, OR service_access
      with serviceDelivered=true.
    - "accessed" / "used" / "downloaded" / "logged in" / "streamed" →

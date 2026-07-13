@@ -87,7 +87,30 @@ describe("claimGuards", () => {
     expect(result.failures.some((f) => f.guardId === "delivery_was_delivered")).toBe(true);
   });
 
-  it("delivery claim passes when proofType=delivered is present", () => {
+  it("delivery claim passes when proofType=delivered_confirmed is present (collector vocabulary)", () => {
+    // Regression for dispute 328a45e4 (2026-07): the fulfillment
+    // collector writes proofType='delivered_confirmed', but the guard
+    // only accepted the bare 'delivered', so a narrative saying the
+    // goods "were delivered" failed validation even with carrier-
+    // confirmed delivery on the fact.
+    const result = runClaimGuards({
+      narrativeSections: narrative({ fulfillmentArgument: { text: "The goods were delivered to the customer." } }),
+      approvedFacts: [
+        fact({
+          category: "delivery_proof",
+          value: {
+            proofType: "delivered_confirmed",
+            carrier: "PostNord SE",
+            deliveredAt: "2026-05-12T17:27:00Z",
+            deliveredToVerifiedAddress: true,
+          },
+        }),
+      ],
+    });
+    expect(result.failures.some((f) => f.guardId === "delivery_was_delivered")).toBe(false);
+  });
+
+  it("delivery claim passes when legacy proofType=delivered is present", () => {
     const result = runClaimGuards({
       narrativeSections: narrative({ fulfillmentArgument: { text: "The order was delivered to the customer." } }),
       approvedFacts: [
@@ -97,12 +120,32 @@ describe("claimGuards", () => {
     expect(result.failures.some((f) => f.guardId === "delivery_was_delivered")).toBe(false);
   });
 
+  it("delivery claim still fails on proofType=delivered_unverified", () => {
+    const result = runClaimGuards({
+      narrativeSections: narrative({ fulfillmentArgument: { text: "The order was delivered to the customer." } }),
+      approvedFacts: [
+        fact({ category: "delivery_proof", value: { proofType: "delivered_unverified" } }),
+      ],
+    });
+    expect(result.failures.some((f) => f.guardId === "delivery_was_delivered")).toBe(true);
+  });
+
+  it("signature claim passes when proofType=signature_confirmed is present (collector vocabulary)", () => {
+    const result = runClaimGuards({
+      narrativeSections: narrative({ fulfillmentArgument: { text: "The customer signed for the package." } }),
+      approvedFacts: [
+        fact({ category: "delivery_proof", value: { proofType: "signature_confirmed" } }),
+      ],
+    });
+    expect(result.failures.some((f) => f.guardId === "signature_on_delivery")).toBe(false);
+  });
+
   it("unsupported signature claim fails", () => {
     const result = runClaimGuards({
       narrativeSections: narrative({ fulfillmentArgument: { text: "The customer signed for the package." } }),
       approvedFacts: [
         // Has delivery proof but not signature.
-        fact({ category: "delivery_proof", value: { proofType: "delivered" } }),
+        fact({ category: "delivery_proof", value: { proofType: "delivered_confirmed" } }),
       ],
     });
     expect(result.failures.some((f) => f.guardId === "signature_on_delivery")).toBe(true);

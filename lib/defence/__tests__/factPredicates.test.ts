@@ -26,19 +26,54 @@ function fact(overrides: Partial<EvidenceFact> = {}): EvidenceFact {
 
 describe("factPredicates", () => {
   describe("delivery_confirmed", () => {
-    it("true when delivery_proof with proofType=delivered", () => {
+    // The fulfillment collector writes the canonical 4-state
+    // DeliveryProofType vocabulary (delivered_confirmed /
+    // signature_confirmed / delivered_unverified / label_created).
+    // Regression for dispute 328a45e4 (2026-07): the predicate only
+    // matched the bare 'delivered'/'signature' values, which real pack
+    // data never carries, so carrier-confirmed delivery could never
+    // ground a delivery claim and narrative validation always failed.
+    it("true when delivery_proof with proofType=delivered_confirmed (collector vocabulary)", () => {
+      expect(
+        FACT_PREDICATES.delivery_confirmed.evaluate([
+          fact({ category: "delivery_proof", value: { proofType: "delivered_confirmed" } }),
+        ]),
+      ).toBe(true);
+    });
+    it("true when shipping_tracking with proofType=signature_confirmed (collector vocabulary)", () => {
+      expect(
+        FACT_PREDICATES.delivery_confirmed.evaluate([
+          fact({ category: "shipping_tracking", value: { proofType: "signature_confirmed" } }),
+        ]),
+      ).toBe(true);
+    });
+    it("true when delivery_proof with legacy proofType=delivered", () => {
       expect(
         FACT_PREDICATES.delivery_confirmed.evaluate([
           fact({ category: "delivery_proof", value: { proofType: "delivered" } }),
         ]),
       ).toBe(true);
     });
-    it("true when shipping_tracking with proofType=signature", () => {
+    it("true when shipping_tracking with legacy proofType=signature", () => {
       expect(
         FACT_PREDICATES.delivery_confirmed.evaluate([
           fact({ category: "shipping_tracking", value: { proofType: "signature" } }),
         ]),
       ).toBe(true);
+    });
+    it("false on proofType=delivered_unverified (carrier never confirmed)", () => {
+      expect(
+        FACT_PREDICATES.delivery_confirmed.evaluate([
+          fact({ category: "delivery_proof", value: { proofType: "delivered_unverified" } }),
+        ]),
+      ).toBe(false);
+    });
+    it("false on proofType=label_created", () => {
+      expect(
+        FACT_PREDICATES.delivery_confirmed.evaluate([
+          fact({ category: "delivery_proof", value: { proofType: "label_created" } }),
+        ]),
+      ).toBe(false);
     });
     it("false when proofType missing", () => {
       expect(
@@ -50,17 +85,24 @@ describe("factPredicates", () => {
   });
 
   describe("signature_captured", () => {
-    it("true on proofType=signature", () => {
+    it("true on proofType=signature_confirmed (collector vocabulary)", () => {
+      expect(
+        FACT_PREDICATES.signature_captured.evaluate([
+          fact({ category: "delivery_proof", value: { proofType: "signature_confirmed" } }),
+        ]),
+      ).toBe(true);
+    });
+    it("true on legacy proofType=signature", () => {
       expect(
         FACT_PREDICATES.signature_captured.evaluate([
           fact({ category: "delivery_proof", value: { proofType: "signature" } }),
         ]),
       ).toBe(true);
     });
-    it("false on proofType=delivered", () => {
+    it("false on proofType=delivered_confirmed", () => {
       expect(
         FACT_PREDICATES.signature_captured.evaluate([
-          fact({ category: "delivery_proof", value: { proofType: "delivered" } }),
+          fact({ category: "delivery_proof", value: { proofType: "delivered_confirmed" } }),
         ]),
       ).toBe(false);
     });
