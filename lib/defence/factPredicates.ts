@@ -90,16 +90,28 @@ function orderRecordFulfillment(facts: EvidenceFact[]): string | null {
 export const FACT_PREDICATES: Record<FactPredicateId, FactPredicate> = {
   delivery_confirmed: {
     id: "delivery_confirmed",
-    description: "delivery_proof or shipping_tracking with proofType='delivered' or 'signature'",
+    description:
+      "delivery_proof or shipping_tracking with proofType='delivered_confirmed' or 'signature_confirmed'",
+    // The fulfillment collector writes the 4-state DeliveryProofType
+    // vocabulary (canonicalEvidence.ts): signature_confirmed /
+    // delivered_confirmed / delivered_unverified / label_created.
+    // Only the two carrier-confirmed states satisfy this predicate —
+    // delivered_unverified and label_created never ground a delivery
+    // claim. The bare 'delivered' / 'signature' values are accepted
+    // for manually-entered facts that predate the canonical vocabulary.
     evaluate: (facts) =>
+      hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "delivered_confirmed") ||
+      hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "signature_confirmed") ||
       hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "delivered") ||
       hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "signature"),
   },
 
   signature_captured: {
     id: "signature_captured",
-    description: "delivery_proof or shipping_tracking with proofType='signature'",
+    description:
+      "delivery_proof or shipping_tracking with proofType='signature_confirmed'",
     evaluate: (facts) =>
+      hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "signature_confirmed") ||
       hasCategoryWithValueEquals(facts, DELIVERY_CATEGORIES, "proofType", "signature"),
   },
 
