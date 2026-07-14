@@ -18,6 +18,7 @@ import {
 } from "@shopify/polaris-icons";
 import { withShopParams } from "@/lib/withShopParams";
 import type { CbInqSplit, DashboardStats } from "./dashboardHelpers";
+import { UNDER_REVIEW_NORMALIZED_STATUSES } from "./disputes/disputeListHelpers";
 import { CbInqBreakdown } from "./CbInqBreakdown";
 
 interface CardSpec {
@@ -142,9 +143,13 @@ export function DashboardOperationalSummary({ stats, loading }: Props) {
     (s.operationalBreakdown["action_needed"] ?? 0) +
     (s.operationalBreakdown["needs_review"] ?? 0);
   const readyToSubmit = s.operationalBreakdown["ready_to_submit"] ?? 0;
-  const waitingOnIssuer =
-    (s.operationalBreakdown["waiting_on_issuer"] ?? 0) +
-    (s.operationalBreakdown["submitted_to_bank"] ?? 0);
+  // Same status family the disputes list collapses to "Submitted"
+  // (under-review). Counting only waiting_on_issuer/submitted_to_bank
+  // left `submitted` / `submitted_to_shopify` disputes on no card.
+  const waitingOnIssuer = UNDER_REVIEW_NORMALIZED_STATUSES.reduce(
+    (sum, k) => sum + (s.operationalBreakdown[k] ?? 0),
+    0,
+  );
 
   // Sum the per-status cb·inq splits into the same buckets the counts use,
   // so each card's breakdown reconciles with its headline number.
@@ -207,9 +212,9 @@ export function DashboardOperationalSummary({ stats, loading }: Props) {
       iconColor: "#005BD3",
       borderColor: null,
       cta: null,
-      split: sumSplit("waiting_on_issuer", "submitted_to_bank"),
+      split: sumSplit(...UNDER_REVIEW_NORMALIZED_STATUSES),
       url: withShopParams(
-        "/app/disputes?normalized_status=waiting_on_issuer,submitted_to_bank",
+        `/app/disputes?normalized_status=${UNDER_REVIEW_NORMALIZED_STATUSES.join(",")}`,
         searchParams ?? new URLSearchParams(),
       ),
     },
