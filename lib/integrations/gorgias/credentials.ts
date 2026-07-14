@@ -9,11 +9,14 @@
  *
  * Evidence mode (integrations.meta.evidence_mode) rides along because the
  * collector's inclusion behavior is keyed on it:
- *   'legacy_auto_include'       Phase-1 snapshot-everything (pre-cutover
- *                               shops only; path deleted at cutover)
  *   'merchant_review_required'  only merchant-approved messages may reach
  *                               a pack — never silently fall back
- * A missing value defaults to legacy until the cutover flips the default.
+ *   'legacy_auto_include'       retired at the 2026-07-14 cutover
+ *                               (migration 20260714200000). The value can
+ *                               still appear on the type for historical
+ *                               reads, but no code path honors it and a
+ *                               MISSING value now fail-safes to
+ *                               merchant_review_required.
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
@@ -35,9 +38,11 @@ export function readEvidenceMode(meta: unknown): GorgiasEvidenceMode {
     meta && typeof meta === "object"
       ? (meta as Record<string, unknown>).evidence_mode
       : null;
-  return mode === "merchant_review_required"
-    ? "merchant_review_required"
-    : "legacy_auto_include";
+  // Post-cutover fail-safe: anything that isn't the retired legacy
+  // literal — including a missing value — is merchant-review mode.
+  return mode === "legacy_auto_include"
+    ? "legacy_auto_include"
+    : "merchant_review_required";
 }
 
 /**

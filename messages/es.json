@@ -2517,7 +2517,32 @@
     "gdprDesc": "Pleno cumplimiento de la normativa de protección de datos",
     "notifMonthlyDigest": "Resumen mensual de contracargos",
     "notifMonthlyDigestDesc": "Un correo mensual que resume tu exposición a contracargos, tu posición frente a las reglas de las redes y los cambios.",
-    "automationSectionHelp": "Valores predeterminados avanzados — para configurar políticas, consulta Automatización"
+    "automationSectionHelp": "Valores predeterminados avanzados — para configurar políticas, consulta Automatización",
+    "integrations": {
+      "title": "Integraciones",
+      "loading": "Cargando integraciones…",
+      "gorgiasDescription": "Relaciona conversaciones de soporte con disputas y apruébalas como evidencia.",
+      "badge": {
+        "connected": "Conectado",
+        "notConnected": "No conectado",
+        "needsAttention": "Requiere atención",
+        "reconnectRequired": "Reconexión necesaria"
+      },
+      "lastTested": "Última prueba {date}",
+      "connect": "Conectar",
+      "reconnect": "Reconectar",
+      "updateCredentials": "Actualizar credenciales",
+      "test": "Probar conexión",
+      "testOk": "La conexión funciona.",
+      "testFailed": "La prueba de conexión falló.",
+      "disconnect": "Desconectar",
+      "disconnectModal": {
+        "title": "¿Desconectar Gorgias?",
+        "body": "DisputeDesk dejará de buscar en tu helpdesk para nuevas disputas. La evidencia ya aprobada permanece en tus disputas.",
+        "confirm": "Desconectar",
+        "cancel": "Cancelar"
+      }
+    }
   },
   "connect": {
     "title": "Connection Readiness",
@@ -2910,7 +2935,7 @@
       },
       "howPacksBuilt": {
         "title": "Cómo se crean los paquetes automáticamente",
-        "body": "DisputeDesk recopila automáticamente evidencia de múltiples fuentes:\n\n- Datos del pedido: artículos, montos, dirección (solo ciudad).\n- Envío y seguimiento: transportista, números de seguimiento, estado de entrega.\n- Políticas de la tienda: envío, reembolso, términos.\n- Conversaciones de soporte: cuando conecta Gorgias (Configuración → Fuentes de evidencia), las conversaciones del servicio de asistencia del cliente se asocian por correo electrónico y se adjuntan automáticamente como evidencia de apoyo. Las notas internas nunca se incluyen.\n\nEl paquete se estructura según el motivo de la disputa.\n\n**Plantillas de biblioteca:** Instalar una plantilla en Paquetes añade un paquete a su **biblioteca** (narrativas y secciones). Es independiente de cada **generación automática por disputa**, que usa el pipeline de recolectores anterior; la estructura de la biblioteca aún no se fusiona automáticamente en el build."
+        "body": "DisputeDesk recopila automáticamente evidencia de múltiples fuentes:\n\n- Datos del pedido: artículos, montos, dirección (solo ciudad).\n- Envío y seguimiento: transportista, números de seguimiento, estado de entrega.\n- Políticas de la tienda: envío, reembolso, términos.\n- Conversaciones del helpdesk: cuando conectas Gorgias (Configuración inicial → Fuentes de evidencia, o Configuración → Integraciones), DisputeDesk encuentra las conversaciones de soporte del cliente para cada disputa, puntúa la coincidencia de cada ticket con el pedido en disputa y propone los mensajes más relevantes como evidencia. Nada se incluye automáticamente: revisas cada propuesta en la pestaña Evidencia de la disputa, apruebas el pasaje exacto y regeneras el paquete para incluirlo. Las notas internas de los agentes nunca se recopilan.\n\nEl paquete se estructura según el motivo de la disputa.\n\n**Plantillas de biblioteca:** Instalar una plantilla en Paquetes añade un paquete a su **biblioteca** (narrativas y secciones). Es independiente de cada **generación automática por disputa**, que usa el pipeline de recolectores anterior; la estructura de la biblioteca aún no se fusiona automáticamente en el build."
       },
       "generatingPackManually": {
         "title": "Crear un paquete manualmente",
