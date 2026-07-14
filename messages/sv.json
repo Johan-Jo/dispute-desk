@@ -1736,8 +1736,7 @@
         "approvedBadge": "Godkänt",
         "proposedBadge": "Föreslaget",
         "needsReapprovalBadge": "Kräver nytt godkännande",
-        "truncatedNote": "(meddelandet förkortat)",
-        "fromConversation": "Från konversationen:"
+        "truncatedNote": "(meddelandet förkortat)"
       },
       "category": {
         "transaction_recognition": "Bekräftar köpet",
