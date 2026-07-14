@@ -1297,6 +1297,7 @@
       "supplementary_documents": "Documents complémentaires",
       "fraud_screening": "Contrôle anti-fraude pré-autorisation",
       "refund_record": "Preuve de remboursement",
+      "refund": "Statut du remboursement",
       "no_return_initiated": "Aucun retour initié"
     },
     "decisiveHint": {

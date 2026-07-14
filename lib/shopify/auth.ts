@@ -36,6 +36,18 @@ export function buildAuthUrl(shop: string, state: string, isOnline: boolean = fa
 
 /**
  * Exchange the authorization code for an access token.
+ *
+ * NOTE (docs/plans/expiring-offline-tokens.plan.md): this is the classic
+ * OAuth code-grant flow. Shopify's `expiring=1` parameter is only
+ * accepted on the token-exchange (id_token) flow — there's no
+ * expiring-token variant of code-grant, so sessions minted here are
+ * always the legacy non-expiring type (`token_expiring: false`).
+ * Middleware only falls back to this path when no `id_token` is
+ * present; every subsequent embedded load runs through
+ * `app/api/auth/shopify/token-exchange/route.ts`, which upgrades a
+ * legacy session to the expiring variant in place (Stage 3). Prefer
+ * routing re-auth through token-exchange wherever an id_token is
+ * available.
  */
 export async function exchangeCodeForToken(
   shop: string,

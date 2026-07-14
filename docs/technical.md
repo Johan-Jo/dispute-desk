@@ -112,11 +112,106 @@ permission.
 
 | Type    | Use Case                            | Token Lifetime |
 |---------|-------------------------------------|----------------|
-| Offline | Background sync, job execution, reads | Permanent      |
+| Offline | Background sync, job execution, reads | Expiring: 1h access token + 90d refresh token (auto-refreshed). Legacy sessions predating the 2026-07-15 migration are non-expiring but **rejected by Shopify** — see "Expiring Offline Tokens" below. |
 | Online  | Save evidence (user-context mutation) | Short-lived    |
 
 Both stored in `shop_sessions` with encrypted access tokens (AES-256-GCM)
 and key versioning for rotation.
+
+### Expiring Offline Tokens (`docs/plans/expiring-offline-tokens.plan.md`)
+
+Shopify deprecated non-expiring offline access tokens and now **rejects**
+Admin API calls made with the legacy variant (`[API] Non-expiring access
+tokens are no longer accepted for the Admin API`) — first observed live
+on `surasvenne` (dev), where it broke dispute sync, pack builds, policy
+ingest, and webhook re-registration. New tokens are minted as the
+**expiring** variant: a 1-hour access token backed by a 90-day refresh
+token, refreshed server-side.
+
+**Schema** (`shop_sessions`, migration `20260715090000`): `refresh_token_encrypted`
+(AES-256-GCM, same as the access token), `refresh_token_expires_at`,
+`token_expiring` (bool — `true` once minted/upgraded to the expiring
+variant; `false` for legacy sessions), `refresh_claimed_at` (optimistic
+per-row refresh lock, reclaimable after 30s — refresh tokens are
+single-use/rotating, so two concurrent background jobs must not both
+call Shopify's refresh endpoint with the same one).
+
+**Mint** (`app/api/auth/shopify/token-exchange/route.ts`): the
+token-exchange body now sends `expiring: "1"`. Response carries
+`expires_in` / `refresh_token` / `refresh_token_expires_in`; `storeSession`
+persists all three plus `tokenExpiring: true`.
+
+**Refresh** (`lib/shopify/sessions/refreshOfflineToken.ts`):
+`ensureFreshSession(session)` is a no-op for legacy sessions and for
+expiring sessions with >5 minutes of headroom (`needsRefresh`). Otherwise
+it claims the row (`refresh_claimed_at`), POSTs
+`grant_type=refresh_token` to `/admin/oauth/access_token`, and persists
+the rotated pair via `updateSessionTokens` (an in-place `UPDATE` by
+session `id` — never delete+insert, so the claim on that row stays
+valid). A lost claim re-reads the session once rather than racing
+Shopify. Never throws: any failure (Shopify rejects the refresh, DB
+write fails) returns the original session so the caller's own
+`assertNotAuthInvalid` handling takes over.
+
+**Wiring:** `getShopBackgroundSession` — the single choke point most
+background code funnels through (directly, or via `makeAuthedRequest`) —
+calls `ensureFreshSession` before returning, which covers the large
+majority of Shopify Admin API traffic without touching individual call
+sites. The two remaining direct `loadSession(shopId,"offline")` callers
+that hit Shopify themselves (`app/api/cron/orders-reconciliation`,
+`app/api/webhooks/shop-update`) call `ensureFreshSession` explicitly.
+Belt-and-suspenders: `makeAuthedRequest` detects an auth-invalid response
+(`detectAuthInvalidReason`, shared with `assertNotAuthInvalid`) on an
+expiring-token session and forces exactly one refresh + retry — covers
+clock skew / early Shopify-side invalidation that slips past the
+proactive 5-minute skew window.
+
+**Migrating the installed base:** the token-exchange route no longer
+skips the exchange when an offline session already exists — it only
+skips when the existing session is **already** the expiring variant.
+A legacy (`token_expiring: false`) session is upgraded in place using
+that request's `id_token`, on the merchant's next embedded load.
+Exchanging revokes the old token on Shopify's side, so the new pair is
+persisted before the handler returns success; if the upgrade exchange
+fails (network blip, Shopify error), the route degrades gracefully —
+redirects using the still-usable legacy session rather than breaking an
+otherwise-working install — and tries again on the next load. The
+classic OAuth code-grant flow (`lib/shopify/auth.ts` `exchangeCodeForToken`,
+used only when middleware has no `id_token` to bounce through
+token-exchange) has no `expiring` parameter in Shopify's API — sessions
+minted there stay legacy until the next embedded load runs them through
+token-exchange.
+
+**Middleware must actually route through token-exchange for this to
+fire (fixed 2026-07-15).** The first cut of this migration only routed
+`id_token` → token-exchange when `shopify_shop` was *absent* (the
+original bootstrap-only purpose of that redirect). A merchant who
+already has that cookie — it's set for 30 days — never re-hits
+token-exchange through normal navigation, even though Shopify keeps
+handing the app a fresh `id_token` on every embedded load. Live-verified
+on `surasvenne`: reopening the app after the fix deployed did nothing,
+because the existing cookie short-circuited past the bootstrap check
+entirely. `middleware.ts` now has a second, narrower redirect in the
+`shopDomain`-present branch: when `dd_token_expiring` isn't `"1"`, a
+well-formed `id_token` is present, and the cookie's shop matches
+`?shop=`, it redirects through token-exchange the same way. The
+`dd_token_expiring` cookie (set by `buildSuccessRedirect` to the
+session's *actual* `tokenExpiring` state — `"1"` or `"0"`, never
+assumed) makes this a one-time cost per shop: once confirmed, later
+loads skip the extra redirect; if an upgrade attempt failed, `"0"`
+keeps retrying on the next load instead of giving up silently.
+
+**Verification:** unit tests cover the refresh request shape, expiry-window
+math, claim win/lose, graceful failure, the token-exchange route's
+skip/upgrade/degrade branching, and the middleware re-check redirect
+(`lib/shopify/__tests__/sessionStorage.test.ts`,
+`lib/shopify/sessions/__tests__/{refreshOfflineToken,getShopBackgroundSession}.test.ts`,
+`lib/shopify/__tests__/makeAuthedRequest.test.ts`,
+`app/api/auth/shopify/token-exchange/__tests__/route.test.ts`,
+`tests/integration/middlewareTokenExpiringRecheck.test.ts`). Live
+verification requires an actual embedded load (the id_token is short-lived
+and Shopify-signed, so it can't be simulated locally) — confirm via
+`shop_sessions.token_expiring` on the target shop after opening the app.
 
 ### Session Token Exchange (iOS mobile app, managed install)
 

@@ -1297,6 +1297,7 @@
       "supplementary_documents": "Ergänzende Unterlagen",
       "fraud_screening": "Betrugsprüfung vor Autorisierung",
       "refund_record": "Rückerstattungsnachweis",
+      "refund": "Rückerstattungsstatus",
       "no_return_initiated": "Keine Rücksendung veranlasst"
     },
     "decisiveHint": {
