@@ -34,6 +34,9 @@ vi.mock("@/lib/email/sendNewDisputeAlert", () => ({
 vi.mock("@/lib/email/sendOutcomePostedAlert", () => ({
   sendOutcomePostedAlert: vi.fn(),
 }));
+vi.mock("@/lib/integrations/gorgias/enqueueEnrichment", () => ({
+  enqueueGorgiasEnrichment: vi.fn().mockResolvedValue({ enqueued: false, reason: "not_connected" }),
+}));
 
 import { dispatchDisputeEffects } from "@/lib/disputes/disputeEffectsDispatcher";
 import { getServiceClient } from "@/lib/supabase/server";
