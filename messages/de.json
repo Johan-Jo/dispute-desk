@@ -1675,6 +1675,7 @@
     },
     "gorgiasComms": {
       "title": "Kundensupport-Konversationen",
+      "subtitle": "Nachrichten aus Ihrem Support-Postfach, die dieser Bestellung zugeordnet wurden. Geben Sie die frei, die Ihre Verteidigung stützen, um sie als Beweis aufzunehmen.",
       "actionFailed": "Die Aktion konnte nicht ausgeführt werden. Bitte erneut versuchen.",
       "conversationLoading": "Konversation wird geladen…",
       "conversationError": "Die Konversation konnte nicht geladen werden. Bitte erneut versuchen.",
@@ -1698,7 +1699,9 @@
       "tier": {
         "possible": "Mögliche Treffer",
         "possibleHint": "Bestätigen Sie, dass eine Konversation zur strittigen Bestellung gehört, bevor ihre Nachrichten als Nachweis verwendet werden können.",
-        "other": "Weitere mögliche Konversationen ({count})"
+        "other": "Weitere mögliche Konversationen ({count})",
+        "matched": "Zugeordnete Konversation",
+        "matchedHint": "Übereinstimmung mit hoher Sicherheit für die strittige Bestellung – freigegebene Nachrichten können als Beweis verwendet werden."
       },
       "ticket": {
         "confirm": "Treffer bestätigen",
@@ -1712,17 +1715,16 @@
         "medium": "Möglicher Treffer",
         "low": "Unwahrscheinlicher Treffer"
       },
-      "reasonsHeading": "Warum wir das zugeordnet haben:",
       "reason": {
-        "linked_shopify_order": "Mit Bestellung {detail} in Gorgias verknüpft",
-        "order_number_in_text": "Erwähnt Bestellung {detail}",
-        "shopify_customer_id": "Gleiches Kundenkonto",
-        "email_match": "Von der E-Mail-Adresse der Bestellung",
-        "conflicting_email": "Von einer anderen E-Mail-Adresse als der Bestellung",
-        "tracking_number_in_text": "Erwähnt Sendungsnummer {detail}",
-        "within_order_window": "Etwa zum Zeitpunkt der Bestellung gesendet",
-        "before_chargeback": "Vor Eröffnung der Rückbuchung gesendet",
-        "references_other_order": "Erwähnt außerdem eine andere Bestellung ({detail})"
+        "linked_shopify_order": "Mit dieser Bestellung verknüpft",
+        "order_number_in_text": "Bestellnummer erwähnt",
+        "shopify_customer_id": "Gleicher Shopify-Kunde",
+        "email_match": "E-Mail stimmt überein",
+        "conflicting_email": "Abweichende E-Mail",
+        "tracking_number_in_text": "Sendungsnummer erwähnt",
+        "within_order_window": "Rund um das Bestelldatum",
+        "before_chargeback": "Vor der Rückbuchung",
+        "references_other_order": "Erwähnt eine andere Bestellung"
       },
       "message": {
         "customer": "Kunde",

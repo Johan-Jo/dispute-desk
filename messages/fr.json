@@ -1675,6 +1675,7 @@
     },
     "gorgiasComms": {
       "title": "Conversations du support client",
+      "subtitle": "Messages de votre boîte de support associés à cette commande. Approuvez ceux qui soutiennent votre défense pour les inclure comme preuve.",
       "actionFailed": "L'action n'a pas pu être effectuée. Veuillez réessayer.",
       "conversationLoading": "Chargement de la conversation…",
       "conversationError": "La conversation n'a pas pu être chargée. Veuillez réessayer.",
@@ -1698,7 +1699,9 @@
       "tier": {
         "possible": "Correspondances possibles",
         "possibleHint": "Confirmez qu'une conversation concerne la commande contestée avant que ses messages puissent servir de preuve.",
-        "other": "Autres conversations possibles ({count})"
+        "other": "Autres conversations possibles ({count})",
+        "matched": "Conversation associée",
+        "matchedHint": "Correspondance à haute confiance avec la commande contestée — les messages approuvés peuvent servir de preuve."
       },
       "ticket": {
         "confirm": "Confirmer la correspondance",
@@ -1712,17 +1715,16 @@
         "medium": "Correspondance possible",
         "low": "Correspondance improbable"
       },
-      "reasonsHeading": "Pourquoi cette correspondance :",
       "reason": {
-        "linked_shopify_order": "Liée à la commande {detail} dans Gorgias",
-        "order_number_in_text": "Mentionne la commande {detail}",
-        "shopify_customer_id": "Même compte client",
-        "email_match": "Provient de l'e-mail de la commande",
-        "conflicting_email": "Provient d'un e-mail différent de la commande",
-        "tracking_number_in_text": "Mentionne le numéro de suivi {detail}",
-        "within_order_window": "Envoyée autour de la date de la commande",
-        "before_chargeback": "Envoyée avant l'ouverture de la rétrofacturation",
-        "references_other_order": "Mentionne aussi une autre commande ({detail})"
+        "linked_shopify_order": "Liée à cette commande",
+        "order_number_in_text": "Numéro de commande mentionné",
+        "shopify_customer_id": "Même client Shopify",
+        "email_match": "E-mail identique",
+        "conflicting_email": "E-mail différent",
+        "tracking_number_in_text": "Numéro de suivi mentionné",
+        "within_order_window": "Autour de la date de commande",
+        "before_chargeback": "Avant la rétrofacturation",
+        "references_other_order": "Mentionne une autre commande"
       },
       "message": {
         "customer": "Client",
