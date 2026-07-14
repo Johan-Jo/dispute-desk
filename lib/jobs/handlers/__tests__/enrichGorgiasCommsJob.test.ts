@@ -227,7 +227,7 @@ describe("handleEnrichGorgiasComms — outcomes", () => {
     );
   });
 
-  it("happy path: scores, persists ticket + messages, finishes completed", async () => {
+  it("happy path: scores, persists, analyzes, proposes, finishes ready_for_review", async () => {
     const gorgiasTicket: GorgiasTicket = {
       id: 42,
       status: "closed",
@@ -271,21 +271,69 @@ describe("handleEnrichGorgiasComms — outcomes", () => {
         { data: [{ id: "run-1" }] }, // → resolving_customer
         { data: [{ id: "run-1" }] }, // → searching_tickets
         { data: [{ id: "run-1" }] }, // → fetching_messages
-        { data: null }, // finishRun (completed)
+        { data: [{ id: "run-1" }] }, // → analyzing
+        { data: null }, // finishRun (ready_for_review)
         { data: null, count: 0 }, // first-enriched count
       ],
-      disputes: [{ data: DISPUTE_ROW }],
+      disputes: [
+        { data: DISPUTE_ROW }, // loadOrderSignals
+        { data: { reason: "fraudulent", network_reason_code: "10.4", order_name: "#1066" } }, // analysis
+        { data: null }, // attention update
+      ],
       shopify_orders: [{ data: ORDER_ROW }],
+      shops: [{ data: { locale: "en" } }],
       gorgias_matched_tickets: [
         { data: [] }, // existing rows
         { data: { id: "mt-1" } }, // insert → select single
+        {
+          data: [
+            {
+              id: "mt-1",
+              gorgias_ticket_id: 42,
+              ticket_snapshot: { subject: "Where is my order #1066?", channel: "email" },
+            },
+          ],
+        }, // analyzable tickets
+        { data: null }, // analyzed_at stamp
       ],
       gorgias_evidence_messages: [
         { data: [] }, // existing messages
         { data: null }, // insert
+        {
+          data: [
+            {
+              id: "gem-1",
+              matched_ticket_id: "mt-1",
+              sender_type: "customer",
+              sent_at: "2026-03-10T10:00:00Z",
+              message_text: "I got order #1066 yesterday, looks great",
+              content_truncated: false,
+            },
+          ],
+        }, // candidates
+        { data: [{ id: "gem-1" }] }, // proposal update → select
       ],
     });
     mockGetServiceClient.mockReturnValue(sb);
+
+    const analyze = vi.fn(async () => ({
+      proposals: [
+        {
+          id: "gem-1",
+          category: "transaction_recognition" as const,
+          explanation: "The customer acknowledges the disputed order.",
+          confidence: 90,
+        },
+      ],
+      rejectedCount: 0,
+      overflowCount: 0,
+      model: "claude-haiku-4-5",
+      promptVersion: 1,
+      tokens: { prompt: 800, completion: 60, cached: 0 },
+      durationMs: 400,
+      capReached: false,
+      error: null,
+    }));
 
     const res = await handleEnrichGorgiasComms(makeJob(), {
       loadConnection: async () => CONN,
@@ -293,9 +341,11 @@ describe("handleEnrichGorgiasComms — outcomes", () => {
         fakeClient({
           listCustomerTickets: vi.fn(async () => [gorgiasTicket]),
         }),
+      analyze,
     });
 
     expect(res).toEqual({ ok: true });
+    expect(analyze).toHaveBeenCalledTimes(1);
 
     const ticketInsert = calls.find(
       (c) => c.table === "gorgias_matched_tickets" && c.op === "insert",
@@ -314,13 +364,46 @@ describe("handleEnrichGorgiasComms — outcomes", () => {
     expect(msgRow.review_status).toBe("candidate");
     expect(String(msgRow.message_text)).not.toContain("sketchy");
 
+    // Proposal write is guarded candidate → proposed only.
+    const proposalUpdate = calls
+      .filter((c) => c.table === "gorgias_evidence_messages" && c.op === "update")
+      .find(
+        (c) => (c.args[0] as Record<string, unknown>).review_status === "proposed",
+      );
+    expect(proposalUpdate).toBeTruthy();
+    const proposalPatch = proposalUpdate!.args[0] as Record<string, unknown>;
+    expect(proposalPatch.evidence_category).toBe("transaction_recognition");
+    expect(proposalPatch.analyzer_model).toBe("claude-haiku-4-5");
+    const guardEq = calls.filter(
+      (c) =>
+        c.table === "gorgias_evidence_messages" &&
+        c.op === "eq" &&
+        c.args[0] === "review_status" &&
+        c.args[1] === "candidate",
+    );
+    expect(guardEq.length).toBeGreaterThan(0);
+
     const finish = calls
       .filter((c) => c.table === "gorgias_enrichment_runs" && c.op === "update")
-      .find((c) => (c.args[0] as Record<string, unknown>).status === "completed");
+      .find(
+        (c) => (c.args[0] as Record<string, unknown>).status === "ready_for_review",
+      );
     expect(finish).toBeTruthy();
     const finishPatch = finish!.args[0] as Record<string, unknown>;
     expect(finishPatch.tickets_high).toBe(1);
     expect(finishPatch.messages_stored).toBe(1);
+    expect(finishPatch.proposal_count).toBe(1);
+
+    // Ready-for-review raises dispute attention.
+    const attention = calls
+      .filter((c) => c.table === "disputes" && c.op === "update")
+      .find(
+        (c) =>
+          (c.args[0] as Record<string, unknown>).attention_reason ===
+          "gorgias_evidence_ready",
+      );
+    expect(attention).toBeTruthy();
+    expect((attention!.args[0] as Record<string, unknown>).needs_attention).toBe(true);
 
     expect(mockLogEvent).toHaveBeenCalledWith(
       "shop-1",
@@ -335,13 +418,118 @@ describe("handleEnrichGorgiasComms — outcomes", () => {
     expect(mockLogEvent).toHaveBeenCalledWith(
       "shop-1",
       "gorgias_enrichment_completed",
-      expect.objectContaining({ messagesStored: 1 }),
+      expect.objectContaining({ messagesStored: 1, proposalCount: 1 }),
     );
     expect(mockLogEvent).toHaveBeenCalledWith(
       "shop-1",
       "gorgias_first_dispute_enriched",
       expect.objectContaining({ runId: "run-1" }),
     );
+  });
+
+  it("LLM cap reached → analysis_deferred with next_retry_at, never no_matches", async () => {
+    const gorgiasTicket: GorgiasTicket = {
+      id: 42,
+      status: "closed",
+      channel: "email",
+      spam: false,
+      subject: "Where is my order #1066?",
+      customer: { id: 7, email: "anna@example.com" },
+      trashed_datetime: null,
+      created_datetime: "2026-03-10T09:00:00Z",
+      updated_datetime: null,
+      messages: [
+        {
+          id: 9001,
+          public: true,
+          channel: "email",
+          from_agent: false,
+          stripped_text: "I got order #1066 yesterday",
+          body_text: null,
+          body_html: null,
+          sent_datetime: "2026-03-10T10:00:00Z",
+          created_datetime: null,
+        },
+      ],
+    };
+
+    const { sb, calls } = makeSb({
+      gorgias_enrichment_runs: [
+        { data: ACTIVE_RUN },
+        { data: null },
+        { data: [{ id: "run-1" }] },
+        { data: [{ id: "run-1" }] },
+        { data: [{ id: "run-1" }] },
+        { data: [{ id: "run-1" }] }, // → analyzing
+        { data: null }, // finishRun (analysis_deferred)
+        { data: null, count: 0 },
+      ],
+      disputes: [
+        { data: DISPUTE_ROW },
+        { data: { reason: "fraudulent", network_reason_code: null, order_name: "#1066" } },
+      ],
+      shopify_orders: [{ data: ORDER_ROW }],
+      shops: [{ data: { locale: "en" } }],
+      gorgias_matched_tickets: [
+        { data: [] },
+        { data: { id: "mt-1" } },
+        {
+          data: [
+            { id: "mt-1", gorgias_ticket_id: 42, ticket_snapshot: {} },
+          ],
+        },
+      ],
+      gorgias_evidence_messages: [
+        { data: [] },
+        { data: null },
+        {
+          data: [
+            {
+              id: "gem-1",
+              matched_ticket_id: "mt-1",
+              sender_type: "customer",
+              sent_at: null,
+              message_text: "I got order #1066 yesterday",
+              content_truncated: false,
+            },
+          ],
+        },
+      ],
+    });
+    mockGetServiceClient.mockReturnValue(sb);
+
+    const res = await handleEnrichGorgiasComms(makeJob(), {
+      loadConnection: async () => CONN,
+      createClient: () =>
+        fakeClient({ listCustomerTickets: vi.fn(async () => [gorgiasTicket]) }),
+      analyze: vi.fn(async () => ({
+        proposals: [],
+        rejectedCount: 0,
+        overflowCount: 0,
+        model: "claude-haiku-4-5",
+        promptVersion: 1,
+        tokens: { prompt: 0, completion: 0, cached: 0 },
+        durationMs: 0,
+        capReached: true,
+        error: null,
+      })),
+    });
+
+    expect(res).toEqual({ ok: true });
+    const finish = calls
+      .filter((c) => c.table === "gorgias_enrichment_runs" && c.op === "update")
+      .find(
+        (c) =>
+          (c.args[0] as Record<string, unknown>).status === "analysis_deferred",
+      );
+    expect(finish).toBeTruthy();
+    const patch = finish!.args[0] as Record<string, unknown>;
+    expect(patch.error_code).toBe("llm_cap_reached");
+    expect(patch.next_retry_at).toBeTruthy();
+    // Ticket rows were persisted — matches remain visible while deferred.
+    expect(
+      calls.some((c) => c.table === "gorgias_matched_tickets" && c.op === "insert"),
+    ).toBe(true);
   });
 
   it("transient failure → failed_retryable + rethrow for worker backoff", async () => {
