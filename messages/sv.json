@@ -1701,23 +1701,28 @@
         "other": "Andra möjliga konversationer ({count})"
       },
       "ticket": {
-        "scoreBadge": "Träffpoäng {score}",
         "confirm": "Bekräfta träff",
         "notRelated": "Inte relaterad",
         "reportBadMatch": "Rapportera felaktig träff",
         "viewConversation": "Visa hela konversationen",
         "hideConversation": "Dölj konversationen"
       },
+      "confidence": {
+        "high": "Stark träff",
+        "medium": "Möjlig träff",
+        "low": "Osannolik träff"
+      },
+      "reasonsHeading": "Varför vi matchade detta:",
       "reason": {
-        "linked_shopify_order": "Kopplad till den här beställningen",
-        "order_number_in_text": "Ordernummer nämns",
-        "shopify_customer_id": "Samma Shopify-kund",
-        "email_match": "E-post matchar",
-        "conflicting_email": "Annan e-postadress",
-        "tracking_number_in_text": "Spårningsnummer nämns",
-        "within_order_window": "Nära beställningsdatumet",
-        "before_chargeback": "Före återkravet",
-        "references_other_order": "Nämner en annan beställning"
+        "linked_shopify_order": "Kopplad till beställning {detail} i Gorgias",
+        "order_number_in_text": "Nämner beställning {detail}",
+        "shopify_customer_id": "Samma kundkonto",
+        "email_match": "Från e-postadressen på beställningen",
+        "conflicting_email": "Från en annan e-postadress än beställningen",
+        "tracking_number_in_text": "Nämner spårningsnummer {detail}",
+        "within_order_window": "Skickad runt tidpunkten för beställningen",
+        "before_chargeback": "Skickad innan återkravet öppnades",
+        "references_other_order": "Nämner även en annan beställning ({detail})"
       },
       "message": {
         "customer": "Kund",
@@ -1731,7 +1736,8 @@
         "approvedBadge": "Godkänt",
         "proposedBadge": "Föreslaget",
         "needsReapprovalBadge": "Kräver nytt godkännande",
-        "truncatedNote": "(meddelandet förkortat)"
+        "truncatedNote": "(meddelandet förkortat)",
+        "fromConversation": "Från konversationen:"
       },
       "category": {
         "transaction_recognition": "Bekräftar köpet",

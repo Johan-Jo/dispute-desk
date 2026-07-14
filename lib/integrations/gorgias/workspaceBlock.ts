@@ -24,6 +24,15 @@ export interface GorgiasCommsMessageSummary {
   explanationEdited: boolean;
   /** Short preview of the approved excerpt (approved/manual rows only). */
   approvedExcerptPreview: string | null;
+  /**
+   * Short verbatim preview of the message body itself, so a merchant
+   * reviewing a *proposed* (not-yet-approved) message can see the
+   * customer's own words as proof — not only the AI relevance
+   * explanation. Bounded like the excerpt preview so it stays light on
+   * the ~4s poll; full text is still lazily fetched via the transcript
+   * endpoint.
+   */
+  messagePreview: string | null;
   needsReapproval: boolean;
 }
 
@@ -100,7 +109,7 @@ export async function buildGorgiasCommsBlock(
       sb
         .from("gorgias_evidence_messages")
         .select(
-          "id, matched_ticket_id, sender_type, sent_at, review_status, evidence_category, confidence_score, relevance_explanation, explanation_edited, approved_excerpt, approved_content_hash, content_hash",
+          "id, matched_ticket_id, sender_type, sent_at, review_status, evidence_category, confidence_score, relevance_explanation, explanation_edited, approved_excerpt, approved_content_hash, content_hash, message_text",
         )
         .eq("dispute_id", disputeId),
     ]);
@@ -150,6 +159,12 @@ export async function buildGorgiasCommsBlock(
         approvedExcerptPreview:
           typeof m.approved_excerpt === "string"
             ? m.approved_excerpt.slice(0, EXCERPT_PREVIEW_CHARS)
+            : null,
+        messagePreview:
+          typeof m.message_text === "string" && m.message_text.trim().length > 0
+            ? m.message_text.trim().length > EXCERPT_PREVIEW_CHARS
+              ? `${m.message_text.trim().slice(0, EXCERPT_PREVIEW_CHARS)}…`
+              : m.message_text.trim()
             : null,
         needsReapproval:
           ["approved", "manual"].includes(m.review_status as string) &&

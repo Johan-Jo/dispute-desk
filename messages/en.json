@@ -1701,23 +1701,28 @@
         "other": "Other possible conversations ({count})"
       },
       "ticket": {
-        "scoreBadge": "Match score {score}",
         "confirm": "Confirm match",
         "notRelated": "Not related",
         "reportBadMatch": "Report bad match",
         "viewConversation": "View full conversation",
         "hideConversation": "Hide conversation"
       },
+      "confidence": {
+        "high": "Strong match",
+        "medium": "Possible match",
+        "low": "Unlikely match"
+      },
+      "reasonsHeading": "Why we matched this:",
       "reason": {
-        "linked_shopify_order": "Linked to this order",
-        "order_number_in_text": "Order number mentioned",
-        "shopify_customer_id": "Same Shopify customer",
-        "email_match": "Email matches",
-        "conflicting_email": "Different email",
-        "tracking_number_in_text": "Tracking number mentioned",
-        "within_order_window": "Around the order date",
-        "before_chargeback": "Before the chargeback",
-        "references_other_order": "Mentions another order"
+        "linked_shopify_order": "Linked to order {detail} in Gorgias",
+        "order_number_in_text": "Mentions order {detail}",
+        "shopify_customer_id": "Same customer account",
+        "email_match": "From the email address on the order",
+        "conflicting_email": "From a different email than the order",
+        "tracking_number_in_text": "Mentions tracking number {detail}",
+        "within_order_window": "Sent around the time of the order",
+        "before_chargeback": "Sent before the dispute was opened",
+        "references_other_order": "Also mentions a different order ({detail})"
       },
       "message": {
         "customer": "Customer",
@@ -1731,7 +1736,8 @@
         "approvedBadge": "Approved",
         "proposedBadge": "Proposed",
         "needsReapprovalBadge": "Needs re-approval",
-        "truncatedNote": "(message shortened)"
+        "truncatedNote": "(message shortened)",
+        "fromConversation": "From the conversation:"
       },
       "category": {
         "transaction_recognition": "Recognizes the purchase",

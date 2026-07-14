@@ -1701,23 +1701,28 @@
         "other": "Otras conversaciones posibles ({count})"
       },
       "ticket": {
-        "scoreBadge": "Puntuación {score}",
         "confirm": "Confirmar coincidencia",
         "notRelated": "No relacionada",
         "reportBadMatch": "Reportar coincidencia incorrecta",
         "viewConversation": "Ver conversación completa",
         "hideConversation": "Ocultar conversación"
       },
+      "confidence": {
+        "high": "Coincidencia fuerte",
+        "medium": "Coincidencia posible",
+        "low": "Coincidencia improbable"
+      },
+      "reasonsHeading": "Por qué lo asociamos:",
       "reason": {
-        "linked_shopify_order": "Vinculada a este pedido",
-        "order_number_in_text": "Número de pedido mencionado",
-        "shopify_customer_id": "Mismo cliente de Shopify",
-        "email_match": "El correo coincide",
-        "conflicting_email": "Correo diferente",
-        "tracking_number_in_text": "Número de seguimiento mencionado",
-        "within_order_window": "Cerca de la fecha del pedido",
-        "before_chargeback": "Antes del contracargo",
-        "references_other_order": "Menciona otro pedido"
+        "linked_shopify_order": "Vinculada al pedido {detail} en Gorgias",
+        "order_number_in_text": "Menciona el pedido {detail}",
+        "shopify_customer_id": "Misma cuenta de cliente",
+        "email_match": "Del correo electrónico del pedido",
+        "conflicting_email": "De un correo distinto al del pedido",
+        "tracking_number_in_text": "Menciona el número de seguimiento {detail}",
+        "within_order_window": "Enviado cerca de la fecha del pedido",
+        "before_chargeback": "Enviado antes de abrirse el contracargo",
+        "references_other_order": "También menciona otro pedido ({detail})"
       },
       "message": {
         "customer": "Cliente",
@@ -1731,7 +1736,8 @@
         "approvedBadge": "Aprobado",
         "proposedBadge": "Propuesto",
         "needsReapprovalBadge": "Requiere nueva aprobación",
-        "truncatedNote": "(mensaje acortado)"
+        "truncatedNote": "(mensaje acortado)",
+        "fromConversation": "De la conversación:"
       },
       "category": {
         "transaction_recognition": "Reconoce la compra",
