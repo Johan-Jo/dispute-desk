@@ -1694,7 +1694,9 @@
       "staleBanner": {
         "title": "Tu paquete de defensa está desactualizado",
         "body": "Cambiaste la evidencia de comunicación después de generar el paquete. Regenéralo para incluir tus mensajes aprobados.",
-        "cta": "Regenerar paquete"
+        "cta": "Regenerar paquete",
+        "windowClosedTitle": "Ya enviado al banco",
+        "windowClosedBody": "Aprobaste nueva evidencia de comunicación, pero Shopify ya reenvió esta disputa al banco emisor: el paquete de defensa ya no se puede modificar."
       },
       "tier": {
         "possible": "Posibles coincidencias",

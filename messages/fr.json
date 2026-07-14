@@ -1694,7 +1694,9 @@
       "staleBanner": {
         "title": "Votre dossier de défense n'est plus à jour",
         "body": "Vous avez modifié les preuves de communication après la génération du dossier. Régénérez-le pour inclure vos messages approuvés.",
-        "cta": "Régénérer le dossier"
+        "cta": "Régénérer le dossier",
+        "windowClosedTitle": "Déjà transmis à la banque",
+        "windowClosedBody": "Vous avez approuvé de nouvelles preuves de communication, mais Shopify a déjà transmis ce litige à la banque émettrice — le dossier de défense ne peut plus être modifié."
       },
       "tier": {
         "possible": "Correspondances possibles",

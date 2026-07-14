@@ -239,13 +239,28 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
   const regenerate = useCallback(async () => {
     if (!data?.pack) return;
     setRegenerating(true);
+    setActionError(null);
     try {
-      await fetch(`/api/packs/${data.pack.id}/regenerate`, { method: "POST" });
+      const res = await fetch(`/api/packs/${data.pack.id}/regenerate`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        // Surface the failure instead of silently reverting — e.g. a
+        // 409 WINDOW_CLOSED / INVALID_REGENERATE_WINDOW when the dispute
+        // was already forwarded to the bank. The route returns a human
+        // `message`; fall back to `error` then the generic copy.
+        const err = (await res.json().catch(() => null)) as {
+          message?: string;
+          error?: string;
+        } | null;
+        setActionError(err?.message ?? err?.error ?? t("actionFailed"));
+        return;
+      }
       await actions.fetchAll();
     } finally {
       setRegenerating(false);
     }
-  }, [data?.pack, actions]);
+  }, [data?.pack, actions, t]);
 
   const openApproveDialog = useCallback(
     async (
@@ -341,17 +356,29 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
     );
   }
 
+  // Once Shopify has forwarded the dispute to the bank the package can
+  // no longer change, so `POST /regenerate` hard-returns 409. Offering a
+  // Regenerate button there is a dead end (the bug the merchant hit:
+  // "clicked Regenerate, nothing happened"). Show an honest note instead.
+  const windowClosed = data?.dispute?.submissionState === "submitted_confirmed";
+
   const staleBanner = data?.pack?.gorgiasEvidenceStale ? (
-    <Banner tone="warning" title={t("staleBanner.title")}>
-      <BlockStack gap="200">
-        <p>{t("staleBanner.body")}</p>
-        <InlineStack>
-          <Button onClick={() => void regenerate()} loading={regenerating}>
-            {t("staleBanner.cta")}
-          </Button>
-        </InlineStack>
-      </BlockStack>
-    </Banner>
+    windowClosed ? (
+      <Banner tone="info" title={t("staleBanner.windowClosedTitle")}>
+        <p>{t("staleBanner.windowClosedBody")}</p>
+      </Banner>
+    ) : (
+      <Banner tone="warning" title={t("staleBanner.title")}>
+        <BlockStack gap="200">
+          <p>{t("staleBanner.body")}</p>
+          <InlineStack>
+            <Button onClick={() => void regenerate()} loading={regenerating}>
+              {t("staleBanner.cta")}
+            </Button>
+          </InlineStack>
+        </BlockStack>
+      </Banner>
+    )
   ) : null;
 
   const hasPossibleGroup = mediumProposed.length > 0;
