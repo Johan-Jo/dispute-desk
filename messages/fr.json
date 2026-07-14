@@ -1671,6 +1671,89 @@
       "factsSignedBy": "Signé par {name}",
       "factsNotDeliveredEta": "Non livré (est. {date})",
       "factsCarrier": "{carrier}"
+    },
+    "gorgiasComms": {
+      "title": "Conversations du support client",
+      "actionFailed": "L'action n'a pas pu être effectuée. Veuillez réessayer.",
+      "conversationLoading": "Chargement de la conversation…",
+      "conversationError": "La conversation n'a pas pu être chargée. Veuillez réessayer.",
+      "status": {
+        "processing": "Recherche de preuves de communication…",
+        "refresh": "Actualiser depuis Gorgias",
+        "retry": "Réessayer",
+        "noMatches": "Aucune conversation de support n'a été trouvée pour ce client.",
+        "failedTitle": "Échec de la recherche de communications",
+        "failedBody": "Nous n'avons pas pu interroger votre helpdesk pour ce litige.",
+        "analysisDeferredTitle": "Correspondances trouvées — analyse temporairement différée",
+        "analysisDeferredBody": "Des conversations ont été associées, mais l'analyse des preuves est en pause et reprendra bientôt. Les tickets associés restent visibles ci-dessous.",
+        "reconnectRequiredTitle": "Reconnecter Gorgias",
+        "reconnectRequiredBody": "Votre connexion Gorgias n'est plus autorisée. Reconnectez-la dans les Paramètres pour reprendre les preuves de communication."
+      },
+      "staleBanner": {
+        "title": "Votre dossier de défense n'est plus à jour",
+        "body": "Vous avez modifié les preuves de communication après la génération du dossier. Régénérez-le pour inclure vos messages approuvés.",
+        "cta": "Régénérer le dossier"
+      },
+      "tier": {
+        "possible": "Correspondances possibles",
+        "possibleHint": "Confirmez qu'une conversation concerne la commande contestée avant que ses messages puissent servir de preuve.",
+        "other": "Autres conversations possibles ({count})"
+      },
+      "ticket": {
+        "scoreBadge": "Score de correspondance {score}",
+        "confirm": "Confirmer la correspondance",
+        "notRelated": "Sans rapport",
+        "reportBadMatch": "Signaler une erreur",
+        "viewConversation": "Voir la conversation complète",
+        "hideConversation": "Masquer la conversation"
+      },
+      "reason": {
+        "linked_shopify_order": "Liée à cette commande",
+        "order_number_in_text": "Numéro de commande mentionné",
+        "shopify_customer_id": "Même client Shopify",
+        "email_match": "E-mail identique",
+        "conflicting_email": "E-mail différent",
+        "tracking_number_in_text": "Numéro de suivi mentionné",
+        "within_order_window": "Autour de la date de commande",
+        "before_chargeback": "Avant la rétrofacturation",
+        "references_other_order": "Mentionne une autre commande"
+      },
+      "message": {
+        "customer": "Client",
+        "merchant": "Marchand",
+        "approve": "Approuver comme preuve",
+        "exclude": "Exclure",
+        "addAsEvidence": "Ajouter comme preuve",
+        "editExplanation": "Modifier l'explication",
+        "saveExplanation": "Enregistrer l'explication",
+        "cancel": "Annuler",
+        "approvedBadge": "Approuvé",
+        "proposedBadge": "Proposé",
+        "needsReapprovalBadge": "Nouvelle approbation requise",
+        "truncatedNote": "(message raccourci)"
+      },
+      "category": {
+        "transaction_recognition": "Reconnaît l'achat",
+        "delivery_recognition": "Confirme la livraison",
+        "product_usage": "A utilisé le produit",
+        "refund_history": "Discussion de remboursement",
+        "cancellation_history": "Discussion d'annulation",
+        "resolution_attempt": "Tentative de résolution",
+        "contradiction": "Contredit le litige"
+      },
+      "approveModal": {
+        "title": "Approuver le message comme preuve",
+        "excerptLabel": "Extrait de preuve",
+        "excerptHelp": "Ne conservez que le passage pertinent. L'extrait doit être une partie exacte du message d'origine — il figurera dans votre dossier de défense.",
+        "confirm": "Approuver",
+        "cancel": "Annuler"
+      },
+      "reportModal": {
+        "title": "Signaler une correspondance incorrecte",
+        "reasonLabel": "Pourquoi cette correspondance est-elle incorrecte ? (facultatif)",
+        "submit": "Envoyer le signalement",
+        "cancel": "Annuler"
+      }
     }
   },
   "disputeReasons": {

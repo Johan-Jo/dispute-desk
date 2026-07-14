@@ -1671,6 +1671,89 @@
       "factsSignedBy": "Firmado por {name}",
       "factsNotDeliveredEta": "No entregado (est. {date})",
       "factsCarrier": "{carrier}"
+    },
+    "gorgiasComms": {
+      "title": "Conversaciones de soporte al cliente",
+      "actionFailed": "No se pudo completar la acción. Inténtalo de nuevo.",
+      "conversationLoading": "Cargando conversación…",
+      "conversationError": "No se pudo cargar la conversación. Inténtalo de nuevo.",
+      "status": {
+        "processing": "Buscando evidencia de comunicación…",
+        "refresh": "Actualizar desde Gorgias",
+        "retry": "Reintentar",
+        "noMatches": "No se encontraron conversaciones de soporte para este cliente.",
+        "failedTitle": "La búsqueda de comunicaciones falló",
+        "failedBody": "No pudimos buscar en tu helpdesk para esta disputa.",
+        "analysisDeferredTitle": "Coincidencias encontradas — análisis aplazado temporalmente",
+        "analysisDeferredBody": "Se encontraron conversaciones, pero el análisis de evidencia está en pausa y se reanudará pronto. Los tickets coincidentes siguen visibles abajo.",
+        "reconnectRequiredTitle": "Reconectar Gorgias",
+        "reconnectRequiredBody": "Tu conexión con Gorgias ya no está autorizada. Reconéctala en Configuración para reanudar la evidencia de comunicación."
+      },
+      "staleBanner": {
+        "title": "Tu paquete de defensa está desactualizado",
+        "body": "Cambiaste la evidencia de comunicación después de generar el paquete. Regenéralo para incluir tus mensajes aprobados.",
+        "cta": "Regenerar paquete"
+      },
+      "tier": {
+        "possible": "Posibles coincidencias",
+        "possibleHint": "Confirma que una conversación pertenece al pedido en disputa antes de que sus mensajes puedan usarse como evidencia.",
+        "other": "Otras conversaciones posibles ({count})"
+      },
+      "ticket": {
+        "scoreBadge": "Puntuación {score}",
+        "confirm": "Confirmar coincidencia",
+        "notRelated": "No relacionada",
+        "reportBadMatch": "Reportar coincidencia incorrecta",
+        "viewConversation": "Ver conversación completa",
+        "hideConversation": "Ocultar conversación"
+      },
+      "reason": {
+        "linked_shopify_order": "Vinculada a este pedido",
+        "order_number_in_text": "Número de pedido mencionado",
+        "shopify_customer_id": "Mismo cliente de Shopify",
+        "email_match": "El correo coincide",
+        "conflicting_email": "Correo diferente",
+        "tracking_number_in_text": "Número de seguimiento mencionado",
+        "within_order_window": "Cerca de la fecha del pedido",
+        "before_chargeback": "Antes del contracargo",
+        "references_other_order": "Menciona otro pedido"
+      },
+      "message": {
+        "customer": "Cliente",
+        "merchant": "Comerciante",
+        "approve": "Aprobar como evidencia",
+        "exclude": "Excluir",
+        "addAsEvidence": "Añadir como evidencia",
+        "editExplanation": "Editar explicación",
+        "saveExplanation": "Guardar explicación",
+        "cancel": "Cancelar",
+        "approvedBadge": "Aprobado",
+        "proposedBadge": "Propuesto",
+        "needsReapprovalBadge": "Requiere nueva aprobación",
+        "truncatedNote": "(mensaje acortado)"
+      },
+      "category": {
+        "transaction_recognition": "Reconoce la compra",
+        "delivery_recognition": "Confirma la entrega",
+        "product_usage": "Usó el producto",
+        "refund_history": "Conversación sobre reembolso",
+        "cancellation_history": "Conversación sobre cancelación",
+        "resolution_attempt": "Intento de resolución",
+        "contradiction": "Contradice la disputa"
+      },
+      "approveModal": {
+        "title": "Aprobar mensaje como evidencia",
+        "excerptLabel": "Extracto de evidencia",
+        "excerptHelp": "Conserva solo el pasaje relevante. El extracto debe ser una parte exacta del mensaje original — aparecerá en tu paquete de defensa.",
+        "confirm": "Aprobar",
+        "cancel": "Cancelar"
+      },
+      "reportModal": {
+        "title": "Reportar una coincidencia incorrecta",
+        "reasonLabel": "¿Por qué es incorrecta esta coincidencia? (opcional)",
+        "submit": "Enviar reporte",
+        "cancel": "Cancelar"
+      }
     }
   },
   "disputeReasons": {

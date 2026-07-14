@@ -1671,6 +1671,89 @@
       "factsSignedBy": "Signed by {name}",
       "factsNotDeliveredEta": "Not delivered (est. {date})",
       "factsCarrier": "{carrier}"
+    },
+    "gorgiasComms": {
+      "title": "Customer support conversations",
+      "actionFailed": "The action could not be completed. Please try again.",
+      "conversationLoading": "Loading conversation…",
+      "conversationError": "The conversation could not be loaded. Please try again.",
+      "status": {
+        "processing": "Finding communication evidence…",
+        "refresh": "Refresh from Gorgias",
+        "retry": "Retry",
+        "noMatches": "No support conversations were found for this customer.",
+        "failedTitle": "Communication search failed",
+        "failedBody": "We couldn't search your helpdesk for this dispute.",
+        "analysisDeferredTitle": "Matches found — analysis temporarily deferred",
+        "analysisDeferredBody": "Conversations were matched, but evidence analysis is paused and will resume shortly. Matched tickets remain visible below.",
+        "reconnectRequiredTitle": "Reconnect Gorgias",
+        "reconnectRequiredBody": "Your Gorgias connection is no longer authorized. Reconnect it in Settings to resume communication evidence."
+      },
+      "staleBanner": {
+        "title": "Your defence package is out of date",
+        "body": "You changed the communication evidence after the package was generated. Regenerate it to include your approved messages.",
+        "cta": "Regenerate package"
+      },
+      "tier": {
+        "possible": "Possible matches",
+        "possibleHint": "Confirm that a conversation belongs to the disputed order before its messages can be used as evidence.",
+        "other": "Other possible conversations ({count})"
+      },
+      "ticket": {
+        "scoreBadge": "Match score {score}",
+        "confirm": "Confirm match",
+        "notRelated": "Not related",
+        "reportBadMatch": "Report bad match",
+        "viewConversation": "View full conversation",
+        "hideConversation": "Hide conversation"
+      },
+      "reason": {
+        "linked_shopify_order": "Linked to this order",
+        "order_number_in_text": "Order number mentioned",
+        "shopify_customer_id": "Same Shopify customer",
+        "email_match": "Email matches",
+        "conflicting_email": "Different email",
+        "tracking_number_in_text": "Tracking number mentioned",
+        "within_order_window": "Around the order date",
+        "before_chargeback": "Before the chargeback",
+        "references_other_order": "Mentions another order"
+      },
+      "message": {
+        "customer": "Customer",
+        "merchant": "Merchant",
+        "approve": "Approve as evidence",
+        "exclude": "Exclude",
+        "addAsEvidence": "Add as evidence",
+        "editExplanation": "Edit explanation",
+        "saveExplanation": "Save explanation",
+        "cancel": "Cancel",
+        "approvedBadge": "Approved",
+        "proposedBadge": "Proposed",
+        "needsReapprovalBadge": "Needs re-approval",
+        "truncatedNote": "(message shortened)"
+      },
+      "category": {
+        "transaction_recognition": "Recognizes the purchase",
+        "delivery_recognition": "Confirms delivery",
+        "product_usage": "Used the product",
+        "refund_history": "Refund discussion",
+        "cancellation_history": "Cancellation discussion",
+        "resolution_attempt": "Resolution attempt",
+        "contradiction": "Contradicts the dispute"
+      },
+      "approveModal": {
+        "title": "Approve message as evidence",
+        "excerptLabel": "Evidence excerpt",
+        "excerptHelp": "Keep only the relevant passage. The excerpt must be an exact part of the original message — it appears in your defence package.",
+        "confirm": "Approve",
+        "cancel": "Cancel"
+      },
+      "reportModal": {
+        "title": "Report an incorrect match",
+        "reasonLabel": "Why is this match incorrect? (optional)",
+        "submit": "Send report",
+        "cancel": "Cancel"
+      }
     }
   },
   "disputeReasons": {
