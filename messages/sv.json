@@ -1711,6 +1711,7 @@
       "shopifyProtect": "Shopify Protect-täckning",
       "customerCommunication": "Kundkommunikation",
       "gorgiasCommunication": "Helpdesk-konversation",
+      "customerCommunicationHistory": "Kundkommunikationshistorik",
       "ipLocationCheck": "IP- och platskontroll",
       "fraudRiskScreening": "Bedrägeririskbedömning före auktorisering",
       "fulfillments": "Leveranser ({count})",
