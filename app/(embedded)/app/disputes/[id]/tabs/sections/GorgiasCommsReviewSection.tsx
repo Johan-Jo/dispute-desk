@@ -775,20 +775,10 @@ function TicketCard({
                 )}
               </InlineStack>
 
-              {/* Verbatim proof from the actual conversation. Approved
-                  messages show the merchant-approved excerpt; proposed
-                  messages show a preview of the customer's own words so
-                  the merchant can see the evidence really came from the
-                  support thread, not just the AI's one-line summary. */}
-              {(m.approvedExcerptPreview ?? m.messagePreview) && (
-                <BlockStack gap="050">
-                  <Text as="span" tone="subdued" variant="bodyXs">
-                    {t("message.fromConversation")}
-                  </Text>
-                  <Text as="p" variant="bodySm">
-                    “{m.approvedExcerptPreview ?? m.messagePreview}”
-                  </Text>
-                </BlockStack>
+              {m.approvedExcerptPreview && (
+                <Text as="p" variant="bodySm">
+                  “{m.approvedExcerptPreview}”
+                </Text>
               )}
               {m.relevanceExplanation && (
                 <Text as="p" tone="subdued" variant="bodySm">

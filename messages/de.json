@@ -1736,8 +1736,7 @@
         "approvedBadge": "Freigegeben",
         "proposedBadge": "Vorgeschlagen",
         "needsReapprovalBadge": "Erneute Freigabe erforderlich",
-        "truncatedNote": "(Nachricht gekürzt)",
-        "fromConversation": "Aus der Konversation:"
+        "truncatedNote": "(Nachricht gekürzt)"
       },
       "category": {
         "transaction_recognition": "Erkennt den Kauf an",

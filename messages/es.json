@@ -1736,8 +1736,7 @@
         "approvedBadge": "Aprobado",
         "proposedBadge": "Propuesto",
         "needsReapprovalBadge": "Requiere nueva aprobación",
-        "truncatedNote": "(mensaje acortado)",
-        "fromConversation": "De la conversación:"
+        "truncatedNote": "(mensaje acortado)"
       },
       "category": {
         "transaction_recognition": "Reconoce la compra",
