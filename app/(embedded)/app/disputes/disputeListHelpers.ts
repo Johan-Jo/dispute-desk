@@ -261,6 +261,19 @@ export type FigmaCaseStrength = "strong" | "moderate" | "weak";
 export type FigmaOutcome = "pending" | "won" | "lost";
 export type FigmaDueStatus = "past" | "today" | "upcoming" | "closed";
 
+/** The "evidence is committed, awaiting an external outcome" status
+ *  family. Single source of truth shared by the list's under-review
+ *  collapse (below) and the dashboard's "Waiting on Issuer" card —
+ *  the card must count every status the list renders as "Submitted",
+ *  or a submitted dispute appears in the list but on no card
+ *  (cay-collective #12121, 2026-07-14). */
+export const UNDER_REVIEW_NORMALIZED_STATUSES = [
+  "submitted",
+  "submitted_to_shopify",
+  "submitted_to_bank",
+  "waiting_on_issuer",
+] as const;
+
 /** Map the persisted normalized_status (and closed_at) to the Figma
  *  status enum. `new`, `in_progress`, and `ready_to_submit` collapse to
  *  `action-needed` per scope decision: the merchant should treat
@@ -276,12 +289,7 @@ export function figmaStatus(d: Dispute): FigmaStatus {
   ) {
     return "closed";
   }
-  if (
-    ns === "submitted" ||
-    ns === "submitted_to_shopify" ||
-    ns === "submitted_to_bank" ||
-    ns === "waiting_on_issuer"
-  ) {
+  if ((UNDER_REVIEW_NORMALIZED_STATUSES as readonly string[]).includes(ns ?? "")) {
     return "under-review";
   }
   if (ns === "needs_review" || d.needs_review) return "needs-review";
