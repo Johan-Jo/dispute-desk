@@ -1671,6 +1671,89 @@
       "factsSignedBy": "Signé par {name}",
       "factsNotDeliveredEta": "Non livré (est. {date})",
       "factsCarrier": "{carrier}"
+    },
+    "gorgiasComms": {
+      "title": "Conversations du support client",
+      "actionFailed": "L'action n'a pas pu être effectuée. Veuillez réessayer.",
+      "conversationLoading": "Chargement de la conversation…",
+      "conversationError": "La conversation n'a pas pu être chargée. Veuillez réessayer.",
+      "status": {
+        "processing": "Recherche de preuves de communication…",
+        "refresh": "Actualiser depuis Gorgias",
+        "retry": "Réessayer",
+        "noMatches": "Aucune conversation de support n'a été trouvée pour ce client.",
+        "failedTitle": "Échec de la recherche de communications",
+        "failedBody": "Nous n'avons pas pu interroger votre helpdesk pour ce litige.",
+        "analysisDeferredTitle": "Correspondances trouvées — analyse temporairement différée",
+        "analysisDeferredBody": "Des conversations ont été associées, mais l'analyse des preuves est en pause et reprendra bientôt. Les tickets associés restent visibles ci-dessous.",
+        "reconnectRequiredTitle": "Reconnecter Gorgias",
+        "reconnectRequiredBody": "Votre connexion Gorgias n'est plus autorisée. Reconnectez-la dans les Paramètres pour reprendre les preuves de communication."
+      },
+      "staleBanner": {
+        "title": "Votre dossier de défense n'est plus à jour",
+        "body": "Vous avez modifié les preuves de communication après la génération du dossier. Régénérez-le pour inclure vos messages approuvés.",
+        "cta": "Régénérer le dossier"
+      },
+      "tier": {
+        "possible": "Correspondances possibles",
+        "possibleHint": "Confirmez qu'une conversation concerne la commande contestée avant que ses messages puissent servir de preuve.",
+        "other": "Autres conversations possibles ({count})"
+      },
+      "ticket": {
+        "scoreBadge": "Score de correspondance {score}",
+        "confirm": "Confirmer la correspondance",
+        "notRelated": "Sans rapport",
+        "reportBadMatch": "Signaler une erreur",
+        "viewConversation": "Voir la conversation complète",
+        "hideConversation": "Masquer la conversation"
+      },
+      "reason": {
+        "linked_shopify_order": "Liée à cette commande",
+        "order_number_in_text": "Numéro de commande mentionné",
+        "shopify_customer_id": "Même client Shopify",
+        "email_match": "E-mail identique",
+        "conflicting_email": "E-mail différent",
+        "tracking_number_in_text": "Numéro de suivi mentionné",
+        "within_order_window": "Autour de la date de commande",
+        "before_chargeback": "Avant la rétrofacturation",
+        "references_other_order": "Mentionne une autre commande"
+      },
+      "message": {
+        "customer": "Client",
+        "merchant": "Marchand",
+        "approve": "Approuver comme preuve",
+        "exclude": "Exclure",
+        "addAsEvidence": "Ajouter comme preuve",
+        "editExplanation": "Modifier l'explication",
+        "saveExplanation": "Enregistrer l'explication",
+        "cancel": "Annuler",
+        "approvedBadge": "Approuvé",
+        "proposedBadge": "Proposé",
+        "needsReapprovalBadge": "Nouvelle approbation requise",
+        "truncatedNote": "(message raccourci)"
+      },
+      "category": {
+        "transaction_recognition": "Reconnaît l'achat",
+        "delivery_recognition": "Confirme la livraison",
+        "product_usage": "A utilisé le produit",
+        "refund_history": "Discussion de remboursement",
+        "cancellation_history": "Discussion d'annulation",
+        "resolution_attempt": "Tentative de résolution",
+        "contradiction": "Contredit le litige"
+      },
+      "approveModal": {
+        "title": "Approuver le message comme preuve",
+        "excerptLabel": "Extrait de preuve",
+        "excerptHelp": "Ne conservez que le passage pertinent. L'extrait doit être une partie exacte du message d'origine — il figurera dans votre dossier de défense.",
+        "confirm": "Approuver",
+        "cancel": "Annuler"
+      },
+      "reportModal": {
+        "title": "Signaler une correspondance incorrecte",
+        "reasonLabel": "Pourquoi cette correspondance est-elle incorrecte ? (facultatif)",
+        "submit": "Envoyer le signalement",
+        "cancel": "Annuler"
+      }
     }
   },
   "disputeReasons": {
@@ -1711,6 +1794,7 @@
       "shopifyProtect": "Couverture Shopify Protect",
       "customerCommunication": "Communication avec le client",
       "gorgiasCommunication": "Conversation du service d'assistance",
+      "customerCommunicationHistory": "Historique de communication avec le client",
       "ipLocationCheck": "Vérification IP et localisation",
       "fraudRiskScreening": "Évaluation du risque de fraude avant autorisation",
       "fulfillments": "Expéditions ({count})",
@@ -2433,7 +2517,32 @@
     "gdprDesc": "Conformité totale aux réglementations sur la protection des données",
     "notifMonthlyDigest": "Bulletin mensuel de contestations",
     "notifMonthlyDigestDesc": "Un email mensuel qui résume votre exposition aux contestations, votre position vis-à-vis des règles des réseaux et les évolutions.",
-    "automationSectionHelp": "Valeurs par défaut avancées — pour la configuration des politiques, voir Automatisation"
+    "automationSectionHelp": "Valeurs par défaut avancées — pour la configuration des politiques, voir Automatisation",
+    "integrations": {
+      "title": "Intégrations",
+      "loading": "Chargement des intégrations…",
+      "gorgiasDescription": "Associez les conversations du support aux litiges et approuvez-les comme preuves.",
+      "badge": {
+        "connected": "Connecté",
+        "notConnected": "Non connecté",
+        "needsAttention": "Attention requise",
+        "reconnectRequired": "Reconnexion requise"
+      },
+      "lastTested": "Dernier test {date}",
+      "connect": "Connecter",
+      "reconnect": "Reconnecter",
+      "updateCredentials": "Mettre à jour les identifiants",
+      "test": "Tester la connexion",
+      "testOk": "La connexion fonctionne.",
+      "testFailed": "Le test de connexion a échoué.",
+      "disconnect": "Déconnecter",
+      "disconnectModal": {
+        "title": "Déconnecter Gorgias ?",
+        "body": "DisputeDesk cessera d'interroger votre helpdesk pour les nouveaux litiges. Les preuves déjà approuvées restent dans vos litiges.",
+        "confirm": "Déconnecter",
+        "cancel": "Annuler"
+      }
+    }
   },
   "connect": {
     "title": "Connection Readiness",
@@ -2826,7 +2935,7 @@
       },
       "howPacksBuilt": {
         "title": "Comment les dossiers sont créés automatiquement",
-        "body": "DisputeDesk collecte automatiquement des preuves de plusieurs sources :\n\n- Données de commande : articles, montants, adresse (ville uniquement).\n- Expédition et suivi : transporteur, numéros de suivi, statut de livraison.\n- Politiques de la boutique : expédition, remboursement, conditions.\n- Conversations d'assistance : lorsque vous connectez Gorgias (Configuration → Sources de preuves), les conversations du service client sont associées par e-mail et jointes automatiquement comme preuve à l'appui. Les notes internes ne sont jamais incluses.\n\nLe dossier est structuré selon le motif du litige.\n\n**Modèles de bibliothèque :** Installer un modèle sous Packs ajoute un dossier à votre **bibliothèque** (récits, sections). C'est distinct de chaque **génération automatique par litige**, qui utilise le pipeline de collecte ci-dessus ; la structure de votre bibliothèque n'est pas encore fusionnée automatiquement dans le build."
+        "body": "DisputeDesk collecte automatiquement des preuves de plusieurs sources :\n\n- Données de commande : articles, montants, adresse (ville uniquement).\n- Expédition et suivi : transporteur, numéros de suivi, statut de livraison.\n- Politiques de la boutique : expédition, remboursement, conditions.\n- Conversations du helpdesk : lorsque vous connectez Gorgias (Configuration → Sources de preuves, ou Paramètres → Intégrations), DisputeDesk retrouve les conversations de support du client pour chaque litige, évalue la correspondance de chaque ticket avec la commande contestée et propose les messages les plus pertinents comme preuves. Rien n'est inclus automatiquement — vous examinez chaque proposition dans l'onglet Preuves du litige, approuvez le passage exact à utiliser et régénérez le dossier pour l'inclure. Les notes internes des agents ne sont jamais collectées.\n\nLe dossier est structuré selon le motif du litige.\n\n**Modèles de bibliothèque :** Installer un modèle sous Packs ajoute un dossier à votre **bibliothèque** (récits, sections). C'est distinct de chaque **génération automatique par litige**, qui utilise le pipeline de collecte ci-dessus ; la structure de votre bibliothèque n'est pas encore fusionnée automatiquement dans le build."
       },
       "generatingPackManually": {
         "title": "Créer un dossier manuellement",
