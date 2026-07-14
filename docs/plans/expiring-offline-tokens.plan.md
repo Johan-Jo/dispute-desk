@@ -1,6 +1,10 @@
 # Migrate to Expiring Offline Tokens
 
-**Status:** Proposed
+**Status:** Implemented (2026-07-15) — all 3 stages shipped on branch
+`feat/shopify-expiring-offline-tokens`. See `docs/technical.md` §
+"Expiring Offline Tokens" for the shipped design. Live verification
+(installed-base upgrade on a real embedded load) still pending — see
+that section's "Verification" note.
 **Created:** 2026-06-15
 **Trigger:** Escalated from "parked" — Shopify is now **actively rejecting** Admin API calls made with legacy non-expiring offline tokens (`[API] Non-expiring access tokens are no longer accepted for the Admin API`). Observed on the dev shop `surasvenne` (blocks policy ingest *and every other background Admin call*).
 

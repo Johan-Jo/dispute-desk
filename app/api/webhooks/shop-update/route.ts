@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyShopifyWebhook } from "@/lib/webhooks/verify";
 import { getServiceClient } from "@/lib/supabase/server";
 import { loadSession } from "@/lib/shopify/sessionStorage";
+import { ensureFreshSession } from "@/lib/shopify/sessions/refreshOfflineToken";
 import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
 import { persistShopCurrency } from "@/lib/shopify/persistShopCurrency";
 
@@ -52,7 +53,8 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (shop) {
-    const session = await loadSession(shop.id, "offline");
+    const rawSession = await loadSession(shop.id, "offline");
+    const session = rawSession ? await ensureFreshSession(rawSession) : null;
     if (session?.accessToken) {
       registerDisputeWebhooks({
         shopDomain,

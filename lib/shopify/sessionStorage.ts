@@ -17,6 +17,15 @@ export interface StoredSession {
   accessToken: string;
   scopes: string;
   expiresAt: string | null;
+  /** Expiring-token variant only (docs/plans/expiring-offline-tokens.plan.md).
+   *  NULL for legacy non-expiring sessions. */
+  refreshToken: string | null;
+  /** Refresh-token expiry (~90 days from mint/refresh). NULL for legacy sessions. */
+  refreshTokenExpiresAt: string | null;
+  /** true once minted/upgraded via token-exchange with expiring=1.
+   *  false = legacy non-expiring token — Shopify now rejects these for
+   *  background Admin API calls. */
+  tokenExpiring: boolean;
 }
 
 function isLikelyMyShopifyDomain(value: string | null | undefined): value is string {
@@ -40,10 +49,18 @@ export async function storeSession(session: {
   accessToken: string;
   scopes: string;
   expiresAt?: string | null;
+  /** Expiring-token variant (Stage 2). Omit/null for legacy sessions —
+   *  tokenExpiring then defaults to false at the DB layer. */
+  refreshToken?: string | null;
+  refreshTokenExpiresAt?: string | null;
+  tokenExpiring?: boolean;
 }): Promise<void> {
   const db = getServiceClient();
   const encrypted = encrypt(session.accessToken);
   const tokenStr = serializeEncrypted(encrypted);
+  const refreshTokenStr = session.refreshToken
+    ? serializeEncrypted(encrypt(session.refreshToken))
+    : null;
 
   const row = {
     shop_id: session.shopInternalId,
@@ -54,6 +71,9 @@ export async function storeSession(session: {
     key_version: encrypted.keyVersion,
     scopes: session.scopes,
     expires_at: session.expiresAt ?? null,
+    refresh_token_encrypted: refreshTokenStr,
+    refresh_token_expires_at: session.refreshTokenExpiresAt ?? null,
+    token_expiring: session.tokenExpiring ?? false,
   };
 
   if (session.sessionType === "offline") {
@@ -101,6 +121,10 @@ export async function loadSession(
   const encrypted = deserializeEncrypted(data.access_token_encrypted);
   const accessToken = decrypt(encrypted);
 
+  const refreshToken = data.refresh_token_encrypted
+    ? decrypt(deserializeEncrypted(data.refresh_token_encrypted))
+    : null;
+
   let shopDomain = (data.shop_domain ?? "").trim();
   if (!isLikelyMyShopifyDomain(shopDomain)) {
     // Backward-compatibility for old rows missing/invalid shop_domain.
@@ -124,6 +148,77 @@ export async function loadSession(
     accessToken,
     scopes: data.scopes,
     expiresAt: data.expires_at,
+    refreshToken,
+    refreshTokenExpiresAt: data.refresh_token_expires_at ?? null,
+    tokenExpiring: data.token_expiring === true,
+  };
+}
+
+/**
+ * In-place update of a session's token material (row `id` unchanged).
+ * Dedicated to the token-refresh path
+ * (lib/shopify/sessions/refreshOfflineToken.ts) — unlike `storeSession`,
+ * this never delete+inserts, so the optimistic refresh-claim on the
+ * same row id stays valid across the update.
+ */
+export async function updateSessionTokens(
+  sessionId: string,
+  tokens: {
+    accessToken: string;
+    scopes: string;
+    expiresAt: string | null;
+    refreshToken: string | null;
+    refreshTokenExpiresAt: string | null;
+    tokenExpiring: boolean;
+  },
+): Promise<StoredSession | null> {
+  const db = getServiceClient();
+  const encrypted = encrypt(tokens.accessToken);
+  const refreshTokenStr = tokens.refreshToken
+    ? serializeEncrypted(encrypt(tokens.refreshToken))
+    : null;
+
+  const { data, error } = await db
+    .from("shop_sessions")
+    .update({
+      access_token_encrypted: serializeEncrypted(encrypted),
+      key_version: encrypted.keyVersion,
+      scopes: tokens.scopes,
+      expires_at: tokens.expiresAt,
+      refresh_token_encrypted: refreshTokenStr,
+      refresh_token_expires_at: tokens.refreshTokenExpiresAt,
+      token_expiring: tokens.tokenExpiring,
+      refresh_claimed_at: null,
+    })
+    .eq("id", sessionId)
+    .select("*")
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  let shopDomain = (data.shop_domain ?? "").trim();
+  if (!isLikelyMyShopifyDomain(shopDomain)) {
+    const { data: shopRow } = await db
+      .from("shops")
+      .select("shop_domain")
+      .eq("id", data.shop_id)
+      .maybeSingle();
+    const fallbackDomain = (shopRow?.shop_domain ?? "").trim();
+    if (isLikelyMyShopifyDomain(fallbackDomain)) shopDomain = fallbackDomain;
+  }
+
+  return {
+    id: data.id,
+    shopId: data.shop_id,
+    sessionType: data.session_type,
+    userId: data.user_id,
+    shopDomain,
+    accessToken: tokens.accessToken,
+    scopes: data.scopes,
+    expiresAt: data.expires_at,
+    refreshToken: tokens.refreshToken,
+    refreshTokenExpiresAt: data.refresh_token_expires_at ?? null,
+    tokenExpiring: data.token_expiring === true,
   };
 }
 

@@ -77,12 +77,22 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // If we already have an offline session for this shop we can skip the
-  // exchange entirely — the id_token only authenticates *this request*;
-  // persisted access tokens stay valid across app loads.
+  // If we already have an offline session for this shop AND it's already
+  // the expiring-token variant, skip the exchange entirely — the
+  // id_token only authenticates *this request*; persisted access tokens
+  // stay valid across app loads.
+  //
+  // A LEGACY (non-expiring, `tokenExpiring: false`) session is NOT
+  // skipped — it's upgraded in place via the same token-exchange call,
+  // using this request's id_token (docs/plans/expiring-offline-tokens.plan.md
+  // Stage 3). Shopify now actively rejects Admin API calls made with the
+  // legacy token type, so re-using it forever (the old behavior) left
+  // shops permanently stuck; every embedded load is an opportunity to
+  // migrate. Exchanging revokes the old token on Shopify's side, so the
+  // new pair is persisted before this handler returns success.
   const existing = await loadSession(shopInternalId, "offline");
 
-  if (!existing) {
+  if (!existing || !existing.tokenExpiring) {
     try {
       const exchangeRes = await fetch(`https://${shop}/admin/oauth/access_token`, {
         method: "POST",
@@ -94,16 +104,33 @@ export async function GET(req: NextRequest) {
           subject_token: idToken,
           subject_token_type: SUBJECT_TOKEN_TYPE,
           requested_token_type: OFFLINE_TOKEN_TYPE,
+          expiring: "1",
         }),
       });
 
       if (!exchangeRes.ok) {
         const body = await exchangeRes.text();
         console.error("[token-exchange] Shopify rejected exchange:", exchangeRes.status, body);
+        // A legacy session that failed to upgrade still has its (soon
+        // to be fully rejected) token — don't error the whole request
+        // out from under an otherwise-working install; only hard-fail
+        // when there was no prior session to fall back on.
+        if (existing) {
+          return buildSuccessRedirect(req, { returnTo, hostParam, shop, shopInternalId });
+        }
         return errorPage(`Shopify rejected token exchange (${exchangeRes.status}).`);
       }
 
-      const data = (await exchangeRes.json()) as { access_token: string; scope: string };
+      const data = (await exchangeRes.json()) as {
+        access_token: string;
+        scope: string;
+        expires_in?: number;
+        refresh_token?: string;
+        refresh_token_expires_in?: number;
+      };
+
+      const nowMs = Date.now();
+      const tokenExpiring = Boolean(data.expires_in && data.refresh_token);
 
       await storeSession({
         shopInternalId,
@@ -112,7 +139,14 @@ export async function GET(req: NextRequest) {
         userId: null,
         accessToken: data.access_token,
         scopes: data.scope,
-        expiresAt: null,
+        expiresAt: data.expires_in
+          ? new Date(nowMs + data.expires_in * 1000).toISOString()
+          : null,
+        refreshToken: data.refresh_token ?? null,
+        refreshTokenExpiresAt: data.refresh_token_expires_in
+          ? new Date(nowMs + data.refresh_token_expires_in * 1000).toISOString()
+          : null,
+        tokenExpiring,
       });
 
       // Register dispute webhooks out-of-band; don't block the redirect.
@@ -137,16 +171,36 @@ export async function GET(req: NextRequest) {
       });
     } catch (err) {
       console.error("[token-exchange] Unhandled error:", err);
+      // Same graceful-degradation as the !exchangeRes.ok branch above —
+      // a transient failure upgrading a legacy session shouldn't break
+      // an otherwise-working install.
+      if (existing) {
+        return buildSuccessRedirect(req, { returnTo, hostParam, shop, shopInternalId });
+      }
       return errorPage(err instanceof Error ? err.message : "Token exchange failed.");
     }
   }
 
-  // Build the final /app URL preserving shop + host + embedded so the
-  // embedded root has the params it needs (App Bridge, etc.).
-  const dest = safeReturnTo(returnTo);
+  return buildSuccessRedirect(req, { returnTo, hostParam, shop, shopInternalId });
+}
+
+/**
+ * Build the final /app redirect preserving shop + host + embedded so
+ * the embedded root has the params it needs (App Bridge, etc.), and set
+ * the shopify_shop / shopify_shop_id cookies. Shared by the normal
+ * success path and the "upgrade exchange failed but a usable legacy
+ * session still exists" fallback.
+ */
+function buildSuccessRedirect(
+  req: NextRequest,
+  params: { returnTo: string; hostParam: string; shop: string; shopInternalId: string },
+): NextResponse {
+  const dest = safeReturnTo(params.returnTo);
   const destUrl = new URL(dest, req.url);
-  if (!destUrl.searchParams.has("shop")) destUrl.searchParams.set("shop", shop);
-  if (hostParam && !destUrl.searchParams.has("host")) destUrl.searchParams.set("host", hostParam);
+  if (!destUrl.searchParams.has("shop")) destUrl.searchParams.set("shop", params.shop);
+  if (params.hostParam && !destUrl.searchParams.has("host")) {
+    destUrl.searchParams.set("host", params.hostParam);
+  }
   if (!destUrl.searchParams.has("embedded")) destUrl.searchParams.set("embedded", "1");
 
   const res = NextResponse.redirect(destUrl);
@@ -158,8 +212,8 @@ export async function GET(req: NextRequest) {
     maxAge: 60 * 60 * 24 * 30,
     path: "/",
   };
-  res.cookies.set("shopify_shop", shop, cookieOpts);
-  res.cookies.set("shopify_shop_id", shopInternalId, cookieOpts);
+  res.cookies.set("shopify_shop", params.shop, cookieOpts);
+  res.cookies.set("shopify_shop_id", params.shopInternalId, cookieOpts);
   return res;
 }
 
