@@ -182,12 +182,33 @@ token-exchange) has no `expiring` parameter in Shopify's API — sessions
 minted there stay legacy until the next embedded load runs them through
 token-exchange.
 
+**Middleware must actually route through token-exchange for this to
+fire (fixed 2026-07-15).** The first cut of this migration only routed
+`id_token` → token-exchange when `shopify_shop` was *absent* (the
+original bootstrap-only purpose of that redirect). A merchant who
+already has that cookie — it's set for 30 days — never re-hits
+token-exchange through normal navigation, even though Shopify keeps
+handing the app a fresh `id_token` on every embedded load. Live-verified
+on `surasvenne`: reopening the app after the fix deployed did nothing,
+because the existing cookie short-circuited past the bootstrap check
+entirely. `middleware.ts` now has a second, narrower redirect in the
+`shopDomain`-present branch: when `dd_token_expiring` isn't `"1"`, a
+well-formed `id_token` is present, and the cookie's shop matches
+`?shop=`, it redirects through token-exchange the same way. The
+`dd_token_expiring` cookie (set by `buildSuccessRedirect` to the
+session's *actual* `tokenExpiring` state — `"1"` or `"0"`, never
+assumed) makes this a one-time cost per shop: once confirmed, later
+loads skip the extra redirect; if an upgrade attempt failed, `"0"`
+keeps retrying on the next load instead of giving up silently.
+
 **Verification:** unit tests cover the refresh request shape, expiry-window
-math, claim win/lose, graceful failure, and the token-exchange route's
-skip/upgrade/degrade branching (`lib/shopify/__tests__/sessionStorage.test.ts`,
+math, claim win/lose, graceful failure, the token-exchange route's
+skip/upgrade/degrade branching, and the middleware re-check redirect
+(`lib/shopify/__tests__/sessionStorage.test.ts`,
 `lib/shopify/sessions/__tests__/{refreshOfflineToken,getShopBackgroundSession}.test.ts`,
 `lib/shopify/__tests__/makeAuthedRequest.test.ts`,
-`app/api/auth/shopify/token-exchange/__tests__/route.test.ts`). Live
+`app/api/auth/shopify/token-exchange/__tests__/route.test.ts`,
+`tests/integration/middlewareTokenExpiringRecheck.test.ts`). Live
 verification requires an actual embedded load (the id_token is short-lived
 and Shopify-signed, so it can't be simulated locally) — confirm via
 `shop_sessions.token_expiring` on the target shop after opening the app.

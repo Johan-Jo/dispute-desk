@@ -849,6 +849,30 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(sessionUrl);
     }
 
+    // Expiring-token migration (docs/plans/expiring-offline-tokens.plan.md
+    // Stage 3): the bootstrap id_token->token-exchange redirect above only
+    // fires when `shopify_shop` is ABSENT. A merchant who already has that
+    // cookie (it's set for 30 days) never re-hits token-exchange through
+    // normal navigation — even though Shopify keeps handing us a fresh
+    // id_token on embedded loads — so a legacy (non-expiring) session
+    // would never get upgraded. Use that id_token once to run the
+    // upgrade; `dd_token_expiring` (set by token-exchange once the
+    // session is confirmed on the expiring variant) short-circuits this
+    // on every later load so upgraded shops don't pay a redirect hop.
+    if (
+      req.cookies.get("dd_token_expiring")?.value !== "1" &&
+      looksLikeSessionToken(idTokenParam) &&
+      shopParam &&
+      shopIdentityMatches(shopDomain, shopParam)
+    ) {
+      const exchangeUrl = new URL("/api/auth/shopify/token-exchange", req.url);
+      exchangeUrl.searchParams.set("id_token", idTokenParam!);
+      exchangeUrl.searchParams.set("shop", shopParam);
+      if (hostParam) exchangeUrl.searchParams.set("host", hostParam);
+      exchangeUrl.searchParams.set("return_to", pathname + req.nextUrl.search);
+      return NextResponse.redirect(exchangeUrl);
+    }
+
     // Stale-cookie guard: the `shopify_shop` cookie is scoped to our host, not
     // per-shop. When a merchant opens Admin for store B after store A in the
     // same browser, Shopify sends ?shop=B but cookies still point to A — and
