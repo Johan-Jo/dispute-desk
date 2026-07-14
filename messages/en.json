@@ -693,6 +693,7 @@
       "supplementary_documents": "Supplementary documents",
       "fraud_screening": "Pre-authorization fraud screening",
       "refund_record": "Refund record",
+      "refund": "Refund status",
       "no_return_initiated": "No return initiated"
     },
     "reasonFamilyLabel": {

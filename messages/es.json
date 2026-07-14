@@ -1297,6 +1297,7 @@
       "supplementary_documents": "Documentos complementarios",
       "fraud_screening": "Detección de fraude previa a la autorización",
       "refund_record": "Registro de reembolso",
+      "refund": "Estado del reembolso",
       "no_return_initiated": "Sin devolución iniciada"
     },
     "decisiveHint": {
