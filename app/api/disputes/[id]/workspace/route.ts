@@ -25,7 +25,6 @@ import {
 } from "@/lib/argument/caseStrength";
 import type { EvidenceFact } from "@/lib/defence/types";
 import { CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
-import { buildGorgiasCommsBlock } from "@/lib/integrations/gorgias/workspaceBlock";
 
 /** Merchant-facing dispute submission state derived from the underlying
  *  DB enums + Shopify forwarding signal. See plan §"presentationStatus". */
@@ -477,15 +476,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
                 uploadedAt: string;
               }>
             | undefined) ?? [],
-        /** Gorgias evidence core: true when a merchant review action
-         *  (approve/exclude/manual-add/reset or ticket reject) happened
-         *  after this pack was generated — the snapshot no longer
-         *  reflects the curated evidence. Set atomically by the review
-         *  RPCs; clears itself on regenerate (buildPack rewrites
-         *  pack_json wholesale). */
-        gorgiasEvidenceStale:
-          ((packRow.pack_json as { gorgiasEvidenceStale?: unknown } | null)
-            ?.gorgiasEvidenceStale as boolean | undefined) === true,
       }
     : null;
 
@@ -862,15 +852,9 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   // strengthReason composition to the API).
   void caseStrength;
 
-  // Gorgias evidence core — summaries only (transcripts are lazy-loaded
-  // per ticket). Null when the shop has no Gorgias integration row, so
-  // the workspace UI can self-hide the section.
-  const gorgiasComms = await buildGorgiasCommsBlock(sb, shopId, disputeId);
-
   return NextResponse.json({
     dispute,
     pack,
-    gorgiasComms,
     argumentMap,
     rebuttalDraft,
     rebuttalOutdated,
