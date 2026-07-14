@@ -29,14 +29,13 @@
  * (text snapshot only). Attachment byte capture is a Phase 1.5 follow-up.
  */
 
-import { getServiceClient } from "@/lib/supabase/server";
-import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
 import {
   createGorgiasClient,
   type GorgiasClient,
   type GorgiasCredentials,
   type GorgiasMessage,
 } from "@/lib/integrations/gorgias/client";
+import { loadGorgiasCredentials } from "@/lib/integrations/gorgias/credentials";
 import type { EvidenceSection, BuildContext } from "../types";
 
 /** Test seam: lets the collector test inject credentials + a fake client
@@ -60,39 +59,6 @@ interface SnapshotConversation {
   channel: string | null;
   csatScore: number | null;
   messages: SnapshotMessage[];
-}
-
-async function loadGorgiasCredentials(
-  shopId: string,
-): Promise<GorgiasCredentials | null> {
-  const sb = getServiceClient();
-  const { data: integration } = await sb
-    .from("integrations")
-    .select("id, status")
-    .eq("shop_id", shopId)
-    .eq("type", "gorgias")
-    .maybeSingle();
-
-  if (!integration || integration.status !== "connected") return null;
-
-  const { data: secret } = await sb
-    .from("integration_secrets")
-    .select("secret_enc")
-    .eq("integration_id", integration.id)
-    .maybeSingle();
-
-  if (!secret?.secret_enc) return null;
-
-  const parsed = JSON.parse(
-    decrypt(deserializeEncrypted(secret.secret_enc)),
-  ) as Partial<GorgiasCredentials>;
-
-  if (!parsed.subdomain || !parsed.email || !parsed.apiKey) return null;
-  return {
-    subdomain: parsed.subdomain,
-    email: parsed.email,
-    apiKey: parsed.apiKey,
-  };
 }
 
 /** Drop internal agent notes and any non-public message. */
