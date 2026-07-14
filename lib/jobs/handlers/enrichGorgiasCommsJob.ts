@@ -43,6 +43,12 @@ import {
 } from "@/lib/integrations/gorgias/credentials";
 import type { OrderMatchSignals } from "@/lib/integrations/gorgias/matchScoring";
 import {
+  analyzeGorgiasRelevance,
+  type AnalyzerCaseInput,
+  type AnalyzerResult,
+} from "@/lib/integrations/gorgias/relevanceAnalyzer";
+import { DISPUTE_ATTENTION_REASONS } from "@/lib/disputes/attentionReasons";
+import {
   ACTIVE_RUN_STATUSES,
   customerIdDigits,
   planMessagePersistence,
@@ -59,6 +65,10 @@ import {
 export interface EnrichGorgiasDeps {
   loadConnection?: (shopId: string) => Promise<GorgiasConnection | null>;
   createClient?: (creds: GorgiasConnection["credentials"]) => GorgiasClient;
+  analyze?: (
+    shopId: string,
+    input: AnalyzerCaseInput,
+  ) => Promise<AnalyzerResult>;
 }
 
 interface RunRow {
@@ -203,18 +213,80 @@ export async function handleEnrichGorgiasComms(
       });
     }
 
-    // Relevance analysis lands in PR3; until then a run with persisted
-    // matches finishes 'completed' with proposal_count 0.
-    await finishRun(sb, run, "completed", {
+    // ── Relevance analysis ──────────────────────────────────────────────
+    // Over confirmed tickets (high tier auto-confirms; medium confirms via
+    // merchant review) not yet analyzed. The analyzer only proposes —
+    // candidate → proposed; approval stays a merchant action.
+    const analysis = await runAnalysisPhase(
+      sb,
+      job.shopId,
+      disputeId,
+      run,
+      deps.analyze ?? analyzeGorgiasRelevance,
+    );
+
+    if (analysis.deferred) {
+      await finishRun(sb, run, "analysis_deferred", {
+        ...counters,
+        messages_stored: messagesStored,
+        error_code: analysis.errorCode,
+        next_retry_at: analysis.nextRetryAt,
+        analyzer_model: analysis.model ?? null,
+        analyzer_version: analysis.promptVersion ?? null,
+        prompt_tokens: analysis.tokens?.prompt ?? 0,
+        completion_tokens: analysis.tokens?.completion ?? 0,
+      });
+      await logSetupEvent(job.shopId, "gorgias_enrichment_completed", {
+        disputeId,
+        runId: run.id,
+        ...counters,
+        messagesStored,
+        proposalCount: 0,
+        analysisDeferred: true,
+        errorCode: analysis.errorCode,
+      });
+      await maybeLogFirstEnriched(sb, job.shopId, run.id, disputeId);
+      return { ok: true };
+    }
+
+    const finalStatus =
+      analysis.proposalCount > 0 ? "ready_for_review" : "completed";
+    await finishRun(sb, run, finalStatus, {
       ...counters,
       messages_stored: messagesStored,
+      proposal_count: analysis.proposalCount,
+      analyzer_model: analysis.model ?? null,
+      analyzer_version: analysis.promptVersion ?? null,
+      prompt_tokens: analysis.tokens?.prompt ?? 0,
+      completion_tokens: analysis.tokens?.completion ?? 0,
     });
+
+    // Ready-for-review notification: visible from the dispute list, not
+    // only inside the open workspace. Cleared by the review routes once
+    // no actionable items remain.
+    if (analysis.proposalCount > 0) {
+      await sb
+        .from("disputes")
+        .update({
+          needs_attention: true,
+          attention_reason: DISPUTE_ATTENTION_REASONS.GORGIAS_EVIDENCE_READY,
+          attention_payload: {
+            proposal_count: analysis.proposalCount,
+            run_id: run.id,
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", disputeId)
+        .eq("shop_id", job.shopId);
+    }
+
     await logSetupEvent(job.shopId, "gorgias_enrichment_completed", {
       disputeId,
       runId: run.id,
       ...counters,
       messagesStored,
-      proposalCount: 0,
+      proposalCount: analysis.proposalCount,
+      rejectedByValidation: analysis.rejectedCount,
     });
     await maybeLogFirstEnriched(sb, job.shopId, run.id, disputeId);
 
@@ -583,6 +655,173 @@ async function persistScoredTickets(
   }
 
   return { messagesStored, newMatches };
+}
+
+// ── Analysis phase ───────────────────────────────────────────────────────────
+
+interface AnalysisPhaseResult {
+  deferred: boolean;
+  errorCode?: string;
+  nextRetryAt?: string;
+  proposalCount: number;
+  rejectedCount: number;
+  model?: string;
+  promptVersion?: number;
+  tokens?: { prompt: number; completion: number; cached: number };
+}
+
+/** Start of the next UTC day — when the daily LLM cap bucket resets. */
+function nextUtcMidnight(): string {
+  const d = new Date();
+  d.setUTCHours(24, 0, 0, 0);
+  return d.toISOString();
+}
+
+async function runAnalysisPhase(
+  sb: SupabaseClient,
+  shopId: string,
+  disputeId: string,
+  run: RunRow,
+  analyze: NonNullable<EnrichGorgiasDeps["analyze"]>,
+): Promise<AnalysisPhaseResult> {
+  const none: AnalysisPhaseResult = {
+    deferred: false,
+    proposalCount: 0,
+    rejectedCount: 0,
+  };
+
+  const { data: ticketRows } = await sb
+    .from("gorgias_matched_tickets")
+    .select("id, gorgias_ticket_id, ticket_snapshot")
+    .eq("dispute_id", disputeId)
+    .eq("match_status", "confirmed_match")
+    .is("analyzed_at", null);
+  const analyzable = (ticketRows ?? []) as Array<{
+    id: string;
+    gorgias_ticket_id: number;
+    ticket_snapshot: Record<string, unknown> | null;
+  }>;
+  if (analyzable.length === 0) return none;
+
+  const ticketIds = analyzable.map((t) => t.id);
+  const { data: msgRows } = await sb
+    .from("gorgias_evidence_messages")
+    .select(
+      "id, matched_ticket_id, sender_type, sent_at, message_text, content_truncated",
+    )
+    .in("matched_ticket_id", ticketIds)
+    .eq("review_status", "candidate");
+  const candidates = (msgRows ?? []) as Array<{
+    id: string;
+    matched_ticket_id: string;
+    sender_type: "customer" | "merchant";
+    sent_at: string | null;
+    message_text: string;
+    content_truncated: boolean;
+  }>;
+  if (candidates.length === 0) return none;
+
+  await transition(sb, run.id, ["fetching_messages"], "analyzing");
+
+  const [{ data: dispute }, { data: shop }] = await Promise.all([
+    sb
+      .from("disputes")
+      .select("reason, network_reason_code, order_name")
+      .eq("id", disputeId)
+      .maybeSingle(),
+    sb.from("shops").select("locale").eq("id", shopId).maybeSingle(),
+  ]);
+
+  const byTicket = new Map<string, typeof candidates>();
+  for (const c of candidates) {
+    const list = byTicket.get(c.matched_ticket_id) ?? [];
+    list.push(c);
+    byTicket.set(c.matched_ticket_id, list);
+  }
+
+  const input: AnalyzerCaseInput = {
+    disputeReason: (dispute?.reason as string | null) ?? null,
+    networkReasonCode: (dispute?.network_reason_code as string | null) ?? null,
+    orderName: (dispute?.order_name as string | null) ?? null,
+    orderCreatedAt: null,
+    deliveredAt: null,
+    explanationLocale: (shop?.locale as string | null) ?? "en",
+    tickets: analyzable.map((t) => ({
+      ticketId: Number(t.gorgias_ticket_id),
+      channel: (t.ticket_snapshot?.channel as string | null) ?? null,
+      subject: (t.ticket_snapshot?.subject as string | null) ?? null,
+      messages: (byTicket.get(t.id) ?? []).map((c) => ({
+        id: c.id,
+        senderType: c.sender_type,
+        sentAt: c.sent_at,
+        text: c.message_text,
+        contentTruncated: c.content_truncated,
+      })),
+    })),
+  };
+
+  const result = await analyze(shopId, input);
+
+  if (result.capReached) {
+    return {
+      deferred: true,
+      errorCode: "llm_cap_reached",
+      nextRetryAt: nextUtcMidnight(),
+      proposalCount: 0,
+      rejectedCount: 0,
+    };
+  }
+  if (result.error) {
+    // Matching results are already persisted — analysis is deferred, not
+    // lost, and never reported as no_matches (candidate tickets exist).
+    return {
+      deferred: true,
+      errorCode: "analyzer_error",
+      nextRetryAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      proposalCount: 0,
+      rejectedCount: 0,
+      model: result.model,
+      promptVersion: result.promptVersion,
+      tokens: result.tokens,
+    };
+  }
+
+  // Write proposals — HARD RULE: only candidate → proposed. The guarded
+  // WHERE keeps the analyzer from ever touching merchant-decided rows.
+  let proposalCount = 0;
+  for (const p of result.proposals) {
+    const { data: updated } = await sb
+      .from("gorgias_evidence_messages")
+      .update({
+        review_status: "proposed",
+        evidence_category: p.category,
+        relevance_explanation: p.explanation,
+        confidence_score: p.confidence,
+        analyzer_model: result.model,
+        analyzer_prompt_version: result.promptVersion,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", p.id)
+      .eq("dispute_id", disputeId)
+      .eq("review_status", "candidate")
+      .select("id");
+    if (updated && updated.length > 0) proposalCount++;
+  }
+
+  const analyzedAt = new Date().toISOString();
+  await sb
+    .from("gorgias_matched_tickets")
+    .update({ analyzed_at: analyzedAt, updated_at: analyzedAt })
+    .in("id", ticketIds);
+
+  return {
+    deferred: false,
+    proposalCount,
+    rejectedCount: result.rejectedCount,
+    model: result.model,
+    promptVersion: result.promptVersion,
+    tokens: result.tokens,
+  };
 }
 
 async function maybeLogFirstEnriched(

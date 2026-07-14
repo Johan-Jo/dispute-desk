@@ -49,6 +49,13 @@ export const DISPUTE_ATTENTION_REASONS = {
   /** Save-to-Shopify job exhausted retries. Payload:
    *  `{ pack_id, job_id, last_error: string }`. */
   SUBMISSION_FAILED: "submission_failed",
+
+  /** Gorgias enrichment finished with AI-proposed communication evidence
+   *  awaiting merchant review. Payload:
+   *  `{ proposal_count: number, run_id: string }`. Cleared by the review
+   *  routes once no proposed messages / unconfirmed medium tickets /
+   *  re-approval flags remain. */
+  GORGIAS_EVIDENCE_READY: "gorgias_evidence_ready",
 } as const;
 
 export type DisputeAttentionReason =

@@ -33,6 +33,7 @@ import {
   Mail,
   Gauge,
   Fingerprint,
+  MessagesSquare,
 } from "lucide-react";
 import { ToastProvider } from "@/components/admin/Toast";
 
@@ -75,6 +76,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Passkeys", href: "/admin/passkeys", icon: Fingerprint },
   { label: "Resources", href: "/admin/resources", icon: BookOpen },
   { label: "Signal Radar", href: "/admin/signal-radar", icon: Radar },
+  { label: "Gorgias Evidence", href: "/admin/gorgias", icon: MessagesSquare },
   { label: "Playbook Leads", href: "/admin/playbook-leads", icon: Mail, group: "Growth" },
   { label: "Winnability Leads", href: "/admin/winnability-leads", icon: Gauge, group: "Growth" },
   { label: "Help", href: "/admin/help", icon: HelpCircle },
