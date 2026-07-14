@@ -127,11 +127,6 @@ export interface WorkspacePack {
    *  `buildPackJob` at start. Used to drive the "Regenerating defence
    *  package" banner during the gap between request and worker pickup. */
   rebuildPending: boolean;
-  /** Gorgias evidence core: a review action happened after this pack
-   *  was generated — the snapshot no longer reflects the curated
-   *  communication evidence. Set atomically by the review RPCs; clears
-   *  on regenerate. */
-  gorgiasEvidenceStale?: boolean;
   /** Resubmission Window: user-facing outcome of the most recent
    *  regenerate attempt. NOT authoritative submission state — see
    *  `lib/automation/rebuildOutcome.ts`. Drives the Evidence-tab outcome
@@ -220,59 +215,9 @@ export interface AppliedRule {
   mode: AppliedRuleMode;
 }
 
-/** Gorgias evidence core — summaries only (client-safe mirror of
- *  lib/integrations/gorgias/workspaceBlock.ts, which is server-only).
- *  Full transcripts are lazily fetched per ticket. */
-export interface GorgiasCommsMessageSummary {
-  id: string;
-  senderType: "customer" | "merchant";
-  sentAt: string | null;
-  reviewStatus: string;
-  evidenceCategory: string | null;
-  confidenceScore: number | null;
-  relevanceExplanation: string | null;
-  explanationEdited: boolean;
-  approvedExcerptPreview: string | null;
-  needsReapproval: boolean;
-}
-
-export interface GorgiasCommsTicketSummary {
-  id: string;
-  gorgiasTicketId: number;
-  subject: string | null;
-  channel: string | null;
-  ticketCreatedAt: string | null;
-  matchScore: number;
-  confidence: "high" | "medium" | "low";
-  matchStatus: "proposed_match" | "confirmed_match" | "rejected_match";
-  matchReasons: Array<{ signal: string; points: number; detail?: string }>;
-  analyzedAt: string | null;
-  counts: { total: number; proposed: number; approved: number; excluded: number };
-  reviewableMessages: GorgiasCommsMessageSummary[];
-}
-
-export interface GorgiasCommsBlock {
-  integrationStatus: string;
-  evidenceMode: "legacy_auto_include" | "merchant_review_required";
-  errorCode: string | null;
-  latestRun: {
-    id: string;
-    status: string;
-    triggerSource: string;
-    proposalCount: number;
-    errorCode: string | null;
-    startedAt: string;
-    completedAt: string | null;
-  } | null;
-  tickets: GorgiasCommsTicketSummary[];
-}
-
 export interface WorkspaceData {
   dispute: WorkspaceDispute;
   pack: WorkspacePack | null;
-  /** Gorgias evidence core (null when the shop has no Gorgias
-   *  integration — the review section self-hides). */
-  gorgiasComms?: GorgiasCommsBlock | null;
   /** Merchant-facing submission state for the dispute. Drives the
    *  Overview hero copy, the timeline active step, and the Submission
    *  Summary panel's tense. Plan v2. */

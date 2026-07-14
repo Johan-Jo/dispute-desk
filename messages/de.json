@@ -1671,89 +1671,6 @@
       "factsSignedBy": "Unterschrieben von {name}",
       "factsNotDeliveredEta": "Nicht zugestellt (vsl. {date})",
       "factsCarrier": "{carrier}"
-    },
-    "gorgiasComms": {
-      "title": "Kundensupport-Konversationen",
-      "actionFailed": "Die Aktion konnte nicht ausgeführt werden. Bitte erneut versuchen.",
-      "conversationLoading": "Konversation wird geladen…",
-      "conversationError": "Die Konversation konnte nicht geladen werden. Bitte erneut versuchen.",
-      "status": {
-        "processing": "Kommunikationsnachweise werden gesucht…",
-        "refresh": "Aus Gorgias aktualisieren",
-        "retry": "Erneut versuchen",
-        "noMatches": "Für diesen Kunden wurden keine Support-Konversationen gefunden.",
-        "failedTitle": "Kommunikationssuche fehlgeschlagen",
-        "failedBody": "Wir konnten Ihren Helpdesk für diesen Streitfall nicht durchsuchen.",
-        "analysisDeferredTitle": "Treffer gefunden — Analyse vorübergehend verschoben",
-        "analysisDeferredBody": "Konversationen wurden zugeordnet, aber die Nachweisanalyse pausiert und wird in Kürze fortgesetzt. Zugeordnete Tickets bleiben unten sichtbar.",
-        "reconnectRequiredTitle": "Gorgias neu verbinden",
-        "reconnectRequiredBody": "Ihre Gorgias-Verbindung ist nicht mehr autorisiert. Verbinden Sie sie in den Einstellungen neu, um Kommunikationsnachweise fortzusetzen."
-      },
-      "staleBanner": {
-        "title": "Ihr Verteidigungspaket ist veraltet",
-        "body": "Sie haben die Kommunikationsnachweise geändert, nachdem das Paket erstellt wurde. Erstellen Sie es neu, um Ihre freigegebenen Nachrichten aufzunehmen.",
-        "cta": "Paket neu erstellen"
-      },
-      "tier": {
-        "possible": "Mögliche Treffer",
-        "possibleHint": "Bestätigen Sie, dass eine Konversation zur strittigen Bestellung gehört, bevor ihre Nachrichten als Nachweis verwendet werden können.",
-        "other": "Weitere mögliche Konversationen ({count})"
-      },
-      "ticket": {
-        "scoreBadge": "Trefferwert {score}",
-        "confirm": "Treffer bestätigen",
-        "notRelated": "Nicht zugehörig",
-        "reportBadMatch": "Falschen Treffer melden",
-        "viewConversation": "Gesamte Konversation anzeigen",
-        "hideConversation": "Konversation ausblenden"
-      },
-      "reason": {
-        "linked_shopify_order": "Mit dieser Bestellung verknüpft",
-        "order_number_in_text": "Bestellnummer erwähnt",
-        "shopify_customer_id": "Gleicher Shopify-Kunde",
-        "email_match": "E-Mail stimmt überein",
-        "conflicting_email": "Abweichende E-Mail",
-        "tracking_number_in_text": "Sendungsnummer erwähnt",
-        "within_order_window": "Rund um das Bestelldatum",
-        "before_chargeback": "Vor der Rückbuchung",
-        "references_other_order": "Erwähnt eine andere Bestellung"
-      },
-      "message": {
-        "customer": "Kunde",
-        "merchant": "Händler",
-        "approve": "Als Nachweis freigeben",
-        "exclude": "Ausschließen",
-        "addAsEvidence": "Als Nachweis hinzufügen",
-        "editExplanation": "Erläuterung bearbeiten",
-        "saveExplanation": "Erläuterung speichern",
-        "cancel": "Abbrechen",
-        "approvedBadge": "Freigegeben",
-        "proposedBadge": "Vorgeschlagen",
-        "needsReapprovalBadge": "Erneute Freigabe erforderlich",
-        "truncatedNote": "(Nachricht gekürzt)"
-      },
-      "category": {
-        "transaction_recognition": "Erkennt den Kauf an",
-        "delivery_recognition": "Bestätigt die Lieferung",
-        "product_usage": "Produkt verwendet",
-        "refund_history": "Erstattungsdiskussion",
-        "cancellation_history": "Stornierungsdiskussion",
-        "resolution_attempt": "Lösungsversuch",
-        "contradiction": "Widerspricht dem Streitfall"
-      },
-      "approveModal": {
-        "title": "Nachricht als Nachweis freigeben",
-        "excerptLabel": "Nachweis-Auszug",
-        "excerptHelp": "Behalten Sie nur die relevante Passage. Der Auszug muss ein exakter Teil der Originalnachricht sein — er erscheint in Ihrem Verteidigungspaket.",
-        "confirm": "Freigeben",
-        "cancel": "Abbrechen"
-      },
-      "reportModal": {
-        "title": "Falschen Treffer melden",
-        "reasonLabel": "Warum ist dieser Treffer falsch? (optional)",
-        "submit": "Meldung senden",
-        "cancel": "Abbrechen"
-      }
     }
   },
   "disputeReasons": {
@@ -1794,7 +1711,6 @@
       "shopifyProtect": "Shopify-Protect-Abdeckung",
       "customerCommunication": "Kundenkommunikation",
       "gorgiasCommunication": "Helpdesk-Konversation",
-      "customerCommunicationHistory": "Kundenkommunikationsverlauf",
       "ipLocationCheck": "IP- und Standortprüfung",
       "fraudRiskScreening": "Betrugsrisikoprüfung vor der Autorisierung",
       "fulfillments": "Lieferungen ({count})",
@@ -2517,32 +2433,7 @@
     "gdprDesc": "Vollständige Einhaltung der Datenschutzbestimmungen",
     "notifMonthlyDigest": "Monatliche Rückbuchungs-Übersicht",
     "notifMonthlyDigestDesc": "Eine monatliche E-Mail mit deiner Rückbuchungs-Exposition, deiner Position gegenüber den Netzwerkregeln und den Veränderungen.",
-    "automationSectionHelp": "Erweiterte Standardwerte — für die Richtlinienkonfiguration siehe Automatisierung",
-    "integrations": {
-      "title": "Integrationen",
-      "loading": "Integrationen werden geladen…",
-      "gorgiasDescription": "Ordnen Sie Support-Konversationen Streitfällen zu und geben Sie sie als Nachweis frei.",
-      "badge": {
-        "connected": "Verbunden",
-        "notConnected": "Nicht verbunden",
-        "needsAttention": "Aufmerksamkeit erforderlich",
-        "reconnectRequired": "Neuverbindung erforderlich"
-      },
-      "lastTested": "Zuletzt getestet {date}",
-      "connect": "Verbinden",
-      "reconnect": "Neu verbinden",
-      "updateCredentials": "Zugangsdaten aktualisieren",
-      "test": "Verbindung testen",
-      "testOk": "Verbindung funktioniert.",
-      "testFailed": "Verbindungstest fehlgeschlagen.",
-      "disconnect": "Trennen",
-      "disconnectModal": {
-        "title": "Gorgias trennen?",
-        "body": "DisputeDesk durchsucht Ihren Helpdesk dann nicht mehr für neue Streitfälle. Bereits freigegebene Nachweise bleiben in Ihren Streitfällen erhalten.",
-        "confirm": "Trennen",
-        "cancel": "Abbrechen"
-      }
-    }
+    "automationSectionHelp": "Erweiterte Standardwerte — für die Richtlinienkonfiguration siehe Automatisierung"
   },
   "connect": {
     "title": "Connection Readiness",
@@ -2935,7 +2826,7 @@
       },
       "howPacksBuilt": {
         "title": "Wie Bewispakete automatisch erstellt werden",
-        "body": "DisputeDesk sammelt automatisch Beweise aus mehreren Quellen:\n\n- Bestelldaten: Positionen, Beträge, Adresse (nur Stadtebene).\n- Versand & Tracking: Spediteur, Sendungsnummern, Lieferstatus.\n- Shop-Richtlinien: Versand-, Rückgabe- und Stornierungsrichtlinien.\n- Helpdesk-Konversationen: Wenn Sie Gorgias verbinden (Einrichtung → Nachweisquellen oder Einstellungen → Integrationen), findet DisputeDesk die Support-Konversationen des Kunden zu jedem Streitfall, bewertet, wie stark jedes Ticket zur strittigen Bestellung passt, und schlägt die relevantesten Nachrichten als Nachweis vor. Nichts wird automatisch aufgenommen — Sie prüfen jeden Vorschlag im Nachweise-Tab des Streitfalls, geben die genaue Passage frei und erstellen das Paket neu, um sie aufzunehmen. Interne Agentennotizen werden nie erfasst.\n\nDas Paket wird nach Streitfallgrund strukturiert.\n\n**Bibliotheksvorlagen:** Eine unter „Packs“ installierte Vorlage ergänzt Ihre **Bibliothek** mit Abschnitten und Texten. Das ist getrennt vom **automatischen Aufbau pro Streitfall**, der die Sammler-Pipeline nutzt und Ihre Bibliotheksstruktur derzeit nicht automatisch übernimmt."
+        "body": "DisputeDesk sammelt automatisch Beweise aus mehreren Quellen:\n\n- Bestelldaten: Positionen, Beträge, Adresse (nur Stadtebene).\n- Versand & Tracking: Spediteur, Sendungsnummern, Lieferstatus.\n- Shop-Richtlinien: Versand-, Rückgabe- und Stornierungsrichtlinien.\n- Helpdesk-Konversationen: Wenn Sie Gorgias verbinden (Einrichtung → Beweisquellen), werden die Kundenservice-Konversationen des Kunden per E-Mail zugeordnet und automatisch als unterstützender Beweis angehängt. Interne Notizen werden nie aufgenommen.\n\nDas Paket wird nach Streitfallgrund strukturiert.\n\n**Bibliotheksvorlagen:** Eine unter „Packs“ installierte Vorlage ergänzt Ihre **Bibliothek** mit Abschnitten und Texten. Das ist getrennt vom **automatischen Aufbau pro Streitfall**, der die Sammler-Pipeline nutzt und Ihre Bibliotheksstruktur derzeit nicht automatisch übernimmt."
       },
       "generatingPackManually": {
         "title": "Ein Paket manuell erstellen",
