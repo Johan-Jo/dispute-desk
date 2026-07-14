@@ -1701,23 +1701,28 @@
         "other": "Weitere mögliche Konversationen ({count})"
       },
       "ticket": {
-        "scoreBadge": "Trefferwert {score}",
         "confirm": "Treffer bestätigen",
         "notRelated": "Nicht zugehörig",
         "reportBadMatch": "Falschen Treffer melden",
         "viewConversation": "Gesamte Konversation anzeigen",
         "hideConversation": "Konversation ausblenden"
       },
+      "confidence": {
+        "high": "Starker Treffer",
+        "medium": "Möglicher Treffer",
+        "low": "Unwahrscheinlicher Treffer"
+      },
+      "reasonsHeading": "Warum wir das zugeordnet haben:",
       "reason": {
-        "linked_shopify_order": "Mit dieser Bestellung verknüpft",
-        "order_number_in_text": "Bestellnummer erwähnt",
-        "shopify_customer_id": "Gleicher Shopify-Kunde",
-        "email_match": "E-Mail stimmt überein",
-        "conflicting_email": "Abweichende E-Mail",
-        "tracking_number_in_text": "Sendungsnummer erwähnt",
-        "within_order_window": "Rund um das Bestelldatum",
-        "before_chargeback": "Vor der Rückbuchung",
-        "references_other_order": "Erwähnt eine andere Bestellung"
+        "linked_shopify_order": "Mit Bestellung {detail} in Gorgias verknüpft",
+        "order_number_in_text": "Erwähnt Bestellung {detail}",
+        "shopify_customer_id": "Gleiches Kundenkonto",
+        "email_match": "Von der E-Mail-Adresse der Bestellung",
+        "conflicting_email": "Von einer anderen E-Mail-Adresse als der Bestellung",
+        "tracking_number_in_text": "Erwähnt Sendungsnummer {detail}",
+        "within_order_window": "Etwa zum Zeitpunkt der Bestellung gesendet",
+        "before_chargeback": "Vor Eröffnung der Rückbuchung gesendet",
+        "references_other_order": "Erwähnt außerdem eine andere Bestellung ({detail})"
       },
       "message": {
         "customer": "Kunde",
@@ -1731,7 +1736,8 @@
         "approvedBadge": "Freigegeben",
         "proposedBadge": "Vorgeschlagen",
         "needsReapprovalBadge": "Erneute Freigabe erforderlich",
-        "truncatedNote": "(Nachricht gekürzt)"
+        "truncatedNote": "(Nachricht gekürzt)",
+        "fromConversation": "Aus der Konversation:"
       },
       "category": {
         "transaction_recognition": "Erkennt den Kauf an",

@@ -233,6 +233,8 @@ export interface GorgiasCommsMessageSummary {
   relevanceExplanation: string | null;
   explanationEdited: boolean;
   approvedExcerptPreview: string | null;
+  /** Short verbatim preview of the message body (proof for proposed rows). */
+  messagePreview: string | null;
   needsReapproval: boolean;
 }
 

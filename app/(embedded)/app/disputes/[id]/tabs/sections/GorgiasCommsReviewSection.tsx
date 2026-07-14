@@ -39,12 +39,14 @@ import {
   Button,
   Card,
   Collapsible,
+  Icon,
   InlineStack,
   Modal,
   Spinner,
   Text,
   TextField,
 } from "@shopify/polaris";
+import { CheckCircleIcon, AlertTriangleIcon } from "@shopify/polaris-icons";
 import type { useDisputeWorkspace } from "../../hooks/useDisputeWorkspace";
 import type {
   GorgiasCommsMessageSummary,
@@ -410,15 +412,18 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
               <Card key={ticket.id} background="bg-surface-secondary">
                 <InlineStack align="space-between" blockAlign="center" gap="200">
                   <BlockStack gap="100">
-                    <Text as="span" fontWeight="semibold">
-                      {ticket.subject ?? `#${ticket.gorgiasTicketId}`}
-                    </Text>
+                    <InlineStack gap="200" blockAlign="center">
+                      <Text as="span" fontWeight="semibold">
+                        {ticket.subject ?? `#${ticket.gorgiasTicketId}`}
+                      </Text>
+                      <Badge tone={confidenceTone(ticket.confidence)}>
+                        {t(`confidence.${ticket.confidence}`)}
+                      </Badge>
+                    </InlineStack>
                     <Text as="span" tone="subdued" variant="bodySm">
-                      {t("ticket.scoreBadge", { score: ticket.matchScore })} ·{" "}
                       {formatDate(ticket.ticketCreatedAt)}
-                      {" · "}
-                      {matchReasonLine(ticket, t)}
                     </Text>
+                    <MatchReasons ticket={ticket} t={t} />
                   </BlockStack>
                   <InlineStack gap="200">
                     <Button
@@ -461,8 +466,7 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
                     blockAlign="center"
                   >
                     <Text as="span" tone="subdued" variant="bodySm">
-                      {ticket.subject ?? `#${ticket.gorgiasTicketId}`} ·{" "}
-                      {t("ticket.scoreBadge", { score: ticket.matchScore })}
+                      {ticket.subject ?? `#${ticket.gorgiasTicketId}`}
                     </Text>
                     <Button
                       variant="plain"
@@ -617,14 +621,65 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
   );
 }
 
-function matchReasonLine(
-  ticket: GorgiasCommsTicketSummary,
-  t: ReturnType<typeof useTranslations<"disputes.gorgiasComms">>,
-): string {
-  return ticket.matchReasons
-    .filter((r) => r.points > 0)
-    .map((r) => t(`reason.${r.signal}` as Parameters<typeof t>[0]))
-    .join(", ");
+/**
+ * Confidence tier → Polaris Badge tone. The merchant never sees the raw
+ * additive match score (that lives in the internal admin view); the tier
+ * is surfaced as a plain "Strong / Possible match" label instead.
+ */
+function confidenceTone(
+  confidence: GorgiasCommsTicketSummary["confidence"],
+): "success" | "attention" | "info" {
+  if (confidence === "high") return "success";
+  if (confidence === "medium") return "attention";
+  return "info";
+}
+
+/**
+ * MatchReasons — the "why we matched this" fact list. Each stored reason
+ * becomes a plain-English line a human can verify at a glance (with the
+ * real order #, tracking #, etc. interpolated from `detail`). Positive
+ * signals get a green check; negative signals (conflicting email, a
+ * different order referenced) are shown as red warnings rather than
+ * hidden, so a reviewing merchant sees the red flags too.
+ */
+function MatchReasons({
+  ticket,
+  t,
+}: {
+  ticket: GorgiasCommsTicketSummary;
+  t: ReturnType<typeof useTranslations<"disputes.gorgiasComms">>;
+}) {
+  if (ticket.matchReasons.length === 0) return null;
+  const positives = ticket.matchReasons.filter((r) => r.points > 0);
+  const negatives = ticket.matchReasons.filter((r) => r.points < 0);
+  // The reason key is dynamic and some messages interpolate {detail}
+  // while others don't; cast to a permissive signature so passing the
+  // detail value for every reason doesn't fight next-intl's per-key
+  // value typing.
+  const tr = t as unknown as (k: string, v?: Record<string, string>) => string;
+  return (
+    <BlockStack gap="050">
+      <Text as="span" tone="subdued" variant="bodySm">
+        {t("reasonsHeading")}
+      </Text>
+      {[...positives, ...negatives].map((r, i) => {
+        const negative = r.points < 0;
+        return (
+          <InlineStack key={`${r.signal}-${i}`} gap="100" blockAlign="center" wrap={false}>
+            <span style={{ flexShrink: 0, width: 16, height: 16 }}>
+              <Icon
+                source={negative ? AlertTriangleIcon : CheckCircleIcon}
+                tone={negative ? "critical" : "success"}
+              />
+            </span>
+            <Text as="span" tone={negative ? "critical" : "subdued"} variant="bodySm">
+              {tr(`reason.${r.signal}`, { detail: r.detail ?? "" })}
+            </Text>
+          </InlineStack>
+        );
+      })}
+    </BlockStack>
+  );
 }
 
 function TicketCard({
@@ -661,16 +716,15 @@ function TicketCard({
               <Text as="span" fontWeight="semibold">
                 {ticket.subject ?? `#${ticket.gorgiasTicketId}`}
               </Text>
-              <Badge tone={ticket.confidence === "high" ? "success" : "info"}>
-                {t("ticket.scoreBadge", { score: ticket.matchScore })}
+              <Badge tone={confidenceTone(ticket.confidence)}>
+                {t(`confidence.${ticket.confidence}`)}
               </Badge>
             </InlineStack>
             <Text as="span" tone="subdued" variant="bodySm">
               {formatDate(ticket.ticketCreatedAt)}
               {ticket.channel ? ` · ${ticket.channel}` : ""}
-              {" · "}
-              {matchReasonLine(ticket, t)}
             </Text>
+            <MatchReasons ticket={ticket} t={t} />
           </BlockStack>
           <Button variant="plain" tone="critical" onClick={onReport}>
             {t("ticket.reportBadMatch")}
@@ -721,10 +775,20 @@ function TicketCard({
                 )}
               </InlineStack>
 
-              {m.approvedExcerptPreview && (
-                <Text as="p" variant="bodySm">
-                  “{m.approvedExcerptPreview}”
-                </Text>
+              {/* Verbatim proof from the actual conversation. Approved
+                  messages show the merchant-approved excerpt; proposed
+                  messages show a preview of the customer's own words so
+                  the merchant can see the evidence really came from the
+                  support thread, not just the AI's one-line summary. */}
+              {(m.approvedExcerptPreview ?? m.messagePreview) && (
+                <BlockStack gap="050">
+                  <Text as="span" tone="subdued" variant="bodyXs">
+                    {t("message.fromConversation")}
+                  </Text>
+                  <Text as="p" variant="bodySm">
+                    “{m.approvedExcerptPreview ?? m.messagePreview}”
+                  </Text>
+                </BlockStack>
               )}
               {m.relevanceExplanation && (
                 <Text as="p" tone="subdued" variant="bodySm">
