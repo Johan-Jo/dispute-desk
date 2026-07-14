@@ -65,12 +65,26 @@ export interface GorgiasSatisfactionSurvey {
   scored_datetime?: string | null;
 }
 
+export interface GorgiasTicketCustomer {
+  id?: number | null;
+  email?: string | null;
+  name?: string | null;
+  /** Integration payloads (e.g. Shopify) Gorgias attaches to the customer.
+   *  Shape is account-specific and undocumented — always read defensively. */
+  integrations?: Record<string, unknown> | null;
+  data?: Record<string, unknown> | null;
+}
+
 export interface GorgiasTicket {
   id: number;
   /** Gorgias status enum is only "open" | "closed". */
   status: string | null;
   channel: string | null;
   spam: boolean;
+  subject?: string | null;
+  customer?: GorgiasTicketCustomer | null;
+  /** Free-form integration/app metadata on the ticket. Undocumented shape. */
+  meta?: Record<string, unknown> | null;
   /** Soft-delete marker. Non-null = trashed; excluded from evidence. */
   trashed_datetime: string | null;
   created_datetime: string | null;
@@ -79,6 +93,60 @@ export interface GorgiasTicket {
    *  messages call to stay under the rate limit. */
   messages?: GorgiasMessage[] | null;
   satisfaction_survey?: GorgiasSatisfactionSurvey | null;
+}
+
+/**
+ * Best-effort extraction of a linked Shopify order name ("#1066") from the
+ * undocumented Gorgias↔Shopify integration payloads on a ticket/customer.
+ * Only present when the merchant runs Gorgias's own Shopify integration;
+ * returns null whenever the shape doesn't cooperate (the match engine
+ * reaches high confidence without this signal).
+ */
+export function extractLinkedShopifyOrderName(
+  ticket: GorgiasTicket,
+): string | null {
+  const candidates: unknown[] = [ticket.meta, ticket.customer?.integrations, ticket.customer?.data];
+  for (const root of candidates) {
+    const found = findOrderNameDeep(root, 0);
+    if (found) return found;
+  }
+  return null;
+}
+
+const ORDER_NAME_KEYS = new Set(["order_name", "orderName", "name", "order_number", "orderNumber"]);
+
+function findOrderNameDeep(node: unknown, depth: number): string | null {
+  if (depth > 4 || node === null || typeof node !== "object") return null;
+  const obj = node as Record<string, unknown>;
+  // Only trust name-like keys that live under an order-ish parent — handled
+  // by recursing into keys containing "order"/"shopify" and checking leaves.
+  for (const [key, value] of Object.entries(obj)) {
+    const keyLower = key.toLowerCase();
+    if (
+      ORDER_NAME_KEYS.has(key) &&
+      typeof value === "string" &&
+      /^#?\d{3,}$/.test(value.trim())
+    ) {
+      // Bare "name" only counts when the parent chain was order-scoped —
+      // enforced by only recursing into order/shopify branches below.
+      if (key === "name" || key === "order_number" || key === "orderNumber") {
+        if (depth === 0) continue; // never trust top-level generic keys
+      }
+      return value.trim().startsWith("#") ? value.trim() : `#${value.trim()}`;
+    }
+    if (
+      (keyLower.includes("order") || keyLower.includes("shopify")) &&
+      typeof value === "object" &&
+      value !== null
+    ) {
+      const arr = Array.isArray(value) ? value : [value];
+      for (const item of arr) {
+        const found = findOrderNameDeep(item, depth + 1);
+        if (found) return found;
+      }
+    }
+  }
+  return null;
 }
 
 export interface GorgiasClient {

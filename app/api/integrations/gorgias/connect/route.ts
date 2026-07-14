@@ -55,6 +55,10 @@ export async function POST(req: NextRequest) {
         meta: {
           subdomain,
           email,
+          // Every NEW connection is enrolled in merchant-review mode:
+          // no Gorgias message reaches an evidence pack without explicit
+          // merchant approval. One-way — never downgraded to legacy.
+          evidence_mode: "merchant_review_required",
           ...(testError ? { last_error: testError } : {}),
           tested_at: new Date().toISOString(),
         },

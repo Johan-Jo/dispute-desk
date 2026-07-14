@@ -1671,6 +1671,89 @@
       "factsSignedBy": "Signerad av {name}",
       "factsNotDeliveredEta": "Ej levererad (ber. {date})",
       "factsCarrier": "{carrier}"
+    },
+    "gorgiasComms": {
+      "title": "Kundsupportkonversationer",
+      "actionFailed": "Åtgärden kunde inte slutföras. Försök igen.",
+      "conversationLoading": "Laddar konversation…",
+      "conversationError": "Konversationen kunde inte laddas. Försök igen.",
+      "status": {
+        "processing": "Söker kommunikationsbevis…",
+        "refresh": "Uppdatera från Gorgias",
+        "retry": "Försök igen",
+        "noMatches": "Inga supportkonversationer hittades för den här kunden.",
+        "failedTitle": "Kommunikationssökningen misslyckades",
+        "failedBody": "Vi kunde inte söka i din helpdesk för den här tvisten.",
+        "analysisDeferredTitle": "Träffar hittade — analysen tillfälligt uppskjuten",
+        "analysisDeferredBody": "Konversationer matchades, men bevisanalysen är pausad och återupptas snart. Matchade ärenden visas nedan.",
+        "reconnectRequiredTitle": "Återanslut Gorgias",
+        "reconnectRequiredBody": "Din Gorgias-anslutning är inte längre auktoriserad. Återanslut den i Inställningar för att återuppta kommunikationsbevis."
+      },
+      "staleBanner": {
+        "title": "Ditt försvarspaket är inaktuellt",
+        "body": "Du ändrade kommunikationsbevisen efter att paketet skapades. Skapa om det för att inkludera dina godkända meddelanden.",
+        "cta": "Skapa om paketet"
+      },
+      "tier": {
+        "possible": "Möjliga träffar",
+        "possibleHint": "Bekräfta att en konversation hör till den omtvistade beställningen innan dess meddelanden kan användas som bevis.",
+        "other": "Andra möjliga konversationer ({count})"
+      },
+      "ticket": {
+        "scoreBadge": "Träffpoäng {score}",
+        "confirm": "Bekräfta träff",
+        "notRelated": "Inte relaterad",
+        "reportBadMatch": "Rapportera felaktig träff",
+        "viewConversation": "Visa hela konversationen",
+        "hideConversation": "Dölj konversationen"
+      },
+      "reason": {
+        "linked_shopify_order": "Kopplad till den här beställningen",
+        "order_number_in_text": "Ordernummer nämns",
+        "shopify_customer_id": "Samma Shopify-kund",
+        "email_match": "E-post matchar",
+        "conflicting_email": "Annan e-postadress",
+        "tracking_number_in_text": "Spårningsnummer nämns",
+        "within_order_window": "Nära beställningsdatumet",
+        "before_chargeback": "Före återkravet",
+        "references_other_order": "Nämner en annan beställning"
+      },
+      "message": {
+        "customer": "Kund",
+        "merchant": "Handlare",
+        "approve": "Godkänn som bevis",
+        "exclude": "Uteslut",
+        "addAsEvidence": "Lägg till som bevis",
+        "editExplanation": "Redigera förklaring",
+        "saveExplanation": "Spara förklaring",
+        "cancel": "Avbryt",
+        "approvedBadge": "Godkänt",
+        "proposedBadge": "Föreslaget",
+        "needsReapprovalBadge": "Kräver nytt godkännande",
+        "truncatedNote": "(meddelandet förkortat)"
+      },
+      "category": {
+        "transaction_recognition": "Bekräftar köpet",
+        "delivery_recognition": "Bekräftar leveransen",
+        "product_usage": "Använde produkten",
+        "refund_history": "Återbetalningsdiskussion",
+        "cancellation_history": "Avbokningsdiskussion",
+        "resolution_attempt": "Lösningsförsök",
+        "contradiction": "Motsäger tvisten"
+      },
+      "approveModal": {
+        "title": "Godkänn meddelande som bevis",
+        "excerptLabel": "Bevisutdrag",
+        "excerptHelp": "Behåll endast det relevanta avsnittet. Utdraget måste vara en exakt del av originalmeddelandet — det visas i ditt försvarspaket.",
+        "confirm": "Godkänn",
+        "cancel": "Avbryt"
+      },
+      "reportModal": {
+        "title": "Rapportera en felaktig träff",
+        "reasonLabel": "Varför är den här träffen felaktig? (valfritt)",
+        "submit": "Skicka rapport",
+        "cancel": "Avbryt"
+      }
     }
   },
   "disputeReasons": {
@@ -1711,6 +1794,7 @@
       "shopifyProtect": "Shopify Protect-täckning",
       "customerCommunication": "Kundkommunikation",
       "gorgiasCommunication": "Helpdesk-konversation",
+      "customerCommunicationHistory": "Kundkommunikationshistorik",
       "ipLocationCheck": "IP- och platskontroll",
       "fraudRiskScreening": "Bedrägeririskbedömning före auktorisering",
       "fulfillments": "Leveranser ({count})",
@@ -2433,7 +2517,32 @@
     "gdpr": "Redo för GDPR och CCPA",
     "gdprDesc": "Fullständig efterlevnad av dataskyddsförordningar",
     "notifMonthlyDigest": "Månatlig chargebacksammanfattning",
-    "notifMonthlyDigestDesc": "Ett månadsmejl som sammanfattar din chargebackexponering, din position gentemot kortnätsreglerna och förändringarna."
+    "notifMonthlyDigestDesc": "Ett månadsmejl som sammanfattar din chargebackexponering, din position gentemot kortnätsreglerna och förändringarna.",
+    "integrations": {
+      "title": "Integrationer",
+      "loading": "Laddar integrationer…",
+      "gorgiasDescription": "Matcha supportkonversationer med tvister och godkänn dem som bevis.",
+      "badge": {
+        "connected": "Ansluten",
+        "notConnected": "Inte ansluten",
+        "needsAttention": "Kräver åtgärd",
+        "reconnectRequired": "Återanslutning krävs"
+      },
+      "lastTested": "Senast testad {date}",
+      "connect": "Anslut",
+      "reconnect": "Återanslut",
+      "updateCredentials": "Uppdatera uppgifter",
+      "test": "Testa anslutningen",
+      "testOk": "Anslutningen fungerar.",
+      "testFailed": "Anslutningstestet misslyckades.",
+      "disconnect": "Koppla från",
+      "disconnectModal": {
+        "title": "Koppla från Gorgias?",
+        "body": "DisputeDesk slutar då söka i din helpdesk för nya tvister. Bevis som du redan godkänt finns kvar i dina tvister.",
+        "confirm": "Koppla från",
+        "cancel": "Avbryt"
+      }
+    }
   },
   "connect": {
     "title": "Connection Readiness",
@@ -2826,7 +2935,7 @@
       },
       "howPacksBuilt": {
         "title": "Hur bevispaket byggs automatiskt",
-        "body": "När DisputeDesk bygger ett bevispaket samlar det automatiskt bevis från flera källor:\n\n- Orderdata: rader, belopp, faktureringsadress (stadsnivå — personuppgifter redigeras), kundhistorik.\n- Leverans och spårning: transportör, spårningsnummer, leveransstatus.\n- Butikspolicyer: ögonblicksbilder av dina frakt-, retur-, villkors- och avbokningspolicyer.\n- Helpdesk-konversationer: när du ansluter Gorgias (Konfiguration → Beviskällor) matchas kundens kundtjänstkonversationer via e-post och bifogas automatiskt som stödjande bevis. Interna anteckningar inkluderas aldrig.\n\nPaketet struktureras efter tvistorsak. Till exempel prioriterar en \"Produkt ej mottagen\"-tvist frakt- och spårningsbevis.\n\n**Biblioteksmallar:** Att installera en mall under Paket lägger till ett paket i ditt **bibliotek** (texter och avsnitt). Det är skilt från varje **automatisk per-tvist-byggnad**, som använder insamlarpipelinen ovan; bibliotekets layout slås ännu inte automatiskt in i bygget."
+        "body": "När DisputeDesk bygger ett bevispaket samlar det automatiskt bevis från flera källor:\n\n- Orderdata: rader, belopp, faktureringsadress (stadsnivå — personuppgifter redigeras), kundhistorik.\n- Leverans och spårning: transportör, spårningsnummer, leveransstatus.\n- Butikspolicyer: ögonblicksbilder av dina frakt-, retur-, villkors- och avbokningspolicyer.\n- Helpdeskkonversationer: när du ansluter Gorgias (Installation → Beviskällor, eller Inställningar → Integrationer) hittar DisputeDesk kundens supportkonversationer för varje tvist, poängsätter hur väl varje ärende matchar den omtvistade beställningen och föreslår de mest relevanta meddelandena som bevis. Inget inkluderas automatiskt — du granskar varje förslag på tvistens bevisflik, godkänner det exakta avsnittet som ska användas och skapar om paketet för att inkludera det. Interna agentanteckningar samlas aldrig in.\n\nPaketet struktureras efter tvistorsak. Till exempel prioriterar en \"Produkt ej mottagen\"-tvist frakt- och spårningsbevis.\n\n**Biblioteksmallar:** Att installera en mall under Paket lägger till ett paket i ditt **bibliotek** (texter och avsnitt). Det är skilt från varje **automatisk per-tvist-byggnad**, som använder insamlarpipelinen ovan; bibliotekets layout slås ännu inte automatiskt in i bygget."
       },
       "generatingPackManually": {
         "title": "Skapa ett paket manuellt",
