@@ -37,7 +37,6 @@ import { EvidenceUsedSection } from "./sections/EvidenceUsedSection";
 import { MissingOrWeakSection } from "./sections/MissingOrWeakSection";
 import { RegeneratePromptModal } from "./sections/RegeneratePromptModal";
 import { CardholderAcknowledgementCard } from "./sections/CardholderAcknowledgementCard";
-import { GorgiasCommsReviewSection } from "./sections/GorgiasCommsReviewSection";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -305,20 +304,6 @@ export default function EvidenceTab({ workspace }: Props) {
         lineItems={data?.evidenceLineItems ?? []}
         internalSignals={sections.internalOnly}
       />
-
-      {/* §3.5 — Gorgias communication evidence review (evidence core).
-              Self-hides when the shop has no Gorgias integration or the
-              dispute has no matched tickets/runs. Summaries ride the
-              workspace poll; transcripts are lazily fetched per ticket.
-              Approve/exclude/manual-add mutate via the atomic review
-              RPCs; approved evidence reaches the pack ONLY through the
-              Regenerate CTA (gorgiasEvidenceStale banner). */}
-      {data?.dispute?.id && (
-        <GorgiasCommsReviewSection
-          workspace={workspace}
-          disputeId={data.dispute.id}
-        />
-      )}
 
       {/* §4 — Missing or weak evidence (collapses when empty)
               Inline actions: Upload evidence + Mark as not applicable.
