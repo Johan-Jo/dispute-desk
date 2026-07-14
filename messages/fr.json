@@ -2517,32 +2517,7 @@
     "gdprDesc": "Conformité totale aux réglementations sur la protection des données",
     "notifMonthlyDigest": "Bulletin mensuel de contestations",
     "notifMonthlyDigestDesc": "Un email mensuel qui résume votre exposition aux contestations, votre position vis-à-vis des règles des réseaux et les évolutions.",
-    "automationSectionHelp": "Valeurs par défaut avancées — pour la configuration des politiques, voir Automatisation",
-    "integrations": {
-      "title": "Intégrations",
-      "loading": "Chargement des intégrations…",
-      "gorgiasDescription": "Associez les conversations du support aux litiges et approuvez-les comme preuves.",
-      "badge": {
-        "connected": "Connecté",
-        "notConnected": "Non connecté",
-        "needsAttention": "Attention requise",
-        "reconnectRequired": "Reconnexion requise"
-      },
-      "lastTested": "Dernier test {date}",
-      "connect": "Connecter",
-      "reconnect": "Reconnecter",
-      "updateCredentials": "Mettre à jour les identifiants",
-      "test": "Tester la connexion",
-      "testOk": "La connexion fonctionne.",
-      "testFailed": "Le test de connexion a échoué.",
-      "disconnect": "Déconnecter",
-      "disconnectModal": {
-        "title": "Déconnecter Gorgias ?",
-        "body": "DisputeDesk cessera d'interroger votre helpdesk pour les nouveaux litiges. Les preuves déjà approuvées restent dans vos litiges.",
-        "confirm": "Déconnecter",
-        "cancel": "Annuler"
-      }
-    }
+    "automationSectionHelp": "Valeurs par défaut avancées — pour la configuration des politiques, voir Automatisation"
   },
   "connect": {
     "title": "Connection Readiness",
@@ -2935,7 +2910,7 @@
       },
       "howPacksBuilt": {
         "title": "Comment les dossiers sont créés automatiquement",
-        "body": "DisputeDesk collecte automatiquement des preuves de plusieurs sources :\n\n- Données de commande : articles, montants, adresse (ville uniquement).\n- Expédition et suivi : transporteur, numéros de suivi, statut de livraison.\n- Politiques de la boutique : expédition, remboursement, conditions.\n- Conversations du helpdesk : lorsque vous connectez Gorgias (Configuration → Sources de preuves, ou Paramètres → Intégrations), DisputeDesk retrouve les conversations de support du client pour chaque litige, évalue la correspondance de chaque ticket avec la commande contestée et propose les messages les plus pertinents comme preuves. Rien n'est inclus automatiquement — vous examinez chaque proposition dans l'onglet Preuves du litige, approuvez le passage exact à utiliser et régénérez le dossier pour l'inclure. Les notes internes des agents ne sont jamais collectées.\n\nLe dossier est structuré selon le motif du litige.\n\n**Modèles de bibliothèque :** Installer un modèle sous Packs ajoute un dossier à votre **bibliothèque** (récits, sections). C'est distinct de chaque **génération automatique par litige**, qui utilise le pipeline de collecte ci-dessus ; la structure de votre bibliothèque n'est pas encore fusionnée automatiquement dans le build."
+        "body": "DisputeDesk collecte automatiquement des preuves de plusieurs sources :\n\n- Données de commande : articles, montants, adresse (ville uniquement).\n- Expédition et suivi : transporteur, numéros de suivi, statut de livraison.\n- Politiques de la boutique : expédition, remboursement, conditions.\n- Conversations d'assistance : lorsque vous connectez Gorgias (Configuration → Sources de preuves), les conversations du service client sont associées par e-mail et jointes automatiquement comme preuve à l'appui. Les notes internes ne sont jamais incluses.\n\nLe dossier est structuré selon le motif du litige.\n\n**Modèles de bibliothèque :** Installer un modèle sous Packs ajoute un dossier à votre **bibliothèque** (récits, sections). C'est distinct de chaque **génération automatique par litige**, qui utilise le pipeline de collecte ci-dessus ; la structure de votre bibliothèque n'est pas encore fusionnée automatiquement dans le build."
       },
       "generatingPackManually": {
         "title": "Créer un dossier manuellement",

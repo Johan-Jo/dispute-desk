@@ -1,31 +1,32 @@
 /**
  * Gorgias helpdesk-communication evidence source collector.
  *
- * MERCHANT-REVIEW ONLY since the 2026-07-14 cutover (migration
- * 20260714200000): the section is built exclusively from merchant-
- * approved rows persisted by the enrichment pipeline — no Gorgias API
- * call at build time, no credential decrypt, and NO auto-inclusion of
- * unreviewed content under any circumstance. The Phase-1 legacy
- * auto-include path was deleted at the cutover.
+ * MODE-AWARE since the evidence core (2026-07). The behavior is keyed on
+ * `integrations.meta.evidence_mode` (read via loadGorgiasConnection):
  *
- * A message is included only when ALL hold:
- *   - review_status in ('approved','manual')
- *   - parent ticket match_status = 'confirmed_match'
- *   - content_hash = approved_content_hash  (source-drift guard)
- * Anything else — enrichment pending, failed, nothing approved, drifted
- * source — returns [] and the pack simply omits Gorgias communications.
+ *   'merchant_review_required' (every shop enrolled in the review flow;
+ *   the only mode after the cutover):
+ *     DB-ONLY, SNAPSHOT-RENDERED. The section is built exclusively from
+ *     merchant-approved rows in gorgias_evidence_messages — no Gorgias
+ *     API call at build time. A message is included only when ALL hold:
+ *       - review_status in ('approved','manual')
+ *       - parent ticket match_status = 'confirmed_match'
+ *       - content_hash = approved_content_hash  (source-drift guard)
+ *     Anything else — enrichment pending, failed, nothing approved —
+ *     returns [] and the pack simply omits Gorgias communications.
+ *     THERE IS NO FALLBACK TO AUTO-INCLUSION IN THIS MODE, EVER.
  *
- * Approved snapshots deliberately survive a Gorgias disconnect: the
- * merchant approved them, and Gorgias purges trashed tickets / GDPR-
- * deletes customers, so our persisted copy is the durable record.
+ *   'legacy_auto_include' (pre-cutover shops that never enrolled):
+ *     the original Phase-1 inline snapshot (email match → all public
+ *     messages). Deleted at cutover (PR7).
  *
- * The section data written into the immutable pack_json is the
- * APPROVED-EVIDENCE SNAPSHOT: message + ticket ids, sender, timestamps,
- * the merchant-approved excerpt (never the full body), the merchant-
- * editable explanation, category, approval metadata, content hash,
- * analyzer + matching versions. The PDF and defence pipeline render only
- * from this snapshot — later Gorgias edits or reclassification cannot
- * change an already-generated package.
+ * The persisted path writes an APPROVED-EVIDENCE SNAPSHOT into the
+ * section data (and therefore into the immutable pack_json): message +
+ * ticket ids, sender, timestamps, the merchant-approved excerpt (never
+ * the full body), the merchant-editable explanation, category, approval
+ * metadata, content hash, analyzer + matching versions. The PDF and the
+ * defence pipeline render only from this snapshot — later Gorgias edits
+ * or reclassification cannot change an already-generated package.
  *
  * customerConfirmsOrder (the only supporting→strong lever, resolved in
  * lib/argument/canonicalEvidence.ts) is set iff at least one included
@@ -33,26 +34,42 @@
  * (merchant "the customer confirmed" never counts), category
  * 'transaction_recognition', ticket confidence high or merchant-confirmed
  * medium (never low), approved/manual with approval metadata, and the
- * approval hash still matching the source. The AI can propose but never
+ * approval hash still matches the source. The AI can propose but never
  * flip this — approval is a merchant action.
  *
  * Self-incrimination guard: internal notes were filtered before
- * persistence (enrichment) and therefore can never appear here.
+ * persistence (enrichment) and are filtered again in the legacy path.
  */
 
+import {
+  createGorgiasClient,
+  type GorgiasClient,
+  type GorgiasCredentials,
+  type GorgiasMessage,
+} from "@/lib/integrations/gorgias/client";
+import {
+  loadGorgiasCredentials,
+  loadGorgiasConnection,
+  type GorgiasConnection,
+} from "@/lib/integrations/gorgias/credentials";
 import { getServiceClient } from "@/lib/supabase/server";
 import { logSetupEvent } from "@/lib/setup/events";
 import type { EvidenceSection, BuildContext } from "../types";
 
-/** Test seam: inject the persistence loader + event logger. */
+/** Test seam: lets tests inject connection/persistence/client loaders
+ *  without standing up Supabase or mocking fetch. */
 export interface GorgiasCommDeps {
+  loadConnection?: (shopId: string) => Promise<GorgiasConnection | null>;
   loadPersistedEvidence?: (
     disputeId: string,
   ) => Promise<PersistedGorgiasEvidence | null>;
+  /** Legacy-path seams (Phase-1 behavior; removed at cutover). */
+  loadCredentials?: (shopId: string) => Promise<GorgiasCredentials | null>;
+  createClient?: (creds: GorgiasCredentials) => GorgiasClient;
   logEvent?: typeof logSetupEvent;
 }
 
-// ── Persisted shapes ─────────────────────────────────────────────────────────
+// ── Persisted (review-mode) shapes ───────────────────────────────────────────
 
 export interface PersistedGorgiasMessage {
   id: string;
@@ -168,7 +185,7 @@ async function defaultLoadPersistedEvidence(
   return { tickets: mapped, matchSummary: summary };
 }
 
-// ── Section builder (pure, exported for tests) ───────────────────────────────
+// ── Review-mode section builder (pure, exported for tests) ───────────────────
 
 /** Inclusion guard — plan §5. */
 export function isIncludableMessage(
@@ -277,6 +294,119 @@ export function buildSnapshotSection(
   };
 }
 
+// ── Legacy Phase-1 path (deleted at cutover) ─────────────────────────────────
+
+interface SnapshotMessage {
+  fromAgent: boolean;
+  channel: string | null;
+  text: string;
+  sentAt: string | null;
+}
+
+interface SnapshotConversation {
+  ticketId: number;
+  status: string | null;
+  channel: string | null;
+  csatScore: number | null;
+  messages: SnapshotMessage[];
+}
+
+/** Drop internal agent notes and any non-public message. */
+function isPublicMessage(m: GorgiasMessage): boolean {
+  return m.public === true && m.channel !== "internal-note";
+}
+
+function snapshot(m: GorgiasMessage): SnapshotMessage {
+  const text = (m.stripped_text ?? m.body_text ?? "").trim();
+  return {
+    fromAgent: m.from_agent === true,
+    channel: m.channel ?? null,
+    text,
+    sentAt: m.sent_datetime ?? m.created_datetime ?? null,
+  };
+}
+
+async function collectLegacy(
+  ctx: BuildContext,
+  deps: GorgiasCommDeps,
+): Promise<EvidenceSection[]> {
+  const order = ctx.order;
+  const email = order?.email?.trim() || null;
+  if (!order || !email) return [];
+
+  const loadCreds = deps.loadCredentials ?? loadGorgiasCredentials;
+  const creds = await loadCreds(ctx.shopId);
+  if (!creds) return [];
+
+  const client = (deps.createClient ?? ((c) => createGorgiasClient(c)))(creds);
+
+  const customer = await client.resolveCustomerByEmail(email);
+  if (!customer) return [];
+
+  const tickets = await client.listCustomerTickets(customer.id);
+  const usable = tickets.filter((t) => !t.trashed_datetime && t.spam !== true);
+
+  const conversations: SnapshotConversation[] = [];
+  let totalMessages = 0;
+  let customerMessageCount = 0;
+  let highestCsat: number | null = null;
+
+  for (const t of usable) {
+    const raw = Array.isArray(t.messages)
+      ? t.messages
+      : await client.listTicketMessages(t.id);
+
+    const visible = raw
+      .filter(isPublicMessage)
+      .map(snapshot)
+      .filter((s) => s.text.length > 0);
+
+    if (visible.length === 0) continue;
+
+    totalMessages += visible.length;
+    customerMessageCount += visible.filter((s) => !s.fromAgent).length;
+
+    const score = t.satisfaction_survey?.score;
+    if (typeof score === "number") {
+      highestCsat = highestCsat === null ? score : Math.max(highestCsat, score);
+    }
+
+    conversations.push({
+      ticketId: t.id,
+      status: t.status ?? null,
+      channel: t.channel ?? null,
+      csatScore: typeof score === "number" ? score : null,
+      messages: visible,
+    });
+  }
+
+  if (conversations.length === 0) return [];
+
+  return [
+    {
+      type: "comms",
+      labelToken: { key: "packs.section.gorgiasCommunication" },
+      source: "gorgias",
+      fieldsProvided: ["customer_communication"],
+      data: {
+        provider: "gorgias",
+        enriched: false,
+        customerEmail: email,
+        conversationCount: conversations.length,
+        conversations,
+        summary: {
+          conversationCount: conversations.length,
+          messageCount: totalMessages,
+          customerMessageCount,
+          highestCsatScore: highestCsat,
+        },
+        // customerConfirmsOrder intentionally NOT set on the legacy
+        // path — unreviewed content can never upgrade strength.
+      },
+    },
+  ];
+}
+
 // ── Entry point ──────────────────────────────────────────────────────────────
 
 export async function collectGorgiasCommEvidence(
@@ -284,22 +414,36 @@ export async function collectGorgiasCommEvidence(
   deps: GorgiasCommDeps = {},
 ): Promise<EvidenceSection[]> {
   try {
-    const loadPersisted =
-      deps.loadPersistedEvidence ?? defaultLoadPersistedEvidence;
-    const persisted = await loadPersisted(ctx.disputeId);
-    const section = persisted ? buildSnapshotSection(persisted, ctx) : null;
-    if (!section) return [];
+    const loadConn = deps.loadConnection ?? loadGorgiasConnection;
+    const conn = await loadConn(ctx.shopId);
+    if (!conn) return [];
 
-    const logEvent = deps.logEvent ?? logSetupEvent;
-    const data = section.data as { summary?: { messageCount?: number } };
-    void logEvent(ctx.shopId, "gorgias_evidence_rendered_in_pack", {
-      disputeId: ctx.disputeId,
-      packId: ctx.packId,
-      enriched: true,
-      messageCount: data.summary?.messageCount ?? 0,
-    }).catch(() => {});
+    let sections: EvidenceSection[];
+    if (conn.evidenceMode === "merchant_review_required") {
+      const loadPersisted =
+        deps.loadPersistedEvidence ?? defaultLoadPersistedEvidence;
+      const persisted = await loadPersisted(ctx.disputeId);
+      const section = persisted ? buildSnapshotSection(persisted, ctx) : null;
+      sections = section ? [section] : [];
+    } else {
+      sections = await collectLegacy(ctx, deps);
+    }
 
-    return [section];
+    if (sections.length > 0) {
+      const logEvent = deps.logEvent ?? logSetupEvent;
+      const data = sections[0].data as {
+        enriched?: boolean;
+        summary?: { messageCount?: number };
+      };
+      void logEvent(ctx.shopId, "gorgias_evidence_rendered_in_pack", {
+        disputeId: ctx.disputeId,
+        packId: ctx.packId,
+        enriched: data.enriched === true,
+        messageCount: data.summary?.messageCount ?? 0,
+      }).catch(() => {});
+    }
+
+    return sections;
   } catch (e) {
     console.warn(
       `[gorgiasCommSource] skipped for shop ${ctx.shopId}:`,
