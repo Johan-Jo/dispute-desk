@@ -258,7 +258,19 @@ function buildSuccessRedirect(
   };
   res.cookies.set("shopify_shop", params.shop, cookieOpts);
   res.cookies.set("shopify_shop_id", params.shopInternalId, cookieOpts);
-  res.cookies.set("dd_token_expiring", params.tokenExpiring ? "1" : "0", cookieOpts);
+  // `dd_token_expiring` gates the middleware's Stage-3 re-check redirect
+  // (embedded loads only re-hit token-exchange while this ISN'T "1").
+  // Give it a short life aligned with the ~1h access-token TTL (minus the
+  // 5-min refresh skew) rather than the 30-day life of the shop cookies:
+  // when the cookie lapses, the next embedded load re-hits token-exchange,
+  // which re-exchanges the now-stale token (see `needsRefresh` above). This
+  // makes the token self-heal on app load — the safety net for when the
+  // background refresh isn't running (e.g. an env with the worker off). A
+  // still-fresh token simply skips the exchange and re-sets the cookie.
+  res.cookies.set("dd_token_expiring", params.tokenExpiring ? "1" : "0", {
+    ...cookieOpts,
+    maxAge: 55 * 60,
+  });
   return res;
 }
 
