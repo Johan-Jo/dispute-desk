@@ -7,13 +7,20 @@
  * GET /api/disputes/:id/gorgias/tickets/:matchedTicketId only when the
  * merchant opens a conversation — message bodies never ride the poll.
  *
+ * Visual language matches the "Evidence in your defence package" card
+ * (`EvidenceUsedSection` / `EvidenceRow`) per the `Dispute Evidence.html`
+ * design: one `.icard`, disposition groups marked by a coloured dot chip
+ * + count + helper, `.evrow` ticket rows, per-message boxes with a
+ * category tag + review-status spill + inline "View full conversation".
+ * The two cards read as one system.
+ *
  * Tiers (PRD §11):
- *   confirmed (high auto-confirmed + merchant-confirmed medium/low) —
+ *   Matched conversation (high auto-confirmed + merchant-confirmed) —
  *     reviewable messages with Approve / Exclude, inline-editable AI
- *     explanation, "view conversation" transcript with manual add.
- *   medium proposed_match — "Possible matches": Confirm / Not related
+ *     explanation, inline transcript with manual add.
+ *   Possible matches (medium proposed_match) — Confirm / Not related
  *     FIRST; messages stay hidden until the ticket is confirmed.
- *   low proposed_match — collapsed "Other possible conversations".
+ *   Other possible conversations (low proposed_match) — collapsed.
  *   rejected — hidden (audit retains them server-side).
  *
  * Approval requires selecting the excerpt: the approve dialog fetches
@@ -30,23 +37,18 @@
 
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
-  Badge,
   Banner,
   BlockStack,
   Button,
-  Card,
-  Collapsible,
-  Icon,
   InlineStack,
   Modal,
   Spinner,
   Text,
   TextField,
 } from "@shopify/polaris";
-import { CheckCircleIcon, AlertTriangleIcon } from "@shopify/polaris-icons";
 import type { useDisputeWorkspace } from "../../hooks/useDisputeWorkspace";
 import type {
   GorgiasCommsMessageSummary,
@@ -81,6 +83,19 @@ const RUN_PROCESSING_STATUSES = new Set([
   "analyzing",
 ]);
 
+// Matches EvidenceUsedSection's DISPOSITION_COLORS + the design's chip
+// palette so the Gorgias card reads as the same green/grey family as the
+// evidence card directly above it.
+const MATCHED_COLORS = { dot: "#059669", chipBg: "#DCFCE7", chipText: "#065F46" };
+const POSSIBLE_COLORS = { dot: "#9CA3AF", chipBg: "#F3F4F6", chipText: "#374151" };
+
+const CARD_STYLE: CSSProperties = {
+  background: "#fff",
+  border: "1px solid #E1E3E5",
+  borderRadius: 12,
+  padding: 20,
+};
+
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
   try {
@@ -97,7 +112,6 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
 
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [expandedTicket, setExpandedTicket] = useState<string | null>(null);
   const [transcripts, setTranscripts] = useState<
     Record<string, TranscriptMessage[] | "loading" | "error">
   >({});
@@ -280,7 +294,7 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
   const processing = run ? RUN_PROCESSING_STATUSES.has(run.status) : false;
 
   // ── Status line ──
-  let statusLine: React.ReactNode = null;
+  let statusLine: ReactNode = null;
   if (reconnectRequired) {
     statusLine = (
       <Banner tone="warning" title={t("status.reconnectRequiredTitle")}>
@@ -340,148 +354,178 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
     </Banner>
   ) : null;
 
+  const hasPossibleGroup = mediumProposed.length > 0;
+
   return (
-    <Card>
-      <BlockStack gap="400">
-        <InlineStack align="space-between" blockAlign="center">
-          <Text as="h2" variant="headingMd">
+    <div style={CARD_STYLE}>
+      {/* Header — title + subtitle + Refresh, matching the evidence card */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 16,
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <h2
+            style={{
+              fontSize: 18,
+              fontWeight: 600,
+              color: "#202223",
+              margin: 0,
+              lineHeight: 1.3,
+            }}
+          >
             {t("title")}
-          </Text>
-          {!processing && !reconnectRequired && (
+          </h2>
+          <p
+            style={{
+              fontSize: 13,
+              color: "#6D7175",
+              lineHeight: 1.5,
+              margin: "4px 0 0",
+              maxWidth: 640,
+            }}
+          >
+            {t("subtitle")}
+          </p>
+        </div>
+        {!processing && !reconnectRequired && (
+          <div style={{ flex: "none" }}>
             <Button
-              variant="tertiary"
               onClick={() => void refreshEnrichment()}
               loading={busy === "enrich"}
             >
               {t("status.refresh")}
             </Button>
-          )}
-        </InlineStack>
-
-        {statusLine}
-        {staleBanner}
-        {actionError && (
-          <Banner tone="critical" onDismiss={() => setActionError(null)}>
-            <p>{actionError}</p>
-          </Banner>
+          </div>
         )}
+      </div>
 
-        {/* ── Confirmed matches ── */}
-        {confirmed.map((ticket) => (
-          <TicketCard
-            key={ticket.id}
-            ticket={ticket}
-            busy={busy}
-            expanded={expandedTicket === ticket.id}
-            transcript={transcripts[ticket.id]}
-            onToggleExpand={() => {
-              const next = expandedTicket === ticket.id ? null : ticket.id;
-              setExpandedTicket(next);
-              if (next) void loadTranscript(ticket.id);
-            }}
-            onApprove={(m) => void openApproveDialog(ticket.id, m, "approve")}
-            onManualAdd={(m) =>
-              void openApproveDialog(ticket.id, m, "manual_add")
-            }
-            onExclude={(m) =>
-              void messageAction(
-                { messageId: m.id, action: "exclude" },
-                `msg:${m.id}`,
-              )
-            }
-            onEditExplanation={(m) =>
-              setEditingExplanation({
-                messageId: m.id,
-                text: m.relevanceExplanation ?? "",
-              })
-            }
-            onReport={() => setReportTarget({ ticketId: ticket.id, reason: "" })}
-          />
-        ))}
+      {(statusLine || staleBanner || actionError) && (
+        <div style={{ marginBottom: 16 }}>
+          <BlockStack gap="300">
+            {statusLine}
+            {staleBanner}
+            {actionError && (
+              <Banner tone="critical" onDismiss={() => setActionError(null)}>
+                <p>{actionError}</p>
+              </Banner>
+            )}
+          </BlockStack>
+        </div>
+      )}
 
-        {/* ── Medium tier: confirm the match first ── */}
-        {mediumProposed.length > 0 && (
-          <BlockStack gap="200">
-            <Text as="h3" variant="headingSm">
-              {t("tier.possible")}
-            </Text>
-            <Text as="p" tone="subdued" variant="bodySm">
-              {t("tier.possibleHint")}
-            </Text>
-            {mediumProposed.map((ticket) => (
-              <Card key={ticket.id} background="bg-surface-secondary">
-                <InlineStack align="space-between" blockAlign="center" gap="200">
+      {/* ── Matched conversation (confirmed) ── */}
+      {confirmed.length > 0 && (
+        <DispositionGroup
+          colors={MATCHED_COLORS}
+          title={t("tier.matched")}
+          count={confirmed.length}
+          helper={t("tier.matchedHint")}
+          isFirst
+        >
+          {confirmed.map((ticket, i) => (
+            <MatchedTicket
+              key={ticket.id}
+              ticket={ticket}
+              isFirst={i === 0}
+              busy={busy}
+              transcript={transcripts[ticket.id]}
+              t={t}
+              onOpenTranscript={() => void loadTranscript(ticket.id)}
+              onApprove={(m) => void openApproveDialog(ticket.id, m, "approve")}
+              onManualAdd={(m) =>
+                void openApproveDialog(ticket.id, m, "manual_add")
+              }
+              onExclude={(m) =>
+                void messageAction(
+                  { messageId: m.id, action: "exclude" },
+                  `msg:${m.id}`,
+                )
+              }
+              onEditExplanation={(m) =>
+                setEditingExplanation({
+                  messageId: m.id,
+                  text: m.relevanceExplanation ?? "",
+                })
+              }
+              onReport={() =>
+                setReportTarget({ ticketId: ticket.id, reason: "" })
+              }
+            />
+          ))}
+        </DispositionGroup>
+      )}
+
+      {/* ── Possible matches (medium) + low-tier collapsed link ── */}
+      {(hasPossibleGroup || lowProposed.length > 0) && (
+        <DispositionGroup
+          colors={POSSIBLE_COLORS}
+          title={t("tier.possible")}
+          count={mediumProposed.length}
+          helper={t("tier.possibleHint")}
+          isFirst={confirmed.length === 0}
+        >
+          {mediumProposed.map((ticket) => (
+            <PossibleTicket
+              key={ticket.id}
+              ticket={ticket}
+              busy={busy}
+              transcript={transcripts[ticket.id]}
+              t={t}
+              onOpenTranscript={() => void loadTranscript(ticket.id)}
+              onManualAdd={(m) =>
+                void openApproveDialog(ticket.id, m, "manual_add")
+              }
+              onConfirm={() => void ticketAction(ticket.id, "confirm")}
+              onReject={() => void ticketAction(ticket.id, "reject")}
+            />
+          ))}
+
+          {lowProposed.length > 0 && (
+            <div style={{ marginTop: mediumProposed.length > 0 ? 12 : 0 }}>
+              <Button
+                variant="plain"
+                disclosure={lowTierOpen ? "up" : "down"}
+                onClick={() => setLowTierOpen((v) => !v)}
+              >
+                {t("tier.other", { count: lowProposed.length })}
+              </Button>
+              {lowTierOpen && (
+                <div style={{ marginTop: 8 }}>
                   <BlockStack gap="100">
-                    <InlineStack gap="200" blockAlign="center">
-                      <Text as="span" fontWeight="semibold">
-                        {ticket.subject ?? `#${ticket.gorgiasTicketId}`}
-                      </Text>
-                      <Badge tone={confidenceTone(ticket.confidence)}>
-                        {t(`confidence.${ticket.confidence}`)}
-                      </Badge>
-                    </InlineStack>
-                    <Text as="span" tone="subdued" variant="bodySm">
-                      {formatDate(ticket.ticketCreatedAt)}
-                    </Text>
-                    <MatchReasons ticket={ticket} t={t} />
+                    {lowProposed.map((ticket) => (
+                      <div
+                        key={ticket.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 12,
+                        }}
+                      >
+                        <Text as="span" tone="subdued" variant="bodySm">
+                          {ticket.subject ?? `#${ticket.gorgiasTicketId}`}
+                        </Text>
+                        <Button
+                          variant="plain"
+                          onClick={() => void ticketAction(ticket.id, "confirm")}
+                          loading={busy === `ticket:${ticket.id}:confirm`}
+                        >
+                          {t("ticket.confirm")}
+                        </Button>
+                      </div>
+                    ))}
                   </BlockStack>
-                  <InlineStack gap="200">
-                    <Button
-                      onClick={() => void ticketAction(ticket.id, "confirm")}
-                      loading={busy === `ticket:${ticket.id}:confirm`}
-                    >
-                      {t("ticket.confirm")}
-                    </Button>
-                    <Button
-                      variant="tertiary"
-                      tone="critical"
-                      onClick={() => void ticketAction(ticket.id, "reject")}
-                      loading={busy === `ticket:${ticket.id}:reject`}
-                    >
-                      {t("ticket.notRelated")}
-                    </Button>
-                  </InlineStack>
-                </InlineStack>
-              </Card>
-            ))}
-          </BlockStack>
-        )}
-
-        {/* ── Low tier: collapsed ── */}
-        {lowProposed.length > 0 && (
-          <BlockStack gap="200">
-            <Button
-              variant="plain"
-              disclosure={lowTierOpen ? "up" : "down"}
-              onClick={() => setLowTierOpen((v) => !v)}
-            >
-              {t("tier.other", { count: lowProposed.length })}
-            </Button>
-            <Collapsible open={lowTierOpen} id="gorgias-low-tier">
-              <BlockStack gap="100">
-                {lowProposed.map((ticket) => (
-                  <InlineStack
-                    key={ticket.id}
-                    align="space-between"
-                    blockAlign="center"
-                  >
-                    <Text as="span" tone="subdued" variant="bodySm">
-                      {ticket.subject ?? `#${ticket.gorgiasTicketId}`}
-                    </Text>
-                    <Button
-                      variant="plain"
-                      onClick={() => void ticketAction(ticket.id, "confirm")}
-                      loading={busy === `ticket:${ticket.id}:confirm`}
-                    >
-                      {t("ticket.confirm")}
-                    </Button>
-                  </InlineStack>
-                ))}
-              </BlockStack>
-            </Collapsible>
-          </BlockStack>
-        )}
-      </BlockStack>
+                </div>
+              )}
+            </div>
+          )}
+        </DispositionGroup>
+      )}
 
       {/* ── Approve / manual-add dialog with excerpt selection ── */}
       <Modal
@@ -491,9 +535,7 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
         primaryAction={{
           content: t("approveModal.confirm"),
           loading: busy?.startsWith("msg:") ?? false,
-          disabled:
-            approveTarget?.loading ||
-            !approveTarget?.excerpt.trim(),
+          disabled: approveTarget?.loading || !approveTarget?.excerpt.trim(),
           onAction: () => {
             if (!approveTarget) return;
             void (async () => {
@@ -617,77 +659,429 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
           />
         </Modal.Section>
       </Modal>
-    </Card>
+    </div>
   );
 }
 
-/**
- * Confidence tier → Polaris Badge tone. The merchant never sees the raw
- * additive match score (that lives in the internal admin view); the tier
- * is surfaced as a plain "Strong / Possible match" label instead.
- */
-function confidenceTone(
-  confidence: GorgiasCommsTicketSummary["confidence"],
-): "success" | "attention" | "info" {
-  if (confidence === "high") return "success";
-  if (confidence === "medium") return "attention";
-  return "info";
-}
+type GorgiasT = ReturnType<typeof useTranslations<"disputes.gorgiasComms">>;
 
 /**
- * MatchReasons — the "why we matched this" fact list. Each stored reason
- * becomes a plain-English line a human can verify at a glance (with the
- * real order #, tracking #, etc. interpolated from `detail`). Positive
- * signals get a green check; negative signals (conflicting email, a
- * different order referenced) are shown as red warnings rather than
- * hidden, so a reviewing merchant sees the red flags too.
+ * DispositionGroup — coloured dot chip + count + helper, wrapping the
+ * rows. Mirrors EvidenceUsedSection's DispositionSection so the Gorgias
+ * groups line up visually with the evidence card's buckets.
  */
-function MatchReasons({
-  ticket,
+function DispositionGroup({
+  colors,
+  title,
+  count,
+  helper,
+  isFirst,
+  children,
+}: {
+  colors: { dot: string; chipBg: string; chipText: string };
+  title: string;
+  count: number;
+  helper: string;
+  isFirst: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        paddingTop: isFirst ? 0 : 12,
+        marginTop: isFirst ? 0 : 16,
+        borderTop: isFirst ? "0" : "1px solid #E1E3E5",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          gap: 8,
+          marginBottom: 4,
+          flexWrap: "wrap",
+        }}
+      >
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "3px 10px",
+            borderRadius: 999,
+            fontSize: 12,
+            fontWeight: 600,
+            background: colors.chipBg,
+            color: colors.chipText,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: colors.dot,
+            }}
+          />
+          {title}{" "}
+          <span style={{ fontVariantNumeric: "tabular-nums" }}>{count}</span>
+        </span>
+      </div>
+      <p
+        style={{
+          fontSize: 12.5,
+          color: "#6D7175",
+          lineHeight: 1.4,
+          margin: "0 0 12px",
+        }}
+      >
+        {helper}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+/** Confidence tier → plain-language chip (Strong / Possible / Unlikely). */
+function ConfidenceChip({
+  confidence,
   t,
 }: {
-  ticket: GorgiasCommsTicketSummary;
-  t: ReturnType<typeof useTranslations<"disputes.gorgiasComms">>;
+  confidence: GorgiasCommsTicketSummary["confidence"];
+  t: GorgiasT;
 }) {
-  if (ticket.matchReasons.length === 0) return null;
-  const positives = ticket.matchReasons.filter((r) => r.points > 0);
-  const negatives = ticket.matchReasons.filter((r) => r.points < 0);
-  // The reason key is dynamic and some messages interpolate {detail}
-  // while others don't; cast to a permissive signature so passing the
-  // detail value for every reason doesn't fight next-intl's per-key
-  // value typing.
-  const tr = t as unknown as (k: string, v?: Record<string, string>) => string;
+  const c =
+    confidence === "high"
+      ? MATCHED_COLORS
+      : confidence === "medium"
+        ? { dot: "#D97706", chipBg: "#FEF3C7", chipText: "#92400E" }
+        : POSSIBLE_COLORS;
   return (
-    <BlockStack gap="050">
-      <Text as="span" tone="subdued" variant="bodySm">
-        {t("reasonsHeading")}
-      </Text>
-      {[...positives, ...negatives].map((r, i) => {
-        const negative = r.points < 0;
-        return (
-          <InlineStack key={`${r.signal}-${i}`} gap="100" blockAlign="center" wrap={false}>
-            <span style={{ flexShrink: 0, width: 16, height: 16 }}>
-              <Icon
-                source={negative ? AlertTriangleIcon : CheckCircleIcon}
-                tone={negative ? "critical" : "success"}
-              />
-            </span>
-            <Text as="span" tone={negative ? "critical" : "subdued"} variant="bodySm">
-              {tr(`reason.${r.signal}`, { detail: r.detail ?? "" })}
-            </Text>
-          </InlineStack>
-        );
-      })}
-    </BlockStack>
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "3px 10px",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 600,
+        whiteSpace: "nowrap",
+        flex: "none",
+        background: c.chipBg,
+        color: c.chipText,
+      }}
+    >
+      <span
+        aria-hidden
+        style={{ width: 8, height: 8, borderRadius: "50%", background: c.dot }}
+      />
+      {t(`confidence.${confidence}`)}
+    </span>
   );
 }
 
-function TicketCard({
-  ticket,
-  busy,
-  expanded,
+/** Review-status spill for a message box (Proposed / Approved / re-approval). */
+function ReviewSpill({
+  message,
+  t,
+}: {
+  message: GorgiasCommsMessageSummary;
+  t: GorgiasT;
+}) {
+  const approved =
+    message.reviewStatus === "approved" || message.reviewStatus === "manual";
+  const style: { bg: string; color: string; label: string } = message.needsReapproval
+    ? { bg: "#FEF3C7", color: "#78350F", label: t("message.needsReapprovalBadge") }
+    : approved
+      ? { bg: "#D1FAE5", color: "#065F46", label: t("message.approvedBadge") }
+      : { bg: "#FEF3C7", color: "#92400E", label: t("message.proposedBadge") };
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        flexShrink: 0,
+        alignSelf: "start",
+        padding: "3px 10px",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 600,
+        whiteSpace: "nowrap",
+        background: style.bg,
+        color: style.color,
+      }}
+    >
+      {style.label}
+    </span>
+  );
+}
+
+/** Category tag (grey), matching the design's `.tag`. */
+function CategoryTag({ category, t }: { category: string; t: GorgiasT }) {
+  const tc = t as unknown as (k: string) => string;
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        fontSize: 12,
+        fontWeight: 500,
+        padding: "2px 8px",
+        borderRadius: 6,
+        background: "#F1F2F3",
+        color: "#4B5563",
+      }}
+    >
+      {tc(`category.${category}`)}
+    </span>
+  );
+}
+
+/** Compact comma-joined reason line (positive signals only), per design. */
+function reasonText(ticket: GorgiasCommsTicketSummary, t: GorgiasT): string {
+  const tr = t as unknown as (k: string) => string;
+  return ticket.matchReasons
+    .filter((r) => r.points > 0)
+    .map((r) => tr(`reason.${r.signal}`))
+    .join(", ");
+}
+
+function ticketMetaLine(ticket: GorgiasCommsTicketSummary, t: GorgiasT): string {
+  const parts = [formatDate(ticket.ticketCreatedAt)];
+  if (ticket.channel) parts.push(ticket.channel);
+  const reasons = reasonText(ticket, t);
+  if (reasons) parts.push(reasons);
+  return parts.join(" · ");
+}
+
+/**
+ * Inline "View full conversation" disclosure — native <details> matching
+ * the design's `.conv`, lazily loading the ticket transcript on open.
+ */
+function ConversationDetails({
   transcript,
-  onToggleExpand,
+  onOpen,
+  onManualAdd,
+  t,
+}: {
+  transcript: TranscriptMessage[] | "loading" | "error" | undefined;
+  onOpen: () => void;
+  onManualAdd: (m: { id: string }) => void;
+  t: GorgiasT;
+}) {
+  return (
+    <details
+      style={{ marginTop: 12 }}
+      onToggle={(e) => {
+        if ((e.currentTarget as HTMLDetailsElement).open) onOpen();
+      }}
+    >
+      <summary
+        style={{
+          listStyle: "none",
+          cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          fontSize: 13,
+          fontWeight: 600,
+          color: "#005BD3",
+        }}
+      >
+        {t("ticket.viewConversation")}
+      </summary>
+      <div
+        style={{
+          marginTop: 10,
+          border: "1px solid #E1E3E5",
+          borderRadius: 10,
+          padding: "12px 14px",
+          background: "#FAFBFB",
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+        }}
+      >
+        {transcript === "loading" && (
+          <Spinner size="small" accessibilityLabel={t("conversationLoading")} />
+        )}
+        {transcript === "error" && (
+          <Text as="p" tone="critical" variant="bodySm">
+            {t("conversationError")}
+          </Text>
+        )}
+        {Array.isArray(transcript) &&
+          transcript.map((m) => (
+            <div key={m.id}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flexWrap: "wrap",
+                }}
+              >
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#202223" }}>
+                  {m.senderType === "customer"
+                    ? t("message.customer")
+                    : t("message.merchant")}
+                  {m.senderName ? ` (${m.senderName})` : ""}
+                </span>
+                <span style={{ fontSize: 11, color: "#6D7175" }}>
+                  {formatDate(m.sentAt)}
+                </span>
+                {m.reviewStatus === "candidate" && (
+                  <Button
+                    size="micro"
+                    variant="plain"
+                    onClick={() => onManualAdd(m)}
+                  >
+                    {t("message.addAsEvidence")}
+                  </Button>
+                )}
+              </div>
+              <p
+                style={{
+                  margin: "2px 0 0",
+                  fontSize: 12.5,
+                  lineHeight: 1.5,
+                  color: "#4B5563",
+                }}
+              >
+                {m.text}
+                {m.contentTruncated ? ` ${t("message.truncatedNote")}` : ""}
+              </p>
+            </div>
+          ))}
+      </div>
+    </details>
+  );
+}
+
+/** A single reviewable message box inside a confirmed ticket. */
+function MessageBox({
+  message,
+  busy,
+  t,
+  onApprove,
+  onExclude,
+  onEditExplanation,
+}: {
+  message: GorgiasCommsMessageSummary;
+  busy: string | null;
+  t: GorgiasT;
+  onApprove: (m: GorgiasCommsMessageSummary) => void;
+  onExclude: (m: GorgiasCommsMessageSummary) => void;
+  onEditExplanation: (m: GorgiasCommsMessageSummary) => void;
+}) {
+  return (
+    <div style={{ border: "1px solid #E1E3E5", borderRadius: 12, padding: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 16,
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              flexWrap: "wrap",
+            }}
+          >
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#202223" }}>
+              {message.senderType === "customer"
+                ? t("message.customer")
+                : t("message.merchant")}
+            </span>
+            <span style={{ fontSize: 12, color: "#6D7175" }}>
+              {formatDate(message.sentAt)}
+            </span>
+            {message.evidenceCategory && (
+              <CategoryTag category={message.evidenceCategory} t={t} />
+            )}
+          </div>
+          {message.approvedExcerptPreview && (
+            <p
+              style={{
+                margin: "8px 0 0",
+                fontSize: 12.5,
+                lineHeight: 1.5,
+                color: "#202223",
+              }}
+            >
+              “{message.approvedExcerptPreview}”
+            </p>
+          )}
+          {message.relevanceExplanation && (
+            <p
+              style={{
+                margin: "4px 0 0",
+                fontSize: 12.5,
+                lineHeight: 1.5,
+                color: "#4B5563",
+              }}
+            >
+              {message.relevanceExplanation}
+            </p>
+          )}
+        </div>
+        <ReviewSpill message={message} t={t} />
+      </div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginTop: 14,
+          flexWrap: "wrap",
+        }}
+      >
+        {(message.reviewStatus === "proposed" || message.needsReapproval) && (
+          <Button
+            size="slim"
+            onClick={() => onApprove(message)}
+            loading={busy === `msg:${message.id}`}
+          >
+            {t("message.approve")}
+          </Button>
+        )}
+        {message.reviewStatus !== "excluded" && (
+          <Button
+            size="slim"
+            variant="tertiary"
+            onClick={() => onExclude(message)}
+            loading={busy === `msg:${message.id}`}
+          >
+            {t("message.exclude")}
+          </Button>
+        )}
+        <Button
+          size="slim"
+          variant="plain"
+          onClick={() => onEditExplanation(message)}
+        >
+          {t("message.editExplanation")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** Confirmed ("Matched conversation") ticket: header row + message boxes. */
+function MatchedTicket({
+  ticket,
+  isFirst,
+  busy,
+  transcript,
+  t,
+  onOpenTranscript,
   onApprove,
   onManualAdd,
   onExclude,
@@ -695,179 +1089,180 @@ function TicketCard({
   onReport,
 }: {
   ticket: GorgiasCommsTicketSummary;
+  isFirst: boolean;
   busy: string | null;
-  expanded: boolean;
   transcript: TranscriptMessage[] | "loading" | "error" | undefined;
-  onToggleExpand: () => void;
+  t: GorgiasT;
+  onOpenTranscript: () => void;
   onApprove: (m: GorgiasCommsMessageSummary) => void;
   onManualAdd: (m: { id: string }) => void;
   onExclude: (m: GorgiasCommsMessageSummary) => void;
   onEditExplanation: (m: GorgiasCommsMessageSummary) => void;
   onReport: () => void;
 }) {
-  const t = useTranslations("disputes.gorgiasComms");
-
   return (
-    <Card background="bg-surface-secondary">
-      <BlockStack gap="300">
-        <InlineStack align="space-between" blockAlign="center" gap="200">
-          <BlockStack gap="100">
-            <InlineStack gap="200" blockAlign="center">
-              <Text as="span" fontWeight="semibold">
-                {ticket.subject ?? `#${ticket.gorgiasTicketId}`}
-              </Text>
-              <Badge tone={confidenceTone(ticket.confidence)}>
-                {t(`confidence.${ticket.confidence}`)}
-              </Badge>
-            </InlineStack>
-            <Text as="span" tone="subdued" variant="bodySm">
-              {formatDate(ticket.ticketCreatedAt)}
-              {ticket.channel ? ` · ${ticket.channel}` : ""}
-            </Text>
-            <MatchReasons ticket={ticket} t={t} />
-          </BlockStack>
+    <div
+      style={{
+        paddingTop: isFirst ? 0 : 16,
+        marginTop: isFirst ? 0 : 16,
+        borderTop: isFirst ? "0" : "1px solid #E1E3E5",
+      }}
+    >
+      {/* Ticket header row */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr auto",
+          gap: 12,
+          alignItems: "center",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <p
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: "#202223",
+              lineHeight: 1.4,
+              margin: 0,
+            }}
+          >
+            {ticket.subject ?? `#${ticket.gorgiasTicketId}`}
+          </p>
+          <p
+            style={{
+              fontSize: 11,
+              color: "#6D7175",
+              margin: "6px 0 0",
+              letterSpacing: "0.01em",
+            }}
+          >
+            {ticketMetaLine(ticket, t)}
+          </p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "none" }}>
+          <ConfidenceChip confidence={ticket.confidence} t={t} />
           <Button variant="plain" tone="critical" onClick={onReport}>
             {t("ticket.reportBadMatch")}
           </Button>
-        </InlineStack>
+        </div>
+      </div>
 
-        {/* Proposed + approved messages (summaries; bodies via transcript) */}
-        {ticket.reviewableMessages.map((m) => (
-          <div
-            key={m.id}
+      {/* Reviewable message boxes */}
+      {ticket.reviewableMessages.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+            marginTop: 12,
+          }}
+        >
+          {ticket.reviewableMessages.map((m) => (
+            <MessageBox
+              key={m.id}
+              message={m}
+              busy={busy}
+              t={t}
+              onApprove={onApprove}
+              onExclude={onExclude}
+              onEditExplanation={onEditExplanation}
+            />
+          ))}
+        </div>
+      )}
+
+      <ConversationDetails
+        transcript={transcript}
+        onOpen={onOpenTranscript}
+        onManualAdd={onManualAdd}
+        t={t}
+      />
+    </div>
+  );
+}
+
+/** Medium ("Possible matches") ticket: confirm-first row + transcript. */
+function PossibleTicket({
+  ticket,
+  busy,
+  transcript,
+  t,
+  onOpenTranscript,
+  onManualAdd,
+  onConfirm,
+  onReject,
+}: {
+  ticket: GorgiasCommsTicketSummary;
+  busy: string | null;
+  transcript: TranscriptMessage[] | "loading" | "error" | undefined;
+  t: GorgiasT;
+  onOpenTranscript: () => void;
+  onManualAdd: (m: { id: string }) => void;
+  onConfirm: () => void;
+  onReject: () => void;
+}) {
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr auto",
+          gap: 12,
+          alignItems: "center",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <p
             style={{
-              borderLeft: "3px solid var(--p-color-border)",
-              paddingLeft: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              flexWrap: "wrap",
+              fontSize: 14,
+              fontWeight: 600,
+              color: "#202223",
+              lineHeight: 1.4,
+              margin: 0,
             }}
           >
-            <BlockStack gap="150">
-              <InlineStack gap="200" blockAlign="center">
-                <Text as="span" fontWeight="medium" variant="bodySm">
-                  {m.senderType === "customer"
-                    ? t("message.customer")
-                    : t("message.merchant")}
-                </Text>
-                <Text as="span" tone="subdued" variant="bodySm">
-                  {formatDate(m.sentAt)}
-                </Text>
-                {m.evidenceCategory && (
-                  <Badge size="small">
-                    {t(
-                      `category.${m.evidenceCategory}` as Parameters<
-                        ReturnType<typeof useTranslations>
-                      >[0],
-                    )}
-                  </Badge>
-                )}
-                {m.reviewStatus === "approved" || m.reviewStatus === "manual" ? (
-                  <Badge tone="success" size="small">
-                    {t("message.approvedBadge")}
-                  </Badge>
-                ) : (
-                  <Badge tone="attention" size="small">
-                    {t("message.proposedBadge")}
-                  </Badge>
-                )}
-                {m.needsReapproval && (
-                  <Badge tone="warning" size="small">
-                    {t("message.needsReapprovalBadge")}
-                  </Badge>
-                )}
-              </InlineStack>
-
-              {m.approvedExcerptPreview && (
-                <Text as="p" variant="bodySm">
-                  “{m.approvedExcerptPreview}”
-                </Text>
-              )}
-              {m.relevanceExplanation && (
-                <Text as="p" tone="subdued" variant="bodySm">
-                  {m.relevanceExplanation}
-                </Text>
-              )}
-
-              <InlineStack gap="200">
-                {(m.reviewStatus === "proposed" || m.needsReapproval) && (
-                  <Button
-                    size="slim"
-                    onClick={() => onApprove(m)}
-                    loading={busy === `msg:${m.id}`}
-                  >
-                    {t("message.approve")}
-                  </Button>
-                )}
-                {m.reviewStatus !== "excluded" && (
-                  <Button
-                    size="slim"
-                    variant="tertiary"
-                    onClick={() => onExclude(m)}
-                    loading={busy === `msg:${m.id}`}
-                  >
-                    {t("message.exclude")}
-                  </Button>
-                )}
-                <Button
-                  size="slim"
-                  variant="plain"
-                  onClick={() => onEditExplanation(m)}
-                >
-                  {t("message.editExplanation")}
-                </Button>
-              </InlineStack>
-            </BlockStack>
-          </div>
-        ))}
-
-        <Button
-          variant="plain"
-          disclosure={expanded ? "up" : "down"}
-          onClick={onToggleExpand}
-        >
-          {expanded ? t("ticket.hideConversation") : t("ticket.viewConversation")}
-        </Button>
-        <Collapsible open={expanded} id={`gorgias-transcript-${ticket.id}`}>
-          {transcript === "loading" && (
-            <Spinner size="small" accessibilityLabel={t("conversationLoading")} />
-          )}
-          {transcript === "error" && (
-            <Text as="p" tone="critical" variant="bodySm">
-              {t("conversationError")}
-            </Text>
-          )}
-          {Array.isArray(transcript) && (
-            <BlockStack gap="200">
-              {transcript.map((m) => (
-                <div key={m.id}>
-                  <InlineStack gap="200" blockAlign="center">
-                    <Text as="span" fontWeight="medium" variant="bodySm">
-                      {m.senderType === "customer"
-                        ? t("message.customer")
-                        : t("message.merchant")}
-                      {m.senderName ? ` (${m.senderName})` : ""}
-                    </Text>
-                    <Text as="span" tone="subdued" variant="bodySm">
-                      {formatDate(m.sentAt)}
-                    </Text>
-                    {m.reviewStatus === "candidate" && (
-                      <Button
-                        size="micro"
-                        variant="plain"
-                        onClick={() => onManualAdd(m)}
-                      >
-                        {t("message.addAsEvidence")}
-                      </Button>
-                    )}
-                  </InlineStack>
-                  <Text as="p" variant="bodySm">
-                    {m.text}
-                    {m.contentTruncated ? ` ${t("message.truncatedNote")}` : ""}
-                  </Text>
-                </div>
-              ))}
-            </BlockStack>
-          )}
-        </Collapsible>
-      </BlockStack>
-    </Card>
+            {ticket.subject ?? `#${ticket.gorgiasTicketId}`}
+            <ConfidenceChip confidence={ticket.confidence} t={t} />
+          </p>
+          <p
+            style={{
+              fontSize: 11,
+              color: "#6D7175",
+              margin: "6px 0 0",
+              letterSpacing: "0.01em",
+            }}
+          >
+            {ticketMetaLine(ticket, t)}
+          </p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: "none" }}>
+          <Button
+            onClick={onConfirm}
+            loading={busy === `ticket:${ticket.id}:confirm`}
+          >
+            {t("ticket.confirm")}
+          </Button>
+          <Button
+            variant="plain"
+            tone="critical"
+            onClick={onReject}
+            loading={busy === `ticket:${ticket.id}:reject`}
+          >
+            {t("ticket.notRelated")}
+          </Button>
+        </div>
+      </div>
+      <ConversationDetails
+        transcript={transcript}
+        onOpen={onOpenTranscript}
+        onManualAdd={onManualAdd}
+        t={t}
+      />
+    </div>
   );
 }

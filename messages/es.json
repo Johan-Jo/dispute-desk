@@ -1675,6 +1675,7 @@
     },
     "gorgiasComms": {
       "title": "Conversaciones de soporte al cliente",
+      "subtitle": "Mensajes de tu bandeja de soporte asociados a este pedido. Aprueba los que respalden tu defensa para incluirlos como evidencia.",
       "actionFailed": "No se pudo completar la acción. Inténtalo de nuevo.",
       "conversationLoading": "Cargando conversación…",
       "conversationError": "No se pudo cargar la conversación. Inténtalo de nuevo.",
@@ -1698,7 +1699,9 @@
       "tier": {
         "possible": "Posibles coincidencias",
         "possibleHint": "Confirma que una conversación pertenece al pedido en disputa antes de que sus mensajes puedan usarse como evidencia.",
-        "other": "Otras conversaciones posibles ({count})"
+        "other": "Otras conversaciones posibles ({count})",
+        "matched": "Conversación coincidente",
+        "matchedHint": "Coincidencia de alta confianza con el pedido en disputa: los mensajes aprobados pueden usarse como evidencia."
       },
       "ticket": {
         "confirm": "Confirmar coincidencia",
@@ -1712,17 +1715,16 @@
         "medium": "Coincidencia posible",
         "low": "Coincidencia improbable"
       },
-      "reasonsHeading": "Por qué lo asociamos:",
       "reason": {
-        "linked_shopify_order": "Vinculada al pedido {detail} en Gorgias",
-        "order_number_in_text": "Menciona el pedido {detail}",
-        "shopify_customer_id": "Misma cuenta de cliente",
-        "email_match": "Del correo electrónico del pedido",
-        "conflicting_email": "De un correo distinto al del pedido",
-        "tracking_number_in_text": "Menciona el número de seguimiento {detail}",
-        "within_order_window": "Enviado cerca de la fecha del pedido",
-        "before_chargeback": "Enviado antes de abrirse el contracargo",
-        "references_other_order": "También menciona otro pedido ({detail})"
+        "linked_shopify_order": "Vinculada a este pedido",
+        "order_number_in_text": "Número de pedido mencionado",
+        "shopify_customer_id": "Mismo cliente de Shopify",
+        "email_match": "El correo coincide",
+        "conflicting_email": "Correo diferente",
+        "tracking_number_in_text": "Número de seguimiento mencionado",
+        "within_order_window": "Cerca de la fecha del pedido",
+        "before_chargeback": "Antes del contracargo",
+        "references_other_order": "Menciona otro pedido"
       },
       "message": {
         "customer": "Cliente",
