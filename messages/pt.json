@@ -1297,6 +1297,7 @@
       "supplementary_documents": "Documentos complementares",
       "fraud_screening": "Triagem de fraude pré-autorização",
       "refund_record": "Comprovante de reembolso",
+      "refund": "Status do reembolso",
       "no_return_initiated": "Nenhuma devolução iniciada"
     },
     "decisiveHint": {

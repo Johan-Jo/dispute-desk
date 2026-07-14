@@ -699,6 +699,7 @@
       "supplementary_documents": "Kompletterande dokument",
       "fraud_screening": "Bedrägerikontroll före auktorisering",
       "refund_record": "Återbetalningsbevis",
+      "refund": "Återbetalningsstatus",
       "no_return_initiated": "Ingen retur påbörjad"
     },
     "reasonFamilyLabel": {
