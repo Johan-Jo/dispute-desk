@@ -91,6 +91,11 @@ export async function GET(req: NextRequest) {
   // migrate. Exchanging revokes the old token on Shopify's side, so the
   // new pair is persisted before this handler returns success.
   const existing = await loadSession(shopInternalId, "offline");
+  // Threaded into every buildSuccessRedirect call below so the
+  // dd_token_expiring cookie (middleware's short-circuit for the
+  // Stage-3 re-check redirect) always reflects the ACTUAL persisted
+  // state, not an assumption.
+  let finalTokenExpiring = existing?.tokenExpiring ?? false;
 
   if (!existing || !existing.tokenExpiring) {
     try {
@@ -116,7 +121,13 @@ export async function GET(req: NextRequest) {
         // out from under an otherwise-working install; only hard-fail
         // when there was no prior session to fall back on.
         if (existing) {
-          return buildSuccessRedirect(req, { returnTo, hostParam, shop, shopInternalId });
+          return buildSuccessRedirect(req, {
+            returnTo,
+            hostParam,
+            shop,
+            shopInternalId,
+            tokenExpiring: finalTokenExpiring,
+          });
         }
         return errorPage(`Shopify rejected token exchange (${exchangeRes.status}).`);
       }
@@ -131,6 +142,7 @@ export async function GET(req: NextRequest) {
 
       const nowMs = Date.now();
       const tokenExpiring = Boolean(data.expires_in && data.refresh_token);
+      finalTokenExpiring = tokenExpiring;
 
       await storeSession({
         shopInternalId,
@@ -175,13 +187,25 @@ export async function GET(req: NextRequest) {
       // a transient failure upgrading a legacy session shouldn't break
       // an otherwise-working install.
       if (existing) {
-        return buildSuccessRedirect(req, { returnTo, hostParam, shop, shopInternalId });
+        return buildSuccessRedirect(req, {
+          returnTo,
+          hostParam,
+          shop,
+          shopInternalId,
+          tokenExpiring: finalTokenExpiring,
+        });
       }
       return errorPage(err instanceof Error ? err.message : "Token exchange failed.");
     }
   }
 
-  return buildSuccessRedirect(req, { returnTo, hostParam, shop, shopInternalId });
+  return buildSuccessRedirect(req, {
+    returnTo,
+    hostParam,
+    shop,
+    shopInternalId,
+    tokenExpiring: finalTokenExpiring,
+  });
 }
 
 /**
@@ -190,10 +214,22 @@ export async function GET(req: NextRequest) {
  * the shopify_shop / shopify_shop_id cookies. Shared by the normal
  * success path and the "upgrade exchange failed but a usable legacy
  * session still exists" fallback.
+ *
+ * Also sets `dd_token_expiring` to the ACTUAL persisted state — never
+ * assumed. `middleware.ts` reads this to short-circuit its Stage-3
+ * re-check redirect once a shop's session is confirmed on the expiring
+ * variant; a legacy session (`tokenExpiring: false`) writes "0" so the
+ * next embedded load retries the upgrade instead of silently giving up.
  */
 function buildSuccessRedirect(
   req: NextRequest,
-  params: { returnTo: string; hostParam: string; shop: string; shopInternalId: string },
+  params: {
+    returnTo: string;
+    hostParam: string;
+    shop: string;
+    shopInternalId: string;
+    tokenExpiring: boolean;
+  },
 ): NextResponse {
   const dest = safeReturnTo(params.returnTo);
   const destUrl = new URL(dest, req.url);
@@ -214,6 +250,7 @@ function buildSuccessRedirect(
   };
   res.cookies.set("shopify_shop", params.shop, cookieOpts);
   res.cookies.set("shopify_shop_id", params.shopInternalId, cookieOpts);
+  res.cookies.set("dd_token_expiring", params.tokenExpiring ? "1" : "0", cookieOpts);
   return res;
 }
 
