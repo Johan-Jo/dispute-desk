@@ -333,132 +333,6 @@ function ManualUploadsSection({ data }: { data: Record<string, unknown> }) {
   );
 }
 
-/**
- * Customer communication history (Gorgias evidence core).
- *
- * Renders ONLY the approved-evidence snapshot persisted in pack_json —
- * merchant-approved excerpts, never full bodies, never live data.
- * Internal notes were excluded before persistence (defense in depth).
- * The legacy (pre-review-mode) shape renders plain messages without
- * category/explanation.
- */
-export function CommsSection({ data }: { data: Record<string, unknown> }) {
-  const enriched = data.enriched === true;
-
-  if (enriched) {
-    const conversations = data.conversations as
-      | Array<{
-          ticketId: number;
-          subject?: string | null;
-          channel?: string | null;
-          matchConfidence?: string;
-          messages: Array<{
-            senderType: "customer" | "merchant";
-            senderName?: string | null;
-            sentAt?: string | null;
-            channel?: string | null;
-            excerpt: string;
-            relevanceExplanation?: string | null;
-            evidenceCategory?: string | null;
-            contentTruncated?: boolean;
-          }>;
-        }>
-      | undefined;
-    if (!conversations?.length) return null;
-
-    return (
-      <View>
-        <Text style={styles.sectionTitle}>Customer Communication History</Text>
-        {conversations.map((c, i) => (
-          <View key={i} style={{ marginTop: 8 }}>
-            <Text style={styles.sectionSubtitle}>
-              Conversation{c.subject ? ` — ${c.subject}` : ` #${c.ticketId}`}
-              {c.channel ? ` (${c.channel})` : ""}
-            </Text>
-            {c.messages.map((m, j) => (
-              <View key={j} style={{ marginBottom: 6 }}>
-                <View style={styles.kvRow}>
-                  <Text style={styles.kvLabel}>
-                    {m.senderType === "customer" ? "Customer" : "Merchant"}
-                  </Text>
-                  <Text style={styles.kvValue}>
-                    {formatDate(m.sentAt ?? null)}
-                    {m.channel ? ` · ${m.channel}` : ""}
-                  </Text>
-                </View>
-                <Text
-                  style={[
-                    styles.policyText,
-                    m.senderType === "customer"
-                      ? { fontWeight: 700 }
-                      : { color: "#475569" },
-                  ]}
-                >
-                  “{m.excerpt}”
-                  {m.contentTruncated ? " (excerpt of a longer message)" : ""}
-                </Text>
-                {m.relevanceExplanation && (
-                  <Text
-                    style={[
-                      styles.policyText,
-                      { fontStyle: "italic", color: "#64748B" },
-                    ]}
-                  >
-                    {m.evidenceCategory
-                      ? `[${m.evidenceCategory.replace(/_/g, " ")}] `
-                      : ""}
-                    {m.relevanceExplanation}
-                  </Text>
-                )}
-              </View>
-            ))}
-          </View>
-        ))}
-      </View>
-    );
-  }
-
-  // Legacy (pre-review-mode) shape — plain snapshot without categories.
-  const legacyConversations = data.conversations as
-    | Array<{
-        ticketId: number;
-        channel?: string | null;
-        messages: Array<{
-          fromAgent: boolean;
-          channel?: string | null;
-          text: string;
-          sentAt?: string | null;
-        }>;
-      }>
-    | undefined;
-  if (!legacyConversations?.length) return null;
-
-  return (
-    <View>
-      <Text style={styles.sectionTitle}>Customer Communication History</Text>
-      {legacyConversations.map((c, i) => (
-        <View key={i} style={{ marginTop: 8 }}>
-          <Text style={styles.sectionSubtitle}>
-            Conversation #{c.ticketId}
-            {c.channel ? ` (${c.channel})` : ""}
-          </Text>
-          {c.messages.map((m, j) => (
-            <View key={j} style={{ marginBottom: 6 }}>
-              <View style={styles.kvRow}>
-                <Text style={styles.kvLabel}>
-                  {m.fromAgent ? "Merchant" : "Customer"}
-                </Text>
-                <Text style={styles.kvValue}>{formatDate(m.sentAt ?? null)}</Text>
-              </View>
-              <Text style={styles.policyText}>“{m.text}”</Text>
-            </View>
-          ))}
-        </View>
-      ))}
-    </View>
-  );
-}
-
 function AuditSection({ events }: { events: AuditEvent[] }) {
   if (!events.length) return null;
 
@@ -489,12 +363,6 @@ function ContentPage({ data }: { data: PackPdfData }) {
   );
   const manualSections = data.sections.filter(
     (s) => s.source === "manual_upload"
-  );
-  // Gorgias helpdesk conversations (merchant-approved snapshot or legacy
-  // shape). Shopify-timeline comms sections carry a different data shape
-  // and stay unrendered here (they feed the defence pipeline instead).
-  const commsSections = data.sections.filter(
-    (s) => s.type === "comms" && s.source === "gorgias"
   );
 
   return (
@@ -530,10 +398,6 @@ function ContentPage({ data }: { data: PackPdfData }) {
 
       {manualSections.map((s, i) => (
         <ManualUploadsSection key={i} data={s.data} />
-      ))}
-
-      {commsSections.map((s, i) => (
-        <CommsSection key={i} data={s.data} />
       ))}
 
       <AuditSection events={data.auditEvents} />
