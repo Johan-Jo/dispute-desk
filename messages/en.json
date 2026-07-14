@@ -2517,7 +2517,32 @@
     "soc2": "SOC 2 Type II Compliant",
     "soc2Desc": "Annual third-party security audits",
     "gdpr": "GDPR & CCPA Ready",
-    "gdprDesc": "Full compliance with data protection regulations"
+    "gdprDesc": "Full compliance with data protection regulations",
+    "integrations": {
+      "title": "Integrations",
+      "loading": "Loading integrations…",
+      "gorgiasDescription": "Match support conversations to disputes and approve them as evidence.",
+      "badge": {
+        "connected": "Connected",
+        "notConnected": "Not connected",
+        "needsAttention": "Needs attention",
+        "reconnectRequired": "Reconnect required"
+      },
+      "lastTested": "Last tested {date}",
+      "connect": "Connect",
+      "reconnect": "Reconnect",
+      "updateCredentials": "Update credentials",
+      "test": "Test connection",
+      "testOk": "Connection works.",
+      "testFailed": "Connection test failed.",
+      "disconnect": "Disconnect",
+      "disconnectModal": {
+        "title": "Disconnect Gorgias?",
+        "body": "DisputeDesk will stop searching your helpdesk for new disputes. Evidence you already approved stays in your disputes.",
+        "confirm": "Disconnect",
+        "cancel": "Cancel"
+      }
+    }
   },
   "connect": {
     "title": "Authorize DisputeDesk",
@@ -2909,7 +2934,7 @@
       },
       "howPacksBuilt": {
         "title": "How evidence packs are built automatically",
-        "body": "When DisputeDesk builds an evidence pack, it automatically collects evidence from multiple sources:\n\n- Order data: line items, amounts, billing address (city-level only — PII is redacted), customer tenure, and refund history.\n- Fulfillment & tracking: carrier name, tracking numbers, tracking URLs, and delivery status.\n- Store policies: snapshots of your shipping, refund, terms, and cancellation policies.\n- Helpdesk conversations: when you connect Gorgias (Setup → Evidence sources), the customer's customer-service conversations are matched by email and attached automatically as supporting evidence. Internal agent notes are never included.\n\nThe pack is structured by dispute reason. For example, a \"Product not received\" dispute will prioritize shipping and tracking evidence, while a \"Fraudulent\" dispute will emphasize order and customer verification.\n\nAfter collection, DisputeDesk calculates a completeness score and identifies any blockers (missing required evidence). You can then upload additional files to strengthen the pack.\n\n**Library pack templates:** Installing a template from the Packs page adds a pack to your **library** for narratives, sections, and editing. That is separate from each **automated per-dispute build**, which uses the collectors pipeline above. The automated build does not currently merge your library template structure into the pack automatically."
+        "body": "When DisputeDesk builds an evidence pack, it automatically collects evidence from multiple sources:\n\n- Order data: line items, amounts, billing address (city-level only — PII is redacted), customer tenure, and refund history.\n- Fulfillment & tracking: carrier name, tracking numbers, tracking URLs, and delivery status.\n- Store policies: snapshots of your shipping, refund, terms, and cancellation policies.\n- Helpdesk conversations: when you connect Gorgias (Setup → Evidence sources, or Settings → Integrations), DisputeDesk finds the customer's support conversations for each dispute, scores how strongly each ticket matches the disputed order, and proposes the most relevant messages as evidence. Nothing is included automatically — you review each proposal in the dispute's Evidence tab, approve the exact passage to use, and regenerate the package to include it. Internal agent notes are never collected.\n\nThe pack is structured by dispute reason. For example, a \"Product not received\" dispute will prioritize shipping and tracking evidence, while a \"Fraudulent\" dispute will emphasize order and customer verification.\n\nAfter collection, DisputeDesk calculates a completeness score and identifies any blockers (missing required evidence). You can then upload additional files to strengthen the pack.\n\n**Library pack templates:** Installing a template from the Packs page adds a pack to your **library** for narratives, sections, and editing. That is separate from each **automated per-dispute build**, which uses the collectors pipeline above. The automated build does not currently merge your library template structure into the pack automatically."
       },
       "generatingPackManually": {
         "title": "Generating a pack manually",

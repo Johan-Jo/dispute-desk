@@ -26,6 +26,7 @@ import {
   TextField,
   Banner,
 } from "@shopify/polaris";
+import { IntegrationsCard } from "@/components/settings/IntegrationsCard";
 
 interface ShopInfo {
   shopDomain?: string;
@@ -221,6 +222,13 @@ export default function EmbeddedSettingsPage() {
               )}
             </BlockStack>
           </Card>
+        </Layout.Section>
+
+        {/* Integrations — Gorgias connection status + connect / test /
+            disconnect. First-class home outside the setup wizard so
+            reconnect-required states are self-serviceable. */}
+        <Layout.Section>
+          <IntegrationsCard />
         </Layout.Section>
 
         {/* Notifications — before automation (daily relevance) */}
