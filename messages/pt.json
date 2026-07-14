@@ -1694,7 +1694,9 @@
       "staleBanner": {
         "title": "Seu pacote de defesa está desatualizado",
         "body": "Você alterou as evidências de comunicação depois que o pacote foi gerado. Regenere-o para incluir suas mensagens aprovadas.",
-        "cta": "Regenerar pacote"
+        "cta": "Regenerar pacote",
+        "windowClosedTitle": "Já enviado ao banco",
+        "windowClosedBody": "Você aprovou novas evidências de comunicação, mas a Shopify já encaminhou esta disputa ao banco emissor — o pacote de defesa não pode mais ser alterado."
       },
       "tier": {
         "possible": "Possíveis correspondências",

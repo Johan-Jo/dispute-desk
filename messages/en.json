@@ -1694,7 +1694,9 @@
       "staleBanner": {
         "title": "Your defence package is out of date",
         "body": "You changed the communication evidence after the package was generated. Regenerate it to include your approved messages.",
-        "cta": "Regenerate package"
+        "cta": "Regenerate package",
+        "windowClosedTitle": "Already submitted to the bank",
+        "windowClosedBody": "You approved new communication evidence, but Shopify has already forwarded this dispute to the issuing bank — the defence package can no longer be changed."
       },
       "tier": {
         "possible": "Possible matches",

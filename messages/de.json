@@ -1694,7 +1694,9 @@
       "staleBanner": {
         "title": "Ihr Verteidigungspaket ist veraltet",
         "body": "Sie haben die Kommunikationsnachweise geändert, nachdem das Paket erstellt wurde. Erstellen Sie es neu, um Ihre freigegebenen Nachrichten aufzunehmen.",
-        "cta": "Paket neu erstellen"
+        "cta": "Paket neu erstellen",
+        "windowClosedTitle": "Bereits an die Bank übermittelt",
+        "windowClosedBody": "Sie haben neue Kommunikationsbelege freigegeben, aber Shopify hat diesen Widerspruch bereits an die ausstellende Bank weitergeleitet – das Verteidigungspaket kann nicht mehr geändert werden."
       },
       "tier": {
         "possible": "Mögliche Treffer",
