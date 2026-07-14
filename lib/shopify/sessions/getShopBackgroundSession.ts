@@ -1,4 +1,5 @@
 import { loadSession, type StoredSession } from "../sessionStorage";
+import { ensureFreshSession } from "./refreshOfflineToken";
 
 /**
  * Single source of truth for background/worker Shopify session lookup.
@@ -44,7 +45,17 @@ export class ShopifyAuthInvalidError extends Error {
   }
 }
 
-/** Loads the shop's offline session. Throws if missing. */
+/**
+ * Loads the shop's offline session. Throws if missing.
+ *
+ * Expiring-token sessions (docs/plans/expiring-offline-tokens.plan.md)
+ * are proactively refreshed here when near/at expiry — this is the
+ * single choke point most background code funnels through
+ * (`makeAuthedRequest` and every direct caller), so refreshing here
+ * covers the large majority of Shopify Admin API traffic without
+ * touching individual call sites. Legacy (non-expiring) sessions pass
+ * through unchanged; they're upgraded separately on embedded load.
+ */
 export async function getShopBackgroundSession(shopId: string): Promise<StoredSession> {
   const session = await loadSession(shopId, "offline");
   if (!session) {
@@ -55,10 +66,31 @@ export async function getShopBackgroundSession(shopId: string): Promise<StoredSe
   if (session.sessionType !== "offline") {
     throw new NoBackgroundSessionError(shopId);
   }
+  const fresh = await ensureFreshSession(session);
   console.log(
-    `[shop-auth] mode=offline purpose=background shop=${shopId} sessionId=${session.id}`,
+    `[shop-auth] mode=offline purpose=background shop=${shopId} sessionId=${fresh.id} tokenExpiring=${fresh.tokenExpiring}`,
   );
-  return session;
+  return fresh;
+}
+
+const AUTH_INVALID_PATTERN =
+  /invalid api key|unrecognized login|access denied|wrong password|non-expiring access tokens/i;
+
+/**
+ * Non-throwing version of the same detection `assertNotAuthInvalid`
+ * uses — returns the matched reason (or null). Used by
+ * `makeAuthedRequest`'s reactive refresh-and-retry, which needs to
+ * inspect the response without unwinding the stack.
+ */
+export function detectAuthInvalidReason(response: {
+  status?: number;
+  errors?: Array<{ message?: string } | null | undefined> | null;
+}): string | null {
+  if (response.status === 401) return "HTTP 401";
+  const messages = (response.errors ?? [])
+    .map((e) => (e && typeof e.message === "string" ? e.message : ""))
+    .filter((m) => m.length > 0);
+  return messages.find((m) => AUTH_INVALID_PATTERN.test(m)) ?? null;
 }
 
 /**
@@ -72,8 +104,9 @@ export async function getShopBackgroundSession(shopId: string): Promise<StoredSe
  * Matches: HTTP 401, or any top-level GraphQL `errors[].message` that
  * contains the Shopify auth-invalid vocabulary we've observed in prod
  * (`Invalid API key or access token`, `unrecognized login or wrong
- * password`, `Access denied`). `userErrors` are NOT inspected — those
- * describe input problems, not auth.
+ * password`, `Access denied`, the legacy-non-expiring-token rejection).
+ * `userErrors` are NOT inspected — those describe input problems, not
+ * auth.
  */
 export function assertNotAuthInvalid(
   shopId: string,
@@ -83,18 +116,8 @@ export function assertNotAuthInvalid(
     errors?: Array<{ message?: string } | null | undefined> | null;
   },
 ): void {
-  const authPattern = /invalid api key|unrecognized login|access denied|wrong password/i;
-
-  if (response.status === 401) {
-    throw new ShopifyAuthInvalidError(shopId, sessionType, `HTTP 401`);
-  }
-
-  const messages = (response.errors ?? [])
-    .map((e) => (e && typeof e.message === "string" ? e.message : ""))
-    .filter((m) => m.length > 0);
-
-  const match = messages.find((m) => authPattern.test(m));
-  if (match) {
-    throw new ShopifyAuthInvalidError(shopId, sessionType, match);
+  const reason = detectAuthInvalidReason(response);
+  if (reason) {
+    throw new ShopifyAuthInvalidError(shopId, sessionType, reason);
   }
 }

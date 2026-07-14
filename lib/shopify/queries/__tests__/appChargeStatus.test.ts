@@ -34,6 +34,9 @@ const SESSION = {
   accessToken: "tok",
   scopes: "",
   expiresAt: null,
+  refreshToken: null,
+  refreshTokenExpiresAt: null,
+  tokenExpiring: false,
 };
 
 beforeEach(() => {

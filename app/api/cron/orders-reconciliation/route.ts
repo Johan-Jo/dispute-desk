@@ -28,6 +28,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { enqueueJob } from "@/lib/jobs/claimJobs";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { loadSession } from "@/lib/shopify/sessionStorage";
+import { ensureFreshSession } from "@/lib/shopify/sessions/refreshOfflineToken";
 import { cronEnvGate } from "@/lib/cron/envGate";
 
 const MAX_ENQUEUES_PER_SHOP = 100;
@@ -130,10 +131,15 @@ async function reconcileShop(params: {
   shopDomain: string;
   queryString: string;
 }): Promise<number> {
-  const session = await loadSession(params.shopId, "offline");
-  if (!session) {
+  const rawSession = await loadSession(params.shopId, "offline");
+  if (!rawSession) {
     throw new Error(`no offline session for ${params.shopId}`);
   }
+  // Expiring-token refresh (docs/plans/expiring-offline-tokens.plan.md) —
+  // this cron calls Shopify directly rather than through
+  // getShopBackgroundSession/makeAuthedRequest, so it needs the same
+  // proactive-refresh treatment applied explicitly.
+  const session = await ensureFreshSession(rawSession);
 
   const resp = await requestShopifyGraphQL<{
     orders: { edges: Array<{ node: { id: string } }> };
