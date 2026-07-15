@@ -4,6 +4,7 @@ import { storeSession, loadSession } from "@/lib/shopify/sessionStorage";
 import { verifySessionToken } from "@/lib/shopify/sessionToken";
 import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
 import { persistShopCurrency } from "@/lib/shopify/persistShopCurrency";
+import { needsRefresh } from "@/lib/shopify/sessions/refreshOfflineToken";
 
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY ?? "";
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET ?? "";
@@ -77,19 +78,26 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // If we already have an offline session for this shop AND it's already
-  // the expiring-token variant, skip the exchange entirely — the
-  // id_token only authenticates *this request*; persisted access tokens
-  // stay valid across app loads.
+  // If we already have an offline session for this shop that's already
+  // the expiring-token variant AND its access token is still fresh, skip
+  // the exchange entirely — the id_token only authenticates *this
+  // request*; a valid persisted access token stays usable across loads.
   //
-  // A LEGACY (non-expiring, `tokenExpiring: false`) session is NOT
-  // skipped — it's upgraded in place via the same token-exchange call,
-  // using this request's id_token (docs/plans/expiring-offline-tokens.plan.md
-  // Stage 3). Shopify now actively rejects Admin API calls made with the
-  // legacy token type, so re-using it forever (the old behavior) left
-  // shops permanently stuck; every embedded load is an opportunity to
-  // migrate. Exchanging revokes the old token on Shopify's side, so the
-  // new pair is persisted before this handler returns success.
+  // We re-exchange (using this request's id_token) in three cases:
+  //   - no existing session,
+  //   - a LEGACY (non-expiring) session — upgraded in place to the
+  //     expiring variant (docs/plans/expiring-offline-tokens.plan.md
+  //     Stage 3); Shopify now rejects legacy tokens for Admin API calls,
+  //   - an expiring session whose access token is EXPIRED / within the
+  //     refresh skew (`needsRefresh`). The expiring design relies on a
+  //     BACKGROUND refresh (grant_type=refresh_token) to keep the ~1h
+  //     access token fresh, but if that never runs (e.g. an environment
+  //     with the job worker disabled) the token goes stale and every
+  //     Admin call fails. An embedded load is a free opportunity to mint
+  //     a fresh pair server-side, so recover here rather than stranding
+  //     the shop on a dead token.
+  // Exchanging revokes the old token on Shopify's side, so the new pair
+  // is persisted before this handler returns success.
   const existing = await loadSession(shopInternalId, "offline");
   // Threaded into every buildSuccessRedirect call below so the
   // dd_token_expiring cookie (middleware's short-circuit for the
@@ -97,7 +105,7 @@ export async function GET(req: NextRequest) {
   // state, not an assumption.
   let finalTokenExpiring = existing?.tokenExpiring ?? false;
 
-  if (!existing || !existing.tokenExpiring) {
+  if (!existing || !existing.tokenExpiring || needsRefresh(existing)) {
     try {
       const exchangeRes = await fetch(`https://${shop}/admin/oauth/access_token`, {
         method: "POST",
@@ -250,7 +258,19 @@ function buildSuccessRedirect(
   };
   res.cookies.set("shopify_shop", params.shop, cookieOpts);
   res.cookies.set("shopify_shop_id", params.shopInternalId, cookieOpts);
-  res.cookies.set("dd_token_expiring", params.tokenExpiring ? "1" : "0", cookieOpts);
+  // `dd_token_expiring` gates the middleware's Stage-3 re-check redirect
+  // (embedded loads only re-hit token-exchange while this ISN'T "1").
+  // Give it a short life aligned with the ~1h access-token TTL (minus the
+  // 5-min refresh skew) rather than the 30-day life of the shop cookies:
+  // when the cookie lapses, the next embedded load re-hits token-exchange,
+  // which re-exchanges the now-stale token (see `needsRefresh` above). This
+  // makes the token self-heal on app load — the safety net for when the
+  // background refresh isn't running (e.g. an env with the worker off). A
+  // still-fresh token simply skips the exchange and re-sets the cookie.
+  res.cookies.set("dd_token_expiring", params.tokenExpiring ? "1" : "0", {
+    ...cookieOpts,
+    maxAge: 55 * 60,
+  });
   return res;
 }
 

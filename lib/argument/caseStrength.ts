@@ -151,6 +151,22 @@ function composeStrengthReasonI18n(args: {
         params: { label: labelParam(strong[0].signalId) },
       };
     }
+    // Moderate reached on moderate-category signals alone (e.g. a refund
+    // family rated moderate off a single no_return_initiated signal). Name
+    // the actual signals — mirroring weak.moderateOnly — instead of the
+    // canned per-family line. Pre-fix, this branch discarded the signal
+    // names and merchants read "Some refund evidence exists" with no way
+    // to know WHICH evidence (dispute #891BECCC, 2026-07-15).
+    if (moderate[0]) {
+      return {
+        key: "disputes.strengthReason.moderate.moderateOnly",
+        params: {
+          label1: labelParam(moderate[0].signalId),
+          label2: moderate[1] ? labelParam(moderate[1].signalId) : "empty",
+          hint: hintParam(family),
+        },
+      };
+    }
     return { key: `disputes.strengthReason.${family}.moderate` };
   }
 

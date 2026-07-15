@@ -22,6 +22,8 @@
  * resolve.
  */
 
+import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
+
 /**
  * Canonicalise a raw Shopify dispute reason to the UPPERCASE enum form used
  * by `packs.disputeTypeLabel.*`, the reason families, and the network-reason
@@ -38,8 +40,8 @@ export function normalizeDisputeReasonKey(reason: string | null | undefined): st
  * namespace, with a human-readable fallback when the key is unknown.
  *
  * next-intl does NOT throw on a missing key — it returns the key path string.
- * So we can't rely on try/catch; we check the resolved value for the tell-tale
- * key echo and fall back to a title-cased version of the reason instead.
+ * Miss detection is delegated to the shared `safeDynamicT` helper; on a miss
+ * we fall back to a title-cased version of the reason instead.
  *
  * @param tPacks a translator scoped to the `packs` namespace (from
  *   `useTranslations("packs")` / `getTranslations("packs")`).
@@ -49,19 +51,11 @@ export function resolveDisputeTypeLabel(
   reason: string | null | undefined,
 ): string {
   const key = normalizeDisputeReasonKey(reason);
-  const label = tPacks(`disputeTypeLabel.${key}`);
-  // Miss: next-intl echoed the key back (either bare or namespace-prefixed).
-  if (
-    typeof label !== "string" ||
-    label.includes("disputeTypeLabel.") ||
-    label.startsWith("packs.")
-  ) {
-    // key is UPPERCASE_SNAKE — lowercase first, then Title Case each word so
-    // we get "Some Unmapped Reason", not "SOME UNMAPPED REASON".
-    return key
-      .toLowerCase()
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-  }
-  return label;
+  // key is UPPERCASE_SNAKE — lowercase first, then Title Case each word so
+  // the miss-fallback reads "Some Unmapped Reason", not "SOME UNMAPPED REASON".
+  const fallback = key
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return safeDynamicT(tPacks, `disputeTypeLabel.${key}`, fallback);
 }

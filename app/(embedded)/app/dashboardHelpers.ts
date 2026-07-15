@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import type { CbInqSplit } from "@/lib/disputes/metrics";
+import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
 
 export type { CbInqSplit };
 
@@ -159,28 +160,20 @@ export function useFormatCurrency(currencyCode: string) {
   );
 }
 
+// Missing-key-safe status/outcome labels. Both previously hardcoded a
+// `startsWith("disputeTimeline.")` miss check — correct only while the
+// caller's translator happens to be scoped to that exact namespace. The
+// shared helper detects a miss for any translator scope.
 export function safeStatusLabel(
   t: ReturnType<typeof useTranslations>,
   status: string,
 ): string {
-  try {
-    const result = t(`normalizedStatuses.${status}`);
-    if (result.startsWith("disputeTimeline.")) return status.replace(/_/g, " ");
-    return result;
-  } catch {
-    return status.replace(/_/g, " ");
-  }
+  return safeDynamicT(t, `normalizedStatuses.${status}`, status.replace(/_/g, " "));
 }
 
 export function safeOutcomeLabel(
   t: ReturnType<typeof useTranslations>,
   outcome: string,
 ): string {
-  try {
-    const result = t(`outcomes.${outcome}`);
-    if (result.startsWith("disputeTimeline.")) return outcome.replace(/_/g, " ");
-    return result;
-  } catch {
-    return outcome.replace(/_/g, " ");
-  }
+  return safeDynamicT(t, `outcomes.${outcome}`, outcome.replace(/_/g, " "));
 }

@@ -1,5 +1,6 @@
 import { DISPUTE_REASON_FAMILIES, type AllDisputeReasonCode } from "@/lib/rules/disputeReasons";
 import { normalizeDisputeReasonKey } from "@/lib/disputes/reasonLabel";
+import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
 
 export interface Dispute {
   id: string;
@@ -74,24 +75,18 @@ export function translateReason(reason: string | null, t: Translate): string {
   // (e.g. "credit_not_processed") while the disputeReasons map is keyed by the
   // UPPERCASE enum. Without this the localized label silently misses.
   const canonical = normalizeDisputeReasonKey(reason);
-  const key = `disputeReasons.${canonical}`;
-  const translated = t(key);
-  if (translated === key) {
-    return canonical
-      .toLowerCase()
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-  }
-  return translated;
+  const fallback = canonical
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return safeDynamicT(t, `disputeReasons.${canonical}`, fallback);
 }
 
 export function translateFamily(reason: string | null, t: Translate): string {
   const family =
     DISPUTE_REASON_FAMILIES[normalizeDisputeReasonKey(reason) as AllDisputeReasonCode];
   if (!family) return "";
-  const key = `disputeFamilies.${family}`;
-  const translated = t(key);
-  return translated === key ? family : translated;
+  return safeDynamicT(t, `disputeFamilies.${family}`, family);
 }
 
 export function formatCurrency(

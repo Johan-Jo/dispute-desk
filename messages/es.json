@@ -1333,13 +1333,14 @@
       "moderate": {
         "fraudAvsOnly": "La autenticación del pago respalda este caso, pero pruebas decisivas adicionales como confirmación de entrega, coherencia de dispositivo/sesión o confirmación del cliente mejorarían el caso.",
         "strongAndModerate": "{strongLabel} y {moderateLabel} respaldan este caso; pruebas decisivas adicionales fortalecerían el caso.",
-        "strongOnly": "{label} respalda este caso, con corroboración moderada; pruebas decisivas adicionales fortalecerían el caso."
+        "strongOnly": "{label} respalda este caso, con corroboración moderada; pruebas decisivas adicionales fortalecerían el caso.",
+        "moderateOnly": "{label1}{label2, select, empty {} other { y {label2}}} respaldan este caso. Pruebas decisivas adicionales como {hint} lo fortalecerían aún más."
       },
       "weak": {
         "strongAlone": "{label} respalda este caso, pero pruebas decisivas adicionales (como {hint}) fortalecerían el caso.",
         "moderateOnly": "{label1}{label2, select, empty {} other { y {label2}}} ofrecen respaldo parcial. Una señal sólida como {hint} fortalecería significativamente el caso.",
         "supportingOnly": "El caso es débil porque el paquete de evidencia contiene principalmente documentación de apoyo, pero ninguna prueba decisiva de {family}. {decisive} fortalecería el caso.",
-        "deliveryInTransit": "Ahora mismo es débil porque el transportista no ha confirmado la entrega al cliente: el seguimiento está activo pero no muestra entrega. {decisive} reforzaría el caso."
+        "deliveryInTransit": "Ahora mismo es débil porque no ha llegado ninguna confirmación de entrega a Shopify: el seguimiento está activo, pero muchos transportistas nunca informan la entrega a Shopify. Si la página de seguimiento del transportista muestra el paquete como entregado, sube esa confirmación como prueba de entrega. {decisive} reforzaría el caso."
       },
       "fraud": {
         "strong": "La verificación del pago y el comportamiento de compra respaldan sólidamente este caso.",
@@ -1411,6 +1412,8 @@
       "helperNoDate": "El banco emisor suele responder en 30–75 días."
     },
     "sourceCaption": {
+      "refund_record": "De los datos de reembolso de Shopify",
+      "no_return_initiated": "Del estado de devolución de Shopify",
       "order_confirmation": "De los datos del pedido en Shopify",
       "billing_address_match": "De los datos del pedido en Shopify",
       "avs_cvv_match": "De la pasarela de pago",
@@ -1464,6 +1467,11 @@
       }
     },
     "whyText": {
+      "refund_record": "Demuestra que realmente se emitió un reembolso en el pedido — decisivo frente a reclamaciones de «reembolso no procesado»",
+      "no_return_initiated": "Muestra que el cliente nunca inició una devolución — fundamenta el argumento de que no se debía ningún reembolso",
+      "ip_location_check": "Sitúa el pedido en la ubicación habitual del cliente — respalda que lo realizó el titular de la tarjeta",
+      "device_session_consistency": "Vincula el pedido al dispositivo y la sesión conocidos del cliente — refuta alegaciones de «yo no fui»",
+      "fraud_risk_screening": "El análisis de riesgo de Shopify no detectó señales de fraude — respaldo independiente de que el pedido es legítimo",
       "order_confirmation": "Prueba que la transacción es legítima — la base de toda respuesta a una disputa",
       "shipping_tracking": "Muestra que el transportista confirmó el envío — necesario para ganar disputas de 'producto no recibido'",
       "delivery_proof": "Confirma que el cliente recibió el paquete — la evidencia más sólida contra reclamos de 'no recibido'",
@@ -1665,15 +1673,15 @@
       "notConfirmed": "Estado de entrega: sin confirmar",
       "whySignature": "Firma capturada por el transportista en la entrega: la prueba más sólida de que el cliente recibió el pedido.",
       "whyCarrierConfirmed": "El transportista confirmó la entrega con fecha y hora: un respaldo sólido de que el pedido llegó.",
-      "whyShippedUnconfirmed": "El pedido se envió con seguimiento válido, pero el transportista no ha confirmado la entrega: esto respalda el caso sin probar la recepción.",
+      "whyShippedUnconfirmed": "El pedido se envió con seguimiento válido, pero no ha llegado ninguna confirmación de entrega a Shopify: esto respalda el caso sin probar la recepción. Si la página del transportista muestra la entrega, súbela como prueba.",
       "whyNotConfirmed": "El transportista muestra el paquete como no entregado: sin escaneo de entrega ni firma. En una disputa por “no recibido”, esta es la brecha que hay que cerrar.",
       "whyLabelOnly": "Se creó una etiqueta de envío, pero el transportista nunca escaneó el paquete: esto aún no respalda la entrega.",
       "factsShippedVia": "Enviado el {date} vía {carrier}",
       "factsShipped": "Enviado el {date}",
       "factsDelivered": "Entregado el {date}",
-      "factsNotDelivered": "No entregado",
+      "factsNotDelivered": "Entrega sin confirmar",
       "factsSignedBy": "Firmado por {name}",
-      "factsNotDeliveredEta": "No entregado (est. {date})",
+      "factsNotDeliveredEta": "Entrega sin confirmar (est. {date})",
       "factsCarrier": "{carrier}"
     }
   },

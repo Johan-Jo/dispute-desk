@@ -40,9 +40,8 @@ const mockLoadSession = vi.mocked(loadSession);
 const mockVerify = vi.mocked(verifySessionToken);
 
 function makeShopsTable(shopRow: { id: string } | null) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const chain: any = {};
-  for (const m of ["select", "eq", "update", "insert"]) {
+  const chain: Record<string, unknown> = {};
+  for (const m of ["from", "select", "eq", "update", "insert"]) {
     chain[m] = () => chain;
   }
   chain.maybeSingle = async () => ({ data: shopRow, error: null });
@@ -127,6 +126,32 @@ describe("GET /api/auth/shopify/token-exchange — expiring tokens", () => {
     expect(res.status).toBe(307);
     expect(vi.mocked(fetch)).not.toHaveBeenCalled();
     expect(mockStoreSession).not.toHaveBeenCalled();
+  });
+
+  it("re-exchanges when the existing expiring session's access token is expired (recovers a dead token instead of skipping)", async () => {
+    mockLoadSession.mockResolvedValue({
+      id: "s1",
+      shopId: "shop-1",
+      sessionType: "offline",
+      userId: null,
+      shopDomain: "acme.myshopify.com",
+      accessToken: "shpat_stale",
+      scopes: "read_orders",
+      // Access token already expired — the background refresh never ran
+      // (e.g. worker disabled), so the app load must mint a fresh pair.
+      expiresAt: "2020-01-01T00:00:00Z",
+      refreshToken: "shprt_stale",
+      refreshTokenExpiresAt: "2026-10-13T14:00:00Z",
+      tokenExpiring: true,
+    });
+
+    const res = await GET(makeRequest(BASE_URL));
+
+    expect(res.status).toBe(307);
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
+    expect(mockStoreSession).toHaveBeenCalledWith(
+      expect.objectContaining({ accessToken: "shpat_new", tokenExpiring: true }),
+    );
   });
 
   it("upgrades an existing LEGACY session instead of reusing it forever", async () => {
