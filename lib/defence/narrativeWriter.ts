@@ -57,7 +57,14 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // promptBodies were rewritten to lead with the claim category instead
 // of the network's environment classification. Same cache-invalidation
 // pattern as the 2→3 bump above.
-const PROMPT_VERSION = 8;
+// v9 (2026-07-15): rule 8c now explicitly forbids the mechanical
+// "fulfillment status of X" phrasing (dispute #C89276B6 kept emitting it
+// in transactionOverviewArgument + chronologyArgument and failed
+// validation even after the retry). Paired with a validateNarrative.ts
+// change that stops banning natural lowercase "fulfilled" prose. Same
+// cache-invalidation pattern as prior bumps — first call after deploy
+// pays full prompt cost, subsequent calls amortise.
+const PROMPT_VERSION = 9;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
@@ -144,6 +151,15 @@ Rules:
        "shipped", "dispatched"
 
    This applies in EVERY section including chronologyArgument.
+
+   NEVER echo the raw order-system status enum. Do NOT write the
+   mechanical phrase "fulfillment status of FULFILLED/UNFULFILLED/
+   PARTIAL" (in any casing) and never write the bare token UNFULFILLED.
+   Describe what the record shows in plain bank-facing language instead:
+     WRONG → "the order's fulfillment status of fulfilled"
+     RIGHT → "the order was fulfilled and the goods were delivered"
+             (only when a delivery/access fact supports it — see below)
+     RIGHT → "the order record shows the goods left the merchant"
 
    Concrete examples for an UNFULFILLED order with no delivery_proof:
 

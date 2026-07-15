@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { resolveDisputeTypeLabel } from "@/lib/disputes/reasonLabel";
 import {
   StepCard,
   StatusBanner,
@@ -248,9 +249,8 @@ export default function PackPreviewPage() {
   const cfg = statusConfig(pack.status, ts);
   const isLibraryPack = pack.dispute_id == null;
   const fromTemplate = pack.source === "TEMPLATE" && (pack.template_name ?? pack.name);
-  const disputeTypeKey = pack.dispute_type ? pack.dispute_type.toUpperCase().replace(/\s+/g, "_") : "GENERAL";
   const disputeTypeLabel = pack.dispute_type
-    ? (t as (key: string) => string)(`disputeTypeLabel.${disputeTypeKey}`) || pack.dispute_type.replace(/_/g, " ")
+    ? resolveDisputeTypeLabel(t as (key: string) => string, pack.dispute_type)
     : null;
   // Previously fell back to a hardcoded SUGGESTED_EVIDENCE_KEYS map
   // when pack.checklist was empty. The API now returns real

@@ -110,9 +110,14 @@ describe("GET /api/auth/shopify/token-exchange — expiring tokens", () => {
       shopDomain: "acme.myshopify.com",
       accessToken: "shpat_current",
       scopes: "read_orders",
-      expiresAt: "2026-07-15T14:00:00Z",
+      // Far-future so `needsRefresh` is deterministically false regardless
+      // of when the suite runs. A near-now literal here is a time bomb: the
+      // original "2026-07-15T14:00:00Z" fell inside the refresh skew once
+      // wall-clock passed that instant on 2026-07-15, flipping the route to
+      // re-exchange and breaking this "should skip" assertion in CI.
+      expiresAt: "2099-01-01T00:00:00Z",
       refreshToken: "shprt_current",
-      refreshTokenExpiresAt: "2026-10-13T14:00:00Z",
+      refreshTokenExpiresAt: "2099-04-01T00:00:00Z",
       tokenExpiring: true,
     });
 

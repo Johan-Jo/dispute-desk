@@ -1097,6 +1097,9 @@
           "deliveryProof": {
             "notIncluded": "A entrega ainda não foi confirmada. Quando a transportadora marcar o pedido como entregue (ou você enviar uma assinatura/foto), esta linha será preenchida automaticamente."
           },
+          "refundRecord": {
+            "notIncluded": "Nenhum reembolso foi emitido neste pedido — portanto, não há registro de reembolso a exibir. Numa disputa por «crédito/reembolso não processado», essa costuma ser a posição mais forte: sua defesa é que nenhum reembolso era devido, e não que um já foi pago."
+          },
           "tdsAuthentication": {
             "notIncluded": "O recibo de pagamento não inclui dados de autenticação 3-D Secure para esta transação."
           },
