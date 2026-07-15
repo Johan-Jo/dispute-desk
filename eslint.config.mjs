@@ -33,6 +33,15 @@ const eslintConfig = [
       // fail on no-this-alias errors in transpiled extension output).
       ".shopify/**",
       "extensions/**/dist/**",
+      // Claude Design sync tooling — generated/vendored bundles (incl. a
+      // full vendored `_vendor/react.js`) dropped locally by the design
+      // sync workflow. Already gitignored; lint shouldn't trip on the
+      // vendored bundle (same rationale as the Shopify deploy bundles
+      // above — it tripped release:verify with react-internal/* rule and
+      // rules-of-hooks errors from React's own source).
+      "ds-bundle/**",
+      ".ds-sync/**",
+      ".design-sync/**",
       "coverage/**",
       "playwright-report/**",
       "test-results/**",

@@ -42,6 +42,7 @@ import {
   sendOutcomePostedAlert,
   type OutcomeVariant,
 } from "@/lib/email/sendOutcomePostedAlert";
+import { enqueueGorgiasEnrichment } from "@/lib/integrations/gorgias/enqueueEnrichment";
 import { withEffectDedup } from "./dispatchOnce";
 import { keyForEffect } from "./disputeEventKey";
 import type {
@@ -220,6 +221,22 @@ async function dispatchDisputeOpened(
             `automation(${event.disputeId}): ${err instanceof Error ? err.message : String(err)}`,
           );
         }
+      }
+
+      // Gorgias enrichment: fire-and-forget background job that finds the
+      // customer's support conversations for merchant review. Runs inside
+      // this deduped effect (webhook+cron double-observation can't double-
+      // enqueue) and must NEVER block alerts or the pipeline.
+      try {
+        await enqueueGorgiasEnrichment({
+          shopId: args.shopId,
+          disputeId: event.disputeId,
+          trigger: "dispute_opened",
+        });
+      } catch (err) {
+        summary.errors.push(
+          `gorgias_enrich(${event.disputeId}): ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
 
       // Defer the new-dispute email when a build was enqueued — the pipeline

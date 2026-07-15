@@ -1683,6 +1683,98 @@
       "factsSignedBy": "Assinado por {name}",
       "factsNotDeliveredEta": "Entrega não confirmada (prev. {date})",
       "factsCarrier": "{carrier}"
+    },
+    "gorgiasComms": {
+      "title": "Conversas do suporte ao cliente",
+      "subtitle": "Mensagens da sua caixa de suporte associadas a este pedido. Aprove as que apoiam a sua defesa para incluí-las como evidência.",
+      "actionFailed": "Não foi possível concluir a ação. Tente novamente.",
+      "conversationLoading": "Carregando conversa…",
+      "conversationError": "Não foi possível carregar a conversa. Tente novamente.",
+      "status": {
+        "processing": "Procurando evidências de comunicação…",
+        "refresh": "Atualizar do Gorgias",
+        "retry": "Tentar novamente",
+        "noMatches": "Nenhuma conversa de suporte foi encontrada para este cliente.",
+        "failedTitle": "Falha na busca de comunicações",
+        "failedBody": "Não conseguimos pesquisar seu helpdesk para esta disputa.",
+        "analysisDeferredTitle": "Correspondências encontradas — análise temporariamente adiada",
+        "analysisDeferredBody": "Conversas foram associadas, mas a análise de evidências está pausada e será retomada em breve. Os tickets associados permanecem visíveis abaixo.",
+        "reconnectRequiredTitle": "Reconectar o Gorgias",
+        "reconnectRequiredBody": "Sua conexão com o Gorgias não está mais autorizada. Reconecte-a nas Configurações para retomar as evidências de comunicação."
+      },
+      "staleBanner": {
+        "title": "Seu pacote de defesa está desatualizado",
+        "body": "Você alterou as evidências de comunicação depois que o pacote foi gerado. Regenere-o para incluir suas mensagens aprovadas.",
+        "cta": "Regenerar pacote",
+        "windowClosedTitle": "Já enviado ao banco",
+        "windowClosedBody": "Você aprovou novas evidências de comunicação, mas a Shopify já encaminhou esta disputa ao banco emissor — o pacote de defesa não pode mais ser alterado."
+      },
+      "tier": {
+        "possible": "Possíveis correspondências",
+        "possibleHint": "Confirme que uma conversa pertence ao pedido em disputa antes que suas mensagens possam ser usadas como evidência.",
+        "other": "Outras conversas possíveis ({count})",
+        "matched": "Conversa correspondente",
+        "matchedHint": "Correspondência de alta confiança com o pedido em disputa — as mensagens aprovadas podem ser usadas como evidência."
+      },
+      "ticket": {
+        "confirm": "Confirmar correspondência",
+        "notRelated": "Não relacionada",
+        "reportBadMatch": "Reportar correspondência incorreta",
+        "viewConversation": "Ver conversa completa",
+        "hideConversation": "Ocultar conversa"
+      },
+      "confidence": {
+        "high": "Correspondência forte",
+        "medium": "Correspondência possível",
+        "low": "Correspondência improvável"
+      },
+      "reason": {
+        "linked_shopify_order": "Vinculada a este pedido",
+        "order_number_in_text": "Número do pedido mencionado",
+        "shopify_customer_id": "Mesmo cliente Shopify",
+        "email_match": "E-mail corresponde",
+        "conflicting_email": "E-mail diferente",
+        "tracking_number_in_text": "Código de rastreio mencionado",
+        "within_order_window": "Próximo à data do pedido",
+        "before_chargeback": "Antes do chargeback",
+        "references_other_order": "Menciona outro pedido"
+      },
+      "message": {
+        "customer": "Cliente",
+        "merchant": "Lojista",
+        "approve": "Aprovar como evidência",
+        "exclude": "Excluir",
+        "addAsEvidence": "Adicionar como evidência",
+        "editExplanation": "Editar explicação",
+        "saveExplanation": "Salvar explicação",
+        "cancel": "Cancelar",
+        "approvedBadge": "Aprovada",
+        "proposedBadge": "Proposta",
+        "needsReapprovalBadge": "Requer nova aprovação",
+        "truncatedNote": "(mensagem encurtada)"
+      },
+      "category": {
+        "transaction_recognition": "Reconhece a compra",
+        "delivery_recognition": "Confirma a entrega",
+        "product_usage": "Usou o produto",
+        "refund_history": "Discussão de reembolso",
+        "cancellation_history": "Discussão de cancelamento",
+        "resolution_attempt": "Tentativa de resolução",
+        "contradiction": "Contradiz a disputa"
+      },
+      "approveModal": {
+        "title": "Aprovar mensagem como evidência",
+        "excerptLabel": "Trecho de evidência",
+        "excerptHelp": "Mantenha apenas o trecho relevante. O trecho deve ser uma parte exata da mensagem original — ele aparecerá no seu pacote de defesa.",
+        "confirm": "Aprovar",
+        "cancel": "Cancelar"
+      },
+      "reportModal": {
+        "title": "Reportar uma correspondência incorreta",
+        "reasonLabel": "Por que esta correspondência está incorreta? (opcional)",
+        "submit": "Enviar relato",
+        "cancel": "Cancelar"
+      }
     }
   },
   "disputeReasons": {
@@ -1723,6 +1815,7 @@
       "shopifyProtect": "Cobertura do Shopify Protect",
       "customerCommunication": "Comunicação com o cliente",
       "gorgiasCommunication": "Conversa da central de atendimento",
+      "customerCommunicationHistory": "Histórico de comunicação com o cliente",
       "ipLocationCheck": "Verificação de IP e localização",
       "fraudRiskScreening": "Triagem de risco de fraude pré-autorização",
       "fulfillments": "Envios ({count})",
@@ -2445,7 +2538,32 @@
     "gdprDesc": "Conformidade total com regulamentos de proteção de dados",
     "notifMonthlyDigest": "Resumo mensal de estornos",
     "notifMonthlyDigestDesc": "Um e-mail mensal que resume sua exposição a estornos, sua posição em relação às regras das redes e o que mudou.",
-    "automationSectionHelp": "Padrões avançados — para configuração de políticas, consulte Automação"
+    "automationSectionHelp": "Padrões avançados — para configuração de políticas, consulte Automação",
+    "integrations": {
+      "title": "Integrações",
+      "loading": "Carregando integrações…",
+      "gorgiasDescription": "Relacione conversas de suporte a disputas e aprove-as como evidência.",
+      "badge": {
+        "connected": "Conectado",
+        "notConnected": "Não conectado",
+        "needsAttention": "Requer atenção",
+        "reconnectRequired": "Reconexão necessária"
+      },
+      "lastTested": "Último teste {date}",
+      "connect": "Conectar",
+      "reconnect": "Reconectar",
+      "updateCredentials": "Atualizar credenciais",
+      "test": "Testar conexão",
+      "testOk": "A conexão funciona.",
+      "testFailed": "O teste de conexão falhou.",
+      "disconnect": "Desconectar",
+      "disconnectModal": {
+        "title": "Desconectar o Gorgias?",
+        "body": "O DisputeDesk deixará de pesquisar seu helpdesk para novas disputas. As evidências já aprovadas permanecem nas suas disputas.",
+        "confirm": "Desconectar",
+        "cancel": "Cancelar"
+      }
+    }
   },
   "connect": {
     "title": "Connection Readiness",
@@ -2838,7 +2956,7 @@
       },
       "howPacksBuilt": {
         "title": "Como os pacotes de evidências são gerados automaticamente",
-        "body": "Quando o DisputeDesk gera um pacote de evidências, ele coleta evidências automaticamente de múltiplas fontes:\n\n- Dados do pedido: itens, valores, endereço de cobrança (apenas cidade — dados pessoais são removidos), tempo de cadastro do cliente e histórico de reembolsos.\n- Entrega e rastreamento: transportadora, números de rastreamento, URLs de rastreamento e status de entrega.\n- Políticas da loja: cópias das suas políticas de envio, reembolso, termos e cancelamento.\n- Conversas de atendimento: ao conectar o Gorgias (Configuração → Fontes de evidência), as conversas de atendimento ao cliente são associadas por e-mail e anexadas automaticamente como evidência de apoio. Notas internas nunca são incluídas.\n\nO pacote é estruturado conforme o motivo da disputa. Por exemplo, uma disputa por \"Produto não recebido\" priorizará evidências de envio e rastreamento, enquanto uma disputa por \"Fraude\" enfatizará verificação do pedido e do cliente.\n\nApós a coleta, o DisputeDesk calcula uma pontuação de completude e identifica bloqueios (evidências obrigatórias ausentes). Você pode então enviar arquivos adicionais para fortalecer o pacote.\n\n**Modelos na biblioteca:** Instalar um modelo na página Pacotes adiciona um pacote à sua **biblioteca** (narrativas, seções e edição). Isso é separado de cada **geração automática por disputa**, que usa o pipeline de coletores acima. A geração automática ainda não incorpora automaticamente o layout do modelo da sua biblioteca."
+        "body": "Quando o DisputeDesk gera um pacote de evidências, ele coleta evidências automaticamente de múltiplas fontes:\n\n- Dados do pedido: itens, valores, endereço de cobrança (apenas cidade — dados pessoais são removidos), tempo de cadastro do cliente e histórico de reembolsos.\n- Entrega e rastreamento: transportadora, números de rastreamento, URLs de rastreamento e status de entrega.\n- Políticas da loja: cópias das suas políticas de envio, reembolso, termos e cancelamento.\n- Conversas do helpdesk: quando você conecta o Gorgias (Configuração → Fontes de evidência, ou Configurações → Integrações), o DisputeDesk encontra as conversas de suporte do cliente para cada disputa, pontua o quanto cada ticket corresponde ao pedido em disputa e propõe as mensagens mais relevantes como evidência. Nada é incluído automaticamente — você revisa cada proposta na aba Evidências da disputa, aprova o trecho exato a usar e regenera o pacote para incluí-lo. Notas internas de agentes nunca são coletadas.\n\nO pacote é estruturado conforme o motivo da disputa. Por exemplo, uma disputa por \"Produto não recebido\" priorizará evidências de envio e rastreamento, enquanto uma disputa por \"Fraude\" enfatizará verificação do pedido e do cliente.\n\nApós a coleta, o DisputeDesk calcula uma pontuação de completude e identifica bloqueios (evidências obrigatórias ausentes). Você pode então enviar arquivos adicionais para fortalecer o pacote.\n\n**Modelos na biblioteca:** Instalar um modelo na página Pacotes adiciona um pacote à sua **biblioteca** (narrativas, seções e edição). Isso é separado de cada **geração automática por disputa**, que usa o pipeline de coletores acima. A geração automática ainda não incorpora automaticamente o layout do modelo da sua biblioteca."
       },
       "generatingPackManually": {
         "title": "Gerando um pacote manualmente",
