@@ -22,6 +22,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { InfoBanner } from "@/components/ui/info-banner";
 import { Button } from "@/components/ui/button";
+import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
 
 interface BillingBannerResponse {
   variant:
@@ -138,15 +139,12 @@ export function BillingBanner({
   );
 }
 
-/** Tiny shim so a missing translation falls back to the key path
- *  instead of throwing. Real translations live in messages/{locale}.json. */
+/** Missing-key-safe lookup via the shared helper. The previous shim
+ *  relied on next-intl throwing on a miss — it doesn't (it returns the
+ *  key path), so a missing banner key would have rendered the raw path. */
 function safeT(
   t: ReturnType<typeof useTranslations>,
   key: string,
 ): string {
-  try {
-    return t(key);
-  } catch {
-    return key;
-  }
+  return safeDynamicT(t, key);
 }

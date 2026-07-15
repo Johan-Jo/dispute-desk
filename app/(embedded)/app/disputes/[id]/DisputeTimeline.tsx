@@ -15,6 +15,7 @@ import {
 } from "@shopify/polaris";
 import { ChevronDownIcon } from "@shopify/polaris-icons";
 import styles from "./dispute-detail.module.css";
+import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
 
 // ─── Types ──────────────────────────────────────────────────────────────
 
@@ -370,17 +371,14 @@ function deriveSubTextFromMetadata(event: TimelineEvent): string | null {
   return null;
 }
 
-/** Safely try a translation key, returning fallback if the key doesn't exist. */
+/** Safely try a translation key, returning fallback if the key doesn't
+ *  exist. Delegates to the shared miss-detection helper — the previous
+ *  inline guard hardcoded the `disputeTimeline.` namespace, which broke
+ *  silently anywhere it was copy-pasted next to a different namespace. */
 function safeT(
   t: (key: string) => string,
   key: string,
   fallback: string,
 ): string {
-  try {
-    const result = t(key);
-    // next-intl returns the key path if missing
-    return result === key || result.startsWith("disputeTimeline.") ? fallback : result;
-  } catch {
-    return fallback;
-  }
+  return safeDynamicT(t, key, fallback);
 }

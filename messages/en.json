@@ -736,13 +736,14 @@
       "moderate": {
         "fraudAvsOnly": "Payment authentication supports this defense, but additional decisive evidence such as delivery confirmation, device/session consistency, or customer confirmation would improve the case.",
         "strongAndModerate": "{strongLabel} and {moderateLabel} support this defense; additional decisive evidence would strengthen the case.",
-        "strongOnly": "{label} supports this defense, with moderate corroboration; additional decisive evidence would strengthen the case."
+        "strongOnly": "{label} supports this defense, with moderate corroboration; additional decisive evidence would strengthen the case.",
+        "moderateOnly": "{label1}{label2, select, empty {} other { and {label2}}} support this defense. Additional decisive evidence such as {hint} would strengthen it further."
       },
       "weak": {
         "strongAlone": "{label} supports this defense, but additional decisive evidence (such as {hint}) would strengthen the case.",
         "moderateOnly": "{label1}{label2, select, empty {} other { and {label2}}} provide partial support. A strong signal such as {hint} would significantly strengthen the case.",
         "supportingOnly": "This is weak because the defence package contains mostly supporting documentation, but no decisive {family} evidence. {decisive} would strengthen the case.",
-        "deliveryInTransit": "This is weak right now because the carrier has not confirmed delivery to the customer — the tracking is active but shows no delivery. {decisive} would strengthen the case."
+        "deliveryInTransit": "This is weak right now because no delivery confirmation has reached Shopify — the tracking is active, but many carriers never report delivery back to Shopify. If the carrier's tracking page shows the parcel as delivered, upload that confirmation as delivery proof. {decisive} would strengthen the case."
       },
       "fraud": {
         "strong": "Payment verification and purchase behavior strongly support this defense.",
@@ -814,6 +815,8 @@
       "helperNoDate": "The issuing bank typically responds within 30–75 days."
     },
     "sourceCaption": {
+      "refund_record": "From Shopify refund data",
+      "no_return_initiated": "From Shopify return status",
       "auto_shopify": "From Shopify order data",
       "auto_policy": "From store policies",
       "auto_ipinfo": "From IP intelligence",
@@ -867,6 +870,11 @@
       }
     },
     "whyText": {
+      "refund_record": "Proves a refund was actually issued on the order — decisive against 'refund not processed' claims",
+      "no_return_initiated": "Shows the customer never initiated a return — grounds the argument that no refund was owed",
+      "ip_location_check": "Places the order at the customer's usual location — supports that the cardholder placed it",
+      "device_session_consistency": "Ties the order to the customer's known device and session — counters 'this wasn't me' claims",
+      "fraud_risk_screening": "Shopify's risk screening found no fraud signals — independent backing that the order was legitimate",
       "order_confirmation": "Proves the transaction is legitimate — the foundation of every dispute response",
       "shipping_tracking": "Shows the carrier confirmed shipment — required to win 'item not received' disputes",
       "delivery_proof": "Confirms the customer received the package — strongest evidence against 'not received' claims",
@@ -1665,15 +1673,15 @@
       "notConfirmed": "Delivery status: not confirmed",
       "whySignature": "Carrier-captured signature on delivery — the strongest proof the customer received the order.",
       "whyCarrierConfirmed": "The carrier confirmed delivery with a timestamp — strong support that the order arrived.",
-      "whyShippedUnconfirmed": "The order shipped with valid tracking, but the carrier hasn’t confirmed delivery — this supports the case without proving receipt.",
+      "whyShippedUnconfirmed": "The order shipped with valid tracking, but no delivery confirmation has reached Shopify — this supports the case without proving receipt. If the carrier's page shows delivery, upload it as proof.",
       "whyNotConfirmed": "The carrier shows the parcel as not delivered — no delivery scan or signature. For a “not received” dispute, this is the gap to close.",
       "whyLabelOnly": "A shipping label was created but the carrier never scanned the parcel — this doesn’t yet support delivery.",
       "factsShippedVia": "Shipped {date} via {carrier}",
       "factsShipped": "Shipped {date}",
       "factsDelivered": "Delivered {date}",
-      "factsNotDelivered": "Not delivered",
+      "factsNotDelivered": "Delivery not confirmed",
       "factsSignedBy": "Signed by {name}",
-      "factsNotDeliveredEta": "Not delivered (est. {date})",
+      "factsNotDeliveredEta": "Delivery not confirmed (est. {date})",
       "factsCarrier": "{carrier}"
     },
     "gorgiasComms": {
