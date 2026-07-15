@@ -29,6 +29,7 @@ import { generateRiskExplanation } from "@/lib/argument/riskExplanation";
 import { generateRecommendation } from "@/lib/argument/recommendation";
 import { asLocalized, type Localized } from "@/lib/i18n/localized";
 import { resolveToken } from "@/lib/i18n/resolveToken";
+import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
 
 /* ── WHY text for evidence items ── */
 
@@ -949,19 +950,18 @@ export function useDisputeWorkspace(disputeId: string) {
     );
 
     const categories = deriveCategories(items);
-    const safeT = (t: ReturnType<typeof useTranslations>, key: string): string => {
-      try {
-        const v = t(key);
-        return v === key ? "" : v;
-      } catch {
-        return "";
-      }
-    };
+    // Missing-key-safe lookups via the shared helper. The previous inline
+    // guard compared the result to the SCOPED key, but next-intl returns
+    // the FULL path (namespace included) on a miss, so the guard never
+    // fired and raw keys like `disputes.whyText.refund_record` leaked
+    // into the Missing-or-weak card (2026-07-15).
+    const safeT = (t: ReturnType<typeof useTranslations>, key: string): string =>
+      safeDynamicT(t, key);
     const safeTNested = (
       t: ReturnType<typeof useTranslations>,
       field: string,
       sub: string,
-    ): string => safeT(t, `${field}.${sub}`);
+    ): string => safeDynamicT(t, `${field}.${sub}`);
     const missingItems = deriveMissingItems(effectiveChecklist, {
       whyText: (field) => safeT(tWhy, field),
       sourceCaption: (field) => safeT(tSource, field),

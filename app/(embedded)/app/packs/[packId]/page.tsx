@@ -35,6 +35,7 @@ import {
 import { withShopParams } from "@/lib/withShopParams";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import { normalizeDisputeReasonKey } from "@/lib/disputes/reasonLabel";
+import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
 import { PackHeader } from "@/components/packs/detail/PackHeader";
 import { EvidenceBuilderSection } from "@/components/packs/detail/EvidenceBuilderSection";
 import { SubmissionSidebar } from "@/components/packs/detail/SubmissionSidebar";
@@ -504,13 +505,12 @@ export default function PackPreviewPage() {
   const isSaved = pack.status === "saved_to_shopify";
   const isReadOnly = isSaved;
   const disputeTypeKey = normalizeDisputeReasonKey(pack.dispute_type);
-  const disputeTypeRaw = t(
-    `packs.disputeTypeLabel.${disputeTypeKey}` as Parameters<typeof t>[0],
-  );
   const disputeTypeLabel = pack.dispute_type
-    ? disputeTypeRaw.includes("disputeTypeLabel.")
-      ? pack.dispute_type.replace(/_/g, " ")
-      : disputeTypeRaw
+    ? safeDynamicT(
+        t as unknown as (key: string) => string,
+        `packs.disputeTypeLabel.${disputeTypeKey}`,
+        pack.dispute_type.replace(/_/g, " "),
+      )
     : "—";
 
   const phaseLabel =

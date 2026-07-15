@@ -72,7 +72,12 @@ interface TemplateField {
 
 type ReasonTemplate = TemplateField[];
 
-const REASON_TEMPLATES: Record<string, ReasonTemplate> = {
+// Exported (read-only) so tests/unit/checklistFieldCopy.test.ts can
+// enumerate every checklist field and enforce that per-field UI copy
+// (disputes.whyText.*, disputes.sourceCaption.*) exists — adding a field
+// here without copy is a CI failure, not a raw-i18n-key leak in prod
+// (which is exactly what happened with refund_record on 2026-07-15).
+export const REASON_TEMPLATES: Record<string, ReasonTemplate> = {
   PRODUCT_NOT_RECEIVED: [
     { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always" },
     { field: "shipping_tracking", label: "Shipping Tracking", requirementMode: "required_if_fulfilled" },
@@ -333,7 +338,8 @@ export type { TemplateFieldV2, ChecklistItemV2, CompletenessResultV2 };
  * partial evidence submissions. The product should guide, not
  * falsely prevent.
  */
-const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
+// Exported for the same copy-enforcement test as REASON_TEMPLATES above.
+export const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
   PRODUCT_NOT_RECEIVED: [
     { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "shipping_tracking", label: "Shipping Tracking", requirementMode: "required_if_fulfilled", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },

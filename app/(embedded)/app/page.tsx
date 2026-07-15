@@ -46,6 +46,7 @@ import { DashboardInsights } from "./DashboardInsights";
 import { DashboardOperationalInsightsStrip } from "./DashboardOperationalInsightsStrip";
 import { DashboardScopeUpgradeBanner } from "./DashboardScopeUpgradeBanner";
 import { CbInqBreakdown } from "./CbInqBreakdown";
+import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
 
 // ─── OutcomeBreakdown ─────────────────────────────────────────────────────
 
@@ -122,13 +123,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 function safeEventLabel(t: ReturnType<typeof useTranslations>, eventType: string): string {
-  try {
-    const result = t(`eventTypes.${eventType}`);
-    if (result.startsWith("disputeTimeline.")) return eventType.replace(/_/g, " ");
-    return result;
-  } catch {
-    return eventType.replace(/_/g, " ");
-  }
+  return safeDynamicT(t, `eventTypes.${eventType}`, eventType.replace(/_/g, " "));
 }
 
 function localizeEventDescription(

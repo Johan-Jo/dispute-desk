@@ -1333,13 +1333,14 @@
       "moderate": {
         "fraudAvsOnly": "Die Zahlungsauthentifizierung stützt diesen Fall, aber zusätzliche entscheidende Beweise wie Lieferbestätigung, Geräte-/Sitzungskonsistenz oder Kundenbestätigung würden den Fall verbessern.",
         "strongAndModerate": "{strongLabel} und {moderateLabel} stützen diesen Fall; zusätzliche entscheidende Beweise würden den Fall stärken.",
-        "strongOnly": "{label} stützt diesen Fall mit moderater Bestätigung; zusätzliche entscheidende Beweise würden den Fall stärken."
+        "strongOnly": "{label} stützt diesen Fall mit moderater Bestätigung; zusätzliche entscheidende Beweise würden den Fall stärken.",
+        "moderateOnly": "{label1}{label2, select, empty {} other { und {label2}}} stützen diesen Fall. Zusätzliche entscheidende Beweise wie {hint} würden ihn weiter stärken."
       },
       "weak": {
         "strongAlone": "{label} stützt diesen Fall, aber zusätzliche entscheidende Beweise (wie {hint}) würden den Fall stärken.",
         "moderateOnly": "{label1}{label2, select, empty {} other { und {label2}}} bieten teilweise Unterstützung. Ein starkes Signal wie {hint} würde den Fall erheblich stärken.",
         "supportingOnly": "Der Fall ist schwach, weil das Beweispaket hauptsächlich unterstützende Dokumentation enthält, aber keine entscheidenden Beweise für {family}. {decisive} würde den Fall stärken.",
-        "deliveryInTransit": "Derzeit schwach, weil der Zusteller die Zustellung an den Kunden nicht bestätigt hat – die Sendungsverfolgung ist aktiv, zeigt aber keine Zustellung. {decisive} würde den Fall stärken."
+        "deliveryInTransit": "Derzeit schwach, weil keine Zustellbestätigung bei Shopify eingegangen ist – die Sendungsverfolgung ist aktiv, aber viele Zusteller melden die Zustellung nicht an Shopify zurück. Zeigt die Tracking-Seite des Zustellers das Paket als zugestellt, laden Sie diese Bestätigung als Zustellnachweis hoch. {decisive} würde den Fall stärken."
       },
       "fraud": {
         "strong": "Zahlungsverifizierung und Kaufverhalten stützen diesen Fall stark.",
@@ -1411,6 +1412,8 @@
       "helperNoDate": "Die ausstellende Bank antwortet normalerweise innerhalb von 30–75 Tagen."
     },
     "sourceCaption": {
+      "refund_record": "Aus Shopify-Rückerstattungsdaten",
+      "no_return_initiated": "Aus dem Shopify-Rücksendestatus",
       "order_confirmation": "Aus Shopify-Bestelldaten",
       "billing_address_match": "Aus Shopify-Bestelldaten",
       "avs_cvv_match": "Vom Zahlungs-Gateway",
@@ -1464,6 +1467,11 @@
       }
     },
     "whyText": {
+      "refund_record": "Belegt, dass tatsächlich eine Rückerstattung für die Bestellung ausgestellt wurde — entscheidend gegen Behauptungen einer „nicht bearbeiteten Rückerstattung“",
+      "no_return_initiated": "Zeigt, dass der Kunde nie eine Rücksendung eingeleitet hat — untermauert das Argument, dass keine Rückerstattung geschuldet war",
+      "ip_location_check": "Ordnet die Bestellung dem üblichen Standort des Kunden zu — spricht dafür, dass der Karteninhaber sie aufgegeben hat",
+      "device_session_consistency": "Verknüpft die Bestellung mit dem bekannten Gerät und der bekannten Sitzung des Kunden — entkräftet „Das war ich nicht“-Behauptungen",
+      "fraud_risk_screening": "Shopifys Risikoprüfung fand keine Betrugssignale — unabhängige Bestätigung einer legitimen Bestellung",
       "order_confirmation": "Belegt die Legitimität der Transaktion — die Grundlage jeder Streitfall-Antwort",
       "shipping_tracking": "Zeigt, dass der Versanddienstleister den Versand bestätigt hat — erforderlich, um Streitfälle wegen nicht erhaltener Ware zu gewinnen",
       "delivery_proof": "Bestätigt, dass der Kunde das Paket erhalten hat — stärkster Beweis gegen Behauptungen, die Ware sei nicht angekommen",
@@ -1665,15 +1673,15 @@
       "notConfirmed": "Zustellstatus: nicht bestätigt",
       "whySignature": "Vom Zusteller erfasste Unterschrift bei der Zustellung – der stärkste Nachweis, dass der Kunde die Bestellung erhalten hat.",
       "whyCarrierConfirmed": "Der Zusteller hat die Zustellung mit Zeitstempel bestätigt – ein starker Beleg dafür, dass die Bestellung angekommen ist.",
-      "whyShippedUnconfirmed": "Die Bestellung wurde mit gültiger Sendungsverfolgung versandt, aber der Zusteller hat die Zustellung nicht bestätigt – das stützt den Fall, beweist den Empfang aber nicht.",
+      "whyShippedUnconfirmed": "Die Bestellung wurde mit gültiger Sendungsverfolgung versandt, aber bei Shopify ist keine Zustellbestätigung eingegangen – das stützt den Fall, beweist den Empfang aber nicht. Zeigt die Zusteller-Seite die Zustellung, laden Sie sie als Nachweis hoch.",
       "whyNotConfirmed": "Der Zusteller weist das Paket als nicht zugestellt aus – kein Zustellscan und keine Unterschrift. Bei einer „Nicht erhalten“-Reklamation ist das die entscheidende Lücke.",
       "whyLabelOnly": "Ein Versandetikett wurde erstellt, aber der Zusteller hat das Paket nie gescannt – das belegt die Zustellung noch nicht.",
       "factsShippedVia": "Versandt am {date} über {carrier}",
       "factsShipped": "Versandt am {date}",
       "factsDelivered": "Zugestellt am {date}",
-      "factsNotDelivered": "Nicht zugestellt",
+      "factsNotDelivered": "Zustellung nicht bestätigt",
       "factsSignedBy": "Unterschrieben von {name}",
-      "factsNotDeliveredEta": "Nicht zugestellt (vsl. {date})",
+      "factsNotDeliveredEta": "Zustellung nicht bestätigt (vsl. {date})",
       "factsCarrier": "{carrier}"
     }
   },
