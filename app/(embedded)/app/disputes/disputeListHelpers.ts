@@ -1,4 +1,5 @@
 import { DISPUTE_REASON_FAMILIES, type AllDisputeReasonCode } from "@/lib/rules/disputeReasons";
+import { normalizeDisputeReasonKey } from "@/lib/disputes/reasonLabel";
 
 export interface Dispute {
   id: string;
@@ -69,16 +70,24 @@ export const OUTCOME_TONE: Record<string, SoftTone> = {
 
 export function translateReason(reason: string | null, t: Translate): string {
   if (!reason) return "—";
-  const key = `disputeReasons.${reason}`;
+  // Canonicalize casing: legacy rows may carry a lowercase REST reason
+  // (e.g. "credit_not_processed") while the disputeReasons map is keyed by the
+  // UPPERCASE enum. Without this the localized label silently misses.
+  const canonical = normalizeDisputeReasonKey(reason);
+  const key = `disputeReasons.${canonical}`;
   const translated = t(key);
   if (translated === key) {
-    return reason.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    return canonical
+      .toLowerCase()
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
   }
   return translated;
 }
 
 export function translateFamily(reason: string | null, t: Translate): string {
-  const family = DISPUTE_REASON_FAMILIES[reason as AllDisputeReasonCode];
+  const family =
+    DISPUTE_REASON_FAMILIES[normalizeDisputeReasonKey(reason) as AllDisputeReasonCode];
   if (!family) return "";
   const key = `disputeFamilies.${family}`;
   const translated = t(key);

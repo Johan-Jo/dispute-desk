@@ -1556,6 +1556,9 @@
           "deliveryProof": {
             "notIncluded": "Delivery has not been confirmed yet. Once the carrier marks the order delivered (or you upload a signature/photo) this row will populate automatically."
           },
+          "refundRecord": {
+            "notIncluded": "No refund has been issued on this order — so there is no refund record to show. For a \"credit / refund not processed\" dispute this is usually the stronger position: your defence is that no refund was owed, not that one was already paid."
+          },
           "tdsAuthentication": {
             "notIncluded": "The payment receipt does not include 3-D Secure authentication data for this transaction."
           },

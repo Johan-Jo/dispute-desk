@@ -1184,6 +1184,9 @@
           "deliveryProof": {
             "notIncluded": "Die Zustellung wurde noch nicht bestätigt. Sobald der Spediteur die Bestellung als zugestellt markiert (oder Sie eine Unterschrift/ein Foto hochladen), wird diese Zeile automatisch gefüllt."
           },
+          "refundRecord": {
+            "notIncluded": "Für diese Bestellung wurde keine Rückerstattung ausgestellt – daher gibt es keinen Rückerstattungsnachweis. Bei einer Streitigkeit wegen „nicht bearbeiteter Gutschrift/Rückerstattung“ ist das in der Regel die stärkere Position: Ihre Verteidigung besteht darin, dass keine Rückerstattung geschuldet war, nicht dass bereits eine gezahlt wurde."
+          },
           "tdsAuthentication": {
             "notIncluded": "Die Zahlungsquittung enthält für diese Transaktion keine 3-D-Secure-Authentifizierungsdaten."
           },

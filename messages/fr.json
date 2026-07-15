@@ -1097,6 +1097,9 @@
           "deliveryProof": {
             "notIncluded": "La livraison n'a pas encore été confirmée. Une fois que le transporteur marquera la commande comme livrée (ou que vous téléverserez une signature/photo), cette ligne se remplira automatiquement."
           },
+          "refundRecord": {
+            "notIncluded": "Aucun remboursement n'a été effectué sur cette commande — il n'y a donc aucune trace de remboursement à afficher. Pour un litige « avoir/remboursement non traité », c'est généralement la position la plus solide : votre défense est qu'aucun remboursement n'était dû, et non qu'un remboursement a déjà été versé."
+          },
           "tdsAuthentication": {
             "notIncluded": "Le reçu de paiement ne contient pas de données d'authentification 3-D Secure pour cette transaction."
           },

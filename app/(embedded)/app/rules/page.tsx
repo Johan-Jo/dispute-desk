@@ -51,6 +51,7 @@ import {
 } from "@/lib/rules/packHandlingAutomation";
 import { CustomRuleModal, type CustomRuleDraft } from "./CustomRuleModal";
 import { FAMILY_TO_DISPUTE_TYPE } from "@/lib/rules/helpers";
+import { normalizeDisputeReasonKey } from "@/lib/disputes/reasonLabel";
 
 // ─── Constants ──────────────────────────────────────────────────────────
 
@@ -604,11 +605,12 @@ export default function EmbeddedRulesPage() {
                     family.labelKey.replace("coverage.", ""),
                   );
                   const playbookNames = packs
-                    .map((p) =>
-                      tp.has(`disputeTypeLabel.${p.dispute_type}`)
-                        ? tp(`disputeTypeLabel.${p.dispute_type}`)
-                        : p.name,
-                    )
+                    .map((p) => {
+                      const key = normalizeDisputeReasonKey(p.dispute_type);
+                      return tp.has(`disputeTypeLabel.${key}`)
+                        ? tp(`disputeTypeLabel.${key}`)
+                        : p.name;
+                    })
                     .join(", ");
 
                   return (

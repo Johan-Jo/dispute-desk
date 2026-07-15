@@ -47,7 +47,9 @@ describe("normalizeDisputeWebhookPayload", () => {
       customerDisplayName: null,
       customerEmail: null,
       status: "needs_response",
-      reason: "fraudulent",
+      // Canonicalized from the lowercase REST reason to the UPPERCASE enum so
+      // it matches the GraphQL path and every disputeTypeLabel lookup.
+      reason: "FRAUDULENT",
       networkReasonCode: "10.4",
       initiatedAt: "2026-05-19T12:00:00Z",
       evidenceDueBy: "2026-05-26T12:00:00Z",
@@ -136,7 +138,7 @@ describe("normalizeGraphQLDispute", () => {
       customerDisplayName: null,
       customerEmail: null,
       status: "needs_response",
-      reason: "fraudulent",
+      reason: "FRAUDULENT",
       networkReasonCode: null,
       initiatedAt: "2026-05-19T12:00:00Z",
       evidenceDueBy: "2026-05-26T12:00:00Z",
@@ -343,5 +345,35 @@ describe("parity: webhook + GraphQL of the same dispute", () => {
 
     expect(w?.orderId).toBe(99);
     expect(g?.orderId).toBe("99");
+  });
+
+  it("reason casing: webhook lowercase reason is canonicalized to the enum (dispute #12452)", () => {
+    // Regression: dispute #12452 arrived live via the REST webhook with
+    // reason "credit_not_processed" (lowercase). It was stored raw, so the
+    // dashboard's disputeTypeLabel lookup missed and leaked the raw i18n key
+    // `packs.disputeTypeLabel.credit_not_processed` into the UI. The webhook
+    // path must now emit the same UPPERCASE enum the GraphQL path does.
+    const w = normalizeDisputeWebhookPayload({
+      id: 12452,
+      reason: "credit_not_processed",
+      status: "won",
+      type: "inquiry",
+    });
+    expect(w?.reason).toBe("CREDIT_NOT_PROCESSED");
+
+    const g = normalizeGraphQLDispute({
+      id: "gid://shopify/ShopifyPaymentsDispute/12452",
+      reasonDetails: { reason: "CREDIT_NOT_PROCESSED" },
+    });
+    expect(g?.reason).toBe("CREDIT_NOT_PROCESSED");
+  });
+
+  it("reason: genuine null reason is preserved as null, not coerced to GENERAL", () => {
+    const w = normalizeDisputeWebhookPayload({ id: 1, status: "won" });
+    expect(w?.reason).toBeNull();
+    const g = normalizeGraphQLDispute({
+      id: "gid://shopify/ShopifyPaymentsDispute/1",
+    });
+    expect(g?.reason).toBeNull();
   });
 });

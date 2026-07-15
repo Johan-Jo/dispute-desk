@@ -6,6 +6,7 @@ import { FileText, CheckCircle } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import type { StepId } from "@/lib/setup/types";
 import { TemplateSetupWizardModal } from "@/components/setup/modals/TemplateSetupWizardModal";
+import { resolveDisputeTypeLabel } from "@/lib/disputes/reasonLabel";
 
 interface Template {
   id: string;
@@ -24,10 +25,6 @@ function getShopId(): string | null {
   return document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? null;
 }
 
-function normalizeDisputeTypeKey(disputeType: string | null): string {
-  return (disputeType ?? "GENERAL").toUpperCase().replace(/\s+/g, "_");
-}
-
 export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
   const t = useTranslations("setup.packs");
   const tPacks = useTranslations("packs");
@@ -44,17 +41,8 @@ export function PacksStep({ stepId, onSaveRef }: PacksStepProps) {
   const [activatedPacks, setActivatedPacks] = useState<{ id: string; name: string }[]>([]);
 
   const disputeLabel = useCallback(
-    (disputeType: string | null) => {
-      const key = `disputeTypeLabel.${normalizeDisputeTypeKey(disputeType)}`;
-      const label = (tPacks as (k: string) => string)(key);
-      if (
-        typeof label === "string" &&
-        (label.includes("disputeTypeLabel.") || label.startsWith("packs."))
-      ) {
-        return normalizeDisputeTypeKey(disputeType).replace(/_/g, " ");
-      }
-      return label;
-    },
+    (disputeType: string | null) =>
+      resolveDisputeTypeLabel(tPacks as (k: string) => string, disputeType),
     [tPacks]
   );
 
