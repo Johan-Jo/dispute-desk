@@ -25,6 +25,10 @@ Take-aways:
 - **ChargePay is the closest feature rival** (their delivery-dispute pitch aims at the ground our carrier-truth work fights on), not Chargeflow.
 - **Securify proves the widget surface works in this exact category** (their pitch stat: "40–50% of Gorgias support discussions involve chargebacks and fraud") — but theirs is pre-order email-fraud intel. **Dispute-case context on the ticket is shipped by no one.**
 
+ChargePay's marketing creatives (reviewed 2026-07-15) detail their mechanism: per-message **structured claim extraction** from conversations ("shipping address confirmed", "estimated delivery timeframe provided", "customer confirmed receipt", each timestamped), **ticket-intent chips** (Delivery Issue / Duplicate Charge / Item Not Received — implying they classify all inbound tickets, with no visible privacy tiering), **ticket-attachment harvesting** (delivery photos, invoice PDFs pulled into evidence), and a review kanban (Evidence Ready → Needs Review → Submitted) in their own dashboard. Two structural weaknesses to exploit:
+- **Evidence provenance is conversation-derived.** Their "Delivery Confirmed" is sourced from what a support agent *typed* in a reply ("delivered May 7 at 2:14 PM") — the merchant's own assertion, i.e. hearsay, versus carrier records. Our carrier-truth pipeline (Shopify-native event classification + planned carrier-API adapters) produces primary-source proof; their model silently inherits the same Shopify-`deliveredAt` gap we diagnosed (DHL Freight etc.) and papers over it with agent statements.
+- **No visible bank-safety judgment in auto-generation** — one creative shows the customer's complaint text ("I haven't received my order yet") bundled INTO the evidence package. Our review contract + bank-safe copy principles are the counter-position.
+
 **Positioning sentence:** *"The only chargeback app your support agents can see — live dispute context on every ticket, and evidence that never reaches the bank without your approval."*
 
 ## 3. What we already have (foundation, no rebuild)
@@ -34,6 +38,8 @@ Take-aways:
 - **The 4 blocking safety rules** (unchanged by this plan): (1) no auto-inclusion in `merchant_review_required` mode, ever; (2) pack generation omits pending Gorgias evidence — never races enrichment; (3) packs render only from the approved snapshot (approved excerpt + content hash); (4) idempotent runs + atomic approval RPC.
 
 The public app is a **transport + surface** upgrade around this core. The core itself does not change.
+
+**Known core gap surfaced by competitive review (candidate PR, evidence core — not this app):** our snapshot pipeline captures message TEXT only; ChargePay harvests **ticket attachments** (delivery photos, invoices) into evidence. Customer-shared delivery photos in support threads are strong INR evidence. Follow-up: extend the enrichment snapshot to attachments (same review gate, same content-hash discipline, size/type allowlist, stored via the existing private-bucket upload path).
 
 ## 4. Phase 0 — hard gates (no code until these clear)
 
