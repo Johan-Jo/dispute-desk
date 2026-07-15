@@ -1333,13 +1333,14 @@
       "moderate": {
         "fraudAvsOnly": "L'authentification du paiement appuie ce dossier, mais des preuves décisives supplémentaires comme une confirmation de livraison, une cohérence appareil/session ou une confirmation client amélioreraient le dossier.",
         "strongAndModerate": "{strongLabel} et {moderateLabel} appuient ce dossier ; des preuves décisives supplémentaires le renforceraient.",
-        "strongOnly": "{label} appuie ce dossier, avec une corroboration modérée ; des preuves décisives supplémentaires le renforceraient."
+        "strongOnly": "{label} appuie ce dossier, avec une corroboration modérée ; des preuves décisives supplémentaires le renforceraient.",
+        "moderateOnly": "{label1}{label2, select, empty {} other { et {label2}}} appuient ce dossier. Des preuves décisives supplémentaires telles que {hint} le renforceraient davantage."
       },
       "weak": {
         "strongAlone": "{label} appuie ce dossier, mais des preuves décisives supplémentaires (comme {hint}) le renforceraient.",
         "moderateOnly": "{label1}{label2, select, empty {} other { et {label2}}} apportent un appui partiel. Un signal solide tel que {hint} renforcerait considérablement le dossier.",
         "supportingOnly": "Le dossier est faible car le paquet de preuves contient principalement de la documentation complémentaire, mais aucune preuve décisive de {family}. {decisive} renforcerait le dossier.",
-        "deliveryInTransit": "Faible pour l’instant car le transporteur n’a pas confirmé la livraison au client — le suivi est actif mais n’indique aucune livraison. {decisive} renforcerait le dossier."
+        "deliveryInTransit": "Faible pour l’instant car aucune confirmation de livraison n’est parvenue à Shopify — le suivi est actif, mais de nombreux transporteurs ne signalent jamais la livraison à Shopify. Si la page de suivi du transporteur indique le colis comme livré, téléversez cette confirmation comme preuve de livraison. {decisive} renforcerait le dossier."
       },
       "fraud": {
         "strong": "La vérification du paiement et le comportement d'achat appuient fortement ce dossier.",
@@ -1411,6 +1412,8 @@
       "helperNoDate": "La banque émettrice répond généralement dans un délai de 30 à 75 jours."
     },
     "sourceCaption": {
+      "refund_record": "Issu des données de remboursement Shopify",
+      "no_return_initiated": "Issu du statut de retour Shopify",
       "order_confirmation": "Issu des données de commande Shopify",
       "billing_address_match": "Issu des données de commande Shopify",
       "avs_cvv_match": "Issu de la passerelle de paiement",
@@ -1464,6 +1467,11 @@
       }
     },
     "whyText": {
+      "refund_record": "Prouve qu'un remboursement a réellement été effectué sur la commande — décisif contre les réclamations « remboursement non traité »",
+      "no_return_initiated": "Montre que le client n'a jamais initié de retour — fonde l'argument qu'aucun remboursement n'était dû",
+      "ip_location_check": "Situe la commande à l'emplacement habituel du client — conforte que le titulaire de la carte l'a passée",
+      "device_session_consistency": "Relie la commande à l'appareil et à la session connus du client — réfute les allégations « ce n'était pas moi »",
+      "fraud_risk_screening": "L'analyse de risque de Shopify n'a détecté aucun signal de fraude — appui indépendant de la légitimité de la commande",
       "order_confirmation": "Prouve que la transaction est légitime — la base de toute réponse à un litige",
       "shipping_tracking": "Montre que le transporteur a confirmé l'expédition — indispensable pour gagner les litiges « article non reçu »",
       "delivery_proof": "Confirme que le client a reçu le colis — preuve la plus solide contre les réclamations « non reçu »",
@@ -1665,15 +1673,15 @@
       "notConfirmed": "Statut de livraison : non confirmé",
       "whySignature": "Signature enregistrée par le transporteur à la livraison : la preuve la plus solide que le client a reçu la commande.",
       "whyCarrierConfirmed": "Le transporteur a confirmé la livraison avec un horodatage : un appui solide indiquant que la commande est arrivée.",
-      "whyShippedUnconfirmed": "La commande a été expédiée avec un suivi valide, mais le transporteur n’a pas confirmé la livraison : cela appuie le dossier sans prouver la réception.",
+      "whyShippedUnconfirmed": "La commande a été expédiée avec un suivi valide, mais aucune confirmation de livraison n’est parvenue à Shopify : cela appuie le dossier sans prouver la réception. Si la page du transporteur indique la livraison, téléversez-la comme preuve.",
       "whyNotConfirmed": "Le transporteur indique le colis comme non livré : aucun scan de livraison ni signature. Pour un litige « non reçu », c’est la lacune à combler.",
       "whyLabelOnly": "Une étiquette d’expédition a été créée, mais le transporteur n’a jamais scanné le colis : cela n’appuie pas encore la livraison.",
       "factsShippedVia": "Expédié le {date} via {carrier}",
       "factsShipped": "Expédié le {date}",
       "factsDelivered": "Livré le {date}",
-      "factsNotDelivered": "Non livré",
+      "factsNotDelivered": "Livraison non confirmée",
       "factsSignedBy": "Signé par {name}",
-      "factsNotDeliveredEta": "Non livré (est. {date})",
+      "factsNotDeliveredEta": "Livraison non confirmée (est. {date})",
       "factsCarrier": "{carrier}"
     },
     "gorgiasComms": {

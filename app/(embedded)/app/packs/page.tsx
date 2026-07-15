@@ -41,6 +41,7 @@ import {
 } from "@shopify/polaris-icons";
 import { DISPUTE_REASON_FAMILIES, type AllDisputeReasonCode } from "@/lib/rules/disputeReasons";
 import { DISPUTE_FAMILIES } from "@/lib/coverage/deriveCoverage";
+import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
 import { INQUIRY_TEMPLATE_ID_SET } from "@/lib/setup/recommendTemplates";
 
 /**
@@ -648,7 +649,9 @@ export default function PacksListPage() {
                         </IndexTable.Cell>
                         <IndexTable.Cell>
                           <Text as="p" variant="bodyMd">
-                            {typeLabelKey ? t(`packTemplates.${typeLabelKey}`) : pack.dispute_type}
+                            {typeLabelKey
+                              ? safeDynamicT(t, `packTemplates.${typeLabelKey}`, pack.dispute_type)
+                              : pack.dispute_type}
                           </Text>
                         </IndexTable.Cell>
                         <IndexTable.Cell>
@@ -656,9 +659,7 @@ export default function PacksListPage() {
                             {(() => {
                               const family = getPackFamily(pack.dispute_type);
                               if (!family) return "";
-                              const key = `disputeFamilies.${family}`;
-                              const translated = t(key);
-                              return translated === key ? family : translated;
+                              return safeDynamicT(t, `disputeFamilies.${family}`, family);
                             })()}
                           </Text>
                         </IndexTable.Cell>

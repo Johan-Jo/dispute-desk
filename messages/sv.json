@@ -742,13 +742,14 @@
       "moderate": {
         "fraudAvsOnly": "Betalningsautentisering stöder detta försvar, men ytterligare avgörande bevis såsom leveransbekräftelse, enhets-/sessionskonsistens eller kundbekräftelse skulle förbättra ärendet.",
         "strongAndModerate": "{strongLabel} och {moderateLabel} stöder detta försvar; ytterligare avgörande bevis skulle stärka ärendet.",
-        "strongOnly": "{label} stöder detta försvar, med visst stöd; ytterligare avgörande bevis skulle stärka ärendet."
+        "strongOnly": "{label} stöder detta försvar, med visst stöd; ytterligare avgörande bevis skulle stärka ärendet.",
+        "moderateOnly": "{label1}{label2, select, empty {} other { och {label2}}} stöder detta försvar. Ytterligare avgörande bevis såsom {hint} skulle stärka det ytterligare."
       },
       "weak": {
         "strongAlone": "{label} stöder detta försvar, men ytterligare avgörande bevis (såsom {hint}) skulle stärka ärendet.",
         "moderateOnly": "{label1}{label2, select, empty {} other { och {label2}}} ger delvis stöd. En stark signal såsom {hint} skulle avsevärt stärka ärendet.",
         "supportingOnly": "Detta är svagt eftersom försvarspaketet huvudsakligen innehåller stödjande dokumentation, men inga avgörande {family}-bevis. {decisive} skulle stärka ärendet.",
-        "deliveryInTransit": "Detta är svagt just nu eftersom transportören inte har bekräftat leverans till kunden – spårningen är aktiv men visar ingen leverans. {decisive} skulle stärka ärendet."
+        "deliveryInTransit": "Detta är svagt just nu eftersom ingen leveransbekräftelse har nått Shopify – spårningen är aktiv, men många transportörer rapporterar aldrig leveransen tillbaka till Shopify. Om transportörens spårningssida visar paketet som levererat, ladda upp den bekräftelsen som leveransbevis. {decisive} skulle stärka ärendet."
       },
       "fraud": {
         "strong": "Betalningsverifiering och köpbeteende stöder starkt detta försvar.",
@@ -820,6 +821,8 @@
       "helperNoDate": "Den utfärdande banken svarar vanligtvis inom 30–75 dagar."
     },
     "sourceCaption": {
+      "refund_record": "Från Shopifys återbetalningsdata",
+      "no_return_initiated": "Från Shopifys returstatus",
       "auto_shopify": "Från Shopify-orderdata",
       "auto_policy": "Från butikens policysida",
       "auto_ipinfo": "Från IP-information",
@@ -873,6 +876,11 @@
       }
     },
     "whyText": {
+      "refund_record": "Bevisar att en återbetalning faktiskt gjordes på beställningen — avgörande mot påståenden om ”ej behandlad återbetalning”",
+      "no_return_initiated": "Visar att kunden aldrig påbörjade en retur — grundar argumentet att ingen återbetalning var skyldig",
+      "ip_location_check": "Placerar beställningen på kundens vanliga plats — stödjer att kortinnehavaren gjorde den",
+      "device_session_consistency": "Kopplar beställningen till kundens kända enhet och session — motbevisar påståenden om ”det var inte jag”",
+      "fraud_risk_screening": "Shopifys riskbedömning hittade inga bedrägerisignaler — oberoende stöd för att beställningen är legitim",
       "order_confirmation": "Bevisar att transaktionen är legitim — grunden för varje tviststvar",
       "shipping_tracking": "Visar att transportören bekräftat försändelsen — krävs för att vinna 'ej mottaget'-tvister",
       "delivery_proof": "Bekräftar att kunden mottog paketet — det starkaste beviset mot 'ej mottaget'-krav",
@@ -1665,15 +1673,15 @@
       "notConfirmed": "Leveransstatus: ej bekräftad",
       "whySignature": "Signatur som transportören registrerat vid leverans – det starkaste beviset på att kunden fått ordern.",
       "whyCarrierConfirmed": "Transportören bekräftade leveransen med tidsstämpel – ett starkt stöd för att ordern kom fram.",
-      "whyShippedUnconfirmed": "Ordern skickades med giltig spårning, men transportören har inte bekräftat leveransen – det stöder ärendet utan att bevisa mottagandet.",
+      "whyShippedUnconfirmed": "Ordern skickades med giltig spårning, men ingen leveransbekräftelse har nått Shopify – det stöder ärendet utan att bevisa mottagandet. Om transportörens sida visar leveransen, ladda upp den som bevis.",
       "whyNotConfirmed": "Transportören visar paketet som ej levererat – ingen leveransskanning eller signatur. I en tvist om ”ej mottaget” är detta luckan att täppa till.",
       "whyLabelOnly": "En fraktetikett skapades men transportören skannade aldrig paketet – det styrker ännu inte leveransen.",
       "factsShippedVia": "Skickad {date} med {carrier}",
       "factsShipped": "Skickad {date}",
       "factsDelivered": "Levererad {date}",
-      "factsNotDelivered": "Ej levererad",
+      "factsNotDelivered": "Leverans ej bekräftad",
       "factsSignedBy": "Signerad av {name}",
-      "factsNotDeliveredEta": "Ej levererad (ber. {date})",
+      "factsNotDeliveredEta": "Leverans ej bekräftad (ber. {date})",
       "factsCarrier": "{carrier}"
     },
     "gorgiasComms": {

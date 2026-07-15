@@ -37,6 +37,29 @@ describe("refund-family rollup (CREDIT_NOT_PROCESSED)", () => {
     expect(r.overall).toBe("moderate");
   });
 
+  it("moderate-only reason NAMES the contributing signal — not the canned family line", () => {
+    // Regression (dispute #891BECCC, 2026-07-15): moderate reached on
+    // moderate-category signals alone rendered the vague
+    // "Some refund evidence exists, but complete documentation would help."
+    // (disputes.strengthReason.refund.moderate) — the merchant had no way
+    // to know WHICH evidence. The composer must take the parameterized
+    // moderateOnly branch and splice in the actual signal label.
+    const checklist = [available("order_confirmation"), available("no_return_initiated"), available("refund_policy")];
+    const source = byField({
+      order_confirmation: { orderId: "1" },
+      no_return_initiated: { returnStatus: "NO_RETURN" },
+      refund_policy: {},
+    });
+    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source);
+    expect(r.strengthReasonI18n.key).toBe(
+      "disputes.strengthReason.moderate.moderateOnly",
+    );
+    // label1 must reference a signal-label i18n key (the actual evidence name).
+    const label1 = r.strengthReasonI18n.params?.label1 as { type: string; key: string };
+    expect(label1?.type).toBe("i18n-key");
+    expect(label1?.key).toBeTruthy();
+  });
+
   it("a processed refund_record alone → MODERATE", () => {
     const checklist = [available("refund_record")];
     const source = byField({

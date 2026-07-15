@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useTranslations } from "next-intl";
+import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
 import {
   Card,
   BlockStack,
@@ -52,37 +54,13 @@ function sortByPriority(items: ChecklistItemV2[]): ChecklistItemV2[] {
   );
 }
 
-/** Outcome-driven "why" text per evidence field. */
-const WHY_TEXT: Record<string, string> = {
-  order_confirmation:
-    "Proves the transaction is legitimate \u2014 the foundation of every dispute response",
-  shipping_tracking:
-    "Shows the carrier confirmed shipment \u2014 required to win \u2018item not received\u2019 disputes",
-  delivery_proof:
-    "Confirms the customer received the package \u2014 strongest evidence against \u2018not received\u2019 claims",
-  billing_address_match:
-    "Matches the billing address to the order \u2014 critical for fraud disputes",
-  avs_cvv_match:
-    "Shows the card security checks passed \u2014 banks weigh this heavily in fraud cases",
-  product_description:
-    "Proves the product matched what was advertised \u2014 key defense for \u2018not as described\u2019 disputes",
-  refund_policy:
-    "Shows the customer agreed to your refund terms \u2014 protects against buyer\u2019s remorse claims",
-  shipping_policy:
-    "Documents your shipping commitments \u2014 supports delivery timeline disputes",
-  cancellation_policy:
-    "Proves the customer was informed of cancellation rules before purchase",
-  customer_communication:
-    "Shows you attempted to resolve the issue \u2014 banks favor merchants who engage",
-  duplicate_explanation:
-    "Explains why the charges are not duplicates \u2014 required for duplicate dispute responses",
-  supporting_documents: "Additional proof that strengthens your case",
-  activity_log: "Customer purchase history and account activity \u2014 proves legitimate customer engagement",
-};
-
-function getWhyText(field: string): string {
-  return WHY_TEXT[field] ?? "Strengthens your dispute response";
-}
+// Outcome-driven "why" text per evidence field lives in ONE place \u2014 the
+// `disputes.whyText.*` i18n namespace. This component previously carried a
+// parallel hardcoded-English copy of that map, which drifted: fields added
+// to the checklist landed in one map but not the other (refund_record was
+// in neither, leaking the raw key `disputes.whyText.refund_record` on the
+// workspace surface, 2026-07-15). The per-field coverage is enforced by
+// tests/unit/checklistFieldCopy.test.ts.
 
 /**
  * Internal-only signals — auto-collected from Shopify order data, never
@@ -179,6 +157,17 @@ export function EvidenceBuilderSection({
   const [includedOpen, setIncludedOpen] = useState(readOnly);
   const [selectedTab, setSelectedTab] = useState(0);
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const tWhy = useTranslations("disputes.whyText");
+  const tWorkspace = useTranslations("disputes.workspaceHook");
+  const getWhyText = useCallback(
+    (field: string) =>
+      safeDynamicT(
+        tWhy,
+        field,
+        safeDynamicT(tWorkspace, "impactFallback", "Strengthens your dispute response"),
+      ),
+    [tWhy, tWorkspace],
+  );
 
   const setItemRef = useCallback(
     (field: string) => (el: HTMLDivElement | null) => {
