@@ -5,6 +5,7 @@ import {
   pickThreeDsAuthenticated,
   pickPaymentMethod,
   normalizeBackfillOrder,
+  normalizeFulfillmentTrackings,
   deriveNativeDelivery,
   flattenTrackingForRow,
   extractNativeSignature,
@@ -754,5 +755,177 @@ describe("normalizeBackfillOrder", () => {
       storeCountryCode: "US",
     });
     expect(assessments).toEqual([]);
+  });
+});
+
+describe("normalizeFulfillmentTrackings", () => {
+  const F1 = "gid://shopify/Fulfillment/11";
+  const F2 = "gid://shopify/Fulfillment/22";
+
+  it("emits one row per (fulfillment, tracking entry), preserving the relationship", () => {
+    const raw = rawOrder({
+      fulfillments: [
+        {
+          id: F1,
+          createdAt: "2026-05-01T08:00:00Z",
+          displayStatus: "DELIVERED",
+          deliveredAt: "2026-05-05T12:00:00Z",
+          trackingInfo: [
+            { company: "PostNord SE", number: "PN123", url: "https://tracking.postnord.com/?id=PN123" },
+          ],
+        },
+        {
+          id: F2,
+          createdAt: "2026-05-02T08:00:00Z",
+          displayStatus: "IN_TRANSIT",
+          trackingInfo: [
+            { company: "DHL Freight", number: "5198980574", url: "https://www.dhl.com/se-en/home/tracking.html?tracking-id=373325386394209542" },
+          ],
+        },
+      ],
+    });
+    const rows = normalizeFulfillmentTrackings("shop-1", raw);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({
+      shop_id: "shop-1",
+      shopify_order_id: "gid://shopify/Order/1",
+      shopify_fulfillment_id: F1,
+      company_raw: "PostNord SE",
+      tracking_number: "PN123",
+      tracking_key: "PN123",
+      shipment_status: "Delivered",
+      terminal_at: "2026-05-05T12:00:00Z",
+      tracking_source: "shopify_native",
+    });
+    expect(rows[1]).toMatchObject({
+      shopify_fulfillment_id: F2,
+      company_raw: "DHL Freight",
+      tracking_number: "5198980574",
+      shipment_status: null,
+      terminal_at: null,
+      tracking_source: null,
+    });
+  });
+
+  it("dedupes identical tracking entries within a fulfillment", () => {
+    const raw = rawOrder({
+      fulfillments: [
+        {
+          id: F1,
+          createdAt: null,
+          displayStatus: null,
+          trackingInfo: [
+            { company: "DHL", number: "N1", url: "https://dhl.example/a" },
+            { company: "DHL", number: "N1", url: "https://dhl.example/a" },
+            { company: "DHL", number: "N2", url: null },
+          ],
+        },
+      ],
+    });
+    const rows = normalizeFulfillmentTrackings("shop-1", raw);
+    expect(rows.map((r) => r.tracking_key)).toEqual(["N1", "N2"]);
+  });
+
+  it("keys on the URL when the number is missing", () => {
+    const raw = rawOrder({
+      fulfillments: [
+        {
+          id: F1,
+          createdAt: null,
+          displayStatus: null,
+          trackingInfo: [{ company: "GLS", number: null, url: "https://gls.example/t/42" }],
+        },
+      ],
+    });
+    const rows = normalizeFulfillmentTrackings("shop-1", raw);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].tracking_number).toBeNull();
+    expect(rows[0].tracking_key).toBe("https://gls.example/t/42");
+  });
+
+  it("emits a trackingless row (empty key) so classification is still persisted", () => {
+    const raw = rawOrder({
+      fulfillments: [
+        {
+          id: F1,
+          createdAt: null,
+          displayStatus: "DELIVERED",
+          trackingInfo: [],
+          events: {
+            edges: [
+              {
+                node: {
+                  status: "DELIVERED",
+                  happenedAt: "2026-05-06T10:00:00Z",
+                  message: "Delivered to recipient",
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+    const rows = normalizeFulfillmentTrackings("shop-1", raw);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].tracking_key).toBe("");
+    expect(rows[0].shipment_status).toBe("Delivered");
+  });
+
+  it("classifies per shipment, NOT collapsed to the order's best signal", () => {
+    const raw = rawOrder({
+      fulfillments: [
+        {
+          id: F1,
+          createdAt: null,
+          displayStatus: null,
+          trackingInfo: [{ company: "Bring", number: "B1", url: null }],
+          events: {
+            edges: [
+              {
+                node: {
+                  status: "DELIVERED",
+                  happenedAt: "2026-05-06T10:00:00Z",
+                  message: "Delivered to recipient",
+                },
+              },
+            ],
+          },
+        },
+        {
+          id: F2,
+          createdAt: null,
+          displayStatus: null,
+          trackingInfo: [{ company: "Bring", number: "B2", url: null }],
+          events: {
+            edges: [
+              {
+                node: {
+                  status: "FAILURE",
+                  happenedAt: "2026-05-07T10:00:00Z",
+                  message: "Returned to sender",
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+    const rows = normalizeFulfillmentTrackings("shop-1", raw);
+    expect(rows.find((r) => r.tracking_key === "B1")?.shipment_status).toBe("Delivered");
+    expect(rows.find((r) => r.tracking_key === "B2")?.shipment_status).toBe("Returned");
+  });
+
+  it("skips fulfillments without an id and orders without fulfillments", () => {
+    expect(normalizeFulfillmentTrackings("shop-1", rawOrder())).toEqual([]);
+    const raw = rawOrder({
+      fulfillments: [
+        {
+          createdAt: null,
+          displayStatus: null,
+          trackingInfo: [{ company: "DHL", number: "X", url: null }],
+        },
+      ],
+    });
+    expect(normalizeFulfillmentTrackings("shop-1", raw)).toEqual([]);
   });
 });

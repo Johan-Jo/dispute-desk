@@ -1433,6 +1433,10 @@ The event connection is queried **newest-first** (`events(first: 30, sortKey: HA
 
 `ORDER_FOR_INGEST_QUERY` is registered with the production GraphQL registry so the daily drift checker covers it.
 
+##### Per-shipment tracking persistence (`shopify_fulfillment_trackings`, carrier plan PR 1A)
+
+`shopify_orders` stores only the **collapsed best** delivery signal per order. `supabase/migrations/20260715210000_carrier_tracking_persistence.sql` adds `shopify_fulfillment_trackings` — one row per `(fulfillment, tracking entry)` — populated from both ingest paths (backfill + `orders/*` webhooks) via `normalizeFulfillmentTrackings` (fan-out, NOT collapsed; dedup on `tracking_key` = number, else URL) and `persistFulfillmentTrackings` (upsert on `(shop_id, shopify_fulfillment_id, tracking_key)`; auxiliary — failures never break the orders-ingest contract). Both ingest queries now fetch fulfillment `id` + `trackingInfo { company number url }`. The payload carries only Shopify-sourced columns, so the carrier-lookup cache columns (`effective_tracking_id`, `last_carrier_lookup_*`, adapter/classification versions — written by the carrier adapter layer, plan PR 1B+) survive re-ingest untouched. The same migration adds `carrier_alert_incidents`, the persistent dedup ledger for carrier support notifications (plan §6.4/§7.3). Carrier-mix audits: `scripts/sql/audit-pack-carrier-mix.sql` (now a plain `group by` over the new table). Full design: `docs/plans/carrier-delivery-verification.plan.md`.
+
 ### Structured signals table (PR-D)
 
 `supabase/migrations/20260523111400_shopify_order_risk_signals.sql` adds two tables:
