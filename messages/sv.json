@@ -1468,6 +1468,9 @@
           "deliveryProof": {
             "notIncluded": "Leveransen har inte bekräftats än. När transportören markerar beställningen som levererad (eller du laddar upp signatur/foto) fylls den här raden i automatiskt."
           },
+          "refundRecord": {
+            "notIncluded": "Ingen återbetalning har gjorts för den här beställningen – därför finns det ingen återbetalningspost att visa. Vid en tvist om ”ej behandlad kredit/återbetalning” är detta oftast det starkare läget: ditt försvar är att ingen återbetalning var skyldig, inte att en redan har betalats."
+          },
           "tdsAuthentication": {
             "notIncluded": "Betalningskvittot innehåller inte 3-D Secure-autentiseringsdata för den här transaktionen."
           },

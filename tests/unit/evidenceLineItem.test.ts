@@ -1163,6 +1163,50 @@ describe("Test 24 — internal-only field with no payload routes to not_included
     expect(row?.reason).not.toMatch(/ambiguous or unfavorable/i);
   });
 
+  it("refund_record with no refund reads the honest field-specific message, not the generic one", async () => {
+    // Regression (dispute #C89276B6, 2026-07-15): a CREDIT_NOT_PROCESSED
+    // dispute with no refund on the order showed the generic, alarming
+    // "Field is on file but no usable evidence payload was emitted." The
+    // refund_record slot must instead explain that no refund was issued —
+    // which for a "refund not processed" dispute is the FAVORABLE position.
+    const mod = await import("@/lib/argument/evidenceLineItem");
+    const { deriveEvidenceLineItems } = mod as {
+      deriveEvidenceLineItems: (args: unknown) => Array<{
+        field: string;
+        submissionMethod: string;
+        reason: string;
+      }>;
+    };
+    const checklist = [
+      {
+        field: "refund_record",
+        label: "Refund Record",
+        status: "missing" as const,
+        priority: "critical" as const,
+        blocking: false,
+        source: "auto_shopify" as const,
+        collectionType: "conditional_auto" as const,
+      },
+    ];
+    const lineItems = deriveEvidenceLineItems({
+      checklist,
+      facts: [],
+      // No refund on the order → the orderSource collector never emits a
+      // refund_record payload.
+      payloadByField: new Map<string, unknown>(),
+      contributions: { strong: [], moderate: [] },
+      packSavedToShopify: true,
+      excludedFields: new Set<string>(),
+      attachmentUploadFailures: new Map<string, string>(),
+      inclusionOverrides: new Map(),
+      reasonFamily: "refund",
+    });
+    const row = lineItems.find((li) => li.field === "refund_record");
+    expect(row?.submissionMethod).toBe("not_included");
+    expect(row?.reason).toMatch(/no refund has been issued/i);
+    expect(row?.reason).not.toMatch(/no usable evidence payload/i);
+  });
+
   it("ip_location_check with VPN/proxy reads explains the privacy issue", async () => {
     const mod = await import("@/lib/argument/evidenceLineItem");
     const { deriveEvidenceLineItems } = mod as {

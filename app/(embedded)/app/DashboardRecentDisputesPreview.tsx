@@ -28,6 +28,7 @@ import type { DisputePhase } from "@/lib/rules/disputeReasons";
 import { MobileDisputesList } from "./disputes/MobileDisputesList";
 import type { Dispute } from "./disputes/disputeListHelpers";
 import { safeStatusLabel, useDateLocale } from "./dashboardHelpers";
+import { resolveDisputeTypeLabel } from "@/lib/disputes/reasonLabel";
 
 interface DisputeRow {
   id: string;
@@ -150,12 +151,7 @@ export function DashboardRecentDisputesPreview() {
 
   const formatReason = (reason: string | null) => {
     if (!reason) return "—";
-    try {
-      return tPacks(`disputeTypeLabel.${reason}`);
-    } catch {
-      /* fallback */
-    }
-    return reason.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    return resolveDisputeTypeLabel(tPacks, reason);
   };
 
   const normalizedStatusBadge = (status: string | null) => {

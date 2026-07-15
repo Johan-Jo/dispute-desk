@@ -134,7 +134,7 @@ describe("Invariant 1b — narrative validator rejects raw AVS/CVV codes in pros
 });
 
 describe("Invariant 2 — narrative validator rejects fulfillmentStatus leaks", () => {
-  it("matches 'fulfillment status of UNFULFILLED' and bare 'UNFULFILLED'", () => {
+  it("matches the raw uppercase enum leak + bare 'UNFULFILLED'", () => {
     const samples = [
       "fulfillment status of UNFULFILLED at the time of this response",
       "fulfillment status of FULFILLED",
@@ -151,6 +151,23 @@ describe("Invariant 2 — narrative validator rejects fulfillmentStatus leaks", 
       "the order record was created at the time of purchase",
       "the available records indicate the order was placed via the web channel",
       "the payment was authorised with matching verification credentials",
+    ];
+    for (const s of samples) {
+      const hit = FORBIDDEN_PHRASES.some((p) => p.test(s));
+      expect(hit, `unexpected forbidden match in: ${s}`).toBe(false);
+    }
+  });
+
+  it("does NOT flag natural lowercase 'fulfillment status of fulfilled' prose", () => {
+    // Regression (dispute #C89276B6, 2026-07-15): the ban was
+    // case-insensitive and caught this clean, merchant-favorable prose in a
+    // refund/CREDIT_NOT_PROCESSED case, hard-failing the whole package. The
+    // ban now targets only the verbatim UPPERCASE enum leak. The bare
+    // `UNFULFILLED` confession word stays banned in any casing position
+    // (it is only ever emitted uppercase).
+    const samples = [
+      "the order's fulfillment status of fulfilled confirms the goods were delivered",
+      "the fulfillment status of fulfilled is reflected in the carrier record",
     ];
     for (const s of samples) {
       const hit = FORBIDDEN_PHRASES.some((p) => p.test(s));
