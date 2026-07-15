@@ -369,7 +369,7 @@ disappear silently. Every distinct actionable carrier-integration failure sends
 an operational notification email to:
 
 ```text
-support@disputedesk.com
+support@disputedesk.app
 ```
 
 **Reuse the existing server-side transactional-email utility** (the
@@ -471,7 +471,7 @@ classified separately as `unsupported_carrier` and generates a notification
 email to:
 
 ```text
-support@dispute-us.com
+support@disputedesk.app
 ```
 
 Suggested subject: `[DisputeDesk] Unsupported carrier detected: {carrier}`.
@@ -699,12 +699,12 @@ cay-collective:
   Shopify-supplied;
 - evidence-pack generation succeeds even if the DHL lookup fails;
 - a simulated actionable DHL error sends exactly one deduplicated email to
-  `support@disputedesk.com`, containing sufficient operational context and no
+  `support@disputedesk.app`, containing sufficient operational context and no
   sensitive tracking or customer data;
 - a fixture using a recognizable but unregistered carrier completes the
   evidence-pack build, preserves any existing evidence, records the
   unsupported carrier (§7.4), and sends one deduplicated notification to
-  `support@dispute-us.com` without exposing sensitive tracking or customer
+  `support@disputedesk.app` without exposing sensitive tracking or customer
   data.
 
 Verify with `scripts/inspect-dhl-order-12809.ts` before and after the
@@ -718,7 +718,7 @@ integration. **No production mutation or rebuild without explicit approval.**
   `DHL_API_SECRET` remain the configured credentials.
 - Absence is never evidence of non-delivery.
 - Carrier failures never break evidence-pack generation; errors are logged and
-  actionable failures notify `support@disputedesk.com`; support-email failures
+  actionable failures notify `support@disputedesk.app`; support-email failures
   never break evidence-pack generation.
 - `DeliveredToPickup` remains separate from `Delivered` in KPI calculations.
 - Returned status may affect scoring but is never automatically exposed in the
@@ -735,18 +735,10 @@ integration. **No production mutation or rebuild without explicit approval.**
 
 ## 13. Open questions
 
-1. **Notification addresses** — this revision specifies
-   `support@disputedesk.com` for operational carrier-API failures (§6) and
-   `support@dispute-us.com` for unsupported-carrier notifications (§7), per the
-   2026-07-15 revision instructions. Both differ from the address used
-   elsewhere in the product (`support@disputedesk.app`, cf. `LEADS_FORM_TO`).
-   Confirm both mailboxes exist and are monitored before PR 1B ships the
-   senders; the addresses are config values, so correcting them later is a
-   one-line change.
-2. **PostNord business account** — do we (or cay) have one? Gates a future
+1. **PostNord business account** — do we (or cay) have one? Gates a future
    PostNord adapter; not needed for P0.
-3. **Push APIs** (DHL has one) — skip for v1; dispute-triggered pull is enough
+2. **Push APIs** (DHL has one) — skip for v1; dispute-triggered pull is enough
    and avoids webhook infrastructure. Revisit only if lookup volume ever
    threatens rate limits.
-4. **Merchant-credential carriers** — if a merchant ever needs one, design the
+3. **Merchant-credential carriers** — if a merchant ever needs one, design the
    portal form flow then; out of scope for P0.
