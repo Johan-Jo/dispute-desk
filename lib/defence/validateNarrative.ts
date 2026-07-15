@@ -64,11 +64,16 @@ export const FORBIDDEN_PHRASES = [
   // "AVS Y", "AVS result of 'Y'", "AVS result was Y".
   /\bAVS\s+(?:result\s+(?:of\s+|was\s+|=\s*)?)?['"]?[YNXAZWPSGIMNCDU]['"]?\b/i,
   /\bCVV\s+(?:result\s+(?:of\s+|was\s+|=\s*)?)?['"]?[MNPSUYX]['"]?\b/i,
-  // Fulfillment-status echo in prose — UNFULFILLED/FULFILLED/PARTIAL
-  // as raw uppercase strings is order-system jargon that doesn't
-  // belong in bank-facing argument. The fact value carries the order
-  // record cleanly; the prose must not name the status verbatim.
-  /\bfulfillment\s+status\s+of\s+(?:UNFULFILLED|FULFILLED|PARTIAL)\b/i,
+  // Fulfillment-status echo in prose — the raw uppercase enum
+  // (UNFULFILLED/FULFILLED/PARTIAL) is order-system jargon that doesn't
+  // belong in bank-facing argument. NOTE: matched WITHOUT the /i flag so
+  // it targets the verbatim enum leak only. Natural lowercase prose like
+  // "the order's fulfillment status of fulfilled" is clean copy and, in a
+  // refund/CREDIT_NOT_PROCESSED case, a *favorable* fact — banning it
+  // case-insensitively hard-blocked a legitimate package (dispute
+  // #C89276B6, 2026-07-15). The confession-risk word `UNFULFILLED` is
+  // still banned in ANY position by the bare pattern below.
+  /\bfulfillment\s+status\s+of\s+(?:UNFULFILLED|FULFILLED|PARTIAL)\b/,
   /\bUNFULFILLED\b/,
 ];
 

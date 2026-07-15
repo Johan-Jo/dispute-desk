@@ -14,6 +14,7 @@
 
 import { z } from "zod";
 import { sanitizeDueAt } from "@/lib/disputes/dueDate";
+import { normalizeDisputeReasonKey } from "@/lib/disputes/reasonLabel";
 
 export interface DisputeSnapshot {
   /** GraphQL Admin id, e.g. "gid://shopify/ShopifyPaymentsDispute/12345". */
@@ -42,7 +43,13 @@ export interface DisputeSnapshot {
   customerEmail?: string | null;
   /** Raw Shopify status, lowercased: needs_response, under_review, won, lost, ... */
   status?: string | null;
-  /** Raw reason text Shopify returned, e.g. "fraudulent". */
+  /**
+   * Canonical UPPERCASE dispute reason enum, e.g. "FRAUDULENT",
+   * "CREDIT_NOT_PROCESSED". Both transports normalize to this casing (Shopify
+   * REST hands it back lowercase, GraphQL uppercase) via
+   * `normalizeDisputeReasonKey`, so `disputes.reason` is stored canonically and
+   * every `disputeTypeLabel.*` / reason-family lookup keys off one form.
+   */
   reason?: string | null;
   networkReasonCode?: string | null;
   initiatedAt?: string | null;
@@ -184,7 +191,10 @@ export function normalizeDisputeWebhookPayload(
     customerDisplayName: null,
     customerEmail: null,
     status: lowerOrNull(p.status),
-    reason: p.reason ?? null,
+    // Shopify REST returns the reason lowercase (e.g. "credit_not_processed");
+    // canonicalize to the UPPERCASE enum so it matches the GraphQL path and the
+    // disputeTypeLabel / reason-family lookups. Preserve genuine null.
+    reason: p.reason ? normalizeDisputeReasonKey(p.reason) : null,
     networkReasonCode: p.network_reason_code ?? null,
     initiatedAt: p.initiated_at ?? null,
     // Shopify sometimes returns an epoch `evidenceDueBy` (1970-01-01) for
@@ -235,7 +245,11 @@ export function normalizeGraphQLDispute(
     customerDisplayName,
     customerEmail,
     status: lowerOrNull(d.status),
-    reason: d.reasonDetails?.reason ?? null,
+    // GraphQL already returns the UPPERCASE enum, but normalize anyway so both
+    // transports go through one canonicaliser. Preserve genuine null.
+    reason: d.reasonDetails?.reason
+      ? normalizeDisputeReasonKey(d.reasonDetails.reason)
+      : null,
     networkReasonCode: null,
     initiatedAt: d.initiatedAt ?? null,
     // Shopify sometimes returns an epoch `evidenceDueBy` (1970-01-01) for

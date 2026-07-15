@@ -15,6 +15,7 @@ import {
 import { PackModeSegmentedControl } from "@/components/setup/PackModeSegmentedControl";
 import { agentLogClient } from "@/lib/debug/agentLogClient";
 import { useDdDebug } from "@/lib/setup/useDdDebug";
+import { resolveDisputeTypeLabel } from "@/lib/disputes/reasonLabel";
 
 const CONTENT_MAX_WIDTH_PX = 720;
 
@@ -67,10 +68,6 @@ function getShopId(): string | null {
   return document.cookie.match(/shopify_shop_id=([^;]+)/)?.[1] ?? null;
 }
 
-function normalizeDisputeTypeKey(disputeType: string | null): string {
-  return (disputeType ?? "GENERAL").toUpperCase().replace(/\s+/g, "_");
-}
-
 export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepProps) {
   const t = useTranslations("setup.rules");
   const tPacks = useTranslations("packs");
@@ -105,17 +102,8 @@ export function AutomationRulesStep({ stepId, onSaveRef }: AutomationRulesStepPr
   );
 
   const disputeLabel = useCallback(
-    (disputeType: string | null) => {
-      const key = `disputeTypeLabel.${normalizeDisputeTypeKey(disputeType)}`;
-      const label = (tPacks as (k: string) => string)(key);
-      if (
-        typeof label === "string" &&
-        (label.includes("disputeTypeLabel.") || label.startsWith("packs."))
-      ) {
-        return normalizeDisputeTypeKey(disputeType).replace(/_/g, " ");
-      }
-      return label;
-    },
+    (disputeType: string | null) =>
+      resolveDisputeTypeLabel(tPacks as (k: string) => string, disputeType),
     [tPacks]
   );
 

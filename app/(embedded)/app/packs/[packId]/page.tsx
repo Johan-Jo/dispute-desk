@@ -34,6 +34,7 @@ import {
 } from "@shopify/polaris";
 import { withShopParams } from "@/lib/withShopParams";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
+import { normalizeDisputeReasonKey } from "@/lib/disputes/reasonLabel";
 import { PackHeader } from "@/components/packs/detail/PackHeader";
 import { EvidenceBuilderSection } from "@/components/packs/detail/EvidenceBuilderSection";
 import { SubmissionSidebar } from "@/components/packs/detail/SubmissionSidebar";
@@ -502,9 +503,7 @@ export default function PackPreviewPage() {
   const isLibraryPack = pack.dispute_id == null;
   const isSaved = pack.status === "saved_to_shopify";
   const isReadOnly = isSaved;
-  const disputeTypeKey = pack.dispute_type
-    ? pack.dispute_type.toUpperCase().replace(/\s+/g, "_")
-    : "GENERAL";
+  const disputeTypeKey = normalizeDisputeReasonKey(pack.dispute_type);
   const disputeTypeRaw = t(
     `packs.disputeTypeLabel.${disputeTypeKey}` as Parameters<typeof t>[0],
   );

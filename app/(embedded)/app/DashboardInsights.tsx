@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { BlockStack, Card, Spinner, Text } from "@shopify/polaris";
 import type { DashboardStats } from "./dashboardHelpers";
 import { CbInqBreakdown } from "./CbInqBreakdown";
+import { resolveDisputeTypeLabel } from "@/lib/disputes/reasonLabel";
 
 interface Props {
   stats: DashboardStats;
@@ -14,14 +15,8 @@ export function DashboardInsights({ stats, loading }: Props) {
   const t = useTranslations("dashboard");
   const tPacks = useTranslations("packs");
 
-  const translateCategory = (label: string) => {
-    try {
-      return tPacks(`disputeTypeLabel.${label}`);
-    } catch {
-      /* fallback */
-    }
-    return label.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-  };
+  const translateCategory = (label: string) =>
+    resolveDisputeTypeLabel(tPacks, label);
 
   const trend = stats.winRateTrend.length ? stats.winRateTrend : [0, 0, 0, 0];
   const trendMax = Math.max(...trend, 1);

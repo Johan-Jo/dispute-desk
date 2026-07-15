@@ -322,6 +322,9 @@ const REASON_OVERRIDES: Record<string, Partial<Record<SubmissionMethod, I18nToke
   delivery_proof: {
     not_included: { key: `${REASONS_NS}.deliveryProof.notIncluded` },
   },
+  refund_record: {
+    not_included: { key: `${REASONS_NS}.refundRecord.notIncluded` },
+  },
   tds_authentication: {
     not_included: { key: `${REASONS_NS}.tdsAuthentication.notIncluded` },
   },
