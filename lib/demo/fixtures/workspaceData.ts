@@ -362,7 +362,13 @@ export function buildWorkspaceData(disputeId: string) {
         package_mode: "full",
         generated_at: rebase("2026-01-13T11:30:00Z"),
         generated_by: "system",
-        pdf_path: `/api/packs/pack-${fixture.id}/download`,
+        // Static sample PDF under /public — regenerate with
+        // `node scripts/generate-demo-defence-pdf.mjs`. The card's
+        // "View PDF" is a real link navigation (not fetch), so it
+        // bypasses the fetch shim; on shopId==="demo" the card links
+        // straight to this path instead of the real preview route
+        // (which 401s on demo shop context).
+        pdf_path: "/demo/defence-package-sample.pdf",
         evidence_hash: `hash-${fixture.id}`,
         llm_model: "claude-opus-4-7",
         prompt_family: "fraud_v3",

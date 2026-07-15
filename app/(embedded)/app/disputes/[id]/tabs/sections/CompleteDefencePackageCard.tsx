@@ -450,8 +450,15 @@ export function CompleteDefencePackageCard({
   // a real user-gesture context (a link click), instead of an async
   // window.open() from a fetch callback — which Shopify Admin's iframe
   // sandbox blocks.
+  // Demo exception: the public demo (shopId === "demo") has no real
+  // defence_packages row and the preview route 401s on demo shop
+  // context — and a link navigation bypasses the demo fetch shim, which
+  // only wraps window.fetch. The demo fixture stores a static sample
+  // PDF path under /public, so link to it directly.
   const previewHref = displayRow?.pdf_path
-    ? `/api/defence-packages/${displayRow.id}/preview${shopIdQs}`
+    ? dispute?.shopId === "demo"
+      ? displayRow.pdf_path
+      : `/api/defence-packages/${displayRow.id}/preview${shopIdQs}`
     : null;
 
   /** True when the merchant clicked Regenerate AND no newer-version
