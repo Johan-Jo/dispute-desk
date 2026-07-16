@@ -405,6 +405,9 @@ async function dispatchOutcomeDetected(
         amount: event.context.amount,
         currencyCode: event.context.currency,
         orderName,
+        // Inquiries must not be announced as chargebacks — the email
+        // helper switches to "dispute"-worded copy for this phase.
+        phase: event.context.phase === "inquiry" ? "inquiry" : "chargeback",
       });
     },
   });
