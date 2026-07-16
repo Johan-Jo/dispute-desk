@@ -156,10 +156,22 @@ describe("classifyDeliveryTimeline — the real DHL Freight #12809 acceptance sh
     expect(r.finalAt).toBe("2026-06-04T18:12:00");
   });
 
-  it("classifies recipient-collection variants as pickup", () => {
-    expect(classifyDeliveryEvent(ev("Collected by recipient"))).toBe("delivered_to_pickup");
-    expect(classifyDeliveryEvent(ev("Picked up by the recipient"))).toBe("delivered_to_pickup");
-    expect(classifyDeliveryEvent(ev("Uthämtad av mottagaren"))).toBe("delivered_to_pickup");
+  it("classifies recipient-collection variants as pickup across all classifier locales", () => {
+    for (const message of [
+      "Collected by recipient", // en
+      "Picked up by the recipient", // en
+      "Uthämtad av mottagaren", // sv
+      "Sendungen er hentet av mottaker", // no
+      "Pakken er afhentet af modtageren", // da
+      "Die Sendung wurde vom Empfänger abgeholt", // de
+      "Zending opgehaald door de ontvanger", // nl
+      "Colis retiré par le destinataire", // fr
+      "Envío recogido por el destinatario", // es
+      "Encomenda levantada — retirado pelo destinatário", // pt
+      "Objeto retirado pelo destinatario", // pt (unaccented feed)
+    ]) {
+      expect(classifyDeliveryEvent(ev(message)), message).toBe("delivered_to_pickup");
+    }
   });
 
   it("does NOT misclassify an origin pickup from the shipper", () => {

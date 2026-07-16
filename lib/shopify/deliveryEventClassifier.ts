@@ -184,6 +184,7 @@ const PICKUP_ROOTS = [
   // RECEIVER collecting at a servicepoint, not delivery to their address).
   // Without these roots the message goes unmatched and the structured
   // "delivered" code overclaims final delivery.
+  // en
   "picked up by receiver",
   "picked up by recipient",
   "picked up by the receiver",
@@ -192,9 +193,39 @@ const PICKUP_ROOTS = [
   "collected by recipient",
   "collected by the receiver",
   "collected by the recipient",
+  // sv
   "uthämtad av mottagaren",
   "uthämtat av mottagaren",
   "hämtats av mottagaren",
+  "hämtat av mottagaren",
+  // no
+  "hentet av mottaker",
+  "hentet av mottakeren",
+  // da
+  "afhentet af modtager",
+  "afhentet af modtageren",
+  // de
+  "vom empfänger abgeholt",
+  "vom empfaenger abgeholt",
+  "durch empfänger abgeholt",
+  "empfänger hat die sendung abgeholt",
+  // nl
+  "opgehaald door de ontvanger",
+  "afgehaald door de ontvanger",
+  "door ontvanger opgehaald",
+  // fr
+  "retiré par le destinataire",
+  "retire par le destinataire",
+  "récupéré par le destinataire",
+  "recupere par le destinataire",
+  // es
+  "recogido por el destinatario",
+  "retirado por el destinatario",
+  // pt
+  "levantado pelo destinatário",
+  "levantado pelo destinatario",
+  "retirado pelo destinatário",
+  "retirado pelo destinatario",
   // UPS / FedEx carrier pickup points (the "Delivered to a UPS Access
   // Point" trap + FedEx hold-at-location)
   "access point",
