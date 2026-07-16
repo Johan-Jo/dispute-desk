@@ -40,7 +40,7 @@ function fulfillmentChronologyEvents(
   // milestone (the last time it occurred) keeps the chronology honest and
   // uncluttered.
   const latest: Partial<Record<
-    "delivered" | "delivered_to_pickup" | "returned",
+    "delivered" | "collected_at_pickup" | "delivered_to_pickup" | "returned",
     string
   >> = {};
   for (const f of order.fulfillments ?? []) {
@@ -48,7 +48,12 @@ function fulfillmentChronologyEvents(
       const at = e.happenedAt ?? null;
       if (!at) continue;
       const cat = classifyDeliveryEvent(e);
-      if (cat !== "delivered" && cat !== "delivered_to_pickup" && cat !== "returned") {
+      if (
+        cat !== "delivered" &&
+        cat !== "collected_at_pickup" &&
+        cat !== "delivered_to_pickup" &&
+        cat !== "returned"
+      ) {
         continue;
       }
       if (!latest[cat] || at > latest[cat]!) latest[cat] = at;
@@ -60,6 +65,9 @@ function fulfillmentChronologyEvents(
   }
   if (latest.delivered_to_pickup) {
     out.push({ message: "Carrier delivered the shipment to a pickup point for collection.", createdAt: latest.delivered_to_pickup });
+  }
+  if (latest.collected_at_pickup) {
+    out.push({ message: "Recipient collected the shipment at the pickup point (identification required at collection).", createdAt: latest.collected_at_pickup });
   }
   if (latest.delivered) {
     out.push({ message: "Carrier confirmed delivery of the shipment to the recipient.", createdAt: latest.delivered });

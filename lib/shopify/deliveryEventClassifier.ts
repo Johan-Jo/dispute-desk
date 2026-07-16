@@ -21,12 +21,28 @@
  * Categories (deliberately distinct — the distinctions are chargeback-
  * critical; "delivered to a pickup point" is NOT "customer received it",
  * and "returned to sender" must never read as delivered):
- *   - "delivered"          → handed to the recipient / final delivery
- *   - "delivered_to_pickup"→ arrived at / collected at a service point,
- *                            parcel locker, ombud, point relais, etc.
+ *   - "delivered"          → handed to the recipient at their address
+ *   - "collected_at_pickup"→ the CUSTOMER collected the parcel at a
+ *                            service point / ombud (in SE/Nordics this
+ *                            requires photo ID or BankID — confirmed
+ *                            customer receipt, STRONG for INR, but never
+ *                            an "delivered to their address" claim)
+ *   - "delivered_to_pickup"→ arrived at a service point, parcel locker,
+ *                            ombud, point relais — awaiting collection.
+ *                            The customer may never collect it (real
+ *                            case: two return-to-sender cycles).
  *   - "returned"           → returned to sender (NOT delivered)
  *   - "failed"             → delivery attempt failed / could not deliver
  *   - "other"              → in transit, label, notification, etc.
+ *
+ * Collection is detected two ways:
+ *   1. EXPLICIT phrasing ("Picked up by receiver", "uthämtad av
+ *      mottagaren") — COLLECTED_ROOTS, per event.
+ *   2. CONTEXT (PostNord emits a bare "Försändelsen har levererats." when
+ *      the customer collects at an ombud): a final "delivered" event that
+ *      follows a "delivered_to_pickup" arrival with NO new out-for-
+ *      delivery attempt and NO return between them is a collection, not a
+ *      doorstep delivery — applied by classifyDeliveryTimeline.
  *
  * Matching is substring/root based and case-insensitive, tuned to the
  * confirmed PostNord Swedish strings plus the common delivery roots across
@@ -41,6 +57,7 @@
 
 export type DeliveryEventCategory =
   | "delivered"
+  | "collected_at_pickup"
   | "delivered_to_pickup"
   | "returned"
   | "failed"
@@ -54,9 +71,14 @@ export interface DeliveryEventLike {
 
 export interface DeliveryTimelineResult {
   /** Final classification = the latest (by happenedAt) event that is
-   *  delivered / delivered_to_pickup / returned. "other"/"failed"-only
-   *  timelines resolve to null (undelivered). */
-  finalCategory: "delivered" | "delivered_to_pickup" | "returned" | null;
+   *  delivered / collected_at_pickup / delivered_to_pickup / returned.
+   *  "other"/"failed"-only timelines resolve to null (undelivered). */
+  finalCategory:
+    | "delivered"
+    | "collected_at_pickup"
+    | "delivered_to_pickup"
+    | "returned"
+    | null;
   /** happenedAt of the event that set `finalCategory`. */
   finalAt: string | null;
 }
@@ -216,8 +238,99 @@ const PICKUP_ROOTS = [
   "ponto de recolha",
 ];
 
+/** Roots that indicate the CUSTOMER COLLECTED the parcel at a pickup
+ *  point — confirmed customer receipt (SE/Nordic servicepoints require
+ *  photo ID / BankID at the counter). Distinct from PICKUP_ROOTS (arrival
+ *  at the point, collection still pending) and from DELIVERED (doorstep).
+ *  Confirmed live 2026-07-16 on the DHL Freight #12809 acceptance
+ *  shipment: terminal event "Picked up by receiver", statusCode
+ *  "delivered", product "DHL Servicepoint Domestic". Checked before
+ *  PICKUP and DELIVERED. */
+const COLLECTED_ROOTS = [
+  // en
+  "picked up by receiver",
+  "picked up by recipient",
+  "picked up by the receiver",
+  "picked up by the recipient",
+  "collected by receiver",
+  "collected by recipient",
+  "collected by the receiver",
+  "collected by the recipient",
+  // sv
+  "uthämtad av mottagaren",
+  "uthämtat av mottagaren",
+  "hämtats av mottagaren",
+  "hämtat av mottagaren",
+  // no
+  "hentet av mottaker",
+  "hentet av mottakeren",
+  // da
+  "afhentet af modtager",
+  "afhentet af modtageren",
+  // de
+  "vom empfänger abgeholt",
+  "vom empfaenger abgeholt",
+  "durch empfänger abgeholt",
+  "empfänger hat die sendung abgeholt",
+  // nl
+  "opgehaald door de ontvanger",
+  "afgehaald door de ontvanger",
+  "door ontvanger opgehaald",
+  // fr
+  "retiré par le destinataire",
+  "retire par le destinataire",
+  "récupéré par le destinataire",
+  "recupere par le destinataire",
+  // es
+  "recogido por el destinatario",
+  "retirado por el destinatario",
+  // pt
+  "levantado pelo destinatário",
+  "levantado pelo destinatario",
+  "retirado pelo destinatário",
+  "retirado pelo destinatario",
+];
+
+/** Roots that indicate the parcel is OUT FOR (home) DELIVERY. Used only
+ *  by the timeline context rule: a bare "delivered" that follows a
+ *  pickup-point arrival is a COLLECTION unless a new out-for-delivery
+ *  attempt happened in between (i.e. the carrier redirected the parcel
+ *  back onto a van for a doorstep delivery). */
+const OUT_FOR_DELIVERY_ROOTS = [
+  // en
+  "out for delivery",
+  // sv (PostNord: "Lastad på bil, utkörning påbörjad.")
+  "utkörning",
+  "utkorning",
+  "lastad på bil",
+  "lastad pa bil",
+  "ut för leverans",
+  // no / da
+  "på vei til deg",
+  "ute til levering",
+  "under udbringning",
+  "til levering",
+  // de
+  "in zustellung",
+  "zustellung heute",
+  "zustellfahrzeug",
+  // nl
+  "in bezorging",
+  "wordt bezorgd",
+  // fr
+  "en cours de livraison",
+  "en cours d'acheminement pour livraison",
+  // es
+  "en reparto",
+  "salida a reparto",
+  // pt
+  "saiu para entrega",
+  "em distribuição",
+  "em distribuicao",
+];
+
 /** Roots that indicate FINAL DELIVERY to the recipient. Checked last, and
- *  only after RETURNED/PICKUP have been ruled out for that event. */
+ *  only after RETURNED/COLLECTED/PICKUP have been ruled out for that event. */
 const DELIVERED_ROOTS = [
   "delivered",
   "levererats",
@@ -267,6 +380,10 @@ export function classifyDeliveryEvent(
   const msg = (event.message ?? "").toLowerCase();
   if (msg) {
     if (containsAny(msg, RETURNED_ROOTS)) return "returned";
+    // Explicit customer collection ("Picked up by receiver", "uthämtad av
+    // mottagaren") — confirmed receipt, checked before PICKUP so the
+    // arrival wording never masks the collection.
+    if (containsAny(msg, COLLECTED_ROOTS)) return "collected_at_pickup";
     // Pickup point AND neighbour/safe-place both bucket as
     // "delivered_to_pickup": the parcel left the carrier's control but did
     // NOT reach the cardholder's own hands. Both must win over a bare
@@ -296,21 +413,56 @@ export function classifyDeliveryEvent(
 export function classifyDeliveryTimeline(
   events: DeliveryEventLike[] | null | undefined,
 ): DeliveryTimelineResult {
+  const classified = (events ?? []).map((e) => ({
+    cat: classifyDeliveryEvent(e),
+    at: e.happenedAt ?? null,
+    msg: (e.message ?? "").toLowerCase(),
+  }));
+
   let finalCategory: DeliveryTimelineResult["finalCategory"] = null;
   let finalAt: string | null = null;
-  for (const e of events ?? []) {
-    const cat = classifyDeliveryEvent(e);
-    if (cat !== "delivered" && cat !== "delivered_to_pickup" && cat !== "returned") {
+  for (const e of classified) {
+    if (
+      e.cat !== "delivered" &&
+      e.cat !== "collected_at_pickup" &&
+      e.cat !== "delivered_to_pickup" &&
+      e.cat !== "returned"
+    ) {
       continue;
     }
-    const at = e.happenedAt ?? "";
+    const at = e.at ?? "";
     // Later event (by ISO timestamp) wins. A dated event always beats an
     // undated one; among undated, last-seen wins (stable order preserved).
     const currentAt = finalAt ?? "";
     if (finalCategory === null || at >= currentAt) {
-      finalCategory = cat;
-      finalAt = e.happenedAt ?? null;
+      finalCategory = e.cat;
+      finalAt = e.at;
     }
   }
+
+  // CONTEXT RULE (collection at a pickup point): PostNord et al. emit a
+  // bare "levererats"/"delivered" when the CUSTOMER collects at the
+  // service point. If the final "delivered" event follows a pickup-point
+  // arrival and the parcel was never sent back out for a doorstep attempt
+  // (no out-for-delivery marker, no return) between the two, the delivery
+  // is a collection — confirmed customer receipt, but NOT delivery to
+  // their address. Applied only to dated events (undated events cannot be
+  // ordered, so we stay conservative and leave "delivered" as-is).
+  if (finalCategory === "delivered" && finalAt) {
+    const pickupBefore = classified
+      .filter((e) => e.cat === "delivered_to_pickup" && e.at && e.at < finalAt!)
+      .sort((a, b) => (a.at! < b.at! ? 1 : -1))[0];
+    if (pickupBefore) {
+      const intervening = classified.some(
+        (e) =>
+          e.at &&
+          e.at > pickupBefore.at! &&
+          e.at < finalAt! &&
+          (e.cat === "returned" || containsAny(e.msg, OUT_FOR_DELIVERY_ROOTS)),
+      );
+      if (!intervening) finalCategory = "collected_at_pickup";
+    }
+  }
+
   return { finalCategory, finalAt };
 }

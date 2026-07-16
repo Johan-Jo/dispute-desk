@@ -116,3 +116,21 @@ describe("collectFulfillmentEvidence — deliveredToVerifiedAddress (rubric #9)"
     expect(data.deliveredToVerifiedAddress).toBe(false);
   });
 });
+
+describe("collectFulfillmentEvidence — collection at pickup point (ID-verified receipt)", () => {
+  const COLLECTION_SEQUENCE = [
+    PICKUP, // 2026-07-01 arrival at serviceställe
+    { status: "FAILURE", happenedAt: "2026-07-06T18:16:00Z", message: "Försändelsen har levererats." }, // customer collects
+  ];
+
+  it("counts as confirmed receipt (moderate tier + receipt date) but NEVER as address delivery", async () => {
+    const data = await sectionData(
+      ctx({ fulfillments: [evtFulfillment(COLLECTION_SEQUENCE)] as OrderFulfillment[] } as Partial<OrderDetailNode>),
+    );
+    expect(data.proofType).toBe("delivered_confirmed"); // receipt confirmed
+    expect(data.deliveredAt).toBe("2026-07-06T18:16:00Z"); // collection date
+    expect(data.deliveredToVerifiedAddress).toBe(false); // rubric #9 stays off
+    const f = (data.fulfillments as Array<Record<string, unknown>>)[0];
+    expect((f.carrierTracking as Record<string, unknown>).deliveryStatus).toBe("CollectedAtPickup");
+  });
+});

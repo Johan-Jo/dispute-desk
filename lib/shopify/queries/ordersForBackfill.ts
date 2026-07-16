@@ -165,10 +165,21 @@ export const ORDERS_FOR_BACKFILL_QUERY = /* GraphQL */ `
           # first: 5 (was 1) so a multi-shipment order surfaces its delivered
           # shipments — we take the best (earliest confirmed) delivery.
           fulfillments(first: 5) {
+            id
             createdAt
             displayStatus
             status
             deliveredAt
+            # Per-shipment tracking identity — persisted one-row-per-entry
+            # to shopify_fulfillment_trackings (carrier-delivery plan PR 1A)
+            # so the carrier-API adapter layer can resolve shipments without
+            # a second GraphQL round-trip. first: 10 mirrors the pack-build
+            # query (orders.ts); most fulfillments carry 0-2 entries.
+            trackingInfo(first: 10) {
+              company
+              number
+              url
+            }
             # NEWEST events first — a parcel can accumulate 20+ events
             # (return-to-sender then re-delivery), and the LATEST delivery
             # event is the one that decides final state. Default order is
@@ -272,6 +283,9 @@ export interface RawBackfillOrder {
   billingAddress?: { countryCode: string | null; zip: string | null } | null;
   customer: { id: string | null; email: string | null } | null;
   fulfillments: Array<{
+    /** gid://shopify/Fulfillment/<n> — key for per-shipment persistence.
+     *  Optional so pre-PR-1A fixtures keep parsing. */
+    id?: string | null;
     createdAt: string | null;
     displayStatus: string | null;
     status?: string | null;
@@ -279,6 +293,12 @@ export interface RawBackfillOrder {
      *  any carrier once the shipment is delivered — NOT dependent on a
      *  tracking app. Null while in transit / label-only. */
     deliveredAt?: string | null;
+    /** Per-shipment tracking entries (carrier-delivery plan PR 1A). */
+    trackingInfo?: Array<{
+      company: string | null;
+      number: string | null;
+      url: string | null;
+    }> | null;
     events?: {
       edges: Array<{
         node: {
@@ -663,11 +683,15 @@ export function deriveNativeDelivery(raw: RawBackfillOrder): {
   let bestStatus: string | null = null;
   let deliveredAt: string | null = null;
   let signedBy: string | null = null;
-  // Rank so the strongest state across fulfillments wins.
+  // Rank so the strongest state across fulfillments wins. CollectedAtPickup
+  // (customer collected at a service point — ID-verified in SE/Nordics) is
+  // confirmed customer RECEIPT, ranked just below a doorstep Delivered;
+  // DeliveredToPickup is only an arrival, the customer may never collect.
   const rank: Record<string, number> = {
     Returned: 1,
     DeliveredToPickup: 2,
-    Delivered: 3,
+    CollectedAtPickup: 3,
+    Delivered: 4,
   };
   const rankOf = (s: string | null) => (s ? rank[s] ?? 0 : 0);
 
@@ -685,6 +709,9 @@ export function deriveNativeDelivery(raw: RawBackfillOrder): {
     if (timeline.finalCategory === "delivered") {
       status = "Delivered";
       at = at ?? timeline.finalAt;
+    } else if (timeline.finalCategory === "collected_at_pickup" && status !== "Delivered") {
+      status = "CollectedAtPickup";
+      at = timeline.finalAt;
     } else if (timeline.finalCategory === "delivered_to_pickup" && status !== "Delivered") {
       status = "DeliveredToPickup";
     } else if (timeline.finalCategory === "returned" && status !== "Delivered") {
@@ -693,7 +720,11 @@ export function deriveNativeDelivery(raw: RawBackfillOrder): {
 
     if (rankOf(status) > rankOf(bestStatus)) {
       bestStatus = status;
-      deliveredAt = status === "Delivered" ? at : null;
+      // Both a doorstep delivery and an ID-verified collection are a
+      // carrier-confirmed customer-receipt timestamp (the Insights KPI
+      // counts delivery_status='Delivered' OR delivered_at_tracking).
+      deliveredAt =
+        status === "Delivered" || status === "CollectedAtPickup" ? at : null;
     }
     // Signature capture — free-text on the event message/status.
     if (!signedBy) signedBy = extractNativeSignature(events);
@@ -767,6 +798,114 @@ export function flattenTrackingForRow(raw: RawBackfillOrder): {
     signed_by_name: signedByName,
     tracking_source: trackingSource,
   };
+}
+
+/** Row shape for `shopify_fulfillment_trackings` — the Shopify-sourced
+ *  columns only. Carrier-lookup cache columns (last_carrier_lookup_*,
+ *  effective_tracking_id, adapter/classification versions) are written by
+ *  the adapter layer and deliberately absent here so re-ingest upserts
+ *  can never clobber them. */
+export interface ShopifyFulfillmentTrackingRow {
+  shop_id: string;
+  shopify_order_id: string;
+  shopify_fulfillment_id: string;
+  company_raw: string | null;
+  tracking_number: string | null;
+  tracking_url: string | null;
+  tracking_key: string;
+  fulfillment_status: string | null;
+  shipment_status: string | null;
+  terminal_at: string | null;
+  tracking_source: string | null;
+  updated_at: string;
+}
+
+/** Pure fan-out: one row per (fulfillment, tracking entry) for
+ *  `shopify_fulfillment_trackings` (carrier-delivery plan PR 1A §5.6).
+ *
+ *  Unlike `deriveNativeDelivery`/`flattenTrackingForRow`, which collapse
+ *  all fulfillments into one best per-order signal, this PRESERVES the
+ *  order → fulfillment → tracking-entry relationship so the carrier
+ *  adapter layer can resolve each shipment independently.
+ *
+ *  - A fulfillment with tracking entries emits one row per entry
+ *    (deduped on tracking_key: number, else url).
+ *  - A fulfillment with NO tracking entries still emits one row
+ *    (tracking_key '') so its per-shipment classification is persisted.
+ *  - Fulfillments without an id (old fixtures, defensive) are skipped —
+ *    the table is keyed on the Shopify fulfillment GID. */
+export function normalizeFulfillmentTrackings(
+  shopId: string,
+  raw: RawBackfillOrder,
+): ShopifyFulfillmentTrackingRow[] {
+  const rows: ShopifyFulfillmentTrackingRow[] = [];
+  const nowIso = new Date().toISOString();
+
+  for (const f of raw.fulfillments ?? []) {
+    if (!f.id) continue;
+
+    // Per-shipment classification from the event message timeline —
+    // same semantics as deriveNativeDelivery, but NOT collapsed.
+    const events = (f.events?.edges ?? []).map((e) => e.node);
+    const timeline = classifyDeliveryTimeline(events);
+    let shipmentStatus: string | null = null;
+    let terminalAt: string | null = null;
+    if (f.deliveredAt || timeline.finalCategory === "delivered") {
+      shipmentStatus = "Delivered";
+      terminalAt = f.deliveredAt ?? timeline.finalAt;
+    } else if (timeline.finalCategory === "collected_at_pickup") {
+      shipmentStatus = "CollectedAtPickup";
+      terminalAt = timeline.finalAt;
+    } else if (timeline.finalCategory === "delivered_to_pickup") {
+      shipmentStatus = "DeliveredToPickup";
+      terminalAt = timeline.finalAt;
+    } else if (timeline.finalCategory === "returned") {
+      shipmentStatus = "Returned";
+      terminalAt = timeline.finalAt;
+    }
+
+    const base = {
+      shop_id: shopId,
+      shopify_order_id: raw.id,
+      shopify_fulfillment_id: f.id,
+      fulfillment_status: f.displayStatus ?? null,
+      shipment_status: shipmentStatus,
+      terminal_at: terminalAt,
+      tracking_source: shipmentStatus ? "shopify_native" : null,
+      updated_at: nowIso,
+    };
+
+    const entries = (f.trackingInfo ?? []).filter(
+      (t) => (t.number ?? "").trim() || (t.url ?? "").trim(),
+    );
+    if (entries.length === 0) {
+      rows.push({
+        ...base,
+        company_raw: null,
+        tracking_number: null,
+        tracking_url: null,
+        tracking_key: "",
+      });
+      continue;
+    }
+
+    const seenKeys = new Set<string>();
+    for (const t of entries) {
+      const number = (t.number ?? "").trim() || null;
+      const url = (t.url ?? "").trim() || null;
+      const key = number ?? url ?? "";
+      if (seenKeys.has(key)) continue; // Shopify sometimes repeats an entry
+      seenKeys.add(key);
+      rows.push({
+        ...base,
+        company_raw: (t.company ?? "").trim() || null,
+        tracking_number: number,
+        tracking_url: url,
+        tracking_key: key,
+      });
+    }
+  }
+  return rows;
 }
 
 export function pickInitialRisk(
