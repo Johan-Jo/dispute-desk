@@ -90,10 +90,18 @@ export const ORDER_FOR_INGEST_QUERY = /* GraphQL */ `
       # for every carrier (PostNord, Bring, DHL) with no tracking app;
       # events carry the signature message when the carrier reports one.
       fulfillments(first: 5) {
+        id
         createdAt
         displayStatus
         status
         deliveredAt
+        # Per-shipment tracking identity — persisted to
+        # shopify_fulfillment_trackings (carrier-delivery plan PR 1A).
+        trackingInfo(first: 10) {
+          company
+          number
+          url
+        }
         # Newest events first — see ordersForBackfill.ts: a long
         # return-then-redeliver timeline truncates away the final delivery
         # under the default oldest-first order.

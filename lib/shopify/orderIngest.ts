@@ -22,8 +22,12 @@
 
 import { getShopBackgroundSession } from "@/lib/shopify/sessions/getShopBackgroundSession";
 import { fetchOrderForIngest } from "@/lib/shopify/queries/orderForIngest";
-import { normalizeBackfillOrder } from "@/lib/shopify/queries/ordersForBackfill";
+import {
+  normalizeBackfillOrder,
+  normalizeFulfillmentTrackings,
+} from "@/lib/shopify/queries/ordersForBackfill";
 import { persistOrders, type PersistOrdersResult } from "@/lib/shopify/persistOrders";
+import { persistFulfillmentTrackings } from "@/lib/shopify/persistFulfillmentTrackings";
 import { upsertSignalRow } from "@/lib/fraudIntel/signalWriter";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { getServiceClient } from "@/lib/supabase/server";
@@ -80,6 +84,19 @@ export async function normalizeOrderIngest(
   });
 
   const persistResult = await persistOrders(shopId, [order], assessments);
+
+  // Carrier plan PR 1A: per-shipment tracking rows. Auxiliary — a
+  // failure never breaks the ingest contract (mirrors the signal-row
+  // handling below).
+  try {
+    await persistFulfillmentTrackings(
+      normalizeFulfillmentTrackings(shopId, raw),
+    );
+  } catch (err) {
+    console.warn(
+      `[carriers] fulfillment-tracking upsert failed for ${raw.id}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
 
   // PR-D: always upsert the signal row — even on skipped_unchanged we
   // refresh the parser snapshot in case PARSER_VERSION bumped or a

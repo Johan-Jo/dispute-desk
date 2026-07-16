@@ -39,8 +39,10 @@ import { getShopBackgroundSession } from "@/lib/shopify/sessions/getShopBackgrou
 import {
   fetchOrdersBackfillPage,
   normalizeBackfillOrder,
+  normalizeFulfillmentTrackings,
 } from "@/lib/shopify/queries/ordersForBackfill";
 import { persistOrders } from "@/lib/shopify/persistOrders";
+import { persistFulfillmentTrackings } from "@/lib/shopify/persistFulfillmentTrackings";
 import { upsertSignalRow } from "@/lib/fraudIntel/signalWriter";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { enqueueJob } from "@/lib/jobs/claimJobs";
@@ -244,6 +246,17 @@ export async function backfillShopOrders(
         normalized.map((n) => n.order),
         normalized.flatMap((n) => n.assessments),
       );
+      // Carrier plan PR 1A: per-shipment tracking rows. Auxiliary —
+      // a failure never breaks the orders ingest contract.
+      try {
+        await persistFulfillmentTrackings(
+          page.orders.flatMap((o) => normalizeFulfillmentTrackings(shopId, o)),
+        );
+      } catch (err) {
+        console.warn(
+          `[carriers] fulfillment-tracking upsert failed (page at ${processed}): ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
       // PR-D: parse + upsert the signal row per order. Done inside
       // the page loop so failures are isolated; the page total is
       // unaffected even if one signal write errors.
