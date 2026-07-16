@@ -137,3 +137,35 @@ describe("classifyDeliveryTimeline — the real cay-collective order #12936", ()
     expect(classifyDeliveryTimeline([]).finalCategory).toBeNull();
   });
 });
+
+describe("classifyDeliveryTimeline — the real DHL Freight #12809 acceptance shipment (2026-07-16)", () => {
+  // Verbatim from the live DHL Unified Tracking API: the terminal event
+  // carries statusCode "delivered" but the message is a SERVICEPOINT
+  // collection ("Picked up by receiver", product "DHL Servicepoint
+  // Domestic"). Must classify as delivered_to_pickup — never as final
+  // delivery to the customer's own address.
+  it("classifies 'Picked up by receiver' as pickup despite the delivered status code", () => {
+    const r = classifyDeliveryTimeline([
+      ev("Picked up by receiver", "2026-06-04T18:12:00", "delivered"),
+      ev("Receiver notified", "2026-06-04T10:34:00", "transit"),
+      ev("Received at terminal", "2026-06-04T01:58:26", "transit"),
+      ev("Received at terminal", "2026-06-03T16:08:08", "transit"),
+      ev("Consignment created", "2026-06-03T12:25:59", "pre-transit"),
+    ]);
+    expect(r.finalCategory).toBe("delivered_to_pickup");
+    expect(r.finalAt).toBe("2026-06-04T18:12:00");
+  });
+
+  it("classifies recipient-collection variants as pickup", () => {
+    expect(classifyDeliveryEvent(ev("Collected by recipient"))).toBe("delivered_to_pickup");
+    expect(classifyDeliveryEvent(ev("Picked up by the recipient"))).toBe("delivered_to_pickup");
+    expect(classifyDeliveryEvent(ev("Uthämtad av mottagaren"))).toBe("delivered_to_pickup");
+  });
+
+  it("does NOT misclassify an origin pickup from the shipper", () => {
+    // "Picked up" alone (carrier collecting from the SHIPPER) must not
+    // read as a receiver collection.
+    expect(classifyDeliveryEvent(ev("Picked up", null, "transit"))).not.toBe("delivered_to_pickup");
+    expect(classifyDeliveryEvent(ev("Shipment picked up by DHL"))).not.toBe("delivered_to_pickup");
+  });
+});
