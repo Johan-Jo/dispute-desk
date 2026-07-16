@@ -178,6 +178,23 @@ const PICKUP_ROOTS = [
   "en oficina",
   "punto de acceso",
   "depositado en",
+  // DHL Freight servicepoint collection (confirmed live 2026-07-16 on the
+  // #12809 acceptance shipment: terminal event "Picked up by receiver",
+  // statusCode "delivered", product "DHL Servicepoint Domestic" — the
+  // RECEIVER collecting at a servicepoint, not delivery to their address).
+  // Without these roots the message goes unmatched and the structured
+  // "delivered" code overclaims final delivery.
+  "picked up by receiver",
+  "picked up by recipient",
+  "picked up by the receiver",
+  "picked up by the recipient",
+  "collected by receiver",
+  "collected by recipient",
+  "collected by the receiver",
+  "collected by the recipient",
+  "uthämtad av mottagaren",
+  "uthämtat av mottagaren",
+  "hämtats av mottagaren",
   // UPS / FedEx carrier pickup points (the "Delivered to a UPS Access
   // Point" trap + FedEx hold-at-location)
   "access point",
