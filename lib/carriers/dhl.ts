@@ -152,6 +152,10 @@ export function normalizeDhlShipment(
   if (timeline.finalCategory === "delivered") {
     deliveryStatus = "Delivered";
     terminalAt = timeline.finalAt;
+  } else if (timeline.finalCategory === "collected_at_pickup") {
+    // "Picked up by receiver" — ID-verified collection at a servicepoint.
+    deliveryStatus = "CollectedAtPickup";
+    terminalAt = timeline.finalAt;
   } else if (timeline.finalCategory === "delivered_to_pickup") {
     deliveryStatus = "DeliveredToPickup";
     terminalAt = timeline.finalAt;

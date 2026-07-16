@@ -103,12 +103,12 @@ describe("dhlAdapter.fetchTimeline", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("success: pickup-point delivery normalizes to DeliveredToPickup (the #12809 shape)", async () => {
+  it("success: 'Picked up by receiver' normalizes to CollectedAtPickup — ID-verified collection (the #12809 shape)", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(shipmentFixture()));
     const r = await dhlAdapter.fetchTimeline(TRACKING);
     expect(r.status).toBe("success");
     if (r.status === "success") {
-      expect(r.shipment.deliveryStatus).toBe("DeliveredToPickup");
+      expect(r.shipment.deliveryStatus).toBe("CollectedAtPickup");
       expect(r.shipment.terminalAt).toBe("2026-06-04T14:31:00");
       expect(r.shipment.events).toHaveLength(2);
     }
