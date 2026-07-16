@@ -81,6 +81,68 @@ describe("buildDeliveryPresentation", () => {
     ]);
   });
 
+  it("recovers the number from a 17track hash URL when Shopify's number is empty (dispute c89276b6)", () => {
+    // Real prod shape 2026-07-16: PostNord SE fulfillment with number ""
+    // but a 17track URL carrying the number in the hash fragment.
+    const p = buildDeliveryPresentation({
+      proofType: "delivered_unverified",
+      fulfillments: [
+        {
+          tracking: [
+            {
+              carrier: "PostNord SE",
+              number: "",
+              url: "https://t.17track.net/en#nums=LA113743680SE&fc=19241",
+            },
+          ],
+        },
+      ],
+    });
+    expect(p.trackingLinks).toEqual([
+      {
+        carrier: "PostNord SE",
+        number: "LA113743680SE",
+        url: "https://t.17track.net/en#nums=LA113743680SE&fc=19241",
+      },
+    ]);
+  });
+
+  it("recovers the number from a query param and takes the first of a comma list", () => {
+    const p = buildDeliveryPresentation({
+      fulfillments: [
+        {
+          tracking: [
+            {
+              carrier: "DHL",
+              number: "",
+              url: "https://www.dhl.com/se-en/home/tracking.html?tracking-id=5194515796,9999999999",
+            },
+          ],
+        },
+      ],
+    });
+    expect(p.trackingLinks[0]?.number).toBe("5194515796");
+  });
+
+  it("leaves number null when the URL carries no known tracking param", () => {
+    const p = buildDeliveryPresentation({
+      fulfillments: [
+        {
+          tracking: [
+            {
+              carrier: "PostNord SE",
+              number: "",
+              url: "https://tracking.postnord.com/se/",
+            },
+          ],
+        },
+      ],
+    });
+    expect(p.trackingLinks).toEqual([
+      { carrier: "PostNord SE", number: null, url: "https://tracking.postnord.com/se/" },
+    ]);
+  });
+
   it("rejects non-http tracking urls but keeps the number", () => {
     const p = buildDeliveryPresentation({
       fulfillments: [

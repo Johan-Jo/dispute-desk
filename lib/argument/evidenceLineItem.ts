@@ -29,6 +29,7 @@ import {
   categorizeEvidenceField,
   type EvidenceCategory,
 } from "./canonicalEvidence";
+import { numberFromTrackingUrl } from "./deliveryPresentation";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type { EvidenceFact } from "@/lib/defence/types";
 import {
@@ -1100,9 +1101,14 @@ function buildDeliveryFacts(
     for (const t of tracking) {
       if (!t || typeof t !== "object") continue;
       const tr = t as Record<string, unknown>;
-      const num = typeof tr.number === "string" && tr.number.trim() ? tr.number.trim() : null;
       const url =
         typeof tr.url === "string" && /^https?:\/\//i.test(tr.url.trim()) ? tr.url.trim() : null;
+      // Shopify fulfillments sometimes carry an EMPTY number next to a
+      // tracking URL that embeds it (PostNord SE via 17track) — recover
+      // it from the URL so the facts line still shows the number.
+      const num =
+        (typeof tr.number === "string" && tr.number.trim() ? tr.number.trim() : null) ??
+        (url ? numberFromTrackingUrl(url) : null);
       const car = typeof tr.carrier === "string" && tr.carrier.trim() ? tr.carrier.trim() : null;
       if (trackingNumber == null) trackingNumber = num;
       if (trackingUrl == null) trackingUrl = url;
