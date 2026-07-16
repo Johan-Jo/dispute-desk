@@ -850,7 +850,7 @@ Both are required; neither is sufficient alone. Delivery dedup alone fails when 
 
 - `DISPUTE_OPENED` → `evaluateRules` → `runAutomationPipeline` → maybe send review alert (deferred when a build was enqueued).
 - `SUBMISSION_CONFIRMED` → `claimAndSendDeferredNewDisputeAlert` (auto variant).
-- `OUTCOME_DETECTED` → `sendOutcomePostedAlert` (won / lost / accepted variant).
+- `OUTCOME_DETECTED` → `sendOutcomePostedAlert` (won / lost / accepted variant). The email is **phase-aware**: the dispatcher forwards `event.context.phase`, and when the case resolved while still an **inquiry**, the copy says "dispute" (subject + heading) and the body states explicitly that the case was an inquiry — an inquiry must never be announced as "You won this chargeback" (K-Collective #12809, 2026-07-16). Unknown/null phase falls back to the chargeback wording, matching `phaseUtils`' default. All 6 locales carry inquiry variants; preview all wordings with `scripts/preview-outcome-emails.mjs`.
 - `STATUS_CHANGED` / `DUE_DATE_CHANGED` / `DISPUTE_CLOSED` → no per-event downstream effect today; the ledger entry from the diff engine is sufficient. (`DISPUTE_CLOSED` always fires alongside `OUTCOME_DETECTED`, so the email is keyed off the latter to avoid double-firing.)
 
 Each effect is wrapped in `withEffectDedup`, which writes the `audit_events` claim row first. Unique-violation (Postgres 23505) → effect skipped (`already_applied`). Otherwise the effect runs.

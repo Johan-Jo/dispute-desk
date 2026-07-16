@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// Preview the three outcome-posted email variants by sending one of
-// each to a hardcoded recipient. Uses Resend directly with the same
-// HTML the production helper produces — no DB writes, no audit events,
+// Preview the outcome-posted email variants (chargeback + inquiry
+// wording, won/lost/accepted each) by sending one of each to a
+// hardcoded recipient. Uses Resend directly with the same HTML the
+// production helper produces — no DB writes, no audit events,
 // no shop_setup lookup. Safe to run repeatedly.
 //
 // Usage:
@@ -65,6 +66,44 @@ const STRINGS = {
     cta: "View case record",
     resultLine: "Result: Closed · No defence submitted",
   },
+  // Inquiry-phase wording — says "dispute", never "chargeback", and the
+  // body states explicitly that the case was an inquiry.
+  inquiry_won: {
+    subject: ({ orderName }) =>
+      `You won the dispute on ${orderName ?? "dispute"}`,
+    heading: "You won this dispute",
+    body: [
+      "Good news — this case was an inquiry, not a chargeback: the payment provider asked for more information before deciding whether to raise a formal chargeback. Your response satisfied them, and the case has been resolved in your favour.",
+      "The disputed amount remains with you, and the case closed without escalating to a chargeback.",
+      "Your case record stays in DisputeDesk, including the evidence submitted, timeline, and outcome, so your team can review what worked and reuse the pattern for future disputes.",
+    ],
+    amountLabel: "Amount protected",
+    cta: "View winning case",
+    resultLine: "Result: Inquiry resolved in your favour · Funds retained",
+  },
+  inquiry_lost: {
+    subject: ({ orderName }) =>
+      `This dispute was lost — ${orderName ?? "dispute"}`,
+    heading: "This dispute was not won",
+    body: [
+      "This case was an inquiry, not a chargeback: the payment provider asked for more information before making a decision. The case has been resolved against you, and the disputed amount has been deducted from your payout.",
+      "This decision is final for this case, so there is no further action to take. The case will remain in DisputeDesk with the submitted evidence, timeline, and outcome so your team can review what happened and identify ways to strengthen future responses.",
+    ],
+    amountLabel: "Amount lost",
+    cta: "Review the case",
+    resultLine: "Result: Resolved against you · Funds deducted",
+  },
+  inquiry_accepted: {
+    subject: ({ orderName }) => `Dispute closed on ${orderName ?? "dispute"}`,
+    heading: "This dispute has closed",
+    body: [
+      "This case was an inquiry, not a chargeback: the payment provider asked for more information before deciding whether to escalate. The case has now closed without a submitted response, and the disputed amount has settled with the customer.",
+      "There is nothing further to do on this case, but DisputeDesk will keep the record available so your team can review the timeline, see what evidence was available, and improve future dispute handling.",
+    ],
+    amountLabel: "Amount settled with customer",
+    cta: "View case record",
+    resultLine: "Result: Closed · No response submitted",
+  },
 };
 
 function formatCurrency(amount, currency) {
@@ -79,8 +118,11 @@ function formatCurrency(amount, currency) {
 }
 
 function renderHtml({ variant, ctx }) {
-  const accent =
-    variant === "won" ? "#0C5132" : variant === "lost" ? "#8B1F19" : "#4A4A4A";
+  const accent = variant.endsWith("won")
+    ? "#0C5132"
+    : variant.endsWith("lost")
+      ? "#8B1F19"
+      : "#4A4A4A";
   const v = STRINGS[variant];
   const s = STRINGS.shared;
   const amountStr = formatCurrency(ctx.amount, ctx.currency);
@@ -160,6 +202,33 @@ const VARIANTS = [
       reason: "Duplicate charge",
       amount: 95,
       currency: "USD",
+    },
+  },
+  {
+    variant: "inquiry_won",
+    ctx: {
+      orderName: "#12809",
+      reason: "Refund not processed",
+      amount: 1747.14,
+      currency: "SEK",
+    },
+  },
+  {
+    variant: "inquiry_lost",
+    ctx: {
+      orderName: "#12810",
+      reason: "Product not received",
+      amount: 289,
+      currency: "SEK",
+    },
+  },
+  {
+    variant: "inquiry_accepted",
+    ctx: {
+      orderName: "#12811",
+      reason: "Unrecognized charge",
+      amount: 412.5,
+      currency: "SEK",
     },
   },
 ];
