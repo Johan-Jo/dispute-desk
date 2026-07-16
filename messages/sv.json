@@ -846,7 +846,8 @@
       "device_session_consistency": "Från enhetens fingeravtryck",
       "fraud_risk_screening": "Från Shopifys riskmotor",
       "customer_account_info": "Från Shopify-kunddata",
-      "default": "Från butiksdata"
+      "default": "Från butiksdata",
+      "carrier_api": "Från transportörens spårningssystem ({carrier})"
     },
     "fieldAction": {
       "default": {
@@ -1682,7 +1683,16 @@
       "factsNotDelivered": "Leverans ej bekräftad",
       "factsSignedBy": "Signerad av {name}",
       "factsNotDeliveredEta": "Leverans ej bekräftad (ber. {date})",
-      "factsCarrier": "{carrier}"
+      "factsCarrier": "{carrier}",
+      "titleDelivered": "Levererad",
+      "titleDeliveredOn": "Levererad {date}",
+      "titleSigned": "Levererad och kvitterad",
+      "titleSignedOn": "Levererad och kvitterad {date}",
+      "titleCollected": "Uthämtad av kunden på utlämningsstället",
+      "titleCollectedOn": "Uthämtad av kunden på utlämningsstället ({date})",
+      "titleAwaitingCollection": "På utlämningsstället — väntar på att kunden hämtar ut",
+      "factsCollected": "Uthämtad på utlämningsstället {date} — legitimation krävs vid uthämtning",
+      "factsAwaitingCollection": "På utlämningsstället — ännu inte uthämtad"
     },
     "gorgiasComms": {
       "title": "Kundsupportkonversationer",
@@ -1775,6 +1785,14 @@
         "submit": "Skicka rapport",
         "cancel": "Avbryt"
       }
+    },
+    "refundStatus": {
+      "titleIssued": "Återbetalning genomförd",
+      "titleNone": "Ingen återbetalning genomförd",
+      "factsIssued": "{amount} {currency} återbetalades {date}",
+      "factsIssuedNoDate": "{amount} {currency} återbetalades",
+      "factsIssuedDateOnly": "Återbetalades {date}",
+      "factsNoReturn": "Kunden har aldrig påbörjat en retur"
     }
   },
   "disputeReasons": {

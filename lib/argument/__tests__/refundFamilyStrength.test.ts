@@ -86,3 +86,39 @@ describe("refund-family rollup (CREDIT_NOT_PROCESSED)", () => {
     expect(r.overall).toBe("weak");
   });
 });
+
+describe("improvement hint never contradicts a collected signal (cay cc86296d, 2026-07-16)", () => {
+  it("does NOT recommend a refund-signal sibling when the refund signal is already Strong", () => {
+    // Live bug: the hero said "Add Refund record to strengthen your case"
+    // while "Refund status · Strong" sat in the list below it. Scoring
+    // keeps the best row per signal, so the suggestion could never move
+    // the score either.
+    const checklist = [
+      available("order_confirmation"),
+      available("refund_record"),
+      { field: "no_return_initiated", status: "missing", collectionType: "manual" } as unknown as ChecklistItemV2,
+    ];
+    const source = byField({
+      order_confirmation: { orderId: "1" },
+      refund_record: { refundStatus: "processed", amount: "249.00", currency: "SEK" },
+    });
+    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source);
+    expect(r.improvementHintI18n).toBeNull();
+  });
+
+  it("still recommends a missing field of an UNCOVERED signal", () => {
+    const checklist = [
+      available("order_confirmation"),
+      available("refund_record"),
+      { field: "delivery_proof", status: "missing", collectionType: "manual" } as unknown as ChecklistItemV2,
+    ];
+    const source = byField({
+      order_confirmation: { orderId: "1" },
+      refund_record: { refundStatus: "processed", amount: "249.00", currency: "SEK" },
+    });
+    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source);
+    expect(r.improvementHintI18n).not.toBeNull();
+    const label = r.improvementHintI18n?.params?.label as { key?: string };
+    expect(JSON.stringify(label)).toContain("delivery");
+  });
+});

@@ -1437,7 +1437,8 @@
       "auto_policy": "Aus Shop-Richtlinien",
       "auto_ipinfo": "Aus IP-Intelligenz",
       "manual_upload": "Manuell hochgeladen",
-      "unavailable_from_source": "Nicht aus Quelle verfügbar"
+      "unavailable_from_source": "Nicht aus Quelle verfügbar",
+      "carrier_api": "Aus dem Tracking-System des Versanddienstleisters ({carrier})"
     },
     "fieldAction": {
       "default": {
@@ -1682,7 +1683,16 @@
       "factsNotDelivered": "Zustellung nicht bestätigt",
       "factsSignedBy": "Unterschrieben von {name}",
       "factsNotDeliveredEta": "Zustellung nicht bestätigt (vsl. {date})",
-      "factsCarrier": "{carrier}"
+      "factsCarrier": "{carrier}",
+      "titleDelivered": "Zugestellt",
+      "titleDeliveredOn": "Zugestellt am {date}",
+      "titleSigned": "Zugestellt & quittiert",
+      "titleSignedOn": "Zugestellt & quittiert am {date}",
+      "titleCollected": "Vom Kunden an der Abholstelle abgeholt",
+      "titleCollectedOn": "Vom Kunden an der Abholstelle abgeholt ({date})",
+      "titleAwaitingCollection": "An der Abholstelle — Abholung durch den Kunden ausstehend",
+      "factsCollected": "An der Abholstelle abgeholt am {date} — Ausweis bei Abholung erforderlich",
+      "factsAwaitingCollection": "An der Abholstelle — noch nicht abgeholt"
     },
     "gorgiasComms": {
       "title": "Kundensupport-Konversationen",
@@ -1775,6 +1785,14 @@
         "submit": "Meldung senden",
         "cancel": "Abbrechen"
       }
+    },
+    "refundStatus": {
+      "titleIssued": "Rückerstattung erfolgt",
+      "titleNone": "Keine Rückerstattung erfolgt",
+      "factsIssued": "{amount} {currency} erstattet am {date}",
+      "factsIssuedNoDate": "{amount} {currency} erstattet",
+      "factsIssuedDateOnly": "Erstattet am {date}",
+      "factsNoReturn": "Der Kunde hat nie eine Rücksendung eingeleitet"
     }
   },
   "disputeReasons": {
