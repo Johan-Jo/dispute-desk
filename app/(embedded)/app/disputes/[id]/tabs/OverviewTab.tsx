@@ -1316,13 +1316,19 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                   deliveryPresentation.trackingLinks.length > 0 && (
                     <div style={{ marginTop: 4 }}>
                       {deliveryPresentation.trackingLinks.map((tl, i) => {
-                        const labelText = resolveToken(tRoot, {
-                          key: "disputes.deliveryProof.trackingLink",
-                          params: {
-                            carrier: tl.carrier ?? tExtra("trackingCarrierFallback"),
-                            number: tl.number ?? "—",
-                          },
-                        });
+                        // No recoverable number → show the carrier name
+                        // alone (data, not copy); "PostNord SE · —" reads
+                        // as broken.
+                        const labelText = tl.number
+                          ? resolveToken(tRoot, {
+                              key: "disputes.deliveryProof.trackingLink",
+                              params: {
+                                carrier:
+                                  tl.carrier ?? tExtra("trackingCarrierFallback"),
+                                number: tl.number,
+                              },
+                            })
+                          : (tl.carrier ?? tExtra("trackingCarrierFallback"));
                         return (
                           <p
                             key={`${tl.number ?? tl.url ?? "trk"}-${i}`}

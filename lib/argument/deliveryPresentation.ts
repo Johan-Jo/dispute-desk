@@ -73,6 +73,53 @@ function resolveProofType(
   return looksLikeManualUpload ? "delivered_unverified" : "label_created";
 }
 
+/** Tracking-URL query/hash params that carry the shipment number, by
+ *  convention across tracking pages (17track `nums=`, DHL `tracking-id=`,
+ *  generic `tracking_numbers=` …). Shopify fulfillments sometimes ship a
+ *  tracking URL with an EMPTY `number` field (live example: PostNord SE
+ *  via 17track, dispute c89276b6 2026-07-16) — the number is recoverable
+ *  from the URL, so recover it instead of rendering "carrier · —". */
+const TRACKING_NUMBER_PARAMS = new Set([
+  "nums",
+  "num",
+  "tracking_numbers",
+  "trackingnumber",
+  "trackingnumbers",
+  "tracknumber",
+  "tracknumbers",
+  "tracking-id",
+  "trackingid",
+  "shipmentid",
+]);
+
+/** Recover the tracking number from a known tracking-URL param. Handles
+ *  params in both the query string and the hash fragment (17track puts
+ *  `nums=` after `#`). Comma-separated lists take the first entry.
+ *  Shared with `evidenceLineItem.buildDeliveryFacts` so every surface
+ *  recovers the same number. */
+export function numberFromTrackingUrl(url: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  const paramSources = [
+    parsed.searchParams,
+    new URLSearchParams(parsed.hash.replace(/^#/, "")),
+  ];
+  for (const params of paramSources) {
+    for (const [key, value] of params) {
+      if (!TRACKING_NUMBER_PARAMS.has(key.toLowerCase())) continue;
+      const first = value.split(",")[0]?.trim() ?? "";
+      // Require a plausible shipment ref — guards against picking up
+      // flags/locale values on unknown pages sharing a param name.
+      if (/^[A-Za-z0-9][A-Za-z0-9 -]{4,}$/.test(first)) return first;
+    }
+  }
+  return null;
+}
+
 /** Pull carrier + tracking number + URL out of the fulfillment payload.
  *  The fulfillment collector writes `fulfillments[].tracking[]` with
  *  `{ carrier, number, url }`. Older/manual payloads may carry a flat
@@ -89,13 +136,15 @@ function extractTrackingLinks(
     number: unknown,
     url: unknown,
   ): void => {
-    const num = typeof number === "string" && number.trim() ? number.trim() : null;
     const car =
       typeof carrier === "string" && carrier.trim() ? carrier.trim() : null;
     const link =
       typeof url === "string" && /^https?:\/\//i.test(url.trim())
         ? url.trim()
         : null;
+    const num =
+      (typeof number === "string" && number.trim() ? number.trim() : null) ??
+      (link ? numberFromTrackingUrl(link) : null);
     // Skip an entry that carries nothing renderable.
     if (!num && !link && !car) return;
     const key = num ?? link ?? car!;
