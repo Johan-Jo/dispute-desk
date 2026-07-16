@@ -1793,6 +1793,10 @@
       "factsIssuedNoDate": "{amount} {currency} reembolsados",
       "factsIssuedDateOnly": "Reembolsado el {date}",
       "factsNoReturn": "El cliente nunca inició una devolución"
+    },
+    "signalLabelValue": {
+      "refundIssued": "Prueba de que el reembolso ya fue emitido",
+      "noRefundOwed": "Prueba de que no correspondía ningún reembolso (el cliente nunca devolvió los productos)"
     }
   },
   "disputeReasons": {

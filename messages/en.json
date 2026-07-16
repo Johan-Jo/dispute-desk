@@ -1793,6 +1793,10 @@
       "factsIssuedNoDate": "{amount} {currency} refunded",
       "factsIssuedDateOnly": "Refunded on {date}",
       "factsNoReturn": "The customer never initiated a return"
+    },
+    "signalLabelValue": {
+      "refundIssued": "Proof that the refund was already issued",
+      "noRefundOwed": "Proof that no refund was owed (the customer never returned the goods)"
     }
   },
   "disputeReasons": {
