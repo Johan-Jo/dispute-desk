@@ -122,3 +122,30 @@ describe("improvement hint never contradicts a collected signal (cay cc86296d, 2
     expect(JSON.stringify(label)).toContain("delivery");
   });
 });
+
+describe("strength reason names the refund FACT, not the ambiguous 'Refund record' (dispute 328a45e4, 2026-07-16)", () => {
+  it("no_return_initiated contributor → 'proof that no refund was owed'", () => {
+    const checklist = [available("order_confirmation"), available("no_return_initiated"), available("refund_policy")];
+    const source = byField({
+      order_confirmation: { orderId: "1" },
+      no_return_initiated: { returnStatus: "NO_RETURN" },
+      refund_policy: {},
+    });
+    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source);
+    const label1 = r.strengthReasonI18n.params?.label1 as { key: string };
+    expect(label1.key).toBe("disputes.signalLabelValue.noRefundOwed");
+  });
+
+  it("refund_record contributor → 'proof that the refund was already issued'", () => {
+    const checklist = [available("order_confirmation"), available("refund_record")];
+    const source = byField({
+      order_confirmation: { orderId: "1" },
+      refund_record: { refundStatus: "processed", amount: "249.00", currency: "SEK" },
+    });
+    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source);
+    const params = r.strengthReasonI18n.params ?? {};
+    const labels = JSON.stringify(params);
+    expect(labels).toContain("disputes.signalLabelValue.refundIssued");
+    expect(labels).not.toContain("signalLabel.refund_record");
+  });
+});

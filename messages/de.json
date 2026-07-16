@@ -1793,6 +1793,10 @@
       "factsIssuedNoDate": "{amount} {currency} erstattet",
       "factsIssuedDateOnly": "Erstattet am {date}",
       "factsNoReturn": "Der Kunde hat nie eine Rücksendung eingeleitet"
+    },
+    "signalLabelValue": {
+      "refundIssued": "Nachweis, dass die Rückerstattung bereits erfolgt ist",
+      "noRefundOwed": "Nachweis, dass keine Rückerstattung geschuldet war (der Kunde hat die Ware nie zurückgesendet)"
     }
   },
   "disputeReasons": {

@@ -1793,6 +1793,10 @@
       "factsIssuedNoDate": "{amount} {currency} återbetalades",
       "factsIssuedDateOnly": "Återbetalades {date}",
       "factsNoReturn": "Kunden har aldrig påbörjat en retur"
+    },
+    "signalLabelValue": {
+      "refundIssued": "Bevis på att återbetalningen redan är genomförd",
+      "noRefundOwed": "Bevis på att ingen återbetalning skulle utgå (kunden returnerade aldrig varorna)"
     }
   },
   "disputeReasons": {

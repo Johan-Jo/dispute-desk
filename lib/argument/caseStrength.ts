@@ -28,7 +28,7 @@
  *     re-derives via `categoryFor()` on every call. (P2.4a)
  */
 
-import type { I18nKeyParam, I18nToken } from "@/lib/i18n/token";
+import type { I18nKey, I18nKeyParam, I18nToken } from "@/lib/i18n/token";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type {
   CaseStrengthResult,
@@ -78,11 +78,33 @@ function signalLabelKey(signalId: SignalId): string {
 interface ContributionRow {
   signalId: SignalId;
   category: "strong" | "moderate";
+  /** Winning field for this signal — lets the composer name the actual
+   *  FACT where the signal-level label is ambiguous. */
+  field?: string;
 }
 
 /** Build an I18nKeyParam that references a signal's localized label. */
 function labelParam(signalId: SignalId): I18nKeyParam {
   return { type: "i18n-key", key: signalLabelKey(signalId) };
+}
+
+/** Fields whose signal-level label misstates the fact in running copy.
+ *  "Refund record" in "X and Refund record support this defense" reads
+ *  as "the merchant refunded the customer" — when the contributor is
+ *  no_return_initiated the fact is the OPPOSITE (no refund was owed).
+ *  These value labels state the fact unambiguously. */
+const CONTRIBUTION_VALUE_LABEL_KEY: Record<string, I18nKey> = {
+  refund_record: "disputes.signalLabelValue.refundIssued",
+  no_return_initiated: "disputes.signalLabelValue.noRefundOwed",
+};
+
+/** Label param for a contribution row: the winning field's fact-stating
+ *  label when one exists, else the generic signal label. */
+function contributionLabelParam(row: ContributionRow): I18nKeyParam {
+  const valueKey = row.field ? CONTRIBUTION_VALUE_LABEL_KEY[row.field] : undefined;
+  return valueKey
+    ? { type: "i18n-key", key: valueKey }
+    : labelParam(row.signalId);
 }
 
 /** Build an I18nKeyParam for the per-family decisive-hint copy. */
@@ -116,9 +138,9 @@ function composeStrengthReasonI18n(args: {
       return {
         key: "disputes.strengthReason.strong.multi",
         params: {
-          label1: labelParam(strong[0].signalId),
-          label2: labelParam(strong[1].signalId),
-          label3: strong[2] ? labelParam(strong[2].signalId) : "empty",
+          label1: contributionLabelParam(strong[0]),
+          label2: contributionLabelParam(strong[1]),
+          label3: strong[2] ? contributionLabelParam(strong[2]) : "empty",
           count: strong.length,
         },
       };
@@ -126,7 +148,7 @@ function composeStrengthReasonI18n(args: {
     if (strong[0]) {
       return {
         key: "disputes.strengthReason.strong.single",
-        params: { label: labelParam(strong[0].signalId) },
+        params: { label: contributionLabelParam(strong[0]) },
       };
     }
     return { key: "disputes.strengthReason.strong.fallback" };
@@ -140,15 +162,15 @@ function composeStrengthReasonI18n(args: {
       return {
         key: "disputes.strengthReason.moderate.strongAndModerate",
         params: {
-          strongLabel: labelParam(strong[0].signalId),
-          moderateLabel: labelParam(moderate[0].signalId),
+          strongLabel: contributionLabelParam(strong[0]),
+          moderateLabel: contributionLabelParam(moderate[0]),
         },
       };
     }
     if (strong[0]) {
       return {
         key: "disputes.strengthReason.moderate.strongOnly",
-        params: { label: labelParam(strong[0].signalId) },
+        params: { label: contributionLabelParam(strong[0]) },
       };
     }
     // Moderate reached on moderate-category signals alone (e.g. a refund
@@ -161,8 +183,8 @@ function composeStrengthReasonI18n(args: {
       return {
         key: "disputes.strengthReason.moderate.moderateOnly",
         params: {
-          label1: labelParam(moderate[0].signalId),
-          label2: moderate[1] ? labelParam(moderate[1].signalId) : "empty",
+          label1: contributionLabelParam(moderate[0]),
+          label2: moderate[1] ? contributionLabelParam(moderate[1]) : "empty",
           hint: hintParam(family),
         },
       };
@@ -175,7 +197,7 @@ function composeStrengthReasonI18n(args: {
     return {
       key: "disputes.strengthReason.weak.strongAlone",
       params: {
-        label: labelParam(strong[0].signalId),
+        label: contributionLabelParam(strong[0]),
         hint: hintParam(family),
       },
     };
@@ -184,8 +206,8 @@ function composeStrengthReasonI18n(args: {
     return {
       key: "disputes.strengthReason.weak.moderateOnly",
       params: {
-        label1: labelParam(moderate[0].signalId),
-        label2: moderate[1] ? labelParam(moderate[1].signalId) : "empty",
+        label1: contributionLabelParam(moderate[0]),
+        label2: moderate[1] ? contributionLabelParam(moderate[1]) : "empty",
         hint: hintParam(family),
       },
     };
@@ -354,10 +376,13 @@ export function calculateCaseStrength(
     supporting: 1,
     invalid: 0,
   };
-  // Per-signal accumulator: best category seen (per-signalId dedup).
-  // The signalId itself is enough for strength-reason composition —
-  // the token layer resolves the label.
-  type SignalAcc = { category: EvidenceCategory };
+  // Per-signal accumulator: best category seen (per-signalId dedup),
+  // plus the WINNING FIELD so the strength reason can name the actual
+  // fact instead of the ambiguous signal-level label ("Refund record"
+  // read as "we refunded the customer" when the contributor was
+  // no_return_initiated — live complaint, cay dispute 328a45e4,
+  // 2026-07-16).
+  type SignalAcc = { category: EvidenceCategory; field: string };
   const bestBySignalDetailed = new Map<SignalId, SignalAcc>();
 
   let registeredItems = 0; // canonical fields visible in the checklist
@@ -411,7 +436,7 @@ export function calculateCaseStrength(
       if (!affectsStrength(category)) continue;
       const prev = bestBySignalDetailed.get(spec.signalId);
       if (!prev || RANK[category] > RANK[prev.category]) {
-        bestBySignalDetailed.set(spec.signalId, { category });
+        bestBySignalDetailed.set(spec.signalId, { category, field: item.field });
       }
     } else if (isMissing && (item.collectionType === "manual" || !item.collectionType)) {
       // Candidate for the improvement hint. We use the spec's default
@@ -450,9 +475,9 @@ export function calculateCaseStrength(
   const moderateRows: ContributionRow[] = [];
   for (const [signalId, acc] of bestBySignalDetailed) {
     if (acc.category === "strong") {
-      strongRows.push({ signalId, category: "strong" });
+      strongRows.push({ signalId, category: "strong", field: acc.field });
     } else if (acc.category === "moderate") {
-      moderateRows.push({ signalId, category: "moderate" });
+      moderateRows.push({ signalId, category: "moderate", field: acc.field });
     }
   }
   const strongCount = strongRows.length;
