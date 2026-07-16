@@ -1,6 +1,6 @@
 # Carrier Delivery Verification — direct carrier-API adapters (DHL first)
 
-**Status:** planned — not started (v2, revised 2026-07-15)
+**Status:** PR 1A–1C implemented on develop (2026-07-15: #304 persistence, #305 adapter+alerting, #306 pack integration). PR 1D (controlled prod verification) pending explicit approval + DHL developer-portal product subscription (v2, revised 2026-07-15)
 **Origin:** 2026-07-15 DHL Freight investigation on cay-collective (dispute #891BECCC / order #12809)
 **Related memory:** `project_delivery_confirmation_shopify_gap`
 **Diagnostic script:** `scripts/inspect-dhl-order-12809.ts` (parameterized by order GID, read-only)
