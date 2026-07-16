@@ -106,10 +106,28 @@ describe("classifyDeliveryTimeline — the real cay-collective order #12936", ()
     ev("Försändelsen har levererats.", "2026-07-06T18:16:00Z", "FAILURE"),
   ];
 
-  it("resolves to delivered with the 2026-07-06 timestamp (latest wins)", () => {
+  it("resolves to COLLECTED with the 2026-07-06 timestamp — the bare 'levererats' follows a serviceställe arrival with no new delivery attempt, so it is the customer collecting (ID-verified), not a doorstep delivery", () => {
     const r = classifyDeliveryTimeline(events);
+    expect(r.finalCategory).toBe("collected_at_pickup");
+    expect(r.finalAt).toBe("2026-07-06T18:16:00Z");
+  });
+
+  it("an out-for-delivery attempt between the serviceställe arrival and the final 'levererats' means a real doorstep delivery — stays delivered", () => {
+    const r = classifyDeliveryTimeline([
+      ...events,
+      ev("Lastad på bil, utkörning påbörjad.", "2026-07-05T08:00:00Z", "IN_TRANSIT"),
+    ]);
     expect(r.finalCategory).toBe("delivered");
     expect(r.finalAt).toBe("2026-07-06T18:16:00Z");
+  });
+
+  it("a return between the pickup arrival and a later 'levererats' breaks the collection inference", () => {
+    const r = classifyDeliveryTimeline([
+      ev("Försändelsen har levererats till ett serviceställe.", "2026-07-01T10:00:00Z", "FAILURE"),
+      ev("Ditt paket har returnerats till avsändaren eftersom det inte hämtades i tid.", "2026-07-03T08:00:00Z", "FAILURE"),
+      ev("Försändelsen har levererats.", "2026-07-06T18:16:00Z", "FAILURE"),
+    ]);
+    expect(r.finalCategory).toBe("delivered");
   });
 
   it("if the timeline STOPS at the return, it resolves to returned", () => {
@@ -144,7 +162,7 @@ describe("classifyDeliveryTimeline — the real DHL Freight #12809 acceptance sh
   // collection ("Picked up by receiver", product "DHL Servicepoint
   // Domestic"). Must classify as delivered_to_pickup — never as final
   // delivery to the customer's own address.
-  it("classifies 'Picked up by receiver' as pickup despite the delivered status code", () => {
+  it("classifies 'Picked up by receiver' as an ID-verified COLLECTION despite the delivered status code", () => {
     const r = classifyDeliveryTimeline([
       ev("Picked up by receiver", "2026-06-04T18:12:00", "delivered"),
       ev("Receiver notified", "2026-06-04T10:34:00", "transit"),
@@ -152,11 +170,11 @@ describe("classifyDeliveryTimeline — the real DHL Freight #12809 acceptance sh
       ev("Received at terminal", "2026-06-03T16:08:08", "transit"),
       ev("Consignment created", "2026-06-03T12:25:59", "pre-transit"),
     ]);
-    expect(r.finalCategory).toBe("delivered_to_pickup");
+    expect(r.finalCategory).toBe("collected_at_pickup");
     expect(r.finalAt).toBe("2026-06-04T18:12:00");
   });
 
-  it("classifies recipient-collection variants as pickup across all classifier locales", () => {
+  it("classifies recipient-collection variants as collection across all classifier locales", () => {
     for (const message of [
       "Collected by recipient", // en
       "Picked up by the recipient", // en
@@ -170,14 +188,14 @@ describe("classifyDeliveryTimeline — the real DHL Freight #12809 acceptance sh
       "Encomenda levantada — retirado pelo destinatário", // pt
       "Objeto retirado pelo destinatario", // pt (unaccented feed)
     ]) {
-      expect(classifyDeliveryEvent(ev(message)), message).toBe("delivered_to_pickup");
+      expect(classifyDeliveryEvent(ev(message)), message).toBe("collected_at_pickup");
     }
   });
 
   it("does NOT misclassify an origin pickup from the shipper", () => {
     // "Picked up" alone (carrier collecting from the SHIPPER) must not
     // read as a receiver collection.
-    expect(classifyDeliveryEvent(ev("Picked up", null, "transit"))).not.toBe("delivered_to_pickup");
-    expect(classifyDeliveryEvent(ev("Shipment picked up by DHL"))).not.toBe("delivered_to_pickup");
+    expect(classifyDeliveryEvent(ev("Picked up", null, "transit"))).not.toBe("collected_at_pickup");
+    expect(classifyDeliveryEvent(ev("Shipment picked up by DHL"))).not.toBe("collected_at_pickup");
   });
 });

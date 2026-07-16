@@ -62,7 +62,7 @@ function nativeSignedBy(fulfillment: OrderFulfillment): string | null {
  *  deliveredAt). Returns the latest delivery-relevant category + its
  *  timestamp. See lib/shopify/deliveryEventClassifier for why. */
 function nativeDelivery(fulfillment: OrderFulfillment): {
-  category: "delivered" | "delivered_to_pickup" | "returned" | null;
+  category: "delivered" | "collected_at_pickup" | "delivered_to_pickup" | "returned" | null;
   at: string | null;
 } {
   const t = classifyDeliveryTimeline(
@@ -97,6 +97,7 @@ function readTrackingForFulfillment(
 
 const NATIVE_CATEGORY_TO_STATUS = {
   delivered: "Delivered",
+  collected_at_pickup: "CollectedAtPickup",
   delivered_to_pickup: "DeliveredToPickup",
   returned: "Returned",
 } as const;
@@ -201,14 +202,30 @@ function stateOf(states: DeliveryStates, f: OrderFulfillment): FulfillmentDelive
   );
 }
 
-/** Delivered with a corroborating timestamp — the moderate-tier bar. */
-function confirmedDelivered(
+/** Confirmed CUSTOMER RECEIPT with a corroborating timestamp — the
+ *  moderate-tier bar. Both a doorstep delivery and an ID-verified
+ *  collection at a pickup point count (in SE/Nordics collection requires
+ *  photo ID / BankID — the goods are demonstrably in the customer's
+ *  hands). An uncollected pickup-point arrival does NOT. */
+function confirmedReceipt(
   f: OrderFulfillment,
   s: FulfillmentDeliveryState,
 ): boolean {
+  const status = s.current?.status;
   return (
-    s.current?.status === "Delivered" && !!(s.current.at || f.deliveredAt)
+    (status === "Delivered" || status === "CollectedAtPickup") &&
+    !!(s.current?.at || f.deliveredAt)
   );
+}
+
+/** Doorstep delivery to the customer's own address, strictly — the ONLY
+ *  state allowed to feed the rubric-#9 "delivered to verified address"
+ *  claim. A collection is receipt, not address delivery. */
+function confirmedAddressDelivery(
+  f: OrderFulfillment,
+  s: FulfillmentDeliveryState,
+): boolean {
+  return s.current?.status === "Delivered" && !!(s.current.at || f.deliveredAt);
 }
 
 function extractTrackingData(
@@ -218,14 +235,21 @@ function extractTrackingData(
 ) {
   const tracking = readTrackingForFulfillment(fulfillment, order);
   const native = nativeDelivery(fulfillment);
-  // Native carrier "delivered" event date, when Shopify's own deliveredAt
-  // is null (the common PostNord case — the delivery lives only in the
-  // event message). Only a true final delivery contributes a date here.
+  // Native carrier receipt date, when Shopify's own deliveredAt is null
+  // (the common PostNord case — the delivery lives only in the event
+  // message). A doorstep delivery or an ID-verified collection both
+  // contribute a customer-receipt date; a pending pickup arrival does not.
   const nativeDeliveredAt =
-    native.category === "delivered" ? native.at : null;
+    native.category === "delivered" || native.category === "collected_at_pickup"
+      ? native.at
+      : null;
   const carrierWon = !!state.current && state.current.source.startsWith("carrier_api");
   const carrierDeliveredAt =
-    carrierWon && state.current?.status === "Delivered" ? state.current.at : null;
+    carrierWon &&
+    (state.current?.status === "Delivered" ||
+      state.current?.status === "CollectedAtPickup")
+      ? state.current.at
+      : null;
 
   // The carrier's own terminal event, citable verbatim in evidence
   // ("Picked up by receiver, X Servicepoint") — data, not UI copy.
@@ -319,16 +343,18 @@ function resolveProofType(
     // A reconciled return is the opposite of delivery evidence — never
     // let this shipment raise the tier.
     if (s.current?.status === "Returned") continue;
-    if (confirmedDelivered(f, s)) {
+    // Confirmed receipt: doorstep delivery OR ID-verified collection at a
+    // pickup point, with a timestamp.
+    if (confirmedReceipt(f, s)) {
       bestTier = Math.max(bestTier, 2) as 0 | 1 | 2 | 3;
       continue;
     }
-    // Weaker delivery signals → unverified tier: delivered without a
-    // corroborating timestamp, a pickup-point arrival (customer
-    // collection of the goods, but not at their own address), or a bare
-    // Shopify status flag.
+    // Weaker delivery signals → unverified tier: delivered/collected
+    // without a corroborating timestamp, a pickup-point ARRIVAL (customer
+    // collection still pending), or a bare Shopify status flag.
     if (
       s.current?.status === "Delivered" ||
+      s.current?.status === "CollectedAtPickup" ||
       s.current?.status === "DeliveredToPickup" ||
       f.status === "SUCCESS" ||
       f.displayStatus === "DELIVERED"
@@ -358,7 +384,15 @@ function resolveDeliveredAt(
   let best: string | null = null;
   for (const f of fulfillments) {
     const s = stateOf(states, f);
-    if (s.current?.status !== "Delivered") continue;
+    // Customer-receipt date: doorstep delivery or ID-verified collection.
+    // For a collection this matches the carrier's own record verbatim
+    // (PostNord/DHL word the collection event "levererats"/"delivered").
+    if (
+      s.current?.status !== "Delivered" &&
+      s.current?.status !== "CollectedAtPickup"
+    ) {
+      continue;
+    }
     const candidate = s.current.at ?? f.deliveredAt ?? null;
     if (!candidate) continue;
     if (!best || candidate < best) best = candidate;
@@ -400,15 +434,16 @@ function shippedToVerifiedAddress(order: OrderDetailNode): boolean {
   return bCountry === sCountry && bCity === sCity;
 }
 
-/** Whether ANY fulfillment's reconciled state is a true final delivery to
- *  the recipient with a corroborating timestamp. Pickup-point / neighbour
- *  / returned do NOT count — and neither does a delivery that a NEWER
- *  return event superseded. */
+/** Whether ANY fulfillment's reconciled state is a true DOORSTEP delivery
+ *  to the recipient's address with a corroborating timestamp. Collection
+ *  at a pickup point / neighbour / returned do NOT count — collection is
+ *  confirmed receipt (see confirmedReceipt) but never an address-delivery
+ *  claim — and neither does a delivery a NEWER return event superseded. */
 function hasFinalDelivery(
   fulfillments: OrderFulfillment[],
   states: DeliveryStates,
 ): boolean {
-  return fulfillments.some((f) => confirmedDelivered(f, stateOf(states, f)));
+  return fulfillments.some((f) => confirmedAddressDelivery(f, stateOf(states, f)));
 }
 
 /** §5.6 — does the delivered portion cover the disputed merchandise?
@@ -432,7 +467,9 @@ function resolveDeliveryCoverage(
   let deliveredQty = 0;
   for (const f of order.fulfillments) {
     const s = stateOf(states, f);
-    if (!confirmedDelivered(f, s)) continue;
+    // Coverage counts confirmed RECEIPT — a collected parcel is in the
+    // customer's hands just as surely as a doorstep-delivered one.
+    if (!confirmedReceipt(f, s)) continue;
     deliveredQty += f.fulfillmentLineItems.edges.reduce(
       (sum, e) => sum + (e.node.quantity ?? 0),
       0,
@@ -489,6 +526,7 @@ export async function collectFulfillmentEvidence(
       f.status === "SUCCESS" ||
       f.displayStatus === "DELIVERED" ||
       stateOf(states, f).current?.status === "Delivered" ||
+      stateOf(states, f).current?.status === "CollectedAtPickup" ||
       stateOf(states, f).current?.status === "DeliveredToPickup"
   );
   if (hasDelivery) fieldsProvided.push("delivery_proof");

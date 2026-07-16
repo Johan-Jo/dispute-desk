@@ -59,10 +59,16 @@ export interface CarrierEvent {
   message: string | null;
 }
 
-/** PR #236 vocabulary — only `Delivered` counts in the KPI;
- *  `DeliveredToPickup` is separate (but citable INR evidence). */
+/** Delivery vocabulary (PR #236 + collected-at-pickup extension):
+ *  - `Delivered`          — doorstep delivery to the recipient's address.
+ *  - `CollectedAtPickup`  — the customer COLLECTED the parcel at a service
+ *    point (ID-verified in SE/Nordics) — confirmed customer receipt,
+ *    strong INR evidence, but never an address-delivery claim.
+ *  - `DeliveredToPickup`  — arrived at a pickup point, collection pending.
+ *  - `Returned`           — back to sender. */
 export type CarrierDeliveryStatus =
   | "Delivered"
+  | "CollectedAtPickup"
   | "DeliveredToPickup"
   | "Returned";
 

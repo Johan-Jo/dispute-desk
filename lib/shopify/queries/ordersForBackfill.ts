@@ -683,11 +683,15 @@ export function deriveNativeDelivery(raw: RawBackfillOrder): {
   let bestStatus: string | null = null;
   let deliveredAt: string | null = null;
   let signedBy: string | null = null;
-  // Rank so the strongest state across fulfillments wins.
+  // Rank so the strongest state across fulfillments wins. CollectedAtPickup
+  // (customer collected at a service point — ID-verified in SE/Nordics) is
+  // confirmed customer RECEIPT, ranked just below a doorstep Delivered;
+  // DeliveredToPickup is only an arrival, the customer may never collect.
   const rank: Record<string, number> = {
     Returned: 1,
     DeliveredToPickup: 2,
-    Delivered: 3,
+    CollectedAtPickup: 3,
+    Delivered: 4,
   };
   const rankOf = (s: string | null) => (s ? rank[s] ?? 0 : 0);
 
@@ -705,6 +709,9 @@ export function deriveNativeDelivery(raw: RawBackfillOrder): {
     if (timeline.finalCategory === "delivered") {
       status = "Delivered";
       at = at ?? timeline.finalAt;
+    } else if (timeline.finalCategory === "collected_at_pickup" && status !== "Delivered") {
+      status = "CollectedAtPickup";
+      at = timeline.finalAt;
     } else if (timeline.finalCategory === "delivered_to_pickup" && status !== "Delivered") {
       status = "DeliveredToPickup";
     } else if (timeline.finalCategory === "returned" && status !== "Delivered") {
@@ -713,7 +720,11 @@ export function deriveNativeDelivery(raw: RawBackfillOrder): {
 
     if (rankOf(status) > rankOf(bestStatus)) {
       bestStatus = status;
-      deliveredAt = status === "Delivered" ? at : null;
+      // Both a doorstep delivery and an ID-verified collection are a
+      // carrier-confirmed customer-receipt timestamp (the Insights KPI
+      // counts delivery_status='Delivered' OR delivered_at_tracking).
+      deliveredAt =
+        status === "Delivered" || status === "CollectedAtPickup" ? at : null;
     }
     // Signature capture — free-text on the event message/status.
     if (!signedBy) signedBy = extractNativeSignature(events);
@@ -842,6 +853,9 @@ export function normalizeFulfillmentTrackings(
     if (f.deliveredAt || timeline.finalCategory === "delivered") {
       shipmentStatus = "Delivered";
       terminalAt = f.deliveredAt ?? timeline.finalAt;
+    } else if (timeline.finalCategory === "collected_at_pickup") {
+      shipmentStatus = "CollectedAtPickup";
+      terminalAt = timeline.finalAt;
     } else if (timeline.finalCategory === "delivered_to_pickup") {
       shipmentStatus = "DeliveredToPickup";
       terminalAt = timeline.finalAt;

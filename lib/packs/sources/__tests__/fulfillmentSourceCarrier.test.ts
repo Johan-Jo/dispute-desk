@@ -127,7 +127,7 @@ afterEach(() => {
 });
 
 describe("the #12809 acceptance shape — DHL Freight, no Shopify signal", () => {
-  it("cites the carrier pickup honestly: DeliveredToPickup, carrier provenance, URL-derived id", async () => {
+  it("cites the carrier collection honestly: CollectedAtPickup (ID-verified receipt), carrier provenance, URL-derived id", async () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify(pickupFixture), { status: 200, headers: { "content-type": "application/json" } }),
     );
@@ -139,15 +139,16 @@ describe("the #12809 acceptance shape — DHL Freight, no Shopify signal", () =>
 
     const f = data.fulfillments[0];
     expect(f.carrierTracking).toMatchObject({
-      deliveryStatus: "DeliveredToPickup",
+      deliveryStatus: "CollectedAtPickup",
       trackingSource: "carrier_api_dhl",
-      deliveredAtTracking: null, // pickup ≠ Delivered — no delivered date
+      deliveredAtTracking: "2026-06-04T14:31:00", // customer-receipt date
     });
     expect(f.carrierTerminalEvent.message).toContain("Picked up by receiver");
-    // KPI/tier honesty: pickup is supporting-tier, never delivered_confirmed.
-    expect(data.proofType).toBe("delivered_unverified");
+    // ID-verified collection = confirmed customer receipt → moderate tier…
+    expect(data.proofType).toBe("delivered_confirmed");
+    expect(data.deliveredAt).toBe("2026-06-04T14:31:00");
+    // …but NEVER an address-delivery claim (rubric #9 stays off).
     expect(data.deliveredToVerifiedAddress).toBe(false);
-    expect(data.deliveredAt).toBeNull();
     // Result persisted with provenance for cache + admin.
     expect(upsertMock).toHaveBeenCalled();
     const persisted = upsertMock.mock.calls[0][0] as Record<string, unknown>;
@@ -155,7 +156,7 @@ describe("the #12809 acceptance shape — DHL Freight, no Shopify signal", () =>
       carrier_normalized: "dhl",
       effective_tracking_id: "373325386394209542",
       identifier_source: "url",
-      shipment_status: "DeliveredToPickup",
+      shipment_status: "CollectedAtPickup",
       tracking_source: "carrier_api_dhl",
       last_carrier_lookup_result: "success",
     });

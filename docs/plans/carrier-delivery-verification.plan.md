@@ -262,7 +262,16 @@ Carrier APIs return structured status codes (e.g. DHL `status.statusCode`),
 which are more reliable than message-text regex. Each adapter maps carrier
 codes to the existing native vocabulary from
 `supabase/migrations/20260706170000_delivery_status_native_values.sql`:
-`Delivered | DeliveredToPickup | Returned`. Where codes are ambiguous
+`Delivered | CollectedAtPickup | DeliveredToPickup | Returned`
+(**`CollectedAtPickup` added 2026-07-16**: the customer collected the parcel
+at a pickup point — ID/BankID-verified in SE/Nordics, confirmed customer
+receipt and moderate-tier evidence with a citable receipt date, but never an
+address-delivery claim; distinct from the `DeliveredToPickup` arrival, which
+stays supporting-tier. Detected via explicit collection phrasing in nine
+locales AND a timeline context rule: a bare "delivered" following a pickup
+arrival with no new out-for-delivery attempt and no return in between is a
+collection. Verified on the real #12936/PostNord and #12809/DHL shipments).
+Where codes are ambiguous
 (pickup-point deliveries reusing the "delivered" verb), fall back to
 `classifyDeliveryTimeline` message rules — its multilingual pickup/neighbour/
 return checks exist precisely for this. Latest-terminal-event-wins (handles
@@ -720,7 +729,10 @@ integration. **No production mutation or rebuild without explicit approval.**
 - Carrier failures never break evidence-pack generation; errors are logged and
   actionable failures notify `support@disputedesk.app`; support-email failures
   never break evidence-pack generation.
-- `DeliveredToPickup` remains separate from `Delivered` in KPI calculations.
+- `DeliveredToPickup` remains separate from `Delivered` in KPI calculations;
+  `CollectedAtPickup` (ID-verified collection) counts as confirmed customer
+  receipt but never as address delivery (rubric #9 requires strict
+  `Delivered`).
 - Returned status may affect scoring but is never automatically exposed in the
   bank-facing narrative (bank non-disclosure / strengthening-facts rules).
 - Source provenance is visible in admin.
