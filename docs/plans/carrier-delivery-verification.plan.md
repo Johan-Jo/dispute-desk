@@ -73,7 +73,7 @@ architecture" — genericity is proven by a fake test adapter (§9, PR 1B).
 |---|---------|----------|---------------------|-------|
 | 1 | **DHL** (all divisions: Freight, Express, eCommerce, Parcel) | **P0** | DHL **Unified Shipment Tracking API** (developer.dhl.com) — explicitly covers DHL Freight incl. Sweden; free tier 250 calls/day; has Push API (not used in v1). **Verified against developer.dhl.com 2026-07-15.** | Credentials already provisioned — see §4. TRAP: for DHL Freight fulfillments the stored tracking `number` is DHL's *customer confirmation number* (e.g. `5198…0574`); the real tracking id lives only in the tracking URL query param `tracking-id=` — the adapter MUST parse the URL (§5.3) |
 | 2 | **FedEx** | Conditional | FedEx Track API (developer.fedex.com) | Not yet observed in prod packs. Implement when real merchant demand appears — NOT as an automatic second adapter |
-| 3 | **PostNord** | Conditional | PostNord Track & Trace API (developer.postnord.com); auth model reported as OAuth2 client-credentials with a business-account requirement — **unverified, revalidate before implementation** | Native Shopify sync works today for cay; adapter would be a fallback. PostNord signature/POD is a separate, service-gated API — do not chase (structurally ~0 since 2026-01) |
+| 3 | **PostNord** | Conditional — **PARTNER-GATED** | PostNord Track & Trace V5 (developer.postnord.com); auth = `?apikey=` query param (verified 2026-07-16). BUT self-service keys are NOT activated for external parties: PostNord Kundintegration requires a partner meeting before releasing API access (confirmed by email 2026-07-16, Jimmy Judén / kundintegration.se@postnord.com, +46 10 436 52 33 — contacts Carlos & Martin, back from vacation **August 2026**). A registered prod key returns blanket 429 on every product until activated; sandbox rejects it as invalid. | Native Shopify sync works today for cay; adapter would be a fallback. Interim for PostNord merchants without native sync: a tracking app (ParcelPanel/Wonderment) that writes native events. PostNord signature/POD is a separate, service-gated API — do not chase (structurally ~0 since 2026-01) |
 | 4 | **Bring** | Conditional | Bring Tracking API (developer.bring.com) | Classifier already handles Bring quirk: `DELIVERED_SENDER` = returned, not delivered |
 | 5 | **GLS** | Conditional | GLS Track & Trace (per-country REST) | Listed carrier, currently syncing; low urgency |
 | 6 | **UPS** | Conditional | UPS Track API (developer.ups.com) | |
@@ -735,8 +735,12 @@ integration. **No production mutation or rebuild without explicit approval.**
 
 ## 13. Open questions
 
-1. **PostNord business account** — do we (or cay) have one? Gates a future
-   PostNord adapter; not needed for P0.
+1. **PostNord partner meeting** — API access is partner-gated (see §3 row 3):
+   schedule the call with Carlos & Martin (kundintegration.se@postnord.com)
+   when they return in **August 2026**. Talking points: DisputeDesk is a
+   Shopify chargeback-evidence app doing low-volume, dispute-triggered
+   single-shipment lookups (single digits/day) — not a tracking product.
+   Not needed for P0 (DHL is live).
 2. **Push APIs** (DHL has one) — skip for v1; dispute-triggered pull is enough
    and avoids webhook infrastructure. Revisit only if lookup volume ever
    threatens rate limits.
