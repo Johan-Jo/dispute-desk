@@ -12,11 +12,18 @@
  *   delivered_unverified → supporting
  *   label_created → invalid
  *
- * `signature_confirmed` requires explicit signature data from carrier
- * tracking events. The current Shopify fulfillment query does not
- * expose those events (deferred work — see TODO below), so this
- * collector currently never returns `signature_confirmed`. Whenever a
- * signature scan is wired in, branch here.
+ * Carrier plan PR 1C (docs/plans/carrier-delivery-verification.plan.md):
+ * delivery state is now resolved PER SHIPMENT across three sources —
+ * tracking-app metafields, Shopify-native fulfillment events, and the
+ * direct carrier-API adapters (lib/carriers) — reconciled by the
+ * newest-terminal-event rule (§5.7): a later Returned beats an older
+ * Delivered, a redelivery supersedes a return, and source conflicts are
+ * surfaced on the payload instead of silently discarded. The carrier API
+ * is only queried under the bounded rule (no terminal signal, or
+ * conflicting signals) and its failures NEVER break the pack build.
+ * One order ≠ one shipment (§5.6): order-level "delivered" language is
+ * gated on line-item coverage; package-level evidence stays available
+ * when only part of the order is confirmed.
  */
 
 import type { OrderFulfillment, OrderDetailNode } from "@/lib/shopify/queries/orders";
@@ -30,6 +37,14 @@ import {
 } from "@/lib/shopify/trackingApps";
 import { extractNativeSignature } from "@/lib/shopify/queries/ordersForBackfill";
 import { classifyDeliveryTimeline } from "@/lib/shopify/deliveryEventClassifier";
+import {
+  resolveCarrierShipments,
+  type CarrierShipmentSignal,
+} from "@/lib/carriers/resolveShipments";
+import {
+  reconcileDeliveryState,
+  type DeliverySignal,
+} from "@/lib/carriers/reconcile";
 
 /** Signee name from a fulfillment's native carrier events (message like
  *  "Delivered, signed by ANNA ANDERSSON"). This is the ONLY signature
@@ -80,9 +95,126 @@ function readTrackingForFulfillment(
   return mergeTrackingReads(ful, ord);
 }
 
+const NATIVE_CATEGORY_TO_STATUS = {
+  delivered: "Delivered",
+  delivered_to_pickup: "DeliveredToPickup",
+  returned: "Returned",
+} as const;
+
+/** Terminal signals already known from Shopify-side sources for ONE
+ *  fulfillment: native deliveredAt, native event timeline, and a
+ *  tracking-app "Delivered" metafield. Inputs to reconciliation (§5.7). */
+function existingSignalsFor(
+  fulfillment: OrderFulfillment,
+  order: OrderDetailNode,
+): DeliverySignal[] {
+  const signals: DeliverySignal[] = [];
+  if (fulfillment.deliveredAt) {
+    signals.push({
+      status: "Delivered",
+      at: fulfillment.deliveredAt,
+      source: "shopify_native",
+    });
+  }
+  const native = nativeDelivery(fulfillment);
+  if (native.category) {
+    signals.push({
+      status: NATIVE_CATEGORY_TO_STATUS[native.category],
+      at: native.at,
+      source: "shopify_native",
+    });
+  }
+  const tracking = readTrackingForFulfillment(fulfillment, order);
+  if (tracking.deliveryStatus === "Delivered") {
+    signals.push({
+      status: "Delivered",
+      at: tracking.deliveredAtTracking,
+      source: tracking.trackingSource ?? "tracking_app",
+    });
+  }
+  return signals;
+}
+
+/** Per-fulfillment resolved delivery state after cross-source
+ *  reconciliation (Shopify-native + tracking-app + carrier API). */
+interface FulfillmentDeliveryState {
+  /** Newest sufficiently reliable terminal signal, or null (in transit /
+   *  no signal — which is NEVER treated as "not delivered"). */
+  current: DeliverySignal | null;
+  /** Sources disagree on terminal status — surfaced, never discarded. */
+  conflict: boolean;
+  signedBy: string | null;
+  carrier: CarrierShipmentSignal | null;
+}
+
+type DeliveryStates = Map<string, FulfillmentDeliveryState>;
+
+/** Resolve every fulfillment's delivery state. The carrier resolver
+ *  applies the bounded lookup rule internally and never throws; a total
+ *  carrier outage degrades to Shopify-side signals only. */
+async function resolveDeliveryStates(
+  ctx: BuildContext,
+  order: OrderDetailNode,
+): Promise<DeliveryStates> {
+  let carrierMap = new Map<string, CarrierShipmentSignal>();
+  try {
+    carrierMap = await resolveCarrierShipments({
+      shopId: ctx.shopId,
+      orderGid: ctx.orderGid ?? order.id,
+      disputeId: ctx.disputeId,
+      correlationId: ctx.correlationId ?? `pack-${ctx.packId}`,
+      fulfillments: order.fulfillments.map((f) => ({
+        id: f.id,
+        trackingInfo: f.trackingInfo.map((t) => ({
+          company: t.company,
+          number: t.number,
+          url: t.url,
+        })),
+        existingSignals: existingSignalsFor(f, order),
+      })),
+    });
+  } catch {
+    // resolver never throws — belt-and-braces so the pack always builds.
+  }
+
+  const states: DeliveryStates = new Map();
+  for (const f of order.fulfillments) {
+    const carrier = carrierMap.get(f.id) ?? null;
+    const { current, conflict } = reconcileDeliveryState([
+      ...existingSignalsFor(f, order),
+      carrier?.signal,
+    ]);
+    const tracking = readTrackingForFulfillment(f, order);
+    states.set(f.id, {
+      current,
+      conflict,
+      signedBy: tracking.signedByName ?? nativeSignedBy(f) ?? carrier?.podName ?? null,
+      carrier,
+    });
+  }
+  return states;
+}
+
+function stateOf(states: DeliveryStates, f: OrderFulfillment): FulfillmentDeliveryState {
+  return (
+    states.get(f.id) ?? { current: null, conflict: false, signedBy: null, carrier: null }
+  );
+}
+
+/** Delivered with a corroborating timestamp — the moderate-tier bar. */
+function confirmedDelivered(
+  f: OrderFulfillment,
+  s: FulfillmentDeliveryState,
+): boolean {
+  return (
+    s.current?.status === "Delivered" && !!(s.current.at || f.deliveredAt)
+  );
+}
+
 function extractTrackingData(
   fulfillment: OrderFulfillment,
   order: OrderDetailNode,
+  state: FulfillmentDeliveryState,
 ) {
   const tracking = readTrackingForFulfillment(fulfillment, order);
   const native = nativeDelivery(fulfillment);
@@ -91,12 +223,28 @@ function extractTrackingData(
   // event message). Only a true final delivery contributes a date here.
   const nativeDeliveredAt =
     native.category === "delivered" ? native.at : null;
+  const carrierWon = !!state.current && state.current.source.startsWith("carrier_api");
+  const carrierDeliveredAt =
+    carrierWon && state.current?.status === "Delivered" ? state.current.at : null;
+
+  // The carrier's own terminal event, citable verbatim in evidence
+  // ("Picked up by receiver, X Servicepoint") — data, not UI copy.
+  const shipment = state.carrier?.shipment;
+  const carrierTerminalEvent =
+    shipment?.deliveryStatus && shipment.terminalAt
+      ? {
+          happenedAt: shipment.terminalAt,
+          message:
+            shipment.events.find((e) => e.happenedAt === shipment.terminalAt)?.message ?? null,
+        }
+      : null;
+
   return {
     fulfillmentId: fulfillment.id,
     status: fulfillment.status,
     displayStatus: fulfillment.displayStatus,
     createdAt: fulfillment.createdAt,
-    deliveredAt: fulfillment.deliveredAt ?? nativeDeliveredAt,
+    deliveredAt: fulfillment.deliveredAt ?? nativeDeliveredAt ?? carrierDeliveredAt,
     estimatedDeliveryAt: fulfillment.estimatedDeliveryAt,
     tracking: fulfillment.trackingInfo
       .filter((t) => t.number || t.url)
@@ -109,31 +257,38 @@ function extractTrackingData(
       title: e.node.lineItem.title,
       quantity: e.node.quantity,
     })),
-    // Carrier delivery data. Prefers a tracking-app metafield; falls back
-    // to the native carrier event (PostNord et al.) so a merchant with no
-    // tracking app still gets delivery status + date + any signature. Maps
-    // the native category to the same vocabulary the UI expects
-    // ("Delivered" | "DeliveredToPickup" | "Returned").
-    carrierTracking: tracking.deliveryStatus
+    // Reconciled per-shipment delivery state (§5.7). The carrier API's
+    // result is used when reconciliation elected it (newest terminal
+    // event); otherwise the tracking-app / native precedence is
+    // unchanged. Provenance rides in trackingSource — a carrier-API
+    // event is never presented as Shopify-supplied.
+    carrierTracking: carrierWon && state.current
       ? {
-          deliveryStatus: tracking.deliveryStatus,
-          deliveredAtTracking: tracking.deliveredAtTracking,
-          signedByName: tracking.signedByName ?? nativeSignedBy(fulfillment),
-          trackingSource: tracking.trackingSource,
+          deliveryStatus: state.current.status,
+          deliveredAtTracking: carrierDeliveredAt,
+          signedByName: state.signedBy,
+          trackingSource: state.current.source,
         }
-      : native.category
+      : tracking.deliveryStatus
         ? {
-            deliveryStatus:
-              native.category === "delivered"
-                ? "Delivered"
-                : native.category === "delivered_to_pickup"
-                  ? "DeliveredToPickup"
-                  : "Returned",
-            deliveredAtTracking: nativeDeliveredAt,
-            signedByName: nativeSignedBy(fulfillment),
-            trackingSource: "shopify_native",
+            deliveryStatus: tracking.deliveryStatus,
+            deliveredAtTracking: tracking.deliveredAtTracking,
+            signedByName: tracking.signedByName ?? nativeSignedBy(fulfillment),
+            trackingSource: tracking.trackingSource,
           }
-        : null,
+        : native.category
+          ? {
+              deliveryStatus: NATIVE_CATEGORY_TO_STATUS[native.category],
+              deliveredAtTracking: nativeDeliveredAt,
+              signedByName: nativeSignedBy(fulfillment),
+              trackingSource: "shopify_native",
+            }
+          : null,
+    carrierTerminalEvent,
+    // Admin provenance: sources disagreed on this shipment's terminal
+    // state — the reconciled winner is in carrierTracking, the conflict
+    // is never silently discarded.
+    sourceConflict: state.conflict,
   };
 }
 
@@ -142,47 +297,39 @@ function extractTrackingData(
  *  label). The categorizer will downgrade strong→moderate→supporting→
  *  invalid based on this string.
  *
- *  signature_confirmed is reached when a tracking-app metafield
- *  (AfterShip / Shipway / Wonderment / etc.) carries a signed-by-
- *  name on at least one fulfillment. That's the strongest possible
- *  delivery evidence — carrier-attested human-readable signature.
- *  See lib/shopify/trackingApps.ts for the metafield reader. */
+ *  signature_confirmed is reached when a tracking-app metafield, a
+ *  native carrier event message, or a carrier-API POD name carries a
+ *  signee on at least one fulfillment — carrier-attested human-readable
+ *  signature is the strongest possible delivery evidence.
+ *
+ *  A shipment whose RECONCILED state is Returned contributes nothing —
+ *  including when an older Delivered event exists (stale positives are
+ *  exactly what reconciliation kills). */
 function resolveProofType(
   fulfillments: OrderFulfillment[],
-  order: OrderDetailNode,
+  states: DeliveryStates,
 ): DeliveryProofType {
   let bestTier: 0 | 1 | 2 | 3 = 0;
   for (const f of fulfillments) {
-    // Signature confirmation — tracking-app metafield first, then the
-    // native carrier event message (PostNord et al.). Either counts as
-    // the strongest delivery evidence tier.
-    const tracking = readTrackingForFulfillment(f, order);
-    if (tracking.signedByName || nativeSignedBy(f)) {
+    const s = stateOf(states, f);
+    if (s.signedBy) {
       bestTier = Math.max(bestTier, 3) as 0 | 1 | 2 | 3;
       continue;
     }
-    const native = nativeDelivery(f);
-    // A native "returned to sender" is the opposite of delivery evidence —
-    // never let it raise the tier. (rank it 0; the loop simply skips it.)
-    if (native.category === "returned") continue;
-    // Delivered with a corroborating timestamp: Shopify's own deliveredAt,
-    // a tracking-app's Delivered+timestamp, OR a native carrier "delivered"
-    // event message with a happenedAt.
-    const carrierConfirmedDelivered =
-      tracking.deliveryStatus === "Delivered" &&
-      !!tracking.deliveredAtTracking;
-    const nativeDeliveredConfirmed =
-      native.category === "delivered" && !!native.at;
-    if (f.deliveredAt || carrierConfirmedDelivered || nativeDeliveredConfirmed) {
+    // A reconciled return is the opposite of delivery evidence — never
+    // let this shipment raise the tier.
+    if (s.current?.status === "Returned") continue;
+    if (confirmedDelivered(f, s)) {
       bestTier = Math.max(bestTier, 2) as 0 | 1 | 2 | 3;
       continue;
     }
-    // Weaker delivery signals → unverified tier: a native "delivered to a
-    // pickup point" (arrived but customer collection unconfirmed), or a
-    // bare Shopify status flag with no carrier-confirmed timestamp.
+    // Weaker delivery signals → unverified tier: delivered without a
+    // corroborating timestamp, a pickup-point arrival (customer
+    // collection of the goods, but not at their own address), or a bare
+    // Shopify status flag.
     if (
-      native.category === "delivered_to_pickup" ||
-      native.category === "delivered" ||
+      s.current?.status === "Delivered" ||
+      s.current?.status === "DeliveredToPickup" ||
       f.status === "SUCCESS" ||
       f.displayStatus === "DELIVERED"
     ) {
@@ -200,46 +347,36 @@ function resolveProofType(
 
 /** The best (earliest confirmed) delivery timestamp across all
  *  fulfillments, in ISO form, or null if none is carrier-confirmed.
- *  Prefers Shopify's own `deliveredAt`, falling back to a tracking-app
- *  metafield's `deliveredAtTracking`. Lifted to the top level of the
- *  section `data` so the fact classifier (which reads `p.deliveredAt`)
- *  can pass it to the narrative writer — the LLM prompt already asks
- *  for "delivered {date}" prose when the fact carries a date. Without
- *  this the date stayed nested under `fulfillments[]` and never
- *  reached the rebuttal. */
+ *  Reads the RECONCILED per-shipment state, so a shipment that was later
+ *  returned no longer contributes its stale delivery date. Lifted to the
+ *  top level of the section `data` so the fact classifier (which reads
+ *  `p.deliveredAt`) can pass it to the narrative writer. */
 function resolveDeliveredAt(
   fulfillments: OrderFulfillment[],
-  order: OrderDetailNode,
+  states: DeliveryStates,
 ): string | null {
   let best: string | null = null;
   for (const f of fulfillments) {
-    const tracking = readTrackingForFulfillment(f, order);
-    const native = nativeDelivery(f);
-    const candidate =
-      (typeof f.deliveredAt === "string" ? f.deliveredAt : null) ??
-      (tracking.deliveryStatus === "Delivered" ? tracking.deliveredAtTracking : null) ??
-      // Native carrier event: use the classified delivery timestamp, but
-      // ONLY for a true final delivery (not a pickup-point / returned
-      // event) — the date must corroborate "delivered to the customer".
-      (native.category === "delivered" ? native.at : null);
+    const s = stateOf(states, f);
+    if (s.current?.status !== "Delivered") continue;
+    const candidate = s.current.at ?? f.deliveredAt ?? null;
     if (!candidate) continue;
     if (!best || candidate < best) best = candidate;
   }
   return best;
 }
 
-/** Signed-by name from any tracking-app metafield, if present — the
- *  strongest delivery signal. Lifted to top-level so the classified
- *  fact and the narrative writer can cite it. */
+/** Signed-by name from any source (tracking-app metafield, native event
+ *  message, carrier-API POD), if present — the strongest delivery
+ *  signal. Lifted to top-level so the classified fact and the narrative
+ *  writer can cite it. */
 function resolveSignedByName(
   fulfillments: OrderFulfillment[],
-  order: OrderDetailNode,
+  states: DeliveryStates,
 ): string | null {
   for (const f of fulfillments) {
-    const tracking = readTrackingForFulfillment(f, order);
-    if (tracking.signedByName) return tracking.signedByName;
-    const native = nativeSignedBy(f);
-    if (native) return native;
+    const s = stateOf(states, f);
+    if (s.signedBy) return s.signedBy;
   }
   return null;
 }
@@ -263,37 +400,66 @@ function shippedToVerifiedAddress(order: OrderDetailNode): boolean {
   return bCountry === sCountry && bCity === sCity;
 }
 
-/** Whether ANY fulfillment reached a true final delivery to the recipient
- *  (native "delivered" event, Shopify deliveredAt, or a tracking-app
- *  "Delivered" status). Pickup-point / neighbour / returned do NOT count. */
+/** Whether ANY fulfillment's reconciled state is a true final delivery to
+ *  the recipient with a corroborating timestamp. Pickup-point / neighbour
+ *  / returned do NOT count — and neither does a delivery that a NEWER
+ *  return event superseded. */
 function hasFinalDelivery(
   fulfillments: OrderFulfillment[],
-  order: OrderDetailNode,
+  states: DeliveryStates,
 ): boolean {
-  for (const f of fulfillments) {
-    if (typeof f.deliveredAt === "string" && f.deliveredAt) return true;
-    if (nativeDelivery(f).category === "delivered") return true;
-    const tracking = readTrackingForFulfillment(f, order);
-    if (tracking.deliveryStatus === "Delivered" && tracking.deliveredAtTracking) {
-      return true;
-    }
+  return fulfillments.some((f) => confirmedDelivered(f, stateOf(states, f)));
+}
+
+/** §5.6 — does the delivered portion cover the disputed merchandise?
+ *  "complete" = delivered quantity ≥ ordered quantity; "partial" = some
+ *  but not all; "none" = nothing delivered; "unknown" = the order's line
+ *  items are unavailable (never guess). Order-level definitive language
+ *  is reserved for "complete" (or "unknown", where per-shipment evidence
+ *  is all we have) — one delivered package must not speak for the whole
+ *  order. */
+export type DeliveryCoverage = "complete" | "partial" | "none" | "unknown";
+
+function resolveDeliveryCoverage(
+  order: OrderDetailNode,
+  states: DeliveryStates,
+): DeliveryCoverage {
+  const orderQty = (order.lineItems?.edges ?? []).reduce(
+    (sum, e) => sum + (e.node.quantity ?? 0),
+    0,
+  );
+  if (!orderQty) return "unknown";
+  let deliveredQty = 0;
+  for (const f of order.fulfillments) {
+    const s = stateOf(states, f);
+    if (!confirmedDelivered(f, s)) continue;
+    deliveredQty += f.fulfillmentLineItems.edges.reduce(
+      (sum, e) => sum + (e.node.quantity ?? 0),
+      0,
+    );
   }
-  return false;
+  if (deliveredQty <= 0) return "none";
+  return deliveredQty >= orderQty ? "complete" : "partial";
 }
 
 /** Rubric #9 flag consumed by the canonical categorizer
  *  (lib/argument/canonicalEvidence.ts): `delivered_confirmed` upgrades to
  *  STRONG when delivery landed at the verified customer address. True only
  *  when there is a genuine FINAL delivery AND the shipping address is
- *  verified (billing/shipping aligned, no cross-border/city mismatch). A
- *  pickup-point, neighbour, or returned parcel never sets this. This is the
- *  decisive signal for an item-not-received dispute — the carrier confirms
- *  the goods reached the customer's own address. */
+ *  verified (billing/shipping aligned, no cross-border/city mismatch) AND
+ *  the delivered shipments cover the disputed merchandise (§5.6 — a
+ *  single delivered package never vouches for a partially-delivered
+ *  order). A pickup-point, neighbour, or returned parcel never sets this. */
 function resolveDeliveredToVerifiedAddress(
-  fulfillments: OrderFulfillment[],
   order: OrderDetailNode,
+  states: DeliveryStates,
+  coverage: DeliveryCoverage,
 ): boolean {
-  return hasFinalDelivery(fulfillments, order) && shippedToVerifiedAddress(order);
+  return (
+    hasFinalDelivery(order.fulfillments, states) &&
+    shippedToVerifiedAddress(order) &&
+    (coverage === "complete" || coverage === "unknown")
+  );
 }
 
 export async function collectFulfillmentEvidence(
@@ -302,7 +468,9 @@ export async function collectFulfillmentEvidence(
   const order = ctx.order;
   if (!order?.fulfillments?.length) return [];
 
-  const proofType = resolveProofType(order.fulfillments, order);
+  const states = await resolveDeliveryStates(ctx, order);
+  const proofType = resolveProofType(order.fulfillments, states);
+  const coverage = resolveDeliveryCoverage(order, states);
 
   const fieldsProvided: string[] = [];
   const hasTracking = order.fulfillments.some((f) =>
@@ -319,7 +487,9 @@ export async function collectFulfillmentEvidence(
     (f) =>
       f.deliveredAt ||
       f.status === "SUCCESS" ||
-      f.displayStatus === "DELIVERED"
+      f.displayStatus === "DELIVERED" ||
+      stateOf(states, f).current?.status === "Delivered" ||
+      stateOf(states, f).current?.status === "DeliveredToPickup"
   );
   if (hasDelivery) fieldsProvided.push("delivery_proof");
 
@@ -342,16 +512,24 @@ export async function collectFulfillmentEvidence(
         // Top-level delivery facts read by factClassifier.extractValue
         // (`p.deliveredAt` / `p.signedByName`) → narrative writer, which
         // cites "delivered {date}" / signature in bank-facing prose.
-        deliveredAt: resolveDeliveredAt(order.fulfillments, order),
-        signedByName: resolveSignedByName(order.fulfillments, order),
+        deliveredAt: resolveDeliveredAt(order.fulfillments, states),
+        signedByName: resolveSignedByName(order.fulfillments, states),
         // Rubric #9 — canonical categorizer upgrades delivered_confirmed to
-        // STRONG when true. Set only for a genuine final delivery to the
-        // verified customer address (see resolveDeliveredToVerifiedAddress).
+        // STRONG when true. Requires final delivery + verified address +
+        // disputed-merchandise coverage (see resolveDeliveredToVerifiedAddress).
         deliveredToVerifiedAddress: resolveDeliveredToVerifiedAddress(
-          order.fulfillments,
           order,
+          states,
+          coverage,
         ),
-        fulfillments: order.fulfillments.map((f) => extractTrackingData(f, order)),
+        // §5.6 — complete | partial | none | unknown. Package-level rows
+        // below stay citable when only part of the order is confirmed.
+        deliveryCoverage: coverage,
+        // §5.7 — any shipment whose sources disagreed (admin provenance).
+        sourceConflict: order.fulfillments.some((f) => stateOf(states, f).conflict),
+        fulfillments: order.fulfillments.map((f) =>
+          extractTrackingData(f, order, stateOf(states, f)),
+        ),
       },
     },
   ];
