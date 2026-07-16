@@ -26,7 +26,7 @@
  */
 
 import type { DeliveryProofType } from "@/lib/argument/canonicalEvidence";
-import type { I18nKey } from "@/lib/i18n/token";
+import type { I18nKey, I18nToken } from "@/lib/i18n/token";
 
 /** One carrier tracking reference, ready to render as a link. */
 export interface TrackingLink {
@@ -36,8 +36,19 @@ export interface TrackingLink {
 }
 
 export interface DeliveryPresentation {
-  /** Specific, proof-state-aware label key. */
+  /** Proof-tier label key (signature/carrier/shipped/label). Kept for
+   *  tier ranking + the in-transit strength-reason check — display
+   *  surfaces should prefer `titleToken`. */
   labelKey: I18nKey;
+  /** Fact-stating display title: WHAT happened and WHEN — "Delivered
+   *  Jun 4", "Collected at pickup point Jun 4", "At pickup point —
+   *  awaiting collection" — instead of the categorical "Delivery
+   *  confirmation (carrier)". */
+  titleToken: I18nToken;
+  /** Carrier-API provenance: the adapter slug (e.g. "dhl") when a
+   *  carrier_api_* source supplied the delivery state — the source
+   *  caption must then say so instead of "From Shopify order data". */
+  carrierApiSlug: string | null;
   /** Carrier + tracking references pulled from the fulfillment payload.
    *  Empty when the payload carries none. */
   trackingLinks: TrackingLink[];
@@ -175,11 +186,124 @@ function extractTrackingLinks(
   return links;
 }
 
+const SHORT_MONTHS = [
+  "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec",
+];
+
+/** ISO → "Mon D" (UTC). Null on garbage so the segment drops out. Shared
+ *  date shape with evidenceLineItem's facts line. */
+export function shortEvidenceDate(iso: unknown): string | null {
+  if (typeof iso !== "string") return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${SHORT_MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
+}
+
+/** Reconciled receipt state for the whole payload, read from the
+ *  per-fulfillment `carrierTracking` the collector wrote (the reconciled
+ *  winner per shipment — see lib/packs/sources/fulfillmentSource.ts).
+ *  Display precedence: a doorstep delivery outranks a collection, which
+ *  outranks an awaiting-collection arrival. `date` is the customer-
+ *  receipt timestamp when one exists. */
+export interface DeliveryReceipt {
+  state: "delivered" | "collected" | "awaiting_collection" | null;
+  date: string | null;
+  carrierApiSlug: string | null;
+}
+
+const RECEIPT_RANK: Record<string, number> = {
+  Delivered: 3,
+  CollectedAtPickup: 2,
+  DeliveredToPickup: 1,
+};
+
+export function resolveDeliveryReceipt(
+  payload: Record<string, unknown> | null | undefined,
+): DeliveryReceipt {
+  const p = payload ?? {};
+  let bestStatus: string | null = null;
+  let bestAt: string | null = null;
+  let carrierApiSlug: string | null = null;
+
+  const fulfillments = Array.isArray(p.fulfillments) ? p.fulfillments : [];
+  for (const f of fulfillments) {
+    if (!f || typeof f !== "object") continue;
+    const ct = (f as Record<string, unknown>).carrierTracking;
+    if (!ct || typeof ct !== "object") continue;
+    const tr = ct as Record<string, unknown>;
+    const status = typeof tr.deliveryStatus === "string" ? tr.deliveryStatus : null;
+    const source = typeof tr.trackingSource === "string" ? tr.trackingSource : "";
+    if (source.startsWith("carrier_api")) {
+      carrierApiSlug = source.replace(/^carrier_api_?/, "") || "carrier";
+    }
+    if (!status || !(status in RECEIPT_RANK)) continue;
+    if (!bestStatus || RECEIPT_RANK[status] > RECEIPT_RANK[bestStatus]) {
+      bestStatus = status;
+      bestAt =
+        typeof tr.deliveredAtTracking === "string" ? tr.deliveredAtTracking : null;
+    }
+  }
+
+  const topLevelDeliveredAt =
+    typeof p.deliveredAt === "string" ? p.deliveredAt : null;
+  const state =
+    bestStatus === "Delivered"
+      ? "delivered"
+      : bestStatus === "CollectedAtPickup"
+        ? "collected"
+        : bestStatus === "DeliveredToPickup"
+          ? "awaiting_collection"
+          : topLevelDeliveredAt
+            ? "delivered"
+            : null;
+  return {
+    state,
+    date: bestAt ?? topLevelDeliveredAt,
+    carrierApiSlug,
+  };
+}
+
+/** Fact-stating title for a delivery row: what happened + when. Falls
+ *  back to the proof-tier wording when the payload carries no receipt
+ *  state (older packs). Shared by the Overview evidence card and the
+ *  collapsed delivery line item so every surface tells the same story. */
+export function resolveDeliveryTitle(
+  proofType: DeliveryProofType,
+  payload: Record<string, unknown> | null | undefined,
+): I18nToken {
+  const NS = "disputes.deliveryProof";
+  const receipt = resolveDeliveryReceipt(payload);
+  const date = shortEvidenceDate(receipt.date);
+
+  if (proofType === "signature_confirmed") {
+    return date
+      ? { key: `${NS}.titleSignedOn`, params: { date } }
+      : { key: `${NS}.titleSigned` };
+  }
+  if (proofType === "delivered_confirmed") {
+    if (receipt.state === "collected") {
+      return date
+        ? { key: `${NS}.titleCollectedOn`, params: { date } }
+        : { key: `${NS}.titleCollected` };
+    }
+    return date
+      ? { key: `${NS}.titleDeliveredOn`, params: { date } }
+      : { key: `${NS}.titleDelivered` };
+  }
+  if (proofType === "delivered_unverified") {
+    if (receipt.state === "awaiting_collection") {
+      return { key: `${NS}.titleAwaitingCollection` };
+    }
+    return { key: PROOF_LABEL_KEY.delivered_unverified };
+  }
+  return { key: PROOF_LABEL_KEY.label_created };
+}
+
 /**
  * Build the delivery-row presentation from a fulfillment payload. Returns
- * a proof-state-specific label key and any tracking references. The caller
- * (Overview evidence list) resolves `labelKey` and renders `trackingLinks`
- * as clickable links.
+ * the proof-tier label key, a fact-stating display title, carrier-API
+ * provenance, and any tracking references. The caller (Overview evidence
+ * list) resolves the tokens and renders `trackingLinks` as clickable links.
  */
 export function buildDeliveryPresentation(
   payload: Record<string, unknown> | null | undefined,
@@ -187,6 +311,8 @@ export function buildDeliveryPresentation(
   const proofType = resolveProofType(payload);
   return {
     labelKey: PROOF_LABEL_KEY[proofType],
+    titleToken: resolveDeliveryTitle(proofType, payload),
+    carrierApiSlug: resolveDeliveryReceipt(payload).carrierApiSlug,
     trackingLinks: extractTrackingLinks(payload),
   };
 }

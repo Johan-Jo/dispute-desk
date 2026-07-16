@@ -39,6 +39,7 @@ import { EVIDENCE_EVALUATION_HELPER } from "@/lib/argument/evidenceStatus";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type { PresentationStatus } from "../workspace-components/types";
 import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
+import { buildRefundPresentation } from "@/lib/argument/refundPresentation";
 import {
   buildDeliveryPresentation,
   type DeliveryPresentation,
@@ -947,12 +948,19 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               spec.signalId === "delivery"
                 ? buildDeliveryPresentation(payload)
                 : null;
+            // Refund rows get a fact-stating title ("Refund issued" /
+            // "No refund issued") + a facts line (amount, currency, date)
+            // instead of the categorical "Refund status" — the merchant
+            // must be able to answer "was this refunded?" from the card.
+            const refundPresentation =
+              spec.signalId === "refund" ? buildRefundPresentation(payload) : null;
             return {
               item: c,
               spec,
               classification,
               lineItem: lineItemsByField.get(c.field),
               deliveryPresentation,
+              refundPresentation,
             };
           });
 
@@ -1101,8 +1109,14 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         //   leading icon (5x5) · title (14/600) + descriptor (12/subdued)
         //   · trailing pill self-aligned.
         const renderRow = (row: Row) => {
-          const { item, spec, classification, lineItem, deliveryPresentation } =
-            row;
+          const {
+            item,
+            spec,
+            classification,
+            lineItem,
+            deliveryPresentation,
+            refundPresentation,
+          } = row;
           const isMissing = classification.status === "missing";
           const isInternalOnly = isInternalOnlyRow(row);
           // System-derived row that's currently missing — replace the
@@ -1167,6 +1181,16 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             !isInternalOnly
               ? (LINE_ITEM_SOURCE_NOTE[lineItem.source] ?? null)
               : null;
+          // Honest provenance for carrier-API-sourced delivery states:
+          // when the DHL (etc.) adapter supplied the reconciled state,
+          // "From Shopify order data" is simply false — say where the
+          // evidence really came from.
+          const carrierApiSourceNote =
+            !isMissing && deliveryPresentation?.carrierApiSlug
+              ? tSource("carrier_api", {
+                  carrier: deliveryPresentation.carrierApiSlug.toUpperCase(),
+                })
+              : null;
           const sourceNote =
             classification.status === "not_applicable" && item.unavailableReason
               ? item.unavailableReason
@@ -1176,7 +1200,10 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                   ? resolveToken(tRoot, lineItem.reasonToken)
                   : isPendingSystemSignal
                     ? t("rowSourceCaptionPendingSystem")
-                    : (lineItemSourceNote ?? SOURCE_NOTE[item.source ?? ""] ?? null);
+                    : (carrierApiSourceNote ??
+                       lineItemSourceNote ??
+                       SOURCE_NOTE[item.source ?? ""] ??
+                       null);
           const isNeutral =
             classification.status === "not_applicable" ||
             classification.status === "waived";
@@ -1266,16 +1293,26 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                   }}
                 >
                   {(() => {
-                    // Delivery rows get a proof-state-aware title so a
-                    // shipped-but-unconfirmed order reads as "Shipping &
-                    // tracking", not the generic "Delivery confirmation".
-                    // Only override for COLLECTED rows — a missing delivery
-                    // row should keep the generic signal label as a prompt.
+                    // Delivery rows get a FACT-stating title — what
+                    // happened and when ("Delivered Jun 4", "Collected at
+                    // pickup point Jun 4", "At pickup point — awaiting
+                    // collection") instead of the categorical "Delivery
+                    // confirmation (carrier)". Only override for COLLECTED
+                    // rows — a missing delivery row should keep the
+                    // generic signal label as a prompt.
                     if (deliveryPresentation && !isMissing) {
                       try {
-                        return resolveToken(tRoot, {
-                          key: deliveryPresentation.labelKey,
-                        });
+                        return resolveToken(tRoot, deliveryPresentation.titleToken);
+                      } catch {
+                        /* fall through to generic label */
+                      }
+                    }
+                    // Refund rows likewise state the fact: "Refund issued"
+                    // / "No refund issued" — never the categorical
+                    // "Refund status".
+                    if (refundPresentation && !isMissing) {
+                      try {
+                        return resolveToken(tRoot, refundPresentation.titleToken);
                       } catch {
                         /* fall through to generic label */
                       }
@@ -1366,6 +1403,32 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                         </p>
                       )}
                     </div>
+                  )}
+                {/* Refund facts — answers "how much / when" right on the
+                    card: "249.00 SEK refunded on Jun 12" or "the customer
+                    never initiated a return". */}
+                {!isMissing &&
+                  refundPresentation &&
+                  refundPresentation.factsTokens.length > 0 && (
+                    <p
+                      style={{
+                        fontSize: 12,
+                        color: "#6D7175",
+                        margin: "2px 0 0",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {refundPresentation.factsTokens
+                        .map((tok) => {
+                          try {
+                            return resolveToken(tRoot, tok);
+                          } catch {
+                            return null;
+                          }
+                        })
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
                   )}
                 {/* Internal-only warnings attached to a row whose
                     primary value is still useful (e.g.

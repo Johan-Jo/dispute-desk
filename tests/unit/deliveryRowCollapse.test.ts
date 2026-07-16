@@ -104,18 +104,23 @@ describe("delivery row collapse — one row, not two", () => {
     expect(keys).toContain("disputes.deliveryProof.factsNotDeliveredEta");
   });
 
-  it("escalates the label when the carrier confirmed delivery", () => {
+  it("escalates the label to the fact-stating title when the carrier confirmed delivery", () => {
+    // 2026-07-16: titles now state WHAT happened and WHEN ("Delivered
+    // Jun 9"), not the category ("Delivery confirmation (carrier)").
     const carrier = derive("delivered_confirmed", { deliveredAt: "2026-06-09T10:00:00Z" });
     const cRow = carrier.find(
       (li) => li.field === "shipping_tracking" || li.field === "delivery_proof",
     )!;
-    expect(cRow.displayLabelToken?.key).toBe("disputes.deliveryProof.carrierConfirmed");
+    expect(cRow.displayLabelToken).toEqual({
+      key: "disputes.deliveryProof.titleDeliveredOn",
+      params: { date: "Jun 9" },
+    });
 
     const sig = derive("signature_confirmed", { signedByName: "J. Smith" });
     const sRow = sig.find(
       (li) => li.field === "shipping_tracking" || li.field === "delivery_proof",
     )!;
-    expect(sRow.displayLabelToken?.key).toBe("disputes.deliveryProof.signature");
+    expect(sRow.displayLabelToken?.key).toBe("disputes.deliveryProof.titleSigned");
   });
 
   it("replaces the generic context reason with proof-specific why-context", () => {

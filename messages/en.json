@@ -840,7 +840,8 @@
       "device_session_consistency": "From device fingerprint",
       "fraud_risk_screening": "From Shopify risk engine",
       "customer_account_info": "From Shopify customer data",
-      "default": "From store data"
+      "default": "From store data",
+      "carrier_api": "From the carrier's tracking system ({carrier})"
     },
     "fieldAction": {
       "default": {
@@ -1682,7 +1683,16 @@
       "factsNotDelivered": "Delivery not confirmed",
       "factsSignedBy": "Signed by {name}",
       "factsNotDeliveredEta": "Delivery not confirmed (est. {date})",
-      "factsCarrier": "{carrier}"
+      "factsCarrier": "{carrier}",
+      "titleDelivered": "Delivered",
+      "titleDeliveredOn": "Delivered {date}",
+      "titleSigned": "Delivered & signed for",
+      "titleSignedOn": "Delivered & signed for {date}",
+      "titleCollected": "Collected by customer at pickup point",
+      "titleCollectedOn": "Collected by customer at pickup point ({date})",
+      "titleAwaitingCollection": "At pickup point — awaiting customer collection",
+      "factsCollected": "Collected at the pickup point {date} — ID required at collection",
+      "factsAwaitingCollection": "At the pickup point — not yet collected"
     },
     "gorgiasComms": {
       "title": "Customer support conversations",
@@ -1775,6 +1785,14 @@
         "submit": "Send report",
         "cancel": "Cancel"
       }
+    },
+    "refundStatus": {
+      "titleIssued": "Refund issued",
+      "titleNone": "No refund issued",
+      "factsIssued": "{amount} {currency} refunded on {date}",
+      "factsIssuedNoDate": "{amount} {currency} refunded",
+      "factsIssuedDateOnly": "Refunded on {date}",
+      "factsNoReturn": "The customer never initiated a return"
     }
   },
   "disputeReasons": {

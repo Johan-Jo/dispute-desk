@@ -29,7 +29,11 @@ import {
   categorizeEvidenceField,
   type EvidenceCategory,
 } from "./canonicalEvidence";
-import { numberFromTrackingUrl } from "./deliveryPresentation";
+import {
+  numberFromTrackingUrl,
+  resolveDeliveryTitle,
+  resolveDeliveryReceipt,
+} from "./deliveryPresentation";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type { EvidenceFact } from "@/lib/defence/types";
 import {
@@ -1132,21 +1136,34 @@ function buildDeliveryFacts(
     factsTokens.push({ key: `${NS}.factsCarrier`, params: { carrier } });
   }
 
-  // Delivery segment — proof-state aware.
+  // Delivery segment — proof-state AND receipt-state aware: a collection
+  // at a pickup point reads "Collected at pickup point {date}", never a
+  // bare "Delivered {date}" (and an awaiting-collection arrival never
+  // reads as the misleading "Not delivered").
+  const receipt = resolveDeliveryReceipt(payload);
   if (proof === "signature_confirmed" && signedByName) {
     factsTokens.push({ key: `${NS}.factsSignedBy`, params: { name: signedByName } });
   } else if (
     (proof === "signature_confirmed" || proof === "delivered_confirmed") &&
-    shortDate(deliveredAt)
+    shortDate(receipt.date ?? deliveredAt)
   ) {
-    factsTokens.push({ key: `${NS}.factsDelivered`, params: { date: shortDate(deliveredAt)! } });
-  } else if (proof === "delivered_unverified") {
-    const eta = shortDate(estimatedDeliveryAt);
+    const date = shortDate(receipt.date ?? deliveredAt)!;
     factsTokens.push(
-      eta
-        ? { key: `${NS}.factsNotDeliveredEta`, params: { date: eta } }
-        : { key: `${NS}.factsNotDelivered` },
+      receipt.state === "collected"
+        ? { key: `${NS}.factsCollected`, params: { date } }
+        : { key: `${NS}.factsDelivered`, params: { date } },
     );
+  } else if (proof === "delivered_unverified") {
+    if (receipt.state === "awaiting_collection") {
+      factsTokens.push({ key: `${NS}.factsAwaitingCollection` });
+    } else {
+      const eta = shortDate(estimatedDeliveryAt);
+      factsTokens.push(
+        eta
+          ? { key: `${NS}.factsNotDeliveredEta`, params: { date: eta } }
+          : { key: `${NS}.factsNotDelivered` },
+      );
+    }
   }
 
   return { factsTokens, trackingUrl, trackingNumber };
@@ -1182,7 +1199,10 @@ function collapseDeliveryRows(
   };
   const survivor = [...deliveryRows].sort((a, b) => rank(b) - rank(a))[0];
 
-  const displayLabelToken = deliveryLabelToken(proof);
+  // Fact-stating title shared with the Overview card ("Delivered Jun 4",
+  // "Collected at pickup point Jun 4"); falls back to the proof-tier
+  // wording for payloads with no receipt state.
+  const displayLabelToken = resolveDeliveryTitle(proof, payload);
   // Proof-specific why-context replaces the generic reason ONLY when the
   // row is in the package as context/bank evidence; excluded / waived /
   // not-included rows keep their status-specific reason (e.g. "you
