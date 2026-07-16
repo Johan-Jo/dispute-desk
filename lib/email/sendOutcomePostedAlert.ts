@@ -14,6 +14,13 @@
  *                  terminal that isn't won/lost — collapses to "closed
  *                  without DisputeDesk response")
  *
+ * Each variant additionally has an inquiry counterpart: when the case
+ * resolved while still an inquiry (phase === "inquiry"), the copy says
+ * "dispute" instead of "chargeback" and the body states explicitly that
+ * the case was an inquiry — calling an inquiry a "chargeback" is
+ * factually wrong (K-Collective, 2026-07-16). Unknown/null phase falls
+ * back to the chargeback wording, matching phaseUtils' default.
+ *
  * Effect-level idempotency is handled by the dispatcher
  * (`withEffectDedup` on the OUTCOME_DETECTED event key). This helper
  * does NOT add a per-dispute claim guard because the dispatcher
@@ -45,6 +52,9 @@ export interface OutcomePostedAlertContext {
   amount: number | null;
   currencyCode: string | null;
   orderName: string | null;
+  /** Dispute phase at resolution. "inquiry" selects the inquiry-worded
+   *  copy; null/undefined falls back to chargeback wording. */
+  phase?: "inquiry" | "chargeback" | null;
 }
 
 type Locale = "en" | "es" | "pt" | "fr" | "de" | "sv";
@@ -71,6 +81,13 @@ interface LocaleStrings {
   won: VariantStrings;
   lost: VariantStrings;
   accepted: VariantStrings;
+  /** Copy used when the case resolved while still an inquiry — says
+   *  "dispute", never "chargeback", and names the inquiry explicitly. */
+  inquiry: {
+    won: VariantStrings;
+    lost: VariantStrings;
+    accepted: VariantStrings;
+  };
   shared: {
     reason: string;
     order: string;
@@ -131,6 +148,45 @@ const STRINGS: Record<Locale, LocaleStrings> = {
       cta: "View case record",
       resultLine: "Result: Closed · No defence submitted",
     },
+    inquiry: {
+      won: {
+        subject: ({ shortId, orderName }) =>
+          `You won the dispute on ${orderName ?? `dispute ${shortId}`}`,
+        heading: "You won this dispute",
+        body: [
+          "Good news — this case was an inquiry, not a chargeback: the payment provider asked for more information before deciding whether to raise a formal chargeback. Your response satisfied them, and the case has been resolved in your favour.",
+          "The disputed amount remains with you, and the case closed without escalating to a chargeback.",
+          "Your case record stays in DisputeDesk, including the evidence submitted, timeline, and outcome, so your team can review what worked and reuse the pattern for future disputes.",
+        ],
+        amountLabel: "Amount protected",
+        cta: "View winning case",
+        resultLine: "Result: Inquiry resolved in your favour · Funds retained",
+      },
+      lost: {
+        subject: ({ shortId, orderName }) =>
+          `This dispute was lost — ${orderName ?? `dispute ${shortId}`}`,
+        heading: "This dispute was not won",
+        body: [
+          "This case was an inquiry, not a chargeback: the payment provider asked for more information before making a decision. The case has been resolved against you, and the disputed amount has been deducted from your payout.",
+          "This decision is final for this case, so there is no further action to take. The case will remain in DisputeDesk with the submitted evidence, timeline, and outcome so your team can review what happened and identify ways to strengthen future responses.",
+        ],
+        amountLabel: "Amount lost",
+        cta: "Review the case",
+        resultLine: "Result: Resolved against you · Funds deducted",
+      },
+      accepted: {
+        subject: ({ shortId, orderName }) =>
+          `Dispute closed on ${orderName ?? `dispute ${shortId}`}`,
+        heading: "This dispute has closed",
+        body: [
+          "This case was an inquiry, not a chargeback: the payment provider asked for more information before deciding whether to escalate. The case has now closed without a submitted response, and the disputed amount has settled with the customer.",
+          "There is nothing further to do on this case, but DisputeDesk will keep the record available so your team can review the timeline, see what evidence was available, and improve future dispute handling.",
+        ],
+        amountLabel: "Amount settled with customer",
+        cta: "View case record",
+        resultLine: "Result: Closed · No response submitted",
+      },
+    },
   },
   de: {
     shared: {
@@ -175,6 +231,45 @@ const STRINGS: Record<Locale, LocaleStrings> = {
       amountLabel: "An Karten­inhaber abgeführter Betrag",
       cta: "Akteneintrag ansehen",
       resultLine: "Ergebnis: Geschlossen · Keine Verteidigung eingereicht",
+    },
+    inquiry: {
+      won: {
+        subject: ({ shortId, orderName }) =>
+          `Sie haben den Streitfall zu ${orderName ?? `Streitfall ${shortId}`} gewonnen`,
+        heading: "Sie haben diesen Streitfall gewonnen",
+        body: [
+          "Gute Nachrichten — dieser Fall war eine Anfrage, keine Rückbuchung: Der Zahlungsanbieter hat zusätzliche Informationen angefordert, bevor über eine formelle Rückbuchung entschieden wird. Ihre Antwort war überzeugend, und der Fall wurde zu Ihren Gunsten entschieden.",
+          "Der strittige Betrag bleibt bei Ihnen, und der Fall wurde geschlossen, ohne zu einer Rückbuchung zu eskalieren.",
+          "Der Fall bleibt in DisputeDesk gespeichert — einschließlich der eingereichten Beweise, der Zeitlinie und des Ergebnisses —, damit Ihr Team analysieren kann, was funktioniert hat, und das Muster für künftige Streitfälle wiederverwenden kann.",
+        ],
+        amountLabel: "Geschützter Betrag",
+        cta: "Gewonnenen Fall ansehen",
+        resultLine: "Ergebnis: Anfrage zu Ihren Gunsten entschieden · Mittel behalten",
+      },
+      lost: {
+        subject: ({ shortId, orderName }) =>
+          `Streitfall verloren — ${orderName ?? `Streitfall ${shortId}`}`,
+        heading: "Dieser Streitfall wurde nicht gewonnen",
+        body: [
+          "Dieser Fall war eine Anfrage, keine Rückbuchung: Der Zahlungsanbieter hat zusätzliche Informationen angefordert, bevor eine Entscheidung getroffen wird. Der Fall wurde zu Ihren Ungunsten entschieden, und der strittige Betrag wurde von Ihrer Auszahlung abgezogen.",
+          "Diese Entscheidung ist für diesen Fall endgültig, es ist keine weitere Maßnahme erforderlich. Der Fall bleibt in DisputeDesk mit den eingereichten Beweisen, der Zeitlinie und dem Ergebnis verfügbar, damit Ihr Team prüfen kann, was passiert ist, und künftige Antworten stärken kann.",
+        ],
+        amountLabel: "Verlorener Betrag",
+        cta: "Fall überprüfen",
+        resultLine: "Ergebnis: Zu Ihren Ungunsten entschieden · Mittel abgezogen",
+      },
+      accepted: {
+        subject: ({ shortId, orderName }) =>
+          `Streitfall geschlossen — ${orderName ?? `Streitfall ${shortId}`}`,
+        heading: "Dieser Streitfall wurde geschlossen",
+        body: [
+          "Dieser Fall war eine Anfrage, keine Rückbuchung: Der Zahlungsanbieter hat zusätzliche Informationen angefordert, bevor über eine Eskalation entschieden wird. Der Fall wurde ohne eingereichte Antwort geschlossen, und der strittige Betrag wurde mit dem Kunden abgerechnet.",
+          "Für diesen Fall ist keine weitere Maßnahme erforderlich. DisputeDesk bewahrt den Datensatz auf, damit Ihr Team die Zeitlinie einsehen, verfügbare Beweise prüfen und die Bearbeitung künftiger Streitfälle verbessern kann.",
+        ],
+        amountLabel: "Mit dem Kunden abgerechneter Betrag",
+        cta: "Akteneintrag ansehen",
+        resultLine: "Ergebnis: Geschlossen · Keine Antwort eingereicht",
+      },
     },
   },
   es: {
@@ -221,6 +316,45 @@ const STRINGS: Record<Locale, LocaleStrings> = {
       cta: "Ver registro del caso",
       resultLine: "Resultado: Cerrado · Sin defensa presentada",
     },
+    inquiry: {
+      won: {
+        subject: ({ shortId, orderName }) =>
+          `Ha ganado la disputa de ${orderName ?? shortId}`,
+        heading: "Ha ganado esta disputa",
+        body: [
+          "Buenas noticias: este caso era una consulta, no un contracargo. El proveedor de pagos solicitó más información antes de decidir si abrir un contracargo formal. Su respuesta fue satisfactoria y el caso se ha resuelto a su favor.",
+          "El importe disputado permanece con usted, y el caso se cerró sin escalar a un contracargo.",
+          "El registro del caso permanece en DisputeDesk, incluidas las pruebas presentadas, la cronología y el resultado, para que su equipo pueda revisar qué funcionó y reutilizar el patrón en futuras disputas.",
+        ],
+        amountLabel: "Importe protegido",
+        cta: "Ver caso ganador",
+        resultLine: "Resultado: Consulta resuelta a su favor · Fondos retenidos",
+      },
+      lost: {
+        subject: ({ shortId, orderName }) =>
+          `Esta disputa se perdió — ${orderName ?? `disputa ${shortId}`}`,
+        heading: "Esta disputa no se ganó",
+        body: [
+          "Este caso era una consulta, no un contracargo. El proveedor de pagos solicitó más información antes de tomar una decisión. El caso se ha resuelto en su contra y el importe disputado se ha deducido de su pago.",
+          "Esta decisión es definitiva para este caso, por lo que no hay más acciones a realizar. El caso permanecerá en DisputeDesk con las pruebas presentadas, la cronología y el resultado para que su equipo pueda revisar qué ocurrió e identificar formas de fortalecer futuras respuestas.",
+        ],
+        amountLabel: "Importe perdido",
+        cta: "Revisar el caso",
+        resultLine: "Resultado: Resuelto en su contra · Fondos deducidos",
+      },
+      accepted: {
+        subject: ({ shortId, orderName }) =>
+          `Disputa cerrada en ${orderName ?? `disputa ${shortId}`}`,
+        heading: "Esta disputa se ha cerrado",
+        body: [
+          "Este caso era una consulta, no un contracargo. El proveedor de pagos solicitó más información antes de decidir si escalar. El caso se ha cerrado sin una respuesta presentada y el importe disputado se ha liquidado con el cliente.",
+          "No hay nada más que hacer en este caso, pero DisputeDesk mantendrá el registro disponible para que su equipo pueda revisar la cronología, ver qué pruebas estaban disponibles y mejorar la gestión de futuras disputas.",
+        ],
+        amountLabel: "Importe liquidado con el cliente",
+        cta: "Ver registro del caso",
+        resultLine: "Resultado: Cerrado · Sin respuesta presentada",
+      },
+    },
   },
   pt: {
     shared: {
@@ -265,6 +399,45 @@ const STRINGS: Record<Locale, LocaleStrings> = {
       amountLabel: "Valor liquidado com o titular do cartão",
       cta: "Ver registro do caso",
       resultLine: "Resultado: Encerrado · Sem defesa enviada",
+    },
+    inquiry: {
+      won: {
+        subject: ({ shortId, orderName }) =>
+          `Você venceu a disputa de ${orderName ?? `disputa ${shortId}`}`,
+        heading: "Você venceu esta disputa",
+        body: [
+          "Boas notícias — este caso era uma consulta, não um chargeback: o provedor de pagamento solicitou mais informações antes de decidir se abriria um chargeback formal. Sua resposta foi satisfatória e o caso foi resolvido a seu favor.",
+          "O valor disputado permanece com você, e o caso foi encerrado sem escalar para um chargeback.",
+          "O registro do caso permanece no DisputeDesk, incluindo as provas enviadas, a linha do tempo e o resultado, para que sua equipe possa revisar o que funcionou e reutilizar o padrão em disputas futuras.",
+        ],
+        amountLabel: "Valor protegido",
+        cta: "Ver caso vencedor",
+        resultLine: "Resultado: Consulta resolvida a seu favor · Fundos retidos",
+      },
+      lost: {
+        subject: ({ shortId, orderName }) =>
+          `Esta disputa foi perdida — ${orderName ?? `disputa ${shortId}`}`,
+        heading: "Esta disputa não foi vencida",
+        body: [
+          "Este caso era uma consulta, não um chargeback: o provedor de pagamento solicitou mais informações antes de tomar uma decisão. O caso foi resolvido contra você, e o valor disputado foi deduzido do seu pagamento.",
+          "Esta decisão é final para este caso, portanto não há mais ações a tomar. O caso permanecerá no DisputeDesk com as provas enviadas, a linha do tempo e o resultado, para que sua equipe possa revisar o que aconteceu e identificar maneiras de fortalecer respostas futuras.",
+        ],
+        amountLabel: "Valor perdido",
+        cta: "Revisar o caso",
+        resultLine: "Resultado: Resolvido contra você · Fundos deduzidos",
+      },
+      accepted: {
+        subject: ({ shortId, orderName }) =>
+          `Disputa encerrada em ${orderName ?? `disputa ${shortId}`}`,
+        heading: "Esta disputa foi encerrada",
+        body: [
+          "Este caso era uma consulta, não um chargeback: o provedor de pagamento solicitou mais informações antes de decidir se escalaria. O caso foi encerrado sem uma resposta enviada, e o valor disputado foi liquidado com o cliente.",
+          "Não há mais nada a fazer neste caso, mas o DisputeDesk manterá o registro disponível para que sua equipe possa revisar a linha do tempo, ver quais provas estavam disponíveis e melhorar o tratamento de futuras disputas.",
+        ],
+        amountLabel: "Valor liquidado com o cliente",
+        cta: "Ver registro do caso",
+        resultLine: "Resultado: Encerrado · Sem resposta enviada",
+      },
     },
   },
   fr: {
@@ -311,6 +484,45 @@ const STRINGS: Record<Locale, LocaleStrings> = {
       cta: "Voir le dossier",
       resultLine: "Résultat : Clôturé · Aucune défense soumise",
     },
+    inquiry: {
+      won: {
+        subject: ({ shortId, orderName }) =>
+          `Vous avez gagné le différend sur ${orderName ?? `le différend ${shortId}`}`,
+        heading: "Vous avez gagné ce différend",
+        body: [
+          "Bonne nouvelle — ce dossier était une demande de renseignements, pas une rétrofacturation : le prestataire de paiement a demandé des informations supplémentaires avant de décider d'ouvrir une rétrofacturation formelle. Votre réponse a été jugée satisfaisante et le dossier a été tranché en votre faveur.",
+          "Le montant contesté reste à vous, et le dossier a été clôturé sans donner lieu à une rétrofacturation.",
+          "Le dossier reste dans DisputeDesk, y compris les preuves soumises, la chronologie et le résultat, pour que votre équipe puisse examiner ce qui a fonctionné et réutiliser le schéma pour les futurs différends.",
+        ],
+        amountLabel: "Montant protégé",
+        cta: "Voir l'affaire gagnée",
+        resultLine: "Résultat : Demande résolue en votre faveur · Fonds conservés",
+      },
+      lost: {
+        subject: ({ shortId, orderName }) =>
+          `Ce différend a été perdu — ${orderName ?? `différend ${shortId}`}`,
+        heading: "Ce différend n'a pas été gagné",
+        body: [
+          "Ce dossier était une demande de renseignements, pas une rétrofacturation : le prestataire de paiement a demandé des informations supplémentaires avant de prendre une décision. Le dossier a été tranché en votre défaveur, et le montant contesté a été déduit de votre versement.",
+          "Cette décision est finale pour ce dossier, il n'y a donc aucune action supplémentaire à entreprendre. L'affaire restera dans DisputeDesk avec les preuves soumises, la chronologie et le résultat, pour que votre équipe puisse examiner ce qui s'est passé et identifier des moyens de renforcer les réponses futures.",
+        ],
+        amountLabel: "Montant perdu",
+        cta: "Examiner l'affaire",
+        resultLine: "Résultat : Tranché en votre défaveur · Fonds déduits",
+      },
+      accepted: {
+        subject: ({ shortId, orderName }) =>
+          `Différend clôturé sur ${orderName ?? `différend ${shortId}`}`,
+        heading: "Ce différend a été clôturé",
+        body: [
+          "Ce dossier était une demande de renseignements, pas une rétrofacturation : le prestataire de paiement a demandé des informations supplémentaires avant de décider d'une éventuelle escalade. Le dossier a été clôturé sans réponse soumise, et le montant contesté a été réglé avec le client.",
+          "Il n'y a rien de plus à faire sur cette affaire, mais DisputeDesk conservera l'enregistrement disponible pour que votre équipe puisse examiner la chronologie, voir quelles preuves étaient disponibles et améliorer le traitement des futurs différends.",
+        ],
+        amountLabel: "Montant réglé avec le client",
+        cta: "Voir le dossier",
+        resultLine: "Résultat : Clôturé · Aucune réponse soumise",
+      },
+    },
   },
   sv: {
     shared: {
@@ -355,6 +567,45 @@ const STRINGS: Record<Locale, LocaleStrings> = {
       amountLabel: "Belopp reglerat med korthållare",
       cta: "Visa ärende­post",
       resultLine: "Resultat: Avslutat · Inget försvar inlämnat",
+    },
+    inquiry: {
+      won: {
+        subject: ({ shortId, orderName }) =>
+          `Du vann tvisten på ${orderName ?? `tvist ${shortId}`}`,
+        heading: "Du vann denna tvist",
+        body: [
+          "Goda nyheter — detta ärende var en förfrågan, inte ett återkrav: betalningsleverantören begärde mer information innan beslut om ett formellt återkrav. Ditt svar var övertygande och ärendet har avgjorts till din fördel.",
+          "Det tvistade beloppet stannar hos dig, och ärendet avslutades utan att eskalera till ett återkrav.",
+          "Ärendet stannar i DisputeDesk — inklusive de inskickade bevisen, tidslinjen och utfallet — så att ditt team kan granska vad som fungerade och återanvända mönstret för framtida tvister.",
+        ],
+        amountLabel: "Skyddat belopp",
+        cta: "Visa vunnet ärende",
+        resultLine: "Resultat: Förfrågan avgjord till din fördel · Medel behållna",
+      },
+      lost: {
+        subject: ({ shortId, orderName }) =>
+          `Denna tvist förlorades — ${orderName ?? `tvist ${shortId}`}`,
+        heading: "Denna tvist vanns inte",
+        body: [
+          "Detta ärende var en förfrågan, inte ett återkrav: betalningsleverantören begärde mer information innan beslut fattades. Ärendet har avgjorts till din nackdel, och det tvistade beloppet har dragits från din utbetalning.",
+          "Detta beslut är slutgiltigt för detta ärende, så det finns inga ytterligare åtgärder att vidta. Ärendet kommer att finnas kvar i DisputeDesk med de inskickade bevisen, tidslinjen och utfallet så att ditt team kan granska vad som hände och identifiera sätt att stärka framtida svar.",
+        ],
+        amountLabel: "Förlorat belopp",
+        cta: "Granska ärendet",
+        resultLine: "Resultat: Avgjord till din nackdel · Medel dragna",
+      },
+      accepted: {
+        subject: ({ shortId, orderName }) =>
+          `Tvist avslutad på ${orderName ?? `tvist ${shortId}`}`,
+        heading: "Denna tvist har avslutats",
+        body: [
+          "Detta ärende var en förfrågan, inte ett återkrav: betalningsleverantören begärde mer information innan beslut om eventuell eskalering. Ärendet har nu avslutats utan ett inlämnat svar, och det tvistade beloppet har reglerats med kunden.",
+          "Det finns inget mer att göra i detta ärende, men DisputeDesk bevarar ärendet så att ditt team kan granska tidslinjen, se vilka bevis som var tillgängliga och förbättra hanteringen av framtida tvister.",
+        ],
+        amountLabel: "Belopp reglerat med kund",
+        cta: "Visa ärende­post",
+        resultLine: "Resultat: Avslutat · Inget svar inlämnat",
+      },
     },
   },
 };
@@ -452,7 +703,11 @@ export async function sendOutcomePostedAlert(
       (steps?.store_profile?.payload?.storeLocale as string | undefined) ?? null;
     const locale = resolveLocale(storeLocale);
     const s = STRINGS[locale];
-    const variant = s[ctx.outcome];
+    // Inquiry-resolved cases must never be called a "chargeback" — pick
+    // the inquiry-worded variant set; unknown/null phase keeps the
+    // chargeback wording (same default as phaseUtils).
+    const variant =
+      ctx.phase === "inquiry" ? s.inquiry[ctx.outcome] : s[ctx.outcome];
 
     const { data: shop } = await sb
       .from("shops")

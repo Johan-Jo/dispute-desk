@@ -408,7 +408,61 @@ describe("dispatchDisputeEffects", () => {
     });
 
     expect(mockSendOutcome).toHaveBeenCalledWith(
-      expect.objectContaining({ disputeId: "dispute-1", outcome: "won" }),
+      expect.objectContaining({
+        disputeId: "dispute-1",
+        outcome: "won",
+        // OPENED_EVENT.context.phase is "chargeback" — must reach the
+        // email helper so the copy says "chargeback".
+        phase: "chargeback",
+      }),
+    );
+  });
+
+  it("OUTCOME_DETECTED on an inquiry forwards phase='inquiry' (email must not say 'chargeback')", async () => {
+    const outcomeClient = {
+      from: (table: string) => {
+        if (table === "audit_events") {
+          return { insert: vi.fn().mockResolvedValue({ error: null }) };
+        }
+        if (table === "disputes") {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi
+                  .fn()
+                  .mockResolvedValue({ data: { order_name: "#12809" }, error: null }),
+              }),
+            }),
+          };
+        }
+        throw new Error(`unexpected table: ${table}`);
+      },
+    } as unknown as never;
+    mockGetServiceClient.mockReturnValue(outcomeClient);
+
+    await dispatchDisputeEffects({
+      shopId: "shop-1",
+      result: appliedResult([
+        {
+          type: "OUTCOME_DETECTED",
+          disputeId: "dispute-1",
+          shopId: "shop-1",
+          eventAt: "2026-07-16T13:00:00Z",
+          eventKey: "dispute-1:OUTCOME_DETECTED:won",
+          newStatus: "won",
+          context: { ...OPENED_EVENT.context, phase: "inquiry", finalOutcome: "won" },
+        },
+      ]),
+      source: "webhook",
+      client: outcomeClient,
+    });
+
+    expect(mockSendOutcome).toHaveBeenCalledWith(
+      expect.objectContaining({
+        disputeId: "dispute-1",
+        outcome: "won",
+        phase: "inquiry",
+      }),
     );
   });
 
