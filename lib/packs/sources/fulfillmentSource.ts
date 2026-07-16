@@ -110,14 +110,29 @@ function existingSignalsFor(
   order: OrderDetailNode,
 ): DeliverySignal[] {
   const signals: DeliverySignal[] = [];
-  if (fulfillment.deliveredAt) {
+  const native = nativeDelivery(fulfillment);
+  // Shopify's bare `deliveredAt` is a GENERIC delivery stamp derived
+  // from the same carrier feed the event timeline comes from. When the
+  // timeline classified a RECEIPT state (delivered / collected) covering
+  // that moment (equal or newer timestamp), the SPECIFIC classification
+  // wins and the stamp is redundant — otherwise a servicepoint
+  // collection ties with its own deliveredAt stamp and the generic
+  // "Delivered" masks it (real case: cay order #12121, deliveredAt ===
+  // the "levererats" collection event, 2026-07-16). A RETURNED timeline
+  // does NOT swallow the stamp: delivered-then-returned are two distinct
+  // facts — both signals flow into reconciliation so the conflict stays
+  // visible (and can trigger a live carrier lookup to settle it).
+  const timelineReceiptCoversStamp =
+    (native.category === "delivered" || native.category === "collected_at_pickup") &&
+    !!fulfillment.deliveredAt &&
+    (native.at ?? "") >= fulfillment.deliveredAt;
+  if (fulfillment.deliveredAt && !timelineReceiptCoversStamp) {
     signals.push({
       status: "Delivered",
       at: fulfillment.deliveredAt,
       source: "shopify_native",
     });
   }
-  const native = nativeDelivery(fulfillment);
   if (native.category) {
     signals.push({
       status: NATIVE_CATEGORY_TO_STATUS[native.category],
@@ -499,6 +514,29 @@ function resolveDeliveredToVerifiedAddress(
   );
 }
 
+/** Decisive-receipt sibling of rubric #9 for COLLECTIONS: the customer
+ *  personally collected the parcel at the pickup point (ID/BankID at
+ *  the counter in SE/Nordic networks) — receipt tied to the recipient
+ *  even more directly than a doorstep drop. Same coverage gate as the
+ *  address flag: one collected package never vouches for a
+ *  partially-delivered order. */
+function resolveCollectedByCustomer(
+  order: OrderDetailNode,
+  states: DeliveryStates,
+  coverage: DeliveryCoverage,
+): boolean {
+  return (
+    order.fulfillments.some((f) => {
+      const s = stateOf(states, f);
+      return (
+        s.current?.status === "CollectedAtPickup" &&
+        !!(s.current.at || f.deliveredAt)
+      );
+    }) &&
+    (coverage === "complete" || coverage === "unknown")
+  );
+}
+
 export async function collectFulfillmentEvidence(
   ctx: BuildContext,
 ): Promise<EvidenceSection[]> {
@@ -560,6 +598,10 @@ export async function collectFulfillmentEvidence(
           states,
           coverage,
         ),
+        // Decisive-receipt sibling for collections — the canonical
+        // categorizer upgrades delivered_confirmed → STRONG when true
+        // (in-person collection, ID-verified in SE/Nordic networks).
+        collectedByCustomer: resolveCollectedByCustomer(order, states, coverage),
         // §5.6 — complete | partial | none | unknown. Package-level rows
         // below stay citable when only part of the order is confirmed.
         deliveryCoverage: coverage,

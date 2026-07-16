@@ -134,3 +134,31 @@ describe("collectFulfillmentEvidence — collection at pickup point (ID-verified
     expect((f.carrierTracking as Record<string, unknown>).deliveryStatus).toBe("CollectedAtPickup");
   });
 });
+
+describe("collectFulfillmentEvidence — the real #12121 shape (deliveredAt stamp masks a collection)", () => {
+  // Shopify's stream for cay order #12121 LACKS the serviceställe-arrival
+  // event and SETS deliveredAt (= the final "levererats" collection
+  // event). The collection must still be recognized via the
+  // READY_FOR_PICKUP notification, and the generic stamp must not mask it.
+  const F12121 = [
+    { status: "IN_TRANSIT", happenedAt: "2026-05-12T08:36:36Z", message: "Lastad på bil, utkörning påbörjad. - Sista hämtningsdag: 2026-05-19" },
+    { status: "READY_FOR_PICKUP", happenedAt: "2026-05-12T10:43:21Z", message: "Avisering skickad via APP. - Sista hämtningsdag: 2026-05-19" },
+    { status: "DELIVERED", happenedAt: "2026-05-12T17:27:00Z", message: "Försändelsen har levererats." },
+  ];
+
+  it("classifies as CollectedAtPickup, upgrades to STRONG via collectedByCustomer", async () => {
+    const data = await sectionData(
+      ctx({
+        fulfillments: [
+          evtFulfillment(F12121, { deliveredAt: "2026-05-12T17:27:00Z" }),
+        ] as OrderFulfillment[],
+      } as Partial<OrderDetailNode>),
+    );
+    const f = (data.fulfillments as Array<Record<string, unknown>>)[0];
+    expect((f.carrierTracking as Record<string, unknown>).deliveryStatus).toBe("CollectedAtPickup");
+    expect(data.proofType).toBe("delivered_confirmed");
+    expect(data.collectedByCustomer).toBe(true); // categorizer → STRONG
+    expect(data.deliveredToVerifiedAddress).toBe(false); // never an address claim
+    expect(data.deliveredAt).toBe("2026-05-12T17:27:00Z"); // receipt date kept
+  });
+});

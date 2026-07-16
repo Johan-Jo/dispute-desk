@@ -701,21 +701,31 @@ export function deriveNativeDelivery(raw: RawBackfillOrder): {
 
     let status: string | null = null;
     let at: string | null = null;
-    // Native deliveredAt is a hard delivery signal when present.
-    if (f.deliveredAt) {
+    // The classified event timeline is the SPECIFIC truth; Shopify's
+    // bare `deliveredAt` is a generic stamp derived from the same feed.
+    // The timeline wins whenever it covers the stamp's moment (equal or
+    // newer) — otherwise a servicepoint COLLECTION whose "levererats"
+    // event also set deliveredAt would be masked as a doorstep
+    // Delivered (real case: cay #12121, 2026-07-16). deliveredAt stands
+    // alone when the timeline is silent or the stamp is newer.
+    const timelineCovers =
+      timeline.finalCategory !== null &&
+      (!f.deliveredAt || (timeline.finalAt ?? "") >= f.deliveredAt);
+    if (timelineCovers) {
+      if (timeline.finalCategory === "delivered") {
+        status = "Delivered";
+        at = timeline.finalAt ?? f.deliveredAt ?? null;
+      } else if (timeline.finalCategory === "collected_at_pickup") {
+        status = "CollectedAtPickup";
+        at = timeline.finalAt;
+      } else if (timeline.finalCategory === "delivered_to_pickup") {
+        status = "DeliveredToPickup";
+      } else if (timeline.finalCategory === "returned") {
+        status = "Returned";
+      }
+    } else if (f.deliveredAt) {
       status = "Delivered";
       at = f.deliveredAt;
-    }
-    if (timeline.finalCategory === "delivered") {
-      status = "Delivered";
-      at = at ?? timeline.finalAt;
-    } else if (timeline.finalCategory === "collected_at_pickup" && status !== "Delivered") {
-      status = "CollectedAtPickup";
-      at = timeline.finalAt;
-    } else if (timeline.finalCategory === "delivered_to_pickup" && status !== "Delivered") {
-      status = "DeliveredToPickup";
-    } else if (timeline.finalCategory === "returned" && status !== "Delivered") {
-      status = "Returned";
     }
 
     if (rankOf(status) > rankOf(bestStatus)) {
@@ -850,18 +860,29 @@ export function normalizeFulfillmentTrackings(
     const timeline = classifyDeliveryTimeline(events);
     let shipmentStatus: string | null = null;
     let terminalAt: string | null = null;
-    if (f.deliveredAt || timeline.finalCategory === "delivered") {
+    // Same specific-over-generic precedence as deriveNativeDelivery:
+    // the classified timeline wins whenever it covers the deliveredAt
+    // stamp's moment; the bare stamp stands alone otherwise.
+    const timelineCovers =
+      timeline.finalCategory !== null &&
+      (!f.deliveredAt || (timeline.finalAt ?? "") >= f.deliveredAt);
+    if (timelineCovers) {
+      if (timeline.finalCategory === "delivered") {
+        shipmentStatus = "Delivered";
+        terminalAt = timeline.finalAt ?? f.deliveredAt ?? null;
+      } else if (timeline.finalCategory === "collected_at_pickup") {
+        shipmentStatus = "CollectedAtPickup";
+        terminalAt = timeline.finalAt;
+      } else if (timeline.finalCategory === "delivered_to_pickup") {
+        shipmentStatus = "DeliveredToPickup";
+        terminalAt = timeline.finalAt;
+      } else if (timeline.finalCategory === "returned") {
+        shipmentStatus = "Returned";
+        terminalAt = timeline.finalAt;
+      }
+    } else if (f.deliveredAt) {
       shipmentStatus = "Delivered";
-      terminalAt = f.deliveredAt ?? timeline.finalAt;
-    } else if (timeline.finalCategory === "collected_at_pickup") {
-      shipmentStatus = "CollectedAtPickup";
-      terminalAt = timeline.finalAt;
-    } else if (timeline.finalCategory === "delivered_to_pickup") {
-      shipmentStatus = "DeliveredToPickup";
-      terminalAt = timeline.finalAt;
-    } else if (timeline.finalCategory === "returned") {
-      shipmentStatus = "Returned";
-      terminalAt = timeline.finalAt;
+      terminalAt = f.deliveredAt;
     }
 
     const base = {

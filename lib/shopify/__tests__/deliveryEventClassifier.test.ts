@@ -199,3 +199,48 @@ describe("classifyDeliveryTimeline — the real DHL Freight #12809 acceptance sh
     expect(classifyDeliveryEvent(ev("Shipment picked up by DHL"))).not.toBe("collected_at_pickup");
   });
 });
+
+describe("classifyDeliveryTimeline — the real cay order #12121 (PostNord collection, 2026-07-16)", () => {
+  // Verbatim from Shopify's synced events. CRITICAL GAP this pins:
+  // Shopify's stream LACKS the serviceställe-arrival event (PostNord's
+  // own page shows it), so the collection must be recognized from the
+  // READY_FOR_PICKUP notification ("Avisering skickad via APP. - Sista
+  // hämtningsdag: …") followed by the bare final "levererats".
+  const events = [
+    ev(null, "2026-05-09T18:53:51Z", "LABEL_PURCHASED"),
+    ev("Försändelsen har lämnats av avsändaren.", "2026-05-09T20:56:34Z", "IN_TRANSIT"),
+    ev("Försändelsen är på väg.", "2026-05-11T16:17:00Z", "IN_TRANSIT"),
+    ev("Försändelsen är på väg. - Sista hämtningsdag: 2026-05-19", "2026-05-12T00:33:00Z", "IN_TRANSIT"),
+    ev("Försändelsen har ankommit distributionsterminal. - Sista hämtningsdag: 2026-05-19", "2026-05-12T08:25:53Z", "IN_TRANSIT"),
+    ev("Lastad på bil, utkörning påbörjad. - Sista hämtningsdag: 2026-05-19", "2026-05-12T08:36:36Z", "IN_TRANSIT"),
+    ev("Avisering skickad via APP. - Sista hämtningsdag: 2026-05-19", "2026-05-12T10:43:21Z", "READY_FOR_PICKUP"),
+    ev("Försändelsen har levererats.", "2026-05-12T17:27:00Z", "DELIVERED"),
+  ];
+
+  it("resolves to collected_at_pickup via the READY_FOR_PICKUP marker", () => {
+    const r = classifyDeliveryTimeline(events);
+    expect(r.finalCategory).toBe("collected_at_pickup");
+    expect(r.finalAt).toBe("2026-05-12T17:27:00Z");
+  });
+
+  it("READY_FOR_PICKUP enum classifies as at-pickup-point even with an unmatched message", () => {
+    expect(
+      classifyDeliveryEvent(
+        ev("Avisering skickad via APP. - Sista hämtningsdag: 2026-05-19", null, "READY_FOR_PICKUP"),
+      ),
+    ).toBe("delivered_to_pickup");
+  });
+
+  it("in-transit events carrying the 'Sista hämtningsdag' suffix stay in transit", () => {
+    expect(
+      classifyDeliveryEvent(
+        ev("Lastad på bil, utkörning påbörjad. - Sista hämtningsdag: 2026-05-19", null, "IN_TRANSIT"),
+      ),
+    ).toBe("other");
+  });
+
+  it("stopping at the notification reads as awaiting collection, never delivered", () => {
+    const r = classifyDeliveryTimeline(events.slice(0, 7));
+    expect(r.finalCategory).toBe("delivered_to_pickup");
+  });
+});

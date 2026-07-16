@@ -524,3 +524,21 @@ describe("fileEligible static flag (Phase 1 of conditional file evidence layer)"
     }
   });
 });
+
+describe("delivered_confirmed strength upgrades (rubric #9 + collection sibling)", () => {
+  it("collectedByCustomer upgrades delivered_confirmed to STRONG (ID-verified collection)", async () => {
+    const { categorizeEvidenceField } = await import("@/lib/argument/canonicalEvidence");
+    expect(
+      categorizeEvidenceField("delivery_proof", {
+        proofType: "delivered_confirmed",
+        collectedByCustomer: true,
+      }),
+    ).toBe("strong");
+    expect(
+      categorizeEvidenceField("delivery_proof", {
+        proofType: "delivered_confirmed",
+        collectedByCustomer: false,
+      }),
+    ).toBe("moderate");
+  });
+});
