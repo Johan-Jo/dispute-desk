@@ -401,6 +401,19 @@ export function classifyDeliveryEvent(
   if (!msg && (event.status ?? "").toUpperCase() === "DELIVERED") {
     return "delivered";
   }
+  // READY_FOR_PICKUP enum → the parcel is at a pickup point awaiting
+  // collection. Trusted even with an unmatched message: PostNord's
+  // collection-notification event reads "Avisering skickad via APP. -
+  // Sista hämtningsdag: …" (no pickup root) with status
+  // READY_FOR_PICKUP — and Shopify's synced stream may LACK the
+  // serviceställe-arrival event entirely (real case: cay order #12121,
+  // 2026-07-16), so this marker is what lets the timeline context rule
+  // recognize the final bare "levererats" as a customer COLLECTION.
+  // Safe direction: worst case a stale enum yields the weaker
+  // "awaiting collection" state, never a delivery claim.
+  if ((event.status ?? "").toUpperCase() === "READY_FOR_PICKUP") {
+    return "delivered_to_pickup";
+  }
   return "other";
 }
 

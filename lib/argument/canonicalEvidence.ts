@@ -386,7 +386,18 @@ export function categorizeEvidenceField(
       case "signature_confirmed":
         return "strong";
       case "delivered_confirmed":
-        return p.deliveredToVerifiedAddress === true ? "strong" : "moderate";
+        // Strong on either decisive receipt path:
+        //  - rubric #9: doorstep delivery at the verified customer
+        //    address (deliveredToVerifiedAddress), or
+        //  - in-person collection at a pickup point
+        //    (collectedByCustomer): the recipient personally collected
+        //    the parcel — in SE/Nordic networks with photo ID / BankID —
+        //    which ties receipt to the customer even more directly than
+        //    a doorstep drop.
+        return p.deliveredToVerifiedAddress === true ||
+          p.collectedByCustomer === true
+          ? "strong"
+          : "moderate";
       case "delivered_unverified":
         return "supporting";
       case "label_created":
