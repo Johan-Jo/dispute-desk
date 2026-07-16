@@ -362,7 +362,18 @@ export function calculateCaseStrength(
 
   let registeredItems = 0; // canonical fields visible in the checklist
   let presentItems = 0;    // available or waived
-  let missingActionableTopField: { field: string; category: EvidenceCategory } | null = null;
+  // Missing actionable candidates — resolved AFTER the loop so a field
+  // whose SIGNAL is already covered by a collected sibling is never
+  // suggested. Scoring keeps only the best row per signalId, so "add
+  // refund_record" when the refund signal is already Strong is both
+  // contradictory ("Refund status · Strong" sits right below the hint)
+  // and mathematically useless (live bug: cay dispute cc86296d,
+  // 2026-07-16).
+  const missingActionableCandidates: Array<{
+    field: string;
+    category: EvidenceCategory;
+    signalId: SignalId;
+  }> = [];
   const missingRank = (c: EvidenceCategory): number => (c === "strong" ? 3 : c === "moderate" ? 2 : 0);
   // Shipped-but-in-transit: a delivery-signal payload that carries a
   // tracking number but whose proofType is `delivered_unverified` (the
@@ -403,14 +414,31 @@ export function calculateCaseStrength(
         bestBySignalDetailed.set(spec.signalId, { category });
       }
     } else if (isMissing && (item.collectionType === "manual" || !item.collectionType)) {
-      // Track the highest-default-category missing actionable field for
-      // the improvement hint. We use the spec's default category (best
-      // case) since we don't have a payload to evaluate.
+      // Candidate for the improvement hint. We use the spec's default
+      // category (best case) since we don't have a payload to evaluate.
+      // Selection happens after the loop, once signal coverage is known.
       const candidateCat = spec.category;
       if (!affectsStrength(candidateCat)) continue;
-      if (!missingActionableTopField || missingRank(candidateCat) > missingRank(missingActionableTopField.category)) {
-        missingActionableTopField = { field: item.field, category: candidateCat };
-      }
+      missingActionableCandidates.push({
+        field: item.field,
+        category: candidateCat,
+        signalId: spec.signalId,
+      });
+    }
+  }
+
+  // Pick the improvement-hint field: highest default category among
+  // missing actionables whose signal is NOT already contributing — a
+  // signal that already has a strength-affecting row can't be improved
+  // by adding a sibling field (per-signal best-row scoring).
+  let missingActionableTopField: { field: string; category: EvidenceCategory } | null = null;
+  for (const cand of missingActionableCandidates) {
+    if (bestBySignalDetailed.has(cand.signalId)) continue;
+    if (
+      !missingActionableTopField ||
+      missingRank(cand.category) > missingRank(missingActionableTopField.category)
+    ) {
+      missingActionableTopField = { field: cand.field, category: cand.category };
     }
   }
 
@@ -723,6 +751,23 @@ export function calculateImprovement(
   // Find the missing actionable field whose canonical default category
   // is highest (strong > moderate). Supporting fields don't help
   // strength so we skip them entirely.
+  //
+  // Signals that already contribute a strength-affecting row are
+  // excluded — per-signal best-row scoring means adding a sibling field
+  // of a covered signal cannot move the score, and suggesting it
+  // contradicts the "collected · Strong" row shown to the merchant.
+  const coveredSignals = new Set<SignalId>();
+  for (const item of checklist) {
+    if (item.status !== "available" && item.status !== "waived") continue;
+    const spec = CANONICAL_EVIDENCE[item.field];
+    if (!spec) continue;
+    const cat = categoryFor({
+      fieldKey: item.field,
+      payload: payloadFor(payloadSource, item.field),
+    });
+    if (affectsStrength(cat)) coveredSignals.add(spec.signalId);
+  }
+
   let bestField: string | null = null;
   let bestCategory: EvidenceCategory | null = null;
   const rank = (c: EvidenceCategory): number => (c === "strong" ? 3 : c === "moderate" ? 2 : 0);
@@ -732,6 +777,7 @@ export function calculateImprovement(
     if (item.collectionType !== "manual" && item.collectionType) continue;
     const spec = CANONICAL_EVIDENCE[item.field];
     if (!spec) continue;
+    if (coveredSignals.has(spec.signalId)) continue;
     const cat = spec.category;
     if (!affectsStrength(cat)) continue;
     if (!bestCategory || rank(cat) > rank(bestCategory)) {

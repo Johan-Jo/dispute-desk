@@ -1437,7 +1437,8 @@
       "auto_policy": "De las políticas de la tienda",
       "auto_ipinfo": "De inteligencia de IP",
       "manual_upload": "Subido manualmente",
-      "unavailable_from_source": "No disponible desde la fuente"
+      "unavailable_from_source": "No disponible desde la fuente",
+      "carrier_api": "Del sistema de seguimiento del transportista ({carrier})"
     },
     "fieldAction": {
       "default": {
@@ -1682,7 +1683,16 @@
       "factsNotDelivered": "Entrega sin confirmar",
       "factsSignedBy": "Firmado por {name}",
       "factsNotDeliveredEta": "Entrega sin confirmar (est. {date})",
-      "factsCarrier": "{carrier}"
+      "factsCarrier": "{carrier}",
+      "titleDelivered": "Entregado",
+      "titleDeliveredOn": "Entregado el {date}",
+      "titleSigned": "Entregado y firmado",
+      "titleSignedOn": "Entregado y firmado el {date}",
+      "titleCollected": "Recogido por el cliente en el punto de recogida",
+      "titleCollectedOn": "Recogido por el cliente en el punto de recogida ({date})",
+      "titleAwaitingCollection": "En el punto de recogida — pendiente de que el cliente lo recoja",
+      "factsCollected": "Recogido en el punto de recogida el {date} — se requiere identificación al recoger",
+      "factsAwaitingCollection": "En el punto de recogida — aún sin recoger"
     },
     "gorgiasComms": {
       "title": "Conversaciones de soporte al cliente",
@@ -1775,6 +1785,14 @@
         "submit": "Enviar reporte",
         "cancel": "Cancelar"
       }
+    },
+    "refundStatus": {
+      "titleIssued": "Reembolso emitido",
+      "titleNone": "Sin reembolso emitido",
+      "factsIssued": "{amount} {currency} reembolsados el {date}",
+      "factsIssuedNoDate": "{amount} {currency} reembolsados",
+      "factsIssuedDateOnly": "Reembolsado el {date}",
+      "factsNoReturn": "El cliente nunca inició una devolución"
     }
   },
   "disputeReasons": {

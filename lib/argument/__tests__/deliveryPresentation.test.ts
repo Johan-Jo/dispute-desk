@@ -158,3 +158,91 @@ describe("buildDeliveryPresentation", () => {
     ).toEqual([]);
   });
 });
+
+describe("resolveDeliveryTitle / receipt state — fact-stating titles (2026-07-16)", () => {
+  const collectedPayload = {
+    proofType: "delivered_confirmed",
+    deliveredAt: "2026-06-04T18:12:00Z",
+    fulfillments: [
+      {
+        carrierTracking: {
+          deliveryStatus: "CollectedAtPickup",
+          deliveredAtTracking: "2026-06-04T18:12:00Z",
+          trackingSource: "carrier_api_dhl",
+        },
+        tracking: [{ carrier: "DHL Freight", number: "5194515796", url: "https://www.dhl.com/t?tracking-id=5194515796" }],
+      },
+    ],
+  };
+
+  it("carrier-API collection: 'Collected at pickup point {date}' + dhl provenance (the cc86296d shape)", () => {
+    const p = buildDeliveryPresentation(collectedPayload);
+    expect(p.titleToken).toEqual({
+      key: "disputes.deliveryProof.titleCollectedOn",
+      params: { date: "Jun 4" },
+    });
+    expect(p.carrierApiSlug).toBe("dhl");
+    // Tier key preserved for ranking / strength-reason checks.
+    expect(p.labelKey).toBe("disputes.deliveryProof.carrierConfirmed");
+  });
+
+  it("doorstep delivery: 'Delivered {date}', no carrier-API provenance", () => {
+    const p = buildDeliveryPresentation({
+      proofType: "delivered_confirmed",
+      deliveredAt: "2026-07-06T18:16:00Z",
+      fulfillments: [
+        {
+          carrierTracking: {
+            deliveryStatus: "Delivered",
+            deliveredAtTracking: "2026-07-06T18:16:00Z",
+            trackingSource: "shopify_native",
+          },
+          tracking: [],
+        },
+      ],
+    });
+    expect(p.titleToken).toEqual({
+      key: "disputes.deliveryProof.titleDeliveredOn",
+      params: { date: "Jul 6" },
+    });
+    expect(p.carrierApiSlug).toBeNull();
+  });
+
+  it("arrival awaiting collection: never 'Not delivered', never 'Delivered'", () => {
+    const p = buildDeliveryPresentation({
+      proofType: "delivered_unverified",
+      fulfillments: [
+        {
+          carrierTracking: {
+            deliveryStatus: "DeliveredToPickup",
+            deliveredAtTracking: null,
+            trackingSource: "shopify_native",
+          },
+          tracking: [],
+        },
+      ],
+    });
+    expect(p.titleToken).toEqual({
+      key: "disputes.deliveryProof.titleAwaitingCollection",
+    });
+  });
+
+  it("signature: 'Delivered & signed for {date}'", () => {
+    const p = buildDeliveryPresentation({
+      proofType: "signature_confirmed",
+      deliveredAt: "2026-07-06T18:16:00Z",
+      fulfillments: [],
+    });
+    expect(p.titleToken).toEqual({
+      key: "disputes.deliveryProof.titleSignedOn",
+      params: { date: "Jul 6" },
+    });
+  });
+
+  it("older pack with no receipt state falls back to tier wording without a date", () => {
+    const p = buildDeliveryPresentation({ proofType: "delivered_confirmed", fulfillments: [] });
+    expect(p.titleToken).toEqual({ key: "disputes.deliveryProof.titleDelivered" });
+    const q = buildDeliveryPresentation({ proofType: "delivered_unverified", fulfillments: [] });
+    expect(q.titleToken).toEqual({ key: "disputes.deliveryProof.shippedUnconfirmed" });
+  });
+});
