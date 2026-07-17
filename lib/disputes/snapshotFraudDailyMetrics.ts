@@ -255,9 +255,19 @@ function nextDateIso(dateIso: string): string {
  * the backfill_fraud_daily_metrics handler so it's bounded by the
  * 300s `maxDuration` like its sibling.
  */
+/** Rollup rows synced within this window are skipped by the backfill.
+ *  This is what makes the job CONVERGE across worker retries: a large
+ *  shop (~1100 order-dates) cannot finish inside the worker's 300s
+ *  maxDuration, and without the skip every retry re-ran the same date
+ *  prefix from scratch and timed out at the same point (K-Collective,
+ *  2026-07-17 — 3 attempts, zero net progress on the recent window).
+ *  48h is generous: anything the previous attempt (or the daily cron)
+ *  wrote is still accurate, while genuinely stale rows refresh. */
+const BACKFILL_SKIP_FRESH_MS = 48 * 3600 * 1000;
+
 export async function backfillFraudDailyMetrics(
   shopId: string,
-): Promise<{ shopId: string; daysWritten: number }> {
+): Promise<{ shopId: string; daysWritten: number; daysSkipped: number }> {
   const sb = getServiceClient();
 
   // Paginated scan of the per-shop timestamp columns. The original
@@ -283,12 +293,50 @@ export async function backfillFraudDailyMetrics(
     }
     if (!rows || rows.length < DB_PAGE_SIZE) break;
   }
-  const dates = Array.from(dateSet).sort();
+
+  // Resume support: skip dates whose rollup row is already fresh —
+  // see BACKFILL_SKIP_FRESH_MS. Paginated like every other multi-row
+  // read in this module.
+  const freshDates = new Set<string>();
+  const nowMs = Date.now();
+  for (let from = 0; ; from += DB_PAGE_SIZE) {
+    const { data: existing, error: existingErr } = await sb
+      .from("shop_fraud_daily_metrics")
+      .select("date, last_synced_at")
+      .eq("shop_id", shopId)
+      .order("date", { ascending: true })
+      .range(from, from + DB_PAGE_SIZE - 1);
+    if (existingErr) {
+      throw new Error(
+        `shop_fraud_daily_metrics freshness scan failed: ${existingErr.message}`,
+      );
+    }
+    for (const r of existing ?? []) {
+      const syncedMs = r.last_synced_at ? Date.parse(r.last_synced_at as string) : NaN;
+      if (Number.isFinite(syncedMs) && nowMs - syncedMs < BACKFILL_SKIP_FRESH_MS) {
+        freshDates.add((r.date as string).slice(0, 10));
+      }
+    }
+    if (!existing || existing.length < DB_PAGE_SIZE) break;
+  }
+
+  // Newest-first: if an attempt still hits the 300s budget, the dates
+  // the dashboard actually reads (trailing 90d + MoM prior window)
+  // are written first, and the next retry resumes from where this one
+  // stopped instead of re-doing its work.
+  const dates = Array.from(dateSet)
+    .filter((d) => !freshDates.has(d))
+    .sort()
+    .reverse();
 
   for (const date of dates) {
     await snapshotFraudDailyMetrics(shopId, date);
   }
-  return { shopId, daysWritten: dates.length };
+  return {
+    shopId,
+    daysWritten: dates.length,
+    daysSkipped: dateSet.size - dates.length,
+  };
 }
 
 /** Yesterday in UTC (`YYYY-MM-DD`). The most recent fully complete day. */
