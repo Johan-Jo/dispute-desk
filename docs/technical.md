@@ -1320,7 +1320,7 @@ Hierarchy (operational behavior is the hero, Shopify's classification is support
 1. Hero — orders analyzed + leading observation.
 2. KPI strips — three thematic cards in this order: **Delivery operations** (median fulfill, high-risk fulfilled, confirmed delivery, signed-for) → **Payment verification** (3-DS auth, Protect coverage) → **Fraud-risk profile** (acceptance, high-risk, fraud-dispute rate). Each KPI tile carries an info-icon tooltip explaining the metric in 1–2 sentences. Reads as the interpretation layer, not a Shopify wrapper.
 3. **Operational Checkpoints** — rule-engine output (see below).
-4. Risk classification breakdown — stacked bar always visible; per-bucket prose lives behind a "Show classification details" disclosure to reduce visual weight.
+4. Risk classification breakdown — stacked bar always visible; per-bucket prose lives behind a "Show classification details" disclosure to reduce visual weight. Bucket semantics (corrected 2026-07-17 after verifying against live Admin API data): the `none` bucket is labeled **"Not analyzed"** (`fraudIntel.riskNone`; formerly the misleading "Cleared") — Shopify's `riskLevel: NONE` means fraud analysis **never ran** on the order (analysis only covers online payments Shopify can verify; manual/draft, cash, and some gift-card payments are skipped), NOT "analyzed with no findings". On a healthy store the vast majority of orders are analyzed and land in **Low** — the old copy claimed most orders end up in "Cleared", which inverted reality and made correct data look broken. Klarna, Apple Pay, and wallet orders through Shopify Payments DO get analyzed, not just card payments.
 5. Two-column row — risk-to-dispute correlation chart + chargeback-health gauge.
 6. "What this means" footer.
 
