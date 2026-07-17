@@ -145,7 +145,10 @@ interface FakeQuery {
   rangeTo: number | null;
 }
 
-function makeFakeSupabase(scanRows: Array<{ processed_at: string | null; created_at_shopify: string | null }>) {
+function makeFakeSupabase(
+  scanRows: Array<{ processed_at: string | null; created_at_shopify: string | null }>,
+  existingRollups: Array<{ date: string; last_synced_at: string | null }> = [],
+) {
   const upsertedDates: string[] = [];
   const makeBuilder = (table: string) => {
     const q: FakeQuery = { table, select: "", rangeFrom: null, rangeTo: null };
@@ -153,11 +156,14 @@ function makeFakeSupabase(scanRows: Array<{ processed_at: string | null; created
       if (q.table === "shopify_orders" && q.select.includes("risk_level_initial")) {
         return { data: [], error: null }; // per-day rows: empty day is fine
       }
+      const from = q.rangeFrom ?? 0;
+      // Emulate PostgREST: honor the requested range, cap at 1000.
+      const to = q.rangeTo === null ? from + 999 : Math.min(q.rangeTo, from + 999);
       if (q.table === "shopify_orders") {
-        const from = q.rangeFrom ?? 0;
-        // Emulate PostgREST: honor the requested range, cap at 1000.
-        const to = q.rangeTo === null ? from + 999 : Math.min(q.rangeTo, from + 999);
         return { data: scanRows.slice(from, to + 1), error: null };
+      }
+      if (q.table === "shop_fraud_daily_metrics") {
+        return { data: existingRollups.slice(from, to + 1), error: null };
       }
       return { data: [], error: null }; // disputes
     };
@@ -206,8 +212,35 @@ describe("backfillFraudDailyMetrics — scan pagination", () => {
     try {
       const out = await backfillFraudDailyMetrics("shop-1");
       expect(out.daysWritten).toBe(2);
-      expect(fake.upsertedDates).toContain("2026-01-01");
-      expect(fake.upsertedDates).toContain("2026-01-02");
+      // Newest-first: the dashboard's trailing windows fill before deep
+      // history, so a timeout-truncated attempt still helps — and the
+      // next retry resumes instead of re-doing this prefix.
+      expect(fake.upsertedDates).toEqual(["2026-01-02", "2026-01-01"]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("skips dates whose rollup row is already fresh (retry resume)", async () => {
+    const scanRows = [
+      { processed_at: "2026-01-01T10:00:00Z", created_at_shopify: "2026-01-01T10:00:00Z" },
+      { processed_at: "2026-01-02T10:00:00Z", created_at_shopify: "2026-01-02T10:00:00Z" },
+    ];
+    // Date 2 was written moments ago (a previous timed-out attempt);
+    // date 1's row is ancient and must refresh.
+    const fake = makeFakeSupabase(scanRows, [
+      { date: "2026-01-01", last_synced_at: "2020-01-01T00:00:00Z" },
+      { date: "2026-01-02", last_synced_at: new Date().toISOString() },
+    ]);
+    const serverModule = await import("@/lib/supabase/server");
+    const spy = vi
+      .spyOn(serverModule, "getServiceClient")
+      .mockReturnValue(fake.client as never);
+    try {
+      const out = await backfillFraudDailyMetrics("shop-1");
+      expect(out.daysWritten).toBe(1);
+      expect(out.daysSkipped).toBe(1);
+      expect(fake.upsertedDates).toEqual(["2026-01-01"]);
     } finally {
       spy.mockRestore();
     }
