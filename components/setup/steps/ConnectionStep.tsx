@@ -157,11 +157,22 @@ export function ConnectionStep({ onSaveRef, onCanContinueChange }: ConnectionSte
     fetchReadiness();
   }, [fetchReadiness]);
 
-  // Step 1 does not persist — onSave just advances if no blockers
+  // Persist `connection` as done on advance (no blockers). `connection` is one
+  // of the 6 counted onboarding steps, so if it's never recorded, allDone can
+  // never become true and the dashboard loops the merchant back into the wizard
+  // forever. Earlier this step only returned true without persisting.
   useEffect(() => {
     onSaveRef.current = async () => {
       if (readiness?.hasBlockers) return false;
-      return true;
+      const res = await fetch("/api/setup/step", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stepId: "connection",
+          payload: { confirmedAt: new Date().toISOString() },
+        }),
+      });
+      return res.ok;
     };
   }, [onSaveRef, readiness]);
 
