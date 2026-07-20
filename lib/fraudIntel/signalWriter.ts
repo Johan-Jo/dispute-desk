@@ -183,6 +183,79 @@ export async function upsertSignalRow(input: SignalRowInput): Promise<void> {
   }
 }
 
+/**
+ * Batch variant of {@link upsertSignalRow} — builds every input's row
+ * once and writes the whole set in a SINGLE upsert (plus one grouped
+ * miss-insert), instead of one round-trip per order.
+ *
+ * The backfill page loop persists 100 orders per page; calling
+ * upsertSignalRow in a per-order `for` loop cost 100 sequential DB
+ * round-trips per page (the dominant per-page latency measured on the
+ * blume-box historical import, 2026-07-20). This collapses that to one.
+ *
+ * Semantics are identical to the per-order path:
+ *   - Same (shop_id, shopify_order_id) conflict key → latest-snapshot
+ *     overwrite. Duplicate order ids within the same page are de-duped
+ *     (last one wins) so PostgREST doesn't reject the upsert for
+ *     affecting a row twice — real pages never repeat an id, but a
+ *     defensive dedup keeps the contract total.
+ *   - Misses across all rows are flushed in one insert; failure stays
+ *     best-effort (logged, never throws).
+ *
+ * A structured/parse failure on the signal upsert throws (same as the
+ * per-order path) so the page's caller can decide; misses never throw.
+ */
+export async function upsertSignalRows(
+  inputs: SignalRowInput[],
+): Promise<void> {
+  if (inputs.length === 0) return;
+  const sb = getServiceClient();
+
+  // Build every row + collect misses. De-dup rows on the conflict key
+  // (last wins) so a single upsert can't touch the same row twice.
+  const rowByKey = new Map<string, BuiltSignalRow>();
+  const missRows: Array<{
+    shop_id: string;
+    fact_text: string;
+    fact_sentiment: string | null;
+    parser_version: number;
+  }> = [];
+  for (const input of inputs) {
+    const { row, misses } = buildSignalRow(input);
+    rowByKey.set(`${row.shop_id}:${row.shopify_order_id}`, row);
+    for (const m of misses) {
+      missRows.push({
+        shop_id: input.shopId,
+        fact_text: m.text,
+        fact_sentiment: m.sentiment,
+        parser_version: PARSER_VERSION,
+      });
+    }
+  }
+
+  const rows = Array.from(rowByKey.values());
+  const { error: signalErr } = await sb
+    .from("shopify_order_risk_signals")
+    .upsert(rows, { onConflict: "shop_id,shopify_order_id" });
+  if (signalErr) {
+    throw new Error(
+      `shopify_order_risk_signals batch upsert failed: ${signalErr.message}`,
+    );
+  }
+
+  if (missRows.length > 0) {
+    const { error: missErr } = await sb
+      .from("fraud_intel_parse_misses")
+      .insert(missRows);
+    if (missErr) {
+      // Don't fail the whole ingest — miss-tracking is best-effort.
+      console.warn(
+        `[fraudIntel] parse-misses batch insert failed: ${missErr.message}`,
+      );
+    }
+  }
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────
 
 function pickPrimaryCardTransaction(

@@ -43,7 +43,7 @@ import {
 } from "@/lib/shopify/queries/ordersForBackfill";
 import { persistOrders } from "@/lib/shopify/persistOrders";
 import { persistFulfillmentTrackings } from "@/lib/shopify/persistFulfillmentTrackings";
-import { upsertSignalRow } from "@/lib/fraudIntel/signalWriter";
+import { upsertSignalRows } from "@/lib/fraudIntel/signalWriter";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { enqueueJob } from "@/lib/jobs/claimJobs";
 
@@ -257,21 +257,24 @@ export async function backfillShopOrders(
           `[carriers] fulfillment-tracking upsert failed (page at ${processed}): ${err instanceof Error ? err.message : String(err)}`,
         );
       }
-      // PR-D: parse + upsert the signal row per order. Done inside
-      // the page loop so failures are isolated; the page total is
-      // unaffected even if one signal write errors.
-      for (const raw of page.orders) {
-        try {
-          await upsertSignalRow({
+      // PR-D: parse + upsert the signal rows for the page. Batched into
+      // a single upsert (one DB round-trip per page instead of one per
+      // order) — the per-order loop was the dominant per-page latency on
+      // large historical imports (blume-box, 2026-07-20). A batch failure
+      // is isolated: the page's orders are already persisted above, so
+      // signal-row loss is non-fatal and a later re-run repopulates it.
+      try {
+        await upsertSignalRows(
+          page.orders.map((raw) => ({
             shopId,
             shopifyOrderId: raw.id,
             raw,
-          });
-        } catch (err) {
-          console.warn(
-            `[fraudIntel] signal-row upsert failed for ${raw.id}: ${err instanceof Error ? err.message : String(err)}`,
-          );
-        }
+          })),
+        );
+      } catch (err) {
+        console.warn(
+          `[fraudIntel] signal-row batch upsert failed (page at ${processed}): ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
       processed += page.orders.length;
       const { error: progErr } = await sb
