@@ -210,6 +210,79 @@ describe("pickThreeDsAuthenticated", () => {
       ]),
     ).toBeNull();
   });
+
+  // ── shapes observed LIVE on cay prod (probe 2026-07-19) — the two
+  // misses behind the store-wide false-zero. Pinned here so the
+  // ingest path can never regress on them again; the walk itself is
+  // exhaustively covered in lib/shopify/receipts/__tests__/threeDs.test.ts.
+
+  it("returns true for the OLD charges.data[0] receipt shape (live cay order #1014)", () => {
+    const receipt = JSON.stringify({
+      charges: {
+        data: [
+          {
+            payment_method_details: {
+              card: {
+                three_d_secure: {
+                  authenticated: true,
+                  authentication_flow: "challenge",
+                  result: "authenticated",
+                  succeeded: true,
+                  version: "2.2.0",
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
+    expect(
+      pickThreeDsAuthenticated([
+        { kind: "SALE", status: "SUCCESS", gateway: "shopify_payments", receiptJson: receipt },
+      ]),
+    ).toBe(true);
+  });
+
+  it("returns true for the MODERN result-only shape with no authenticated field (live cay order #13812)", () => {
+    const receipt = JSON.stringify({
+      latest_charge: {
+        payment_method_details: {
+          card: {
+            three_d_secure: {
+              authentication_flow: "challenge",
+              electronic_commerce_indicator: "02",
+              exemption_indicator: null,
+              result: "authenticated",
+              result_reason: null,
+              version: "2.2.0",
+            },
+          },
+        },
+      },
+    });
+    expect(
+      pickThreeDsAuthenticated([
+        { kind: "SALE", status: "SUCCESS", gateway: "shopify_payments", receiptJson: receipt },
+      ]),
+    ).toBe(true);
+  });
+
+  it("returns null for result:'exempted' — an SCA exemption is not an authentication", () => {
+    const receipt = JSON.stringify({
+      latest_charge: {
+        payment_method_details: {
+          card: {
+            three_d_secure: { result: "exempted", exemption_indicator: "tra" },
+          },
+        },
+      },
+    });
+    expect(
+      pickThreeDsAuthenticated([
+        { kind: "SALE", status: "SUCCESS", gateway: "shopify_payments", receiptJson: receipt },
+      ]),
+    ).toBeNull();
+  });
 });
 
 describe("pickPaymentMethod", () => {

@@ -120,10 +120,14 @@ interface PeriodWindow {
    *  `chargeback_count`). This — NOT `chargebackOrders` — is the
    *  monthly-volume signal the plan recommender sizes on. */
   chargebackCount: number;
-  /** % of Shopify Payments orders that completed 3-D Secure
+  /** % of Shopify Payments CARD orders that completed 3-D Secure
    *  authentication. Numerator: orders with three_ds_authenticated=true.
-   *  Denominator: orders with payment_gateway='shopify_payments'.
-   *  Null when the denominator is zero. */
+   *  Denominator: payment_gateway='shopify_payments' AND
+   *  payment_method='card' — BNPL (Klarna) and wallets (Apple Pay /
+   *  Shop Pay) can never carry a card-3DS receipt block, so counting
+   *  them structurally diluted the rate on BNPL-heavy shops (cay:
+   *  cards are only ~30% of orders). Null when the denominator is
+   *  zero. */
   threeDsAuthRatePct: number | null;
   threeDsAuthOrders: number;
   threeDsAuthEligibleOrders: number;
@@ -192,6 +196,7 @@ interface DailyRow {
 
 interface OrderForKpi {
   payment_gateway: string | null;
+  payment_method: string | null;
   three_ds_authenticated: boolean | null;
   processed_at: string | null;
   fulfilled_at: string | null;
@@ -231,7 +236,12 @@ function compute3dsAndFulfillment(
     if (!r.processed_at) continue;
     const procMs = new Date(r.processed_at).getTime();
     if (procMs < fromMs || procMs >= toMs) continue;
-    if (r.payment_gateway === "shopify_payments") {
+    // Card orders only — BNPL/wallet methods never carry a card-3DS
+    // receipt block, so they belong in neither side of this rate.
+    if (
+      r.payment_gateway === "shopify_payments" &&
+      r.payment_method === "card"
+    ) {
       authEligible += 1;
       if (r.three_ds_authenticated === true) authPositive += 1;
     }
@@ -446,7 +456,7 @@ export async function GET(req: NextRequest) {
       const { data, error } = await sb
         .from("shopify_orders")
         .select(
-          "payment_gateway, three_ds_authenticated, processed_at, fulfilled_at, delivery_status, delivered_at_tracking, signed_by_name",
+          "payment_gateway, payment_method, three_ds_authenticated, processed_at, fulfilled_at, delivery_status, delivered_at_tracking, signed_by_name",
         )
         .eq("shop_id", shopId)
         .gte("processed_at", windowStart90dIso)
