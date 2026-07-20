@@ -1481,11 +1481,13 @@ CI gate: `factParser.test.ts` asserts ≥95% coverage on a canonical 14-fixture 
 
 #### Writer (`lib/fraudIntel/signalWriter.ts`)
 
-`buildSignalRow` (pure) + `upsertSignalRow` (writes). Load-bearing precedence contract: **structured-from-GraphQL fields ALWAYS win over parser output**. The builder takes GraphQL `paymentDetails.{avsResultCode, cvvResultCode, bin, company, wallet}` and `Order.clientIp` first; the parser equivalents (AVS / CVV / BIN / brand / wallet — currently empty) are dropped on the floor. Tested explicitly in `signalWriter.test.ts` so a future widening of the parser can't silently pollute these columns.
+`buildSignalRow` (pure) + `upsertSignalRow` (writes one) + `upsertSignalRows` (writes a batch). Load-bearing precedence contract: **structured-from-GraphQL fields ALWAYS win over parser output**. The builder takes GraphQL `paymentDetails.{avsResultCode, cvvResultCode, bin, company, wallet}` and `Order.clientIp` first; the parser equivalents (AVS / CVV / BIN / brand / wallet — currently empty) are dropped on the floor. Tested explicitly in `signalWriter.test.ts` so a future widening of the parser can't silently pollute these columns.
+
+`upsertSignalRows` collapses a whole backfill page (100 orders) into **one** upsert + one grouped miss-insert, instead of one DB round-trip per order. On a large historical import (blume-box, 2026-07-20) the per-order loop was the dominant per-page latency — batching removes 100 sequential awaits per page. Rows are deduped on the `(shop_id, shopify_order_id)` conflict key (last wins) so a single upsert never touches the same row twice. Batch contract pinned in `signalWriterBatch.test.ts`.
 
 Wired into:
-- `lib/shopify/orderIngest.normalizeOrderIngest` — runs after `persistOrders`.
-- `lib/disputes/backfillOrders.backfillShopOrders` — per-page loop after `persistOrders`.
+- `lib/shopify/orderIngest.normalizeOrderIngest` — runs after `persistOrders` (single-order `upsertSignalRow`).
+- `lib/disputes/backfillOrders.backfillShopOrders` — one `upsertSignalRows` call per page after `persistOrders`.
 
 Signal-row write failures are logged but never break the ingest contract — the raw `facts_json` is still captured on `shopify_order_risk_assessments`, and the hydration script can backfill later.
 
