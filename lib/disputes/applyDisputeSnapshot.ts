@@ -67,13 +67,23 @@ export interface DisputeTransitionEvent {
   /**
    * True when this event was produced while first-importing a dispute that
    * Shopify had ALREADY resolved (terminal status at insert time) or already
-   * marked evidence-submitted. Historical backfill — the dispute did not just
-   * transition, we merely discovered it. The dispatcher suppresses merchant
-   * emails for these so a first sync of an established shop doesn't blast one
-   * "you won / ready for review" email per historical dispute. Ledger rows and
-   * the pipeline row-work still run.
+   * marked evidence-submitted. There is NOTHING to build or act on: the
+   * dispatcher skips the automation pipeline AND suppresses merchant emails.
+   * The dispute row + dispute_events ledger are still written.
    */
   historicalImport?: boolean;
+  /**
+   * True when this event was produced during the shop's FIRST-ever sync (a
+   * backfill of the existing dispute backlog). Distinct from historicalImport:
+   * a backfilled dispute may still be OPEN with nothing submitted to Shopify,
+   * in which case we DO want the evidence pack built — we just must NOT send
+   * the per-dispute "ready for review" email (that's the install-time flood).
+   * The dispatcher burns the alert claim (self-suppressing the pipeline's own
+   * deferred email) and then still runs the pipeline. For a backfilled dispute
+   * that is ALSO terminal/submitted, historicalImport wins and the pipeline is
+   * skipped entirely.
+   */
+  suppressEmail?: boolean;
   /** Snapshot fields the dispatcher needs to fire downstream effects. */
   context: {
     reason: string | null;
@@ -108,6 +118,20 @@ export interface ApplyDisputeSnapshotArgs {
     disputeGid: string,
   ) => Promise<Partial<DisputeSnapshot> | null>;
   client?: SupabaseClient;
+  /**
+   * First-ever sync of this shop (a backfill). When true, EVERY newly-inserted
+   * dispute is a historical import — we are discovering the shop's existing
+   * dispute backlog, not observing live transitions — regardless of whether
+   * Shopify reports each one as terminal or still open. The dispatcher then
+   * suppresses merchant emails for all of them.
+   *
+   * This is broader than the per-dispute terminal/evidence-submitted detection
+   * below: an established shop's backlog contains many OPEN, non-terminal
+   * disputes at install time, and those must NOT each fire a "ready for review"
+   * alert. Only the very first sync (shops.last_reconciled_at IS NULL) sets
+   * this; the webhook path never does (a webhook IS a live transition).
+   */
+  backfillImport?: boolean;
 }
 
 export interface ApplyDisputeSnapshotResult {
@@ -362,9 +386,17 @@ export async function applyDisputeSnapshot(
     // so the dispatcher suppresses merchant emails (the row + ledger still
     // land). This is what stops a first full sync of an established shop from
     // sending one "you won / ready for review" email per historical dispute.
+    // "Nothing to build" — the dispute is already terminal or already
+    // evidence-submitted. Skip the pipeline AND the email.
     const isHistoricalImport =
       (newStatus != null && TERMINAL_STATUSES.has(newStatus)) ||
       Boolean(snapshot.evidenceSentOn);
+    // "Suppress the email but still build" — every dispute discovered on the
+    // shop's first-ever sync is part of the existing backlog, not a live
+    // transition. An OPEN, un-submitted one still needs its pack built; it must
+    // just not trigger a per-dispute email. This is the install-flood gate that
+    // now also covers open disputes (historicalImport only caught resolved ones).
+    const suppressEmail = Boolean(args.backfillImport) || isHistoricalImport;
     const openedAt = snapshot.initiatedAt ?? nowIso;
     void emitDisputeEvent({
       disputeId,
@@ -391,6 +423,7 @@ export async function applyDisputeSnapshot(
       newStatus,
       context: ctxBase,
       historicalImport: isHistoricalImport,
+      suppressEmail,
     });
 
     if (newStatus && TERMINAL_STATUSES.has(newStatus)) {
@@ -419,6 +452,7 @@ export async function applyDisputeSnapshot(
         newStatus,
         context: { ...ctxBase, finalOutcome: outcome },
         historicalImport: isHistoricalImport,
+        suppressEmail,
       });
     }
 
@@ -447,6 +481,7 @@ export async function applyDisputeSnapshot(
         eventKey: `${disputeId}:SUBMISSION_CONFIRMED:${snapshot.evidenceSentOn}`,
         context: ctxBase,
         historicalImport: isHistoricalImport,
+        suppressEmail,
       });
     }
 

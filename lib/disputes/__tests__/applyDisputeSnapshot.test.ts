@@ -152,8 +152,9 @@ describe("applyDisputeSnapshot", () => {
     expect(result.events).toHaveLength(1);
     expect(result.events[0]?.type).toBe("DISPUTE_OPENED");
     // A live-opened (non-terminal, unsubmitted) dispute is NOT a historical
-    // import — the merchant SHOULD be emailed.
+    // import and NOT a backfill — the merchant SHOULD be emailed.
     expect(result.events[0]?.historicalImport).toBe(false);
+    expect(result.events[0]?.suppressEmail).toBe(false);
     expect(upsertCalls).toHaveLength(1);
     expect(upsertCalls[0]).toMatchObject({
       shop_id: "shop-1",
@@ -163,6 +164,27 @@ describe("applyDisputeSnapshot", () => {
     expect(mockEmit).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: "dispute_opened" }),
     );
+  });
+
+  it("1b. backfillImport on an OPEN dispute → suppressEmail true, historicalImport false", async () => {
+    // First-ever sync of an established shop. An OPEN, un-submitted backlog
+    // dispute must suppress the email (no install flood) WITHOUT being flagged
+    // historical (the dispatcher still builds its pack). This is the open-
+    // dispute half of the flood fix that the terminal-only historicalImport
+    // check never covered.
+    const { client } = setupClient({ existing: null });
+    const result = await applyDisputeSnapshot({
+      shopId: "shop-1",
+      source: "cron",
+      snapshot: BASE_SNAPSHOT, // status needs_response, evidenceSentOn null
+      backfillImport: true,
+      client,
+    });
+
+    expect(result.events).toHaveLength(1);
+    expect(result.events[0]?.type).toBe("DISPUTE_OPENED");
+    expect(result.events[0]?.suppressEmail).toBe(true);
+    expect(result.events[0]?.historicalImport).toBe(false);
   });
 
   it("2. fresh insert already terminal emits OUTCOME_DETECTED + writes closed_at", async () => {

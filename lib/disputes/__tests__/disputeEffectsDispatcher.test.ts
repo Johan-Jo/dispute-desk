@@ -323,6 +323,36 @@ describe("dispatchDisputeEffects", () => {
     expect(mockClaimDeferred).not.toHaveBeenCalled();
   });
 
+  it("suppress-email (open backfill) DISPUTE_OPENED → STILL runs the pipeline but sends NO email", async () => {
+    // The open-dispute half of the install-flood fix. An OPEN backlog dispute
+    // discovered on the shop's first sync is flagged suppressEmail (NOT
+    // historicalImport): the pipeline must still run so a pack gets built, but
+    // the per-dispute "ready for review" email must not fire. The alert claim
+    // is burned up front so the pipeline's own deferred email self-suppresses.
+    const { client } = buildClient({});
+    mockGetServiceClient.mockReturnValue(client);
+    // Pipeline does NOT enqueue a build — normally this would trigger an
+    // immediate review-variant email. suppressEmail must block it.
+    mockRunPipeline.mockResolvedValue({
+      action: "skipped_auto_build_off",
+    } as never);
+
+    const summary = await dispatchDisputeEffects({
+      shopId: "shop-1",
+      result: appliedResult([{ ...OPENED_EVENT, suppressEmail: true }]),
+      source: "cron",
+      client,
+    });
+
+    expect(summary.effectsRan).toBe(1);
+    // Pack-building work still happens…
+    expect(mockEvaluateRules).toHaveBeenCalled();
+    expect(mockRunPipeline).toHaveBeenCalled();
+    // …but no email flood.
+    expect(mockSendAlert).not.toHaveBeenCalled();
+    expect(mockClaimDeferred).not.toHaveBeenCalled();
+  });
+
   it("historical-import OUTCOME_DETECTED → no 'you won/lost' email", async () => {
     const { client } = buildClient({});
     mockGetServiceClient.mockReturnValue(client);

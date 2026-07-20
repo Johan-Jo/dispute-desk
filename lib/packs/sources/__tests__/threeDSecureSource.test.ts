@@ -111,6 +111,89 @@ describe("threeDSecureSource — Shopify Payments receipt walk", () => {
     expect(await collectThreeDSecureEvidence(ctx)).toEqual([]);
   });
 
+  // ── shapes observed LIVE on cay prod (probe 2026-07-19) — pinned so
+  // the collector can never again false-zero on them. Exhaustive walk
+  // coverage lives in lib/shopify/receipts/__tests__/threeDs.test.ts.
+
+  it("emits for the OLD charges.data[0] receipt shape (live cay order #1014)", async () => {
+    const ctx = makeCtx([
+      {
+        ...baseTx,
+        gateway: "shopify_payments",
+        receiptJson: {
+          charges: {
+            data: [
+              {
+                payment_method_details: {
+                  card: {
+                    three_d_secure: {
+                      authenticated: true,
+                      authentication_flow: "challenge",
+                      result: "authenticated",
+                      succeeded: true,
+                      version: "2.2.0",
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+    ]);
+    const [section] = await collectThreeDSecureEvidence(ctx);
+    expect(section).toBeTruthy();
+    expect(section.data.tdsAuthenticated).toBe(true);
+    expect(section.data.verifiedSource).toBe("shopify_receipt");
+  });
+
+  it("emits for the MODERN result-only shape with no authenticated field (live cay order #13812)", async () => {
+    const ctx = makeCtx([
+      {
+        ...baseTx,
+        gateway: "shopify_payments",
+        receiptJson: {
+          latest_charge: {
+            payment_method_details: {
+              card: {
+                three_d_secure: {
+                  authentication_flow: "challenge",
+                  electronic_commerce_indicator: "02",
+                  exemption_indicator: null,
+                  result: "authenticated",
+                  result_reason: null,
+                  version: "2.2.0",
+                },
+              },
+            },
+          },
+        },
+      },
+    ]);
+    const [section] = await collectThreeDSecureEvidence(ctx);
+    expect(section).toBeTruthy();
+    expect(section.data.tdsAuthenticated).toBe(true);
+  });
+
+  it("does NOT emit for result:'exempted' — an SCA exemption is not an authentication", async () => {
+    const ctx = makeCtx([
+      {
+        ...baseTx,
+        gateway: "shopify_payments",
+        receiptJson: {
+          latest_charge: {
+            payment_method_details: {
+              card: {
+                three_d_secure: { result: "exempted", exemption_indicator: "tra" },
+              },
+            },
+          },
+        },
+      },
+    ]);
+    expect(await collectThreeDSecureEvidence(ctx)).toEqual([]);
+  });
+
   it("reads from latest_charge.payment_method_details (modern PaymentIntent shape)", async () => {
     const ctx = makeCtx([
       {

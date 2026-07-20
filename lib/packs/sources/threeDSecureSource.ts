@@ -7,14 +7,10 @@
  * documents as gateway-defined and not a stable contract.
  *
  * For Shopify Payments orders the receipt is a JSON STRING that mirrors
- * Stripe's PaymentIntent. Verified shape (live probe, 2026-04-26):
- *   receipt = JSON.parse(receiptJson)
- *   receipt.latest_charge.payment_method_details.card.three_d_secure
- *     → null when 3DS was not used
- *     → { authenticated: boolean, result, version, ... } when used
- * Older receipts may flatten `latest_charge` at the root, so we also
- * accept `receipt.payment_method_details.card.three_d_secure` as a
- * fallback path.
+ * Stripe's PaymentIntent. The receipt walk (paths, positive rule, drift
+ * history) lives in the shared helper `lib/shopify/receipts/threeDs.ts`
+ * — the ONE canonical reader, also used by the orders-ingest picker in
+ * `lib/shopify/queries/ordersForBackfill.ts`.
  *
  * Tradeoffs we accept:
  *  1. Shopify Payments only. We refuse to read receipts from any other
@@ -35,6 +31,10 @@ import type {
   OrderTransaction,
 } from "@/lib/shopify/queries/orders";
 import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
+import {
+  parseReceiptJson,
+  readThreeDsAuthenticated,
+} from "@/lib/shopify/receipts/threeDs";
 import type { EvidenceSection, BuildContext } from "../types";
 
 /** Where the 3DS signal came from. */
@@ -79,12 +79,12 @@ export async function collectThreeDSecureEvidence(
     return [];
   }
 
-  const receipt = parseReceipt(tx.receiptJson);
+  const receipt = parseReceiptJson(tx.receiptJson);
   if (!receipt) {
     return [];
   }
 
-  const authenticated = readAuthenticatedFlag(receipt);
+  const authenticated = readThreeDsAuthenticated(receipt);
 
   // Only emit when we got a definitive boolean. A null read means the
   // shape moved or 3DS wasn't applicable; either way, no signal.
@@ -129,64 +129,6 @@ function pickPrimaryTransaction(
         t.status === "SUCCESS",
     ) ?? null
   );
-}
-
-/**
- * Receipts come back as JSON strings in 2026-01. Older or proxied
- * gateways may pre-parse them. Accept either; reject everything else.
- */
-function parseReceipt(raw: unknown): Record<string, unknown> | null {
-  if (raw == null) return null;
-  if (typeof raw === "string") {
-    try {
-      const parsed = JSON.parse(raw);
-      return isPlainObject(parsed) ? parsed : null;
-    } catch {
-      return null;
-    }
-  }
-  return isPlainObject(raw) ? raw : null;
-}
-
-/**
- * Walk to `three_d_secure.authenticated`. Modern Stripe PaymentIntent
- * receipts nest the charge under `latest_charge`; older charge-level
- * receipts have the path at the root. Try both.
- *
- * Returns null whenever 3DS was not used or the path doesn't resolve —
- * absence of 3DS is never a negative signal in our rubric, so we
- * collapse all "no positive 3DS" states into a single "no signal".
- */
-function readAuthenticatedFlag(
-  receipt: Record<string, unknown>,
-): boolean | null {
-  try {
-    const candidates: Array<unknown> = [
-      // Modern PaymentIntent shape — only path observed in live samples
-      // on 2026-01 (verified across 18 transactions, 2026-04-26).
-      (receipt.latest_charge as Record<string, unknown> | undefined)
-        ?.payment_method_details,
-      // Legacy charge-level shape — defensive fallback, never observed
-      // in 2026-01 samples. Kept as cheap insurance against shape drift
-      // on older orders or future API changes.
-      receipt.payment_method_details,
-    ];
-    for (const pmd of candidates) {
-      if (!isPlainObject(pmd)) continue;
-      const card = pmd.card;
-      if (!isPlainObject(card)) continue;
-      const tds = card.three_d_secure;
-      if (!isPlainObject(tds)) continue;
-      if (tds.authenticated === true) return true;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
 /** Top-level keys of the receipt — useful for diagnostics when shape drifts. */
