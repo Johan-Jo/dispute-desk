@@ -163,12 +163,22 @@ async function dispatchDisputeOpened(
       // review. Burn the `new_dispute_alert_sent_at` claim (so any code path
       // that would otherwise send the "ready for review" alert no-ops) and
       // return without emailing. The dispute row + dispute_events ledger are
-      // already written by applyDisputeSnapshot. This is the gate that stops
-      // a first full sync of an established shop from blasting one email per
-      // historical dispute.
+      // already written by applyDisputeSnapshot.
       if (event.historicalImport) {
         await claimNewDisputeAlertColumn(args, event);
         return;
+      }
+
+      // First-sync backfill of an OPEN, un-submitted dispute: we DO want the
+      // evidence pack built (nothing has been submitted to Shopify yet, so the
+      // merchant needs a pack ready), but we must NOT send the per-dispute
+      // "ready for review" email — one per historical dispute is the install
+      // flood. Burn the alert claim FIRST so the pipeline's own deferred email
+      // (fired on pack-build completion via claimAndSendDeferredNewDisputeAlert,
+      // which checks new_dispute_alert_sent_at) self-suppresses. Then fall
+      // through to run the pipeline exactly as normal.
+      if (event.suppressEmail) {
+        await claimNewDisputeAlertColumn(args, event);
       }
 
       // Evaluate the rule even when skipAutomation is true — the result
@@ -241,8 +251,10 @@ async function dispatchDisputeOpened(
 
       // Defer the new-dispute email when a build was enqueued — the pipeline
       // sends the alert (review or auto variant) once the build completes.
+      // For a suppressed backfill dispute the claim was already burned above,
+      // so both this immediate send and the pipeline's deferred send no-op.
       const deferNewDisputeEmail = pipelineResult?.action === "pack_enqueued";
-      if (!deferNewDisputeEmail) {
+      if (!deferNewDisputeEmail && !event.suppressEmail) {
         await sendOpenedAlertReviewVariant(args, event);
       }
     },
@@ -312,9 +324,10 @@ async function dispatchSubmissionConfirmed(
   summary: DispatchSummary,
 ): Promise<void> {
   summary.effectsAttempted++;
-  // Historical import: evidence was submitted before we ever saw the dispute.
+  // Historical import / first-sync backfill: evidence was submitted before we
+  // ever saw the dispute (or we're backfilling the shop's existing backlog).
   // Nothing to notify the merchant about — skip the email.
-  if (event.historicalImport) {
+  if (event.historicalImport || event.suppressEmail) {
     summary.effectsSkipped++;
     return;
   }
@@ -363,10 +376,11 @@ async function dispatchOutcomeDetected(
   summary: DispatchSummary,
 ): Promise<void> {
   summary.effectsAttempted++;
-  // Historical import: the dispute resolved before we ever saw it. Discovering
+  // Historical import / first-sync backfill: the dispute resolved before we
+  // ever saw it (or we're backfilling the shop's existing backlog). Discovering
   // a years-old won/lost dispute on a first sync must NOT email the merchant
   // "you won / this chargeback was lost" — that's the flood this gate stops.
-  if (event.historicalImport) {
+  if (event.historicalImport || event.suppressEmail) {
     summary.effectsSkipped++;
     return;
   }
