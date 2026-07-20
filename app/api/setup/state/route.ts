@@ -9,14 +9,42 @@ import {
 import type { StepId, StepState, SetupStateResponse } from "@/lib/setup/types";
 import { agentLogRuntime } from "@/lib/debug/agentLogRuntime";
 
-/** Migrate legacy step keys to new step ids when reading shop_setup.steps */
+/** Status precedence — a more-complete state must never be clobbered by a
+ *  less-complete one when two source keys migrate to the same canonical id.
+ *  (e.g. a lingering legacy `team:{todo}` collapsing onto `activate:{done}`
+ *  — object key order previously let the `todo` win and wedged the wizard.) */
+const STATUS_RANK: Record<string, number> = {
+  done: 3,
+  skipped: 3,
+  in_progress: 1,
+  todo: 0,
+};
+
+function statusRank(state: StepState | undefined): number {
+  return STATUS_RANK[state?.status ?? "todo"] ?? 0;
+}
+
+/** Migrate legacy step keys to new step ids when reading shop_setup.steps.
+ *  Multiple source keys can map to one canonical id (LEGACY_STEP_ID_MAP is
+ *  many→one). When they collide, keep the most-complete state rather than
+ *  letting object iteration order decide the winner. */
 function migrateStepsMap(raw: Record<string, unknown> | null): Partial<Record<StepId, StepState>> {
   const steps = (raw ?? {}) as Record<string, StepState>;
   const out: Partial<Record<StepId, StepState>> = {};
   for (const [key, state] of Object.entries(steps)) {
     const newId = LEGACY_STEP_ID_MAP[key] ?? (STEP_IDS.includes(key as StepId) ? (key as StepId) : null);
     if (newId && state && typeof state === "object" && "status" in state) {
-      out[newId] = state;
+      // A canonical key always outranks a legacy alias at equal completeness,
+      // and a more-complete status always wins regardless of source.
+      const existing = out[newId];
+      const incomingIsCanonical = key === newId;
+      if (
+        !existing ||
+        statusRank(state) > statusRank(existing) ||
+        (statusRank(state) === statusRank(existing) && incomingIsCanonical)
+      ) {
+        out[newId] = state;
+      }
     }
   }
   return out;

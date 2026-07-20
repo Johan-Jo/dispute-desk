@@ -92,6 +92,38 @@ describe("GET /api/setup/state", () => {
     expect(body.nextStepId).toBe("store_profile");
   });
 
+  it("does not let a lingering legacy team:{todo} clobber activate:{done}", async () => {
+    // Regression: ActivateStep PATCHes /api/shop/preferences (writes
+    // steps.team = {status:'todo', payload:{notifications,...}}) BEFORE it
+    // POSTs /api/setup/step for `activate` ({status:'done'}). Both keys then
+    // coexist, and LEGACY_STEP_ID_MAP maps team → activate. Object iteration
+    // order previously let team's `todo` overwrite activate's `done`, so
+    // allDone stayed false and the dashboard bounced back into the wizard
+    // forever. The most-complete status must win regardless of key order.
+    const steps: Record<string, { status: string; payload?: unknown }> = {
+      connection: { status: "done" },
+      store_profile: { status: "done" },
+      coverage: { status: "done" },
+      automation: { status: "done" },
+      policies: { status: "done" },
+      // activate listed BEFORE team so `team` (todo) is the later writer.
+      activate: { status: "done" },
+      team: { status: "todo", payload: { teamEmail: "hi@blume.com" } },
+    };
+
+    const client = createMockSupabaseClient();
+    setTableResult(client, "shop_setup", { shop_id: "shop-123", steps });
+    mockGetServiceClient.mockReturnValue(client as any);
+
+    const res = await GET(makeRequest("shop-123"));
+    const body = await res.json();
+
+    expect(body.steps.activate?.status).toBe("done");
+    expect(body.progress.doneCount).toBe(6);
+    expect(body.allDone).toBe(true);
+    expect(body.nextStepId).toBeNull();
+  });
+
   it("returns allDone when all 6 onboarding steps are done", async () => {
     const allDoneSteps: Record<string, { status: string }> = {};
     const ids = [
