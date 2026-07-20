@@ -138,10 +138,20 @@ export async function syncDisputes(
 
   const { data: shop } = await sb
     .from("shops")
-    .select("id, shop_domain")
+    .select("id, shop_domain, last_reconciled_at")
     .eq("id", shopId)
     .single();
   if (!shop) throw new Error(`Shop not found: ${shopId}`);
+
+  // First-ever sync of this shop = a backfill of its existing dispute backlog.
+  // Read this ONCE up front: recordReconcileOutcome() stamps last_reconciled_at
+  // at the end of THIS run, so every applyDisputeSnapshot call below must see
+  // the value as it was BEFORE the run started. When true, applyDisputeSnapshot
+  // flags every newly-discovered dispute as a historical import (open OR
+  // resolved), and the dispatcher suppresses the per-dispute "ready for review"
+  // / outcome emails. This is what stops installing an established shop from
+  // flooding the merchant with one alert per historical dispute.
+  const isBackfillImport = shop.last_reconciled_at == null;
 
   const { data: session } = await sb
     .from("shop_sessions")
@@ -227,6 +237,7 @@ export async function syncDisputes(
           shopId,
           source: "cron",
           snapshot,
+          backfillImport: isBackfillImport,
         });
 
         if (applyResult.outcome === "error") {

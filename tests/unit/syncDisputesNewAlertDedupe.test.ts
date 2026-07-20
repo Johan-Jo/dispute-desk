@@ -84,8 +84,23 @@ const shopifyDispute = {
 function buildFakeClient(opts: {
   existingBehavior: "found" | "null-no-error" | "transient-error";
   alertAlreadySent: boolean;
+  /**
+   * shops.last_reconciled_at at the START of the sync. null → first-ever sync
+   * (backfill: emails suppressed). A timestamp → steady-state sync (emails
+   * fire normally). Defaults to a timestamp so the existing steady-state
+   * assertions below still exercise the send path.
+   */
+  lastReconciledAt?: string | null;
 }) {
-  const shopRow = { id: SHOP_ID, shop_domain: "t.myshopify.com" };
+  const lastReconciledAt =
+    opts.lastReconciledAt === undefined
+      ? "2026-04-01T00:00:00Z"
+      : opts.lastReconciledAt;
+  const shopRow = {
+    id: SHOP_ID,
+    shop_domain: "t.myshopify.com",
+    last_reconciled_at: lastReconciledAt,
+  };
   const sessionRow = {
     access_token_encrypted: "enc",
     key_version: 1,
@@ -347,5 +362,44 @@ describe("syncDisputes — new-dispute alert dedupe", () => {
     expect(mockSendAlert).toHaveBeenCalledWith(
       expect.objectContaining({ resolvedMode: "review" }),
     );
+  });
+
+  it("FIRST SYNC (last_reconciled_at null): does NOT email for an open backlog dispute but STILL builds the pack", async () => {
+    // The install-flood fix. An established shop's first sync discovers its
+    // existing dispute backlog. Open, un-submitted disputes still get a pack
+    // built (the merchant needs it), but NONE of them may fire a per-dispute
+    // "ready for review" email — that's the flood the user reported.
+    mockRunPipeline.mockResolvedValue({ action: "skipped_auto_build_off" });
+    mockGetServiceClient.mockReturnValue(
+      buildFakeClient({
+        existingBehavior: "null-no-error",
+        alertAlreadySent: false,
+        lastReconciledAt: null, // first-ever sync
+      }),
+    );
+
+    await syncDisputes(SHOP_ID, { triggerAutomation: true });
+
+    // Pack still built for the open dispute…
+    expect(mockRunPipeline).toHaveBeenCalled();
+    // …but no email flood.
+    expect(mockSendAlert).not.toHaveBeenCalled();
+  });
+
+  it("STEADY STATE (last_reconciled_at set): a genuinely new dispute DOES email", async () => {
+    // Contrast with the first-sync case: once the shop has been synced before,
+    // a newly-arrived dispute is a live transition and must notify the merchant.
+    mockRunPipeline.mockResolvedValue({ action: "skipped_auto_build_off" });
+    mockGetServiceClient.mockReturnValue(
+      buildFakeClient({
+        existingBehavior: "null-no-error",
+        alertAlreadySent: false,
+        lastReconciledAt: "2026-04-01T00:00:00Z",
+      }),
+    );
+
+    await syncDisputes(SHOP_ID, { triggerAutomation: true });
+
+    expect(mockSendAlert).toHaveBeenCalledTimes(1);
   });
 });
