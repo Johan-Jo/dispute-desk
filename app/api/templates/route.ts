@@ -4,26 +4,16 @@ import { normalizeLocale, DEFAULT_LOCALE } from "@/lib/i18n/locales";
 import { getServiceClient } from "@/lib/supabase/server";
 import type { DisputePhase } from "@/lib/rules/disputeReasons";
 import { INQUIRY_TEMPLATE_ID_SET } from "@/lib/setup/recommendTemplates";
-
-const REASON_TO_CATEGORY: Record<string, string> = {
-  FRAUDULENT: "fraud",
-  FRAUD: "fraud",
-  PRODUCT_NOT_RECEIVED: "not_received",
-  PNR: "not_received",
-  PRODUCT_UNACCEPTABLE: "unacceptable",
-  NOT_AS_DESCRIBED: "unacceptable",
-  DUPLICATE: "duplicate",
-  SUBSCRIPTION_CANCELED: "subscription",
-  SUBSCRIPTION: "subscription",
-  CREDIT_NOT_PROCESSED: "credit",
-  REFUND: "credit",
-};
+import { normalizeDisputeType } from "@/lib/rules/disputeTypes";
 
 /**
- * GET /api/templates?locale=fr-FR&category=PNR&reason=FRAUDULENT&phase=inquiry
+ * GET /api/templates?locale=fr-FR&category=PRODUCT_NOT_RECEIVED&reason=FRAUDULENT&phase=inquiry
  *
  * Returns global template catalog. No shop_id required — templates are public.
- * If ?reason= is provided (Shopify dispute reason), maps it to a category automatically.
+ * Both `?category=` and `?reason=` are normalized to the canonical
+ * `pack_templates.dispute_type` vocabulary (see `lib/rules/disputeTypes.ts`)
+ * so legacy short aliases (`PNR`, `REFUND`, …) from old deep links still
+ * resolve to real rows instead of silently filtering everything out.
  * Explicit ?category= takes precedence over ?reason=.
  *
  * When ?phase= and ?reason= are both provided, queries reason_template_mappings
@@ -37,8 +27,7 @@ export async function GET(req: NextRequest) {
   const reason = searchParams.get("reason") ?? undefined;
   const phase = searchParams.get("phase") as DisputePhase | null;
   const category =
-    explicitCategory ??
-    (reason ? REASON_TO_CATEGORY[reason.toUpperCase()] : undefined);
+    normalizeDisputeType(explicitCategory) ?? normalizeDisputeType(reason);
 
   const rawTemplates = await listTemplates(locale, category);
 
