@@ -20,7 +20,7 @@ describe("GET /api/templates", () => {
       {
         id: "a0000000-0000-0000-0000-000000000001",
         slug: "fraud_standard",
-        dispute_type: "FRAUD",
+        dispute_type: "FRAUDULENT",
         is_recommended: true,
         min_plan: "FREE",
         created_at: "2025-01-01T00:00:00Z",
@@ -29,6 +29,9 @@ describe("GET /api/templates", () => {
         short_description: "Comprehensive evidence package for fraudulent disputes.",
         works_best_for: "Chargebacks where the cardholder claims they did not authorize.",
         preview_note: null,
+        requiredDocs: 2,
+        optionalDocs: 8,
+        keyEvidence: ["Order details", "IP logs", "Device data", "Timeline"],
       },
     ]);
 
@@ -56,5 +59,34 @@ describe("GET /api/templates", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.templates).toEqual([]);
+  });
+
+  it("normalizes a canonical category straight through to listTemplates", async () => {
+    mockListTemplates.mockResolvedValue([]);
+    const url = new URL(
+      "http://localhost/api/templates?category=CREDIT_NOT_PROCESSED"
+    );
+    const req = { nextUrl: url } as unknown as NextRequest;
+    await GET(req);
+    // second arg is the category passed to the DB filter
+    expect(mockListTemplates.mock.calls[0][1]).toBe("CREDIT_NOT_PROCESSED");
+  });
+
+  it("maps a legacy short category code to its canonical dispute_type", async () => {
+    // Old deep links / bookmarks still send REFUND, PNR, etc. These must be
+    // rewritten to the real dispute_type or the DB filter matches nothing and
+    // the modal surfaces uninstallable cards (the 2026-07-20 bug).
+    mockListTemplates.mockResolvedValue([]);
+    for (const [alias, canonical] of [
+      ["REFUND", "CREDIT_NOT_PROCESSED"],
+      ["PNR", "PRODUCT_NOT_RECEIVED"],
+      ["FRAUD", "FRAUDULENT"],
+    ] as const) {
+      mockListTemplates.mockClear();
+      const url = new URL(`http://localhost/api/templates?category=${alias}`);
+      const req = { nextUrl: url } as unknown as NextRequest;
+      await GET(req);
+      expect(mockListTemplates.mock.calls[0][1]).toBe(canonical);
+    }
   });
 });

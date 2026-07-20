@@ -10,7 +10,9 @@ interface Props {
   shopId: string;
   locale: string;
   onInstalled: (packId: string) => void;
-  /** Pre-select a dispute-type filter (e.g. "FRAUD") when opening */
+  /** Pre-select a dispute-type filter (e.g. "FRAUDULENT") when opening.
+   *  Must be a canonical `pack_templates.dispute_type` code — see
+   *  `lib/rules/disputeTypes.ts`. */
   initialCategory?: string;
   /** Create installed templates ACTIVE (not DRAFT) so they immediately cover
    *  the dispute type. Set true from the Automation/Coverage "Install Playbook"

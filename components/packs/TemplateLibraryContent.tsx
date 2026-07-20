@@ -5,12 +5,7 @@ import { useTranslations } from "next-intl";
 import {
   Search,
   FileText,
-  Globe,
   CheckCircle2,
-  Package,
-  MessageSquare,
-  Clock,
-  Download,
   Loader2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -21,68 +16,41 @@ export interface TemplateCard {
   slug: string;
   dispute_type: string;
   is_recommended: boolean;
-  nameKey?: string;
-  bestForKey?: string;
-  requiredDocs?: number;
-  optionalDocs?: number;
-  keyEvidence?: string[];
   name?: string;
   works_best_for?: string | null;
+  requiredDocs?: number;
+  optionalDocs?: number;
+  /** Ready-to-render evidence chip labels from the API (already localized). */
+  keyEvidence?: string[];
 }
 
+/**
+ * Category tabs. `value` is the canonical `pack_templates.dispute_type`
+ * code (see `lib/rules/disputeTypes.ts`) — the same vocabulary the DB and
+ * the `/api/templates` filter use, so a tab always matches real rows.
+ */
 export const CATEGORY_KEYS = [
   { value: "", labelKey: "all" },
-  { value: "FRAUD", labelKey: "catFraud" },
-  { value: "PNR", labelKey: "catPNR" },
-  { value: "NOT_AS_DESCRIBED", labelKey: "catNotAsDescribed" },
-  { value: "SUBSCRIPTION", labelKey: "catSubscription" },
-  { value: "REFUND", labelKey: "catRefund" },
+  { value: "FRAUDULENT", labelKey: "catFraud" },
+  { value: "PRODUCT_NOT_RECEIVED", labelKey: "catPNR" },
+  { value: "PRODUCT_UNACCEPTABLE", labelKey: "catNotAsDescribed" },
+  { value: "SUBSCRIPTION_CANCELED", labelKey: "catSubscription" },
+  { value: "CREDIT_NOT_PROCESSED", labelKey: "catRefund" },
   { value: "DUPLICATE", labelKey: "catDuplicate" },
   { value: "DIGITAL", labelKey: "catDigital" },
   { value: "GENERAL", labelKey: "catGeneral" },
 ] as const;
 
 export const DISPUTE_TYPE_LABEL_KEYS: Record<string, string> = {
-  FRAUD: "catFraud",
-  PNR: "catPNR",
-  NOT_AS_DESCRIBED: "catNotAsDescribed",
-  SUBSCRIPTION: "catSubscription",
-  REFUND: "catRefund",
+  FRAUDULENT: "catFraud",
+  PRODUCT_NOT_RECEIVED: "catPNR",
+  PRODUCT_UNACCEPTABLE: "catNotAsDescribed",
+  SUBSCRIPTION_CANCELED: "catSubscription",
+  CREDIT_NOT_PROCESSED: "catRefund",
   DUPLICATE: "catDuplicate",
   DIGITAL: "catDigital",
   GENERAL: "catGeneral",
 };
-
-const EVIDENCE_ICONS: Record<string, React.ReactNode> = {
-  evTracking: <Package className="w-3 h-3" />,
-  evPolicyLinks: <FileText className="w-3 h-3" />,
-  evCustomerComms: <MessageSquare className="w-3 h-3" />,
-  evTimeline: <Clock className="w-3 h-3" />,
-  evVerification: <CheckCircle2 className="w-3 h-3" />,
-  evIPLogs: <Globe className="w-3 h-3" />,
-  evDeviceData: <Globe className="w-3 h-3" />,
-  evProductPhotos: <FileText className="w-3 h-3" />,
-  evDescription: <FileText className="w-3 h-3" />,
-  evActivityLogs: <Clock className="w-3 h-3" />,
-  evAccessLogs: <Clock className="w-3 h-3" />,
-  evIPData: <Globe className="w-3 h-3" />,
-  evDownloadProof: <Download className="w-3 h-3" />,
-  evRefundProof: <FileText className="w-3 h-3" />,
-  evBankRecords: <FileText className="w-3 h-3" />,
-  evOrderDetails: <FileText className="w-3 h-3" />,
-  evErrorLogs: <FileText className="w-3 h-3" />,
-};
-
-const DEMO_TEMPLATES: TemplateCard[] = [
-  { id: "TPL-001", slug: "pnr_with_tracking", dispute_type: "PNR", is_recommended: true, nameKey: "tpl1Name", bestForKey: "tpl1BestFor", requiredDocs: 4, optionalDocs: 2, keyEvidence: ["evTracking", "evPolicyLinks", "evCustomerComms", "evTimeline"] },
-  { id: "TPL-002", slug: "fraud_standard", dispute_type: "FRAUD", is_recommended: true, nameKey: "tpl2Name", bestForKey: "tpl2BestFor", requiredDocs: 6, optionalDocs: 3, keyEvidence: ["evVerification", "evIPLogs", "evDeviceData", "evTimeline"] },
-  { id: "TPL-003", slug: "not_as_described_quality", dispute_type: "NOT_AS_DESCRIBED", is_recommended: true, nameKey: "tpl3Name", bestForKey: "tpl3BestFor", requiredDocs: 5, optionalDocs: 2, keyEvidence: ["evProductPhotos", "evPolicyLinks", "evCustomerComms", "evDescription"] },
-  { id: "TPL-004", slug: "subscription_canceled", dispute_type: "SUBSCRIPTION", is_recommended: true, nameKey: "tpl4Name", bestForKey: "tpl4BestFor", requiredDocs: 5, optionalDocs: 3, keyEvidence: ["evPolicyLinks", "evCustomerComms", "evActivityLogs", "evTimeline"] },
-  { id: "TPL-005", slug: "digital_goods", dispute_type: "DIGITAL", is_recommended: false, nameKey: "tpl5Name", bestForKey: "tpl5BestFor", requiredDocs: 4, optionalDocs: 1, keyEvidence: ["evAccessLogs", "evIPData", "evDownloadProof", "evTimeline"] },
-  { id: "TPL-006", slug: "credit_not_processed", dispute_type: "REFUND", is_recommended: false, nameKey: "tpl6Name", bestForKey: "tpl6BestFor", requiredDocs: 3, optionalDocs: 2, keyEvidence: ["evRefundProof", "evBankRecords", "evCustomerComms", "evTimeline"] },
-  { id: "TPL-007", slug: "general_catchall", dispute_type: "GENERAL", is_recommended: false, nameKey: "tpl7Name", bestForKey: "tpl7BestFor", requiredDocs: 3, optionalDocs: 1, keyEvidence: ["evOrderDetails", "evCustomerComms", "evTimeline"] },
-  { id: "TPL-008", slug: "duplicate_incorrect", dispute_type: "DUPLICATE", is_recommended: false, nameKey: "tpl8Name", bestForKey: "tpl8BestFor", requiredDocs: 4, optionalDocs: 2, keyEvidence: ["evRefundProof", "evBankRecords", "evErrorLogs", "evTimeline"] },
-];
 
 export interface TemplateLibraryContentProps {
   shopId: string;
@@ -96,7 +64,8 @@ export interface TemplateLibraryContentProps {
   isActive?: boolean;
   /** 'page' = back link + full-height grid; 'modal' = constrained grid */
   layoutMode?: "modal" | "page";
-  /** Pre-select a dispute-type filter (e.g. "FRAUD") when opening */
+  /** Pre-select a dispute-type filter (canonical `dispute_type` code,
+   *  e.g. "FRAUDULENT" — see `lib/rules/disputeTypes.ts`) when opening. */
   initialCategory?: string;
   /** When true, installed templates are created ACTIVE (not DRAFT) so they
    *  immediately count as coverage. Used by the Automation/Coverage "Install
@@ -121,6 +90,7 @@ export function TemplateLibraryContent({
 
   const [templates, setTemplates] = useState<TemplateCard[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [category, setCategory] = useState(initialCategory);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("recommended");
@@ -134,23 +104,22 @@ export function TemplateLibraryContent({
 
   const fetchTemplates = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const params = new URLSearchParams({ locale });
       if (category) params.set("category", category);
       const res = await fetch(`/api/templates?${params}`);
       if (res.ok) {
         const data = await res.json();
-        const live = data.templates ?? [];
-        if (live.length > 0) {
-          setTemplates(live);
-          setLoading(false);
-          return;
-        }
+        setTemplates(data.templates ?? []);
+      } else {
+        setTemplates([]);
+        setLoadError(true);
       }
     } catch {
-      /* fallback to demo */
+      setTemplates([]);
+      setLoadError(true);
     }
-    setTemplates(DEMO_TEMPLATES);
     setLoading(false);
   }, [locale, category]);
 
@@ -163,15 +132,14 @@ export function TemplateLibraryContent({
       setSearchQuery("");
       setShowInstalledBanner(false);
       setInstallError(null);
+      setLoadError(false);
     }
   }, [isActive, fetchTemplates]);
 
   const recommendedCount = templates.filter((tpl) => tpl.is_recommended).length;
   const filtered = templates.filter((tpl) => {
     const matchesCategory = !category || tpl.dispute_type === category;
-    const name =
-      tpl.name ??
-      (tpl.nameKey ? t(tpl.nameKey) : tpl.slug ?? "");
+    const name = tpl.name ?? tpl.slug ?? "";
     const matchesSearch =
       !searchQuery ||
       (typeof name === "string" && name.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -279,7 +247,7 @@ export function TemplateLibraryContent({
           <div className="flex items-start justify-between mb-4">
             <div>
               <h3 className="font-semibold text-[#0B1220]">
-                {t("preview")}: {previewTpl.name ?? (previewTpl.nameKey ? t(previewTpl.nameKey) : previewTpl.slug ?? "")}
+                {t("preview")}: {previewTpl.name ?? previewTpl.slug ?? ""}
               </h3>
               <p className="text-sm text-[#667085] mt-1">
                 {DISPUTE_TYPE_LABEL_KEYS[previewTpl.dispute_type]
@@ -289,21 +257,23 @@ export function TemplateLibraryContent({
             </div>
             <Button variant="ghost" size="sm" onClick={() => setPreviewTemplateId(null)}>×</Button>
           </div>
-          <p className="text-sm text-[#667085] mb-3">
-            <strong className="text-[#0B1220]">{t("worksBestFor")}</strong>{" "}
-            {previewTpl.works_best_for ?? (previewTpl.bestForKey ? t(previewTpl.bestForKey) : "")}
-          </p>
+          {previewTpl.works_best_for && (
+            <p className="text-sm text-[#667085] mb-3">
+              <strong className="text-[#0B1220]">{t("worksBestFor")}</strong>{" "}
+              {previewTpl.works_best_for}
+            </p>
+          )}
           <p className="text-sm text-[#667085] mb-3">
             {previewTpl.requiredDocs ?? 0} {t("required")}, {previewTpl.optionalDocs ?? 0} {t("optional")}
           </p>
           <div className="flex flex-wrap gap-1.5 mb-4">
-            {(previewTpl.keyEvidence ?? []).map((evKey, idx) => (
+            {(previewTpl.keyEvidence ?? []).map((label, idx) => (
               <span
                 key={idx}
                 className="inline-flex items-center gap-1 px-2 py-0.5 bg-white text-[#0B1220] rounded text-xs border border-[#E5E7EB]"
               >
-                {EVIDENCE_ICONS[evKey]}
-                {t(evKey)}
+                <FileText className="w-3 h-3" />
+                {label}
               </span>
             ))}
           </div>
@@ -388,14 +358,15 @@ export function TemplateLibraryContent({
                 <option value="new">{t("sortNew")}</option>
               </select>
             </div>
-            <div className="min-w-[180px]">
+            <div className="min-w-[200px]">
               <label className="text-xs font-medium text-transparent mb-1 block select-none">_</label>
               <Button
                 variant="primary"
                 size="sm"
                 onClick={handleInstallRecommended}
-                disabled={isInstallingBulk || showInstalledBanner}
+                disabled={isInstallingBulk || showInstalledBanner || recommendedCount === 0}
                 className="w-full"
+                title={t("installRecommendedHint")}
               >
                 {isInstallingBulk ? t("installing") : t("installRecommended", { count: recommendedCount })}
               </Button>
@@ -427,8 +398,17 @@ export function TemplateLibraryContent({
       ) : sorted.length === 0 ? (
         <div className="text-center py-12">
           <FileText className="w-12 h-12 text-[#667085] mx-auto mb-3" />
-          <h3 className="font-semibold text-[#0B1220] mb-2">{t("noTemplatesTitle")}</h3>
-          <p className="text-sm text-[#667085]">{t("noTemplatesDescription")}</p>
+          <h3 className="font-semibold text-[#0B1220] mb-2">
+            {loadError ? t("loadErrorTitle") : t("noTemplatesTitle")}
+          </h3>
+          <p className="text-sm text-[#667085] mb-4">
+            {loadError ? t("loadErrorDescription") : t("noTemplatesDescription")}
+          </p>
+          {loadError && (
+            <Button variant="secondary" size="sm" onClick={fetchTemplates}>
+              {t("retry")}
+            </Button>
+          )}
         </div>
       ) : (
         <div
@@ -449,7 +429,7 @@ export function TemplateLibraryContent({
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h3 className="font-semibold text-[#0B1220]">
-                        {tpl.name ?? (tpl.nameKey ? t(tpl.nameKey) : tpl.slug)}
+                        {tpl.name ?? tpl.slug}
                       </h3>
                       {tpl.is_recommended && (
                         <Badge variant="default" className="text-xs">
@@ -474,22 +454,24 @@ export function TemplateLibraryContent({
                     <div className="flex items-start gap-2 text-sm">
                       <span className="text-[#667085] font-medium whitespace-nowrap">{t("keyEvidence")}</span>
                       <div className="flex flex-wrap gap-1.5">
-                        {(tpl.keyEvidence ?? []).map((evKey, idx) => (
+                        {(tpl.keyEvidence ?? []).map((label, idx) => (
                           <span
                             key={idx}
                             className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#F6F8FB] text-[#0B1220] rounded text-xs border border-[#E5E7EB]"
                           >
-                            {EVIDENCE_ICONS[evKey]}
-                            {t(evKey)}
+                            <FileText className="w-3 h-3" />
+                            {label}
                           </span>
                         ))}
                       </div>
                     </div>
                   )}
-                  <div className="text-sm text-[#667085]">
-                    <strong className="text-[#0B1220]">{t("worksBestFor")}</strong>{" "}
-                    {tpl.works_best_for ?? (tpl.bestForKey ? t(tpl.bestForKey) : "")}
-                  </div>
+                  {tpl.works_best_for && (
+                    <div className="text-sm text-[#667085]">
+                      <strong className="text-[#0B1220]">{t("worksBestFor")}</strong>{" "}
+                      {tpl.works_best_for}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -528,8 +510,10 @@ export function TemplateLibraryContent({
                       </>
                     )}
                   </div>
-                  {isInstalled && (
+                  {isInstalled ? (
                     <p className="text-xs text-[#667085] text-center">{t("installedAsDraft")}</p>
+                  ) : (
+                    <p className="text-xs text-[#667085] text-center">{t("installHint")}</p>
                   )}
                 </div>
               </div>
