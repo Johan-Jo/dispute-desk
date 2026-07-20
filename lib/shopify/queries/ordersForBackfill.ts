@@ -38,6 +38,10 @@
  */
 
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
+import {
+  parseReceiptJson,
+  readThreeDsAuthenticated,
+} from "@/lib/shopify/receipts/threeDs";
 import { assertNotAuthInvalid } from "@/lib/shopify/sessions/getShopBackgroundSession";
 import {
   readTrackingMetafields,
@@ -508,21 +512,22 @@ const RISK_LEVEL_RANK: Record<string, number> = {
 
 /**
  * Pure helper: extract the 3-D Secure authenticated flag from a
- * Shopify Payments transaction receipt. Mirrors the contract in
- * lib/packs/sources/threeDSecureSource.ts — only Shopify Payments is
+ * Shopify Payments transaction receipt. Only Shopify Payments is
  * trusted; the receipt shape on other gateways is provider-defined
- * and we refuse to read it.
+ * and we refuse to read it. The receipt walk itself (paths, positive
+ * rule, drift history) is the shared canonical reader in
+ * lib/shopify/receipts/threeDs.ts — same one the dispute-evidence
+ * collector uses, so backfill and per-dispute read agree.
  *
  * Returns:
- *   true  — 3DS authentication completed successfully
+ *   true  — receipt carries an explicit positive 3DS authentication
  *   null  — unknown, non-Shopify-Payments, receipt unparseable, or
  *           3DS was not used. Absence of 3DS is never a negative
  *           signal in our rubric; all "no positive read" outcomes
  *           collapse to null.
  *
  * Picks the primary transaction (first SUCCESS sale/auth) — same
- * rule as the dispute-evidence collector so backfill and per-dispute
- * read agree.
+ * rule as the dispute-evidence collector.
  */
 export function pickThreeDsAuthenticated(
   transactions: RawBackfillTransaction[] | null | undefined,
@@ -535,9 +540,9 @@ export function pickThreeDsAuthenticated(
   );
   if (!tx) return null;
   if (tx.gateway !== "shopify_payments") return null;
-  const receipt = parseReceiptShape(tx.receiptJson);
+  const receipt = parseReceiptJson(tx.receiptJson);
   if (!receipt) return null;
-  return readThreeDsAuthenticatedFromReceipt(receipt);
+  return readThreeDsAuthenticated(receipt);
 }
 
 /**
@@ -584,50 +589,6 @@ export function pickPaymentMethod(
   }
 
   return null;
-}
-
-function parseReceiptShape(
-  raw: unknown,
-): Record<string, unknown> | null {
-  if (raw == null) return null;
-  if (typeof raw === "string") {
-    try {
-      const parsed = JSON.parse(raw);
-      return isPlainObject(parsed) ? parsed : null;
-    } catch {
-      return null;
-    }
-  }
-  return isPlainObject(raw) ? raw : null;
-}
-
-function readThreeDsAuthenticatedFromReceipt(
-  receipt: Record<string, unknown>,
-): boolean | null {
-  try {
-    const candidates: unknown[] = [
-      // Modern PaymentIntent shape (2026-01)
-      (receipt.latest_charge as Record<string, unknown> | undefined)
-        ?.payment_method_details,
-      // Legacy charge-level fallback
-      receipt.payment_method_details,
-    ];
-    for (const pmd of candidates) {
-      if (!isPlainObject(pmd)) continue;
-      const card = pmd.card;
-      if (!isPlainObject(card)) continue;
-      const tds = card.three_d_secure;
-      if (!isPlainObject(tds)) continue;
-      if (tds.authenticated === true) return true;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
 /** Regex for signature-capture text in a native carrier delivery event.

@@ -81,7 +81,7 @@ async function windowMetrics(
   const { data: orders } = await sb
     .from("shopify_orders")
     .select(
-      "id, risk_level_initial, three_ds_authenticated, processed_at, fulfilled_at, signed_by_name, delivered_at_tracking, fraud_protection_level",
+      "id, risk_level_initial, three_ds_authenticated, payment_gateway, payment_method, processed_at, fulfilled_at, signed_by_name, delivered_at_tracking, fraud_protection_level",
     )
     .eq("shop_id", shopId)
     .gte("created_at_shopify", start.toISOString())
@@ -90,6 +90,8 @@ async function windowMetrics(
   const rows = (orders ?? []) as Array<{
     risk_level_initial: string | null;
     three_ds_authenticated: boolean | null;
+    payment_gateway: string | null;
+    payment_method: string | null;
     processed_at: string | null;
     fulfilled_at: string | null;
     signed_by_name: string | null;
@@ -125,8 +127,10 @@ async function windowMetrics(
     (o) => o.risk_level_initial === "HIGH" && o.fulfilled_at,
   ).length;
   const fulfilled = rows.filter((o) => o.fulfilled_at).length;
+  // Card orders only — mirrors the monthly-digest route denominator.
   const threeDsEligible = rows.filter(
-    (o) => o.three_ds_authenticated !== null,
+    (o) =>
+      o.payment_gateway === "shopify_payments" && o.payment_method === "card",
   ).length;
   const threeDsOk = rows.filter((o) => o.three_ds_authenticated === true).length;
   const protected_ = rows.filter((o) =>

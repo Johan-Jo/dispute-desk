@@ -215,7 +215,7 @@ async function windowMetrics(
     select: (cols: string) => unknown;
   })
     .select(
-      "id, risk_level_initial, three_ds_authenticated, processed_at, fulfilled_at, signed_by_name, delivered_at_tracking, fraud_protection_level",
+      "id, risk_level_initial, three_ds_authenticated, payment_gateway, payment_method, processed_at, fulfilled_at, signed_by_name, delivered_at_tracking, fraud_protection_level",
     );
   // Chain the query manually because the supabase-js return type is
   // too dynamic to thread through the helper cleanly.
@@ -233,6 +233,8 @@ async function windowMetrics(
   const rows = (data ?? []) as Array<{
     risk_level_initial: string | null;
     three_ds_authenticated: boolean | null;
+    payment_gateway: string | null;
+    payment_method: string | null;
     processed_at: string | null;
     fulfilled_at: string | null;
     signed_by_name: string | null;
@@ -269,8 +271,13 @@ async function windowMetrics(
     (o) => o.risk_level_initial === "HIGH" && o.fulfilled_at,
   ).length;
   const fulfilled = rows.filter((o) => o.fulfilled_at).length;
+  // Card orders only — same denominator as the Insights KPI tile.
+  // The column only ever holds true|null (the reader never writes
+  // false), so the previous `!== null` denominator made the rate
+  // read 100% whenever any positive existed.
   const threeDsEligible = rows.filter(
-    (o) => o.three_ds_authenticated !== null,
+    (o) =>
+      o.payment_gateway === "shopify_payments" && o.payment_method === "card",
   ).length;
   const threeDsOk = rows.filter((o) => o.three_ds_authenticated === true).length;
   const protected_ = rows.filter((o) =>
