@@ -166,6 +166,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const stats = { probed: 0, newlyTrue: 0, alreadyTrue: 0, stillNull: 0, noReceipt: 0, errors: 0, updated: 0 };
 const toUpdate = [];
+const retries = new Map();
 
 for (let i = 0; i < targets.length; i++) {
   const o = targets[i];
@@ -181,6 +182,25 @@ for (let i = 0; i < targets.length; i++) {
       continue;
     }
     const json = await res.json();
+    // Shopify GraphQL signals throttling with HTTP 200 + a THROTTLED
+    // error, NOT HTTP 429 — without this check a drained cost budget
+    // silently degrades reads into "noReceipt" (observed 2026-07-20:
+    // a 10 rps run misread 1,097/2,845 orders).
+    const throttled = (json?.errors ?? []).some(
+      (e) => e?.extensions?.code === "THROTTLED",
+    );
+    if (throttled) {
+      const n = (retries.get(o.shopify_order_id) ?? 0) + 1;
+      retries.set(o.shopify_order_id, n);
+      if (n > 10) {
+        stats.errors++;
+        console.error(`  giving up after 10 throttle retries: ${o.shopify_order_number}`);
+        continue;
+      }
+      await sleep(4000); // restore cost budget before retrying
+      i--; // retry this order
+      continue;
+    }
     const txs = json?.data?.node?.transactions ?? [];
     const tx = txs.find(
       (t) => (t.kind === "SALE" || t.kind === "AUTHORIZATION") && t.status === "SUCCESS",
@@ -203,7 +223,7 @@ for (let i = 0; i < targets.length; i++) {
   if ((i + 1) % 200 === 0) {
     console.log(`  … ${i + 1}/${targets.length} probed (newly true so far: ${stats.newlyTrue})`);
   }
-  await sleep(250); // ~4 rps
+  await sleep(250); // ~4 rps — stays under the GraphQL cost-restore rate; do not "speed up"
 }
 
 console.log("\n── probe summary ──");
