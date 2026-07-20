@@ -44,6 +44,16 @@ export interface TemplateListItem extends PackTemplate {
   short_description: string;
   works_best_for: string | null;
   preview_note: string | null;
+  /** Count of DOC_REQUIREMENT items with required=true (computed from sections). */
+  requiredDocs: number;
+  /** Count of DOC_REQUIREMENT items with required=false. */
+  optionalDocs: number;
+  /**
+   * Up to 4 evidence chip labels for the card, derived from the template's
+   * doc-requirement item keys/labels (required items first). Human-readable
+   * — already resolved, no further i18n lookup needed.
+   */
+  keyEvidence: string[];
 }
 
 /** Full template preview including sections and items. */

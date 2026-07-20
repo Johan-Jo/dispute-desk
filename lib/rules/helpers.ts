@@ -12,13 +12,21 @@
  * Family slug → dispute-type code used by the rule engine + the
  * pack template installer. Drives the install-modal's initial
  * category and the `?family=...` deep links from the coverage page.
+ *
+ * The values MUST be the canonical `pack_templates.dispute_type`
+ * codes (the Shopify reason codes, since migration 20260411160000)
+ * — the template library filters on `.eq("dispute_type", …)`, so a
+ * short alias like "FRAUD"/"REFUND" would match zero rows and the
+ * modal would surface uninstallable cards. See
+ * `CATEGORY_TO_DISPUTE_TYPE` in `lib/rules/disputeTypes.ts` for the
+ * one canonical vocabulary shared across the UI, the API and the DB.
  */
 export const FAMILY_TO_DISPUTE_TYPE: Record<string, string> = {
-  fraud: "FRAUD",
-  pnr: "PNR",
-  not_as_described: "NOT_AS_DESCRIBED",
-  subscription: "SUBSCRIPTION",
-  refund: "REFUND",
+  fraud: "FRAUDULENT",
+  pnr: "PRODUCT_NOT_RECEIVED",
+  not_as_described: "PRODUCT_UNACCEPTABLE",
+  subscription: "SUBSCRIPTION_CANCELED",
+  refund: "CREDIT_NOT_PROCESSED",
   duplicate: "DUPLICATE",
   general: "GENERAL",
 };

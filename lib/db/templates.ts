@@ -68,7 +68,9 @@ export async function listTemplates(
 
   let query = sb
     .from("pack_templates")
-    .select("*, pack_template_i18n(*)")
+    .select(
+      "*, pack_template_i18n(*), pack_template_sections(pack_template_items(item_type, required, key, label_default, sort))"
+    )
     .order("is_recommended", { ascending: false })
     .order("created_at", { ascending: true });
 
@@ -86,6 +88,7 @@ export async function listTemplates(
   return (data ?? []).map((row) => {
     const i18nRows = (row.pack_template_i18n ?? []) as PackTemplateI18n[];
     const resolved = resolveI18nRow(i18nRows, locale);
+    const docStats = summarizeDocRequirements(row.pack_template_sections);
 
     return {
       id: row.id,
@@ -99,8 +102,60 @@ export async function listTemplates(
       short_description: resolved?.short_description ?? "",
       works_best_for: resolved?.works_best_for ?? null,
       preview_note: resolved?.preview_note ?? null,
+      requiredDocs: docStats.requiredDocs,
+      optionalDocs: docStats.optionalDocs,
+      keyEvidence: docStats.keyEvidence,
     };
   });
+}
+
+interface RawDocItem {
+  item_type: string;
+  required: boolean;
+  key: string | null;
+  label_default: string | null;
+  sort: number | null;
+}
+
+/**
+ * Roll up a template's sections → doc-requirement counts + card chips.
+ * Only `DOC_REQUIREMENT` items count (NOTE items are guidance, not evidence).
+ * Chips are the required items first, then optional, capped at 4, using the
+ * item's `label_default` (already human-readable) and falling back to a
+ * de-slugged `key`.
+ */
+function summarizeDocRequirements(
+  sections: unknown
+): { requiredDocs: number; optionalDocs: number; keyEvidence: string[] } {
+  const sectionRows = (sections ?? []) as Array<{
+    pack_template_items?: RawDocItem[] | null;
+  }>;
+
+  const docItems = sectionRows
+    .flatMap((s) => s.pack_template_items ?? [])
+    .filter((i) => i.item_type === "DOC_REQUIREMENT")
+    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+
+  const requiredDocs = docItems.filter((i) => i.required).length;
+  const optionalDocs = docItems.length - requiredDocs;
+
+  const ordered = [
+    ...docItems.filter((i) => i.required),
+    ...docItems.filter((i) => !i.required),
+  ];
+  const keyEvidence = ordered
+    .slice(0, 4)
+    .map((i) => i.label_default?.trim() || deslug(i.key));
+
+  return { requiredDocs, optionalDocs, keyEvidence };
+}
+
+function deslug(key: string | null): string {
+  if (!key) return "";
+  return key
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
 }
 
 /**
@@ -150,6 +205,8 @@ export async function getTemplatePreview(
     } satisfies PackTemplateSection & { items: PackTemplateItem[] };
   });
 
+  const docStats = summarizeDocRequirements(sections);
+
   return {
     id: tpl.id,
     slug: tpl.slug,
@@ -162,6 +219,9 @@ export async function getTemplatePreview(
     short_description: i18n?.short_description ?? "",
     works_best_for: i18n?.works_best_for ?? null,
     preview_note: i18n?.preview_note ?? null,
+    requiredDocs: docStats.requiredDocs,
+    optionalDocs: docStats.optionalDocs,
+    keyEvidence: docStats.keyEvidence,
     sections: mappedSections,
   };
 }
