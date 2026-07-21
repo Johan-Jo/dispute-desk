@@ -1287,6 +1287,7 @@
         "sourceShopify": "Shopify",
         "sourceMerchant": "Merchant upload",
         "sourceDerived": "Derived",
+        "sourcePaymentGateway": "Shopify Payments",
         "sourceStorePolicy": "Store policy",
         "strength": {
           "strong": "Strong",
@@ -1551,6 +1552,11 @@
           },
           "avsCvv": {
             "bankArgument": "Payment verification supports cardholder identity.",
+            "bothMatched": "Billing address and card verification code (CVV) matched the issuer's records.",
+            "addressMatched": "The billing address matched the issuer's records.",
+            "streetMatched": "The billing street address matched the issuer's records.",
+            "postalMatched": "The billing postal code matched the issuer's records.",
+            "cvvMatched": "The card verification code (CVV) matched the issuer's records.",
             "notIncluded": "The payment processor did not return AVS or CVV verification codes for this transaction. Nothing to include — these codes come from the payment gateway at checkout, not after the fact.",
             "internalBothFail": "Both the billing address (AVS) and the card verification code (CVV) failed to match the issuer's records. Kept internal — citing this to the bank would undermine the fraud response.",
             "internalAvsFail": "The billing address (AVS) did not match the issuer's records. Kept internal — citing this to the bank would undermine the fraud response.",

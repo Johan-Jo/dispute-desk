@@ -442,7 +442,54 @@ function reasonFor(
     const specific = ipLocationReasonFromPayload(payload, method);
     if (specific) return specific;
   }
+  // Payload-aware specificity for avs_cvv_match: name EXACTLY what the
+  // gateway verified (address and/or CVV) instead of a generic line. The
+  // copy states what matched the issuer's records — it never claims the
+  // match proves cardholder identity or authorization, and it never
+  // claims both matched when only one did.
+  if (
+    field === "avs_cvv_match" &&
+    (method === "bank_argument" || method === "context_only")
+  ) {
+    const specific = avsCvvReasonFromPayload(payload);
+    if (specific) return specific;
+  }
   return REASON_OVERRIDES[field]?.[method] ?? REASON_FOR_METHOD[method];
+}
+
+/**
+ * Builds the row reason for avs_cvv_match from the actual gateway result
+ * codes. Returns null when neither code is a match (callers fall back to
+ * the static REASON_OVERRIDES entry — negative payloads never reach the
+ * bank-facing methods anyway via `isNegativeOrAmbiguous`).
+ *
+ * Match sets mirror the canonical categorizer
+ * (`lib/argument/canonicalEvidence.ts`): AVS Y/A/W/X/D/M, CVV M. The
+ * copy variant is chosen so a single successful verification is never
+ * reported as "both matched":
+ *   - AVS + CVV both match → bothMatched
+ *   - AVS only: A (street) → streetMatched; W (zip) → postalMatched;
+ *     Y/X/D/M (full/international) → addressMatched
+ *   - CVV only → cvvMatched
+ */
+function avsCvvReasonFromPayload(payload: unknown): I18nToken | null {
+  if (!payload || typeof payload !== "object") return null;
+  const p = payload as Record<string, unknown>;
+  const avs =
+    typeof p.avsResultCode === "string" ? p.avsResultCode.toUpperCase() : "";
+  const cvv =
+    typeof p.cvvResultCode === "string" ? p.cvvResultCode.toUpperCase() : "";
+  const avsOk = AVS_MATCH_CODES.has(avs);
+  const cvvOk = CVV_MATCH_CODES.has(cvv);
+
+  if (avsOk && cvvOk) return { key: `${REASONS_NS}.avsCvv.bothMatched` };
+  if (avsOk) {
+    if (avs === "A") return { key: `${REASONS_NS}.avsCvv.streetMatched` };
+    if (avs === "W") return { key: `${REASONS_NS}.avsCvv.postalMatched` };
+    return { key: `${REASONS_NS}.avsCvv.addressMatched` };
+  }
+  if (cvvOk) return { key: `${REASONS_NS}.avsCvv.cvvMatched` };
+  return null;
 }
 
 /**
@@ -907,6 +954,11 @@ interface ResolutionContext {
   naturalCategory: EvidenceCategory;
   factLookup: FactLookup | undefined;
   reasonFamily: ReasonFamily;
+  /** Pre-computed `!internalFlag && isFieldBankEligible(field, payload)`
+   *  from the derivation loop. Gates EVERY path into `bank_argument` so
+   *  `submissionMethod === "bank_argument"` can never disagree with the
+   *  downstream `includedInBankArgument` flag (which requires it too). */
+  bankEligible: boolean;
 }
 
 function resolveSubmissionMethod(ctx: ResolutionContext): SubmissionMethod {
@@ -963,18 +1015,56 @@ function resolveSubmissionMethod(ctx: ResolutionContext): SubmissionMethod {
   // Today every registered field has either a fact pathway or a context
   // pathway, so this branch is reserved for future "not_supported" cases.
 
-  // Bank-argument: row contributes strong/moderate AND has an approved fact.
-  if (ctx.contributesStrongOrModerate && ctx.factLookup?.hasApprovedFact) {
+  // Bank-argument: row contributes strong/moderate, is bank-eligible, and
+  // is not negative/ambiguous. Eligibility + the negative guard gate BOTH
+  // ways in:
+  //   (a) an approved bank-eligible fact exists (generated defence
+  //       package), OR
+  //   (b) the categorizer's own category is strong/moderate — the signal
+  //       stands on its own even before the LLM narrative is generated.
+  // Case (b) closes the remaining half of the draft-pack contradiction
+  // (prod: blume-box dispute 306080eb, draft pack 2026-07-21): the
+  // context_only branch below already keeps strong rows IN the package
+  // pre-narrative, but a contributing Strong signal (e.g. AVS+CVV both
+  // matched) still read "context, not decisive proof" under a "no
+  // decisive bank-facing evidence" banner while its pill said Strong.
+  // A contributing, eligible, non-negative strong/moderate row IS the
+  // positive bank argument — generation state only refines the wording.
+  // NOTE: this resolver does not classify evidence; `naturalCategory`
+  // comes from the canonical categorizer unchanged.
+  if (
+    ctx.contributesStrongOrModerate &&
+    ctx.bankEligible &&
+    !isNegativeOrAmbiguous(ctx.field, ctx.payload, ctx.reasonFamily) &&
+    (ctx.factLookup?.hasApprovedFact ||
+      ctx.naturalCategory === "strong" ||
+      ctx.naturalCategory === "moderate")
+  ) {
     return "bank_argument";
   }
 
-  // Context-only: row contributes (or is on file as supporting) and has
-  // an approved fact, but doesn't reach strong/moderate.
+  // Context-only: the row is on file and independently categorizes as
+  // decisive-or-supporting evidence, even without an approved fact or a
+  // same-field scoring contribution. This is the pre-narrative / draft
+  // path: a freshly-built pack has no `facts_json` yet, so no field has
+  // `hasApprovedFact`, and the delivery signal's single contribution is
+  // deduped (by shared `signalId: "delivery"`) to only ONE of the two
+  // delivery field keys. WITHOUT `strong` here, a genuinely-delivered
+  // order's `shipping_tracking` row — category `strong`, `available`,
+  // its own facts line reading "Delivered {date}" — fell through to
+  // `not_included` and printed the field-generic "The order has not
+  // shipped yet" reason: a Strong badge sitting in "On file — not
+  // included" contradicting its own data (prod: blume-box dispute
+  // 5e63afa7, draft pack 2026-07-21). Including `strong` keeps such a
+  // row in the package as context; once the narrative runs and stamps
+  // an approved fact + contribution, the earlier `bank_argument` branch
+  // promotes it. Applies to every field, not just delivery.
   if (
     ctx.status === "available" &&
     (ctx.factLookup?.hasApprovedFact ||
       ctx.naturalCategory === "supporting" ||
-      ctx.naturalCategory === "moderate")
+      ctx.naturalCategory === "moderate" ||
+      ctx.naturalCategory === "strong")
   ) {
     return "context_only";
   }
@@ -1203,13 +1293,23 @@ function collapseDeliveryRows(
   // "Collected at pickup point Jun 4"); falls back to the proof-tier
   // wording for payloads with no receipt state.
   const displayLabelToken = resolveDeliveryTitle(proof, payload);
-  // Proof-specific why-context replaces the generic reason ONLY when the
-  // row is in the package as context/bank evidence; excluded / waived /
-  // not-included rows keep their status-specific reason (e.g. "you
-  // excluded this") so we don't overwrite a more relevant message.
+  // Proof-specific why-context replaces the generic reason when the row is
+  // in the package as context/bank evidence — AND for a `not_included`
+  // survivor whose payload nonetheless proves the parcel moved (proofType
+  // above `label_created`). The field-generic `not_included` copy claims
+  // "The order has not shipped yet, so no carrier tracking is available";
+  // for a shipped/delivered parcel that is flatly false and contradicts
+  // the row's own facts line ("Shipped Jul 7 · Delivered Jul 13"). The
+  // proof-state "why" copy (whyShippedUnconfirmed / whyCarrierConfirmed /
+  // whySignature) tells the honest story instead. Only a genuine
+  // `label_created` (label printed, never scanned) — or an excluded /
+  // waived row — keeps its status-specific reason. See prod blume-box
+  // dispute 5e63afa7 (draft pack 2026-07-21).
   const proofReasonToken = deliveryReasonToken(proof);
   const useProofReason = (li: EvidenceLineItem): boolean =>
-    li.submissionMethod === "bank_argument" || li.submissionMethod === "context_only";
+    li.submissionMethod === "bank_argument" ||
+    li.submissionMethod === "context_only" ||
+    (li.submissionMethod === "not_included" && proof !== "label_created");
   return out
     .filter((li) => !DELIVERY_FIELDS.has(li.field) || li.field === survivor.field)
     .map((li) =>
@@ -1289,6 +1389,7 @@ export function deriveEvidenceLineItems(
       naturalCategory,
       factLookup: lookup,
       reasonFamily: input.reasonFamily,
+      bankEligible: bankEligibleField,
     });
 
     // Strength contribution. Internal-only fields are always rendered

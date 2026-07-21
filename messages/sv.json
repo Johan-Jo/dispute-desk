@@ -1143,6 +1143,7 @@
         "sourceShopify": "Shopify",
         "sourceMerchant": "Handlarens uppladdning",
         "sourceDerived": "Härlett",
+        "sourcePaymentGateway": "Shopify Payments",
         "sourceStorePolicy": "Butikspolicy",
         "strength": {
           "strong": "Stark",
@@ -1463,6 +1464,11 @@
           },
           "avsCvv": {
             "bankArgument": "Betalningsverifieringen styrker kortinnehavarens identitet.",
+            "bothMatched": "Faktureringsadressen och kortverifieringskoden (CVV) matchade utgivarens uppgifter.",
+            "addressMatched": "Faktureringsadressen matchade utgivarens uppgifter.",
+            "streetMatched": "Gatuadressen i faktureringsadressen matchade utgivarens uppgifter.",
+            "postalMatched": "Postnumret i faktureringsadressen matchade utgivarens uppgifter.",
+            "cvvMatched": "Kortverifieringskoden (CVV) matchade utgivarens uppgifter.",
             "notIncluded": "Betalningsprocessorn returnerade inga AVS- eller CVV-verifieringskoder för den här transaktionen. Inget att inkludera — dessa koder kommer från betalningsgatewayen vid utcheckningen, inte i efterhand.",
             "internalBothFail": "Både faktureringsadressen (AVS) och kortverifieringskoden (CVV) misslyckades med att matcha utgivarens uppgifter. Hålls intern — att åberopa detta för banken skulle undergräva svaret på bedrägeriärendet.",
             "internalAvsFail": "Faktureringsadressen (AVS) matchade inte utgivarens uppgifter. Hålls intern — att åberopa detta för banken skulle undergräva svaret på bedrägeriärendet.",

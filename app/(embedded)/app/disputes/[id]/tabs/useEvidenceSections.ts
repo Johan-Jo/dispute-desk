@@ -47,7 +47,12 @@ type Workspace = ReturnType<typeof useDisputeWorkspace>;
 /** Item-level row strength. Case-level uses CaseStrengthLevel directly. */
 export type ItemStrength = "strong" | "moderate" | "supporting";
 
-export type EvidenceSource = "shopify" | "merchant" | "derived" | "store_policy";
+export type EvidenceSource =
+  | "shopify"
+  | "merchant"
+  | "derived"
+  | "store_policy"
+  | "payment_gateway";
 export type CaseStatus = "submitted" | "needs_attention" | "in_progress";
 export type AutomationMode = "automatic" | "review_required";
 
@@ -252,6 +257,13 @@ const MERCHANT_FIELDS: ReadonlySet<string> = new Set([
 const DERIVED_FIELDS: ReadonlySet<string> = new Set([
   "ip_location_check",
   "device_session_consistency",
+]);
+
+// AVS/CVV result codes are returned verbatim by the Shopify Payments
+// gateway at authorization — nothing is inferred by DisputeDesk. Labelling
+// them "Derived" undersold their provenance, so they get their own source
+// bucket rendered as "Shopify Payments".
+const PAYMENT_GATEWAY_FIELDS: ReadonlySet<string> = new Set([
   "avs_cvv_match",
 ]);
 
@@ -264,6 +276,7 @@ const STORE_POLICY_FIELDS: ReadonlySet<string> = new Set([
 function inferSource(field: string): EvidenceSource {
   if (MERCHANT_FIELDS.has(field)) return "merchant";
   if (DERIVED_FIELDS.has(field)) return "derived";
+  if (PAYMENT_GATEWAY_FIELDS.has(field)) return "payment_gateway";
   if (STORE_POLICY_FIELDS.has(field)) return "store_policy";
   return "shopify";
 }
