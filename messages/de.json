@@ -906,6 +906,7 @@
         "sourceShopify": "Shopify",
         "sourceMerchant": "Händler-Upload",
         "sourceDerived": "Abgeleitet",
+        "sourcePaymentGateway": "Shopify Payments",
         "sourceStorePolicy": "Geschäftsbedingungen",
         "strength": {
           "strong": "Stark",
@@ -1170,6 +1171,11 @@
           },
           "avsCvv": {
             "bankArgument": "Die Zahlungsverifizierung stützt die Identität des Karteninhabers.",
+            "bothMatched": "Rechnungsadresse und Kartenprüfwert (CVV) stimmten mit den Daten des Ausstellers überein.",
+            "addressMatched": "Die Rechnungsadresse stimmte mit den Daten des Ausstellers überein.",
+            "streetMatched": "Die Straße der Rechnungsadresse stimmte mit den Daten des Ausstellers überein.",
+            "postalMatched": "Die Postleitzahl der Rechnungsadresse stimmte mit den Daten des Ausstellers überein.",
+            "cvvMatched": "Der Kartenprüfwert (CVV) stimmte mit den Daten des Ausstellers überein.",
             "notIncluded": "Der Zahlungsprozessor hat für diese Transaktion keine AVS- oder CVV-Verifizierungscodes zurückgegeben. Nichts hinzuzufügen — diese Codes kommen vom Zahlungs-Gateway beim Checkout, nicht im Nachhinein.",
             "internalBothFail": "Sowohl die Rechnungsadresse (AVS) als auch der Kartenprüfwert (CVV) konnten nicht mit den Daten des Ausstellers abgeglichen werden. Wird intern gehalten — dies gegenüber der Bank anzuführen, würde die Antwort auf den Betrugsstreitfall untergraben.",
             "internalAvsFail": "Die Rechnungsadresse (AVS) stimmte nicht mit den Daten des Ausstellers überein. Wird intern gehalten — dies gegenüber der Bank anzuführen, würde die Antwort auf den Betrugsstreitfall untergraben.",

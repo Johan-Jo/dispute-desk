@@ -257,6 +257,16 @@ export function EvidenceUsedSection({
     });
   }
 
+  // The banner derives from the SAME canonical merchant-facing decision as
+  // the positive bucket — `usedAsPositiveBankEvidence` (bucketForRow's first
+  // check) — NEVER from raw row strength. Keying off strength here would let
+  // a Strong internal-only or excluded row falsely claim bank-facing
+  // evidence exists; keying off anything other than the bucket set would let
+  // the header contradict the rows below it (the 2026-07-21 blume-box
+  // draft-pack bug: a Strong pill under "No decisive bank-facing evidence").
+  // `buckets.positive` IS the usedAsPositiveBankEvidence set (including the
+  // pre-load fallback and the delivery-collapse skip), so banner ⇔ bucket
+  // holds in every state by construction.
   const positiveFields = buckets.positive.map((r) => r.title);
   const explainer =
     buckets.positive.length > 0

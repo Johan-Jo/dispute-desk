@@ -1341,3 +1341,262 @@ describe("Test 24 — internal-only field with no payload routes to not_included
     expect(["context_only", "bank_argument"]).toContain(row?.submissionMethod);
   });
 });
+
+describe("Test 25 — draft-pack inclusion consistency (2026-07-21 blume-box 306080eb)", () => {
+  /**
+   * Regression: on a pack whose defence package was never generated
+   * (facts_json empty), a contributing Strong signal (AVS+CVV both
+   * matched) fell out of `bank_argument` because that tier required an
+   * approved fact — so the row showed a Strong pill inside "Context
+   * only" under a "No decisive bank-facing evidence" banner. The
+   * inclusion decision must not depend on LLM-generation state: a
+   * contributing, bank-eligible, non-negative strong/moderate row IS
+   * the positive bank argument. NOTE: this pins INCLUSION only — the
+   * strength/category values come from the canonical categorizer
+   * unchanged (classification is the rules engine's job, not this
+   * derivation's).
+   */
+  type LineItem = {
+    field: string;
+    hasEvidence: boolean;
+    bankEligible: boolean;
+    isNegativeOrAmbiguous: boolean;
+    strengthContribution: string;
+    submissionMethod: string;
+    includedInDefencePackage: boolean;
+    includedInBankArgument: boolean;
+    usedAsPositiveBankEvidence: boolean;
+    reason: string;
+  };
+
+  const AVS_CHECKLIST_ROW = {
+    field: "avs_cvv_match",
+    label: "Payment authentication",
+    status: "available" as const,
+    priority: "critical" as const,
+    blocking: false,
+    source: "auto_shopify" as const,
+    collectionType: "conditional_auto" as const,
+  };
+
+  const PAYMENT_AUTH_STRONG_CONTRIBUTION = {
+    signalId: "payment_auth",
+    category: "strong" as const,
+    labelToken: { key: "disputes.signalLabel.payment_auth" },
+    evidenceFieldKey: "avs_cvv_match",
+  };
+
+  async function derive(args: {
+    checklist: unknown[];
+    payloadByField: Map<string, unknown>;
+    contributions?: { strong: unknown[]; moderate: unknown[] };
+    inclusionOverrides?: Map<string, "force_include" | "force_exclude">;
+  }): Promise<LineItem[]> {
+    const mod = await import("@/lib/argument/evidenceLineItem");
+    const { deriveEvidenceLineItems } = mod as {
+      deriveEvidenceLineItems: (a: unknown) => LineItem[];
+    };
+    return deriveEvidenceLineItems({
+      checklist: args.checklist,
+      // facts: [] — the defence package is an ungenerated draft.
+      facts: [],
+      payloadByField: args.payloadByField,
+      contributions: args.contributions ?? { strong: [], moderate: [] },
+      packSavedToShopify: false,
+      excludedFields: new Set<string>(),
+      attachmentUploadFailures: new Map<string, string>(),
+      inclusionOverrides: args.inclusionOverrides ?? new Map(),
+      reasonFamily: "fraud",
+    });
+  }
+
+  it("contributing Strong AVS+CVV with empty facts resolves to bank_argument / usedAsPositiveBankEvidence", async () => {
+    const lineItems = await derive({
+      checklist: [AVS_CHECKLIST_ROW],
+      payloadByField: new Map<string, unknown>([
+        ["avs_cvv_match", { avsResultCode: "Y", cvvResultCode: "M" }],
+      ]),
+      contributions: { strong: [PAYMENT_AUTH_STRONG_CONTRIBUTION], moderate: [] },
+    });
+    const row = lineItems.find((li) => li.field === "avs_cvv_match");
+    expect(row?.submissionMethod).toBe("bank_argument");
+    expect(row?.usedAsPositiveBankEvidence).toBe(true);
+    expect(row?.includedInDefencePackage).toBe(true);
+    expect(row?.includedInBankArgument).toBe(true);
+  });
+
+  it("negative guard: both-fail AVS/CVV stays internal_only even with a (stale) contribution", async () => {
+    const lineItems = await derive({
+      checklist: [AVS_CHECKLIST_ROW],
+      payloadByField: new Map<string, unknown>([
+        ["avs_cvv_match", { avsResultCode: "N", cvvResultCode: "N" }],
+      ]),
+      contributions: { strong: [PAYMENT_AUTH_STRONG_CONTRIBUTION], moderate: [] },
+    });
+    const row = lineItems.find((li) => li.field === "avs_cvv_match");
+    expect(row?.submissionMethod).toBe("internal_only");
+    expect(row?.usedAsPositiveBankEvidence).toBe(false);
+  });
+
+  it("invariant: eligible + available + non-negative strong/moderate rows are ALWAYS positive; legitimate exclusions stay out without failing", async () => {
+    // Fixture deliberately avoids shared-signalId siblings
+    // (customer_account_info/activity_log, the two delivery keys):
+    // contribution dedup keeps only ONE field per signal, so a
+    // non-contributing strong-category sibling legitimately stays
+    // context_only until the row collapse / narrative pass. The
+    // invariant below is the per-row business rule for contributing
+    // fields, not a universal claim over deduped siblings.
+    const lineItems = await derive({
+      checklist: [
+        AVS_CHECKLIST_ROW,
+        {
+          field: "ip_location_check",
+          label: "IP & location consistency",
+          status: "available" as const,
+          priority: "recommended" as const,
+          blocking: false,
+          source: "auto_shopify" as const,
+          collectionType: "auto" as const,
+        },
+        {
+          field: "customer_account_info",
+          label: "Customer account history",
+          status: "available" as const,
+          priority: "optional" as const,
+          blocking: false,
+          source: "auto_shopify" as const,
+          collectionType: "auto" as const,
+        },
+        {
+          field: "refund_policy",
+          label: "Refund policy",
+          status: "available" as const,
+          priority: "optional" as const,
+          blocking: false,
+          source: "auto_shopify" as const,
+          collectionType: "auto" as const,
+        },
+        {
+          field: "order_confirmation",
+          label: "Order record",
+          status: "available" as const,
+          priority: "optional" as const,
+          blocking: false,
+          source: "auto_shopify" as const,
+          collectionType: "auto" as const,
+        },
+        {
+          field: "shipping_tracking",
+          label: "Shipping & tracking",
+          status: "missing" as const,
+          priority: "critical" as const,
+          blocking: false,
+          source: "auto_shopify" as const,
+          collectionType: "auto" as const,
+        },
+      ],
+      payloadByField: new Map<string, unknown>([
+        ["avs_cvv_match", { avsResultCode: "Y", cvvResultCode: "M" }],
+        // Negative IP payload → internal_only (legitimately non-positive).
+        ["ip_location_check", { locationMatch: "different_country", riskLevel: "high" }],
+        // Zero-history account on a fraud dispute → internal (fraud
+        // indicator; prior === 0 trips isNegativeOrAmbiguous). NOTE:
+        // totalOrders >= 1 categorizes STRONG per the engine's rubric #5
+        // even when the only order is the disputed one — that
+        // classification question belongs to the rules-engine review,
+        // not this display fix.
+        ["customer_account_info", { totalOrders: 0, isRepeatCustomer: false }],
+        // Plain policy text → supporting → context_only.
+        ["refund_policy", { policyText: "30-day returns" }],
+        ["order_confirmation", { confirmationSent: true }],
+      ]),
+      contributions: { strong: [PAYMENT_AUTH_STRONG_CONTRIBUTION], moderate: [] },
+      // Merchant excluded the order record → legitimately non-positive.
+      inclusionOverrides: new Map([["order_confirmation", "force_exclude" as const]]),
+    });
+
+    expect(lineItems.length).toBeGreaterThan(0);
+    for (const li of lineItems) {
+      const isEligiblePositiveAndAvailable =
+        li.hasEvidence &&
+        li.bankEligible &&
+        !li.isNegativeOrAmbiguous &&
+        (li.strengthContribution === "strong" ||
+          li.strengthContribution === "moderate");
+      if (isEligiblePositiveAndAvailable) {
+        expect(li.usedAsPositiveBankEvidence).toBe(true);
+        expect(li.submissionMethod).toBe("bank_argument");
+      }
+    }
+    // Both sides exercised: the AVS row IS positive…
+    expect(
+      lineItems.find((li) => li.field === "avs_cvv_match")?.usedAsPositiveBankEvidence,
+    ).toBe(true);
+    // …and the legitimate exclusions sit outside positive without
+    // tripping the invariant.
+    expect(
+      lineItems.find((li) => li.field === "ip_location_check")?.submissionMethod,
+    ).toBe("internal_only");
+    expect(
+      lineItems.find((li) => li.field === "customer_account_info")?.submissionMethod,
+    ).toBe("internal_only");
+    expect(
+      lineItems.find((li) => li.field === "order_confirmation")?.submissionMethod,
+    ).toBe("excluded");
+    expect(
+      lineItems.find((li) => li.field === "shipping_tracking")?.usedAsPositiveBankEvidence ?? false,
+    ).toBe(false);
+  });
+
+  it("AVS/CVV reason copy names exactly what matched — and never claims both when only one did", async () => {
+    const cases: Array<{
+      payload: Record<string, string>;
+      mustMatch: RegExp;
+      mustNotMatch?: RegExp;
+    }> = [
+      {
+        // Both matched (this dispute's live payload).
+        payload: { avsResultCode: "Y", cvvResultCode: "M" },
+        mustMatch:
+          /^Billing address and card verification code \(CVV\) matched the issuer's records\.$/,
+      },
+      {
+        // AVS full match only — must NOT claim the CVV matched.
+        payload: { avsResultCode: "Y", cvvResultCode: "N" },
+        mustMatch: /^The billing address matched the issuer's records\.$/,
+        mustNotMatch: /CVV|card verification code/,
+      },
+      {
+        // CVV only — must NOT claim the billing address matched.
+        payload: { avsResultCode: "N", cvvResultCode: "M" },
+        mustMatch:
+          /^The card verification code \(CVV\) matched the issuer's records\.$/,
+        mustNotMatch: /billing address/,
+      },
+      {
+        // AVS street-only match (code A).
+        payload: { avsResultCode: "A", cvvResultCode: "N" },
+        mustMatch: /^The billing street address matched the issuer's records\.$/,
+      },
+      {
+        // AVS zip-only match (code W).
+        payload: { avsResultCode: "W", cvvResultCode: "N" },
+        mustMatch: /^The billing postal code matched the issuer's records\.$/,
+      },
+    ];
+    for (const c of cases) {
+      const lineItems = await derive({
+        checklist: [AVS_CHECKLIST_ROW],
+        payloadByField: new Map<string, unknown>([["avs_cvv_match", c.payload]]),
+      });
+      const row = lineItems.find((li) => li.field === "avs_cvv_match");
+      expect(row?.reason, JSON.stringify(c.payload)).toMatch(c.mustMatch);
+      if (c.mustNotMatch) {
+        expect(row?.reason, JSON.stringify(c.payload)).not.toMatch(c.mustNotMatch);
+      }
+      // The payload-aware copy never claims identity/authorization —
+      // AVS/CVV verifies values against issuer records, nothing more.
+      expect(row?.reason).not.toMatch(/identity|proves authorization/i);
+    }
+  });
+});

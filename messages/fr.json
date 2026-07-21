@@ -763,6 +763,7 @@
         "sourceShopify": "Shopify",
         "sourceMerchant": "Téléversement marchand",
         "sourceDerived": "Dérivé",
+        "sourcePaymentGateway": "Shopify Payments",
         "sourceStorePolicy": "Politique de boutique",
         "strength": {
           "strong": "Solide",
@@ -1083,6 +1084,11 @@
           },
           "avsCvv": {
             "bankArgument": "La vérification de paiement étaye l'identité du titulaire de la carte.",
+            "bothMatched": "L'adresse de facturation et le code de vérification de la carte (CVV) ont correspondu aux enregistrements de l'émetteur.",
+            "addressMatched": "L'adresse de facturation a correspondu aux enregistrements de l'émetteur.",
+            "streetMatched": "La rue de l'adresse de facturation a correspondu aux enregistrements de l'émetteur.",
+            "postalMatched": "Le code postal de facturation a correspondu aux enregistrements de l'émetteur.",
+            "cvvMatched": "Le code de vérification de la carte (CVV) a correspondu aux enregistrements de l'émetteur.",
             "notIncluded": "Le processeur de paiement n'a pas renvoyé de codes de vérification AVS ou CVV pour cette transaction. Rien à inclure — ces codes proviennent de la passerelle de paiement au moment du paiement, pas après coup.",
             "internalBothFail": "L'adresse de facturation (AVS) et le code de vérification de la carte (CVV) n'ont pas correspondu aux enregistrements de l'émetteur. Conservé en interne — citer cela à la banque émettrice affaiblirait la réponse à la fraude.",
             "internalAvsFail": "L'adresse de facturation (AVS) n'a pas correspondu aux enregistrements de l'émetteur. Conservé en interne — citer cela à la banque émettrice affaiblirait la réponse à la fraude.",
