@@ -31,6 +31,7 @@ function sourceLabel(
   if (source === "shopify") return t("sourceShopify");
   if (source === "merchant") return t("sourceMerchant");
   if (source === "store_policy") return t("sourceStorePolicy");
+  if (source === "payment_gateway") return t("sourcePaymentGateway");
   return t("sourceDerived");
 }
 

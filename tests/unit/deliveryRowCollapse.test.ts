@@ -133,4 +133,69 @@ describe("delivery row collapse — one row, not two", () => {
       expect(row.reasonToken.key).toBe("disputes.deliveryProof.whyShippedUnconfirmed");
     }
   });
+
+  // ── Regression: a DELIVERED draft pack must not read "not shipped yet" ──
+  //
+  // Prod blume-box dispute 5e63afa7 (draft pack 2026-07-21, INR / reason
+  // 13.1). Order shipped Jul 7 via TechSHIP, delivered Jul 13 (UPS→USPS).
+  // The draft pack had NO facts_json and NO scoring contribution keyed to
+  // shipping_tracking (deduped to the sibling delivery_proof by shared
+  // signalId), so the row rendered a Strong badge inside "On file — not
+  // included" with the field-generic reason "The order has not shipped
+  // yet, so no carrier tracking is available" — contradicting its own
+  // "Delivered Jul 13" facts line.
+  describe("delivered draft pack (no facts, no contributions)", () => {
+    const carrierConfirmed = () =>
+      derive("delivered_confirmed", {
+        deliveredAt: "2026-07-13T14:26:00Z",
+        deliveredToVerifiedAddress: true,
+      });
+
+    it("keeps the delivered row IN the package — never not_included", () => {
+      const row = carrierConfirmed().find(
+        (li) => li.field === "shipping_tracking" || li.field === "delivery_proof",
+      )!;
+      expect(row.submissionMethod).not.toBe("not_included");
+      expect(row.includedInDefencePackage).toBe(true);
+    });
+
+    it("never prints the 'not shipped yet' reason for a delivered parcel", () => {
+      const row = carrierConfirmed().find(
+        (li) => li.field === "shipping_tracking" || li.field === "delivery_proof",
+      )!;
+      expect(row.reasonToken.key).not.toBe(
+        "disputes.reviewTab.inclusion.reasons.shippingTracking.notIncluded",
+      );
+      expect(row.reasonToken.key).not.toBe(
+        "disputes.reviewTab.inclusion.reasons.deliveryProof.notIncluded",
+      );
+      // Uses the proof-state "why" copy instead.
+      expect(row.reasonToken.key).toBe("disputes.deliveryProof.whyCarrierConfirmed");
+    });
+
+    it("still shows the Strong strength badge (title + facts stay honest)", () => {
+      const row = carrierConfirmed().find(
+        (li) => li.field === "shipping_tracking" || li.field === "delivery_proof",
+      )!;
+      expect(row.strengthContribution).toBe("strong");
+      expect(row.displayLabelToken).toEqual({
+        key: "disputes.deliveryProof.titleDeliveredOn",
+        params: { date: "Jul 13" },
+      });
+    });
+  });
+
+  // A genuine label-only row (printed, never scanned) MUST keep the
+  // honest "not shipped / not scanned" reason — the fix above must not
+  // paper over a truly-unshipped order.
+  it("a label_created row keeps its not-shipped reason", () => {
+    const rows = derive("label_created", { deliveredAt: null });
+    const row = rows.find(
+      (li) => li.field === "shipping_tracking" || li.field === "delivery_proof",
+    )!;
+    expect(row.submissionMethod).toBe("not_included");
+    // The proof-state reason is NOT applied for label_created — the
+    // field-generic honest message survives.
+    expect(row.reasonToken.key).not.toBe("disputes.deliveryProof.whyCarrierConfirmed");
+  });
 });
