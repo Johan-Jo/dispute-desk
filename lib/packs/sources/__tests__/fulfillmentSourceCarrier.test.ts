@@ -1,9 +1,11 @@
 /**
- * Carrier plan PR 1C — carrier-API integration in the fulfillment
- * collector: bounded lookups, cache participation, cross-source
- * reconciliation, multi-shipment coverage (§5.6/§5.7), and the safety
- * contract (a total carrier outage never breaks the pack build and never
- * produces negative delivery language).
+ * Carrier plan PR 1C (+ always-verify v2, 2026-07) — carrier-API
+ * integration in the fulfillment collector: always-verify lookups (query
+ * the carrier for strength even when Shopify already reports delivered),
+ * cache participation, cross-source reconciliation, multi-shipment
+ * coverage (§5.6/§5.7), and the safety contract (a total carrier outage
+ * never breaks the pack build and never produces negative delivery
+ * language; a carrier result only ever adds strength, never downgrades).
  *
  * The DHL adapter runs against a mocked global fetch; Supabase and the
  * admin-email helper are mocked so alert/dedup/cache flows are observable.
@@ -183,12 +185,28 @@ describe("the #12809 acceptance shape — DHL Freight, no Shopify signal", () =>
   });
 });
 
-describe("bounded lookup rule + cache participation (§5.7)", () => {
-  it("no live lookup when Shopify-side sources already agree on a terminal state", async () => {
+describe("always-verify + cache participation (§5.7 v2)", () => {
+  it("still queries the carrier for strength even when Shopify already reports delivered", async () => {
+    // v2 (2026-07): the bounded gate is gone — we fetch the carrier POD for
+    // strength regardless of the existing Shopify "Delivered" signal. The
+    // carrier confirming the same delivery keeps proofType delivered_confirmed.
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          shipments: [
+            {
+              status: { timestamp: "2026-06-01T10:00:00Z", statusCode: "delivered" },
+              events: [{ timestamp: "2026-06-01T10:00:00Z", statusCode: "delivered", description: "Delivered to recipient" }],
+            },
+          ],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
     const data = await sectionData(
       ctx({ fulfillments: [fulfillment({ events: NATIVE_DELIVERED })] }),
     );
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalled();
     expect(data.proofType).toBe("delivered_confirmed");
   });
 
@@ -283,13 +301,19 @@ describe("unsupported / unknown carriers (§7)", () => {
     expect(email.text).not.toContain("?id="); // hostname only
   });
 
-  it("unsupported carrier whose shipment already has a terminal signal stays quiet", async () => {
+  it("unsupported carrier ALWAYS notifies now, even with an existing terminal signal (v2)", async () => {
+    // v2: a missing adapter always costs us the stronger carrier POD, so
+    // the demand signal fires regardless of Shopify already reporting
+    // delivered. (Dedup still limits this to one email per merchant+carrier
+    // per 7 days at the alerts layer.)
     const f = fulfillment({
       trackingInfo: [{ number: "PN1", url: null, company: "PostNord SE" }],
       events: NATIVE_DELIVERED,
     });
     await sectionData(ctx({ fulfillments: [f] }));
-    expect(sendAdminEmailMock).not.toHaveBeenCalled();
+    expect(sendAdminEmailMock).toHaveBeenCalledTimes(1);
+    const email = sendAdminEmailMock.mock.calls[0][0] as { subject: string };
+    expect(email.subject).toBe("[DisputeDesk] Unsupported carrier detected: postnord");
   });
 
   it("unknown carrier is recorded but never emailed", async () => {

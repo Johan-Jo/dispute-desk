@@ -968,13 +968,28 @@ function resolveSubmissionMethod(ctx: ResolutionContext): SubmissionMethod {
     return "bank_argument";
   }
 
-  // Context-only: row contributes (or is on file as supporting) and has
-  // an approved fact, but doesn't reach strong/moderate.
+  // Context-only: the row is on file and independently categorizes as
+  // decisive-or-supporting evidence, even without an approved fact or a
+  // same-field scoring contribution. This is the pre-narrative / draft
+  // path: a freshly-built pack has no `facts_json` yet, so no field has
+  // `hasApprovedFact`, and the delivery signal's single contribution is
+  // deduped (by shared `signalId: "delivery"`) to only ONE of the two
+  // delivery field keys. WITHOUT `strong` here, a genuinely-delivered
+  // order's `shipping_tracking` row — category `strong`, `available`,
+  // its own facts line reading "Delivered {date}" — fell through to
+  // `not_included` and printed the field-generic "The order has not
+  // shipped yet" reason: a Strong badge sitting in "On file — not
+  // included" contradicting its own data (prod: blume-box dispute
+  // 5e63afa7, draft pack 2026-07-21). Including `strong` keeps such a
+  // row in the package as context; once the narrative runs and stamps
+  // an approved fact + contribution, the earlier `bank_argument` branch
+  // promotes it. Applies to every field, not just delivery.
   if (
     ctx.status === "available" &&
     (ctx.factLookup?.hasApprovedFact ||
       ctx.naturalCategory === "supporting" ||
-      ctx.naturalCategory === "moderate")
+      ctx.naturalCategory === "moderate" ||
+      ctx.naturalCategory === "strong")
   ) {
     return "context_only";
   }
@@ -1203,13 +1218,23 @@ function collapseDeliveryRows(
   // "Collected at pickup point Jun 4"); falls back to the proof-tier
   // wording for payloads with no receipt state.
   const displayLabelToken = resolveDeliveryTitle(proof, payload);
-  // Proof-specific why-context replaces the generic reason ONLY when the
-  // row is in the package as context/bank evidence; excluded / waived /
-  // not-included rows keep their status-specific reason (e.g. "you
-  // excluded this") so we don't overwrite a more relevant message.
+  // Proof-specific why-context replaces the generic reason when the row is
+  // in the package as context/bank evidence — AND for a `not_included`
+  // survivor whose payload nonetheless proves the parcel moved (proofType
+  // above `label_created`). The field-generic `not_included` copy claims
+  // "The order has not shipped yet, so no carrier tracking is available";
+  // for a shipped/delivered parcel that is flatly false and contradicts
+  // the row's own facts line ("Shipped Jul 7 · Delivered Jul 13"). The
+  // proof-state "why" copy (whyShippedUnconfirmed / whyCarrierConfirmed /
+  // whySignature) tells the honest story instead. Only a genuine
+  // `label_created` (label printed, never scanned) — or an excluded /
+  // waived row — keeps its status-specific reason. See prod blume-box
+  // dispute 5e63afa7 (draft pack 2026-07-21).
   const proofReasonToken = deliveryReasonToken(proof);
   const useProofReason = (li: EvidenceLineItem): boolean =>
-    li.submissionMethod === "bank_argument" || li.submissionMethod === "context_only";
+    li.submissionMethod === "bank_argument" ||
+    li.submissionMethod === "context_only" ||
+    (li.submissionMethod === "not_included" && proof !== "label_created");
   return out
     .filter((li) => !DELIVERY_FIELDS.has(li.field) || li.field === survivor.field)
     .map((li) =>
