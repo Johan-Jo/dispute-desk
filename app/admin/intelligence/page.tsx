@@ -57,7 +57,19 @@ interface Run {
   completed_at: string | null;
   data_quality: DataQuality | null;
   baseline: Baseline | null;
+  feasibility: Feasibility | null;
+  model_report: ModelReport | null;
   errors: string[];
+}
+
+interface ModelVerdict { model: string; feasible: boolean; reason: string; eligibleFeatures: string[]; gateFailures: string[]; }
+interface Feasibility { anyModelBuilt: boolean; summary: string; verdicts: ModelVerdict[]; }
+interface ModelReport {
+  featureSet: string[]; evidenceGrade: string; confidence: string; targetPopulation: string;
+  overall: { testN: number; brier: number; baseRate: number; meanPredicted: number };
+  folds: { trainThroughYear: string; testYear: string; trainN: number; testN: number; brier: number; observedWinRate: number; meanPredicted: number }[];
+  calibration: { bucket: string; n: number; meanPredicted: number; observedWinRate: number }[];
+  limitations: string[];
 }
 
 const STATUS_STYLE: Record<AreaStatus, string> = {
@@ -206,6 +218,8 @@ export default function IntelligencePage() {
             <div className="space-y-6">
               {selected.baseline && <BaselineView b={selected.baseline} />}
               <RecommendationsView recs={recs} />
+              {selected.feasibility && <FeasibilityView f={selected.feasibility} />}
+              {selected.model_report && <ModelReportView m={selected.model_report} />}
               <DataQualityView dq={selected.data_quality} />
             </div>
           )}
@@ -359,6 +373,69 @@ function PolicySimulator({ shopId }: { shopId: string }) {
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+function ModelReportView({ m }: { m: ModelReport }) {
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-slate-700 mb-2">Response-win model (Phase D)</h3>
+      <div className="p-3 rounded-lg border border-amber-200 bg-amber-50 text-xs text-amber-800 mb-2">
+        <b>Target population:</b> {m.targetPopulation}
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+        <Stat label="Backtest test-N" value={String(m.overall.testN)} />
+        <Stat label="Brier" value={m.overall.brier.toFixed(3)} />
+        <Stat label="Base win rate" value={pct(m.overall.baseRate)} />
+        <Stat label="Confidence" value={m.confidence} />
+      </div>
+      <div className="p-3 rounded-lg border border-slate-200 bg-white text-xs">
+        <div className="font-medium text-slate-600 mb-1">Chronological folds</div>
+        {m.folds.map((f, i) => (
+          <div key={i} className="flex justify-between py-0.5 border-b border-slate-100 last:border-0">
+            <span>train ≤{f.trainThroughYear} → test {f.testYear} (n={f.testN})</span>
+            <span className="text-slate-500">Brier {f.brier.toFixed(3)} · obs {pct(f.observedWinRate)} · pred {pct(f.meanPredicted)}</span>
+          </div>
+        ))}
+        <div className="font-medium text-slate-600 mt-2 mb-1">Calibration</div>
+        {m.calibration.map((c, i) => (
+          <div key={i} className="flex justify-between py-0.5">
+            <span>{c.bucket} (n={c.n})</span>
+            <span className="text-slate-500">pred {pct(c.meanPredicted)} vs obs {pct(c.observedWinRate)}</span>
+          </div>
+        ))}
+      </div>
+      <ul className="list-disc pl-5 mt-2 text-xs text-slate-400 space-y-0.5">
+        {m.limitations.map((l, i) => <li key={i}>{l}</li>)}
+      </ul>
+    </div>
+  );
+}
+
+function FeasibilityView({ f }: { f: Feasibility }) {
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-slate-700 mb-2">Model feasibility (Phase D)</h3>
+      <div className={`p-3 rounded-lg border text-sm mb-2 ${f.anyModelBuilt ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-amber-50 border-amber-200 text-amber-700"}`}>
+        {f.summary}
+      </div>
+      <div className="space-y-2">
+        {f.verdicts.map((v) => (
+          <div key={v.model} className="p-3 rounded-lg border border-slate-200 bg-white text-sm">
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-slate-800">{v.model.replace(/_/g, " ")}</span>
+              <span className={`px-2 py-0.5 rounded text-xs font-medium ${v.feasible ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{v.feasible ? "feasible" : "not built"}</span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">{v.reason}</p>
+            {v.gateFailures.length > 0 && (
+              <ul className="list-disc pl-5 mt-1 text-xs text-slate-400 space-y-0.5">
+                {v.gateFailures.map((g, i) => <li key={i}>{g}</li>)}
+              </ul>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

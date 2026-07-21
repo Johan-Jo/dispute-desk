@@ -12,8 +12,10 @@ import { assessDataQuality } from "@/lib/intelligence/dataQuality/audit";
 import { buildBaseline, type DisputeRecordRow } from "@/lib/intelligence/report/baseline";
 import { detectOpportunities } from "@/lib/intelligence/opportunities/detect";
 import { insertRecommendations } from "@/lib/intelligence/recommendations";
+import { evaluateModelFeasibility } from "@/lib/intelligence/models/feasibility";
+import { buildResponseWinModel } from "@/lib/intelligence/models/responseWin";
 import { scopedSelectAll } from "@/lib/intelligence/db/tenantScope";
-import { markRunning, setStage, storeDataQuality, storeBaseline, finishRun } from "@/lib/intelligence/runs";
+import { markRunning, setStage, storeDataQuality, storeBaseline, storeFeasibility, storeModelReport, finishRun } from "@/lib/intelligence/runs";
 
 /**
  * Phase A: audit stage. Phase B: + baseline descriptive report + descriptive
@@ -54,6 +56,18 @@ export async function handleIntelligenceRun(job: ClaimedJob): Promise<JobResult>
     await setStage(runId, "recommending");
     const drafts = detectOpportunities(rows, baseline, dq);
     await insertRecommendations(runId, job.shopId, drafts);
+
+    // Stage 4 — model-feasibility evaluation (Phase D, conditional).
+    const feasibility = evaluateModelFeasibility(rows);
+    await storeFeasibility(runId, feasibility);
+
+    // Stage 5 — build the response-win model ONLY if it passed its gates.
+    // Otherwise modeling is unsupported and descriptive outputs are retained.
+    const responseFeasible = feasibility.verdicts.find((v) => v.model === "response_win_pooled")?.feasible;
+    if (responseFeasible) {
+      const modelReport = buildResponseWinModel(rows);
+      await storeModelReport(runId, modelReport);
+    }
 
     await finishRun(runId, "succeeded");
     return { ok: true };
