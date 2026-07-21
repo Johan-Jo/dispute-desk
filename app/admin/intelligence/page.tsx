@@ -456,11 +456,10 @@ export default function IntelligencePage() {
 
   /* ── shared bits ── */
   const navStyle = (active: boolean): CSSProperties => ({
-    display: "flex", alignItems: "center", gap: "10px", width: "100%", padding: "9px 11px", border: "none",
-    borderRadius: "9px", cursor: "pointer", fontSize: "13.5px", fontWeight: active ? 700 : 600,
-    background: active ? "#EFF4FF" : "transparent", color: active ? "#1D4ED8" : "#475569", textAlign: "left",
+    display: "inline-flex", alignItems: "center", gap: "7px", padding: "13px 12px 11px", border: "none",
+    borderBottom: "2px solid " + (active ? "#1D4ED8" : "transparent"), background: "transparent", cursor: "pointer",
+    fontSize: "13.5px", fontWeight: active ? 700 : 600, color: active ? "#1D4ED8" : "#64748B", whiteSpace: "nowrap", marginBottom: "-1px",
   });
-  const markerStyle = (active: boolean): CSSProperties => ({ width: "6px", height: "6px", borderRadius: "999px", background: active ? "#1D4ED8" : "#CBD5E1", flex: "0 0 auto" });
   const badgeStyle: CSSProperties = { fontSize: "10.5px", fontWeight: 800, background: "#1D4ED8", color: "#fff", borderRadius: "999px", padding: "1px 7px", minWidth: "18px", textAlign: "center" };
 
   const selArrow = <span style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8", pointerEvents: "none", fontSize: "11px" }}>▾</span>;
@@ -477,7 +476,7 @@ export default function IntelligencePage() {
       ` }} />
 
       {/* ───────── TOP BAR ───────── */}
-      <header style={{ position: "sticky", top: 0, zIndex: 20, background: "rgba(255,255,255,.92)", backdropFilter: "blur(8px)", borderBottom: "1px solid #E2E8F0" }}>
+      <header style={{ position: "relative", zIndex: 20, background: "#fff", borderBottom: "1px solid #E2E8F0" }}>
         <div style={{ maxWidth: "1320px", margin: "0 auto", padding: "14px 28px", display: "flex", alignItems: "center", gap: "18px", flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "11px", minWidth: 0 }}>
             <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#1D4ED8", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: "15px", flex: "0 0 auto" }}>D</div>
@@ -549,31 +548,29 @@ export default function IntelligencePage() {
         )}
       </header>
 
-      <div style={{ maxWidth: "1320px", margin: "0 auto", padding: "26px 28px", display: "grid", gridTemplateColumns: "216px minmax(0,1fr)", gap: "28px", alignItems: "start" }}>
-
-        {/* ───────── SIDEBAR NAV ───────── */}
-        <nav style={{ position: "sticky", top: "96px", display: "flex", flexDirection: "column", gap: "2px" }}>
-          <div style={{ fontSize: "10.5px", fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase", color: "#94A3B8", padding: "4px 10px 8px" }}>Sections</div>
-          {navDefs.map(([k, label]) => {
-            const active = section === k;
-            return (
-              <button key={k} onClick={() => setSection(k)} style={navStyle(active)}>
-                <span style={markerStyle(active)} />
-                <span style={{ flex: 1, textAlign: "left" }}>{label}</span>
-                {k === "opps" && recs.length > 0 && <span style={badgeStyle}>{recs.length}</span>}
-              </button>
-            );
-          })}
-
-          <div style={{ marginTop: "14px", padding: "12px 12px 4px", borderTop: "1px solid #E2E8F0" }}>
-            <div style={{ fontSize: "10.5px", fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase", color: "#94A3B8", marginBottom: "8px" }}>Run provenance</div>
-            <div style={{ fontSize: "11.5px", color: "#64748B", lineHeight: 1.7 }}>
-              <div>feature <span className="mono" style={{ color: "#334155" }}>{run?.feature_registry_version || "—"}</span></div>
-              <div>classifier <span className="mono" style={{ color: "#334155" }}>{run?.classification_version || "—"}</span></div>
-              <div>method <span className="mono" style={{ color: "#334155" }}>{run?.methodology_version || "—"}</span></div>
-            </div>
+      {/* ───────── SECTION TABS ───────── */}
+      <div style={{ position: "sticky", top: 0, zIndex: 10, background: "#fff", borderBottom: "1px solid #E2E8F0" }}>
+        <div style={{ maxWidth: "1320px", margin: "0 auto", padding: "0 28px", display: "flex", alignItems: "center", gap: "18px", flexWrap: "wrap" }}>
+          <nav style={{ display: "flex", alignItems: "stretch", gap: "2px", overflowX: "auto", flex: 1, minWidth: 0 }}>
+            {navDefs.map(([k, label]) => {
+              const active = section === k;
+              return (
+                <button key={k} onClick={() => setSection(k)} style={navStyle(active)}>
+                  <span style={{ flex: "0 0 auto" }}>{label}</span>
+                  {k === "opps" && recs.length > 0 && <span style={badgeStyle}>{recs.length}</span>}
+                </button>
+              );
+            })}
+          </nav>
+          <div style={{ display: "flex", alignItems: "center", gap: "14px", fontSize: "11px", color: "#94A3B8", whiteSpace: "nowrap", padding: "8px 0" }}>
+            <span>feature <span className="mono" style={{ color: "#475569" }}>{run?.feature_registry_version || "—"}</span></span>
+            <span>classifier <span className="mono" style={{ color: "#475569" }}>{run?.classification_version || "—"}</span></span>
+            <span>method <span className="mono" style={{ color: "#475569" }}>{run?.methodology_version || "—"}</span></span>
           </div>
-        </nav>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: "1320px", margin: "0 auto", padding: "26px 28px" }}>
 
         {/* ───────── MAIN ───────── */}
         <main style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "18px" }}>
