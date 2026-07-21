@@ -109,6 +109,9 @@ describe("sendGorgiasEvidenceReadyAlert", () => {
     expect(arg.subject).toContain("fraudulent");
     // proposalCount is reflected in the body copy.
     expect(arg.html).toContain("2");
+    // CTA deep-links to the Gorgias review card (section param survives the
+    // ddredirect URL-encoding), so the merchant lands on the right spot.
+    expect(arg.html).toContain(encodeURIComponent("section=gorgias-comms"));
   });
 
   it("sends even when the evidenceReady preference is missing (defaults on)", async () => {
