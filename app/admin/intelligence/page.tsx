@@ -479,7 +479,6 @@ export default function IntelligencePage() {
       <header style={{ position: "relative", zIndex: 20, background: "#fff", borderBottom: "1px solid #E2E8F0" }}>
         <div style={{ maxWidth: "1320px", margin: "0 auto", padding: "14px 28px", display: "flex", alignItems: "center", gap: "18px", flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "11px", minWidth: 0 }}>
-            <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "#1D4ED8", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: "15px", flex: "0 0 auto" }}>D</div>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: "11px", letterSpacing: ".09em", textTransform: "uppercase", color: "#94A3B8", fontWeight: 700, lineHeight: 1 }}>DisputeDesk · Admin</div>
               <div style={{ fontSize: "15px", fontWeight: 700, lineHeight: 1.3, whiteSpace: "nowrap" }}>Historical Dispute Intelligence</div>
