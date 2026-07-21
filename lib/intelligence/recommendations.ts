@@ -63,6 +63,20 @@ export async function listRecommendations(
   return (data as RecommendationRow[]) ?? [];
 }
 
+export async function getRecommendationById(id: string): Promise<RecommendationRow | null> {
+  const db = getServiceClient();
+  const { data } = await db.from("intelligence_recommendations").select("*").eq("id", id).maybeSingle();
+  return (data as RecommendationRow) ?? null;
+}
+
+export async function setExplanation(id: string, prose: string, model: string): Promise<void> {
+  const db = getServiceClient();
+  await db
+    .from("intelligence_recommendations")
+    .update({ explanation: prose, explanation_model: model, explanation_generated_at: new Date().toISOString() })
+    .eq("id", id);
+}
+
 export async function logDecision(params: {
   shopId: string;
   recommendationId?: string;

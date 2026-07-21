@@ -46,7 +46,7 @@ interface Recommendation {
   affected_dispute_count: number; affected_disputed_minor: string | null; currency: string | null;
   estimate_lower_minor: string | null; estimate_point_minor: string | null; estimate_upper_minor: string | null;
   evidence_grade: string; confidence: string; implementation_effort: string | null; customer_friction_risk: string | null;
-  limitations: string[];
+  limitations: string[]; explanation?: string | null;
 }
 interface Run {
   id: string;
@@ -216,6 +216,11 @@ export default function IntelligencePage() {
             </div>
           ) : (
             <div className="space-y-6">
+              <div className="flex justify-end">
+                <a href={`/api/admin/intelligence/runs/${selected.id}/export`} className="px-3 py-1.5 text-sm rounded border border-slate-300 text-slate-700 hover:bg-slate-50">
+                  Export report (.md)
+                </a>
+              </div>
               {selected.baseline && <BaselineView b={selected.baseline} />}
               <RecommendationsView recs={recs} />
               {selected.feasibility && <FeasibilityView f={selected.feasibility} />}
@@ -490,36 +495,72 @@ function RecommendationsView({ recs }: { recs: Recommendation[] }) {
       <h3 className="text-sm font-semibold text-slate-700 mb-2">Opportunities ({recs.length})</h3>
       {recs.length === 0 && <p className="text-sm text-slate-400">No opportunities passed the sample gates for this run (expected with small N — see limitations).</p>}
       <div className="space-y-3">
-        {recs.map((r) => (
-          <div key={r.id} className="p-4 rounded-lg border border-slate-200 bg-white">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-slate-900">{r.title}</div>
-                <div className="text-xs text-slate-500 mt-0.5 uppercase tracking-wide">{r.category.replace(/_/g, " ")}</div>
-              </div>
-              <div className="flex gap-1.5 shrink-0">
-                <span className={`px-2 py-0.5 rounded text-xs font-medium ${GRADE_STYLE[r.evidence_grade] || "bg-slate-100 text-slate-600"}`}>{r.evidence_grade.replace(/_/g, " ")}</span>
-                <span className="px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700">{r.confidence}</span>
-              </div>
-            </div>
-            <p className="text-sm text-slate-600 mt-2">{r.summary}</p>
-            <p className="text-sm text-slate-800 mt-1"><span className="font-medium">Action:</span> {r.suggested_action}</p>
-            {(r.estimate_point_minor || r.affected_dispute_count > 0) && (
-              <div className="flex flex-wrap gap-4 mt-2 text-xs text-slate-500">
-                <span>{r.affected_dispute_count} disputes</span>
-                {r.estimate_point_minor && r.currency && (
-                  <span>Est. impact {r.currency} {r.estimate_lower_minor}–{r.estimate_upper_minor} (pt {r.estimate_point_minor})</span>
-                )}
-                {r.implementation_effort && <span>effort: {r.implementation_effort}</span>}
-                {r.customer_friction_risk && <span>friction: {r.customer_friction_risk}</span>}
-              </div>
-            )}
-            {r.limitations?.length > 0 && (
-              <ul className="list-disc pl-5 mt-2 text-xs text-slate-400 space-y-0.5">
-                {r.limitations.map((l, i) => <li key={i}>{l}</li>)}
-              </ul>
-            )}
-          </div>
+        {recs.map((r) => <RecommendationCard key={r.id} r={r} />)}
+      </div>
+    </div>
+  );
+}
+
+function RecommendationCard({ r }: { r: Recommendation }) {
+  const [explanation, setExplanation] = useState<string | null>(r.explanation ?? null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [decided, setDecided] = useState<string | null>(null);
+
+  const explain = async () => {
+    setBusy("explain");
+    try {
+      const res = await fetch("/api/admin/intelligence/explain", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ recommendationId: r.id }) });
+      const d = await res.json();
+      if (res.ok) setExplanation(d.prose);
+    } finally { setBusy(null); }
+  };
+  const decide = async (action: string) => {
+    setBusy(action);
+    try {
+      await fetch("/api/admin/intelligence/decision", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ recommendationId: r.id, action }) });
+      setDecided(action);
+    } finally { setBusy(null); }
+  };
+
+  return (
+    <div className="p-4 rounded-lg border border-slate-200 bg-white">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold text-slate-900">{r.title}</div>
+          <div className="text-xs text-slate-500 mt-0.5 uppercase tracking-wide">{r.category.replace(/_/g, " ")}</div>
+        </div>
+        <div className="flex gap-1.5 shrink-0">
+          <span className={`px-2 py-0.5 rounded text-xs font-medium ${GRADE_STYLE[r.evidence_grade] || "bg-slate-100 text-slate-600"}`}>{r.evidence_grade.replace(/_/g, " ")}</span>
+          <span className="px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700">{r.confidence}</span>
+        </div>
+      </div>
+      <p className="text-sm text-slate-600 mt-2">{r.summary}</p>
+      <p className="text-sm text-slate-800 mt-1"><span className="font-medium">Action:</span> {r.suggested_action}</p>
+      {(r.estimate_point_minor || r.affected_dispute_count > 0) && (
+        <div className="flex flex-wrap gap-4 mt-2 text-xs text-slate-500">
+          <span>{r.affected_dispute_count} disputes</span>
+          {r.estimate_point_minor && r.currency && <span>Est. impact {r.currency} {r.estimate_lower_minor}–{r.estimate_upper_minor} (pt {r.estimate_point_minor})</span>}
+          {r.implementation_effort && <span>effort: {r.implementation_effort}</span>}
+          {r.customer_friction_risk && <span>friction: {r.customer_friction_risk}</span>}
+        </div>
+      )}
+      {r.limitations?.length > 0 && (
+        <ul className="list-disc pl-5 mt-2 text-xs text-slate-400 space-y-0.5">
+          {r.limitations.map((l, i) => <li key={i}>{l}</li>)}
+        </ul>
+      )}
+      {explanation && (
+        <div className="mt-2 p-2 rounded bg-slate-50 border border-slate-200 text-xs text-slate-600 whitespace-pre-wrap">{explanation}</div>
+      )}
+      <div className="flex gap-2 mt-3">
+        <button onClick={explain} disabled={!!busy} className="px-2 py-1 text-xs rounded border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+          {busy === "explain" ? "Explaining…" : "Explain"}
+        </button>
+        {["accepted", "rejected", "marked_later"].map((a) => (
+          <button key={a} onClick={() => decide(a)} disabled={!!busy}
+            className={`px-2 py-1 text-xs rounded border disabled:opacity-50 ${decided === a ? "bg-indigo-600 text-white border-indigo-600" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}>
+            {a.replace("_", " ")}
+          </button>
         ))}
       </div>
     </div>

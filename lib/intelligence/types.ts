@@ -105,6 +105,9 @@ export interface RecommendationRow {
   assumptions: string[];
   required_data_quality_checks: string[];
   supporting_segment_ids: string[];
+  explanation?: string | null;
+  explanation_model?: string | null;
+  explanation_generated_at?: string | null;
   created_at: string;
 }
 
