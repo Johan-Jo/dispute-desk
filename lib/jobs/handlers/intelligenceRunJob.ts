@@ -9,8 +9,18 @@
 
 import type { ClaimedJob, JobResult } from "../claimJobs";
 import { assessDataQuality } from "@/lib/intelligence/dataQuality/audit";
-import { markRunning, setStage, storeDataQuality, finishRun } from "@/lib/intelligence/runs";
+import { buildBaseline, type DisputeRecordRow } from "@/lib/intelligence/report/baseline";
+import { detectOpportunities } from "@/lib/intelligence/opportunities/detect";
+import { insertRecommendations } from "@/lib/intelligence/recommendations";
+import { scopedSelectAll } from "@/lib/intelligence/db/tenantScope";
+import { markRunning, setStage, storeDataQuality, storeBaseline, finishRun } from "@/lib/intelligence/runs";
 
+/**
+ * Phase A: audit stage. Phase B: + baseline descriptive report + descriptive
+ * opportunity detection. All stages run in one job (Blume Box is small — 454
+ * disputes); Phase C+ heavier stages will chain via enqueueJob with the 240s
+ * checkpoint pattern.
+ */
 export async function handleIntelligenceRun(job: ClaimedJob): Promise<JobResult> {
   const runId = job.entityId;
   if (!runId) {
@@ -19,22 +29,37 @@ export async function handleIntelligenceRun(job: ClaimedJob): Promise<JobResult>
 
   try {
     await markRunning(runId);
+
+    // Stage 1 — data-quality audit.
     await setStage(runId, "auditing");
-
-    const report = await assessDataQuality(job.shopId);
-
-    await storeDataQuality(runId, report, {
-      orders: report.facts.orders.count,
-      disputes: report.facts.disputes.count,
-      evidence_items: report.facts.evidence.item_count,
+    const dq = await assessDataQuality(job.shopId);
+    await storeDataQuality(runId, dq, {
+      orders: dq.facts.orders.count,
+      disputes: dq.facts.disputes.count,
+      evidence_items: dq.facts.evidence.item_count,
     });
+
+    // Stage 2 — baseline descriptive report.
+    await setStage(runId, "reporting");
+    const rows = await scopedSelectAll<DisputeRecordRow>(
+      "intel_dispute_records",
+      job.shopId,
+      "dispute_id,initiated_at,due_at,submitted_at,reason,phase,final_outcome,amount,currency_code,outcome_amount_recovered,is_adjudicated",
+      "dispute_id",
+    );
+    const baseline = buildBaseline(rows);
+    await storeBaseline(runId, baseline);
+
+    // Stage 3 — descriptive opportunity detection.
+    await setStage(runId, "recommending");
+    const drafts = detectOpportunities(rows, baseline, dq);
+    await insertRecommendations(runId, job.shopId, drafts);
 
     await finishRun(runId, "succeeded");
     return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await finishRun(runId, "failed", [message]).catch(() => {});
-    // Data-quality audit failures are typically transient (DB) → retriable.
     return { ok: false, reason: message, retriable: true };
   }
 }

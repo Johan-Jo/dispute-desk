@@ -27,6 +27,27 @@ interface DataQuality {
   globalLimitations: string[];
 }
 
+interface RateMetric { name: string; numerator: number; denominator: number; point: number; lower: number; upper: number; confidence: string; }
+interface Baseline {
+  currency: string;
+  period: { from: string | null; to: string | null };
+  portfolio: {
+    totalDisputes: number;
+    totalDisputedAmount: { amountMinor: string; currency: string };
+    totalRecovered: { amountMinor: string; currency: string };
+    totalNetLoss: { amountMinor: string; currency: string };
+    adjudicatedCount: number; respondedCount: number; disputesWithAmount: number;
+  };
+  rates: { fullWinRate: RateMetric; anyRecoveryRate: RateMetric; rawResponseRate: RateMetric; actionableResponseRate: RateMetric };
+  limitations: string[];
+}
+interface Recommendation {
+  id: string; category: string; title: string; summary: string; suggested_action: string;
+  affected_dispute_count: number; affected_disputed_minor: string | null; currency: string | null;
+  estimate_lower_minor: string | null; estimate_point_minor: string | null; estimate_upper_minor: string | null;
+  evidence_grade: string; confidence: string; implementation_effort: string | null; customer_friction_risk: string | null;
+  limitations: string[];
+}
 interface Run {
   id: string;
   shop_id: string;
@@ -35,6 +56,7 @@ interface Run {
   created_at: string;
   completed_at: string | null;
   data_quality: DataQuality | null;
+  baseline: Baseline | null;
   errors: string[];
 }
 
@@ -49,6 +71,7 @@ export default function IntelligencePage() {
   const [shopId, setShopId] = useState("");
   const [runs, setRuns] = useState<Run[]>([]);
   const [selected, setSelected] = useState<Run | null>(null);
+  const [recs, setRecs] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -93,7 +116,7 @@ export default function IntelligencePage() {
 
   const openRun = async (id: string) => {
     const r = await fetch(`/api/admin/intelligence/runs/${id}`);
-    if (r.ok) setSelected((await r.json()).run);
+    if (r.ok) { const d = await r.json(); setSelected(d.run); setRecs(d.recommendations || []); }
   };
 
   useEffect(() => {
@@ -178,7 +201,11 @@ export default function IntelligencePage() {
               <Clock className="w-4 h-4 animate-pulse" /> Audit in progress ({selected.stage})… refreshing.
             </div>
           ) : (
-            <DataQualityView dq={selected.data_quality} />
+            <div className="space-y-6">
+              {selected.baseline && <BaselineView b={selected.baseline} />}
+              <RecommendationsView recs={recs} />
+              <DataQualityView dq={selected.data_quality} />
+            </div>
           )}
         </div>
       </div>
@@ -233,6 +260,92 @@ function DataQualityView({ dq }: { dq: DataQuality }) {
         <ul className="list-disc pl-5 text-sm text-slate-600 space-y-1">
           {dq.globalLimitations.map((l, i) => <li key={i}>{l}</li>)}
         </ul>
+      </div>
+    </div>
+  );
+}
+
+function pct(v: number) { return `${(v * 100).toFixed(1)}%`; }
+
+function RateRow({ r, label }: { r: RateMetric; label: string }) {
+  return (
+    <div className="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0">
+      <span className="text-sm text-slate-600">{label}</span>
+      <div className="text-right">
+        <span className="text-sm font-semibold text-slate-900">{r.denominator === 0 ? "—" : pct(r.point)}</span>
+        {r.denominator > 0 && (
+          <span className="text-xs text-slate-400 ml-2">95% CI [{pct(r.lower)}–{pct(r.upper)}] · n={r.numerator}/{r.denominator} · {r.confidence}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BaselineView({ b }: { b: Baseline }) {
+  const money = (m: { amountMinor: string; currency: string }) => `${m.currency} ${m.amountMinor}`;
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-slate-700 mb-2">Baseline report</h3>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+        <Stat label="Disputed" value={money(b.portfolio.totalDisputedAmount)} />
+        <Stat label="Recovered" value={money(b.portfolio.totalRecovered)} />
+        <Stat label="Net loss" value={money(b.portfolio.totalNetLoss)} />
+        <Stat label="Adjudicated" value={String(b.portfolio.adjudicatedCount)} />
+      </div>
+      <div className="p-3 rounded-lg border border-slate-200 bg-white">
+        <RateRow label="Full-win rate (Wilson)" r={b.rates.fullWinRate} />
+        <RateRow label="Any-recovery rate (Wilson)" r={b.rates.anyRecoveryRate} />
+        <RateRow label="Raw response rate" r={b.rates.rawResponseRate} />
+        <RateRow label="Actionable response rate" r={b.rates.actionableResponseRate} />
+      </div>
+      <p className="text-xs text-slate-400 mt-2">Period {b.period.from?.slice(0,10) || "?"} → {b.period.to?.slice(0,10) || "?"} · {b.currency}. Binary rates use Wilson; monetary uses bootstrap. Partial wins are not credited inside a binomial.</p>
+    </div>
+  );
+}
+
+const GRADE_STYLE: Record<string, string> = {
+  descriptive: "bg-slate-100 text-slate-600",
+  adjusted_observational: "bg-blue-100 text-blue-700",
+  prospectively_validated: "bg-emerald-100 text-emerald-700",
+};
+
+function RecommendationsView({ recs }: { recs: Recommendation[] }) {
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-slate-700 mb-2">Opportunities ({recs.length})</h3>
+      {recs.length === 0 && <p className="text-sm text-slate-400">No opportunities passed the sample gates for this run (expected with small N — see limitations).</p>}
+      <div className="space-y-3">
+        {recs.map((r) => (
+          <div key={r.id} className="p-4 rounded-lg border border-slate-200 bg-white">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">{r.title}</div>
+                <div className="text-xs text-slate-500 mt-0.5 uppercase tracking-wide">{r.category.replace(/_/g, " ")}</div>
+              </div>
+              <div className="flex gap-1.5 shrink-0">
+                <span className={`px-2 py-0.5 rounded text-xs font-medium ${GRADE_STYLE[r.evidence_grade] || "bg-slate-100 text-slate-600"}`}>{r.evidence_grade.replace(/_/g, " ")}</span>
+                <span className="px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700">{r.confidence}</span>
+              </div>
+            </div>
+            <p className="text-sm text-slate-600 mt-2">{r.summary}</p>
+            <p className="text-sm text-slate-800 mt-1"><span className="font-medium">Action:</span> {r.suggested_action}</p>
+            {(r.estimate_point_minor || r.affected_dispute_count > 0) && (
+              <div className="flex flex-wrap gap-4 mt-2 text-xs text-slate-500">
+                <span>{r.affected_dispute_count} disputes</span>
+                {r.estimate_point_minor && r.currency && (
+                  <span>Est. impact {r.currency} {r.estimate_lower_minor}–{r.estimate_upper_minor} (pt {r.estimate_point_minor})</span>
+                )}
+                {r.implementation_effort && <span>effort: {r.implementation_effort}</span>}
+                {r.customer_friction_risk && <span>friction: {r.customer_friction_risk}</span>}
+              </div>
+            )}
+            {r.limitations?.length > 0 && (
+              <ul className="list-disc pl-5 mt-2 text-xs text-slate-400 space-y-0.5">
+                {r.limitations.map((l, i) => <li key={i}>{l}</li>)}
+              </ul>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
