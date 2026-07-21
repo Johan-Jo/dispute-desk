@@ -48,6 +48,7 @@ import {
   type AnalyzerResult,
 } from "@/lib/integrations/gorgias/relevanceAnalyzer";
 import { DISPUTE_ATTENTION_REASONS } from "@/lib/disputes/attentionReasons";
+import { sendGorgiasEvidenceReadyAlert } from "@/lib/email/sendGorgiasEvidenceReadyAlert";
 import {
   ACTIVE_RUN_STATUSES,
   customerIdDigits,
@@ -261,9 +262,10 @@ export async function handleEnrichGorgiasComms(
       completion_tokens: analysis.tokens?.completion ?? 0,
     });
 
-    // Ready-for-review notification: visible from the dispute list, not
-    // only inside the open workspace. Cleared by the review routes once
-    // no actionable items remain.
+    // Ready-for-review notification: an in-app dispute-list flag AND an
+    // email (merchants who don't open the app would otherwise never learn
+    // matched support conversations are waiting for review). Cleared by the
+    // review routes once no actionable items remain.
     if (analysis.proposalCount > 0) {
       await sb
         .from("disputes")
@@ -278,6 +280,24 @@ export async function handleEnrichGorgiasComms(
         })
         .eq("id", disputeId)
         .eq("shop_id", job.shopId);
+
+      // Email the merchant to prompt review + approval. Fire-and-forget:
+      // the alert loads its own dispute fields and never blocks enrichment.
+      const { data: disputeMeta } = await sb
+        .from("disputes")
+        .select("reason, amount, currency_code")
+        .eq("id", disputeId)
+        .eq("shop_id", job.shopId)
+        .maybeSingle();
+      void sendGorgiasEvidenceReadyAlert({
+        shopId: job.shopId,
+        disputeId,
+        proposalCount: analysis.proposalCount,
+        reason: (disputeMeta?.reason as string | null) ?? null,
+        amount:
+          disputeMeta?.amount != null ? Number(disputeMeta.amount) : null,
+        currencyCode: (disputeMeta?.currency_code as string | null) ?? null,
+      });
     }
 
     await logSetupEvent(job.shopId, "gorgias_enrichment_completed", {
