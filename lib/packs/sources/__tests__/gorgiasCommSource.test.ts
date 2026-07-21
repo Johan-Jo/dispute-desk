@@ -184,6 +184,85 @@ describe("inclusion guard", () => {
   });
 });
 
+describe("bank non-disclosure category block (layer-two guard)", () => {
+  it("excludes self-incriminating categories even when merchant-approved and hash-intact", () => {
+    const t = persistedTicket();
+    // A fully-approved, hash-intact refund_history admission must NOT include.
+    expect(
+      isIncludableMessage(
+        t,
+        persistedMsg({ evidenceCategory: "refund_history" }),
+      ),
+    ).toBe(false);
+    // Same for cancellation_history.
+    expect(
+      isIncludableMessage(
+        t,
+        persistedMsg({ evidenceCategory: "cancellation_history" }),
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps bank-safe categories includable (regression: block is not over-broad)", () => {
+    const t = persistedTicket();
+    for (const category of [
+      "transaction_recognition",
+      "delivery_recognition",
+      "product_usage",
+      "contradiction",
+      // resolution_attempt is double-edged but not hard-blocked — stays a
+      // merchant-review judgment, so it remains includable once approved.
+      "resolution_attempt",
+    ] as const) {
+      expect(isIncludableMessage(t, persistedMsg({ evidenceCategory: category }))).toBe(
+        true,
+      );
+    }
+    // A null category is not a listed admission → not blocked here.
+    expect(isIncludableMessage(t, persistedMsg({ evidenceCategory: null }))).toBe(
+      true,
+    );
+  });
+
+  it("drops an approved refund_history message from the built section", () => {
+    // One safe + one refund_history, both approved: only the safe one renders.
+    const section = buildSnapshotSection(
+      persisted([
+        persistedTicket({
+          messages: [
+            persistedMsg({ id: "safe", gorgiasMessageId: 1 }),
+            persistedMsg({
+              id: "admission",
+              gorgiasMessageId: 2,
+              senderType: "merchant",
+              evidenceCategory: "refund_history",
+            }),
+          ],
+        }),
+      ]),
+      { packId: "p1" },
+    );
+    expect(section).not.toBeNull();
+    const conv = (section!.data.conversations as Array<{ messages: Array<{ gorgiasMessageId: number }> }>)[0];
+    expect(conv.messages.map((m) => m.gorgiasMessageId)).toEqual([1]);
+    expect((section!.data.summary as { messageCount: number }).messageCount).toBe(1);
+  });
+
+  it("yields no section when the ONLY approved message is a blocked admission", () => {
+    const section = buildSnapshotSection(
+      persisted([
+        persistedTicket({
+          messages: [
+            persistedMsg({ evidenceCategory: "cancellation_history" }),
+          ],
+        }),
+      ]),
+      { packId: "p1" },
+    );
+    expect(section).toBeNull();
+  });
+});
+
 describe("customerConfirmsOrder derivation", () => {
   it("fires only for customer-authored transaction_recognition on a non-low confirmed ticket", () => {
     const t = persistedTicket();
@@ -224,7 +303,11 @@ describe("customerConfirmsOrder derivation", () => {
     const supporting = buildSnapshotSection(
       persisted([
         persistedTicket({
-          messages: [persistedMsg({ evidenceCategory: "refund_history" })],
+          // A bank-safe category that renders but does NOT flip the strong
+          // lever (delivery_recognition, not transaction_recognition).
+          // NB: not a bank-excluded category — those never render (covered
+          // by the non-disclosure block suite).
+          messages: [persistedMsg({ evidenceCategory: "delivery_recognition" })],
         }),
       ]),
       { packId: "p1" },
