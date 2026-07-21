@@ -1,6 +1,7 @@
 "use client";
 
 import { Page, Spinner, BlockStack } from "@shopify/polaris";
+import { useEffect, useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { withShopParams } from "@/lib/withShopParams";
@@ -83,6 +84,21 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
     { id: "evidence", label: t("disputes.workspaceShell.tabs.evidence"), panelId: "evidence-panel" },
     { id: "submit", label: t("disputes.workspaceShell.tabs.reviewSubmit"), panelId: "submit-panel" },
   ];
+
+  // Deep link support: `?section=gorgias-comms` (from the evidence-ready
+  // email) opens the Evidence tab so the merchant lands ON the review card
+  // instead of the top of the Overview tab. The card itself handles the
+  // scroll-into-view + transient highlight off the same param. Run once,
+  // only after data has loaded so the tab panel is mounted.
+  const deepLinkApplied = useRef(false);
+  const targetSection = searchParams.get("section");
+  useEffect(() => {
+    if (deepLinkApplied.current || !data) return;
+    if (targetSection === "gorgias-comms") {
+      deepLinkApplied.current = true;
+      actions.setActiveTab(1);
+    }
+  }, [data, targetSection, actions]);
 
   if (clientState.loading || !data) {
     return (
