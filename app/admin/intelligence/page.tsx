@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Brain, Play, RefreshCw, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import { Brain, Play, RefreshCw, AlertTriangle, CheckCircle2, Clock, FlaskConical } from "lucide-react";
 
 /* Phase A shell (design §10): trigger an analysis run for a shop, list runs,
    and render the Data-Quality report. Recommendations / Policy Simulator land
@@ -165,6 +165,8 @@ export default function IntelligencePage() {
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       </div>
 
+      {shopId && <PolicySimulator shopId={shopId} />}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
           <h2 className="text-sm font-semibold text-slate-700 mb-2">Runs</h2>
@@ -261,6 +263,102 @@ function DataQualityView({ dq }: { dq: DataQuality }) {
           {dq.globalLimitations.map((l, i) => <li key={i}>{l}</li>)}
         </ul>
       </div>
+    </div>
+  );
+}
+
+interface SimResult {
+  template: string; currency: string; ordersAffected: number; disputesInSegment: number;
+  revenueAffected: string; netLossInSegment: string; legitimateOrdersAffected: number;
+  implementationCost: string;
+  avoidedLoss: { conservative: string; expected: string; optimistic: string };
+  netImpact: { conservative: string; expected: string; optimistic: string };
+  confidence: string; evidenceGrade: string; assumptions: string[]; limitations: string[];
+}
+
+function PolicySimulator({ shopId }: { shopId: string }) {
+  const [templates, setTemplates] = useState<{ key: string; label: string; description: string }[]>([]);
+  const [tpl, setTpl] = useState("");
+  const [currency, setCurrency] = useState("USD");
+  const [minValue, setMinValue] = useState("150");
+  const [expectedPct, setExpectedPct] = useState("35");
+  const [perOrderCost, setPerOrderCost] = useState("0.00");
+  const [result, setResult] = useState<SimResult | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/intelligence/simulate").then((r) => r.ok ? r.json() : { templates: [] }).then((d) => {
+      setTemplates(d.templates || []); if (d.templates?.[0]) setTpl(d.templates[0].key);
+    }).catch(() => {});
+  }, []);
+
+  const run = async () => {
+    setBusy(true); setErr(null);
+    const exp = Math.round(parseFloat(expectedPct) * 100) || 3500;
+    const input = {
+      template: tpl, currency,
+      filters: { minValueDecimal: parseFloat(minValue) || null, riskLevels: tpl.includes("high_risk") ? ["HIGH"] : null, crossBorder: tpl.includes("international") ? true : null },
+      effectiveness: { conservativeBps: Math.round(exp * 0.4), expectedBps: exp, optimisticBps: Math.round(exp * 1.7) },
+      costs: { perOrderCostMinor: Math.round((parseFloat(perOrderCost) || 0) * 100) },
+    };
+    try {
+      const r = await fetch("/api/admin/intelligence/simulate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shopId, input }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Simulation failed");
+      setResult(d.result);
+    } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-4 mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <FlaskConical className="w-4 h-4 text-purple-600" />
+        <h2 className="text-sm font-semibold text-slate-700">Policy Simulator</h2>
+        <span className="text-xs text-slate-400">historical what-if · labeled estimate</span>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-3">
+        <label className="text-xs text-slate-600 col-span-2 sm:col-span-1">Template
+          <select value={tpl} onChange={(e) => setTpl(e.target.value)} className="mt-1 w-full px-2 py-1.5 border border-slate-300 rounded text-sm">
+            {templates.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+          </select>
+        </label>
+        <label className="text-xs text-slate-600">Min order value
+          <input value={minValue} onChange={(e) => setMinValue(e.target.value)} className="mt-1 w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
+        </label>
+        <label className="text-xs text-slate-600">Expected effect %
+          <input value={expectedPct} onChange={(e) => setExpectedPct(e.target.value)} className="mt-1 w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
+        </label>
+        <label className="text-xs text-slate-600">Cost / order
+          <input value={perOrderCost} onChange={(e) => setPerOrderCost(e.target.value)} className="mt-1 w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
+        </label>
+        <label className="text-xs text-slate-600">Currency
+          <input value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} className="mt-1 w-full px-2 py-1.5 border border-slate-300 rounded text-sm" />
+        </label>
+      </div>
+      <button onClick={run} disabled={busy || !tpl} className="px-3 py-1.5 bg-purple-600 text-white rounded text-sm font-medium hover:bg-purple-700 disabled:opacity-50">
+        {busy ? "Simulating…" : "Simulate"}
+      </button>
+      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+      {result && (
+        <div className="mt-3 space-y-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <Stat label="Orders affected" value={result.ordersAffected.toLocaleString()} />
+            <Stat label="Disputes in segment" value={String(result.disputesInSegment)} />
+            <Stat label="Net loss in segment" value={`${result.currency} ${result.netLossInSegment}`} />
+            <Stat label="Legit orders affected" value={result.legitimateOrdersAffected.toLocaleString()} />
+          </div>
+          <div className="p-3 rounded-lg border border-purple-200 bg-purple-50 text-sm">
+            <div className="font-medium text-purple-800">Estimated avoided loss (range)</div>
+            <div className="text-purple-700 mt-1">{result.currency} {result.avoidedLoss.conservative} → <b>{result.avoidedLoss.expected}</b> → {result.avoidedLoss.optimistic}</div>
+            <div className="text-purple-700 mt-1">Net impact (after {result.currency} {result.implementationCost} cost): {result.currency} {result.netImpact.conservative} → <b>{result.netImpact.expected}</b> → {result.netImpact.optimistic}</div>
+            <div className="text-xs text-purple-500 mt-1">confidence: {result.confidence} · {result.evidenceGrade}</div>
+          </div>
+          <ul className="list-disc pl-5 text-xs text-slate-400 space-y-0.5">
+            {result.limitations.map((l, i) => <li key={i}>{l}</li>)}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

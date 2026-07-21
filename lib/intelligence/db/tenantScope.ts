@@ -15,6 +15,44 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import type { DataQualityFacts } from "../types";
 
+export interface SegmentFilters {
+  minValueDecimal?: number | null;
+  riskLevels?: string[] | null;
+  countries?: string[] | null;
+  gateways?: string[] | null;
+  crossBorder?: boolean | null;
+  reasons?: string[] | null;
+}
+
+export interface SegmentFacts {
+  orders_affected: number;
+  revenue_affected: string; // numeric as string
+  disputes_in_segment: number;
+  disputed_value: string;
+  net_loss_in_segment: string;
+  legit_orders_affected: number;
+}
+
+/** Policy-simulator segment aggregates — computed server-side (design §16). */
+export async function runSegmentSimulation(
+  shopId: string,
+  filters: SegmentFilters,
+): Promise<SegmentFacts> {
+  assertShopId(shopId);
+  const db = getServiceClient();
+  const { data, error } = await db.rpc("intel_simulate_segment", {
+    p_shop_id: shopId,
+    p_min_value: filters.minValueDecimal ?? null,
+    p_risk_levels: filters.riskLevels ?? null,
+    p_countries: filters.countries ?? null,
+    p_gateways: filters.gateways ?? null,
+    p_cross_border: filters.crossBorder ?? null,
+    p_reasons: filters.reasons ?? null,
+  });
+  if (error) throw new Error(`[intelligence/tenantScope] simulate RPC failed: ${error.message}`);
+  return data as SegmentFacts;
+}
+
 const INTEL_VIEWS = new Set([
   "intel_order_records",
   "intel_dispute_records",
