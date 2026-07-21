@@ -194,9 +194,13 @@ export async function sendGorgiasEvidenceReadyAlert(
     const reason = reasonLabel(ctx.reason);
     const amountStr = formatCurrency(ctx.amount, ctx.currencyCode);
 
+    // `?section=gorgias-comms` lands the merchant on the Evidence tab's
+    // "Customer support conversations" card (WorkspaceShell reads it to
+    // select the tab; the card scrolls into view + spotlights the messages
+    // awaiting approval) — not the top of the Overview tab.
     const disputeUrl = getEmbeddedAppUrl(
       shopDomain || null,
-      `disputes/${ctx.disputeId}`,
+      `disputes/${ctx.disputeId}?section=gorgias-comms`,
     );
 
     const dueAt = dispute?.due_at ?? null;
