@@ -483,73 +483,40 @@ export async function GET(req: NextRequest) {
   const chargebackRateSparklineWeekly = weeklySparkline(daily);
 
   // ── Risk-to-dispute conversion (all-time) ──────────────────────
-  async function fetchAllOrders(): Promise<
-    Array<{ shopify_order_id: string; risk_level_initial: string | null }>
-  > {
-    const out: Array<{ shopify_order_id: string; risk_level_initial: string | null }> = [];
-    for (let from = 0; ; from += 1000) {
-      const { data, error } = await sb
-        .from("shopify_orders")
-        .select("shopify_order_id, risk_level_initial")
-        .eq("shop_id", shopId)
-        .range(from, from + 999);
-      if (error) throw new Error(error.message);
-      out.push(
-        ...(data ?? []).map((d) => ({
-          shopify_order_id: d.shopify_order_id as string,
-          risk_level_initial: (d.risk_level_initial as string | null) ?? null,
-        })),
-      );
-      if (!data || data.length < 1000) break;
-    }
-    return out;
-  }
-  async function fetchAllDisputedGids(): Promise<Set<string>> {
-    const out = new Set<string>();
-    for (let from = 0; ; from += 1000) {
-      const { data, error } = await sb
-        .from("disputes")
-        .select("order_gid")
-        .eq("shop_id", shopId)
-        .not("order_gid", "is", null)
-        .range(from, from + 999);
-      if (error) throw new Error(error.message);
-      for (const r of data ?? []) {
-        if (r.order_gid) out.add(r.order_gid as string);
-      }
-      if (!data || data.length < 1000) break;
-    }
-    return out;
-  }
-
-  const allOrders = await fetchAllOrders();
-  const disputedGids = await fetchAllDisputedGids();
-  const conversionBuckets = {
+  // Aggregated set-based in Postgres (one round-trip) rather than
+  // streaming every order for the shop into this function. A large
+  // historical importer (Blume Box: 354k orders) made the old
+  // page-by-page walk hundreds of serial round-trips that blew the
+  // serverless timeout and hung the Insights page. See migration
+  // 20260721200000_insights_risk_conversion_rpc.sql.
+  type ConversionKey = "high" | "medium" | "low" | "none" | "pending";
+  const conversionBuckets: Record<ConversionKey, { orders: number; disputes: number }> = {
     high:    { orders: 0, disputes: 0 },
     medium:  { orders: 0, disputes: 0 },
     low:     { orders: 0, disputes: 0 },
     none:    { orders: 0, disputes: 0 },
     pending: { orders: 0, disputes: 0 },
   };
-  let allTimeOrdersLow = 0, allTimeOrdersMedium = 0, allTimeOrdersHigh = 0, allTimeOrdersNone = 0, allTimeOrdersPending = 0;
-  for (const o of allOrders) {
-    const lvl = (o.risk_level_initial ?? "").toUpperCase();
-    const key =
-      lvl === "HIGH"    ? "high"   :
-      lvl === "MEDIUM"  ? "medium" :
-      lvl === "LOW"     ? "low"    :
-      lvl === "PENDING" ? "pending" :
-                          "none";
-    conversionBuckets[key].orders += 1;
-    if (disputedGids.has(o.shopify_order_id)) {
-      conversionBuckets[key].disputes += 1;
-    }
-    if      (key === "high")    allTimeOrdersHigh    += 1;
-    else if (key === "medium")  allTimeOrdersMedium  += 1;
-    else if (key === "low")     allTimeOrdersLow     += 1;
-    else if (key === "pending") allTimeOrdersPending += 1;
-    else                        allTimeOrdersNone    += 1;
+  const { data: conversionRows, error: conversionErr } = await sb.rpc(
+    "insights_risk_conversion",
+    { p_shop_id: shopId },
+  );
+  if (conversionErr) throw new Error(conversionErr.message);
+  for (const r of (conversionRows ?? []) as Array<{
+    bucket: ConversionKey;
+    orders: number | string;
+    disputes: number | string;
+  }>) {
+    const b = conversionBuckets[r.bucket];
+    if (!b) continue;
+    b.orders += Number(r.orders);
+    b.disputes += Number(r.disputes);
   }
+  const allTimeOrdersHigh = conversionBuckets.high.orders;
+  const allTimeOrdersMedium = conversionBuckets.medium.orders;
+  const allTimeOrdersLow = conversionBuckets.low.orders;
+  const allTimeOrdersNone = conversionBuckets.none.orders;
+  const allTimeOrdersPending = conversionBuckets.pending.orders;
   function bucketWithPct(b: { orders: number; disputes: number }): RiskConversionBucket {
     return {
       orders: b.orders,

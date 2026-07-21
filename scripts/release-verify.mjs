@@ -57,6 +57,9 @@ const STEPS = [
   // Bedräglig in one namespace and Obehörig transaktion in another).
   // Group definitions live in scripts/i18n/term-equivalences.json.
   { name: "i18n: equivalences", cmd: "node", args: ["scripts/verify-i18n-equivalences.mjs"] },
+  // Intelligence engine: the analytical layer may be reached only via the
+  // tenant-scoped DAL (service role bypasses RLS, so .eq(shop_id) is app-level).
+  { name: "Intelligence tenant-scope", cmd: "node", args: ["scripts/verify-intelligence-tenant-scope.mjs"] },
   // verbose reporter so each test name streams — user can follow progress
   { name: "Vitest", cmd: "npx", args: ["vitest", "run", "--reporter=verbose"] },
   // Migration parity — confirms the set of files under supabase/migrations/

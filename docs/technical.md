@@ -1481,11 +1481,13 @@ CI gate: `factParser.test.ts` asserts ≥95% coverage on a canonical 14-fixture 
 
 #### Writer (`lib/fraudIntel/signalWriter.ts`)
 
-`buildSignalRow` (pure) + `upsertSignalRow` (writes). Load-bearing precedence contract: **structured-from-GraphQL fields ALWAYS win over parser output**. The builder takes GraphQL `paymentDetails.{avsResultCode, cvvResultCode, bin, company, wallet}` and `Order.clientIp` first; the parser equivalents (AVS / CVV / BIN / brand / wallet — currently empty) are dropped on the floor. Tested explicitly in `signalWriter.test.ts` so a future widening of the parser can't silently pollute these columns.
+`buildSignalRow` (pure) + `upsertSignalRow` (writes one) + `upsertSignalRows` (writes a batch). Load-bearing precedence contract: **structured-from-GraphQL fields ALWAYS win over parser output**. The builder takes GraphQL `paymentDetails.{avsResultCode, cvvResultCode, bin, company, wallet}` and `Order.clientIp` first; the parser equivalents (AVS / CVV / BIN / brand / wallet — currently empty) are dropped on the floor. Tested explicitly in `signalWriter.test.ts` so a future widening of the parser can't silently pollute these columns.
+
+`upsertSignalRows` collapses a whole backfill page (100 orders) into **one** upsert + one grouped miss-insert, instead of one DB round-trip per order. On a large historical import (blume-box, 2026-07-20) the per-order loop was the dominant per-page latency — batching removes 100 sequential awaits per page. Rows are deduped on the `(shop_id, shopify_order_id)` conflict key (last wins) so a single upsert never touches the same row twice. Batch contract pinned in `signalWriterBatch.test.ts`.
 
 Wired into:
-- `lib/shopify/orderIngest.normalizeOrderIngest` — runs after `persistOrders`.
-- `lib/disputes/backfillOrders.backfillShopOrders` — per-page loop after `persistOrders`.
+- `lib/shopify/orderIngest.normalizeOrderIngest` — runs after `persistOrders` (single-order `upsertSignalRow`).
+- `lib/disputes/backfillOrders.backfillShopOrders` — one `upsertSignalRows` call per page after `persistOrders`.
 
 Signal-row write failures are logged but never break the ingest contract — the raw `facts_json` is still captured on `shopify_order_risk_assessments`, and the hydration script can backfill later.
 
@@ -3298,7 +3300,9 @@ This pattern is the template for the remaining embedded pages (packs, rules, pol
 
 **Coverage page (`/app/coverage`):** `lib/coverage/deriveLifecycleCoverage.ts` picks a separate matching rule per `(family, phase)` via `pickRuleForFamilyAndPhase`. Phase-specific rules win over phase-blind rules at the same priority so the inquiry and chargeback rows of a family can show different automation modes when the merchant has configured them that way. Per-family "Install playbook" buttons open `TemplateLibraryModal` in-place (pre-filtered by the row's dispute type via `FAMILY_TO_DISPUTE_TYPE` map) instead of navigating away. On successful install, coverage data reloads so the card updates immediately.
 
-**Template catalog API (`GET /api/templates`):** Inquiry-phase templates are filtered out of merchant-facing results using `INQUIRY_TEMPLATE_ID_SET` so merchants never see or pick inquiry packs directly. The admin route (`/api/admin/templates`) is unaffected.
+**Template catalog API (`GET /api/templates`):** Inquiry-phase templates are filtered out of merchant-facing results using `INQUIRY_TEMPLATE_ID_SET` so merchants never see or pick inquiry packs directly. The admin route (`/api/admin/templates`) is unaffected. The list response also carries per-card `requiredDocs` / `optionalDocs` counts and a `keyEvidence` string array, both computed in `listTemplates` (`lib/db/templates.ts`) by rolling up each template's `pack_template_sections` → `pack_template_items` (`DOC_REQUIREMENT` items only; `keyEvidence` = up to 4 item labels, required first). These used to exist only in a hardcoded demo array in the client — that array is gone.
+
+**Canonical dispute-type vocabulary (one source of truth).** `pack_templates.dispute_type` stores Shopify's dispute **reason codes** directly since migration `20260411160000` (`FRAUDULENT`, `PRODUCT_NOT_RECEIVED`, `PRODUCT_UNACCEPTABLE`, `SUBSCRIPTION_CANCELED`, `CREDIT_NOT_PROCESSED`, `DUPLICATE`, `GENERAL`, plus `DIGITAL` — a product-type signal with no Shopify equivalent). The template library filters on this column with `.eq("dispute_type", …)`, so the UI category codes (`CATEGORY_KEYS`, `DISPUTE_TYPE_LABEL_KEYS` in `TemplateLibraryContent.tsx`), the `FAMILY_TO_DISPUTE_TYPE` map (`lib/rules/helpers.ts`) and the `/api/templates` filter **must** all speak this exact vocabulary. `lib/rules/disputeTypes.ts` is the canonical module: `DISPUTE_TYPES` (the allowed set), `isDisputeType`, and `normalizeDisputeType` (which maps legacy short aliases from old deep links — `FRAUD`, `PNR`, `NOT_AS_DESCRIBED`, `SUBSCRIPTION`, `REFUND` — and Shopify synonyms like `UNRECOGNIZED` back to the canonical code). The route normalizes both `?category=` and `?reason=` through it. A vitest invariant (`lib/rules/__tests__/disputeTypes.test.ts`) fails the build if any UI category code drifts off this vocabulary. **Why this exists:** on 2026-07-20 three vocabularies had diverged (UI `FRAUD`/`REFUND`, API `fraud`/`credit`, DB `FRAUDULENT`/`CREDIT_NOT_PROCESSED`); category-filtered queries matched zero rows and the modal silently fell back to fake demo cards whose install always 500'd with "Template may not exist." Never reintroduce a per-surface alias set.
 
 ### Sync Integration
 
@@ -3340,12 +3344,12 @@ Pack preview pages show a yellow warning banner when `completeness_score < 60%`:
 
 When a merchant clicks "Generate Pack" on the dispute detail page, the UI first checks for a matching template before running the generate call:
 
-1. `GET /api/templates?reason=<dispute.reason>&locale=<locale>` — finds templates for the dispute's reason via `REASON_TO_CATEGORY` mapping (e.g. `FRAUDULENT` → `fraud`, `PRODUCT_NOT_RECEIVED` → `not_received`).
+1. `GET /api/templates?reason=<dispute.reason>&locale=<locale>` — finds templates for the dispute's reason. The `?reason=` value is passed through `normalizeDisputeType` (`lib/rules/disputeTypes.ts`) to the canonical `dispute_type` code (a Shopify reason code like `FRAUDULENT` / `PRODUCT_NOT_RECEIVED` normalizes to itself; legacy aliases such as `REFUND` → `CREDIT_NOT_PROCESSED`).
 2. A Polaris `Modal` is always shown:
    - **Template found**: primary "Use template" → POSTs to `POST /api/disputes/:id/packs` with `{ template_id }`, creates the pack tied to the dispute, then navigates directly to the new pack page. Secondary "Generate basic pack" → same API without template_id.
    - **No template**: primary "Go to template library" → navigates to `/app/packs`. Secondary "Generate basic pack" → creates a basic pack and navigates to it.
 3. `POST /api/disputes/:id/packs` accepts an optional `template_id` body param and stores it as `pack_template_id` on the `evidence_packs` row.
-4. `GET /api/templates` accepts `?reason=` (Shopify reason code) in addition to `?category=` (explicit short code). Explicit `category` takes precedence.
+4. `GET /api/templates` accepts `?reason=` (Shopify reason code) in addition to `?category=` (canonical `dispute_type` code; legacy short aliases are normalized). Explicit `category` takes precedence.
 
 ### Pack Page Locale Preservation
 
