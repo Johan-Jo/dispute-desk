@@ -16,9 +16,13 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/setup/events", () => ({
   logSetupEvent: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("@/lib/email/sendGorgiasEvidenceReadyAlert", () => ({
+  sendGorgiasEvidenceReadyAlert: vi.fn().mockResolvedValue(undefined),
+}));
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { logSetupEvent } from "@/lib/setup/events";
+import { sendGorgiasEvidenceReadyAlert } from "@/lib/email/sendGorgiasEvidenceReadyAlert";
 import { handleEnrichGorgiasComms } from "../enrichGorgiasCommsJob";
 import type { ClaimedJob } from "../../claimJobs";
 import type { GorgiasClient, GorgiasTicket } from "@/lib/integrations/gorgias/client";
@@ -26,6 +30,7 @@ import type { GorgiasConnection } from "@/lib/integrations/gorgias/credentials";
 
 const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockLogEvent = vi.mocked(logSetupEvent);
+const mockSendEvidenceReadyAlert = vi.mocked(sendGorgiasEvidenceReadyAlert);
 
 function makeJob(entityId: string | null = "dispute-1"): ClaimedJob {
   return {
@@ -225,6 +230,8 @@ describe("handleEnrichGorgiasComms — outcomes", () => {
       "gorgias_enrichment_no_matches",
       expect.objectContaining({ reason: "customer_not_found" }),
     );
+    // No proposals → no evidence-ready email.
+    expect(mockSendEvidenceReadyAlert).not.toHaveBeenCalled();
   });
 
   it("happy path: scores, persists, analyzes, proposes, finishes ready_for_review", async () => {
@@ -279,6 +286,7 @@ describe("handleEnrichGorgiasComms — outcomes", () => {
         { data: DISPUTE_ROW }, // loadOrderSignals
         { data: { reason: "fraudulent", network_reason_code: "10.4", order_name: "#1066" } }, // analysis
         { data: null }, // attention update
+        { data: { reason: "fraudulent", amount: "110.89", currency_code: "USD" } }, // evidence-ready email meta
       ],
       shopify_orders: [{ data: ORDER_ROW }],
       shops: [{ data: { locale: "en" } }],
@@ -404,6 +412,20 @@ describe("handleEnrichGorgiasComms — outcomes", () => {
       );
     expect(attention).toBeTruthy();
     expect((attention!.args[0] as Record<string, unknown>).needs_attention).toBe(true);
+
+    // Ready-for-review ALSO fires the evidence-ready email (not just the
+    // in-app flag) — the whole point of the notification gap fix.
+    expect(mockSendEvidenceReadyAlert).toHaveBeenCalledTimes(1);
+    expect(mockSendEvidenceReadyAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        shopId: "shop-1",
+        disputeId: "dispute-1",
+        proposalCount: 1,
+        reason: "fraudulent",
+        amount: 110.89,
+        currencyCode: "USD",
+      }),
+    );
 
     expect(mockLogEvent).toHaveBeenCalledWith(
       "shop-1",
