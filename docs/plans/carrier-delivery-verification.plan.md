@@ -76,7 +76,7 @@ architecture" — genericity is proven by a fake test adapter (§9, PR 1B).
 | 3 | **PostNord** | Conditional — **PARTNER-GATED** | PostNord Track & Trace V5 (developer.postnord.com); auth = `?apikey=` query param (verified 2026-07-16). BUT self-service keys are NOT activated for external parties: PostNord Kundintegration requires a partner meeting before releasing API access (confirmed by email 2026-07-16, Jimmy Judén / kundintegration.se@postnord.com, +46 10 436 52 33 — contacts Carlos & Martin, back from vacation **August 2026**). A registered prod key returns blanket 429 on every product until activated; sandbox rejects it as invalid. | Native Shopify sync works today for cay; adapter would be a fallback. Interim for PostNord merchants without native sync: a tracking app (ParcelPanel/Wonderment) that writes native events. PostNord signature/POD is a separate, service-gated API — do not chase (structurally ~0 since 2026-01) |
 | 4 | **Bring** | Conditional | Bring Tracking API (developer.bring.com) | Classifier already handles Bring quirk: `DELIVERED_SENDER` = returned, not delivered |
 | 5 | **GLS** | Conditional | GLS Track & Trace (per-country REST) | Listed carrier, currently syncing; low urgency |
-| 6 | **UPS** | Conditional | UPS Track API (developer.ups.com) | |
+| 6 | **UPS** | Conditional — **SHELVED 2026-07** (creds unobtainable) | UPS Track API (developer.ups.com) — OAuth 2.0 client-credentials. Adapter was scoped (`1Z`-match, `deliveryInformation.receivedBy` POD, token cache) but not built: **UPS blocks developer-account creation for non-EU/non-US companies**, so `UPS_CLIENT_ID`/`UPS_CLIENT_SECRET` can't be obtained. Revisit if UPS opens accounts or a US/EU entity is available. | blume-box US disputes ship **UPS Ground Saver → USPS** final mile. Until an adapter exists, UPS stays identified-but-unsupported; under always-verify (§5.7 v2) that emits the unsupported-carrier demand-signal email (dedup 1/merchant+carrier/7d). |
 | 7 | **USPS** | Conditional | USPS Tracking API (developers.usps.com) | US merchants — none live yet |
 | 8 | **DPD** | Conditional | DPD tracking APIs (per-country business units) | |
 | 9 | **PostNL** | Conditional | PostNL Shipment status API | |
@@ -339,8 +339,24 @@ confidence, and fulfillment coverage. At minimum:
 - **absence of a carrier result never overrides an existing positive event**
   (an API failure or `not_found` leaves prior evidence untouched).
 
-**Bounded lookup rule** — not every carrier is queried for every pack. The
-carrier API is queried for a shipment when ANY of:
+**Always-verify rule (v2, 2026-07 — supersedes the bounded rule below)** — the
+carrier API is queried for a shipment for evidentiary **strength** whenever a
+supported adapter matches, EVEN WHEN Shopify-side sources already report a
+terminal "delivered" state. A carrier POD (recipient/signature + carrier-attested
+timestamp) is materially stronger delivery proof than Shopify's generic feed, so
+we fetch it rather than settle for the weaker signal. Two safeguards keep this
+cheap and safe: (a) **cost** — a fresh **terminal carrier-cache hit** still
+short-circuits with zero API calls (only shipments lacking a terminal *carrier*
+result incur the extra lookup); (b) **no downgrade** — a losing or absent
+carrier result never overrides an existing positive (reconciliation elects the
+newest terminal event; terminal columns are written only when the carrier won),
+so a carrier result can only ADD strength or confirm. Consequence: an
+identified-but-unsupported carrier ALWAYS emits the unsupported-carrier detection
+email (the missing adapter now always costs the stronger signal), dedup-capped at
+one email per merchant+carrier per 7 days.
+
+**Bounded lookup rule (v1, superseded — kept for history)** — originally the
+carrier API was queried for a shipment only when ANY of:
 
 1. no usable terminal signal exists for it;
 2. the existing signal may be stale (non-terminal, or terminal-positive but old
@@ -355,7 +371,9 @@ carrier API is queried for a shipment when ANY of:
    policy permits another attempt.
 
 A cached **terminal** carrier result is normally reused without a new API call
-(retention terms handled separately, per the scope note).
+(retention terms handled separately, per the scope note). Note reasons 2/3 —
+"stronger carrier result could materially affect the case" — are exactly what
+v2 generalizes to "always fetch for strength."
 
 ### 5.8 Invocation & caching
 

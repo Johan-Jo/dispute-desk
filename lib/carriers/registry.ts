@@ -51,7 +51,12 @@ const KNOWN_CARRIERS: Array<{
 const IGNORED_CARRIERS: ReadonlySet<CarrierSlug> = new Set();
 
 /** Production adapter registry. Conditional carriers join here when real
- *  merchant demand appears (plan §9) — never speculatively. */
+ *  merchant demand appears (plan §9) — never speculatively. (A UPS adapter
+ *  was scoped 2026-07 for blume-box US disputes but shelved: UPS blocks
+ *  developer-account creation for non-EU/non-US companies, so no
+ *  credentials are obtainable for now. Until then UPS stays
+ *  identified-but-unsupported and — under always-verify — emits the
+ *  unsupported-carrier demand-signal email.) */
 const ADAPTERS = new Map<CarrierSlug, CarrierAdapter>([["dhl", dhlAdapter]]);
 
 /** Test seam: register/unregister an adapter (e.g. the fake carrier-
