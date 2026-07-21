@@ -34,6 +34,7 @@ import {
   Gauge,
   Fingerprint,
   MessagesSquare,
+  Brain,
 } from "lucide-react";
 import { ToastProvider } from "@/components/admin/Toast";
 
@@ -66,6 +67,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Jobs", href: "/admin/jobs", icon: Cog },
   { label: "Webhooks", href: "/admin/webhooks", icon: Webhook },
   { label: "Fraud Intel", href: "/admin/fraud-intel", icon: ShieldCheck },
+  { label: "Intelligence", href: "/admin/intelligence", icon: Brain },
   { label: "Templates", href: "/admin/templates", icon: FileText, group: "Template Ops" },
   { label: "Reason Mapping", href: "/admin/reason-mapping", icon: GitBranch, group: "Template Ops" },
   { label: "Template Health", href: "/admin/template-health", icon: Activity, group: "Template Ops" },

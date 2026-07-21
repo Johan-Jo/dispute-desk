@@ -12,6 +12,7 @@ import { handleSnapshotFraudDailyMetrics } from "@/lib/jobs/handlers/snapshotFra
 import { handleBackfillFraudDailyMetrics } from "@/lib/jobs/handlers/backfillFraudDailyMetricsJob";
 import { handleReconcileMissingOrder } from "@/lib/jobs/handlers/reconcileMissingOrderJob";
 import { handleEnrichGorgiasComms } from "@/lib/jobs/handlers/enrichGorgiasCommsJob";
+import { handleIntelligenceRun } from "@/lib/jobs/handlers/intelligenceRunJob";
 import { cronEnvGate } from "@/lib/cron/envGate";
 
 export const runtime = "nodejs";
@@ -79,6 +80,9 @@ async function runWorker(req: NextRequest) {
           break;
         case "enrich_gorgias_comms":
           handlerResult = await handleEnrichGorgiasComms(job);
+          break;
+        case "intel_run":
+          handlerResult = await handleIntelligenceRun(job);
           break;
         default:
           throw new Error(`Unknown job type: ${job.jobType}`);
