@@ -4,13 +4,29 @@
  * Orchestrates, per fulfillment: detection (registry) → bounded lookup
  * rule → cache → carrier API → classification → persistence → alerting.
  *
- * BOUNDED LOOKUP RULE (v1): the carrier API is queried for a shipment
- * only when the existing sources (Shopify-native events, tracking-app
- * metafields) produced NO terminal signal, or when they CONFLICT. A
- * cached terminal carrier result is reused without an API call; cached
- * non-terminal or failed lookups are eligible for re-fetch on the next
- * build (§5.7 triggers 1, 4, 5, 7 — staleness-window and materiality
- * triggers 2/3/6 are documented follow-ups).
+ * ALWAYS-VERIFY RULE (v2, 2026-07): the carrier API is queried for
+ * evidentiary STRENGTH whenever a supported adapter matches — even when
+ * Shopify-side sources already report a terminal "delivered" state. A
+ * carrier POD (recipient/signature + carrier-attested timestamp) is a
+ * materially stronger delivery proof than Shopify's generic feed, so we
+ * fetch it rather than settle for the weaker signal. This SUPERSEDES the
+ * old bounded rule (query only on no-signal/conflict).
+ *
+ * Two safeguards keep "always verify" cheap and safe:
+ *   - COST: a fresh TERMINAL carrier-cache hit still short-circuits with
+ *     zero API calls (isTerminalCacheHit, below) — we never re-fetch a
+ *     shipment the carrier already POD-confirmed. Only shipments lacking
+ *     a terminal *carrier* result incur the extra lookup; cached
+ *     non-terminal / failed lookups remain eligible for re-fetch.
+ *   - NO DOWNGRADE: a losing or absent carrier result NEVER overrides an
+ *     existing positive event. Reconciliation elects the newest terminal
+ *     event (`carrierWon`), and persistence only writes terminal columns
+ *     when the carrier won — so a carrier result can only ADD strength or
+ *     confirm, never turn a delivered order into "not delivered".
+ *
+ * Because a missing adapter now ALWAYS costs us the stronger signal, an
+ * identified-but-unsupported carrier ALWAYS emits the unsupported-carrier
+ * detection email (dedup: one per merchant+carrier per 7 days).
  *
  * FAILURE CONTRACT: this module NEVER throws. Every failure is logged,
  * classified, alert-routed per §6.5 (isolated not_found = log only;
@@ -128,11 +144,12 @@ async function resolveOne(
   f: FulfillmentForResolution,
   cache: Map<string, CachedLookup>,
 ): Promise<CarrierShipmentSignal | null> {
-  const existing = reconcileDeliveryState(f.existingSignals);
-  // Bounded rule: skip the carrier entirely when Shopify-side sources
-  // already agree on a terminal state (§5.7 v1).
-  const needLookup = existing.current === null || existing.conflict;
-
+  // Always-verify (v2): we no longer gate the carrier lookup on whether
+  // Shopify-side sources already have a terminal signal — a carrier POD
+  // is stronger evidence, so we fetch it regardless. Cost is bounded by
+  // the terminal-cache short-circuit below; safety by the no-downgrade
+  // reconciliation (`carrierWon`). `f.existingSignals` still feeds that
+  // reconciliation further down.
   for (const entry of f.trackingInfo) {
     const detection = detectCarrier(entry);
 
@@ -149,11 +166,12 @@ async function resolveOne(
     }
 
     if (detection.outcome === "unsupported_carrier") {
-      // Report only when the missing adapter actually costs us evidence —
-      // a carrier that syncs natively (e.g. PostNord) already delivered a
-      // terminal signal, and alerting on every healthy shipment would
-      // drown the demand signal in noise.
-      if (!needLookup) continue;
+      // Under always-verify a missing adapter ALWAYS costs us the stronger
+      // carrier POD — even for a carrier that syncs a terminal signal
+      // natively — so we always surface the demand signal. Email dedup is
+      // per merchant+carrier over a 7-day window (alerts.ts), so "always
+      // report" is at most one email per merchant+carrier per week, not a
+      // storm.
       await reportUnsupportedCarrier({
         carrier: detection.carrier,
         companyRaw: entry.company,
@@ -202,17 +220,11 @@ async function resolveOne(
       };
     }
 
-    // Bounded rule: no live lookup when Shopify-side sources already
-    // agree on a terminal state.
-    if (!needLookup) {
-      logCarrierEvent("lookup_skipped_existing_signal", {
-        carrier: detection.carrier,
-        fulfillmentId: f.id,
-        correlationId: input.correlationId,
-      });
-      continue;
-    }
-
+    // Always-verify: proceed to the live lookup for strength even when
+    // Shopify-side sources already reported delivered. The terminal
+    // carrier-cache hit above already short-circuited the only case where
+    // a fetch would be wasted (the carrier itself already POD-confirmed
+    // this shipment).
     logCarrierEvent("lookup_attempt", {
       carrier: match.carrier,
       matchedFrom: match.matchedFrom,

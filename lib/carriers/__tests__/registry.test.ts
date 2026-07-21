@@ -48,6 +48,11 @@ describe("detectCarrier (layer 2 — adapter resolution)", () => {
     }
   });
 
+  it("unsupported_carrier: UPS is identified but has no adapter (creds unobtainable, shelved 2026-07)", () => {
+    const d = detectCarrier({ company: "UPS", number: "1Z31X14FYW96542082", url: null });
+    expect(d).toMatchObject({ outcome: "unsupported_carrier", carrier: "ups", identifiedFrom: "company" });
+  });
+
   it("unsupported_carrier: identifiable carrier without a registered adapter", () => {
     const d = detectCarrier({ company: "PostNord SE", number: "PN1", url: null });
     expect(d).toMatchObject({ outcome: "unsupported_carrier", carrier: "postnord", identifiedFrom: "company" });
