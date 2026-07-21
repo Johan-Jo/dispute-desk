@@ -763,6 +763,7 @@
         "sourceShopify": "Shopify",
         "sourceMerchant": "Carga del comerciante",
         "sourceDerived": "Derivado",
+        "sourcePaymentGateway": "Shopify Payments",
         "sourceStorePolicy": "Política de tienda",
         "strength": {
           "strong": "Sólida",
@@ -1083,6 +1084,11 @@
           },
           "avsCvv": {
             "bankArgument": "La verificación de pago respalda la identidad del titular de la tarjeta.",
+            "bothMatched": "La dirección de facturación y el código de verificación de la tarjeta (CVV) coincidieron con los registros del emisor.",
+            "addressMatched": "La dirección de facturación coincidió con los registros del emisor.",
+            "streetMatched": "La calle de la dirección de facturación coincidió con los registros del emisor.",
+            "postalMatched": "El código postal de facturación coincidió con los registros del emisor.",
+            "cvvMatched": "El código de verificación de la tarjeta (CVV) coincidió con los registros del emisor.",
             "notIncluded": "El procesador de pagos no devolvió códigos de verificación AVS ni CVV para esta transacción. Nada que incluir: estos códigos vienen de la pasarela de pago en el momento del pago, no después.",
             "internalBothFail": "Tanto la dirección de facturación (AVS) como el código de verificación de la tarjeta (CVV) no coincidieron con los registros del emisor. Se mantiene interno: citarlo al banco socavaría la respuesta de fraude.",
             "internalAvsFail": "La dirección de facturación (AVS) no coincidió con los registros del emisor. Se mantiene interno: citarlo al banco socavaría la respuesta de fraude.",
