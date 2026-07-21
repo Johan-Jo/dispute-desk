@@ -85,6 +85,30 @@ export async function storeDataQuality(
     .eq("id", runId);
 }
 
+export async function storeBaseline(runId: string, baseline: unknown): Promise<void> {
+  const db = getServiceClient();
+  await db
+    .from("intelligence_analysis_runs")
+    .update({ baseline, updated_at: new Date().toISOString() })
+    .eq("id", runId);
+}
+
+export async function storeFeasibility(runId: string, feasibility: unknown): Promise<void> {
+  const db = getServiceClient();
+  await db
+    .from("intelligence_analysis_runs")
+    .update({ feasibility, updated_at: new Date().toISOString() })
+    .eq("id", runId);
+}
+
+export async function storeModelReport(runId: string, modelReport: unknown): Promise<void> {
+  const db = getServiceClient();
+  await db
+    .from("intelligence_analysis_runs")
+    .update({ model_report: modelReport, updated_at: new Date().toISOString() })
+    .eq("id", runId);
+}
+
 export async function finishRun(
   runId: string,
   status: Extract<RunStatus, "succeeded" | "failed">,

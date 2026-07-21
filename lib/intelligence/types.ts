@@ -67,6 +67,50 @@ export type FinalOutcome =
 
 export type Confidence = "insufficient" | "low" | "moderate" | "high";
 
+export type EvidenceGrade =
+  | "descriptive"
+  | "adjusted_observational"
+  | "prospectively_validated";
+
+export type RecommendationCategory =
+  | "prevention"
+  | "response"
+  | "automation"
+  | "economic_non_response";
+
+/** Persisted recommendation row (design §11), money as decimal-string bigint. */
+export interface RecommendationRow {
+  id: string;
+  analysis_run_id: string;
+  shop_id: string;
+  category: RecommendationCategory;
+  title: string;
+  summary: string;
+  suggested_action: string;
+  affected_order_count: number;
+  affected_dispute_count: number;
+  affected_disputed_minor: string | null;
+  currency: string | null;
+  baseline_metric: { name: string; value: number; numerator?: number; denominator?: number };
+  estimate_lower_minor: string | null;
+  estimate_point_minor: string | null;
+  estimate_upper_minor: string | null;
+  estimate_period: "historical_total" | "annualized" | null;
+  evidence_grade: EvidenceGrade;
+  confidence: Confidence;
+  confidence_kind: string | null;
+  implementation_effort: "low" | "medium" | "high" | null;
+  customer_friction_risk: "low" | "medium" | "high" | null;
+  limitations: string[];
+  assumptions: string[];
+  required_data_quality_checks: string[];
+  supporting_segment_ids: string[];
+  explanation?: string | null;
+  explanation_model?: string | null;
+  explanation_generated_at?: string | null;
+  created_at: string;
+}
+
 export type ConfidenceKind =
   | "descriptive_data"
   | "statistical_estimate"

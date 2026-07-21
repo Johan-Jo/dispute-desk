@@ -170,11 +170,47 @@ async function defaultLoadPersistedEvidence(
 
 // ── Section builder (pure, exported for tests) ───────────────────────────────
 
-/** Inclusion guard — plan §5. */
+/**
+ * Second, code-enforced non-disclosure layer (bank-optimized rebuttal rule).
+ *
+ * The analyzer tags every message with an `evidenceCategory`. Two of those
+ * categories are self-incriminating in a bank submission — they concede the
+ * very thing the merchant is contesting:
+ *   - `refund_history`      — a refund/credit was requested, offered, or owed
+ *     ("please drop the chargeback so we can refund you" is a confession).
+ *   - `cancellation_history`— the customer asked to cancel and it was
+ *     acknowledged (concedes the sale fell through).
+ *
+ * These MUST never reach bank-facing evidence, regardless of merchant
+ * approval. Merchant review is layer one (they shouldn't approve these); this
+ * set is layer two so a mistaken approval still cannot leak a confession into
+ * a pack → PDF → Shopify → bank. Matches EvidenceCategory strings emitted by
+ * lib/integrations/gorgias/relevanceAnalyzer.ts.
+ *
+ * `resolution_attempt` is deliberately NOT excluded here: it is genuinely
+ * double-edged (a merchant "here's your tracking" is helpful; a merchant "so
+ * sorry, it hasn't shipped" is not) and cannot be adjudicated by category
+ * alone — that stays a merchant-review judgment. Only unambiguous admissions
+ * are hard-blocked.
+ */
+export const BANK_EXCLUDED_EVIDENCE_CATEGORIES: ReadonlySet<string> = new Set([
+  "refund_history",
+  "cancellation_history",
+]);
+
+/** Inclusion guard — plan §5 + non-disclosure category block. */
 export function isIncludableMessage(
   ticket: PersistedGorgiasTicket,
   m: PersistedGorgiasMessage,
 ): boolean {
+  // Hard non-disclosure block: a self-incriminating category can never enter
+  // a bank-facing pack, even if a merchant approved it (layer-two guard).
+  if (
+    m.evidenceCategory !== null &&
+    BANK_EXCLUDED_EVIDENCE_CATEGORIES.has(m.evidenceCategory)
+  ) {
+    return false;
+  }
   return (
     (m.reviewStatus === "approved" || m.reviewStatus === "manual") &&
     ticket.matchStatus === "confirmed_match" &&
