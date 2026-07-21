@@ -37,7 +37,15 @@
 
 "use client";
 
-import { useCallback, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Banner,
@@ -109,6 +117,34 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
   const t = useTranslations("disputes.gorgiasComms");
   const { data, actions } = workspace;
   const comms = data?.gorgiasComms ?? null;
+
+  // Deep-link spotlight: when the evidence-ready email lands the merchant
+  // here (`?section=gorgias-comms`), scroll this card into view and pulse a
+  // temporary highlight ring around the messages awaiting approval, then
+  // fade it. Runs once, after the card has mounted with content. Hooks must
+  // precede the early returns below (rules-of-hooks), so they live here.
+  const searchParams = useSearchParams();
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const spotlightApplied = useRef(false);
+  const [spotlight, setSpotlight] = useState(false);
+  const isSpotlightTarget =
+    searchParams.get("section") === "gorgias-comms" && comms !== null;
+  useEffect(() => {
+    if (spotlightApplied.current || !isSpotlightTarget || !cardRef.current) return;
+    spotlightApplied.current = true;
+    const el = cardRef.current;
+    // Wait a tick so the Evidence tab panel is painted before scrolling.
+    const scrollTimer = window.setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setSpotlight(true);
+    }, 250);
+    // Fade the ring after it has done its job.
+    const fadeTimer = window.setTimeout(() => setSpotlight(false), 4200);
+    return () => {
+      window.clearTimeout(scrollTimer);
+      window.clearTimeout(fadeTimer);
+    };
+  }, [isSpotlightTarget]);
 
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -362,7 +398,17 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
   // "clicked Regenerate, nothing happened"). Show an honest note instead.
   const windowClosed = data?.dispute?.submissionState === "submitted_confirmed";
 
-  const staleBanner = data?.pack?.gorgiasEvidenceStale ? (
+  // The "package is out of date → Regenerate" prompt is only meaningful
+  // once there is APPROVED communication evidence not yet in the pack.
+  // The stale flag alone can be set by any content-affecting review action
+  // (approve/exclude/reset) — showing Regenerate while every message is
+  // still "Proposed" invites a no-op rebuild and reads as broken pedagogy.
+  // Gate on both: the flag AND at least one approved/manual message.
+  const approvedMessageCount = visibleTickets.reduce(
+    (sum, tk) => sum + (tk.counts?.approved ?? 0),
+    0,
+  );
+  const staleBanner = data?.pack?.gorgiasEvidenceStale && approvedMessageCount > 0 ? (
     windowClosed ? (
       <Banner tone="info" title={t("staleBanner.windowClosedTitle")}>
         <p>{t("staleBanner.windowClosedBody")}</p>
@@ -384,7 +430,43 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
   const hasPossibleGroup = mediumProposed.length > 0;
 
   return (
-    <div style={CARD_STYLE}>
+    <div
+      id="gorgias-comms"
+      ref={cardRef}
+      data-spotlight={spotlight ? "true" : "false"}
+      style={{
+        ...CARD_STYLE,
+        transition: "box-shadow 400ms ease, border-color 400ms ease",
+        ...(spotlight
+          ? {
+              borderColor: "#F59E0B",
+              boxShadow:
+                "0 0 0 3px rgba(245, 158, 11, 0.45), 0 8px 24px rgba(245, 158, 11, 0.18)",
+            }
+          : {}),
+      }}
+    >
+      {/* Deep-link spotlight: ring the messages awaiting approval so the
+          merchant sees exactly what to act on. Fades with the card ring. */}
+      <style>{`
+        #gorgias-comms[data-spotlight="true"] .gorgias-msg-box[data-awaiting-approval="true"] {
+          border-color: #F59E0B;
+          box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.35);
+          animation: gorgiasApprovePulse 1.1s ease-in-out 3;
+        }
+        .gorgias-msg-box {
+          transition: box-shadow 400ms ease, border-color 400ms ease;
+        }
+        @keyframes gorgiasApprovePulse {
+          0%, 100% { box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.30); }
+          50% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.55); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          #gorgias-comms[data-spotlight="true"] .gorgias-msg-box[data-awaiting-approval="true"] {
+            animation: none;
+          }
+        }
+      `}</style>
       {/* Header — title + subtitle + Refresh, matching the evidence card */}
       <div
         style={{
@@ -1009,8 +1091,14 @@ function MessageBox({
   onExclude: (m: GorgiasCommsMessageSummary) => void;
   onEditExplanation: (m: GorgiasCommsMessageSummary) => void;
 }) {
+  const awaitingApproval =
+    message.reviewStatus === "proposed" || message.needsReapproval;
   return (
-    <div style={{ border: "1px solid #E1E3E5", borderRadius: 12, padding: 16 }}>
+    <div
+      className="gorgias-msg-box"
+      data-awaiting-approval={awaitingApproval ? "true" : "false"}
+      style={{ border: "1px solid #E1E3E5", borderRadius: 12, padding: 16 }}
+    >
       <div
         style={{
           display: "flex",
