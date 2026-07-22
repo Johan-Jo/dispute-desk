@@ -45,7 +45,18 @@ export async function GET(req: NextRequest) {
   let query = sb
     .from("disputes")
     .select("*", { count: "exact" })
-    .eq("shop_id", shopId)
+    .eq("shop_id", shopId);
+
+  // Due-date ("urgency") sort ranks OPEN disputes before resolved ones.
+  // Resolved disputes keep their historical due_at (e.g. a 2018 chargeback),
+  // so a plain `due_at asc` floated long-closed rows above cases due this
+  // week (blume-box, 2026-07-22). closed_at IS NULL ⇒ open, and
+  // nullsFirst puts those first; resolved rows follow (most recently
+  // closed first), each group still due-date-ordered by the second key.
+  if (sortCol === "due_at" && sortAsc) {
+    query = query.order("closed_at", { ascending: false, nullsFirst: true });
+  }
+  query = query
     .order(sortCol, { ascending: sortAsc, nullsFirst: false })
     .order("created_at", { ascending: false });
 

@@ -1708,6 +1708,7 @@
       "conversationError": "Die Konversation konnte nicht geladen werden. Bitte erneut versuchen.",
       "status": {
         "processing": "Kommunikationsnachweise werden gesucht…",
+        "queuedNote": "Dies steht hinter anderen Hintergrundaufgaben in der Warteschlange und wird automatisch ausgeführt – Sie können diese Seite verlassen und später zurückkehren.",
         "refresh": "Aus Gorgias aktualisieren",
         "retry": "Erneut versuchen",
         "noMatches": "Für diesen Kunden wurden keine Support-Konversationen gefunden.",
