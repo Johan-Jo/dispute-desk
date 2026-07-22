@@ -52,6 +52,7 @@ import {
 import { CustomRuleModal, type CustomRuleDraft } from "./CustomRuleModal";
 import { FAMILY_TO_DISPUTE_TYPE } from "@/lib/rules/helpers";
 import { normalizeDisputeReasonKey } from "@/lib/disputes/reasonLabel";
+import { withShopParams } from "@/lib/withShopParams";
 
 // ─── Constants ──────────────────────────────────────────────────────────
 
@@ -96,6 +97,8 @@ interface ActivePack {
 interface AutomationData {
   activePacks: ActivePack[];
   pack_modes: Record<string, PackHandlingUiMode>;
+  /** Plan gate — false means every rules write on this page will 403. */
+  rulesAllowed: boolean;
 }
 
 interface CustomRule {
@@ -200,6 +203,7 @@ export default function EmbeddedRulesPage() {
         const next: AutomationData = {
           activePacks: data.activePacks ?? [],
           pack_modes: data.pack_modes ?? {},
+          rulesAllowed: data.rulesAccess?.allowed !== false,
         };
         setAutomation(next);
         setPendingModes(next.pack_modes);
@@ -295,6 +299,7 @@ export default function EmbeddedRulesPage() {
   );
 
   const dirty = packModesDirty || safeguardDirty;
+  const rulesAllowed = automation?.rulesAllowed ?? true;
 
   // ─── Deep link from coverage ──────────────────────────────────────────
 
@@ -347,6 +352,12 @@ export default function EmbeddedRulesPage() {
     setSaving(true);
     setErrorMsg(null);
     setSavedBanner(false);
+    // Reads the response body so a plan-gate 403 (upgrade_required) surfaces
+    // as its own message instead of the generic save error.
+    const throwSaveError = async (res: Response): Promise<never> => {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.upgrade_required ? "planGateSaveError" : "starterRulesError");
+    };
     try {
       if (packModesDirty) {
         const res = await fetch("/api/setup/automation", {
@@ -354,12 +365,7 @@ export default function EmbeddedRulesPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pack_modes: pendingModes }),
         });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(
-            typeof body?.error === "string" ? body.error : "save_failed",
-          );
-        }
+        if (!res.ok) await throwSaveError(res);
       }
 
       if (safeguardDirty) {
@@ -377,21 +383,25 @@ export default function EmbeddedRulesPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(rulePayload),
           });
-          if (!res.ok) throw new Error("safeguard_save_failed");
+          if (!res.ok) await throwSaveError(res);
         } else if (safeguard.enabled) {
           const res = await fetch("/api/rules", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(rulePayload),
           });
-          if (!res.ok) throw new Error("safeguard_save_failed");
+          if (!res.ok) await throwSaveError(res);
         }
       }
 
       await fetchAll();
       setSavedBanner(true);
-    } catch {
-      setErrorMsg("starterRulesError");
+    } catch (e) {
+      setErrorMsg(
+        e instanceof Error && e.message === "planGateSaveError"
+          ? "planGateSaveError"
+          : "starterRulesError",
+      );
     } finally {
       setSaving(false);
     }
@@ -454,6 +464,7 @@ export default function EmbeddedRulesPage() {
       primaryAction={{
         content: tr("primaryAddCustom"),
         onAction: openNewCustomRule,
+        disabled: !rulesAllowed,
       }}
     >
       <Layout>
@@ -467,6 +478,23 @@ export default function EmbeddedRulesPage() {
             {errorMsg && (
               <Banner tone="critical" onDismiss={() => setErrorMsg(null)}>
                 <p>{tr(errorMsg)}</p>
+              </Banner>
+            )}
+
+            {/* ── Plan gate — rules writes would 403, say so up front ── */}
+            {!rulesAllowed && (
+              <Banner
+                tone="warning"
+                title={tr("planGateTitle")}
+                action={{
+                  content: tr("upgradePlan"),
+                  url: withShopParams(
+                    "/app/billing",
+                    searchParams ?? new URLSearchParams(),
+                  ),
+                }}
+              >
+                <p>{tr("planGateBody")}</p>
               </Banner>
             )}
 
@@ -674,6 +702,7 @@ export default function EmbeddedRulesPage() {
                           onChange={(next) => setFamilyMode(family.id, next)}
                           reviewLabel={tr("review")}
                           autoLabel={tr("modeAutomaticShort")}
+                          disabled={!rulesAllowed}
                         />
                       )}
                     </div>
@@ -695,17 +724,25 @@ export default function EmbeddedRulesPage() {
                 }}
               >
                 <InlineStack gap="200" wrap>
-                  <Button size="slim" onClick={() => applyQuickConfig("auto")}>
+                  <Button
+                    size="slim"
+                    disabled={!rulesAllowed}
+                    onClick={() => applyQuickConfig("auto")}
+                  >
                     {tr("quickAutoAll")}
                   </Button>
-                  <Button size="slim" onClick={() => applyQuickConfig("review")}>
+                  <Button
+                    size="slim"
+                    disabled={!rulesAllowed}
+                    onClick={() => applyQuickConfig("review")}
+                  >
                     {tr("quickReviewAll")}
                   </Button>
                 </InlineStack>
                 <Button
                   variant="primary"
                   loading={saving}
-                  disabled={saving || !dirty}
+                  disabled={saving || !dirty || !rulesAllowed}
                   onClick={save}
                 >
                   {configuredCount > 0
@@ -736,6 +773,7 @@ export default function EmbeddedRulesPage() {
                 <Checkbox
                   label={tr("safeguardToggle")}
                   checked={safeguard.enabled}
+                  disabled={!rulesAllowed}
                   onChange={(checked) =>
                     setSafeguard((prev) => ({ ...prev, enabled: checked }))
                   }
@@ -745,6 +783,7 @@ export default function EmbeddedRulesPage() {
                     <TextField
                       label={tr("safeguardAmountLabel")}
                       type="number"
+                      disabled={!rulesAllowed}
                       value={String(safeguard.amount)}
                       onChange={(value) => {
                         const num = parseInt(value, 10);
@@ -765,7 +804,7 @@ export default function EmbeddedRulesPage() {
                     <Button
                       variant="primary"
                       loading={saving}
-                      disabled={saving}
+                      disabled={saving || !rulesAllowed}
                       onClick={save}
                     >
                       {tr("saveStarterRules")}
@@ -875,11 +914,13 @@ function ModeToggle({
   onChange,
   reviewLabel,
   autoLabel,
+  disabled = false,
 }: {
   mode: "auto" | "review";
   onChange: (mode: "auto" | "review") => void;
   reviewLabel: string;
   autoLabel: string;
+  disabled?: boolean;
 }) {
   const baseBtn: React.CSSProperties = {
     border: "none",
@@ -887,7 +928,7 @@ function ModeToggle({
     fontSize: 13,
     fontWeight: 600,
     borderRadius: 6,
-    cursor: "pointer",
+    cursor: disabled ? "default" : "pointer",
     transition: "all 150ms ease",
   };
   return (
@@ -900,10 +941,12 @@ function ModeToggle({
         background: "#F6F8FB",
         gap: 4,
         flexShrink: 0,
+        opacity: disabled ? 0.5 : 1,
       }}
     >
       <button
         type="button"
+        disabled={disabled}
         onClick={() => onChange("review")}
         style={{
           ...baseBtn,
@@ -917,6 +960,7 @@ function ModeToggle({
       </button>
       <button
         type="button"
+        disabled={disabled}
         onClick={() => onChange("auto")}
         style={{
           ...baseBtn,

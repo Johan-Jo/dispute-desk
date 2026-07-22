@@ -49,6 +49,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Plan gate — same check the POST enforces. Returned so the UI can render
+  // the upgrade state up front instead of failing the save at the last step.
+  const { data: shop } = await sb
+    .from("shops")
+    .select("plan")
+    .eq("id", shopId)
+    .single();
+  const rulesAccess = checkFeatureAccess(shop?.plan ?? "free", "rules");
+
   const installedTemplateIds = await listInstalledTemplateIdsForShop(shopId);
   const activePacks = await listLibraryPacksForAutomationRules(shopId);
   const allRules = (rules ?? []) as Rule[];
@@ -79,6 +88,10 @@ export async function GET(req: NextRequest) {
     activePacks,
     pack_modes,
     packAutomation: true,
+    rulesAccess: {
+      allowed: rulesAccess.allowed,
+      reason: rulesAccess.reason ?? null,
+    },
   });
 }
 
