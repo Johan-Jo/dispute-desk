@@ -19,6 +19,7 @@ import {
   CASE_STRENGTHENED,
 } from "../../disputeEvents/eventTypes";
 import { DISPUTE_ATTENTION_REASONS } from "../../disputes/attentionReasons";
+import { categorizeEvidenceField } from "../../argument/canonicalEvidence";
 import type { ClaimedJob } from "../claimJobs";
 import type { BuildResult } from "../../packs/buildPack";
 
@@ -411,45 +412,72 @@ async function notifyCaseStrengthened(
   }
 }
 
-/**
- * Derive the set of completeness fields already collected on a pack, so the
- * evidence email doesn't ask the merchant to upload evidence we already have.
- *
- * Prefers the richer `checklist_v2` (present ⇔ status "available" or "waived"),
- * falling back to the v1 checklist inside `pack_json.completeness` (present ===
- * true). Returns an empty set if neither is available.
- */
-function derivePresentFields(pack: {
-  checklist_v2?: unknown;
-  pack_json?: unknown;
-}): Set<string> {
-  const out = new Set<string>();
+interface PackSection {
+  type?: string;
+  source?: string;
+  fieldsProvided?: string[];
+  data?: Record<string, unknown>;
+}
 
-  const v2 = pack.checklist_v2 as
-    | Array<{ field?: string; status?: string }>
-    | null
-    | undefined;
-  if (Array.isArray(v2) && v2.length > 0) {
-    for (const c of v2) {
-      if (c?.field && (c.status === "available" || c.status === "waived")) {
-        out.add(c.field);
+/**
+ * Derive what REAL evidence the pack actually holds — verified by content, not
+ * by checklist field-presence. The checklist marks a field "available" the
+ * instant any section emits it, which is why an empty Shopify order timeline
+ * (or marketing-app buyer attributes) once made `customer_communication` read
+ * as "present" and the email falsely claimed we'd attached support
+ * conversations. Here we inspect the actual section payloads instead.
+ *
+ * - Real delivery proof ⇔ a fulfillment section whose `delivery_proof`
+ *   categorizes as `moderate`/`strong` (proofType delivered_confirmed /
+ *   signature_confirmed) — a bare `label_created` does NOT count.
+ * - Real support comms ⇔ a Gorgias section with approved messages, OR a
+ *   Shopify-timeline comms section with genuine human authorship (staff note /
+ *   customer note / merchant comment). Buyer attributes and system timeline
+ *   events do NOT count.
+ */
+function deriveRealEvidence(pack: { pack_json?: unknown }): {
+  hasRealDeliveryProof: boolean;
+  hasRealSupportComms: boolean;
+} {
+  const sections =
+    (pack.pack_json as { sections?: PackSection[] } | null | undefined)
+      ?.sections ?? [];
+
+  let hasRealDeliveryProof = false;
+  let hasRealSupportComms = false;
+
+  for (const s of sections) {
+    const data = (s?.data ?? {}) as Record<string, unknown>;
+    const provides = s?.fieldsProvided ?? [];
+
+    // Delivery proof — categorize the fulfillment section's payload.
+    if (
+      !hasRealDeliveryProof &&
+      (provides.includes("delivery_proof") || provides.includes("shipping_tracking"))
+    ) {
+      const cat = categorizeEvidenceField("delivery_proof", data);
+      if (cat === "moderate" || cat === "strong") hasRealDeliveryProof = true;
+    }
+
+    // Support comms — must be real human authorship, not an empty timeline.
+    if (!hasRealSupportComms && s?.type === "comms") {
+      const summary = (data.summary ?? {}) as Record<string, unknown>;
+      if (s.source === "gorgias") {
+        // Gorgias section is only emitted with approved, included messages.
+        if (Number(summary.messageCount ?? 0) > 0) hasRealSupportComms = true;
+      } else {
+        // shopify_timeline — genuine authorship only. Explicitly ignore
+        // buyerAttributeCount / timelineEventCount / confirmationEventCount.
+        const real =
+          Number(summary.merchantCommentCount ?? 0) > 0 ||
+          summary.staffNotePresent === true ||
+          summary.customerNotePresent === true;
+        if (real) hasRealSupportComms = true;
       }
     }
-    return out;
   }
 
-  const v1 = (
-    pack.pack_json as
-      | { completeness?: { checklist?: Array<{ field?: string; present?: boolean }> } }
-      | null
-      | undefined
-  )?.completeness?.checklist;
-  if (Array.isArray(v1)) {
-    for (const c of v1) {
-      if (c?.field && c.present) out.add(c.field);
-    }
-  }
-  return out;
+  return { hasRealDeliveryProof, hasRealSupportComms };
 }
 
 async function sendManualEvidenceAlert(
@@ -457,11 +485,11 @@ async function sendManualEvidenceAlert(
   shopId: string,
   packId: string
 ): Promise<void> {
-  // Load pack → dispute info. checklist_v2 + pack_json carry the completeness
-  // checklist we read to avoid asking the merchant for evidence we already have.
+  // Load pack → dispute info. pack_json carries the collected sections we
+  // inspect (by content) to decide what real evidence we hold.
   const { data: pack } = await db
     .from("evidence_packs")
-    .select("id, dispute_id, shop_id, checklist_v2, pack_json")
+    .select("id, dispute_id, shop_id, pack_json")
     .eq("id", packId)
     .single();
   if (!pack?.dispute_id) return;
@@ -486,21 +514,19 @@ async function sendManualEvidenceAlert(
     .single();
 
   const storeProfile = (setup?.steps as Record<string, { payload?: Record<string, unknown> }>)?.store_profile?.payload;
-  const digitalProof = storeProfile?.digitalProof as string | undefined;
   const storeTypes = (storeProfile?.storeTypes as string[] | undefined) ?? [];
 
-  // Check if this dispute type warrants an evidence touchpoint at all. This is
-  // deliberately WITHOUT present-fields: even when every ask is already
-  // satisfied, we still send a calm "ready to review" email rather than going
-  // silent — the mailer picks ask-mode vs review-mode from the present-fields.
-  if (!shouldSendEvidenceAlert(dispute.reason, digitalProof, storeTypes)) {
+  // We always send the post-build touchpoint (subject to the notification
+  // pref + dedupe below); the mailer decides ask-mode vs review-mode from the
+  // REAL evidence state, so we never go silent.
+  if (!shouldSendEvidenceAlert(dispute.reason, undefined, storeTypes)) {
     return;
   }
 
-  // What DisputeDesk has ALREADY collected for this pack — read the persisted
-  // completeness checklist (never recompute). Used to suppress redundant asks
-  // and to render the "already attached" reassurance block.
-  const presentFields = derivePresentFields(pack);
+  // What DisputeDesk ACTUALLY has for this pack — verified by section content,
+  // not by checklist field-presence. Drives both ask-suppression and the
+  // truthful "already attached" block (never claim evidence we don't hold).
+  const { hasRealDeliveryProof, hasRealSupportComms } = deriveRealEvidence(pack);
 
   // Matched-but-pending Gorgias comms: enrichment sets attention_reason =
   // 'gorgias_evidence_ready' with a proposal_count when it finds support
@@ -552,9 +578,9 @@ async function sendManualEvidenceAlert(
     disputeReason: dispute.reason,
     disputeAmount: amount,
     packId,
-    digitalProof,
     storeTypes,
-    presentFields,
+    hasRealDeliveryProof,
+    hasRealSupportComms,
     pendingSupportReview,
     pendingSupportCount,
     orderName: dispute.order_name ?? null,

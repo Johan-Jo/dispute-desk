@@ -1,18 +1,25 @@
 /**
  * Send the post-build merchant evidence email.
  *
- * Triggered after a pack build. Two modes, chosen from what the pack already
- * collected (`ctx.presentFields`):
- *  - ask mode:    the dispute type benefits from evidence DisputeDesk can't
- *                 auto-collect (e.g. digital access logs) AND it isn't already
- *                 attached → prompt the merchant to upload the missing items.
- *  - review mode: everything we can collect is already on the pack (delivery
- *                 proof, support conversations, …) → a calm "ready to review"
- *                 note with no upload ask, so we never ask for evidence we have.
+ * Triggered after a pack build. Two modes, chosen from what DisputeDesk
+ * ACTUALLY has for the dispute (real, verified content — not mere checklist
+ * presence):
+ *  - ask mode:    something genuinely manual is missing — carrier delivery
+ *                 proof we couldn't auto-find (physical shipping disputes), or
+ *                 Gorgias-matched conversations awaiting the merchant's
+ *                 approve/reject decision → a targeted prompt.
+ *  - review mode: nothing manual is genuinely needed → a calm "ready to
+ *                 review" note, no ask.
  *
- * Either way, a "We've already attached" block reassures the merchant about
- * what's already in the pack, derived from the same present-fields the asks
- * are suppressed against so it can never over-claim.
+ * A "We've already attached" block reassures the merchant — but ONLY lists
+ * evidence we actually have (real delivery confirmation, real support
+ * conversations), never something we merely have a structural checklist row
+ * for. This email must never claim to have attached evidence it doesn't have.
+ *
+ * IMPORTANT — do not reintroduce a "digital access logs / usage records" ask.
+ * That maps to nothing manual: the equivalent (`activity_log` →
+ * `accessActivityLog`) is auto-collected for every order, so it's neither
+ * uploadable by the merchant nor missing. It was removed 2026-07-22.
  *
  * Fire-and-forget — never throws; callers should log failures without blocking.
  */
@@ -26,34 +33,16 @@ const FROM_EMAIL =
 const REPLY_TO =
   process.env.EMAIL_REPLY_TO ?? "DisputeDesk <notifications@mail.disputedesk.app>";
 
-/** Dispute reasons where digital/manual evidence strengthens the case. */
-const DIGITAL_EVIDENCE_REASONS = new Set([
-  "PRODUCT_UNACCEPTABLE",
-  "NOT_AS_DESCRIBED",
-  "SUBSCRIPTION_CANCELED",
-  "CREDIT_NOT_PROCESSED",
-  "FRAUDULENT",
-  "GENERAL",
-]);
-
-/** Dispute reasons where carrier/shipping proof strengthens the case. */
+/**
+ * Dispute reasons where carrier/shipping delivery proof is a relevant manual
+ * ask (only when we couldn't auto-collect it and the store ships physical
+ * goods). These are the only reasons where "upload delivery proof" makes
+ * sense as a merchant action.
+ */
 const SHIPPING_EVIDENCE_REASONS = new Set([
   "PRODUCT_NOT_RECEIVED",
   "FRAUDULENT",
 ]);
-
-/**
- * Map each manual-evidence request type to the completeness checklist field(s)
- * that, when already collected, make the request redundant. If ANY listed
- * field is present in the pack, we DON'T ask the merchant to upload it.
- *
- * `digital_access_logs` is intentionally absent — DisputeDesk has no way to
- * auto-collect digital access logs from Shopify, so it is never suppressed.
- */
-const SUPPRESS_IF_PRESENT: Record<string, string[]> = {
-  carrier_delivery_proof: ["delivery_proof", "shipping_tracking"],
-  support_conversations: ["customer_communication"],
-};
 
 export interface EvidenceNeededContext {
   to: string;
@@ -63,23 +52,30 @@ export interface EvidenceNeededContext {
   disputeReason: string | null;
   disputeAmount?: string | null;
   packId: string;
-  /** Merchant's digital proof capability from store profile */
-  digitalProof?: string;
-  /** Merchant's store types from store profile (used to gate shipping asks) */
+  /** Merchant's store types from store profile (gates the shipping ask). */
   storeTypes?: string[];
   /** Link to the dispute detail page */
   disputeUrl?: string;
   /**
-   * Completeness fields already collected in the pack (e.g. "delivery_proof",
-   * "customer_communication"). Used to suppress asks for evidence we already
-   * have and to render the "already attached" reassurance block.
+   * True when the pack has REAL delivery proof (a fulfillment section whose
+   * proofType is delivered_confirmed / signature_confirmed — categorized
+   * moderate/strong, not a bare label). Drives both ask-suppression and the
+   * "already attached" line. Computed by the caller from actual section data,
+   * NOT from checklist field-presence.
    */
-  presentFields?: Set<string>;
+  hasRealDeliveryProof?: boolean;
+  /**
+   * True when the pack has REAL support conversations — a Gorgias section with
+   * approved messages, or a Shopify-timeline comms section with genuine human
+   * authorship (staff note / customer note / merchant comment). Marketing-app
+   * buyer attributes and system timeline events do NOT count. Computed by the
+   * caller from actual section data, NOT from checklist field-presence.
+   */
+  hasRealSupportComms?: boolean;
   /**
    * True when Gorgias matched support conversations to this dispute that are
-   * awaiting the merchant's approve/reject decision. Swaps the generic
-   * "upload support conversations" ask for a "review matched conversations"
-   * prompt that deep-links to the review section.
+   * awaiting the merchant's approve/reject decision. Surfaces a "review matched
+   * conversations" prompt that deep-links to the review section.
    */
   pendingSupportReview?: boolean;
   /** Number of matched conversations awaiting review (for the prompt copy). */
@@ -89,126 +85,89 @@ export interface EvidenceNeededContext {
 }
 
 /**
- * Options for `getNeededEvidenceTypes` beyond the core reason/profile inputs.
+ * Options for `getNeededEvidenceTypes` — the REAL, content-verified state of
+ * the pack (not checklist field-presence).
  */
 export interface NeededEvidenceOptions {
+  /** Pack has real delivery proof (moderate/strong), so don't ask for it. */
+  hasRealDeliveryProof?: boolean;
   /**
-   * Completeness fields already collected in the pack (e.g. "delivery_proof",
-   * "customer_communication"). Anything already satisfied is not requested.
-   */
-  presentFields?: Set<string>;
-  /**
-   * True when Gorgias matched support conversations to this dispute that are
-   * awaiting the merchant's approve/reject decision (they are NOT yet in the
-   * pack, so `customer_communication` is not set). In that case we swap the
-   * generic "upload support conversations" ask for a "review the matched
-   * conversations" ask — the merchant approves what we already found instead
-   * of digging up threads from scratch.
+   * Gorgias matched conversations exist but aren't approved yet → ask the
+   * merchant to review/approve them (not upload from scratch).
    */
   pendingSupportReview?: boolean;
 }
 
 /**
- * Determine what manual evidence types should be requested based on
- * the dispute reason, the merchant's stated capabilities, and what
- * DisputeDesk has ALREADY collected for this pack.
+ * Determine what GENUINELY-MANUAL, GENUINELY-MISSING evidence to ask for.
  *
- * Shipping evidence is gated on the merchant selling physical goods —
- * a digital-only store will never have carrier proof to upload, even if
- * the issuer miscodes the dispute as PRODUCT_NOT_RECEIVED.
+ * The app auto-collects nearly everything (order/transaction record, AVS/CVV,
+ * IP, activity log, fraud screening, tracking, delivery, policies). The only
+ * things worth asking a merchant for are:
+ *  - carrier delivery proof, when we couldn't auto-find delivery/tracking AND
+ *    the store ships physical goods AND the reason is a shipping reason; and
+ *  - reviewing Gorgias-matched conversations that are awaiting approval.
  *
- * `opts.presentFields` (the pack's already-collected completeness fields)
- * removes anything we already have: e.g. if delivery proof is on the pack we
- * don't ask the merchant to upload carrier proof, and if support comms are
- * attached (Gorgias-approved or Shopify timeline) we don't ask for support
- * conversations.
- *
- * `opts.pendingSupportReview` handles the in-between state: Gorgias matched
- * conversations exist but aren't approved yet — we ask the merchant to review
- * and approve them rather than to upload conversations from scratch.
+ * There is deliberately NO "digital access logs / usage records" ask — that
+ * maps to nothing manual and is auto-collected (see module header).
  */
 export function getNeededEvidenceTypes(
   reason: string | null,
-  digitalProof?: string,
+  _digitalProof?: string,
   storeTypes?: string[],
   opts?: NeededEvidenceOptions
 ): string[] {
-  const presentFields = opts?.presentFields;
+  const hasRealDeliveryProof = opts?.hasRealDeliveryProof ?? false;
   const pendingSupportReview = opts?.pendingSupportReview ?? false;
 
   const needed: string[] = [];
   const r = (reason ?? "GENERAL").toUpperCase();
   const sellsPhysical = !!storeTypes?.includes("physical");
 
-  // Digital evidence: access logs, usage records, download proof
+  // Carrier delivery proof — only when we DON'T already have real delivery
+  // proof, the store ships physical goods, and the reason is shipping-related.
   if (
-    DIGITAL_EVIDENCE_REASONS.has(r) &&
-    digitalProof &&
-    digitalProof !== "no"
+    SHIPPING_EVIDENCE_REASONS.has(r) &&
+    sellsPhysical &&
+    !hasRealDeliveryProof
   ) {
-    needed.push("digital_access_logs");
-  }
-
-  // Shipping evidence: carrier proof of delivery, signed delivery.
-  // Only ask physical-goods merchants — digital/services/subscriptions
-  // stores have nothing to upload here.
-  if (SHIPPING_EVIDENCE_REASONS.has(r) && sellsPhysical) {
     needed.push("carrier_delivery_proof");
   }
 
-  // Support conversations: always useful for disputed charges. When Gorgias
-  // has already matched conversations awaiting approval, ask the merchant to
-  // REVIEW those (approve/reject) rather than upload from scratch.
-  if (DIGITAL_EVIDENCE_REASONS.has(r) || SHIPPING_EVIDENCE_REASONS.has(r)) {
-    needed.push(
-      pendingSupportReview ? "review_matched_conversations" : "support_conversations"
-    );
+  // Gorgias matched conversations awaiting the merchant's approve/reject
+  // decision — the one legitimate manual comms action.
+  if (pendingSupportReview) {
+    needed.push("review_matched_conversations");
   }
 
-  // Drop anything we've already collected — don't ask a merchant to upload
-  // evidence that is already in the pack. `review_matched_conversations` is
-  // NOT suppressed by `customer_communication`: the whole point is that the
-  // matched comms are pending approval and thus not yet a present field.
-  if (!presentFields || presentFields.size === 0) return needed;
-  return needed.filter((type) => {
-    const satisfiers = SUPPRESS_IF_PRESENT[type];
-    if (!satisfiers) return true; // no auto-collected equivalent
-    return !satisfiers.some((f) => presentFields.has(f));
-  });
+  return needed;
 }
 
 /**
- * Check if a dispute warrants a manual evidence alert email at all.
+ * Check if a dispute warrants an evidence email at all.
  *
- * NOTE: This intentionally does NOT take `presentFields`. It answers "did this
- * dispute type ever warrant an evidence touchpoint?" — the caller still sends
- * a calm "ready to review" email when every ask has been auto-satisfied, so
- * the gate must not go silent just because nothing is left to upload.
+ * The email is a per-dispute touchpoint after a successful build; we always
+ * send it (subject to the notification pref + dedupe in the caller) so the
+ * merchant gets either a targeted ask or a calm "ready to review" note. The
+ * caller owns those gates; this remains true so the touchpoint is never
+ * silently dropped.
  */
 export function shouldSendEvidenceAlert(
-  reason: string | null,
-  digitalProof?: string,
-  storeTypes?: string[]
+  _reason: string | null,
+  _digitalProof?: string,
+  _storeTypes?: string[]
 ): boolean {
-  return getNeededEvidenceTypes(reason, digitalProof, storeTypes).length > 0;
+  return true;
 }
 
 const EVIDENCE_TYPE_LABELS: Record<string, { label: string; hint: string }> = {
-  digital_access_logs: {
-    label: "Digital access logs or usage records",
-    hint: "Screenshots or exports of customer access logs, download records, or account activity",
-  },
   carrier_delivery_proof: {
     label: "Carrier delivery proof",
     hint: "Signed delivery confirmation, carrier proof-of-delivery document, or delivery photo",
   },
-  support_conversations: {
-    label: "Customer support conversations",
-    hint: "Email threads, chat logs, or support tickets related to this order",
-  },
-  // Distinct from support_conversations: we've already MATCHED conversations
-  // (via Gorgias) and just need the merchant to approve/reject them. The hint
-  // is overridden at render time with the actual pending count + deep link.
+  // Distinct from an upload: we've already MATCHED conversations (via Gorgias)
+  // and just need the merchant to approve/reject them. The hint is overridden
+  // at render time with the actual pending count + deep link.
   review_matched_conversations: {
     label: "Review matched support conversations",
     hint: "We matched support conversations to this order — approve the ones that support your defence",
@@ -216,33 +175,15 @@ const EVIDENCE_TYPE_LABELS: Record<string, { label: string; hint: string }> = {
 };
 
 /**
- * Human labels for completeness fields DisputeDesk has already collected —
- * used in the "We've already attached" reassurance block. Keyed by the same
- * canonical field keys the completeness engine emits. Multiple fields can map
- * to one label (delivery_proof + shipping_tracking both mean "delivery
- * confirmation"); we de-duplicate by label when rendering.
+ * Build the "already attached" labels from what the pack ACTUALLY has —
+ * real delivery proof and/or real support conversations. Each entry is gated
+ * on a content-verified boolean computed by the caller, so this block can
+ * never claim evidence we don't hold.
  */
-const PRESENT_FIELD_LABELS: Record<string, string> = {
-  delivery_proof: "Delivery confirmation & tracking",
-  shipping_tracking: "Delivery confirmation & tracking",
-  customer_communication: "Customer support conversations",
-};
-
-/**
- * Build the de-duplicated list of "already attached" evidence labels from the
- * pack's present fields, in a stable order.
- */
-function alreadyAttachedLabels(presentFields?: Set<string>): string[] {
-  if (!presentFields || presentFields.size === 0) return [];
-  const seen = new Set<string>();
+function alreadyAttachedLabels(ctx: EvidenceNeededContext): string[] {
   const out: string[] = [];
-  for (const field of Object.keys(PRESENT_FIELD_LABELS)) {
-    if (!presentFields.has(field)) continue;
-    const label = PRESENT_FIELD_LABELS[field];
-    if (seen.has(label)) continue;
-    seen.add(label);
-    out.push(label);
-  }
+  if (ctx.hasRealDeliveryProof) out.push("Delivery confirmation & tracking");
+  if (ctx.hasRealSupportComms) out.push("Customer support conversations");
   return out;
 }
 
@@ -256,10 +197,10 @@ export async function sendEvidenceNeededAlert(
 
   const neededTypes = getNeededEvidenceTypes(
     ctx.disputeReason,
-    ctx.digitalProof,
+    undefined,
     ctx.storeTypes,
     {
-      presentFields: ctx.presentFields,
+      hasRealDeliveryProof: ctx.hasRealDeliveryProof,
       pendingSupportReview: ctx.pendingSupportReview,
     }
   );
@@ -325,9 +266,10 @@ export async function sendEvidenceNeededAlert(
       ? gorgiasReviewUrl
       : disputeUrl;
 
-  // "Already attached" reassurance — derived from the SAME present-fields the
-  // asks were suppressed against, so it can never claim something we don't have.
-  const attachedLabels = alreadyAttachedLabels(ctx.presentFields);
+  // "Already attached" reassurance — derived from content-verified booleans
+  // (real delivery proof / real support comms), so it can never claim
+  // something we don't actually have.
+  const attachedLabels = alreadyAttachedLabels(ctx);
   const attachedListHtml = attachedLabels
     .map((l) => `<li>${l}</li>`)
     .join("");
