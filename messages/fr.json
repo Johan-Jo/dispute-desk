@@ -1708,6 +1708,7 @@
       "conversationError": "La conversation n'a pas pu être chargée. Veuillez réessayer.",
       "status": {
         "processing": "Recherche de preuves de communication…",
+        "queuedNote": "Cette tâche est en file d'attente derrière d'autres traitements en arrière-plan et s'exécutera automatiquement — vous pouvez quitter cette page et y revenir plus tard.",
         "refresh": "Actualiser depuis Gorgias",
         "retry": "Réessayer",
         "noMatches": "Aucune conversation de support n'a été trouvée pour ce client.",

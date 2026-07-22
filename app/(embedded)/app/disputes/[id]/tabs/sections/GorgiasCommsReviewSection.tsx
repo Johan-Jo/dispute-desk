@@ -91,6 +91,16 @@ const RUN_PROCESSING_STATUSES = new Set([
   "analyzing",
 ]);
 
+// A run sits in "queued" until the shop's single worker slot frees up. With
+// MAX_CONCURRENT_PER_SHOP = 1 the enrichment can legitimately wait behind a
+// bulk backlog (e.g. many build_pack jobs) for several minutes. Past this
+// grace period we tell the merchant it's queued behind other work — and keep
+// the Refresh control available — instead of leaving them on a spinner that
+// looks stuck forever. (blume-box, 2026-07-22: enrich starved ~15 min behind
+// 7 priority-50 build_pack jobs.) The re-enqueue is idempotent, so a Refresh
+// during this window is a no-op guarded by the pending-job check.
+const QUEUED_GRACE_MS = 30_000;
+
 // Matches EvidenceUsedSection's DISPOSITION_COLORS + the design's chip
 // palette so the Gorgias card reads as the same green/grey family as the
 // evidence card directly above it.
@@ -148,6 +158,11 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
 
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  // A 1s clock so the "queued too long" copy appears even when the polled run
+  // object is byte-identical across ticks (a run can sit in "queued" for
+  // minutes behind a bulk backlog). Only mounts a timer while the run is
+  // still queued — see the effect below, which reads `comms.latestRun`.
+  const [now, setNow] = useState<number | null>(null);
   const [transcripts, setTranscripts] = useState<
     Record<string, TranscriptMessage[] | "loading" | "error">
   >({});
@@ -169,6 +184,24 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
     reason: string;
   } | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+
+  // While the run is still "queued" (not yet claimed by a worker), tick a 1s
+  // clock so the elapsed-since-queued comparison crosses QUEUED_GRACE_MS even
+  // if the polled run object never changes. Stops as soon as the run leaves
+  // "queued". Reads `comms.latestRun` directly (hooks precede early returns).
+  const queuedStartedAt =
+    comms?.latestRun?.status === "queued"
+      ? comms.latestRun.startedAt ?? null
+      : null;
+  useEffect(() => {
+    if (!queuedStartedAt) {
+      setNow(null);
+      return;
+    }
+    setNow(Date.now());
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [queuedStartedAt]);
 
   const loadTranscript = useCallback(
     async (matchedTicketId: string): Promise<TranscriptMessage[] | null> => {
@@ -344,6 +377,16 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
   const reconnectRequired = comms.errorCode === "reconnect_required";
   const processing = run ? RUN_PROCESSING_STATUSES.has(run.status) : false;
 
+  // A run that has been "queued" past the grace period is waiting behind other
+  // background work (single worker slot per shop). Surface an honest note and
+  // keep the Refresh control available so the merchant is never trapped on a
+  // spinner that looks stuck. `now === null` before the clock's first tick.
+  const queuedTooLong =
+    run?.status === "queued" &&
+    now !== null &&
+    Date.parse(run.startedAt) > 0 &&
+    now - Date.parse(run.startedAt) >= QUEUED_GRACE_MS;
+
   // ── Status line ──
   let statusLine: ReactNode = null;
   if (reconnectRequired) {
@@ -354,12 +397,19 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
     );
   } else if (processing) {
     statusLine = (
-      <InlineStack gap="200" blockAlign="center">
-        <Spinner size="small" accessibilityLabel={t("status.processing")} />
-        <Text as="span" tone="subdued">
-          {t("status.processing")}
-        </Text>
-      </InlineStack>
+      <BlockStack gap="150">
+        <InlineStack gap="200" blockAlign="center">
+          <Spinner size="small" accessibilityLabel={t("status.processing")} />
+          <Text as="span" tone="subdued">
+            {t("status.processing")}
+          </Text>
+        </InlineStack>
+        {queuedTooLong && (
+          <Text as="p" tone="subdued" variant="bodySm">
+            {t("status.queuedNote")}
+          </Text>
+        )}
+      </BlockStack>
     );
   } else if (run?.status === "analysis_deferred") {
     statusLine = (
@@ -516,7 +566,7 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
             {t("subtitle")}
           </p>
         </div>
-        {!processing && !reconnectRequired && (
+        {(!processing || queuedTooLong) && !reconnectRequired && (
           <div style={{ flex: "none" }}>
             <Button
               onClick={() => void refreshEnrichment()}

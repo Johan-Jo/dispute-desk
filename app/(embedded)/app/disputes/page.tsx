@@ -45,6 +45,7 @@ import {
   formatDueDate,
   formatShortId,
   orderLabel,
+  parseListDeepLink,
   resolveSort,
   statusLabelForCsv,
   translateFamily,
@@ -153,13 +154,27 @@ export default function DisputesListPage() {
     w.__ddFirstDisputeId = disputes[0]?.id;
   }, [disputes]);
 
+  // Deep-links from the dashboard land on this page with a
+  // `?normalized_status=…` (and optionally `?closed=…`) param — e.g. the
+  // "Needs action" tile opens `?normalized_status=new,action_needed,needs_review`.
+  // Read those once on mount so the initial list fetch is actually filtered.
+  // Previously the URL param was ignored: state started at `[]` / tab "all",
+  // so the list fetched UNFILTERED and showed resolved/closed disputes under
+  // a "needs action" heading (blume-box, 2026-07-22). `closed` disputes carry
+  // a stale `due_at`, so with the due-date sort they even floated to the top.
+  // Mount-only: subsequent navigation is driven by in-page state, not the URL.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const initialUrlFilters = useMemo(() => parseListDeepLink(searchParams), []);
+
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [statusFilter] = useState<string[]>([]);
   const [phaseFilter, setPhaseFilter] = useState<string[]>([]);
-  const [normalizedStatusFilter, setNormalizedStatusFilter] = useState<string[]>([]);
+  const [normalizedStatusFilter, setNormalizedStatusFilter] = useState<string[]>(
+    initialUrlFilters.statuses,
+  );
   const [outcomeFilter, setOutcomeFilter] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<TabId>("all");
+  const [activeTab, setActiveTab] = useState<TabId>(initialUrlFilters.tab);
   const [queryValue, setQueryValue] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, total_pages: 0 });
