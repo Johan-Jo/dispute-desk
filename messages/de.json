@@ -1723,7 +1723,9 @@
         "body": "Sie haben die Kommunikationsnachweise geändert, nachdem das Paket erstellt wurde. Erstellen Sie es neu, um Ihre freigegebenen Nachrichten aufzunehmen.",
         "cta": "Paket neu erstellen",
         "windowClosedTitle": "Bereits an die Bank übermittelt",
-        "windowClosedBody": "Sie haben neue Kommunikationsbelege freigegeben, aber Shopify hat diesen Widerspruch bereits an die ausstellende Bank weitergeleitet – das Verteidigungspaket kann nicht mehr geändert werden."
+        "windowClosedBody": "Sie haben neue Kommunikationsbelege freigegeben, aber Shopify hat diesen Widerspruch bereits an die ausstellende Bank weitergeleitet – das Verteidigungspaket kann nicht mehr geändert werden.",
+        "notSavedTitle": "Ihre genehmigten Nachrichten werden aufgenommen",
+        "notSavedBody": "Sie haben Support-Nachrichten als Beweise genehmigt. Sie werden automatisch zu Ihrem Verteidigungspaket hinzugefügt, wenn Sie es erstellen und einreichen — kein zusätzlicher Schritt nötig."
       },
       "tier": {
         "possible": "Mögliche Treffer",
