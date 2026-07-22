@@ -28,10 +28,18 @@ vi.mock("@/lib/packs/buildPack", () => ({
 vi.mock("@/lib/automation/pipeline", () => ({
   evaluateAndMaybeAutoSave: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/lib/email/sendEvidenceNeededAlert", () => ({
-  sendEvidenceNeededAlert: vi.fn().mockResolvedValue({ ok: false }),
-  shouldSendEvidenceAlert: vi.fn().mockReturnValue(false),
-}));
+// Use the REAL shouldSendEvidenceAlert (pure gate) so the alert path is
+// actually exercised; only sendEvidenceNeededAlert is stubbed so tests can
+// assert the context it receives (presentFields, orderName, …).
+vi.mock("@/lib/email/sendEvidenceNeededAlert", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/lib/email/sendEvidenceNeededAlert")
+  >("@/lib/email/sendEvidenceNeededAlert");
+  return {
+    ...actual,
+    sendEvidenceNeededAlert: vi.fn().mockResolvedValue({ ok: false }),
+  };
+});
 vi.mock("@/lib/email/sendNewDisputeAlert", () => ({
   claimAndSendDeferredNewDisputeAlert: vi.fn().mockResolvedValue(undefined),
 }));
@@ -61,6 +69,7 @@ import { buildPack } from "@/lib/packs/buildPack";
 import { evaluateAndMaybeAutoSave } from "@/lib/automation/pipeline";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { claimAndSendDeferredNewDisputeAlert } from "@/lib/email/sendNewDisputeAlert";
+import { sendEvidenceNeededAlert } from "@/lib/email/sendEvidenceNeededAlert";
 import { consumePack, PackLimitReachedError } from "@/lib/billing/consumePack";
 import { handleBuildPack } from "../buildPackJob";
 import type { ClaimedJob } from "../../claimJobs";
@@ -71,6 +80,7 @@ const mockBuildPack = vi.mocked(buildPack);
 const mockEvaluateAndMaybeAutoSave = vi.mocked(evaluateAndMaybeAutoSave);
 const mockEmitDisputeEvent = vi.mocked(emitDisputeEvent);
 const mockDeferredAlert = vi.mocked(claimAndSendDeferredNewDisputeAlert);
+const mockSendEvidenceNeededAlert = vi.mocked(sendEvidenceNeededAlert);
 const mockConsumePack = vi.mocked(consumePack);
 
 const PACK_ID = "pack-1";
@@ -382,5 +392,201 @@ describe("handleBuildPack", () => {
 
     await expect(handleBuildPack(makeJob())).rejects.toThrow();
     expect(mockConsumePack).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Table-routing Supabase double for the sendManualEvidenceAlert path. Unlike
+ * `makeSb` (one fixed row for every select), this serves per-table fixtures so
+ * we can exercise the completeness-aware email selection end-to-end.
+ */
+function makeRoutingSb(opts: {
+  checklistV2?: Array<{ field: string; status: string }> | null;
+  packJson?: unknown;
+  disputeRow?: Record<string, unknown>;
+  storeProfile?: Record<string, unknown>;
+  team?: Record<string, unknown>;
+  shopDomain?: string;
+}) {
+  const rowByTable: Record<string, unknown> = {
+    evidence_packs: {
+      id: PACK_ID,
+      dispute_id: DISPUTE_ID,
+      shop_id: SHOP_ID,
+      checklist_v2: opts.checklistV2 ?? null,
+      pack_json: opts.packJson ?? null,
+    },
+    disputes: {
+      id: DISPUTE_ID,
+      reason: "FRAUDULENT",
+      amount: 255.07,
+      currency_code: "USD",
+      evidence_alert_sent_at: null,
+      order_name: null,
+      ...opts.disputeRow,
+    },
+    shop_setup: {
+      steps: {
+        store_profile: {
+          payload: opts.storeProfile ?? { storeTypes: ["physical"] },
+        },
+        team: {
+          payload: opts.team ?? { teamEmail: "merchant@example.com" },
+        },
+      },
+    },
+    shops: { shop_domain: opts.shopDomain ?? "blume-box.myshopify.com" },
+  };
+
+  const sb = {
+    from: vi.fn((table: string) => ({
+      update: vi.fn(() => ({
+        eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+      })),
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi
+            .fn()
+            .mockResolvedValue({ data: rowByTable[table] ?? null, error: null }),
+        }),
+      }),
+    })),
+  };
+  return { sb };
+}
+
+const READY_BUILD = {
+  packId: PACK_ID,
+  status: "ready" as const,
+  completenessScore: 90,
+  blockers: [] as string[],
+  sectionsCollected: 6,
+  itemsCreated: 9,
+  failureCode: null,
+  priorStrength: null,
+  newStrength: "moderate" as const,
+  strengthImproved: false,
+};
+
+describe("handleBuildPack → sendManualEvidenceAlert (completeness-aware email)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockConsumePack.mockResolvedValue({ ok: true, consumed: 1, remaining: 4 });
+    mockBuildPack.mockResolvedValue(READY_BUILD);
+  });
+
+  it("covered dispute (POD + support comms present) → review-mode email with empty asks", async () => {
+    const { sb } = makeRoutingSb({
+      checklistV2: [
+        { field: "delivery_proof", status: "available" },
+        { field: "customer_communication", status: "available" },
+      ],
+    });
+    mockGetServiceClient.mockReturnValue(
+      sb as unknown as ReturnType<typeof getServiceClient>,
+    );
+
+    await handleBuildPack(makeJob());
+
+    // The email still fires (we don't go silent), but with a presentFields set
+    // that suppresses every ask — the mailer renders review-mode from that.
+    expect(mockSendEvidenceNeededAlert).toHaveBeenCalledTimes(1);
+    const ctx = mockSendEvidenceNeededAlert.mock.calls[0][0];
+    expect(ctx.presentFields).toBeInstanceOf(Set);
+    expect(ctx.presentFields).toEqual(
+      new Set(["delivery_proof", "customer_communication"]),
+    );
+  });
+
+  it("threads order_name into the email context for the subject", async () => {
+    const { sb } = makeRoutingSb({
+      disputeRow: { order_name: "#1234" },
+    });
+    mockGetServiceClient.mockReturnValue(
+      sb as unknown as ReturnType<typeof getServiceClient>,
+    );
+
+    await handleBuildPack(makeJob());
+
+    expect(mockSendEvidenceNeededAlert).toHaveBeenCalledTimes(1);
+    expect(mockSendEvidenceNeededAlert.mock.calls[0][0].orderName).toBe("#1234");
+  });
+
+  it("passes collected fields as presentFields so redundant asks are suppressed", async () => {
+    const { sb } = makeRoutingSb({
+      checklistV2: [
+        { field: "delivery_proof", status: "available" },
+        { field: "shipping_tracking", status: "missing" },
+      ],
+    });
+    mockGetServiceClient.mockReturnValue(
+      sb as unknown as ReturnType<typeof getServiceClient>,
+    );
+
+    await handleBuildPack(makeJob());
+
+    const ctx = mockSendEvidenceNeededAlert.mock.calls[0][0];
+    // Only "available"/"waived" fields count as present.
+    expect(ctx.presentFields).toEqual(new Set(["delivery_proof"]));
+  });
+
+  it("falls back to pack_json.completeness.checklist when checklist_v2 is absent", async () => {
+    const { sb } = makeRoutingSb({
+      checklistV2: null,
+      packJson: {
+        completeness: {
+          checklist: [
+            { field: "customer_communication", present: true },
+            { field: "delivery_proof", present: false },
+          ],
+        },
+      },
+    });
+    mockGetServiceClient.mockReturnValue(
+      sb as unknown as ReturnType<typeof getServiceClient>,
+    );
+
+    await handleBuildPack(makeJob());
+
+    const ctx = mockSendEvidenceNeededAlert.mock.calls[0][0];
+    expect(ctx.presentFields).toEqual(new Set(["customer_communication"]));
+  });
+
+  it("threads pendingSupportReview when Gorgias matched comms await review", async () => {
+    const { sb } = makeRoutingSb({
+      disputeRow: {
+        needs_attention: true,
+        attention_reason: "gorgias_evidence_ready",
+        attention_payload: { proposal_count: 3, run_id: "run-1" },
+      },
+    });
+    mockGetServiceClient.mockReturnValue(
+      sb as unknown as ReturnType<typeof getServiceClient>,
+    );
+
+    await handleBuildPack(makeJob());
+
+    const ctx = mockSendEvidenceNeededAlert.mock.calls[0][0];
+    expect(ctx.pendingSupportReview).toBe(true);
+    expect(ctx.pendingSupportCount).toBe(3);
+  });
+
+  it("does NOT set pendingSupportReview for an unrelated attention reason", async () => {
+    const { sb } = makeRoutingSb({
+      disputeRow: {
+        needs_attention: true,
+        attention_reason: "quota_exceeded",
+        attention_payload: { plan: "starter" },
+      },
+    });
+    mockGetServiceClient.mockReturnValue(
+      sb as unknown as ReturnType<typeof getServiceClient>,
+    );
+
+    await handleBuildPack(makeJob());
+
+    const ctx = mockSendEvidenceNeededAlert.mock.calls[0][0];
+    expect(ctx.pendingSupportReview).toBe(false);
+    expect(ctx.pendingSupportCount).toBe(0);
   });
 });
