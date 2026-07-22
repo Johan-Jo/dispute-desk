@@ -1708,6 +1708,7 @@
       "conversationError": "No se pudo cargar la conversación. Inténtalo de nuevo.",
       "status": {
         "processing": "Buscando evidencia de comunicación…",
+        "queuedNote": "Esto está en cola detrás de otro trabajo en segundo plano y se ejecutará automáticamente; puedes salir de esta página y volver más tarde.",
         "refresh": "Actualizar desde Gorgias",
         "retry": "Reintentar",
         "noMatches": "No se encontraron conversaciones de soporte para este cliente.",

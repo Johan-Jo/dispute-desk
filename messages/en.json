@@ -1708,6 +1708,7 @@
       "conversationError": "The conversation could not be loaded. Please try again.",
       "status": {
         "processing": "Finding communication evidence…",
+        "queuedNote": "This is queued behind other background work and will run automatically — you can leave this page and come back.",
         "refresh": "Refresh from Gorgias",
         "retry": "Retry",
         "noMatches": "No support conversations were found for this customer.",
