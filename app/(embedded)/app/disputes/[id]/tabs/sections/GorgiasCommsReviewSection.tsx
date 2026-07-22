@@ -392,12 +392,6 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
     );
   }
 
-  // Once Shopify has forwarded the dispute to the bank the package can
-  // no longer change, so `POST /regenerate` hard-returns 409. Offering a
-  // Regenerate button there is a dead end (the bug the merchant hit:
-  // "clicked Regenerate, nothing happened"). Show an honest note instead.
-  const windowClosed = data?.dispute?.submissionState === "submitted_confirmed";
-
   // The "package is out of date → Regenerate" prompt is only meaningful
   // once there is APPROVED communication evidence not yet in the pack.
   // The stale flag alone can be set by any content-affecting review action
@@ -408,12 +402,27 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
     (sum, tk) => sum + (tk.counts?.approved ?? 0),
     0,
   );
+
+  // The Regenerate action (`POST /regenerate`) is ONLY valid while the
+  // dispute is in the resubmission window (submission_state ===
+  // "saved_to_shopify"). Offering the button in any other state is a
+  // guaranteed 409 dead-end — the exact bug the merchant hit:
+  //   - not_saved         → 409 INVALID_REGENERATE_WINDOW ("...only after
+  //     the first save"). The pack hasn't been generated yet, so approved
+  //     evidence is simply included when the package is FIRST generated —
+  //     there is nothing to "regenerate". Show a plain info note, no button.
+  //   - submitted_confirmed → 409 WINDOW_CLOSED (bank already has it).
+  //   - saved_to_shopify  → the real Regenerate flow, with the button.
+  const submissionState = data?.dispute?.submissionState ?? null;
+  const canRegenerate = submissionState === "saved_to_shopify";
+  const windowClosed = submissionState === "submitted_confirmed";
+
   const staleBanner = data?.pack?.gorgiasEvidenceStale && approvedMessageCount > 0 ? (
     windowClosed ? (
       <Banner tone="info" title={t("staleBanner.windowClosedTitle")}>
         <p>{t("staleBanner.windowClosedBody")}</p>
       </Banner>
-    ) : (
+    ) : canRegenerate ? (
       <Banner tone="warning" title={t("staleBanner.title")}>
         <BlockStack gap="200">
           <p>{t("staleBanner.body")}</p>
@@ -423,6 +432,12 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
             </Button>
           </InlineStack>
         </BlockStack>
+      </Banner>
+    ) : (
+      // not_saved: no package exists yet — approved messages are included
+      // on first generation. Info note, NO Regenerate button (would 409).
+      <Banner tone="info" title={t("staleBanner.notSavedTitle")}>
+        <p>{t("staleBanner.notSavedBody")}</p>
       </Banner>
     )
   ) : null;

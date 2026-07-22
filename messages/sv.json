@@ -1723,7 +1723,9 @@
         "body": "Du ändrade kommunikationsbevisen efter att paketet skapades. Skapa om det för att inkludera dina godkända meddelanden.",
         "cta": "Skapa om paketet",
         "windowClosedTitle": "Redan skickat till banken",
-        "windowClosedBody": "Du godkände nya kommunikationsbevis, men Shopify har redan vidarebefordrat den här tvisten till den utfärdande banken – försvarspaketet kan inte längre ändras."
+        "windowClosedBody": "Du godkände nya kommunikationsbevis, men Shopify har redan vidarebefordrat den här tvisten till den utfärdande banken – försvarspaketet kan inte längre ändras.",
+        "notSavedTitle": "Dina godkända meddelanden kommer att inkluderas",
+        "notSavedBody": "Du har godkänt supportmeddelanden som bevis. De läggs automatiskt till i ditt försvarspaket när du genererar och skickar in det — inget extra steg behövs."
       },
       "tier": {
         "possible": "Möjliga träffar",
