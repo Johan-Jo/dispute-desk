@@ -89,6 +89,141 @@ export function normalizeChronologyText(text: string): string {
   );
 }
 
+/**
+ * Bank-facing chronology hygiene — an ALLOW-LIST, by deliberate design.
+ *
+ * The rich path forwards Shopify's `Order.events` verbatim (orderSource.ts).
+ * That timeline is open-ended free text: Shopify and *every app a merchant
+ * installs* (Rebuy, Flow, an OMS, a loyalty app, …) invent their own event
+ * verbs, and new ones appear whenever a merchant installs another app. A
+ * deny-list is therefore whack-a-mole — we would forever chase new noise
+ * verbs into bank documents, and one class ("Shopify Protect is no longer
+ * active for this order") is actively self-incriminating (CLAUDE.md — bank
+ * non-disclosure; Coverage Gate).
+ *
+ * So we invert it: the bullets that reach a bank are HARD-DEFINED. Only
+ * events that positively match a recognized **evidentiary category** below
+ * are kept. Everything else — payout accounting, "order archived",
+ * confirmation-number chatter, duplicate/pending payment states, and the
+ * next app's brand-new verb — is dropped by default. A surprise line is
+ * silently excluded, never silently leaked. The dropped tail is returned
+ * by `partitionChronologyEvents` so callers can log it for review.
+ *
+ * Matching is case-insensitive. Each pattern is scoped to a clear,
+ * defensible evidentiary meaning — never a broad substring that admits noise.
+ */
+export type ChronologyCategory =
+  | "order_placed"
+  | "payment"
+  | "fulfillment_shipment"
+  | "shipping_confirmation"
+  | "delivery_notification"
+  | "carrier_delivery"
+  | "chargeback";
+
+/**
+ * The allow-list: category → the patterns that positively identify it.
+ * A line is kept iff it matches at least one pattern here.
+ */
+const CHRONO_ALLOW: Array<{ category: ChronologyCategory; patterns: RegExp[] }> = [
+  {
+    // Order creation / placement on the storefront.
+    category: "order_placed",
+    patterns: [/\border was placed\b/i, /\bplaced (?:this )?order\b/i, /\border placed\b/i],
+  },
+  {
+    // Money movement that authenticates the transaction: a payment being
+    // processed/captured, or an authorization/authentication being placed.
+    // Explicitly NOT payout accounting ("added to / deducted from your …
+    // payout") and NOT the noisy "capture is pending" interim state.
+    category: "payment",
+    patterns: [
+      /payment was (?:processed|captured|authorized|authorised)/i,
+      /was (?:authorized|authorised) using a/i,
+      /was captured using a/i,
+      /payment was authenticated|payment authentication/i,
+    ],
+  },
+  {
+    // The ACTUAL shipment leaving — includes the app-generated "marked N
+    // items as fulfilled" wording, not the OMS "requested/accepted
+    // fulfillment" routing chatter.
+    category: "fulfillment_shipment",
+    patterns: [/\bfulfilled\b.*\bitems?\b/i, /marked \d+ items? as fulfilled/i, /shipment was tendered to the carrier/i],
+  },
+  {
+    // Merchant→customer shipping confirmation (proof the customer was told
+    // the goods were on the way to the address on file).
+    category: "shipping_confirmation",
+    patterns: [/shipping confirmation email/i, /shipment was tracked as/i],
+  },
+  {
+    // Merchant→customer delivery notifications: "out for delivery" and
+    // "delivered" emails to the address on file. Evidentiary for
+    // not-received / fraud — the customer was told the goods arrived.
+    category: "delivery_notification",
+    patterns: [
+      /shipment (?:out for delivery|delivered) email was sent/i,
+      /(?:out for delivery|delivered) email was sent/i,
+    ],
+  },
+  {
+    // Carrier delivery milestones — FIXED wording emitted by
+    // fulfillmentChronologyEvents (orderSource.ts). Keep in sync with it.
+    category: "carrier_delivery",
+    patterns: [
+      /carrier confirmed delivery/i,
+      /carrier delivered the shipment to a pickup point/i,
+      /collected the shipment at the pickup point/i,
+      /carrier reported the shipment returned to sender/i,
+    ],
+  },
+  {
+    // The chargeback / dispute itself — ONLY the event that OPENS the case.
+    // A bare /chargeback/ match wrongly kept payout-accounting lines
+    // ("$X deducted from your payout because of a chargeback") — merchant
+    // bookkeeping with no evidentiary value, and emphasizing the loss is
+    // self-harm in a bank document. Scope to the dispute-open verb only.
+    category: "chargeback",
+    patterns: [
+      /opened a chargeback/i,
+      /chargeback was (?:opened|filed|initiated)/i,
+      /customer (?:opened|filed|initiated) a (?:chargeback|dispute)/i,
+    ],
+  },
+];
+
+/**
+ * Classify a chronology line against the allow-list. Returns the matched
+ * evidentiary category, or `null` when the line is NOT recognized bank
+ * evidence (→ dropped). Pure and exported so tests pin exactly what is
+ * and isn't admitted.
+ */
+export function classifyChronologyEvent(text: string): ChronologyCategory | null {
+  for (const { category, patterns } of CHRONO_ALLOW) {
+    if (patterns.some((re) => re.test(text))) return category;
+  }
+  return null;
+}
+
+/**
+ * Partition a normalized chronology array into the bank-facing `kept` events
+ * (allow-listed) and the `droppedUnknown` texts (everything not recognized),
+ * so the excluded tail is visible for review rather than disappearing
+ * silently. Pure — no I/O here.
+ */
+export function partitionChronologyEvents(
+  events: ChronologyEvent[],
+): { kept: ChronologyEvent[]; droppedUnknown: string[] } {
+  const kept: ChronologyEvent[] = [];
+  const droppedUnknown: string[] = [];
+  for (const e of events) {
+    if (classifyChronologyEvent(e.text)) kept.push(e);
+    else droppedUnknown.push(e.text);
+  }
+  return { kept, droppedUnknown };
+}
+
 const CHRONO_MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
@@ -128,9 +263,29 @@ export function buildChronologyEvents(
   // Path 1: rich timeline. Same priority order both surfaces share.
   const rich = context.timelineEvents;
   if (Array.isArray(rich) && rich.length > 0) {
-    return [...rich]
+    const normalized = [...rich]
       .map((e) => ({ ...e, text: normalizeChronologyText(e.text) }))
       .sort((a, b) => a.at.localeCompare(b.at));
+    // Bank-facing hygiene: keep ONLY allow-listed evidentiary events.
+    // Shopify's raw Order.events is an open-ended free-text stream that
+    // includes payout accounting, "order archived", confirmation-number
+    // chatter, duplicate payment states, and app-specific verbs — none of
+    // which prove the transaction and some of which are self-incriminating
+    // (payout debits emphasize the loss). `partitionChronologyEvents`
+    // drops everything that isn't a recognized category. This is the single
+    // wiring point both renderers share (PDF + HTML view), so the filter
+    // can never be silently skipped by one surface.
+    const { kept, droppedUnknown } = partitionChronologyEvents(normalized);
+    if (droppedUnknown.length > 0) {
+      // Log the excluded tail (numbers collapsed so identical shapes
+      // dedupe) — review it to promote genuinely useful new event types
+      // into the allow-list instead of them vanishing blindly.
+      const shapes = [...new Set(droppedUnknown.map((t) => t.replace(/\d[\d.,]*/g, "#")))];
+      console.info(
+        `[chronology] dropped ${droppedUnknown.length} non-evidentiary timeline line(s); shapes: ${shapes.slice(0, 10).join(" | ")}`,
+      );
+    }
+    return kept;
   }
 
   // Path 2: synthetic fallback. Only fires when the pack lacks captured events.
