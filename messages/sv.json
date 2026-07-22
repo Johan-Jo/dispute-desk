@@ -1708,6 +1708,7 @@
       "conversationError": "Konversationen kunde inte laddas. Försök igen.",
       "status": {
         "processing": "Söker kommunikationsbevis…",
+        "queuedNote": "Detta ligger i kö bakom annat bakgrundsarbete och körs automatiskt – du kan lämna sidan och komma tillbaka senare.",
         "refresh": "Uppdatera från Gorgias",
         "retry": "Försök igen",
         "noMatches": "Inga supportkonversationer hittades för den här kunden.",
