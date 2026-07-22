@@ -266,10 +266,19 @@ export default function DisputesListPage() {
     fetchDisputes();
   }, [fetchDisputes]);
 
-  // Reset sortMode to default when switching tabs so each tab gets its natural ordering
+  // Preserve the merchant's chosen sort across tab switches instead of
+  // wiping it every time. Only clear it when the current mode is invalid
+  // for the new tab: `closed_desc` (recently-closed) is offered on the
+  // closed tab only, so drop it back to `default` when leaving that tab.
+  // `default` itself resolves to due-date order on open tabs and
+  // closed-date order on the closed tab (see resolveSort), so a merchant
+  // who never touches the sort control always gets the sensible per-tab
+  // ordering.
   useEffect(() => {
-    setSortMode("default");
-  }, [activeTab]);
+    if (activeTab !== "closed" && sortMode === "closed_desc") {
+      setSortMode("default");
+    }
+  }, [activeTab, sortMode]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -737,6 +746,7 @@ export default function DisputesListPage() {
                     />
                   </div>
                   {filterPopover}
+                  {sortPopover}
                   <Button icon={ExportIcon} onClick={exportCsv}>
                     {t("disputes.export")}
                   </Button>
