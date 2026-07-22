@@ -234,15 +234,20 @@ export function resolveSort(
 ): { sort: string; sort_dir: "asc" | "desc" } {
   if (sortMode === "urgency") return { sort: "due_at", sort_dir: "asc" };
   if (sortMode === "amount") return { sort: "amount", sort_dir: "desc" };
-  // "Newest" / default = the real Shopify dispute date (initiated_at), NOT
-  // created_at (our DB import timestamp). A historical import gives every row a
+  // "Newest" = the real Shopify dispute date (initiated_at), NOT created_at
+  // (our DB import timestamp). A historical import gives every row a
   // near-identical created_at, so created_at sorting scrambled the order and
   // surfaced old 2024 disputes first. initiated_at is what the table displays.
   if (sortMode === "newest") return { sort: "initiated_at", sort_dir: "desc" };
   if (sortMode === "closed_desc") return { sort: "closed_at", sort_dir: "desc" };
-  if (activeTab === "active") return { sort: "initiated_at", sort_dir: "desc" };
+  // Default per tab. On open/active/all views the merchant is triaging
+  // against deadlines, so the natural order is soonest-due-first
+  // (`due_at asc`) — the UI already labels the default pill "Most urgent",
+  // and this makes the request match that label (previously it sent
+  // `initiated_at desc`, so a dispute due today could land on page 3–4).
+  // Rows with no due date sink to the end (API sets nullsFirst:false).
   if (activeTab === "closed") return { sort: "closed_at", sort_dir: "desc" };
-  return { sort: "initiated_at", sort_dir: "desc" };
+  return { sort: "due_at", sort_dir: "asc" };
 }
 
 /* ── Figma list-page helpers (shopify-cases.tsx, 2026-04-28) ── *
