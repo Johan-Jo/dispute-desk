@@ -1723,7 +1723,9 @@
         "body": "Você alterou as evidências de comunicação depois que o pacote foi gerado. Regenere-o para incluir suas mensagens aprovadas.",
         "cta": "Regenerar pacote",
         "windowClosedTitle": "Já enviado ao banco",
-        "windowClosedBody": "Você aprovou novas evidências de comunicação, mas a Shopify já encaminhou esta disputa ao banco emissor — o pacote de defesa não pode mais ser alterado."
+        "windowClosedBody": "Você aprovou novas evidências de comunicação, mas a Shopify já encaminhou esta disputa ao banco emissor — o pacote de defesa não pode mais ser alterado.",
+        "notSavedTitle": "Suas mensagens aprovadas serão incluídas",
+        "notSavedBody": "Você aprovou mensagens de suporte como evidência. Elas serão adicionadas automaticamente ao seu pacote de defesa quando você gerá-lo e enviá-lo — nenhum passo extra é necessário."
       },
       "tier": {
         "possible": "Possíveis correspondências",

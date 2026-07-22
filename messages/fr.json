@@ -1723,7 +1723,9 @@
         "body": "Vous avez modifié les preuves de communication après la génération du dossier. Régénérez-le pour inclure vos messages approuvés.",
         "cta": "Régénérer le dossier",
         "windowClosedTitle": "Déjà transmis à la banque",
-        "windowClosedBody": "Vous avez approuvé de nouvelles preuves de communication, mais Shopify a déjà transmis ce litige à la banque émettrice — le dossier de défense ne peut plus être modifié."
+        "windowClosedBody": "Vous avez approuvé de nouvelles preuves de communication, mais Shopify a déjà transmis ce litige à la banque émettrice — le dossier de défense ne peut plus être modifié.",
+        "notSavedTitle": "Vos messages approuvés seront inclus",
+        "notSavedBody": "Vous avez approuvé des messages du service client comme preuves. Ils seront automatiquement ajoutés à votre dossier de défense lorsque vous le générerez et le soumettrez — aucune étape supplémentaire n'est nécessaire."
       },
       "tier": {
         "possible": "Correspondances possibles",

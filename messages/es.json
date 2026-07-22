@@ -1723,7 +1723,9 @@
         "body": "Cambiaste la evidencia de comunicación después de generar el paquete. Regenéralo para incluir tus mensajes aprobados.",
         "cta": "Regenerar paquete",
         "windowClosedTitle": "Ya enviado al banco",
-        "windowClosedBody": "Aprobaste nueva evidencia de comunicación, pero Shopify ya reenvió esta disputa al banco emisor: el paquete de defensa ya no se puede modificar."
+        "windowClosedBody": "Aprobaste nueva evidencia de comunicación, pero Shopify ya reenvió esta disputa al banco emisor: el paquete de defensa ya no se puede modificar.",
+        "notSavedTitle": "Tus mensajes aprobados se incluirán",
+        "notSavedBody": "Has aprobado mensajes de soporte como evidencia. Se añadirán automáticamente a tu paquete de defensa cuando lo generes y lo envíes; no necesitas hacer nada más."
       },
       "tier": {
         "possible": "Posibles coincidencias",

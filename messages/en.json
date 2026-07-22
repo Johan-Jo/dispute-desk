@@ -1723,7 +1723,9 @@
         "body": "You changed the communication evidence after the package was generated. Regenerate it to include your approved messages.",
         "cta": "Regenerate package",
         "windowClosedTitle": "Already submitted to the bank",
-        "windowClosedBody": "You approved new communication evidence, but Shopify has already forwarded this dispute to the issuing bank — the defence package can no longer be changed."
+        "windowClosedBody": "You approved new communication evidence, but Shopify has already forwarded this dispute to the issuing bank — the defence package can no longer be changed.",
+        "notSavedTitle": "Your approved messages will be included",
+        "notSavedBody": "You've approved support messages as evidence. They'll be added to your defence package automatically when you generate and submit it — no extra step needed."
       },
       "tier": {
         "possible": "Possible matches",
