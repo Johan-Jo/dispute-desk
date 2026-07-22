@@ -280,8 +280,15 @@ export function buildChronologyEvents(
       // Log the excluded tail (numbers collapsed so identical shapes
       // dedupe) — review it to promote genuinely useful new event types
       // into the allow-list instead of them vanishing blindly.
+      //
+      // MUST be stderr (console.error), never stdout: this module also runs
+      // inside the PDF subprocess worker, whose stdout IS the PDF byte
+      // stream (the parent asserts it starts with "%PDF-"). A console.info
+      // here prefixed the log onto the PDF bytes and failed every render
+      // with dropped lines ("pdf_render_failed: … first 200 bytes:
+      // [chronology] dropped …"). stderr is collected separately.
       const shapes = [...new Set(droppedUnknown.map((t) => t.replace(/\d[\d.,]*/g, "#")))];
-      console.info(
+      console.error(
         `[chronology] dropped ${droppedUnknown.length} non-evidentiary timeline line(s); shapes: ${shapes.slice(0, 10).join(" | ")}`,
       );
     }
