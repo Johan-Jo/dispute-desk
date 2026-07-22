@@ -218,9 +218,31 @@ function capitalizeFirst(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// The delivery signal reaches the classifier under two sibling
+// categories — `delivery_proof` and `shipping_tracking` — carrying the
+// SAME fulfillment payload (proofType, deliveredAt, …). Left alone,
+// buildEvidenceBasisRows emits two Evidence Basis rows that render an
+// identical value (e.g. "Delivery confirmation → Delivered Jul 7" and
+// "Shipping tracking → Delivered Jul 7"), printing the same fact twice.
+//
+// The UI line-item surfaces already collapse this pair upstream
+// (`deriveEvidenceLineItems`, tests/unit/deliveryRowCollapse.test.ts);
+// the PDF's Evidence Basis table is the one place that did not. Keep the
+// higher-ranked `delivery_proof` row (it sorts first and carries the
+// proof-oriented "Delivery confirmation" label) and drop the sibling
+// `shipping_tracking` row when both survive filtering. If only one of the
+// pair is present, it is kept as-is.
+function collapseDeliveryPair(facts: EvidenceFact[]): EvidenceFact[] {
+  const hasDeliveryProof = facts.some((f) => f.category === "delivery_proof");
+  if (!hasDeliveryProof) return facts;
+  return facts.filter((f) => f.category !== "shipping_tracking");
+}
+
 export function buildEvidenceBasisRows(facts: EvidenceFact[]): EvidenceBasisRow[] {
-  const filtered = facts.filter(
-    (f) => f.bankEligible && f.includeInBankNarrative && !f.submissionRisk,
+  const filtered = collapseDeliveryPair(
+    facts.filter(
+      (f) => f.bankEligible && f.includeInBankNarrative && !f.submissionRisk,
+    ),
   );
   const sorted = [...filtered].sort((a, b) => {
     const r = categoryRank(a.category) - categoryRank(b.category);
