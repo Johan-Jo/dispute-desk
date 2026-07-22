@@ -396,13 +396,13 @@ describe("handleBuildPack", () => {
 });
 
 /**
- * Table-routing Supabase double for the sendManualEvidenceAlert path. Unlike
- * `makeSb` (one fixed row for every select), this serves per-table fixtures so
- * we can exercise the completeness-aware email selection end-to-end.
+ * Table-routing Supabase double for the sendManualEvidenceAlert path. Serves
+ * per-table fixtures so we can exercise the content-verified email selection
+ * end-to-end. `packSections` populates `pack_json.sections`, which the caller
+ * inspects (by content) to decide what real evidence exists.
  */
 function makeRoutingSb(opts: {
-  checklistV2?: Array<{ field: string; status: string }> | null;
-  packJson?: unknown;
+  packSections?: Array<Record<string, unknown>>;
   disputeRow?: Record<string, unknown>;
   storeProfile?: Record<string, unknown>;
   team?: Record<string, unknown>;
@@ -413,8 +413,7 @@ function makeRoutingSb(opts: {
       id: PACK_ID,
       dispute_id: DISPUTE_ID,
       shop_id: SHOP_ID,
-      checklist_v2: opts.checklistV2 ?? null,
-      pack_json: opts.packJson ?? null,
+      pack_json: { sections: opts.packSections ?? [] },
     },
     disputes: {
       id: DISPUTE_ID,
@@ -468,18 +467,89 @@ const READY_BUILD = {
   strengthImproved: false,
 };
 
-describe("handleBuildPack → sendManualEvidenceAlert (completeness-aware email)", () => {
+// Real delivery-proof section (delivered_confirmed → moderate/strong).
+const realDeliverySection = {
+  type: "shipping",
+  source: "shopify_fulfillments",
+  fieldsProvided: ["shipping_tracking", "delivery_proof"],
+  data: { proofType: "delivered_confirmed", deliveredAt: "2026-07-13T17:50:00Z" },
+};
+
+// Empty Shopify-timeline comms section — the blume-box false positive: only
+// buyer attributes + system events, no real human authorship.
+const emptyTimelineComms = {
+  type: "comms",
+  source: "shopify_timeline",
+  fieldsProvided: ["customer_communication"],
+  data: {
+    summary: {
+      staffNotePresent: false,
+      customerNotePresent: false,
+      merchantCommentCount: 0,
+      buyerAttributeCount: 3,
+      timelineEventCount: 17,
+      confirmationEventCount: 2,
+    },
+  },
+};
+
+// Real Gorgias comms section with approved messages.
+const realGorgiasComms = {
+  type: "comms",
+  source: "gorgias",
+  fieldsProvided: ["customer_communication"],
+  data: { provider: "gorgias", enriched: true, summary: { messageCount: 4 } },
+};
+
+describe("handleBuildPack → sendManualEvidenceAlert (content-verified email)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockConsumePack.mockResolvedValue({ ok: true, consumed: 1, remaining: 4 });
     mockBuildPack.mockResolvedValue(READY_BUILD);
   });
 
-  it("covered dispute (POD + support comms present) → review-mode email with empty asks", async () => {
+  it("the blume-box case: real delivery + EMPTY timeline comms → delivery attached, comms NOT claimed", async () => {
     const { sb } = makeRoutingSb({
-      checklistV2: [
-        { field: "delivery_proof", status: "available" },
-        { field: "customer_communication", status: "available" },
+      packSections: [realDeliverySection, emptyTimelineComms],
+    });
+    mockGetServiceClient.mockReturnValue(
+      sb as unknown as ReturnType<typeof getServiceClient>,
+    );
+
+    await handleBuildPack(makeJob());
+
+    expect(mockSendEvidenceNeededAlert).toHaveBeenCalledTimes(1);
+    const ctx = mockSendEvidenceNeededAlert.mock.calls[0][0];
+    expect(ctx.hasRealDeliveryProof).toBe(true);
+    // The whole point: an empty timeline (buyer attrs + system events) must NOT
+    // be treated as real support conversations.
+    expect(ctx.hasRealSupportComms).toBe(false);
+  });
+
+  it("real Gorgias comms with messages → hasRealSupportComms true", async () => {
+    const { sb } = makeRoutingSb({
+      packSections: [realDeliverySection, realGorgiasComms],
+    });
+    mockGetServiceClient.mockReturnValue(
+      sb as unknown as ReturnType<typeof getServiceClient>,
+    );
+
+    await handleBuildPack(makeJob());
+
+    const ctx = mockSendEvidenceNeededAlert.mock.calls[0][0];
+    expect(ctx.hasRealSupportComms).toBe(true);
+    expect(ctx.hasRealDeliveryProof).toBe(true);
+  });
+
+  it("timeline comms WITH a real staff note → hasRealSupportComms true", async () => {
+    const { sb } = makeRoutingSb({
+      packSections: [
+        {
+          type: "comms",
+          source: "shopify_timeline",
+          fieldsProvided: ["customer_communication"],
+          data: { summary: { staffNotePresent: true, merchantCommentCount: 0 } },
+        },
       ],
     });
     mockGetServiceClient.mockReturnValue(
@@ -488,68 +558,51 @@ describe("handleBuildPack → sendManualEvidenceAlert (completeness-aware email)
 
     await handleBuildPack(makeJob());
 
-    // The email still fires (we don't go silent), but with a presentFields set
-    // that suppresses every ask — the mailer renders review-mode from that.
-    expect(mockSendEvidenceNeededAlert).toHaveBeenCalledTimes(1);
-    const ctx = mockSendEvidenceNeededAlert.mock.calls[0][0];
-    expect(ctx.presentFields).toBeInstanceOf(Set);
-    expect(ctx.presentFields).toEqual(
-      new Set(["delivery_proof", "customer_communication"]),
+    expect(mockSendEvidenceNeededAlert.mock.calls[0][0].hasRealSupportComms).toBe(true);
+  });
+
+  it("bare label_created delivery → hasRealDeliveryProof false", async () => {
+    const { sb } = makeRoutingSb({
+      packSections: [
+        {
+          type: "shipping",
+          source: "shopify_fulfillments",
+          fieldsProvided: ["shipping_tracking"],
+          data: { proofType: "label_created" },
+        },
+      ],
+    });
+    mockGetServiceClient.mockReturnValue(
+      sb as unknown as ReturnType<typeof getServiceClient>,
     );
+
+    await handleBuildPack(makeJob());
+
+    expect(mockSendEvidenceNeededAlert.mock.calls[0][0].hasRealDeliveryProof).toBe(false);
+  });
+
+  it("never passes a digital_access_logs concept to the email", async () => {
+    const { sb } = makeRoutingSb({ packSections: [realDeliverySection] });
+    mockGetServiceClient.mockReturnValue(
+      sb as unknown as ReturnType<typeof getServiceClient>,
+    );
+
+    await handleBuildPack(makeJob());
+
+    const ctx = mockSendEvidenceNeededAlert.mock.calls[0][0];
+    expect(ctx).not.toHaveProperty("digitalProof");
+    expect(ctx).not.toHaveProperty("presentFields");
   });
 
   it("threads order_name into the email context for the subject", async () => {
-    const { sb } = makeRoutingSb({
-      disputeRow: { order_name: "#1234" },
-    });
+    const { sb } = makeRoutingSb({ disputeRow: { order_name: "#1234" } });
     mockGetServiceClient.mockReturnValue(
       sb as unknown as ReturnType<typeof getServiceClient>,
     );
 
     await handleBuildPack(makeJob());
 
-    expect(mockSendEvidenceNeededAlert).toHaveBeenCalledTimes(1);
     expect(mockSendEvidenceNeededAlert.mock.calls[0][0].orderName).toBe("#1234");
-  });
-
-  it("passes collected fields as presentFields so redundant asks are suppressed", async () => {
-    const { sb } = makeRoutingSb({
-      checklistV2: [
-        { field: "delivery_proof", status: "available" },
-        { field: "shipping_tracking", status: "missing" },
-      ],
-    });
-    mockGetServiceClient.mockReturnValue(
-      sb as unknown as ReturnType<typeof getServiceClient>,
-    );
-
-    await handleBuildPack(makeJob());
-
-    const ctx = mockSendEvidenceNeededAlert.mock.calls[0][0];
-    // Only "available"/"waived" fields count as present.
-    expect(ctx.presentFields).toEqual(new Set(["delivery_proof"]));
-  });
-
-  it("falls back to pack_json.completeness.checklist when checklist_v2 is absent", async () => {
-    const { sb } = makeRoutingSb({
-      checklistV2: null,
-      packJson: {
-        completeness: {
-          checklist: [
-            { field: "customer_communication", present: true },
-            { field: "delivery_proof", present: false },
-          ],
-        },
-      },
-    });
-    mockGetServiceClient.mockReturnValue(
-      sb as unknown as ReturnType<typeof getServiceClient>,
-    );
-
-    await handleBuildPack(makeJob());
-
-    const ctx = mockSendEvidenceNeededAlert.mock.calls[0][0];
-    expect(ctx.presentFields).toEqual(new Set(["customer_communication"]));
   });
 
   it("threads pendingSupportReview when Gorgias matched comms await review", async () => {
