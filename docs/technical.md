@@ -728,6 +728,28 @@ worker endpoint (`/api/jobs/worker`).
 5. Retry: 3 attempts, 30s × attempt backoff on failure.
 6. UI polls `GET /api/jobs/:id` every 3 seconds until terminal state.
 
+### Priority tiers (`lib/jobs/priorities.ts`)
+
+`claim_jobs` orders by `priority ASC, run_at ASC`. Because each shop drains
+at ~1 job / 2 min (per-shop cap 1 × 2-min worker cadence), everything at the
+same priority is a single FIFO — a bulk batch enqueued ahead of a merchant
+click starves the merchant for `2 × queue-length` minutes (2026-07-22: a
+40-pack backfill chained 40 defence rebuilds and pinned a merchant
+"Rebuild defence package" click behind ~1.5 h of queue; the UI spinner never
+resolved).
+
+| Priority | Tier | Who enqueues at it |
+|----------|------|--------------------|
+| < 20     | Ops reserved | Manual unblocking of a specific stuck job (ad-hoc SQL) |
+| 20       | `JOB_PRIORITY_INTERACTIVE` | Merchant-clicked work: both regenerate routes, manual pack build (`POST /api/disputes/:id/packs`), cardholder acknowledgement rebuild, manual defence-package enqueue, and the `rebuild_pending` tail in `saveToShopifyJob` |
+| 100      | `JOB_PRIORITY_DEFAULT` (column default) | Webhook-driven pipeline, cron sweeps |
+| ≥ 500    | Bulk convention | Ad-hoc backfill batches (`scripts/sql/`) MUST use this so they never starve the tiers above |
+
+Chained jobs inherit the trigger's priority: `ClaimedJob.priority` is
+returned by `claim_jobs`, and `buildPackJob` passes it into
+`maybeEnqueueDefencePackage(packId, { priority })` so an interactive
+rebuild's defence build stays interactive-tier end to end.
+
 #### Stale-lock reclaim (`20260702150000_claim_jobs_stale_lock_reclaim.sql`)
 
 `claim_jobs` takes a `p_lock_timeout_seconds int default 600` (passed as
@@ -3269,7 +3291,7 @@ Reference implementation — disputes list (`app/(embedded)/app/disputes/`):
 - `MobileDisputesList.tsx` — stack of cards inside `<Card padding="0">`, cards self-separate via `border-bottom`
 - `disputeListHelpers.ts` — shared helpers + `formatDueTiming(d, tab, t, locale)` and `resolveSort(sortMode, tab)`
 
-**List sorting (2026-07-22).** The sort control (`sortPopover`, choices Most urgent / Highest amount / Newest, plus Recently closed on the closed tab) is rendered on **both** desktop and mobile — previously it was mobile-only, so desktop merchants had no way to sort by due date and the list stayed on `initiated_at desc`, pushing a due-today dispute onto page 3–4. `resolveSort(sortMode, tab)` now maps the **default** (untouched) sort to `due_at asc` (soonest-due first) on the open/active/all tabs and `closed_at desc` on the closed tab; the "Most urgent" choice is the same `due_at asc`. Sorting is applied server-side over the full result set in `/api/disputes` (`.order(sortCol, { nullsFirst: false }).order("created_at", desc)` tiebreak) before `.range()` pagination, so it orders the whole dataset, not just the current page. The chosen sort now persists across tab switches — only `closed_desc` is reset (it is offered on the closed tab alone). Two invariants make the urgency sort honest (both added 2026-07-22 after blume-box showed resolved 2018 disputes atop a "needs action" view): **(1) open-first ranking** — when `/api/disputes` sorts `due_at asc` it prepends `.order("closed_at", { ascending: false, nullsFirst: true })`, so open disputes (`closed_at IS NULL`) always rank before resolved ones, which keep their historical `due_at` (pinned by `tests/api/disputes/listSortOrdering.test.ts`); **(2) deep-link filters are honored** — the list page parses `?normalized_status=…` / `?closed=…` on mount via `parseListDeepLink` (`disputeListHelpers.ts`) and initializes its filter state from them; a status deep-link implies the active (open-only) tab so `closed=false` is sent. Previously the dashboard tiles' deep-links were ignored and the first fetch ran unfiltered.
+**List sorting (2026-07-22).** The sort control (`sortPopover`, choices Most urgent / Highest amount / Newest, plus Recently closed on the closed tab) is rendered on **both** desktop and mobile — previously it was mobile-only, so desktop merchants had no way to sort by due date and the list stayed on `initiated_at desc`, pushing a due-today dispute onto page 3–4. `resolveSort(sortMode, tab)` now maps the **default** (untouched) sort to `due_at asc` (soonest-due first) on the open/active/all tabs and `closed_at desc` on the closed tab; the "Most urgent" choice is the same `due_at asc`. Sorting is applied server-side over the full result set in `/api/disputes` (`.order(sortCol, { nullsFirst: false }).order("created_at", desc)` tiebreak) before `.range()` pagination, so it orders the whole dataset, not just the current page. The chosen sort now persists across tab switches — only `closed_desc` is reset (it is offered on the closed tab alone). Three invariants make the urgency sort honest (all added 2026-07-22 after blume-box showed resolved 2018 disputes — then already-submitted disputes — atop the urgency view): **(1) open-first ranking** — when `/api/disputes` sorts `due_at asc` it prepends `.order("closed_at", { ascending: false, nullsFirst: true })`, so open disputes (`closed_at IS NULL`) always rank before resolved ones, which keep their historical `due_at` (pinned by `tests/api/disputes/listSortOrdering.test.ts`); **(2) actionable-before-submitted** — the second pre-key `.order("urgency_rank", { ascending: true })` demotes open-but-submitted disputes (the `UNDER_REVIEW_NORMALIZED_STATUSES` family: `submitted | submitted_to_shopify | submitted_to_bank | waiting_on_issuer`) below disputes the merchant can still act on; they are out of the merchant's hands (the bank owns the timeline) yet keep their historical `due_at`, which otherwise pinned them to the top. `urgency_rank` is a stored generated column (migration `20260722030000_disputes_urgency_rank.sql`) because PostgREST cannot `ORDER BY` an expression; a vitest invariant in `listSortOrdering.test.ts` greps the migration to keep its CASE list in sync with `UNDER_REVIEW_NORMALIZED_STATUSES`. Resulting order: actionable open → submitted open → resolved; **(3) deep-link filters are honored** — the list page parses `?normalized_status=…` / `?closed=…` on mount via `parseListDeepLink` (`disputeListHelpers.ts`) and initializes its filter state from them; a status deep-link implies the active (open-only) tab so `closed=false` is sent. Previously the dashboard tiles' deep-links were ignored and the first fetch ran unfiltered.
 
 Dashboard (`app/(embedded)/app/`):
 - `DashboardOperationalSummary.tsx` — single Polaris `Card` with headline ("Operational Summary" + optional critical `Badge` with attention count) and a contextual primary CTA (Review {n} action needed / Submit {n} ready / View all). Below, 4 coloured counter tiles (Action Needed critical, Ready to Submit warning, Waiting on Issuer subdued, Closed in period subdued). Mobile uses `dashboard.module.css` (`mobileGrid2`, `summaryCounterMobile`) for a 2-column tile grid and a full-width CTA. Each tile deep-links to the matching `normalized_status` filter on the disputes list. **Single-case shortcut:** when exactly one open dispute is in `new | action_needed | needs_review`, the primary CTA routes straight to that dispute's detail page (`/app/disputes/{id}`) instead of the filtered list — the counter tile still links to the filtered list for consistency. The single dispute ID is delivered as `actionNeededDisputeId` on `/api/dashboard/stats` (null when count ≠ 1).
