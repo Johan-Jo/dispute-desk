@@ -224,6 +224,35 @@ export function formatDueTiming(
 }
 
 /**
+ * Parse the dispute-list deep-link params (`?normalized_status=…`,
+ * `?closed=…`) into the page's initial filter state. Dashboard tiles
+ * deep-link with these (e.g. "Needs action" →
+ * `?normalized_status=new,action_needed,needs_review`); the page MUST
+ * honor them on the first fetch or the list renders unfiltered — which
+ * showed resolved 2018 disputes under a "needs action" heading
+ * (blume-box, 2026-07-22). A status deep-link implies the active
+ * (open-only) tab so `closed=false` is sent and resolved rows are
+ * excluded.
+ */
+export function parseListDeepLink(searchParams: {
+  get(name: string): string | null;
+} | null): { statuses: string[]; tab: TabId } {
+  const raw = searchParams?.get("normalized_status") ?? "";
+  const statuses = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const closedParam = searchParams?.get("closed");
+  const tab: TabId =
+    closedParam === "true"
+      ? "closed"
+      : statuses.length > 0 || closedParam === "false"
+        ? "active"
+        : "all";
+  return { statuses, tab };
+}
+
+/**
  * Map sortMode + tab to the `sort` + `sort_dir` query params accepted by
  * /api/disputes. `default` mirrors the current tab-derived behavior so
  * desktop (where sortMode stays `default`) fetches identically to today.
