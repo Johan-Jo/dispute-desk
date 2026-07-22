@@ -341,14 +341,16 @@ describe("Invariant 5 — HTML view chronology mirrors the PDF (no parallel synt
 });
 
 describe("Invariant 6 — shared chronology builder behaves correctly on both paths", () => {
-  it("returns the rich timeline (sorted) when timelineEvents is non-empty", async () => {
+  it("returns the rich timeline (sorted, allow-listed) when timelineEvents is non-empty", async () => {
     const { buildChronologyEvents } = await import("../chronology");
+    // Texts must be allow-listed evidentiary events — the rich path now
+    // applies the bank-facing chronology filter (partitionChronologyEvents).
     const events = buildChronologyEvents(
       {
         timelineEvents: [
-          { at: "2026-05-17T21:44:43Z", text: "C" },
-          { at: "2026-05-17T21:44:36Z", text: "A" },
-          { at: "2026-05-17T21:44:42Z", text: "B" },
+          { at: "2026-05-17T21:44:43Z", text: "Carrier confirmed delivery of the shipment to the recipient." },
+          { at: "2026-05-17T21:44:36Z", text: "Jane Doe placed this order on Online Store." },
+          { at: "2026-05-17T21:44:42Z", text: "$10.00 USD was captured using a Visa ending in 0259." },
         ],
         transactionDate: "2026-05-17T21:44:36Z",
         orderName: "#1078",
@@ -357,7 +359,11 @@ describe("Invariant 6 — shared chronology builder behaves correctly on both pa
       },
       [],
     );
-    expect(events.map((e) => e.text)).toEqual(["A", "B", "C"]);
+    expect(events.map((e) => e.text)).toEqual([
+      "Jane Doe placed this order on Online Store.",
+      "$10.00 USD was captured using a Visa ending in 0259.",
+      "Carrier confirmed delivery of the shipment to the recipient.",
+    ]);
   });
 
   it("falls back to synthetic 2-event path when timelineEvents is empty/null", async () => {
@@ -382,7 +388,7 @@ describe("Invariant 6 — shared chronology builder behaves correctly on both pa
     const events = buildChronologyEvents(
       {
         timelineEvents: [
-          { at: "2026-05-17T22:00:00Z", text: "captured" },
+          { at: "2026-05-17T22:00:00Z", text: "$10.00 USD was captured using a Visa ending in 0259." },
         ],
         transactionDate: "2026-05-17T21:44:36Z",
         orderName: "#1078",
@@ -391,7 +397,7 @@ describe("Invariant 6 — shared chronology builder behaves correctly on both pa
     );
     // Rich path wins — no synthetic fallback events get appended.
     expect(events).toHaveLength(1);
-    expect(events[0].text).toBe("captured");
+    expect(events[0].text).toBe("$10.00 USD was captured using a Visa ending in 0259.");
   });
 
   it("synthetic fallback adds a customer_communication event when fact carries lastMessageAt", async () => {
