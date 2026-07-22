@@ -148,6 +148,38 @@ describe("buildEvidenceBasisRows", () => {
     expect(rows[0].value).toBe("Prior account history on file");
   });
 
+  it("collapses the delivery_proof + shipping_tracking pair into one row", () => {
+    // The delivery signal reaches the classifier under two sibling
+    // categories carrying the SAME fulfillment payload. Without the
+    // collapse both survive filtering and print an identical value
+    // (blume-box dispute 3477c53f: "Delivery confirmation → Delivered
+    // Jul 7" AND "Shipping tracking → Delivered Jul 7"). Keep the
+    // delivery_proof row; drop the shipping_tracking sibling.
+    const value = { proofType: "delivered_confirmed", deliveredAt: "2026-07-07T22:18:00Z" };
+    const rows = buildEvidenceBasisRows([
+      fact({ id: "delivery", category: "delivery_proof", label: "Delivery confirmation", value }),
+      fact({ id: "tracking", category: "shipping_tracking", label: "Shipping tracking", value }),
+    ]);
+    expect(rows.map((r) => r.factId)).toEqual(["delivery"]);
+    expect(rows[0].label).toBe("Delivery confirmation");
+    expect(rows[0].value).toBe("Delivered Jul 7, 2026, 22:18 UTC");
+  });
+
+  it("keeps a lone shipping_tracking row when no delivery_proof is present", () => {
+    // The collapse only drops the sibling when delivery_proof also
+    // survives; a shipping_tracking fact on its own must still render.
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "tracking",
+        category: "shipping_tracking",
+        label: "Shipping tracking",
+        value: { proofType: "delivered_confirmed", deliveredAt: "2026-07-07T22:18:00Z" },
+      }),
+    ]);
+    expect(rows.map((r) => r.factId)).toEqual(["tracking"]);
+    expect(rows[0].value).toBe("Delivered Jul 7, 2026, 22:18 UTC");
+  });
+
   it("empty input → empty rows", () => {
     expect(buildEvidenceBasisRows([])).toEqual([]);
   });
