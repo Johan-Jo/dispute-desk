@@ -18,6 +18,7 @@ import {
   PACK_BUILD_FAILED,
   CASE_STRENGTHENED,
 } from "../../disputeEvents/eventTypes";
+import { DISPUTE_ATTENTION_REASONS } from "../../disputes/attentionReasons";
 import type { ClaimedJob } from "../claimJobs";
 import type { BuildResult } from "../../packs/buildPack";
 
@@ -410,22 +411,66 @@ async function notifyCaseStrengthened(
   }
 }
 
+/**
+ * Derive the set of completeness fields already collected on a pack, so the
+ * evidence email doesn't ask the merchant to upload evidence we already have.
+ *
+ * Prefers the richer `checklist_v2` (present ⇔ status "available" or "waived"),
+ * falling back to the v1 checklist inside `pack_json.completeness` (present ===
+ * true). Returns an empty set if neither is available.
+ */
+function derivePresentFields(pack: {
+  checklist_v2?: unknown;
+  pack_json?: unknown;
+}): Set<string> {
+  const out = new Set<string>();
+
+  const v2 = pack.checklist_v2 as
+    | Array<{ field?: string; status?: string }>
+    | null
+    | undefined;
+  if (Array.isArray(v2) && v2.length > 0) {
+    for (const c of v2) {
+      if (c?.field && (c.status === "available" || c.status === "waived")) {
+        out.add(c.field);
+      }
+    }
+    return out;
+  }
+
+  const v1 = (
+    pack.pack_json as
+      | { completeness?: { checklist?: Array<{ field?: string; present?: boolean }> } }
+      | null
+      | undefined
+  )?.completeness?.checklist;
+  if (Array.isArray(v1)) {
+    for (const c of v1) {
+      if (c?.field && c.present) out.add(c.field);
+    }
+  }
+  return out;
+}
+
 async function sendManualEvidenceAlert(
   db: ReturnType<typeof getServiceClient>,
   shopId: string,
   packId: string
 ): Promise<void> {
-  // Load pack → dispute info
+  // Load pack → dispute info. checklist_v2 + pack_json carry the completeness
+  // checklist we read to avoid asking the merchant for evidence we already have.
   const { data: pack } = await db
     .from("evidence_packs")
-    .select("id, dispute_id, shop_id")
+    .select("id, dispute_id, shop_id, checklist_v2, pack_json")
     .eq("id", packId)
     .single();
   if (!pack?.dispute_id) return;
 
   const { data: dispute } = await db
     .from("disputes")
-    .select("id, reason, amount, currency_code, evidence_alert_sent_at")
+    .select(
+      "id, reason, amount, currency_code, evidence_alert_sent_at, order_name, needs_attention, attention_reason, attention_payload",
+    )
     .eq("id", pack.dispute_id)
     .single();
   if (!dispute) return;
@@ -444,10 +489,37 @@ async function sendManualEvidenceAlert(
   const digitalProof = storeProfile?.digitalProof as string | undefined;
   const storeTypes = (storeProfile?.storeTypes as string[] | undefined) ?? [];
 
-  // Check if this dispute type needs manual evidence given merchant capabilities
+  // Check if this dispute type warrants an evidence touchpoint at all. This is
+  // deliberately WITHOUT present-fields: even when every ask is already
+  // satisfied, we still send a calm "ready to review" email rather than going
+  // silent — the mailer picks ask-mode vs review-mode from the present-fields.
   if (!shouldSendEvidenceAlert(dispute.reason, digitalProof, storeTypes)) {
     return;
   }
+
+  // What DisputeDesk has ALREADY collected for this pack — read the persisted
+  // completeness checklist (never recompute). Used to suppress redundant asks
+  // and to render the "already attached" reassurance block.
+  const presentFields = derivePresentFields(pack);
+
+  // Matched-but-pending Gorgias comms: enrichment sets attention_reason =
+  // 'gorgias_evidence_ready' with a proposal_count when it finds support
+  // conversations awaiting the merchant's approve/reject decision. Those are
+  // NOT in the pack yet (so customer_communication isn't a present field), so
+  // instead of asking the merchant to upload conversations from scratch we ask
+  // them to review the ones we already matched. This flag races with the
+  // enrichment job; when it isn't set yet, enrichment's own
+  // sendGorgiasEvidenceReadyAlert covers the case — no double-ask either way.
+  const pendingSupportReview =
+    dispute.needs_attention === true &&
+    dispute.attention_reason ===
+      DISPUTE_ATTENTION_REASONS.GORGIAS_EVIDENCE_READY;
+  const pendingSupportCount = pendingSupportReview
+    ? Number(
+        (dispute.attention_payload as { proposal_count?: number } | null)
+          ?.proposal_count ?? 0,
+      )
+    : 0;
 
   // Check notification preference
   const teamPayload = (setup?.steps as Record<string, { payload?: Record<string, unknown> }>)?.team?.payload;
@@ -482,6 +554,10 @@ async function sendManualEvidenceAlert(
     packId,
     digitalProof,
     storeTypes,
+    presentFields,
+    pendingSupportReview,
+    pendingSupportCount,
+    orderName: dispute.order_name ?? null,
   });
 
   // Stamp on the dispute so subsequent pack rebuilds won't re-send
