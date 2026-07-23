@@ -40,6 +40,10 @@ import {
 } from "./sources/coverageSource";
 import { collectDeviceLocationEvidence } from "./sources/deviceLocationSource";
 import { calculateCaseStrength } from "@/lib/argument/caseStrength";
+import {
+  cardholderNameFromPayload,
+  detectCardholderNameMismatch,
+} from "@/lib/argument/nameMismatch";
 import type { CaseStrengthLevel } from "@/lib/argument/types";
 import { detectFatalLoss, type FatalLossSummary } from "@/lib/automation/fatalLoss";
 import {
@@ -160,7 +164,7 @@ export async function buildPack(
 
   const { data: dispute } = await sb
     .from("disputes")
-    .select("id, reason, order_gid, dispute_gid, amount, phase")
+    .select("id, reason, order_gid, dispute_gid, amount, phase, customer_display_name")
     .eq("id", pack.dispute_id)
     .single();
   if (!dispute) throw new Error(`Dispute not found: ${pack.dispute_id}`);
@@ -722,6 +726,25 @@ export async function buildPack(
         & Record<string, unknown>,
     })),
   };
+  // Cardholder-name-mismatch gate input — gateway-registered card name
+  // (payment section) vs. the dispute's customer name. Merchant-UI-only
+  // diagnostic; caps fraud-family strength at "moderate" inside
+  // calculateCaseStrength. Never bank-facing.
+  const avsSectionData = allSections.find((s) =>
+    s.fieldsProvided.includes("avs_cvv_match"),
+  )?.data as Record<string, unknown> | undefined;
+  const gatewayCardholderName = cardholderNameFromPayload(avsSectionData ?? null);
+  const disputeCustomerName =
+    typeof dispute.customer_display_name === "string" &&
+    dispute.customer_display_name.trim().length > 0
+      ? dispute.customer_display_name.trim()
+      : null;
+  const nameMismatchInput = {
+    triggered: detectCardholderNameMismatch(gatewayCardholderName, disputeCustomerName),
+    cardholderName: gatewayCardholderName,
+    customerName: disputeCustomerName,
+  };
+
   const caseStrengthForGate = calculateCaseStrength(
     reconciledChecklist,
     dispute.reason,
@@ -732,6 +755,7 @@ export async function buildPack(
     },
     fatalLossSummary,
     riskWeaknessSummary,
+    nameMismatchInput,
   );
   const caseStrengthSummary: {
     overall: CaseStrengthLevel;
@@ -798,6 +822,10 @@ export async function buildPack(
     case_strength: caseStrengthSummary,
     fatal_loss: fatalLossSummary,
     risk_weakness: riskWeaknessSummary,
+    // Cardholder-name-mismatch diagnostics (merchant-UI + audit only —
+    // NEVER bank-facing). `capApplied` records whether the fraud-family
+    // strength cap actually lowered `overall` on this build.
+    name_mismatch: caseStrengthForGate.nameMismatch ?? null,
     // Payment-method context (card | klarna | affirm | bnpl | …). Persisted
     // so the defence-package pipeline (enqueue + build job) can route/overlay
     // on payment method without re-fetching the order. See

@@ -142,7 +142,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   },
   tds_authentication: {
     signalId: "payment_auth",
-    labelKey: "disputes.signalLabel.payment_auth",
+    labelKey: "disputes.signalLabel.tds_authentication",
     category: "strong",
     supportingOnly: false,
     excludedFromStrength: false,
@@ -230,7 +230,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     category: "supporting",
     supportingOnly: false,
     excludedFromStrength: false,
-    note: "Strong when prior undisputed orders exist for the same customer (rubric #5 — payload.priorUndisputedOrders >= 1, OR payload.totalOrders >= 1 and payload.disputeFreeHistory !== false). Otherwise supporting.",
+    note: "Strong only when PRIOR undisputed orders exist for the same customer (rubric #5). `totalOrders` mirrors Shopify's Customer.numberOfOrders, which INCLUDES the disputed order itself — so prior history requires totalOrders >= 2 (see effectivePriorOrders). A first-order account has no history to cite and stays supporting; prior to 2026-07-23 totalOrders === 1 was miscounted as history and scored Strong (prod dispute 235d4152).",
   },
   activity_log: {
     signalId: "account_history",
@@ -321,6 +321,53 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
 };
 
 /* ── Categorizer ── */
+
+/**
+ * Prior-order count for `customer_account_info` payloads, EXCLUDING the
+ * disputed order itself.
+ *
+ * The collector (`lib/packs/sources/orderSource.ts`) sets `totalOrders`
+ * from Shopify's `Customer.numberOfOrders`, which counts EVERY order on
+ * the account — including the one now being disputed. "Account history"
+ * evidence is only real when the customer bought BEFORE this order, so:
+ *
+ *   - `priorUndisputedOrders` (explicitly prior) wins when present.
+ *   - `isRepeatCustomer` (collector-computed `totalOrders > 1`) is the
+ *     next-most-explicit signal.
+ *   - Otherwise `totalOrders - 1`, floored at 0.
+ *
+ * Returns null when the payload carries no usable order-count signal at
+ * all — callers treat null as "no history" (conservative).
+ *
+ * Shared by the categorizer below, `deriveEvidenceLineItems`'s fraud
+ * guard, and `factClassifier.extractValue` so every surface counts prior
+ * history the same way. (Before 2026-07-23 each consumer read
+ * `totalOrders` as if it excluded the disputed order — a first-order
+ * account scored Strong and the bank narrative claimed "one prior
+ * undisputed order" on the customer's only, disputed, order.)
+ */
+export function effectivePriorOrders(
+  payload: Record<string, unknown> | null | undefined,
+): number | null {
+  if (!payload) return null;
+  const p = payload;
+  if (typeof p.priorUndisputedOrders === "number") {
+    return Math.max(0, p.priorUndisputedOrders);
+  }
+  const totalRaw = p.totalOrders;
+  const total =
+    typeof totalRaw === "number"
+      ? totalRaw
+      : typeof totalRaw === "string" && totalRaw.trim() !== ""
+        ? Number(totalRaw)
+        : null;
+  if (p.isRepeatCustomer === true) {
+    return total !== null && Number.isFinite(total) ? Math.max(1, total - 1) : 1;
+  }
+  if (p.isRepeatCustomer === false) return 0;
+  if (total === null || !Number.isFinite(total)) return null;
+  return Math.max(0, total - 1);
+}
 
 /** AVS result codes Shopify exposes that count as a match.
  *  Y = full match (street+zip), A = address match only, W = zip match only,
@@ -504,15 +551,17 @@ export function categorizeEvidenceField(
   }
 
   // ── customer_account_info ── (rubric #5: prior undisputed transaction history)
-  // Strong: prior undisputed orders exist for this customer/card/email/
-  // address. Conservative — never upgrade if disputeFreeHistory is
-  // explicitly false (would be misleading).
+  // Strong: PRIOR undisputed orders exist for this customer — i.e. orders
+  // placed before the disputed one. `effectivePriorOrders` excludes the
+  // disputed order from the count (Shopify's numberOfOrders includes it),
+  // so a first-order account is supporting, never strong: there is no
+  // history to cite, and on a fraud claim "brand-new account" is a fraud
+  // indicator, not evidence. Conservative — never upgrade if
+  // disputeFreeHistory is explicitly false (would be misleading).
   if (fieldKey === "customer_account_info") {
     if (p.disputeFreeHistory === false) return "supporting";
-    const prior = Number(p.priorUndisputedOrders ?? 0);
-    const totalOrders = Number(p.totalOrders ?? 0);
-    if (prior >= 1) return "strong";
-    if (totalOrders >= 1 && p.disputeFreeHistory !== false) return "strong";
+    const prior = effectivePriorOrders(p);
+    if (prior !== null && prior >= 1) return "strong";
     return "supporting";
   }
 
