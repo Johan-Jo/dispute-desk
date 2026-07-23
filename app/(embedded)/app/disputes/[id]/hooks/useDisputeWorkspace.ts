@@ -27,6 +27,7 @@ import {
 import { generateWhyWins } from "@/lib/argument/whyThisCaseWins";
 import { generateRiskExplanation } from "@/lib/argument/riskExplanation";
 import { generateRecommendation } from "@/lib/argument/recommendation";
+import { getCanonicalSpec } from "@/lib/argument/canonicalEvidence";
 import { asLocalized, type Localized } from "@/lib/i18n/localized";
 import { resolveToken } from "@/lib/i18n/resolveToken";
 import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
@@ -120,6 +121,12 @@ export const SYSTEM_DERIVED_FIELDS: ReadonlySet<string> = new Set([
   "order_confirmation",
   "customer_account_info",
   "activity_log",
+  // product_description is also a FIELD_ACTIONS key (upload CTA config),
+  // so this denylist entry was previously DEAD — MERCHANT_ACTIONABLE_FIELDS
+  // won the precedence check and it got the upload nag anyway. The
+  // supportingOnly guard at the top of canMerchantUpload now refuses it
+  // (and every other weight-0 field) before either list is consulted, so
+  // this entry is belt-and-suspenders.
   "product_description",
 ]);
 
@@ -144,6 +151,19 @@ export function canMerchantUpload(item: {
   field: string;
   collectionType?: string;
 }): boolean {
+  // Never surface a red "Missing · Add this evidence" nag for a field
+  // that can NEVER change case strength. `supportingOnly` fields
+  // (product_description, order_confirmation, duplicate_explanation) are
+  // weight-0 by canonical rule — uploading one leaves the case exactly as
+  // weak as before, so nagging for it is dishonest (the merchant reads
+  // "add this to strengthen" and it provably can't). This mirrors the
+  // guard `calculateCaseStrength`'s improvement hint already applies
+  // (`affectsStrength`), closing the gap where the Overview Missing-card
+  // path didn't share it. Prod dispute 8f90a8f0 (not-as-described), 2026-07-23.
+  // Class-level: catches any current or future supportingOnly field, not
+  // just product_description. Such evidence still travels into the PDF as
+  // supporting context when present — this only stops the missing-row nag.
+  if (getCanonicalSpec(item.field)?.supportingOnly === true) return false;
   if (MERCHANT_ACTIONABLE_FIELDS.has(item.field)) return true;
   if (SYSTEM_DERIVED_FIELDS.has(item.field)) return false;
   return item.collectionType === "manual" || item.collectionType === "conditional_auto";
