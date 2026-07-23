@@ -1645,13 +1645,27 @@
       "general": "litige"
     },
     "internalSignals": {
-      "avsCodePrefix": "Code AVS {code}",
-      "cvvCodePrefix": "Code CVV {code}",
       "avsCvvMismatch": {
         "title": "Le contrôle de sécurité de la carte n'a pas entièrement réussi",
-        "explanation": "La passerelle de paiement a renvoyé une non-correspondance ({codes}). Utilisé en interne pour l'évaluation ; non transmis à la banque afin de ne pas affaiblir la réponse.",
         "titlePartial": "Le contrôle de sécurité de la carte a partiellement réussi",
-        "explanationPartial": "La passerelle de paiement a renvoyé une non-correspondance ({failed}). Ce résultat a été retenu vis-à-vis de la banque afin de ne pas affaiblir la réponse — mais la partie qui a correspondu ({matched}) est citée dans la réponse comme preuve positive."
+        "resultAvsFailCvvMatch": "L'adresse ne correspondait pas aux données de l'émetteur de la carte, mais le code de sécurité de la carte oui (AVS {avs}, CVV {cvv}).",
+        "resultAvsUncheckedCvvMatch": "L'émetteur n'a pas vérifié l'adresse ; le code de sécurité de la carte correspondait (AVS {avs}, CVV {cvv}).",
+        "resultAvsMatchCvvFail": "L'adresse correspondait aux données de l'émetteur de la carte, mais pas le code de sécurité (AVS {avs}, CVV {cvv}).",
+        "resultAvsMatchCvvUnchecked": "L'adresse correspondait aux données de l'émetteur ; le code de sécurité n'a pas été vérifié (AVS {avs}, CVV {cvv}).",
+        "resultBothFail": "Ni l'adresse ni le code de sécurité de la carte ne correspondaient aux données de l'émetteur (AVS {avs}, CVV {cvv}).",
+        "resultAvsFailCvvUnchecked": "L'adresse ne correspondait pas aux données de l'émetteur ; le code de sécurité n'a pas été vérifié (AVS {avs}, CVV {cvv}).",
+        "resultAvsUncheckedCvvFail": "Le code de sécurité de la carte ne correspondait pas aux données de l'émetteur ; l'adresse n'a pas été vérifiée (AVS {avs}, CVV {cvv}).",
+        "resultBothUnchecked": "L'émetteur n'a vérifié ni l'adresse ni le code de sécurité (AVS {avs}, CVV {cvv}).",
+        "resultAvsFailOnly": "L'adresse ne correspondait pas aux données de l'émetteur de la carte (code AVS {avs}).",
+        "resultAvsUncheckedOnly": "L'émetteur n'a pas vérifié l'adresse (code AVS {avs}).",
+        "resultCvvFailOnly": "Le code de sécurité de la carte ne correspondait pas aux données de l'émetteur (code CVV {cvv}).",
+        "resultCvvUncheckedOnly": "L'émetteur n'a pas vérifié le code de sécurité de la carte (code CVV {cvv}).",
+        "outcomeOnlyCvvCited": "Seul le code de sécurité correspondant a été cité comme preuve dans la réponse au litige — la divergence d'adresse l'affaiblirait.",
+        "outcomeOnlyAvsCited": "Seule l'adresse correspondante a été citée comme preuve dans la réponse au litige — la divergence du code l'affaiblirait.",
+        "outcomeCvvCitedClean": "Le code de sécurité correspondant a été cité comme preuve dans la réponse au litige.",
+        "outcomeAvsCitedClean": "L'adresse correspondante a été citée comme preuve dans la réponse au litige.",
+        "outcomeNothingCited": "Aucun de ces résultats n'a été cité comme preuve dans la réponse au litige — seuls les résultats qui renforcent le dossier sont envoyés à la banque.",
+        "outcomeSingleNotCited": "Il n'a pas été cité comme preuve — il affaiblirait la réponse au litige."
       },
       "billingAddress": {
         "title": "Les adresses de facturation et de livraison ne correspondent pas",

@@ -40,9 +40,14 @@ import {
   cardholderNameFromPayload,
   detectCardholderNameMismatch,
 } from "@/lib/argument/nameMismatch";
+import { avsBucket, cvvBucket } from "@/lib/argument/avsCvvExplain";
+import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import type { Localized } from "@/lib/i18n/localized";
 import { resolveToken } from "@/lib/i18n/resolveToken";
-import { MERCHANT_UI_HIDDEN_FIELDS } from "@/lib/automation/merchantUiHiddenFields";
+import {
+  MERCHANT_UI_HIDDEN_FIELDS,
+  isNonEvidenceAccountHistoryRow,
+} from "@/lib/automation/merchantUiHiddenFields";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -451,48 +456,79 @@ function readString(v: unknown): string | null {
 const AVS_MATCH_CODES = new Set(["Y", "A", "W", "X", "D", "M"]);
 const CVV_MATCH_CODES = new Set(["M"]);
 
+/**
+ * MERCHANT-LANGUAGE RULE (2026-07-23): never lead with a bare gateway
+ * code — nobody but a bank knows what "AVS code Z" indicates. One
+ * combined plain-words sentence covers both results (codes in
+ * parentheses at the end), then one short outcome sentence using the
+ * consistent "cited as evidence" phrasing. Mirrors
+ * `lib/argument/internalSignals.ts` — keep the two in lockstep.
+ *
+ * Result-sentence key by (avsBucket, cvvBucket); null = code absent.
+ * Only combinations that can fire the warning (at least one present
+ * code outside the scoring match set) are listed.
+ */
+const AVS_CVV_RESULT_KEY: Record<string, string> = {
+  "no_match|match": "resultAvsFailCvvMatch",
+  "unchecked|match": "resultAvsUncheckedCvvMatch",
+  "match|no_match": "resultAvsMatchCvvFail",
+  "match|unchecked": "resultAvsMatchCvvUnchecked",
+  "no_match|no_match": "resultBothFail",
+  "no_match|unchecked": "resultAvsFailCvvUnchecked",
+  "unchecked|no_match": "resultAvsUncheckedCvvFail",
+  "unchecked|unchecked": "resultBothUnchecked",
+  "no_match|none": "resultAvsFailOnly",
+  "unchecked|none": "resultAvsUncheckedOnly",
+  "none|no_match": "resultCvvFailOnly",
+  "none|unchecked": "resultCvvUncheckedOnly",
+};
+
 function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel | null {
   if (!isPlainObject(payload)) return null;
-  const avs = readString(payload.avsResultCode);
-  const cvv = readString(payload.cvvResultCode);
-  // Only emit when at least one code is present AND that code is a
-  // mismatch. Absence of codes (null/empty) is not a negative signal.
+  const avs = readString(payload.avsResultCode)?.toUpperCase() ?? null;
+  const cvv = readString(payload.cvvResultCode)?.toUpperCase() ?? null;
+  // Only emit when at least one code is present AND that code is
+  // outside the scoring match set. Absence of codes is not a signal.
   const avsMismatch = avs !== null && avs !== "" && !AVS_MATCH_CODES.has(avs);
   const cvvMismatch = cvv !== null && cvv !== "" && !CVV_MATCH_CODES.has(cvv);
   if (!avsMismatch && !cvvMismatch) return null;
 
-  const failedParts: string[] = [];
-  if (avsMismatch) failedParts.push(t("internalSignals.avsCodePrefix", { code: avs ?? "" }));
-  if (cvvMismatch) failedParts.push(t("internalSignals.cvvCodePrefix", { code: cvv ?? "" }));
+  const NS = "internalSignals.avsCvvMismatch";
+  const avsB = avsBucket(avs) ?? "none";
+  const cvvB = cvvBucket(cvv) ?? "none";
+  const resultKey = AVS_CVV_RESULT_KEY[`${avsB}|${cvvB}`];
+  if (!resultKey) return null; // unreachable combos (match|match etc.)
 
-  // Partial match: exactly one code was present-and-matched while the
-  // other failed. In that case the matched half IS cited to the bank
-  // (avs_cvv_match categorizes to `moderate` and lands in the positive
-  // bucket), so the "not surfaced to the bank" copy is only half-true.
-  // Name what was withheld AND what was cited so the merchant isn't left
-  // reading a row that both claims "cited as proof" and "kept internal".
-  const avsMatched = avs !== null && avs !== "" && AVS_MATCH_CODES.has(avs);
-  const cvvMatched = cvv !== null && cvv !== "" && CVV_MATCH_CODES.has(cvv);
-  const matchedParts: string[] = [];
-  if (avsMatched) matchedParts.push(t("internalSignals.avsCodePrefix", { code: avs ?? "" }));
-  if (cvvMatched) matchedParts.push(t("internalSignals.cvvCodePrefix", { code: cvv ?? "" }));
-  const isPartial = matchedParts.length > 0;
+  const sentences: string[] = [
+    t(`${NS}.${resultKey}`, { avs: avs ?? "", cvv: cvv ?? "" }),
+  ];
 
-  if (isPartial) {
-    return {
-      id: "internal:avs_cvv_mismatch",
-      title: t("internalSignals.avsCvvMismatch.titlePartial"),
-      explanation: t("internalSignals.avsCvvMismatch.explanationPartial", {
-        failed: failedParts.join(", "),
-        matched: matchedParts.join(", "),
-      }),
-    };
+  // Outcome — consistent "cited as evidence" phrasing. "Cited" follows
+  // the SCORING match sets (what actually reaches the positive bucket /
+  // narrative). Pure-unchecked results carry no outcome: nothing was
+  // withheld and nothing cited, the result sentence stands alone.
+  const avsCited = avs !== null && AVS_MATCH_CODES.has(avs);
+  const cvvCited = cvv !== null && CVV_MATCH_CODES.has(cvv);
+  if (cvvCited) {
+    sentences.push(
+      t(`${NS}.${avsB === "no_match" ? "outcomeOnlyCvvCited" : "outcomeCvvCitedClean"}`),
+    );
+  } else if (avsCited) {
+    sentences.push(
+      t(`${NS}.${cvvB === "no_match" ? "outcomeOnlyAvsCited" : "outcomeAvsCitedClean"}`),
+    );
+  } else if (avsB === "no_match" && cvvB === "none") {
+    sentences.push(t(`${NS}.outcomeSingleNotCited`));
+  } else if (cvvB === "no_match" && avsB === "none") {
+    sentences.push(t(`${NS}.outcomeSingleNotCited`));
+  } else if (avsB === "no_match" || cvvB === "no_match") {
+    sentences.push(t(`${NS}.outcomeNothingCited`));
   }
 
   return {
     id: "internal:avs_cvv_mismatch",
-    title: t("internalSignals.avsCvvMismatch.title"),
-    explanation: t("internalSignals.avsCvvMismatch.explanation", { codes: failedParts.join(", ") }),
+    title: avsCited || cvvCited ? t(`${NS}.titlePartial`) : t(`${NS}.title`),
+    explanation: sentences.join(" "),
   };
 }
 
@@ -855,6 +891,18 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
   for (const item of derived.effectiveChecklist) {
     if (item.status !== "available") continue;
     if (usedInDefense.some((row) => row.field === item.field)) continue;
+    // First-time customer on fraud: not evidence — the row renders
+    // nowhere merchant-facing (2026-07-23 user decision; mirrors the
+    // line-item derivation, which also drops it).
+    if (
+      isNonEvidenceAccountHistoryRow(
+        item.field,
+        (item.payload ?? null) as Record<string, unknown> | null,
+        data.dispute.reasonFamily ?? resolveReasonFamily(data.dispute.reason),
+      )
+    ) {
+      continue;
+    }
     usedInDefense.push(buildRow("supporting", item.field, fieldLabel(item.field, item.label), "supporting"));
   }
 

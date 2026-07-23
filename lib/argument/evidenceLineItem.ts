@@ -41,6 +41,7 @@ import {
   INTERNAL_ONLY_FIELDS,
   isFieldBankEligible,
 } from "@/lib/defence/factClassifier";
+import { isNonEvidenceAccountHistoryRow } from "@/lib/automation/merchantUiHiddenFields";
 import type { CaseStrengthContribution } from "./caseStrength";
 import type { ReasonFamily } from "./reasonFamily";
 import type { I18nToken } from "@/lib/i18n/token";
@@ -1358,6 +1359,18 @@ export function deriveEvidenceLineItems(
     if (!spec) continue; // Off-registry fields are invisible everywhere.
 
     const payload = payloadObjectFor(payloadByField, item.field);
+
+    // First-time customer on a fraud dispute: "account history" with
+    // zero prior orders is not evidence — it's the absence of history.
+    // No line item is emitted, so the row renders NOWHERE merchant-
+    // facing (Evidence tab buckets, Submission Summary, Inclusion
+    // Review). Returning customers keep the row — that IS evidence.
+    // (2026-07-23 user decision; scoring/pack builder unaffected.)
+    if (
+      isNonEvidenceAccountHistoryRow(item.field, payload, input.reasonFamily)
+    ) {
+      continue;
+    }
     const internalFlag = INTERNAL_ONLY_FIELDS.has(item.field);
     const negativeOrAmbiguous = isNegativeOrAmbiguous(item.field, payload, input.reasonFamily);
     const override = inclusionOverrides.get(item.field);

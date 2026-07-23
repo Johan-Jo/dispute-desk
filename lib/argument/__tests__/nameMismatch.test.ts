@@ -14,6 +14,7 @@ import {
 } from "../nameMismatch";
 import { calculateCaseStrength } from "../caseStrength";
 import { buildInternalSignalsByField } from "../internalSignals";
+import { isNonEvidenceAccountHistoryRow } from "@/lib/automation/merchantUiHiddenFields";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 
 describe("detectCardholderNameMismatch", () => {
@@ -208,7 +209,7 @@ describe("buildInternalSignalsByField — cardholder-name mismatch warning", () 
     ).toBeUndefined();
   });
 
-  it("partial AVS/CVV warning names the cited half, not a blanket withhold", () => {
+  it("partial AVS/CVV warning: one plain combined sentence + 'cited as evidence' outcome", () => {
     const map = buildInternalSignalsByField(
       new Map([["avs_cvv_match", avsCvvPayload]]),
       { customerName: "Sean Boyd" },
@@ -218,8 +219,102 @@ describe("buildInternalSignalsByField — cardholder-name mismatch warning", () 
     );
     expect(avsWarning).toBeDefined();
     expect(avsWarning!.label).toBe("Card security check partially passed");
-    expect(avsWarning!.reason).toContain("AVS code N");
-    expect(avsWarning!.reason).toContain("CVV code M");
-    expect(avsWarning!.reason).toContain("cited in the response");
+    // Plain-language rule: describe WHAT happened, codes in parentheses
+    // at the end — never lead with a bare gateway code.
+    expect(avsWarning!.reason).toBe(
+      "The address did not match the card issuer's records, but the card's security code did (AVS N, CVV M). " +
+        "Only the matching security code was cited as evidence in the dispute response — the address mismatch would weaken it.",
+    );
+  });
+
+  it("AVS Z + CVV M renders the same grouped 'did not match' sentence", () => {
+    const map = buildInternalSignalsByField(
+      new Map([
+        [
+          "avs_cvv_match",
+          { avsResultCode: "Z", cvvResultCode: "M", cardholderName: "Robin Denise Pipe" },
+        ],
+      ]),
+    );
+    const w = (map.get("avs_cvv_match") ?? []).find(
+      (x) => x.id === "internal:avs_cvv_mismatch",
+    );
+    expect(w).toBeDefined();
+    expect(w!.reason).toContain(
+      "The address did not match the card issuer's records, but the card's security code did (AVS Z, CVV M).",
+    );
+  });
+
+  it("unchecked AVS (code U) reads as not checked, never as a mismatch", () => {
+    const map = buildInternalSignalsByField(
+      new Map([["avs_cvv_match", { avsResultCode: "U", cvvResultCode: "M" }]]),
+    );
+    const w = (map.get("avs_cvv_match") ?? []).find(
+      (x) => x.id === "internal:avs_cvv_mismatch",
+    );
+    expect(w).toBeDefined();
+    expect(w!.reason).toBe(
+      "The issuer did not check the address; the card's security code matched (AVS U, CVV M). " +
+        "The matching security code was cited as evidence in the dispute response.",
+    );
+  });
+
+  it("both failed reads as one sentence + nothing-cited outcome", () => {
+    const map = buildInternalSignalsByField(
+      new Map([["avs_cvv_match", { avsResultCode: "N", cvvResultCode: "N" }]]),
+    );
+    const w = (map.get("avs_cvv_match") ?? []).find(
+      (x) => x.id === "internal:avs_cvv_mismatch",
+    );
+    expect(w).toBeDefined();
+    expect(w!.label).toBe("Card security check did not fully pass");
+    expect(w!.reason).toBe(
+      "Neither the address nor the card's security code matched the issuer's records (AVS N, CVV N). " +
+        "Neither result was cited as evidence in the dispute response — only results that strengthen the case go to the bank.",
+    );
+  });
+});
+
+/* ── Non-evidence account-history row (2026-07-23 user decision) ── */
+
+describe("isNonEvidenceAccountHistoryRow", () => {
+  it("hides a first-time customer on a fraud dispute", () => {
+    expect(
+      isNonEvidenceAccountHistoryRow(
+        "customer_account_info",
+        { totalOrders: 1, isRepeatCustomer: false },
+        "fraud",
+      ),
+    ).toBe(true);
+  });
+
+  it("hides when the payload carries no order-count signal at all", () => {
+    expect(
+      isNonEvidenceAccountHistoryRow("customer_account_info", {}, "fraud"),
+    ).toBe(true);
+  });
+
+  it("keeps a returning customer (that IS evidence)", () => {
+    expect(
+      isNonEvidenceAccountHistoryRow(
+        "customer_account_info",
+        { totalOrders: 3, isRepeatCustomer: true },
+        "fraud",
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps the row on non-fraud families", () => {
+    expect(
+      isNonEvidenceAccountHistoryRow(
+        "customer_account_info",
+        { totalOrders: 1, isRepeatCustomer: false },
+        "delivery",
+      ),
+    ).toBe(false);
+  });
+
+  it("never touches other fields", () => {
+    expect(isNonEvidenceAccountHistoryRow("activity_log", {}, "fraud")).toBe(false);
   });
 });
