@@ -1291,6 +1291,7 @@
     "noDisputesHint": "Las disputas se muestran para la tienda seleccionada en la barra lateral. Si usas varias tiendas, cambia a la correcta y luego haz clic en Sincronizar ahora.",
     "signalLabel": {
       "payment_auth": "Autenticación del pago",
+      "tds_authentication": "Autenticación 3-D Secure",
       "billing_match": "Coincidencia de dirección de facturación",
       "delivery": "Confirmación de entrega",
       "ip_location": "Coherencia de IP y ubicación",
@@ -1648,7 +1649,9 @@
       "cvvCodePrefix": "Código CVV {code}",
       "avsCvvMismatch": {
         "title": "La verificación de seguridad de la tarjeta no pasó completamente",
-        "explanation": "La pasarela de pago devolvió una no coincidencia ({codes}). Se usa internamente para la evaluación; no se envía al banco para no debilitar la respuesta."
+        "explanation": "La pasarela de pago devolvió una no coincidencia ({codes}). Se usa internamente para la evaluación; no se envía al banco para no debilitar la respuesta.",
+        "titlePartial": "La verificación de seguridad de la tarjeta pasó parcialmente",
+        "explanationPartial": "La pasarela de pago devolvió una no coincidencia ({failed}). Ese resultado se ocultó al banco para no debilitar la respuesta, pero la parte que sí coincidió ({matched}) se cita en la respuesta como prueba positiva."
       },
       "billingAddress": {
         "title": "Las direcciones de facturación y envío no coinciden",
@@ -1667,6 +1670,10 @@
       "ipBankIneligible": {
         "title": "Señal de IP/ubicación mantenida interna",
         "explanation": "Esta señal informa la evaluación, pero el recopilador la marcó como no elegible para el banco. No se envía a Shopify."
+      },
+      "cardholderNameMismatch": {
+        "title": "La tarjeta está registrada a un nombre distinto del comprador",
+        "explanation": "La tarjeta de pago está registrada a nombre de \"{cardholder}\", pero el pedido lo realizó \"{customer}\". Es un patrón habitual de tarjeta robada — revísalo antes de enviar. Se usa internamente para la evaluación; no se añade al argumento presentado al banco."
       }
     },
     "deliveryProof": {

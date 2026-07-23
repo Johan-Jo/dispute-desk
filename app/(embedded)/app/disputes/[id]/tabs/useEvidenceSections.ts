@@ -36,6 +36,10 @@ import type {
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 import type { CaseStrengthLevel } from "@/lib/argument/types";
 import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
+import {
+  cardholderNameFromPayload,
+  detectCardholderNameMismatch,
+} from "@/lib/argument/nameMismatch";
 import type { Localized } from "@/lib/i18n/localized";
 import { resolveToken } from "@/lib/i18n/resolveToken";
 import { MERCHANT_UI_HIDDEN_FIELDS } from "@/lib/automation/merchantUiHiddenFields";
@@ -439,7 +443,12 @@ function readString(v: unknown): string | null {
   return typeof v === "string" ? v : null;
 }
 
-const AVS_MATCH_CODES = new Set(["Y", "A"]);
+// Kept in lockstep with the canonical categorizer
+// (lib/argument/canonicalEvidence.ts): Y/A/W/X/D/M are AVS matches, M is
+// a CVV match. A narrower set here would flag a canonically-matching code
+// (e.g. AVS W = zip match) as a mismatch and surface a false internal
+// warning that contradicts the positive bucket.
+const AVS_MATCH_CODES = new Set(["Y", "A", "W", "X", "D", "M"]);
 const CVV_MATCH_CODES = new Set(["M"]);
 
 function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel | null {
@@ -452,13 +461,38 @@ function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel
   const cvvMismatch = cvv !== null && cvv !== "" && !CVV_MATCH_CODES.has(cvv);
   if (!avsMismatch && !cvvMismatch) return null;
 
-  const parts: string[] = [];
-  if (avsMismatch) parts.push(t("internalSignals.avsCodePrefix", { code: avs ?? "" }));
-  if (cvvMismatch) parts.push(t("internalSignals.cvvCodePrefix", { code: cvv ?? "" }));
+  const failedParts: string[] = [];
+  if (avsMismatch) failedParts.push(t("internalSignals.avsCodePrefix", { code: avs ?? "" }));
+  if (cvvMismatch) failedParts.push(t("internalSignals.cvvCodePrefix", { code: cvv ?? "" }));
+
+  // Partial match: exactly one code was present-and-matched while the
+  // other failed. In that case the matched half IS cited to the bank
+  // (avs_cvv_match categorizes to `moderate` and lands in the positive
+  // bucket), so the "not surfaced to the bank" copy is only half-true.
+  // Name what was withheld AND what was cited so the merchant isn't left
+  // reading a row that both claims "cited as proof" and "kept internal".
+  const avsMatched = avs !== null && avs !== "" && AVS_MATCH_CODES.has(avs);
+  const cvvMatched = cvv !== null && cvv !== "" && CVV_MATCH_CODES.has(cvv);
+  const matchedParts: string[] = [];
+  if (avsMatched) matchedParts.push(t("internalSignals.avsCodePrefix", { code: avs ?? "" }));
+  if (cvvMatched) matchedParts.push(t("internalSignals.cvvCodePrefix", { code: cvv ?? "" }));
+  const isPartial = matchedParts.length > 0;
+
+  if (isPartial) {
+    return {
+      id: "internal:avs_cvv_mismatch",
+      title: t("internalSignals.avsCvvMismatch.titlePartial"),
+      explanation: t("internalSignals.avsCvvMismatch.explanationPartial", {
+        failed: failedParts.join(", "),
+        matched: matchedParts.join(", "),
+      }),
+    };
+  }
+
   return {
     id: "internal:avs_cvv_mismatch",
     title: t("internalSignals.avsCvvMismatch.title"),
-    explanation: t("internalSignals.avsCvvMismatch.explanation", { codes: parts.join(", ") }),
+    explanation: t("internalSignals.avsCvvMismatch.explanation", { codes: failedParts.join(", ") }),
   };
 }
 
@@ -579,9 +613,39 @@ function classifyIpLocation(payload: unknown, t: Translate): InternalSignalViewM
   };
 }
 
+/**
+ * Cardholder-name mismatch — the gateway's registered card name shares
+ * no token with the buyer's name (classic stolen-card pattern). Prints
+ * BOTH names so the merchant sees exactly what differs. Merchant-UI
+ * only; the comparison itself lives in `lib/argument/nameMismatch.ts`
+ * (shared with the strength cap and the server-side warnings map).
+ */
+function classifyCardholderName(
+  payload: unknown,
+  customerName: string | null,
+  t: Translate,
+): InternalSignalViewModel | null {
+  if (!isPlainObject(payload)) return null;
+  const cardholder = cardholderNameFromPayload(payload);
+  const customer =
+    typeof customerName === "string" && customerName.trim().length > 0
+      ? customerName.trim()
+      : null;
+  if (!detectCardholderNameMismatch(cardholder, customer)) return null;
+  return {
+    id: "internal:cardholder_name_mismatch",
+    title: t("internalSignals.cardholderNameMismatch.title"),
+    explanation: t("internalSignals.cardholderNameMismatch.explanation", {
+      cardholder: cardholder ?? "",
+      customer: customer ?? "",
+    }),
+  };
+}
+
 function deriveInternalOnlySignals(
   effectiveChecklist: EvidenceItemWithStrength[],
   t: Translate,
+  customerName: string | null,
 ): InternalSignalViewModel[] {
   const out: InternalSignalViewModel[] = [];
   // Index payloads by field for quick lookup. The checklist iteration
@@ -594,6 +658,13 @@ function deriveInternalOnlySignals(
 
   const avs = classifyAvsCvv(byField.get("avs_cvv_match"), t);
   if (avs) out.push(avs);
+
+  const nameMismatch = classifyCardholderName(
+    byField.get("avs_cvv_match"),
+    customerName,
+    t,
+  );
+  if (nameMismatch) out.push(nameMismatch);
 
   const billing = classifyBillingAddressMismatch(effectiveChecklist, t);
   if (billing) out.push(billing);
@@ -816,7 +887,11 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
   // (VPN/proxy/data-center), and any payload explicitly flagged
   // bankEligible:false. Conservative — absence of data is never a
   // negative signal.
-  const internalOnly = deriveInternalOnlySignals(derived.effectiveChecklist, tInternal);
+  const internalOnly = deriveInternalOnlySignals(
+    derived.effectiveChecklist,
+    tInternal,
+    data.dispute.customerName ?? null,
+  );
 
   return {
     caseSummary,

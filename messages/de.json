@@ -1291,6 +1291,7 @@
     "noDisputesHint": "Streitfälle werden für den in der Seitenleiste ausgewählten Shop angezeigt. Wenn Sie mehrere Shops nutzen, wechseln Sie zum richtigen und klicken Sie auf Jetzt synchronisieren.",
     "signalLabel": {
       "payment_auth": "Zahlungsauthentifizierung",
+      "tds_authentication": "3-D-Secure-Authentifizierung",
       "billing_match": "Übereinstimmung der Rechnungsadresse",
       "delivery": "Lieferbestätigung",
       "ip_location": "IP- und Standortübereinstimmung",
@@ -1648,7 +1649,9 @@
       "cvvCodePrefix": "CVV-Code {code}",
       "avsCvvMismatch": {
         "title": "Kartensicherheitsprüfung nicht vollständig bestanden",
-        "explanation": "Das Zahlungs-Gateway lieferte keine vollständige Übereinstimmung ({codes}). Wird intern zur Bewertung verwendet; nicht an die Bank weitergegeben, um die Antwort nicht zu schwächen."
+        "explanation": "Das Zahlungs-Gateway lieferte keine vollständige Übereinstimmung ({codes}). Wird intern zur Bewertung verwendet; nicht an die Bank weitergegeben, um die Antwort nicht zu schwächen.",
+        "titlePartial": "Kartensicherheitsprüfung teilweise bestanden",
+        "explanationPartial": "Das Zahlungs-Gateway lieferte für einen Teil keine Übereinstimmung ({failed}). Dieses Ergebnis wurde der Bank vorenthalten, um die Antwort nicht zu schwächen – der übereinstimmende Teil ({matched}) wird in der Antwort jedoch als positiver Nachweis angeführt."
       },
       "billingAddress": {
         "title": "Rechnungs- und Lieferadresse stimmen nicht überein",
@@ -1667,6 +1670,10 @@
       "ipBankIneligible": {
         "title": "IP-/Standort-Signal nur intern",
         "explanation": "Dieses Signal fließt in die Bewertung ein, wurde aber vom Upstream-Collector als nicht bankfähig markiert. Nicht an Shopify übermittelt."
+      },
+      "cardholderNameMismatch": {
+        "title": "Karte ist auf einen anderen Namen registriert als der Käufer",
+        "explanation": "Die Zahlungskarte ist auf \"{cardholder}\" registriert, die Bestellung wurde jedoch von \"{customer}\" aufgegeben. Dies ist ein typisches Muster bei gestohlenen Karten — vor dem Einreichen prüfen. Wird intern zur Bewertung verwendet; nicht in die Argumentation gegenüber der Bank aufgenommen."
       }
     },
     "deliveryProof": {

@@ -678,6 +678,7 @@
     },
     "signalLabel": {
       "payment_auth": "Payment authentication",
+      "tds_authentication": "3-D Secure authentication",
       "billing_match": "Billing address match",
       "delivery": "Delivery confirmation",
       "ip_location": "IP & location consistency",
@@ -998,7 +999,9 @@
       "cvvCodePrefix": "CVV code {code}",
       "avsCvvMismatch": {
         "title": "Card security check did not fully pass",
-        "explanation": "The payment gateway returned a non-match ({codes}). Used internally for assessment; not surfaced to the bank to avoid weakening the response."
+        "explanation": "The payment gateway returned a non-match ({codes}). Used internally for assessment; not surfaced to the bank to avoid weakening the response.",
+        "titlePartial": "Card security check partially passed",
+        "explanationPartial": "The payment gateway returned a non-match ({failed}). That result was withheld from the bank to avoid weakening the response — but the part that did match ({matched}) is cited in the response as positive evidence."
       },
       "billingAddress": {
         "title": "Billing and shipping addresses do not match",
@@ -1017,6 +1020,10 @@
       "ipBankIneligible": {
         "title": "IP/location signal kept internal",
         "explanation": "This signal informs the assessment but the upstream collector marked it as not bank-eligible. Not submitted to Shopify."
+      },
+      "cardholderNameMismatch": {
+        "title": "Card is registered to a different name than the buyer",
+        "explanation": "The payment card is registered to \"{cardholder}\" but the order was placed by \"{customer}\". This is a common stolen-card pattern — review before submitting. Used internally for assessment; not added to the bank-facing argument."
       }
     },
     "evidenceTabExtra": {

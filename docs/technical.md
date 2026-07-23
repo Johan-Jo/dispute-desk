@@ -2321,6 +2321,21 @@ review + fatal_loss → park_for_review           (review is absolute)
 - The `MESSAGES` copy in `lib/automation/fatalLoss.ts` is merchant-UI only. Bank-rebuttal text generation must NEVER cite "we already refunded" — that's a confession, not a defense.
 - Coverage beats fatal-loss. A covered case is never "fatal" because Shopify pays regardless.
 
+### Cardholder-name-mismatch gate (2026-07-23, merchant-UI only)
+
+The payment gateway returns the name the card is registered to (`cardholderName` on the `avs_cvv_match` payment-section payload, via `lib/packs/sources/paymentSource.ts`). When that name shares **no token** with the dispute's customer name, the order was placed by someone other than the person the issuer knows — the classic stolen-card pattern (prod dispute `235d4152`: card registered to "Robin Denise Pipe", order by "Sean Boyd", AVS N, first-order account, Shopify pre-auth HIGH/CANCEL — presented as a Strong case pre-fix).
+
+**Detector:** `detectCardholderNameMismatch` in `lib/argument/nameMismatch.ts`. Deliberately conservative — token-based comparison (lowercased, diacritics stripped, 1-char tokens dropped) that fires only on zero overlap. Shared surnames (family purchases), initials, and partial legal names all pass; missing data never fires.
+
+**Effects when triggered:**
+
+- **Strength cap (fraud family only):** `calculateCaseStrength` accepts `nameMismatch` as input and caps `overall` at `"moderate"` (ceiling — weak/moderate pass through, non-fraud families unaffected). A name-mismatched order therefore never auto-submits as Strong; it routes through the existing `auto + moderate → park_for_review` branch. Wired at all three call sites: `buildPack` (persisted `pack_json.case_strength` + new `pack_json.name_mismatch` diagnostics with `capApplied`), the workspace API, and the disputes-list Stage B fallback.
+- **Merchant warning:** a "Kept internal" signal that **prints both names** ("The payment card is registered to \"X\" but the order was placed by \"Y\"…"), anchored on the `avs_cvv_match` row. Emitted by both `buildInternalSignalsByField` (server, needs `context.customerName`) and `useEvidenceSections.classifyCardholderName` (client, localized via `disputes.internalSignals.cardholderNameMismatch`).
+
+**Bank non-disclosure:** the mismatch and both names are merchant-UI + audit only. They MUST NEVER enter the bank-rebuttal text, the evidence PDF body, or Shopify `disputeEvidence` mutations — telling the bank the buyer isn't the cardholder is a confession, and the issuer already knows their cardholder's name. (The PDF Case Details "Cardholder name" row is unchanged: it prints the gateway name the issuer already has.)
+
+**Related first-order-history fix (same date):** `totalOrders` on `customer_account_info` payloads mirrors Shopify's `Customer.numberOfOrders`, which **includes the disputed order itself**. Every consumer previously read it as if it excluded it, so a brand-new account (totalOrders = 1) scored **Strong** "account history" and the LLM narrative claimed "one prior undisputed order" on the customer's only, disputed, order. The shared corrector `effectivePriorOrders` (in `lib/argument/canonicalEvidence.ts`) now feeds the canonical categorizer (first-order → `supporting`, never strong), `deriveEvidenceLineItems`' fraud internal-only guard and reason copy, and `factClassifier.extractValue` (`priorOrderCount` the LLM sees). Genuine returning customers (≥1 order BEFORE the disputed one) still score Strong.
+
 ### Risk-weakness diagnostics (internal-only)
 
 **Status (2026-05-15):** the Phase 2 CAP was rolled back. Surfacing Shopify's pre-auth risk score to the merchant doesn't change what they can do — the case is defensible (or not) based on AVS/CVV/delivery/auth, regardless of the risk score at checkout. The merchant-facing surfaces (embedded banner, email callout, strength-reason override) were all removed. Diagnostics are retained for internal analytics + support debugging.

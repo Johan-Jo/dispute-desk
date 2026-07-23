@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { calculateCaseStrength } from "@/lib/argument/caseStrength";
+import {
+  cardholderNameFromPayload,
+  detectCardholderNameMismatch,
+} from "@/lib/argument/nameMismatch";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 
@@ -173,6 +177,18 @@ export async function GET(req: NextRequest) {
   const disputeIds = (data ?? []).map((d) => d.id);
   const reasonByDisputeId = new Map<string, string | null>();
   for (const d of data ?? []) reasonByDisputeId.set(d.id, d.reason ?? null);
+  // Customer names for the cardholder-name-mismatch gate in the Stage B
+  // recompute below — keeps the list's live-computed strength consistent
+  // with the build path's persisted case_strength (Stage A), which
+  // already applies the cap.
+  const customerNameByDisputeId = new Map<string, string | null>();
+  for (const d of data ?? []) {
+    const name =
+      typeof d.customer_display_name === "string" && d.customer_display_name.trim().length > 0
+        ? d.customer_display_name.trim()
+        : null;
+    customerNameByDisputeId.set(d.id, name);
+  }
   const strengthByDispute = new Map<
     string,
     {
@@ -273,10 +289,22 @@ export async function GET(req: NextRequest) {
 
         try {
           const reason = reasonByDisputeId.get(p.dispute_id) ?? null;
+          const customerName = customerNameByDisputeId.get(p.dispute_id) ?? null;
+          const cardholderName = cardholderNameFromPayload(
+            (byField["avs_cvv_match"]?.payload ?? null) as Record<string, unknown> | null,
+          );
           const result = calculateCaseStrength(
             checklist,
             reason,
             payloadSource,
+            undefined,
+            undefined,
+            undefined,
+            {
+              triggered: detectCardholderNameMismatch(cardholderName, customerName),
+              cardholderName,
+              customerName,
+            },
           );
           strengthByDispute.set(p.dispute_id, {
             overall: result.overall,

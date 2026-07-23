@@ -306,6 +306,22 @@ export interface CaseRiskWeaknessInput {
   };
 }
 
+/** Optional Cardholder-name-mismatch Gate input (2026-07-23). Computed
+ *  by callers via `detectCardholderNameMismatch` (lib/argument/
+ *  nameMismatch.ts) from the avs_cvv_match payload's gateway-registered
+ *  `cardholderName` vs. the dispute's customer name. When triggered on
+ *  a FRAUD-family dispute, CAPS `overall` at "moderate" — a
+ *  name-mismatched order is the classic stolen-card pattern and must
+ *  never auto-submit as a Strong case. Cap-as-ceiling: weak stays weak,
+ *  moderate stays moderate. Non-fraud families are unaffected (the
+ *  dispute isn't about the buyer's identity there). The names are
+ *  merchant-UI-only diagnostics — never bank-facing. */
+export interface CaseNameMismatchInput {
+  triggered: boolean;
+  cardholderName: string | null;
+  customerName: string | null;
+}
+
 const COVERED_STRENGTH_REASON_TOKEN: I18nToken = {
   key: "disputes.strengthReason.covered",
 };
@@ -334,6 +350,10 @@ export function calculateCaseStrength(
    *  Routes through the existing auto + moderate → park_for_review
    *  pipeline branch; no new gate required. */
   riskWeakness?: CaseRiskWeaknessInput,
+  /** Optional Cardholder-name-mismatch Gate input. Fraud family only:
+   *  caps `overall` at "moderate" when triggered. See
+   *  `CaseNameMismatchInput`. */
+  nameMismatch?: CaseNameMismatchInput,
 ): CaseStrengthResult {
   const family = resolveReasonFamily(reason);
 
@@ -361,9 +381,12 @@ export function calculateCaseStrength(
           : { key: `disputes.strengthReason.${family}.insufficient` },
       coverage: coverage ?? undefined,
       fatalLoss: fatalLoss ?? undefined,
-      // No checklist → no scoring → the risk-weakness cap is a no-op
-      // here. The diagnostic block still propagates for audit.
+      // No checklist → no scoring → the risk-weakness and name-mismatch
+      // caps are no-ops here. Diagnostic blocks still propagate for audit.
       riskWeakness: riskWeakness ?? undefined,
+      nameMismatch: nameMismatch
+        ? { ...nameMismatch, capApplied: false }
+        : undefined,
     };
   }
 
@@ -595,6 +618,25 @@ export function calculateCaseStrength(
     else overall = "weak";
   }
 
+  // Cardholder-name-mismatch cap (fraud family only). The gateway says
+  // the card is registered to someone who shares no name token with the
+  // buyer — the stolen-card pattern. Cap at "moderate" so the case never
+  // auto-submits as Strong; the merchant reviews it with the
+  // kept-internal warning that prints both names. Applied BEFORE reason
+  // composition so the hero copy is written for the capped level, and
+  // BEFORE the coverage/fatal-loss overrides (which take precedence
+  // downstream regardless). Ceiling only — weak/moderate pass through.
+  let nameMismatchCapApplied = false;
+  if (
+    family === "fraud" &&
+    nameMismatch?.triggered === true &&
+    overall === "strong"
+  ) {
+    overall = "moderate";
+    isFraudAvsOnlyStrong = false;
+    nameMismatchCapApplied = true;
+  }
+
   // Weighted sum (P2.1 weights). Replaces the legacy 0-100 ratio
   // semantically — but the legacy 0-100 lives on as `coveragePercent`
   // for the UI's coverage pill.
@@ -690,6 +732,9 @@ export function calculateCaseStrength(
     coverage: coverage ?? undefined,
     fatalLoss: fatalLoss ?? undefined,
     riskWeakness: riskWeakness ?? undefined,
+    nameMismatch: nameMismatch
+      ? { ...nameMismatch, capApplied: nameMismatchCapApplied }
+      : undefined,
   };
 }
 

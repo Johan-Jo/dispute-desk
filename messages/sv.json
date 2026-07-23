@@ -684,6 +684,7 @@
     },
     "signalLabel": {
       "payment_auth": "Betalningsautentisering",
+      "tds_authentication": "3-D Secure-autentisering",
       "billing_match": "Faktureringsadress matchar",
       "delivery": "Leveransbekräftelse",
       "ip_location": "IP & platskonsistens",
@@ -1004,7 +1005,9 @@
       "cvvCodePrefix": "CVV-kod {code}",
       "avsCvvMismatch": {
         "title": "Kortsäkerhetskontroll passerade inte fullständigt",
-        "explanation": "Betalningsgatewayen returnerade en icke-matchning ({codes}). Används internt för bedömning; visas inte för banken för att undvika att försvaga svaret."
+        "explanation": "Betalningsgatewayen returnerade en icke-matchning ({codes}). Används internt för bedömning; visas inte för banken för att undvika att försvaga svaret.",
+        "titlePartial": "Kortsäkerhetskontroll passerade delvis",
+        "explanationPartial": "Betalningsgatewayen returnerade en icke-matchning ({failed}). Det resultatet undanhölls från banken för att inte försvaga svaret – men den del som matchade ({matched}) åberopas i svaret som positivt bevis."
       },
       "billingAddress": {
         "title": "Fakturerings- och leveransadresser stämmer inte överens",
@@ -1023,6 +1026,10 @@
       "ipBankIneligible": {
         "title": "IP-/platssignal hålls intern",
         "explanation": "Denna signal påverkar bedömningen men uppströmskollektorn markerade den som ej bank-berättigad. Skickas inte till Shopify."
+      },
+      "cardholderNameMismatch": {
+        "title": "Kortet är registrerat på ett annat namn än köparen",
+        "explanation": "Betalkortet är registrerat på \"{cardholder}\" men beställningen gjordes av \"{customer}\". Detta är ett vanligt mönster vid stulna kort — granska innan du skickar in. Används internt för bedömning; läggs inte till i argumentationen mot banken."
       }
     },
     "evidenceTabExtra": {
