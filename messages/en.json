@@ -995,13 +995,27 @@
       "invalid": "Invalid"
     },
     "internalSignals": {
-      "avsCodePrefix": "AVS code {code}",
-      "cvvCodePrefix": "CVV code {code}",
       "avsCvvMismatch": {
         "title": "Card security check did not fully pass",
-        "explanation": "The payment gateway returned a non-match ({codes}). Used internally for assessment; not surfaced to the bank to avoid weakening the response.",
         "titlePartial": "Card security check partially passed",
-        "explanationPartial": "The payment gateway returned a non-match ({failed}). That result was withheld from the bank to avoid weakening the response — but the part that did match ({matched}) is cited in the response as positive evidence."
+        "resultAvsFailCvvMatch": "The address did not match the card issuer's records, but the card's security code did (AVS {avs}, CVV {cvv}).",
+        "resultAvsUncheckedCvvMatch": "The issuer did not check the address; the card's security code matched (AVS {avs}, CVV {cvv}).",
+        "resultAvsMatchCvvFail": "The address matched the card issuer's records, but the card's security code did not (AVS {avs}, CVV {cvv}).",
+        "resultAvsMatchCvvUnchecked": "The address matched the issuer's records; the security code was not checked (AVS {avs}, CVV {cvv}).",
+        "resultBothFail": "Neither the address nor the card's security code matched the issuer's records (AVS {avs}, CVV {cvv}).",
+        "resultAvsFailCvvUnchecked": "The address did not match the issuer's records; the security code was not checked (AVS {avs}, CVV {cvv}).",
+        "resultAvsUncheckedCvvFail": "The card's security code did not match the issuer's records; the address was not checked (AVS {avs}, CVV {cvv}).",
+        "resultBothUnchecked": "The issuer checked neither the address nor the security code (AVS {avs}, CVV {cvv}).",
+        "resultAvsFailOnly": "The address did not match the card issuer's records (AVS code {avs}).",
+        "resultAvsUncheckedOnly": "The issuer did not check the address (AVS code {avs}).",
+        "resultCvvFailOnly": "The card's security code did not match the issuer's records (CVV code {cvv}).",
+        "resultCvvUncheckedOnly": "The issuer did not check the card's security code (CVV code {cvv}).",
+        "outcomeOnlyCvvCited": "Only the matching security code was cited as evidence in the dispute response — the address mismatch would weaken it.",
+        "outcomeOnlyAvsCited": "Only the matching address was cited as evidence in the dispute response — the code mismatch would weaken it.",
+        "outcomeCvvCitedClean": "The matching security code was cited as evidence in the dispute response.",
+        "outcomeAvsCitedClean": "The matching address was cited as evidence in the dispute response.",
+        "outcomeNothingCited": "Neither result was cited as evidence in the dispute response — only results that strengthen the case go to the bank.",
+        "outcomeSingleNotCited": "It was not cited as evidence — it would weaken the dispute response."
       },
       "billingAddress": {
         "title": "Billing and shipping addresses do not match",

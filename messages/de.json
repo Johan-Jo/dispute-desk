@@ -1645,13 +1645,27 @@
       "general": "Streitfall"
     },
     "internalSignals": {
-      "avsCodePrefix": "AVS-Code {code}",
-      "cvvCodePrefix": "CVV-Code {code}",
       "avsCvvMismatch": {
         "title": "Kartensicherheitsprüfung nicht vollständig bestanden",
-        "explanation": "Das Zahlungs-Gateway lieferte keine vollständige Übereinstimmung ({codes}). Wird intern zur Bewertung verwendet; nicht an die Bank weitergegeben, um die Antwort nicht zu schwächen.",
         "titlePartial": "Kartensicherheitsprüfung teilweise bestanden",
-        "explanationPartial": "Das Zahlungs-Gateway lieferte für einen Teil keine Übereinstimmung ({failed}). Dieses Ergebnis wurde der Bank vorenthalten, um die Antwort nicht zu schwächen – der übereinstimmende Teil ({matched}) wird in der Antwort jedoch als positiver Nachweis angeführt."
+        "resultAvsFailCvvMatch": "Die Adresse stimmte nicht mit den Unterlagen des Kartenausstellers überein, die Sicherheitszahl der Karte jedoch schon (AVS {avs}, CVV {cvv}).",
+        "resultAvsUncheckedCvvMatch": "Der Aussteller prüfte die Adresse nicht; die Sicherheitszahl der Karte stimmte überein (AVS {avs}, CVV {cvv}).",
+        "resultAvsMatchCvvFail": "Die Adresse stimmte mit den Unterlagen des Kartenausstellers überein, die Sicherheitszahl der Karte jedoch nicht (AVS {avs}, CVV {cvv}).",
+        "resultAvsMatchCvvUnchecked": "Die Adresse stimmte mit den Unterlagen des Ausstellers überein; die Sicherheitszahl wurde nicht geprüft (AVS {avs}, CVV {cvv}).",
+        "resultBothFail": "Weder die Adresse noch die Sicherheitszahl der Karte stimmten mit den Unterlagen des Ausstellers überein (AVS {avs}, CVV {cvv}).",
+        "resultAvsFailCvvUnchecked": "Die Adresse stimmte nicht mit den Unterlagen des Ausstellers überein; die Sicherheitszahl wurde nicht geprüft (AVS {avs}, CVV {cvv}).",
+        "resultAvsUncheckedCvvFail": "Die Sicherheitszahl der Karte stimmte nicht mit den Unterlagen des Ausstellers überein; die Adresse wurde nicht geprüft (AVS {avs}, CVV {cvv}).",
+        "resultBothUnchecked": "Der Aussteller prüfte weder die Adresse noch die Sicherheitszahl (AVS {avs}, CVV {cvv}).",
+        "resultAvsFailOnly": "Die Adresse stimmte nicht mit den Unterlagen des Kartenausstellers überein (AVS-Code {avs}).",
+        "resultAvsUncheckedOnly": "Der Aussteller prüfte die Adresse nicht (AVS-Code {avs}).",
+        "resultCvvFailOnly": "Die Sicherheitszahl der Karte stimmte nicht mit den Unterlagen des Ausstellers überein (CVV-Code {cvv}).",
+        "resultCvvUncheckedOnly": "Der Aussteller prüfte die Sicherheitszahl der Karte nicht (CVV-Code {cvv}).",
+        "outcomeOnlyCvvCited": "Nur die übereinstimmende Sicherheitszahl wurde in der Antwort als Nachweis angeführt – die Adressabweichung würde sie schwächen.",
+        "outcomeOnlyAvsCited": "Nur die übereinstimmende Adresse wurde in der Antwort als Nachweis angeführt – die Codeabweichung würde sie schwächen.",
+        "outcomeCvvCitedClean": "Die übereinstimmende Sicherheitszahl wurde in der Antwort als Nachweis angeführt.",
+        "outcomeAvsCitedClean": "Die übereinstimmende Adresse wurde in der Antwort als Nachweis angeführt.",
+        "outcomeNothingCited": "Keines der Ergebnisse wurde in der Antwort als Nachweis angeführt – nur Ergebnisse, die den Fall stärken, gehen an die Bank.",
+        "outcomeSingleNotCited": "Es wurde nicht als Nachweis angeführt – es würde die Antwort schwächen."
       },
       "billingAddress": {
         "title": "Rechnungs- und Lieferadresse stimmen nicht überein",

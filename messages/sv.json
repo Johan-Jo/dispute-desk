@@ -1001,13 +1001,27 @@
       "invalid": "Ogiltigt"
     },
     "internalSignals": {
-      "avsCodePrefix": "AVS-kod {code}",
-      "cvvCodePrefix": "CVV-kod {code}",
       "avsCvvMismatch": {
         "title": "Kortsäkerhetskontroll passerade inte fullständigt",
-        "explanation": "Betalningsgatewayen returnerade en icke-matchning ({codes}). Används internt för bedömning; visas inte för banken för att undvika att försvaga svaret.",
         "titlePartial": "Kortsäkerhetskontroll passerade delvis",
-        "explanationPartial": "Betalningsgatewayen returnerade en icke-matchning ({failed}). Det resultatet undanhölls från banken för att inte försvaga svaret – men den del som matchade ({matched}) åberopas i svaret som positivt bevis."
+        "resultAvsFailCvvMatch": "Adressen stämde inte med kortutgivarens register, men kortets säkerhetskod gjorde det (AVS {avs}, CVV {cvv}).",
+        "resultAvsUncheckedCvvMatch": "Utgivaren kontrollerade inte adressen; kortets säkerhetskod stämde (AVS {avs}, CVV {cvv}).",
+        "resultAvsMatchCvvFail": "Adressen stämde med kortutgivarens register, men kortets säkerhetskod gjorde det inte (AVS {avs}, CVV {cvv}).",
+        "resultAvsMatchCvvUnchecked": "Adressen stämde med utgivarens register; säkerhetskoden kontrollerades inte (AVS {avs}, CVV {cvv}).",
+        "resultBothFail": "Varken adressen eller kortets säkerhetskod stämde med utgivarens register (AVS {avs}, CVV {cvv}).",
+        "resultAvsFailCvvUnchecked": "Adressen stämde inte med utgivarens register; säkerhetskoden kontrollerades inte (AVS {avs}, CVV {cvv}).",
+        "resultAvsUncheckedCvvFail": "Kortets säkerhetskod stämde inte med utgivarens register; adressen kontrollerades inte (AVS {avs}, CVV {cvv}).",
+        "resultBothUnchecked": "Utgivaren kontrollerade varken adressen eller säkerhetskoden (AVS {avs}, CVV {cvv}).",
+        "resultAvsFailOnly": "Adressen stämde inte med kortutgivarens register (AVS-kod {avs}).",
+        "resultAvsUncheckedOnly": "Utgivaren kontrollerade inte adressen (AVS-kod {avs}).",
+        "resultCvvFailOnly": "Kortets säkerhetskod stämde inte med utgivarens register (CVV-kod {cvv}).",
+        "resultCvvUncheckedOnly": "Utgivaren kontrollerade inte kortets säkerhetskod (CVV-kod {cvv}).",
+        "outcomeOnlyCvvCited": "Endast den matchande säkerhetskoden åberopades som bevis i tvistsvaret – adressavvikelsen skulle försvaga det.",
+        "outcomeOnlyAvsCited": "Endast den matchande adressen åberopades som bevis i tvistsvaret – kodavvikelsen skulle försvaga det.",
+        "outcomeCvvCitedClean": "Den matchande säkerhetskoden åberopades som bevis i tvistsvaret.",
+        "outcomeAvsCitedClean": "Den matchande adressen åberopades som bevis i tvistsvaret.",
+        "outcomeNothingCited": "Inget av resultaten åberopades som bevis i tvistsvaret – endast resultat som stärker ärendet skickas till banken.",
+        "outcomeSingleNotCited": "Det åberopades inte som bevis – det skulle försvaga tvistsvaret."
       },
       "billingAddress": {
         "title": "Fakturerings- och leveransadresser stämmer inte överens",

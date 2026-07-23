@@ -1645,13 +1645,27 @@
       "general": "disputa"
     },
     "internalSignals": {
-      "avsCodePrefix": "Código AVS {code}",
-      "cvvCodePrefix": "Código CVV {code}",
       "avsCvvMismatch": {
         "title": "La verificación de seguridad de la tarjeta no pasó completamente",
-        "explanation": "La pasarela de pago devolvió una no coincidencia ({codes}). Se usa internamente para la evaluación; no se envía al banco para no debilitar la respuesta.",
         "titlePartial": "La verificación de seguridad de la tarjeta pasó parcialmente",
-        "explanationPartial": "La pasarela de pago devolvió una no coincidencia ({failed}). Ese resultado se ocultó al banco para no debilitar la respuesta, pero la parte que sí coincidió ({matched}) se cita en la respuesta como prueba positiva."
+        "resultAvsFailCvvMatch": "La dirección no coincidió con los registros del emisor de la tarjeta, pero el código de seguridad sí (AVS {avs}, CVV {cvv}).",
+        "resultAvsUncheckedCvvMatch": "El emisor no comprobó la dirección; el código de seguridad de la tarjeta coincidió (AVS {avs}, CVV {cvv}).",
+        "resultAvsMatchCvvFail": "La dirección coincidió con los registros del emisor de la tarjeta, pero el código de seguridad no (AVS {avs}, CVV {cvv}).",
+        "resultAvsMatchCvvUnchecked": "La dirección coincidió con los registros del emisor; el código de seguridad no se comprobó (AVS {avs}, CVV {cvv}).",
+        "resultBothFail": "Ni la dirección ni el código de seguridad de la tarjeta coincidieron con los registros del emisor (AVS {avs}, CVV {cvv}).",
+        "resultAvsFailCvvUnchecked": "La dirección no coincidió con los registros del emisor; el código de seguridad no se comprobó (AVS {avs}, CVV {cvv}).",
+        "resultAvsUncheckedCvvFail": "El código de seguridad de la tarjeta no coincidió con los registros del emisor; la dirección no se comprobó (AVS {avs}, CVV {cvv}).",
+        "resultBothUnchecked": "El emisor no comprobó ni la dirección ni el código de seguridad (AVS {avs}, CVV {cvv}).",
+        "resultAvsFailOnly": "La dirección no coincidió con los registros del emisor de la tarjeta (código AVS {avs}).",
+        "resultAvsUncheckedOnly": "El emisor no comprobó la dirección (código AVS {avs}).",
+        "resultCvvFailOnly": "El código de seguridad de la tarjeta no coincidió con los registros del emisor (código CVV {cvv}).",
+        "resultCvvUncheckedOnly": "El emisor no comprobó el código de seguridad de la tarjeta (código CVV {cvv}).",
+        "outcomeOnlyCvvCited": "Solo el código de seguridad coincidente se citó como prueba en la respuesta a la disputa: la discrepancia de dirección la debilitaría.",
+        "outcomeOnlyAvsCited": "Solo la dirección coincidente se citó como prueba en la respuesta a la disputa: la discrepancia del código la debilitaría.",
+        "outcomeCvvCitedClean": "El código de seguridad coincidente se citó como prueba en la respuesta a la disputa.",
+        "outcomeAvsCitedClean": "La dirección coincidente se citó como prueba en la respuesta a la disputa.",
+        "outcomeNothingCited": "Ninguno de los resultados se citó como prueba en la respuesta a la disputa: solo se envían al banco los resultados que refuerzan el caso.",
+        "outcomeSingleNotCited": "No se citó como prueba: debilitaría la respuesta a la disputa."
       },
       "billingAddress": {
         "title": "Las direcciones de facturación y envío no coinciden",

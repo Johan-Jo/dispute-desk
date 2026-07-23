@@ -15,6 +15,51 @@ import {
   cardholderNameFromPayload,
   detectCardholderNameMismatch,
 } from "./nameMismatch";
+import { avsBucket, cvvBucket } from "./avsCvvExplain";
+
+/* MERCHANT-LANGUAGE RULE (2026-07-23): never lead with a bare gateway
+ * code — nobody but a bank knows what "AVS code Z" indicates. ONE
+ * combined plain-words sentence covers both results (codes
+ * parenthesized at the end), then one short outcome sentence with the
+ * consistent "cited as evidence" phrasing. These English sentences
+ * mirror `messages/en.json` → `disputes.internalSignals.avsCvvMismatch.*`
+ * (resolved per-locale by `useEvidenceSections.classifyAvsCvv`) — keep
+ * the two in lockstep. Key: `${avsBucket}|${cvvBucket}` with "none" for
+ * an absent code; only combinations that can fire the warning are listed. */
+const AVS_CVV_RESULT_EN: Record<string, (avs: string, cvv: string) => string> = {
+  "no_match|match": (a, c) =>
+    `The address did not match the card issuer's records, but the card's security code did (AVS ${a}, CVV ${c}).`,
+  "unchecked|match": (a, c) =>
+    `The issuer did not check the address; the card's security code matched (AVS ${a}, CVV ${c}).`,
+  "match|no_match": (a, c) =>
+    `The address matched the card issuer's records, but the card's security code did not (AVS ${a}, CVV ${c}).`,
+  "match|unchecked": (a, c) =>
+    `The address matched the issuer's records; the security code was not checked (AVS ${a}, CVV ${c}).`,
+  "no_match|no_match": (a, c) =>
+    `Neither the address nor the card's security code matched the issuer's records (AVS ${a}, CVV ${c}).`,
+  "no_match|unchecked": (a, c) =>
+    `The address did not match the issuer's records; the security code was not checked (AVS ${a}, CVV ${c}).`,
+  "unchecked|no_match": (a, c) =>
+    `The card's security code did not match the issuer's records; the address was not checked (AVS ${a}, CVV ${c}).`,
+  "unchecked|unchecked": (a, c) =>
+    `The issuer checked neither the address nor the security code (AVS ${a}, CVV ${c}).`,
+  "no_match|none": (a) => `The address did not match the card issuer's records (AVS code ${a}).`,
+  "unchecked|none": (a) => `The issuer did not check the address (AVS code ${a}).`,
+  "none|no_match": (_a, c) =>
+    `The card's security code did not match the issuer's records (CVV code ${c}).`,
+  "none|unchecked": (_a, c) => `The issuer did not check the card's security code (CVV code ${c}).`,
+};
+const OUTCOME_EN = {
+  onlyCvvCited:
+    "Only the matching security code was cited as evidence in the dispute response — the address mismatch would weaken it.",
+  onlyAvsCited:
+    "Only the matching address was cited as evidence in the dispute response — the code mismatch would weaken it.",
+  cvvCitedClean: "The matching security code was cited as evidence in the dispute response.",
+  avsCitedClean: "The matching address was cited as evidence in the dispute response.",
+  nothingCited:
+    "Neither result was cited as evidence in the dispute response — only results that strengthen the case go to the bank.",
+  singleNotCited: "It was not cited as evidence — it would weaken the dispute response.",
+} as const;
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -62,33 +107,45 @@ export function buildInternalSignalsByField(
     const avsMatched = avs !== null && avs !== "" && AVS_MATCH_CODES.has(avs.toUpperCase());
     const cvvMatched = cvv !== null && cvv !== "" && CVV_MATCH_CODES.has(cvv.toUpperCase());
     if (avsMismatch || cvvMismatch) {
-      const failedParts: string[] = [];
-      if (avsMismatch) failedParts.push(`AVS code ${avs}`);
-      if (cvvMismatch) failedParts.push(`CVV code ${cvv}`);
-      const matchedParts: string[] = [];
-      if (avsMatched) matchedParts.push(`AVS code ${avs}`);
-      if (cvvMatched) matchedParts.push(`CVV code ${cvv}`);
-      // Partial match: the matched half IS cited to the bank (the row
-      // categorizes moderate and lands in the positive bucket), so the
-      // blanket "not surfaced to the bank" copy would be half-false.
-      // Name what was withheld AND what was cited. Mirrors
-      // useEvidenceSections.classifyAvsCvv.
-      push(
-        "avs_cvv_match",
-        matchedParts.length > 0
-          ? {
-              id: "internal:avs_cvv_mismatch",
-              label: "Card security check partially passed",
-              reason: `The payment gateway returned a non-match (${failedParts.join(", ")}). That result was withheld from the bank to avoid weakening the response — but the part that did match (${matchedParts.join(", ")}) is cited in the response as positive evidence.`,
-              severity: "warning",
-            }
-          : {
-              id: "internal:avs_cvv_mismatch",
-              label: "Card security check did not fully pass",
-              reason: `The payment gateway returned a non-match (${failedParts.join(", ")}). Used internally for assessment; not surfaced to the bank to avoid weakening the response.`,
-              severity: "warning",
-            },
-      );
+      // MERCHANT-LANGUAGE RULE: one combined plain-words sentence for
+      // both results, then one short outcome sentence with consistent
+      // "cited as evidence" phrasing. "Cited" follows the SCORING match
+      // sets — what actually reaches the positive bucket / narrative.
+      // Pure not-checked results carry no outcome: nothing was cited
+      // or withheld, the result sentence stands alone.
+      const avsB = avsBucket(avs) ?? "none";
+      const cvvB = cvvBucket(cvv) ?? "none";
+      const result = AVS_CVV_RESULT_EN[`${avsB}|${cvvB}`];
+      if (result) {
+        const sentences: string[] = [
+          result(avs?.toUpperCase() ?? "", cvv?.toUpperCase() ?? ""),
+        ];
+        if (cvvMatched) {
+          sentences.push(
+            avsB === "no_match" ? OUTCOME_EN.onlyCvvCited : OUTCOME_EN.cvvCitedClean,
+          );
+        } else if (avsMatched) {
+          sentences.push(
+            cvvB === "no_match" ? OUTCOME_EN.onlyAvsCited : OUTCOME_EN.avsCitedClean,
+          );
+        } else if (
+          (avsB === "no_match" && cvvB === "none") ||
+          (cvvB === "no_match" && avsB === "none")
+        ) {
+          sentences.push(OUTCOME_EN.singleNotCited);
+        } else if (avsB === "no_match" || cvvB === "no_match") {
+          sentences.push(OUTCOME_EN.nothingCited);
+        }
+        push("avs_cvv_match", {
+          id: "internal:avs_cvv_mismatch",
+          label:
+            avsMatched || cvvMatched
+              ? "Card security check partially passed"
+              : "Card security check did not fully pass",
+          reason: sentences.join(" "),
+          severity: "warning",
+        });
+      }
     }
 
     // Cardholder-name mismatch → anchor on avs_cvv_match. The gateway
