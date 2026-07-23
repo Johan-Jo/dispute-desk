@@ -494,12 +494,36 @@ export function calculateCaseStrength(
   // Same data the workspace UI reads via `computeContributions` —
   // guaranteed to agree with "What supports your case" and "Evidence
   // collected" because it comes from the same per-signal verdict.
+  // Prior-order history is CORROBORATION on a fraud claim, never decisive
+  // proof of cardholder identity. The canonical registry rates
+  // `customer_account_info` STRONG on >=1 prior undisputed order — a far
+  // weaker bar than Visa's Compelling Evidence 3.0 remedy (2+ prior
+  // undisputed transactions in a 120-365 day window sharing >=2 data
+  // elements incl. IP or device ID). Treating a single prior order as a
+  // decisive fraud signal is a false CE3.0 proxy, so for the FRAUD family
+  // only, an `account_history` row rated strong is demoted to moderate
+  // HERE — at row-build time, so the reported counts, the contribution
+  // list ("What supports your case"), and the strength reason all agree
+  // rather than the UI showing a Strong pill the scorer discounted.
+  // Other families keep the registry rating (prior history genuinely
+  // supports e.g. a not-as-described defence), and the registry itself is
+  // untouched, preserving the family-independent-categories invariant.
+  // Measured 2026-07-23: 0 of 360 prod fraud disputes qualify for a real
+  // CE3.0 remedy, so this drops a false signal without losing a true one.
+  // See docs/plans/tech-debt/ce3-fraud-compelling-evidence.plan.md.
+  const demoteToCorroboration = (signalId: SignalId): boolean =>
+    family === "fraud" && signalId === "account_history";
+
   const strongRows: ContributionRow[] = [];
   const moderateRows: ContributionRow[] = [];
   for (const [signalId, acc] of bestBySignalDetailed) {
-    if (acc.category === "strong") {
+    const effective =
+      acc.category === "strong" && demoteToCorroboration(signalId)
+        ? "moderate"
+        : acc.category;
+    if (effective === "strong") {
       strongRows.push({ signalId, category: "strong", field: acc.field });
-    } else if (acc.category === "moderate") {
+    } else if (effective === "moderate") {
       moderateRows.push({ signalId, category: "moderate", field: acc.field });
     }
   }
@@ -548,6 +572,10 @@ export function calculateCaseStrength(
     "communication",
     "account_history",
   ]);
+  // NOTE: account_history is already demoted strong -> moderate for the
+  // fraud family at row-build time (see `demoteToCorroboration` above), so
+  // these counts see it as a moderate corroborating signal, not a decisive
+  // one. No extra filtering needed here.
   const strongCountFromFraudSignals = strongRows.filter((r) =>
     FRAUD_DECISIVE_SIGNALS.has(r.signalId),
   ).length;
@@ -823,12 +851,19 @@ export interface CaseStrengthContributions {
 export function computeContributions(
   checklist: ChecklistItemV2[],
   payloadSource?: EvidencePayloadSource,
+  /** Dispute reason. Optional for back-compat, but pass it wherever the
+   *  rows are rendered: it applies the same fraud-family
+   *  `account_history` strong->moderate demotion `calculateCaseStrength`
+   *  does, so "What supports your case" can't show a Strong pill the
+   *  scorer counted as moderate. See the demotion comment above. */
+  reason?: string | null,
 ): CaseStrengthContributions {
   // Per signalId: track the highest category seen + the first field
   // that contributed it (deterministic by checklist iteration order).
   type Acc = { category: EvidenceCategory; field: string };
   const RANK: Record<EvidenceCategory, number> = { strong: 3, moderate: 2, supporting: 1, invalid: 0 };
   const bySignal = new Map<SignalId, Acc>();
+  const isFraud = reason != null && resolveReasonFamily(reason) === "fraud";
 
   for (const item of checklist) {
     if (item.status !== "available" && item.status !== "waived") continue;
@@ -846,13 +881,21 @@ export function computeContributions(
   const moderate: CaseStrengthContribution[] = [];
   for (const [signalId, acc] of bySignal) {
     const spec = CANONICAL_EVIDENCE[acc.field];
+    // Same fraud-family demotion the scorer applies: prior-order history
+    // corroborates, it never decisively proves cardholder identity.
+    const effective =
+      acc.category === "strong" && isFraud && signalId === "account_history"
+        ? "moderate"
+        : acc.category;
     const row: CaseStrengthContribution = {
       signalId,
-      category: acc.category as "strong" | "moderate",
+      category: effective as "strong" | "moderate",
       labelToken: { key: spec?.labelKey ?? signalLabelKey(signalId) },
       evidenceFieldKey: acc.field,
     };
-    if (acc.category === "strong") strong.push(row);
+    // Bucket by the EFFECTIVE category — bucketing by acc.category would
+    // push a demoted row (labelled moderate) into the strong array.
+    if (effective === "strong") strong.push(row);
     else moderate.push(row);
   }
 

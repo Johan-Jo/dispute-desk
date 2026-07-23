@@ -14,7 +14,7 @@
  *   Two from the SAME axis → stays Moderate.
  */
 import { describe, it, expect } from "vitest";
-import { calculateCaseStrength } from "@/lib/argument/caseStrength";
+import { calculateCaseStrength, computeContributions } from "@/lib/argument/caseStrength";
 import type { EvidencePayloadSource } from "@/lib/argument/caseStrength";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 
@@ -120,5 +120,50 @@ describe("product-family two-axis rollup (PRODUCT_UNACCEPTABLE / 13.3)", () => {
     });
     const r = calculateCaseStrength(checklist, "FRAUDULENT", source);
     expect(r.overall).not.toBe("strong");
+  });
+});
+
+/* ── Fraud-family account_history demotion (CE3.0 false-proxy fix) ── */
+
+describe("fraud family: prior-order history corroborates, never decides", () => {
+  const priorHistory = { totalOrders: 3, disputeFreeHistory: true }; // 2 priors
+  const avsStrong = { avsResultCode: "Y", cvvResultCode: "M" };
+
+  it("account_history alone does NOT make a fraud case strong", () => {
+    const checklist = [available("customer_account_info"), available("avs_cvv_match")];
+    const source = byField({
+      customer_account_info: priorHistory,
+      avs_cvv_match: avsStrong, // payment_auth strong
+    });
+    const r = calculateCaseStrength(checklist, "FRAUDULENT", source);
+    // Pre-fix this was 2 decisive fraud signals -> strong. account_history
+    // is now moderate corroboration, so AVS-strong-alone -> moderate.
+    expect(r.overall).toBe("moderate");
+  });
+
+  it("the demoted row is reported as moderate, not strong (UI must agree)", () => {
+    const checklist = [available("customer_account_info")];
+    const source = byField({ customer_account_info: priorHistory });
+    const r = calculateCaseStrength(checklist, "FRAUDULENT", source);
+    expect(r.strongCount).toBe(0);
+    expect(r.moderateCount).toBe(1);
+  });
+
+  it("non-fraud families keep prior history as STRONG", () => {
+    const checklist = [available("customer_account_info")];
+    const source = byField({ customer_account_info: priorHistory });
+    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source);
+    expect(r.strongCount).toBe(1);
+  });
+
+  it("computeContributions applies the same demotion when given the reason", () => {
+    const checklist = [available("customer_account_info")];
+    const source = byField({ customer_account_info: priorHistory });
+    const fraud = computeContributions(checklist, source, "FRAUDULENT");
+    expect(fraud.strong).toHaveLength(0);
+    expect(fraud.moderate).toHaveLength(1);
+    // Non-fraud keeps it strong.
+    const other = computeContributions(checklist, source, "PRODUCT_NOT_RECEIVED");
+    expect(other.strong).toHaveLength(1);
   });
 });
