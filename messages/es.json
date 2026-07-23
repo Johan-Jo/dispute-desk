@@ -1289,6 +1289,12 @@
       "rowWaivedNoteSuffix": " Nota: {note}"
     },
     "noDisputesHint": "Las disputas se muestran para la tienda seleccionada en la barra lateral. Si usas varias tiendas, cambia a la correcta y luego haz clic en Sincronizar ahora.",
+    "reviewChip": {
+      "inReview": "En revisión",
+      "inReviewDue": "En revisión · {days} d",
+      "scheduled": "Programada",
+      "notDefended": "Sin defender"
+    },
     "signalLabel": {
       "payment_auth": "Autenticación del pago",
       "tds_authentication": "Autenticación 3-D Secure",
@@ -1552,6 +1558,25 @@
     "overviewExtra": {
       "evidenceCollected": "Evidencia recopilada",
       "evidenceOrderingHelper": "Ordenado según cuánto fortalece cada elemento el caso. Las más fuertes primero.",
+      "review": {
+        "title": "Decide qué hacer con esta disputa",
+        "prompt": "Este caso necesita tu decisión antes de la fecha límite. Ponla en revisión mientras la analizas, prográmala para enviarse automáticamente o concédela si no vale la pena defenderla.",
+        "hold": "Poner en revisión",
+        "approve": "Enviar en la fecha límite",
+        "concede": "No defender",
+        "holdHelp": "Seguiremos vigilándola y te avisaremos antes de la fecha límite.",
+        "approveHelp": "Enviaremos la evidencia automáticamente cuando llegue la fecha límite.",
+        "concedeHelp": "No enviaremos nada. La disputa se cierra sin defensa.",
+        "stateInReviewTitle": "En espera de tu revisión",
+        "stateInReviewBody": "Estás revisando esta disputa. Si no haces nada más, seguirá tu regla de automatización en la fecha límite{due}.",
+        "stateApprovedTitle": "Programada para enviarse",
+        "stateApprovedBody": "Esta disputa se enviará automáticamente en la fecha límite{due}.",
+        "stateConcededTitle": "Sin defender",
+        "stateConcededBody": "Elegiste no defender esta disputa. No se enviará nada.",
+        "dueSuffix": " ({date})",
+        "change": "Cambiar decisión",
+        "undo": "Deshacer"
+      },
       "whatHappensNow": "Qué sucede ahora",
       "automationRule": "Regla de automatización:",
       "appliedMode": {

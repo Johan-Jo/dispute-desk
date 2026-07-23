@@ -107,7 +107,22 @@ export type EventType =
   | "save_to_shopify_skipped_window_closed"
   | "pack_regenerate_coalesced"
   | "pack_regenerate_coalesced_skipped_window_closed"
-  | "pack_regenerate_coalesced_job_already_exists";
+  | "pack_regenerate_coalesced_job_already_exists"
+  // Merchant review lifecycle — POST /api/disputes/:id/review
+  // (lib/disputes/reviewState.ts). actorType "merchant". Payload
+  // `{ action, from, to }` where action ∈ hold|approve|concede|clear.
+  //   - review_held:     merchant chose "hold & watch" (review_state=in_review)
+  //   - review_approved: "reviewed, submit on the deadline" (approved)
+  //   - review_conceded: "do not defend" (conceded; deadline cron skips)
+  //   - review_cleared:  merchant undid a decision (review_state → NULL)
+  //   - review_resurfaced_by_reminder: dispute-reminders cron flipped a
+  //     stale `in_review` back to needs_attention near the deadline
+  //     (actorType "system"; payload `{ hours_to_deadline }`).
+  | "review_held"
+  | "review_approved"
+  | "review_conceded"
+  | "review_cleared"
+  | "review_resurfaced_by_reminder";
 
 export interface AuditLogInput {
   shopId: string;

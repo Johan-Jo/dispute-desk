@@ -1,5 +1,80 @@
 import { describe, it, expect } from "vitest";
-import { parseListDeepLink, resolveSort } from "../disputeListHelpers";
+import {
+  parseListDeepLink,
+  resolveSort,
+  figmaStatus,
+  figmaReviewChip,
+  type Dispute,
+} from "../disputeListHelpers";
+
+/** Minimal Dispute fixture — only fields the review helpers read. */
+function dispute(over: Partial<Dispute>): Dispute {
+  return {
+    id: "d1",
+    dispute_gid: "gid",
+    order_gid: null,
+    status: "needs_response",
+    reason: "fraudulent",
+    phase: "chargeback",
+    amount: 100,
+    currency_code: "USD",
+    due_at: null,
+    initiated_at: null,
+    needs_review: false,
+    last_synced_at: null,
+    ...over,
+  };
+}
+
+const idT = (k: string, p?: Record<string, string | number>) =>
+  p ? `${k}:${JSON.stringify(p)}` : k;
+
+describe("figmaReviewChip + figmaStatus (review lifecycle)", () => {
+  it("returns null when there is no review decision", () => {
+    expect(figmaReviewChip(dispute({}), idT)).toBeNull();
+  });
+
+  it("in_review → chip; with a future due date shows a day countdown", () => {
+    const due = new Date(Date.now() + 3 * 86_400_000).toISOString();
+    const chip = figmaReviewChip(
+      dispute({ review_state: "in_review", review_due_at: due }),
+      idT,
+    );
+    expect(chip?.label).toBe("disputes.reviewChip.inReviewDue:{\"days\":3}");
+  });
+
+  it("in_review without a due date shows the plain label", () => {
+    const chip = figmaReviewChip(dispute({ review_state: "in_review" }), idT);
+    expect(chip?.label).toBe("disputes.reviewChip.inReview");
+  });
+
+  it("approved + conceded map to their chips", () => {
+    expect(figmaReviewChip(dispute({ review_state: "approved" }), idT)?.label).toBe(
+      "disputes.reviewChip.scheduled",
+    );
+    expect(figmaReviewChip(dispute({ review_state: "conceded" }), idT)?.label).toBe(
+      "disputes.reviewChip.notDefended",
+    );
+  });
+
+  it("conceded leaves the actionable views (figmaStatus → closed)", () => {
+    expect(figmaStatus(dispute({ review_state: "conceded", needs_review: true }))).toBe(
+      "closed",
+    );
+  });
+
+  it("approved routes to under-review (scheduled, not actionable)", () => {
+    expect(figmaStatus(dispute({ review_state: "approved", needs_review: true }))).toBe(
+      "under-review",
+    );
+  });
+
+  it("in_review stays actionable (needs-review)", () => {
+    expect(figmaStatus(dispute({ review_state: "in_review", needs_review: true }))).toBe(
+      "needs-review",
+    );
+  });
+});
 
 describe("parseListDeepLink", () => {
   // Regression for blume-box 2026-07-22: the dashboard "Needs action" tile

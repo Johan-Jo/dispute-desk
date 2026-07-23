@@ -12,6 +12,7 @@ import {
   figmaNextAction,
   figmaOutcome,
   figmaRowChrome,
+  figmaReviewChip,
   figmaStatus,
   figmaStrengthDetail,
   formatCurrency,
@@ -111,11 +112,14 @@ export function MobileDisputeCard({
   );
   const status = figmaStatus(d);
   const strength = figmaCaseStrength(d);
+  const reviewChip = figmaReviewChip(d, t);
   const detail = figmaStrengthDetail(d, t);
   const outcome = figmaOutcome(d);
   const due = figmaDueDate(d, t, dateLocale);
   const next = figmaNextAction(d, t);
   const chrome = figmaRowChrome(d);
+  // approved / conceded rows are routed out of the actionable statuses by
+  // figmaStatus, so this stays correct without an extra guard.
   const isActionable = status === "action-needed" || status === "needs-review";
 
   const cardStyle: CSSProperties = {
@@ -164,6 +168,33 @@ export function MobileDisputeCard({
                   {detail}
                 </div>
               )}
+              {reviewChip && (
+                <span
+                  style={{
+                    ...PILL_STYLE,
+                    background: reviewChip.bg,
+                    color: reviewChip.color,
+                    marginTop: 6,
+                    display: "inline-flex",
+                  }}
+                >
+                  {reviewChip.label}
+                </span>
+              )}
+            </div>
+          )}
+          {!strength && reviewChip && (
+            <div style={{ marginBottom: 8 }}>
+              <span
+                style={{
+                  ...PILL_STYLE,
+                  background: reviewChip.bg,
+                  color: reviewChip.color,
+                  display: "inline-flex",
+                }}
+              >
+                {reviewChip.label}
+              </span>
             </div>
           )}
           <p

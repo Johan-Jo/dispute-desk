@@ -56,6 +56,14 @@ export const DISPUTE_ATTENTION_REASONS = {
    *  routes once no proposed messages / unconfirmed medium tickets /
    *  re-approval flags remain. */
   GORGIAS_EVIDENCE_READY: "gorgias_evidence_ready",
+
+  /** A dispute the merchant put on hold (`review_state = 'in_review'`)
+   *  is approaching its evidence deadline while still untouched. The
+   *  `dispute-reminders` cron resurfaces it (sets needs_attention=true,
+   *  clears review_state) so a held dispute can't silently rot to the
+   *  deadline. Payload: `{ hours_to_deadline: number, due_at: string }`.
+   *  Cleared when the merchant takes a fresh review action. */
+  REVIEW_DEADLINE_APPROACHING: "review_deadline_approaching",
 } as const;
 
 export type DisputeAttentionReason =
