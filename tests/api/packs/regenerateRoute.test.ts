@@ -198,6 +198,7 @@ describe("POST /api/packs/:packId/regenerate", () => {
       shop_id: shopId,
       job_type: "build_pack",
       entity_id: packId,
+      priority: 20,
     });
 
     // The update should set rebuild_pending=true but must NOT include

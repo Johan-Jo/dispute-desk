@@ -52,6 +52,7 @@ import {
   stampRebuildOutcome,
 } from "@/lib/automation/rebuildOutcome";
 import type { ClaimedJob, JobResult } from "../claimJobs";
+import { JOB_PRIORITY_INTERACTIVE } from "../priorities";
 
 const ALLOWED_PACK_STATUSES = new Set(["ready", "saving", "saved_to_shopify"]);
 
@@ -701,10 +702,14 @@ export async function handleSaveToShopify(
           },
         });
       } else {
+        // rebuild_pending is only ever set by the merchant-facing
+        // regenerate route, so this tail-enqueued rebuild is the
+        // continuation of an interactive request — keep it at that tier.
         await sb.from("jobs").insert({
           shop_id: pack.shop_id,
           job_type: "build_pack",
           entity_id: packId,
+          priority: JOB_PRIORITY_INTERACTIVE,
         });
         await logAuditEvent({
           shopId: pack.shop_id,

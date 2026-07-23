@@ -4,6 +4,7 @@ import { extractShopId } from "@/lib/middleware/extractShopId";
 import { checkPackQuota } from "@/lib/billing/checkQuota";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
 import { sendFreeOutOfPacksEmail } from "@/lib/email/billingLifecycle";
+import { JOB_PRIORITY_INTERACTIVE } from "@/lib/jobs/priorities";
 
 /**
  * POST /api/disputes/:id/packs
@@ -113,6 +114,7 @@ export async function POST(
       shop_id: dispute.shop_id,
       job_type: "build_pack",
       entity_id: pack.id,
+      priority: JOB_PRIORITY_INTERACTIVE,
     })
     .select("id")
     .single();

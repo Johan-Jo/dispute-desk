@@ -728,6 +728,28 @@ worker endpoint (`/api/jobs/worker`).
 5. Retry: 3 attempts, 30s × attempt backoff on failure.
 6. UI polls `GET /api/jobs/:id` every 3 seconds until terminal state.
 
+### Priority tiers (`lib/jobs/priorities.ts`)
+
+`claim_jobs` orders by `priority ASC, run_at ASC`. Because each shop drains
+at ~1 job / 2 min (per-shop cap 1 × 2-min worker cadence), everything at the
+same priority is a single FIFO — a bulk batch enqueued ahead of a merchant
+click starves the merchant for `2 × queue-length` minutes (2026-07-22: a
+40-pack backfill chained 40 defence rebuilds and pinned a merchant
+"Rebuild defence package" click behind ~1.5 h of queue; the UI spinner never
+resolved).
+
+| Priority | Tier | Who enqueues at it |
+|----------|------|--------------------|
+| < 20     | Ops reserved | Manual unblocking of a specific stuck job (ad-hoc SQL) |
+| 20       | `JOB_PRIORITY_INTERACTIVE` | Merchant-clicked work: both regenerate routes, manual pack build (`POST /api/disputes/:id/packs`), cardholder acknowledgement rebuild, manual defence-package enqueue, and the `rebuild_pending` tail in `saveToShopifyJob` |
+| 100      | `JOB_PRIORITY_DEFAULT` (column default) | Webhook-driven pipeline, cron sweeps |
+| ≥ 500    | Bulk convention | Ad-hoc backfill batches (`scripts/sql/`) MUST use this so they never starve the tiers above |
+
+Chained jobs inherit the trigger's priority: `ClaimedJob.priority` is
+returned by `claim_jobs`, and `buildPackJob` passes it into
+`maybeEnqueueDefencePackage(packId, { priority })` so an interactive
+rebuild's defence build stays interactive-tier end to end.
+
 #### Stale-lock reclaim (`20260702150000_claim_jobs_stale_lock_reclaim.sql`)
 
 `claim_jobs` takes a `p_lock_timeout_seconds int default 600` (passed as

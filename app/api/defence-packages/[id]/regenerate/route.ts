@@ -28,6 +28,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
+import { JOB_PRIORITY_INTERACTIVE } from "@/lib/jobs/priorities";
 
 export const runtime = "nodejs";
 
@@ -87,6 +88,7 @@ export async function POST(
     shop_id: existing.shop_id,
     job_type: "build_pack",
     entity_id: existing.source_pack_id,
+    priority: JOB_PRIORITY_INTERACTIVE,
   });
 
   await logAuditEvent({

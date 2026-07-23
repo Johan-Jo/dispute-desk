@@ -56,6 +56,7 @@ describe("claimJobs — RPC wiring", () => {
           entity_id: "cursor-xyz",
           attempts: 2,
           max_attempts: 3,
+          priority: 20,
         },
       ],
       error: null,
@@ -74,6 +75,7 @@ describe("claimJobs — RPC wiring", () => {
         entityId: "cursor-xyz",
         attempts: 2,
         maxAttempts: 3,
+        priority: 20,
       },
     ]);
   });

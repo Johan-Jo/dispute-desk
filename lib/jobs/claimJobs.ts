@@ -20,6 +20,10 @@ export interface ClaimedJob {
   entityId: string | null;
   attempts: number;
   maxAttempts: number;
+  /** Queue priority the job was claimed at (lower = sooner). Handlers
+   * that chain follow-up jobs pass this through so an interactive-tier
+   * chain (see lib/jobs/priorities.ts) never degrades to default. */
+  priority: number;
 }
 
 /**
@@ -74,6 +78,7 @@ export async function claimJobs(
     entityId: (row.entity_id as string) ?? null,
     attempts: row.attempts as number,
     maxAttempts: row.max_attempts as number,
+    priority: (row.priority as number) ?? 100,
   }));
 }
 

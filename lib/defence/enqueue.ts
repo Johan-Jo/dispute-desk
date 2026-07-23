@@ -22,6 +22,7 @@ import {
   resolveReasonCodeModuleForContext,
 } from "./reasonCodes/registry";
 import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
+import { JOB_PRIORITY_DEFAULT } from "@/lib/jobs/priorities";
 import type { DefencePackageStatus } from "./types";
 
 export interface MaybeEnqueueResult {
@@ -54,6 +55,7 @@ export interface MaybeEnqueueResult {
  */
 export async function maybeEnqueueDefencePackage(
   packId: string,
+  opts: { priority?: number } = {},
 ): Promise<MaybeEnqueueResult> {
   if (!isDefencePackageBuilderEnabled()) {
     return { enqueued: false, reason: "flag_off", packageId: null, version: null, status: null };
@@ -236,11 +238,15 @@ export async function maybeEnqueueDefencePackage(
     throw new Error(`Failed to insert defence_packages row: ${insertErr?.message ?? "unknown"}`);
   }
 
-  // Enqueue the build job.
+  // Enqueue the build job. The priority is inherited from the caller
+  // (buildPackJob passes its own job's priority) so a chain started by
+  // a merchant click stays interactive-tier end to end instead of
+  // falling to the back of the shop's queue behind bulk work.
   const { error: jobErr } = await sb.from("jobs").insert({
     shop_id: pack.shop_id,
     job_type: "build_defence_package",
     entity_id: inserted.id,
+    priority: opts.priority ?? JOB_PRIORITY_DEFAULT,
   });
   if (jobErr) {
     throw new Error(`Failed to enqueue build_defence_package: ${jobErr.message}`);
