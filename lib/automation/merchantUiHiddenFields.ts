@@ -26,7 +26,39 @@
  *   - app/(embedded)/app/disputes/[id]/tabs/sections/InclusionReviewSection.tsx
  *     → Submit/Review tab "Not included" group
  */
+import { effectivePriorOrders } from "@/lib/argument/canonicalEvidence";
+
 export const MERCHANT_UI_HIDDEN_FIELDS: ReadonlySet<string> = new Set([
   "customer_communication",
   "supporting_documents",
 ]);
+
+/**
+ * Payload-conditional companion to the static set above: the
+ * "Customer account history" row for a FIRST-TIME customer on a fraud
+ * dispute (2026-07-23 user decision, prod example JAYLENE DOILEY /
+ * Roy L MCLANE).
+ *
+ * A first order is not evidence — it is the absence of history, and the
+ * only thing the card could say is "we're withholding a fraud
+ * indicator". Evidence surfaces list evidence; so the row renders
+ * NOWHERE merchant-facing when this returns true. A returning customer
+ * (≥1 order before the disputed one) keeps the row — that IS evidence.
+ *
+ * Scoring, the pack builder, the coverage gate, and admin views are
+ * unaffected — like the static set, this only filters merchant-facing
+ * rendering. Non-fraud families keep the row too (first-time status is
+ * neutral context there, not a fraud indicator).
+ *
+ * `family` is the resolved reason family (`resolveReasonFamily`).
+ */
+export function isNonEvidenceAccountHistoryRow(
+  field: string,
+  payload: Record<string, unknown> | null | undefined,
+  family: string | null | undefined,
+): boolean {
+  if (field !== "customer_account_info") return false;
+  if (family !== "fraud") return false;
+  const prior = effectivePriorOrders(payload ?? null);
+  return prior === 0 || prior === null;
+}

@@ -1499,12 +1499,10 @@ describe("Test 25 — draft-pack inclusion consistency (2026-07-21 blume-box 306
         ["avs_cvv_match", { avsResultCode: "Y", cvvResultCode: "M" }],
         // Negative IP payload → internal_only (legitimately non-positive).
         ["ip_location_check", { locationMatch: "different_country", riskLevel: "high" }],
-        // Zero-history account on a fraud dispute → internal (fraud
-        // indicator; prior === 0 trips isNegativeOrAmbiguous). NOTE:
-        // totalOrders >= 1 categorizes STRONG per the engine's rubric #5
-        // even when the only order is the disputed one — that
-        // classification question belongs to the rules-engine review,
-        // not this display fix.
+        // Zero-history account on a fraud dispute → the row is DROPPED
+        // entirely (2026-07-23 user decision: a first-time customer's
+        // "account history" is not evidence — nothing to show, nothing
+        // to withhold). Asserted below as absence.
         ["customer_account_info", { totalOrders: 0, isRepeatCustomer: false }],
         // Plain policy text → supporting → context_only.
         ["refund_policy", { policyText: "30-day returns" }],
@@ -1537,9 +1535,11 @@ describe("Test 25 — draft-pack inclusion consistency (2026-07-21 blume-box 306
     expect(
       lineItems.find((li) => li.field === "ip_location_check")?.submissionMethod,
     ).toBe("internal_only");
+    // First-time customer on fraud: no line item at all — the row is
+    // not evidence and renders nowhere merchant-facing.
     expect(
-      lineItems.find((li) => li.field === "customer_account_info")?.submissionMethod,
-    ).toBe("internal_only");
+      lineItems.find((li) => li.field === "customer_account_info"),
+    ).toBeUndefined();
     expect(
       lineItems.find((li) => li.field === "order_confirmation")?.submissionMethod,
     ).toBe("excluded");

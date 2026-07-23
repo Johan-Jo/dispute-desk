@@ -49,7 +49,11 @@ import { classifyEvidenceRow } from "@/lib/argument/categoryBadge";
 import { canMerchantUpload, type useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { LiabilityShiftPanel } from "@/components/liability-shift/LiabilityShiftPanel";
 import { SubmissionSummaryPanel } from "./sections/SubmissionSummaryPanel";
-import { MERCHANT_UI_HIDDEN_FIELDS } from "@/lib/automation/merchantUiHiddenFields";
+import {
+  MERCHANT_UI_HIDDEN_FIELDS,
+  isNonEvidenceAccountHistoryRow,
+} from "@/lib/automation/merchantUiHiddenFields";
+import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -614,6 +618,19 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     if (c.status === "unavailable") return false;
     if (c.status === "missing" && !canMerchantUpload(c)) return false;
     if (MERCHANT_UI_HIDDEN_FIELDS.has(c.field)) return false;
+    // First-time customer on fraud: not evidence — hidden from
+    // coverage counts too, matching the Evidence-collected list below.
+    if (
+      isNonEvidenceAccountHistoryRow(
+        c.field,
+        (data.pack?.evidenceItemsByField?.[c.field]?.payload ?? null) as
+          | Record<string, unknown>
+          | null,
+        resolveReasonFamily(dispute.reason),
+      )
+    ) {
+      return false;
+    }
     return true;
   });
   type Bucket = { key: "critical" | "recommended" | "optional"; label: string; items: ChecklistItemV2[]; complete: number };
@@ -929,6 +946,21 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           // collected and they'll surface as real evidence — but until
           // then, no "Missing / Add this evidence" nag.
           .filter((c) => !(MERCHANT_UI_HIDDEN_FIELDS.has(c.field) && c.status !== "available"))
+          // First-time customer on a fraud dispute: "account history"
+          // with zero prior orders is not evidence — it's the absence of
+          // history, and the card only says "we're withholding a fraud
+          // indicator". Evidence surfaces list evidence; drop the row.
+          // Returning customers keep it (2026-07-23 user decision).
+          .filter(
+            (c) =>
+              !isNonEvidenceAccountHistoryRow(
+                c.field,
+                (data.pack?.evidenceItemsByField?.[c.field]?.payload ?? null) as
+                  | Record<string, unknown>
+                  | null,
+                resolveReasonFamily(dispute.reason),
+              ),
+          )
           .map((c) => {
             const spec = CANONICAL_EVIDENCE[c.field]!;
             const payload =
