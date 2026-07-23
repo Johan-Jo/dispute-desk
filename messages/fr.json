@@ -1291,6 +1291,7 @@
     "noDisputesHint": "Les litiges affichés correspondent à la boutique sélectionnée dans la barre latérale. Si vous utilisez plusieurs boutiques, basculez sur la bonne, puis cliquez sur Synchroniser maintenant.",
     "signalLabel": {
       "payment_auth": "Authentification du paiement",
+      "tds_authentication": "Authentification 3-D Secure",
       "billing_match": "Correspondance de l'adresse de facturation",
       "delivery": "Confirmation de livraison",
       "ip_location": "Cohérence IP et localisation",
@@ -1648,7 +1649,9 @@
       "cvvCodePrefix": "Code CVV {code}",
       "avsCvvMismatch": {
         "title": "Le contrôle de sécurité de la carte n'a pas entièrement réussi",
-        "explanation": "La passerelle de paiement a renvoyé une non-correspondance ({codes}). Utilisé en interne pour l'évaluation ; non transmis à la banque afin de ne pas affaiblir la réponse."
+        "explanation": "La passerelle de paiement a renvoyé une non-correspondance ({codes}). Utilisé en interne pour l'évaluation ; non transmis à la banque afin de ne pas affaiblir la réponse.",
+        "titlePartial": "Le contrôle de sécurité de la carte a partiellement réussi",
+        "explanationPartial": "La passerelle de paiement a renvoyé une non-correspondance ({failed}). Ce résultat a été retenu vis-à-vis de la banque afin de ne pas affaiblir la réponse — mais la partie qui a correspondu ({matched}) est citée dans la réponse comme preuve positive."
       },
       "billingAddress": {
         "title": "Les adresses de facturation et de livraison ne correspondent pas",
@@ -1667,6 +1670,10 @@
       "ipBankIneligible": {
         "title": "Signal IP/localisation conservé en interne",
         "explanation": "Ce signal alimente l'évaluation mais le collecteur en amont l'a marqué comme non admissible pour la banque. Non soumis à Shopify."
+      },
+      "cardholderNameMismatch": {
+        "title": "La carte est enregistrée à un autre nom que celui de l'acheteur",
+        "explanation": "La carte de paiement est enregistrée au nom de \"{cardholder}\", mais la commande a été passée par \"{customer}\". C'est un schéma courant de carte volée — à vérifier avant l'envoi. Utilisé en interne pour l'évaluation ; non ajouté à l'argumentaire présenté à la banque."
       }
     },
     "deliveryProof": {

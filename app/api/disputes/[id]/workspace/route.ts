@@ -17,6 +17,10 @@ import {
   type SubmissionMethod,
 } from "@/lib/argument/evidenceLineItem";
 import { buildInternalSignalsByField } from "@/lib/argument/internalSignals";
+import {
+  cardholderNameFromPayload,
+  detectCardholderNameMismatch,
+} from "@/lib/argument/nameMismatch";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import { CANONICAL_EVIDENCE, categoryFor } from "@/lib/argument/canonicalEvidence";
 import {
@@ -682,6 +686,22 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   // Mirrors `useDisputeWorkspace`'s derivation but server-side so the
   // workspace API can ship a fully-derived view-model.
   const coverageInput = pack?.coverage ?? undefined;
+  // Cardholder-name-mismatch gate input — same derivation as the build
+  // path (lib/packs/buildPack.ts) so the live workspace strength agrees
+  // with the persisted pack_json.case_strength. Merchant-UI only.
+  const avsPayloadForName = (evidenceItemsByField["avs_cvv_match"]?.payload ??
+    null) as Record<string, unknown> | null;
+  const gatewayCardholderName = cardholderNameFromPayload(avsPayloadForName);
+  const disputeCustomerName =
+    typeof row.customer_display_name === "string" &&
+    row.customer_display_name.trim().length > 0
+      ? row.customer_display_name.trim()
+      : null;
+  const nameMismatchInput = {
+    triggered: detectCardholderNameMismatch(gatewayCardholderName, disputeCustomerName),
+    cardholderName: gatewayCardholderName,
+    customerName: disputeCustomerName,
+  };
   const caseStrength = calculateCaseStrength(
     reconciledChecklistV2,
     row.reason,
@@ -689,6 +709,9 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     coverageInput
       ? { state: coverageInput.state, shopifyProtectStatus: coverageInput.shopifyProtectStatus }
       : undefined,
+    undefined,
+    undefined,
+    nameMismatchInput,
   );
   // computeContributions equivalent inline — same logic as
   // useDisputeWorkspace's derivation, deduped by signalId.
@@ -758,7 +781,9 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   for (const f of rawFailures) attachmentUploadFailures.set(f.field, f.reason);
 
   // Internal-only signals, anchored to fields.
-  const internalSignalsByField = buildInternalSignalsByField(payloadByField);
+  const internalSignalsByField = buildInternalSignalsByField(payloadByField, {
+    customerName: disputeCustomerName,
+  });
 
   // Override audit history per field. Surfaces the latest
   // evidence_inclusion_overridden_with_warning event for each field so

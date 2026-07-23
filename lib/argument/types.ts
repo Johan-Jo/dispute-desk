@@ -189,6 +189,21 @@ export interface CaseStrengthResult {
       fulfillmentCount: number;
     };
   };
+  /** Cardholder-name mismatch gate (2026-07-23). When the gateway's
+   *  registered cardholder name shares no token with the order's
+   *  customer name on a FRAUD-family dispute, `overall` is capped at
+   *  "moderate" (ceiling — never elevates) so the stolen-card pattern
+   *  never auto-submits as Strong. The names are MERCHANT-UI-ONLY
+   *  diagnostics: they MUST NEVER appear in bank-rebuttal text, the
+   *  evidence PDF, or Shopify disputeEvidence mutations. */
+  nameMismatch?: {
+    triggered: boolean;
+    cardholderName: string | null;
+    customerName: string | null;
+    /** True when the cap actually lowered `overall` (i.e. the case
+     *  scored Strong on evidence but was held at Moderate). */
+    capApplied: boolean;
+  };
 }
 
 /* ── Why This Case Wins ── */

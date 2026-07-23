@@ -11,6 +11,10 @@
  */
 
 import type { InternalSignalWarning } from "./evidenceLineItem";
+import {
+  cardholderNameFromPayload,
+  detectCardholderNameMismatch,
+} from "./nameMismatch";
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -36,6 +40,10 @@ const CVV_MATCH_CODES = new Set(["M"]);
  */
 export function buildInternalSignalsByField(
   payloadByField: Map<string, unknown>,
+  /** Optional dispute context the payload map alone cannot provide.
+   *  `customerName` (disputes.customer_display_name) enables the
+   *  cardholder-name-mismatch warning below. */
+  context?: { customerName?: string | null },
 ): Map<string, InternalSignalWarning[]> {
   const out = new Map<string, InternalSignalWarning[]>();
   const push = (field: string, signal: InternalSignalWarning): void => {
@@ -51,14 +59,55 @@ export function buildInternalSignalsByField(
     const cvv = readString(avsPayload.cvvResultCode);
     const avsMismatch = avs !== null && avs !== "" && !AVS_MATCH_CODES.has(avs.toUpperCase());
     const cvvMismatch = cvv !== null && cvv !== "" && !CVV_MATCH_CODES.has(cvv.toUpperCase());
+    const avsMatched = avs !== null && avs !== "" && AVS_MATCH_CODES.has(avs.toUpperCase());
+    const cvvMatched = cvv !== null && cvv !== "" && CVV_MATCH_CODES.has(cvv.toUpperCase());
     if (avsMismatch || cvvMismatch) {
-      const parts: string[] = [];
-      if (avsMismatch) parts.push(`AVS code ${avs}`);
-      if (cvvMismatch) parts.push(`CVV code ${cvv}`);
+      const failedParts: string[] = [];
+      if (avsMismatch) failedParts.push(`AVS code ${avs}`);
+      if (cvvMismatch) failedParts.push(`CVV code ${cvv}`);
+      const matchedParts: string[] = [];
+      if (avsMatched) matchedParts.push(`AVS code ${avs}`);
+      if (cvvMatched) matchedParts.push(`CVV code ${cvv}`);
+      // Partial match: the matched half IS cited to the bank (the row
+      // categorizes moderate and lands in the positive bucket), so the
+      // blanket "not surfaced to the bank" copy would be half-false.
+      // Name what was withheld AND what was cited. Mirrors
+      // useEvidenceSections.classifyAvsCvv.
+      push(
+        "avs_cvv_match",
+        matchedParts.length > 0
+          ? {
+              id: "internal:avs_cvv_mismatch",
+              label: "Card security check partially passed",
+              reason: `The payment gateway returned a non-match (${failedParts.join(", ")}). That result was withheld from the bank to avoid weakening the response — but the part that did match (${matchedParts.join(", ")}) is cited in the response as positive evidence.`,
+              severity: "warning",
+            }
+          : {
+              id: "internal:avs_cvv_mismatch",
+              label: "Card security check did not fully pass",
+              reason: `The payment gateway returned a non-match (${failedParts.join(", ")}). Used internally for assessment; not surfaced to the bank to avoid weakening the response.`,
+              severity: "warning",
+            },
+      );
+    }
+
+    // Cardholder-name mismatch → anchor on avs_cvv_match. The gateway
+    // says the card is registered to someone who shares no name token
+    // with the buyer — the classic stolen-card pattern. Prints BOTH
+    // names so the merchant sees exactly what differs. Merchant-UI
+    // only; never enters the bank-facing argument (the issuer already
+    // knows their cardholder's name — restating the mismatch would be
+    // a confession).
+    const gatewayCardholderName = cardholderNameFromPayload(avsPayload);
+    const customerName =
+      typeof context?.customerName === "string" && context.customerName.trim().length > 0
+        ? context.customerName.trim()
+        : null;
+    if (detectCardholderNameMismatch(gatewayCardholderName, customerName)) {
       push("avs_cvv_match", {
-        id: "internal:avs_cvv_mismatch",
-        label: "Card security check did not fully pass",
-        reason: `The payment gateway returned a non-match (${parts.join(", ")}). Used internally for assessment; not surfaced to the bank to avoid weakening the response.`,
+        id: "internal:cardholder_name_mismatch",
+        label: "Card is registered to a different name than the buyer",
+        reason: `The payment card is registered to "${gatewayCardholderName}" but the order was placed by "${customerName}". This is a common stolen-card pattern — review before submitting. Used internally for assessment; not added to the bank-facing argument.`,
         severity: "warning",
       });
     }

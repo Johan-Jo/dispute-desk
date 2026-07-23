@@ -27,6 +27,7 @@
 import {
   CANONICAL_EVIDENCE,
   categorizeEvidenceField,
+  effectivePriorOrders,
   type EvidenceCategory,
 } from "./canonicalEvidence";
 import {
@@ -552,12 +553,10 @@ function customerAccountReasonFromPayload(
 ): I18nToken | null {
   if (!payload || typeof payload !== "object") return null;
   const p = payload as Record<string, unknown>;
-  const prior =
-    typeof p.priorUndisputedOrders === "number"
-      ? p.priorUndisputedOrders
-      : typeof p.totalOrders === "number"
-        ? p.totalOrders
-        : null;
+  // Prior orders EXCLUDING the disputed one — keeps the "returning
+  // customer (N prior orders)" copy from counting the disputed order as
+  // its own history.
+  const prior = effectivePriorOrders(p);
   const disputeFree = p.disputeFreeHistory !== false;
   const sinceRaw = typeof p.customerSince === "string" ? p.customerSince : null;
   const sinceLabel = formatCustomerSince(sinceRaw);
@@ -643,12 +642,8 @@ function ipLocationReasonFromPayload(
 function customerAccountInternalReason(payload: unknown): I18nToken | null {
   if (!payload || typeof payload !== "object") return null;
   const p = payload as Record<string, unknown>;
-  const prior =
-    typeof p.priorUndisputedOrders === "number"
-      ? p.priorUndisputedOrders
-      : typeof p.totalOrders === "number"
-        ? p.totalOrders
-        : null;
+  // Same corrected prior-order count as the guard above.
+  const prior = effectivePriorOrders(p);
   const sinceRaw = typeof p.customerSince === "string" ? p.customerSince : null;
   const sinceLabel = formatCustomerSince(sinceRaw);
 
@@ -862,12 +857,12 @@ function isNegativeOrAmbiguous(
   }
 
   if (field === "customer_account_info" && reasonFamily === "fraud") {
-    const prior =
-      typeof payload.priorUndisputedOrders === "number"
-        ? payload.priorUndisputedOrders
-        : typeof payload.totalOrders === "number"
-          ? payload.totalOrders
-          : null;
+    // Prior orders EXCLUDING the disputed one — `effectivePriorOrders`
+    // corrects for Shopify's numberOfOrders counting the disputed order
+    // itself (pre-fix, totalOrders === 1 read as "one prior order" and a
+    // brand-new account sailed into the positive bucket; prod dispute
+    // 235d4152, 2026-07-23).
+    const prior = effectivePriorOrders(payload);
     // Treat first-order accounts (and missing-history payloads) as a
     // fraud-indicator signal — keep internal so the bank doesn't read
     // "new customer" as a reason to side with the cardholder.

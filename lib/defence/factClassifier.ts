@@ -17,6 +17,7 @@
 import {
   CANONICAL_EVIDENCE,
   categoryFor,
+  effectivePriorOrders,
   type EvidenceCategory,
 } from "@/lib/argument/canonicalEvidence";
 import type { CaseStrengthLevel } from "@/lib/argument/types";
@@ -275,12 +276,13 @@ function extractValue(
         lastMessageAt: typeof p.lastMessageAt === "string" ? p.lastMessageAt : null,
       };
     case "customer_account_info":
+      // Prior orders EXCLUDING the disputed one. `totalOrders` mirrors
+      // Shopify's numberOfOrders, which counts the disputed order itself
+      // — passing it through unadjusted made the LLM narrative claim
+      // "one prior undisputed order" on a customer's only, disputed,
+      // order (prod dispute 235d4152, defence package 7304e09f).
       return {
-        priorOrderCount: typeof p.priorUndisputedOrders === "number"
-          ? p.priorUndisputedOrders
-          : typeof p.totalOrders === "number"
-            ? p.totalOrders
-            : 0,
+        priorOrderCount: effectivePriorOrders(p) ?? 0,
         disputeFreeHistory: p.disputeFreeHistory !== false,
       };
     case "activity_log":
