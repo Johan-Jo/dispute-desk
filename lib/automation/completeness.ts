@@ -372,11 +372,24 @@ export const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
     { field: "cancellation_policy", label: "Cancellation Policy", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "auto_policy", collectionType: "conditional_auto" },
     { field: "supporting_documents", label: "Supporting Documents", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
   ],
+  // "Not as described / defective" (Visa 13.3 · MC 4853). The winning
+  // rebuttal answers two axes (see docs/plans/product-not-as-described-
+  // scoring.plan.md): the item matched what was bought (customer
+  // acknowledgement / signed spec) AND the dispute isn't valid/is moot
+  // (customer never returned — a return is a PRECONDITION to filing 13.3
+  // post-Oct-2024 — or a refund was already issued). The `no_return_initiated`
+  // + `refund_record` rows were previously ABSENT from this template, so
+  // orderSource collected them but they never reached the scored
+  // checklist_v2 — the same gap the CREDIT_NOT_PROCESSED comment below
+  // describes. Recommended (auto-collected from order data), never blocking.
   PRODUCT_UNACCEPTABLE: [
     { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "product_description", label: "Product Description", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
     { field: "refund_policy", label: "Refund Policy", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_policy", collectionType: "conditional_auto" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
+    { field: "no_return_initiated", label: "Return Status", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
+    { field: "refund_record", label: "Refund Record", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
+    { field: "customer_account_info", label: "Customer Account History", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "shipping_tracking", label: "Shipping Tracking", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "supporting_documents", label: "Supporting Documents", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
   ],

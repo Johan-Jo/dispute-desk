@@ -1481,6 +1481,7 @@
       }
     },
     "whyText": {
+      "customer_account_info": "Montre l'historique des commandes précédentes du client dans votre boutique — appuie le fait que la commande était un achat authentique",
       "refund_record": "Prouve qu'un remboursement a réellement été effectué sur la commande — décisif contre les réclamations « remboursement non traité »",
       "no_return_initiated": "Montre que le client n'a jamais initié de retour — fonde l'argument qu'aucun remboursement n'était dû",
       "ip_location_check": "Situe la commande à l'emplacement habituel du client — conforte que le titulaire de la carte l'a passée",

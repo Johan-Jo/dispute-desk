@@ -1481,6 +1481,7 @@
       }
     },
     "whyText": {
+      "customer_account_info": "Zeigt die frühere Bestellhistorie des Kunden in Ihrem Shop — stützt, dass die Bestellung ein echter Kauf war",
       "refund_record": "Belegt, dass tatsächlich eine Rückerstattung für die Bestellung ausgestellt wurde — entscheidend gegen Behauptungen einer „nicht bearbeiteten Rückerstattung“",
       "no_return_initiated": "Zeigt, dass der Kunde nie eine Rücksendung eingeleitet hat — untermauert das Argument, dass keine Rückerstattung geschuldet war",
       "ip_location_check": "Ordnet die Bestellung dem üblichen Standort des Kunden zu — spricht dafür, dass der Karteninhaber sie aufgegeben hat",

@@ -555,6 +555,31 @@ export function calculateCaseStrength(
     FRAUD_DECISIVE_SIGNALS.has(r.signalId),
   ).length;
 
+  // Product / "not as described" (Visa 13.3 · MC 4853) decisive signals,
+  // split into the two axes the card networks + representment industry
+  // weigh (docs/plans/product-not-as-described-scoring.plan.md):
+  //   Axis 1 — "it matched what they bought": the customer acknowledged
+  //     the order/receipt (communication) or signed a spec/contract
+  //     (supplementary_documents strong). The bare product listing /
+  //     order record are NOT here — they show what was advertised, not
+  //     that the customer agreed it matched (stay supportingOnly).
+  //   Axis 2 — "the dispute isn't valid / is moot": the customer never
+  //     returned the item (refund signal via no_return_initiated) —
+  //     post-2024 Visa a return is a PRECONDITION to filing 13.3, so
+  //     "never returned" attacks validity at the root — or a refund was
+  //     already issued (refund_record). Shared signalId `refund`.
+  const PRODUCT_AXIS1_MATCH = new Set<SignalId>([
+    "communication",
+    "supplementary_documents",
+  ]);
+  const PRODUCT_AXIS2_VALIDITY = new Set<SignalId>(["refund"]);
+  const hasProductAxis1 =
+    strongRows.some((r) => PRODUCT_AXIS1_MATCH.has(r.signalId)) ||
+    moderateRows.some((r) => PRODUCT_AXIS1_MATCH.has(r.signalId));
+  const hasProductAxis2 =
+    strongRows.some((r) => PRODUCT_AXIS2_VALIDITY.has(r.signalId)) ||
+    moderateRows.some((r) => PRODUCT_AXIS2_VALIDITY.has(r.signalId));
+
   let overall: CaseStrengthLevel;
   let isFraudAvsOnlyStrong = false;
   if (family === "fraud") {
@@ -612,6 +637,31 @@ export function calculateCaseStrength(
     else if (strongCount === 1 && moderateCount >= 1) overall = "moderate";
     else if (hasRefundSignal) overall = "moderate";
     else overall = "weak";
+  } else if (family === "product") {
+    // "Not as described / defective" (Visa 13.3 · MC 4853). A subjective
+    // merchandise-quality claim: the winning rebuttal must answer BOTH
+    // halves the bank weighs — (1) the item matched what the customer
+    // bought, and (2) the dispute isn't valid/is moot. So:
+    //   Strong   = at least one Axis-1 signal AND one Axis-2 signal
+    //              (both halves answered).
+    //   Moderate = at least one decisive signal from EITHER axis, OR the
+    //              generic two-strong / one-strong+one-moderate count.
+    //   Weak     = no decisive signal. A bare listing + order record
+    //              (both supportingOnly) genuinely is weak here — we do
+    //              NOT inflate it (matches the industry ranking; see plan).
+    // Two signals from the SAME axis do not reach Strong — that proves
+    // one half twice and leaves the other unanswered.
+    if ((hasProductAxis1 && hasProductAxis2) || strongCount >= 2) {
+      overall = "strong";
+    } else if (
+      hasProductAxis1 ||
+      hasProductAxis2 ||
+      (strongCount === 1 && moderateCount >= 1)
+    ) {
+      overall = "moderate";
+    } else {
+      overall = "weak";
+    }
   } else {
     if (strongCount >= 2) overall = "strong";
     else if (strongCount === 1 && moderateCount >= 1) overall = "moderate";

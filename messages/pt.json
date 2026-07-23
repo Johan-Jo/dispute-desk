@@ -1481,6 +1481,7 @@
       }
     },
     "whyText": {
+      "customer_account_info": "Mostra o histórico de pedidos anteriores do cliente na sua loja — apoia que o pedido foi uma compra genuína",
       "refund_record": "Comprova que um reembolso foi de fato emitido no pedido — decisivo contra alegações de «reembolso não processado»",
       "no_return_initiated": "Mostra que o cliente nunca iniciou uma devolução — fundamenta o argumento de que nenhum reembolso era devido",
       "ip_location_check": "Situa o pedido na localização habitual do cliente — sustenta que o titular do cartão o realizou",

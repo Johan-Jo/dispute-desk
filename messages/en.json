@@ -878,6 +878,7 @@
       }
     },
     "whyText": {
+      "customer_account_info": "Shows the customer's prior order history with your store — supports that the order was a genuine purchase",
       "refund_record": "Proves a refund was actually issued on the order — decisive against 'refund not processed' claims",
       "no_return_initiated": "Shows the customer never initiated a return — grounds the argument that no refund was owed",
       "ip_location_check": "Places the order at the customer's usual location — supports that the cardholder placed it",
