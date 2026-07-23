@@ -56,9 +56,17 @@ export async function GET(req: NextRequest) {
   // so a plain `due_at asc` floated long-closed rows above cases due this
   // week (blume-box, 2026-07-22). closed_at IS NULL ⇒ open, and
   // nullsFirst puts those first; resolved rows follow (most recently
-  // closed first), each group still due-date-ordered by the second key.
+  // closed first), each group still due-date-ordered by the later keys.
+  //
+  // Within the open group, `urgency_rank` (generated column, migration
+  // 20260722030000) then demotes submitted / under-review disputes: they
+  // are open but out of the merchant's hands, and their historical due_at
+  // otherwise pins them to the top of the urgency view (blume-box,
+  // 2026-07-22). Order: actionable open → submitted open → resolved.
   if (sortCol === "due_at" && sortAsc) {
-    query = query.order("closed_at", { ascending: false, nullsFirst: true });
+    query = query
+      .order("closed_at", { ascending: false, nullsFirst: true })
+      .order("urgency_rank", { ascending: true });
   }
   query = query
     .order(sortCol, { ascending: sortAsc, nullsFirst: false })
