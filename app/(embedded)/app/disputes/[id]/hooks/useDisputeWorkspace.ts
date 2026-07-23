@@ -861,6 +861,30 @@ export function useDisputeWorkspace(disputeId: string) {
     await fetchAll();
   }, [disputeId, fetchAll]);
 
+  /** Merchant review-lifecycle decision on a parked/weak dispute
+   *  (2026-07-23): "hold" (watch until deadline), "approve" (submit on
+   *  the deadline), "concede" (do not defend), or "clear" (undo). POSTs
+   *  to /review then refetches so the action row + chip reflect the new
+   *  reviewState. */
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const setReviewDecision = useCallback(
+    async (action: "hold" | "approve" | "concede" | "clear") => {
+      if (reviewSaving) return;
+      setReviewSaving(true);
+      try {
+        await fetch(`/api/disputes/${disputeId}/review`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        });
+        await fetchAll();
+      } finally {
+        setReviewSaving(false);
+      }
+    },
+    [disputeId, fetchAll, reviewSaving],
+  );
+
   const setActiveTab = useCallback((tab: 0 | 1 | 2) => {
     setClientState((s) => ({ ...s, activeTab: tab }));
   }, []);
@@ -1123,6 +1147,8 @@ export function useDisputeWorkspace(disputeId: string) {
       exportPdf,
       downloadPdf,
       syncDispute,
+      setReviewDecision,
+      reviewSaving,
       setActiveTab,
       navigateToEvidence,
       toggleSubmissionField,

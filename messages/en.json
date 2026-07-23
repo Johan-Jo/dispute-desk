@@ -676,6 +676,12 @@
       "moderate": "Partially supported case",
       "weak": "Weak case"
     },
+    "reviewChip": {
+      "inReview": "In review",
+      "inReviewDue": "In review · {days}d",
+      "scheduled": "Scheduled",
+      "notDefended": "Not defended"
+    },
     "signalLabel": {
       "payment_auth": "Payment authentication",
       "tds_authentication": "3-D Secure authentication",
@@ -949,6 +955,25 @@
     "overviewExtra": {
       "evidenceCollected": "Evidence collected",
       "evidenceOrderingHelper": "Ordered by how much each item strengthens the case. Strongest first.",
+      "review": {
+        "title": "Decide what to do with this dispute",
+        "prompt": "This case needs your call before the deadline. Hold it while you look into it, schedule it to submit automatically, or concede it if it isn't worth defending.",
+        "hold": "Hold for review",
+        "approve": "Submit on the deadline",
+        "concede": "Don't defend",
+        "holdHelp": "We'll keep watching it and remind you before the deadline.",
+        "approveHelp": "We'll submit the evidence automatically when the deadline arrives.",
+        "concedeHelp": "We won't submit anything. The dispute closes undefended.",
+        "stateInReviewTitle": "On hold for your review",
+        "stateInReviewBody": "You're reviewing this dispute. If you take no further action, it will follow your automation rule at the deadline{due}.",
+        "stateApprovedTitle": "Scheduled to submit",
+        "stateApprovedBody": "This dispute is set to submit automatically on the deadline{due}.",
+        "stateConcededTitle": "Not being defended",
+        "stateConcededBody": "You chose not to defend this dispute. Nothing will be submitted.",
+        "dueSuffix": " ({date})",
+        "change": "Change decision",
+        "undo": "Undo"
+      },
       "whatHappensNow": "What happens now",
       "automationRule": "Automation rule:",
       "appliedMode": {

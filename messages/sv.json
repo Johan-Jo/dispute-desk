@@ -682,6 +682,12 @@
       "internal_only": "Endast internt",
       "none": "Ingen"
     },
+    "reviewChip": {
+      "inReview": "Under granskning",
+      "inReviewDue": "Under granskning · {days} d",
+      "scheduled": "Schemalagd",
+      "notDefended": "Försvaras inte"
+    },
     "signalLabel": {
       "payment_auth": "Betalningsautentisering",
       "tds_authentication": "3-D Secure-autentisering",
@@ -955,6 +961,25 @@
     "overviewExtra": {
       "evidenceCollected": "Insamlade bevis",
       "evidenceOrderingHelper": "Sorterade efter hur mycket varje objekt stärker ärendet. Starkast först.",
+      "review": {
+        "title": "Bestäm vad du vill göra med den här tvisten",
+        "prompt": "Det här ärendet behöver ditt beslut före tidsfristen. Pausa det medan du undersöker, schemalägg det för automatisk inskickning, eller avstå om det inte är värt att försvara.",
+        "hold": "Pausa för granskning",
+        "approve": "Skicka in vid tidsfristen",
+        "concede": "Försvara inte",
+        "holdHelp": "Vi fortsätter bevaka det och påminner dig före tidsfristen.",
+        "approveHelp": "Vi skickar in bevisningen automatiskt när tidsfristen infaller.",
+        "concedeHelp": "Vi skickar inte in något. Tvisten avslutas utan försvar.",
+        "stateInReviewTitle": "Pausad för din granskning",
+        "stateInReviewBody": "Du granskar den här tvisten. Om du inte gör något mer följer den din automatiseringsregel vid tidsfristen{due}.",
+        "stateApprovedTitle": "Schemalagd för inskickning",
+        "stateApprovedBody": "Den här tvisten är inställd på att skickas in automatiskt vid tidsfristen{due}.",
+        "stateConcededTitle": "Försvaras inte",
+        "stateConcededBody": "Du valde att inte försvara den här tvisten. Inget kommer att skickas in.",
+        "dueSuffix": " ({date})",
+        "change": "Ändra beslut",
+        "undo": "Ångra"
+      },
       "whatHappensNow": "Vad händer nu",
       "automationRule": "Automatiseringsregel:",
       "appliedMode": {

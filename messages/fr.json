@@ -1289,6 +1289,12 @@
       "rowWaivedNoteSuffix": " Note : {note}"
     },
     "noDisputesHint": "Les litiges affichés correspondent à la boutique sélectionnée dans la barre latérale. Si vous utilisez plusieurs boutiques, basculez sur la bonne, puis cliquez sur Synchroniser maintenant.",
+    "reviewChip": {
+      "inReview": "En cours d'examen",
+      "inReviewDue": "En examen · {days} j",
+      "scheduled": "Programmé",
+      "notDefended": "Non défendu"
+    },
     "signalLabel": {
       "payment_auth": "Authentification du paiement",
       "tds_authentication": "Authentification 3-D Secure",
@@ -1552,6 +1558,25 @@
     "overviewExtra": {
       "evidenceCollected": "Preuves collectées",
       "evidenceOrderingHelper": "Classées selon leur capacité à renforcer le dossier. Les plus solides en premier.",
+      "review": {
+        "title": "Décidez quoi faire de ce litige",
+        "prompt": "Ce dossier nécessite votre décision avant la date limite. Mettez-le en attente le temps de l'examiner, programmez son envoi automatique, ou renoncez à le défendre s'il n'en vaut pas la peine.",
+        "hold": "Mettre en attente",
+        "approve": "Envoyer à la date limite",
+        "concede": "Ne pas défendre",
+        "holdHelp": "Nous continuons à le surveiller et vous rappelons avant la date limite.",
+        "approveHelp": "Nous envoyons les preuves automatiquement à la date limite.",
+        "concedeHelp": "Nous n'envoyons rien. Le litige se clôt sans défense.",
+        "stateInReviewTitle": "En attente de votre examen",
+        "stateInReviewBody": "Vous examinez ce litige. Sans autre action de votre part, il suivra votre règle d'automatisation à la date limite{due}.",
+        "stateApprovedTitle": "Programmé pour envoi",
+        "stateApprovedBody": "Ce litige sera envoyé automatiquement à la date limite{due}.",
+        "stateConcededTitle": "Non défendu",
+        "stateConcededBody": "Vous avez choisi de ne pas défendre ce litige. Rien ne sera envoyé.",
+        "dueSuffix": " ({date})",
+        "change": "Changer la décision",
+        "undo": "Annuler"
+      },
       "whatHappensNow": "Et maintenant ?",
       "automationRule": "Règle d'automatisation :",
       "appliedMode": {

@@ -78,14 +78,18 @@ export async function sendHighValueReviewAlert(
       </p>
 
       <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:16px;margin-bottom:20px">
-        <p style="font-size:13px;color:#1E40AF;margin:0;line-height:1.6">
-          <strong>What to do:</strong> Open the dispute, review the auto-collected
-          evidence, add anything else you'd like to include, and submit when ready.
+        <p style="font-size:13px;color:#1E40AF;margin:0 0 8px;line-height:1.6">
+          <strong>Open the dispute and choose what to do:</strong>
         </p>
+        <ul style="font-size:13px;color:#1E40AF;margin:0;padding-left:18px;line-height:1.6">
+          <li><strong>Submit on the deadline</strong> — we send the evidence automatically when the deadline arrives.</li>
+          <li><strong>Hold for review</strong> — we keep watching it and remind you before the deadline.</li>
+          <li><strong>Don't defend</strong> — we submit nothing and the dispute closes undefended.</li>
+        </ul>
       </div>
 
       <a href="${disputeUrl}" style="display:inline-block;padding:12px 24px;background:#1D4ED8;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500">
-        Review &amp; submit →
+        Review this dispute →
       </a>
     </div>
 
@@ -103,10 +107,12 @@ A ${reasonLabel} dispute for ${shopLabel} came in at $${ctx.disputeAmount}, whic
 the $${ctx.threshold} review threshold you set during setup. DisputeDesk built the evidence
 pack automatically but is holding it for your approval before submitting.
 
-What to do: Open the dispute, review the auto-collected evidence, add anything else you'd
-like to include, and submit when ready.
+Open the dispute and choose what to do:
+  - Submit on the deadline — we send the evidence automatically when the deadline arrives.
+  - Hold for review — we keep watching it and remind you before the deadline.
+  - Don't defend — we submit nothing and the dispute closes undefended.
 
-Review and submit: ${disputeUrl}
+Review this dispute: ${disputeUrl}
 
 ---
 You're getting this because high-value review is turned on in your Automation settings.`;

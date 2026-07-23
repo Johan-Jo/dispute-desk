@@ -698,6 +698,93 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </Banner>
       )}
 
+      {/* Review lifecycle (2026-07-23). A parked-for-review or weak
+          dispute needs an explicit merchant decision so it doesn't sit in
+          the queue forever. Shows three actions when undecided, or the
+          standing decision + an undo once made. Hidden once the dispute
+          is read-only (submitted / closed) — the decision is moot then. */}
+      {!isReadOnly &&
+        (() => {
+          const rs = dispute.reviewState ?? null;
+          const isWeak =
+            caseStrength.overall === "weak" ||
+            caseStrength.overall === "insufficient";
+          const parked = dispute.needsReview === true;
+          // Offer the row when the case is weak or parked, OR whenever a
+          // decision is already recorded (so the merchant can see/undo it).
+          if (!isWeak && !parked && !rs) return null;
+          const saving = actions.reviewSaving === true;
+          const dueSuffix = dispute.reviewDueAt
+            ? tExtra("review.dueSuffix", { date: formatDate(dispute.reviewDueAt) })
+            : dispute.dueAt
+              ? tExtra("review.dueSuffix", { date: formatDate(dispute.dueAt) })
+              : "";
+
+          if (rs) {
+            const tone =
+              rs === "conceded" ? "critical" : rs === "approved" ? "info" : "warning";
+            const titleKey =
+              rs === "conceded"
+                ? "review.stateConcededTitle"
+                : rs === "approved"
+                  ? "review.stateApprovedTitle"
+                  : "review.stateInReviewTitle";
+            const bodyKey =
+              rs === "conceded"
+                ? "review.stateConcededBody"
+                : rs === "approved"
+                  ? "review.stateApprovedBody"
+                  : "review.stateInReviewBody";
+            return (
+              <Banner tone={tone} title={tExtra(titleKey)}>
+                <BlockStack gap="200">
+                  <p style={{ margin: 0 }}>{tExtra(bodyKey, { due: dueSuffix })}</p>
+                  <InlineStack gap="200">
+                    <Button
+                      variant="plain"
+                      disabled={saving}
+                      onClick={() => actions.setReviewDecision("clear")}
+                    >
+                      {tExtra("review.undo")}
+                    </Button>
+                  </InlineStack>
+                </BlockStack>
+              </Banner>
+            );
+          }
+
+          return (
+            <Banner tone="warning" title={tExtra("review.title")}>
+              <BlockStack gap="300">
+                <p style={{ margin: 0 }}>{tExtra("review.prompt")}</p>
+                <InlineStack gap="200">
+                  <Button
+                    disabled={saving}
+                    onClick={() => actions.setReviewDecision("hold")}
+                  >
+                    {tExtra("review.hold")}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    disabled={saving}
+                    onClick={() => actions.setReviewDecision("approve")}
+                  >
+                    {tExtra("review.approve")}
+                  </Button>
+                  <Button
+                    variant="plain"
+                    tone="critical"
+                    disabled={saving}
+                    onClick={() => actions.setReviewDecision("concede")}
+                  >
+                    {tExtra("review.concede")}
+                  </Button>
+                </InlineStack>
+              </BlockStack>
+            </Banner>
+          );
+        })()}
+
 
       {/* O1: Hero — minimal per Figma: label + confidence pill + 1-line summary.
           Recommendation / improvement / helper / deadline copy moves to the
@@ -1465,7 +1552,14 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 {/* Internal-only warnings attached to a row whose
                     primary value is still useful (e.g.
                     order_confirmation carrying a billing/shipping
-                    address mismatch). Render after the main caption. */}
+                    address mismatch).
+
+                    OVERVIEW = one-liner. Show ONLY the short label
+                    (e.g. "Card security check partially passed"); the
+                    full multi-sentence explanation lives on the
+                    Evidence tab's internal-signals rows. Rendering the
+                    full `sig.reason` here duplicated the Evidence-tab
+                    copy word-for-word (2026-07-23 user decision). */}
                 {lineItem?.internalSignals?.map((sig) => (
                   <p
                     key={sig.id}
@@ -1476,7 +1570,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                       lineHeight: 1.4,
                     }}
                   >
-                    {sig.label}: {sig.reason}
+                    {sig.label}
                   </p>
                 ))}
                 {showAddCta && (

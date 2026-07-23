@@ -1289,6 +1289,12 @@
       }
     },
     "noDisputesHint": "Streitfälle werden für den in der Seitenleiste ausgewählten Shop angezeigt. Wenn Sie mehrere Shops nutzen, wechseln Sie zum richtigen und klicken Sie auf Jetzt synchronisieren.",
+    "reviewChip": {
+      "inReview": "In Prüfung",
+      "inReviewDue": "In Prüfung · {days} T",
+      "scheduled": "Geplant",
+      "notDefended": "Nicht verteidigt"
+    },
     "signalLabel": {
       "payment_auth": "Zahlungsauthentifizierung",
       "tds_authentication": "3-D-Secure-Authentifizierung",
@@ -1552,6 +1558,25 @@
     "overviewExtra": {
       "evidenceCollected": "Gesammelte Beweise",
       "evidenceOrderingHelper": "Sortiert nach Wirkung auf die Fallstärke. Stärkste zuerst.",
+      "review": {
+        "title": "Entscheiden Sie, was mit dieser Reklamation geschehen soll",
+        "prompt": "Dieser Fall erfordert vor der Frist Ihre Entscheidung. Halten Sie ihn zurück, während Sie ihn prüfen, planen Sie die automatische Einreichung oder geben Sie ihn auf, wenn er die Verteidigung nicht wert ist.",
+        "hold": "Zur Prüfung zurückhalten",
+        "approve": "Zum Fristtermin einreichen",
+        "concede": "Nicht verteidigen",
+        "holdHelp": "Wir behalten ihn im Auge und erinnern Sie vor der Frist.",
+        "approveHelp": "Wir reichen die Beweise automatisch zum Fristtermin ein.",
+        "concedeHelp": "Wir reichen nichts ein. Die Reklamation wird unverteidigt geschlossen.",
+        "stateInReviewTitle": "Für Ihre Prüfung zurückgehalten",
+        "stateInReviewBody": "Sie prüfen diese Reklamation. Wenn Sie nichts weiter unternehmen, folgt sie zum Fristtermin Ihrer Automatisierungsregel{due}.",
+        "stateApprovedTitle": "Zur Einreichung geplant",
+        "stateApprovedBody": "Diese Reklamation wird zum Fristtermin automatisch eingereicht{due}.",
+        "stateConcededTitle": "Wird nicht verteidigt",
+        "stateConcededBody": "Sie haben sich entschieden, diese Reklamation nicht zu verteidigen. Es wird nichts eingereicht.",
+        "dueSuffix": " ({date})",
+        "change": "Entscheidung ändern",
+        "undo": "Rückgängig"
+      },
       "whatHappensNow": "Was passiert jetzt",
       "automationRule": "Automatisierungsregel:",
       "appliedMode": {
