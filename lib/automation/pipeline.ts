@@ -26,6 +26,7 @@ import {
   type DisputeAttentionReason,
 } from "@/lib/disputes/attentionReasons";
 import { claimBillingBlockedEmailSlot } from "./billingBlockedEmailThrottle";
+import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 
 const HIGH_VALUE_SAFEGUARD_NAME = `${SETUP_RULE_PREFIX}safeguard:high_value`;
 import {
@@ -512,6 +513,20 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // behavior intact for them rather than silently flipping decisions.
   const caseStrength = (pack.pack_json as { case_strength?: { overall?: string } } | null)?.case_strength;
   const strengthOverall = caseStrength?.overall ?? null;
+  // "Not as described" (product family) is a subjective merchandise-quality
+  // claim. For the first release of product-family scoring we do NOT
+  // auto-submit even a two-axis Strong product case — the merchant may
+  // know context the evidence doesn't capture (the item genuinely was
+  // defective). Treat product-Strong like Moderate for the auto-gate: it
+  // parks for review rather than falling through to the quality gate +
+  // auto-save. Removing this guard later opts product-Strong back into
+  // normal auto-submit. (docs/plans/product-not-as-described-scoring.plan.md.)
+  const disputeReason =
+    (pack.pack_json as { disputeReason?: string | null } | null)?.disputeReason ?? null;
+  const isProductFamily = resolveReasonFamily(disputeReason) === "product";
+  const parksAsModerate =
+    strengthOverall === "moderate" ||
+    (strengthOverall === "strong" && isProductFamily);
   // Approved-fact count for the material-change heuristic. We need it
   // before the review-mode branch, which is where the
   // `blocked_no_material_change` outcome fires. Read from the most
@@ -530,7 +545,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       ? (latestDraft!.facts_json as unknown[]).length
       : null;
   }
-  if (ruleMode === "auto" && strengthOverall === "moderate") {
+  if (ruleMode === "auto" && parksAsModerate) {
     // No rebuild-outcome stamp here. Moderate-strength parks for
     // merchant review with a fresh draft — that's the happy path for
     // a regenerate (new draft is now the candidate), not a blocker.
@@ -552,7 +567,10 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         });
       }
     }
-    const reason = "Auto-mode case strength is Moderate — parked for merchant review per PRD §9";
+    const reason =
+      strengthOverall === "strong" && isProductFamily
+        ? "Auto-mode: 'not as described' cases are parked for merchant review even when Strong (subjective merchandise claim)"
+        : "Auto-mode case strength is Moderate — parked for merchant review per PRD §9";
     const alreadySaved =
       pack.status === "saved_to_shopify" ||
       pack.status === "saved_to_shopify_unverified" ||

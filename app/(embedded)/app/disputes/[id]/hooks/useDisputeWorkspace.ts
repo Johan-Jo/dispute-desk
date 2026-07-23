@@ -1068,7 +1068,15 @@ export function useDisputeWorkspace(disputeId: string) {
     const improvementHintText: Localized | null = caseStrength.improvementHintI18n
       ? resolveToken(tRoot, caseStrength.improvementHintI18n)
       : null;
-    const contributions = computeContributions(effectiveChecklist, payloadSource);
+    // Pass the reason so the contribution rows apply the same
+    // fraud-family account_history demotion the scorer does — otherwise
+    // "What supports your case" would show a Strong pill for prior-order
+    // history that the score counted as moderate corroboration.
+    const contributions = computeContributions(
+      effectiveChecklist,
+      payloadSource,
+      data.dispute.reason,
+    );
     const whyWins = generateWhyWins(effectiveChecklist, caseStrength.overall);
     const risk = generateRiskExplanation(effectiveChecklist, caseStrength.overall);
     const improvement = calculateImprovement(effectiveChecklist, data.dispute.reason, payloadSource);
