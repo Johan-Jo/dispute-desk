@@ -22,6 +22,7 @@ interface Dispute {
   currency_code: string | null;
   due_at: string | null;
   needs_review: boolean;
+  review_state?: "in_review" | "approved" | "conceded" | null;
   last_synced_at: string | null;
 }
 
@@ -361,9 +362,20 @@ export default function DisputesPage() {
                     </td>
                     <td className="px-4 py-3 text-[#667085]">{d.reason ? tr.has(d.reason) ? tr(d.reason) : d.reason : ts("unknown")}</td>
                     <td className="px-4 py-3">
-                      <Badge variant={STATUS_VARIANTS[d.status ?? ""] ?? "default"}>
-                        {ts(STATUS_KEYS[d.status ?? ""] ?? "unknown")}
-                      </Badge>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant={STATUS_VARIANTS[d.status ?? ""] ?? "default"}>
+                          {ts(STATUS_KEYS[d.status ?? ""] ?? "unknown")}
+                        </Badge>
+                        {d.review_state === "in_review" && (
+                          <Badge variant="warning">{t("reviewChip.inReview")}</Badge>
+                        )}
+                        {d.review_state === "approved" && (
+                          <Badge variant="info">{t("reviewChip.scheduled")}</Badge>
+                        )}
+                        {d.review_state === "conceded" && (
+                          <Badge variant="default">{t("reviewChip.notDefended")}</Badge>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-[#667085]">{formatDate(d.due_at, locale)}</td>
                     <td className="px-4 py-3 text-right">

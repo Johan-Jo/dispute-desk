@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { sendDueReminder } from "@/lib/email/sendDueReminder";
 import { cronEnvGate } from "@/lib/cron/envGate";
+import { resurfaceHeldReviews } from "@/lib/disputes/resurfaceHeldReviews";
 
 /**
  * GET /api/cron/dispute-reminders
@@ -15,6 +16,11 @@ export async function GET(req: NextRequest) {
   if (gate) return gate;
 
   const sb = getServiceClient();
+
+  // First: resurface any "held for review" dispute near its deadline so
+  // a stale hold can't silently ride to the deadline. Runs independently
+  // of the reminder-email scan below (which filters on reminder_sent_at).
+  const resurface = await resurfaceHeldReviews(sb);
 
   // Disputes due within 48h that haven't been reminded yet.
   // Exclude rows where the merchant has already saved/submitted evidence —
@@ -46,7 +52,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (!disputes?.length) {
-    return NextResponse.json({ sent: 0, skipped: 0 });
+    return NextResponse.json({ sent: 0, skipped: 0, resurfaced: resurface.resurfaced });
   }
 
   // Group by shop so we load setup once per shop.
@@ -136,5 +142,5 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ sent, skipped });
+  return NextResponse.json({ sent, skipped, resurfaced: resurface.resurfaced });
 }

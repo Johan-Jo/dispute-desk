@@ -1289,6 +1289,12 @@
       "rowWaivedNoteSuffix": " Nota: {note}"
     },
     "noDisputesHint": "As disputas são exibidas para a loja selecionada na barra lateral. Se você usa várias lojas, troque a loja ativa.",
+    "reviewChip": {
+      "inReview": "Em análise",
+      "inReviewDue": "Em análise · {days} d",
+      "scheduled": "Agendada",
+      "notDefended": "Sem defesa"
+    },
     "signalLabel": {
       "payment_auth": "Autenticação do pagamento",
       "tds_authentication": "Autenticação 3-D Secure",
@@ -1552,6 +1558,25 @@
     "overviewExtra": {
       "evidenceCollected": "Evidências coletadas",
       "evidenceOrderingHelper": "Ordenadas pelo quanto cada item fortalece o caso. Mais fortes primeiro.",
+      "review": {
+        "title": "Decida o que fazer com esta disputa",
+        "prompt": "Este caso precisa da sua decisão antes do prazo. Mantenha-o em análise enquanto investiga, agende o envio automático ou desista dele se não valer a pena defender.",
+        "hold": "Manter em análise",
+        "approve": "Enviar no prazo",
+        "concede": "Não defender",
+        "holdHelp": "Continuaremos acompanhando e lembraremos você antes do prazo.",
+        "approveHelp": "Enviaremos as evidências automaticamente quando o prazo chegar.",
+        "concedeHelp": "Não enviaremos nada. A disputa é encerrada sem defesa.",
+        "stateInReviewTitle": "Em espera para sua análise",
+        "stateInReviewBody": "Você está analisando esta disputa. Se não fizer mais nada, ela seguirá sua regra de automação no prazo{due}.",
+        "stateApprovedTitle": "Agendada para envio",
+        "stateApprovedBody": "Esta disputa será enviada automaticamente no prazo{due}.",
+        "stateConcededTitle": "Sem defesa",
+        "stateConcededBody": "Você optou por não defender esta disputa. Nada será enviado.",
+        "dueSuffix": " ({date})",
+        "change": "Alterar decisão",
+        "undo": "Desfazer"
+      },
       "whatHappensNow": "O que acontece agora",
       "automationRule": "Regra de automação:",
       "appliedMode": {

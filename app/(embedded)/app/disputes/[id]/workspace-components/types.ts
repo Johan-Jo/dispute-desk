@@ -76,6 +76,13 @@ export interface WorkspaceDispute {
   openedAt: string;
   normalizedStatus: string;
   submissionState: string;
+  /** Review-lifecycle state (2026-07-23). Gates + reflects the
+   *  Hold/Approve/Concede action row on a parked/weak dispute. */
+  needsReview?: boolean;
+  needsAttention?: boolean;
+  attentionReason?: string | null;
+  reviewState?: "in_review" | "approved" | "conceded" | null;
+  reviewDueAt?: string | null;
   /** Set by `syncDisputes` from Shopify's `evidenceSentOn`. Only
    *  meaningful when `submissionState === "submitted_confirmed"`.
    *  Drives the date in the Evidence-tab window-closed banner. */

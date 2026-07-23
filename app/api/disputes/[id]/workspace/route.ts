@@ -359,6 +359,15 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     openedAt: row.initiated_at ?? null,
     normalizedStatus: row.normalized_status ?? null,
     submissionState: row.submission_state ?? null,
+    // Review-lifecycle state (2026-07-23). The detail action row gates on
+    // `needsReview`/`needsAttention`/weak strength to decide whether to
+    // offer Hold/Approve/Concede, and reflects the current `reviewState`
+    // (+ its deadline snapshot) as the merchant's standing decision.
+    needsReview: row.needs_review === true,
+    needsAttention: row.needs_attention === true,
+    attentionReason: row.attention_reason ?? null,
+    reviewState: row.review_state ?? null,
+    reviewDueAt: row.review_due_at ?? null,
     /** Set by `lib/disputes/syncDisputes.ts` from Shopify's
      *  `evidenceSentOn`. Only meaningful when
      *  `submissionState === "submitted_confirmed"`. Used in the

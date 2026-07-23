@@ -16,6 +16,10 @@ export interface Dispute {
   due_at: string | null;
   initiated_at: string | null;
   needs_review: boolean;
+  /** Merchant review decision (2026-07-23). Drives the list chip and
+   *  removes approved/conceded rows from the actionable views. */
+  review_state?: "in_review" | "approved" | "conceded" | null;
+  review_due_at?: string | null;
   last_synced_at: string | null;
   normalized_status?: string | null;
   submission_state?: string | null;
@@ -327,12 +331,55 @@ export function figmaStatus(d: Dispute): FigmaStatus {
   ) {
     return "closed";
   }
+  // Merchant review decisions (2026-07-23) take priority over the raw
+  // status so approved/conceded rows leave the actionable views:
+  //   conceded → "closed" (won't be defended; nothing more to do)
+  //   approved → "under-review" (scheduled to submit on the deadline)
+  // in_review stays actionable — it's work-in-progress — but carries its
+  // own calmer chip via figmaReviewChip() rather than a red nag.
+  if (d.review_state === "conceded") return "closed";
+  if (d.review_state === "approved") return "under-review";
   if ((UNDER_REVIEW_NORMALIZED_STATUSES as readonly string[]).includes(ns ?? "")) {
     return "under-review";
   }
   if (ns === "needs_review" || d.needs_review) return "needs-review";
   // action_needed | new | in_progress | ready_to_submit | unknown → action-needed
   return "action-needed";
+}
+
+/** Review-lifecycle chip for the list/search rows. Returns null when the
+ *  merchant hasn't made a decision (the row shows its normal status
+ *  chip). When present, the chip is rendered ALONGSIDE the status pill so
+ *  the merchant sees the standing decision at a glance:
+ *    in_review → "In review" (+ optional countdown from review_due_at)
+ *    approved  → "Scheduled"
+ *    conceded  → "Not defended"
+ *  Colors follow the list's soft-pill palette. */
+export function figmaReviewChip(
+  d: Dispute,
+  t: Translate,
+): { label: string; bg: string; color: string } | null {
+  switch (d.review_state) {
+    case "in_review": {
+      const days =
+        d.review_due_at != null
+          ? Math.ceil(
+              (new Date(d.review_due_at).getTime() - Date.now()) / 86_400_000,
+            )
+          : null;
+      const label =
+        days != null && days >= 0
+          ? t("disputes.reviewChip.inReviewDue", { days })
+          : t("disputes.reviewChip.inReview");
+      return { label, bg: "#FEF3C7", color: "#92400E" };
+    }
+    case "approved":
+      return { label: t("disputes.reviewChip.scheduled"), bg: "#E0F2FE", color: "#075985" };
+    case "conceded":
+      return { label: t("disputes.reviewChip.notDefended"), bg: "#E1E3E5", color: "#6D7175" };
+    default:
+      return null;
+  }
 }
 
 /** Map persisted case_strength.overall to the Figma 3-bucket pill.

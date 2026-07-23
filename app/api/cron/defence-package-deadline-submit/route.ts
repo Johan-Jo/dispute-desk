@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
   const { data: disputes, error } = await sb
     .from("disputes")
     .select(
-      "id, shop_id, dispute_gid, reason, amount, currency_code, due_at, status, normalized_status",
+      "id, shop_id, dispute_gid, reason, amount, currency_code, due_at, status, normalized_status, review_state",
     )
     .gte("due_at", startOfToday.toISOString())
     .lt("due_at", endOfToday.toISOString())
@@ -115,6 +115,14 @@ export async function GET(req: NextRequest) {
 
   for (const d of disputes) {
     try {
+      // Merchant explicitly conceded this dispute ("do not defend").
+      // NEVER auto-submit it, regardless of pack state — covers the plain
+      // submit path AND both auto-finalize + fallback branches below.
+      // (2026-07-23 review lifecycle; lib/disputes/reviewState.ts.)
+      if (d.review_state === "conceded") {
+        summary.scanned--; // don't count a deliberately-skipped dispute
+        continue;
+      }
       // Find the latest pack for this dispute (the source pack for the
       // defence package, also the entity_id of save_to_shopify).
       const { data: pack } = await sb

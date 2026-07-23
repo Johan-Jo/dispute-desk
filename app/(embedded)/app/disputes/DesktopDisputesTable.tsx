@@ -11,6 +11,7 @@ import {
   figmaDueDate,
   figmaNextAction,
   figmaOutcome,
+  figmaReviewChip,
   figmaRowChrome,
   figmaStatus,
   figmaStrengthDetail,
@@ -167,6 +168,7 @@ export function DesktopDisputesTable({
           );
           const status = figmaStatus(d);
           const strength = figmaCaseStrength(d);
+          const reviewChip = figmaReviewChip(d, t);
           const detail = figmaStrengthDetail(d, t);
           const outcome = figmaOutcome(d);
           const due = figmaDueDate(d, t, dateLocale);
@@ -255,7 +257,7 @@ export function DesktopDisputesTable({
                 </span>
               </div>
 
-              {/* Case strength + subtitle */}
+              {/* Case strength + subtitle + review-decision chip */}
               <div style={{ minWidth: 0 }}>
                 {strength ? (
                   <>
@@ -285,6 +287,19 @@ export function DesktopDisputesTable({
                   </>
                 ) : (
                   <span style={{ fontSize: 14, color: "#6D7175" }}>—</span>
+                )}
+                {reviewChip && (
+                  <span
+                    style={{
+                      ...PILL_STYLE,
+                      background: reviewChip.bg,
+                      color: reviewChip.color,
+                      marginTop: strength ? 4 : 0,
+                      display: "inline-flex",
+                    }}
+                  >
+                    {reviewChip.label}
+                  </span>
                 )}
               </div>
 
