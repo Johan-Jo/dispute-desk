@@ -494,12 +494,36 @@ export function calculateCaseStrength(
   // Same data the workspace UI reads via `computeContributions` —
   // guaranteed to agree with "What supports your case" and "Evidence
   // collected" because it comes from the same per-signal verdict.
+  // Prior-order history is CORROBORATION on a fraud claim, never decisive
+  // proof of cardholder identity. The canonical registry rates
+  // `customer_account_info` STRONG on >=1 prior undisputed order — a far
+  // weaker bar than Visa's Compelling Evidence 3.0 remedy (2+ prior
+  // undisputed transactions in a 120-365 day window sharing >=2 data
+  // elements incl. IP or device ID). Treating a single prior order as a
+  // decisive fraud signal is a false CE3.0 proxy, so for the FRAUD family
+  // only, an `account_history` row rated strong is demoted to moderate
+  // HERE — at row-build time, so the reported counts, the contribution
+  // list ("What supports your case"), and the strength reason all agree
+  // rather than the UI showing a Strong pill the scorer discounted.
+  // Other families keep the registry rating (prior history genuinely
+  // supports e.g. a not-as-described defence), and the registry itself is
+  // untouched, preserving the family-independent-categories invariant.
+  // Measured 2026-07-23: 0 of 360 prod fraud disputes qualify for a real
+  // CE3.0 remedy, so this drops a false signal without losing a true one.
+  // See docs/plans/tech-debt/ce3-fraud-compelling-evidence.plan.md.
+  const demoteToCorroboration = (signalId: SignalId): boolean =>
+    family === "fraud" && signalId === "account_history";
+
   const strongRows: ContributionRow[] = [];
   const moderateRows: ContributionRow[] = [];
   for (const [signalId, acc] of bestBySignalDetailed) {
-    if (acc.category === "strong") {
+    const effective =
+      acc.category === "strong" && demoteToCorroboration(signalId)
+        ? "moderate"
+        : acc.category;
+    if (effective === "strong") {
       strongRows.push({ signalId, category: "strong", field: acc.field });
-    } else if (acc.category === "moderate") {
+    } else if (effective === "moderate") {
       moderateRows.push({ signalId, category: "moderate", field: acc.field });
     }
   }
@@ -548,12 +572,41 @@ export function calculateCaseStrength(
     "communication",
     "account_history",
   ]);
+  // NOTE: account_history is already demoted strong -> moderate for the
+  // fraud family at row-build time (see `demoteToCorroboration` above), so
+  // these counts see it as a moderate corroborating signal, not a decisive
+  // one. No extra filtering needed here.
   const strongCountFromFraudSignals = strongRows.filter((r) =>
     FRAUD_DECISIVE_SIGNALS.has(r.signalId),
   ).length;
   const moderateCountFromFraudSignals = moderateRows.filter((r) =>
     FRAUD_DECISIVE_SIGNALS.has(r.signalId),
   ).length;
+
+  // Product / "not as described" (Visa 13.3 · MC 4853) decisive signals,
+  // split into the two axes the card networks + representment industry
+  // weigh (docs/plans/product-not-as-described-scoring.plan.md):
+  //   Axis 1 — "it matched what they bought": the customer acknowledged
+  //     the order/receipt (communication) or signed a spec/contract
+  //     (supplementary_documents strong). The bare product listing /
+  //     order record are NOT here — they show what was advertised, not
+  //     that the customer agreed it matched (stay supportingOnly).
+  //   Axis 2 — "the dispute isn't valid / is moot": the customer never
+  //     returned the item (refund signal via no_return_initiated) —
+  //     post-2024 Visa a return is a PRECONDITION to filing 13.3, so
+  //     "never returned" attacks validity at the root — or a refund was
+  //     already issued (refund_record). Shared signalId `refund`.
+  const PRODUCT_AXIS1_MATCH = new Set<SignalId>([
+    "communication",
+    "supplementary_documents",
+  ]);
+  const PRODUCT_AXIS2_VALIDITY = new Set<SignalId>(["refund"]);
+  const hasProductAxis1 =
+    strongRows.some((r) => PRODUCT_AXIS1_MATCH.has(r.signalId)) ||
+    moderateRows.some((r) => PRODUCT_AXIS1_MATCH.has(r.signalId));
+  const hasProductAxis2 =
+    strongRows.some((r) => PRODUCT_AXIS2_VALIDITY.has(r.signalId)) ||
+    moderateRows.some((r) => PRODUCT_AXIS2_VALIDITY.has(r.signalId));
 
   let overall: CaseStrengthLevel;
   let isFraudAvsOnlyStrong = false;
@@ -612,6 +665,31 @@ export function calculateCaseStrength(
     else if (strongCount === 1 && moderateCount >= 1) overall = "moderate";
     else if (hasRefundSignal) overall = "moderate";
     else overall = "weak";
+  } else if (family === "product") {
+    // "Not as described / defective" (Visa 13.3 · MC 4853). A subjective
+    // merchandise-quality claim: the winning rebuttal must answer BOTH
+    // halves the bank weighs — (1) the item matched what the customer
+    // bought, and (2) the dispute isn't valid/is moot. So:
+    //   Strong   = at least one Axis-1 signal AND one Axis-2 signal
+    //              (both halves answered).
+    //   Moderate = at least one decisive signal from EITHER axis, OR the
+    //              generic two-strong / one-strong+one-moderate count.
+    //   Weak     = no decisive signal. A bare listing + order record
+    //              (both supportingOnly) genuinely is weak here — we do
+    //              NOT inflate it (matches the industry ranking; see plan).
+    // Two signals from the SAME axis do not reach Strong — that proves
+    // one half twice and leaves the other unanswered.
+    if ((hasProductAxis1 && hasProductAxis2) || strongCount >= 2) {
+      overall = "strong";
+    } else if (
+      hasProductAxis1 ||
+      hasProductAxis2 ||
+      (strongCount === 1 && moderateCount >= 1)
+    ) {
+      overall = "moderate";
+    } else {
+      overall = "weak";
+    }
   } else {
     if (strongCount >= 2) overall = "strong";
     else if (strongCount === 1 && moderateCount >= 1) overall = "moderate";
@@ -773,12 +851,19 @@ export interface CaseStrengthContributions {
 export function computeContributions(
   checklist: ChecklistItemV2[],
   payloadSource?: EvidencePayloadSource,
+  /** Dispute reason. Optional for back-compat, but pass it wherever the
+   *  rows are rendered: it applies the same fraud-family
+   *  `account_history` strong->moderate demotion `calculateCaseStrength`
+   *  does, so "What supports your case" can't show a Strong pill the
+   *  scorer counted as moderate. See the demotion comment above. */
+  reason?: string | null,
 ): CaseStrengthContributions {
   // Per signalId: track the highest category seen + the first field
   // that contributed it (deterministic by checklist iteration order).
   type Acc = { category: EvidenceCategory; field: string };
   const RANK: Record<EvidenceCategory, number> = { strong: 3, moderate: 2, supporting: 1, invalid: 0 };
   const bySignal = new Map<SignalId, Acc>();
+  const isFraud = reason != null && resolveReasonFamily(reason) === "fraud";
 
   for (const item of checklist) {
     if (item.status !== "available" && item.status !== "waived") continue;
@@ -796,13 +881,21 @@ export function computeContributions(
   const moderate: CaseStrengthContribution[] = [];
   for (const [signalId, acc] of bySignal) {
     const spec = CANONICAL_EVIDENCE[acc.field];
+    // Same fraud-family demotion the scorer applies: prior-order history
+    // corroborates, it never decisively proves cardholder identity.
+    const effective =
+      acc.category === "strong" && isFraud && signalId === "account_history"
+        ? "moderate"
+        : acc.category;
     const row: CaseStrengthContribution = {
       signalId,
-      category: acc.category as "strong" | "moderate",
+      category: effective as "strong" | "moderate",
       labelToken: { key: spec?.labelKey ?? signalLabelKey(signalId) },
       evidenceFieldKey: acc.field,
     };
-    if (acc.category === "strong") strong.push(row);
+    // Bucket by the EFFECTIVE category — bucketing by acc.category would
+    // push a demoted row (labelled moderate) into the strong array.
+    if (effective === "strong") strong.push(row);
     else moderate.push(row);
   }
 

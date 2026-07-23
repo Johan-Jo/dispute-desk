@@ -884,6 +884,7 @@
       }
     },
     "whyText": {
+      "customer_account_info": "Visar kundens tidigare beställningshistorik hos din butik — stöder att beställningen var ett äkta köp",
       "refund_record": "Bevisar att en återbetalning faktiskt gjordes på beställningen — avgörande mot påståenden om ”ej behandlad återbetalning”",
       "no_return_initiated": "Visar att kunden aldrig påbörjade en retur — grundar argumentet att ingen återbetalning var skyldig",
       "ip_location_check": "Placerar beställningen på kundens vanliga plats — stödjer att kortinnehavaren gjorde den",
