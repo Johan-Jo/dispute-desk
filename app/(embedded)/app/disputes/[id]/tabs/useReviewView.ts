@@ -69,7 +69,7 @@ export function useReviewView(workspace: Workspace): ReviewViewModel {
   const cta = isSubmitted
     ? null
     : {
-        label: requiresOverride ? "Submit anyway" : derived.nextAction.label,
+        label: requiresOverride ? "Save anyway" : derived.nextAction.label,
         severity: derived.nextAction.severity,
         enabled: !derived.isBuilding && !derived.isFailed,
         requiresOverride,

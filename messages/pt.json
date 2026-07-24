@@ -783,9 +783,9 @@
         "body": "Este caso foi salvo no Shopify, mas o Shopify ainda não o encaminhou ao banco. Você ainda pode adicionar provas. Se regenerar o pacote, o novo PDF substituirá o que está atualmente salvo na disputa do Shopify."
       },
       "windowClosedBanner": {
-        "title": "Enviado ao banco",
-        "body": "O Shopify encaminhou as provas desta disputa ao banco emissor em {submittedAt}. Não é mais possível adicionar novos arquivos ao pacote de defesa direcionado ao banco.",
-        "bodyNoDate": "O Shopify já encaminhou as provas desta disputa ao banco emissor. Não é mais possível adicionar novos arquivos ao pacote de defesa direcionado ao banco."
+        "title": "Enviada à rede do cartão",
+        "body": "O Shopify encaminhou estas provas da disputa à rede do cartão em {submittedAt}. Não é mais possível adicionar novos arquivos ao pacote de defesa voltado ao banco.",
+        "bodyNoDate": "O Shopify já encaminhou estas provas da disputa à rede do cartão. Não é mais possível adicionar novos arquivos ao pacote de defesa voltado ao banco."
       },
       "regeneratingBanner": {
         "title": "Regenerando o pacote de defesa",
@@ -861,7 +861,7 @@
         "savingBody": "O DisputeDesk aceitou o seu envio e está fazendo upload do pacote de evidências para o Shopify. Isso geralmente é concluído em menos de 30 segundos — este aviso será atualizado automaticamente.",
         "savedTitles": {
           "outcomePosted": "Resultado publicado",
-          "forwardedToNetwork": "Encaminhado para a rede de cartões",
+          "forwardedToNetwork": "Enviada à rede do cartão",
           "savedToShopify": "Salvo no Shopify"
         },
         "savedBody": {
@@ -871,7 +871,7 @@
           "closedNoDate": "O pacote de evidências v{version} foi enviado. O estorno foi encerrado pela rede de cartões.",
           "savedWithDate": "O pacote de evidências v{version} está salvo no Shopify ({date}). O Shopify ainda não o encaminhou à rede de cartões — se você regenerar, o novo PDF substituirá esta versão salva de forma limpa.",
           "savedNoDate": "O pacote de evidências v{version} está salvo no Shopify. O Shopify ainda não o encaminhou à rede de cartões — se você regenerar, o novo PDF substituirá esta versão salva de forma limpa.",
-          "fallback": "Um pacote de evidências foi enviado ao banco."
+          "fallback": "Um pacote de defesa foi salvo no Shopify."
         },
         "openInShopifyAdmin": "Abrir no Shopify Admin",
         "viewPdf": "Ver PDF",
@@ -882,8 +882,8 @@
         "draftBannerBodyFinal": "O rascunho v{version} foi gerado mas ainda não foi enviado ao Shopify — o banco possui atualmente a v{bankVersion}. Revise-o abaixo. Se estiver correto, reenvie-o ao Shopify — isso substituirá a v{bankVersion}.",
         "approveDraft": "Aprovar rascunho v{version}",
         "approveVersion": "Aprovar v{version}",
-        "submitToShopify": "Enviar ao Shopify",
-        "resubmitToShopify": "Reenviar ao Shopify",
+        "submitToShopify": "Salvar no Shopify",
+        "resubmitToShopify": "Salvar novamente no Shopify",
         "moreActions": "Mais ações",
         "regenerating": "Regenerando…",
         "regenerateFromScratch": "Regenerar rascunho do zero",
@@ -953,8 +953,8 @@
           "outdated": "O pacote de evidências mudou desde que esta declaração foi gerada. Regere-a para incorporar os sinais mais recentes."
         },
         "override": {
-          "title": "Enviar mesmo assim?",
-          "body": "Enviar antes que todas as evidências críticas estejam no lugar pode enfraquecer seu caso. Escolha um motivo abaixo para confirmar.",
+          "title": "Salvar mesmo assim?",
+          "body": "Salvar antes de todas as provas críticas estarem prontas pode enfraquecer seu caso. Escolha um motivo abaixo para confirmar.",
           "reasonLabel": "Motivo para enviar agora",
           "reasonPlaceholder": "Selecione um motivo",
           "reason": {
@@ -966,7 +966,7 @@
           "noteLabel": "Nota opcional",
           "notePlaceholder": "Adicione contexto para o log de auditoria…",
           "cancel": "Cancel",
-          "confirm": "Enviar mesmo assim"
+          "confirm": "Salvar mesmo assim"
         }
       },
       "inclusion": {
@@ -1486,12 +1486,12 @@
       "no_return_initiated": "Mostra que o cliente nunca iniciou uma devolução — fundamenta o argumento de que nenhum reembolso era devido",
       "ip_location_check": "Situa o pedido na localização habitual do cliente — sustenta que o titular do cartão o realizou",
       "device_session_consistency": "Vincula o pedido ao dispositivo e à sessão conhecidos do cliente — refuta alegações de «não fui eu»",
-      "fraud_risk_screening": "A triagem de risco da Shopify não encontrou sinais de fraude — respaldo independente de que o pedido é legítimo",
+      "fraud_risk_screening": "A triagem de risco do Shopify não encontrou sinais de fraude — contexto de apoio de que o pedido era legítimo",
       "order_confirmation": "Comprova que a transação é legítima — a base de qualquer resposta a disputa",
       "shipping_tracking": "Mostra que a transportadora confirmou o envio — necessário para vencer disputas de 'produto não recebido'",
       "delivery_proof": "Confirma que o cliente recebeu o pacote — a evidência mais forte contra alegações de 'não recebido'",
-      "billing_address_match": "Cruza o endereço de cobrança com o pedido — crucial em disputas de fraude",
-      "avs_cvv_match": "Mostra que as verificações de segurança do cartão passaram — os bancos dão muito peso a isso em casos de fraude",
+      "billing_address_match": "Compara o endereço de cobrança com o pedido — um sinal de apoio em disputas de fraude",
+      "avs_cvv_match": "Mostra que as verificações de segurança do cartão foram aprovadas — um sinal de apoio cujo peso depende do motivo da disputa e das demais provas disponíveis",
       "product_description": "Comprova que o produto correspondeu ao que foi anunciado — defesa chave para disputas de 'não conforme descrição'",
       "refund_policy": "Mostra que o cliente concordou com seus termos de reembolso — protege contra alegações de arrependimento de compra",
       "shipping_policy": "Documenta seus compromissos de envio — apoia disputas sobre prazos de entrega",
@@ -1588,10 +1588,10 @@
       },
       "changeRule": "Alterar regra",
       "editEvidence": "Editar evidências",
-      "submitToShopify": "Enviar ao Shopify",
+      "submitToShopify": "Salvar no Shopify",
       "viewInShopify": "Ver no Shopify Admin",
       "addMissingEvidence": "Adicionar evidências faltantes",
-      "submitAnyway": "Enviar mesmo assim",
+      "submitAnyway": "Salvar mesmo assim",
       "autoSubmitPausedTitle": "Envio automático pausado — sua revisão é necessária",
       "autoSubmitPausedBody": "O DisputeDesk monta sua defesa automaticamente, mas só envia automaticamente quando o pacote atinge seu limite de envio automático. Este pacote não atingiu o limite, então paramos e passamos para você.",
       "whyPrefix": "Why:",
@@ -1785,7 +1785,7 @@
       "ticket": {
         "confirm": "Confirmar correspondência",
         "notRelated": "Não relacionada",
-        "reportBadMatch": "Reportar correspondência incorreta",
+        "reportBadMatch": "Relatar correspondência incorreta",
         "viewConversation": "Ver conversa completa",
         "hideConversation": "Ocultar conversa"
       },
@@ -1814,7 +1814,7 @@
         "editExplanation": "Editar explicação",
         "saveExplanation": "Salvar explicação",
         "cancel": "Cancelar",
-        "approvedBadge": "Aprovada",
+        "approvedBadge": "Aprovado para inclusão",
         "proposedBadge": "Proposta",
         "needsReapprovalBadge": "Requer nova aprovação",
         "truncatedNote": "(mensagem encurtada)"

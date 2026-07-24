@@ -783,9 +783,9 @@
         "body": "Ce dossier a été enregistré sur Shopify, mais Shopify ne l'a pas encore transmis à la banque. Vous pouvez toujours ajouter des preuves. Si vous régénérez le dossier, le nouveau PDF remplacera celui actuellement enregistré sur le litige Shopify."
       },
       "windowClosedBanner": {
-        "title": "Transmis à la banque",
-        "body": "Shopify a transmis les preuves de ce litige à la banque émettrice le {submittedAt}. De nouveaux fichiers ne peuvent plus être ajoutés au dossier de défense destiné à la banque.",
-        "bodyNoDate": "Shopify a déjà transmis les preuves de ce litige à la banque émettrice. De nouveaux fichiers ne peuvent plus être ajoutés au dossier de défense destiné à la banque."
+        "title": "Envoyée au réseau de cartes",
+        "body": "Shopify a transmis ces preuves du litige au réseau de cartes le {submittedAt}. Il n'est plus possible d'ajouter de nouveaux fichiers au dossier de défense destiné à la banque.",
+        "bodyNoDate": "Shopify a déjà transmis ces preuves du litige au réseau de cartes. Il n'est plus possible d'ajouter de nouveaux fichiers au dossier de défense destiné à la banque."
       },
       "regeneratingBanner": {
         "title": "Régénération du dossier de défense",
@@ -861,7 +861,7 @@
         "savingBody": "DisputeDesk a accepté votre soumission et téléverse le dossier de preuves vers Shopify. Cela se termine généralement en moins de 30 secondes — ce message se mettra à jour automatiquement.",
         "savedTitles": {
           "outcomePosted": "Résultat publié",
-          "forwardedToNetwork": "Transmis au réseau de cartes",
+          "forwardedToNetwork": "Envoyée au réseau de cartes",
           "savedToShopify": "Enregistré dans Shopify"
         },
         "savedBody": {
@@ -871,7 +871,7 @@
           "closedNoDate": "Le dossier de preuves v{version} a été soumis. La rétrofacturation a été clôturée par le réseau de cartes.",
           "savedWithDate": "Le dossier de preuves v{version} est enregistré dans Shopify ({date}). Shopify ne l'a pas encore transmis au réseau de cartes — si vous regénérez, le nouveau PDF remplacera proprement cette version enregistrée.",
           "savedNoDate": "Le dossier de preuves v{version} est enregistré dans Shopify. Shopify ne l'a pas encore transmis au réseau de cartes — si vous regénérez, le nouveau PDF remplacera proprement cette version enregistrée.",
-          "fallback": "Un dossier de preuves a été soumis à la banque."
+          "fallback": "Un dossier de défense a été enregistré dans Shopify."
         },
         "openInShopifyAdmin": "Ouvrir dans Shopify Admin",
         "viewPdf": "Voir le PDF",
@@ -882,8 +882,8 @@
         "draftBannerBodyFinal": "L'ébauche v{version} a été générée mais n'a pas encore été envoyée à Shopify — la banque possède actuellement la v{bankVersion}. Examinez-la ci-dessous. Si elle est correcte, soumettez-la à nouveau à Shopify — cela remplacera la v{bankVersion}.",
         "approveDraft": "Approuver l'ébauche v{version}",
         "approveVersion": "Approuver v{version}",
-        "submitToShopify": "Soumettre à Shopify",
-        "resubmitToShopify": "Soumettre à nouveau à Shopify",
+        "submitToShopify": "Enregistrer dans Shopify",
+        "resubmitToShopify": "Enregistrer à nouveau dans Shopify",
         "moreActions": "Plus d'actions",
         "regenerating": "Régénération…",
         "regenerateFromScratch": "Régénérer l'ébauche depuis zéro",
@@ -953,8 +953,8 @@
           "outdated": "Le dossier de preuves a changé depuis la génération de cette argumentation. Régénérez-la pour intégrer les derniers signaux."
         },
         "override": {
-          "title": "Soumettre quand même ?",
-          "body": "Soumettre avant que toutes les preuves essentielles ne soient en place peut affaiblir votre dossier. Choisissez un motif ci-dessous pour confirmer.",
+          "title": "Enregistrer quand même ?",
+          "body": "Enregistrer avant que toutes les preuves critiques soient réunies peut affaiblir votre dossier. Choisissez un motif ci-dessous pour confirmer.",
           "reasonLabel": "Motif de soumission immédiate",
           "reasonPlaceholder": "Sélectionnez un motif",
           "reason": {
@@ -966,7 +966,7 @@
           "noteLabel": "Note facultative",
           "notePlaceholder": "Ajoutez un contexte pour le journal d'audit…",
           "cancel": "Cancel",
-          "confirm": "Soumettre quand même"
+          "confirm": "Enregistrer quand même"
         }
       },
       "inclusion": {
@@ -1486,12 +1486,12 @@
       "no_return_initiated": "Montre que le client n'a jamais initié de retour — fonde l'argument qu'aucun remboursement n'était dû",
       "ip_location_check": "Situe la commande à l'emplacement habituel du client — conforte que le titulaire de la carte l'a passée",
       "device_session_consistency": "Relie la commande à l'appareil et à la session connus du client — réfute les allégations « ce n'était pas moi »",
-      "fraud_risk_screening": "L'analyse de risque de Shopify n'a détecté aucun signal de fraude — appui indépendant de la légitimité de la commande",
+      "fraud_risk_screening": "L'analyse de risque de Shopify n'a détecté aucun signal de fraude — un contexte de soutien indiquant que la commande était légitime",
       "order_confirmation": "Prouve que la transaction est légitime — la base de toute réponse à un litige",
       "shipping_tracking": "Montre que le transporteur a confirmé l'expédition — indispensable pour gagner les litiges « article non reçu »",
       "delivery_proof": "Confirme que le client a reçu le colis — preuve la plus solide contre les réclamations « non reçu »",
-      "billing_address_match": "Fait correspondre l'adresse de facturation à la commande — essentiel pour les litiges de fraude",
-      "avs_cvv_match": "Montre que les contrôles de sécurité de la carte ont réussi — les banques en tiennent fortement compte dans les cas de fraude",
+      "billing_address_match": "Fait correspondre l'adresse de facturation à la commande — un signal de soutien pour les litiges pour fraude",
+      "avs_cvv_match": "Montre que les contrôles de sécurité de la carte ont été validés — un signal de soutien dont le poids dépend du motif du litige et des autres preuves disponibles",
       "product_description": "Prouve que le produit correspondait à ce qui était annoncé — argument clé pour les litiges « non conforme à la description »",
       "refund_policy": "Montre que le client a accepté vos conditions de remboursement — protège contre les réclamations de remords d'achat",
       "shipping_policy": "Documente vos engagements de livraison — appuie les litiges relatifs aux délais de livraison",
@@ -1588,10 +1588,10 @@
       },
       "changeRule": "Modifier la règle",
       "editEvidence": "Modifier les preuves",
-      "submitToShopify": "Soumettre à Shopify",
+      "submitToShopify": "Enregistrer dans Shopify",
       "viewInShopify": "Voir dans Shopify Admin",
       "addMissingEvidence": "Ajouter les preuves manquantes",
-      "submitAnyway": "Soumettre quand même",
+      "submitAnyway": "Enregistrer quand même",
       "autoSubmitPausedTitle": "Soumission automatique en pause — votre examen est requis",
       "autoSubmitPausedBody": "DisputeDesk monte votre dossier automatiquement, mais ne le soumet que lorsque celui-ci atteint votre seuil de soumission automatique. Ce dossier n'a pas franchi le seuil ; nous l'avons donc mis en pause et vous le transmettons.",
       "whyPrefix": "Why:",
@@ -1785,7 +1785,7 @@
       "ticket": {
         "confirm": "Confirmer la correspondance",
         "notRelated": "Sans rapport",
-        "reportBadMatch": "Signaler une erreur",
+        "reportBadMatch": "Signaler une correspondance incorrecte",
         "viewConversation": "Voir la conversation complète",
         "hideConversation": "Masquer la conversation"
       },
@@ -1814,7 +1814,7 @@
         "editExplanation": "Modifier l'explication",
         "saveExplanation": "Enregistrer l'explication",
         "cancel": "Annuler",
-        "approvedBadge": "Approuvé",
+        "approvedBadge": "Approuvé pour inclusion",
         "proposedBadge": "Proposé",
         "needsReapprovalBadge": "Nouvelle approbation requise",
         "truncatedNote": "(message raccourci)"

@@ -926,9 +926,9 @@
         "body": "Dieser Fall wurde an Shopify gespeichert, aber Shopify hat ihn noch nicht an die Bank weitergeleitet. Sie können weiterhin Belege hinzufügen. Wenn Sie das Paket neu erstellen, ersetzt die neue PDF die aktuell bei Shopify gespeicherte."
       },
       "windowClosedBanner": {
-        "title": "An die Bank übermittelt",
-        "body": "Shopify hat die Streitbeweise am {submittedAt} an die ausstellende Bank weitergeleitet. Es können keine neuen Dateien mehr zum bankseitigen Verteidigungspaket hinzugefügt werden.",
-        "bodyNoDate": "Shopify hat die Streitbeweise bereits an die ausstellende Bank weitergeleitet. Es können keine neuen Dateien mehr zum bankseitigen Verteidigungspaket hinzugefügt werden."
+        "title": "An das Kartennetzwerk gesendet",
+        "body": "Shopify hat diese Streitfall-Beweise am {submittedAt} an das Kartennetzwerk weitergeleitet. Neue Dateien können dem bankgerichteten Verteidigungspaket nicht mehr hinzugefügt werden.",
+        "bodyNoDate": "Shopify hat diese Streitfall-Beweise bereits an das Kartennetzwerk weitergeleitet. Neue Dateien können dem bankgerichteten Verteidigungspaket nicht mehr hinzugefügt werden."
       },
       "regeneratingBanner": {
         "title": "Verteidigungspaket wird neu erstellt",
@@ -1004,7 +1004,7 @@
         "savingBody": "DisputeDesk hat Ihre Einreichung angenommen und lädt das Beweispaket zu Shopify hoch. Dies dauert in der Regel weniger als 30 Sekunden — dieser Hinweis wird automatisch aktualisiert.",
         "savedTitles": {
           "outcomePosted": "Ergebnis eingetragen",
-          "forwardedToNetwork": "An das Kartennetzwerk weitergeleitet",
+          "forwardedToNetwork": "An das Kartennetzwerk gesendet",
           "savedToShopify": "In Shopify gespeichert"
         },
         "savedBody": {
@@ -1014,7 +1014,7 @@
           "closedNoDate": "Beweispaket v{version} wurde eingereicht. Die Rückbuchung wurde vom Kartennetzwerk abgeschlossen.",
           "savedWithDate": "Beweispaket v{version} ist in Shopify gespeichert ({date}). Shopify hat es noch nicht an das Kartennetzwerk weitergeleitet — wenn Sie es neu generieren, ersetzt das neue PDF diese gespeicherte Version sauber.",
           "savedNoDate": "Beweispaket v{version} ist in Shopify gespeichert. Shopify hat es noch nicht an das Kartennetzwerk weitergeleitet — wenn Sie es neu generieren, ersetzt das neue PDF diese gespeicherte Version sauber.",
-          "fallback": "Ein Beweispaket wurde an die Bank übermittelt."
+          "fallback": "Ein Verteidigungspaket wurde in Shopify gespeichert."
         },
         "openInShopifyAdmin": "In Shopify Admin öffnen",
         "viewPdf": "PDF anzeigen",
@@ -1025,8 +1025,8 @@
         "draftBannerBodyFinal": "Entwurf v{version} wurde erstellt, aber noch nicht an Shopify gesendet — die Bank hat derzeit v{bankVersion}. Prüfen Sie ihn unten. Wenn alles korrekt aussieht, übermitteln Sie ihn erneut an Shopify — dies ersetzt v{bankVersion}.",
         "approveDraft": "Entwurf v{version} genehmigen",
         "approveVersion": "v{version} genehmigen",
-        "submitToShopify": "An Shopify übermitteln",
-        "resubmitToShopify": "Erneut an Shopify übermitteln",
+        "submitToShopify": "In Shopify speichern",
+        "resubmitToShopify": "Erneut in Shopify speichern",
         "moreActions": "Weitere Aktionen",
         "regenerating": "Wird neu generiert…",
         "regenerateFromScratch": "Entwurf von Grund auf neu generieren",
@@ -1271,8 +1271,8 @@
           "outdated": "Das Beweispaket hat sich seit Erstellung dieser Stellungnahme geändert. Generieren Sie neu, um die aktuellen Signale zu übernehmen."
         },
         "override": {
-          "title": "Trotzdem einreichen?",
-          "body": "Eine Einreichung, bevor alle kritischen Beweise vorliegen, kann Ihren Fall schwächen. Wählen Sie unten einen Grund zur Bestätigung.",
+          "title": "Trotzdem speichern?",
+          "body": "Das Speichern, bevor alle entscheidenden Beweise vorliegen, kann Ihren Fall schwächen. Wählen Sie zur Bestätigung unten einen Grund.",
           "reasonLabel": "Grund für die jetzige Einreichung",
           "reasonPlaceholder": "Grund auswählen",
           "reason": {
@@ -1284,7 +1284,7 @@
           "noteLabel": "Optionale Notiz",
           "notePlaceholder": "Kontext für das Audit-Log hinzufügen…",
           "cancel": "Cancel",
-          "confirm": "Trotzdem einreichen"
+          "confirm": "Trotzdem speichern"
         }
       }
     },
@@ -1486,12 +1486,12 @@
       "no_return_initiated": "Zeigt, dass der Kunde nie eine Rücksendung eingeleitet hat — untermauert das Argument, dass keine Rückerstattung geschuldet war",
       "ip_location_check": "Ordnet die Bestellung dem üblichen Standort des Kunden zu — spricht dafür, dass der Karteninhaber sie aufgegeben hat",
       "device_session_consistency": "Verknüpft die Bestellung mit dem bekannten Gerät und der bekannten Sitzung des Kunden — entkräftet „Das war ich nicht“-Behauptungen",
-      "fraud_risk_screening": "Shopifys Risikoprüfung fand keine Betrugssignale — unabhängige Bestätigung einer legitimen Bestellung",
+      "fraud_risk_screening": "Shopifys Risikoprüfung fand keine Betrugssignale — unterstützender Kontext dafür, dass die Bestellung legitim war",
       "order_confirmation": "Belegt die Legitimität der Transaktion — die Grundlage jeder Streitfall-Antwort",
       "shipping_tracking": "Zeigt, dass der Versanddienstleister den Versand bestätigt hat — erforderlich, um Streitfälle wegen nicht erhaltener Ware zu gewinnen",
       "delivery_proof": "Bestätigt, dass der Kunde das Paket erhalten hat — stärkster Beweis gegen Behauptungen, die Ware sei nicht angekommen",
-      "billing_address_match": "Gleicht die Rechnungsadresse mit der Bestellung ab — entscheidend für Betrugsfälle",
-      "avs_cvv_match": "Zeigt, dass die Kartensicherheitsprüfungen bestanden wurden — Banken gewichten dies in Betrugsfällen stark",
+      "billing_address_match": "Gleicht die Rechnungsadresse mit der Bestellung ab — ein unterstützendes Signal bei Betrugsstreitfällen",
+      "avs_cvv_match": "Zeigt, dass die Kartensicherheitsprüfungen bestanden wurden — ein unterstützendes Signal, dessen Gewicht vom Streitgrund und den übrigen Beweisen abhängt",
       "product_description": "Belegt, dass das Produkt der Beschreibung entsprach — Schlüsselargument bei Streitfällen wegen abweichender Ware",
       "refund_policy": "Zeigt, dass der Kunde Ihren Rückerstattungsbedingungen zugestimmt hat — schützt vor Reue-Käufen",
       "shipping_policy": "Dokumentiert Ihre Versandzusagen — unterstützt Streitfälle zu Lieferzeiten",
@@ -1588,10 +1588,10 @@
       },
       "changeRule": "Regel ändern",
       "editEvidence": "Beweise bearbeiten",
-      "submitToShopify": "An Shopify einreichen",
+      "submitToShopify": "In Shopify speichern",
       "viewInShopify": "In Shopify Admin anzeigen",
       "addMissingEvidence": "Fehlende Beweise hinzufügen",
-      "submitAnyway": "Trotzdem jetzt einreichen",
+      "submitAnyway": "Trotzdem speichern",
       "autoSubmitPausedTitle": "Auto-Einreichung pausiert — Ihre Prüfung erforderlich",
       "autoSubmitPausedBody": "DisputeDesk erstellt Ihren Fall automatisch, reicht ihn aber nur ein, wenn das Beweispaket Ihren Auto-Einreichungs-Schwellenwert erfüllt. Dieses Paket hat den Schwellenwert nicht erreicht, daher haben wir gestoppt und es an Sie übergeben.",
       "whyPrefix": "Why:",
@@ -1785,7 +1785,7 @@
       "ticket": {
         "confirm": "Treffer bestätigen",
         "notRelated": "Nicht zugehörig",
-        "reportBadMatch": "Falschen Treffer melden",
+        "reportBadMatch": "Falsche Zuordnung melden",
         "viewConversation": "Gesamte Konversation anzeigen",
         "hideConversation": "Konversation ausblenden"
       },
@@ -1814,7 +1814,7 @@
         "editExplanation": "Erläuterung bearbeiten",
         "saveExplanation": "Erläuterung speichern",
         "cancel": "Abbrechen",
-        "approvedBadge": "Freigegeben",
+        "approvedBadge": "Zur Aufnahme freigegeben",
         "proposedBadge": "Vorgeschlagen",
         "needsReapprovalBadge": "Erneute Freigabe erforderlich",
         "truncatedNote": "(Nachricht gekürzt)"

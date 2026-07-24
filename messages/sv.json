@@ -889,12 +889,12 @@
       "no_return_initiated": "Visar att kunden aldrig påbörjade en retur — grundar argumentet att ingen återbetalning var skyldig",
       "ip_location_check": "Placerar beställningen på kundens vanliga plats — stödjer att kortinnehavaren gjorde den",
       "device_session_consistency": "Kopplar beställningen till kundens kända enhet och session — motbevisar påståenden om ”det var inte jag”",
-      "fraud_risk_screening": "Shopifys riskbedömning hittade inga bedrägerisignaler — oberoende stöd för att beställningen är legitim",
+      "fraud_risk_screening": "Shopifys riskgranskning hittade inga bedrägerisignaler — stödjande kontext för att ordern var legitim",
       "order_confirmation": "Bevisar att transaktionen är legitim — grunden för varje tviststvar",
       "shipping_tracking": "Visar att transportören bekräftat försändelsen — krävs för att vinna 'ej mottaget'-tvister",
       "delivery_proof": "Bekräftar att kunden mottog paketet — det starkaste beviset mot 'ej mottaget'-krav",
-      "billing_address_match": "Matchar faktureringsadressen till ordern — kritiskt för bedrägeritvister",
-      "avs_cvv_match": "Visar att kortets säkerhetskontroller godkändes — banker väger detta tungt i bedrägerifall",
+      "billing_address_match": "Matchar faktureringsadressen mot ordern — en stödjande signal vid bedrägeritvister",
+      "avs_cvv_match": "Visar att kortets säkerhetskontroller godkändes — en stödjande signal vars vikt beror på tvistens orsak och övriga tillgängliga bevis",
       "product_description": "Bevisar att produkten matchade vad som annonserades — viktigt försvar för 'inte som beskrivet'-tvister",
       "refund_policy": "Visar att kunden godkände dina chargebackvillkor — skyddar mot ångerkrav",
       "shipping_policy": "Dokumenterar dina fraktåtaganden — stöder tidslinjetvister för leverans",
@@ -992,11 +992,11 @@
       "changeRule": "Ändra regel",
       "editEvidence": "Redigera bevis",
       "addMissingEvidence": "Lägg till saknade bevis",
-      "submitAnyway": "Skicka in ändå",
+      "submitAnyway": "Spara ändå",
       "autoSubmitPausedTitle": "Automatisk inskickning pausad — din granskning behövs",
       "autoSubmitPausedBody": "DisputeDesk bygger ditt försvar automatiskt, men skickar bara in när paketet uppfyller din tröskel för automatisk inskickning. Detta paket klarade inte ribban, så vi stannade och lämnade över till dig.",
       "whyPrefix": "Anledning:",
-      "submitToShopify": "Skicka in till Shopify",
+      "submitToShopify": "Spara i Shopify",
       "viewInShopify": "Visa i Shopify Admin",
       "addThisEvidence": "Lägg till detta bevis",
       "submittedOn": "Inskickat {date}",
@@ -1210,9 +1210,9 @@
         "body": "Detta ärende har sparats till Shopify, men Shopify har ännu inte vidarebefordrat det till banken. Du kan fortfarande lägga till bevis. Om du regenererar paketet ersätter den nya PDF:en det som för närvarande är sparat på Shopify-tvisten."
       },
       "windowClosedBanner": {
-        "title": "Skickat till banken",
-        "body": "Shopify vidarebefordrade bevisen för denna tvist till utfärdande bank den {submittedAt}. Nya filer kan inte längre läggas till i det bankriktade försvarspaketet.",
-        "bodyNoDate": "Shopify har redan vidarebefordrat bevisen för denna tvist till utfärdande bank. Nya filer kan inte längre läggas till i det bankriktade försvarspaketet."
+        "title": "Skickat till kortnätverket",
+        "body": "Shopify vidarebefordrade tvistens bevis till kortnätverket den {submittedAt}. Nya filer kan inte längre läggas till i det bankriktade försvarspaketet.",
+        "bodyNoDate": "Shopify har redan vidarebefordrat tvistens bevis till kortnätverket. Nya filer kan inte längre läggas till i det bankriktade försvarspaketet."
       },
       "regeneratingBanner": {
         "title": "Försvarspaketet regenereras",
@@ -1288,7 +1288,7 @@
         "savingBody": "DisputeDesk har tagit emot din inskickning och laddar upp försvarspaketet till Shopify. Detta brukar slutföras på under 30 sekunder — detta meddelande uppdateras automatiskt.",
         "savedTitles": {
           "outcomePosted": "Resultat publicerat",
-          "forwardedToNetwork": "Vidarebefordrat till kortnätverket",
+          "forwardedToNetwork": "Skickat till kortnätverket",
           "savedToShopify": "Sparat i Shopify"
         },
         "savedBody": {
@@ -1298,7 +1298,7 @@
           "closedNoDate": "Försvarspaket v{version} skickades in. Chargebacken har stängts av kortnätverket.",
           "savedWithDate": "Försvarspaket v{version} är sparat i Shopify ({date}). Shopify har ännu inte vidarebefordrat det till kortnätverket — om du genererar om kommer den nya PDF:en att ersätta denna sparade version rent.",
           "savedNoDate": "Försvarspaket v{version} är sparat i Shopify. Shopify har ännu inte vidarebefordrat det till kortnätverket — om du genererar om kommer den nya PDF:en att ersätta denna sparade version rent.",
-          "fallback": "Ett försvarspaket har skickats till banken."
+          "fallback": "Ett försvarspaket har sparats i Shopify."
         },
         "openInShopifyAdmin": "Öppna i Shopify Admin",
         "viewPdf": "Visa PDF",
@@ -1309,8 +1309,8 @@
         "draftBannerBodyFinal": "Utkast v{version} har genererats men har inte skickats till Shopify ännu — banken har för närvarande v{bankVersion}. Granska det nedan. Om det ser korrekt ut, skicka om det till Shopify — det kommer att ersätta v{bankVersion}.",
         "approveDraft": "Godkänn utkast v{version}",
         "approveVersion": "Godkänn v{version}",
-        "submitToShopify": "Skicka till Shopify",
-        "resubmitToShopify": "Skicka om till Shopify",
+        "submitToShopify": "Spara i Shopify",
+        "resubmitToShopify": "Spara i Shopify igen",
         "moreActions": "Fler åtgärder",
         "regenerating": "Genererar om…",
         "regenerateFromScratch": "Generera om utkast från början",
@@ -1380,8 +1380,8 @@
           "outdated": "Bevispaketet har ändrats sedan detta utlåtande genererades. Generera om för att fånga upp de senaste signalerna."
         },
         "override": {
-          "title": "Skicka in ändå?",
-          "body": "Att skicka in innan alla kritiska bevis finns på plats kan försvaga ditt ärende. Välj en anledning nedan för att bekräfta.",
+          "title": "Spara ändå?",
+          "body": "Att spara innan alla avgörande bevis finns på plats kan försvaga ditt ärende. Välj en anledning nedan för att bekräfta.",
           "reasonLabel": "Anledning till att skicka in nu",
           "reasonPlaceholder": "Välj en anledning",
           "reason": {
@@ -1393,7 +1393,7 @@
           "noteLabel": "Valfri anteckning",
           "notePlaceholder": "Lägg till sammanhang för revisionsloggen…",
           "cancel": "Cancel",
-          "confirm": "Skicka in ändå"
+          "confirm": "Spara ändå"
         }
       },
       "inclusion": {
@@ -1785,7 +1785,7 @@
       "ticket": {
         "confirm": "Bekräfta träff",
         "notRelated": "Inte relaterad",
-        "reportBadMatch": "Rapportera felaktig träff",
+        "reportBadMatch": "Rapportera felaktig matchning",
         "viewConversation": "Visa hela konversationen",
         "hideConversation": "Dölj konversationen"
       },
@@ -1814,7 +1814,7 @@
         "editExplanation": "Redigera förklaring",
         "saveExplanation": "Spara förklaring",
         "cancel": "Avbryt",
-        "approvedBadge": "Godkänt",
+        "approvedBadge": "Godkänd för inkludering",
         "proposedBadge": "Föreslaget",
         "needsReapprovalBadge": "Kräver nytt godkännande",
         "truncatedNote": "(meddelandet förkortat)"

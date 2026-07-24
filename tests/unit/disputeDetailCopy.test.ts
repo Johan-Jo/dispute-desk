@@ -125,3 +125,52 @@ describe("Timeline copy — banned phrases", () => {
     expect(awaitingTitle).not.toMatch(/disputedesk submitted/i);
   });
 });
+
+/* ── Saved-vs-sent vocabulary (design-alignment plan §8) ─────────────── */
+
+describe("Saved-vs-sent vocabulary — plan §8 wording corrections", () => {
+  const disputes = (enMessages as unknown as { disputes: Record<string, unknown> })
+    .disputes;
+
+  it("window-closed banner says 'Sent to card network', never 'Submitted to bank'", () => {
+    const banner = (disputes.evidenceTab as Record<string, Record<string, string>>)
+      .windowClosedBanner;
+    expect(banner.title).toBe("Sent to card network");
+    expect(banner.title).not.toMatch(/bank/i);
+    expect(banner.body).toMatch(/card network/i);
+    expect(banner.body).not.toMatch(/issuing bank/i);
+  });
+
+  it("saved-body fallback never claims transmission it cannot verify", () => {
+    const pkg = (disputes.reviewTab as Record<string, Record<string, Record<string, string>>>)
+      .package;
+    expect(pkg.savedBody.fallback).toMatch(/saved to Shopify/i);
+    expect(pkg.savedBody.fallback).not.toMatch(/submitted to (the )?bank/i);
+    expect(pkg.savedTitles.forwardedToNetwork).toBe("Sent to card network");
+  });
+
+  it("the merchant action is Save (to Shopify), not Submit", () => {
+    const pkg = (disputes.reviewTab as Record<string, Record<string, Record<string, string>>>)
+      .package;
+    expect(pkg.submitToShopify as unknown as string).toBe("Save to Shopify");
+    const extra = disputes.overviewExtra as Record<string, string>;
+    expect(extra.submitToShopify).toBe("Save to Shopify");
+    expect(extra.submitAnyway).toBe("Save anyway");
+  });
+
+  it("AVS/CVV and fraud screening are framed as supporting signals, never decisive", () => {
+    const why = disputes.whyText as Record<string, string>;
+    expect(why.avs_cvv_match).toMatch(/supporting signal/i);
+    expect(why.avs_cvv_match).not.toMatch(/weigh this heavily/i);
+    expect(why.billing_address_match).toMatch(/supporting signal/i);
+    expect(why.billing_address_match).not.toMatch(/critical/i);
+    expect(why.fraud_risk_screening).toMatch(/supporting context/i);
+    expect(why.fraud_risk_screening).not.toMatch(/independent backing/i);
+  });
+
+  it("Gorgias approved state reads 'Approved for inclusion'", () => {
+    const g = disputes.gorgiasComms as Record<string, Record<string, string>>;
+    expect(g.message.approvedBadge).toBe("Approved for inclusion");
+    expect(g.ticket.reportBadMatch).toBe("Report incorrect match");
+  });
+});
