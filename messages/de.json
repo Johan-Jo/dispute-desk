@@ -2664,6 +2664,28 @@
         "confirm": "Trennen",
         "cancel": "Abbrechen"
       }
+    },
+    "disputeHandling": {
+      "title": "Streitfall-Bearbeitung",
+      "help": "DisputeDesk sammelt automatisch Beweise, erstellt das Paket, überwacht Aktualisierungen und wendet die Regel-Engine auf jeden Streitfall an. Diese Einstellungen steuern, wie Sie diese Arbeit verfolgen und wie sie Shopify erreicht.",
+      "involvementTitle": "Ihre Beteiligung",
+      "involvementDesc": "Wählen Sie, wie eng Sie Streitfälle verfolgen möchten. DisputeDesk bereitet in beiden Optionen jede Antwort vor und überwacht sie.",
+      "handsOffTitle": "Automatisch",
+      "recommendedBadge": "Empfohlen",
+      "handsOffDesc": "Streitfälle automatisch bearbeiten und mich nur benachrichtigen, wenn meine Aufmerksamkeit wirklich nötig ist.",
+      "stayTitle": "Eingebunden bleiben",
+      "stayDesc": "Relevante Fortschrittsmeldungen und Möglichkeiten zur Stärkung von Streitfällen anzeigen, einschließlich Vorschlägen zur Kundenkommunikation.",
+      "involvementNote": "Beide Optionen verwenden dieselbe Beweissammlung, dieselben Regeln und dieselbe Antwortvorbereitung. Diese Einstellung ändert, was Sie sehen — nicht die erstellte Verteidigung.",
+      "savingTitle": "Beweise in Shopify speichern",
+      "savingDesc": "Wählen Sie, ob DisputeDesk geeignete Beweispakete automatisch speichern darf oder auf Ihre Freigabe warten muss. Dies ist eine operative Schutzmaßnahme, keine Benachrichtigungseinstellung.",
+      "autoTitle": "Automatisch speichern",
+      "autoDesc": "DisputeDesk speichert geeignete Beweispakete automatisch in Shopify, nachdem alle konfigurierten Qualitäts- und Sicherheitsprüfungen bestanden wurden.",
+      "autoNote": "Sie können das Paket weiterhin in DisputeDesk prüfen. Das Speichern in Shopify bestätigt für sich genommen nicht, dass die Antwort an das Kartennetzwerk gesendet wurde.",
+      "approveTitle": "Vor dem Speichern meine Freigabe verlangen",
+      "approveDesc": "DisputeDesk bereitet die Antwort vor und überwacht sie, wartet aber auf Ihre Freigabe, bevor das erste Beweispaket in Shopify gespeichert wird.",
+      "mixedNote": "Einige Streitfalltypen verwenden derzeit unterschiedliche Modi. Eine Auswahl hier gilt für alle Typen.",
+      "upgradeNote": "Die Verwaltung der Speichermodi erfordert einen Plan mit Automatisierungsregeln.",
+      "saved": "Einstellungen zur Streitfall-Bearbeitung gespeichert"
     }
   },
   "connect": {

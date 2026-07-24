@@ -2664,6 +2664,28 @@
         "confirm": "Disconnect",
         "cancel": "Cancel"
       }
+    },
+    "disputeHandling": {
+      "title": "Dispute handling",
+      "help": "DisputeDesk automatically collects evidence, builds the package, monitors for updates, and applies the rules engine on every dispute. These preferences control how you follow that work and how it reaches Shopify.",
+      "involvementTitle": "Your involvement",
+      "involvementDesc": "Choose how closely you want to follow disputes. DisputeDesk prepares and monitors every response in either option.",
+      "handsOffTitle": "Hands-off",
+      "recommendedBadge": "Recommended",
+      "handsOffDesc": "Handle disputes automatically and notify me only when my attention is genuinely needed.",
+      "stayTitle": "Stay involved",
+      "stayDesc": "Show me relevant progress updates and opportunities to strengthen disputes, including customer-communication suggestions.",
+      "involvementNote": "Both options use the same evidence collection, rules, and response preparation. This preference changes what you see — not the defence produced.",
+      "savingTitle": "Saving evidence to Shopify",
+      "savingDesc": "Choose whether DisputeDesk can save eligible evidence packages automatically, or must wait for your approval. This is an operational safeguard, not a notification preference.",
+      "autoTitle": "Save automatically",
+      "autoDesc": "DisputeDesk automatically saves eligible evidence packages to Shopify after all configured quality and safety checks pass.",
+      "autoNote": "You can still review the package in DisputeDesk. Saving evidence to Shopify does not by itself confirm the response has been sent to the card network.",
+      "approveTitle": "Require my approval before saving",
+      "approveDesc": "DisputeDesk prepares and monitors the response but waits for your approval before saving the first evidence package to Shopify.",
+      "mixedNote": "Some dispute types currently use different modes. Choosing an option here applies it to all types.",
+      "upgradeNote": "Managing save modes requires a plan that includes automation rules.",
+      "saved": "Dispute handling preferences saved"
     }
   },
   "connect": {

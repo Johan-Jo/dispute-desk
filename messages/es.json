@@ -2664,6 +2664,28 @@
         "confirm": "Desconectar",
         "cancel": "Cancelar"
       }
+    },
+    "disputeHandling": {
+      "title": "Gestión de disputas",
+      "help": "DisputeDesk recopila pruebas automáticamente, arma el paquete, supervisa actualizaciones y aplica el motor de reglas a cada disputa. Estas preferencias controlan cómo sigue ese trabajo y cómo llega a Shopify.",
+      "involvementTitle": "Su participación",
+      "involvementDesc": "Elija qué tan de cerca quiere seguir las disputas. DisputeDesk prepara y supervisa cada respuesta en cualquiera de las opciones.",
+      "handsOffTitle": "Automático",
+      "recommendedBadge": "Recomendado",
+      "handsOffDesc": "Gestionar las disputas automáticamente y notificarme solo cuando mi atención sea genuinamente necesaria.",
+      "stayTitle": "Mantenerme involucrado",
+      "stayDesc": "Mostrarme actualizaciones de progreso relevantes y oportunidades para fortalecer disputas, incluidas sugerencias de comunicación con clientes.",
+      "involvementNote": "Ambas opciones usan la misma recopilación de pruebas, reglas y preparación de respuestas. Esta preferencia cambia lo que usted ve — no la defensa producida.",
+      "savingTitle": "Guardar pruebas en Shopify",
+      "savingDesc": "Elija si DisputeDesk puede guardar automáticamente los paquetes de pruebas elegibles o debe esperar su aprobación. Es una salvaguarda operativa, no una preferencia de notificación.",
+      "autoTitle": "Guardar automáticamente",
+      "autoDesc": "DisputeDesk guarda automáticamente los paquetes de pruebas elegibles en Shopify después de superar todas las comprobaciones de calidad y seguridad configuradas.",
+      "autoNote": "Aún puede revisar el paquete en DisputeDesk. Guardar pruebas en Shopify no confirma por sí solo que la respuesta se haya enviado a la red de tarjetas.",
+      "approveTitle": "Requerir mi aprobación antes de guardar",
+      "approveDesc": "DisputeDesk prepara y supervisa la respuesta, pero espera su aprobación antes de guardar el primer paquete de pruebas en Shopify.",
+      "mixedNote": "Algunos tipos de disputa usan actualmente modos diferentes. Elegir una opción aquí la aplica a todos los tipos.",
+      "upgradeNote": "Gestionar los modos de guardado requiere un plan que incluya reglas de automatización.",
+      "saved": "Preferencias de gestión de disputas guardadas"
     }
   },
   "connect": {

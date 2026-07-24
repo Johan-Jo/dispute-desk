@@ -2664,6 +2664,28 @@
         "confirm": "Desconectar",
         "cancel": "Cancelar"
       }
+    },
+    "disputeHandling": {
+      "title": "Tratamento de disputas",
+      "help": "O DisputeDesk coleta provas automaticamente, monta o pacote, monitora atualizações e aplica o motor de regras a cada disputa. Estas preferências controlam como você acompanha esse trabalho e como ele chega ao Shopify.",
+      "involvementTitle": "Seu envolvimento",
+      "involvementDesc": "Escolha o quanto deseja acompanhar as disputas. O DisputeDesk prepara e monitora cada resposta em qualquer das opções.",
+      "handsOffTitle": "Automático",
+      "recommendedBadge": "Recomendado",
+      "handsOffDesc": "Tratar as disputas automaticamente e me notificar apenas quando minha atenção for genuinamente necessária.",
+      "stayTitle": "Continuar envolvido",
+      "stayDesc": "Mostrar atualizações de progresso relevantes e oportunidades de fortalecer disputas, incluindo sugestões de comunicação com clientes.",
+      "involvementNote": "Ambas as opções usam a mesma coleta de provas, regras e preparação de resposta. Esta preferência muda o que você vê — não a defesa produzida.",
+      "savingTitle": "Salvar provas no Shopify",
+      "savingDesc": "Escolha se o DisputeDesk pode salvar automaticamente os pacotes de provas elegíveis ou deve aguardar sua aprovação. É uma salvaguarda operacional, não uma preferência de notificação.",
+      "autoTitle": "Salvar automaticamente",
+      "autoDesc": "O DisputeDesk salva automaticamente os pacotes de provas elegíveis no Shopify após todas as verificações de qualidade e segurança configuradas.",
+      "autoNote": "Você ainda pode revisar o pacote no DisputeDesk. Salvar provas no Shopify não confirma por si só que a resposta foi enviada à rede do cartão.",
+      "approveTitle": "Exigir minha aprovação antes de salvar",
+      "approveDesc": "O DisputeDesk prepara e monitora a resposta, mas aguarda sua aprovação antes de salvar o primeiro pacote de provas no Shopify.",
+      "mixedNote": "Alguns tipos de disputa usam modos diferentes no momento. Escolher uma opção aqui a aplica a todos os tipos.",
+      "upgradeNote": "Gerenciar os modos de salvamento requer um plano que inclua regras de automação.",
+      "saved": "Preferências de tratamento de disputas salvas"
     }
   },
   "connect": {

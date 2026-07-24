@@ -2664,6 +2664,28 @@
         "confirm": "Koppla från",
         "cancel": "Avbryt"
       }
+    },
+    "disputeHandling": {
+      "title": "Tvisthantering",
+      "help": "DisputeDesk samlar automatiskt in bevis, bygger paketet, övervakar uppdateringar och tillämpar regelmotorn på varje tvist. Dessa inställningar styr hur du följer arbetet och hur det når Shopify.",
+      "involvementTitle": "Din delaktighet",
+      "involvementDesc": "Välj hur nära du vill följa tvister. DisputeDesk förbereder och övervakar varje svar i båda alternativen.",
+      "handsOffTitle": "Automatiskt",
+      "recommendedBadge": "Rekommenderas",
+      "handsOffDesc": "Hantera tvister automatiskt och meddela mig endast när min uppmärksamhet verkligen behövs.",
+      "stayTitle": "Var delaktig",
+      "stayDesc": "Visa relevanta framstegsuppdateringar och möjligheter att stärka tvister, inklusive förslag på kundkommunikation.",
+      "involvementNote": "Båda alternativen använder samma bevisinsamling, regler och svarsförberedelse. Inställningen ändrar vad du ser — inte försvaret som produceras.",
+      "savingTitle": "Spara bevis i Shopify",
+      "savingDesc": "Välj om DisputeDesk får spara kvalificerade bevispaket automatiskt eller måste vänta på ditt godkännande. Detta är en operativ säkerhetsåtgärd, inte en aviseringsinställning.",
+      "autoTitle": "Spara automatiskt",
+      "autoDesc": "DisputeDesk sparar automatiskt kvalificerade bevispaket i Shopify efter att alla konfigurerade kvalitets- och säkerhetskontroller godkänts.",
+      "autoNote": "Du kan fortfarande granska paketet i DisputeDesk. Att spara bevis i Shopify bekräftar inte i sig att svaret har skickats till kortnätverket.",
+      "approveTitle": "Kräv mitt godkännande innan sparande",
+      "approveDesc": "DisputeDesk förbereder och övervakar svaret men väntar på ditt godkännande innan det första bevispaketet sparas i Shopify.",
+      "mixedNote": "Vissa tvisttyper använder för närvarande olika lägen. Ett val här tillämpas på alla typer.",
+      "upgradeNote": "Att hantera sparlägen kräver en plan som inkluderar automatiseringsregler.",
+      "saved": "Inställningar för tvisthantering sparade"
     }
   },
   "connect": {

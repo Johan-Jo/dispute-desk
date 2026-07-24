@@ -2664,6 +2664,28 @@
         "confirm": "Déconnecter",
         "cancel": "Annuler"
       }
+    },
+    "disputeHandling": {
+      "title": "Traitement des litiges",
+      "help": "DisputeDesk collecte automatiquement les preuves, constitue le dossier, surveille les mises à jour et applique le moteur de règles à chaque litige. Ces préférences contrôlent la façon dont vous suivez ce travail et dont il atteint Shopify.",
+      "involvementTitle": "Votre implication",
+      "involvementDesc": "Choisissez à quel point vous souhaitez suivre les litiges. DisputeDesk prépare et surveille chaque réponse dans les deux options.",
+      "handsOffTitle": "Automatique",
+      "recommendedBadge": "Recommandé",
+      "handsOffDesc": "Gérer les litiges automatiquement et ne me notifier que lorsque mon attention est réellement nécessaire.",
+      "stayTitle": "Rester impliqué",
+      "stayDesc": "Me montrer les mises à jour pertinentes et les occasions de renforcer les litiges, y compris les suggestions de communication client.",
+      "involvementNote": "Les deux options utilisent la même collecte de preuves, les mêmes règles et la même préparation de réponse. Cette préférence change ce que vous voyez — pas la défense produite.",
+      "savingTitle": "Enregistrement des preuves dans Shopify",
+      "savingDesc": "Choisissez si DisputeDesk peut enregistrer automatiquement les dossiers de preuves éligibles ou doit attendre votre approbation. C'est une protection opérationnelle, pas une préférence de notification.",
+      "autoTitle": "Enregistrer automatiquement",
+      "autoDesc": "DisputeDesk enregistre automatiquement les dossiers de preuves éligibles dans Shopify après validation de tous les contrôles de qualité et de sécurité configurés.",
+      "autoNote": "Vous pouvez toujours consulter le dossier dans DisputeDesk. L'enregistrement dans Shopify ne confirme pas à lui seul que la réponse a été envoyée au réseau de cartes.",
+      "approveTitle": "Exiger mon approbation avant l'enregistrement",
+      "approveDesc": "DisputeDesk prépare et surveille la réponse, mais attend votre approbation avant d'enregistrer le premier dossier de preuves dans Shopify.",
+      "mixedNote": "Certains types de litige utilisent actuellement des modes différents. Choisir une option ici l'applique à tous les types.",
+      "upgradeNote": "La gestion des modes d'enregistrement nécessite un forfait incluant les règles d'automatisation.",
+      "saved": "Préférences de traitement des litiges enregistrées"
     }
   },
   "connect": {
