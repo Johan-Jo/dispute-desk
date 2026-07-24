@@ -144,7 +144,7 @@ async function backfillShop(shop) {
     `&created_at_min=${encodeURIComponent(since)}` +
     `&fields=id,created_at,client_details`;
 
-  const stats = { scanned: 0, updated: 0, empty: 0, skipped: 0 };
+  const stats = { scanned: 0, updated: 0, empty: 0, skipped: 0, noRow: 0 };
 
   for (let page = 0; page < MAX_PAGES && url; page++) {
     const res = await shopifyGet(url, token);
@@ -190,11 +190,29 @@ async function backfillShop(shop) {
       });
     }
 
+    // UPDATE-only, never INSERT.
+    //
+    // An upsert here would be actively destructive: on conflict Postgres
+    // updates EVERY supplied column, and `parser_version` is NOT NULL with
+    // no default — so supplying it would overwrite the real risk-parser
+    // version (v1) on the ~355k existing rows, silently erasing parser
+    // state; omitting it makes the INSERT path fail outright (which is how
+    // this was caught). The risk-signal row is owned by the risk parser
+    // (lib/fraudIntel/signalWriter.ts); this backfill only decorates rows
+    // that already exist with client_details. Orders with no row yet are
+    // counted as `noRow` and left alone for the parser to create.
     if (rows.length > 0 && !DRY_RUN) {
-      const { error } = await sb
-        .from("shopify_order_risk_signals")
-        .upsert(rows, { onConflict: "shop_id,shopify_order_id" });
-      if (error) throw new Error(`upsert failed: ${error.message}`);
+      for (const row of rows) {
+        const { shop_id, shopify_order_id, ...patch } = row;
+        const { data, error } = await sb
+          .from("shopify_order_risk_signals")
+          .update(patch)
+          .eq("shop_id", shop_id)
+          .eq("shopify_order_id", shopify_order_id)
+          .select("id");
+        if (error) throw new Error(`update failed: ${error.message}`);
+        if (!data || data.length === 0) stats.noRow++;
+      }
     }
 
     process.stdout.write(
@@ -232,7 +250,7 @@ async function main() {
     shops = [data];
   }
 
-  const totals = { scanned: 0, updated: 0, empty: 0, skipped: 0 };
+  const totals = { scanned: 0, updated: 0, empty: 0, skipped: 0, noRow: 0 };
   for (const shop of shops) {
     console.log(`${shop.shop_domain}:`);
     const s = await backfillShop(shop);
@@ -245,6 +263,7 @@ async function main() {
   console.log(`  updated:  ${totals.updated}  (had ip and/or user_agent)`);
   console.log(`  empty:    ${totals.empty}  (no client_details — POS/API/draft)`);
   console.log(`  skipped:  ${totals.skipped}  (already fetched)`);
+  console.log(`  no row:   ${totals.noRow}  (no risk-signal row yet — left for the risk parser)`);
   if (DRY_RUN) console.log("\n(dry run — nothing written)");
 }
 
