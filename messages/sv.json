@@ -923,7 +923,7 @@
       "tabs": {
         "overview": "Översikt",
         "evidence": "Bevis",
-        "reviewSubmit": "Granska & Skicka in"
+        "reviewSubmit": "Granska och vidarebefordra"
       },
       "strengthLabel": {
         "strong": "Starkt ärende",
@@ -5790,6 +5790,7 @@
       "blocking": "DisputeDesk väntar på ditt godkännande",
       "technical_error": "Återanslut för att återuppta övervakningen"
     },
-    "internalIssue": "DisputeDesk har upptäckt ett tekniskt problem och arbetar med att lösa det. Ingen åtgärd krävs från dig just nu."
+    "internalIssue": "DisputeDesk har upptäckt ett tekniskt problem och arbetar med att lösa det. Ingen åtgärd krävs från dig just nu.",
+    "deadlineLabel": "Shopifys svarsfrist"
   }
 }

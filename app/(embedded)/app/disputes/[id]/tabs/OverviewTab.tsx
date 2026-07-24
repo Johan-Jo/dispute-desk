@@ -38,6 +38,7 @@ import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import { EVIDENCE_EVALUATION_HELPER } from "@/lib/argument/evidenceStatus";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type { PresentationStatus } from "../workspace-components/types";
+import { TAB_INDEX } from "../workspace-components/types";
 import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
 import { buildRefundPresentation } from "@/lib/argument/refundPresentation";
 import {
@@ -661,8 +662,8 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     ? tExtra("appliedMode.automaticHelp")
     : tExtra("appliedMode.reviewBeforeSubmitHelp");
 
-  const goToReview = () => actions.setActiveTab(2);
-  const goToEvidence = () => actions.setActiveTab(1);
+  const goToReview = () => actions.setActiveTab(TAB_INDEX.reviewForward);
+  const goToEvidence = () => actions.setActiveTab(TAB_INDEX.evidence);
   const shopifyAdminUrl = dispute.shopDomain && dispute.disputeEvidenceGid
     ? getShopifyDisputeUrl(dispute.shopDomain, dispute.disputeEvidenceGid)
     : null;

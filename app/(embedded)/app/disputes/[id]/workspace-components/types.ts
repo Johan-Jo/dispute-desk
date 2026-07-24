@@ -6,6 +6,17 @@
 import type { ChecklistItemV2, SubmissionReadiness, WaivedItemRecord, WaiveReason } from "@/lib/types/evidenceItem";
 import type { CaseStrengthResult, WhyWinsResult, RiskResult, ImprovementSignal, NextAction, MissingItemWithContext } from "@/lib/argument/types";
 import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
+import type { DisputePresentation } from "@/lib/disputes/presentation/types";
+
+/** Canonical tab indices for the dispute-detail workspace. Approved
+ *  order (design-alignment plan §6.0): Overview → Review and Forward →
+ *  Evidence. ALWAYS use these constants — never raw numbers — so a
+ *  future reorder is a one-line change. */
+export const TAB_INDEX = {
+  overview: 0,
+  reviewForward: 1,
+  evidence: 2,
+} as const;
 
 export type { ChecklistItemV2, SubmissionReadiness, WaivedItemRecord, WaiveReason };
 export type { CaseStrengthResult, WhyWinsResult, RiskResult, ImprovementSignal, NextAction, MissingItemWithContext };
@@ -284,6 +295,10 @@ export interface WorkspaceData {
    *  Overview hero copy, the timeline active step, and the Submission
    *  Summary panel's tense. Plan v2. */
   presentationStatus: PresentationStatus;
+  /** Shared presentation model (lib/disputes/presentation) — the same
+   *  lifecycle/attention/strength interpretation the list and dashboard
+   *  use. The detail page must never re-derive these dimensions. */
+  presentation?: DisputePresentation | null;
   /** Per-row dispute-detail view-model from `deriveEvidenceLineItems`.
    *  Single source of truth for every UI surface; never duplicated. */
   evidenceLineItems: EvidenceLineItem[];

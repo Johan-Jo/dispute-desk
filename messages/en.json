@@ -917,7 +917,7 @@
       "tabs": {
         "overview": "Overview",
         "evidence": "Evidence",
-        "reviewSubmit": "Review & Submit"
+        "reviewSubmit": "Review and Forward"
       },
       "strengthLabel": {
         "strong": "Strong case",
@@ -5789,6 +5789,7 @@
       "blocking": "DisputeDesk is waiting for your approval",
       "technical_error": "Reconnect to restore monitoring"
     },
-    "internalIssue": "DisputeDesk detected a technical issue and is working to resolve it. No action is currently required from you."
+    "internalIssue": "DisputeDesk detected a technical issue and is working to resolve it. No action is currently required from you.",
+    "deadlineLabel": "Shopify response deadline"
   }
 }

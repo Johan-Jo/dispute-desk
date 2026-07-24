@@ -1520,7 +1520,7 @@
       "tabs": {
         "overview": "Visão geral",
         "evidence": "Evidências",
-        "reviewSubmit": "Revisar e enviar"
+        "reviewSubmit": "Revisar e encaminhar"
       },
       "strengthLabel": {
         "strong": "Caso forte",
@@ -5790,6 +5790,7 @@
       "blocking": "O DisputeDesk está aguardando sua aprovação",
       "technical_error": "Reconecte para restaurar o monitoramento"
     },
-    "internalIssue": "O DisputeDesk detectou um problema técnico e está trabalhando para resolvê-lo. Nenhuma ação é necessária de sua parte no momento."
+    "internalIssue": "O DisputeDesk detectou um problema técnico e está trabalhando para resolvê-lo. Nenhuma ação é necessária de sua parte no momento.",
+    "deadlineLabel": "Prazo de resposta do Shopify"
   }
 }

@@ -1520,7 +1520,7 @@
       "tabs": {
         "overview": "Übersicht",
         "evidence": "Beweise",
-        "reviewSubmit": "Prüfen & Einreichen"
+        "reviewSubmit": "Prüfen und weiterleiten"
       },
       "strengthLabel": {
         "strong": "Starker Fall",
@@ -5790,6 +5790,7 @@
       "blocking": "DisputeDesk wartet auf Ihre Freigabe",
       "technical_error": "Verbindung wiederherstellen, um die Überwachung fortzusetzen"
     },
-    "internalIssue": "DisputeDesk hat ein technisches Problem erkannt und arbeitet an der Lösung. Derzeit ist keine Aktion von Ihnen erforderlich."
+    "internalIssue": "DisputeDesk hat ein technisches Problem erkannt und arbeitet an der Lösung. Derzeit ist keine Aktion von Ihnen erforderlich.",
+    "deadlineLabel": "Shopify-Antwortfrist"
   }
 }

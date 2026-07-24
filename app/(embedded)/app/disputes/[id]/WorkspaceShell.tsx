@@ -9,22 +9,15 @@ import { useDisputeWorkspace } from "./hooks/useDisputeWorkspace";
 import OverviewTab from "./tabs/OverviewTab";
 import EvidenceTab from "./tabs/EvidenceTab";
 import ReviewSubmitTab from "./tabs/ReviewSubmitTab";
-
-const STRENGTH_LABEL_KEY: Record<string, string> = {
-  strong: "disputes.workspaceShell.strengthLabel.strong",
-  moderate: "disputes.workspaceShell.strengthLabel.moderate",
-  weak: "disputes.workspaceShell.strengthLabel.weak",
-  insufficient: "disputes.workspaceShell.strengthLabel.weak",
-};
-
-/** Figma-style flat pill — `px-2 py-0.5 rounded-md text-xs font-semibold`
- *  with the matching strength palette. Matches `shopify-dispute-detail`
- *  Make source (lines 47-55). */
-function strengthPillColors(level: string): { bg: string; color: string } {
-  if (level === "strong") return { bg: "#D1FAE5", color: "#065F46" };
-  if (level === "moderate") return { bg: "#FEF3C7", color: "#92400E" };
-  return { bg: "#FEE2E2", color: "#991B1B" };
-}
+import { TAB_INDEX } from "./workspace-components/types";
+import {
+  ATTENTION_CHIP,
+  LIFECYCLE_CHIP,
+  STRENGTH_CHIP,
+  type ChipTokens,
+} from "@/lib/disputes/presentation/uiTokens";
+import { resolveStrength } from "@/lib/disputes/presentation/resolveStrength";
+import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 
 const PILL_STYLE = {
   padding: "2px 8px",
@@ -79,10 +72,12 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
     }
   };
 
+  // Approved tab order (design-alignment plan §6.0):
+  // Overview → Review and Forward → Evidence.
   const tabs: Array<{ id: string; label: string; panelId: string }> = [
     { id: "overview", label: t("disputes.workspaceShell.tabs.overview"), panelId: "overview-panel" },
-    { id: "evidence", label: t("disputes.workspaceShell.tabs.evidence"), panelId: "evidence-panel" },
     { id: "submit", label: t("disputes.workspaceShell.tabs.reviewSubmit"), panelId: "submit-panel" },
+    { id: "evidence", label: t("disputes.workspaceShell.tabs.evidence"), panelId: "evidence-panel" },
   ];
 
   // Deep link support: `?section=gorgias-comms` (from the evidence-ready
@@ -96,7 +91,7 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
     if (deepLinkApplied.current || !data) return;
     if (targetSection === "gorgias-comms") {
       deepLinkApplied.current = true;
-      actions.setActiveTab(1);
+      actions.setActiveTab(TAB_INDEX.evidence);
     }
   }, [data, targetSection, actions]);
 
@@ -117,16 +112,55 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
   }
 
   const dispute = data.dispute;
-  const submitted = derived.isReadOnly;
   const reasonLabel = reasonLabelFor(dispute.reason);
   const headerTitle = t("disputes.workspaceShell.headerTitle", {
     id: dispute.id.slice(0, 8).toUpperCase(),
     reason: reasonLabel,
   });
 
-  const strengthKey = derived.caseStrength.overall;
-  const strengthLabelKey = STRENGTH_LABEL_KEY[strengthKey] ?? "disputes.workspaceShell.strengthLabel.weak";
-  const strengthText = t(strengthLabelKey);
+  // Shared presentation model — the API-resolved interpretation (never
+  // re-derived here). Strength falls back to the workspace engine
+  // result through the same pass-through resolver.
+  const presentation = data.presentation ?? null;
+  const strength =
+    presentation?.strength ?? resolveStrength(derived.caseStrength.overall);
+  const headerChips: Array<{ key: string; label: string; tokens: ChipTokens }> = [];
+  if (presentation) {
+    headerChips.push({
+      key: "lifecycle",
+      label: t(`presentation.lifecycle.${presentation.lifecycle}`),
+      tokens: LIFECYCLE_CHIP[presentation.lifecycle],
+    });
+  }
+  headerChips.push({
+    key: "strength",
+    label: t(`presentation.strength.detail.${strength}`),
+    tokens: STRENGTH_CHIP[strength],
+  });
+  // Attention pill ONLY when attention ≠ none — never rendered merely
+  // because of an involvement preference (plan §6.1).
+  if (presentation && presentation.attention !== "none") {
+    headerChips.push({
+      key: "attention",
+      label: t(`presentation.attention.${presentation.attention}`),
+      tokens: ATTENTION_CHIP[presentation.attention],
+    });
+  }
+
+  // Deadline line — only while the response can still change (the
+  // mockup hides it once transmission is confirmed or the dispute is
+  // terminal).
+  const showDeadline = Boolean(
+    dispute.dueAt && presentation && presentation.editable,
+  );
+
+  // "View in Shopify Admin" — navigational only. Reuses the reliable
+  // URL builder; when it returns null the action is HIDDEN (never a
+  // guessed fallback URL — plan §6.1).
+  const shopifyAdminUrl = getShopifyDisputeUrl(
+    dispute.shopDomain,
+    dispute.disputeEvidenceGid,
+  );
 
   const facts: Array<{ label: string; value: string }> = [
     { label: t("disputes.workspaceShell.facts.amount"), value: `${dispute.currency} ${dispute.amount}` },
@@ -172,24 +206,73 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
               >
                 {headerTitle}
               </h1>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <span
-                  style={{
-                    ...PILL_STYLE,
-                    background: submitted ? "#D1FAE5" : "#FEE2E2",
-                    color: submitted ? "#065F46" : "#991B1B",
-                  }}
-                >
-                  {submitted ? t("disputes.workspaceShell.statusPill.submitted") : t("disputes.workspaceShell.statusPill.needsAction")}
-                </span>
-                {(() => {
-                  const c = strengthPillColors(strengthKey);
-                  return (
-                    <span style={{ ...PILL_STYLE, background: c.bg, color: c.color }}>
-                      {strengthText}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  flexWrap: "wrap",
+                }}
+              >
+                {headerChips.map((chip) => (
+                  <span
+                    key={chip.key}
+                    style={{
+                      ...PILL_STYLE,
+                      gap: 5,
+                      background: chip.tokens.bg,
+                      color: chip.tokens.fg,
+                    }}
+                  >
+                    {chip.tokens.dot ? (
+                      <span
+                        style={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: "50%",
+                          background: chip.tokens.dot,
+                          flex: "none",
+                        }}
+                      />
+                    ) : null}
+                    {chip.label}
+                  </span>
+                ))}
+                {showDeadline ? (
+                  <span style={{ fontSize: 12.5, color: "#6D7175", lineHeight: 1.4 }}>
+                    <span style={{ fontWeight: 600, color: "#4B5563" }}>
+                      {t("presentation.deadlineLabel")}
                     </span>
-                  );
-                })()}
+                    {": "}
+                    {formatDate(dispute.dueAt, locale)}
+                  </span>
+                ) : null}
+                {shopifyAdminUrl ? (
+                  <a
+                    href={shopifyAdminUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      marginLeft: "auto",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      borderRadius: 8,
+                      padding: "8px 13px",
+                      lineHeight: 1.2,
+                      whiteSpace: "nowrap",
+                      border: "1px solid #C9CCCF",
+                      background: "#ffffff",
+                      color: "#202223",
+                      boxShadow: "0 1px 0 rgba(0,0,0,.04)",
+                      textDecoration: "none",
+                    }}
+                  >
+                    {t("disputes.overviewExtra.viewInShopify")}
+                  </a>
+                ) : null}
               </div>
             </div>
 
@@ -274,14 +357,14 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
               padding: 20,
             }}
           >
-            {clientState.activeTab === 0 && (
+            {clientState.activeTab === TAB_INDEX.overview && (
               <OverviewTab workspace={workspace} />
             )}
-            {clientState.activeTab === 1 && (
-              <EvidenceTab workspace={workspace} />
-            )}
-            {clientState.activeTab === 2 && (
+            {clientState.activeTab === TAB_INDEX.reviewForward && (
               <ReviewSubmitTab workspace={workspace} />
+            )}
+            {clientState.activeTab === TAB_INDEX.evidence && (
+              <EvidenceTab workspace={workspace} />
             )}
           </div>
         </div>
