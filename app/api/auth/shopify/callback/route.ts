@@ -148,9 +148,19 @@ export async function GET(req: NextRequest) {
       // offline OAuth phase (the first phase of every install, portal AND
       // embedded). Source-independent so an App Store install can no longer
       // go unannounced (unlike sendAdminSignupNotification, which is gated on
-      // source === "portal"). Fire-and-forget: never blocks OAuth, and the
-      // helper itself swallows errors. fetchShopDetails works here because the
-      // offline session was just stored above.
+      // source === "portal"). fetchShopDetails works here because the offline
+      // session was just stored above.
+      //
+      // MUST be AWAITED (see below) — it cannot be fire-and-forget: the offline
+      // phase ends in an immediate NextResponse.redirect(onlineAuthUrl) for
+      // embedded App Store installs, and Vercel freezes/kills the serverless
+      // instance the moment the response returns. An un-awaited
+      // fetchShopDetails→send chain (a Shopify GraphQL round-trip) loses that
+      // race and the email never sends — the cause of missed install alerts
+      // for every App Store install (daniel-store / blume-box / cay-collective,
+      // all source !== "portal"). Awaiting is safe: fetchShopDetails is
+      // .catch()'d to null and sendAdminInstallNotification never throws, so
+      // this only adds a bounded, best-effort delay before the redirect.
       if (isNewShop) {
         // Free-tier lifetime pack floor — grant N usable packs once per
         // new shop so the Free plan isn't blocked at its first pack build.
@@ -170,7 +180,7 @@ export async function GET(req: NextRequest) {
         // throw must NOT suppress the notification: shopDomain alone is
         // always known and the enriched fields render as "—" when absent.
         // So swallow the fetch failure to null and always send.
-        fetchShopDetails(shopInternalId)
+        await fetchShopDetails(shopInternalId)
           .catch((err) => {
             console.warn(
               "[email:admin-install] shop-details enrichment failed; sending without it:",
