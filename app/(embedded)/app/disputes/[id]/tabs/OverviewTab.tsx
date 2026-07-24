@@ -41,6 +41,7 @@ import type { PresentationStatus } from "../workspace-components/types";
 import { TAB_INDEX } from "../workspace-components/types";
 import { resolveLifecycle } from "@/lib/disputes/presentation/resolveLifecycle";
 import { ATTENTION_CHIP } from "@/lib/disputes/presentation/uiTokens";
+import { attentionLabelKey } from "@/lib/disputes/presentation/labels";
 import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
 import { buildRefundPresentation } from "@/lib/argument/refundPresentation";
 import {
@@ -876,7 +877,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                     background: ATTENTION_CHIP[presentation.attention].dot,
                   }}
                 />
-                {tp(`attention.${presentation.attention}`)}
+                {tRoot(attentionLabelKey(presentation))}
               </span>
             </div>
           )}

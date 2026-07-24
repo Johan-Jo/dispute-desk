@@ -106,8 +106,23 @@ export interface AttentionInput {
   transmissionConfirmed: boolean;
 }
 
+/** The specific cause behind attention=`blocking`, so surfaces can
+ *  label it truthfully instead of a one-size-fits-all pill ("Approval
+ *  required" is only true for the approval gate — a missing-evidence
+ *  block is NOT awaiting approval; dev report 2026-07-24). */
+export type BlockingReason =
+  | "approval_gate"
+  | "missing_required_evidence"
+  | "quota_exceeded"
+  | "feature_blocked"
+  | "subscription_expired"
+  | "payment_failed"
+  | "auto_build_off";
+
 export interface AttentionResult {
   attention: MerchantAttention;
+  /** Set iff attention === "blocking" — the matched cause. */
+  blockingReason: BlockingReason | null;
   /** An internal, non-merchant-resolvable issue exists — surface
    *  neutral transparency copy only ("DisputeDesk detected a technical
    *  issue and is working to resolve it. No action is currently
@@ -127,22 +142,31 @@ export function resolveAttention(input: AttentionInput): AttentionResult {
   // Stale-attention guard: nothing is a merchant task once the response
   // is locked or the dispute is terminal.
   if (input.terminal || input.transmissionConfirmed) {
-    return { attention: "none", internalIssue };
+    return { attention: "none", blockingReason: null, internalIssue };
   }
 
   // 1 — merchant-resolvable technical problem only.
   if (input.integrationReconnectRequired) {
-    return { attention: "technical_error", internalIssue };
+    return { attention: "technical_error", blockingReason: null, internalIssue };
   }
 
   // 2 — blocking: work halted pending the merchant (deadline or not).
+  // The specific cause travels with the result so surfaces can label
+  // it truthfully (evidence needed vs approval vs billing).
   const reason = input.needsAttention ? input.attentionReason : null;
   const approvalGate =
     input.automationMode === "review" &&
     input.packStatus === "ready" &&
     input.approvedForSaveAt == null;
-  if ((reason != null && BLOCKING_ATTENTION_REASONS.has(reason)) || approvalGate) {
-    return { attention: "blocking", internalIssue };
+  if (reason != null && BLOCKING_ATTENTION_REASONS.has(reason)) {
+    return {
+      attention: "blocking",
+      blockingReason: reason as BlockingReason,
+      internalIssue,
+    };
+  }
+  if (approvalGate) {
+    return { attention: "blocking", blockingReason: "approval_gate", internalIssue };
   }
 
   // 3 — requested: an explicit ask, work not halted.
@@ -150,18 +174,18 @@ export function resolveAttention(input: AttentionInput): AttentionResult {
     (reason != null && REQUESTED_ATTENTION_REASONS.has(reason)) ||
     input.gorgiasActionableCount > 0
   ) {
-    return { attention: "requested", internalIssue };
+    return { attention: "requested", blockingReason: null, internalIssue };
   }
 
   // 4 — recommended: a concrete recommended contribution exists.
   if (input.concreteContribution === "recommended") {
-    return { attention: "recommended", internalIssue };
+    return { attention: "recommended", blockingReason: null, internalIssue };
   }
 
   // 5 — opportunity: optional and available, not recommended.
   if (input.concreteContribution === "optional") {
-    return { attention: "opportunity", internalIssue };
+    return { attention: "opportunity", blockingReason: null, internalIssue };
   }
 
-  return { attention: "none", internalIssue };
+  return { attention: "none", blockingReason: null, internalIssue };
 }

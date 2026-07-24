@@ -5805,7 +5805,7 @@
       "opportunity": "Kommunikation tillgänglig",
       "recommended": "Kommunikation rekommenderas",
       "requested": "Granska kommunikation",
-      "blocking": "Godkännande krävs",
+      "blocking": "Din insats krävs",
       "technical_error": "Uppmärksamhet krävs"
     },
     "strength": {
@@ -5865,6 +5865,24 @@
         "saved_to_shopify": "Shopify skickar svaret vid fristen",
         "under_review": "Utfall mottaget"
       }
+    },
+    "attentionBlocking": {
+      "approval_gate": "Godkännande krävs",
+      "missing_required_evidence": "Bevis behövs",
+      "quota_exceeded": "Faktureringsåtgärd krävs",
+      "feature_blocked": "Faktureringsåtgärd krävs",
+      "subscription_expired": "Faktureringsåtgärd krävs",
+      "payment_failed": "Faktureringsåtgärd krävs",
+      "auto_build_off": "Automatisering pausad"
+    },
+    "attentionBlockingSub": {
+      "approval_gate": "DisputeDesk väntar på ditt godkännande för att spara bevispaketet",
+      "missing_required_evidence": "Obligatoriska bevis saknas — DisputeDesk kan inte spara förrän de har lagts till",
+      "quota_exceeded": "En faktureringsåtgärd behövs innan DisputeDesk kan fortsätta",
+      "feature_blocked": "En faktureringsåtgärd behövs innan DisputeDesk kan fortsätta",
+      "subscription_expired": "En faktureringsåtgärd behövs innan DisputeDesk kan fortsätta",
+      "payment_failed": "En faktureringsåtgärd behövs innan DisputeDesk kan fortsätta",
+      "auto_build_off": "Automatisk bevisinsamling är avstängd i dina inställningar"
     }
   }
 }

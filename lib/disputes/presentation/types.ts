@@ -90,6 +90,10 @@ export interface DisputePresentation {
    *  Surfaces transparency copy only — never Action required
    *  (§12V decision 4). */
   internalIssue: boolean;
+  /** The specific cause when attention === "blocking" (approval_gate /
+   *  missing_required_evidence / billing reasons / auto_build_off) —
+   *  surfaces label the block truthfully instead of a generic pill. */
+  blockingReason: string | null;
   /** True when this dispute counts as a genuine merchant task
    *  (attention ∈ ACTION_REQUIRED_ATTENTION). */
   needsMerchantAction: boolean;

@@ -5805,7 +5805,7 @@
       "opportunity": "Communication disponible",
       "recommended": "Communication recommandée",
       "requested": "Vérifier la communication",
-      "blocking": "Approbation requise",
+      "blocking": "Votre intervention est requise",
       "technical_error": "Attention requise"
     },
     "strength": {
@@ -5865,6 +5865,24 @@
         "saved_to_shopify": "Shopify envoie la réponse à la date limite",
         "under_review": "Résultat reçu"
       }
+    },
+    "attentionBlocking": {
+      "approval_gate": "Approbation requise",
+      "missing_required_evidence": "Preuves requises",
+      "quota_exceeded": "Action de facturation requise",
+      "feature_blocked": "Action de facturation requise",
+      "subscription_expired": "Action de facturation requise",
+      "payment_failed": "Action de facturation requise",
+      "auto_build_off": "Automatisation en pause"
+    },
+    "attentionBlockingSub": {
+      "approval_gate": "DisputeDesk attend votre approbation pour enregistrer le dossier de preuves",
+      "missing_required_evidence": "Des preuves requises manquent — DisputeDesk ne peut pas enregistrer tant qu'elles ne sont pas ajoutées",
+      "quota_exceeded": "Une action de facturation est nécessaire pour que DisputeDesk puisse continuer",
+      "feature_blocked": "Une action de facturation est nécessaire pour que DisputeDesk puisse continuer",
+      "subscription_expired": "Une action de facturation est nécessaire pour que DisputeDesk puisse continuer",
+      "payment_failed": "Une action de facturation est nécessaire pour que DisputeDesk puisse continuer",
+      "auto_build_off": "La constitution automatique des preuves est désactivée dans vos réglages"
     }
   }
 }

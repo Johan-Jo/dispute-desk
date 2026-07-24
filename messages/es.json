@@ -5805,7 +5805,7 @@
       "opportunity": "Comunicación disponible",
       "recommended": "Comunicación recomendada",
       "requested": "Revisar comunicación",
-      "blocking": "Aprobación requerida",
+      "blocking": "Se requiere su intervención",
       "technical_error": "Atención requerida"
     },
     "strength": {
@@ -5865,6 +5865,24 @@
         "saved_to_shopify": "Shopify envía la respuesta en la fecha límite",
         "under_review": "Resultado recibido"
       }
+    },
+    "attentionBlocking": {
+      "approval_gate": "Aprobación requerida",
+      "missing_required_evidence": "Pruebas necesarias",
+      "quota_exceeded": "Acción de facturación requerida",
+      "feature_blocked": "Acción de facturación requerida",
+      "subscription_expired": "Acción de facturación requerida",
+      "payment_failed": "Acción de facturación requerida",
+      "auto_build_off": "Automatización en pausa"
+    },
+    "attentionBlockingSub": {
+      "approval_gate": "DisputeDesk espera su aprobación para guardar el paquete de pruebas",
+      "missing_required_evidence": "Faltan pruebas requeridas — DisputeDesk no puede guardar hasta que se añadan",
+      "quota_exceeded": "Se necesita una acción de facturación para que DisputeDesk pueda continuar",
+      "feature_blocked": "Se necesita una acción de facturación para que DisputeDesk pueda continuar",
+      "subscription_expired": "Se necesita una acción de facturación para que DisputeDesk pueda continuar",
+      "payment_failed": "Se necesita una acción de facturación para que DisputeDesk pueda continuar",
+      "auto_build_off": "La creación automática de pruebas está desactivada en sus ajustes"
     }
   }
 }

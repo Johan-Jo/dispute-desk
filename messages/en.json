@@ -5804,7 +5804,7 @@
       "opportunity": "Communication available",
       "recommended": "Communication recommended",
       "requested": "Review communication",
-      "blocking": "Approval required",
+      "blocking": "Input required",
       "technical_error": "Attention required"
     },
     "strength": {
@@ -5864,6 +5864,24 @@
         "saved_to_shopify": "Shopify sends the response at the deadline",
         "under_review": "Outcome received"
       }
+    },
+    "attentionBlocking": {
+      "approval_gate": "Approval required",
+      "missing_required_evidence": "Evidence needed",
+      "quota_exceeded": "Billing action required",
+      "feature_blocked": "Billing action required",
+      "subscription_expired": "Billing action required",
+      "payment_failed": "Billing action required",
+      "auto_build_off": "Automation paused"
+    },
+    "attentionBlockingSub": {
+      "approval_gate": "DisputeDesk is waiting for your approval to save the evidence package",
+      "missing_required_evidence": "Required evidence is missing — DisputeDesk can't save until it's added",
+      "quota_exceeded": "A billing action is needed before DisputeDesk can continue",
+      "feature_blocked": "A billing action is needed before DisputeDesk can continue",
+      "subscription_expired": "A billing action is needed before DisputeDesk can continue",
+      "payment_failed": "A billing action is needed before DisputeDesk can continue",
+      "auto_build_off": "Automatic evidence building is turned off in your settings"
     }
   }
 }

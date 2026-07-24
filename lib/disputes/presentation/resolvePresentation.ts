@@ -59,7 +59,7 @@ export function resolvePresentation(
     terminal,
     transmissionConfirmed,
   };
-  const { attention, internalIssue } = resolveAttention(attentionInput);
+  const { attention, blockingReason, internalIssue } = resolveAttention(attentionInput);
 
   const outcome: OutcomeKind =
     lifecycle === "won"
@@ -73,6 +73,7 @@ export function resolvePresentation(
   return {
     lifecycle,
     attention,
+    blockingReason,
     strength: resolveStrength(input.strengthOverall),
     transmissionConfirmed,
     editable: !terminal && !transmissionConfirmed,

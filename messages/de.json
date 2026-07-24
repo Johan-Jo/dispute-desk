@@ -5805,7 +5805,7 @@
       "opportunity": "Kommunikation verfügbar",
       "recommended": "Kommunikation empfohlen",
       "requested": "Kommunikation prüfen",
-      "blocking": "Freigabe erforderlich",
+      "blocking": "Ihre Eingabe erforderlich",
       "technical_error": "Aufmerksamkeit erforderlich"
     },
     "strength": {
@@ -5865,6 +5865,24 @@
         "saved_to_shopify": "Shopify sendet die Antwort zur Frist",
         "under_review": "Ergebnis erhalten"
       }
+    },
+    "attentionBlocking": {
+      "approval_gate": "Freigabe erforderlich",
+      "missing_required_evidence": "Beweise erforderlich",
+      "quota_exceeded": "Abrechnungsaktion erforderlich",
+      "feature_blocked": "Abrechnungsaktion erforderlich",
+      "subscription_expired": "Abrechnungsaktion erforderlich",
+      "payment_failed": "Abrechnungsaktion erforderlich",
+      "auto_build_off": "Automatisierung pausiert"
+    },
+    "attentionBlockingSub": {
+      "approval_gate": "DisputeDesk wartet auf Ihre Freigabe, um das Beweispaket zu speichern",
+      "missing_required_evidence": "Erforderliche Beweise fehlen — DisputeDesk kann erst nach dem Hinzufügen speichern",
+      "quota_exceeded": "Eine Abrechnungsaktion ist nötig, bevor DisputeDesk fortfahren kann",
+      "feature_blocked": "Eine Abrechnungsaktion ist nötig, bevor DisputeDesk fortfahren kann",
+      "subscription_expired": "Eine Abrechnungsaktion ist nötig, bevor DisputeDesk fortfahren kann",
+      "payment_failed": "Eine Abrechnungsaktion ist nötig, bevor DisputeDesk fortfahren kann",
+      "auto_build_off": "Die automatische Beweiserstellung ist in Ihren Einstellungen deaktiviert"
     }
   }
 }
