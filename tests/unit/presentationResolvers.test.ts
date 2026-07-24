@@ -450,3 +450,54 @@ describe("resolvePresentation + dashboardBucket", () => {
     expect(isActiveNormalizedStatus("waiting_on_issuer")).toBe(true); // legacy rows
   });
 });
+
+// ── Cross-page consistency (§15) ────────────────────────────────────────
+// The same dispute facts must resolve identically wherever they are
+// consumed: the list's primary-state map, the dashboard bucketer, and
+// the detail heading all read the SAME DisputePresentation.
+
+import { listPrimaryState } from "@/lib/disputes/presentation/labels";
+
+describe("Cross-page consistency", () => {
+  it("a requested (Gorgias review) case reads identically on all three surfaces", () => {
+    const p = resolvePresentation({
+      ...basePresentation,
+      gorgiasActionableCount: 2,
+    });
+    // Detail heading: attention pill 'requested'; list: Review
+    // communication; dashboard: Action required — one interpretation.
+    expect(p.attention).toBe("requested");
+    expect(listPrimaryState(p).labelKey).toBe("presentation.listState.requested");
+    expect(dashboardBucket(p)).toBe("action_required");
+    expect(p.needsMerchantAction).toBe(true);
+  });
+
+  it("a saved-editable case is calm everywhere (no task, no warning)", () => {
+    const p = resolvePresentation({
+      ...basePresentation,
+      submissionState: "saved_to_shopify",
+      packStatus: "saved_to_shopify",
+    });
+    expect(p.lifecycle).toBe("saved_to_shopify");
+    expect(p.attention).toBe("none");
+    expect(listPrimaryState(p)).toEqual({
+      labelKey: "presentation.lifecycle.saved_to_shopify",
+      subKey: "presentation.lifecycleSub.saved_to_shopify",
+    });
+    expect(dashboardBucket(p)).toBe("building_monitoring");
+    expect(p.editable).toBe(true); // Monitoring ≠ Done
+  });
+
+  it("a weak monitoring case with nothing to add is never a task on any surface", () => {
+    const p = resolvePresentation({
+      ...basePresentation,
+      strengthOverall: "weak",
+      packStatus: "saved_to_shopify",
+      submissionState: "not_saved",
+    });
+    expect(p.strength).toBe("weak");
+    expect(p.attention).toBe("none");
+    expect(p.needsMerchantAction).toBe(false);
+    expect(dashboardBucket(p)).toBe("building_monitoring");
+  });
+});
