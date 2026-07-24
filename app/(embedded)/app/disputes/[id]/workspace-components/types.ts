@@ -8,14 +8,16 @@ import type { CaseStrengthResult, WhyWinsResult, RiskResult, ImprovementSignal, 
 import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
 import type { DisputePresentation } from "@/lib/disputes/presentation/types";
 
-/** Canonical tab indices for the dispute-detail workspace. Approved
- *  order (design-alignment plan §6.0): Overview → Review and Forward →
- *  Evidence. ALWAYS use these constants — never raw numbers — so a
- *  future reorder is a one-line change. */
+/** Canonical tab indices for the dispute-detail workspace. Order per
+ *  reviewer direction 2026-07-24 (supersedes plan §6.0): Overview →
+ *  Evidence → Review and Forward (the review/forward step sits
+ *  rightmost, as the last step of the flow). ALWAYS use these
+ *  constants — never raw numbers — so a future reorder is a one-line
+ *  change. */
 export const TAB_INDEX = {
   overview: 0,
-  reviewForward: 1,
-  evidence: 2,
+  evidence: 1,
+  reviewForward: 2,
 } as const;
 
 export type { ChecklistItemV2, SubmissionReadiness, WaivedItemRecord, WaiveReason };

@@ -72,12 +72,13 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
     }
   };
 
-  // Approved tab order (design-alignment plan §6.0):
-  // Overview → Review and Forward → Evidence.
+  // Tab order per reviewer direction 2026-07-24: Overview → Evidence →
+  // Review and Forward (rightmost — the last step of the flow). Array
+  // order MUST match TAB_INDEX in workspace-components/types.ts.
   const tabs: Array<{ id: string; label: string; panelId: string }> = [
     { id: "overview", label: t("disputes.workspaceShell.tabs.overview"), panelId: "overview-panel" },
-    { id: "submit", label: t("disputes.workspaceShell.tabs.reviewSubmit"), panelId: "submit-panel" },
     { id: "evidence", label: t("disputes.workspaceShell.tabs.evidence"), panelId: "evidence-panel" },
+    { id: "submit", label: t("disputes.workspaceShell.tabs.reviewSubmit"), panelId: "submit-panel" },
   ];
 
   // Deep link support: `?section=gorgias-comms` (from the evidence-ready

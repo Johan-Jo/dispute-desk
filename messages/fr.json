@@ -868,7 +868,9 @@
     "reviewTab": {
       "chrome": {
         "loadingReview": "Chargement de la revue",
-        "buildFailedBody": "Nous n'avons pas pu construire ce dossier de preuves. Essayez de resynchroniser la rétrofacturation ou de regénérer le dossier depuis l'en-tête."
+        "buildFailedBody": "Nous n'avons pas pu construire ce dossier de preuves. Essayez de resynchroniser la rétrofacturation ou de regénérer le dossier depuis l'en-tête.",
+        "noDefenceTitle": "La lettre de défense n'a pas encore été générée",
+        "noDefenceBody": "DisputeDesk n'a pas encore généré la lettre de défense destinée à la banque pour ce litige. Les détails d'inclusion des preuves restent disponibles ci-dessous, et la lettre apparaîtra ici une fois générée."
       },
       "package": {
         "loadingAccessibilityLabel": "Chargement du dossier de preuves",

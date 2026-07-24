@@ -868,7 +868,9 @@
     "reviewTab": {
       "chrome": {
         "loadingReview": "Cargando revisión",
-        "buildFailedBody": "No pudimos construir este paquete de evidencia. Intenta resincronizar el contracargo o regenerar el paquete desde el encabezado del caso."
+        "buildFailedBody": "No pudimos construir este paquete de evidencia. Intenta resincronizar el contracargo o regenerar el paquete desde el encabezado del caso.",
+        "noDefenceTitle": "La carta de defensa aún no se ha generado",
+        "noDefenceBody": "DisputeDesk aún no ha generado la carta de defensa dirigida al banco para esta disputa. Los detalles de inclusión de pruebas siguen disponibles abajo, y la carta aparecerá aquí cuando se genere."
       },
       "package": {
         "loadingAccessibilityLabel": "Cargando paquete de evidencia",

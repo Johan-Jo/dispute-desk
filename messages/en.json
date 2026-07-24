@@ -1439,7 +1439,9 @@
     "reviewTab": {
       "chrome": {
         "loadingReview": "Loading review",
-        "buildFailedBody": "We couldn't build this evidence pack. Try resyncing the dispute or regenerating the pack from the dispute header."
+        "buildFailedBody": "We couldn't build this evidence pack. Try resyncing the dispute or regenerating the pack from the dispute header.",
+        "noDefenceTitle": "Defence letter not generated yet",
+        "noDefenceBody": "DisputeDesk has not generated the bank-facing defence letter for this dispute. The evidence inclusion details below are still available, and the letter will appear here once it is generated."
       },
       "package": {
         "loadingAccessibilityLabel": "Loading defence package",

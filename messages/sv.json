@@ -1295,7 +1295,9 @@
     "reviewTab": {
       "chrome": {
         "loadingReview": "Läser in granskning",
-        "buildFailedBody": "Vi kunde inte bygga detta bevispaket. Försök att synkronisera ärendet på nytt eller generera om paketet från ärendehuvudet."
+        "buildFailedBody": "Vi kunde inte bygga detta bevispaket. Försök att synkronisera ärendet på nytt eller generera om paketet från ärendehuvudet.",
+        "noDefenceTitle": "Försvarsbrevet har inte genererats ännu",
+        "noDefenceBody": "DisputeDesk har ännu inte genererat det bankriktade försvarsbrevet för den här tvisten. Bevisdetaljerna nedan är fortfarande tillgängliga, och brevet visas här när det har genererats."
       },
       "package": {
         "loadingAccessibilityLabel": "Läser in försvarspaket",

@@ -868,7 +868,9 @@
     "reviewTab": {
       "chrome": {
         "loadingReview": "Carregando revisão",
-        "buildFailedBody": "Não conseguimos construir este pacote de evidências. Tente ressincronizar o estorno ou regenerar o pacote pelo cabeçalho do caso."
+        "buildFailedBody": "Não conseguimos construir este pacote de evidências. Tente ressincronizar o estorno ou regenerar o pacote pelo cabeçalho do caso.",
+        "noDefenceTitle": "A carta de defesa ainda não foi gerada",
+        "noDefenceBody": "O DisputeDesk ainda não gerou a carta de defesa voltada ao banco para esta disputa. Os detalhes de inclusão de provas continuam disponíveis abaixo, e a carta aparecerá aqui assim que for gerada."
       },
       "package": {
         "loadingAccessibilityLabel": "Carregando pacote de evidências",
