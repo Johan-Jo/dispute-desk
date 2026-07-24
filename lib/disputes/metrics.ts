@@ -15,6 +15,7 @@ import {
   windowStartDate,
 } from "./chargebackRate";
 import { isDormantInquiry } from "./dormantInquiry";
+import { ACTIVE_NORMALIZED_STATUSES } from "./presentation/isActive";
 
 export interface MetricsOptions {
   /** Shop ID for shop-scoped metrics. Omit for cross-shop (admin). */
@@ -176,11 +177,9 @@ export interface DisputeMetrics {
   chargebackRateLastSyncedAt: string | null;
 }
 
-const ACTIVE_NORMALIZED = [
-  "new", "in_progress", "needs_review", "ready_to_submit",
-  "action_needed", "submitted", "submitted_to_shopify",
-  "waiting_on_issuer", "submitted_to_bank",
-];
+// Single source of truth for "active inventory" — shared with the
+// presentation resolvers (lib/disputes/presentation/isActive.ts).
+const ACTIVE_NORMALIZED = ACTIVE_NORMALIZED_STATUSES;
 
 function pctChange(curr: number, prev: number | null): number | null {
   if (prev === null) return null;
