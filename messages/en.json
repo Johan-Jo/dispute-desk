@@ -620,7 +620,7 @@
       "defenseSectionConclusion": "Conclusion",
       "defenseSectionArgument": "Argument"
     },
-    "kpiNeedsAction": "Needs action",
+    "kpiNeedsAction": "Merchant action required",
     "kpiNeedsActionUrgent": "{count} urgent",
     "kpiAmountAtRisk": "Amount at risk",
     "kpiStrongCases": "Strong cases",
@@ -633,7 +633,7 @@
     "urgentBannerViewAll": "View all",
     "colOrderCustomer": "Order & Customer",
     "colCaseStrength": "Case strength",
-    "colNextAction": "Next action",
+    "colNextAction": "Status & next step",
     "colAmount": "Amount",
     "colDueDate": "Due date",
     "colOutcome": "Outcome",
@@ -660,7 +660,13 @@
       "needsReview": "Needs review",
       "underReview": "Under review",
       "submitted": "Submitted",
-      "closed": "Closed"
+      "closed": "Closed",
+      "monitoring": "Monitoring",
+      "comm": "Communication",
+      "saved": "Saved to Shopify",
+      "won": "Won",
+      "lost": "Lost",
+      "attention": "Attention required"
     },
     "facts": {
       "title": "Case Details",
@@ -1853,7 +1859,12 @@
     "signalLabelValue": {
       "refundIssued": "Proof that the refund was already issued",
       "noRefundOwed": "Proof that no refund was owed (the customer never returned the goods)"
-    }
+    },
+    "kpiActiveDisputes": "Active disputes",
+    "kpiActiveDisputesSub": "Being handled automatically",
+    "kpiAmountAtRiskSub": "Across active disputes",
+    "kpiUnderReview": "Under review",
+    "kpiUnderReviewSub": "Responses sent"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank cannot process",

@@ -64,6 +64,15 @@ const REQUESTED_ATTENTION_REASONS = new Set([
  *  only, never merchant attention (§12V decision 4). */
 const INTERNAL_ATTENTION_REASONS = new Set(["submission_failed"]);
 
+/** attention_reason values that constitute a genuine merchant task
+ *  (blocking + requested). Shared by the /api/disputes attention
+ *  filter and the shop-wide merchant-action aggregate so the two can
+ *  never disagree. */
+export const MERCHANT_TASK_ATTENTION_REASONS: readonly string[] = [
+  ...BLOCKING_ATTENTION_REASONS,
+  ...REQUESTED_ATTENTION_REASONS,
+];
+
 export interface AttentionInput {
   /** `disputes.attention_reason` (meaningful when needs_attention). */
   attentionReason: string | null;

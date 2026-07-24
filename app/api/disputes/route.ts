@@ -11,6 +11,8 @@ import {
   gatherPresentations,
   type DisputeRowFacts,
 } from "@/lib/disputes/presentation/serverFacts";
+import type { I18nToken } from "@/lib/i18n/token";
+import { MERCHANT_TASK_ATTENTION_REASONS } from "@/lib/disputes/presentation/resolveAttention";
 
 /**
  * GET /api/disputes
@@ -126,6 +128,28 @@ export async function GET(req: NextRequest) {
     query = query.is("closed_at", null);
   }
 
+  // Merchant-attention filter (plan §11): independent of the lifecycle
+  // and strength dimensions, with the stale-attention guard.
+  //   attention=tasks — genuine merchant tasks only (blocking +
+  //                     requested attention reasons).
+  //   attention=comm  — communication review states (Gorgias messages
+  //                     awaiting explicit review). `recommended` is not
+  //                     yet queryable server-side (no persisted flag) —
+  //                     documented limitation.
+  const attentionParam = sp.get("attention");
+  if (attentionParam === "tasks" || attentionParam === "comm") {
+    query = query
+      .eq("needs_attention", true)
+      .in(
+        "attention_reason",
+        attentionParam === "comm"
+          ? ["gorgias_evidence_ready"]
+          : [...MERCHANT_TASK_ATTENTION_REASONS],
+      )
+      .is("closed_at", null)
+      .neq("submission_state", "submitted_confirmed");
+  }
+
   // Date range filter
   const ALLOWED_DATE_FIELDS = ["initiated_at", "submitted_at", "closed_at"];
   const dateField = ALLOWED_DATE_FIELDS.includes(sp.get("date_field") ?? "") ? sp.get("date_field")! : "initiated_at";
@@ -208,6 +232,10 @@ export async function GET(req: NextRequest) {
       strongCount: number;
       moderateCount: number;
       supportingCount: number;
+      /** Rules-engine explanation token — the list's strength subtitle
+       *  (replaces the banned "{n} strong + {m} moderate" arithmetic;
+       *  plan §5 item 3). */
+      strengthReasonI18n?: I18nToken | null;
     }
   >();
   if (disputeIds.length > 0) {
@@ -231,6 +259,7 @@ export async function GET(req: NextRequest) {
             strongCount?: number;
             moderateCount?: number;
             supportingCount?: number;
+            strengthReasonI18n?: { key: string; params?: Record<string, string | number> } | null;
           }
         | null
         | undefined;
@@ -240,6 +269,7 @@ export async function GET(req: NextRequest) {
           strongCount: cs.strongCount ?? 0,
           moderateCount: cs.moderateCount ?? 0,
           supportingCount: cs.supportingCount ?? 0,
+          strengthReasonI18n: cs.strengthReasonI18n ?? null,
         });
       } else {
         latestForDispute.set(p.dispute_id, {
@@ -323,6 +353,7 @@ export async function GET(req: NextRequest) {
             strongCount: result.strongCount,
             moderateCount: result.moderateCount,
             supportingCount: result.supportingCount,
+            strengthReasonI18n: result.strengthReasonI18n ?? null,
           });
         } catch {
           // If the engine throws on a malformed legacy checklist, leave
@@ -368,16 +399,7 @@ export async function GET(req: NextRequest) {
     .select("id", { count: "exact", head: true })
     .eq("shop_id", shopId)
     .eq("needs_attention", true)
-    .in("attention_reason", [
-      "quota_exceeded",
-      "feature_blocked",
-      "subscription_expired",
-      "payment_failed",
-      "missing_required_evidence",
-      "auto_build_off",
-      "gorgias_evidence_ready",
-      "review_deadline_approaching",
-    ])
+    .in("attention_reason", [...MERCHANT_TASK_ATTENTION_REASONS])
     .is("closed_at", null)
     .neq("submission_state", "submitted_confirmed");
 

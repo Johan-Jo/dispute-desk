@@ -628,7 +628,7 @@
       "source": "Quelle",
       "created": "Erstellt"
     },
-    "kpiNeedsAction": "Aktion erforderlich",
+    "kpiNeedsAction": "Händleraktion erforderlich",
     "kpiNeedsActionUrgent": "{count} dringend",
     "kpiAmountAtRisk": "Betrag im Risiko",
     "kpiStrongCases": "Starke Fälle",
@@ -641,7 +641,7 @@
     "urgentBannerViewAll": "Alle anzeigen",
     "colOrderCustomer": "Bestellung & Kunde",
     "colCaseStrength": "Fallstärke",
-    "colNextAction": "Nächste Aktion",
+    "colNextAction": "Status & nächster Schritt",
     "colAmount": "Amount",
     "colDueDate": "Fälligkeitsdatum",
     "colOutcome": "Outcome",
@@ -668,7 +668,13 @@
       "needsReview": "Prüfung erforderlich",
       "underReview": "In Prüfung",
       "submitted": "Submitted",
-      "closed": "Closed"
+      "closed": "Closed",
+      "monitoring": "Überwachung",
+      "comm": "Kommunikation",
+      "saved": "In Shopify gespeichert",
+      "won": "Gewonnen",
+      "lost": "Verloren",
+      "attention": "Aufmerksamkeit erforderlich"
     },
     "caseStrength": {
       "strong": "Starker Fall",
@@ -1853,7 +1859,12 @@
     "signalLabelValue": {
       "refundIssued": "Nachweis, dass die Rückerstattung bereits erfolgt ist",
       "noRefundOwed": "Nachweis, dass keine Rückerstattung geschuldet war (der Kunde hat die Ware nie zurückgesendet)"
-    }
+    },
+    "kpiActiveDisputes": "Aktive Streitfälle",
+    "kpiActiveDisputesSub": "Werden automatisch bearbeitet",
+    "kpiAmountAtRiskSub": "Über aktive Streitfälle",
+    "kpiUnderReview": "In Prüfung",
+    "kpiUnderReviewSub": "Antworten gesendet"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank kann nicht verarbeiten",

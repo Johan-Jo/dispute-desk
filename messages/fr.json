@@ -628,7 +628,7 @@
       "source": "Source",
       "created": "Créé"
     },
-    "kpiNeedsAction": "Action requise",
+    "kpiNeedsAction": "Action du marchand requise",
     "kpiNeedsActionUrgent": "{count} urgent(s)",
     "kpiAmountAtRisk": "Montant à risque",
     "kpiStrongCases": "Dossiers solides",
@@ -641,7 +641,7 @@
     "urgentBannerViewAll": "Tout afficher",
     "colOrderCustomer": "Commande et client",
     "colCaseStrength": "Solidité du dossier",
-    "colNextAction": "Prochaine action",
+    "colNextAction": "Statut et prochaine étape",
     "colAmount": "Amount",
     "colDueDate": "Date d'échéance",
     "colOutcome": "Outcome",
@@ -668,7 +668,13 @@
       "needsReview": "À vérifier",
       "underReview": "En cours d'examen",
       "submitted": "Submitted",
-      "closed": "Closed"
+      "closed": "Closed",
+      "monitoring": "Surveillance",
+      "comm": "Communication",
+      "saved": "Enregistrées dans Shopify",
+      "won": "Gagnés",
+      "lost": "Perdus",
+      "attention": "Attention requise"
     },
     "caseStrength": {
       "strong": "Dossier solide",
@@ -1853,7 +1859,12 @@
     "signalLabelValue": {
       "refundIssued": "Preuve que le remboursement a déjà été effectué",
       "noRefundOwed": "Preuve qu'aucun remboursement n'était dû (le client n'a jamais retourné les articles)"
-    }
+    },
+    "kpiActiveDisputes": "Litiges actifs",
+    "kpiActiveDisputesSub": "Gérés automatiquement",
+    "kpiAmountAtRiskSub": "Sur les litiges actifs",
+    "kpiUnderReview": "En examen",
+    "kpiUnderReviewSub": "Réponses envoyées"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "La banque ne peut pas traiter",

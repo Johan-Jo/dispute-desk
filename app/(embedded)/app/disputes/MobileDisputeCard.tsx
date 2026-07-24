@@ -9,12 +9,12 @@ import { withShopParams } from "@/lib/withShopParams";
 import {
   figmaCaseStrength,
   figmaDueDate,
-  figmaNextAction,
+  rowPrimaryState,
   figmaOutcome,
-  figmaRowChrome,
+  rowChromeV2,
   figmaReviewChip,
   figmaStatus,
-  figmaStrengthDetail,
+  strengthSubtitle,
   formatCurrency,
   orderLabel,
   translateReason,
@@ -113,14 +113,19 @@ export function MobileDisputeCard({
   const status = figmaStatus(d);
   const strength = figmaCaseStrength(d);
   const reviewChip = figmaReviewChip(d, t);
-  const detail = figmaStrengthDetail(d, t);
+  const detail = strengthSubtitle(d, t);
   const outcome = figmaOutcome(d);
   const due = figmaDueDate(d, t, dateLocale);
-  const next = figmaNextAction(d, t);
-  const chrome = figmaRowChrome(d);
+  const next = rowPrimaryState(d, t);
+  const chrome = rowChromeV2(d);
   // approved / conceded rows are routed out of the actionable statuses by
   // figmaStatus, so this stays correct without an extra guard.
-  const isActionable = status === "action-needed" || status === "needs-review";
+  // Prominence follows MERCHANT ATTENTION (genuine tasks only), never
+  // "every active dispute" (plan §5). Legacy status fallback for rows
+  // without a presentation.
+  const isActionable = d.presentation
+    ? d.presentation.needsMerchantAction
+    : status === "action-needed" || status === "needs-review";
 
   const cardStyle: CSSProperties = {
     background: chrome.bgColor ?? "#ffffff",
@@ -301,9 +306,10 @@ export function MobileDisputeCard({
         </span>
       </div>
 
-      {/* Next action — full-width primary button on actionable rows,
-          subdued secondary text otherwise. Same destination as the
-          card link; this is purely a visual-prominence signal. */}
+      {/* Status & next step — primary treatment only when a genuine
+          merchant task exists; calm secondary treatment for routine
+          DisputeDesk work. Two lines: lifecycle label + responsibility
+          copy (plan §5). */}
       <div
         style={{
           paddingTop: 12,
@@ -323,8 +329,21 @@ export function MobileDisputeCard({
             textAlign: "center",
           }}
         >
-          {next}
+          {next.label}
         </div>
+        {next.sub ? (
+          <div
+            style={{
+              fontSize: 12,
+              color: "#6D7175",
+              marginTop: 6,
+              lineHeight: 1.4,
+              textAlign: "center",
+            }}
+          >
+            {next.sub}
+          </div>
+        ) : null}
       </div>
     </Link>
   );

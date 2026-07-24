@@ -628,7 +628,7 @@
       "source": "Källa",
       "created": "Skapad"
     },
-    "kpiNeedsAction": "Kräver åtgärd",
+    "kpiNeedsAction": "Åtgärd från handlaren krävs",
     "kpiNeedsActionUrgent": "{count} brådskande",
     "kpiAmountAtRisk": "Belopp i riskzonen",
     "kpiStrongCases": "Starka ärenden",
@@ -641,7 +641,7 @@
     "urgentBannerViewAll": "Visa alla",
     "colOrderCustomer": "Beställning & kund",
     "colCaseStrength": "Ärendestyrka",
-    "colNextAction": "Nästa åtgärd",
+    "colNextAction": "Status & nästa steg",
     "colAmount": "Amount",
     "colDueDate": "Förfallodatum",
     "colOutcome": "Outcome",
@@ -668,7 +668,13 @@
       "needsReview": "Kräver granskning",
       "underReview": "Under granskning",
       "submitted": "Submitted",
-      "closed": "Closed"
+      "closed": "Closed",
+      "monitoring": "Övervakning",
+      "comm": "Kommunikation",
+      "saved": "Sparade i Shopify",
+      "won": "Vunna",
+      "lost": "Förlorade",
+      "attention": "Uppmärksamhet krävs"
     },
     "caseStrength": {
       "strong": "Starkt ärende",
@@ -1853,7 +1859,12 @@
     "signalLabelValue": {
       "refundIssued": "Bevis på att återbetalningen redan är genomförd",
       "noRefundOwed": "Bevis på att ingen återbetalning skulle utgå (kunden returnerade aldrig varorna)"
-    }
+    },
+    "kpiActiveDisputes": "Aktiva tvister",
+    "kpiActiveDisputesSub": "Hanteras automatiskt",
+    "kpiAmountAtRiskSub": "Över aktiva tvister",
+    "kpiUnderReview": "Under granskning",
+    "kpiUnderReviewSub": "Svar skickade"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banken kan inte behandla",

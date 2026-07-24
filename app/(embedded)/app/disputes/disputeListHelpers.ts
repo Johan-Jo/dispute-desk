@@ -1,6 +1,14 @@
 import { DISPUTE_REASON_FAMILIES, type AllDisputeReasonCode } from "@/lib/rules/disputeReasons";
 import { normalizeDisputeReasonKey } from "@/lib/disputes/reasonLabel";
 import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
+import type { DisputePresentation } from "@/lib/disputes/presentation/types";
+import { listPrimaryState } from "@/lib/disputes/presentation/labels";
+import { resolveToken } from "@/lib/i18n/resolveToken";
+import type { I18nToken } from "@/lib/i18n/token";
+import {
+  ATTENTION_ROW_EMPHASIS,
+  type RowEmphasisTokens,
+} from "@/lib/disputes/presentation/uiTokens";
 
 export interface Dispute {
   id: string;
@@ -37,7 +45,86 @@ export interface Dispute {
     strongCount: number;
     moderateCount: number;
     supportingCount: number;
+    /** Rules-engine explanation token — the strength subtitle
+     *  (replaces the banned signal-count arithmetic; plan §5). */
+    strengthReasonI18n?: I18nToken | null;
   } | null;
+  /** Shared presentation model resolved server-side by
+   *  lib/disputes/presentation — the same interpretation the dashboard
+   *  and detail page use. The list never re-derives it. */
+  presentation?: DisputePresentation | null;
+}
+
+/* ── Shared-presentation row helpers (plan §5) ── */
+
+/** The two-line "Status & next step" cell: primary operational label +
+ *  secondary responsibility copy. Falls back to the legacy next-action
+ *  vocabulary only when a row predates the presentation field. */
+export function rowPrimaryState(
+  d: Dispute,
+  t: Translate,
+): { label: string; sub: string } {
+  if (d.presentation) {
+    const keys = listPrimaryState(d.presentation);
+    return { label: t(keys.labelKey), sub: t(keys.subKey) };
+  }
+  return { label: figmaNextAction(d, t), sub: "" };
+}
+
+/** Row emphasis follows MERCHANT ATTENTION only (plan §5): light for
+ *  opportunity/recommended, clear-task for requested, warning for
+ *  blocking, error for merchant-resolvable technical problems. Never
+ *  emphasized for active/weak/editable/monitoring/saved. */
+export function rowAttentionEmphasis(d: Dispute): RowEmphasisTokens | null {
+  const attention = d.presentation?.attention;
+  if (!attention) return null;
+  return ATTENTION_ROW_EMPHASIS[attention] ?? null;
+}
+
+/** Full row chrome from the shared model. Emphasis is attention-driven;
+ *  a tight deadline AMPLIFIES a row that already carries a required
+ *  action (blocking/requested) to the warning treatment — deadline risk
+ *  is emphasis, never a standalone attention value (plan §3.1/§5).
+ *  Terminal rows dim. Falls back to the legacy chrome for rows without
+ *  a presentation. */
+export function rowChromeV2(d: Dispute): {
+  stripeColor: string | null;
+  bgColor: string | null;
+  opacity: number;
+} {
+  const p = d.presentation;
+  if (!p) return figmaRowChrome(d);
+  if (p.terminal) return { stripeColor: null, bgColor: null, opacity: 0.6 };
+  const emphasis = ATTENTION_ROW_EMPHASIS[p.attention] ?? null;
+  if (!emphasis) return { stripeColor: null, bgColor: null, opacity: 1 };
+  const hasRequiredAction =
+    p.attention === "blocking" ||
+    p.attention === "requested" ||
+    p.attention === "technical_error";
+  if (hasRequiredAction && d.due_at && !d.closed_at) {
+    const hoursLeft =
+      (new Date(d.due_at).getTime() - Date.now()) / (1000 * 60 * 60);
+    if (hoursLeft <= 48) {
+      const warn = ATTENTION_ROW_EMPHASIS.blocking!;
+      return { stripeColor: warn.stripe, bgColor: warn.bg, opacity: 1 };
+    }
+  }
+  return { stripeColor: emphasis.stripe, bgColor: emphasis.bg, opacity: 1 };
+}
+
+/** Strength subtitle = the rules-engine's own explanation (resolved
+ *  i18n token via the canonical resolveToken path), never re-derived
+ *  arithmetic. Null when the engine has no explanation for the row.
+ *  Pass a ROOT translator (token keys are absolute). */
+export function strengthSubtitle(d: Dispute, rootT: Translate): string | null {
+  const token = d.caseStrength?.strengthReasonI18n;
+  if (!token?.key) return null;
+  try {
+    const text = resolveToken(rootT as Parameters<typeof resolveToken>[0], token);
+    return (text as string) || null;
+  } catch {
+    return null;
+  }
 }
 
 export type TabId = "active" | "closed" | "all";

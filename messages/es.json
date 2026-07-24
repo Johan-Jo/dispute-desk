@@ -628,7 +628,7 @@
       "source": "Fuente",
       "created": "Creado"
     },
-    "kpiNeedsAction": "Requiere acción",
+    "kpiNeedsAction": "Acción del comerciante requerida",
     "kpiNeedsActionUrgent": "{count} urgentes",
     "kpiAmountAtRisk": "Monto en riesgo",
     "kpiStrongCases": "Casos sólidos",
@@ -641,7 +641,7 @@
     "urgentBannerViewAll": "Ver todas",
     "colOrderCustomer": "Pedido y cliente",
     "colCaseStrength": "Solidez del caso",
-    "colNextAction": "Siguiente acción",
+    "colNextAction": "Estado y siguiente paso",
     "colAmount": "Amount",
     "colDueDate": "Fecha de vencimiento",
     "colOutcome": "Outcome",
@@ -668,7 +668,13 @@
       "needsReview": "Requiere revisión",
       "underReview": "En revisión",
       "submitted": "Submitted",
-      "closed": "Closed"
+      "closed": "Closed",
+      "monitoring": "Supervisión",
+      "comm": "Comunicación",
+      "saved": "Guardadas en Shopify",
+      "won": "Ganadas",
+      "lost": "Perdidas",
+      "attention": "Atención requerida"
     },
     "caseStrength": {
       "strong": "Caso sólido",
@@ -1853,7 +1859,12 @@
     "signalLabelValue": {
       "refundIssued": "Prueba de que el reembolso ya fue emitido",
       "noRefundOwed": "Prueba de que no correspondía ningún reembolso (el cliente nunca devolvió los productos)"
-    }
+    },
+    "kpiActiveDisputes": "Disputas activas",
+    "kpiActiveDisputesSub": "Gestionadas automáticamente",
+    "kpiAmountAtRiskSub": "En disputas activas",
+    "kpiUnderReview": "En revisión",
+    "kpiUnderReviewSub": "Respuestas enviadas"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "El banco no puede procesar",
