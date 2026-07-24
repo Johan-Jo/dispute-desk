@@ -19,3 +19,13 @@ export {
   ACTIVE_NORMALIZED_STATUSES,
   isActiveNormalizedStatus,
 } from "./isActive";
+export {
+  FIELD_ACTIONS,
+  DEFAULT_FIELD_ACTION,
+  MERCHANT_ACTIONABLE_FIELDS,
+  SYSTEM_DERIVED_FIELDS,
+  canMerchantUpload,
+  deriveConcreteContribution,
+  type ChecklistRowFacts,
+  type FieldAction,
+} from "./concreteContribution";

@@ -322,9 +322,16 @@ export async function computeDisputeMetrics(
   // period selector.
   const won = outcomeList.filter((d) => d.final_outcome === "won");
   const lost = outcomeList.filter((d) => d.final_outcome === "lost");
+  // Win-rate denominator (plan §13.1, decision 2026-07-24): `accepted`
+  // (merchant accepted liability / did not contest) counts as a loss —
+  // money was conceded. `refunded` stays excluded (resolved without a
+  // ruling on the merits); `partially_won`/`expired`/`canceled` remain
+  // excluded (never produced by automated paths). The Win Rate tile's
+  // label must disclose this definition.
+  const accepted = outcomeList.filter((d) => d.final_outcome === "accepted");
   const disputesWon = won.length;
   const disputesLost = lost.length;
-  const winLossDenom = disputesWon + disputesLost;
+  const winLossDenom = disputesWon + disputesLost + accepted.length;
   const winRate = winLossDenom > 0 ? Math.round((disputesWon / winLossDenom) * 100) : 0;
 
   // ── Financial outcomes (windowed by closed_at, primary currency) ──────
@@ -408,7 +415,9 @@ export async function computeDisputeMetrics(
   const phaseWinPct = (phaseInq: boolean): number => {
     const w = won.filter((d) => (d.phase === "inquiry") === phaseInq).length;
     const l = lost.filter((d) => (d.phase === "inquiry") === phaseInq).length;
-    return w + l > 0 ? Math.round((w / (w + l)) * 100) : 0;
+    // Same denominator rule as the headline winRate: accepted = loss.
+    const a = accepted.filter((d) => (d.phase === "inquiry") === phaseInq).length;
+    return w + l + a > 0 ? Math.round((w / (w + l + a)) * 100) : 0;
   };
   const winRatePctSplit: CbInqSplit = {
     cb: phaseWinPct(false),
@@ -427,7 +436,8 @@ export async function computeDisputeMetrics(
   const prevAmountAtRisk: number | null = null; // snapshot metric, no delta
   const prevWon = prevOutcomeList.filter((d) => d.final_outcome === "won").length;
   const prevLost = prevOutcomeList.filter((d) => d.final_outcome === "lost").length;
-  const prevDenom = prevWon + prevLost;
+  const prevAccepted = prevOutcomeList.filter((d) => d.final_outcome === "accepted").length;
+  const prevDenom = prevWon + prevLost + prevAccepted;
   const prevWinRate = periodFrom && prevDenom > 0
     ? Math.round((prevWon / prevDenom) * 100)
     : periodFrom ? 0 : null;

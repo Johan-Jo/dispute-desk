@@ -7,6 +7,10 @@ import {
 } from "@/lib/argument/nameMismatch";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import { extractShopId } from "@/lib/middleware/extractShopId";
+import {
+  gatherPresentations,
+  type DisputeRowFacts,
+} from "@/lib/disputes/presentation/serverFacts";
 
 /**
  * GET /api/disputes
@@ -328,16 +332,65 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // ── Shared presentation model (plan §3) ────────────────────────────
+  // One resolver interpretation per row: operational lifecycle, merchant
+  // attention, strength, external milestones. Batched queries inside
+  // (latest pack, checklist, rules, integration flag) — no per-row N+1.
+  const strengthOverallByDispute = new Map<string, string>();
+  for (const [id, cs] of strengthByDispute) {
+    strengthOverallByDispute.set(id, cs.overall);
+  }
+  const presentations = await gatherPresentations(
+    sb,
+    shopId,
+    (data ?? []) as unknown as DisputeRowFacts[],
+    { includeConcreteContribution: true, strengthOverallByDispute },
+  );
+
   const disputesWithStrength = (data ?? []).map((d) => ({
     ...d,
     caseStrength: strengthByDispute.get(d.id) ?? null,
+    presentation: presentations.get(d.id) ?? null,
   }));
+
+  // Corrected merchant-action count: genuine tasks only (blocking /
+  // requested attention reasons) — NOT every needs_attention row (which
+  // includes internal failures like submission_failed). Shop-wide, with
+  // the stale-attention guard (no closed / transmission-confirmed rows).
+  //
+  // Known approximation (documented in plan §12V item 4): the review-mode
+  // approval gate (pack ready + unapproved) and the shop-level Gorgias
+  // reconnect flag are not attention_reason rows and are not counted
+  // here; they surface per-row via `presentation` and are folded into
+  // the dashboard-side count in the stats route.
+  const { count: merchantActionCount } = await sb
+    .from("disputes")
+    .select("id", { count: "exact", head: true })
+    .eq("shop_id", shopId)
+    .eq("needs_attention", true)
+    .in("attention_reason", [
+      "quota_exceeded",
+      "feature_blocked",
+      "subscription_expired",
+      "payment_failed",
+      "missing_required_evidence",
+      "auto_build_off",
+      "gorgias_evidence_ready",
+      "review_deadline_approaching",
+    ])
+    .is("closed_at", null)
+    .neq("submission_state", "submitted_confirmed");
 
   return NextResponse.json({
     disputes: disputesWithStrength,
     aggregates: {
-      // Shop-wide count, independent of the current filter/page.
+      // Legacy shop-wide count (includes internal failures) — kept until
+      // the UI cuts over to merchant_action_required.
       needs_attention: needsAttentionCount ?? 0,
+      // Genuine merchant tasks only (plan §5): blocking + requested
+      // attention reasons, excluding terminal and transmission-confirmed
+      // rows (stale-attention guard, §4).
+      merchant_action_required: merchantActionCount ?? 0,
     },
     pagination: {
       page,
