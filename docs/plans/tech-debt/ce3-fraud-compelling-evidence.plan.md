@@ -75,6 +75,23 @@ The blocker is NOT data availability — we can backfill IP + user-agent for ~3 
 
 So: build the backfill (it's cheap and unlocks matching), but expect CE3.0 to qualify on a small minority of disputes. Re-run `scripts/sql/_ce3_feasibility.sql` after backfilling `browser_ip`/`user_agent` per order to get the true qualification rate with real element matching.
 
+## DEFINITIVE RESULT (2026-07-24) — backfill done, matching measured
+
+The Blume backfill completed: **51,198 orders in the 400-day window, 45,292 with IP (88%), 45,081 with user_agent (88%)**. With the device element now populated, the true CE3.0 qualification query (`scripts/sql/_ce3_feasibility.sql`, IP OR user_agent as the required element):
+
+| Gate | Count |
+|---|---|
+| Fraud disputes | 361 |
+| 2+ prior undisputed orders in the 120–365d window | **12 (3.3%)** |
+| …AND ≥2 priors share IP or user_agent with the disputed order | **0** |
+
+**Backfilling the device data changed the outcome by exactly zero.** This confirms the blocker is the transaction-history precondition, not data availability. Only 12 fraud disputes have 2+ qualifying priors at all, and none of those priors share a device element with the disputed order — the signature of genuine card-not-present fraud (a stolen card used once, not a returning customer on a known device).
+
+### Bottom line
+- **Do NOT build the CE3.0 signal now.** It would fire on 0 of 361 fraud disputes for this merchant base. The `account_history` demotion already shipped removes the *false* CE3.0 proxy, which was the real defect.
+- **The backfill + columns still earn their keep**: they make CE3.0 *measurable* going forward, and the device data supports other fraud signals (IP/device consistency on the disputed order itself, which IS common).
+- **Revisit trigger:** re-run `scripts/sql/_ce3_feasibility.sql` if the merchant mix shifts toward subscription/repeat-purchase businesses where returning-customer fraud (same device, disputed anyway) is common — that's the pattern CE3.0 is designed for. For a one-off-purchase base like Blume, it structurally won't qualify.
+
 ## What this means
 
 1. **Building a full CE3.0 signal today would fire on ~0% of our fraud disputes.** It is NOT the highest-value fraud work despite being the "correct" Visa remedy. The audit ranked it S1 on correctness grounds; the data says the *impact* is currently nil.
