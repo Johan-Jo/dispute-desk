@@ -5790,6 +5790,36 @@
       "technical_error": "Reconnect to restore monitoring"
     },
     "internalIssue": "DisputeDesk detected a technical issue and is working to resolve it. No action is currently required from you.",
-    "deadlineLabel": "Shopify response deadline"
+    "deadlineLabel": "Shopify response deadline",
+    "hero": {
+      "nextLabel": "Next:",
+      "building_evidence": {
+        "title": "Building your evidence pack",
+        "message": "DisputeDesk is collecting order, payment, fulfillment, and tracking data from your connected sources. The evidence pack is assembled automatically — no action is needed from you."
+      },
+      "monitoring": {
+        "title": "Monitoring for additional evidence",
+        "message": "The current evidence supports the response, and DisputeDesk is monitoring connected sources for anything that strengthens it further."
+      },
+      "pack_prepared": {
+        "title": "Evidence package prepared",
+        "message": "DisputeDesk has assembled the evidence package and will continue monitoring for relevant updates until the response is locked or sent."
+      },
+      "saved_to_shopify": {
+        "title": "Evidence saved to Shopify",
+        "message": "The latest evidence package has been saved with the Shopify dispute. DisputeDesk will continue monitoring and updating it while changes remain possible."
+      },
+      "under_review": {
+        "title": "The card network is reviewing the dispute",
+        "message": "The response has been sent and can no longer be changed. DisputeDesk is tracking the dispute for an outcome."
+      },
+      "next": {
+        "building_evidence": "Evidence pack prepared — usually within a few hours",
+        "monitoring": "Evidence saved to Shopify before the response deadline",
+        "pack_prepared": "Evidence saved to Shopify before the response deadline",
+        "saved_to_shopify": "Shopify sends the response at the deadline",
+        "under_review": "Outcome received"
+      }
+    }
   }
 }

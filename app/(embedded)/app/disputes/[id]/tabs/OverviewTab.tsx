@@ -39,6 +39,8 @@ import { EVIDENCE_EVALUATION_HELPER } from "@/lib/argument/evidenceStatus";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type { PresentationStatus } from "../workspace-components/types";
 import { TAB_INDEX } from "../workspace-components/types";
+import { resolveLifecycle } from "@/lib/disputes/presentation/resolveLifecycle";
+import { ATTENTION_CHIP } from "@/lib/disputes/presentation/uiTokens";
 import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
 import { buildRefundPresentation } from "@/lib/argument/refundPresentation";
 import {
@@ -223,6 +225,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // Root (unscoped) translator for token resolution — used to resolve
   // EvidenceLineItem.reasonToken at the internal-only row caption boundary.
   const tRoot = useTranslations();
+  const tp = useTranslations("presentation");
   const { data, derived, actions, clientState } = workspace;
 
   if (!data) return null;
@@ -314,7 +317,40 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // dropped field surfaces as a TypeScript error rather than a silent
   // "hard_to_win" degradation in the UI.
   const heroVariant: HeroVariant = caseStrength.heroVariant as HeroVariant;
-  const heroTone = HERO_TONE_BY_VARIANT[heroVariant];
+
+  // ── Shared presentation model (plan §6.2) ──
+  // The hero maps RESOLVED dimensions to copy/layout — it no longer
+  // re-classifies via `presentationStatus × heroVariant`. Fallback:
+  // when an older cached response lacks `presentation`, run the same
+  // pure lifecycle resolver over the fields already on the client so
+  // the interpretation cannot diverge.
+  const presentation = data.presentation ?? null;
+  const lifecycle =
+    presentation?.lifecycle ??
+    resolveLifecycle({
+      finalOutcome: dispute.finalOutcome ?? null,
+      closedAt: null,
+      submissionState: dispute.submissionState ?? null,
+      normalizedStatus: dispute.normalizedStatus ?? null,
+      packStatus: data.pack?.status ?? null,
+    });
+
+  // Hero tone follows LIFECYCLE, not strength (plan §8: strength never
+  // creates alarm or a green "ready" glow). Calm indigo default; green
+  // for won; red only for lost. Shopify Protect coverage keeps its
+  // distinct cool-blue "no action" hero (coverage gate — CLAUDE.md).
+  const HERO_TONE_CALM = {
+    bg: "#F8FAFF", border: "#D6E0F5", iconBg: "#E0E7FF", iconColor: "#3730A3",
+    titleColor: "#1F2A5B", bodyColor: "#3F4A5C", pillBg: "#E0E7FF", pillColor: "#3730A3",
+  };
+  const heroTone =
+    heroVariant === "covered"
+      ? HERO_TONE_BY_VARIANT.covered
+      : lifecycle === "won"
+        ? HERO_TONE_BY_VARIANT.likely_to_win
+        : lifecycle === "lost"
+          ? HERO_TONE_BY_VARIANT.hard_to_win
+          : HERO_TONE_CALM;
 
   // Whether carrier delivery is already CONFIRMED (delivered to recipient
   // or signed for). Drives the "monitoring" banner so it stops promising a
@@ -331,76 +367,73 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     return proof === "delivered_confirmed" || proof === "signature_confirmed";
   })();
 
+  /** Hero headline — strength-free operational statement (plan §8:
+   *  "Strong case saved…" style headlines are banned). Keyed by the
+   *  resolved lifecycle; Shopify Protect coverage keeps its dedicated
+   *  covered headline. Terminal titles reuse the existing translated
+   *  `hero.title.closed.*` keys. */
   function resolveHeroTitle(): string {
-    switch (presentationStatus) {
-      case "CLOSED_WON":
+    if (heroVariant === "covered" && lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed") {
+      return t("hero.title.preSubmit.covered");
+    }
+    switch (lifecycle) {
+      case "won":
         return t("hero.title.closed.won");
-      case "CLOSED_LOST":
+      case "lost":
         return t("hero.title.closed.lost");
-      case "CLOSED_UNKNOWN":
+      case "closed":
         return t("hero.title.closed.unknown");
-      case "SUBMITTED_TO_NETWORK":
-        return t(`hero.title.submitted_to_network.${heroVariant}`);
-      case "AWAITING_SHOPIFY_AUTO_SUBMISSION":
-        return t(`hero.title.awaiting.${heroVariant}`);
-      case "SAVED_TO_SHOPIFY":
-        return t(`hero.title.saved.${heroVariant}`);
-      case "DRAFT":
       default:
-        return t(`hero.title.preSubmit.${heroVariant}`);
+        return tp(`hero.${lifecycle}.title`);
     }
   }
   const strengthLabel = resolveHeroTitle();
 
+  /** Hero message — what DisputeDesk is doing NOW. Strength commentary
+   *  stays out of the hero (it lives in the assessment/recommendation
+   *  copy); terminal + covered messages reuse the existing translated
+   *  keys. */
   function resolveHeroSubtitle(): string | null {
-    const reason = (strengthReasonText ?? "").trim();
-    const savedDate = formatDate(submittedAt);
-    const deadline = dispute.dueAt ? formatDate(dispute.dueAt) : null;
-    switch (presentationStatus) {
-      case "DRAFT":
-        return reason.length > 0 ? reason : null;
-      case "SAVED_TO_SHOPIFY":
-        if (!reason && !submittedAt) return null;
-        if (reason && submittedAt && deadline) {
-          return t("hero.subtitle.savedWithReasonAndDeadline", {
-            strengthReason: reason || " ",
-            savedDate,
-            deadline,
-          });
-        }
-        if (reason && submittedAt) {
-          return t("hero.subtitle.savedWithReason", {
-            strengthReason: reason || " ",
-            savedDate,
-          });
-        }
-        return t("hero.subtitle.savedNoDate", { strengthReason: reason || " " });
-      case "AWAITING_SHOPIFY_AUTO_SUBMISSION":
-        return t("hero.subtitle.awaitingForward", { strengthReason: reason || " " });
-      case "SUBMITTED_TO_NETWORK":
+    if (heroVariant === "covered" && lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed") {
+      const reason = (strengthReasonText ?? "").trim();
+      return reason.length > 0 ? reason : null;
+    }
+    switch (lifecycle) {
+      case "won":
+        return t("hero.subtitle.closedWon", {
+          submittedDate: submittedAt ? formatDate(submittedAt) : "none",
+        });
+      case "lost":
+        return t("hero.subtitle.closedLost", {
+          submittedDate: submittedAt ? formatDate(submittedAt) : "none",
+        });
+      case "closed":
+        return t("hero.subtitle.closedUnknown", {
+          outcome: dispute.finalOutcome ?? "—",
+        });
+      case "under_review":
         if (submittedAt) {
           return t("hero.subtitle.submittedToNetworkWithDate", {
             submittedDate: formatDate(submittedAt),
           });
         }
-        return t("hero.subtitle.submittedToNetwork", { strengthReason: reason || " " });
-      case "CLOSED_WON":
-        return t("hero.subtitle.closedWon", {
-          submittedDate: submittedAt ? formatDate(submittedAt) : "none",
-        });
-      case "CLOSED_LOST":
-        return t("hero.subtitle.closedLost", {
-          submittedDate: submittedAt ? formatDate(submittedAt) : "none",
-        });
-      case "CLOSED_UNKNOWN":
-        return t("hero.subtitle.closedUnknown", {
-          outcome: dispute.finalOutcome ?? "—",
-        });
+        return tp("hero.under_review.message");
       default:
-        return reason.length > 0 ? reason : null;
+        return tp(`hero.${lifecycle}.message`);
     }
   }
   const heroSubtitle = resolveHeroSubtitle();
+
+  // "Next:" milestone line — active (non-terminal, non-covered) states
+  // only. "Monitoring ≠ Done": the saved state's next milestone is
+  // Shopify sending the response, never "done".
+  const heroNextStep =
+    heroVariant !== "covered" &&
+    lifecycle !== "won" &&
+    lifecycle !== "lost" &&
+    lifecycle !== "closed"
+      ? tp(`hero.next.${lifecycle}`)
+      : null;
 
   /* ── Timeline ──
    *
@@ -821,6 +854,45 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           {heroSubtitle && (
             <p style={{ fontSize: 14, color: heroTone.bodyColor, margin: 0, lineHeight: 1.5, opacity: 0.85 }}>
               {heroSubtitle}
+            </p>
+          )}
+          {/* Merchant status pill — the attention dimension (grey "No
+              action required" when none). Emphasis colors only when a
+              genuine action exists. */}
+          {presentation && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+              <span
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  padding: "2px 9px", borderRadius: 999, fontSize: 11.5,
+                  fontWeight: 600, lineHeight: 1.5, whiteSpace: "nowrap",
+                  background: ATTENTION_CHIP[presentation.attention].bg,
+                  color: ATTENTION_CHIP[presentation.attention].fg,
+                }}
+              >
+                <span
+                  style={{
+                    width: 6, height: 6, borderRadius: "50%", flex: "none",
+                    background: ATTENTION_CHIP[presentation.attention].dot,
+                  }}
+                />
+                {tp(`attention.${presentation.attention}`)}
+              </span>
+            </div>
+          )}
+          {/* Next milestone — Monitoring ≠ Done: active states always
+              name what happens next. */}
+          {heroNextStep && (
+            <p style={{ fontSize: 12.5, color: "#6D7175", margin: "8px 0 0", lineHeight: 1.5 }}>
+              <span style={{ fontWeight: 600, color: "#4B5563" }}>{tp("hero.nextLabel")}</span>{" "}
+              {heroNextStep}
+            </p>
+          )}
+          {/* Internal-issue transparency — neutral, no merchant action
+              implied (plan §3.1 internal failures). */}
+          {presentation?.internalIssue && (
+            <p style={{ fontSize: 12.5, color: "#6D7175", margin: "8px 0 0", lineHeight: 1.5 }}>
+              {tp("internalIssue")}
             </p>
           )}
         </div>

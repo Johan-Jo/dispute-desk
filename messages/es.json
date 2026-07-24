@@ -5791,6 +5791,36 @@
       "technical_error": "Vuelva a conectar para restaurar la supervisión"
     },
     "internalIssue": "DisputeDesk detectó un problema técnico y está trabajando para resolverlo. Por el momento no se requiere ninguna acción de su parte.",
-    "deadlineLabel": "Fecha límite de respuesta de Shopify"
+    "deadlineLabel": "Fecha límite de respuesta de Shopify",
+    "hero": {
+      "nextLabel": "Siguiente:",
+      "building_evidence": {
+        "title": "Preparando su paquete de pruebas",
+        "message": "DisputeDesk está recopilando datos de pedidos, pagos, envíos y seguimiento de sus fuentes conectadas. El paquete de pruebas se arma automáticamente — no se requiere ninguna acción de su parte."
+      },
+      "monitoring": {
+        "title": "Supervisando en busca de más pruebas",
+        "message": "Las pruebas actuales respaldan la respuesta, y DisputeDesk supervisa las fuentes conectadas en busca de cualquier cosa que la fortalezca."
+      },
+      "pack_prepared": {
+        "title": "Paquete de pruebas preparado",
+        "message": "DisputeDesk ha preparado el paquete de pruebas y seguirá supervisando actualizaciones relevantes hasta que la respuesta se bloquee o se envíe."
+      },
+      "saved_to_shopify": {
+        "title": "Pruebas guardadas en Shopify",
+        "message": "El último paquete de pruebas se ha guardado en la disputa de Shopify. DisputeDesk seguirá supervisándolo y actualizándolo mientras los cambios sean posibles."
+      },
+      "under_review": {
+        "title": "La red de tarjetas está revisando la disputa",
+        "message": "La respuesta se ha enviado y ya no se puede modificar. DisputeDesk sigue la disputa hasta conocer el resultado."
+      },
+      "next": {
+        "building_evidence": "Paquete de pruebas preparado — normalmente en pocas horas",
+        "monitoring": "Pruebas guardadas en Shopify antes de la fecha límite de respuesta",
+        "pack_prepared": "Pruebas guardadas en Shopify antes de la fecha límite de respuesta",
+        "saved_to_shopify": "Shopify envía la respuesta en la fecha límite",
+        "under_review": "Resultado recibido"
+      }
+    }
   }
 }

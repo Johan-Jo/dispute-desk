@@ -5791,6 +5791,36 @@
       "technical_error": "Reconnectez-vous pour rétablir la surveillance"
     },
     "internalIssue": "DisputeDesk a détecté un problème technique et travaille à le résoudre. Aucune action n'est requise de votre part pour le moment.",
-    "deadlineLabel": "Date limite de réponse Shopify"
+    "deadlineLabel": "Date limite de réponse Shopify",
+    "hero": {
+      "nextLabel": "Prochaine étape :",
+      "building_evidence": {
+        "title": "Constitution de votre dossier de preuves",
+        "message": "DisputeDesk collecte les données de commande, de paiement, d'expédition et de suivi depuis vos sources connectées. Le dossier de preuves est assemblé automatiquement — aucune action n'est requise de votre part."
+      },
+      "monitoring": {
+        "title": "Surveillance de preuves supplémentaires",
+        "message": "Les preuves actuelles soutiennent la réponse, et DisputeDesk surveille les sources connectées pour tout élément susceptible de la renforcer."
+      },
+      "pack_prepared": {
+        "title": "Dossier de preuves préparé",
+        "message": "DisputeDesk a assemblé le dossier de preuves et continue de surveiller les mises à jour pertinentes jusqu'à ce que la réponse soit verrouillée ou envoyée."
+      },
+      "saved_to_shopify": {
+        "title": "Preuves enregistrées dans Shopify",
+        "message": "Le dernier dossier de preuves a été enregistré dans le litige Shopify. DisputeDesk continue de le surveiller et de le mettre à jour tant que des modifications restent possibles."
+      },
+      "under_review": {
+        "title": "Le réseau de cartes examine le litige",
+        "message": "La réponse a été envoyée et ne peut plus être modifiée. DisputeDesk suit le litige jusqu'au résultat."
+      },
+      "next": {
+        "building_evidence": "Dossier de preuves préparé — généralement en quelques heures",
+        "monitoring": "Preuves enregistrées dans Shopify avant la date limite de réponse",
+        "pack_prepared": "Preuves enregistrées dans Shopify avant la date limite de réponse",
+        "saved_to_shopify": "Shopify envoie la réponse à la date limite",
+        "under_review": "Résultat reçu"
+      }
+    }
   }
 }

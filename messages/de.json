@@ -5791,6 +5791,36 @@
       "technical_error": "Verbindung wiederherstellen, um die Überwachung fortzusetzen"
     },
     "internalIssue": "DisputeDesk hat ein technisches Problem erkannt und arbeitet an der Lösung. Derzeit ist keine Aktion von Ihnen erforderlich.",
-    "deadlineLabel": "Shopify-Antwortfrist"
+    "deadlineLabel": "Shopify-Antwortfrist",
+    "hero": {
+      "nextLabel": "Als Nächstes:",
+      "building_evidence": {
+        "title": "Ihr Beweispaket wird erstellt",
+        "message": "DisputeDesk sammelt Bestell-, Zahlungs-, Versand- und Tracking-Daten aus Ihren verbundenen Quellen. Das Beweispaket wird automatisch zusammengestellt — keine Aktion von Ihnen erforderlich."
+      },
+      "monitoring": {
+        "title": "Überwachung auf weitere Beweise",
+        "message": "Die aktuellen Beweise stützen die Antwort, und DisputeDesk überwacht verbundene Quellen auf alles, was sie weiter stärkt."
+      },
+      "pack_prepared": {
+        "title": "Beweispaket erstellt",
+        "message": "DisputeDesk hat das Beweispaket zusammengestellt und überwacht weiterhin relevante Aktualisierungen, bis die Antwort gesperrt oder gesendet wird."
+      },
+      "saved_to_shopify": {
+        "title": "Beweise in Shopify gespeichert",
+        "message": "Das aktuelle Beweispaket wurde im Shopify-Disput gespeichert. DisputeDesk überwacht und aktualisiert es weiter, solange Änderungen möglich sind."
+      },
+      "under_review": {
+        "title": "Das Kartennetzwerk prüft den Disput",
+        "message": "Die Antwort wurde gesendet und kann nicht mehr geändert werden. DisputeDesk verfolgt den Disput bis zum Ergebnis."
+      },
+      "next": {
+        "building_evidence": "Beweispaket erstellt — meist innerhalb weniger Stunden",
+        "monitoring": "Beweise werden vor der Antwortfrist in Shopify gespeichert",
+        "pack_prepared": "Beweise werden vor der Antwortfrist in Shopify gespeichert",
+        "saved_to_shopify": "Shopify sendet die Antwort zur Frist",
+        "under_review": "Ergebnis erhalten"
+      }
+    }
   }
 }

@@ -5791,6 +5791,36 @@
       "technical_error": "Reconecte para restaurar o monitoramento"
     },
     "internalIssue": "O DisputeDesk detectou um problema técnico e está trabalhando para resolvê-lo. Nenhuma ação é necessária de sua parte no momento.",
-    "deadlineLabel": "Prazo de resposta do Shopify"
+    "deadlineLabel": "Prazo de resposta do Shopify",
+    "hero": {
+      "nextLabel": "Próximo passo:",
+      "building_evidence": {
+        "title": "Montando seu pacote de provas",
+        "message": "O DisputeDesk está coletando dados de pedido, pagamento, envio e rastreamento de suas fontes conectadas. O pacote de provas é montado automaticamente — nenhuma ação é necessária de sua parte."
+      },
+      "monitoring": {
+        "title": "Monitorando provas adicionais",
+        "message": "As provas atuais sustentam a resposta, e o DisputeDesk monitora as fontes conectadas em busca de qualquer coisa que a fortaleça."
+      },
+      "pack_prepared": {
+        "title": "Pacote de provas preparado",
+        "message": "O DisputeDesk montou o pacote de provas e continuará monitorando atualizações relevantes até que a resposta seja bloqueada ou enviada."
+      },
+      "saved_to_shopify": {
+        "title": "Provas salvas no Shopify",
+        "message": "O pacote de provas mais recente foi salvo na disputa do Shopify. O DisputeDesk continuará monitorando e atualizando enquanto alterações forem possíveis."
+      },
+      "under_review": {
+        "title": "A rede do cartão está analisando a disputa",
+        "message": "A resposta foi enviada e não pode mais ser alterada. O DisputeDesk acompanha a disputa até o resultado."
+      },
+      "next": {
+        "building_evidence": "Pacote de provas preparado — geralmente em poucas horas",
+        "monitoring": "Provas salvas no Shopify antes do prazo de resposta",
+        "pack_prepared": "Provas salvas no Shopify antes do prazo de resposta",
+        "saved_to_shopify": "O Shopify envia a resposta no prazo",
+        "under_review": "Resultado recebido"
+      }
+    }
   }
 }
