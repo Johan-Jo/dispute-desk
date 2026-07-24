@@ -1011,7 +1011,9 @@
     "reviewTab": {
       "chrome": {
         "loadingReview": "Prüfung wird geladen",
-        "buildFailedBody": "Wir konnten dieses Beweispaket nicht erstellen. Versuchen Sie, den Fall erneut zu synchronisieren oder das Paket über die Fallkopfzeile neu zu generieren."
+        "buildFailedBody": "Wir konnten dieses Beweispaket nicht erstellen. Versuchen Sie, den Fall erneut zu synchronisieren oder das Paket über die Fallkopfzeile neu zu generieren.",
+        "noDefenceTitle": "Verteidigungsschreiben noch nicht erstellt",
+        "noDefenceBody": "DisputeDesk hat das bankgerichtete Verteidigungsschreiben für diesen Streitfall noch nicht erstellt. Die Beweisdetails unten sind weiterhin verfügbar; das Schreiben erscheint hier, sobald es erstellt wurde."
       },
       "package": {
         "loadingAccessibilityLabel": "Beweispaket wird geladen",

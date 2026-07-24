@@ -61,11 +61,27 @@ export default function ReviewSubmitTab({ workspace }: Props) {
       </Banner>
     ) : null;
 
+  // The CompleteDefencePackageCard renders nothing when no defence
+  // package row exists for the pack (its long-standing `!latest` guard).
+  // Without this banner the tab silently shows only the inclusion
+  // review and the merchant has no idea where the defence letter went
+  // (dev report 2026-07-24). Honest empty state, no fabricated status.
+  const noDefenceLetterBanner =
+    data?.pack &&
+    !derived.isBuilding &&
+    !derived.isFailed &&
+    !data?.defencePackage?.latest ? (
+      <Banner tone="info" title={tChrome("noDefenceTitle")}>
+        <p>{tChrome("noDefenceBody")}</p>
+      </Banner>
+    ) : null;
+
   return (
     <BlockStack gap="500">
       {failedBanner}
       {buildingBanner}
       {noPackBanner}
+      {noDefenceLetterBanner}
 
       {/* Complete Defence Package — the primary card on this tab.
           Mounted first so the merchant sees the submission state,
