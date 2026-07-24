@@ -5805,7 +5805,7 @@
       "opportunity": "Comunicação disponível",
       "recommended": "Comunicação recomendada",
       "requested": "Revisar comunicação",
-      "blocking": "Aprovação necessária",
+      "blocking": "Sua intervenção é necessária",
       "technical_error": "Atenção necessária"
     },
     "strength": {
@@ -5865,6 +5865,24 @@
         "saved_to_shopify": "O Shopify envia a resposta no prazo",
         "under_review": "Resultado recebido"
       }
+    },
+    "attentionBlocking": {
+      "approval_gate": "Aprovação necessária",
+      "missing_required_evidence": "Provas necessárias",
+      "quota_exceeded": "Ação de cobrança necessária",
+      "feature_blocked": "Ação de cobrança necessária",
+      "subscription_expired": "Ação de cobrança necessária",
+      "payment_failed": "Ação de cobrança necessária",
+      "auto_build_off": "Automação pausada"
+    },
+    "attentionBlockingSub": {
+      "approval_gate": "O DisputeDesk aguarda sua aprovação para salvar o pacote de provas",
+      "missing_required_evidence": "Faltam provas obrigatórias — o DisputeDesk não pode salvar até que sejam adicionadas",
+      "quota_exceeded": "Uma ação de cobrança é necessária para que o DisputeDesk possa continuar",
+      "feature_blocked": "Uma ação de cobrança é necessária para que o DisputeDesk possa continuar",
+      "subscription_expired": "Uma ação de cobrança é necessária para que o DisputeDesk possa continuar",
+      "payment_failed": "Uma ação de cobrança é necessária para que o DisputeDesk possa continuar",
+      "auto_build_off": "A montagem automática de provas está desativada nas suas configurações"
     }
   }
 }

@@ -24,9 +24,33 @@ export function lifecycleLabelKey(p: Pick<DisputePresentation, "lifecycle">): st
   return `presentation.lifecycle.${p.lifecycle}`;
 }
 
+/** Blocking causes with dedicated labels. Anything outside this set
+ *  falls back to the cause-neutral generic `attention.blocking`. */
+const BLOCKING_LABELED_REASONS = new Set([
+  "approval_gate",
+  "missing_required_evidence",
+  "quota_exceeded",
+  "feature_blocked",
+  "subscription_expired",
+  "payment_failed",
+  "auto_build_off",
+]);
+
 /** Attention pill label (shown only when attention ≠ none on the
- *  detail heading; the list folds attention into the primary state). */
-export function attentionLabelKey(p: Pick<DisputePresentation, "attention">): string {
+ *  detail heading; the list folds attention into the primary state).
+ *  `blocking` is labeled by its CAUSE — "Approval required" is only
+ *  true for the approval gate; a missing-evidence block says
+ *  "Evidence needed", billing halts say "Billing action required". */
+export function attentionLabelKey(
+  p: Pick<DisputePresentation, "attention" | "blockingReason">,
+): string {
+  if (
+    p.attention === "blocking" &&
+    p.blockingReason &&
+    BLOCKING_LABELED_REASONS.has(p.blockingReason)
+  ) {
+    return `presentation.attentionBlocking.${p.blockingReason}`;
+  }
   return `presentation.attention.${p.attention}`;
 }
 
@@ -48,7 +72,7 @@ export function strengthLabelKey(
  * Secondary copy is responsibility information, never an imperative.
  */
 export function listPrimaryState(
-  p: Pick<DisputePresentation, "lifecycle" | "attention">,
+  p: Pick<DisputePresentation, "lifecycle" | "attention" | "blockingReason">,
 ): { labelKey: string; subKey: string } {
   switch (p.attention) {
     case "technical_error":
@@ -57,6 +81,12 @@ export function listPrimaryState(
         subKey: "presentation.listStateSub.technical_error",
       };
     case "blocking":
+      if (p.blockingReason && BLOCKING_LABELED_REASONS.has(p.blockingReason)) {
+        return {
+          labelKey: `presentation.attentionBlocking.${p.blockingReason}`,
+          subKey: `presentation.attentionBlockingSub.${p.blockingReason}`,
+        };
+      }
       return {
         labelKey: "presentation.listState.blocking",
         subKey: "presentation.listStateSub.blocking",

@@ -17,6 +17,7 @@ import {
   type ChipTokens,
 } from "@/lib/disputes/presentation/uiTokens";
 import { resolveStrength } from "@/lib/disputes/presentation/resolveStrength";
+import { attentionLabelKey } from "@/lib/disputes/presentation/labels";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 
 const PILL_STYLE = {
@@ -143,7 +144,7 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
   if (presentation && presentation.attention !== "none") {
     headerChips.push({
       key: "attention",
-      label: t(`presentation.attention.${presentation.attention}`),
+      label: t(attentionLabelKey(presentation)),
       tokens: ATTENTION_CHIP[presentation.attention],
     });
   }

@@ -501,3 +501,56 @@ describe("Cross-page consistency", () => {
     expect(dashboardBucket(p)).toBe("building_monitoring");
   });
 });
+
+// ── Blocking-cause labels (dev report 2026-07-24) ───────────────────────
+// "Approval required" is only true for the approval gate. A
+// missing-evidence block labels as evidence-needed; billing halts as
+// billing-action; the generic fallback is cause-neutral.
+
+import { attentionLabelKey } from "@/lib/disputes/presentation/labels";
+
+describe("Blocking-cause labels", () => {
+  it("missing_required_evidence blocks label as evidence-needed, not approval", () => {
+    const p = resolvePresentation({
+      ...basePresentation,
+      needsAttention: true,
+      attentionReason: "missing_required_evidence",
+    });
+    expect(p.attention).toBe("blocking");
+    expect(p.blockingReason).toBe("missing_required_evidence");
+    expect(attentionLabelKey(p)).toBe(
+      "presentation.attentionBlocking.missing_required_evidence",
+    );
+    expect(listPrimaryState(p).labelKey).toBe(
+      "presentation.attentionBlocking.missing_required_evidence",
+    );
+  });
+
+  it("the review-mode approval gate labels as approval required", () => {
+    const p = resolvePresentation({
+      ...basePresentation,
+      automationMode: "review",
+      packStatus: "ready",
+      approvedForSaveAt: null,
+    });
+    expect(p.attention).toBe("blocking");
+    expect(p.blockingReason).toBe("approval_gate");
+    expect(attentionLabelKey(p)).toBe("presentation.attentionBlocking.approval_gate");
+  });
+
+  it("billing halts label as billing action", () => {
+    const p = resolvePresentation({
+      ...basePresentation,
+      needsAttention: true,
+      attentionReason: "quota_exceeded",
+    });
+    expect(p.blockingReason).toBe("quota_exceeded");
+    expect(attentionLabelKey(p)).toBe("presentation.attentionBlocking.quota_exceeded");
+  });
+
+  it("non-blocking attention keeps the plain attention key", () => {
+    const p = resolvePresentation({ ...basePresentation, gorgiasActionableCount: 1 });
+    expect(attentionLabelKey(p)).toBe("presentation.attention.requested");
+    expect(p.blockingReason).toBe(null);
+  });
+});
