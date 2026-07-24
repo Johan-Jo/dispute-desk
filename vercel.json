@@ -23,6 +23,7 @@
     { "path": "/api/cron/calculate-ratios", "schedule": "0 2 * * *" },
     { "path": "/api/cron/db-backup", "schedule": "0 4 * * *" },
     { "path": "/api/cron/plan-recommendations", "schedule": "0 5 1 * *" },
-    { "path": "/api/cron/playbook-nurture", "schedule": "0 13 * * *" }
+    { "path": "/api/cron/playbook-nurture", "schedule": "0 13 * * *" },
+    { "path": "/api/cron/ce3-client-details-topup", "schedule": "0 4 * * 1" }
   ]
 }
