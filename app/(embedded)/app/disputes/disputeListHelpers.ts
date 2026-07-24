@@ -327,20 +327,25 @@ export function formatDueTiming(
  */
 export function parseListDeepLink(searchParams: {
   get(name: string): string | null;
-} | null): { statuses: string[]; tab: TabId } {
+} | null): { statuses: string[]; tab: TabId; attention: "" | "tasks" | "comm" } {
   const raw = searchParams?.get("normalized_status") ?? "";
   const statuses = raw
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+  // Attention deep-link (plan §11): the dashboard banner links
+  // `?attention=tasks` (genuine merchant tasks only).
+  const attentionRaw = searchParams?.get("attention");
+  const attention: "" | "tasks" | "comm" =
+    attentionRaw === "tasks" || attentionRaw === "comm" ? attentionRaw : "";
   const closedParam = searchParams?.get("closed");
   const tab: TabId =
     closedParam === "true"
       ? "closed"
-      : statuses.length > 0 || closedParam === "false"
+      : statuses.length > 0 || attention !== "" || closedParam === "false"
         ? "active"
         : "all";
-  return { statuses, tab };
+  return { statuses, tab, attention };
 }
 
 /**

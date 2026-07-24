@@ -12,6 +12,7 @@ import {
 } from "@shopify/polaris";
 import {
   AlertCircleIcon,
+  ChartVerticalIcon,
   CheckCircleIcon,
   ClockIcon,
   ChevronRightIcon,
@@ -30,6 +31,7 @@ interface CardSpec {
   iconBg: string;
   iconColor: string;
   borderColor: string | null;
+  cardBg: string | null;
   cta: { label: string; color: string } | null;
   url: string | null;
   split: CbInqSplit;
@@ -39,7 +41,7 @@ function OperationalCard({ card }: { card: CardSpec }) {
   const inner = (
     <div
       style={{
-        background: "#fff",
+        background: card.cardBg ?? "#fff",
         border: card.borderColor ? `2px solid ${card.borderColor}` : "1px solid #E1E3E5",
         borderRadius: "8px",
         padding: "20px",
@@ -133,86 +135,98 @@ interface Props {
   loading: boolean;
 }
 
+/**
+ * Four operational cards — the mutually-exclusive partition from the
+ * shared presentation model (design-alignment plan §4):
+ *
+ *   Building & monitoring — DisputeDesk is working (calm blue)
+ *   Action required       — needs merchant input (amber; highlighted
+ *                           ONLY when count > 0)
+ *   Under review          — response sent, awaiting an outcome
+ *   Closed                — outcome received (windowed by period)
+ *
+ * "Ready to Submit" and "Waiting on Issuer" are gone — DisputeDesk's
+ * own work is never presented as a merchant queue.
+ */
 export function DashboardOperationalSummary({ stats, loading }: Props) {
   const t = useTranslations("dashboard");
   const searchParams = useSearchParams();
   const s = stats;
 
-  const actionNeeded =
+  // Buckets from the stats route resolver. Legacy fallback keeps the
+  // cards rendering against an older cached response shape.
+  const buckets = s.operationalBuckets ?? null;
+  const legacyAction =
     (s.operationalBreakdown["new"] ?? 0) +
     (s.operationalBreakdown["action_needed"] ?? 0) +
     (s.operationalBreakdown["needs_review"] ?? 0);
-  const readyToSubmit = s.operationalBreakdown["ready_to_submit"] ?? 0;
-  // Same status family the disputes list collapses to "Submitted"
-  // (under-review). Counting only waiting_on_issuer/submitted_to_bank
-  // left `submitted` / `submitted_to_shopify` disputes on no card.
-  const waitingOnIssuer = UNDER_REVIEW_NORMALIZED_STATUSES.reduce(
+  const legacyUnderReview = UNDER_REVIEW_NORMALIZED_STATUSES.reduce(
     (sum, k) => sum + (s.operationalBreakdown[k] ?? 0),
     0,
   );
-
-  // Sum the per-status cb·inq splits into the same buckets the counts use,
-  // so each card's breakdown reconciles with its headline number.
-  const sumSplit = (...keys: string[]): CbInqSplit =>
-    keys.reduce(
-      (acc, k) => {
-        const sp = s.operationalSplit[k];
-        if (sp) {
-          acc.cb += sp.cb;
-          acc.inq += sp.inq;
-        }
-        return acc;
-      },
-      { cb: 0, inq: 0 },
-    );
+  const building =
+    buckets?.building_monitoring ??
+    {
+      count: Math.max(0, s.activeDisputes - legacyAction - legacyUnderReview),
+      cb: 0,
+      inq: 0,
+    };
+  const action =
+    buckets?.action_required ?? { count: legacyAction, cb: 0, inq: 0 };
+  const underReview =
+    buckets?.under_review ?? { count: legacyUnderReview, cb: 0, inq: 0 };
+  const closed =
+    buckets?.closed ??
+    { count: s.totalClosed, cb: s.closedSplit.cb, inq: s.closedSplit.inq };
 
   const cards: CardSpec[] = [
     {
-      key: "action_needed",
-      label: t("actionNeeded"),
-      desc: t("actionNeededDesc"),
-      count: actionNeeded,
-      icon: AlertCircleIcon,
-      iconBg: "#FEE2E2",
-      iconColor: "#DC2626",
-      borderColor: actionNeeded > 0 ? "#FCA5A5" : null,
-      cta: actionNeeded > 0 ? { label: t("reviewCases"), color: "#DC2626" } : null,
-      split: sumSplit("new", "action_needed", "needs_review"),
-      url:
-        actionNeeded === 1 && s.actionNeededDisputeId
-          ? withShopParams(`/app/disputes/${s.actionNeededDisputeId}`, searchParams ?? new URLSearchParams())
-          : withShopParams(
-              "/app/disputes?normalized_status=new,action_needed,needs_review",
-              searchParams ?? new URLSearchParams(),
-            ),
-    },
-    {
-      key: "ready_to_submit",
-      label: t("readyToSubmit"),
-      desc: t("readyToSubmitDesc"),
-      count: readyToSubmit,
-      icon: CheckCircleIcon,
-      iconBg: "#FEF3C7",
-      iconColor: "#D97706",
-      borderColor: readyToSubmit > 0 ? "#FDE68A" : null,
-      cta: readyToSubmit > 0 ? { label: t("submitNow"), color: "#D97706" } : null,
-      split: sumSplit("ready_to_submit"),
+      key: "building_monitoring",
+      label: t("buildingMonitoring"),
+      desc: t("buildingMonitoringDesc"),
+      count: building.count,
+      icon: ChartVerticalIcon,
+      iconBg: "#E0F2FE",
+      iconColor: "#0369A1",
+      borderColor: null,
+      cardBg: null,
+      cta: null,
+      split: { cb: building.cb, inq: building.inq },
       url: withShopParams(
-        "/app/disputes?normalized_status=ready_to_submit",
+        "/app/disputes?normalized_status=new,in_progress,needs_review,ready_to_submit,action_needed",
         searchParams ?? new URLSearchParams(),
       ),
     },
     {
-      key: "waiting_on_issuer",
-      label: t("waitingOnIssuer"),
-      desc: t("waitingOnIssuerDesc"),
-      count: waitingOnIssuer,
+      key: "action_required",
+      label: t("actionNeeded"),
+      desc: t("actionNeededDesc"),
+      count: action.count,
+      icon: AlertCircleIcon,
+      iconBg: "#FEF3C7",
+      iconColor: "#B45309",
+      // Highlighted ONLY when a genuine task exists (mockup behavior).
+      borderColor: action.count > 0 ? "#F2C879" : null,
+      cardBg: action.count > 0 ? "#FFFDF6" : null,
+      cta: action.count > 0 ? { label: t("reviewCases"), color: "#B45309" } : null,
+      split: { cb: action.cb, inq: action.inq },
+      url: withShopParams(
+        "/app/disputes?attention=tasks",
+        searchParams ?? new URLSearchParams(),
+      ),
+    },
+    {
+      key: "under_review",
+      label: t("underReviewCard"),
+      desc: t("underReviewCardDesc"),
+      count: underReview.count,
       icon: ClockIcon,
-      iconBg: "#DBEAFE",
-      iconColor: "#005BD3",
+      iconBg: "#EDE9FE",
+      iconColor: "#6D28D9",
       borderColor: null,
+      cardBg: null,
       cta: null,
-      split: sumSplit(...UNDER_REVIEW_NORMALIZED_STATUSES),
+      split: { cb: underReview.cb, inq: underReview.inq },
       url: withShopParams(
         `/app/disputes?normalized_status=${UNDER_REVIEW_NORMALIZED_STATUSES.join(",")}`,
         searchParams ?? new URLSearchParams(),
@@ -222,16 +236,14 @@ export function DashboardOperationalSummary({ stats, loading }: Props) {
       key: "closed",
       label: t("closedInPeriod"),
       desc: t("closedInPeriodDesc"),
-      count: s.totalClosed,
+      count: closed.count,
       icon: CheckCircleIcon,
       iconBg: "#F1F2F4",
-      iconColor: "#6D7175",
+      iconColor: "#4B5563",
       borderColor: null,
+      cardBg: null,
       cta: null,
-      // Window-scoped split (closedSplit) so the footer sums to
-      // totalClosed. NOT operationalClosedSplit, which is all-time and
-      // would show 61 under a headline of 2.
-      split: s.closedSplit,
+      split: { cb: closed.cb, inq: closed.inq },
       url: null,
     },
   ];

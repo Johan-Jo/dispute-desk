@@ -28,6 +28,7 @@ import type { DisputePhase } from "@/lib/rules/disputeReasons";
 import { MobileDisputesList } from "./disputes/MobileDisputesList";
 import type { Dispute } from "./disputes/disputeListHelpers";
 import { safeStatusLabel, useDateLocale } from "./dashboardHelpers";
+import { LIFECYCLE_CHIP } from "@/lib/disputes/presentation/uiTokens";
 import { resolveDisputeTypeLabel } from "@/lib/disputes/reasonLabel";
 
 interface DisputeRow {
@@ -38,6 +39,7 @@ interface DisputeRow {
   reason: string | null;
   phase: string | null;
   normalizedStatus: string | null;
+  presentation: Dispute["presentation"];
   dueAt: string | null;
   initiatedAt: string | null;
 }
@@ -85,6 +87,7 @@ export function DashboardRecentDisputesPreview() {
           reason: d.reason ?? null,
           phase: d.phase ?? null,
           normalizedStatus: d.normalized_status ?? null,
+          presentation: d.presentation ?? null,
           dueAt: d.due_at ?? null,
           initiatedAt: d.initiated_at ?? null,
         })),
@@ -152,6 +155,40 @@ export function DashboardRecentDisputesPreview() {
   const formatReason = (reason: string | null) => {
     if (!reason) return "—";
     return resolveDisputeTypeLabel(tPacks, reason);
+  };
+
+  // Status column = the operational-lifecycle chip from the shared
+  // presentation model (plan §4) — never a raw normalized-status enum.
+  const lifecycleChip = (row: DisputeRow) => {
+    const p = row.presentation;
+    if (p) {
+      const tokens = LIFECYCLE_CHIP[p.lifecycle];
+      return (
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            padding: "2px 9px",
+            borderRadius: 6,
+            fontSize: 11.5,
+            fontWeight: 600,
+            whiteSpace: "nowrap",
+            lineHeight: 1.6,
+            background: tokens.bg,
+            color: tokens.fg,
+          }}
+        >
+          {tokens.dot ? (
+            <span
+              style={{ width: 6, height: 6, borderRadius: "50%", background: tokens.dot, flex: "none" }}
+            />
+          ) : null}
+          {t(`presentation.lifecycle.${p.lifecycle}`)}
+        </span>
+      );
+    }
+    return normalizedStatusBadge(row.normalizedStatus);
   };
 
   const normalizedStatusBadge = (status: string | null) => {
@@ -223,7 +260,7 @@ export function DashboardRecentDisputesPreview() {
                       {phaseLabel(r.phase as DisputePhase | null, t)}
                     </Badge>
                   </td>
-                  <td style={recentDisputesTdStyle}>{normalizedStatusBadge(r.normalizedStatus)}</td>
+                  <td style={recentDisputesTdStyle}>{lifecycleChip(r)}</td>
                   <td style={recentDisputesTdStyle}>
                     <Text as="span" variant="bodySm" tone="subdued">
                       {r.initiatedAt

@@ -196,7 +196,9 @@ export default function DisputesListPage() {
   /** Attention filter param (plan §11) — independent of lifecycle and
    *  strength. `tasks` = genuine merchant tasks; `comm` =
    *  communication-review states. */
-  const [attentionParam, setAttentionParam] = useState<"" | "tasks" | "comm">("");
+  const [attentionParam, setAttentionParam] = useState<"" | "tasks" | "comm">(
+    initialUrlFilters.attention,
+  );
   const [submissionStateFilter, setSubmissionStateFilter] = useState<string[]>([]);
   const [outcomeDropdownFilter, setOutcomeDropdownFilter] = useState<string[]>([]);
 
