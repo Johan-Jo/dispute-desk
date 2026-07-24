@@ -1138,21 +1138,15 @@ function ConversationDetails({
 function MessageBox({
   message,
   busy,
-  transcript,
   t,
-  onOpenTranscript,
   onApprove,
-  onManualAdd,
   onExclude,
   onEditExplanation,
 }: {
   message: GorgiasCommsMessageSummary;
   busy: string | null;
-  transcript: TranscriptMessage[] | "loading" | "error" | undefined;
   t: GorgiasT;
-  onOpenTranscript: () => void;
   onApprove: (m: GorgiasCommsMessageSummary) => void;
-  onManualAdd: (m: { id: string }) => void;
   onExclude: (m: GorgiasCommsMessageSummary) => void;
   onEditExplanation: (m: GorgiasCommsMessageSummary) => void;
 }) {
@@ -1256,12 +1250,6 @@ function MessageBox({
           {t("message.editExplanation")}
         </Button>
       </div>
-      <ConversationDetails
-        transcript={transcript}
-        onOpen={onOpenTranscript}
-        onManualAdd={onManualAdd}
-        t={t}
-      />
     </div>
   );
 }
@@ -1340,10 +1328,11 @@ function MatchedTicket({
         </div>
       </div>
 
-      {/* Reviewable message boxes — each carries its own inline
-          "View full conversation" link at the bottom of the card,
-          matching the design mockup. */}
-      {ticket.reviewableMessages.length > 0 ? (
+      {/* Reviewable message boxes. The full-conversation transcript is a
+          single ticket-level disclosure below (NOT per message box) — a
+          ticket with N reviewable messages would otherwise repeat the same
+          conversation N times. */}
+      {ticket.reviewableMessages.length > 0 && (
         <div
           style={{
             display: "flex",
@@ -1357,26 +1346,22 @@ function MatchedTicket({
               key={m.id}
               message={m}
               busy={busy}
-              transcript={transcript}
               t={t}
-              onOpenTranscript={onOpenTranscript}
               onApprove={onApprove}
-              onManualAdd={onManualAdd}
               onExclude={onExclude}
               onEditExplanation={onEditExplanation}
             />
           ))}
         </div>
-      ) : (
-        // No reviewable messages left on this ticket — keep the transcript
-        // reachable at the ticket level so it isn't orphaned.
-        <ConversationDetails
-          transcript={transcript}
-          onOpen={onOpenTranscript}
-          onManualAdd={onManualAdd}
-          t={t}
-        />
       )}
+
+      {/* One "View full conversation" for the whole ticket. */}
+      <ConversationDetails
+        transcript={transcript}
+        onOpen={onOpenTranscript}
+        onManualAdd={onManualAdd}
+        t={t}
+      />
     </div>
   );
 }
