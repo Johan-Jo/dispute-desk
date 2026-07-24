@@ -280,6 +280,10 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     label: t("dashboard.winRate"),
     value: `${stats.winRate}%`,
     change: stats.winRateChange,
+    // Denominator disclosure (plan §13.1 decision): accepted counts as
+    // a loss; refunded is excluded. The label must never leave the
+    // definition ambiguous.
+    hint: t("dashboard.winRateDenominatorNote"),
     breakdown: {
       split: stats.winRatePctSplit,
       format: (v) => `${v}%`,

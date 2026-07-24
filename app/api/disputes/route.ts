@@ -7,6 +7,12 @@ import {
 } from "@/lib/argument/nameMismatch";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import { extractShopId } from "@/lib/middleware/extractShopId";
+import {
+  gatherPresentations,
+  type DisputeRowFacts,
+} from "@/lib/disputes/presentation/serverFacts";
+import type { I18nToken } from "@/lib/i18n/token";
+import { MERCHANT_TASK_ATTENTION_REASONS } from "@/lib/disputes/presentation/resolveAttention";
 
 /**
  * GET /api/disputes
@@ -122,6 +128,28 @@ export async function GET(req: NextRequest) {
     query = query.is("closed_at", null);
   }
 
+  // Merchant-attention filter (plan §11): independent of the lifecycle
+  // and strength dimensions, with the stale-attention guard.
+  //   attention=tasks — genuine merchant tasks only (blocking +
+  //                     requested attention reasons).
+  //   attention=comm  — communication review states (Gorgias messages
+  //                     awaiting explicit review). `recommended` is not
+  //                     yet queryable server-side (no persisted flag) —
+  //                     documented limitation.
+  const attentionParam = sp.get("attention");
+  if (attentionParam === "tasks" || attentionParam === "comm") {
+    query = query
+      .eq("needs_attention", true)
+      .in(
+        "attention_reason",
+        attentionParam === "comm"
+          ? ["gorgias_evidence_ready"]
+          : [...MERCHANT_TASK_ATTENTION_REASONS],
+      )
+      .is("closed_at", null)
+      .neq("submission_state", "submitted_confirmed");
+  }
+
   // Date range filter
   const ALLOWED_DATE_FIELDS = ["initiated_at", "submitted_at", "closed_at"];
   const dateField = ALLOWED_DATE_FIELDS.includes(sp.get("date_field") ?? "") ? sp.get("date_field")! : "initiated_at";
@@ -204,6 +232,10 @@ export async function GET(req: NextRequest) {
       strongCount: number;
       moderateCount: number;
       supportingCount: number;
+      /** Rules-engine explanation token — the list's strength subtitle
+       *  (replaces the banned "{n} strong + {m} moderate" arithmetic;
+       *  plan §5 item 3). */
+      strengthReasonI18n?: I18nToken | null;
     }
   >();
   if (disputeIds.length > 0) {
@@ -227,6 +259,7 @@ export async function GET(req: NextRequest) {
             strongCount?: number;
             moderateCount?: number;
             supportingCount?: number;
+            strengthReasonI18n?: { key: string; params?: Record<string, string | number> } | null;
           }
         | null
         | undefined;
@@ -236,6 +269,7 @@ export async function GET(req: NextRequest) {
           strongCount: cs.strongCount ?? 0,
           moderateCount: cs.moderateCount ?? 0,
           supportingCount: cs.supportingCount ?? 0,
+          strengthReasonI18n: cs.strengthReasonI18n ?? null,
         });
       } else {
         latestForDispute.set(p.dispute_id, {
@@ -319,6 +353,7 @@ export async function GET(req: NextRequest) {
             strongCount: result.strongCount,
             moderateCount: result.moderateCount,
             supportingCount: result.supportingCount,
+            strengthReasonI18n: result.strengthReasonI18n ?? null,
           });
         } catch {
           // If the engine throws on a malformed legacy checklist, leave
@@ -328,16 +363,56 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // ── Shared presentation model (plan §3) ────────────────────────────
+  // One resolver interpretation per row: operational lifecycle, merchant
+  // attention, strength, external milestones. Batched queries inside
+  // (latest pack, checklist, rules, integration flag) — no per-row N+1.
+  const strengthOverallByDispute = new Map<string, string>();
+  for (const [id, cs] of strengthByDispute) {
+    strengthOverallByDispute.set(id, cs.overall);
+  }
+  const presentations = await gatherPresentations(
+    sb,
+    shopId,
+    (data ?? []) as unknown as DisputeRowFacts[],
+    { includeConcreteContribution: true, strengthOverallByDispute },
+  );
+
   const disputesWithStrength = (data ?? []).map((d) => ({
     ...d,
     caseStrength: strengthByDispute.get(d.id) ?? null,
+    presentation: presentations.get(d.id) ?? null,
   }));
+
+  // Corrected merchant-action count: genuine tasks only (blocking /
+  // requested attention reasons) — NOT every needs_attention row (which
+  // includes internal failures like submission_failed). Shop-wide, with
+  // the stale-attention guard (no closed / transmission-confirmed rows).
+  //
+  // Known approximation (documented in plan §12V item 4): the review-mode
+  // approval gate (pack ready + unapproved) and the shop-level Gorgias
+  // reconnect flag are not attention_reason rows and are not counted
+  // here; they surface per-row via `presentation` and are folded into
+  // the dashboard-side count in the stats route.
+  const { count: merchantActionCount } = await sb
+    .from("disputes")
+    .select("id", { count: "exact", head: true })
+    .eq("shop_id", shopId)
+    .eq("needs_attention", true)
+    .in("attention_reason", [...MERCHANT_TASK_ATTENTION_REASONS])
+    .is("closed_at", null)
+    .neq("submission_state", "submitted_confirmed");
 
   return NextResponse.json({
     disputes: disputesWithStrength,
     aggregates: {
-      // Shop-wide count, independent of the current filter/page.
+      // Legacy shop-wide count (includes internal failures) — kept until
+      // the UI cuts over to merchant_action_required.
       needs_attention: needsAttentionCount ?? 0,
+      // Genuine merchant tasks only (plan §5): blocking + requested
+      // attention reasons, excluding terminal and transmission-confirmed
+      // rows (stale-attention guard, §4).
+      merchant_action_required: merchantActionCount ?? 0,
     },
     pagination: {
       page,

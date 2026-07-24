@@ -27,7 +27,6 @@ import {
 import { generateWhyWins } from "@/lib/argument/whyThisCaseWins";
 import { generateRiskExplanation } from "@/lib/argument/riskExplanation";
 import { generateRecommendation } from "@/lib/argument/recommendation";
-import { getCanonicalSpec } from "@/lib/argument/canonicalEvidence";
 import { asLocalized, type Localized } from "@/lib/i18n/localized";
 import { resolveToken } from "@/lib/i18n/resolveToken";
 import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
@@ -56,118 +55,22 @@ const EFFORT_MAP: Record<string, "low" | "medium" | "high"> = {
 
 // SOURCE_MAP deleted in Phase 5: see comment on EFFORT_MAP.
 
-/* ── Per-field action metadata for merchant-addable items ── */
-
-interface FieldAction {
-  actionType: "upload" | "paste" | "note";
-}
-
-// i18n-allow-block: these are the English fallback values used only
-// when `disputes.fieldAction.<field>.*` is missing from the active
-// locale. The render path in `deriveMissingItems` calls the next-intl
-// translator first and falls back to these strings as a defence-in-
-// depth measure. Keep them in sync with `messages/en.json
-// disputes.fieldAction.*` (the canonical source).
-// Per-field action type only. CTA text comes from i18n.
-const FIELD_ACTIONS: Record<string, FieldAction> = {
-  supporting_documents: { actionType: "upload" },
-  customer_communication: { actionType: "paste" },
-  product_description: { actionType: "upload" },
-  duplicate_explanation: { actionType: "paste" },
-};
-
-const DEFAULT_ACTION: FieldAction = { actionType: "upload" };
-
-/* Set of evidence fields the merchant can directly act on (upload or
- * paste). Derived from `FIELD_ACTIONS` so the allowlist stays in sync
- * with the per-field CTA config. Other fields (`avs_cvv_match`,
- * `billing_address_match`, `ip_location_check`, etc.) are gateway/
- * system signals where a manual upload doesn't make semantic sense.
+/* ── Per-field action metadata for merchant-addable items ──
  *
- * Why this is the gate (and `collectionType !== "auto"` is not):
- * `customer_communication` is marked `collection_type=auto` in the
- * checklist generator because Shopify *attempts* to pull it from
- * order notes — but it only becomes Strong via
- * `payload.customerConfirmsOrder === true`, which requires the
- * merchant to provide a conversation. Auto-collection is a
- * best-effort fallback there; merchant upload is the actual path to
- * strength, and the UI must surface it. */
-export const MERCHANT_ACTIONABLE_FIELDS: ReadonlySet<string> = new Set(
-  Object.keys(FIELD_ACTIONS),
-);
+ * Relocated to lib/disputes/presentation/concreteContribution.ts so the
+ * server-side presentation resolver shares the exact same predicate and
+ * field sets (plan §12V item 4). Re-exported below for existing
+ * consumers of this hook module. */
 
-/** Fields that are UNAMBIGUOUSLY system-derived: the data comes from a
- *  source outside the merchant's control (payment gateway, carrier,
- *  Shopify's risk engine, IPinfo, etc.). The merchant cannot upload
- *  these by definition — surfacing Upload/Mark-not-applicable buttons
- *  for them is misleading.
- *
- *  This list is the inverse of MERCHANT_ACTIONABLE_FIELDS for the
- *  fields the canonical registry knows about. Kept as an explicit
- *  allowlist (not derived) so a future template/registry change that
- *  inadvertently nulls `collectionType` cannot accidentally promote
- *  a system signal back to a merchant task. Same set as
- *  SOURCE_OUTSIDE_MERCHANT_CONTROL in lib/argument/evidenceLineItem.ts.
- */
-export const SYSTEM_DERIVED_FIELDS: ReadonlySet<string> = new Set([
-  "avs_cvv_match",
-  "billing_address_match",
-  "tds_authentication",
-  "fraud_risk_screening",
-  "ip_location_check",
-  "device_session_consistency",
-  "shipping_tracking",
-  "delivery_proof",
-  "order_confirmation",
-  "customer_account_info",
-  "activity_log",
-  // product_description is also a FIELD_ACTIONS key (upload CTA config),
-  // so this denylist entry was previously DEAD — MERCHANT_ACTIONABLE_FIELDS
-  // won the precedence check and it got the upload nag anyway. The
-  // supportingOnly guard at the top of canMerchantUpload now refuses it
-  // (and every other weight-0 field) before either list is consulted, so
-  // this entry is belt-and-suspenders.
-  "product_description",
-]);
+import {
+  FIELD_ACTIONS,
+  DEFAULT_FIELD_ACTION as DEFAULT_ACTION,
+  MERCHANT_ACTIONABLE_FIELDS,
+  SYSTEM_DERIVED_FIELDS,
+  canMerchantUpload,
+} from "@/lib/disputes/presentation/concreteContribution";
 
-/** True when the merchant should see an upload affordance on a
- *  missing evidence row. Used by both the Overview tab "Add this
- *  evidence" CTA and the Evidence tab inventory + per-row Upload
- *  button so the policy is single-sourced.
- *
- *  Precedence:
- *   1. `MERCHANT_ACTIONABLE_FIELDS` allowlist → always allow upload
- *      (e.g. `customer_communication` overrides any collectionType
- *      because uploads are the actual path to strength).
- *   2. `SYSTEM_DERIVED_FIELDS` denylist → always refuse, regardless
- *      of `collectionType`. Catches the case where a DB-backed
- *      template row doesn't carry `collection_type` and the prior
- *      fallback (`collectionType !== "auto"`) was too permissive.
- *   3. Otherwise: only allow when `collectionType` is explicitly
- *      `manual` or `conditional_auto`. An absent `collectionType`
- *      defaults to "no upload" (strict) so off-registry/template
- *      rows can't accidentally surface upload buttons. */
-export function canMerchantUpload(item: {
-  field: string;
-  collectionType?: string;
-}): boolean {
-  // Never surface a red "Missing · Add this evidence" nag for a field
-  // that can NEVER change case strength. `supportingOnly` fields
-  // (product_description, order_confirmation, duplicate_explanation) are
-  // weight-0 by canonical rule — uploading one leaves the case exactly as
-  // weak as before, so nagging for it is dishonest (the merchant reads
-  // "add this to strengthen" and it provably can't). This mirrors the
-  // guard `calculateCaseStrength`'s improvement hint already applies
-  // (`affectsStrength`), closing the gap where the Overview Missing-card
-  // path didn't share it. Prod dispute 8f90a8f0 (not-as-described), 2026-07-23.
-  // Class-level: catches any current or future supportingOnly field, not
-  // just product_description. Such evidence still travels into the PDF as
-  // supporting context when present — this only stops the missing-row nag.
-  if (getCanonicalSpec(item.field)?.supportingOnly === true) return false;
-  if (MERCHANT_ACTIONABLE_FIELDS.has(item.field)) return true;
-  if (SYSTEM_DERIVED_FIELDS.has(item.field)) return false;
-  return item.collectionType === "manual" || item.collectionType === "conditional_auto";
-}
+export { MERCHANT_ACTIONABLE_FIELDS, SYSTEM_DERIVED_FIELDS, canMerchantUpload };
 
 /* ── Derived state helpers ── */
 

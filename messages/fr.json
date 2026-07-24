@@ -276,7 +276,7 @@
     "daysValue": "{days}j",
     "statusDistribution": "Distribution des statuts",
     "outcomeBreakdown": "Répartition des résultats",
-    "recentActivity": "Activité d'automatisation et de soumission",
+    "recentActivity": "Activité DisputeDesk",
     "recentActivityEmpty": "L'activité apparaîtra ici dès que les litiges commenceront à se synchroniser — vous verrez les builds de dossiers, les soumissions et les changements de statut.",
     "statusCol": "Statut",
     "submissionCol": "Soumission",
@@ -308,11 +308,11 @@
     "dueToday": "Échéance aujourd'hui",
     "overdue": "Overdue",
     "attentionBannerMessage": "{count, plural, =1 {# litige nécessite votre attention} other {# litiges nécessitent votre attention}}",
-    "attentionBannerCta": "Examiner maintenant",
-    "actionNeededDesc": "Examen manuel requis",
+    "attentionBannerCta": "Vérifier les litiges",
+    "actionNeededDesc": "Votre intervention est nécessaire",
     "readyToSubmitDesc": "Preuves complètes",
     "waitingOnIssuerDesc": "Soumis à la banque",
-    "closedInPeriodDesc": "Cas historiques",
+    "closedInPeriodDesc": "Résultat reçu",
     "reviewCases": "Examiner les cas",
     "submitNow": "Soumettre maintenant",
     "insightsTitle": "Insights",
@@ -342,7 +342,16 @@
     "revenueRecovered": "Revenus récupérés",
     "avgResponseTime": "Délai moyen de réponse",
     "winRateTrend": "Tendance du taux de gain",
-    "disputeCategories": "Catégories de litiges"
+    "disputeCategories": "Catégories de litiges",
+    "attentionBannerBody": "DisputeDesk gère tout le reste automatiquement.",
+    "monitoringBannerTitle": "{count, plural, =1 {DisputeDesk surveille # litige actif} other {DisputeDesk surveille # litiges actifs}}",
+    "monitoringBannerBody": "Aucune action n'est requise de votre part pour le moment.",
+    "monitoringBannerCta": "Voir les litiges actifs",
+    "buildingMonitoring": "Constitution et surveillance",
+    "buildingMonitoringDesc": "DisputeDesk travaille",
+    "underReviewCard": "En examen",
+    "underReviewCardDesc": "Réponse envoyée",
+    "winRateDenominatorNote": "gagnés ÷ tranchés (gagnés, perdus, acceptés)"
   },
   "disputes": {
     "title": "Litiges",
@@ -628,7 +637,7 @@
       "source": "Source",
       "created": "Créé"
     },
-    "kpiNeedsAction": "Action requise",
+    "kpiNeedsAction": "Action du marchand requise",
     "kpiNeedsActionUrgent": "{count} urgent(s)",
     "kpiAmountAtRisk": "Montant à risque",
     "kpiStrongCases": "Dossiers solides",
@@ -641,7 +650,7 @@
     "urgentBannerViewAll": "Tout afficher",
     "colOrderCustomer": "Commande et client",
     "colCaseStrength": "Solidité du dossier",
-    "colNextAction": "Prochaine action",
+    "colNextAction": "Statut et prochaine étape",
     "colAmount": "Amount",
     "colDueDate": "Date d'échéance",
     "colOutcome": "Outcome",
@@ -668,7 +677,13 @@
       "needsReview": "À vérifier",
       "underReview": "En cours d'examen",
       "submitted": "Submitted",
-      "closed": "Closed"
+      "closed": "Closed",
+      "monitoring": "Surveillance",
+      "comm": "Communication",
+      "saved": "Enregistrées dans Shopify",
+      "won": "Gagnés",
+      "lost": "Perdus",
+      "attention": "Attention requise"
     },
     "caseStrength": {
       "strong": "Dossier solide",
@@ -783,9 +798,9 @@
         "body": "Ce dossier a été enregistré sur Shopify, mais Shopify ne l'a pas encore transmis à la banque. Vous pouvez toujours ajouter des preuves. Si vous régénérez le dossier, le nouveau PDF remplacera celui actuellement enregistré sur le litige Shopify."
       },
       "windowClosedBanner": {
-        "title": "Transmis à la banque",
-        "body": "Shopify a transmis les preuves de ce litige à la banque émettrice le {submittedAt}. De nouveaux fichiers ne peuvent plus être ajoutés au dossier de défense destiné à la banque.",
-        "bodyNoDate": "Shopify a déjà transmis les preuves de ce litige à la banque émettrice. De nouveaux fichiers ne peuvent plus être ajoutés au dossier de défense destiné à la banque."
+        "title": "Envoyée au réseau de cartes",
+        "body": "Shopify a transmis ces preuves du litige au réseau de cartes le {submittedAt}. Il n'est plus possible d'ajouter de nouveaux fichiers au dossier de défense destiné à la banque.",
+        "bodyNoDate": "Shopify a déjà transmis ces preuves du litige au réseau de cartes. Il n'est plus possible d'ajouter de nouveaux fichiers au dossier de défense destiné à la banque."
       },
       "regeneratingBanner": {
         "title": "Régénération du dossier de défense",
@@ -861,7 +876,7 @@
         "savingBody": "DisputeDesk a accepté votre soumission et téléverse le dossier de preuves vers Shopify. Cela se termine généralement en moins de 30 secondes — ce message se mettra à jour automatiquement.",
         "savedTitles": {
           "outcomePosted": "Résultat publié",
-          "forwardedToNetwork": "Transmis au réseau de cartes",
+          "forwardedToNetwork": "Envoyée au réseau de cartes",
           "savedToShopify": "Enregistré dans Shopify"
         },
         "savedBody": {
@@ -871,7 +886,7 @@
           "closedNoDate": "Le dossier de preuves v{version} a été soumis. La rétrofacturation a été clôturée par le réseau de cartes.",
           "savedWithDate": "Le dossier de preuves v{version} est enregistré dans Shopify ({date}). Shopify ne l'a pas encore transmis au réseau de cartes — si vous regénérez, le nouveau PDF remplacera proprement cette version enregistrée.",
           "savedNoDate": "Le dossier de preuves v{version} est enregistré dans Shopify. Shopify ne l'a pas encore transmis au réseau de cartes — si vous regénérez, le nouveau PDF remplacera proprement cette version enregistrée.",
-          "fallback": "Un dossier de preuves a été soumis à la banque."
+          "fallback": "Un dossier de défense a été enregistré dans Shopify."
         },
         "openInShopifyAdmin": "Ouvrir dans Shopify Admin",
         "viewPdf": "Voir le PDF",
@@ -882,8 +897,8 @@
         "draftBannerBodyFinal": "L'ébauche v{version} a été générée mais n'a pas encore été envoyée à Shopify — la banque possède actuellement la v{bankVersion}. Examinez-la ci-dessous. Si elle est correcte, soumettez-la à nouveau à Shopify — cela remplacera la v{bankVersion}.",
         "approveDraft": "Approuver l'ébauche v{version}",
         "approveVersion": "Approuver v{version}",
-        "submitToShopify": "Soumettre à Shopify",
-        "resubmitToShopify": "Soumettre à nouveau à Shopify",
+        "submitToShopify": "Enregistrer dans Shopify",
+        "resubmitToShopify": "Enregistrer à nouveau dans Shopify",
         "moreActions": "Plus d'actions",
         "regenerating": "Régénération…",
         "regenerateFromScratch": "Régénérer l'ébauche depuis zéro",
@@ -953,8 +968,8 @@
           "outdated": "Le dossier de preuves a changé depuis la génération de cette argumentation. Régénérez-la pour intégrer les derniers signaux."
         },
         "override": {
-          "title": "Soumettre quand même ?",
-          "body": "Soumettre avant que toutes les preuves essentielles ne soient en place peut affaiblir votre dossier. Choisissez un motif ci-dessous pour confirmer.",
+          "title": "Enregistrer quand même ?",
+          "body": "Enregistrer avant que toutes les preuves critiques soient réunies peut affaiblir votre dossier. Choisissez un motif ci-dessous pour confirmer.",
           "reasonLabel": "Motif de soumission immédiate",
           "reasonPlaceholder": "Sélectionnez un motif",
           "reason": {
@@ -966,7 +981,7 @@
           "noteLabel": "Note facultative",
           "notePlaceholder": "Ajoutez un contexte pour le journal d'audit…",
           "cancel": "Cancel",
-          "confirm": "Soumettre quand même"
+          "confirm": "Enregistrer quand même"
         }
       },
       "inclusion": {
@@ -1486,12 +1501,12 @@
       "no_return_initiated": "Montre que le client n'a jamais initié de retour — fonde l'argument qu'aucun remboursement n'était dû",
       "ip_location_check": "Situe la commande à l'emplacement habituel du client — conforte que le titulaire de la carte l'a passée",
       "device_session_consistency": "Relie la commande à l'appareil et à la session connus du client — réfute les allégations « ce n'était pas moi »",
-      "fraud_risk_screening": "L'analyse de risque de Shopify n'a détecté aucun signal de fraude — appui indépendant de la légitimité de la commande",
+      "fraud_risk_screening": "L'analyse de risque de Shopify n'a détecté aucun signal de fraude — un contexte de soutien indiquant que la commande était légitime",
       "order_confirmation": "Prouve que la transaction est légitime — la base de toute réponse à un litige",
       "shipping_tracking": "Montre que le transporteur a confirmé l'expédition — indispensable pour gagner les litiges « article non reçu »",
       "delivery_proof": "Confirme que le client a reçu le colis — preuve la plus solide contre les réclamations « non reçu »",
-      "billing_address_match": "Fait correspondre l'adresse de facturation à la commande — essentiel pour les litiges de fraude",
-      "avs_cvv_match": "Montre que les contrôles de sécurité de la carte ont réussi — les banques en tiennent fortement compte dans les cas de fraude",
+      "billing_address_match": "Fait correspondre l'adresse de facturation à la commande — un signal de soutien pour les litiges pour fraude",
+      "avs_cvv_match": "Montre que les contrôles de sécurité de la carte ont été validés — un signal de soutien dont le poids dépend du motif du litige et des autres preuves disponibles",
       "product_description": "Prouve que le produit correspondait à ce qui était annoncé — argument clé pour les litiges « non conforme à la description »",
       "refund_policy": "Montre que le client a accepté vos conditions de remboursement — protège contre les réclamations de remords d'achat",
       "shipping_policy": "Documente vos engagements de livraison — appuie les litiges relatifs aux délais de livraison",
@@ -1520,7 +1535,7 @@
       "tabs": {
         "overview": "Aperçu",
         "evidence": "Preuves",
-        "reviewSubmit": "Vérifier et soumettre"
+        "reviewSubmit": "Vérifier et transmettre"
       },
       "strengthLabel": {
         "strong": "Dossier solide",
@@ -1588,10 +1603,10 @@
       },
       "changeRule": "Modifier la règle",
       "editEvidence": "Modifier les preuves",
-      "submitToShopify": "Soumettre à Shopify",
+      "submitToShopify": "Enregistrer dans Shopify",
       "viewInShopify": "Voir dans Shopify Admin",
       "addMissingEvidence": "Ajouter les preuves manquantes",
-      "submitAnyway": "Soumettre quand même",
+      "submitAnyway": "Enregistrer quand même",
       "autoSubmitPausedTitle": "Soumission automatique en pause — votre examen est requis",
       "autoSubmitPausedBody": "DisputeDesk monte votre dossier automatiquement, mais ne le soumet que lorsque celui-ci atteint votre seuil de soumission automatique. Ce dossier n'a pas franchi le seuil ; nous l'avons donc mis en pause et vous le transmettons.",
       "whyPrefix": "Why:",
@@ -1785,7 +1800,7 @@
       "ticket": {
         "confirm": "Confirmer la correspondance",
         "notRelated": "Sans rapport",
-        "reportBadMatch": "Signaler une erreur",
+        "reportBadMatch": "Signaler une correspondance incorrecte",
         "viewConversation": "Voir la conversation complète",
         "hideConversation": "Masquer la conversation"
       },
@@ -1814,7 +1829,7 @@
         "editExplanation": "Modifier l'explication",
         "saveExplanation": "Enregistrer l'explication",
         "cancel": "Annuler",
-        "approvedBadge": "Approuvé",
+        "approvedBadge": "Approuvé pour inclusion",
         "proposedBadge": "Proposé",
         "needsReapprovalBadge": "Nouvelle approbation requise",
         "truncatedNote": "(message raccourci)"
@@ -1853,7 +1868,12 @@
     "signalLabelValue": {
       "refundIssued": "Preuve que le remboursement a déjà été effectué",
       "noRefundOwed": "Preuve qu'aucun remboursement n'était dû (le client n'a jamais retourné les articles)"
-    }
+    },
+    "kpiActiveDisputes": "Litiges actifs",
+    "kpiActiveDisputesSub": "Gérés automatiquement",
+    "kpiAmountAtRiskSub": "Sur les litiges actifs",
+    "kpiUnderReview": "En examen",
+    "kpiUnderReviewSub": "Réponses envoyées"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "La banque ne peut pas traiter",
@@ -2644,6 +2664,28 @@
         "confirm": "Déconnecter",
         "cancel": "Annuler"
       }
+    },
+    "disputeHandling": {
+      "title": "Traitement des litiges",
+      "help": "DisputeDesk collecte automatiquement les preuves, constitue le dossier, surveille les mises à jour et applique le moteur de règles à chaque litige. Ces préférences contrôlent la façon dont vous suivez ce travail et dont il atteint Shopify.",
+      "involvementTitle": "Votre implication",
+      "involvementDesc": "Choisissez à quel point vous souhaitez suivre les litiges. DisputeDesk prépare et surveille chaque réponse dans les deux options.",
+      "handsOffTitle": "Automatique",
+      "recommendedBadge": "Recommandé",
+      "handsOffDesc": "Gérer les litiges automatiquement et ne me notifier que lorsque mon attention est réellement nécessaire.",
+      "stayTitle": "Rester impliqué",
+      "stayDesc": "Me montrer les mises à jour pertinentes et les occasions de renforcer les litiges, y compris les suggestions de communication client.",
+      "involvementNote": "Les deux options utilisent la même collecte de preuves, les mêmes règles et la même préparation de réponse. Cette préférence change ce que vous voyez — pas la défense produite.",
+      "savingTitle": "Enregistrement des preuves dans Shopify",
+      "savingDesc": "Choisissez si DisputeDesk peut enregistrer automatiquement les dossiers de preuves éligibles ou doit attendre votre approbation. C'est une protection opérationnelle, pas une préférence de notification.",
+      "autoTitle": "Enregistrer automatiquement",
+      "autoDesc": "DisputeDesk enregistre automatiquement les dossiers de preuves éligibles dans Shopify après validation de tous les contrôles de qualité et de sécurité configurés.",
+      "autoNote": "Vous pouvez toujours consulter le dossier dans DisputeDesk. L'enregistrement dans Shopify ne confirme pas à lui seul que la réponse a été envoyée au réseau de cartes.",
+      "approveTitle": "Exiger mon approbation avant l'enregistrement",
+      "approveDesc": "DisputeDesk prépare et surveille la réponse, mais attend votre approbation avant d'enregistrer le premier dossier de preuves dans Shopify.",
+      "mixedNote": "Certains types de litige utilisent actuellement des modes différents. Choisir une option ici l'applique à tous les types.",
+      "upgradeNote": "La gestion des modes d'enregistrement nécessite un forfait incluant les règles d'automatisation.",
+      "saved": "Préférences de traitement des litiges enregistrées"
     }
   },
   "connect": {
@@ -4487,28 +4529,28 @@
     "amountLost": "Montant Perdu",
     "noEvents": "Aucun événement dans la chronologie.",
     "eventTypes": {
-      "dispute_opened": "Litige Ouvert",
-      "status_changed": "Statut Modifié",
+      "dispute_opened": "Litige détecté",
+      "status_changed": "Statut du litige mis à jour",
       "due_date_changed": "Date Limite Modifiée",
-      "dispute_closed": "Litige Clôturé",
-      "pack_created": "Dossier de Preuves Généré",
-      "pack_ready": "Dossier Prêt pour Révision",
+      "dispute_closed": "Litige clôturé",
+      "pack_created": "Dossier de preuves créé",
+      "pack_ready": "Dossier de preuves préparé",
       "pack_blocked": "Dossier Bloqué",
-      "pdf_rendered": "PDF de Preuves Généré",
-      "evidence_saved_to_shopify": "Preuve Sauvegardée sur Shopify",
-      "submission_confirmed": "Soumission Confirmée",
-      "auto_build_triggered": "Construction Auto Démarrée",
-      "auto_save_triggered": "Sauvegarde Auto Démarrée",
-      "parked_for_review": "Signalé pour Révision",
-      "merchant_approved_for_save": "Approuvé par le Commerçant",
-      "outcome_detected": "Résultat Détecté",
+      "pdf_rendered": "Document de preuves préparé",
+      "evidence_saved_to_shopify": "Preuves enregistrées dans Shopify",
+      "submission_confirmed": "Preuves envoyées au réseau de cartes",
+      "auto_build_triggered": "Collecte des preuves lancée",
+      "auto_save_triggered": "Enregistrement des preuves dans Shopify",
+      "parked_for_review": "Mis en attente pour votre vérification",
+      "merchant_approved_for_save": "Approuvé par vous",
+      "outcome_detected": "Résultat reçu",
       "sync_failed": "Synchronisation Échouée",
       "pack_build_failed": "Construction du Dossier Échouée",
       "evidence_save_failed": "Sauvegarde de Preuve Échouée",
       "support_note_added": "Note ajoutée",
       "admin_override": "Remplacement admin",
       "admin_override_cleared": "Remplacement annulé",
-      "dispute_resynced": "Litige resynchronisé"
+      "dispute_resynced": "Litige actualisé depuis Shopify"
     },
     "actors": {
       "merchant_user": "Vous",
@@ -4521,12 +4563,12 @@
       "new": "Nouveau",
       "in_progress": "En Cours",
       "needs_review": "Révision Nécessaire",
-      "ready_to_submit": "Prêt à Soumettre",
+      "ready_to_submit": "Dossier de preuves préparé",
       "action_needed": "Action Requise",
-      "submitted": "Soumis",
-      "submitted_to_shopify": "Soumis à Shopify",
-      "waiting_on_issuer": "En Attente de l’Émetteur",
-      "submitted_to_bank": "Soumis à la banque",
+      "submitted": "En examen",
+      "submitted_to_shopify": "Preuves enregistrées dans Shopify",
+      "waiting_on_issuer": "En examen",
+      "submitted_to_bank": "En examen",
       "won": "Gagné",
       "lost": "Perdu",
       "accepted_not_contested": "Accepté",
@@ -5732,6 +5774,94 @@
         "priceThemLabel": "Riskified · % du GMV / sur mesure",
         "priceThemSub": "% entreprise sur ~$6,000",
         "priceNote": "La tarification entreprise de Riskified augmente avec le GMV — facilement $1,200+ par mois à ce volume, et bien plus à l'échelle."
+      }
+    }
+  },
+  "presentation": {
+    "lifecycle": {
+      "building_evidence": "Collecte des preuves",
+      "monitoring": "Surveillance",
+      "pack_prepared": "Dossier de preuves préparé",
+      "saved_to_shopify": "Preuves enregistrées dans Shopify",
+      "under_review": "En examen",
+      "won": "Gagné",
+      "lost": "Perdu",
+      "closed": "Clôturé"
+    },
+    "lifecycleSub": {
+      "building_evidence": "Aucune action requise",
+      "monitoring": "Aucune action requise",
+      "pack_prepared": "Aucune action requise",
+      "saved_to_shopify": "DisputeDesk continue de surveiller tant que des modifications restent possibles",
+      "under_review": "La réponse ne peut plus être modifiée",
+      "won": "",
+      "lost": "",
+      "closed": ""
+    },
+    "attention": {
+      "none": "Aucune action requise",
+      "opportunity": "Communication disponible",
+      "recommended": "Communication recommandée",
+      "requested": "Vérifier la communication",
+      "blocking": "Approbation requise",
+      "technical_error": "Attention requise"
+    },
+    "strength": {
+      "list": {
+        "strong": "Solide",
+        "moderate": "Modérée",
+        "weak": "Faible",
+        "not_assessed": "Pas encore évaluée"
+      },
+      "detail": {
+        "strong": "Preuves solides",
+        "moderate": "Partiellement étayée",
+        "weak": "Preuves limitées",
+        "not_assessed": "Pas encore évaluée"
+      }
+    },
+    "listState": {
+      "recommended": "Communication recommandée",
+      "requested": "Vérifier la communication",
+      "blocking": "Approbation requise",
+      "technical_error": "Attention technique requise"
+    },
+    "listStateSub": {
+      "recommended": "Une communication client peut renforcer cette réponse",
+      "requested": "Vérifiez les messages clients suggérés",
+      "blocking": "DisputeDesk attend votre approbation",
+      "technical_error": "Reconnectez-vous pour rétablir la surveillance"
+    },
+    "internalIssue": "DisputeDesk a détecté un problème technique et travaille à le résoudre. Aucune action n'est requise de votre part pour le moment.",
+    "deadlineLabel": "Date limite de réponse Shopify",
+    "hero": {
+      "nextLabel": "Prochaine étape :",
+      "building_evidence": {
+        "title": "Constitution de votre dossier de preuves",
+        "message": "DisputeDesk collecte les données de commande, de paiement, d'expédition et de suivi depuis vos sources connectées. Le dossier de preuves est assemblé automatiquement — aucune action n'est requise de votre part."
+      },
+      "monitoring": {
+        "title": "Surveillance de preuves supplémentaires",
+        "message": "Les preuves actuelles soutiennent la réponse, et DisputeDesk surveille les sources connectées pour tout élément susceptible de la renforcer."
+      },
+      "pack_prepared": {
+        "title": "Dossier de preuves préparé",
+        "message": "DisputeDesk a assemblé le dossier de preuves et continue de surveiller les mises à jour pertinentes jusqu'à ce que la réponse soit verrouillée ou envoyée."
+      },
+      "saved_to_shopify": {
+        "title": "Preuves enregistrées dans Shopify",
+        "message": "Le dernier dossier de preuves a été enregistré dans le litige Shopify. DisputeDesk continue de le surveiller et de le mettre à jour tant que des modifications restent possibles."
+      },
+      "under_review": {
+        "title": "Le réseau de cartes examine le litige",
+        "message": "La réponse a été envoyée et ne peut plus être modifiée. DisputeDesk suit le litige jusqu'au résultat."
+      },
+      "next": {
+        "building_evidence": "Dossier de preuves préparé — généralement en quelques heures",
+        "monitoring": "Preuves enregistrées dans Shopify avant la date limite de réponse",
+        "pack_prepared": "Preuves enregistrées dans Shopify avant la date limite de réponse",
+        "saved_to_shopify": "Shopify envoie la réponse à la date limite",
+        "under_review": "Résultat reçu"
       }
     }
   }

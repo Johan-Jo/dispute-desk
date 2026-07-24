@@ -4,6 +4,11 @@ import { computeDisputeMetrics } from "@/lib/disputes/metrics";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { isHiddenActivityEvent } from "@/lib/disputeEvents/spuriousDueDate";
 import { isDormantInquiry } from "@/lib/disputes/dormantInquiry";
+import { dashboardBucket } from "@/lib/disputes/presentation/buckets";
+import {
+  gatherPresentations,
+  type DisputeRowFacts,
+} from "@/lib/disputes/presentation/serverFacts";
 
 export const runtime = "nodejs";
 
@@ -68,7 +73,9 @@ export async function GET(req: NextRequest) {
   // counts, matching the Active Disputes tile in computeDisputeMetrics.
   const breakdownP = sb
     .from("disputes")
-    .select("id, normalized_status, closed_at, submission_state, phase, due_at, initiated_at")
+    .select(
+      "id, shop_id, reason, status, amount, normalized_status, final_outcome, closed_at, submission_state, phase, due_at, initiated_at, needs_attention, attention_reason, attention_payload",
+    )
     .eq("shop_id", shopId);
 
   // ── Recent activity (last 10 events) ─────────────────────────────────
@@ -149,6 +156,60 @@ export async function GET(req: NextRequest) {
   }
   const actionNeededDisputeId =
     actionNeededIds.length === 1 ? actionNeededIds[0] : null;
+
+  // ── Shared presentation model → mutually-exclusive operational
+  //    buckets (plan §4) ────────────────────────────────────────────────
+  // Precedence: Closed → Under review → Action required → Building &
+  // monitoring. Population scope (§12V decision 1): the three open
+  // buckets are point-in-time snapshots over all unresolved,
+  // non-dormant disputes; the Closed card is WINDOWED by the selected
+  // period (`closed_at` ∈ window) so it reconciles with the outcome
+  // tiles and its cb·inq footer split.
+  // Concrete-contribution derivation is skipped: recommended/opportunity
+  // never affect buckets or merchantActionCount (§4).
+  const periodStartMs = periodFrom ? new Date(periodFrom).getTime() : null;
+  const nonDormantRows = allDisputeRows.filter((r) => {
+    const row = r as Record<string, unknown>;
+    if (row.closed_at) return true; // terminal rows bucket as closed
+    return !isDormantInquiry({
+      phase: row.phase as string | null,
+      due_at: row.due_at as string | null,
+      initiated_at: row.initiated_at as string | null,
+    });
+  });
+  const bucketPresentations = await gatherPresentations(
+    sb,
+    shopId,
+    nonDormantRows as unknown as DisputeRowFacts[],
+    { includeConcreteContribution: false },
+  );
+  type BucketCell = { count: number; cb: number; inq: number };
+  const emptyCell = (): BucketCell => ({ count: 0, cb: 0, inq: 0 });
+  const operationalBuckets: Record<string, BucketCell> = {
+    building_monitoring: emptyCell(),
+    action_required: emptyCell(),
+    under_review: emptyCell(),
+    closed: emptyCell(),
+  };
+  let merchantActionCount = 0;
+  for (const r of nonDormantRows) {
+    const row = r as Record<string, unknown>;
+    const p = bucketPresentations.get(String(row.id));
+    if (!p) continue;
+    const bucket = dashboardBucket(p);
+    if (bucket === "closed") {
+      // Windowed Closed card (§12V decision 1).
+      const closedMs = row.closed_at
+        ? new Date(String(row.closed_at)).getTime()
+        : NaN;
+      if (periodStartMs != null && !(closedMs >= periodStartMs)) continue;
+    }
+    const cell = operationalBuckets[bucket];
+    cell.count += 1;
+    if (row.phase === "inquiry") cell.inq += 1;
+    else cell.cb += 1;
+    if (bucket === "action_required") merchantActionCount += 1;
+  }
 
   // Drop spurious due_date_changed events (epoch / same-instant), then cap at
   // the 10 the feed shows (we over-fetched 40 to survive the filter).
@@ -244,8 +305,14 @@ export async function GET(req: NextRequest) {
   // bulk-imported shop into one bucket (a single filled bar). The window is
   // the selected period; for "all time" it spans the shop's earliest
   // decision to now so the 6 bars still spread across real history.
+  // Same denominator rule as the KPI Win Rate (§13.1 decision):
+  // accepted counts as a loss; refunded stays excluded.
   const decided = legacyList.filter(
-    (d) => d.closed_at && (d.final_outcome === "won" || d.final_outcome === "lost"),
+    (d) =>
+      d.closed_at &&
+      (d.final_outcome === "won" ||
+        d.final_outcome === "lost" ||
+        d.final_outcome === "accepted"),
   );
   const decidedTimes = decided.map((d) => new Date(String(d.closed_at)).getTime());
   const trendStart = periodFrom
@@ -264,8 +331,9 @@ export async function GET(req: NextRequest) {
       return c >= bStart && (i === 5 ? c <= bEnd : c < bEnd);
     });
     const w = subset.filter((d) => d.final_outcome === "won").length;
-    const l = subset.filter((d) => d.final_outcome === "lost").length;
-    const r = w + l;
+    // Denominator = every decided dispute in the bucket (won + lost +
+    // accepted-as-loss), matching the KPI Win Rate.
+    const r = subset.length;
     winRateTrend.push(r > 0 ? Math.round((w / r) * 100) : 0);
   }
 
@@ -282,6 +350,15 @@ export async function GET(req: NextRequest) {
       actionNeededDisputeId,
       submissionBreakdown,
       recentActivity,
+
+      // ── Shared presentation model (plan §3/§4) ──
+      // Mutually-exclusive partition: Closed (period-windowed) →
+      // Under review → Action required → Building & monitoring.
+      operationalBuckets,
+      // Genuine merchant tasks only (blocking / requested /
+      // merchant-resolvable technical_error) — drives the dashboard
+      // banner. NOT the same as the legacy needs_attention count.
+      merchantActionCount,
 
       // ── Legacy fields (backward compat) ──
       totalDisputes,

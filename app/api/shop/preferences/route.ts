@@ -20,6 +20,14 @@ export interface NotificationPreferences {
   outcome: boolean;
 }
 
+/** Merchant involvement preference (design-alignment plan §12S).
+ *  Presentation-only: affects notification defaults and optional-
+ *  opportunity prominence — NEVER objective lifecycle, attention
+ *  classification, or dashboard-bucket truth. */
+export type InvolvementPreference = "hands_off" | "stay_involved";
+
+const DEFAULT_INVOLVEMENT: InvolvementPreference = "hands_off";
+
 const DEFAULTS: NotificationPreferences = {
   newDispute: true,
   beforeDue: true,
@@ -45,9 +53,14 @@ export async function GET(req: NextRequest) {
     .eq("shop_id", shopId)
     .single();
 
-  const steps = (data?.steps ?? {}) as Record<string, { payload?: { notifications?: Partial<NotificationPreferences> } }>;
+  const steps = (data?.steps ?? {}) as Record<
+    string,
+    { payload?: { notifications?: Partial<NotificationPreferences>; involvement?: InvolvementPreference } }
+  >;
   const team = steps.team;
   const notifs = team?.payload?.notifications;
+  const involvement: InvolvementPreference =
+    team?.payload?.involvement === "stay_involved" ? "stay_involved" : DEFAULT_INVOLVEMENT;
 
   const preferences: NotificationPreferences = {
     newDispute: notifs?.newDispute ?? DEFAULTS.newDispute,
@@ -59,7 +72,7 @@ export async function GET(req: NextRequest) {
 
   const teamEmail = (team?.payload as Record<string, unknown>)?.teamEmail as string | undefined;
 
-  return NextResponse.json({ notifications: preferences, teamEmail: teamEmail ?? "" });
+  return NextResponse.json({ notifications: preferences, teamEmail: teamEmail ?? "", involvement });
 }
 
 /**
@@ -68,7 +81,12 @@ export async function GET(req: NextRequest) {
  * Merges into team step payload.
  */
 export async function PATCH(req: NextRequest) {
-  let body: { shop_id?: string; notifications?: Partial<NotificationPreferences>; teamEmail?: string };
+  let body: {
+    shop_id?: string;
+    notifications?: Partial<NotificationPreferences>;
+    teamEmail?: string;
+    involvement?: InvolvementPreference;
+  };
   try {
     body = await req.json();
   } catch {
@@ -83,7 +101,9 @@ export async function PATCH(req: NextRequest) {
   const updates = body.notifications ?? {};
   const hasNotifUpdates = Object.keys(updates).length > 0;
   const hasEmailUpdate = body.teamEmail !== undefined;
-  if (!hasNotifUpdates && !hasEmailUpdate) {
+  const hasInvolvementUpdate =
+    body.involvement === "hands_off" || body.involvement === "stay_involved";
+  if (!hasNotifUpdates && !hasEmailUpdate && !hasInvolvementUpdate) {
     return NextResponse.json({ ok: true });
   }
 
@@ -105,6 +125,9 @@ export async function PATCH(req: NextRequest) {
   const updatedPayload: Record<string, unknown> = { ...team.payload, notifications: merged };
   if (hasEmailUpdate) {
     updatedPayload.teamEmail = body.teamEmail;
+  }
+  if (hasInvolvementUpdate) {
+    updatedPayload.involvement = body.involvement;
   }
   stepsMap.team = {
     ...team,

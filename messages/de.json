@@ -258,7 +258,7 @@
     "performanceOverview": "Leistungsübersicht",
     "operationalSummary": "Streitfall-Operationen",
     "attentionCount": "{count} benötigen Aufmerksamkeit",
-    "actionNeeded": "Handlung erforderlich",
+    "actionNeeded": "Aktion erforderlich",
     "readyToSubmit": "Bereit zum Einreichen",
     "savedToShopify": "In Shopify gespeichert",
     "waitingOnIssuer": "Warte auf Herausgeber",
@@ -276,7 +276,7 @@
     "daysValue": "{days}T",
     "statusDistribution": "Statusverteilung",
     "outcomeBreakdown": "Ergebnisaufschlüsselung",
-    "recentActivity": "Automatisierung & Einreichungs-Aktivität",
+    "recentActivity": "DisputeDesk-Aktivität",
     "recentActivityEmpty": "Aktivitäten erscheinen hier, sobald Streitfälle synchronisiert werden — Paket-Builds, Einreichungen und Statusänderungen werden alle angezeigt.",
     "statusCol": "Status",
     "submissionCol": "Einreichung",
@@ -307,12 +307,12 @@
     "dueInDays": "In {count} Tagen",
     "dueToday": "Heute fällig",
     "overdue": "Overdue",
-    "attentionBannerMessage": "{count, plural, =1 {# Widerspruch erfordert Aufmerksamkeit} other {# Widersprüche erfordern Aufmerksamkeit}}",
-    "attentionBannerCta": "Jetzt prüfen",
-    "actionNeededDesc": "Manuelle Prüfung nötig",
+    "attentionBannerMessage": "{count, plural, =1 {# Streitfall benötigt Ihre Aufmerksamkeit} other {# Streitfälle benötigen Ihre Aufmerksamkeit}}",
+    "attentionBannerCta": "Streitfälle prüfen",
+    "actionNeededDesc": "Ihre Eingabe wird benötigt",
     "readyToSubmitDesc": "Beweise vollständig",
     "waitingOnIssuerDesc": "An Bank gesendet",
-    "closedInPeriodDesc": "Historische Fälle",
+    "closedInPeriodDesc": "Ergebnis erhalten",
     "reviewCases": "Fälle prüfen",
     "submitNow": "Jetzt einreichen",
     "insightsTitle": "Insights",
@@ -342,7 +342,16 @@
     "revenueRecovered": "Wiederhergestellte Einnahmen",
     "avgResponseTime": "Durchschn. Reaktionszeit",
     "winRateTrend": "Gewinnraten-Trend",
-    "disputeCategories": "Streitfall-Kategorien"
+    "disputeCategories": "Streitfall-Kategorien",
+    "attentionBannerBody": "Alles andere erledigt DisputeDesk automatisch.",
+    "monitoringBannerTitle": "{count, plural, =1 {DisputeDesk überwacht # aktiven Streitfall} other {DisputeDesk überwacht # aktive Streitfälle}}",
+    "monitoringBannerBody": "Derzeit ist keine Aktion von Ihnen erforderlich.",
+    "monitoringBannerCta": "Aktive Streitfälle ansehen",
+    "buildingMonitoring": "Aufbau & Überwachung",
+    "buildingMonitoringDesc": "DisputeDesk arbeitet",
+    "underReviewCard": "In Prüfung",
+    "underReviewCardDesc": "Antwort gesendet",
+    "winRateDenominatorNote": "gewonnen ÷ entschieden (gewonnen, verloren, akzeptiert)"
   },
   "disputes": {
     "title": "Streitfälle",
@@ -628,7 +637,7 @@
       "source": "Quelle",
       "created": "Erstellt"
     },
-    "kpiNeedsAction": "Aktion erforderlich",
+    "kpiNeedsAction": "Händleraktion erforderlich",
     "kpiNeedsActionUrgent": "{count} dringend",
     "kpiAmountAtRisk": "Betrag im Risiko",
     "kpiStrongCases": "Starke Fälle",
@@ -641,7 +650,7 @@
     "urgentBannerViewAll": "Alle anzeigen",
     "colOrderCustomer": "Bestellung & Kunde",
     "colCaseStrength": "Fallstärke",
-    "colNextAction": "Nächste Aktion",
+    "colNextAction": "Status & nächster Schritt",
     "colAmount": "Amount",
     "colDueDate": "Fälligkeitsdatum",
     "colOutcome": "Outcome",
@@ -668,7 +677,13 @@
       "needsReview": "Prüfung erforderlich",
       "underReview": "In Prüfung",
       "submitted": "Submitted",
-      "closed": "Closed"
+      "closed": "Closed",
+      "monitoring": "Überwachung",
+      "comm": "Kommunikation",
+      "saved": "In Shopify gespeichert",
+      "won": "Gewonnen",
+      "lost": "Verloren",
+      "attention": "Aufmerksamkeit erforderlich"
     },
     "caseStrength": {
       "strong": "Starker Fall",
@@ -926,9 +941,9 @@
         "body": "Dieser Fall wurde an Shopify gespeichert, aber Shopify hat ihn noch nicht an die Bank weitergeleitet. Sie können weiterhin Belege hinzufügen. Wenn Sie das Paket neu erstellen, ersetzt die neue PDF die aktuell bei Shopify gespeicherte."
       },
       "windowClosedBanner": {
-        "title": "An die Bank übermittelt",
-        "body": "Shopify hat die Streitbeweise am {submittedAt} an die ausstellende Bank weitergeleitet. Es können keine neuen Dateien mehr zum bankseitigen Verteidigungspaket hinzugefügt werden.",
-        "bodyNoDate": "Shopify hat die Streitbeweise bereits an die ausstellende Bank weitergeleitet. Es können keine neuen Dateien mehr zum bankseitigen Verteidigungspaket hinzugefügt werden."
+        "title": "An das Kartennetzwerk gesendet",
+        "body": "Shopify hat diese Streitfall-Beweise am {submittedAt} an das Kartennetzwerk weitergeleitet. Neue Dateien können dem bankgerichteten Verteidigungspaket nicht mehr hinzugefügt werden.",
+        "bodyNoDate": "Shopify hat diese Streitfall-Beweise bereits an das Kartennetzwerk weitergeleitet. Neue Dateien können dem bankgerichteten Verteidigungspaket nicht mehr hinzugefügt werden."
       },
       "regeneratingBanner": {
         "title": "Verteidigungspaket wird neu erstellt",
@@ -1004,7 +1019,7 @@
         "savingBody": "DisputeDesk hat Ihre Einreichung angenommen und lädt das Beweispaket zu Shopify hoch. Dies dauert in der Regel weniger als 30 Sekunden — dieser Hinweis wird automatisch aktualisiert.",
         "savedTitles": {
           "outcomePosted": "Ergebnis eingetragen",
-          "forwardedToNetwork": "An das Kartennetzwerk weitergeleitet",
+          "forwardedToNetwork": "An das Kartennetzwerk gesendet",
           "savedToShopify": "In Shopify gespeichert"
         },
         "savedBody": {
@@ -1014,7 +1029,7 @@
           "closedNoDate": "Beweispaket v{version} wurde eingereicht. Die Rückbuchung wurde vom Kartennetzwerk abgeschlossen.",
           "savedWithDate": "Beweispaket v{version} ist in Shopify gespeichert ({date}). Shopify hat es noch nicht an das Kartennetzwerk weitergeleitet — wenn Sie es neu generieren, ersetzt das neue PDF diese gespeicherte Version sauber.",
           "savedNoDate": "Beweispaket v{version} ist in Shopify gespeichert. Shopify hat es noch nicht an das Kartennetzwerk weitergeleitet — wenn Sie es neu generieren, ersetzt das neue PDF diese gespeicherte Version sauber.",
-          "fallback": "Ein Beweispaket wurde an die Bank übermittelt."
+          "fallback": "Ein Verteidigungspaket wurde in Shopify gespeichert."
         },
         "openInShopifyAdmin": "In Shopify Admin öffnen",
         "viewPdf": "PDF anzeigen",
@@ -1025,8 +1040,8 @@
         "draftBannerBodyFinal": "Entwurf v{version} wurde erstellt, aber noch nicht an Shopify gesendet — die Bank hat derzeit v{bankVersion}. Prüfen Sie ihn unten. Wenn alles korrekt aussieht, übermitteln Sie ihn erneut an Shopify — dies ersetzt v{bankVersion}.",
         "approveDraft": "Entwurf v{version} genehmigen",
         "approveVersion": "v{version} genehmigen",
-        "submitToShopify": "An Shopify übermitteln",
-        "resubmitToShopify": "Erneut an Shopify übermitteln",
+        "submitToShopify": "In Shopify speichern",
+        "resubmitToShopify": "Erneut in Shopify speichern",
         "moreActions": "Weitere Aktionen",
         "regenerating": "Wird neu generiert…",
         "regenerateFromScratch": "Entwurf von Grund auf neu generieren",
@@ -1271,8 +1286,8 @@
           "outdated": "Das Beweispaket hat sich seit Erstellung dieser Stellungnahme geändert. Generieren Sie neu, um die aktuellen Signale zu übernehmen."
         },
         "override": {
-          "title": "Trotzdem einreichen?",
-          "body": "Eine Einreichung, bevor alle kritischen Beweise vorliegen, kann Ihren Fall schwächen. Wählen Sie unten einen Grund zur Bestätigung.",
+          "title": "Trotzdem speichern?",
+          "body": "Das Speichern, bevor alle entscheidenden Beweise vorliegen, kann Ihren Fall schwächen. Wählen Sie zur Bestätigung unten einen Grund.",
           "reasonLabel": "Grund für die jetzige Einreichung",
           "reasonPlaceholder": "Grund auswählen",
           "reason": {
@@ -1284,7 +1299,7 @@
           "noteLabel": "Optionale Notiz",
           "notePlaceholder": "Kontext für das Audit-Log hinzufügen…",
           "cancel": "Cancel",
-          "confirm": "Trotzdem einreichen"
+          "confirm": "Trotzdem speichern"
         }
       }
     },
@@ -1486,12 +1501,12 @@
       "no_return_initiated": "Zeigt, dass der Kunde nie eine Rücksendung eingeleitet hat — untermauert das Argument, dass keine Rückerstattung geschuldet war",
       "ip_location_check": "Ordnet die Bestellung dem üblichen Standort des Kunden zu — spricht dafür, dass der Karteninhaber sie aufgegeben hat",
       "device_session_consistency": "Verknüpft die Bestellung mit dem bekannten Gerät und der bekannten Sitzung des Kunden — entkräftet „Das war ich nicht“-Behauptungen",
-      "fraud_risk_screening": "Shopifys Risikoprüfung fand keine Betrugssignale — unabhängige Bestätigung einer legitimen Bestellung",
+      "fraud_risk_screening": "Shopifys Risikoprüfung fand keine Betrugssignale — unterstützender Kontext dafür, dass die Bestellung legitim war",
       "order_confirmation": "Belegt die Legitimität der Transaktion — die Grundlage jeder Streitfall-Antwort",
       "shipping_tracking": "Zeigt, dass der Versanddienstleister den Versand bestätigt hat — erforderlich, um Streitfälle wegen nicht erhaltener Ware zu gewinnen",
       "delivery_proof": "Bestätigt, dass der Kunde das Paket erhalten hat — stärkster Beweis gegen Behauptungen, die Ware sei nicht angekommen",
-      "billing_address_match": "Gleicht die Rechnungsadresse mit der Bestellung ab — entscheidend für Betrugsfälle",
-      "avs_cvv_match": "Zeigt, dass die Kartensicherheitsprüfungen bestanden wurden — Banken gewichten dies in Betrugsfällen stark",
+      "billing_address_match": "Gleicht die Rechnungsadresse mit der Bestellung ab — ein unterstützendes Signal bei Betrugsstreitfällen",
+      "avs_cvv_match": "Zeigt, dass die Kartensicherheitsprüfungen bestanden wurden — ein unterstützendes Signal, dessen Gewicht vom Streitgrund und den übrigen Beweisen abhängt",
       "product_description": "Belegt, dass das Produkt der Beschreibung entsprach — Schlüsselargument bei Streitfällen wegen abweichender Ware",
       "refund_policy": "Zeigt, dass der Kunde Ihren Rückerstattungsbedingungen zugestimmt hat — schützt vor Reue-Käufen",
       "shipping_policy": "Dokumentiert Ihre Versandzusagen — unterstützt Streitfälle zu Lieferzeiten",
@@ -1520,7 +1535,7 @@
       "tabs": {
         "overview": "Übersicht",
         "evidence": "Beweise",
-        "reviewSubmit": "Prüfen & Einreichen"
+        "reviewSubmit": "Prüfen und weiterleiten"
       },
       "strengthLabel": {
         "strong": "Starker Fall",
@@ -1588,10 +1603,10 @@
       },
       "changeRule": "Regel ändern",
       "editEvidence": "Beweise bearbeiten",
-      "submitToShopify": "An Shopify einreichen",
+      "submitToShopify": "In Shopify speichern",
       "viewInShopify": "In Shopify Admin anzeigen",
       "addMissingEvidence": "Fehlende Beweise hinzufügen",
-      "submitAnyway": "Trotzdem jetzt einreichen",
+      "submitAnyway": "Trotzdem speichern",
       "autoSubmitPausedTitle": "Auto-Einreichung pausiert — Ihre Prüfung erforderlich",
       "autoSubmitPausedBody": "DisputeDesk erstellt Ihren Fall automatisch, reicht ihn aber nur ein, wenn das Beweispaket Ihren Auto-Einreichungs-Schwellenwert erfüllt. Dieses Paket hat den Schwellenwert nicht erreicht, daher haben wir gestoppt und es an Sie übergeben.",
       "whyPrefix": "Why:",
@@ -1785,7 +1800,7 @@
       "ticket": {
         "confirm": "Treffer bestätigen",
         "notRelated": "Nicht zugehörig",
-        "reportBadMatch": "Falschen Treffer melden",
+        "reportBadMatch": "Falsche Zuordnung melden",
         "viewConversation": "Gesamte Konversation anzeigen",
         "hideConversation": "Konversation ausblenden"
       },
@@ -1814,7 +1829,7 @@
         "editExplanation": "Erläuterung bearbeiten",
         "saveExplanation": "Erläuterung speichern",
         "cancel": "Abbrechen",
-        "approvedBadge": "Freigegeben",
+        "approvedBadge": "Zur Aufnahme freigegeben",
         "proposedBadge": "Vorgeschlagen",
         "needsReapprovalBadge": "Erneute Freigabe erforderlich",
         "truncatedNote": "(Nachricht gekürzt)"
@@ -1853,7 +1868,12 @@
     "signalLabelValue": {
       "refundIssued": "Nachweis, dass die Rückerstattung bereits erfolgt ist",
       "noRefundOwed": "Nachweis, dass keine Rückerstattung geschuldet war (der Kunde hat die Ware nie zurückgesendet)"
-    }
+    },
+    "kpiActiveDisputes": "Aktive Streitfälle",
+    "kpiActiveDisputesSub": "Werden automatisch bearbeitet",
+    "kpiAmountAtRiskSub": "Über aktive Streitfälle",
+    "kpiUnderReview": "In Prüfung",
+    "kpiUnderReviewSub": "Antworten gesendet"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank kann nicht verarbeiten",
@@ -2644,6 +2664,28 @@
         "confirm": "Trennen",
         "cancel": "Abbrechen"
       }
+    },
+    "disputeHandling": {
+      "title": "Streitfall-Bearbeitung",
+      "help": "DisputeDesk sammelt automatisch Beweise, erstellt das Paket, überwacht Aktualisierungen und wendet die Regel-Engine auf jeden Streitfall an. Diese Einstellungen steuern, wie Sie diese Arbeit verfolgen und wie sie Shopify erreicht.",
+      "involvementTitle": "Ihre Beteiligung",
+      "involvementDesc": "Wählen Sie, wie eng Sie Streitfälle verfolgen möchten. DisputeDesk bereitet in beiden Optionen jede Antwort vor und überwacht sie.",
+      "handsOffTitle": "Automatisch",
+      "recommendedBadge": "Empfohlen",
+      "handsOffDesc": "Streitfälle automatisch bearbeiten und mich nur benachrichtigen, wenn meine Aufmerksamkeit wirklich nötig ist.",
+      "stayTitle": "Eingebunden bleiben",
+      "stayDesc": "Relevante Fortschrittsmeldungen und Möglichkeiten zur Stärkung von Streitfällen anzeigen, einschließlich Vorschlägen zur Kundenkommunikation.",
+      "involvementNote": "Beide Optionen verwenden dieselbe Beweissammlung, dieselben Regeln und dieselbe Antwortvorbereitung. Diese Einstellung ändert, was Sie sehen — nicht die erstellte Verteidigung.",
+      "savingTitle": "Beweise in Shopify speichern",
+      "savingDesc": "Wählen Sie, ob DisputeDesk geeignete Beweispakete automatisch speichern darf oder auf Ihre Freigabe warten muss. Dies ist eine operative Schutzmaßnahme, keine Benachrichtigungseinstellung.",
+      "autoTitle": "Automatisch speichern",
+      "autoDesc": "DisputeDesk speichert geeignete Beweispakete automatisch in Shopify, nachdem alle konfigurierten Qualitäts- und Sicherheitsprüfungen bestanden wurden.",
+      "autoNote": "Sie können das Paket weiterhin in DisputeDesk prüfen. Das Speichern in Shopify bestätigt für sich genommen nicht, dass die Antwort an das Kartennetzwerk gesendet wurde.",
+      "approveTitle": "Vor dem Speichern meine Freigabe verlangen",
+      "approveDesc": "DisputeDesk bereitet die Antwort vor und überwacht sie, wartet aber auf Ihre Freigabe, bevor das erste Beweispaket in Shopify gespeichert wird.",
+      "mixedNote": "Einige Streitfalltypen verwenden derzeit unterschiedliche Modi. Eine Auswahl hier gilt für alle Typen.",
+      "upgradeNote": "Die Verwaltung der Speichermodi erfordert einen Plan mit Automatisierungsregeln.",
+      "saved": "Einstellungen zur Streitfall-Bearbeitung gespeichert"
     }
   },
   "connect": {
@@ -4487,28 +4529,28 @@
     "amountLost": "Verlorener Betrag",
     "noEvents": "Noch keine Zeitleistenereignisse.",
     "eventTypes": {
-      "dispute_opened": "Disput eröffnet",
-      "status_changed": "Status geändert",
+      "dispute_opened": "Streitfall erkannt",
+      "status_changed": "Streitfallstatus aktualisiert",
       "due_date_changed": "Fälligkeitsdatum geändert",
-      "dispute_closed": "Disput geschlossen",
+      "dispute_closed": "Streitfall abgeschlossen",
       "pack_created": "Beweispaket erstellt",
-      "pack_ready": "Paket bereit zur Prüfung",
+      "pack_ready": "Beweispaket vorbereitet",
       "pack_blocked": "Paket blockiert",
-      "pdf_rendered": "Beweis-PDF erstellt",
-      "evidence_saved_to_shopify": "Beweis bei Shopify gespeichert",
-      "submission_confirmed": "Einreichung bestätigt",
-      "auto_build_triggered": "Auto-Build gestartet",
-      "auto_save_triggered": "Auto-Speichern gestartet",
-      "parked_for_review": "Zur Prüfung markiert",
-      "merchant_approved_for_save": "Vom Händler genehmigt",
-      "outcome_detected": "Ergebnis erkannt",
+      "pdf_rendered": "Beweisdokument erstellt",
+      "evidence_saved_to_shopify": "Beweise in Shopify gespeichert",
+      "submission_confirmed": "Beweise an das Kartennetzwerk gesendet",
+      "auto_build_triggered": "Beweissammlung gestartet",
+      "auto_save_triggered": "Beweise werden in Shopify gespeichert",
+      "parked_for_review": "Zur Prüfung zurückgestellt",
+      "merchant_approved_for_save": "Von Ihnen freigegeben",
+      "outcome_detected": "Ergebnis erhalten",
       "sync_failed": "Synchronisierung fehlgeschlagen",
       "pack_build_failed": "Paketerstellung fehlgeschlagen",
       "evidence_save_failed": "Beweisspeicherung fehlgeschlagen",
       "support_note_added": "Notiz hinzugefügt",
       "admin_override": "Admin-Überschreibung",
       "admin_override_cleared": "Überschreibung aufgehoben",
-      "dispute_resynced": "Streitfall neu synchronisiert"
+      "dispute_resynced": "Streitfall aus Shopify aktualisiert"
     },
     "actors": {
       "merchant_user": "Sie",
@@ -4521,12 +4563,12 @@
       "new": "Neu",
       "in_progress": "In Bearbeitung",
       "needs_review": "Prüfung erforderlich",
-      "ready_to_submit": "Bereit zum Einreichen",
+      "ready_to_submit": "Beweispaket erstellt",
       "action_needed": "Handlung erforderlich",
-      "submitted": "Eingereicht",
-      "submitted_to_shopify": "An Shopify übermittelt",
-      "waiting_on_issuer": "Warten auf Herausgeber",
-      "submitted_to_bank": "An Bank übermittelt",
+      "submitted": "In Prüfung",
+      "submitted_to_shopify": "Beweise in Shopify gespeichert",
+      "waiting_on_issuer": "In Prüfung",
+      "submitted_to_bank": "In Prüfung",
       "won": "Gewonnen",
       "lost": "Verloren",
       "accepted_not_contested": "Akzeptiert",
@@ -5732,6 +5774,94 @@
         "priceThemLabel": "Riskified · % des GMV / individuell",
         "priceThemSub": "Enterprise-% auf ~$6,000",
         "priceNote": "Die Enterprise-Preise von Riskified skalieren mit dem GMV — leicht $1,200+ im Monat bei diesem Volumen, und weit mehr im großen Maßstab."
+      }
+    }
+  },
+  "presentation": {
+    "lifecycle": {
+      "building_evidence": "Beweise werden gesammelt",
+      "monitoring": "Überwachung",
+      "pack_prepared": "Beweispaket erstellt",
+      "saved_to_shopify": "Beweise in Shopify gespeichert",
+      "under_review": "In Prüfung",
+      "won": "Gewonnen",
+      "lost": "Verloren",
+      "closed": "Abgeschlossen"
+    },
+    "lifecycleSub": {
+      "building_evidence": "Keine Aktion erforderlich",
+      "monitoring": "Keine Aktion erforderlich",
+      "pack_prepared": "Keine Aktion erforderlich",
+      "saved_to_shopify": "DisputeDesk überwacht weiter, solange Änderungen möglich sind",
+      "under_review": "Die Antwort kann nicht mehr geändert werden",
+      "won": "",
+      "lost": "",
+      "closed": ""
+    },
+    "attention": {
+      "none": "Keine Aktion erforderlich",
+      "opportunity": "Kommunikation verfügbar",
+      "recommended": "Kommunikation empfohlen",
+      "requested": "Kommunikation prüfen",
+      "blocking": "Freigabe erforderlich",
+      "technical_error": "Aufmerksamkeit erforderlich"
+    },
+    "strength": {
+      "list": {
+        "strong": "Stark",
+        "moderate": "Mittel",
+        "weak": "Schwach",
+        "not_assessed": "Noch nicht bewertet"
+      },
+      "detail": {
+        "strong": "Starke Beweislage",
+        "moderate": "Teilweise gestützt",
+        "weak": "Begrenzte Beweislage",
+        "not_assessed": "Noch nicht bewertet"
+      }
+    },
+    "listState": {
+      "recommended": "Kommunikation empfohlen",
+      "requested": "Kommunikation prüfen",
+      "blocking": "Freigabe erforderlich",
+      "technical_error": "Technische Aufmerksamkeit erforderlich"
+    },
+    "listStateSub": {
+      "recommended": "Kundenkommunikation kann diese Antwort stärken",
+      "requested": "Prüfen Sie die vorgeschlagenen Kundennachrichten",
+      "blocking": "DisputeDesk wartet auf Ihre Freigabe",
+      "technical_error": "Verbindung wiederherstellen, um die Überwachung fortzusetzen"
+    },
+    "internalIssue": "DisputeDesk hat ein technisches Problem erkannt und arbeitet an der Lösung. Derzeit ist keine Aktion von Ihnen erforderlich.",
+    "deadlineLabel": "Shopify-Antwortfrist",
+    "hero": {
+      "nextLabel": "Als Nächstes:",
+      "building_evidence": {
+        "title": "Ihr Beweispaket wird erstellt",
+        "message": "DisputeDesk sammelt Bestell-, Zahlungs-, Versand- und Tracking-Daten aus Ihren verbundenen Quellen. Das Beweispaket wird automatisch zusammengestellt — keine Aktion von Ihnen erforderlich."
+      },
+      "monitoring": {
+        "title": "Überwachung auf weitere Beweise",
+        "message": "Die aktuellen Beweise stützen die Antwort, und DisputeDesk überwacht verbundene Quellen auf alles, was sie weiter stärkt."
+      },
+      "pack_prepared": {
+        "title": "Beweispaket erstellt",
+        "message": "DisputeDesk hat das Beweispaket zusammengestellt und überwacht weiterhin relevante Aktualisierungen, bis die Antwort gesperrt oder gesendet wird."
+      },
+      "saved_to_shopify": {
+        "title": "Beweise in Shopify gespeichert",
+        "message": "Das aktuelle Beweispaket wurde im Shopify-Disput gespeichert. DisputeDesk überwacht und aktualisiert es weiter, solange Änderungen möglich sind."
+      },
+      "under_review": {
+        "title": "Das Kartennetzwerk prüft den Disput",
+        "message": "Die Antwort wurde gesendet und kann nicht mehr geändert werden. DisputeDesk verfolgt den Disput bis zum Ergebnis."
+      },
+      "next": {
+        "building_evidence": "Beweispaket erstellt — meist innerhalb weniger Stunden",
+        "monitoring": "Beweise werden vor der Antwortfrist in Shopify gespeichert",
+        "pack_prepared": "Beweise werden vor der Antwortfrist in Shopify gespeichert",
+        "saved_to_shopify": "Shopify sendet die Antwort zur Frist",
+        "under_review": "Ergebnis erhalten"
       }
     }
   }

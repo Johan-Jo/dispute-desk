@@ -274,7 +274,7 @@
     "helpCardLink": "Read the guide",
     "operationalSummary": "Dispute Operations",
     "attentionCount": "{count} need attention",
-    "actionNeeded": "Action Needed",
+    "actionNeeded": "Action required",
     "readyToSubmit": "Ready to Submit",
     "savedToShopify": "Saved to Shopify",
     "waitingOnIssuer": "Waiting on Issuer",
@@ -292,7 +292,7 @@
     "daysValue": "{days}d",
     "statusDistribution": "Status Distribution",
     "outcomeBreakdown": "Outcome Breakdown",
-    "recentActivity": "Automation & Submission Activity",
+    "recentActivity": "DisputeDesk activity",
     "recentActivityEmpty": "Activity will appear here once disputes start syncing — pack builds, submissions, and status changes will all show up.",
     "statusCol": "Status",
     "submissionCol": "Submission",
@@ -323,12 +323,12 @@
     "dueInDays": "In {count} days",
     "dueToday": "Due today",
     "overdue": "Overdue",
-    "attentionBannerMessage": "{count, plural, =1 {# dispute needs attention} other {# disputes need attention}}",
-    "attentionBannerCta": "Review now",
-    "actionNeededDesc": "Needs manual review",
+    "attentionBannerMessage": "{count, plural, =1 {# dispute needs your attention} other {# disputes need your attention}}",
+    "attentionBannerCta": "Review disputes",
+    "actionNeededDesc": "Needs your input",
     "readyToSubmitDesc": "Evidence complete",
     "waitingOnIssuerDesc": "Submitted to bank",
-    "closedInPeriodDesc": "Historical cases",
+    "closedInPeriodDesc": "Outcome received",
     "reviewCases": "Review cases",
     "submitNow": "Submit now",
     "insightsTitle": "Insights",
@@ -342,7 +342,16 @@
     "disputeRate": "Dispute rate",
     "allDisputesOverOrders": "all disputes ÷ orders",
     "recoveredShort": "Recovered",
-    "atRiskShort": "At Risk"
+    "atRiskShort": "At Risk",
+    "attentionBannerBody": "DisputeDesk is handling everything else automatically.",
+    "monitoringBannerTitle": "{count, plural, =1 {DisputeDesk is monitoring # active dispute} other {DisputeDesk is monitoring # active disputes}}",
+    "monitoringBannerBody": "No action is currently required from you.",
+    "monitoringBannerCta": "View active disputes",
+    "buildingMonitoring": "Building & monitoring",
+    "buildingMonitoringDesc": "DisputeDesk is working",
+    "underReviewCard": "Under review",
+    "underReviewCardDesc": "Response sent",
+    "winRateDenominatorNote": "won ÷ decided (won, lost, accepted)"
   },
   "disputes": {
     "title": "Disputes",
@@ -620,7 +629,7 @@
       "defenseSectionConclusion": "Conclusion",
       "defenseSectionArgument": "Argument"
     },
-    "kpiNeedsAction": "Needs action",
+    "kpiNeedsAction": "Merchant action required",
     "kpiNeedsActionUrgent": "{count} urgent",
     "kpiAmountAtRisk": "Amount at risk",
     "kpiStrongCases": "Strong cases",
@@ -633,7 +642,7 @@
     "urgentBannerViewAll": "View all",
     "colOrderCustomer": "Order & Customer",
     "colCaseStrength": "Case strength",
-    "colNextAction": "Next action",
+    "colNextAction": "Status & next step",
     "colAmount": "Amount",
     "colDueDate": "Due date",
     "colOutcome": "Outcome",
@@ -660,7 +669,13 @@
       "needsReview": "Needs review",
       "underReview": "Under review",
       "submitted": "Submitted",
-      "closed": "Closed"
+      "closed": "Closed",
+      "monitoring": "Monitoring",
+      "comm": "Communication",
+      "saved": "Saved to Shopify",
+      "won": "Won",
+      "lost": "Lost",
+      "attention": "Attention required"
     },
     "facts": {
       "title": "Case Details",
@@ -883,12 +898,12 @@
       "no_return_initiated": "Shows the customer never initiated a return — grounds the argument that no refund was owed",
       "ip_location_check": "Places the order at the customer's usual location — supports that the cardholder placed it",
       "device_session_consistency": "Ties the order to the customer's known device and session — counters 'this wasn't me' claims",
-      "fraud_risk_screening": "Shopify's risk screening found no fraud signals — independent backing that the order was legitimate",
+      "fraud_risk_screening": "Shopify's risk screening found no fraud signals — supporting context that the order was legitimate",
       "order_confirmation": "Proves the transaction is legitimate — the foundation of every dispute response",
       "shipping_tracking": "Shows the carrier confirmed shipment — required to win 'item not received' disputes",
       "delivery_proof": "Confirms the customer received the package — strongest evidence against 'not received' claims",
-      "billing_address_match": "Matches the billing address to the order — critical for fraud disputes",
-      "avs_cvv_match": "Shows the card security checks passed — banks weigh this heavily in fraud cases",
+      "billing_address_match": "Matches the billing address to the order — a supporting signal for fraud disputes",
+      "avs_cvv_match": "Shows the card security checks passed — a supporting signal whose weight depends on the dispute reason and the other evidence available",
       "product_description": "Proves the product matched what was advertised — key defense for 'not as described' disputes",
       "refund_policy": "Shows the customer agreed to your refund terms — protects against buyer's remorse claims",
       "shipping_policy": "Documents your shipping commitments — supports delivery timeline disputes",
@@ -917,7 +932,7 @@
       "tabs": {
         "overview": "Overview",
         "evidence": "Evidence",
-        "reviewSubmit": "Review & Submit"
+        "reviewSubmit": "Review and Forward"
       },
       "strengthLabel": {
         "strong": "Strong case",
@@ -985,10 +1000,10 @@
       },
       "changeRule": "Change rule",
       "editEvidence": "Edit evidence",
-      "submitToShopify": "Submit to Shopify",
+      "submitToShopify": "Save to Shopify",
       "viewInShopify": "View in Shopify Admin",
       "addMissingEvidence": "Add missing evidence",
-      "submitAnyway": "Submit now anyway",
+      "submitAnyway": "Save anyway",
       "autoSubmitPausedTitle": "Auto-submit paused — your review needed",
       "autoSubmitPausedBody": "DisputeDesk builds your defense automatically, but only auto-submits when the pack meets your auto-submit threshold. This pack didn't clear the bar, so we stopped and handed it to you.",
       "whyPrefix": "Why:",
@@ -1354,9 +1369,9 @@
         "body": "This case has been saved to Shopify, but Shopify hasn't yet forwarded it to the bank. You can still add evidence. If you regenerate the package, the new PDF will replace the current one saved on the Shopify dispute."
       },
       "windowClosedBanner": {
-        "title": "Submitted to bank",
-        "body": "Shopify forwarded this dispute evidence to the issuing bank on {submittedAt}. New files can no longer be added to the bank-facing defense package.",
-        "bodyNoDate": "Shopify has already forwarded this dispute evidence to the issuing bank. New files can no longer be added to the bank-facing defense package."
+        "title": "Sent to card network",
+        "body": "Shopify forwarded this dispute evidence to the card network on {submittedAt}. New files can no longer be added to the bank-facing defense package.",
+        "bodyNoDate": "Shopify has already forwarded this dispute evidence to the card network. New files can no longer be added to the bank-facing defense package."
       },
       "regeneratingBanner": {
         "title": "Rebuilding the defence package",
@@ -1432,7 +1447,7 @@
         "savingBody": "DisputeDesk has accepted your submission and is uploading the defence package to Shopify. This usually completes in under 30 seconds — this banner will update automatically.",
         "savedTitles": {
           "outcomePosted": "Outcome posted",
-          "forwardedToNetwork": "Forwarded to the card network",
+          "forwardedToNetwork": "Sent to card network",
           "savedToShopify": "Saved to Shopify"
         },
         "savedBody": {
@@ -1442,7 +1457,7 @@
           "closedNoDate": "Defence package v{version} was submitted. The dispute has been closed by the card network.",
           "savedWithDate": "Defence package v{version} is saved to Shopify ({date}). Shopify has not yet forwarded it to the card network — if you regenerate, the new PDF will replace this saved version cleanly.",
           "savedNoDate": "Defence package v{version} is saved to Shopify. Shopify has not yet forwarded it to the card network — if you regenerate, the new PDF will replace this saved version cleanly.",
-          "fallback": "A defence package has been submitted to the bank."
+          "fallback": "A defence package has been saved to Shopify."
         },
         "openInShopifyAdmin": "Open in Shopify Admin",
         "viewPdf": "View PDF",
@@ -1453,8 +1468,8 @@
         "draftBannerBodyFinal": "Draft v{version} has been generated but has not been sent to Shopify yet — the bank currently has v{bankVersion}. Review it below. If it looks correct, resubmit it to Shopify — that will replace v{bankVersion}.",
         "approveDraft": "Approve draft v{version}",
         "approveVersion": "Approve v{version}",
-        "submitToShopify": "Submit to Shopify",
-        "resubmitToShopify": "Resubmit to Shopify",
+        "submitToShopify": "Save to Shopify",
+        "resubmitToShopify": "Save to Shopify again",
         "moreActions": "More actions",
         "regenerating": "Regenerating…",
         "regenerateFromScratch": "Regenerate draft from scratch",
@@ -1699,8 +1714,8 @@
           "outdated": "The evidence pack changed since this statement was generated. Regenerate to pick up the latest signals."
         },
         "override": {
-          "title": "Submit anyway?",
-          "body": "Submitting before all critical evidence is in place may weaken your case. Choose a reason below to confirm.",
+          "title": "Save anyway?",
+          "body": "Saving before all critical evidence is in place may weaken your case. Choose a reason below to confirm.",
           "reasonLabel": "Reason for submitting now",
           "reasonPlaceholder": "Select a reason",
           "reason": {
@@ -1712,7 +1727,7 @@
           "noteLabel": "Optional note",
           "notePlaceholder": "Add context for the audit log…",
           "cancel": "Cancel",
-          "confirm": "Submit anyway"
+          "confirm": "Save anyway"
         }
       }
     },
@@ -1785,7 +1800,7 @@
       "ticket": {
         "confirm": "Confirm match",
         "notRelated": "Not related",
-        "reportBadMatch": "Report bad match",
+        "reportBadMatch": "Report incorrect match",
         "viewConversation": "View full conversation",
         "hideConversation": "Hide conversation"
       },
@@ -1814,7 +1829,7 @@
         "editExplanation": "Edit explanation",
         "saveExplanation": "Save explanation",
         "cancel": "Cancel",
-        "approvedBadge": "Approved",
+        "approvedBadge": "Approved for inclusion",
         "proposedBadge": "Proposed",
         "needsReapprovalBadge": "Needs re-approval",
         "truncatedNote": "(message shortened)"
@@ -1853,7 +1868,12 @@
     "signalLabelValue": {
       "refundIssued": "Proof that the refund was already issued",
       "noRefundOwed": "Proof that no refund was owed (the customer never returned the goods)"
-    }
+    },
+    "kpiActiveDisputes": "Active disputes",
+    "kpiActiveDisputesSub": "Being handled automatically",
+    "kpiAmountAtRiskSub": "Across active disputes",
+    "kpiUnderReview": "Under review",
+    "kpiUnderReviewSub": "Responses sent"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank cannot process",
@@ -2644,6 +2664,28 @@
         "confirm": "Disconnect",
         "cancel": "Cancel"
       }
+    },
+    "disputeHandling": {
+      "title": "Dispute handling",
+      "help": "DisputeDesk automatically collects evidence, builds the package, monitors for updates, and applies the rules engine on every dispute. These preferences control how you follow that work and how it reaches Shopify.",
+      "involvementTitle": "Your involvement",
+      "involvementDesc": "Choose how closely you want to follow disputes. DisputeDesk prepares and monitors every response in either option.",
+      "handsOffTitle": "Hands-off",
+      "recommendedBadge": "Recommended",
+      "handsOffDesc": "Handle disputes automatically and notify me only when my attention is genuinely needed.",
+      "stayTitle": "Stay involved",
+      "stayDesc": "Show me relevant progress updates and opportunities to strengthen disputes, including customer-communication suggestions.",
+      "involvementNote": "Both options use the same evidence collection, rules, and response preparation. This preference changes what you see — not the defence produced.",
+      "savingTitle": "Saving evidence to Shopify",
+      "savingDesc": "Choose whether DisputeDesk can save eligible evidence packages automatically, or must wait for your approval. This is an operational safeguard, not a notification preference.",
+      "autoTitle": "Save automatically",
+      "autoDesc": "DisputeDesk automatically saves eligible evidence packages to Shopify after all configured quality and safety checks pass.",
+      "autoNote": "You can still review the package in DisputeDesk. Saving evidence to Shopify does not by itself confirm the response has been sent to the card network.",
+      "approveTitle": "Require my approval before saving",
+      "approveDesc": "DisputeDesk prepares and monitors the response but waits for your approval before saving the first evidence package to Shopify.",
+      "mixedNote": "Some dispute types currently use different modes. Choosing an option here applies it to all types.",
+      "upgradeNote": "Managing save modes requires a plan that includes automation rules.",
+      "saved": "Dispute handling preferences saved"
     }
   },
   "connect": {
@@ -4674,28 +4716,28 @@
     "amountLost": "Amount Lost",
     "noEvents": "No timeline events yet.",
     "eventTypes": {
-      "dispute_opened": "Dispute Opened",
-      "status_changed": "Status Changed",
+      "dispute_opened": "Dispute detected",
+      "status_changed": "Dispute status updated",
       "due_date_changed": "Due Date Changed",
-      "dispute_closed": "Dispute Closed",
-      "pack_created": "Evidence Pack Generated",
-      "pack_ready": "Pack Ready for Review",
+      "dispute_closed": "Dispute closed",
+      "pack_created": "Evidence package created",
+      "pack_ready": "Evidence package prepared",
       "pack_blocked": "Pack Blocked",
-      "pdf_rendered": "Evidence PDF Generated",
-      "evidence_saved_to_shopify": "Evidence Saved to Shopify",
-      "submission_confirmed": "Submission Confirmed",
-      "auto_build_triggered": "Auto-Build Started",
-      "auto_save_triggered": "Auto-Save Started",
-      "parked_for_review": "Flagged for Review",
-      "merchant_approved_for_save": "Approved by Merchant",
-      "outcome_detected": "Outcome Detected",
+      "pdf_rendered": "Evidence document prepared",
+      "evidence_saved_to_shopify": "Evidence saved to Shopify",
+      "submission_confirmed": "Evidence sent to card network",
+      "auto_build_triggered": "Evidence collection started",
+      "auto_save_triggered": "Saving evidence to Shopify",
+      "parked_for_review": "Held for your review",
+      "merchant_approved_for_save": "Approved by you",
+      "outcome_detected": "Outcome received",
       "sync_failed": "Sync Failed",
       "pack_build_failed": "Pack Build Failed",
       "evidence_save_failed": "Evidence Save Failed",
       "support_note_added": "Note Added",
       "admin_override": "Admin Override",
       "admin_override_cleared": "Override Cleared",
-      "dispute_resynced": "Dispute Resynced"
+      "dispute_resynced": "Dispute refreshed from Shopify"
     },
     "eventDescriptions": {
       "submission_confirmed": "Submission confirmed by Shopify",
@@ -4719,12 +4761,12 @@
       "new": "New",
       "in_progress": "In Progress",
       "needs_review": "Needs Review",
-      "ready_to_submit": "Ready to Submit",
+      "ready_to_submit": "Evidence package prepared",
       "action_needed": "Action Needed",
-      "submitted": "Submitted",
-      "submitted_to_shopify": "Submitted to Shopify",
-      "waiting_on_issuer": "Waiting on Issuer",
-      "submitted_to_bank": "Submitted to Bank",
+      "submitted": "Under review",
+      "submitted_to_shopify": "Evidence saved to Shopify",
+      "waiting_on_issuer": "Under review",
+      "submitted_to_bank": "Under review",
       "won": "Won",
       "lost": "Lost",
       "accepted_not_contested": "Accepted",
@@ -5731,6 +5773,94 @@
         "priceThemLabel": "Riskified · % of GMV / custom",
         "priceThemSub": "enterprise % on ~$6,000",
         "priceNote": "Riskified's enterprise pricing scales with GMV — easily $1,200+ a month at this volume, and far more at scale."
+      }
+    }
+  },
+  "presentation": {
+    "lifecycle": {
+      "building_evidence": "Building evidence",
+      "monitoring": "Monitoring",
+      "pack_prepared": "Evidence package prepared",
+      "saved_to_shopify": "Evidence saved to Shopify",
+      "under_review": "Under review",
+      "won": "Won",
+      "lost": "Lost",
+      "closed": "Closed"
+    },
+    "lifecycleSub": {
+      "building_evidence": "No action required",
+      "monitoring": "No action required",
+      "pack_prepared": "No action required",
+      "saved_to_shopify": "DisputeDesk will continue monitoring while changes remain possible",
+      "under_review": "The response can no longer be changed",
+      "won": "",
+      "lost": "",
+      "closed": ""
+    },
+    "attention": {
+      "none": "No action required",
+      "opportunity": "Communication available",
+      "recommended": "Communication recommended",
+      "requested": "Review communication",
+      "blocking": "Approval required",
+      "technical_error": "Attention required"
+    },
+    "strength": {
+      "list": {
+        "strong": "Strong",
+        "moderate": "Moderate",
+        "weak": "Weak",
+        "not_assessed": "Not yet assessed"
+      },
+      "detail": {
+        "strong": "Strong evidence",
+        "moderate": "Partially supported",
+        "weak": "Limited evidence",
+        "not_assessed": "Not yet assessed"
+      }
+    },
+    "listState": {
+      "recommended": "Communication recommended",
+      "requested": "Review communication",
+      "blocking": "Approval required",
+      "technical_error": "Technical attention required"
+    },
+    "listStateSub": {
+      "recommended": "Customer communication may strengthen this response",
+      "requested": "Review the suggested customer messages",
+      "blocking": "DisputeDesk is waiting for your approval",
+      "technical_error": "Reconnect to restore monitoring"
+    },
+    "internalIssue": "DisputeDesk detected a technical issue and is working to resolve it. No action is currently required from you.",
+    "deadlineLabel": "Shopify response deadline",
+    "hero": {
+      "nextLabel": "Next:",
+      "building_evidence": {
+        "title": "Building your evidence pack",
+        "message": "DisputeDesk is collecting order, payment, fulfillment, and tracking data from your connected sources. The evidence pack is assembled automatically — no action is needed from you."
+      },
+      "monitoring": {
+        "title": "Monitoring for additional evidence",
+        "message": "The current evidence supports the response, and DisputeDesk is monitoring connected sources for anything that strengthens it further."
+      },
+      "pack_prepared": {
+        "title": "Evidence package prepared",
+        "message": "DisputeDesk has assembled the evidence package and will continue monitoring for relevant updates until the response is locked or sent."
+      },
+      "saved_to_shopify": {
+        "title": "Evidence saved to Shopify",
+        "message": "The latest evidence package has been saved with the Shopify dispute. DisputeDesk will continue monitoring and updating it while changes remain possible."
+      },
+      "under_review": {
+        "title": "The card network is reviewing the dispute",
+        "message": "The response has been sent and can no longer be changed. DisputeDesk is tracking the dispute for an outcome."
+      },
+      "next": {
+        "building_evidence": "Evidence pack prepared — usually within a few hours",
+        "monitoring": "Evidence saved to Shopify before the response deadline",
+        "pack_prepared": "Evidence saved to Shopify before the response deadline",
+        "saved_to_shopify": "Shopify sends the response at the deadline",
+        "under_review": "Outcome received"
       }
     }
   }

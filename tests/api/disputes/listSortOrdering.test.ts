@@ -28,6 +28,7 @@ function makeChain() {
   for (const m of [
     "select",
     "eq",
+    "neq",
     "in",
     "not",
     "is",
@@ -39,6 +40,8 @@ function makeChain() {
   ]) {
     chain[m] = self;
   }
+  // gatherPresentations calls .maybeSingle() on the integrations lookup.
+  chain.maybeSingle = () => Promise.resolve({ data: null, error: null });
   chain.order = (col: string, opts: { ascending?: boolean; nullsFirst?: boolean } = {}) => {
     orderCalls.push([col, opts]);
     return chain;

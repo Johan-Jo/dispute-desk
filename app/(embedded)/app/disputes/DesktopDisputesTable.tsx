@@ -9,12 +9,12 @@ import { withShopParams } from "@/lib/withShopParams";
 import {
   figmaCaseStrength,
   figmaDueDate,
-  figmaNextAction,
+  rowPrimaryState,
   figmaOutcome,
   figmaReviewChip,
-  figmaRowChrome,
+  rowChromeV2,
   figmaStatus,
-  figmaStrengthDetail,
+  strengthSubtitle,
   formatCurrency,
   orderLabel,
   translateReason,
@@ -169,11 +169,11 @@ export function DesktopDisputesTable({
           const status = figmaStatus(d);
           const strength = figmaCaseStrength(d);
           const reviewChip = figmaReviewChip(d, t);
-          const detail = figmaStrengthDetail(d, t);
+          const detail = strengthSubtitle(d, t);
           const outcome = figmaOutcome(d);
           const due = figmaDueDate(d, t, dateLocale);
-          const next = figmaNextAction(d, t);
-          const chrome = figmaRowChrome(d);
+          const next = rowPrimaryState(d, t);
+          const chrome = rowChromeV2(d);
 
           const rowStyle: CSSProperties = {
             display: "grid",
@@ -303,19 +303,39 @@ export function DesktopDisputesTable({
                 )}
               </div>
 
-              {/* Next action */}
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: "#005BD3",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  minWidth: 0,
-                }}
-              >
-                {next}
+              {/* Status & next step — two lines: primary operational
+                  lifecycle label + secondary responsibility copy (never
+                  an imperative). Plan §5. */}
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "#202223",
+                    lineHeight: 1.4,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {next.label}
+                </div>
+                {next.sub ? (
+                  <div
+                    style={{
+                      fontSize: 11.5,
+                      color: "#6D7175",
+                      marginTop: 2,
+                      lineHeight: 1.4,
+                      overflow: "hidden",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                    }}
+                  >
+                    {next.sub}
+                  </div>
+                ) : null}
               </div>
 
               {/* Amount */}

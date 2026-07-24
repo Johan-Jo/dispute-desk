@@ -59,6 +59,8 @@ interface DisputesResponse {
   disputes: Dispute[];
   aggregates?: {
     needs_attention: number;
+    /** Genuine merchant tasks only (blocking + requested) — plan §5. */
+    merchant_action_required?: number;
   };
   pagination: {
     page: number;
@@ -191,45 +193,78 @@ export default function DisputesListPage() {
    *  popover stays for power users. */
   const [statusDropdown, setStatusDropdown] = useState<string>("all");
 
+  /** Attention filter param (plan §11) — independent of lifecycle and
+   *  strength. `tasks` = genuine merchant tasks; `comm` =
+   *  communication-review states. */
+  const [attentionParam, setAttentionParam] = useState<"" | "tasks" | "comm">(
+    initialUrlFilters.attention,
+  );
+  const [submissionStateFilter, setSubmissionStateFilter] = useState<string[]>([]);
+  const [outcomeDropdownFilter, setOutcomeDropdownFilter] = useState<string[]>([]);
+
+  /** Status dropdown → the three independent query dimensions
+   *  (plan §11): lifecycle values query lifecycle facts; the
+   *  communication / attention options query the attention dimension;
+   *  Won/Lost query final outcomes. NOT a renamed version of the old
+   *  merged filter — each option's query logic matches its dimension. */
   const applyStatusDropdown = useCallback((value: string) => {
     setStatusDropdown(value);
     setPage(1);
-    if (value === "all") {
-      setNormalizedStatusFilter([]);
-      setActiveTab("all");
-      return;
-    }
-    if (value === "closed") {
-      setNormalizedStatusFilter([]);
-      setActiveTab("closed");
-      return;
-    }
-    setActiveTab("active");
-    if (value === "action_needed") {
-      setNormalizedStatusFilter([
-        "action_needed",
-        "ready_to_submit",
-        "new",
-        "in_progress",
-      ]);
-      return;
-    }
-    if (value === "needs_review") {
-      setNormalizedStatusFilter(["needs_review"]);
-      return;
-    }
-    if (value === "under_review") {
-      setNormalizedStatusFilter([
-        "submitted_to_shopify",
-        "submitted_to_bank",
-        "waiting_on_issuer",
-        "submitted",
-      ]);
-      return;
-    }
-    if (value === "submitted") {
-      setNormalizedStatusFilter(["submitted_to_shopify", "submitted_to_bank"]);
-      return;
+    // Reset all dimension filters, then apply the selected one.
+    setNormalizedStatusFilter([]);
+    setSubmissionStateFilter([]);
+    setOutcomeDropdownFilter([]);
+    setAttentionParam("");
+    switch (value) {
+      case "all":
+        setActiveTab("all");
+        return;
+      case "monitoring":
+        // Lifecycle: building + monitoring + prepared (unsaved actives).
+        setActiveTab("active");
+        setNormalizedStatusFilter([
+          "new",
+          "in_progress",
+          "needs_review",
+          "ready_to_submit",
+          "action_needed",
+        ]);
+        return;
+      case "comm":
+        // Attention dimension: communication awaiting review.
+        setActiveTab("active");
+        setAttentionParam("comm");
+        return;
+      case "saved":
+        // Lifecycle: evidence saved to Shopify (authoritative state).
+        setActiveTab("active");
+        setSubmissionStateFilter(["saved_to_shopify"]);
+        return;
+      case "review":
+        // Lifecycle: under review (confirmed transmission family).
+        setActiveTab("active");
+        setNormalizedStatusFilter([
+          "submitted",
+          "submitted_to_bank",
+          "waiting_on_issuer",
+        ]);
+        return;
+      case "won":
+        setActiveTab("all");
+        setOutcomeDropdownFilter(["won"]);
+        return;
+      case "lost":
+        setActiveTab("all");
+        setOutcomeDropdownFilter(["lost"]);
+        return;
+      case "closed":
+        setActiveTab("closed");
+        return;
+      case "attention":
+        // Attention dimension: genuine merchant tasks only.
+        setActiveTab("active");
+        setAttentionParam("tasks");
+        return;
     }
   }, []);
 
@@ -258,7 +293,11 @@ export default function DisputesListPage() {
       if (phaseFilter.length === 1) params.set("phase", phaseFilter[0]);
       if (normalizedStatusFilter.length > 0)
         params.set("normalized_status", normalizedStatusFilter.join(","));
-      if (outcomeFilter.length > 0) params.set("final_outcome", outcomeFilter.join(","));
+      const outcomes = outcomeFilter.length > 0 ? outcomeFilter : outcomeDropdownFilter;
+      if (outcomes.length > 0) params.set("final_outcome", outcomes.join(","));
+      if (submissionStateFilter.length > 0)
+        params.set("submission_state", submissionStateFilter.join(","));
+      if (attentionParam) params.set("attention", attentionParam);
       if (activeTab === "active") {
         params.set("closed", "false");
       } else if (activeTab === "closed") {
@@ -271,11 +310,15 @@ export default function DisputesListPage() {
       const json: DisputesResponse = await res.json();
       setDisputes(json.disputes ?? []);
       setPagination(json.pagination ?? { total: 0, total_pages: 0 });
-      setNeedsAttentionCount(json.aggregates?.needs_attention ?? 0);
+      setNeedsAttentionCount(
+        json.aggregates?.merchant_action_required ??
+          json.aggregates?.needs_attention ??
+          0,
+      );
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, phaseFilter, normalizedStatusFilter, outcomeFilter, activeTab, sortMode]);
+  }, [page, statusFilter, phaseFilter, normalizedStatusFilter, outcomeFilter, outcomeDropdownFilter, submissionStateFilter, attentionParam, activeTab, sortMode]);
 
   useEffect(() => {
     fetchDisputes();
@@ -367,6 +410,28 @@ export default function DisputesListPage() {
   // KPIs for the Figma 4-card row + red urgent banner.
   const kpis = useMemo(() => figmaKpis(disputes), [disputes]);
 
+  // Shared-model KPI values (plan §5): Active = unresolved pre-outcome
+  // (INCLUDES under-review; allow-list based, not final_outcome-null);
+  // Amount at risk = sum over that same active set; Under review =
+  // transmission confirmed, no outcome yet. Page-scoped like the
+  // legacy figmaKpis; the Merchant-action card uses the shop-wide
+  // aggregate instead.
+  const presKpis = useMemo(() => {
+    let active = 0;
+    let underReview = 0;
+    let atRisk = 0;
+    for (const d of disputes) {
+      const p = d.presentation;
+      const isActive = p ? p.isActive : !d.closed_at;
+      if (isActive) {
+        active += 1;
+        atRisk += Number(d.amount) || 0;
+      }
+      if (p && p.transmissionConfirmed && !p.terminal) underReview += 1;
+    }
+    return { active, underReview, atRisk };
+  }, [disputes]);
+
   /** Find the first urgent dispute's id so the "Resolve now" button on
    *  the red banner can deep-link the merchant straight to the most
    *  pressing case. Falls back to navigating to the filtered list. */
@@ -400,6 +465,21 @@ export default function DisputesListPage() {
   const effectiveSortValue = sortMode === "default"
     ? (activeTab === "closed" ? "closed_desc" : "urgency")
     : sortMode;
+
+  // Status dropdown — mockup vocabulary over three independent
+  // dimensions (plan §11). "Sent to card network" is deliberately NOT a
+  // value: with current data it is indistinguishable from Under review.
+  const statusDropdownOptions = [
+    { label: t("disputes.statusDropdown.all"), value: "all" },
+    { label: t("disputes.statusDropdown.monitoring"), value: "monitoring" },
+    { label: t("disputes.statusDropdown.comm"), value: "comm" },
+    { label: t("disputes.statusDropdown.saved"), value: "saved" },
+    { label: t("disputes.statusDropdown.underReview"), value: "review" },
+    { label: t("disputes.statusDropdown.won"), value: "won" },
+    { label: t("disputes.statusDropdown.lost"), value: "lost" },
+    { label: t("disputes.statusDropdown.closed"), value: "closed" },
+    { label: t("disputes.statusDropdown.attention"), value: "attention" },
+  ];
 
   const filterPopover = (
     <Popover
@@ -525,6 +605,24 @@ export default function DisputesListPage() {
                   gap: 16,
                 }}
               >
+                {/* Plan §5: Active disputes (pre-outcome, INCLUDING
+                    under-review) / Amount at risk / Merchant action
+                    required (genuine tasks, shop-wide) / Under review.
+                    One source per card — no dual-source drift. */}
+                <KpiCard
+                  label={t("disputes.kpiActiveDisputes")}
+                  value={String(presKpis.active)}
+                  subtitle={t("disputes.kpiActiveDisputesSub")}
+                />
+                <KpiCard
+                  label={t("disputes.kpiAmountAtRisk")}
+                  value={formatCurrency(
+                    presKpis.atRisk,
+                    disputes[0]?.currency_code ?? "USD",
+                    numberLocale,
+                  )}
+                  subtitle={t("disputes.kpiAmountAtRiskSub")}
+                />
                 <KpiCard
                   label={t("disputes.kpiNeedsAction")}
                   value={String(needsAttentionCount)}
@@ -535,26 +633,12 @@ export default function DisputesListPage() {
                         })
                       : undefined
                   }
-                  subtitleColor="#F59E0B"
+                  subtitleColor={needsAttentionCount > 0 ? "#B45309" : "#6D7175"}
                 />
                 <KpiCard
-                  label={t("disputes.kpiAmountAtRisk")}
-                  value={formatCurrency(
-                    kpis.totalAtRisk,
-                    disputes[0]?.currency_code ?? "USD",
-                    numberLocale,
-                  )}
-                />
-                <KpiCard
-                  label={t("disputes.kpiStrongCases")}
-                  value={String(kpis.strongCasesCount)}
-                  subtitle={t("disputes.kpiStrongCasesSub")}
-                  subtitleColor="#065F46"
-                />
-                <KpiCard
-                  label={t("disputes.kpiAwaitingResponse")}
-                  value={String(kpis.awaitingResponseCount)}
-                  subtitle={t("disputes.kpiAwaitingResponseSub")}
+                  label={t("disputes.kpiUnderReview")}
+                  value={String(presKpis.underReview)}
+                  subtitle={t("disputes.kpiUnderReviewSub")}
                 />
               </div>
             )}
@@ -706,14 +790,7 @@ export default function DisputesListPage() {
                   <Select
                     label={t("disputes.statusDropdown.all")}
                     labelHidden
-                    options={[
-                      { label: t("disputes.statusDropdown.all"), value: "all" },
-                      { label: t("disputes.statusDropdown.actionNeeded"), value: "action_needed" },
-                      { label: t("disputes.statusDropdown.needsReview"), value: "needs_review" },
-                      { label: t("disputes.statusDropdown.underReview"), value: "under_review" },
-                      { label: t("disputes.statusDropdown.submitted"), value: "submitted" },
-                      { label: t("disputes.statusDropdown.closed"), value: "closed" },
-                    ]}
+                    options={statusDropdownOptions}
                     value={statusDropdown}
                     onChange={applyStatusDropdown}
                   />
@@ -737,14 +814,7 @@ export default function DisputesListPage() {
                     <Select
                       label={t("disputes.statusDropdown.all")}
                       labelHidden
-                      options={[
-                        { label: t("disputes.statusDropdown.all"), value: "all" },
-                        { label: t("disputes.statusDropdown.actionNeeded"), value: "action_needed" },
-                        { label: t("disputes.statusDropdown.needsReview"), value: "needs_review" },
-                        { label: t("disputes.statusDropdown.underReview"), value: "under_review" },
-                        { label: t("disputes.statusDropdown.submitted"), value: "submitted" },
-                        { label: t("disputes.statusDropdown.closed"), value: "closed" },
-                      ]}
+                      options={statusDropdownOptions}
                       value={statusDropdown}
                       onChange={applyStatusDropdown}
                     />
