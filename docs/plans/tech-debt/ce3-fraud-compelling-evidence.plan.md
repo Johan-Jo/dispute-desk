@@ -48,6 +48,33 @@ So a real CE3.0 backfill IS buildable: re-fetch historical orders including `cli
 
 **Also note:** the 0-of-360 qualification result above was computed using `shopify_order_risk_signals.client_ip` only. It shows *IP alone* doesn't carry across a 4–12 month gap — it does NOT rule out CE3.0 via `session_hash`/`user_agent`, which were never tested because we don't store them yet. The "defer CE3.0" recommendation below is therefore **superseded**: the right next step is to backfill `client_details` and re-measure.
 
+## SPIKE RESULT (2026-07-23) — measured, not assumed
+
+Ran `scripts/ce3-client-details-spike.mjs` (read-only) against **blume-box.myshopify.com** with the live offline token. `read_all_orders` confirmed granted.
+
+**1,000 most-recent orders** (the window CE3.0 cares about — priors must be <365 days old):
+
+| Field | Coverage |
+|---|---|
+| `client_details` present | **76.3%** |
+| `browser_ip` | **76.0%** |
+| `user_agent` | **75.3%** |
+| `session_hash` | **0.0%** |
+
+**750 oldest orders (all 2018):** only **8.9%** have `client_details` at all.
+
+### Reading the numbers
+- **`client_details` IS backfillable and well-populated on recent orders (~76%).** The earlier "can't backfill device data" claim is definitively wrong.
+- **`session_hash` is dead** — 0% across 1,750 sampled orders. Shopify still documents the field but no longer populates it. Do NOT design around it.
+- **`user_agent` is the usable device identifier** at ~75% coverage. It is weaker than a true device ID (not unique per device — many users share a common UA string), so it should be used as a *corroborating* element combined with IP, not as a standalone device fingerprint.
+- **Coverage collapses on old orders** (8.9% in 2018). Irrelevant for CE3.0 (priors must be <365 days) but it rules out deep-history analytics built on this field.
+- The ~24% gap on recent orders is consistent with Shopify's documented behaviour: orders not placed through online checkout (POS, API-created, draft) carry no client details.
+
+### Revised CE3.0 verdict
+The blocker is NOT data availability — we can backfill IP + user-agent for ~3 of 4 recent orders. The blocker measured earlier stands on its own: of 360 prod fraud disputes, only **12 (3.3%)** have 2+ prior undisputed orders in the 120–365 day window at all, before any element matching. **The transaction-history precondition, not the data, is what gates CE3.0 for this merchant base.**
+
+So: build the backfill (it's cheap and unlocks matching), but expect CE3.0 to qualify on a small minority of disputes. Re-run `scripts/sql/_ce3_feasibility.sql` after backfilling `browser_ip`/`user_agent` per order to get the true qualification rate with real element matching.
+
 ## What this means
 
 1. **Building a full CE3.0 signal today would fire on ~0% of our fraud disputes.** It is NOT the highest-value fraud work despite being the "correct" Visa remedy. The audit ranked it S1 on correctness grounds; the data says the *impact* is currently nil.
