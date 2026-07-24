@@ -5734,5 +5734,62 @@
         "priceNote": "El precio empresarial de Riskified crece con el GMV — fácilmente $1,200+ al mes a este volumen, y mucho más a gran escala."
       }
     }
+  },
+  "presentation": {
+    "lifecycle": {
+      "building_evidence": "Recopilando pruebas",
+      "monitoring": "Supervisión",
+      "pack_prepared": "Paquete de pruebas preparado",
+      "saved_to_shopify": "Pruebas guardadas en Shopify",
+      "under_review": "En revisión",
+      "won": "Ganada",
+      "lost": "Perdida",
+      "closed": "Cerrada"
+    },
+    "lifecycleSub": {
+      "building_evidence": "No se requiere ninguna acción",
+      "monitoring": "No se requiere ninguna acción",
+      "pack_prepared": "No se requiere ninguna acción",
+      "saved_to_shopify": "DisputeDesk seguirá supervisando mientras los cambios sean posibles",
+      "under_review": "La respuesta ya no se puede modificar",
+      "won": "",
+      "lost": "",
+      "closed": ""
+    },
+    "attention": {
+      "none": "No se requiere ninguna acción",
+      "opportunity": "Comunicación disponible",
+      "recommended": "Comunicación recomendada",
+      "requested": "Revisar comunicación",
+      "blocking": "Aprobación requerida",
+      "technical_error": "Atención requerida"
+    },
+    "strength": {
+      "list": {
+        "strong": "Fuerte",
+        "moderate": "Moderada",
+        "weak": "Débil",
+        "not_assessed": "Aún sin evaluar"
+      },
+      "detail": {
+        "strong": "Pruebas sólidas",
+        "moderate": "Parcialmente respaldada",
+        "weak": "Pruebas limitadas",
+        "not_assessed": "Aún sin evaluar"
+      }
+    },
+    "listState": {
+      "recommended": "Comunicación recomendada",
+      "requested": "Revisar comunicación",
+      "blocking": "Aprobación requerida",
+      "technical_error": "Atención técnica requerida"
+    },
+    "listStateSub": {
+      "recommended": "La comunicación con el cliente puede fortalecer esta respuesta",
+      "requested": "Revise los mensajes de cliente sugeridos",
+      "blocking": "DisputeDesk está esperando su aprobación",
+      "technical_error": "Vuelva a conectar para restaurar la supervisión"
+    },
+    "internalIssue": "DisputeDesk detectó un problema técnico y está trabajando para resolverlo. Por el momento no se requiere ninguna acción de su parte."
   }
 }

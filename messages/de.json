@@ -5734,5 +5734,62 @@
         "priceNote": "Die Enterprise-Preise von Riskified skalieren mit dem GMV — leicht $1,200+ im Monat bei diesem Volumen, und weit mehr im großen Maßstab."
       }
     }
+  },
+  "presentation": {
+    "lifecycle": {
+      "building_evidence": "Beweise werden gesammelt",
+      "monitoring": "Überwachung",
+      "pack_prepared": "Beweispaket erstellt",
+      "saved_to_shopify": "Beweise in Shopify gespeichert",
+      "under_review": "In Prüfung",
+      "won": "Gewonnen",
+      "lost": "Verloren",
+      "closed": "Abgeschlossen"
+    },
+    "lifecycleSub": {
+      "building_evidence": "Keine Aktion erforderlich",
+      "monitoring": "Keine Aktion erforderlich",
+      "pack_prepared": "Keine Aktion erforderlich",
+      "saved_to_shopify": "DisputeDesk überwacht weiter, solange Änderungen möglich sind",
+      "under_review": "Die Antwort kann nicht mehr geändert werden",
+      "won": "",
+      "lost": "",
+      "closed": ""
+    },
+    "attention": {
+      "none": "Keine Aktion erforderlich",
+      "opportunity": "Kommunikation verfügbar",
+      "recommended": "Kommunikation empfohlen",
+      "requested": "Kommunikation prüfen",
+      "blocking": "Freigabe erforderlich",
+      "technical_error": "Aufmerksamkeit erforderlich"
+    },
+    "strength": {
+      "list": {
+        "strong": "Stark",
+        "moderate": "Mittel",
+        "weak": "Schwach",
+        "not_assessed": "Noch nicht bewertet"
+      },
+      "detail": {
+        "strong": "Starke Beweislage",
+        "moderate": "Teilweise gestützt",
+        "weak": "Begrenzte Beweislage",
+        "not_assessed": "Noch nicht bewertet"
+      }
+    },
+    "listState": {
+      "recommended": "Kommunikation empfohlen",
+      "requested": "Kommunikation prüfen",
+      "blocking": "Freigabe erforderlich",
+      "technical_error": "Technische Aufmerksamkeit erforderlich"
+    },
+    "listStateSub": {
+      "recommended": "Kundenkommunikation kann diese Antwort stärken",
+      "requested": "Prüfen Sie die vorgeschlagenen Kundennachrichten",
+      "blocking": "DisputeDesk wartet auf Ihre Freigabe",
+      "technical_error": "Verbindung wiederherstellen, um die Überwachung fortzusetzen"
+    },
+    "internalIssue": "DisputeDesk hat ein technisches Problem erkannt und arbeitet an der Lösung. Derzeit ist keine Aktion von Ihnen erforderlich."
   }
 }

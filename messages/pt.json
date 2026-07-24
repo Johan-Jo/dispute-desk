@@ -5734,5 +5734,62 @@
         "priceNote": "O preço enterprise da Riskified escala com o GMV — facilmente $1,200+ por mês neste volume, e muito mais em escala."
       }
     }
+  },
+  "presentation": {
+    "lifecycle": {
+      "building_evidence": "Coletando provas",
+      "monitoring": "Monitoramento",
+      "pack_prepared": "Pacote de provas preparado",
+      "saved_to_shopify": "Provas salvas no Shopify",
+      "under_review": "Em análise",
+      "won": "Ganha",
+      "lost": "Perdida",
+      "closed": "Encerrada"
+    },
+    "lifecycleSub": {
+      "building_evidence": "Nenhuma ação necessária",
+      "monitoring": "Nenhuma ação necessária",
+      "pack_prepared": "Nenhuma ação necessária",
+      "saved_to_shopify": "O DisputeDesk continuará monitorando enquanto alterações forem possíveis",
+      "under_review": "A resposta não pode mais ser alterada",
+      "won": "",
+      "lost": "",
+      "closed": ""
+    },
+    "attention": {
+      "none": "Nenhuma ação necessária",
+      "opportunity": "Comunicação disponível",
+      "recommended": "Comunicação recomendada",
+      "requested": "Revisar comunicação",
+      "blocking": "Aprovação necessária",
+      "technical_error": "Atenção necessária"
+    },
+    "strength": {
+      "list": {
+        "strong": "Forte",
+        "moderate": "Moderada",
+        "weak": "Fraca",
+        "not_assessed": "Ainda não avaliada"
+      },
+      "detail": {
+        "strong": "Provas fortes",
+        "moderate": "Parcialmente sustentada",
+        "weak": "Provas limitadas",
+        "not_assessed": "Ainda não avaliada"
+      }
+    },
+    "listState": {
+      "recommended": "Comunicação recomendada",
+      "requested": "Revisar comunicação",
+      "blocking": "Aprovação necessária",
+      "technical_error": "Atenção técnica necessária"
+    },
+    "listStateSub": {
+      "recommended": "A comunicação com o cliente pode fortalecer esta resposta",
+      "requested": "Revise as mensagens de cliente sugeridas",
+      "blocking": "O DisputeDesk está aguardando sua aprovação",
+      "technical_error": "Reconecte para restaurar o monitoramento"
+    },
+    "internalIssue": "O DisputeDesk detectou um problema técnico e está trabalhando para resolvê-lo. Nenhuma ação é necessária de sua parte no momento."
   }
 }

@@ -5734,5 +5734,62 @@
         "priceNote": "Riskifieds enterprise-prissättning skalar med GMV — lätt $1,200+ i månaden vid den här volymen, och betydligt mer i större skala."
       }
     }
+  },
+  "presentation": {
+    "lifecycle": {
+      "building_evidence": "Samlar bevis",
+      "monitoring": "Övervakning",
+      "pack_prepared": "Bevispaket förberett",
+      "saved_to_shopify": "Bevis sparade i Shopify",
+      "under_review": "Under granskning",
+      "won": "Vunnen",
+      "lost": "Förlorad",
+      "closed": "Avslutad"
+    },
+    "lifecycleSub": {
+      "building_evidence": "Ingen åtgärd krävs",
+      "monitoring": "Ingen åtgärd krävs",
+      "pack_prepared": "Ingen åtgärd krävs",
+      "saved_to_shopify": "DisputeDesk fortsätter övervaka så länge ändringar är möjliga",
+      "under_review": "Svaret kan inte längre ändras",
+      "won": "",
+      "lost": "",
+      "closed": ""
+    },
+    "attention": {
+      "none": "Ingen åtgärd krävs",
+      "opportunity": "Kommunikation tillgänglig",
+      "recommended": "Kommunikation rekommenderas",
+      "requested": "Granska kommunikation",
+      "blocking": "Godkännande krävs",
+      "technical_error": "Uppmärksamhet krävs"
+    },
+    "strength": {
+      "list": {
+        "strong": "Stark",
+        "moderate": "Medelstark",
+        "weak": "Svag",
+        "not_assessed": "Ännu inte bedömd"
+      },
+      "detail": {
+        "strong": "Starka bevis",
+        "moderate": "Delvis underbyggt",
+        "weak": "Begränsade bevis",
+        "not_assessed": "Ännu inte bedömd"
+      }
+    },
+    "listState": {
+      "recommended": "Kommunikation rekommenderas",
+      "requested": "Granska kommunikation",
+      "blocking": "Godkännande krävs",
+      "technical_error": "Teknisk uppmärksamhet krävs"
+    },
+    "listStateSub": {
+      "recommended": "Kundkommunikation kan stärka det här svaret",
+      "requested": "Granska de föreslagna kundmeddelandena",
+      "blocking": "DisputeDesk väntar på ditt godkännande",
+      "technical_error": "Återanslut för att återuppta övervakningen"
+    },
+    "internalIssue": "DisputeDesk har upptäckt ett tekniskt problem och arbetar med att lösa det. Ingen åtgärd krävs från dig just nu."
   }
 }

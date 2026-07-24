@@ -5733,5 +5733,62 @@
         "priceNote": "Riskified's enterprise pricing scales with GMV — easily $1,200+ a month at this volume, and far more at scale."
       }
     }
+  },
+  "presentation": {
+    "lifecycle": {
+      "building_evidence": "Building evidence",
+      "monitoring": "Monitoring",
+      "pack_prepared": "Evidence package prepared",
+      "saved_to_shopify": "Evidence saved to Shopify",
+      "under_review": "Under review",
+      "won": "Won",
+      "lost": "Lost",
+      "closed": "Closed"
+    },
+    "lifecycleSub": {
+      "building_evidence": "No action required",
+      "monitoring": "No action required",
+      "pack_prepared": "No action required",
+      "saved_to_shopify": "DisputeDesk will continue monitoring while changes remain possible",
+      "under_review": "The response can no longer be changed",
+      "won": "",
+      "lost": "",
+      "closed": ""
+    },
+    "attention": {
+      "none": "No action required",
+      "opportunity": "Communication available",
+      "recommended": "Communication recommended",
+      "requested": "Review communication",
+      "blocking": "Approval required",
+      "technical_error": "Attention required"
+    },
+    "strength": {
+      "list": {
+        "strong": "Strong",
+        "moderate": "Moderate",
+        "weak": "Weak",
+        "not_assessed": "Not yet assessed"
+      },
+      "detail": {
+        "strong": "Strong evidence",
+        "moderate": "Partially supported",
+        "weak": "Limited evidence",
+        "not_assessed": "Not yet assessed"
+      }
+    },
+    "listState": {
+      "recommended": "Communication recommended",
+      "requested": "Review communication",
+      "blocking": "Approval required",
+      "technical_error": "Technical attention required"
+    },
+    "listStateSub": {
+      "recommended": "Customer communication may strengthen this response",
+      "requested": "Review the suggested customer messages",
+      "blocking": "DisputeDesk is waiting for your approval",
+      "technical_error": "Reconnect to restore monitoring"
+    },
+    "internalIssue": "DisputeDesk detected a technical issue and is working to resolve it. No action is currently required from you."
   }
 }
