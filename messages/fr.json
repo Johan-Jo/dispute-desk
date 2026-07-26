@@ -1551,7 +1551,8 @@
         "stateConcededBody": "Vous avez choisi de ne pas défendre ce litige. Rien ne sera envoyé.",
         "dueSuffix": " ({date})",
         "change": "Changer la décision",
-        "undo": "Annuler"
+        "undo": "Annuler",
+        "settingsHint": "Vous pouvez modifier ceci dans Paramètres → Enregistrement des preuves dans Shopify."
       },
       "whatHappensNow": "Et maintenant ?",
       "automationRule": "Règle d'automatisation :",

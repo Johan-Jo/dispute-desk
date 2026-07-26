@@ -977,7 +977,8 @@
         "stateConcededBody": "Du valde att inte försvara den här tvisten. Inget kommer att skickas in.",
         "dueSuffix": " ({date})",
         "change": "Ändra beslut",
-        "undo": "Ångra"
+        "undo": "Ångra",
+        "settingsHint": "Du kan ändra detta i Inställningar → Spara bevis i Shopify."
       },
       "whatHappensNow": "Vad händer nu",
       "automationRule": "Automatiseringsregel:",

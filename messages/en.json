@@ -971,7 +971,8 @@
         "stateConcededBody": "You chose not to defend this dispute. Nothing will be submitted.",
         "dueSuffix": " ({date})",
         "change": "Change decision",
-        "undo": "Undo"
+        "undo": "Undo",
+        "settingsHint": "You can change this in Settings → Saving evidence to Shopify."
       },
       "whatHappensNow": "What happens now",
       "automationRule": "Automation rule:",
