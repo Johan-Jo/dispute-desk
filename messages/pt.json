@@ -1589,7 +1589,8 @@
       "retryHelp": "Tente reconstruir. Se continuar falhando, entre em contato com o suporte e cite esta disputa.",
       "retryBuild": "Tentar novamente",
       "setUpPolicies": "Configurar políticas para casos futuros",
-      "trackingCarrierFallback": "Transportadora"
+      "trackingCarrierFallback": "Transportadora",
+      "viewInShopifyUnavailable": "Não há um link direto para esta disputa disponível a partir dos dados atuais."
     },
     "evidenceTabExtra": {
       "buildFailedTitle": "Falha ao montar o pacote de evidências",
@@ -5747,7 +5748,7 @@
     "lifecycle": {
       "building_evidence": "Coletando provas",
       "monitoring": "Monitoramento",
-      "pack_prepared": "Pacote de provas preparado",
+      "pack_prepared": "Pacote preparado",
       "saved_to_shopify": "Provas salvas no Shopify",
       "under_review": "Em análise",
       "won": "Ganha",
@@ -5768,7 +5769,7 @@
       "none": "Nenhuma ação necessária",
       "opportunity": "Comunicação disponível",
       "recommended": "Comunicação recomendada",
-      "requested": "Revisar comunicação",
+      "requested": "Comunicação solicitada",
       "blocking": "Sua intervenção é necessária",
       "technical_error": "Atenção necessária"
     },
@@ -5827,9 +5828,14 @@
         "monitoring": "Provas salvas no Shopify antes do prazo de resposta",
         "pack_prepared": "Provas salvas no Shopify antes do prazo de resposta",
         "saved_to_shopify": "O Shopify envia a resposta no prazo",
-        "under_review": "Resultado recebido"
+        "under_review": "Resultado recebido",
+        "technical_error": "O monitoramento é retomado automaticamente assim que a conexão for restaurada"
       },
-      "nextSavedWithDate": "Prazo de resposta do Shopify: {date} — o Shopify envia então a resposta salva"
+      "nextSavedWithDate": "Prazo de resposta do Shopify: {date} — o Shopify envia então a resposta salva",
+      "technicalProblem": {
+        "title": "O monitoramento requer atenção",
+        "message": "O DisputeDesk não consegue verificar a comunicação com o suporte ao cliente porque a conexão expirou. As provas de todas as outras fontes conectadas não são afetadas e o monitoramento continua."
+      }
     },
     "attentionBlocking": {
       "approval_gate": "Aprovação necessária",
@@ -5861,6 +5867,11 @@
     "attentionCta": {
       "requested": "Revisar comunicação",
       "recommended": "Adicionar comunicação do cliente"
+    },
+    "techAttention": {
+      "title": "Atenção necessária",
+      "body": "O DisputeDesk não consegue verificar a comunicação com o suporte ao cliente porque a conexão expirou. Reconectar restaura o monitoramento da caixa de entrada de suporte. A força das provas e todos os outros monitoramentos não são afetados.",
+      "cta": "Reconectar"
     }
   }
 }
