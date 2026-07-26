@@ -110,6 +110,21 @@ export async function POST(req: NextRequest) {
     correlationId: `topup-${shop_id}-${sku}`,
   });
 
+  // Surface top-level GraphQL errors (requestShopifyGraphQL returns
+  // them in-band and never throws). Without this, an "Access denied" /
+  // managed-pricing / scope failure became a silent 200 with no
+  // confirmationUrl — the merchant saw only the generic "didn't go
+  // through" banner and the logs showed nothing (dev, 2026-07-26).
+  const gqlErrors = (result as { errors?: Array<{ message: string }> }).errors ?? [];
+  if (gqlErrors.length > 0) {
+    const messages = gqlErrors.map((e) => e.message);
+    console.error("[billing/topup] Shopify GraphQL errors", {
+      shopId: shop_id,
+      messages,
+    });
+    return NextResponse.json({ error: messages.join(", ") }, { status: 422 });
+  }
+
   const mutation = result.data?.appPurchaseOneTimeCreate;
   const userErrors = mutation?.userErrors ?? [];
 
@@ -120,8 +135,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  if (!mutation?.confirmationUrl) {
+    console.error("[billing/topup] no confirmationUrl returned", {
+      shopId: shop_id,
+      mutation,
+    });
+    return NextResponse.json(
+      { error: "Shopify did not return a charge confirmation URL." },
+      { status: 502 },
+    );
+  }
+
   return NextResponse.json({
-    confirmationUrl: mutation?.confirmationUrl,
-    purchaseId: mutation?.appPurchaseOneTime?.id,
+    confirmationUrl: mutation.confirmationUrl,
+    purchaseId: mutation.appPurchaseOneTime?.id,
   });
 }
