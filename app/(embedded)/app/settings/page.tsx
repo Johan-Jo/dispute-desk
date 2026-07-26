@@ -184,6 +184,12 @@ export default function EmbeddedSettingsPage() {
   const pickInvolvement = useCallback(async (v: Involvement) => {
     setInvolvement(v);
     setHandlingSaved(false);
+    // Involvement drives the progress-notification defaults (plan
+    // §12S): the server materializes evidenceReady + monthlyDigest to
+    // match; mirror that locally so the toggles update immediately.
+    const stayInvolved = v === "stay_involved";
+    setNotifEvidenceReady(stayInvolved);
+    setNotifMonthlyDigest(stayInvolved);
     await fetch("/api/shop/preferences", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -579,6 +585,23 @@ export default function EmbeddedSettingsPage() {
                     />
                   </InlineStack>
                 </div>
+                {/* Approval-required alert — locked ON while the save
+                    mode requires approval (plan §12S / Settings.html):
+                    a merchant in approve mode cannot silently miss the
+                    approvals their own gate creates. Display-only when
+                    locked; hidden in auto mode (no approvals exist). */}
+                {saveMode === "review" ? (
+                  <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
+                    <InlineStack align="space-between" blockAlign="center">
+                      <BlockStack gap="050">
+                        <Text as="span" variant="bodyMd" fontWeight="medium">{t("notifApprovalRequired")}</Text>
+                        <Text as="span" variant="bodySm" tone="subdued">{t("notifApprovalRequiredDesc")}</Text>
+                        <Text as="span" variant="bodySm" tone="caution">{t("notifApprovalRequiredLock")}</Text>
+                      </BlockStack>
+                      <Checkbox label="" checked disabled labelHidden />
+                    </InlineStack>
+                  </div>
+                ) : null}
                 <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
                   <InlineStack align="space-between" blockAlign="center">
                     <BlockStack gap="050">

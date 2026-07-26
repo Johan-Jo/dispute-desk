@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import { localizeEventDescription } from "@/lib/disputeEvents/localizeDescription";
 import {
   Card,
   Text,
@@ -303,9 +304,15 @@ export default function DisputeTimeline({ disputeId, orderEvents = [] }: { dispu
                     ? (event.metadata_json?.appTitle as string) ?? "Shopify"
                     : "";
 
+                  // Localize DB free-text through the shared FAIL-CLOSED
+                  // localizer — raw internal vocabulary (status enums,
+                  // scores, gate reasons) never reaches the merchant;
+                  // unrecognized shapes fall back to metadata-derived
+                  // copy or nothing (design-alignment audit 2026-07-26).
                   const subText = isShopifyEvent
                     ? null
-                    : event.description ?? deriveSubTextFromMetadata(event);
+                    : localizeEventDescription(t, event.event_type, event.description) ??
+                      deriveSubTextFromMetadata(event);
 
                   return (
                     <div

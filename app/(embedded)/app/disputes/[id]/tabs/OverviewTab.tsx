@@ -40,7 +40,7 @@ import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type { PresentationStatus } from "../workspace-components/types";
 import { TAB_INDEX } from "../workspace-components/types";
 import { resolveLifecycle } from "@/lib/disputes/presentation/resolveLifecycle";
-import { ATTENTION_CHIP } from "@/lib/disputes/presentation/uiTokens";
+import { ATTENTION_CHIP, STRENGTH_CHIP } from "@/lib/disputes/presentation/uiTokens";
 import { attentionLabelKey } from "@/lib/disputes/presentation/labels";
 import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
 import { buildRefundPresentation } from "@/lib/argument/refundPresentation";
@@ -427,13 +427,16 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
   // "Next:" milestone line — active (non-terminal, non-covered) states
   // only. "Monitoring ≠ Done": the saved state's next milestone is
-  // Shopify sending the response, never "done".
+  // Shopify sending the response, never "done". The saved-editable
+  // four-part block names the actual deadline date (plan §6.2).
   const heroNextStep =
     heroVariant !== "covered" &&
     lifecycle !== "won" &&
     lifecycle !== "lost" &&
     lifecycle !== "closed"
-      ? tp(`hero.next.${lifecycle}`)
+      ? lifecycle === "saved_to_shopify" && dispute.dueAt
+        ? tp("hero.nextSavedWithDate", { date: formatDate(dispute.dueAt) })
+        : tp(`hero.next.${lifecycle}`)
       : null;
 
   /* ── Timeline ──
@@ -899,6 +902,77 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </div>
       </div>
 
+      {/* Outcome card (plan §6.2) — dedicated won/lost block: decision
+          date + amount recovered / lost. Terminal disputes only. */}
+      {presentation && (presentation.outcome === "won" || presentation.outcome === "lost") && (
+        <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
+          <BlockStack gap="300">
+            <Text as="h3" variant="headingSm">{tp("outcomeCard.title")}</Text>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                gap: 16,
+              }}
+            >
+              <div>
+                <p style={{ fontSize: 12, color: "#6D7175", margin: 0 }}>{tp("outcomeCard.decisionDate")}</p>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "#202223", margin: "4px 0 0" }}>
+                  {formatDate(dispute.closedAt ?? null)}
+                </p>
+              </div>
+              {presentation.outcome === "won" ? (
+                <div>
+                  <p style={{ fontSize: 12, color: "#6D7175", margin: 0 }}>{tp("outcomeCard.amountRecovered")}</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "#065F46", margin: "4px 0 0" }}>
+                    {dispute.currency} {dispute.outcomeAmountRecovered ?? dispute.amount}
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p style={{ fontSize: 12, color: "#6D7175", margin: 0 }}>{tp("outcomeCard.amountLost")}</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "#991B1B", margin: "4px 0 0" }}>
+                    {dispute.currency} {dispute.outcomeAmountLost ?? dispute.amount}
+                  </p>
+                </div>
+              )}
+            </div>
+          </BlockStack>
+        </div>
+      )}
+
+      {/* Evidence-assessment card (plan §6.2) — the strength grade +
+          the rules-engine's own explanation. Assessment copy ONLY:
+          strength never becomes an operational callout or a task. */}
+      <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
+        <BlockStack gap="200">
+          <InlineStack gap="200" blockAlign="center">
+            <Text as="h3" variant="headingSm">{tp("assessmentCard.title")}</Text>
+            {(() => {
+              const strengthKey = presentation?.strength
+                ?? (caseStrength.overall === "insufficient" ? "not_assessed" : caseStrength.overall);
+              const tokens = STRENGTH_CHIP[strengthKey as keyof typeof STRENGTH_CHIP];
+              return (
+                <span
+                  style={{
+                    display: "inline-flex", alignItems: "center", padding: "2px 9px",
+                    borderRadius: 999, fontSize: 11.5, fontWeight: 600,
+                    background: tokens.bg, color: tokens.fg,
+                  }}
+                >
+                  {tRoot(`presentation.strength.detail.${strengthKey}`)}
+                </span>
+              );
+            })()}
+          </InlineStack>
+          {strengthReasonText ? (
+            <p style={{ fontSize: 13, color: "#4B5563", margin: 0, lineHeight: 1.55, maxWidth: 760 }}>
+              {strengthReasonText}
+            </p>
+          ) : null}
+        </BlockStack>
+      </div>
+
       {/* Monitoring banner — placed directly under the hero so the
           merchant sees the "we're still watching" reassurance immediately
           after the saved-to-Shopify confirmation. Custom card styling
@@ -1020,6 +1094,62 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           </BlockStack>
         </BlockStack>
       </div>
+
+      {/* Merchant-attention card (plan §6.2) — driven by
+          presentation.attention. Blue for communication states
+          (requested/recommended) with the review/add CTA; red only for
+          a merchant-resolvable technical error. Never rendered for
+          none/opportunity — calm states get no card. */}
+      {presentation && (presentation.attention === "requested" || presentation.attention === "recommended") && (
+        <div
+          style={{
+            background: presentation.attention === "requested" ? "#EFF6FF" : "#F8FAFF",
+            border: `1px solid ${presentation.attention === "requested" ? "#BFDBFE" : "#D6E0F5"}`,
+            borderRadius: 12,
+            padding: 16,
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 12,
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: "#1E3A8A", margin: 0 }}>
+              {tRoot(attentionLabelKey(presentation))}
+            </p>
+            <p style={{ fontSize: 12.5, color: "#3F5B80", margin: "3px 0 0", lineHeight: 1.5 }}>
+              {tRoot(
+                presentation.attention === "requested"
+                  ? "presentation.listStateSub.requested"
+                  : "presentation.listStateSub.recommended",
+              )}
+            </p>
+          </div>
+          <Button onClick={goToEvidence}>
+            {tRoot(
+              presentation.attention === "requested"
+                ? "presentation.attentionCta.requested"
+                : "presentation.attentionCta.recommended",
+            )}
+          </Button>
+        </div>
+      )}
+      {presentation && presentation.attention === "technical_error" && (
+        <div
+          style={{
+            background: "#FEF2F2",
+            border: "1px solid #FCA5A5",
+            borderRadius: 12,
+            padding: 16,
+          }}
+        >
+          <p style={{ fontSize: 14, fontWeight: 600, color: "#7F1D1D", margin: 0 }}>
+            {tRoot(attentionLabelKey(presentation))}
+          </p>
+          <p style={{ fontSize: 12.5, color: "#B42318", margin: "3px 0 0", lineHeight: 1.5 }}>
+            {tRoot("presentation.listStateSub.technical_error")}
+          </p>
+        </div>
+      )}
 
       {/* Recommendation card — preserves the merchant-action copy that
           was previously stuffed into the hero. Stays compact and below

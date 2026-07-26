@@ -40,6 +40,7 @@ import styles from "./disputes-list.module.css";
 import { DesktopDisputesTable } from "./DesktopDisputesTable";
 import { MobileDisputesList } from "./MobileDisputesList";
 import {
+  figmaIsUrgent,
   figmaKpis,
   formatCurrency,
   formatDueDate,
@@ -61,6 +62,13 @@ interface DisputesResponse {
     needs_attention: number;
     /** Genuine merchant tasks only (blocking + requested) — plan §5. */
     merchant_action_required?: number;
+    /** Shop-wide KPI facts (plan §5.1) — never page-scoped. */
+    active_count?: number;
+    under_review_count?: number;
+    amount_at_risk?: number;
+    amount_at_risk_currency?: string;
+    /** Dispute COUNTS per non-primary currency (§13). */
+    other_currency_counts?: Record<string, number>;
   };
   pagination: {
     page: number;
@@ -199,6 +207,16 @@ export default function DisputesListPage() {
   const [attentionParam, setAttentionParam] = useState<"" | "tasks" | "comm">(
     initialUrlFilters.attention,
   );
+  /** Evidence-strength filter (plan §11.2) — the independent strength
+   *  dimension; never mixed with lifecycle or attention. */
+  const [strengthFilter, setStrengthFilter] = useState<"" | "strong" | "moderate" | "weak">("");
+  const [shopKpis, setShopKpis] = useState<{
+    active: number;
+    underReview: number;
+    atRisk: number;
+    atRiskCurrency: string;
+    otherCurrencyCounts: Record<string, number>;
+  } | null>(null);
   const [submissionStateFilter, setSubmissionStateFilter] = useState<string[]>([]);
   const [outcomeDropdownFilter, setOutcomeDropdownFilter] = useState<string[]>([]);
 
@@ -298,6 +316,7 @@ export default function DisputesListPage() {
       if (submissionStateFilter.length > 0)
         params.set("submission_state", submissionStateFilter.join(","));
       if (attentionParam) params.set("attention", attentionParam);
+      if (strengthFilter) params.set("strength", strengthFilter);
       if (activeTab === "active") {
         params.set("closed", "false");
       } else if (activeTab === "closed") {
@@ -310,15 +329,23 @@ export default function DisputesListPage() {
       const json: DisputesResponse = await res.json();
       setDisputes(json.disputes ?? []);
       setPagination(json.pagination ?? { total: 0, total_pages: 0 });
-      setNeedsAttentionCount(
-        json.aggregates?.merchant_action_required ??
-          json.aggregates?.needs_attention ??
-          0,
-      );
+      // Genuine merchant tasks only — no fallback to the legacy
+      // needs_attention aggregate (it counts internal failures the
+      // model excludes; plan §5.1).
+      setNeedsAttentionCount(json.aggregates?.merchant_action_required ?? 0);
+      if (json.aggregates?.active_count !== undefined) {
+        setShopKpis({
+          active: json.aggregates.active_count ?? 0,
+          underReview: json.aggregates.under_review_count ?? 0,
+          atRisk: json.aggregates.amount_at_risk ?? 0,
+          atRiskCurrency: json.aggregates.amount_at_risk_currency ?? "USD",
+          otherCurrencyCounts: json.aggregates.other_currency_counts ?? {},
+        });
+      }
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, phaseFilter, normalizedStatusFilter, outcomeFilter, outcomeDropdownFilter, submissionStateFilter, attentionParam, activeTab, sortMode]);
+  }, [page, statusFilter, phaseFilter, normalizedStatusFilter, outcomeFilter, outcomeDropdownFilter, submissionStateFilter, attentionParam, strengthFilter, activeTab, sortMode]);
 
   useEffect(() => {
     fetchDisputes();
@@ -436,13 +463,11 @@ export default function DisputesListPage() {
    *  the red banner can deep-link the merchant straight to the most
    *  pressing case. Falls back to navigating to the filtered list. */
   const firstUrgent = useMemo(() => {
+    // SAME predicate as the banner count (figmaIsUrgent): a genuine
+    // merchant task with a tight deadline — the banner must never
+    // deep-link to a dispute it does not itself count as urgent.
     const urgent = disputes
-      .filter((d) => {
-        if (!d.due_at) return false;
-        if (d.closed_at) return false;
-        const h = (new Date(d.due_at).getTime() - Date.now()) / (1000 * 60 * 60);
-        return h <= 48;
-      })
+      .filter((d) => figmaIsUrgent(d))
       .sort(
         (a, b) =>
           new Date(a.due_at!).getTime() - new Date(b.due_at!).getTime(),
@@ -480,6 +505,19 @@ export default function DisputesListPage() {
     { label: t("disputes.statusDropdown.closed"), value: "closed" },
     { label: t("disputes.statusDropdown.attention"), value: "attention" },
   ];
+
+  // Independent evidence-strength filter (plan §11.2) — rules-engine
+  // grade only, never lifecycle.
+  const strengthFilterOptions = [
+    { label: t("disputes.strengthFilterAny"), value: "" },
+    { label: t("presentation.strength.list.strong"), value: "strong" },
+    { label: t("presentation.strength.list.moderate"), value: "moderate" },
+    { label: t("presentation.strength.list.weak"), value: "weak" },
+  ];
+  const applyStrengthFilter = (value: string) => {
+    setPage(1);
+    setStrengthFilter(value as "" | "strong" | "moderate" | "weak");
+  };
 
   const filterPopover = (
     <Popover
@@ -611,17 +649,27 @@ export default function DisputesListPage() {
                     One source per card — no dual-source drift. */}
                 <KpiCard
                   label={t("disputes.kpiActiveDisputes")}
-                  value={String(presKpis.active)}
+                  value={String(shopKpis?.active ?? presKpis.active)}
                   subtitle={t("disputes.kpiActiveDisputesSub")}
                 />
                 <KpiCard
                   label={t("disputes.kpiAmountAtRisk")}
                   value={formatCurrency(
-                    presKpis.atRisk,
-                    disputes[0]?.currency_code ?? "USD",
+                    shopKpis?.atRisk ?? presKpis.atRisk,
+                    shopKpis?.atRiskCurrency ?? disputes[0]?.currency_code ?? "USD",
                     numberLocale,
                   )}
-                  subtitle={t("disputes.kpiAmountAtRiskSub")}
+                  subtitle={
+                    shopKpis && Object.keys(shopKpis.otherCurrencyCounts).length > 0
+                      ? // §13 currency rule: other currencies are DISPUTE
+                        // COUNTS ("Plus N disputes in CAD"), never amounts.
+                        t("disputes.kpiAmountAtRiskOther", {
+                          list: Object.entries(shopKpis.otherCurrencyCounts)
+                            .map(([code, n]) => `${n} ${code}`)
+                            .join(" · "),
+                        })
+                      : t("disputes.kpiAmountAtRiskSub")
+                  }
                 />
                 <KpiCard
                   label={t("disputes.kpiNeedsAction")}
@@ -637,7 +685,7 @@ export default function DisputesListPage() {
                 />
                 <KpiCard
                   label={t("disputes.kpiUnderReview")}
-                  value={String(presKpis.underReview)}
+                  value={String(shopKpis?.underReview ?? presKpis.underReview)}
                   subtitle={t("disputes.kpiUnderReviewSub")}
                 />
               </div>
@@ -746,7 +794,7 @@ export default function DisputesListPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        applyStatusDropdown("action_needed");
+                        applyStatusDropdown("attention");
                         setSortMode("urgency");
                       }}
                       style={{
@@ -794,6 +842,13 @@ export default function DisputesListPage() {
                     value={statusDropdown}
                     onChange={applyStatusDropdown}
                   />
+                  <Select
+                    label={t("disputes.strengthFilterAny")}
+                    labelHidden
+                    options={strengthFilterOptions}
+                    value={strengthFilter}
+                    onChange={applyStrengthFilter}
+                  />
                   <TextField
                     label={t("disputes.searchPlaceholder")}
                     labelHidden
@@ -817,6 +872,15 @@ export default function DisputesListPage() {
                       options={statusDropdownOptions}
                       value={statusDropdown}
                       onChange={applyStatusDropdown}
+                    />
+                  </div>
+                  <div style={{ minWidth: 170 }}>
+                    <Select
+                      label={t("disputes.strengthFilterAny")}
+                      labelHidden
+                      options={strengthFilterOptions}
+                      value={strengthFilter}
+                      onChange={applyStrengthFilter}
                     />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>

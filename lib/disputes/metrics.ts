@@ -131,8 +131,9 @@ export interface DisputeMetrics {
    *  so its footer sums to the window-scoped headline. */
   closedSplit: CbInqSplit;
   outcomeSplit: Record<string, CbInqSplit>;
-  /** Per-phase win rate % (won / (won+lost) within each phase), for the
-   *  Win Rate tile's "cb X% · inq Y%" footer. 0 when a phase has no
+  /** Per-phase win rate % (won / (won+lost+accepted) within each
+   *  phase — accepted counts as a loss, §13.1 decision), for the Win
+   *  Rate tile's "cb X% · inq Y%" footer. 0 when a phase has no
    *  decided disputes in the window. */
   winRatePctSplit: CbInqSplit;
   /** Dashboard v3 "Dispute rate" tile: ALL disputes (chargebacks +
@@ -410,8 +411,8 @@ export async function computeDisputeMetrics(
     outcomeList.filter(inPrimaryCurrency),
     "outcome_amount_recovered",
   );
-  // Per-phase win rate % for the Win Rate tile footer (won / (won+lost)
-  // within each phase). 0 when a phase has no decided disputes.
+  // Per-phase win rate % for the Win Rate tile footer — same
+  // denominator rule as the headline (accepted counts as a loss).
   const phaseWinPct = (phaseInq: boolean): number => {
     const w = won.filter((d) => (d.phase === "inquiry") === phaseInq).length;
     const l = lost.filter((d) => (d.phase === "inquiry") === phaseInq).length;

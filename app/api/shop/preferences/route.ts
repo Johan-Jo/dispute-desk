@@ -62,11 +62,17 @@ export async function GET(req: NextRequest) {
   const involvement: InvolvementPreference =
     team?.payload?.involvement === "stay_involved" ? "stay_involved" : DEFAULT_INVOLVEMENT;
 
+  // Involvement-aware DEFAULTS (plan §12S — the approved involvement
+  // behavior): progress-flavored notifications (evidence-package-ready,
+  // monthly digest) default ON only in Stay-involved; an explicit
+  // merchant choice always wins over the default. Critical alerts
+  // (new dispute, deadline, outcome) stay default-on regardless.
+  const stayInvolved = involvement === "stay_involved";
   const preferences: NotificationPreferences = {
     newDispute: notifs?.newDispute ?? DEFAULTS.newDispute,
     beforeDue: notifs?.beforeDue ?? DEFAULTS.beforeDue,
-    evidenceReady: notifs?.evidenceReady ?? DEFAULTS.evidenceReady,
-    monthlyDigest: notifs?.monthlyDigest ?? DEFAULTS.monthlyDigest,
+    evidenceReady: notifs?.evidenceReady ?? stayInvolved,
+    monthlyDigest: notifs?.monthlyDigest ?? stayInvolved,
     outcome: notifs?.outcome ?? DEFAULTS.outcome,
   };
 
@@ -121,6 +127,17 @@ export async function PATCH(req: NextRequest) {
     ...currentNotifs,
     ...updates,
   };
+  // Involvement drives the progress-notification defaults (plan §12S):
+  // switching involvement materializes evidenceReady + monthlyDigest to
+  // match, so the settings UI, the email senders (which read the raw
+  // stored payload with a send-unless-false default), and the digest
+  // cron all agree. Explicit toggles sent in the SAME request win; the
+  // merchant can re-toggle afterwards at any time.
+  if (hasInvolvementUpdate) {
+    const stayInvolved = body.involvement === "stay_involved";
+    if (updates.evidenceReady === undefined) merged.evidenceReady = stayInvolved;
+    if (updates.monthlyDigest === undefined) merged.monthlyDigest = stayInvolved;
+  }
 
   const updatedPayload: Record<string, unknown> = { ...team.payload, notifications: merged };
   if (hasEmailUpdate) {

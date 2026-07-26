@@ -101,6 +101,11 @@ export interface WorkspaceDispute {
    *  Drives the date in the Evidence-tab window-closed banner. */
   submittedAt: string | null;
   finalOutcome: string | null;
+  /** Outcome card (plan §6.2): decision date + amounts for the
+   *  dedicated won/lost Outcome block on the Overview tab. */
+  closedAt?: string | null;
+  outcomeAmountRecovered?: number | null;
+  outcomeAmountLost?: number | null;
   /** Order-context fields extracted from `pack_json.sections` by
    *  `deriveOrderContext`. Populates the Case Details table on the
    *  embedded Review & Submit tab so it matches the PDF rendering.

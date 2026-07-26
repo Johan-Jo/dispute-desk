@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { computeDisputeMetrics } from "@/lib/disputes/metrics";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { isHiddenActivityEvent } from "@/lib/disputeEvents/spuriousDueDate";
+import { MERCHANT_ACTIVITY_EVENT_TYPES } from "@/lib/disputeEvents/localizeDescription";
 import { isDormantInquiry } from "@/lib/disputes/dormantInquiry";
 import { dashboardBucket } from "@/lib/disputes/presentation/buckets";
 import {
@@ -65,8 +66,9 @@ export async function GET(req: NextRequest) {
   // Waiting on Issuer / Closed) and the submission-state breakdown
   // scan the same `disputes` table with overlapping filters. One scan
   // pulls the union of needed columns and both aggregates run client-
-  // side. Closed counts must reflect *current* workload, not just the
-  // selected period, so this stays unfiltered by created_at.
+  // side. NOTE: the LEGACY `operationalClosedCount` below is all-time;
+  // the four operational cards use `operationalBuckets`, whose Closed
+  // cell is WINDOWED by the selected period (§12V decision 1).
   // `phase`, `due_at`, `initiated_at` are pulled so dormant inquiries
   // (dead Shopify inquiries with no real deadline — see
   // lib/disputes/dormantInquiry.ts) can be dropped from the operational
@@ -88,6 +90,10 @@ export async function GET(req: NextRequest) {
     .select("id, dispute_id, event_type, description, event_at, actor_type, metadata_json")
     .eq("shop_id", shopId)
     .eq("visibility", "merchant_and_internal")
+    // Merchant feed allow-list (plan §8 row 16): internal failure
+    // events (sync/build/save errors, admin overrides) never reach the
+    // activity feed — they are transparency-on-detail, not feed alarm.
+    .in("event_type", [...MERCHANT_ACTIVITY_EVENT_TYPES])
     .order("event_at", { ascending: false })
     .limit(40);
 

@@ -36,16 +36,38 @@ const hero = (
 ).disputes.overview.hero;
 
 describe("Hero copy — banned phrases never appear in non-network states", () => {
-  const FAMILIES = ["preSubmit", "saved", "awaiting"] as const;
-  for (const family of FAMILIES) {
-    for (const [variant, copy] of Object.entries(hero.title[family])) {
-      it(`title.${family}.${variant} contains no card-network wording`, () => {
+  // The legacy strength-flavored `hero.title.preSubmit/saved/awaiting`
+  // families were DELETED (design-alignment audit — they carried the
+  // banned "Strong case saved to Shopify" headlines). The live hero
+  // copy is `presentation.hero.*`; pin the same gate on every
+  // non-network lifecycle state there. `preSubmit.covered` survives
+  // for the Shopify Protect hero.
+  const heroV2 = (
+    enMessages as unknown as {
+      presentation: { hero: Record<string, unknown> };
+    }
+  ).presentation.hero;
+  const NON_NETWORK_STATES = [
+    "building_evidence",
+    "monitoring",
+    "pack_prepared",
+    "saved_to_shopify",
+  ] as const;
+  for (const state of NON_NETWORK_STATES) {
+    const entry = heroV2[state] as { title: string; message: string };
+    for (const [part, copy] of Object.entries(entry)) {
+      it(`presentation.hero.${state}.${part} contains no card-network wording`, () => {
         for (const re of BANNED_FOR_NON_NETWORK) {
           expect(copy).not.toMatch(re);
         }
       });
     }
   }
+  it("the covered hero title contains no card-network wording", () => {
+    for (const re of BANNED_FOR_NON_NETWORK) {
+      expect(hero.title.preSubmit.covered).not.toMatch(re);
+    }
+  });
 
   it("subtitle.savedNoDate contains no card-network wording", () => {
     for (const re of BANNED_FOR_NON_NETWORK) {
@@ -78,11 +100,18 @@ describe("Hero copy — always-banned phrases never appear", () => {
   });
 });
 
-describe("Hero copy — SUBMITTED_TO_NETWORK may use card-network wording", () => {
-  it("at least one submitted_to_network title contains card-network wording", () => {
-    const titles = Object.values(hero.title.submitted_to_network);
-    const usesCardNetwork = titles.some((s) => /card network/i.test(s));
-    expect(usesCardNetwork).toBe(true);
+describe("Hero copy — under-review states may use card-network wording", () => {
+  it("the under-review hero references the card network", () => {
+    // The legacy submitted_to_network title family was deleted; the
+    // live under-review hero (presentation.hero.under_review) carries
+    // the card-network reference.
+    const heroV2 = (
+      enMessages as unknown as {
+        presentation: { hero: { under_review: { title: string; message: string } } };
+      }
+    ).presentation.hero;
+    const copy = `${heroV2.under_review.title} ${heroV2.under_review.message}`;
+    expect(/card network/i.test(copy)).toBe(true);
   });
 });
 
