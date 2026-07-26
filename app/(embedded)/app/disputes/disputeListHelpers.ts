@@ -112,21 +112,6 @@ export function rowChromeV2(d: Dispute): {
   return { stripeColor: emphasis.stripe, bgColor: emphasis.bg, opacity: 1 };
 }
 
-/** Strength subtitle = the rules-engine's own explanation (resolved
- *  i18n token via the canonical resolveToken path), never re-derived
- *  arithmetic. Null when the engine has no explanation for the row.
- *  Pass a ROOT translator (token keys are absolute). */
-export function strengthSubtitle(d: Dispute, rootT: Translate): string | null {
-  const token = d.caseStrength?.strengthReasonI18n;
-  if (!token?.key) return null;
-  try {
-    const text = resolveToken(rootT as Parameters<typeof resolveToken>[0], token);
-    return (text as string) || null;
-  } catch {
-    return null;
-  }
-}
-
 export type TabId = "active" | "closed" | "all";
 export type SortMode = "default" | "urgency" | "amount" | "newest" | "closed_desc";
 
@@ -484,11 +469,10 @@ export function figmaCaseStrength(d: Dispute): FigmaCaseStrength | null {
   return "weak"; // weak + insufficient
 }
 
-// figmaStrengthDetail was deleted (plan §8 row 8): the signal-count
-// arithmetic ("{n} strong + {m} moderate") contradicted the rules-engine
-// grade. The strength subtitle is now the engine's own explanation via
-// `strengthSubtitle` above; the strengthDetailSignals/strengthDetailMixed
-// keys were removed from all locales.
+// figmaStrengthDetail and strengthSubtitle were both deleted: the
+// Case strength column shows the grade pill only (Weak/Moderate/Strong,
+// user decision 2026-07-26) — no sub-line. The engine's explanation
+// still renders on the detail page.
 
 /** Map final_outcome to the Figma 3-bucket outcome pill. Pre-decision
  *  rows render "Pending". */
