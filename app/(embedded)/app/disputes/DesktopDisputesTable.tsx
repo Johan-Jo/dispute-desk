@@ -14,7 +14,6 @@ import {
   figmaReviewChip,
   rowChromeV2,
   figmaStatus,
-  strengthSubtitle,
   formatCurrency,
   orderLabel,
   translateReason,
@@ -82,15 +81,6 @@ function caseStrengthPillColors(s: FigmaCaseStrength, t: Translate): {
   if (s === "strong") return { bg: "#D1FAE5", color: "#065F46", label: t("disputes.strengthStrong") };
   if (s === "moderate") return { bg: "#FEF3C7", color: "#92400E", label: t("disputes.strengthModerate") };
   return { bg: "#FEE2E2", color: "#991B1B", label: t("disputes.strengthWeak") };
-}
-
-/** Subtitle color tied to strength so the detail-line ("2 strong
- *  signals" / "1 strong + 2 moderate" / "Insufficient evidence")
- *  reads in the same red/yellow/green pattern as the detail-page hero. */
-function caseStrengthSubtitleColor(s: FigmaCaseStrength): string {
-  if (s === "strong") return "#065F46";
-  if (s === "moderate") return "#92400E";
-  return "#991B1B";
 }
 
 function outcomePillColors(o: FigmaOutcome, t: Translate): {
@@ -169,7 +159,6 @@ export function DesktopDisputesTable({
           const status = figmaStatus(d);
           const strength = figmaCaseStrength(d);
           const reviewChip = figmaReviewChip(d, t);
-          const detail = strengthSubtitle(d, t);
           const outcome = figmaOutcome(d);
           const due = figmaDueDate(d, t, dateLocale);
           const next = rowPrimaryState(d, t);
@@ -269,21 +258,6 @@ export function DesktopDisputesTable({
                     >
                       {caseStrengthPillColors(strength, t).label}
                     </span>
-                    {detail && (
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: caseStrengthSubtitleColor(strength),
-                          marginTop: 4,
-                          lineHeight: 1.4,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {detail}
-                      </div>
-                    )}
                   </>
                 ) : (
                   <span style={{ fontSize: 14, color: "#6D7175" }}>—</span>

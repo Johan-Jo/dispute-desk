@@ -3,7 +3,6 @@ import { normalizeDisputeReasonKey } from "@/lib/disputes/reasonLabel";
 import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
 import type { DisputePresentation } from "@/lib/disputes/presentation/types";
 import { listPrimaryState } from "@/lib/disputes/presentation/labels";
-import { resolveToken } from "@/lib/i18n/resolveToken";
 import type { I18nToken } from "@/lib/i18n/token";
 import {
   ATTENTION_ROW_EMPHASIS,
@@ -65,7 +64,7 @@ export function rowPrimaryState(
   t: Translate,
 ): { label: string; sub: string } {
   if (d.presentation) {
-    const keys = listPrimaryState(d.presentation);
+    const keys = listPrimaryState(d.presentation, d.review_state ?? null);
     return { label: t(keys.labelKey), sub: t(keys.subKey) };
   }
   return { label: figmaNextAction(d, t), sub: "" };
@@ -112,20 +111,11 @@ export function rowChromeV2(d: Dispute): {
   return { stripeColor: emphasis.stripe, bgColor: emphasis.bg, opacity: 1 };
 }
 
-/** Strength subtitle = the rules-engine's own explanation (resolved
- *  i18n token via the canonical resolveToken path), never re-derived
- *  arithmetic. Null when the engine has no explanation for the row.
- *  Pass a ROOT translator (token keys are absolute). */
-export function strengthSubtitle(d: Dispute, rootT: Translate): string | null {
-  const token = d.caseStrength?.strengthReasonI18n;
-  if (!token?.key) return null;
-  try {
-    const text = resolveToken(rootT as Parameters<typeof resolveToken>[0], token);
-    return (text as string) || null;
-  } catch {
-    return null;
-  }
-}
+// strengthSubtitle was removed (user decision 2026-07-26, reconfirmed):
+// the Case strength column shows the grade pill ONLY (Weak/Moderate/
+// Strong) — no explanation sub-line, which also leaked raw i18n keys
+// like "disputes.strengthReaso…" on rows whose token had no locale
+// entry. The engine's explanation still renders on the detail page.
 
 export type TabId = "active" | "closed" | "all";
 export type SortMode = "default" | "urgency" | "amount" | "newest" | "closed_desc";
@@ -484,11 +474,11 @@ export function figmaCaseStrength(d: Dispute): FigmaCaseStrength | null {
   return "weak"; // weak + insufficient
 }
 
-// figmaStrengthDetail was deleted (plan §8 row 8): the signal-count
-// arithmetic ("{n} strong + {m} moderate") contradicted the rules-engine
-// grade. The strength subtitle is now the engine's own explanation via
-// `strengthSubtitle` above; the strengthDetailSignals/strengthDetailMixed
-// keys were removed from all locales.
+// figmaStrengthDetail and strengthSubtitle were both deleted: the Case
+// strength column shows only the grade pill (Weak/Moderate/Strong). The
+// arithmetic subtitle contradicted the grade, and the engine-explanation
+// subtitle leaked raw i18n keys; the explanation lives on the detail
+// page. The strengthDetailSignals/strengthDetailMixed keys are gone too.
 
 /** Map final_outcome to the Figma 3-bucket outcome pill. Pre-decision
  *  rows render "Pending". */

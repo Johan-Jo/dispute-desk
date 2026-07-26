@@ -5873,6 +5873,16 @@
       "title": "Atenção necessária",
       "body": "O DisputeDesk não consegue verificar a comunicação com o suporte ao cliente porque a conexão expirou. Reconectar restaura o monitoramento da caixa de entrada de suporte. A força das provas e todos os outros monitoramentos não são afetados.",
       "cta": "Reconectar"
+    },
+    "reviewDecision": {
+      "approved": "Agendado",
+      "conceded": "Não defendido",
+      "in_review": "Em análise"
+    },
+    "reviewDecisionSub": {
+      "approved": "Definido para enviar automaticamente no prazo",
+      "conceded": "Você optou por não defender esta disputa",
+      "in_review": "Você está analisando isto antes do prazo"
     }
   }
 }

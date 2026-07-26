@@ -5873,6 +5873,16 @@
       "title": "Åtgärd krävs",
       "body": "DisputeDesk kan för närvarande inte kontrollera kundtjänstkommunikationen eftersom anslutningen har gått ut. Att återansluta återställer övervakningen av supportinkorgen. Bevisstyrkan och all annan övervakning påverkas inte.",
       "cta": "Återanslut"
+    },
+    "reviewDecision": {
+      "approved": "Schemalagd",
+      "conceded": "Ej försvarad",
+      "in_review": "Under granskning"
+    },
+    "reviewDecisionSub": {
+      "approved": "Inställd att skickas automatiskt vid tidsfristen",
+      "conceded": "Du valde att inte försvara denna tvist",
+      "in_review": "Du granskar detta före tidsfristen"
     }
   }
 }
