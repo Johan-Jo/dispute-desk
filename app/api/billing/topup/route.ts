@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceClient } from "@/lib/supabase/server";
 import { isBillingTestMode } from "@/lib/billing/testMode";
 import { getTopUp } from "@/lib/billing/plans";
-import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
-import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
+import { makeAuthedRequest } from "@/lib/shopify/makeAuthedRequest";
+import { NoBackgroundSessionError } from "@/lib/shopify/sessions/getShopBackgroundSession";
 import { validateBody, billingTopUpSchema } from "@/lib/middleware/validate";
 
 export const runtime = "nodejs";
@@ -34,14 +33,6 @@ const APP_PURCHASE_ONE_TIME_CREATE = `
   }
 `;
 
-function decryptToken(encrypted: string): string {
-  try {
-    return decrypt(deserializeEncrypted(encrypted));
-  } catch {
-    return encrypted;
-  }
-}
-
 /**
  * POST /api/billing/topup
  * Body: { shop_id, sku }
@@ -63,20 +54,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid top-up SKU" }, { status: 400 });
   }
 
-  const sb = getServiceClient();
-
-  const { data: session } = await sb
-    .from("shop_sessions")
-    .select("access_token_encrypted, shop_domain")
-    .eq("shop_id", shop_id)
-    .eq("session_type", "offline")
-    .single();
-
-  if (!session) {
-    return NextResponse.json({ error: "No session found" }, { status: 404 });
-  }
-
-  const accessToken = decryptToken(session.access_token_encrypted);
   // Test charges on dev/local (dev stores reject real charges);
   // single source of truth in lib/billing/testMode.ts.
   const isTest = isBillingTestMode();
@@ -92,23 +69,36 @@ export async function POST(req: NextRequest) {
   if (shop) callbackUrl.searchParams.set("shop", shop);
   const returnUrl = callbackUrl.toString();
 
-  const result = await requestShopifyGraphQL<{
+  // Canonical authed request (expiring offline tokens): loads the
+  // session, decrypts, refreshes near-expiry tokens, and force-retries
+  // once on auth-invalid. The previous hand-rolled load+decrypt here
+  // bypassed all of that — an expired offline token surfaced as
+  // "[API] Invalid API key or access token" (dev, 2026-07-26).
+  let result: Awaited<ReturnType<typeof makeAuthedRequest<{
     appPurchaseOneTimeCreate: {
       appPurchaseOneTime: { id: string; status: string } | null;
       confirmationUrl: string | null;
       userErrors: Array<{ field: string[]; message: string }>;
     };
-  }>({
-    session: { shopDomain: session.shop_domain, accessToken },
-    query: APP_PURCHASE_ONE_TIME_CREATE,
-    variables: {
-      name: `DisputeDesk ${topUp.label}`,
-      price: { amount: topUp.priceUsd, currencyCode: "USD" },
-      returnUrl,
-      test: isTest,
-    },
-    correlationId: `topup-${shop_id}-${sku}`,
-  });
+  }>>>;
+  try {
+    result = await makeAuthedRequest({
+      shopId: shop_id,
+      query: APP_PURCHASE_ONE_TIME_CREATE,
+      variables: {
+        name: `DisputeDesk ${topUp.label}`,
+        price: { amount: topUp.priceUsd, currencyCode: "USD" },
+        returnUrl,
+        test: isTest,
+      },
+      correlationId: `topup-${shop_id}-${sku}`,
+    });
+  } catch (e) {
+    if (e instanceof NoBackgroundSessionError) {
+      return NextResponse.json({ error: "No session found" }, { status: 404 });
+    }
+    throw e;
+  }
 
   // Surface top-level GraphQL errors (requestShopifyGraphQL returns
   // them in-band and never throws). Without this, an "Access denied" /

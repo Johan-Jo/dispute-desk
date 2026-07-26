@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { isBillingTestMode } from "@/lib/billing/testMode";
-import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
-import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
+import { makeAuthedRequest } from "@/lib/shopify/makeAuthedRequest";
+import { NoBackgroundSessionError } from "@/lib/shopify/sessions/getShopBackgroundSession";
 import { getPlan } from "@/lib/billing/plans";
 import { checkTrialEligibility } from "@/lib/billing/trialEligibility";
 import { validateBody, billingSubscribeSchema } from "@/lib/middleware/validate";
@@ -12,14 +12,6 @@ import {
 } from "@/lib/shopify/mutations/appSubscriptionCreate";
 
 export const runtime = "nodejs";
-
-function decryptToken(encrypted: string): string {
-  try {
-    return decrypt(deserializeEncrypted(encrypted));
-  } catch {
-    return encrypted;
-  }
-}
 
 /**
  * Resolve a Shopify-asserted myshopify domain from the `shop` (domain) and/or
@@ -131,7 +123,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const accessToken = decryptToken(session.access_token_encrypted);
   // Test charges on dev/local (dev stores reject real charges);
   // single source of truth in lib/billing/testMode.ts.
   const isTest = isBillingTestMode();
@@ -163,26 +154,43 @@ export async function POST(req: NextRequest) {
   if (return_to) callbackUrl.searchParams.set("return_to", return_to);
   const returnUrl = callbackUrl.toString();
 
-  const result = await requestShopifyGraphQL<AppSubscriptionCreateResult>({
-    session: { shopDomain, accessToken },
-    query: APP_SUBSCRIPTION_CREATE_MUTATION,
-    variables: {
-      name: `DisputeDesk ${plan.name}`,
-      lineItems: [
-        {
-          plan: {
-            appRecurringPricingDetails: {
-              price: { amount: plan.price, currencyCode: "USD" },
+  // Canonical authed request (expiring offline tokens): decrypts,
+  // refreshes near-expiry tokens, force-retries once on auth-invalid.
+  // The previous hand-rolled decrypt bypassed refresh — an expired
+  // offline token surfaced as "[API] Invalid API key or access token"
+  // (dev, 2026-07-26). The session-existence checks above still guard
+  // shop resolution; the helper re-reads the session internally.
+  let result: Awaited<ReturnType<typeof makeAuthedRequest<AppSubscriptionCreateResult>>>;
+  try {
+    result = await makeAuthedRequest<AppSubscriptionCreateResult>({
+      shopId: resolvedShopId,
+      query: APP_SUBSCRIPTION_CREATE_MUTATION,
+      variables: {
+        name: `DisputeDesk ${plan.name}`,
+        lineItems: [
+          {
+            plan: {
+              appRecurringPricingDetails: {
+                price: { amount: plan.price, currencyCode: "USD" },
+              },
             },
           },
-        },
-      ],
-      returnUrl,
-      trialDays,
-      test: isTest,
-    },
-    correlationId: `billing-${resolvedShopId}`,
-  });
+        ],
+        returnUrl,
+        trialDays,
+        test: isTest,
+      },
+      correlationId: `billing-${resolvedShopId}`,
+    });
+  } catch (e) {
+    if (e instanceof NoBackgroundSessionError) {
+      return NextResponse.json(
+        { error: "Reconnect this store to upgrade. Use “Clear shop & reconnect” in the sidebar, then open the app from Shopify Admin." },
+        { status: 404 },
+      );
+    }
+    throw e;
+  }
 
   // Surface top-level GraphQL errors (requestShopifyGraphQL returns
   // them in-band and never throws). Without this, an "Access denied" /
