@@ -192,8 +192,11 @@ export function DashboardOperationalSummary({ stats, loading }: Props) {
       cardBg: null,
       cta: null,
       split: { cb: building.cb, inq: building.inq },
+      // The bucket is "everything unresolved and pre-transmission with
+      // no required action" — not expressible as a status list, so the
+      // card links to the open-disputes view (closed=false).
       url: withShopParams(
-        "/app/disputes?normalized_status=new,in_progress,needs_review,ready_to_submit,action_needed",
+        "/app/disputes?closed=false",
         searchParams ?? new URLSearchParams(),
       ),
     },

@@ -83,9 +83,12 @@ export interface RowEmphasisTokens {
 export const ATTENTION_ROW_EMPHASIS: Partial<
   Record<MerchantAttention, RowEmphasisTokens>
 > = {
-  opportunity: { bg: "#F6F9FF", stripe: "#2563EB" },
-  recommended: { bg: "#F6F9FF", stripe: "#2563EB" },
-  requested: { bg: "#EFF6FF", stripe: "#1D4ED8" },
+  opportunity: { bg: "#F6F9FF", stripe: "#93C5FD" },
+  recommended: { bg: "#F6F9FF", stripe: "#93C5FD" },
+  // Clear Action-required treatment — visibly stronger than the light
+  // optional tint (plan §5.4: a concrete merchant task must not read
+  // like a suggestion). Saturated tint + dark stripe.
+  requested: { bg: "#DBEAFE", stripe: "#1D4ED8" },
   blocking: { bg: "#FFFAF1", stripe: "#D97706" },
   technical_error: { bg: "#FEF6F5", stripe: "#DC2626" },
 };

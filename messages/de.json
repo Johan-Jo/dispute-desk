@@ -259,9 +259,7 @@
     "operationalSummary": "Streitfall-Operationen",
     "attentionCount": "{count} benötigen Aufmerksamkeit",
     "actionNeeded": "Aktion erforderlich",
-    "readyToSubmit": "Bereit zum Einreichen",
     "savedToShopify": "In Shopify gespeichert",
-    "waitingOnIssuer": "Warte auf Herausgeber",
     "closedInPeriod": "Geschlossen",
     "reviewActionNeeded": "{count} Fälle prüfen, die Handlung erfordern",
     "submitReady": "{count} bereite Fälle einreichen",
@@ -310,11 +308,8 @@
     "attentionBannerMessage": "{count, plural, =1 {# Streitfall benötigt Ihre Aufmerksamkeit} other {# Streitfälle benötigen Ihre Aufmerksamkeit}}",
     "attentionBannerCta": "Streitfälle prüfen",
     "actionNeededDesc": "Ihre Eingabe wird benötigt",
-    "readyToSubmitDesc": "Beweise vollständig",
-    "waitingOnIssuerDesc": "An Bank gesendet",
     "closedInPeriodDesc": "Ergebnis erhalten",
     "reviewCases": "Fälle prüfen",
-    "submitNow": "Jetzt einreichen",
     "insightsTitle": "Insights",
     "insightsSubtitle": "Gewinnrate und Streitkategorien",
     "cbShort": "RB",
@@ -522,7 +517,6 @@
     "autoPackTriggered": "Ausgelöst durch Regel: \"{name}\"",
     "moreEvidenceFileCount": "{count}/{max} Dateien",
     "uploadsUnavailable": "Uploads sind für diesen Fallstatus nicht verfügbar.",
-    "uploadsSubmittedToBank": "Die Beweise wurden bereits an die Bank übermittelt. Für diesen Streitfall können keine weiteren Dateien hochgeladen werden.",
     "uploadsAvailableHint": "Uploads sind nur verfügbar, wenn der Fall in KI-Überprüfung oder Warten auf weitere Beweise ist.",
     "orderData": "Bestelldaten",
     "fulfillmentJourney": "Versandverlauf",
@@ -640,10 +634,6 @@
     "kpiNeedsAction": "Händleraktion erforderlich",
     "kpiNeedsActionUrgent": "{count} dringend",
     "kpiAmountAtRisk": "Betrag im Risiko",
-    "kpiStrongCases": "Starke Fälle",
-    "kpiStrongCasesSub": "Bereit zur Einreichung",
-    "kpiAwaitingResponse": "Wartet auf Antwort",
-    "kpiAwaitingResponseSub": "An Bank eingereicht",
     "urgentBannerTitle": "{count} dringende Streitfälle erfordern Aufmerksamkeit",
     "urgentBannerBody": "{amount} im Risiko — frühester Termin in {days} Tag(en)",
     "urgentBannerResolve": "Jetzt lösen",
@@ -657,8 +647,6 @@
     "strengthStrong": "Strong",
     "strengthModerate": "Moderate",
     "strengthWeak": "Weak",
-    "strengthDetailSignals": "{count} starke Signale",
-    "strengthDetailMixed": "{strong} stark + {moderate} moderat",
     "strengthDetailInsufficient": "Unzureichende Beweise",
     "nextActionSubmitEvidence": "Beweise einreichen",
     "nextActionReview": "Vor Einreichung prüfen",
@@ -669,7 +657,6 @@
     "outcomeWon": "Won",
     "outcomeLost": "Lost",
     "dueTomorrow": "Tomorrow",
-    "dueSubmitted": "Submitted",
     "dueResolved": "Resolved",
     "statusDropdown": {
       "all": "Alle Status",
@@ -742,38 +729,13 @@
       },
       "hero": {
         "title": {
-          "preSubmit": {
-            "likely_to_win": "Starker Fall zum Anfechten",
-            "could_win": "Vor dem Anfechten prüfen",
-            "needs_strengthening": "Vor dem Anfechten prüfen",
-            "hard_to_win": "Vollständige Dokumentation, schwacher Fall",
-            "covered": "Durch Shopify Protect abgedeckt"
-          },
-          "saved": {
-            "likely_to_win": "Starker Fall in Shopify gespeichert",
-            "could_win": "Teilweise gestützter Fall in Shopify gespeichert",
-            "needs_strengthening": "Teilweise gestützter Fall in Shopify gespeichert",
-            "hard_to_win": "Schwacher Fall in Shopify gespeichert",
-            "covered": "Durch Shopify Protect abgedeckt"
-          },
-          "awaiting": {
-            "likely_to_win": "Starker Fall an Shopify weitergeleitet",
-            "could_win": "Teilweise gestützter Fall an Shopify weitergeleitet",
-            "needs_strengthening": "Teilweise gestützter Fall an Shopify weitergeleitet",
-            "hard_to_win": "Schwacher Fall an Shopify weitergeleitet",
-            "covered": "Durch Shopify Protect abgedeckt"
-          },
-          "submitted_to_network": {
-            "likely_to_win": "Starker Fall an das Kartennetzwerk gesendet",
-            "could_win": "Teilweise gestützter Fall an das Kartennetzwerk gesendet",
-            "needs_strengthening": "Teilweise gestützter Fall an das Kartennetzwerk gesendet",
-            "hard_to_win": "Schwacher Fall an das Kartennetzwerk gesendet",
-            "covered": "Durch Shopify Protect abgedeckt"
-          },
           "closed": {
             "won": "Vorgang gewonnen",
             "lost": "Vorgang verloren",
             "unknown": "Vorgang abgeschlossen"
+          },
+          "preSubmit": {
+            "covered": "Durch Shopify Protect abgedeckt"
           }
         },
         "subtitle": {
@@ -1066,7 +1028,7 @@
         "statusLabels": {
           "draft": "Entwurf",
           "stale": "Veraltet",
-          "ready": "Bereit zum Übermitteln",
+          "ready": "Bereit zum Speichern",
           "submitted": "Übermittelt",
           "superseded": "Ersetzt",
           "validationFailed": "Validierung fehlgeschlagen",
@@ -1432,11 +1394,11 @@
         "weakOrInsufficient": "Empfehlung: Beobachten Sie diesen Fall. Erwägen Sie, Beweise für zukünftige Streitfälle zu stärken."
       },
       "notSubmitted": {
-        "strong": "Empfehlung: Jetzt einreichen — Ihre Beweise sind stark genug, um diese Belastung zu verteidigen.",
-        "moderateWithMissing": "Empfehlung: Sie können einreichen, aber das Hinzufügen von {label} würde Ihre Erfolgsaussichten erheblich verbessern.",
-        "moderateNoMissing": "Empfehlung: Sie können jetzt einreichen, aber etwas zusätzliche Beweise würden Ihre Erfolgsaussichten verbessern.",
-        "weakWithMissing": "Empfehlung: Fügen Sie {label} vor dem Einreichen hinzu — der Fall ist derzeit kaum zu gewinnen.",
-        "weakNoMissing": "Empfehlung: Stärken Sie die Beweise vor dem Einreichen — der Fall ist derzeit kaum zu gewinnen."
+        "strong": "Empfehlung: Ihre Beweise reichen aus, um diese Belastung zu verteidigen. DisputeDesk speichert sie gemäß Ihren Einstellungen in Shopify.",
+        "moderateWithMissing": "Empfehlung: Die Antwort ist vertretbar; {label} hinzuzufügen würde Ihre Chancen deutlich verbessern.",
+        "moderateNoMissing": "Empfehlung: Die Antwort ist vertretbar; etwas zusätzliche Beweise würden Ihre Chancen verbessern.",
+        "weakWithMissing": "Empfehlung: Fügen Sie {label} hinzu — der Fall ist derzeit kaum zu gewinnen.",
+        "weakNoMissing": "Empfehlung: Stärken Sie die Beweise — der Fall ist derzeit kaum zu gewinnen."
       },
       "helperWithDays": "{days, plural, =0 {Heute eingereicht} =1 {1 Tag seit der Einreichung} other {# Tage seit der Einreichung}}. Die ausstellende Bank antwortet normalerweise innerhalb von 30–75 Tagen.",
       "helperNoDate": "Die ausstellende Bank antwortet normalerweise innerhalb von 30–75 Tagen."
@@ -1560,10 +1522,6 @@
         "SUBSCRIPTION_CANCELED": "Abonnement gekündigt",
         "UNRECOGNIZED": "Nicht erkannte Zahlung",
         "fallback": "Streitfall"
-      },
-      "statusPill": {
-        "submitted": "Submitted",
-        "needsAction": "Aktion erforderlich"
       },
       "facts": {
         "amount": "Amount",
@@ -1787,8 +1745,8 @@
         "title": "Ihr Verteidigungspaket ist veraltet",
         "body": "Sie haben die Kommunikationsnachweise geändert, nachdem das Paket erstellt wurde. Erstellen Sie es neu, um Ihre freigegebenen Nachrichten aufzunehmen.",
         "cta": "Paket neu erstellen",
-        "windowClosedTitle": "Bereits an die Bank übermittelt",
-        "windowClosedBody": "Sie haben neue Kommunikationsbelege freigegeben, aber Shopify hat diesen Widerspruch bereits an die ausstellende Bank weitergeleitet – das Verteidigungspaket kann nicht mehr geändert werden.",
+        "windowClosedTitle": "Bereits an das Kartennetzwerk gesendet",
+        "windowClosedBody": "Sie haben neue Kommunikationsbeweise freigegeben, aber die Antwort wurde bereits an das Kartennetzwerk gesendet — das Verteidigungspaket kann nicht mehr geändert werden.",
         "notSavedTitle": "Ihre genehmigten Nachrichten werden aufgenommen",
         "notSavedBody": "Sie haben Support-Nachrichten als Beweise genehmigt. Sie werden automatisch zu Ihrem Verteidigungspaket hinzugefügt, wenn Sie es erstellen und einreichen — kein zusätzlicher Schritt nötig."
       },
@@ -1875,7 +1833,10 @@
     "kpiActiveDisputesSub": "Werden automatisch bearbeitet",
     "kpiAmountAtRiskSub": "Über aktive Streitfälle",
     "kpiUnderReview": "In Prüfung",
-    "kpiUnderReviewSub": "Antworten gesendet"
+    "kpiUnderReviewSub": "Antworten gesendet",
+    "dueSent": "Gesendet {date}",
+    "strengthFilterAny": "Beliebige Beweisstärke",
+    "kpiAmountAtRiskOther": "Plus Streitfälle in anderen Währungen: {list}"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank kann nicht verarbeiten",
@@ -2150,7 +2111,7 @@
     "headerDeadlineUrgent": "Frist rückt näher — Antwort bis {date}",
     "headerSubmittedBanner": "Beweise erfolgreich eingereicht",
     "ctaAddRequired": "Erforderliche Beweise hinzufügen",
-    "ctaSubmit": "An Shopify einreichen",
+    "ctaSubmit": "In Shopify speichern",
     "ctaRetrySubmit": "Einreichung wiederholen",
     "ctaOpenShopify": "In Shopify Admin öffnen",
     "builderRequiredTitle": "Erforderliche Beweise",
@@ -2688,7 +2649,10 @@
       "mixedNote": "Einige Streitfalltypen verwenden derzeit unterschiedliche Modi. Eine Auswahl hier gilt für alle Typen.",
       "upgradeNote": "Die Verwaltung der Speichermodi erfordert einen Plan mit Automatisierungsregeln.",
       "saved": "Einstellungen zur Streitfall-Bearbeitung gespeichert"
-    }
+    },
+    "notifApprovalRequired": "Freigabe erforderlich",
+    "notifApprovalRequiredDesc": "Erhalten Sie eine E-Mail, wenn ein Beweispaket auf Ihre Freigabe wartet, bevor es in Shopify gespeichert werden kann.",
+    "notifApprovalRequiredLock": "Erforderlich, damit Sie keine Freigaben oder Antwortfristen verpassen."
   },
   "connect": {
     "title": "Connection Readiness",
@@ -2942,7 +2906,7 @@
         "dashboardAttentionTitle": "Wo dringende Streitfälle erscheinen",
         "dashboardAttentionDesc": "Wenn ein Streitfall sofortiges Handeln erfordert — Bankfrist rückt näher, Beweislücke, irgendetwas, das die Auto-Einreichung blockiert — leuchtet es hier auf. Das rote Banner zeigt dringende Anzahlen und verlinkt direkt zu dem, was geprüft werden muss.",
         "disputesKpisTitle": "Triage auf einen Blick",
-        "disputesKpisDesc": "Vier schnelle Kennzahlen: wie viele Streitfälle Ihr Eingreifen erfordern, wie viel im Risiko steht, wie viele starke Fälle einreichbereit sind und wie viele bereits bei der Bank auf eine Entscheidung warten.",
+        "disputesKpisDesc": "Vier Karten fassen Ihre Streitfälle zusammen: aktive Streitfälle in Bearbeitung, der gefährdete Betrag, Fälle, die wirklich Ihre Aktion benötigen, und Antworten in Prüfung beim Kartennetzwerk.",
         "disputesUrgentBannerTitle": "Dringendste zuerst",
         "disputesUrgentBannerDesc": "Streitfälle, die in den nächsten 48 Stunden fällig sind, erscheinen hier in Rot. „Jetzt lösen“ bringt Sie direkt in den dringendsten Fall, damit Sie keine Frist verpassen.",
         "detailHeaderTitle": "Alles auf einen Blick",
@@ -2954,7 +2918,7 @@
         "detailEvidenceTabTitle": "Beweise hinzufügen oder ausnehmen",
         "detailEvidenceTabDesc": "Der Beweise-Tab ist der Ort, an dem Sie Extras hochladen (Fotos, unterschriebene Vereinbarungen, Kunden-Chatprotokolle) oder Punkte ausnehmen, die Sie nicht bereitstellen können. Jedes Feld hat eine „Warum das wichtig ist“-Notiz, die erklärt, wie es Ihre Gewinnchancen beeinflusst.",
         "detailReviewTabTitle": "Prüfen, was Sie einreichen werden",
-        "detailReviewTabDesc": "Prüfen & Einreichen zeigt das vollständige Beweispaket, das DisputeDesk an Shopify senden wird, plus eine Bereitschafts-Pille: grün Bereit, gelb Riskant (schwacher Fall), rot Blockiert (erforderliche Beweise fehlen). Ist Ihre Automatisierungsregel für diesen Streitfall-Typ auf Auto gesetzt, reicht DisputeDesk ohne Warten ein; bei Prüfung parkt der Streitfall hier, bis Sie auf Einreichen klicken.",
+        "detailReviewTabDesc": "Prüfen und weiterleiten zeigt das vollständige Beweispaket, das DisputeDesk an Shopify senden wird, plus eine Bereitschafts-Pille: grün Bereit, gelb Riskant (schwacher Fall), rot Blockiert (erforderliche Beweise fehlen). Ist Ihre Automatisierungsregel für diesen Streitfall-Typ auf Auto gesetzt, reicht DisputeDesk ohne Warten ein; bei Prüfung parkt der Streitfall hier, bis Sie auf Einreichen klicken.",
         "detailSubmitButtonTitle": "Einreichen, wenn Sie bereit sind",
         "detailSubmitButtonDesc": "Diese Schaltfläche sendet das Beweispaket an Shopify. Nach der Einreichung wird derselbe Tab zu einer „Was wurde gesendet“-Zusammenfassung, damit Sie genau sehen können, was Shopify erhalten hat, und die Antwort der Bank verfolgen können."
       },
@@ -3161,7 +3125,7 @@
       },
       "afterSaving": {
         "title": "Was nach dem Speichern passiert",
-        "body": "Nach dem Speichern:\n\n1. Beweise erscheinen im Shopify Admin: Bestellungen > die verknüpfte Bestellung > Chargeback.\n2. Prüfen Sie in Shopify und fügen Sie Anmerkungen hinzu.\n3. Shopify reicht beim Kartennetzwerk ein — manuell oder automatisch zum Fälligkeitsdatum.\n4. Das Kartennetzwerk prüft die Beweise.\n5. Entscheidung: Gewonnen oder Verloren.\n\nDisputeDesk überwacht den Status und aktualisiert ihn.\n\n**Datei-Zeilen in Shopify Admin:** Wenn die Datei-Beweis-Schicht aktiviert ist, zeigen die Zeilen **Versanddokumentation**, **Kundenkommunikation**, **Servicedokumentation** und **Sonstige Beweise** in Shopify Payments eine ausgefüllte Datei mit Download-Symbol — DisputeDesk lädt eine fokussierte PDF pro Slot hoch, die den Grund und die wichtigsten Fakten aus deinem Paket enthält. Deine ursprünglich hochgeladenen Dateien bleiben zusätzlich als markierte sichere Links (https://disputedesk.app/e/…) im Beweistext erhalten — der Aussteller sieht also sowohl die kontextuelle Zusammenfassung als auch die Originaldateien. Die Zeilen für **Rückgaberichtlinie** und **Stornierungsrichtlinie** sind reason-aware und werden in Admin nur bei bestimmten Streitgründen gerendert; bis die Anzeige pro Familie verifiziert ist, fließen diese Dateien als markierte Links. Bei deaktivierter Schicht fließt jede Datei nur als markierter Link. Verwende **Prüfen & Einreichen** hier, um die exakte Nutzlast vorab anzuzeigen."
+        "body": "Nach dem Speichern:\n\n1. Beweise erscheinen im Shopify Admin: Bestellungen > die verknüpfte Bestellung > Chargeback.\n2. Prüfen Sie in Shopify und fügen Sie Anmerkungen hinzu.\n3. Shopify reicht beim Kartennetzwerk ein — manuell oder automatisch zum Fälligkeitsdatum.\n4. Das Kartennetzwerk prüft die Beweise.\n5. Entscheidung: Gewonnen oder Verloren.\n\nDisputeDesk überwacht den Status und aktualisiert ihn.\n\n**Datei-Zeilen in Shopify Admin:** Wenn die Datei-Beweis-Schicht aktiviert ist, zeigen die Zeilen **Versanddokumentation**, **Kundenkommunikation**, **Servicedokumentation** und **Sonstige Beweise** in Shopify Payments eine ausgefüllte Datei mit Download-Symbol — DisputeDesk lädt eine fokussierte PDF pro Slot hoch, die den Grund und die wichtigsten Fakten aus deinem Paket enthält. Deine ursprünglich hochgeladenen Dateien bleiben zusätzlich als markierte sichere Links (https://disputedesk.app/e/…) im Beweistext erhalten — der Aussteller sieht also sowohl die kontextuelle Zusammenfassung als auch die Originaldateien. Die Zeilen für **Rückgaberichtlinie** und **Stornierungsrichtlinie** sind reason-aware und werden in Admin nur bei bestimmten Streitgründen gerendert; bis die Anzeige pro Familie verifiziert ist, fließen diese Dateien als markierte Links. Bei deaktivierter Schicht fließt jede Datei nur als markierter Link. Verwende **Prüfen und weiterleiten** hier, um die exakte Nutzlast vorab anzuzeigen."
       },
       "notSubmitToNetworks": {
         "title": "DisputeDesk reicht NICHT beim Kartennetzwerk ein",
@@ -3269,7 +3233,7 @@
         },
         "afterSaving": {
           "title": "Was passiert nach dem Speichern der Beweise",
-          "body": "Nachdem du Beweise von dieser App in Shopify gespeichert hast:\n\n1. Beweise erscheinen in Shopify Admin: Gehe zu Bestellungen → die verknüpfte Bestellung → Rückbuchung.\n2. Du kannst in Shopify Admin abschließende Notizen hinzufügen oder Anpassungen vornehmen.\n3. Shopify sendet die Beweise an das Kartennetzwerk, wenn du in Shopify Admin auf 'Antworten' klickst, oder automatisch zum Fälligkeitsdatum.\n4. Das Kartennetzwerk prüft den Streitfall und löst ihn als Gewonnen oder Verloren.\n\nDisputeDesk aktualisiert den Status, wenn Shopify das Ergebnis meldet.\n\n**Datei-Zeilen in Shopify Admin:** Wenn die Datei-Beweis-Schicht aktiviert ist, zeigen die Zeilen **Versanddokumentation**, **Kundenkommunikation**, **Servicedokumentation** und **Sonstige Beweise** eine ausgefüllte Datei mit Download-Symbol — DisputeDesk lädt eine fokussierte PDF pro Slot hoch, die den Grund und die wichtigsten Fakten aus deinem Paket enthält. Deine ursprünglich hochgeladenen Dateien bleiben zusätzlich als markierte sichere Links (https://disputedesk.app/e/…) im Beweistext erhalten. Die Zeilen für **Rückgaberichtlinie** und **Stornierungsrichtlinie** werden nur bei bestimmten Streitgründen gerendert; bis das pro Familie verifiziert ist, fließen diese Dateien als markierte Links. Bei deaktivierter Schicht fließt jede Datei nur als markierter Link. Verwende **Prüfen & Einreichen** hier, um die exakte Nutzlast vorab anzuzeigen."
+          "body": "Nachdem du Beweise von dieser App in Shopify gespeichert hast:\n\n1. Beweise erscheinen in Shopify Admin: Gehe zu Bestellungen → die verknüpfte Bestellung → Rückbuchung.\n2. Du kannst in Shopify Admin abschließende Notizen hinzufügen oder Anpassungen vornehmen.\n3. Shopify sendet die Beweise an das Kartennetzwerk, wenn du in Shopify Admin auf 'Antworten' klickst, oder automatisch zum Fälligkeitsdatum.\n4. Das Kartennetzwerk prüft den Streitfall und löst ihn als Gewonnen oder Verloren.\n\nDisputeDesk aktualisiert den Status, wenn Shopify das Ergebnis meldet.\n\n**Datei-Zeilen in Shopify Admin:** Wenn die Datei-Beweis-Schicht aktiviert ist, zeigen die Zeilen **Versanddokumentation**, **Kundenkommunikation**, **Servicedokumentation** und **Sonstige Beweise** eine ausgefüllte Datei mit Download-Symbol — DisputeDesk lädt eine fokussierte PDF pro Slot hoch, die den Grund und die wichtigsten Fakten aus deinem Paket enthält. Deine ursprünglich hochgeladenen Dateien bleiben zusätzlich als markierte sichere Links (https://disputedesk.app/e/…) im Beweistext erhalten. Die Zeilen für **Rückgaberichtlinie** und **Stornierungsrichtlinie** werden nur bei bestimmten Streitgründen gerendert; bis das pro Familie verifiziert ist, fließen diese Dateien als markierte Links. Bei deaktivierter Schicht fließt jede Datei nur als markierter Link. Verwende **Prüfen und weiterleiten** hier, um die exakte Nutzlast vorab anzuzeigen."
         },
         "viewingFilteringDisputes": {
           "title": "Streitfälle anzeigen und filtern",
@@ -4533,11 +4497,11 @@
     "eventTypes": {
       "dispute_opened": "Streitfall erkannt",
       "status_changed": "Streitfallstatus aktualisiert",
-      "due_date_changed": "Fälligkeitsdatum geändert",
+      "due_date_changed": "Frist aktualisiert",
       "dispute_closed": "Streitfall abgeschlossen",
       "pack_created": "Beweispaket erstellt",
       "pack_ready": "Beweispaket vorbereitet",
-      "pack_blocked": "Paket blockiert",
+      "pack_blocked": "Beweispaket zurückgestellt",
       "pdf_rendered": "Beweisdokument erstellt",
       "evidence_saved_to_shopify": "Beweise in Shopify gespeichert",
       "submission_confirmed": "Beweise an das Kartennetzwerk gesendet",
@@ -4546,12 +4510,12 @@
       "parked_for_review": "Zur Prüfung zurückgestellt",
       "merchant_approved_for_save": "Von Ihnen freigegeben",
       "outcome_detected": "Ergebnis erhalten",
-      "sync_failed": "Synchronisierung fehlgeschlagen",
-      "pack_build_failed": "Paketerstellung fehlgeschlagen",
-      "evidence_save_failed": "Beweisspeicherung fehlgeschlagen",
+      "sync_failed": "Synchronisierungsproblem erkannt",
+      "pack_build_failed": "Problem bei der Beweiserstellung",
+      "evidence_save_failed": "Problem beim Speichern der Beweise",
       "support_note_added": "Notiz hinzugefügt",
-      "admin_override": "Admin-Überschreibung",
-      "admin_override_cleared": "Überschreibung aufgehoben",
+      "admin_override": "Support-Anpassung",
+      "admin_override_cleared": "Support-Anpassung zurückgenommen",
       "dispute_resynced": "Streitfall aus Shopify aktualisiert"
     },
     "actors": {
@@ -4599,8 +4563,8 @@
       "dispute_opened": "{type} eröffnet — {reason}",
       "status_changed": "{from} → {to}",
       "due_date_changed": "Fälligkeitsdatum geändert auf {date}",
-      "pack_created": "Bewertung: {score}%, {count} Beweise gesammelt",
-      "pack_blocked_score": "Automatischer Versand pausiert — Bewertung {score}% liegt unter Ihrem Schwellenwert von {threshold}%",
+      "pack_created": "{count} Beweiselemente gesammelt",
+      "pack_blocked_score": "Automatisches Speichern pausiert — das Beweispaket liegt unter Ihrer Vollständigkeitsschwelle",
       "evidence_saved_to_shopify": "{count} Beweisfelder an Shopify gesendet",
       "support_note_added": "Notiz hinzugefügt von {role}",
       "dispute_resynced": "Neu synchronisiert von {role}"
@@ -5864,7 +5828,8 @@
         "pack_prepared": "Beweise werden vor der Antwortfrist in Shopify gespeichert",
         "saved_to_shopify": "Shopify sendet die Antwort zur Frist",
         "under_review": "Ergebnis erhalten"
-      }
+      },
+      "nextSavedWithDate": "Shopify-Antwortfrist: {date} — Shopify sendet die gespeicherte Antwort dann"
     },
     "attentionBlocking": {
       "approval_gate": "Freigabe erforderlich",
@@ -5883,6 +5848,19 @@
       "subscription_expired": "Eine Abrechnungsaktion ist nötig, bevor DisputeDesk fortfahren kann",
       "payment_failed": "Eine Abrechnungsaktion ist nötig, bevor DisputeDesk fortfahren kann",
       "auto_build_off": "Die automatische Beweiserstellung ist in Ihren Einstellungen deaktiviert"
+    },
+    "outcomeCard": {
+      "title": "Ergebnis",
+      "decisionDate": "Entscheidungsdatum",
+      "amountRecovered": "Zurückgewonnener Betrag",
+      "amountLost": "Verlorener Betrag"
+    },
+    "assessmentCard": {
+      "title": "Beweisbewertung"
+    },
+    "attentionCta": {
+      "requested": "Kommunikation prüfen",
+      "recommended": "Kundenkommunikation hinzufügen"
     }
   }
 }

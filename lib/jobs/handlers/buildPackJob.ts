@@ -118,6 +118,9 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
               : "Pack build did not complete",
           eventAt: new Date().toISOString(),
           actorType: "disputedesk_system",
+          // Internal failure \u2014 transparency copy on the detail page,
+          // never feed alarm (design-alignment \u00a712V decision 4).
+          visibility: "internal_only",
           sourceType: "pack_engine",
           metadataJson: {
             pack_id: packId,
@@ -202,6 +205,9 @@ export async function handleBuildPack(job: ClaimedJob): Promise<void> {
               eventAt: new Date().toISOString(),
               actorType: "disputedesk_system",
               sourceType: "pack_engine",
+              // Billing halt reaches the merchant via the blocking
+              // attention banner, not the activity feed.
+              visibility: "internal_only",
               metadataJson: {
                 pack_id: packId,
                 failure_code: "pack_limit_reached",

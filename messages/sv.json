@@ -259,9 +259,7 @@
     "operationalSummary": "Tvisthantering",
     "attentionCount": "{count} behover uppmärksamhet",
     "actionNeeded": "Åtgärd krävs",
-    "readyToSubmit": "Redo att skicka",
     "savedToShopify": "Sparat till Shopify",
-    "waitingOnIssuer": "Väntar på utfärdare",
     "closedInPeriod": "Avslutade",
     "reviewActionNeeded": "Granska {count} ärenden som kräver åtgärd",
     "submitReady": "Skicka {count} redo ärenden",
@@ -310,11 +308,8 @@
     "attentionBannerMessage": "{count, plural, =1 {# tvist behöver din uppmärksamhet} other {# tvister behöver din uppmärksamhet}}",
     "attentionBannerCta": "Granska tvister",
     "actionNeededDesc": "Behöver din insats",
-    "readyToSubmitDesc": "Bevis kompletta",
-    "waitingOnIssuerDesc": "Skickat till bank",
     "closedInPeriodDesc": "Utfall mottaget",
     "reviewCases": "Granska fall",
-    "submitNow": "Skicka in nu",
     "insightsTitle": "Insights",
     "insightsSubtitle": "Vinstgrad och tvistkategorier",
     "cbShort": "återkr.",
@@ -522,7 +517,6 @@
     "autoPackTriggered": "Utlöst av regel: \"{name}\"",
     "moreEvidenceFileCount": "{count}/{max} filer",
     "uploadsUnavailable": "Uppladdningar är inte tillgängliga för denna ärendestatus.",
-    "uploadsSubmittedToBank": "Bevisningen har redan skickats till banken. Inga ytterligare filer kan laddas upp för denna tvist.",
     "uploadsAvailableHint": "Uppladdningar är bara tillgängliga när ärendet är i AI-granskning eller Väntar på ytterligare bevis.",
     "orderData": "Orderdata",
     "fulfillmentJourney": "Leveransresa",
@@ -640,10 +634,6 @@
     "kpiNeedsAction": "Åtgärd från handlaren krävs",
     "kpiNeedsActionUrgent": "{count} brådskande",
     "kpiAmountAtRisk": "Belopp i riskzonen",
-    "kpiStrongCases": "Starka ärenden",
-    "kpiStrongCasesSub": "Redo att skickas in",
-    "kpiAwaitingResponse": "Väntar på svar",
-    "kpiAwaitingResponseSub": "Inskickad till bank",
     "urgentBannerTitle": "{count} brådskande tvister kräver uppmärksamhet",
     "urgentBannerBody": "{amount} i riskzonen — tidigaste förfaller om {days} dag(ar)",
     "urgentBannerResolve": "Åtgärda nu",
@@ -657,8 +647,6 @@
     "strengthStrong": "Stark",
     "strengthModerate": "Medelstark",
     "strengthWeak": "Svag",
-    "strengthDetailSignals": "{count} starka signaler",
-    "strengthDetailMixed": "{strong} starka + {moderate} medelstarka",
     "strengthDetailInsufficient": "Otillräcklig bevisning",
     "nextActionSubmitEvidence": "Skicka in bevis",
     "nextActionReview": "Granska före inskickning",
@@ -669,7 +657,6 @@
     "outcomeWon": "Won",
     "outcomeLost": "Lost",
     "dueTomorrow": "Tomorrow",
-    "dueSubmitted": "Submitted",
     "dueResolved": "Resolved",
     "statusDropdown": {
       "all": "Alla statusar",
@@ -833,11 +820,11 @@
         "weakOrInsufficient": "Rekommendation: Övervaka detta ärende. Överväg att stärka bevisen för framtida tvister."
       },
       "notSubmitted": {
-        "strong": "Rekommendation: Skicka in nu — dina bevis är tillräckligt starka för att försvara denna debitering.",
-        "moderateWithMissing": "Rekommendation: Du kan skicka in, men att lägga till {label} skulle förbättra dina chanser betydligt.",
-        "moderateNoMissing": "Rekommendation: Du kan skicka in nu, men lite extra bevis skulle förbättra dina chanser.",
-        "weakWithMissing": "Rekommendation: Lägg till {label} innan inskickning — ärendet kommer sannolikt inte att vinna som det är.",
-        "weakNoMissing": "Rekommendation: Stärk bevisen innan inskickning — ärendet kommer sannolikt inte att vinna som det är."
+        "strong": "Rekommendation: Dina bevis är starka nog att försvara den här debiteringen. DisputeDesk sparar dem i Shopify enligt dina inställningar.",
+        "moderateWithMissing": "Rekommendation: Svaret är försvarbart; att lägga till {label} skulle klart förbättra dina odds.",
+        "moderateNoMissing": "Rekommendation: Svaret är försvarbart; lite ytterligare bevis skulle förbättra dina odds.",
+        "weakWithMissing": "Rekommendation: Lägg till {label} — ärendet är i nuläget osannolikt att vinna som det är.",
+        "weakNoMissing": "Rekommendation: Stärk bevisen — ärendet är i nuläget osannolikt att vinna som det är."
       },
       "helperWithDays": "{days, plural, =0 {Inskickat idag} =1 {1 dag sedan inskickning} other {# dagar sedan inskickning}}. Den utfärdande banken svarar vanligtvis inom 30–75 dagar.",
       "helperNoDate": "Den utfärdande banken svarar vanligtvis inom 30–75 dagar."
@@ -961,10 +948,6 @@
         "SUBSCRIPTION_CANCELED": "Prenumeration avslutad",
         "UNRECOGNIZED": "Okänd betalning",
         "fallback": "Tvist"
-      },
-      "statusPill": {
-        "submitted": "Inskickat",
-        "needsAction": "Kräver åtgärd"
       },
       "facts": {
         "amount": "Belopp",
@@ -1350,7 +1333,7 @@
         "statusLabels": {
           "draft": "Utkast",
           "stale": "Föråldrat",
-          "ready": "Redo att skicka",
+          "ready": "Redo att sparas",
           "submitted": "Inskickat",
           "superseded": "Ersatt",
           "validationFailed": "Validering misslyckades",
@@ -1681,38 +1664,13 @@
       },
       "hero": {
         "title": {
-          "preSubmit": {
-            "likely_to_win": "Starkt ärende att bestrida",
-            "could_win": "Granska före bestridande",
-            "needs_strengthening": "Granska före bestridande",
-            "hard_to_win": "Fullständig dokumentation, svagt ärende",
-            "covered": "Täcks av Shopify Protect"
-          },
-          "saved": {
-            "likely_to_win": "Starkt ärende sparat i Shopify",
-            "could_win": "Medelstarkt ärende sparat i Shopify",
-            "needs_strengthening": "Medelstarkt ärende sparat i Shopify",
-            "hard_to_win": "Svagt ärende sparat i Shopify",
-            "covered": "Täcks av Shopify Protect"
-          },
-          "awaiting": {
-            "likely_to_win": "Starkt ärende vidarebefordrat till Shopify",
-            "could_win": "Medelstarkt ärende vidarebefordrat till Shopify",
-            "needs_strengthening": "Medelstarkt ärende vidarebefordrat till Shopify",
-            "hard_to_win": "Svagt ärende vidarebefordrat till Shopify",
-            "covered": "Täcks av Shopify Protect"
-          },
-          "submitted_to_network": {
-            "likely_to_win": "Starkt ärende skickat till kortnätverket",
-            "could_win": "Medelstarkt ärende skickat till kortnätverket",
-            "needs_strengthening": "Medelstarkt ärende skickat till kortnätverket",
-            "hard_to_win": "Svagt ärende skickat till kortnätverket",
-            "covered": "Täcks av Shopify Protect"
-          },
           "closed": {
             "won": "Tvist vunnen",
             "lost": "Tvist förlorad",
             "unknown": "Tvist avslutad"
+          },
+          "preSubmit": {
+            "covered": "Täcks av Shopify Protect"
           }
         },
         "subtitle": {
@@ -1787,8 +1745,8 @@
         "title": "Ditt försvarspaket är inaktuellt",
         "body": "Du ändrade kommunikationsbevisen efter att paketet skapades. Skapa om det för att inkludera dina godkända meddelanden.",
         "cta": "Skapa om paketet",
-        "windowClosedTitle": "Redan skickat till banken",
-        "windowClosedBody": "Du godkände nya kommunikationsbevis, men Shopify har redan vidarebefordrat den här tvisten till den utfärdande banken – försvarspaketet kan inte längre ändras.",
+        "windowClosedTitle": "Redan skickat till kortnätverket",
+        "windowClosedBody": "Du godkände nya kommunikationsbevis, men svaret har redan skickats till kortnätverket — försvarspaketet kan inte längre ändras.",
         "notSavedTitle": "Dina godkända meddelanden kommer att inkluderas",
         "notSavedBody": "Du har godkänt supportmeddelanden som bevis. De läggs automatiskt till i ditt försvarspaket när du genererar och skickar in det — inget extra steg behövs."
       },
@@ -1875,7 +1833,10 @@
     "kpiActiveDisputesSub": "Hanteras automatiskt",
     "kpiAmountAtRiskSub": "Över aktiva tvister",
     "kpiUnderReview": "Under granskning",
-    "kpiUnderReviewSub": "Svar skickade"
+    "kpiUnderReviewSub": "Svar skickade",
+    "dueSent": "Skickat {date}",
+    "strengthFilterAny": "Alla bevisstyrkor",
+    "kpiAmountAtRiskOther": "Plus tvister i andra valutor: {list}"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banken kan inte behandla",
@@ -2150,7 +2111,7 @@
     "headerDeadlineUrgent": "Deadline närmar sig — svara senast {date}",
     "headerSubmittedBanner": "Bevis inskickade",
     "ctaAddRequired": "Lägg till obligatoriska bevis",
-    "ctaSubmit": "Skicka in till Shopify",
+    "ctaSubmit": "Spara i Shopify",
     "ctaRetrySubmit": "Försök skicka in igen",
     "ctaOpenShopify": "Öppna i Shopify Admin",
     "builderRequiredTitle": "Obligatoriska bevis",
@@ -2688,7 +2649,10 @@
       "mixedNote": "Vissa tvisttyper använder för närvarande olika lägen. Ett val här tillämpas på alla typer.",
       "upgradeNote": "Att hantera sparlägen kräver en plan som inkluderar automatiseringsregler.",
       "saved": "Inställningar för tvisthantering sparade"
-    }
+    },
+    "notifApprovalRequired": "Godkännande krävs",
+    "notifApprovalRequiredDesc": "Få ett e-postmeddelande när ett bevispaket väntar på ditt godkännande innan det kan sparas i Shopify.",
+    "notifApprovalRequiredLock": "Krävs så att du inte missar godkännanden eller svarsfrister."
   },
   "connect": {
     "title": "Connection Readiness",
@@ -2942,7 +2906,7 @@
         "dashboardAttentionTitle": "Där brådskande tvister dyker upp",
         "dashboardAttentionDesc": "När en tvist kräver omedelbar åtgärd — bankens deadline närmar sig, bevisgap, eller något som blockerar automatisk inskickning — så framhävs den här. Den röda banderollen visar brådskande antal och länkar direkt till det som behöver granskas.",
         "disputesKpisTitle": "Triagering vid en blick",
-        "disputesKpisDesc": "Fyra snabba mått: hur många tvister som kräver din åtgärd, hur mycket som ligger i riskzonen, hur många starka ärenden som är redo att skickas in, och hur många som redan är hos banken i väntan på beslut.",
+        "disputesKpisDesc": "Fyra kort sammanfattar dina tvister: aktiva tvister som hanteras, beloppet i riskzonen, ärenden som verkligen behöver din åtgärd och svar under granskning hos kortnätverket.",
         "disputesUrgentBannerTitle": "Mest brådskande först",
         "disputesUrgentBannerDesc": "Tvister som förfaller inom de närmaste 48 timmarna visas här i rött. 'Åtgärda nu' tar dig direkt till det mest brådskande ärendet så att du inte missar en deadline.",
         "detailHeaderTitle": "Allt vid en blick",
@@ -2954,7 +2918,7 @@
         "detailEvidenceTabTitle": "Lägg till eller avstå från bevis",
         "detailEvidenceTabDesc": "Fliken Bevis är där du laddar upp extra material (bilder, signerade avtal, kundchattloggar) eller avstår från punkter du inte kan tillhandahålla. Varje fält har en 'varför det här är viktigt'-anteckning som förklarar hur det påverkar dina chanser att vinna.",
         "detailReviewTabTitle": "Granska vad du kommer att skicka in",
-        "detailReviewTabDesc": "Granska & skicka in visar hela bevispaketet som DisputeDesk skickar till Shopify, plus en redo-etikett: grön Klar, gul Riskabel (svagt ärende), röd Blockerad (obligatoriska bevis saknas). Om din automationsregel för denna tvisttyp är inställd på Auto skickar DisputeDesk in utan att vänta; om Granska parkeras tvisten här tills du klickar på Skicka in.",
+        "detailReviewTabDesc": "Granska och vidarebefordra visar hela bevispaketet som DisputeDesk skickar till Shopify, plus en redo-etikett: grön Klar, gul Riskabel (svagt ärende), röd Blockerad (obligatoriska bevis saknas). Om din automationsregel för denna tvisttyp är inställd på Auto skickar DisputeDesk in utan att vänta; om Granska parkeras tvisten här tills du klickar på Skicka in.",
         "detailSubmitButtonTitle": "Skicka in när du är redo",
         "detailSubmitButtonDesc": "Denna knapp skickar paketet till Shopify. Efter inskickning förvandlas denna flik till en 'vad som skickades'-sammanfattning så att du ser exakt vad Shopify mottog och kan följa bankens svar."
       },
@@ -4533,11 +4497,11 @@
     "eventTypes": {
       "dispute_opened": "Tvist upptäckt",
       "status_changed": "Tviststatus uppdaterad",
-      "due_date_changed": "Förfallodatum ändrat",
+      "due_date_changed": "Frist uppdaterad",
       "dispute_closed": "Tvist avslutad",
       "pack_created": "Bevispaket skapat",
       "pack_ready": "Bevispaket förberett",
-      "pack_blocked": "Paket blockerat",
+      "pack_blocked": "Bevispaket pausat",
       "pdf_rendered": "Bevisdokument förberett",
       "evidence_saved_to_shopify": "Bevis sparade i Shopify",
       "submission_confirmed": "Bevis skickade till kortnätverket",
@@ -4546,12 +4510,12 @@
       "parked_for_review": "Parkerad för din granskning",
       "merchant_approved_for_save": "Godkänd av dig",
       "outcome_detected": "Utfall mottaget",
-      "sync_failed": "Synk misslyckades",
-      "pack_build_failed": "Paketbygge misslyckades",
-      "evidence_save_failed": "Bevissparande misslyckades",
+      "sync_failed": "Synkroniseringsproblem upptäckt",
+      "pack_build_failed": "Problem vid bevisbygge",
+      "evidence_save_failed": "Problem vid sparande av bevis",
       "support_note_added": "Anteckning tillagd",
-      "admin_override": "Adminöverställning",
-      "admin_override_cleared": "Överställning rensad",
+      "admin_override": "Supportjustering",
+      "admin_override_cleared": "Supportjustering återställd",
       "dispute_resynced": "Tvist uppdaterad från Shopify"
     },
     "actors": {
@@ -4599,8 +4563,8 @@
       "dispute_opened": "{type} öppnad — {reason}",
       "status_changed": "{from} → {to}",
       "due_date_changed": "Förfallodatum ändrat till {date}",
-      "pack_created": "Poäng: {score}%, {count} bevis insamlade",
-      "pack_blocked_score": "Automatisk inskickning pausad — poäng {score}% är under din tröskel på {threshold}%",
+      "pack_created": "{count} bevisobjekt insamlade",
+      "pack_blocked_score": "Automatiskt sparande pausat — bevispaketet ligger under din kompletthetströskel",
       "evidence_saved_to_shopify": "{count} bevisfält skickade till Shopify",
       "support_note_added": "Anteckning tillagd av {role}",
       "dispute_resynced": "Omsynkad av {role}"
@@ -5864,7 +5828,8 @@
         "pack_prepared": "Bevis sparas i Shopify före svarsfristen",
         "saved_to_shopify": "Shopify skickar svaret vid fristen",
         "under_review": "Utfall mottaget"
-      }
+      },
+      "nextSavedWithDate": "Shopifys svarsfrist: {date} — Shopify skickar då det sparade svaret"
     },
     "attentionBlocking": {
       "approval_gate": "Godkännande krävs",
@@ -5883,6 +5848,19 @@
       "subscription_expired": "En faktureringsåtgärd behövs innan DisputeDesk kan fortsätta",
       "payment_failed": "En faktureringsåtgärd behövs innan DisputeDesk kan fortsätta",
       "auto_build_off": "Automatisk bevisinsamling är avstängd i dina inställningar"
+    },
+    "outcomeCard": {
+      "title": "Utfall",
+      "decisionDate": "Beslutsdatum",
+      "amountRecovered": "Återvunnet belopp",
+      "amountLost": "Förlorat belopp"
+    },
+    "assessmentCard": {
+      "title": "Bevisbedömning"
+    },
+    "attentionCta": {
+      "requested": "Granska kommunikation",
+      "recommended": "Lägg till kundkommunikation"
     }
   }
 }

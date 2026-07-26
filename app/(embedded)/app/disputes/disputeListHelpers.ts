@@ -484,30 +484,11 @@ export function figmaCaseStrength(d: Dispute): FigmaCaseStrength | null {
   return "weak"; // weak + insufficient
 }
 
-/** Compose the Figma strength subtitle ("2 strong signals", "1 strong
- *  + 2 moderate", "Insufficient evidence") from the persisted counts.
- *  Returns null when no pack — the UI shows nothing under the pill. */
-export function figmaStrengthDetail(d: Dispute, t: Translate): string | null {
-  const cs = d.caseStrength;
-  if (!cs) return null;
-  const { overall, strongCount, moderateCount } = cs;
-  if (overall === "insufficient" || (strongCount === 0 && moderateCount === 0)) {
-    return t("disputes.strengthDetailInsufficient");
-  }
-  if (strongCount > 0 && moderateCount === 0) {
-    return t("disputes.strengthDetailSignals", { count: strongCount });
-  }
-  if (strongCount === 0 && moderateCount > 0) {
-    return t("disputes.strengthDetailMixed", {
-      strong: 0,
-      moderate: moderateCount,
-    });
-  }
-  return t("disputes.strengthDetailMixed", {
-    strong: strongCount,
-    moderate: moderateCount,
-  });
-}
+// figmaStrengthDetail was deleted (plan §8 row 8): the signal-count
+// arithmetic ("{n} strong + {m} moderate") contradicted the rules-engine
+// grade. The strength subtitle is now the engine's own explanation via
+// `strengthSubtitle` above; the strengthDetailSignals/strengthDetailMixed
+// keys were removed from all locales.
 
 /** Map final_outcome to the Figma 3-bucket outcome pill. Pre-decision
  *  rows render "Pending". */
@@ -519,9 +500,11 @@ export function figmaOutcome(d: Dispute): FigmaOutcome {
 }
 
 /** Natural-language due-date label + status enum for the Figma row.
- *  Closed disputes show "Resolved" (with closed_at); under-review/
- *  submitted rows show "Submitted"; otherwise the relative-time logic
- *  from `formatDueTiming`. */
+ *  Closed disputes show "Resolved" (with closed_at). Transmission-
+ *  confirmed rows show "Sent {date}" (from `submitted_at`) — NEVER the
+ *  word "Submitted" as a deadline (plan §5.6; saved ≠ sent, and a
+ *  status is not a date). Rows that are merely saved keep their real
+ *  deadline. Otherwise the relative-time logic from `formatDueTiming`. */
 export function figmaDueDate(
   d: Dispute,
   t: Translate,
@@ -531,8 +514,24 @@ export function figmaDueDate(
   if (status === "closed") {
     return { label: t("disputes.dueResolved"), status: "closed" };
   }
-  if (status === "under-review" || status === "submitted") {
-    return { label: t("disputes.dueSubmitted"), status: "closed" };
+  // "Sent {date}" only once transmission is externally confirmed
+  // (submission_state / the under-review normalized family). Without a
+  // usable sent date, fall back to a neutral em-dash — never a fake
+  // deadline and never the word "Submitted".
+  const transmissionConfirmed =
+    d.presentation?.transmissionConfirmed ??
+    (d.submission_state === "submitted_confirmed" ||
+      d.normalized_status === "submitted_to_bank");
+  if (transmissionConfirmed || status === "under-review" || status === "submitted") {
+    if (transmissionConfirmed && d.submitted_at) {
+      return {
+        label: t("disputes.dueSent", {
+          date: formatDueDate(d.submitted_at, dateLocale),
+        }),
+        status: "closed",
+      };
+    }
+    return { label: "—", status: "closed" };
   }
   if (!d.due_at) return { label: "—", status: "upcoming" };
   const hoursLeft = (new Date(d.due_at).getTime() - Date.now()) / (1000 * 60 * 60);
@@ -563,17 +562,21 @@ export function figmaNextAction(d: Dispute, t: Translate): string {
   return t("disputes.nextActionSubmitEvidence");
 }
 
-/** Boolean: due in <= 48h AND the merchant can still act (action-needed
- *  or needs-review). Drives the urgent banner count + the row-edge red
- *  stripe. Submitted / under-review disputes are out of the merchant's
- *  hands — the bank now owns the timeline — so they never count as urgent
- *  even if their original `due_at` is in the past. */
+/** Boolean: due in <= 48h AND a GENUINE merchant task exists
+ *  (attention blocking / requested / merchant-resolvable technical
+ *  error). Deadline risk AMPLIFIES a required action — it never alarms
+ *  on its own (plan §3.1/§5): a dispute DisputeDesk is handling
+ *  autonomously is not "urgent" for the merchant regardless of its
+ *  deadline. Drives the urgent banner + its count + the deep-link
+ *  target, so all three share ONE definition. Legacy fallback for rows
+ *  without a presentation keeps the old status heuristic. */
 export function figmaIsUrgent(d: Dispute): boolean {
-  const s = figmaStatus(d);
-  if (s !== "action-needed" && s !== "needs-review") return false;
   if (!d.due_at) return false;
   const hoursLeft = (new Date(d.due_at).getTime() - Date.now()) / (1000 * 60 * 60);
-  return hoursLeft <= 48;
+  if (hoursLeft > 48) return false;
+  if (d.presentation) return d.presentation.needsMerchantAction;
+  const s = figmaStatus(d);
+  return s === "action-needed" || s === "needs-review";
 }
 
 /** Row chrome — left-edge stripe + bg tint + opacity. Three states

@@ -378,6 +378,11 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
      *  Evidence-tab window-closed banner. */
     submittedAt: row.submitted_at ?? null,
     finalOutcome: row.final_outcome ?? null,
+    // Outcome card (plan §6.2): decision date + recovered/lost amounts
+    // for the dedicated won/lost Outcome block on the Overview tab.
+    closedAt: row.closed_at ?? null,
+    outcomeAmountRecovered: row.outcome_amount_recovered ?? null,
+    outcomeAmountLost: row.outcome_amount_lost ?? null,
     // Order context — populated from pack_json. Each field can still be
     // null when the pack lacks the data (e.g. payment gateway on a
     // non-Shopify-Payments order).

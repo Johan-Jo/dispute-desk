@@ -47,6 +47,7 @@ import { DashboardOperationalInsightsStrip } from "./DashboardOperationalInsight
 import { DashboardScopeUpgradeBanner } from "./DashboardScopeUpgradeBanner";
 import { CbInqBreakdown } from "./CbInqBreakdown";
 import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
+import { localizeEventDescription } from "@/lib/disputeEvents/localizeDescription";
 
 // ─── OutcomeBreakdown ─────────────────────────────────────────────────────
 
@@ -124,68 +125,6 @@ const STATUS_COLORS: Record<string, string> = {
 
 function safeEventLabel(t: ReturnType<typeof useTranslations>, eventType: string): string {
   return safeDynamicT(t, `eventTypes.${eventType}`, eventType.replace(/_/g, " "));
-}
-
-function localizeEventDescription(
-  t: ReturnType<typeof useTranslations>,
-  eventType: string,
-  description: string | null,
-): string | null {
-  if (!description) return null;
-
-  try {
-    switch (eventType) {
-      case "submission_confirmed":
-        return t("eventDescriptions.submission_confirmed");
-      case "dispute_opened": {
-        const m = description.match(/^(.+?) opened — (.+)$/);
-        if (m) return t("eventDescriptions.dispute_opened", { type: m[1], reason: m[2] });
-        break;
-      }
-      case "status_changed": {
-        const m = description.match(/^(.+?) → (.+)$/);
-        if (m) return t("eventDescriptions.status_changed", { from: m[1], to: m[2] });
-        break;
-      }
-      case "due_date_changed": {
-        const m = description.match(/^Due date changed to (.+)$/);
-        if (m) return t("eventDescriptions.due_date_changed", { date: m[1] });
-        break;
-      }
-      case "pack_created": {
-        const m = description.match(/^Score: (\d+)%, (\d+) evidence items collected$/);
-        if (m) return t("eventDescriptions.pack_created", { score: m[1], count: m[2] });
-        break;
-      }
-      case "evidence_saved_to_shopify": {
-        const m = description.match(/^(\d+) evidence fields sent to Shopify$/);
-        if (m) return t("eventDescriptions.evidence_saved_to_shopify", { count: m[1] });
-        break;
-      }
-      case "support_note_added": {
-        const m = description.match(/^Note added by (.+)$/);
-        if (m) return t("eventDescriptions.support_note_added", { role: m[1] });
-        break;
-      }
-      case "dispute_resynced": {
-        const m = description.match(/^Resynced by (.+?)\./);
-        if (m) return t("eventDescriptions.dispute_resynced", { role: m[1] });
-        break;
-      }
-      case "pack_blocked": {
-        // Gate emits "Completeness score X% is below threshold Y%" (joined
-        // with "; " when multiple reasons). Localize the common case; fall
-        // through to the raw description for uncommon gate reasons.
-        const m = description.match(/^Completeness score (\d+)% is below threshold (\d+)%$/);
-        if (m) return t("eventDescriptions.pack_blocked_score", { score: m[1], threshold: m[2] });
-        break;
-      }
-    }
-  } catch {
-    /* fall through */
-  }
-
-  return description;
 }
 
 function RecentActivityFeed({ stats, loading }: { stats: DashboardStats; loading: boolean }) {
