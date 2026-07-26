@@ -178,6 +178,13 @@ export default function EmbeddedSettingsPage() {
   const [saveMode, setSaveMode] = useState<SaveMode | null>(null);
   const [saveModeMixed, setSaveModeMixed] = useState(false);
   const [saveModePackIds, setSaveModePackIds] = useState<string[]>([]);
+  /** How the radio is bound (audit fix 2026-07-26): "rules" writes the
+   *  per-pack-type rule mode; "gate" — used when the shop has NO active
+   *  pack types to bind rules to — writes the shop-level
+   *  `shop_settings.auto_save_enabled` flag, which is the gate
+   *  `evaluateAutoSaveGate` actually reads. Without this fallback the
+   *  control silently no-ops on shops without installed templates. */
+  const [saveModeBinding, setSaveModeBinding] = useState<"rules" | "gate">("rules");
   const [rulesAllowed, setRulesAllowed] = useState(true);
   const [handlingSaved, setHandlingSaved] = useState(false);
 
@@ -201,10 +208,33 @@ export default function EmbeddedSettingsPage() {
 
   const pickSaveMode = useCallback(
     async (v: SaveMode) => {
-      if (!rulesAllowed || saveModePackIds.length === 0) return;
+      setHandlingSaved(false);
+      if (saveModeBinding === "gate" || saveModePackIds.length === 0) {
+        // No pack types to bind rules to — write the shop-level
+        // auto-save gate (the flag evaluateAutoSaveGate reads).
+        setSaveMode(v);
+        setSaveModeMixed(false);
+        const next = { ...automation, auto_save_enabled: v === "auto" };
+        setAutomation(next);
+        const res = await fetch("/api/automation/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            auto_build_enabled: next.auto_build_enabled,
+            auto_save_enabled: next.auto_save_enabled,
+            auto_save_min_score: next.auto_save_min_score,
+            enforce_no_blockers: next.enforce_no_blockers,
+          }),
+        });
+        if (res.ok) {
+          setHandlingSaved(true);
+          setTimeout(() => setHandlingSaved(false), 2600);
+        }
+        return;
+      }
+      if (!rulesAllowed) return;
       setSaveMode(v);
       setSaveModeMixed(false);
-      setHandlingSaved(false);
       const pack_modes: Record<string, SaveMode> = {};
       for (const id of saveModePackIds) pack_modes[id] = v;
       const res = await fetch("/api/setup/automation", {
@@ -217,7 +247,7 @@ export default function EmbeddedSettingsPage() {
         setTimeout(() => setHandlingSaved(false), 2600);
       }
     },
-    [rulesAllowed, saveModePackIds],
+    [rulesAllowed, saveModePackIds, saveModeBinding, automation],
   );
 
   const fetchInfo = useCallback(async () => {
@@ -239,10 +269,15 @@ export default function EmbeddedSettingsPage() {
         setSaveModePackIds(ids);
         setRulesAllowed(m.rulesAccess?.allowed !== false);
         if (modes.length > 0) {
+          setSaveModeBinding("rules");
           const allAuto = modes.every((v) => v === "auto");
           const allReview = modes.every((v) => v === "review");
           setSaveMode(allAuto ? "auto" : "review");
           setSaveModeMixed(!allAuto && !allReview);
+        } else {
+          // No active pack types → bind to the shop-level auto-save
+          // gate instead of silently no-oping.
+          setSaveModeBinding("gate");
         }
       }
       if (usageRes.ok) {
@@ -279,6 +314,9 @@ export default function EmbeddedSettingsPage() {
         const a = await autoRes.json() as AutomationSettings;
         setAutomation(a);
         setMinScoreInput(String(a.auto_save_min_score));
+        // Gate-bound fallback selection (no pack types): reflect the
+        // actual auto-save flag.
+        setSaveMode((prev) => prev ?? (a.auto_save_enabled ? "auto" : "review"));
       }
     } finally {
       setLoading(false);
@@ -424,10 +462,10 @@ export default function EmbeddedSettingsPage() {
               <BlockStack gap="200">
                 <Text as="h3" variant="headingSm">{t("disputeHandling.savingTitle")}</Text>
                 <Text as="p" variant="bodySm" tone="subdued">{t("disputeHandling.savingDesc")}</Text>
-                {!rulesAllowed ? (
+                {!rulesAllowed && saveModeBinding === "rules" ? (
                   <Banner tone="info">{t("disputeHandling.upgradeNote")}</Banner>
                 ) : null}
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", opacity: rulesAllowed ? 1 : 0.5 }}>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", opacity: rulesAllowed || saveModeBinding === "gate" ? 1 : 0.5 }}>
                   <OptionBox
                     selected={saveMode === "auto" && !saveModeMixed}
                     onClick={() => pickSaveMode("auto")}
