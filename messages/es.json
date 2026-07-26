@@ -1589,7 +1589,8 @@
       "retryHelp": "Intenta reconstruir. Si sigue fallando, contacta a soporte y haz referencia a esta disputa.",
       "retryBuild": "Reintentar construcción",
       "setUpPolicies": "Configura políticas para casos futuros",
-      "trackingCarrierFallback": "Transportista"
+      "trackingCarrierFallback": "Transportista",
+      "viewInShopifyUnavailable": "No hay un enlace directo a esta disputa disponible con los datos actuales."
     },
     "evidenceTabExtra": {
       "buildFailedTitle": "Falló la construcción del paquete de evidencia",
@@ -5747,7 +5748,7 @@
     "lifecycle": {
       "building_evidence": "Recopilando pruebas",
       "monitoring": "Supervisión",
-      "pack_prepared": "Paquete de pruebas preparado",
+      "pack_prepared": "Paquete preparado",
       "saved_to_shopify": "Pruebas guardadas en Shopify",
       "under_review": "En revisión",
       "won": "Ganada",
@@ -5768,7 +5769,7 @@
       "none": "No se requiere ninguna acción",
       "opportunity": "Comunicación disponible",
       "recommended": "Comunicación recomendada",
-      "requested": "Revisar comunicación",
+      "requested": "Comunicación solicitada",
       "blocking": "Se requiere su intervención",
       "technical_error": "Atención requerida"
     },
@@ -5827,9 +5828,14 @@
         "monitoring": "Pruebas guardadas en Shopify antes de la fecha límite de respuesta",
         "pack_prepared": "Pruebas guardadas en Shopify antes de la fecha límite de respuesta",
         "saved_to_shopify": "Shopify envía la respuesta en la fecha límite",
-        "under_review": "Resultado recibido"
+        "under_review": "Resultado recibido",
+        "technical_error": "El monitoreo se reanuda automáticamente cuando se restablece la conexión"
       },
-      "nextSavedWithDate": "Fecha límite de respuesta de Shopify: {date} — Shopify envía entonces la respuesta guardada"
+      "nextSavedWithDate": "Fecha límite de respuesta de Shopify: {date} — Shopify envía entonces la respuesta guardada",
+      "technicalProblem": {
+        "title": "El monitoreo requiere atención",
+        "message": "DisputeDesk no puede comprobar la comunicación con el servicio de atención al cliente porque la conexión ha caducado. Las pruebas de todas las demás fuentes conectadas no se ven afectadas y el monitoreo continúa."
+      }
     },
     "attentionBlocking": {
       "approval_gate": "Aprobación requerida",
@@ -5861,6 +5867,11 @@
     "attentionCta": {
       "requested": "Revisar comunicación",
       "recommended": "Añadir comunicación del cliente"
+    },
+    "techAttention": {
+      "title": "Atención requerida",
+      "body": "DisputeDesk no puede comprobar la comunicación con el servicio de atención al cliente porque la conexión ha caducado. Volver a conectar restaura el monitoreo de la bandeja de entrada de soporte. La solidez de las pruebas y todos los demás monitoreos no se ven afectados.",
+      "cta": "Volver a conectar"
     }
   }
 }

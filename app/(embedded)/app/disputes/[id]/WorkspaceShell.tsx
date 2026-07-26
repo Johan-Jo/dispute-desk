@@ -274,7 +274,35 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
                   >
                     {t("disputes.overviewExtra.viewInShopify")}
                   </a>
-                ) : null}
+                ) : (
+                  // Design keeps the action present but DISABLED when a
+                  // direct link isn't available from the current data
+                  // (Dispute Detail.html — the button degrades, never
+                  // vanishes). No guessed fallback URL (plan §6.1).
+                  <button
+                    type="button"
+                    disabled
+                    title={t("disputes.overviewExtra.viewInShopifyUnavailable")}
+                    style={{
+                      marginLeft: "auto",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      borderRadius: 8,
+                      padding: "8px 13px",
+                      lineHeight: 1.2,
+                      whiteSpace: "nowrap",
+                      border: "1px solid #E1E3E5",
+                      background: "#F6F6F7",
+                      color: "#8C9196",
+                      cursor: "not-allowed",
+                    }}
+                  >
+                    {t("disputes.overviewExtra.viewInShopify")}
+                  </button>
+                )}
               </div>
             </div>
 

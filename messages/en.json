@@ -985,6 +985,7 @@
       "editEvidence": "Edit evidence",
       "submitToShopify": "Save to Shopify",
       "viewInShopify": "View in Shopify Admin",
+      "viewInShopifyUnavailable": "A direct link to this dispute isn't available from the current data.",
       "addMissingEvidence": "Add missing evidence",
       "submitAnyway": "Save anyway",
       "autoSubmitPausedTitle": "Auto-submit paused — your review needed",
@@ -5746,7 +5747,7 @@
     "lifecycle": {
       "building_evidence": "Building evidence",
       "monitoring": "Monitoring",
-      "pack_prepared": "Evidence package prepared",
+      "pack_prepared": "Pack prepared",
       "saved_to_shopify": "Evidence saved to Shopify",
       "under_review": "Under review",
       "won": "Won",
@@ -5767,7 +5768,7 @@
       "none": "No action required",
       "opportunity": "Communication available",
       "recommended": "Communication recommended",
-      "requested": "Review communication",
+      "requested": "Communication requested",
       "blocking": "Input required",
       "technical_error": "Attention required"
     },
@@ -5821,14 +5822,24 @@
         "title": "The card network is reviewing the dispute",
         "message": "The response has been sent and can no longer be changed. DisputeDesk is tracking the dispute for an outcome."
       },
+      "technicalProblem": {
+        "title": "Monitoring needs attention",
+        "message": "DisputeDesk cannot currently check customer-support communication because the connection has expired. Evidence from every other connected source is unaffected and monitoring continues."
+      },
       "next": {
         "building_evidence": "Evidence pack prepared — usually within a few hours",
         "monitoring": "Evidence saved to Shopify before the response deadline",
         "pack_prepared": "Evidence saved to Shopify before the response deadline",
         "saved_to_shopify": "Shopify sends the response at the deadline",
-        "under_review": "Outcome received"
+        "under_review": "Outcome received",
+        "technical_error": "Monitoring resumes automatically once the connection is restored"
       },
       "nextSavedWithDate": "Shopify response deadline: {date} — Shopify sends the saved response then"
+    },
+    "techAttention": {
+      "title": "Attention required",
+      "body": "DisputeDesk cannot currently check customer-support communication because the connection has expired. Reconnecting restores support-inbox monitoring. Evidence strength and all other monitoring are unaffected.",
+      "cta": "Reconnect"
     },
     "attentionBlocking": {
       "approval_gate": "Approval required",

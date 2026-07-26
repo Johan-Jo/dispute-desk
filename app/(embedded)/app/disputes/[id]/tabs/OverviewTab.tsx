@@ -344,14 +344,26 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     bg: "#F8FAFF", border: "#D6E0F5", iconBg: "#E0E7FF", iconColor: "#3730A3",
     titleColor: "#1F2A5B", bodyColor: "#3F4A5C", pillBg: "#E0E7FF", pillColor: "#3730A3",
   };
+  // Merchant-resolvable technical problem (e.g. expired Gorgias/OAuth
+  // connection — plan §12V's one `technical_error` signal). The design's
+  // "Monitoring needs attention" state (Dispute Detail.html state 12) gives
+  // this a red hero + warning icon, while the LIFECYCLE stays calm per the
+  // plan (internal facts never change lifecycle — the red is on attention).
+  const isTechProblem = presentation?.attention === "technical_error";
+  const HERO_TONE_TECH = {
+    bg: "#FEF2F2", border: "#FCA5A5", iconBg: "#FEE2E2", iconColor: "#DC2626",
+    titleColor: "#7F1D1D", bodyColor: "#B42318", pillBg: "#FEE2E2", pillColor: "#991B1B",
+  };
   const heroTone =
-    heroVariant === "covered"
-      ? HERO_TONE_BY_VARIANT.covered
-      : lifecycle === "won"
-        ? HERO_TONE_BY_VARIANT.likely_to_win
-        : lifecycle === "lost"
-          ? HERO_TONE_BY_VARIANT.hard_to_win
-          : HERO_TONE_CALM;
+    isTechProblem
+      ? HERO_TONE_TECH
+      : heroVariant === "covered"
+        ? HERO_TONE_BY_VARIANT.covered
+        : lifecycle === "won"
+          ? HERO_TONE_BY_VARIANT.likely_to_win
+          : lifecycle === "lost"
+            ? HERO_TONE_BY_VARIANT.hard_to_win
+            : HERO_TONE_CALM;
 
   // Whether carrier delivery is already CONFIRMED (delivered to recipient
   // or signed for). Drives the "monitoring" banner so it stops promising a
@@ -374,6 +386,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
    *  covered headline. Terminal titles reuse the existing translated
    *  `hero.title.closed.*` keys. */
   function resolveHeroTitle(): string {
+    if (isTechProblem && lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed") {
+      return tp("hero.technicalProblem.title");
+    }
     if (heroVariant === "covered" && lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed") {
       return t("hero.title.preSubmit.covered");
     }
@@ -395,6 +410,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
    *  copy); terminal + covered messages reuse the existing translated
    *  keys. */
   function resolveHeroSubtitle(): string | null {
+    if (isTechProblem && lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed") {
+      return tp("hero.technicalProblem.message");
+    }
     if (heroVariant === "covered" && lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed") {
       const reason = (strengthReasonText ?? "").trim();
       return reason.length > 0 ? reason : null;
@@ -434,9 +452,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     lifecycle !== "won" &&
     lifecycle !== "lost" &&
     lifecycle !== "closed"
-      ? lifecycle === "saved_to_shopify" && dispute.dueAt
-        ? tp("hero.nextSavedWithDate", { date: formatDate(dispute.dueAt) })
-        : tp(`hero.next.${lifecycle}`)
+      ? isTechProblem
+        ? tp("hero.next.technical_error")
+        : lifecycle === "saved_to_shopify" && dispute.dueAt
+          ? tp("hero.nextSavedWithDate", { date: formatDate(dispute.dueAt) })
+          : tp(`hero.next.${lifecycle}`)
       : null;
 
   /* ── Timeline ──
@@ -847,7 +867,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             flexShrink: 0,
           }}
         >
-          <Icon source={ShieldCheckMarkIcon} />
+          <Icon source={isTechProblem ? AlertCircleIcon : ShieldCheckMarkIcon} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4, flexWrap: "wrap" }}>
@@ -1133,21 +1153,45 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           </Button>
         </div>
       )}
+      {/* Technical-attention card (design "Monitoring needs attention"
+          state): red card with the reconnect action. Renders for the one
+          merchant-resolvable technical_error signal (expired integration
+          connection); the merchant can self-fix by reconnecting. */}
       {presentation && presentation.attention === "technical_error" && (
         <div
           style={{
             background: "#FEF2F2",
             border: "1px solid #FCA5A5",
             borderRadius: 12,
-            padding: 16,
+            padding: 20,
+            display: "flex",
+            gap: 14,
+            alignItems: "flex-start",
           }}
         >
-          <p style={{ fontSize: 14, fontWeight: 600, color: "#7F1D1D", margin: 0 }}>
-            {tRoot(attentionLabelKey(presentation))}
-          </p>
-          <p style={{ fontSize: 12.5, color: "#B42318", margin: "3px 0 0", lineHeight: 1.5 }}>
-            {tRoot("presentation.listStateSub.technical_error")}
-          </p>
+          <span
+            style={{
+              width: 36, height: 36, borderRadius: 9, background: "#FEE2E2",
+              color: "#DC2626", flex: "none", display: "inline-flex",
+              alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <Icon source={AlertCircleIcon} />
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 15, fontWeight: 600, color: "#7F1D1D", margin: 0 }}>
+              {tp("techAttention.title")}
+            </p>
+            <p style={{ fontSize: 13, color: "#991B1B", margin: "4px 0 12px", lineHeight: 1.55, maxWidth: 680 }}>
+              {tp("techAttention.body")}
+            </p>
+            <Button
+              variant="primary"
+              url={withShopParams("/app/settings", searchParams)}
+            >
+              {tp("techAttention.cta")}
+            </Button>
+          </div>
         </div>
       )}
 

@@ -1015,7 +1015,8 @@
       "retryHelp": "Försök bygga om. Om det fortsätter att misslyckas, kontakta supporten och referera till denna tvist.",
       "retryBuild": "Försök bygga om",
       "setUpPolicies": "Konfigurera policys för framtida ärenden",
-      "trackingCarrierFallback": "Transportör"
+      "trackingCarrierFallback": "Transportör",
+      "viewInShopifyUnavailable": "Ingen direktlänk till den här tvisten är tillgänglig från nuvarande data."
     },
     "overviewPill": {
       "missing": "Saknas",
@@ -5747,7 +5748,7 @@
     "lifecycle": {
       "building_evidence": "Samlar bevis",
       "monitoring": "Övervakning",
-      "pack_prepared": "Bevispaket förberett",
+      "pack_prepared": "Paket förberett",
       "saved_to_shopify": "Bevis sparade i Shopify",
       "under_review": "Under granskning",
       "won": "Vunnen",
@@ -5768,7 +5769,7 @@
       "none": "Ingen åtgärd krävs",
       "opportunity": "Kommunikation tillgänglig",
       "recommended": "Kommunikation rekommenderas",
-      "requested": "Granska kommunikation",
+      "requested": "Kommunikation begärd",
       "blocking": "Din insats krävs",
       "technical_error": "Uppmärksamhet krävs"
     },
@@ -5827,9 +5828,14 @@
         "monitoring": "Bevis sparas i Shopify före svarsfristen",
         "pack_prepared": "Bevis sparas i Shopify före svarsfristen",
         "saved_to_shopify": "Shopify skickar svaret vid fristen",
-        "under_review": "Utfall mottaget"
+        "under_review": "Utfall mottaget",
+        "technical_error": "Övervakningen återupptas automatiskt när anslutningen har återställts"
       },
-      "nextSavedWithDate": "Shopifys svarsfrist: {date} — Shopify skickar då det sparade svaret"
+      "nextSavedWithDate": "Shopifys svarsfrist: {date} — Shopify skickar då det sparade svaret",
+      "technicalProblem": {
+        "title": "Övervakningen kräver åtgärd",
+        "message": "DisputeDesk kan för närvarande inte kontrollera kundtjänstkommunikationen eftersom anslutningen har gått ut. Bevis från alla andra anslutna källor påverkas inte och övervakningen fortsätter."
+      }
     },
     "attentionBlocking": {
       "approval_gate": "Godkännande krävs",
@@ -5861,6 +5867,11 @@
     "attentionCta": {
       "requested": "Granska kommunikation",
       "recommended": "Lägg till kundkommunikation"
+    },
+    "techAttention": {
+      "title": "Åtgärd krävs",
+      "body": "DisputeDesk kan för närvarande inte kontrollera kundtjänstkommunikationen eftersom anslutningen har gått ut. Att återansluta återställer övervakningen av supportinkorgen. Bevisstyrkan och all annan övervakning påverkas inte.",
+      "cta": "Återanslut"
     }
   }
 }

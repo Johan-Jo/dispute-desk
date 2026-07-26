@@ -1589,7 +1589,8 @@
       "retryHelp": "Versuchen Sie es erneut. Wenn es weiterhin fehlschlägt, kontaktieren Sie den Support und verweisen Sie auf diesen Streitfall.",
       "retryBuild": "Erneut erstellen",
       "setUpPolicies": "Richtlinien für künftige Fälle einrichten",
-      "trackingCarrierFallback": "Zusteller"
+      "trackingCarrierFallback": "Zusteller",
+      "viewInShopifyUnavailable": "Ein direkter Link zu diesem Fall ist aus den aktuellen Daten nicht verfügbar."
     },
     "evidenceTabExtra": {
       "buildFailedTitle": "Erstellung des Beweispakets fehlgeschlagen",
@@ -5747,7 +5748,7 @@
     "lifecycle": {
       "building_evidence": "Beweise werden gesammelt",
       "monitoring": "Überwachung",
-      "pack_prepared": "Beweispaket erstellt",
+      "pack_prepared": "Paket vorbereitet",
       "saved_to_shopify": "Beweise in Shopify gespeichert",
       "under_review": "In Prüfung",
       "won": "Gewonnen",
@@ -5768,7 +5769,7 @@
       "none": "Keine Aktion erforderlich",
       "opportunity": "Kommunikation verfügbar",
       "recommended": "Kommunikation empfohlen",
-      "requested": "Kommunikation prüfen",
+      "requested": "Kommunikation angefordert",
       "blocking": "Ihre Eingabe erforderlich",
       "technical_error": "Aufmerksamkeit erforderlich"
     },
@@ -5827,9 +5828,14 @@
         "monitoring": "Beweise werden vor der Antwortfrist in Shopify gespeichert",
         "pack_prepared": "Beweise werden vor der Antwortfrist in Shopify gespeichert",
         "saved_to_shopify": "Shopify sendet die Antwort zur Frist",
-        "under_review": "Ergebnis erhalten"
+        "under_review": "Ergebnis erhalten",
+        "technical_error": "Die Überwachung wird automatisch fortgesetzt, sobald die Verbindung wiederhergestellt ist"
       },
-      "nextSavedWithDate": "Shopify-Antwortfrist: {date} — Shopify sendet die gespeicherte Antwort dann"
+      "nextSavedWithDate": "Shopify-Antwortfrist: {date} — Shopify sendet die gespeicherte Antwort dann",
+      "technicalProblem": {
+        "title": "Überwachung erfordert Aufmerksamkeit",
+        "message": "DisputeDesk kann die Kundensupport-Kommunikation derzeit nicht prüfen, da die Verbindung abgelaufen ist. Beweise aus allen anderen verbundenen Quellen sind nicht betroffen und die Überwachung wird fortgesetzt."
+      }
     },
     "attentionBlocking": {
       "approval_gate": "Freigabe erforderlich",
@@ -5861,6 +5867,11 @@
     "attentionCta": {
       "requested": "Kommunikation prüfen",
       "recommended": "Kundenkommunikation hinzufügen"
+    },
+    "techAttention": {
+      "title": "Aufmerksamkeit erforderlich",
+      "body": "DisputeDesk kann die Kundensupport-Kommunikation derzeit nicht prüfen, da die Verbindung abgelaufen ist. Durch erneutes Verbinden wird die Überwachung des Support-Postfachs wiederhergestellt. Die Beweisstärke und alle anderen Überwachungen sind nicht betroffen.",
+      "cta": "Erneut verbinden"
     }
   }
 }

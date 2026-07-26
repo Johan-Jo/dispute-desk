@@ -1589,7 +1589,8 @@
       "retryHelp": "Essayez de relancer la construction. Si l'échec persiste, contactez l'assistance en précisant ce litige.",
       "retryBuild": "Relancer la construction",
       "setUpPolicies": "Configurer les politiques pour les futurs dossiers",
-      "trackingCarrierFallback": "Transporteur"
+      "trackingCarrierFallback": "Transporteur",
+      "viewInShopifyUnavailable": "Aucun lien direct vers ce litige n'est disponible à partir des données actuelles."
     },
     "evidenceTabExtra": {
       "buildFailedTitle": "Échec de la construction du dossier de preuves",
@@ -5747,7 +5748,7 @@
     "lifecycle": {
       "building_evidence": "Collecte des preuves",
       "monitoring": "Surveillance",
-      "pack_prepared": "Dossier de preuves préparé",
+      "pack_prepared": "Dossier prêt",
       "saved_to_shopify": "Preuves enregistrées dans Shopify",
       "under_review": "En examen",
       "won": "Gagné",
@@ -5768,7 +5769,7 @@
       "none": "Aucune action requise",
       "opportunity": "Communication disponible",
       "recommended": "Communication recommandée",
-      "requested": "Vérifier la communication",
+      "requested": "Communication demandée",
       "blocking": "Votre intervention est requise",
       "technical_error": "Attention requise"
     },
@@ -5827,9 +5828,14 @@
         "monitoring": "Preuves enregistrées dans Shopify avant la date limite de réponse",
         "pack_prepared": "Preuves enregistrées dans Shopify avant la date limite de réponse",
         "saved_to_shopify": "Shopify envoie la réponse à la date limite",
-        "under_review": "Résultat reçu"
+        "under_review": "Résultat reçu",
+        "technical_error": "La surveillance reprend automatiquement une fois la connexion rétablie"
       },
-      "nextSavedWithDate": "Date limite de réponse Shopify : {date} — Shopify envoie alors la réponse enregistrée"
+      "nextSavedWithDate": "Date limite de réponse Shopify : {date} — Shopify envoie alors la réponse enregistrée",
+      "technicalProblem": {
+        "title": "La surveillance nécessite votre attention",
+        "message": "DisputeDesk ne peut pas vérifier la communication avec le service client car la connexion a expiré. Les preuves de toutes les autres sources connectées ne sont pas affectées et la surveillance se poursuit."
+      }
     },
     "attentionBlocking": {
       "approval_gate": "Approbation requise",
@@ -5861,6 +5867,11 @@
     "attentionCta": {
       "requested": "Vérifier la communication",
       "recommended": "Ajouter une communication client"
+    },
+    "techAttention": {
+      "title": "Attention requise",
+      "body": "DisputeDesk ne peut pas vérifier la communication avec le service client car la connexion a expiré. La reconnexion rétablit la surveillance de la boîte de réception du support. La force des preuves et toutes les autres surveillances ne sont pas affectées.",
+      "cta": "Reconnecter"
     }
   }
 }
