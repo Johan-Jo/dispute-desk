@@ -1551,7 +1551,8 @@
         "stateConcededBody": "Sie haben sich entschieden, diese Reklamation nicht zu verteidigen. Es wird nichts eingereicht.",
         "dueSuffix": " ({date})",
         "change": "Entscheidung ändern",
-        "undo": "Rückgängig"
+        "undo": "Rückgängig",
+        "settingsHint": "Sie können dies in den Einstellungen → Beweise in Shopify speichern ändern."
       },
       "whatHappensNow": "Was passiert jetzt",
       "automationRule": "Automatisierungsregel:",

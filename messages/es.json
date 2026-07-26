@@ -1551,7 +1551,8 @@
         "stateConcededBody": "Elegiste no defender esta disputa. No se enviará nada.",
         "dueSuffix": " ({date})",
         "change": "Cambiar decisión",
-        "undo": "Deshacer"
+        "undo": "Deshacer",
+        "settingsHint": "Puede cambiar esto en Configuración → Guardar pruebas en Shopify."
       },
       "whatHappensNow": "Qué sucede ahora",
       "automationRule": "Regla de automatización:",

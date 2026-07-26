@@ -350,6 +350,16 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // this a red hero + warning icon, while the LIFECYCLE stays calm per the
   // plan (internal facts never change lifecycle — the red is on attention).
   const isTechProblem = presentation?.attention === "technical_error";
+  // Approval-required state (design "Decide what to do" block): the pack is
+  // ready but the shop requires approval before the first Shopify save.
+  // Shown ONLY in this state (not on every weak/parked case), rendered
+  // INSIDE the hero below "Next:" — matches Dispute Detail.html, which
+  // gates the block on approvalRequired === true.
+  const showApprovalDecide =
+    !isReadOnly &&
+    !dispute.reviewState &&
+    presentation?.attention === "blocking" &&
+    presentation?.blockingReason === "approval_gate";
   const HERO_TONE_TECH = {
     bg: "#FEF2F2", border: "#FCA5A5", iconBg: "#FEE2E2", iconColor: "#DC2626",
     titleColor: "#7F1D1D", bodyColor: "#B42318", pillBg: "#FEE2E2", pillColor: "#991B1B",
@@ -756,86 +766,48 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </Banner>
       )}
 
-      {/* Review lifecycle (2026-07-23). A parked-for-review or weak
-          dispute needs an explicit merchant decision so it doesn't sit in
-          the queue forever. Shows three actions when undecided, or the
-          standing decision + an undo once made. Hidden once the dispute
-          is read-only (submitted / closed) — the decision is moot then. */}
+      {/* Review lifecycle — STANDING DECISION only (2026-07-23). Once the
+          merchant has decided (hold / approve / concede) we show the
+          standing state + undo. The UNDECIDED three-button form lives
+          INSIDE the hero for the approval-required state only, per the
+          approved design (Dispute Detail.html: the "Decide what to do"
+          block renders only when approvalRequired is true). Hidden once
+          read-only. */}
       {!isReadOnly &&
+        dispute.reviewState &&
         (() => {
-          const rs = dispute.reviewState ?? null;
-          const isWeak =
-            caseStrength.overall === "weak" ||
-            caseStrength.overall === "insufficient";
-          const parked = dispute.needsReview === true;
-          // Offer the row when the case is weak or parked, OR whenever a
-          // decision is already recorded (so the merchant can see/undo it).
-          if (!isWeak && !parked && !rs) return null;
+          const rs = dispute.reviewState;
           const saving = actions.reviewSaving === true;
           const dueSuffix = dispute.reviewDueAt
             ? tExtra("review.dueSuffix", { date: formatDate(dispute.reviewDueAt) })
             : dispute.dueAt
               ? tExtra("review.dueSuffix", { date: formatDate(dispute.dueAt) })
               : "";
-
-          if (rs) {
-            const tone =
-              rs === "conceded" ? "critical" : rs === "approved" ? "info" : "warning";
-            const titleKey =
-              rs === "conceded"
-                ? "review.stateConcededTitle"
-                : rs === "approved"
-                  ? "review.stateApprovedTitle"
-                  : "review.stateInReviewTitle";
-            const bodyKey =
-              rs === "conceded"
-                ? "review.stateConcededBody"
-                : rs === "approved"
-                  ? "review.stateApprovedBody"
-                  : "review.stateInReviewBody";
-            return (
-              <Banner tone={tone} title={tExtra(titleKey)}>
-                <BlockStack gap="200">
-                  <p style={{ margin: 0 }}>{tExtra(bodyKey, { due: dueSuffix })}</p>
-                  <InlineStack gap="200">
-                    <Button
-                      variant="plain"
-                      disabled={saving}
-                      onClick={() => actions.setReviewDecision("clear")}
-                    >
-                      {tExtra("review.undo")}
-                    </Button>
-                  </InlineStack>
-                </BlockStack>
-              </Banner>
-            );
-          }
-
+          const tone =
+            rs === "conceded" ? "critical" : rs === "approved" ? "info" : "warning";
+          const titleKey =
+            rs === "conceded"
+              ? "review.stateConcededTitle"
+              : rs === "approved"
+                ? "review.stateApprovedTitle"
+                : "review.stateInReviewTitle";
+          const bodyKey =
+            rs === "conceded"
+              ? "review.stateConcededBody"
+              : rs === "approved"
+                ? "review.stateApprovedBody"
+                : "review.stateInReviewBody";
           return (
-            <Banner tone="warning" title={tExtra("review.title")}>
-              <BlockStack gap="300">
-                <p style={{ margin: 0 }}>{tExtra("review.prompt")}</p>
+            <Banner tone={tone} title={tExtra(titleKey)}>
+              <BlockStack gap="200">
+                <p style={{ margin: 0 }}>{tExtra(bodyKey, { due: dueSuffix })}</p>
                 <InlineStack gap="200">
                   <Button
-                    disabled={saving}
-                    onClick={() => actions.setReviewDecision("hold")}
-                  >
-                    {tExtra("review.hold")}
-                  </Button>
-                  <Button
-                    variant="primary"
-                    disabled={saving}
-                    onClick={() => actions.setReviewDecision("approve")}
-                  >
-                    {tExtra("review.approve")}
-                  </Button>
-                  <Button
                     variant="plain"
-                    tone="critical"
                     disabled={saving}
-                    onClick={() => actions.setReviewDecision("concede")}
+                    onClick={() => actions.setReviewDecision("clear")}
                   >
-                    {tExtra("review.concede")}
+                    {tExtra("review.undo")}
                   </Button>
                 </InlineStack>
               </BlockStack>
@@ -855,7 +827,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           borderRadius: 8,
           padding: 24,
           display: "flex",
-          alignItems: "center",
+          alignItems: showApprovalDecide ? "flex-start" : "center",
           gap: 16,
         }}
       >
@@ -918,6 +890,44 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             <p style={{ fontSize: 12.5, color: "#6D7175", margin: "8px 0 0", lineHeight: 1.5 }}>
               {tp("internalIssue")}
             </p>
+          )}
+          {/* "Decide what to do" — approval-required state ONLY, inside the
+              hero below "Next:", divided off by a top border (design). */}
+          {showApprovalDecide && (
+            <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #D6E0F5" }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "#1F2A5B", margin: "0 0 4px" }}>
+                {tExtra("review.title")}
+              </p>
+              <p style={{ fontSize: 12.5, color: "#3F4A5C", margin: "0 0 10px", lineHeight: 1.5, maxWidth: 700 }}>
+                {tExtra("review.prompt")}
+              </p>
+              <InlineStack gap="200" blockAlign="center">
+                <Button
+                  variant="primary"
+                  disabled={actions.reviewSaving === true}
+                  onClick={() => actions.setReviewDecision("approve")}
+                >
+                  {tExtra("review.approve")}
+                </Button>
+                <Button
+                  disabled={actions.reviewSaving === true}
+                  onClick={() => actions.setReviewDecision("hold")}
+                >
+                  {tExtra("review.hold")}
+                </Button>
+                <Button
+                  variant="plain"
+                  tone="critical"
+                  disabled={actions.reviewSaving === true}
+                  onClick={() => actions.setReviewDecision("concede")}
+                >
+                  {tExtra("review.concede")}
+                </Button>
+              </InlineStack>
+              <p style={{ fontSize: 12, color: "#6D7175", margin: "10px 0 0" }}>
+                {tExtra("review.settingsHint")}
+              </p>
+            </div>
           )}
         </div>
       </div>

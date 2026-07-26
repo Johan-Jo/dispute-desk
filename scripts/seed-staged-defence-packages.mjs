@@ -46,15 +46,18 @@
  * non-SEED dispute) are never touched. Deterministic RNG seeded per
  * dispute so a re-run is byte-identical.
  *
- * Run (DEV only — surasvenne on vrpkgudqmpyunekrkpnc):
- *   node scripts/seed-staged-defence-packages.mjs            # dry run
- *   node scripts/seed-staged-defence-packages.mjs --apply
+ * Run (DEV only — surasvenne on vrpkgudqmpyunekrkpnc). Uses tsx so it can
+ * import the real strength engine and store the SAME tier the detail page
+ * recomputes on read (no stored-vs-recomputed drift):
+ *   npx tsx scripts/seed-staged-defence-packages.mjs            # dry run
+ *   npx tsx scripts/seed-staged-defence-packages.mjs --apply
  */
 
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 import { join } from "node:path";
 import { randomUUID, createHash } from "node:crypto";
+import { calculateCaseStrength } from "../lib/argument/caseStrength.ts";
 
 config({ path: join(process.cwd(), ".env.local") });
 config({ path: join(process.cwd(), ".env") });
@@ -86,24 +89,35 @@ function round2(x) { return Number(x.toFixed(2)); }
 //  scripts/backfill-seed-pack-evidence.mjs so the two seeders agree)
 // ─────────────────────────────────────────────────────────────────────
 
-const REASON_PROFILES = {
-  FRAUDULENT: {
-    available: ["order_confirmation", "billing_address_match", "avs_cvv_match", "activity_log", "ip_location_check", "customer_account_info"],
+// Profiles are keyed by INTENDED STRENGTH TIER, not by reason, so the
+// evidence set deterministically produces that tier under the real
+// engine (lib/argument/caseStrength.ts: strong needs >=2 strong signals;
+// 1 strong + >=1 moderate = moderate; else weak). The stored
+// case_strength.overall is set to the SAME tier the engine recomputes on
+// read, so the detail page never disagrees with the saved pack.
+//
+//   strong   → delivery(delivered_confirmed + verified address = strong)
+//              + AVS(Y/M = strong) = 2 strong  → engine "strong"
+//   moderate → delivery(delivered_confirmed + verified = strong) only
+//              = 1 strong                        → engine "moderate"
+//   weak     → policies + activity, no decisive signal → engine "weak"
+const STRENGTH_PROFILES = {
+  strong: {
+    available: ["order_confirmation", "billing_address_match", "avs_cvv_match", "shipping_tracking", "delivery_proof", "activity_log", "customer_account_info"],
     missing: ["customer_communication"],
-    unavailable: [
-      { field: "shipping_tracking", reason: "Order is unfulfilled" },
-      { field: "delivery_proof", reason: "Order is unfulfilled" },
-    ],
+    unavailable: [],
   },
-  PRODUCT_NOT_RECEIVED: {
+  moderate: {
     available: ["order_confirmation", "shipping_tracking", "delivery_proof", "activity_log", "shipping_policy"],
     missing: ["customer_communication"],
     unavailable: [],
   },
-  PRODUCT_UNACCEPTABLE: {
+  weak: {
     available: ["order_confirmation", "refund_policy", "shipping_policy", "activity_log"],
     missing: ["product_description", "customer_communication"],
-    unavailable: [],
+    unavailable: [
+      { field: "delivery_proof", reason: "Order is unfulfilled" },
+    ],
   },
 };
 
@@ -138,7 +152,7 @@ const FIELD_META = {
   product_description: { priority: "recommended", source: "manual_upload", collectionType: "manual" },
 };
 
-function buildSections(rng, dispute, fields) {
+function buildSections(rng, dispute, fields, strength) {
   const sections = [];
   const items = [];
   const orderNumberShort = String(Math.floor(rng() * 9000) + 1000);
@@ -179,7 +193,15 @@ function buildSections(rng, dispute, fields) {
   }
 
   if (has("avs_cvv_match")) {
-    const data = { avs_result_code: "Y", cvv_result_code: "M", processor: "stripe" };
+    // Engine keys (lib/argument/canonicalEvidence.ts categoryFor): both
+    // avsResultCode AND cvvResultCode matching → strong; one → moderate.
+    // Strong tier: Y + M (both match). Moderate tier: Y + only AVS.
+    const strong = strength === "strong";
+    const data = {
+      avsResultCode: "Y",
+      cvvResultCode: strong ? "M" : "N",
+      processor: "stripe",
+    };
     sections.push({ type: "other", label: "AVS / CVV match", source: "shopify_transactions", fieldsProvided: ["avs_cvv_match"], data });
     items.push({ type: "other", label: "AVS / CVV match", source: "shopify_transactions", payload: { ...data, fieldsProvided: ["avs_cvv_match"] }, confidence: round2(0.92 + rng() * 0.07) });
   }
@@ -194,7 +216,21 @@ function buildSections(rng, dispute, fields) {
   if (has("shipping_tracking") || has("delivery_proof")) {
     const provided = ["shipping_tracking", "delivery_proof"].filter(has);
     const carrier = pick(rng, ["PostNord", "DHL", "Bring", "GLS"]);
-    const data = { carrier, trackingNumber: String(Math.floor(rng() * 900000000) + 100000000), shippedAt: new Date(Date.now() - (10 + Math.floor(rng() * 60)) * 86400000).toISOString(), deliveredAt: new Date(Date.now() - (5 + Math.floor(rng() * 30)) * 86400000).toISOString(), status: "delivered" };
+    // Engine keys (canonicalEvidence.ts): proofType is the discriminator.
+    // Both strong+moderate tiers use delivered_confirmed +
+    // deliveredToVerifiedAddress (= a STRONG delivery signal). That one
+    // strong signal alone yields engine "moderate"; the strong tier adds
+    // a second strong signal (AVS Y/M) to reach "strong" (>=2 strong).
+    const strongDelivery = strength === "strong" || strength === "moderate";
+    const data = {
+      carrier,
+      trackingNumber: String(Math.floor(rng() * 900000000) + 100000000),
+      shippedAt: new Date(Date.now() - (10 + Math.floor(rng() * 60)) * 86400000).toISOString(),
+      deliveredAt: new Date(Date.now() - (5 + Math.floor(rng() * 30)) * 86400000).toISOString(),
+      status: "delivered",
+      proofType: strongDelivery ? "delivered_confirmed" : "delivered_unverified",
+      deliveredToVerifiedAddress: strongDelivery,
+    };
     sections.push({ type: "tracking", label: `Tracking — ${carrier}`, source: "shopify_fulfillment", fieldsProvided: provided, data });
     items.push({ type: "tracking", label: `Tracking — ${carrier}`, source: "shopify_fulfillment", payload: { ...data, fieldsProvided: provided }, confidence: round2(0.9 + rng() * 0.08) });
   }
@@ -445,8 +481,14 @@ for (const d of disputes) {
   if (!pack) { console.log(`  ${gidSuffix}: NO PACK — skipping`); continue; }
   if (pack.status === "building") { console.log(`  ${gidSuffix}: pack still building — no defence package (correct)`); continue; }
 
-  const profile = REASON_PROFILES[d.reason] ?? REASON_PROFILES.FRAUDULENT;
-  const strength = pack.pack_json?.case_strength?.overall ?? "moderate";
+  // Intended tier from the SQL seed's stored case_strength; the profile
+  // is chosen so the engine RECOMPUTES this same tier on read.
+  const rawStrength = pack.pack_json?.case_strength?.overall ?? "moderate";
+  const strength =
+    rawStrength === "strong" ? "strong"
+    : rawStrength === "moderate" ? "moderate"
+    : "weak"; // weak + insufficient
+  const profile = STRENGTH_PROFILES[strength];
   plan.push({ d, pack, gidSuffix, profile, strength });
 }
 
@@ -472,10 +514,27 @@ console.log(`Cleared ${delDp?.length ?? 0} old defence packages, ${delItems?.len
 let done = 0;
 for (const { d, pack, gidSuffix, profile, strength } of plan) {
   const rng = makeRng(`${d.id}|${d.reason}`);
-  const { sections, items } = buildSections(rng, d, profile.available);
+  const { sections, items } = buildSections(rng, d, profile.available, strength);
   const checklistV2 = buildChecklistV2(profile);
 
-  // 1. pack_json.sections + checklist_v2 (preserve case_strength etc.)
+  // Recompute strength with the REAL engine over the checklist + payloads
+  // we just built, keyed by field exactly as the workspace route does.
+  // Store THIS value so the detail page (which recomputes on read) always
+  // agrees with the saved pack — no stored-vs-recomputed drift. The seed's
+  // intended tier still drives the evidence set, but the engine has the
+  // final say on the label.
+  const byField = {};
+  for (const it of items) {
+    for (const f of it.payload?.fieldsProvided ?? []) {
+      if (!(f in byField)) byField[f] = { payload: it.payload };
+    }
+  }
+  const engine = calculateCaseStrength(checklistV2, d.reason, { kind: "byField", map: byField });
+  const engineOverall = engine.overall; // strong | moderate | weak | insufficient
+
+  const priorCaseStrength = (pack.pack_json ?? {}).case_strength ?? {};
+
+  // 1. pack_json.sections + checklist_v2 + engine-consistent case_strength
   const newPackJson = {
     ...(pack.pack_json ?? {}),
     version: "1.0.0",
@@ -484,6 +543,7 @@ for (const { d, pack, gidSuffix, profile, strength } of plan) {
     disputeReason: d.reason,
     generatedAt: new Date().toISOString(),
     completeness: pack.completeness_score ?? 72,
+    case_strength: { ...priorCaseStrength, overall: engineOverall },
   };
   const { error: uErr } = await sb.from("evidence_packs")
     .update({ pack_json: newPackJson, checklist_v2: checklistV2, updated_at: new Date().toISOString() })
