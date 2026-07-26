@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { isBillingTestMode } from "@/lib/billing/testMode";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
 import { getPlan } from "@/lib/billing/plans";
@@ -131,9 +132,9 @@ export async function POST(req: NextRequest) {
   }
 
   const accessToken = decryptToken(session.access_token_encrypted);
-  const isTest =
-    process.env.SHOPIFY_BILLING_TEST === "true" ||
-    process.env.NODE_ENV !== "production";
+  // Test charges on dev/local (dev stores reject real charges);
+  // single source of truth in lib/billing/testMode.ts.
+  const isTest = isBillingTestMode();
 
   // Trial is a first-time-customer promotion only. Upgrades,
   // downgrades, reactivations, and resubscriptions after cancel
