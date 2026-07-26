@@ -184,6 +184,21 @@ export async function POST(req: NextRequest) {
     correlationId: `billing-${resolvedShopId}`,
   });
 
+  // Surface top-level GraphQL errors (requestShopifyGraphQL returns
+  // them in-band and never throws). Without this, an "Access denied" /
+  // managed-pricing / scope failure became a silent 200 with no
+  // confirmationUrl — the merchant saw only the generic "didn't go
+  // through" banner and the logs showed nothing (dev, 2026-07-26).
+  const gqlErrors = (result as { errors?: Array<{ message: string }> }).errors ?? [];
+  if (gqlErrors.length > 0) {
+    const messages = gqlErrors.map((e) => e.message);
+    console.error("[billing/subscribe] Shopify GraphQL errors", {
+      shopId: shop_id,
+      messages,
+    });
+    return NextResponse.json({ error: messages.join(", ") }, { status: 422 });
+  }
+
   const mutation = result.data?.appSubscriptionCreate;
   const userErrors = mutation?.userErrors ?? [];
 
