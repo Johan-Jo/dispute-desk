@@ -108,10 +108,15 @@ export function computeBillingBannerState(
     }
   }
 
-  // 3. Blue low-credits — only for healthy states.
+  // 3. Blue low-credits — only for healthy states, and ONLY when the
+  // balance is actually KNOWN. `remainingPacks == null` means the
+  // pack_balance view has no row yet (fresh cycle / no grant recorded)
+  // — an unknown balance is not "almost out", and defaulting it to 0
+  // fired a false "Almost out of packs" banner on shops with zero
+  // usage (dev report 2026-07-26).
   const activeStates: SubscriptionState[] = ["trialing", "active"];
-  if (activeStates.includes(input.subscriptionState)) {
-    const remaining = input.remainingPacks ?? 0;
+  if (activeStates.includes(input.subscriptionState) && input.remainingPacks != null) {
+    const remaining = input.remainingPacks;
     const limit = input.monthlyPackLimit ?? 0;
     if (limit > 0) {
       const ratio = remaining / limit;

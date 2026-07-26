@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
+import { isBillingTestMode } from "@/lib/billing/testMode";
 import { getTopUp } from "@/lib/billing/plans";
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { deserializeEncrypted, decrypt } from "@/lib/security/encryption";
@@ -76,9 +77,9 @@ export async function POST(req: NextRequest) {
   }
 
   const accessToken = decryptToken(session.access_token_encrypted);
-  const isTest =
-    process.env.SHOPIFY_BILLING_TEST === "true" ||
-    process.env.NODE_ENV !== "production";
+  // Test charges on dev/local (dev stores reject real charges);
+  // single source of truth in lib/billing/testMode.ts.
+  const isTest = isBillingTestMode();
   const appUrl = process.env.SHOPIFY_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
   const callbackUrl = new URL(`${appUrl}/api/billing/topup-callback`);
   callbackUrl.searchParams.set("shop_id", shop_id);

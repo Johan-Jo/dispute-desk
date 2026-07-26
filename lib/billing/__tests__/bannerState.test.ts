@@ -272,3 +272,31 @@ describe("DISMISSAL_COLUMN registry", () => {
     );
   });
 });
+
+describe("low_credits — unknown balance never fires (2026-07-26 fix)", () => {
+  it("remainingPacks null (no pack_balance row) → no banner despite active state", () => {
+    const state = computeBillingBannerState({
+      subscriptionState: "active",
+      billingCycleEndsAt: "2026-08-20T00:00:00Z",
+      lowCreditsBannerDismissedCycle: null,
+      graceBannerDismissedCycle: null,
+      remainingPacks: null,
+      monthlyPackLimit: 100,
+      planId: "growth",
+    });
+    expect(state.variant).toBe("none");
+  });
+
+  it("a KNOWN low balance still fires", () => {
+    const state = computeBillingBannerState({
+      subscriptionState: "active",
+      billingCycleEndsAt: "2026-08-20T00:00:00Z",
+      lowCreditsBannerDismissedCycle: null,
+      graceBannerDismissedCycle: null,
+      remainingPacks: 5,
+      monthlyPackLimit: 100,
+      planId: "growth",
+    });
+    expect(state.variant).toBe("low_credits");
+  });
+});
