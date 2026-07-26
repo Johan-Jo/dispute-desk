@@ -5873,6 +5873,16 @@
       "title": "Attention requise",
       "body": "DisputeDesk ne peut pas vérifier la communication avec le service client car la connexion a expiré. La reconnexion rétablit la surveillance de la boîte de réception du support. La force des preuves et toutes les autres surveillances ne sont pas affectées.",
       "cta": "Reconnecter"
+    },
+    "reviewDecision": {
+      "approved": "Planifié",
+      "conceded": "Non défendu",
+      "in_review": "En cours d'examen"
+    },
+    "reviewDecisionSub": {
+      "approved": "Configuré pour être soumis automatiquement à l'échéance",
+      "conceded": "Vous avez choisi de ne pas défendre ce litige",
+      "in_review": "Vous examinez ceci avant l'échéance"
     }
   }
 }

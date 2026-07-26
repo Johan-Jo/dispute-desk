@@ -5873,6 +5873,16 @@
       "title": "Atención requerida",
       "body": "DisputeDesk no puede comprobar la comunicación con el servicio de atención al cliente porque la conexión ha caducado. Volver a conectar restaura el monitoreo de la bandeja de entrada de soporte. La solidez de las pruebas y todos los demás monitoreos no se ven afectados.",
       "cta": "Volver a conectar"
+    },
+    "reviewDecision": {
+      "approved": "Programado",
+      "conceded": "No defendido",
+      "in_review": "En revisión"
+    },
+    "reviewDecisionSub": {
+      "approved": "Configurado para enviarse automáticamente en la fecha límite",
+      "conceded": "Decidió no defender esta disputa",
+      "in_review": "Está revisando esto antes de la fecha límite"
     }
   }
 }

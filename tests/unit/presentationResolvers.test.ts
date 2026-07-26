@@ -472,6 +472,34 @@ describe("Cross-page consistency", () => {
     expect(p.needsMerchantAction).toBe(true);
   });
 
+  it("a recorded review decision overrides the attention-derived list status", () => {
+    // Approval gate is still technically open (attention=blocking/
+    // approval_gate) but the merchant already decided — the list must
+    // stop saying 'Approval required' and reflect the standing decision.
+    const p = resolvePresentation({
+      ...basePresentation,
+      automationMode: "review",
+      packStatus: "ready",
+      approvedForSaveAt: null,
+    });
+    expect(p.attention).toBe("blocking");
+    expect(p.blockingReason).toBe("approval_gate");
+    // No decision yet → shows the approval label.
+    expect(listPrimaryState(p).labelKey).toBe(
+      "presentation.attentionBlocking.approval_gate",
+    );
+    // Decision recorded → reflects it, not 'Approval required'.
+    expect(listPrimaryState(p, "approved").labelKey).toBe(
+      "presentation.reviewDecision.approved",
+    );
+    expect(listPrimaryState(p, "conceded").labelKey).toBe(
+      "presentation.reviewDecision.conceded",
+    );
+    expect(listPrimaryState(p, "in_review").labelKey).toBe(
+      "presentation.reviewDecision.in_review",
+    );
+  });
+
   it("a saved-editable case is calm everywhere (no task, no warning)", () => {
     const p = resolvePresentation({
       ...basePresentation,

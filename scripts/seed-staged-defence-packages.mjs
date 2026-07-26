@@ -382,11 +382,16 @@ function buildNarrative(reason, strength, factSet) {
   };
 }
 
-// Network reason-code module hint by reason (display only in the seed).
+// Reason-code MODULE KEY — must be a valid ReasonCodeModuleKey
+// (lib/defence/types.ts). The detail renderer feeds this into
+// familyKeyForModule()/isSectionDeniedForModule(); an unknown key made
+// familyForModule() return undefined and crashed the Review and Forward
+// tab with a client-side exception (dev 2026-07-26). These are NOT the
+// bare network codes (visa_10_4) — they are the internal module keys.
 const REASON_CODE_MODULE = {
-  FRAUDULENT: "visa_10_4",
-  PRODUCT_NOT_RECEIVED: "visa_13_1",
-  PRODUCT_UNACCEPTABLE: "visa_13_3",
+  FRAUDULENT: "visa_10_4_fraud",
+  PRODUCT_NOT_RECEIVED: "inr_product_not_received",
+  PRODUCT_UNACCEPTABLE: "product_unacceptable",
 };
 
 // ── dispute_events lifecycle (drives the Overview timeline) ───────────

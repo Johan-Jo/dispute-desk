@@ -5873,6 +5873,16 @@
       "title": "Aufmerksamkeit erforderlich",
       "body": "DisputeDesk kann die Kundensupport-Kommunikation derzeit nicht prüfen, da die Verbindung abgelaufen ist. Durch erneutes Verbinden wird die Überwachung des Support-Postfachs wiederhergestellt. Die Beweisstärke und alle anderen Überwachungen sind nicht betroffen.",
       "cta": "Erneut verbinden"
+    },
+    "reviewDecision": {
+      "approved": "Geplant",
+      "conceded": "Nicht verteidigt",
+      "in_review": "In Prüfung"
+    },
+    "reviewDecisionSub": {
+      "approved": "Wird am Fälligkeitsdatum automatisch eingereicht",
+      "conceded": "Sie haben sich entschieden, diesen Fall nicht zu verteidigen",
+      "in_review": "Sie prüfen dies vor dem Fälligkeitsdatum"
     }
   }
 }
