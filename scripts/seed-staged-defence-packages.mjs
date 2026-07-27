@@ -486,7 +486,7 @@ if (!shop) { console.error("Shop not found"); process.exit(1); }
 
 const { data: disputes } = await sb
   .from("disputes")
-  .select("id, dispute_gid, reason, amount, currency_code, initiated_at, order_gid, normalized_status, final_outcome, submission_state, closed_at")
+  .select("id, dispute_gid, reason, amount, currency_code, initiated_at, order_gid, normalized_status, final_outcome, submission_state, closed_at, customer_display_name")
   .eq("shop_id", shop.id)
   .like("dispute_gid", `${SEED_PREFIX}%`);
 
@@ -644,6 +644,108 @@ for (const { d, pack, gidSuffix, profile, strength } of plan) {
   done += 1;
   console.log(`  ${gidSuffix.padEnd(16)} ✓ ${sections.length} sections, ${itemRows.length} items, ${checklistV2.length} checklist, defence(${st.status}/${st.mode}), ${evInserted} events`);
 }
+
+// ── COMM-REQUESTED (#9007): real Gorgias backing ───────────────────────
+// The "Review communication" state (attention_reason=gorgias_evidence_ready)
+// PROMISES reviewable customer messages. Without the actual Gorgias rows
+// the Evidence tab shows nothing — the pill lies. Seed the real records so
+// the state has substance: integration + enrichment run + 2 matched
+// tickets + 2 proposed evidence messages. Idempotent (deletes first).
+async function seedGorgiasForCommRequested() {
+  const commDispute = disputes.find(
+    (d) => d.dispute_gid === `${SEED_PREFIX}COMM-REQUESTED`,
+  );
+  if (!commDispute) return;
+  const dId = commDispute.id;
+
+  // Clear prior gorgias rows (children first).
+  await sb.from("gorgias_evidence_messages").delete().eq("dispute_id", dId);
+  await sb.from("gorgias_matched_tickets").delete().eq("dispute_id", dId);
+  await sb.from("gorgias_enrichment_runs").delete().eq("dispute_id", dId);
+
+  // Integration (one per shop; connected — NOT needs_attention, so it
+  // cannot trip technical_error on other disputes).
+  let { data: integ } = await sb
+    .from("integrations")
+    .select("id")
+    .eq("shop_id", shop.id)
+    .eq("type", "gorgias")
+    .maybeSingle();
+  if (!integ) {
+    const insMeta = { evidence_mode: "review", seed: true };
+    const { data: created, error } = await sb
+      .from("integrations")
+      .insert({ shop_id: shop.id, type: "gorgias", status: "connected", meta: insMeta })
+      .select("id")
+      .single();
+    if (error) { console.error(`  gorgias integration failed: ${error.message}`); return; }
+    integ = created;
+  }
+
+  const runId = randomUUID();
+  await sb.from("gorgias_enrichment_runs").insert({
+    id: runId, shop_id: shop.id, dispute_id: dId, integration_id: integ.id,
+    run_number: 1, status: "completed", trigger_source: "dispute_opened",
+    attempt_count: 1, tickets_scanned: 5, tickets_high: 1, tickets_medium: 1, tickets_low: 3,
+    messages_stored: 2, proposal_count: 2, approved_count: 0,
+    analyzer_model: "claude-sonnet-4-5", analyzer_version: 1,
+    prompt_tokens: 1200, completion_tokens: 350, duration_ms: 4200,
+    daily_bucket: new Date().toISOString().slice(0, 10),
+    started_at: new Date(Date.now() - 2 * 3600_000).toISOString(),
+    completed_at: new Date(Date.now() - 2 * 3600_000 + 4000).toISOString(),
+  });
+
+  const t1 = randomUUID();
+  const t2 = randomUUID();
+  await sb.from("gorgias_matched_tickets").insert([
+    {
+      id: t1, shop_id: shop.id, dispute_id: dId, integration_id: integ.id,
+      gorgias_ticket_id: 880011, gorgias_customer_id: 550011, match_score: 92, confidence: "high",
+      match_reasons: [
+        { signal: "email_match", points: 50, detail: "Ticket email matches the order email" },
+        { signal: "order_number", points: 42, detail: "Order referenced in the ticket" },
+      ],
+      matching_algorithm_version: 1, match_status: "proposed_match",
+      analyzed_at: new Date(Date.now() - 2 * 3600_000).toISOString(),
+      ticket_snapshot: { subject: "Where is my order?", channel: "email", createdAt: new Date(Date.now() - 9 * 86400_000).toISOString() },
+    },
+    {
+      id: t2, shop_id: shop.id, dispute_id: dId, integration_id: integ.id,
+      gorgias_ticket_id: 880012, gorgias_customer_id: 550011, match_score: 68, confidence: "medium",
+      match_reasons: [{ signal: "email_match", points: 50, detail: "Same customer email" }],
+      matching_algorithm_version: 1, match_status: "proposed_match",
+      analyzed_at: new Date(Date.now() - 2 * 3600_000).toISOString(),
+      ticket_snapshot: { subject: "Re: order received, thanks", channel: "email", createdAt: new Date(Date.now() - 5 * 86400_000).toISOString() },
+    },
+  ]);
+
+  const { createHash: ch } = await import("node:crypto");
+  const hash = (s) => ch("sha256").update(s).digest("hex");
+  await sb.from("gorgias_evidence_messages").insert([
+    {
+      id: randomUUID(), shop_id: shop.id, dispute_id: dId, matched_ticket_id: t1,
+      gorgias_message_id: 990021, sender_type: "customer", sender_name: commDispute.customer_display_name ?? "Customer",
+      channel: "email", sent_at: new Date(Date.now() - 5 * 86400_000).toISOString(),
+      message_text: "Hi, I actually did receive the package last week — please disregard my earlier message. Thank you!",
+      content_truncated: false, original_character_count: 98, content_hash: hash("msg-990021-seed"),
+      evidence_category: "delivery_recognition", confidence_score: 88,
+      relevance_explanation: "Customer explicitly confirms receiving the order, which directly refutes the not-received claim.",
+      explanation_edited: false, analyzer_model: "claude-sonnet-4-5", analyzer_prompt_version: 1, review_status: "proposed",
+    },
+    {
+      id: randomUUID(), shop_id: shop.id, dispute_id: dId, matched_ticket_id: t2,
+      gorgias_message_id: 990022, sender_type: "customer", sender_name: commDispute.customer_display_name ?? "Customer",
+      channel: "email", sent_at: new Date(Date.now() - 5 * 86400_000).toISOString(),
+      message_text: "Order received, thanks for the quick shipping.",
+      content_truncated: false, original_character_count: 46, content_hash: hash("msg-990022-seed"),
+      evidence_category: "transaction_recognition", confidence_score: 72,
+      relevance_explanation: "Customer acknowledges receipt of the order.",
+      explanation_edited: false, analyzer_model: "claude-sonnet-4-5", analyzer_prompt_version: 1, review_status: "proposed",
+    },
+  ]);
+  console.log(`  COMM-REQUESTED   ✓ gorgias: integration + run + 2 tickets + 2 proposed messages`);
+}
+await seedGorgiasForCommRequested();
 
 console.log(`\nDone. Completed ${done}/${plan.length} disputes.\n`);
 process.exit(0);
