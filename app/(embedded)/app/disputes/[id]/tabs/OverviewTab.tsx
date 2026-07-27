@@ -34,7 +34,6 @@ import {
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
-import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import { EVIDENCE_EVALUATION_HELPER } from "@/lib/argument/evidenceStatus";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type { PresentationStatus } from "../workspace-components/types";
@@ -244,7 +243,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     isReadOnly,
     recommendationText,
     recommendationHelperText,
-    missingItems,
   } = derived;
 
   /* ── F1: Failure short-circuit ── */
@@ -753,17 +751,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
   const goToReview = () => actions.setActiveTab(TAB_INDEX.reviewForward);
   const goToEvidence = () => actions.setActiveTab(TAB_INDEX.evidence);
-  const shopifyAdminUrl = dispute.shopDomain && dispute.disputeEvidenceGid
-    ? getShopifyDisputeUrl(dispute.shopDomain, dispute.disputeEvidenceGid)
-    : null;
 
-  // Post-submit secondary CTA — surface only when there's an actual
-  // policy gap on this case.
-  const POLICY_FIELDS = new Set(["refund_policy", "shipping_policy", "cancellation_policy"]);
-  const hasMissingPolicy = missingItems.some((m) => POLICY_FIELDS.has(m.field));
-  const policyCta = submitted && hasMissingPolicy
-    ? { label: tExtra("setUpPolicies"), url: withShopParams("/app/policies", searchParams) }
-    : null;
 
   return (
     <BlockStack gap="400">
@@ -868,6 +856,21 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               {tp("internalIssue")}
             </p>
           )}
+          {/* Undo the standing decision — placed directly under the
+              decision copy it reverses (NOT below the Evidence assessment,
+              where it read as undoing the assessment). A discreet button
+              (not a link — the app doesn't use hyperlinks for actions). */}
+          {reviewDecision && !isReadOnly && (
+            <div style={{ marginTop: 10 }}>
+              <Button
+                size="slim"
+                disabled={actions.reviewSaving === true}
+                onClick={() => actions.setReviewDecision("clear")}
+              >
+                {tExtra("review.undo")}
+              </Button>
+            </div>
+          )}
           {/* Evidence assessment — folded INTO the hero (2026-07-27):
               strength grade pill + the rules-engine's explanation, on a
               subtle divider. Assessment copy only — strength never becomes
@@ -901,19 +904,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               </p>
             ) : null}
           </div>
-          {/* Undo the standing decision — the only control the removed
-              standing-decision banner still owed the merchant. */}
-          {reviewDecision && !isReadOnly && (
-            <div style={{ marginTop: 12 }}>
-              <Button
-                variant="plain"
-                disabled={actions.reviewSaving === true}
-                onClick={() => actions.setReviewDecision("clear")}
-              >
-                {tExtra("review.undo")}
-              </Button>
-            </div>
-          )}
           {/* "Decide what to do" — approval-required state ONLY, inside the
               hero below "Next:", divided off by a top border (design). */}
           {showApprovalDecide && (
@@ -2091,27 +2081,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </InlineStack>
       </div>
 
-      {/* Footer CTAs */}
-      <InlineStack gap="200" align="end">
-        {!submitted && (
-          <>
-            <Button onClick={goToEvidence} icon={AlertCircleIcon}>{tExtra("editEvidence")}</Button>
-            <Button variant="primary" onClick={goToReview} icon={ShieldCheckMarkIcon} size="large">
-              {tExtra("submitToShopify")}
-            </Button>
-          </>
-        )}
-        {submitted && (
-          <>
-            {policyCta && <Button url={policyCta.url}>{policyCta.label}</Button>}
-            {shopifyAdminUrl && (
-              <Button variant="primary" url={shopifyAdminUrl} target="_blank" size="large">
-                {tExtra("viewInShopify")}
-              </Button>
-            )}
-          </>
-        )}
-      </InlineStack>
+      {/* Footer CTAs removed (2026-07-27): the bottom-of-page "Edit
+          evidence" / "Save to Shopify" (and post-submit "View in Shopify")
+          buttons duplicated actions available in the Review and Forward
+          tab / the heading's "View in Shopify Admin" — the Overview is a
+          read/monitor surface, not an action bar. */}
     </BlockStack>
   );
 }
