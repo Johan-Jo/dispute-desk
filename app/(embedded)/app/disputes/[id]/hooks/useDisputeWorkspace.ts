@@ -196,6 +196,11 @@ export interface WorkspaceClientState {
   completedFields: Set<string>;
   uploadSuccessNotice: UploadSuccessNotice | null;
   focusField: string | null;
+  /** A workspace SECTION to scroll-to + spotlight (in-page equivalent of
+   *  the `?section=` deep-link). Bumped with a nonce so re-triggering the
+   *  same section (e.g. the Overview "Review communication" CTA) re-fires
+   *  the pulse even if it was already applied once. */
+  focusSection: { key: string; nonce: number } | null;
   expandedCategories: Set<string>;
   excludedFields: Set<string>;
   showOverrideModal: boolean;
@@ -296,6 +301,7 @@ export function useDisputeWorkspace(disputeId: string) {
     completedFields: new Set(),
     uploadSuccessNotice: null,
     focusField: null,
+    focusSection: null,
     expandedCategories: new Set(),
     excludedFields: new Set(),
     showOverrideModal: false,
@@ -812,6 +818,23 @@ export function useDisputeWorkspace(disputeId: string) {
     setClientState((s) => ({ ...s, activeTab: tab }));
   }, []);
 
+  // Switch to the Evidence tab AND signal the Gorgias review card to
+  // scroll-into-view + pulse its spotlight — the in-page equivalent of the
+  // `?section=gorgias-comms` deep-link, used by the Overview attention
+  // card's "Review communication" CTA. The nonce makes repeat clicks
+  // re-fire the pulse.
+  const focusGorgiasReview = useCallback(() => {
+    setClientState((s) => ({
+      ...s,
+      activeTab: 1,
+      focusSection: { key: "gorgias-comms", nonce: (s.focusSection?.nonce ?? 0) + 1 },
+    }));
+  }, []);
+
+  const clearFocusSection = useCallback(() => {
+    setClientState((s) => ({ ...s, focusSection: null }));
+  }, []);
+
   const navigateToEvidence = useCallback((field: string) => {
     // Find which category contains this field
     const cat = EVIDENCE_CATEGORIES.find((c) => c.fields.includes(field));
@@ -1081,6 +1104,8 @@ export function useDisputeWorkspace(disputeId: string) {
       setReviewDecision,
       reviewSaving,
       setActiveTab,
+      focusGorgiasReview,
+      clearFocusSection,
       navigateToEvidence,
       toggleSubmissionField,
       clearFocus,

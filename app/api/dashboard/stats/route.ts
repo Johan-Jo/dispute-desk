@@ -198,6 +198,10 @@ export async function GET(req: NextRequest) {
     closed: emptyCell(),
   };
   let merchantActionCount = 0;
+  // Capture the action-required disputes so the banner can deep-link
+  // straight to the ONE dispute (and its relevant section) when there's
+  // exactly one — instead of the filtered list.
+  const actionRequired: Array<{ id: string; attentionReason: string | null }> = [];
   for (const r of nonDormantRows) {
     const row = r as Record<string, unknown>;
     const p = bucketPresentations.get(String(row.id));
@@ -214,8 +218,18 @@ export async function GET(req: NextRequest) {
     cell.count += 1;
     if (row.phase === "inquiry") cell.inq += 1;
     else cell.cb += 1;
-    if (bucket === "action_required") merchantActionCount += 1;
+    if (bucket === "action_required") {
+      merchantActionCount += 1;
+      actionRequired.push({
+        id: String(row.id),
+        attentionReason: (row.attention_reason as string | null) ?? null,
+      });
+    }
   }
+  // Only expose the single-dispute deep-link target when there's exactly
+  // one — with many, the banner sends the merchant to the filtered list.
+  const singleActionDispute =
+    actionRequired.length === 1 ? actionRequired[0] : null;
 
   // Drop spurious due_date_changed events (epoch / same-instant), then cap at
   // the 10 the feed shows (we over-fetched 40 to survive the filter).
@@ -365,6 +379,9 @@ export async function GET(req: NextRequest) {
       // merchant-resolvable technical_error) — drives the dashboard
       // banner. NOT the same as the legacy needs_attention count.
       merchantActionCount,
+      // When exactly one dispute needs action, the banner deep-links
+      // straight to it (+ its section); null when 0 or many.
+      singleActionDispute,
 
       // ── Legacy fields (backward compat) ──
       totalDisputes,

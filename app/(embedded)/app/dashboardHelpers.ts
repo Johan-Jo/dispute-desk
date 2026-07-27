@@ -85,6 +85,9 @@ export interface DashboardStats {
    *  merchant-resolvable technical errors) — drives the banner. NOT
    *  the legacy needs_attention count. */
   merchantActionCount?: number;
+  /** When exactly one dispute needs action, the banner deep-links to it
+   *  (+ its relevant section). Null when zero or many. */
+  singleActionDispute?: { id: string; attentionReason: string | null } | null;
 
   // ── Chargeback rate (PRD §8) ─────────────────────────────────────
   // Rate is null when the snapshot is missing for the window — UI

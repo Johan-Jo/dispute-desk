@@ -7,6 +7,7 @@ import { Icon } from "@shopify/polaris";
 import { ChevronRightIcon } from "@shopify/polaris-icons";
 import { withShopParams } from "@/lib/withShopParams";
 import { STRENGTH_CHIP } from "@/lib/disputes/presentation/uiTokens";
+import { attentionSectionForAttention } from "@/lib/disputes/attentionDeepLink";
 import {
   figmaCaseStrength,
   figmaDueDate,
@@ -100,8 +101,9 @@ export function MobileDisputeCard({
   numberLocale,
   t,
 }: Props) {
+  const rowSection = attentionSectionForAttention(d.presentation?.attention);
   const detailHref = withShopParams(
-    `/app/disputes/${d.id}`,
+    rowSection ? `/app/disputes/${d.id}?section=${rowSection}` : `/app/disputes/${d.id}`,
     searchParams ?? new URLSearchParams(),
   );
   const status = figmaStatus(d);
