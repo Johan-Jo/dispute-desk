@@ -15,6 +15,7 @@ import {
 import { replacePackBasedAutomationRules } from "@/lib/rules/replacePackAutomationRules";
 import type { Rule } from "@/lib/rules/types";
 import { checkFeatureAccess } from "@/lib/billing/checkQuota";
+import { reconcileParkedAutoDisputes } from "@/lib/automation/reconcileParkedAutoDisputes";
 
 export const runtime = "nodejs";
 
@@ -175,6 +176,18 @@ export async function POST(req: NextRequest) {
     .eq("shop_id", shopId);
   if (gateErr) {
     return NextResponse.json({ error: gateErr.message }, { status: 500 });
+  }
+
+  // A pack just flipped to auto may unstick already-built Strong drafts that
+  // were parked under the previous review rule (built-but-never-saved). Fire
+  // the reconcile pass so those auto-save under the new rule without waiting
+  // for a rebuild or the next sync. Non-blocking + non-fatal: the toggle
+  // succeeds regardless. Applies the same PRD gates, so only genuinely
+  // auto-eligible Strong cases are promoted.
+  if (allAuto) {
+    void reconcileParkedAutoDisputes(shopId).catch((err) => {
+      console.error("[setup/automation] reconcileParkedAutoDisputes failed", err);
+    });
   }
 
   return NextResponse.json({ ok: true });

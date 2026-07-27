@@ -44,6 +44,7 @@ import { uploadDefencePdf } from "@/lib/defence/storage";
 import { computeEvidenceHash } from "@/lib/defence/computeEvidenceHash";
 import { deriveOrderContext, merchantNameFromDomain } from "@/lib/defence/orderContext";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
+import { finalizeAndEnqueueSave } from "@/lib/automation/finalizeAndEnqueueSave";
 import type {
   DefencePackageDocumentData,
 } from "@/lib/defence/pdf/DefencePackageDocument";
@@ -726,59 +727,20 @@ export async function handleBuildDefencePackage(
   });
 
   // ── Auto mode: supersede any prior final + enqueue save_to_shopify ──
+  // The row was already flipped to final by the UPDATE above (targetStatus).
+  // finalizeAndEnqueueSave is idempotent on the final flip (it only acts on
+  // a `draft` row) — here it just supersedes any prior final and enqueues
+  // the save, the identical tail that reconcileParkedAutoDisputes runs so
+  // there is ONE finalize+save path, not two that can drift.
   if (resolvedMode === "auto") {
-    // Atomically flip any prior final (for the same dispute, different
-    // version) to superseded so the immutability trigger is satisfied.
-    // The new row is already in status=final per the UPDATE above; the
-    // trigger validates that superseded_by_id targets must be final.
-    const { data: priorFinal } = await sb
-      .from("defence_packages")
-      .select("id, version")
-      .eq("dispute_id", pkg.dispute_id)
-      .eq("status", "final")
-      .neq("id", packageId)
-      .order("version", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (priorFinal) {
-      const { error: supErr } = await sb
-        .from("defence_packages")
-        .update({
-          status: "superseded",
-          superseded_by_id: packageId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", priorFinal.id);
-      if (supErr) {
-        console.error("[defence build] superseded update failed", supErr);
-      } else {
-        await logAuditEvent({
-          shopId: pkg.shop_id,
-          disputeId: pkg.dispute_id,
-          packId: pkg.source_pack_id,
-          actorType: "system",
-          eventType: "defence_package_superseded",
-          eventPayload: {
-            supersededId: priorFinal.id,
-            supersededVersion: priorFinal.version,
-            replacedById: packageId,
-            replacedByVersion: pkg.version,
-          },
-        });
-      }
-    }
-
-    // Enqueue save_to_shopify against the source pack. saveToShopifyJob
-    // will discover the latest final defence_packages row and swap the
-    // uncategorizedFile buffer to the defence package PDF.
-    const { error: jobErr } = await sb.from("jobs").insert({
-      shop_id: pkg.shop_id,
-      job_type: "save_to_shopify",
-      entity_id: pkg.source_pack_id,
+    await finalizeAndEnqueueSave({
+      sb,
+      shopId: pkg.shop_id,
+      disputeId: pkg.dispute_id,
+      packageId,
+      packageVersion: pkg.version,
+      sourcePackId: pkg.source_pack_id,
     });
-    if (jobErr) {
-      console.error("[defence build] enqueue save_to_shopify failed", jobErr);
-    }
   }
 
   return { ok: true };
