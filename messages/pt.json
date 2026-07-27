@@ -697,7 +697,10 @@
           "status": {
             "submitted": "Submitted",
             "needs_attention": "Requer atenção",
-            "in_progress": "Em andamento"
+            "in_progress": "Em andamento",
+            "won": "Ganha",
+            "lost": "Perdida",
+            "closed": "Encerrada"
           },
           "automationMode": {
             "automatic": "Automatic",
@@ -722,6 +725,11 @@
             },
             "reviewMissing": "Revise as evidências faltantes abaixo",
             "submittedNoAction": "Enviado — nenhuma ação adicional necessária"
+          },
+          "outcomeHeadline": {
+            "won": "Disputa ganha — nenhuma ação adicional necessária",
+            "lost": "Disputa perdida — nenhuma ação adicional necessária",
+            "closed": "Disputa encerrada — nenhuma ação adicional necessária"
           }
         },
         "used": {

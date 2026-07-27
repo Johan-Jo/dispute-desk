@@ -815,7 +815,10 @@
           "status": {
             "submitted": "Submitted",
             "needs_attention": "Aufmerksamkeit erforderlich",
-            "in_progress": "In Bearbeitung"
+            "in_progress": "In Bearbeitung",
+            "won": "Gewonnen",
+            "lost": "Verloren",
+            "closed": "Geschlossen"
           },
           "automationMode": {
             "automatic": "Automatic",
@@ -840,6 +843,11 @@
             },
             "reviewMissing": "Fehlende Beweise unten prüfen",
             "submittedNoAction": "Eingereicht — keine weitere Aktion erforderlich"
+          },
+          "outcomeHeadline": {
+            "won": "Fall gewonnen — keine weitere Aktion erforderlich",
+            "lost": "Fall verloren — keine weitere Aktion erforderlich",
+            "closed": "Fall geschlossen — keine weitere Aktion erforderlich"
           }
         },
         "used": {

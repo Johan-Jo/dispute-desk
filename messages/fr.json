@@ -697,7 +697,10 @@
           "status": {
             "submitted": "Submitted",
             "needs_attention": "Requiert votre attention",
-            "in_progress": "En cours"
+            "in_progress": "En cours",
+            "won": "Gagné",
+            "lost": "Perdu",
+            "closed": "Clôturé"
           },
           "automationMode": {
             "automatic": "Automatic",
@@ -722,6 +725,11 @@
             },
             "reviewMissing": "Vérifiez les preuves manquantes ci-dessous",
             "submittedNoAction": "Soumis — aucune action supplémentaire requise"
+          },
+          "outcomeHeadline": {
+            "won": "Litige gagné — aucune action requise",
+            "lost": "Litige perdu — aucune action requise",
+            "closed": "Litige clôturé — aucune action requise"
           }
         },
         "used": {

@@ -47,6 +47,9 @@ const STATUS_PILL: Record<CaseStatus, { bg: string; color: string }> = {
   submitted: { bg: "#D1FAE5", color: "#065F46" },
   needs_attention: { bg: "#FEF3C7", color: "#92400E" },
   in_progress: { bg: "#DBEAFE", color: "#1E40AF" },
+  won: { bg: "#D1FAE5", color: "#065F46" },
+  lost: { bg: "#FEE2E2", color: "#991B1B" },
+  closed: { bg: "#F1F2F3", color: "#4B5563" },
 };
 
 const AUTOMATION_PILL: Record<AutomationMode, { bg: string; color: string }> = {
@@ -148,7 +151,8 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
 
   const strengthColors = STRENGTH_PILL[display];
   const statusColors = STATUS_PILL[props.status];
-  const autoColors = AUTOMATION_PILL[props.automationMode];
+  // null automationMode → decided dispute: no automation pill at all.
+  const autoColors = props.automationMode ? AUTOMATION_PILL[props.automationMode] : null;
 
   return (
     <div
@@ -220,7 +224,9 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
               {tStrength(display)}
             </span>
             <span style={{ fontSize: 16, fontWeight: 600, color: "#202223" }}>
-              {nextStepCopy(props.nextStep, tNext, locale)}
+              {props.status === "won" || props.status === "lost" || props.status === "closed"
+                ? t(`outcomeHeadline.${props.status}`)
+                : nextStepCopy(props.nextStep, tNext, locale)}
             </span>
           </div>
         </div>
@@ -253,27 +259,29 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
               {tStatus(props.status)}
             </Pill>
           </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 4,
-            }}
-          >
-            <p
+          {autoColors && props.automationMode && (
+            <div
               style={{
-                fontSize: 12,
-                color: "#6D7175",
-                margin: 0,
-                lineHeight: 1.4,
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
               }}
             >
-              {t("automationLabel")}
-            </p>
-            <Pill bg={autoColors.bg} color={autoColors.color}>
-              {tAuto(props.automationMode)}
-            </Pill>
-          </div>
+              <p
+                style={{
+                  fontSize: 12,
+                  color: "#6D7175",
+                  margin: 0,
+                  lineHeight: 1.4,
+                }}
+              >
+                {t("automationLabel")}
+              </p>
+              <Pill bg={autoColors.bg} color={autoColors.color}>
+                {tAuto(props.automationMode)}
+              </Pill>
+            </div>
+          )}
         </div>
       </div>
 
