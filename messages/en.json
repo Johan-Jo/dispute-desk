@@ -5769,7 +5769,7 @@
       "none": "No action required",
       "opportunity": "Communication available",
       "recommended": "Communication recommended",
-      "requested": "Communication requested",
+      "requested": "Review communication",
       "blocking": "Input required",
       "technical_error": "Attention required"
     },
