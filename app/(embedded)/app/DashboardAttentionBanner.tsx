@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Icon } from "@shopify/polaris";
 import { AlertCircleIcon, ShieldCheckMarkIcon } from "@shopify/polaris-icons";
 import { withShopParams } from "@/lib/withShopParams";
+import { disputeDeepLinkPath } from "@/lib/disputes/attentionDeepLink";
 import type { DashboardStats } from "./dashboardHelpers";
 
 interface Props {
@@ -30,10 +31,20 @@ export function DashboardAttentionBanner({ stats }: Props) {
   const activeCount = stats.activeDisputes ?? 0;
 
   if (merchantActionCount > 0) {
-    const reviewUrl = withShopParams(
-      "/app/disputes?attention=tasks",
-      searchParams ?? new URLSearchParams(),
-    );
+    // Exactly one dispute needs action → deep-link STRAIGHT to it (and
+    // spotlight the relevant section), so the merchant sees exactly what
+    // to do instead of a filtered list. With many, go to the list.
+    const single = stats.singleActionDispute ?? null;
+    const reviewUrl =
+      merchantActionCount === 1 && single
+        ? withShopParams(
+            disputeDeepLinkPath("/app/disputes", single.id, single.attentionReason),
+            searchParams ?? new URLSearchParams(),
+          )
+        : withShopParams(
+            "/app/disputes?attention=tasks",
+            searchParams ?? new URLSearchParams(),
+          );
     return (
       <div
         style={{

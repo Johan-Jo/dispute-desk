@@ -253,22 +253,22 @@ describe("resolveAttention", () => {
     expect(reask.attention).toBe("requested");
   });
 
-  it("recommended requires a concrete contribution — never strength/improvementHint (no such inputs exist)", () => {
+  it("generic 'recommended' contribution NO LONGER raises attention (removed 2026-07-27) — stays none", () => {
+    // Almost every dispute improves with customer communication, so the
+    // generic "communication may strengthen this" state was removed. A
+    // concrete contribution no longer produces a merchant task.
     const r = resolveAttention({ ...baseAttention, concreteContribution: "recommended" });
-    expect(r.attention).toBe("recommended");
-    expect(ACTION_REQUIRED_ATTENTION.has(r.attention)).toBe(false);
-    // A weak case with no addable item stays none (strength is not an input).
+    expect(r.attention).toBe("none");
     const none = resolveAttention({ ...baseAttention });
     expect(none.attention).toBe("none");
   });
 
-  it("opportunity: optional and available, not recommended — not a task", () => {
+  it("generic 'optional' contribution also stays none (opportunity state removed)", () => {
     const r = resolveAttention({ ...baseAttention, concreteContribution: "optional" });
-    expect(r.attention).toBe("opportunity");
-    expect(ACTION_REQUIRED_ATTENTION.has(r.attention)).toBe(false);
+    expect(r.attention).toBe("none");
   });
 
-  it("mutual exclusivity: first rung wins (blocking > requested > recommended)", () => {
+  it("mutual exclusivity: blocking > requested; a concrete contribution never wins", () => {
     const r = resolveAttention({
       ...baseAttention,
       needsAttention: true,
@@ -283,6 +283,9 @@ describe("resolveAttention", () => {
       concreteContribution: "recommended",
     });
     expect(r2.attention).toBe("requested");
+    // concreteContribution alone → none (no longer a task).
+    const r3 = resolveAttention({ ...baseAttention, concreteContribution: "recommended" });
+    expect(r3.attention).toBe("none");
   });
 
   it("stale-attention guard: terminal and under-review never yield tasks", () => {
@@ -343,14 +346,14 @@ describe("resolvePresentation + dashboardBucket", () => {
     expect(dashboardBucket(p)).toBe("under_review");
   });
 
-  it("recommended does NOT enter Action required; requested does", () => {
+  it("a concrete contribution is NOT a task (generic recommended removed); only requested is", () => {
     const rec = resolvePresentation({
       ...basePresentation,
       packStatus: "saved_to_shopify",
       submissionState: "saved_to_shopify",
       concreteContribution: "recommended",
     });
-    expect(rec.attention).toBe("recommended");
+    expect(rec.attention).toBe("none");
     expect(rec.needsMerchantAction).toBe(false);
     expect(dashboardBucket(rec)).toBe("building_monitoring");
 

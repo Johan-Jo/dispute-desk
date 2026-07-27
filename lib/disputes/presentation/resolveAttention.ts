@@ -169,7 +169,10 @@ export function resolveAttention(input: AttentionInput): AttentionResult {
     return { attention: "blocking", blockingReason: "approval_gate", internalIssue };
   }
 
-  // 3 — requested: an explicit ask, work not halted.
+  // 3 — requested: an explicit ask, work not halted. This is the ONLY
+  // "you can add something" state we surface — a CONCRETE, matched Gorgias
+  // conversation awaiting approval (gorgias_evidence_ready), not a generic
+  // suggestion.
   if (
     (reason != null && REQUESTED_ATTENTION_REASONS.has(reason)) ||
     input.gorgiasActionableCount > 0
@@ -177,15 +180,12 @@ export function resolveAttention(input: AttentionInput): AttentionResult {
     return { attention: "requested", blockingReason: null, internalIssue };
   }
 
-  // 4 — recommended: a concrete recommended contribution exists.
-  if (input.concreteContribution === "recommended") {
-    return { attention: "recommended", blockingReason: null, internalIssue };
-  }
-
-  // 5 — opportunity: optional and available, not recommended.
-  if (input.concreteContribution === "optional") {
-    return { attention: "opportunity", blockingReason: null, internalIssue };
-  }
-
+  // The generic `recommended` / `opportunity` "customer communication may
+  // strengthen this" states were REMOVED (2026-07-27, user decision):
+  // virtually EVERY dispute improves with customer communication, so
+  // flagging it on a few and not others is arbitrary and confusing. We
+  // only surface a real, concrete Gorgias match that needs approval
+  // (the `requested` rung above) — nothing generic. `concreteContribution`
+  // is still computed for other consumers but no longer raises attention.
   return { attention: "none", blockingReason: null, internalIssue };
 }

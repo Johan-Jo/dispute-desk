@@ -751,6 +751,10 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
   const goToReview = () => actions.setActiveTab(TAB_INDEX.reviewForward);
   const goToEvidence = () => actions.setActiveTab(TAB_INDEX.evidence);
+  // Evidence tab + scroll-to + pulse the Gorgias review card (the
+  // "highlight"), so the "Review communication" CTA lands the merchant
+  // exactly on what needs their approval.
+  const goToGorgiasReview = () => actions.focusGorgiasReview();
 
 
   return (
@@ -1110,15 +1114,18 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       </div>
 
       {/* Merchant-attention card (plan §6.2) — driven by
-          presentation.attention. Blue for communication states
-          (requested/recommended) with the review/add CTA; red only for
-          a merchant-resolvable technical error. Never rendered for
-          none/opportunity — calm states get no card. */}
-      {presentation && (presentation.attention === "requested" || presentation.attention === "recommended") && (
+          presentation.attention. Shown ONLY for `requested` — a real,
+          concrete Gorgias conversation awaiting the merchant's approval.
+          The generic "communication may strengthen this" (recommended/
+          opportunity) states were removed (2026-07-27): almost every
+          dispute improves with customer communication, so surfacing it on
+          a few and not others was arbitrary. The CTA scrolls to + pulses
+          the Gorgias review card on the Evidence tab (the "highlight"). */}
+      {presentation && presentation.attention === "requested" && (
         <div
           style={{
-            background: presentation.attention === "requested" ? "#EFF6FF" : "#F8FAFF",
-            border: `1px solid ${presentation.attention === "requested" ? "#BFDBFE" : "#D6E0F5"}`,
+            background: "#EFF6FF",
+            border: "1px solid #BFDBFE",
             borderRadius: 12,
             padding: 16,
             display: "flex",
@@ -1131,19 +1138,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               {tRoot(attentionLabelKey(presentation))}
             </p>
             <p style={{ fontSize: 12.5, color: "#3F5B80", margin: "3px 0 0", lineHeight: 1.5 }}>
-              {tRoot(
-                presentation.attention === "requested"
-                  ? "presentation.listStateSub.requested"
-                  : "presentation.listStateSub.recommended",
-              )}
+              {tRoot("presentation.listStateSub.requested")}
             </p>
           </div>
-          <Button onClick={goToEvidence}>
-            {tRoot(
-              presentation.attention === "requested"
-                ? "presentation.attentionCta.requested"
-                : "presentation.attentionCta.recommended",
-            )}
+          <Button onClick={goToGorgiasReview}>
+            {tRoot("presentation.attentionCta.requested")}
           </Button>
         </div>
       )}
