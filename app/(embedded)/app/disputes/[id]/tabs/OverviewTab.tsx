@@ -788,55 +788,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </Banner>
       )}
 
-      {/* Review lifecycle — STANDING DECISION only (2026-07-23). Once the
-          merchant has decided (hold / approve / concede) we show the
-          standing state + undo. The UNDECIDED three-button form lives
-          INSIDE the hero for the approval-required state only, per the
-          approved design (Dispute Detail.html: the "Decide what to do"
-          block renders only when approvalRequired is true). Hidden once
-          read-only. */}
-      {!isReadOnly &&
-        dispute.reviewState &&
-        (() => {
-          const rs = dispute.reviewState;
-          const saving = actions.reviewSaving === true;
-          const dueSuffix = dispute.reviewDueAt
-            ? tExtra("review.dueSuffix", { date: formatDate(dispute.reviewDueAt) })
-            : dispute.dueAt
-              ? tExtra("review.dueSuffix", { date: formatDate(dispute.dueAt) })
-              : "";
-          const tone =
-            rs === "conceded" ? "critical" : rs === "approved" ? "info" : "warning";
-          const titleKey =
-            rs === "conceded"
-              ? "review.stateConcededTitle"
-              : rs === "approved"
-                ? "review.stateApprovedTitle"
-                : "review.stateInReviewTitle";
-          const bodyKey =
-            rs === "conceded"
-              ? "review.stateConcededBody"
-              : rs === "approved"
-                ? "review.stateApprovedBody"
-                : "review.stateInReviewBody";
-          return (
-            <Banner tone={tone} title={tExtra(titleKey)}>
-              <BlockStack gap="200">
-                <p style={{ margin: 0 }}>{tExtra(bodyKey, { due: dueSuffix })}</p>
-                <InlineStack gap="200">
-                  <Button
-                    variant="plain"
-                    disabled={saving}
-                    onClick={() => actions.setReviewDecision("clear")}
-                  >
-                    {tExtra("review.undo")}
-                  </Button>
-                </InlineStack>
-              </BlockStack>
-            </Banner>
-          );
-        })()}
-
+      {/* The standing review-decision banner was removed (2026-07-27): it
+          duplicated the hero, which now carries the decision headline +
+          body + Undo when reviewState is set. One block, not two. */}
 
       {/* O1: Hero — minimal per Figma: label + confidence pill + 1-line summary.
           Recommendation / improvement / helper / deadline copy moves to the
@@ -849,7 +803,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           borderRadius: 8,
           padding: 24,
           display: "flex",
-          alignItems: showApprovalDecide ? "flex-start" : "center",
+          alignItems: "flex-start",
           gap: 16,
         }}
       >
@@ -913,6 +867,52 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             <p style={{ fontSize: 12.5, color: "#6D7175", margin: "8px 0 0", lineHeight: 1.5 }}>
               {tp("internalIssue")}
             </p>
+          )}
+          {/* Evidence assessment — folded INTO the hero (2026-07-27):
+              strength grade pill + the rules-engine's explanation, on a
+              subtle divider. Assessment copy only — strength never becomes
+              an operational callout (plan §8). The standalone card below
+              is suppressed so this shows once. */}
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${heroTone.border}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: heroTone.titleColor }}>
+                {tp("assessmentCard.title")}
+              </span>
+              {(() => {
+                const strengthKey = presentation?.strength
+                  ?? (caseStrength.overall === "insufficient" ? "not_assessed" : caseStrength.overall);
+                const tokens = STRENGTH_CHIP[strengthKey as keyof typeof STRENGTH_CHIP];
+                return (
+                  <span
+                    style={{
+                      display: "inline-flex", alignItems: "center", padding: "2px 9px",
+                      borderRadius: 999, fontSize: 11.5, fontWeight: 600,
+                      background: tokens.bg, color: tokens.fg,
+                    }}
+                  >
+                    {tRoot(`presentation.strength.detail.${strengthKey}`)}
+                  </span>
+                );
+              })()}
+            </div>
+            {strengthReasonText ? (
+              <p style={{ fontSize: 12.5, color: heroTone.bodyColor, margin: "6px 0 0", lineHeight: 1.55, maxWidth: 760 }}>
+                {strengthReasonText}
+              </p>
+            ) : null}
+          </div>
+          {/* Undo the standing decision — the only control the removed
+              standing-decision banner still owed the merchant. */}
+          {reviewDecision && !isReadOnly && (
+            <div style={{ marginTop: 12 }}>
+              <Button
+                variant="plain"
+                disabled={actions.reviewSaving === true}
+                onClick={() => actions.setReviewDecision("clear")}
+              >
+                {tExtra("review.undo")}
+              </Button>
+            </div>
           )}
           {/* "Decide what to do" — approval-required state ONLY, inside the
               hero below "Next:", divided off by a top border (design). */}
@@ -994,37 +994,8 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </div>
       )}
 
-      {/* Evidence-assessment card (plan §6.2) — the strength grade +
-          the rules-engine's own explanation. Assessment copy ONLY:
-          strength never becomes an operational callout or a task. */}
-      <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
-        <BlockStack gap="200">
-          <InlineStack gap="200" blockAlign="center">
-            <Text as="h3" variant="headingSm">{tp("assessmentCard.title")}</Text>
-            {(() => {
-              const strengthKey = presentation?.strength
-                ?? (caseStrength.overall === "insufficient" ? "not_assessed" : caseStrength.overall);
-              const tokens = STRENGTH_CHIP[strengthKey as keyof typeof STRENGTH_CHIP];
-              return (
-                <span
-                  style={{
-                    display: "inline-flex", alignItems: "center", padding: "2px 9px",
-                    borderRadius: 999, fontSize: 11.5, fontWeight: 600,
-                    background: tokens.bg, color: tokens.fg,
-                  }}
-                >
-                  {tRoot(`presentation.strength.detail.${strengthKey}`)}
-                </span>
-              );
-            })()}
-          </InlineStack>
-          {strengthReasonText ? (
-            <p style={{ fontSize: 13, color: "#4B5563", margin: 0, lineHeight: 1.55, maxWidth: 760 }}>
-              {strengthReasonText}
-            </p>
-          ) : null}
-        </BlockStack>
-      </div>
+      {/* Evidence assessment now lives INSIDE the hero (2026-07-27) — the
+          standalone card was removed to consolidate the top block. */}
 
       {/* Monitoring banner — placed directly under the hero so the
           merchant sees the "we're still watching" reassurance immediately
