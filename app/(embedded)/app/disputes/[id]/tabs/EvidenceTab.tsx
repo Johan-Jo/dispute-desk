@@ -80,8 +80,17 @@ export default function EvidenceTab({ workspace }: Props) {
   // first-time-building > window-open. The closed state suppresses
   // the upload-success banner so we don't claim a file was added at
   // the same time we're telling the merchant uploads are disabled.
+  // A DECIDED dispute (won/lost/closed) no longer needs the "Sent to card
+  // network" banner — the Case-summary already states the outcome + "no
+  // further action required", so the forwarded-to-bank note is just noise.
+  const isDecided =
+    data?.presentation?.outcome === "won" ||
+    data?.presentation?.outcome === "lost" ||
+    data?.presentation?.outcome === "closed" ||
+    data?.dispute?.finalOutcome === "won" ||
+    data?.dispute?.finalOutcome === "lost";
   const isWindowClosed =
-    data?.dispute?.submissionState === "submitted_confirmed";
+    data?.dispute?.submissionState === "submitted_confirmed" && !isDecided;
   const isWindowOpen =
     data?.dispute?.submissionState === "saved_to_shopify";
 

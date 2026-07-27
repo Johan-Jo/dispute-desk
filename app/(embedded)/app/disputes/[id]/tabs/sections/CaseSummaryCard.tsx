@@ -348,20 +348,24 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
               </p>
             </div>
           ) : null}
-          <p
-            style={{
-              fontSize: 12,
-              color: "#6D7175",
-              margin: "10px 0 0",
-              lineHeight: 1.4,
-            }}
-          >
-            {props.automationMode === "automatic"
-              ? tAutoCopy("automatic")
-              : tAutoCopy("reviewRequired")}
-          </p>
+          {/* No automation line on a DECIDED dispute (automationMode null)
+              — "Review required before submission" is false once settled. */}
+          {props.automationMode && (
+            <p
+              style={{
+                fontSize: 12,
+                color: "#6D7175",
+                margin: "10px 0 0",
+                lineHeight: 1.4,
+              }}
+            >
+              {props.automationMode === "automatic"
+                ? tAutoCopy("automatic")
+                : tAutoCopy("reviewRequired")}
+            </p>
+          )}
         </div>
-      ) : (
+      ) : props.automationMode ? (
         <p
           style={{
             fontSize: 12,
@@ -376,7 +380,7 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
             ? tAutoCopy("automatic")
             : tAutoCopy("reviewRequired")}
         </p>
-      )}
+      ) : null}
     </div>
   );
 }
