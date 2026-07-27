@@ -51,6 +51,8 @@ interface TopupInfo {
   expiresAt: string | null;
   purchasedAt: string;
   reference: string | null;
+  /** 'topup' (merchant purchase) | 'admin_adjustment' (support grant). */
+  source?: string;
 }
 
 const PLAN_FEATURE_KEYS: Record<string, string[]> = {
@@ -679,6 +681,19 @@ function BillingPageInner() {
                 <Text as="p" variant="bodySm" tone="subdued">
                   {t("billing.packsUsed", { used: usage.packsUsed, limit: usage.packsLimit })}
                 </Text>
+                {/* The "X of Y" line above is THIS CYCLE'S monthly-included
+                    usage — it does NOT reflect top-up / admin-granted
+                    credits, so a shop with a big balance could read
+                    "4 of 100" and think its extra packs vanished
+                    (blume-box, 2026-07-27). Surface the TRUE available
+                    balance (the credit-ledger total the pipeline actually
+                    gates on) so granted packs are visible. */}
+                {usage.packsRemaining != null &&
+                  usage.packsRemaining !== usage.packsLimit && (
+                    <Text as="p" variant="bodySm" fontWeight="semibold">
+                      {t("billing.packsAvailable", { available: usage.packsRemaining })}
+                    </Text>
+                  )}
               </div>
             )}
 

@@ -2385,7 +2385,8 @@
     "starterShort": "20 Pakete/Monat · Basisregeln · E-Mail-Support",
     "growthShort": "100 Pakete/Monat · Erweiterte Regeln · Auto-Speichern",
     "scaleShort": "400 Pakete/Monat · Erweiterte Exporte · Priorisierter Support",
-    "perMonthSuffix": "/Mon."
+    "perMonthSuffix": "/Mon.",
+    "packsAvailable": "{available} Pakete verfügbar"
   },
   "rules": {
     "title": "Regeln",

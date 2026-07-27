@@ -2385,7 +2385,8 @@
     "starterShort": "20 dossiers/mois · Règles de base · Assistance par e-mail",
     "growthShort": "100 dossiers/mois · Règles avancées · Sauvegarde automatique",
     "scaleShort": "400 dossiers/mois · Exports avancés · Assistance prioritaire",
-    "perMonthSuffix": "/mois"
+    "perMonthSuffix": "/mois",
+    "packsAvailable": "{available} dossiers disponibles"
   },
   "rules": {
     "title": "Règles",
