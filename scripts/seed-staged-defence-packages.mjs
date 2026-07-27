@@ -394,6 +394,17 @@ const REASON_CODE_MODULE = {
   PRODUCT_UNACCEPTABLE: "product_unacceptable",
 };
 
+// Reason → family_key / prompt_family. Verified against the real registry
+// (familyKeyForModule): FRAUDULENT→unauthorized_fraud,
+// PRODUCT_NOT_RECEIVED→item_not_received,
+// PRODUCT_UNACCEPTABLE→product_not_as_described. Previously the defence
+// row hardcoded 'fraud' for EVERY reason — a PNR/PUA pack labelled fraud.
+const REASON_FAMILY = {
+  FRAUDULENT: "unauthorized_fraud",
+  PRODUCT_NOT_RECEIVED: "item_not_received",
+  PRODUCT_UNACCEPTABLE: "product_not_as_described",
+};
+
 // ── dispute_events lifecycle (drives the Overview timeline) ───────────
 // Description formats + actor/source enums mirror the localizer
 // (lib/disputeEvents/localizeDescription.ts) and the real event
@@ -446,13 +457,23 @@ function buildEvents(d, shopId, pack, strength) {
   return rows;
 }
 
-// Per-stage defence-package lifecycle. gid suffix → { status, submitted, mode }.
-// draft = merchant's current letter (latest); submitted = on file with the
-// bank (bankFacing). Transmitted stages (UNDER-REVIEW/WON/LOST) are submitted.
-function defencePackageStateFor(gidSuffix, strength) {
-  const transmitted = ["UNDER-REVIEW", "WON", "LOST"].some((s) => gidSuffix.startsWith(s));
+// Per-stage defence-package lifecycle keyed off the dispute's REAL
+// submission_state (not the gid label), so the defence status is
+// consistent with what the dispute claims:
+//   transmitted (submitted_confirmed) → submitted (on file with the bank)
+//   saved to Shopify (saved_to_shopify) → final (the pipeline invariant:
+//     saveToShopifyJob requires the latest defence row = status 'final'
+//     with a pdf_path — a DRAFT can never have been saved to Shopify)
+//   otherwise (ready/not-saved, needs_review) → draft (merchant's current
+//     working letter, not yet saved)
+function defencePackageStateFor(gidSuffix, strength, submissionState) {
   const mode = strength === "weak" || strength === "moderate" ? "narrow" : "full";
-  if (transmitted) return { status: "submitted", submitted: true, mode };
+  if (submissionState === "submitted_confirmed") {
+    return { status: "submitted", submitted: true, mode };
+  }
+  if (submissionState === "saved_to_shopify") {
+    return { status: "final", submitted: false, mode };
+  }
   return { status: "draft", submitted: false, mode };
 }
 
@@ -500,7 +521,7 @@ for (const d of disputes) {
 console.log(`\nWill complete ${plan.length} disputes (pack sections + evidence_items + checklist_v2 + defence package).\n`);
 if (!APPLY) {
   for (const p of plan) {
-    const st = defencePackageStateFor(p.gidSuffix, p.strength);
+    const st = defencePackageStateFor(p.gidSuffix, p.strength, p.d.submission_state);
     console.log(`  ${p.gidSuffix.padEnd(16)} ${p.d.reason.padEnd(22)} strength=${p.strength.padEnd(8)} → defence: status=${st.status} mode=${st.mode}`);
   }
   console.log("\nDry run. Pass --apply to write.\n");
@@ -568,7 +589,7 @@ for (const { d, pack, gidSuffix, profile, strength } of plan) {
   // 3. defence package (the rebuttal letter)
   const factSet = buildFacts(rng, profile, d.reason);
   const narrative = buildNarrative(d.reason, strength, factSet);
-  const st = defencePackageStateFor(gidSuffix, strength);
+  const st = defencePackageStateFor(gidSuffix, strength, d.submission_state);
   const evidenceHash = createHash("sha256").update(`${d.id}|${JSON.stringify(factSet.facts)}`).digest("hex");
   const generatedAt = new Date(Date.now() - 2 * 86400000).toISOString();
 
@@ -583,13 +604,20 @@ for (const { d, pack, gidSuffix, profile, strength } of plan) {
     package_mode: st.mode,
     generated_at: generatedAt,
     generated_by: "system",
-    pdf_path: null,
+    // final/submitted packages carry a rendered PDF (pipeline invariant:
+    // saveToShopifyJob requires the latest defence row = 'final' WITH a
+    // pdf_path). Draft working letters have none yet.
+    pdf_path:
+      st.status === "final" || st.status === "submitted"
+        ? `defence/${d.id}/v1.pdf`
+        : null,
     pdf_storage_bucket: "evidence-packs",
     evidence_hash: evidenceHash,
     llm_model: "claude-sonnet-4-5",
-    prompt_family: "fraud",
+    // family/module derived from the dispute's REASON, not hardcoded fraud.
+    prompt_family: REASON_FAMILY[d.reason] ?? "unauthorized_fraud",
     prompt_version: 1,
-    reason_code_module: REASON_CODE_MODULE[d.reason] ?? "visa_10_4",
+    reason_code_module: REASON_CODE_MODULE[d.reason] ?? "generic_fallback",
     output_schema_version: 1,
     validation_status: "ok",
     validation_errors: [],
@@ -597,7 +625,7 @@ for (const { d, pack, gidSuffix, profile, strength } of plan) {
     facts_json: factSet.facts,
     submitted_at: st.submitted ? generatedAt : null,
     submitted_by: st.submitted ? "seed_script" : null,
-    family_key: "fraud",
+    family_key: REASON_FAMILY[d.reason] ?? "unauthorized_fraud",
   };
   const { error: dErr } = await sb.from("defence_packages").insert(dpRow);
   if (dErr) { console.error(`  ${gidSuffix}: defence package insert failed: ${dErr.message}`); continue; }
