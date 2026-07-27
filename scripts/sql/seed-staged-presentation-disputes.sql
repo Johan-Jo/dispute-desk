@@ -38,10 +38,12 @@ spec as (
     --  pack_status, pack_saved_days_ago, pack_approved, strength)
     ('SEED-STAGE-BUILDING',        '#9001', 'Seed Byggman',     'needs_response', 'FRAUDULENT',            120.00, 14, 'in_progress',          'not_saved',           null,   null, null, false, false, null, null,
      'building', null, false, null),
-    ('SEED-STAGE-PREP-STRONG',     '#9002', 'Seed Starkman',    'needs_response', 'FRAUDULENT',            210.00, 12, 'ready_to_submit',      'not_saved',           null,   null, null, false, false, null, null,
-     'ready', null, false, 'strong'),
-    ('SEED-STAGE-PREP-MODERATE',   '#9003', 'Seed Mellanberg',  'needs_response', 'PRODUCT_NOT_RECEIVED',  107.92, 10, 'ready_to_submit',      'not_saved',           null,   null, null, false, false, null, null,
-     'ready', null, false, 'moderate'),
+    -- Strong/moderate on an AUTO shop → auto-save already SAVED them (an
+    -- autopilot shop does not leave a strong pack sitting at "ready").
+    ('SEED-STAGE-PREP-STRONG',     '#9002', 'Seed Starkman',    'needs_response', 'FRAUDULENT',            210.00, 12, 'submitted_to_shopify', 'saved_to_shopify',    null,   null, null, false, false, null, null,
+     'saved_to_shopify_verified', 1, true, 'strong'),
+    ('SEED-STAGE-PREP-MODERATE',   '#9003', 'Seed Mellanberg',  'needs_response', 'PRODUCT_NOT_RECEIVED',  107.92, 10, 'submitted_to_shopify', 'saved_to_shopify',    null,   null, null, false, false, null, null,
+     'saved_to_shopify_verified', 1, true, 'moderate'),
     ('SEED-STAGE-PREP-WEAK',       '#9004', 'Seed Svagsson',    'needs_response', 'PRODUCT_UNACCEPTABLE',   99.00,  9, 'ready_to_submit',      'not_saved',           null,   null, null, false, false, null, null,
      'ready', null, false, 'weak'),
     ('SEED-STAGE-SAVED-STRONG',    '#9005', 'Seed Sparad',      'needs_response', 'FRAUDULENT',            186.58, 11, 'submitted_to_shopify', 'saved_to_shopify',    null,   null, null, false, false, null, null,
@@ -50,7 +52,14 @@ spec as (
      'saved_to_shopify_verified', 2, true, 'moderate'),
     ('SEED-STAGE-COMM-REQUESTED',  '#9007', 'Seed Gorgiasdottir','needs_response','FRAUDULENT',             60.78, 13, 'needs_review',         'not_saved',           null,   null, null, true,  true,  'gorgias_evidence_ready', '{"proposal_count": 2, "run_id": "seed-stage"}',
      'ready', null, false, 'moderate'),
-    ('SEED-STAGE-BLOCKING',        '#9008', 'Seed Blockberg',   'needs_response', 'PRODUCT_NOT_RECEIVED',  210.00,  3, 'action_needed',        'not_saved',           null,   null, null, false, true,  'missing_required_evidence', '{"pack_id": "seed-stage", "missing_fields": ["delivery_proof"]}',
+    -- Weak case on an AUTO shop: the strength gate holds it at "ready"
+    -- (auto shops don't auto-submit weak evidence) but this is NOT a
+    -- merchant task — the live pipeline never flags needs_attention/
+    -- missing_required_evidence here, it just keeps the strongest truthful
+    -- pack and monitors. So: no attention, no urgent banner. (Previously
+    -- this row FABRICATED a missing_required_evidence urgent state the real
+    -- pipeline never produces — corrected 2026-07-27.)
+    ('SEED-STAGE-BLOCKING',        '#9008', 'Seed Blockberg',   'needs_response', 'PRODUCT_NOT_RECEIVED',  210.00,  3, 'ready_to_submit',      'not_saved',           null,   null, null, false, false, null, null,
      'ready', null, false, 'weak'),
     ('SEED-STAGE-UNDER-REVIEW',    '#9009', 'Seed Granskvist',  'under_review',   'FRAUDULENT',            124.80, null,'submitted_to_bank',   'submitted_confirmed', null,   null, 3, false, false, null, null,
      'saved_to_shopify_verified', 5, true, 'strong'),
