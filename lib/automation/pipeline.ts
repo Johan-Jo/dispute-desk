@@ -23,6 +23,7 @@ import {
 } from "@/lib/automation/rebuildOutcome";
 import {
   DISPUTE_ATTENTION_REASONS,
+  BILLING_ATTENTION_REASONS,
   type DisputeAttentionReason,
 } from "@/lib/disputes/attentionReasons";
 import { claimBillingBlockedEmailSlot } from "./billingBlockedEmailThrottle";
@@ -127,6 +128,39 @@ async function recordBlockedAutoBuild(args: {
   }
 
   void updateNormalizedStatus(disputeId);
+}
+
+/**
+ * Self-heal a stale billing-block attention flag. Called after the quota
+ * gate PASSES (the shop has credits again). If the dispute still carries a
+ * billing-shaped `attention_reason` (quota_exceeded / feature_blocked /
+ * subscription_expired / payment_failed), it's out of date — the block
+ * that set it no longer holds — so clear it. Scoped to billing reasons
+ * ONLY via the WHERE clause, so a genuine merchant task (gorgias review,
+ * approval gate, technical error) is never touched. Idempotent + cheap:
+ * the update matches nothing when there's no stale billing flag.
+ */
+async function clearStaleBillingAttention(disputeId: string): Promise<void> {
+  const sb = getServiceClient();
+  const { error } = await sb
+    .from("disputes")
+    .update({
+      needs_attention: false,
+      attention_reason: null,
+      attention_payload: {},
+      next_action_type: null,
+      next_action_text: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", disputeId)
+    .in("attention_reason", Array.from(BILLING_ATTENTION_REASONS));
+  if (error) {
+    // Non-fatal: a failed self-heal just leaves the stale flag for the
+    // next pipeline pass; never block the build on it.
+    console.warn(
+      `[pipeline] clearStaleBillingAttention failed for ${disputeId}: ${error.message}`,
+    );
+  }
 }
 
 interface Dispute {
@@ -237,6 +271,15 @@ export async function runAutomationPipeline(dispute: Dispute): Promise<{
     });
     return { action: "quota_exceeded" };
   }
+
+  // Self-heal a STALE billing block: the shop now HAS credits (we passed
+  // the quota gate), so any lingering `quota_exceeded` (or other billing)
+  // attention flag on this dispute is out of date and must be cleared —
+  // otherwise a dispute stays "Billing action required" forever after the
+  // merchant tops up (blume-box prod, 2026-07-27: 65 disputes stuck on a
+  // pre-top-up quota flag). Only touches billing-shaped reasons; never a
+  // real merchant task (gorgias/approval/etc.).
+  await clearStaleBillingAttention(dispute.id);
 
   // NOTE: auto-build is NOT tier-gated. Every plan — including Free — can
   // auto-build; the credit ledger is the only gate. Free ships with 5
