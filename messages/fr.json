@@ -5836,6 +5836,20 @@
       "technicalProblem": {
         "title": "La surveillance nécessite votre attention",
         "message": "DisputeDesk ne peut pas vérifier la communication avec le service client car la connexion a expiré. Les preuves de toutes les autres sources connectées ne sont pas affectées et la surveillance se poursuit."
+      },
+      "reviewDecision": {
+        "approved": {
+          "title": "Planifié pour soumission",
+          "message": "Ce litige est configuré pour être soumis automatiquement à l'échéance ({date}). DisputeDesk continuera de surveiller et de mettre à jour le dossier de preuves jusque-là."
+        },
+        "in_review": {
+          "title": "En cours d'examen",
+          "message": "Vous examinez ce litige avant l'échéance ({date}). Si vous ne faites rien d'autre, votre règle d'automatisation s'appliquera à l'échéance."
+        },
+        "conceded": {
+          "title": "Non défendu",
+          "message": "Vous avez choisi de ne pas défendre ce litige. Rien ne sera soumis."
+        }
       }
     },
     "attentionBlocking": {
@@ -5873,6 +5887,16 @@
       "title": "Attention requise",
       "body": "DisputeDesk ne peut pas vérifier la communication avec le service client car la connexion a expiré. La reconnexion rétablit la surveillance de la boîte de réception du support. La force des preuves et toutes les autres surveillances ne sont pas affectées.",
       "cta": "Reconnecter"
+    },
+    "reviewDecision": {
+      "approved": "Planifié",
+      "conceded": "Non défendu",
+      "in_review": "En cours d'examen"
+    },
+    "reviewDecisionSub": {
+      "approved": "Configuré pour être soumis automatiquement à l'échéance",
+      "conceded": "Vous avez choisi de ne pas défendre ce litige",
+      "in_review": "Vous examinez ceci avant l'échéance"
     }
   }
 }

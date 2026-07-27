@@ -139,9 +139,27 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
     label: t(`presentation.strength.detail.${strength}`),
     tokens: STRENGTH_CHIP[strength],
   });
-  // Attention pill ONLY when attention ≠ none — never rendered merely
-  // because of an involvement preference (plan §6.1).
-  if (presentation && presentation.attention !== "none") {
+  // A recorded merchant review decision OVERRIDES the raw attention pill:
+  // once the merchant has approved (scheduled) / conceded / held, the
+  // heading must reflect that standing decision instead of still saying
+  // "Approval required" (the approval gate stays technically open until
+  // the deadline). Mirrors the list-status fix (listPrimaryState).
+  const reviewState = dispute.reviewState ?? null;
+  if (reviewState) {
+    // Calm, non-alarming tones — a decision is not a warning.
+    const DECISION_TOKENS: Record<string, ChipTokens> = {
+      approved: { bg: "#DBEAFE", fg: "#1E40AF", dot: "#2563EB" }, // Scheduled
+      in_review: { bg: "#FEF3C7", fg: "#92400E", dot: "#D97706" }, // On hold
+      conceded: { bg: "#F1F2F3", fg: "#4B5563", dot: "#9CA3AF" }, // Not defended
+    };
+    headerChips.push({
+      key: "decision",
+      label: t(`presentation.reviewDecision.${reviewState}`),
+      tokens: DECISION_TOKENS[reviewState] ?? DECISION_TOKENS.in_review,
+    });
+  } else if (presentation && presentation.attention !== "none") {
+    // Attention pill ONLY when attention ≠ none — never rendered merely
+    // because of an involvement preference (plan §6.1).
     headerChips.push({
       key: "attention",
       label: t(attentionLabelKey(presentation)),

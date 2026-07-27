@@ -5836,6 +5836,20 @@
       "technicalProblem": {
         "title": "Övervakningen kräver åtgärd",
         "message": "DisputeDesk kan för närvarande inte kontrollera kundtjänstkommunikationen eftersom anslutningen har gått ut. Bevis från alla andra anslutna källor påverkas inte och övervakningen fortsätter."
+      },
+      "reviewDecision": {
+        "approved": {
+          "title": "Schemalagd för inskickning",
+          "message": "Denna tvist är inställd att skickas automatiskt vid tidsfristen ({date}). DisputeDesk fortsätter att övervaka och uppdatera bevispaketet fram till dess."
+        },
+        "in_review": {
+          "title": "Under granskning",
+          "message": "Du granskar denna tvist före tidsfristen ({date}). Om du inte vidtar någon ytterligare åtgärd tillämpas din automatiseringsregel vid tidsfristen."
+        },
+        "conceded": {
+          "title": "Försvaras inte",
+          "message": "Du valde att inte försvara denna tvist. Ingenting kommer att skickas."
+        }
       }
     },
     "attentionBlocking": {
@@ -5873,6 +5887,16 @@
       "title": "Åtgärd krävs",
       "body": "DisputeDesk kan för närvarande inte kontrollera kundtjänstkommunikationen eftersom anslutningen har gått ut. Att återansluta återställer övervakningen av supportinkorgen. Bevisstyrkan och all annan övervakning påverkas inte.",
       "cta": "Återanslut"
+    },
+    "reviewDecision": {
+      "approved": "Schemalagd",
+      "conceded": "Ej försvarad",
+      "in_review": "Under granskning"
+    },
+    "reviewDecisionSub": {
+      "approved": "Inställd att skickas automatiskt vid tidsfristen",
+      "conceded": "Du valde att inte försvara denna tvist",
+      "in_review": "Du granskar detta före tidsfristen"
     }
   }
 }

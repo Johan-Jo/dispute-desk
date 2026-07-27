@@ -360,6 +360,15 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     !dispute.reviewState &&
     presentation?.attention === "blocking" &&
     presentation?.blockingReason === "approval_gate";
+  // A recorded review decision (Submit on deadline / Hold / Don't defend)
+  // takes over the hero for a non-terminal dispute: it reflects the
+  // standing decision ("Scheduled to submit" etc.) instead of the raw
+  // lifecycle + "Approval required" pill. Honest — approved means
+  // SCHEDULED for the deadline, not saved yet.
+  const reviewDecision =
+    lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed"
+      ? (dispute.reviewState ?? null)
+      : null;
   const HERO_TONE_TECH = {
     bg: "#FEF2F2", border: "#FCA5A5", iconBg: "#FEE2E2", iconColor: "#DC2626",
     titleColor: "#7F1D1D", bodyColor: "#B42318", pillBg: "#FEE2E2", pillColor: "#991B1B",
@@ -396,6 +405,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
    *  covered headline. Terminal titles reuse the existing translated
    *  `hero.title.closed.*` keys. */
   function resolveHeroTitle(): string {
+    if (reviewDecision) {
+      return tp(`hero.reviewDecision.${reviewDecision}.title`);
+    }
     if (isTechProblem && lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed") {
       return tp("hero.technicalProblem.title");
     }
@@ -420,6 +432,14 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
    *  copy); terminal + covered messages reuse the existing translated
    *  keys. */
   function resolveHeroSubtitle(): string | null {
+    if (reviewDecision) {
+      // approved/in_review name the deadline; conceded has no date.
+      return reviewDecision === "conceded"
+        ? tp("hero.reviewDecision.conceded.message")
+        : tp(`hero.reviewDecision.${reviewDecision}.message`, {
+            date: dispute.dueAt ? formatDate(dispute.dueAt) : "—",
+          });
+    }
     if (isTechProblem && lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed") {
       return tp("hero.technicalProblem.message");
     }
@@ -458,16 +478,18 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // Shopify sending the response, never "done". The saved-editable
   // four-part block names the actual deadline date (plan §6.2).
   const heroNextStep =
-    heroVariant !== "covered" &&
-    lifecycle !== "won" &&
-    lifecycle !== "lost" &&
-    lifecycle !== "closed"
-      ? isTechProblem
-        ? tp("hero.next.technical_error")
-        : lifecycle === "saved_to_shopify" && dispute.dueAt
-          ? tp("hero.nextSavedWithDate", { date: formatDate(dispute.dueAt) })
-          : tp(`hero.next.${lifecycle}`)
-      : null;
+    reviewDecision // decision message already states what happens next
+      ? null
+      : heroVariant !== "covered" &&
+          lifecycle !== "won" &&
+          lifecycle !== "lost" &&
+          lifecycle !== "closed"
+        ? isTechProblem
+          ? tp("hero.next.technical_error")
+          : lifecycle === "saved_to_shopify" && dispute.dueAt
+            ? tp("hero.nextSavedWithDate", { date: formatDate(dispute.dueAt) })
+            : tp(`hero.next.${lifecycle}`)
+        : null;
 
   /* ── Timeline ──
    *
@@ -854,8 +876,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           )}
           {/* Merchant status pill — the attention dimension (grey "No
               action required" when none). Emphasis colors only when a
-              genuine action exists. */}
-          {presentation && (
+              genuine action exists. Suppressed once a review decision is
+              recorded (the decision drives the hero copy + heading pill). */}
+          {presentation && !reviewDecision && (
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
               <span
                 style={{

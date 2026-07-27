@@ -73,7 +73,31 @@ export function strengthLabelKey(
  */
 export function listPrimaryState(
   p: Pick<DisputePresentation, "lifecycle" | "attention" | "blockingReason">,
+  reviewState?: "in_review" | "approved" | "conceded" | null,
 ): { labelKey: string; subKey: string } {
+  // A recorded merchant decision OVERRIDES the attention-derived status:
+  // once the merchant has approved / held / conceded, the row must stop
+  // saying "Approval required" and reflect the standing decision, even
+  // though the underlying approval gate (attention=blocking/approval_gate)
+  // is technically still open until the deadline fires.
+  if (reviewState === "approved") {
+    return {
+      labelKey: "presentation.reviewDecision.approved",
+      subKey: "presentation.reviewDecisionSub.approved",
+    };
+  }
+  if (reviewState === "conceded") {
+    return {
+      labelKey: "presentation.reviewDecision.conceded",
+      subKey: "presentation.reviewDecisionSub.conceded",
+    };
+  }
+  if (reviewState === "in_review") {
+    return {
+      labelKey: "presentation.reviewDecision.in_review",
+      subKey: "presentation.reviewDecisionSub.in_review",
+    };
+  }
   switch (p.attention) {
     case "technical_error":
       return {

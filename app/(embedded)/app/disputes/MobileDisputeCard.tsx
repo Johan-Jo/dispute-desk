@@ -14,7 +14,6 @@ import {
   rowChromeV2,
   figmaReviewChip,
   figmaStatus,
-  strengthSubtitle,
   formatCurrency,
   orderLabel,
   translateReason,
@@ -75,14 +74,6 @@ function caseStrengthPillColors(s: FigmaCaseStrength, t: Translate): {
   return { bg: "#FEE2E2", color: "#991B1B", label: t("disputes.strengthWeak") };
 }
 
-/** Subtitle color tied to strength (red/yellow/green pattern, same
- *  as the detail page). */
-function caseStrengthSubtitleColor(s: FigmaCaseStrength): string {
-  if (s === "strong") return "#065F46";
-  if (s === "moderate") return "#92400E";
-  return "#991B1B";
-}
-
 function outcomePillColors(o: FigmaOutcome, t: Translate): {
   bg: string;
   color: string;
@@ -113,7 +104,6 @@ export function MobileDisputeCard({
   const status = figmaStatus(d);
   const strength = figmaCaseStrength(d);
   const reviewChip = figmaReviewChip(d, t);
-  const detail = strengthSubtitle(d, t);
   const outcome = figmaOutcome(d);
   const due = figmaDueDate(d, t, dateLocale);
   const next = rowPrimaryState(d, t);
@@ -161,18 +151,6 @@ export function MobileDisputeCard({
               <span style={{ ...PILL_STYLE, ...caseStrengthPillColors(strength, t) }}>
                 {caseStrengthPillColors(strength, t).label}
               </span>
-              {detail && (
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: caseStrengthSubtitleColor(strength),
-                    marginTop: 4,
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {detail}
-                </div>
-              )}
               {reviewChip && (
                 <span
                   style={{

@@ -48,13 +48,21 @@ import {
 } from "@/lib/defence/render/sections";
 import { buildEvidenceBasisRows } from "@/lib/defence/pdf/evidenceBasisRows";
 import { renderThesis } from "@/lib/defence/pdf/renderThesis";
-import { familyKeyForModule } from "@/lib/defence/reasonCodes/registry";
+import { familyKeyForModule, ALL_REASON_CODE_MODULES } from "@/lib/defence/reasonCodes/registry";
 import { buildCaseDetailsRows } from "@/lib/defence/render/caseDetails";
 import {
   buildLineItems,
   type LineItem,
 } from "@/lib/defence/render/lineItems";
 import type { ReasonCodeModuleKey } from "@/lib/defence/types";
+
+/** Recognized reason-code module keys. Used to normalize an unknown
+ *  `reason_code_module` to null before it reaches familyForModule()
+ *  (which throws on unknown keys). Guards the tab against a crash from
+ *  a bad/stale data row. */
+const VALID_MODULE_KEYS = new Set<string>(
+  ALL_REASON_CODE_MODULES.map((m) => m.key),
+);
 
 /**
  * Resolve the thesis blockquote text for a section.
@@ -225,7 +233,15 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
     narrative.omittedSections.map((o) => o.sectionKey),
   );
   const mode: PackageMode = row.package_mode ?? "full";
-  const moduleKey = row.reason_code_module;
+  // Guard against an unrecognized reason_code_module. familyForModule()
+  // THROWS on an unknown key (it's a fail-loud invariant for code bugs),
+  // which would white-screen the whole Review and Forward tab on a single
+  // bad/stale data row. Normalize any unknown value to null so the
+  // module-aware helpers (familyKeyForModule / isSectionDeniedForModule)
+  // take their null-safe paths instead of crashing.
+  const moduleKey = VALID_MODULE_KEYS.has(row.reason_code_module as string)
+    ? row.reason_code_module
+    : null;
 
   const evidenceBasis = buildEvidenceBasisRows(facts);
   const chrono = chronologyEvents(dispute, facts);
