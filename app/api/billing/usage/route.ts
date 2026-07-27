@@ -33,15 +33,18 @@ export async function GET(req: NextRequest) {
   const [quota, trialEligibility, topupRows] = await Promise.all([
     checkPackQuota(shopId),
     checkTrialEligibility(shopId),
-    // Active top-up bundles — currently unexpired, source='topup', positive
-    // packs. Surfaced in the billing UI so merchants can see what they
-    // bought and when it expires. (Without this, top-ups are invisible
-    // beyond the email + transient success banner.)
+    // Extra credit grants beyond the monthly allowance — currently
+    // unexpired, positive packs. Includes both merchant top-ups
+    // (source='topup') AND admin/support grants (source='admin_adjustment')
+    // so an admin-granted bundle is VISIBLE in the billing UI instead of
+    // silently missing (blume-box's 200 admin packs read as invisible,
+    // 2026-07-27). Without this, granted credits appear nowhere beyond the
+    // ledger.
     sb
       .from("pack_credits_ledger")
-      .select("packs, expires_at, created_at, reference")
+      .select("packs, expires_at, created_at, reference, source")
       .eq("shop_id", shopId)
-      .eq("source", "topup")
+      .in("source", ["topup", "admin_adjustment"])
       .gt("packs", 0)
       .or("expires_at.is.null,expires_at.gt." + new Date().toISOString())
       .order("expires_at", { ascending: true })
@@ -53,11 +56,13 @@ export async function GET(req: NextRequest) {
     expires_at: string | null;
     created_at: string;
     reference: string | null;
+    source: string;
   }>).map((row) => ({
     packs: row.packs,
     expiresAt: row.expires_at,
     purchasedAt: row.created_at,
     reference: row.reference,
+    source: row.source,
   }));
 
   return NextResponse.json({

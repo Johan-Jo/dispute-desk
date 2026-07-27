@@ -2385,7 +2385,8 @@
     "starterShort": "20 paquetes/mes · Reglas básicas · Soporte por correo",
     "growthShort": "100 paquetes/mes · Reglas avanzadas · Guardado automático",
     "scaleShort": "400 paquetes/mes · Exportaciones avanzadas · Soporte prioritario",
-    "perMonthSuffix": "/mes"
+    "perMonthSuffix": "/mes",
+    "packsAvailable": "{available} paquetes disponibles"
   },
   "rules": {
     "title": "Reglas",

@@ -2385,7 +2385,8 @@
     "starterShort": "20 packs/month · Basic rules · Email support",
     "growthShort": "100 packs/month · Advanced rules · Auto-save",
     "scaleShort": "400 packs/month · Advanced exports · Priority support",
-    "perMonthSuffix": "/mo"
+    "perMonthSuffix": "/mo",
+    "packsAvailable": "{available} packs available"
   },
   "rules": {
     "title": "Rules",

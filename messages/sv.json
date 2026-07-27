@@ -2385,7 +2385,8 @@
     "starterShort": "20 paket/månad · Grundläggande regler · E-postsupport",
     "growthShort": "100 paket/månad · Avancerade regler · Autospara",
     "scaleShort": "400 paket/månad · Avancerade exporter · Prioriterad support",
-    "perMonthSuffix": "/mån"
+    "perMonthSuffix": "/mån",
+    "packsAvailable": "{available} paket tillgängliga"
   },
   "rules": {
     "title": "Regler",

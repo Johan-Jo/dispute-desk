@@ -227,7 +227,15 @@ describe("runAutomationPipeline — blocked-exit visibility", () => {
               .mockResolvedValue({ data: null, error: null }),
             update: vi.fn().mockImplementation((row) => {
               capture.disputeUpdates.push(row);
-              return { eq: vi.fn().mockResolvedValue({ data: null, error: null }) };
+              // Support both the recordBlockedAutoBuild `.update().eq()`
+              // chain AND the self-heal `.update().eq().in()` chain.
+              return {
+                eq: vi.fn().mockReturnValue({
+                  in: vi.fn().mockResolvedValue({ data: null, error: null }),
+                  then: (resolve: (v: unknown) => void) =>
+                    resolve({ data: null, error: null }),
+                }),
+              };
             }),
           };
         }
@@ -275,6 +283,16 @@ describe("runAutomationPipeline — blocked-exit visibility", () => {
         (a) => (a.event_payload as { reason?: string })?.reason === "feature_blocked",
       ),
     ).toBe(false);
+    // Self-heal: the quota gate PASSED (credits remain), so a clear-stale-
+    // billing-attention update fires — needs_attention:false + reason null.
+    // This is the fix for the blume-box stuck-quota-flag incident.
+    expect(
+      capture.disputeUpdates.some(
+        (u) =>
+          (u as { needs_attention?: boolean }).needs_attention === false &&
+          (u as { attention_reason?: unknown }).attention_reason === null,
+      ),
+    ).toBe(true);
   });
 
   it("terminal dispute (won/closed) → skipped_terminal with NO side effects", async () => {
