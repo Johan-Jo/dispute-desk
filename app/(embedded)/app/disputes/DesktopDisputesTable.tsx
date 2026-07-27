@@ -246,19 +246,19 @@ export function DesktopDisputesTable({
                 </span>
               </div>
 
-              {/* Case strength + subtitle + review-decision chip */}
-              <div style={{ minWidth: 0 }}>
+              {/* Case strength + review-decision chip — stacked: the
+                  decision chip (e.g. "Scheduled") sits BELOW the strength
+                  pill, not to its right. */}
+              <div style={{ minWidth: 0, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
                 {strength ? (
-                  <>
-                    <span
-                      style={{
-                        ...PILL_STYLE,
-                        ...caseStrengthPillColors(strength, t),
-                      }}
-                    >
-                      {caseStrengthPillColors(strength, t).label}
-                    </span>
-                  </>
+                  <span
+                    style={{
+                      ...PILL_STYLE,
+                      ...caseStrengthPillColors(strength, t),
+                    }}
+                  >
+                    {caseStrengthPillColors(strength, t).label}
+                  </span>
                 ) : (
                   <span style={{ fontSize: 14, color: "#6D7175" }}>—</span>
                 )}
@@ -268,7 +268,6 @@ export function DesktopDisputesTable({
                       ...PILL_STYLE,
                       background: reviewChip.bg,
                       color: reviewChip.color,
-                      marginTop: strength ? 4 : 0,
                       display: "inline-flex",
                     }}
                   >

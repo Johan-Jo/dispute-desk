@@ -147,7 +147,7 @@ export function MobileDisputeCard({
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           {strength && (
-            <div style={{ marginBottom: 8 }}>
+            <div style={{ marginBottom: 8, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
               <span style={{ ...PILL_STYLE, ...caseStrengthPillColors(strength, t) }}>
                 {caseStrengthPillColors(strength, t).label}
               </span>
@@ -157,7 +157,6 @@ export function MobileDisputeCard({
                     ...PILL_STYLE,
                     background: reviewChip.bg,
                     color: reviewChip.color,
-                    marginTop: 6,
                     display: "inline-flex",
                   }}
                 >
