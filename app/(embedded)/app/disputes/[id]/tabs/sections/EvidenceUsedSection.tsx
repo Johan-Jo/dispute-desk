@@ -282,6 +282,18 @@ export function EvidenceUsedSection({
       />
     ));
 
+  // Empty-card guard: all four disposition buckets empty → self-hide
+  // rather than render a titled card with an explainer and zero rows
+  // (an empty shell that reads as "we have evidence" while showing none).
+  if (
+    buckets.positive.length === 0 &&
+    buckets.context.length === 0 &&
+    buckets.excluded.length === 0 &&
+    internalSignals.length === 0
+  ) {
+    return null;
+  }
+
   return (
     <div
       style={{

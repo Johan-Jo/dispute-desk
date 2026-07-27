@@ -1839,7 +1839,8 @@
     "dueSent": "Skickat {date}",
     "strengthFilterAny": "Alla bevisstyrkor",
     "kpiAmountAtRiskOther": "Plus tvister i andra valutor: {list}",
-    "outcomeClosed": "Stängd"
+    "outcomeClosed": "Stängd",
+    "urgentBannerBodyOverdue": "{amount} i risk — närmaste tidsfrist har passerat"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banken kan inte behandla",

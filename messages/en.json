@@ -1839,7 +1839,8 @@
     "dueSent": "Sent {date}",
     "strengthFilterAny": "Any evidence strength",
     "kpiAmountAtRiskOther": "Plus disputes in other currencies: {list}",
-    "outcomeClosed": "Closed"
+    "outcomeClosed": "Closed",
+    "urgentBannerBodyOverdue": "{amount} at risk — earliest deadline has passed"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank cannot process",

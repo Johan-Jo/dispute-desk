@@ -1839,7 +1839,8 @@
     "dueSent": "Gesendet {date}",
     "strengthFilterAny": "Beliebige Beweisstärke",
     "kpiAmountAtRiskOther": "Plus Streitfälle in anderen Währungen: {list}",
-    "outcomeClosed": "Geschlossen"
+    "outcomeClosed": "Geschlossen",
+    "urgentBannerBodyOverdue": "{amount} gefährdet — früheste Frist ist verstrichen"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank kann nicht verarbeiten",

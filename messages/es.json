@@ -1839,7 +1839,8 @@
     "dueSent": "Enviada {date}",
     "strengthFilterAny": "Cualquier solidez de pruebas",
     "kpiAmountAtRiskOther": "Más disputas en otras monedas: {list}",
-    "outcomeClosed": "Cerrada"
+    "outcomeClosed": "Cerrada",
+    "urgentBannerBodyOverdue": "{amount} en riesgo — el plazo más próximo ya venció"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "El banco no puede procesar",

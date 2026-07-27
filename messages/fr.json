@@ -1839,7 +1839,8 @@
     "dueSent": "Envoyée {date}",
     "strengthFilterAny": "Toute solidité de preuves",
     "kpiAmountAtRiskOther": "Plus des litiges dans d'autres devises : {list}",
-    "outcomeClosed": "Clôturé"
+    "outcomeClosed": "Clôturé",
+    "urgentBannerBodyOverdue": "{amount} à risque — la première échéance est dépassée"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "La banque ne peut pas traiter",

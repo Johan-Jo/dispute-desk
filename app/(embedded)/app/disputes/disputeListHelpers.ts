@@ -627,16 +627,42 @@ export function figmaRowChrome(d: Dispute): {
   return { stripeColor: null, bgColor: null, opacity: 1 };
 }
 
-/** Single-pass aggregation of every KPI the new header + banner need. */
-export function figmaKpis(disputes: Dispute[]): {
+/** Single-pass aggregation of every KPI the new header + banner need.
+ *  `primaryCurrency` scopes the money sums to ONE currency so the banner
+ *  never adds USD + EUR + GBP into a single figure it then labels with a
+ *  single symbol (cross-currency raw sum — a real bug the KPIs elsewhere
+ *  are careful to avoid). Rows in other currencies are excluded from the
+ *  amounts (their COUNT still drives urgentCount). When null, the most-
+ *  frequent currency among the disputes is used. */
+export function figmaKpis(
+  disputes: Dispute[],
+  primaryCurrency?: string | null,
+): {
   needsActionCount: number;
   urgentCount: number;
   urgentAmount: number;
+  urgentAmountCurrency: string | null;
   totalAtRisk: number;
   strongCasesCount: number;
   awaitingResponseCount: number;
   earliestDueInDays: number | null;
+  earliestOverdue: boolean;
 } {
+  // Resolve the primary currency: caller-supplied, else most-frequent.
+  const primary =
+    primaryCurrency ??
+    (() => {
+      const counts = new Map<string, number>();
+      for (const d of disputes) {
+        const c = d.currency_code ?? "USD";
+        counts.set(c, (counts.get(c) ?? 0) + 1);
+      }
+      let best: string | null = null;
+      let bestN = -1;
+      for (const [c, n] of counts) if (n > bestN) { best = c; bestN = n; }
+      return best;
+    })();
+
   let needsActionCount = 0;
   let urgentCount = 0;
   let urgentAmount = 0;
@@ -649,15 +675,17 @@ export function figmaKpis(disputes: Dispute[]): {
     const s = figmaStatus(d);
     const cs = figmaCaseStrength(d);
     const isClosed = s === "closed";
+    const isPrimaryCurrency = (d.currency_code ?? "USD") === primary;
     if (s === "action-needed" || s === "needs-review") needsActionCount += 1;
     if (cs === "strong" && (s === "action-needed" || s === "needs-review")) {
       strongCasesCount += 1;
     }
     if (s === "submitted" || s === "under-review") awaitingResponseCount += 1;
-    if (!isClosed && d.amount != null) totalAtRisk += d.amount;
+    // Money sums are primary-currency ONLY — never mix currencies.
+    if (!isClosed && d.amount != null && isPrimaryCurrency) totalAtRisk += d.amount;
     if (figmaIsUrgent(d)) {
       urgentCount += 1;
-      if (d.amount != null) urgentAmount += d.amount;
+      if (d.amount != null && isPrimaryCurrency) urgentAmount += d.amount;
       if (d.due_at) {
         const hoursLeft =
           (new Date(d.due_at).getTime() - Date.now()) / (1000 * 60 * 60);
@@ -668,8 +696,12 @@ export function figmaKpis(disputes: Dispute[]): {
     }
   }
 
+  // Overdue is reported as such (earliestOverdue), NOT clamped to
+  // "due in 0 day(s)" — an overdue urgent dispute reading "0 days" looked
+  // broken. Days is only meaningful for a future deadline.
+  const earliestOverdue = minHoursLeft !== null && minHoursLeft < 0;
   const earliestDueInDays =
-    minHoursLeft !== null
+    minHoursLeft !== null && minHoursLeft >= 0
       ? Math.max(0, Math.ceil(minHoursLeft / 24))
       : null;
 
@@ -677,9 +709,11 @@ export function figmaKpis(disputes: Dispute[]): {
     needsActionCount,
     urgentCount,
     urgentAmount,
+    urgentAmountCurrency: primary,
     totalAtRisk,
     strongCasesCount,
     awaitingResponseCount,
     earliestDueInDays,
+    earliestOverdue,
   };
 }

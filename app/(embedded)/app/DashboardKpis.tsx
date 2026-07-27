@@ -275,10 +275,15 @@ export function DashboardKpis({ stats, loading, period, onPeriodChange }: Props)
     changeInverse: true,
     breakdown: { split: stats.activeSplit },
   };
+  // No decided disputes in the window → show "—", NOT "0%". A literal
+  // 0% reads as "we lose every dispute" when the truth is "nothing was
+  // decided in this period" (e.g. the 24h view of a shop whose wins
+  // closed last week).
+  const hasDecidedDisputes = stats.disputesWon + stats.disputesLost > 0;
   const winRate: KpiCard = {
     icon: ChartLineIcon,
     label: t("dashboard.winRate"),
-    value: `${stats.winRate}%`,
+    value: hasDecidedDisputes ? `${stats.winRate}%` : "—",
     change: stats.winRateChange,
     // Denominator disclosure (plan §13.1 decision): accepted counts as
     // a loss; refunded is excluded. The label must never leave the
