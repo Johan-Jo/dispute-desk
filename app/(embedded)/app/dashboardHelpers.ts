@@ -72,6 +72,23 @@ export interface DashboardStats {
   disputeCategories: { label: string; value: number; cb: number; inq: number }[];
   recentActivity: ActivityItem[];
 
+  // ── Shared presentation model (design-alignment plan §4) ─────────
+  /** Mutually-exclusive operational partition, precedence Closed →
+   *  Under review → Action required → Building & monitoring. The
+   *  Closed cell is windowed by the selected period; the three open
+   *  cells are point-in-time snapshots. */
+  operationalBuckets?: Record<
+    "building_monitoring" | "action_required" | "under_review" | "closed",
+    { count: number; cb: number; inq: number }
+  >;
+  /** Genuine merchant tasks only (blocking / requested /
+   *  merchant-resolvable technical errors) — drives the banner. NOT
+   *  the legacy needs_attention count. */
+  merchantActionCount?: number;
+  /** When exactly one dispute needs action, the banner deep-links to it
+   *  (+ its relevant section). Null when zero or many. */
+  singleActionDispute?: { id: string; attentionReason: string | null } | null;
+
   // ── Chargeback rate (PRD §8) ─────────────────────────────────────
   // Rate is null when the snapshot is missing for the window — UI
   // renders "—" + "Calculating…" rather than a misleading 0%.

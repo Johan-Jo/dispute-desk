@@ -48,13 +48,21 @@ import {
 } from "@/lib/defence/render/sections";
 import { buildEvidenceBasisRows } from "@/lib/defence/pdf/evidenceBasisRows";
 import { renderThesis } from "@/lib/defence/pdf/renderThesis";
-import { familyKeyForModule } from "@/lib/defence/reasonCodes/registry";
+import { familyKeyForModule, ALL_REASON_CODE_MODULES } from "@/lib/defence/reasonCodes/registry";
 import { buildCaseDetailsRows } from "@/lib/defence/render/caseDetails";
 import {
   buildLineItems,
   type LineItem,
 } from "@/lib/defence/render/lineItems";
 import type { ReasonCodeModuleKey } from "@/lib/defence/types";
+
+/** Recognized reason-code module keys. Used to normalize an unknown
+ *  `reason_code_module` to null before it reaches familyForModule()
+ *  (which throws on unknown keys). Guards the tab against a crash from
+ *  a bad/stale data row. */
+const VALID_MODULE_KEYS = new Set<string>(
+  ALL_REASON_CODE_MODULES.map((m) => m.key),
+);
 
 /**
  * Resolve the thesis blockquote text for a section.
@@ -225,7 +233,15 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
     narrative.omittedSections.map((o) => o.sectionKey),
   );
   const mode: PackageMode = row.package_mode ?? "full";
-  const moduleKey = row.reason_code_module;
+  // Guard against an unrecognized reason_code_module. familyForModule()
+  // THROWS on an unknown key (it's a fail-loud invariant for code bugs),
+  // which would white-screen the whole Review and Forward tab on a single
+  // bad/stale data row. Normalize any unknown value to null so the
+  // module-aware helpers (familyKeyForModule / isSectionDeniedForModule)
+  // take their null-safe paths instead of crashing.
+  const moduleKey = VALID_MODULE_KEYS.has(row.reason_code_module as string)
+    ? row.reason_code_module
+    : null;
 
   const evidenceBasis = buildEvidenceBasisRows(facts);
   const chrono = chronologyEvents(dispute, facts);
@@ -261,6 +277,27 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
       ? familyKeyForModule(moduleKey as ReasonCodeModuleKey)
       : null,
   });
+
+  // Empty-card guard: if NONE of the body sources have content — no
+  // narrative section carries text, and there are no evidence-basis
+  // rows, chronology events, or line items — do not render a titled
+  // "Chargeback response preview" card with an empty body. That empty
+  // shell is worse than showing nothing (it implies a package exists
+  // when there's nothing to show). Case Details alone (identity fields)
+  // is not "body content" — a package needs at least one argument,
+  // evidence row, or line item to be worth previewing.
+  const hasNarrativeText = SECTION_ORDER.some((key) => {
+    const section = narrative[key as NarrativeSectionKey];
+    return section && !omitted.has(key as NarrativeSectionKey) && section.text?.trim();
+  });
+  const hasBodyContent =
+    hasNarrativeText ||
+    evidenceBasis.length > 0 ||
+    chrono.length > 0 ||
+    lineItems.length > 0;
+  if (!hasBodyContent) {
+    return null;
+  }
 
   return (
     <Card padding="500">

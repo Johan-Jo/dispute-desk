@@ -34,10 +34,13 @@ import {
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { withShopParams } from "@/lib/withShopParams";
-import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 import { EVIDENCE_EVALUATION_HELPER } from "@/lib/argument/evidenceStatus";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import type { PresentationStatus } from "../workspace-components/types";
+import { TAB_INDEX } from "../workspace-components/types";
+import { resolveLifecycle } from "@/lib/disputes/presentation/resolveLifecycle";
+import { ATTENTION_CHIP, STRENGTH_CHIP } from "@/lib/disputes/presentation/uiTokens";
+import { attentionLabelKey } from "@/lib/disputes/presentation/labels";
 import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
 import { buildRefundPresentation } from "@/lib/argument/refundPresentation";
 import {
@@ -222,6 +225,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // Root (unscoped) translator for token resolution — used to resolve
   // EvidenceLineItem.reasonToken at the internal-only row caption boundary.
   const tRoot = useTranslations();
+  const tp = useTranslations("presentation");
   const { data, derived, actions, clientState } = workspace;
 
   if (!data) return null;
@@ -239,7 +243,6 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     isReadOnly,
     recommendationText,
     recommendationHelperText,
-    missingItems,
   } = derived;
 
   /* ── F1: Failure short-circuit ── */
@@ -313,7 +316,71 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // dropped field surfaces as a TypeScript error rather than a silent
   // "hard_to_win" degradation in the UI.
   const heroVariant: HeroVariant = caseStrength.heroVariant as HeroVariant;
-  const heroTone = HERO_TONE_BY_VARIANT[heroVariant];
+
+  // ── Shared presentation model (plan §6.2) ──
+  // The hero maps RESOLVED dimensions to copy/layout — it no longer
+  // re-classifies via `presentationStatus × heroVariant`. Fallback:
+  // when an older cached response lacks `presentation`, run the same
+  // pure lifecycle resolver over the fields already on the client so
+  // the interpretation cannot diverge.
+  const presentation = data.presentation ?? null;
+  const lifecycle =
+    presentation?.lifecycle ??
+    resolveLifecycle({
+      finalOutcome: dispute.finalOutcome ?? null,
+      closedAt: null,
+      submissionState: dispute.submissionState ?? null,
+      normalizedStatus: dispute.normalizedStatus ?? null,
+      packStatus: data.pack?.status ?? null,
+    });
+
+  // Hero tone follows LIFECYCLE, not strength (plan §8: strength never
+  // creates alarm or a green "ready" glow). Calm indigo default; green
+  // for won; red only for lost. Shopify Protect coverage keeps its
+  // distinct cool-blue "no action" hero (coverage gate — CLAUDE.md).
+  const HERO_TONE_CALM = {
+    bg: "#F8FAFF", border: "#D6E0F5", iconBg: "#E0E7FF", iconColor: "#3730A3",
+    titleColor: "#1F2A5B", bodyColor: "#3F4A5C", pillBg: "#E0E7FF", pillColor: "#3730A3",
+  };
+  // Merchant-resolvable technical problem (e.g. expired Gorgias/OAuth
+  // connection — plan §12V's one `technical_error` signal). The design's
+  // "Monitoring needs attention" state (Dispute Detail.html state 12) gives
+  // this a red hero + warning icon, while the LIFECYCLE stays calm per the
+  // plan (internal facts never change lifecycle — the red is on attention).
+  const isTechProblem = presentation?.attention === "technical_error";
+  // Approval-required state (design "Decide what to do" block): the pack is
+  // ready but the shop requires approval before the first Shopify save.
+  // Shown ONLY in this state (not on every weak/parked case), rendered
+  // INSIDE the hero below "Next:" — matches Dispute Detail.html, which
+  // gates the block on approvalRequired === true.
+  const showApprovalDecide =
+    !isReadOnly &&
+    !dispute.reviewState &&
+    presentation?.attention === "blocking" &&
+    presentation?.blockingReason === "approval_gate";
+  // A recorded review decision (Submit on deadline / Hold / Don't defend)
+  // takes over the hero for a non-terminal dispute: it reflects the
+  // standing decision ("Scheduled to submit" etc.) instead of the raw
+  // lifecycle + "Approval required" pill. Honest — approved means
+  // SCHEDULED for the deadline, not saved yet.
+  const reviewDecision =
+    lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed"
+      ? (dispute.reviewState ?? null)
+      : null;
+  const HERO_TONE_TECH = {
+    bg: "#FEF2F2", border: "#FCA5A5", iconBg: "#FEE2E2", iconColor: "#DC2626",
+    titleColor: "#7F1D1D", bodyColor: "#B42318", pillBg: "#FEE2E2", pillColor: "#991B1B",
+  };
+  const heroTone =
+    isTechProblem
+      ? HERO_TONE_TECH
+      : heroVariant === "covered"
+        ? HERO_TONE_BY_VARIANT.covered
+        : lifecycle === "won"
+          ? HERO_TONE_BY_VARIANT.likely_to_win
+          : lifecycle === "lost"
+            ? HERO_TONE_BY_VARIANT.hard_to_win
+            : HERO_TONE_CALM;
 
   // Whether carrier delivery is already CONFIRMED (delivered to recipient
   // or signed for). Drives the "monitoring" banner so it stops promising a
@@ -330,76 +397,97 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     return proof === "delivered_confirmed" || proof === "signature_confirmed";
   })();
 
+  /** Hero headline — strength-free operational statement (plan §8:
+   *  "Strong case saved…" style headlines are banned). Keyed by the
+   *  resolved lifecycle; Shopify Protect coverage keeps its dedicated
+   *  covered headline. Terminal titles reuse the existing translated
+   *  `hero.title.closed.*` keys. */
   function resolveHeroTitle(): string {
-    switch (presentationStatus) {
-      case "CLOSED_WON":
+    if (reviewDecision) {
+      return tp(`hero.reviewDecision.${reviewDecision}.title`);
+    }
+    if (isTechProblem && lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed") {
+      return tp("hero.technicalProblem.title");
+    }
+    if (heroVariant === "covered" && lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed") {
+      return t("hero.title.preSubmit.covered");
+    }
+    switch (lifecycle) {
+      case "won":
         return t("hero.title.closed.won");
-      case "CLOSED_LOST":
+      case "lost":
         return t("hero.title.closed.lost");
-      case "CLOSED_UNKNOWN":
+      case "closed":
         return t("hero.title.closed.unknown");
-      case "SUBMITTED_TO_NETWORK":
-        return t(`hero.title.submitted_to_network.${heroVariant}`);
-      case "AWAITING_SHOPIFY_AUTO_SUBMISSION":
-        return t(`hero.title.awaiting.${heroVariant}`);
-      case "SAVED_TO_SHOPIFY":
-        return t(`hero.title.saved.${heroVariant}`);
-      case "DRAFT":
       default:
-        return t(`hero.title.preSubmit.${heroVariant}`);
+        return tp(`hero.${lifecycle}.title`);
     }
   }
   const strengthLabel = resolveHeroTitle();
 
+  /** Hero message — what DisputeDesk is doing NOW. Strength commentary
+   *  stays out of the hero (it lives in the assessment/recommendation
+   *  copy); terminal + covered messages reuse the existing translated
+   *  keys. */
   function resolveHeroSubtitle(): string | null {
-    const reason = (strengthReasonText ?? "").trim();
-    const savedDate = formatDate(submittedAt);
-    const deadline = dispute.dueAt ? formatDate(dispute.dueAt) : null;
-    switch (presentationStatus) {
-      case "DRAFT":
-        return reason.length > 0 ? reason : null;
-      case "SAVED_TO_SHOPIFY":
-        if (!reason && !submittedAt) return null;
-        if (reason && submittedAt && deadline) {
-          return t("hero.subtitle.savedWithReasonAndDeadline", {
-            strengthReason: reason || " ",
-            savedDate,
-            deadline,
+    if (reviewDecision) {
+      // approved/in_review name the deadline; conceded has no date.
+      return reviewDecision === "conceded"
+        ? tp("hero.reviewDecision.conceded.message")
+        : tp(`hero.reviewDecision.${reviewDecision}.message`, {
+            date: dispute.dueAt ? formatDate(dispute.dueAt) : "—",
           });
-        }
-        if (reason && submittedAt) {
-          return t("hero.subtitle.savedWithReason", {
-            strengthReason: reason || " ",
-            savedDate,
-          });
-        }
-        return t("hero.subtitle.savedNoDate", { strengthReason: reason || " " });
-      case "AWAITING_SHOPIFY_AUTO_SUBMISSION":
-        return t("hero.subtitle.awaitingForward", { strengthReason: reason || " " });
-      case "SUBMITTED_TO_NETWORK":
+    }
+    if (isTechProblem && lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed") {
+      return tp("hero.technicalProblem.message");
+    }
+    if (heroVariant === "covered" && lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed") {
+      const reason = (strengthReasonText ?? "").trim();
+      return reason.length > 0 ? reason : null;
+    }
+    switch (lifecycle) {
+      case "won":
+        return t("hero.subtitle.closedWon", {
+          submittedDate: submittedAt ? formatDate(submittedAt) : "none",
+        });
+      case "lost":
+        return t("hero.subtitle.closedLost", {
+          submittedDate: submittedAt ? formatDate(submittedAt) : "none",
+        });
+      case "closed":
+        return t("hero.subtitle.closedUnknown", {
+          outcome: dispute.finalOutcome ?? "—",
+        });
+      case "under_review":
         if (submittedAt) {
           return t("hero.subtitle.submittedToNetworkWithDate", {
             submittedDate: formatDate(submittedAt),
           });
         }
-        return t("hero.subtitle.submittedToNetwork", { strengthReason: reason || " " });
-      case "CLOSED_WON":
-        return t("hero.subtitle.closedWon", {
-          submittedDate: submittedAt ? formatDate(submittedAt) : "none",
-        });
-      case "CLOSED_LOST":
-        return t("hero.subtitle.closedLost", {
-          submittedDate: submittedAt ? formatDate(submittedAt) : "none",
-        });
-      case "CLOSED_UNKNOWN":
-        return t("hero.subtitle.closedUnknown", {
-          outcome: dispute.finalOutcome ?? "—",
-        });
+        return tp("hero.under_review.message");
       default:
-        return reason.length > 0 ? reason : null;
+        return tp(`hero.${lifecycle}.message`);
     }
   }
   const heroSubtitle = resolveHeroSubtitle();
+
+  // "Next:" milestone line — active (non-terminal, non-covered) states
+  // only. "Monitoring ≠ Done": the saved state's next milestone is
+  // Shopify sending the response, never "done". The saved-editable
+  // four-part block names the actual deadline date (plan §6.2).
+  const heroNextStep =
+    reviewDecision // decision message already states what happens next
+      ? null
+      : heroVariant !== "covered" &&
+          lifecycle !== "won" &&
+          lifecycle !== "lost" &&
+          lifecycle !== "closed"
+        ? isTechProblem
+          ? tp("hero.next.technical_error")
+          : lifecycle === "saved_to_shopify" && dispute.dueAt
+            ? tp("hero.nextSavedWithDate", { date: formatDate(dispute.dueAt) })
+            : tp(`hero.next.${lifecycle}`)
+        : null;
 
   /* ── Timeline ──
    *
@@ -661,19 +749,13 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     ? tExtra("appliedMode.automaticHelp")
     : tExtra("appliedMode.reviewBeforeSubmitHelp");
 
-  const goToReview = () => actions.setActiveTab(2);
-  const goToEvidence = () => actions.setActiveTab(1);
-  const shopifyAdminUrl = dispute.shopDomain && dispute.disputeEvidenceGid
-    ? getShopifyDisputeUrl(dispute.shopDomain, dispute.disputeEvidenceGid)
-    : null;
+  const goToReview = () => actions.setActiveTab(TAB_INDEX.reviewForward);
+  const goToEvidence = () => actions.setActiveTab(TAB_INDEX.evidence);
+  // Evidence tab + scroll-to + pulse the Gorgias review card (the
+  // "highlight"), so the "Review communication" CTA lands the merchant
+  // exactly on what needs their approval.
+  const goToGorgiasReview = () => actions.focusGorgiasReview();
 
-  // Post-submit secondary CTA — surface only when there's an actual
-  // policy gap on this case.
-  const POLICY_FIELDS = new Set(["refund_policy", "shipping_policy", "cancellation_policy"]);
-  const hasMissingPolicy = missingItems.some((m) => POLICY_FIELDS.has(m.field));
-  const policyCta = submitted && hasMissingPolicy
-    ? { label: tExtra("setUpPolicies"), url: withShopParams("/app/policies", searchParams) }
-    : null;
 
   return (
     <BlockStack gap="400">
@@ -698,93 +780,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </Banner>
       )}
 
-      {/* Review lifecycle (2026-07-23). A parked-for-review or weak
-          dispute needs an explicit merchant decision so it doesn't sit in
-          the queue forever. Shows three actions when undecided, or the
-          standing decision + an undo once made. Hidden once the dispute
-          is read-only (submitted / closed) — the decision is moot then. */}
-      {!isReadOnly &&
-        (() => {
-          const rs = dispute.reviewState ?? null;
-          const isWeak =
-            caseStrength.overall === "weak" ||
-            caseStrength.overall === "insufficient";
-          const parked = dispute.needsReview === true;
-          // Offer the row when the case is weak or parked, OR whenever a
-          // decision is already recorded (so the merchant can see/undo it).
-          if (!isWeak && !parked && !rs) return null;
-          const saving = actions.reviewSaving === true;
-          const dueSuffix = dispute.reviewDueAt
-            ? tExtra("review.dueSuffix", { date: formatDate(dispute.reviewDueAt) })
-            : dispute.dueAt
-              ? tExtra("review.dueSuffix", { date: formatDate(dispute.dueAt) })
-              : "";
-
-          if (rs) {
-            const tone =
-              rs === "conceded" ? "critical" : rs === "approved" ? "info" : "warning";
-            const titleKey =
-              rs === "conceded"
-                ? "review.stateConcededTitle"
-                : rs === "approved"
-                  ? "review.stateApprovedTitle"
-                  : "review.stateInReviewTitle";
-            const bodyKey =
-              rs === "conceded"
-                ? "review.stateConcededBody"
-                : rs === "approved"
-                  ? "review.stateApprovedBody"
-                  : "review.stateInReviewBody";
-            return (
-              <Banner tone={tone} title={tExtra(titleKey)}>
-                <BlockStack gap="200">
-                  <p style={{ margin: 0 }}>{tExtra(bodyKey, { due: dueSuffix })}</p>
-                  <InlineStack gap="200">
-                    <Button
-                      variant="plain"
-                      disabled={saving}
-                      onClick={() => actions.setReviewDecision("clear")}
-                    >
-                      {tExtra("review.undo")}
-                    </Button>
-                  </InlineStack>
-                </BlockStack>
-              </Banner>
-            );
-          }
-
-          return (
-            <Banner tone="warning" title={tExtra("review.title")}>
-              <BlockStack gap="300">
-                <p style={{ margin: 0 }}>{tExtra("review.prompt")}</p>
-                <InlineStack gap="200">
-                  <Button
-                    disabled={saving}
-                    onClick={() => actions.setReviewDecision("hold")}
-                  >
-                    {tExtra("review.hold")}
-                  </Button>
-                  <Button
-                    variant="primary"
-                    disabled={saving}
-                    onClick={() => actions.setReviewDecision("approve")}
-                  >
-                    {tExtra("review.approve")}
-                  </Button>
-                  <Button
-                    variant="plain"
-                    tone="critical"
-                    disabled={saving}
-                    onClick={() => actions.setReviewDecision("concede")}
-                  >
-                    {tExtra("review.concede")}
-                  </Button>
-                </InlineStack>
-              </BlockStack>
-            </Banner>
-          );
-        })()}
-
+      {/* The standing review-decision banner was removed (2026-07-27): it
+          duplicated the hero, which now carries the decision headline +
+          body + Undo when reviewState is set. One block, not two. */}
 
       {/* O1: Hero — minimal per Figma: label + confidence pill + 1-line summary.
           Recommendation / improvement / helper / deadline copy moves to the
@@ -797,7 +795,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           borderRadius: 8,
           padding: 24,
           display: "flex",
-          alignItems: "center",
+          alignItems: "flex-start",
           gap: 16,
         }}
       >
@@ -809,7 +807,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
             flexShrink: 0,
           }}
         >
-          <Icon source={ShieldCheckMarkIcon} />
+          <Icon source={isTechProblem ? AlertCircleIcon : ShieldCheckMarkIcon} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4, flexWrap: "wrap" }}>
@@ -822,8 +820,176 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               {heroSubtitle}
             </p>
           )}
+          {/* Merchant status pill — the attention dimension (grey "No
+              action required" when none). Emphasis colors only when a
+              genuine action exists. Suppressed once a review decision is
+              recorded (the decision drives the hero copy + heading pill). */}
+          {presentation && !reviewDecision && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+              <span
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  padding: "2px 9px", borderRadius: 999, fontSize: 11.5,
+                  fontWeight: 600, lineHeight: 1.5, whiteSpace: "nowrap",
+                  background: ATTENTION_CHIP[presentation.attention].bg,
+                  color: ATTENTION_CHIP[presentation.attention].fg,
+                }}
+              >
+                <span
+                  style={{
+                    width: 6, height: 6, borderRadius: "50%", flex: "none",
+                    background: ATTENTION_CHIP[presentation.attention].dot,
+                  }}
+                />
+                {tRoot(attentionLabelKey(presentation))}
+              </span>
+            </div>
+          )}
+          {/* Next milestone — Monitoring ≠ Done: active states always
+              name what happens next. */}
+          {heroNextStep && (
+            <p style={{ fontSize: 12.5, color: "#6D7175", margin: "8px 0 0", lineHeight: 1.5 }}>
+              <span style={{ fontWeight: 600, color: "#4B5563" }}>{tp("hero.nextLabel")}</span>{" "}
+              {heroNextStep}
+            </p>
+          )}
+          {/* Internal-issue transparency — neutral, no merchant action
+              implied (plan §3.1 internal failures). */}
+          {presentation?.internalIssue && (
+            <p style={{ fontSize: 12.5, color: "#6D7175", margin: "8px 0 0", lineHeight: 1.5 }}>
+              {tp("internalIssue")}
+            </p>
+          )}
+          {/* Undo the standing decision — placed directly under the
+              decision copy it reverses (NOT below the Evidence assessment,
+              where it read as undoing the assessment). A discreet button
+              (not a link — the app doesn't use hyperlinks for actions). */}
+          {reviewDecision && !isReadOnly && (
+            <div style={{ marginTop: 10 }}>
+              <Button
+                size="slim"
+                disabled={actions.reviewSaving === true}
+                onClick={() => actions.setReviewDecision("clear")}
+              >
+                {tExtra("review.undo")}
+              </Button>
+            </div>
+          )}
+          {/* Evidence assessment — folded INTO the hero (2026-07-27):
+              strength grade pill + the rules-engine's explanation, on a
+              subtle divider. Assessment copy only — strength never becomes
+              an operational callout (plan §8). The standalone card below
+              is suppressed so this shows once. */}
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${heroTone.border}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: heroTone.titleColor }}>
+                {tp("assessmentCard.title")}
+              </span>
+              {(() => {
+                const strengthKey = presentation?.strength
+                  ?? (caseStrength.overall === "insufficient" ? "not_assessed" : caseStrength.overall);
+                const tokens = STRENGTH_CHIP[strengthKey as keyof typeof STRENGTH_CHIP];
+                return (
+                  <span
+                    style={{
+                      display: "inline-flex", alignItems: "center", padding: "2px 9px",
+                      borderRadius: 999, fontSize: 11.5, fontWeight: 600,
+                      background: tokens.bg, color: tokens.fg,
+                    }}
+                  >
+                    {tRoot(`presentation.strength.detail.${strengthKey}`)}
+                  </span>
+                );
+              })()}
+            </div>
+            {strengthReasonText ? (
+              <p style={{ fontSize: 12.5, color: heroTone.bodyColor, margin: "6px 0 0", lineHeight: 1.55, maxWidth: 760 }}>
+                {strengthReasonText}
+              </p>
+            ) : null}
+          </div>
+          {/* "Decide what to do" — approval-required state ONLY, inside the
+              hero below "Next:", divided off by a top border (design). */}
+          {showApprovalDecide && (
+            <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #D6E0F5" }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "#1F2A5B", margin: "0 0 4px" }}>
+                {tExtra("review.title")}
+              </p>
+              <p style={{ fontSize: 12.5, color: "#3F4A5C", margin: "0 0 10px", lineHeight: 1.5, maxWidth: 700 }}>
+                {tExtra("review.prompt")}
+              </p>
+              <InlineStack gap="200" blockAlign="center">
+                <Button
+                  variant="primary"
+                  disabled={actions.reviewSaving === true}
+                  onClick={() => actions.setReviewDecision("approve")}
+                >
+                  {tExtra("review.approve")}
+                </Button>
+                <Button
+                  disabled={actions.reviewSaving === true}
+                  onClick={() => actions.setReviewDecision("hold")}
+                >
+                  {tExtra("review.hold")}
+                </Button>
+                <Button
+                  variant="plain"
+                  tone="critical"
+                  disabled={actions.reviewSaving === true}
+                  onClick={() => actions.setReviewDecision("concede")}
+                >
+                  {tExtra("review.concede")}
+                </Button>
+              </InlineStack>
+              <p style={{ fontSize: 12, color: "#6D7175", margin: "10px 0 0" }}>
+                {tExtra("review.settingsHint")}
+              </p>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Outcome card (plan §6.2) — dedicated won/lost block: decision
+          date + amount recovered / lost. Terminal disputes only. */}
+      {presentation && (presentation.outcome === "won" || presentation.outcome === "lost") && (
+        <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
+          <BlockStack gap="300">
+            <Text as="h3" variant="headingSm">{tp("outcomeCard.title")}</Text>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                gap: 16,
+              }}
+            >
+              <div>
+                <p style={{ fontSize: 12, color: "#6D7175", margin: 0 }}>{tp("outcomeCard.decisionDate")}</p>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "#202223", margin: "4px 0 0" }}>
+                  {formatDate(dispute.closedAt ?? null)}
+                </p>
+              </div>
+              {presentation.outcome === "won" ? (
+                <div>
+                  <p style={{ fontSize: 12, color: "#6D7175", margin: 0 }}>{tp("outcomeCard.amountRecovered")}</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "#065F46", margin: "4px 0 0" }}>
+                    {dispute.currency} {dispute.outcomeAmountRecovered ?? dispute.amount}
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p style={{ fontSize: 12, color: "#6D7175", margin: 0 }}>{tp("outcomeCard.amountLost")}</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "#991B1B", margin: "4px 0 0" }}>
+                    {dispute.currency} {dispute.outcomeAmountLost ?? dispute.amount}
+                  </p>
+                </div>
+              )}
+            </div>
+          </BlockStack>
+        </div>
+      )}
+
+      {/* Evidence assessment now lives INSIDE the hero (2026-07-27) — the
+          standalone card was removed to consolidate the top block. */}
 
       {/* Monitoring banner — placed directly under the hero so the
           merchant sees the "we're still watching" reassurance immediately
@@ -946,6 +1112,81 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           </BlockStack>
         </BlockStack>
       </div>
+
+      {/* Merchant-attention card (plan §6.2) — driven by
+          presentation.attention. Shown ONLY for `requested` — a real,
+          concrete Gorgias conversation awaiting the merchant's approval.
+          The generic "communication may strengthen this" (recommended/
+          opportunity) states were removed (2026-07-27): almost every
+          dispute improves with customer communication, so surfacing it on
+          a few and not others was arbitrary. The CTA scrolls to + pulses
+          the Gorgias review card on the Evidence tab (the "highlight"). */}
+      {presentation && presentation.attention === "requested" && (
+        <div
+          style={{
+            background: "#EFF6FF",
+            border: "1px solid #BFDBFE",
+            borderRadius: 12,
+            padding: 16,
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 12,
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: "#1E3A8A", margin: 0 }}>
+              {tRoot(attentionLabelKey(presentation))}
+            </p>
+            <p style={{ fontSize: 12.5, color: "#3F5B80", margin: "3px 0 0", lineHeight: 1.5 }}>
+              {tRoot("presentation.listStateSub.requested")}
+            </p>
+          </div>
+          <Button onClick={goToGorgiasReview}>
+            {tRoot("presentation.attentionCta.requested")}
+          </Button>
+        </div>
+      )}
+      {/* Technical-attention card (design "Monitoring needs attention"
+          state): red card with the reconnect action. Renders for the one
+          merchant-resolvable technical_error signal (expired integration
+          connection); the merchant can self-fix by reconnecting. */}
+      {presentation && presentation.attention === "technical_error" && (
+        <div
+          style={{
+            background: "#FEF2F2",
+            border: "1px solid #FCA5A5",
+            borderRadius: 12,
+            padding: 20,
+            display: "flex",
+            gap: 14,
+            alignItems: "flex-start",
+          }}
+        >
+          <span
+            style={{
+              width: 36, height: 36, borderRadius: 9, background: "#FEE2E2",
+              color: "#DC2626", flex: "none", display: "inline-flex",
+              alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <Icon source={AlertCircleIcon} />
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 15, fontWeight: 600, color: "#7F1D1D", margin: 0 }}>
+              {tp("techAttention.title")}
+            </p>
+            <p style={{ fontSize: 13, color: "#991B1B", margin: "4px 0 12px", lineHeight: 1.55, maxWidth: 680 }}>
+              {tp("techAttention.body")}
+            </p>
+            <Button
+              variant="primary"
+              url={withShopParams("/app/settings", searchParams)}
+            >
+              {tp("techAttention.cta")}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Recommendation card — preserves the merchant-action copy that
           was previously stuffed into the hero. Stays compact and below
@@ -1839,27 +2080,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
         </InlineStack>
       </div>
 
-      {/* Footer CTAs */}
-      <InlineStack gap="200" align="end">
-        {!submitted && (
-          <>
-            <Button onClick={goToEvidence} icon={AlertCircleIcon}>{tExtra("editEvidence")}</Button>
-            <Button variant="primary" onClick={goToReview} icon={ShieldCheckMarkIcon} size="large">
-              {tExtra("submitToShopify")}
-            </Button>
-          </>
-        )}
-        {submitted && (
-          <>
-            {policyCta && <Button url={policyCta.url}>{policyCta.label}</Button>}
-            {shopifyAdminUrl && (
-              <Button variant="primary" url={shopifyAdminUrl} target="_blank" size="large">
-                {tExtra("viewInShopify")}
-              </Button>
-            )}
-          </>
-        )}
-      </InlineStack>
+      {/* Footer CTAs removed (2026-07-27): the bottom-of-page "Edit
+          evidence" / "Save to Shopify" (and post-submit "View in Shopify")
+          buttons duplicated actions available in the Review and Forward
+          tab / the heading's "View in Shopify Admin" — the Overview is a
+          read/monitor surface, not an action bar. */}
     </BlockStack>
   );
 }

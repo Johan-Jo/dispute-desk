@@ -7,6 +7,13 @@ import {
 } from "@/lib/argument/nameMismatch";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import { extractShopId } from "@/lib/middleware/extractShopId";
+import {
+  gatherPresentations,
+  type DisputeRowFacts,
+} from "@/lib/disputes/presentation/serverFacts";
+import type { I18nToken } from "@/lib/i18n/token";
+import { isActiveNormalizedStatus } from "@/lib/disputes/presentation/isActive";
+import { isDormantInquiry } from "@/lib/disputes/dormantInquiry";
 
 /**
  * GET /api/disputes
@@ -122,6 +129,56 @@ export async function GET(req: NextRequest) {
     query = query.is("closed_at", null);
   }
 
+  // ── Shop-wide presentation scan (plan §5.1 aggregates + §11 attention
+  //    filter) ─────────────────────────────────────────────────────────
+  // ONE resolver pass over the shop's disputes produces: the KPI
+  // aggregates, the merchant-task id set (banner/aggregate), AND the
+  // `?attention=` filter — so the dashboard banner's promise, the list
+  // filter's result set, and the KPI count can never disagree (the
+  // dual-source class the plan kills). The scan includes the
+  // approval-gate and merchant-reconnect tasks the old
+  // attention_reason-only filter missed.
+  const { data: shopRows } = await sb
+    .from("disputes")
+    .select(
+      "id, shop_id, reason, status, amount, currency_code, phase, normalized_status, submission_state, final_outcome, closed_at, due_at, initiated_at, needs_attention, attention_reason, attention_payload",
+    )
+    .eq("shop_id", shopId);
+  const nonTerminalRows = (shopRows ?? []).filter(
+    (r) => r.closed_at == null && r.final_outcome == null,
+  );
+  const shopPresentations = await gatherPresentations(
+    sb,
+    shopId,
+    nonTerminalRows as unknown as DisputeRowFacts[],
+    { includeConcreteContribution: false },
+  );
+  const taskIds: string[] = [];
+  const commIds: string[] = [];
+  for (const r of nonTerminalRows) {
+    const p = shopPresentations.get(r.id as string);
+    if (!p) continue;
+    if (p.needsMerchantAction) taskIds.push(r.id as string);
+    if (p.attention === "requested") commIds.push(r.id as string);
+  }
+
+  // Merchant-attention filter (plan §11): independent of the lifecycle
+  // and strength dimensions.
+  //   attention=tasks — the EXACT merchant-task set the dashboard
+  //                     banner counts (blocking incl. approval gate +
+  //                     requested + merchant-resolvable technical).
+  //   attention=comm  — communication review states (requested).
+  //   `recommended` is not yet queryable server-side (no persisted
+  //   concrete-contribution flag) — documented limitation.
+  const attentionParam = sp.get("attention");
+  if (attentionParam === "tasks" || attentionParam === "comm") {
+    const ids = attentionParam === "comm" ? commIds : taskIds;
+    query = query.in(
+      "id",
+      ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"],
+    );
+  }
+
   // Date range filter
   const ALLOWED_DATE_FIELDS = ["initiated_at", "submitted_at", "closed_at"];
   const dateField = ALLOWED_DATE_FIELDS.includes(sp.get("date_field") ?? "") ? sp.get("date_field")! : "initiated_at";
@@ -142,6 +199,49 @@ export async function GET(req: NextRequest) {
   }
   if (amountMax) {
     query = query.lte("amount", parseFloat(amountMax));
+  }
+
+  // Evidence-strength filter (plan §11.2) — the INDEPENDENT strength
+  // dimension: filters on the rules-engine grade of each dispute's
+  // LATEST non-failed pack (same "latest wins" rule as the Stage A
+  // strength merge below), never on lifecycle. Values: strong |
+  // moderate | weak (weak includes the engine's pre-assessment
+  // "insufficient", matching resolveStrength's display collapse on the
+  // list). Implemented as an id pre-filter so pagination counts stay
+  // correct.
+  const strengthParam = sp.get("strength");
+  if (
+    strengthParam === "strong" ||
+    strengthParam === "moderate" ||
+    strengthParam === "weak"
+  ) {
+    const { data: strengthPacks } = await sb
+      .from("evidence_packs")
+      .select("dispute_id, created_at, overall:pack_json->case_strength->>overall")
+      .eq("shop_id", shopId)
+      .not("status", "in", "(failed,queued,building)")
+      .order("created_at", { ascending: false });
+    const latestOverall = new Map<string, string | null>();
+    for (const p of strengthPacks ?? []) {
+      if (!p.dispute_id || latestOverall.has(p.dispute_id)) continue;
+      latestOverall.set(p.dispute_id, (p as { overall?: string | null }).overall ?? null);
+    }
+    const matchingIds: string[] = [];
+    for (const [id, overall] of latestOverall) {
+      const matches =
+        strengthParam === "weak"
+          ? overall === "weak" || overall === "insufficient"
+          : overall === strengthParam;
+      if (matches) matchingIds.push(id);
+    }
+    // Empty match set → impossible-id filter so the rest of the flow
+    // (pagination shape, aggregates) stays uniform.
+    query = query.in(
+      "id",
+      matchingIds.length > 0
+        ? matchingIds
+        : ["00000000-0000-0000-0000-000000000000"],
+    );
   }
 
   // Pagination
@@ -165,6 +265,58 @@ export async function GET(req: NextRequest) {
     .select("id", { count: "exact", head: true })
     .eq("shop_id", shopId)
     .eq("needs_attention", true);
+
+  // ── Shop-wide KPI aggregates (plan §5.1) ───────────────────────────
+  // Active / Amount-at-risk / Under-review must be shop-wide facts, not
+  // page-scoped sums that shrink under filters. Reuses the same
+  // `shopRows` scan as the attention filter above; same allow-list +
+  // dormant-inquiry rules as lib/disputes/metrics.ts. Currency rule
+  // (§13): the at-risk sum covers ONE primary currency (most frequent
+  // among active rows); other currencies are disclosed as dispute
+  // COUNTS, never mixed into the sum.
+  let activeCount = 0;
+  let underReviewCount = 0;
+  const activeRows: Array<{ amount: number; currency: string }> = [];
+  for (const r of shopRows ?? []) {
+    const row = r as Record<string, unknown>;
+    const terminal = row.closed_at != null || row.final_outcome != null;
+    if (
+      !terminal &&
+      (row.submission_state === "submitted_confirmed" ||
+        row.normalized_status === "submitted_to_bank")
+    ) {
+      underReviewCount += 1;
+    }
+    if (terminal) continue;
+    if (!isActiveNormalizedStatus(row.normalized_status as string | null)) continue;
+    if (
+      isDormantInquiry({
+        phase: row.phase as string | null,
+        due_at: row.due_at as string | null,
+        initiated_at: row.initiated_at as string | null,
+      })
+    ) {
+      continue;
+    }
+    activeCount += 1;
+    activeRows.push({
+      amount: Number(row.amount) || 0,
+      currency: String(row.currency_code ?? "USD"),
+    });
+  }
+  const currencyCounts: Record<string, number> = {};
+  for (const r of activeRows) {
+    currencyCounts[r.currency] = (currencyCounts[r.currency] ?? 0) + 1;
+  }
+  const primaryCurrency =
+    Object.entries(currencyCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "USD";
+  const amountAtRisk = activeRows
+    .filter((r) => r.currency === primaryCurrency)
+    .reduce((s, r) => s + r.amount, 0);
+  const otherCurrencyCounts: Record<string, number> = {};
+  for (const [code, n] of Object.entries(currencyCounts)) {
+    if (code !== primaryCurrency) otherCurrencyCounts[code] = n;
+  }
 
   // Merge `caseStrength` from each dispute's latest non-failed pack so the
   // list page can render the strength pill + "{N} strong signals" subtitle
@@ -204,6 +356,10 @@ export async function GET(req: NextRequest) {
       strongCount: number;
       moderateCount: number;
       supportingCount: number;
+      /** Rules-engine explanation token — the list's strength subtitle
+       *  (replaces the banned "{n} strong + {m} moderate" arithmetic;
+       *  plan §5 item 3). */
+      strengthReasonI18n?: I18nToken | null;
     }
   >();
   if (disputeIds.length > 0) {
@@ -227,6 +383,7 @@ export async function GET(req: NextRequest) {
             strongCount?: number;
             moderateCount?: number;
             supportingCount?: number;
+            strengthReasonI18n?: { key: string; params?: Record<string, string | number> } | null;
           }
         | null
         | undefined;
@@ -236,6 +393,7 @@ export async function GET(req: NextRequest) {
           strongCount: cs.strongCount ?? 0,
           moderateCount: cs.moderateCount ?? 0,
           supportingCount: cs.supportingCount ?? 0,
+          strengthReasonI18n: cs.strengthReasonI18n ?? null,
         });
       } else {
         latestForDispute.set(p.dispute_id, {
@@ -319,6 +477,7 @@ export async function GET(req: NextRequest) {
             strongCount: result.strongCount,
             moderateCount: result.moderateCount,
             supportingCount: result.supportingCount,
+            strengthReasonI18n: result.strengthReasonI18n ?? null,
           });
         } catch {
           // If the engine throws on a malformed legacy checklist, leave
@@ -328,16 +487,51 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // ── Shared presentation model (plan §3) ────────────────────────────
+  // One resolver interpretation per row: operational lifecycle, merchant
+  // attention, strength, external milestones. Batched queries inside
+  // (latest pack, checklist, rules, integration flag) — no per-row N+1.
+  const strengthOverallByDispute = new Map<string, string>();
+  for (const [id, cs] of strengthByDispute) {
+    strengthOverallByDispute.set(id, cs.overall);
+  }
+  const presentations = await gatherPresentations(
+    sb,
+    shopId,
+    (data ?? []) as unknown as DisputeRowFacts[],
+    { includeConcreteContribution: true, strengthOverallByDispute },
+  );
+
   const disputesWithStrength = (data ?? []).map((d) => ({
     ...d,
     caseStrength: strengthByDispute.get(d.id) ?? null,
+    presentation: presentations.get(d.id) ?? null,
   }));
+
+  // Merchant-action count = the size of the SAME presentation-based
+  // task set the `?attention=tasks` filter returns and the dashboard
+  // banner counts (includes approval-gate and merchant-reconnect
+  // tasks) — one definition, zero drift.
+  const merchantActionCount = taskIds.length;
 
   return NextResponse.json({
     disputes: disputesWithStrength,
     aggregates: {
-      // Shop-wide count, independent of the current filter/page.
+      // Legacy shop-wide count (includes internal failures) — kept until
+      // the UI cuts over to merchant_action_required.
       needs_attention: needsAttentionCount ?? 0,
+      // Genuine merchant tasks only (plan §5): blocking + requested
+      // attention reasons, excluding terminal and transmission-confirmed
+      // rows (stale-attention guard, §4).
+      merchant_action_required: merchantActionCount,
+      // Shop-wide KPI facts (plan §5.1) — never page-scoped.
+      active_count: activeCount,
+      under_review_count: underReviewCount,
+      amount_at_risk: amountAtRisk,
+      amount_at_risk_currency: primaryCurrency,
+      // Dispute COUNTS per non-primary currency (§13) — rendered as
+      // "Plus N disputes in {code}", never as currency amounts.
+      other_currency_counts: otherCurrencyCounts,
     },
     pagination: {
       page,

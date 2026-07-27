@@ -5,6 +5,10 @@ import { extractShopId } from "@/lib/middleware/extractShopId";
 import { getArgumentTemplate, getIssuerClaimText } from "@/lib/argument/templates";
 import { normalizeMode } from "@/lib/rules/normalizeMode";
 import {
+  gatherPresentations,
+  type DisputeRowFacts,
+} from "@/lib/disputes/presentation/serverFacts";
+import {
   collectedFieldsFromPack,
   reconcileChecklistWithCollectedFields,
 } from "@/lib/packs/checklistReconcile";
@@ -374,6 +378,11 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
      *  Evidence-tab window-closed banner. */
     submittedAt: row.submitted_at ?? null,
     finalOutcome: row.final_outcome ?? null,
+    // Outcome card (plan §6.2): decision date + recovered/lost amounts
+    // for the dedicated won/lost Outcome block on the Overview tab.
+    closedAt: row.closed_at ?? null,
+    outcomeAmountRecovered: row.outcome_amount_recovered ?? null,
+    outcomeAmountLost: row.outcome_amount_lost ?? null,
     // Order context — populated from pack_json. Each field can still be
     // null when the pack lacks the data (e.g. payment gateway on a
     // non-Shopify-Payments order).
@@ -901,6 +910,22 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   // the workspace UI can self-hide the section.
   const gorgiasComms = await buildGorgiasCommsBlock(sb, shopId, disputeId);
 
+  // ── Shared presentation model (plan §3) ───────────────────────────
+  // The same resolver interpretation the list and dashboard use — the
+  // detail page must never re-derive lifecycle/attention/strength.
+  const presentationMap = await gatherPresentations(
+    sb,
+    shopId,
+    [row as unknown as DisputeRowFacts],
+    {
+      includeConcreteContribution: true,
+      strengthOverallByDispute: caseStrength?.overall
+        ? new Map([[disputeId, caseStrength.overall]])
+        : undefined,
+    },
+  );
+  const presentation = presentationMap.get(disputeId) ?? null;
+
   return NextResponse.json({
     dispute,
     pack,
@@ -909,6 +934,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     rebuttalDraft,
     rebuttalOutdated,
     presentationStatus,
+    // Shared presentation model — lifecycle/attention/strength/
+    // milestones resolved by lib/disputes/presentation (identical to
+    // the list + dashboard interpretation).
+    presentation,
     evidenceLineItems,
     submissionSummary,
     // Derived first-class attachment inventory for the dispute Review

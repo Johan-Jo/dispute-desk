@@ -6,15 +6,16 @@ import type { CSSProperties } from "react";
 import { Icon } from "@shopify/polaris";
 import { ChevronRightIcon } from "@shopify/polaris-icons";
 import { withShopParams } from "@/lib/withShopParams";
+import { STRENGTH_CHIP } from "@/lib/disputes/presentation/uiTokens";
+import { attentionSectionForAttention } from "@/lib/disputes/attentionDeepLink";
 import {
   figmaCaseStrength,
   figmaDueDate,
-  figmaNextAction,
+  rowPrimaryState,
   figmaOutcome,
   figmaReviewChip,
-  figmaRowChrome,
+  rowChromeV2,
   figmaStatus,
-  figmaStrengthDetail,
   formatCurrency,
   orderLabel,
   translateReason,
@@ -79,18 +80,13 @@ function caseStrengthPillColors(s: FigmaCaseStrength, t: Translate): {
   color: string;
   label: string;
 } {
-  if (s === "strong") return { bg: "#D1FAE5", color: "#065F46", label: t("disputes.strengthStrong") };
-  if (s === "moderate") return { bg: "#FEF3C7", color: "#92400E", label: t("disputes.strengthModerate") };
-  return { bg: "#FEE2E2", color: "#991B1B", label: t("disputes.strengthWeak") };
-}
-
-/** Subtitle color tied to strength so the detail-line ("2 strong
- *  signals" / "1 strong + 2 moderate" / "Insufficient evidence")
- *  reads in the same red/yellow/green pattern as the detail-page hero. */
-function caseStrengthSubtitleColor(s: FigmaCaseStrength): string {
-  if (s === "strong") return "#065F46";
-  if (s === "moderate") return "#92400E";
-  return "#991B1B";
+  // Colors come from the SHARED STRENGTH_CHIP so the list matches the
+  // detail page. Weak is GREY (not red) — "weakness is never alarming"
+  // (uiTokens.ts); the list previously hardcoded a red weak pill while
+  // the detail showed a calm grey "Limited evidence" for the same case.
+  if (s === "strong") return { ...STRENGTH_CHIP.strong, color: STRENGTH_CHIP.strong.fg, label: t("disputes.strengthStrong") };
+  if (s === "moderate") return { ...STRENGTH_CHIP.moderate, color: STRENGTH_CHIP.moderate.fg, label: t("disputes.strengthModerate") };
+  return { ...STRENGTH_CHIP.weak, color: STRENGTH_CHIP.weak.fg, label: t("disputes.strengthWeak") };
 }
 
 function outcomePillColors(o: FigmaOutcome, t: Translate): {
@@ -100,6 +96,7 @@ function outcomePillColors(o: FigmaOutcome, t: Translate): {
 } {
   if (o === "won") return { bg: "#D1FAE5", color: "#065F46", label: t("disputes.outcomeWon") };
   if (o === "lost") return { bg: "#FEE2E2", color: "#991B1B", label: t("disputes.outcomeLost") };
+  if (o === "closed") return { bg: "#F1F2F3", color: "#4B5563", label: t("disputes.outcomeClosed") };
   return { bg: "#E1E3E5", color: "#6D7175", label: t("disputes.outcomePending") };
 }
 
@@ -162,18 +159,22 @@ export function DesktopDisputesTable({
       {/* Rows */}
       <div>
         {disputes.map((d, rowIdx) => {
+          // Attention rows deep-link to the relevant spotlighted section
+          // (e.g. a Gorgias-review row lands on the Evidence tab's review
+          // card), so clicking a search result forwards the merchant to
+          // exactly what needs their action.
+          const rowSection = attentionSectionForAttention(d.presentation?.attention);
           const detailHref = withShopParams(
-            `/app/disputes/${d.id}`,
+            rowSection ? `/app/disputes/${d.id}?section=${rowSection}` : `/app/disputes/${d.id}`,
             searchParams ?? new URLSearchParams(),
           );
           const status = figmaStatus(d);
           const strength = figmaCaseStrength(d);
           const reviewChip = figmaReviewChip(d, t);
-          const detail = figmaStrengthDetail(d, t);
           const outcome = figmaOutcome(d);
           const due = figmaDueDate(d, t, dateLocale);
-          const next = figmaNextAction(d, t);
-          const chrome = figmaRowChrome(d);
+          const next = rowPrimaryState(d, t);
+          const chrome = rowChromeV2(d);
 
           const rowStyle: CSSProperties = {
             display: "grid",
@@ -257,34 +258,19 @@ export function DesktopDisputesTable({
                 </span>
               </div>
 
-              {/* Case strength + subtitle + review-decision chip */}
-              <div style={{ minWidth: 0 }}>
+              {/* Case strength + review-decision chip — stacked: the
+                  decision chip (e.g. "Scheduled") sits BELOW the strength
+                  pill, not to its right. */}
+              <div style={{ minWidth: 0, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
                 {strength ? (
-                  <>
-                    <span
-                      style={{
-                        ...PILL_STYLE,
-                        ...caseStrengthPillColors(strength, t),
-                      }}
-                    >
-                      {caseStrengthPillColors(strength, t).label}
-                    </span>
-                    {detail && (
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: caseStrengthSubtitleColor(strength),
-                          marginTop: 4,
-                          lineHeight: 1.4,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {detail}
-                      </div>
-                    )}
-                  </>
+                  <span
+                    style={{
+                      ...PILL_STYLE,
+                      ...caseStrengthPillColors(strength, t),
+                    }}
+                  >
+                    {caseStrengthPillColors(strength, t).label}
+                  </span>
                 ) : (
                   <span style={{ fontSize: 14, color: "#6D7175" }}>—</span>
                 )}
@@ -294,7 +280,6 @@ export function DesktopDisputesTable({
                       ...PILL_STYLE,
                       background: reviewChip.bg,
                       color: reviewChip.color,
-                      marginTop: strength ? 4 : 0,
                       display: "inline-flex",
                     }}
                   >
@@ -303,19 +288,39 @@ export function DesktopDisputesTable({
                 )}
               </div>
 
-              {/* Next action */}
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: "#005BD3",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  minWidth: 0,
-                }}
-              >
-                {next}
+              {/* Status & next step — two lines: primary operational
+                  lifecycle label + secondary responsibility copy (never
+                  an imperative). Plan §5. */}
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "#202223",
+                    lineHeight: 1.4,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {next.label}
+                </div>
+                {next.sub ? (
+                  <div
+                    style={{
+                      fontSize: 11.5,
+                      color: "#6D7175",
+                      marginTop: 2,
+                      lineHeight: 1.4,
+                      overflow: "hidden",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                    }}
+                  >
+                    {next.sub}
+                  </div>
+                ) : null}
               </div>
 
               {/* Amount */}

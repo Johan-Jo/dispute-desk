@@ -6,6 +6,19 @@
 import type { ChecklistItemV2, SubmissionReadiness, WaivedItemRecord, WaiveReason } from "@/lib/types/evidenceItem";
 import type { CaseStrengthResult, WhyWinsResult, RiskResult, ImprovementSignal, NextAction, MissingItemWithContext } from "@/lib/argument/types";
 import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
+import type { DisputePresentation } from "@/lib/disputes/presentation/types";
+
+/** Canonical tab indices for the dispute-detail workspace. Order per
+ *  reviewer direction 2026-07-24 (supersedes plan §6.0): Overview →
+ *  Evidence → Review and Forward (the review/forward step sits
+ *  rightmost, as the last step of the flow). ALWAYS use these
+ *  constants — never raw numbers — so a future reorder is a one-line
+ *  change. */
+export const TAB_INDEX = {
+  overview: 0,
+  evidence: 1,
+  reviewForward: 2,
+} as const;
 
 export type { ChecklistItemV2, SubmissionReadiness, WaivedItemRecord, WaiveReason };
 export type { CaseStrengthResult, WhyWinsResult, RiskResult, ImprovementSignal, NextAction, MissingItemWithContext };
@@ -88,6 +101,11 @@ export interface WorkspaceDispute {
    *  Drives the date in the Evidence-tab window-closed banner. */
   submittedAt: string | null;
   finalOutcome: string | null;
+  /** Outcome card (plan §6.2): decision date + amounts for the
+   *  dedicated won/lost Outcome block on the Overview tab. */
+  closedAt?: string | null;
+  outcomeAmountRecovered?: number | null;
+  outcomeAmountLost?: number | null;
   /** Order-context fields extracted from `pack_json.sections` by
    *  `deriveOrderContext`. Populates the Case Details table on the
    *  embedded Review & Submit tab so it matches the PDF rendering.
@@ -284,6 +302,10 @@ export interface WorkspaceData {
    *  Overview hero copy, the timeline active step, and the Submission
    *  Summary panel's tense. Plan v2. */
   presentationStatus: PresentationStatus;
+  /** Shared presentation model (lib/disputes/presentation) — the same
+   *  lifecycle/attention/strength interpretation the list and dashboard
+   *  use. The detail page must never re-derive these dimensions. */
+  presentation?: DisputePresentation | null;
   /** Per-row dispute-detail view-model from `deriveEvidenceLineItems`.
    *  Single source of truth for every UI surface; never duplicated. */
   evidenceLineItems: EvidenceLineItem[];

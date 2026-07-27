@@ -678,22 +678,25 @@ describe("Test 11 — \"Strong evidence is included\" only renders when strong b
   });
 });
 
-describe("Test 12 — \"submitted to card network\" never appears for SAVED_TO_SHOPIFY / AWAITING_*", () => {
-  it("hero copy gates card-network wording on presentationStatus", async () => {
-    // The detailed regex assertions over every i18n entry live in
-    // disputeDetailCopy.test.ts. Here we pin the contract: the title
-    // family used for SAVED_TO_SHOPIFY and AWAITING_SHOPIFY_AUTO_SUBMISSION
-    // (`saved.*` / `awaiting.*`) must NOT match the card-network regex.
+describe("Test 12 — \"submitted to card network\" never appears for saved-state hero copy", () => {
+  it("hero copy for the saved lifecycle gates card-network wording", async () => {
+    // The legacy strength-flavored `hero.title.saved/awaiting` families
+    // were DELETED (design-alignment audit: they carried the banned
+    // "Strong case saved to Shopify" headlines). The saved-state hero
+    // now comes from `presentation.hero.saved_to_shopify.*` — pin the
+    // same card-network gate on the live keys.
     const mod = await import("@/messages/en.json");
-    const hero = mod.disputes.overview.hero;
     const bannedRe = /(submitted|sent) to (the |your )?(bank|card network)/i;
-    for (const family of ["saved", "awaiting"] as const) {
-      for (const copy of Object.values(hero.title[family])) {
-        expect(copy).not.toMatch(bannedRe);
-      }
+    const heroV2 = (mod as unknown as {
+      presentation: { hero: Record<string, { title?: string; message?: string }> };
+    }).presentation.hero;
+    for (const key of ["building_evidence", "monitoring", "pack_prepared", "saved_to_shopify"]) {
+      expect(heroV2[key]?.title ?? "").not.toMatch(bannedRe);
+      expect(heroV2[key]?.message ?? "").not.toMatch(bannedRe);
     }
-    expect(hero.subtitle.savedNoDate).not.toMatch(bannedRe);
-    expect(hero.subtitle.awaitingForward).not.toMatch(bannedRe);
+    const legacy = mod.disputes.overview.hero;
+    expect(legacy.subtitle.savedNoDate).not.toMatch(bannedRe);
+    expect(legacy.subtitle.awaitingForward).not.toMatch(bannedRe);
   });
 });
 

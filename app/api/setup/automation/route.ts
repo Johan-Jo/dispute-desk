@@ -157,5 +157,25 @@ export async function POST(req: NextRequest) {
     const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
+
+  // Keep the shop-level auto-save GATE in lockstep with the per-pack save
+  // mode (decision 2026-07-27). The pipeline's auto-save gate reads
+  // `shop_settings.auto_save_enabled`; the Settings radio reads the pack
+  // rule modes. Previously these two stores could disagree — all pack
+  // rules on "auto" while auto_save_enabled stayed false — so the UI
+  // showed "Save automatically" while every dispute parked for approval.
+  // The save mode is the single source of truth: any pack on "review"
+  // (or no packs) means the merchant wants to gate saves → false;
+  // all-auto → true.
+  const modeValues = Object.values(packModes);
+  const allAuto = modeValues.length > 0 && modeValues.every((m) => m === "auto");
+  const { error: gateErr } = await sb
+    .from("shop_settings")
+    .update({ auto_save_enabled: allAuto })
+    .eq("shop_id", shopId);
+  if (gateErr) {
+    return NextResponse.json({ error: gateErr.message }, { status: 500 });
+  }
+
   return NextResponse.json({ ok: true });
 }

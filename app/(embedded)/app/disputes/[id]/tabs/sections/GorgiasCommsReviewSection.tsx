@@ -137,11 +137,23 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const spotlightApplied = useRef(false);
   const [spotlight, setSpotlight] = useState(false);
-  const isSpotlightTarget =
+  // Two triggers, same effect: (1) the `?section=gorgias-comms` deep-link
+  // (from the evidence-ready email / dashboard banner / list row), and
+  // (2) the in-page `focusSection` signal (the Overview "Review
+  // communication" CTA), which carries a nonce so a repeat click re-pulses.
+  const urlTarget =
     searchParams.get("section") === "gorgias-comms" && comms !== null;
+  const focusSection = workspace.clientState.focusSection;
+  const inPageNonce =
+    focusSection?.key === "gorgias-comms" && comms !== null
+      ? focusSection.nonce
+      : null;
   useEffect(() => {
-    if (spotlightApplied.current || !isSpotlightTarget || !cardRef.current) return;
-    spotlightApplied.current = true;
+    // URL deep-link fires once; the in-page nonce re-fires on each change.
+    const isUrl = urlTarget && !spotlightApplied.current;
+    const isInPage = inPageNonce != null;
+    if ((!isUrl && !isInPage) || !cardRef.current) return;
+    if (isUrl) spotlightApplied.current = true;
     const el = cardRef.current;
     // Wait a tick so the Evidence tab panel is painted before scrolling.
     const scrollTimer = window.setTimeout(() => {
@@ -154,7 +166,8 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
       window.clearTimeout(scrollTimer);
       window.clearTimeout(fadeTimer);
     };
-  }, [isSpotlightTarget]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlTarget, inPageNonce]);
 
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);

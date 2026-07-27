@@ -6,15 +6,16 @@ import type { CSSProperties } from "react";
 import { Icon } from "@shopify/polaris";
 import { ChevronRightIcon } from "@shopify/polaris-icons";
 import { withShopParams } from "@/lib/withShopParams";
+import { STRENGTH_CHIP } from "@/lib/disputes/presentation/uiTokens";
+import { attentionSectionForAttention } from "@/lib/disputes/attentionDeepLink";
 import {
   figmaCaseStrength,
   figmaDueDate,
-  figmaNextAction,
+  rowPrimaryState,
   figmaOutcome,
-  figmaRowChrome,
+  rowChromeV2,
   figmaReviewChip,
   figmaStatus,
-  figmaStrengthDetail,
   formatCurrency,
   orderLabel,
   translateReason,
@@ -70,17 +71,10 @@ function caseStrengthPillColors(s: FigmaCaseStrength, t: Translate): {
   color: string;
   label: string;
 } {
-  if (s === "strong") return { bg: "#D1FAE5", color: "#065F46", label: t("disputes.strengthStrong") };
-  if (s === "moderate") return { bg: "#FEF3C7", color: "#92400E", label: t("disputes.strengthModerate") };
-  return { bg: "#FEE2E2", color: "#991B1B", label: t("disputes.strengthWeak") };
-}
-
-/** Subtitle color tied to strength (red/yellow/green pattern, same
- *  as the detail page). */
-function caseStrengthSubtitleColor(s: FigmaCaseStrength): string {
-  if (s === "strong") return "#065F46";
-  if (s === "moderate") return "#92400E";
-  return "#991B1B";
+  // Shared STRENGTH_CHIP colors — weak is grey, not red (matches detail).
+  if (s === "strong") return { ...STRENGTH_CHIP.strong, color: STRENGTH_CHIP.strong.fg, label: t("disputes.strengthStrong") };
+  if (s === "moderate") return { ...STRENGTH_CHIP.moderate, color: STRENGTH_CHIP.moderate.fg, label: t("disputes.strengthModerate") };
+  return { ...STRENGTH_CHIP.weak, color: STRENGTH_CHIP.weak.fg, label: t("disputes.strengthWeak") };
 }
 
 function outcomePillColors(o: FigmaOutcome, t: Translate): {
@@ -90,6 +84,7 @@ function outcomePillColors(o: FigmaOutcome, t: Translate): {
 } {
   if (o === "won") return { bg: "#D1FAE5", color: "#065F46", label: t("disputes.outcomeWon") };
   if (o === "lost") return { bg: "#FEE2E2", color: "#991B1B", label: t("disputes.outcomeLost") };
+  if (o === "closed") return { bg: "#F1F2F3", color: "#4B5563", label: t("disputes.outcomeClosed") };
   return { bg: "#E1E3E5", color: "#6D7175", label: t("disputes.outcomePending") };
 }
 
@@ -106,21 +101,31 @@ export function MobileDisputeCard({
   numberLocale,
   t,
 }: Props) {
+  const rowSection = attentionSectionForAttention(d.presentation?.attention);
   const detailHref = withShopParams(
-    `/app/disputes/${d.id}`,
+    rowSection ? `/app/disputes/${d.id}?section=${rowSection}` : `/app/disputes/${d.id}`,
     searchParams ?? new URLSearchParams(),
   );
   const status = figmaStatus(d);
   const strength = figmaCaseStrength(d);
   const reviewChip = figmaReviewChip(d, t);
-  const detail = figmaStrengthDetail(d, t);
   const outcome = figmaOutcome(d);
   const due = figmaDueDate(d, t, dateLocale);
-  const next = figmaNextAction(d, t);
-  const chrome = figmaRowChrome(d);
+  const next = rowPrimaryState(d, t);
+  const chrome = rowChromeV2(d);
   // approved / conceded rows are routed out of the actionable statuses by
   // figmaStatus, so this stays correct without an extra guard.
-  const isActionable = status === "action-needed" || status === "needs-review";
+  // Prominence follows MERCHANT ATTENTION (genuine tasks only), never
+  // "every active dispute" (plan §5). Legacy status fallback for rows
+  // without a presentation.
+  // A recorded review decision calms the card (matches the detail page +
+  // rowChromeV2) — an in_review/approved/conceded dispute is not an open
+  // task even if the underlying attention gate is still technically open.
+  const isActionable = d.review_state
+    ? false
+    : d.presentation
+      ? d.presentation.needsMerchantAction
+      : status === "action-needed" || status === "needs-review";
 
   const cardStyle: CSSProperties = {
     background: chrome.bgColor ?? "#ffffff",
@@ -152,29 +157,16 @@ export function MobileDisputeCard({
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           {strength && (
-            <div style={{ marginBottom: 8 }}>
+            <div style={{ marginBottom: 8, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
               <span style={{ ...PILL_STYLE, ...caseStrengthPillColors(strength, t) }}>
                 {caseStrengthPillColors(strength, t).label}
               </span>
-              {detail && (
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: caseStrengthSubtitleColor(strength),
-                    marginTop: 4,
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {detail}
-                </div>
-              )}
               {reviewChip && (
                 <span
                   style={{
                     ...PILL_STYLE,
                     background: reviewChip.bg,
                     color: reviewChip.color,
-                    marginTop: 6,
                     display: "inline-flex",
                   }}
                 >
@@ -301,9 +293,10 @@ export function MobileDisputeCard({
         </span>
       </div>
 
-      {/* Next action — full-width primary button on actionable rows,
-          subdued secondary text otherwise. Same destination as the
-          card link; this is purely a visual-prominence signal. */}
+      {/* Status & next step — primary treatment only when a genuine
+          merchant task exists; calm secondary treatment for routine
+          DisputeDesk work. Two lines: lifecycle label + responsibility
+          copy (plan §5). */}
       <div
         style={{
           paddingTop: 12,
@@ -323,8 +316,21 @@ export function MobileDisputeCard({
             textAlign: "center",
           }}
         >
-          {next}
+          {next.label}
         </div>
+        {next.sub ? (
+          <div
+            style={{
+              fontSize: 12,
+              color: "#6D7175",
+              marginTop: 6,
+              lineHeight: 1.4,
+              textAlign: "center",
+            }}
+          >
+            {next.sub}
+          </div>
+        ) : null}
       </div>
     </Link>
   );

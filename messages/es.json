@@ -259,9 +259,7 @@
     "operationalSummary": "Operaciones de disputas",
     "attentionCount": "{count} necesitan atención",
     "actionNeeded": "Acción requerida",
-    "readyToSubmit": "Listo para enviar",
     "savedToShopify": "Guardado en Shopify",
-    "waitingOnIssuer": "Esperando al emisor",
     "closedInPeriod": "Cerrados",
     "reviewActionNeeded": "Revisar {count} casos que necesitan acción",
     "submitReady": "Enviar {count} casos listos",
@@ -276,7 +274,7 @@
     "daysValue": "{days}d",
     "statusDistribution": "Distribución de estados",
     "outcomeBreakdown": "Desglose de resultados",
-    "recentActivity": "Actividad de automatización y envío",
+    "recentActivity": "Actividad de DisputeDesk",
     "recentActivityEmpty": "La actividad aparecerá aquí cuando las disputas comiencen a sincronizarse — verás compilaciones de paquetes, envíos y cambios de estado.",
     "statusCol": "Estado",
     "submissionCol": "Envío",
@@ -307,14 +305,11 @@
     "dueInDays": "En {count} días",
     "dueToday": "Vence hoy",
     "overdue": "Overdue",
-    "attentionBannerMessage": "{count, plural, =1 {# disputa necesita atención} other {# disputas necesitan atención}}",
-    "attentionBannerCta": "Revisar ahora",
-    "actionNeededDesc": "Requiere revisión manual",
-    "readyToSubmitDesc": "Pruebas completas",
-    "waitingOnIssuerDesc": "Enviado al banco",
-    "closedInPeriodDesc": "Casos históricos",
+    "attentionBannerMessage": "{count, plural, =1 {# disputa necesita su atención} other {# disputas necesitan su atención}}",
+    "attentionBannerCta": "Revisar disputas",
+    "actionNeededDesc": "Necesita su intervención",
+    "closedInPeriodDesc": "Resultado recibido",
     "reviewCases": "Revisar casos",
-    "submitNow": "Enviar ahora",
     "insightsTitle": "Insights",
     "insightsSubtitle": "Tasa de éxito y categorías de disputas",
     "cbShort": "cc",
@@ -342,7 +337,16 @@
     "revenueRecovered": "Ingresos recuperados",
     "avgResponseTime": "Tiempo medio de respuesta",
     "winRateTrend": "Tendencia de tasa de éxito",
-    "disputeCategories": "Categorías de disputas"
+    "disputeCategories": "Categorías de disputas",
+    "attentionBannerBody": "DisputeDesk gestiona todo lo demás automáticamente.",
+    "monitoringBannerTitle": "{count, plural, =1 {DisputeDesk está supervisando # disputa activa} other {DisputeDesk está supervisando # disputas activas}}",
+    "monitoringBannerBody": "Por el momento no se requiere ninguna acción de su parte.",
+    "monitoringBannerCta": "Ver disputas activas",
+    "buildingMonitoring": "Preparación y supervisión",
+    "buildingMonitoringDesc": "DisputeDesk está trabajando",
+    "underReviewCard": "En revisión",
+    "underReviewCardDesc": "Respuesta enviada",
+    "winRateDenominatorNote": "ganadas ÷ decididas (ganadas, perdidas, aceptadas)"
   },
   "disputes": {
     "title": "Disputas",
@@ -513,7 +517,6 @@
     "autoPackTriggered": "Activado por regla: \"{name}\"",
     "moreEvidenceFileCount": "{count}/{max} archivos",
     "uploadsUnavailable": "Las cargas no están disponibles para este estado del caso.",
-    "uploadsSubmittedToBank": "La evidencia ya ha sido enviada al banco. No se pueden subir archivos adicionales para esta disputa.",
     "uploadsAvailableHint": "Las cargas solo están disponibles mientras el caso está en Revisión IA o Esperando más evidencia.",
     "orderData": "Datos del pedido",
     "fulfillmentJourney": "Trayecto de envío",
@@ -628,28 +631,22 @@
       "source": "Fuente",
       "created": "Creado"
     },
-    "kpiNeedsAction": "Requiere acción",
+    "kpiNeedsAction": "Acción del comerciante requerida",
     "kpiNeedsActionUrgent": "{count} urgentes",
     "kpiAmountAtRisk": "Monto en riesgo",
-    "kpiStrongCases": "Casos sólidos",
-    "kpiStrongCasesSub": "Listos para enviar",
-    "kpiAwaitingResponse": "Esperando respuesta",
-    "kpiAwaitingResponseSub": "Enviados al banco",
     "urgentBannerTitle": "{count} disputas urgentes requieren atención",
     "urgentBannerBody": "{amount} en riesgo — vencimiento más próximo en {days} día(s)",
     "urgentBannerResolve": "Resolver ahora",
     "urgentBannerViewAll": "Ver todas",
     "colOrderCustomer": "Pedido y cliente",
     "colCaseStrength": "Solidez del caso",
-    "colNextAction": "Siguiente acción",
+    "colNextAction": "Estado y siguiente paso",
     "colAmount": "Amount",
     "colDueDate": "Fecha de vencimiento",
     "colOutcome": "Outcome",
     "strengthStrong": "Strong",
     "strengthModerate": "Moderate",
     "strengthWeak": "Weak",
-    "strengthDetailSignals": "{count} señales sólidas",
-    "strengthDetailMixed": "{strong} sólidas + {moderate} moderadas",
     "strengthDetailInsufficient": "Evidencia insuficiente",
     "nextActionSubmitEvidence": "Enviar evidencia",
     "nextActionReview": "Revisar antes de enviar",
@@ -660,7 +657,6 @@
     "outcomeWon": "Won",
     "outcomeLost": "Lost",
     "dueTomorrow": "Tomorrow",
-    "dueSubmitted": "Submitted",
     "dueResolved": "Resolved",
     "statusDropdown": {
       "all": "Todos los estados",
@@ -668,7 +664,13 @@
       "needsReview": "Requiere revisión",
       "underReview": "En revisión",
       "submitted": "Submitted",
-      "closed": "Closed"
+      "closed": "Closed",
+      "monitoring": "Supervisión",
+      "comm": "Comunicación",
+      "saved": "Guardadas en Shopify",
+      "won": "Ganadas",
+      "lost": "Perdidas",
+      "attention": "Atención requerida"
     },
     "caseStrength": {
       "strong": "Caso sólido",
@@ -695,7 +697,10 @@
           "status": {
             "submitted": "Submitted",
             "needs_attention": "Requiere atención",
-            "in_progress": "En curso"
+            "in_progress": "En curso",
+            "won": "Ganada",
+            "lost": "Perdida",
+            "closed": "Cerrada"
           },
           "automationMode": {
             "automatic": "Automatic",
@@ -720,6 +725,11 @@
             },
             "reviewMissing": "Revisa la evidencia faltante a continuación",
             "submittedNoAction": "Enviado — no se requiere ninguna otra acción"
+          },
+          "outcomeHeadline": {
+            "won": "Disputa ganada — no se requiere ninguna acción",
+            "lost": "Disputa perdida — no se requiere ninguna acción",
+            "closed": "Disputa cerrada — no se requiere ninguna acción"
           }
         },
         "used": {
@@ -783,9 +793,9 @@
         "body": "Este caso se ha guardado en Shopify, pero Shopify aún no lo ha enviado al banco. Todavía puede añadir pruebas. Si regenera el paquete, el nuevo PDF reemplazará al que está guardado actualmente en la disputa de Shopify."
       },
       "windowClosedBanner": {
-        "title": "Enviado al banco",
-        "body": "Shopify envió las pruebas de esta disputa al banco emisor el {submittedAt}. Ya no se pueden añadir nuevos archivos al paquete de defensa dirigido al banco.",
-        "bodyNoDate": "Shopify ya ha enviado las pruebas de esta disputa al banco emisor. Ya no se pueden añadir nuevos archivos al paquete de defensa dirigido al banco."
+        "title": "Enviada a la red de tarjetas",
+        "body": "Shopify reenvió estas pruebas de la disputa a la red de tarjetas el {submittedAt}. Ya no se pueden añadir archivos nuevos al paquete de defensa dirigido al banco.",
+        "bodyNoDate": "Shopify ya reenvió estas pruebas de la disputa a la red de tarjetas. Ya no se pueden añadir archivos nuevos al paquete de defensa dirigido al banco."
       },
       "regeneratingBanner": {
         "title": "Regenerando el paquete de defensa",
@@ -853,7 +863,9 @@
     "reviewTab": {
       "chrome": {
         "loadingReview": "Cargando revisión",
-        "buildFailedBody": "No pudimos construir este paquete de evidencia. Intenta resincronizar el contracargo o regenerar el paquete desde el encabezado del caso."
+        "buildFailedBody": "No pudimos construir este paquete de evidencia. Intenta resincronizar el contracargo o regenerar el paquete desde el encabezado del caso.",
+        "noDefenceTitle": "La carta de defensa aún no se ha generado",
+        "noDefenceBody": "DisputeDesk aún no ha generado la carta de defensa dirigida al banco para esta disputa. Los detalles de inclusión de pruebas siguen disponibles abajo, y la carta aparecerá aquí cuando se genere."
       },
       "package": {
         "loadingAccessibilityLabel": "Cargando paquete de evidencia",
@@ -861,7 +873,7 @@
         "savingBody": "DisputeDesk ha aceptado tu envío y está subiendo el paquete de evidencia a Shopify. Esto suele completarse en menos de 30 segundos — este aviso se actualizará automáticamente.",
         "savedTitles": {
           "outcomePosted": "Resultado publicado",
-          "forwardedToNetwork": "Reenviado a la red de tarjetas",
+          "forwardedToNetwork": "Enviada a la red de tarjetas",
           "savedToShopify": "Guardado en Shopify"
         },
         "savedBody": {
@@ -871,7 +883,7 @@
           "closedNoDate": "El paquete de evidencia v{version} fue enviado. El contracargo ha sido cerrado por la red de tarjetas.",
           "savedWithDate": "El paquete de evidencia v{version} está guardado en Shopify ({date}). Shopify aún no lo ha reenviado a la red de tarjetas — si regeneras, el nuevo PDF reemplazará esta versión guardada de forma limpia.",
           "savedNoDate": "El paquete de evidencia v{version} está guardado en Shopify. Shopify aún no lo ha reenviado a la red de tarjetas — si regeneras, el nuevo PDF reemplazará esta versión guardada de forma limpia.",
-          "fallback": "Se ha enviado un paquete de evidencia al banco."
+          "fallback": "Se ha guardado un paquete de defensa en Shopify."
         },
         "openInShopifyAdmin": "Abrir en Shopify Admin",
         "viewPdf": "Ver PDF",
@@ -882,8 +894,8 @@
         "draftBannerBodyFinal": "El borrador v{version} se ha generado pero aún no se ha enviado a Shopify — el banco tiene actualmente la v{bankVersion}. Revísalo abajo. Si es correcto, reenvíalo a Shopify — eso reemplazará la v{bankVersion}.",
         "approveDraft": "Aprobar borrador v{version}",
         "approveVersion": "Aprobar v{version}",
-        "submitToShopify": "Enviar a Shopify",
-        "resubmitToShopify": "Reenviar a Shopify",
+        "submitToShopify": "Guardar en Shopify",
+        "resubmitToShopify": "Guardar de nuevo en Shopify",
         "moreActions": "Más acciones",
         "regenerating": "Regenerando…",
         "regenerateFromScratch": "Regenerar borrador desde cero",
@@ -906,7 +918,7 @@
         "statusLabels": {
           "draft": "Borrador",
           "stale": "Obsoleto",
-          "ready": "Listo para enviar",
+          "ready": "Lista para guardar",
           "submitted": "Enviado",
           "superseded": "Sustituido",
           "validationFailed": "Falló la validación",
@@ -953,8 +965,8 @@
           "outdated": "El paquete de evidencia cambió desde que se generó esta declaración. Regenera para incorporar las señales más recientes."
         },
         "override": {
-          "title": "¿Enviar de todos modos?",
-          "body": "Enviar antes de tener toda la evidencia crítica puede debilitar tu caso. Elige un motivo abajo para confirmar.",
+          "title": "¿Guardar de todos modos?",
+          "body": "Guardar antes de que todas las pruebas críticas estén listas puede debilitar su caso. Elija un motivo abajo para confirmar.",
           "reasonLabel": "Motivo para enviar ahora",
           "reasonPlaceholder": "Selecciona un motivo",
           "reason": {
@@ -966,7 +978,7 @@
           "noteLabel": "Nota opcional",
           "notePlaceholder": "Añade contexto para el registro de auditoría…",
           "cancel": "Cancel",
-          "confirm": "Enviar de todos modos"
+          "confirm": "Guardar de todos modos"
         }
       },
       "inclusion": {
@@ -1237,38 +1249,13 @@
       },
       "hero": {
         "title": {
-          "preSubmit": {
-            "likely_to_win": "Caso sólido para impugnar",
-            "could_win": "Revisar antes de impugnar",
-            "needs_strengthening": "Revisar antes de impugnar",
-            "hard_to_win": "Documentación completa, caso débil",
-            "covered": "Cubierto por Shopify Protect"
-          },
-          "saved": {
-            "likely_to_win": "Caso sólido guardado en Shopify",
-            "could_win": "Caso parcialmente respaldado guardado en Shopify",
-            "needs_strengthening": "Caso parcialmente respaldado guardado en Shopify",
-            "hard_to_win": "Caso débil guardado en Shopify",
-            "covered": "Cubierto por Shopify Protect"
-          },
-          "awaiting": {
-            "likely_to_win": "Caso sólido reenviado a Shopify",
-            "could_win": "Caso parcialmente respaldado reenviado a Shopify",
-            "needs_strengthening": "Caso parcialmente respaldado reenviado a Shopify",
-            "hard_to_win": "Caso débil reenviado a Shopify",
-            "covered": "Cubierto por Shopify Protect"
-          },
-          "submitted_to_network": {
-            "likely_to_win": "Caso sólido enviado a la red de tarjetas",
-            "could_win": "Caso parcialmente respaldado enviado a la red de tarjetas",
-            "needs_strengthening": "Caso parcialmente respaldado enviado a la red de tarjetas",
-            "hard_to_win": "Caso débil enviado a la red de tarjetas",
-            "covered": "Cubierto por Shopify Protect"
-          },
           "closed": {
             "won": "Disputa ganada",
             "lost": "Disputa perdida",
             "unknown": "Disputa cerrada"
+          },
+          "preSubmit": {
+            "covered": "Cubierto por Shopify Protect"
           }
         },
         "subtitle": {
@@ -1415,11 +1402,11 @@
         "weakOrInsufficient": "Recomendación: Supervise este caso. Considere reforzar las pruebas para disputas futuras."
       },
       "notSubmitted": {
-        "strong": "Recomendación: Envíe ahora — sus pruebas son lo suficientemente sólidas para defender este cargo.",
-        "moderateWithMissing": "Recomendación: Puede enviar, pero agregar {label} mejoraría significativamente sus probabilidades.",
-        "moderateNoMissing": "Recomendación: Puede enviar ahora, pero algunas pruebas adicionales mejorarían sus probabilidades.",
-        "weakWithMissing": "Recomendación: Agregue {label} antes de enviar — actualmente el caso difícilmente se ganará tal como está.",
-        "weakNoMissing": "Recomendación: Refuerce las pruebas antes de enviar — actualmente el caso difícilmente se ganará tal como está."
+        "strong": "Recomendación: Sus pruebas son lo bastante sólidas para defender este cargo. DisputeDesk las guardará en Shopify según su configuración.",
+        "moderateWithMissing": "Recomendación: La respuesta es defendible; añadir {label} mejoraría notablemente sus probabilidades.",
+        "moderateNoMissing": "Recomendación: La respuesta es defendible; un poco más de pruebas mejoraría sus probabilidades.",
+        "weakWithMissing": "Recomendación: Añada {label} — actualmente es poco probable ganar el caso tal como está.",
+        "weakNoMissing": "Recomendación: Refuerce las pruebas — actualmente es poco probable ganar el caso tal como está."
       },
       "helperWithDays": "{days, plural, =0 {Enviado hoy} =1 {1 día desde el envío} other {# días desde el envío}}. El banco emisor suele responder en 30–75 días.",
       "helperNoDate": "El banco emisor suele responder en 30–75 días."
@@ -1486,12 +1473,12 @@
       "no_return_initiated": "Muestra que el cliente nunca inició una devolución — fundamenta el argumento de que no se debía ningún reembolso",
       "ip_location_check": "Sitúa el pedido en la ubicación habitual del cliente — respalda que lo realizó el titular de la tarjeta",
       "device_session_consistency": "Vincula el pedido al dispositivo y la sesión conocidos del cliente — refuta alegaciones de «yo no fui»",
-      "fraud_risk_screening": "El análisis de riesgo de Shopify no detectó señales de fraude — respaldo independiente de que el pedido es legítimo",
+      "fraud_risk_screening": "El análisis de riesgo de Shopify no encontró señales de fraude — contexto de apoyo de que el pedido era legítimo",
       "order_confirmation": "Prueba que la transacción es legítima — la base de toda respuesta a una disputa",
       "shipping_tracking": "Muestra que el transportista confirmó el envío — necesario para ganar disputas de 'producto no recibido'",
       "delivery_proof": "Confirma que el cliente recibió el paquete — la evidencia más sólida contra reclamos de 'no recibido'",
-      "billing_address_match": "Compara la dirección de facturación con el pedido — crítico para disputas de fraude",
-      "avs_cvv_match": "Muestra que las verificaciones de seguridad de la tarjeta pasaron — los bancos lo consideran mucho en casos de fraude",
+      "billing_address_match": "Compara la dirección de facturación con el pedido — una señal de apoyo en disputas por fraude",
+      "avs_cvv_match": "Muestra que las comprobaciones de seguridad de la tarjeta se superaron — una señal de apoyo cuyo peso depende del motivo de la disputa y de las demás pruebas disponibles",
       "product_description": "Prueba que el producto coincidió con lo anunciado — clave para disputas de 'no coincide con la descripción'",
       "refund_policy": "Muestra que el cliente aceptó tus términos de reembolso — protege contra reclamos de arrepentimiento",
       "shipping_policy": "Documenta tus compromisos de envío — respalda disputas sobre tiempos de entrega",
@@ -1520,7 +1507,7 @@
       "tabs": {
         "overview": "Resumen",
         "evidence": "Evidencia",
-        "reviewSubmit": "Revisar y enviar"
+        "reviewSubmit": "Revisar y reenviar"
       },
       "strengthLabel": {
         "strong": "Caso sólido",
@@ -1543,10 +1530,6 @@
         "SUBSCRIPTION_CANCELED": "Suscripción cancelada",
         "UNRECOGNIZED": "Pago no reconocido",
         "fallback": "Disputa"
-      },
-      "statusPill": {
-        "submitted": "Submitted",
-        "needsAction": "Requiere acción"
       },
       "facts": {
         "amount": "Amount",
@@ -1576,7 +1559,8 @@
         "stateConcededBody": "Elegiste no defender esta disputa. No se enviará nada.",
         "dueSuffix": " ({date})",
         "change": "Cambiar decisión",
-        "undo": "Deshacer"
+        "undo": "Deshacer",
+        "settingsHint": "Puede cambiar esto en Configuración → Guardar pruebas en Shopify."
       },
       "whatHappensNow": "Qué sucede ahora",
       "automationRule": "Regla de automatización:",
@@ -1588,10 +1572,10 @@
       },
       "changeRule": "Cambiar regla",
       "editEvidence": "Editar evidencia",
-      "submitToShopify": "Enviar a Shopify",
+      "submitToShopify": "Guardar en Shopify",
       "viewInShopify": "Ver en el panel de Shopify",
       "addMissingEvidence": "Añadir evidencia faltante",
-      "submitAnyway": "Enviar de todos modos",
+      "submitAnyway": "Guardar de todos modos",
       "autoSubmitPausedTitle": "Envío automático en pausa — requiere tu revisión",
       "autoSubmitPausedBody": "DisputeDesk construye tu caso automáticamente, pero solo envía cuando el paquete cumple tu umbral de envío automático. Este paquete no alcanzó el umbral, así que lo detuvimos y te lo entregamos.",
       "whyPrefix": "Why:",
@@ -1614,7 +1598,8 @@
       "retryHelp": "Intenta reconstruir. Si sigue fallando, contacta a soporte y haz referencia a esta disputa.",
       "retryBuild": "Reintentar construcción",
       "setUpPolicies": "Configura políticas para casos futuros",
-      "trackingCarrierFallback": "Transportista"
+      "trackingCarrierFallback": "Transportista",
+      "viewInShopifyUnavailable": "No hay un enlace directo a esta disputa disponible con los datos actuales."
     },
     "evidenceTabExtra": {
       "buildFailedTitle": "Falló la construcción del paquete de evidencia",
@@ -1770,8 +1755,8 @@
         "title": "Tu paquete de defensa está desactualizado",
         "body": "Cambiaste la evidencia de comunicación después de generar el paquete. Regenéralo para incluir tus mensajes aprobados.",
         "cta": "Regenerar paquete",
-        "windowClosedTitle": "Ya enviado al banco",
-        "windowClosedBody": "Aprobaste nueva evidencia de comunicación, pero Shopify ya reenvió esta disputa al banco emisor: el paquete de defensa ya no se puede modificar.",
+        "windowClosedTitle": "Ya enviada a la red de tarjetas",
+        "windowClosedBody": "Aprobó nuevas pruebas de comunicación, pero la respuesta ya se envió a la red de tarjetas — el paquete de defensa ya no puede modificarse.",
         "notSavedTitle": "Tus mensajes aprobados se incluirán",
         "notSavedBody": "Has aprobado mensajes de soporte como evidencia. Se añadirán automáticamente a tu paquete de defensa cuando lo generes y lo envíes; no necesitas hacer nada más."
       },
@@ -1814,7 +1799,7 @@
         "editExplanation": "Editar explicación",
         "saveExplanation": "Guardar explicación",
         "cancel": "Cancelar",
-        "approvedBadge": "Aprobado",
+        "approvedBadge": "Aprobado para inclusión",
         "proposedBadge": "Propuesto",
         "needsReapprovalBadge": "Requiere nueva aprobación",
         "truncatedNote": "(mensaje acortado)"
@@ -1853,7 +1838,17 @@
     "signalLabelValue": {
       "refundIssued": "Prueba de que el reembolso ya fue emitido",
       "noRefundOwed": "Prueba de que no correspondía ningún reembolso (el cliente nunca devolvió los productos)"
-    }
+    },
+    "kpiActiveDisputes": "Disputas activas",
+    "kpiActiveDisputesSub": "Gestionadas automáticamente",
+    "kpiAmountAtRiskSub": "En disputas activas",
+    "kpiUnderReview": "En revisión",
+    "kpiUnderReviewSub": "Respuestas enviadas",
+    "dueSent": "Enviada {date}",
+    "strengthFilterAny": "Cualquier solidez de pruebas",
+    "kpiAmountAtRiskOther": "Más disputas en otras monedas: {list}",
+    "outcomeClosed": "Cerrada",
+    "urgentBannerBodyOverdue": "{amount} en riesgo — el plazo más próximo ya venció"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "El banco no puede procesar",
@@ -2128,7 +2123,7 @@
     "headerDeadlineUrgent": "Plazo próximo — responde antes del {date}",
     "headerSubmittedBanner": "Evidencia enviada correctamente",
     "ctaAddRequired": "Añadir evidencia requerida",
-    "ctaSubmit": "Enviar a Shopify",
+    "ctaSubmit": "Guardar en Shopify",
     "ctaRetrySubmit": "Reintentar envío",
     "ctaOpenShopify": "Abrir en el panel de Shopify",
     "builderRequiredTitle": "Evidencia requerida",
@@ -2644,7 +2639,32 @@
         "confirm": "Desconectar",
         "cancel": "Cancelar"
       }
-    }
+    },
+    "disputeHandling": {
+      "title": "Gestión de disputas",
+      "help": "DisputeDesk recopila pruebas automáticamente, arma el paquete, supervisa actualizaciones y aplica el motor de reglas a cada disputa. Estas preferencias controlan cómo sigue ese trabajo y cómo llega a Shopify.",
+      "involvementTitle": "Su participación",
+      "involvementDesc": "Elija qué tan de cerca quiere seguir las disputas. DisputeDesk prepara y supervisa cada respuesta en cualquiera de las opciones.",
+      "handsOffTitle": "Automático",
+      "recommendedBadge": "Recomendado",
+      "handsOffDesc": "Gestionar las disputas automáticamente y notificarme solo cuando mi atención sea genuinamente necesaria.",
+      "stayTitle": "Mantenerme involucrado",
+      "stayDesc": "Mostrarme actualizaciones de progreso relevantes y oportunidades para fortalecer disputas, incluidas sugerencias de comunicación con clientes.",
+      "involvementNote": "Ambas opciones usan la misma recopilación de pruebas, reglas y preparación de respuestas. Esta preferencia cambia lo que usted ve — no la defensa producida.",
+      "savingTitle": "Guardar pruebas en Shopify",
+      "savingDesc": "Elija si DisputeDesk puede guardar automáticamente los paquetes de pruebas elegibles o debe esperar su aprobación. Es una salvaguarda operativa, no una preferencia de notificación.",
+      "autoTitle": "Guardar automáticamente",
+      "autoDesc": "DisputeDesk guarda automáticamente los paquetes de pruebas elegibles en Shopify después de superar todas las comprobaciones de calidad y seguridad configuradas.",
+      "autoNote": "Aún puede revisar el paquete en DisputeDesk. Guardar pruebas en Shopify no confirma por sí solo que la respuesta se haya enviado a la red de tarjetas.",
+      "approveTitle": "Requerir mi aprobación antes de guardar",
+      "approveDesc": "DisputeDesk prepara y supervisa la respuesta, pero espera su aprobación antes de guardar el primer paquete de pruebas en Shopify.",
+      "mixedNote": "Algunos tipos de disputa usan actualmente modos diferentes. Elegir una opción aquí la aplica a todos los tipos.",
+      "upgradeNote": "Gestionar los modos de guardado requiere un plan que incluya reglas de automatización.",
+      "saved": "Preferencias de gestión de disputas guardadas"
+    },
+    "notifApprovalRequired": "Aprobación requerida",
+    "notifApprovalRequiredDesc": "Reciba un correo cuando un paquete de pruebas espere su aprobación antes de poder guardarse en Shopify.",
+    "notifApprovalRequiredLock": "Obligatorio para que no se pierda aprobaciones ni fechas límite de respuesta."
   },
   "connect": {
     "title": "Connection Readiness",
@@ -2898,7 +2918,7 @@
         "dashboardAttentionTitle": "Dónde aparecen las disputas urgentes",
         "dashboardAttentionDesc": "Cuando una disputa necesita tu acción inmediata — plazo del banco próximo, evidencia faltante, cualquier cosa que bloquee el envío automático — se ilumina aquí. El banner rojo muestra los conteos urgentes y enlaza directo a lo que requiere revisión.",
         "disputesKpisTitle": "Triaje de un vistazo",
-        "disputesKpisDesc": "Cuatro métricas rápidas: cuántas disputas requieren tu acción, cuánto dinero está en riesgo, cuántos casos sólidos están listos para enviar y cuántos están ya con el banco esperando su decisión.",
+        "disputesKpisDesc": "Cuatro tarjetas resumen sus disputas: disputas activas en gestión, el importe en riesgo, casos que realmente necesitan su acción y respuestas en revisión en la red de tarjetas.",
         "disputesUrgentBannerTitle": "Los más urgentes primero",
         "disputesUrgentBannerDesc": "Las disputas con vencimiento en las próximas 48 horas aparecen aquí en rojo. 'Resolver ahora' te lleva directo al caso más apremiante para que no pierdas un plazo.",
         "detailHeaderTitle": "Todo de un vistazo",
@@ -2910,7 +2930,7 @@
         "detailEvidenceTabTitle": "Añadir u omitir evidencia",
         "detailEvidenceTabDesc": "La pestaña Evidencia es donde subes extras (fotos, acuerdos firmados, registros de chat con el cliente) u omites elementos que no puedes proporcionar. Cada campo tiene una nota 'por qué importa' que explica cómo afecta tus probabilidades de ganar.",
         "detailReviewTabTitle": "Revisa lo que vas a enviar",
-        "detailReviewTabDesc": "Revisar y enviar muestra el paquete completo de evidencia que DisputeDesk enviará a Shopify, más una etiqueta de preparación: verde Listo, ámbar Riesgoso (caso débil), rojo Bloqueado (evidencia requerida faltante). Si tu regla de automatización para este tipo de disputa está en Automático, DisputeDesk envía sin esperar; si está en Revisar, la disputa se queda aquí hasta que hagas clic en Enviar.",
+        "detailReviewTabDesc": "Revisar y reenviar muestra el paquete completo de evidencia que DisputeDesk enviará a Shopify, más una etiqueta de preparación: verde Listo, ámbar Riesgoso (caso débil), rojo Bloqueado (evidencia requerida faltante). Si tu regla de automatización para este tipo de disputa está en Automático, DisputeDesk envía sin esperar; si está en Revisar, la disputa se queda aquí hasta que hagas clic en Enviar.",
         "detailSubmitButtonTitle": "Envía cuando estés listo",
         "detailSubmitButtonDesc": "Este botón envía el paquete a Shopify. Después de enviar, esta misma pestaña se convierte en un resumen de 'lo que se envió' para que veas exactamente qué recibió Shopify y puedas rastrear la respuesta del banco."
       },
@@ -3117,7 +3137,7 @@
       },
       "afterSaving": {
         "title": "Qué sucede después de guardar",
-        "body": "Después de guardar:\n\n1. La evidencia aparece en Shopify Admin: Pedidos > el pedido vinculado > Contracargo.\n2. Revise en Shopify y agregue notas.\n3. Shopify envía a la red de tarjetas — manual o automáticamente en la fecha límite.\n4. La red evalúa la evidencia.\n5. Resolución: Ganada o Perdida.\n\nDisputeDesk monitorea el estado y lo actualiza.\n\n**Filas de archivo en Shopify Admin:** Cuando la capa de evidencia en archivos está activada, las filas **Documentación de envío**, **Comunicación con el cliente**, **Documentación del servicio** y **Otra evidencia** muestran un archivo con icono de descarga — DisputeDesk sube un PDF enfocado por espacio que incluye el motivo y los datos clave de tu paquete. Tus archivos originales también permanecen como enlaces seguros etiquetados (https://disputedesk.app/e/…) dentro del texto de evidencia, así que el emisor ve tanto el resumen contextual como los archivos originales. Las filas **Política de reembolso** y **Política de cancelación** son reason-aware y solo se renderizan en ciertos motivos de disputa; hasta verificarlo por familia, esos archivos viajan como enlaces etiquetados. Cuando la capa está desactivada, todos los archivos viajan solo como enlaces. Usa **Revisar y enviar** aquí para previsualizar la carga útil exacta."
+        "body": "Después de guardar:\n\n1. La evidencia aparece en Shopify Admin: Pedidos > el pedido vinculado > Contracargo.\n2. Revise en Shopify y agregue notas.\n3. Shopify envía a la red de tarjetas — manual o automáticamente en la fecha límite.\n4. La red evalúa la evidencia.\n5. Resolución: Ganada o Perdida.\n\nDisputeDesk monitorea el estado y lo actualiza.\n\n**Filas de archivo en Shopify Admin:** Cuando la capa de evidencia en archivos está activada, las filas **Documentación de envío**, **Comunicación con el cliente**, **Documentación del servicio** y **Otra evidencia** muestran un archivo con icono de descarga — DisputeDesk sube un PDF enfocado por espacio que incluye el motivo y los datos clave de tu paquete. Tus archivos originales también permanecen como enlaces seguros etiquetados (https://disputedesk.app/e/…) dentro del texto de evidencia, así que el emisor ve tanto el resumen contextual como los archivos originales. Las filas **Política de reembolso** y **Política de cancelación** son reason-aware y solo se renderizan en ciertos motivos de disputa; hasta verificarlo por familia, esos archivos viajan como enlaces etiquetados. Cuando la capa está desactivada, todos los archivos viajan solo como enlaces. Usa **Revisar y reenviar** aquí para previsualizar la carga útil exacta."
       },
       "notSubmitToNetworks": {
         "title": "DisputeDesk NO envía a redes de tarjetas",
@@ -3225,7 +3245,7 @@
         },
         "afterSaving": {
           "title": "Qué ocurre después de guardar evidencias",
-          "body": "Después de guardar evidencias desde esta app a Shopify:\n\n1. Las evidencias aparecen en Shopify Admin: ve a Pedidos → el pedido vinculado → Contracargo.\n2. Puedes añadir notas finales o ajustes en Shopify Admin.\n3. Shopify envía las evidencias a la red de tarjetas cuando haces clic en responder en Shopify Admin, o automáticamente en la fecha de vencimiento.\n4. La red de tarjetas revisa y resuelve la disputa como Ganada o Perdida.\n\nDisputeDesk actualiza el estado cuando Shopify informa la resolución.\n\n**Filas de archivo en Shopify Admin:** Cuando la capa de evidencia en archivos está activada, las filas **Documentación de envío**, **Comunicación con el cliente**, **Documentación del servicio** y **Otra evidencia** muestran un archivo con icono de descarga — DisputeDesk sube un PDF enfocado por espacio que incluye el motivo y los datos clave de tu paquete. Tus archivos originales también permanecen como enlaces seguros etiquetados (https://disputedesk.app/e/…) dentro del texto de evidencia. Las filas **Política de reembolso** y **Política de cancelación** solo se renderizan en ciertos motivos de disputa; hasta verificarlo por familia, esos archivos viajan como enlaces etiquetados. Cuando la capa está desactivada, todos los archivos viajan solo como enlaces. Usa **Revisar y enviar** aquí para previsualizar la carga útil exacta."
+          "body": "Después de guardar evidencias desde esta app a Shopify:\n\n1. Las evidencias aparecen en Shopify Admin: ve a Pedidos → el pedido vinculado → Contracargo.\n2. Puedes añadir notas finales o ajustes en Shopify Admin.\n3. Shopify envía las evidencias a la red de tarjetas cuando haces clic en responder en Shopify Admin, o automáticamente en la fecha de vencimiento.\n4. La red de tarjetas revisa y resuelve la disputa como Ganada o Perdida.\n\nDisputeDesk actualiza el estado cuando Shopify informa la resolución.\n\n**Filas de archivo en Shopify Admin:** Cuando la capa de evidencia en archivos está activada, las filas **Documentación de envío**, **Comunicación con el cliente**, **Documentación del servicio** y **Otra evidencia** muestran un archivo con icono de descarga — DisputeDesk sube un PDF enfocado por espacio que incluye el motivo y los datos clave de tu paquete. Tus archivos originales también permanecen como enlaces seguros etiquetados (https://disputedesk.app/e/…) dentro del texto de evidencia. Las filas **Política de reembolso** y **Política de cancelación** solo se renderizan en ciertos motivos de disputa; hasta verificarlo por familia, esos archivos viajan como enlaces etiquetados. Cuando la capa está desactivada, todos los archivos viajan solo como enlaces. Usa **Revisar y reenviar** aquí para previsualizar la carga útil exacta."
         },
         "viewingFilteringDisputes": {
           "title": "Ver y filtrar disputas",
@@ -4487,28 +4507,28 @@
     "amountLost": "Monto Perdido",
     "noEvents": "Aún no hay eventos en la línea de tiempo.",
     "eventTypes": {
-      "dispute_opened": "Disputa Abierta",
-      "status_changed": "Estado Cambiado",
-      "due_date_changed": "Fecha Límite Cambiada",
-      "dispute_closed": "Disputa Cerrada",
-      "pack_created": "Paquete de Evidencia Generado",
-      "pack_ready": "Paquete Listo para Revisión",
-      "pack_blocked": "Paquete Bloqueado",
-      "pdf_rendered": "PDF de Evidencia Generado",
-      "evidence_saved_to_shopify": "Evidencia Guardada en Shopify",
-      "submission_confirmed": "Envío Confirmado",
-      "auto_build_triggered": "Auto-Construcción Iniciada",
-      "auto_save_triggered": "Auto-Guardado Iniciado",
-      "parked_for_review": "Señalado para Revisión",
-      "merchant_approved_for_save": "Aprobado por el Comerciante",
-      "outcome_detected": "Resultado Detectado",
-      "sync_failed": "Sincronización Fallida",
-      "pack_build_failed": "Construcción del Paquete Fallida",
-      "evidence_save_failed": "Guardado de Evidencia Fallido",
+      "dispute_opened": "Disputa detectada",
+      "status_changed": "Estado de la disputa actualizado",
+      "due_date_changed": "Fecha límite actualizada",
+      "dispute_closed": "Disputa cerrada",
+      "pack_created": "Paquete de pruebas creado",
+      "pack_ready": "Paquete de pruebas preparado",
+      "pack_blocked": "Paquete de pruebas en espera",
+      "pdf_rendered": "Documento de pruebas preparado",
+      "evidence_saved_to_shopify": "Pruebas guardadas en Shopify",
+      "submission_confirmed": "Pruebas enviadas a la red de tarjetas",
+      "auto_build_triggered": "Recopilación de pruebas iniciada",
+      "auto_save_triggered": "Guardando pruebas en Shopify",
+      "parked_for_review": "Retenida para su revisión",
+      "merchant_approved_for_save": "Aprobada por usted",
+      "outcome_detected": "Resultado recibido",
+      "sync_failed": "Problema de sincronización detectado",
+      "pack_build_failed": "Problema al preparar las pruebas",
+      "evidence_save_failed": "Problema al guardar las pruebas",
       "support_note_added": "Nota añadida",
-      "admin_override": "Anulación de admin",
-      "admin_override_cleared": "Anulación eliminada",
-      "dispute_resynced": "Disputa resincronizada"
+      "admin_override": "Ajuste de soporte",
+      "admin_override_cleared": "Ajuste de soporte revertido",
+      "dispute_resynced": "Disputa actualizada desde Shopify"
     },
     "actors": {
       "merchant_user": "Usted",
@@ -4521,12 +4541,12 @@
       "new": "Nuevo",
       "in_progress": "En Progreso",
       "needs_review": "Necesita Revisión",
-      "ready_to_submit": "Listo para Enviar",
+      "ready_to_submit": "Paquete de pruebas preparado",
       "action_needed": "Acción Requerida",
-      "submitted": "Enviado",
-      "submitted_to_shopify": "Enviado a Shopify",
-      "waiting_on_issuer": "Esperando al Emisor",
-      "submitted_to_bank": "Enviado al banco",
+      "submitted": "En revisión",
+      "submitted_to_shopify": "Pruebas guardadas en Shopify",
+      "waiting_on_issuer": "En revisión",
+      "submitted_to_bank": "En revisión",
       "won": "Ganado",
       "lost": "Perdido",
       "accepted_not_contested": "Aceptado",
@@ -4555,8 +4575,8 @@
       "dispute_opened": "{type} abierta — {reason}",
       "status_changed": "{from} → {to}",
       "due_date_changed": "Fecha límite cambiada a {date}",
-      "pack_created": "Puntuación: {score}%, {count} pruebas recopiladas",
-      "pack_blocked_score": "Envío automático pausado: la puntuación {score}% está por debajo del umbral de {threshold}%",
+      "pack_created": "{count} elementos de prueba recopilados",
+      "pack_blocked_score": "Guardado automático en pausa — el paquete de pruebas está por debajo de su umbral de completitud",
       "evidence_saved_to_shopify": "{count} campos de evidencia enviados a Shopify",
       "support_note_added": "Nota añadida por {role}",
       "dispute_resynced": "Resincronizado por {role}"
@@ -5733,6 +5753,160 @@
         "priceThemSub": "% empresarial sobre ~$6,000",
         "priceNote": "El precio empresarial de Riskified crece con el GMV — fácilmente $1,200+ al mes a este volumen, y mucho más a gran escala."
       }
+    }
+  },
+  "presentation": {
+    "lifecycle": {
+      "building_evidence": "Recopilando pruebas",
+      "monitoring": "Supervisión",
+      "pack_prepared": "Paquete preparado",
+      "saved_to_shopify": "Pruebas guardadas en Shopify",
+      "under_review": "En revisión",
+      "won": "Ganada",
+      "lost": "Perdida",
+      "closed": "Cerrada"
+    },
+    "lifecycleSub": {
+      "building_evidence": "No se requiere ninguna acción",
+      "monitoring": "No se requiere ninguna acción",
+      "pack_prepared": "No se requiere ninguna acción",
+      "saved_to_shopify": "DisputeDesk seguirá supervisando mientras los cambios sean posibles",
+      "under_review": "La respuesta ya no se puede modificar",
+      "won": "",
+      "lost": "",
+      "closed": ""
+    },
+    "attention": {
+      "none": "No se requiere ninguna acción",
+      "opportunity": "Comunicación disponible",
+      "recommended": "Comunicación recomendada",
+      "requested": "Revisar comunicación",
+      "blocking": "Se requiere su intervención",
+      "technical_error": "Atención requerida"
+    },
+    "strength": {
+      "list": {
+        "strong": "Fuerte",
+        "moderate": "Moderada",
+        "weak": "Débil",
+        "not_assessed": "Aún sin evaluar"
+      },
+      "detail": {
+        "strong": "Pruebas sólidas",
+        "moderate": "Parcialmente respaldada",
+        "weak": "Pruebas limitadas",
+        "not_assessed": "Aún sin evaluar"
+      }
+    },
+    "listState": {
+      "recommended": "Comunicación recomendada",
+      "requested": "Revisar comunicación",
+      "blocking": "Aprobación requerida",
+      "technical_error": "Atención técnica requerida"
+    },
+    "listStateSub": {
+      "recommended": "La comunicación con el cliente puede fortalecer esta respuesta",
+      "requested": "Revise los mensajes de cliente sugeridos",
+      "blocking": "DisputeDesk está esperando su aprobación",
+      "technical_error": "Vuelva a conectar para restaurar la supervisión"
+    },
+    "internalIssue": "DisputeDesk detectó un problema técnico y está trabajando para resolverlo. Por el momento no se requiere ninguna acción de su parte.",
+    "deadlineLabel": "Fecha límite de respuesta de Shopify",
+    "hero": {
+      "nextLabel": "Siguiente:",
+      "building_evidence": {
+        "title": "Preparando su paquete de pruebas",
+        "message": "DisputeDesk está recopilando datos de pedidos, pagos, envíos y seguimiento de sus fuentes conectadas. El paquete de pruebas se arma automáticamente — no se requiere ninguna acción de su parte."
+      },
+      "monitoring": {
+        "title": "Supervisando en busca de más pruebas",
+        "message": "Las pruebas actuales respaldan la respuesta, y DisputeDesk supervisa las fuentes conectadas en busca de cualquier cosa que la fortalezca."
+      },
+      "pack_prepared": {
+        "title": "Paquete de pruebas preparado",
+        "message": "DisputeDesk ha preparado el paquete de pruebas y seguirá supervisando actualizaciones relevantes hasta que la respuesta se bloquee o se envíe."
+      },
+      "saved_to_shopify": {
+        "title": "Pruebas guardadas en Shopify",
+        "message": "El último paquete de pruebas se ha guardado en la disputa de Shopify. DisputeDesk seguirá supervisándolo y actualizándolo mientras los cambios sean posibles."
+      },
+      "under_review": {
+        "title": "La red de tarjetas está revisando la disputa",
+        "message": "La respuesta se ha enviado y ya no se puede modificar. DisputeDesk sigue la disputa hasta conocer el resultado."
+      },
+      "next": {
+        "building_evidence": "Paquete de pruebas preparado — normalmente en pocas horas",
+        "monitoring": "Pruebas guardadas en Shopify antes de la fecha límite de respuesta",
+        "pack_prepared": "Pruebas guardadas en Shopify antes de la fecha límite de respuesta",
+        "saved_to_shopify": "Shopify envía la respuesta en la fecha límite",
+        "under_review": "Resultado recibido",
+        "technical_error": "El monitoreo se reanuda automáticamente cuando se restablece la conexión"
+      },
+      "nextSavedWithDate": "Fecha límite de respuesta de Shopify: {date} — Shopify envía entonces la respuesta guardada",
+      "technicalProblem": {
+        "title": "El monitoreo requiere atención",
+        "message": "DisputeDesk no puede comprobar la comunicación con el servicio de atención al cliente porque la conexión ha caducado. Las pruebas de todas las demás fuentes conectadas no se ven afectadas y el monitoreo continúa."
+      },
+      "reviewDecision": {
+        "approved": {
+          "title": "Programado para enviar",
+          "message": "Esta disputa está configurada para enviarse automáticamente en la fecha límite ({date}). DisputeDesk seguirá supervisando y actualizando el paquete de pruebas hasta entonces."
+        },
+        "in_review": {
+          "title": "En revisión",
+          "message": "Está revisando esta disputa antes de la fecha límite ({date}). Si no realiza ninguna otra acción, se aplicará su regla de automatización en la fecha límite."
+        },
+        "conceded": {
+          "title": "No se está defendiendo",
+          "message": "Decidió no defender esta disputa. No se enviará nada."
+        }
+      }
+    },
+    "attentionBlocking": {
+      "approval_gate": "Aprobación requerida",
+      "missing_required_evidence": "Pruebas necesarias",
+      "quota_exceeded": "Acción de facturación requerida",
+      "feature_blocked": "Acción de facturación requerida",
+      "subscription_expired": "Acción de facturación requerida",
+      "payment_failed": "Acción de facturación requerida",
+      "auto_build_off": "Automatización en pausa"
+    },
+    "attentionBlockingSub": {
+      "approval_gate": "DisputeDesk espera su aprobación para guardar el paquete de pruebas",
+      "missing_required_evidence": "Faltan pruebas requeridas — DisputeDesk no puede guardar hasta que se añadan",
+      "quota_exceeded": "Se necesita una acción de facturación para que DisputeDesk pueda continuar",
+      "feature_blocked": "Se necesita una acción de facturación para que DisputeDesk pueda continuar",
+      "subscription_expired": "Se necesita una acción de facturación para que DisputeDesk pueda continuar",
+      "payment_failed": "Se necesita una acción de facturación para que DisputeDesk pueda continuar",
+      "auto_build_off": "La creación automática de pruebas está desactivada en sus ajustes"
+    },
+    "outcomeCard": {
+      "title": "Resultado",
+      "decisionDate": "Fecha de decisión",
+      "amountRecovered": "Importe recuperado",
+      "amountLost": "Importe perdido"
+    },
+    "assessmentCard": {
+      "title": "Evaluación de pruebas"
+    },
+    "attentionCta": {
+      "requested": "Revisar comunicación",
+      "recommended": "Añadir comunicación del cliente"
+    },
+    "techAttention": {
+      "title": "Atención requerida",
+      "body": "DisputeDesk no puede comprobar la comunicación con el servicio de atención al cliente porque la conexión ha caducado. Volver a conectar restaura el monitoreo de la bandeja de entrada de soporte. La solidez de las pruebas y todos los demás monitoreos no se ven afectados.",
+      "cta": "Volver a conectar"
+    },
+    "reviewDecision": {
+      "approved": "Programado",
+      "conceded": "No defendido",
+      "in_review": "En revisión"
+    },
+    "reviewDecisionSub": {
+      "approved": "Configurado para enviarse automáticamente en la fecha límite",
+      "conceded": "Decidió no defender esta disputa",
+      "in_review": "Está revisando esto antes de la fecha límite"
     }
   }
 }

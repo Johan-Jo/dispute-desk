@@ -52,6 +52,92 @@ interface AutomationSettings {
   enforce_no_blockers: boolean;
 }
 
+type Involvement = "hands_off" | "stay_involved";
+type SaveMode = "auto" | "review";
+
+/** Bordered radio-option card (mockup `.opt` treatment). */
+function OptionBox({
+  selected,
+  onClick,
+  title,
+  badge,
+  desc,
+  note,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  title: string;
+  badge?: string;
+  desc: string;
+  note?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        textAlign: "left",
+        fontFamily: "inherit",
+        background: selected ? "#F7FAFF" : "#ffffff",
+        border: `1.5px solid ${selected ? "#005BD3" : "#E1E3E5"}`,
+        boxShadow: selected ? "0 0 0 1px #005BD3" : "none",
+        borderRadius: 12,
+        padding: 16,
+        cursor: "pointer",
+        flex: 1,
+        minWidth: 220,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <span
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: "50%",
+            border: `2px solid ${selected ? "#005BD3" : "#C9CCCF"}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flex: "none",
+            marginTop: 1,
+          }}
+        >
+          {selected ? (
+            <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#005BD3" }} />
+          ) : null}
+        </span>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#202223" }}>{title}</span>
+            {badge ? (
+              <span
+                style={{
+                  padding: "2px 9px",
+                  borderRadius: 999,
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  background: "#ECFDF5",
+                  color: "#065F46",
+                }}
+              >
+                {badge}
+              </span>
+            ) : null}
+          </div>
+          <p style={{ fontSize: 12.5, color: "#4B5563", margin: "4px 0 0", lineHeight: 1.5 }}>
+            {desc}
+          </p>
+          {note ? (
+            <p style={{ fontSize: 12, color: "#6D7175", margin: "10px 0 0", lineHeight: 1.5 }}>
+              {note}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </button>
+  );
+}
+
 export default function EmbeddedSettingsPage() {
   const t = useTranslations("settings");
   const tc = useTranslations("common");
@@ -83,14 +169,117 @@ export default function EmbeddedSettingsPage() {
   const [automationSaving, setAutomationSaving] = useState(false);
   const [automationSaved, setAutomationSaved] = useState(false);
 
+  // ── Dispute handling (design-alignment plan §12S / §2.4) ──
+  // Involvement is presentation-only (notification defaults + optional-
+  // opportunity prominence) — it never changes objective classification.
+  const [involvement, setInvolvement] = useState<Involvement>("hands_off");
+  // Save mode binds to the per-rule action.mode across ALL pack types
+  // (decision 3): "auto" only when every pack type resolves to auto.
+  const [saveMode, setSaveMode] = useState<SaveMode | null>(null);
+  const [saveModeMixed, setSaveModeMixed] = useState(false);
+  const [saveModePackIds, setSaveModePackIds] = useState<string[]>([]);
+  /** How the radio is bound (audit fix 2026-07-26): "rules" writes the
+   *  per-pack-type rule mode; "gate" — used when the shop has NO active
+   *  pack types to bind rules to — writes the shop-level
+   *  `shop_settings.auto_save_enabled` flag, which is the gate
+   *  `evaluateAutoSaveGate` actually reads. Without this fallback the
+   *  control silently no-ops on shops without installed templates. */
+  const [saveModeBinding, setSaveModeBinding] = useState<"rules" | "gate">("rules");
+  const [rulesAllowed, setRulesAllowed] = useState(true);
+  const [handlingSaved, setHandlingSaved] = useState(false);
+
+  const pickInvolvement = useCallback(async (v: Involvement) => {
+    setInvolvement(v);
+    setHandlingSaved(false);
+    // Involvement drives the progress-notification defaults (plan
+    // §12S): the server materializes evidenceReady + monthlyDigest to
+    // match; mirror that locally so the toggles update immediately.
+    const stayInvolved = v === "stay_involved";
+    setNotifEvidenceReady(stayInvolved);
+    setNotifMonthlyDigest(stayInvolved);
+    await fetch("/api/shop/preferences", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ involvement: v }),
+    });
+    setHandlingSaved(true);
+    setTimeout(() => setHandlingSaved(false), 2600);
+  }, []);
+
+  const pickSaveMode = useCallback(
+    async (v: SaveMode) => {
+      setHandlingSaved(false);
+      if (saveModeBinding === "gate" || saveModePackIds.length === 0) {
+        // No pack types to bind rules to — write the shop-level
+        // auto-save gate (the flag evaluateAutoSaveGate reads).
+        setSaveMode(v);
+        setSaveModeMixed(false);
+        const next = { ...automation, auto_save_enabled: v === "auto" };
+        setAutomation(next);
+        const res = await fetch("/api/automation/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            auto_build_enabled: next.auto_build_enabled,
+            auto_save_enabled: next.auto_save_enabled,
+            auto_save_min_score: next.auto_save_min_score,
+            enforce_no_blockers: next.enforce_no_blockers,
+          }),
+        });
+        if (res.ok) {
+          setHandlingSaved(true);
+          setTimeout(() => setHandlingSaved(false), 2600);
+        }
+        return;
+      }
+      if (!rulesAllowed) return;
+      setSaveMode(v);
+      setSaveModeMixed(false);
+      const pack_modes: Record<string, SaveMode> = {};
+      for (const id of saveModePackIds) pack_modes[id] = v;
+      const res = await fetch("/api/setup/automation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pack_modes }),
+      });
+      if (res.ok) {
+        setHandlingSaved(true);
+        setTimeout(() => setHandlingSaved(false), 2600);
+      }
+    },
+    [rulesAllowed, saveModePackIds, saveModeBinding, automation],
+  );
+
   const fetchInfo = useCallback(async () => {
     setLoading(true);
     try {
-      const [usageRes, prefsRes, autoRes] = await Promise.all([
+      const [usageRes, prefsRes, autoRes, modesRes] = await Promise.all([
         fetch("/api/billing/usage"),
         fetch("/api/shop/preferences"),
         fetch("/api/automation/settings"),
+        fetch("/api/setup/automation"),
       ]);
+      if (modesRes.ok) {
+        const m = (await modesRes.json()) as {
+          pack_modes?: Record<string, SaveMode>;
+          rulesAccess?: { allowed: boolean };
+        };
+        const modes = Object.values(m.pack_modes ?? {});
+        const ids = Object.keys(m.pack_modes ?? {});
+        setSaveModePackIds(ids);
+        setRulesAllowed(m.rulesAccess?.allowed !== false);
+        if (modes.length > 0) {
+          setSaveModeBinding("rules");
+          const allAuto = modes.every((v) => v === "auto");
+          const allReview = modes.every((v) => v === "review");
+          setSaveMode(allAuto ? "auto" : "review");
+          setSaveModeMixed(!allAuto && !allReview);
+        } else {
+          // No active pack types → bind to the shop-level auto-save
+          // gate instead of silently no-oping.
+          setSaveModeBinding("gate");
+        }
+      }
       if (usageRes.ok) {
         const data = await usageRes.json();
         setShopInfo({
@@ -100,6 +289,9 @@ export default function EmbeddedSettingsPage() {
       }
       if (prefsRes.ok) {
         const prefs = await prefsRes.json();
+        if (prefs.involvement === "stay_involved" || prefs.involvement === "hands_off") {
+          setInvolvement(prefs.involvement);
+        }
         const n = prefs.notifications as NotificationPrefs | undefined;
         if (n) {
           setNotifNewDispute(n.newDispute);
@@ -122,6 +314,9 @@ export default function EmbeddedSettingsPage() {
         const a = await autoRes.json() as AutomationSettings;
         setAutomation(a);
         setMinScoreInput(String(a.auto_save_min_score));
+        // Gate-bound fallback selection (no pack types): reflect the
+        // actual auto-save flag.
+        setSaveMode((prev) => prev ?? (a.auto_save_enabled ? "auto" : "review"));
       }
     } finally {
       setLoading(false);
@@ -229,6 +424,72 @@ export default function EmbeddedSettingsPage() {
             reconnect-required states are self-serviceable. */}
         <Layout.Section>
           <IntegrationsCard />
+        </Layout.Section>
+
+        {/* Dispute handling — involvement + save-to-Shopify mode
+            (design-alignment plan §2.4/§12S; Settings.html mockup).
+            Involvement is presentation-only; the save radio drives the
+            per-rule auto/review mode across all pack types. */}
+        <Layout.Section>
+          <Card>
+            <BlockStack gap="400">
+              <BlockStack gap="100">
+                <Text as="h2" variant="headingMd">{t("disputeHandling.title")}</Text>
+                <Text as="p" variant="bodySm" tone="subdued">{t("disputeHandling.help")}</Text>
+              </BlockStack>
+              <Divider />
+              <BlockStack gap="200">
+                <Text as="h3" variant="headingSm">{t("disputeHandling.involvementTitle")}</Text>
+                <Text as="p" variant="bodySm" tone="subdued">{t("disputeHandling.involvementDesc")}</Text>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <OptionBox
+                    selected={involvement === "hands_off"}
+                    onClick={() => pickInvolvement("hands_off")}
+                    title={t("disputeHandling.handsOffTitle")}
+                    badge={t("disputeHandling.recommendedBadge")}
+                    desc={t("disputeHandling.handsOffDesc")}
+                  />
+                  <OptionBox
+                    selected={involvement === "stay_involved"}
+                    onClick={() => pickInvolvement("stay_involved")}
+                    title={t("disputeHandling.stayTitle")}
+                    desc={t("disputeHandling.stayDesc")}
+                  />
+                </div>
+                <Text as="p" variant="bodySm" tone="subdued">{t("disputeHandling.involvementNote")}</Text>
+              </BlockStack>
+              <Divider />
+              <BlockStack gap="200">
+                <Text as="h3" variant="headingSm">{t("disputeHandling.savingTitle")}</Text>
+                <Text as="p" variant="bodySm" tone="subdued">{t("disputeHandling.savingDesc")}</Text>
+                {!rulesAllowed && saveModeBinding === "rules" ? (
+                  <Banner tone="info">{t("disputeHandling.upgradeNote")}</Banner>
+                ) : null}
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", opacity: rulesAllowed || saveModeBinding === "gate" ? 1 : 0.5 }}>
+                  <OptionBox
+                    selected={saveMode === "auto" && !saveModeMixed}
+                    onClick={() => pickSaveMode("auto")}
+                    title={t("disputeHandling.autoTitle")}
+                    badge={t("disputeHandling.recommendedBadge")}
+                    desc={t("disputeHandling.autoDesc")}
+                    note={t("disputeHandling.autoNote")}
+                  />
+                  <OptionBox
+                    selected={saveMode === "review" && !saveModeMixed}
+                    onClick={() => pickSaveMode("review")}
+                    title={t("disputeHandling.approveTitle")}
+                    desc={t("disputeHandling.approveDesc")}
+                  />
+                </div>
+                {saveModeMixed ? (
+                  <Text as="p" variant="bodySm" tone="subdued">{t("disputeHandling.mixedNote")}</Text>
+                ) : null}
+                {handlingSaved ? (
+                  <Text as="p" variant="bodySm" tone="success">{t("disputeHandling.saved")}</Text>
+                ) : null}
+              </BlockStack>
+            </BlockStack>
+          </Card>
         </Layout.Section>
 
         {/* Notifications — before automation (daily relevance) */}
@@ -362,6 +623,23 @@ export default function EmbeddedSettingsPage() {
                     />
                   </InlineStack>
                 </div>
+                {/* Approval-required alert — locked ON while the save
+                    mode requires approval (plan §12S / Settings.html):
+                    a merchant in approve mode cannot silently miss the
+                    approvals their own gate creates. Display-only when
+                    locked; hidden in auto mode (no approvals exist). */}
+                {saveMode === "review" ? (
+                  <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
+                    <InlineStack align="space-between" blockAlign="center">
+                      <BlockStack gap="050">
+                        <Text as="span" variant="bodyMd" fontWeight="medium">{t("notifApprovalRequired")}</Text>
+                        <Text as="span" variant="bodySm" tone="subdued">{t("notifApprovalRequiredDesc")}</Text>
+                        <Text as="span" variant="bodySm" tone="caution">{t("notifApprovalRequiredLock")}</Text>
+                      </BlockStack>
+                      <Checkbox label="" checked disabled labelHidden />
+                    </InlineStack>
+                  </div>
+                ) : null}
                 <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
                   <InlineStack align="space-between" blockAlign="center">
                     <BlockStack gap="050">

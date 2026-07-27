@@ -88,6 +88,7 @@ describe("parseListDeepLink", () => {
     expect(parseListDeepLink(sp)).toEqual({
       statuses: ["new", "action_needed", "needs_review"],
       tab: "active",
+      attention: "",
     });
   });
 
@@ -105,8 +106,9 @@ describe("parseListDeepLink", () => {
     expect(parseListDeepLink(new URLSearchParams(""))).toEqual({
       statuses: [],
       tab: "all",
+      attention: "",
     });
-    expect(parseListDeepLink(null)).toEqual({ statuses: [], tab: "all" });
+    expect(parseListDeepLink(null)).toEqual({ statuses: [], tab: "all", attention: "" });
   });
 
   it("trims and drops empty segments", () => {

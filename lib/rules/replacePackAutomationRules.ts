@@ -81,14 +81,23 @@ function buildPackAndFallbackRules(
       });
     }
   }
-  // Catch-all fallback — no rule matched means "prepare a pack, let the
-  // merchant approve". Never silently drop.
+  // Catch-all fallback — no pack rule matched. The fallback mode FOLLOWS
+  // the chosen save mode (decision 2026-07-27): when every pack type is
+  // set to auto, an unmatched dispute type auto-saves too, so the
+  // fallback can't silently park a case under a stale "review" while the
+  // Settings radio says "Save automatically". Only when at least one pack
+  // is on review does the fallback stay review (mixed/manual intent).
+  const anyReview =
+    packsOrdered.length > 0 &&
+    packsOrdered.some((p) => (packModes[p.id] ?? "review") === "review");
+  const fallbackMode: PackHandlingUiMode =
+    packsOrdered.length === 0 ? "review" : anyReview ? "review" : "auto";
   rows.push({
     shop_id: shopId,
     enabled: true,
     name: FALLBACK_RULE_NAME,
     match: {},
-    action: { mode: "review", pack_template_id: null },
+    action: { mode: fallbackMode, pack_template_id: null },
     priority: 100_000,
   });
   return rows;
