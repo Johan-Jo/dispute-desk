@@ -198,23 +198,28 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
   } | null>(null);
   const [regenerating, setRegenerating] = useState(false);
 
-  // While the run is still "queued" (not yet claimed by a worker), tick a 1s
-  // clock so the elapsed-since-queued comparison crosses QUEUED_GRACE_MS even
-  // if the polled run object never changes. Stops as soon as the run leaves
-  // "queued". Reads `comms.latestRun` directly (hooks precede early returns).
-  const queuedStartedAt =
-    comms?.latestRun?.status === "queued"
+  // While the run is in ANY processing status (queued OR
+  // resolving/searching/fetching/analyzing), tick a 1s clock so the
+  // elapsed-since-start comparison crosses the grace threshold even if the
+  // polled run object never changes. This bounds the "Finding communication
+  // evidence…" spinner so it can NEVER spin forever: past the grace window
+  // we surface a "taking longer than expected → Refresh" affordance so the
+  // merchant is never trapped (previously only `queued` had this; a run
+  // stuck mid-analysis, or a stale/mismatched poll frame, left an unbounded
+  // spinner — blume-box #5fd3781c looked like it was 'looping' 2026-07-27).
+  const processingStartedAt =
+    comms?.latestRun && RUN_PROCESSING_STATUSES.has(comms.latestRun.status)
       ? comms.latestRun.startedAt ?? null
       : null;
   useEffect(() => {
-    if (!queuedStartedAt) {
+    if (!processingStartedAt) {
       setNow(null);
       return;
     }
     setNow(Date.now());
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
-  }, [queuedStartedAt]);
+  }, [processingStartedAt]);
 
   const loadTranscript = useCallback(
     async (matchedTicketId: string): Promise<TranscriptMessage[] | null> => {
@@ -390,13 +395,15 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
   const reconnectRequired = comms.errorCode === "reconnect_required";
   const processing = run ? RUN_PROCESSING_STATUSES.has(run.status) : false;
 
-  // A run that has been "queued" past the grace period is waiting behind other
-  // background work (single worker slot per shop). Surface an honest note and
-  // keep the Refresh control available so the merchant is never trapped on a
-  // spinner that looks stuck. `now === null` before the clock's first tick.
-  const queuedTooLong =
-    run?.status === "queued" &&
+  // A run stuck in ANY processing status past the grace period is either
+  // waiting behind other background work (single worker slot per shop) or
+  // genuinely stalled. Either way, surface an honest note + a Refresh so the
+  // merchant is never trapped on a spinner that looks stuck forever.
+  // `now === null` before the clock's first tick.
+  const processingTooLong =
+    processing &&
     now !== null &&
+    run != null &&
     Date.parse(run.startedAt) > 0 &&
     now - Date.parse(run.startedAt) >= QUEUED_GRACE_MS;
 
@@ -417,10 +424,21 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
             {t("status.processing")}
           </Text>
         </InlineStack>
-        {queuedTooLong && (
-          <Text as="p" tone="subdued" variant="bodySm">
-            {t("status.queuedNote")}
-          </Text>
+        {processingTooLong && (
+          <BlockStack gap="150">
+            <Text as="p" tone="subdued" variant="bodySm">
+              {t("status.takingLongerNote")}
+            </Text>
+            <div>
+              <Button
+                size="slim"
+                onClick={() => void refreshEnrichment()}
+                loading={busy === "enrich"}
+              >
+                {t("status.refresh")}
+              </Button>
+            </div>
+          </BlockStack>
         )}
       </BlockStack>
     );
@@ -579,7 +597,9 @@ export function GorgiasCommsReviewSection({ workspace, disputeId }: Props) {
             {t("subtitle")}
           </p>
         </div>
-        {(!processing || queuedTooLong) && !reconnectRequired && (
+        {/* Header Refresh shows when NOT processing (or processing-too-long,
+            which now carries its own inline Refresh in the status line). */}
+        {(!processing || processingTooLong) && !reconnectRequired && (
           <div style={{ flex: "none" }}>
             <Button
               onClick={() => void refreshEnrichment()}
