@@ -1122,7 +1122,10 @@
           "status": {
             "submitted": "Submitted",
             "needs_attention": "Kräver uppmärksamhet",
-            "in_progress": "Pågående"
+            "in_progress": "Pågående",
+            "won": "Vunnen",
+            "lost": "Förlorad",
+            "closed": "Stängd"
           },
           "automationMode": {
             "automatic": "Automatic",
@@ -1147,6 +1150,11 @@
             },
             "reviewMissing": "Granska saknade bevis nedan",
             "submittedNoAction": "Inskickad — inga fler åtgärder krävs"
+          },
+          "outcomeHeadline": {
+            "won": "Tvist vunnen — ingen ytterligare åtgärd krävs",
+            "lost": "Tvist förlorad — ingen ytterligare åtgärd krävs",
+            "closed": "Tvist stängd — ingen ytterligare åtgärd krävs"
           }
         },
         "used": {

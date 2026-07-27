@@ -62,7 +62,7 @@ export type EvidenceSource =
   | "derived"
   | "store_policy"
   | "payment_gateway";
-export type CaseStatus = "submitted" | "needs_attention" | "in_progress";
+export type CaseStatus = "submitted" | "needs_attention" | "in_progress" | "won" | "lost" | "closed";
 export type AutomationMode = "automatic" | "review_required";
 
 /**
@@ -114,7 +114,8 @@ export interface CaseSummaryViewModel {
    *  `insufficient` → `Weak` lives in CaseSummaryCard. */
   strength: CaseStrengthLevel;
   status: CaseStatus;
-  automationMode: AutomationMode;
+  /** null on a DECIDED dispute (won/lost/closed) — no automation pill. */
+  automationMode: AutomationMode | null;
   nextStep: NextStep;
   /** Merchant-facing one-line summary of why the case is at this
    *  strength (resolved from `caseStrength.strengthReasonI18n`).
@@ -191,13 +192,26 @@ function deriveStatus(args: {
   isReadOnly: boolean;
   readiness: string;
   isFailed: boolean;
+  /** Resolved outcome from the presentation model (won/lost/closed) — a
+   *  DECIDED dispute must show its outcome on the Evidence + Review tabs,
+   *  not the generic "Submitted". Takes precedence over everything. */
+  outcome?: "won" | "lost" | "closed" | "pending" | null;
 }): CaseStatus {
+  if (args.outcome === "won") return "won";
+  if (args.outcome === "lost") return "lost";
+  if (args.outcome === "closed") return "closed";
   if (args.isReadOnly) return "submitted";
   if (args.isFailed) return "needs_attention";
   if (args.readiness === "blocked" || args.readiness === "ready_with_warnings") {
     return "needs_attention";
   }
   return "in_progress";
+}
+
+/** A decided dispute has a terminal outcome — used to suppress the
+ *  automation pill + next-step CTA (nothing left to review/submit). */
+function isDecided(status: CaseStatus): boolean {
+  return status === "won" || status === "lost" || status === "closed";
 }
 
 function deriveAutomationMode(
@@ -796,20 +810,37 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
   // strength is the RAW backend value. No mutation. CaseSummaryCard
   // does the display-time mapping of "insufficient" → "Weak" label.
   const automationMode = deriveAutomationMode(data.appliedRule);
+  // A DECIDED outcome (won/lost/closed) is the highest-priority state on
+  // the Evidence tab's case summary — it must not read "Submitted /
+  // Review required" once the card network has ruled.
+  const caseOutcome =
+    (data.presentation?.outcome as "won" | "lost" | "closed" | "pending" | null | undefined) ??
+    (data.dispute.finalOutcome === "won"
+      ? "won"
+      : data.dispute.finalOutcome === "lost"
+        ? "lost"
+        : null);
+  const caseStatus = deriveStatus({
+    isReadOnly: derived.isReadOnly,
+    readiness: derived.readiness,
+    isFailed: derived.isFailed,
+    outcome: caseOutcome,
+  });
+  const decided = isDecided(caseStatus);
   const caseSummary: CaseSummaryViewModel = {
     strength: derived.caseStrength.overall,
-    status: deriveStatus({
-      isReadOnly: derived.isReadOnly,
-      readiness: derived.readiness,
-      isFailed: derived.isFailed,
-    }),
-    automationMode,
-    nextStep: deriveNextStep({
-      isReadOnly: derived.isReadOnly,
-      readiness: derived.readiness,
-      automationMode,
-      dueAt: data.dispute.dueAt,
-    }),
+    status: caseStatus,
+    // Decided cases have nothing to automate — drop the "Review required"
+    // pill (the outcome pill + calm headline carry the state).
+    automationMode: decided ? null : automationMode,
+    nextStep: decided
+      ? { kind: "submitted_no_action" }
+      : deriveNextStep({
+          isReadOnly: derived.isReadOnly,
+          readiness: derived.readiness,
+          automationMode,
+          dueAt: data.dispute.dueAt,
+        }),
     strengthReasonText: derived.strengthReasonText,
     improvementHintText: derived.improvementHintText,
   };

@@ -1241,7 +1241,10 @@
           "status": {
             "submitted": "Submitted",
             "needs_attention": "Needs attention",
-            "in_progress": "In progress"
+            "in_progress": "In progress",
+            "won": "Won",
+            "lost": "Lost",
+            "closed": "Closed"
           },
           "automationMode": {
             "automatic": "Automatic",
@@ -1266,6 +1269,11 @@
             },
             "reviewMissing": "Review missing evidence below",
             "submittedNoAction": "Submitted — no further action required"
+          },
+          "outcomeHeadline": {
+            "won": "Dispute won — no further action required",
+            "lost": "Dispute lost — no further action required",
+            "closed": "Dispute closed — no further action required"
           }
         },
         "used": {
