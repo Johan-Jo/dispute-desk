@@ -1838,7 +1838,8 @@
     "kpiUnderReviewSub": "Antworten gesendet",
     "dueSent": "Gesendet {date}",
     "strengthFilterAny": "Beliebige Beweisstärke",
-    "kpiAmountAtRiskOther": "Plus Streitfälle in anderen Währungen: {list}"
+    "kpiAmountAtRiskOther": "Plus Streitfälle in anderen Währungen: {list}",
+    "outcomeClosed": "Geschlossen"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank kann nicht verarbeiten",

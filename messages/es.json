@@ -1838,7 +1838,8 @@
     "kpiUnderReviewSub": "Respuestas enviadas",
     "dueSent": "Enviada {date}",
     "strengthFilterAny": "Cualquier solidez de pruebas",
-    "kpiAmountAtRiskOther": "Más disputas en otras monedas: {list}"
+    "kpiAmountAtRiskOther": "Más disputas en otras monedas: {list}",
+    "outcomeClosed": "Cerrada"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "El banco no puede procesar",

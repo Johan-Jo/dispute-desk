@@ -1838,7 +1838,8 @@
     "kpiUnderReviewSub": "Svar skickade",
     "dueSent": "Skickat {date}",
     "strengthFilterAny": "Alla bevisstyrkor",
-    "kpiAmountAtRiskOther": "Plus tvister i andra valutor: {list}"
+    "kpiAmountAtRiskOther": "Plus tvister i andra valutor: {list}",
+    "outcomeClosed": "Stängd"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banken kan inte behandla",

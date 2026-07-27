@@ -1838,7 +1838,8 @@
     "kpiUnderReviewSub": "Responses sent",
     "dueSent": "Sent {date}",
     "strengthFilterAny": "Any evidence strength",
-    "kpiAmountAtRiskOther": "Plus disputes in other currencies: {list}"
+    "kpiAmountAtRiskOther": "Plus disputes in other currencies: {list}",
+    "outcomeClosed": "Closed"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank cannot process",

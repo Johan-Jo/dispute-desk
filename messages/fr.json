@@ -1838,7 +1838,8 @@
     "kpiUnderReviewSub": "Réponses envoyées",
     "dueSent": "Envoyée {date}",
     "strengthFilterAny": "Toute solidité de preuves",
-    "kpiAmountAtRiskOther": "Plus des litiges dans d'autres devises : {list}"
+    "kpiAmountAtRiskOther": "Plus des litiges dans d'autres devises : {list}",
+    "outcomeClosed": "Clôturé"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "La banque ne peut pas traiter",

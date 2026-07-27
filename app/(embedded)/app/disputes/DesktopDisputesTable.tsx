@@ -6,6 +6,7 @@ import type { CSSProperties } from "react";
 import { Icon } from "@shopify/polaris";
 import { ChevronRightIcon } from "@shopify/polaris-icons";
 import { withShopParams } from "@/lib/withShopParams";
+import { STRENGTH_CHIP } from "@/lib/disputes/presentation/uiTokens";
 import {
   figmaCaseStrength,
   figmaDueDate,
@@ -78,9 +79,13 @@ function caseStrengthPillColors(s: FigmaCaseStrength, t: Translate): {
   color: string;
   label: string;
 } {
-  if (s === "strong") return { bg: "#D1FAE5", color: "#065F46", label: t("disputes.strengthStrong") };
-  if (s === "moderate") return { bg: "#FEF3C7", color: "#92400E", label: t("disputes.strengthModerate") };
-  return { bg: "#FEE2E2", color: "#991B1B", label: t("disputes.strengthWeak") };
+  // Colors come from the SHARED STRENGTH_CHIP so the list matches the
+  // detail page. Weak is GREY (not red) — "weakness is never alarming"
+  // (uiTokens.ts); the list previously hardcoded a red weak pill while
+  // the detail showed a calm grey "Limited evidence" for the same case.
+  if (s === "strong") return { ...STRENGTH_CHIP.strong, color: STRENGTH_CHIP.strong.fg, label: t("disputes.strengthStrong") };
+  if (s === "moderate") return { ...STRENGTH_CHIP.moderate, color: STRENGTH_CHIP.moderate.fg, label: t("disputes.strengthModerate") };
+  return { ...STRENGTH_CHIP.weak, color: STRENGTH_CHIP.weak.fg, label: t("disputes.strengthWeak") };
 }
 
 function outcomePillColors(o: FigmaOutcome, t: Translate): {
@@ -90,6 +95,7 @@ function outcomePillColors(o: FigmaOutcome, t: Translate): {
 } {
   if (o === "won") return { bg: "#D1FAE5", color: "#065F46", label: t("disputes.outcomeWon") };
   if (o === "lost") return { bg: "#FEE2E2", color: "#991B1B", label: t("disputes.outcomeLost") };
+  if (o === "closed") return { bg: "#F1F2F3", color: "#4B5563", label: t("disputes.outcomeClosed") };
   return { bg: "#E1E3E5", color: "#6D7175", label: t("disputes.outcomePending") };
 }
 

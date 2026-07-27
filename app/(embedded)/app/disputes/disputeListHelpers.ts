@@ -94,6 +94,12 @@ export function rowChromeV2(d: Dispute): {
   const p = d.presentation;
   if (!p) return figmaRowChrome(d);
   if (p.terminal) return { stripeColor: null, bgColor: null, opacity: 0.6 };
+  // A recorded review decision (approved/conceded/in_review) calms the
+  // row — no attention emphasis — mirroring the detail page, which
+  // suppresses the attention pill once a decision exists. Without this an
+  // in_review dispute kept its amber/blocking chrome on the list while
+  // the detail showed a calm "On hold" (list-vs-detail divergence).
+  if (d.review_state) return { stripeColor: null, bgColor: null, opacity: 1 };
   const emphasis = ATTENTION_ROW_EMPHASIS[p.attention] ?? null;
   if (!emphasis) return { stripeColor: null, bgColor: null, opacity: 1 };
   const hasRequiredAction =
@@ -382,7 +388,7 @@ export type FigmaStatus =
   | "closed";
 
 export type FigmaCaseStrength = "strong" | "moderate" | "weak";
-export type FigmaOutcome = "pending" | "won" | "lost";
+export type FigmaOutcome = "pending" | "won" | "lost" | "closed";
 export type FigmaDueStatus = "past" | "today" | "upcoming" | "closed";
 
 /** The "evidence is committed, awaiting an external outcome" status
@@ -465,13 +471,25 @@ export function figmaReviewChip(
 }
 
 /** Map persisted case_strength.overall to the Figma 3-bucket pill.
- *  Returns null when no completed pack exists yet (UI renders em-dash). */
+ *  Returns null when no completed pack exists yet OR the pack scored
+ *  `insufficient` (pre-assessment) — the UI renders an em-dash, matching
+ *  the detail page's "Not yet assessed" rather than falsely showing a
+ *  "Weak" pill for an unassessed case. Prefers the shared presentation
+ *  strength when present (it distinguishes not_assessed from weak). */
 export function figmaCaseStrength(d: Dispute): FigmaCaseStrength | null {
+  const p = d.presentation?.strength;
+  if (p) {
+    if (p === "strong") return "strong";
+    if (p === "moderate") return "moderate";
+    if (p === "weak") return "weak";
+    return null; // not_assessed → em-dash
+  }
   const o = d.caseStrength?.overall;
   if (!o) return null;
   if (o === "strong") return "strong";
   if (o === "moderate") return "moderate";
-  return "weak"; // weak + insufficient
+  if (o === "insufficient") return null; // not assessed → em-dash, not "Weak"
+  return "weak";
 }
 
 // figmaStrengthDetail and strengthSubtitle were both deleted: the Case
@@ -486,6 +504,11 @@ export function figmaOutcome(d: Dispute): FigmaOutcome {
   const o = d.final_outcome;
   if (o === "won" || o === "partially_won") return "won";
   if (o === "lost" || o === "refunded" || o === "accepted") return "lost";
+  // A terminal dispute with no won/lost outcome is CLOSED, not pending —
+  // showing "Pending" implied it was still open (matches the detail
+  // page's neutral "Closed" lifecycle). Prefer the presentation outcome.
+  if (d.presentation?.outcome === "closed") return "closed";
+  if (d.presentation?.lifecycle === "closed") return "closed";
   return "pending";
 }
 
@@ -512,7 +535,22 @@ export function figmaDueDate(
     d.presentation?.transmissionConfirmed ??
     (d.submission_state === "submitted_confirmed" ||
       d.normalized_status === "submitted_to_bank");
-  if (transmissionConfirmed || status === "under-review" || status === "submitted") {
+  // A merely SAVED-to-Shopify dispute (editable, not yet transmitted)
+  // keeps its real deadline — it is NOT "sent". figmaStatus collapses
+  // `submitted_to_shopify` into `under-review`, which previously dropped
+  // the deadline to "—" and made the list look done while the detail
+  // page still showed a live "Shopify response deadline". Trust the
+  // presentation lifecycle: only genuinely-transmitted (or the legacy
+  // under-review status WITHOUT a saved-editable presentation) collapses.
+  const savedEditable =
+    d.presentation?.lifecycle === "saved_to_shopify" ||
+    d.presentation?.lifecycle === "pack_prepared" ||
+    d.presentation?.lifecycle === "monitoring" ||
+    d.presentation?.lifecycle === "building_evidence";
+  if (
+    transmissionConfirmed ||
+    ((status === "under-review" || status === "submitted") && !savedEditable)
+  ) {
     if (transmissionConfirmed && d.submitted_at) {
       return {
         label: t("disputes.dueSent", {
