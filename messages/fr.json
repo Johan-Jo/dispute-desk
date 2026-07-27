@@ -1838,7 +1838,9 @@
     "kpiUnderReviewSub": "Réponses envoyées",
     "dueSent": "Envoyée {date}",
     "strengthFilterAny": "Toute solidité de preuves",
-    "kpiAmountAtRiskOther": "Plus des litiges dans d'autres devises : {list}"
+    "kpiAmountAtRiskOther": "Plus des litiges dans d'autres devises : {list}",
+    "outcomeClosed": "Clôturé",
+    "urgentBannerBodyOverdue": "{amount} à risque — la première échéance est dépassée"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "La banque ne peut pas traiter",
@@ -5770,7 +5772,7 @@
       "none": "Aucune action requise",
       "opportunity": "Communication disponible",
       "recommended": "Communication recommandée",
-      "requested": "Communication demandée",
+      "requested": "Vérifier la communication",
       "blocking": "Votre intervention est requise",
       "technical_error": "Attention requise"
     },

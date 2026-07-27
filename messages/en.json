@@ -1838,7 +1838,9 @@
     "kpiUnderReviewSub": "Responses sent",
     "dueSent": "Sent {date}",
     "strengthFilterAny": "Any evidence strength",
-    "kpiAmountAtRiskOther": "Plus disputes in other currencies: {list}"
+    "kpiAmountAtRiskOther": "Plus disputes in other currencies: {list}",
+    "outcomeClosed": "Closed",
+    "urgentBannerBodyOverdue": "{amount} at risk — earliest deadline has passed"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank cannot process",
@@ -5769,7 +5771,7 @@
       "none": "No action required",
       "opportunity": "Communication available",
       "recommended": "Communication recommended",
-      "requested": "Communication requested",
+      "requested": "Review communication",
       "blocking": "Input required",
       "technical_error": "Attention required"
     },

@@ -6,6 +6,7 @@ import type { CSSProperties } from "react";
 import { Icon } from "@shopify/polaris";
 import { ChevronRightIcon } from "@shopify/polaris-icons";
 import { withShopParams } from "@/lib/withShopParams";
+import { STRENGTH_CHIP } from "@/lib/disputes/presentation/uiTokens";
 import {
   figmaCaseStrength,
   figmaDueDate,
@@ -69,9 +70,10 @@ function caseStrengthPillColors(s: FigmaCaseStrength, t: Translate): {
   color: string;
   label: string;
 } {
-  if (s === "strong") return { bg: "#D1FAE5", color: "#065F46", label: t("disputes.strengthStrong") };
-  if (s === "moderate") return { bg: "#FEF3C7", color: "#92400E", label: t("disputes.strengthModerate") };
-  return { bg: "#FEE2E2", color: "#991B1B", label: t("disputes.strengthWeak") };
+  // Shared STRENGTH_CHIP colors — weak is grey, not red (matches detail).
+  if (s === "strong") return { ...STRENGTH_CHIP.strong, color: STRENGTH_CHIP.strong.fg, label: t("disputes.strengthStrong") };
+  if (s === "moderate") return { ...STRENGTH_CHIP.moderate, color: STRENGTH_CHIP.moderate.fg, label: t("disputes.strengthModerate") };
+  return { ...STRENGTH_CHIP.weak, color: STRENGTH_CHIP.weak.fg, label: t("disputes.strengthWeak") };
 }
 
 function outcomePillColors(o: FigmaOutcome, t: Translate): {
@@ -81,6 +83,7 @@ function outcomePillColors(o: FigmaOutcome, t: Translate): {
 } {
   if (o === "won") return { bg: "#D1FAE5", color: "#065F46", label: t("disputes.outcomeWon") };
   if (o === "lost") return { bg: "#FEE2E2", color: "#991B1B", label: t("disputes.outcomeLost") };
+  if (o === "closed") return { bg: "#F1F2F3", color: "#4B5563", label: t("disputes.outcomeClosed") };
   return { bg: "#E1E3E5", color: "#6D7175", label: t("disputes.outcomePending") };
 }
 
@@ -113,9 +116,14 @@ export function MobileDisputeCard({
   // Prominence follows MERCHANT ATTENTION (genuine tasks only), never
   // "every active dispute" (plan §5). Legacy status fallback for rows
   // without a presentation.
-  const isActionable = d.presentation
-    ? d.presentation.needsMerchantAction
-    : status === "action-needed" || status === "needs-review";
+  // A recorded review decision calms the card (matches the detail page +
+  // rowChromeV2) — an in_review/approved/conceded dispute is not an open
+  // task even if the underlying attention gate is still technically open.
+  const isActionable = d.review_state
+    ? false
+    : d.presentation
+      ? d.presentation.needsMerchantAction
+      : status === "action-needed" || status === "needs-review";
 
   const cardStyle: CSSProperties = {
     background: chrome.bgColor ?? "#ffffff",

@@ -435,7 +435,10 @@ export default function DisputesListPage() {
   };
 
   // KPIs for the Figma 4-card row + red urgent banner.
-  const kpis = useMemo(() => figmaKpis(disputes), [disputes]);
+  const kpis = useMemo(
+    () => figmaKpis(disputes, shopKpis?.atRiskCurrency ?? null),
+    [disputes, shopKpis?.atRiskCurrency],
+  );
 
   // Shared-model KPI values (plan §5): Active = unresolved pre-outcome
   // (INCLUDES under-review; allow-list based, not final_outcome-null);
@@ -754,14 +757,22 @@ export default function DisputesListPage() {
                           lineHeight: 1.4,
                         }}
                       >
-                        {t("disputes.urgentBannerBody", {
-                          amount: formatCurrency(
-                            kpis.urgentAmount,
-                            disputes[0]?.currency_code ?? "USD",
-                            numberLocale,
-                          ),
-                          days: kpis.earliestDueInDays ?? 0,
-                        })}
+                        {kpis.earliestOverdue
+                          ? t("disputes.urgentBannerBodyOverdue", {
+                              amount: formatCurrency(
+                                kpis.urgentAmount,
+                                kpis.urgentAmountCurrency ?? "USD",
+                                numberLocale,
+                              ),
+                            })
+                          : t("disputes.urgentBannerBody", {
+                              amount: formatCurrency(
+                                kpis.urgentAmount,
+                                kpis.urgentAmountCurrency ?? "USD",
+                                numberLocale,
+                              ),
+                              days: kpis.earliestDueInDays ?? 0,
+                            })}
                       </div>
                     </div>
                   </div>

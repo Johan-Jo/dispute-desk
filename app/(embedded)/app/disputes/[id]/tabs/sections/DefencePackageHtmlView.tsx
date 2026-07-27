@@ -278,6 +278,27 @@ export function DefencePackageHtmlView({ row, dispute }: Props) {
       : null,
   });
 
+  // Empty-card guard: if NONE of the body sources have content — no
+  // narrative section carries text, and there are no evidence-basis
+  // rows, chronology events, or line items — do not render a titled
+  // "Chargeback response preview" card with an empty body. That empty
+  // shell is worse than showing nothing (it implies a package exists
+  // when there's nothing to show). Case Details alone (identity fields)
+  // is not "body content" — a package needs at least one argument,
+  // evidence row, or line item to be worth previewing.
+  const hasNarrativeText = SECTION_ORDER.some((key) => {
+    const section = narrative[key as NarrativeSectionKey];
+    return section && !omitted.has(key as NarrativeSectionKey) && section.text?.trim();
+  });
+  const hasBodyContent =
+    hasNarrativeText ||
+    evidenceBasis.length > 0 ||
+    chrono.length > 0 ||
+    lineItems.length > 0;
+  if (!hasBodyContent) {
+    return null;
+  }
+
   return (
     <Card padding="500">
       <BlockStack gap="400">

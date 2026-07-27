@@ -394,6 +394,17 @@ const REASON_CODE_MODULE = {
   PRODUCT_UNACCEPTABLE: "product_unacceptable",
 };
 
+// Reason → family_key / prompt_family. Verified against the real registry
+// (familyKeyForModule): FRAUDULENT→unauthorized_fraud,
+// PRODUCT_NOT_RECEIVED→item_not_received,
+// PRODUCT_UNACCEPTABLE→product_not_as_described. Previously the defence
+// row hardcoded 'fraud' for EVERY reason — a PNR/PUA pack labelled fraud.
+const REASON_FAMILY = {
+  FRAUDULENT: "unauthorized_fraud",
+  PRODUCT_NOT_RECEIVED: "item_not_received",
+  PRODUCT_UNACCEPTABLE: "product_not_as_described",
+};
+
 // ── dispute_events lifecycle (drives the Overview timeline) ───────────
 // Description formats + actor/source enums mirror the localizer
 // (lib/disputeEvents/localizeDescription.ts) and the real event
@@ -446,13 +457,23 @@ function buildEvents(d, shopId, pack, strength) {
   return rows;
 }
 
-// Per-stage defence-package lifecycle. gid suffix → { status, submitted, mode }.
-// draft = merchant's current letter (latest); submitted = on file with the
-// bank (bankFacing). Transmitted stages (UNDER-REVIEW/WON/LOST) are submitted.
-function defencePackageStateFor(gidSuffix, strength) {
-  const transmitted = ["UNDER-REVIEW", "WON", "LOST"].some((s) => gidSuffix.startsWith(s));
+// Per-stage defence-package lifecycle keyed off the dispute's REAL
+// submission_state (not the gid label), so the defence status is
+// consistent with what the dispute claims:
+//   transmitted (submitted_confirmed) → submitted (on file with the bank)
+//   saved to Shopify (saved_to_shopify) → final (the pipeline invariant:
+//     saveToShopifyJob requires the latest defence row = status 'final'
+//     with a pdf_path — a DRAFT can never have been saved to Shopify)
+//   otherwise (ready/not-saved, needs_review) → draft (merchant's current
+//     working letter, not yet saved)
+function defencePackageStateFor(gidSuffix, strength, submissionState) {
   const mode = strength === "weak" || strength === "moderate" ? "narrow" : "full";
-  if (transmitted) return { status: "submitted", submitted: true, mode };
+  if (submissionState === "submitted_confirmed") {
+    return { status: "submitted", submitted: true, mode };
+  }
+  if (submissionState === "saved_to_shopify") {
+    return { status: "final", submitted: false, mode };
+  }
   return { status: "draft", submitted: false, mode };
 }
 
@@ -465,7 +486,7 @@ if (!shop) { console.error("Shop not found"); process.exit(1); }
 
 const { data: disputes } = await sb
   .from("disputes")
-  .select("id, dispute_gid, reason, amount, currency_code, initiated_at, order_gid, normalized_status, final_outcome, submission_state, closed_at")
+  .select("id, dispute_gid, reason, amount, currency_code, initiated_at, order_gid, normalized_status, final_outcome, submission_state, closed_at, customer_display_name")
   .eq("shop_id", shop.id)
   .like("dispute_gid", `${SEED_PREFIX}%`);
 
@@ -500,7 +521,7 @@ for (const d of disputes) {
 console.log(`\nWill complete ${plan.length} disputes (pack sections + evidence_items + checklist_v2 + defence package).\n`);
 if (!APPLY) {
   for (const p of plan) {
-    const st = defencePackageStateFor(p.gidSuffix, p.strength);
+    const st = defencePackageStateFor(p.gidSuffix, p.strength, p.d.submission_state);
     console.log(`  ${p.gidSuffix.padEnd(16)} ${p.d.reason.padEnd(22)} strength=${p.strength.padEnd(8)} → defence: status=${st.status} mode=${st.mode}`);
   }
   console.log("\nDry run. Pass --apply to write.\n");
@@ -568,7 +589,7 @@ for (const { d, pack, gidSuffix, profile, strength } of plan) {
   // 3. defence package (the rebuttal letter)
   const factSet = buildFacts(rng, profile, d.reason);
   const narrative = buildNarrative(d.reason, strength, factSet);
-  const st = defencePackageStateFor(gidSuffix, strength);
+  const st = defencePackageStateFor(gidSuffix, strength, d.submission_state);
   const evidenceHash = createHash("sha256").update(`${d.id}|${JSON.stringify(factSet.facts)}`).digest("hex");
   const generatedAt = new Date(Date.now() - 2 * 86400000).toISOString();
 
@@ -583,13 +604,20 @@ for (const { d, pack, gidSuffix, profile, strength } of plan) {
     package_mode: st.mode,
     generated_at: generatedAt,
     generated_by: "system",
-    pdf_path: null,
+    // final/submitted packages carry a rendered PDF (pipeline invariant:
+    // saveToShopifyJob requires the latest defence row = 'final' WITH a
+    // pdf_path). Draft working letters have none yet.
+    pdf_path:
+      st.status === "final" || st.status === "submitted"
+        ? `defence/${d.id}/v1.pdf`
+        : null,
     pdf_storage_bucket: "evidence-packs",
     evidence_hash: evidenceHash,
     llm_model: "claude-sonnet-4-5",
-    prompt_family: "fraud",
+    // family/module derived from the dispute's REASON, not hardcoded fraud.
+    prompt_family: REASON_FAMILY[d.reason] ?? "unauthorized_fraud",
     prompt_version: 1,
-    reason_code_module: REASON_CODE_MODULE[d.reason] ?? "visa_10_4",
+    reason_code_module: REASON_CODE_MODULE[d.reason] ?? "generic_fallback",
     output_schema_version: 1,
     validation_status: "ok",
     validation_errors: [],
@@ -597,7 +625,7 @@ for (const { d, pack, gidSuffix, profile, strength } of plan) {
     facts_json: factSet.facts,
     submitted_at: st.submitted ? generatedAt : null,
     submitted_by: st.submitted ? "seed_script" : null,
-    family_key: "fraud",
+    family_key: REASON_FAMILY[d.reason] ?? "unauthorized_fraud",
   };
   const { error: dErr } = await sb.from("defence_packages").insert(dpRow);
   if (dErr) { console.error(`  ${gidSuffix}: defence package insert failed: ${dErr.message}`); continue; }
@@ -616,6 +644,108 @@ for (const { d, pack, gidSuffix, profile, strength } of plan) {
   done += 1;
   console.log(`  ${gidSuffix.padEnd(16)} ✓ ${sections.length} sections, ${itemRows.length} items, ${checklistV2.length} checklist, defence(${st.status}/${st.mode}), ${evInserted} events`);
 }
+
+// ── COMM-REQUESTED (#9007): real Gorgias backing ───────────────────────
+// The "Review communication" state (attention_reason=gorgias_evidence_ready)
+// PROMISES reviewable customer messages. Without the actual Gorgias rows
+// the Evidence tab shows nothing — the pill lies. Seed the real records so
+// the state has substance: integration + enrichment run + 2 matched
+// tickets + 2 proposed evidence messages. Idempotent (deletes first).
+async function seedGorgiasForCommRequested() {
+  const commDispute = disputes.find(
+    (d) => d.dispute_gid === `${SEED_PREFIX}COMM-REQUESTED`,
+  );
+  if (!commDispute) return;
+  const dId = commDispute.id;
+
+  // Clear prior gorgias rows (children first).
+  await sb.from("gorgias_evidence_messages").delete().eq("dispute_id", dId);
+  await sb.from("gorgias_matched_tickets").delete().eq("dispute_id", dId);
+  await sb.from("gorgias_enrichment_runs").delete().eq("dispute_id", dId);
+
+  // Integration (one per shop; connected — NOT needs_attention, so it
+  // cannot trip technical_error on other disputes).
+  let { data: integ } = await sb
+    .from("integrations")
+    .select("id")
+    .eq("shop_id", shop.id)
+    .eq("type", "gorgias")
+    .maybeSingle();
+  if (!integ) {
+    const insMeta = { evidence_mode: "review", seed: true };
+    const { data: created, error } = await sb
+      .from("integrations")
+      .insert({ shop_id: shop.id, type: "gorgias", status: "connected", meta: insMeta })
+      .select("id")
+      .single();
+    if (error) { console.error(`  gorgias integration failed: ${error.message}`); return; }
+    integ = created;
+  }
+
+  const runId = randomUUID();
+  await sb.from("gorgias_enrichment_runs").insert({
+    id: runId, shop_id: shop.id, dispute_id: dId, integration_id: integ.id,
+    run_number: 1, status: "completed", trigger_source: "dispute_opened",
+    attempt_count: 1, tickets_scanned: 5, tickets_high: 1, tickets_medium: 1, tickets_low: 3,
+    messages_stored: 2, proposal_count: 2, approved_count: 0,
+    analyzer_model: "claude-sonnet-4-5", analyzer_version: 1,
+    prompt_tokens: 1200, completion_tokens: 350, duration_ms: 4200,
+    daily_bucket: new Date().toISOString().slice(0, 10),
+    started_at: new Date(Date.now() - 2 * 3600_000).toISOString(),
+    completed_at: new Date(Date.now() - 2 * 3600_000 + 4000).toISOString(),
+  });
+
+  const t1 = randomUUID();
+  const t2 = randomUUID();
+  await sb.from("gorgias_matched_tickets").insert([
+    {
+      id: t1, shop_id: shop.id, dispute_id: dId, integration_id: integ.id,
+      gorgias_ticket_id: 880011, gorgias_customer_id: 550011, match_score: 92, confidence: "high",
+      match_reasons: [
+        { signal: "email_match", points: 50, detail: "Ticket email matches the order email" },
+        { signal: "order_number", points: 42, detail: "Order referenced in the ticket" },
+      ],
+      matching_algorithm_version: 1, match_status: "proposed_match",
+      analyzed_at: new Date(Date.now() - 2 * 3600_000).toISOString(),
+      ticket_snapshot: { subject: "Where is my order?", channel: "email", createdAt: new Date(Date.now() - 9 * 86400_000).toISOString() },
+    },
+    {
+      id: t2, shop_id: shop.id, dispute_id: dId, integration_id: integ.id,
+      gorgias_ticket_id: 880012, gorgias_customer_id: 550011, match_score: 68, confidence: "medium",
+      match_reasons: [{ signal: "email_match", points: 50, detail: "Same customer email" }],
+      matching_algorithm_version: 1, match_status: "proposed_match",
+      analyzed_at: new Date(Date.now() - 2 * 3600_000).toISOString(),
+      ticket_snapshot: { subject: "Re: order received, thanks", channel: "email", createdAt: new Date(Date.now() - 5 * 86400_000).toISOString() },
+    },
+  ]);
+
+  const { createHash: ch } = await import("node:crypto");
+  const hash = (s) => ch("sha256").update(s).digest("hex");
+  await sb.from("gorgias_evidence_messages").insert([
+    {
+      id: randomUUID(), shop_id: shop.id, dispute_id: dId, matched_ticket_id: t1,
+      gorgias_message_id: 990021, sender_type: "customer", sender_name: commDispute.customer_display_name ?? "Customer",
+      channel: "email", sent_at: new Date(Date.now() - 5 * 86400_000).toISOString(),
+      message_text: "Hi, I actually did receive the package last week — please disregard my earlier message. Thank you!",
+      content_truncated: false, original_character_count: 98, content_hash: hash("msg-990021-seed"),
+      evidence_category: "delivery_recognition", confidence_score: 88,
+      relevance_explanation: "Customer explicitly confirms receiving the order, which directly refutes the not-received claim.",
+      explanation_edited: false, analyzer_model: "claude-sonnet-4-5", analyzer_prompt_version: 1, review_status: "proposed",
+    },
+    {
+      id: randomUUID(), shop_id: shop.id, dispute_id: dId, matched_ticket_id: t2,
+      gorgias_message_id: 990022, sender_type: "customer", sender_name: commDispute.customer_display_name ?? "Customer",
+      channel: "email", sent_at: new Date(Date.now() - 5 * 86400_000).toISOString(),
+      message_text: "Order received, thanks for the quick shipping.",
+      content_truncated: false, original_character_count: 46, content_hash: hash("msg-990022-seed"),
+      evidence_category: "transaction_recognition", confidence_score: 72,
+      relevance_explanation: "Customer acknowledges receipt of the order.",
+      explanation_edited: false, analyzer_model: "claude-sonnet-4-5", analyzer_prompt_version: 1, review_status: "proposed",
+    },
+  ]);
+  console.log(`  COMM-REQUESTED   ✓ gorgias: integration + run + 2 tickets + 2 proposed messages`);
+}
+await seedGorgiasForCommRequested();
 
 console.log(`\nDone. Completed ${done}/${plan.length} disputes.\n`);
 process.exit(0);

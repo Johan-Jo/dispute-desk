@@ -1838,7 +1838,9 @@
     "kpiUnderReviewSub": "Svar skickade",
     "dueSent": "Skickat {date}",
     "strengthFilterAny": "Alla bevisstyrkor",
-    "kpiAmountAtRiskOther": "Plus tvister i andra valutor: {list}"
+    "kpiAmountAtRiskOther": "Plus tvister i andra valutor: {list}",
+    "outcomeClosed": "Stängd",
+    "urgentBannerBodyOverdue": "{amount} i risk — närmaste tidsfrist har passerat"
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banken kan inte behandla",
@@ -5770,7 +5772,7 @@
       "none": "Ingen åtgärd krävs",
       "opportunity": "Kommunikation tillgänglig",
       "recommended": "Kommunikation rekommenderas",
-      "requested": "Kommunikation begärd",
+      "requested": "Granska kommunikation",
       "blocking": "Din insats krävs",
       "technical_error": "Uppmärksamhet krävs"
     },
