@@ -5836,6 +5836,20 @@
       "technicalProblem": {
         "title": "Überwachung erfordert Aufmerksamkeit",
         "message": "DisputeDesk kann die Kundensupport-Kommunikation derzeit nicht prüfen, da die Verbindung abgelaufen ist. Beweise aus allen anderen verbundenen Quellen sind nicht betroffen und die Überwachung wird fortgesetzt."
+      },
+      "reviewDecision": {
+        "approved": {
+          "title": "Zur Übermittlung geplant",
+          "message": "Dieser Fall wird am Fälligkeitsdatum ({date}) automatisch übermittelt. DisputeDesk überwacht und aktualisiert das Beweispaket bis dahin weiter."
+        },
+        "in_review": {
+          "title": "In Prüfung",
+          "message": "Sie prüfen diesen Fall vor dem Fälligkeitsdatum ({date}). Wenn Sie nichts weiter unternehmen, wird zur Frist Ihre Automatisierungsregel angewendet."
+        },
+        "conceded": {
+          "title": "Wird nicht verteidigt",
+          "message": "Sie haben sich entschieden, diesen Fall nicht zu verteidigen. Es wird nichts übermittelt."
+        }
       }
     },
     "attentionBlocking": {

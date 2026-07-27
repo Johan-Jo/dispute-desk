@@ -5836,6 +5836,20 @@
       "technicalProblem": {
         "title": "El monitoreo requiere atención",
         "message": "DisputeDesk no puede comprobar la comunicación con el servicio de atención al cliente porque la conexión ha caducado. Las pruebas de todas las demás fuentes conectadas no se ven afectadas y el monitoreo continúa."
+      },
+      "reviewDecision": {
+        "approved": {
+          "title": "Programado para enviar",
+          "message": "Esta disputa está configurada para enviarse automáticamente en la fecha límite ({date}). DisputeDesk seguirá supervisando y actualizando el paquete de pruebas hasta entonces."
+        },
+        "in_review": {
+          "title": "En revisión",
+          "message": "Está revisando esta disputa antes de la fecha límite ({date}). Si no realiza ninguna otra acción, se aplicará su regla de automatización en la fecha límite."
+        },
+        "conceded": {
+          "title": "No se está defendiendo",
+          "message": "Decidió no defender esta disputa. No se enviará nada."
+        }
       }
     },
     "attentionBlocking": {

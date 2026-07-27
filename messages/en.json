@@ -5845,7 +5845,21 @@
         "under_review": "Outcome received",
         "technical_error": "Monitoring resumes automatically once the connection is restored"
       },
-      "nextSavedWithDate": "Shopify response deadline: {date} — Shopify sends the saved response then"
+      "nextSavedWithDate": "Shopify response deadline: {date} — Shopify sends the saved response then",
+      "reviewDecision": {
+        "approved": {
+          "title": "Scheduled to submit",
+          "message": "This dispute is set to submit automatically on the deadline ({date}). DisputeDesk will keep monitoring and updating the evidence package until then."
+        },
+        "in_review": {
+          "title": "On hold for your review",
+          "message": "You're reviewing this dispute before the deadline ({date}). If you take no further action, it will follow your automation rule at the deadline."
+        },
+        "conceded": {
+          "title": "Not being defended",
+          "message": "You chose not to defend this dispute. Nothing will be submitted."
+        }
+      }
     },
     "techAttention": {
       "title": "Attention required",

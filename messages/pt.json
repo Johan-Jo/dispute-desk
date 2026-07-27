@@ -5836,6 +5836,20 @@
       "technicalProblem": {
         "title": "O monitoramento requer atenção",
         "message": "O DisputeDesk não consegue verificar a comunicação com o suporte ao cliente porque a conexão expirou. As provas de todas as outras fontes conectadas não são afetadas e o monitoramento continua."
+      },
+      "reviewDecision": {
+        "approved": {
+          "title": "Agendado para envio",
+          "message": "Esta disputa está definida para ser enviada automaticamente no prazo ({date}). O DisputeDesk continuará monitorando e atualizando o pacote de provas até lá."
+        },
+        "in_review": {
+          "title": "Em análise",
+          "message": "Você está analisando esta disputa antes do prazo ({date}). Se não tomar nenhuma outra ação, sua regra de automação será aplicada no prazo."
+        },
+        "conceded": {
+          "title": "Não está sendo defendida",
+          "message": "Você optou por não defender esta disputa. Nada será enviado."
+        }
       }
     },
     "attentionBlocking": {
