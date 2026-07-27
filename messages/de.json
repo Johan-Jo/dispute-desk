@@ -1749,7 +1749,8 @@
         "analysisDeferredTitle": "Treffer gefunden — Analyse vorübergehend verschoben",
         "analysisDeferredBody": "Konversationen wurden zugeordnet, aber die Nachweisanalyse pausiert und wird in Kürze fortgesetzt. Zugeordnete Tickets bleiben unten sichtbar.",
         "reconnectRequiredTitle": "Gorgias neu verbinden",
-        "reconnectRequiredBody": "Ihre Gorgias-Verbindung ist nicht mehr autorisiert. Verbinden Sie sie in den Einstellungen neu, um Kommunikationsnachweise fortzusetzen."
+        "reconnectRequiredBody": "Ihre Gorgias-Verbindung ist nicht mehr autorisiert. Verbinden Sie sie in den Einstellungen neu, um Kommunikationsnachweise fortzusetzen.",
+        "takingLongerNote": "Das dauert länger als erwartet. Möglicherweise wartet es auf andere Aufgaben – aktualisieren Sie, um nach Updates zu suchen."
       },
       "staleBanner": {
         "title": "Ihr Verteidigungspaket ist veraltet",

@@ -1749,7 +1749,8 @@
         "analysisDeferredTitle": "Correspondências encontradas — análise temporariamente adiada",
         "analysisDeferredBody": "Conversas foram associadas, mas a análise de evidências está pausada e será retomada em breve. Os tickets associados permanecem visíveis abaixo.",
         "reconnectRequiredTitle": "Reconectar o Gorgias",
-        "reconnectRequiredBody": "Sua conexão com o Gorgias não está mais autorizada. Reconecte-a nas Configurações para retomar as evidências de comunicação."
+        "reconnectRequiredBody": "Sua conexão com o Gorgias não está mais autorizada. Reconecte-a nas Configurações para retomar as evidências de comunicação.",
+        "takingLongerNote": "Isto está a demorar mais do que o esperado. Pode estar a aguardar atrás de outras tarefas — atualize para verificar se há novidades."
       },
       "staleBanner": {
         "title": "Seu pacote de defesa está desatualizado",

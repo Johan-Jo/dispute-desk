@@ -1749,7 +1749,8 @@
         "analysisDeferredTitle": "Coincidencias encontradas — análisis aplazado temporalmente",
         "analysisDeferredBody": "Se encontraron conversaciones, pero el análisis de evidencia está en pausa y se reanudará pronto. Los tickets coincidentes siguen visibles abajo.",
         "reconnectRequiredTitle": "Reconectar Gorgias",
-        "reconnectRequiredBody": "Tu conexión con Gorgias ya no está autorizada. Reconéctala en Configuración para reanudar la evidencia de comunicación."
+        "reconnectRequiredBody": "Tu conexión con Gorgias ya no está autorizada. Reconéctala en Configuración para reanudar la evidencia de comunicación.",
+        "takingLongerNote": "Esto está tardando más de lo esperado. Puede estar esperando detrás de otras tareas; actualiza para comprobar si hay novedades."
       },
       "staleBanner": {
         "title": "Tu paquete de defensa está desactualizado",
