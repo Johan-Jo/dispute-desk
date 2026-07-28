@@ -289,9 +289,6 @@ export default function EmbeddedSettingsPage() {
         const a = await autoRes.json() as AutomationSettings;
         setAutomation(a);
         setMinScoreInput(String(a.auto_save_min_score));
-        // Gate-bound fallback selection (no pack types): reflect the
-        // actual auto-save flag.
-        setSaveMode((prev) => prev ?? (a.auto_save_enabled ? "auto" : "review"));
       }
     } finally {
       setLoading(false);
@@ -306,7 +303,9 @@ export default function EmbeddedSettingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         auto_build_enabled: automation.auto_build_enabled,
-        auto_save_enabled: automation.auto_save_enabled,
+        // auto_save_enabled is NOT sent: it is a strict mirror of the
+        // store-wide switch, owned by writeStoreAutomation. The server
+        // allow-list drops it anyway.
         auto_save_min_score: score,
         enforce_no_blockers: automation.enforce_no_blockers,
       }),
@@ -671,22 +670,6 @@ export default function EmbeddedSettingsPage() {
                         label=""
                         checked={automation.auto_build_enabled}
                         onChange={(v) => setAutomation((a) => ({ ...a, auto_build_enabled: v }))}
-                        labelHidden
-                      />
-                    </InlineStack>
-                  </div>
-
-                  {/* Auto Save */}
-                  <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
-                    <InlineStack align="space-between" blockAlign="center">
-                      <BlockStack gap="050">
-                        <Text as="span" variant="bodyMd" fontWeight="medium">{t("autoSaveLabel")}</Text>
-                        <Text as="span" variant="bodySm" tone="subdued">{t("autoSaveDesc")}</Text>
-                      </BlockStack>
-                      <Checkbox
-                        label=""
-                        checked={automation.auto_save_enabled}
-                        onChange={(v) => setAutomation((a) => ({ ...a, auto_save_enabled: v }))}
                         labelHidden
                       />
                     </InlineStack>

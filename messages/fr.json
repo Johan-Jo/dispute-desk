@@ -2657,15 +2657,12 @@
       "autoNote": "Vous pouvez toujours consulter le dossier dans DisputeDesk. L'enregistrement dans Shopify ne confirme pas à lui seul que la réponse a été envoyée au réseau de cartes.",
       "approveTitle": "Exiger mon approbation avant l'enregistrement",
       "approveDesc": "DisputeDesk prépare et surveille la réponse, mais attend votre approbation avant d'enregistrer le premier dossier de preuves dans Shopify.",
-      "mixedNote": "Certains types de litige utilisent actuellement des modes différents. Choisir une option ici l'applique à tous les types.",
       "upgradeNote": "La gestion des modes d'enregistrement nécessite un forfait incluant les règles d'automatisation.",
       "saved": "Préférences de traitement des litiges enregistrées"
     },
     "notifApprovalRequired": "Approbation requise",
     "notifApprovalRequiredDesc": "Recevez un e-mail lorsqu'un dossier de preuves attend votre approbation avant de pouvoir être enregistré dans Shopify.",
-    "notifApprovalRequiredLock": "Obligatoire pour ne manquer aucune approbation ni date limite de réponse.",
-    "autoSaveLabel": "Enregistrer automatiquement sur Shopify",
-    "autoSaveDesc": "Envoyer automatiquement les preuves complètes à Shopify"
+    "notifApprovalRequiredLock": "Obligatoire pour ne manquer aucune approbation ni date limite de réponse."
   },
   "connect": {
     "title": "Connection Readiness",

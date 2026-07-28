@@ -2657,15 +2657,12 @@
       "autoNote": "Sie können das Paket weiterhin in DisputeDesk prüfen. Das Speichern in Shopify bestätigt für sich genommen nicht, dass die Antwort an das Kartennetzwerk gesendet wurde.",
       "approveTitle": "Vor dem Speichern meine Freigabe verlangen",
       "approveDesc": "DisputeDesk bereitet die Antwort vor und überwacht sie, wartet aber auf Ihre Freigabe, bevor das erste Beweispaket in Shopify gespeichert wird.",
-      "mixedNote": "Einige Streitfalltypen verwenden derzeit unterschiedliche Modi. Eine Auswahl hier gilt für alle Typen.",
       "upgradeNote": "Die Verwaltung der Speichermodi erfordert einen Plan mit Automatisierungsregeln.",
       "saved": "Einstellungen zur Streitfall-Bearbeitung gespeichert"
     },
     "notifApprovalRequired": "Freigabe erforderlich",
     "notifApprovalRequiredDesc": "Erhalten Sie eine E-Mail, wenn ein Beweispaket auf Ihre Freigabe wartet, bevor es in Shopify gespeichert werden kann.",
-    "notifApprovalRequiredLock": "Erforderlich, damit Sie keine Freigaben oder Antwortfristen verpassen.",
-    "autoSaveLabel": "Beweise automatisch in Shopify speichern",
-    "autoSaveDesc": "Fertige Beweise automatisch an Shopify senden"
+    "notifApprovalRequiredLock": "Erforderlich, damit Sie keine Freigaben oder Antwortfristen verpassen."
   },
   "connect": {
     "title": "Connection Readiness",

@@ -2657,15 +2657,12 @@
       "autoNote": "You can still review the package in DisputeDesk. Saving evidence to Shopify does not by itself confirm the response has been sent to the card network.",
       "approveTitle": "Require my approval before saving",
       "approveDesc": "DisputeDesk prepares and monitors the response but waits for your approval before saving the first evidence package to Shopify.",
-      "mixedNote": "Some dispute types currently use different modes. Choosing an option here applies it to all types.",
       "upgradeNote": "Managing save modes requires a plan that includes automation rules.",
       "saved": "Dispute handling preferences saved"
     },
     "notifApprovalRequired": "Approval required",
     "notifApprovalRequiredDesc": "Receive an email when an evidence package is waiting for your approval before it can be saved to Shopify.",
-    "notifApprovalRequiredLock": "Required so you don't miss evidence approvals or response deadlines.",
-    "autoSaveLabel": "Auto-save evidence to Shopify",
-    "autoSaveDesc": "Automatically push complete evidence to Shopify when gates pass"
+    "notifApprovalRequiredLock": "Required so you don't miss evidence approvals or response deadlines."
   },
   "connect": {
     "title": "Authorize DisputeDesk",

@@ -148,13 +148,13 @@ export function HandlingStep({ onSaveRef, onCanContinueChange }: HandlingStepPro
         });
       }
 
-      // 2) Persist the store-wide handling choice. The x-dd-setup header
-      //    exempts this write from the rules plan gate — a free-plan merchant
-      //    must be able to choose their mode during onboarding.
+      // 2) Persist the store-wide handling choice. No plan-gate exemption
+      //    header is needed: the switch is core product and is not gated
+      //    anywhere (see app/api/automation/store/route.ts).
       const effectiveSafeguard = safeguardEnabled && amountValid;
       const storeRes = await fetch("/api/automation/store", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "x-dd-setup": "1" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode,
           safeguard: {

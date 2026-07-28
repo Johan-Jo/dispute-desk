@@ -2657,15 +2657,12 @@
       "autoNote": "Você ainda pode revisar o pacote no DisputeDesk. Salvar provas no Shopify não confirma por si só que a resposta foi enviada à rede do cartão.",
       "approveTitle": "Exigir minha aprovação antes de salvar",
       "approveDesc": "O DisputeDesk prepara e monitora a resposta, mas aguarda sua aprovação antes de salvar o primeiro pacote de provas no Shopify.",
-      "mixedNote": "Alguns tipos de disputa usam modos diferentes no momento. Escolher uma opção aqui a aplica a todos os tipos.",
       "upgradeNote": "Gerenciar os modos de salvamento requer um plano que inclua regras de automação.",
       "saved": "Preferências de tratamento de disputas salvas"
     },
     "notifApprovalRequired": "Aprovação necessária",
     "notifApprovalRequiredDesc": "Receba um e-mail quando um pacote de provas estiver aguardando sua aprovação antes de poder ser salvo no Shopify.",
-    "notifApprovalRequiredLock": "Obrigatório para que você não perca aprovações nem prazos de resposta.",
-    "autoSaveLabel": "Salvar evidências no Shopify automaticamente",
-    "autoSaveDesc": "Envia evidências completas ao Shopify automaticamente quando as verificações são aprovadas"
+    "notifApprovalRequiredLock": "Obrigatório para que você não perca aprovações nem prazos de resposta."
   },
   "connect": {
     "title": "Connection Readiness",

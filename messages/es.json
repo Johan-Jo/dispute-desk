@@ -2657,15 +2657,12 @@
       "autoNote": "Aún puede revisar el paquete en DisputeDesk. Guardar pruebas en Shopify no confirma por sí solo que la respuesta se haya enviado a la red de tarjetas.",
       "approveTitle": "Requerir mi aprobación antes de guardar",
       "approveDesc": "DisputeDesk prepara y supervisa la respuesta, pero espera su aprobación antes de guardar el primer paquete de pruebas en Shopify.",
-      "mixedNote": "Algunos tipos de disputa usan actualmente modos diferentes. Elegir una opción aquí la aplica a todos los tipos.",
       "upgradeNote": "Gestionar los modos de guardado requiere un plan que incluya reglas de automatización.",
       "saved": "Preferencias de gestión de disputas guardadas"
     },
     "notifApprovalRequired": "Aprobación requerida",
     "notifApprovalRequiredDesc": "Reciba un correo cuando un paquete de pruebas espere su aprobación antes de poder guardarse en Shopify.",
-    "notifApprovalRequiredLock": "Obligatorio para que no se pierda aprobaciones ni fechas límite de respuesta.",
-    "autoSaveLabel": "Guardar automáticamente en Shopify",
-    "autoSaveDesc": "Enviar automáticamente evidencia completa a Shopify"
+    "notifApprovalRequiredLock": "Obligatorio para que no se pierda aprobaciones ni fechas límite de respuesta."
   },
   "connect": {
     "title": "Connection Readiness",
