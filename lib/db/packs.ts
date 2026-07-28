@@ -1,6 +1,7 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import type { Pack, PackNarrativeSettings, PackNarrative } from "@/lib/types/packs";
 import { INQUIRY_TEMPLATE_ID_SET } from "@/lib/setup/recommendTemplates";
+import { normalizeDisputeType } from "@/lib/rules/disputeTypes";
 
 // Uses Shopify dispute reason codes directly after migration
 // 20260411160000. DIGITAL is retained as a product-type signal
@@ -9,7 +10,7 @@ const DISPUTE_TYPE_LABELS: Record<string, string> = {
   FRAUDULENT: "Fraudulent transaction",
   PRODUCT_NOT_RECEIVED: "Product not received",
   PRODUCT_UNACCEPTABLE: "Product not as described",
-  SUBSCRIPTION_CANCELED: "Subscription",
+  SUBSCRIPTION_CANCELLED: "Subscription",
   CREDIT_NOT_PROCESSED: "Refund/credit not processed",
   DUPLICATE: "Duplicate/incorrect amount",
   DIGITAL: "Digital goods/service",
@@ -131,7 +132,11 @@ export async function installTemplate(
   });
 
   // 6. Generate skeleton English narrative
-  const typeLabel = DISPUTE_TYPE_LABELS[tpl.dispute_type] ?? tpl.dispute_type;
+  // Legacy `pack_templates.dispute_type` rows may still carry the single-L
+  // SUBSCRIPTION_CANCELED spelling — normalise before the label lookup.
+  const typeLabel =
+    DISPUTE_TYPE_LABELS[normalizeDisputeType(tpl.dispute_type) ?? tpl.dispute_type] ??
+    tpl.dispute_type;
   const evidenceBullets = requiredItemLabels
     .slice(0, 5)
     .map((label) => `- ${label}`)

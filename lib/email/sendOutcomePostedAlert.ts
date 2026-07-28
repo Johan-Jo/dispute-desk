@@ -33,6 +33,7 @@
 import { Resend } from "resend";
 import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 import { getServiceClient } from "@/lib/supabase/server";
+import { canonicalReasonCode } from "@/lib/rules/disputeReasons";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL =
@@ -651,9 +652,10 @@ function reasonLabel(reason: string | null): string {
     PRODUCT_NOT_RECEIVED: "Product not received",
     DUPLICATE: "Duplicate charge",
     CREDIT_NOT_PROCESSED: "Refund not processed",
-    SUBSCRIPTION_CANCELED: "Subscription canceled",
+    SUBSCRIPTION_CANCELLED: "Subscription cancelled",
   };
-  if (known[reason]) return known[reason];
+  const canonical = canonicalReasonCode(reason) ?? reason;
+  if (known[canonical]) return known[canonical];
   return reason
     .toLowerCase()
     .split("_")

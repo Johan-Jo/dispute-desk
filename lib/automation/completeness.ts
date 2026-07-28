@@ -7,7 +7,14 @@
  * inapplicable fields don't block pack generation.
  *
  * Packs are ALWAYS generated. Blockers only gate auto-save.
+ *
+ * Reason keys below are canonical Shopify enum values. Lookups go through
+ * `canonicalReasonCode` so a legacy spelling can't silently fall through to
+ * the GENERAL checklist — which is exactly how every subscription dispute
+ * stopped being asked for its cancellation policy (see disputeReasons.ts).
  */
+
+import { canonicalReasonCode } from "@/lib/rules/disputeReasons";
 
 export type RequirementMode =
   | "required_always"
@@ -109,7 +116,7 @@ export const REASON_TEMPLATES: Record<string, ReasonTemplate> = {
     { field: "duplicate_explanation", label: "Duplicate Explanation", requirementMode: "required_always" },
     { field: "supporting_documents", label: "Supporting documents", requirementMode: "optional" },
   ],
-  SUBSCRIPTION_CANCELED: [
+  SUBSCRIPTION_CANCELLED: [
     { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always" },
     { field: "cancellation_policy", label: "Cancellation Policy", requirementMode: "required_always" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended" },
@@ -148,8 +155,8 @@ export const REASON_TEMPLATES: Record<string, ReasonTemplate> = {
 export const MANUAL_UPLOAD_FIELD = "supporting_documents";
 
 function getTemplate(reason: string | null | undefined): ReasonTemplate {
-  if (!reason) return REASON_TEMPLATES.GENERAL;
-  const key = reason.toUpperCase().replace(/\s+/g, "_");
+  const key = canonicalReasonCode(reason);
+  if (!key) return REASON_TEMPLATES.GENERAL;
   return REASON_TEMPLATES[key] ?? REASON_TEMPLATES.GENERAL;
 }
 
@@ -398,7 +405,7 @@ export const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
     { field: "duplicate_explanation", label: "Duplicate Explanation", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
     { field: "supporting_documents", label: "Supporting Documents", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
   ],
-  SUBSCRIPTION_CANCELED: [
+  SUBSCRIPTION_CANCELLED: [
     { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "cancellation_policy", label: "Cancellation Policy", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_policy", collectionType: "conditional_auto" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
@@ -440,8 +447,8 @@ export const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
 };
 
 function getTemplateV2(reason: string | null | undefined): TemplateFieldV2[] {
-  if (!reason) return REASON_TEMPLATES_V2.GENERAL;
-  const key = reason.toUpperCase().replace(/\s+/g, "_");
+  const key = canonicalReasonCode(reason);
+  if (!key) return REASON_TEMPLATES_V2.GENERAL;
   return REASON_TEMPLATES_V2[key] ?? REASON_TEMPLATES_V2.GENERAL;
 }
 

@@ -20,7 +20,10 @@
  * real outcomes (Phase 5+ data) is a config change, not a logic change.
  */
 
-import type { AllDisputeReasonCode } from "@/lib/rules/disputeReasons";
+import {
+  canonicalReasonCode,
+  type AllDisputeReasonCode,
+} from "@/lib/rules/disputeReasons";
 import {
   REASON_CODE_CATALOG,
   getReasonCode,
@@ -113,7 +116,7 @@ const INFERENCE_MAP: Partial<
     visa: "13.3",
     mastercard: "4853",
   },
-  SUBSCRIPTION_CANCELED: {
+  SUBSCRIPTION_CANCELLED: {
     visa: "13.2",
     mastercard: "4841",
   },
@@ -308,7 +311,8 @@ function tryInferred(input: ResolveInput): ResolveResult | null {
   // them yet.
   if (network !== "visa" && network !== "mastercard") return null;
 
-  const enumKey = shopifyReason.toUpperCase() as AllDisputeReasonCode;
+  const enumKey = canonicalReasonCode(shopifyReason);
+  if (!enumKey) return null;
   const baseCode = INFERENCE_MAP[enumKey]?.[network];
   if (!baseCode) return null;
 
@@ -318,7 +322,7 @@ function tryInferred(input: ResolveInput): ResolveResult | null {
   // differs by code). Order context only sharpens the diagnostic reason.
   let inferenceReason = `enum_to_code:${enumKey}:${network}`;
   if (
-    enumKey === "SUBSCRIPTION_CANCELED" &&
+    enumKey === "SUBSCRIPTION_CANCELLED" &&
     input.orderContext?.hasSubscription === false
   ) {
     inferenceReason = `${inferenceReason}:no_subscription_signal`;
@@ -363,7 +367,7 @@ export function knownCodes(): { network: CardNetwork; code: string }[] {
  *
  * NOT included on purpose:
  *   - CREDIT_NOT_PROCESSED: refund-flow dispute; risk screening is irrelevant.
- *   - PRODUCT_NOT_RECEIVED / PRODUCT_UNACCEPTABLE / SUBSCRIPTION_CANCELED:
+ *   - PRODUCT_NOT_RECEIVED / PRODUCT_UNACCEPTABLE / SUBSCRIPTION_CANCELLED:
  *     delivery / quality / contract-lifecycle disputes; the cardholder
  *     authorized the original transaction, so a "low risk at checkout"
  *     citation does not address the merchant's burden of proof.

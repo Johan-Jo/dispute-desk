@@ -21,13 +21,15 @@
  *   Unauthorized Purchase · High-Risk Order.
  */
 
+import { canonicalReasonCode } from "@/lib/rules/disputeReasons";
+
 /** Shopify `ShopifyPaymentsDisputeReason` enum → Klarna category label. */
 const SHOPIFY_REASON_TO_KLARNA_CATEGORY: Record<string, string> = {
   PRODUCT_NOT_RECEIVED: "Goods not received",
   PRODUCT_UNACCEPTABLE: "Faulty or not as described",
   CREDIT_NOT_PROCESSED: "Refund not processed",
   DUPLICATE: "Incorrect amount",
-  SUBSCRIPTION_CANCELED: "Return / cancellation",
+  SUBSCRIPTION_CANCELLED: "Return / cancellation",
   FRAUDULENT: "Unauthorized purchase",
   UNRECOGNIZED: "Unauthorized purchase",
 };
@@ -41,8 +43,7 @@ const SHOPIFY_REASON_TO_KLARNA_CATEGORY: Record<string, string> = {
 export function klarnaDisputeCategoryDisplay(
   shopifyReason: string | null | undefined,
 ): string {
-  const category = shopifyReason
-    ? SHOPIFY_REASON_TO_KLARNA_CATEGORY[shopifyReason.toUpperCase()]
-    : undefined;
+  const key = canonicalReasonCode(shopifyReason);
+  const category = key ? SHOPIFY_REASON_TO_KLARNA_CATEGORY[key] : undefined;
   return category ? `Klarna dispute — ${category}` : "Klarna dispute";
 }

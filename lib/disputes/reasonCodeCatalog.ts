@@ -288,7 +288,7 @@ const VISA_CODES: ReasonCodeEntry[] = [
     i18nKey: "code.visa.13-2",
     rebuttalTemplateKey: "rebuttal.visa.13-2.cancelled-recurring",
     evidenceChecklistKey: "checklist.subscription",
-    shopifyEnumFallbacks: ["SUBSCRIPTION_CANCELED"],
+    shopifyEnumFallbacks: ["SUBSCRIPTION_CANCELLED"],
     introducedDate: "2018-04",
   },
   {
@@ -351,7 +351,7 @@ const VISA_CODES: ReasonCodeEntry[] = [
     i18nKey: "code.visa.13-7",
     rebuttalTemplateKey: "rebuttal.visa.13-7.cancelled",
     evidenceChecklistKey: "checklist.cancellation",
-    shopifyEnumFallbacks: ["SUBSCRIPTION_CANCELED", "CREDIT_NOT_PROCESSED"],
+    shopifyEnumFallbacks: ["SUBSCRIPTION_CANCELLED", "CREDIT_NOT_PROCESSED"],
     introducedDate: "2018-04",
   },
   {
@@ -475,7 +475,7 @@ const MASTERCARD_CODES: ReasonCodeEntry[] = [
     i18nKey: "code.mc.4841",
     rebuttalTemplateKey: "rebuttal.mc.4841.cancelled-recurring",
     evidenceChecklistKey: "checklist.subscription",
-    shopifyEnumFallbacks: ["SUBSCRIPTION_CANCELED"],
+    shopifyEnumFallbacks: ["SUBSCRIPTION_CANCELLED"],
     introducedDate: "2016-10",
   },
   {

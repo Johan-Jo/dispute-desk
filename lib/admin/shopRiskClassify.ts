@@ -8,7 +8,7 @@
 
 import {
   DISPUTE_REASON_FAMILIES,
-  type AllDisputeReasonCode,
+  canonicalReasonCode,
 } from "@/lib/rules/disputeReasons";
 
 export type ReasonBucket =
@@ -35,8 +35,8 @@ const FAMILY_TO_BUCKET: Record<string, ReasonBucket> = {
 export function classifyReasonFamily(
   reason: string | null | undefined,
 ): ReasonBucket {
-  if (!reason) return "other";
-  const code = reason.toUpperCase().replace(/\s+/g, "_") as AllDisputeReasonCode;
+  const code = canonicalReasonCode(reason);
+  if (!code) return "other";
   const family = DISPUTE_REASON_FAMILIES[code];
   if (!family) return "other";
   return FAMILY_TO_BUCKET[family] ?? "other";

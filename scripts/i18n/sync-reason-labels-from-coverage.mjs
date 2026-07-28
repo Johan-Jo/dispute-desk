@@ -24,7 +24,7 @@ const FAMILY_TO_CODES = {
   familyUnrecognized: ["UNRECOGNIZED"],
   familyPnr: ["PRODUCT_NOT_RECEIVED", "PNR"],
   familyNotAsDescribed: ["PRODUCT_UNACCEPTABLE", "NOT_AS_DESCRIBED"],
-  familySubscription: ["SUBSCRIPTION_CANCELED", "SUBSCRIPTION"],
+  familySubscription: ["SUBSCRIPTION_CANCELLED", "SUBSCRIPTION"],
   familyRefund: ["CREDIT_NOT_PROCESSED", "REFUND"],
   familyDuplicate: ["DUPLICATE"],
   familyGeneral: ["GENERAL"],

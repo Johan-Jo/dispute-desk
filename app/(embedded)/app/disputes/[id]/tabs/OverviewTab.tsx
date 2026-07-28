@@ -202,7 +202,7 @@ function mapReasonToRulesFamily(reason: string | null | undefined): string {
   if (key === "FRAUDULENT" || key === "UNRECOGNIZED") return "fraud";
   if (key === "PRODUCT_NOT_RECEIVED") return "pnr";
   if (key === "PRODUCT_UNACCEPTABLE" || key === "NOT_AS_DESCRIBED") return "not_as_described";
-  if (key === "SUBSCRIPTION_CANCELED") return "subscription";
+  if (key === "SUBSCRIPTION_CANCELLED") return "subscription";
   if (key === "CREDIT_NOT_PROCESSED") return "refund";
   if (key === "DUPLICATE") return "duplicate";
   return "general";

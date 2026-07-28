@@ -112,7 +112,7 @@ export const DEMO_DASHBOARD_STATS_REAL: DashboardStats = {
   disputeCategories: [
     { label: "FRAUDULENT", value: 2, cb: 2, inq: 0 },
     { label: "PRODUCT_NOT_RECEIVED", value: 2, cb: 2, inq: 0 },
-    { label: "SUBSCRIPTION_CANCELED", value: 1, cb: 0, inq: 1 },
+    { label: "SUBSCRIPTION_CANCELLED", value: 1, cb: 0, inq: 1 },
     { label: "CREDIT_NOT_PROCESSED", value: 1, cb: 1, inq: 0 },
   ],
 

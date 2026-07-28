@@ -8,6 +8,8 @@
  * data + format logic that should live in one place.
  */
 
+import { canonicalReasonCode } from "./disputeReasons";
+
 /**
  * Family slug → dispute-type code used by the rule engine + the
  * pack template installer. Drives the install-modal's initial
@@ -25,7 +27,7 @@ export const FAMILY_TO_DISPUTE_TYPE: Record<string, string> = {
   fraud: "FRAUDULENT",
   pnr: "PRODUCT_NOT_RECEIVED",
   not_as_described: "PRODUCT_UNACCEPTABLE",
-  subscription: "SUBSCRIPTION_CANCELED",
+  subscription: "SUBSCRIPTION_CANCELLED",
   refund: "CREDIT_NOT_PROCESSED",
   duplicate: "DUPLICATE",
   general: "GENERAL",
@@ -41,7 +43,7 @@ export const REASON_KEYS: Record<string, string> = {
   PRODUCT_UNACCEPTABLE: "productUnacceptable",
   FRAUDULENT: "fraudulent",
   CREDIT_NOT_PROCESSED: "creditNotProcessed",
-  SUBSCRIPTION_CANCELED: "subscriptionCanceled",
+  SUBSCRIPTION_CANCELLED: "subscriptionCanceled",
   DUPLICATE: "duplicate",
   GENERAL: "general",
 };
@@ -88,7 +90,9 @@ export function matchSummary(
   const parts: string[] = [];
   if (match.reason?.length) {
     const translated = match.reason.map((r) => {
-      const key = REASON_KEYS[r];
+      // Stored rules written before 2026-07-28 can carry the single-L
+      // SUBSCRIPTION_CANCELED spelling — normalise so the label resolves.
+      const key = REASON_KEYS[canonicalReasonCode(r) ?? r];
       return key && tReasons.has(key) ? tReasons(key) : r.replace(/_/g, " ");
     });
     parts.push(`${tRules("reason")}: ${translated.join(", ")}`);

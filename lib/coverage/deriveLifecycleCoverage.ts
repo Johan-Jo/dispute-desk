@@ -13,6 +13,7 @@ import {
   type AutomationMode,
   type DisputeFamily,
 } from "./deriveCoverage";
+import { canonicalReasonCode } from "@/lib/rules/disputeReasons";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -89,11 +90,13 @@ interface PackInput {
 // ---------------------------------------------------------------------------
 
 function packMatchesFamily(pack: PackInput, family: DisputeFamily): boolean {
-  const type = pack.dispute_type?.toUpperCase();
-  if (!type) return false;
-  if (type === "DIGITAL") {
+  const raw = pack.dispute_type?.toUpperCase();
+  if (!raw) return false;
+  if (raw === "DIGITAL") {
     return family.reasons.includes("GENERAL");
   }
+  // Rows written before 2026-07-28 may carry SUBSCRIPTION_CANCELED (single L).
+  const type = canonicalReasonCode(raw) ?? raw;
   return family.reasons.includes(type);
 }
 
@@ -113,7 +116,8 @@ function ruleMatchesFamily(
   // shown on the Coverage page — that would diverge from the
   // Automation page, which only reads pack-specific rules.
   if (!rule.match.reason || rule.match.reason.length === 0) return false;
-  return family.reasons.some((r) => rule.match.reason!.includes(r));
+  const ruleReasons = rule.match.reason.map((r) => canonicalReasonCode(r) ?? r);
+  return family.reasons.some((r) => ruleReasons.includes(r));
 }
 
 /** Phase-specific rules win over phase-blind rules at the same priority. */

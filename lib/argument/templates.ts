@@ -13,6 +13,7 @@
  */
 
 import type { ArgumentTemplate } from "./types";
+import { canonicalReasonCode } from "@/lib/rules/disputeReasons";
 
 const TEMPLATES: Record<string, ArgumentTemplate> = {
   FRAUDULENT: {
@@ -57,8 +58,8 @@ const TEMPLATES: Record<string, ArgumentTemplate> = {
     ],
   },
 
-  SUBSCRIPTION_CANCELED: {
-    disputeType: "Subscription canceled",
+  SUBSCRIPTION_CANCELLED: {
+    disputeType: "Subscription cancelled",
     toWin: [
       "Cancellation terms were disclosed",
       "Customer was notified of renewal",
@@ -104,8 +105,8 @@ const TEMPLATES: Record<string, ArgumentTemplate> = {
 export function getArgumentTemplate(
   reason: string | null | undefined,
 ): ArgumentTemplate {
-  if (!reason) return TEMPLATES.GENERAL;
-  const key = reason.toUpperCase().replace(/\s+/g, "_");
+  const key = canonicalReasonCode(reason);
+  if (!key) return TEMPLATES.GENERAL;
   return TEMPLATES[key] ?? TEMPLATES.GENERAL;
 }
 
@@ -115,8 +116,8 @@ const ISSUER_CLAIMS: Record<string, string> = {
   PRODUCT_NOT_RECEIVED: "Customer claims the item was not received",
   PRODUCT_UNACCEPTABLE:
     "Customer claims the product was not as described or defective",
-  SUBSCRIPTION_CANCELED:
-    "Customer claims the subscription was canceled but still charged",
+  SUBSCRIPTION_CANCELLED:
+    "Customer claims the subscription was cancelled but still charged",
   DUPLICATE: "Customer claims they were charged more than once",
   GENERAL: "Customer disputes this transaction",
 };
@@ -124,7 +125,7 @@ const ISSUER_CLAIMS: Record<string, string> = {
 export function getIssuerClaimText(
   reason: string | null | undefined,
 ): string {
-  if (!reason) return ISSUER_CLAIMS.GENERAL;
-  const key = reason.toUpperCase().replace(/\s+/g, "_");
+  const key = canonicalReasonCode(reason);
+  if (!key) return ISSUER_CLAIMS.GENERAL;
   return ISSUER_CLAIMS[key] ?? ISSUER_CLAIMS.GENERAL;
 }
