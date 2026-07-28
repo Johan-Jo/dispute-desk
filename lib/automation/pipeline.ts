@@ -15,7 +15,10 @@ import { claimAndSendDeferredNewDisputeAlert } from "@/lib/email/sendNewDisputeA
 import { sendHighValueReviewAlert } from "@/lib/email/sendHighValueReviewAlert";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { normalizeMode, type AutomationMode } from "@/lib/rules/normalizeMode";
-import { SETUP_RULE_PREFIX } from "@/lib/rules/setupAutomation";
+import {
+  SAFEGUARD_RULE_NAME as HIGH_VALUE_SAFEGUARD_NAME,
+  readStoreAutomation,
+} from "@/lib/rules/storeAutomation";
 import {
   isRegenerateBuild,
   isMaterialChange,
@@ -29,7 +32,6 @@ import {
 import { claimBillingBlockedEmailSlot } from "./billingBlockedEmailThrottle";
 import { evaluateAutoSubmitGuards } from "./autoSubmitGuards";
 
-const HIGH_VALUE_SAFEGUARD_NAME = `${SETUP_RULE_PREFIX}safeguard:high_value`;
 import {
   AUTO_BUILD_TRIGGERED,
   AUTO_SAVE_TRIGGERED,
@@ -920,16 +922,13 @@ async function sendHighValueReviewAlertForPack(
     .single();
   if (disputeRow?.high_value_alert_sent_at) return;
 
-  // Look up the threshold from the wizard payload + the merchant team email.
+  // Merchant team email still comes from the wizard payload.
   const { data: setup } = await sb
     .from("shop_setup")
     .select("steps")
     .eq("shop_id", shopId)
     .single();
   const steps = (setup?.steps ?? {}) as Record<string, { payload?: Record<string, unknown> }>;
-  const automationPayload = steps.automation?.payload as
-    | { reviewThreshold?: string | number; highValueReviewEnabled?: boolean }
-    | undefined;
   const teamPayload = steps.team?.payload as
     | { teamEmail?: string; notifications?: { evidenceReady?: boolean } }
     | undefined;
@@ -940,11 +939,14 @@ async function sendHighValueReviewAlertForPack(
   const to = teamPayload?.teamEmail;
   if (!to) return;
 
-  const thresholdRaw = automationPayload?.reviewThreshold;
-  const threshold =
-    typeof thresholdRaw === "number"
-      ? thresholdRaw
-      : Number.parseFloat(String(thresholdRaw ?? "0"));
+  // Threshold comes from the safeguard RULE — the actual source of truth and
+  // the very thing that matched to get us here. It used to be read from
+  // `shop_setup.steps.automation.payload.reviewThreshold`, which meant a
+  // merchant who only ever set the threshold on /app/rules had no payload,
+  // so `threshold` came out 0 and this email silently never sent.
+  const storeAutomation = await readStoreAutomation(shopId);
+  if (!storeAutomation.safeguard.enabled) return;
+  const threshold = storeAutomation.safeguard.amount;
   if (!Number.isFinite(threshold) || threshold <= 0) return;
 
   if (dispute.amount == null) return;

@@ -14,10 +14,9 @@
  * [[project_llm_cap_defence_package_incident]] for the sibling "cap-failed
  * drafts never self-heal" class.
  *
- * Called from `POST /api/setup/automation` after a rule write. NOTE: it is
- * NOT yet wired into `POST /api/rules` or `PATCH/DELETE /api/rules/[id]`, so
- * creating a custom auto rule does not currently unstick matching drafts —
- * that gap is closed in a later PR of the store-wide automation work.
+ * Runs after any rule write: `writeStoreAutomation` (the store-wide switch
+ * and its safeguard) and every custom-rule mutation — `POST /api/rules`,
+ * `PATCH /api/rules/[id]`, `DELETE /api/rules/[id]`.
  *
  * It re-applies the SAME gates the auto path enforces — Coverage, Fatal-loss,
  * and PRD §9 strength (Strong only; product-family Strong still parks) — via
