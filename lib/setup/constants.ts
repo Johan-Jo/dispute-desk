@@ -130,16 +130,27 @@ export const LEGACY_STEP_ID_MAP: Record<string, StepId> = {
 };
 
 /**
- * Resolve an incoming step id to a canonical one, tolerating legacy aliases.
+ * Resolve an incoming step id to a canonical one, tolerating legacy aliases
+ * and separator/casing drift. Returns null for genuinely unknown ids.
  *
- * A stale client tab (or a bookmarked wizard URL) can post `coverage` or
- * `automation` after the 6→5 merge; rejecting those with a 400 would strand
- * the merchant mid-wizard. Returns null for genuinely unknown ids.
+ * Three classes of input have to survive:
+ *   1. Legacy ids — a stale tab or bookmark posting `coverage`/`automation`
+ *      after the 6→5 merge. Rejecting those strands the merchant mid-wizard.
+ *   2. Separator drift — `store-profile` vs `store_profile`. Hyphens read as
+ *      natural in a URL and every hand-written link gets this wrong sooner or
+ *      later; the wizard rendered a blank "Setup Wizard" card when it did.
+ *   3. Casing/whitespace from hand-edited URLs.
+ *
+ * Normalising here (rather than at each of the four call sites) keeps the
+ * tolerance in one place — the page, POST /step, POST /skip and the portal
+ * wizard all route through this.
  */
 export function resolveStepId(raw: unknown): StepId | null {
-  if (typeof raw !== "string" || raw.length === 0) return null;
-  if (STEP_IDS.includes(raw as StepId)) return raw as StepId;
-  return LEGACY_STEP_ID_MAP[raw] ?? null;
+  if (typeof raw !== "string") return null;
+  const normalized = raw.trim().toLowerCase().replace(/-/g, "_");
+  if (normalized.length === 0) return null;
+  if (STEP_IDS.includes(normalized as StepId)) return normalized as StepId;
+  return LEGACY_STEP_ID_MAP[normalized] ?? null;
 }
 
 export function getNextActionableStep(

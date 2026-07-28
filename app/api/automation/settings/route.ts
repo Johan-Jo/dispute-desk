@@ -46,9 +46,16 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
+  // `auto_save_enabled` is DELIBERATELY absent (2026-07-28). It is now a
+  // strict 1:1 mirror of the store-wide handling switch, written only by
+  // `writeStoreAutomation` (lib/rules/storeAutomation.ts). Accepting it here
+  // would let a client desync the mirror — /app/rules would say auto while
+  // the gate said false, which is the exact class of drift the store-wide
+  // redesign removed. Change the mode via PUT /api/automation/store instead.
+  // Silently filtered rather than 400'd so an older cached client PATCHing
+  // the full settings object still succeeds for the fields it does own.
   const allowed = [
     "auto_build_enabled",
-    "auto_save_enabled",
     "auto_save_min_score",
     "enforce_no_blockers",
   ];
