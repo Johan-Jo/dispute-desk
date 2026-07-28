@@ -17,6 +17,7 @@ import { persistShopCurrency } from "@/lib/shopify/persistShopCurrency";
 import { ingestShopifyPolicies } from "@/lib/policies/ingestShopifyPolicies";
 import { grantFreeLifetimeCredits } from "@/lib/billing/grantFreeLifetime";
 import { sendWelcomeEmail } from "@/lib/email/sendWelcome";
+import { seedDefaultStoreAutomation } from "@/lib/rules/storeAutomation";
 import {
   sendAdminSignupNotification,
   sendAdminInstallNotification,
@@ -610,4 +611,16 @@ async function ensureShopSetup(
         .eq("shop_id", shopId);
     }
   }
+
+  // Seed the store-wide automation default: auto-pilot ON with a $500
+  // high-value safeguard. Idempotent (no-ops once a fallback rule exists),
+  // so a re-install or repeated OAuth never resets a merchant's choice.
+  //
+  // This is what makes auto-pilot live from install rather than only after
+  // onboarding: writeStoreAutomation calls ensure_shop_settings, so a brand-new
+  // shop gets auto_save_enabled = true even though the column defaults to
+  // false. Non-fatal — a failure here must never break the OAuth callback.
+  await seedDefaultStoreAutomation(shopId).catch((err) => {
+    console.warn("[oauth] seedDefaultStoreAutomation failed:", err);
+  });
 }

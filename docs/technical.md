@@ -2385,6 +2385,41 @@ Precedence is coverage → fatal-loss → strength, matching PRD §4 → §5 →
 
 Tests: `lib/automation/__tests__/autoSubmitGuards.test.ts` (exhaustive verdict + precedence matrix) and `lib/jobs/handlers/__tests__/buildDefencePackageJobGuards.test.ts` (the job-path regression — Moderate yields a draft with a `park` verdict).
 
+### Store-wide automation mode (2026-07-27)
+
+Replaces the per-dispute-type Automatic/Review grid. **One switch per shop**, plus an explicit amount safeguard.
+
+**Why the grid went.** The per-type mode is gate #3 of 8 in `evaluateAndMaybeAutoSave`. Coverage, fatal-loss, Moderate/Weak/Insufficient strength, product-family-even-when-Strong, the completeness floor and blockers all park or block *regardless* of what the merchant picked per type. Auto-submit only ever happened at the intersection of {Strong} ∩ {not product family} ∩ {not covered} ∩ {no fatal loss} ∩ {completeness ≥ threshold} ∩ {no blockers}. Seven choices where there was really one — and the conditions that actually decide were invisible.
+
+**Storage — setup owns exactly TWO rows in `rules`:**
+
+| Row | Match | Priority | Meaning |
+|---|---|---|---|
+| `__dd_setup__:fallback:default` | `{}` | 100000 | `action.mode` **IS** the store-wide switch (tier-2 catch-all) |
+| `__dd_setup__:safeguard:high_value` | `{ amount_range: { min } }` | 5 | tier-0 amount safeguard; forces review on high-value disputes |
+
+Merchant custom rules (any name not starting with `__dd_setup__:`) are untouched and keep evaluating through the unchanged tier0/tier1/tier2 logic in `pickAutomationAction`.
+
+**Deleted:** `__dd_setup__:pack:{packId}` (+ `:inquiry` siblings), `__dd_setup__:coverage:{familyId}`, and the duplicate `__dd_safeguard__:high_value`. Migration `20260727120000_collapse_setup_rules_to_store_switch.sql` collapses existing shops conservatively (auto only if *every* enabled setup rule was auto; the safeguard is excluded from that vote since it is always `review`).
+
+**Template resolution improved.** Setup rules no longer carry `pack_template_id`, so `resolveAutomationTemplate` falls to `reason_template_mappings(reason_code, dispute_phase, is_active)` — which is **phase-aware by construction**. The old per-pack rule pinned a *chargeback* template even for inquiry-phase disputes unless a paired sibling rule existed. The entire `packInquiryRuleName` / `CHARGEBACK_TO_INQUIRY_TEMPLATE` phase-pairing machinery is gone.
+
+**`lib/rules/storeAutomation.ts` is the single read/write path** — `readStoreAutomation`, `writeStoreAutomation`, `seedDefaultStoreAutomation`. **DO NOT add a second surface that writes the switch or the safeguard.** Three surfaces writing this concept into two backing stores is what produced the drift below.
+
+**The `auto_save_enabled` mirror invariant.** `shop_settings.auto_save_enabled` is a strict 1:1 mirror of the switch, written only by `writeStoreAutomation` (which calls `ensure_shop_settings` first, so a shop with no settings row gets one). Two bugs this closes:
+- The wizard's `POST /api/setup/coverage-rules` wrote rules but **never** set the flag, so a merchant who chose all-auto in onboarding still hit a `false` gate and nothing auto-saved.
+- The flag was derived **all-or-nothing** from per-pack modes, so one family on review disabled auto-save for *every* family.
+
+The raw `auto_save_enabled` checkbox is therefore removed from Settings' Advanced card — a manual toggle on a derived mirror re-creates exactly this drift class.
+
+**Install-time default: auto-pilot ON + $500 safeguard**, seeded by `seedDefaultStoreAutomation` from `ensureShopSetup()` in the OAuth callback. Idempotent (no-ops once a fallback row exists), so a re-install never resets a merchant's choice. A shop can therefore auto-submit before the merchant opens the app — deliberate, and bounded by the engine gates plus the free-tier lifetime pack quota.
+
+**High-value email threshold** is read from the safeguard rule via `readStoreAutomation`, not from `shop_setup.steps.automation.payload.reviewThreshold`. Previously a merchant who set the threshold on `/app/rules` wrote a *differently named* rule (`__dd_safeguard__:`) and had no wizard payload, so the threshold read as 0 and the email silently never sent.
+
+**API:** `GET|PUT /api/automation/store`. One route, one plan gate (`checkFeatureAccess(plan, "rules")`) — with a deliberate exemption: a setup-originated write (`x-dd-setup: 1`) skips the gate so free-plan merchants can choose their mode during onboarding. `POST /api/setup/coverage-rules` and `POST /api/setup/automation` are removed.
+
+**`reconcileParkedAutoDisputes` now runs after every rule write** — `writeStoreAutomation` *and* `POST /api/rules` / `PATCH`/`DELETE /api/rules/[id]`. Its docstring previously claimed this; only the setup route actually called it, so creating a custom auto rule unstuck nothing.
+
 ### Cardholder-name-mismatch gate (2026-07-23, merchant-UI only)
 
 The payment gateway returns the name the card is registered to (`cardholderName` on the `avs_cvv_match` payment-section payload, via `lib/packs/sources/paymentSource.ts`). When that name shares **no token** with the dispute's customer name, the order was placed by someone other than the person the issuer knows — the classic stolen-card pattern (prod dispute `235d4152`: card registered to "Robin Denise Pipe", order by "Sean Boyd", AVS N, first-order account, Shopify pre-auth HIGH/CANCEL — presented as a Strong case pre-fix).
