@@ -2347,6 +2347,44 @@ review + fatal_loss → park_for_review           (review is absolute)
 - The `MESSAGES` copy in `lib/automation/fatalLoss.ts` is merchant-UI only. Bank-rebuttal text generation must NEVER cite "we already refunded" — that's a confession, not a defense.
 - Coverage beats fatal-loss. A covered case is never "fatal" because Shopify pays regardless.
 
+### Auto-submit guards — one decision, three callers (2026-07-27)
+
+`lib/automation/autoSubmitGuards.ts` — `evaluateAutoSubmitGuards(input): AutoSubmitVerdict`. **Pure** (no DB, no I/O, no side effects). This is the single authority on whether an *auto-mode* case may actually be submitted.
+
+**Why it exists.** The same decision was implemented three times and two of them disagreed:
+
+| Caller | Moderate strength, before |
+|---|---|
+| `lib/automation/pipeline.ts` (`evaluateAndMaybeAutoSave`) | **parked** |
+| `lib/jobs/handlers/buildDefencePackageJob.ts` | **blocked** (lumped with weak/insufficient) |
+| `lib/automation/reconcileParkedAutoDisputes.ts` | hand-rolled the same four checks a third time |
+
+The merchant-visible outcome was identical either way — a park and a block both leave the defence package a `draft` — which is exactly why the drift survived unnoticed. It was only visible as an inconsistent audit trail.
+
+**Verdict table (auto mode only; review mode never consults this function — review parks by definition):**
+
+| Condition | Verdict |
+|---|---|
+| `coverageState === "covered_shopify"` | `block` / `covered_shopify` |
+| `fatalLoss.triggered === true` | `block` / `fatal_loss` |
+| `caseStrength === "moderate"` | `park` / `moderate_strength` |
+| `caseStrength === "weak" \| "insufficient"` | `block` / same |
+| `caseStrength === "strong"` && `resolveReasonFamily(disputeReason) === "product"` | `park` / `product_family_strong` |
+| `caseStrength === "strong"` (non-product) | `proceed` |
+| `caseStrength === null` (pack predating the field) | `proceed` — preserves the pre-scoring behaviour in every caller |
+
+Precedence is coverage → fatal-loss → strength, matching PRD §4 → §5 → §9.
+
+**Canonical semantics: Moderate PARKS, it does not block.** A Moderate case has a usable draft the merchant can review and submit manually; blocking it would strand a viable defence. The pipeline's reading was correct and is now the shared one.
+
+**Hard rules:**
+- The function is decision-only. **Side effects stay with the callers** — `pipeline.ts` writes `evidence_packs.status` and emits dispute events; `buildDefencePackageJob` writes `defence_packages.status`. Those genuinely differ; extracting them too would produce a worse abstraction.
+- Never add a fourth hand-rolled copy of these checks. If a new caller needs the decision, call this function.
+- In `buildDefencePackageJob` a `park` and a `block` both demote `resolvedMode` to `"review"` (its only lever is `targetStatus: "final" | "draft"`), but the `auto_save_blocked` audit payload records `decision` + `verdict_reason` so the two stay distinguishable in the trail.
+- Coverage is unreachable from `pipeline.ts` (it returns `skip_covered` before rules are resolved); the verdict exists for the other two callers.
+
+Tests: `lib/automation/__tests__/autoSubmitGuards.test.ts` (exhaustive verdict + precedence matrix) and `lib/jobs/handlers/__tests__/buildDefencePackageJobGuards.test.ts` (the job-path regression — Moderate yields a draft with a `park` verdict).
+
 ### Cardholder-name-mismatch gate (2026-07-23, merchant-UI only)
 
 The payment gateway returns the name the card is registered to (`cardholderName` on the `avs_cvv_match` payment-section payload, via `lib/packs/sources/paymentSource.ts`). When that name shares **no token** with the dispute's customer name, the order was placed by someone other than the person the issuer knows — the classic stolen-card pattern (prod dispute `235d4152`: card registered to "Robin Denise Pipe", order by "Sean Boyd", AVS N, first-order account, Shopify pre-auth HIGH/CANCEL — presented as a Strong case pre-fix).
@@ -2370,7 +2408,7 @@ The payment gateway returns the name the card is registered to (`cardholderName`
 
 **Fraud-family `account_history` demotion (CE3.0 false proxy), 2026-07-23:** the canonical registry rates `customer_account_info` **strong** on ≥1 prior undisputed order. On a *fraud* claim that overstates it — Visa's Compelling Evidence 3.0 remedy requires **2+ prior undisputed transactions in a 120–365 day window sharing ≥2 data elements including IP or device ID**. A single prior order is nowhere near that bar, so for the **fraud family only** an `account_history` row rated strong is demoted to **moderate corroboration** at row-build time in `caseStrength.ts` (and mirrored in `computeContributions`, which now takes the dispute reason, so "What supports your case" can't show a Strong pill the scorer counted as moderate). Other families keep the registry rating; the registry itself is untouched, preserving the family-independent-categories invariant. Effect: a fraud case can no longer reach Strong on AVS + prior-history alone — it needs a second genuinely decisive signal (delivery, device/session, customer confirmation). Measured on prod 2026-07-23: 11 strong fraud packs, 4 with ≥1 prior order. A real CE3.0 signal is scoped separately in `docs/plans/tech-debt/ce3-fraud-compelling-evidence.plan.md` (note: `Order.client_details` — `browser_ip`/`session_hash`/`user_agent` — **is** backfillable via the `read_all_orders` scope we already hold; coverage needs sampling first).
 
-**Product-family scoring — "not as described" (Visa 13.3 · MC 4853), 2026-07-23:** `PRODUCT_UNACCEPTABLE` (family `product`) now has a dedicated `caseStrength.ts` branch instead of falling to the strict-count default (which left every such case weak with 0 positive arguments). Two-axis rule, calibrated from Visa guidelines + representment-industry practice: **Axis 1** ("item matched what they bought") = `customer_communication` (customerConfirmsOrder) or `supporting_documents` (signedContract); **Axis 2** ("dispute invalid/moot") = `no_return_initiated` (a return is a precondition to filing 13.3 post-Oct-2024) or `refund_record`. Moderate = one signal from either axis; Strong = one from EACH axis; two from the same axis stays Moderate; bare listing/order-record stay `supportingOnly` (posted return policy has no bearing on 13.3). **Sync-gap fix:** the product checklist template previously omitted `no_return_initiated`/`refund_record`/`customer_account_info`, so orderSource collected them but they never reached the scored `checklist_v2` — added to both `REASON_TEMPLATES_V2.PRODUCT_UNACCEPTABLE` and DB template T4 (migration `20260723210000`). **Auto-mode:** product-Strong is gated to park-for-review (not auto-submit) for the first release — subjective merchandise claim; `pipeline.ts` treats it like Moderate. Remove the `isProductFamily` guard to opt product-Strong into normal auto-submit later. See `docs/plans/product-not-as-described-scoring.plan.md`; broader per-code audit vs Visa in `docs/plans/tech-debt/defense-audit-vs-visa-guidelines.plan.md`.
+**Product-family scoring — "not as described" (Visa 13.3 · MC 4853), 2026-07-23:** `PRODUCT_UNACCEPTABLE` (family `product`) now has a dedicated `caseStrength.ts` branch instead of falling to the strict-count default (which left every such case weak with 0 positive arguments). Two-axis rule, calibrated from Visa guidelines + representment-industry practice: **Axis 1** ("item matched what they bought") = `customer_communication` (customerConfirmsOrder) or `supporting_documents` (signedContract); **Axis 2** ("dispute invalid/moot") = `no_return_initiated` (a return is a precondition to filing 13.3 post-Oct-2024) or `refund_record`. Moderate = one signal from either axis; Strong = one from EACH axis; two from the same axis stays Moderate; bare listing/order-record stay `supportingOnly` (posted return policy has no bearing on 13.3). **Sync-gap fix:** the product checklist template previously omitted `no_return_initiated`/`refund_record`/`customer_account_info`, so orderSource collected them but they never reached the scored `checklist_v2` — added to both `REASON_TEMPLATES_V2.PRODUCT_UNACCEPTABLE` and DB template T4 (migration `20260723210000`). **Auto-mode:** product-Strong is gated to park-for-review (not auto-submit) for the first release — subjective merchandise claim, treated like Moderate. Since 2026-07-27 this lives in the shared `evaluateAutoSubmitGuards` (`product_family_strong` park verdict), not in `pipeline.ts`; remove that branch to opt product-Strong into normal auto-submit later. See `docs/plans/product-not-as-described-scoring.plan.md`; broader per-code audit vs Visa in `docs/plans/tech-debt/defense-audit-vs-visa-guidelines.plan.md`.
 
 **Overview one-liner vs Evidence-tab elaboration (2026-07-23):** the Overview "Evidence collected" list shows an internal-signal warning's **label only** (e.g. "Card security check partially passed"); the full multi-sentence explanation lives on the Evidence tab's internal-signal rows (`InternalSignalRow` → `signal.explanation`). Previously both surfaces printed the full text verbatim. Rule: Overview = one-liner, Evidence tab = elaboration.
 
