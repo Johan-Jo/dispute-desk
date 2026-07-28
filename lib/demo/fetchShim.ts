@@ -268,14 +268,27 @@ const HANDLERS: Handler[] = [
     },
   },
 
-  // ── Setup automation — empty active packs + empty modes
+  // ── Setup automation — read-only templates/packs. `pack_modes` and
+  //    `packAutomation` were dropped when per-pack rules were removed;
+  //    the store-wide mode now lives at /api/automation/store below.
   {
     match: (u) => u.pathname === "/api/setup/automation",
     respond: () => jsonResponse({
       activePacks: [],
       installedTemplateIds: [],
-      pack_modes: {},
-      packAutomation: true,
+      rulesAccess: { allowed: true, reason: null },
+    }),
+  },
+
+  // ── Store-wide automation switch. Without this entry the fetch falls
+  //    through, `saveMode` stays null, and NEITHER radio renders selected
+  //    on the demo Settings page (same for /app/rules).
+  {
+    match: (u) => u.pathname === "/api/automation/store",
+    respond: () => jsonResponse({
+      mode: "auto",
+      safeguard: { enabled: true, amount: 500 },
+      rulesAccess: { allowed: true, reason: null },
     }),
   },
 

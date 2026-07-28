@@ -24,10 +24,6 @@ import {
   installTemplate,
   listLibraryPacksForAutomationRules,
 } from "@/lib/db/packs";
-import { replacePackBasedAutomationRules } from "@/lib/rules/replacePackAutomationRules";
-import { parsePackModesFromRules } from "@/lib/rules/packHandlingAutomation";
-import { SETUP_RULE_PREFIX } from "@/lib/rules/setupAutomation";
-import type { Rule } from "@/lib/rules/types";
 
 export interface BackfillShopResult {
   shopId: string;
@@ -82,37 +78,21 @@ async function backfillOneShop(shopId: string): Promise<BackfillShopResult> {
     if (pack) installed.push(templateId);
   }
 
-  // 3. If the shop uses pack-based setup rules, rewrite them so the new
-  //    inquiry siblings are wired into phase-paired rules. Otherwise leave
-  //    rules alone — the pipeline's reason_template_mappings fallback will
-  //    route inquiries to the right template for those shops.
-  const { data: setupRules } = await sb
-    .from("rules")
-    .select("*")
-    .eq("shop_id", shopId)
-    .like("name", `${SETUP_RULE_PREFIX}pack:%`);
-
-  const hasPackBasedSetup = (setupRules?.length ?? 0) > 0;
-  let rulesRewritten = false;
-
-  if (hasPackBasedSetup && installed.length > 0) {
-    const visiblePacks = await listLibraryPacksForAutomationRules(shopId);
-    const packModes = parsePackModesFromRules((setupRules ?? []) as Rule[]);
-    await replacePackBasedAutomationRules(shopId, visiblePacks, packModes);
-    rulesRewritten = true;
-  }
-
+  // 3. Rules are NOT rewritten (changed 2026-07-28). This used to call
+  //    `replacePackBasedAutomationRules`, whose `LIKE '__dd_setup__%'`
+  //    delete removes the canonical fallback + safeguard rows — so running
+  //    this admin backfill would silently disable a merchant's auto-pilot
+  //    and wipe their high-value threshold.
+  //
+  //    Installing the sibling pack is sufficient on its own: template
+  //    resolution goes through the phase-aware `reason_template_mappings`,
+  //    which routes inquiry disputes correctly with no per-pack rule.
   return {
     shopId,
     installedTemplateIds: installed,
-    rulesRewritten,
-    skipped: installed.length === 0 && !hasPackBasedSetup,
-    reason:
-      installed.length === 0
-        ? hasPackBasedSetup
-          ? "no_missing_siblings"
-          : "no_setup_rules_and_no_missing_siblings"
-        : undefined,
+    rulesRewritten: false,
+    skipped: installed.length === 0,
+    reason: installed.length === 0 ? "no_missing_siblings" : undefined,
   };
 }
 
