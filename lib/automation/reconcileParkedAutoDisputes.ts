@@ -14,16 +14,21 @@
  * [[project_llm_cap_defence_package_incident]] for the sibling "cap-failed
  * drafts never self-heal" class.
  *
- * This runs after any rule write (see app/api/rules). It re-applies the SAME
- * gates the auto path enforces — Coverage, Fatal-loss, and PRD §9 strength
- * (Strong only; product-family Strong still parks) — so it can ONLY promote
- * a case the pipeline itself would have auto-saved. It never touches
+ * Called from `POST /api/setup/automation` after a rule write. NOTE: it is
+ * NOT yet wired into `POST /api/rules` or `PATCH/DELETE /api/rules/[id]`, so
+ * creating a custom auto rule does not currently unstick matching drafts —
+ * that gap is closed in a later PR of the store-wide automation work.
+ *
+ * It re-applies the SAME gates the auto path enforces — Coverage, Fatal-loss,
+ * and PRD §9 strength (Strong only; product-family Strong still parks) — via
+ * the shared `evaluateAutoSubmitGuards`, so it can ONLY promote a case the
+ * pipeline itself would have auto-saved. It never touches
  * moderate/weak/insufficient, covered, fatal-loss, or product-family cases.
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
-import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
+import { evaluateAutoSubmitGuards } from "./autoSubmitGuards";
 import { finalizeAndEnqueueSave } from "./finalizeAndEnqueueSave";
 
 interface PackJson {
@@ -75,19 +80,24 @@ export async function reconcileParkedAutoDisputes(
     const packJson = (pack.pack_json ?? {}) as PackJson;
     const strength = packJson.case_strength?.overall ?? null;
     // PRD §9: auto saves ONLY Strong. Anything else legitimately parks.
+    // Checked up front so `scanned` counts only Strong candidates, and so a
+    // legacy pack with no recorded strength is never promoted here (the
+    // shared guards let `null` proceed for the build paths, but promoting a
+    // never-scored pack after the fact is not this function's job).
     if (strength !== "strong") continue;
 
     result.scanned += 1;
 
-    // Coverage gate — never auto-save a covered pack.
-    if (packJson.coverage?.state === "covered_shopify") continue;
-    // Fatal-loss gate — structurally unwinnable, never auto-save.
-    if (packJson.fatal_loss?.triggered === true) continue;
-    // Product-family Strong still parks for merchant review (subjective
-    // merchandise claim), matching the pipeline's `parksAsModerate` guard.
-    if (resolveReasonFamily(packJson.disputeReason ?? dispute.reason ?? null) === "product") {
-      continue;
-    }
+    // Coverage / fatal-loss / product-family Strong — the SAME decision the
+    // pipeline and the defence-build job apply. Shared so the three paths
+    // can never drift apart. See lib/automation/autoSubmitGuards.ts.
+    const verdict = evaluateAutoSubmitGuards({
+      coverageState: packJson.coverage?.state,
+      fatalLoss: packJson.fatal_loss,
+      caseStrength: strength,
+      disputeReason: packJson.disputeReason ?? dispute.reason ?? null,
+    });
+    if (verdict.decision !== "proceed") continue;
 
     // Does the CURRENT rule set resolve this dispute to auto? If the rule
     // is still review, the merchant wants to approve manually — leave it.
