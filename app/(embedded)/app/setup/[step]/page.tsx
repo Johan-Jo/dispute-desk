@@ -47,15 +47,21 @@ function StepPageInner() {
     setCanContinue(value);
   }, []);
 
+  // Unresolvable step slug. Tagged with a testid so e2e can assert this card
+  // NEVER renders for a real step — it is visually a blank panel, so a
+  // routing regression here is easy to miss by eye (it shipped once already:
+  // `store-profile` with a hyphen resolved to null on 2026-07-28).
   if (!stepId) {
     return (
       <Page title={t("wizardTitle")}>
         <Layout>
           <Layout.Section>
             <Card>
-              <Text as="p" variant="bodyMd">
-                {t("wizardTitle")}
-              </Text>
+              <div data-testid="dd-setup-invalid-step">
+                <Text as="p" variant="bodyMd">
+                  {t("wizardTitle")}
+                </Text>
+              </div>
             </Card>
           </Layout.Section>
         </Layout>

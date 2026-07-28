@@ -124,9 +124,31 @@ describe("resolveStepId / LEGACY_STEP_ID_MAP", () => {
     expect(resolveStepId("automation")).toBe("handling");
   });
 
+  it("tolerates hyphens as separators", () => {
+    // Regression (2026-07-28): /app/setup/store-profile rendered a blank
+    // "Setup Wizard" fallback card because only the underscore form resolved.
+    // Hyphens read as natural in a URL, so hand-written links hit this.
+    expect(resolveStepId("store-profile")).toBe("store_profile");
+    expect(resolveStepId("store_profile")).toBe("store_profile");
+  });
+
+  it("tolerates casing and surrounding whitespace", () => {
+    expect(resolveStepId("Store-Profile")).toBe("store_profile");
+    expect(resolveStepId("  handling  ")).toBe("handling");
+    expect(resolveStepId("COVERAGE")).toBe("handling");
+  });
+
+  it("every canonical id survives a hyphenated round-trip", () => {
+    // Closes the class rather than the one instance.
+    for (const id of STEP_IDS) {
+      expect(resolveStepId(id.replace(/_/g, "-"))).toBe(id);
+    }
+  });
+
   it("returns null for unknown or empty input", () => {
     expect(resolveStepId("nonexistent")).toBeNull();
     expect(resolveStepId("")).toBeNull();
+    expect(resolveStepId("   ")).toBeNull();
     expect(resolveStepId(undefined)).toBeNull();
     expect(resolveStepId(42)).toBeNull();
   });
