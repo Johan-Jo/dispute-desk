@@ -9,11 +9,17 @@ export interface StepState {
   skipped_reason?: SkippedReason | null;
 }
 
+/**
+ * `handling` replaces the former `coverage` + `automation` pair (2026-07-27).
+ * The naming was inverted: the step called "Automation" held only a
+ * high-value toggle, while the real auto/review choice sat in a dropdown on
+ * the "Coverage" step. Both now collapse into one step that asks the single
+ * question that matters. See LEGACY_STEP_ID_MAP for the migration.
+ */
 export type StepId =
   | "connection"
   | "store_profile"
-  | "coverage"
-  | "automation"
+  | "handling"
   | "policies"
   | "activate";
 

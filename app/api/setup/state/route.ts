@@ -47,6 +47,43 @@ function migrateStepsMap(raw: Record<string, unknown> | null): Partial<Record<St
       }
     }
   }
+
+  // Mid-wizard merchants must see the merged `handling` step ONCE.
+  //
+  // `coverage` and `automation` both fold into `handling`, and the rank logic
+  // above would let a merchant who finished `coverage` but never reached
+  // `automation` skip straight past it as "done". They would then silently
+  // inherit whatever the rules migration derived for them, having never made
+  // the store-wide choice consciously — the exact thing this redesign exists
+  // to fix. Downgrade to in_progress so the wizard routes them through it.
+  //
+  // Only applies when the two source keys genuinely disagree: a merchant who
+  // completed BOTH keeps `done` and is never sent backwards.
+  const legacyCoverage = steps.coverage;
+  const legacyAutomation = steps.automation;
+  const bothComplete =
+    statusRank(legacyCoverage) >= STATUS_RANK.done &&
+    statusRank(legacyAutomation) >= STATUS_RANK.done;
+  const eitherComplete =
+    statusRank(legacyCoverage) >= STATUS_RANK.done ||
+    statusRank(legacyAutomation) >= STATUS_RANK.done;
+
+  if (
+    out.handling &&
+    statusRank(out.handling) >= STATUS_RANK.done &&
+    eitherComplete &&
+    !bothComplete &&
+    // A merchant who already completed the NEW step keeps it; only the
+    // legacy-pair case is downgraded.
+    !steps.handling
+  ) {
+    out.handling = {
+      ...out.handling,
+      status: "in_progress",
+      completed_at: undefined,
+    };
+  }
+
   return out;
 }
 

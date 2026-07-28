@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
-import { STEP_IDS } from "@/lib/setup/constants";
+import { resolveStepId } from "@/lib/setup/constants";
 import { logSetupEvent } from "@/lib/setup/events";
-import type { StepId, StepState } from "@/lib/setup/types";
+import type { StepState } from "@/lib/setup/types";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -15,10 +15,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
   }
 
-  const stepId = body.stepId as StepId;
+  // Accept legacy ids (`coverage` / `automation` from a stale client tab)
+  // and map them onto the canonical step rather than 400-ing the merchant
+  // mid-wizard.
+  const stepId = resolveStepId(body.stepId);
   const payload = body.payload ?? {};
 
-  if (!stepId || !STEP_IDS.includes(stepId)) {
+  if (!stepId) {
     return NextResponse.json({ error: "Invalid stepId" }, { status: 400 });
   }
 

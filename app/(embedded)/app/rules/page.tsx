@@ -1,20 +1,24 @@
 /**
- * Embedded Automation page — Figma-matched layout.
+ * Embedded Automation page — store-wide handling switch.
  *
- * Per-family routing view backed by the canonical pack-based automation
- * system. One row per dispute family from DISPUTE_FAMILIES; each row's
- * segmented toggle edits the modes of all packs in that family. Saves go
- * through POST /api/setup/automation (pack_modes branch) — same pipeline
- * the setup wizard uses, so coverage and rules always agree.
+ * Replaces the per-dispute-type grid (7 family rows, each with an
+ * Automatic/Review toggle). That grid presented seven choices where there was
+ * really one: the per-type mode is gate #3 of 8 in the auto-save pipeline, and
+ * coverage / fatal-loss / Moderate / Weak / product-family / the completeness
+ * floor all park or block regardless of what the merchant picked. See
+ * docs/technical.md § Store-wide automation mode.
  *
- * Also includes:
- * - Safeguards section: high-value review threshold (standalone rule with
- *   __dd_safeguard__: prefix, survives pack-based saves)
- * - Custom rules: read-only list of user-created rules from /portal/rules
+ * Three cards:
+ *   1. How disputes are handled — the switch (writes immediately)
+ *   2. Safeguards — the amount threshold + the read-only always-reviewed facts
+ *   3. Custom rules — unchanged merchant-authored rules
+ *
+ * All persistence goes through GET|PUT /api/automation/store → the single
+ * canonical path in lib/rules/storeAutomation.ts.
  */
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import {
@@ -32,73 +36,24 @@ import {
   Checkbox,
   TextField,
 } from "@shopify/polaris";
-import {
-  ShieldPersonIcon,
-  AlertTriangleIcon,
-  DeliveryIcon,
-  OrderIcon,
-  ReceiptRefundIcon,
-  DuplicateIcon,
-  ClipboardCheckFilledIcon,
-  InfoIcon,
-  XIcon,
-} from "@shopify/polaris-icons";
-import { DISPUTE_FAMILIES } from "@/lib/coverage/deriveCoverage";
+import { InfoIcon, XIcon } from "@shopify/polaris-icons";
 import { TemplateLibraryModal } from "@/components/packs/TemplateLibraryModal";
-import {
-  disputeTypeToPrimaryReason,
-  type PackHandlingUiMode,
-} from "@/lib/rules/packHandlingAutomation";
+import { StoreModeSelector } from "@/components/automation/StoreModeSelector";
+import { AlwaysReviewedFacts } from "@/components/automation/AlwaysReviewedFacts";
 import { CustomRuleModal, type CustomRuleDraft } from "./CustomRuleModal";
-import { FAMILY_TO_DISPUTE_TYPE } from "@/lib/rules/helpers";
-import { normalizeDisputeReasonKey } from "@/lib/disputes/reasonLabel";
+import {
+  DEFAULT_SAFEGUARD_AMOUNT,
+  type StoreAutomationMode,
+} from "@/lib/rules/storeAutomation";
 import { withShopParams } from "@/lib/withShopParams";
 
-// ─── Constants ──────────────────────────────────────────────────────────
-
-const SAFEGUARD_RULE_NAME = "__dd_safeguard__:high_value";
-const DEFAULT_SAFEGUARD_AMOUNT = 500;
 const EXPLAINER_DISMISSED_KEY = "dd_automation_explainer_dismissed";
 
-// FAMILY_TO_DISPUTE_TYPE moved to lib/rules/helpers.ts so the portal
-// rules page can share it. UI primitives (Polaris vs Tailwind) stay
-// divergent intentionally per memory feedback_figma_embedded_vs_portal.
-
-const FAMILY_ICONS: Record<string, typeof ShieldPersonIcon> = {
-  fraud: ShieldPersonIcon,
-  pnr: DeliveryIcon,
-  not_as_described: AlertTriangleIcon,
-  subscription: OrderIcon,
-  refund: ReceiptRefundIcon,
-  duplicate: DuplicateIcon,
-  general: ClipboardCheckFilledIcon,
-};
-
-const FAMILY_ICON_COLOR: Record<string, string> = {
-  fraud: "#DC2626",
-  pnr: "#3B82F6",
-  not_as_described: "#F59E0B",
-  subscription: "#22C55E",
-  refund: "#8B5CF6",
-  duplicate: "#06B6D4",
-  general: "#6D7175",
-};
-
-// ─── Types ──────────────────────────────────────────────────────────────
-
-interface ActivePack {
-  id: string;
-  name: string;
-  dispute_type: string;
-  template_id: string | null;
-  status: string;
-}
-
-interface AutomationData {
-  activePacks: ActivePack[];
-  pack_modes: Record<string, PackHandlingUiMode>;
-  /** Plan gate — false means every rules write on this page will 403. */
-  rulesAllowed: boolean;
+/** Setup-owned rules are rendered by the cards above, never in the custom list. */
+function isSetupOwnedRule(name: string | null | undefined): boolean {
+  return Boolean(
+    name?.startsWith("__dd_setup__") || name?.startsWith("__dd_safeguard__"),
+  );
 }
 
 interface CustomRule {
@@ -110,76 +65,56 @@ interface CustomRule {
     status?: string[];
     amount_range?: { min?: number; max?: number };
   };
-  action: {
-    mode: string;
-    pack_template_id?: string | null;
-  };
+  action: { mode: string; pack_template_id?: string | null };
   priority: number;
 }
 
 interface SafeguardState {
-  ruleId: string | null;
   enabled: boolean;
   amount: number;
 }
-
-function isSetupOrSafeguardRule(name: string | null | undefined): boolean {
-  return Boolean(
-    name?.startsWith("__dd_setup__") || name?.startsWith("__dd_safeguard__"),
-  );
-}
-
-type FamilyMode = "auto" | "review" | "none";
-
-// ─── Component ──────────────────────────────────────────────────────────
 
 export default function EmbeddedRulesPage() {
   const searchParams = useSearchParams();
   const locale = useLocale();
   const tr = useTranslations("rules");
   const tn = useTranslations("nav");
-  const tc = useTranslations("coverage");
-  const tp = useTranslations("packs");
   const tCommon = useTranslations("common");
 
   // Data
-  const [automation, setAutomation] = useState<AutomationData | null>(null);
-  const [customRules, setCustomRules] = useState<CustomRule[]>([]);
-  const [pendingModes, setPendingModes] = useState<
-    Record<string, PackHandlingUiMode>
-  >({});
+  const [mode, setMode] = useState<StoreAutomationMode>("review");
   const [safeguard, setSafeguard] = useState<SafeguardState>({
-    ruleId: null,
     enabled: false,
     amount: DEFAULT_SAFEGUARD_AMOUNT,
   });
   const [savedSafeguard, setSavedSafeguard] = useState<SafeguardState>({
-    ruleId: null,
     enabled: false,
     amount: DEFAULT_SAFEGUARD_AMOUNT,
   });
+  const [rulesAllowed, setRulesAllowed] = useState(true);
+  const [customRules, setCustomRules] = useState<CustomRule[]>([]);
+  const [shopId, setShopId] = useState<string | null>(null);
 
   // UI state
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedBanner, setSavedBanner] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [highlightedFamilyId, setHighlightedFamilyId] = useState<
-    string | null
-  >(null);
-  const [shopId, setShopId] = useState<string | null>(null);
-  const [installModalFamily, setInstallModalFamily] = useState<string | null>(null);
+  const [playbooksOpen, setPlaybooksOpen] = useState(false);
   const [customRuleDraft, setCustomRuleDraft] = useState<CustomRuleDraft | null>(null);
   const [customRuleModalOpen, setCustomRuleModalOpen] = useState(false);
   const [explainerOpen, setExplainerOpen] = useState(() => {
     if (typeof window === "undefined") return true;
     return localStorage.getItem(EXPLAINER_DISMISSED_KEY) !== "1";
   });
-  const familyRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const dismissExplainer = useCallback(() => {
     setExplainerOpen(false);
-    try { localStorage.setItem(EXPLAINER_DISMISSED_KEY, "1"); } catch {}
+    try {
+      localStorage.setItem(EXPLAINER_DISMISSED_KEY, "1");
+    } catch {
+      /* private browsing — the banner just reappears next visit */
+    }
   }, []);
 
   // ─── Data fetching ────────────────────────────────────────────────────
@@ -187,8 +122,8 @@ export default function EmbeddedRulesPage() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [automationRes, rulesRes, stateRes] = await Promise.all([
-        fetch("/api/setup/automation"),
+      const [storeRes, rulesRes, stateRes] = await Promise.all([
+        fetch("/api/automation/store"),
         fetch("/api/rules"),
         fetch("/api/setup/state"),
       ]);
@@ -198,33 +133,22 @@ export default function EmbeddedRulesPage() {
         if (stateData?.shopId) setShopId(stateData.shopId);
       }
 
-      if (automationRes.ok) {
-        const data = await automationRes.json();
-        const next: AutomationData = {
-          activePacks: data.activePacks ?? [],
-          pack_modes: data.pack_modes ?? {},
-          rulesAllowed: data.rulesAccess?.allowed !== false,
+      if (storeRes.ok) {
+        const data = await storeRes.json();
+        setMode(data.mode === "auto" ? "auto" : "review");
+        const sg: SafeguardState = {
+          enabled: Boolean(data.safeguard?.enabled),
+          amount: Number(data.safeguard?.amount) || DEFAULT_SAFEGUARD_AMOUNT,
         };
-        setAutomation(next);
-        setPendingModes(next.pack_modes);
+        setSafeguard(sg);
+        setSavedSafeguard(sg);
+        setRulesAllowed(data.rulesAccess?.allowed !== false);
       }
 
       if (rulesRes.ok) {
-        const allRules = (await rulesRes.json()) as CustomRule[];
-        const arr = Array.isArray(allRules) ? allRules : [];
-
-        const sg = arr.find((r) => r.name === SAFEGUARD_RULE_NAME);
-        if (sg) {
-          const sgState: SafeguardState = {
-            ruleId: sg.id,
-            enabled: sg.enabled,
-            amount: sg.match?.amount_range?.min ?? DEFAULT_SAFEGUARD_AMOUNT,
-          };
-          setSafeguard(sgState);
-          setSavedSafeguard(sgState);
-        }
-
-        setCustomRules(arr.filter((r) => !isSetupOrSafeguardRule(r.name)));
+        const allRules = await rulesRes.json();
+        const arr = (Array.isArray(allRules) ? allRules : []) as CustomRule[];
+        setCustomRules(arr.filter((r) => !isSetupOwnedRule(r.name)));
       }
     } finally {
       setLoading(false);
@@ -235,177 +159,66 @@ export default function EmbeddedRulesPage() {
     fetchAll();
   }, [fetchAll]);
 
-  // ─── Derived state ────────────────────────────────────────────────────
+  // ─── Persistence ──────────────────────────────────────────────────────
 
-  const familyPacks = useMemo(() => {
-    const map: Record<string, ActivePack[]> = {};
-    for (const family of DISPUTE_FAMILIES) {
-      if (!automation) {
-        map[family.id] = [];
-        continue;
-      }
-      map[family.id] = automation.activePacks.filter((p) => {
-        const reason = disputeTypeToPrimaryReason(p.dispute_type);
-        return family.reasons.includes(reason);
-      });
-    }
-    return map;
-  }, [automation]);
-
-  const familyModes = useMemo(() => {
-    const out: Record<string, FamilyMode> = {};
-    for (const family of DISPUTE_FAMILIES) {
-      const packs = familyPacks[family.id] ?? [];
-      if (packs.length === 0) {
-        out[family.id] = "none";
-        continue;
-      }
-      const anyAuto = packs.some((p) => pendingModes[p.id] === "auto");
-      out[family.id] = anyAuto ? "auto" : "review";
-    }
-    return out;
-  }, [familyPacks, pendingModes]);
-
-  const summary = useMemo(() => {
-    let auto = 0;
-    let review = 0;
-    let noPlaybook = 0;
-    for (const family of DISPUTE_FAMILIES) {
-      const m = familyModes[family.id];
-      if (m === "auto") auto++;
-      else if (m === "review") review++;
-      else noPlaybook++;
-    }
-    return { auto, review, noPlaybook, total: DISPUTE_FAMILIES.length };
-  }, [familyModes]);
-
-  const packModesDirty = useMemo(() => {
-    if (!automation) return false;
-    const allKeys = new Set([
-      ...Object.keys(automation.pack_modes),
-      ...Object.keys(pendingModes),
-    ]);
-    for (const id of allKeys) {
-      if (automation.pack_modes[id] !== pendingModes[id]) return true;
-    }
-    return false;
-  }, [automation, pendingModes]);
-
-  const safeguardDirty = useMemo(
-    () =>
-      safeguard.enabled !== savedSafeguard.enabled ||
-      safeguard.amount !== savedSafeguard.amount,
-    [safeguard, savedSafeguard],
-  );
-
-  const dirty = packModesDirty || safeguardDirty;
-  const rulesAllowed = automation?.rulesAllowed ?? true;
-
-  // ─── Deep link from coverage ──────────────────────────────────────────
-
-  useEffect(() => {
-    if (loading) return;
-    const familyId = searchParams?.get("family");
-    if (!familyId) return;
-    requestAnimationFrame(() => {
-      const el = familyRowRefs.current[familyId];
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-        setHighlightedFamilyId(familyId);
-        setTimeout(() => setHighlightedFamilyId(null), 2500);
-      }
-    });
-  }, [loading, searchParams]);
-
-  // ─── Actions ──────────────────────────────────────────────────────────
-
-  const setFamilyMode = useCallback(
-    (familyId: string, mode: "auto" | "review") => {
-      const packs = familyPacks[familyId] ?? [];
-      if (packs.length === 0) return;
-      setPendingModes((prev) => {
-        const next = { ...prev };
-        for (const p of packs) {
-          next[p.id] = mode;
-        }
-        return next;
-      });
-    },
-    [familyPacks],
-  );
-
-  const applyQuickConfig = useCallback(
-    (mode: "auto" | "review") => {
-      if (!automation) return;
-      setPendingModes((prev) => {
-        const next = { ...prev };
-        for (const p of automation.activePacks) {
-          next[p.id] = mode;
-        }
-        return next;
-      });
-    },
-    [automation],
-  );
-
-  const save = useCallback(async () => {
-    setSaving(true);
-    setErrorMsg(null);
-    setSavedBanner(false);
-    // Reads the response body so a plan-gate 403 (upgrade_required) surfaces
-    // as its own message instead of the generic save error.
-    const throwSaveError = async (res: Response): Promise<never> => {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body?.upgrade_required ? "planGateSaveError" : "starterRulesError");
-    };
-    try {
-      if (packModesDirty) {
-        const res = await fetch("/api/setup/automation", {
-          method: "POST",
+  const persist = useCallback(
+    async (next: { mode: StoreAutomationMode; safeguard: SafeguardState }) => {
+      setSaving(true);
+      setErrorMsg(null);
+      try {
+        const res = await fetch("/api/automation/store", {
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pack_modes: pendingModes }),
+          body: JSON.stringify({
+            mode: next.mode,
+            safeguard: {
+              enabled: next.safeguard.enabled,
+              amount: next.safeguard.amount,
+            },
+          }),
         });
-        if (!res.ok) await throwSaveError(res);
-      }
-
-      if (safeguardDirty) {
-        const rulePayload = {
-          name: SAFEGUARD_RULE_NAME,
-          match: { amount_range: { min: safeguard.amount } },
-          action: { mode: "review" as const },
-          enabled: safeguard.enabled,
-          priority: 5,
-        };
-
-        if (safeguard.ruleId) {
-          const res = await fetch(`/api/rules/${safeguard.ruleId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(rulePayload),
-          });
-          if (!res.ok) await throwSaveError(res);
-        } else if (safeguard.enabled) {
-          const res = await fetch("/api/rules", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(rulePayload),
-          });
-          if (!res.ok) await throwSaveError(res);
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          setErrorMsg(body?.upgrade_required ? "planGateSaveError" : "starterRulesError");
+          return false;
         }
+        setSavedSafeguard(next.safeguard);
+        setSavedBanner(true);
+        return true;
+      } catch {
+        setErrorMsg("starterRulesError");
+        return false;
+      } finally {
+        setSaving(false);
       }
+    },
+    [],
+  );
 
-      await fetchAll();
-      setSavedBanner(true);
-    } catch (e) {
-      setErrorMsg(
-        e instanceof Error && e.message === "planGateSaveError"
-          ? "planGateSaveError"
-          : "starterRulesError",
-      );
-    } finally {
-      setSaving(false);
-    }
-  }, [pendingModes, packModesDirty, safeguard, safeguardDirty, fetchAll]);
+  /**
+   * The switch writes immediately — a single binary choice with no other
+   * pending state doesn't warrant a Save button. Optimistic, reverted on
+   * failure so the UI never claims a mode the server didn't accept.
+   */
+  const onModeChange = useCallback(
+    async (next: StoreAutomationMode) => {
+      if (next === mode || saving) return;
+      const previous = mode;
+      setMode(next);
+      const ok = await persist({ mode: next, safeguard: savedSafeguard });
+      if (!ok) setMode(previous);
+    },
+    [mode, saving, persist, savedSafeguard],
+  );
+
+  /** The safeguard has a free-text amount, so it keeps an explicit Save. */
+  const saveSafeguard = useCallback(async () => {
+    await persist({ mode, safeguard });
+  }, [persist, mode, safeguard]);
+
+  const safeguardDirty =
+    safeguard.enabled !== savedSafeguard.enabled ||
+    (safeguard.enabled && safeguard.amount !== savedSafeguard.amount);
 
   // ─── Render ───────────────────────────────────────────────────────────
 
@@ -424,8 +237,6 @@ export default function EmbeddedRulesPage() {
       </Page>
     );
   }
-
-  const configuredCount = summary.auto + summary.review;
 
   const openNewCustomRule = () => {
     setCustomRuleDraft(null);
@@ -452,8 +263,8 @@ export default function EmbeddedRulesPage() {
     setCustomRuleModalOpen(true);
   };
 
-  // Newly created rules sort below the catch-all (priority 100000) so
-  // baseline + safeguard rules continue to win first.
+  // Newly created rules sort below the catch-all (priority 100000) so the
+  // store-wide switch and the safeguard continue to win first.
   const nextRulePriority =
     customRules.reduce((m, r) => Math.max(m, r.priority), 100000) + 1;
 
@@ -466,13 +277,20 @@ export default function EmbeddedRulesPage() {
         onAction: openNewCustomRule,
         disabled: !rulesAllowed,
       }}
+      secondaryActions={[
+        {
+          content: tr("browsePlaybooks"),
+          onAction: () => setPlaybooksOpen(true),
+          disabled: !shopId,
+        },
+      ]}
     >
       <Layout>
         <Layout.Section>
           <BlockStack gap="400">
             {savedBanner && (
               <Banner tone="success" onDismiss={() => setSavedBanner(false)}>
-                <p>{tr("starterRulesSaved")}</p>
+                <p>{tr("modeSaved")}</p>
               </Banner>
             )}
             {errorMsg && (
@@ -526,10 +344,26 @@ export default function EmbeddedRulesPage() {
                   <Icon source={InfoIcon} tone="info" />
                 </span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "#202223", marginBottom: 8 }}>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: "#202223",
+                      marginBottom: 8,
+                    }}
+                  >
                     {tr("explainerTitle")}
                   </div>
-                  <ul style={{ listStyle: "disc", margin: 0, paddingLeft: 18, color: "#202223", fontSize: 14, lineHeight: 1.5 }}>
+                  <ul
+                    style={{
+                      listStyle: "disc",
+                      margin: 0,
+                      paddingLeft: 18,
+                      color: "#202223",
+                      fontSize: 14,
+                      lineHeight: 1.5,
+                    }}
+                  >
                     <li style={{ marginBottom: 6 }}>{tr("explainerBullet1")}</li>
                     <li style={{ marginBottom: 6 }}>{tr("explainerBullet2")}</li>
                     <li>{tr("explainerBullet3")}</li>
@@ -538,7 +372,7 @@ export default function EmbeddedRulesPage() {
                 <button
                   type="button"
                   onClick={dismissExplainer}
-                  aria-label="Dismiss"
+                  aria-label={tCommon("dismiss")}
                   style={{
                     flexShrink: 0,
                     background: "transparent",
@@ -556,277 +390,106 @@ export default function EmbeddedRulesPage() {
               </div>
             )}
 
-            {/* ── Status summary ─────────────────────────────────── */}
+            {/* ── The store-wide switch ──────────────────────────── */}
             <Card>
-              <BlockStack gap="200">
-                <Text as="p" variant="bodyMd">
-                  {tr("figmaSummary", {
-                    automated: summary.auto,
-                    total: summary.total,
-                    review: summary.review,
-                  })}
-                </Text>
-                <InlineStack gap="200" wrap>
-                  <span
-                    style={{
-                      display: "inline-block",
-                      padding: "2px 8px",
-                      borderRadius: 4,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      background: "#D1FAE5",
-                      color: "#065F46",
-                    }}
-                  >
-                    {`${summary.auto} ${tr("modeAutomaticShort")}`}
-                  </span>
-                  <span
-                    style={{
-                      display: "inline-block",
-                      padding: "2px 8px",
-                      borderRadius: 4,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      background: "#DBEAFE",
-                      color: "#1E40AF",
-                    }}
-                  >
-                    {`${summary.review} ${tr("review")}`}
-                  </span>
-                  {summary.noPlaybook > 0 && (
-                    <Badge tone="attention">
-                      {`${summary.noPlaybook} ${tr("notConfigured")}`}
-                    </Badge>
-                  )}
-                </InlineStack>
+              <BlockStack gap="300">
+                <BlockStack gap="100">
+                  <Text as="h2" variant="headingMd">
+                    {tr("modeSectionTitle")}
+                  </Text>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {tr("modeSectionSubtitle")}
+                  </Text>
+                </BlockStack>
+                <StoreModeSelector
+                  value={mode}
+                  onChange={onModeChange}
+                  t={tr}
+                  disabled={!rulesAllowed || saving}
+                />
               </BlockStack>
             </Card>
 
-            {/* ── Automation rules card ──────────────────────────── */}
-            <div data-help-guide="rules-list">
-            <Card padding="0">
-              {/* Header */}
-              <div
-                style={{
-                  padding: "16px 20px",
-                  borderBottom: "1px solid #E1E3E5",
-                }}
-              >
-                <div style={{ fontSize: 16, fontWeight: 600, color: "#202223", marginBottom: 4 }}>
-                  {tr("automationRulesTitle")}
-                </div>
-                <div style={{ fontSize: 14, color: "#6D7175" }}>
-                  {tr("automationRulesSubtitle")}
-                </div>
-              </div>
-
-              {/* Family rows */}
-              <div>
-                {DISPUTE_FAMILIES.map((family, index) => {
-                  const FamilyIcon =
-                    FAMILY_ICONS[family.id] ?? ClipboardCheckFilledIcon;
-                  const familyColor = FAMILY_ICON_COLOR[family.id] ?? "#6D7175";
-                  const mode = familyModes[family.id];
-                  const packs = familyPacks[family.id] ?? [];
-                  const isHighlighted = highlightedFamilyId === family.id;
-                  const familyLabel = tc(
-                    family.labelKey.replace("coverage.", ""),
-                  );
-                  const playbookNames = packs
-                    .map((p) => {
-                      const key = normalizeDisputeReasonKey(p.dispute_type);
-                      return tp.has(`disputeTypeLabel.${key}`)
-                        ? tp(`disputeTypeLabel.${key}`)
-                        : p.name;
-                    })
-                    .join(", ");
-
-                  return (
-                    <div
-                      key={family.id}
-                      ref={(el) => {
-                        familyRowRefs.current[family.id] = el;
-                      }}
-                      style={{
-                        padding: "20px",
-                        borderTop: index === 0 ? "none" : "1px solid #E1E3E5",
-                        transition: "background-color 400ms ease",
-                        background: isHighlighted ? "#FEF3C7" : "transparent",
-                        display: "flex",
-                        gap: 16,
-                        alignItems: "center",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: 8,
-                          background: "#F6F8FB",
-                          color: familyColor,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <Icon source={FamilyIcon} />
-                      </div>
-
-                      <div style={{ flex: 1, minWidth: 200 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: "#202223", marginBottom: 2 }}>
-                          {familyLabel}
-                        </div>
-                        {playbookNames ? (
-                          <div style={{ fontSize: 12, color: "#6D7175" }}>
-                            {tr("playbooksInUse", { names: playbookNames })}
-                          </div>
-                        ) : (
-                          <div style={{ fontSize: 12, color: "#6D7175" }}>
-                            {tr("noPlaybookBadge")}
-                          </div>
-                        )}
-                      </div>
-
-                      {mode === "none" ? (
-                        <Button
-                          size="slim"
-                          onClick={() => setInstallModalFamily(family.id)}
-                        >
-                          {tc("installPlaybook")}
-                        </Button>
-                      ) : (
-                        <ModeToggle
-                          mode={mode}
-                          onChange={(next) => setFamilyMode(family.id, next)}
-                          reviewLabel={tr("review")}
-                          autoLabel={tr("modeAutomaticShort")}
-                          disabled={!rulesAllowed}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Bottom toolbar */}
-              <div
-                style={{
-                  padding: "16px 20px",
-                  borderTop: "1px solid #E1E3E5",
-                  background: "#F6F8FB",
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 12,
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <InlineStack gap="200" wrap>
-                  <Button
-                    size="slim"
-                    disabled={!rulesAllowed}
-                    onClick={() => applyQuickConfig("auto")}
-                  >
-                    {tr("quickAutoAll")}
-                  </Button>
-                  <Button
-                    size="slim"
-                    disabled={!rulesAllowed}
-                    onClick={() => applyQuickConfig("review")}
-                  >
-                    {tr("quickReviewAll")}
-                  </Button>
-                </InlineStack>
-                <Button
-                  variant="primary"
-                  loading={saving}
-                  disabled={saving || !dirty || !rulesAllowed}
-                  onClick={save}
-                >
-                  {configuredCount > 0
-                    ? tr("saveNRules", { count: configuredCount })
-                    : tr("saveStarterRules")}
-                </Button>
-              </div>
-              <div
-                style={{
-                  padding: "12px 20px",
-                  borderTop: "1px solid #E1E3E5",
-                  background: "#F6F8FB",
-                  fontSize: 12,
-                  color: "#6D7175",
-                }}
-              >
-                {tr("firstMatchWinsHint")}
-              </div>
-            </Card>
-            </div>
-
             {/* ── Safeguards ─────────────────────────────────────── */}
             <Card>
-              <BlockStack gap="300">
-                <Text as="h2" variant="headingMd">
-                  {tr("safeguardTitle")}
-                </Text>
-                <Checkbox
-                  label={tr("safeguardToggle")}
-                  checked={safeguard.enabled}
-                  disabled={!rulesAllowed}
-                  onChange={(checked) =>
-                    setSafeguard((prev) => ({ ...prev, enabled: checked }))
-                  }
-                />
-                {safeguard.enabled && (
-                  <div style={{ maxWidth: 200 }}>
-                    <TextField
-                      label={tr("safeguardAmountLabel")}
-                      type="number"
-                      disabled={!rulesAllowed}
-                      value={String(safeguard.amount)}
-                      onChange={(value) => {
-                        const num = parseInt(value, 10);
-                        if (!isNaN(num) && num > 0) {
-                          setSafeguard((prev) => ({ ...prev, amount: num }));
-                        }
-                      }}
-                      prefix="$"
-                      autoComplete="off"
-                    />
-                  </div>
-                )}
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {tr("safeguardHint")}
-                </Text>
-                {safeguardDirty && (
-                  <InlineStack align="end">
-                    <Button
-                      variant="primary"
-                      loading={saving}
-                      disabled={saving || !rulesAllowed}
-                      onClick={save}
-                    >
-                      {tr("saveStarterRules")}
-                    </Button>
-                  </InlineStack>
-                )}
+              <BlockStack gap="400">
+                <BlockStack gap="300">
+                  <Text as="h2" variant="headingMd">
+                    {tr("safeguardTitle")}
+                  </Text>
+                  <Checkbox
+                    label={tr("safeguardToggle")}
+                    checked={safeguard.enabled}
+                    disabled={!rulesAllowed}
+                    onChange={(checked) =>
+                      setSafeguard((prev) => ({ ...prev, enabled: checked }))
+                    }
+                  />
+                  {safeguard.enabled && (
+                    <div style={{ maxWidth: 200 }}>
+                      <TextField
+                        label={tr("safeguardAmountLabel")}
+                        type="number"
+                        disabled={!rulesAllowed}
+                        value={String(safeguard.amount)}
+                        onChange={(value) => {
+                          const num = parseInt(value, 10);
+                          if (!isNaN(num) && num > 0) {
+                            setSafeguard((prev) => ({ ...prev, amount: num }));
+                          }
+                        }}
+                        prefix="$"
+                        autoComplete="off"
+                      />
+                    </div>
+                  )}
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {tr("safeguardHint")}
+                  </Text>
+                  {safeguardDirty && (
+                    <InlineStack align="end">
+                      <Button
+                        variant="primary"
+                        loading={saving}
+                        disabled={saving || !rulesAllowed}
+                        onClick={saveSafeguard}
+                      >
+                        {tr("saveStarterRules")}
+                      </Button>
+                    </InlineStack>
+                  )}
+                </BlockStack>
+
+                <div style={{ borderTop: "1px solid #E1E3E5", paddingTop: 16 }}>
+                  <AlwaysReviewedFacts t={tr} />
+                </div>
               </BlockStack>
             </Card>
 
             {/* ── Custom advanced rules ──────────────────────────── */}
-            {customRules.length > 0 && (
-              <Card>
-                <BlockStack gap="400">
-                  <BlockStack gap="100">
-                    <Text as="h2" variant="headingMd">
-                      {tr("advancedFiltersTitle")}
-                    </Text>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      {tr("advancedFiltersSubtitle")}
-                    </Text>
-                  </BlockStack>
+            <Card>
+              <BlockStack gap="400">
+                <BlockStack gap="100">
+                  <Text as="h2" variant="headingMd">
+                    {tr("advancedFiltersTitle")}
+                  </Text>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {tr("advancedFiltersSubtitle")}
+                  </Text>
+                </BlockStack>
 
+                {customRules.length === 0 ? (
+                  <BlockStack gap="300">
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {tr("customRulesEmpty")}
+                    </Text>
+                    <InlineStack>
+                      <Button onClick={openNewCustomRule} disabled={!rulesAllowed}>
+                        {tr("customRulesEmptyCta")}
+                      </Button>
+                    </InlineStack>
+                  </BlockStack>
+                ) : (
                   <BlockStack gap="0">
                     {customRules.map((rule, idx) => {
                       const normalizedMode =
@@ -835,9 +498,7 @@ export default function EmbeddedRulesPage() {
                           ? "auto"
                           : "review";
                       const actionLabel =
-                        normalizedMode === "auto"
-                          ? tr("autoPack")
-                          : tr("review");
+                        normalizedMode === "auto" ? tr("autoPack") : tr("review");
                       return (
                         <div
                           key={rule.id}
@@ -871,23 +532,24 @@ export default function EmbeddedRulesPage() {
                       );
                     })}
                   </BlockStack>
-                </BlockStack>
-              </Card>
-            )}
+                )}
+              </BlockStack>
+            </Card>
           </BlockStack>
         </Layout.Section>
       </Layout>
-      {shopId && installModalFamily && (
+
+      {shopId && playbooksOpen && (
         <TemplateLibraryModal
           isOpen
-          onClose={() => setInstallModalFamily(null)}
+          onClose={() => setPlaybooksOpen(false)}
           shopId={shopId}
           locale={locale}
           onInstalled={() => {
-            setInstallModalFamily(null);
+            setPlaybooksOpen(false);
             fetchAll();
           }}
-          initialCategory={FAMILY_TO_DISPUTE_TYPE[installModalFamily] ?? ""}
+          initialCategory=""
         />
       )}
       <CustomRuleModal
@@ -904,74 +566,5 @@ export default function EmbeddedRulesPage() {
         }}
       />
     </Page>
-  );
-}
-
-// ─── Mode toggle (segmented) ────────────────────────────────────────────
-
-function ModeToggle({
-  mode,
-  onChange,
-  reviewLabel,
-  autoLabel,
-  disabled = false,
-}: {
-  mode: "auto" | "review";
-  onChange: (mode: "auto" | "review") => void;
-  reviewLabel: string;
-  autoLabel: string;
-  disabled?: boolean;
-}) {
-  const baseBtn: React.CSSProperties = {
-    border: "none",
-    padding: "6px 12px",
-    fontSize: 13,
-    fontWeight: 600,
-    borderRadius: 6,
-    cursor: disabled ? "default" : "pointer",
-    transition: "all 150ms ease",
-  };
-  return (
-    <div
-      style={{
-        display: "inline-flex",
-        padding: 4,
-        borderRadius: 8,
-        border: "1px solid #C9CCCF",
-        background: "#F6F8FB",
-        gap: 4,
-        flexShrink: 0,
-        opacity: disabled ? 0.5 : 1,
-      }}
-    >
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => onChange("review")}
-        style={{
-          ...baseBtn,
-          background: mode === "review" ? "#0EA5E9" : "transparent",
-          color: mode === "review" ? "#FFFFFF" : "#6D7175",
-          boxShadow:
-            mode === "review" ? "0 1px 2px rgba(0,0,0,0.1)" : "none",
-        }}
-      >
-        {reviewLabel}
-      </button>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => onChange("auto")}
-        style={{
-          ...baseBtn,
-          background: mode === "auto" ? "#22C55E" : "transparent",
-          color: mode === "auto" ? "#FFFFFF" : "#6D7175",
-          boxShadow:
-            mode === "auto" ? "0 1px 2px rgba(0,0,0,0.1)" : "none",
-        }}
-      >
-        {autoLabel}
-      </button>
-    </div>
   );
 }
