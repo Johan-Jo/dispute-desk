@@ -1527,7 +1527,7 @@
         "NONCOMPLIANT": "Transacción no conforme",
         "PRODUCT_NOT_RECEIVED": "Producto no recibido",
         "PRODUCT_UNACCEPTABLE": "Producto inaceptable / No conforme a la descripción",
-        "SUBSCRIPTION_CANCELED": "Suscripción cancelada",
+        "SUBSCRIPTION_CANCELLED": "Suscripción cancelada",
         "UNRECOGNIZED": "Pago no reconocido",
         "fallback": "Disputa"
       },
@@ -1864,7 +1864,7 @@
     "NONCOMPLIANT": "No conforme",
     "PRODUCT_NOT_RECEIVED": "Producto no recibido",
     "PRODUCT_UNACCEPTABLE": "Producto inaceptable / No conforme a la descripción",
-    "SUBSCRIPTION_CANCELED": "Suscripción cancelada",
+    "SUBSCRIPTION_CANCELLED": "Suscripción cancelada",
     "UNRECOGNIZED": "Pago no reconocido"
   },
   "disputeFamilies": {
@@ -2104,7 +2104,7 @@
       "DIGITAL": "Bienes digitales o servicio",
       "GENERAL": "General o casos especiales",
       "CREDIT_NOT_PROCESSED": "Reembolso / Crédito no procesado",
-      "SUBSCRIPTION_CANCELED": "Suscripción cancelada",
+      "SUBSCRIPTION_CANCELLED": "Suscripción cancelada",
       "PRODUCT_UNACCEPTABLE": "Producto inaceptable / No conforme a la descripción",
       "NONCOMPLIANT": "No conforme",
       "UNRECOGNIZED": "Pago no reconocido",

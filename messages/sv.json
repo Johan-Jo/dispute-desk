@@ -945,7 +945,7 @@
         "NONCOMPLIANT": "Ej regelenlig",
         "PRODUCT_NOT_RECEIVED": "Produkt ej mottagen",
         "PRODUCT_UNACCEPTABLE": "Produkt ej enligt beskrivning",
-        "SUBSCRIPTION_CANCELED": "Prenumeration avslutad",
+        "SUBSCRIPTION_CANCELLED": "Prenumeration avslutad",
         "UNRECOGNIZED": "Okänd betalning",
         "fallback": "Tvist"
       },
@@ -1864,7 +1864,7 @@
     "NONCOMPLIANT": "Ej regelenlig",
     "PRODUCT_NOT_RECEIVED": "Produkt ej mottagen",
     "PRODUCT_UNACCEPTABLE": "Produkt ej enligt beskrivning",
-    "SUBSCRIPTION_CANCELED": "Prenumeration avslutad",
+    "SUBSCRIPTION_CANCELLED": "Prenumeration avslutad",
     "UNRECOGNIZED": "Okänd betalning"
   },
   "disputeFamilies": {
@@ -2104,7 +2104,7 @@
       "DIGITAL": "Digitala varor eller tjänst",
       "GENERAL": "Generellt eller specialfall",
       "CREDIT_NOT_PROCESSED": "Chargeback / Kredit ej behandlad",
-      "SUBSCRIPTION_CANCELED": "Prenumeration avslutad",
+      "SUBSCRIPTION_CANCELLED": "Prenumeration avslutad",
       "PRODUCT_UNACCEPTABLE": "Produkt ej enligt beskrivning",
       "NONCOMPLIANT": "Ej regelenlig",
       "UNRECOGNIZED": "Okänd betalning",

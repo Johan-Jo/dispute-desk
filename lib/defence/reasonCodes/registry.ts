@@ -11,6 +11,7 @@ import type {
   ReasonCodeGuidance,
   ReasonCodeModuleKey,
 } from "../types";
+import { canonicalReasonCode } from "@/lib/rules/disputeReasons";
 import { visa_10_4_fraud } from "./visa_10_4_fraud";
 import { inr_product_not_received } from "./inr_product_not_received";
 import { product_unacceptable } from "./product_unacceptable";
@@ -97,7 +98,7 @@ const SHOPIFY_REASON_TO_MODULE: ReadonlyMap<string, ReasonCodeModuleKey> =
     ["PRODUCT_NOT_RECEIVED", "inr_product_not_received"],
     ["CREDIT_NOT_PROCESSED", "credit_not_processed"],
     ["PRODUCT_UNACCEPTABLE", "product_unacceptable"],
-    ["SUBSCRIPTION_CANCELED", "canceled_recurring"],
+    ["SUBSCRIPTION_CANCELLED", "canceled_recurring"],
     ["DUPLICATE", "duplicate_processing"],
   ]);
 
@@ -115,7 +116,9 @@ export function resolveReasonCodeModuleForContext(
   dbOverride?: ReasonCodeModuleOverride | null,
 ): ReasonCodeGuidance {
   if (!networkReasonCode && shopifyReason) {
-    const key = SHOPIFY_REASON_TO_MODULE.get(shopifyReason.toUpperCase());
+    const key = SHOPIFY_REASON_TO_MODULE.get(
+      canonicalReasonCode(shopifyReason) ?? "",
+    );
     if (key) {
       const base = MODULES[key];
       if (!dbOverride) return base;

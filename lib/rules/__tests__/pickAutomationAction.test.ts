@@ -273,7 +273,7 @@ describe("pickAutomationAction", () => {
     const r = pickAutomationAction(rules, {
       id: "d1",
       shop_id: "s1",
-      reason: "SUBSCRIPTION_CANCELED",
+      reason: "SUBSCRIPTION_CANCELLED",
       status: null,
       amount: 20,
     });

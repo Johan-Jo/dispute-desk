@@ -39,7 +39,7 @@ async function main() {
     FRAUDULENT: "Unauthorized Transaction",
     PRODUCT_NOT_RECEIVED: "Item Not Received",
     PRODUCT_UNACCEPTABLE: "Product Not As Described",
-    SUBSCRIPTION_CANCELED: "Subscription Dispute",
+    SUBSCRIPTION_CANCELLED: "Subscription Dispute",
     DUPLICATE: "Duplicate Charge",
   }[reason] || reason;
 
@@ -48,7 +48,7 @@ async function main() {
     FRAUDULENT: new Set(["order", "other", "comms", "access_log"]),
     PRODUCT_NOT_RECEIVED: new Set(["order", "shipping", "comms", "policy", "access_log"]),
     PRODUCT_UNACCEPTABLE: new Set(["order", "comms", "policy"]),
-    SUBSCRIPTION_CANCELED: new Set(["order", "comms", "policy", "access_log"]),
+    SUBSCRIPTION_CANCELLED: new Set(["order", "comms", "policy", "access_log"]),
     DUPLICATE: new Set(["order", "other"]),
   }[reason] || new Set(["order", "shipping", "other", "comms", "policy", "access_log"]);
 
@@ -181,7 +181,7 @@ async function main() {
         FRAUDULENT: [], // Fraud doesn't need policies
         PRODUCT_NOT_RECEIVED: ["shipping", "refunds"],
         PRODUCT_UNACCEPTABLE: ["refunds", "terms"],
-        SUBSCRIPTION_CANCELED: ["terms", "refunds"],
+        SUBSCRIPTION_CANCELLED: ["terms", "refunds"],
         DUPLICATE: [],
       }[reason] || ["refunds", "shipping", "terms"];
 

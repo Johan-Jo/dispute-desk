@@ -315,10 +315,10 @@ describe("decideFileAttachments — reason-aware slot filtering (Phase 0c)", () 
     expect(linked?.resolvedSlot).toMatchObject({ kind: "link", fallbackReason: "reason_hidden_for_dispute" });
   });
 
-  it("SUBSCRIPTION_CANCELED: cancellation_policy is NOT visible until empirically verified — falls to link", () => {
+  it("SUBSCRIPTION_CANCELLED: cancellation_policy is NOT visible until empirically verified — falls to link", () => {
     const plan = decideFileAttachments(input({
       caseStrength: "moderate",
-      disputeReason: "SUBSCRIPTION_CANCELED",
+      disputeReason: "SUBSCRIPTION_CANCELLED",
       candidates: [STRONG_CANCELLATION_POLICY],
     }));
     const native = plan.filter(p => p.resolvedSlot.kind === "native");
@@ -366,7 +366,7 @@ describe("decideFileAttachments — reason-aware slot filtering (Phase 0c)", () 
         .filter(p => p.resolvedSlot.kind === "native")
         .map(p => (p.resolvedSlot.kind === "native" ? p.resolvedSlot.targetField : "")),
     );
-    for (const reason of ["CREDIT_NOT_PROCESSED", "SUBSCRIPTION_CANCELED", "PRODUCT_NOT_RECEIVED", "DUPLICATE", "GENERAL"]) {
+    for (const reason of ["CREDIT_NOT_PROCESSED", "SUBSCRIPTION_CANCELLED", "PRODUCT_NOT_RECEIVED", "DUPLICATE", "GENERAL"]) {
       const plan = decideFileAttachments(input({
         caseStrength: "moderate",
         disputeReason: reason,

@@ -24,7 +24,7 @@ const REASONS: Array<{ value: string; labelKey: string }> = [
   { value: "FRAUDULENT", labelKey: "reasonFraudulent" },
   { value: "PRODUCT_NOT_RECEIVED", labelKey: "reasonProductNotReceived" },
   { value: "PRODUCT_UNACCEPTABLE", labelKey: "reasonProductUnacceptable" },
-  { value: "SUBSCRIPTION_CANCELED", labelKey: "reasonSubscriptionCanceled" },
+  { value: "SUBSCRIPTION_CANCELLED", labelKey: "reasonSubscriptionCanceled" },
   { value: "CREDIT_NOT_PROCESSED", labelKey: "reasonCreditNotProcessed" },
   { value: "DUPLICATE", labelKey: "reasonDuplicate" },
   { value: "GENERAL", labelKey: "reasonGeneral" },

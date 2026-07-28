@@ -1527,7 +1527,7 @@
         "NONCOMPLIANT": "Nicht konform",
         "PRODUCT_NOT_RECEIVED": "Produkt nicht erhalten",
         "PRODUCT_UNACCEPTABLE": "Produkt nicht wie beschrieben",
-        "SUBSCRIPTION_CANCELED": "Abonnement gekündigt",
+        "SUBSCRIPTION_CANCELLED": "Abonnement gekündigt",
         "UNRECOGNIZED": "Nicht erkannte Zahlung",
         "fallback": "Streitfall"
       },
@@ -1864,7 +1864,7 @@
     "NONCOMPLIANT": "Nicht konform",
     "PRODUCT_NOT_RECEIVED": "Produkt nicht erhalten",
     "PRODUCT_UNACCEPTABLE": "Produkt nicht wie beschrieben",
-    "SUBSCRIPTION_CANCELED": "Abonnement gekündigt",
+    "SUBSCRIPTION_CANCELLED": "Abonnement gekündigt",
     "UNRECOGNIZED": "Nicht erkannte Zahlung"
   },
   "disputeFamilies": {
@@ -2104,7 +2104,7 @@
       "DIGITAL": "Digitale Güter oder Dienstleistung",
       "GENERAL": "Allgemein oder Sonderfälle",
       "CREDIT_NOT_PROCESSED": "Rückerstattung / Gutschrift nicht verarbeitet",
-      "SUBSCRIPTION_CANCELED": "Abonnement gekündigt",
+      "SUBSCRIPTION_CANCELLED": "Abonnement gekündigt",
       "PRODUCT_UNACCEPTABLE": "Produkt nicht wie beschrieben",
       "NONCOMPLIANT": "Nicht konform",
       "UNRECOGNIZED": "Nicht erkannte Zahlung",

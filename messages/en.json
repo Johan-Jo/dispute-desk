@@ -945,7 +945,7 @@
         "NONCOMPLIANT": "Noncompliant",
         "PRODUCT_NOT_RECEIVED": "Product Not Received",
         "PRODUCT_UNACCEPTABLE": "Product Unacceptable / Not as Described",
-        "SUBSCRIPTION_CANCELED": "Subscription Canceled",
+        "SUBSCRIPTION_CANCELLED": "Subscription Canceled",
         "UNRECOGNIZED": "Unrecognized Payment",
         "fallback": "Dispute"
       },
@@ -1864,7 +1864,7 @@
     "NONCOMPLIANT": "Noncompliant",
     "PRODUCT_NOT_RECEIVED": "Product Not Received",
     "PRODUCT_UNACCEPTABLE": "Product Unacceptable / Not as Described",
-    "SUBSCRIPTION_CANCELED": "Subscription Canceled",
+    "SUBSCRIPTION_CANCELLED": "Subscription Canceled",
     "UNRECOGNIZED": "Unrecognized Payment"
   },
   "disputeFamilies": {
@@ -2031,7 +2031,7 @@
       "DIGITAL": "Digital goods or service",
       "GENERAL": "General or Edge-Case",
       "CREDIT_NOT_PROCESSED": "Refund / Credit Not Processed",
-      "SUBSCRIPTION_CANCELED": "Subscription Canceled",
+      "SUBSCRIPTION_CANCELLED": "Subscription Canceled",
       "PRODUCT_UNACCEPTABLE": "Product Unacceptable / Not as Described",
       "NONCOMPLIANT": "Noncompliant",
       "UNRECOGNIZED": "Unrecognized Payment",

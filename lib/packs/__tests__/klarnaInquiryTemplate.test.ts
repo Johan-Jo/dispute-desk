@@ -20,7 +20,7 @@ describe("resolveKlarnaInquiryTemplateId", () => {
   });
 
   it("returns null for unmapped/absent reasons", () => {
-    expect(resolveKlarnaInquiryTemplateId("SUBSCRIPTION_CANCELED")).toBeNull();
+    expect(resolveKlarnaInquiryTemplateId("SUBSCRIPTION_CANCELLED")).toBeNull();
     expect(resolveKlarnaInquiryTemplateId(null)).toBeNull();
     expect(resolveKlarnaInquiryTemplateId("")).toBeNull();
   });
@@ -47,7 +47,7 @@ describe("klarnaInquiryTemplateOverride", () => {
 
   it("does NOT override when the reason has no Klarna variant", () => {
     expect(
-      klarnaInquiryTemplateOverride({ paymentFamily: "klarna", phase: "inquiry", reason: "SUBSCRIPTION_CANCELED" }),
+      klarnaInquiryTemplateOverride({ paymentFamily: "klarna", phase: "inquiry", reason: "SUBSCRIPTION_CANCELLED" }),
     ).toBeNull();
   });
 

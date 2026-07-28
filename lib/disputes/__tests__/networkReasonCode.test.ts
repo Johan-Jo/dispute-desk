@@ -48,9 +48,9 @@ describe("resolveNetworkReasonCode — inferred path", () => {
     expect(result.code).toBe("13.1");
   });
 
-  it("Visa + SUBSCRIPTION_CANCELED → 13.2 (recurring), not 13.1", () => {
+  it("Visa + SUBSCRIPTION_CANCELLED → 13.2 (recurring), not 13.1", () => {
     const result = resolveNetworkReasonCode({
-      shopifyReason: "SUBSCRIPTION_CANCELED",
+      shopifyReason: "SUBSCRIPTION_CANCELLED",
       cardNetwork: "visa",
     });
     expect(result.code).toBe("13.2");
@@ -203,9 +203,9 @@ describe("resolveNetworkReasonCode — derived path (receiptJson)", () => {
 });
 
 describe("resolveNetworkReasonCode — order context refinement", () => {
-  it("SUBSCRIPTION_CANCELED + !hasSubscription emits diagnostic reason but keeps the code", () => {
+  it("SUBSCRIPTION_CANCELLED + !hasSubscription emits diagnostic reason but keeps the code", () => {
     const result = resolveNetworkReasonCode({
-      shopifyReason: "SUBSCRIPTION_CANCELED",
+      shopifyReason: "SUBSCRIPTION_CANCELLED",
       cardNetwork: "visa",
       orderContext: { hasSubscription: false },
     });

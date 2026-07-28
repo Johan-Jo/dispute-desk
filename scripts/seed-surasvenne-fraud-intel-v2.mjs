@@ -21,7 +21,7 @@
  * 3. Outcome / phase / reason / status mix realistic:
  *      phase:   75% chargeback · 25% inquiry
  *      reason:  50% FRAUDULENT · 20% PRODUCT_NOT_RECEIVED ·
- *               12% PRODUCT_UNACCEPTABLE · 10% SUBSCRIPTION_CANCELED ·
+ *               12% PRODUCT_UNACCEPTABLE · 10% SUBSCRIPTION_CANCELLED ·
  *               8% CREDIT_NOT_PROCESSED
  *      status:  20% NEEDS_RESPONSE · 15% under_review ·
  *               25% won · 30% lost · 10% accepted
@@ -113,7 +113,7 @@ const DISPUTE_REASON_BUCKETS = [
   ["FRAUDULENT", 50],
   ["PRODUCT_NOT_RECEIVED", 20],
   ["PRODUCT_UNACCEPTABLE", 12],
-  ["SUBSCRIPTION_CANCELED", 10],
+  ["SUBSCRIPTION_CANCELLED", 10],
   ["CREDIT_NOT_PROCESSED", 8],
 ];
 const DISPUTE_STATUS_BUCKETS = [

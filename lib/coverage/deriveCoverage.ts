@@ -6,6 +6,8 @@
  * read-only projection of existing data.
  */
 
+import { canonicalReasonCode } from "@/lib/rules/disputeReasons";
+
 export interface DisputeFamily {
   id: string;
   /** Shopify reason codes that map to this family */
@@ -18,7 +20,7 @@ export const DISPUTE_FAMILIES: DisputeFamily[] = [
   { id: "fraud", reasons: ["FRAUDULENT", "UNRECOGNIZED"], labelKey: "coverage.familyFraud" },
   { id: "pnr", reasons: ["PRODUCT_NOT_RECEIVED"], labelKey: "coverage.familyPnr" },
   { id: "not_as_described", reasons: ["PRODUCT_UNACCEPTABLE", "NOT_AS_DESCRIBED"], labelKey: "coverage.familyNotAsDescribed" },
-  { id: "subscription", reasons: ["SUBSCRIPTION_CANCELED"], labelKey: "coverage.familySubscription" },
+  { id: "subscription", reasons: ["SUBSCRIPTION_CANCELLED"], labelKey: "coverage.familySubscription" },
   { id: "refund", reasons: ["CREDIT_NOT_PROCESSED"], labelKey: "coverage.familyRefund" },
   { id: "duplicate", reasons: ["DUPLICATE"], labelKey: "coverage.familyDuplicate" },
   { id: "general", reasons: ["GENERAL"], labelKey: "coverage.familyGeneral" },
@@ -65,11 +67,13 @@ interface PackInput {
  * to GENERAL family handling.
  */
 function packMatchesFamily(pack: PackInput, family: DisputeFamily): boolean {
-  const type = pack.dispute_type?.toUpperCase();
-  if (!type) return false;
-  if (type === "DIGITAL") {
+  const raw = pack.dispute_type?.toUpperCase();
+  if (!raw) return false;
+  if (raw === "DIGITAL") {
     return family.reasons.includes("GENERAL");
   }
+  // Rows written before 2026-07-28 may carry SUBSCRIPTION_CANCELED (single L).
+  const type = canonicalReasonCode(raw) ?? raw;
   return family.reasons.includes(type);
 }
 
@@ -83,7 +87,8 @@ function ruleMatchesFamily(rule: RuleInput, family: DisputeFamily): boolean {
   // Mode shown on the Coverage page — that would diverge from the
   // Automation page, which only reads pack-specific rules.
   if (!rule.match.reason || rule.match.reason.length === 0) return false;
-  return family.reasons.some((r) => rule.match.reason!.includes(r));
+  const ruleReasons = rule.match.reason.map((r) => canonicalReasonCode(r) ?? r);
+  return family.reasons.some((r) => ruleReasons.includes(r));
 }
 
 /**

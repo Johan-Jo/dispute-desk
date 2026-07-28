@@ -62,7 +62,7 @@ const REASON_PRIORITY = {
     duplicate_explanation: "critical",
     supporting_documents: "optional",
   },
-  SUBSCRIPTION_CANCELED: {
+  SUBSCRIPTION_CANCELLED: {
     order_confirmation: "critical",
     cancellation_policy: "critical",
     customer_communication: "recommended",
