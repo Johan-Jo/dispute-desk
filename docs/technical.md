@@ -4472,9 +4472,33 @@ The 10 chargeback templates (T1–T10) and 8 inquiry templates (T11–T18) were 
 
 ### Overview
 
-A 6-step guided setup wizard helps merchants configure DisputeDesk after
+A 5-step guided setup wizard helps merchants configure DisputeDesk after
 installation. Progress is tracked per-shop in the `shop_setup` table and surfaced on the
 dashboard via a Setup Checklist card with a ring progress indicator.
+
+**Steps:** Connection → Store Profile → **Handling** → Policies → Activate.
+
+#### The 6→5 merge (2026-07-27)
+
+`coverage` + `automation` collapsed into a single `handling` step. The naming was inverted: the step *called* "Automation" held only a high-value toggle, while the real auto/review decision sat in a per-family dropdown table on the "Coverage" step. Merchants configured seven rows to express one intention — and the per-type choice only ever governed the clean-Strong slice anyway (see § *Store-wide automation mode*).
+
+`handling` is a **new** id, not a reuse. Reusing `coverage` would credit merchants for a step whose semantics changed; reusing `automation` would make the stepper jump backward.
+
+**Three population states, all pinned by `tests/api/setup/state.test.ts`:**
+
+| Prior state | Result |
+|---|---|
+| All 6 legacy steps `done` | Both keys fold to `handling: done`; `doneCount` 5 of `TOTAL_STEPS` 5 → `allDone: true`, **no loop-back** |
+| `coverage: done` + `automation: todo` | **Forced through once** — `migrateStepsMap` downgrades `handling` to `in_progress`. Plain rank precedence would skip them past the merged step, leaving them to silently inherit a migration-derived mode they never chose |
+| `handling` already present | Never downgraded — the legacy-pair override only fires when the two *legacy* keys disagree |
+
+`LEGACY_STEP_ID_MAP` repoints **every** alias that used to target the removed ids (`disputes`, `sync_disputes`, `packs`, `evidence_sources`, `rules`, `automation_rules`) onto `handling`. An alias left pointing at a removed id would silently drop that step's state — `setupConstants.test.ts` asserts every alias resolves to a live id.
+
+`resolveStepId()` (in `lib/setup/constants.ts`) maps legacy ids onto canonical ones, and is used by `POST /api/setup/step`, `POST /api/setup/skip`, and the `[step]` page so a stale client tab or bookmarked `/app/setup/coverage` resolves instead of 400-ing or 404-ing.
+
+**Template install is no longer a merchant decision.** `HandlingStep` derives the playbook set from the store profile and installs it (plus silent inquiry siblings) on save — the Coverage step's default path, minus the "advanced" disclosure that re-introduced per-type configuration.
+
+**Surfaces that share `StepId`** and must be updated together: `app/(embedded)/app/setup/[step]/page.tsx`, `components/setup/WizardStepper.tsx`, `components/setup/PortalSetupChecklistCard.tsx`, and `app/(portal)/portal/setup/[step]/page.tsx` (the portal wizard keys its CTA map on step ids).
 
 **Billing, Settings, and Help** are app sections (reachable from nav) but are **not** part of the onboarding checklist.
 

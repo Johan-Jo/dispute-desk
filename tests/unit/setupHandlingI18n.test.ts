@@ -1,51 +1,49 @@
 import { describe, it, expect } from "vitest";
 import enMessages from "@/messages/en.json";
 
-describe("Setup coverage and activate i18n keys", () => {
+describe("Setup handling and activate i18n keys", () => {
   const setup = (enMessages as Record<string, unknown>).setup as Record<string, unknown>;
 
-  describe("setup.coverage namespace", () => {
-    const coverage = setup?.coverage as Record<string, string> | undefined;
+  describe("setup.handling namespace", () => {
+    // `coverage` + `automation` merged into `handling` (2026-07-27).
+    const handling = setup?.handling as Record<string, string> | undefined;
 
     it("exists", () => {
-      expect(coverage).toBeDefined();
+      expect(handling).toBeDefined();
     });
 
     const requiredKeys = [
       "title",
       "subtitle",
-      "summaryTitle",
-      "summarySubtitle",
-      "statAutomated",
-      "statReview",
-      "statNotify",
-      "colDisputeType",
-      "colHandling",
-      "colAutomation",
-      "colConfidence",
-      "modeAutomated",
-      "modeReview",
-      "modeNotify",
-      "confidence_high",
-      "confidence_medium",
-      "confidence_low",
-      "noteLabel",
-      "noteText",
-      "installingSaving",
-      "loading",
-      "family_fraud",
-      "family_pnr",
-      "family_not_as_described",
-      "family_subscription",
-      "family_refund",
-      "family_duplicate",
-      "family_digital",
-      "family_general",
+      "safeguardTitle",
+      "safeguardToggle",
+      "thresholdLabel",
+      "thresholdInvalid",
+      "safeguardHint",
+      "setupSummaryTitle",
+      "setupSummaryPlaybooks",
+      "setupSummaryInquiry",
     ];
 
     it.each(requiredKeys)("has key: %s", (key) => {
-      expect(coverage?.[key]).toBeDefined();
-      expect(typeof coverage?.[key]).toBe("string");
+      expect(handling?.[key]).toBeDefined();
+      expect(typeof handling?.[key]).toBe("string");
+    });
+  });
+
+  describe("removed namespaces stay removed", () => {
+    // The merged step replaced both. Reintroducing either would resurrect the
+    // per-dispute-type grid this redesign deleted.
+    it("setup.coverage and setup.automation no longer exist", () => {
+      expect(setup?.coverage).toBeUndefined();
+      expect(setup?.automation).toBeUndefined();
+    });
+
+    it("setup.stepper no longer carries the merged step ids", () => {
+      const stepper = setup?.stepper as Record<string, string> | undefined;
+      expect(stepper?.coverage).toBeUndefined();
+      expect(stepper?.automation).toBeUndefined();
+      expect(stepper?.handling).toBeDefined();
     });
   });
 
@@ -65,14 +63,15 @@ describe("Setup coverage and activate i18n keys", () => {
     const requiredKeys = [
       "title",
       "subtitle",
-      "statCoverageLabel",
-      "statCoverageDesc",
-      "statAutomatedLabel",
-      "statAutomatedDesc",
-      "statReviewLabel",
-      "statReviewDesc",
+      "statModeLabel",
+      "statModeDesc",
+      "statModeAuto",
+      "statModeReview",
+      "statPlaybooksLabel",
+      "statPlaybooksDesc",
       "statThresholdLabel",
       "statThresholdDesc",
+      "statThresholdOff",
       "nextTitle",
       "readyTitle",
       "readyDesc",
@@ -156,12 +155,22 @@ describe("Setup coverage and activate i18n keys", () => {
     });
   });
 
-  describe("setup.automation owns the threshold input", () => {
-    const automation = setup?.automation as Record<string, string> | undefined;
+  describe("setup.activate drops the per-family stat keys", () => {
+    const activate = setup?.activate as Record<string, string> | undefined;
 
-    it("has thresholdLabel (moved from storeProfile)", () => {
-      expect(automation?.thresholdLabel).toBeDefined();
-      expect(typeof automation?.thresholdLabel).toBe("string");
+    it("no longer exposes coverage/automated/review counts", () => {
+      // The 2x2 family-count grid is gone; the summary now reports the
+      // store-wide mode, playbook count, and threshold.
+      for (const key of [
+        "statCoverageLabel",
+        "statCoverageDesc",
+        "statAutomatedLabel",
+        "statAutomatedDesc",
+        "statReviewLabel",
+        "statReviewDesc",
+      ]) {
+        expect(activate?.[key]).toBeUndefined();
+      }
     });
   });
 });

@@ -153,7 +153,9 @@ export function CoverageTable({ rows, searchParams, tc }: Props) {
                 <td style={cell}>
                   <a
                     href={withShopParams(
-                      `/app/rules?family=${row.familyId}`,
+                      // Handling is store-wide now — there is no per-family
+                      // row to deep-link to (the 7-row grid is gone).
+                      `/app/rules`,
                       searchParams ?? new URLSearchParams(),
                     )}
                     style={{

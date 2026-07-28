@@ -740,7 +740,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
   /* ── Automation rule + Footer CTAs ── */
   const disputeFamily = mapReasonToRulesFamily(dispute.reason);
-  const rulesUrl = withShopParams(`/app/rules?family=${disputeFamily}`, searchParams);
+  // Handling is store-wide now — the per-family grid (and its ?family= deep
+  // link) is gone, so this points at the Automation page itself.
+  const rulesUrl = withShopParams(`/app/rules`, searchParams);
   const appliedMode = appliedRule?.mode ?? "review";
   const appliedModeLabel = appliedMode === "auto"
     ? tExtra("appliedMode.automatic")

@@ -41,7 +41,7 @@ describe("GET /api/setup/state", () => {
 
     const body = await res.json();
     expect(body.progress.doneCount).toBe(0);
-    expect(body.progress.total).toBe(6);
+    expect(body.progress.total).toBe(5);
     expect(body.allDone).toBe(false);
     expect(body.nextStepId).toBe("connection");
 
@@ -58,7 +58,7 @@ describe("GET /api/setup/state", () => {
       steps: {
         connection: { status: "done", completed_at: "2026-01-01" },
         store_profile: { status: "done", completed_at: "2026-01-01" },
-        coverage: { status: "in_progress" },
+        handling: { status: "in_progress" },
       },
     });
     mockGetServiceClient.mockReturnValue(client as any);
@@ -67,8 +67,8 @@ describe("GET /api/setup/state", () => {
     const body = await res.json();
 
     expect(body.progress.doneCount).toBe(2);
-    expect(body.progress.total).toBe(6);
-    expect(body.nextStepId).toBe("coverage");
+    expect(body.progress.total).toBe(5);
+    expect(body.nextStepId).toBe("handling");
     expect(body.allDone).toBe(false);
   });
 
@@ -88,7 +88,7 @@ describe("GET /api/setup/state", () => {
     const body = await res.json();
 
     expect(body.steps.connection?.status).toBe("done");
-    expect(body.steps.coverage?.status).toBe("in_progress");
+    expect(body.steps.handling?.status).toBe("in_progress");
     expect(body.nextStepId).toBe("store_profile");
   });
 
@@ -103,8 +103,7 @@ describe("GET /api/setup/state", () => {
     const steps: Record<string, { status: string; payload?: unknown }> = {
       connection: { status: "done" },
       store_profile: { status: "done" },
-      coverage: { status: "done" },
-      automation: { status: "done" },
+      handling: { status: "done" },
       policies: { status: "done" },
       // activate listed BEFORE team so `team` (todo) is the later writer.
       activate: { status: "done" },
@@ -119,15 +118,15 @@ describe("GET /api/setup/state", () => {
     const body = await res.json();
 
     expect(body.steps.activate?.status).toBe("done");
-    expect(body.progress.doneCount).toBe(6);
+    expect(body.progress.doneCount).toBe(5);
     expect(body.allDone).toBe(true);
     expect(body.nextStepId).toBeNull();
   });
 
-  it("returns allDone when all 6 onboarding steps are done", async () => {
+  it("returns allDone when all 5 onboarding steps are done", async () => {
     const allDoneSteps: Record<string, { status: string }> = {};
     const ids = [
-      "connection", "store_profile", "coverage", "automation", "policies", "activate",
+      "connection", "store_profile", "handling", "policies", "activate",
     ];
     for (const id of ids) {
       allDoneSteps[id] = { status: "done", completed_at: "2026-01-01" } as any;
@@ -143,8 +142,97 @@ describe("GET /api/setup/state", () => {
     const res = await GET(makeRequest("shop-123"));
     const body = await res.json();
 
-    expect(body.progress.doneCount).toBe(6);
+    expect(body.progress.doneCount).toBe(5);
     expect(body.allDone).toBe(true);
     expect(body.nextStepId).toBeNull();
+  });
+
+  // ── 6→5 wizard merge (2026-07-27) ─────────────────────────────────────
+  // `coverage` + `automation` both fold into `handling`. TOTAL_STEPS drops
+  // 6→5, which is exactly the shape that once wedged merchants via the
+  // `team` collision — so all three population states are pinned here.
+
+  it("MERGED: a fully-completed legacy merchant stays done (no loop-back)", async () => {
+    const client = createMockSupabaseClient();
+    setTableResult(client, "shop_setup", {
+      shop_id: "shop-123",
+      steps: {
+        connection: { status: "done" },
+        store_profile: { status: "done" },
+        coverage: { status: "done" },
+        automation: { status: "done" },
+        policies: { status: "done" },
+        activate: { status: "done" },
+      },
+    });
+    mockGetServiceClient.mockReturnValue(client as any);
+
+    const body = await (await GET(makeRequest("shop-123"))).json();
+
+    // Both legacy keys collapse onto handling; done survives.
+    expect(body.steps.handling?.status).toBe("done");
+    expect(body.progress.doneCount).toBe(5);
+    expect(body.allDone).toBe(true);
+    expect(body.nextStepId).toBeNull();
+  });
+
+  it("MERGED: a mid-wizard merchant is FORCED through the new handling step", async () => {
+    // coverage:done + automation:todo. Plain status-rank precedence would
+    // mark handling done and skip them past the merged step — they would
+    // then silently inherit whatever the rules migration derived, having
+    // never consciously chosen a handling mode. Downgrade to in_progress.
+    const client = createMockSupabaseClient();
+    setTableResult(client, "shop_setup", {
+      shop_id: "shop-123",
+      steps: {
+        connection: { status: "done" },
+        store_profile: { status: "done" },
+        coverage: { status: "done" },
+        automation: { status: "todo" },
+      },
+    });
+    mockGetServiceClient.mockReturnValue(client as any);
+
+    const body = await (await GET(makeRequest("shop-123"))).json();
+
+    expect(body.steps.handling?.status).toBe("in_progress");
+    expect(body.nextStepId).toBe("handling");
+    expect(body.allDone).toBe(false);
+  });
+
+  it("MERGED: a merchant who completed the NEW step is never downgraded", async () => {
+    // Once `handling` exists in its own right, the legacy-pair downgrade
+    // must not fire — otherwise they'd be sent back every page load.
+    const client = createMockSupabaseClient();
+    setTableResult(client, "shop_setup", {
+      shop_id: "shop-123",
+      steps: {
+        connection: { status: "done" },
+        store_profile: { status: "done" },
+        coverage: { status: "done" },
+        automation: { status: "todo" },
+        handling: { status: "done" },
+        policies: { status: "done" },
+        activate: { status: "done" },
+      },
+    });
+    mockGetServiceClient.mockReturnValue(client as any);
+
+    const body = await (await GET(makeRequest("shop-123"))).json();
+
+    expect(body.steps.handling?.status).toBe("done");
+    expect(body.allDone).toBe(true);
+  });
+
+  it("MERGED: a fresh install starts at connection with 5 todo steps", async () => {
+    const client = createMockSupabaseClient();
+    setTableResult(client, "shop_setup", { shop_id: "shop-123", steps: {} });
+    mockGetServiceClient.mockReturnValue(client as any);
+
+    const body = await (await GET(makeRequest("shop-123"))).json();
+
+    expect(Object.keys(body.steps)).toHaveLength(5);
+    expect(body.nextStepId).toBe("connection");
+    expect(body.allDone).toBe(false);
   });
 });

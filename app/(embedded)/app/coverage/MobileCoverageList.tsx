@@ -46,7 +46,8 @@ export function MobileCoverageList({ rows, searchParams, tc }: Props) {
 
             <a
               href={withShopParams(
-                `/app/rules?family=${row.familyId}`,
+                // Handling is store-wide now — no per-family row to target.
+                `/app/rules`,
                 searchParams ?? new URLSearchParams(),
               )}
               style={{

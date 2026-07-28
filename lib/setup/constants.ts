@@ -10,7 +10,7 @@ export interface StepDefinition {
   unlocks: string[];
 }
 
-/** Wizard steps: Connection → Store Profile → Coverage → Automation → Policies → Activate. */
+/** Wizard steps: Connection → Store Profile → Handling → Policies → Activate. */
 export const SETUP_STEPS: StepDefinition[] = [
   {
     id: "connection",
@@ -39,34 +39,21 @@ export const SETUP_STEPS: StepDefinition[] = [
     ],
   },
   {
-    id: "coverage",
+    id: "handling",
     index: 2,
-    title: "Coverage",
-    dashboardLabel: "Dispute coverage",
-    timeEstimate: "2 min",
-    prerequisites: [],
-    unlocks: [
-      "Recommended handling for each dispute type",
-      "Confidence-based automation levels",
-      "Full dispute family coverage",
-    ],
-  },
-  {
-    id: "automation",
-    index: 3,
-    title: "Automation",
-    dashboardLabel: "Automation rules",
+    title: "Handling",
+    dashboardLabel: "How disputes are handled",
     timeEstimate: "2 min",
     prerequisites: [],
     unlocks: [
       "Hands-free dispute handling",
-      "Review rules for high-value or risky cases",
-      "Full control and oversight",
+      "Safeguards for high-value disputes",
+      "Playbooks matched to your store",
     ],
   },
   {
     id: "policies",
-    index: 4,
+    index: 3,
     title: "Policies",
     dashboardLabel: "Business policies",
     timeEstimate: "2 min",
@@ -79,7 +66,7 @@ export const SETUP_STEPS: StepDefinition[] = [
   },
   {
     id: "activate",
-    index: 5,
+    index: 4,
     title: "Activate",
     dashboardLabel: "Activate protection",
     timeEstimate: "1 min",
@@ -100,31 +87,60 @@ export const STEP_BY_ID = Object.fromEntries(
 
 export const TOTAL_STEPS = SETUP_STEPS.length;
 
-/** All 6 steps are shown in the wizard flow (no separate welcome/pre-steps). */
-export const WIZARD_STEP_IDS: StepId[] = ["connection", "store_profile", "coverage", "automation", "policies", "activate"];
+/** All 5 steps are shown in the wizard flow (no separate welcome/pre-steps). */
+export const WIZARD_STEP_IDS: StepId[] = ["connection", "store_profile", "handling", "policies", "activate"];
 
-/** All 6 steps shown in the wizard top stepper bar. */
-export const WIZARD_STEPPER_IDS: StepId[] = ["connection", "store_profile", "coverage", "automation", "policies", "activate"];
+/** All 5 steps shown in the wizard top stepper bar. */
+export const WIZARD_STEPPER_IDS: StepId[] = ["connection", "store_profile", "handling", "policies", "activate"];
 
 export const TOTAL_WIZARD_STEPS = WIZARD_STEP_IDS.length;
 
-/** Map legacy step ids to new step ids for migration of shop_setup.steps */
+/**
+ * Map legacy step ids to current step ids when reading shop_setup.steps.
+ *
+ * Many→one by design; `migrateStepsMap` in app/api/setup/state/route.ts
+ * resolves collisions by status precedence so a less-complete alias can never
+ * clobber a more-complete canonical entry (the bug that once wedged the
+ * wizard via a lingering `team:{todo}` landing on `activate:{done}`).
+ *
+ * `coverage` and `automation` both fold into `handling` (2026-07-27). Every
+ * alias that used to point at either of those has been repointed here — an
+ * alias left pointing at a removed id would silently drop that step's state.
+ */
 export const LEGACY_STEP_ID_MAP: Record<string, StepId> = {
-  // Old 8-step wizard → new 5-step wizard
+  // Old 8-step wizard → current 5-step wizard
   permissions: "connection",
   open_in_admin: "connection",
   overview: "connection",
   welcome_goals: "connection",
-  disputes: "coverage",
-  sync_disputes: "coverage",
-  packs: "coverage",
-  evidence_sources: "coverage",
+  // The merged step
+  coverage: "handling",
+  automation: "handling",
+  // Previously → "coverage"
+  disputes: "handling",
+  sync_disputes: "handling",
+  packs: "handling",
+  evidence_sources: "handling",
+  // Previously → "automation"
+  rules: "handling",
+  automation_rules: "handling",
   business_policies: "policies",
-  rules: "automation",
-  automation_rules: "automation",
   team: "activate",
   team_notifications: "activate",
 };
+
+/**
+ * Resolve an incoming step id to a canonical one, tolerating legacy aliases.
+ *
+ * A stale client tab (or a bookmarked wizard URL) can post `coverage` or
+ * `automation` after the 6→5 merge; rejecting those with a 400 would strand
+ * the merchant mid-wizard. Returns null for genuinely unknown ids.
+ */
+export function resolveStepId(raw: unknown): StepId | null {
+  if (typeof raw !== "string" || raw.length === 0) return null;
+  if (STEP_IDS.includes(raw as StepId)) return raw as StepId;
+  return LEGACY_STEP_ID_MAP[raw] ?? null;
+}
 
 export function getNextActionableStep(
   stepsMap: Partial<Record<StepId, { status: string }>>

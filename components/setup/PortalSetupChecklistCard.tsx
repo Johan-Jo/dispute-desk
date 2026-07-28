@@ -81,8 +81,7 @@ function ConnectStoreChecklist() {
 const STEP_ROUTES: Record<StepId, string> = {
   connection: "/portal/setup/connection",
   store_profile: "/portal/setup/store_profile",
-  coverage: "/portal/setup/coverage",
-  automation: "/portal/setup/automation",
+  handling: "/portal/setup/handling",
   policies: "/portal/setup/policies",
   activate: "/portal/setup/activate",
 };
