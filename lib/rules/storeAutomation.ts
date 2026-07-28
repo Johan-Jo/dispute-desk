@@ -63,8 +63,9 @@ export const LEGACY_SAFEGUARD_RULE_NAME = "__dd_safeguard__:high_value";
 
 export const DEFAULT_SAFEGUARD_AMOUNT = 500;
 
-const FALLBACK_PRIORITY = 100_000;
-const SAFEGUARD_PRIORITY = 5;
+/* Priorities live in the write_store_automation RPC (migration
+   20260728120100) — the single writer. Kept here only as documentation:
+   fallback = 100000 (tier-2 catch-all), safeguard = 5 (tier-0 amount rule). */
 
 export type StoreAutomationMode = "auto" | "review";
 
@@ -149,53 +150,20 @@ export async function writeStoreAutomation(
 
   const previous = await readStoreAutomation(shopId);
 
-  // 1) Clear every setup-owned row (canonical + legacy per-pack/coverage).
-  const { error: delSetupErr } = await sb
-    .from("rules")
-    .delete()
-    .eq("shop_id", shopId)
-    .like("name", `${SETUP_RULE_PREFIX}%`);
-  if (delSetupErr) {
-    throw new Error(`Failed to clear setup rules: ${delSetupErr.message}`);
-  }
-
-  // 2) Clear the legacy safeguard name (different prefix, so not covered above).
-  const { error: delLegacyErr } = await sb
-    .from("rules")
-    .delete()
-    .eq("shop_id", shopId)
-    .eq("name", LEGACY_SAFEGUARD_RULE_NAME);
-  if (delLegacyErr) {
-    throw new Error(`Failed to clear legacy safeguard: ${delLegacyErr.message}`);
-  }
-
-  // 3) + 4) Insert the canonical rows.
-  const rows: Array<Record<string, unknown>> = [
-    {
-      shop_id: shopId,
-      enabled: true,
-      name: FALLBACK_RULE_NAME,
-      match: {},
-      action: { mode, pack_template_id: null },
-      priority: FALLBACK_PRIORITY,
-    },
-  ];
-  if (safeguardEnabled) {
-    rows.push({
-      shop_id: shopId,
-      enabled: true,
-      name: SAFEGUARD_RULE_NAME,
-      match: { amount_range: { min: amount } },
-      // pack_template_id intentionally omitted — a tier-0 safeguard only
-      // forces review mode; the template is resolved by reason_template_mappings.
-      action: { mode: "review" },
-      priority: SAFEGUARD_PRIORITY,
-    });
-  }
-
-  const { error: insErr } = await sb.from("rules").insert(rows);
-  if (insErr) {
-    throw new Error(`Failed to write store automation rules: ${insErr.message}`);
+  // 1-4) Atomic swap of the two setup-owned rows. Previously this was three
+  // separate round-trips (delete, delete, insert) with no transaction: a
+  // crash between them left the shop with NO rules — every dispute silently
+  // falling to review while `auto_save_enabled` kept its old value — and two
+  // concurrent writes could interleave into duplicate fallback rows. The RPC
+  // takes a row lock and does the whole swap in one transaction.
+  const { error: rpcErr } = await sb.rpc("write_store_automation", {
+    p_shop_id: shopId,
+    p_mode: mode,
+    p_safeguard_enabled: safeguardEnabled,
+    p_safeguard_amount: safeguardEnabled ? amount : null,
+  });
+  if (rpcErr) {
+    throw new Error(`Failed to write store automation: ${rpcErr.message}`);
   }
 
   // 5) Mirror the shop-level auto-save gate. `updateShopSettings` calls

@@ -24,15 +24,6 @@ import {
 export const runtime = "nodejs";
 
 /**
- * Setup-originated writes skip the plan gate. A free-plan merchant must be
- * able to choose their handling mode during onboarding — they are already
- * seeded auto-pilot at install, so gating the wizard would only produce a
- * dead-end first-run screen without protecting anything. Post-onboarding
- * edits on /app/rules and merchant-authored custom rules stay gated.
- */
-const SETUP_EXEMPT_HEADER = "x-dd-setup";
-
-/**
  * Shop-id resolution. `extractShopId` covers ?shop_id= and x-shop-id; the
  * embedded surfaces also carry a cookie, matching what the setup routes
  * this replaces accepted.
@@ -67,8 +58,10 @@ export async function GET(req: NextRequest) {
       readStoreAutomation(shopId),
       getRulesAccess(shopId),
     ]);
-    // Plan access is returned as a FLAG, not a 403 — the UI needs to render
-    // the current setting (read-only + upgrade prompt) rather than fail.
+    // `rulesAccess` describes merchant-authored CUSTOM RULES only — the
+    // store-wide switch itself is never gated (see PUT). Returned as a flag
+    // so the UI can disable the "Add rule" affordance without disabling the
+    // switch.
     return NextResponse.json({
       ...config,
       rulesAccess: { allowed: access.allowed, reason: access.reason ?? null },
@@ -117,16 +110,13 @@ export async function PUT(req: NextRequest) {
     }
   }
 
-  const isSetupWrite = req.headers.get(SETUP_EXEMPT_HEADER) === "1";
-  if (!isSetupWrite) {
-    const access = await getRulesAccess(shopId);
-    if (!access.allowed) {
-      return NextResponse.json(
-        { error: access.reason, upgrade_required: true },
-        { status: 403 },
-      );
-    }
-  }
+  // NOT plan-gated (2026-07-28). The store-wide switch is core product, not
+  // a premium rules feature: it decides whether we submit on the merchant's
+  // behalf. Gating it left free-plan shops seeded auto-pilot at install with
+  // NO way to require approval — a safety control they could never reach.
+  // The gate still applies to merchant-authored custom rules
+  // (POST /api/rules), which is what `checkFeatureAccess(plan, "rules")`
+  // is actually for.
 
   try {
     const saved = await writeStoreAutomation(shopId, {

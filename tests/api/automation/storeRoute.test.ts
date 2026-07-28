@@ -145,29 +145,32 @@ describe("PUT /api/automation/store", () => {
     expect(res.status).toBe(400);
   });
 
-  it("403s on a gated plan", async () => {
+  it("is NEVER plan-gated — a free-plan shop can always choose review", async () => {
+    // Regression (2026-07-28): the switch used to be gated behind
+    // checkFeatureAccess(plan, "rules"). Because a shop is seeded auto-pilot
+    // at install, that left free-plan merchants auto-submitting with NO UI
+    // path to require approval — a safety control they could never reach.
+    // The gate belongs on merchant-authored custom rules, not on this.
     mockAccess.mockReturnValue({ allowed: false, reason: "upgrade" } as never);
     const res = await PUT(
-      makeReq("PUT", { body: { mode: "auto", safeguard: { enabled: false } } }),
-    );
-    expect(res.status).toBe(403);
-    expect((await res.json()).upgrade_required).toBe(true);
-    expect(mockWrite).not.toHaveBeenCalled();
-  });
-
-  it("SKIPS the plan gate for a setup-originated write", async () => {
-    // A free-plan merchant must be able to choose their handling mode during
-    // onboarding — they are seeded auto-pilot at install anyway, so gating the
-    // wizard would only produce a dead-end first-run screen.
-    mockAccess.mockReturnValue({ allowed: false, reason: "upgrade" } as never);
-    const res = await PUT(
-      makeReq("PUT", {
-        body: { mode: "review", safeguard: { enabled: false } },
-        headers: { "x-dd-setup": "1" },
-      }),
+      makeReq("PUT", { body: { mode: "review", safeguard: { enabled: false } } }),
     );
     expect(res.status).toBe(200);
-    expect(mockWrite).toHaveBeenCalled();
+    expect(mockWrite).toHaveBeenCalledWith("shop-1", {
+      mode: "review",
+      safeguard: { enabled: false, amount: 0 },
+    });
+  });
+
+  it("still reports the custom-rules plan flag on GET", async () => {
+    // The flag is how the UI disables "Add rule" without disabling the switch.
+    mockAccess.mockReturnValue({ allowed: false, reason: "upgrade" } as never);
+    const res = await GET(makeReq("GET"));
+    expect(res.status).toBe(200);
+    expect((await res.json()).rulesAccess).toEqual({
+      allowed: false,
+      reason: "upgrade",
+    });
   });
 
   it("400s on malformed JSON", async () => {

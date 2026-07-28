@@ -173,9 +173,23 @@ export default function EmbeddedSettingsPage() {
   // Involvement is presentation-only (notification defaults + optional-
   // opportunity prominence) — it never changes objective classification.
   const [involvement, setInvolvement] = useState<Involvement>("hands_off");
+  /** Save mode — the approved plan §12S control, unchanged in intent.
+   *  Rebound 2026-07-28: it used to derive from per-pack `pack_modes`, which
+   *  the rules-collapse migration deleted, so it silently rendered "Require
+   *  my approval" on stores genuinely set to auto. It now reads and writes
+   *  the SAME canonical store-wide switch as /app/rules
+   *  (GET|PUT /api/automation/store → lib/rules/storeAutomation.ts), so the
+   *  two surfaces cannot disagree. `null` until loaded — never guess a mode.
+   *  There is no "mixed" state any more: the switch is store-wide. */
+  const [saveMode, setSaveMode] = useState<SaveMode | null>(null);
+  /** The merchant's high-value safeguard, carried read-only so a save-mode
+   *  write (which PUTs the whole config) cannot wipe it. Owned by /app/rules. */
+  const [storeSafeguard, setStoreSafeguard] = useState<{ enabled: boolean; amount: number }>({
+    enabled: false,
+    amount: 500,
+  });
+  const [rulesAllowed, setRulesAllowed] = useState(true);
   const [handlingSaved, setHandlingSaved] = useState(false);
-  /** Store-wide handling mode, read-only here — owned by /app/rules. */
-  const [storeMode, setStoreMode] = useState<SaveMode>("auto");
 
   const pickInvolvement = useCallback(async (v: Involvement) => {
     setInvolvement(v);
@@ -195,6 +209,31 @@ export default function EmbeddedSettingsPage() {
     setTimeout(() => setHandlingSaved(false), 2600);
   }, []);
 
+  const pickSaveMode = useCallback(
+    async (v: SaveMode) => {
+      if (!rulesAllowed) return;
+      const previous = saveMode;
+      setHandlingSaved(false);
+      setSaveMode(v);
+      // Single canonical write. writeStoreAutomation mirrors
+      // shop_settings.auto_save_enabled and preserves the safeguard, so this
+      // can no longer desync from the Automation page.
+      const res = await fetch("/api/automation/store", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: v, safeguard: storeSafeguard }),
+      });
+      if (res.ok) {
+        setHandlingSaved(true);
+        setTimeout(() => setHandlingSaved(false), 2600);
+      } else {
+        // Never leave the UI claiming a mode the server rejected.
+        setSaveMode(previous);
+      }
+    },
+    [rulesAllowed, saveMode, storeSafeguard],
+  );
+
   const fetchInfo = useCallback(async () => {
     setLoading(true);
     try {
@@ -202,14 +241,19 @@ export default function EmbeddedSettingsPage() {
         fetch("/api/billing/usage"),
         fetch("/api/shop/preferences"),
         fetch("/api/automation/settings"),
-        // The store-wide handling mode. Read from the ONE canonical source
-        // (/api/automation/store) so this page can never contradict the
-        // Automation page — the exact bug the duplicated radio caused.
         fetch("/api/automation/store"),
       ]);
       if (storeRes.ok) {
-        const cfg = await storeRes.json();
-        setStoreMode(cfg?.mode === "auto" ? "auto" : "review");
+        const cfg = (await storeRes.json()) as {
+          mode?: string;
+          safeguard?: { enabled: boolean; amount: number };
+          rulesAccess?: { allowed: boolean };
+        };
+        setSaveMode(cfg.mode === "auto" ? "auto" : "review");
+        // Carried so a save-mode write cannot clobber the merchant's
+        // safeguard (the PUT replaces the whole config).
+        if (cfg.safeguard) setStoreSafeguard(cfg.safeguard);
+        setRulesAllowed(cfg.rulesAccess?.allowed !== false);
       }
       if (usageRes.ok) {
         const data = await usageRes.json();
@@ -245,6 +289,9 @@ export default function EmbeddedSettingsPage() {
         const a = await autoRes.json() as AutomationSettings;
         setAutomation(a);
         setMinScoreInput(String(a.auto_save_min_score));
+        // Gate-bound fallback selection (no pack types): reflect the
+        // actual auto-save flag.
+        setSaveMode((prev) => prev ?? (a.auto_save_enabled ? "auto" : "review"));
       }
     } finally {
       setLoading(false);
@@ -259,6 +306,7 @@ export default function EmbeddedSettingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         auto_build_enabled: automation.auto_build_enabled,
+        auto_save_enabled: automation.auto_save_enabled,
         auto_save_min_score: score,
         enforce_no_blockers: automation.enforce_no_blockers,
       }),
@@ -373,6 +421,7 @@ export default function EmbeddedSettingsPage() {
                     selected={involvement === "hands_off"}
                     onClick={() => pickInvolvement("hands_off")}
                     title={t("disputeHandling.handsOffTitle")}
+                    badge={t("disputeHandling.recommendedBadge")}
                     desc={t("disputeHandling.handsOffDesc")}
                   />
                   <OptionBox
@@ -385,26 +434,31 @@ export default function EmbeddedSettingsPage() {
                 <Text as="p" variant="bodySm" tone="subdued">{t("disputeHandling.involvementNote")}</Text>
               </BlockStack>
               <Divider />
-              {/* Save-to-Shopify mode MOVED to /app/rules (2026-07-28).
-                  It duplicated the store-wide switch, and the two surfaces
-                  wrote different stores — a shop genuinely on auto could be
-                  shown "Require my approval" here. A pointer, not a silent
-                  deletion: merchants have muscle memory for this section. */}
               <BlockStack gap="200">
                 <Text as="h3" variant="headingSm">{t("disputeHandling.savingTitle")}</Text>
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {t("disputeHandling.savingMovedDesc")}
-                </Text>
-                <InlineStack>
-                  <Button
-                    url={withShopParams(
-                      "/app/rules",
-                      searchParams ?? new URLSearchParams(),
-                    )}
-                  >
-                    {t("disputeHandling.savingManageCta")}
-                  </Button>
-                </InlineStack>
+                <Text as="p" variant="bodySm" tone="subdued">{t("disputeHandling.savingDesc")}</Text>
+                {!rulesAllowed ? (
+                  <Banner tone="info">{t("disputeHandling.upgradeNote")}</Banner>
+                ) : null}
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", opacity: rulesAllowed ? 1 : 0.5 }}>
+                  <OptionBox
+                    selected={saveMode === "auto"}
+                    onClick={() => pickSaveMode("auto")}
+                    title={t("disputeHandling.autoTitle")}
+                    badge={t("disputeHandling.recommendedBadge")}
+                    desc={t("disputeHandling.autoDesc")}
+                    note={t("disputeHandling.autoNote")}
+                  />
+                  <OptionBox
+                    selected={saveMode === "review"}
+                    onClick={() => pickSaveMode("review")}
+                    title={t("disputeHandling.approveTitle")}
+                    desc={t("disputeHandling.approveDesc")}
+                  />
+                </div>
+                {handlingSaved ? (
+                  <Text as="p" variant="bodySm" tone="success">{t("disputeHandling.saved")}</Text>
+                ) : null}
               </BlockStack>
             </BlockStack>
           </Card>
@@ -546,7 +600,7 @@ export default function EmbeddedSettingsPage() {
                     a merchant in approve mode cannot silently miss the
                     approvals their own gate creates. Display-only when
                     locked; hidden in auto mode (no approvals exist). */}
-                {storeMode === "review" ? (
+                {saveMode === "review" ? (
                   <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
                     <InlineStack align="space-between" blockAlign="center">
                       <BlockStack gap="050">
@@ -617,6 +671,22 @@ export default function EmbeddedSettingsPage() {
                         label=""
                         checked={automation.auto_build_enabled}
                         onChange={(v) => setAutomation((a) => ({ ...a, auto_build_enabled: v }))}
+                        labelHidden
+                      />
+                    </InlineStack>
+                  </div>
+
+                  {/* Auto Save */}
+                  <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
+                    <InlineStack align="space-between" blockAlign="center">
+                      <BlockStack gap="050">
+                        <Text as="span" variant="bodyMd" fontWeight="medium">{t("autoSaveLabel")}</Text>
+                        <Text as="span" variant="bodySm" tone="subdued">{t("autoSaveDesc")}</Text>
+                      </BlockStack>
+                      <Checkbox
+                        label=""
+                        checked={automation.auto_save_enabled}
+                        onChange={(v) => setAutomation((a) => ({ ...a, auto_save_enabled: v }))}
                         labelHidden
                       />
                     </InlineStack>

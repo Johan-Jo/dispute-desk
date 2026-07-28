@@ -43,6 +43,8 @@ const mockReconcile = vi.mocked(reconcileParkedAutoDisputes);
 interface Recorded {
   inserted: Array<Record<string, unknown>>;
   deletes: Array<{ like?: string; eqName?: string }>;
+  /** Args passed to the atomic write_store_automation RPC. */
+  rpcCalls: Array<{ fn: string; args: Record<string, unknown> }>;
 }
 
 /** Minimal supabase double covering the exact chains storeAutomation uses. */
@@ -100,7 +102,34 @@ function mockSb(existingRules: Array<Record<string, unknown>>, rec: Recorded) {
     };
     return chain;
   }
-  return { from };
+  return {
+    from,
+    // The swap is one atomic RPC (migration 20260728120100) — the three
+    // separate round-trips it replaced could leave a shop with no rules at
+    // all if the process died between them.
+    rpc: async (fn: string, args: Record<string, unknown>) => {
+      rec.rpcCalls.push({ fn, args });
+      if (fn === "write_store_automation") {
+        rec.deletes.push({ like: "__dd_setup__:%" });
+        rec.deletes.push({ eqName: LEGACY_SAFEGUARD_RULE_NAME });
+        rec.inserted.push({
+          name: FALLBACK_RULE_NAME,
+          match: {},
+          action: { mode: args.p_mode, pack_template_id: null },
+          priority: 100000,
+        });
+        if (args.p_safeguard_enabled && (args.p_safeguard_amount as number) > 0) {
+          rec.inserted.push({
+            name: SAFEGUARD_RULE_NAME,
+            match: { amount_range: { min: args.p_safeguard_amount } },
+            action: { mode: "review" },
+            priority: 5,
+          });
+        }
+      }
+      return { data: null, error: null };
+    },
+  };
 }
 
 function fallbackRow(mode: string, enabled = true) {
@@ -132,7 +161,7 @@ beforeEach(() => {
 
 describe("readStoreAutomation", () => {
   it("reads the switch from the fallback rule and the amount from the safeguard", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(
       mockSb([fallbackRow("auto"), safeguardRow(SAFEGUARD_RULE_NAME, 750)], rec) as never,
     );
@@ -144,7 +173,7 @@ describe("readStoreAutomation", () => {
   });
 
   it("a shop with no setup rows reads as review + safeguard off", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
 
     expect(await readStoreAutomation("shop-1")).toEqual({
@@ -154,7 +183,7 @@ describe("readStoreAutomation", () => {
   });
 
   it("falls back to the legacy safeguard name when only that exists", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(
       mockSb(
         [fallbackRow("review"), safeguardRow(LEGACY_SAFEGUARD_RULE_NAME, 200)],
@@ -167,7 +196,7 @@ describe("readStoreAutomation", () => {
   });
 
   it("the canonical safeguard wins when both names are present", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(
       mockSb(
         [
@@ -183,7 +212,7 @@ describe("readStoreAutomation", () => {
   });
 
   it("a disabled fallback rule reads as review (never silently auto)", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(
       mockSb([fallbackRow("auto", false)], rec) as never,
     );
@@ -192,7 +221,7 @@ describe("readStoreAutomation", () => {
   });
 
   it("a safeguard with a non-positive min reads as disabled", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(
       mockSb([fallbackRow("auto"), safeguardRow(SAFEGUARD_RULE_NAME, 0)], rec) as never,
     );
@@ -203,7 +232,7 @@ describe("readStoreAutomation", () => {
 
 describe("writeStoreAutomation", () => {
   it("writes exactly two rows for auto + safeguard", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
 
     await writeStoreAutomation("shop-1", {
@@ -227,7 +256,7 @@ describe("writeStoreAutomation", () => {
   });
 
   it("writes only the fallback when the safeguard is off", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
 
     await writeStoreAutomation("shop-1", {
@@ -240,7 +269,7 @@ describe("writeStoreAutomation", () => {
   });
 
   it("clears the whole __dd_setup__ prefix AND the legacy safeguard name", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
 
     await writeStoreAutomation("shop-1", {
@@ -255,7 +284,7 @@ describe("writeStoreAutomation", () => {
   });
 
   it("NEVER deletes merchant custom rules", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
 
     await writeStoreAutomation("shop-1", {
@@ -272,8 +301,27 @@ describe("writeStoreAutomation", () => {
     }
   });
 
+  it("performs the swap in ONE atomic RPC, not separate deletes+inserts", async () => {
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
+    mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
+
+    await writeStoreAutomation("shop-1", {
+      mode: "auto",
+      safeguard: { enabled: true, amount: 500 },
+    });
+
+    expect(rec.rpcCalls).toHaveLength(1);
+    expect(rec.rpcCalls[0].fn).toBe("write_store_automation");
+    expect(rec.rpcCalls[0].args).toMatchObject({
+      p_shop_id: "shop-1",
+      p_mode: "auto",
+      p_safeguard_enabled: true,
+      p_safeguard_amount: 500,
+    });
+  });
+
   it("mirrors auto_save_enabled = true when the switch is auto", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
 
     await writeStoreAutomation("shop-1", {
@@ -287,7 +335,7 @@ describe("writeStoreAutomation", () => {
   });
 
   it("mirrors auto_save_enabled = false when the switch is review", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
 
     await writeStoreAutomation("shop-1", {
@@ -301,7 +349,7 @@ describe("writeStoreAutomation", () => {
   });
 
   it("a non-positive amount disables the safeguard rather than writing a junk rule", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
 
     await writeStoreAutomation("shop-1", {
@@ -314,7 +362,7 @@ describe("writeStoreAutomation", () => {
   });
 
   it("fires reconcile when flipping review → auto", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(mockSb([fallbackRow("review")], rec) as never);
 
     await writeStoreAutomation("shop-1", {
@@ -326,7 +374,7 @@ describe("writeStoreAutomation", () => {
   });
 
   it("does NOT fire reconcile when staying on review", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(mockSb([fallbackRow("review")], rec) as never);
 
     await writeStoreAutomation("shop-1", {
@@ -340,7 +388,7 @@ describe("writeStoreAutomation", () => {
   it("fires reconcile when the safeguard is relaxed while already on auto", async () => {
     // Cases parked only because they exceeded the old threshold may now be
     // eligible — raising the bar must unstick them.
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(
       mockSb([fallbackRow("auto"), safeguardRow(SAFEGUARD_RULE_NAME, 200)], rec) as never,
     );
@@ -354,7 +402,7 @@ describe("writeStoreAutomation", () => {
   });
 
   it("fires reconcile when the safeguard is turned off while already on auto", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(
       mockSb([fallbackRow("auto"), safeguardRow(SAFEGUARD_RULE_NAME, 200)], rec) as never,
     );
@@ -369,7 +417,7 @@ describe("writeStoreAutomation", () => {
 
   it("does NOT fire reconcile when the safeguard is TIGHTENED on auto", async () => {
     // A lower threshold can only park more cases, never free any.
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(
       mockSb([fallbackRow("auto"), safeguardRow(SAFEGUARD_RULE_NAME, 900)], rec) as never,
     );
@@ -385,7 +433,7 @@ describe("writeStoreAutomation", () => {
 
 describe("seedDefaultStoreAutomation", () => {
   it("seeds auto-pilot + $500 safeguard for a brand-new shop", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
 
     await seedDefaultStoreAutomation("shop-1");
@@ -403,7 +451,7 @@ describe("seedDefaultStoreAutomation", () => {
   });
 
   it("is idempotent — never resets a shop that already chose review", async () => {
-    const rec: Recorded = { inserted: [], deletes: [] };
+    const rec: Recorded = { inserted: [], deletes: [], rpcCalls: [] };
     mockGetServiceClient.mockReturnValue(mockSb([fallbackRow("review")], rec) as never);
 
     await seedDefaultStoreAutomation("shop-1");

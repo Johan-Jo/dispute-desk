@@ -401,11 +401,14 @@ export default function EmbeddedRulesPage() {
                     {tr("modeSectionSubtitle")}
                   </Text>
                 </BlockStack>
+                {/* NOT gated by `rulesAllowed`. The switch is core product —
+                    a free-plan merchant seeded auto-pilot at install must be
+                    able to choose review. Only custom rules are plan-gated. */}
                 <StoreModeSelector
                   value={mode}
                   onChange={onModeChange}
                   t={tr}
-                  disabled={!rulesAllowed || saving}
+                  disabled={saving}
                 />
               </BlockStack>
             </Card>
@@ -420,7 +423,6 @@ export default function EmbeddedRulesPage() {
                   <Checkbox
                     label={tr("safeguardToggle")}
                     checked={safeguard.enabled}
-                    disabled={!rulesAllowed}
                     onChange={(checked) =>
                       setSafeguard((prev) => ({ ...prev, enabled: checked }))
                     }
@@ -430,7 +432,6 @@ export default function EmbeddedRulesPage() {
                       <TextField
                         label={tr("safeguardAmountLabel")}
                         type="number"
-                        disabled={!rulesAllowed}
                         value={String(safeguard.amount)}
                         onChange={(value) => {
                           const num = parseInt(value, 10);
@@ -451,7 +452,7 @@ export default function EmbeddedRulesPage() {
                       <Button
                         variant="primary"
                         loading={saving}
-                        disabled={saving || !rulesAllowed}
+                        disabled={saving}
                         onClick={saveSafeguard}
                       >
                         {tr("saveStarterRules")}
