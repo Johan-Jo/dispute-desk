@@ -511,6 +511,9 @@ export default function EmbeddedRulesPage() {
               <ul
                 style={{
                   margin: 0,
+                  // Explicit: a global reset strips markers, and the design
+                  // draws a bulleted list.
+                  listStyle: "disc",
                   paddingLeft: 18,
                   display: "flex",
                   flexDirection: "column",
