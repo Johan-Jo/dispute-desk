@@ -14,7 +14,7 @@ describe("getNeededEvidenceTypes", () => {
     for (const reason of [
       "FRAUDULENT",
       "PRODUCT_UNACCEPTABLE",
-      "SUBSCRIPTION_CANCELED",
+      "SUBSCRIPTION_CANCELLED",
       "CREDIT_NOT_PROCESSED",
       "GENERAL",
       "PRODUCT_NOT_RECEIVED",
@@ -71,7 +71,7 @@ describe("getNeededEvidenceTypes", () => {
   });
 
   it("does NOT ask for delivery proof on a non-shipping reason", () => {
-    const asks = getNeededEvidenceTypes("SUBSCRIPTION_CANCELED", undefined, PHYSICAL, {
+    const asks = getNeededEvidenceTypes("SUBSCRIPTION_CANCELLED", undefined, PHYSICAL, {
       hasRealDeliveryProof: false,
     });
     expect(asks).not.toContain("carrier_delivery_proof");

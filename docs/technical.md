@@ -2452,6 +2452,16 @@ Merchant custom rules (any name not starting with `__dd_setup__:`) are untouched
 
 The raw `auto_save_enabled` checkbox is therefore removed from Settings' Advanced card — a manual toggle on a derived mirror re-creates exactly this drift class.
 
+**Actually enforced from 2026-07-28.** The paragraph above described the intent; the checkbox was still on the page. It PATCHed `/api/automation/settings`, whose allow-list accepted the field, so a merchant could set it `false` while `/app/rules` still displayed "Auto-pilot" — the switch said automate, the gate blocked every save, and nothing on screen said which control had won. Three changes make it real:
+
+- the checkbox is gone from `/app/settings` (the §12S **Save mode** radio in the *Dispute handling* card stays — it is the one control, and it writes through `PUT /api/automation/store`)
+- `auto_save_enabled` is off the `PATCH /api/automation/settings` allow-list; the route still owns `auto_build_enabled`, `auto_save_min_score`, `enforce_no_blockers`
+- `tests/unit/singleAutoSaveWriter.test.ts` fails the build if any file outside `storeAutomation.ts` assigns or submits the field, or if the allow-list regains it
+
+Note the distinction from reverted PR #442, which deleted the **Save mode radio itself** and had to be reverted by #444: the radio is the approved control, the raw checkbox was the duplicate.
+
+**Involvement is a notification preference, not an automation one.** `Hands-off` / `Stay involved` (`shop_setup.steps.team.payload.involvement`) only sets the defaults for the `evidenceReady` + `monthlyDigest` emails (`app/api/shop/preferences/route.ts`); `resolveLifecycle.ts` and `WorkspaceShell.tsx` are both explicitly forbidden from reading it. Its copy previously opened with *"Handle disputes automatically…"*, which read as an automation setting sitting directly above Save mode. Reworded 2026-07-28 across all 6 locales to describe emails only, with a closing pointer to the Save-mode control below it.
+
 **Install-time default: auto-pilot ON + $500 safeguard**, seeded by `seedDefaultStoreAutomation` from `ensureShopSetup()` in the OAuth callback. Idempotent (no-ops once a fallback row exists), so a re-install never resets a merchant's choice. A shop can therefore auto-submit before the merchant opens the app — deliberate, and bounded by the engine gates plus the free-tier lifetime pack quota.
 
 **High-value email threshold** is read from the safeguard rule via `readStoreAutomation`, not from `shop_setup.steps.automation.payload.reviewThreshold`. Previously a merchant who set the threshold on `/app/rules` wrote a *differently named* rule (`__dd_safeguard__:`) and had no wizard payload, so the threshold read as 0 and the email silently never sent.
@@ -3281,7 +3291,7 @@ The public guided demo (`app/(demo)/demo/*`, plan: `plans/demo-shopify-facsimile
 
 ### Automation
 - `GET /api/automation/settings?shop_id=...` — read shop automation settings (`auto_build_enabled`, `auto_save_enabled`, `auto_save_min_score`, `enforce_no_blockers`)
-- `PATCH /api/automation/settings` — update any subset of the four automation fields. Called by the embedded Settings page Automation section (four controls: Auto Build toggle, Auto Save toggle, Min Score number input, Blocker Gate toggle + Save button).
+- `PATCH /api/automation/settings` — update any subset of **three** writable fields: `auto_build_enabled`, `auto_save_min_score`, `enforce_no_blockers`. Called by the embedded Settings page Automation section (Auto Build toggle, Min Score number input, Blocker Gate toggle + Save button). **`auto_save_enabled` is readable but NOT writable here** — it mirrors the store-wide switch and is owned by `writeStoreAutomation` / `PUT /api/automation/store`; see the mirror invariant above.
 
 **Embedded Settings page — Automation section:** `app/(embedded)/app/settings/page.tsx` now includes a full Automation card above Notifications. Fetches `/api/automation/settings` on load alongside usage and prefs. Renders four controls in bordered rows matching the Notifications style. Saving PATCHes `/api/automation/settings` and shows a 3-second success banner. The dashboard Automation Status card "Settings" link uses `withShopParams` to preserve locale when navigating here.
 - `POST /api/disputes/sync` — enqueue dispute sync job

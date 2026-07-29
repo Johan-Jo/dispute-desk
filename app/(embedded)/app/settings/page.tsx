@@ -47,7 +47,10 @@ interface NotificationPrefs {
 
 interface AutomationSettings {
   auto_build_enabled: boolean;
-  auto_save_enabled: boolean;
+  /** READ-ONLY, and optional so it never enters this page's state. Mirrors the
+   *  store-wide switch; written only by writeStoreAutomation. Read straight off
+   *  the GET response as the Save-mode fallback, never held or edited here. */
+  auto_save_enabled?: boolean;
   auto_save_min_score: number;
   enforce_no_blockers: boolean;
 }
@@ -161,7 +164,6 @@ export default function EmbeddedSettingsPage() {
 
   const [automation, setAutomation] = useState<AutomationSettings>({
     auto_build_enabled: false,
-    auto_save_enabled: false,
     auto_save_min_score: 80,
     enforce_no_blockers: true,
   });
@@ -302,9 +304,11 @@ export default function EmbeddedSettingsPage() {
     await fetch("/api/automation/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
+      // No `auto_save_enabled` — it mirrors the store-wide switch and is
+      // owned by writeStoreAutomation (via the Save mode control above).
+      // The route rejects it too.
       body: JSON.stringify({
         auto_build_enabled: automation.auto_build_enabled,
-        auto_save_enabled: automation.auto_save_enabled,
         auto_save_min_score: score,
         enforce_no_blockers: automation.enforce_no_blockers,
       }),
@@ -674,21 +678,12 @@ export default function EmbeddedSettingsPage() {
                     </InlineStack>
                   </div>
 
-                  {/* Auto Save */}
-                  <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
-                    <InlineStack align="space-between" blockAlign="center">
-                      <BlockStack gap="050">
-                        <Text as="span" variant="bodyMd" fontWeight="medium">{t("autoSaveLabel")}</Text>
-                        <Text as="span" variant="bodySm" tone="subdued">{t("autoSaveDesc")}</Text>
-                      </BlockStack>
-                      <Checkbox
-                        label=""
-                        checked={automation.auto_save_enabled}
-                        onChange={(v) => setAutomation((a) => ({ ...a, auto_save_enabled: v }))}
-                        labelHidden
-                      />
-                    </InlineStack>
-                  </div>
+                  {/* No auto-save toggle here — "Save mode" above is the one
+                      control for it. This section is advanced *defaults*; the
+                      auto-save switch itself is store-wide and lives with the
+                      handling choice (and on /app/rules). Removed 2026-07-28:
+                      it wrote shop_settings.auto_save_enabled directly, so it
+                      could contradict Save mode with no way to see which won. */}
 
                   {/* Min Score */}
                   <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
