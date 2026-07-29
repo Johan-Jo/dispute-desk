@@ -487,7 +487,6 @@
     "unknownPhaseWarning": "Phase noch nicht klassifiziert. Wird beim nächsten Sync automatisch aktualisiert.",
     "unknownPhaseAction": "Jetzt synchronisieren",
     "caseStatusBuilding": "DisputeDesk erstellt Beweise für diesen Fall.",
-    "caseStatusReview": "Beweise sind bereit für Ihre Überprüfung.",
     "caseStatusReady": "Beweispaket ist vollständig und bereit zum Speichern.",
     "caseStatusSaved": "Beweise wurden in Shopify gespeichert.",
     "caseStatusNoPack": "Es wurde noch kein Beweispaket erstellt.",
@@ -544,14 +543,12 @@
     "managedAutomatedTitle": "Vollständig automatisiert",
     "managedAutomatedDesc": "DisputeDesk bearbeitet diesen Fall automatisch basierend auf Ihren Regeln.",
     "managedReviewTitle": "Überprüfung erforderlich",
-    "managedReviewDesc": "DisputeDesk bereitet Beweise vor, wartet aber auf Ihre Überprüfung, bevor diese bei Shopify gespeichert werden.",
     "managedManualTitle": "Manuelle Bearbeitung",
     "managedManualDesc": "Keine Automatisierungsregel passt zu diesem Fall. Sie müssen Beweise manuell vorbereiten und speichern.",
     "purposeLine": "Alle Ihre Shopify-Streitfälle an einem Ort — mit Status, Dringlichkeit und was noch Ihre Aufmerksamkeit benötigt.",
     "stateZero": "Derzeit keine Streitfälle zu bearbeiten. Neue Streitfälle erscheinen hier automatisch, sobald sie aus Shopify eintreffen.",
     "stateAllClear": "Sie haben {total, plural, one {1 offenen Streitfall} other {# offene Streitfälle}} — alles sieht gut aus.",
     "stateSomeUrgent": "Sie haben {total, plural, one {1 offenen Streitfall} other {# offene Streitfälle}}. {urgent, plural, one {1 benötigt} other {# benötigen}} sofortige Aufmerksamkeit — überfällig oder bald fällig.",
-    "stateNeedsReview": "Sie haben {total, plural, one {1 offenen Streitfall} other {# offene Streitfälle}}. {review, plural, one {1 ist zur Überprüfung markiert} other {# sind zur Überprüfung markiert}}, bevor DisputeDesk fortfahren kann.",
     "stateNeedsSync": "Sie haben {total, plural, one {1 Streitfall} other {# Streitfälle}}. {sync, plural, one {1 wurde noch nicht klassifiziert} other {# wurden noch nicht klassifiziert}} — führen Sie eine Synchronisierung aus.",
     "alertsNudge": "Möchten Sie E-Mail-Benachrichtigungen erhalten, wenn neue Reklamationen eingehen? Fügen Sie Ihre Team-E-Mail in den Einstellungen hinzu.",
     "alertsNudgeLink": "Einstellungen öffnen",
@@ -987,7 +984,7 @@
       },
       "package": {
         "loadingAccessibilityLabel": "Beweispaket wird geladen",
-        "cardHelp": "DisputeDesk erstellt ein bankgerichtetes PDF, das genehmigte Shopify-Beweise, Zahlungssignale, Erfüllungsnachweise, Kundenkommunikation, Richtlinien und alle vom Händler bereitgestellten Dokumente in einem strukturierten Beweispaket zusammenfasst. <b>Prüfen Sie das Paket und reichen Sie es vor der Frist ein – im Prüfmodus wird nichts gesendet, solange Sie nicht einreichen.</b>",
+        "cardHelp": "DisputeDesk erstellt ein bankgerechtes PDF, das freigegebene Shopify-Beweise, Zahlungssignale, Zustellnachweise, Kundenkommunikation, Richtlinien und alle von Ihnen bereitgestellten Dokumente zu einem strukturierten Verteidigungspaket zusammenfasst. <b>Prüfen Sie es vor der Frist. Im Autopilot wird es zur Frist in Shopify gespeichert, wenn Sie nicht gehandelt haben; im Prüfmodus wird es nur gespeichert, wenn Sie es freigeben.</b>",
         "savingBody": "DisputeDesk hat Ihre Einreichung angenommen und lädt das Beweispaket zu Shopify hoch. Dies dauert in der Regel weniger als 30 Sekunden — dieser Hinweis wird automatisch aktualisiert.",
         "savedTitles": {
           "outcomePosted": "Ergebnis eingetragen",
@@ -2475,7 +2472,7 @@
     "advancedFiltersSubtitle": "Optionale Regeln für bestimmte Falltypen oder Beträge. Sie werden vor Ihrer shopweiten Einstellung geprüft.",
     "explainerTitle": "Das sehen Sie hier",
     "explainerBullet1": "Eine Einstellung gilt für Ihren gesamten Shop – für jeden eingehenden Fall.",
-    "explainerBullet2": "Der Autopilot übermittelt nur Fälle, bei denen wir sicher sind. Schwache, subjektive oder bereits verlorene Fälle warten immer auf Sie.",
+    "explainerBullet2": "Der Autopilot sendet Fälle, bei denen wir sicher sind, sofort. Schwache, subjektive oder bereits verlorene Fälle werden zuerst für Sie zurückgehalten — sie gehen zur Frist trotzdem an Shopify, sofern Sie sie nicht aufgeben.",
     "explainerBullet3": "Mit Schutzmaßnahmen halten Sie mehr zurück: Legen Sie einen Betrag fest, und jeder Fall darüber wartet auf Ihre Freigabe.",
     "setupTitle": "Automatisiere deinen Streitigkeits-Workflow",
     "setupDescription": "Regeln entscheiden, was passiert, wenn eine neue Streitigkeit eintrifft.",
@@ -2496,14 +2493,14 @@
     "presetCatchAllReview": "Auffangregel: Zur Prüfung senden",
     "presetCatchAllReviewDesc": "Leitet verbleibende Streitigkeiten als Sicherheitsnetz in die Review-Warteschlange.",
     "modeSectionTitle": "Wie Zahlungsstreitigkeiten bearbeitet werden",
-    "modeSectionSubtitle": "Dies gilt für jeden Fall. Manche Fälle warten immer auf Sie – siehe „Schutzmaßnahmen“ unten.",
+    "modeSectionSubtitle": "Dies gilt für jeden Fall. Manche Fälle werden immer zuerst für Ihre Prüfung zurückgehalten – siehe „Schutzmaßnahmen“ unten.",
     "modeAutoTitle": "Autopilot",
     "modeAutoBadge": "Empfohlen",
-    "modeAutoDesc": "Wir erstellen und übermitteln Ihre stärksten Fälle automatisch. Alles andere wartet auf Ihre Prüfung.",
+    "modeAutoDesc": "Wir erstellen Ihre stärksten Fälle und speichern sie in Shopify, sobald sie fertig sind. Alles andere wird zuerst für Ihre Prüfung zurückgehalten und dann zur Frist in Shopify gespeichert, wenn Sie nicht entschieden haben.",
     "modeReviewTitle": "Alles prüfen",
     "modeReviewDesc": "Wir bereiten jede Antwort vor. Nichts wird in Shopify gespeichert, bevor Sie es freigeben.",
     "modeSaved": "Einstellungen gespeichert",
-    "alwaysReviewedTitle": "Immer geprüft – unabhängig vom gewählten Modus",
+    "alwaysReviewedTitle": "Immer zuerst für Sie zurückgehalten – unabhängig vom gewählten Modus",
     "alwaysReviewedProduct": "Reklamationen wegen „nicht wie beschrieben“ und Produktqualität",
     "alwaysReviewedCovered": "Fälle, die bereits durch Shopify Protect gedeckt sind",
     "alwaysReviewedWeak": "Fälle mit schwacher oder fehlender Beweislage",
@@ -2542,7 +2539,7 @@
     "safeguardAmountPrefix": "Jeden Fall über",
     "safeguardAmountSuffix": "zur Freigabe zurückhalten.",
     "alwaysReviewedHeading": "Immer geprüft",
-    "alwaysReviewedHeadingTail": "– unabhängig vom gewählten Modus werden diese nie eigenständig übermittelt",
+    "alwaysReviewedHeadingTail": "– unabhängig vom gewählten Modus werden diese zuerst zur Prüfung zurückgehalten und erreichen Shopify erst zur Frist",
     "saveChanges": "Änderungen speichern",
     "saveSaved": "Gespeichert"
   },
@@ -2556,7 +2553,6 @@
     "automationBanner": "Beweise werden per API in Shopify gespeichert. Die Einreichung erfolgt im Shopify Admin. DisputeDesk reicht nicht in Ihrem Namen ein.",
     "autoBuildLabel": "Bewispakete automatisch erstellen",
     "autoBuildDesc": "Pakete automatisch generieren, wenn neue Streitfälle erkannt werden",
-    "reviewLabel": "Prüfung vor Auto-Speicherung erforderlich",
     "reviewDesc": "Pakete in der Warteschlange zur Genehmigung parken",
     "blockerLabel": "Null Blockierungen erzwingen",
     "blockerDesc": "Auto-Speicherung blockieren, wenn Pflichtbeweise fehlen",
@@ -2686,7 +2682,7 @@
       "savingTitle": "Beweise in Shopify speichern",
       "savingDesc": "Wählen Sie, ob DisputeDesk geeignete Beweispakete automatisch speichern darf oder auf Ihre Freigabe warten muss. Dies ist eine operative Schutzmaßnahme, keine Benachrichtigungseinstellung.",
       "autoTitle": "Automatisch speichern",
-      "autoDesc": "DisputeDesk speichert geeignete Beweispakete automatisch in Shopify, nachdem alle konfigurierten Qualitäts- und Sicherheitsprüfungen bestanden wurden.",
+      "autoDesc": "DisputeDesk speichert geeignete Beweispakete automatisch in Shopify, sobald alle konfigurierten Qualitäts- und Sicherheitsprüfungen bestanden sind. Pakete, die nicht bestehen, werden für Ihre Prüfung zurückgehalten und zur Frist in Shopify gespeichert, sofern Sie den Fall nicht aufgeben.",
       "autoNote": "Sie können das Paket weiterhin in DisputeDesk prüfen. Das Speichern in Shopify bestätigt für sich genommen nicht, dass die Antwort an das Kartennetzwerk gesendet wurde.",
       "approveTitle": "Vor dem Speichern meine Freigabe verlangen",
       "approveDesc": "DisputeDesk bereitet die Antwort vor und überwacht sie, wartet aber auf Ihre Freigabe, bevor das erste Beweispaket in Shopify gespeichert wird.",
@@ -3082,11 +3078,11 @@
       },
       "reviewQueue": {
         "title": "Die Prüfungswarteschlange",
-        "body": "Die Prüfungswarteschlange enthält Streitfälle, die Ihre manuelle Prüfung erfordern.\n\nStreitfälle landen hier wenn:\n- Eine Regel sie dorthin leitet.\n- Keine Regel passt.\n- \"Prüfung vor Auto-Speicherung\" aktiviert ist.\n\nSie können Streitfälle prüfen und genehmigen."
+        "body": "Die Prüfliste enthält Fälle, die für Sie zurückgehalten werden, bevor Beweise in Shopify gespeichert werden.\n\nFälle landen in der Prüfliste, wenn:\n- Eine Regel sie zur Prüfung leitet (z. B. Fälle über einem bestimmten Betrag).\n- Keine Regel greift und die Standardaktion „Prüfen“ ist.\n- Die Beweislage schwach oder subjektiv ist oder der Fall bereits verloren ist.\n\nIm Tab „Prüfliste“ können Sie:\n- Alle Fälle sehen, die auf Sie warten.\n- Einen Fall öffnen und das Beweispaket prüfen.\n- Auf „Freigeben“ klicken, um die Beweise in Shopify zu speichern.\n\nEin Fall in der Prüfliste ist nicht eingefroren. Im Autopilot wird er zur Frist in Shopify gespeichert, wenn Sie nicht gehandelt haben; im Prüfmodus nur, wenn Sie freigeben. Wählen Sie „Nicht verteidigen“, um ihn in beiden Fällen zu stoppen."
       },
       "approvingDisputes": {
         "title": "Streitfälle aus der Warteschlange genehmigen",
-        "body": "Um einen Streitfall zu genehmigen:\n\n1. Gehen Sie zur Streitfallseite, Tab \"Prüfungswarteschlange\".\n2. Klicken Sie \"Genehmigen\".\n3. DisputeDesk startet die Automatisierungspipeline.\n4. Ein Beweispaket wird erstellt.\n5. Bei bestandenen Qualitätsprüfungen wird das Beweismaterial bei Shopify gespeichert.\n\nAlle Genehmigungen werden im Prüfprotokoll festgehalten."
+        "body": "Wenn ein Fall in Ihrer Prüfliste liegt, hat DisputeDesk die Beweise bereits erstellt. Ihre Freigabe entscheidet nur, ob sie in Shopify gespeichert werden.\n\nSo geben Sie einen Fall frei:\n1. Öffnen Sie die Seite „Fälle“ und wechseln Sie zum Tab „Prüfliste“.\n2. Klicken Sie neben dem Fall auf „Freigeben“.\n3. Besteht das Paket Ihre Vollständigkeits- und Blocker-Prüfungen, werden die Beweise in Shopify gespeichert.\n\nSie können auch auf der Detailseite über „Freigeben & speichern“ freigeben.\n\nIm Autopilot wird ein zurückgehaltener Fall zur Frist in Shopify gespeichert, wenn Sie nichts unternehmen. Im Prüfmodus wird nichts gespeichert, solange Sie nicht freigeben. Wählen Sie „Nicht verteidigen“, um einen Fall in beiden Modi zu stoppen.\n\nAlle Freigaben werden im Audit-Trail protokolliert."
       },
       "howPacksBuilt": {
         "title": "Wie Bewispakete automatisch erstellt werden",
@@ -3290,7 +3286,7 @@
         },
         "reviewQueue": {
           "title": "Die Prüfungswarteschlange",
-          "body": "Die Prüfungswarteschlange umfasst Streitfälle, die Ihre Regeln zur **manuellen Prüfung** leiten, bevor Beweise in Shopify gespeichert werden.\n\nStreitfälle landen hier, wenn:\n- eine Regel sie zur Prüfung sendet (z. B. hoher Betrag),\n- keine Regel passt und die Vorgabe „Prüfung“ ist,\n- **Prüfung vor Auto-Speichern** in den Automatisierungseinstellungen aktiv ist.\n\nIn der eingebetteten App erscheinen sie auf der Liste **Streitfälle** mit Ihren übrigen Chargebacks — nutzen Sie **Filter** nach Status oder öffnen Sie Einträge vom Dashboard. Öffnen Sie einen Streitfall, prüfen Sie das Paket und nutzen Sie auf der Detailseite **Freigabe & Speichern**, wenn Sie soweit sind."
+          "body": "Die Prüfliste sind Fälle, die für Sie zurückgehalten werden, bevor Beweise in Shopify gespeichert werden.\n\nFälle landen hier, wenn:\n- Eine Regel sie zur Prüfung schickt (zum Beispiel hoher Betrag).\n- Keine Regel greift und der Standard „Prüfen“ ist.\n- Die Beweislage schwach oder subjektiv ist oder der Fall bereits verloren ist.\n\nIn der eingebetteten App erscheinen diese Fälle in der Liste **Fälle** zusammen mit Ihren übrigen Rückbuchungen — nutzen Sie **Filter** nach Status oder öffnen Sie Einträge vom Dashboard. Öffnen Sie einen Fall, prüfen Sie das Paket und nutzen Sie dann **Freigeben & speichern** auf der Detailseite.\n\nEin Fall hier ist nicht eingefroren. Im Autopilot wird er zur Frist in Shopify gespeichert, wenn Sie nicht gehandelt haben; im Prüfmodus nur, wenn Sie freigeben. Wählen Sie **Nicht verteidigen**, um ihn in beiden Fällen zu stoppen."
         },
         "approvingDisputes": {
           "title": "Freigabe aus der Prüfungswarteschlange",
@@ -4380,7 +4376,7 @@
       "setupSummaryTitle": "Das haben wir für Sie eingerichtet",
       "setupSummaryInquiry": "Frühe Anfragen werden automatisch abgedeckt",
       "setupSummaryReady": "Bereit für Disputes wegen {families}.",
-      "setupSummaryModeAuto": "Starke Antworten werden automatisch erstellt und an Shopify übermittelt. Alles, was einen genaueren Blick braucht, wartet auf Ihre Freigabe.",
+      "setupSummaryModeAuto": "Starke Antworten werden automatisch in Shopify gespeichert. Alles, was einen genaueren Blick braucht, wird für Ihre Prüfung zurückgehalten und dann zur Frist in Shopify gespeichert, wenn Sie nicht entschieden haben.",
       "setupSummaryModeReview": "Jede Antwort wird für Sie erstellt und wartet auf Ihre Freigabe, bevor sie an Shopify geht.",
       "setupSummarySafeguard": "Disputes über ${amount} warten immer auf Ihre Freigabe.",
       "setupSummaryPointer": "Einzelne Dispute-Typen können Sie später auf der Automatisierungsseite feinjustieren."
@@ -5819,8 +5815,8 @@
       },
       "next": {
         "building_evidence": "Beweispaket erstellt — meist innerhalb weniger Stunden",
-        "monitoring": "Beweise werden vor der Antwortfrist in Shopify gespeichert",
-        "pack_prepared": "Beweise werden vor der Antwortfrist in Shopify gespeichert",
+        "monitoring": "Für Ihre Prüfung zurückgehalten – wird zur Frist in Shopify gespeichert, sofern Sie nicht anders entscheiden",
+        "pack_prepared": "Für Ihre Prüfung zurückgehalten – wird zur Frist in Shopify gespeichert, sofern Sie nicht anders entscheiden",
         "saved_to_shopify": "Shopify sendet die Antwort zur Frist",
         "under_review": "Ergebnis erhalten",
         "technical_error": "Die Überwachung wird automatisch fortgesetzt, sobald die Verbindung wiederhergestellt ist"

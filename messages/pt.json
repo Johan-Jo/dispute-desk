@@ -487,7 +487,6 @@
     "unknownPhaseWarning": "Fase ainda não classificada. Será atualizado automaticamente na próxima sincronização.",
     "unknownPhaseAction": "Sincronizar agora",
     "caseStatusBuilding": "DisputeDesk está preparando evidências para este caso.",
-    "caseStatusReview": "Evidências prontas para sua revisão.",
     "caseStatusReady": "Pacote de evidências completo e pronto para salvar.",
     "caseStatusSaved": "Evidências foram salvas no Shopify.",
     "caseStatusNoPack": "Nenhum pacote de evidências foi gerado ainda.",
@@ -544,14 +543,12 @@
     "managedAutomatedTitle": "Totalmente automatizado",
     "managedAutomatedDesc": "O DisputeDesk trata este caso automaticamente com base nas suas regras.",
     "managedReviewTitle": "Revisão necessária",
-    "managedReviewDesc": "O DisputeDesk prepara as evidências mas aguarda sua revisão antes de salvar no Shopify.",
     "managedManualTitle": "Tratamento manual",
     "managedManualDesc": "Nenhuma regra de automação corresponde a este caso. Você precisará preparar e salvar as evidências manualmente.",
     "purposeLine": "Todas as suas disputas do Shopify em um só lugar — com status, urgência e o que ainda precisa da sua atenção.",
     "stateZero": "Nenhuma disputa para tratar no momento. Novas disputas aparecerão aqui automaticamente quando chegarem do Shopify.",
     "stateAllClear": "Você tem {total, plural, one {1 disputa aberta} other {# disputas abertas}} — tudo parece em ordem.",
     "stateSomeUrgent": "Você tem {total, plural, one {1 disputa aberta} other {# disputas abertas}}. {urgent, plural, one {1 precisa} other {# precisam}} de atenção imediata — atrasadas ou com vencimento próximo.",
-    "stateNeedsReview": "Você tem {total, plural, one {1 disputa aberta} other {# disputas abertas}}. {review, plural, one {1 está sinalizada} other {# estão sinalizadas}} para sua revisão antes que o DisputeDesk possa prosseguir.",
     "stateNeedsSync": "Você tem {total, plural, one {1 disputa} other {# disputas}}. {sync, plural, one {1 ainda não foi classificada} other {# ainda não foram classificadas}} — execute uma sincronização para se atualizar.",
     "alertsNudge": "Quer receber alertas por email quando novas disputas chegarem? Adicione o email da equipe nas Configurações.",
     "alertsNudgeLink": "Abrir Configurações",
@@ -869,7 +866,7 @@
       },
       "package": {
         "loadingAccessibilityLabel": "Carregando pacote de evidências",
-        "cardHelp": "O DisputeDesk prepara um PDF voltado ao banco que combina evidências aprovadas do Shopify, sinais de pagamento, comprovantes de cumprimento, comunicação com o cliente, políticas e quaisquer documentos fornecidos pelo lojista em um pacote de evidências estruturado. <b>Revise o pacote e envie-o antes do prazo — no modo de revisão nada é enviado a menos que você envie.</b>",
+        "cardHelp": "O DisputeDesk prepara um PDF para o banco que combina provas aprovadas do Shopify, sinais de pagamento, prova de entrega, comunicação com o cliente, políticas e quaisquer documentos que forneça num único pacote de defesa estruturado. <b>Reveja-o antes do prazo. No piloto automático é guardado no Shopify no prazo se não tiver agido; no modo de revisão só é guardado quando o aprovar.</b>",
         "savingBody": "O DisputeDesk aceitou o seu envio e está fazendo upload do pacote de evidências para o Shopify. Isso geralmente é concluído em menos de 30 segundos — este aviso será atualizado automaticamente.",
         "savedTitles": {
           "outcomePosted": "Resultado publicado",
@@ -2475,7 +2472,7 @@
     "advancedFiltersSubtitle": "Regras opcionais para tipos de disputa ou valores específicos. São verificadas antes da definição geral da loja.",
     "explainerTitle": "O que está a ver",
     "explainerBullet1": "Uma única definição cobre toda a sua loja — aplica-se a todas as disputas que chegam.",
-    "explainerBullet2": "O piloto automático só envia os casos sobre os quais temos confiança. Casos fracos, subjetivos ou já perdidos esperam sempre por si.",
+    "explainerBullet2": "O piloto automático envia de imediato os casos sobre os quais temos confiança. Casos fracos, subjetivos ou já perdidos ficam primeiro retidos para si — seguem à mesma para o Shopify no prazo, a menos que escolha não os defender.",
     "explainerBullet3": "As salvaguardas permitem reter mais: defina um valor e todas as disputas acima dele aguardarão a sua aprovação.",
     "setupTitle": "Automatize seu fluxo de disputas",
     "setupDescription": "As regras decidem o que acontece quando uma nova disputa chega.",
@@ -2496,14 +2493,14 @@
     "presetCatchAllReview": "Captura Geral: Enviar para Revisão",
     "presetCatchAllReviewDesc": "Encaminha as disputas restantes para a fila de revisão como rede de segurança.",
     "modeSectionTitle": "Como as disputas são tratadas",
-    "modeSectionSubtitle": "Isto aplica-se a todas as disputas. Alguns casos esperam sempre por si — veja «Salvaguardas» abaixo.",
+    "modeSectionSubtitle": "Isto aplica-se a todas as disputas. Alguns casos ficam sempre retidos para a sua revisão — veja «Salvaguardas» abaixo.",
     "modeAutoTitle": "Piloto automático",
     "modeAutoBadge": "Recomendado",
-    "modeAutoDesc": "Criamos e enviamos automaticamente os seus casos mais fortes. Todo o resto aguarda a sua revisão.",
+    "modeAutoDesc": "Criamos os seus casos mais fortes e guardamo-los no Shopify assim que estão prontos. Tudo o resto fica primeiro retido para a sua revisão e depois é guardado no Shopify no prazo, se não tiver decidido.",
     "modeReviewTitle": "Rever tudo",
     "modeReviewDesc": "Preparamos todas as respostas. Nada é guardado no Shopify até que aprove.",
     "modeSaved": "Definições guardadas",
-    "alwaysReviewedTitle": "Sempre revistos — independentemente do modo escolhido",
+    "alwaysReviewedTitle": "Sempre retidos para si primeiro — independentemente do modo escolhido",
     "alwaysReviewedProduct": "Reclamações de «não corresponde à descrição» e de qualidade do produto",
     "alwaysReviewedCovered": "Disputas já cobertas pelo Shopify Protect",
     "alwaysReviewedWeak": "Casos com provas fracas ou em falta",
@@ -2542,7 +2539,7 @@
     "safeguardAmountPrefix": "Reter para a sua aprovação todas as disputas acima de",
     "safeguardAmountSuffix": ".",
     "alwaysReviewedHeading": "Sempre revistos",
-    "alwaysReviewedHeadingTail": "— independentemente do modo escolhido, estes nunca são enviados sozinhos",
+    "alwaysReviewedHeadingTail": "— independentemente do modo escolhido, estes ficam primeiro retidos para revisão e só chegam ao Shopify no prazo",
     "saveChanges": "Guardar alterações",
     "saveSaved": "Guardado"
   },
@@ -2556,7 +2553,6 @@
     "automationBanner": "As evidências são salvas no Shopify via API. O envio à operadora de cartão acontece no Shopify Admin (ou é enviado automaticamente na data limite). O DisputeDesk não faz o envio em seu nome.",
     "autoBuildLabel": "Gerar pacotes de evidências automaticamente",
     "autoBuildDesc": "Gera pacotes automaticamente quando novas disputas são detectadas",
-    "reviewLabel": "Exigir revisão antes do salvamento automático",
     "reviewDesc": "Mantém pacotes na fila de revisão para aprovação antes de salvar no Shopify",
     "blockerLabel": "Exigir zero bloqueios",
     "blockerDesc": "Bloqueia o salvamento automático se houver itens de evidência obrigatórios ausentes",
@@ -2686,7 +2682,7 @@
       "savingTitle": "Salvar provas no Shopify",
       "savingDesc": "Escolha se o DisputeDesk pode salvar automaticamente os pacotes de provas elegíveis ou deve aguardar sua aprovação. É uma salvaguarda operacional, não uma preferência de notificação.",
       "autoTitle": "Salvar automaticamente",
-      "autoDesc": "O DisputeDesk salva automaticamente os pacotes de provas elegíveis no Shopify após todas as verificações de qualidade e segurança configuradas.",
+      "autoDesc": "O DisputeDesk guarda automaticamente no Shopify os pacotes de provas elegíveis depois de passarem todas as verificações de qualidade e segurança configuradas. Os pacotes que não passam ficam retidos para a sua revisão e são guardados no Shopify no prazo, a menos que escolha não os defender.",
       "autoNote": "Você ainda pode revisar o pacote no DisputeDesk. Salvar provas no Shopify não confirma por si só que a resposta foi enviada à rede do cartão.",
       "approveTitle": "Exigir minha aprovação antes de salvar",
       "approveDesc": "O DisputeDesk prepara e monitora a resposta, mas aguarda sua aprovação antes de salvar o primeiro pacote de provas no Shopify.",
@@ -3082,11 +3078,11 @@
       },
       "reviewQueue": {
         "title": "A fila de revisão",
-        "body": "A Fila de Revisão contém disputas que precisam da sua revisão manual antes que as evidências sejam salvas no Shopify.\n\nAs disputas vão para a fila de revisão quando:\n- Uma regra as encaminha para revisão (ex.: disputas de alto valor acima de um determinado montante).\n- Nenhuma regra corresponde e a ação padrão é revisão.\n- Você tem \"Exigir revisão antes do salvamento automático\" ativado nas configurações de automação.\n\nNa aba Fila de Revisão da página de Disputas, você pode:\n- Ver todas as disputas aguardando sua atenção.\n- Clicar em qualquer disputa para revisar o pacote de evidências.\n- Clicar em \"Aprovar\" para acionar o pipeline de automação (geração e salvamento do pacote).\n\nIsso dá a você total controle sobre quais disputas recebem respostas automatizadas e quais você deseja tratar pessoalmente."
+        "body": "A fila de revisão contém disputas retidas para si antes de as provas serem guardadas no Shopify.\n\nUma disputa chega à fila de revisão quando:\n- Uma regra a envia para revisão (por exemplo, disputas acima de um determinado valor).\n- Nenhuma regra corresponde e a ação padrão é rever.\n- As provas são fracas ou subjetivas, ou o caso já está perdido.\n\nNo separador Fila de revisão pode:\n- Ver todas as disputas que aguardam a sua atenção.\n- Abrir qualquer disputa para rever o pacote de provas.\n- Clicar em «Aprovar» para guardar as provas no Shopify.\n\nUma disputa na fila não está congelada. No piloto automático é guardada no Shopify no prazo se não tiver agido; no modo de revisão só é guardada quando a aprovar. Escolha «Não defender» para a parar em ambos os casos."
       },
       "approvingDisputes": {
         "title": "Aprovando disputas da fila de revisão",
-        "body": "Quando uma disputa está na Fila de Revisão, você precisa aprová-la antes que o DisputeDesk gere e salve as evidências.\n\nPara aprovar uma disputa:\n1. Vá à página de Disputas e mude para a aba \"Fila de Revisão\".\n2. Clique no botão \"Aprovar\" ao lado da disputa.\n3. O DisputeDesk acionará imediatamente o pipeline de automação.\n4. Um pacote de evidências será gerado a partir dos dados do pedido, rastreamento e políticas.\n5. Se o pacote passar nas verificações de completude e bloqueios, as evidências serão salvas no Shopify.\n\nVocê também pode aprovar pela página de detalhes da disputa clicando em \"Aprovar e Salvar\".\n\nTodas as aprovações são registradas no registro de auditoria para rastreamento de conformidade."
+        "body": "Quando uma disputa está na sua fila de revisão, o DisputeDesk já criou as provas. A sua aprovação apenas controla se são guardadas no Shopify.\n\nPara aprovar uma disputa:\n1. Vá à página Disputas e mude para o separador «Fila de revisão».\n2. Clique em «Aprovar» ao lado da disputa.\n3. Se o pacote passar as suas verificações de integridade e bloqueios, as provas são guardadas no Shopify.\n\nTambém pode aprovar na página de detalhe com «Aprovar e guardar».\n\nNo piloto automático, uma disputa retida é guardada no Shopify no prazo se não fizer nada. No modo de revisão, nada é guardado enquanto não aprovar. Escolha «Não defender» para a parar em qualquer dos modos.\n\nTodas as aprovações ficam registadas no histórico de auditoria."
       },
       "howPacksBuilt": {
         "title": "Como os pacotes de evidências são gerados automaticamente",
@@ -3290,7 +3286,7 @@
         },
         "reviewQueue": {
           "title": "A fila de revisão",
-          "body": "A fila de revisão são disputas que suas regras encaminham para **revisão manual** antes de salvar evidências no Shopify.\n\nElas entram quando:\n- uma regra as envia para revisão (por exemplo, alto valor),\n- nenhuma regra coincide e o padrão é revisão,\n- **Revisão antes do salvamento automático** está ativo na automação.\n\nNo app incorporado, aparecem na lista **Disputas** com as demais — use **Filtrar** por status ou abra pelo painel. Abra a disputa, revise o pacote e use **Aprovar e salvar** na página de detalhe quando estiver pronto."
+          "body": "A fila de revisão são disputas retidas para si antes de as provas serem guardadas no Shopify.\n\nChegam aqui quando:\n- Uma regra as envia para revisão (por exemplo, valor elevado).\n- Nenhuma regra corresponde e o padrão é rever.\n- As provas são fracas ou subjetivas, ou o caso já está perdido.\n\nNa app incorporada, essas disputas aparecem na lista **Disputas** com os restantes estornos — use **Filtrar** por estado ou abra itens a partir do painel. Abra uma disputa para inspecionar o pacote e use **Aprovar e guardar** na página de detalhe quando estiver pronto.\n\nUma disputa aqui não está congelada. No piloto automático é guardada no Shopify no prazo se não tiver agido; no modo de revisão só é guardada quando a aprovar. Escolha **Não defender** para a parar em ambos os casos."
         },
         "approvingDisputes": {
           "title": "Aprovar disputas na fila de revisão",
@@ -4380,7 +4376,7 @@
       "setupSummaryTitle": "O que configurámos para si",
       "setupSummaryInquiry": "Consultas iniciais cobertas automaticamente",
       "setupSummaryReady": "Pronto para disputas de {families}.",
-      "setupSummaryModeAuto": "As respostas fortes são criadas e enviadas ao Shopify automaticamente. Tudo o que exigir um olhar mais atento aguarda a sua aprovação.",
+      "setupSummaryModeAuto": "As respostas fortes são guardadas no Shopify automaticamente. Tudo o que exigir um olhar mais atento fica retido para a sua revisão e depois é guardado no Shopify no prazo, se não tiver decidido.",
       "setupSummaryModeReview": "Cada resposta é criada para si e aguarda a sua aprovação antes de seguir para o Shopify.",
       "setupSummarySafeguard": "Disputas acima de ${amount} aguardam sempre a sua aprovação.",
       "setupSummaryPointer": "Pode ajustar tipos de disputa específicos mais tarde na página de Automação."
@@ -5819,8 +5815,8 @@
       },
       "next": {
         "building_evidence": "Pacote de provas preparado — geralmente em poucas horas",
-        "monitoring": "Provas salvas no Shopify antes do prazo de resposta",
-        "pack_prepared": "Provas salvas no Shopify antes do prazo de resposta",
+        "monitoring": "Retido para a sua revisão — guardado no Shopify no prazo, a menos que decida o contrário",
+        "pack_prepared": "Retido para a sua revisão — guardado no Shopify no prazo, a menos que decida o contrário",
         "saved_to_shopify": "O Shopify envia a resposta no prazo",
         "under_review": "Resultado recebido",
         "technical_error": "O monitoramento é retomado automaticamente assim que a conexão for restaurada"
