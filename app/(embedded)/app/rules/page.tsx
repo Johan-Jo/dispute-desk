@@ -955,6 +955,7 @@ export default function EmbeddedRulesPage() {
             >
               <input
                 type="checkbox"
+                aria-label={tr("safeguardToggle")}
                 checked={safeguard.enabled}
                 disabled={!rulesAllowed}
                 onChange={(e) => {
