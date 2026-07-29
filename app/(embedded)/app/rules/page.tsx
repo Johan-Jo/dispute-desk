@@ -35,11 +35,19 @@ import {
   Icon,
   Checkbox,
   TextField,
+  Collapsible,
 } from "@shopify/polaris";
-import { InfoIcon, XIcon } from "@shopify/polaris-icons";
+import {
+  InfoIcon,
+  XIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+} from "@shopify/polaris-icons";
 import { TemplateLibraryModal } from "@/components/packs/TemplateLibraryModal";
 import { StoreModeSelector } from "@/components/automation/StoreModeSelector";
 import { AlwaysReviewedFacts } from "@/components/automation/AlwaysReviewedFacts";
+import { AutomationGroupList } from "@/components/automation/AutomationGroupList";
+import type { GroupOverrides } from "@/lib/rules/automationGroups";
 import { CustomRuleModal, type CustomRuleDraft } from "./CustomRuleModal";
 import {
   DEFAULT_SAFEGUARD_AMOUNT,
@@ -91,6 +99,13 @@ export default function EmbeddedRulesPage() {
     enabled: false,
     amount: DEFAULT_SAFEGUARD_AMOUNT,
   });
+  /**
+   * Per-group overrides. `groups` is what's on screen, `savedGroups` is what
+   * the server has. They differ only for the instant between a change and its
+   * response — but the distinction is load-bearing: see `onModeChange`.
+   */
+  const [groups, setGroups] = useState<GroupOverrides>({});
+  const [savedGroups, setSavedGroups] = useState<GroupOverrides>({});
   const [rulesAllowed, setRulesAllowed] = useState(true);
   const [customRules, setCustomRules] = useState<CustomRule[]>([]);
   const [shopId, setShopId] = useState<string | null>(null);
@@ -101,6 +116,7 @@ export default function EmbeddedRulesPage() {
   const [savedBanner, setSavedBanner] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [playbooksOpen, setPlaybooksOpen] = useState(false);
+  const [groupsOpen, setGroupsOpen] = useState(false);
   const [customRuleDraft, setCustomRuleDraft] = useState<CustomRuleDraft | null>(null);
   const [customRuleModalOpen, setCustomRuleModalOpen] = useState(false);
   const [explainerOpen, setExplainerOpen] = useState(() => {
@@ -142,6 +158,12 @@ export default function EmbeddedRulesPage() {
         };
         setSafeguard(sg);
         setSavedSafeguard(sg);
+        const g = (data.groups ?? {}) as GroupOverrides;
+        setGroups(g);
+        setSavedGroups(g);
+        // Open the section when the merchant already has overrides; a merchant
+        // who has never touched it sees today's page verbatim.
+        setGroupsOpen(Object.keys(g).length > 0);
         setRulesAllowed(data.rulesAccess?.allowed !== false);
       }
 
@@ -162,7 +184,11 @@ export default function EmbeddedRulesPage() {
   // ─── Persistence ──────────────────────────────────────────────────────
 
   const persist = useCallback(
-    async (next: { mode: StoreAutomationMode; safeguard: SafeguardState }) => {
+    async (next: {
+      mode: StoreAutomationMode;
+      safeguard: SafeguardState;
+      groups: GroupOverrides;
+    }) => {
       setSaving(true);
       setErrorMsg(null);
       try {
@@ -175,6 +201,9 @@ export default function EmbeddedRulesPage() {
               enabled: next.safeguard.enabled,
               amount: next.safeguard.amount,
             },
+            // This page renders the group controls, so it always sends the
+            // full set — the route reads an explicit `groups` as a replace.
+            groups: next.groups,
           }),
         });
         if (!res.ok) {
@@ -183,6 +212,7 @@ export default function EmbeddedRulesPage() {
           return false;
         }
         setSavedSafeguard(next.safeguard);
+        setSavedGroups(next.groups);
         setSavedBanner(true);
         return true;
       } catch {
@@ -205,16 +235,42 @@ export default function EmbeddedRulesPage() {
       if (next === mode || saving) return;
       const previous = mode;
       setMode(next);
-      const ok = await persist({ mode: next, safeguard: savedSafeguard });
+      // `savedSafeguard` / `savedGroups`, NOT `safeguard` / `groups`. A PUT
+      // carries the whole config, so passing the on-screen values would
+      // silently commit unsaved edits from the other controls on a switch
+      // click. The easiest thing on this page to get wrong.
+      const ok = await persist({
+        mode: next,
+        safeguard: savedSafeguard,
+        groups: savedGroups,
+      });
       if (!ok) setMode(previous);
     },
-    [mode, saving, persist, savedSafeguard],
+    [mode, saving, persist, savedSafeguard, savedGroups],
   );
 
   /** The safeguard has a free-text amount, so it keeps an explicit Save. */
   const saveSafeguard = useCallback(async () => {
-    await persist({ mode, safeguard });
-  }, [persist, mode, safeguard]);
+    await persist({ mode, safeguard, groups: savedGroups });
+  }, [persist, mode, safeguard, savedGroups]);
+
+  /**
+   * A group is a discrete choice like the switch, so it writes immediately —
+   * no Save button. Optimistic, reverted on failure so the UI never claims an
+   * override the server didn't accept.
+   */
+  const onGroupsChange = useCallback(
+    async (next: GroupOverrides) => {
+      if (saving) return;
+      const previous = groups;
+      setGroups(next);
+      const ok = await persist({ mode, safeguard: savedSafeguard, groups: next });
+      if (!ok) setGroups(previous);
+    },
+    [saving, groups, persist, mode, savedSafeguard],
+  );
+
+  const customisedCount = Object.keys(groups).length;
 
   const safeguardDirty =
     safeguard.enabled !== savedSafeguard.enabled ||
@@ -407,6 +463,63 @@ export default function EmbeddedRulesPage() {
                   t={tr}
                   disabled={!rulesAllowed || saving}
                 />
+
+                {/* ── Per-type overrides, as progressive disclosure ──────
+                    Closed when nothing is overridden, so a merchant who never
+                    opens it sees the page exactly as it was. */}
+                <div style={{ borderTop: "1px solid #E1E3E5", paddingTop: 16 }}>
+                  <button
+                    type="button"
+                    onClick={() => setGroupsOpen((open) => !open)}
+                    aria-expanded={groupsOpen}
+                    aria-controls="automation-groups"
+                    style={{
+                      width: "100%",
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
+                  >
+                    <InlineStack align="space-between" blockAlign="center" gap="200">
+                      <BlockStack gap="050">
+                        <InlineStack gap="200" blockAlign="center">
+                          <Text as="h3" variant="headingSm">
+                            {tr("groupsSectionTitle")}
+                          </Text>
+                          {/* Hidden entirely at 0 — a "0 customised" badge is
+                              noise on a page most merchants never customise. */}
+                          {customisedCount > 0 && (
+                            <Badge tone="info">
+                              {tr("groupsCustomisedBadge", { count: customisedCount })}
+                            </Badge>
+                          )}
+                        </InlineStack>
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          {tr("groupsSectionSubtitle")}
+                        </Text>
+                      </BlockStack>
+                      <Icon source={groupsOpen ? ChevronUpIcon : ChevronDownIcon} />
+                    </InlineStack>
+                  </button>
+
+                  <Collapsible
+                    open={groupsOpen}
+                    id="automation-groups"
+                    transition={{ duration: "150ms", timingFunction: "ease-in-out" }}
+                  >
+                    <div style={{ paddingTop: 16 }}>
+                      <AutomationGroupList
+                        storeMode={mode}
+                        value={groups}
+                        onChange={onGroupsChange}
+                        t={tr}
+                        disabled={!rulesAllowed || saving}
+                      />
+                    </div>
+                  </Collapsible>
+                </div>
               </BlockStack>
             </Card>
 

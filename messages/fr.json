@@ -2511,7 +2511,19 @@
     "alwaysReviewedIncomplete": "Tout ce qui se situe sous votre seuil de qualité des preuves",
     "customRulesEmpty": "Aucune règle personnalisée pour l'instant. La plupart des boutiques n'en ont pas besoin : les réglages ci-dessus couvrent les cas courants.",
     "customRulesEmptyCta": "Ajouter une règle",
-    "browsePlaybooks": "Parcourir les playbooks"
+    "browsePlaybooks": "Parcourir les playbooks",
+    "groupsSectionTitle": "Traiter certains types de litige différemment",
+    "groupsSectionSubtitle": "Facultatif. Tout ce que vous ne définissez pas ici suit le réglage par défaut de votre boutique.",
+    "groupsCustomisedBadge": "{count} personnalisés",
+    "groupUseDefault": "Utiliser le réglage par défaut de la boutique ({mode})",
+    "groupsGeneralNote": "Tout type de litige non listé ici — y compris les litiges généraux et non catégorisés — suit le réglage par défaut de votre boutique.",
+    "groupFraud": "Fraude à la carte",
+    "groupPnr": "Article non reçu",
+    "groupNotAsDescribed": "Non conforme à la description",
+    "groupNotAsDescribedLocked": "Toujours examinés. Ce sont des réclamations qualité subjectives où vous pouvez connaître un contexte que les preuves ne capturent pas.",
+    "groupSubscription": "Abonnement annulé",
+    "groupRefund": "Remboursement non traité",
+    "groupDuplicate": "Double débit"
   },
   "settings": {
     "title": "Paramètres",
