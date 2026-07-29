@@ -63,16 +63,15 @@ const GROUP_PRIORITY = 50;
 const COPY = {
   fraud: "Card fraud",
   notAsDescribed: "Not as described",
-  // Distinct from the "Always reviewed — whatever mode you pick" heading on
-  // the Safeguards card, which /Always reviewed/ would also match.
+  // Distinct from the "Always reviewed" heading on the Safeguards card, which
+  // a looser pattern would also match.
   notAsDescribedLocked: /subjective quality claims/i,
-  reviewOption: "Review before submit",
+  storeDefaultOption: "Store default",
   autoOption: "Automatic",
-  useDefaultAuto: "Use store default (Auto-pilot)",
-  useDefaultReview: "Use store default (Review everything)",
+  reviewOption: "Review before submit",
   safeguardToggle: "Review high-value disputes before sending",
   safeguardAmount: "Minimum amount",
-  save: "Save starter rules",
+  save: "Save changes",
   customisedBadge: /customised/i,
 };
 
@@ -178,6 +177,20 @@ async function authedContext(browser: Browser, baseURL: string | undefined) {
 
 const groupsToggle = (page: Page) => page.locator('button[aria-controls="automation-groups"]');
 
+/** One row's three-way segmented control. */
+const segment = (page: Page, group: string, option: string) =>
+  page.getByRole("radiogroup", { name: group }).getByRole("radio", { name: option });
+
+/**
+ * The page has ONE commit point, so every edit is a draft until this. Clicking
+ * a segment or the safeguard no longer writes anything on its own.
+ */
+async function saveChanges(page: Page) {
+  await expectSaved(page, () =>
+    page.getByRole("button", { name: COPY.save }).click(),
+  );
+}
+
 /** Perform `action` and wait for the PUT it triggers to come back 200. */
 async function expectSaved(page: Page, action: () => Promise<unknown>) {
   const [res] = await Promise.all([
@@ -245,21 +258,23 @@ test.describe("embedded /app/rules — per-group overrides (§10 steps 1-5)", ()
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
     // The "{n} customised" badge is hidden entirely at zero, not rendered as "0".
     await expect(toggle.getByText(COPY.customisedBadge)).toHaveCount(0);
-    await expect(page.getByLabel(COPY.fraud)).not.toBeVisible();
+    await expect(page.getByRole("radiogroup", { name: COPY.fraud })).toHaveCount(0);
   });
 
   test("2 — Fraud → Automatic writes one group row at priority 50", async ({ page }) => {
     await openRulesPage(page);
     await groupsToggle(page).click();
 
-    const fraud = page.getByLabel(COPY.fraud);
-    await expect(fraud).toBeVisible();
-    // The inherited option names the current store mode rather than saying
-    // "default", so the merchant can read what they are inheriting.
-    await expect(fraud).toHaveValue("");
-    await expect(fraud.locator("option").first()).toHaveText(COPY.useDefaultReview);
+    // Starts on "Store default", which is the ABSENCE of an override.
+    await expect(segment(page, COPY.fraud, COPY.storeDefaultOption)).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
 
-    await expectSaved(page, () => fraud.selectOption("auto"));
+    await segment(page, COPY.fraud, COPY.autoOption).click();
+    // Nothing is written until Save — the page has one commit point.
+    expect(await groupRow(FRAUD_ROW), "a segment click must not write on its own").toBeNull();
+    await saveChanges(page);
 
     const row = await groupRow(FRAUD_ROW);
     expect(row, "the fraud group row must exist after selecting Automatic").toBeTruthy();
@@ -283,7 +298,7 @@ test.describe("embedded /app/rules — per-group overrides (§10 steps 1-5)", ()
     await page.getByLabel(COPY.safeguardToggle).check();
     const amount = page.getByLabel(COPY.safeguardAmount);
     await amount.fill("500");
-    await expectSaved(page, () => page.getByRole("button", { name: COPY.save }).click());
+    await saveChanges(page);
 
     const row = await groupRow(FRAUD_ROW);
     expect(row, "the fraud group row must SURVIVE a safeguard save").toBeTruthy();
@@ -303,28 +318,31 @@ test.describe("embedded /app/rules — per-group overrides (§10 steps 1-5)", ()
     expect(safeguard.data!.match?.amount_range?.min).toBe(500);
   });
 
-  test("4 — back to Use store default removes the row", async ({ page }) => {
+  test("4 — back to Store default removes the row", async ({ page }) => {
     await openRulesPage(page);
     // The section auto-opens when overrides already exist.
     await expect(groupsToggle(page)).toHaveAttribute("aria-expanded", "true");
 
-    const fraud = page.getByLabel(COPY.fraud);
-    await expect(fraud).toHaveValue("auto");
-    await expectSaved(page, () => fraud.selectOption(""));
+    await expect(segment(page, COPY.fraud, COPY.autoOption)).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await segment(page, COPY.fraud, COPY.storeDefaultOption).click();
+    await saveChanges(page);
 
     expect(await groupRow(FRAUD_ROW), "inheriting means no row at all").toBeNull();
     await expect(groupsToggle(page).getByText(COPY.customisedBadge)).toHaveCount(0);
   });
 
-  test("5 — not_as_described is a badge, not a dropdown, and the API enforces it", async ({
+  test("5 — not_as_described is a fact, not a control, and the API enforces it", async ({
     page,
   }) => {
     await openRulesPage(page);
     await groupsToggle(page).click();
 
-    // A greyed-out Select reads as "you can't afford this" — the plan-gate
+    // A greyed-out control reads as "you can't afford this" — the plan-gate
     // idiom already on this page. A badge reads as a fact.
-    await expect(page.getByLabel(COPY.notAsDescribed)).toHaveCount(0);
+    await expect(page.getByRole("radiogroup", { name: COPY.notAsDescribed })).toHaveCount(0);
     await expect(page.getByText(COPY.notAsDescribedLocked)).toBeVisible();
 
     // The lock is enforced server-side too: the UI is not the only gate.
