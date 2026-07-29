@@ -1096,24 +1096,31 @@ The Supabase CLI's linked project is a **single invisible global pointer** (`sup
 Refs (source of truth = `CLAUDE.md`): **prod = `aokhplydttxtebvbeuzc`, dev = `vrpkgudqmpyunekrkpnc`**.
 
 - **Migrations**: never run the raw `supabase db push`. Use `npm run db:migrate:dev` / `npm run db:migrate:prod`. Both run `scripts/guard-db-target.mjs <env>` first, which reads the linked ref and **refuses unless it matches that env's known ref** — so a dev/prod mix-up fails hard with the re-link command, never a silent wrong push. Bare `npm run db:migrate` is intentionally blocked (errors demanding an explicit target).
-- **Ad-hoc `db query --linked`**: the guard doesn't wrap raw queries, so **`cat supabase/.temp/linked-project.json` and confirm the ref before running** — a diagnostic against the wrong DB is how the incident started.
+- **Ad-hoc queries**: use **`npm run db:query:dev`** / **`npm run db:query:prod`** (added 2026-07-29). They run the same guard before `supabase db query --linked`, so a read against the wrong DB fails the same way a write does. Arguments pass straight through: `npm run db:query:dev -- --file scripts/sql/foo.sql`.
+- **The pointer can change UNDER a session.** On **2026-07-29** it was verified as dev at the start of a session and was pointing at **prod** twenty minutes later, with nothing in that session having re-linked it. Confirming once is not enough — the read-only queries in between produced two contradictory pictures of the same shop (a `shops` row that existed in one answer and not the next), which is what exposed it. This is why the guard now wraps reads: **confirm per command, not per session.**
 - **Re-link** to the intended project with `npx supabase link --project-ref <ref>` (a separate step before the migrate command; let it settle before running the guard).
 - The **dev app reads its DB from the dev Vercel project's `SUPABASE_URL`** (`vrpkgudqmpyunekrkpnc`), independent of whatever the CLI is linked to — so the live app and a CLI query can silently diverge. `vercel env pull` the app's real env when verifying live behavior.
 
 ### Ad-hoc SQL / ops queries (canonical path)
 
-**Use this for one-shot reads, diagnostics, and targeted cleanups** — anything that is not a migration and not application code. It runs SQL via the Supabase Management API against the linked project, so it needs no DB password and does not depend on `SUPABASE_URL_POSTGRES` being in sync (that env var rots when the DB password is rotated in the dashboard). **First confirm which project is linked (see *Supabase DB target safety* above).**
+**Use this for one-shot reads, diagnostics, and targeted cleanups** — anything that is not a migration and not application code. It runs SQL via the Supabase Management API against the linked project, so it needs no DB password and does not depend on `SUPABASE_URL_POSTGRES` being in sync (that env var rots when the DB password is rotated in the dashboard).
+
+**Go through the guarded wrapper**, which states the intended environment and refuses on a mismatch:
 
 ```bash
 # Inline query — service-role-equivalent privilege
-npx supabase db query --linked "select count(*) from disputes where status = 'NEEDS_RESPONSE'"
+npm run db:query:dev -- "select count(*) from disputes where status = 'NEEDS_RESPONSE'"
 
 # From a file — preferred for any multi-statement / transactional block
-npx supabase db query --linked --file scripts/sql/my-cleanup.sql
+npm run db:query:dev -- --file scripts/sql/my-cleanup.sql
 
 # CSV / table output for humans
-npx supabase db query --linked --output table "select shop_domain, plan from shops limit 20"
+npm run db:query:prod -- --output table "select shop_domain, plan from shops limit 20"
 ```
+
+Each run prints the ref it matched (`✓ intended=dev — linked project ref vrpkgudqmpyunekrkpnc matches`), so the target is in the transcript next to the answer rather than assumed from something checked earlier. Raw `npx supabase db query --linked` still works and is what the wrapper calls, but it inherits the pointer silently — prefer the wrapper.
+
+**Read the whole result.** Piping these through `tail` truncates from the TOP, so a multi-row answer silently becomes its last row — which on 2026-07-29 read as "dev has exactly one shop." Redirect to a file and read it, or use `--output table`.
 
 **Privilege & safety notes:**
 - Runs with privileges sufficient to `ALTER TABLE … DISABLE TRIGGER` and set session GUCs (e.g. `app.allow_audit_mutation = 'on'`), which means it can bypass audit-immutability triggers when needed. **Always wrap destructive ops in a `do $$ … end $$` block with explicit structural guards** (assert the dispute_gid pattern, shop_domain, etc.) before the deletes — see `scripts/sql/delete-dispute-384652be.sql` for the reference pattern.
@@ -1124,7 +1131,7 @@ npx supabase db query --linked --output table "select shop_domain, plan from sho
 
 | Need | Use |
 |------|-----|
-| Apply a migration file | `npm run db:migrate` (alias for `supabase db push`) |
+| Apply a migration file | `npm run db:migrate:dev` / `npm run db:migrate:prod` (bare `db:migrate` is blocked) |
 | Read rows from app code or scripts | `@supabase/supabase-js` with `SUPABASE_SERVICE_ROLE_KEY` (RLS-bypassing, but trigger-respecting — cannot delete audit/dispute_events rows) |
 | Direct `psql`-style session (multi-statement transactions outside Management API, `\copy`, large bulk loads) | `pg.Client` with `SUPABASE_URL_POSTGRES` in `.env.local`. **This password is rotated periodically in the Supabase dashboard;** if `password authentication failed for user "postgres"` shows up, refresh the value from Dashboard → Project Settings → Database → Connection string before re-running. Do **not** reach for this when `db query --linked` would have worked. |
 | Bypass `audit_events` immutability from an RPC | The existing `delete_e2e_fixture_dispute(uuid)` RPC is scoped to E2E fixtures only; for other one-shot ops, use `db query --linked` with the DO-block pattern above. |
@@ -2507,6 +2514,23 @@ The migration snapshots into `legacy_setup_rules_backup_20260729`, then **conver
 | `GENERAL=auto` | dropped | no GENERAL group by design; promoting the fallback would widen every uncovered reason. Narrowing is the safe direction |
 
 Shops with no `rules` rows at all (test / app-review installs) are left alone — they already read as `review`, so seeding would fabricate configuration a merchant never chose.
+
+**Verifying it in a real browser (`e2e/embedded-automation-groups.spec.ts`).** `tsc`, `vitest` and `next build` were all green while `/app/setup/store-profile` rendered a blank card, so this page carried a manual Admin checklist. Steps 1-5 of it are mechanical and now run headlessly against the deployed dev app:
+
+```bash
+E2E_EMBEDDED_SHOP=surasvenne.myshopify.com \
+PLAYWRIGHT_BASE_URL=https://dev.disputedesk.app \
+npx playwright test e2e/embedded-automation-groups.spec.ts
+```
+
+It skips unless `E2E_EMBEDDED_SHOP` is set (never runs in CI — it mutates a real shop's config), refuses to start unless `SUPABASE_URL` is the dev project, and snapshots/restores the shop's automation config around the run. The load-bearing case is **step 3**: set Fraud → Auto, then save an unrelated safeguard amount, and assert the group row survives — the regression the by-name delete exists to prevent.
+
+Two things make a top-level browser work where the e2e README previously said a "test-mode session bridge" was needed:
+
+- **Auth.** No session token is involved. Loading `/app/rules?shop=<domain>` hits the middleware branch that resolves the domain against `shops` + an offline `shop_sessions` row and re-plants `shopify_shop` / `shopify_shop_id` (middleware.ts:784-800); middleware then injects `x-shop-id` on the API calls (`:548`), which is what `/api/automation/store` reads. Note the API itself is **not** open — without that cookie middleware answers 401 `SESSION_REQUIRED`, and only `/api/setup/*` accepts a bare `?shop=`.
+- **App Bridge.** `/app/*` always asks the layout to load `app-bridge.js` (`:669`); at top level that script redirects the tab into `admin.shopify.com/.../app/rules` and lands on a Shopify login page. The spec aborts that one request. Nothing is bypassed and no cookie is forged — the page simply renders without the piece the spec declares out of scope.
+
+**What it still cannot prove**, and why a human pass in Admin remains the sign-off: App Bridge itself, anything CSP/iframe-specific, and the `sameSite=none; partitioned` (CHIPS) cookie whose intermittent non-delivery inside Admin is documented at `:784` — the spec plants that cookie by hand, which is precisely the surface most likely to break. Step 6 (safeguard beats a group) is pure engine behaviour and lives in `pickAutomationAction.test.ts` instead.
 
 **Reconcile fires on group relaxation too** — a group flipping to auto is the same kind of relaxation as the switch flipping, and it must fire even while the store stays on review. Over-firing is safe (the pass re-applies every gate itself); under-firing strands built drafts.
 

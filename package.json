@@ -40,6 +40,8 @@
     "db:migrate:dev": "node scripts/guard-db-target.mjs dev && npx supabase db push --linked",
     "db:migrate:prod": "node scripts/db-push-prod.mjs",
     "db:migrate:script": "node scripts/run-migration.mjs",
+    "db:query:dev": "node scripts/guard-db-target.mjs dev && npx supabase db query --linked",
+    "db:query:prod": "node scripts/guard-db-target.mjs prod && npx supabase db query --linked",
     "db:push:prod": "node scripts/db-push-prod.mjs",
     "cleanup:e2e-orphans": "node scripts/cleanup-e2e-orphans.mjs",
     "cron:resources": "node scripts/trigger-resources-crons.mjs",
