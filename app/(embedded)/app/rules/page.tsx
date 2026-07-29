@@ -33,13 +33,8 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { TemplateLibraryModal } from "@/components/packs/TemplateLibraryModal";
 import { AutomationGroupList } from "@/components/automation/AutomationGroupList";
-import {
-  ALWAYS_REVIEWED_KEYS,
-} from "@/components/automation/AlwaysReviewedFacts";
-import {
-  AUTOMATION_GROUPS,
-  type GroupOverrides,
-} from "@/lib/rules/automationGroups";
+import { ALWAYS_REVIEWED_KEYS } from "@/components/automation/AlwaysReviewedFacts";
+import type { GroupOverrides } from "@/lib/rules/automationGroups";
 import { CustomRuleModal, type CustomRuleDraft } from "./CustomRuleModal";
 import {
   DEFAULT_SAFEGUARD_AMOUNT,
@@ -233,10 +228,18 @@ export default function EmbeddedRulesPage() {
     (safeguard.enabled && safeguard.amount !== savedSafeguard.amount) ||
     !sameGroups(groups, savedGroups);
 
+  /**
+   * How many per-type exceptions the last house-rule click wiped. Shown as a
+   * note under the two cards: clearing the list is the intended effect, but an
+   * invisible one would be just as confusing as the contradiction it replaced.
+   */
+  const [clearedCount, setClearedCount] = useState(0);
+
   /** Any edit clears the "Saved" confirmation — it must never outlive its truth. */
   const touch = useCallback(() => {
     setJustSaved(false);
     setErrorMsg(null);
+    setClearedCount(0);
   }, []);
 
   const save = useCallback(async () => {
@@ -274,17 +277,33 @@ export default function EmbeddedRulesPage() {
     }
   }, [dirty, saving, rulesAllowed, mode, safeguard, groups]);
 
-  /** Bulk actions never touch a locked group — no row is ever written for one. */
-  const setAllGroups = useCallback(
-    (next: "auto" | "review") => {
+  /**
+   * Picking a house rule CLEARS the per-type list.
+   *
+   * This is the whole fix. Before, the store-wide choice and the per-type list
+   * were two controls at the same level with the list silently winning, so a
+   * merchant could select "Review everything" and stare at four rows reading
+   * "Automatic" with nothing on screen explaining it. The page contradicted
+   * itself and read as broken.
+   *
+   * Now the house rule is authoritative at the moment you pick it: it wipes
+   * every exception and everything follows it. Anything you set on a row
+   * AFTERWARDS takes precedence again — that is what the list is for. Clicking
+   * the rule you are already on still clears, because "make everything follow
+   * this" is exactly what the merchant is asking for.
+   *
+   * Draft only. Nothing is written until Save changes, so navigating away
+   * abandons it.
+   */
+  const pickMode = useCallback(
+    (next: StoreAutomationMode) => {
+      if (!rulesAllowed || saving) return;
       touch();
-      const draft: GroupOverrides = {};
-      for (const group of AUTOMATION_GROUPS) {
-        if (!group.locked) draft[group.id] = next;
-      }
-      setGroups(draft);
+      setClearedCount(Object.keys(groups).length);
+      setMode(next);
+      setGroups({});
     },
-    [touch],
+    [rulesAllowed, saving, touch, groups],
   );
 
   const customisedCount = Object.keys(groups).length;
@@ -589,10 +608,7 @@ export default function EmbeddedRulesPage() {
             <button
               type="button"
               disabled={!rulesAllowed}
-              onClick={() => {
-                touch();
-                setMode("auto");
-              }}
+              onClick={() => pickMode("auto")}
               style={{
                 textAlign: "left",
                 font: "inherit",
@@ -657,10 +673,7 @@ export default function EmbeddedRulesPage() {
             <button
               type="button"
               disabled={!rulesAllowed}
-              onClick={() => {
-                touch();
-                setMode("review");
-              }}
+              onClick={() => pickMode("review")}
               style={{
                 textAlign: "left",
                 font: "inherit",
@@ -710,6 +723,48 @@ export default function EmbeddedRulesPage() {
               </span>
             </button>
           </div>
+
+          {/* Clearing the list is the point of picking a house rule, but an
+              invisible effect would be as confusing as the contradiction it
+              replaced. Say what just happened. */}
+          {clearedCount > 0 && (
+            <div style={{ padding: "0 20px 18px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  alignItems: "flex-start",
+                  background: "#F0F7FF",
+                  border: "1px solid #C9E1FB",
+                  borderRadius: 10,
+                  padding: "10px 14px",
+                  fontSize: 12.5,
+                  lineHeight: 1.5,
+                  color: "#1E3A5F",
+                }}
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#1D4ED8"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  style={{ flexShrink: 0, marginTop: 2 }}
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 11v5M12 7.5v.01" />
+                </svg>
+                <span>
+                  {tr("modeClearedExceptions", {
+                    count: clearedCount,
+                    mode: mode === "auto" ? tr("modeAutoTitle") : tr("modeReviewTitle"),
+                  })}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* ── Per-type overrides, as progressive disclosure ────── */}
           <div
@@ -822,28 +877,16 @@ export default function EmbeddedRulesPage() {
               display: "flex",
               gap: 10,
               alignItems: "center",
-              justifyContent: "space-between",
+              justifyContent: "flex-end",
               flexWrap: "wrap",
             }}
           >
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button
-                type="button"
-                disabled={!rulesAllowed}
-                onClick={() => setAllGroups("auto")}
-                style={{ ...BTN_SECONDARY, fontSize: 12.5, padding: "6px 12px" }}
-              >
-                {tr("groupsAutomateAll")}
-              </button>
-              <button
-                type="button"
-                disabled={!rulesAllowed}
-                onClick={() => setAllGroups("review")}
-                style={{ ...BTN_SECONDARY, fontSize: 12.5, padding: "6px 12px" }}
-              >
-                {tr("groupsReviewAll")}
-              </button>
-            </div>
+            {/* "Automate all" / "Review all" are GONE. Under the house-rule
+                model they were a trap: identical in effect to picking the
+                matching rule, except they left six exceptions behind that the
+                next house-rule click silently wiped. And with every row already
+                set they appeared to do nothing at all, which is the complaint
+                that started this. The house rule IS the bulk action. */}
             <button
               type="button"
               onClick={save}

@@ -34,49 +34,48 @@ import {
 import type { StoreAutomationMode } from "@/lib/rules/storeAutomation";
 
 /**
- * Per-row identity from the design: the icon path, its tint square and the
- * sub-label naming the playbook that handles the type. Keyed by group id so a
- * new group cannot render without someone choosing how it looks.
+ * Per-row identity from the design: the icon path and its tint square. Keyed
+ * by group id so a new group cannot render without someone choosing how it
+ * looks.
+ *
+ * The design also gave each row a "Playbook: …" sub-label. It is gone: the
+ * sub-line's job is to say whether this row is following the store setting or
+ * has its own answer, which is the one thing the page was failing to tell
+ * anyone. Naming the playbook there was noise competing for the same slot.
  */
 const ROW_STYLE: Record<
   AutomationGroupId,
-  { icon: string; color: string; tint: string; subKey: string }
+  { icon: string; color: string; tint: string }
 > = {
   fraud: {
     icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
     color: "#DC2626",
     tint: "#FEF2F2",
-    subKey: "groupSubFraud",
   },
   pnr: {
     icon: "M21 16V8l-9-5-9 5v8l9 5 9-5M3 8l9 5 9-5M12 13v9",
     color: "#3B82F6",
     tint: "#EFF6FF",
-    subKey: "groupSubPnr",
   },
   not_as_described: {
     icon: "M12 3l9 16H3l9-16M12 9v5M12 17.4v.01",
     color: "#F59E0B",
     tint: "#FFFBEB",
-    subKey: "groupSubNotAsDescribed",
   },
   subscription: {
     icon: "M21 12a9 9 0 1 1-3-6.7M21 4v5h-5",
     color: "#22C55E",
     tint: "#F0FDF4",
-    subKey: "groupSubSubscription",
   },
   refund: {
     icon: "M4 4h16v16l-3-2-3 2-3-2-3 2V4M8 9h8M8 13h5",
     color: "#8B5CF6",
     tint: "#F5F3FF",
-    subKey: "groupSubRefund",
   },
   duplicate: {
     icon: "M9 9h10v10H9zM5 15V5h10",
     color: "#06B6D4",
     tint: "#ECFEFF",
-    subKey: "groupSubDuplicate",
   },
 };
 
@@ -122,21 +121,28 @@ export function AutomationGroupList({
         const style = ROW_STYLE[group.id];
         const current: Segment = value[group.id] ?? "default";
         const effective = current === "default" ? storeMode : current;
-        // A row on "default" says what it is inheriting, so the merchant never
-        // has to hold the switch in their head while reading the list.
-        //
-        // A LOCKED row never inherits, so it never says so. The design's
-        // prototype applies the inherit line to every row without an override,
-        // which on this row prints "Follows store default — Automatic"
-        // immediately beside a badge reading "Always reviewed" — two
-        // contradictory claims about the same dispute type. It keeps its
-        // static sub-line instead.
-        const sub =
-          !group.locked && current === "default"
-            ? t("groupFollowsDefault", {
+
+        /**
+         * THE ONE THING THIS LINE EXISTS TO SAY: is this row following the
+         * house rule above, or has it been given its own answer that ignores
+         * it?
+         *
+         * Without it the page contradicted itself in the only way that
+         * matters — "Review everything" selected at the top, four rows reading
+         * "Automatic", and nothing anywhere explaining that the rows win. A
+         * merchant read that as broken, and they were right to.
+         *
+         * A LOCKED row never follows the house rule and never has its own
+         * answer either; it states its own fact via the badge, so it gets no
+         * sub-line at all rather than a misleading one.
+         */
+        const sub = group.locked
+          ? null
+          : current === "default"
+            ? t("groupFollowingStoreSetting", {
                 mode: effective === "auto" ? t("autoPack") : t("review"),
               })
-            : t(style.subKey);
+            : t("groupHasOwnSetting");
 
         return (
           <div
@@ -191,7 +197,19 @@ export function AutomationGroupList({
               <span style={{ fontSize: 13.5, fontWeight: 600, color: "#202223" }}>
                 {t(group.labelKey)}
               </span>
-              <span style={{ fontSize: 12, color: "#6D7175" }}>{sub}</span>
+              {sub && (
+                <span
+                  style={{
+                    fontSize: 12,
+                    // A row with its own answer is the exception on the page,
+                    // so it reads darker than the ones quietly inheriting.
+                    color: current === "default" ? "#6D7175" : "#3B4149",
+                    fontWeight: current === "default" ? 400 : 500,
+                  }}
+                >
+                  {sub}
+                </span>
+              )}
             </div>
 
             {/* Locked rows state a fact rather than offering a dead control.

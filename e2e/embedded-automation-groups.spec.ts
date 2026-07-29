@@ -72,7 +72,11 @@ const COPY = {
   safeguardToggle: "Review high-value disputes before sending",
   safeguardAmount: "Minimum amount",
   save: "Save changes",
-  customisedBadge: /customised/i,
+  customisedBadge: /with their own setting/i,
+  autoPilotCard: "Auto-pilot",
+  reviewEverythingCard: "Review everything",
+  followingStoreSetting: /Following store setting/i,
+  clearedNote: /Cleared \d+ dispute types/i,
 };
 
 interface StoreConfig {
@@ -366,5 +370,35 @@ test.describe("embedded /app/rules — per-group overrides (§10 steps 1-5)", ()
     expect((await res.json()).error).toContain("not_as_described");
 
     expect(await groupRow("__dd_setup__:group:not_as_described")).toBeNull();
+  });
+
+  test("6 — picking a house rule clears the per-type list", async ({ page }) => {
+    // The defect this replaced: the store-wide choice and the per-type list
+    // were two controls at the same level, with the list silently winning. A
+    // merchant could select "Review everything" and see four rows still
+    // reading "Automatic", with nothing on screen explaining it. The house
+    // rule is now authoritative the moment it is picked.
+    await openRulesPage(page);
+    await groupsToggle(page).click();
+
+    // Give one type its own answer, and confirm the page SAYS so.
+    await segment(page, COPY.fraud, COPY.autoOption).click();
+    await expect(customisedBadge(page)).toBeVisible();
+    await saveChanges(page);
+    expect(await groupRow(FRAUD_ROW), "precondition: fraud has its own setting").toBeTruthy();
+
+    // Now pick a house rule. Every exception goes.
+    await page.getByRole("button", { name: COPY.reviewEverythingCard }).click();
+    await expect(page.getByText(COPY.clearedNote)).toBeVisible();
+    await expect(customisedBadge(page)).toHaveCount(0);
+    await expect(
+      segment(page, COPY.fraud, COPY.storeDefaultOption),
+    ).toHaveAttribute("aria-checked", "true");
+    // Rows state what they are following, rather than leaving the merchant to
+    // infer it from the card above.
+    await expect(page.getByText(COPY.followingStoreSetting).first()).toBeVisible();
+
+    await saveChanges(page);
+    expect(await groupRow(FRAUD_ROW), "the house rule cleared the override").toBeNull();
   });
 });
