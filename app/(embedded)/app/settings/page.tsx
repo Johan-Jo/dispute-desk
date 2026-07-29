@@ -692,7 +692,14 @@ export default function EmbeddedSettingsPage() {
                         <Text as="span" variant="bodyMd" fontWeight="medium">{t("minScore")}</Text>
                         <Text as="span" variant="bodySm" tone="subdued">{t("minScoreHelp")}</Text>
                       </BlockStack>
-                      <div style={{ width: 80, flexShrink: 0 }}>
+                      {/* 120, not 80. At 80 the number input's spinner, the
+                          "%" suffix and the padding left 21px of usable field
+                          for a value needing 28px — so a stored 80 rendered as
+                          "8" and a merchant read their auto-save threshold as
+                          8%. The value was never wrong, only unreadable, which
+                          is the worse failure: nothing looks broken. 120 fits
+                          the 3-digit maximum (100) with room to spare. */}
+                      <div style={{ width: 120, flexShrink: 0 }}>
                         <TextField
                           label=""
                           labelHidden
