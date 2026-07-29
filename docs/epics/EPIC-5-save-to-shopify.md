@@ -66,7 +66,7 @@ Push structured evidence fields from the internal pack back to Shopify's dispute
 ### 5.5 — UX Copy Compliance
 
 - All labels use "Save evidence" language.
-- Info text: "Saves structured evidence fields to Shopify via API. Submission to the card network happens in Shopify Admin."
+- Info text: "Submits the defence package to Shopify via API. Shopify passes it to the card network." (Corrected 2026-07-29 — the original said submission "happens in Shopify Admin", which stopped being true when `submitEvidence: true` became unconditional on 2026-05-16. See CLAUDE.md § What It Is.)
 - Never: "Submit response", "Submit to card network", "File dispute response".
 
 ### 5.6 — Mutation (Pre-existing)
