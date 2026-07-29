@@ -50,7 +50,7 @@ describe("automation page wiring", () => {
     // One commit point means the on-screen values are the payload. Sending
     // `savedGroups` / `savedSafeguard` here would silently discard whatever
     // the merchant just changed and report success.
-    const fn = block(page, "save = useCallback", "setAllGroups");
+    const fn = block(page, "save = useCallback", "pickMode");
     expect(fn).toMatch(/body: JSON\.stringify\(\{/);
     expect(fn).toContain("mode,");
     expect(fn).toContain("groups,");
@@ -59,24 +59,45 @@ describe("automation page wiring", () => {
   });
 
   it("save commits all three halves of the draft, so dirty cannot stick", () => {
-    const fn = block(page, "save = useCallback", "setAllGroups");
+    const fn = block(page, "save = useCallback", "pickMode");
     expect(fn).toContain("setSavedMode(mode)");
     expect(fn).toContain("setSavedSafeguard(safeguard)");
     expect(fn).toContain("setSavedGroups(groups)");
   });
 
   it("dirty compares every control, not just the switch", () => {
-    const fn = block(page, "dirty =", "touch");
+    const fn = block(page, "dirty =", "[clearedCount");
     expect(fn).toContain("mode !== savedMode");
     expect(fn).toContain("safeguard.enabled !== savedSafeguard.enabled");
     expect(fn).toContain("sameGroups(groups, savedGroups)");
   });
 
-  it("bulk actions never write a row for a locked group", () => {
-    // `evaluateAutoSubmitGuards` ignores such a row 100% of the time, so
-    // "Automate all" writing one would be a lie stored in the database.
-    const fn = block(page, "setAllGroups", "customisedCount");
-    expect(fn).toMatch(/if \(!group\.locked\)/);
+  it("picking a house rule CLEARS the per-type list", () => {
+    // The whole fix. Two controls at the same level with the list silently
+    // winning is what let "Review everything" sit above four rows reading
+    // "Automatic" with no explanation — the page contradicted itself and read
+    // as broken. The house rule is now authoritative at the moment it is
+    // picked; anything set on a row afterwards takes precedence again.
+    const fn = block(page, "pickMode = useCallback", "customisedCount");
+    expect(fn).toContain("setGroups({})");
+    expect(fn).toContain("setMode(next)");
+    // And it says how many it wiped — an invisible reset is as confusing as
+    // the contradiction it replaced.
+    expect(fn).toContain("setClearedCount(Object.keys(groups).length)");
+  });
+
+  it("both house-rule cards go through pickMode, so neither can skip the clear", () => {
+    expect(page).toContain('onClick={() => pickMode("auto")}');
+    expect(page).toContain('onClick={() => pickMode("review")}');
+    expect(page).not.toMatch(/onClick=\{\(\) => \{\s*touch\(\);\s*setMode\(/);
+  });
+
+  it("the bulk buttons are gone — the house rule is the bulk action", () => {
+    // They were identical in effect to picking the matching rule, except they
+    // left six exceptions the next house-rule click would wipe; and with every
+    // row already set they appeared to do nothing at all.
+    expect(page).not.toContain("groupsAutomateAll");
+    expect(page).not.toContain("groupsReviewAll");
   });
 
   it("the section opens only when overrides already exist", () => {
@@ -118,12 +139,12 @@ describe("automation group copy", () => {
     "groupsGeneralNote",
     "groupsShow",
     "groupsHide",
-    "groupsAutomateAll",
-    "groupsReviewAll",
     "groupStoreDefault",
     "groupStoreDefaultHint",
-    "groupFollowsDefault",
+    "groupFollowingStoreSetting",
+    "groupHasOwnSetting",
     "groupAlwaysReviewed",
+    "modeClearedExceptions",
     "safeguardSubtitle",
     "safeguardAmountPrefix",
     "safeguardAmountSuffix",
@@ -132,17 +153,18 @@ describe("automation group copy", () => {
     "saveChanges",
     "saveSaved",
     ...AUTOMATION_GROUPS.map((g) => g.labelKey),
-    ...AUTOMATION_GROUPS.map(
-      (g) =>
-        `groupSub${g.id
-          .split("_")
-          .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-          .join("")}`,
-    ),
     ...AUTOMATION_GROUPS.filter((g) => g.lockedReasonKey).map(
       (g) => g.lockedReasonKey as string,
     ),
   ];
+
+  it("the copy the removed controls used is gone too", () => {
+    // Dead copy outlives the control that rendered it and then gets
+    // resurrected by someone who assumes it is still wired to something.
+    for (const key of ["groupsAutomateAll", "groupsReviewAll", "groupFollowsDefault"]) {
+      expect(rulesNamespace("en")[key], `rules.${key} should be deleted`).toBeUndefined();
+    }
+  });
 
   for (const locale of LOCALES) {
     it(`${locale} has every rules.group* key`, () => {
@@ -153,12 +175,21 @@ describe("automation group copy", () => {
     });
   }
 
-  it("an inheriting row names the mode it inherits, not just 'default'", () => {
-    // "Store default" alone is mysterious — the sub-line has to say WHICH
-    // default, and re-render when the switch above changes.
-    expect(rulesNamespace("en").groupFollowsDefault).toContain("{mode}");
-    expect(component).toContain("groupFollowsDefault");
+  it("every row says whether it follows the house rule or overrides it", () => {
+    // The one fact the page was failing to state. "Review everything" selected
+    // above four rows reading "Automatic", with nothing explaining that the
+    // rows win, is why a merchant read the page as broken.
+    expect(rulesNamespace("en").groupFollowingStoreSetting).toContain("{mode}");
+    expect(component).toContain("groupFollowingStoreSetting");
+    expect(component).toContain("groupHasOwnSetting");
+    // And it names the inherited mode rather than saying "default".
     expect(component).toContain("autoPack");
+  });
+
+  it("the cleared-exceptions note says how many and which rule now applies", () => {
+    const copy = rulesNamespace("en").modeClearedExceptions;
+    expect(copy).toContain("{count}");
+    expect(copy).toContain("{mode}");
   });
 
   it("the locked row's note no longer repeats its own badge", () => {
