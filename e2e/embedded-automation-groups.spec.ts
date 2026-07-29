@@ -177,6 +177,13 @@ async function authedContext(browser: Browser, baseURL: string | undefined) {
 
 const groupsToggle = (page: Page) => page.locator('button[aria-controls="automation-groups"]');
 
+/**
+ * The "{n} customised" badge. It sits beside the section heading, NOT inside
+ * the show/hide button — scoping it to the button silently passed the
+ * hidden-at-zero check for the wrong reason.
+ */
+const customisedBadge = (page: Page) => page.getByText(COPY.customisedBadge);
+
 /** One row's three-way segmented control. */
 const segment = (page: Page, group: string, option: string) =>
   page.getByRole("radiogroup", { name: group }).getByRole("radio", { name: option });
@@ -257,7 +264,7 @@ test.describe("embedded /app/rules — per-group overrides (§10 steps 1-5)", ()
     await expect(toggle).toBeVisible();
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
     // The "{n} customised" badge is hidden entirely at zero, not rendered as "0".
-    await expect(toggle.getByText(COPY.customisedBadge)).toHaveCount(0);
+    await expect(customisedBadge(page)).toHaveCount(0);
     await expect(page.getByRole("radiogroup", { name: COPY.fraud })).toHaveCount(0);
   });
 
@@ -283,7 +290,7 @@ test.describe("embedded /app/rules — per-group overrides (§10 steps 1-5)", ()
     expect(row!.action?.mode).toBe("auto");
     expect(row!.enabled).toBe(true);
 
-    await expect(groupsToggle(page).getByText(COPY.customisedBadge)).toBeVisible();
+    await expect(customisedBadge(page)).toBeVisible();
   });
 
   test("3 — THE BLOCKER: saving the safeguard must not delete the group row", async ({
@@ -331,7 +338,7 @@ test.describe("embedded /app/rules — per-group overrides (§10 steps 1-5)", ()
     await saveChanges(page);
 
     expect(await groupRow(FRAUD_ROW), "inheriting means no row at all").toBeNull();
-    await expect(groupsToggle(page).getByText(COPY.customisedBadge)).toHaveCount(0);
+    await expect(customisedBadge(page)).toHaveCount(0);
   });
 
   test("5 — not_as_described is a fact, not a control, and the API enforces it", async ({
