@@ -11,9 +11,22 @@
  * wipe their threshold — including `POST /api/setup/automation` and the live
  * admin route `/api/admin/backfill-inquiry-pairs`.
  *
- * The helper is deleted. This test stops the pattern coming back: the only
- * places allowed to bulk-delete setup rules are the canonical writer and the
- * SQL migrations that own the schema.
+ * The helper is deleted. This test stops the pattern coming back.
+ *
+ * UPDATED 2026-07-28 — this file had become a trap in two ways:
+ *
+ *  1. Its comment described a `write_store_automation` RPC doing the
+ *     delete+insert atomically under a row lock. **There is no such RPC.** The
+ *     migrations that would have created it were in closed PR #443 and never
+ *     merged; the test passed anyway because it only greps for string patterns
+ *     and never asserted the function exists. Documentation that lies is worse
+ *     than none, so the claim is gone rather than softened.
+ *  2. Now that `storeAutomation.ts` deletes by an explicit name list, it no
+ *     longer contains a `${SETUP_RULE_PREFIX}%` pattern — so it stops matching
+ *     the scan, the allow-list entry goes dead, and the test would keep
+ *     passing while silently guarding nothing. The allow-list is therefore
+ *     EMPTY (nobody may prefix-delete, canonical writer included) and a
+ *     positive assertion pins the writer's delete shape directly.
  */
 
 import { describe, it, expect } from "vitest";
@@ -26,10 +39,14 @@ const ROOT = resolve(__dirname, "../..");
 const SCANNED = ["app", "lib", "components"];
 
 /**
- * The single canonical writer. It delegates to the `write_store_automation`
- * RPC, which does the delete+insert atomically under a row lock.
+ * Empty on purpose. `lib/rules/storeAutomation.ts` used to be exempt because
+ * it was the one place a `__dd_setup__:%` prefix delete was legitimate. It
+ * isn't any more: a prefix delete would take the merchant's per-group
+ * overrides with it. Every delete now names exactly what it removes.
  */
-const ALLOWED = new Set(["lib/rules/storeAutomation.ts"]);
+const ALLOWED = new Set<string>([]);
+
+const CANONICAL_WRITER = "lib/rules/storeAutomation.ts";
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
@@ -76,10 +93,32 @@ describe("no destructive bulk deletes of setup-owned rules", () => {
 
     expect(
       offenders,
-      `These files bulk-delete setup-owned rules. Only lib/rules/storeAutomation.ts ` +
-        `may do that (via the write_store_automation RPC) — a prefix delete removes ` +
-        `the store-wide switch AND the merchant's high-value safeguard.`,
+      `These files bulk-delete setup-owned rules by prefix. Nothing may do that — ` +
+        `a prefix delete removes the store-wide switch, the merchant's high-value ` +
+        `safeguard AND every per-group override. Delete by explicit name instead ` +
+        `(see SETUP_OWNED_RULE_NAMES in ${CANONICAL_WRITER}).`,
     ).toEqual([]);
+  });
+
+  it("the canonical writer deletes by name, never by LIKE", () => {
+    // The positive half. Without it, narrowing the delete would make the scan
+    // above stop matching this file, and the guard would quietly evaporate.
+    const src = readFileSync(resolve(ROOT, CANONICAL_WRITER), "utf8");
+    const code = src
+      .split("\n")
+      .filter((l) => !l.trim().startsWith("*") && !l.trim().startsWith("//"))
+      .join("\n");
+
+    expect(code).not.toMatch(/\.like\s*\(/);
+    expect(code).toMatch(/\.delete\s*\(\s*\)/);
+    expect(code).toMatch(/\.in\s*\(\s*["']name["']\s*,\s*SETUP_OWNED_RULE_NAMES/);
+  });
+
+  it("the writer's delete list covers every group name", () => {
+    // A group name missing from the list leaves an orphan row routing disputes
+    // through a control the UI no longer shows.
+    const src = readFileSync(resolve(ROOT, CANONICAL_WRITER), "utf8");
+    expect(src).toMatch(/ALL_GROUP_RULE_NAMES/);
   });
 
   it("the deleted destructive helpers have not been reintroduced", () => {

@@ -58,6 +58,7 @@ beforeEach(() => {
   mockRead.mockResolvedValue({
     mode: "auto",
     safeguard: { enabled: true, amount: 500 },
+    groups: {},
   });
   mockWrite.mockImplementation(async (_shopId, next) => next);
 });
@@ -69,6 +70,7 @@ describe("GET /api/automation/store", () => {
     expect(await res.json()).toEqual({
       mode: "auto",
       safeguard: { enabled: true, amount: 500 },
+      groups: {},
       rulesAccess: { allowed: true, reason: null },
     });
   });
@@ -106,6 +108,7 @@ describe("PUT /api/automation/store", () => {
     expect(mockWrite).toHaveBeenCalledWith("shop-1", {
       mode: "auto",
       safeguard: { enabled: true, amount: 750 },
+      groups: {},
     });
   });
 
@@ -117,6 +120,7 @@ describe("PUT /api/automation/store", () => {
     expect(mockWrite).toHaveBeenCalledWith("shop-1", {
       mode: "review",
       safeguard: { enabled: false, amount: 0 },
+      groups: {},
     });
   });
 
@@ -143,6 +147,120 @@ describe("PUT /api/automation/store", () => {
       }),
     );
     expect(res.status).toBe(400);
+  });
+
+  // ── groups: OMISSION PRESERVES ──────────────────────────────────────────
+  //
+  // The alternative — `rec.groups ?? {}` — makes every caller responsible for
+  // state it doesn't render. The setup wizard and the Settings save-mode radio
+  // both PUT `{ mode, safeguard }` only; under replace-semantics either one
+  // would silently delete a merchant's overrides.
+
+  it("a mode-only write PRESERVES the stored group overrides", async () => {
+    mockRead.mockResolvedValue({
+      mode: "review",
+      safeguard: { enabled: false, amount: 500 },
+      groups: { fraud: "auto" },
+    });
+
+    const res = await PUT(
+      makeReq("PUT", { body: { mode: "auto", safeguard: { enabled: false } } }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockWrite).toHaveBeenCalledWith("shop-1", {
+      mode: "auto",
+      safeguard: { enabled: false, amount: 0 },
+      groups: { fraud: "auto" },
+    });
+  });
+
+  it("an explicit groups object REPLACES the set", async () => {
+    mockRead.mockResolvedValue({
+      mode: "review",
+      safeguard: { enabled: false, amount: 500 },
+      groups: { fraud: "auto", pnr: "review" },
+    });
+
+    const res = await PUT(
+      makeReq("PUT", {
+        body: {
+          mode: "review",
+          safeguard: { enabled: false },
+          groups: { pnr: "auto" },
+        },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockWrite).toHaveBeenCalledWith(
+      "shop-1",
+      expect.objectContaining({ groups: { pnr: "auto" } }),
+    );
+  });
+
+  it("an empty groups object CLEARS every override", async () => {
+    mockRead.mockResolvedValue({
+      mode: "review",
+      safeguard: { enabled: false, amount: 500 },
+      groups: { fraud: "auto" },
+    });
+
+    const res = await PUT(
+      makeReq("PUT", {
+        body: { mode: "review", safeguard: { enabled: false }, groups: {} },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockWrite).toHaveBeenCalledWith(
+      "shop-1",
+      expect.objectContaining({ groups: {} }),
+    );
+  });
+
+  it("400s on an unknown group id rather than dropping it silently", async () => {
+    const res = await PUT(
+      makeReq("PUT", {
+        body: {
+          mode: "auto",
+          safeguard: { enabled: false },
+          groups: { fruad: "auto" },
+        },
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("unknown group");
+    expect(mockWrite).not.toHaveBeenCalled();
+  });
+
+  it("400s on a locked group — the engine would ignore the row anyway", async () => {
+    const res = await PUT(
+      makeReq("PUT", {
+        body: {
+          mode: "auto",
+          safeguard: { enabled: false },
+          groups: { not_as_described: "auto" },
+        },
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("cannot be automated");
+    expect(mockWrite).not.toHaveBeenCalled();
+  });
+
+  it("400s on a group mode that is neither auto nor review", async () => {
+    const res = await PUT(
+      makeReq("PUT", {
+        body: {
+          mode: "auto",
+          safeguard: { enabled: false },
+          groups: { fraud: "automated" },
+        },
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(mockWrite).not.toHaveBeenCalled();
   });
 
   it("403s on a gated plan", async () => {

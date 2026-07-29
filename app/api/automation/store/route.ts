@@ -20,6 +20,7 @@ import {
   writeStoreAutomation,
   type StoreAutomationMode,
 } from "@/lib/rules/storeAutomation";
+import { findGroup, type GroupOverrides } from "@/lib/rules/automationGroups";
 
 export const runtime = "nodejs";
 
@@ -91,6 +92,7 @@ export async function PUT(req: NextRequest) {
     shop_id?: string;
     mode?: string;
     safeguard?: { enabled?: boolean; amount?: number };
+    groups?: Record<string, unknown>;
   };
 
   const shopId = rec.shop_id ?? getShopId(req);
@@ -117,6 +119,49 @@ export async function PUT(req: NextRequest) {
     }
   }
 
+  // `groups` semantics — OMISSION PRESERVES.
+  //
+  //   omitted    → keep whatever is stored (partial update)
+  //   { ... }    → replace the override set wholesale
+  //   {}         → explicitly clear all overrides
+  //
+  // Without this every caller that doesn't render groups (the setup wizard,
+  // the Settings save-mode radio) would have to round-trip state it knows
+  // nothing about, and forgetting to would silently delete a merchant's
+  // overrides. A store-mode update must not mean "replace the entire
+  // automation configuration".
+  let groups: GroupOverrides | undefined;
+  if (rec.groups !== undefined) {
+    if (typeof rec.groups !== "object" || rec.groups === null || Array.isArray(rec.groups)) {
+      return NextResponse.json({ error: "groups must be an object" }, { status: 400 });
+    }
+    const validated: GroupOverrides = {};
+    for (const [key, value] of Object.entries(rec.groups)) {
+      const group = findGroup(key);
+      // A typo'd group id is loud, not silently dropped — a silent drop reads
+      // to the merchant as "saved" while nothing changed.
+      if (!group) {
+        return NextResponse.json({ error: `unknown group '${key}'` }, { status: 400 });
+      }
+      if (group.locked) {
+        // Server-side enforcement of the engine lock. Without it a
+        // hand-crafted PUT writes a row that permanently lies to the UI.
+        return NextResponse.json(
+          { error: `group '${key}' cannot be automated` },
+          { status: 400 },
+        );
+      }
+      if (value !== "auto" && value !== "review") {
+        return NextResponse.json(
+          { error: `group '${key}' must be 'auto' or 'review'` },
+          { status: 400 },
+        );
+      }
+      validated[group.id] = value;
+    }
+    groups = validated;
+  }
+
   const isSetupWrite = req.headers.get(SETUP_EXEMPT_HEADER) === "1";
   if (!isSetupWrite) {
     const access = await getRulesAccess(shopId);
@@ -129,12 +174,18 @@ export async function PUT(req: NextRequest) {
   }
 
   try {
+    // Omission preserves: read what's stored and pass it straight back, so a
+    // mode-only write leaves the overrides exactly as they were.
+    const effectiveGroups =
+      groups ?? (await readStoreAutomation(shopId)).groups;
+
     const saved = await writeStoreAutomation(shopId, {
       mode,
       safeguard: {
         enabled: safeguardEnabled,
         amount: safeguardEnabled ? (rawAmount as number) : 0,
       },
+      groups: effectiveGroups,
     });
     return NextResponse.json({ ok: true, ...saved });
   } catch (e) {
