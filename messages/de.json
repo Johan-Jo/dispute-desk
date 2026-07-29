@@ -2511,7 +2511,19 @@
     "alwaysReviewedIncomplete": "Alles unterhalb Ihres Schwellenwerts für die Beweisqualität",
     "customRulesEmpty": "Noch keine eigenen Regeln. Die meisten Shops brauchen keine – die Einstellungen oben decken die üblichen Fälle ab.",
     "customRulesEmptyCta": "Regel hinzufügen",
-    "browsePlaybooks": "Playbooks durchsuchen"
+    "browsePlaybooks": "Playbooks durchsuchen",
+    "groupsSectionTitle": "Bestimmte Streitfalltypen anders behandeln",
+    "groupsSectionSubtitle": "Optional. Alles, was Sie hier nicht festlegen, folgt Ihrer Store-Standardeinstellung.",
+    "groupsCustomisedBadge": "{count} angepasst",
+    "groupUseDefault": "Store-Standard verwenden ({mode})",
+    "groupsGeneralNote": "Jeder hier nicht aufgeführte Streitfalltyp — einschließlich allgemeiner und nicht kategorisierter Streitfälle — folgt Ihrer Store-Standardeinstellung.",
+    "groupFraud": "Kartenbetrug",
+    "groupPnr": "Ware nicht erhalten",
+    "groupNotAsDescribed": "Nicht wie beschrieben",
+    "groupNotAsDescribedLocked": "Wird immer geprüft. Das sind subjektive Qualitätsansprüche, bei denen Sie Zusammenhänge kennen können, die die Beweise nicht erfassen.",
+    "groupSubscription": "Abonnement gekündigt",
+    "groupRefund": "Rückerstattung nicht verarbeitet",
+    "groupDuplicate": "Doppelte Belastung"
   },
   "settings": {
     "title": "Einstellungen",

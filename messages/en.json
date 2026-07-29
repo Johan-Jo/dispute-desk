@@ -2511,7 +2511,19 @@
     "alwaysReviewedIncomplete": "Anything below your evidence quality threshold",
     "customRulesEmpty": "No custom rules yet. Most stores don't need any — the settings above cover the usual cases.",
     "customRulesEmptyCta": "Add a rule",
-    "browsePlaybooks": "Browse playbooks"
+    "browsePlaybooks": "Browse playbooks",
+    "groupsSectionTitle": "Handle some dispute types differently",
+    "groupsSectionSubtitle": "Optional. Anything you don't set here follows your store default.",
+    "groupsCustomisedBadge": "{count} customised",
+    "groupUseDefault": "Use store default ({mode})",
+    "groupsGeneralNote": "Any dispute type not listed here — including general and uncategorised disputes — follows your store default.",
+    "groupFraud": "Card fraud",
+    "groupPnr": "Item not received",
+    "groupNotAsDescribed": "Not as described",
+    "groupNotAsDescribedLocked": "Always reviewed. These are subjective quality claims where you may know context the evidence doesn't capture.",
+    "groupSubscription": "Subscription cancelled",
+    "groupRefund": "Refund not processed",
+    "groupDuplicate": "Duplicate charge"
   },
   "settings": {
     "title": "Settings",

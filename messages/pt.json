@@ -2511,7 +2511,19 @@
     "alwaysReviewedIncomplete": "Tudo abaixo do seu limiar de qualidade das provas",
     "customRulesEmpty": "Ainda não há regras personalizadas. A maioria das lojas não precisa — as definições acima cobrem os casos habituais.",
     "customRulesEmptyCta": "Adicionar regra",
-    "browsePlaybooks": "Explorar playbooks"
+    "browsePlaybooks": "Explorar playbooks",
+    "groupsSectionTitle": "Tratar alguns tipos de disputa de forma diferente",
+    "groupsSectionSubtitle": "Opcional. Tudo o que você não definir aqui segue o padrão da sua loja.",
+    "groupsCustomisedBadge": "{count} personalizados",
+    "groupUseDefault": "Usar o padrão da loja ({mode})",
+    "groupsGeneralNote": "Qualquer tipo de disputa não listado aqui — incluindo disputas gerais e não categorizadas — segue o padrão da sua loja.",
+    "groupFraud": "Fraude de cartão",
+    "groupPnr": "Item não recebido",
+    "groupNotAsDescribed": "Fora da descrição",
+    "groupNotAsDescribedLocked": "Sempre revisadas. São reclamações subjetivas de qualidade em que você pode conhecer um contexto que as provas não capturam.",
+    "groupSubscription": "Assinatura cancelada",
+    "groupRefund": "Reembolso não processado",
+    "groupDuplicate": "Cobrança duplicada"
   },
   "settings": {
     "title": "Configurações",
