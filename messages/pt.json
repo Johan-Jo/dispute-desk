@@ -533,7 +533,7 @@
       "createdTitle": "Disputa criada",
       "createdDesc": "Nova disputa foi registrada",
       "packTitle": "Em andamento",
-      "packDesc": "Evidências enviadas pelo DisputeDesk",
+      "packDesc": "As evidências são enviadas ao Shopify pelo DisputeDesk",
       "savedTitle": "Enviar evidências",
       "savedDesc": "Envio pendente",
       "reviewTitle": "Revisão bancária",
@@ -2523,7 +2523,8 @@
     "groupNotAsDescribedLocked": "Sempre revisadas. São reclamações subjetivas de qualidade em que você pode conhecer um contexto que as provas não capturam.",
     "groupSubscription": "Assinatura cancelada",
     "groupRefund": "Reembolso não processado",
-    "groupDuplicate": "Cobrança duplicada"
+    "groupDuplicate": "Cobrança duplicada",
+    "reasonUnrecognized": "Pagamento não reconhecido"
   },
   "settings": {
     "title": "Configurações",
@@ -2813,7 +2814,8 @@
     "creditNotProcessed": "Crédito não processado",
     "subscriptionCanceled": "Assinatura cancelada",
     "duplicate": "Duplicado",
-    "general": "Geral"
+    "general": "Geral",
+    "unrecognized": "Pagamento não reconhecido"
   },
   "table": {
     "disputeId": "ID da disputa",
@@ -3802,7 +3804,7 @@
     },
     "storeProfile": {
       "title": "Conte-nos como sua loja funciona",
-      "subtitle": "Usaremos isso para recomendar a cobertura de disputas e o nível de automação ideais.",
+      "subtitle": "Usaremos isto para configurar as evidências e os playbooks certos para a sua loja.",
       "whatDoYouSell": "O que você vende?",
       "sellHint": "Selecione todas as opções aplicáveis. Isso nos ajuda a recomendar os tipos certos de evidência.",
       "physical": "Produtos físicos",
@@ -4356,8 +4358,12 @@
       "thresholdInvalid": "Introduza um valor superior a 0",
       "safeguardHint": "Continuamos a criar a resposta automaticamente — apenas aguarda a sua aprovação antes de ser guardada no Shopify.",
       "setupSummaryTitle": "O que configurámos para si",
-      "setupSummaryPlaybooks": "{count} playbooks adaptados ao que a sua loja vende",
-      "setupSummaryInquiry": "Consultas iniciais cobertas automaticamente"
+      "setupSummaryInquiry": "Consultas iniciais cobertas automaticamente",
+      "setupSummaryReady": "Pronto para disputas de {families}.",
+      "setupSummaryModeAuto": "As respostas fortes são criadas e enviadas ao Shopify automaticamente. Tudo o que exigir um olhar mais atento aguarda a sua aprovação.",
+      "setupSummaryModeReview": "Cada resposta é criada para si e aguarda a sua aprovação antes de seguir para o Shopify.",
+      "setupSummarySafeguard": "Disputas acima de ${amount} aguardam sempre a sua aprovação.",
+      "setupSummaryPointer": "Pode ajustar tipos de disputa específicos mais tarde na página de Automação."
     }
   },
   "coverage": {
@@ -4401,7 +4407,6 @@
     "chargebackConfigured": "{count} fluxos de chargeback",
     "fullyConfigured": "{count} totalmente configurados",
     "gapsFound": "{count} lacunas",
-    "noAutomation": "Sem regra de automação",
     "reviewOnly": "Apenas revisão — sem playbook",
     "mappedTemplate": "Padrão: {name}",
     "noMappedTemplate": "Sem modelo padrão",
@@ -4442,11 +4447,13 @@
     "colAction": "Ação",
     "handlingConfigured": "Configurado",
     "handlingMissingPlaybook": "Playbook ausente",
-    "handlingNeedsRule": "Precisa de regra",
     "inquiryEnabled": "Ativado",
     "inquiryDisabled": "Desativado",
     "modeAutoSubmit": "Envio automático",
-    "modeReviewLabel": "Revisar antes de enviar"
+    "modeReviewLabel": "Revisar antes de enviar",
+    "modeWithSource": "{mode} — {source}",
+    "modeSourceOverride": "personalizado",
+    "modeSourceStoreDefault": "padrão da loja"
   },
   "disputeTimeline": {
     "title": "Histórico",

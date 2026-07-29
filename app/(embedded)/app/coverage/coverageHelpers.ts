@@ -5,11 +5,17 @@
  */
 
 import type {
+  AutomationSource,
   LifecycleFamilyCoverage,
   LifecyclePhaseHandling,
 } from "@/lib/coverage/deriveLifecycleCoverage";
 
-export type ChargebackStatus = "configured" | "missing-playbook" | "needs-rule";
+/**
+ * `needs-rule` is gone. It meant "this family has no automation rule", which
+ * stopped being a real state once a family without its own rule inherits the
+ * store-wide switch. The only remaining gap is a missing playbook.
+ */
+export type ChargebackStatus = "configured" | "missing-playbook";
 export type InquiryStatus = "enabled" | "disabled";
 /**
  * Two merchant-facing modes only — see lib/rules/normalizeMode.ts.
@@ -23,12 +29,12 @@ export interface CoverageRow {
   chargeback: ChargebackStatus;
   inquiry: InquiryStatus;
   mode: CurrentMode;
+  /** Whether `mode` is pinned on this family or inherited from the switch. */
+  modeSource: AutomationSource;
 }
 
 export function chargebackStatus(h: LifecyclePhaseHandling): ChargebackStatus {
-  if (!h.hasGap) return "configured";
-  if (h.automationMode !== "none") return "missing-playbook";
-  return "needs-rule";
+  return h.hasGap ? "missing-playbook" : "configured";
 }
 
 export function inquiryStatus(h: LifecyclePhaseHandling): InquiryStatus {
@@ -46,6 +52,7 @@ export function toRow(family: LifecycleFamilyCoverage): CoverageRow {
     chargeback: chargebackStatus(family.chargeback),
     inquiry: inquiryStatus(family.inquiry),
     mode: currentMode(family.chargeback),
+    modeSource: family.chargeback.automationSource,
   };
 }
 

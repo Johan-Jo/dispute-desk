@@ -27,15 +27,37 @@ export interface ReasonMappingInput {
   is_active: boolean;
 }
 
+/**
+ * WHY the family's mode reads the way it does.
+ *
+ * "Auto" from inheritance and "Auto" from a pin behave identically today and
+ * diverge the moment the store switch moves. Without this a merchant cannot
+ * understand why flipping the switch changed one family and not another.
+ */
+export type AutomationSource = "override" | "store_default";
+
 export interface LifecyclePhaseHandling {
   phase: "inquiry" | "chargeback";
-  /** From rules (phase-blind — same for both phases currently) */
+  /**
+   * The EFFECTIVE mode for this family — what a dispute would actually get.
+   * Never `"none"`: a family with no reason rule inherits the store-wide
+   * switch, which is what the engine does at tier-2.
+   */
   automationMode: AutomationMode;
+  /** Whether `automationMode` came from a per-family rule or the store switch. */
+  automationSource: AutomationSource;
   /** Active packs matching this family */
   playbooks: { id: string; name: string; disputeType: string }[];
   /** Default template from reason_template_mappings for this phase */
   mappedTemplateName: string | null;
-  /** True if automation mode is "none" AND no playbooks AND no mapped template */
+  /**
+   * A gap is **no playbook installed** for the family.
+   *
+   * Automation mode is deliberately NOT a gap dimension any more: it always
+   * resolves — to an override or to the store default — so counting it as
+   * "missing" was what made every family read "Review / needs a rule" once the
+   * per-family rules collapsed into one switch.
+   */
   hasGap: boolean;
   /** Merchant-facing warnings (i18n keys) */
   warnings: string[];
@@ -81,6 +103,9 @@ interface PackInput {
   dispute_type: string;
   status: string;
 }
+
+/** The store-wide switch, as `GET /api/automation/store` reports it. */
+type StoreDefaultMode = "auto" | "review";
 
 // ---------------------------------------------------------------------------
 // Pack type → family match
@@ -159,10 +184,22 @@ function derivePhaseHandling(
   matchingRule: RuleInput | null,
   matchingPacks: PackInput[],
   mappings: ReasonMappingInput[],
+  storeDefaultMode: StoreDefaultMode,
 ): LifecyclePhaseHandling {
-  const automationMode = matchingRule
+  // No reason rule for this family means it inherits the store-wide switch —
+  // the tier-2 catch-all the engine falls through to. Reporting "none" here is
+  // what produced seven rows reading "Review" for a store set to Auto-pilot:
+  // the only setup rows left after the collapse are the fallback (`match: {}`)
+  // and the safeguard (`match: { amount_range }`), and neither carries a
+  // `reason`, so neither can define a family's mode.
+  const automationMode: AutomationMode = matchingRule
     ? ruleToAutomationMode(matchingRule)
-    : "none";
+    : storeDefaultMode === "auto"
+      ? "automated"
+      : "review_first";
+  const automationSource: AutomationSource = matchingRule
+    ? "override"
+    : "store_default";
 
   const playbooks = matchingPacks.map((p) => ({ id: p.id, name: p.name, disputeType: p.dispute_type }));
 
@@ -176,17 +213,11 @@ function derivePhaseHandling(
   );
   const mappedTemplateName = phaseMapping?.template_name ?? null;
 
-  const hasGap =
-    automationMode === "none" &&
-    playbooks.length === 0 &&
-    mappedTemplateName === null;
+  const hasGap = playbooks.length === 0 && mappedTemplateName === null;
 
   const warnings: string[] = [];
-  if (playbooks.length === 0 && mappedTemplateName === null) {
+  if (hasGap) {
     warnings.push("coverage.noPlaybook");
-  }
-  if (automationMode === "none") {
-    warnings.push("coverage.noAutomation");
   }
   if (automationMode === "review_first" && playbooks.length === 0) {
     warnings.push("coverage.reviewOnly");
@@ -195,6 +226,7 @@ function derivePhaseHandling(
   return {
     phase,
     automationMode,
+    automationSource,
     playbooks,
     mappedTemplateName,
     hasGap,
@@ -206,6 +238,12 @@ export function deriveLifecycleCoverage(
   rules: RuleInput[],
   activePacks: PackInput[],
   reasonMappings: ReasonMappingInput[],
+  /**
+   * The store-wide switch, which every family without its own rule inherits.
+   * Defaulted for back-compat with callers that predate the group model; a
+   * caller that has the real value must pass it (`GET /api/automation/store`).
+   */
+  storeDefaultMode: StoreDefaultMode = "review",
 ): LifecycleCoverageSummary {
   const families: LifecycleFamilyCoverage[] = DISPUTE_FAMILIES.map((family) => {
     const matchingPacks = activePacks.filter((p) => packMatchesFamily(p, family));
@@ -222,6 +260,7 @@ export function deriveLifecycleCoverage(
       inquiryRule,
       matchingPacks,
       reasonMappings,
+      storeDefaultMode,
     );
     const chargeback = derivePhaseHandling(
       "chargeback",
@@ -229,6 +268,7 @@ export function deriveLifecycleCoverage(
       chargebackRule,
       matchingPacks,
       reasonMappings,
+      storeDefaultMode,
     );
 
     // Fully covered = BOTH phases have handling. Partial = one phase. Not covered = both gaps.

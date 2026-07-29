@@ -533,7 +533,7 @@
       "createdTitle": "Tvist skapad",
       "createdDesc": "Ny tvist har registrerats",
       "packTitle": "Pågående arbete",
-      "packDesc": "Bevis skickas av DisputeDesk",
+      "packDesc": "Bevis skickas till Shopify av DisputeDesk",
       "savedTitle": "Skicka bevis",
       "savedDesc": "Inväntar inskickning",
       "reviewTitle": "Bankgranskning",
@@ -2523,7 +2523,8 @@
     "groupNotAsDescribedLocked": "Granskas alltid. Det här är subjektiva kvalitetsanspråk där du kan känna till sammanhang som bevisen inte fångar.",
     "groupSubscription": "Prenumeration avslutad",
     "groupRefund": "Återbetalning inte genomförd",
-    "groupDuplicate": "Dubbel debitering"
+    "groupDuplicate": "Dubbel debitering",
+    "reasonUnrecognized": "Okänd betalning"
   },
   "settings": {
     "title": "Inställningar",
@@ -2813,7 +2814,8 @@
     "creditNotProcessed": "Kredit ej behandlad",
     "subscriptionCanceled": "Prenumeration avbruten",
     "duplicate": "Dubblett",
-    "general": "Allmänt"
+    "general": "Allmänt",
+    "unrecognized": "Okänd betalning"
   },
   "table": {
     "disputeId": "Disput-ID",
@@ -3944,7 +3946,7 @@
     },
     "storeProfile": {
       "title": "Berätta hur din butik fungerar",
-      "subtitle": "Vi använder detta för att rekommendera rätt tvisttäckning och automatiseringsnivå.",
+      "subtitle": "Vi använder detta för att sätta upp rätt bevis och playbooks för din butik.",
       "whatDoYouSell": "Vad säljer du?",
       "sellHint": "Välj alla som gäller. Detta hjälper oss rekommendera rätt bevistyper.",
       "physical": "Fysiska varor",
@@ -4356,8 +4358,12 @@
       "thresholdInvalid": "Ange ett belopp större än 0",
       "safeguardHint": "Vi bygger fortfarande svaret automatiskt – det väntar bara på ditt godkännande innan det sparas till Shopify.",
       "setupSummaryTitle": "Det här har vi ställt in åt dig",
-      "setupSummaryPlaybooks": "{count} playbooks anpassade till vad din butik säljer",
-      "setupSummaryInquiry": "Tidiga förfrågningar täcks automatiskt"
+      "setupSummaryInquiry": "Tidiga förfrågningar täcks automatiskt",
+      "setupSummaryReady": "Redo för tvister om {families}.",
+      "setupSummaryModeAuto": "Starka svar byggs och skickas till Shopify automatiskt. Allt som behöver en närmare titt väntar på ditt godkännande.",
+      "setupSummaryModeReview": "Varje svar byggs åt dig och väntar på ditt godkännande innan det går till Shopify.",
+      "setupSummarySafeguard": "Tvister över {amount} USD väntar alltid på ditt godkännande.",
+      "setupSummaryPointer": "Du kan finjustera enskilda tvisttyper senare på Automatiseringssidan."
     }
   },
   "coverage": {
@@ -4401,7 +4407,6 @@
     "chargebackConfigured": "{count} återkravsflöden",
     "fullyConfigured": "{count} helt konfigurerade",
     "gapsFound": "{count} luckor",
-    "noAutomation": "Ingen automatiseringsregel",
     "reviewOnly": "Bara granskning — ingen playbook",
     "mappedTemplate": "Standard: {name}",
     "noMappedTemplate": "Ingen standardmall",
@@ -4442,11 +4447,13 @@
     "colAction": "Åtgärd",
     "handlingConfigured": "Konfigurerad",
     "handlingMissingPlaybook": "Saknar playbook",
-    "handlingNeedsRule": "Behöver regel",
     "inquiryEnabled": "Aktiverad",
     "inquiryDisabled": "Inaktiverad",
     "modeAutoSubmit": "Auto-skicka",
-    "modeReviewLabel": "Granska före skick"
+    "modeReviewLabel": "Granska före skick",
+    "modeWithSource": "{mode} — {source}",
+    "modeSourceOverride": "anpassad",
+    "modeSourceStoreDefault": "butikens standardval"
   },
   "disputeTimeline": {
     "title": "Historik",

@@ -1,12 +1,15 @@
 /**
- * Coverage derivation utility.
+ * The dispute-family vocabulary shared by the coverage surfaces.
  *
- * Takes existing rules and active packs and derives a merchant-facing
- * coverage view per dispute family. No new backend — this is a pure
- * read-only projection of existing data.
+ * This file used to also export `deriveCoverage()`, a flat (non-lifecycle)
+ * projection of rules + packs. It had **zero live callers** — every surface
+ * moved to `deriveLifecycleCoverage` — while keeping its own copy of
+ * `ruleMatchesFamily`, whose "a rule without `match.reason` cannot define a
+ * family's mode" predicate is exactly what went stale when the per-family rules
+ * collapsed into one store-wide switch. Two copies of one broken predicate is
+ * how that drifted, so the dead copy is gone; the family table and the mode
+ * type stay, because `deriveLifecycleCoverage` and the packs page import them.
  */
-
-import { canonicalReasonCode } from "@/lib/rules/disputeReasons";
 
 export interface DisputeFamily {
   id: string;
@@ -26,108 +29,10 @@ export const DISPUTE_FAMILIES: DisputeFamily[] = [
   { id: "general", reasons: ["GENERAL"], labelKey: "coverage.familyGeneral" },
 ];
 
+/**
+ * `manual` / `notify` are legacy stored values that normalize to review (see
+ * lib/rules/normalizeMode.ts). `none` is retained for back-compat with stored
+ * shapes; `deriveLifecycleCoverage` no longer emits it, because a family with
+ * no rule of its own inherits the store-wide switch rather than having no mode.
+ */
 export type AutomationMode = "automated" | "review_first" | "manual" | "notify" | "none";
-
-export interface FamilyCoverage {
-  familyId: string;
-  labelKey: string;
-  reasons: string[];
-  hasCoverage: boolean;
-  automationMode: AutomationMode;
-  activePackCount: number;
-  matchingRuleId: string | null;
-}
-
-export interface CoverageSummary {
-  families: FamilyCoverage[];
-  coveredCount: number;
-  automatedCount: number;
-  reviewFirstCount: number;
-  totalFamilies: number;
-}
-
-interface RuleInput {
-  id: string;
-  enabled: boolean;
-  match: { reason?: string[]; status?: string[]; amount_range?: { min?: number; max?: number } };
-  action: { mode: string; pack_template_id?: string | null };
-}
-
-interface PackInput {
-  id: string;
-  dispute_type: string;
-  status: string;
-}
-
-/**
- * pack_templates.dispute_type and packs.dispute_type use Shopify
- * reason codes directly after migration
- * 20260411160000_normalize_dispute_type_to_reason_codes.sql. DIGITAL
- * is the one legacy value that has no Shopify equivalent — it maps
- * to GENERAL family handling.
- */
-function packMatchesFamily(pack: PackInput, family: DisputeFamily): boolean {
-  const raw = pack.dispute_type?.toUpperCase();
-  if (!raw) return false;
-  if (raw === "DIGITAL") {
-    return family.reasons.includes("GENERAL");
-  }
-  // Rows written before 2026-07-28 may carry SUBSCRIPTION_CANCELED (single L).
-  const type = canonicalReasonCode(raw) ?? raw;
-  return family.reasons.includes(type);
-}
-
-function ruleMatchesFamily(rule: RuleInput, family: DisputeFamily): boolean {
-  if (!rule.enabled) return false;
-  // Only rules with an explicit reason filter overlapping the family's
-  // reasons define a family's automation mode. Catch-all rules
-  // (safeguards like __dd_safeguard__:high_value, fallbacks like
-  // __dd_setup__:fallback:default, custom global rules) match disputes
-  // at dispatch time but must not override the per-family Current
-  // Mode shown on the Coverage page — that would diverge from the
-  // Automation page, which only reads pack-specific rules.
-  if (!rule.match.reason || rule.match.reason.length === 0) return false;
-  const ruleReasons = rule.match.reason.map((r) => canonicalReasonCode(r) ?? r);
-  return family.reasons.some((r) => ruleReasons.includes(r));
-}
-
-/**
- * Map a stored rule.action.mode (canonical "auto"|"review" or any legacy
- * value) to the coverage-page AutomationMode. Mirrors the two-mode model
- * defined in lib/rules/normalizeMode.ts: anything that is not "auto" /
- * "auto_pack" is review.
- */
-function ruleToAutomationMode(rule: RuleInput): AutomationMode {
-  if (rule.action.mode === "auto" || rule.action.mode === "auto_pack") {
-    return "automated";
-  }
-  return "review_first";
-}
-
-export function deriveCoverage(
-  rules: RuleInput[],
-  activePacks: PackInput[],
-): CoverageSummary {
-  const families: FamilyCoverage[] = DISPUTE_FAMILIES.map((family) => {
-    const matchingPacks = activePacks.filter((p) => packMatchesFamily(p, family));
-    const matchingRule = rules.find((r) => ruleMatchesFamily(r, family)) ?? null;
-
-    return {
-      familyId: family.id,
-      labelKey: family.labelKey,
-      reasons: family.reasons,
-      hasCoverage: matchingPacks.length > 0 || matchingRule !== null,
-      automationMode: matchingRule ? ruleToAutomationMode(matchingRule) : "none",
-      activePackCount: matchingPacks.length,
-      matchingRuleId: matchingRule?.id ?? null,
-    };
-  });
-
-  return {
-    families,
-    coveredCount: families.filter((f) => f.hasCoverage).length,
-    automatedCount: families.filter((f) => f.automationMode === "automated").length,
-    reviewFirstCount: families.filter((f) => f.automationMode === "review_first").length,
-    totalFamilies: families.length,
-  };
-}
