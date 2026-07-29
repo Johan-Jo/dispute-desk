@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { pickAutomationAction } from "../pickAutomationAction";
 import type { Rule } from "../types";
+import { GROUP_RULE_PRIORITY } from "../automationGroups";
 
 /**
  * The automation model only exposes two merchant-facing modes: "auto" and
@@ -279,5 +280,129 @@ describe("pickAutomationAction", () => {
     });
     expect(r.matchedRule?.id).toBe("catch");
     expect(r.action.mode).toBe("review");
+  });
+});
+
+/**
+ * Group overrides vs the tier engine.
+ *
+ * A group is structurally a tier-1 rule (`match.reason`, no `amount_range`),
+ * so these outcomes fall out of the existing engine rather than from new code
+ * — which makes them WEAK as regression proof on their own. They are pinned
+ * anyway because they encode the contract the UI will promise, and each was
+ * checked the other way round: setting GROUP_RULE_PRIORITY to 1 must NOT
+ * change the safeguard case (tiers beat priority), and dropping UNRECOGNIZED
+ * from the fraud group must turn the UNRECOGNIZED case red.
+ */
+describe("pickAutomationAction — automation groups", () => {
+  const fallback = (mode: string) =>
+    baseRule({
+      id: "fallback",
+      name: "__dd_setup__:fallback:default",
+      match: {},
+      action: { mode },
+      priority: 100_000,
+    });
+
+  const safeguard = (min: number) =>
+    baseRule({
+      id: "safeguard",
+      name: "__dd_setup__:safeguard:high_value",
+      match: { amount_range: { min } },
+      action: { mode: "review" },
+      priority: 5,
+    });
+
+  const groupRule = (id: string, reasons: string[], mode: string) =>
+    baseRule({
+      id: `group-${id}`,
+      name: `__dd_setup__:group:${id}`,
+      match: { reason: reasons },
+      action: { mode },
+      priority: GROUP_RULE_PRIORITY,
+    });
+
+  const dispute = (reason: string, amount = 100) => ({
+    id: "d1",
+    shop_id: "s1",
+    reason,
+    status: null,
+    amount,
+  });
+
+  it("a group beats the store-wide catch-all", () => {
+    const rules = [
+      fallback("review"),
+      groupRule("fraud", ["FRAUDULENT", "UNRECOGNIZED"], "auto"),
+    ];
+    expect(pickAutomationAction(rules, dispute("FRAUDULENT")).action.mode).toBe("auto");
+  });
+
+  it("the amount safeguard beats a group (tier-0 over tier-1)", () => {
+    const rules = [
+      fallback("review"),
+      safeguard(500),
+      groupRule("fraud", ["FRAUDULENT", "UNRECOGNIZED"], "auto"),
+    ];
+    expect(pickAutomationAction(rules, dispute("FRAUDULENT", 900)).action.mode).toBe(
+      "review",
+    );
+  });
+
+  it("a restrictive group overrides an auto store", () => {
+    const rules = [
+      fallback("auto"),
+      groupRule("fraud", ["FRAUDULENT", "UNRECOGNIZED"], "review"),
+    ];
+    expect(pickAutomationAction(rules, dispute("FRAUDULENT")).action.mode).toBe("review");
+  });
+
+  it("a group does not leak to other reasons", () => {
+    const rules = [
+      fallback("auto"),
+      groupRule("fraud", ["FRAUDULENT", "UNRECOGNIZED"], "review"),
+    ];
+    expect(
+      pickAutomationAction(rules, dispute("PRODUCT_NOT_RECEIVED")).action.mode,
+    ).toBe("auto");
+  });
+
+  it("UNRECOGNIZED is routed by the fraud group", () => {
+    const rules = [
+      fallback("review"),
+      groupRule("fraud", ["FRAUDULENT", "UNRECOGNIZED"], "auto"),
+    ];
+    expect(pickAutomationAction(rules, dispute("UNRECOGNIZED")).action.mode).toBe("auto");
+  });
+
+  it("a merchant's own rule beats a group at a lower priority number", () => {
+    const rules = [
+      fallback("review"),
+      groupRule("fraud", ["FRAUDULENT", "UNRECOGNIZED"], "auto"),
+      baseRule({
+        id: "custom",
+        name: "My fraud rule",
+        match: { reason: ["FRAUDULENT"] },
+        action: { mode: "review" },
+        priority: 3,
+      }),
+    ];
+    expect(pickAutomationAction(rules, dispute("FRAUDULENT")).action.mode).toBe("review");
+  });
+
+  it("groups are phase-blind: one setting covers inquiry AND chargeback", () => {
+    // A deliberate product decision — "Fraud → Auto" means "handle fraud this
+    // way". A merchant needing the finer cut writes a custom rule, which
+    // supports match.phase and wins at equal priority.
+    const rules = [
+      fallback("review"),
+      groupRule("fraud", ["FRAUDULENT", "UNRECOGNIZED"], "auto"),
+    ];
+    for (const phase of ["inquiry", "chargeback"]) {
+      expect(
+        pickAutomationAction(rules, { ...dispute("FRAUDULENT"), phase } as never)
+          .action.mode,
+      ).toBe("auto");
+    }
   });
 });

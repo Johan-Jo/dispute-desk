@@ -2446,7 +2446,13 @@ Merchant custom rules (any name not starting with `__dd_setup__:`) are untouched
 
 **`lib/rules/storeAutomation.ts` is the single read/write path** — `readStoreAutomation`, `writeStoreAutomation`, `seedDefaultStoreAutomation`. **DO NOT add a second surface that writes the switch or the safeguard.** Three surfaces writing this concept into two backing stores is what produced the drift below.
 
-**The `auto_save_enabled` mirror invariant.** `shop_settings.auto_save_enabled` is a strict 1:1 mirror of the switch, written only by `writeStoreAutomation` (which calls `ensure_shop_settings` first, so a shop with no settings row gets one). Two bugs this closes:
+**The `auto_save_enabled` invariant — "enabled SOMEWHERE", not "the switch".** Written only by `writeStoreAutomation` (which calls `ensure_shop_settings` first, so a shop with no settings row gets one). It has exactly one functional reader, `evaluateAutoSaveGate`, reached in `pipeline.ts` **only after** a dispute's own rule already resolved to `auto` — so it is a kill-switch, not a per-dispute decision.
+
+Mirroring it 1:1 off the switch was right while the switch was the only way to ask for automation. With per-group overrides it becomes fatal: Store=Review + Fraud=Auto resolves a fraud dispute to `auto` at tier-1, reaches the gate, and is blocked with *"Auto-save is disabled for this store."* The feature would render perfectly and do nothing. So the flag is now `mode === "auto" || any group === "auto"`. Safe precisely because the gate is not the authority — turning it on for a Store=Review shop with one auto group cannot auto-save anything else, since every other dispute resolves to `review` and returns before the gate.
+
+Proven end-to-end in `lib/automation/__tests__/groupOverrideAutomation.test.ts`, which runs the real writer → the real tier engine → the real pipeline (only the DB is doubled). Reverting the mirror to `mode === "auto"` turns it red with `expected 'block' to be 'auto_save'`, and a dedicated case pins that the gate is genuinely on that path.
+
+Two older bugs this same invariant closes:
 - The wizard's `POST /api/setup/coverage-rules` wrote rules but **never** set the flag, so a merchant who chose all-auto in onboarding still hit a `false` gate and nothing auto-saved.
 - The flag was derived **all-or-nothing** from per-pack modes, so one family on review disabled auto-save for *every* family.
 
@@ -2461,6 +2467,28 @@ The raw `auto_save_enabled` checkbox is therefore removed from Settings' Advance
 Note the distinction from reverted PR #442, which deleted the **Save mode radio itself** and had to be reverted by #444: the radio is the approved control, the raw checkbox was the duplicate.
 
 **Involvement is a notification preference, not an automation one.** `Hands-off` / `Stay involved` (`shop_setup.steps.team.payload.involvement`) only sets the defaults for the `evidenceReady` + `monthlyDigest` emails (`app/api/shop/preferences/route.ts`); `resolveLifecycle.ts` and `WorkspaceShell.tsx` are both explicitly forbidden from reading it. Its copy previously opened with *"Handle disputes automatically…"*, which read as an automation setting sitting directly above Save mode. Reworded 2026-07-28 across all 6 locales to describe emails only, with a closing pointer to the Save-mode control below it.
+
+### Per-group overrides
+
+A merchant can pin an individual dispute type to auto or review without moving the store-wide switch. A group is **one `rules` row** whose `match.reason` lists the group's Shopify reason codes (`lib/rules/automationGroups.ts`) — no schema change, no migration:
+
+```
+__dd_setup__:group:{id}    match { reason: [...] }    priority 50
+```
+
+That makes it structurally **tier-1** in `pickAutomationAction`, and because tiers are evaluated in order and return immediately, the consequences fall out for free: a group **always beats** the tier-2 catch-all (the switch) and **can never outrank** the tier-0 amount safeguard, whatever priority number it carries. Priority 50 only breaks ties against other reason rules — i.e. merchant custom rules, which sit lower and therefore win.
+
+- **Absence of a row means "inherit the switch"** — there is no third state.
+- **A redundant pin is stored.** Setting Fraud → Auto while the switch is already Auto writes the row, because the merchant asked for it explicitly and it must survive a later switch flip.
+- **Groups are phase-blind** (`match.reason` only). "Fraud → Auto" means "handle fraud this way"; the inquiry/chargeback distinction is an internal lifecycle concept this control doesn't expose. A merchant needing that cut writes a custom rule, which supports `match.phase` and wins at equal priority.
+- **`not_as_described` is LOCKED.** `evaluateAutoSubmitGuards` parks product-family cases even when Strong, so a row would be ignored 100% of the time. No row is ever written, `readStoreAutomation` never surfaces one, and the route 400s on the attempt. `automationGroups.test.ts` asserts the flag and the engine behaviour **in the same test**, so the two can only move together.
+- **`UNRECOGNIZED` ships inside the fraud group.** It is scored with the fraud formula and is absent from the custom-rule reason list, so leaving it out would strand every such dispute on the catch-all with no way for a merchant to fix it.
+
+**The delete is by NAME, never by prefix.** `writeStoreAutomation` deletes `SETUP_OWNED_RULE_NAMES` — the two canonical rows, the legacy safeguard, and every group name (locked ones included, so a stray row from an older build still gets swept). The previous `.like("__dd_setup__:%")` would have wiped the merchant's overrides on every switch or safeguard save. Legacy `__dd_setup__:pack:*` / `:coverage:*` rows are deliberately **no longer self-healed here**: converting them changes live behaviour (a shop can have `coverage:fraud=auto` running today) and must not happen as a side effect of an unrelated safeguard edit — a dedicated migration converts them once, then deletes them. Pinned by `tests/unit/noDestructiveSetupRuleWrites.test.ts`.
+
+**`PUT /api/automation/store` — omission preserves.** `groups` omitted → keep what's stored; `groups: {...}` → replace the set; `groups: {}` → clear it. Anything else would make every caller responsible for state it doesn't render: the setup wizard and the Settings save-mode radio both PUT `{ mode, safeguard }` only, and under replace-semantics either would silently delete a merchant's overrides. The route 400s on an unknown group id (a silent drop reads as "saved"), on a locked group, and on a mode that isn't `auto`/`review`.
+
+**Reconcile fires on group relaxation too** — a group flipping to auto is the same kind of relaxation as the switch flipping, and it must fire even while the store stays on review. Over-firing is safe (the pass re-applies every gate itself); under-firing strands built drafts.
 
 **Install-time default: auto-pilot ON + $500 safeguard**, seeded by `seedDefaultStoreAutomation` from `ensureShopSetup()` in the OAuth callback. Idempotent (no-ops once a fallback row exists), so a re-install never resets a merchant's choice. A shop can therefore auto-submit before the merchant opens the app — deliberate, and bounded by the engine gates plus the free-tier lifetime pack quota.
 

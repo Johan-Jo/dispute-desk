@@ -2,11 +2,16 @@
  * Contract tests for the ONE read/write path of the store-wide automation
  * setting. These pin the invariants the whole redesign rests on:
  *
- *   - setup owns exactly TWO rows, never more;
+ *   - setup owns the two canonical rows plus at most one row per automation
+ *     group, and NOTHING else;
+ *   - deletes name exactly what they remove — never a `__dd_setup__:%` prefix,
+ *     which would wipe the merchant's group overrides on every switch save;
  *   - merchant custom rules are NEVER touched;
  *   - the legacy `__dd_safeguard__:` name is self-healed away;
- *   - `shop_settings.auto_save_enabled` is a strict 1:1 mirror of the switch
- *     (the bug class that made wizard-configured auto-pilot silently inert).
+ *   - `shop_settings.auto_save_enabled` means "automation is enabled SOMEWHERE"
+ *     (the switch or any group), not "the switch". Mirroring the switch alone
+ *     is what would make Store=Review + Fraud=Auto render perfectly and do
+ *     nothing.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -30,11 +35,17 @@ import {
   readStoreAutomation,
   writeStoreAutomation,
   seedDefaultStoreAutomation,
+  isSetupOwnedRuleName,
   FALLBACK_RULE_NAME,
   SAFEGUARD_RULE_NAME,
   LEGACY_SAFEGUARD_RULE_NAME,
   DEFAULT_SAFEGUARD_AMOUNT,
 } from "../storeAutomation";
+import {
+  AUTOMATION_GROUPS,
+  GROUP_RULE_PRIORITY,
+  groupRuleName,
+} from "../automationGroups";
 
 const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockUpdateShopSettings = vi.mocked(updateShopSettings);
@@ -42,14 +53,20 @@ const mockReconcile = vi.mocked(reconcileParkedAutoDisputes);
 
 interface Recorded {
   inserted: Array<Record<string, unknown>>;
-  deletes: Array<{ like?: string; eqName?: string }>;
+  /**
+   * `inNames` was added 2026-07-28 with the group work. The double previously
+   * recorded only `like` / `eqName`, and routed `in()` into `selectNames` —
+   * so it could not see what a DELETE targeted. Any test asserting "the delete
+   * is scoped correctly" was therefore unfalsifiable against an `.in()` delete.
+   */
+  deletes: Array<{ like?: string; eqName?: string; inNames?: string[] }>;
 }
 
 /** Minimal supabase double covering the exact chains storeAutomation uses. */
 function mockSb(existingRules: Array<Record<string, unknown>>, rec: Recorded) {
   function from(table: string) {
     if (table !== "rules") throw new Error(`unexpected table ${table}`);
-    const pending: { like?: string; eqName?: string } = {};
+    const pending: { like?: string; eqName?: string; inNames?: string[] } = {};
     let mode: "select" | "delete" | "insert" | null = null;
     let selectNames: string[] | null = null;
     let selectName: string | null = null;
@@ -76,7 +93,8 @@ function mockSb(existingRules: Array<Record<string, unknown>>, rec: Recorded) {
         return chain;
       },
       in: (_col: string, vals: string[]) => {
-        selectNames = vals;
+        if (mode === "delete") pending.inNames = vals;
+        else selectNames = vals;
         return chain;
       },
       like: (_col: string, pattern: string) => {
@@ -140,6 +158,7 @@ describe("readStoreAutomation", () => {
     expect(await readStoreAutomation("shop-1")).toEqual({
       mode: "auto",
       safeguard: { enabled: true, amount: 750 },
+      groups: {},
     });
   });
 
@@ -150,6 +169,7 @@ describe("readStoreAutomation", () => {
     expect(await readStoreAutomation("shop-1")).toEqual({
       mode: "review",
       safeguard: { enabled: false, amount: DEFAULT_SAFEGUARD_AMOUNT },
+      groups: {},
     });
   });
 
@@ -209,6 +229,7 @@ describe("writeStoreAutomation", () => {
     await writeStoreAutomation("shop-1", {
       mode: "auto",
       safeguard: { enabled: true, amount: 500 },
+      groups: {},
     });
 
     expect(rec.inserted).toHaveLength(2);
@@ -233,25 +254,56 @@ describe("writeStoreAutomation", () => {
     await writeStoreAutomation("shop-1", {
       mode: "review",
       safeguard: { enabled: false, amount: 500 },
+      groups: {},
     });
 
     expect(rec.inserted).toHaveLength(1);
     expect(rec.inserted[0].name).toBe(FALLBACK_RULE_NAME);
   });
 
-  it("clears the whole __dd_setup__ prefix AND the legacy safeguard name", async () => {
+  it("NEVER prefix-deletes — every delete names exactly what it removes", async () => {
+    // THE BLOCKER. `.like("__dd_setup__:%")` would wipe the merchant's group
+    // overrides on every switch or safeguard save, so the feature would appear
+    // to work and then silently reset itself.
     const rec: Recorded = { inserted: [], deletes: [] };
     mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
 
     await writeStoreAutomation("shop-1", {
       mode: "auto",
       safeguard: { enabled: true, amount: 500 },
+      groups: {},
     });
 
-    // Prefix delete self-heals leftover pack:/coverage: rows from the
-    // per-dispute-type era on any shop that missed the migration.
-    expect(rec.deletes.some((d) => d.like === "__dd_setup__:%")).toBe(true);
-    expect(rec.deletes.some((d) => d.eqName === LEGACY_SAFEGUARD_RULE_NAME)).toBe(true);
+    for (const d of rec.deletes) {
+      expect(d.like).toBeUndefined();
+    }
+  });
+
+  it("the delete names the canonical rows, the legacy safeguard and every group", async () => {
+    const rec: Recorded = { inserted: [], deletes: [] };
+    mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
+
+    await writeStoreAutomation("shop-1", {
+      mode: "auto",
+      safeguard: { enabled: true, amount: 500 },
+      groups: {},
+    });
+
+    const names = rec.deletes.flatMap((d) => d.inNames ?? []);
+    expect(names).toContain(FALLBACK_RULE_NAME);
+    expect(names).toContain(SAFEGUARD_RULE_NAME);
+    expect(names).toContain(LEGACY_SAFEGUARD_RULE_NAME);
+    // Locked groups included: a row from an older build or written by hand
+    // must still be swept, or it routes disputes invisibly.
+    for (const group of AUTOMATION_GROUPS) {
+      expect(names).toContain(groupRuleName(group.id));
+    }
+    // Legacy pack:/coverage: rows are deliberately NOT swept here — converting
+    // them changes live behaviour and belongs to a dedicated migration, not to
+    // a side effect of an unrelated safeguard edit.
+    expect(names.some((n) => n.includes(":pack:") || n.includes(":coverage:"))).toBe(
+      false,
+    );
   });
 
   it("NEVER deletes merchant custom rules", async () => {
@@ -261,14 +313,16 @@ describe("writeStoreAutomation", () => {
     await writeStoreAutomation("shop-1", {
       mode: "auto",
       safeguard: { enabled: true, amount: 500 },
+      groups: {},
     });
 
-    // Every delete is scoped to a setup-owned name. An unscoped delete
-    // (no `like` and no `eq(name)`) would wipe custom rules.
+    // Every delete is scoped to an explicit setup-owned name list. An unscoped
+    // delete (no name filter at all) would wipe custom rules.
     for (const d of rec.deletes) {
-      expect(d.like ?? d.eqName).toBeDefined();
-      if (d.like) expect(d.like).toBe("__dd_setup__:%");
-      if (d.eqName) expect(d.eqName).toBe(LEGACY_SAFEGUARD_RULE_NAME);
+      expect(d.inNames ?? d.eqName).toBeDefined();
+      for (const name of d.inNames ?? []) {
+        expect(isSetupOwnedRuleName(name)).toBe(true);
+      }
     }
   });
 
@@ -279,6 +333,7 @@ describe("writeStoreAutomation", () => {
     await writeStoreAutomation("shop-1", {
       mode: "auto",
       safeguard: { enabled: false, amount: 0 },
+      groups: {},
     });
 
     expect(mockUpdateShopSettings).toHaveBeenCalledWith("shop-1", {
@@ -293,6 +348,7 @@ describe("writeStoreAutomation", () => {
     await writeStoreAutomation("shop-1", {
       mode: "review",
       safeguard: { enabled: false, amount: 0 },
+      groups: {},
     });
 
     expect(mockUpdateShopSettings).toHaveBeenCalledWith("shop-1", {
@@ -307,6 +363,7 @@ describe("writeStoreAutomation", () => {
     await writeStoreAutomation("shop-1", {
       mode: "auto",
       safeguard: { enabled: true, amount: 0 },
+      groups: {},
     });
 
     expect(rec.inserted).toHaveLength(1);
@@ -320,6 +377,7 @@ describe("writeStoreAutomation", () => {
     await writeStoreAutomation("shop-1", {
       mode: "auto",
       safeguard: { enabled: false, amount: 0 },
+      groups: {},
     });
 
     expect(mockReconcile).toHaveBeenCalledWith("shop-1");
@@ -332,6 +390,7 @@ describe("writeStoreAutomation", () => {
     await writeStoreAutomation("shop-1", {
       mode: "review",
       safeguard: { enabled: false, amount: 0 },
+      groups: {},
     });
 
     expect(mockReconcile).not.toHaveBeenCalled();
@@ -348,6 +407,7 @@ describe("writeStoreAutomation", () => {
     await writeStoreAutomation("shop-1", {
       mode: "auto",
       safeguard: { enabled: true, amount: 900 },
+      groups: {},
     });
 
     expect(mockReconcile).toHaveBeenCalledWith("shop-1");
@@ -362,6 +422,7 @@ describe("writeStoreAutomation", () => {
     await writeStoreAutomation("shop-1", {
       mode: "auto",
       safeguard: { enabled: false, amount: 0 },
+      groups: {},
     });
 
     expect(mockReconcile).toHaveBeenCalledWith("shop-1");
@@ -377,9 +438,184 @@ describe("writeStoreAutomation", () => {
     await writeStoreAutomation("shop-1", {
       mode: "auto",
       safeguard: { enabled: true, amount: 200 },
+      groups: {},
     });
 
     expect(mockReconcile).not.toHaveBeenCalled();
+  });
+});
+
+describe("writeStoreAutomation — group overrides", () => {
+  it("a switch write PRESERVES the group rows it was asked to keep", async () => {
+    const rec: Recorded = { inserted: [], deletes: [] };
+    mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
+
+    await writeStoreAutomation("shop-1", {
+      mode: "review",
+      safeguard: { enabled: false, amount: 0 },
+      groups: { fraud: "auto" },
+    });
+
+    const fraud = rec.inserted.find((r) => r.name === groupRuleName("fraud"));
+    expect(fraud).toBeDefined();
+    expect(fraud!.match).toEqual({ reason: ["FRAUDULENT", "UNRECOGNIZED"] });
+    expect(fraud!.priority).toBe(GROUP_RULE_PRIORITY);
+    expect(fraud!.action).toMatchObject({ mode: "auto" });
+  });
+
+  it("a group left unset writes no row at all (absence == inherit)", async () => {
+    const rec: Recorded = { inserted: [], deletes: [] };
+    mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
+
+    await writeStoreAutomation("shop-1", {
+      mode: "auto",
+      safeguard: { enabled: false, amount: 0 },
+      groups: { pnr: "review" },
+    });
+
+    expect(rec.inserted.find((r) => r.name === groupRuleName("pnr"))).toBeDefined();
+    expect(rec.inserted.find((r) => r.name === groupRuleName("fraud"))).toBeUndefined();
+  });
+
+  it("a redundant pin (group == switch) IS stored, so it survives a later flip", async () => {
+    const rec: Recorded = { inserted: [], deletes: [] };
+    mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
+
+    await writeStoreAutomation("shop-1", {
+      mode: "auto",
+      safeguard: { enabled: false, amount: 0 },
+      groups: { fraud: "auto" },
+    });
+
+    expect(rec.inserted.find((r) => r.name === groupRuleName("fraud"))).toBeDefined();
+  });
+
+  it("NEVER writes a row for a locked group", async () => {
+    const rec: Recorded = { inserted: [], deletes: [] };
+    mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
+
+    await writeStoreAutomation("shop-1", {
+      mode: "review",
+      safeguard: { enabled: false, amount: 0 },
+      // The route rejects this, but the writer must not depend on the route.
+      groups: { not_as_described: "auto" },
+    });
+
+    expect(
+      rec.inserted.find((r) => r.name === groupRuleName("not_as_described")),
+    ).toBeUndefined();
+  });
+
+  it("auto_save_enabled is TRUE when only a group is auto and the store is review", async () => {
+    // The single most important assertion in this file: mirroring the switch
+    // alone would leave the override inert — the rule resolves to `auto`, the
+    // gate says "Auto-save is disabled for this store", nothing saves.
+    const rec: Recorded = { inserted: [], deletes: [] };
+    mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
+
+    await writeStoreAutomation("shop-1", {
+      mode: "review",
+      safeguard: { enabled: false, amount: 0 },
+      groups: { fraud: "auto" },
+    });
+
+    expect(mockUpdateShopSettings).toHaveBeenCalledWith("shop-1", {
+      auto_save_enabled: true,
+    });
+  });
+
+  it("auto_save_enabled goes FALSE when the last auto group is removed on a review store", async () => {
+    const rec: Recorded = { inserted: [], deletes: [] };
+    mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
+
+    await writeStoreAutomation("shop-1", {
+      mode: "review",
+      safeguard: { enabled: false, amount: 0 },
+      groups: { fraud: "review" },
+    });
+
+    expect(mockUpdateShopSettings).toHaveBeenCalledWith("shop-1", {
+      auto_save_enabled: false,
+    });
+  });
+
+  it("fires reconcile when a group flips to auto, even though the store stays on review", async () => {
+    const rec: Recorded = { inserted: [], deletes: [] };
+    mockGetServiceClient.mockReturnValue(mockSb([fallbackRow("review")], rec) as never);
+
+    await writeStoreAutomation("shop-1", {
+      mode: "review",
+      safeguard: { enabled: false, amount: 0 },
+      groups: { fraud: "auto" },
+    });
+
+    expect(mockReconcile).toHaveBeenCalledWith("shop-1");
+  });
+
+  it("does NOT fire reconcile when a group is only tightened to review", async () => {
+    const rec: Recorded = { inserted: [], deletes: [] };
+    mockGetServiceClient.mockReturnValue(mockSb([fallbackRow("review")], rec) as never);
+
+    await writeStoreAutomation("shop-1", {
+      mode: "review",
+      safeguard: { enabled: false, amount: 0 },
+      groups: { fraud: "review" },
+    });
+
+    expect(mockReconcile).not.toHaveBeenCalled();
+  });
+});
+
+describe("readStoreAutomation — group overrides", () => {
+  function groupRow(id: string, mode: string, enabled = true) {
+    const group = AUTOMATION_GROUPS.find((g) => g.id === id)!;
+    return {
+      id: `r-group-${id}`,
+      name: groupRuleName(group.id),
+      enabled,
+      match: { reason: group.reasons },
+      action: { mode },
+      priority: GROUP_RULE_PRIORITY,
+    };
+  }
+
+  it("derives overrides from the stored rows", async () => {
+    const rec: Recorded = { inserted: [], deletes: [] };
+    mockGetServiceClient.mockReturnValue(
+      mockSb([fallbackRow("review"), groupRow("fraud", "auto")], rec) as never,
+    );
+
+    expect((await readStoreAutomation("shop-1")).groups).toEqual({ fraud: "auto" });
+  });
+
+  it("a shop with no group rows reads as no overrides", async () => {
+    const rec: Recorded = { inserted: [], deletes: [] };
+    mockGetServiceClient.mockReturnValue(mockSb([fallbackRow("auto")], rec) as never);
+
+    expect((await readStoreAutomation("shop-1")).groups).toEqual({});
+  });
+
+  it("skips a disabled group row", async () => {
+    const rec: Recorded = { inserted: [], deletes: [] };
+    mockGetServiceClient.mockReturnValue(
+      mockSb([fallbackRow("review"), groupRow("pnr", "auto", false)], rec) as never,
+    );
+
+    expect((await readStoreAutomation("shop-1")).groups).toEqual({});
+  });
+
+  it("never surfaces a locked group's row, even if one exists", async () => {
+    // A read that reports an override the engine ignores is how a UI ends up
+    // lying to the merchant.
+    const rec: Recorded = { inserted: [], deletes: [] };
+    mockGetServiceClient.mockReturnValue(
+      mockSb(
+        [fallbackRow("review"), groupRow("not_as_described", "auto")],
+        rec,
+      ) as never,
+    );
+
+    expect((await readStoreAutomation("shop-1")).groups).toEqual({});
   });
 });
 
