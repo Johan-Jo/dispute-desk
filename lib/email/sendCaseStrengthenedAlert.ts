@@ -97,8 +97,8 @@ export async function sendCaseStrengthenedAlert(
       <div style="background:#ECFDF5;border:1px solid #6EE7B7;border-radius:8px;padding:16px;margin-bottom:20px">
         <p style="font-size:13px;color:#065F46;margin:0;line-height:1.6">
           DisputeDesk automatically updated the defence package with the new evidence.
-          Review it before your deadline — no action is required for it to be submitted,
-          but a quick check is worthwhile.
+          Review it before your deadline. On Auto-pilot it goes to Shopify on the due date;
+          in review mode it waits for your approval.
         </p>
       </div>
 

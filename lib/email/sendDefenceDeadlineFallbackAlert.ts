@@ -1,8 +1,15 @@
 /**
- * Send "deadline auto-submit used the pack PDF fallback" email to the
- * merchant. Triggered by the defence-package deadline cron when the
- * Defence Package PDF couldn't be used (validation failed, skipped, or
- * missing) and the dispute deadline is today.
+ * Send "we could not build a defence package and your deadline is today" to
+ * the merchant. Triggered by the defence-package deadline cron when the
+ * Defence Package PDF can't be used (validation failed, skipped, or missing)
+ * and the dispute deadline is today.
+ *
+ * THERE IS NO FALLBACK SUBMISSION. The file name is historical: the pack-PDF
+ * fallback was retired, and the cron that calls this inserts no job. So this
+ * email is the merchant's only warning that nothing has been filed, and it
+ * must never imply otherwise — it used to say "we submitted the existing
+ * evidence pack PDF in its place", which was the opposite of the truth on the
+ * one morning it mattered.
  *
  * Fire-and-forget — never throws.
  */
@@ -10,10 +17,14 @@
 import { Resend } from "resend";
 import { getServiceClient } from "@/lib/supabase/server";
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL =
+// Read lazily so a test can stub `process.env.RESEND_API_KEY` in beforeEach and
+// have the new value picked up. A module-level `const` captures the value at
+// import time, which silently no-ops every stub — the same trap already
+// documented in sendNewDisputeAlert.ts.
+const getResendApiKey = (): string | undefined => process.env.RESEND_API_KEY;
+const getFromEmail = (): string =>
   process.env.EMAIL_FROM ?? "DisputeDesk <notifications@mail.disputedesk.app>";
-const REPLY_TO =
+const getReplyTo = (): string =>
   process.env.EMAIL_REPLY_TO ?? "DisputeDesk <notifications@mail.disputedesk.app>";
 
 export interface DefenceDeadlineFallbackContext {
@@ -46,10 +57,20 @@ function readableReason(reason: DefenceDeadlineFallbackContext["fallbackReason"]
   }
 }
 
+/**
+ * Shopify Protect is the one reason on this list that is NOT a problem.
+ * Shopify absorbs the loss, DisputeDesk deliberately builds nothing, and there
+ * is no deadline to miss — so the "act today or forfeit" framing that the other
+ * reasons need would be alarming and wrong.
+ */
+function isCovered(reason: DefenceDeadlineFallbackContext["fallbackReason"]): boolean {
+  return reason === "skipped_covered";
+}
+
 export async function sendDefenceDeadlineFallbackAlert(
   ctx: DefenceDeadlineFallbackContext,
 ): Promise<SendResult> {
-  if (!RESEND_API_KEY) {
+  if (!getResendApiKey()) {
     return { ok: false, error: "RESEND_API_KEY not configured" };
   }
 
@@ -85,33 +106,65 @@ export async function sendDefenceDeadlineFallbackAlert(
       ? `${ctx.currencyCode} ${ctx.amount}`
       : null;
 
-  const subject = `Action required: Defence Package fallback used on dispute ${disputeIdShort}`;
+  /**
+   * NOTHING WAS SUBMITTED. This email used to say the opposite — "we submitted
+   * the existing evidence pack PDF in its place", "your evidence pack has been
+   * sent, the bank will review what was submitted" — while the cron that sends
+   * it inserts no job at all (its own comment: "Post-retirement: no pack-PDF
+   * fallback… The merchant must regenerate manually"). So the one email a
+   * merchant receives on the morning their deadline expires told them they were
+   * covered. Whatever else this message does, it has to say the opposite of
+   * that, in the first sentence, unmistakably.
+   */
+  const covered = isCovered(ctx.fallbackReason);
 
-  const text = [
-    `Hello,`,
-    ``,
-    `The chargeback dispute ${disputeIdShort}${amountStr ? ` (${amountStr})` : ""} reached its evidence deadline today.`,
-    ``,
-    `Because ${reason}, DisputeDesk could not auto-submit your Complete Defence Package. To avoid losing the dispute by default, we submitted the existing evidence pack PDF to Shopify in its place.`,
-    ``,
-    `Your evidence pack has been sent — the bank will review what was submitted. If you would like to override or supplement the submission, sign into the DisputeDesk admin in your Shopify Admin and review the dispute detail page.`,
-    ``,
-    `Dispute reason: ${ctx.reason ?? "—"}`,
-    `Reason for fallback: ${ctx.fallbackReason}`,
-    `Deadline: ${ctx.dueAt ?? "—"}`,
-    ``,
-    `— DisputeDesk`,
-  ].join("\n");
+  const subject = covered
+    ? `No response needed: dispute ${disputeIdShort} is covered by Shopify Protect`
+    : `Action required today: dispute ${disputeIdShort} has no response filed`;
+
+  const text = covered
+    ? [
+        `Hello,`,
+        ``,
+        `The chargeback dispute ${disputeIdShort}${amountStr ? ` (${amountStr})` : ""} reached its evidence deadline today, and DisputeDesk did not build a response for it.`,
+        ``,
+        `That is deliberate: ${reason}. Shopify absorbs this loss, so there is nothing to defend and nothing for you to do.`,
+        ``,
+        `Dispute reason: ${ctx.reason ?? "—"}`,
+        `Deadline: ${ctx.dueAt ?? "—"}`,
+        ``,
+        `— DisputeDesk`,
+      ].join("\n")
+    : [
+        `Hello,`,
+        ``,
+        `The chargeback dispute ${disputeIdShort}${amountStr ? ` (${amountStr})` : ""} reaches its evidence deadline today and NOTHING HAS BEEN FILED.`,
+        ``,
+        `DisputeDesk could not produce a defence package because ${reason}, and there is no fallback — the defence package is the only thing we submit. No evidence has been sent to Shopify for this dispute.`,
+        ``,
+        `If you do nothing, this dispute will be lost by default. Open it in DisputeDesk to regenerate the package, or submit your own evidence directly in Shopify Admin before the deadline passes.`,
+        ``,
+        `Dispute reason: ${ctx.reason ?? "—"}`,
+        `Why we could not build it: ${ctx.fallbackReason}`,
+        `Deadline: ${ctx.dueAt ?? "—"}`,
+        ``,
+        `— DisputeDesk`,
+      ].join("\n");
+
+  const body = covered
+    ? `<p>The chargeback dispute <strong>${disputeIdShort}</strong>${amountStr ? ` (${amountStr})` : ""} reached its evidence deadline today, and DisputeDesk did not build a response for it.</p>
+<p>That is deliberate: ${reason}. Shopify absorbs this loss, so there is nothing to defend and nothing for you to do.</p>`
+    : `<p style="font-size:16px;font-weight:600;">The chargeback dispute <strong>${disputeIdShort}</strong>${amountStr ? ` (${amountStr})` : ""} reaches its evidence deadline today and nothing has been filed.</p>
+<p>DisputeDesk could not produce a defence package because ${reason}, and there is no fallback — the defence package is the only thing we submit. <strong>No evidence has been sent to Shopify for this dispute.</strong></p>
+<p>If you do nothing, this dispute will be lost by default. Open it in DisputeDesk to regenerate the package, or submit your own evidence directly in Shopify Admin before the deadline passes.</p>`;
 
   const html = `<!doctype html>
 <html><body style="font-family:Helvetica,Arial,sans-serif;color:#0F172A;line-height:1.55;">
 <p>Hello,</p>
-<p>The chargeback dispute <strong>${disputeIdShort}</strong>${amountStr ? ` (${amountStr})` : ""} reached its evidence deadline today.</p>
-<p>Because ${reason}, DisputeDesk could not auto-submit your Complete Defence Package. To avoid losing the dispute by default, we submitted the existing evidence pack PDF to Shopify in its place.</p>
-<p>Your evidence pack has been sent — the bank will review what was submitted. If you would like to override or supplement the submission, sign into DisputeDesk in your Shopify Admin and review the dispute detail page.</p>
+${body}
 <table style="border-collapse:collapse;margin-top:12px;font-size:13px;">
   <tr><td style="color:#64748B;padding:4px 12px 4px 0;">Dispute reason</td><td>${escapeHtml(ctx.reason ?? "—")}</td></tr>
-  <tr><td style="color:#64748B;padding:4px 12px 4px 0;">Reason for fallback</td><td>${escapeHtml(ctx.fallbackReason)}</td></tr>
+  ${covered ? "" : `<tr><td style="color:#64748B;padding:4px 12px 4px 0;">Why we could not build it</td><td>${escapeHtml(ctx.fallbackReason)}</td></tr>`}
   <tr><td style="color:#64748B;padding:4px 12px 4px 0;">Deadline</td><td>${escapeHtml(ctx.dueAt ?? "—")}</td></tr>
   ${shopDomain ? `<tr><td style="color:#64748B;padding:4px 12px 4px 0;">Shop</td><td>${escapeHtml(shopDomain)}</td></tr>` : ""}
 </table>
@@ -119,10 +172,10 @@ export async function sendDefenceDeadlineFallbackAlert(
 </body></html>`;
 
   try {
-    const resend = new Resend(RESEND_API_KEY);
+    const resend = new Resend(getResendApiKey());
     const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      replyTo: REPLY_TO,
+      from: getFromEmail(),
+      replyTo: getReplyTo(),
       to,
       subject,
       html,
