@@ -124,11 +124,17 @@ export function AutomationGroupList({
         const effective = current === "default" ? storeMode : current;
         // A row on "default" says what it is inheriting, so the merchant never
         // has to hold the switch in their head while reading the list.
+        //
+        // A LOCKED row never inherits, so it never says so. The design's
+        // prototype applies the inherit line to every row without an override,
+        // which on this row prints "Follows store default — Automatic"
+        // immediately beside a badge reading "Always reviewed" — two
+        // contradictory claims about the same dispute type. It keeps its
+        // static sub-line instead.
         const sub =
-          current === "default"
+          !group.locked && current === "default"
             ? t("groupFollowsDefault", {
-                mode:
-                  effective === "auto" ? t("autoPack") : t("review"),
+                mode: effective === "auto" ? t("autoPack") : t("review"),
               })
             : t(style.subKey);
 
