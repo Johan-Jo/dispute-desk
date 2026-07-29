@@ -146,10 +146,16 @@ const STRINGS: Record<Locale, EmailStrings> = {
       callout: {
         label: "What happens next",
         body: ({ dueDate }) =>
-          `Shopify will forward your response to the card network on <b>${dueDate}</b>. No action is required from you — but if you'd like to resolve this sooner, you can submit directly in Shopify Admin.`,
+          // NOT "you can submit directly in Shopify Admin to resolve it
+          // sooner". `composeShopifyMutationPayload` sends
+          // `submitEvidence: true`, so the response is already filed — there
+          // is no pending submit button, and pointing a merchant at one sends
+          // them looking for something that isn't there. The five other
+          // locales already said this correctly.
+          `Shopify has your response and will pass it to the card network by <b>${dueDate}</b>. No action is required — you can open the dispute in DisputeDesk to see exactly what was sent.`,
       },
       cta: "Open in DisputeDesk →",
-      ctaSecondary: "Submit in Shopify Admin ↗",
+      ctaSecondary: "View in Shopify Admin ↗",
     },
     review: {
       subject: ({ shortId }) => `Dispute #${shortId} is ready for your review`,

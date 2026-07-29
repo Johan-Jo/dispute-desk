@@ -153,7 +153,9 @@ export async function GET(req: NextRequest) {
       // Look at the latest defence package row for this dispute.
       const { data: dpkg } = await sb
         .from("defence_packages")
-        .select("id, status, validation_status, pdf_path, version")
+        // `failure_code` distinguishes a Shopify-Protect skip from a
+        // no-bank-facts skip; without it every skip is reported as the latter.
+        .select("id, status, validation_status, pdf_path, version, failure_code")
         .eq("dispute_id", d.id)
         .order("version", { ascending: false })
         .limit(1)
@@ -293,7 +295,11 @@ export async function GET(req: NextRequest) {
 }
 
 function pickFallbackReason(
-  dpkg: { status: string; validation_status: string | null } | null,
+  dpkg: {
+    status: string;
+    validation_status: string | null;
+    failure_code?: string | null;
+  } | null,
 ):
   | "validation_failed"
   | "skipped_no_facts"
@@ -303,9 +309,13 @@ function pickFallbackReason(
   if (!dpkg) return "missing";
   if (dpkg.status === "failed") return "validation_failed";
   if (dpkg.status === "skipped") {
-    // Coverage gate vs no-bank-facts — we treat both as "skipped" status,
-    // failure_code distinguishes them but we don't load it here for
-    // simplicity. The merchant email mentions the broader reason.
+    // `failure_code` is what distinguishes the coverage gate from
+    // no-bank-facts. It used to be left unread "for simplicity", which meant
+    // `skipped_covered` was never returned and a Shopify-Protect dispute was
+    // emailed "not enough bank-eligible evidence" — telling a merchant their
+    // evidence was too thin when the real answer is that Shopify is already
+    // covering the loss and there is nothing to do.
+    if (dpkg.failure_code === "covered_shopify") return "skipped_covered";
     return "skipped_no_facts";
   }
   return null;
