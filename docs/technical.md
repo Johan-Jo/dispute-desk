@@ -2488,6 +2488,18 @@ That makes it structurally **tier-1** in `pickAutomationAction`, and because tie
 
 **`PUT /api/automation/store` — omission preserves.** `groups` omitted → keep what's stored; `groups: {...}` → replace the set; `groups: {}` → clear it. Anything else would make every caller responsible for state it doesn't render: the setup wizard and the Settings save-mode radio both PUT `{ mode, safeguard }` only, and under replace-semantics either would silently delete a merchant's overrides. The route 400s on an unknown group id (a silent drop reads as "saved"), on a locked group, and on a mode that isn't `auto`/`review`.
 
+**Legacy conversion (migration `20260729010000`).** The per-dispute-type era left two row families — `__dd_setup__:coverage:{family}` (priority 10) and `__dd_setup__:pack:{uuid}` (priority 20+). **Both carry `action.mode`, so both were routing live disputes**: `blume-box` ran auto on seven reasons through `pack:` rows while its store switch read `review`. An earlier plan treated `pack:` rows as superseded template pins and would have deleted them, silently shutting off automation for the highest-volume merchant on the platform.
+
+The migration snapshots into `legacy_setup_rules_backup_20260729`, then **converts → verifies → deletes**, raising rather than deleting if any convertible row lacks its group row. Coverage rows outrank pack rows (10 vs 20+), matching how the engine resolves them today; `coverage:general` becomes the store-wide fallback for shops that lack one, and an existing fallback is never overwritten. Three cases cannot be preserved exactly, all deliberate:
+
+| Legacy | Outcome | Why |
+|---|---|---|
+| `PRODUCT_UNACCEPTABLE=auto` | dropped | no-op — the engine parks product-family cases even when Strong |
+| `FRAUDULENT=auto` | → `group:fraud` | widens `UNRECOGNIZED` review → auto (1 dispute in all of prod); same scoring, same Strong-only guards |
+| `GENERAL=auto` | dropped | no GENERAL group by design; promoting the fallback would widen every uncovered reason. Narrowing is the safe direction |
+
+Shops with no `rules` rows at all (test / app-review installs) are left alone — they already read as `review`, so seeding would fabricate configuration a merchant never chose.
+
 **Reconcile fires on group relaxation too** — a group flipping to auto is the same kind of relaxation as the switch flipping, and it must fire even while the store stays on review. Over-firing is safe (the pass re-applies every gate itself); under-firing strands built drafts.
 
 **Install-time default: auto-pilot ON + $500 safeguard**, seeded by `seedDefaultStoreAutomation` from `ensureShopSetup()` in the OAuth callback. Idempotent (no-ops once a fallback row exists), so a re-install never resets a merchant's choice. A shop can therefore auto-submit before the merchant opens the app — deliberate, and bounded by the engine gates plus the free-tier lifetime pack quota.
