@@ -35,18 +35,59 @@ export const FAMILY_TO_DISPUTE_TYPE: Record<string, string> = {
 
 /**
  * Shopify dispute-reason code → i18n key under the `reasons.*`
- * namespace. The list mirrors `DISPUTE_REASONS` in the portal
- * rules page; any new reason needs both the constant + a key.
+ * namespace.
  */
 export const REASON_KEYS: Record<string, string> = {
   PRODUCT_NOT_RECEIVED: "productNotReceived",
   PRODUCT_UNACCEPTABLE: "productUnacceptable",
   FRAUDULENT: "fraudulent",
+  UNRECOGNIZED: "unrecognized",
   CREDIT_NOT_PROCESSED: "creditNotProcessed",
   SUBSCRIPTION_CANCELLED: "subscriptionCanceled",
   DUPLICATE: "duplicate",
   GENERAL: "general",
 };
+
+/**
+ * The reasons a merchant can pick when building a custom rule, in display
+ * order.
+ *
+ * ONE list, for both rule builders. The embedded modal and the portal form
+ * each used to carry their own copy while importing `REASON_KEYS` for labels
+ * only — so the lists could drift from the labels and from each other, and
+ * they did: **`UNRECOGNIZED` was missing from both.** A merchant building
+ * "auto for fraud" picked `FRAUDULENT` and silently missed every
+ * `UNRECOGNIZED` dispute, which fell through to the catch-all. It sits next to
+ * `FRAUDULENT` here because `resolveReasonFamily` scores it with the fraud
+ * formula (`lib/argument/reasonFamily.ts`).
+ *
+ * Pinned by `lib/rules/__tests__/ruleReasonOptions.test.ts`.
+ */
+export const RULE_REASON_CODES: readonly string[] = [
+  "FRAUDULENT",
+  "UNRECOGNIZED",
+  "PRODUCT_NOT_RECEIVED",
+  "PRODUCT_UNACCEPTABLE",
+  "SUBSCRIPTION_CANCELLED",
+  "CREDIT_NOT_PROCESSED",
+  "DUPLICATE",
+  "GENERAL",
+];
+
+/**
+ * The same reason, keyed for the embedded surface.
+ *
+ * The two surfaces store their labels in different namespaces — the portal
+ * reads `reasons.<camelCase>`, the embedded modal reads
+ * `rules.reason<PascalCase>` — but the two are the same word, derived from the
+ * same `REASON_KEYS` entry, so a new reason cannot land in one and not the
+ * other.
+ */
+export function embeddedReasonLabelKey(code: string): string {
+  const key = REASON_KEYS[code];
+  if (!key) return code.replace(/_/g, " ");
+  return `reason${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+}
 
 /** Match shape used by both rules pages. Subset of the full Rule
  *  row shape; only the parts `matchSummary` reads. */

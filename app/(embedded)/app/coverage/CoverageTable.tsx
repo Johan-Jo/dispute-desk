@@ -13,6 +13,7 @@ import {
   ClipboardCheckFilledIcon,
 } from "@shopify/polaris-icons";
 import { withShopParams } from "@/lib/withShopParams";
+import type { AutomationSource } from "@/lib/coverage/deriveLifecycleCoverage";
 import {
   FAMILY_ICON_COLOR,
   familyLabelKey,
@@ -54,7 +55,6 @@ function chargebackPill(status: ChargebackStatus, tc: Translate) {
   const map: Record<ChargebackStatus, { bg: string; color: string; key: string }> = {
     "configured": { bg: "#D1FAE5", color: "#065F46", key: "handlingConfigured" },
     "missing-playbook": { bg: "#FEF3C7", color: "#92400E", key: "handlingMissingPlaybook" },
-    "needs-rule": { bg: "#FEE2E2", color: "#991B1B", key: "handlingNeedsRule" },
   };
   const c = map[status];
   return (
@@ -71,14 +71,27 @@ function inquiryPill(status: InquiryStatus, tc: Translate) {
   );
 }
 
-function modePill(mode: CurrentMode, tc: Translate) {
+/**
+ * The mode, and WHY it reads that way.
+ *
+ * "Auto" inherited from the store switch and "Auto" pinned on this family
+ * behave identically until the switch moves — at which point one changes and
+ * the other doesn't. Naming the source is what makes that legible.
+ */
+function modePill(mode: CurrentMode, source: AutomationSource, tc: Translate) {
   const map: Record<CurrentMode, { bg: string; color: string; key: string }> = {
     "auto-submit": { bg: "#D1FAE5", color: "#065F46", key: "modeAutoSubmit" },
     "review": { bg: "#FEF3C7", color: "#92400E", key: "modeReviewLabel" },
   };
   const c = map[mode];
+  const label = tc("modeWithSource", {
+    mode: tc(c.key),
+    source: tc(
+      source === "override" ? "modeSourceOverride" : "modeSourceStoreDefault",
+    ),
+  });
   return (
-    <span style={{ ...PILL, background: c.bg, color: c.color }}>{tc(c.key)}</span>
+    <span style={{ ...PILL, background: c.bg, color: c.color }}>{label}</span>
   );
 }
 
@@ -149,7 +162,7 @@ export function CoverageTable({ rows, searchParams, tc }: Props) {
                 </td>
                 <td style={cell}>{chargebackPill(row.chargeback, tc)}</td>
                 <td style={cell}>{inquiryPill(row.inquiry, tc)}</td>
-                <td style={cell}>{modePill(row.mode, tc)}</td>
+                <td style={cell}>{modePill(row.mode, row.modeSource, tc)}</td>
                 <td style={cell}>
                   <a
                     href={withShopParams(

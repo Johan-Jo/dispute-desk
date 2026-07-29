@@ -81,7 +81,6 @@ import {
   type GroupOverrides,
 } from "./automationGroups";
 import {
-  SETUP_RULE_PREFIX,
   FALLBACK_RULE_NAME,
   SAFEGUARD_RULE_NAME,
   LEGACY_SAFEGUARD_RULE_NAME,
@@ -96,7 +95,13 @@ export {
    * Read + delete only — never written again.
    */
   LEGACY_SAFEGUARD_RULE_NAME,
-};
+  /**
+   * Re-exported so server-side callers keep one import site. Client components
+   * must import it from `./storeAutomationNames` directly — this module pulls
+   * in the Supabase server client.
+   */
+  isSetupOwnedRuleName,
+} from "./storeAutomationNames";
 
 export const DEFAULT_SAFEGUARD_AMOUNT = 500;
 
@@ -149,12 +154,6 @@ export function deriveAutoSaveEnabled(config: {
     config.mode === "auto" ||
     Object.values(config.groups).some((m) => m === "auto")
   );
-}
-
-/** True for any rule this module owns (and therefore may delete). */
-export function isSetupOwnedRuleName(name: string | null | undefined): boolean {
-  if (!name) return false;
-  return name.startsWith(SETUP_RULE_PREFIX) || name === LEGACY_SAFEGUARD_RULE_NAME;
 }
 
 function parseSafeguardAmount(rule: Pick<Rule, "match"> | null): number | null {

@@ -53,16 +53,10 @@ import {
   DEFAULT_SAFEGUARD_AMOUNT,
   type StoreAutomationMode,
 } from "@/lib/rules/storeAutomation";
+import { isSetupOwnedRuleName } from "@/lib/rules/storeAutomationNames";
 import { withShopParams } from "@/lib/withShopParams";
 
 const EXPLAINER_DISMISSED_KEY = "dd_automation_explainer_dismissed";
-
-/** Setup-owned rules are rendered by the cards above, never in the custom list. */
-function isSetupOwnedRule(name: string | null | undefined): boolean {
-  return Boolean(
-    name?.startsWith("__dd_setup__") || name?.startsWith("__dd_safeguard__"),
-  );
-}
 
 interface CustomRule {
   id: string;
@@ -170,7 +164,9 @@ export default function EmbeddedRulesPage() {
       if (rulesRes.ok) {
         const allRules = await rulesRes.json();
         const arr = (Array.isArray(allRules) ? allRules : []) as CustomRule[];
-        setCustomRules(arr.filter((r) => !isSetupOwnedRule(r.name)));
+        // Setup-owned rules are rendered by the cards above, never in the
+        // custom list.
+        setCustomRules(arr.filter((r) => !isSetupOwnedRuleName(r.name)));
       }
     } finally {
       setLoading(false);

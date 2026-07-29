@@ -533,7 +533,7 @@
       "createdTitle": "Litige créé",
       "createdDesc": "Nouveau litige déposé",
       "packTitle": "En cours de traitement",
-      "packDesc": "Preuves soumises par DisputeDesk",
+      "packDesc": "Les preuves sont envoyées à Shopify par DisputeDesk",
       "savedTitle": "Soumettre les preuves",
       "savedDesc": "Soumission en attente",
       "reviewTitle": "Examen bancaire",
@@ -2523,7 +2523,8 @@
     "groupNotAsDescribedLocked": "Toujours examinés. Ce sont des réclamations qualité subjectives où vous pouvez connaître un contexte que les preuves ne capturent pas.",
     "groupSubscription": "Abonnement annulé",
     "groupRefund": "Remboursement non traité",
-    "groupDuplicate": "Double débit"
+    "groupDuplicate": "Double débit",
+    "reasonUnrecognized": "Paiement non reconnu"
   },
   "settings": {
     "title": "Paramètres",
@@ -2813,7 +2814,8 @@
     "creditNotProcessed": "Crédit non traité",
     "subscriptionCanceled": "Abonnement annulé",
     "duplicate": "Doublon",
-    "general": "Général"
+    "general": "Général",
+    "unrecognized": "Paiement non reconnu"
   },
   "table": {
     "disputeId": "ID du litige",
@@ -3809,7 +3811,7 @@
     },
     "storeProfile": {
       "title": "Dites-nous comment fonctionne votre boutique",
-      "subtitle": "Nous utiliserons ces informations pour recommander la bonne couverture de litiges et le niveau d’automatisation adapté.",
+      "subtitle": "Nous utiliserons ces informations pour mettre en place les preuves et les playbooks adaptés à votre boutique.",
       "whatDoYouSell": "Que vendez-vous ?",
       "sellHint": "Sélectionnez tout ce qui s’applique. Cela nous aide à recommander les bons types de preuves.",
       "physical": "Biens physiques",
@@ -4356,8 +4358,12 @@
       "thresholdInvalid": "Saisissez un montant supérieur à 0",
       "safeguardHint": "Nous préparons toujours la réponse automatiquement — elle attend simplement votre validation avant d'être enregistrée dans Shopify.",
       "setupSummaryTitle": "Ce que nous avons configuré pour vous",
-      "setupSummaryPlaybooks": "{count} playbooks adaptés à ce que vend votre boutique",
-      "setupSummaryInquiry": "Demandes préalables couvertes automatiquement"
+      "setupSummaryInquiry": "Demandes préalables couvertes automatiquement",
+      "setupSummaryReady": "Prêt pour les litiges de type {families}.",
+      "setupSummaryModeAuto": "Les réponses solides sont préparées et envoyées à Shopify automatiquement. Tout ce qui mérite un examen attend votre validation.",
+      "setupSummaryModeReview": "Chaque réponse est préparée pour vous et attend votre validation avant d'être envoyée à Shopify.",
+      "setupSummarySafeguard": "Les litiges de plus de {amount} $ attendent toujours votre validation.",
+      "setupSummaryPointer": "Vous pourrez affiner chaque type de litige plus tard sur la page Automatisation."
     }
   },
   "coverage": {
@@ -4401,7 +4407,6 @@
     "chargebackConfigured": "{count} flux de rétrofacturations",
     "fullyConfigured": "{count} entièrement configurées",
     "gapsFound": "{count} lacunes",
-    "noAutomation": "Aucune règle d'automatisation",
     "reviewOnly": "Vérification uniquement — pas de playbook",
     "mappedTemplate": "Par défaut : {name}",
     "noMappedTemplate": "Aucun modèle par défaut",
@@ -4442,11 +4447,13 @@
     "colAction": "Action",
     "handlingConfigured": "Configuré",
     "handlingMissingPlaybook": "Playbook manquant",
-    "handlingNeedsRule": "Règle requise",
     "inquiryEnabled": "Activé",
     "inquiryDisabled": "Désactivé",
     "modeAutoSubmit": "Envoi automatique",
-    "modeReviewLabel": "Examiner avant envoi"
+    "modeReviewLabel": "Examiner avant envoi",
+    "modeWithSource": "{mode} — {source}",
+    "modeSourceOverride": "personnalisé",
+    "modeSourceStoreDefault": "réglage par défaut"
   },
   "disputeTimeline": {
     "title": "Historique",

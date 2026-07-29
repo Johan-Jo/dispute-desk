@@ -21,13 +21,35 @@ describe("Setup handling and activate i18n keys", () => {
       "thresholdInvalid",
       "safeguardHint",
       "setupSummaryTitle",
-      "setupSummaryPlaybooks",
+      // The summary now states what was set up, in the merchant's terms:
+      // which dispute types, how they're handled, inquiries, the threshold,
+      // and where to fine-tune later.
+      "setupSummaryReady",
+      "setupSummaryModeAuto",
+      "setupSummaryModeReview",
       "setupSummaryInquiry",
+      "setupSummarySafeguard",
+      "setupSummaryPointer",
     ];
 
     it.each(requiredKeys)("has key: %s", (key) => {
       expect(handling?.[key]).toBeDefined();
       expect(typeof handling?.[key]).toBe("string");
+    });
+
+    it("no longer counts playbooks", () => {
+      // "{count} playbooks matched to what your store sells" meant nothing to
+      // a merchant AND contradicted the next screen, which counts installed
+      // packs including the silently-installed inquiry siblings.
+      expect(handling?.setupSummaryPlaybooks).toBeUndefined();
+    });
+
+    it("names Shopify as the destination wherever it says submitted", () => {
+      // "submit" is accurate for Shopify and false for the card network, which
+      // is what an unqualified "submitted for you" implies. See CLAUDE.md.
+      for (const key of ["setupSummaryModeAuto", "setupSummaryModeReview"]) {
+        expect(handling?.[key]).toMatch(/Shopify/);
+      }
     });
   });
 

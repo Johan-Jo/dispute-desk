@@ -36,6 +36,7 @@ import {
   DEFAULT_SAFEGUARD_AMOUNT,
   type StoreAutomationMode,
 } from "@/lib/rules/storeAutomation";
+import { findGroup, type GroupOverrides } from "@/lib/rules/automationGroups";
 
 interface HandlingStepProps {
   stepId: StepId;
@@ -55,6 +56,14 @@ export function HandlingStep({ onSaveRef, onCanContinueChange }: HandlingStepPro
   const [safeguardAmount, setSafeguardAmount] = useState(
     String(DEFAULT_SAFEGUARD_AMOUNT),
   );
+  /**
+   * Per-group overrides are NOT editable here — a six-row table on a first-run
+   * screen would undo the merge to one step. But they must be carried through
+   * the save: `PUT /api/automation/store` treats an omitted `groups` as "keep
+   * what's stored", and a returning merchant re-running the wizard would
+   * otherwise depend on that. Echoing them back states the intent explicitly.
+   */
+  const [groups, setGroups] = useState<GroupOverrides>({});
 
   // Derived from the store profile — shown read-only as reassurance, and used
   // by the save handler to install the right playbooks.
@@ -89,6 +98,9 @@ export function HandlingStep({ onSaveRef, onCanContinueChange }: HandlingStepPro
           }
           if (cfg?.safeguard?.amount) {
             setSafeguardAmount(String(cfg.safeguard.amount));
+          }
+          if (cfg?.groups && typeof cfg.groups === "object") {
+            setGroups(cfg.groups as GroupOverrides);
           }
         }
 
@@ -161,6 +173,8 @@ export function HandlingStep({ onSaveRef, onCanContinueChange }: HandlingStepPro
             enabled: effectiveSafeguard,
             amount: effectiveSafeguard ? parsedAmount : 0,
           },
+          // Echoed back unchanged — this step doesn't render group controls.
+          groups,
         }),
       });
       if (!storeRes.ok) return false;
@@ -197,6 +211,7 @@ export function HandlingStep({ onSaveRef, onCanContinueChange }: HandlingStepPro
     parsedAmount,
     selectedFamilies,
     evidenceConfidence,
+    groups,
   ]);
 
   useEffect(() => {
@@ -210,6 +225,42 @@ export function HandlingStep({ onSaveRef, onCanContinueChange }: HandlingStepPro
       </div>
     );
   }
+
+  /**
+   * The summary lines, derived from state already in this component — no extra
+   * fetches.
+   *
+   * It used to read "{n} playbooks matched to what your store sells". That
+   * number meant nothing to a merchant AND it disagreed with the very next
+   * screen, which counts the installed packs (~8, because the wizard silently
+   * installs the inquiry siblings too). Naming the dispute types is the thing
+   * the merchant can actually check against their own store.
+   *
+   * `digital` / `general` have no group of their own by design — they follow
+   * the store default, exactly as `rules.groupsGeneralNote` says on the
+   * Automation page — so they are not listed.
+   */
+  const familyNames = selectedFamilies
+    .map((family) => findGroup(family))
+    .filter((group): group is NonNullable<typeof group> => Boolean(group))
+    .map((group) => tr(group.labelKey));
+  const familyList = new Intl.ListFormat(locale, {
+    style: "long",
+    type: "conjunction",
+  }).format(familyNames);
+
+  // "submitted" is accurate ONLY with its destination named. Unqualified it
+  // reads as "filed with the card network", which DisputeDesk does not do —
+  // the merchant submits from Shopify Admin. See CLAUDE.md.
+  const summaryLines = [
+    familyNames.length > 0 ? t("setupSummaryReady", { families: familyList }) : null,
+    mode === "auto" ? t("setupSummaryModeAuto") : t("setupSummaryModeReview"),
+    t("setupSummaryInquiry"),
+    safeguardEnabled && amountValid
+      ? t("setupSummarySafeguard", { amount: parsedAmount })
+      : null,
+    t("setupSummaryPointer"),
+  ].filter((line): line is string => Boolean(line));
 
   const cardStyle: React.CSSProperties = {
     background: "#FFFFFF",
@@ -279,18 +330,14 @@ export function HandlingStep({ onSaveRef, onCanContinueChange }: HandlingStepPro
             {t("setupSummaryTitle")}
           </Text>
           <BlockStack gap="100">
-            <InlineStack gap="200" blockAlign="start" wrap={false}>
-              <span style={{ color: "#22C55E", flexShrink: 0 }}>✓</span>
-              <Text as="p" variant="bodySm" tone="subdued">
-                {t("setupSummaryPlaybooks", { count: defaultTemplateIds.length })}
-              </Text>
-            </InlineStack>
-            <InlineStack gap="200" blockAlign="start" wrap={false}>
-              <span style={{ color: "#22C55E", flexShrink: 0 }}>✓</span>
-              <Text as="p" variant="bodySm" tone="subdued">
-                {t("setupSummaryInquiry")}
-              </Text>
-            </InlineStack>
+            {summaryLines.map((line) => (
+              <InlineStack key={line} gap="200" blockAlign="start" wrap={false}>
+                <span style={{ color: "#22C55E", flexShrink: 0 }}>✓</span>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {line}
+                </Text>
+              </InlineStack>
+            ))}
           </BlockStack>
         </BlockStack>
       </div>

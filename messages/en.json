@@ -540,7 +540,7 @@
       "createdTitle": "Dispute Created",
       "createdDesc": "New dispute has been filed",
       "packTitle": "Work in Progress",
-      "packDesc": "Evidence is submitted by DisputeDesk",
+      "packDesc": "Evidence is submitted to Shopify by DisputeDesk",
       "savedTitle": "Submit Evidence",
       "savedDesc": "Submission pending",
       "reviewTitle": "Bank Review",
@@ -2523,7 +2523,8 @@
     "groupNotAsDescribedLocked": "Always reviewed. These are subjective quality claims where you may know context the evidence doesn't capture.",
     "groupSubscription": "Subscription cancelled",
     "groupRefund": "Refund not processed",
-    "groupDuplicate": "Duplicate charge"
+    "groupDuplicate": "Duplicate charge",
+    "reasonUnrecognized": "Unrecognized Payment"
   },
   "settings": {
     "title": "Settings",
@@ -2812,7 +2813,8 @@
     "creditNotProcessed": "Credit Not Processed",
     "subscriptionCanceled": "Subscription Canceled",
     "duplicate": "Duplicate",
-    "general": "General"
+    "general": "General",
+    "unrecognized": "Unrecognized Payment"
   },
   "table": {
     "disputeId": "Dispute ID",
@@ -3869,7 +3871,6 @@
     "chargebackConfigured": "{count} chargeback flows",
     "fullyConfigured": "{count} fully configured",
     "gapsFound": "{count} gaps",
-    "noAutomation": "No automation rule",
     "reviewOnly": "Review only — no playbook",
     "mappedTemplate": "Default: {name}",
     "noMappedTemplate": "No default template",
@@ -3910,11 +3911,13 @@
     "colAction": "Action",
     "handlingConfigured": "Configured",
     "handlingMissingPlaybook": "Missing playbook",
-    "handlingNeedsRule": "Needs rule",
     "inquiryEnabled": "Enabled",
     "inquiryDisabled": "Disabled",
     "modeAutoSubmit": "Auto-submit",
-    "modeReviewLabel": "Review before submit"
+    "modeReviewLabel": "Review before submit",
+    "modeWithSource": "{mode} — {source}",
+    "modeSourceOverride": "customised",
+    "modeSourceStoreDefault": "store default"
   },
   "templateLibrary": {
     "title": "Install a playbook",
@@ -4167,7 +4170,7 @@
     },
     "storeProfile": {
       "title": "Tell us how your store works",
-      "subtitle": "We'll use this to recommend the right dispute coverage and level of automation.",
+      "subtitle": "We'll use this to set up the right evidence and playbooks for your store.",
       "whatDoYouSell": "What do you sell?",
       "sellHint": "Select all that apply. This helps us recommend the right evidence types.",
       "physical": "Physical goods",
@@ -4631,8 +4634,12 @@
       "thresholdInvalid": "Enter an amount greater than 0",
       "safeguardHint": "We still build the response automatically — it just waits for your approval before being saved to Shopify.",
       "setupSummaryTitle": "What we've set up for you",
-      "setupSummaryPlaybooks": "{count} playbooks matched to what your store sells",
-      "setupSummaryInquiry": "Early-stage inquiries covered automatically"
+      "setupSummaryInquiry": "Early-stage inquiries covered automatically",
+      "setupSummaryReady": "Ready for {families} disputes.",
+      "setupSummaryModeAuto": "Strong responses are built and submitted to Shopify automatically. Anything that needs a closer look waits for your approval.",
+      "setupSummaryModeReview": "Every response is built for you and waits for your approval before it goes to Shopify.",
+      "setupSummarySafeguard": "Disputes over ${amount} always wait for your approval.",
+      "setupSummaryPointer": "You can fine-tune individual dispute types later on the Automation page."
     }
   },
   "disputeTimeline": {
