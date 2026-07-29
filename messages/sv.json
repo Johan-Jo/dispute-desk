@@ -2511,7 +2511,19 @@
     "alwaysReviewedIncomplete": "Allt under din tröskel för bevisningens kvalitet",
     "customRulesEmpty": "Inga egna regler ännu. De flesta butiker behöver inga – inställningarna ovan täcker de vanliga fallen.",
     "customRulesEmptyCta": "Lägg till regel",
-    "browsePlaybooks": "Bläddra bland playbooks"
+    "browsePlaybooks": "Bläddra bland playbooks",
+    "groupsSectionTitle": "Hantera vissa tvisttyper annorlunda",
+    "groupsSectionSubtitle": "Valfritt. Allt du inte ställer in här följer butikens standardval.",
+    "groupsCustomisedBadge": "{count} anpassade",
+    "groupUseDefault": "Använd butikens standardval ({mode})",
+    "groupsGeneralNote": "Alla tvisttyper som inte listas här — inklusive allmänna och okategoriserade tvister — följer butikens standardval.",
+    "groupFraud": "Kortbedrägeri",
+    "groupPnr": "Varan har inte kommit fram",
+    "groupNotAsDescribed": "Inte som beskriven",
+    "groupNotAsDescribedLocked": "Granskas alltid. Det här är subjektiva kvalitetsanspråk där du kan känna till sammanhang som bevisen inte fångar.",
+    "groupSubscription": "Prenumeration avslutad",
+    "groupRefund": "Återbetalning inte genomförd",
+    "groupDuplicate": "Dubbel debitering"
   },
   "settings": {
     "title": "Inställningar",
