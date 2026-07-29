@@ -434,6 +434,13 @@ describe("evaluateAndMaybeAutoSave — deferred new-dispute email variant", () =
   // claims the deferred alert with the correct variant — the auto
   // variant ("we submitted it on your behalf") MUST only fire when the
   // pipeline actually decided to auto-save.
+  //
+  // THREE variants, not two (2026-07-29). Every auto-mode hold — park, block,
+  // fatal-loss, gate refusal — claims `held`, never `review`. The guards are a
+  // BUILD-TIME filter: the deadline cron finalizes and submits the draft on
+  // the due date regardless. `review` says "this still requires your
+  // decision", which is only true when the shop is genuinely in review mode
+  // (`needs_review` keeps those disputes outside the cron entirely).
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -453,7 +460,7 @@ describe("evaluateAndMaybeAutoSave — deferred new-dispute email variant", () =
     expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "auto");
   });
 
-  it("auto + moderate (parked) → claims REVIEW variant, never auto", async () => {
+  it("auto + moderate (parked) → claims HELD variant, never auto", async () => {
     setupMocks({
       ruleMode: "auto",
       pack: {
@@ -465,11 +472,11 @@ describe("evaluateAndMaybeAutoSave — deferred new-dispute email variant", () =
       },
     });
     await evaluateAndMaybeAutoSave("p1");
-    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review");
+    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "held");
     expect(mockClaimAndSendDeferredAlert).not.toHaveBeenCalledWith("d1", "auto");
   });
 
-  it("auto + weak (blocked) → claims REVIEW variant", async () => {
+  it("auto + weak (blocked) → claims HELD variant", async () => {
     setupMocks({
       ruleMode: "auto",
       pack: {
@@ -481,7 +488,7 @@ describe("evaluateAndMaybeAutoSave — deferred new-dispute email variant", () =
       },
     });
     await evaluateAndMaybeAutoSave("p1");
-    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review");
+    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "held");
   });
 
   it("review mode (parked) → claims REVIEW variant", async () => {
@@ -518,7 +525,7 @@ describe("evaluateAndMaybeAutoSave — deferred new-dispute email variant", () =
     expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review");
   });
 
-  it("Fatal-loss block → claims REVIEW variant", async () => {
+  it("Fatal-loss block → claims HELD variant", async () => {
     setupMocks({
       ruleMode: "auto",
       pack: {
@@ -531,10 +538,10 @@ describe("evaluateAndMaybeAutoSave — deferred new-dispute email variant", () =
       },
     });
     await evaluateAndMaybeAutoSave("p1");
-    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review");
+    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "held");
   });
 
-  it("auto + strong + gate FAILS (low completeness) → claims REVIEW variant", async () => {
+  it("auto + strong + gate FAILS (low completeness) → claims HELD variant", async () => {
     setupMocks({
       ruleMode: "auto",
       pack: {
@@ -546,6 +553,6 @@ describe("evaluateAndMaybeAutoSave — deferred new-dispute email variant", () =
       },
     });
     await evaluateAndMaybeAutoSave("p1");
-    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "review");
+    expect(mockClaimAndSendDeferredAlert).toHaveBeenCalledWith("d1", "held");
   });
 });

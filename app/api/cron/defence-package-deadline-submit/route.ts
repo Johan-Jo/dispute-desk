@@ -83,6 +83,17 @@ export async function GET(req: NextRequest) {
   // intentionally EXCLUDED from this list. (Auto mode still auto-submits;
   // the pipeline only parks to review when a rule says so or strength is
   // below the auto threshold.) Do NOT re-add `needs_review` here.
+  //
+  // ONE EXCEPTION, added 2026-07-29: `review_state = "approved"`. That is the
+  // merchant pressing "Submit on the deadline" — an explicit instruction, not
+  // an absence of one. The approve handler
+  // (app/api/disputes/[id]/review/route.ts) writes `review_state` but
+  // deliberately leaves `needs_review` alone, because that flag drives the
+  // review queues and attention lists everywhere else. Without this inclusion
+  // an approved dispute stayed `needs_review`, fell outside the status filter,
+  // and was never submitted — so the button promised a submission that never
+  // happened and the merchant forfeited by default. `conceded` still wins: it
+  // is checked per-dispute below and returns before any submit path.
   const merchantActionableStatuses = [
     "new",
     "in_progress",
@@ -98,7 +109,7 @@ export async function GET(req: NextRequest) {
     .lt("due_at", endOfToday.toISOString())
     .is("evidence_saved_to_shopify_at", null)
     .or(
-      `normalized_status.is.null,normalized_status.in.(${merchantActionableStatuses.join(",")})`,
+      `normalized_status.is.null,normalized_status.in.(${merchantActionableStatuses.join(",")}),review_state.eq.approved`,
     );
 
   if (error) {

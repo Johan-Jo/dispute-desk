@@ -552,10 +552,11 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         dedupeKey: `${pack.dispute_id}:${PACK_BLOCKED}:${packId}:${new Date().toISOString()}`,
       });
       void updateNormalizedStatus(pack.dispute_id);
-      // Sync-time send was deferred. Send review variant so the
-      // merchant is informed of the new dispute even though the case
-      // is structurally unwinnable.
-      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
+      // Sync-time send was deferred. `held`, not `review`: the guards only
+      // run in auto mode, so this merchant is on Auto-pilot and the deadline
+      // cron will still save this to Shopify on the due date. The review
+      // variant would tell them it "requires your decision", which is false.
+      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "held").catch(
         () => {
           /* non-fatal */
         },
@@ -644,7 +645,9 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       void updateNormalizedStatus(pack.dispute_id);
     }
     if (pack.dispute_id && !alreadySaved) {
-      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
+      // Parked by the Moderate guard — auto mode, so the deadline cron still
+      // saves it to Shopify on the due date. `held`, not `review`.
+      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "held").catch(
         () => {
           /* non-fatal */
         },
@@ -697,10 +700,12 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         dedupeKey: `${pack.dispute_id}:${PACK_BLOCKED}:${packId}:${new Date().toISOString()}`,
       });
       void updateNormalizedStatus(pack.dispute_id);
-      // Sync-time send was deferred for this dispute. Send the review
-      // variant now: the merchant needs to know the case won't auto-
-      // submit and they have to act.
-      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
+      // Sync-time send was deferred for this dispute. `held`, not `review`:
+      // the Weak/Insufficient guard only fires in auto mode, and the block is
+      // build-time only — the deadline cron finalizes and submits the draft on
+      // the due date. Telling the merchant it "requires your decision" is the
+      // exact falsehood this variant exists to fix.
+      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "held").catch(
         () => {
           /* non-fatal */
         },
@@ -886,9 +891,9 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     void updateNormalizedStatus(pack.dispute_id);
     // Sync-time send was deferred for this dispute. Auto rule said
     // "submit" but the quality gate refused (low completeness or
-    // blockers present). Send review variant so the merchant knows
-    // they need to fill the gaps and submit.
-    void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
+    // blockers present). `held`, not `review` — the merchant should fill the
+    // gaps, but if they don't, the deadline cron submits what we have.
+    void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "held").catch(
       () => {
         /* non-fatal */
       },

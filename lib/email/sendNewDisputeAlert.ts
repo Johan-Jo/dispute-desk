@@ -6,13 +6,18 @@
  * (see claimAndSendDeferredNewDisputeReviewAlert). Checks the `newDispute`
  * notification preference before sending.
  *
- * The email body is selected by `resolvedMode`:
+ * The email body is selected by `variant`:
  *   - "auto"   → "we handled it automatically" confirmation (submission already happened)
- *   - "review" → "your response is ready, please review and submit" call-to-action
- *     (deferred when automation enqueued a build so this only sends after
- *     evidence is collected and the pack is parked for review)
+ *   - "review" → "your response is ready, please review and submit" call-to-action.
+ *     REVIEW MODE ONLY: nothing is ever sent without the merchant.
+ *   - "held"   → auto-pilot held this case back. It is NOT waiting for a
+ *     decision the way a review-mode dispute is: the deadline cron saves it to
+ *     Shopify on the due date regardless. Added 2026-07-29, because the park
+ *     and block branches of the pipeline were sending the "review" body — so
+ *     an auto-pilot merchant was told "this dispute still requires your
+ *     decision" about a dispute that would submit itself.
  *
- * Callers must pass the mode their automation pipeline actually resolved to
+ * Callers must pass the variant their automation pipeline actually resolved to
  * (after normalizeMode). Legacy modes should never reach this function.
  *
  * Fire-and-forget — never throws.
@@ -49,7 +54,7 @@ export interface NewDisputeAlertContext {
    * Resolved automation mode for this dispute. Determines which email
    * variant is sent. Must already be normalized to "auto" | "review".
    */
-  resolvedMode: AutomationMode;
+  resolvedMode: NewDisputeAlertVariant;
   /**
    * Shopify DisputeEvidence GID (e.g. `gid://shopify/DisputeEvidence/10484056121`).
    * Used to build the "Submit in Shopify Admin" secondary CTA shown in the
@@ -101,10 +106,17 @@ interface ModeStrings {
   ctaSecondary?: string;
 }
 
+/**
+ * Which body to send. Not the same axis as `AutomationMode`: "held" is auto
+ * mode, holding a case that the deadline will submit anyway.
+ */
+export type NewDisputeAlertVariant = AutomationMode | "held";
+
 interface EmailStrings {
   shared: SharedStrings;
   auto: ModeStrings;
   review: ModeStrings;
+  held: ModeStrings;
 }
 
 const STRINGS: Record<Locale, EmailStrings> = {
@@ -157,6 +169,24 @@ const STRINGS: Record<Locale, EmailStrings> = {
       },
       cta: "Review dispute →",
     },
+    held: {
+      subject: ({ shortId }) => `Dispute #${shortId} is held for your review`,
+      heading: "Your response is ready — held for your review",
+      bodyP1: ({ orderName }) =>
+        `A new dispute was detected for order ${orderName}. DisputeDesk prepared your response but did not send it straight away.`,
+      listLabel: "What to do next",
+      listItems: [
+        "Open the dispute and review the prepared evidence",
+        "Leave it as is — we save it to Shopify on the due date",
+        "Or concede it if it isn't worth defending",
+      ],
+      callout: {
+        label: "What happens next",
+        body: ({ dueDate }) =>
+          `Nothing has been saved yet. If you take no action, we save this response to Shopify on <b>${dueDate}</b>.`,
+      },
+      cta: "Review dispute →",
+    },
   },
   es: {
     shared: {
@@ -202,6 +232,24 @@ const STRINGS: Record<Locale, EmailStrings> = {
       callout: {
         label: "Importante",
         body: "Todavía no se ha enviado nada. Esta disputa aún requiere tu decisión.",
+      },
+      cta: "Revisar disputa →",
+    },
+    held: {
+      subject: ({ shortId }) => `La disputa #${shortId} está retenida para tu revisión`,
+      heading: "Tu respuesta está lista — retenida para tu revisión",
+      bodyP1: ({ orderName }) =>
+        `Se detectó una nueva disputa para el pedido ${orderName}. DisputeDesk preparó tu respuesta, pero no la envió de inmediato.`,
+      listLabel: "Qué hacer ahora",
+      listItems: [
+        "Abre la disputa y revisa las pruebas preparadas",
+        "Déjala como está: la guardamos en Shopify en la fecha límite",
+        "O no la defiendas si no vale la pena",
+      ],
+      callout: {
+        label: "Qué pasa después",
+        body: ({ dueDate }) =>
+          `Todavía no se ha guardado nada. Si no haces nada, guardaremos esta respuesta en Shopify el <b>${dueDate}</b>.`,
       },
       cta: "Revisar disputa →",
     },
@@ -253,6 +301,24 @@ const STRINGS: Record<Locale, EmailStrings> = {
       },
       cta: "Revisar disputa →",
     },
+    held: {
+      subject: ({ shortId }) => `A disputa #${shortId} está retida para a sua revisão`,
+      heading: "A sua resposta está pronta — retida para a sua revisão",
+      bodyP1: ({ orderName }) =>
+        `Foi detetada uma nova disputa para a encomenda ${orderName}. O DisputeDesk preparou a sua resposta, mas não a enviou de imediato.`,
+      listLabel: "O que fazer a seguir",
+      listItems: [
+        "Abra a disputa e reveja as provas preparadas",
+        "Deixe como está — guardamos no Shopify no prazo",
+        "Ou não a defenda se não valer a pena",
+      ],
+      callout: {
+        label: "O que acontece a seguir",
+        body: ({ dueDate }) =>
+          `Ainda não foi guardado nada. Se não fizer nada, guardamos esta resposta no Shopify a <b>${dueDate}</b>.`,
+      },
+      cta: "Revisar disputa →",
+    },
   },
   fr: {
     shared: {
@@ -298,6 +364,24 @@ const STRINGS: Record<Locale, EmailStrings> = {
       callout: {
         label: "Important",
         body: "Rien n'a encore été soumis. Ce litige nécessite toujours votre décision.",
+      },
+      cta: "Examiner le litige →",
+    },
+    held: {
+      subject: ({ shortId }) => `Le litige #${shortId} est retenu pour votre examen`,
+      heading: "Votre réponse est prête — retenue pour votre examen",
+      bodyP1: ({ orderName }) =>
+        `Un nouveau litige a été détecté pour la commande ${orderName}. DisputeDesk a préparé votre réponse mais ne l'a pas envoyée immédiatement.`,
+      listLabel: "Que faire ensuite",
+      listItems: [
+        "Ouvrez le litige et examinez les preuves préparées",
+        "Laissez tel quel — nous l'enregistrons dans Shopify à la date limite",
+        "Ou ne le défendez pas si cela n'en vaut pas la peine",
+      ],
+      callout: {
+        label: "Ce qui se passe ensuite",
+        body: ({ dueDate }) =>
+          `Rien n'a encore été enregistré. Si vous n'intervenez pas, nous enregistrerons cette réponse dans Shopify le <b>${dueDate}</b>.`,
       },
       cta: "Examiner le litige →",
     },
@@ -349,6 +433,24 @@ const STRINGS: Record<Locale, EmailStrings> = {
       },
       cta: "Reklamation prüfen →",
     },
+    held: {
+      subject: ({ shortId }) => `Reklamation #${shortId} wird für Ihre Prüfung zurückgehalten`,
+      heading: "Ihre Antwort ist fertig — für Ihre Prüfung zurückgehalten",
+      bodyP1: ({ orderName }) =>
+        `Für Bestellung ${orderName} wurde eine neue Reklamation erkannt. DisputeDesk hat Ihre Antwort vorbereitet, sie aber nicht sofort gesendet.`,
+      listLabel: "Nächste Schritte",
+      listItems: [
+        "Öffnen Sie die Reklamation und prüfen Sie die vorbereiteten Beweise",
+        "Lassen Sie sie so — wir speichern sie zur Frist in Shopify",
+        "Oder geben Sie sie auf, wenn sie sich nicht lohnt",
+      ],
+      callout: {
+        label: "Was als Nächstes passiert",
+        body: ({ dueDate }) =>
+          `Es wurde noch nichts gespeichert. Wenn Sie nichts unternehmen, speichern wir diese Antwort am <b>${dueDate}</b> in Shopify.`,
+      },
+      cta: "Reklamation prüfen →",
+    },
   },
   sv: {
     shared: {
@@ -394,6 +496,24 @@ const STRINGS: Record<Locale, EmailStrings> = {
       callout: {
         label: "Viktigt",
         body: "Inget har skickats in ännu. Denna tvist kräver fortfarande ditt beslut.",
+      },
+      cta: "Granska tvist →",
+    },
+    held: {
+      subject: ({ shortId }) => `Tvist #${shortId} hålls för din granskning`,
+      heading: "Ditt svar är klart — hålls för din granskning",
+      bodyP1: ({ orderName }) =>
+        `En ny tvist upptäcktes för order ${orderName}. DisputeDesk förberedde ditt svar men skickade det inte direkt.`,
+      listLabel: "Vad du gör härnäst",
+      listItems: [
+        "Öppna tvisten och granska de förberedda bevisen",
+        "Låt den vara — vi sparar den till Shopify på förfallodagen",
+        "Eller avstå från att försvara den om det inte är värt det",
+      ],
+      callout: {
+        label: "Vad händer nu",
+        body: ({ dueDate }) =>
+          `Ingenting har sparats än. Om du inte gör något sparar vi det här svaret till Shopify den <b>${dueDate}</b>.`,
       },
       cta: "Granska tvist →",
     },
@@ -529,7 +649,7 @@ export async function sendNewDisputeAlert(
     const locale = resolveLocale(storeLocale);
     const s = STRINGS[locale];
     const shared = s.shared;
-    const variant = ctx.resolvedMode === "auto" ? s.auto : s.review;
+    const variant = s[ctx.resolvedMode];
 
     const { data: shop } = await sb
       .from("shops")
@@ -577,11 +697,11 @@ export async function sendNewDisputeAlert(
     const calloutHtml =
       variant.callout && calloutBody !== null
         ? `
-      <div style="background:${ctx.resolvedMode === "review" ? "#FEF3C7;border:1px solid #FCD34D" : "#EFF6FF;border:1px solid #BFDBFE"};border-radius:8px;padding:12px 16px;margin-bottom:20px">
-        <p style="font-size:13px;font-weight:600;color:${ctx.resolvedMode === "review" ? "#92400E" : "#1E40AF"};margin:0 0 4px">
+      <div style="background:${ctx.resolvedMode !== "auto" ? "#FEF3C7;border:1px solid #FCD34D" : "#EFF6FF;border:1px solid #BFDBFE"};border-radius:8px;padding:12px 16px;margin-bottom:20px">
+        <p style="font-size:13px;font-weight:600;color:${ctx.resolvedMode !== "auto" ? "#92400E" : "#1E40AF"};margin:0 0 4px">
           ${variant.callout.label}
         </p>
-        <p style="font-size:13px;color:${ctx.resolvedMode === "review" ? "#92400E" : "#1E40AF"};margin:0;line-height:1.5">
+        <p style="font-size:13px;color:${ctx.resolvedMode !== "auto" ? "#92400E" : "#1E40AF"};margin:0;line-height:1.5">
           ${calloutBody}
         </p>
       </div>`
@@ -732,7 +852,7 @@ ${shared.footer}`;
  */
 export async function claimAndSendDeferredNewDisputeAlert(
   disputeId: string,
-  mode: AutomationMode,
+  mode: NewDisputeAlertVariant,
 ): Promise<void> {
   try {
     const sb = getServiceClient();

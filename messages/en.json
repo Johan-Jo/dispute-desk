@@ -490,11 +490,9 @@
     "managedAutomatedTitle": "Fully Automated",
     "managedAutomatedDesc": "DisputeDesk handles this case automatically based on your rules.",
     "managedReviewTitle": "Review Required",
-    "managedReviewDesc": "DisputeDesk prepares evidence for this case but waits for your review before saving to Shopify.",
     "managedManualTitle": "Manual Handling",
     "managedManualDesc": "No automation rule matches this case. You'll need to prepare and save evidence manually.",
     "caseStatusBuilding": "DisputeDesk is building evidence for this case.",
-    "caseStatusReview": "Evidence is ready for your review.",
     "caseStatusReady": "Evidence pack is complete and ready to save.",
     "caseStatusSaved": "Evidence has been saved to Shopify.",
     "caseStatusNoPack": "No evidence pack has been generated yet.",
@@ -552,7 +550,6 @@
     "stateZero": "No disputes to handle right now. New disputes will appear here automatically as they come in from Shopify.",
     "stateAllClear": "You have {total, plural, one {1 open dispute} other {# open disputes}} — everything looks on track.",
     "stateSomeUrgent": "You have {total, plural, one {1 open dispute} other {# open disputes}}. {urgent, plural, one {1 needs} other {# need}} immediate attention — overdue or due soon.",
-    "stateNeedsReview": "You have {total, plural, one {1 open dispute} other {# open disputes}}. {review, plural, one {1 is flagged} other {# are flagged}} for your review before DisputeDesk can proceed.",
     "stateNeedsSync": "You have {total, plural, one {1 dispute} other {# disputes}}. {sync, plural, one {1 hasn't} other {# haven't}} been classified yet — run a sync to catch up.",
     "alertsNudge": "Want an email when a dispute is ready to review? Add your team email in Settings.",
     "alertsNudgeLink": "Open Settings",
@@ -1413,7 +1410,7 @@
       },
       "package": {
         "loadingAccessibilityLabel": "Loading defence package",
-        "cardHelp": "DisputeDesk prepares a bank-facing PDF that combines approved Shopify evidence, payment signals, fulfilment proof, customer communication, policies, and any merchant-supplied documents into one structured defence package. <b>Review the package and submit it before the deadline — in review mode nothing is sent unless you submit.</b>",
+        "cardHelp": "DisputeDesk prepares a bank-facing PDF that combines approved Shopify evidence, payment signals, fulfilment proof, customer communication, policies, and any merchant-supplied documents into one structured defence package. <b>Review it before the deadline. On Auto-pilot it is saved to Shopify on the due date if you haven't acted; in review mode it is saved only when you approve it.</b>",
         "savingBody": "DisputeDesk has accepted your submission and is uploading the defence package to Shopify. This usually completes in under 30 seconds — this banner will update automatically.",
         "savedTitles": {
           "outcomePosted": "Outcome posted",
@@ -2493,17 +2490,17 @@
     "advancedFiltersSubtitle": "Optional rules for specific dispute types or amounts. These are checked before your store-wide setting.",
     "explainerTitle": "What you're looking at",
     "explainerBullet1": "One setting covers your whole store — it applies to every dispute that arrives.",
-    "explainerBullet2": "Auto-pilot submits only the cases we're confident about. Weak, subjective, or already-lost cases always wait for you.",
+    "explainerBullet2": "Auto-pilot sends the cases we're confident about straight away. Weak, subjective, or already-lost cases are held for you first — they still go to Shopify on the due date unless you choose not to defend them.",
     "explainerBullet3": "Safeguards let you hold back more: set an amount and every dispute above it waits for your approval.",
     "modeSectionTitle": "How disputes are handled",
-    "modeSectionSubtitle": "This applies to every dispute. Some cases always wait for you — see Safeguards below.",
+    "modeSectionSubtitle": "This applies to every dispute. Some cases are always held for your review first — see Safeguards below.",
     "modeAutoTitle": "Auto-pilot",
     "modeAutoBadge": "Recommended",
-    "modeAutoDesc": "We build and submit your strongest cases automatically. Everything else waits for your review.",
+    "modeAutoDesc": "We build your strongest cases and save them to Shopify as soon as they're ready. Everything else is held for your review first, then saved to Shopify on the due date if you haven't decided.",
     "modeReviewTitle": "Review everything",
     "modeReviewDesc": "We prepare every response. Nothing is saved to Shopify until you approve it.",
     "modeSaved": "Handling settings saved",
-    "alwaysReviewedTitle": "Always reviewed — whatever mode you pick",
+    "alwaysReviewedTitle": "Always held for you first — whatever mode you pick",
     "alwaysReviewedProduct": "“Not as described” and product quality claims",
     "alwaysReviewedCovered": "Disputes already covered by Shopify Protect",
     "alwaysReviewedWeak": "Cases where the evidence is weak or missing",
@@ -2542,7 +2539,7 @@
     "safeguardAmountPrefix": "Hold every dispute above",
     "safeguardAmountSuffix": "for your approval.",
     "alwaysReviewedHeading": "Always reviewed",
-    "alwaysReviewedHeadingTail": "— whatever mode you pick, these never submit on their own",
+    "alwaysReviewedHeadingTail": "— whatever mode you pick, these are held for review first and only reach Shopify on the due date",
     "saveChanges": "Save changes",
     "saveSaved": "Saved"
   },
@@ -2557,7 +2554,6 @@
     "automationBanner": "Evidence is saved to Shopify via API. Submission to the card network happens in Shopify Admin (or auto-submits on due date). DisputeDesk does not submit on your behalf.",
     "autoBuildLabel": "Auto-build evidence packs",
     "autoBuildDesc": "Automatically generate packs when new disputes are detected",
-    "reviewLabel": "Require review before auto-save",
     "reviewDesc": "Park packs in review queue for approval before saving to Shopify",
     "blockerLabel": "Enforce zero blockers",
     "blockerDesc": "Block auto-save if any required evidence items are missing",
@@ -2686,7 +2682,7 @@
       "savingTitle": "Saving evidence to Shopify",
       "savingDesc": "Choose whether DisputeDesk can save eligible evidence packages automatically, or must wait for your approval. This is an operational safeguard, not a notification preference.",
       "autoTitle": "Save automatically",
-      "autoDesc": "DisputeDesk automatically saves eligible evidence packages to Shopify after all configured quality and safety checks pass.",
+      "autoDesc": "DisputeDesk automatically saves eligible evidence packages to Shopify after all configured quality and safety checks pass. Packages that don't pass are held for your review and saved to Shopify on the due date unless you choose not to defend.",
       "autoNote": "You can still review the package in DisputeDesk. Saving evidence to Shopify does not by itself confirm the response has been sent to the card network.",
       "approveTitle": "Require my approval before saving",
       "approveDesc": "DisputeDesk prepares and monitors the response but waits for your approval before saving the first evidence package to Shopify.",
@@ -3081,11 +3077,11 @@
       },
       "reviewQueue": {
         "title": "The review queue",
-        "body": "The Review Queue contains disputes that require your manual review before evidence is saved to Shopify.\n\nDisputes end up in the review queue when:\n- A rule routes them to review (e.g. high-value disputes over a certain amount).\n- No rule matches and the default action is review.\n- You have \"Require review before auto-save\" enabled in your automation settings.\n\nFrom the Review Queue tab on the Disputes page, you can:\n- See all disputes awaiting your attention.\n- Click into any dispute to review the evidence pack.\n- Click \"Approve\" to trigger the automation pipeline (pack building and saving).\n\nThis gives you full control over which disputes get automated responses and which ones you want to handle personally."
+        "body": "The Review Queue contains disputes held for you before evidence is saved to Shopify.\n\nDisputes end up in the review queue when:\n- A rule routes them to review (e.g. high-value disputes over a certain amount).\n- No rule matches and the default action is review.\n- The evidence is weak, subjective, or the case is already lost.\n\nFrom the Review Queue tab on the Disputes page, you can:\n- See all disputes awaiting your attention.\n- Click into any dispute to review the evidence pack.\n- Click \"Approve\" to save the evidence to Shopify.\n\nA dispute in the review queue is not frozen. On Auto-pilot it is saved to Shopify on the due date if you have not acted; in review mode it is saved only when you approve it. Choose \"Don't defend\" to stop it either way."
       },
       "approvingDisputes": {
         "title": "Approving disputes from the review queue",
-        "body": "When a dispute is in your Review Queue, you need to approve it before DisputeDesk will build and save evidence.\n\nTo approve a dispute:\n1. Go to the Disputes page and switch to the \"Review Queue\" tab.\n2. Click the \"Approve\" button next to the dispute.\n3. DisputeDesk will immediately trigger the automation pipeline.\n4. An evidence pack will be built from your order data, tracking, and policies.\n5. If the pack passes your completeness and blocker gates, evidence will be saved to Shopify.\n\nYou can also approve from the dispute detail page by clicking \"Approve & Save.\"\n\nAll approvals are logged in the audit trail for compliance tracking."
+        "body": "When a dispute is in your Review Queue, DisputeDesk has already built the evidence. Your approval controls whether it is saved to Shopify.\n\nTo approve a dispute:\n1. Go to the Disputes page and switch to the \"Review Queue\" tab.\n2. Click the \"Approve\" button next to the dispute.\n3. If the pack passes your completeness and blocker gates, evidence is saved to Shopify.\n\nYou can also approve from the dispute detail page by clicking \"Approve & Save.\"\n\nOn Auto-pilot, a dispute held for review is saved to Shopify on the due date if you take no action. In review mode, nothing is saved unless you approve it. Choose \"Don't defend\" to stop a dispute in either mode.\n\nAll approvals are logged in the audit trail for compliance tracking."
       },
       "howPacksBuilt": {
         "title": "How evidence packs are built automatically",
@@ -3289,7 +3285,7 @@
         },
         "reviewQueue": {
           "title": "The review queue",
-          "body": "The review queue is disputes your rules route to **manual review** before evidence is saved to Shopify.\n\nDisputes land here when:\n- A rule sends them to review (for example high value).\n- No rule matches and the default is review.\n- **Require review before auto-save** is on in automation settings.\n\nIn the embedded app, those disputes appear on the **Disputes** list with your other chargebacks — use **Filter** by status or open items from the dashboard. Open a dispute to inspect the pack, then use **Approve & Save** on the detail page when ready.\n\nThis keeps automation for simple cases and hands unusual or sensitive disputes to you."
+          "body": "The review queue is disputes held for you before evidence is saved to Shopify.\n\nDisputes land here when:\n- A rule sends them to review (for example high value).\n- No rule matches and the default is review.\n- The evidence is weak, subjective, or the case is already lost.\n\nIn the embedded app, those disputes appear on the **Disputes** list with your other chargebacks — use **Filter** by status or open items from the dashboard. Open a dispute to inspect the pack, then use **Approve & Save** on the detail page when ready.\n\nA dispute here is not frozen. On Auto-pilot it is saved to Shopify on the due date if you have not acted; in review mode it is saved only when you approve it. Choose **Don't defend** to stop it either way."
         },
         "approvingDisputes": {
           "title": "Approving disputes from the review queue",
@@ -4656,7 +4652,7 @@
       "setupSummaryTitle": "What we've set up for you",
       "setupSummaryInquiry": "Early-stage inquiries covered automatically",
       "setupSummaryReady": "Ready for {families} disputes.",
-      "setupSummaryModeAuto": "Strong responses are built and submitted to Shopify automatically. Anything that needs a closer look waits for your approval.",
+      "setupSummaryModeAuto": "Strong responses are saved to Shopify automatically. Anything that needs a closer look is held for your review, then saved to Shopify on the due date if you haven't decided.",
       "setupSummaryModeReview": "Every response is built for you and waits for your approval before it goes to Shopify.",
       "setupSummarySafeguard": "Disputes over ${amount} always wait for your approval.",
       "setupSummaryPointer": "You can fine-tune individual dispute types later on the Automation page."
@@ -5832,8 +5828,8 @@
       },
       "next": {
         "building_evidence": "Evidence pack prepared — usually within a few hours",
-        "monitoring": "Evidence saved to Shopify before the response deadline",
-        "pack_prepared": "Evidence saved to Shopify before the response deadline",
+        "monitoring": "Held for your review — saved to Shopify on the due date unless you decide otherwise",
+        "pack_prepared": "Held for your review — saved to Shopify on the due date unless you decide otherwise",
         "saved_to_shopify": "Shopify sends the response at the deadline",
         "under_review": "Outcome received",
         "technical_error": "Monitoring resumes automatically once the connection is restored"

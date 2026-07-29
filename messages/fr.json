@@ -487,7 +487,6 @@
     "unknownPhaseWarning": "Phase pas encore classifiée. Sera mise à jour automatiquement lors de la prochaine synchronisation.",
     "unknownPhaseAction": "Synchroniser maintenant",
     "caseStatusBuilding": "DisputeDesk prépare les preuves pour ce cas.",
-    "caseStatusReview": "Les preuves sont prêtes pour votre examen.",
     "caseStatusReady": "Le dossier de preuves est complet et prêt à être sauvegardé.",
     "caseStatusSaved": "Les preuves ont été sauvegardées dans Shopify.",
     "caseStatusNoPack": "Aucun dossier de preuves n'a encore été généré.",
@@ -544,14 +543,12 @@
     "managedAutomatedTitle": "Entièrement automatisé",
     "managedAutomatedDesc": "DisputeDesk traite ce cas automatiquement selon vos règles.",
     "managedReviewTitle": "Examen requis",
-    "managedReviewDesc": "DisputeDesk prépare les preuves mais attend votre examen avant de les enregistrer dans Shopify.",
     "managedManualTitle": "Traitement manuel",
     "managedManualDesc": "Aucune règle d automatisation ne correspond à ce cas. Vous devrez préparer et enregistrer les preuves manuellement.",
     "purposeLine": "Tous vos litiges Shopify au même endroit — avec statut, urgence et ce qui nécessite encore votre attention.",
     "stateZero": "Aucun litige à traiter pour le moment. Les nouveaux litiges apparaîtront ici automatiquement dès leur arrivée depuis Shopify.",
     "stateAllClear": "Vous avez {total, plural, one {1 litige ouvert} other {# litiges ouverts}} — tout semble en ordre.",
     "stateSomeUrgent": "Vous avez {total, plural, one {1 litige ouvert} other {# litiges ouverts}}. {urgent, plural, one {1 nécessite} other {# nécessitent}} une attention immédiate — en retard ou bientôt dus.",
-    "stateNeedsReview": "Vous avez {total, plural, one {1 litige ouvert} other {# litiges ouverts}}. {review, plural, one {1 est signalé} other {# sont signalés}} pour votre examen avant que DisputeDesk ne puisse continuer.",
     "stateNeedsSync": "Vous avez {total, plural, one {1 litige} other {# litiges}}. {sync, plural, one {1 n'a pas encore été classé} other {# n'ont pas encore été classés}} — lancez une synchronisation pour rattraper.",
     "alertsNudge": "Vous souhaitez recevoir des alertes email pour les nouveaux litiges ? Ajoutez votre email d'équipe dans les Paramètres.",
     "alertsNudgeLink": "Ouvrir les Paramètres",
@@ -869,7 +866,7 @@
       },
       "package": {
         "loadingAccessibilityLabel": "Chargement du dossier de preuves",
-        "cardHelp": "DisputeDesk prépare un PDF destiné à la banque qui combine les preuves Shopify approuvées, les signaux de paiement, les preuves d'exécution, les communications client, les politiques et tout document fourni par le marchand en un dossier de preuves structuré. <b>Vérifiez le dossier et soumettez-le avant l'échéance — en mode révision, rien n'est envoyé tant que vous ne soumettez pas.</b>",
+        "cardHelp": "DisputeDesk prépare un PDF destiné à la banque qui réunit les preuves Shopify approuvées, les signaux de paiement, les preuves de livraison, les échanges clients, les politiques et tout document que vous fournissez en un dossier de défense structuré. <b>Examinez-le avant la date limite. En pilote automatique, il est enregistré dans Shopify à la date limite si vous n'avez rien fait ; en mode examen, il n'est enregistré que lorsque vous le validez.</b>",
         "savingBody": "DisputeDesk a accepté votre soumission et téléverse le dossier de preuves vers Shopify. Cela se termine généralement en moins de 30 secondes — ce message se mettra à jour automatiquement.",
         "savedTitles": {
           "outcomePosted": "Résultat publié",
@@ -2475,7 +2472,7 @@
     "advancedFiltersSubtitle": "Règles facultatives pour des types de litige ou des montants précis. Elles sont vérifiées avant votre réglage global.",
     "explainerTitle": "Ce que vous voyez ici",
     "explainerBullet1": "Un seul réglage couvre toute votre boutique — il s'applique à chaque litige reçu.",
-    "explainerBullet2": "Le pilote automatique n'envoie que les dossiers dont nous sommes sûrs. Les dossiers faibles, subjectifs ou déjà perdus attendent toujours votre validation.",
+    "explainerBullet2": "Le pilote automatique envoie immédiatement les dossiers dont nous sommes sûrs. Les dossiers faibles, subjectifs ou déjà perdus sont d'abord retenus pour vous — ils partent tout de même vers Shopify à la date limite, sauf si vous choisissez de ne pas les défendre.",
     "explainerBullet3": "Les garde-fous vous permettent d'en retenir davantage : fixez un montant et tout litige au-dessus attendra votre approbation.",
     "setupTitle": "Automatisez votre flux de litiges",
     "setupDescription": "Les règles décident de ce qui se passe quand un nouveau litige arrive.",
@@ -2496,14 +2493,14 @@
     "presetCatchAllReview": "Attrape-tout : Envoyer en révision",
     "presetCatchAllReviewDesc": "Achemine les litiges restants vers la file d'attente de révision comme filet de sécurité.",
     "modeSectionTitle": "Comment les litiges sont traités",
-    "modeSectionSubtitle": "Ceci s'applique à tous les litiges. Certains cas attendent toujours votre validation — voir « Garde-fous » ci-dessous.",
+    "modeSectionSubtitle": "Ceci s'applique à tous les litiges. Certains cas sont toujours retenus pour votre examen — voir « Garde-fous » ci-dessous.",
     "modeAutoTitle": "Pilote automatique",
     "modeAutoBadge": "Recommandé",
-    "modeAutoDesc": "Nous constituons et envoyons automatiquement vos dossiers les plus solides. Tout le reste attend votre validation.",
+    "modeAutoDesc": "Nous préparons vos dossiers les plus solides et les enregistrons dans Shopify dès qu'ils sont prêts. Tout le reste est d'abord retenu pour votre examen, puis enregistré dans Shopify à la date limite si vous n'avez pas tranché.",
     "modeReviewTitle": "Tout examiner",
     "modeReviewDesc": "Nous préparons chaque réponse. Rien n'est enregistré dans Shopify tant que vous ne l'avez pas approuvé.",
     "modeSaved": "Paramètres enregistrés",
-    "alwaysReviewedTitle": "Toujours examinés, quel que soit le mode choisi",
+    "alwaysReviewedTitle": "Toujours retenus pour vous d'abord, quel que soit le mode choisi",
     "alwaysReviewedProduct": "Réclamations « non conforme à la description » et qualité du produit",
     "alwaysReviewedCovered": "Litiges déjà couverts par Shopify Protect",
     "alwaysReviewedWeak": "Dossiers dont les preuves sont faibles ou absentes",
@@ -2542,7 +2539,7 @@
     "safeguardAmountPrefix": "Retenir pour validation tout litige supérieur à",
     "safeguardAmountSuffix": ".",
     "alwaysReviewedHeading": "Toujours examinés",
-    "alwaysReviewedHeadingTail": "— quel que soit le mode choisi, ceux-ci ne sont jamais envoyés seuls",
+    "alwaysReviewedHeadingTail": "— quel que soit le mode choisi, ceux-ci sont d'abord retenus pour examen et n'arrivent dans Shopify qu'à la date limite",
     "saveChanges": "Enregistrer les modifications",
     "saveSaved": "Enregistré"
   },
@@ -2556,7 +2553,6 @@
     "automationBanner": "Les preuves sont enregistrées sur Shopify via API. La soumission se fait dans Shopify Admin. DisputeDesk ne soumet pas en votre nom.",
     "autoBuildLabel": "Créer automatiquement les dossiers",
     "autoBuildDesc": "Générer automatiquement des dossiers quand de nouveaux litiges sont détectés",
-    "reviewLabel": "Exiger un examen avant l'enregistrement auto",
     "reviewDesc": "Placer les dossiers en file d'examen pour approbation",
     "blockerLabel": "Exiger zéro blocage",
     "blockerDesc": "Bloquer l'enregistrement auto si des preuves obligatoires manquent",
@@ -2686,7 +2682,7 @@
       "savingTitle": "Enregistrement des preuves dans Shopify",
       "savingDesc": "Choisissez si DisputeDesk peut enregistrer automatiquement les dossiers de preuves éligibles ou doit attendre votre approbation. C'est une protection opérationnelle, pas une préférence de notification.",
       "autoTitle": "Enregistrer automatiquement",
-      "autoDesc": "DisputeDesk enregistre automatiquement les dossiers de preuves éligibles dans Shopify après validation de tous les contrôles de qualité et de sécurité configurés.",
+      "autoDesc": "DisputeDesk enregistre automatiquement dans Shopify les dossiers de preuves éligibles une fois toutes les vérifications de qualité et de sécurité configurées réussies. Les dossiers qui échouent sont retenus pour votre examen et enregistrés dans Shopify à la date limite, sauf si vous choisissez de ne pas les défendre.",
       "autoNote": "Vous pouvez toujours consulter le dossier dans DisputeDesk. L'enregistrement dans Shopify ne confirme pas à lui seul que la réponse a été envoyée au réseau de cartes.",
       "approveTitle": "Exiger mon approbation avant l'enregistrement",
       "approveDesc": "DisputeDesk prépare et surveille la réponse, mais attend votre approbation avant d'enregistrer le premier dossier de preuves dans Shopify.",
@@ -3082,11 +3078,11 @@
       },
       "reviewQueue": {
         "title": "La file d'examen",
-        "body": "La file d'examen contient les litiges nécessitant votre examen manuel.\n\nLes litiges y arrivent quand :\n- Une règle les dirige ici.\n- Aucune règle ne correspond.\n- \"Exiger un examen\" est activé.\n\nVous pouvez examiner et approuver les litiges."
+        "body": "La file d'examen contient les litiges retenus pour vous avant l'enregistrement des preuves dans Shopify.\n\nUn litige arrive dans la file d'examen quand :\n- Une règle l'y envoie (par exemple les litiges au-dessus d'un certain montant).\n- Aucune règle ne correspond et l'action par défaut est l'examen.\n- Les preuves sont faibles ou subjectives, ou le dossier est déjà perdu.\n\nDepuis l'onglet File d'examen, vous pouvez :\n- Voir tous les litiges qui attendent votre attention.\n- Ouvrir un litige pour examiner le dossier de preuves.\n- Cliquer sur « Valider » pour enregistrer les preuves dans Shopify.\n\nUn litige dans la file n'est pas gelé. En pilote automatique, il est enregistré dans Shopify à la date limite si vous n'avez rien fait ; en mode examen, il ne l'est que lorsque vous validez. Choisissez « Ne pas défendre » pour l'arrêter dans les deux cas."
       },
       "approvingDisputes": {
         "title": "Approuver des litiges depuis la file d'examen",
-        "body": "Pour approuver un litige :\n\n1. Allez à la page Litiges, onglet \"File d'examen\".\n2. Cliquez \"Approuver\".\n3. DisputeDesk lance le pipeline d'automatisation.\n4. Un dossier de preuves est créé.\n5. Si les contrôles passent, les preuves sont enregistrées sur Shopify.\n\nToutes les approbations sont enregistrées dans le journal d'audit."
+        "body": "Lorsqu'un litige est dans votre file d'examen, DisputeDesk a déjà préparé les preuves. Votre validation détermine seulement si elles sont enregistrées dans Shopify.\n\nPour valider un litige :\n1. Ouvrez la page Litiges et passez à l'onglet « File d'examen ».\n2. Cliquez sur « Valider » à côté du litige.\n3. Si le dossier passe vos contrôles d'exhaustivité et de blocage, les preuves sont enregistrées dans Shopify.\n\nVous pouvez aussi valider depuis la page de détail avec « Valider et enregistrer ».\n\nEn pilote automatique, un litige retenu est enregistré dans Shopify à la date limite si vous n'intervenez pas. En mode examen, rien n'est enregistré tant que vous ne validez pas. Choisissez « Ne pas défendre » pour l'arrêter dans les deux modes.\n\nToutes les validations sont consignées dans la piste d'audit."
       },
       "howPacksBuilt": {
         "title": "Comment les dossiers sont créés automatiquement",
@@ -3290,7 +3286,7 @@
         },
         "reviewQueue": {
           "title": "La file d'attente de révision",
-          "body": "La file d'attente regroupe les litiges que vos règles orientent vers une **révision manuelle** avant l'enregistrement des preuves dans Shopify.\n\nIls y arrivent lorsque :\n- une règle les envoie en révision (par ex. montant élevé),\n- aucune règle ne correspond et la valeur par défaut est la révision,\n- **Révision avant enregistrement auto** est activé dans l'automatisation.\n\nDans l'app intégrée, ils apparaissent dans la liste **Litiges** avec les autres — utilisez **Filtrer** par statut ou ouvrez-les depuis le tableau de bord. Ouvrez le litige, examinez le paquet puis **Approuver et enregistrer** sur la page de détail lorsque vous êtes prêt."
+          "body": "La file d'examen regroupe les litiges retenus pour vous avant l'enregistrement des preuves dans Shopify.\n\nIls arrivent ici quand :\n- Une règle les envoie en examen (par exemple un montant élevé).\n- Aucune règle ne correspond et le réglage par défaut est l'examen.\n- Les preuves sont faibles ou subjectives, ou le dossier est déjà perdu.\n\nDans l'application intégrée, ces litiges apparaissent dans la liste **Litiges** avec vos autres impayés — utilisez **Filtrer** par statut ou ouvrez-les depuis le tableau de bord. Ouvrez un litige pour inspecter le dossier, puis utilisez **Valider et enregistrer** sur la page de détail.\n\nUn litige ici n'est pas gelé. En pilote automatique, il est enregistré dans Shopify à la date limite si vous n'avez rien fait ; en mode examen, il ne l'est que lorsque vous validez. Choisissez **Ne pas défendre** pour l'arrêter dans les deux cas."
         },
         "approvingDisputes": {
           "title": "Approuver des litiges depuis la file d'attente",
@@ -4380,7 +4376,7 @@
       "setupSummaryTitle": "Ce que nous avons configuré pour vous",
       "setupSummaryInquiry": "Demandes préalables couvertes automatiquement",
       "setupSummaryReady": "Prêt pour les litiges de type {families}.",
-      "setupSummaryModeAuto": "Les réponses solides sont préparées et envoyées à Shopify automatiquement. Tout ce qui mérite un examen attend votre validation.",
+      "setupSummaryModeAuto": "Les réponses solides sont enregistrées automatiquement dans Shopify. Tout ce qui mérite un examen est retenu pour votre validation, puis enregistré dans Shopify à la date limite si vous n'avez pas tranché.",
       "setupSummaryModeReview": "Chaque réponse est préparée pour vous et attend votre validation avant d'être envoyée à Shopify.",
       "setupSummarySafeguard": "Les litiges de plus de {amount} $ attendent toujours votre validation.",
       "setupSummaryPointer": "Vous pourrez affiner chaque type de litige plus tard sur la page Automatisation."
@@ -5819,8 +5815,8 @@
       },
       "next": {
         "building_evidence": "Dossier de preuves préparé — généralement en quelques heures",
-        "monitoring": "Preuves enregistrées dans Shopify avant la date limite de réponse",
-        "pack_prepared": "Preuves enregistrées dans Shopify avant la date limite de réponse",
+        "monitoring": "Retenu pour votre examen — enregistré dans Shopify à la date limite sauf décision contraire",
+        "pack_prepared": "Retenu pour votre examen — enregistré dans Shopify à la date limite sauf décision contraire",
         "saved_to_shopify": "Shopify envoie la réponse à la date limite",
         "under_review": "Résultat reçu",
         "technical_error": "La surveillance reprend automatiquement une fois la connexion rétablie"
