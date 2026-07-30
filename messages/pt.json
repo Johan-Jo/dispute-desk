@@ -1252,7 +1252,9 @@
             "unknown": "Disputa encerrada"
           },
           "preSubmit": {
-            "covered": "Coberto pelo Shopify Protect"
+            "covered": "Coberto pelo Shopify Protect",
+            "could_win": "Revisar antes de contestar",
+            "needs_strengthening": "Revisar antes de contestar"
           }
         },
         "subtitle": {

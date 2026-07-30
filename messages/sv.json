@@ -1674,7 +1674,9 @@
             "unknown": "Tvist avslutad"
           },
           "preSubmit": {
-            "covered": "Täcks av Shopify Protect"
+            "covered": "Täcks av Shopify Protect",
+            "could_win": "Granska före bestridande",
+            "needs_strengthening": "Granska före bestridande"
           }
         },
         "subtitle": {

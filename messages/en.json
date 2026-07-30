@@ -1205,7 +1205,9 @@
             "unknown": "Dispute closed"
           },
           "preSubmit": {
-            "covered": "Covered by Shopify Protect"
+            "covered": "Covered by Shopify Protect",
+            "could_win": "Review before challenging",
+            "needs_strengthening": "Review before challenging"
           }
         },
         "subtitle": {

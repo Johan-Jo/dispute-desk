@@ -732,7 +732,9 @@
             "unknown": "Vorgang abgeschlossen"
           },
           "preSubmit": {
-            "covered": "Durch Shopify Protect abgedeckt"
+            "covered": "Durch Shopify Protect abgedeckt",
+            "could_win": "Vor dem Anfechten prüfen",
+            "needs_strengthening": "Vor dem Anfechten prüfen"
           }
         },
         "subtitle": {

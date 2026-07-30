@@ -1252,7 +1252,9 @@
             "unknown": "Litige clos"
           },
           "preSubmit": {
-            "covered": "Couvert par Shopify Protect"
+            "covered": "Couvert par Shopify Protect",
+            "could_win": "À examiner avant de contester",
+            "needs_strengthening": "À examiner avant de contester"
           }
         },
         "subtitle": {
