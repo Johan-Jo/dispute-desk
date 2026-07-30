@@ -2533,7 +2533,11 @@
     "saveSaved": "Gespeichert",
     "groupFollowingStoreSetting": "Folgt der Store-Einstellung: {mode}",
     "groupHasOwnSetting": "Hat eine eigene Einstellung",
-    "modeClearedExceptions": "{count} Dispute-Typen mit eigener Einstellung wurden gelöscht. Alles folgt jetzt „{mode}“. Legen Sie unten einen Typ fest, wenn Sie eine Ausnahme möchten."
+    "modeClearedExceptions": "{count} Dispute-Typen mit eigener Einstellung wurden gelöscht. Alles folgt jetzt „{mode}“. Legen Sie unten einen Typ fest, wenn Sie eine Ausnahme möchten.",
+    "modeAutoLead": "Wir erstellen Ihre stärksten Fälle und speichern sie in Shopify, sobald sie fertig sind.",
+    "modeAutoNote": "Alles andere wird zuerst für Ihre Prüfung zurückgehalten und dann zur Frist in Shopify gespeichert — es sei denn, Sie wählen „Nicht verteidigen“.",
+    "modeReviewLead": "Wir bereiten jede Antwort vor. Nichts wird in Shopify gespeichert, bevor Sie es freigeben.",
+    "modeReviewNote": "Volle Kontrolle — jeder Fall wartet auf Ihre Freigabe."
   },
   "settings": {
     "title": "Einstellungen",
@@ -4361,17 +4365,20 @@
       "title": "Wie sollen wir Zahlungsstreitigkeiten bearbeiten?",
       "subtitle": "Eine Einstellung für Ihren gesamten Shop. Sie können sie jederzeit auf der Seite „Automatisierung“ ändern.",
       "safeguardTitle": "Schutzmaßnahmen",
-      "safeguardToggle": "Hochwertige Fälle immer prüfen",
-      "thresholdLabel": "Betrag",
+      "safeguardToggle": "Hochwertige Reklamationen vor dem Senden prüfen",
+      "thresholdLabel": "Mindestbetrag",
       "thresholdInvalid": "Geben Sie einen Betrag größer als 0 ein",
-      "safeguardHint": "Wir erstellen die Antwort weiterhin automatisch – sie wartet nur auf Ihre Freigabe, bevor sie in Shopify gespeichert wird.",
+      "safeguardHint": "Das Beweispaket wird weiterhin automatisch erstellt, wartet aber vor dem Speichern in Shopify auf Ihre Freigabe.",
       "setupSummaryTitle": "Das haben wir für Sie eingerichtet",
       "setupSummaryInquiry": "Frühe Anfragen werden automatisch abgedeckt",
       "setupSummaryReady": "Bereit für Disputes wegen {families}.",
       "setupSummaryModeAuto": "Starke Antworten werden automatisch in Shopify gespeichert. Alles, was einen genaueren Blick braucht, wird für Ihre Prüfung zurückgehalten und dann zur Frist in Shopify gespeichert — es sei denn, Sie wählen „Nicht verteidigen“.",
       "setupSummaryModeReview": "Jede Antwort wird für Sie erstellt und wartet auf Ihre Freigabe, bevor sie an Shopify geht.",
       "setupSummarySafeguard": "Disputes über ${amount} warten immer auf Ihre Freigabe.",
-      "setupSummaryPointer": "Einzelne Dispute-Typen können Sie später auf der Automatisierungsseite feinjustieren."
+      "setupSummaryPointer": "Einzelne Dispute-Typen können Sie später auf der Automatisierungsseite feinjustieren.",
+      "safeguardSubtitle": "Zusätzliche Bremsen, die unabhängig vom gewählten Modus greifen.",
+      "alwaysHeldTitle": "Immer zuerst für Sie zurückgehalten",
+      "alwaysHeldSubtitle": "Zuerst für Ihre Prüfung zurückgehalten — unabhängig vom gewählten Modus."
     }
   },
   "coverage": {

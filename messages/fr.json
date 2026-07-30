@@ -2533,7 +2533,11 @@
     "saveSaved": "Enregistré",
     "groupFollowingStoreSetting": "Suit le réglage de la boutique : {mode}",
     "groupHasOwnSetting": "A son propre réglage",
-    "modeClearedExceptions": "{count} types de litige qui avaient leur propre réglage ont été effacés. Tout suit maintenant « {mode} ». Définissez un type ci-dessous si vous voulez une exception."
+    "modeClearedExceptions": "{count} types de litige qui avaient leur propre réglage ont été effacés. Tout suit maintenant « {mode} ». Définissez un type ci-dessous si vous voulez une exception.",
+    "modeAutoLead": "Nous préparons vos dossiers les plus solides et les enregistrons dans Shopify dès qu'ils sont prêts.",
+    "modeAutoNote": "Tout le reste est d'abord retenu pour votre examen, puis enregistré dans Shopify à la date limite, sauf si vous choisissez « Ne pas défendre ».",
+    "modeReviewLead": "Nous préparons chaque réponse. Rien n'est enregistré dans Shopify tant que vous ne l'avez pas approuvé.",
+    "modeReviewNote": "Contrôle total — chaque dossier attend votre validation."
   },
   "settings": {
     "title": "Paramètres",
@@ -4361,17 +4365,20 @@
       "title": "Comment devons-nous traiter les litiges ?",
       "subtitle": "Un seul réglage pour toute la boutique. Vous pouvez le modifier à tout moment depuis la page Automatisation.",
       "safeguardTitle": "Garde-fous",
-      "safeguardToggle": "Toujours examiner les litiges de montant élevé",
-      "thresholdLabel": "Montant",
+      "safeguardToggle": "Examiner les litiges de montant élevé avant l'envoi",
+      "thresholdLabel": "Montant minimum",
       "thresholdInvalid": "Saisissez un montant supérieur à 0",
-      "safeguardHint": "Nous préparons toujours la réponse automatiquement — elle attend simplement votre validation avant d'être enregistrée dans Shopify.",
+      "safeguardHint": "Le dossier de preuves est toujours constitué automatiquement, mais il attend votre validation avant d'être enregistré dans Shopify.",
       "setupSummaryTitle": "Ce que nous avons configuré pour vous",
       "setupSummaryInquiry": "Demandes préalables couvertes automatiquement",
       "setupSummaryReady": "Prêt pour les litiges de type {families}.",
       "setupSummaryModeAuto": "Les réponses solides sont enregistrées automatiquement dans Shopify. Tout ce qui mérite un examen est retenu pour votre validation, puis enregistré dans Shopify à la date limite, sauf si vous choisissez « Ne pas défendre ».",
       "setupSummaryModeReview": "Chaque réponse est préparée pour vous et attend votre validation avant d'être envoyée à Shopify.",
       "setupSummarySafeguard": "Les litiges de plus de {amount} $ attendent toujours votre validation.",
-      "setupSummaryPointer": "Vous pourrez affiner chaque type de litige plus tard sur la page Automatisation."
+      "setupSummaryPointer": "Vous pourrez affiner chaque type de litige plus tard sur la page Automatisation.",
+      "safeguardSubtitle": "Des garde-fous supplémentaires qui s'appliquent quel que soit le mode choisi.",
+      "alwaysHeldTitle": "Toujours retenus pour vous d'abord",
+      "alwaysHeldSubtitle": "Retenus pour votre examen d'abord — quel que soit le mode choisi."
     }
   },
   "coverage": {

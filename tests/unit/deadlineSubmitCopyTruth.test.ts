@@ -274,3 +274,49 @@ describe("concede copy does not promise a filing that cannot be stopped", () => 
     });
   }
 });
+
+// ─── F. The split mode copy cannot drift from the full string ──────────────
+
+/**
+ * `Onboarding Handling Step.dc.html` renders each mode card as a LEAD sentence
+ * plus a footnote below a dashed rule, so the wizard reads `modeAutoLead` +
+ * `modeAutoNote`. /app/rules still renders the single `modeAutoDesc`.
+ *
+ * Two renderings of one sentence is a drift factory: someone corrects the card
+ * and leaves the Automation page saying the old thing, or vice versa — exactly
+ * how "if you haven't decided" survived in two places at once. These assert the
+ * lead is literally the opening of the full description, and that the note
+ * carries the concede escape (section D's requirement, for the surface that
+ * actually shows the note).
+ */
+describe("wizard mode copy stays in lockstep with the Automation page copy", () => {
+  for (const locale of LOCALES) {
+    it(`${locale}: modeAutoLead is the opening of modeAutoDesc`, () => {
+      const lead = leaf(messages(locale), "rules.modeAutoLead");
+      const desc = leaf(messages(locale), "rules.modeAutoDesc");
+      expect(lead, `${locale}: rules.modeAutoLead missing`).toBeTruthy();
+      expect(desc, `${locale}: rules.modeAutoDesc missing`).toBeTruthy();
+      expect(
+        desc!.startsWith(lead!),
+        `${locale}: the wizard card and the Automation page would open differently`,
+      ).toBe(true);
+    });
+
+    it(`${locale}: modeReviewLead equals modeReviewDesc`, () => {
+      expect(leaf(messages(locale), "rules.modeReviewLead")).toBe(
+        leaf(messages(locale), "rules.modeReviewDesc"),
+      );
+    });
+
+    it(`${locale}: modeAutoNote names the concede escape and the deadline`, () => {
+      const note = leaf(messages(locale), "rules.modeAutoNote");
+      const label = leaf(messages(locale), CONCEDE_LABEL_KEY);
+      expect(note, `${locale}: rules.modeAutoNote missing`).toBeTruthy();
+      // The wizard shows ONLY the note under the dashed rule, so it — not just
+      // the combined string — has to carry both facts.
+      expect(note).toContain(label!);
+      expect(note).toMatch(DEADLINE_TERM[locale]);
+      expect(note).toMatch(/Shopify/);
+    });
+  }
+});

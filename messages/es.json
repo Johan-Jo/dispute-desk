@@ -2533,7 +2533,11 @@
     "saveSaved": "Guardado",
     "groupFollowingStoreSetting": "Sigue la configuración de la tienda: {mode}",
     "groupHasOwnSetting": "Tiene su propia configuración",
-    "modeClearedExceptions": "Se borraron {count} tipos de disputa que tenían su propia configuración. Ahora todo sigue «{mode}». Define un tipo abajo si quieres una excepción."
+    "modeClearedExceptions": "Se borraron {count} tipos de disputa que tenían su propia configuración. Ahora todo sigue «{mode}». Define un tipo abajo si quieres una excepción.",
+    "modeAutoLead": "Creamos tus casos más sólidos y los guardamos en Shopify en cuanto están listos.",
+    "modeAutoNote": "Todo lo demás se retiene primero para tu revisión y luego se guarda en Shopify en la fecha límite, salvo que elijas «No defender».",
+    "modeReviewLead": "Preparamos cada respuesta. No se guarda nada en Shopify hasta que lo apruebes.",
+    "modeReviewNote": "Control total: cada caso espera tu aprobación."
   },
   "settings": {
     "title": "Configuración",
@@ -4361,17 +4365,20 @@
       "title": "¿Cómo debemos gestionar las disputas?",
       "subtitle": "Una sola configuración para toda la tienda. Puedes cambiarla cuando quieras desde la página de Automatización.",
       "safeguardTitle": "Salvaguardas",
-      "safeguardToggle": "Revisar siempre las disputas de importe elevado",
-      "thresholdLabel": "Importe",
+      "safeguardToggle": "Revisar disputas de alto valor antes de enviarlas",
+      "thresholdLabel": "Importe mínimo",
       "thresholdInvalid": "Introduce un importe mayor que 0",
-      "safeguardHint": "Seguimos creando la respuesta automáticamente: solo espera tu aprobación antes de guardarse en Shopify.",
+      "safeguardHint": "El paquete de pruebas se sigue creando automáticamente, pero espera tu aprobación antes de guardarse en Shopify.",
       "setupSummaryTitle": "Esto es lo que hemos configurado por ti",
       "setupSummaryInquiry": "Consultas iniciales cubiertas automáticamente",
       "setupSummaryReady": "Listo para disputas por {families}.",
       "setupSummaryModeAuto": "Las respuestas sólidas se guardan en Shopify automáticamente. Todo lo que requiera una revisión más detallada se retiene para tu revisión y luego se guarda en Shopify en la fecha límite, salvo que elijas «No defender».",
       "setupSummaryModeReview": "Cada respuesta se crea para ti y espera tu aprobación antes de enviarse a Shopify.",
       "setupSummarySafeguard": "Las disputas de más de ${amount} siempre esperan tu aprobación.",
-      "setupSummaryPointer": "Puedes ajustar tipos de disputa concretos más adelante en la página de Automatización."
+      "setupSummaryPointer": "Puedes ajustar tipos de disputa concretos más adelante en la página de Automatización.",
+      "safeguardSubtitle": "Frenos adicionales que se aplican sobre el modo que elijas.",
+      "alwaysHeldTitle": "Siempre retenidos para ti primero",
+      "alwaysHeldSubtitle": "Retenidos para tu revisión primero, sea cual sea el modo elegido."
     }
   },
   "coverage": {

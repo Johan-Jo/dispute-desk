@@ -2533,7 +2533,11 @@
     "saveSaved": "Sparat",
     "groupFollowingStoreSetting": "Följer butikens inställning: {mode}",
     "groupHasOwnSetting": "Har en egen inställning",
-    "modeClearedExceptions": "{count} invändningstyper med egen inställning rensades. Allt följer nu ”{mode}”. Ställ in en typ nedan om du vill ha ett undantag."
+    "modeClearedExceptions": "{count} invändningstyper med egen inställning rensades. Allt följer nu ”{mode}”. Ställ in en typ nedan om du vill ha ett undantag.",
+    "modeAutoLead": "Vi bygger dina starkaste ärenden och sparar dem till Shopify så snart de är klara.",
+    "modeAutoNote": "Allt annat hålls först för din granskning och sparas sedan till Shopify på förfallodagen — om du inte väljer ”Försvara inte”.",
+    "modeReviewLead": "Vi förbereder varje svar. Ingenting sparas till Shopify förrän du godkänt det.",
+    "modeReviewNote": "Full överblick — varje ärende väntar på ditt godkännande."
   },
   "settings": {
     "title": "Inställningar",
@@ -4361,17 +4365,20 @@
       "title": "Hur ska vi hantera invändningar?",
       "subtitle": "En inställning för hela butiken. Du kan ändra den när som helst på sidan Automatisering.",
       "safeguardTitle": "Skyddsregler",
-      "safeguardToggle": "Granska alltid invändningar med höga belopp",
-      "thresholdLabel": "Belopp",
+      "safeguardToggle": "Granska högvärdiga tvister innan de skickas",
+      "thresholdLabel": "Minsta belopp",
       "thresholdInvalid": "Ange ett belopp större än 0",
-      "safeguardHint": "Vi bygger fortfarande svaret automatiskt – det väntar bara på ditt godkännande innan det sparas till Shopify.",
+      "safeguardHint": "Bevispaketet byggs fortfarande automatiskt, men väntar på ditt godkännande innan det sparas till Shopify.",
       "setupSummaryTitle": "Det här har vi ställt in åt dig",
       "setupSummaryInquiry": "Tidiga förfrågningar täcks automatiskt",
       "setupSummaryReady": "Redo för tvister om {families}.",
       "setupSummaryModeAuto": "Starka svar sparas till Shopify automatiskt. Allt som behöver en närmare titt hålls för din granskning och sparas sedan till Shopify på förfallodagen — om du inte väljer ”Försvara inte”.",
       "setupSummaryModeReview": "Varje svar byggs åt dig och väntar på ditt godkännande innan det går till Shopify.",
       "setupSummarySafeguard": "Tvister över {amount} USD väntar alltid på ditt godkännande.",
-      "setupSummaryPointer": "Du kan finjustera enskilda tvisttyper senare på Automatiseringssidan."
+      "setupSummaryPointer": "Du kan finjustera enskilda tvisttyper senare på Automatiseringssidan.",
+      "safeguardSubtitle": "Extra bromsar som gäller oavsett vilket läge du väljer.",
+      "alwaysHeldTitle": "Hålls alltid för dig först",
+      "alwaysHeldSubtitle": "Hålls först för din granskning — oavsett vilket läge du väljer."
     }
   },
   "coverage": {
