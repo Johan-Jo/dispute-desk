@@ -187,3 +187,90 @@ describe("absolute 'never submits' promises are confined to where they hold", ()
     expect(offenders, `unqualified absolute promise:\n${offenders.join("\n")}`).toEqual([]);
   });
 });
+
+// ─── D. The escape must be NAMED, not gestured at ──────────────────────────
+
+/**
+ * The auto-pilot copy used to end "…saved to Shopify on the due date if you
+ * haven't decided." That names the wrong escape.
+ *
+ * A held dispute sits in one of four `review_state`s, and THREE of them end in
+ * submission: null (never opened), `in_review` (Hold & watch), `approved`
+ * (Submit on the deadline). Only `conceded` is excluded — see
+ * `blocksAutoSubmit` in lib/disputes/reviewState.ts and the cron's `:122`
+ * guard. So deciding does not stop the filing; exactly one decision does.
+ *
+ * A merchant who clicks Hold & watch has decided, and still gets a submission.
+ *
+ * The guard asserts the copy contains the concede button's OWN label, read
+ * from the same catalog. That ties the sentence to a control the merchant can
+ * see on screen, and means renaming the button fails this test until the
+ * explanatory copy follows it.
+ */
+const CONCEDE_LABEL_KEY = "disputes.overviewExtra.review.concede";
+const NAMES_ESCAPE_KEYS = ["rules.modeAutoDesc", "setup.handling.setupSummaryModeAuto"];
+
+describe("auto-pilot copy names the one decision that stops a filing", () => {
+  for (const locale of LOCALES) {
+    const label = leaf(messages(locale), CONCEDE_LABEL_KEY);
+
+    it(`${locale}: the concede label exists to be referenced`, () => {
+      expect(label, `${locale}: ${CONCEDE_LABEL_KEY} missing`).toBeTruthy();
+    });
+
+    for (const key of NAMES_ESCAPE_KEYS) {
+      it(`${locale}: ${key} names "${label}" rather than a vague decision`, () => {
+        const value = leaf(messages(locale), key);
+        expect(value, `${locale}: ${key} missing`).toBeTruthy();
+        expect(
+          value,
+          `${locale}: ${key} must name the concede action ("${label}"), ` +
+            `because approving and holding are also decisions and BOTH still submit`,
+        ).toContain(label!);
+      });
+    }
+  }
+});
+
+// ─── E. Conceding withholds OUR package, not the filing ────────────────────
+
+/**
+ * `concedeHelp` said "We won't submit anything. The dispute closes
+ * undefended." DisputeDesk cannot produce that state.
+ *
+ * When no evidence is submitted by the due date, Shopify auto-compiles the
+ * order data it holds and files that itself, and the Admin GraphQL API exposes
+ * no accept/concede mutation to stop it (`ShopifyPaymentsDispute` has only
+ * `disputeEvidenceUpdate`). Accepting a chargeback exists solely as a manual
+ * button in Shopify Admin. So conceding withholds our defence package; it does
+ * not withhold the filing.
+ *
+ * Naming Shopify is the load-bearing assertion — a sentence that says what we
+ * won't do without saying what Shopify still does is the false version.
+ */
+describe("concede copy does not promise a filing that cannot be stopped", () => {
+  const NOTHING_AT_ALL: Record<string, RegExp> = {
+    en: /submit anything|send anything|nothing (is|will be) (sent|submitted)/i,
+    de: /nichts ein|nichts gesendet|nichts übermittelt/i,
+    es: /no enviaremos nada|nada se envía/i,
+    fr: /n'envoyons rien|n'enverrons rien|rien ne sera envoyé/i,
+    pt: /não enviaremos nada|nada será enviado/i,
+    sv: /inte in något|inget skickas/i,
+  };
+
+  for (const locale of LOCALES) {
+    it(`${locale}: concedeHelp scopes the promise to our package and names Shopify`, () => {
+      const value = leaf(messages(locale), "disputes.overviewExtra.review.concedeHelp");
+      expect(value, `${locale}: concedeHelp missing`).toBeTruthy();
+      expect(
+        value,
+        `${locale}: concedeHelp claims nothing at all is filed. Shopify files ` +
+          `its own scraped order data when we file none, and no API can stop it`,
+      ).not.toMatch(NOTHING_AT_ALL[locale]);
+      expect(
+        value,
+        `${locale}: concedeHelp must say what Shopify still does`,
+      ).toMatch(/Shopify/);
+    });
+  }
+});
