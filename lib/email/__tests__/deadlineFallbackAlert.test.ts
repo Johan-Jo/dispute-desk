@@ -115,12 +115,23 @@ describe("deadline fallback alert — nothing was submitted", () => {
       expect(mail.text).not.toMatch(/we submitted|pack has been sent/i);
     });
 
-    it(`${reason}: states plainly that nothing is filed, and that today is the deadline`, async () => {
+    it(`${reason}: scopes "filed nothing" to DisputeDesk, and names today as the deadline`, async () => {
       const mail = await render(reason);
       expect(mail.subject).toMatch(/action required today/i);
-      expect(mail.html).toMatch(/nothing has been filed/i);
-      expect(mail.html).toMatch(/No evidence has been sent to Shopify/i);
-      expect(mail.html).toMatch(/lost by default/i);
+      // Amended 2026-07-30. This asserted a flat /nothing has been filed/.
+      // Shopify auto-compiles the order data it holds and files THAT when no
+      // evidence is submitted, so the only true version of the claim is the
+      // one scoped to us. The unscoped sentence would tell a merchant the case
+      // is merely unattended when it is about to be argued badly on their
+      // behalf — the same defect as the old concedeHelp copy.
+      expect(mail.html).toMatch(/DisputeDesk has filed nothing/i);
+      expect(mail.html).toMatch(/We have sent no evidence to Shopify/i);
+      expect(mail.html).not.toMatch(/nothing has been filed/i);
+      // And it must say what Shopify does instead, or the warning understates
+      // the stake.
+      expect(mail.html).toMatch(/Shopify will pass on the basic order details/i);
+      expect(mail.text).toMatch(/Shopify will pass on the basic order details/i);
+      expect(mail.html).toMatch(/rarely wins/i);
     });
   }
 

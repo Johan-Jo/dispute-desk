@@ -156,7 +156,15 @@ const ABSOLUTE_PROMISE =
  * guard looks at the SENTENCE, not the whole string — a long help article may
  * legitimately contain both a scoped absolute and unrelated prose.
  */
-const QUALIFIER = /review mode|Shopify Protect|don't defend|conceded?|approve it/i;
+/**
+ * `Review everything` is the mode's actual UI label, and the one merchant copy
+ * naturally reaches for. The list carried only the internal phrasing "review
+ * mode", so a correctly-scoped absolute written in the merchant's vocabulary
+ * tripped the guard (2026-07-30, the approving-disputes article). Naming the
+ * label is the fix — not loosening the pattern.
+ */
+const QUALIFIER =
+  /review mode|Review everything|Shopify Protect|don't defend|conceded?|approve it/i;
 
 const ALLOWED_ABSOLUTE = new Set([
   "rules.alwaysReviewedCovered",
@@ -319,4 +327,65 @@ describe("wizard mode copy stays in lockstep with the Automation page copy", () 
       expect(note).toMatch(/Shopify/);
     });
   }
+});
+
+// ─── G. Inaction has a consequence, and every surface must name it ─────────
+
+/**
+ * The last three surfaces that told a merchant a decision was needed without
+ * saying what happens when they don't make one.
+ *
+ * In REVIEW mode `disputeEffectsDispatcher` sets `needs_review=true`, which
+ * puts the dispute outside the deadline cron's status filter permanently — so
+ * DisputeDesk submits nothing, ever. Shopify then files the order data it
+ * scraped when the deadline passes. "Still requires your decision" describes
+ * that as an open question; it is actually a countdown to a filing the
+ * merchant never sees.
+ *
+ * Each assertion is anchored on naming Shopify, because a sentence about what
+ * WE won't do, without what Shopify still does, is the version that misleads.
+ */
+describe("copy about not-deciding names what happens anyway", () => {
+  it("the review-mode new-dispute callout names Shopify in every locale", () => {
+    const source = readFileSync(
+      resolve(ROOT, "lib/email/sendNewDisputeAlert.ts"),
+      "utf8",
+    );
+    // The `review` variant's callout is the one that used to stop at "requires
+    // your decision". Six locales, so six occurrences of the corrected shape.
+    const stale = source.match(
+      /requires your decision|requiere tu decisión|requer sua decisão|nécessite toujours votre décision|erfordert weiterhin Ihre Entscheidung|kräver fortfarande ditt beslut/g,
+    );
+    expect(
+      stale,
+      "a review-mode callout still says a decision is required without saying what inaction costs",
+    ).toBeNull();
+  });
+
+  it("the deadline-fallback alert scopes 'filed nothing' to DisputeDesk", () => {
+    const source = readFileSync(
+      resolve(ROOT, "lib/email/sendDefenceDeadlineFallbackAlert.ts"),
+      "utf8",
+    );
+    // It may say WE filed nothing; it may not say nothing was filed at all,
+    // because Shopify files its scrape.
+    expect(source).not.toMatch(/nothing has been filed(?! nothing)/i);
+    expect(source).toMatch(/DisputeDesk has filed nothing/i);
+    // And it must tell the merchant what Shopify does instead.
+    expect(source).toMatch(/Shopify will pass on the basic order details/i);
+  });
+
+  it("the approving-disputes help article says what never approving costs", () => {
+    for (const locale of LOCALES) {
+      const body = leaf(
+        messages(locale),
+        "help.embedded.articles.approvingDisputes.body",
+      );
+      expect(body, `${locale}: approvingDisputes.body missing`).toBeTruthy();
+      expect(
+        body,
+        `${locale}: the approval guide never says what happens if you don't approve`,
+      ).toMatch(/Shopify/);
+    }
+  });
 });

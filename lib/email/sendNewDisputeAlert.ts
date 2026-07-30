@@ -171,7 +171,7 @@ const STRINGS: Record<Locale, EmailStrings> = {
       ],
       callout: {
         label: "Important",
-        body: "Nothing has been submitted yet. This dispute still requires your decision.",
+        body: "Nothing has been submitted yet. If you take no action, we never send your prepared response — Shopify files only the basic order details it holds when the deadline passes.",
       },
       cta: "Review dispute →",
     },
@@ -237,7 +237,7 @@ const STRINGS: Record<Locale, EmailStrings> = {
       ],
       callout: {
         label: "Importante",
-        body: "Todavía no se ha enviado nada. Esta disputa aún requiere tu decisión.",
+        body: "Todavía no se ha enviado nada. Si no haces nada, nunca enviaremos tu respuesta preparada: Shopify solo transmite los datos básicos del pedido cuando vence el plazo.",
       },
       cta: "Revisar disputa →",
     },
@@ -303,7 +303,7 @@ const STRINGS: Record<Locale, EmailStrings> = {
       ],
       callout: {
         label: "Importante",
-        body: "Nada foi enviado ainda. Esta disputa ainda requer sua decisão.",
+        body: "Nada foi enviado ainda. Se não fizer nada, nunca enviaremos a sua resposta preparada — o Shopify apenas transmite os dados básicos da encomenda quando o prazo terminar.",
       },
       cta: "Revisar disputa →",
     },
@@ -369,7 +369,7 @@ const STRINGS: Record<Locale, EmailStrings> = {
       ],
       callout: {
         label: "Important",
-        body: "Rien n'a encore été soumis. Ce litige nécessite toujours votre décision.",
+        body: "Rien n'a encore été soumis. Si vous ne faites rien, nous n'enverrons jamais votre réponse préparée — Shopify ne transmettra que les informations de commande de base à l'échéance.",
       },
       cta: "Examiner le litige →",
     },
@@ -435,7 +435,7 @@ const STRINGS: Record<Locale, EmailStrings> = {
       ],
       callout: {
         label: "Wichtig",
-        body: "Es wurde noch nichts eingereicht. Diese Reklamation erfordert weiterhin Ihre Entscheidung.",
+        body: "Es wurde noch nichts eingereicht. Wenn Sie nichts tun, senden wir Ihre vorbereitete Antwort nie — Shopify übermittelt zur Frist nur die grundlegenden Bestelldaten.",
       },
       cta: "Reklamation prüfen →",
     },
@@ -501,7 +501,7 @@ const STRINGS: Record<Locale, EmailStrings> = {
       ],
       callout: {
         label: "Viktigt",
-        body: "Inget har skickats in ännu. Denna tvist kräver fortfarande ditt beslut.",
+        body: "Inget har skickats in ännu. Om du inte gör något skickar vi aldrig ditt förberedda svar — Shopify vidarebefordrar bara de grundläggande orderuppgifterna när fristen löper ut.",
       },
       cta: "Granska tvist →",
     },

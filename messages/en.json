@@ -3285,7 +3285,7 @@
         },
         "approvingDisputes": {
           "title": "Approving disputes from the review queue",
-          "body": "Approve from the **dispute detail** page after you open a dispute from the list or dashboard.\n\nSteps:\n1. Go to **Disputes** and choose **View details** (or open the dispute from the dashboard).\n2. Review the evidence pack and completeness on the detail page.\n3. Use **Approve & Save** to run the pipeline and save evidence to Shopify when your gates pass.\n\nYou can generate or refresh packs on the detail page first. There is no **Approve** button only on the list — the detail page is where you confirm evidence before saving."
+          "body": "Approve from the **dispute detail** page after you open a dispute from the list or dashboard.\n\nSteps:\n1. Go to **Disputes** and choose **View details** (or open the dispute from the dashboard).\n2. Review the evidence pack and completeness on the detail page.\n3. Use **Approve & Save** to run the pipeline and save evidence to Shopify when your gates pass.\n\nYou can generate or refresh packs on the detail page first. There is no **Approve** button only on the list — the detail page is where you confirm evidence before saving.\n\n**If you never approve:** in **Review everything** mode nothing is sent from DisputeDesk — not now, not on the due date. Shopify files only the basic order details it holds when the deadline passes, which rarely wins. Approving schedules your prepared pack to be saved to Shopify on the due date; choosing **Don't defend** stops us sending it, though Shopify still passes on its own order details."
         }
       },
       "heroSearchPlaceholder": "Search for help articles, guides, or topics…",

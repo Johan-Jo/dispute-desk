@@ -6,10 +6,16 @@
  *
  * THERE IS NO FALLBACK SUBMISSION. The file name is historical: the pack-PDF
  * fallback was retired, and the cron that calls this inserts no job. So this
- * email is the merchant's only warning that nothing has been filed, and it
- * must never imply otherwise — it used to say "we submitted the existing
+ * email is the merchant's only warning that DisputeDesk has filed nothing, and
+ * it must never imply otherwise — it used to say "we submitted the existing
  * evidence pack PDF in its place", which was the opposite of the truth on the
  * one morning it mattered.
+ *
+ * It must not overcorrect either. Until 2026-07-30 it said "nothing has been
+ * filed" flat out. Shopify auto-compiles the order data it holds and files THAT
+ * when no evidence is submitted, so the accurate claim is scoped to us: we sent
+ * nothing. Naming what Shopify still does is what tells the merchant the case
+ * is not merely unattended but about to be argued badly on their behalf.
  *
  * Fire-and-forget — never throws.
  */
@@ -138,11 +144,11 @@ export async function sendDefenceDeadlineFallbackAlert(
     : [
         `Hello,`,
         ``,
-        `The chargeback dispute ${disputeIdShort}${amountStr ? ` (${amountStr})` : ""} reaches its evidence deadline today and NOTHING HAS BEEN FILED.`,
+        `The chargeback dispute ${disputeIdShort}${amountStr ? ` (${amountStr})` : ""} reaches its evidence deadline today and DISPUTEDESK HAS FILED NOTHING.`,
         ``,
-        `DisputeDesk could not produce a defence package because ${reason}, and there is no fallback — the defence package is the only thing we submit. No evidence has been sent to Shopify for this dispute.`,
+        `DisputeDesk could not produce a defence package because ${reason}, and there is no fallback — the defence package is the only thing we submit. We have sent no evidence to Shopify for this dispute.`,
         ``,
-        `If you do nothing, this dispute will be lost by default. Open it in DisputeDesk to regenerate the package, or submit your own evidence directly in Shopify Admin before the deadline passes.`,
+        `Shopify will pass on the basic order details it holds when the deadline passes, but nothing we built and nothing you have reviewed. That rarely wins. Open the dispute in DisputeDesk to regenerate the package, or add your own evidence directly in Shopify Admin before the deadline.`,
         ``,
         `Dispute reason: ${ctx.reason ?? "—"}`,
         `Why we could not build it: ${ctx.fallbackReason}`,
@@ -154,9 +160,9 @@ export async function sendDefenceDeadlineFallbackAlert(
   const body = covered
     ? `<p>The chargeback dispute <strong>${disputeIdShort}</strong>${amountStr ? ` (${amountStr})` : ""} reached its evidence deadline today, and DisputeDesk did not build a response for it.</p>
 <p>That is deliberate: ${reason}. Shopify absorbs this loss, so there is nothing to defend and nothing for you to do.</p>`
-    : `<p style="font-size:16px;font-weight:600;">The chargeback dispute <strong>${disputeIdShort}</strong>${amountStr ? ` (${amountStr})` : ""} reaches its evidence deadline today and nothing has been filed.</p>
-<p>DisputeDesk could not produce a defence package because ${reason}, and there is no fallback — the defence package is the only thing we submit. <strong>No evidence has been sent to Shopify for this dispute.</strong></p>
-<p>If you do nothing, this dispute will be lost by default. Open it in DisputeDesk to regenerate the package, or submit your own evidence directly in Shopify Admin before the deadline passes.</p>`;
+    : `<p style="font-size:16px;font-weight:600;">The chargeback dispute <strong>${disputeIdShort}</strong>${amountStr ? ` (${amountStr})` : ""} reaches its evidence deadline today and DisputeDesk has filed nothing.</p>
+<p>DisputeDesk could not produce a defence package because ${reason}, and there is no fallback — the defence package is the only thing we submit. <strong>We have sent no evidence to Shopify for this dispute.</strong></p>
+<p>Shopify will pass on the basic order details it holds when the deadline passes, but nothing we built and nothing you have reviewed. That rarely wins. Open the dispute in DisputeDesk to regenerate the package, or add your own evidence directly in Shopify Admin before the deadline.</p>`;
 
   const html = `<!doctype html>
 <html><body style="font-family:Helvetica,Arial,sans-serif;color:#0F172A;line-height:1.55;">

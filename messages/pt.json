@@ -3286,7 +3286,7 @@
         },
         "approvingDisputes": {
           "title": "Aprovar disputas na fila de revisão",
-          "body": "Aprove na página de **detalhe da disputa** depois de abri-la pela lista ou pelo painel.\n\nPassos:\n1. Vá em **Disputas** e use **Ver detalhes** (ou abra a disputa pelo painel).\n2. Revise o pacote de evidências e a completude no detalhe.\n3. Use **Aprovar e salvar** para executar o fluxo e salvar no Shopify se os limites forem atendidos.\n\nVocê pode gerar ou atualizar pacotes no detalhe antes. **Não há botão Aprovar só na lista** — a confirmação é no detalhe."
+          "body": "Aprove na página de **detalhe da disputa** depois de abri-la pela lista ou pelo painel.\n\nPassos:\n1. Vá em **Disputas** e use **Ver detalhes** (ou abra a disputa pelo painel).\n2. Revise o pacote de evidências e a completude no detalhe.\n3. Use **Aprovar e salvar** para executar o fluxo e salvar no Shopify se os limites forem atendidos.\n\nVocê pode gerar ou atualizar pacotes no detalhe antes. **Não há botão Aprovar só na lista** — a confirmação é no detalhe.\n\n**Se nunca aprovar:** no modo **Rever tudo**, o DisputeDesk não envia nada — nem agora, nem no prazo. O Shopify apenas transmite os dados básicos da encomenda quando o prazo termina, o que raramente ganha. Aprovar agenda a gravação do seu pacote no Shopify no prazo; escolher **Não defender** impede-nos de o enviar, mas o Shopify continua a transmitir os seus próprios dados da encomenda."
         }
       },
       "heroSearchPlaceholder": "Pesquise artigos de ajuda, guias ou tópicos…",
