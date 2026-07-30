@@ -412,6 +412,32 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     if (heroVariant === "covered" && lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed") {
       return t("hero.title.preSubmit.covered");
     }
+    /* "Review before challenging" — restored 2026-07-30.
+     *
+     * PR #413 deleted 19 of the 20 hero titles under the plan's "no
+     * strength-based operational callouts" rule (design-alignment plan §6.2,
+     * citing §8). Re-reading that rule, it bans headlines that NAME the
+     * strength — "Strong case saved to Shopify", "Weak case…", "Partially
+     * supported case…" — and it is written for the saved, editable case, for
+     * which it prescribes "Evidence saved to Shopify" instead.
+     *
+     * These two carry no strength word at all. "Review before challenging" is
+     * an instruction, not a strength callout, so §8 never covered it — it was
+     * swept up with the 17 that genuinely violated the rule. The other 17 stay
+     * deleted, including the ones `Dispute Case v2.dc.html` still shows
+     * ("Partially supported case sent to the card network"), because there the
+     * design is the thing that is out of date.
+     *
+     * Scoped to `pack_prepared`: the package exists and nothing has been saved
+     * or sent yet, which is exactly the state the headline describes. Earlier
+     * rungs (building_evidence / monitoring) have nothing to review, so they
+     * keep their lifecycle headline. */
+    if (
+      lifecycle === "pack_prepared" &&
+      (heroVariant === "could_win" || heroVariant === "needs_strengthening")
+    ) {
+      return t(`hero.title.preSubmit.${heroVariant}`);
+    }
     switch (lifecycle) {
       case "won":
         return t("hero.title.closed.won");
