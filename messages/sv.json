@@ -3286,7 +3286,7 @@
         },
         "approvingDisputes": {
           "title": "Godkänna tvister från granskningskön",
-          "body": "Godkänn på **tvistens detaljsida** efter att du öppnat den från listan eller instrumentpanelen.\n\nSteg:\n1. Gå till **Tvister** och använd **Visa detaljer** (eller öppna tvisten från instrumentpanelen).\n2. Granska bevispaketet och kompletenhet på detaljsidan.\n3. Använd **Godkänn och spara** för att köra pipelinen och spara i Shopify när dina trösklar passar.\n\nDu kan generera eller uppdatera paket på detaljsidan först. **Det finns ingen Godkänn-knapp bara i listan** — bekräftelsen sker på detaljsidan."
+          "body": "Godkänn på **tvistens detaljsida** efter att du öppnat den från listan eller instrumentpanelen.\n\nSteg:\n1. Gå till **Tvister** och använd **Visa detaljer** (eller öppna tvisten från instrumentpanelen).\n2. Granska bevispaketet och kompletenhet på detaljsidan.\n3. Använd **Godkänn och spara** för att köra pipelinen och spara i Shopify när dina trösklar passar.\n\nDu kan generera eller uppdatera paket på detaljsidan först. **Det finns ingen Godkänn-knapp bara i listan** — bekräftelsen sker på detaljsidan.\n\n**Om du aldrig godkänner:** i läget **Granska allt** skickar DisputeDesk ingenting — varken nu eller på förfallodagen. Shopify vidarebefordrar bara de grundläggande orderuppgifterna när fristen löper ut, vilket sällan vinner. Att godkänna schemalägger ditt förberedda paket för att sparas till Shopify på förfallodagen; väljer du **Försvara inte** skickar vi det inte, men Shopify vidarebefordrar ändå sina egna orderuppgifter."
         }
       },
       "heroSearchPlaceholder": "Sök efter hjälpartiklar, guider eller ämnen…",
