@@ -442,3 +442,72 @@ describe("the auto-submit-paused banner is not resurrected", () => {
     }
   });
 });
+
+// ─── I. "Review before challenging" survives the next compliance audit ────
+
+/**
+ * The design-alignment plan bans strength-NAMED operational headlines
+ * ("Strong case saved to Shopify"). PR #413 read that as "delete the hero
+ * title matrix" and removed 19 of 20 entries, including
+ * `preSubmit.could_win` / `needs_strengthening` = "Review before
+ * challenging" — a string containing no strength word at all.
+ *
+ * These pin the distinction in code so the next audit has to argue with a
+ * failing test rather than re-delete it: the instruction headline stays, the
+ * strength-named ones stay gone.
+ */
+describe("hero headlines: instruction copy stays, strength-named copy does not", () => {
+  const BANNED_IN_HEADLINE = /\b(strong|weak|partially supported)\b/i;
+
+  for (const locale of LOCALES) {
+    it(`${locale}: the pre-submit review headline exists`, () => {
+      for (const variant of ["could_win", "needs_strengthening"]) {
+        const value = leaf(
+          messages(locale),
+          `disputes.overview.hero.title.preSubmit.${variant}`,
+        );
+        expect(
+          value,
+          `${locale}: preSubmit.${variant} was deleted again — see the plan's ` +
+            `"What this rule does NOT ban" note before removing it`,
+        ).toBeTruthy();
+      }
+    });
+  }
+
+  it("en: no surviving hero title names the case strength", () => {
+    const titles = leaf2(messages("en"), "disputes.overview.hero.title");
+    const offenders: string[] = [];
+    (function walk(node: unknown, path: string) {
+      if (typeof node === "string") {
+        if (BANNED_IN_HEADLINE.test(node)) offenders.push(`${path}: ${node}`);
+        return;
+      }
+      if (node && typeof node === "object") {
+        for (const [k, v] of Object.entries(node)) walk(v, path ? `${path}.${k}` : k);
+      }
+    })(titles, "");
+    expect(
+      offenders,
+      `a strength-named headline is back:\n${offenders.join("\n")}`,
+    ).toEqual([]);
+  });
+
+  it("the code actually reads the restored keys", () => {
+    // Restoring the strings without the branch renders nothing — #413 also
+    // rewrote resolveHeroTitle to key off lifecycle alone.
+    const source = readFileSync(
+      resolve(ROOT, "app/(embedded)/app/disputes/[id]/tabs/OverviewTab.tsx"),
+      "utf8",
+    );
+    expect(source).toMatch(/hero\.title\.preSubmit\.\$\{heroVariant\}/);
+    expect(source).toMatch(/lifecycle === "pack_prepared"/);
+  });
+});
+
+/** Object-returning sibling of `leaf` (which narrows to string). */
+function leaf2(obj: unknown, path: string): unknown {
+  return path
+    .split(".")
+    .reduce<unknown>((o, k) => (o && typeof o === "object" ? (o as Record<string, unknown>)[k] : undefined), obj);
+}
