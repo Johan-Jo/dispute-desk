@@ -389,3 +389,56 @@ describe("copy about not-deciding names what happens anyway", () => {
     }
   });
 });
+
+// ─── H. The auto-submit-paused banner stays gone ──────────────────────────
+
+/**
+ * The amber "Auto-submit paused — your review needed" Banner sat at the top of
+ * the dispute Overview tab until 2026-07-30. It was the last surface still
+ * telling merchants that DisputeDesk had "stopped and handed it to you" — the
+ * claim sections B–G removed everywhere else.
+ *
+ * Three specific faults, any of which could be reintroduced by someone
+ * restoring it from git history:
+ *   - it rendered off a STORED `auto_save_blocked` audit event, so it replayed
+ *     a build-time message forever and never cleared;
+ *   - its text said "auto-submit blocked" for a Moderate verdict, which the
+ *     shared guard calls a PARK;
+ *   - it contradicted the "No action required" card directly beneath it.
+ *
+ * Its two actions were kept and moved into the hero card. This guard pins the
+ * removal of the banner and its copy, not the actions.
+ */
+describe("the auto-submit-paused banner is not resurrected", () => {
+  const OVERVIEW = resolve(
+    ROOT,
+    "app/(embedded)/app/disputes/[id]/tabs/OverviewTab.tsx",
+  );
+
+  it("no warning Banner renders the paused-gate copy", () => {
+    const source = readFileSync(OVERVIEW, "utf8");
+    expect(source).not.toMatch(/autoSubmitPausedTitle|autoSubmitPausedBody/);
+    // The banner was the only `tone="warning"` Banner in the file; the
+    // remaining one is tone="critical" (a genuine failure state).
+    expect(source).not.toMatch(/<Banner\s+tone="warning"/);
+  });
+
+  it("the actions survived the banner", () => {
+    // Deleting the banner must not silently delete the merchant's way to add
+    // evidence or submit early — those moved into the hero, they did not go.
+    const source = readFileSync(OVERVIEW, "utf8");
+    expect(source).toMatch(/addMissingEvidence/);
+    expect(source).toMatch(/submitAnyway/);
+  });
+
+  it("its copy is deleted from every locale", () => {
+    for (const locale of LOCALES) {
+      for (const key of ["autoSubmitPausedTitle", "autoSubmitPausedBody", "whyPrefix"]) {
+        expect(
+          leaf(messages(locale), `disputes.overviewExtra.${key}`),
+          `${locale}: disputes.overviewExtra.${key} should be deleted`,
+        ).toBeUndefined();
+      }
+    }
+  });
+});
