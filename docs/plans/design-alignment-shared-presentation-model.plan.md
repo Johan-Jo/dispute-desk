@@ -261,6 +261,12 @@ The Overview must **not** introduce an independent status system. The shared res
 
 Strength for that case appears only inside the Evidence-assessment card as explanatory copy. "View in Shopify Admin" remains a secondary navigational action regardless of strength.
 
+**What this rule does NOT ban (clarified 2026-07-30, after it was over-applied).** The test is whether the headline **names the strength** — "Strong case…", "Weak case…", "Partially supported case…". A headline that states what the merchant should *do*, without grading the case, is not a strength-based callout and is not covered here.
+
+PR #413 read the rule as "delete the hero title matrix" and removed 19 of 20 entries, including `preSubmit.could_win` / `preSubmit.needs_strengthening` = **"Review before challenging"**. That string contains no strength word; it is an instruction. It was collateral, and it left the pre-submit hero falling through to a generic lifecycle headline while an unrelated amber banner became the loudest thing on the tab. Restored 2026-07-30 for `pack_prepared` only.
+
+The other 17 deletions were correct and stay deleted — including the ones `Dispute Case v2.dc.html` (Claude Design project *Dispute Overview Redesigned*) still renders, e.g. "Partially supported case sent to the card network". **Where that design and this rule disagree, this rule wins and the design is the stale artifact.** Note that the design lives in a different Claude Design project from the current work, which is why nothing connected #413 to it at the time.
+
 **Timeline** keeps **separate** "Evidence saved to Shopify" and "Sent to card network" milestones; sent is never inferred from saved.
 
 ### 6.3 Protected tabs (redesign forbidden — CLAUDE.md #8)

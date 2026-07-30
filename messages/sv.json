@@ -989,9 +989,6 @@
       "editEvidence": "Redigera bevis",
       "addMissingEvidence": "Lägg till saknade bevis",
       "submitAnyway": "Spara ändå",
-      "autoSubmitPausedTitle": "Automatisk inskickning pausad — din granskning behövs",
-      "autoSubmitPausedBody": "DisputeDesk bygger ditt försvar automatiskt, men skickar bara in när paketet uppfyller din tröskel för automatisk inskickning. Detta paket klarade inte ribban, så vi stannade och lämnade över till dig.",
-      "whyPrefix": "Anledning:",
       "submitToShopify": "Spara i Shopify",
       "viewInShopify": "Visa i Shopify Admin",
       "addThisEvidence": "Lägg till detta bevis",
@@ -1677,7 +1674,9 @@
             "unknown": "Tvist avslutad"
           },
           "preSubmit": {
-            "covered": "Täcks av Shopify Protect"
+            "covered": "Täcks av Shopify Protect",
+            "could_win": "Granska före bestridande",
+            "needs_strengthening": "Granska före bestridande"
           }
         },
         "subtitle": {

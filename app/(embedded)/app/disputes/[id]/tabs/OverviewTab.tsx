@@ -412,6 +412,32 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     if (heroVariant === "covered" && lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed") {
       return t("hero.title.preSubmit.covered");
     }
+    /* "Review before challenging" — restored 2026-07-30.
+     *
+     * PR #413 deleted 19 of the 20 hero titles under the plan's "no
+     * strength-based operational callouts" rule (design-alignment plan §6.2,
+     * citing §8). Re-reading that rule, it bans headlines that NAME the
+     * strength — "Strong case saved to Shopify", "Weak case…", "Partially
+     * supported case…" — and it is written for the saved, editable case, for
+     * which it prescribes "Evidence saved to Shopify" instead.
+     *
+     * These two carry no strength word at all. "Review before challenging" is
+     * an instruction, not a strength callout, so §8 never covered it — it was
+     * swept up with the 17 that genuinely violated the rule. The other 17 stay
+     * deleted, including the ones `Dispute Case v2.dc.html` still shows
+     * ("Partially supported case sent to the card network"), because there the
+     * design is the thing that is out of date.
+     *
+     * Scoped to `pack_prepared`: the package exists and nothing has been saved
+     * or sent yet, which is exactly the state the headline describes. Earlier
+     * rungs (building_evidence / monitoring) have nothing to review, so they
+     * keep their lifecycle headline. */
+    if (
+      lifecycle === "pack_prepared" &&
+      (heroVariant === "could_win" || heroVariant === "needs_strengthening")
+    ) {
+      return t(`hero.title.preSubmit.${heroVariant}`);
+    }
     switch (lifecycle) {
       case "won":
         return t("hero.title.closed.won");
@@ -764,25 +790,32 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       {/* LSE-1: Visa CE 3.0 qualification verdict. Renders null when not applicable. */}
       <LiabilityShiftPanel disputeId={dispute.id} />
 
-      {/* F2: Auto-save denied banner — preserved from existing logic */}
-      {autoSaveBlock && (
-        <Banner tone="warning" title={tExtra("autoSubmitPausedTitle")}>
-          <BlockStack gap="200">
-            <Text as="p" variant="bodyMd">
-              {tExtra("autoSubmitPausedBody")}
-            </Text>
-            {autoSaveBlock.reasons.length > 0 && (
-              <Text as="p" variant="bodySm">{tExtra("whyPrefix")} {autoSaveBlock.reasons.join(" • ")}</Text>
-            )}
-            <InlineStack gap="200">
-              <Button onClick={goToEvidence}>{tExtra("addMissingEvidence")}</Button>
-              <Button variant="primary" onClick={goToReview}>{tExtra("submitAnyway")}</Button>
-            </InlineStack>
-          </BlockStack>
-        </Banner>
-      )}
+      {/* The standalone amber "Auto-submit paused" Banner that used to sit
+          here was removed 2026-07-30. Three reasons:
 
-      {/* The standing review-decision banner was removed (2026-07-27): it
+          1. It rendered off a STORED `auto_save_blocked` audit event, so it
+             replayed a message written at build time forever — it never
+             re-evaluated and never cleared. Its wording ("auto-submit
+             blocked") predated the shared guard, which calls a Moderate
+             verdict a PARK, not a block.
+          2. Its premise — "we stopped and handed it to you" — is false. The
+             deadline cron files the draft on the due date regardless. It was
+             the last surface still making the claim #467 removed everywhere
+             else.
+          3. It contradicted the card directly beneath it, which correctly
+             said "No action required".
+
+          Its two actions were the genuinely useful part, so they move into
+          the hero card per `Dispute Case v2.dc.html` (Claude Design project
+          "Dispute Overview Redesigned"), which places them in a divided
+          block inside the card rather than a banner above it.
+
+          NOTE: that design also keeps a small amber gate strip inside the
+          card. It is deliberately NOT reproduced — the maintainer asked for
+          the orange treatment gone entirely (2026-07-30). Restore it here if
+          that is ever revisited.
+
+          The standing review-decision banner was removed (2026-07-27): it
           duplicated the hero, which now carries the decision headline +
           body + Undo when reviewState is set. One block, not two. */}
 
@@ -910,6 +943,28 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               </p>
             ) : null}
           </div>
+          {/* Gate actions — the two buttons the removed amber banner carried,
+              relocated into the card per `Dispute Case v2.dc.html`. The design
+              INVERTS the old emphasis: "Add missing evidence" is the primary
+              and submitting anyway is the quiet secondary, so the default pull
+              is toward strengthening the case rather than firing it off. The
+              old banner had that the other way round.
+
+              No explanatory prose here on purpose. "Next:" above already
+              states what happens if the merchant does nothing, and the old
+              banner's body ("we stopped and handed it to you") was the false
+              sentence that got it deleted. */}
+          {autoSaveBlock && !isReadOnly && (
+            <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${heroTone.border}` }}>
+              <InlineStack gap="200" blockAlign="center">
+                <Button variant="primary" onClick={goToEvidence}>
+                  {tExtra("addMissingEvidence")}
+                </Button>
+                <Button onClick={goToReview}>{tExtra("submitAnyway")}</Button>
+              </InlineStack>
+            </div>
+          )}
+
           {/* "Decide what to do" — approval-required state ONLY, inside the
               hero below "Next:", divided off by a top border (design). */}
           {showApprovalDecide && (

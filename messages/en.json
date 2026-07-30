@@ -986,9 +986,6 @@
       "viewInShopifyUnavailable": "A direct link to this dispute isn't available from the current data.",
       "addMissingEvidence": "Add missing evidence",
       "submitAnyway": "Save anyway",
-      "autoSubmitPausedTitle": "Auto-submit paused — your review needed",
-      "autoSubmitPausedBody": "DisputeDesk builds your defense automatically, but only auto-submits when the pack meets your auto-submit threshold. This pack didn't clear the bar, so we stopped and handed it to you.",
-      "whyPrefix": "Why:",
       "addThisEvidence": "Add this evidence",
       "submittedOn": "Submitted {date}",
       "submissionDeadlineIn": "Submission deadline in {days, plural, =1 {1 day} other {# days}} ({date}){urgent, select, yes { — urgent} other {}}",
@@ -1208,7 +1205,9 @@
             "unknown": "Dispute closed"
           },
           "preSubmit": {
-            "covered": "Covered by Shopify Protect"
+            "covered": "Covered by Shopify Protect",
+            "could_win": "Review before challenging",
+            "needs_strengthening": "Review before challenging"
           }
         },
         "subtitle": {

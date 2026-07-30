@@ -1252,7 +1252,9 @@
             "unknown": "Disputa cerrada"
           },
           "preSubmit": {
-            "covered": "Cubierto por Shopify Protect"
+            "covered": "Cubierto por Shopify Protect",
+            "could_win": "Revisar antes de impugnar",
+            "needs_strengthening": "Revisar antes de impugnar"
           }
         },
         "subtitle": {
@@ -1573,9 +1575,6 @@
       "viewInShopify": "Ver en el panel de Shopify",
       "addMissingEvidence": "Añadir evidencia faltante",
       "submitAnyway": "Guardar de todos modos",
-      "autoSubmitPausedTitle": "Envío automático en pausa — requiere tu revisión",
-      "autoSubmitPausedBody": "DisputeDesk construye tu caso automáticamente, pero solo envía cuando el paquete cumple tu umbral de envío automático. Este paquete no alcanzó el umbral, así que lo detuvimos y te lo entregamos.",
-      "whyPrefix": "Why:",
       "addThisEvidence": "Añadir esta evidencia",
       "submittedOn": "Enviado el {date}",
       "submissionDeadlineIn": "Plazo de envío en {days, plural, =1 {1 día} other {# días}} ({date}){urgent, select, yes { — urgente} other {}}",
