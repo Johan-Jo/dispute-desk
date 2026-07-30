@@ -626,9 +626,9 @@ export async function handleBuildDefencePackage(
   }
 
   // Pre-flight guards: even when rules say "auto", the same gates the pack
-  // pipeline applies (Coverage / Fatal-loss / PRD §9 strength, incl. the
-  // product-family Strong park) must prevent auto-finalize + save-to-Shopify
-  // enqueue here. Without this, the pack pipeline can correctly block at sync
+  // pipeline applies (Coverage / Fatal-loss / PRD §9 strength) must prevent
+  // auto-finalize + save-to-Shopify enqueue here. Without this, the pack
+  // pipeline can correctly block at sync
   // time and then this handler — re-resolving rules independently — silently
   // saves a Weak / Fatal-loss / Covered pack a few minutes later, bypassing
   // the gate.
@@ -647,10 +647,6 @@ export async function handleBuildDefencePackage(
       coverageState: coverage,
       fatalLoss,
       caseStrength: caseStrengthOverall,
-      disputeReason:
-        (packJson.disputeReason as string | null | undefined) ??
-        (dispute?.reason as string | null | undefined) ??
-        null,
     });
     if (verdict.decision !== "proceed") {
       resolvedMode = "review";

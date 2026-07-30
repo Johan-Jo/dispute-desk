@@ -192,17 +192,24 @@ describe("automation group copy", () => {
     expect(copy).toContain("{mode}");
   });
 
-  it("the locked row's note no longer repeats its own badge", () => {
-    // The pill says "Always reviewed"; the note used to open with the same
-    // words, which read as a stutter once they sat side by side.
-    expect(rulesNamespace("en").groupNotAsDescribedLocked).not.toMatch(
-      /^Always reviewed/,
-    );
+  it("the copy for the removed not_as_described lock is gone", () => {
+    // Unlocked 2026-07-30 with the product-family park it described. Dead copy
+    // outlives the control that rendered it and then gets resurrected.
+    expect(rulesNamespace("en").groupNotAsDescribedLocked).toBeUndefined();
+    expect(rulesNamespace("en").alwaysReviewedProduct).toBeUndefined();
   });
 
-  it("does not add a sixth always-reviewed bullet", () => {
-    // The lock IS the alwaysReviewedProduct fact. Two statements of one rule
-    // reads as two rules.
+  it("no group is locked, so no row renders the lock branch", () => {
+    // The `locked` machinery is retained for a future group that genuinely
+    // can't be automated, but nothing exercises it today. If someone re-locks
+    // a group, they must also add its lockedReasonKey copy to all 6 locales —
+    // this test is the reminder.
+    expect(AUTOMATION_GROUPS.filter((g) => g.locked)).toHaveLength(0);
+  });
+
+  it("does not add a fifth always-reviewed bullet", () => {
+    // The bullets are engine facts, not per-group settings. A group-derived
+    // bullet would state one rule twice and read as two rules.
     const facts = readFileSync(
       resolve(ROOT, "components/automation/AlwaysReviewedFacts.tsx"),
       "utf8",

@@ -226,20 +226,19 @@ describe("buildDefencePackageJob — auto-submit guards", () => {
     expect(finalizeAndEnqueueSave).not.toHaveBeenCalled();
   });
 
-  it("product-family Strong PARKS as a draft", async () => {
-    const { pkgUpdate, blockedAudit } = await runWith(
+  it("product-family Strong PROCEEDS — the park was removed 2026-07-30", async () => {
+    // Was: parked as a draft. Shopify files its own scraped evidence when we
+    // file none, so parking never withheld a rebuttal — it substituted a worse
+    // one. See lib/automation/autoSubmitGuards.ts for the full reasoning.
+    const { blockedAudit } = await runWith(
       packJsonWith({
         case_strength: { overall: "strong" },
         disputeReason: "PRODUCT_UNACCEPTABLE",
       }),
     );
 
-    expect(pkgUpdate?.values.status).toBe("draft");
-    expect(blockedAudit?.values.event_payload).toMatchObject({
-      decision: "park",
-      verdict_reason: "product_family_strong",
-    });
-    expect(finalizeAndEnqueueSave).not.toHaveBeenCalled();
+    expect(blockedAudit).toBeUndefined();
+    expect(finalizeAndEnqueueSave).toHaveBeenCalled();
   });
 
   it("Weak strength BLOCKS and records a block verdict", async () => {

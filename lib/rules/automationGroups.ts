@@ -69,11 +69,13 @@ export const AUTOMATION_GROUPS: readonly AutomationGroup[] = [
     // it (see ALIAS_TO_DISPUTE_TYPE in ./disputeTypes.ts).
     reasons: ["PRODUCT_UNACCEPTABLE"],
     labelKey: "groupNotAsDescribed",
-    // `evaluateAutoSubmitGuards` parks product-family cases even when Strong.
-    // Setting this group to auto would write a rule the engine ignores 100% of
-    // the time. Pinned by a test that asserts the guard still behaves this way.
-    locked: true,
-    lockedReasonKey: "groupNotAsDescribedLocked",
+    // Unlocked 2026-07-30. This group was locked because
+    // `evaluateAutoSubmitGuards` parked product-family cases even at Strong,
+    // so an auto setting would have written a rule the engine ignored 100% of
+    // the time. That park is gone (see autoSubmitGuards.ts for why), so the
+    // control is now honest. NOTE: this leaves NO group locked — the `locked`
+    // machinery below is retained but currently unexercised.
+    locked: false,
   },
   {
     id: "subscription",

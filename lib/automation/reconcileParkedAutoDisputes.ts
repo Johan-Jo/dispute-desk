@@ -19,10 +19,10 @@
  * `PATCH /api/rules/[id]`, `DELETE /api/rules/[id]`.
  *
  * It re-applies the SAME gates the auto path enforces — Coverage, Fatal-loss,
- * and PRD §9 strength (Strong only; product-family Strong still parks) — via
+ * and PRD §9 strength (Strong only) — via
  * the shared `evaluateAutoSubmitGuards`, so it can ONLY promote a case the
  * pipeline itself would have auto-saved. It never touches
- * moderate/weak/insufficient, covered, fatal-loss, or product-family cases.
+ * moderate/weak/insufficient, covered, or fatal-loss cases.
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
@@ -87,14 +87,13 @@ export async function reconcileParkedAutoDisputes(
 
     result.scanned += 1;
 
-    // Coverage / fatal-loss / product-family Strong — the SAME decision the
-    // pipeline and the defence-build job apply. Shared so the three paths
-    // can never drift apart. See lib/automation/autoSubmitGuards.ts.
+    // Coverage / fatal-loss / strength — the SAME decision the pipeline and
+    // the defence-build job apply. Shared so the three paths can never drift
+    // apart. See lib/automation/autoSubmitGuards.ts.
     const verdict = evaluateAutoSubmitGuards({
       coverageState: packJson.coverage?.state,
       fatalLoss: packJson.fatal_loss,
       caseStrength: strength,
-      disputeReason: packJson.disputeReason ?? dispute.reason ?? null,
     });
     if (verdict.decision !== "proceed") continue;
 

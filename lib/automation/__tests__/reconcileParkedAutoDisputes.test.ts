@@ -220,13 +220,15 @@ describe("reconcileParkedAutoDisputes", () => {
     expect(res.reconciled).toBe(0);
   });
 
-  it("skips a product-family Strong dispute (subjective merchandise claim parks)", async () => {
+  it("reconciles a product-family Strong dispute — the park was removed 2026-07-30", async () => {
+    // Was: skipped, because the guard parked "not as described" even at
+    // Strong. See lib/automation/autoSubmitGuards.ts for why that went.
     const sb = mockSb({
-      disputes: [{ id: "disp-1", reason: "PRODUCT_NOT_AS_DESCRIBED", status: "needs_response", amount: 100, phase: "chargeback" }],
+      disputes: [{ id: "disp-1", reason: "PRODUCT_UNACCEPTABLE", status: "needs_response", amount: 100, phase: "chargeback" }],
       packByDispute: {
         "disp-1": {
           ...READY_STRONG_PACK,
-          pack_json: { ...READY_STRONG_PACK.pack_json, disputeReason: "PRODUCT_NOT_AS_DESCRIBED" },
+          pack_json: { ...READY_STRONG_PACK.pack_json, disputeReason: "PRODUCT_UNACCEPTABLE" },
         },
       },
       dpkgByDispute: { "disp-1": FINALIZABLE_DRAFT },
@@ -234,7 +236,7 @@ describe("reconcileParkedAutoDisputes", () => {
     mockGetServiceClient.mockReturnValue(sb as never);
 
     const res = await reconcileParkedAutoDisputes("shop-1");
-    expect(res.reconciled).toBe(0);
+    expect(res.reconciled).toBe(1);
   });
 
   it("skips when the latest defence package is not a finalize-able draft", async () => {
