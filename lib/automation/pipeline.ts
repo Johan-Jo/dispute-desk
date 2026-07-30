@@ -493,8 +493,8 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // `false`. Computed once so we don't hit the DB per branch.
   const isRegen = await isRegenerateBuild(pack.dispute_id);
 
-  // Auto-mode pre-flight guards (PRD §5 fatal-loss + §9 strength, incl.
-  // the product-family Strong park). ONE shared decision — the same
+  // Auto-mode pre-flight guards (PRD §5 fatal-loss + §9 strength). ONE
+  // shared decision — the same
   // function backs buildDefencePackageJob and reconcileParkedAutoDisputes
   // so the three paths can never disagree (they did: the job used to BLOCK
   // on Moderate while this path PARKED). See lib/automation/autoSubmitGuards.ts.
@@ -509,15 +509,12 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   const fatalLoss = (pack.pack_json as { fatal_loss?: { triggered?: boolean; reason?: string | null; message?: string | null } } | null)?.fatal_loss;
   const strengthOverall =
     (pack.pack_json as { case_strength?: { overall?: string } } | null)?.case_strength?.overall ?? null;
-  const disputeReason =
-    (pack.pack_json as { disputeReason?: string | null } | null)?.disputeReason ?? null;
   const guardVerdict =
     ruleMode === "auto"
       ? evaluateAutoSubmitGuards({
           coverageState: coverage?.state,
           fatalLoss,
           caseStrength: strengthOverall,
-          disputeReason,
         })
       : ({ decision: "proceed" } as const);
 

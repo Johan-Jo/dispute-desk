@@ -51,6 +51,36 @@ const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockUpdateShopSettings = vi.mocked(updateShopSettings);
 const mockReconcile = vi.mocked(reconcileParkedAutoDisputes);
 
+/**
+ * Run `fn` with one group temporarily marked locked, then restore it.
+ *
+ * The read/write paths both honour `AutomationGroup.locked` — a locked group
+ * gets no rule row written and is never surfaced by a read. Those invariants
+ * used to be tested against `not_as_described`, the one genuinely locked
+ * group. It was unlocked on 2026-07-30 with the product-family auto-submit
+ * park, which left ZERO locked groups and would have quietly retired both
+ * tests. Injecting the lock keeps the mechanism covered no matter which
+ * groups happen to be locked in production config.
+ *
+ * `readonly` on AUTOMATION_GROUPS is compile-time only, so the cast is safe
+ * at runtime; the `finally` guarantees restoration even if `fn` throws.
+ */
+async function withLockedGroup<T>(
+  id: (typeof AUTOMATION_GROUPS)[number]["id"],
+  fn: () => Promise<T>,
+): Promise<T> {
+  const group = AUTOMATION_GROUPS.find((g) => g.id === id);
+  if (!group) throw new Error(`no such automation group: ${id}`);
+  const mutable = group as { locked: boolean };
+  const previous = mutable.locked;
+  mutable.locked = true;
+  try {
+    return await fn();
+  } finally {
+    mutable.locked = previous;
+  }
+}
+
 interface Recorded {
   inserted: Array<Record<string, unknown>>;
   /**
@@ -494,11 +524,19 @@ describe("writeStoreAutomation — group overrides", () => {
     const rec: Recorded = { inserted: [], deletes: [] };
     mockGetServiceClient.mockReturnValue(mockSb([], rec) as never);
 
-    await writeStoreAutomation("shop-1", {
-      mode: "review",
-      safeguard: { enabled: false, amount: 0 },
-      // The route rejects this, but the writer must not depend on the route.
-      groups: { not_as_described: "auto" },
+    // No group is locked in production config as of 2026-07-30 (the
+    // not_as_described lock went with the product-family park), so the
+    // mechanism has to be exercised against an injected lock rather than a
+    // real one — otherwise this invariant silently stops being tested the
+    // moment the last locked group is unlocked, which is exactly what
+    // happened here.
+    await withLockedGroup("not_as_described", async () => {
+      await writeStoreAutomation("shop-1", {
+        mode: "review",
+        safeguard: { enabled: false, amount: 0 },
+        // The route rejects this, but the writer must not depend on the route.
+        groups: { not_as_described: "auto" },
+      });
     });
 
     expect(
@@ -606,7 +644,7 @@ describe("readStoreAutomation — group overrides", () => {
 
   it("never surfaces a locked group's row, even if one exists", async () => {
     // A read that reports an override the engine ignores is how a UI ends up
-    // lying to the merchant.
+    // lying to the merchant. Injected lock — see the writer's twin above.
     const rec: Recorded = { inserted: [], deletes: [] };
     mockGetServiceClient.mockReturnValue(
       mockSb(
@@ -615,7 +653,10 @@ describe("readStoreAutomation — group overrides", () => {
       ) as never,
     );
 
-    expect((await readStoreAutomation("shop-1")).groups).toEqual({});
+    const groups = await withLockedGroup("not_as_described", () =>
+      readStoreAutomation("shop-1").then((r) => r.groups),
+    );
+    expect(groups).toEqual({});
   });
 });
 

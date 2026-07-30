@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The five conditions DisputeDesk always holds for merchant review, whatever
+ * The four conditions DisputeDesk always holds for merchant review, whatever
  * handling mode the shop picked.
  *
  * These are FACTS ABOUT THE ENGINE, not settings — there is deliberately no
@@ -10,11 +10,13 @@
  * differently.
  *
  * Every bullet traces to real code (see docs/technical.md § Auto-submit guards):
- *   product      → evaluateAutoSubmitGuards → park / product_family_strong
  *   covered      → pipeline coverage gate → skip_covered
  *   weak         → guards → block / weak | insufficient (moderate parks)
  *   fatal        → lib/automation/fatalLoss.ts → block / fatal_loss
  *   incomplete   → evaluateAutoSaveGate (score floor + blockers)
+ *
+ * `alwaysReviewedProduct` was removed 2026-07-30 together with the
+ * product-family park it described (see lib/automation/autoSubmitGuards.ts).
  *
  * Copy lives under `rules.alwaysReviewed*` — ONE copy, shared. Duplicating
  * the strings under `setup.handling.*` would guarantee they drift.
@@ -24,7 +26,6 @@ import { Text, BlockStack, InlineStack, Icon } from "@shopify/polaris";
 import { InfoIcon } from "@shopify/polaris-icons";
 
 export const ALWAYS_REVIEWED_KEYS = [
-  "alwaysReviewedProduct",
   "alwaysReviewedCovered",
   "alwaysReviewedWeak",
   "alwaysReviewedFatal",

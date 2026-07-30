@@ -14,28 +14,21 @@ import {
   type AutoSubmitGuardInput,
 } from "../autoSubmitGuards";
 
-/** A Strong, non-product, uncovered, winnable case — the only "proceed". */
+/** A Strong, uncovered, winnable case — the only "proceed". */
 function baseInput(overrides: Partial<AutoSubmitGuardInput> = {}): AutoSubmitGuardInput {
   return {
     coverageState: "not_covered",
     fatalLoss: { triggered: false, reason: null },
     caseStrength: "strong",
-    disputeReason: "FRAUDULENT",
     ...overrides,
   };
 }
 
 describe("evaluateAutoSubmitGuards — proceed", () => {
-  it("Strong non-product case proceeds", () => {
+  it("Strong case proceeds, whatever the dispute reason", () => {
+    // The guard is reason-blind as of 2026-07-30 — see the removed-park block
+    // at the bottom of this file.
     expect(evaluateAutoSubmitGuards(baseInput())).toEqual({ decision: "proceed" });
-  });
-
-  it("Strong delivery (PRODUCT_NOT_RECEIVED) proceeds — 'delivery' is not the product family", () => {
-    // Guards against a naive substring match on "PRODUCT_".
-    const v = evaluateAutoSubmitGuards(
-      baseInput({ disputeReason: "PRODUCT_NOT_RECEIVED" }),
-    );
-    expect(v.decision).toBe("proceed");
   });
 
   it("legacy pack with null case_strength proceeds (pre-scoring behaviour preserved)", () => {
@@ -115,27 +108,40 @@ describe("evaluateAutoSubmitGuards — park", () => {
     expect(v).toMatchObject({ decision: "park", reason: "moderate_strength" });
   });
 
-  it("product-family Strong parks (subjective merchandise claim)", () => {
-    const v = evaluateAutoSubmitGuards(
-      baseInput({ caseStrength: "strong", disputeReason: "PRODUCT_UNACCEPTABLE" }),
-    );
-    expect(v).toMatchObject({ decision: "park", reason: "product_family_strong" });
-  });
-
-  it("product-family Moderate reports moderate_strength, not product_family_strong", () => {
-    // Strength is evaluated before the product-family park, so a Moderate
-    // product case is attributed to its strength — the more actionable cause.
-    const v = evaluateAutoSubmitGuards(
-      baseInput({ caseStrength: "moderate", disputeReason: "PRODUCT_UNACCEPTABLE" }),
-    );
+  it("product-family Moderate parks on its strength, like every other family", () => {
+    const v = evaluateAutoSubmitGuards(baseInput({ caseStrength: "moderate" }));
     expect(v).toMatchObject({ decision: "park", reason: "moderate_strength" });
   });
+});
 
-  it("product-family with null strength still proceeds (never scored)", () => {
-    const v = evaluateAutoSubmitGuards(
-      baseInput({ caseStrength: null, disputeReason: "PRODUCT_UNACCEPTABLE" }),
-    );
-    expect(v.decision).toBe("proceed");
+describe("evaluateAutoSubmitGuards — the removed product-family park", () => {
+  // Removed 2026-07-30. The guard used to park "not as described" cases even
+  // at Strong, on the theory the merchant might know the item genuinely WAS
+  // defective. Three facts killed it: Shopify files its own scraped evidence
+  // when we file none (so parking swapped our pack for a worse one, it did not
+  // withhold a rebuttal); VDMP/VAMP score disputes RECEIVED so there is no
+  // penalty for losing a representment; and we ship no way to edit the
+  // narrative, so the merchant could not act on that context anyway.
+  //
+  // These cases exist so a reintroduction has to delete an explicit statement
+  // of intent rather than quietly flip an assertion.
+
+  it("does not park on strength alone — the input no longer carries a reason", () => {
+    // `disputeReason` was dropped from AutoSubmitGuardInput with the park. If
+    // it comes back, this test is where to justify it.
+    const v = evaluateAutoSubmitGuards(baseInput({ caseStrength: "strong" }));
+    expect(v).toEqual({ decision: "proceed" });
+  });
+
+  it("no verdict reason mentions the product family", () => {
+    const verdicts = (
+      ["strong", "moderate", "weak", "insufficient", null] as const
+    ).map((s) => evaluateAutoSubmitGuards(baseInput({ caseStrength: s })));
+    for (const v of verdicts) {
+      if (v.decision !== "proceed") {
+        expect(v.reason).not.toMatch(/product/);
+      }
+    }
   });
 });
 
@@ -167,11 +173,11 @@ describe("evaluateAutoSubmitGuards — precedence", () => {
     expect(v).toMatchObject({ decision: "block", reason: "fatal_loss" });
   });
 
-  it("fatal loss beats the product-family park", () => {
+  it("fatal loss beats a Strong score", () => {
     const v = evaluateAutoSubmitGuards(
       baseInput({
         fatalLoss: { triggered: true, reason: "refund_issued" },
-        disputeReason: "PRODUCT_UNACCEPTABLE",
+        caseStrength: "strong",
       }),
     );
     expect(v).toMatchObject({ decision: "block", reason: "fatal_loss" });

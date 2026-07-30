@@ -19,8 +19,21 @@
  *
  * Canonical semantics: **Moderate PARKS, it does not block.** A moderate
  * case has a usable draft the merchant can review and submit manually;
- * blocking it would strand a viable defence. Same for product-family Strong
- * (a subjective merchandise claim the merchant may have context on).
+ * blocking it would strand a viable defence.
+ *
+ * A product-family ("not as described") Strong case used to park here too,
+ * on the theory that the merchant might know the item genuinely WAS
+ * defective. Removed 2026-07-30 — the theory does not survive three facts:
+ *   1. Shopify auto-compiles and files its own order data on the due date
+ *      when no evidence is submitted, so parking never withheld a rebuttal;
+ *      it substituted a worse one.
+ *   2. There is no penalty for losing a representment. VDMP/VAMP score the
+ *      dispute ratio off disputes RECEIVED, fixed when the chargeback lands.
+ *   3. We ship no way to edit the generated narrative, so the merchant could
+ *      not act on that private context even when they had it.
+ * The park also cost a pack credit, which is consumed at BUILD (see
+ * lib/disputes/reviewState.ts), so it charged the merchant and then withheld
+ * the thing they paid for.
  *
  * This function is PURE — no DB, no I/O, no side effects. Callers keep their
  * own side effects (the pipeline writes `evidence_packs.status`, the job
@@ -30,9 +43,7 @@
  * Review mode never consults this function: review parks by definition.
  */
 
-import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
-
-export type AutoSubmitParkReason = "moderate_strength" | "product_family_strong";
+export type AutoSubmitParkReason = "moderate_strength";
 
 export type AutoSubmitBlockReason =
   | "covered_shopify"
@@ -59,14 +70,11 @@ export interface AutoSubmitGuardInput {
    * gate-only behaviour in every caller.
    */
   caseStrength: string | null | undefined;
-  /** `pack_json.disputeReason` — drives the product-family park. */
-  disputeReason: string | null | undefined;
 }
 
 /**
- * Order of precedence: Coverage → Fatal-loss → strength (incl. the
- * product-family Strong park). Matches PRD §4 (coverage beats everything),
- * §5 (fatal-loss), and §9 (auto executes ONLY on Strong).
+ * Order of precedence: Coverage → Fatal-loss → strength. Matches PRD §4
+ * (coverage beats everything), §5 (fatal-loss), and §9.
  */
 export function evaluateAutoSubmitGuards(
   input: AutoSubmitGuardInput,
@@ -113,20 +121,7 @@ export function evaluateAutoSubmitGuards(
     };
   }
 
-  // "Not as described" is a subjective merchandise-quality claim. We do NOT
-  // auto-submit even a two-axis Strong product case — the merchant may know
-  // context the evidence doesn't capture (the item genuinely was defective).
-  // Removing this guard later opts product-Strong back into normal
-  // auto-submit. (docs/plans/product-not-as-described-scoring.plan.md)
-  if (strength === "strong" && resolveReasonFamily(input.disputeReason) === "product") {
-    return {
-      decision: "park",
-      reason: "product_family_strong",
-      message:
-        "Auto-mode: 'not as described' cases are parked for merchant review even when Strong (subjective merchandise claim)",
-    };
-  }
-
-  // Strong non-product, or a legacy pack with no case_strength recorded.
+  // Strong (any family, product included), or a legacy pack with no
+  // case_strength recorded.
   return { decision: "proceed" };
 }

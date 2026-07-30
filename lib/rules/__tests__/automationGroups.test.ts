@@ -51,40 +51,36 @@ describe("automation group model", () => {
     }
   });
 
-  it("the not_as_described lock matches what the engine actually does", () => {
-    // Both halves in ONE test, deliberately. If the product decision is
-    // revisited, the flag and the guard must move together — a lock the engine
-    // no longer enforces is a control we're needlessly withholding, and an
-    // unlocked group the engine still parks is a UI that lies.
+  it("not_as_described is no longer locked, and the engine agrees", () => {
+    // Both halves in ONE test, deliberately. The flag and the guard must move
+    // together — a lock the engine no longer enforces is a control we're
+    // needlessly withholding, and an unlocked group the engine still parks is
+    // a UI that lies. The product-family park was removed 2026-07-30 because
+    // Shopify files its own evidence when we file none, so parking swapped our
+    // pack for a worse one rather than withholding a rebuttal.
     const group = findGroup("not_as_described")!;
-    expect(group.locked).toBe(true);
+    expect(group.locked).toBe(false);
 
     const verdict = evaluateAutoSubmitGuards({
       coverageState: "not_covered",
       fatalLoss: null,
       caseStrength: "strong",
-      disputeReason: group.reasons[0],
     });
-    expect(verdict.decision).toBe("park");
-    if (verdict.decision === "park") {
-      expect(verdict.reason).toBe("product_family_strong");
-    }
+    expect(verdict.decision).toBe("proceed");
   });
 
-  it("no OTHER group is silently un-automatable", () => {
-    // The mirror image: an unlocked group must actually be able to auto-submit
-    // a Strong case, or the control promises something it can't deliver.
+  it("no group is silently un-automatable", () => {
+    // An unlocked group must actually be able to auto-submit a Strong case, or
+    // the control promises something it can't deliver. Every group is unlocked
+    // as of 2026-07-30, so this now covers all of them.
     for (const group of AUTOMATION_GROUPS) {
-      if (group.locked) continue;
-      for (const reason of group.reasons) {
-        const verdict = evaluateAutoSubmitGuards({
-          coverageState: "not_covered",
-          fatalLoss: null,
-          caseStrength: "strong",
-          disputeReason: reason,
-        });
-        expect(verdict.decision, `${group.id} / ${reason}`).toBe("proceed");
-      }
+      expect(group.locked, `${group.id} is locked`).toBe(false);
+      const verdict = evaluateAutoSubmitGuards({
+        coverageState: "not_covered",
+        fatalLoss: null,
+        caseStrength: "strong",
+      });
+      expect(verdict.decision, group.id).toBe("proceed");
     }
   });
 

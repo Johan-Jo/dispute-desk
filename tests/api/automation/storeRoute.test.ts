@@ -18,6 +18,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { readStoreAutomation, writeStoreAutomation } from "@/lib/rules/storeAutomation";
 import { checkFeatureAccess } from "@/lib/billing/checkQuota";
 import { GET, PUT } from "@/app/api/automation/store/route";
+import { AUTOMATION_GROUPS } from "@/lib/rules/automationGroups";
 
 const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockRead = vi.mocked(readStoreAutomation);
@@ -235,6 +236,36 @@ describe("PUT /api/automation/store", () => {
   });
 
   it("400s on a locked group — the engine would ignore the row anyway", async () => {
+    // No group is locked in production config since 2026-07-30, when
+    // not_as_described was unlocked along with the product-family auto-submit
+    // park. The rejection path still has to work for a future locked group, so
+    // the lock is injected rather than borrowed from a real one — otherwise
+    // this test would silently pass by never reaching the branch.
+    const group = AUTOMATION_GROUPS.find((g) => g.id === "not_as_described")!;
+    const mutable = group as { locked: boolean };
+    const previous = mutable.locked;
+    mutable.locked = true;
+    try {
+      const res = await PUT(
+        makeReq("PUT", {
+          body: {
+            mode: "auto",
+            safeguard: { enabled: false },
+            groups: { not_as_described: "auto" },
+          },
+        }),
+      );
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain("cannot be automated");
+      expect(mockWrite).not.toHaveBeenCalled();
+    } finally {
+      mutable.locked = previous;
+    }
+  });
+
+  it("accepts not_as_described now that it is unlocked", async () => {
+    // The mirror of the test above, and the one that would have caught the
+    // control being withheld after the engine stopped enforcing it.
     const res = await PUT(
       makeReq("PUT", {
         body: {
@@ -244,9 +275,8 @@ describe("PUT /api/automation/store", () => {
         },
       }),
     );
-    expect(res.status).toBe(400);
-    expect((await res.json()).error).toContain("cannot be automated");
-    expect(mockWrite).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(mockWrite).toHaveBeenCalled();
   });
 
   it("400s on a group mode that is neither auto nor review", async () => {

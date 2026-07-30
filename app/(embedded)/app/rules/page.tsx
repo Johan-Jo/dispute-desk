@@ -4,8 +4,8 @@
  * Replaces the per-dispute-type grid (7 family rows, each with an
  * Automatic/Review toggle). That grid presented seven choices where there was
  * really one: the per-type mode is gate #3 of 8 in the auto-save pipeline, and
- * coverage / fatal-loss / Moderate / Weak / product-family / the completeness
- * floor all park or block regardless of what the merchant picked. See
+ * coverage / fatal-loss / Moderate / Weak / the completeness floor all park or
+ * block regardless of what the merchant picked. See
  * docs/technical.md § Store-wide automation mode.
  *
  * LAYOUT IS A TRANSCRIPTION of `Automation Rules Page.dc.html` (Claude Design

@@ -3,8 +3,8 @@
  *
  * WHAT WENT WRONG. The Auto-pilot card said "Everything else waits for your
  * review." It does not. Under auto mode `evaluateAutoSubmitGuards` either
- * `park`s (Moderate, product-family Strong) or `block`s (Weak, Insufficient,
- * fatal-loss) — and BOTH leave `defence_packages` at `status='draft'`,
+ * `park`s (Moderate) or `block`s (Weak, Insufficient, fatal-loss) — and BOTH
+ * leave `defence_packages` at `status='draft'`,
  * `validation_status='ok'` with a `pdf_path`
  * (lib/jobs/handlers/buildDefencePackageJob.ts). At 08:00 UTC on the due date
  * the deadline cron flips exactly that shape to `final` and submits it. So the
