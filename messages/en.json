@@ -2533,7 +2533,11 @@
     "saveSaved": "Saved",
     "groupFollowingStoreSetting": "Following store setting: {mode}",
     "groupHasOwnSetting": "Has its own setting",
-    "modeClearedExceptions": "Cleared {count} dispute types that had their own setting. Everything now follows {mode}. Set a type below if you want an exception."
+    "modeClearedExceptions": "Cleared {count} dispute types that had their own setting. Everything now follows {mode}. Set a type below if you want an exception.",
+    "modeAutoLead": "We build your strongest cases and save them to Shopify as soon as they're ready.",
+    "modeAutoNote": "Everything else is held for your review first, then saved to Shopify on the due date unless you choose “Don't defend”.",
+    "modeReviewLead": "We prepare every response. Nothing is saved to Shopify until you approve it.",
+    "modeReviewNote": "Full oversight — every case waits for your approval."
   },
   "settings": {
     "title": "Settings",
@@ -4637,17 +4641,20 @@
       "title": "How should we handle disputes?",
       "subtitle": "One setting for your whole store. You can change it any time from the Automation page.",
       "safeguardTitle": "Safeguards",
-      "safeguardToggle": "Always review high-value disputes",
-      "thresholdLabel": "Amount",
+      "safeguardToggle": "Review high-value disputes before sending",
+      "thresholdLabel": "Minimum amount",
       "thresholdInvalid": "Enter an amount greater than 0",
-      "safeguardHint": "We still build the response automatically — it just waits for your approval before being saved to Shopify.",
+      "safeguardHint": "The evidence pack is still built automatically, but held for your approval before saving to Shopify.",
       "setupSummaryTitle": "What we've set up for you",
       "setupSummaryInquiry": "Early-stage inquiries covered automatically",
       "setupSummaryReady": "Ready for {families} disputes.",
       "setupSummaryModeAuto": "Strong responses are saved to Shopify automatically. Anything that needs a closer look is held for your review, then saved to Shopify on the due date unless you choose “Don't defend”.",
       "setupSummaryModeReview": "Every response is built for you and waits for your approval before it goes to Shopify.",
       "setupSummarySafeguard": "Disputes over ${amount} always wait for your approval.",
-      "setupSummaryPointer": "You can fine-tune individual dispute types later on the Automation page."
+      "setupSummaryPointer": "You can fine-tune individual dispute types later on the Automation page.",
+      "safeguardSubtitle": "Extra brakes that apply on top of whichever mode you pick.",
+      "alwaysHeldTitle": "Always held for you first",
+      "alwaysHeldSubtitle": "Held for your review first — whatever mode you pick."
     }
   },
   "disputeTimeline": {
