@@ -7,11 +7,26 @@
  *
  * ALL_DISPUTE_REASONS — the full 14 Shopify dispute reason codes, used in
  * the internal admin reason mapping system. Safe to expand.
+ *
+ * ## Every value here MUST exist in Shopify's `ShopifyPaymentsDisputeReason`
+ *
+ * We invented `SUBSCRIPTION_CANCELED` (single L). Shopify only ever sends
+ * `SUBSCRIPTION_CANCELLED` (double L) — verified against the Admin GraphQL
+ * enum on 2026-07-28, and against 17 live prod disputes carrying the double-L
+ * spelling. Because every consumer degrades silently (`?? "general"`,
+ * `?? REASON_TEMPLATES.GENERAL`), the mistake was invisible: subscription
+ * disputes were scored as `general`, got the GENERAL evidence checklist (which
+ * never asks for the cancellation policy), and resolved to no template at all.
+ *
+ * `lib/rules/__tests__/shopifyReasonEnum.test.ts` now fails the build if any
+ * hardcoded reason key drifts outside the enum again. When a reason code is
+ * needed as a map key ANYWHERE, key it on the canonical value and run legacy
+ * input through `canonicalReasonCode()` — never add a second spelling.
  */
 export const DISPUTE_REASONS_ORDER = [
   "FRAUDULENT",
   "PRODUCT_NOT_RECEIVED",
-  "SUBSCRIPTION_CANCELED",
+  "SUBSCRIPTION_CANCELLED",
   "PRODUCT_UNACCEPTABLE",
   "CREDIT_NOT_PROCESSED",
   "DUPLICATE",
@@ -37,11 +52,51 @@ export const ALL_DISPUTE_REASONS = [
   "NONCOMPLIANT",
   "PRODUCT_NOT_RECEIVED",
   "PRODUCT_UNACCEPTABLE",
-  "SUBSCRIPTION_CANCELED",
+  "SUBSCRIPTION_CANCELLED",
   "UNRECOGNIZED",
 ] as const;
 
 export type AllDisputeReasonCode = (typeof ALL_DISPUTE_REASONS)[number];
+
+const ALL_DISPUTE_REASON_SET: ReadonlySet<string> = new Set(ALL_DISPUTE_REASONS);
+
+/**
+ * Spellings that appear in STORED data but are not Shopify enum values.
+ * Read-only: we accept them on the way in and immediately canonicalise.
+ * Never write one, never key a map on one.
+ *
+ *   SUBSCRIPTION_CANCELED — our own historical typo. 2 prod disputes + seed
+ *     data + pre-2026-07-28 `rules.match.reason` arrays and
+ *     `pack_templates.dispute_type` rows carry it.
+ *   NOT_AS_DESCRIBED — legacy UI alias, never sent by Shopify
+ *     (see `ALIAS_TO_DISPUTE_TYPE` in ./disputeTypes.ts).
+ */
+export const LEGACY_REASON_ALIASES: Readonly<Record<string, AllDisputeReasonCode>> = {
+  SUBSCRIPTION_CANCELED: "SUBSCRIPTION_CANCELLED",
+  NOT_AS_DESCRIBED: "PRODUCT_UNACCEPTABLE",
+};
+
+/**
+ * The ONE normaliser for a dispute reason arriving from anywhere — Shopify,
+ * the DB, a rule's `match.reason`, a deep link, a merchant-typed value.
+ *
+ * Upper-cases, collapses whitespace to underscores, then maps any legacy
+ * spelling to its canonical enum value. Returns `null` for empty input or a
+ * code we don't recognise, so callers keep their own fallback behaviour
+ * (`?? "general"`) instead of silently matching the wrong key.
+ *
+ * Call this BEFORE indexing any reason-keyed map. That is what makes the
+ * single-L → double-L repair a class fix rather than 22 renames waiting to
+ * drift again.
+ */
+export function canonicalReasonCode(
+  reason: string | null | undefined,
+): AllDisputeReasonCode | null {
+  if (!reason) return null;
+  const key = reason.trim().toUpperCase().replace(/\s+/g, "_");
+  if (ALL_DISPUTE_REASON_SET.has(key)) return key as AllDisputeReasonCode;
+  return LEGACY_REASON_ALIASES[key] ?? null;
+}
 
 /** Human-friendly labels for all 14 Shopify dispute reasons. */
 export const DISPUTE_REASON_LABELS: Record<AllDisputeReasonCode, string> = {
@@ -57,7 +112,7 @@ export const DISPUTE_REASON_LABELS: Record<AllDisputeReasonCode, string> = {
   NONCOMPLIANT: "Noncompliant",
   PRODUCT_NOT_RECEIVED: "Product Not Received",
   PRODUCT_UNACCEPTABLE: "Product Unacceptable",
-  SUBSCRIPTION_CANCELED: "Subscription Canceled",
+  SUBSCRIPTION_CANCELLED: "Subscription Cancelled",
   UNRECOGNIZED: "Unrecognized",
 };
 
@@ -78,14 +133,14 @@ export const MERCHANT_DISPUTE_REASON_LABELS: Record<AllDisputeReasonCode, string
   NONCOMPLIANT: "Noncompliant transaction",
   PRODUCT_NOT_RECEIVED: "Item not received",
   PRODUCT_UNACCEPTABLE: "Item not as described",
-  SUBSCRIPTION_CANCELED: "Subscription canceled",
+  SUBSCRIPTION_CANCELLED: "Subscription cancelled",
   UNRECOGNIZED: "Unrecognized charge",
 };
 
 /** Resolve a Shopify dispute reason to its merchant-facing label. */
 export function merchantDisputeReasonLabel(reason: string | null | undefined): string {
-  if (!reason) return "Dispute";
-  const key = reason.toUpperCase().replace(/\s+/g, "_") as AllDisputeReasonCode;
+  const key = canonicalReasonCode(reason);
+  if (!key) return "Dispute";
   return MERCHANT_DISPUTE_REASON_LABELS[key] ?? "Dispute";
 }
 
@@ -103,7 +158,7 @@ export const DISPUTE_REASON_FAMILIES: Record<AllDisputeReasonCode, string> = {
   NONCOMPLIANT: "Compliance",
   PRODUCT_NOT_RECEIVED: "Fulfillment",
   PRODUCT_UNACCEPTABLE: "Quality",
-  SUBSCRIPTION_CANCELED: "Subscription",
+  SUBSCRIPTION_CANCELLED: "Subscription",
   UNRECOGNIZED: "Fraud",
 };
 

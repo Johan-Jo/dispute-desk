@@ -10,9 +10,15 @@
  *   - "won"      → "You won this chargeback."
  *   - "lost"     → "This chargeback was lost." (no shame copy; bank's
  *                  decision is informational, not a merchant fault)
- *   - "accepted" → "You accepted the chargeback." (or any other
- *                  terminal that isn't won/lost — collapses to "closed
- *                  without DisputeDesk response")
+ *   - "accepted" → "This chargeback has closed." (or any other terminal
+ *                  that isn't won/lost — `outcomeVariantFor` collapses
+ *                  refunded / accepted / any future value here)
+ *
+ * The accepted copy deliberately does NOT say "closed without a submitted
+ * defence response". Because the variant is a catch-all, it also reaches
+ * disputes DisputeDesk did submit — including ones the deadline cron
+ * submitted — so that is not something this email can know. Stating the
+ * closure and the money movement is the most it can honestly claim.
  *
  * Each variant additionally has an inquiry counterpart: when the case
  * resolved while still an inquiry (phase === "inquiry"), the copy says
@@ -33,6 +39,7 @@
 import { Resend } from "resend";
 import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 import { getServiceClient } from "@/lib/supabase/server";
+import { canonicalReasonCode } from "@/lib/rules/disputeReasons";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL =
@@ -141,12 +148,12 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         `Chargeback closed on ${orderName ?? `dispute ${shortId}`}`,
       heading: "This chargeback has closed",
       body: [
-        "This dispute has now closed without a submitted defence response. The disputed amount has settled with the cardholder.",
+        "This dispute has now closed. The disputed amount has settled with the cardholder.",
         "There is nothing further to do on this case, but DisputeDesk will keep the record available so your team can review the timeline, see what evidence was available, and improve future dispute handling.",
       ],
       amountLabel: "Amount settled with cardholder",
       cta: "View case record",
-      resultLine: "Result: Closed · No defence submitted",
+      resultLine: "Result: Closed",
     },
     inquiry: {
       won: {
@@ -179,7 +186,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           `Dispute closed on ${orderName ?? `dispute ${shortId}`}`,
         heading: "This dispute has closed",
         body: [
-          "This case was an inquiry, not a chargeback: the payment provider asked for more information before deciding whether to escalate. The case has now closed without a submitted response, and the disputed amount has settled with the customer.",
+          "This case was an inquiry, not a chargeback: the payment provider asked for more information before deciding whether to escalate. The case has now closed, and the disputed amount has settled with the customer.",
           "There is nothing further to do on this case, but DisputeDesk will keep the record available so your team can review the timeline, see what evidence was available, and improve future dispute handling.",
         ],
         amountLabel: "Amount settled with customer",
@@ -225,12 +232,12 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         `Rückbuchungs­fall geschlossen — ${orderName ?? `Streitfall ${shortId}`}`,
       heading: "Dieser Rückbuchungs­fall wurde geschlossen",
       body: [
-        "Dieser Streitfall wurde ohne eingereichte Verteidigungs­antwort geschlossen. Der strittige Betrag wurde an den Karten­inhaber abgeführt.",
+        "Dieser Streitfall wurde geschlossen. Der strittige Betrag wurde an den Karten­inhaber abgeführt.",
         "Für diesen Fall ist keine weitere Maßnahme erforderlich. DisputeDesk bewahrt den Datensatz auf, damit Ihr Team die Zeitlinie einsehen, verfügbare Beweise prüfen und die Bearbeitung künftiger Streitfälle verbessern kann.",
       ],
       amountLabel: "An Karten­inhaber abgeführter Betrag",
       cta: "Akteneintrag ansehen",
-      resultLine: "Ergebnis: Geschlossen · Keine Verteidigung eingereicht",
+      resultLine: "Ergebnis: Geschlossen",
     },
     inquiry: {
       won: {
@@ -263,7 +270,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           `Streitfall geschlossen — ${orderName ?? `Streitfall ${shortId}`}`,
         heading: "Dieser Streitfall wurde geschlossen",
         body: [
-          "Dieser Fall war eine Anfrage, keine Rückbuchung: Der Zahlungsanbieter hat zusätzliche Informationen angefordert, bevor über eine Eskalation entschieden wird. Der Fall wurde ohne eingereichte Antwort geschlossen, und der strittige Betrag wurde mit dem Kunden abgerechnet.",
+          "Dieser Fall war eine Anfrage, keine Rückbuchung: Der Zahlungsanbieter hat zusätzliche Informationen angefordert, bevor über eine Eskalation entschieden wird. Der Fall wurde geschlossen, und der strittige Betrag wurde mit dem Kunden abgerechnet.",
           "Für diesen Fall ist keine weitere Maßnahme erforderlich. DisputeDesk bewahrt den Datensatz auf, damit Ihr Team die Zeitlinie einsehen, verfügbare Beweise prüfen und die Bearbeitung künftiger Streitfälle verbessern kann.",
         ],
         amountLabel: "Mit dem Kunden abgerechneter Betrag",
@@ -309,12 +316,12 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         `Contracargo cerrado en ${orderName ?? `disputa ${shortId}`}`,
       heading: "Este contracargo se ha cerrado",
       body: [
-        "Esta disputa se ha cerrado sin una respuesta de defensa presentada. El importe disputado se ha liquidado con el titular de la tarjeta.",
+        "Esta disputa se ha cerrado. El importe disputado se ha liquidado con el titular de la tarjeta.",
         "No hay nada más que hacer en este caso, pero DisputeDesk mantendrá el registro disponible para que su equipo pueda revisar la cronología, ver qué pruebas estaban disponibles y mejorar la gestión de futuras disputas.",
       ],
       amountLabel: "Importe liquidado con el titular de la tarjeta",
       cta: "Ver registro del caso",
-      resultLine: "Resultado: Cerrado · Sin defensa presentada",
+      resultLine: "Resultado: Cerrado",
     },
     inquiry: {
       won: {
@@ -347,7 +354,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           `Disputa cerrada en ${orderName ?? `disputa ${shortId}`}`,
         heading: "Esta disputa se ha cerrado",
         body: [
-          "Este caso era una consulta, no un contracargo. El proveedor de pagos solicitó más información antes de decidir si escalar. El caso se ha cerrado sin una respuesta presentada y el importe disputado se ha liquidado con el cliente.",
+          "Este caso era una consulta, no un contracargo. El proveedor de pagos solicitó más información antes de decidir si escalar. El caso se ha cerrado y el importe disputado se ha liquidado con el cliente.",
           "No hay nada más que hacer en este caso, pero DisputeDesk mantendrá el registro disponible para que su equipo pueda revisar la cronología, ver qué pruebas estaban disponibles y mejorar la gestión de futuras disputas.",
         ],
         amountLabel: "Importe liquidado con el cliente",
@@ -393,12 +400,12 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         `Chargeback encerrado em ${orderName ?? `disputa ${shortId}`}`,
       heading: "Este chargeback foi encerrado",
       body: [
-        "Esta disputa foi encerrada sem uma resposta de defesa enviada. O valor disputado foi liquidado com o titular do cartão.",
+        "Esta disputa foi encerrada. O valor disputado foi liquidado com o titular do cartão.",
         "Não há mais nada a fazer neste caso, mas o DisputeDesk manterá o registro disponível para que sua equipe possa revisar a linha do tempo, ver quais provas estavam disponíveis e melhorar o tratamento de futuras disputas.",
       ],
       amountLabel: "Valor liquidado com o titular do cartão",
       cta: "Ver registro do caso",
-      resultLine: "Resultado: Encerrado · Sem defesa enviada",
+      resultLine: "Resultado: Encerrado",
     },
     inquiry: {
       won: {
@@ -431,7 +438,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           `Disputa encerrada em ${orderName ?? `disputa ${shortId}`}`,
         heading: "Esta disputa foi encerrada",
         body: [
-          "Este caso era uma consulta, não um chargeback: o provedor de pagamento solicitou mais informações antes de decidir se escalaria. O caso foi encerrado sem uma resposta enviada, e o valor disputado foi liquidado com o cliente.",
+          "Este caso era uma consulta, não um chargeback: o provedor de pagamento solicitou mais informações antes de decidir se escalaria. O caso foi encerrado, e o valor disputado foi liquidado com o cliente.",
           "Não há mais nada a fazer neste caso, mas o DisputeDesk manterá o registro disponível para que sua equipe possa revisar a linha do tempo, ver quais provas estavam disponíveis e melhorar o tratamento de futuras disputas.",
         ],
         amountLabel: "Valor liquidado com o cliente",
@@ -477,12 +484,12 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         `Litige clôturé sur ${orderName ?? `différend ${shortId}`}`,
       heading: "Ce litige a été clôturé",
       body: [
-        "Ce différend a été clôturé sans réponse de défense soumise. Le montant contesté a été réglé avec le titulaire de la carte.",
+        "Ce différend a été clôturé. Le montant contesté a été réglé avec le titulaire de la carte.",
         "Il n'y a rien de plus à faire sur cette affaire, mais DisputeDesk conservera l'enregistrement disponible pour que votre équipe puisse examiner la chronologie, voir quelles preuves étaient disponibles et améliorer le traitement des futurs différends.",
       ],
       amountLabel: "Montant réglé avec le titulaire de la carte",
       cta: "Voir le dossier",
-      resultLine: "Résultat : Clôturé · Aucune défense soumise",
+      resultLine: "Résultat : Clôturé",
     },
     inquiry: {
       won: {
@@ -515,7 +522,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           `Différend clôturé sur ${orderName ?? `différend ${shortId}`}`,
         heading: "Ce différend a été clôturé",
         body: [
-          "Ce dossier était une demande de renseignements, pas une rétrofacturation : le prestataire de paiement a demandé des informations supplémentaires avant de décider d'une éventuelle escalade. Le dossier a été clôturé sans réponse soumise, et le montant contesté a été réglé avec le client.",
+          "Ce dossier était une demande de renseignements, pas une rétrofacturation : le prestataire de paiement a demandé des informations supplémentaires avant de décider d'une éventuelle escalade. Le dossier a été clôturé, et le montant contesté a été réglé avec le client.",
           "Il n'y a rien de plus à faire sur cette affaire, mais DisputeDesk conservera l'enregistrement disponible pour que votre équipe puisse examiner la chronologie, voir quelles preuves étaient disponibles et améliorer le traitement des futurs différends.",
         ],
         amountLabel: "Montant réglé avec le client",
@@ -561,12 +568,12 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         `Återkrav avslutat på ${orderName ?? `tvist ${shortId}`}`,
       heading: "Detta återkrav har avslutats",
       body: [
-        "Denna tvist har nu avslutats utan ett inlämnat försvars­svar. Det tvistade beloppet har reglerats med korthållaren.",
+        "Denna tvist har nu avslutats. Det tvistade beloppet har reglerats med korthållaren.",
         "Det finns inget mer att göra i detta ärende, men DisputeDesk bevarar ärendet så att ditt team kan granska tidslinjen, se vilka bevis som var tillgängliga och förbättra hanteringen av framtida tvister.",
       ],
       amountLabel: "Belopp reglerat med korthållare",
       cta: "Visa ärende­post",
-      resultLine: "Resultat: Avslutat · Inget försvar inlämnat",
+      resultLine: "Resultat: Avslutat",
     },
     inquiry: {
       won: {
@@ -599,7 +606,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
           `Tvist avslutad på ${orderName ?? `tvist ${shortId}`}`,
         heading: "Denna tvist har avslutats",
         body: [
-          "Detta ärende var en förfrågan, inte ett återkrav: betalningsleverantören begärde mer information innan beslut om eventuell eskalering. Ärendet har nu avslutats utan ett inlämnat svar, och det tvistade beloppet har reglerats med kunden.",
+          "Detta ärende var en förfrågan, inte ett återkrav: betalningsleverantören begärde mer information innan beslut om eventuell eskalering. Ärendet har nu avslutats, och det tvistade beloppet har reglerats med kunden.",
           "Det finns inget mer att göra i detta ärende, men DisputeDesk bevarar ärendet så att ditt team kan granska tidslinjen, se vilka bevis som var tillgängliga och förbättra hanteringen av framtida tvister.",
         ],
         amountLabel: "Belopp reglerat med kund",
@@ -651,9 +658,10 @@ function reasonLabel(reason: string | null): string {
     PRODUCT_NOT_RECEIVED: "Product not received",
     DUPLICATE: "Duplicate charge",
     CREDIT_NOT_PROCESSED: "Refund not processed",
-    SUBSCRIPTION_CANCELED: "Subscription canceled",
+    SUBSCRIPTION_CANCELLED: "Subscription cancelled",
   };
-  if (known[reason]) return known[reason];
+  const canonical = canonicalReasonCode(reason) ?? reason;
+  if (known[canonical]) return known[canonical];
   return reason
     .toLowerCase()
     .split("_")

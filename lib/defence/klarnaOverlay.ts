@@ -30,6 +30,7 @@
  */
 
 import type { KlarnaSubProduct } from "@/lib/disputes/paymentContext";
+import { canonicalReasonCode } from "@/lib/rules/disputeReasons";
 
 /** Klarna dispute categories we tailor for. Mapped from the Shopify reason
  *  enum; `generic` covers anything unmapped. */
@@ -47,7 +48,7 @@ const SHOPIFY_REASON_TO_KLARNA_CATEGORY: Record<string, KlarnaCategory> = {
   PRODUCT_UNACCEPTABLE: "faulty_or_not_as_described",
   CREDIT_NOT_PROCESSED: "refund_not_processed",
   DUPLICATE: "incorrect_amount",
-  SUBSCRIPTION_CANCELED: "refund_not_processed",
+  SUBSCRIPTION_CANCELLED: "refund_not_processed",
   FRAUDULENT: "unauthorized_purchase",
   UNRECOGNIZED: "unauthorized_purchase",
 };
@@ -55,10 +56,9 @@ const SHOPIFY_REASON_TO_KLARNA_CATEGORY: Record<string, KlarnaCategory> = {
 export function klarnaCategoryForReason(
   shopifyReason: string | null | undefined,
 ): KlarnaCategory {
-  if (!shopifyReason) return "generic";
-  return (
-    SHOPIFY_REASON_TO_KLARNA_CATEGORY[shopifyReason.toUpperCase()] ?? "generic"
-  );
+  const key = canonicalReasonCode(shopifyReason);
+  if (!key) return "generic";
+  return SHOPIFY_REASON_TO_KLARNA_CATEGORY[key] ?? "generic";
 }
 
 /** Per-category Klarna evidence guidance (what Klarna actually weighs). */

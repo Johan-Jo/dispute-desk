@@ -3,7 +3,7 @@
  *
  * `pack_templates.dispute_type` stores Shopify's dispute reason codes
  * directly (since migration 20260411160000): `FRAUDULENT`,
- * `PRODUCT_NOT_RECEIVED`, `PRODUCT_UNACCEPTABLE`, `SUBSCRIPTION_CANCELED`,
+ * `PRODUCT_NOT_RECEIVED`, `PRODUCT_UNACCEPTABLE`, `SUBSCRIPTION_CANCELLED`,
  * `CREDIT_NOT_PROCESSED`, `DUPLICATE`, `GENERAL`, plus `DIGITAL` (a
  * product-type signal with no Shopify equivalent).
  *
@@ -22,7 +22,7 @@ export const DISPUTE_TYPES = [
   "FRAUDULENT",
   "PRODUCT_NOT_RECEIVED",
   "PRODUCT_UNACCEPTABLE",
-  "SUBSCRIPTION_CANCELED",
+  "SUBSCRIPTION_CANCELLED",
   "CREDIT_NOT_PROCESSED",
   "DUPLICATE",
   "DIGITAL",
@@ -65,9 +65,14 @@ const ALIAS_TO_DISPUTE_TYPE: Record<string, DisputeType> = {
   FRAUD: "FRAUDULENT",
   PNR: "PRODUCT_NOT_RECEIVED",
   NOT_AS_DESCRIBED: "PRODUCT_UNACCEPTABLE",
-  SUBSCRIPTION: "SUBSCRIPTION_CANCELED",
+  SUBSCRIPTION: "SUBSCRIPTION_CANCELLED",
   REFUND: "CREDIT_NOT_PROCESSED",
   CREDIT: "CREDIT_NOT_PROCESSED",
+  // Our own historical typo. Shopify's enum has only the double-L spelling;
+  // stored `pack_templates.dispute_type` rows written before 2026-07-28 and
+  // any bookmarked `?type=` link still carry the single-L one. Read-only —
+  // never write it back. See LEGACY_REASON_ALIASES in ./disputeReasons.ts.
+  SUBSCRIPTION_CANCELED: "SUBSCRIPTION_CANCELLED",
   // Shopify reason-code synonyms
   UNRECOGNIZED: "FRAUDULENT",
 };

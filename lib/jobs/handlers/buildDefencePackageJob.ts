@@ -44,6 +44,8 @@ import { uploadDefencePdf } from "@/lib/defence/storage";
 import { computeEvidenceHash } from "@/lib/defence/computeEvidenceHash";
 import { deriveOrderContext, merchantNameFromDomain } from "@/lib/defence/orderContext";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
+import { finalizeAndEnqueueSave } from "@/lib/automation/finalizeAndEnqueueSave";
+import { evaluateAutoSubmitGuards } from "@/lib/automation/autoSubmitGuards";
 import type {
   DefencePackageDocumentData,
 } from "@/lib/defence/pdf/DefencePackageDocument";
@@ -623,29 +625,30 @@ export async function handleBuildDefencePackage(
     }
   }
 
-  // Pre-flight guards: even when rules say "auto", the same three gates
-  // the pack pipeline applies (Coverage / Fatal-loss / PRD §9 strength)
-  // must block auto-finalize + save-to-Shopify enqueue here. Without
-  // this, the pack pipeline can correctly block at sync time and then
-  // this handler — re-resolving rules independently — silently saves a
-  // Weak / Fatal-loss / Covered pack a few minutes later, bypassing the
-  // gate. Source: pack_json fields persisted by buildPack.
+  // Pre-flight guards: even when rules say "auto", the same gates the pack
+  // pipeline applies (Coverage / Fatal-loss / PRD §9 strength) must prevent
+  // auto-finalize + save-to-Shopify enqueue here. Without this, the pack
+  // pipeline can correctly block at sync
+  // time and then this handler — re-resolving rules independently — silently
+  // saves a Weak / Fatal-loss / Covered pack a few minutes later, bypassing
+  // the gate.
+  //
+  // The decision itself lives in lib/automation/autoSubmitGuards.ts, shared
+  // with the pipeline and reconcileParkedAutoDisputes. Before that extraction
+  // this handler BLOCKED on Moderate while the pipeline PARKED on it — same
+  // net effect (both leave a draft) but two different audit trails, which is
+  // why the drift went unnoticed. Our only lever is targetStatus, so a park
+  // and a block both demote to "review"; the verdict is recorded so they stay
+  // distinguishable in the audit trail.
   const caseStrengthOverall =
     (packJson.case_strength as { overall?: string } | undefined)?.overall ?? null;
-  let autoBlockReason: string | null = null;
   if (resolvedMode === "auto") {
-    if (coverage === "covered_shopify") {
-      autoBlockReason = "Covered by Shopify Protect — no auto-submit";
-    } else if (fatalLoss.triggered === true) {
-      autoBlockReason = `Fatal-loss condition (${fatalLoss.reason ?? "unknown"}) — auto-submit blocked per PRD §5`;
-    } else if (
-      caseStrengthOverall === "weak" ||
-      caseStrengthOverall === "insufficient" ||
-      caseStrengthOverall === "moderate"
-    ) {
-      autoBlockReason = `Auto-mode case strength is ${caseStrengthOverall} — auto-submit blocked per PRD §9`;
-    }
-    if (autoBlockReason) {
+    const verdict = evaluateAutoSubmitGuards({
+      coverageState: coverage,
+      fatalLoss,
+      caseStrength: caseStrengthOverall,
+    });
+    if (verdict.decision !== "proceed") {
       resolvedMode = "review";
       // Raw insert (bypasses typed logEvent helper) because
       // `auto_save_blocked` is not in the typed EventType union — the
@@ -657,7 +660,9 @@ export async function handleBuildDefencePackage(
         actor_type: "system",
         event_type: "auto_save_blocked",
         event_payload: {
-          reasons: [autoBlockReason],
+          reasons: [verdict.message],
+          decision: verdict.decision,
+          verdict_reason: verdict.reason,
           case_strength: caseStrengthOverall,
           coverage,
           fatal_loss: fatalLoss.triggered === true ? fatalLoss.reason : null,
@@ -726,59 +731,20 @@ export async function handleBuildDefencePackage(
   });
 
   // ── Auto mode: supersede any prior final + enqueue save_to_shopify ──
+  // The row was already flipped to final by the UPDATE above (targetStatus).
+  // finalizeAndEnqueueSave is idempotent on the final flip (it only acts on
+  // a `draft` row) — here it just supersedes any prior final and enqueues
+  // the save, the identical tail that reconcileParkedAutoDisputes runs so
+  // there is ONE finalize+save path, not two that can drift.
   if (resolvedMode === "auto") {
-    // Atomically flip any prior final (for the same dispute, different
-    // version) to superseded so the immutability trigger is satisfied.
-    // The new row is already in status=final per the UPDATE above; the
-    // trigger validates that superseded_by_id targets must be final.
-    const { data: priorFinal } = await sb
-      .from("defence_packages")
-      .select("id, version")
-      .eq("dispute_id", pkg.dispute_id)
-      .eq("status", "final")
-      .neq("id", packageId)
-      .order("version", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (priorFinal) {
-      const { error: supErr } = await sb
-        .from("defence_packages")
-        .update({
-          status: "superseded",
-          superseded_by_id: packageId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", priorFinal.id);
-      if (supErr) {
-        console.error("[defence build] superseded update failed", supErr);
-      } else {
-        await logAuditEvent({
-          shopId: pkg.shop_id,
-          disputeId: pkg.dispute_id,
-          packId: pkg.source_pack_id,
-          actorType: "system",
-          eventType: "defence_package_superseded",
-          eventPayload: {
-            supersededId: priorFinal.id,
-            supersededVersion: priorFinal.version,
-            replacedById: packageId,
-            replacedByVersion: pkg.version,
-          },
-        });
-      }
-    }
-
-    // Enqueue save_to_shopify against the source pack. saveToShopifyJob
-    // will discover the latest final defence_packages row and swap the
-    // uncategorizedFile buffer to the defence package PDF.
-    const { error: jobErr } = await sb.from("jobs").insert({
-      shop_id: pkg.shop_id,
-      job_type: "save_to_shopify",
-      entity_id: pkg.source_pack_id,
+    await finalizeAndEnqueueSave({
+      sb,
+      shopId: pkg.shop_id,
+      disputeId: pkg.dispute_id,
+      packageId,
+      packageVersion: pkg.version,
+      sourcePackId: pkg.source_pack_id,
     });
-    if (jobErr) {
-      console.error("[defence build] enqueue save_to_shopify failed", jobErr);
-    }
   }
 
   return { ok: true };

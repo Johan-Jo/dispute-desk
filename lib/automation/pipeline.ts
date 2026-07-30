@@ -15,7 +15,10 @@ import { claimAndSendDeferredNewDisputeAlert } from "@/lib/email/sendNewDisputeA
 import { sendHighValueReviewAlert } from "@/lib/email/sendHighValueReviewAlert";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { normalizeMode, type AutomationMode } from "@/lib/rules/normalizeMode";
-import { SETUP_RULE_PREFIX } from "@/lib/rules/setupAutomation";
+import {
+  SAFEGUARD_RULE_NAME as HIGH_VALUE_SAFEGUARD_NAME,
+  readStoreAutomation,
+} from "@/lib/rules/storeAutomation";
 import {
   isRegenerateBuild,
   isMaterialChange,
@@ -27,9 +30,8 @@ import {
   type DisputeAttentionReason,
 } from "@/lib/disputes/attentionReasons";
 import { claimBillingBlockedEmailSlot } from "./billingBlockedEmailThrottle";
-import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
+import { evaluateAutoSubmitGuards } from "./autoSubmitGuards";
 
-const HIGH_VALUE_SAFEGUARD_NAME = `${SETUP_RULE_PREFIX}safeguard:high_value`;
 import {
   AUTO_BUILD_TRIGGERED,
   AUTO_SAVE_TRIGGERED,
@@ -491,30 +493,46 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // `false`. Computed once so we don't hit the DB per branch.
   const isRegen = await isRegenerateBuild(pack.dispute_id);
 
-  // Fatal-loss Gate (PRD §3 step 2 / §5). Sits between Coverage Gate
-  // and the strength gate. When triggered, auto-mode never submits
-  // regardless of completeness or strength — the case is structurally
-  // unwinnable. Review-mode falls through and parks normally so the
-  // merchant can still see the pack and decide for themselves.
-  // Source field: `pack_json.fatal_loss` (persisted by buildPack).
+  // Auto-mode pre-flight guards (PRD §5 fatal-loss + §9 strength). ONE
+  // shared decision — the same
+  // function backs buildDefencePackageJob and reconcileParkedAutoDisputes
+  // so the three paths can never disagree (they did: the job used to BLOCK
+  // on Moderate while this path PARKED). See lib/automation/autoSubmitGuards.ts.
+  //
+  // Review mode never consults the guards: it falls through to the review
+  // branch below and parks, so the merchant can still see the pack and
+  // decide for themselves even on a structurally unwinnable case.
+  //
+  // Coverage is handled earlier (it returns `skip_covered` before rules are
+  // even resolved), so the guards' coverage verdict is unreachable here by
+  // construction — it exists for the other two callers.
   const fatalLoss = (pack.pack_json as { fatal_loss?: { triggered?: boolean; reason?: string | null; message?: string | null } } | null)?.fatal_loss;
-  if (ruleMode === "auto" && fatalLoss?.triggered === true) {
-    const reason =
-      fatalLoss.message ??
-      `Auto-submit blocked — fatal-loss condition (${fatalLoss.reason ?? "unknown"}) per PRD §5`;
+  const strengthOverall =
+    (pack.pack_json as { case_strength?: { overall?: string } } | null)?.case_strength?.overall ?? null;
+  const guardVerdict =
+    ruleMode === "auto"
+      ? evaluateAutoSubmitGuards({
+          coverageState: coverage?.state,
+          fatalLoss,
+          caseStrength: strengthOverall,
+        })
+      : ({ decision: "proceed" } as const);
+
+  if (guardVerdict.decision === "block" && guardVerdict.reason === "fatal_loss") {
+    const reason = guardVerdict.message;
     await sb.from("audit_events").insert({
       shop_id: pack.shop_id,
       dispute_id: pack.dispute_id,
       pack_id: packId,
       actor_type: "system",
       event_type: "auto_save_blocked",
-      event_payload: { reasons: [reason], fatal_loss: fatalLoss.reason },
+      event_payload: { reasons: [reason], fatal_loss: fatalLoss?.reason },
     });
     if (isRegen) {
       await stampRebuildOutcome({
         packId,
         outcome: "blocked_fatal_loss",
-        reason: fatalLoss.reason ?? "fatal_loss",
+        reason: fatalLoss?.reason ?? "fatal_loss",
       });
     }
     if (pack.dispute_id) {
@@ -527,14 +545,15 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         sourceType: "pack_engine",
         visibility: "merchant_and_internal",
         description: reason,
-        metadataJson: { pack_id: packId, reasons: [reason], fatal_loss: fatalLoss.reason },
+        metadataJson: { pack_id: packId, reasons: [reason], fatal_loss: fatalLoss?.reason },
         dedupeKey: `${pack.dispute_id}:${PACK_BLOCKED}:${packId}:${new Date().toISOString()}`,
       });
       void updateNormalizedStatus(pack.dispute_id);
-      // Sync-time send was deferred. Send review variant so the
-      // merchant is informed of the new dispute even though the case
-      // is structurally unwinnable.
-      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
+      // Sync-time send was deferred. `held`, not `review`: the guards only
+      // run in auto mode, so this merchant is on Auto-pilot and the deadline
+      // cron will still save this to Shopify on the due date. The review
+      // variant would tell them it "requires your decision", which is false.
+      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "held").catch(
         () => {
           /* non-fatal */
         },
@@ -543,33 +562,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     return { action: "block", details: reason };
   }
 
-  // PRD §9 strength gate (auto-mode only). The PRD principle "Auto mode
-  // executes ONLY on Strong cases" forbids auto-submission of weaker
-  // evidence regardless of completeness:
-  //   auto + strong       → fall through to the existing quality gate
-  //   auto + moderate     → park_for_review
-  //   auto + weak         → block
-  //   auto + insufficient → block
-  // Source field: `pack_json.case_strength.overall` (persisted in
-  // buildPack since the previous commit). Older packs built before
-  // that commit have no case_strength entry — we leave the existing
-  // behavior intact for them rather than silently flipping decisions.
-  const caseStrength = (pack.pack_json as { case_strength?: { overall?: string } } | null)?.case_strength;
-  const strengthOverall = caseStrength?.overall ?? null;
-  // "Not as described" (product family) is a subjective merchandise-quality
-  // claim. For the first release of product-family scoring we do NOT
-  // auto-submit even a two-axis Strong product case — the merchant may
-  // know context the evidence doesn't capture (the item genuinely was
-  // defective). Treat product-Strong like Moderate for the auto-gate: it
-  // parks for review rather than falling through to the quality gate +
-  // auto-save. Removing this guard later opts product-Strong back into
-  // normal auto-submit. (docs/plans/product-not-as-described-scoring.plan.md.)
-  const disputeReason =
-    (pack.pack_json as { disputeReason?: string | null } | null)?.disputeReason ?? null;
-  const isProductFamily = resolveReasonFamily(disputeReason) === "product";
-  const parksAsModerate =
-    strengthOverall === "moderate" ||
-    (strengthOverall === "strong" && isProductFamily);
+  const parksAsModerate = guardVerdict.decision === "park";
   // Approved-fact count for the material-change heuristic. We need it
   // before the review-mode branch, which is where the
   // `blocked_no_material_change` outcome fires. Read from the most
@@ -588,7 +581,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       ? (latestDraft!.facts_json as unknown[]).length
       : null;
   }
-  if (ruleMode === "auto" && parksAsModerate) {
+  if (parksAsModerate) {
     // No rebuild-outcome stamp here. Moderate-strength parks for
     // merchant review with a fresh draft — that's the happy path for
     // a regenerate (new draft is now the candidate), not a blocker.
@@ -610,10 +603,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         });
       }
     }
-    const reason =
-      strengthOverall === "strong" && isProductFamily
-        ? "Auto-mode: 'not as described' cases are parked for merchant review even when Strong (subjective merchandise claim)"
-        : "Auto-mode case strength is Moderate — parked for merchant review per PRD §9";
+    const reason = guardVerdict.message;
     const alreadySaved =
       pack.status === "saved_to_shopify" ||
       pack.status === "saved_to_shopify_unverified" ||
@@ -652,7 +642,9 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       void updateNormalizedStatus(pack.dispute_id);
     }
     if (pack.dispute_id && !alreadySaved) {
-      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
+      // Parked by the Moderate guard — auto mode, so the deadline cron still
+      // saves it to Shopify on the due date. `held`, not `review`.
+      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "held").catch(
         () => {
           /* non-fatal */
         },
@@ -661,8 +653,8 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     return { action: "park_for_review", details: reason };
   }
   if (
-    ruleMode === "auto" &&
-    (strengthOverall === "weak" || strengthOverall === "insufficient")
+    guardVerdict.decision === "block" &&
+    (guardVerdict.reason === "weak" || guardVerdict.reason === "insufficient")
   ) {
     if (isRegen && pack.dispute_id) {
       // On a regenerate that lands at weak/insufficient, the merchant
@@ -682,7 +674,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
           : "no_new_bank_eligible_signals",
       });
     }
-    const reason = `Auto-mode case strength is ${strengthOverall === "weak" ? "Weak" : "Insufficient"} — auto-submit blocked per PRD §9`;
+    const reason = guardVerdict.message;
     await sb.from("audit_events").insert({
       shop_id: pack.shop_id,
       dispute_id: pack.dispute_id,
@@ -705,10 +697,12 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         dedupeKey: `${pack.dispute_id}:${PACK_BLOCKED}:${packId}:${new Date().toISOString()}`,
       });
       void updateNormalizedStatus(pack.dispute_id);
-      // Sync-time send was deferred for this dispute. Send the review
-      // variant now: the merchant needs to know the case won't auto-
-      // submit and they have to act.
-      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
+      // Sync-time send was deferred for this dispute. `held`, not `review`:
+      // the Weak/Insufficient guard only fires in auto mode, and the block is
+      // build-time only — the deadline cron finalizes and submits the draft on
+      // the due date. Telling the merchant it "requires your decision" is the
+      // exact falsehood this variant exists to fix.
+      void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "held").catch(
         () => {
           /* non-fatal */
         },
@@ -894,9 +888,9 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     void updateNormalizedStatus(pack.dispute_id);
     // Sync-time send was deferred for this dispute. Auto rule said
     // "submit" but the quality gate refused (low completeness or
-    // blockers present). Send review variant so the merchant knows
-    // they need to fill the gaps and submit.
-    void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "review").catch(
+    // blockers present). `held`, not `review` — the merchant should fill the
+    // gaps, but if they don't, the deadline cron submits what we have.
+    void claimAndSendDeferredNewDisputeAlert(pack.dispute_id, "held").catch(
       () => {
         /* non-fatal */
       },
@@ -930,16 +924,13 @@ async function sendHighValueReviewAlertForPack(
     .single();
   if (disputeRow?.high_value_alert_sent_at) return;
 
-  // Look up the threshold from the wizard payload + the merchant team email.
+  // Merchant team email still comes from the wizard payload.
   const { data: setup } = await sb
     .from("shop_setup")
     .select("steps")
     .eq("shop_id", shopId)
     .single();
   const steps = (setup?.steps ?? {}) as Record<string, { payload?: Record<string, unknown> }>;
-  const automationPayload = steps.automation?.payload as
-    | { reviewThreshold?: string | number; highValueReviewEnabled?: boolean }
-    | undefined;
   const teamPayload = steps.team?.payload as
     | { teamEmail?: string; notifications?: { evidenceReady?: boolean } }
     | undefined;
@@ -950,11 +941,14 @@ async function sendHighValueReviewAlertForPack(
   const to = teamPayload?.teamEmail;
   if (!to) return;
 
-  const thresholdRaw = automationPayload?.reviewThreshold;
-  const threshold =
-    typeof thresholdRaw === "number"
-      ? thresholdRaw
-      : Number.parseFloat(String(thresholdRaw ?? "0"));
+  // Threshold comes from the safeguard RULE — the actual source of truth and
+  // the very thing that matched to get us here. It used to be read from
+  // `shop_setup.steps.automation.payload.reviewThreshold`, which meant a
+  // merchant who only ever set the threshold on /app/rules had no payload,
+  // so `threshold` came out 0 and this email silently never sent.
+  const storeAutomation = await readStoreAutomation(shopId);
+  if (!storeAutomation.safeguard.enabled) return;
+  const threshold = storeAutomation.safeguard.amount;
   if (!Number.isFinite(threshold) || threshold <= 0) return;
 
   if (dispute.amount == null) return;

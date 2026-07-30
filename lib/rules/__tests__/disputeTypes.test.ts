@@ -68,7 +68,7 @@ describe("normalizeDisputeType", () => {
       FRAUD: "FRAUDULENT",
       PNR: "PRODUCT_NOT_RECEIVED",
       NOT_AS_DESCRIBED: "PRODUCT_UNACCEPTABLE",
-      SUBSCRIPTION: "SUBSCRIPTION_CANCELED",
+      SUBSCRIPTION: "SUBSCRIPTION_CANCELLED",
       REFUND: "CREDIT_NOT_PROCESSED",
     };
     for (const [alias, expected] of Object.entries(cases)) {

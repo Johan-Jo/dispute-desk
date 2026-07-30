@@ -56,8 +56,9 @@ function ActivateIcon() {
 const STEP_ICON_COMPONENTS: Record<string, React.ReactNode> = {
   connection: <ConnectionIcon />,
   store_profile: <StoreProfileIcon />,
-  coverage: <CoverageIcon />,
-  automation: <AutomationIcon />,
+  // `coverage` + `automation` merged into `handling` (2026-07-27). The
+  // lightning bolt reads as "automation" better than the coverage shield.
+  handling: <AutomationIcon />,
   policies: <PoliciesIcon />,
   activate: <ActivateIcon />,
 };
@@ -140,7 +141,7 @@ export function WizardStepper({ currentStepId, stepsMap }: WizardStepperProps) {
                   whiteSpace: "nowrap",
                 }}
               >
-                {t(stepId as "connection" | "store_profile" | "coverage" | "automation" | "policies" | "activate")}
+                {t(stepId as "connection" | "store_profile" | "handling" | "policies" | "activate")}
               </span>
             </div>
 

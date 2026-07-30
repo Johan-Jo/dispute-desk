@@ -202,7 +202,7 @@ function mapReasonToRulesFamily(reason: string | null | undefined): string {
   if (key === "FRAUDULENT" || key === "UNRECOGNIZED") return "fraud";
   if (key === "PRODUCT_NOT_RECEIVED") return "pnr";
   if (key === "PRODUCT_UNACCEPTABLE" || key === "NOT_AS_DESCRIBED") return "not_as_described";
-  if (key === "SUBSCRIPTION_CANCELED") return "subscription";
+  if (key === "SUBSCRIPTION_CANCELLED") return "subscription";
   if (key === "CREDIT_NOT_PROCESSED") return "refund";
   if (key === "DUPLICATE") return "duplicate";
   return "general";
@@ -740,7 +740,9 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
   /* ── Automation rule + Footer CTAs ── */
   const disputeFamily = mapReasonToRulesFamily(dispute.reason);
-  const rulesUrl = withShopParams(`/app/rules?family=${disputeFamily}`, searchParams);
+  // Handling is store-wide now — the per-family grid (and its ?family= deep
+  // link) is gone, so this points at the Automation page itself.
+  const rulesUrl = withShopParams(`/app/rules`, searchParams);
   const appliedMode = appliedRule?.mode ?? "review";
   const appliedModeLabel = appliedMode === "auto"
     ? tExtra("appliedMode.automatic")

@@ -186,7 +186,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     step: 5,
     title: "Case strength at a glance",
-    body: "Strong, Moderate, or Weak — based on AVS/CVV matches, 3-D Secure status, fulfillment data, and customer history. This case is Strong, so DisputeDesk can auto-submit once you approve.",
+    body: "Strong, Moderate, or Weak — based on AVS/CVV matches, 3-D Secure status, fulfillment data, and customer history. This case is Strong, so on Auto-pilot DisputeDesk saves it to Shopify as soon as it's ready — no approval needed.",
     path: "/demo/disputes/dp-2401",
     selector: '[data-help-guide="detail-overview-hero"]',
     preClickSelector: '[data-help-guide="detail-tab-overview"]',

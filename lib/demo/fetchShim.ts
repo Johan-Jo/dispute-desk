@@ -212,7 +212,7 @@ const HANDLERS: Handler[] = [
       { id: "rule-fraud", enabled: true, priority: 1, match: { reason: ["FRAUDULENT", "UNRECOGNIZED"], phase: ["inquiry", "chargeback"] }, action: { mode: "automated", pack_template_id: "tpl-fraud" } },
       { id: "rule-pnr", enabled: true, priority: 2, match: { reason: ["PRODUCT_NOT_RECEIVED"], phase: ["inquiry", "chargeback"] }, action: { mode: "automated", pack_template_id: "tpl-pnr" } },
       { id: "rule-nad", enabled: true, priority: 3, match: { reason: ["PRODUCT_UNACCEPTABLE", "NOT_AS_DESCRIBED"], phase: ["inquiry", "chargeback"] }, action: { mode: "review_first", pack_template_id: "tpl-nad" } },
-      { id: "rule-sub", enabled: true, priority: 4, match: { reason: ["SUBSCRIPTION_CANCELED"], phase: ["inquiry", "chargeback"] }, action: { mode: "automated", pack_template_id: "tpl-sub" } },
+      { id: "rule-sub", enabled: true, priority: 4, match: { reason: ["SUBSCRIPTION_CANCELLED"], phase: ["inquiry", "chargeback"] }, action: { mode: "automated", pack_template_id: "tpl-sub" } },
       { id: "rule-refund", enabled: true, priority: 5, match: { reason: ["CREDIT_NOT_PROCESSED"], phase: ["inquiry", "chargeback"] }, action: { mode: "review_first", pack_template_id: "tpl-refund" } },
       { id: "rule-dup", enabled: true, priority: 6, match: { reason: ["DUPLICATE"], phase: ["inquiry", "chargeback"] }, action: { mode: "automated", pack_template_id: "tpl-dup" } },
       { id: "rule-general", enabled: true, priority: 7, match: { reason: ["GENERAL"], phase: ["inquiry", "chargeback"] }, action: { mode: "review_first", pack_template_id: "tpl-general" } },
@@ -230,7 +230,7 @@ const HANDLERS: Handler[] = [
         { id: "pk-fraud", name: "Fraudulent — verified cardholder", dispute_type: "FRAUDULENT", status: "ACTIVE", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z", template_id: "tpl-fraud" },
         { id: "pk-pnr", name: "Product not received — tracked delivery", dispute_type: "PRODUCT_NOT_RECEIVED", status: "ACTIVE", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z", template_id: "tpl-pnr" },
         { id: "pk-nad", name: "Product not as described — listing snapshot", dispute_type: "PRODUCT_UNACCEPTABLE", status: "ACTIVE", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z", template_id: "tpl-nad" },
-        { id: "pk-sub", name: "Subscription canceled — policy + history", dispute_type: "SUBSCRIPTION_CANCELED", status: "ACTIVE", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z", template_id: "tpl-sub" },
+        { id: "pk-sub", name: "Subscription canceled — policy + history", dispute_type: "SUBSCRIPTION_CANCELLED", status: "ACTIVE", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z", template_id: "tpl-sub" },
         { id: "pk-refund", name: "Credit not processed — refund timeline", dispute_type: "CREDIT_NOT_PROCESSED", status: "ACTIVE", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z", template_id: "tpl-refund" },
         { id: "pk-dup", name: "Duplicate charge — payment reconciliation", dispute_type: "DUPLICATE", status: "ACTIVE", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z", template_id: "tpl-dup" },
         { id: "pk-general", name: "General — best-effort evidence pack", dispute_type: "GENERAL", status: "ACTIVE", locale: "en", version: 1, updated_at: "2026-01-10T10:00:00Z", template_id: "tpl-general" },
@@ -248,7 +248,7 @@ const HANDLERS: Handler[] = [
         ["UNRECOGNIZED", "tpl-fraud"],
         ["PRODUCT_NOT_RECEIVED", "tpl-pnr"],
         ["PRODUCT_UNACCEPTABLE", "tpl-nad"],
-        ["SUBSCRIPTION_CANCELED", "tpl-sub"],
+        ["SUBSCRIPTION_CANCELLED", "tpl-sub"],
         ["CREDIT_NOT_PROCESSED", "tpl-refund"],
         ["DUPLICATE", "tpl-dup"],
         ["GENERAL", "tpl-general"],
@@ -268,14 +268,27 @@ const HANDLERS: Handler[] = [
     },
   },
 
-  // ── Setup automation — empty active packs + empty modes
+  // ── Setup automation — read-only templates/packs. `pack_modes` and
+  //    `packAutomation` were dropped when per-pack rules were removed;
+  //    the store-wide mode now lives at /api/automation/store below.
   {
     match: (u) => u.pathname === "/api/setup/automation",
     respond: () => jsonResponse({
       activePacks: [],
       installedTemplateIds: [],
-      pack_modes: {},
-      packAutomation: true,
+      rulesAccess: { allowed: true, reason: null },
+    }),
+  },
+
+  // ── Store-wide automation switch. Without this entry the fetch falls
+  //    through, `saveMode` stays null, and NEITHER radio renders selected
+  //    on the demo Settings page (same for /app/rules).
+  {
+    match: (u) => u.pathname === "/api/automation/store",
+    respond: () => jsonResponse({
+      mode: "auto",
+      safeguard: { enabled: true, amount: 500 },
+      rulesAccess: { allowed: true, reason: null },
     }),
   },
 

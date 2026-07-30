@@ -9,7 +9,8 @@ import { Modal } from "@/components/ui/modal";
 import { useDemoMode } from "@/lib/demo-mode";
 import { useActiveShopId } from "@/lib/portal/activeShopContext";
 import { DemoNotice } from "@/components/ui/demo-notice";
-import { REASON_KEYS, matchSummary } from "@/lib/rules/helpers";
+import { REASON_KEYS, RULE_REASON_CODES, matchSummary } from "@/lib/rules/helpers";
+import { isSetupOwnedRuleName } from "@/lib/rules/storeAutomationNames";
 
 interface Rule {
   id: string;
@@ -28,20 +29,12 @@ const DEMO_RULES = [
   { id: "R-004", nameKey: "demoRule4Name", triggerKey: "demoRule4Trigger", actionKey: "demoRule4Action", status: "inactive", executions: 0 },
 ];
 
-const DISPUTE_REASONS = [
-  "PRODUCT_NOT_RECEIVED",
-  "PRODUCT_UNACCEPTABLE",
-  "FRAUDULENT",
-  "CREDIT_NOT_PROCESSED",
-  "SUBSCRIPTION_CANCELED",
-  "DUPLICATE",
-  "GENERAL",
-];
-
-// REASON_KEYS + matchSummary live in lib/rules/helpers.ts so the
-// embedded rules page (Polaris) and the portal rules page (Tailwind)
-// share a single source of truth. UI is intentionally divergent;
-// data + formatting are not.
+// RULE_REASON_CODES + REASON_KEYS + matchSummary live in lib/rules/helpers.ts
+// so the embedded rules page (Polaris) and the portal rules page (Tailwind)
+// share a single source of truth. UI is intentionally divergent; data +
+// formatting are not. This page used to keep its own reason list, which is how
+// UNRECOGNIZED went missing from both surfaces.
+const DISPUTE_REASONS = RULE_REASON_CODES;
 
 export default function RulesSettingsPage() {
   // TODO: Re-wire portal auto-complete for new wizard steps
@@ -57,7 +50,10 @@ export default function RulesSettingsPage() {
 
   const [formName, setFormName] = useState("");
   const [formReasons, setFormReasons] = useState<string[]>([]);
-  const [formMode, setFormMode] = useState<"auto" | "review">("auto");
+  // `review`, matching the embedded modal. Two forms POSTing the same endpoint
+  // with opposite safety postures is a bug: the portal used to default a new
+  // rule to auto-submit.
+  const [formMode, setFormMode] = useState<"auto" | "review">("review");
   const [formMinAmount, setFormMinAmount] = useState("");
   const [formMaxAmount, setFormMaxAmount] = useState("");
 
@@ -70,7 +66,16 @@ export default function RulesSettingsPage() {
     setLoading(true);
     const res = await fetch(`/api/rules?shop_id=${shopId}`);
     const data = await res.json();
-    setRules(Array.isArray(data) ? data : []);
+    // Setup-owned rows are rendered by the embedded Automation page's own
+    // cards, never as custom rules. Without this filter the store-wide switch
+    // (`__dd_setup__:fallback:default`) and every group row showed up here as
+    // unnamed, editable, deletable rules — a merchant could destroy their own
+    // automation config by tidying up a list they were never meant to see.
+    setRules(
+      Array.isArray(data)
+        ? (data as Rule[]).filter((r) => !isSetupOwnedRuleName(r.name))
+        : [],
+    );
     setLoading(false);
 
     const usageRes = await fetch(`/api/billing/usage?shop_id=${shopId}`);

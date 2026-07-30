@@ -88,7 +88,7 @@ const REASON_PROFILES = {
     missing: ["customer_communication"],
     unavailable: [],
   },
-  SUBSCRIPTION_CANCELED: {
+  SUBSCRIPTION_CANCELLED: {
     available: [
       "order_confirmation",
       "cancellation_policy",

@@ -61,9 +61,8 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
 
   const [loading, setLoading] = useState(true);
   const [activePacks, setActivePacks] = useState<PackInfo[]>([]);
-  const [familyCount, setFamilyCount] = useState(0);
-  const [autoCount, setAutoCount] = useState(0);
-  const [reviewCount, setReviewCount] = useState(0);
+  const [storeMode, setStoreMode] = useState<"auto" | "review">("auto");
+  const [safeguardEnabled, setSafeguardEnabled] = useState(true);
   const [reviewThreshold, setReviewThreshold] = useState("500");
   const [teamEmail, setTeamEmail] = useState("");
   const [teamEmailSource, setTeamEmailSource] = useState<"shopify" | "saved" | "edited">("shopify");
@@ -87,47 +86,22 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
 
         if (state?.shopId) setShopId(state.shopId);
 
-        // Threshold lives on the automation step; fall back to a legacy
-        // store_profile value for stores onboarded before the wizard split.
-        const threshold =
-          state?.steps?.automation?.payload?.reviewThreshold ??
-          state?.steps?.store_profile?.payload?.reviewThreshold;
-        if (threshold) setReviewThreshold(String(threshold));
+        // Handling mode + threshold come from the STORE CONFIG (the rules
+        // rows), not from wizard payloads. That is the source of truth the
+        // engine actually reads, so this summary can never disagree with what
+        // will happen. Previously both were derived from per-family payloads
+        // that no longer exist.
+        const storeRes = await fetch("/api/automation/store");
+        if (!cancelled && storeRes.ok) {
+          const cfg = await storeRes.json();
+          setStoreMode(cfg?.mode === "auto" ? "auto" : "review");
+          setSafeguardEnabled(Boolean(cfg?.safeguard?.enabled));
+          if (cfg?.safeguard?.amount) setReviewThreshold(String(cfg.safeguard.amount));
+        }
 
         // Packs for activation
         const packs = (automation.activePacks ?? []) as PackInfo[];
         setActivePacks(packs);
-
-        // Coverage settings from Step 3, or derive
-        const coverageSettings = state?.steps?.coverage?.payload?.coverageSettings as
-          | Record<string, string>
-          | undefined;
-
-        let automationValues: Array<"auto" | "review">;
-        if (coverageSettings && Object.keys(coverageSettings).length > 0) {
-          automationValues = Object.values(coverageSettings).map(toCanonicalMode);
-          setFamilyCount(Object.keys(coverageSettings).length);
-        } else {
-          const profilePayload = state?.steps?.store_profile?.payload;
-          const storeTypes = (profilePayload?.storeTypes ?? ["physical"]) as StoreType[];
-          const evidenceConfig = profilePayload?.shopifyEvidenceConfig ??
-            getDefaultEvidenceConfig(storeTypes);
-          const profile: StoreProfileForRecommendation = {
-            storeTypes,
-            digitalProof: profilePayload?.digitalProof ?? "yes",
-            shopifyEvidenceConfig: evidenceConfig,
-          };
-          const confidence = deriveEvidenceConfidence(evidenceConfig);
-          const recs = recommendTemplates(profile).filter((r) => r.isDefault);
-          const familySet = new Set(recs.map((r) => r.disputeFamily));
-          setFamilyCount(familySet.size);
-          automationValues = [...familySet].map((f) =>
-            deriveFamilyAutomation(f, confidence)
-          );
-        }
-
-        setAutoCount(automationValues.filter((v) => v === "auto").length);
-        setReviewCount(automationValues.filter((v) => v === "review").length);
 
         // Team email — prefer the value the merchant has already saved
         // (re-entry into the step), otherwise fall back to the Shopify
@@ -238,9 +212,11 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
         </p>
       </div>
 
-      {/* Stats grid — 2x2 */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
-        {/* Coverage Enabled — blue filled */}
+      {/* Stats grid — mode / playbooks / threshold. Reads the store config
+          (the rules rows the engine actually evaluates), so this summary can
+          never disagree with what will really happen. */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 24 }}>
+        {/* Handling mode — blue filled, the headline decision */}
         <div style={{
           background: "linear-gradient(135deg, #1D4ED8, #3B82F6)",
           borderRadius: 12,
@@ -249,15 +225,17 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10 1l7 3v5c0 4.4-3 8.5-7 9.9C6 17.5 3 13.4 3 9V4l7-3z" />
+              <path d="M11 1L5 11h4v8l6-10h-4V1z" />
             </svg>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>{t("statCoverageLabel")}</span>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>{t("statModeLabel")}</span>
           </div>
-          <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1 }}>{familyCount}</div>
-          <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>{t("statCoverageDesc")}</div>
+          <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.2 }}>
+            {storeMode === "auto" ? t("statModeAuto") : t("statModeReview")}
+          </div>
+          <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>{t("statModeDesc")}</div>
         </div>
 
-        {/* Automated — green outline */}
+        {/* Playbooks installed — green outline */}
         <div style={{
           background: "#fff",
           border: "2px solid #22C55E",
@@ -266,33 +244,15 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             <svg width="18" height="18" viewBox="0 0 20 20" fill="#1D4ED8">
-              <path d="M11 1L5 11h4v8l6-10h-4V1z" />
+              <path d="M10 1l7 3v5c0 4.4-3 8.5-7 9.9C6 17.5 3 13.4 3 9V4l7-3z" />
             </svg>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#202223" }}>{t("statAutomatedLabel")}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#202223" }}>{t("statPlaybooksLabel")}</span>
           </div>
-          <div style={{ fontSize: 36, fontWeight: 700, color: "#22C55E", lineHeight: 1 }}>{autoCount}</div>
-          <div style={{ fontSize: 12, color: "#6D7175", marginTop: 6 }}>{t("statAutomatedDesc")}</div>
+          <div style={{ fontSize: 36, fontWeight: 700, color: "#22C55E", lineHeight: 1 }}>{activePacks.length}</div>
+          <div style={{ fontSize: 12, color: "#6D7175", marginTop: 6 }}>{t("statPlaybooksDesc")}</div>
         </div>
 
-        {/* Review First — amber outline */}
-        <div style={{
-          background: "#fff",
-          border: "2px solid #F59E0B",
-          borderRadius: 12,
-          padding: "24px 24px 20px",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-              <circle cx="10" cy="10" r="8" stroke="#F59E0B" strokeWidth="2" />
-              <path d="M10 6v5M10 13v1" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#202223" }}>{t("statReviewLabel")}</span>
-          </div>
-          <div style={{ fontSize: 36, fontWeight: 700, color: "#F59E0B", lineHeight: 1 }}>{reviewCount}</div>
-          <div style={{ fontSize: 12, color: "#6D7175", marginTop: 6 }}>{t("statReviewDesc")}</div>
-        </div>
-
-        {/* Review Threshold — neutral */}
+        {/* High-value threshold — neutral; reads "Off" when disabled */}
         <div style={{
           background: "#fff",
           border: "1px solid #E1E3E5",
@@ -305,7 +265,9 @@ export function ActivateStep({ onSaveRef }: ActivateStepProps) {
             </svg>
             <span style={{ fontSize: 13, fontWeight: 600, color: "#202223" }}>{t("statThresholdLabel")}</span>
           </div>
-          <div style={{ fontSize: 36, fontWeight: 700, color: "#202223", lineHeight: 1 }}>${reviewThreshold}</div>
+          <div style={{ fontSize: 36, fontWeight: 700, color: "#202223", lineHeight: 1 }}>
+            {safeguardEnabled ? `$${reviewThreshold}` : t("statThresholdOff")}
+          </div>
           <div style={{ fontSize: 12, color: "#6D7175", marginTop: 6 }}>{t("statThresholdDesc")}</div>
         </div>
       </div>

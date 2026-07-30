@@ -19,16 +19,13 @@ import {
   Text,
   Banner,
 } from "@shopify/polaris";
+import { RULE_REASON_CODES, embeddedReasonLabelKey } from "@/lib/rules/helpers";
 
-const REASONS: Array<{ value: string; labelKey: string }> = [
-  { value: "FRAUDULENT", labelKey: "reasonFraudulent" },
-  { value: "PRODUCT_NOT_RECEIVED", labelKey: "reasonProductNotReceived" },
-  { value: "PRODUCT_UNACCEPTABLE", labelKey: "reasonProductUnacceptable" },
-  { value: "SUBSCRIPTION_CANCELED", labelKey: "reasonSubscriptionCanceled" },
-  { value: "CREDIT_NOT_PROCESSED", labelKey: "reasonCreditNotProcessed" },
-  { value: "DUPLICATE", labelKey: "reasonDuplicate" },
-  { value: "GENERAL", labelKey: "reasonGeneral" },
-];
+// Derived, never hand-listed — see RULE_REASON_CODES for why (this list and
+// the portal's used to drift, and both were missing UNRECOGNIZED).
+const REASONS: Array<{ value: string; labelKey: string }> = RULE_REASON_CODES.map(
+  (value) => ({ value, labelKey: embeddedReasonLabelKey(value) }),
+);
 
 export interface CustomRuleDraft {
   id?: string;

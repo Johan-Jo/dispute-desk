@@ -43,7 +43,7 @@ describe("Setup flow: end-to-end progression", () => {
   });
 
   describe("After OAuth callback (fresh install)", () => {
-    it("fresh setup has all 6 steps as todo, nextStepId = connection", async () => {
+    it("fresh setup has all 5 steps as todo, nextStepId = connection", async () => {
       const client = createMockSupabaseClient();
       setTableResult(client, "shop_setup", {
         shop_id: "shop-new",
@@ -56,7 +56,7 @@ describe("Setup flow: end-to-end progression", () => {
       const body: SetupStateResponse = await res.json();
 
       expect(body.progress.doneCount).toBe(0);
-      expect(body.progress.total).toBe(6);
+      expect(body.progress.total).toBe(5);
       expect(body.nextStepId).toBe("connection");
       expect(body.allDone).toBe(false);
 
@@ -77,7 +77,7 @@ describe("Setup flow: end-to-end progression", () => {
           connection: { status: "done" },
           store_profile: { status: "done" },
         })
-      ).toBe("coverage");
+      ).toBe("handling");
     });
 
     it("getNextActionableStep skips skipped steps", () => {
@@ -102,7 +102,7 @@ describe("Setup flow: end-to-end progression", () => {
   });
 
   describe("Step completion via API", () => {
-    it("completing store_profile advances nextStepId to coverage", async () => {
+    it("completing store_profile advances nextStepId to handling", async () => {
       const client = createMockSupabaseClient();
       setTableResult(client, "shop_setup", {
         shop_id: "shop-1",
@@ -128,10 +128,10 @@ describe("Setup flow: end-to-end progression", () => {
       const state: SetupStateResponse = await stateRes.json();
 
       expect(state.progress.doneCount).toBe(2);
-      expect(state.nextStepId).toBe("coverage");
+      expect(state.nextStepId).toBe("handling");
     });
 
-    it("completing all 6 steps results in allDone", async () => {
+    it("completing all 5 steps results in allDone", async () => {
       const allDoneSteps: Record<string, StepState> = {};
       for (const id of STEP_IDS) {
         allDoneSteps[id] = { status: "done", completed_at: new Date().toISOString() };
@@ -148,7 +148,7 @@ describe("Setup flow: end-to-end progression", () => {
       const body: SetupStateResponse = await res.json();
 
       expect(body.allDone).toBe(true);
-      expect(body.progress.doneCount).toBe(6);
+      expect(body.progress.doneCount).toBe(5);
       expect(body.nextStepId).toBeNull();
     });
   });
@@ -174,8 +174,8 @@ describe("Setup flow: end-to-end progression", () => {
       expect(body.steps.connection.status).toBe("done");
       // business_policies → policies
       expect(body.steps.policies.status).toBe("done");
-      // disputes → coverage
-      expect(body.steps.coverage.status).toBe("done");
+      // disputes → handling (was → coverage before the 6→5 merge)
+      expect(body.steps.handling.status).toBe("done");
     });
   });
 
@@ -209,8 +209,7 @@ describe("Setup flow: end-to-end progression", () => {
     const STEP_ROUTES: Record<string, string> = {
       connection: "/portal/setup/connection",
       store_profile: "/portal/setup/store_profile",
-      coverage: "/portal/setup/coverage",
-      automation: "/portal/setup/automation",
+      handling: "/portal/setup/handling",
       policies: "/portal/setup/policies",
       activate: "/portal/setup/activate",
     };

@@ -21,15 +21,11 @@ const STEP_CTA: Partial<
     label: "Tell us about your store",
     ask: "Fill in your store profile and define your store policies. Policies strengthen your dispute evidence. When you’re done, come back and click Save & Continue.",
   },
-  coverage: {
-    href: "/portal/disputes",
-    label: "Review dispute coverage",
-    ask: "Review your dispute coverage settings and evidence packs. Each pack is tailored to a dispute type and collects the right documents automatically. When you’re ready, come back and click Save & Continue.",
-  },
-  automation: {
+  // `coverage` + `automation` merged into `handling` (2026-07-27).
+  handling: {
     href: "/portal/rules",
-    label: "Configure automation",
-    ask: "Configure rules to automate your dispute workflow. Install our suggested starter rules or create custom ones. When you’re done, come back and click Save & Continue.",
+    label: "Choose how disputes are handled",
+    ask: "Choose how DisputeDesk should handle your disputes — auto-pilot for your strongest cases, or review everything before it goes out. You can also set an amount above which every dispute waits for your approval. When you’re done, come back and click Save & Continue.",
   },
   activate: {
     href: "/portal/dashboard",

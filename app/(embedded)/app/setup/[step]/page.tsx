@@ -2,7 +2,7 @@
  * FIGMA SCREEN MAPPING (file key: 5o2yOdPqVmvwjaK8eTeUUx)
  * Route: app/(embedded)/app/setup/[step]/page.tsx
  * Figma Make source: src/app/pages/shopify/onboarding-wizard.tsx
- * 5-step onboarding wizard: Connection → Store Profile → Coverage → Automation → Activate
+ * 5-step onboarding wizard: Connection → Store Profile → Handling → Policies → Activate
  */
 "use client";
 
@@ -13,14 +13,13 @@ import { Suspense, useCallback, useState } from "react";
 import { useParams } from "next/navigation";
 import { Page, Layout, Card, BlockStack, Spinner, Text } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
-import { STEP_IDS } from "@/lib/setup/constants";
+import { resolveStepId } from "@/lib/setup/constants";
 import { normalizeSetupStepParam } from "@/lib/setup/normalizeStepParam";
 import type { StepId } from "@/lib/setup/types";
 import { SetupWizardShell } from "@/components/setup/SetupWizardShell";
 import { ConnectionStep } from "@/components/setup/steps/ConnectionStep";
 import { StoreProfileStep } from "@/components/setup/steps/StoreProfileStep";
-import { CoverageStep } from "@/components/setup/steps/CoverageStep";
-import { AutomationStep } from "@/components/setup/steps/AutomationStep";
+import { HandlingStep } from "@/components/setup/steps/HandlingStep";
 import { BusinessPoliciesStep } from "@/components/setup/steps/BusinessPoliciesStep";
 import { ActivateStep } from "@/components/setup/steps/ActivateStep";
 
@@ -30,8 +29,7 @@ type StepComponentType = React.ComponentType<typeof _stepComponentProps & { onCa
 const stepComponents: Record<StepId, StepComponentType> = {
   connection: ConnectionStep as StepComponentType,
   store_profile: StoreProfileStep as StepComponentType,
-  coverage: CoverageStep as StepComponentType,
-  automation: AutomationStep as StepComponentType,
+  handling: HandlingStep as StepComponentType,
   policies: BusinessPoliciesStep as StepComponentType,
   activate: ActivateStep as StepComponentType,
 };
@@ -39,22 +37,31 @@ const stepComponents: Record<StepId, StepComponentType> = {
 function StepPageInner() {
   const t = useTranslations("setup");
   const params = useParams<{ step: string }>();
-  const stepId = normalizeSetupStepParam(params.step) as StepId;
+  // resolveStepId maps legacy slugs onto canonical ids, so a bookmarked
+  // /app/setup/coverage or /app/setup/automation renders the merged Handling
+  // step instead of the not-found card.
+  const stepId = resolveStepId(normalizeSetupStepParam(params.step));
   const [canContinue, setCanContinue] = useState(true);
 
   const handleCanContinueChange = useCallback((value: boolean) => {
     setCanContinue(value);
   }, []);
 
-  if (!STEP_IDS.includes(stepId)) {
+  // Unresolvable step slug. Tagged with a testid so e2e can assert this card
+  // NEVER renders for a real step — it is visually a blank panel, so a
+  // routing regression here is easy to miss by eye (it shipped once already:
+  // `store-profile` with a hyphen resolved to null on 2026-07-28).
+  if (!stepId) {
     return (
       <Page title={t("wizardTitle")}>
         <Layout>
           <Layout.Section>
             <Card>
-              <Text as="p" variant="bodyMd">
-                {t("wizardTitle")}
-              </Text>
+              <div data-testid="dd-setup-invalid-step">
+                <Text as="p" variant="bodyMd">
+                  {t("wizardTitle")}
+                </Text>
+              </div>
             </Card>
           </Layout.Section>
         </Layout>
@@ -74,7 +81,7 @@ function StepPageInner() {
   };
 
   return (
-    <SetupWizardShell stepId={stepId} onSave={handleSave} canContinue={canContinue} noCard={stepId === "coverage" || stepId === "automation" || stepId === "policies" || stepId === "activate"}>
+    <SetupWizardShell stepId={stepId} onSave={handleSave} canContinue={canContinue} noCard={stepId === "handling" || stepId === "policies" || stepId === "activate"}>
       <StepComponent
         stepId={stepId}
         onSaveRef={saveRef}

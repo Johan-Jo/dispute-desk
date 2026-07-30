@@ -28,6 +28,7 @@ config({ path: ".env.local" });
 import { fileURLToPath } from "url";
 import { dirname, resolve } from "path";
 import { pathToFileURL } from "url";
+import { readAllDisputeReasons } from "./lib/allDisputeReasons.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -143,25 +144,14 @@ async function main() {
     process.exit(0);
   }
 
-  // Hardcoded local reference list mirrors lib/rules/disputeReasons.ts
-  // ALL_DISPUTE_REASONS. Keep in sync if that list changes — or just
-  // run this script afterwards to verify.
-  const ALL_DISPUTE_REASONS = [
-    "BANK_CANNOT_PROCESS",
-    "CREDIT_NOT_PROCESSED",
-    "CUSTOMER_INITIATED",
-    "DEBIT_NOT_AUTHORIZED",
-    "DUPLICATE",
-    "FRAUDULENT",
-    "GENERAL",
-    "INCORRECT_ACCOUNT_DETAILS",
-    "INSUFFICIENT_FUNDS",
-    "NONCOMPLIANT",
-    "PRODUCT_NOT_RECEIVED",
-    "PRODUCT_UNACCEPTABLE",
-    "SUBSCRIPTION_CANCELED",
-    "UNRECOGNIZED",
-  ];
+  // Read the local reference list straight out of lib/rules/disputeReasons.ts
+  // rather than keeping a third copy of it here.
+  //
+  // The copy this replaced had drifted: it carried `SUBSCRIPTION_CANCELED`
+  // (single L), a value Shopify's enum has never contained. A drift checker
+  // that hardcodes the thing it is checking cannot report its own drift.
+  // `lib/rules/__tests__/shopifyReasonEnum.test.ts` pins this parse.
+  const ALL_DISPUTE_REASONS = readAllDisputeReasons();
 
   const remoteSet = new Set(enumValues);
   const localSet = new Set(ALL_DISPUTE_REASONS);

@@ -23,7 +23,7 @@ describe("classifyReasonFamily — six curated buckets", () => {
 
   it("routes quality + subscription to their own buckets", () => {
     expect(classifyReasonFamily("PRODUCT_UNACCEPTABLE")).toBe("quality");
-    expect(classifyReasonFamily("SUBSCRIPTION_CANCELED")).toBe("subscription");
+    expect(classifyReasonFamily("SUBSCRIPTION_CANCELLED")).toBe("subscription");
   });
 
   it("keeps general/billing/technical/compliance/unknown in other", () => {

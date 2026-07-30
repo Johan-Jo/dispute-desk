@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
-import { STEP_IDS } from "@/lib/setup/constants";
+import { resolveStepId } from "@/lib/setup/constants";
 import { logSetupEvent } from "@/lib/setup/events";
-import type { StepId, StepState, SkippedReason } from "@/lib/setup/types";
+import type { StepState, SkippedReason } from "@/lib/setup/types";
 
 const VALID_REASONS: SkippedReason[] = ["do_later", "not_relevant", "need_help"];
 
@@ -17,10 +17,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "shop_id required" }, { status: 400 });
   }
 
-  const stepId = body.stepId as StepId;
+  // Legacy ids from a stale client tab map onto the canonical step.
+  const stepId = resolveStepId(body.stepId);
   const reason = body.reason as SkippedReason;
 
-  if (!stepId || !STEP_IDS.includes(stepId)) {
+  if (!stepId) {
     return NextResponse.json({ error: "Invalid stepId" }, { status: 400 });
   }
 

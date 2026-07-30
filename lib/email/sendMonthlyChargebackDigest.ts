@@ -18,6 +18,7 @@
 
 import { Resend } from "resend";
 import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
+import { canonicalReasonCode } from "@/lib/rules/disputeReasons";
 import { evaluateCheckpoints } from "@/lib/insights/checkpoints";
 import type { Checkpoint } from "@/lib/insights/checkpoints.types";
 import type { DisputeActivity } from "@/lib/email/digestDisputeActivity";
@@ -96,13 +97,16 @@ const REASON_LABELS: Record<string, string> = {
   FRAUDULENT: "Fraudulent",
   PRODUCT_NOT_RECEIVED: "Not received",
   PRODUCT_UNACCEPTABLE: "Not as described",
-  SUBSCRIPTION_CANCELED: "Subscription",
+  SUBSCRIPTION_CANCELLED: "Subscription",
   DUPLICATE: "Duplicate",
   CREDIT_NOT_PROCESSED: "Credit not processed",
   GENERAL: "Other",
 };
 function reasonLabel(r: string): string {
-  return REASON_LABELS[r] ?? r.replace(/_/g, " ").toLowerCase();
+  return (
+    REASON_LABELS[canonicalReasonCode(r) ?? r] ??
+    r.replace(/_/g, " ").toLowerCase()
+  );
 }
 
 // ─── Outcome summary string ───────────────────────────────────────

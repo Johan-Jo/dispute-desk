@@ -4,6 +4,7 @@ import { checkFeatureAccess } from "@/lib/billing/checkQuota";
 import { validateBody, ruleCreateSchema } from "@/lib/middleware/validate";
 import { normalizeMode } from "@/lib/rules/normalizeMode";
 import { extractShopId } from "@/lib/middleware/extractShopId";
+import { reconcileParkedAutoDisputes } from "@/lib/automation/reconcileParkedAutoDisputes";
 
 export const runtime = "nodejs";
 
@@ -81,6 +82,13 @@ export async function POST(req: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // A new auto rule may match already-built Strong drafts that parked under
+  // the previous rule set. Unstick them without waiting for a rebuild.
+  // Non-blocking + non-fatal; the pass re-applies every auto gate itself.
+  void reconcileParkedAutoDisputes(shop_id).catch((err) => {
+    console.error("[api/rules] reconcileParkedAutoDisputes failed", err);
+  });
 
   return NextResponse.json(data, { status: 201 });
 }

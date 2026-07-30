@@ -68,12 +68,12 @@
       "disputes.workspaceShell.merchantReasonLabel.DUPLICATE"
     ]
   },
-  "reason_SUBSCRIPTION_CANCELED_canonical": {
+  "reason_SUBSCRIPTION_CANCELLED_canonical": {
     "paths": [
       "coverage.familySubscription",
-      "disputeReasons.SUBSCRIPTION_CANCELED",
-      "packs.disputeTypeLabel.SUBSCRIPTION_CANCELED",
-      "disputes.workspaceShell.merchantReasonLabel.SUBSCRIPTION_CANCELED"
+      "disputeReasons.SUBSCRIPTION_CANCELLED",
+      "packs.disputeTypeLabel.SUBSCRIPTION_CANCELLED",
+      "disputes.workspaceShell.merchantReasonLabel.SUBSCRIPTION_CANCELLED"
     ]
   },
   "reason_UNRECOGNIZED_canonical": {

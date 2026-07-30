@@ -2,45 +2,35 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { ALL_DISPUTE_REASONS } from "@/lib/rules/disputeReasons";
+import { readAllDisputeReasons } from "../../scripts/lib/allDisputeReasons.mjs";
 
 /**
- * Guards against drift between the TypeScript source of truth
- * (lib/rules/disputeReasons.ts ALL_DISPUTE_REASONS) and the
- * standalone Node script scripts/check-shopify-reasons.mjs that
- * carries its own copy of the list because it runs without a
- * TypeScript toolchain.
+ * Node scripts must READ the dispute-reason list, never copy it.
  *
- * If this test fails, someone edited ALL_DISPUTE_REASONS without
- * updating the script (or vice versa). Fix by mirroring the change.
+ * This test used to assert that `scripts/check-shopify-reasons.mjs`'s own
+ * hardcoded copy matched `ALL_DISPUTE_REASONS` — and it passed happily while
+ * BOTH carried `SUBSCRIPTION_CANCELED`, a spelling Shopify's enum has never
+ * contained (2026-07-28). Two copies agreeing with each other says nothing
+ * about either being right, and the script in question is the *drift checker*.
+ *
+ * So the guard changed shape: there is now one list, parsed out of the TS
+ * source by `scripts/lib/allDisputeReasons.mjs`. Correctness against Shopify's
+ * actual enum is pinned separately in
+ * `lib/rules/__tests__/shopifyReasonEnum.test.ts`.
  */
-describe("scripts/check-shopify-reasons.mjs ALL_DISPUTE_REASONS sync", () => {
-  it("matches lib/rules/disputeReasons.ts ALL_DISPUTE_REASONS exactly", () => {
-    const scriptPath = resolve(
-      process.cwd(),
-      "scripts/check-shopify-reasons.mjs",
-    );
-    const source = readFileSync(scriptPath, "utf8");
+describe("node scripts share one dispute-reason list", () => {
+  it("the shared parser returns exactly ALL_DISPUTE_REASONS", () => {
+    expect(readAllDisputeReasons()).toEqual([...ALL_DISPUTE_REASONS]);
+  });
 
-    // Extract the ALL_DISPUTE_REASONS array literal. The const is the
-    // only variable in the script with that name, and it's a plain
-    // string-literal array, so a straightforward regex is enough.
-    const match = source.match(
-      /const\s+ALL_DISPUTE_REASONS\s*=\s*\[([\s\S]*?)\]/,
-    );
-    expect(
-      match,
-      "couldn't find ALL_DISPUTE_REASONS in scripts/check-shopify-reasons.mjs",
-    ).toBeTruthy();
-
-    const body = match![1];
-    const scriptReasons = Array.from(body.matchAll(/"([A-Z_]+)"/g)).map(
-      (m) => m[1],
+  it("check-shopify-reasons.mjs holds no copy of its own", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "scripts/check-shopify-reasons.mjs"),
+      "utf8",
     );
 
-    // Sort both so ordering differences don't false-positive.
-    const scriptSorted = [...scriptReasons].sort();
-    const sourceSorted = [...ALL_DISPUTE_REASONS].sort();
-
-    expect(scriptSorted).toEqual(sourceSorted);
+    expect(source).toContain("readAllDisputeReasons");
+    // A literal array assigned to the name is the copy this replaced.
+    expect(source).not.toMatch(/const\s+ALL_DISPUTE_REASONS\s*=\s*\[/);
   });
 });

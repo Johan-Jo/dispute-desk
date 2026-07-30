@@ -21,11 +21,12 @@ describe("setup types", () => {
   });
 
   it("StepId values match expected set", () => {
+    // `coverage` + `automation` merged into `handling` (2026-07-27).
     const ids: StepId[] = [
       "connection",
       "store_profile",
-      "coverage",
-      "automation",
+      "handling",
+      "policies",
       "activate",
     ];
     expect(ids).toHaveLength(5);
@@ -38,7 +39,7 @@ describe("setup types", () => {
     };
     expect(map.connection?.status).toBe("done");
     expect(map.store_profile?.skipped_reason).toBe("do_later");
-    expect(map.coverage).toBeUndefined();
+    expect(map.handling).toBeUndefined();
   });
 
   it("SetupStateResponse shape is valid", () => {
@@ -46,13 +47,12 @@ describe("setup types", () => {
       steps: {
         connection: { status: "done" },
         store_profile: { status: "done" },
-        coverage: { status: "todo" },
-        automation: { status: "todo" },
+        handling: { status: "todo" },
         policies: { status: "todo" },
         activate: { status: "todo" },
       },
-      progress: { doneCount: 2, total: 6 },
-      nextStepId: "coverage",
+      progress: { doneCount: 2, total: 5 },
+      nextStepId: "handling",
       allDone: false,
     };
     expect(response.progress.doneCount).toBe(2);

@@ -1096,24 +1096,31 @@ The Supabase CLI's linked project is a **single invisible global pointer** (`sup
 Refs (source of truth = `CLAUDE.md`): **prod = `aokhplydttxtebvbeuzc`, dev = `vrpkgudqmpyunekrkpnc`**.
 
 - **Migrations**: never run the raw `supabase db push`. Use `npm run db:migrate:dev` / `npm run db:migrate:prod`. Both run `scripts/guard-db-target.mjs <env>` first, which reads the linked ref and **refuses unless it matches that env's known ref** — so a dev/prod mix-up fails hard with the re-link command, never a silent wrong push. Bare `npm run db:migrate` is intentionally blocked (errors demanding an explicit target).
-- **Ad-hoc `db query --linked`**: the guard doesn't wrap raw queries, so **`cat supabase/.temp/linked-project.json` and confirm the ref before running** — a diagnostic against the wrong DB is how the incident started.
+- **Ad-hoc queries**: use **`npm run db:query:dev`** / **`npm run db:query:prod`** (added 2026-07-29). They run the same guard before `supabase db query --linked`, so a read against the wrong DB fails the same way a write does. Arguments pass straight through: `npm run db:query:dev -- --file scripts/sql/foo.sql`.
+- **The pointer can change UNDER a session.** On **2026-07-29** it was verified as dev at the start of a session and was pointing at **prod** twenty minutes later, with nothing in that session having re-linked it. Confirming once is not enough — the read-only queries in between produced two contradictory pictures of the same shop (a `shops` row that existed in one answer and not the next), which is what exposed it. This is why the guard now wraps reads: **confirm per command, not per session.**
 - **Re-link** to the intended project with `npx supabase link --project-ref <ref>` (a separate step before the migrate command; let it settle before running the guard).
 - The **dev app reads its DB from the dev Vercel project's `SUPABASE_URL`** (`vrpkgudqmpyunekrkpnc`), independent of whatever the CLI is linked to — so the live app and a CLI query can silently diverge. `vercel env pull` the app's real env when verifying live behavior.
 
 ### Ad-hoc SQL / ops queries (canonical path)
 
-**Use this for one-shot reads, diagnostics, and targeted cleanups** — anything that is not a migration and not application code. It runs SQL via the Supabase Management API against the linked project, so it needs no DB password and does not depend on `SUPABASE_URL_POSTGRES` being in sync (that env var rots when the DB password is rotated in the dashboard). **First confirm which project is linked (see *Supabase DB target safety* above).**
+**Use this for one-shot reads, diagnostics, and targeted cleanups** — anything that is not a migration and not application code. It runs SQL via the Supabase Management API against the linked project, so it needs no DB password and does not depend on `SUPABASE_URL_POSTGRES` being in sync (that env var rots when the DB password is rotated in the dashboard).
+
+**Go through the guarded wrapper**, which states the intended environment and refuses on a mismatch:
 
 ```bash
 # Inline query — service-role-equivalent privilege
-npx supabase db query --linked "select count(*) from disputes where status = 'NEEDS_RESPONSE'"
+npm run db:query:dev -- "select count(*) from disputes where status = 'NEEDS_RESPONSE'"
 
 # From a file — preferred for any multi-statement / transactional block
-npx supabase db query --linked --file scripts/sql/my-cleanup.sql
+npm run db:query:dev -- --file scripts/sql/my-cleanup.sql
 
 # CSV / table output for humans
-npx supabase db query --linked --output table "select shop_domain, plan from shops limit 20"
+npm run db:query:prod -- --output table "select shop_domain, plan from shops limit 20"
 ```
+
+Each run prints the ref it matched (`✓ intended=dev — linked project ref vrpkgudqmpyunekrkpnc matches`), so the target is in the transcript next to the answer rather than assumed from something checked earlier. Raw `npx supabase db query --linked` still works and is what the wrapper calls, but it inherits the pointer silently — prefer the wrapper.
+
+**Read the whole result.** Piping these through `tail` truncates from the TOP, so a multi-row answer silently becomes its last row — which on 2026-07-29 read as "dev has exactly one shop." Redirect to a file and read it, or use `--output table`.
 
 **Privilege & safety notes:**
 - Runs with privileges sufficient to `ALTER TABLE … DISABLE TRIGGER` and set session GUCs (e.g. `app.allow_audit_mutation = 'on'`), which means it can bypass audit-immutability triggers when needed. **Always wrap destructive ops in a `do $$ … end $$` block with explicit structural guards** (assert the dispute_gid pattern, shop_domain, etc.) before the deletes — see `scripts/sql/delete-dispute-384652be.sql` for the reference pattern.
@@ -1124,7 +1131,7 @@ npx supabase db query --linked --output table "select shop_domain, plan from sho
 
 | Need | Use |
 |------|-----|
-| Apply a migration file | `npm run db:migrate` (alias for `supabase db push`) |
+| Apply a migration file | `npm run db:migrate:dev` / `npm run db:migrate:prod` (bare `db:migrate` is blocked) |
 | Read rows from app code or scripts | `@supabase/supabase-js` with `SUPABASE_SERVICE_ROLE_KEY` (RLS-bypassing, but trigger-respecting — cannot delete audit/dispute_events rows) |
 | Direct `psql`-style session (multi-statement transactions outside Management API, `\copy`, large bulk loads) | `pg.Client` with `SUPABASE_URL_POSTGRES` in `.env.local`. **This password is rotated periodically in the Supabase dashboard;** if `password authentication failed for user "postgres"` shows up, refresh the value from Dashboard → Project Settings → Database → Connection string before re-running. Do **not** reach for this when `db query --linked` would have worked. |
 | Bypass `audit_events` immutability from an RPC | The existing `delete_e2e_fixture_dispute(uuid)` RPC is scoped to E2E fixtures only; for other one-shot ops, use `db query --linked` with the DO-block pattern above. |
@@ -1658,11 +1665,51 @@ Counts (`activeDisputes`, `disputesWon`, etc.) and rates (`winRate`, `recoveryRa
 - `lib/disputeEvents/` — emitEvent, normalizeStatus, deriveFinalOutcome, updateNormalizedStatus, eventTypes, types
 - `lib/disputes/metrics.ts` — shared dispute metrics aggregation
 
+## Dispute Reason Codes — one canonical spelling
+
+`lib/rules/disputeReasons.ts` owns `ALL_DISPUTE_REASONS`, which **must equal
+Shopify's `ShopifyPaymentsDisputeReason` enum exactly**. Everything that keys a
+map on a dispute reason — reason family, evidence checklist, argument template,
+network-code inference, Klarna category, reason-code module, pack labels, email
+labels, coverage families — keys on those values and nothing else.
+
+**Reading a reason from anywhere (Shopify, the DB, a rule's `match.reason`, a
+deep link) goes through `canonicalReasonCode()` first.** It upper-cases,
+normalises whitespace and folds legacy spellings via `LEGACY_REASON_ALIASES`,
+returning `null` for anything unrecognised so callers keep their own fallback
+rather than silently matching the wrong key.
+
+Why this exists: until 2026-07-28 we hardcoded `SUBSCRIPTION_CANCELED` (single
+L) in 22 source files, 6 message bundles and two DB tables. Shopify has only
+ever sent `SUBSCRIPTION_CANCELLED`. Because every consumer degrades quietly
+(`?? "general"`, `?? REASON_TEMPLATES.GENERAL`), all 17 prod subscription
+disputes were classified `general`, were served the GENERAL evidence checklist
+— which never asks for the cancellation policy, the decisive document for a
+"charged after I cancelled" claim — and resolved to no template at all.
+
+Guards, in order of when they fire:
+
+| Guard | Where | Catches |
+|---|---|---|
+| Enum snapshot + near-miss scan | `lib/rules/__tests__/shopifyReasonEnum.test.ts` | a hardcoded spelling within edit-distance 2 of a real enum value, anywhere in `lib/ app/ components/ messages/ scripts/` — i.e. this bug class, at build time |
+| Shared list for node scripts | `scripts/lib/allDisputeReasons.mjs` | a script keeping its own copy (the previous copy in `check-shopify-reasons.mjs` had itself drifted) |
+| Live enum drift check | `lib/shopify/checkReasonEnumDrift.ts`, daily 10:00 UTC via `/api/cron/check-shopify-reasons` | Shopify adding/removing a value after we shipped |
+| Unknown-reason auto-heal | `syncDisputes.ensureReasonMapping` | a reason arriving with no `reason_template_mappings` row — inserts a placeholder (`family = 'Unknown'`, `template_id` NULL) and emails ops |
+
+A legacy spelling may appear in exactly ONE place: the alias table that folds it
+away. Adding a second key for the same reason re-opens the bug.
+
+Data repair: `supabase/migrations/20260728160000_subscription_cancelled_spelling.sql`
+moved `reason_template_mappings`, `pack_templates.dispute_type`,
+`packs.dispute_type` and `rules.match.reason` onto the canonical spelling.
+`disputes.reason` is deliberately untouched — a dispute's recorded reason is a
+historical fact, read through the alias.
+
 ## Network Reason Code Resolution (LSE-0)
 
 Shopify Admin GraphQL **2026-01 exposes only the coarse 14-value
 `ShopifyPaymentsDisputeReason` enum** on `Dispute.reasonDetails.reason`
-(`FRAUDULENT`, `PRODUCT_NOT_RECEIVED`, `SUBSCRIPTION_CANCELED`, …). There
+(`FRAUDULENT`, `PRODUCT_NOT_RECEIVED`, `SUBSCRIPTION_CANCELLED`, …). There
 is no typed `networkReasonCode` field. The Liability-Shift Engine
 (EPIC-LSE-0 through EPIC-LSE-6, PRD: [`docs/liability-shift-engine-prd.md`](liability-shift-engine-prd.md))
 needs the underlying Visa / Mastercard network code (e.g. `10.4`, `4837`)
@@ -2304,6 +2351,10 @@ The "Chronology of Events" bullets (PDF + embedded, via `lib/defence/chronology.
 
 **Second enforcement point — `buildDefencePackageJob`:** The defence-package build handler ([lib/jobs/handlers/buildDefencePackageJob.ts](../lib/jobs/handlers/buildDefencePackageJob.ts)) independently re-resolves the per-dispute automation mode via `evaluateRules` and, when `"auto"`, was previously flipping the defence package to `status: "final"` and enqueueing `save_to_shopify` **without checking the strength / coverage / fatal-loss gates**. This was a real bug: the pack pipeline could correctly block a Weak pack at sync time, then this handler — running 2 minutes later for the same dispute — would push it to Shopify anyway. The handler now applies a pre-flight guard with the same three checks (Coverage / Fatal-loss / PRD §9 strength) and forces `resolvedMode = "review"` if any would block, writing an `auto_save_blocked` audit event with `source: "defence_build"` so the trail distinguishes pipeline vs. defence-build origins. Merchant-initiated routes (`/approve`, `/save-to-shopify`, `/submit`) and the cron deadline submitter remain ungated by design — those are deliberate overrides.
 
+**Shared finalize+save tail (`finalizeAndEnqueueSave`).** The "promote a ready draft → final, supersede any prior final, enqueue `save_to_shopify`" sequence lives in ONE place — [lib/automation/finalizeAndEnqueueSave.ts](../lib/automation/finalizeAndEnqueueSave.ts). `buildDefencePackageJob` calls it on the auto path instead of inlining the supersede+enqueue logic, so there is a single path that cannot drift. The final flip is guarded on `status='draft'`, so it is a no-op (no duplicate audit event) when the caller already flipped the row.
+
+**Rule-flip reconciliation (`reconcileParkedAutoDisputes`).** `buildDefencePackageJob` decides finalize-vs-draft **once, at build time**, from the rule mode resolved then. If a merchant later flips a reason's rule to `auto` (or lowers an amount safeguard), nothing re-runs the build — so already-built **Strong** drafts sit at `status='draft'` / `submission_state='not_saved'` forever, never auto-saved under the new rule. This was a real prod incident on blume-box (2026-07-27): four Strong fraud disputes built Jul-22 ~03:00 under `rule=review`, then the fraud rule flipped to `auto` Jul-22 22:50, and the drafts stayed stuck. [lib/automation/reconcileParkedAutoDisputes.ts](../lib/automation/reconcileParkedAutoDisputes.ts) re-scans a shop's `not_saved` disputes and, for any whose **current** rules now resolve to `auto`, re-applies the SAME gates (Coverage / Fatal-loss / PRD §9 Strong-only) and calls `finalizeAndEnqueueSave` for the ones that pass. It is fired fire-and-forget from `POST /api/setup/automation` when the merchant toggles all packs to auto (`allAuto`), and is idempotent (skips a dispute with a pending save job or a non-draft latest package), so repeated calls are safe. It can ONLY promote a case the pipeline itself would have auto-saved — it never touches moderate/weak/insufficient, covered, fatal-loss, or product-family disputes.
+
 ### Fatal-loss Gate (PRD §3 step 2 / §5)
 
 **Routing primitive: PRD v1.1 §5.** Sits between the Coverage Gate and the strength gate. Detects cases where evidence-strength scoring is misleading because the case is structurally unwinnable. When triggered:
@@ -2343,6 +2394,170 @@ review + fatal_loss → park_for_review           (review is absolute)
 - The `MESSAGES` copy in `lib/automation/fatalLoss.ts` is merchant-UI only. Bank-rebuttal text generation must NEVER cite "we already refunded" — that's a confession, not a defense.
 - Coverage beats fatal-loss. A covered case is never "fatal" because Shopify pays regardless.
 
+### Auto-submit guards — one decision, three callers (2026-07-27)
+
+`lib/automation/autoSubmitGuards.ts` — `evaluateAutoSubmitGuards(input): AutoSubmitVerdict`. **Pure** (no DB, no I/O, no side effects). This is the single authority on whether an *auto-mode* case may actually be submitted.
+
+**Why it exists.** The same decision was implemented three times and two of them disagreed:
+
+| Caller | Moderate strength, before |
+|---|---|
+| `lib/automation/pipeline.ts` (`evaluateAndMaybeAutoSave`) | **parked** |
+| `lib/jobs/handlers/buildDefencePackageJob.ts` | **blocked** (lumped with weak/insufficient) |
+| `lib/automation/reconcileParkedAutoDisputes.ts` | hand-rolled the same four checks a third time |
+
+The merchant-visible outcome was identical either way — a park and a block both leave the defence package a `draft` — which is exactly why the drift survived unnoticed. It was only visible as an inconsistent audit trail.
+
+**Verdict table (auto mode only; review mode never consults this function — review parks by definition):**
+
+| Condition | Verdict |
+|---|---|
+| `coverageState === "covered_shopify"` | `block` / `covered_shopify` |
+| `fatalLoss.triggered === true` | `block` / `fatal_loss` |
+| `caseStrength === "moderate"` | `park` / `moderate_strength` |
+| `caseStrength === "weak" \| "insufficient"` | `block` / same |
+| `caseStrength === "strong"` (any family) | `proceed` |
+| `caseStrength === null` (pack predating the field) | `proceed` — preserves the pre-scoring behaviour in every caller |
+
+Precedence is coverage → fatal-loss → strength, matching PRD §4 → §5 → §9.
+
+**Canonical semantics: Moderate PARKS, it does not block.** A Moderate case has a usable draft the merchant can review and submit manually; blocking it would strand a viable defence. The pipeline's reading was correct and is now the shared one.
+
+**Hard rules:**
+- The function is decision-only. **Side effects stay with the callers** — `pipeline.ts` writes `evidence_packs.status` and emits dispute events; `buildDefencePackageJob` writes `defence_packages.status`. Those genuinely differ; extracting them too would produce a worse abstraction.
+- Never add a fourth hand-rolled copy of these checks. If a new caller needs the decision, call this function.
+- In `buildDefencePackageJob` a `park` and a `block` both demote `resolvedMode` to `"review"` (its only lever is `targetStatus: "final" | "draft"`), but the `auto_save_blocked` audit payload records `decision` + `verdict_reason` so the two stay distinguishable in the trail.
+- Coverage is unreachable from `pipeline.ts` (it returns `skip_covered` before rules are resolved); the verdict exists for the other two callers.
+
+Tests: `lib/automation/__tests__/autoSubmitGuards.test.ts` (exhaustive verdict + precedence matrix) and `lib/jobs/handlers/__tests__/buildDefencePackageJobGuards.test.ts` (the job-path regression — Moderate yields a draft with a `park` verdict).
+
+### Store-wide automation mode (2026-07-27)
+
+Replaces the per-dispute-type Automatic/Review grid. **One switch per shop**, plus an explicit amount safeguard.
+
+**Why the grid went.** The per-type mode is gate #3 of 8 in `evaluateAndMaybeAutoSave`. Coverage, fatal-loss, Moderate/Weak/Insufficient strength, the completeness floor and blockers all park or block *regardless* of what the merchant picked per type. Auto-submit only ever happened at the intersection of {Strong} ∩ {not covered} ∩ {no fatal loss} ∩ {completeness ≥ threshold} ∩ {no blockers} — and, until 2026-07-30, ∩ {not product family}. Seven choices where there was really one — and the conditions that actually decide were invisible.
+
+**Storage — setup owns exactly TWO rows in `rules`:**
+
+| Row | Match | Priority | Meaning |
+|---|---|---|---|
+| `__dd_setup__:fallback:default` | `{}` | 100000 | `action.mode` **IS** the store-wide switch (tier-2 catch-all) |
+| `__dd_setup__:safeguard:high_value` | `{ amount_range: { min } }` | 5 | tier-0 amount safeguard; forces review on high-value disputes |
+
+Merchant custom rules (any name not starting with `__dd_setup__:`) are untouched and keep evaluating through the unchanged tier0/tier1/tier2 logic in `pickAutomationAction`.
+
+**Deleted:** `__dd_setup__:pack:{packId}` (+ `:inquiry` siblings), `__dd_setup__:coverage:{familyId}`, and the duplicate `__dd_safeguard__:high_value`. Migration `20260727120000_collapse_setup_rules_to_store_switch.sql` collapses existing shops conservatively (auto only if *every* enabled setup rule was auto; the safeguard is excluded from that vote since it is always `review`).
+
+**Template resolution improved.** Setup rules no longer carry `pack_template_id`, so `resolveAutomationTemplate` falls to `reason_template_mappings(reason_code, dispute_phase, is_active)` — which is **phase-aware by construction**. The old per-pack rule pinned a *chargeback* template even for inquiry-phase disputes unless a paired sibling rule existed. The entire `packInquiryRuleName` / `CHARGEBACK_TO_INQUIRY_TEMPLATE` phase-pairing machinery is gone.
+
+**`lib/rules/storeAutomation.ts` is the single read/write path** — `readStoreAutomation`, `writeStoreAutomation`, `seedDefaultStoreAutomation`. **DO NOT add a second surface that writes the switch or the safeguard.** Three surfaces writing this concept into two backing stores is what produced the drift below.
+
+**The `auto_save_enabled` invariant — "enabled SOMEWHERE", not "the switch".** Written only by `writeStoreAutomation` (which calls `ensure_shop_settings` first, so a shop with no settings row gets one). It has exactly one functional reader, `evaluateAutoSaveGate`, reached in `pipeline.ts` **only after** a dispute's own rule already resolved to `auto` — so it is a kill-switch, not a per-dispute decision.
+
+Mirroring it 1:1 off the switch was right while the switch was the only way to ask for automation. With per-group overrides it becomes fatal: Store=Review + Fraud=Auto resolves a fraud dispute to `auto` at tier-1, reaches the gate, and is blocked with *"Auto-save is disabled for this store."* The feature would render perfectly and do nothing. So the flag is now `mode === "auto" || any group === "auto"`. Safe precisely because the gate is not the authority — turning it on for a Store=Review shop with one auto group cannot auto-save anything else, since every other dispute resolves to `review` and returns before the gate.
+
+Proven end-to-end in `lib/automation/__tests__/groupOverrideAutomation.test.ts`, which runs the real writer → the real tier engine → the real pipeline (only the DB is doubled). Reverting the mirror to `mode === "auto"` turns it red with `expected 'block' to be 'auto_save'`, and a dedicated case pins that the gate is genuinely on that path.
+
+Two older bugs this same invariant closes:
+- The wizard's `POST /api/setup/coverage-rules` wrote rules but **never** set the flag, so a merchant who chose all-auto in onboarding still hit a `false` gate and nothing auto-saved.
+- The flag was derived **all-or-nothing** from per-pack modes, so one family on review disabled auto-save for *every* family.
+
+The raw `auto_save_enabled` checkbox is therefore removed from Settings' Advanced card — a manual toggle on a derived mirror re-creates exactly this drift class.
+
+**Actually enforced from 2026-07-28.** The paragraph above described the intent; the checkbox was still on the page. It PATCHed `/api/automation/settings`, whose allow-list accepted the field, so a merchant could set it `false` while `/app/rules` still displayed "Auto-pilot" — the switch said automate, the gate blocked every save, and nothing on screen said which control had won. Three changes make it real:
+
+- the checkbox is gone from `/app/settings` (the §12S **Save mode** radio in the *Dispute handling* card stays — it is the one control, and it writes through `PUT /api/automation/store`)
+- `auto_save_enabled` is off the `PATCH /api/automation/settings` allow-list; the route still owns `auto_build_enabled`, `auto_save_min_score`, `enforce_no_blockers`
+- `tests/unit/singleAutoSaveWriter.test.ts` fails the build if any file outside `storeAutomation.ts` assigns or submits the field, or if the allow-list regains it
+
+Note the distinction from reverted PR #442, which deleted the **Save mode radio itself** and had to be reverted by #444: the radio is the approved control, the raw checkbox was the duplicate.
+
+**Involvement is a notification preference, not an automation one.** `Hands-off` / `Stay involved` (`shop_setup.steps.team.payload.involvement`) only sets the defaults for the `evidenceReady` + `monthlyDigest` emails (`app/api/shop/preferences/route.ts`); `resolveLifecycle.ts` and `WorkspaceShell.tsx` are both explicitly forbidden from reading it. Its copy previously opened with *"Handle disputes automatically…"*, which read as an automation setting sitting directly above Save mode. Reworded 2026-07-28 across all 6 locales to describe emails only, with a closing pointer to the Save-mode control below it.
+
+### Per-group overrides
+
+A merchant can pin an individual dispute type to auto or review without moving the store-wide switch. A group is **one `rules` row** whose `match.reason` lists the group's Shopify reason codes (`lib/rules/automationGroups.ts`) — no schema change, no migration:
+
+```
+__dd_setup__:group:{id}    match { reason: [...] }    priority 50
+```
+
+That makes it structurally **tier-1** in `pickAutomationAction`, and because tiers are evaluated in order and return immediately, the consequences fall out for free: a group **always beats** the tier-2 catch-all (the switch) and **can never outrank** the tier-0 amount safeguard, whatever priority number it carries. Priority 50 only breaks ties against other reason rules — i.e. merchant custom rules, which sit lower and therefore win.
+
+- **Absence of a row means "inherit the switch"** — there is no third state.
+- **A redundant pin is stored.** Setting Fraud → Auto while the switch is already Auto writes the row, because the merchant asked for it explicitly and it must survive a later switch flip.
+- **Groups are phase-blind** (`match.reason` only). "Fraud → Auto" means "handle fraud this way"; the inquiry/chargeback distinction is an internal lifecycle concept this control doesn't expose. A merchant needing that cut writes a custom rule, which supports `match.phase` and wins at equal priority.
+- **`not_as_described` was LOCKED until 2026-07-30, and no group is locked now.** The lock existed because `evaluateAutoSubmitGuards` parked product-family cases even at Strong, so a row would have been ignored 100% of the time. That park is gone (see *Auto-submit guards* above), so the control is honest and the group behaves like any other. The `locked` flag, the `readStoreAutomation` skip and the route's 400 are all retained for a future group that genuinely can't be automated — `automationGroups.test.ts` asserts the flag and the engine behaviour **in the same test**, so the two can only ever move together.
+- **`UNRECOGNIZED` ships inside the fraud group.** It is scored with the fraud formula and is absent from the custom-rule reason list, so leaving it out would strand every such dispute on the catch-all with no way for a merchant to fix it.
+
+**The delete is by NAME, never by prefix.** `writeStoreAutomation` deletes `SETUP_OWNED_RULE_NAMES` — the two canonical rows, the legacy safeguard, and every group name (locked ones included, so a stray row from an older build still gets swept). The previous `.like("__dd_setup__:%")` would have wiped the merchant's overrides on every switch or safeguard save. Legacy `__dd_setup__:pack:*` / `:coverage:*` rows are deliberately **no longer self-healed here**: converting them changes live behaviour (a shop can have `coverage:fraud=auto` running today) and must not happen as a side effect of an unrelated safeguard edit — a dedicated migration converts them once, then deletes them. Pinned by `tests/unit/noDestructiveSetupRuleWrites.test.ts`.
+
+**`PUT /api/automation/store` — omission preserves.** `groups` omitted → keep what's stored; `groups: {...}` → replace the set; `groups: {}` → clear it. Anything else would make every caller responsible for state it doesn't render: the setup wizard and the Settings save-mode radio both PUT `{ mode, safeguard }` only, and under replace-semantics either would silently delete a merchant's overrides. The route 400s on an unknown group id (a silent drop reads as "saved"), on a locked group, and on a mode that isn't `auto`/`review`.
+
+**The UI is progressive disclosure inside the switch card, not a fourth card.** Three cards all answering "what happens to a dispute" is the duplication this page spent several PRs deleting. `components/automation/AutomationGroupList.tsx` nests under `StoreModeSelector` behind a collapsible headed *"Handle some dispute types differently"*, so the page reads as one specificity ladder — everything is handled *this* way · except these types · except above this amount · and these always get reviewed · plus your own rules. That ladder mirrors the tier system exactly (tier-2 → tier-1 → tier-0 → engine guards → tier-1 custom).
+
+- **Closed when nothing is overridden**, open when ≥1, and the `{n} customised` badge is hidden entirely at zero. A merchant who never opens it sees the page exactly as it was.
+- **The "use store default" option names the inherited mode** (`Use store default (Auto-pilot)`) and re-renders when the switch changes — otherwise "default" is mysterious.
+- **A locked row would render a Badge, not a disabled Select.** A greyed-out dropdown reads as *"you can't afford this"* — the plan-gate idiom already used on this page. A badge reads as a fact. No group is locked as of 2026-07-30, so this branch is currently unexercised; the Safeguards card carries **four** engine-fact bullets, and a re-locked group must not add a fifth restating its own badge (two statements of one rule read as two rules).
+- **Group changes save immediately** (a discrete choice, like the switch), optimistic with revert on failure. The safeguard keeps its explicit Save because it has a free-text amount.
+- **`onModeChange` passes `savedGroups`, not `groups`.** A PUT carries the whole config, so passing on-screen values would silently commit unsaved edits from another control on a switch click. Pinned by `tests/unit/automationGroupUi.test.ts`, which goes red if it's changed back.
+
+**Legacy conversion (migration `20260729010000`).** The per-dispute-type era left two row families — `__dd_setup__:coverage:{family}` (priority 10) and `__dd_setup__:pack:{uuid}` (priority 20+). **Both carry `action.mode`, so both were routing live disputes**: `blume-box` ran auto on seven reasons through `pack:` rows while its store switch read `review`. An earlier plan treated `pack:` rows as superseded template pins and would have deleted them, silently shutting off automation for the highest-volume merchant on the platform.
+
+The migration snapshots into `legacy_setup_rules_backup_20260729`, then **converts → verifies → deletes**, raising rather than deleting if any convertible row lacks its group row. Coverage rows outrank pack rows (10 vs 20+), matching how the engine resolves them today; `coverage:general` becomes the store-wide fallback for shops that lack one, and an existing fallback is never overwritten. Three cases cannot be preserved exactly, all deliberate:
+
+| Legacy | Outcome | Why |
+|---|---|---|
+| `PRODUCT_UNACCEPTABLE=auto` | dropped | no-op **at the time of the migration** — the engine then parked product-family cases even at Strong. That park was removed 2026-07-30, so a shop that had set this must re-set it on the Automation page; the migration is a point-in-time record and is not re-run |
+| `FRAUDULENT=auto` | → `group:fraud` | widens `UNRECOGNIZED` review → auto (1 dispute in all of prod); same scoring, same Strong-only guards |
+| `GENERAL=auto` | dropped | no GENERAL group by design; promoting the fallback would widen every uncovered reason. Narrowing is the safe direction |
+
+Shops with no `rules` rows at all (test / app-review installs) are left alone — they already read as `review`, so seeding would fabricate configuration a merchant never chose.
+
+**Verifying it in a real browser (`e2e/embedded-automation-groups.spec.ts`).** `tsc`, `vitest` and `next build` were all green while `/app/setup/store-profile` rendered a blank card, so this page carried a manual Admin checklist. Steps 1-5 of it are mechanical and now run headlessly against the deployed dev app:
+
+```bash
+E2E_EMBEDDED_SHOP=surasvenne.myshopify.com \
+PLAYWRIGHT_BASE_URL=https://dev.disputedesk.app \
+npx playwright test e2e/embedded-automation-groups.spec.ts
+```
+
+It skips unless `E2E_EMBEDDED_SHOP` is set (never runs in CI — it mutates a real shop's config), refuses to start unless `SUPABASE_URL` is the dev project, and snapshots/restores the shop's automation config around the run. The load-bearing case is **step 3**: set Fraud → Auto, then save an unrelated safeguard amount, and assert the group row survives — the regression the by-name delete exists to prevent.
+
+Two things make a top-level browser work where the e2e README previously said a "test-mode session bridge" was needed:
+
+- **Auth.** No session token is involved. Loading `/app/rules?shop=<domain>` hits the middleware branch that resolves the domain against `shops` + an offline `shop_sessions` row and re-plants `shopify_shop` / `shopify_shop_id` (middleware.ts:784-800); middleware then injects `x-shop-id` on the API calls (`:548`), which is what `/api/automation/store` reads. Note the API itself is **not** open — without that cookie middleware answers 401 `SESSION_REQUIRED`, and only `/api/setup/*` accepts a bare `?shop=`.
+- **App Bridge.** `/app/*` always asks the layout to load `app-bridge.js` (`:669`); at top level that script redirects the tab into `admin.shopify.com/.../app/rules` and lands on a Shopify login page. The spec aborts that one request. Nothing is bypassed and no cookie is forged — the page simply renders without the piece the spec declares out of scope.
+
+**What it still cannot prove**, and why a human pass in Admin remains the sign-off: App Bridge itself, anything CSP/iframe-specific, and the `sameSite=none; partitioned` (CHIPS) cookie whose intermittent non-delivery inside Admin is documented at `:784` — the spec plants that cookie by hand, which is precisely the surface most likely to break. Step 6 (safeguard beats a group) is pure engine behaviour and lives in `pickAutomationAction.test.ts` instead.
+### Secondary surfaces, aligned (2026-07-29)
+
+Four places still described the world as it was before the switch. Each was wrong in a way a merchant could see.
+
+**Coverage reports the EFFECTIVE mode, and names its source.** `deriveLifecycleCoverage` takes a fourth argument, the store-wide switch, and a family with no reason rule of its own now inherits it instead of reporting `"none"`. Every phase also carries `automationSource: "override" | "store_default"`, rendered as *Auto-submit — customised* vs *Auto-submit — store default*, because the two behave identically until the switch moves and then diverge. Without it a merchant cannot tell why flipping the switch changed one family and not another.
+
+- **A gap is now a missing playbook, nothing else.** Automation always resolves, so it stopped being a gap dimension; `hasGap`, `gapsCount`, `fullyConfiguredCount` and the empty-state branch are all playbook-derived. The `needs-rule` pill is gone with it (`coverage.handlingNeedsRule` and `coverage.noAutomation` deleted from all six locales) — it meant "this family has no automation rule", which is no longer a state that exists.
+- **`deriveCoverage()` is deleted.** Zero live callers, and it carried a second copy of `ruleMatchesFamily` — the predicate whose "a rule without `match.reason` cannot define a family's mode" clause is exactly what went stale. Two copies of one broken predicate is how it drifted. `DISPUTE_FAMILIES` and the `AutomationMode` type stay; the file keeps them.
+- This supersedes the 2026-05-02 *Coverage / Automation Current Mode parity fix* below. That fix was right for a world with per-family rules: excluding reason-less rules stopped the safeguard from defining every family's mode. It became wrong when the per-family rules collapsed into one reason-less fallback row, because then **nothing** was left to define a mode. The exclusion still stands for picking a family's *rule*; the store switch now supplies the answer when there is none.
+
+**The rule-builder reason list is one list.** `RULE_REASON_CODES` in `lib/rules/helpers.ts`, consumed by both `CustomRuleModal` (embedded) and `/portal/rules`. Both used to hard-code their own copy while importing `REASON_KEYS` for labels only, and both were missing **`UNRECOGNIZED`** — so a merchant building "auto for fraud" picked `FRAUDULENT` and silently missed every unrecognized-payment dispute, which fell through to the catch-all. The two surfaces keep different label namespaces (`reasons.<camelCase>` in the portal, `rules.reason<PascalCase>` embedded); `embeddedReasonLabelKey()` derives the second from the first so a new reason cannot land in one and not the other. `lib/rules/__tests__/ruleReasonOptions.test.ts` pins the list against `AUTOMATION_GROUPS` and against all six locales.
+
+**`/portal/rules` no longer renders setup-owned rows.** It had no filter at all, so `__dd_setup__:fallback:default` — the store-wide switch itself — appeared as an unnamed, editable, deletable rule, and group rows would have joined it. The predicate now lives in `lib/rules/storeAutomationNames.ts` as `isSetupOwnedRuleName` (the names-only module, because both rules pages are client components and `storeAutomation.ts` imports the Supabase server client); the embedded page's private copy is gone. The portal's new-rule form also defaulted to **auto**, against the embedded modal's **review** — two forms POSTing one endpoint with opposite safety postures. Both are review now.
+
+**The wizard summary states what was set up, not how many files were installed.** `setup.handling.setupSummaryPlaybooks` ("{count} playbooks matched to what your store sells") is deleted: the number meant nothing to a merchant and disagreed with the very next screen, which counts installed packs including the inquiry siblings the wizard installs silently. The card now derives its lines from state already in the component — the dispute types (via `Intl.ListFormat` and the `rules.group*` labels), how they'll be handled (live off the switch), inquiries, the threshold when on, and a pointer to the Automation page for per-type tuning. `HandlingStep` also round-trips `groups` on save, so the wizard states its intent rather than relying on omission-preserves.
+
+**Copy: name the destination.** *"submitted"* is accurate for Shopify — `disputeEvidenceUpdate` really does submit evidence into Shopify — and false for the card network, which is what an unqualified *"submitted for you"* implies to a merchant. `disputes.progress.packDesc` becomes *"Evidence is submitted to Shopify by DisputeDesk"*, and both new mode lines name Shopify explicitly (pinned by `tests/unit/setupHandlingI18n.test.ts`). `setup.storeProfile.subtitle` no longer promises to recommend a "level of automation" — that step collects store types and digital proof; automation is the merchant's choice on the next step.
+
+**Reconcile fires on group relaxation too** — a group flipping to auto is the same kind of relaxation as the switch flipping, and it must fire even while the store stays on review. Over-firing is safe (the pass re-applies every gate itself); under-firing strands built drafts.
+
+**Install-time default: auto-pilot ON + $500 safeguard**, seeded by `seedDefaultStoreAutomation` from `ensureShopSetup()` in the OAuth callback. Idempotent (no-ops once a fallback row exists), so a re-install never resets a merchant's choice. A shop can therefore auto-submit before the merchant opens the app — deliberate, and bounded by the engine gates plus the free-tier lifetime pack quota.
+
+**High-value email threshold** is read from the safeguard rule via `readStoreAutomation`, not from `shop_setup.steps.automation.payload.reviewThreshold`. Previously a merchant who set the threshold on `/app/rules` wrote a *differently named* rule (`__dd_safeguard__:`) and had no wizard payload, so the threshold read as 0 and the email silently never sent.
+
+**API:** `GET|PUT /api/automation/store`. One route, one plan gate (`checkFeatureAccess(plan, "rules")`) — with a deliberate exemption: a setup-originated write (`x-dd-setup: 1`) skips the gate so free-plan merchants can choose their mode during onboarding. `POST /api/setup/coverage-rules` and `POST /api/setup/automation` are removed.
+
+**`reconcileParkedAutoDisputes` now runs after every rule write** — `writeStoreAutomation` *and* `POST /api/rules` / `PATCH`/`DELETE /api/rules/[id]`. Its docstring previously claimed this; only the setup route actually called it, so creating a custom auto rule unstuck nothing.
+
 ### Cardholder-name-mismatch gate (2026-07-23, merchant-UI only)
 
 The payment gateway returns the name the card is registered to (`cardholderName` on the `avs_cvv_match` payment-section payload, via `lib/packs/sources/paymentSource.ts`). When that name shares **no token** with the dispute's customer name, the order was placed by someone other than the person the issuer knows — the classic stolen-card pattern (prod dispute `235d4152`: card registered to "Robin Denise Pipe", order by "Sean Boyd", AVS N, first-order account, Shopify pre-auth HIGH/CANCEL — presented as a Strong case pre-fix).
@@ -2366,7 +2581,7 @@ The payment gateway returns the name the card is registered to (`cardholderName`
 
 **Fraud-family `account_history` demotion (CE3.0 false proxy), 2026-07-23:** the canonical registry rates `customer_account_info` **strong** on ≥1 prior undisputed order. On a *fraud* claim that overstates it — Visa's Compelling Evidence 3.0 remedy requires **2+ prior undisputed transactions in a 120–365 day window sharing ≥2 data elements including IP or device ID**. A single prior order is nowhere near that bar, so for the **fraud family only** an `account_history` row rated strong is demoted to **moderate corroboration** at row-build time in `caseStrength.ts` (and mirrored in `computeContributions`, which now takes the dispute reason, so "What supports your case" can't show a Strong pill the scorer counted as moderate). Other families keep the registry rating; the registry itself is untouched, preserving the family-independent-categories invariant. Effect: a fraud case can no longer reach Strong on AVS + prior-history alone — it needs a second genuinely decisive signal (delivery, device/session, customer confirmation). Measured on prod 2026-07-23: 11 strong fraud packs, 4 with ≥1 prior order. A real CE3.0 signal is scoped separately in `docs/plans/tech-debt/ce3-fraud-compelling-evidence.plan.md` (note: `Order.client_details` — `browser_ip`/`session_hash`/`user_agent` — **is** backfillable via the `read_all_orders` scope we already hold; coverage needs sampling first).
 
-**Product-family scoring — "not as described" (Visa 13.3 · MC 4853), 2026-07-23:** `PRODUCT_UNACCEPTABLE` (family `product`) now has a dedicated `caseStrength.ts` branch instead of falling to the strict-count default (which left every such case weak with 0 positive arguments). Two-axis rule, calibrated from Visa guidelines + representment-industry practice: **Axis 1** ("item matched what they bought") = `customer_communication` (customerConfirmsOrder) or `supporting_documents` (signedContract); **Axis 2** ("dispute invalid/moot") = `no_return_initiated` (a return is a precondition to filing 13.3 post-Oct-2024) or `refund_record`. Moderate = one signal from either axis; Strong = one from EACH axis; two from the same axis stays Moderate; bare listing/order-record stay `supportingOnly` (posted return policy has no bearing on 13.3). **Sync-gap fix:** the product checklist template previously omitted `no_return_initiated`/`refund_record`/`customer_account_info`, so orderSource collected them but they never reached the scored `checklist_v2` — added to both `REASON_TEMPLATES_V2.PRODUCT_UNACCEPTABLE` and DB template T4 (migration `20260723210000`). **Auto-mode:** product-Strong is gated to park-for-review (not auto-submit) for the first release — subjective merchandise claim; `pipeline.ts` treats it like Moderate. Remove the `isProductFamily` guard to opt product-Strong into normal auto-submit later. See `docs/plans/product-not-as-described-scoring.plan.md`; broader per-code audit vs Visa in `docs/plans/tech-debt/defense-audit-vs-visa-guidelines.plan.md`.
+**Product-family scoring — "not as described" (Visa 13.3 · MC 4853), 2026-07-23:** `PRODUCT_UNACCEPTABLE` (family `product`) now has a dedicated `caseStrength.ts` branch instead of falling to the strict-count default (which left every such case weak with 0 positive arguments). Two-axis rule, calibrated from Visa guidelines + representment-industry practice: **Axis 1** ("item matched what they bought") = `customer_communication` (customerConfirmsOrder) or `supporting_documents` (signedContract); **Axis 2** ("dispute invalid/moot") = `no_return_initiated` (a return is a precondition to filing 13.3 post-Oct-2024) or `refund_record`. Moderate = one signal from either axis; Strong = one from EACH axis; two from the same axis stays Moderate; bare listing/order-record stay `supportingOnly` (posted return policy has no bearing on 13.3). **Sync-gap fix:** the product checklist template previously omitted `no_return_initiated`/`refund_record`/`customer_account_info`, so orderSource collected them but they never reached the scored `checklist_v2` — added to both `REASON_TEMPLATES_V2.PRODUCT_UNACCEPTABLE` and DB template T4 (migration `20260723210000`). **Auto-mode:** product-Strong was gated to park-for-review for the first release (subjective merchandise claim, treated like Moderate), and that park was **removed on 2026-07-30** — product-Strong now auto-submits like any other family. The rationale did not survive verification: Shopify auto-compiles and files its own order data on the due date when no evidence is submitted ([Shopify Help Center](https://help.shopify.com/en/manual/payments/chargebacks/chargeback-process)), so parking never withheld a rebuttal — it substituted a worse one; VDMP/VAMP score the dispute ratio off disputes **received**, so losing a representment carries no penalty; and DisputeDesk ships no way to edit the generated narrative, so the merchant could not act on the private context the park was meant to protect. The park also cost a pack credit, consumed at BUILD. See `lib/automation/autoSubmitGuards.ts` for the full note. See `docs/plans/product-not-as-described-scoring.plan.md`; broader per-code audit vs Visa in `docs/plans/tech-debt/defense-audit-vs-visa-guidelines.plan.md`.
 
 **Overview one-liner vs Evidence-tab elaboration (2026-07-23):** the Overview "Evidence collected" list shows an internal-signal warning's **label only** (e.g. "Card security check partially passed"); the full multi-sentence explanation lives on the Evidence tab's internal-signal rows (`InternalSignalRow` → `signal.explanation`). Previously both surfaces printed the full text verbatim. Rule: Overview = one-liner, Evidence tab = elaboration.
 
@@ -2375,12 +2590,35 @@ The payment gateway returns the name the card is registered to (`cardholderName`
 Before 2026-07-23 a parked-for-review or weak dispute had no terminal merchant-driven state — it sat in the actionable queue and on the dashboard indefinitely, and there was no verb for "I looked at this and decided". `disputes.review_state` (+ `review_due_at`; migration `20260723160000_disputes_review_state.sql`) adds three explicit decisions. Canonical values + helpers in `lib/disputes/reviewState.ts`.
 
 - **`in_review`** ("hold & watch"): merchant is actively working it. `review_due_at` snapshots the deadline. The `dispute-reminders` cron (daily 09:00 UTC) resurfaces it — `needs_attention=true`, `attention_reason=review_deadline_approaching`, `review_state` cleared — when within 48h of the deadline and still untouched, so a hold can't rot silently (`lib/disputes/resurfaceHeldReviews.ts`).
-- **`approved`** ("submit on the deadline"): clears `needs_attention`; the 08:00-UTC deadline-submit cron auto-submits it per the shop's automation rule. This is NOT `POST .../approve` (that runs the pipeline immediately from the review queue) — here the merchant is scheduling, not submitting now.
+- **`approved`** ("submit on the deadline"): clears `needs_attention`; the 08:00-UTC deadline-submit cron auto-submits it per the shop's automation rule. This is NOT `POST .../approve` (that runs the pipeline immediately from the review queue) — here the merchant is scheduling, not submitting now. **This was aspirational until 2026-07-29 and did not work.** The approve handler writes `review_state` but deliberately never clears `disputes.needs_review` (that flag drives the review queues and attention lists everywhere else), so the dispute kept `normalized_status = 'needs_review'` and fell outside the cron's status filter — the button promised a submission that never happened and the merchant forfeited by default. The cron now selects `review_state.eq.approved` explicitly as an **inclusion** alongside the status list. `conceded` still wins: it is checked per-dispute and returns before any submit path.
 - **`conceded`** ("do not defend"): the deadline-submit cron **skips** it (`if (d.review_state === "conceded") continue;` — covers plain-submit + auto-finalize + fallback branches). Leaves every actionable view; reads "Not defended" in history.
 
 **Billing is unaffected.** The pack credit is consumed at pack **build** (`consumePack`, eventType `finalize`), not at submit — so a held/conceded dispute has already been billed, and conceding does NOT refund it (explicit decision). Weak cases get no special-case: whatever the shop's automation rule says happens at the deadline if the merchant never decides.
 
 Surfaces: `POST /api/disputes/:id/review` `{ action: hold|approve|concede|clear }`; the detail-page "Decide what to do with this dispute" form (Submit on the deadline / Hold for review / Don't defend) via the `setReviewDecision` hook action. Per the approved design (`Dispute Detail.html`) the UNDECIDED form renders **inside the Overview hero** (below the "Next:" line, divided by a top border) and ONLY in the **approval-required** state — `presentation.attention === "blocking"` with `blockingReason === "approval_gate"` (review-mode shop, pack `ready`, not yet approved). It no longer fires on every weak/parked case. **Once a decision is recorded**, the whole detail surface reflects it instead of still showing "Approval required": the heading swaps the amber attention pill for a calm decision pill (**Scheduled** / **On hold** / **Not defended**), and the Overview hero swaps to the decision copy — "Scheduled to submit" / "On hold for your review" / "Not being defended" (approved/in_review name the deadline date; approve = SCHEDULED for the deadline, not saved yet). The raw attention pill + "Next:" line + decide form are suppressed; the standing-decision + Undo banner shows above the hero (all hidden once read-only). The list "Status & next step" cell mirrors this via `listPrimaryState(p, reviewState)`. list/search chips (`figmaReviewChip` in `disputeListHelpers.ts` → `DesktopDisputesTable` + `MobileDisputeCard`; portal Badge) with `figmaStatus` routing approved→under-review and conceded→closed so they leave the actionable filters. Audit event types `review_held|review_approved|review_conceded|review_cleared|review_resurfaced_by_reminder`. Email touchpoints: `sendNewDisputeAlert` (review variant) + `sendHighValueReviewAlert` now name the three choices instead of "review and submit".
+
+### What Auto-pilot actually does with a held case (2026-07-29)
+
+**Under Auto-pilot, a held case is not waiting for a merchant. It is waiting for a clock.**
+
+`evaluateAutoSubmitGuards` yields `park` (Moderate) or `block` (Weak, Insufficient, fatal-loss) — and **both** leave `defence_packages` at `status='draft'`, `validation_status='ok'` with a `pdf_path` (`buildDefencePackageJob.ts:679`). At 08:00 UTC on the due date the deadline cron flips exactly that shape to `final` and submits it. **The guards are a build-time filter, not a permanent veto**: nothing re-reads `case_strength`, `fatal_loss` or coverage at deadline time. The only escapes are `review_state='conceded'` and `normalized_status='needs_review'` (review mode, which never gets there).
+
+Two exceptions that genuinely never submit, and are the only places absolute language is allowed:
+
+- **Shopify Protect** — `lib/defence/enqueue.ts:136-145` returns a `skipped` row with no `pdf_path`, so the finalize branch can never match it.
+- **Review mode / the high-value safeguard** — the safeguard forces `mode:"review"` (`storeAutomation.ts:268-279`), so `needs_review=true` keeps the dispute outside the cron's filter entirely.
+
+**The copy contract.** Merchant-facing copy about Auto-pilot said the opposite of all this — *"Everything else waits for your review"* — across ~13 keys. The vocabulary is now fixed, three moves, no synonyms:
+
+1. strong cases → *"saved to Shopify as soon as they're ready"*
+2. everything else → *"held for your review, then saved to Shopify on the due date if you haven't decided"*
+3. the stop → *"open it and choose Don't defend"*
+
+Strings describing **review mode**, the **safeguard** or **Protect** were deliberately left alone — those promises hold, and a blanket rewrite would have replaced true statements with false ones.
+
+**Three email variants, not two.** `sendNewDisputeAlert` gained `held`. The park, block, fatal-loss and gate-refusal branches of `pipeline.ts` were all passing `"review"`, so an Auto-pilot merchant received *"Nothing has been submitted yet. This dispute still requires your decision"* about a dispute that would submit itself. `review` now fires only from the genuine review-mode branch (`pipeline.ts:768`) and the paths where nothing is ever submitted (pack failed, coverage).
+
+Pinned by `tests/unit/deadlineSubmitCopyTruth.test.ts`: the cron's escape hatches are asserted against its own source; Auto-pilot copy must name the due date **and** Shopify in all six locales; and no string may make an unqualified "never submits" promise outside an allowlist. The i18n scripts cannot catch any of this — `verify-i18n-parity.mjs` checks that a key *exists*, never that it is true, so a stale translation carrying the old promise passes it green.
 
 **Related first-order-history fix (same date):** `totalOrders` on `customer_account_info` payloads mirrors Shopify's `Customer.numberOfOrders`, which **includes the disputed order itself**. Every consumer previously read it as if it excluded it, so a brand-new account (totalOrders = 1) scored **Strong** "account history" and the LLM narrative claimed "one prior undisputed order" on the customer's only, disputed, order. The shared corrector `effectivePriorOrders` (in `lib/argument/canonicalEvidence.ts`) now feeds the canonical categorizer (first-order → `supporting`, never strong), `deriveEvidenceLineItems`' fraud internal-only guard and reason copy, and `factClassifier.extractValue` (`priorOrderCount` the LLM sees). Genuine returning customers (≥1 order BEFORE the disputed one) still score Strong.
 
@@ -3164,7 +3402,7 @@ The public guided demo (`app/(demo)/demo/*`, plan: `plans/demo-shopify-facsimile
 
 ### Automation
 - `GET /api/automation/settings?shop_id=...` — read shop automation settings (`auto_build_enabled`, `auto_save_enabled`, `auto_save_min_score`, `enforce_no_blockers`)
-- `PATCH /api/automation/settings` — update any subset of the four automation fields. Called by the embedded Settings page Automation section (four controls: Auto Build toggle, Auto Save toggle, Min Score number input, Blocker Gate toggle + Save button).
+- `PATCH /api/automation/settings` — update any subset of **three** writable fields: `auto_build_enabled`, `auto_save_min_score`, `enforce_no_blockers`. Called by the embedded Settings page Automation section (Auto Build toggle, Min Score number input, Blocker Gate toggle + Save button). **`auto_save_enabled` is readable but NOT writable here** — it mirrors the store-wide switch and is owned by `writeStoreAutomation` / `PUT /api/automation/store`; see the mirror invariant above.
 
 **Embedded Settings page — Automation section:** `app/(embedded)/app/settings/page.tsx` now includes a full Automation card above Notifications. Fetches `/api/automation/settings` on load alongside usage and prefs. Renders four controls in bordered rows matching the Notifications style. Saving PATCHes `/api/automation/settings` and shows a 3-second success banner. The dashboard Automation Status card "Settings" link uses `withShopParams` to preserve locale when navigating here.
 - `POST /api/disputes/sync` — enqueue dispute sync job
@@ -3389,7 +3627,7 @@ This pattern is the template for the remaining embedded pages (packs, rules, pol
 
 **Template catalog API (`GET /api/templates`):** Inquiry-phase templates are filtered out of merchant-facing results using `INQUIRY_TEMPLATE_ID_SET` so merchants never see or pick inquiry packs directly. The admin route (`/api/admin/templates`) is unaffected. The list response also carries per-card `requiredDocs` / `optionalDocs` counts and a `keyEvidence` string array, both computed in `listTemplates` (`lib/db/templates.ts`) by rolling up each template's `pack_template_sections` → `pack_template_items` (`DOC_REQUIREMENT` items only; `keyEvidence` = up to 4 item labels, required first). These used to exist only in a hardcoded demo array in the client — that array is gone.
 
-**Canonical dispute-type vocabulary (one source of truth).** `pack_templates.dispute_type` stores Shopify's dispute **reason codes** directly since migration `20260411160000` (`FRAUDULENT`, `PRODUCT_NOT_RECEIVED`, `PRODUCT_UNACCEPTABLE`, `SUBSCRIPTION_CANCELED`, `CREDIT_NOT_PROCESSED`, `DUPLICATE`, `GENERAL`, plus `DIGITAL` — a product-type signal with no Shopify equivalent). The template library filters on this column with `.eq("dispute_type", …)`, so the UI category codes (`CATEGORY_KEYS`, `DISPUTE_TYPE_LABEL_KEYS` in `TemplateLibraryContent.tsx`), the `FAMILY_TO_DISPUTE_TYPE` map (`lib/rules/helpers.ts`) and the `/api/templates` filter **must** all speak this exact vocabulary. `lib/rules/disputeTypes.ts` is the canonical module: `DISPUTE_TYPES` (the allowed set), `isDisputeType`, and `normalizeDisputeType` (which maps legacy short aliases from old deep links — `FRAUD`, `PNR`, `NOT_AS_DESCRIBED`, `SUBSCRIPTION`, `REFUND` — and Shopify synonyms like `UNRECOGNIZED` back to the canonical code). The route normalizes both `?category=` and `?reason=` through it. A vitest invariant (`lib/rules/__tests__/disputeTypes.test.ts`) fails the build if any UI category code drifts off this vocabulary. **Why this exists:** on 2026-07-20 three vocabularies had diverged (UI `FRAUD`/`REFUND`, API `fraud`/`credit`, DB `FRAUDULENT`/`CREDIT_NOT_PROCESSED`); category-filtered queries matched zero rows and the modal silently fell back to fake demo cards whose install always 500'd with "Template may not exist." Never reintroduce a per-surface alias set.
+**Canonical dispute-type vocabulary (one source of truth).** `pack_templates.dispute_type` stores Shopify's dispute **reason codes** directly since migration `20260411160000` (`FRAUDULENT`, `PRODUCT_NOT_RECEIVED`, `PRODUCT_UNACCEPTABLE`, `SUBSCRIPTION_CANCELLED`, `CREDIT_NOT_PROCESSED`, `DUPLICATE`, `GENERAL`, plus `DIGITAL` — a product-type signal with no Shopify equivalent). The template library filters on this column with `.eq("dispute_type", …)`, so the UI category codes (`CATEGORY_KEYS`, `DISPUTE_TYPE_LABEL_KEYS` in `TemplateLibraryContent.tsx`), the `FAMILY_TO_DISPUTE_TYPE` map (`lib/rules/helpers.ts`) and the `/api/templates` filter **must** all speak this exact vocabulary. `lib/rules/disputeTypes.ts` is the canonical module: `DISPUTE_TYPES` (the allowed set), `isDisputeType`, and `normalizeDisputeType` (which maps legacy short aliases from old deep links — `FRAUD`, `PNR`, `NOT_AS_DESCRIBED`, `SUBSCRIPTION`, `REFUND` — and Shopify synonyms like `UNRECOGNIZED` back to the canonical code). The route normalizes both `?category=` and `?reason=` through it. A vitest invariant (`lib/rules/__tests__/disputeTypes.test.ts`) fails the build if any UI category code drifts off this vocabulary. **Why this exists:** on 2026-07-20 three vocabularies had diverged (UI `FRAUD`/`REFUND`, API `fraud`/`credit`, DB `FRAUDULENT`/`CREDIT_NOT_PROCESSED`); category-filtered queries matched zero rows and the modal silently fell back to fake demo cards whose install always 500'd with "Template may not exist." Never reintroduce a per-surface alias set.
 
 ### Sync Integration
 
@@ -3561,7 +3799,7 @@ Because Shopify cannot accept files from third-party apps (see section above), m
 
 **Submission format:** the job handler (`lib/jobs/handlers/saveToShopifyJob.ts`) queries `evidence_items` with `source = "manual_upload"` for the pack (NOT `pack_json.sections`, because that is a build-time snapshot and misses post-build uploads), mints one short-link row per upload plus one for the pack PDF (via `createShortLink`), and appends a text block built by `formatManualAttachmentsBlock` (`lib/shopify/manualAttachments.ts`) to **`input.uncategorizedText` only**. Header is pinned at `Supporting documents (secure access links):`. When every upload falls into the catch-all `Supporting documents` group (no merchant labels, or labels that don't map to one of the seven canonical category headings), the inner group heading is suppressed so the bank-facing block does not stack two near-identical "Supporting documents" lines back-to-back; categorised submissions (Order Facts, Delivery proof, Customer Communication, etc.) keep their per-group headings. **`POST /api/packs/:packId/upload`** stores `payload.checklistField` (the Evidence-tab checklist row the merchant uploaded from, defaulting to `supporting_documents` when omitted) and logs **`item_added`** with `evidenceItemId` + `checklistField` for the same row. **`loadChecklistFieldByEvidenceItemIdFromAudit`** (`lib/shopify/manualUploadChecklistFromAudit.ts`) lets the save job and submission preview recover `checklistField` when an older `evidence_items` row predates `payload.checklistField` but a matching audit row exists; the save job then **updates** `evidence_items.payload.checklistField` so later reads are self-contained. Uploads from before both payload and audit carried that metadata cannot be assigned to the correct Evidence row retroactively (no source of truth). The formatter prints a **section title** per group from `checklistField` — typically the same row label as in the workspace (e.g. `Delivery proof`, `Supporting Documents`, `Product Description`), falling back to one of the seven category headings when no row title is mapped, then to label-heuristics + dispute-reason priority, then to a generic `Supporting documents` group. Each file line is `- <evidence-type prefix> - <filename>` followed by the DisputeDesk URL on the next line; the prefix is suppressed when it would be redundant (label missing, label equals filename, or label equals the section heading). File sizes and upload dates are intentionally omitted from the submitted text. The pack PDF is rendered last under `Full evidence pack (PDF):`. No other Shopify field is modified. The `evidence_saved_to_shopify` audit event records `manual_attachment_count` and `pdf_attached` for traceability.
 
-**Multi-purpose evidence (reason-aware primary category):** a single upload often supports more than one category — e.g. a `Delivery confirmation email` is both Fulfillment and Customer Communication. The formatter resolves this by collecting every category the merchant's label could plausibly belong to, then breaking the tie using a per-reason-family priority table (`CATEGORY_PRIORITY_BY_FAMILY` in `manualAttachments.ts`, keyed by `DISPUTE_REASON_FAMILIES`). Examples: for `FRAUDULENT` / `PRODUCT_NOT_RECEIVED` the family-Fraud / family-Fulfillment priorities both put `Fulfillment & Delivery` first, so the email is filed there; for `SUBSCRIPTION_CANCELED` (family `Subscription`), `PRODUCT_UNACCEPTABLE` (family `Quality`), or `CREDIT_NOT_PROCESSED` (family `Refund`), `Customer Communication` outranks Fulfillment so the same email is filed under Communication. The dual nature is preserved by the inline evidence-type prefix on the file line — the bank still reads "Delivery confirmation email" even when the heading above is `Customer Communication`. Uploads are listed once, never duplicated. When the dispute reason is null or unrecognised the formatter falls back to a default priority order matching the historical first-match behaviour. The save job (`saveToShopifyJob.ts`) and the preview route (`app/api/packs/[packId]/submission-preview/route.ts`) both pass `dispute.reason` to the formatter so the rendered preview matches the submitted bytes.
+**Multi-purpose evidence (reason-aware primary category):** a single upload often supports more than one category — e.g. a `Delivery confirmation email` is both Fulfillment and Customer Communication. The formatter resolves this by collecting every category the merchant's label could plausibly belong to, then breaking the tie using a per-reason-family priority table (`CATEGORY_PRIORITY_BY_FAMILY` in `manualAttachments.ts`, keyed by `DISPUTE_REASON_FAMILIES`). Examples: for `FRAUDULENT` / `PRODUCT_NOT_RECEIVED` the family-Fraud / family-Fulfillment priorities both put `Fulfillment & Delivery` first, so the email is filed there; for `SUBSCRIPTION_CANCELLED` (family `Subscription`), `PRODUCT_UNACCEPTABLE` (family `Quality`), or `CREDIT_NOT_PROCESSED` (family `Refund`), `Customer Communication` outranks Fulfillment so the same email is filed under Communication. The dual nature is preserved by the inline evidence-type prefix on the file line — the bank still reads "Delivery confirmation email" even when the heading above is `Customer Communication`. Uploads are listed once, never duplicated. When the dispute reason is null or unrecognised the formatter falls back to a default priority order matching the historical first-match behaviour. The save job (`saveToShopifyJob.ts`) and the preview route (`app/api/packs/[packId]/submission-preview/route.ts`) both pass `dispute.reason` to the formatter so the rendered preview matches the submitted bytes.
 
 **Preview parity:** `GET /api/packs/:packId/submission-preview` (`app/api/packs/[packId]/submission-preview/route.ts`) runs the same serialization as the save job — `buildEvidenceForShopify` (pack sections + `rebuttal_drafts` text) → `formatManualAttachmentsBlock` → `FIELD_MAPPINGS` projection. The only deliberate divergence is the attachment URL: the preview substitutes the literal string `https://disputedesk.app/e/<secure-link>` for the real HMAC token, so an authenticated read of this endpoint cannot leak 180-day credentials. The Review & Submit tab's two rendered surfaces — Section 2 ("What was sent" receipt, shown after submit) and Section 3 ("What will be submitted" collapsible preview, shown before submit) — both consume the API's `fields[]` response directly. Neither hand-rolls a renderer, so they cannot drift from the bytes the save job emits. `ReviewSubmitTab.tsx` keeps a single shared `submissionBlockStyle` constant used by both surfaces to guarantee visual identity.
 
@@ -4395,9 +4633,33 @@ The 10 chargeback templates (T1–T10) and 8 inquiry templates (T11–T18) were 
 
 ### Overview
 
-A 6-step guided setup wizard helps merchants configure DisputeDesk after
+A 5-step guided setup wizard helps merchants configure DisputeDesk after
 installation. Progress is tracked per-shop in the `shop_setup` table and surfaced on the
 dashboard via a Setup Checklist card with a ring progress indicator.
+
+**Steps:** Connection → Store Profile → **Handling** → Policies → Activate.
+
+#### The 6→5 merge (2026-07-27)
+
+`coverage` + `automation` collapsed into a single `handling` step. The naming was inverted: the step *called* "Automation" held only a high-value toggle, while the real auto/review decision sat in a per-family dropdown table on the "Coverage" step. Merchants configured seven rows to express one intention — and the per-type choice only ever governed the clean-Strong slice anyway (see § *Store-wide automation mode*).
+
+`handling` is a **new** id, not a reuse. Reusing `coverage` would credit merchants for a step whose semantics changed; reusing `automation` would make the stepper jump backward.
+
+**Three population states, all pinned by `tests/api/setup/state.test.ts`:**
+
+| Prior state | Result |
+|---|---|
+| All 6 legacy steps `done` | Both keys fold to `handling: done`; `doneCount` 5 of `TOTAL_STEPS` 5 → `allDone: true`, **no loop-back** |
+| `coverage: done` + `automation: todo` | **Forced through once** — `migrateStepsMap` downgrades `handling` to `in_progress`. Plain rank precedence would skip them past the merged step, leaving them to silently inherit a migration-derived mode they never chose |
+| `handling` already present | Never downgraded — the legacy-pair override only fires when the two *legacy* keys disagree |
+
+`LEGACY_STEP_ID_MAP` repoints **every** alias that used to target the removed ids (`disputes`, `sync_disputes`, `packs`, `evidence_sources`, `rules`, `automation_rules`) onto `handling`. An alias left pointing at a removed id would silently drop that step's state — `setupConstants.test.ts` asserts every alias resolves to a live id.
+
+`resolveStepId()` (in `lib/setup/constants.ts`) maps legacy ids onto canonical ones, and is used by `POST /api/setup/step`, `POST /api/setup/skip`, and the `[step]` page so a stale client tab or bookmarked `/app/setup/coverage` resolves instead of 400-ing or 404-ing.
+
+**Template install is no longer a merchant decision.** `HandlingStep` derives the playbook set from the store profile and installs it (plus silent inquiry siblings) on save — the Coverage step's default path, minus the "advanced" disclosure that re-introduced per-type configuration.
+
+**Surfaces that share `StepId`** and must be updated together: `app/(embedded)/app/setup/[step]/page.tsx`, `components/setup/WizardStepper.tsx`, `components/setup/PortalSetupChecklistCard.tsx`, and `app/(portal)/portal/setup/[step]/page.tsx` (the portal wizard keys its CTA map on step ids).
 
 **Billing, Settings, and Help** are app sections (reachable from nav) but are **not** part of the onboarding checklist.
 

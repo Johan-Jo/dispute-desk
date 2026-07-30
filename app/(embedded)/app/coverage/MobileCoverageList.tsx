@@ -41,12 +41,13 @@ export function MobileCoverageList({ rows, searchParams, tc }: Props) {
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
               <Row label={tc("colChargebackHandling")} value={chargebackPill(row.chargeback, tc)} />
               <Row label={tc("colInquiryHandling")} value={inquiryPill(row.inquiry, tc)} />
-              <Row label={tc("colCurrentMode")} value={modePill(row.mode, tc)} />
+              <Row label={tc("colCurrentMode")} value={modePill(row.mode, row.modeSource, tc)} />
             </div>
 
             <a
               href={withShopParams(
-                `/app/rules?family=${row.familyId}`,
+                // Handling is store-wide now — no per-family row to target.
+                `/app/rules`,
                 searchParams ?? new URLSearchParams(),
               )}
               style={{

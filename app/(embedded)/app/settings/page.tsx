@@ -47,7 +47,10 @@ interface NotificationPrefs {
 
 interface AutomationSettings {
   auto_build_enabled: boolean;
-  auto_save_enabled: boolean;
+  /** READ-ONLY, and optional so it never enters this page's state. Mirrors the
+   *  store-wide switch; written only by writeStoreAutomation. Read straight off
+   *  the GET response as the Save-mode fallback, never held or edited here. */
+  auto_save_enabled?: boolean;
   auto_save_min_score: number;
   enforce_no_blockers: boolean;
 }
@@ -161,7 +164,6 @@ export default function EmbeddedSettingsPage() {
 
   const [automation, setAutomation] = useState<AutomationSettings>({
     auto_build_enabled: false,
-    auto_save_enabled: false,
     auto_save_min_score: 80,
     enforce_no_blockers: true,
   });
@@ -173,18 +175,22 @@ export default function EmbeddedSettingsPage() {
   // Involvement is presentation-only (notification defaults + optional-
   // opportunity prominence) — it never changes objective classification.
   const [involvement, setInvolvement] = useState<Involvement>("hands_off");
-  // Save mode binds to the per-rule action.mode across ALL pack types
-  // (decision 3): "auto" only when every pack type resolves to auto.
+  /** Save mode — the §12S-approved control, unchanged in intent.
+   *  REBOUND 2026-07-28: it derived from per-pack `pack_modes`, which
+   *  migration 20260727120000 deleted. With no pack rules the old code fell
+   *  through to a `?? "review"` default and wrote `auto_save_enabled`
+   *  directly — so this page showed "Require my approval" on a store
+   *  genuinely set to auto, and its writes bypassed the store-wide switch.
+   *  Now reads/writes the SAME canonical source as /app/rules
+   *  (GET|PUT /api/automation/store). `null` until loaded — never guess.
+   *  No "mixed" state exists: the switch is store-wide. */
   const [saveMode, setSaveMode] = useState<SaveMode | null>(null);
-  const [saveModeMixed, setSaveModeMixed] = useState(false);
-  const [saveModePackIds, setSaveModePackIds] = useState<string[]>([]);
-  /** How the radio is bound (audit fix 2026-07-26): "rules" writes the
-   *  per-pack-type rule mode; "gate" — used when the shop has NO active
-   *  pack types to bind rules to — writes the shop-level
-   *  `shop_settings.auto_save_enabled` flag, which is the gate
-   *  `evaluateAutoSaveGate` actually reads. Without this fallback the
-   *  control silently no-ops on shops without installed templates. */
-  const [saveModeBinding, setSaveModeBinding] = useState<"rules" | "gate">("rules");
+  /** The merchant's safeguard, carried read-only so a mode write (which PUTs
+   *  the whole config) cannot wipe it. Owned by /app/rules. */
+  const [storeSafeguard, setStoreSafeguard] = useState<{ enabled: boolean; amount: number }>({
+    enabled: false,
+    amount: 500,
+  });
   const [rulesAllowed, setRulesAllowed] = useState(true);
   const [handlingSaved, setHandlingSaved] = useState(false);
 
@@ -208,77 +214,46 @@ export default function EmbeddedSettingsPage() {
 
   const pickSaveMode = useCallback(
     async (v: SaveMode) => {
+      const previous = saveMode;
       setHandlingSaved(false);
-      if (saveModeBinding === "gate" || saveModePackIds.length === 0) {
-        // No pack types to bind rules to — write the shop-level
-        // auto-save gate (the flag evaluateAutoSaveGate reads).
-        setSaveMode(v);
-        setSaveModeMixed(false);
-        const next = { ...automation, auto_save_enabled: v === "auto" };
-        setAutomation(next);
-        const res = await fetch("/api/automation/settings", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            auto_build_enabled: next.auto_build_enabled,
-            auto_save_enabled: next.auto_save_enabled,
-            auto_save_min_score: next.auto_save_min_score,
-            enforce_no_blockers: next.enforce_no_blockers,
-          }),
-        });
-        if (res.ok) {
-          setHandlingSaved(true);
-          setTimeout(() => setHandlingSaved(false), 2600);
-        }
-        return;
-      }
-      if (!rulesAllowed) return;
       setSaveMode(v);
-      setSaveModeMixed(false);
-      const pack_modes: Record<string, SaveMode> = {};
-      for (const id of saveModePackIds) pack_modes[id] = v;
-      const res = await fetch("/api/setup/automation", {
-        method: "POST",
+      // writeStoreAutomation mirrors shop_settings.auto_save_enabled and
+      // preserves the safeguard, so this can no longer desync from
+      // /app/rules or clobber the threshold.
+      const res = await fetch("/api/automation/store", {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pack_modes }),
+        body: JSON.stringify({ mode: v, safeguard: storeSafeguard }),
       });
       if (res.ok) {
         setHandlingSaved(true);
         setTimeout(() => setHandlingSaved(false), 2600);
+      } else {
+        // Never leave the UI claiming a mode the server rejected.
+        setSaveMode(previous);
       }
     },
-    [rulesAllowed, saveModePackIds, saveModeBinding, automation],
+    [saveMode, storeSafeguard],
   );
 
   const fetchInfo = useCallback(async () => {
     setLoading(true);
     try {
-      const [usageRes, prefsRes, autoRes, modesRes] = await Promise.all([
+      const [usageRes, prefsRes, autoRes, storeRes] = await Promise.all([
         fetch("/api/billing/usage"),
         fetch("/api/shop/preferences"),
         fetch("/api/automation/settings"),
-        fetch("/api/setup/automation"),
+        fetch("/api/automation/store"),
       ]);
-      if (modesRes.ok) {
-        const m = (await modesRes.json()) as {
-          pack_modes?: Record<string, SaveMode>;
+      if (storeRes.ok) {
+        const cfg = (await storeRes.json()) as {
+          mode?: string;
+          safeguard?: { enabled: boolean; amount: number };
           rulesAccess?: { allowed: boolean };
         };
-        const modes = Object.values(m.pack_modes ?? {});
-        const ids = Object.keys(m.pack_modes ?? {});
-        setSaveModePackIds(ids);
-        setRulesAllowed(m.rulesAccess?.allowed !== false);
-        if (modes.length > 0) {
-          setSaveModeBinding("rules");
-          const allAuto = modes.every((v) => v === "auto");
-          const allReview = modes.every((v) => v === "review");
-          setSaveMode(allAuto ? "auto" : "review");
-          setSaveModeMixed(!allAuto && !allReview);
-        } else {
-          // No active pack types → bind to the shop-level auto-save
-          // gate instead of silently no-oping.
-          setSaveModeBinding("gate");
-        }
+        setSaveMode(cfg.mode === "auto" ? "auto" : "review");
+        if (cfg.safeguard) setStoreSafeguard(cfg.safeguard);
+        setRulesAllowed(cfg.rulesAccess?.allowed !== false);
       }
       if (usageRes.ok) {
         const data = await usageRes.json();
@@ -329,9 +304,11 @@ export default function EmbeddedSettingsPage() {
     await fetch("/api/automation/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
+      // No `auto_save_enabled` — it mirrors the store-wide switch and is
+      // owned by writeStoreAutomation (via the Save mode control above).
+      // The route rejects it too.
       body: JSON.stringify({
         auto_build_enabled: automation.auto_build_enabled,
-        auto_save_enabled: automation.auto_save_enabled,
         auto_save_min_score: score,
         enforce_no_blockers: automation.enforce_no_blockers,
       }),
@@ -462,12 +439,12 @@ export default function EmbeddedSettingsPage() {
               <BlockStack gap="200">
                 <Text as="h3" variant="headingSm">{t("disputeHandling.savingTitle")}</Text>
                 <Text as="p" variant="bodySm" tone="subdued">{t("disputeHandling.savingDesc")}</Text>
-                {!rulesAllowed && saveModeBinding === "rules" ? (
+                {!rulesAllowed ? (
                   <Banner tone="info">{t("disputeHandling.upgradeNote")}</Banner>
                 ) : null}
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", opacity: rulesAllowed || saveModeBinding === "gate" ? 1 : 0.5 }}>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", opacity: 1 }}>
                   <OptionBox
-                    selected={saveMode === "auto" && !saveModeMixed}
+                    selected={saveMode === "auto"}
                     onClick={() => pickSaveMode("auto")}
                     title={t("disputeHandling.autoTitle")}
                     badge={t("disputeHandling.recommendedBadge")}
@@ -475,15 +452,12 @@ export default function EmbeddedSettingsPage() {
                     note={t("disputeHandling.autoNote")}
                   />
                   <OptionBox
-                    selected={saveMode === "review" && !saveModeMixed}
+                    selected={saveMode === "review"}
                     onClick={() => pickSaveMode("review")}
                     title={t("disputeHandling.approveTitle")}
                     desc={t("disputeHandling.approveDesc")}
                   />
                 </div>
-                {saveModeMixed ? (
-                  <Text as="p" variant="bodySm" tone="subdued">{t("disputeHandling.mixedNote")}</Text>
-                ) : null}
                 {handlingSaved ? (
                   <Text as="p" variant="bodySm" tone="success">{t("disputeHandling.saved")}</Text>
                 ) : null}
@@ -704,21 +678,12 @@ export default function EmbeddedSettingsPage() {
                     </InlineStack>
                   </div>
 
-                  {/* Auto Save */}
-                  <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
-                    <InlineStack align="space-between" blockAlign="center">
-                      <BlockStack gap="050">
-                        <Text as="span" variant="bodyMd" fontWeight="medium">{t("autoSaveLabel")}</Text>
-                        <Text as="span" variant="bodySm" tone="subdued">{t("autoSaveDesc")}</Text>
-                      </BlockStack>
-                      <Checkbox
-                        label=""
-                        checked={automation.auto_save_enabled}
-                        onChange={(v) => setAutomation((a) => ({ ...a, auto_save_enabled: v }))}
-                        labelHidden
-                      />
-                    </InlineStack>
-                  </div>
+                  {/* No auto-save toggle here — "Save mode" above is the one
+                      control for it. This section is advanced *defaults*; the
+                      auto-save switch itself is store-wide and lives with the
+                      handling choice (and on /app/rules). Removed 2026-07-28:
+                      it wrote shop_settings.auto_save_enabled directly, so it
+                      could contradict Save mode with no way to see which won. */}
 
                   {/* Min Score */}
                   <div style={{ padding: "12px", border: "1px solid var(--p-color-border)", borderRadius: 8 }}>
@@ -727,7 +692,14 @@ export default function EmbeddedSettingsPage() {
                         <Text as="span" variant="bodyMd" fontWeight="medium">{t("minScore")}</Text>
                         <Text as="span" variant="bodySm" tone="subdued">{t("minScoreHelp")}</Text>
                       </BlockStack>
-                      <div style={{ width: 80, flexShrink: 0 }}>
+                      {/* 120, not 80. At 80 the number input's spinner, the
+                          "%" suffix and the padding left 21px of usable field
+                          for a value needing 28px — so a stored 80 rendered as
+                          "8" and a merchant read their auto-save threshold as
+                          8%. The value was never wrong, only unreadable, which
+                          is the worse failure: nothing looks broken. 120 fits
+                          the 3-digit maximum (100) with room to spare. */}
+                      <div style={{ width: 120, flexShrink: 0 }}>
                         <TextField
                           label=""
                           labelHidden

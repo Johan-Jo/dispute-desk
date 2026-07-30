@@ -71,10 +71,14 @@ export default function CoveragePage() {
   }, []);
 
   const loadCoverage = useCallback(async () => {
-    const [rulesData, packsData, mappingsData] = await Promise.all([
+    const [rulesData, packsData, mappingsData, storeData] = await Promise.all([
       fetch("/api/rules").then((r) => (r.ok ? r.json() : [])),
       fetch("/api/packs").then((r) => (r.ok ? r.json() : { packs: [] })),
       fetch("/api/reason-mappings").then((r) => (r.ok ? r.json() : { mappings: [] })),
+      // The store-wide switch. Every family without a rule of its own inherits
+      // it, so without this the page reports "Review" for a store on
+      // Auto-pilot — which is what it did for seven rows.
+      fetch("/api/automation/store").then((r) => (r.ok ? r.json() : null)),
     ]);
     const rules = Array.isArray(rulesData) ? rulesData : [];
     const allPacks: Array<{ id: string; name: string; template_id?: string | null; status?: string; dispute_type?: string }> =
@@ -99,7 +103,10 @@ export default function CoveragePage() {
         status: p.status ?? "",
       }));
     const mappings = mappingsData?.mappings ?? [];
-    setCoverage(deriveLifecycleCoverage(rules, visiblePacks, mappings));
+    const storeDefaultMode = storeData?.mode === "auto" ? "auto" : "review";
+    setCoverage(
+      deriveLifecycleCoverage(rules, visiblePacks, mappings, storeDefaultMode),
+    );
   }, []);
 
   useEffect(() => {

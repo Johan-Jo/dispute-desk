@@ -83,6 +83,17 @@ export async function GET(req: NextRequest) {
   // intentionally EXCLUDED from this list. (Auto mode still auto-submits;
   // the pipeline only parks to review when a rule says so or strength is
   // below the auto threshold.) Do NOT re-add `needs_review` here.
+  //
+  // ONE EXCEPTION, added 2026-07-29: `review_state = "approved"`. That is the
+  // merchant pressing "Submit on the deadline" — an explicit instruction, not
+  // an absence of one. The approve handler
+  // (app/api/disputes/[id]/review/route.ts) writes `review_state` but
+  // deliberately leaves `needs_review` alone, because that flag drives the
+  // review queues and attention lists everywhere else. Without this inclusion
+  // an approved dispute stayed `needs_review`, fell outside the status filter,
+  // and was never submitted — so the button promised a submission that never
+  // happened and the merchant forfeited by default. `conceded` still wins: it
+  // is checked per-dispute below and returns before any submit path.
   const merchantActionableStatuses = [
     "new",
     "in_progress",
@@ -98,7 +109,7 @@ export async function GET(req: NextRequest) {
     .lt("due_at", endOfToday.toISOString())
     .is("evidence_saved_to_shopify_at", null)
     .or(
-      `normalized_status.is.null,normalized_status.in.(${merchantActionableStatuses.join(",")})`,
+      `normalized_status.is.null,normalized_status.in.(${merchantActionableStatuses.join(",")}),review_state.eq.approved`,
     );
 
   if (error) {
@@ -142,7 +153,9 @@ export async function GET(req: NextRequest) {
       // Look at the latest defence package row for this dispute.
       const { data: dpkg } = await sb
         .from("defence_packages")
-        .select("id, status, validation_status, pdf_path, version")
+        // `failure_code` distinguishes a Shopify-Protect skip from a
+        // no-bank-facts skip; without it every skip is reported as the latter.
+        .select("id, status, validation_status, pdf_path, version, failure_code")
         .eq("dispute_id", d.id)
         .order("version", { ascending: false })
         .limit(1)
@@ -282,7 +295,11 @@ export async function GET(req: NextRequest) {
 }
 
 function pickFallbackReason(
-  dpkg: { status: string; validation_status: string | null } | null,
+  dpkg: {
+    status: string;
+    validation_status: string | null;
+    failure_code?: string | null;
+  } | null,
 ):
   | "validation_failed"
   | "skipped_no_facts"
@@ -292,9 +309,13 @@ function pickFallbackReason(
   if (!dpkg) return "missing";
   if (dpkg.status === "failed") return "validation_failed";
   if (dpkg.status === "skipped") {
-    // Coverage gate vs no-bank-facts — we treat both as "skipped" status,
-    // failure_code distinguishes them but we don't load it here for
-    // simplicity. The merchant email mentions the broader reason.
+    // `failure_code` is what distinguishes the coverage gate from
+    // no-bank-facts. It used to be left unread "for simplicity", which meant
+    // `skipped_covered` was never returned and a Shopify-Protect dispute was
+    // emailed "not enough bank-eligible evidence" — telling a merchant their
+    // evidence was too thin when the real answer is that Shopify is already
+    // covering the loss and there is nothing to do.
+    if (dpkg.failure_code === "covered_shopify") return "skipped_covered";
     return "skipped_no_facts";
   }
   return null;
