@@ -120,3 +120,18 @@ Companion files:
 - **Verified:** post-push query returns the row `{key: delivery_proof, required: false, collector_key: delivery_proof}` on prod. Only this one migration applied (dev already had it).
 - **Ships with:** PR #182 (feat/delivery-date-in-rebuttal) → develop, promoted via PR #183 (develop→master).
 - CLI relinked to dev after.
+
+
+### 2026-07-30T18:33:06.960Z — prod migration push SUCCEEDED (non-interactive)
+
+- **Route:** `scripts/push-prod-migrations-noninteractive.mjs` — `db-push-prod.mjs` is TTY-only and cannot be run by an agent; `run-migration.mjs` resolves to the DEV database from `.env.local` and does not stop on failure. See that script's header.
+- **Target ref:** `aokhplydttxtebvbeuzc`
+- **Git SHA:** `f1ed476` (master)
+- **Started:** 2026-07-30T18:33:01.737Z
+- **Applied (5):**
+  - 20260727110000_snapshot_setup_rules_pre_collapse.sql
+  - 20260727120000_collapse_setup_rules_to_store_switch.sql
+  - 20260728160000_subscription_cancelled_spelling.sql
+  - 20260729010000_convert_legacy_setup_rules_to_groups.sql
+  - 20260729020000_restore_live_group_rules_after_collapse.sql
+- **Status:** all listed migrations applied in order
