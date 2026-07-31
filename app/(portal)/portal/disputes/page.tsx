@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useDemoMode, useDemoData } from "@/lib/demo-mode";
 import { DemoNotice } from "@/components/ui/demo-notice";
+import { effectiveReviewDecision } from "@/lib/disputes/presentation/reviewDecision";
+import type { OperationalLifecycle } from "@/lib/disputes/presentation/types";
 
 interface Dispute {
   id: string;
@@ -23,6 +25,10 @@ interface Dispute {
   due_at: string | null;
   needs_review: boolean;
   review_state?: "in_review" | "approved" | "conceded" | null;
+  /** Shared presentation model (`/api/disputes` attaches it per row) —
+   *  only `lifecycle` is read here, to tell a still-pending review
+   *  decision from one the deadline cron already carried out. */
+  presentation?: { lifecycle: OperationalLifecycle } | null;
   last_synced_at: string | null;
 }
 
@@ -69,6 +75,24 @@ const STATUS_KEYS: Record<string, string> = {
   won: "won",
   lost: "lost",
 };
+
+/** The review-decision chip a row wears, or nothing. Empty once the
+ *  decision has been carried out — `review_state` is not cleared by the
+ *  save, so an already-filed dispute would otherwise keep reading
+ *  "Scheduled" next to its saved/under-review status badge. */
+function ReviewChip({ d }: { d: Dispute }) {
+  const t = useTranslations("disputes");
+  switch (effectiveReviewDecision(d.presentation?.lifecycle, d.review_state)) {
+    case "in_review":
+      return <Badge variant="warning">{t("reviewChip.inReview")}</Badge>;
+    case "approved":
+      return <Badge variant="info">{t("reviewChip.scheduled")}</Badge>;
+    case "conceded":
+      return <Badge variant="default">{t("reviewChip.notDefended")}</Badge>;
+    default:
+      return null;
+  }
+}
 
 function formatCurrency(amount: number | null, code: string | null, locale: string): string {
   if (amount == null) return "—";
@@ -366,15 +390,7 @@ export default function DisputesPage() {
                         <Badge variant={STATUS_VARIANTS[d.status ?? ""] ?? "default"}>
                           {ts(STATUS_KEYS[d.status ?? ""] ?? "unknown")}
                         </Badge>
-                        {d.review_state === "in_review" && (
-                          <Badge variant="warning">{t("reviewChip.inReview")}</Badge>
-                        )}
-                        {d.review_state === "approved" && (
-                          <Badge variant="info">{t("reviewChip.scheduled")}</Badge>
-                        )}
-                        {d.review_state === "conceded" && (
-                          <Badge variant="default">{t("reviewChip.notDefended")}</Badge>
-                        )}
+                        <ReviewChip d={d} />
                       </div>
                     </td>
                     <td className="px-4 py-3 text-[#667085]">{formatDate(d.due_at, locale)}</td>

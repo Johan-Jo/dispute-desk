@@ -503,6 +503,49 @@ describe("Cross-page consistency", () => {
     );
   });
 
+  // Regression — blume-box 0ab14b8f, 2026-07-31. `review_state` is never
+  // cleared when the deadline cron carries the decision out, so a decision
+  // that has already happened must stop speaking for the dispute: an
+  // approved case that was saved at 08:06 UTC kept promising it was "set to
+  // submit automatically on the deadline" while the submit tab, the list
+  // status, and the confirmation email all said it had been filed.
+  it("a carried-out review decision no longer overrides the lifecycle", () => {
+    const p = resolvePresentation({
+      ...basePresentation,
+      submissionState: "saved_to_shopify",
+      packStatus: "saved_to_shopify",
+    });
+    expect(p.lifecycle).toBe("saved_to_shopify");
+    expect(listPrimaryState(p, "approved").labelKey).toBe(
+      "presentation.lifecycle.saved_to_shopify",
+    );
+    // Same for the other two decisions — "Nothing will be submitted" is
+    // false once something was.
+    expect(listPrimaryState(p, "conceded").labelKey).toBe(
+      "presentation.lifecycle.saved_to_shopify",
+    );
+    expect(listPrimaryState(p, "in_review").labelKey).toBe(
+      "presentation.lifecycle.saved_to_shopify",
+    );
+  });
+
+  it("a transmitted or terminal dispute ignores the stored decision too", () => {
+    const sent = resolvePresentation({
+      ...basePresentation,
+      submissionState: "submitted_confirmed",
+      packStatus: "saved_to_shopify",
+    });
+    expect(sent.lifecycle).toBe("under_review");
+    expect(listPrimaryState(sent, "approved").labelKey).toBe(
+      "presentation.lifecycle.under_review",
+    );
+    const won = resolvePresentation({ ...basePresentation, finalOutcome: "won" });
+    expect(won.lifecycle).toBe("won");
+    expect(listPrimaryState(won, "approved").labelKey).toBe(
+      "presentation.lifecycle.won",
+    );
+  });
+
   it("a saved-editable case is calm everywhere (no task, no warning)", () => {
     const p = resolvePresentation({
       ...basePresentation,
