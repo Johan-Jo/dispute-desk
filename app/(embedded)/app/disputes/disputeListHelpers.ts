@@ -3,6 +3,7 @@ import { normalizeDisputeReasonKey } from "@/lib/disputes/reasonLabel";
 import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
 import type { DisputePresentation } from "@/lib/disputes/presentation/types";
 import { listPrimaryState } from "@/lib/disputes/presentation/labels";
+import { effectiveReviewDecision } from "@/lib/disputes/presentation/reviewDecision";
 import type { I18nToken } from "@/lib/i18n/token";
 import {
   ATTENTION_ROW_EMPHASIS,
@@ -99,7 +100,12 @@ export function rowChromeV2(d: Dispute): {
   // suppresses the attention pill once a decision exists. Without this an
   // in_review dispute kept its amber/blocking chrome on the list while
   // the detail showed a calm "On hold" (list-vs-detail divergence).
-  if (d.review_state) return { stripeColor: null, bgColor: null, opacity: 1 };
+  // Only while the decision is still pending: once it has been carried
+  // out, attention is authoritative again (a save that later fails must
+  // not stay calm forever behind a stale `review_state`).
+  if (effectiveReviewDecision(p.lifecycle, d.review_state)) {
+    return { stripeColor: null, bgColor: null, opacity: 1 };
+  }
   const emphasis = ATTENTION_ROW_EMPHASIS[p.attention] ?? null;
   if (!emphasis) return { stripeColor: null, bgColor: null, opacity: 1 };
   const hasRequiredAction =
@@ -442,12 +448,16 @@ export function figmaStatus(d: Dispute): FigmaStatus {
  *    in_review → "In review" (+ optional countdown from review_due_at)
  *    approved  → "Scheduled"
  *    conceded  → "Not defended"
- *  Colors follow the list's soft-pill palette. */
+ *  Colors follow the list's soft-pill palette.
+ *
+ *  Also null once the decision has been CARRIED OUT — `review_state`
+ *  outlives the save, so an already-filed row would keep wearing
+ *  "Scheduled" (effectiveReviewDecision). */
 export function figmaReviewChip(
   d: Dispute,
   t: Translate,
 ): { label: string; bg: string; color: string } | null {
-  switch (d.review_state) {
+  switch (effectiveReviewDecision(d.presentation?.lifecycle, d.review_state)) {
     case "in_review": {
       const days =
         d.review_due_at != null

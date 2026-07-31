@@ -18,6 +18,7 @@ import {
 } from "@/lib/disputes/presentation/uiTokens";
 import { resolveStrength } from "@/lib/disputes/presentation/resolveStrength";
 import { attentionLabelKey } from "@/lib/disputes/presentation/labels";
+import { effectiveReviewDecision } from "@/lib/disputes/presentation/reviewDecision";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
 
 const PILL_STYLE = {
@@ -144,7 +145,12 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
   // heading must reflect that standing decision instead of still saying
   // "Approval required" (the approval gate stays technically open until
   // the deadline). Mirrors the list-status fix (listPrimaryState).
-  const reviewState = dispute.reviewState ?? null;
+  // Dropped once the decision has been carried out — a filed dispute must
+  // not keep wearing a "Scheduled" chip (effectiveReviewDecision).
+  const reviewState = effectiveReviewDecision(
+    presentation?.lifecycle,
+    dispute.reviewState ?? null,
+  );
   if (reviewState) {
     // Calm, non-alarming tones — a decision is not a warning.
     const DECISION_TOKENS: Record<string, ChipTokens> = {

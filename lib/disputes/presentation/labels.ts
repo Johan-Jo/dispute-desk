@@ -18,6 +18,7 @@
  */
 
 import type { DisputePresentation } from "./types";
+import { effectiveReviewDecision } from "./reviewDecision";
 
 /** Operational-lifecycle chip label. */
 export function lifecycleLabelKey(p: Pick<DisputePresentation, "lifecycle">): string {
@@ -73,13 +74,19 @@ export function strengthLabelKey(
  */
 export function listPrimaryState(
   p: Pick<DisputePresentation, "lifecycle" | "attention" | "blockingReason">,
-  reviewState?: "in_review" | "approved" | "conceded" | null,
+  reviewStateInput?: "in_review" | "approved" | "conceded" | null,
 ): { labelKey: string; subKey: string } {
   // A recorded merchant decision OVERRIDES the attention-derived status:
   // once the merchant has approved / held / conceded, the row must stop
   // saying "Approval required" and reflect the standing decision, even
   // though the underlying approval gate (attention=blocking/approval_gate)
   // is technically still open until the deadline fires.
+  //
+  // …but only while the decision is still PENDING. `review_state` is never
+  // cleared when the deadline cron carries it out, so past the save it
+  // would keep the row on "Scheduled to submit" for an already-filed
+  // dispute — see effectiveReviewDecision.
+  const reviewState = effectiveReviewDecision(p.lifecycle, reviewStateInput);
   if (reviewState === "approved") {
     return {
       labelKey: "presentation.reviewDecision.approved",
