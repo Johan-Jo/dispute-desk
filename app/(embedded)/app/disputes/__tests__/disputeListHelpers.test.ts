@@ -74,6 +74,36 @@ describe("figmaReviewChip + figmaStatus (review lifecycle)", () => {
       "needs-review",
     );
   });
+
+  // Regression — blume-box 0ab14b8f, 2026-07-31: the deadline cron saved the
+  // evidence at 08:06 UTC but nothing clears `review_state`, so the row kept
+  // wearing "Scheduled" beside its saved status while the submit tab and the
+  // confirmation email both said it had been filed.
+  it("drops the chip once the decision has been carried out (saved/sent/terminal)", () => {
+    for (const lifecycle of ["saved_to_shopify", "under_review", "won"] as const) {
+      expect(
+        figmaReviewChip(
+          dispute({
+            review_state: "approved",
+            presentation: { lifecycle } as Dispute["presentation"],
+          }),
+          idT,
+        ),
+      ).toBeNull();
+    }
+  });
+
+  it("keeps the chip while the decision is still pending", () => {
+    expect(
+      figmaReviewChip(
+        dispute({
+          review_state: "approved",
+          presentation: { lifecycle: "pack_prepared" } as Dispute["presentation"],
+        }),
+        idT,
+      )?.label,
+    ).toBe("disputes.reviewChip.scheduled");
+  });
 });
 
 describe("parseListDeepLink", () => {

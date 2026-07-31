@@ -34,6 +34,7 @@ export {
   strengthLabelKey,
   listPrimaryState,
 } from "./labels";
+export { effectiveReviewDecision } from "./reviewDecision";
 export {
   FIELD_ACTIONS,
   DEFAULT_FIELD_ACTION,

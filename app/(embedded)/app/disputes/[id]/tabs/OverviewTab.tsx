@@ -41,6 +41,7 @@ import { TAB_INDEX } from "../workspace-components/types";
 import { resolveLifecycle } from "@/lib/disputes/presentation/resolveLifecycle";
 import { ATTENTION_CHIP, STRENGTH_CHIP } from "@/lib/disputes/presentation/uiTokens";
 import { attentionLabelKey } from "@/lib/disputes/presentation/labels";
+import { effectiveReviewDecision } from "@/lib/disputes/presentation/reviewDecision";
 import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
 import { buildRefundPresentation } from "@/lib/argument/refundPresentation";
 import {
@@ -359,14 +360,21 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     presentation?.attention === "blocking" &&
     presentation?.blockingReason === "approval_gate";
   // A recorded review decision (Submit on deadline / Hold / Don't defend)
-  // takes over the hero for a non-terminal dispute: it reflects the
+  // takes over the hero while it is still PENDING: it reflects the
   // standing decision ("Scheduled to submit" etc.) instead of the raw
   // lifecycle + "Approval required" pill. Honest — approved means
   // SCHEDULED for the deadline, not saved yet.
-  const reviewDecision =
-    lifecycle !== "won" && lifecycle !== "lost" && lifecycle !== "closed"
-      ? (dispute.reviewState ?? null)
-      : null;
+  //
+  // The moment it is carried out it stops being the truth: `review_state`
+  // survives the save, so this used to promise "set to submit
+  // automatically on the deadline" on a dispute the deadline cron had
+  // already filed hours earlier — contradicting the submit tab, the list,
+  // and the confirmation email. `effectiveReviewDecision` hands the hero
+  // back to the lifecycle once the evidence is saved/sent or terminal.
+  const reviewDecision = effectiveReviewDecision(
+    lifecycle,
+    dispute.reviewState ?? null,
+  );
   const HERO_TONE_TECH = {
     bg: "#FEF2F2", border: "#FCA5A5", iconBg: "#FEE2E2", iconColor: "#DC2626",
     titleColor: "#7F1D1D", bodyColor: "#B42318", pillBg: "#FEE2E2", pillColor: "#991B1B",

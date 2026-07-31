@@ -7,6 +7,7 @@ import { Icon } from "@shopify/polaris";
 import { ChevronRightIcon } from "@shopify/polaris-icons";
 import { withShopParams } from "@/lib/withShopParams";
 import { STRENGTH_CHIP } from "@/lib/disputes/presentation/uiTokens";
+import { effectiveReviewDecision } from "@/lib/disputes/presentation/reviewDecision";
 import { attentionSectionForAttention } from "@/lib/disputes/attentionDeepLink";
 import {
   figmaCaseStrength,
@@ -121,7 +122,12 @@ export function MobileDisputeCard({
   // A recorded review decision calms the card (matches the detail page +
   // rowChromeV2) — an in_review/approved/conceded dispute is not an open
   // task even if the underlying attention gate is still technically open.
-  const isActionable = d.review_state
+  // Only while it is still PENDING: once carried out, attention decides
+  // again (effectiveReviewDecision).
+  const isActionable = effectiveReviewDecision(
+    d.presentation?.lifecycle,
+    d.review_state,
+  )
     ? false
     : d.presentation
       ? d.presentation.needsMerchantAction
