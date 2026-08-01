@@ -58,6 +58,7 @@ const CTX_FRAUD: BuildContext = {
   accessToken: "tok",
   order: null,
   paymentContext: { family: "card", raw: null, label: "Card", cardNetwork: "visa" },
+  priorHistory: null,
 };
 
 const CTX_NON_FRAUD: BuildContext = {
@@ -112,6 +113,7 @@ describe("collectFraudRiskEvidence", () => {
     const klarnaFraudCtx: BuildContext = {
       ...CTX_FRAUD,
       paymentContext: { family: "klarna", raw: "klarna", label: "Klarna", cardNetwork: null },
+      priorHistory: null,
     };
     const sections = await collectFraudRiskEvidence(klarnaFraudCtx);
     expect(sections).toEqual([]);

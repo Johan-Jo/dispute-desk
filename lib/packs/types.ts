@@ -12,6 +12,7 @@
 import type { I18nToken } from "@/lib/i18n/token";
 import type { OrderDetailNode } from "@/lib/shopify/queries/orders";
 import type { PaymentContext } from "@/lib/disputes/paymentContext";
+import type { PriorOrderHistory } from "./priorOrderHistory";
 
 export interface EvidenceSection {
   type:
@@ -62,4 +63,13 @@ export interface BuildContext {
    * when there is no order.
    */
   paymentContext: PaymentContext;
+  /**
+   * VERIFIED prior-order history for this customer (own-DB lookup done
+   * once in buildPack.ts, same pattern as the risk-weakness snapshot).
+   * Null when it could not be established — guest checkout, no order,
+   * a failed read, or partial order coverage. `orderSource` MUST omit
+   * `disputeFreeHistory` from the payload in that case so consumers
+   * read "unknown" rather than "clean". See lib/packs/priorOrderHistory.ts.
+   */
+  priorHistory: PriorOrderHistory | null;
 }

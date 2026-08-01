@@ -268,6 +268,17 @@ export async function collectOrderEvidence(
   // timeline events.
   if (order.customer) {
     const totalOrders = Number(order.customer.numberOfOrders ?? 0);
+    // `disputeFreeHistory` and `priorUndisputedOrders` are emitted ONLY
+    // when `loadPriorOrderHistory` verified them against our own
+    // ingested orders + disputes. When it could not (guest checkout,
+    // partial order coverage, read failure) the keys are OMITTED — an
+    // absent key reads as "unknown" through `disputeFreeHistoryState`,
+    // and the copy then states the order count without claiming the
+    // history is clean. Do NOT default either key: writing `true` here
+    // is exactly the bug that told an issuer an account with two open
+    // chargebacks had "an established dispute-free order history"
+    // (blume-box dispute 162042cd, 2026-07-31).
+    const prior = ctx.priorHistory;
     sections.push({
       type: "other",
       labelToken: { key: "packs.section.customerAccountDetails" },
@@ -278,6 +289,17 @@ export async function collectOrderEvidence(
         customerSince: order.customer.createdAt,
         customerNote: order.customer.note,
         isRepeatCustomer: totalOrders > 1,
+        // Both keys or neither: `priorUndisputedOrders` asserts
+        // undisputedness in its own name, so it may only be emitted
+        // alongside a RESOLVED `disputeFreeHistory`. On partial coverage
+        // (`disputeFreeHistory === null`) we emit neither and the row
+        // reads as unknown.
+        ...(prior && prior.disputeFreeHistory !== null
+          ? {
+              priorUndisputedOrders: prior.priorUndisputedOrders,
+              disputeFreeHistory: prior.disputeFreeHistory,
+            }
+          : {}),
       },
     });
   }

@@ -49,6 +49,7 @@ const CTX: BuildContext = {
   accessToken: "tok",
   order: null,
   paymentContext: { family: "card", raw: null, label: "Card", cardNetwork: null },
+  priorHistory: null,
 };
 
 beforeEach(() => {

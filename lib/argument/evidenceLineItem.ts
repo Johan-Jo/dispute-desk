@@ -27,6 +27,7 @@
 import {
   CANONICAL_EVIDENCE,
   categorizeEvidenceField,
+  disputeFreeHistoryState,
   effectivePriorOrders,
   type EvidenceCategory,
 } from "./canonicalEvidence";
@@ -558,11 +559,15 @@ function customerAccountReasonFromPayload(
   // customer (N prior orders)" copy from counting the disputed order as
   // its own history.
   const prior = effectivePriorOrders(p);
-  const disputeFree = p.disputeFreeHistory !== false;
+  const state = disputeFreeHistoryState(p);
   const sinceRaw = typeof p.customerSince === "string" ? p.customerSince : null;
   const sinceLabel = formatCustomerSince(sinceRaw);
 
-  if (prior !== null && prior >= 1 && disputeFree) {
+  // VERIFIED dispute-free — the only branch allowed to tell the issuer
+  // the history is dispute-free. Requires `disputeFreeHistory === true`,
+  // which only `loadPriorOrderHistory` writes and only when it checked
+  // our full ingested history for this customer.
+  if (prior !== null && prior >= 1 && state === "dispute_free") {
     const isSingular = prior === 1;
     const hasSince = sinceLabel != null;
     const variantStem =
@@ -575,7 +580,22 @@ function customerAccountReasonFromPayload(
     return { key, params };
   }
 
-  if (prior !== null && prior >= 1 && !disputeFree) {
+  // UNVERIFIED — a returning customer whose prior orders we could not
+  // fully check for disputes. State the count, claim nothing about
+  // whether that history is clean. This branch used to be swallowed by
+  // the one above via `disputeFreeHistory !== false`.
+  if (prior !== null && prior >= 1 && state === "unknown") {
+    const isSingular = prior === 1;
+    const hasSince = sinceLabel != null;
+    const numberSuffix = isSingular ? "Singular" : "Plural";
+    const sinceSuffix = hasSince ? "Since" : "";
+    const key = `${REASONS_NS}.customerAccount.returningUnverified${numberSuffix}${sinceSuffix}`;
+    const params: Record<string, string | number> = { prior };
+    if (hasSince) params.sinceLabel = sinceLabel;
+    return { key, params };
+  }
+
+  if (prior !== null && prior >= 1 && state === "has_disputes") {
     const isSingular = prior === 1;
     const key = `${REASONS_NS}.customerAccount.returningWithDisputes${isSingular ? "Singular" : "Plural"}`;
     return { key, params: { prior } };
@@ -657,7 +677,7 @@ function customerAccountInternalReason(payload: unknown): I18nToken | null {
     }
     return { key: `${REASONS_NS}.customerAccount.internalFirstTime` };
   }
-  if (p.disputeFreeHistory === false) {
+  if (disputeFreeHistoryState(p) === "has_disputes") {
     return { key: `${REASONS_NS}.customerAccount.internalWithDisputes` };
   }
   return null;
@@ -871,7 +891,12 @@ function isNegativeOrAmbiguous(
     // Returning customer but the account has prior chargebacks — also
     // a fraud-weakening signal. Account history with disputes carries
     // the OPPOSITE inference from a clean history.
-    if (payload.disputeFreeHistory === false) return true;
+    //
+    // `unknown` deliberately stays bank-facing: "returning customer with
+    // N prior orders" is true and useful even unverified. Honesty is
+    // carried by the COPY (returningUnverified*), which omits the
+    // dispute-free claim, not by hiding the row.
+    if (disputeFreeHistoryState(payload) === "has_disputes") return true;
   }
 
   if (field === "ip_location_check") {

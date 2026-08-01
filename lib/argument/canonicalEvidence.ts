@@ -369,6 +369,43 @@ export function effectivePriorOrders(
   return Math.max(0, total - 1);
 }
 
+/**
+ * Whether this account's prior orders are known to be dispute-free.
+ *
+ * THREE states, never a boolean. `customer_account_info` payloads carry
+ * `disputeFreeHistory` only when `loadPriorOrderHistory` could VERIFY it
+ * against our ingested orders + disputes; a missing key means we do not
+ * know, which is not the same as "clean".
+ *
+ * Every consumer used to spell this `disputeFreeHistory !== false`, so an
+ * absent key resolved to `true` and the pack asserted "an established
+ * dispute-free order history" to the issuer about accounts we had never
+ * checked — including, on blume-box dispute 162042cd, an account with two
+ * open chargebacks sitting in our own `disputes` table. Read this helper
+ * instead; `unknown` must never render the dispute-free claim.
+ */
+export type DisputeFreeHistoryState = "dispute_free" | "has_disputes" | "unknown";
+
+export function disputeFreeHistoryState(
+  payload: Record<string, unknown> | null | undefined,
+): DisputeFreeHistoryState {
+  if (!payload) return "unknown";
+  if (payload.disputeFreeHistory === true) return "dispute_free";
+  if (payload.disputeFreeHistory === false) return "has_disputes";
+  // `priorUndisputedOrders` asserts undisputedness in its own name, so a
+  // numeric value is itself a verification claim. Producers must emit it
+  // ONLY when they actually checked — `loadPriorOrderHistory` withholds
+  // it whenever `disputeFreeHistory` is null (partial coverage).
+  //
+  // `totalOrders` is deliberately NOT accepted here: it is Shopify's raw
+  // order count and claims nothing about disputes. Treating it as one is
+  // the whole bug — blume-box 162042cd shipped
+  // `{ totalOrders: 9, isRepeatCustomer: true }` and we read it as a
+  // dispute-free history on an account with two open chargebacks.
+  if (typeof payload.priorUndisputedOrders === "number") return "dispute_free";
+  return "unknown";
+}
+
 /** AVS result codes Shopify exposes that count as a match.
  *  Y = full match (street+zip), A = address match only, W = zip match only,
  *  X = full match (international), D/M = international match. */
@@ -556,12 +593,23 @@ export function categorizeEvidenceField(
   // disputed order from the count (Shopify's numberOfOrders includes it),
   // so a first-order account is supporting, never strong: there is no
   // history to cite, and on a fraud claim "brand-new account" is a fraud
-  // indicator, not evidence. Conservative — never upgrade if
-  // disputeFreeHistory is explicitly false (would be misleading).
+  // indicator, not evidence.
+  //
+  // The rubric says "prior UNDISPUTED transaction history", so Strong
+  // requires the undisputed half to be VERIFIED, not assumed:
+  //   dispute_free  + priors → strong   (the rubric's actual case)
+  //   unknown       + priors → moderate (real returning-customer context,
+  //                            but we never checked for prior disputes)
+  //   has_disputes           → supporting (opposite inference)
+  // Before 2026-08-01 `unknown` was scored Strong because the flag
+  // defaulted to true — see disputeFreeHistoryState.
   if (fieldKey === "customer_account_info") {
-    if (p.disputeFreeHistory === false) return "supporting";
+    const state = disputeFreeHistoryState(p);
+    if (state === "has_disputes") return "supporting";
     const prior = effectivePriorOrders(p);
-    if (prior !== null && prior >= 1) return "strong";
+    if (prior !== null && prior >= 1) {
+      return state === "dispute_free" ? "strong" : "moderate";
+    }
     return "supporting";
   }
 

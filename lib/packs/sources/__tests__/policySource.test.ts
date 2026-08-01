@@ -45,6 +45,7 @@ const ctx: BuildContext = {
   accessToken: "x",
   order: null,
   paymentContext: { family: "unknown", raw: null, label: null, cardNetwork: null },
+  priorHistory: null,
 };
 
 function row(

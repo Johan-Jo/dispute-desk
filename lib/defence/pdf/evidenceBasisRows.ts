@@ -122,12 +122,24 @@ function renderValue(fact: EvidenceFact): string {
       // facts are categorized as supporting and never bank-eligible,
       // so they never appear here.
       const count = typeof v?.priorOrderCount === "number" ? v.priorOrderCount : 0;
-      const disputeFree = v?.disputeFreeHistory !== false;
-      if (count >= 1 && disputeFree) {
+      // Tri-state — see disputeFreeHistoryState. The word "undisputed"
+      // is only printed on a VERIFIED clean history; an unverified one
+      // states the count and stops there. `!== false` used to print
+      // "N prior undisputed orders" on every unchecked account.
+      const disputeFree =
+        v?.disputeFreeHistory === true
+          ? "dispute_free"
+          : v?.disputeFreeHistory === false
+            ? "has_disputes"
+            : "unknown";
+      if (count >= 1 && disputeFree === "dispute_free") {
         return `${count} prior undisputed order${count === 1 ? "" : "s"}`;
       }
-      if (count >= 1 && !disputeFree) {
+      if (count >= 1 && disputeFree === "has_disputes") {
         return `${count} prior order${count === 1 ? "" : "s"} (account has prior chargebacks)`;
+      }
+      if (count >= 1) {
+        return `${count} prior order${count === 1 ? "" : "s"} on this account`;
       }
       // Defensive fallback for legacy / hand-rolled facts that bypassed
       // the categorizer gate. The earlier "Confirmed" string was vague;
