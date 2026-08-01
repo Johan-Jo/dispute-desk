@@ -806,15 +806,17 @@ export async function buildPack(
     dispute.reason,
     caseStrengthPayloadSource,
     {
-      state: coverageSummary.state,
-      shopifyProtectStatus: coverageSummary.shopifyProtectStatus,
-    },
-    fatalLossSummary,
-    riskWeaknessSummary,
-    nameMismatchInput,
-    {
-      triggered: creditAlreadyIssued.triggered,
-      coversDisputedAmount: creditAlreadyIssued.coversDisputedAmount,
+      coverage: {
+        state: coverageSummary.state,
+        shopifyProtectStatus: coverageSummary.shopifyProtectStatus,
+      },
+      fatalLoss: fatalLossSummary,
+      riskWeakness: riskWeaknessSummary,
+      nameMismatch: nameMismatchInput,
+      creditAlreadyIssued: {
+        triggered: creditAlreadyIssued.triggered,
+        coversDisputedAmount: creditAlreadyIssued.coversDisputedAmount,
+      },
     },
   );
   const caseStrengthSummary: {

@@ -26,11 +26,10 @@ import {
   detectCardholderNameMismatch,
 } from "@/lib/argument/nameMismatch";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
-import { CANONICAL_EVIDENCE, categoryFor } from "@/lib/argument/canonicalEvidence";
 import {
   calculateCaseStrength,
+  computeContributions,
   creditAlreadyIssuedInput,
-  type CaseStrengthContribution,
 } from "@/lib/argument/caseStrength";
 import type { EvidenceFact } from "@/lib/defence/types";
 import { CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
@@ -439,7 +438,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         // case strength agrees with the server and with the submitted
         // package. Without it the page renders "Weak case" for a
         // dispute the system scored strong and already filed.
-        creditAlreadyIssued: creditAlreadyIssuedInput(packRow.pack_json) ?? null,
+        creditAlreadyIssued: creditAlreadyIssuedInput(packRow.pack_json),
         /** Last successful build timestamp. Used by the EvidenceTab
          *  rebuild-outcome banner to detect stale outcomes — if
          *  `lastRebuildAt < updatedAt`, the outcome describes a save
@@ -726,66 +725,46 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     cardholderName: gatewayCardholderName,
     customerName: disputeCustomerName,
   };
+  const caseStrengthPayloadSource = {
+    kind: "byField" as const,
+    map: evidenceItemsByField as Record<string, { payload?: Record<string, unknown> | null }>,
+  };
   const caseStrength = calculateCaseStrength(
     reconciledChecklistV2,
     row.reason,
-    { kind: "byField", map: evidenceItemsByField as Record<string, { payload?: Record<string, unknown> | null }> },
-    coverageInput
-      ? { state: coverageInput.state, shopifyProtectStatus: coverageInput.shopifyProtectStatus }
-      : undefined,
-    undefined,
-    undefined,
-    nameMismatchInput,
-    // Credit-already-issued FLOOR. Read from the persisted pack rather
-    // than re-derived: `buildPack` owns the timing comparison and has
-    // the order in hand, this route does not.
-    //
-    // Passing it here is not optional. `calculateCaseStrength` takes it
-    // as a trailing optional argument, so a call site that omits it
-    // silently scores the case WITHOUT the floor — and this route is
-    // what the dispute page renders. On blume-box 162042cd that split
-    // the system in two: buildPack scored `strong`, auto-submit filed
-    // it and emailed the merchant, and the page they opened showed no
-    // strong badge because this call had not been updated.
-    creditAlreadyIssuedInput(packRow?.pack_json),
+    caseStrengthPayloadSource,
+    {
+      coverage: coverageInput
+        ? { state: coverageInput.state, shopifyProtectStatus: coverageInput.shopifyProtectStatus }
+        : null,
+      // This route has no order in hand, so it cannot derive either of
+      // these; `buildPack` owns them and persists its verdict.
+      fatalLoss: null,
+      riskWeakness: null,
+      nameMismatch: nameMismatchInput,
+      // Credit-already-issued FLOOR. Read from the persisted pack rather
+      // than re-derived: `buildPack` owns the timing comparison and has
+      // the order in hand, this route does not.
+      //
+      // Omitting it here is now a compile error, which it was not on
+      // blume-box 162042cd: that call simply lacked the argument, so
+      // buildPack scored `strong`, auto-submit filed it and emailed the
+      // merchant, and the page they opened — rendered from here — showed
+      // no strong badge.
+      creditAlreadyIssued: creditAlreadyIssuedInput(packRow?.pack_json),
+    },
   );
-  // computeContributions equivalent inline — same logic as
-  // useDisputeWorkspace's derivation, deduped by signalId.
-  const RANK_CONTRIB: Record<string, number> = { strong: 3, moderate: 2, supporting: 1, invalid: 0 };
-  const bestBySignal = new Map<
-    string,
-    { category: "strong" | "moderate"; labelKey: string; evidenceFieldKey: string }
-  >();
-  for (const item of reconciledChecklistV2) {
-    if (item.status !== "available" && item.status !== "waived") continue;
-    const spec = CANONICAL_EVIDENCE[item.field];
-    if (!spec) continue;
-    const cat = categoryFor({
-      fieldKey: item.field,
-      payload: (evidenceItemsByField[item.field]?.payload ?? null) as Record<string, unknown> | null,
-    });
-    if (cat !== "strong" && cat !== "moderate") continue;
-    const prev = bestBySignal.get(spec.signalId);
-    if (!prev || RANK_CONTRIB[cat] > RANK_CONTRIB[prev.category]) {
-      bestBySignal.set(spec.signalId, {
-        category: cat,
-        labelKey: spec.labelKey,
-        evidenceFieldKey: item.field,
-      });
-    }
-  }
-  const strongContribs: CaseStrengthContribution[] = [];
-  const moderateContribs: CaseStrengthContribution[] = [];
-  for (const [signalId, acc] of bestBySignal.entries()) {
-    const entry: CaseStrengthContribution = {
-      signalId: signalId as CaseStrengthContribution["signalId"],
-      category: acc.category,
-      labelToken: { key: acc.labelKey },
-      evidenceFieldKey: acc.evidenceFieldKey,
-    };
-    if (acc.category === "strong") strongContribs.push(entry);
-    else moderateContribs.push(entry);
-  }
+  // Contribution rows for the line-item resolver. This used to be a
+  // hand-copied inline reimplementation of `computeContributions`, and
+  // the copy had drifted: it never consulted `reason`, so it skipped the
+  // fraud-family `account_history` strong->moderate demotion the scorer
+  // applies and rendered a Strong prior-order-history pill on rows the
+  // score counted as moderate. Call the shared function.
+  const { strong: strongContribs, moderate: moderateContribs } = computeContributions({
+    checklist: reconciledChecklistV2,
+    payloadSource: caseStrengthPayloadSource,
+    reason: row.reason,
+  });
 
   // Inclusion overrides — keyed by field. Stored in
   // pack_json.inclusionOverrides (commit 10 writes here; empty until

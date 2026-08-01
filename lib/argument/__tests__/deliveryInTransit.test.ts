@@ -13,6 +13,7 @@ import { describe, it, expect } from "vitest";
 import { calculateCaseStrength } from "@/lib/argument/caseStrength";
 import type { EvidencePayloadSource } from "@/lib/argument/caseStrength";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
+import { NO_GATES } from "@/tests/helpers/caseStrengthGates";
 
 function byField(
   map: Record<string, Record<string, unknown>>,
@@ -51,7 +52,7 @@ describe("delivery in-transit strength reason", () => {
       delivery_proof: { proofType: "delivered_unverified" },
     });
 
-    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source);
+    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source, NO_GATES);
     expect(r.overall).toBe("weak");
     expect(r.deliveryInTransit).toBe(true);
     expect(r.strengthReasonI18n.key).toBe(
@@ -65,7 +66,7 @@ describe("delivery in-transit strength reason", () => {
       // delivered_unverified but no tracking artifact — just a bare label
       delivery_proof: { proofType: "delivered_unverified" },
     });
-    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source);
+    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source, NO_GATES);
     expect(r.deliveryInTransit).toBeFalsy();
     expect(r.strengthReasonI18n.key).toBe(
       "disputes.strengthReason.weak.supportingOnly",
@@ -83,7 +84,7 @@ describe("delivery in-transit strength reason", () => {
         ],
       },
     });
-    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source);
+    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source, NO_GATES);
     expect(r.deliveryInTransit).toBeFalsy();
   });
 });

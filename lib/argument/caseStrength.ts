@@ -303,26 +303,37 @@ export interface CaseCreditAlreadyIssuedInput {
  * Read the credit-already-issued floor out of a persisted `pack_json`.
  *
  * EVERY caller of `calculateCaseStrength` that renders or scores a
- * dispute must pass this. It is a trailing optional argument, so a site
- * that forgets it silently scores the case without the floor — and the
- * failure is invisible to TypeScript. That is exactly how blume-box
- * 162042cd ended up submitted-as-strong by `buildPack` while the
- * dispute page, recomputing without it, showed no strong badge.
+ * dispute must pass this. Until 2026-08-01 it was a trailing optional
+ * argument, so a site that forgot it silently scored the case without
+ * the floor and TypeScript said nothing — that is how blume-box
+ * 162042cd ended up submitted-as-strong by `buildPack` while the dispute
+ * page, recomputing without it, showed no strong badge. The gates are
+ * now a required object (`CaseStrengthGates`), so omission is a compile
+ * error; `null` here means "this pack records no credit", which is a
+ * different statement from "nobody asked".
  *
  * `buildPack` owns the underlying timing comparison (it has the order);
  * every read path takes the persisted answer from here.
  */
 export function creditAlreadyIssuedInput(
   packJson: unknown,
-): CaseCreditAlreadyIssuedInput | undefined {
-  const block = (packJson as { credit_already_issued?: unknown } | null)
-    ?.credit_already_issued as
-    | { triggered?: unknown; coversDisputedAmount?: unknown }
-    | undefined;
-  if (!block || typeof block !== "object") return undefined;
+): CaseCreditAlreadyIssuedInput | null {
+  return creditAlreadyIssuedFromBlock(
+    (packJson as { credit_already_issued?: unknown } | null)?.credit_already_issued,
+  );
+}
+
+/** Same reader, for call sites that project the block directly out of
+ *  `pack_json` (`select("pack_json->credit_already_issued")`) instead of
+ *  loading the whole document. */
+export function creditAlreadyIssuedFromBlock(
+  block: unknown,
+): CaseCreditAlreadyIssuedInput | null {
+  const b = block as { triggered?: unknown; coversDisputedAmount?: unknown } | null | undefined;
+  if (!b || typeof b !== "object") return null;
   return {
-    triggered: block.triggered === true,
-    coversDisputedAmount: block.coversDisputedAmount === true,
+    triggered: b.triggered === true,
+    coversDisputedAmount: b.coversDisputedAmount === true,
   };
 }
 
@@ -363,38 +374,64 @@ const COVERED_STRENGTH_REASON_TOKEN: I18nToken = {
   key: "disputes.strengthReason.covered",
 };
 
+/**
+ * Every gate/floor `calculateCaseStrength` consults, as one REQUIRED
+ * object with REQUIRED, explicitly-nullable fields.
+ *
+ * This shape exists because of a specific failure. These five arrived as
+ * trailing optional arguments, and on 2026-08-01 the fifth
+ * (`creditAlreadyIssued`) was wired into `buildPack` alone: the other
+ * three call sites kept compiling, kept running, and kept returning a
+ * plausible wrong number. Auto-submit filed a defence as "strong" while
+ * the dispute page told the merchant the case was weak and advised work
+ * that could not change the argument. Nothing failed — not the compiler,
+ * not a test, not a runtime check.
+ *
+ * So: no field is optional and none defaults. `null` is a caller saying
+ * "no data for this gate", recorded at the site that decided it. A sixth
+ * gate added here breaks every call site at compile time, which is
+ * precisely the alarm that was missing. Do NOT relax this to `Partial<>`
+ * or optional members, and do NOT add a production-importable
+ * all-nulls constant — either one restores the hole one level up.
+ * (`NO_GATES` exists for tests only, in `tests/helpers/caseStrengthGates.ts`.)
+ *
+ * Plan: `docs/plans/case-strength-gates-object.plan.md`.
+ */
+export interface CaseStrengthGates {
+  /** Coverage Gate. When `state === "covered_shopify"`, the hero variant
+   *  is forced to `covered` and the strength reason is replaced with the
+   *  covered-by-Shopify copy. Highest-priority routing signal. */
+  coverage: CaseCoverageInput | null;
+  /** Fatal-loss Gate. When `triggered === true` AND coverage is not
+   *  active, `overall` is capped at "weak", `heroVariant` becomes
+   *  "hard_to_win", and the strength reason is replaced with the
+   *  fatal-loss message. */
+  fatalLoss: CaseFatalLossInput | null;
+  /** Risk-weakness Gate (fraud-risk Phase 2). Received for diagnostics
+   *  and persisted to `pack_json`; does NOT cap `overall` (decision
+   *  2026-05-15 — see the comment at the gate application below). */
+  riskWeakness: CaseRiskWeaknessInput | null;
+  /** Cardholder-name-mismatch Gate. Fraud family only: caps `overall`
+   *  at "moderate" when triggered. See `CaseNameMismatchInput`. */
+  nameMismatch: CaseNameMismatchInput | null;
+  /** Credit-already-issued FLOOR, not a signal. See
+   *  `CaseCreditAlreadyIssuedInput`. */
+  creditAlreadyIssued: CaseCreditAlreadyIssuedInput | null;
+}
+
 export function calculateCaseStrength(
   checklist: ChecklistItemV2[],
-  reason?: string | null,
-  /** Optional payload source for conditional categorization (delivery
-   *  proofType, AVS/CVV codes, IP location flags). When omitted,
-   *  conditional fields collapse to their best-case default category
-   *  per the canonical registry. Pass the workspace's
+  reason: string | null | undefined,
+  /** Payload source for conditional categorization (delivery proofType,
+   *  AVS/CVV codes, IP location flags). `undefined` collapses
+   *  conditional fields to their best-case default category per the
+   *  canonical registry. Pass the workspace's
    *  `pack.evidenceItemsByField` map for accurate scoring. */
-  payloadSource?: EvidencePayloadSource,
-  /** Optional Coverage Gate input. When `covered_shopify`, the hero
-   *  variant is forced to `covered` and the strength reason is replaced
-   *  with the covered-by-Shopify copy. */
-  coverage?: CaseCoverageInput,
-  /** Optional Fatal-loss Gate input. When `triggered === true` AND
-   *  coverage is not active, `overall` is capped at "weak", `heroVariant`
-   *  becomes "hard_to_win", and `strengthReason` is replaced with the
-   *  fatal-loss message. */
-  fatalLoss?: CaseFatalLossInput,
-  /** Optional Risk-weakness Gate input (fraud-risk Phase 2). When
-   *  `triggered === true` AND not pre-empted by coverage or fatal-loss,
-   *  caps `overall` at "moderate" (cap-as-ceiling — never elevates).
-   *  Routes through the existing auto + moderate → park_for_review
-   *  pipeline branch; no new gate required. */
-  riskWeakness?: CaseRiskWeaknessInput,
-  /** Optional Cardholder-name-mismatch Gate input. Fraud family only:
-   *  caps `overall` at "moderate" when triggered. See
-   *  `CaseNameMismatchInput`. */
-  nameMismatch?: CaseNameMismatchInput,
-  /** Optional credit-already-issued input. See
-   *  `CaseCreditAlreadyIssuedInput` — a strength FLOOR, not a signal. */
-  creditAlreadyIssued?: CaseCreditAlreadyIssuedInput,
+  payloadSource: EvidencePayloadSource | undefined,
+  /** REQUIRED. Every gate, explicitly. See `CaseStrengthGates`. */
+  gates: CaseStrengthGates,
 ): CaseStrengthResult {
+  const { coverage, fatalLoss, riskWeakness, nameMismatch, creditAlreadyIssued } = gates;
   const family = resolveReasonFamily(reason);
 
   if (!checklist.length) {
@@ -916,21 +953,47 @@ export interface CaseStrengthContributions {
 }
 
 /**
+ * Inputs to `computeContributions`, as one object with REQUIRED fields.
+ *
+ * Same rule as `CaseStrengthGates`, for the same reason: `reason` used
+ * to be a trailing optional argument, and the function's own doc comment
+ * already recorded what omitting it costs (a Strong pill on rows the
+ * scorer counted as moderate). Positional made it worse — the two
+ * neighbouring helpers disagreed on argument order
+ * (`computeContributions(checklist, payloadSource, reason)` vs
+ * `calculateImprovement(checklist, reason, payloadSource)`), so the call
+ * sites could not be read at a glance. Named and required: a value may
+ * be `undefined`, but the caller has to say so.
+ */
+export interface ContributionInput {
+  checklist: ChecklistItemV2[];
+  /** Payload source for conditional categorization. `undefined` falls
+   *  back to registry default categories. */
+  payloadSource: EvidencePayloadSource | undefined;
+  /** Dispute reason. Applies the same fraud-family `account_history`
+   *  strong->moderate demotion `calculateCaseStrength` does, so "What
+   *  supports your case" can't show a Strong pill the scorer counted as
+   *  moderate. See the demotion comment above. `undefined`/`null` means
+   *  the reason is genuinely unknown here — not that it was forgotten. */
+  reason: string | null | undefined;
+}
+
+/**
  * Compute the "What supports your case" rows for the dispute Overview.
  * Plan v3 §P2.6 — one row per canonical signalId with effective
  * category `strong` or `moderate`, deduplicated, no synthesis. Only
  * AVAILABLE / WAIVED items contribute.
+ *
+ * This is the ONE implementation. `app/api/disputes/[id]/workspace/route.ts`
+ * carried a hand-copied version of this loop until 2026-08-01; the copy
+ * had silently dropped the fraud demotion below, so the dispute page
+ * rendered a Strong prior-order-history pill on fraud disputes the
+ * scorer had counted as moderate. Call this; never re-implement it.
  */
 export function computeContributions(
-  checklist: ChecklistItemV2[],
-  payloadSource?: EvidencePayloadSource,
-  /** Dispute reason. Optional for back-compat, but pass it wherever the
-   *  rows are rendered: it applies the same fraud-family
-   *  `account_history` strong->moderate demotion `calculateCaseStrength`
-   *  does, so "What supports your case" can't show a Strong pill the
-   *  scorer counted as moderate. See the demotion comment above. */
-  reason?: string | null,
+  input: ContributionInput,
 ): CaseStrengthContributions {
+  const { checklist, payloadSource, reason } = input;
   // Per signalId: track the highest category seen + the first field
   // that contributed it (deterministic by checklist iteration order).
   type Acc = { category: EvidenceCategory; field: string };
@@ -1029,7 +1092,23 @@ export function calculateImprovement(
   // `improvementHintI18n`. Emit a non-localized debug string here so
   // the diagnostic stays readable.
   const labelKey = CANONICAL_EVIDENCE[bestField]?.labelKey ?? bestField;
-  const current = calculateCaseStrength(checklist, reason, payloadSource);
+  // Gate-free BY CONSTRUCTION, not by omission. This call asks a
+  // counting question — "how many strong/moderate signals does the
+  // evidence itself carry, and would one more move the count?" — and
+  // every gate is a verdict override that leaves those counts untouched.
+  // Feeding gates in here would only change `current.overall`, and the
+  // gated verdict is already owned by the caller: the surfaces that
+  // render this hint read `calculateCaseStrength(...).improvementHintI18n`,
+  // which suppresses itself under coverage / fatal-loss / credit-issued.
+  // Written out rather than importing a shared all-nulls constant so a
+  // sixth gate still stops here and makes someone re-read this comment.
+  const current = calculateCaseStrength(checklist, reason, payloadSource, {
+    coverage: null,
+    fatalLoss: null,
+    riskWeakness: null,
+    nameMismatch: null,
+    creditAlreadyIssued: null,
+  });
   if (current.overall === "strong") return null;
 
   // Estimate next strength under the count formula. Adding a single

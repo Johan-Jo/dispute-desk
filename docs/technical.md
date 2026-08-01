@@ -2273,7 +2273,7 @@ The Coverage Gate is the highest-priority routing decision in the pipeline. When
 
 **Pipeline short-circuit (`evaluateAndMaybeAutoSave` in `lib/automation/pipeline.ts`):** when `coverage.state === "covered_shopify"`, returns `{ action: "skip_covered" }` and emits a `covered_by_shopify` audit event. Pack stays `status: "ready"` so the merchant can still see what was collected. The rule-mode resolution and auto-save gate do NOT run for covered packs.
 
-**Case strength surface (`calculateCaseStrength` in `lib/argument/caseStrength.ts`):** accepts an optional `coverage` parameter. When `state === "covered_shopify"`, `heroVariant` is forced to `"covered"` and `strengthReason` is replaced with the covered copy ("This dispute is protected under Shopify's payment protection. No action is required from you."). Underlying `overall` / counts are still computed for diagnostics, but UI consumers should branch on `heroVariant` first.
+**Case strength surface (`calculateCaseStrength` in `lib/argument/caseStrength.ts`):** takes `coverage` on the required `gates` object (see *Case-strength gates* below — it is `null` when the caller has no coverage data, never omitted). When `state === "covered_shopify"`, `heroVariant` is forced to `"covered"` and `strengthReason` is replaced with the covered copy ("This dispute is protected under Shopify's payment protection. No action is required from you."). Underlying `overall` / counts are still computed for diagnostics, but UI consumers should branch on `heroVariant` first.
 
 **UI (`OverviewTab.tsx`):** new `"covered"` hero variant with a distinct cool-blue palette so the merchant doesn't read it as green-go. Strength label per PRD §10: "Covered by Shopify". No layout changes — only label + tone.
 
@@ -2400,7 +2400,7 @@ The refund check requires a non-null `dispute.amount` to avoid false positives o
 
 **Source field:** `pack_json.fatal_loss = { triggered, reason, message }`, persisted by `buildPack` via `detectFatalLoss(order, dispute.reason, dispute.amount)`. Pure function over the order + dispute context — no I/O.
 
-**Precedence (verified by `lib/automation/__tests__/pipelineMatrix.test.ts` and `lib/argument/__tests__/caseStrength.test.ts`):**
+**Precedence (verified by `lib/automation/__tests__/pipelineMatrix.test.ts` and `lib/argument/__tests__/caseStrengthGates.test.ts`):**
 
 ```
 covered_shopify   → skip_covered                (PRD §4 — coverage beats fatal-loss)
@@ -2413,6 +2413,34 @@ review + fatal_loss → park_for_review           (review is absolute)
 - Never trigger refund_issued without a positive `dispute.amount` — partial refunds on legacy disputes risk false positives.
 - The `MESSAGES` copy in `lib/automation/fatalLoss.ts` is merchant-UI only. Bank-rebuttal text generation must NEVER cite "we already refunded" — that's a confession, not a defense.
 - Coverage beats fatal-loss. A covered case is never "fatal" because Shopify pays regardless.
+
+### Case-strength gates — one REQUIRED object (2026-08-01)
+
+`calculateCaseStrength` takes its gates as a single **required** parameter with **required, explicitly-nullable** fields:
+
+```ts
+export interface CaseStrengthGates {
+  coverage: CaseCoverageInput | null;
+  fatalLoss: CaseFatalLossInput | null;
+  riskWeakness: CaseRiskWeaknessInput | null;
+  nameMismatch: CaseNameMismatchInput | null;
+  creditAlreadyIssued: CaseCreditAlreadyIssuedInput | null;
+}
+
+calculateCaseStrength(checklist, reason, payloadSource, gates): CaseStrengthResult
+```
+
+**Why.** These were five trailing *optional* positional arguments. On 2026-08-01 the credit-already-issued floor was wired into `buildPack` alone; the other call sites kept compiling, kept running, and kept returning a plausible wrong number. `buildPack` scored blume-box `162042cd` **strong**, auto-submit filed the evidence and emailed the merchant — while the dispute page, recomputing without the floor, rendered **"Weak case"** and advised adding delivery confirmation to an already-refunded order. Nothing failed: not the compiler, not a test, not a runtime check. Now a caller with no data writes `null` (a decision on the record) and a caller that forgets does not compile; adding a sixth gate breaks **every** call site deliberately. Plan: `docs/plans/case-strength-gates-object.plan.md`.
+
+**Rules:**
+- **Do not** relax the interface to `Partial<>` or optional members, and **do not** export an all-nulls constant from `lib/` — either restores the hole one level up (a new gate would break only the shared constant). Production call sites write the object out literally. `NO_GATES` / `gatesWith()` exist for tests only, in `tests/helpers/caseStrengthGates.ts`; an ESLint `no-restricted-imports` rule bars `lib/**` and `app/**` from importing them.
+- The invariant is pinned at compile time by `tests/types/caseStrengthGates.typecheck.ts` — `@ts-expect-error` assertions for a missing field, a missing object, and the old positional shape. It is not a vitest test (vitest does not typecheck); it is read by `npx tsc --noEmit` and by `npm run build`. It replaced `tests/unit/caseStrengthGateParity.test.ts`, a text-level grep guard that could only enumerate call sites it already knew about — and which is exactly why the fourth site (`app/api/disputes/route.ts`, not in its list) stayed broken after the first fix.
+- Production call sites (all four): `lib/packs/buildPack.ts`, `app/api/disputes/[id]/workspace/route.ts`, `app/(embedded)/app/disputes/[id]/hooks/useDisputeWorkspace.ts`, `app/api/disputes/route.ts`. The list route now projects the floor out of `pack_json` (`select("… pack_json->credit_already_issued")` → `creditAlreadyIssuedFromBlock`), closing the last gate-parity gap from the incident.
+- `creditAlreadyIssuedInput(packJson)` returns `CaseCreditAlreadyIssuedInput | null` (was `| undefined`) so it drops straight into the object.
+
+**`computeContributions` takes an object too** (`ContributionInput { checklist, payloadSource, reason }`, all required). Same defect shape — its own doc comment already recorded what omitting `reason` costs — plus the two neighbouring helpers disagreed on positional order (`computeContributions(checklist, payloadSource, reason)` vs `calculateImprovement(checklist, reason, payloadSource)`). The workspace API used to carry a **hand-copied** reimplementation of the contributions loop that never consulted `reason`, so it skipped the fraud-family `account_history` strong→moderate demotion and rendered a Strong prior-order-history pill on rows the scorer counted as moderate; it now calls the shared function. There is one implementation — never re-implement it.
+
+**Parity verification** (`scripts/case-strength-parity.mjs` + `scripts/sql/case-strength-parity-sample.sql`): samples packs by stratum, scores each through two engine builds (it adapts to either signature), and deep-compares the **entire** `CaseStrengthResult` — comparing `overall` alone would pass a refactor that changed counts, hint, hero variant, or the reason token. The stratum report prints the population next to the sample so a thin stratum reads as "the database holds N" rather than as coverage. Prod (209 packs) holds exactly one fatal-loss verdict, one credit-already-issued block, zero Shopify-Protect-covered packs, and zero multi-gate packs, so those paths are covered synthetically in `lib/argument/__tests__/caseStrengthGates.test.ts` (gate behaviour + precedence: coverage > fatal-loss > credit floor > name-mismatch cap; risk-weakness never caps).
 
 ### Auto-submit guards — one decision, three callers (2026-07-27)
 
@@ -2586,7 +2614,7 @@ The payment gateway returns the name the card is registered to (`cardholderName`
 
 **Effects when triggered:**
 
-- **Strength cap (fraud family only):** `calculateCaseStrength` accepts `nameMismatch` as input and caps `overall` at `"moderate"` (ceiling — weak/moderate pass through, non-fraud families unaffected). A name-mismatched order therefore never auto-submits as Strong; it routes through the existing `auto + moderate → park_for_review` branch. Wired at all three call sites: `buildPack` (persisted `pack_json.case_strength` + new `pack_json.name_mismatch` diagnostics with `capApplied`), the workspace API, and the disputes-list Stage B fallback.
+- **Strength cap (fraud family only):** `calculateCaseStrength` takes `nameMismatch` on the required `gates` object and caps `overall` at `"moderate"` (ceiling — weak/moderate pass through, non-fraud families unaffected). A name-mismatched order therefore never auto-submits as Strong; it routes through the existing `auto + moderate → park_for_review` branch. Wired at three call sites: `buildPack` (persisted `pack_json.case_strength` + `pack_json.name_mismatch` diagnostics with `capApplied`), the workspace API, and the disputes-list Stage B fallback. The embedded hook passes `null` — the workspace response does not carry the gateway cardholder name. Note the credit-already-issued **floor out-ranks this cap**: a full pre-dispute refund is a different claim, and a name mismatch does not make it less of a refund.
 - **Merchant warning:** a "Kept internal" signal that **prints both names** ("The payment card is registered to \"X\" but the order was placed by \"Y\"…"), anchored on the `avs_cvv_match` row. Emitted by both `buildInternalSignalsByField` (server, needs `context.customerName`) and `useEvidenceSections.classifyCardholderName` (client, localized via `disputes.internalSignals.cardholderNameMismatch`).
 
 **Bank non-disclosure:** the mismatch and both names are merchant-UI + audit only. They MUST NEVER enter the bank-rebuttal text, the evidence PDF body, or Shopify `disputeEvidence` mutations — telling the bank the buyer isn't the cardholder is a confession, and the issuer already knows their cardholder's name. (The PDF Case Details "Cardholder name" row is unchanged: it prints the gateway name the issuer already has.)
@@ -2670,7 +2698,7 @@ Behaviour by state: `dispute_free` → strong, keeps the "N prior undisputed ord
 - `detectRiskWeakness` in `lib/automation/riskWeakness.ts` — pure detector, unchanged.
 - `loadRiskWeakness` in `lib/packs/buildPack.ts` — still reads the persisted snapshot from `shopify_orders` with the live-fetch-failure fallback.
 - `pack_json.risk_weakness` — still persisted on every pack with `{ triggered, reason, message, diagnostics }`.
-- `calculateCaseStrength` accepts `riskWeakness` as input and propagates it to the result for pack_json persistence, but **never** caps `overall`. Auto-mode continues to submit on Strong cases regardless of risk-weakness.
+- `calculateCaseStrength` takes `riskWeakness` on the required `gates` object and propagates it to the result for pack_json persistence, but **never** caps `overall`. Auto-mode continues to submit on Strong cases regardless of risk-weakness.
 
 **What was removed:**
 

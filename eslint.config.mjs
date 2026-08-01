@@ -92,6 +92,39 @@ const eslintConfig = [
       "@typescript-eslint/no-explicit-any": "warn",
     },
   },
+  // Production code may not import test fixtures. The one that motivated
+  // this rule is `tests/helpers/caseStrengthGates.ts` (`NO_GATES`):
+  // `calculateCaseStrength` takes its gates as a REQUIRED object so that
+  // adding a gate breaks every call site at compile time, and an
+  // all-nulls shorthand importable from production would restore exactly
+  // the hole the object closed — the new gate would break the shared
+  // constant and nothing else. Production sites write the object out.
+  // See docs/plans/case-strength-gates-object.plan.md §2.
+  {
+    files: ["app/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"],
+    ignores: [
+      "app/**/__tests__/**",
+      "app/**/*.test.ts",
+      "app/**/*.test.tsx",
+      "lib/**/__tests__/**",
+      "lib/**/tests/**",
+      "lib/**/*.test.ts",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/tests/*", "@/tests/**", "**/tests/helpers/*", "**/tests/fixtures/*"],
+              message:
+                "Test fixtures are test-only. In particular NO_GATES: production callers of calculateCaseStrength must write the gates object literally, so a new gate breaks them at compile time.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;

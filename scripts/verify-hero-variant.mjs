@@ -18,7 +18,21 @@ const map = {};
 for (const it of items ?? []) for (const f of (it.payload?.fieldsProvided ?? [])) if (!(f in map)) map[f] = it;
 for (const s of pack.pack_json?.sections ?? []) for (const f of s.fieldsProvided ?? []) if (!(f in map)) map[f] = { payload: { ...(s.data ?? {}), fieldsProvided: s.fieldsProvided } };
 
-const cs = calculateCaseStrength(null, reconciled, "FRAUDULENT", { kind: "byField", map });
+// One-off hero diagnostic for a single pack. Was calling the engine with
+// a stale leading `null` argument (it would have thrown on
+// `checklist.length`); fixed here alongside the gates migration.
+const cs = calculateCaseStrength(
+  reconciled,
+  "FRAUDULENT",
+  { kind: "byField", map },
+  {
+    coverage: null,
+    fatalLoss: null,
+    riskWeakness: null,
+    nameMismatch: null,
+    creditAlreadyIssued: null,
+  },
+);
 console.log("OUTPUT:");
 console.log("  overall:", cs.overall);
 console.log("  heroVariant:", cs.heroVariant, "  ← drives hero label + tone");
