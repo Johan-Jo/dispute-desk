@@ -802,7 +802,8 @@
       "fatalLoss": {
         "refund_issued": "A refund was already issued for this order — the bank will treat this as a confession of liability, so the case cannot win as-is.",
         "inr_no_fulfillment": "The order was never fulfilled and the dispute reason is item-not-received — there is no factual basis to defend the charge."
-      }
+      },
+      "creditAlreadyIssued": "This transaction was already credited before the dispute was filed. The strongest response is the credit itself — the cardholder has been refunded, so there is nothing further owed."
     },
     "improvementHint": "Add {label} to strengthen your case.",
     "recommendation": {

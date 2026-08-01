@@ -37,6 +37,9 @@ const ctx: BuildContext = {
   order: { email: "buyer@example.com" } as unknown as OrderDetailNode,
   paymentContext: { family: "card", raw: null, label: "Card", cardNetwork: null },
   priorHistory: null,
+  disputeInitiatedAt: null,
+  disputeAmount: null,
+  disputePhase: null,
 };
 
 const noopLogEvent = async () => {};

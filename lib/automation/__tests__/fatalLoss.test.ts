@@ -237,3 +237,53 @@ describe("detectFatalLoss — guards", () => {
     expect(r.reason).toBe("refund_issued");
   });
 });
+
+// An INQUIRY is a pre-dispute retrieval request, not a chargeback.
+// Shopify only blocks refunds on an open CHARGEBACK, so refunding to
+// settle an inquiry is the textbook response — and prod bears that out:
+// both instances (cay-collective, 2026-07, CREDIT_NOT_PROCESSED) were
+// refunded days after initiation and WON. The gate used to call them
+// structurally unwinnable because the refund landed after initiated_at.
+describe("detectFatalLoss — inquiry phase", () => {
+  const refundedAfter = makeOrder({
+    totalRefundedSet: { shopMoney: { amount: "220.00", currencyCode: "USD" } },
+    refunds: [
+      {
+        id: "gid://shopify/Refund/1",
+        createdAt: "2026-07-13T08:48:01Z",
+        note: null,
+        totalRefundedSet: { shopMoney: { amount: "220.00", currencyCode: "USD" } },
+      },
+    ] as OrderDetailNode["refunds"],
+  });
+
+  it("a refund resolving an INQUIRY is not a fatal loss", () => {
+    const r = detectFatalLoss(
+      refundedAfter,
+      "CREDIT_NOT_PROCESSED",
+      220,
+      "2026-07-09T22:36:09Z",
+      "inquiry",
+    );
+    expect(r.triggered).toBe(false);
+  });
+
+  it("the same refund on a CHARGEBACK still fires", () => {
+    const r = detectFatalLoss(
+      refundedAfter,
+      "CREDIT_NOT_PROCESSED",
+      220,
+      "2026-07-09T22:36:09Z",
+      "chargeback",
+    );
+    expect(r.triggered).toBe(true);
+    expect(r.reason).toBe("refund_issued");
+  });
+
+  it("an unknown phase keeps the conservative behaviour", () => {
+    expect(
+      detectFatalLoss(refundedAfter, "CREDIT_NOT_PROCESSED", 220, "2026-07-09T22:36:09Z")
+        .triggered,
+    ).toBe(true);
+  });
+});

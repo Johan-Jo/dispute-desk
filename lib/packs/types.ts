@@ -72,4 +72,11 @@ export interface BuildContext {
    * read "unknown" rather than "clean". See lib/packs/priorOrderHistory.ts.
    */
   priorHistory: PriorOrderHistory | null;
+  /** `disputes.initiated_at` — collectors need it to tell a pre-dispute
+   *  credit from a post-dispute one (see lib/automation/creditTiming). */
+  disputeInitiatedAt: string | null;
+  /** Disputed amount in the order's currency, for coverage arithmetic. */
+  disputeAmount: number | null;
+  /** `disputes.phase` — `inquiry` | `chargeback`. */
+  disputePhase: string | null;
 }
