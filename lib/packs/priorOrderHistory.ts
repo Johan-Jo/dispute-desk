@@ -26,9 +26,13 @@
  *     One ingested dispute on a prior order settles it regardless of how
  *     complete our order coverage is.
  *   - "This account is dispute-FREE" is a universal claim. We only make
- *     it when our ingested prior-order count reaches what Shopify says
- *     the account holds — otherwise the orders we never ingested could
+ *     it when our ingested order count for the customer reaches Shopify's
+ *     `numberOfOrders` — otherwise the orders we never ingested could
  *     each be hiding a chargeback, and the honest answer is `unknown`.
+ *     Note the coverage test counts ALL of the customer's orders on both
+ *     sides, while the prior count is strictly-before-the-dispute; mixing
+ *     those two scales reports a phantom gap for every customer who
+ *     ordered again afterwards.
  *
  * `unknown` is a first-class outcome: callers omit the flag entirely and
  * the consumer helpers (`disputeFreeHistoryState`) render copy that
@@ -121,46 +125,49 @@ export async function loadPriorOrderHistory(args: {
     .map((r) => r.shopify_order_id)
     .filter((g): g is string => typeof g === "string" && g.length > 0);
 
-  if (priorGids.length === 0) {
-    return {
-      priorOrders: 0,
-      disputedPriorOrders: 0,
-      priorUndisputedOrders: 0,
-      // No priors at all → nothing to be dispute-free ABOUT. The count
-      // carries the meaning; the flag would be a vacuous truth that
-      // downstream copy could misread as a positive signal.
-      disputeFreeHistory: null,
-      shopifyPriorOrders: priorCountFromShopify(shopifyTotalOrders),
-    };
-  }
+  let disputedPriorOrders = 0;
+  if (priorGids.length > 0) {
+    const { data: disputeRows, error: disputesError } = await sb
+      .from("disputes")
+      .select("order_gid")
+      .eq("shop_id", shopId)
+      .in("order_gid", priorGids);
 
-  const { data: disputeRows, error: disputesError } = await sb
-    .from("disputes")
-    .select("order_gid")
-    .eq("shop_id", shopId)
-    .in("order_gid", priorGids);
+    if (disputesError) {
+      console.warn(
+        `[buildPack] prior-dispute read failed for customer ${customerGid}:`,
+        disputesError.message,
+      );
+      return null;
+    }
 
-  if (disputesError) {
-    console.warn(
-      `[buildPack] prior-dispute read failed for customer ${customerGid}:`,
-      disputesError.message,
+    const disputedGids = new Set(
+      (disputeRows ?? [])
+        .map((r) => r.order_gid)
+        .filter((g): g is string => typeof g === "string"),
     );
-    return null;
+    disputedPriorOrders = priorGids.filter((g) => disputedGids.has(g)).length;
   }
-
-  const disputedGids = new Set(
-    (disputeRows ?? [])
-      .map((r) => r.order_gid)
-      .filter((g): g is string => typeof g === "string"),
-  );
-  const disputedPriorOrders = priorGids.filter((g) => disputedGids.has(g)).length;
+  // Zero priors is a RESULT, not a reason to bail. Emitting a verified
+  // `priorUndisputedOrders: 0` is what stops `effectivePriorOrders`
+  // falling back to `totalOrders - 1`, which counts LATER orders as
+  // history: on prod, 6 disputes were crediting a customer with "1 prior
+  // order" whose only other order came after the disputed one.
 
   const shopifyPriorOrders = priorCountFromShopify(shopifyTotalOrders);
-  // Coverage test for the universal claim only. `>=` not `===`: our
-  // count can legitimately exceed Shopify's when the customer has since
-  // been merged/deleted, and that is still full coverage.
+  // Coverage compares LIKE WITH LIKE: every order we ingested for this
+  // customer against Shopify's `numberOfOrders`. Both sides count the
+  // disputed order and any LATER ones.
+  //
+  // The first cut of this compared `priors.length` (strictly-before)
+  // against `numberOfOrders - 1` (all other orders), which reports a gap
+  // for any customer who ordered again after the disputed order. On prod
+  // that was most of them: 11 of 14 "partial coverage" verdicts were
+  // customers whose only other order came LATER, with our ingest
+  // complete. `>=` not `===`: our count can legitimately exceed
+  // Shopify's after a customer merge/delete, and that is still full.
   const fullCoverage =
-    shopifyPriorOrders == null || priors.length >= shopifyPriorOrders;
+    shopifyTotalOrders == null || orderRows.length >= shopifyTotalOrders;
 
   return {
     priorOrders: priors.length,
