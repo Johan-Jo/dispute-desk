@@ -11,6 +11,7 @@ import { describe, it, expect } from "vitest";
 import { calculateCaseStrength } from "@/lib/argument/caseStrength";
 import type { EvidencePayloadSource } from "@/lib/argument/caseStrength";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
+import { NO_GATES } from "@/tests/helpers/caseStrengthGates";
 
 function byField(map: Record<string, Record<string, unknown>>): EvidencePayloadSource {
   const obj: Record<string, { payload: Record<string, unknown> }> = {};
@@ -28,7 +29,7 @@ describe("delivery-family rollup (INR)", () => {
       shipping_tracking: { proofType: "delivered_confirmed", deliveredToVerifiedAddress: true },
       delivery_proof: { proofType: "delivered_confirmed", deliveredToVerifiedAddress: true },
     });
-    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source);
+    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source, NO_GATES);
     expect(r.strongCount).toBe(1); // delivery signal, deduped
     expect(r.moderateCount).toBe(0);
     expect(r.overall).toBe("moderate");
@@ -41,7 +42,7 @@ describe("delivery-family rollup (INR)", () => {
     const source = byField({
       delivery_proof: { proofType: "delivered_confirmed" }, // no verified-address flag → moderate
     });
-    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source);
+    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source, NO_GATES);
     expect(r.strongCount).toBe(0);
     expect(r.moderateCount).toBe(1);
     expect(r.overall).toBe("weak");
@@ -50,7 +51,7 @@ describe("delivery-family rollup (INR)", () => {
   it("in-transit (delivered_unverified) stays weak", () => {
     const checklist = [available("delivery_proof")];
     const source = byField({ delivery_proof: { proofType: "delivered_unverified" } });
-    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source);
+    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source, NO_GATES);
     expect(r.overall).toBe("weak");
   });
 
@@ -60,7 +61,7 @@ describe("delivery-family rollup (INR)", () => {
       delivery_proof: { proofType: "delivered_confirmed", deliveredToVerifiedAddress: true },
       customer_communication: { customerConfirmsOrder: true }, // strong
     });
-    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source);
+    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source, NO_GATES);
     expect(r.strongCount).toBe(2);
     expect(r.overall).toBe("strong");
   });
@@ -70,7 +71,7 @@ describe("delivery-family rollup (INR)", () => {
     // delivery-family Moderate boost.
     const checklist = [available("customer_communication")];
     const source = byField({ customer_communication: { customerConfirmsOrder: true } });
-    const r = calculateCaseStrength(checklist, "FRAUDULENT", source);
+    const r = calculateCaseStrength(checklist, "FRAUDULENT", source, NO_GATES);
     // fraud family has its own rules; communication-strong alone is not AVS
     // → not elevated to moderate by the delivery rule.
     expect(r.overall).not.toBe("moderate");

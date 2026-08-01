@@ -17,6 +17,7 @@ import { describe, it, expect } from "vitest";
 import { calculateCaseStrength, computeContributions } from "@/lib/argument/caseStrength";
 import type { EvidencePayloadSource } from "@/lib/argument/caseStrength";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
+import { NO_GATES } from "@/tests/helpers/caseStrengthGates";
 
 function byField(map: Record<string, Record<string, unknown>>): EvidencePayloadSource {
   const obj: Record<string, { payload: Record<string, unknown> }> = {};
@@ -35,7 +36,7 @@ describe("product-family two-axis rollup (PRODUCT_UNACCEPTABLE / 13.3)", () => {
       order_confirmation: { orderId: "1" },
       product_description: { text: "as advertised" },
     });
-    const r = calculateCaseStrength(checklist, REASON, source);
+    const r = calculateCaseStrength(checklist, REASON, source, NO_GATES);
     expect(r.strongCount).toBe(0);
     expect(r.overall).toBe("weak");
   });
@@ -46,7 +47,7 @@ describe("product-family two-axis rollup (PRODUCT_UNACCEPTABLE / 13.3)", () => {
       order_confirmation: { orderId: "1" },
       no_return_initiated: { returnStatus: "NO_RETURN" },
     });
-    const r = calculateCaseStrength(checklist, REASON, source);
+    const r = calculateCaseStrength(checklist, REASON, source, NO_GATES);
     expect(r.overall).toBe("moderate");
   });
 
@@ -56,7 +57,7 @@ describe("product-family two-axis rollup (PRODUCT_UNACCEPTABLE / 13.3)", () => {
       order_confirmation: { orderId: "1" },
       customer_communication: { customerConfirmsOrder: true },
     });
-    const r = calculateCaseStrength(checklist, REASON, source);
+    const r = calculateCaseStrength(checklist, REASON, source, NO_GATES);
     expect(r.overall).toBe("moderate");
   });
 
@@ -69,7 +70,7 @@ describe("product-family two-axis rollup (PRODUCT_UNACCEPTABLE / 13.3)", () => {
       customer_communication: { customerConfirmsOrder: true }, // Axis 1
       no_return_initiated: { returnStatus: "NO_RETURN" }, // Axis 2
     });
-    const r = calculateCaseStrength(checklist, REASON, source);
+    const r = calculateCaseStrength(checklist, REASON, source, NO_GATES);
     expect(r.overall).toBe("strong");
   });
 
@@ -82,7 +83,7 @@ describe("product-family two-axis rollup (PRODUCT_UNACCEPTABLE / 13.3)", () => {
       supporting_documents: { signedContract: true }, // Axis 1
       refund_record: { refundStatus: "processed", amount: 80 }, // Axis 2
     });
-    const r = calculateCaseStrength(checklist, REASON, source);
+    const r = calculateCaseStrength(checklist, REASON, source, NO_GATES);
     expect(r.overall).toBe("strong");
   });
 
@@ -97,14 +98,14 @@ describe("product-family two-axis rollup (PRODUCT_UNACCEPTABLE / 13.3)", () => {
       no_return_initiated: { returnStatus: "NO_RETURN" },
       refund_record: { refundStatus: "processed", amount: 80 },
     });
-    const r = calculateCaseStrength(checklist, REASON, source);
+    const r = calculateCaseStrength(checklist, REASON, source, NO_GATES);
     expect(r.overall).toBe("moderate");
   });
 
   it("posted refund policy alone does NOT elevate (no bearing on 13.3)", () => {
     const checklist = [available("order_confirmation"), available("refund_policy")];
     const source = byField({ order_confirmation: { orderId: "1" }, refund_policy: {} });
-    const r = calculateCaseStrength(checklist, REASON, source);
+    const r = calculateCaseStrength(checklist, REASON, source, NO_GATES);
     expect(r.overall).toBe("weak");
   });
 
@@ -118,7 +119,7 @@ describe("product-family two-axis rollup (PRODUCT_UNACCEPTABLE / 13.3)", () => {
       customer_communication: { customerConfirmsOrder: true },
       no_return_initiated: { returnStatus: "NO_RETURN" },
     });
-    const r = calculateCaseStrength(checklist, "FRAUDULENT", source);
+    const r = calculateCaseStrength(checklist, "FRAUDULENT", source, NO_GATES);
     expect(r.overall).not.toBe("strong");
   });
 });
@@ -135,7 +136,7 @@ describe("fraud family: prior-order history corroborates, never decides", () => 
       customer_account_info: priorHistory,
       avs_cvv_match: avsStrong, // payment_auth strong
     });
-    const r = calculateCaseStrength(checklist, "FRAUDULENT", source);
+    const r = calculateCaseStrength(checklist, "FRAUDULENT", source, NO_GATES);
     // Pre-fix this was 2 decisive fraud signals -> strong. account_history
     // is now moderate corroboration, so AVS-strong-alone -> moderate.
     expect(r.overall).toBe("moderate");
@@ -144,7 +145,7 @@ describe("fraud family: prior-order history corroborates, never decides", () => 
   it("the demoted row is reported as moderate, not strong (UI must agree)", () => {
     const checklist = [available("customer_account_info")];
     const source = byField({ customer_account_info: priorHistory });
-    const r = calculateCaseStrength(checklist, "FRAUDULENT", source);
+    const r = calculateCaseStrength(checklist, "FRAUDULENT", source, NO_GATES);
     expect(r.strongCount).toBe(0);
     expect(r.moderateCount).toBe(1);
   });
@@ -152,18 +153,26 @@ describe("fraud family: prior-order history corroborates, never decides", () => 
   it("non-fraud families keep prior history as STRONG", () => {
     const checklist = [available("customer_account_info")];
     const source = byField({ customer_account_info: priorHistory });
-    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source);
+    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source, NO_GATES);
     expect(r.strongCount).toBe(1);
   });
 
   it("computeContributions applies the same demotion when given the reason", () => {
     const checklist = [available("customer_account_info")];
     const source = byField({ customer_account_info: priorHistory });
-    const fraud = computeContributions(checklist, source, "FRAUDULENT");
+    const fraud = computeContributions({
+      checklist,
+      payloadSource: source,
+      reason: "FRAUDULENT",
+    });
     expect(fraud.strong).toHaveLength(0);
     expect(fraud.moderate).toHaveLength(1);
     // Non-fraud keeps it strong.
-    const other = computeContributions(checklist, source, "PRODUCT_NOT_RECEIVED");
+    const other = computeContributions({
+      checklist,
+      payloadSource: source,
+      reason: "PRODUCT_NOT_RECEIVED",
+    });
     expect(other.strong).toHaveLength(1);
   });
 });

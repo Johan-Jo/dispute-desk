@@ -16,6 +16,7 @@ import { calculateCaseStrength } from "../caseStrength";
 import { buildInternalSignalsByField } from "../internalSignals";
 import { isNonEvidenceAccountHistoryRow } from "@/lib/automation/merchantUiHiddenFields";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
+import { NO_GATES, gatesWith } from "@/tests/helpers/caseStrengthGates";
 
 describe("detectCardholderNameMismatch", () => {
   it("fires when the names share no token (prod 235d4152)", () => {
@@ -109,21 +110,20 @@ const payloadSource = {
 
 describe("calculateCaseStrength — cardholder-name-mismatch cap", () => {
   it("caps a Strong fraud case at moderate when triggered", () => {
-    const base = calculateCaseStrength(checklist(), "FRAUDULENT", payloadSource);
+    const base = calculateCaseStrength(checklist(), "FRAUDULENT", payloadSource, NO_GATES);
     expect(base.overall).toBe("strong");
 
     const capped = calculateCaseStrength(
       checklist(),
       "FRAUDULENT",
       payloadSource,
-      undefined,
-      undefined,
-      undefined,
-      {
-        triggered: true,
-        cardholderName: "Robin Denise Pipe",
-        customerName: "Sean Boyd",
-      },
+      gatesWith({
+        nameMismatch: {
+          triggered: true,
+          cardholderName: "Robin Denise Pipe",
+          customerName: "Sean Boyd",
+        },
+      }),
     );
     expect(capped.overall).toBe("moderate");
     expect(capped.nameMismatch?.capApplied).toBe(true);
@@ -135,10 +135,13 @@ describe("calculateCaseStrength — cardholder-name-mismatch cap", () => {
       checklist(),
       "FRAUDULENT",
       payloadSource,
-      undefined,
-      undefined,
-      undefined,
-      { triggered: false, cardholderName: "Sean Boyd", customerName: "Sean Boyd" },
+      gatesWith({
+        nameMismatch: {
+          triggered: false,
+          cardholderName: "Sean Boyd",
+          customerName: "Sean Boyd",
+        },
+      }),
     );
     expect(r.overall).toBe("strong");
     expect(r.nameMismatch?.capApplied).toBe(false);
@@ -149,14 +152,13 @@ describe("calculateCaseStrength — cardholder-name-mismatch cap", () => {
       checklist(),
       "PRODUCT_NOT_RECEIVED",
       payloadSource,
-      undefined,
-      undefined,
-      undefined,
-      {
-        triggered: true,
-        cardholderName: "Robin Denise Pipe",
-        customerName: "Sean Boyd",
-      },
+      gatesWith({
+        nameMismatch: {
+          triggered: true,
+          cardholderName: "Robin Denise Pipe",
+          customerName: "Sean Boyd",
+        },
+      }),
     );
     expect(r.nameMismatch?.capApplied).toBe(false);
   });
@@ -167,14 +169,13 @@ describe("calculateCaseStrength — cardholder-name-mismatch cap", () => {
       weakChecklist,
       "FRAUDULENT",
       { kind: "byField", map: { order_confirmation: { payload: {} } } },
-      undefined,
-      undefined,
-      undefined,
-      {
-        triggered: true,
-        cardholderName: "Robin Denise Pipe",
-        customerName: "Sean Boyd",
-      },
+      gatesWith({
+        nameMismatch: {
+          triggered: true,
+          cardholderName: "Robin Denise Pipe",
+          customerName: "Sean Boyd",
+        },
+      }),
     );
     expect(r.overall).toBe("weak");
     expect(r.nameMismatch?.capApplied).toBe(false);
