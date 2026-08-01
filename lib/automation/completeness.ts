@@ -20,6 +20,11 @@ export type RequirementMode =
   | "required_always"
   | "required_if_fulfilled"
   | "required_if_card_payment"
+  /** Applies ONLY when the order actually carries a refund. With no
+   *  refund the row resolves `unavailable` (not `missing`), so a
+   *  never-refunded order is never nagged to "add a refund record" —
+   *  a demand the merchant could not satisfy and should not see. */
+  | "required_if_refunded"
   | "recommended"
   | "optional";
 
@@ -52,6 +57,13 @@ export interface OrderContext {
    * payment-method-specific templates.
    */
   paymentFamily?: string;
+  /**
+   * Whether the order carries at least one refund. Drives
+   * `required_if_refunded`: the refund record is decisive evidence when
+   * a refund exists and meaningless noise when it doesn't.
+   * Optional for back-compat; defaults to `false`.
+   */
+  hasRefund?: boolean;
 }
 
 export interface ChecklistItem {
@@ -101,6 +113,14 @@ export const REASON_TEMPLATES: Record<string, ReasonTemplate> = {
     { field: "shipping_tracking", label: "Shipping Tracking", requirementMode: "required_if_fulfilled" },
     { field: "delivery_proof", label: "Delivery Confirmation", requirementMode: "required_if_fulfilled" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended" },
+    // A refund already issued on a fraud claim is decisive and the
+    // merchant must SEE it: the cardholder has the money back, so the
+    // chargeback is a double credit. Absent from this template until
+    // 2026-08-01, so orderSource collected it, the case-strength engine
+    // never scored it, and it appeared on NO merchant surface — even
+    // though it reached the bank narrative (blume-box 162042cd:
+    // $220 refunded 18 days before the dispute, invisible in the UI).
+    { field: "refund_record", label: "Refund Record", requirementMode: "required_if_refunded" },
     { field: "supporting_documents", label: "Supporting documents", requirementMode: "optional" },
   ],
   PRODUCT_UNACCEPTABLE: [
@@ -164,6 +184,7 @@ const SCORE_WEIGHT: Record<RequirementMode, number> = {
   required_always: 1.0,
   required_if_fulfilled: 1.0,
   required_if_card_payment: 1.0,
+  required_if_refunded: 1.0,
   recommended: 0.5,
   optional: 0.1,
 };
@@ -204,6 +225,15 @@ function resolveRequirement(
         };
       }
       return { required: true, collectable: true };
+    case "required_if_refunded":
+      if (!ctx.hasRefund) {
+        return {
+          required: false,
+          collectable: false,
+          unavailableReason: "No refund was issued on this order",
+        };
+      }
+      return { required: true, collectable: true };
     case "recommended":
       return { required: false, collectable: true };
     case "optional":
@@ -235,6 +265,7 @@ const DEFAULT_ORDER_CONTEXT: OrderContext = {
   hasCardPayment: false,
   avsCvvAvailable: false,
   hasShippingEvidence: false,
+  hasRefund: false,
 };
 
 /**
@@ -374,6 +405,9 @@ export const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
     { field: "shipping_tracking", label: "Shipping Confirmation", requirementMode: "required_if_fulfilled", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "delivery_proof", label: "Delivery Confirmation (Signature / Photo)", requirementMode: "required_if_fulfilled", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
+    // See the v1 template above — decisive when a refund exists,
+    // `unavailable` (never a nag) when one doesn't.
+    { field: "refund_record", label: "Refund Record", requirementMode: "required_if_refunded", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "refund_policy", label: "Refund Policy", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "auto_policy", collectionType: "conditional_auto" },
     { field: "shipping_policy", label: "Shipping Policy", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "auto_policy", collectionType: "conditional_auto" },
     { field: "cancellation_policy", label: "Cancellation Policy", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "auto_policy", collectionType: "conditional_auto" },
@@ -511,6 +545,18 @@ function resolveItemStatus(
           status: "unavailable",
           collectable: false,
           unavailableReason: "AVS/CVV not returned by payment gateway",
+        };
+      }
+      break;
+    case "required_if_refunded":
+      // No refund → nothing to show and nothing to ask for. `missing`
+      // here would render a "add a refund record" nag the merchant can
+      // never satisfy on a never-refunded order.
+      if (!ctx.hasRefund) {
+        return {
+          status: "unavailable",
+          collectable: false,
+          unavailableReason: "No refund was issued on this order",
         };
       }
       break;

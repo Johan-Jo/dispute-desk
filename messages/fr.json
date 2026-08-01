@@ -1699,6 +1699,11 @@
       "cardholderNameMismatch": {
         "title": "La carte est enregistrée à un autre nom que celui de l'acheteur",
         "explanation": "La carte de paiement est enregistrée au nom de \"{cardholder}\", mais la commande a été passée par \"{customer}\". C'est un schéma courant de carte volée — à vérifier avant l'envoi. Utilisé en interne pour l'évaluation ; non ajouté à l'argumentaire présenté à la banque."
+      },
+      "priorChargebacks": {
+        "title": "Rétrofacturations antérieures sur ce compte",
+        "explanation": "Ce client a déjà contesté une commande précédente dans votre boutique. Reste interne — mentionner l'historique de litiges d'un client à la banque émettrice affaiblit votre réponse au lieu de la renforcer. Affiché ici pour que vous jugiez avec quelle vigueur défendre ce dossier.",
+        "explanationWithCount": "Ce client a {prior} commandes précédentes dans votre boutique, dont au moins une a fait l'objet d'une rétrofacturation. Reste interne — mentionner l'historique de litiges d'un client à la banque émettrice affaiblit votre réponse au lieu de la renforcer. Affiché ici pour que vous jugiez avec quelle vigueur défendre ce dossier."
       }
     },
     "deliveryProof": {

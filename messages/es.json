@@ -1699,6 +1699,11 @@
       "cardholderNameMismatch": {
         "title": "La tarjeta está registrada a un nombre distinto del comprador",
         "explanation": "La tarjeta de pago está registrada a nombre de \"{cardholder}\", pero el pedido lo realizó \"{customer}\". Es un patrón habitual de tarjeta robada — revísalo antes de enviar. Se usa internamente para la evaluación; no se añade al argumento presentado al banco."
+      },
+      "priorChargebacks": {
+        "title": "Contracargos previos en esta cuenta",
+        "explanation": "Este cliente ya presentó un contracargo en un pedido anterior de tu tienda. Se mantiene interno: mencionar el historial de disputas de un cliente al banco emisor debilita tu respuesta en lugar de reforzarla. Se muestra aquí para que valores con qué fuerza defender este caso.",
+        "explanationWithCount": "Este cliente tiene {prior} pedidos anteriores en tu tienda y al menos uno de ellos terminó en contracargo. Se mantiene interno: mencionar el historial de disputas de un cliente al banco emisor debilita tu respuesta en lugar de reforzarla. Se muestra aquí para que valores con qué fuerza defender este caso."
       }
     },
     "deliveryProof": {

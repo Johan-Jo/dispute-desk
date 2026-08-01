@@ -1058,6 +1058,11 @@
       "cardholderNameMismatch": {
         "title": "Card is registered to a different name than the buyer",
         "explanation": "The payment card is registered to \"{cardholder}\" but the order was placed by \"{customer}\". This is a common stolen-card pattern — review before submitting. Used internally for assessment; not added to the bank-facing argument."
+      },
+      "priorChargebacks": {
+        "title": "Prior chargebacks on this account",
+        "explanation": "This customer has charged back an earlier order with your store. Kept internal — naming a customer's dispute history to the issuing bank weakens your response rather than strengthening it. It is shown here so you can weigh how hard to fight this case.",
+        "explanationWithCount": "This customer has {prior} earlier orders with your store, and at least one of them was charged back. Kept internal — naming a customer's dispute history to the issuing bank weakens your response rather than strengthening it. It is shown here so you can weigh how hard to fight this case."
       }
     },
     "evidenceTabExtra": {

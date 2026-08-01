@@ -1064,6 +1064,11 @@
       "cardholderNameMismatch": {
         "title": "Kortet är registrerat på ett annat namn än köparen",
         "explanation": "Betalkortet är registrerat på \"{cardholder}\" men beställningen gjordes av \"{customer}\". Detta är ett vanligt mönster vid stulna kort — granska innan du skickar in. Används internt för bedömning; läggs inte till i argumentationen mot banken."
+      },
+      "priorChargebacks": {
+        "title": "Tidigare chargebacks på det här kontot",
+        "explanation": "Den här kunden har redan gjort en chargeback på en tidigare beställning i din butik. Hålls internt — att nämna en kunds tvisthistorik för den utfärdande banken försvagar ditt svar i stället för att stärka det. Det visas här så att du kan bedöma hur hårt du vill driva ärendet.",
+        "explanationWithCount": "Den här kunden har {prior} tidigare beställningar i din butik, och minst en av dem slutade i en chargeback. Hålls internt — att nämna en kunds tvisthistorik för den utfärdande banken försvagar ditt svar i stället för att stärka det. Det visas här så att du kan bedöma hur hårt du vill driva ärendet."
       }
     },
     "evidenceTabExtra": {

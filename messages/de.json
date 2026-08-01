@@ -1699,6 +1699,11 @@
       "cardholderNameMismatch": {
         "title": "Karte ist auf einen anderen Namen registriert als der Käufer",
         "explanation": "Die Zahlungskarte ist auf \"{cardholder}\" registriert, die Bestellung wurde jedoch von \"{customer}\" aufgegeben. Dies ist ein typisches Muster bei gestohlenen Karten — vor dem Einreichen prüfen. Wird intern zur Bewertung verwendet; nicht in die Argumentation gegenüber der Bank aufgenommen."
+      },
+      "priorChargebacks": {
+        "title": "Frühere Rückbuchungen auf diesem Konto",
+        "explanation": "Dieser Kunde hat bereits eine frühere Bestellung in Ihrem Shop zurückgebucht. Bleibt intern — die Streithistorie eines Kunden gegenüber der ausstellenden Bank zu nennen, schwächt Ihre Antwort, statt sie zu stärken. Sie wird hier gezeigt, damit Sie abwägen können, wie hart Sie diesen Fall verteidigen.",
+        "explanationWithCount": "Dieser Kunde hat {prior} frühere Bestellungen in Ihrem Shop, und mindestens eine davon wurde zurückgebucht. Bleibt intern — die Streithistorie eines Kunden gegenüber der ausstellenden Bank zu nennen, schwächt Ihre Antwort, statt sie zu stärken. Sie wird hier gezeigt, damit Sie abwägen können, wie hart Sie diesen Fall verteidigen."
       }
     },
     "deliveryProof": {
