@@ -52,6 +52,7 @@ const CTX: BuildContext = {
   priorHistory: null,
   disputeInitiatedAt: null,
   disputeAmount: null,
+  disputeCurrency: null,
   disputePhase: null,
 };
 

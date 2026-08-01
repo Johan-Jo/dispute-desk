@@ -61,6 +61,7 @@ const CTX_FRAUD: BuildContext = {
   priorHistory: null,
   disputeInitiatedAt: null,
   disputeAmount: null,
+  disputeCurrency: null,
   disputePhase: null,
 };
 
@@ -119,6 +120,7 @@ describe("collectFraudRiskEvidence", () => {
       priorHistory: null,
       disputeInitiatedAt: null,
       disputeAmount: null,
+      disputeCurrency: null,
       disputePhase: null,
     };
     const sections = await collectFraudRiskEvidence(klarnaFraudCtx);

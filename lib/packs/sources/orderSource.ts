@@ -174,6 +174,7 @@ export async function collectOrderEvidence(
     const credit = detectCreditAlreadyIssued({
       order,
       disputeAmount: ctx.disputeAmount,
+      disputeCurrency: ctx.disputeCurrency,
       disputeInitiatedAt: ctx.disputeInitiatedAt,
     });
     sections.push({

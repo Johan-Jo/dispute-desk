@@ -167,7 +167,7 @@ export async function buildPack(
   const { data: dispute } = await sb
     .from("disputes")
     .select(
-      "id, reason, order_gid, dispute_gid, amount, phase, customer_display_name, initiated_at",
+      "id, reason, order_gid, dispute_gid, amount, currency_code, phase, customer_display_name, initiated_at",
     )
     .eq("id", pack.dispute_id)
     .single();
@@ -357,6 +357,7 @@ export async function buildPack(
     disputeAmount: Number.isFinite(Number(dispute.amount))
       ? Number(dispute.amount)
       : null,
+    disputeCurrency: dispute.currency_code ?? null,
     disputePhase: dispute.phase ?? null,
   };
 
@@ -736,6 +737,7 @@ export async function buildPack(
     disputeAmount: Number.isFinite(disputeAmountNum)
       ? (disputeAmountNum as number)
       : null,
+    disputeCurrency: dispute.currency_code ?? null,
     disputeInitiatedAt: dispute.initiated_at ?? null,
   });
 

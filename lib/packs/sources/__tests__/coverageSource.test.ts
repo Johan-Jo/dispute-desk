@@ -30,6 +30,7 @@ function ctxWithProtect(status: ProtectStatus | null): BuildContext {
     priorHistory: null,
     disputeInitiatedAt: null,
     disputeAmount: null,
+    disputeCurrency: null,
     disputePhase: null,
   };
 }
@@ -112,6 +113,7 @@ describe("collectCoverageEvidence", () => {
       priorHistory: null,
       disputeInitiatedAt: null,
       disputeAmount: null,
+      disputeCurrency: null,
       disputePhase: null,
     };
     expect(await collectCoverageEvidence(ctx)).toEqual([]);

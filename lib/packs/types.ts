@@ -77,6 +77,10 @@ export interface BuildContext {
   disputeInitiatedAt: string | null;
   /** Disputed amount in the order's currency, for coverage arithmetic. */
   disputeAmount: number | null;
+  /** `disputes.currency_code`. Coverage arithmetic against a refund is
+   *  only valid when it matches the refund currency — 25 prod disputes
+   *  are denominated differently from their order. */
+  disputeCurrency: string | null;
   /** `disputes.phase` — `inquiry` | `chargeback`. */
   disputePhase: string | null;
 }
