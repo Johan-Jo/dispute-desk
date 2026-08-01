@@ -8,6 +8,20 @@ import {
 import type { FactPredicateId } from "../types";
 import { ALL_REASON_CODE_FAMILIES } from "../reasonCodes/familyRegistry";
 
+/**
+ * Strategies deliberately registered under EVERY family.
+ *
+ * `credit_already_issued` argues that the transaction was already
+ * credited before the cardholder filed — Visa's Dispute Management
+ * Guidelines treat that as a ground making the dispute invalid, and it
+ * attaches to the transaction rather than to a reason code. So it is
+ * not family-specific and cannot satisfy the one-family-per-strategy
+ * invariants below. Adding a key here is a deliberate act: it exempts
+ * that strategy from those two checks, so it must be a genuinely
+ * cross-cutting argument, not a shortcut around the registry.
+ */
+const CROSS_FAMILY_STRATEGY_KEYS = new Set<string>(["credit_already_issued"]);
+
 /** Build a predicateEvaluations map with the named ids set to true.
  *  All other ids default to false. */
 function evals(...truthy: FactPredicateId[]): Record<FactPredicateId, boolean> {
@@ -199,6 +213,11 @@ describe("strategy file invariants", () => {
   it("strategies in STRATEGIES_BY_FAMILY[k] all declare familyKey=k", () => {
     for (const [familyKey, strategies] of Object.entries(STRATEGIES_BY_FAMILY)) {
       for (const s of strategies) {
+        // CROSS_FAMILY strategies are registered under every family by
+        // design, so they cannot satisfy familyKey === k. Keep the
+        // invariant for everything else — it is what stops a strategy
+        // being pasted into the wrong family's list.
+        if (CROSS_FAMILY_STRATEGY_KEYS.has(s.key)) continue;
         expect(s.familyKey).toBe(familyKey);
       }
     }
@@ -216,9 +235,24 @@ describe("strategy file invariants", () => {
   });
 
   it("strategy keys are unique across all families", () => {
-    const keys = ALL_STRATEGIES.map((s) => s.key);
-    const set = new Set(keys);
-    expect(set.size).toBe(keys.length);
+    // Cross-family strategies appear once per family by design; every
+    // other key must still be unique, so a copy-paste duplicate inside
+    // one family is still a failure.
+    const keys = ALL_STRATEGIES.map((s) => s.key).filter(
+      (k) => !CROSS_FAMILY_STRATEGY_KEYS.has(k),
+    );
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("each cross-family strategy is registered under EVERY family", () => {
+    for (const key of CROSS_FAMILY_STRATEGY_KEYS) {
+      for (const [familyKey, strategies] of Object.entries(STRATEGIES_BY_FAMILY)) {
+        expect(
+          strategies.some((s) => s.key === key),
+          `family ${familyKey} is missing cross-family strategy ${key}`,
+        ).toBe(true);
+      }
+    }
   });
 
   it("unauthorized_fraud pilot has at least 4 strategies and exactly one fallback", () => {

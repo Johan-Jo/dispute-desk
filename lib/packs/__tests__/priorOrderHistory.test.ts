@@ -113,6 +113,55 @@ describe("loadPriorOrderHistory", () => {
     expect(r?.priorOrders).toBe(2);
   });
 
+  // Regression — blume-box 0f53431d (order #352552, placed 07:22). The
+  // account's other chargebacks sit on orders placed 07:23 and the next
+  // day, so scoping the dispute-free CLAIM to strictly-prior orders
+  // called a three-chargeback account "dispute-free" — and that claim
+  // was half of what scored the case Strong.
+  it("a chargeback on a LATER order still falsifies the dispute-free claim", async () => {
+    const r = await loadPriorOrderHistory({
+      sb: makeSb({
+        shopify_orders: {
+          data: [
+            { shopify_order_id: "gid://shopify/Order/100", processed_at: "2026-07-02T05:03:32Z" },
+            { shopify_order_id: BASE.orderGid, processed_at: BASE.disputedProcessedAt },
+            // One minute later — and charged back.
+            { shopify_order_id: "gid://shopify/Order/999", processed_at: "2026-07-03T04:19:53Z" },
+          ],
+          error: null,
+        },
+        disputes: { data: [{ order_gid: "gid://shopify/Order/999" }], error: null },
+      }),
+      ...BASE,
+      disputedProcessedAt: "2026-07-02T07:22:38Z",
+      shopifyTotalOrders: 3,
+    });
+    // The COUNT stays time-scoped and honest: one order came before.
+    expect(r?.priorOrders).toBe(1);
+    expect(r?.disputedPriorOrders).toBe(0);
+    // The CLAIM is not time-scoped.
+    expect(r?.disputeFreeHistory).toBe(false);
+  });
+
+  it("the disputed order itself never counts against its own account", async () => {
+    // Otherwise every dispute would trivially read "has_disputes".
+    const r = await loadPriorOrderHistory({
+      sb: makeSb({
+        shopify_orders: {
+          data: [
+            { shopify_order_id: "gid://shopify/Order/100", processed_at: "2026-01-02T00:00:00Z" },
+            { shopify_order_id: BASE.orderGid, processed_at: BASE.disputedProcessedAt },
+          ],
+          error: null,
+        },
+        disputes: { data: [], error: null },
+      }),
+      ...BASE,
+      shopifyTotalOrders: 2,
+    });
+    expect(r?.disputeFreeHistory).toBe(true);
+  });
+
   it("a known chargeback beats partial coverage — false, not unknown", async () => {
     const r = await loadPriorOrderHistory({
       sb: makeSb({

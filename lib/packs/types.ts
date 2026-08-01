@@ -72,4 +72,15 @@ export interface BuildContext {
    * read "unknown" rather than "clean". See lib/packs/priorOrderHistory.ts.
    */
   priorHistory: PriorOrderHistory | null;
+  /** `disputes.initiated_at` — collectors need it to tell a pre-dispute
+   *  credit from a post-dispute one (see lib/automation/creditTiming). */
+  disputeInitiatedAt: string | null;
+  /** Disputed amount in the order's currency, for coverage arithmetic. */
+  disputeAmount: number | null;
+  /** `disputes.currency_code`. Coverage arithmetic against a refund is
+   *  only valid when it matches the refund currency — 25 prod disputes
+   *  are denominated differently from their order. */
+  disputeCurrency: string | null;
+  /** `disputes.phase` — `inquiry` | `chargeback`. */
+  disputePhase: string | null;
 }

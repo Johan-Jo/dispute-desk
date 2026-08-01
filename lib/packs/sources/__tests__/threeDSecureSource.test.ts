@@ -24,6 +24,10 @@ function makeCtx(transactions: Partial<OrderTransaction>[]): BuildContext {
     order,
     paymentContext: { family: "card", raw: null, label: "Card", cardNetwork: null },
     priorHistory: null,
+    disputeInitiatedAt: null,
+    disputeAmount: null,
+    disputeCurrency: null,
+    disputePhase: null,
   };
 }
 
@@ -362,6 +366,10 @@ describe("threeDSecureSource — transaction selection", () => {
       order: null,
       paymentContext: { family: "unknown", raw: null, label: null, cardNetwork: null },
       priorHistory: null,
+      disputeInitiatedAt: null,
+      disputeAmount: null,
+      disputeCurrency: null,
+      disputePhase: null,
     };
     expect(await collectThreeDSecureEvidence(ctx)).toEqual([]);
   });

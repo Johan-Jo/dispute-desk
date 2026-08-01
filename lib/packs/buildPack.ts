@@ -47,6 +47,7 @@ import {
 import type { CaseStrengthLevel } from "@/lib/argument/types";
 import { detectFatalLoss, type FatalLossSummary } from "@/lib/automation/fatalLoss";
 import { loadPriorOrderHistory } from "./priorOrderHistory";
+import { detectCreditAlreadyIssued } from "@/lib/automation/creditTiming";
 import {
   detectRiskWeakness,
   type RiskWeaknessSummary,
@@ -166,7 +167,7 @@ export async function buildPack(
   const { data: dispute } = await sb
     .from("disputes")
     .select(
-      "id, reason, order_gid, dispute_gid, amount, phase, customer_display_name, initiated_at",
+      "id, reason, order_gid, dispute_gid, amount, currency_code, phase, customer_display_name, initiated_at",
     )
     .eq("id", pack.dispute_id)
     .single();
@@ -352,6 +353,12 @@ export async function buildPack(
     order,
     paymentContext,
     priorHistory,
+    disputeInitiatedAt: dispute.initiated_at ?? null,
+    disputeAmount: Number.isFinite(Number(dispute.amount))
+      ? Number(dispute.amount)
+      : null,
+    disputeCurrency: dispute.currency_code ?? null,
+    disputePhase: dispute.phase ?? null,
   };
 
   // LSE-0: resolve the network reason code (Visa 10.x / 13.x or Mastercard
@@ -608,11 +615,19 @@ export async function buildPack(
     order?.fulfillments?.some((f) =>
       f.trackingInfo?.some((t) => t.number || t.url),
     ) ?? false;
+  // Any refund at all — the amount comparison against the disputed sum
+  // belongs to the fatal-loss gate, not to "should the merchant see a
+  // refund row". A partial refund is still a fact they need in front of
+  // them.
+  const hasRefund =
+    (order?.refunds?.length ?? 0) > 0 ||
+    Number(order?.totalRefundedSet?.shopMoney?.amount ?? 0) > 0;
   const orderContext: OrderContext = {
     isFulfilled,
     hasCardPayment,
     avsCvvAvailable,
     hasShippingEvidence,
+    hasRefund,
     paymentFamily: paymentContext.family,
   };
 
@@ -710,7 +725,21 @@ export async function buildPack(
     // Timing decides whether a refund is a concession or a
     // representment — a credit issued before the dispute is the latter.
     dispute.initiated_at ?? null,
+    // …and on an INQUIRY a later refund is the resolution, not a loss.
+    dispute.phase ?? null,
   );
+
+  // The credit-already-issued summary rides in pack_json so the hero,
+  // the strength engine and the admin view all read one derived answer
+  // instead of three re-derivations of the same timing comparison.
+  const creditAlreadyIssued = detectCreditAlreadyIssued({
+    order,
+    disputeAmount: Number.isFinite(disputeAmountNum)
+      ? (disputeAmountNum as number)
+      : null,
+    disputeCurrency: dispute.currency_code ?? null,
+    disputeInitiatedAt: dispute.initiated_at ?? null,
+  });
 
   // Risk-weakness summary — fraud-risk Phase 2. Caps overall at
   // "moderate" when Shopify flagged the order as HIGH risk pre-auth
@@ -783,6 +812,10 @@ export async function buildPack(
     fatalLossSummary,
     riskWeaknessSummary,
     nameMismatchInput,
+    {
+      triggered: creditAlreadyIssued.triggered,
+      coversDisputedAmount: creditAlreadyIssued.coversDisputedAmount,
+    },
   );
   const caseStrengthSummary: {
     overall: CaseStrengthLevel;
@@ -848,6 +881,7 @@ export async function buildPack(
     coverage: coverageSummary,
     case_strength: caseStrengthSummary,
     fatal_loss: fatalLossSummary,
+    credit_already_issued: creditAlreadyIssued,
     risk_weakness: riskWeaknessSummary,
     // Cardholder-name-mismatch diagnostics (merchant-UI + audit only —
     // NEVER bank-facing). `capApplied` records whether the fraud-family

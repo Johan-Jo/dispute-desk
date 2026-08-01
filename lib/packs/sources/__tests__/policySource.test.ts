@@ -46,6 +46,10 @@ const ctx: BuildContext = {
   order: null,
   paymentContext: { family: "unknown", raw: null, label: null, cardNetwork: null },
   priorHistory: null,
+  disputeInitiatedAt: null,
+  disputeAmount: null,
+  disputeCurrency: null,
+  disputePhase: null,
 };
 
 function row(

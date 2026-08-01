@@ -1396,7 +1396,8 @@
       "fatalLoss": {
         "refund_issued": "Ya se emitió un reembolso para este pedido — el banco lo considerará una confesión de responsabilidad, por lo que el caso no puede ganarse tal como está.",
         "inr_no_fulfillment": "El pedido nunca se cumplió y el motivo de la disputa es «artículo no recibido» — no hay base factual para defender el cargo."
-      }
+      },
+      "creditAlreadyIssued": "Esta transacción ya fue reembolsada antes de que se presentara la disputa. La respuesta más sólida es el propio reembolso: al titular de la tarjeta ya se le devolvió el dinero, así que no queda nada pendiente."
     },
     "improvementHint": "Agregue {label} para fortalecer su caso.",
     "recommendation": {
@@ -1699,6 +1700,11 @@
       "cardholderNameMismatch": {
         "title": "La tarjeta está registrada a un nombre distinto del comprador",
         "explanation": "La tarjeta de pago está registrada a nombre de \"{cardholder}\", pero el pedido lo realizó \"{customer}\". Es un patrón habitual de tarjeta robada — revísalo antes de enviar. Se usa internamente para la evaluación; no se añade al argumento presentado al banco."
+      },
+      "priorChargebacks": {
+        "title": "Contracargos previos en esta cuenta",
+        "explanation": "Este cliente ya presentó un contracargo en un pedido anterior de tu tienda. Se mantiene interno: mencionar el historial de disputas de un cliente al banco emisor debilita tu respuesta en lugar de reforzarla. Se muestra aquí para que valores con qué fuerza defender este caso.",
+        "explanationWithCount": "Este cliente tiene {prior} pedidos anteriores en tu tienda y al menos uno de ellos terminó en contracargo. Se mantiene interno: mencionar el historial de disputas de un cliente al banco emisor debilita tu respuesta en lugar de reforzarla. Se muestra aquí para que valores con qué fuerza defender este caso."
       }
     },
     "deliveryProof": {

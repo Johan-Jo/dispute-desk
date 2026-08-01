@@ -1396,7 +1396,8 @@
       "fatalLoss": {
         "refund_issued": "Für diese Bestellung wurde bereits eine Rückerstattung ausgestellt — die Bank wird dies als Schuldeingeständnis werten, daher kann der Fall in dieser Form nicht gewonnen werden.",
         "inr_no_fulfillment": "Die Bestellung wurde nie ausgeführt und der Streitfallgrund ist ‚Produkt nicht erhalten' — es gibt keine sachliche Grundlage zur Verteidigung der Belastung."
-      }
+      },
+      "creditAlreadyIssued": "Diese Transaktion wurde bereits vor Einreichung des Widerspruchs erstattet. Die stärkste Antwort ist die Erstattung selbst — der Karteninhaber hat sein Geld zurück, es ist nichts weiter offen."
     },
     "improvementHint": "Fügen Sie {label} hinzu, um Ihren Fall zu stärken.",
     "recommendation": {
@@ -1699,6 +1700,11 @@
       "cardholderNameMismatch": {
         "title": "Karte ist auf einen anderen Namen registriert als der Käufer",
         "explanation": "Die Zahlungskarte ist auf \"{cardholder}\" registriert, die Bestellung wurde jedoch von \"{customer}\" aufgegeben. Dies ist ein typisches Muster bei gestohlenen Karten — vor dem Einreichen prüfen. Wird intern zur Bewertung verwendet; nicht in die Argumentation gegenüber der Bank aufgenommen."
+      },
+      "priorChargebacks": {
+        "title": "Frühere Rückbuchungen auf diesem Konto",
+        "explanation": "Dieser Kunde hat bereits eine frühere Bestellung in Ihrem Shop zurückgebucht. Bleibt intern — die Streithistorie eines Kunden gegenüber der ausstellenden Bank zu nennen, schwächt Ihre Antwort, statt sie zu stärken. Sie wird hier gezeigt, damit Sie abwägen können, wie hart Sie diesen Fall verteidigen.",
+        "explanationWithCount": "Dieser Kunde hat {prior} frühere Bestellungen in Ihrem Shop, und mindestens eine davon wurde zurückgebucht. Bleibt intern — die Streithistorie eines Kunden gegenüber der ausstellenden Bank zu nennen, schwächt Ihre Antwort, statt sie zu stärken. Sie wird hier gezeigt, damit Sie abwägen können, wie hart Sie diesen Fall verteidigen."
       }
     },
     "deliveryProof": {

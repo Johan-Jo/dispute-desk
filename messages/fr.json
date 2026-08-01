@@ -1396,7 +1396,8 @@
       "fatalLoss": {
         "refund_issued": "Un remboursement a déjà été émis pour cette commande — la banque le considérera comme un aveu de responsabilité, donc le dossier ne peut pas être gagné en l'état.",
         "inr_no_fulfillment": "La commande n'a jamais été exécutée et le motif du litige est « article non reçu » — il n'y a aucune base factuelle pour défendre le débit."
-      }
+      },
+      "creditAlreadyIssued": "Cette transaction a déjà été remboursée avant le dépôt du litige. La réponse la plus solide est le remboursement lui-même — le titulaire de la carte a été remboursé, il ne reste rien à devoir."
     },
     "improvementHint": "Ajoutez {label} pour renforcer votre dossier.",
     "recommendation": {
@@ -1699,6 +1700,11 @@
       "cardholderNameMismatch": {
         "title": "La carte est enregistrée à un autre nom que celui de l'acheteur",
         "explanation": "La carte de paiement est enregistrée au nom de \"{cardholder}\", mais la commande a été passée par \"{customer}\". C'est un schéma courant de carte volée — à vérifier avant l'envoi. Utilisé en interne pour l'évaluation ; non ajouté à l'argumentaire présenté à la banque."
+      },
+      "priorChargebacks": {
+        "title": "Rétrofacturations antérieures sur ce compte",
+        "explanation": "Ce client a déjà contesté une commande précédente dans votre boutique. Reste interne — mentionner l'historique de litiges d'un client à la banque émettrice affaiblit votre réponse au lieu de la renforcer. Affiché ici pour que vous jugiez avec quelle vigueur défendre ce dossier.",
+        "explanationWithCount": "Ce client a {prior} commandes précédentes dans votre boutique, dont au moins une a fait l'objet d'une rétrofacturation. Reste interne — mentionner l'historique de litiges d'un client à la banque émettrice affaiblit votre réponse au lieu de la renforcer. Affiché ici pour que vous jugiez avec quelle vigueur défendre ce dossier."
       }
     },
     "deliveryProof": {

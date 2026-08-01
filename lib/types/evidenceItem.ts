@@ -246,6 +246,9 @@ export interface TemplateFieldV2 {
     | "required_always"
     | "required_if_fulfilled"
     | "required_if_card_payment"
+    /** Only when the order carries a refund; otherwise `unavailable`,
+     *  never `missing` (see completeness.ts RequirementMode). */
+    | "required_if_refunded"
     | "recommended"
     | "optional";
   priority: EvidenceItemPriority;

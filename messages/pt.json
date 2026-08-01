@@ -1396,7 +1396,8 @@
       "fatalLoss": {
         "refund_issued": "Já foi emitido um reembolso para este pedido — o banco tratará isso como uma confissão de responsabilidade, portanto o caso não pode ser vencido como está.",
         "inr_no_fulfillment": "O pedido nunca foi cumprido e o motivo da disputa é \"produto não recebido\" — não há base factual para defender a cobrança."
-      }
+      },
+      "creditAlreadyIssued": "Esta transação já foi reembolsada antes de a disputa ser aberta. A resposta mais forte é o próprio reembolso — o titular do cartão já foi reembolsado, portanto nada mais é devido."
     },
     "improvementHint": "Adicione {label} para fortalecer seu caso.",
     "recommendation": {
@@ -1699,6 +1700,11 @@
       "cardholderNameMismatch": {
         "title": "O cartão está registrado em um nome diferente do comprador",
         "explanation": "O cartão de pagamento está registrado em nome de \"{cardholder}\", mas o pedido foi feito por \"{customer}\". Este é um padrão comum de cartão roubado — revise antes de enviar. Usado internamente para avaliação; não adicionado ao argumento apresentado ao banco."
+      },
+      "priorChargebacks": {
+        "title": "Estornos anteriores nesta conta",
+        "explanation": "Este cliente já estornou um pedido anterior na sua loja. Mantido interno — citar o histórico de disputas de um cliente ao banco emissor enfraquece a sua resposta em vez de reforçá-la. É mostrado aqui para que avalie com que força defender este caso.",
+        "explanationWithCount": "Este cliente tem {prior} pedidos anteriores na sua loja e pelo menos um deles foi estornado. Mantido interno — citar o histórico de disputas de um cliente ao banco emissor enfraquece a sua resposta em vez de reforçá-la. É mostrado aqui para que avalie com que força defender este caso."
       }
     },
     "deliveryProof": {
