@@ -54,6 +54,7 @@ import { cancelled_recurring_narrow_fallback } from "./cancelled_recurring_narro
 
 import { processing_error_narrow_fallback } from "./processing_error_narrow_fallback";
 import { authorization_error_narrow_fallback } from "./authorization_error_narrow_fallback";
+import { credit_already_issued } from "./credit_already_issued";
 import { fallback_narrow_fallback } from "./fallback_narrow_fallback";
 
 /** Family-canonical order — declaration order IS the canonical order.
@@ -61,40 +62,46 @@ import { fallback_narrow_fallback } from "./fallback_narrow_fallback";
  *  changes. Empty arrays are valid (family has no strategies yet). */
 export const STRATEGIES_BY_FAMILY: Record<ReasonCodeFamilyKey, StrategySubmodule[]> = {
   unauthorized_fraud: [
+    credit_already_issued,
     unauthorized_fraud_auth_signal_stack,
     unauthorized_fraud_repeat_customer_pattern,
     unauthorized_fraud_customer_engagement_history,
     unauthorized_fraud_narrow_fallback,
   ],
   item_not_received: [
+    credit_already_issued,
     item_not_received_delivery_proof_stack,
     item_not_received_digital_access_record,
     item_not_received_narrow_fallback,
   ],
   product_not_as_described: [
+    credit_already_issued,
     product_not_as_described_listing_as_purchased,
     product_not_as_described_resolution_attempt,
     product_not_as_described_narrow_fallback,
   ],
   credit_not_processed: [
+    credit_already_issued,
     credit_not_processed_refund_record,
     credit_not_processed_no_return,
     credit_not_processed_policy_terms,
     credit_not_processed_narrow_fallback,
   ],
   duplicate_processing: [
+    credit_already_issued,
     duplicate_processing_distinct_markers,
     duplicate_processing_refund_resolved,
     duplicate_processing_narrow_fallback,
   ],
   cancelled_recurring: [
+    credit_already_issued,
     cancelled_recurring_subscription_terms,
     cancelled_recurring_service_usage,
     cancelled_recurring_narrow_fallback,
   ],
-  processing_error: [processing_error_narrow_fallback],
-  authorization_error: [authorization_error_narrow_fallback],
-  fallback: [fallback_narrow_fallback],
+  processing_error: [credit_already_issued, processing_error_narrow_fallback],
+  authorization_error: [credit_already_issued, authorization_error_narrow_fallback],
+  fallback: [credit_already_issued, fallback_narrow_fallback],
 };
 
 export interface RankStrategiesInput {

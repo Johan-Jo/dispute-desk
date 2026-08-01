@@ -49,6 +49,7 @@
 
 import type { I18nToken } from "@/lib/i18n/token";
 import type { OrderDetailNode } from "@/lib/shopify/queries/orders";
+import { detectCreditAlreadyIssued } from "./creditTiming";
 
 export type FatalLossReason =
   | "refund_issued"        // a refund covering the disputed amount has already been issued
@@ -94,22 +95,40 @@ function messageTokenFor(reason: FatalLossReason): I18nToken {
  * @param disputeInitiatedAt  ISO timestamp the dispute was opened
  *                    (`disputes.initiated_at`). Null on legacy rows — the
  *                    refund trigger then stays conservative and fires.
+ * @param disputePhase  `disputes.phase` — `inquiry` or `chargeback`. On
+ *                    an INQUIRY a refund is the textbook resolution, not
+ *                    a concession, so the refund trigger never fires.
  */
 export function detectFatalLoss(
   order: OrderDetailNode | null,
   disputeReason: string | null,
   disputeAmount: number | null,
   disputeInitiatedAt: string | null = null,
+  disputePhase: string | null = null,
 ): FatalLossSummary {
   if (!order) return NOT_TRIGGERED;
 
   // Trigger 1: refund covering the disputed amount has been issued —
-  // but ONLY when the credit did not precede the dispute. See the
-  // "Refund timing" note in the module header.
+  // but ONLY when it is neither a pre-dispute credit nor an inquiry
+  // resolution. See the "Refund timing" note in the module header.
   if (disputeAmount != null && disputeAmount > 0) {
     const refunded = parseMoney(order.totalRefundedSet?.shopMoney?.amount);
     if (refunded != null && refunded >= disputeAmount) {
-      if (!creditPrecededDispute(order, disputeInitiatedAt)) {
+      const credit = detectCreditAlreadyIssued({
+        order,
+        disputeAmount,
+        disputeInitiatedAt,
+      });
+      // An INQUIRY is a pre-dispute retrieval request, not a chargeback.
+      // Refunding in response to one resolves it — Shopify only blocks
+      // refunds on an open CHARGEBACK. Both prod instances of this
+      // shape (cay-collective, 2026-07) were WON, yet the gate called
+      // them structurally unwinnable because the refund landed after
+      // `initiated_at`.
+      const isInquiryResolution =
+        typeof disputePhase === "string" &&
+        disputePhase.toLowerCase() === "inquiry";
+      if (!credit.triggered && !isInquiryResolution) {
         return {
           triggered: true,
           reason: "refund_issued",
@@ -144,34 +163,6 @@ function parseMoney(raw: string | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/**
- * Did the merchant credit the cardholder BEFORE the dispute was filed?
- *
- * True only when we can positively establish it: a parseable dispute
- * date AND at least one refund with a parseable `createdAt` strictly
- * earlier than it. Every unknown resolves to false, which keeps the
- * fatal-loss trigger firing — the gate is allowed to be over-strict
- * (a missed auto-submit), never over-permissive (a bad submission).
- *
- * "At least one" rather than "all": a pre-dispute credit covering the
- * amount is the representable fact. A later top-up refund does not
- * un-issue it.
- */
-function creditPrecededDispute(
-  order: OrderDetailNode,
-  disputeInitiatedAt: string | null,
-): boolean {
-  const disputedAt = parseTime(disputeInitiatedAt);
-  if (disputedAt == null) return false;
-  for (const refund of order.refunds ?? []) {
-    const at = parseTime(refund?.createdAt);
-    if (at != null && at < disputedAt) return true;
-  }
-  return false;
-}
-
-function parseTime(raw: string | null | undefined): number | null {
-  if (!raw) return null;
-  const t = Date.parse(raw);
-  return Number.isFinite(t) ? t : null;
-}
+// The pre-dispute-credit timing check now lives in `creditTiming.ts` —
+// the narrative needs the same answer (and the amount + residual), so
+// re-deriving it here would be two sources of truth for one fact.

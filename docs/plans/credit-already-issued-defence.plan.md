@@ -1,6 +1,6 @@
 # Credit-already-issued defence theory
 
-**Status:** PLAN ONLY — nothing implemented.
+**Status:** IMPLEMENTED 2026-08-01 (PR follows this commit). Decisions 1, 3, 4, 6, 7 taken as recommended; decision 5 (retiring the older refund strategies) deferred — see §8.
 **Raised:** 2026-08-01, from blume-box dispute `162042cd`.
 **Prerequisite shipped:** the fatal-loss gate no longer treats a pre-dispute refund as unwinnable (PR #479), and the refund now appears on the fraud checklist (this PR).
 
@@ -211,3 +211,29 @@ Research closed four of the five. What remains is genuinely a product call.
 - Anything that files, cancels, or alters a refund. This is evidential only.
 - Changing the fatal-loss gate further; #479 already did what was needed.
 - Chasing the ~$15 residual on `162042cd` operationally.
+
+---
+
+## 8. What shipped (2026-08-01)
+
+| Piece | Where |
+|---|---|
+| Shared timing helper — the one comparison | `lib/automation/creditTiming.ts` |
+| Fatal-loss gate reads it + `phase` guard for inquiries | `lib/automation/fatalLoss.ts` |
+| Timing + coverage carried into the refund fact | `lib/packs/sources/orderSource.ts`, `lib/defence/factClassifier.ts` |
+| `credit_preceded_dispute`, `credit_covers_disputed_amount` | `lib/defence/factPredicates.ts` |
+| Cross-family strategy, priority 100 | `lib/defence/strategies/credit_already_issued.ts` |
+| Strength FLOOR (not a signal) + hero + reason token | `lib/argument/caseStrength.ts` |
+| `credit_already_issued` block in `pack_json` | `lib/packs/buildPack.ts` |
+
+**Decisions as implemented.** Partial credits fire the strategy but do **not** reach the strength floor — the floor needs `coversDisputedAmount`, because an uncovered balance still has to be defended on the family's own merits (decision 1, refined during implementation). The strategy supersedes rather than composes: priority 100 beats every family strategy, and the prompt forbids arguing the family's theory alongside it (decision 3). It is registered under all nine families (decision 4). Strength is a floor, not another point on `strongCount` (decision 7).
+
+**Two prompt rules worth keeping.** The narrative may not declare the dispute "invalid" — that determination is the issuer's, and asserting it reads as overreach. And "in full" is gated on `credit_covers_disputed_amount`, so `162042cd`'s $220-against-$235 names both figures instead of overclaiming.
+
+**Registry invariants.** `credit_already_issued` is the first strategy registered under every family, which broke two one-strategy-per-family invariants. They now exempt an explicit `CROSS_FAMILY_STRATEGY_KEYS` set and a new invariant asserts each such strategy really is registered everywhere — the checks stay meaningful for family-specific strategies.
+
+### Still open
+
+- **Decision 5 — retiring `credit_not_processed_refund_record` / `duplicate_processing_refund_resolved`.** Both now sit below `credit_already_issued` and fire on `refund_processed` (any refund) rather than a pre-dispute one, so they remain the right strategy when a refund exists but did *not* precede the dispute. Note `duplicate_processing_refund_resolved` carries the instruction *"Never argue the chargeback is invalid because of the refund"*, written before the Visa research; it does not contradict the new strategy (which also avoids the word "invalid") but the two should be read together before either is retired.
+- **Automation (decision 6).** `autoSubmitGuards` was not touched. A credit-already-issued case now scores `strong`, so it follows the existing Strong auto-submit path — no new gate. Verify that is what happens on a real case before relying on it.
+- **F5 — the Mastercard second-presentment code remains UNVERIFIED.** Nothing in the shipped code cites one.

@@ -327,11 +327,20 @@ function extractValue(
           : typeof p.amount === "string"
             ? Number.parseFloat(p.amount)
             : null;
+      const residual =
+        typeof p.creditResidual === "number" ? p.creditResidual : null;
       return {
         refundStatus: typeof p.refundStatus === "string" ? p.refundStatus : null,
         amount: amount != null && Number.isFinite(amount) ? amount : null,
         currency: typeof p.currency === "string" ? p.currency : null,
         refundedAt: typeof p.refundedAt === "string" ? p.refundedAt : null,
+        // Timing + coverage for the credit-already-issued defence. Only
+        // `true` when the collector positively established the ordering
+        // — the `credit_preceded_dispute` predicate gates the whole
+        // strategy on it, so a guess here becomes a claim to an issuer.
+        precededDispute: p.precededDispute === true,
+        coversDisputedAmount: p.creditCoversDisputedAmount === true,
+        residual: residual != null && Number.isFinite(residual) ? residual : null,
       };
     }
     case "no_return_initiated":

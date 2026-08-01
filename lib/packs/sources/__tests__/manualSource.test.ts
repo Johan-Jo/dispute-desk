@@ -50,6 +50,10 @@ const CTX: BuildContext = {
   order: null,
   paymentContext: { family: "card", raw: null, label: "Card", cardNetwork: null },
   priorHistory: null,
+  disputeInitiatedAt: null,
+  disputeAmount: null,
+  disputeCurrency: null,
+  disputePhase: null,
 };
 
 beforeEach(() => {

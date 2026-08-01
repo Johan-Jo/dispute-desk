@@ -1396,7 +1396,8 @@
       "fatalLoss": {
         "refund_issued": "Un remboursement a déjà été émis pour cette commande — la banque le considérera comme un aveu de responsabilité, donc le dossier ne peut pas être gagné en l'état.",
         "inr_no_fulfillment": "La commande n'a jamais été exécutée et le motif du litige est « article non reçu » — il n'y a aucune base factuelle pour défendre le débit."
-      }
+      },
+      "creditAlreadyIssued": "Cette transaction a déjà été remboursée avant le dépôt du litige. La réponse la plus solide est le remboursement lui-même — le titulaire de la carte a été remboursé, il ne reste rien à devoir."
     },
     "improvementHint": "Ajoutez {label} pour renforcer votre dossier.",
     "recommendation": {

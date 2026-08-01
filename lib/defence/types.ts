@@ -388,6 +388,13 @@ export type FactPredicateId =
   | "policy_disclosed"
   | "policy_accepted"
   | "refund_processed"
+  /** A credit was processed BEFORE the cardholder filed. Visa's Dispute
+   *  Management Guidelines treat "credit already processed" as a ground
+   *  making the dispute invalid, independent of reason code. */
+  | "credit_preceded_dispute"
+  /** …and that credit covers the full disputed amount. Gates any copy
+   *  that says the transaction was credited IN FULL. */
+  | "credit_covers_disputed_amount"
   | "return_not_initiated"
   | "subscription_terms_present"
   | "customer_communication_on_record"

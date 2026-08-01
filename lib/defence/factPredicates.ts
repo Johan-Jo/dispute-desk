@@ -237,6 +237,24 @@ export const FACT_PREDICATES: Record<FactPredicateId, FactPredicate> = {
       hasCategoryWithValueEquals(facts, ["refund_record"], "refundStatus", "processed"),
   },
 
+  credit_preceded_dispute: {
+    id: "credit_preceded_dispute",
+    description:
+      "refund_record processed AND issued before the dispute was filed",
+    evaluate: (facts) =>
+      hasCategoryWithValueEquals(facts, ["refund_record"], "refundStatus", "processed") &&
+      hasCategoryWithValueEquals(facts, ["refund_record"], "precededDispute", true),
+  },
+
+  credit_covers_disputed_amount: {
+    id: "credit_covers_disputed_amount",
+    description:
+      "pre-dispute credit covers the full disputed amount (gates 'in full' copy)",
+    evaluate: (facts) =>
+      hasCategoryWithValueEquals(facts, ["refund_record"], "precededDispute", true) &&
+      hasCategoryWithValueEquals(facts, ["refund_record"], "coversDisputedAmount", true),
+  },
+
   return_not_initiated: {
     id: "return_not_initiated",
     description:

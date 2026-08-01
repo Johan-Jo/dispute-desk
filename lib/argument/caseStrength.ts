@@ -289,6 +289,16 @@ export interface CaseFatalLossInput {
   messageToken: I18nToken | null;
 }
 
+/** Optional credit-already-issued input (`lib/automation/creditTiming`).
+ *  A FLOOR, not a signal: when the credit precedes the dispute AND
+ *  covers it in full, `overall` becomes "strong" and the hero reads
+ *  likely_to_win, regardless of how the family's own evidence scored.
+ *  Coverage and fatal-loss both out-rank it. */
+export interface CaseCreditAlreadyIssuedInput {
+  triggered: boolean;
+  coversDisputedAmount: boolean;
+}
+
 /** Optional Risk-weakness Gate input (fraud-risk Phase 2). When
  *  triggered AND not pre-empted by coverage or fatal-loss, CAPS
  *  `overall` at "moderate" — never elevates. The cap is a ceiling, so
@@ -354,6 +364,9 @@ export function calculateCaseStrength(
    *  caps `overall` at "moderate" when triggered. See
    *  `CaseNameMismatchInput`. */
   nameMismatch?: CaseNameMismatchInput,
+  /** Optional credit-already-issued input. See
+   *  `CaseCreditAlreadyIssuedInput` — a strength FLOOR, not a signal. */
+  creditAlreadyIssued?: CaseCreditAlreadyIssuedInput,
 ): CaseStrengthResult {
   const family = resolveReasonFamily(reason);
 
@@ -765,6 +778,31 @@ export function calculateCaseStrength(
     isFraudAvsOnlyStrong = false;
   }
 
+  // Credit-already-issued (2026-08-01). A credit processed BEFORE the
+  // cardholder filed is not "strong evidence for this family's theory" —
+  // it is a different claim, that the transaction was already made whole.
+  // Visa's Dispute Management Guidelines list it among the grounds that
+  // render a dispute invalid, independent of reason code.
+  //
+  // So it is a FLOOR, not a signal: it does not add to `strongCount`
+  // (which counts evidence for the family theory) but it does mean the
+  // case is strong on its own terms. A name mismatch or a first-seen IP
+  // does not make a full pre-dispute refund any less of a refund.
+  //
+  // Gated on FULL coverage. A partial credit is real and worth arguing,
+  // but it does not by itself make the case strong — the uncovered
+  // balance still has to be defended on the family's own merits.
+  const isCreditAlreadyIssued =
+    !isCovered &&
+    !isFatalLoss &&
+    creditAlreadyIssued?.triggered === true &&
+    creditAlreadyIssued?.coversDisputedAmount === true;
+
+  if (isCreditAlreadyIssued) {
+    overall = "strong";
+    isFraudAvsOnlyStrong = false;
+  }
+
   // Risk-weakness gate is RECEIVED as input (so callers can persist
   // diagnostics to pack_json for internal analytics + support
   // debugging) but DOES NOT cap `overall`. Decision 2026-05-15: the
@@ -778,6 +816,7 @@ export function calculateCaseStrength(
   let heroVariant: NonNullable<CaseStrengthResult["heroVariant"]>;
   if (isCovered) heroVariant = "covered";
   else if (isFatalLoss) heroVariant = "hard_to_win";
+  else if (isCreditAlreadyIssued) heroVariant = "likely_to_win";
   else if (overall === "strong") heroVariant = "likely_to_win";
   else if (overall === "moderate") {
     heroVariant = isFraudAvsOnlyStrong ? "needs_strengthening" : "could_win";
@@ -790,7 +829,9 @@ export function calculateCaseStrength(
           ?? (fatalLoss?.reason
             ? { key: `disputes.strengthReason.fatalLoss.${fatalLoss.reason}` }
             : { key: `disputes.strengthReason.${family}.weak` }))
-      : strengthReasonI18nToken;
+      : isCreditAlreadyIssued
+        ? { key: "disputes.strengthReason.creditAlreadyIssued" }
+        : strengthReasonI18nToken;
 
   return {
     overall,

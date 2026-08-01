@@ -808,7 +808,8 @@
       "fatalLoss": {
         "refund_issued": "En chargeback har redan utfärdats för denna order — banken kommer att behandla detta som ett erkännande av ansvar, så ärendet kan inte vinnas som det är.",
         "inr_no_fulfillment": "Ordern uppfylldes aldrig och tvistorsaken är att artikeln inte mottagits — det finns ingen faktisk grund att försvara debiteringen."
-      }
+      },
+      "creditAlreadyIssued": "Den här transaktionen återbetalades redan innan tvisten öppnades. Det starkaste svaret är återbetalningen i sig — kortinnehavaren har fått pengarna tillbaka, så inget mer är utestående."
     },
     "improvementHint": "Lägg till {label} för att stärka ditt ärende.",
     "recommendation": {

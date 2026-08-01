@@ -15,6 +15,7 @@
 import type { EvidenceSection, BuildContext } from "../types";
 import { classifyDeliveryEvent } from "@/lib/shopify/deliveryEventClassifier";
 import type { OrderDetailNode } from "@/lib/shopify/queries/orders";
+import { detectCreditAlreadyIssued } from "@/lib/automation/creditTiming";
 
 /**
  * Extract bank-facing chronology bullets from native carrier fulfillment
@@ -166,6 +167,16 @@ export async function collectOrderEvidence(
     const latest = [...order.refunds].sort((a, b) =>
       (b.createdAt ?? "").localeCompare(a.createdAt ?? ""),
     )[0];
+    // Did the credit land BEFORE the cardholder filed? That single bit
+    // separates a representable case from a concession, and the
+    // narrative needs it (plus the coverage arithmetic) to argue the
+    // credit without overclaiming. Same helper the fatal-loss gate uses.
+    const credit = detectCreditAlreadyIssued({
+      order,
+      disputeAmount: ctx.disputeAmount,
+      disputeCurrency: ctx.disputeCurrency,
+      disputeInitiatedAt: ctx.disputeInitiatedAt,
+    });
     sections.push({
       type: "order",
       labelToken: { key: "packs.section.refundHistory" },
@@ -176,6 +187,13 @@ export async function collectOrderEvidence(
         amount: order.totalRefundedSet.shopMoney.amount,
         currency: order.totalRefundedSet.shopMoney.currencyCode,
         refundedAt: latest?.createdAt ?? null,
+        // `precededDispute` gates the `credit_preceded_dispute`
+        // predicate, and therefore the whole credit-already-issued
+        // strategy. It is false whenever we cannot positively establish
+        // the ordering — never assert a credit came first on a guess.
+        precededDispute: credit.triggered,
+        creditCoversDisputedAmount: credit.coversDisputedAmount,
+        creditResidual: credit.residual,
         refunds: order.refunds.map((r) => ({
           id: r.id,
           createdAt: r.createdAt,

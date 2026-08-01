@@ -1396,7 +1396,8 @@
       "fatalLoss": {
         "refund_issued": "Für diese Bestellung wurde bereits eine Rückerstattung ausgestellt — die Bank wird dies als Schuldeingeständnis werten, daher kann der Fall in dieser Form nicht gewonnen werden.",
         "inr_no_fulfillment": "Die Bestellung wurde nie ausgeführt und der Streitfallgrund ist ‚Produkt nicht erhalten' — es gibt keine sachliche Grundlage zur Verteidigung der Belastung."
-      }
+      },
+      "creditAlreadyIssued": "Diese Transaktion wurde bereits vor Einreichung des Widerspruchs erstattet. Die stärkste Antwort ist die Erstattung selbst — der Karteninhaber hat sein Geld zurück, es ist nichts weiter offen."
     },
     "improvementHint": "Fügen Sie {label} hinzu, um Ihren Fall zu stärken.",
     "recommendation": {
