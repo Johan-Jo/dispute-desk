@@ -130,6 +130,32 @@ describe("loadPriorOrderHistory", () => {
     expect(r?.disputeFreeHistory).toBe(false);
   });
 
+  // Regression — the coverage test must compare ALL of the customer's
+  // orders against Shopify's numberOfOrders, not strictly-before priors
+  // against numberOfOrders-1. Measured on prod 2026-08-01: 11 of 14
+  // "partial coverage" verdicts were this mistake, on shops whose order
+  // ingest was 100% complete.
+  it("a customer who ordered again LATER still counts as full coverage", async () => {
+    const r = await loadPriorOrderHistory({
+      sb: makeSb({
+        shopify_orders: {
+          data: [
+            { shopify_order_id: "gid://shopify/Order/100", processed_at: "2026-06-01T00:00:00Z" },
+            { shopify_order_id: BASE.orderGid, processed_at: BASE.disputedProcessedAt },
+            { shopify_order_id: "gid://shopify/Order/999", processed_at: "2026-07-20T00:00:00Z" },
+          ],
+          error: null,
+        },
+        disputes: { data: [], error: null },
+      }),
+      ...BASE,
+      // Shopify counts all three; only one is genuinely prior.
+      shopifyTotalOrders: 3,
+    });
+    expect(r?.priorOrders).toBe(1);
+    expect(r?.disputeFreeHistory).toBe(true);
+  });
+
   it("orders placed AFTER the disputed one are not 'prior'", async () => {
     const r = await loadPriorOrderHistory({
       sb: makeSb({
@@ -173,7 +199,28 @@ describe("loadPriorOrderHistory", () => {
     warn.mockRestore();
   });
 
-  it("no priors at all leaves the flag unset rather than vacuously true", async () => {
+  it("reports a verified ZERO when the account has no prior orders", async () => {
+    // Emitting 0 is the point: it stops effectivePriorOrders falling
+    // back to `totalOrders - 1`, which counts later orders as history.
+    const r = await loadPriorOrderHistory({
+      sb: makeSb({
+        shopify_orders: {
+          data: [
+            { shopify_order_id: BASE.orderGid, processed_at: BASE.disputedProcessedAt },
+            { shopify_order_id: "gid://shopify/Order/999", processed_at: "2026-07-20T00:00:00Z" },
+          ],
+          error: null,
+        },
+      }),
+      ...BASE,
+      shopifyTotalOrders: 2,
+    });
+    expect(r?.priorOrders).toBe(0);
+    expect(r?.priorUndisputedOrders).toBe(0);
+    expect(r?.disputeFreeHistory).toBe(true);
+  });
+
+  it("no priors AND partial coverage stays unknown", async () => {
     const r = await loadPriorOrderHistory({
       sb: makeSb({
         shopify_orders: {
@@ -182,7 +229,7 @@ describe("loadPriorOrderHistory", () => {
         },
       }),
       ...BASE,
-      shopifyTotalOrders: 1,
+      shopifyTotalOrders: 6,
     });
     expect(r?.priorOrders).toBe(0);
     expect(r?.disputeFreeHistory).toBeNull();
