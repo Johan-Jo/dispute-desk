@@ -20,10 +20,12 @@ export const unauthorized_fraud_repeat_customer_pattern: StrategySubmodule = {
   priority: 20,
   promptBody: [
     "STRATEGY FOCUS — repeat customer pattern:",
-    "When approved facts include prior_customer_history with priorOrderCount > 0, surface the count and any disputeFreeHistory flag in transactionOverviewArgument and executiveSummary.",
-    "Quote the count: 'The cardholder has N prior undisputed orders with the merchant'.",
+    "When approved facts include prior_customer_history with priorOrderCount > 0, surface the count in transactionOverviewArgument and executiveSummary.",
+    "`disputeFreeHistory` is a TRI-STATE and governs the exact wording. Never write the word 'undisputed' unless it is literally true:",
+    "  disputeFreeHistory=true  → 'The cardholder has N prior undisputed orders with the merchant', and you may mention the absence of prior disputes as additional context.",
+    "  disputeFreeHistory=null  → the prior orders were NOT verified as dispute-free. Write only 'The cardholder has N prior orders with the merchant'. Do NOT write 'undisputed', 'dispute-free', 'clean history', or any equivalent.",
+    "  disputeFreeHistory=false → the account HAS prior chargebacks. Do not cite the order count as supporting evidence at all.",
     "Frame the pattern as 'consistent with a customer in a continuing relationship with the merchant' — never as 'proof the cardholder authorised this transaction'.",
-    "If disputeFreeHistory=true, mention the absence of prior disputes as additional context, but do not draw conclusions about the cardholder's intent for this specific transaction.",
   ].join("\n"),
   version: 1,
 };

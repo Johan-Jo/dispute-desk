@@ -27,6 +27,7 @@ function ctxWithProtect(status: ProtectStatus | null): BuildContext {
     accessToken: "x",
     order,
     paymentContext: { family: "card", raw: null, label: "Card", cardNetwork: null },
+    priorHistory: null,
   };
 }
 
@@ -105,6 +106,7 @@ describe("collectCoverageEvidence", () => {
       accessToken: "y",
       order: null,
       paymentContext: { family: "unknown", raw: null, label: null, cardNetwork: null },
+      priorHistory: null,
     };
     expect(await collectCoverageEvidence(ctx)).toEqual([]);
   });

@@ -251,8 +251,24 @@ describe("rubric — conditional upgrades to strong", () => {
     expect(
       categorizeEvidenceField("customer_account_info", { priorUndisputedOrders: 3 }),
     ).toBe("strong");
-    // totalOrders alone (and disputeFreeHistory not falsified) also upgrades
-    expect(categorizeEvidenceField("customer_account_info", { totalOrders: 5 })).toBe("strong");
+    // `totalOrders` alone no longer upgrades to strong (2026-08-01).
+    // It is Shopify's raw order count and asserts NOTHING about whether
+    // those orders were disputed; reading it as a clean history is what
+    // put "8 prior undisputed orders … established dispute-free order
+    // history" into a pack for an account with two open chargebacks
+    // (blume-box 162042cd). Real returning-customer context, so it earns
+    // moderate — not the rubric-#5 strong, which requires the undisputed
+    // half to be verified.
+    expect(categorizeEvidenceField("customer_account_info", { totalOrders: 5 })).toBe(
+      "moderate",
+    );
+    // Explicit verification restores strong.
+    expect(
+      categorizeEvidenceField("customer_account_info", {
+        totalOrders: 5,
+        disputeFreeHistory: true,
+      }),
+    ).toBe("strong");
   });
 
   it("rubric #5 — disputeFreeHistory: false suppresses any upgrade", () => {

@@ -17,6 +17,7 @@
 import {
   CANONICAL_EVIDENCE,
   categoryFor,
+  disputeFreeHistoryState,
   effectivePriorOrders,
   type EvidenceCategory,
 } from "@/lib/argument/canonicalEvidence";
@@ -281,9 +282,21 @@ function extractValue(
       // — passing it through unadjusted made the LLM narrative claim
       // "one prior undisputed order" on a customer's only, disputed,
       // order (prod dispute 235d4152, defence package 7304e09f).
+      //
+      // `disputeFreeHistory` is passed through as a TRI-STATE (true /
+      // false / null). It used to be coerced with `!== false`, which
+      // handed the LLM `disputeFreeHistory: true` for every account we
+      // had never checked — and the repeat-customer strategy is
+      // explicitly instructed to cite that flag (see
+      // `strategies/unauthorized_fraud_repeat_customer_pattern.ts`).
+      // null must stay null so the narrative cannot assert a clean
+      // history we never verified.
       return {
         priorOrderCount: effectivePriorOrders(p) ?? 0,
-        disputeFreeHistory: p.disputeFreeHistory !== false,
+        disputeFreeHistory:
+          disputeFreeHistoryState(p) === "unknown"
+            ? null
+            : disputeFreeHistoryState(p) === "dispute_free",
       };
     case "activity_log":
       return {

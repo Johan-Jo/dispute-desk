@@ -1137,7 +1137,11 @@
             "firstTimeSince": "Cliente de primeira viagem (conta criada em {sinceLabel}, sem pedidos anteriores). Incluído apenas como contexto — não há histórico de pedidos anterior para corroborar esta transação.",
             "internalFirstTime": "Este é um cliente de primeira viagem, sem pedidos anteriores nesta conta. Mantido interno em uma disputa de fraude — expor \"conta nova\" ao banco é lido como indicador de fraude, não como evidência de apoio.",
             "internalFirstTimeSince": "Este é um cliente de primeira viagem (conta criada em {sinceLabel}, sem pedidos anteriores). Mantido interno em uma disputa de fraude — expor \"conta nova\" ao banco é lido como indicador de fraude, não como evidência de apoio.",
-            "internalWithDisputes": "O cliente possui pedidos anteriores nesta conta, mas a conta também possui estornos anteriores. Mantido interno em uma disputa de fraude — citar uma conta com histórico de estornos enfraqueceria a resposta."
+            "internalWithDisputes": "O cliente possui pedidos anteriores nesta conta, mas a conta também possui estornos anteriores. Mantido interno em uma disputa de fraude — citar uma conta com histórico de estornos enfraqueceria a resposta.",
+            "returningUnverifiedSingular": "Cliente recorrente com {prior} pedido anterior nesta conta. Citado como contexto de apoio — um histórico de pedidos estabelecido é consistente com o titular do cartão ter autorizado esta transação.",
+            "returningUnverifiedSingularSince": "Cliente recorrente com {prior} pedido anterior nesta conta (cliente desde {sinceLabel}). Citado como contexto de apoio — um histórico de pedidos estabelecido é consistente com o titular do cartão ter autorizado esta transação.",
+            "returningUnverifiedPlural": "Cliente recorrente com {prior} pedidos anteriores nesta conta. Citado como contexto de apoio — um histórico de pedidos estabelecido é consistente com o titular do cartão ter autorizado esta transação.",
+            "returningUnverifiedPluralSince": "Cliente recorrente com {prior} pedidos anteriores nesta conta (cliente desde {sinceLabel}). Citado como contexto de apoio — um histórico de pedidos estabelecido é consistente com o titular do cartão ter autorizado esta transação."
           },
           "activityLog": {
             "notIncluded": "O histórico de atividade do cliente não está disponível para este pedido."

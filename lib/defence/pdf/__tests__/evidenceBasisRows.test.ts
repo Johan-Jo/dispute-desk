@@ -109,15 +109,29 @@ describe("buildEvidenceBasisRows", () => {
     expect(rows[0].value).toContain("Signature on delivery");
   });
 
-  it("renders prior customer count (no prior chargebacks)", () => {
+  it("renders prior customer count (verified: no prior chargebacks)", () => {
     const rows = buildEvidenceBasisRows([
       fact({
         category: "prior_customer_history",
         label: "Customer history",
-        value: { priorOrderCount: 4 },
+        value: { priorOrderCount: 4, disputeFreeHistory: true },
       }),
     ]);
     expect(rows[0].value).toBe("4 prior undisputed orders");
+  });
+
+  // The word "undisputed" is a claim, and this row goes in the PDF the
+  // issuer reads. An unverified history states the count and stops.
+  it("omits 'undisputed' when the history was never verified", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        category: "prior_customer_history",
+        label: "Customer history",
+        value: { priorOrderCount: 4, disputeFreeHistory: null },
+      }),
+    ]);
+    expect(rows[0].value).toBe("4 prior orders on this account");
+    expect(rows[0].value).not.toContain("undisputed");
   });
 
   it("renders prior customer count with a prior-chargeback caveat", () => {

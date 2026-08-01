@@ -1559,7 +1559,11 @@
             "firstTimeSince": "Förstagångskund (konto skapat {sinceLabel}, inga tidigare beställningar). Ingår endast som kontext — det finns ingen tidigare beställningshistorik som styrker den här transaktionen.",
             "internalFirstTime": "Det här är en förstagångskund utan tidigare beställningar på det här kontot. Hålls intern i en bedrägeritvist — att lyfta fram \"nytt konto\" för banken läses som en bedrägeriindikator, inte som stödjande bevis.",
             "internalFirstTimeSince": "Det här är en förstagångskund (konto skapat {sinceLabel}, inga tidigare beställningar). Hålls intern i en bedrägeritvist — att lyfta fram \"nytt konto\" för banken läses som en bedrägeriindikator, inte som stödjande bevis.",
-            "internalWithDisputes": "Kunden har tidigare beställningar på det här kontot, men kontot har också tidigare chargebacks. Hålls intern i en bedrägeritvist — att åberopa ett konto med chargeback-historik skulle försvaga svaret."
+            "internalWithDisputes": "Kunden har tidigare beställningar på det här kontot, men kontot har också tidigare chargebacks. Hålls intern i en bedrägeritvist — att åberopa ett konto med chargeback-historik skulle försvaga svaret.",
+            "returningUnverifiedSingular": "Återkommande kund med {prior} tidigare beställning på det här kontot. Anges som stödjande kontext — en etablerad beställningshistorik är förenlig med att kortinnehavaren auktoriserade transaktionen.",
+            "returningUnverifiedSingularSince": "Återkommande kund med {prior} tidigare beställning på det här kontot (kund sedan {sinceLabel}). Anges som stödjande kontext — en etablerad beställningshistorik är förenlig med att kortinnehavaren auktoriserade transaktionen.",
+            "returningUnverifiedPlural": "Återkommande kund med {prior} tidigare beställningar på det här kontot. Anges som stödjande kontext — en etablerad beställningshistorik är förenlig med att kortinnehavaren auktoriserade transaktionen.",
+            "returningUnverifiedPluralSince": "Återkommande kund med {prior} tidigare beställningar på det här kontot (kund sedan {sinceLabel}). Anges som stödjande kontext — en etablerad beställningshistorik är förenlig med att kortinnehavaren auktoriserade transaktionen."
           },
           "activityLog": {
             "notIncluded": "Kundens aktivitetshistorik är inte tillgänglig för den här beställningen."
