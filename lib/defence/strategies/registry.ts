@@ -156,6 +156,23 @@ export function rankStrategies(input: RankStrategiesInput): StrategySubmodule[] 
 
   const fallback = indexed.find(({ s }) => s.isFallback)?.s ?? null;
 
+  // EXCLUSIVE strategies replace the rest of the bundle instead of
+  // merely leading it. Ordering alone is not suppression: on blume-box
+  // 162042cd the credit-already-issued strategy led the bundle and
+  // `unauthorized_fraud_auth_signal_stack`, still present behind it,
+  // produced a full payment-authentication argument anyway — hedging
+  // two theories on a case whose authentication evidence was the weak
+  // flank. The fallback is still appended: it carries tone and hedging
+  // rules, not a competing theory.
+  const exclusives = eligibleNonFallback.filter(({ s }) => s.exclusive === true);
+  if (exclusives.length > 0) {
+    // Highest priority wins when more than one exclusive qualifies.
+    const winner = exclusives.reduce((best, cur) =>
+      cur.s.priority > best.s.priority ? cur : best,
+    ).s;
+    return fallback ? [winner, fallback] : [winner];
+  }
+
   // Cap non-fallback to (max - 1) if a fallback exists, since the
   // fallback always appears as the last entry. If no fallback, cap to
   // max.

@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { STRATEGIES_BY_FAMILY } from "../registry";
+import { STRATEGIES_BY_FAMILY, rankStrategies } from "../registry";
 import { credit_already_issued } from "../credit_already_issued";
 import { FACT_PREDICATES } from "../../factPredicates";
 import type { EvidenceFact } from "../../types";
@@ -119,5 +119,65 @@ describe("strategy prompt safety", () => {
 
   it("forbids speculating about why the refund was issued", () => {
     expect(body).toMatch(/Never speculate about WHY the refund was issued/);
+  });
+});
+
+// Ordering is not suppression. On blume-box 162042cd the strategy led
+// the bundle and unauthorized_fraud_auth_signal_stack, still present
+// behind it, wrote a full paymentAuthenticationArgument anyway — on a
+// case with avsResult='N' and a cardholder-name mismatch. Exclusivity
+// has to be structural, not a line in a prompt.
+describe("exclusivity", () => {
+  const evalsFor = (
+    truthy: string[],
+  ): Record<string, boolean> => {
+    const out: Record<string, boolean> = {};
+    for (const id of Object.keys(FACT_PREDICATES)) out[id] = false;
+    for (const id of truthy) out[id] = true;
+    return out;
+  };
+
+  it("is declared exclusive", () => {
+    expect(credit_already_issued.exclusive).toBe(true);
+  });
+
+  it("replaces the family's own strategies when it qualifies", () => {
+    const bundle = rankStrategies({
+      familyKey: "unauthorized_fraud",
+      predicateEvaluations: evalsFor([
+        "credit_preceded_dispute",
+        // Auth evidence that WOULD otherwise pull in the auth stack.
+        "avs_and_cvv_match",
+        "prior_customer",
+      ]) as never,
+      packageMode: "full" as never,
+    });
+    const keys = bundle.map((s) => s.key);
+    expect(keys).toContain("credit_already_issued");
+    expect(keys).not.toContain("unauthorized_fraud_auth_signal_stack");
+    expect(keys).not.toContain("unauthorized_fraud_repeat_customer_pattern");
+    // The fallback still rides along — tone rules, not a rival theory.
+    expect(keys).toContain("unauthorized_fraud_narrow_fallback");
+    expect(keys).toHaveLength(2);
+  });
+
+  it("leaves the normal bundle untouched when no credit precedes the dispute", () => {
+    const bundle = rankStrategies({
+      familyKey: "unauthorized_fraud",
+      predicateEvaluations: evalsFor(["avs_and_cvv_match", "prior_customer"]) as never,
+      packageMode: "full" as never,
+    });
+    const keys = bundle.map((s) => s.key);
+    expect(keys).not.toContain("credit_already_issued");
+    expect(keys).toContain("unauthorized_fraud_auth_signal_stack");
+  });
+
+  it("a mere refund does not trigger exclusivity — only a PRE-dispute credit", () => {
+    const bundle = rankStrategies({
+      familyKey: "unauthorized_fraud",
+      predicateEvaluations: evalsFor(["refund_processed", "avs_and_cvv_match"]) as never,
+      packageMode: "full" as never,
+    });
+    expect(bundle.map((s) => s.key)).not.toContain("credit_already_issued");
   });
 });
