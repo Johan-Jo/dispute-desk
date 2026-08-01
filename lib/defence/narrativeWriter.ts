@@ -32,6 +32,7 @@ import type {
   NarrativeInput,
   NarrativeSection,
   PackageMode,
+  StrategySubmodule,
 } from "./types";
 
 const DEFAULT_MODEL_ENV = "DEFENCE_PACKAGE_DEFAULT_MODEL";
@@ -399,7 +400,7 @@ export async function generateNarrative(
         strategyKeys,
       });
       return {
-        narrative: parsed,
+        narrative: applySectionSuppression(parsed, input.strategies),
         modelUsed: model,
         promptVersion: PROMPT_VERSION,
         promptFamily: PROMPT_FAMILY,
@@ -502,6 +503,57 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
       label: m.label,
     })),
   };
+}
+
+/**
+ * Blank the sections an active strategy declares it suppresses.
+ *
+ * The output schema has a FIXED section list, so the model writes into
+ * every section that exists — including ones the active strategy has
+ * told it not to argue. On blume-box 162042cd the credit-already-issued
+ * strategy is exclusive and its prompt forbids arguing authorization,
+ * and the model still produced a `paymentAuthenticationArgument`
+ * (softened to "supporting context only", but present) on a case with a
+ * failed AVS and a cardholder-name mismatch.
+ *
+ * Prompt instructions are a request. This is the enforcement: after
+ * parsing, suppressed sections are emptied and recorded in
+ * `omittedSections` so the PDF and the reviewer see a stated omission
+ * rather than a silent gap.
+ */
+function applySectionSuppression(
+  narrative: DefenceNarrativeOutput,
+  strategies: StrategySubmodule[] | undefined,
+): DefenceNarrativeOutput {
+  const suppressed = new Set<string>();
+  for (const s of strategies ?? []) {
+    for (const key of s.suppressesSections ?? []) suppressed.add(key);
+  }
+  if (suppressed.size === 0) return narrative;
+
+  const out = { ...narrative };
+  const omitted = [...(narrative.omittedSections ?? [])];
+  for (const key of suppressed) {
+    const section = (out as unknown as Record<string, unknown>)[key] as
+      | NarrativeSection
+      | undefined;
+    // Nothing to strip when the model already left it empty.
+    if (!section || section.text.trim().length === 0) continue;
+    (out as unknown as Record<string, unknown>)[key] = {
+      text: "",
+      usedFactIds: [],
+    } satisfies NarrativeSection;
+    if (!omitted.some((o) => o.sectionKey === key)) {
+      omitted.push({
+        sectionKey: key as (typeof omitted)[number]["sectionKey"],
+        reason:
+          "Suppressed: the active strategy argues a different theory, and " +
+          "presenting this section alongside it would hedge two arguments.",
+      });
+    }
+  }
+  out.omittedSections = omitted;
+  return out;
 }
 
 function tryParseNarrative(raw: string): DefenceNarrativeOutput | null {

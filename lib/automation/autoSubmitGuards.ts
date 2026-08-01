@@ -70,6 +70,22 @@ export interface AutoSubmitGuardInput {
    * gate-only behaviour in every caller.
    */
   caseStrength: string | null | undefined;
+  /**
+   * `pack_json.credit_already_issued`. A credit that preceded the
+   * dispute and covers it in full sets `case_strength.overall` to
+   * "strong" via the strength FLOOR, so before this field existed such
+   * a case auto-submitted by INHERITING the Strong path — nobody had
+   * decided that, it was a side effect of the floor.
+   *
+   * It is now a named branch. The decision is still "submit": the facts
+   * are objective, the argument needs no judgement, and holding a
+   * fully-credited case back only risks the deadline. But it is legible
+   * in the verdict, auditable, and one line to change if that call
+   * turns out to be wrong.
+   */
+  creditAlreadyIssued?:
+    | { triggered?: boolean; coversDisputedAmount?: boolean }
+    | null;
 }
 
 /**
@@ -99,6 +115,18 @@ export function evaluateAutoSubmitGuards(
         input.fatalLoss.message ??
         `Auto-submit blocked — fatal-loss condition (${input.fatalLoss.reason ?? "unknown"}) per PRD §5`,
     };
+  }
+
+  // Credit already issued, in full, before the dispute was filed.
+  // Decided explicitly rather than inherited from the Strong path: the
+  // evidence is a dated transaction record, the argument requires no
+  // merchant judgement, and the response only has value before the
+  // deadline. Named so the decision is visible in logs and in review.
+  if (
+    input.creditAlreadyIssued?.triggered === true &&
+    input.creditAlreadyIssued?.coversDisputedAmount === true
+  ) {
+    return { decision: "proceed" };
   }
 
   const strength = input.caseStrength ?? null;

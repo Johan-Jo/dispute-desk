@@ -5,6 +5,7 @@
 
 import { describe, it, expect } from "vitest";
 import { detectFatalLoss } from "../fatalLoss";
+import { evaluateAutoSubmitGuards } from "../autoSubmitGuards";
 import type { OrderDetailNode } from "@/lib/shopify/queries/orders";
 
 function makeOrder(overrides: Partial<OrderDetailNode> = {}): OrderDetailNode {
@@ -285,5 +286,50 @@ describe("detectFatalLoss — inquiry phase", () => {
       detectFatalLoss(refundedAfter, "CREDIT_NOT_PROCESSED", 220, "2026-07-09T22:36:09Z")
         .triggered,
     ).toBe(true);
+  });
+});
+
+// Auto-submit for a fully-credited case is now a NAMED decision rather
+// than something inherited from the Strong path. It filed twice on
+// prod (162042cd, 2026-08-01) before anyone had decided it should.
+describe("evaluateAutoSubmitGuards — credit already issued", () => {
+  it("proceeds explicitly when a full pre-dispute credit exists", () => {
+    const v = evaluateAutoSubmitGuards({
+      coverageState: null,
+      fatalLoss: null,
+      // Weak on the family's own evidence — the credit is the case.
+      caseStrength: "weak",
+      creditAlreadyIssued: { triggered: true, coversDisputedAmount: true },
+    });
+    expect(v.decision).toBe("proceed");
+  });
+
+  it("does NOT proceed on a partial credit", () => {
+    const v = evaluateAutoSubmitGuards({
+      coverageState: null,
+      fatalLoss: null,
+      caseStrength: "weak",
+      creditAlreadyIssued: { triggered: true, coversDisputedAmount: false },
+    });
+    expect(v.decision).toBe("block");
+  });
+
+  it("coverage and fatal-loss still out-rank it", () => {
+    expect(
+      evaluateAutoSubmitGuards({
+        coverageState: "covered_shopify",
+        fatalLoss: null,
+        caseStrength: "strong",
+        creditAlreadyIssued: { triggered: true, coversDisputedAmount: true },
+      }).decision,
+    ).toBe("block");
+    expect(
+      evaluateAutoSubmitGuards({
+        coverageState: null,
+        fatalLoss: { triggered: true, reason: "inr_no_fulfillment" },
+        caseStrength: "strong",
+        creditAlreadyIssued: { triggered: true, coversDisputedAmount: true },
+      }).decision,
+    ).toBe("block");
   });
 });

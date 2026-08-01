@@ -515,6 +515,15 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
           coverageState: coverage?.state,
           fatalLoss,
           caseStrength: strengthOverall,
+          creditAlreadyIssued:
+            (
+              pack.pack_json as {
+                credit_already_issued?: {
+                  triggered?: boolean;
+                  coversDisputedAmount?: boolean;
+                };
+              } | null
+            )?.credit_already_issued ?? null,
         })
       : ({ decision: "proceed" } as const);
 

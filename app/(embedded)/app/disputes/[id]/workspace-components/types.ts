@@ -139,6 +139,11 @@ export interface WorkspacePack {
   auditEvents: AuditEvent[];
   pdfPath: string | null;
   savedToShopifyAt: string | null;
+  /** Credit-already-issued floor from `pack_json`. The client recomputes
+   *  case strength live; without this it disagrees with the server and
+   *  with what was actually submitted — blume-box 162042cd rendered
+   *  "Weak case" for a dispute the system scored strong and had filed. */
+  creditAlreadyIssued?: { triggered: boolean; coversDisputedAmount: boolean } | null;
   /** Last successful build timestamp (`evidence_packs.updated_at`).
    *  Used by the rebuild-outcome banner to detect stale outcomes —
    *  buildPack clears the outcome columns on success, but if a write
