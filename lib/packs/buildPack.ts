@@ -46,6 +46,7 @@ import {
 } from "@/lib/argument/nameMismatch";
 import type { CaseStrengthLevel } from "@/lib/argument/types";
 import { detectFatalLoss, type FatalLossSummary } from "@/lib/automation/fatalLoss";
+import { loadPriorOrderHistory } from "./priorOrderHistory";
 import {
   detectRiskWeakness,
   type RiskWeaknessSummary,
@@ -164,7 +165,9 @@ export async function buildPack(
 
   const { data: dispute } = await sb
     .from("disputes")
-    .select("id, reason, order_gid, dispute_gid, amount, phase, customer_display_name")
+    .select(
+      "id, reason, order_gid, dispute_gid, amount, phase, customer_display_name, initiated_at",
+    )
     .eq("id", pack.dispute_id)
     .single();
   if (!dispute) throw new Error(`Dispute not found: ${pack.dispute_id}`);
@@ -317,6 +320,26 @@ export async function buildPack(
     );
   }
 
+  // VERIFY the customer's prior-order history against our own ingested
+  // orders + disputes before any collector can claim it is dispute-free.
+  // Same shape as the risk-weakness snapshot read: one query pair here,
+  // result handed to collectors through ctx. Never throws — an
+  // unresolvable history returns null and the collector omits the flag.
+  const priorHistory = await loadPriorOrderHistory({
+    sb,
+    shopId: pack.shop_id,
+    orderGid: dispute.order_gid,
+    customerGid: order?.customer?.id ?? null,
+    // ORDER_DETAIL_QUERY exposes createdAt, not processedAt; compared
+    // against shopify_orders.processed_at it is close enough to order
+    // the account's timeline (the two differ only for backdated/draft
+    // orders, and only a same-minute sibling could flip).
+    disputedProcessedAt: order?.createdAt ?? null,
+    shopifyTotalOrders: order?.customer?.numberOfOrders != null
+      ? Number(order.customer.numberOfOrders)
+      : null,
+  });
+
   const ctx: BuildContext = {
     packId,
     disputeId: dispute.id,
@@ -328,6 +351,7 @@ export async function buildPack(
     correlationId: opts?.correlationId,
     order,
     paymentContext,
+    priorHistory,
   };
 
   // LSE-0: resolve the network reason code (Visa 10.x / 13.x or Mastercard
@@ -683,6 +707,9 @@ export async function buildPack(
     order,
     dispute.reason,
     Number.isFinite(disputeAmountNum) ? (disputeAmountNum as number) : null,
+    // Timing decides whether a refund is a concession or a
+    // representment — a credit issued before the dispute is the latter.
+    dispute.initiated_at ?? null,
   );
 
   // Risk-weakness summary — fraud-risk Phase 2. Caps overall at

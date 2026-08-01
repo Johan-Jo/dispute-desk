@@ -1624,7 +1624,11 @@
             "firstTimeSince": "First-time customer (account created {sinceLabel}, no prior orders). Included as context only — there is no prior order history to corroborate this transaction.",
             "internalFirstTime": "This is a first-time customer with no prior orders on this account. Kept internal on a fraud dispute — surfacing \"new account\" to the bank reads as a fraud indicator, not as supporting evidence.",
             "internalFirstTimeSince": "This is a first-time customer (account created {sinceLabel}, no prior orders). Kept internal on a fraud dispute — surfacing \"new account\" to the bank reads as a fraud indicator, not as supporting evidence.",
-            "internalWithDisputes": "The customer has prior orders on this account, but the account also has prior chargebacks. Kept internal on a fraud dispute — citing an account with a chargeback history would weaken the response."
+            "internalWithDisputes": "The customer has prior orders on this account, but the account also has prior chargebacks. Kept internal on a fraud dispute — citing an account with a chargeback history would weaken the response.",
+            "returningUnverifiedSingular": "Returning customer with {prior} prior order on this account. Cited as supporting context — an established order history is consistent with the cardholder having authorized this transaction.",
+            "returningUnverifiedSingularSince": "Returning customer with {prior} prior order on this account (customer since {sinceLabel}). Cited as supporting context — an established order history is consistent with the cardholder having authorized this transaction.",
+            "returningUnverifiedPlural": "Returning customer with {prior} prior orders on this account. Cited as supporting context — an established order history is consistent with the cardholder having authorized this transaction.",
+            "returningUnverifiedPluralSince": "Returning customer with {prior} prior orders on this account (customer since {sinceLabel}). Cited as supporting context — an established order history is consistent with the cardholder having authorized this transaction."
           },
           "activityLog": {
             "notIncluded": "Customer activity history is not available for this order."

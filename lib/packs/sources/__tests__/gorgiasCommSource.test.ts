@@ -36,6 +36,7 @@ const ctx: BuildContext = {
   accessToken: "x",
   order: { email: "buyer@example.com" } as unknown as OrderDetailNode,
   paymentContext: { family: "card", raw: null, label: "Card", cardNetwork: null },
+  priorHistory: null,
 };
 
 const noopLogEvent = async () => {};

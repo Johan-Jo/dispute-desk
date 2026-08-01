@@ -8,9 +8,34 @@
  *   - auto-mode submission is blocked (review-mode still parks)
  *
  * LOCKED scope for v1 — only two triggers:
- *   1. refundIssued      — order.totalRefundedSet.amount >= dispute.amount
+ *   1. refundIssued      — order.totalRefundedSet.amount >= dispute.amount,
+ *                          and the credit did NOT precede the dispute
+ *                          (see below)
  *   2. inrNoFulfillment  — reason === PRODUCT_NOT_RECEIVED AND order has
  *                          no successful fulfillment
+ *
+ * ── Refund timing (corrected 2026-08-01) ──
+ * A refund is only a losing position when it lands ON or AFTER the
+ * dispute. A credit issued BEFORE the cardholder filed is the opposite:
+ * it is among the strongest representments available, because the
+ * cardholder already has the money and the issuer should never have
+ * processed a chargeback on an already-credited transaction. Both
+ * networks have rules aimed at preventing exactly that double credit.
+ *
+ * The original gate ignored timing and capped every refunded case at
+ * "weak" / "hard to win" with auto-submit blocked. On blume-box dispute
+ * 162042cd the merchant refunded $220 on 2026-07-13 and the chargeback
+ * arrived 2026-07-31 — eighteen days later — and DisputeDesk told them
+ * the case was structurally unwinnable and stood down. The pack already
+ * carried the winning fact (`refund_record`, `refundStatus: processed`,
+ * `refundedAt`, bankEligible, includeInBankNarrative); only this gate
+ * was wrong.
+ *
+ * Timing is decided from `order.refunds[].createdAt`. When the dispute
+ * date is unknown, or no refund carries a usable timestamp, we keep the
+ * old conservative behaviour and treat it as fatal — the gate only ever
+ * makes auto-mode stricter, so an unresolved timestamp must not become
+ * an auto-submission.
  *
  * Out of scope here (deferred to a future P4.1+):
  *   - "Valid cancellation before billing" (no source today)
@@ -66,23 +91,31 @@ function messageTokenFor(reason: FatalLossReason): I18nToken {
  *                    null on legacy disputes; the refund check skips when
  *                    null (we'd otherwise risk false positives on partial
  *                    refunds).
+ * @param disputeInitiatedAt  ISO timestamp the dispute was opened
+ *                    (`disputes.initiated_at`). Null on legacy rows — the
+ *                    refund trigger then stays conservative and fires.
  */
 export function detectFatalLoss(
   order: OrderDetailNode | null,
   disputeReason: string | null,
   disputeAmount: number | null,
+  disputeInitiatedAt: string | null = null,
 ): FatalLossSummary {
   if (!order) return NOT_TRIGGERED;
 
-  // Trigger 1: refund covering the disputed amount has been issued.
+  // Trigger 1: refund covering the disputed amount has been issued —
+  // but ONLY when the credit did not precede the dispute. See the
+  // "Refund timing" note in the module header.
   if (disputeAmount != null && disputeAmount > 0) {
     const refunded = parseMoney(order.totalRefundedSet?.shopMoney?.amount);
     if (refunded != null && refunded >= disputeAmount) {
-      return {
-        triggered: true,
-        reason: "refund_issued",
-        messageToken: messageTokenFor("refund_issued"),
-      };
+      if (!creditPrecededDispute(order, disputeInitiatedAt)) {
+        return {
+          triggered: true,
+          reason: "refund_issued",
+          messageToken: messageTokenFor("refund_issued"),
+        };
+      }
     }
   }
 
@@ -109,4 +142,36 @@ function parseMoney(raw: string | null | undefined): number | null {
   if (raw == null) return null;
   const n = Number(raw);
   return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Did the merchant credit the cardholder BEFORE the dispute was filed?
+ *
+ * True only when we can positively establish it: a parseable dispute
+ * date AND at least one refund with a parseable `createdAt` strictly
+ * earlier than it. Every unknown resolves to false, which keeps the
+ * fatal-loss trigger firing — the gate is allowed to be over-strict
+ * (a missed auto-submit), never over-permissive (a bad submission).
+ *
+ * "At least one" rather than "all": a pre-dispute credit covering the
+ * amount is the representable fact. A later top-up refund does not
+ * un-issue it.
+ */
+function creditPrecededDispute(
+  order: OrderDetailNode,
+  disputeInitiatedAt: string | null,
+): boolean {
+  const disputedAt = parseTime(disputeInitiatedAt);
+  if (disputedAt == null) return false;
+  for (const refund of order.refunds ?? []) {
+    const at = parseTime(refund?.createdAt);
+    if (at != null && at < disputedAt) return true;
+  }
+  return false;
+}
+
+function parseTime(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+  const t = Date.parse(raw);
+  return Number.isFinite(t) ? t : null;
 }

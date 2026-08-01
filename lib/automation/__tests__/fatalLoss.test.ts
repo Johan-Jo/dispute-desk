@@ -16,6 +16,93 @@ function makeOrder(overrides: Partial<OrderDetailNode> = {}): OrderDetailNode {
   } as OrderDetailNode;
 }
 
+// Regression — blume-box dispute 162042cd (2026-08-01). The merchant
+// refunded $220 on 2026-07-13 and the chargeback arrived 2026-07-31.
+// The gate ignored timing, capped the case at "weak / hard to win" and
+// blocked auto-submit — telling the merchant that the single strongest
+// representment available to them was structurally unwinnable.
+describe("detectFatalLoss — refund timing", () => {
+  const refundedOrder = (refundedAt: string | null) =>
+    makeOrder({
+      totalRefundedSet: { shopMoney: { amount: "220.00", currencyCode: "USD" } },
+      refunds: refundedAt
+        ? ([
+            {
+              id: "gid://shopify/Refund/1",
+              createdAt: refundedAt,
+              note: "Order canceled",
+              totalRefundedSet: { shopMoney: { amount: "220.00", currencyCode: "USD" } },
+            },
+          ] as OrderDetailNode["refunds"])
+        : [],
+    });
+
+  it("does NOT fire when the credit was issued BEFORE the dispute", () => {
+    const r = detectFatalLoss(
+      refundedOrder("2026-07-13T20:50:12Z"),
+      "FRAUDULENT",
+      220,
+      "2026-07-31T21:00:26Z",
+    );
+    expect(r.triggered).toBe(false);
+    expect(r.reason).toBeNull();
+  });
+
+  it("fires when the refund came AFTER the dispute was opened", () => {
+    const r = detectFatalLoss(
+      refundedOrder("2026-08-02T10:00:00Z"),
+      "FRAUDULENT",
+      220,
+      "2026-07-31T21:00:26Z",
+    );
+    expect(r.triggered).toBe(true);
+    expect(r.reason).toBe("refund_issued");
+  });
+
+  it("stays conservative when the dispute date is unknown", () => {
+    // The gate may only ever be over-strict. An unresolvable timestamp
+    // must never become an auto-submission.
+    expect(
+      detectFatalLoss(refundedOrder("2026-07-13T20:50:12Z"), "FRAUDULENT", 220, null)
+        .triggered,
+    ).toBe(true);
+  });
+
+  it("stays conservative when no refund carries a usable timestamp", () => {
+    expect(
+      detectFatalLoss(refundedOrder(null), "FRAUDULENT", 220, "2026-07-31T21:00:26Z")
+        .triggered,
+    ).toBe(true);
+    expect(
+      detectFatalLoss(refundedOrder("not-a-date"), "FRAUDULENT", 220, "2026-07-31T21:00:26Z")
+        .triggered,
+    ).toBe(true);
+  });
+
+  it("a later top-up refund does not un-issue the pre-dispute credit", () => {
+    const order = makeOrder({
+      totalRefundedSet: { shopMoney: { amount: "220.00", currencyCode: "USD" } },
+      refunds: [
+        {
+          id: "gid://shopify/Refund/1",
+          createdAt: "2026-07-13T20:50:12Z",
+          note: null,
+          totalRefundedSet: { shopMoney: { amount: "200.00", currencyCode: "USD" } },
+        },
+        {
+          id: "gid://shopify/Refund/2",
+          createdAt: "2026-08-02T10:00:00Z",
+          note: null,
+          totalRefundedSet: { shopMoney: { amount: "20.00", currencyCode: "USD" } },
+        },
+      ] as OrderDetailNode["refunds"],
+    });
+    expect(
+      detectFatalLoss(order, "FRAUDULENT", 220, "2026-07-31T21:00:26Z").triggered,
+    ).toBe(false);
+  });
+});
+
 describe("detectFatalLoss — refund_issued trigger", () => {
   it("fires when totalRefunded covers disputed amount exactly", () => {
     const order = makeOrder({
