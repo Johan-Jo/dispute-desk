@@ -119,15 +119,30 @@ Visa's *Dispute Management Guidelines for Visa Merchants* — the reference we c
 
 Industry practice agrees on outcome: representment with refund proof is described as *"one of the more straightforward disputes to win, provided you submit evidence before the deadline"*, with ARN, timestamps and refund confirmation as the evidence set.
 
-### F2 — Shopify makes the post-dispute-refund state nearly unreachable. **VERIFIED**
+### F2 — THREE orderings, not two. Only one of them is blocked. **VERIFIED (docs + prod data)**
+
+The first draft of this section split the world into refund-before-dispute and refund-after-dispute, and concluded the second was unreachable. Querying prod showed that taxonomy was wrong. There are three:
+
+| | Ordering | Allowed? | Correct response | Prod (all packs) |
+|---|---|---|---|---|
+| **A** | Refund → **chargeback** later | Yes. Nothing can stop a cardholder filing | Represent with the credit documentation (F1) | 1 — `162042cd` |
+| **B** | **Chargeback** open → merchant refunds | **No** — Shopify blocks it | n/a | 0 |
+| **C** | **Inquiry** → merchant refunds | Yes, and it is the textbook play | Refund resolves it; no representment needed | 2 — both **won** |
+
+Shopify on B only:
 
 > "Refunds can't be issued while a chargeback is open. The funds have already been withdrawn by the bank and are held pending the dispute resolution."
 >
 > "You can't issue a refund after a cardholder initiates a chargeback. If you determine that a refund is warranted for an open chargeback, then the cardholder must first drop the chargeback, and then you can provide a refund."
 
-For Shopify Payments the "refunded after the dispute" branch mostly cannot happen — the platform blocks it. It remains reachable only by a refund that raced the dispute webhook, or a credit issued outside Shopify.
+**A is not prohibited and cannot be.** Visa's rules say the *issuer* should screen such a dispute out as invalid (F1), but that is a rule issuers are meant to apply, not a technical block — and `162042cd` is proof they raise them anyway. That is exactly why the representment path matters.
 
-**Design consequence:** do not build a post-dispute-refund state. Keep `detectFatalLoss`'s existing conservative behaviour as the catch-all for that residue — which is exactly what it already does.
+**C is the case the first draft missed.** An inquiry is a pre-dispute retrieval request, not a chargeback, so Shopify's block does not apply and refunding is the encouraged resolution. Both prod instances (cay-collective, `CREDIT_NOT_PROCESSED`, `phase = inquiry`) were refunded days after initiation and **won**.
+
+**Design consequences:**
+
+1. Do not build a state for B — the platform prevents it. `detectFatalLoss`'s conservative fallback covers any residue (a refund racing the dispute webhook, or an off-Shopify credit).
+2. **`detectFatalLoss` needs a `phase` guard.** It currently compares the refund against `initiated_at` with no regard for phase, so on an inquiry resolved by a refund (case C) the refund lands *after* initiation, the gate fires, and we tell the merchant a correctly-handled case is structurally unwinnable. Both prod instances were won, so this is a messaging defect rather than an outcome one — but it is wrong and it is cheap to fix: when `phase = inquiry`, a later refund is a resolution, not a concession.
 
 ### F3 — Shopify has NO evidence field for a credit already issued. **VERIFIED**
 
@@ -165,7 +180,7 @@ Research closed four of the five. What remains is genuinely a product call.
 | # | Question | Research says | Recommendation |
 |---|---|---|---|
 | 1 | **Partial credit** — fire on partial, or full coverage only? | No formal split-claim mechanism; Shopify has no amount field (F4) | **Fire on partial**, naming both figures, never "in full" unless covered |
-| 2 | **Post-dispute refunds** — build a state for it? | Shopify blocks refunds while a dispute is open (F2) | **Don't build.** Existing fatal-loss conservatism covers the residue |
+| 2 | **Post-dispute refunds** — build a state for it? | Three orderings, not two: A representable, B blocked by Shopify, C (inquiry→refund) allowed and already winning (F2) | **Don't build B.** But **add a `phase` guard to `detectFatalLoss`** so case C stops being labelled unwinnable |
 | 3 | **Supersede or compose** with a strong authorization stack? | Not addressed by any source | **Supersede.** F1 makes this an invalidity claim; pairing it with "and also he authorized it" weakens both |
 | 4 | **Reason codes where credit is not a defence** | Visa frames it as transaction-level invalidity, not claim-type specific (F1) | **Reason-code-agnostic**, as sketched |
 | 5 | **Retire the existing refund strategies?** | Not addressed | Open — needs a read of `credit_not_processed_refund_record` and `duplicate_processing_refund_resolved` against the new one |
