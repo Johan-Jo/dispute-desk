@@ -360,6 +360,23 @@ export interface StrategySubmodule {
     none?: FactPredicateId[];
   };
   isFallback: boolean;
+  /**
+   * When eligible, this strategy REPLACES every other non-fallback
+   * strategy in the bundle rather than merely leading it.
+   *
+   * Priority orders the bundle; it does not empty it. A high-priority
+   * strategy whose prompt says "ignore the family's usual theory" is
+   * still competing with the other strategies' prompt bodies in the
+   * same context — and on blume-box 162042cd (2026-08-01) it lost:
+   * `credit_already_issued` led correctly, then
+   * `unauthorized_fraud_auth_signal_stack` still produced a full
+   * `paymentAuthenticationArgument` on a case with a failed AVS and a
+   * cardholder-name mismatch. Suppression has to be structural.
+   *
+   * The family fallback is still appended — it carries tone/hedging
+   * rules, not a competing theory.
+   */
+  exclusive?: boolean;
   /** Tiebreaker within a family. Family-canonical order (the order
    *  strategies are declared in lib/defence/strategies/<family>.ts)
    *  wins; priority only matters when two strategies share canonical

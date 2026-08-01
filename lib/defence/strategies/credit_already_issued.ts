@@ -42,9 +42,12 @@ export const credit_already_issued: StrategySubmodule = {
   displayName: "Credit already issued",
   predicates: { all: ["credit_preceded_dispute"] },
   isFallback: false,
-  // Above every family's own strategies. When the transaction was
-  // already credited, that is the case — arguing it alongside "and also
-  // the cardholder authorised it" hedges two theories and weakens both.
+  // EXCLUSIVE, not merely first. Priority alone left the family's own
+  // strategies in the bundle, and on 162042cd the fraud auth-signal
+  // stack wrote a full payment-authentication argument underneath this
+  // one — on a case with a failed AVS and a cardholder-name mismatch.
+  // When the transaction was already credited, that IS the case.
+  exclusive: true,
   priority: 100,
   promptBody: [
     "STRATEGY FOCUS — credit already issued (this OVERRIDES the family's usual theory):",
