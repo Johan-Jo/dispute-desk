@@ -107,13 +107,87 @@ All merchant-facing copy in six locales; nothing English in `lib/`.
 
 ---
 
-## 6. Open questions
+## 5a. Research findings (2026-08-01)
 
-1. **Partial credit.** Fire with honest partial wording, or only on full coverage? `162042cd` is the live example ($220 of $235).
-2. **Post-dispute refunds.** Distinct state, or out of scope? The merchant has likely paid twice; the remedy may be operational rather than evidential.
-3. **Does it supersede or compose?** If a case has both a strong authorization stack *and* a pre-dispute credit, do we argue one or both? Arguing both may read as hedging to a reviewer.
-4. **Reason codes where a credit is not a defence.** Any where a pre-dispute refund does not moot the claim? Needs a pass against the Visa guidelines PDF ([[reference_visa_dispute_management_guidelines]]) and the Mastercard chargeback guide before we assert this is universal.
-5. **Retirement of the existing refund strategies** — supersede or wrap.
+Researched against Visa, Mastercard and Shopify documentation to close §6. Each finding is marked **VERIFIED** (found in the cited source) or **UNVERIFIED** (could not reach a primary source — do not build on it without checking).
+
+### F1 — A pre-dispute credit is an *invalidity* ground, not a compelling-evidence category. **VERIFIED**
+
+Visa's *Dispute Management Guidelines for Visa Merchants* — the reference we calibrate against — lists **"credit or reversal has already been processed for the transaction"** among the grounds that make a dispute **invalid**, and directs merchants to supply documentation showing the credit/reversal details. An invalid claim is voided by the issuer rather than forwarded. Visa's cardholder-facing guidance states the same from the other side: *"If you have already received a full refund directly from the seller, you cannot make any further chargeback."*
+
+**This is the single most important finding, and it changes the design.** "Credit already issued" is not a better argument *within* the fraud theory — it says the dispute should never have existed. That is why it is reason-code-agnostic: invalidity attaches to the transaction, not to the claim type. It vindicates the §3.2 sketch (one strategy registered across families) and it means the narrative should assert invalidity, not rebut authorization.
+
+Industry practice agrees on outcome: representment with refund proof is described as *"one of the more straightforward disputes to win, provided you submit evidence before the deadline"*, with ARN, timestamps and refund confirmation as the evidence set.
+
+### F2 — Shopify makes the post-dispute-refund state nearly unreachable. **VERIFIED**
+
+> "Refunds can't be issued while a chargeback is open. The funds have already been withdrawn by the bank and are held pending the dispute resolution."
+>
+> "You can't issue a refund after a cardholder initiates a chargeback. If you determine that a refund is warranted for an open chargeback, then the cardholder must first drop the chargeback, and then you can provide a refund."
+
+For Shopify Payments the "refunded after the dispute" branch mostly cannot happen — the platform blocks it. It remains reachable only by a refund that raced the dispute webhook, or a credit issued outside Shopify.
+
+**Design consequence:** do not build a post-dispute-refund state. Keep `detectFatalLoss`'s existing conservative behaviour as the catch-all for that residue — which is exactly what it already does.
+
+### F3 — Shopify has NO evidence field for a credit already issued. **VERIFIED**
+
+The Dispute Evidence resource carries: `access_activity_log`, `customer_email_address`, `customer_first_name`, `customer_last_name`, `uncategorized_text`, `shipping_address`, `cancellation_policy_disclosure`, `cancellation_rebuttal`, `refund_policy_disclosure`, `refund_refusal_explanation`, `billing_address`, `product_description`, `fulfillments`, `dispute_evidence_files`.
+
+There is no field for a processed refund. Two consequences, one of them a trap:
+
+- The argument must travel in **`uncategorized_text`** (already the fraud path — see *Shopify evidence mapping*), with the refund receipt attached via `dispute_evidence_files`.
+- **`refund_refusal_explanation` must never be used for this.** It means *why a refund was refused* — the opposite of what we are asserting. Populating it to say "we refunded" would tell the reviewer we declined the refund. This needs to be a hard rule in the implementation, and a test.
+
+### F4 — Partial credit: represent, with honest arithmetic. **VERIFIED (practice) / UNVERIFIED (formal mechanism)**
+
+The documented approach for a chargeback exceeding a partial refund is to present the timeline and the refund proof, on the argument that the cardholder cannot collect the same money twice. Outcome is either cardholder withdrawal or a processor ruling on review.
+
+No source describes a formal mechanism for representing *only the covered portion*, and Shopify's evidence submission carries no amount field — it is text and files, all-or-nothing. So we cannot split the claim.
+
+**Recommendation:** fire on partial coverage too, with wording that names both figures and never says "in full" unless `refunded >= disputed`. On `162042cd` that means asserting a $220 credit against a $235 dispute and letting the reviewer weigh the $15, rather than either staying silent or overclaiming.
+
+### F5 — Mastercard's formal second-presentment code. **UNVERIFIED**
+
+I could not reach a primary Mastercard source: the official *Chargeback Guide* PDFs are 403 or unindexed, and the secondary reason-code references cover only first-presentment chargeback codes (4837, 4853, 4842 …), not the acquirer-side second-presentment codes. I could not confirm the existence or number of a "Credit Previously Issued" second-presentment code.
+
+**Do not cite a Mastercard code number in code, copy, or narrative until someone reads the current Chargeback Guide.** F1 stands on Visa's documentation; the Mastercard path is presumed analogous but unproven. Practically this may not matter — we submit evidence text to Shopify, and the acquirer selects the code — but it must not be asserted.
+
+### F6 — Winning does not refund the chargeback fee. **VERIFIED (conditional)**
+
+*"Some processors refund chargeback fees on successful representment, while others do not."* So a won credit-already-issued case still likely costs the fee. It does not change whether to fight — the alternative is losing the disputed amount *as well* — but it should temper any "clear win" language we put in front of a merchant.
+
+---
+
+## 6. Decisions needed
+
+Research closed four of the five. What remains is genuinely a product call.
+
+| # | Question | Research says | Recommendation |
+|---|---|---|---|
+| 1 | **Partial credit** — fire on partial, or full coverage only? | No formal split-claim mechanism; Shopify has no amount field (F4) | **Fire on partial**, naming both figures, never "in full" unless covered |
+| 2 | **Post-dispute refunds** — build a state for it? | Shopify blocks refunds while a dispute is open (F2) | **Don't build.** Existing fatal-loss conservatism covers the residue |
+| 3 | **Supersede or compose** with a strong authorization stack? | Not addressed by any source | **Supersede.** F1 makes this an invalidity claim; pairing it with "and also he authorized it" weakens both |
+| 4 | **Reason codes where credit is not a defence** | Visa frames it as transaction-level invalidity, not claim-type specific (F1) | **Reason-code-agnostic**, as sketched |
+| 5 | **Retire the existing refund strategies?** | Not addressed | Open — needs a read of `credit_not_processed_refund_record` and `duplicate_processing_refund_resolved` against the new one |
+
+### Two new decisions the research surfaced
+
+6. **Auto-submit or park?** The facts are objective and the argument needs no judgement, which argues for auto-submit. Against: winning still costs the chargeback fee (F6), and we have never auto-submitted an invalidity claim before. **Recommendation: auto-submit**, on the same footing as any other Strong case.
+
+7. **Strength representation.** F1 says this is not "strong evidence for the fraud theory" — it is a claim that the dispute is invalid. Modelling it as a strong *signal* understates it and mixes two theories in one score. **Recommendation: a dedicated `caseStrength` branch** that returns strong-with-its-own-reason when a pre-dispute credit is present, rather than adding to `strongCount`.
+
+---
+
+## 7. Sources
+
+- Visa — *Dispute Management Guidelines for Visa Merchants* (June 2024): invalid-dispute grounds incl. credit/reversal already processed. [[reference_visa_dispute_management_guidelines]]
+- Visa — [consumer chargeback guidance](https://www.visa.co.uk/how-you-pay-matters/chargeback-purchase-disputes.html): no chargeback after a full refund from the seller
+- Shopify — [Resolving a chargeback or inquiry](https://help.shopify.com/en/manual/payments/chargebacks/resolve-chargeback): refunds blocked while a dispute is open
+- Shopify — [Dispute Evidence API](https://shopify.dev/docs/api/admin-rest/latest/resources/dispute-evidence): full field list; no credit-issued field
+- [Chargeback Gurus — preventing double refunds](https://www.chargebackgurus.com/blog/chargebacks-preventing-double-refunds)
+- [Chargeflow — chargeback after a refund](https://www.chargeflow.io/blog/receiving-a-chargeback-after-a-refund): evidence set, win likelihood, fee treatment
+- [FightDisputes — chargeback after a partial refund](https://fightdisputes.com/guide/chargeback-after-partial-refund/)
+- **Not reached:** Mastercard *Chargeback Guide* (403 / unindexed) — see F5
 
 ---
 
