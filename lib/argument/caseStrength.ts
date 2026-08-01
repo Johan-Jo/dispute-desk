@@ -299,6 +299,33 @@ export interface CaseCreditAlreadyIssuedInput {
   coversDisputedAmount: boolean;
 }
 
+/**
+ * Read the credit-already-issued floor out of a persisted `pack_json`.
+ *
+ * EVERY caller of `calculateCaseStrength` that renders or scores a
+ * dispute must pass this. It is a trailing optional argument, so a site
+ * that forgets it silently scores the case without the floor — and the
+ * failure is invisible to TypeScript. That is exactly how blume-box
+ * 162042cd ended up submitted-as-strong by `buildPack` while the
+ * dispute page, recomputing without it, showed no strong badge.
+ *
+ * `buildPack` owns the underlying timing comparison (it has the order);
+ * every read path takes the persisted answer from here.
+ */
+export function creditAlreadyIssuedInput(
+  packJson: unknown,
+): CaseCreditAlreadyIssuedInput | undefined {
+  const block = (packJson as { credit_already_issued?: unknown } | null)
+    ?.credit_already_issued as
+    | { triggered?: unknown; coversDisputedAmount?: unknown }
+    | undefined;
+  if (!block || typeof block !== "object") return undefined;
+  return {
+    triggered: block.triggered === true,
+    coversDisputedAmount: block.coversDisputedAmount === true,
+  };
+}
+
 /** Optional Risk-weakness Gate input (fraud-risk Phase 2). When
  *  triggered AND not pre-empted by coverage or fatal-loss, CAPS
  *  `overall` at "moderate" — never elevates. The cap is a ceiling, so
@@ -842,7 +869,12 @@ export function calculateCaseStrength(
     supportingCount,
     supportedClaims: 0,
     totalClaims: 0,
-    improvementHintI18n: isCovered || isFatalLoss ? null : improvementHintI18n,
+    // Suppress the "add X to strengthen your case" hint once an
+    // override owns the outcome. Telling a merchant to add delivery
+    // confirmation to a transaction they already refunded is noise —
+    // it advises work that cannot change the argument.
+    improvementHintI18n:
+      isCovered || isFatalLoss || isCreditAlreadyIssued ? null : improvementHintI18n,
     heroVariant,
     // Suppress the in-transit framing when coverage or fatal-loss has
     // overridden the reason — those states own the merchant message.

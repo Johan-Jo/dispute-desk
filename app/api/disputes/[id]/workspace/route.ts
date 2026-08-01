@@ -29,6 +29,7 @@ import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import { CANONICAL_EVIDENCE, categoryFor } from "@/lib/argument/canonicalEvidence";
 import {
   calculateCaseStrength,
+  creditAlreadyIssuedInput,
   type CaseStrengthContribution,
 } from "@/lib/argument/caseStrength";
 import type { EvidenceFact } from "@/lib/defence/types";
@@ -434,6 +435,11 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         auditEvents: auditRes.data ?? [],
         pdfPath: packRow.pdf_path ?? null,
         savedToShopifyAt: packRow.saved_to_shopify_at ?? null,
+        // Credit-already-issued floor, so the client recomputation of
+        // case strength agrees with the server and with the submitted
+        // package. Without it the page renders "Weak case" for a
+        // dispute the system scored strong and already filed.
+        creditAlreadyIssued: creditAlreadyIssuedInput(packRow.pack_json) ?? null,
         /** Last successful build timestamp. Used by the EvidenceTab
          *  rebuild-outcome banner to detect stale outcomes — if
          *  `lastRebuildAt < updatedAt`, the outcome describes a save
@@ -730,6 +736,18 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     undefined,
     undefined,
     nameMismatchInput,
+    // Credit-already-issued FLOOR. Read from the persisted pack rather
+    // than re-derived: `buildPack` owns the timing comparison and has
+    // the order in hand, this route does not.
+    //
+    // Passing it here is not optional. `calculateCaseStrength` takes it
+    // as a trailing optional argument, so a call site that omits it
+    // silently scores the case WITHOUT the floor — and this route is
+    // what the dispute page renders. On blume-box 162042cd that split
+    // the system in two: buildPack scored `strong`, auto-submit filed
+    // it and emailed the merchant, and the page they opened showed no
+    // strong badge because this call had not been updated.
+    creditAlreadyIssuedInput(packRow?.pack_json),
   );
   // computeContributions equivalent inline — same logic as
   // useDisputeWorkspace's derivation, deduped by signalId.

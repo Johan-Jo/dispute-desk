@@ -181,3 +181,17 @@ describe("exclusivity", () => {
     expect(bundle.map((s) => s.key)).not.toContain("credit_already_issued");
   });
 });
+
+// The output schema has a FIXED section list, so the model writes into
+// paymentAuthenticationArgument even when the active strategy forbids
+// arguing authorization. On 162042cd it did exactly that — softened to
+// "supporting context only", but present, on a case with a failed AVS
+// and a cardholder-name mismatch. Prompt text is a request; the
+// suppression declaration is the enforcement.
+describe("section suppression", () => {
+  it("declares paymentAuthenticationArgument suppressed", () => {
+    expect(credit_already_issued.suppressesSections).toContain(
+      "paymentAuthenticationArgument",
+    );
+  });
+});

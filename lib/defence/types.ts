@@ -377,6 +377,15 @@ export interface StrategySubmodule {
    * rules, not a competing theory.
    */
   exclusive?: boolean;
+  /**
+   * Narrative sections this strategy blanks after generation.
+   *
+   * The output schema has a fixed section list, so the model writes
+   * into every section that exists even when the strategy prompt tells
+   * it not to argue that theory. Prompt text is a request; this is the
+   * enforcement (see applySectionSuppression in narrativeWriter).
+   */
+  suppressesSections?: NarrativeSectionKey[];
   /** Tiebreaker within a family. Family-canonical order (the order
    *  strategies are declared in lib/defence/strategies/<family>.ts)
    *  wins; priority only matters when two strategies share canonical

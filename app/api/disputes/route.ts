@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
-import { calculateCaseStrength } from "@/lib/argument/caseStrength";
+import {
+  calculateCaseStrength,
+  creditAlreadyIssuedInput,
+} from "@/lib/argument/caseStrength";
 import {
   cardholderNameFromPayload,
   detectCardholderNameMismatch,

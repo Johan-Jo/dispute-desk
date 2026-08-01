@@ -48,6 +48,9 @@ export const credit_already_issued: StrategySubmodule = {
   // one — on a case with a failed AVS and a cardholder-name mismatch.
   // When the transaction was already credited, that IS the case.
   exclusive: true,
+  // The prompt asks the model not to argue authorization; the fixed
+  // output schema means it writes the section anyway. Blank it.
+  suppressesSections: ["paymentAuthenticationArgument"],
   priority: 100,
   promptBody: [
     "STRATEGY FOCUS — credit already issued (this OVERRIDES the family's usual theory):",
