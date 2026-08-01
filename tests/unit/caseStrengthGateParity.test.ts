@@ -22,8 +22,9 @@
  * NOTE: this is a text-level guard, and a weaker one than a type error.
  * The real fix is collapsing the trailing optionals into a single
  * REQUIRED `gates` object, so adding a gate breaks every call site at
- * compile time. Tracked separately — do not treat this test as making
- * that unnecessary.
+ * compile time. Planned in `docs/plans/case-strength-gates-object.plan.md`,
+ * which DELETES this file on completion. Do not treat this test as
+ * making that work unnecessary.
  */
 
 import { readFileSync } from "node:fs";
