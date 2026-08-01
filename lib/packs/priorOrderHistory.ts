@@ -45,14 +45,17 @@ export interface PriorOrderHistory {
   /** Orders by this customer on this shop placed BEFORE the disputed
    *  one, as counted from our ingested `shopify_orders`. */
   priorOrders: number;
-  /** Of those, how many carry a dispute row we have ingested. */
+  /** Of those PRIOR orders, how many carry a dispute row we ingested.
+   *  Time-scoped, and deliberately narrower than the flag below. */
   disputedPriorOrders: number;
   /** `priorOrders - disputedPriorOrders`. */
   priorUndisputedOrders: number;
   /**
    * Tri-state, deliberately nullable:
-   *   true    — verified: full coverage AND zero disputed priors
-   *   false   — verified: at least one prior order was disputed
+   *   true    — verified: full coverage AND no chargeback anywhere on
+   *             the account (other than the disputed order itself)
+   *   false   — verified: the account carries at least one other
+   *             chargeback, whenever the underlying order was placed
    *   null    — unknown: partial coverage and nothing disputed found
    * Callers MUST omit the payload key when this is null. A missing key
    * reads as "unknown"; `false` reads as "has disputes". Never coerce.
@@ -125,13 +128,30 @@ export async function loadPriorOrderHistory(args: {
     .map((r) => r.shopify_order_id)
     .filter((g): g is string => typeof g === "string" && g.length > 0);
 
+  // Dispute lookup spans EVERY order on the account except the disputed
+  // one — not just the strictly-prior ones.
+  //
+  // The count of prior orders is legitimately time-scoped ("three orders
+  // came before this one"). The dispute-free CLAIM is not: whether an
+  // account has ever charged back is a property of the account as known
+  // at build time. Scoping both the same way produced a pack that told
+  // an issuer this account had "an established dispute-free order
+  // history" when it held three chargebacks — two of them opened before
+  // we wrote it — because they happened to sit on orders placed one
+  // minute later (blume-box 0f53431d, order #352552 placed 07:22 vs
+  // #352553 at 07:23).
+  const otherGids = orderRows
+    .map((r) => r.shopify_order_id)
+    .filter((g): g is string => typeof g === "string" && g !== orderGid);
+
   let disputedPriorOrders = 0;
-  if (priorGids.length > 0) {
+  let accountDisputedOrders = 0;
+  if (otherGids.length > 0) {
     const { data: disputeRows, error: disputesError } = await sb
       .from("disputes")
       .select("order_gid")
       .eq("shop_id", shopId)
-      .in("order_gid", priorGids);
+      .in("order_gid", otherGids);
 
     if (disputesError) {
       console.warn(
@@ -146,6 +166,7 @@ export async function loadPriorOrderHistory(args: {
         .map((r) => r.order_gid)
         .filter((g): g is string => typeof g === "string"),
     );
+    accountDisputedOrders = otherGids.filter((g) => disputedGids.has(g)).length;
     disputedPriorOrders = priorGids.filter((g) => disputedGids.has(g)).length;
   }
   // Zero priors is a RESULT, not a reason to bail. Emitting a verified
@@ -173,8 +194,10 @@ export async function loadPriorOrderHistory(args: {
     priorOrders: priors.length,
     disputedPriorOrders,
     priorUndisputedOrders: Math.max(0, priors.length - disputedPriorOrders),
+    // ANY chargeback anywhere on the account falsifies the claim — not
+    // only one sitting on a strictly-prior order.
     disputeFreeHistory:
-      disputedPriorOrders > 0 ? false : fullCoverage ? true : null,
+      accountDisputedOrders > 0 ? false : fullCoverage ? true : null,
     shopifyPriorOrders,
   };
 }

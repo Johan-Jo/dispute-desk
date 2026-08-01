@@ -1699,6 +1699,11 @@
       "cardholderNameMismatch": {
         "title": "O cartão está registrado em um nome diferente do comprador",
         "explanation": "O cartão de pagamento está registrado em nome de \"{cardholder}\", mas o pedido foi feito por \"{customer}\". Este é um padrão comum de cartão roubado — revise antes de enviar. Usado internamente para avaliação; não adicionado ao argumento apresentado ao banco."
+      },
+      "priorChargebacks": {
+        "title": "Estornos anteriores nesta conta",
+        "explanation": "Este cliente já estornou um pedido anterior na sua loja. Mantido interno — citar o histórico de disputas de um cliente ao banco emissor enfraquece a sua resposta em vez de reforçá-la. É mostrado aqui para que avalie com que força defender este caso.",
+        "explanationWithCount": "Este cliente tem {prior} pedidos anteriores na sua loja e pelo menos um deles foi estornado. Mantido interno — citar o histórico de disputas de um cliente ao banco emissor enfraquece a sua resposta em vez de reforçá-la. É mostrado aqui para que avalie com que força defender este caso."
       }
     },
     "deliveryProof": {

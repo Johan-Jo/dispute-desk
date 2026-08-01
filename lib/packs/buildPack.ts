@@ -608,11 +608,19 @@ export async function buildPack(
     order?.fulfillments?.some((f) =>
       f.trackingInfo?.some((t) => t.number || t.url),
     ) ?? false;
+  // Any refund at all — the amount comparison against the disputed sum
+  // belongs to the fatal-loss gate, not to "should the merchant see a
+  // refund row". A partial refund is still a fact they need in front of
+  // them.
+  const hasRefund =
+    (order?.refunds?.length ?? 0) > 0 ||
+    Number(order?.totalRefundedSet?.shopMoney?.amount ?? 0) > 0;
   const orderContext: OrderContext = {
     isFulfilled,
     hasCardPayment,
     avsCvvAvailable,
     hasShippingEvidence,
+    hasRefund,
     paymentFamily: paymentContext.family,
   };
 

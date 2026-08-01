@@ -35,7 +35,11 @@ import type {
  *  locale-correct strings. */
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 import type { CaseStrengthLevel } from "@/lib/argument/types";
-import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
+import {
+  CANONICAL_EVIDENCE,
+  disputeFreeHistoryState,
+  effectivePriorOrders,
+} from "@/lib/argument/canonicalEvidence";
 import {
   cardholderNameFromPayload,
   detectCardholderNameMismatch,
@@ -692,6 +696,38 @@ function classifyCardholderName(
   };
 }
 
+/**
+ * Prior chargebacks on the customer's account.
+ *
+ * Merchant-only, always. This is evidence AGAINST us — citing "this
+ * account has charged back before" to the issuer hands them our
+ * weakness, so `evidenceLineItem.isNegativeOrAmbiguous` already keeps
+ * the row out of the bank argument. But that decision lives downstream
+ * and is never written back into the payload, so the generic
+ * `bankEligible === false` sweep below could not see it: the finding
+ * showed on Overview and was missing from the Evidence tab entirely
+ * (reported on blume-box 162042cd, 2026-08-01).
+ *
+ * Fires only on a VERIFIED `disputeFreeHistory === false` — `unknown`
+ * (the flag absent) must never render as an accusation.
+ */
+export function classifyPriorChargebacks(
+  payload: unknown,
+  t: Translate,
+): InternalSignalViewModel | null {
+  if (!isPlainObject(payload)) return null;
+  if (disputeFreeHistoryState(payload) !== "has_disputes") return null;
+  const prior = effectivePriorOrders(payload);
+  return {
+    id: "internal:prior_chargebacks",
+    title: t("internalSignals.priorChargebacks.title"),
+    explanation:
+      prior != null && prior >= 1
+        ? t("internalSignals.priorChargebacks.explanationWithCount", { prior })
+        : t("internalSignals.priorChargebacks.explanation"),
+  };
+}
+
 function deriveInternalOnlySignals(
   effectiveChecklist: EvidenceItemWithStrength[],
   t: Translate,
@@ -721,6 +757,12 @@ function deriveInternalOnlySignals(
 
   const ip = classifyIpLocation(byField.get("ip_location_check"), t);
   if (ip) out.push(ip);
+
+  const priorChargebacks = classifyPriorChargebacks(
+    byField.get("customer_account_info"),
+    t,
+  );
+  if (priorChargebacks) out.push(priorChargebacks);
 
   // fraud_risk_screening is NO LONGER an internal-only signal as of
   // bbe0ab3. When Shopify returned ACCEPT, the screening is

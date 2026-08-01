@@ -279,3 +279,58 @@ describe("evaluateCompleteness", () => {
     expect(unavailable.length).toBeGreaterThanOrEqual(2); // avs + shipping at minimum
   });
 });
+
+// ── Fraud + refund_record (2026-08-01) ──────────────────────────────
+//
+// The refund record was absent from BOTH fraud templates, so a refunded
+// fraud dispute collected it, never scored it, and showed it on no
+// merchant surface — while it still reached the bank narrative
+// (blume-box 162042cd: $220 refunded 18 days before the dispute).
+//
+// The row must appear when a refund exists and must NOT become a
+// "missing evidence" nag when one doesn't: most fraud orders were never
+// refunded, and demanding a refund record from them is a request the
+// merchant can never satisfy.
+describe("FRAUDULENT — refund_record is conditional on an actual refund", () => {
+  const REFUNDED: OrderContext = {
+    isFulfilled: true,
+    hasCardPayment: true,
+    avsCvvAvailable: true,
+    hasRefund: true,
+  };
+  const NOT_REFUNDED: OrderContext = {
+    isFulfilled: true,
+    hasCardPayment: true,
+    avsCvvAvailable: true,
+    hasRefund: false,
+  };
+
+  it("is a blocker when a refund exists but the record was not collected", () => {
+    const result = evaluateCompleteness("FRAUDULENT", new Set<string>(), null, REFUNDED);
+    expect(result.blockers).toContain("Refund Record");
+  });
+
+  it("is NOT a blocker when the order was never refunded", () => {
+    const result = evaluateCompleteness("FRAUDULENT", new Set<string>(), null, NOT_REFUNDED);
+    expect(result.blockers).not.toContain("Refund Record");
+  });
+
+  it("v2 marks it unavailable — not missing — on a never-refunded order", () => {
+    const v2 = evaluateCompletenessV2("FRAUDULENT", new Set<string>(), null, null, NOT_REFUNDED);
+    const row = v2.checklist.find((c) => c.field === "refund_record");
+    expect(row?.status).toBe("unavailable");
+    expect(row?.unavailableReason).toBe("No refund was issued on this order");
+  });
+
+  it("v2 surfaces the collected refund row on a refunded order", () => {
+    const v2 = evaluateCompletenessV2(
+      "FRAUDULENT",
+      new Set(["refund_record"]),
+      null,
+      null,
+      REFUNDED,
+    );
+    const row = v2.checklist.find((c) => c.field === "refund_record");
+    expect(row?.status).toBe("available");
+  });
+});
