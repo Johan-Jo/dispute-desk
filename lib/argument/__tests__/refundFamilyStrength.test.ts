@@ -14,6 +14,7 @@ import { describe, it, expect } from "vitest";
 import { calculateCaseStrength } from "@/lib/argument/caseStrength";
 import type { EvidencePayloadSource } from "@/lib/argument/caseStrength";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
+import { NO_GATES } from "@/tests/helpers/caseStrengthGates";
 
 function byField(map: Record<string, Record<string, unknown>>): EvidencePayloadSource {
   const obj: Record<string, { payload: Record<string, unknown> }> = {};
@@ -31,7 +32,7 @@ describe("refund-family rollup (CREDIT_NOT_PROCESSED)", () => {
       no_return_initiated: { returnStatus: "NO_RETURN" },
       refund_policy: {}, // published only → supporting
     });
-    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source);
+    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source, NO_GATES);
     expect(r.strongCount).toBe(0);
     expect(r.moderateCount).toBe(1); // the refund signal
     expect(r.overall).toBe("moderate");
@@ -50,7 +51,7 @@ describe("refund-family rollup (CREDIT_NOT_PROCESSED)", () => {
       no_return_initiated: { returnStatus: "NO_RETURN" },
       refund_policy: {},
     });
-    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source);
+    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source, NO_GATES);
     expect(r.strengthReasonI18n.key).toBe(
       "disputes.strengthReason.moderate.moderateOnly",
     );
@@ -65,14 +66,14 @@ describe("refund-family rollup (CREDIT_NOT_PROCESSED)", () => {
     const source = byField({
       refund_record: { refundStatus: "processed", refundedAmount: 549 },
     });
-    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source);
+    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source, NO_GATES);
     expect(r.overall).toBe("moderate");
   });
 
   it("only supporting policy evidence (no refund signal) stays weak", () => {
     const checklist = [available("refund_policy"), available("shipping_policy")];
     const source = byField({ refund_policy: {}, shipping_policy: {} });
-    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source);
+    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source, NO_GATES);
     expect(r.overall).toBe("weak");
   });
 
@@ -80,7 +81,7 @@ describe("refund-family rollup (CREDIT_NOT_PROCESSED)", () => {
     // A delivery dispute must not get lifted by a refund-signal path.
     const checklist = [available("no_return_initiated")];
     const source = byField({ no_return_initiated: { returnStatus: "NO_RETURN" } });
-    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source);
+    const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source, NO_GATES);
     // delivery family: no strong delivery, one moderate refund signal →
     // strict formula → weak (refund rule is refund-family only).
     expect(r.overall).toBe("weak");
@@ -102,7 +103,7 @@ describe("improvement hint never contradicts a collected signal (cay cc86296d, 2
       order_confirmation: { orderId: "1" },
       refund_record: { refundStatus: "processed", amount: "249.00", currency: "SEK" },
     });
-    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source);
+    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source, NO_GATES);
     expect(r.improvementHintI18n).toBeNull();
   });
 
@@ -116,7 +117,7 @@ describe("improvement hint never contradicts a collected signal (cay cc86296d, 2
       order_confirmation: { orderId: "1" },
       refund_record: { refundStatus: "processed", amount: "249.00", currency: "SEK" },
     });
-    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source);
+    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source, NO_GATES);
     expect(r.improvementHintI18n).not.toBeNull();
     const label = r.improvementHintI18n?.params?.label as { key?: string };
     expect(JSON.stringify(label)).toContain("delivery");
@@ -131,7 +132,7 @@ describe("strength reason names the refund FACT, not the ambiguous 'Refund recor
       no_return_initiated: { returnStatus: "NO_RETURN" },
       refund_policy: {},
     });
-    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source);
+    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source, NO_GATES);
     const label1 = r.strengthReasonI18n.params?.label1 as { key: string };
     expect(label1.key).toBe("disputes.signalLabelValue.noRefundOwed");
   });
@@ -142,7 +143,7 @@ describe("strength reason names the refund FACT, not the ambiguous 'Refund recor
       order_confirmation: { orderId: "1" },
       refund_record: { refundStatus: "processed", amount: "249.00", currency: "SEK" },
     });
-    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source);
+    const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source, NO_GATES);
     const params = r.strengthReasonI18n.params ?? {};
     const labels = JSON.stringify(params);
     expect(labels).toContain("disputes.signalLabelValue.refundIssued");

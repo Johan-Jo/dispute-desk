@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import {
   calculateCaseStrength,
-  creditAlreadyIssuedInput,
+  creditAlreadyIssuedFromBlock,
 } from "@/lib/argument/caseStrength";
 import {
   cardholderNameFromPayload,
@@ -415,7 +415,9 @@ export async function GET(req: NextRequest) {
     if (stalePackIds.length > 0) {
       const { data: heavy } = await sb
         .from("evidence_packs")
-        .select("id, dispute_id, checklist_v2, pack_json->sections")
+        .select(
+          "id, dispute_id, checklist_v2, pack_json->sections, pack_json->credit_already_issued",
+        )
         .in("id", stalePackIds);
 
       for (const p of heavy ?? []) {
@@ -466,13 +468,27 @@ export async function GET(req: NextRequest) {
             checklist,
             reason,
             payloadSource,
-            undefined,
-            undefined,
-            undefined,
             {
-              triggered: detectCardholderNameMismatch(cardholderName, customerName),
-              cardholderName,
-              customerName,
+              // List view. Coverage, fatal-loss and risk-weakness are all
+              // derived by `buildPack` from the order, which this query
+              // does not load — the list has never shown them and this
+              // records that, rather than leaving it to argument position.
+              coverage: null,
+              fatalLoss: null,
+              riskWeakness: null,
+              nameMismatch: {
+                triggered: detectCardholderNameMismatch(cardholderName, customerName),
+                cardholderName,
+                customerName,
+              },
+              // Credit-already-issued floor, projected out of pack_json
+              // alongside the sections. This site was the fourth ❌ in the
+              // 162042cd table and stayed broken after the first fix
+              // because the text-level parity guard only enumerated three
+              // files. Requiring the object is what surfaced it.
+              creditAlreadyIssued: creditAlreadyIssuedFromBlock(
+                (p as { credit_already_issued?: unknown }).credit_already_issued,
+              ),
             },
           );
           strengthByDispute.set(p.dispute_id, {

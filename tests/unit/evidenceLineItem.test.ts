@@ -12,6 +12,7 @@
 import { describe, it, expect } from "vitest";
 import { calculateCaseStrength } from "@/lib/argument/caseStrength";
 import type { EvidencePayloadSource } from "@/lib/argument/caseStrength";
+import { NO_GATES } from "@/tests/helpers/caseStrengthGates";
 import { resolveToken } from "@/lib/i18n/resolveToken";
 import type { I18nToken } from "@/lib/i18n/token";
 import enMessages from "@/messages/en.json";
@@ -66,7 +67,7 @@ function resolveTokenWithEn(token: I18nToken): string {
 describe("Test 1 — weak fraud case with 8/8 sections collected remains Weak", () => {
   it("scorer returns weak when every available row resolves to supporting or internal-only", () => {
     const f = weakFraudFixture();
-    const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField));
+    const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField), NO_GATES);
     expect(result.overall).toBe("weak");
     expect(result.strongCount).toBe(0);
     expect(result.moderateCount).toBe(0);
@@ -77,7 +78,7 @@ describe("Test 2 — supporting count never upgrades to Moderate or Strong", () 
   it("ten supporting rows yield weak with strongCount=0, moderateCount=0", () => {
     const f = weakFraudFixture();
     // The fixture already supplies ~8 supporting rows; copy to amplify.
-    const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField));
+    const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField), NO_GATES);
     expect(result.overall).toBe("weak");
     expect(result.supportingCount).toBeGreaterThanOrEqual(0);
   });
@@ -86,7 +87,7 @@ describe("Test 2 — supporting count never upgrades to Moderate or Strong", () 
 describe("Test 3 — Fraud + policies only → Weak (fraud decisive-signal filter)", () => {
   it("policies accepted at checkout do not make a fraud case strong", () => {
     const f = policiesOnlyFraudFixture();
-    const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField));
+    const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField), NO_GATES);
     expect(result.overall).toBe("weak");
   });
 });
@@ -94,7 +95,7 @@ describe("Test 3 — Fraud + policies only → Weak (fraud decisive-signal filte
 describe("Test 4 — Fraud + order_receipt only → Weak", () => {
   it("order_confirmation is supportingOnly and never elevates", () => {
     const f = orderReceiptOnlyFraudFixture();
-    const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField));
+    const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField), NO_GATES);
     expect(result.overall).toBe("weak");
   });
 });
@@ -894,7 +895,7 @@ describe("Test 16 — PDF inclusion ≠ bank argument inclusion (context_only ca
 describe("Test 17 — strength reason mentions missing payment verification for fraud no-AVS", () => {
   it("strengthReasonI18n resolves to copy referencing payment authentication / verification for the weak fraud fixture", () => {
     const f = weakFraudFixture();
-    const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField));
+    const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField), NO_GATES);
     const resolved = resolveTokenWithEn(result.strengthReasonI18n);
     expect(resolved).toMatch(/payment (verification|authentication)/i);
   });
@@ -903,7 +904,7 @@ describe("Test 17 — strength reason mentions missing payment verification for 
 describe("Test 18 — strength reason mentions missing confirmed delivery when absent", () => {
   it("the redesigned WEAK reason names delivery confirmation", () => {
     const f = weakFraudFixture();
-    const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField));
+    const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField), NO_GATES);
     const resolved = resolveTokenWithEn(result.strengthReasonI18n);
     expect(resolved).toMatch(/delivery/i);
   });
@@ -912,7 +913,7 @@ describe("Test 18 — strength reason mentions missing confirmed delivery when a
 describe("Test 19 — strength reason mentions missing customer purchase acknowledgement", () => {
   it("the redesigned WEAK reason names customer acknowledgement / communication", () => {
     const f = weakFraudFixture();
-    const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField));
+    const result = calculateCaseStrength(f.checklist, f.reason, payloadSource(f.payloadByField), NO_GATES);
     const resolved = resolveTokenWithEn(result.strengthReasonI18n);
     expect(resolved).toMatch(/(customer|acknowledg|communication)/i);
   });

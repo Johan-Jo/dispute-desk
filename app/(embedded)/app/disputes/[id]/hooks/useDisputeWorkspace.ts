@@ -988,14 +988,20 @@ export function useDisputeWorkspace(disputeId: string) {
       effectiveChecklist,
       data.dispute.reason,
       payloadSource,
-      coverageInput,
-      undefined,
-      undefined,
-      undefined,
-      // Credit-already-issued floor from the persisted pack. Omitting
-      // it here would make the client disagree with both the server
-      // presentation and the submitted package.
-      data.pack?.creditAlreadyIssued ?? undefined,
+      {
+        coverage: coverageInput ?? null,
+        // Client-side recomputation. Fatal-loss, risk-weakness and the
+        // name-mismatch gate are all derived server-side from the order
+        // and the AVS payload; the workspace response does not carry
+        // them, so this surface has never applied them.
+        fatalLoss: null,
+        riskWeakness: null,
+        nameMismatch: null,
+        // Credit-already-issued floor from the persisted pack. Omitting
+        // it here would make the client disagree with both the server
+        // presentation and the submitted package.
+        creditAlreadyIssued: data.pack?.creditAlreadyIssued ?? null,
+      },
     );
     // Resolve the strength tokens into branded `Localized` strings at
     // the hook boundary. UI consumers receive already-translated text
@@ -1010,11 +1016,11 @@ export function useDisputeWorkspace(disputeId: string) {
     // fraud-family account_history demotion the scorer does — otherwise
     // "What supports your case" would show a Strong pill for prior-order
     // history that the score counted as moderate corroboration.
-    const contributions = computeContributions(
-      effectiveChecklist,
+    const contributions = computeContributions({
+      checklist: effectiveChecklist,
       payloadSource,
-      data.dispute.reason,
-    );
+      reason: data.dispute.reason,
+    });
     const whyWins = generateWhyWins(effectiveChecklist, caseStrength.overall);
     const risk = generateRiskExplanation(effectiveChecklist, caseStrength.overall);
     const improvement = calculateImprovement(effectiveChecklist, data.dispute.reason, payloadSource);
