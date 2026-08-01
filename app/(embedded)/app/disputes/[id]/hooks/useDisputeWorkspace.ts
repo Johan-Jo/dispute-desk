@@ -984,7 +984,19 @@ export function useDisputeWorkspace(disputeId: string) {
           shopifyProtectStatus: data.pack.coverage.shopifyProtectStatus,
         }
       : undefined;
-    const caseStrength = calculateCaseStrength(effectiveChecklist, data.dispute.reason, payloadSource, coverageInput);
+    const caseStrength = calculateCaseStrength(
+      effectiveChecklist,
+      data.dispute.reason,
+      payloadSource,
+      coverageInput,
+      undefined,
+      undefined,
+      undefined,
+      // Credit-already-issued floor from the persisted pack. Omitting
+      // it here would make the client disagree with both the server
+      // presentation and the submitted package.
+      data.pack?.creditAlreadyIssued ?? undefined,
+    );
     // Resolve the strength tokens into branded `Localized` strings at
     // the hook boundary. UI consumers receive already-translated text
     // through `strengthReasonText` / `improvementHintText`; the raw
