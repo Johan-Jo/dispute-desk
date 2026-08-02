@@ -8,6 +8,7 @@ import {
   gatherPresentations,
   type DisputeRowFacts,
 } from "@/lib/disputes/presentation/serverFacts";
+import { resolveHeldState } from "@/lib/disputes/heldState";
 import {
   collectedFieldsFromPack,
   reconcileChecklistWithCollectedFields,
@@ -923,6 +924,31 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   );
   const presentation = presentationMap.get(disputeId) ?? null;
 
+  // ── Held state (Auto-pilot) ───────────────────────────────────────
+  // Same derivation the new-dispute email uses, so the page and the
+  // email cannot describe the same dispute differently. `held` is true
+  // only when the shared guards declined to submit on STRENGTH in auto
+  // mode — coverage and fatal-loss keep their own copy.
+  const held = resolveHeldState({
+    automationMode: presentation?.automationMode ?? appliedRule?.mode ?? null,
+    caseStrength: caseStrength?.overall ?? null,
+    coverageState: coverageInput?.state ?? null,
+    fatalLoss:
+      ((packRow?.pack_json as { fatal_loss?: unknown } | null)?.fatal_loss as
+        | { triggered?: boolean }
+        | null) ?? null,
+    creditAlreadyIssued: creditAlreadyIssuedInput(packRow?.pack_json),
+    acknowledgement: {
+      // Read off the resolved line items — the exact value
+      // CardholderAcknowledgementCard gates its own visibility on.
+      communicationHasEvidence:
+        evidenceLineItems.find((li) => li.field === "customer_communication")
+          ?.hasEvidence === true,
+      submissionState: row.submission_state ?? null,
+      finalOutcome: row.final_outcome ?? null,
+    },
+  });
+
   return NextResponse.json({
     dispute,
     pack,
@@ -935,6 +961,9 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // milestones resolved by lib/disputes/presentation (identical to
     // the list + dashboard interpretation).
     presentation,
+    // Auto-pilot hold — what the case is waiting for (a clock, not the
+    // merchant) and the one contribution that can still change it.
+    held,
     evidenceLineItems,
     submissionSummary,
     // Derived first-class attachment inventory for the dispute Review

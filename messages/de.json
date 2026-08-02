@@ -1572,7 +1572,8 @@
         "automatic": "Automatisch",
         "reviewBeforeSubmit": "Vor dem Einreichen prüfen",
         "automaticHelp": "DisputeDesk hat das Beweispaket vorbereitet und automatisch eingereicht.",
-        "reviewBeforeSubmitHelp": "DisputeDesk hat das Beweispaket für Sie vorbereitet. Prüfen Sie es und reichen Sie vor der Frist ein."
+        "reviewBeforeSubmitHelp": "DisputeDesk hat das Beweispaket für Sie vorbereitet. Prüfen Sie es und reichen Sie vor der Frist ein.",
+        "automaticHeldHelp": "DisputeDesk hat das Beweispaket vorbereitet und hält es zurück, während es auf stärkere Beweise achtet. Zur Frist wird es in Shopify gespeichert."
       },
       "changeRule": "Regel ändern",
       "editEvidence": "Beweise bearbeiten",
@@ -1600,7 +1601,12 @@
       "retryBuild": "Erneut erstellen",
       "setUpPolicies": "Richtlinien für künftige Fälle einrichten",
       "trackingCarrierFallback": "Zusteller",
-      "viewInShopifyUnavailable": "Ein direkter Link zu diesem Fall ist aus den aktuellen Daten nicht verfügbar."
+      "viewInShopifyUnavailable": "Ein direkter Link zu diesem Fall ist aus den aktuellen Daten nicht verfügbar.",
+      "held": {
+        "ask": "Wenn Sie eine E-Mail oder einen Chat haben, in dem der Karteninhaber bestätigt, diese Bestellung aufgegeben und erhalten zu haben, fügen Sie sie hinzu — es ist der stärkste einzelne Beleg, den Sie diesem Fall hinzufügen können.",
+        "askFlipsToStrong": "Wenn Sie eine E-Mail oder einen Chat haben, in dem der Karteninhaber bestätigt, diese Bestellung aufgegeben und erhalten zu haben, fügen Sie sie hinzu — eine Bestätigung des Karteninhabers ist entscheidend, und damit können wir diese Antwort sofort in Shopify speichern.",
+        "addAcknowledgement": "Bestätigung des Karteninhabers hinzufügen"
+      }
     },
     "evidenceTabExtra": {
       "buildFailedTitle": "Erstellung des Beweispakets fehlgeschlagen",
@@ -2481,7 +2487,7 @@
     "advancedFiltersSubtitle": "Optionale Regeln für bestimmte Falltypen oder Beträge. Sie werden vor Ihrer shopweiten Einstellung geprüft.",
     "explainerTitle": "Das sehen Sie hier",
     "explainerBullet1": "Eine Einstellung gilt für Ihren gesamten Shop – für jeden eingehenden Fall.",
-    "explainerBullet2": "Der Autopilot sendet Fälle, bei denen wir sicher sind, sofort. Schwache, subjektive oder bereits verlorene Fälle werden zuerst für Sie zurückgehalten — sie gehen zur Frist trotzdem an Shopify, sofern Sie sie nicht aufgeben.",
+    "explainerBullet2": "Auto-Pilot speichert die Fälle, bei denen wir sicher sind, sofort. Schwache, subjektive oder bereits verlorene Fälle werden stattdessen zurückgehalten und beobachtet — sie gehen zur Frist trotzdem an Shopify, außer Sie entscheiden, sie nicht zu verteidigen.",
     "explainerBullet3": "Mit Schutzmaßnahmen halten Sie mehr zurück: Legen Sie einen Betrag fest, und jeder Fall darüber wartet auf Ihre Freigabe.",
     "setupTitle": "Automatisiere deinen Streitigkeits-Workflow",
     "setupDescription": "Regeln entscheiden, was passiert, wenn eine neue Streitigkeit eintrifft.",
@@ -2502,14 +2508,14 @@
     "presetCatchAllReview": "Auffangregel: Zur Prüfung senden",
     "presetCatchAllReviewDesc": "Leitet verbleibende Streitigkeiten als Sicherheitsnetz in die Review-Warteschlange.",
     "modeSectionTitle": "Wie Zahlungsstreitigkeiten bearbeitet werden",
-    "modeSectionSubtitle": "Dies gilt für jeden Fall. Manche Fälle werden immer zuerst für Ihre Prüfung zurückgehalten – siehe „Schutzmaßnahmen“ unten.",
+    "modeSectionSubtitle": "Das gilt für jede Reklamation. Einige Fälle werden immer zuerst zurückgehalten und beobachtet — siehe Schutzmechanismen unten.",
     "modeAutoTitle": "Autopilot",
     "modeAutoBadge": "Empfohlen",
-    "modeAutoDesc": "Wir erstellen Ihre stärksten Fälle und speichern sie in Shopify, sobald sie fertig sind. Alles andere wird zuerst für Ihre Prüfung zurückgehalten und dann zur Frist in Shopify gespeichert — es sei denn, Sie wählen „Nicht verteidigen“.",
+    "modeAutoDesc": "Wir speichern Ihre stärksten Fälle in Shopify, sobald sie fertig sind. Alles andere wird zurückgehalten, während wir weiter Beweise sammeln, und dann zur Frist in Shopify gespeichert — nichts wartet auf Ihre Freigabe, außer Sie wählen „Nicht verteidigen“.",
     "modeReviewTitle": "Alles prüfen",
     "modeReviewDesc": "Wir bereiten jede Antwort vor. Nichts wird in Shopify gespeichert, bevor Sie es freigeben.",
     "modeSaved": "Einstellungen gespeichert",
-    "alwaysReviewedTitle": "Immer zuerst für Sie zurückgehalten – unabhängig vom gewählten Modus",
+    "alwaysReviewedTitle": "Immer zurückgehalten — unabhängig vom gewählten Modus",
     "alwaysReviewedCovered": "Fälle, die bereits durch Shopify Protect gedeckt sind",
     "alwaysReviewedWeak": "Fälle mit schwacher oder fehlender Beweislage",
     "alwaysReviewedFatal": "Aussichtslose Fälle – bereits erstattet oder nie versandt",
@@ -2532,19 +2538,19 @@
     "groupsHide": "Ausblenden",
     "groupStoreDefault": "Store-Standard",
     "groupStoreDefaultHint": "Der Store-weiten Einstellung folgen",
-    "groupAlwaysReviewed": "Immer geprüft",
+    "groupAlwaysReviewed": "Immer zurückgehalten",
     "safeguardSubtitle": "Zusätzliche Bremsen, die zu jedem gewählten Modus hinzukommen.",
     "safeguardAmountPrefix": "Jeden Fall über",
     "safeguardAmountSuffix": "zur Freigabe zurückhalten.",
-    "alwaysReviewedHeading": "Immer geprüft",
-    "alwaysReviewedHeadingTail": "– unabhängig vom gewählten Modus werden diese zuerst zur Prüfung zurückgehalten und erreichen Shopify erst zur Frist",
+    "alwaysReviewedHeading": "Immer zurückgehalten",
+    "alwaysReviewedHeadingTail": "— unabhängig vom gewählten Modus werden diese zurückgehalten und beobachtet, statt sofort gespeichert zu werden",
     "saveChanges": "Änderungen speichern",
     "saveSaved": "Gespeichert",
     "groupFollowingStoreSetting": "Folgt der Store-Einstellung: {mode}",
     "groupHasOwnSetting": "Hat eine eigene Einstellung",
     "modeClearedExceptions": "{count} Dispute-Typen mit eigener Einstellung wurden gelöscht. Alles folgt jetzt „{mode}“. Legen Sie unten einen Typ fest, wenn Sie eine Ausnahme möchten.",
-    "modeAutoLead": "Wir erstellen Ihre stärksten Fälle und speichern sie in Shopify, sobald sie fertig sind.",
-    "modeAutoNote": "Alles andere wird zuerst für Ihre Prüfung zurückgehalten und dann zur Frist in Shopify gespeichert — es sei denn, Sie wählen „Nicht verteidigen“.",
+    "modeAutoLead": "Wir speichern Ihre stärksten Fälle in Shopify, sobald sie fertig sind.",
+    "modeAutoNote": "Alles andere wird zurückgehalten, während wir weiter Beweise sammeln, und dann zur Frist in Shopify gespeichert — nichts wartet auf Ihre Freigabe, außer Sie wählen „Nicht verteidigen“.",
     "modeReviewLead": "Wir bereiten jede Antwort vor. Nichts wird in Shopify gespeichert, bevor Sie es freigeben.",
     "modeReviewNote": "Volle Kontrolle — jeder Fall wartet auf Ihre Freigabe."
   },
@@ -3291,7 +3297,7 @@
         },
         "reviewQueue": {
           "title": "Die Prüfungswarteschlange",
-          "body": "Die Prüfliste sind Fälle, die für Sie zurückgehalten werden, bevor Beweise in Shopify gespeichert werden.\n\nFälle landen hier, wenn:\n- Eine Regel sie zur Prüfung schickt (zum Beispiel hoher Betrag).\n- Keine Regel greift und der Standard „Prüfen“ ist.\n- Die Beweislage schwach oder subjektiv ist oder der Fall bereits verloren ist.\n\nIn der eingebetteten App erscheinen diese Fälle in der Liste **Fälle** zusammen mit Ihren übrigen Rückbuchungen — nutzen Sie **Filter** nach Status oder öffnen Sie Einträge vom Dashboard. Öffnen Sie einen Fall, prüfen Sie das Paket und nutzen Sie dann **Freigeben & speichern** auf der Detailseite.\n\nEin Fall hier ist nicht eingefroren. Im Autopilot wird er zur Frist in Shopify gespeichert, wenn Sie nicht gehandelt haben; im Prüfmodus nur, wenn Sie freigeben. Wählen Sie **Nicht verteidigen**, um ihn in beiden Fällen zu stoppen."
+          "body": "Die Prüfliste sind Fälle, die DisputeDesk vorbereitet, aber noch nicht in Shopify gespeichert hat.\n\nFälle landen hier, wenn:\n- Eine Regel sie zur Prüfung schickt (zum Beispiel hoher Betrag).\n- Keine Regel greift und der Standard „Prüfen“ ist.\n- Die Beweislage schwach oder subjektiv ist oder der Fall bereits verloren ist.\n\nIn der eingebetteten App erscheinen diese Fälle in der Liste **Fälle** zusammen mit Ihren übrigen Rückbuchungen — nutzen Sie **Filter** nach Status oder öffnen Sie Einträge vom Dashboard. Öffnen Sie einen Fall, prüfen Sie das Paket und nutzen Sie dann **Freigeben & speichern** auf der Detailseite.\n\nEin Fall hier ist nicht eingefroren, und im Autopilot wartet er nicht auf Sie: DisputeDesk sammelt weiter Beweise und speichert die Antwort zur Frist in Shopify. Im Modus **Alles prüfen** wird sie nur gespeichert, wenn Sie freigeben. Wählen Sie **Nicht verteidigen**, damit wir nichts senden — Shopify übermittelt dennoch die vorliegenden Bestelldaten."
         },
         "approvingDisputes": {
           "title": "Freigabe aus der Prüfungswarteschlange",
@@ -4381,13 +4387,13 @@
       "setupSummaryTitle": "Das haben wir für Sie eingerichtet",
       "setupSummaryInquiry": "Frühe Anfragen werden automatisch abgedeckt",
       "setupSummaryReady": "Bereit für Disputes wegen {families}.",
-      "setupSummaryModeAuto": "Starke Antworten werden automatisch in Shopify gespeichert. Alles, was einen genaueren Blick braucht, wird für Ihre Prüfung zurückgehalten und dann zur Frist in Shopify gespeichert — es sei denn, Sie wählen „Nicht verteidigen“.",
+      "setupSummaryModeAuto": "Starke Antworten werden automatisch in Shopify gespeichert. Alles weniger Entscheidende wird zurückgehalten und beobachtet und dann zur Frist in Shopify gespeichert, außer Sie wählen „Nicht verteidigen“.",
       "setupSummaryModeReview": "Jede Antwort wird für Sie erstellt und wartet auf Ihre Freigabe, bevor sie an Shopify geht.",
       "setupSummarySafeguard": "Disputes über ${amount} warten immer auf Ihre Freigabe.",
       "setupSummaryPointer": "Einzelne Dispute-Typen können Sie später auf der Automatisierungsseite feinjustieren.",
       "safeguardSubtitle": "Zusätzliche Bremsen, die unabhängig vom gewählten Modus greifen.",
-      "alwaysHeldTitle": "Immer zuerst für Sie zurückgehalten",
-      "alwaysHeldSubtitle": "Zuerst für Ihre Prüfung zurückgehalten — unabhängig vom gewählten Modus."
+      "alwaysHeldTitle": "Immer zuerst zurückgehalten",
+      "alwaysHeldSubtitle": "Zurückgehalten und beobachtet statt sofort gespeichert — unabhängig vom gewählten Modus."
     }
   },
   "coverage": {
@@ -5847,7 +5853,9 @@
           "title": "Wird nicht verteidigt",
           "message": "Sie haben sich entschieden, diesen Fall nicht zu verteidigen. Es wird nichts übermittelt."
         }
-      }
+      },
+      "nextHeldWithDate": "Zurückgehalten, während wir auf stärkere Beweise achten — wird am {date} in Shopify gespeichert",
+      "nextHeldNoDate": "Zurückgehalten, während wir auf stärkere Beweise achten — wird zur Frist in Shopify gespeichert"
     },
     "attentionBlocking": {
       "approval_gate": "Freigabe erforderlich",
