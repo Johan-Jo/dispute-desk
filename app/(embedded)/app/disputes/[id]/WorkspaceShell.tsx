@@ -83,16 +83,20 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
     { id: "submit", label: t("disputes.workspaceShell.tabs.reviewSubmit"), panelId: "submit-panel" },
   ];
 
-  // Deep link support: `?section=gorgias-comms` (from the evidence-ready
-  // email) opens the Evidence tab so the merchant lands ON the review card
-  // instead of the top of the Overview tab. The card itself handles the
-  // scroll-into-view + transient highlight off the same param. Run once,
-  // only after data has loaded so the tab panel is mounted.
+  // Deep link support: `?section=…` opens the Evidence tab so the merchant
+  // lands ON the card instead of the top of the Overview tab. Each card
+  // handles its own scroll-into-view (and expand, or transient highlight)
+  // off the same param. Run once, only after data has loaded so the tab
+  // panel is mounted.
+  //
+  //   gorgias-comms   — evidence-ready email → matched-conversation review
+  //   cardholder-ack  — held new-dispute email → the one contribution a
+  //                     held case can take (lib/disputes/heldState)
   const deepLinkApplied = useRef(false);
   const targetSection = searchParams.get("section");
   useEffect(() => {
     if (deepLinkApplied.current || !data) return;
-    if (targetSection === "gorgias-comms") {
+    if (targetSection === "gorgias-comms" || targetSection === "cardholder-ack") {
       deepLinkApplied.current = true;
       actions.setActiveTab(TAB_INDEX.evidence);
     }

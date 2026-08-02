@@ -1572,7 +1572,8 @@
         "automatic": "Automático",
         "reviewBeforeSubmit": "Revisar antes de enviar",
         "automaticHelp": "O DisputeDesk preparou o pacote de evidências e o enviou automaticamente.",
-        "reviewBeforeSubmitHelp": "O DisputeDesk preparou o pacote de evidências para você. Revise e envie antes do prazo."
+        "reviewBeforeSubmitHelp": "O DisputeDesk preparou o pacote de evidências para você. Revise e envie antes do prazo.",
+        "automaticHeldHelp": "O DisputeDesk preparou o pacote de provas e mantém-no retido enquanto procura provas mais fortes. Será guardado no Shopify no prazo."
       },
       "changeRule": "Alterar regra",
       "editEvidence": "Editar evidências",
@@ -1600,7 +1601,12 @@
       "retryBuild": "Tentar novamente",
       "setUpPolicies": "Configurar políticas para casos futuros",
       "trackingCarrierFallback": "Transportadora",
-      "viewInShopifyUnavailable": "Não há um link direto para esta disputa disponível a partir dos dados atuais."
+      "viewInShopifyUnavailable": "Não há um link direto para esta disputa disponível a partir dos dados atuais.",
+      "held": {
+        "ask": "Se tiver um e-mail ou chat em que o titular do cartão confirma que fez e recebeu esta encomenda, adicione-o: é a prova isolada mais forte que pode juntar a este caso.",
+        "askFlipsToStrong": "Se tiver um e-mail ou chat em que o titular do cartão confirma que fez e recebeu esta encomenda, adicione-o: a confirmação do titular é decisiva e com ela podemos guardar esta resposta no Shopify de imediato.",
+        "addAcknowledgement": "Adicionar confirmação do titular"
+      }
     },
     "evidenceTabExtra": {
       "buildFailedTitle": "Falha ao montar o pacote de evidências",
@@ -2481,7 +2487,7 @@
     "advancedFiltersSubtitle": "Regras opcionais para tipos de disputa ou valores específicos. São verificadas antes da definição geral da loja.",
     "explainerTitle": "O que está a ver",
     "explainerBullet1": "Uma única definição cobre toda a sua loja — aplica-se a todas as disputas que chegam.",
-    "explainerBullet2": "O piloto automático envia de imediato os casos sobre os quais temos confiança. Casos fracos, subjetivos ou já perdidos ficam primeiro retidos para si — seguem à mesma para o Shopify no prazo, a menos que escolha não os defender.",
+    "explainerBullet2": "O piloto automático guarda de imediato os casos de que temos confiança. Os casos fracos, subjetivos ou já perdidos ficam retidos e monitorizados — ainda assim seguem para o Shopify no prazo, a não ser que escolha não os defender.",
     "explainerBullet3": "As salvaguardas permitem reter mais: defina um valor e todas as disputas acima dele aguardarão a sua aprovação.",
     "setupTitle": "Automatize seu fluxo de disputas",
     "setupDescription": "As regras decidem o que acontece quando uma nova disputa chega.",
@@ -2502,14 +2508,14 @@
     "presetCatchAllReview": "Captura Geral: Enviar para Revisão",
     "presetCatchAllReviewDesc": "Encaminha as disputas restantes para a fila de revisão como rede de segurança.",
     "modeSectionTitle": "Como as disputas são tratadas",
-    "modeSectionSubtitle": "Isto aplica-se a todas as disputas. Alguns casos ficam sempre retidos para a sua revisão — veja «Salvaguardas» abaixo.",
+    "modeSectionSubtitle": "Isto aplica-se a todas as disputas. Alguns casos são sempre retidos e monitorizados primeiro — consulte as Salvaguardas abaixo.",
     "modeAutoTitle": "Piloto automático",
     "modeAutoBadge": "Recomendado",
-    "modeAutoDesc": "Criamos os seus casos mais fortes e guardamo-los no Shopify assim que estão prontos. Tudo o resto fica primeiro retido para a sua revisão e depois é guardado no Shopify no prazo, exceto se escolher «Não defender».",
+    "modeAutoDesc": "Guardamos os seus casos mais fortes no Shopify assim que estão prontos. Tudo o resto fica retido enquanto continuamos a recolher provas e é depois guardado no Shopify no prazo — nada fica à espera da sua aprovação, a não ser que escolha “Não defender”.",
     "modeReviewTitle": "Rever tudo",
     "modeReviewDesc": "Preparamos todas as respostas. Nada é guardado no Shopify até que aprove.",
     "modeSaved": "Definições guardadas",
-    "alwaysReviewedTitle": "Sempre retidos para si primeiro — independentemente do modo escolhido",
+    "alwaysReviewedTitle": "Sempre retidos — qualquer que seja o modo escolhido",
     "alwaysReviewedCovered": "Disputas já cobertas pelo Shopify Protect",
     "alwaysReviewedWeak": "Casos com provas fracas ou em falta",
     "alwaysReviewedFatal": "Casos que não podemos ganhar — já reembolsados ou nunca enviados",
@@ -2532,19 +2538,19 @@
     "groupsHide": "Ocultar",
     "groupStoreDefault": "Padrão da loja",
     "groupStoreDefaultHint": "Seguir a definição de toda a loja",
-    "groupAlwaysReviewed": "Sempre revistos",
+    "groupAlwaysReviewed": "Sempre retidos",
     "safeguardSubtitle": "Travões extra que se aplicam por cima do modo que escolher.",
     "safeguardAmountPrefix": "Reter para a sua aprovação todas as disputas acima de",
     "safeguardAmountSuffix": ".",
-    "alwaysReviewedHeading": "Sempre revistos",
-    "alwaysReviewedHeadingTail": "— independentemente do modo escolhido, estes ficam primeiro retidos para revisão e só chegam ao Shopify no prazo",
+    "alwaysReviewedHeading": "Sempre retidos",
+    "alwaysReviewedHeadingTail": "— qualquer que seja o modo escolhido, estes ficam retidos e monitorizados em vez de guardados de imediato",
     "saveChanges": "Guardar alterações",
     "saveSaved": "Guardado",
     "groupFollowingStoreSetting": "Segue a definição da loja: {mode}",
     "groupHasOwnSetting": "Tem a sua própria definição",
     "modeClearedExceptions": "Foram apagados {count} tipos de disputa que tinham a sua própria definição. Tudo segue agora «{mode}». Defina um tipo abaixo se quiser uma exceção.",
-    "modeAutoLead": "Criamos os seus casos mais fortes e guardamo-los no Shopify assim que estão prontos.",
-    "modeAutoNote": "Tudo o resto fica primeiro retido para a sua revisão e depois é guardado no Shopify no prazo, exceto se escolher «Não defender».",
+    "modeAutoLead": "Guardamos os seus casos mais fortes no Shopify assim que estão prontos.",
+    "modeAutoNote": "Tudo o resto fica retido enquanto continuamos a recolher provas e é depois guardado no Shopify no prazo — nada fica à espera da sua aprovação, a não ser que escolha “Não defender”.",
     "modeReviewLead": "Preparamos todas as respostas. Nada é guardado no Shopify até que aprove.",
     "modeReviewNote": "Controlo total — cada caso aguarda a sua aprovação."
   },
@@ -3291,7 +3297,7 @@
         },
         "reviewQueue": {
           "title": "A fila de revisão",
-          "body": "A fila de revisão são disputas retidas para si antes de as provas serem guardadas no Shopify.\n\nChegam aqui quando:\n- Uma regra as envia para revisão (por exemplo, valor elevado).\n- Nenhuma regra corresponde e o padrão é rever.\n- As provas são fracas ou subjetivas, ou o caso já está perdido.\n\nNa app incorporada, essas disputas aparecem na lista **Disputas** com os restantes estornos — use **Filtrar** por estado ou abra itens a partir do painel. Abra uma disputa para inspecionar o pacote e use **Aprovar e guardar** na página de detalhe quando estiver pronto.\n\nUma disputa aqui não está congelada. No piloto automático é guardada no Shopify no prazo se não tiver agido; no modo de revisão só é guardada quando a aprovar. Escolha **Não defender** para a parar em ambos os casos."
+          "body": "A fila de revisão são disputas que o DisputeDesk preparou mas ainda não guardou no Shopify.\n\nChegam aqui quando:\n- Uma regra as envia para revisão (por exemplo, valor elevado).\n- Nenhuma regra corresponde e o padrão é rever.\n- As provas são fracas ou subjetivas, ou o caso já está perdido.\n\nNa app incorporada, essas disputas aparecem na lista **Disputas** com os restantes estornos — use **Filtrar** por estado ou abra itens a partir do painel. Abra uma disputa para inspecionar o pacote e use **Aprovar e guardar** na página de detalhe quando estiver pronto.\n\nUma disputa aqui não está congelada e, no piloto automático, não está à sua espera: o DisputeDesk continua a recolher provas e guarda a resposta no Shopify no prazo. No modo **Rever tudo** só é guardada quando a aprovar. Escolha **Não defender** para não enviarmos nada — o Shopify transmite mesmo assim os dados básicos da encomenda que tem."
         },
         "approvingDisputes": {
           "title": "Aprovar disputas na fila de revisão",
@@ -4381,13 +4387,13 @@
       "setupSummaryTitle": "O que configurámos para si",
       "setupSummaryInquiry": "Consultas iniciais cobertas automaticamente",
       "setupSummaryReady": "Pronto para disputas de {families}.",
-      "setupSummaryModeAuto": "As respostas fortes são guardadas no Shopify automaticamente. Tudo o que exigir um olhar mais atento fica retido para a sua revisão e depois é guardado no Shopify no prazo, exceto se escolher «Não defender».",
+      "setupSummaryModeAuto": "As respostas fortes são guardadas automaticamente no Shopify. O que for menos decisivo fica retido e monitorizado e é guardado no Shopify no prazo, a não ser que escolha “Não defender”.",
       "setupSummaryModeReview": "Cada resposta é criada para si e aguarda a sua aprovação antes de seguir para o Shopify.",
       "setupSummarySafeguard": "Disputas acima de ${amount} aguardam sempre a sua aprovação.",
       "setupSummaryPointer": "Pode ajustar tipos de disputa específicos mais tarde na página de Automação.",
       "safeguardSubtitle": "Travões adicionais que se aplicam a qualquer modo que escolher.",
-      "alwaysHeldTitle": "Sempre retidos para si primeiro",
-      "alwaysHeldSubtitle": "Retidos primeiro para a sua revisão — seja qual for o modo escolhido."
+      "alwaysHeldTitle": "Sempre retidos primeiro",
+      "alwaysHeldSubtitle": "Retidos e monitorizados em vez de guardados de imediato — qualquer que seja o modo escolhido."
     }
   },
   "coverage": {
@@ -5847,7 +5853,9 @@
           "title": "Não está sendo defendida",
           "message": "Você optou por não defender esta disputa. Nada será enviado."
         }
-      }
+      },
+      "nextHeldWithDate": "Retida enquanto procuramos provas mais fortes — guardada no Shopify a {date}",
+      "nextHeldNoDate": "Retida enquanto procuramos provas mais fortes — guardada no Shopify no prazo"
     },
     "attentionBlocking": {
       "approval_gate": "Aprovação necessária",

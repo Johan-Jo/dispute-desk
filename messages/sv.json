@@ -984,7 +984,8 @@
         "automatic": "Automatisk",
         "reviewBeforeSubmit": "Granska före inskick",
         "automaticHelp": "DisputeDesk förberedde bevispaketet och skickade in det automatiskt.",
-        "reviewBeforeSubmitHelp": "DisputeDesk har förberett bevispaketet åt dig. Granska och skicka in före tidsfristen."
+        "reviewBeforeSubmitHelp": "DisputeDesk har förberett bevispaketet åt dig. Granska och skicka in före tidsfristen.",
+        "automaticHeldHelp": "DisputeDesk förberedde bevispaketet och håller kvar det medan vi bevakar starkare bevis. Det sparas till Shopify på förfallodagen."
       },
       "changeRule": "Ändra regel",
       "editEvidence": "Redigera bevis",
@@ -1012,7 +1013,12 @@
       "retryBuild": "Försök bygga om",
       "setUpPolicies": "Konfigurera policys för framtida ärenden",
       "trackingCarrierFallback": "Transportör",
-      "viewInShopifyUnavailable": "Ingen direktlänk till den här tvisten är tillgänglig från nuvarande data."
+      "viewInShopifyUnavailable": "Ingen direktlänk till den här tvisten är tillgänglig från nuvarande data.",
+      "held": {
+        "ask": "Om du har ett mejl eller en chatt där kortinnehavaren bekräftar att hen lade och tog emot den här ordern, lägg till den — det är det enskilt starkaste bevis du kan tillföra ärendet.",
+        "askFlipsToStrong": "Om du har ett mejl eller en chatt där kortinnehavaren bekräftar att hen lade och tog emot den här ordern, lägg till den — en bekräftelse från kortinnehavaren är avgörande, och med den kan vi spara svaret till Shopify direkt.",
+        "addAcknowledgement": "Lägg till kortinnehavarens bekräftelse"
+      }
     },
     "overviewPill": {
       "missing": "Saknas",
@@ -2481,7 +2487,7 @@
     "advancedFiltersSubtitle": "Valfria regler för specifika ärendetyper eller belopp. De kontrolleras före din butiksomfattande inställning.",
     "explainerTitle": "Det här ser du",
     "explainerBullet1": "En inställning täcker hela butiken – den gäller varje invändning som kommer in.",
-    "explainerBullet2": "Autopiloten skickar direkt in de ärenden vi är säkra på. Svaga, subjektiva eller redan förlorade ärenden hålls först för dig — de går ändå till Shopify på förfallodagen om du inte väljer att avstå från att försvara dem.",
+    "explainerBullet2": "Autopilot sparar direkt de ärenden vi är trygga med. Svaga, subjektiva eller redan förlorade ärenden hålls i stället kvar och bevakas — de går ändå till Shopify på förfallodagen om du inte väljer att inte försvara dem.",
     "explainerBullet3": "Med skyddsregler håller du tillbaka mer: ange ett belopp så väntar alla invändningar över det på ditt godkännande.",
     "setupTitle": "Automatisera ditt tvistarbetsflöde",
     "setupDescription": "Regler avgör vad som händer när en ny tvist kommer in.",
@@ -2502,14 +2508,14 @@
     "presetCatchAllReview": "Fånga-allt: Skicka till granskning",
     "presetCatchAllReviewDesc": "Dirigerar återstående tvister till granskningskön som ett säkerhetsnät.",
     "modeSectionTitle": "Så hanteras invändningar",
-    "modeSectionSubtitle": "Detta gäller alla invändningar. Vissa ärenden hålls alltid för din granskning först – se Skyddsregler nedan.",
+    "modeSectionSubtitle": "Detta gäller varje tvist. Vissa ärenden hålls alltid kvar och bevakas först — se Skyddsräcken nedan.",
     "modeAutoTitle": "Autopilot",
     "modeAutoBadge": "Rekommenderas",
-    "modeAutoDesc": "Vi bygger dina starkaste ärenden och sparar dem till Shopify så snart de är klara. Allt annat hålls först för din granskning och sparas sedan till Shopify på förfallodagen — om du inte väljer ”Försvara inte”.",
+    "modeAutoDesc": "Vi sparar dina starkaste ärenden till Shopify så snart de är klara. Allt annat hålls kvar medan vi fortsätter samla bevis och sparas sedan till Shopify på förfallodagen — inget väntar på ditt godkännande, om du inte väljer ”Försvara inte”.",
     "modeReviewTitle": "Granska allt",
     "modeReviewDesc": "Vi förbereder varje svar. Ingenting sparas till Shopify förrän du godkänt det.",
     "modeSaved": "Inställningarna har sparats",
-    "alwaysReviewedTitle": "Hålls alltid för dig först – oavsett vilket läge du väljer",
+    "alwaysReviewedTitle": "Hålls alltid kvar — oavsett vilket läge du väljer",
     "alwaysReviewedCovered": "Invändningar som redan täcks av Shopify Protect",
     "alwaysReviewedWeak": "Ärenden med svag eller saknad bevisning",
     "alwaysReviewedFatal": "Ärenden vi inte kan vinna – redan återbetalda eller aldrig skickade",
@@ -2532,19 +2538,19 @@
     "groupsHide": "Dölj",
     "groupStoreDefault": "Butikens standardval",
     "groupStoreDefaultHint": "Följ inställningen för hela butiken",
-    "groupAlwaysReviewed": "Granskas alltid",
+    "groupAlwaysReviewed": "Hålls alltid kvar",
     "safeguardSubtitle": "Extra bromsar som gäller ovanpå det läge du väljer.",
     "safeguardAmountPrefix": "Håll varje invändning över",
     "safeguardAmountSuffix": "för ditt godkännande.",
-    "alwaysReviewedHeading": "Granskas alltid",
-    "alwaysReviewedHeadingTail": "– oavsett vilket läge du väljer hålls dessa först för granskning och når Shopify först på förfallodagen",
+    "alwaysReviewedHeading": "Hålls alltid kvar",
+    "alwaysReviewedHeadingTail": "— oavsett vilket läge du väljer hålls dessa kvar och bevakas i stället för att sparas direkt",
     "saveChanges": "Spara ändringar",
     "saveSaved": "Sparat",
     "groupFollowingStoreSetting": "Följer butikens inställning: {mode}",
     "groupHasOwnSetting": "Har en egen inställning",
     "modeClearedExceptions": "{count} invändningstyper med egen inställning rensades. Allt följer nu ”{mode}”. Ställ in en typ nedan om du vill ha ett undantag.",
-    "modeAutoLead": "Vi bygger dina starkaste ärenden och sparar dem till Shopify så snart de är klara.",
-    "modeAutoNote": "Allt annat hålls först för din granskning och sparas sedan till Shopify på förfallodagen — om du inte väljer ”Försvara inte”.",
+    "modeAutoLead": "Vi sparar dina starkaste ärenden till Shopify så snart de är klara.",
+    "modeAutoNote": "Allt annat hålls kvar medan vi fortsätter samla bevis och sparas sedan till Shopify på förfallodagen — inget väntar på ditt godkännande, om du inte väljer ”Försvara inte”.",
     "modeReviewLead": "Vi förbereder varje svar. Ingenting sparas till Shopify förrän du godkänt det.",
     "modeReviewNote": "Full överblick — varje ärende väntar på ditt godkännande."
   },
@@ -3291,7 +3297,7 @@
         },
         "reviewQueue": {
           "title": "Granskningskön",
-          "body": "Granskningskön är invändningar som hålls för dig innan bevis sparas till Shopify.\n\nDe hamnar här när:\n- En regel skickar dem till granskning (till exempel högt belopp).\n- Ingen regel matchar och standard är granskning.\n- Bevisen är svaga eller subjektiva, eller ärendet redan är förlorat.\n\nI den inbäddade appen visas de i listan **Invändningar** tillsammans med dina övriga återkrav — använd **Filtrera** på status eller öppna poster från översikten. Öppna en invändning för att granska paketet och använd sedan **Godkänn och spara** på detaljsidan.\n\nEtt ärende här är inte fryst. I autopilot sparas det till Shopify på förfallodagen om du inte har agerat; i granskningsläge sparas det bara när du godkänner. Välj **Försvara inte** för att stoppa det i båda fallen."
+          "body": "Granskningskön är tvister som DisputeDesk har förberett men ännu inte sparat till Shopify.\n\nDe hamnar här när:\n- En regel skickar dem till granskning (till exempel högt belopp).\n- Ingen regel matchar och standard är granskning.\n- Bevisen är svaga eller subjektiva, eller ärendet redan är förlorat.\n\nI den inbäddade appen visas de i listan **Invändningar** tillsammans med dina övriga återkrav — använd **Filtrera** på status eller öppna poster från översikten. Öppna en invändning för att granska paketet och använd sedan **Godkänn och spara** på detaljsidan.\n\nEtt ärende här är inte fryst, och i autopilot väntar det inte på dig: DisputeDesk fortsätter samla bevis och sparar svaret till Shopify på förfallodagen. I läget **Granska allt** sparas det bara när du godkänner. Välj **Försvara inte** så skickar vi ingenting — Shopify vidarebefordrar ändå de grundläggande orderuppgifter det har."
         },
         "approvingDisputes": {
           "title": "Godkänna tvister från granskningskön",
@@ -4381,13 +4387,13 @@
       "setupSummaryTitle": "Det här har vi ställt in åt dig",
       "setupSummaryInquiry": "Tidiga förfrågningar täcks automatiskt",
       "setupSummaryReady": "Redo för tvister om {families}.",
-      "setupSummaryModeAuto": "Starka svar sparas till Shopify automatiskt. Allt som behöver en närmare titt hålls för din granskning och sparas sedan till Shopify på förfallodagen — om du inte väljer ”Försvara inte”.",
+      "setupSummaryModeAuto": "Starka svar sparas automatiskt till Shopify. Det som är mindre avgörande hålls kvar och bevakas och sparas sedan till Shopify på förfallodagen, om du inte väljer ”Försvara inte”.",
       "setupSummaryModeReview": "Varje svar byggs åt dig och väntar på ditt godkännande innan det går till Shopify.",
       "setupSummarySafeguard": "Tvister över {amount} USD väntar alltid på ditt godkännande.",
       "setupSummaryPointer": "Du kan finjustera enskilda tvisttyper senare på Automatiseringssidan.",
       "safeguardSubtitle": "Extra bromsar som gäller oavsett vilket läge du väljer.",
-      "alwaysHeldTitle": "Hålls alltid för dig först",
-      "alwaysHeldSubtitle": "Hålls först för din granskning — oavsett vilket läge du väljer."
+      "alwaysHeldTitle": "Hålls alltid kvar först",
+      "alwaysHeldSubtitle": "Hålls kvar och bevakas i stället för att sparas direkt — oavsett vilket läge du väljer."
     }
   },
   "coverage": {
@@ -5847,7 +5853,9 @@
           "title": "Försvaras inte",
           "message": "Du valde att inte försvara denna tvist. Ingenting kommer att skickas."
         }
-      }
+      },
+      "nextHeldWithDate": "Pausad medan vi bevakar starkare bevis — sparas till Shopify den {date}",
+      "nextHeldNoDate": "Pausad medan vi bevakar starkare bevis — sparas till Shopify på förfallodagen"
     },
     "attentionBlocking": {
       "approval_gate": "Godkännande krävs",

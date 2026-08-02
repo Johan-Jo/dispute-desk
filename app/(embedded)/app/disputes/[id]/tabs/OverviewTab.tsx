@@ -325,6 +325,12 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // pure lifecycle resolver over the fields already on the client so
   // the interpretation cannot diverge.
   const presentation = data.presentation ?? null;
+  // Auto-pilot hold, resolved server-side off the same guard verdict the
+  // pipeline acted on (lib/disputes/heldState). `held` is NOT "something
+  // went wrong" and NOT "you must decide": the deadline cron saves the
+  // package to Shopify on the due date either way. Copy hangs off this so
+  // the page, the email, and the Automation cards say one thing.
+  const held = data.held ?? null;
   const lifecycle =
     presentation?.lifecycle ??
     resolveLifecycle({
@@ -439,9 +445,17 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
      * Scoped to `pack_prepared`: the package exists and nothing has been saved
      * or sent yet, which is exactly the state the headline describes. Earlier
      * rungs (building_evidence / monitoring) have nothing to review, so they
-     * keep their lifecycle headline. */
+     * keep their lifecycle headline.
+     *
+     * NOT shown on a HELD Auto-pilot case (2026-08-02). "Review before
+     * challenging" is an instruction, and in auto mode there is no challenge
+     * for the merchant to authorise: the deadline cron saves the package on
+     * the due date whether or not they ever open it, and the page offers them
+     * no approve/hold/concede control. The instruction only holds in review
+     * mode, where the merchant genuinely is the gate. */
     if (
       lifecycle === "pack_prepared" &&
+      !held?.held &&
       (heroVariant === "could_win" || heroVariant === "needs_strengthening")
     ) {
       return t(`hero.title.preSubmit.${heroVariant}`);
@@ -509,6 +523,13 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // only. "Monitoring ≠ Done": the saved state's next milestone is
   // Shopify sending the response, never "done". The saved-editable
   // four-part block names the actual deadline date (plan §6.2).
+  //
+  // A HELD Auto-pilot case takes its own line. The generic
+  // `hero.next.pack_prepared` / `.monitoring` copy reads "Held for your
+  // review — saved to Shopify on the due date unless you decide
+  // otherwise", which is true in review mode and misleading in auto: there
+  // is no decision to make, and the two decisions the merchant can record
+  // (approve, hold) both end in the same submission anyway.
   const heroNextStep =
     reviewDecision // decision message already states what happens next
       ? null
@@ -518,9 +539,13 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           lifecycle !== "closed"
         ? isTechProblem
           ? tp("hero.next.technical_error")
-          : lifecycle === "saved_to_shopify" && dispute.dueAt
-            ? tp("hero.nextSavedWithDate", { date: formatDate(dispute.dueAt) })
-            : tp(`hero.next.${lifecycle}`)
+          : held?.held
+            ? dispute.dueAt
+              ? tp("hero.nextHeldWithDate", { date: formatDate(dispute.dueAt) })
+              : tp("hero.nextHeldNoDate")
+            : lifecycle === "saved_to_shopify" && dispute.dueAt
+              ? tp("hero.nextSavedWithDate", { date: formatDate(dispute.dueAt) })
+              : tp(`hero.next.${lifecycle}`)
         : null;
 
   /* ── Timeline ──
@@ -781,9 +806,15 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   const appliedModeLabel = appliedMode === "auto"
     ? tExtra("appliedMode.automatic")
     : tExtra("appliedMode.reviewBeforeSubmit");
-  const appliedModeHelp = appliedMode === "auto"
-    ? tExtra("appliedMode.automaticHelp")
-    : tExtra("appliedMode.reviewBeforeSubmitHelp");
+  // Three states, not two. `automaticHelp` used to be shown for every
+  // auto-mode dispute and claims the package "was prepared and saved
+  // automatically" — false for a held case, which is precisely the set of
+  // disputes a merchant is most likely to open and read it on.
+  const appliedModeHelp = appliedMode !== "auto"
+    ? tExtra("appliedMode.reviewBeforeSubmitHelp")
+    : held?.held
+      ? tExtra("appliedMode.automaticHeldHelp")
+      : tExtra("appliedMode.automaticHelp");
 
   const goToReview = () => actions.setActiveTab(TAB_INDEX.reviewForward);
   const goToEvidence = () => actions.setActiveTab(TAB_INDEX.evidence);
@@ -958,15 +989,35 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               is toward strengthening the case rather than firing it off. The
               old banner had that the other way round.
 
-              No explanatory prose here on purpose. "Next:" above already
-              states what happens if the merchant does nothing, and the old
-              banner's body ("we stopped and handed it to you") was the false
-              sentence that got it deleted. */}
-          {autoSaveBlock && !isReadOnly && (
+              The one line of prose that IS here (2026-08-02) names the single
+              contribution a held case can still take: a cardholder
+              acknowledgement. It renders only when
+              `CardholderAcknowledgementCard` would render too — both gate on
+              `canOfferCardholderAcknowledgement` — so the page never invites
+              an action it then hides. "Add missing evidence" is not a truthful
+              primary on a held fraud case: everything else on it is gateway-,
+              carrier- or Shopify-derived, so the button is relabelled to the
+              thing that actually exists.
+
+              The block renders on `held` as well as on the stored
+              `auto_save_blocked` event: the pipeline's PARK branch writes
+              `parked_for_review`, not `auto_save_blocked`, so keying only on
+              the audit row made the ask depend on which path happened to
+              evaluate the pack. */}
+          {(autoSaveBlock || held?.held) && !isReadOnly && (
             <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${heroTone.border}` }}>
+              {held?.offer === "cardholder_acknowledgement" && (
+                <p style={{ fontSize: 12.5, color: heroTone.bodyColor, margin: "0 0 10px", lineHeight: 1.55, maxWidth: 760 }}>
+                  {held.offerFlipsToStrong
+                    ? tExtra("held.askFlipsToStrong")
+                    : tExtra("held.ask")}
+                </p>
+              )}
               <InlineStack gap="200" blockAlign="center">
                 <Button variant="primary" onClick={goToEvidence}>
-                  {tExtra("addMissingEvidence")}
+                  {held?.offer === "cardholder_acknowledgement"
+                    ? tExtra("held.addAcknowledgement")
+                    : tExtra("addMissingEvidence")}
                 </Button>
                 <Button onClick={goToReview}>{tExtra("submitAnyway")}</Button>
               </InlineStack>

@@ -978,7 +978,8 @@
         "automatic": "Automatic",
         "reviewBeforeSubmit": "Review before submit",
         "automaticHelp": "DisputeDesk prepared the evidence pack and submitted it automatically.",
-        "reviewBeforeSubmitHelp": "DisputeDesk prepared the evidence pack for you. Review it and submit before the deadline."
+        "reviewBeforeSubmitHelp": "DisputeDesk prepared the evidence pack for you. Review it and submit before the deadline.",
+        "automaticHeldHelp": "DisputeDesk prepared the evidence pack and is holding it while it watches for stronger evidence. It is saved to Shopify on the due date."
       },
       "changeRule": "Change rule",
       "editEvidence": "Edit evidence",
@@ -1006,7 +1007,12 @@
       "retryHelp": "Try rebuilding. If it keeps failing, contact support and reference this dispute.",
       "retryBuild": "Retry build",
       "setUpPolicies": "Set up policies for future cases",
-      "trackingCarrierFallback": "Carrier"
+      "trackingCarrierFallback": "Carrier",
+      "held": {
+        "ask": "If you have an email or chat in which the cardholder confirms they placed and received this order, add it — it's the strongest single piece of evidence you can add to this case.",
+        "askFlipsToStrong": "If you have an email or chat in which the cardholder confirms they placed and received this order, add it — a confirmation from the cardholder is decisive, and with it we can save this response to Shopify straight away.",
+        "addAcknowledgement": "Add cardholder acknowledgement"
+      }
     },
     "overviewPill": {
       "missing": "Missing",
@@ -2499,17 +2505,17 @@
     "advancedFiltersSubtitle": "Optional rules for specific dispute types or amounts. These are checked before your store-wide setting.",
     "explainerTitle": "What you're looking at",
     "explainerBullet1": "One setting covers your whole store — it applies to every dispute that arrives.",
-    "explainerBullet2": "Auto-pilot sends the cases we're confident about straight away. Weak, subjective, or already-lost cases are held for you first — they still go to Shopify on the due date unless you choose not to defend them.",
+    "explainerBullet2": "Auto-pilot saves the cases we're confident about straight away. Weak, subjective, or already-lost cases are held back and monitored instead — they still go to Shopify on the due date unless you choose not to defend them.",
     "explainerBullet3": "Safeguards let you hold back more: set an amount and every dispute above it waits for your approval.",
     "modeSectionTitle": "How disputes are handled",
-    "modeSectionSubtitle": "This applies to every dispute. Some cases are always held for your review first — see Safeguards below.",
+    "modeSectionSubtitle": "This applies to every dispute. Some cases are always held back and monitored first — see Safeguards below.",
     "modeAutoTitle": "Auto-pilot",
     "modeAutoBadge": "Recommended",
-    "modeAutoDesc": "We build your strongest cases and save them to Shopify as soon as they're ready. Everything else is held for your review first, then saved to Shopify on the due date unless you choose “Don't defend”.",
+    "modeAutoDesc": "We save your strongest cases to Shopify as soon as they're ready. Everything else is held while we keep collecting evidence, then saved to Shopify on the due date — nothing waits for your approval, unless you choose “Don't defend”.",
     "modeReviewTitle": "Review everything",
     "modeReviewDesc": "We prepare every response. Nothing is saved to Shopify until you approve it.",
     "modeSaved": "Handling settings saved",
-    "alwaysReviewedTitle": "Always held for you first — whatever mode you pick",
+    "alwaysReviewedTitle": "Always held back — whatever mode you pick",
     "alwaysReviewedCovered": "Disputes already covered by Shopify Protect",
     "alwaysReviewedWeak": "Cases where the evidence is weak or missing",
     "alwaysReviewedFatal": "Cases we can't win — already refunded, or never fulfilled",
@@ -2532,19 +2538,19 @@
     "groupsHide": "Hide",
     "groupStoreDefault": "Store default",
     "groupStoreDefaultHint": "Follow the store-wide setting",
-    "groupAlwaysReviewed": "Always reviewed",
+    "groupAlwaysReviewed": "Always held",
     "safeguardSubtitle": "Extra brakes that apply on top of whichever mode you pick.",
     "safeguardAmountPrefix": "Hold every dispute above",
     "safeguardAmountSuffix": "for your approval.",
-    "alwaysReviewedHeading": "Always reviewed",
-    "alwaysReviewedHeadingTail": "— whatever mode you pick, these are held for review first and only reach Shopify on the due date",
+    "alwaysReviewedHeading": "Always held back",
+    "alwaysReviewedHeadingTail": "— whatever mode you pick, these are held and monitored rather than saved straight away",
     "saveChanges": "Save changes",
     "saveSaved": "Saved",
     "groupFollowingStoreSetting": "Following store setting: {mode}",
     "groupHasOwnSetting": "Has its own setting",
     "modeClearedExceptions": "Cleared {count} dispute types that had their own setting. Everything now follows {mode}. Set a type below if you want an exception.",
-    "modeAutoLead": "We build your strongest cases and save them to Shopify as soon as they're ready.",
-    "modeAutoNote": "Everything else is held for your review first, then saved to Shopify on the due date unless you choose “Don't defend”.",
+    "modeAutoLead": "We save your strongest cases to Shopify as soon as they're ready.",
+    "modeAutoNote": "Everything else is held while we keep collecting evidence, then saved to Shopify on the due date — nothing waits for your approval, unless you choose “Don't defend”.",
     "modeReviewLead": "We prepare every response. Nothing is saved to Shopify until you approve it.",
     "modeReviewNote": "Full oversight — every case waits for your approval."
   },
@@ -3290,7 +3296,7 @@
         },
         "reviewQueue": {
           "title": "The review queue",
-          "body": "The review queue is disputes held for you before evidence is saved to Shopify.\n\nDisputes land here when:\n- A rule sends them to review (for example high value).\n- No rule matches and the default is review.\n- The evidence is weak, subjective, or the case is already lost.\n\nIn the embedded app, those disputes appear on the **Disputes** list with your other chargebacks — use **Filter** by status or open items from the dashboard. Open a dispute to inspect the pack, then use **Approve & Save** on the detail page when ready.\n\nA dispute here is not frozen. On Auto-pilot it is saved to Shopify on the due date if you have not acted; in review mode it is saved only when you approve it. Choose **Don't defend** to stop it either way."
+          "body": "The review queue is disputes DisputeDesk has prepared but not saved to Shopify yet.\n\nDisputes land here when:\n- A rule sends them to review (for example high value).\n- No rule matches and the default is review.\n- The evidence is weak, subjective, or the case is already lost.\n\nIn the embedded app, those disputes appear on the **Disputes** list with your other chargebacks — use **Filter** by status or open items from the dashboard. Open a dispute to inspect the pack, then use **Approve & Save** on the detail page when ready.\n\nA dispute here is not frozen, and on Auto-pilot it is not waiting for you: DisputeDesk keeps collecting evidence and saves the response to Shopify on the due date. In **Review everything** mode it is saved only when you approve it. Choose **Don't defend** to stop us sending it — Shopify still passes on the basic order details it holds."
         },
         "approvingDisputes": {
           "title": "Approving disputes from the review queue",
@@ -4657,13 +4663,13 @@
       "setupSummaryTitle": "What we've set up for you",
       "setupSummaryInquiry": "Early-stage inquiries covered automatically",
       "setupSummaryReady": "Ready for {families} disputes.",
-      "setupSummaryModeAuto": "Strong responses are saved to Shopify automatically. Anything that needs a closer look is held for your review, then saved to Shopify on the due date unless you choose “Don't defend”.",
+      "setupSummaryModeAuto": "Strong responses are saved to Shopify automatically. Anything less decisive is held back and monitored, then saved to Shopify on the due date unless you choose “Don't defend”.",
       "setupSummaryModeReview": "Every response is built for you and waits for your approval before it goes to Shopify.",
       "setupSummarySafeguard": "Disputes over ${amount} always wait for your approval.",
       "setupSummaryPointer": "You can fine-tune individual dispute types later on the Automation page.",
       "safeguardSubtitle": "Extra brakes that apply on top of whichever mode you pick.",
-      "alwaysHeldTitle": "Always held for you first",
-      "alwaysHeldSubtitle": "Held for your review first — whatever mode you pick."
+      "alwaysHeldTitle": "Always held back first",
+      "alwaysHeldSubtitle": "Held and monitored rather than saved straight away — whatever mode you pick."
     }
   },
   "disputeTimeline": {
@@ -5856,7 +5862,9 @@
           "title": "Not being defended",
           "message": "You chose not to defend this dispute. Nothing will be submitted."
         }
-      }
+      },
+      "nextHeldWithDate": "Held while we watch for stronger evidence — saved to Shopify on {date}",
+      "nextHeldNoDate": "Held while we watch for stronger evidence — saved to Shopify on the due date"
     },
     "techAttention": {
       "title": "Attention required",

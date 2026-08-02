@@ -2479,6 +2479,45 @@ Precedence is coverage → fatal-loss → strength, matching PRD §4 → §5 →
 
 Tests: `lib/automation/__tests__/autoSubmitGuards.test.ts` (exhaustive verdict + precedence matrix) and `lib/jobs/handlers/__tests__/buildDefencePackageJobGuards.test.ts` (the job-path regression — Moderate yields a draft with a `park` verdict).
 
+### Held state — how a held Auto-pilot case is described (2026-08-02)
+
+`lib/disputes/heldState.ts` — `resolveHeldState(input): HeldState`. **Pure**; it calls `evaluateAutoSubmitGuards` rather than restating the strength ladder.
+
+**The problem it fixes.** A `park` or `block` on strength in auto mode leaves `defence_packages` at `draft / validation_status=ok / pdf_path`, which is exactly the shape `app/api/cron/defence-package-deadline-submit` finalizes and saves to Shopify on the due date. The case is waiting for a **clock**, not for the merchant — and the dispute page renders the approve/hold/concede block only for a *review-mode* approval gate, so an Auto-pilot merchant has no such control. Every surface nevertheless said "held for your review", and the new-dispute email told them to review the evidence and "concede it if it isn't worth defending": two instructions they could not act on. (Prod, 2026-08-02: blume-box had 52 moderate + 17 weak disputes in that state; ~87% of packs in 30 days.)
+
+```ts
+interface HeldState {
+  held: boolean;                                // auto mode AND guards declined on strength
+  reason: "moderate_strength" | "weak_strength" | null;
+  offer: "cardholder_acknowledgement" | null;   // the ONE merchant contribution, when reachable
+  offerFlipsToStrong: boolean;                  // moderate only — see below
+}
+```
+
+- **Coverage and fatal-loss are NOT held** (`held: false`). They have their own copy, and no merchant evidence changes them.
+- **`offer`** is the cardholder acknowledgement, and only that: on a held fraud case every other signal is gateway-, carrier- or Shopify-derived. Pasting a message in which the cardholder confirms the purchase writes `payload.customerConfirmsOrder === true` (`app/api/packs/[packId]/cardholder-acknowledgement/route.ts`), which the canonical categorizer treats as the discriminator elevating `customer_communication` supporting → strong.
+- **`offerFlipsToStrong`** is true for `moderate_strength` only. Moderate means ≥1 strong signal is already counted, so a strong `communication` signal makes `strongCount >= 2` → overall strong → the pipeline saves immediately. A Weak case gains its *first* strong signal and still does not clear the bar, so that copy promises nothing.
+- **`canOfferCardholderAcknowledgement()` is the one gate.** `CardholderAcknowledgementCard` calls it too (replacing its local `ccRow?.hasEvidence` check), so a surface can never invite an action the dispute page hides. It keys on `hasEvidence` (row `available`/`waived`) rather than "is it already strong" — a provided conversation the categorizer kept at *supporting* must not be re-requested.
+
+**Consumers:**
+
+| Surface | How it gets the state |
+|---|---|
+| Dispute page | `GET /api/disputes/[id]/workspace` resolves it server-side and returns it as `held`; `OverviewTab` uses it for the "Next:" line, the hero title, the rule caption, and the ask. |
+| New-dispute email (`held` variant) | `claimAndSendDeferredNewDisputeAlert` loads the pack the pipeline just evaluated and resolves the same state. |
+| Automation page / onboarding | Static copy — no per-dispute state — but written to the same contract. |
+
+**Copy rules (guarded by `tests/unit/heldCopyTruth.test.ts` + `lib/email/__tests__/newDisputeAlertHeldVariant.test.ts`):**
+- Never describe an auto-mode hold as awaiting the merchant (`held for your review` and its five translations are asserted absent).
+- Never name conceding in held copy — the control is not rendered in auto mode, and conceding only withholds *our* package (Shopify still files its scrape). It stays documented on the Automation page and in help.
+- Always name Shopify and the due date: "held while we watch for stronger evidence — saved to Shopify on {date}".
+- The ask prints **only** when `offer` is set, and promises the immediate save **only** when `offerFlipsToStrong`.
+- Internal guard messages (`…parked for merchant review per PRD §9`) never reach a merchant surface.
+- `disputes.overviewExtra.appliedMode.automaticHeldHelp` exists because `automaticHelp` claims the pack was saved automatically — false for the held case, which is the one merchants actually open.
+- Email deep link: `?section=cardholder-ack` → `WorkspaceShell` switches to the Evidence tab and the acknowledgement card expands + scrolls itself (same mechanism as `?section=gorgias-comms`).
+
+Tests: `lib/disputes/__tests__/heldState.test.ts` (derivation), `tests/unit/heldCopyTruth.test.ts` (six-locale catalog guard), `lib/email/__tests__/newDisputeAlertHeldVariant.test.ts` (rendered HTML).
+
 ### Store-wide automation mode (2026-07-27)
 
 Replaces the per-dispute-type Automatic/Review grid. **One switch per shop**, plus an explicit amount safeguard.
