@@ -194,6 +194,20 @@ describe("one gate decides whether the acknowledgement is offered", () => {
     expect(CARD).toContain("@/lib/disputes/heldState");
   });
 
+  it("nothing gates the offer on the checklist row having evidence", () => {
+    // The row goes `available` on an auto-collected Shopify order note that
+    // contributes nothing to strength. Gating on it hid the CTA on 11 of 17
+    // open weak disputes — the ones with zero strong signals.
+    for (const [name, src] of [["card", CARD], ["email", EMAIL], ["workspace", WORKSPACE_ROUTE]] as const) {
+      expect(src, `${name} re-introduced the row-based gate`).not.toMatch(
+        /communicationHasEvidence/,
+      );
+    }
+    expect(CARD).toContain("merchantSuppliedAcknowledgementFromItems");
+    expect(EMAIL).toContain("merchantSuppliedAcknowledgementFromItems");
+    expect(WORKSPACE_ROUTE).toContain("merchantSuppliedAcknowledgementFromItems");
+  });
+
   it("the email prints its ask only from the resolved offer", () => {
     expect(EMAIL).toContain("resolveHeldState");
     expect(EMAIL).toMatch(/ctx\.held\?\.offer === "cardholder_acknowledgement"/);

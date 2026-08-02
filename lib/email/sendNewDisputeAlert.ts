@@ -40,7 +40,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { fetchShopDetails } from "@/lib/shopify/shopDetails";
 import type { AutomationMode } from "@/lib/rules/normalizeMode";
 import {
-  communicationHasEvidenceFromChecklist,
+  merchantSuppliedAcknowledgementFromItems,
   resolveHeldState,
   type HeldState,
 } from "@/lib/disputes/heldState";
@@ -1045,11 +1045,16 @@ export async function claimAndSendDeferredNewDisputeAlert(
     if (mode === "held") {
       const { data: packRow } = await sb
         .from("evidence_packs")
-        .select("pack_json, checklist_v2")
+        .select("id, pack_json")
         .eq("dispute_id", disputeId)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+      // Evidence items carry the acknowledgement marker; the checklist row
+      // does not distinguish a merchant paste from an auto-collected note.
+      const { data: itemRows } = packRow?.id
+        ? await sb.from("evidence_items").select("payload").eq("pack_id", packRow.id)
+        : { data: null };
       const packJson = (packRow?.pack_json ?? null) as {
         case_strength?: { overall?: string };
         coverage?: { state?: string };
@@ -1065,10 +1070,8 @@ export async function claimAndSendDeferredNewDisputeAlert(
         fatalLoss: packJson?.fatal_loss ?? null,
         creditAlreadyIssued: packJson?.credit_already_issued ?? null,
         acknowledgement: {
-          communicationHasEvidence: communicationHasEvidenceFromChecklist(
-            (packRow?.checklist_v2 ?? null) as
-              | Array<{ field: string; status: string }>
-              | null,
+          merchantSuppliedAcknowledgement: merchantSuppliedAcknowledgementFromItems(
+            (itemRows ?? []) as Array<{ payload?: Record<string, unknown> | null }>,
           ),
           submissionState: row.submission_state,
           finalOutcome: row.final_outcome,

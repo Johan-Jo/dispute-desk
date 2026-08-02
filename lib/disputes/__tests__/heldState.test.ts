@@ -11,12 +11,12 @@
 import { describe, it, expect } from "vitest";
 import {
   canOfferCardholderAcknowledgement,
-  communicationHasEvidenceFromChecklist,
+  merchantSuppliedAcknowledgementFromItems,
   resolveHeldState,
 } from "../heldState";
 
 const OFFERABLE = {
-  communicationHasEvidence: false,
+  merchantSuppliedAcknowledgement: false,
   submissionState: "not_saved",
   finalOutcome: null,
 };
@@ -85,9 +85,9 @@ describe("resolveHeldState — when a case is held", () => {
 });
 
 describe("resolveHeldState — the offer", () => {
-  it("is absent when the merchant already provided customer communication", () => {
+  it("is absent when the merchant already supplied an acknowledgement", () => {
     const state = held({
-      acknowledgement: { ...OFFERABLE, communicationHasEvidence: true },
+      acknowledgement: { ...OFFERABLE, merchantSuppliedAcknowledgement: true },
     });
     expect(state.held).toBe(true);
     expect(state.offer).toBeNull();
@@ -112,33 +112,51 @@ describe("resolveHeldState — the offer", () => {
 });
 
 describe("canOfferCardholderAcknowledgement — the card's gate", () => {
-  it("mirrors CardholderAcknowledgementCard: hasEvidence hides it, not strength", () => {
-    // The card deliberately hides on `hasEvidence` rather than
-    // `usedAsPositiveBankEvidence` — a provided conversation the categorizer
-    // kept at supporting must not be re-requested.
-    expect(canOfferCardholderAcknowledgement({ communicationHasEvidence: false })).toBe(true);
-    expect(canOfferCardholderAcknowledgement({ communicationHasEvidence: true })).toBe(false);
+  it("hides on merchant-supplied work, not on strength", () => {
+    // A paste the categorizer kept at `supporting` still counts as done —
+    // the merchant must not be asked to redo it.
+    expect(canOfferCardholderAcknowledgement({ merchantSuppliedAcknowledgement: false })).toBe(true);
+    expect(canOfferCardholderAcknowledgement({ merchantSuppliedAcknowledgement: true })).toBe(false);
   });
 });
 
-describe("communicationHasEvidenceFromChecklist", () => {
-  it("reads the customer_communication row only", () => {
-    expect(
-      communicationHasEvidenceFromChecklist([
-        { field: "avs_cvv_match", status: "available" },
-        { field: "customer_communication", status: "missing" },
-      ]),
-    ).toBe(false);
+/**
+ * The distinction this helper exists to draw. Prod, 2026-08-02: 11 of
+ * blume-box's 17 open WEAK disputes had `customer_communication` flipped to
+ * `available` by an auto-collected `shopify_timeline` order note carrying no
+ * `customerConfirmsOrder`. Those packs scored `strongCount: 0` — precisely
+ * the cases an acknowledgement could move — and the old row-based gate hid
+ * the CTA on every one of them.
+ */
+describe("merchantSuppliedAcknowledgementFromItems", () => {
+  const TIMELINE_NOTE = {
+    payload: { source: "shopify_timeline", fieldsProvided: ["customer_communication"] },
+  };
+
+  it("an auto-collected timeline note does NOT count as merchant-supplied", () => {
+    expect(merchantSuppliedAcknowledgementFromItems([TIMELINE_NOTE])).toBe(false);
   });
 
-  it.each(["available", "waived"])("treats %s as provided", (status) => {
+  it("the acknowledgement form's own marker counts, whatever it scored", () => {
+    // `kind` is written only by the cardholder-acknowledgement route, and is
+    // present even when the discriminator failed to lift the row to strong.
     expect(
-      communicationHasEvidenceFromChecklist([{ field: "customer_communication", status }]),
+      merchantSuppliedAcknowledgementFromItems([
+        TIMELINE_NOTE,
+        { payload: { kind: "cardholder_acknowledgement" } },
+      ]),
     ).toBe(true);
   });
 
-  it("treats an absent row (and an absent checklist) as nothing collected", () => {
-    expect(communicationHasEvidenceFromChecklist([])).toBe(false);
-    expect(communicationHasEvidenceFromChecklist(null)).toBe(false);
+  it("an explicit customerConfirmsOrder counts — e.g. an approved Gorgias thread", () => {
+    expect(
+      merchantSuppliedAcknowledgementFromItems([{ payload: { customerConfirmsOrder: true } }]),
+    ).toBe(true);
+  });
+
+  it("is false for an empty, null, or payload-less item list", () => {
+    expect(merchantSuppliedAcknowledgementFromItems([])).toBe(false);
+    expect(merchantSuppliedAcknowledgementFromItems(null)).toBe(false);
+    expect(merchantSuppliedAcknowledgementFromItems([{ payload: null }])).toBe(false);
   });
 });
