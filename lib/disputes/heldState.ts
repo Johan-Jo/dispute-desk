@@ -60,13 +60,25 @@ export interface HeldState {
 
 export interface AcknowledgementOfferInput {
   /**
-   * True when the `customer_communication` row already has evidence (checklist
-   * status `available` or `waived`). Mirrors `EvidenceLineItem.hasEvidence`,
-   * which is what `CardholderAcknowledgementCard` gates on — deliberately NOT
-   * "is it already strong", because the categorizer can keep a provided
-   * conversation at supporting and we must not re-ask for work already done.
+   * True when the MERCHANT has already supplied a cardholder acknowledgement
+   * for this pack — not merely when the `customer_communication` row has
+   * something in it.
+   *
+   * The card used to hide on `EvidenceLineItem.hasEvidence` (checklist row
+   * `available`/`waived`). That conflates two different things, and prod
+   * showed the cost: 11 of blume-box's 17 open WEAK disputes had the row
+   * flipped `available` by an auto-collected `shopify_timeline` order note
+   * with no `customerConfirmsOrder`, contributing nothing to strength. Those
+   * are the cases with ZERO strong signals — the ones an acknowledgement
+   * could actually move — and the CTA was hidden on every one of them.
+   *
+   * The original reason for the wide gate still holds and is preserved: a
+   * merchant who pasted an acknowledgement that the categorizer kept at
+   * `supporting` must not be invited to redo the work. That is why this keys
+   * on the acknowledgement MARKER (or an explicit confirmation), not on
+   * whether the result scored strong.
    */
-  communicationHasEvidence: boolean;
+  merchantSuppliedAcknowledgement: boolean;
   /** `disputes.submission_state` — the resubmission window is closed once
    *  Shopify has forwarded to the bank. */
   submissionState?: string | null;
@@ -81,26 +93,41 @@ export interface HeldStateInput extends AutoSubmitGuardInput {
   acknowledgement?: AcknowledgementOfferInput | null;
 }
 
-/** Checklist row shape shared by `checklist_v2` consumers. */
-export interface ChecklistStatusRow {
-  field: string;
-  status: string;
+/** The `evidence_items.payload` shape this module reads. */
+export interface EvidenceItemPayloadRow {
+  payload?: Record<string, unknown> | null;
 }
 
-const COMMUNICATION_FIELD = "customer_communication";
-const HAS_EVIDENCE_STATUSES = new Set(["available", "waived"]);
+/**
+ * Written ONLY by `app/api/packs/[packId]/cardholder-acknowledgement/route.ts`
+ * — i.e. by the merchant, through the acknowledgement form.
+ */
+const ACKNOWLEDGEMENT_KIND = "cardholder_acknowledgement";
 
 /**
- * Server-side equivalent of `EvidenceLineItem.hasEvidence` for the
- * communication row, read straight off `evidence_packs.checklist_v2`.
- * A missing row means nothing has been collected, so the offer stands
- * (same as the card, whose `ccRow?.hasEvidence` is undefined → falsy).
+ * Has the merchant already supplied a cardholder acknowledgement for this pack?
+ *
+ * Two accepted markers:
+ *   - `payload.kind === "cardholder_acknowledgement"` — the form's own stamp.
+ *     Present whatever the categorizer later decided, so a paste that stayed
+ *     `supporting` still counts as "done" and is not re-requested.
+ *   - `payload.customerConfirmsOrder === true` — the decisive discriminator,
+ *     which a Gorgias conversation the merchant approved can also carry.
+ *
+ * Auto-collected communications (`shopify_timeline` order notes, unconfirmed
+ * Gorgias threads) carry NEITHER, so they no longer suppress the offer.
  */
-export function communicationHasEvidenceFromChecklist(
-  checklist: ReadonlyArray<ChecklistStatusRow> | null | undefined,
+export function merchantSuppliedAcknowledgementFromItems(
+  items: ReadonlyArray<EvidenceItemPayloadRow> | null | undefined,
 ): boolean {
-  const row = checklist?.find((c) => c.field === COMMUNICATION_FIELD);
-  return row ? HAS_EVIDENCE_STATUSES.has(row.status) : false;
+  return (items ?? []).some((item) => {
+    const p = item?.payload;
+    if (!p || typeof p !== "object") return false;
+    return (
+      (p as Record<string, unknown>).kind === ACKNOWLEDGEMENT_KIND ||
+      (p as Record<string, unknown>).customerConfirmsOrder === true
+    );
+  });
 }
 
 /**
@@ -111,7 +138,7 @@ export function communicationHasEvidenceFromChecklist(
 export function canOfferCardholderAcknowledgement(
   input: AcknowledgementOfferInput,
 ): boolean {
-  if (input.communicationHasEvidence) return false;
+  if (input.merchantSuppliedAcknowledgement) return false;
   if (input.submissionState === "submitted_confirmed") return false;
   if (input.finalOutcome) return false;
   return true;

@@ -36,7 +36,10 @@ import {
 } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { canOfferCardholderAcknowledgement } from "@/lib/disputes/heldState";
+import {
+  canOfferCardholderAcknowledgement,
+  merchantSuppliedAcknowledgementFromItems,
+} from "@/lib/disputes/heldState";
 import type { useDisputeWorkspace } from "../../hooks/useDisputeWorkspace";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -77,23 +80,26 @@ export function CardholderAcknowledgementCard({ workspace }: Props) {
 
   // Visibility is decided by `canOfferCardholderAcknowledgement`
   // (lib/disputes/heldState) — hides for terminal / window-closed
-  // disputes, and once the merchant has provided cardholder
-  // communication in ANY form.
+  // disputes, and once the MERCHANT has supplied an acknowledgement.
   //
-  // The gate uses `hasEvidence` (row status available/waived) rather than
-  // `usedAsPositiveBankEvidence` deliberately: the categorizer may keep a
-  // provided conversation at "supporting" when the discriminator
-  // (`customerConfirmsOrder === true`) doesn't propagate, and the CTA then
-  // kept re-appearing after the merchant had already done the work.
+  // It keys on the acknowledgement's own marker rather than on "the
+  // customer_communication row has something in it", because those are not
+  // the same thing: an auto-collected Shopify order note flips that row to
+  // `available` while contributing nothing to strength. Gating on the row
+  // hid this card on 11 of blume-box's 17 open weak disputes — the cases
+  // with zero strong signals, where it is the only thing that could help.
+  // What the marker still protects is the original intent: a merchant whose
+  // paste stayed `supporting` is not asked to redo it.
   //
-  // It is shared, not local, because the Overview hero and the
+  // The gate is shared, not local, because the Overview hero and the
   // new-dispute email now name this same action. A local copy would let
   // them invite an acknowledgement on a dispute where this card is
   // hidden — the exact failure mode of "add the product listing" on a
   // dispute with no product branch (prod 8f90a8f0).
-  const ccRow = data?.evidenceLineItems?.find((li) => li.field === "customer_communication");
   const offerable = canOfferCardholderAcknowledgement({
-    communicationHasEvidence: ccRow?.hasEvidence === true,
+    merchantSuppliedAcknowledgement: merchantSuppliedAcknowledgementFromItems(
+      data?.pack?.evidenceItems,
+    ),
     submissionState: data?.dispute?.submissionState ?? null,
     finalOutcome: data?.dispute?.finalOutcome ?? null,
   });

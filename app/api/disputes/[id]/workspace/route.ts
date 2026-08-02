@@ -8,7 +8,10 @@ import {
   gatherPresentations,
   type DisputeRowFacts,
 } from "@/lib/disputes/presentation/serverFacts";
-import { resolveHeldState } from "@/lib/disputes/heldState";
+import {
+  merchantSuppliedAcknowledgementFromItems,
+  resolveHeldState,
+} from "@/lib/disputes/heldState";
 import {
   collectedFieldsFromPack,
   reconcileChecklistWithCollectedFields,
@@ -939,11 +942,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         | null) ?? null,
     creditAlreadyIssued: creditAlreadyIssuedInput(packRow?.pack_json),
     acknowledgement: {
-      // Read off the resolved line items — the exact value
-      // CardholderAcknowledgementCard gates its own visibility on.
-      communicationHasEvidence:
-        evidenceLineItems.find((li) => li.field === "customer_communication")
-          ?.hasEvidence === true,
+      // The acknowledgement's own marker, from the same evidence items the
+      // card reads — NOT "the communication row has something in it", which
+      // an auto-collected order note satisfies without helping the case.
+      merchantSuppliedAcknowledgement: merchantSuppliedAcknowledgementFromItems(
+        (itemsRes.data ?? []) as Array<{ payload?: Record<string, unknown> | null }>,
+      ),
       submissionState: row.submission_state ?? null,
       finalOutcome: row.final_outcome ?? null,
     },
