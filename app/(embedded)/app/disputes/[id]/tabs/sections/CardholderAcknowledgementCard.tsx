@@ -23,7 +23,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Banner,
   BlockStack,
@@ -35,6 +35,11 @@ import {
   TextField,
 } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
+import {
+  canOfferCardholderAcknowledgement,
+  merchantSuppliedAcknowledgementFromItems,
+} from "@/lib/disputes/heldState";
 import type { useDisputeWorkspace } from "../../hooks/useDisputeWorkspace";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -56,28 +61,49 @@ export function CardholderAcknowledgementCard({ workspace }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Hide for terminal / window-closed states. The merchant cannot
-  // change anything bank-facing once Shopify forwards.
-  const submissionState = data?.dispute?.submissionState ?? null;
-  const isWindowClosed = submissionState === "submitted_confirmed";
-  const hasFinalOutcome = Boolean(data?.dispute?.finalOutcome);
-  if (isWindowClosed || hasFinalOutcome) return null;
+  // Deep link `?section=cardholder-ack` (the held new-dispute email's
+  // secondary CTA). WorkspaceShell switches to the Evidence tab; this
+  // opens the form and scrolls to it, so the merchant lands on the input
+  // rather than somewhere near it. Same shape as the `gorgias-comms`
+  // deep link. Runs once — re-expanding after the merchant collapses it
+  // would make the card impossible to dismiss.
+  const searchParams = useSearchParams();
+  const deepLinked = searchParams.get("section") === "cardholder-ack";
+  const deepLinkApplied = useRef(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!deepLinked || deepLinkApplied.current) return;
+    deepLinkApplied.current = true;
+    setExpanded(true);
+    rootRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [deepLinked]);
 
-  // Hide the CTA once the merchant has provided cardholder
-  // communication in any form. We use `hasEvidence` (true whenever
-  // the row resolves to status "available") rather than
-  // `usedAsPositiveBankEvidence` because the categorizer may keep
-  // the row at "supporting" when the discriminator
-  // (`customerConfirmsOrder === true`) doesn't propagate or the
-  // payload doesn't match the strong-row preconditions. In that
-  // case the CTA was still showing up after the merchant had
-  // already submitted an acknowledgement and the package had been
-  // re-saved to Shopify — inviting them to repeat work that was
-  // already done. Hiding on `hasEvidence` covers both the strong
-  // path (positive bank argument) and the supporting path (text on
-  // file but not decisive).
-  const ccRow = data?.evidenceLineItems?.find((li) => li.field === "customer_communication");
-  if (ccRow?.hasEvidence) return null;
+  // Visibility is decided by `canOfferCardholderAcknowledgement`
+  // (lib/disputes/heldState) — hides for terminal / window-closed
+  // disputes, and once the MERCHANT has supplied an acknowledgement.
+  //
+  // It keys on the acknowledgement's own marker rather than on "the
+  // customer_communication row has something in it", because those are not
+  // the same thing: an auto-collected Shopify order note flips that row to
+  // `available` while contributing nothing to strength. Gating on the row
+  // hid this card on 11 of blume-box's 17 open weak disputes — the cases
+  // with zero strong signals, where it is the only thing that could help.
+  // What the marker still protects is the original intent: a merchant whose
+  // paste stayed `supporting` is not asked to redo it.
+  //
+  // The gate is shared, not local, because the Overview hero and the
+  // new-dispute email now name this same action. A local copy would let
+  // them invite an acknowledgement on a dispute where this card is
+  // hidden — the exact failure mode of "add the product listing" on a
+  // dispute with no product branch (prod 8f90a8f0).
+  const offerable = canOfferCardholderAcknowledgement({
+    merchantSuppliedAcknowledgement: merchantSuppliedAcknowledgementFromItems(
+      data?.pack?.evidenceItems,
+    ),
+    submissionState: data?.dispute?.submissionState ?? null,
+    finalOutcome: data?.dispute?.finalOutcome ?? null,
+  });
+  if (!offerable) return null;
 
   // Hide the whole card while a rebuild is in flight (after the
   // merchant just submitted an acknowledgement, OR while any other
@@ -140,6 +166,7 @@ export function CardholderAcknowledgementCard({ workspace }: Props) {
   if (!expanded) {
     return (
         <div
+          ref={rootRef}
           role="region"
           aria-label={t("ctaEyebrow")}
           style={{
@@ -263,6 +290,7 @@ export function CardholderAcknowledgementCard({ workspace }: Props) {
   }
 
   return (
+    <div ref={rootRef}>
     <Card>
       <BlockStack gap="300">
         <BlockStack gap="100">
@@ -328,5 +356,6 @@ export function CardholderAcknowledgementCard({ workspace }: Props) {
         </BlockStack>
       </BlockStack>
     </Card>
+    </div>
   );
 }

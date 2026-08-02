@@ -17,6 +17,17 @@
  *     an auto-pilot merchant was told "this dispute still requires your
  *     decision" about a dispute that would submit itself.
  *
+ * The `held` body was rewritten 2026-08-02. It still said "review and submit"
+ * and offered "concede it if it isn't worth defending" — two instructions an
+ * Auto-pilot merchant cannot act on: the dispute page renders the
+ * approve/hold/concede block only for a review-mode approval gate, and
+ * conceding withholds our package without stopping Shopify from filing its own
+ * scraped order data. It now describes the hold (we keep collecting; we save on
+ * the due date; nothing is required) and names the ONE contribution that can
+ * change the outcome — a cardholder acknowledgement — but only when
+ * `lib/disputes/heldState` says the acknowledgement card would really render
+ * for this dispute.
+ *
  * Callers must pass the variant their automation pipeline actually resolved to
  * (after normalizeMode). Legacy modes should never reach this function.
  *
@@ -28,6 +39,11 @@ import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 import { getServiceClient } from "@/lib/supabase/server";
 import { fetchShopDetails } from "@/lib/shopify/shopDetails";
 import type { AutomationMode } from "@/lib/rules/normalizeMode";
+import {
+  merchantSuppliedAcknowledgementFromItems,
+  resolveHeldState,
+  type HeldState,
+} from "@/lib/disputes/heldState";
 
 // Env vars are read lazily so tests can stub `process.env.RESEND_API_KEY`
 // in beforeEach() and have the new value picked up — the previous module-
@@ -62,6 +78,12 @@ export interface NewDisputeAlertContext {
    * email gracefully falls back to a single primary CTA.
    */
   shopifyDisputeEvidenceGid?: string | null;
+  /**
+   * Auto-pilot hold facts (lib/disputes/heldState) — the same derivation the
+   * dispute page renders from. Drives the conditional "one thing you can add"
+   * block in the HELD variant. Absent/held:false → no ask is printed.
+   */
+  held?: HeldState | null;
 }
 
 type Locale = "en" | "es" | "pt" | "fr" | "de" | "sv";
@@ -73,6 +95,15 @@ interface SharedStrings {
   due: string;
   phaseHintInquiry: string;
   phaseHintChargeback: string;
+  /**
+   * HELD variant only. The standard hints are instructions to the merchant
+   * ("respond quickly", "evidence must be submitted before the deadline") —
+   * on a held Auto-pilot dispute the responding is ours to do, and printing
+   * an instruction under a body that just said "nothing is required from you"
+   * contradicts it. These say the same facts as statements.
+   */
+  phaseHintInquiryHeld: string;
+  phaseHintChargebackHeld: string;
   footer: string;
 }
 
@@ -104,6 +135,17 @@ interface ModeStrings {
    * English AUTO variant opts in.
    */
   ctaSecondary?: string;
+  /**
+   * HELD variant only — the single contribution a held case can take.
+   * Printed ONLY when `heldState.offer` is set, i.e. when the dispute page
+   * would really show the acknowledgement card.
+   *
+   *   flips — the case is Moderate, so a cardholder confirmation makes it
+   *           Strong and it saves immediately. We may promise that.
+   *   plain — the case is Weak; the acknowledgement still helps but does not
+   *           on its own reach the auto-save bar. No promise.
+   */
+  ask?: { flips: string; plain: string; cta: string };
 }
 
 /**
@@ -129,6 +171,10 @@ const STRINGS: Record<Locale, EmailStrings> = {
       phaseHintInquiry:
         "This is a soft inquiry — respond quickly to prevent escalation to a chargeback.",
       phaseHintChargeback: "Evidence must be submitted before the deadline.",
+      phaseHintInquiryHeld:
+        "This is a soft inquiry. Saving your response before the deadline is what stops it escalating to a chargeback — we handle that.",
+      phaseHintChargebackHeld:
+        "Chargeback deadlines are set by the card network. We save your response to Shopify before yours passes.",
       footer:
         "You received this because new-dispute alerts are enabled in DisputeDesk settings.",
     },
@@ -176,22 +222,29 @@ const STRINGS: Record<Locale, EmailStrings> = {
       cta: "Review dispute →",
     },
     held: {
-      subject: ({ shortId }) => `Dispute #${shortId} is held for your review`,
-      heading: "Your response is ready — held for your review",
+      subject: ({ shortId }) => `Dispute #${shortId} — response prepared and held`,
+      heading: "Your response is ready — held while we look for stronger evidence",
       bodyP1: ({ orderName }) =>
-        `A new dispute was detected for order ${orderName}. DisputeDesk prepared your response but did not send it straight away.`,
-      listLabel: "What to do next",
+        `A new dispute was detected for order ${orderName}. DisputeDesk prepared your response. The evidence we have supports it but isn't decisive yet, so we're holding it and watching your connected sources for anything stronger.`,
+      listLabel: "What happens next",
       listItems: [
-        "Open the dispute and review the prepared evidence",
-        "Leave it as is — we save it to Shopify on the due date",
-        "Or concede it if it isn't worth defending",
+        "We keep collecting from Shopify, your carrier and your payment data, and rebuild the response automatically if something stronger arrives",
+        "If nothing changes, we save this response to Shopify on the due date",
+        "Nothing is required from you",
       ],
       callout: {
-        label: "What happens next",
+        label: "No action needed",
         body: ({ dueDate }) =>
-          `Nothing has been saved yet. If you take no action, we save this response to Shopify on <b>${dueDate}</b>.`,
+          `Nothing has been saved yet. If you do nothing, we save this response to Shopify on <b>${dueDate}</b>.`,
       },
-      cta: "Review dispute →",
+      ask: {
+        flips:
+          "One thing can still change this: if you have an email or chat in which the cardholder confirms they placed and received this order, paste it in. A confirmation from the cardholder is decisive — with it, this case is strong enough for us to save it to Shopify straight away.",
+        plain:
+          "One thing can still change this: if you have an email or chat in which the cardholder confirms they placed and received this order, paste it in. A confirmation from the cardholder is the strongest single piece of evidence you can add to this case.",
+        cta: "Add cardholder acknowledgement →",
+      },
+      cta: "View dispute →",
     },
   },
   es: {
@@ -203,6 +256,10 @@ const STRINGS: Record<Locale, EmailStrings> = {
       phaseHintInquiry:
         "Esta es una consulta suave — responde rápido para evitar que escale a un chargeback.",
       phaseHintChargeback: "La evidencia debe enviarse antes de la fecha límite.",
+      phaseHintInquiryHeld:
+        "Esta es una consulta suave. Guardar tu respuesta antes de la fecha límite es lo que evita que escale a un chargeback: nosotros nos encargamos.",
+      phaseHintChargebackHeld:
+        "Las fechas límite de los chargebacks las fija la red de tarjetas. Guardamos tu respuesta en Shopify antes de que venza la tuya.",
       footer:
         "Recibiste esto porque las alertas de nuevas disputas están activadas en la configuración de DisputeDesk.",
     },
@@ -242,22 +299,29 @@ const STRINGS: Record<Locale, EmailStrings> = {
       cta: "Revisar disputa →",
     },
     held: {
-      subject: ({ shortId }) => `La disputa #${shortId} está retenida para tu revisión`,
-      heading: "Tu respuesta está lista — retenida para tu revisión",
+      subject: ({ shortId }) => `Disputa #${shortId} — respuesta preparada y retenida`,
+      heading: "Tu respuesta está lista — retenida mientras buscamos pruebas más sólidas",
       bodyP1: ({ orderName }) =>
-        `Se detectó una nueva disputa para el pedido ${orderName}. DisputeDesk preparó tu respuesta, pero no la envió de inmediato.`,
-      listLabel: "Qué hacer ahora",
+        `Se detectó una nueva disputa para el pedido ${orderName}. DisputeDesk preparó tu respuesta. Las pruebas que tenemos la respaldan, pero aún no son decisivas, así que la retenemos y seguimos vigilando tus fuentes conectadas por si aparece algo más sólido.`,
+      listLabel: "Qué pasa después",
       listItems: [
-        "Abre la disputa y revisa las pruebas preparadas",
-        "Déjala como está: la guardamos en Shopify en la fecha límite",
-        "O no la defiendas si no vale la pena",
+        "Seguimos recopilando datos de Shopify, tu transportista y tus pagos, y reconstruimos la respuesta automáticamente si llega algo más sólido",
+        "Si nada cambia, guardaremos esta respuesta en Shopify en la fecha límite",
+        "No necesitas hacer nada",
       ],
       callout: {
-        label: "Qué pasa después",
+        label: "No se requiere ninguna acción",
         body: ({ dueDate }) =>
           `Todavía no se ha guardado nada. Si no haces nada, guardaremos esta respuesta en Shopify el <b>${dueDate}</b>.`,
       },
-      cta: "Revisar disputa →",
+      ask: {
+        flips:
+          "Aún hay algo que puede cambiar esto: si tienes un correo o chat en el que el titular de la tarjeta confirma que hizo y recibió este pedido, pégalo aquí. La confirmación del titular es decisiva: con ella, este caso es lo bastante sólido como para que lo guardemos en Shopify de inmediato.",
+        plain:
+          "Aún hay algo que puede cambiar esto: si tienes un correo o chat en el que el titular de la tarjeta confirma que hizo y recibió este pedido, pégalo aquí. La confirmación del titular es la prueba más fuerte que puedes añadir a este caso.",
+        cta: "Añadir confirmación del titular →",
+      },
+      cta: "Ver disputa →",
     },
   },
   pt: {
@@ -269,6 +333,10 @@ const STRINGS: Record<Locale, EmailStrings> = {
       phaseHintInquiry:
         "Esta é uma consulta leve — responda rapidamente para evitar que escale para um chargeback.",
       phaseHintChargeback: "A evidência deve ser enviada antes do prazo.",
+      phaseHintInquiryHeld:
+        "Esta é uma consulta leve. Guardar a sua resposta antes do prazo é o que evita a escalada para um chargeback — tratamos disso.",
+      phaseHintChargebackHeld:
+        "Os prazos de chargeback são definidos pela rede de cartões. Guardamos a sua resposta no Shopify antes de o seu terminar.",
       footer:
         "Você recebeu isto porque os alertas de novas disputas estão ativados nas configurações do DisputeDesk.",
     },
@@ -308,22 +376,29 @@ const STRINGS: Record<Locale, EmailStrings> = {
       cta: "Revisar disputa →",
     },
     held: {
-      subject: ({ shortId }) => `A disputa #${shortId} está retida para a sua revisão`,
-      heading: "A sua resposta está pronta — retida para a sua revisão",
+      subject: ({ shortId }) => `Disputa #${shortId} — resposta preparada e retida`,
+      heading: "A sua resposta está pronta — retida enquanto procuramos provas mais fortes",
       bodyP1: ({ orderName }) =>
-        `Foi detetada uma nova disputa para a encomenda ${orderName}. O DisputeDesk preparou a sua resposta, mas não a enviou de imediato.`,
-      listLabel: "O que fazer a seguir",
+        `Foi detetada uma nova disputa para a encomenda ${orderName}. O DisputeDesk preparou a sua resposta. As provas que temos sustentam-na, mas ainda não são decisivas, por isso mantemo-la retida e continuamos a vigiar as suas fontes ligadas à procura de algo mais forte.`,
+      listLabel: "O que acontece a seguir",
       listItems: [
-        "Abra a disputa e reveja as provas preparadas",
-        "Deixe como está — guardamos no Shopify no prazo",
-        "Ou não a defenda se não valer a pena",
+        "Continuamos a recolher dados do Shopify, da transportadora e dos pagamentos, e reconstruímos a resposta automaticamente se surgir algo mais forte",
+        "Se nada mudar, guardamos esta resposta no Shopify no prazo",
+        "Não é necessária qualquer ação da sua parte",
       ],
       callout: {
-        label: "O que acontece a seguir",
+        label: "Não é necessária qualquer ação",
         body: ({ dueDate }) =>
           `Ainda não foi guardado nada. Se não fizer nada, guardamos esta resposta no Shopify a <b>${dueDate}</b>.`,
       },
-      cta: "Revisar disputa →",
+      ask: {
+        flips:
+          "Ainda há algo que pode mudar isto: se tiver um e-mail ou chat em que o titular do cartão confirma que fez e recebeu esta encomenda, cole-o aqui. A confirmação do titular é decisiva — com ela, este caso fica forte o suficiente para o guardarmos no Shopify de imediato.",
+        plain:
+          "Ainda há algo que pode mudar isto: se tiver um e-mail ou chat em que o titular do cartão confirma que fez e recebeu esta encomenda, cole-o aqui. A confirmação do titular é a prova isolada mais forte que pode acrescentar a este caso.",
+        cta: "Adicionar confirmação do titular →",
+      },
+      cta: "Ver disputa →",
     },
   },
   fr: {
@@ -335,6 +410,10 @@ const STRINGS: Record<Locale, EmailStrings> = {
       phaseHintInquiry:
         "Il s'agit d'une consultation — répondez rapidement pour éviter une escalade en chargeback.",
       phaseHintChargeback: "Les preuves doivent être soumises avant la date limite.",
+      phaseHintInquiryHeld:
+        "Il s'agit d'une consultation. Enregistrer votre réponse avant la date limite est ce qui évite l'escalade en chargeback — nous nous en chargeons.",
+      phaseHintChargebackHeld:
+        "Les délais de chargeback sont fixés par le réseau de cartes. Nous enregistrons votre réponse dans Shopify avant l'échéance.",
       footer:
         "Vous recevez ceci car les alertes de nouveaux litiges sont activées dans les paramètres DisputeDesk.",
     },
@@ -374,22 +453,29 @@ const STRINGS: Record<Locale, EmailStrings> = {
       cta: "Examiner le litige →",
     },
     held: {
-      subject: ({ shortId }) => `Le litige #${shortId} est retenu pour votre examen`,
-      heading: "Votre réponse est prête — retenue pour votre examen",
+      subject: ({ shortId }) => `Litige #${shortId} — réponse préparée et mise en attente`,
+      heading: "Votre réponse est prête — mise en attente le temps de trouver des preuves plus solides",
       bodyP1: ({ orderName }) =>
-        `Un nouveau litige a été détecté pour la commande ${orderName}. DisputeDesk a préparé votre réponse mais ne l'a pas envoyée immédiatement.`,
-      listLabel: "Que faire ensuite",
+        `Un nouveau litige a été détecté pour la commande ${orderName}. DisputeDesk a préparé votre réponse. Les preuves dont nous disposons la soutiennent mais ne sont pas encore décisives : nous la gardons donc en attente et surveillons vos sources connectées au cas où quelque chose de plus solide arriverait.`,
+      listLabel: "Ce qui se passe ensuite",
       listItems: [
-        "Ouvrez le litige et examinez les preuves préparées",
-        "Laissez tel quel — nous l'enregistrons dans Shopify à la date limite",
-        "Ou ne le défendez pas si cela n'en vaut pas la peine",
+        "Nous continuons à collecter les données Shopify, transporteur et paiement, et reconstruisons la réponse automatiquement si un élément plus solide arrive",
+        "Si rien ne change, nous enregistrons cette réponse dans Shopify à la date limite",
+        "Aucune action n'est requise de votre part",
       ],
       callout: {
-        label: "Ce qui se passe ensuite",
+        label: "Aucune action requise",
         body: ({ dueDate }) =>
           `Rien n'a encore été enregistré. Si vous n'intervenez pas, nous enregistrerons cette réponse dans Shopify le <b>${dueDate}</b>.`,
       },
-      cta: "Examiner le litige →",
+      ask: {
+        flips:
+          "Une chose peut encore changer la donne : si vous disposez d'un e-mail ou d'un chat dans lequel le titulaire de la carte confirme avoir passé et reçu cette commande, collez-le ici. La confirmation du titulaire est décisive — avec elle, ce dossier est assez solide pour que nous l'enregistrions immédiatement dans Shopify.",
+        plain:
+          "Une chose peut encore changer la donne : si vous disposez d'un e-mail ou d'un chat dans lequel le titulaire de la carte confirme avoir passé et reçu cette commande, collez-le ici. La confirmation du titulaire est la preuve la plus forte que vous puissiez ajouter à ce dossier.",
+        cta: "Ajouter la confirmation du titulaire →",
+      },
+      cta: "Voir le litige →",
     },
   },
   de: {
@@ -401,6 +487,10 @@ const STRINGS: Record<Locale, EmailStrings> = {
       phaseHintInquiry:
         "Dies ist eine Anfrage — antworten Sie schnell, um eine Eskalation zum Chargeback zu vermeiden.",
       phaseHintChargeback: "Beweise müssen vor Ablauf der Frist eingereicht werden.",
+      phaseHintInquiryHeld:
+        "Dies ist eine Anfrage. Dass Ihre Antwort vor Fristablauf gespeichert wird, verhindert die Eskalation zum Chargeback — das übernehmen wir.",
+      phaseHintChargebackHeld:
+        "Chargeback-Fristen werden vom Kartennetzwerk gesetzt. Wir speichern Ihre Antwort in Shopify, bevor Ihre Frist abläuft.",
       footer:
         "Sie erhalten diese E-Mail, weil Benachrichtigungen für neue Reklamationen in den DisputeDesk-Einstellungen aktiviert sind.",
     },
@@ -440,22 +530,29 @@ const STRINGS: Record<Locale, EmailStrings> = {
       cta: "Reklamation prüfen →",
     },
     held: {
-      subject: ({ shortId }) => `Reklamation #${shortId} wird für Ihre Prüfung zurückgehalten`,
-      heading: "Ihre Antwort ist fertig — für Ihre Prüfung zurückgehalten",
+      subject: ({ shortId }) => `Reklamation #${shortId} — Antwort vorbereitet und zurückgehalten`,
+      heading: "Ihre Antwort ist fertig — zurückgehalten, während wir nach stärkeren Beweisen suchen",
       bodyP1: ({ orderName }) =>
-        `Für Bestellung ${orderName} wurde eine neue Reklamation erkannt. DisputeDesk hat Ihre Antwort vorbereitet, sie aber nicht sofort gesendet.`,
-      listLabel: "Nächste Schritte",
+        `Für Bestellung ${orderName} wurde eine neue Reklamation erkannt. DisputeDesk hat Ihre Antwort vorbereitet. Die vorhandenen Beweise stützen sie, sind aber noch nicht entscheidend — deshalb halten wir sie zurück und beobachten Ihre verbundenen Quellen weiter auf stärkere Belege.`,
+      listLabel: "Was als Nächstes passiert",
       listItems: [
-        "Öffnen Sie die Reklamation und prüfen Sie die vorbereiteten Beweise",
-        "Lassen Sie sie so — wir speichern sie zur Frist in Shopify",
-        "Oder geben Sie sie auf, wenn sie sich nicht lohnt",
+        "Wir sammeln weiter Daten aus Shopify, von Ihrem Versanddienstleister und aus Ihren Zahlungen und bauen die Antwort automatisch neu auf, sobald etwas Stärkeres eintrifft",
+        "Ändert sich nichts, speichern wir diese Antwort zur Frist in Shopify",
+        "Von Ihnen ist nichts erforderlich",
       ],
       callout: {
-        label: "Was als Nächstes passiert",
+        label: "Keine Aktion erforderlich",
         body: ({ dueDate }) =>
           `Es wurde noch nichts gespeichert. Wenn Sie nichts unternehmen, speichern wir diese Antwort am <b>${dueDate}</b> in Shopify.`,
       },
-      cta: "Reklamation prüfen →",
+      ask: {
+        flips:
+          "Eines kann das noch ändern: Wenn Sie eine E-Mail oder einen Chat haben, in dem der Karteninhaber bestätigt, diese Bestellung aufgegeben und erhalten zu haben, fügen Sie sie hier ein. Eine Bestätigung des Karteninhabers ist entscheidend — damit ist dieser Fall stark genug, dass wir ihn sofort in Shopify speichern.",
+        plain:
+          "Eines kann das noch ändern: Wenn Sie eine E-Mail oder einen Chat haben, in dem der Karteninhaber bestätigt, diese Bestellung aufgegeben und erhalten zu haben, fügen Sie sie hier ein. Eine Bestätigung des Karteninhabers ist der stärkste einzelne Beleg, den Sie diesem Fall hinzufügen können.",
+        cta: "Bestätigung des Karteninhabers hinzufügen →",
+      },
+      cta: "Reklamation ansehen →",
     },
   },
   sv: {
@@ -467,6 +564,10 @@ const STRINGS: Record<Locale, EmailStrings> = {
       phaseHintInquiry:
         "Detta är en mjuk förfrågan — svara snabbt för att undvika eskalering till en tvist.",
       phaseHintChargeback: "Bevis måste skickas in före tidsfristen.",
+      phaseHintInquiryHeld:
+        "Det här är en mjuk förfrågan. Att svaret sparas före tidsfristen är det som hindrar att den eskalerar till en tvist — det sköter vi.",
+      phaseHintChargebackHeld:
+        "Tidsfrister för tvister sätts av kortnätverket. Vi sparar ditt svar till Shopify innan din frist löper ut.",
       footer:
         "Du fick detta eftersom aviseringar för nya tvister är aktiverade i DisputeDesk-inställningarna.",
     },
@@ -506,22 +607,29 @@ const STRINGS: Record<Locale, EmailStrings> = {
       cta: "Granska tvist →",
     },
     held: {
-      subject: ({ shortId }) => `Tvist #${shortId} hålls för din granskning`,
-      heading: "Ditt svar är klart — hålls för din granskning",
+      subject: ({ shortId }) => `Tvist #${shortId} — svar förberett och pausat`,
+      heading: "Ditt svar är klart — pausat medan vi letar efter starkare bevis",
       bodyP1: ({ orderName }) =>
-        `En ny tvist upptäcktes för order ${orderName}. DisputeDesk förberedde ditt svar men skickade det inte direkt.`,
-      listLabel: "Vad du gör härnäst",
+        `En ny tvist upptäcktes för order ${orderName}. DisputeDesk har förberett ditt svar. Bevisen vi har stöder det, men de är ännu inte avgörande, så vi håller kvar svaret och bevakar dina anslutna källor efter något starkare.`,
+      listLabel: "Vad händer nu",
       listItems: [
-        "Öppna tvisten och granska de förberedda bevisen",
-        "Låt den vara — vi sparar den till Shopify på förfallodagen",
-        "Eller avstå från att försvara den om det inte är värt det",
+        "Vi fortsätter samla in data från Shopify, ditt fraktbolag och dina betalningar och bygger om svaret automatiskt om något starkare dyker upp",
+        "Om inget ändras sparar vi det här svaret till Shopify på förfallodagen",
+        "Inget krävs av dig",
       ],
       callout: {
-        label: "Vad händer nu",
+        label: "Ingen åtgärd krävs",
         body: ({ dueDate }) =>
           `Ingenting har sparats än. Om du inte gör något sparar vi det här svaret till Shopify den <b>${dueDate}</b>.`,
       },
-      cta: "Granska tvist →",
+      ask: {
+        flips:
+          "En sak kan fortfarande ändra det här: om du har ett mejl eller en chatt där kortinnehavaren bekräftar att hen lade och tog emot den här ordern, klistra in den. En bekräftelse från kortinnehavaren är avgörande — med den är ärendet starkt nog för att vi ska spara det till Shopify direkt.",
+        plain:
+          "En sak kan fortfarande ändra det här: om du har ett mejl eller en chatt där kortinnehavaren bekräftar att hen lade och tog emot den här ordern, klistra in den. En bekräftelse från kortinnehavaren är det enskilt starkaste bevis du kan lägga till i ärendet.",
+        cta: "Lägg till kortinnehavarens bekräftelse →",
+      },
+      cta: "Visa tvist →",
     },
   },
 };
@@ -671,13 +779,50 @@ export async function sendNewDisputeAlert(
       shop?.shop_domain ?? null,
       ctx.shopifyDisputeEvidenceGid ?? null,
     );
-    const showSecondaryCta = Boolean(variant.ctaSecondary && shopifyAdminUrl);
+
+    // The ask: printed ONLY when heldState says the acknowledgement card
+    // would really render for this dispute. Silence is the correct output
+    // otherwise — an email that invites an action the page then hides is
+    // the failure this whole change is fixing.
+    const askText =
+      ctx.resolvedMode === "held" &&
+      variant.ask &&
+      ctx.held?.offer === "cardholder_acknowledgement"
+        ? ctx.held.offerFlipsToStrong
+          ? variant.ask.flips
+          : variant.ask.plain
+        : null;
+
+    // Secondary CTA. The ask outranks the Shopify-Admin link: on a held
+    // dispute there is nothing to do in Shopify Admin, and two secondary
+    // buttons would split the one action we want.
+    const secondaryCta: { label: string; url: string } | null =
+      askText && variant.ask
+        ? {
+            label: variant.ask.cta,
+            // Carried through `ddredirect` — app/(embedded)/app/page.tsx
+            // preserves an embedded query string when it re-navigates, and
+            // WorkspaceShell maps `section` to the Evidence tab while the
+            // acknowledgement card expands + scrolls itself.
+            url: getEmbeddedAppUrl(
+              shop?.shop_domain ?? null,
+              `disputes/${ctx.disputeId}?section=cardholder-ack`,
+            ),
+          }
+        : variant.ctaSecondary && shopifyAdminUrl
+          ? { label: variant.ctaSecondary, url: shopifyAdminUrl }
+          : null;
+    const showSecondaryCta = secondaryCta !== null;
     const amountStr = formatCurrency(ctx.amount, ctx.currencyCode);
     const reason = reasonLabel(ctx.reason);
     const phaseHint =
-      ctx.phase === "inquiry"
-        ? shared.phaseHintInquiry
-        : shared.phaseHintChargeback;
+      ctx.resolvedMode === "held"
+        ? ctx.phase === "inquiry"
+          ? shared.phaseHintInquiryHeld
+          : shared.phaseHintChargebackHeld
+        : ctx.phase === "inquiry"
+          ? shared.phaseHintInquiry
+          : shared.phaseHintChargeback;
     const shortId = shortDisputeId(ctx.disputeId);
     const orderNameDisplay = ctx.orderName ?? "—";
 
@@ -700,18 +845,31 @@ export async function sendNewDisputeAlert(
         : variant.callout.body
       : null;
 
+    // Amber is for REVIEW only — that variant is the one where inaction has a
+    // cost (nothing of ours is ever filed). A held case files itself on the
+    // due date, so warning colours would contradict "no action needed".
+    const warn = ctx.resolvedMode === "review";
     const calloutHtml =
       variant.callout && calloutBody !== null
         ? `
-      <div style="background:${ctx.resolvedMode !== "auto" ? "#FEF3C7;border:1px solid #FCD34D" : "#EFF6FF;border:1px solid #BFDBFE"};border-radius:8px;padding:12px 16px;margin-bottom:20px">
-        <p style="font-size:13px;font-weight:600;color:${ctx.resolvedMode !== "auto" ? "#92400E" : "#1E40AF"};margin:0 0 4px">
+      <div style="background:${warn ? "#FEF3C7;border:1px solid #FCD34D" : "#EFF6FF;border:1px solid #BFDBFE"};border-radius:8px;padding:12px 16px;margin-bottom:20px">
+        <p style="font-size:13px;font-weight:600;color:${warn ? "#92400E" : "#1E40AF"};margin:0 0 4px">
           ${variant.callout.label}
         </p>
-        <p style="font-size:13px;color:${ctx.resolvedMode !== "auto" ? "#92400E" : "#1E40AF"};margin:0;line-height:1.5">
+        <p style="font-size:13px;color:${warn ? "#92400E" : "#1E40AF"};margin:0;line-height:1.5">
           ${calloutBody}
         </p>
       </div>`
         : "";
+
+    // The one contribution — a plain paragraph, not a second callout box, so
+    // it reads as an offer rather than another alert.
+    const askHtml = askText
+      ? `
+      <p style="font-size:13px;color:#202223;margin:0 0 20px;line-height:1.55">
+        ${askText}
+      </p>`
+      : "";
 
     const html = `<!DOCTYPE html>
 <html>
@@ -749,6 +907,7 @@ export async function sendNewDisputeAlert(
       </ul>
 
       ${calloutHtml}
+      ${askHtml}
 
       <div style="background:${ctx.phase === "inquiry" ? "#EFF6FF;border:1px solid #BFDBFE" : "#F6F6F7;border:1px solid #E1E3E5"};border-radius:8px;padding:12px 16px;margin-bottom:20px">
         <p style="font-size:12px;color:${ctx.phase === "inquiry" ? "#1E40AF" : "#6D7175"};margin:0;line-height:1.5">
@@ -766,8 +925,8 @@ export async function sendNewDisputeAlert(
             </a>
           </td>
           <td style="padding:0;vertical-align:middle;white-space:nowrap">
-            <a href="${shopifyAdminUrl}" style="display:inline-block;padding:11px 19px;background:#fff;color:#1D4ED8;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;border:1px solid #1D4ED8;white-space:nowrap">
-            ${variant.ctaSecondary}
+            <a href="${secondaryCta?.url ?? ""}" style="display:inline-block;padding:11px 19px;background:#fff;color:#1D4ED8;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;border:1px solid #1D4ED8;white-space:nowrap">
+            ${secondaryCta?.label ?? ""}
             </a>
           </td>
         </tr>
@@ -801,12 +960,12 @@ ${ctx.orderName ? `${shared.order}: ${ctx.orderName}\n` : ""}${shared.due}: ${fo
 
 ${variant.listLabel}:
 ${variant.listItems.map((item, i) => `${i + 1}. ${item}`).join("\n")}
-${variant.callout && calloutBody !== null ? `\n${variant.callout.label}: ${calloutBody.replace(/<\/?b>/g, "")}\n` : ""}
+${variant.callout && calloutBody !== null ? `\n${variant.callout.label}: ${calloutBody.replace(/<\/?b>/g, "")}\n` : ""}${askText ? `\n${askText}\n` : ""}
 ${phaseHint}
 
 ${variant.cta.replace(" →", "")}: ${disputeUrl}${
-      showSecondaryCta
-        ? `\n${(variant.ctaSecondary ?? "").replace(" ↗", "")}: ${shopifyAdminUrl}`
+      secondaryCta
+        ? `\n${secondaryCta.label.replace(" ↗", "").replace(" →", "")}: ${secondaryCta.url}`
         : ""
     }
 
@@ -841,9 +1000,13 @@ ${shared.footer}`;
  *                pipeline decided to auto-save. The "we submitted it"
  *                copy is now truthful: by the time this claim resolves,
  *                the save_to_shopify job has been enqueued.
- *   - "review" → emitted when the pipeline parked the pack (review-mode
- *                rule, OR auto-mode case strength below the auto-submit
- *                threshold). "Your response is ready" is accurate.
+ *   - "review" → emitted when the pipeline parked the pack under a REVIEW-mode
+ *                rule (and for the covered case, which reaches no other
+ *                branch). "Your response is ready" is accurate.
+ *   - "held"   → emitted from the auto-mode park/block branches. This function
+ *                loads the pack the pipeline just evaluated and resolves
+ *                `heldState` from it, so the email's ask matches what the
+ *                dispute page will show.
  *
  * Why: the original sync-time send claimed "submitted automatically"
  * even when the auto-mode pipeline ended up parking or blocking the
@@ -868,11 +1031,53 @@ export async function claimAndSendDeferredNewDisputeAlert(
       .eq("id", disputeId)
       .is("new_dispute_alert_sent_at", null)
       .select(
-        "id, shop_id, reason, phase, amount, currency_code, due_at, order_name, dispute_evidence_gid",
+        "id, shop_id, reason, phase, amount, currency_code, due_at, order_name, dispute_evidence_gid, submission_state, final_outcome",
       )
       .maybeSingle();
 
     if (error || !row) return;
+
+    // Held facts for the HELD variant's conditional ask. Read from the same
+    // pack the pipeline just evaluated, so the email and the dispute page
+    // resolve the identical state (lib/disputes/heldState). Best-effort: a
+    // missing pack simply means no ask is printed.
+    let held: HeldState | null = null;
+    if (mode === "held") {
+      const { data: packRow } = await sb
+        .from("evidence_packs")
+        .select("id, pack_json")
+        .eq("dispute_id", disputeId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      // Evidence items carry the acknowledgement marker; the checklist row
+      // does not distinguish a merchant paste from an auto-collected note.
+      const { data: itemRows } = packRow?.id
+        ? await sb.from("evidence_items").select("payload").eq("pack_id", packRow.id)
+        : { data: null };
+      const packJson = (packRow?.pack_json ?? null) as {
+        case_strength?: { overall?: string };
+        coverage?: { state?: string };
+        fatal_loss?: { triggered?: boolean };
+        credit_already_issued?: { triggered?: boolean; coversDisputedAmount?: boolean };
+      } | null;
+      held = resolveHeldState({
+        // The HELD variant is emitted only from auto-mode branches of the
+        // pipeline, which is exactly the condition `resolveHeldState` needs.
+        automationMode: "auto",
+        caseStrength: packJson?.case_strength?.overall ?? null,
+        coverageState: packJson?.coverage?.state ?? null,
+        fatalLoss: packJson?.fatal_loss ?? null,
+        creditAlreadyIssued: packJson?.credit_already_issued ?? null,
+        acknowledgement: {
+          merchantSuppliedAcknowledgement: merchantSuppliedAcknowledgementFromItems(
+            (itemRows ?? []) as Array<{ payload?: Record<string, unknown> | null }>,
+          ),
+          submissionState: row.submission_state,
+          finalOutcome: row.final_outcome,
+        },
+      });
+    }
 
     await sendNewDisputeAlert({
       shopId: row.shop_id,
@@ -885,6 +1090,7 @@ export async function claimAndSendDeferredNewDisputeAlert(
       orderName: row.order_name,
       resolvedMode: mode,
       shopifyDisputeEvidenceGid: row.dispute_evidence_gid,
+      held,
     });
   } catch (err) {
     console.error(

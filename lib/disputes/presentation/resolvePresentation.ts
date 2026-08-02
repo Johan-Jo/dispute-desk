@@ -82,5 +82,8 @@ export function resolvePresentation(
     internalIssue,
     needsMerchantAction: ACTION_REQUIRED_ATTENTION.has(attention),
     isActive: !terminal && isActiveNormalizedStatus(input.normalizedStatus),
+    // Passed through, not derived: surfaces need the mode to tell a
+    // held Auto-pilot case apart from a review-mode approval gate.
+    automationMode: input.automationMode,
   };
 }

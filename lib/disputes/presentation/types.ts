@@ -99,4 +99,16 @@ export interface DisputePresentation {
   needsMerchantAction: boolean;
   /** Active inventory membership (unresolved pre-outcome; §5). */
   isActive: boolean;
+  /**
+   * The resolved rule mode for this dispute — passed straight through
+   * from the resolver input (it is NOT a derived dimension).
+   *
+   * Surfaces need it because the same lifecycle means different things
+   * in the two modes: `pack_prepared` under `review` is genuinely
+   * waiting for the merchant to approve, while under `auto` it is held
+   * by the strength guards and the deadline cron saves it to Shopify on
+   * the due date regardless. Copy that ignores the distinction tells an
+   * Auto-pilot merchant to review something they cannot act on.
+   */
+  automationMode: "auto" | "review" | null;
 }

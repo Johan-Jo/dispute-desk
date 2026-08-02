@@ -7,6 +7,7 @@ import type { ChecklistItemV2, SubmissionReadiness, WaivedItemRecord, WaiveReaso
 import type { CaseStrengthResult, WhyWinsResult, RiskResult, ImprovementSignal, NextAction, MissingItemWithContext } from "@/lib/argument/types";
 import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
 import type { DisputePresentation } from "@/lib/disputes/presentation/types";
+import type { HeldState } from "@/lib/disputes/heldState";
 
 /** Canonical tab indices for the dispute-detail workspace. Order per
  *  reviewer direction 2026-07-24 (supersedes plan §6.0): Overview →
@@ -311,6 +312,11 @@ export interface WorkspaceData {
    *  lifecycle/attention/strength interpretation the list and dashboard
    *  use. The detail page must never re-derive these dimensions. */
   presentation?: DisputePresentation | null;
+  /** Auto-pilot hold (lib/disputes/heldState) — resolved server-side
+   *  from the SAME guard verdict the pipeline acted on, and shared with
+   *  the new-dispute email so the page and the email cannot describe
+   *  one dispute two ways. */
+  held?: HeldState | null;
   /** Per-row dispute-detail view-model from `deriveEvidenceLineItems`.
    *  Single source of truth for every UI surface; never duplicated. */
   evidenceLineItems: EvidenceLineItem[];
