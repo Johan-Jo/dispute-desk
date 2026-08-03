@@ -2479,6 +2479,26 @@ Precedence is coverage → fatal-loss → strength, matching PRD §4 → §5 →
 
 Tests: `lib/automation/__tests__/autoSubmitGuards.test.ts` (exhaustive verdict + precedence matrix) and `lib/jobs/handlers/__tests__/buildDefencePackageJobGuards.test.ts` (the job-path regression — Moderate yields a draft with a `park` verdict).
 
+### What Shopify exposes about a dispute's reason and its issuer documents (verified 2026-08-03)
+
+Verified live against blume-box dispute `11017846977` (#345920, MC 4853, lost), Admin API 2026-01, with `scripts/inspect-dispute-issuer-files.mjs`.
+
+**`reasonDetails.networkReasonCode` EXISTS and is populated.** The header of `lib/disputes/networkReasonCode.ts` states that "Shopify Admin GraphQL 2026-01 does NOT expose a typed network reason code" and marks the direct path "currently unreachable". That is **false**: [`ShopifyPaymentsDisputeReasonDetails`](https://shopify.dev/docs/api/admin-graphql/2026-01/objects/ShopifyPaymentsDisputeReasonDetails) carries `networkReasonCode` — "the raw code provided by the payment network" — and it returned `4853` for this dispute. Our production queries (`lib/shopify/queries/disputes.ts`) select `reasonDetails { reason }` only, so today the stored `network_reason_code` is **inferred from the coarse enum** and can never contradict it.
+
+**But reading it would not have caught the mis-labelled dispute.** On `11017846977` the raw code (`4853`) agrees with the enum (`PRODUCT_UNACCEPTABLE`), while the issuer decided the case on delivery proof. MC 4853 is a *broad* consumer-dispute code — our own `lib/disputes/reasonCodeCatalog.ts` entry lists `shopifyEnumFallbacks: ["PRODUCT_UNACCEPTABLE", "PRODUCT_NOT_RECEIVED"]` and notes it is "also used for not-received scenarios". The ambiguity is in the code itself. Reading it is still worth doing (it's free and it's ground truth); it is not a mis-label detector.
+
+**Issuer documents are NOT retrievable through the API.** Shopify Admin attaches an "Issuer Response" packet to a resolved dispute (Attachment A: issuer response, Attachment B: the buyer's claim documentation) — visible at `…/payments/dispute_evidences/{evidenceId}/file_upload/{fileId}`. It is not reachable:
+
+| Attempt | Result |
+|---|---|
+| `disputeEvidence.disputeFileUploads` (plain list, no pagination) | Returns **only our own** upload (`9215738049`, `UNCATEGORIZED_FILE`, our defence PDF) |
+| `node(id: "gid://shopify/ShopifyPaymentsDisputeFileUpload/9246572737")` | Shopify `INTERNAL_SERVER_ERROR` — the type implements `Node`, but the issuer's file does not resolve |
+| `ShopifyPaymentsDisputeEvidenceFileType` enum | Every value is a merchant evidence category; no issuer-supplied type exists |
+
+So the outcome feedback that document contains ("the shipping details you provided didn't include a tracking number or other proof of delivery") can only reach us if a merchant downloads it from Admin and gives it to us. Do not plan an automated ingest against the current API.
+
+**`ShopifyPaymentsDispute` carries no decision rationale either** — `status` + `finalizedOn` is the entire outcome surface. Won/lost and when.
+
 ### Held state — how a held Auto-pilot case is described (2026-08-02)
 
 `lib/disputes/heldState.ts` — `resolveHeldState(input): HeldState`. **Pure**; it calls `evaluateAutoSubmitGuards` rather than restating the strength ladder.
