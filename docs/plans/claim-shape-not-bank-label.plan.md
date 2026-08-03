@@ -1,7 +1,10 @@
 # Defend the claim, not the label
 
-**Status:** proposed, 2026-08-03.
-**Raised by:** two consecutive prod disputes where the bank's label was wrong, found only because a human read the issuer's PDF by hand.
+**Status:** measured 2026-08-03. **The union-defence machinery this plan
+originally proposed is NOT justified** — see §4. Three narrower actions are.
+
+**Raised by:** two consecutive prod disputes where the bank's label was wrong,
+found only because a human read the issuer's PDF by hand.
 
 ---
 
@@ -26,165 +29,125 @@ Two of two disputes examined in detail had the wrong label:
   number or other proof of delivery."* We argued product conformity. Lost.
 - **#352552** — labelled `PRODUCT_UNACCEPTABLE`. The issuer's claim document is
   a **fraud questionnaire**: *"cardholder did not participate"*, card never
-  lost, never stolen, never used. We argued product conformity, and the label
-  suppressed a Mastercard **ECI 02 liability shift** — the strongest fact in
-  the file (fixed for 3DS specifically in PR #502; the general problem stands).
+  lost, never stolen, never used. The label suppressed a Mastercard **ECI 02
+  liability shift** — the strongest fact in the file (fixed for 3DS in PR #502).
 
-**We cannot verify the label.** The issuer claim and issuer response documents
-are Shopify-Admin-only — not in `disputeEvidence.disputeFileUploads`, not
-resolvable by `node()`, absent from the schema even on `unstable` (verified
-2026-08-03, `docs/technical.md` § *What Shopify exposes…*). `networkReasonCode`
-IS available and unused, but MC 4853 spans "not as described" AND "not
-received" — our own `reasonCodeCatalog.ts` says so. It sharpens nothing here.
+**The label cannot be verified.** The issuer claim and response documents are
+Shopify-Admin-only — not in `disputeEvidence.disputeFileUploads`, not
+resolvable by `node()`, absent from the schema even on `unstable`
+(`docs/technical.md` § *What Shopify exposes…*).
 
-At one merchant a human catches this. At a hundred, nobody does.
+## 2. Root cause of the ambiguity: Mastercard's umbrella
 
-## 2. Design principle
+The two networks made opposite choices.
 
-Stop betting the entire defence on one unverifiable label. Three layers, each
-useful alone, in increasing order of ambition.
+- **Visa split the claims.** VCR dispute conditions **13.1** (Merchandise/
+  Services Not Received) and **13.3** (Not as Described or Defective) are
+  distinct codes. A Visa dispute is unambiguous.
+- **Mastercard merged them.** Around 2016 MC consolidated 4841 / 4850 / 4855 /
+  4859 into **4853**, an umbrella covering nearly every non-fraud cardholder
+  dispute: not received, not as described, defective, counterfeit, cancelled
+  recurring, addendum charges. The specific claim travels as **sub-condition
+  text inside the chargeback message**, not as a distinguishing number.
 
----
+Shopify exposes the number and a coarse enum; the sub-condition text only
+surfaces in the Admin-UI issuer claim document. So on MC 4853 the
+distinguishing detail is structurally out of reach. Our own
+`reasonCodeCatalog.ts` already records this — 4853 lists BOTH
+`PRODUCT_UNACCEPTABLE` and `PRODUCT_NOT_RECEIVED` as fallbacks.
 
-## 3. Layer 1 — a label may never suppress universally-safe evidence
+## 3. What was measured
 
-Some evidence helps under one claim type and is merely *irrelevant* under the
-others. It should never be gated on the reason code.
+`scripts/report-label-suppressed-facts.mjs` (read-only; reads our own packs and
+module config — no Shopify call, no inference about the true claim). Run
+against prod 2026-08-03, open disputes.
 
-The first member shipped in PR #502: a **liability-shifted 3-D Secure
-authentication** (ECI 02/05, authenticated, no exemption) is injected into
-`allowedFactCategories` whatever the module says.
+**Deliberately not measured:** a "contradiction rate" between the label and a
+derived claim shape. That number describes the resolver, not reality — high
+disagreement is equally consistent with bad labels and a bad resolver, and we
+have two ground-truth cases to tell them apart. The 466 decided disputes cannot
+help either: only **27** have an evidence pack and **9** a defence package.
 
-Generalise it into a named set — `ALWAYS_ADMISSIBLE_FACTS` — with an explicit
-test per member answering *"can this read against us under any claim type?"*
-Candidates to evaluate, not to assume:
+### 3.1 Facts the label kept out of the letter — 64 of 106 disputes
 
-| Fact | Helps under | Reads against us? |
-|---|---|---|
-| 3DS with liability shift | fraud (decisive) | No — shipped |
-| AVS + CVV both matched | fraud | No |
-| Delivery confirmed to the verified address | delivery, fraud | No |
-| Prior undisputed order history (verified) | fraud | Only if the history contains a chargeback — already gated tri-state |
-| Cardholder acknowledgement | every type | No |
+| Category suppressed | Disputes |
+|---|---|
+| `no_return_initiated` | **81** |
+| `payment_authentication` | **6** |
+| prior_customer_history / refund_record / ip_location / shipping_tracking / delivery_proof | 1 each |
 
-Explicitly NOT in the set: attempted/exempted 3DS, IP/device signals
-(`avoid`-listed for good reason), fraud screening on non-fraud claims.
+The 81 are **not a label problem**. `no_return_initiated` appears in exactly
+one module's `allowedFactCategories` (`credit_not_processed`). Everywhere else
+it is collected, classified bank-eligible, and dropped — whatever the label
+says. Relabelling changes nothing. Separate defect, §5.2.
 
-**Cost:** small. **Risk:** low. **Independent of layers 2–3.**
+The 6 are the real signal: `payment_authentication` excluded under
+`product_unacceptable`, `inr_product_not_received` and `duplicate_processing`.
+That is the #352552 class.
 
----
+### 3.2 Structurally ambiguous reason codes — 92 of 121, but only 4 that matter
 
-## 4. Layer 2 — derive the claim shape from our own facts
+| Code | Disputes | Spans | Different defence? |
+|---|---|---|---|
+| 4837 | 81 | FRAUDULENT / UNRECOGNIZED | **No** — same family, same module |
+| 10.4 | 7 | FRAUDULENT / UNRECOGNIZED | **No** — same |
+| 4853 | 3 | PRODUCT_UNACCEPTABLE / PRODUCT_NOT_RECEIVED | **Yes** |
+| 4834 | 1 | DUPLICATE / GENERAL | Yes |
 
-Compute, from data we already hold, what the dispute *looks like* — with no
-reference to the label — then compare.
+The 76% headline is misleading. Genuine cross-family ambiguity is **4 of 121
+(~3%)**, and it is Mastercard-specific per §2.
 
-```ts
-// lib/disputes/claimShape.ts (new, pure)
-type ClaimShape = "unauthorised" | "not_received" | "not_as_described"
-                | "refund_owed" | "subscription" | "duplicate" | "indeterminate";
+## 4. Conclusion: do not build the union defence
 
-resolveClaimShape(facts) -> { shape, confidence, signals }
-compareToLabel(shape, reason) -> "agrees" | "contradicts" | "ambiguous"
-```
+Two mislabelled disputes made this feel systemic. The measurement says the
+structural ambiguity a union defence would address is ~3% of volume, and both
+known cases sit on 4853 — one of the three. Building a claim-shape resolver,
+union `allowedFactCategories`, dual-strategy ranking and a merchant
+disambiguation prompt is a large surface to carry for that.
 
-Inputs, all already collected:
+Reconsider if any of these change: 4853 volume grows materially; a shop's mix
+shifts toward Mastercard consumer disputes; or issuer responses (collected by
+hand, §5.3) show mislabelling beyond 4853.
 
-- **Fulfillment / delivery**: `proofType`, `deliveredAt`, tracking presence,
-  `fulfillmentStatus`. Nothing delivered + no tracking → leans *not_received*.
-- **Customer communications** (Gorgias + Shopify timeline): the customer's own
-  words to the merchant, pre-dispute. The closest thing we have to the claim
-  document, and today it is used only as an evidence item, never as a signal
-  about *what is being claimed*.
-- **Refund/credit state**: a pre-dispute refund leans *refund_owed*.
-- **Authentication**: AVS/CVV/3DS/fraud screening are the signals that *matter*
-  under `unauthorised` — their presence doesn't prove the shape, but a
-  fraud-shaped case is where they decide.
-- **Subscription markers**: recurring line items, cancellation events.
-- **`reasonDetails.networkReasonCode`** — wire it into the query (it is
-  currently inferred from the enum, which makes it circular; see
-  `lib/disputes/networkReasonCode.ts` header).
+## 5. What to do instead
 
-**Ship this in shadow mode first.** Run it across the 466 decided disputes and
-measure how often it contradicts the label, and whether contradictions
-correlate with losses. Change no defence until that number is known. If
-contradiction is rare, layer 3 is not worth building; if it is common, we have
-the evidence to justify it.
+### 5.1 Extend the always-admissible set to AVS/CVV — small, justified now
 
----
+A fact that helps under one claim type and is merely *irrelevant* under the
+others must not be gated on the reason code. PR #502 shipped the first member
+(3DS with liability shift, injected into `allowedFactCategories` regardless of
+module). Add **AVS + CVV matched** on the same pattern: that covers the
+remaining `payment_authentication` suppressions in §3.1.
 
-## 5. Layer 3 — respond to ambiguity instead of guessing
+Members must each answer *"can this read against us under any claim type?"*
+with a test. Explicitly excluded: attempted/exempted 3DS, IP and device
+signals (`avoid`-listed for good reason), fraud screening on non-fraud claims.
 
-When the shape and the label disagree, or the network code is known-broad
-(MC 4853, `GENERAL`, `CUSTOMER_INITIATED`), **defend both theories** rather
-than picking one:
+### 5.2 Decide what `no_return_initiated` is for — 81 disputes
 
-- Union the `allowedFactCategories` of both modules.
-- Run both strategies; the narrative leads with the shape our facts support and
-  answers the labelled claim second.
-- `mustNotClaim` stays the **intersection** — a restriction from either module
-  binds. Claim guards are unchanged: we still cannot assert what no fact backs.
+Today it is collected, marked bank-eligible, and admissible in exactly one
+module. Either it belongs in more `allowedFactCategories` (it is a factual
+statement about return status, defensible under delivery and product claims
+alike) or it should not be bank-eligible. Right now it is neither, on 81 open
+disputes. Not a label problem — a module-coverage gap.
 
-This costs a longer letter and one extra strategy evaluation. It cannot make a
-case weaker: every sentence still requires a fact.
+### 5.3 Leave 4853 to human judgement
 
-**Merchant escape hatch — one question, only when it changes the outcome.**
-When a contradiction is detected on an open dispute, ask exactly one thing on
-the dispute page:
+Three open disputes. The sub-condition is unreachable by API (§2), so the only
+way to know is to open the issuer claim in Shopify Admin — which is exactly how
+#352552 was caught. Handle those by hand; do not build machinery for three.
 
-> The bank filed this as *product not as described*. Your customer's messages
-> say the order never arrived. Which is it?  **[Never arrived] [Not as
-> described] [Not sure]**
+## 6. Non-goals
 
-One click, no form, and it only appears when the answer changes the defence —
-the rule from `feedback_ask_only_for_what_the_merchant_can_actually_do`.
-"Not sure" is a real answer: it falls back to the union defence.
+- **No LLM guessing at the true reason.**
+- **No overwriting `disputes.reason`.** The stored value stays what Shopify
+  said. The admin override route is not extended to `reason`.
+- **No merchant-facing "the bank got it wrong" copy.**
 
----
+## 7. Verification
 
-## 6. Learning loop
-
-The issuer response is the only ground truth about *why we lost*, and it cannot
-be fetched. It can be **given**:
-
-- On a lost dispute, offer an upload slot: "Shopify Admin → this order →
-  Chargeback → Issuer response. Drop the PDF here."
-- Parse the stated reason, store it against the dispute, and correlate:
-  claim shape vs label vs cited loss reason vs outcome.
-- Availability is limited by design — Shopify only provides issuer responses
-  for chargebacks that escalated from an inquiry and were lost, and not for
-  every bank. Expect a minority, not the full 334.
-
-That corpus is what turns layer 2's thresholds from judgement into measurement.
-
----
-
-## 7. Non-goals
-
-- **No LLM guessing at the true reason.** The shape resolver is deterministic
-  and inspectable, like every other gate in the pipeline.
-- **No overriding the label in `disputes.reason`.** The stored value stays what
-  Shopify said; the shape is a parallel field. The admin override route
-  (`final_outcome`, `submission_state`, …) is not extended to `reason`.
-- **No merchant-facing "the bank got it wrong" copy.** We surface a question,
-  not an accusation.
-
-## 8. Rollout
-
-| Step | Ships | Gate |
-|---|---|---|
-| 1 | `ALWAYS_ADMISSIBLE_FACTS` set (3DS already in) | tests per member |
-| 2 | `networkReasonCode` selected in the dispute queries | — |
-| 3 | `claimShape.ts` + shadow report over 466 decided disputes | contradiction rate measured |
-| 4 | Union defence on contradiction / broad codes | step 3 shows it matters |
-| 5 | One-question escape hatch on open contradictions | step 4 |
-| 6 | Issuer-response upload + outcome correlation | independent |
-
-## 9. Verification
-
-- Unit tests per layer; shadow report is a script, not a behaviour change.
-- Re-run the shape resolver over #345920 (expect *not_received*, contradicting
-  `PRODUCT_UNACCEPTABLE`) and #352552 (expect *unauthorised*, contradicting the
-  same label). Both are known-wrong labels with the answer independently
-  confirmed by an issuer document — the only two ground-truth cases we have.
-- No defence behaviour changes before step 4, and step 4 only on evidence.
+- `scripts/report-label-suppressed-facts.mjs` is the measurement of record;
+  re-run it after §5.1 and §5.2 land and the suppression counts should fall to
+  near zero for the categories addressed.
+- Both ground-truth disputes stay documented here as the reference cases for
+  any future revisit.
