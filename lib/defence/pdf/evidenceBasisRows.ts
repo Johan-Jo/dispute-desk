@@ -63,9 +63,22 @@ function renderValue(fact: EvidenceFact): string {
           ? (v.verificationSummary as string)
           : null;
       const threeDS = v?.threeDS === true;
+      // Only a fact the classifier deemed citable reaches this renderer (see
+      // `isUnciteableThreeDs`), so a 3DS mention here is liability-shifted or
+      // merchant-confirmed. Name the ECI and the DS transaction id with it:
+      // the issuer can match that id against their own authentication record,
+      // which is what separates a verifiable fact from an adjective.
+      const threeDsDetail = (): string => {
+        const eci = typeof v?.eci === "string" ? (v.eci as string).trim() : "";
+        const ds = typeof v?.dsTransactionId === "string" ? (v.dsTransactionId as string).trim() : "";
+        const bits = ["3DS authenticated"];
+        if (eci) bits.push(`ECI ${eci}`);
+        if (ds) bits.push(`DS transaction ${ds}`);
+        return bits.join(", ");
+      };
       if (summary) {
         const parts = [summary];
-        if (threeDS) parts.push("3DS authenticated");
+        if (threeDS) parts.push(threeDsDetail());
         return parts.join(" • ");
       }
       // Fallback for old facts that predate verificationSummary:
@@ -84,7 +97,7 @@ function renderValue(fact: EvidenceFact): string {
       if (typeof cvv === "string" && cvv.toUpperCase() === "M") {
         parts.push("CVV matched");
       }
-      if (threeDS) parts.push("3DS authenticated");
+      if (threeDS) parts.push(threeDsDetail());
       return parts.length ? parts.join(" • ") : "Authenticated";
     }
     case "billing_match":
