@@ -117,10 +117,25 @@ describe("the evidence-basis row prints those identifiers", () => {
     return buildEvidenceBasisRows([fact])[0].value;
   };
 
-  it("appends carrier and number to a confirmed delivery", () => {
+  it("appends carrier, number AND the carrier's tracking URL to a confirmed delivery", () => {
     const out = row(extractValue("delivery_proof", NESTED_PROD_SHAPE));
     expect(out).toContain("Delivered");
     expect(out).toContain("USPS 9434650899562189159072");
+    // The issuer should be able to check the parcel on the carrier's own site
+    // without first working out whose number format this is.
+    expect(out).toContain("https://tools.usps.com/go/TrackConfirmAction.action");
+  });
+
+  it("prints the URL even when the carrier name is missing", () => {
+    const out = row({
+      proofType: "delivered_confirmed",
+      deliveredAt: "2026-06-20T22:58:00Z",
+      carrier: null,
+      trackingNumber: "9434650899562189159072",
+      trackingUrl: "https://tools.usps.com/go/TrackConfirmAction.action",
+    });
+    expect(out).toContain("9434650899562189159072");
+    expect(out).toContain("https://tools.usps.com");
   });
 
   it("appends them to a signature too", () => {
@@ -134,14 +149,16 @@ describe("the evidence-basis row prints those identifiers", () => {
     expect(out).toContain("UPS2 1Z999AA10123456784");
   });
 
-  it("appends them to an in-transit parcel — the number is how the issuer checks it", () => {
+  it("appends them to an in-transit parcel — looking it up is the whole point", () => {
     const out = row({
       proofType: "delivered_unverified",
       carrier: "PostNord SE",
       trackingNumber: "00370725111111111111",
+      trackingUrl: "https://postnord.se/track?id=00370725111111111111",
     });
     expect(out).toContain("In transit");
     expect(out).toContain("PostNord SE 00370725111111111111");
+    expect(out).toContain("https://postnord.se/track");
   });
 
   it("prints no dangling separator when there is no tracking", () => {

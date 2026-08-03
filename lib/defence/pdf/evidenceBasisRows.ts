@@ -96,14 +96,23 @@ function renderValue(fact: EvidenceFact): string {
       // Format the carrier timestamp as a clean bank-facing date instead of
       // the raw ISO string ("2026-07-06T18:16:00Z" → "Jul 6, 2026, 18:16 UTC").
       const at = rawAt ? formatChronologyTimestamp(rawAt) : null;
-      // Carrier + tracking number are the identifiers an issuer needs to
-      // VERIFY a delivery claim; without them "Delivered <date>" is an
-      // unsupported assertion. Blume-box #345920's issuer response asked for
-      // precisely this. Appended to every proof state — including in-transit,
-      // where the number is what lets the issuer check the parcel themselves.
+      // Carrier + tracking number + the carrier's own tracking URL are the
+      // identifiers an issuer needs to VERIFY a delivery claim; without them
+      // "Delivered <date>" is an unsupported assertion. Blume-box #345920's
+      // issuer response asked for precisely this: "a tracking number or
+      // tracking details that show the order was successfully delivered."
+      //
+      // The URL is printed too, not just the number: an issuer reviewing the
+      // packet should be able to check the parcel on the carrier's own site
+      // without first working out which carrier's format the number belongs
+      // to. Appended to every proof state — including in-transit, where
+      // looking it up is the whole point.
       const carrier = typeof v?.carrier === "string" ? (v.carrier as string).trim() : "";
       const number = typeof v?.trackingNumber === "string" ? (v.trackingNumber as string).trim() : "";
-      const ref = [carrier, number].filter(Boolean).join(" ");
+      const url = typeof v?.trackingUrl === "string" ? (v.trackingUrl as string).trim() : "";
+      const ref = [[carrier, number].filter(Boolean).join(" "), url]
+        .filter(Boolean)
+        .join(" · ");
       const withRef = (base: string) => (ref ? `${base} · ${ref}` : base);
       if (proof === "signature_confirmed") {
         return withRef(at ? `Signature on delivery, ${at}` : "Signature on delivery");
