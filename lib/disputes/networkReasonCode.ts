@@ -1,12 +1,20 @@
 /**
  * Network reason-code resolver.
  *
- * Shopify Admin GraphQL 2026-01 does NOT expose a typed network reason
- * code on `Dispute` — only the coarse 14-value `ShopifyPaymentsDisputeReason`
- * enum via `Dispute.reasonDetails.reason`. This module bridges that gap
- * by combining:
- *   1. direct   — a `networkReasonCode` field IF Shopify ever exposes
- *                 one (future-proofing; currently unreachable)
+ * CORRECTION (2026-08-03): this header used to claim Shopify does not expose a
+ * network reason code, and that the `direct` path below was "currently
+ * unreachable". Both are false. `ShopifyPaymentsDisputeReasonDetails.
+ * networkReasonCode` exists in 2026-01 — "the raw code provided by the payment
+ * network" — and returns real values (verified `4853` on blume-box dispute
+ * 11017846977). What is true is that `lib/shopify/queries/disputes.ts` never
+ * SELECTS it, so nothing ever reaches the `direct` path and every stored code
+ * is inferred from the coarse enum — an inference that can never contradict
+ * the enum it came from. Wiring the query is the fix; see docs/technical.md
+ * § "What Shopify exposes about a dispute's reason and its issuer documents".
+ *
+ * The resolver combines:
+ *   1. direct   — a caller-supplied `networkReasonCode` (available from
+ *                 Shopify today; not yet requested by our queries)
  *   2. derived  — receiptJson parsing for Shopify Payments orders (rare;
  *                 contract is gateway-specific per CLAUDE.md)
  *   3. inferred — Shopify enum + card network + order context → best
