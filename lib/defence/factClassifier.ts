@@ -209,6 +209,36 @@ export function categoryForField(fieldKey: string, payload: Record<string, unkno
 
 /* ── Value extraction (no raw Shopify JSON crosses this boundary) ── */
 
+/**
+ * First tracking entry carrying anything usable, across all fulfillments.
+ *
+ * Shape written by `lib/packs/sources/fulfillmentSource.ts`:
+ *   { fulfillments: [ { tracking: [ { carrier, number, url } ], … } ], … }
+ *
+ * Multi-parcel orders produce several entries; the defence cites one, and the
+ * first with a number is the parcel the carrier confirmed. Entries with no
+ * number at all (Shopify records a tracking row with only a URL sometimes)
+ * are skipped so a URL-only row can't shadow a real number.
+ */
+function firstTrackingEntry(
+  payload: Record<string, unknown>,
+): { carrier?: unknown; number?: unknown; url?: unknown } | null {
+  const fulfillments = Array.isArray(payload.fulfillments) ? payload.fulfillments : [];
+  let urlOnly: { carrier?: unknown; number?: unknown; url?: unknown } | null = null;
+  for (const f of fulfillments) {
+    const rows = Array.isArray((f as { tracking?: unknown })?.tracking)
+      ? ((f as { tracking: unknown[] }).tracking)
+      : [];
+    for (const row of rows) {
+      if (!row || typeof row !== "object") continue;
+      const entry = row as { carrier?: unknown; number?: unknown; url?: unknown };
+      if (typeof entry.number === "string" && entry.number.trim().length > 0) return entry;
+      if (!urlOnly && (entry.url || entry.carrier)) urlOnly = entry;
+    }
+  }
+  return urlOnly;
+}
+
 function extractValue(
   fieldKey: string,
   payload: Record<string, unknown> | null,
@@ -262,14 +292,35 @@ function extractValue(
     case "billing_address_match":
       return { match: p.match === true };
     case "delivery_proof":
-    case "shipping_tracking":
+    case "shipping_tracking": {
+      // The carrier, tracking number and tracking URL live INSIDE
+      // `fulfillments[].tracking[]` (fulfillmentSource writes them there),
+      // not at the top level of the payload.
+      //
+      // This branch used to read `p.carrier` and pass no tracking identifier
+      // at all. Consequences, measured on prod 2026-08-03: the carrier name
+      // appeared in 0 of 142 defence packages, and the tracking number in 0 of
+      // 12 packages that had one. So a confirmed delivery reached the issuer
+      // as a bare date — "Delivered Jun 20, 2026" — with nothing they could
+      // verify. Blume-box #345920's issuer response asked for exactly this:
+      // "Requesting evidence from merchant providing a tracking number or
+      // tracking details that show the order was successfully delivered."
+      //
+      // Flat-payload fallbacks are kept: not every collector nests, and a
+      // manual upload may set the fields directly.
+      const tracking = firstTrackingEntry(p);
+      const str = (v: unknown): string | null =>
+        typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
       return {
         proofType: typeof p.proofType === "string" ? p.proofType : null,
-        carrier: typeof p.carrier === "string" ? p.carrier : null,
+        carrier: str(tracking?.carrier) ?? str(p.carrier),
+        trackingNumber: str(tracking?.number) ?? str(p.trackingNumber),
+        trackingUrl: str(tracking?.url) ?? str(p.trackingUrl),
         deliveredAt: typeof p.deliveredAt === "string" ? p.deliveredAt : null,
         signedByName: typeof p.signedByName === "string" ? p.signedByName : null,
         deliveredToVerifiedAddress: p.deliveredToVerifiedAddress === true,
       };
+    }
     case "customer_communication":
       return {
         customerConfirmsOrder: p.customerConfirmsOrder === true,
