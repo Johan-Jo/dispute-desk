@@ -34,6 +34,7 @@ import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import {
   parseReceiptJson,
   readThreeDsAuthenticated,
+  readThreeDsDetail,
 } from "@/lib/shopify/receipts/threeDs";
 import type { EvidenceSection, BuildContext } from "../types";
 
@@ -55,6 +56,30 @@ export interface ThreeDSecureEvidenceData {
   receiptPresent: boolean;
   /** Optional, for debugging. Strip if too noisy. */
   receiptShape?: string | null;
+  /**
+   * Full authentication detail, added 2026-08-03. Until then this collector
+   * captured ONE boolean and dropped the rest of the block — so a fully
+   * liability-shifted authentication was indistinguishable from a bare
+   * "3DS happened", and `claimGuards.three_d_secure` (which requires
+   * `liabilityShift=true`) could never pass for anyone, because nothing in
+   * the codebase wrote that flag.
+   *
+   * blume-box #352552 is the case that surfaced it: ECI 02, 3DS 2.2.0,
+   * `result: authenticated`, no exemption — a Mastercard liability shift —
+   * on a dispute whose issuer claim document is a fraud questionnaire. The
+   * strongest available evidence, suppressed by a flag nobody set.
+   */
+  eci: string | null;
+  /** DS transaction id — the reference the issuer matches against their own
+   *  authentication record. Turns the claim from assertion into fact. */
+  dsTransactionId: string | null;
+  tdsVersion: string | null;
+  authenticationFlow: string | null;
+  /** True ONLY for ECI 02/05, authenticated, with no SCA exemption. */
+  liabilityShift: boolean;
+  /** Set when authentication was deliberately skipped under an exemption —
+   *  in which case the merchant kept the liability and 3DS must not be cited. */
+  exemptionIndicator: string | null;
 }
 
 /** Gateways whose receiptJson we trust to mirror Stripe's shape. */
@@ -92,6 +117,10 @@ export async function collectThreeDSecureEvidence(
     return [];
   }
 
+  // Same canonical walk, full block. `readThreeDsAuthenticated` returned
+  // non-null, so this cannot be null — the fallback keeps the types honest.
+  const detail = readThreeDsDetail(receipt);
+
   const data: ThreeDSecureEvidenceData = {
     tdsAuthenticated: authenticated,
     // tdsVerified is reserved for the manual-confirmation path. We
@@ -101,6 +130,12 @@ export async function collectThreeDSecureEvidence(
     gateway: tx.gateway,
     receiptPresent: true,
     receiptShape: describeShape(receipt),
+    eci: detail?.eci ?? null,
+    dsTransactionId: detail?.dsTransactionId ?? null,
+    tdsVersion: detail?.version ?? null,
+    authenticationFlow: detail?.authenticationFlow ?? null,
+    liabilityShift: detail?.liabilityShift ?? false,
+    exemptionIndicator: detail?.exemptionIndicator ?? null,
   };
 
   return [

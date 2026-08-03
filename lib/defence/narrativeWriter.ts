@@ -22,6 +22,7 @@
  * enforced by counting today's `defence_package_runs` rows for the shop.
  */
 
+import { alwaysAdmissibleCategories } from "./alwaysAdmissible";
 import { getServiceClient } from "@/lib/supabase/server";
 import {
   callClaudeMessages,
@@ -464,6 +465,20 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
       value: f.value,
     }));
 
+  // Some facts are admissible under ANY claim type and must not be gated on
+  // the reason code, because the reason code comes from the BANK's label and
+  // the label is demonstrably unreliable (see lib/defence/alwaysAdmissible.ts
+  // for the admission test, the members, and what is deliberately excluded).
+  const admitted = alwaysAdmissibleCategories(input.approvedFacts);
+  const allowedFactCategories = admitted.length
+    ? [
+        ...input.reasonCodeModule.allowedFactCategories,
+        ...admitted.filter(
+          (c) => !input.reasonCodeModule.allowedFactCategories.includes(c),
+        ),
+      ]
+    : input.reasonCodeModule.allowedFactCategories;
+
   return {
     packageId: input.packageId,
     disputeId: input.disputeId,
@@ -478,7 +493,7 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
       avoid: input.reasonCodeModule.avoid,
       mustNotClaim: input.reasonCodeModule.mustNotClaim,
       criticalCategories: input.reasonCodeModule.criticalCategories,
-      allowedFactCategories: input.reasonCodeModule.allowedFactCategories,
+      allowedFactCategories,
     },
     // Phase 3 telemetry: the strategy keys selected for this dispute.
     // Useful context for the model ("the user has decided these
