@@ -96,10 +96,21 @@ function renderValue(fact: EvidenceFact): string {
       // Format the carrier timestamp as a clean bank-facing date instead of
       // the raw ISO string ("2026-07-06T18:16:00Z" → "Jul 6, 2026, 18:16 UTC").
       const at = rawAt ? formatChronologyTimestamp(rawAt) : null;
-      if (proof === "signature_confirmed") return at ? `Signature on delivery, ${at}` : "Signature on delivery";
-      if (proof === "delivered_confirmed") return at ? `Delivered ${at}` : "Delivered";
-      if (proof === "delivered_unverified") return "In transit / handed to carrier";
-      return "Confirmed";
+      // Carrier + tracking number are the identifiers an issuer needs to
+      // VERIFY a delivery claim; without them "Delivered <date>" is an
+      // unsupported assertion. Blume-box #345920's issuer response asked for
+      // precisely this. Appended to every proof state — including in-transit,
+      // where the number is what lets the issuer check the parcel themselves.
+      const carrier = typeof v?.carrier === "string" ? (v.carrier as string).trim() : "";
+      const number = typeof v?.trackingNumber === "string" ? (v.trackingNumber as string).trim() : "";
+      const ref = [carrier, number].filter(Boolean).join(" ");
+      const withRef = (base: string) => (ref ? `${base} · ${ref}` : base);
+      if (proof === "signature_confirmed") {
+        return withRef(at ? `Signature on delivery, ${at}` : "Signature on delivery");
+      }
+      if (proof === "delivered_confirmed") return withRef(at ? `Delivered ${at}` : "Delivered");
+      if (proof === "delivered_unverified") return withRef("In transit / handed to carrier");
+      return withRef("Confirmed");
     }
     case "customer_communication":
     case "communication": {
