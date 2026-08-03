@@ -464,6 +464,33 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
       value: f.value,
     }));
 
+  // A liability-shifted 3-D Secure authentication is admissible under ANY
+  // reason code, so it is added to the allowed categories whatever the module
+  // says. Rationale: the issuer's own ACS authenticated the cardholder and
+  // accepted fraud liability at authorization. On an unauthorised-use claim
+  // that is the strongest fact in the file; on any other claim it is
+  // irrelevant but harmless — it cannot argue against us.
+  //
+  // The categories are per-reason-code, and reason codes are chosen from the
+  // BANK's label, which is demonstrably unreliable: blume-box #352552 was
+  // labelled PRODUCT_UNACCEPTABLE while the issuer's own claim document is a
+  // fraud questionnaire ("cardholder did not participate", card never lost or
+  // stolen). `product_unacceptable.allowedFactCategories` omits
+  // payment_authentication, so the label alone suppressed a Mastercard ECI 02
+  // liability shift. Never let a mislabelled dispute hide it again.
+  //
+  // Gate is `liabilityShift` — set only for ECI 02/05, authenticated, no SCA
+  // exemption (lib/shopify/receipts/threeDs.ts). An "attempted" or exempted
+  // authentication stays subject to the module's own rules, because those
+  // states can read against us.
+  const hasLiabilityShift = approvedFacts.some(
+    (f) => (f.value as { liabilityShift?: unknown } | null)?.liabilityShift === true,
+  );
+  const allowedFactCategories = hasLiabilityShift
+    && !input.reasonCodeModule.allowedFactCategories.includes("payment_authentication")
+      ? [...input.reasonCodeModule.allowedFactCategories, "payment_authentication" as const]
+      : input.reasonCodeModule.allowedFactCategories;
+
   return {
     packageId: input.packageId,
     disputeId: input.disputeId,
@@ -478,7 +505,7 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
       avoid: input.reasonCodeModule.avoid,
       mustNotClaim: input.reasonCodeModule.mustNotClaim,
       criticalCategories: input.reasonCodeModule.criticalCategories,
-      allowedFactCategories: input.reasonCodeModule.allowedFactCategories,
+      allowedFactCategories,
     },
     // Phase 3 telemetry: the strategy keys selected for this dispute.
     // Useful context for the model ("the user has decided these

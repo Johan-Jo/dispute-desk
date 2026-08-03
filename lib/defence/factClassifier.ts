@@ -282,13 +282,29 @@ function extractValue(
         verificationSummary,
       };
     }
-    case "tds_authentication":
+    case "tds_authentication": {
+      // `liabilityShift` was read here long before anything wrote it, so the
+      // guard that depends on it (claimGuards.three_d_secure) could never
+      // pass. `threeDSecureSource` now derives it from the ECI (02/05,
+      // authenticated, no exemption), so the flag finally means something.
+      //
+      // The DS transaction id travels with it: an issuer can match that
+      // against their own authentication record, which is the difference
+      // between "3DS authenticated" as an adjective and as a fact.
+      const strv = (v: unknown): string | null =>
+        typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
       return {
         threeDS: p.tdsAuthenticated === true || p.tdsVerified === true,
         liabilityShift: p.liabilityShift === true,
         verifiedSource: typeof p.verifiedSource === "string" ? p.verifiedSource : null,
         tdsVerified: p.tdsVerified === true,
+        eci: strv(p.eci),
+        dsTransactionId: strv(p.dsTransactionId),
+        tdsVersion: strv(p.tdsVersion),
+        authenticationFlow: strv(p.authenticationFlow),
+        exemptionIndicator: strv(p.exemptionIndicator),
       };
+    }
     case "billing_address_match":
       return { match: p.match === true };
     case "delivery_proof":
@@ -579,6 +595,24 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
       const isSubmissionRisk = SUBMISSION_RISK_FIELDS.has(fieldKey);
       const isInternalOnly = INTERNAL_ONLY_FIELDS.has(fieldKey);
 
+      // 3-D Secure is bank-citable only when it actually helps: a liability
+      // shift (ECI 02/05, authenticated, no SCA exemption) or a merchant-
+      // confirmed authentication. Everything else — "attempted", exempted, or
+      // a bare receipt read we cannot verify — stays out of every bank-facing
+      // surface.
+      //
+      // This lives here, not in the PDF renderer, because bank-inclusion
+      // predicates belong to the classifier by contract (see the header of
+      // buildLlmFactPayload): the LLM payload, the Evidence Basis rows and the
+      // workspace line items then agree by construction. They did not before:
+      // on blume-box #352552 the narrative correctly refused to argue 3DS
+      // while the PDF's Evidence Basis table asserted "3DS authenticated" to
+      // the same issuer, three lines below.
+      const isUnciteableThreeDs =
+        fieldKey === "tds_authentication" &&
+        value.liabilityShift !== true &&
+        value.tdsVerified !== true;
+
       const fact: EvidenceFact = {
         id: factId,
         category,
@@ -587,10 +621,15 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
         source: section.source,
         sourceRef,
         strength: cat,
-        bankEligible: !isInternalOnly && (cat === "strong" || cat === "moderate"),
+        bankEligible:
+          !isInternalOnly && !isUnciteableThreeDs && (cat === "strong" || cat === "moderate"),
         merchantVisible: true,
         internalOnly: isInternalOnly,
-        includeInBankNarrative: !isInternalOnly && !isSubmissionRisk && (cat === "strong" || cat === "moderate"),
+        includeInBankNarrative:
+          !isInternalOnly &&
+          !isSubmissionRisk &&
+          !isUnciteableThreeDs &&
+          (cat === "strong" || cat === "moderate"),
         submissionRisk: isSubmissionRisk,
         confidence: null,
       };
