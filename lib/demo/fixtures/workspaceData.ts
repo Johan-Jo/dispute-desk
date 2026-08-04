@@ -301,7 +301,6 @@ export function buildWorkspaceData(disputeId: string) {
       state: "not_covered",
       shopifyProtectStatus: "NOT_PROTECTED",
     },
-    attachmentUploads: [],
   };
 
   // Coverage gate (PRD §4): override pack.coverage when fixture is covered
@@ -329,7 +328,6 @@ export function buildWorkspaceData(disputeId: string) {
       state: "covered_shopify",
       shopifyProtectStatus: "PROTECTED",
     },
-    attachmentUploads: [],
   } : null;
 
   return {
@@ -344,11 +342,6 @@ export function buildWorkspaceData(disputeId: string) {
       disputeType: reasonUpper,
       toWin: ["Show the cardholder authorised the transaction", "Demonstrate delivery to the registered address"],
       strongestEvidence: ["AVS/CVV verification", "Tracked delivery + signature", "3-D Secure authentication"],
-    },
-    fileEvidence: {
-      flagEnabled: false,
-      scopesGranted: true,
-      missingScopes: [],
     },
     defencePackage: {
       // Minimal but complete DefencePackageRow so CompleteDefencePackageCard

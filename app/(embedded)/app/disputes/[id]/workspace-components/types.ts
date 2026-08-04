@@ -202,13 +202,6 @@ export interface WorkspacePack {
    *  when the file evidence flag is off or no native attachments
    *  landed. Surfaces in the Evidence tab as a clip-icon badge and
    *  in Review & Submit as a per-file routing row. */
-  attachmentUploads?: Array<{
-    evidenceItemId: string;
-    evidenceFieldKey: string;
-    targetField: string;
-    fileGid: string;
-    uploadedAt: string;
-  }>;
 }
 
 export interface WorkspaceAttachment {
@@ -325,7 +318,6 @@ export interface WorkspaceData {
   submissionSummary: SubmissionSummary;
   /** @deprecated 2026-05-16 — structured field routing was retired.
    *  Always an empty array. Kept on the type for legacy consumers. */
-  submissionFields?: SubmissionField[];
   /** First-class file inventory derived from
    *  `pack.evidenceItems[*].payload.fileId`. Plan v3 §3.A.4. Always
    *  an array; empty array is the explicit empty state for the
@@ -338,11 +330,6 @@ export interface WorkspaceData {
    *  consent banner: when `flagEnabled === true && scopesGranted ===
    *  false`, the merchant is on a pre-f61176c session and must
    *  reinstall to grant the new dispute file upload scopes. */
-  fileEvidence?: {
-    flagEnabled: boolean;
-    scopesGranted: boolean;
-    missingScopes: string[];
-  };
   /** Defence package rows for the embedded ReviewSubmitTab. Folded
    *  into the workspace endpoint (2026-05-25) so
    *  `CompleteDefencePackageCard` no longer pays a separate fetch

@@ -35,15 +35,6 @@ function sourceLabel(
   return t("sourceDerived");
 }
 
-const TARGET_FIELD_LABEL: Record<string, string> = {
-  shippingDocumentationFile: "Shipping documentation",
-  customerCommunicationFile: "Customer communication",
-  serviceDocumentationFile: "Proof of service",
-  refundPolicyFile: "Refund policy",
-  cancellationPolicyFile: "Cancellation policy",
-  uncategorizedFile: "Other evidence",
-};
-
 type PillVariant = "strong" | "moderate" | "supporting" | "none";
 
 const PILL_STYLES: Record<PillVariant, { bg: string; color: string }> = {
@@ -257,26 +248,10 @@ export function EvidenceRow({
     t,
   );
 
-  const attachmentChip = item.nativeAttachment ? (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        padding: "1px 8px",
-        marginLeft: 6,
-        borderRadius: 999,
-        fontSize: 11,
-        fontWeight: 600,
-        background: "#DCFCE7",
-        color: "#065F46",
-      }}
-    >
-      {`📎 ${
-        TARGET_FIELD_LABEL[item.nativeAttachment.targetField] ??
-        item.nativeAttachment.targetField
-      }`}
-    </span>
-  ) : null;
+  // The native-attachment chip was deleted 2026-08-04 with the rest of the
+  // unwired Shopify file-slot layer. It read `attachmentUploads`, which no
+  // writer has ever populated (0 packs in prod), so it never rendered.
+  const attachmentChip = null;
 
   return (
     <RowFrame
