@@ -673,46 +673,17 @@ export function evaluateCompletenessV2(
           };
         });
 
-  // Always-include fields: evidence that the collector produces regardless
-  // of template (e.g. Device & Location Consistency is a system-wide signal,
-  // not template-owned). If the collector wrote the field into the pack
-  // AND the checklist doesn't already carry a row for it, append one so the
-  // UI renders the card. Priority is `recommended` / `supporting_only` —
-  // never critical — because these fields never block submission.
-  const ALWAYS_INCLUDE_IF_COLLECTED: Array<{
-    field: string;
-    label: string;
-    priority: EvidenceItemPriority;
-    source: EvidenceItemSource;
-  }> = [
-    {
-      field: "ip_location_check",
-      label: "IP & Location Check",
-      priority: "recommended",
-      source: "auto_ipinfo",
-    },
-    // Reserved slot for the future Device & Session Consistency collector.
-    // No collector writes this today, so the row is naturally hidden
-    // (presentFields.has(...) is false → checklist push skipped).
-    {
-      field: "device_session_consistency",
-      label: "Device & Session Consistency",
-      priority: "recommended",
-      source: "auto_ipinfo",
-    },
-  ];
-  for (const extra of ALWAYS_INCLUDE_IF_COLLECTED) {
-    if (!presentFields.has(extra.field)) continue;
-    if (checklist.some((c) => c.field === extra.field)) continue;
-    checklist.push({
-      field: extra.field,
-      label: extra.label,
-      status: "available",
-      priority: extra.priority,
-      blocking: false,
-      source: extra.source,
-    });
-  }
+  // ALWAYS_INCLUDE_IF_COLLECTED was removed 2026-08-04 (P6).
+  //
+  // It appended `ip_location_check` / `device_session_consistency` rows when
+  // the collector produced them but the template had no row — a hand-list that
+  // solved the problem for exactly two fields and only at BUILD time, so it
+  // never reached an already-built pack.
+  //
+  // `reconcileChecklistWithCollectedFields` now appends a row for ANY collected
+  // canonical field, and it runs on every READ as well as every build. Keeping
+  // this list alive would be a second place to remember, which is the drift
+  // surface this migration exists to remove.
 
   const metrics = deriveCompletenessMetrics(checklist);
   return { checklist, ...metrics };
