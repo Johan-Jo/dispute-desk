@@ -219,18 +219,46 @@ describe("evidence divergence manifest", () => {
     expect(EVIDENCE_FIELD_KEYS.length).toBeGreaterThanOrEqual(20);
   });
 
-  it("the detector reproduces the known incident", () => {
-    // #352552 is PRODUCT_UNACCEPTABLE with a collected 3-D Secure receipt.
-    // If this stops matching, the detector — not the bug — has broken.
-    const incident = generated.find(
-      (e) =>
-        e.fieldKey === "tds_authentication" && e.reason === "PRODUCT_UNACCEPTABLE",
-    );
+  it("the detector still WORKS — it finds the incident against the pre-fix rule", () => {
+    // The manifest is now empty, which is the goal. But an empty manifest and
+    // a broken detector look identical, so this re-runs the detection against
+    // the OLD flip-only reconcile rule and asserts it still reports the
+    // original 76. Without this, deleting the detector would "close" the
+    // migration.
+    const emitters = collectorEmittedFields();
+    const collected = new Set(emitters.keys());
+    const legacyOffenders: string[] = [];
+    for (const reason of REASONS) {
+      const result = evaluateCompletenessV2(reason, collected, [], null, PERMISSIVE);
+      // Pre-fix behaviour: flip existing rows, never append.
+      const rowFields = new Set(result.checklist.map((c) => c.field));
+      for (const field of collected) {
+        if (!rowFields.has(field)) {
+          legacyOffenders.push(`${reason ?? "GENERAL(null)"}:${field}`);
+        }
+      }
+    }
     expect(
-      incident,
-      "The detector no longer reports the tds_authentication / " +
-        "PRODUCT_UNACCEPTABLE divergence that this migration exists to fix.",
-    ).toBeTruthy();
+      legacyOffenders.length,
+      "The detector no longer reproduces the original divergence against the " +
+        "pre-fix rule, so an empty manifest proves nothing.",
+    ).toBeGreaterThanOrEqual(70);
+    expect(
+      legacyOffenders.some((o) => o.endsWith(":tds_authentication")),
+      "blume-box #352552 — tds_authentication — is no longer detectable.",
+    ).toBe(true);
+  });
+
+  it("the incident is CLOSED: no collected field is invisible on any reason", () => {
+    // The migration's definition of done for the `visibility` property.
+    // `reconcileChecklistWithCollectedFields` now appends a row for any
+    // collected canonical field the reason template omitted, so every field a
+    // collector emits reaches the merchant surfaces and the scorer.
+    expect(
+      generated.map((e) => `${e.reason}:${e.fieldKey}`),
+      "A collected field is still invisible. Each entry is a (reason, field) " +
+        "pair the merchant cannot see while factClassifier can cite it.",
+    ).toEqual([]);
   });
 
   it("every reported field is a real registry field", () => {
