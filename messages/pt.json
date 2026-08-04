@@ -1490,7 +1490,8 @@
       "customer_communication": "Mostra que você tentou resolver o problema — os bancos favorecem lojistas que se engajam",
       "duplicate_explanation": "Explica por que as cobranças não são duplicadas — necessário em respostas a disputas de duplicação",
       "supporting_documents": "Comprovações adicionais que fortalecem seu caso",
-      "activity_log": "Atividade da conta que comprova engajamento legítimo do cliente"
+      "activity_log": "Atividade da conta que comprova engajamento legítimo do cliente",
+      "tds_authentication": "Mostra que o banco autenticou o titular com 3-D Secure antes do pagamento — a prova mais forte de que o titular real aprovou."
     },
     "targetField": {
       "SHIPPING_DOCUMENTATION": "Documentação de envio",
@@ -1861,7 +1862,12 @@
     "strengthFilterAny": "Qualquer solidez de provas",
     "kpiAmountAtRiskOther": "Mais disputas em outras moedas: {list}",
     "outcomeClosed": "Encerrada",
-    "urgentBannerBodyOverdue": "{amount} em risco — o prazo mais próximo já passou"
+    "urgentBannerBodyOverdue": "{amount} em risco — o prazo mais próximo já passou",
+    "citation": {
+      "withheldInternal": "Mantido interno — este sinal é apenas para a sua revisão e nunca é mostrado ao banco.",
+      "threeDsNoLiabilityShift": "Mantido interno — a autenticação não foi concluída, por isso citá-la enfraqueceria a resposta.",
+      "ipNotBankEligible": "Mantido interno — a correspondência de localização não é clara o suficiente para o banco."
+    }
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banco não pode processar",

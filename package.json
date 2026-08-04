@@ -55,7 +55,8 @@
     "verify:app-store-url": "node scripts/verify-app-store-url.mjs",
     "add:admin-user": "node scripts/add-admin-user.mjs",
     "puppeteer:admin": "node scripts/puppeteer-admin-login.mjs",
-    "puppeteer:reset-rebuild": "node scripts/puppeteer-reset-rebuild.mjs"
+    "puppeteer:reset-rebuild": "node scripts/puppeteer-reset-rebuild.mjs",
+    "analysis:evidence": "vitest run --config vitest.analysis.config.ts"
   },
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",

@@ -14,12 +14,34 @@
  * Rules:
  *  - Only `missing` rows are flipped to `available`. Intentional states
  *    (`unavailable`, `waived`, `available`) are preserved.
+ *  - A collected field with NO row at all is APPENDED (see below).
  *  - Applies to every canonical field, supporting items included.
  *  - Pure: no DB I/O. Used both at build time (to persist) and on read
  *    (to normalize older packs without rebuild).
+ *
+ * THE APPEND RULE (2026-08-04). Until now this function could only flip an
+ * existing row, never add one — so a collector output with no template row was
+ * invisible on every merchant surface and skipped by the scorer
+ * (`caseStrength.ts:511-513` iterates the checklist), while `factClassifier`
+ * read `pack_json.sections` directly and cited it to the issuer. That is
+ * blume-box #352552: a real ECI 02 liability shift argued to the bank and
+ * shown to the merchant nowhere. The canonical evidence model measured the
+ * scope: 76 (field × reason) pairs across 14 fields
+ * (docs/evidence-model/divergence-manifest.json).
+ *
+ * This is the ONE function both pipelines' inputs pass through — build time
+ * (`buildPack.ts:663`) and every read (`workspace/route.ts:420`) — so making
+ * it additive fixes every existing open pack on the next page load, with no
+ * rebuild and no backfill. Appended rows are `optional` priority: the reason
+ * template did not ask for them, so they must not outweigh a field it did.
  */
 
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
+import {
+  EVIDENCE_FIELD_KEYS,
+  isEvidenceField,
+} from "@/lib/evidence/model/domains";
+import { definitionFor } from "@/lib/evidence/model/definitions";
 
 interface SectionLike {
   fieldsProvided?: string[] | null;
@@ -87,9 +109,38 @@ export function reconcileChecklistWithCollectedFields(
 ): ChecklistItemV2[] {
   const normalized = normalizeChecklistV2Shape(checklist);
   if (!normalized) return [];
-  return normalized.map((c) => {
+
+  const flipped = normalized.map((c) => {
     if (c.status !== "missing") return c;
     if (!collected.has(c.field)) return c;
     return { ...c, status: "available" as const, unavailableReason: undefined };
   });
+
+  // Append collected canonical fields the template never gave a row.
+  // Iterating EVIDENCE_FIELD_KEYS (not `collected`) keeps the output order
+  // stable and silently ignores anything unregistered — those are reported by
+  // the model's `nonEvidence.operational.unregisteredFields`, not rendered.
+  const present = new Set(flipped.map((c) => c.field));
+  const appended: ChecklistItemV2[] = [];
+  for (const field of EVIDENCE_FIELD_KEYS) {
+    if (present.has(field)) continue;
+    if (!collected.has(field)) continue;
+    if (!isEvidenceField(field)) continue;
+    appended.push({
+      field,
+      // Empty by design: `lib/**` must not emit English, and every render site
+      // resolves the localized name from `CANONICAL_EVIDENCE[field].labelKey`
+      // (e.g. useEvidenceSections `fieldLabel`), falling back to this only
+      // when the key is missing.
+      label: "",
+      status: "available",
+      priority: "optional",
+      blocking: false,
+      source: definitionFor(field).merchantSuppliable
+        ? "manual_upload"
+        : "auto_shopify",
+    });
+  }
+
+  return appended.length > 0 ? [...flipped, ...appended] : flipped;
 }

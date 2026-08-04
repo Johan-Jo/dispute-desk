@@ -1490,7 +1490,8 @@
       "customer_communication": "Zeigt, dass Sie versucht haben, das Problem zu lösen — Banken bevorzugen Händler, die sich engagieren",
       "duplicate_explanation": "Erklärt, warum die Belastungen keine Duplikate sind — erforderlich für Antworten auf doppelte Belastung",
       "supporting_documents": "Zusätzliche Beweise, die Ihren Fall stärken",
-      "activity_log": "Kontoaktivität, die legitime Kundeninteraktion belegt"
+      "activity_log": "Kontoaktivität, die legitime Kundeninteraktion belegt",
+      "tds_authentication": "Zeigt, dass die Bank den Karteninhaber vor der Zahlung per 3-D Secure authentifiziert hat — der stärkste Nachweis, dass der echte Karteninhaber zugestimmt hat."
     },
     "targetField": {
       "SHIPPING_DOCUMENTATION": "Versanddokumentation",
@@ -1861,7 +1862,12 @@
     "strengthFilterAny": "Beliebige Beweisstärke",
     "kpiAmountAtRiskOther": "Plus Streitfälle in anderen Währungen: {list}",
     "outcomeClosed": "Geschlossen",
-    "urgentBannerBodyOverdue": "{amount} gefährdet — früheste Frist ist verstrichen"
+    "urgentBannerBodyOverdue": "{amount} gefährdet — früheste Frist ist verstrichen",
+    "citation": {
+      "withheldInternal": "Intern behalten — dieses Signal dient nur Ihrer Prüfung und wird der Bank nie gezeigt.",
+      "threeDsNoLiabilityShift": "Intern behalten — die Authentifizierung wurde nicht abgeschlossen; sie zu nennen würde die Antwort schwächen.",
+      "ipNotBankEligible": "Intern behalten — die Standortübereinstimmung ist nicht eindeutig genug für die Bank."
+    }
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank kann nicht verarbeiten",
