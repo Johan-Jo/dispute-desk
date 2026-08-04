@@ -503,8 +503,12 @@ export function useDisputeWorkspace(disputeId: string) {
           }
         }
         const checklistRow = data.pack.checklistV2?.find((c) => c.field === field);
+        // `||` not `??`: rows APPENDED by reconcileChecklistWithCollectedFields
+        // carry `label: ""` by design (lib/** may not emit English), and `??`
+        // only falls back on null/undefined — an empty string would sail
+        // through and render a blank evidence title in the upload toast.
         const evidenceTitle =
-          checklistRow?.label ?? field.replace(/_/g, " ");
+          checklistRow?.label || field.replace(/_/g, " ");
         const fileSummary =
           files.length === 1
             ? files[0].name
