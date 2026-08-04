@@ -242,6 +242,58 @@ describe("P2c — completeness threshold crossings (prod, read-only)", () => {
       }
     }
 
+    // ── Recommended threshold under the "usable evidence" semantics ──
+    //
+    // DECISION (user, 2026-08-04): completeness measures usable evidence, not
+    // mere collection. The model therefore scores lower than the template
+    // baseline, and each shop's auto_save_min_score must be lowered BEFORE
+    // the semantics ship — otherwise 64 of 76 packs silently stop auto-filing.
+    //
+    // The recommendation preserves TODAY'S dispositions exactly: the highest
+    // threshold at which every pack that auto-saves now still auto-saves, and
+    // no pack that is blocked now newly passes. Where those two constraints
+    // cannot both hold, the conflict is printed rather than resolved silently.
+    console.log(
+      "\n=== RECOMMENDED auto_save_min_score (preserves today's dispositions) ===\n",
+    );
+    for (const [shop, list] of [...byShop].sort((a, b) => b[1].length - a[1].length)) {
+      const thr = list[0].threshold;
+      const passesToday = list.filter((r) => r.runtime >= thr);
+      const blockedToday = list.filter((r) => r.runtime < thr);
+      // Must be <= the weakest pack that passes today...
+      const floor = passesToday.length
+        ? Math.min(...passesToday.map((r) => r.strict))
+        : null;
+      // ...and > the strongest pack that is blocked today.
+      const ceiling = blockedToday.length
+        ? Math.max(...blockedToday.map((r) => r.strict))
+        : null;
+      const ok = floor !== null && (ceiling === null || floor > ceiling);
+      console.log(
+        `${shop.padEnd(26)} current=${thr}  recommended=${floor ?? "n/a"}` +
+          `  (must stay above blocked-max ${ceiling ?? "n/a"})  ${ok ? "OK" : "CONFLICT"}`,
+      );
+      if (!ok && floor !== null && ceiling !== null) {
+        console.log(
+          `   No single threshold preserves both: the weakest pack that passes today scores ` +
+            `${floor}, while a pack blocked today scores ${ceiling}. The new semantics do not ` +
+            `merely rescale — they REORDER. Some disposition must change; the trade at each ` +
+            `candidate threshold:`,
+        );
+        // Enumerate every candidate so the choice is made on counts, not vibes.
+        const candidates = [...new Set(list.map((r) => r.strict))].sort((a, b) => a - b);
+        for (const t of candidates) {
+          const newlyFiles = blockedToday.filter((r) => r.strict >= t).length;
+          const newlyBlocked = passesToday.filter((r) => r.strict < t).length;
+          if (newlyFiles === 0 && newlyBlocked === 0) continue;
+          console.log(
+            `     threshold ${String(t).padStart(3)} → newly AUTO-FILES ${newlyFiles}, ` +
+              `newly BLOCKS ${newlyBlocked}`,
+          );
+        }
+      }
+    }
+
     const stale = rows.filter((r) => r.persisted !== r.runtime);
     console.log(`\n-- persisted vs runtime (stale snapshots) -- ${stale.length} of ${rows.length}`);
     for (const s of stale.slice(0, 10)) {
