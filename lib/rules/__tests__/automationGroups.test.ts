@@ -65,6 +65,7 @@ describe("automation group model", () => {
       coverageState: "not_covered",
       fatalLoss: null,
       caseStrength: "strong",
+      creditAlreadyIssued: null,
     });
     expect(verdict.decision).toBe("proceed");
   });
@@ -79,6 +80,7 @@ describe("automation group model", () => {
         coverageState: "not_covered",
         fatalLoss: null,
         caseStrength: "strong",
+      creditAlreadyIssued: null,
       });
       expect(verdict.decision, group.id).toBe("proceed");
     }

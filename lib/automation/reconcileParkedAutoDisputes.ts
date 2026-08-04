@@ -94,6 +94,13 @@ export async function reconcileParkedAutoDisputes(
       coverageState: packJson.coverage?.state,
       fatalLoss: packJson.fatal_loss,
       caseStrength: strength,
+      // Previously omitted (P5, 2026-08-04). This path only promotes Strong
+      // packs, so a credited case already passed via the floor — but the gate
+      // set must be identical across all four call sites or "the SAME decision
+      // the pipeline applies" in the comment above stops being true.
+      creditAlreadyIssued:
+        (packJson as { credit_already_issued?: { triggered?: boolean; coversDisputedAmount?: boolean } })
+          .credit_already_issued ?? null,
     });
     if (verdict.decision !== "proceed") continue;
 
