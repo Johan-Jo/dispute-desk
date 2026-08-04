@@ -183,3 +183,70 @@ describe("normalizeChecklistV2Shape — defensive read-side unwrap", () => {
     ).not.toThrow();
   });
 });
+
+/**
+ * The append rule (2026-08-04). Reconcile could previously only FLIP an
+ * existing row, so a collected field with no template row was invisible on
+ * every merchant surface and skipped by the scorer — while `factClassifier`
+ * read `pack_json.sections` directly and cited it to the issuer. That is
+ * blume-box #352552's 3-D Secure liability shift.
+ */
+describe("appends collected fields the template never gave a row", () => {
+  it("adds a row for a collected canonical field that is absent", () => {
+    const out = reconcileChecklistWithCollectedFields(
+      [
+        {
+          field: "order_confirmation",
+          label: "Order Confirmation",
+          status: "available",
+          priority: "critical",
+          blocking: false,
+          source: "auto_shopify",
+        },
+      ],
+      new Set(["order_confirmation", "tds_authentication"]),
+    );
+    const tds = out.find((c) => c.field === "tds_authentication");
+    expect(tds, "3-D Secure was collected but got no checklist row").toBeTruthy();
+    expect(tds!.status).toBe("available");
+    // The reason template did not ask for it, so it must not outweigh a field
+    // it did — `optional` is weight 0.1 in deriveCompletenessMetrics.
+    expect(tds!.priority).toBe("optional");
+    expect(tds!.blocking).toBe(false);
+    // English label intentionally empty: lib/** may not emit English, and
+    // every render site resolves from CANONICAL_EVIDENCE[field].labelKey.
+    expect(tds!.label).toBe("");
+  });
+
+  it("does not append a field that was not collected", () => {
+    const out = reconcileChecklistWithCollectedFields([], new Set([]));
+    expect(out).toEqual([]);
+  });
+
+  it("ignores unregistered field keys instead of rendering them", () => {
+    const out = reconcileChecklistWithCollectedFields(
+      [],
+      new Set(["not_a_real_field", "shopify_protect_coverage"]),
+    );
+    // shopify_protect_coverage is domain `coverage`, not evidence — it is a
+    // gate, and must never appear as a merchant evidence row.
+    expect(out).toEqual([]);
+  });
+
+  it("renders a pack whose checklist is NULL but whose sections collected evidence", () => {
+    // surasvenne #SEED-1001 on dev: pack `ready`, 5 collected sections,
+    // checklist_v2 NULL — the dispute page rendered completely empty while
+    // every one of those fields was citable to the issuer. The early
+    // `return []` on an unparseable checklist caused it.
+    const out = reconcileChecklistWithCollectedFields(
+      null,
+      new Set(["order_confirmation", "avs_cvv_match", "delivery_proof"]),
+    );
+    expect(out.map((c) => c.field).sort()).toEqual([
+      "avs_cvv_match",
+      "delivery_proof",
+      "order_confirmation",
+    ]);
+    expect(out.every((c) => c.status === "available")).toBe(true);
+  });
+});

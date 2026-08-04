@@ -25,6 +25,7 @@ function held(overrides: Record<string, unknown> = {}) {
   return resolveHeldState({
     automationMode: "auto",
     caseStrength: "moderate",
+      creditAlreadyIssued: null,
     coverageState: "not_covered",
     fatalLoss: null,
     acknowledgement: OFFERABLE,

@@ -82,8 +82,16 @@ export interface AutoSubmitGuardInput {
    * fully-credited case back only risks the deadline. But it is legible
    * in the verdict, auditable, and one line to change if that call
    * turns out to be wrong.
+   *
+   * REQUIRED as of 2026-08-04 (P5). It was optional, and two of the four call
+   * sites — `buildDefencePackageJob.ts:646` and
+   * `reconcileParkedAutoDisputes.ts:93` — simply never passed it, so the same
+   * dispute could get a different verdict REASON depending on which path
+   * evaluated it. A trailing optional gate on a decision function is how gate
+   * sets drift apart; making it required means TypeScript, not vigilance,
+   * enforces that every caller has considered every gate.
    */
-  creditAlreadyIssued?:
+  creditAlreadyIssued:
     | { triggered?: boolean; coversDisputedAmount?: boolean }
     | null;
 }

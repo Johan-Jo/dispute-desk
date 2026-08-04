@@ -107,8 +107,15 @@ export function reconcileChecklistWithCollectedFields(
   checklist: ChecklistItemV2[] | null | undefined,
   collected: Set<string>,
 ): ChecklistItemV2[] {
-  const normalized = normalizeChecklistV2Shape(checklist);
-  if (!normalized) return [];
+  // A NULL/unparseable `checklist_v2` is treated as an empty checklist, not as
+  // "stop". Returning early here meant a pack that collected evidence but has
+  // no checklist rendered NOTHING — the merchant saw an empty dispute page
+  // while `pack_json.sections` held five collected sections and
+  // `factClassifier` could cite every one of them to the issuer.
+  // Found on dev via surasvenne #SEED-1001 (2026-08-04), whose pack is `ready`
+  // with 5 sections and a null checklist. Same shape as any pack whose
+  // checklist write failed after the sections were persisted.
+  const normalized = normalizeChecklistV2Shape(checklist) ?? [];
 
   const flipped = normalized.map((c) => {
     if (c.status !== "missing") return c;
