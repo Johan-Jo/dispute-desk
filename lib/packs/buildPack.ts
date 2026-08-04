@@ -56,6 +56,7 @@ import { enrichDisputeWithNetworkReasonCode } from "@/lib/disputes/enrichNetwork
 import { derivePaymentContext } from "@/lib/disputes/paymentContext";
 import { klarnaInquiryTemplateOverride } from "@/lib/packs/klarnaInquiryTemplate";
 import { evaluateQualification } from "@/lib/liabilityShift/evaluateQualification";
+import { deriveCaseEvidenceModel } from "@/lib/evidence/model/derive";
 import type { EvidenceSection, BuildContext } from "./types";
 import { readSectionLabel } from "./sectionLabel";
 import enMessages from "@/messages/en.json";
@@ -914,6 +915,32 @@ export async function buildPack(
     // not "broken". See docs/technical.md § Klarna-aware dispute handling.
     skipped_sections: skippedSections.length > 0 ? skippedSections : undefined,
     collectorErrors: collectorErrors.length > 0 ? collectorErrors : undefined,
+    // ── Canonical evidence model (P2a, shadow) ────────────────────────
+    // Persisted alongside so the model exists on every build and can be
+    // compared against the live consumers. NOTHING reads it for a decision
+    // yet — scoring, completeness, the three tabs, the PDF and the
+    // automation gates all still use their own derivations. Consumers
+    // migrate onto it in P2b → P5, each with its own measurement.
+    //
+    // Derived from `sections` only. `evidence_items` rows (merchant uploads,
+    // pasted acknowledgements) are added at read time, because their ids are
+    // assigned by the insert above and re-reading them here would cost a
+    // round trip for a value nothing consumes yet.
+    evidence_model: deriveCaseEvidenceModel({
+      disputeId: dispute.id,
+      reason: dispute.reason ?? null,
+      packId,
+      sections: allSections.map((s) => ({
+        source: s.source,
+        fieldsProvided: s.fieldsProvided,
+        data: s.data as Record<string, unknown> | null,
+      })),
+      waivedItems: waivedItems ?? [],
+      coverage: {
+        state: coverageSummary?.state ?? null,
+        shopifyProtectStatus: coverageSummary?.shopifyProtectStatus ?? null,
+      },
+    }).model,
   };
 
   // Update the pack row (dual-write: v1 checklist + v2 checklist).

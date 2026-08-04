@@ -647,6 +647,14 @@ export async function handleBuildDefencePackage(
       coverageState: coverage,
       fatalLoss,
       caseStrength: caseStrengthOverall,
+      // Previously omitted (P5, 2026-08-04). A fully-credited case reaches
+      // "strong" through the strength FLOOR, so the verdict was the same —
+      // but its REASON read `strong` here and `credit_already_issued` in the
+      // pipeline, for one dispute. The audit trail now agrees with itself.
+      creditAlreadyIssued:
+        (packJson.credit_already_issued as
+          | { triggered?: boolean; coversDisputedAmount?: boolean }
+          | undefined) ?? null,
     });
     if (verdict.decision !== "proceed") {
       resolvedMode = "review";

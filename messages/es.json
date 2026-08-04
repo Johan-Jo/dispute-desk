@@ -1490,7 +1490,8 @@
       "customer_communication": "Muestra que intentaste resolver el problema — los bancos favorecen a los comerciantes que se involucran",
       "duplicate_explanation": "Explica por qué los cargos no son duplicados — requerido para responder a disputas de duplicado",
       "supporting_documents": "Pruebas adicionales que fortalecen tu caso",
-      "activity_log": "Actividad de la cuenta que demuestra interacción legítima del cliente"
+      "activity_log": "Actividad de la cuenta que demuestra interacción legítima del cliente",
+      "tds_authentication": "Muestra que el banco autenticó al titular con 3-D Secure antes de procesar el pago: la prueba más sólida de que el titular real lo aprobó."
     },
     "targetField": {
       "SHIPPING_DOCUMENTATION": "Documentación de envío",
@@ -1861,7 +1862,12 @@
     "strengthFilterAny": "Cualquier solidez de pruebas",
     "kpiAmountAtRiskOther": "Más disputas en otras monedas: {list}",
     "outcomeClosed": "Cerrada",
-    "urgentBannerBodyOverdue": "{amount} en riesgo — el plazo más próximo ya venció"
+    "urgentBannerBodyOverdue": "{amount} en riesgo — el plazo más próximo ya venció",
+    "citation": {
+      "withheldInternal": "Uso interno: esta señal es solo para tu revisión y nunca se muestra al banco.",
+      "threeDsNoLiabilityShift": "Uso interno: la autenticación no se completó, así que citarla debilitaría la respuesta.",
+      "ipNotBankEligible": "Uso interno: la coincidencia de ubicación no es lo bastante clara para presentarla al banco."
+    }
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "El banco no puede procesar",

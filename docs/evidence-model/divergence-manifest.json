@@ -1,0 +1,6 @@
+{
+  "$comment": "GENERATED — do not hand-edit entries. Run UPDATE_EVIDENCE_MANIFEST=1 npx vitest run tests/unit/evidenceDivergenceManifest.test.ts. Status flips to 'closed' as each migration phase lands; the migration is done when `entries` is empty.",
+  "generatedBy": "tests/unit/evidenceDivergenceManifest.test.ts",
+  "openCount": 0,
+  "entries": []
+}

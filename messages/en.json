@@ -896,7 +896,8 @@
       "customer_communication": "Shows you attempted to resolve the issue — banks favor merchants who engage",
       "duplicate_explanation": "Explains why the charges are not duplicates — required for duplicate dispute responses",
       "supporting_documents": "Additional proof that strengthens your case",
-      "activity_log": "Account activity that proves legitimate customer engagement"
+      "activity_log": "Account activity that proves legitimate customer engagement",
+      "tds_authentication": "Shows the issuer authenticated the cardholder with 3-D Secure before the payment went through — the strongest proof the real cardholder approved it."
     },
     "targetField": {
       "SHIPPING_DOCUMENTATION": "Shipping documentation",
@@ -1861,7 +1862,12 @@
     "strengthFilterAny": "Any evidence strength",
     "kpiAmountAtRiskOther": "Plus disputes in other currencies: {list}",
     "outcomeClosed": "Closed",
-    "urgentBannerBodyOverdue": "{amount} at risk — earliest deadline has passed"
+    "urgentBannerBodyOverdue": "{amount} at risk — earliest deadline has passed",
+    "citation": {
+      "withheldInternal": "Kept internal — this signal is for your review only and is never shown to the bank.",
+      "threeDsNoLiabilityShift": "Kept internal — the authentication did not complete, so citing it would weaken the response.",
+      "ipNotBankEligible": "Kept internal — the location match is not clean enough to put in front of the bank."
+    }
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Bank cannot process",

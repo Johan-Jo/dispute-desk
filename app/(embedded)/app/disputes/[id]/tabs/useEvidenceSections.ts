@@ -145,21 +145,10 @@ export interface EvidenceRowViewModel {
   whyThisMatters: string;
   source: EvidenceSource;
   /**
-   * Where this row's evidence lands in the bank-facing case. Always
-   * deterministic — see EvidenceSubmissionDestination doc.
-   */
-  includedAs: EvidenceSubmissionDestination;
-  /**
    * File evidence layer (Phase 6). Set when the most recent save run
    * uploaded a focused PDF for this field key into a Shopify `*File`
    * slot. Drives the clip-icon badge in EvidenceRow.
    */
-  nativeAttachment?: {
-    /** The Shopify mutation field key (e.g. `shippingDocumentationFile`). */
-    targetField: string;
-    /** ISO timestamp captured when the upload landed. */
-    uploadedAt: string;
-  };
 }
 
 export interface MissingItemViewModel {
@@ -308,106 +297,24 @@ function inferSource(field: string): EvidenceSource {
   return "shopify";
 }
 
-/* ── Submission destination derivation ──
+/*
+ * DELETED 2026-08-04: EVIDENCE_TO_SHOPIFY, ATTACHMENT_FIELDS,
+ * buildIncludedShopifyFieldSet, deriveSubmissionDestination.
  *
- * Maps each canonical evidence field to the set of Shopify mutation
- * field names it can contribute to. Drawn from
- * `lib/shopify/fieldMapping.ts` + `formatEvidenceForShopify.ts` —
- * the same source the actual payload uses.
+ * They described a submission model we abandoned — individual evidence fields
+ * routed to named Shopify slots (accessActivityLog, shippingDocumentationFile,
+ * refundPolicyDisclosure …). `composeShopifyMutationPayload` has only ever
+ * sent ONE file, the defence-package PDF, plus the customer name and email.
  *
- * Empty list = the evidence is not directly addressable as a Shopify
- * field; it influences the rebuttal narrative instead (AVS/CVV,
- * IP/location, device/session). Those rows resolve to `rebuttal_text`,
- * never to a fake "Yes" claim on a non-existent field.
- *
- * Each entry is the COMPLETE list of Shopify field names this
- * evidence can land in; the row resolves to `form_field` when at
- * least one of them is `included: true` in `data.submissionFields`.
+ * None of it ever reached a merchant: `submissionFields` was declared in
+ * WorkspaceData but never populated by any writer, so `includedShopifyFields`
+ * was always empty, and the resulting `includedAs` was computed and never
+ * rendered by any component. Worse, had `submissionFields` ever been
+ * populated, this would have reported `not_included` for nearly every field —
+ * telling merchants their evidence was left out when all of it is woven into
+ * the PDF that IS the submission. Dead code that encodes the wrong answer is
+ * worse than no code.
  */
-const EVIDENCE_TO_SHOPIFY: Record<string, readonly string[]> = {
-  // Order facts → access activity log (timeline)
-  order_confirmation: ["accessActivityLog"],
-  billing_address_match: ["accessActivityLog"],
-  customer_account_info: ["accessActivityLog"],
-  activity_log: ["accessActivityLog"],
-
-  // Fulfillment → carrier doc + activity log
-  shipping_tracking: ["shippingDocumentationFile", "accessActivityLog"],
-  delivery_proof: ["shippingDocumentationFile", "accessActivityLog"],
-
-  // Policies → dedicated Shopify fields
-  refund_policy: ["refundPolicyDisclosure"],
-  cancellation_policy: ["cancellationPolicyDisclosure"],
-  // No dedicated `shippingPolicyDisclosure` exists in Shopify's schema.
-  // Shipping policy text is folded into uncategorizedText when emitted.
-  shipping_policy: ["uncategorizedText"],
-
-  // Customer communication → uncategorizedText (per fieldMapping.ts:91)
-  customer_communication: ["uncategorizedText"],
-
-  // Merchant evidence
-  product_description: ["uncategorizedText"],
-  duplicate_explanation: ["uncategorizedText", "refundRefusalExplanation"],
-
-  // Embedded / derived signals: appear (if at all) inside other fields'
-  // narrative text, never as a dedicated Shopify field. Rows resolve
-  // to `rebuttal_text` — they do reach the bank, just not as a discrete
-  // structured field.
-  avs_cvv_match: [],
-  ip_location_check: [],
-  device_session_consistency: [],
-};
-
-/**
- * Fields whose merchant-visible "available" status implies they ride
- * along with the Shopify submission as attachments rather than as
- * mutation fields (so they don't appear in `submissionFields`). Treated
- * as `form_field` when present — they ARE structured submission inputs,
- * just on the file-attachment channel.
- */
-const ATTACHMENT_FIELDS: ReadonlySet<string> = new Set([
-  "supporting_documents",
-]);
-
-function buildIncludedShopifyFieldSet(
-  data: WorkspaceData,
-): ReadonlySet<string> {
-  const set = new Set<string>();
-  for (const f of data.submissionFields ?? []) {
-    if (f.included) set.add(f.shopifyFieldName);
-  }
-  return set;
-}
-
-function deriveSubmissionDestination(args: {
-  field: string;
-  evidenceStatus: EvidenceItemWithStrength["status"] | undefined;
-  excludedFields: ReadonlySet<string>;
-  includedShopifyFields: ReadonlySet<string>;
-}): EvidenceSubmissionDestination {
-  // Waived items are explicitly excluded from the bank-visible payload.
-  if (args.evidenceStatus === "waived") return "not_included";
-
-  // Merchant has explicitly toggled this field off in the review UI.
-  if (args.excludedFields.has(args.field)) return "not_included";
-
-  // File-attachment fields ride the submission's attachments channel
-  // rather than `submissionFields`. Available + not-excluded = form_field.
-  if (ATTACHMENT_FIELDS.has(args.field)) return "form_field";
-
-  // Post-retirement: every piece of evidence that's not a structured
-  // Shopify file field rides inside the defence-package PDF (which IS
-  // the bank-facing submission). The legacy rebuttal_text destination
-  // doesn't exist anymore; evidence either lands in a discrete Shopify
-  // field or — much more commonly now — is woven into the PDF.
-  const mapped = EVIDENCE_TO_SHOPIFY[args.field];
-  if (!mapped || mapped.length === 0) return "not_included";
-
-  for (const shopifyField of mapped) {
-    if (args.includedShopifyFields.has(shopifyField)) return "form_field";
-  }
-  return "not_included";
-}
 
 /* ── Why-this-matters copy ──
  *
@@ -784,7 +691,9 @@ function deriveInternalOnlySignals(
     if (payload.bankEligible === false) {
       out.push({
         id: `internal:${item.field}:bank_ineligible`,
-        title: `${item.label} kept internal`,
+        // Appended checklist rows carry `label: ""` by design, and a template
+        // literal interpolates that happily — this read " kept internal".
+        title: `${item.label || item.field.replace(/_/g, " ")} kept internal`,
         explanation:
           "The upstream collector marked this signal as not bank-eligible. Used internally for assessment; not submitted to Shopify.",
       });
@@ -838,7 +747,6 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
 
   const excludedFields: ReadonlySet<string> =
     clientState?.excludedFields ?? new Set();
-  const includedShopifyFields = buildIncludedShopifyFieldSet(data);
 
   // Quick lookup: evidence checklist item by field key. Used for both
   // the Strong/Moderate contributions (which only carry an
@@ -888,29 +796,12 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
   };
 
   // ── Evidence used in defense ──
-  // Includes ALL supporting signals (strong + moderate + supporting),
-  // regardless of submission destination. Each row carries an explicit
-  // `includedAs` chip — form_field / rebuttal_text / not_included —
-  // derived from the same source as the Shopify payload.
+  // Includes ALL supporting signals (strong + moderate + supporting).
+  // The per-row `includedAs` chip was removed 2026-08-04 along with the
+  // unwired Shopify file-slot layer it was derived from — it was computed and
+  // never rendered, and would have read `not_included` for evidence that does
+  // reach the bank inside the defence PDF.
   const usedInDefense: EvidenceRowViewModel[] = [];
-
-  // File evidence layer (Phase 6) — index by evidenceFieldKey for O(1)
-  // lookup when building each row's `nativeAttachment` flag. Multiple
-  // uploads for the same field key (rare; e.g. delivery_proof primary
-  // + shipping_tracking overflow) collapse to the most recent.
-  const nativeAttachmentsByField = new Map<
-    string,
-    { targetField: string; uploadedAt: string }
-  >();
-  for (const u of data.pack?.attachmentUploads ?? []) {
-    const prior = nativeAttachmentsByField.get(u.evidenceFieldKey);
-    if (!prior || u.uploadedAt > prior.uploadedAt) {
-      nativeAttachmentsByField.set(u.evidenceFieldKey, {
-        targetField: u.targetField,
-        uploadedAt: u.uploadedAt,
-      });
-    }
-  }
 
   function buildRow(
     idPrefix: string,
@@ -919,7 +810,6 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
     strength: ItemStrength,
   ): EvidenceRowViewModel {
     const checklistItem = checklistByField.get(field);
-    const native = nativeAttachmentsByField.get(field);
     return {
       id: `${idPrefix}:${field}`,
       field,
@@ -927,13 +817,6 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
       strength,
       whyThisMatters: whyThisMatters(field, label),
       source: inferSource(field),
-      includedAs: deriveSubmissionDestination({
-        field,
-        evidenceStatus: checklistItem?.status,
-        excludedFields,
-        includedShopifyFields,
-      }),
-      ...(native ? { nativeAttachment: native } : {}),
     };
   }
 

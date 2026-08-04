@@ -1490,7 +1490,8 @@
       "customer_communication": "Montre que vous avez tenté de résoudre le problème — les banques favorisent les marchands qui s'impliquent",
       "duplicate_explanation": "Explique pourquoi les frais ne sont pas des doublons — indispensable pour répondre aux litiges de double facturation",
       "supporting_documents": "Preuves supplémentaires qui renforcent votre dossier",
-      "activity_log": "Activité du compte qui prouve un engagement client légitime"
+      "activity_log": "Activité du compte qui prouve un engagement client légitime",
+      "tds_authentication": "Montre que la banque a authentifié le titulaire via 3-D Secure avant le paiement — la preuve la plus solide que le vrai titulaire l'a approuvé."
     },
     "targetField": {
       "SHIPPING_DOCUMENTATION": "Documents d'expédition",
@@ -1861,7 +1862,12 @@
     "strengthFilterAny": "Toute solidité de preuves",
     "kpiAmountAtRiskOther": "Plus des litiges dans d'autres devises : {list}",
     "outcomeClosed": "Clôturé",
-    "urgentBannerBodyOverdue": "{amount} à risque — la première échéance est dépassée"
+    "urgentBannerBodyOverdue": "{amount} à risque — la première échéance est dépassée",
+    "citation": {
+      "withheldInternal": "Conservé en interne — ce signal sert uniquement à votre examen et n’est jamais montré à la banque.",
+      "threeDsNoLiabilityShift": "Conservé en interne — l'authentification n'a pas abouti ; la citer affaiblirait la réponse.",
+      "ipNotBankEligible": "Conservé en interne — la correspondance de localisation n’est pas assez nette pour la banque."
+    }
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "La banque ne peut pas traiter",

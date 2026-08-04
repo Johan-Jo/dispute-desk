@@ -97,20 +97,6 @@ export interface CanonicalSpec {
    *  `supportingOnly` for the canonical 4-state system; kept as a
    *  separate flag for forward compatibility with future tiers. */
   excludedFromStrength: boolean;
-  /** Static allow flag for the conditional file evidence layer
-   *  (Phase 1 of `docs/plans/conditional_file_evidence_layer.plan.md`).
-   *  When `true`, this field is *eligible in principle* to produce a
-   *  native Shopify *File attachment; the actual decision (whether to
-   *  attach, which `targetField`, payload-derived priority, reason-
-   *  family slot filtering) lives entirely in
-   *  `lib/shopify/decideFileAttachments.ts`. Only fields whose evidence
-   *  is genuinely file-shaped (delivery proof, customer communication,
-   *  signed contracts, policy acceptance receipts, digital-access
-   *  logs) are marked eligible. Text-derived signals (AVS/CVV,
-   *  3DS receipts, IP location) stay false because attaching a file
-   *  for them is meaningless. Defaults to `undefined` (treated as
-   *  false) for all unmarked fields. */
-  fileEligible?: boolean;
   /** Optional human note (audit-log friendly). */
   note?: string;
 }
@@ -180,7 +166,6 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     category: "moderate",
     supportingOnly: false,
     excludedFromStrength: false,
-    fileEligible: true,
     note: "signature_confirmed → strong; delivered_confirmed AND deliveredToVerifiedAddress → strong (rubric #9); delivered_confirmed alone → moderate; delivered_unverified → supporting; label_created → invalid.",
   },
   shipping_tracking: {
@@ -189,7 +174,6 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     category: "moderate",
     supportingOnly: false,
     excludedFromStrength: false,
-    fileEligible: true,
     note: "Same 4-state proofType mapping as delivery_proof, with the deliveredToVerifiedAddress upgrade for delivered_confirmed. Shares signalId 'delivery' so duplicate evidence does not double-count.",
   },
 
@@ -221,7 +205,6 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     category: "supporting",
     supportingOnly: false,
     excludedFromStrength: false,
-    fileEligible: true,
     note: "Strong when payload.customerConfirmsOrder === true (rubric #6 — explicit confirmation/admission). Otherwise supporting.",
   },
   customer_account_info: {
@@ -238,7 +221,6 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     category: "supporting",
     supportingOnly: false,
     excludedFromStrength: false,
-    fileEligible: true,
     note: "Strong when payload.decisiveSessionProof === true (rubric #4 — login + consistent device/session/IP) OR payload.digitalAccessUsed === true (rubric #7 — customer accessed/used digital good). Otherwise supporting. Shares signalId 'account_history' with customer_account_info — counted once in scoring.",
   },
   supporting_documents: {
@@ -247,7 +229,6 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     category: "supporting",
     supportingOnly: false,
     excludedFromStrength: false,
-    fileEligible: true,
     note: "Strong when payload.signedContract === true (rubric #3 — signed agreement / contract). Otherwise supporting (uploaded documents without decisive content).",
   },
   refund_policy: {
@@ -256,7 +237,6 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     category: "supporting",
     supportingOnly: false,
     excludedFromStrength: false,
-    fileEligible: true,
     note: "Strong when payload.acceptedAtCheckout === true with a payload.acceptanceTimestamp linking to the order (rubric #8). Otherwise supporting (text only).",
   },
   refund_record: {
@@ -281,7 +261,6 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     category: "supporting",
     supportingOnly: false,
     excludedFromStrength: false,
-    fileEligible: true,
     note: "Same acceptance rule as refund_policy (rubric #8).",
   },
   cancellation_policy: {
@@ -290,7 +269,6 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     category: "supporting",
     supportingOnly: false,
     excludedFromStrength: false,
-    fileEligible: true,
     note: "Same acceptance rule as refund_policy (rubric #8).",
   },
 
@@ -693,15 +671,5 @@ export function categoryFor(args: {
  *  strength. Always false for `supporting` and `invalid`. */
 export function affectsStrength(category: EvidenceCategory): boolean {
   return category === "strong" || category === "moderate";
-}
-
-/** Static eligibility check for the conditional file evidence layer.
- *  `true` when the field's spec opts in via `fileEligible: true`; this
- *  is a *necessary but not sufficient* condition for native attachment
- *  — the actual decision (priority, slot, reason-aware filtering)
- *  lives in `lib/shopify/decideFileAttachments.ts`. Unknown field keys
- *  return `false`. */
-export function isFileEligible(fieldKey: string): boolean {
-  return CANONICAL_EVIDENCE[fieldKey]?.fileEligible === true;
 }
 

@@ -253,7 +253,6 @@ export function EvidenceUsedSection({
       strength: "supporting",
       whyThisMatters: li.reasonToken ? resolveToken(tRoot, li.reasonToken) : (li.reason ?? ""),
       source: "shopify",
-      includedAs: "not_included",
     });
   }
 

@@ -20,6 +20,9 @@ function baseInput(overrides: Partial<AutoSubmitGuardInput> = {}): AutoSubmitGua
     coverageState: "not_covered",
     fatalLoss: { triggered: false, reason: null },
     caseStrength: "strong",
+    // Required as of 2026-08-04 (P5): every caller states every gate, so a
+    // path can no longer omit one and reach a different verdict reason.
+    creditAlreadyIssued: null,
     ...overrides,
   };
 }

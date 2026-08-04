@@ -119,6 +119,35 @@ export const SUBMISSION_RISK_FIELDS = new Set([
   // every clean IP match — supporting evidence we were discarding.
 ]);
 
+/**
+ * 3-D Secure is bank-citable only when it actually helps: a liability shift
+ * (ECI 02/05, authenticated, no SCA exemption) or a merchant-confirmed
+ * authentication. Everything else — "attempted", exempted, or a bare receipt
+ * read we cannot verify — stays out of every bank-facing surface.
+ *
+ * Extracted from the inline expression in `classifyFacts` (2026-08-04) so the
+ * canonical evidence model derives citation eligibility from the SAME
+ * predicate the bank filter uses, instead of a second copy that could drift.
+ * Behaviour is unchanged — `classifyFacts` calls this.
+ *
+ * The predicate belongs to the classifier by contract (see the header of
+ * `buildLlmFactPayload`): the LLM payload, the Evidence Basis rows and the
+ * workspace line items then agree by construction. They did not before — on
+ * blume-box #352552 the narrative correctly refused to argue 3DS while the
+ * PDF's Evidence Basis table asserted "3DS authenticated" to the same issuer,
+ * three lines below.
+ */
+export function isUnciteableThreeDsFact(
+  fieldKey: string,
+  value: { liabilityShift?: unknown; tdsVerified?: unknown } | null | undefined,
+): boolean {
+  return (
+    fieldKey === "tds_authentication" &&
+    value?.liabilityShift !== true &&
+    value?.tdsVerified !== true
+  );
+}
+
 /** Field keys whose facts must never appear in bank-facing surfaces by
  *  default. The LLM payload filter excludes them; `submission_risk=true`
  *  is set on the persisted row for the same reason. */
@@ -608,10 +637,7 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
       // on blume-box #352552 the narrative correctly refused to argue 3DS
       // while the PDF's Evidence Basis table asserted "3DS authenticated" to
       // the same issuer, three lines below.
-      const isUnciteableThreeDs =
-        fieldKey === "tds_authentication" &&
-        value.liabilityShift !== true &&
-        value.tdsVerified !== true;
+      const isUnciteableThreeDs = isUnciteableThreeDsFact(fieldKey, value);
 
       const fact: EvidenceFact = {
         id: factId,

@@ -902,7 +902,8 @@
       "customer_communication": "Visar att du försökt lösa problemet — banker föredrar köpmän som engagerar sig",
       "duplicate_explanation": "Förklarar varför debiteringarna inte är dubbla — krävs för dubbelttvistsvar",
       "supporting_documents": "Ytterligare bevis som stärker ditt ärende",
-      "activity_log": "Kontoaktivitet som bevisar legitimt kundengagemang"
+      "activity_log": "Kontoaktivitet som bevisar legitimt kundengagemang",
+      "tds_authentication": "Visar att banken autentiserade kortinnehavaren med 3-D Secure innan betalningen gick igenom — det starkaste beviset för att rätt kortinnehavare godkände den."
     },
     "targetField": {
       "SHIPPING_DOCUMENTATION": "Fraktdokumentation",
@@ -1861,7 +1862,12 @@
     "strengthFilterAny": "Alla bevisstyrkor",
     "kpiAmountAtRiskOther": "Plus tvister i andra valutor: {list}",
     "outcomeClosed": "Stängd",
-    "urgentBannerBodyOverdue": "{amount} i risk — närmaste tidsfrist har passerat"
+    "urgentBannerBodyOverdue": "{amount} i risk — närmaste tidsfrist har passerat",
+    "citation": {
+      "withheldInternal": "Hålls internt — signalen är endast för din granskning och visas aldrig för banken.",
+      "threeDsNoLiabilityShift": "Hålls internt — autentiseringen slutfördes inte, så att nämna den skulle försvaga svaret.",
+      "ipNotBankEligible": "Hålls internt — platsmatchningen är inte tillräckligt tydlig för att visas för banken."
+    }
   },
   "disputeReasons": {
     "BANK_CANNOT_PROCESS": "Banken kan inte behandla",
