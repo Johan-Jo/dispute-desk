@@ -26,7 +26,12 @@ import { createHash } from "crypto";
 import { categorizeEvidenceField } from "@/lib/argument/canonicalEvidence";
 import { isUnciteableThreeDsFact } from "@/lib/defence/factClassifier";
 import type { WaivedItemRecord } from "@/lib/types/evidenceItem";
-import { definitionFor, DEFINITION_REGISTRY_VERSION } from "./definitions";
+import {
+  definitionFor,
+  DEFINITION_REGISTRY_VERSION,
+  requirementModeFor,
+} from "./definitions";
+import { resolveRequirement, type OrderContext } from "@/lib/automation/completeness";
 import {
   instanceCount,
   normalizeEvidencePayload,
@@ -76,6 +81,13 @@ export interface DeriveCaseEvidenceModelInput {
   inclusionOverrides?: Record<string, "force_include" | "force_exclude"> | null;
   coverage?: { state?: string | null; shopifyProtectStatus?: string | null } | null;
   networkReasonCode?: string | null;
+  /**
+   * Order facts that decide whether a field CAN exist here (fulfilled, card
+   * payment, refunded). Omitted ⇒ everything is treated as applicable, which
+   * matches a model derived without order access; callers that have the
+   * context must pass it or completeness will read ~30 points low.
+   */
+  orderContext?: OrderContext | null;
 }
 
 /** Collector `source` strings → the typed provenance origin. */
@@ -369,6 +381,13 @@ export function deriveCaseEvidenceModel(
 
     const available = valid.length > 0;
 
+    // Order-applicability, from the SAME rule the completeness engine uses.
+    const mode = requirementModeFor(fieldKey, input.reason);
+    const applicable =
+      !input.orderContext || !mode
+        ? true
+        : resolveRequirement(mode, input.orderContext).collectable;
+
     fields[fieldKey] = {
       fieldKey,
       relevance,
@@ -378,6 +397,7 @@ export function deriveCaseEvidenceModel(
         .filter((r) => r.citation.eligibility === "eligible")
         .map((r) => r.recordId),
       status: {
+        applicable,
         // Reads record validity ONLY. Waiving never makes evidence available.
         available,
         required: relevance === "critical",

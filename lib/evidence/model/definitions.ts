@@ -24,7 +24,10 @@
 
 import { CANONICAL_EVIDENCE, type SignalId } from "@/lib/argument/canonicalEvidence";
 import { categoryForField } from "@/lib/defence/factClassifier";
-import { REASON_TEMPLATES_V2 } from "@/lib/automation/completeness";
+import {
+  REASON_TEMPLATES_V2,
+  type RequirementMode,
+} from "@/lib/automation/completeness";
 import type { EvidenceFactCategory } from "@/lib/defence/types";
 import { EVIDENCE_FIELD_KEYS, type EvidenceFieldKey } from "./domains";
 import type { AggregationRule, EvidenceDefinition } from "./types";
@@ -104,6 +107,22 @@ const MERCHANT_SUPPLIABLE: ReadonlySet<string> = new Set([
   "customer_communication",
   "duplicate_explanation",
 ]);
+
+/**
+ * Requirement mode from the reason template, or null when the template has no
+ * row for this field. Drives ORDER-APPLICABILITY (can this order produce it at
+ * all), which is a different question from relevance (does this reason weigh
+ * it) — collapsing the two costs ~30 completeness points, because
+ * `deriveCompletenessMetrics` excludes `unavailable` rows from the denominator.
+ */
+export function requirementModeFor(
+  field: string,
+  reason: string | null | undefined,
+): RequirementMode | null {
+  const template =
+    REASON_TEMPLATES_V2[String(reason ?? "")] ?? REASON_TEMPLATES_V2.GENERAL ?? [];
+  return template.find((t) => t.field === field)?.requirementMode ?? null;
+}
 
 /** Template priority → relevance. Absent from the template ⇒ not_applicable. */
 function relevanceFor(field: string, reason: string | null | undefined): RelevanceLevel {

@@ -164,6 +164,18 @@ export interface CaseEvidenceRecord {
  * the merchant just dismissed the request.
  */
 export interface FieldStatus {
+  /**
+   * Can THIS ORDER produce this field at all? False when the order has no
+   * refund (`refund_record`), is unfulfilled (`delivery_proof`), or was not a
+   * card payment (`avs_cvv_match`).
+   *
+   * A SIXTH concept, distinct from `relevance`. Relevance asks whether the
+   * dispute REASON weighs the field; applicability asks whether the ORDER
+   * could ever have it. Collapsing them into "missing" costs ~30 completeness
+   * points, because `deriveCompletenessMetrics` excludes `unavailable` rows
+   * from the denominator — found by measuring against prod, not by reading.
+   */
+  applicable: boolean;
   /** ≥1 record with `validity.state === "valid"`. Reads record validity ONLY. */
   available: boolean;
   required: boolean;

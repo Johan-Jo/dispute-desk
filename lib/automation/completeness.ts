@@ -193,7 +193,16 @@ const SCORE_WEIGHT: Record<RequirementMode, number> = {
  * Resolve whether a requirement mode is effectively required and
  * available given the order context.
  */
-function resolveRequirement(
+/**
+ * Exported 2026-08-04 so the canonical evidence model can derive
+ * order-applicability from the SAME rule instead of a second copy.
+ * `collectable: false` is what `resolveItemStatus` turns into `unavailable`,
+ * and `deriveCompletenessMetrics` excludes `unavailable` rows from the
+ * denominator — so a model that cannot express it computes a completeness
+ * score 30+ points adrift. Behaviour is unchanged; this was already the
+ * single implementation, it was just private.
+ */
+export function resolveRequirement(
   mode: RequirementMode,
   ctx: OrderContext,
 ): { required: boolean; collectable: boolean; unavailableReason?: string } {

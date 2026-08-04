@@ -25,7 +25,12 @@ import {
   type EvidencePayloadSource,
 } from "@/lib/argument/caseStrength";
 import type { CaseStrengthResult } from "@/lib/argument/types";
-import type { ChecklistItemV2, EvidenceItemPriority } from "@/lib/types/evidenceItem";
+import type {
+  ChecklistItemV2,
+  EvidenceItemPriority,
+  SubmissionReadiness,
+} from "@/lib/types/evidenceItem";
+import { deriveCompletenessMetrics } from "@/lib/automation/completeness";
 import { definitionFor } from "./definitions";
 import type { CaseEvidenceModel } from "./types";
 import type { RelevanceLevel } from "./vocabulary";
@@ -40,6 +45,12 @@ export interface CaseAssessment {
   sectionsHash: string;
   gates: CaseStrengthGates;
   strength: CaseStrengthResult;
+  completeness: {
+    score: number;
+    evidenceStrengthScore: number;
+    readiness: SubmissionReadiness;
+    blockers: string[];
+  };
 }
 
 const PRIORITY_BY_RELEVANCE: Record<RelevanceLevel, EvidenceItemPriority> = {
@@ -117,6 +128,53 @@ export function checklistFromModel(
   return out;
 }
 
+/**
+ * `model.fields` → the checklist COMPLETENESS reads.
+ *
+ * Deliberately NOT `checklistFromModel`. Scoring only looks at `available`
+ * rows, so omitting empty fields there is free. Completeness divides present
+ * weight by TOTAL weight, so an omitted empty field shrinks the denominator
+ * and silently inflates the score — which would push packs over their shop's
+ * `auto_save_min_score` and auto-file cases that park today. The two
+ * projections answer different questions and must stay separate.
+ *
+ * The row set mirrors today's template: fields the reason actually weighs.
+ * Collected-but-`not_applicable` fields join only under the permissive
+ * policy, and then they enter BOTH numerator and denominator.
+ */
+export function completenessChecklistFromModel(
+  model: CaseEvidenceModel,
+  policy: ScoringPolicy = DEFAULT_SCORING_POLICY,
+): ChecklistItemV2[] {
+  const out: ChecklistItemV2[] = [];
+  for (const summary of Object.values(model.fields)) {
+    const isRelevant = summary.relevance !== "not_applicable";
+    const counts =
+      isRelevant || (policy.scoreNotApplicable && summary.records.length > 0);
+    if (!counts) continue;
+    const def = definitionFor(summary.fieldKey);
+    out.push({
+      field: summary.fieldKey,
+      label: "",
+      // `unavailable` is NOT "missing". `deriveCompletenessMetrics` drops
+      // unavailable rows from the denominator entirely, so an order with no
+      // refund is not penalised for having no refund record. Collapsing the
+      // two read ~30 points low against prod.
+      status: summary.status.waived
+        ? "waived"
+        : summary.status.available
+          ? "available"
+          : summary.status.applicable
+            ? "missing"
+            : "unavailable",
+      priority: PRIORITY_BY_RELEVANCE[summary.relevance],
+      blocking: summary.status.blocking,
+      source: def.merchantSuppliable ? "manual_upload" : "auto_shopify",
+    });
+  }
+  return out;
+}
+
 export function deriveCaseAssessment(args: {
   model: CaseEvidenceModel;
   gates: CaseStrengthGates;
@@ -145,6 +203,11 @@ export function deriveCaseAssessment(args: {
     payloadSource,
     gates,
   );
+  // Same adapter discipline as strength: reuse the real engine rather than
+  // restate the weights, so a difference can only come from the row set.
+  const completeness = deriveCompletenessMetrics(
+    completenessChecklistFromModel(model, policy),
+  );
   return {
     assessmentVersion: 1,
     scoringPolicyVersion: SCORING_POLICY_VERSION,
@@ -152,5 +215,11 @@ export function deriveCaseAssessment(args: {
     sectionsHash: model.derivedFrom.sectionsHash,
     gates,
     strength,
+    completeness: {
+      score: completeness.completenessScore,
+      evidenceStrengthScore: completeness.evidenceStrengthScore,
+      readiness: completeness.submissionReadiness,
+      blockers: completeness.blockers,
+    },
   };
 }
