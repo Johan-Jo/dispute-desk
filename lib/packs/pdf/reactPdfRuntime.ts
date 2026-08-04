@@ -25,6 +25,3 @@ export async function getEvidencePackDocumentModule() {
   return import("@/lib/packs/pdf/EvidencePackDocument");
 }
 
-export async function getEvidenceAttachmentDocumentModule() {
-  return import("@/lib/packs/pdf/EvidenceAttachmentDocument");
-}

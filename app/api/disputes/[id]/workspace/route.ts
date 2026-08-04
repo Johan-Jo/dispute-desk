@@ -17,7 +17,6 @@ import {
   reconcileChecklistWithCollectedFields,
 } from "@/lib/packs/checklistReconcile";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
-import { isFileEvidenceAttachmentsEnabled } from "@/lib/featureFlags";
 import { deriveOrderContext } from "@/lib/defence/orderContext";
 import {
   deriveEvidenceLineItems,
@@ -492,22 +491,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
                   | null;
               }
             | undefined) ?? null,
-        // File evidence layer (Phase 6 — UI transparency). When the
-        // flag is on and the save job has run, `pack_json.attachmentUploads`
-        // is the authoritative record of which evidence_items landed
-        // in which Shopify *File slot. The UI renders a clip icon /
-        // badge on Evidence-tab rows that match an uploaded item and
-        // explains the routing in Review & Submit.
-        attachmentUploads:
-          ((packRow.pack_json as { attachmentUploads?: unknown } | null)?.attachmentUploads as
-            | Array<{
-                evidenceItemId: string;
-                evidenceFieldKey: string;
-                targetField: string;
-                fileGid: string;
-                uploadedAt: string;
-              }>
-            | undefined) ?? [],
         /** Gorgias evidence core: true when a merchant review action
          *  (approve/exclude/manual-add/reset or ticket reject) happened
          *  after this pack was generated — the snapshot no longer
@@ -607,39 +590,9 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     ? { mode: normalizeMode(rawAppliedMode) }
     : null;
 
-  // ── File evidence layer status (Phase 7b) ─────────────────────────
-  // Surface enough info for the embedded UI to:
-  //   - show a "Reinstall to enable" banner when the flag is on but
-  //     scopes are stale (merchant installed before commit f61176c),
-  //   - hide the banner when scopes are granted, regardless of flag,
-  //   - keep silent when the flag is off.
-  const flagEnabled = isFileEvidenceAttachmentsEnabled();
-  let scopesGranted = true;
-  let missingScopes: string[] = [];
-  if (flagEnabled) {
-    const { data: sessionRow } = await sb
-      .from("shop_sessions")
-      .select("scopes")
-      .eq("shop_id", row.shop_id)
-      .eq("session_type", "offline")
-      .is("user_id", null)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const scopesString = (sessionRow?.scopes as string | null | undefined) ?? "";
-    const granted = new Set(
-      scopesString.split(",").map((s) => s.trim()).filter(Boolean),
-    );
-    missingScopes = FILE_EVIDENCE_REQUIRED_SCOPES.filter(
-      (s) => !granted.has(s),
-    );
-    scopesGranted = missingScopes.length === 0;
-  }
-  const fileEvidence = {
-    flagEnabled,
-    scopesGranted,
-    missingScopes,
-  };
+  // The file-evidence layer status block was deleted 2026-08-04. It ran a
+  // shop_sessions query to compute scope readiness for a feature that was
+  // never wired, and returned `fileEvidence` to a UI that never read it.
 
   // ── 7. Derive presentationStatus + evidenceLineItems + submissionSummary ──
   // Single source of truth for the dispute-detail UI surfaces. Plan v2.
@@ -981,7 +934,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       strongestEvidence: template.strongestEvidence,
       issuerClaim: issuerClaimText,
     },
-    fileEvidence,
     // Defence package data for the embedded ReviewSubmitTab. Folded
     // into the workspace endpoint so the card no longer needs its own
     // fetch-on-mount — switching tabs is now instant and the existing
