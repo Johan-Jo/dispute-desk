@@ -691,7 +691,9 @@ function deriveInternalOnlySignals(
     if (payload.bankEligible === false) {
       out.push({
         id: `internal:${item.field}:bank_ineligible`,
-        title: `${item.label} kept internal`,
+        // Appended checklist rows carry `label: ""` by design, and a template
+        // literal interpolates that happily — this read " kept internal".
+        title: `${item.label || item.field.replace(/_/g, " ")} kept internal`,
         explanation:
           "The upstream collector marked this signal as not bank-eligible. Used internally for assessment; not submitted to Shopify.",
       });
