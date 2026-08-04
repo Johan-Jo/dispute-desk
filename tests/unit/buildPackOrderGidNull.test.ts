@@ -97,7 +97,13 @@ vi.mock("@/lib/argument/caseStrength", () => ({
       improvementHintI18n: null,
     }),
 }));
-vi.mock("@/lib/automation/completeness", () => ({
+// PARTIAL mock via importOriginal. A total mock had to enumerate every
+// export, so it broke the moment buildPack's dependency graph reached one it
+// did not list (`REASON_TEMPLATES_V2`, 2026-08-04). The three functions below
+// are the only ones this test needs to control; everything else stays real,
+// so the mock cannot drift out of date again.
+vi.mock("@/lib/automation/completeness", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/automation/completeness")>()),
   evaluateCompleteness: vi.fn().mockReturnValue({
     score: 0,
     blockers: [],

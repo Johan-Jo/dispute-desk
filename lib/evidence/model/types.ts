@@ -42,6 +42,7 @@ import type {
 import type { SignalId } from "@/lib/argument/canonicalEvidence";
 import type { EvidenceFactCategory } from "@/lib/defence/types";
 import type { WaivedItemRecord } from "@/lib/types/evidenceItem";
+import type { EvidencePayload } from "./payloads";
 
 /* ── Identity ────────────────────────────────────────────────────────── */
 
@@ -132,9 +133,24 @@ export interface CaseEvidenceRecord {
   fieldKey: EvidenceFieldKey;
   provenance: EvidenceProvenance;
   validity: Validity;
-  /** Meaningful only when `validity.state === "valid"`. */
+  /**
+   * Meaningful only when `validity.state === "valid"`.
+   *
+   * P2a note: quality is derived from the SECTION payload, so the two records
+   * of a two-parcel shipment currently share a grade. Per-instance grading
+   * changes what a case scores, and `categorizeEvidenceField` is the declared
+   * authority (R2) for that judgement — inventing a per-instance rule here
+   * would be choosing scoring policy inside a refactor. It belongs to P2b,
+   * with its transition matrix.
+   */
   quality: EvidenceQuality | null;
   citation: CitationState;
+  /**
+   * Normalized, field-discriminated. Consumers read this instead of raw
+   * collector JSON, which is what stops them re-deriving their own answers.
+   * `null` only when the raw payload was absent entirely.
+   */
+  payload: EvidencePayload | null;
 }
 
 /* ── Field-level aggregation ─────────────────────────────────────────── */

@@ -28,6 +28,11 @@ import { isUnciteableThreeDsFact } from "@/lib/defence/factClassifier";
 import type { WaivedItemRecord } from "@/lib/types/evidenceItem";
 import { definitionFor, DEFINITION_REGISTRY_VERSION } from "./definitions";
 import {
+  instanceCount,
+  normalizeEvidencePayload,
+  type EvidencePayload,
+} from "./payloads";
+import {
   EVIDENCE_FIELD_KEYS,
   domainOf,
   isEvidenceField,
@@ -147,49 +152,111 @@ function citationFor(
   return { eligibility: "eligible", reasonToken: null };
 }
 
-function makeRecord(args: {
+/**
+ * Per-instance identity, so a record id survives a rebuild AND distinguishes
+ * parcel A from parcel B. Falls back to the ordinal only when the upstream
+ * system gave us nothing — an ordinal is still stable for a fixed payload,
+ * unlike `EvidenceFact.id`, which is assigned by cross-section iteration
+ * order and shifts whenever any earlier section changes.
+ */
+function instanceKey(
+  payload: EvidencePayload | null,
+  index: number,
+  fallback: string,
+): string {
+  if (payload) {
+    switch (payload.fieldKey) {
+      case "delivery_proof":
+      case "shipping_tracking": {
+        const f = payload.fulfillments[index];
+        if (f?.fulfillmentId) return f.fulfillmentId;
+        if (f?.tracking[0]?.number) return f.tracking[0].number;
+        break;
+      }
+      case "customer_communication": {
+        const c = payload.conversations[index];
+        if (c?.conversationId) return c.conversationId;
+        break;
+      }
+      case "supporting_documents":
+      case "product_description": {
+        const u = payload.uploads[index];
+        if (u?.evidenceItemId) return u.evidenceItemId;
+        if (u?.storagePath) return u.storagePath;
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  return index === 0 ? fallback : `${fallback}:${index}`;
+}
+
+/**
+ * One record per real instance. A two-parcel shipment yields two records; a
+ * Gorgias thread with two conversations yields two.
+ *
+ * Validity and quality come from the SECTION payload via
+ * `categorizeEvidenceField` — the declared authority (R2) — so every instance
+ * of one section currently shares a grade. Grading parcels individually
+ * changes what a case scores and belongs to P2b with its transition matrix,
+ * not to a refactor.
+ */
+function makeRecords(args: {
   fieldKey: EvidenceFieldKey;
-  payload: Record<string, unknown> | null;
+  raw: Record<string, unknown> | null;
   source: string | null | undefined;
   evidenceItemId: string | null;
   collectedAt: string | null;
-}): CaseEvidenceRecord {
-  const { fieldKey, payload, source, evidenceItemId, collectedAt } = args;
-  const legacy = categorizeEvidenceField(fieldKey, payload);
+}): CaseEvidenceRecord[] {
+  const { fieldKey, raw, source, evidenceItemId, collectedAt } = args;
+  const legacy = categorizeEvidenceField(fieldKey, raw);
   const { validity, quality } = fromLegacyCategory(legacy);
   const isValid = validity === "valid";
+  const payload = normalizeEvidencePayload(fieldKey, raw);
+  const citation = citationFor(fieldKey, raw, isValid);
+  const fallback = evidenceItemId ?? source ?? "unknown";
 
-  // Stable identity: the DB row when we have one, else the collector that
-  // produced it. Never positional — `EvidenceFact.id` is `f${index}` today,
-  // so it changes on every rebuild and nothing can reference it.
-  const sourceKey = evidenceItemId ?? source ?? "unknown";
+  const count =
+    definitionFor(fieldKey).cardinality === "multiple" && payload
+      ? instanceCount(payload)
+      : 1;
 
-  return {
-    recordId: `${fieldKey}#${sourceKey}`,
+  return Array.from({ length: count }, (_, i) => ({
+    recordId: `${fieldKey}#${instanceKey(payload, i, fallback)}`,
     fieldKey,
     provenance: {
       origin: originFor(source),
-      sourceSystemId: null,
+      sourceSystemId: perInstanceSourceId(payload, i),
       evidenceItemId,
       collectedAt,
       supersedes: null,
     },
     validity: { state: validity, reasonToken: null },
     quality: isValid ? quality : null,
-    citation: citationFor(fieldKey, payload, isValid),
-  };
+    citation,
+    payload,
+  }));
 }
 
-/** How many instances a section nests, so the collapse is measurable. */
-function nestedInstanceCount(payload: Record<string, unknown> | null): number {
-  if (!payload) return 1;
-  for (const key of ["fulfillments", "conversations", "uploads"]) {
-    const v = payload[key];
-    if (Array.isArray(v) && v.length > 0) return v.length;
+/** Upstream identifier for one instance (Shopify GID, conversation id, path). */
+function perInstanceSourceId(
+  payload: EvidencePayload | null,
+  index: number,
+): string | null {
+  if (!payload) return null;
+  switch (payload.fieldKey) {
+    case "delivery_proof":
+    case "shipping_tracking":
+      return payload.fulfillments[index]?.fulfillmentId ?? null;
+    case "customer_communication":
+      return payload.conversations[index]?.conversationId ?? null;
+    case "supporting_documents":
+    case "product_description":
+      return payload.uploads[index]?.storagePath ?? null;
+    default:
+      return null;
   }
-  const n = payload.messageCount;
-  if (typeof n === "number" && n > 0) return n;
-  return 1;
 }
 
 export interface DeriveResult {
@@ -216,12 +283,14 @@ export function deriveCaseEvidenceModel(
   const collapsed: Record<string, { nested: number; emitted: number }> = {};
   const seenFields: string[] = [];
 
-  const push = (field: string, rec: CaseEvidenceRecord, nested: number) => {
+  const push = (field: string, recs: CaseEvidenceRecord[], nested: number) => {
     if (!isEvidenceField(field)) return;
     const list = recordsByField.get(field) ?? [];
-    // One record per (source × field) in P1 — dedup on the stable id so a
-    // section and its mirrored evidence_item do not double-count.
-    if (!list.some((r) => r.recordId === rec.recordId)) list.push(rec);
+    // Dedup on the stable id so a section and its mirrored evidence_item do
+    // not double-count the same underlying instance.
+    for (const rec of recs) {
+      if (!list.some((r) => r.recordId === rec.recordId)) list.push(rec);
+    }
     recordsByField.set(field, list);
     const prev = collapsed[field] ?? { nested: 0, emitted: 0 };
     collapsed[field] = { nested: prev.nested + nested, emitted: list.length };
@@ -230,20 +299,16 @@ export function deriveCaseEvidenceModel(
   for (const section of sections) {
     const fields = section.fieldsProvided ?? [];
     seenFields.push(...fields);
-    const nested = nestedInstanceCount(section.data ?? null);
     for (const field of fields) {
       if (!isEvidenceField(field)) continue;
-      push(
-        field,
-        makeRecord({
-          fieldKey: field,
-          payload: section.data ?? null,
-          source: section.source,
-          evidenceItemId: null,
-          collectedAt: null,
-        }),
-        nested,
-      );
+      const recs = makeRecords({
+        fieldKey: field,
+        raw: section.data ?? null,
+        source: section.source,
+        evidenceItemId: null,
+        collectedAt: null,
+      });
+      push(field, recs, recs.length);
     }
   }
 
@@ -256,17 +321,14 @@ export function deriveCaseEvidenceModel(
     seenFields.push(...fields);
     for (const field of fields) {
       if (!isEvidenceField(field)) continue;
-      push(
-        field,
-        makeRecord({
-          fieldKey: field,
-          payload,
-          source: item.source,
-          evidenceItemId: item.id ?? null,
-          collectedAt: item.created_at ?? null,
-        }),
-        nestedInstanceCount(payload),
-      );
+      const recs = makeRecords({
+        fieldKey: field,
+        raw: payload,
+        source: item.source,
+        evidenceItemId: item.id ?? null,
+        collectedAt: item.created_at ?? null,
+      });
+      push(field, recs, recs.length);
     }
   }
 

@@ -179,26 +179,130 @@ describe("the domain boundary holds at derivation time", () => {
   });
 });
 
-describe("the P1 collapse is measured, not hidden", () => {
-  it("records how many instances a section nested versus records emitted", () => {
-    // Prod survey: one comms section carries messageCount=3 and one Gorgias
-    // section carries 2 conversations. P1 emits ONE record per section, so
-    // the shortfall must be visible — it is the P2a work-list.
-    const { recordsCollapsed } = derive([
+describe("P2a — real instances become real records", () => {
+  it("splits a Gorgias thread into one record per conversation", () => {
+    // P1 emitted ONE record here and reported the shortfall via
+    // recordsCollapsed. That assertion going red is the migration landing.
+    // Prod carries exactly this shape on one dispute today.
+    const { model, recordsCollapsed } = derive([
       {
         source: "gorgias",
         fieldsProvided: ["customer_communication"],
         data: { conversationCount: 2, conversations: [{ id: "a" }, { id: "b" }] },
       },
     ]);
+    const comms = model.fields.customer_communication;
+    expect(comms.records).toHaveLength(2);
+    expect(comms.records.map((r) => r.recordId)).toEqual([
+      "customer_communication#a",
+      "customer_communication#b",
+    ]);
     expect(recordsCollapsed.customer_communication).toEqual({
       nested: 2,
-      emitted: 1,
+      emitted: 2,
     });
   });
 
-  it("reports no shortfall for a genuinely single-instance field", () => {
+  it("splits a two-parcel shipment and keys each record on its Shopify GID", () => {
+    // The scenario that drove the Definition/Record split. No disputed order
+    // in prod has two fulfillments yet (74/74 have one), so this fixture is
+    // synthetic by necessity — the shape is the real fulfillment shape.
+    const { model } = derive([
+      {
+        source: "shopify_fulfillments",
+        fieldsProvided: ["delivery_proof"],
+        data: {
+          proofType: "delivered_confirmed",
+          deliveredToVerifiedAddress: true,
+          fulfillments: [
+            {
+              fulfillmentId: "gid://shopify/Fulfillment/1",
+              deliveredAt: "2026-07-10T19:28:00Z",
+              tracking: [{ carrier: "TechSHIP", number: "A1", url: null }],
+            },
+            {
+              fulfillmentId: "gid://shopify/Fulfillment/2",
+              deliveredAt: null,
+              tracking: [{ carrier: "TechSHIP", number: "B2", url: null }],
+            },
+          ],
+        },
+      },
+    ]);
+    const d = model.fields.delivery_proof;
+    expect(d.records).toHaveLength(2);
+    expect(d.records.map((r) => r.recordId)).toEqual([
+      "delivery_proof#gid://shopify/Fulfillment/1",
+      "delivery_proof#gid://shopify/Fulfillment/2",
+    ]);
+    // Both parcels are citable — today `firstTrackingEntry()` keeps one and
+    // the second parcel never reaches the issuer.
+    expect(d.citableIds).toHaveLength(2);
+    expect(d.records[1].provenance.sourceSystemId).toBe(
+      "gid://shopify/Fulfillment/2",
+    );
+  });
+
+  it("emits one record for a genuinely single-instance field", () => {
     const { recordsCollapsed } = derive([THREE_DS_SECTION]);
     expect(recordsCollapsed.tds_authentication).toEqual({ nested: 1, emitted: 1 });
+  });
+});
+
+describe("P2a — typed payloads replace the raw-record back door", () => {
+  it("normalizes 3DS into named fields instead of collector JSON", () => {
+    const { model } = derive([THREE_DS_SECTION]);
+    expect(model.fields.tds_authentication.records[0].payload).toEqual({
+      fieldKey: "tds_authentication",
+      authenticated: true,
+      liabilityShift: true,
+      merchantConfirmed: false,
+      eci: "02",
+      dsTransactionId: "b3b905f0-8654-42a3-a1df-e389808fcb9c",
+      version: "2.2.0",
+      flow: "frictionless",
+      exemption: null,
+    });
+  });
+
+  it("reads the LEGACY snake_case AVS shape that 11 prod packs still carry", () => {
+    // `categorizeEvidenceField` reads `avsResultCode` only, so these packs
+    // score AVS as invalid. They are all decided (newest 2026-01-19), so this
+    // is not a live merchant bug — but re-deriving the model on read touches
+    // them, and mis-reading a decided case corrupts any post-mortem.
+    const { model } = derive([
+      {
+        source: "shopify_transactions",
+        fieldsProvided: ["avs_cvv_match"],
+        data: { avs_result_code: "Y", cvv_result_code: "M", processor: "stripe" },
+      },
+    ]);
+    const payload = model.fields.avs_cvv_match.records[0].payload;
+    expect(payload).toMatchObject({
+      fieldKey: "avs_cvv_match",
+      avsResultCode: "Y",
+      cvvResultCode: "M",
+    });
+  });
+
+  it("reads the LEGACY flat delivery shape (4 prod packs, no fulfillments[])", () => {
+    const { model } = derive([
+      {
+        source: "shopify_fulfillments",
+        fieldsProvided: ["delivery_proof"],
+        data: {
+          carrier: "PostNord",
+          trackingNumber: "XYZ",
+          status: "delivered",
+          deliveredAt: "2026-01-02T10:00:00Z",
+        },
+      },
+    ]);
+    const payload = model.fields.delivery_proof.records[0].payload;
+    expect(payload).toMatchObject({ fieldKey: "delivery_proof" });
+    expect(
+      (payload as { fulfillments: { tracking: { number: string | null }[] }[] })
+        .fulfillments[0].tracking[0].number,
+    ).toBe("XYZ");
   });
 });
