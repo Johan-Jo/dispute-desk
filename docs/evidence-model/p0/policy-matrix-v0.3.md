@@ -12,15 +12,22 @@ authorizes it**; roles apply only to included supporting facts.
 Rule-classification: ✓ validated→preserved · ∆ incomplete→extended · ✗ incorrect→replaced ·
 ? unsupported→product decision.
 
-## A. FRAUD family — Visa 10.4 / MC 4837 (both V-PRIMARY; per-row states below)
+## A. FRAUD family — Visa 10.4 / MC 4837
+
+**Network rules V-PRIMARY on both networks; NO 3DS cell is citable today.** Two blocking rules
+from `3ds-network-table.md` §0 govern every 3DS row: **(A)** a verified rule needs an *observable
+trigger* — the primaries speak in raw wire values (Visa ECI, MC SLI) and DisputeDesk sees only a
+receipt `eci`; **(B)** a verified rule needs every *condition* it carries represented by a verified
+input. Visa ECI 6 and all Mastercard states fail (A); Visa ECI 5 fails (B). Raw-wire rows and
+receipt-observable rows are listed separately below and must never be collapsed.
 
 | Evidence | Disposition | Inclusion / role (proposal) | Verification | Class |
 |---|---|---|---|---|
-| 3DS — **Visa ECI 5** (authenticated) | supports | recommended / role per **P-2** ("consistent with Visa Secure protection" framing; never categorical) | **V-PRIMARY** (R-A: listed 10.4 remedy) | ∆ |
-| 3DS — **Visa ECI 6** (attempted, issuer not enrolled) | supports *(per primary!)* | **review_required until the ECI-6 nuance is encoded** — current code treats it as adverse; primary says protected. Per-network table governs | **V-PRIMARY** (R-A) | **✗ for Visa** (current rule unsupportable) |
-| 3DS — **MC SLI 212** (Identity Check authenticated) | supports | recommended; framing per **P-2** (4837-ineligibility consistency) | **V-PRIMARY** (S4: SLI 211/212/217/242 in the "ineligible for chargeback" list) | ∆ |
-| 3DS — **MC SLI 211** (attempted class) | supports *(per primary)* | **review_required** — protected per primary; gateway ECI↔SLI mapping unresolved (zero attempted-class receipts in prod to sample) | **V-PRIMARY** (network) / PENDING (gateway mapping) | **✗ for MC** (current adverse rule unsupportable) |
-| 3DS — MC SLI 217/242 (DSRP etc.) | — | out of scope for current flows; `review_required` if observed | V-PRIMARY (list membership) | — |
+| 3DS — **Visa ECI 5** (authenticated) | supports | **`review_required`** — the rule is verified but its three conditions (correct processing, regional applicability, VFMP status) are **not observable** in our data, and a verified rule with an unobservable condition is not citable. Framing per **P-2** *if and only if* all three become verified inputs | **V-PRIMARY** rule (R-A: listed 10.4 remedy) / **BLOCKED** on unobservable conditions | ∆, blocked |
+| 3DS — **Visa ECI 6** (attempted, issuer not enrolled) | supports *(per primary)* | **`review_required`** — primary says protected, current code treats it as adverse, and the gateway `liability_shift`↔ECI-6 mapping our code keys on is unverified | **V-PRIMARY** rule (R-A) / PENDING (gateway mapping) | **✗ for Visa** (current adverse rule unsupportable) |
+| 3DS — **MC raw SLI 212 / 211 / 217 / 242** (*wire values*) | supports | rule verified at the wire-value level only — **no DisputeDesk cell may key on these directly**, because no raw SLI is observable | **V-PRIMARY** (S4: the four values are in the 4837 "ineligible for chargeback" list) | ∆ (rule recorded, not actionable) |
+| 3DS — **MC receipt `eci` 02** (assumed → SLI 212) | supports *(if the mapping holds)* | **`review_required`** — the receipt ECI↔SLI correspondence is assumed, unsampled and undocumented | V-PRIMARY (rule) / **PENDING** (observable mapping) | ✗/∆ |
+| 3DS — **MC receipt `eci` 01** (assumed → SLI 211) | supports *(if the mapping holds)* | **`review_required`** — same mapping gap; zero attempted-class receipts in prod to sample; record is never silently dropped (#352552 invariant) | V-PRIMARY (rule) / **PENDING** (observable mapping) | **✗ for MC** (current adverse rule unsupportable) |
 | 3DS — no attempt (ECI 7 / absent) | neither | excluded; absence never negative | V-PRIMARY | ✓ |
 | Delivery to AVS-verified address | supports | recommended / corroboration — **the CE-chart form: delivered to the address with AVS match Y or M; signature not required** | **V-PRIMARY** (R-E, chart Item 3) | ✓ (+ Phase 0 note: verify which AVS codes our verified-address derivation accepts) |
 | AVS + CVV both matched | supports | recommended / corroboration; disclosure `redacted_summary` (verificationSummary, never raw letters) | V-PRIMARY (AVS in guide + chart) | ✓ |
@@ -110,7 +117,17 @@ disposition level (replacing prompt-only enforcement); Klarna GNR requires true 
 
 ## Appendix — module × evidence grid (7 × 20)
 
-Cell codes: **P**=primary/required · **R**=recommended · **O**=optional/context · **N**=neither+excluded ·
+**This grid is a HUMAN-READABLE INDEX, not the encoding.** The single-letter codes below are
+lossy — `N` fuses disposition `neither` with inclusion `excluded`, `C` fuses `contradicts` with
+`blocked`, and neither `?` nor `·` carries *why* or *on whose authority*. Since **disposition never
+authorizes inclusion**, a one-letter cell cannot express the policy (it cannot represent `neither` +
+`optional`, or `supports` + `excluded`). The authoritative record for each cell is a **seven-field
+object** — `disposition`, `inclusion`, `role`, `disclosure`, `rationale`, `authority`
+(state + sourceRef + decisionRef), and `requiredConditions` (explicit on every cell, `[]` included)
+— each field set independently and none inferred from another. **Never infer `excluded` from
+`neither`.** The letters are a scanning aid only and must never be parsed.
+
+Cell codes: **P**=primary/required · **R**=recommended · **O**=optional/context · **N**=disposition `neither` *and separately* inclusion `excluded` ·
 **B**=blocked (must never appear) · **C**=contradicts→gates · **?**=product decision · **·**=review_required.
 Row order = canonical evidence fields; columns = modules (F=fraud, I=INR, PU=product, CR=credit,
 DU=duplicate, CA=cancelled-recurring, G=generic).
@@ -120,7 +137,9 @@ DU=duplicate, CA=cancelled-recurring, G=generic).
 | order_confirmation | O | O | R | O | **P** | O | O |
 | billing_address_match | R | O | N | N | O | N | O |
 | avs_cvv_match (both) | R | O | · | N | O | N | O |
-| tds_authentication (per network table) | R/· | O | · | N | O | N | O |
+| tds_authentication — Visa ECI 5 (blocked on conditions) | · | O | · | N | O | N | O |
+| tds_authentication — Visa ECI 6 (mapping unverified) | · | O | · | N | O | N | O |
+| tds_authentication — MC receipt eci 02/01 (mapping unverified) | · | O | · | N | O | N | O |
 | delivery_proof | R | **P** | O | O | O | N | O |
 | shipping_tracking | R | R | O | O | O | N | O |
 | activity_log / service_access | R | R(digital **P**) | O | O | O | R | O |
@@ -139,8 +158,11 @@ DU=duplicate, CA=cancelled-recurring, G=generic).
 | device_session_consistency | B | B | B | B | B | B | B |
 
 Every **·** and every generic-column cell inherits `review_required` semantics. Mastercard
-variant status: fraud column **V-PRIMARY** (SLI table); product/delivery columns **V-PRIMARY at
-the 4853-family remedy level**; duplicate column `review_required` (4834 taxonomy caution);
-credit column `review_required` (chapter extraction on demand); attempted-class 3DS cells
-`review_required` on the gateway ECI↔SLI mapping. This grid is the checkable completeness
-artifact — 7 modules × 20 fields = 140 cells, none blank.
+variant status: fraud column — the **network rule** is V-PRIMARY (raw SLI list) but **every
+observable cell is `review_required`** (receipt `eci` ≠ raw SLI); product/delivery columns
+**V-PRIMARY at the 4853-family remedy level**; duplicate column `review_required` (4834 taxonomy
+caution); credit column `review_required` (MC chapter extraction on demand). **All 3DS rows on both
+networks are `review_required` today** — the attempted class for the mapping gap, the authenticated
+class for the mapping gap (MC) or the unobservable rule conditions (Visa ECI 5). This grid remains
+the checkable completeness artifact — every module × evidence cell present, none blank — but
+completeness is asserted against the seven-field records, not against these letters.

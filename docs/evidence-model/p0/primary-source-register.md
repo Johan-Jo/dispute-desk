@@ -6,6 +6,10 @@ Every rule that the argument layer would encode is listed with its verification 
 (secondary corroboration only — not implementable as categorical policy) · **PENDING** (no
 adequate source — blocks the dependent rule).
 
+**Numbering note:** this register's S-numbers are canonical. Plan v3's D3 table uses a slightly
+different assignment (it lists Visa Core Rules as S3); where they differ, the numbering here
+governs and the plan's is a drafting artifact.
+
 ## Sources and extraction status
 
 | # | Source | Status |
@@ -50,6 +54,15 @@ and must become network-specific; (3) protection is conditional ("certain", "pro
 correctly", regional variance, VFMP exclusion) — so the letter frames it as *"this dispute
 appears inconsistent with Visa Secure protection"*, never a categorical "issuer lacked rights".
 
+**(4) The conditions are load-bearing, and they BLOCK the rule until they are observable.** The
+primary grants the protection *"provided the transaction is processed correctly"*, notes that the
+rules *"may vary by region"*, and excludes VFMP-identified merchants. DisputeDesk holds **no**
+signal for any of the three. Citing ECI 5 without them established asserts "the rule says X" where
+the source says "the rule says X *if* A, B and C" — a stronger claim than the primary supports,
+made to an issuer. **General rule adopted here: a verified rule whose conditions are unobservable
+yields `review_required`, not a citation.** Applied to ECI 5, that means the strongest-verified
+3DS state on either network is not citable today. See `3ds-network-table.md` §0(B).
+
 **Mastercard: V-PRIMARY** (S4, extracted 2026-08-05). The 4837 chapter's *"transactions
 ineligible for chargeback"* list — decoded verbatim (spacing normalized):
 
@@ -71,8 +84,18 @@ attempted/UCAF-collection class) both make a 4837 chargeback ineligible — the 
 parallel of Visa's ECI 5/6 finding; the "attempted 3DS is adverse" rule is therefore
 unsupportable on **both** networks; (2) the MIT/CIT link is a subscription-relevant second
 presentment DisputeDesk does not model today; (3) values 217 and 242 (DSRP / other classes) are
-protected but their applicability to Shopify-Payments ecommerce flows is an open
-gateway-mapping question (see the 3DS network table). Framing stays conditional, as for Visa.
+protected but not applicable to current Shopify-Payments ecommerce flows. Framing stays
+conditional, as for Visa.
+
+**(4) These findings attach to RAW SLI VALUES, which DisputeDesk never observes.** The rule is
+stated in DE 48, subelement 42, subfield 1. Our only 3DS input is a Shopify Payments receipt
+`eci` (plus a gateway-computed `liability_shift`) — a *different encoding*. Whether receipt `eci`
+02 corresponds to SLI 212, and `eci` 01 to SLI 211, is **assumed, unsampled and undocumented**;
+prod holds zero attempted-class receipts to sample. **The mapping gap therefore covers every
+Mastercard state, not merely the attempted class** — an earlier note in this register and in the
+3DS table said "attempted class only", which was wrong and is withdrawn. Until a raw SLI becomes
+observable, or the correspondence is documented *and* sampled, every Mastercard 3DS cell is
+`review_required` despite the rule being V-PRIMARY. See `3ds-network-table.md` §0(A), §2.2.
 
 ### R-B — Compelling Evidence 3.0
 
