@@ -1,0 +1,28 @@
+# Phase 0.5 containment proposals — each item separately approvable
+
+**Status: PROPOSED, not approved.** Phase 0's approval covers none of these. Each is a narrow
+fix for a defect **currently reachable in production**, shippable before and independently of the
+migration. Each ships alone: own approval, own PR, own before/after diff on regenerated packages.
+None restores past behaviour; none adds architecture. Reachability measured 2026-08-05
+(read-only; queries reproducible).
+
+| # | Defect | Reachability (measured) | Proposed narrow fix | Bank-visible effect |
+|---|---|---|---|---|
+| **C-1** | Unciteable 3DS reaches the LLM payload, satisfies `three_d_secure_present` for claim guards, and resolves the thesis `paymentAuthMethod` — suppressed only in the PDF table (four-predicate divergence) | **1 open dispute** (unshifted-3DS pack with a defence package) | Unify the LLM-payload filter to the Evidence-Basis predicate (`bankEligible ∧ includeInBankNarrative ∧ ¬submissionRisk`); update `narrativeWriter.bankInclusionInvariant.test.ts` which currently pins the weaker contract | Prompts/guards/thesis stop seeing facts the PDF table already suppresses. **Note (register R-A):** for Visa, ECI-6 3DS may deserve citation — that is a MATRIX decision; C-1 only makes the four surfaces agree with each other under today's rule |
+| **C-2** | Thesis token asserts "undisputed" purchase history without `disputeFreeHistory === true` | **16 live packages** carry an unverified prior-history fact with `priorOrderCount > 0`; any whose thesis includes the clause tells an issuer "undisputed" unverified | Gate `priorOrderHistoryClause` on the verified tri-state — matching the Evidence-Basis renderer and the repeat-customer strategy prompt (both already refuse). Primary-anchored: the CE-chart/profile evidence contemplates *undisputed* prior transactions specifically | Removes a potentially false assertion to issuers |
+| **C-3** | `no_return_initiated` renders to the issuer as the word "Confirmed", sorted last (rank 999); 3 more categories share the default | **Every package citing it** (incl. #352552 v5) | Add a renderValue branch ("No return initiated or received") + `CATEGORY_ORDER` entries for `no_return_initiated`, `subscription_terms`, `digital_access_log`, `service_access` | Verified rebuttal content (register R-C) becomes legible instead of noise |
+| **C-4** | PDF footer prints `packageMode` + `prompt v{n}` on every page | **Every PDF** | Remove from the footer; keep both in `defence_packages` metadata/audit | Stops disclosing internal posture (narrow/full) to issuers |
+| **C-5** | "Cardholder name" Case-Details row falls back to the ORDER customer name | **Any package lacking a gateway cardholder name** | Render the row only when gateway-sourced; otherwise label "Customer name" | Stops mislabeling a name to the issuer on exactly the disputes where names diverge |
+| **C-6** | Synthetic chronology assertions ("Authorisation captured against the cardholder's {network} ending in {last4}") bypass all validators | **Conditional** — packs without a rich Shopify timeline | Run synthetic bullets through `validateComposedDocument`'s phrase + claim-guard checks before render | Closes the one unvalidated bank-facing text path |
+
+Not proposed for containment (not reachable):
+
+| # | Defect | Why no containment |
+|---|---|---|
+| C-7 | Manual-evidence promotion mints `supporting ∧ bankEligible:true` | **0** `defence_manual_evidence` rows in prod; Phase 4 fixes it |
+| C-8 | CE 3.0 package: raw IPs, ungated attestation, hard-coded "10.4" | Dormant — no caller; decision P-4 governs |
+| C-9 | `canceled_recurring` forced `narrow` by unreachable category | **0** open SUBSCRIPTION_CANCELLED disputes; decision P-5 governs (zero-risk window to fix) |
+| C-10 | Prior-chargebacks disclosure branch | Dead (grade `supporting` blocks it); decision P-8 encodes the rule and deletes it |
+
+Recommended order if approved: C-3 and C-4 (pure rendering, lowest risk) → C-5 → C-2 → C-6 →
+C-1 (touches the LLM payload; regenerate the one affected package after).
