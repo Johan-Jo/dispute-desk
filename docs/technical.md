@@ -5709,3 +5709,172 @@ Extended `EventType` union in `lib/audit/logEvent.ts` with 13 literals: `defence
 ### Submission integration
 
 `lib/jobs/handlers/saveToShopifyJob.ts` checks for the latest `defence_packages` row for the dispute when the flag is on. If a row exists, it must be `status=final` — anything else is a hard block. When `final`, the `uncategorizedFile` buffer source is swapped to the defence package PDF (via a fresh `kind:"pdf"` short-link pointing at the defence row id). On verify-ok, the row is marked `status=submitted` with `shopify_response` set. Structured text fields and per-evidence-field `*File` slots gated by `FILE_EVIDENCE_ATTACHMENTS_ENABLED` are unaffected.
+
+---
+
+## Canonical evidence model
+
+**Status (2026-08-04):** layers 1–2 exist and are consumed by nothing for a
+decision. The merchant surfaces still read `checklist_v2`; the defence package
+still reads `facts_json`. What shipped is the *visibility* fix (below), not a
+consumer migration.
+
+### Why it exists
+
+Three incidents of one shape: evidence that was collected, cited to the issuer,
+and invisible to the merchant.
+
+| Date | Field | Dispute |
+|---|---|---|
+| 2026-07-07 | `refund_record` | CREDIT_NOT_PROCESSED |
+| 2026-08-01 | `refund_record` | FRAUDULENT (blume-box 162042cd) |
+| 2026-08-02 | `tds_authentication` | PRODUCT_UNACCEPTABLE (blume-box #352552) |
+
+Mechanism: `factClassifier` iterates `pack_json.sections[*].fieldsProvided`
+directly, while the merchant surfaces and `calculateCaseStrength` read a
+template-gated checklist. `reconcileChecklistWithCollectedFields` could only
+*flip* an existing row, never add one — so a collected field with no template
+row was citable, invisible and unscored.
+
+An audit found **310 independent definition sites** across 8 properties of an
+evidence item (36 identity, 32 classification, 45 label, 40 availability, 45
+strength, 50 citation-eligibility, 25 deduplication, 37 document/link).
+
+### The fix that shipped
+
+`reconcileChecklistWithCollectedFields` **appends** a row for any collected
+canonical field the reason template omitted. It is the one function both
+pipelines' inputs pass through — build (`buildPack.ts`) and every read
+(`workspace/route.ts`) — so existing packs correct on next page load, no
+rebuild.
+
+Appended rows are `priority: "optional"` (the template did not ask for them, so
+they must not outweigh a field it did) and `label: ""` — `lib/**` may not emit
+English, and every render site resolves the localized name from
+`CANONICAL_EVIDENCE[field].labelKey`. **A row that renders blank means a
+consumer read `.label` directly; that is a bug in the consumer.** Note `??`
+does not catch an empty string — use `||`.
+
+Regression guard: `tests/unit/evidenceDivergenceManifest.test.ts` regenerates
+`docs/evidence-model/divergence-manifest.json` and fails if any collected field
+is invisible on any reason. It also re-runs detection against the *pre-fix*
+rule and asserts it still finds ≥70 divergences — an empty manifest and a
+broken detector otherwise look identical.
+
+### Two levels: definitions vs records
+
+A canonical field is **not** a canonical evidence item. A dispute can hold
+several fulfillments, uploads, helpdesk conversations and refunds.
+
+- `EvidenceDefinition` — what a kind of evidence *means*: identity,
+  `cardinality`, relevance rule, citation policy, aggregation rule.
+- `CaseEvidenceRecord[]` — the instances, with **source-derived** ids
+  (`delivery_proof#gid://shopify/Fulfillment/…`), never positional. Contrast
+  `EvidenceFact.id`, which is `f${index}` and changes on every rebuild.
+- `FieldEvidenceSummary` — a *view* that keeps `records` intact and names a
+  representative. It aggregates; it never replaces.
+
+Collapsing this to one item per field would make the model the fifth
+delivery-collapse implementation and lose evidence through aggregation.
+
+### Vocabularies — one per concept
+
+Seven overlapping enums became six distinct ones. `invalid` is a **validity**
+state, not a strength.
+
+| Concept | Values |
+|---|---|
+| `ValidityState` | `valid` / `invalid` / `unverifiable` |
+| `EvidenceQuality` | `decisive` / `corroborating` / `contextual` |
+| `RelevanceLevel` | `critical` / `recommended` / `optional` / `not_applicable` |
+| `CitationEligibility` | `eligible` / `ineligible` / `withheld_internal` / `withheld_risk` |
+| `SubmissionDisposition` | 7 values |
+| `CaseStrengthLevel` | case-level, not item-level |
+
+Six status concepts stay separate and must not be folded together:
+`applicable` (can this ORDER produce it) · `available` (≥1 valid record) ·
+`required` · `waived` · `blocking` · `satisfied`.
+
+**Waiving never sets `available`.** Waiving means the absence no longer blocks
+completion; it does not conjure evidence. And `applicable` is not `relevance` —
+relevance asks whether the dispute REASON weighs a field, applicability asks
+whether the ORDER could ever have it. Collapsing those two costs ~30
+completeness points, because `deriveCompletenessMetrics` excludes `unavailable`
+rows from the denominator.
+
+### Domain boundary
+
+Every collector output lands in a registered typed domain — `evidence`,
+`coverage`, `risk_signal`, `dispute_metadata`, `operational`. There is no
+discard path. `shopify_protect_coverage` is `coverage`: a gate, never scored,
+never cited, and it must never appear in `model.fields`.
+
+`device_session_consistency`, `ip_location_check` and `fraud_risk_screening`
+stay in the `evidence` domain even though they are never or only conditionally
+bank-facing — they are *scored*, so removing them from `fields` would silently
+stop scoring them. Bank exposure is expressed by `citationPolicy`, not domain.
+
+### Invariant vs intentional across surfaces
+
+The rule is **not** "every surface shows the same thing". Consistency-as-a-goal
+invites someone to push raw AVS codes into the PDF to make a test pass.
+
+**Invariant — identical wherever a record appears:** `recordId`, `fieldKey`,
+`provenance`, `validity`, `quality`, `citation.eligibility`, `status.*`,
+`documents`, `links`, `labelToken`. Every projected row must remain traceable
+to its canonical record.
+
+**Intentional — must differ, and must match these rules:**
+
+| Difference | Rule |
+|---|---|
+| Bank non-disclosure | Raw AVS/CVV codes and `internalSignals` never leave the merchant surfaces. `BankEvidenceRow` carries no payload field, so there is nothing for a renderer to reach into. |
+| Never-citable records | `withheld_internal` (device/session telemetry) is visible to the merchant, flagged `keptInternal`, and absent from the bank projection. |
+| Withheld-risk records | An attempted 3DS (ECI 01/06, no liability shift) is visible to the merchant and withheld from the issuer — citing it invites the issuer to answer it. |
+| Delivery collapse | Overview shows the representative and reports `alsoRepresents`; Evidence shows every parcel. Declared once via `aggregation.collapsesWith`. |
+| Missing evidence | Evidence lists it as actionable; the PDF never mentions absence. |
+| Ordering, grouping, verbosity | Per surface. |
+
+Both directions are asserted in
+`lib/evidence/model/__tests__/projections.test.ts`: the invariants hold, **and**
+the documented divergences are actually present.
+
+### Layer separation
+
+`CaseEvidenceModel` (what exists) → `CaseAssessment` (what it is worth) →
+`CaseAutomationDecision` (what we do). Each carries its own policy version, so
+changing `auto_save_min_score` cannot change the meaning or version of the
+evidence model.
+
+`CaseAssessment` is deliberately an **adapter** over `calculateCaseStrength`,
+not a port: it changes exactly one input (the checklist), so any measured
+difference is attributable to one cause. `payloadSource` is passed through by
+identity — an earlier version rebuilt it as a by-field map and, because
+`avs_cvv_match` is emitted by two sections, handed the categorizer the wrong
+payload and reported 56 of 76 prod packs as stale. That number was produced
+entirely by the adapter.
+
+### Known open items
+
+- **P4 (defence package reads the model) does not proceed as specced.** The
+  gate (`scripts/evidence-model/factEquivalence.analysis.ts`) returns 0
+  identical of 76: `classifyFacts` filters through
+  `reasonCodeModule.allowedFactCategories` and the model's projection does not.
+  That allow-list is the same gate that suppressed `payment_authentication` on
+  #352552, which is why `alwaysAdmissible.ts` exists. Decision 2026-08-04: the
+  allow-list stays, so the projection would need reason-relevance before it
+  could replace the classifier.
+- **The six-consumer contract matrix is blocked on that migration** — four of
+  the six consumers do not read the model yet.
+- Records from one section share a `quality` grade; per-instance grading is a
+  scoring-policy change, not a refactor.
+- Completeness measures **usable evidence** (a valid record), not mere
+  collection — decision 2026-08-04. Thresholds were lowered to match
+  (blume-box 60, surasvenne 50).
+
+### Analysis harness
+
+`npm run analysis:evidence -- scripts/evidence-model/<file>.analysis.ts` runs
+read-only prod comparisons under a separate vitest config, so a prod-reading
+job can never become a CI dependency. All are strictly non-mutating: no pack
+write, no disposition stamp, no job enqueue, no `submission_state` touch.
