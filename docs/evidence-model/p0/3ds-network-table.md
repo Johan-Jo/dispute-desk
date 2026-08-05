@@ -1,8 +1,10 @@
 # Network-specific 3-D Secure disposition table (Phase 0 deliverable)
 
-**Status:** Visa rows are V-PRIMARY (register R-A). Mastercard rows are **PENDING** (source
-blocked; register S4). **No 3DS rule may be generalized across networks.** Nothing in this table
-is implemented yet; it is the input to the matrix approval.
+**Status:** Visa rows V-PRIMARY (register R-A, Guidelines Jun-2024). Mastercard rows
+**V-PRIMARY** (register R-A/S4, Chargeback Guide Merchant Edition, extracted 2026-08-05).
+**No 3DS rule may be generalized across networks** — each row cites its own network source.
+Nothing in this table is implemented; it is the input to the matrix approval, and rows with an
+open gateway-mapping question stay `review_required` regardless of network verification.
 
 ## Visa (Visa Secure) — V-PRIMARY
 
@@ -24,14 +26,22 @@ computation, not a verified fact. **Phase 0 follow-up:** sample receipts with EC
 none currently — the only unshifted-3DS pack shows no `eci` at all) before relying on
 `liability_shift` alone as the Visa disposition key.
 
-## Mastercard (Identity Check) — PENDING
+## Mastercard (Identity Check / DSRP) — V-PRIMARY
 
-| Auth state | SLI/UCAF | Network position | Proposed disposition |
+| Auth state | SLI (DE48 SE42 SF1) | Network position (primary, verbatim-anchored) | Proposed argument disposition (fraud family 4837) |
 |---|---|---|---|
-| Fully authenticated | (e.g. UCAF 2 / ECI 02) | **PENDING S4** | none may ship |
-| Attempted | (e.g. UCAF 1 / ECI 01) | **PENDING S4** | none may ship |
+| Fully authenticated (Identity Check) | **212** | In the 4837 *"transactions ineligible for chargeback"* list | `supports`; framing per **P-2** (consistency with ineligibility, never categorical); disclosure full (DS transaction id when present) |
+| Attempted / UCAF-collection class | **211** | **Also in the ineligible list** — the Mastercard parallel of Visa ECI 6 | `review_required` until the gateway-mapping question below is answered, then per approved matrix |
+| DSRP / other protected classes | **217, 242** | In the ineligible list; DSRP = wallet/tokenized flows | Out of scope for current Shopify-Payments ecommerce flows pending mapping; `review_required` if ever observed |
+| MIT tied to prior authenticated CIT | prior CIT SLI **212/242** | Issuer *"should not use this chargeback reason code"*; acquirer *"may provide specific evidence that the disputed MIT is related to a prior authenticated CIT in a second presentment"* | New remedy, **not modeled today** — matrix row in the cancelled-recurring/subscription family; requires prior-CIT evidence capture (future work item, own approval) |
+| No authentication | — | Not protected | absence never negative (invariant kept) |
 
-Interim: Mastercard disputes keep current code behaviour unchanged.
+**Open gateway-mapping question (applies to BOTH networks' attempted class):** Shopify Payments
+`receiptJson` exposes `eci` and a gateway-computed `liability_shift`, not raw SLI. Whether MC
+ECI 01/02 in receipts maps 1:1 onto SLI 211/212, and whether `liability_shift` is already
+computed per these scheme tables, is unverified — prod currently holds **zero** attempted-class
+receipts to sample (the one unshifted-3DS pack carries no `eci` at all). Until sampled, every
+attempted-class row (Visa ECI 6, MC SLI 211) stays `review_required`.
 
 ## Fixture consequences (replaces F7/F8 — mandate item)
 
@@ -43,7 +53,8 @@ Replacement set:
 |---|---|---|
 | **F7-V5** — Visa, ECI 5, `liability_shift: true` | Record exists, valid, merchant-visible on every surface; citation `eligible`; scored per current policy | any `lead_invalidity` role (blocked on P-2 + matrix) |
 | **F7-V6** — Visa, ECI 6, `liability_shift` as-received | Record exists, valid, merchant-visible; **citation state = whatever the approved matrix decides — fixture is parameterized on the matrix constant**, so approving the matrix updates the fixture, not the reverse | that ECI 6 is adverse (current rule) or protective (primary suggestion) — the test reads the policy table |
-| **F7-M** — Mastercard, authenticated | Record exists, valid, visible; citation per current behaviour | anything network-specific (PENDING) |
+| **F7-M212** — Mastercard, Identity Check fully authenticated (SLI 212 / receipt ECI 02) | Record exists, valid, merchant-visible on every surface; **citation state read from the approved policy constant** (parameterized, like F7-V6) | any issuer-facing framing or role — the fixture never selects wording |
+| **F7-M211** — Mastercard, attempted class (SLI 211 / receipt ECI 01, `liability_shift` as-received) | Record exists, valid, merchant-visible; citation read from the policy constant; additionally pins that the record is **never silently dropped** (the #352552 invariant) | that 211 is adverse OR protected — the network says protected, but the gateway mapping is unresolved, so the constant governs |
 | **F8-X** — no 3DS attempted (ECI 7 / absent) | No record fabricated; absence never penalized; no nag (merchantSuppliable=false) | — |
 
 The parameterization pattern (fixture reads the policy constant it exercises) is the general
