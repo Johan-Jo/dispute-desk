@@ -13,7 +13,7 @@ adequate source — blocks the dependent rule).
 | S1 | **Visa, Dispute Management Guidelines for Visa Merchants, June 2024** — `usa.visa.com/dam/VCOM/global/support-legal/documents/merchants-dispute-management-guidelines.pdf` | **EXTRACTED.** The PDF's body text is Flate-compressed UTF-16BE with a +29 glyph offset (not image-encoded — an earlier note in plan v3 saying "image-encoded" was wrong and is corrected; WebFetch's extractor fails on it, a ~40-line Node script decodes it fully). Decoded text: 1.15M chars; all 52 "How should I respond" sections, the §4 Compelling Evidence chart, and the Visa Secure table recovered. Quote artifacts: `fi` ligature, bullet glyphs, `y\`→y — marked with [sic] handling below. |
 | S2 | **Visa, Compelling Evidence 3.0 Merchant Readiness, Mar 2023** — `usa.visa.com/content/dam/VCOM/regional/na/us/support-legal/documents/compelling-evidence-3.0-merchant-readiness-mar2023.pdf` | **EXTRACTED** (same method). |
 | S3 | **Visa, Updates and Clarifications to Dispute Rule Language** — `usa.visa.com/dam/VCOM/global/support-legal/documents/updates-and-clarifications-to-dispute-rule-language.pdf` | **EXTRACTED** (same method; ~2021-22 era — predates the Oct-2024 changes). |
-| S4 | **Mastercard Chargeback Guide, Merchant Edition** — `mastercard.com/content/dam/mccom/shared/business/support/rules-pdfs/chargeback-guide.pdf` | **PENDING — access blocked.** WebFetch 403 on mastercard.us and mastercard.com; curl with browser UA → Akamai "Access Denied". **Maintainer action to unblock:** download the PDF in a normal browser and place it anywhere readable (e.g. `Downloads/`); the decoder handles the rest. Every Mastercard-specific rule below is PENDING until then. |
+| S4 | **Mastercard Chargeback Guide, Merchant Edition** (19 May 2026 build) — `mastercard.com/content/dam/mccom/shared/business/support/rules-pdfs/chargeback-guide.pdf` | **EXTRACTED 2026-08-05** from a maintainer browser-download (`Downloads/chargeback-guide.pdf`; the CDN 403s every programmatic client). Body is CID-hex behind subset fonts; ToUnicode-CMap reconstruction + de-spaced search recovers it (4.9M chars). Quote artifacts: intra-word spacing (normalized in quotes below). |
 | S5 | **Visa Core Rules** (public) | **NOT YET EXTRACTED** — needed only for the Oct-2024 13.3 return-precondition *rule text* (see R-C) and regional liability-shift variance. |
 | S6 | Shopify `disputeEvidenceUpdate` API | Already established in-repo: one PDF (`uncategorizedFile`) + customer name/email; no CE3.0/VROL fields. |
 
@@ -50,8 +50,29 @@ and must become network-specific; (3) protection is conditional ("certain", "pro
 correctly", regional variance, VFMP exclusion) — so the letter frames it as *"this dispute
 appears inconsistent with Visa Secure protection"*, never a categorical "issuer lacked rights".
 
-**Mastercard: PENDING** (S4 blocked). No Mastercard 3DS disposition rule may ship until the
-Identity Check liability language is extracted. Do **not** generalize the Visa findings.
+**Mastercard: V-PRIMARY** (S4, extracted 2026-08-05). The 4837 chapter's *"transactions
+ineligible for chargeback"* list — decoded verbatim (spacing normalized):
+
+> "…DE 48, subelement 42 (Electronic Commerce Indicators), subfield 1 (**Electronic Commerce
+> Security Level Indicator and UCAF Collection Indicator**), positions 1, 2, and 3) contained
+> any of the following values of **211, 212, 217, or 242**. Examples include, but are not
+> limited to, **Identity Check** and Digital Secure Remote Payment (DSRP)."
+
+And the **MIT/CIT rule** (same chapter):
+
+> "On related MITs, the issuer should not use this chargeback reason code to dispute a
+> merchant-initiated transaction (MIT) that the issuer or cardholder determines is related to a
+> prior authenticated cardholder-initiated transaction (CIT) identified with **SLI 212 or 242**
+> … **The acquirer may provide specific evidence that the disputed MIT is related to a prior
+> authenticated CIT in a second presentment.**"
+
+**Consequences (Mastercard):** (1) SLI **212** (fully authenticated) AND SLI **211** (the
+attempted/UCAF-collection class) both make a 4837 chargeback ineligible — the Mastercard
+parallel of Visa's ECI 5/6 finding; the "attempted 3DS is adverse" rule is therefore
+unsupportable on **both** networks; (2) the MIT/CIT link is a subscription-relevant second
+presentment DisputeDesk does not model today; (3) values 217 and 242 (DSRP / other classes) are
+protected but their applicability to Shopify-Payments ecommerce flows is an open
+gateway-mapping question (see the 3DS network table). Framing stays conditional, as for Visa.
 
 ### R-B — Compelling Evidence 3.0
 
@@ -163,12 +184,25 @@ services after the withdrawal-of-permission-to-bill date and prior to the Disput
 Date.**" Withdrawn permission + no credit → accept. Credit processed → document amount/date.
 Validates the service-usage-after-cancellation strategy, now with the exact date window.
 
-### Mastercard register (all PENDING on S4)
+### Mastercard register (extracted 2026-08-05)
 
-4837 second-presentment remedies · Identity Check (3DS2) liability semantics (which SLI/UCAF
-values protect) · 4853 sub-claim evidence requirements · 4834 duplicate remedies. **No
-Mastercard-specific disposition may ship until extracted.** Interim behaviour for Mastercard
-disputes: current code behaviour, unchanged.
+- **Identity Check liability (R-A above): V-PRIMARY** — SLI 211/212/217/242 ineligible for 4837;
+  MIT/CIT second-presentment right for MITs tied to a prior authenticated CIT (SLI 212/242).
+- **4853 second-presentment remedies: V-PRIMARY** — the chapter's remedy set includes *"The
+  goods or services were repaired, replaced, delivered, and/or provided as agreed"*, *"Refund
+  previously issued"*, *"Suspected return merchandise fraud"*, *"Invalid chargeback"*; plus
+  second-presentment rights that *"the disputed goods or services were used"* and *"a fully
+  enabled Identity Check transaction was used to register a PAN for future transactions"*.
+  Structural note: at pre-arbitration the issuer must supply *"a new cardholder letter, email,
+  message, or completed Dispute Resolution Form … dated after the second presentment and
+  **specifically addressing the merchant's rebuttal**"* — our letters should be structured to
+  pre-empt that reply.
+- **4834 TAXONOMY CAUTION: open.** This edition's TOC lists 4834 as **"ATM Disputes — Cash and
+  Currency Errors"**, not point-of-interaction duplicate processing. Before any 4834-specific
+  rule ships, `lib/disputes/reasonCodeCatalog.ts`'s 4834=duplicate mapping must be checked
+  against the guide's current code table (older editions differ). The matrix's duplicate column
+  carries `review_required` for Mastercard until resolved.
+- Full body text saved to the session scratchpad for deeper per-sub-claim extraction on demand.
 
 ## Reproduction
 
