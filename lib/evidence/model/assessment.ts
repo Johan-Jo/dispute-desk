@@ -21,9 +21,9 @@
 
 import {
   calculateCaseStrength,
-  type CaseStrengthGates,
   type EvidencePayloadSource,
 } from "@/lib/argument/caseStrength";
+import type { CaseGateAssessment } from "@/lib/argument/caseGateAssessment";
 import type { CaseStrengthResult } from "@/lib/argument/types";
 import type {
   ChecklistItemV2,
@@ -43,7 +43,7 @@ export interface CaseAssessment {
   scoringPolicyVersion: number;
   modelVersion: number;
   sectionsHash: string;
-  gates: CaseStrengthGates;
+  gates: CaseGateAssessment;
   strength: CaseStrengthResult;
   completeness: {
     score: number;
@@ -53,17 +53,38 @@ export interface CaseAssessment {
   };
 }
 
+/**
+ * P-1 (approved 2026-08-06): a `not_applicable` record is never scored, so it
+ * never reaches a checklist row and this map never resolves that key for the
+ * scorer. It stays declared because `RelevanceLevel` is exhaustive and because
+ * the merchant-facing projection — which DOES show these records — reads the
+ * same table.
+ */
 const PRIORITY_BY_RELEVANCE: Record<RelevanceLevel, EvidenceItemPriority> = {
   critical: "critical",
   recommended: "recommended",
   optional: "optional",
-  // A record that exists but the reason does not weigh. It still enters the
-  // scorer — that is the whole correction — at the lowest weight, so its
-  // presence can never be MORE important than a field the template asked for.
   not_applicable: "optional",
 };
 
 /**
+ * P-1 — a record the reason does not weigh contributes NOTHING to strength.
+ *
+ * Approved 2026-08-06 (decision sheet, "Strict: do not score them"). Relevance
+ * means what it says: the record stays visible to the merchant and citable to
+ * the bank, but a field the reason does not weigh may not move points, the
+ * denominator, a cap, a floor, or the final band. No irrelevant fact can carry
+ * a case from Weak to Moderate.
+ *
+ * This was a `ScoringPolicy.scoreNotApplicable` toggle whose permissive arm
+ * measured 2 of 76 open prod disputes moving weak → moderate (#352767
+ * FRAUDULENT, #352501 DUPLICATE). The decision retired the toggle: strict is
+ * now the only reachable behaviour, structurally, so no caller can opt a
+ * dispute into scoring irrelevant evidence. `SCORING_POLICY_VERSION` is
+ * deliberately NOT bumped — the resolved policy is the same strict rule that
+ * was the default and the only value any production-shaped path used, so no
+ * persisted snapshot became stale.
+ *
  * `model.fields` → the scorer's checklist view.
  *
  * One row per field that actually has records. A field with no records is
@@ -72,42 +93,13 @@ const PRIORITY_BY_RELEVANCE: Record<RelevanceLevel, EvidenceItemPriority> = {
  * `coveragePercent` (which divides by registered items) without changing
  * `overall` — a silent fleet-wide number move inside a scoring change.
  */
-export interface ScoringPolicy {
-  /**
-   * Does a record whose reason template says `not_applicable` contribute to
-   * strength?
-   *
-   * THIS IS A PRODUCT DECISION, NOT A REFACTOR DETAIL, and it is the only
-   * behavioural choice in P2b. Both readings are defensible:
-   *
-   *   true  — "collection is fact" taken to its conclusion. The merchant has
-   *           the evidence and we already cite it to the issuer, so it should
-   *           count. Measured effect: 2 of 76 open disputes go weak → moderate
-   *           (#352767 FRAUDULENT gains customer_account_info +
-   *           no_return_initiated; #352501 DUPLICATE gains eleven fields
-   *           including delivery_proof and avs_cvv_match).
-   *   false — relevance means what it says. The record stays VISIBLE to the
-   *           merchant and citable to the bank, but a field the reason does
-   *           not weigh cannot move the score. Measured effect: zero strength
-   *           changes; the 76 divergences are fixed for visibility only.
-   *
-   * Default `false` — the conservative reading. Making a case stronger is the
-   * direction that files evidence we would otherwise have held, so it needs an
-   * explicit decision rather than a default.
-   */
-  scoreNotApplicable: boolean;
-}
-
-export const DEFAULT_SCORING_POLICY: ScoringPolicy = { scoreNotApplicable: false };
-
-export function checklistFromModel(
-  model: CaseEvidenceModel,
-  policy: ScoringPolicy = DEFAULT_SCORING_POLICY,
-): ChecklistItemV2[] {
+export function checklistFromModel(model: CaseEvidenceModel): ChecklistItemV2[] {
   const out: ChecklistItemV2[] = [];
   for (const summary of Object.values(model.fields)) {
     if (summary.records.length === 0) continue;
-    if (summary.relevance === "not_applicable" && !policy.scoreNotApplicable) continue;
+    // P-1. The record remains in `model.fields` — representable, merchant-
+    // visible, citable — it simply never becomes a scored row.
+    if (summary.relevance === "not_applicable") continue;
     const def = definitionFor(summary.fieldKey);
     out.push({
       field: summary.fieldKey,
@@ -139,19 +131,20 @@ export function checklistFromModel(
  * projections answer different questions and must stay separate.
  *
  * The row set mirrors today's template: fields the reason actually weighs.
- * Collected-but-`not_applicable` fields join only under the permissive
- * policy, and then they enter BOTH numerator and denominator.
+ * Under P-1 a collected-but-`not_applicable` field joins NEITHER the numerator
+ * nor the denominator — "contributes nothing to strength" includes the
+ * denominator, which is the only place an irrelevant record could still move
+ * a number without ever being counted as evidence.
+ *
+ * Thresholds over this score remain P-7 and stay deferred to the Phase 2
+ * calibration report; P-1 fixes only which records the score sees.
  */
 export function completenessChecklistFromModel(
   model: CaseEvidenceModel,
-  policy: ScoringPolicy = DEFAULT_SCORING_POLICY,
 ): ChecklistItemV2[] {
   const out: ChecklistItemV2[] = [];
   for (const summary of Object.values(model.fields)) {
-    const isRelevant = summary.relevance !== "not_applicable";
-    const counts =
-      isRelevant || (policy.scoreNotApplicable && summary.records.length > 0);
-    if (!counts) continue;
+    if (summary.relevance === "not_applicable") continue;
     const def = definitionFor(summary.fieldKey);
     out.push({
       field: summary.fieldKey,
@@ -177,7 +170,7 @@ export function completenessChecklistFromModel(
 
 export function deriveCaseAssessment(args: {
   model: CaseEvidenceModel;
-  gates: CaseStrengthGates;
+  gates: CaseGateAssessment;
   /**
    * Passed through UNCHANGED, exactly as the caller would give it to
    * `calculateCaseStrength` today.
@@ -194,11 +187,10 @@ export function deriveCaseAssessment(args: {
    * makes the matrix unattributable.
    */
   payloadSource: EvidencePayloadSource | undefined;
-  policy?: ScoringPolicy;
 }): CaseAssessment {
-  const { model, gates, payloadSource, policy = DEFAULT_SCORING_POLICY } = args;
+  const { model, gates, payloadSource } = args;
   const strength = calculateCaseStrength(
-    checklistFromModel(model, policy),
+    checklistFromModel(model),
     model.reason,
     payloadSource,
     gates,
@@ -206,7 +198,7 @@ export function deriveCaseAssessment(args: {
   // Same adapter discipline as strength: reuse the real engine rather than
   // restate the weights, so a difference can only come from the row set.
   const completeness = deriveCompletenessMetrics(
-    completenessChecklistFromModel(model, policy),
+    completenessChecklistFromModel(model),
   );
   return {
     assessmentVersion: 1,

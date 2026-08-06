@@ -118,8 +118,8 @@ describe("P2c — completeness threshold crossings (prod, read-only)", () => {
       autoSave: boolean;
       persisted: number;
       runtime: number;
+      /** The model's score under P-1 (strict `not_applicable` handling). */
       strict: number;
-      permissive: number;
     }[] = [];
 
     for (const pack of open) {
@@ -175,11 +175,12 @@ describe("P2c — completeness threshold crossings (prod, read-only)", () => {
         sections,
         orderContext,
       });
+      // P-1 (approved 2026-08-06) is strict: a `not_applicable` record enters
+      // neither the numerator nor the denominator. The permissive arm this
+      // script used to compute alongside it measured a behaviour the product
+      // can no longer produce, so calibration now reads one column.
       const strict = deriveCompletenessMetrics(
-        completenessChecklistFromModel(model, { scoreNotApplicable: false }),
-      ).completenessScore;
-      const permissive = deriveCompletenessMetrics(
-        completenessChecklistFromModel(model, { scoreNotApplicable: true }),
+        completenessChecklistFromModel(model),
       ).completenessScore;
 
       rows.push({
@@ -190,7 +191,6 @@ describe("P2c — completeness threshold crossings (prod, read-only)", () => {
         persisted: pack.completeness_score ?? 0,
         runtime,
         strict,
-        permissive,
       });
     }
 
@@ -203,9 +203,8 @@ describe("P2c — completeness threshold crossings (prod, read-only)", () => {
       byShop.set(r.shop, list);
     }
 
-    console.log("shop                       packs  thr  autoSave  strictΔ  permΔ  CROSSINGS(strict/perm)");
+    console.log("shop                       packs  thr  autoSave  modelΔ  CROSSINGS");
     let totalStrictCross = 0;
-    let totalPermCross = 0;
     for (const [shop, list] of [...byShop].sort((a, b) => b[1].length - a[1].length)) {
       const thr = list[0].threshold;
       const autoSave = list[0].autoSave;
@@ -222,22 +221,15 @@ describe("P2c — completeness threshold crossings (prod, read-only)", () => {
           (r.runtime < r.threshold && r.strict >= r.threshold) ||
           (r.runtime >= r.threshold && r.strict < r.threshold),
       );
-      const permCross = list.filter(
-        (r) =>
-          (r.runtime < r.threshold && r.permissive >= r.threshold) ||
-          (r.runtime >= r.threshold && r.permissive < r.threshold),
-      );
       totalStrictCross += strictCross.length;
-      totalPermCross += permCross.length;
       console.log(
         `${shop.padEnd(26)} ${String(list.length).padStart(5)}  ${String(thr).padStart(3)}  ` +
-          `${String(autoSave).padEnd(8)}  ${avg((r) => r.strict - r.runtime).padStart(7)}  ` +
-          `${avg((r) => r.permissive - r.runtime).padStart(5)}  ` +
-          `${strictCross.length}/${permCross.length}`,
+          `${String(autoSave).padEnd(8)}  ${avg((r) => r.strict - r.runtime).padStart(6)}  ` +
+          `${strictCross.length}`,
       );
-      for (const c of [...strictCross, ...permCross].slice(0, 6)) {
+      for (const c of strictCross.slice(0, 6)) {
         console.log(
-          `      ${c.order.padEnd(10)} runtime=${c.runtime} strict=${c.strict} perm=${c.permissive} thr=${c.threshold}`,
+          `      ${c.order.padEnd(10)} runtime=${c.runtime} model=${c.strict} thr=${c.threshold}`,
         );
       }
     }
@@ -301,7 +293,7 @@ describe("P2c — completeness threshold crossings (prod, read-only)", () => {
     }
 
     console.log(
-      `\n>>> NEWLY AUTO-FILING PACKS — strict: ${totalStrictCross}, permissive: ${totalPermCross}\n`,
+      `\n>>> THRESHOLD CROSSINGS under the model (P-1 strict): ${totalStrictCross}\n`,
     );
   });
 });

@@ -2414,33 +2414,59 @@ review + fatal_loss → park_for_review           (review is absolute)
 - The `MESSAGES` copy in `lib/automation/fatalLoss.ts` is merchant-UI only. Bank-rebuttal text generation must NEVER cite "we already refunded" — that's a confession, not a defense.
 - Coverage beats fatal-loss. A covered case is never "fatal" because Shopify pays regardless.
 
-### Case-strength gates — one REQUIRED object (2026-08-01)
+### Case-strength gates — one canonical `CaseGateAssessment` (2026-08-01, canonicalised 2026-08-06)
 
-`calculateCaseStrength` takes its gates as a single **required** parameter with **required, explicitly-nullable** fields:
+`calculateCaseStrength` takes its gates as a single **required, branded** parameter produced by exactly one constructor, `lib/argument/caseGateAssessment.ts`:
 
 ```ts
-export interface CaseStrengthGates {
-  coverage: CaseCoverageInput | null;
-  fatalLoss: CaseFatalLossInput | null;
-  riskWeakness: CaseRiskWeaknessInput | null;
-  nameMismatch: CaseNameMismatchInput | null;
-  creditAlreadyIssued: CaseCreditAlreadyIssuedInput | null;
-}
+// Every gate must be STATED — provided (value or null), or explicitly unseen.
+buildCaseGateAssessment({
+  coverage:            gateProvided(coverageInput),         // this site derived it
+  fatalLoss:           gateNotProvided("order_not_loaded"), // this site cannot see it
+  riskWeakness:        gateNotProvided("order_not_loaded"),
+  nameMismatch:        gateProvided(nameMismatchInput),
+  creditAlreadyIssued: gateProvided(creditAlreadyIssuedInput(packJson)),
+}): CaseGateAssessment
 
-calculateCaseStrength(checklist, reason, payloadSource, gates): CaseStrengthResult
+calculateCaseStrength(checklist, reason, payloadSource, assessment): CaseStrengthResult
 ```
 
-**Why.** These were five trailing *optional* positional arguments. On 2026-08-01 the credit-already-issued floor was wired into `buildPack` alone; the other call sites kept compiling, kept running, and kept returning a plausible wrong number. `buildPack` scored blume-box `162042cd` **strong**, auto-submit filed the evidence and emailed the merchant — while the dispute page, recomputing without the floor, rendered **"Weak case"** and advised adding delivery confirmation to an already-refunded order. Nothing failed: not the compiler, not a test, not a runtime check. Now a caller with no data writes `null` (a decision on the record) and a caller that forgets does not compile; adding a sixth gate breaks **every** call site deliberately. Plan: `docs/plans/case-strength-gates-object.plan.md`.
+`GateNotProvidedReason` is a closed vocabulary: `order_not_loaded`, `not_persisted_in_pack`, `not_shipped_to_client`, `gate_free_query`.
+
+**Why (round 1 — omission).** These were five trailing *optional* positional arguments. On 2026-08-01 the credit-already-issued floor was wired into `buildPack` alone; the other call sites kept compiling, kept running, and kept returning a plausible wrong number. `buildPack` scored blume-box `162042cd` **strong**, auto-submit filed the evidence and emailed the merchant — while the dispute page, recomputing without the floor, rendered **"Weak case"** and advised adding delivery confirmation to an already-refunded order. Nothing failed: not the compiler, not a test, not a runtime check. Plan: `docs/plans/case-strength-gates-object.plan.md`.
+
+**Why (round 2 — conflation).** Requiring the object fixed omission but not meaning. Every member was `T | null`, and four independent object literals wrote `null` for two different facts: *"this case has no such gate"* and *"this call site cannot see the gate."* The 2026-08-05 audit measured the result — on a fraud case with a cardholder-name mismatch the browser scored **Strong** while the server capped **Moderate, on one screen** — because the client literal wrote `nameMismatch: null` for the second reason (`docs/evidence-model/p4/legacy-removal-inventory.md`, "the four gate-set variants"). Slice 1 therefore makes the *construction path* canonical: every gate must be stated, an unseen gate carries a named reason on `assessment.notProvided`, and the brand means an object literal is **not** a `CaseGateAssessment` — only the builder produces one. Scored values are unchanged.
 
 **Rules:**
-- **Do not** relax the interface to `Partial<>` or optional members, and **do not** export an all-nulls constant from `lib/` — either restores the hole one level up (a new gate would break only the shared constant). Production call sites write the object out literally. `NO_GATES` / `gatesWith()` exist for tests only, in `tests/helpers/caseStrengthGates.ts`; an ESLint `no-restricted-imports` rule bars `lib/**` and `app/**` from importing them.
-- The invariant is pinned at compile time by `tests/types/caseStrengthGates.typecheck.ts` — `@ts-expect-error` assertions for a missing field, a missing object, and the old positional shape. It is not a vitest test (vitest does not typecheck); it is read by `npx tsc --noEmit` and by `npm run build`. It replaced `tests/unit/caseStrengthGateParity.test.ts`, a text-level grep guard that could only enumerate call sites it already knew about — and which is exactly why the fourth site (`app/api/disputes/route.ts`, not in its list) stayed broken after the first fix.
-- Production call sites (all four): `lib/packs/buildPack.ts`, `app/api/disputes/[id]/workspace/route.ts`, `app/(embedded)/app/disputes/[id]/hooks/useDisputeWorkspace.ts`, `app/api/disputes/route.ts`. The list route now projects the floor out of `pack_json` (`select("… pack_json->credit_already_issued")` → `creditAlreadyIssuedFromBlock`), closing the last gate-parity gap from the incident.
-- `creditAlreadyIssuedInput(packJson)` returns `CaseCreditAlreadyIssuedInput | null` (was `| undefined`) so it drops straight into the object.
+- **Do not** relax `CaseGateSources` to `Partial<>` or optional members, and **do not** export an all-off shorthand from `lib/` — either restores the hole one level up (a new gate would break only the shared constant). `NO_GATES` / `gatesWith()` exist for tests only, in `tests/helpers/caseStrengthGates.ts` (themselves built through the canonical builder); an ESLint `no-restricted-imports` rule bars `lib/**` and `app/**` from importing them.
+- The invariant is pinned at compile time by `tests/types/caseStrengthGates.typecheck.ts` — `@ts-expect-error` assertions for a missing gate, a missing assessment argument, the old positional shape, and a hand-rolled gate literal. It is not a vitest test (vitest does not typecheck); it is read by `npx tsc --noEmit` and by `npm run build`. It replaced `tests/unit/caseStrengthGateParity.test.ts`, a text-level grep guard that could only enumerate call sites it already knew about — and which is exactly why the fourth site (`app/api/disputes/route.ts`, not in its list) stayed broken after the first fix.
+- The **call-site inventory itself** is pinned by `tests/unit/caseGateAssessmentCallSites.test.ts`: it scans `app/`, `lib/` and `scripts/`, asserts the set of scoring entry points matches a named list, and rejects any inline gate object. A new scoring entry point fails there until it is listed — which is the moment to ask which gates it can actually see.
+- Scoring entry points and what each can derive:
+
+  | Site | Gates derived | Gates unseen |
+  |---|---|---|
+  | `lib/packs/buildPack.ts` | all five (holds the Shopify order) | — |
+  | `app/api/disputes/[id]/workspace/route.ts` | coverage, nameMismatch, credit (from pack) | fatalLoss, riskWeakness — `order_not_loaded` |
+  | `app/api/disputes/route.ts` (list, stage B) | nameMismatch, credit (projected from `pack_json`) | coverage, fatalLoss, riskWeakness — `order_not_loaded` |
+  | `useDisputeWorkspace.ts` (client) | coverage, credit (shipped in the response) | fatalLoss, riskWeakness, nameMismatch — `not_shipped_to_client` |
+  | `calculateImprovement` (internal) | — | all five — `gate_free_query` (a counting question; gates only override verdicts) |
+  | `lib/evidence/model/assessment.ts` | — | passes its caller's assessment through unchanged |
+
+- `creditAlreadyIssuedInput(packJson)` returns `CaseCreditAlreadyIssuedInput | null` (was `| undefined`) so it drops straight into `gateProvided(...)`.
 
 **`computeContributions` takes an object too** (`ContributionInput { checklist, payloadSource, reason }`, all required). Same defect shape — its own doc comment already recorded what omitting `reason` costs — plus the two neighbouring helpers disagreed on positional order (`computeContributions(checklist, payloadSource, reason)` vs `calculateImprovement(checklist, reason, payloadSource)`). The workspace API used to carry a **hand-copied** reimplementation of the contributions loop that never consulted `reason`, so it skipped the fraud-family `account_history` strong→moderate demotion and rendered a Strong prior-order-history pill on rows the scorer counted as moderate; it now calls the shared function. There is one implementation — never re-implement it.
 
-**Parity verification** (`scripts/case-strength-parity.mjs` + `scripts/sql/case-strength-parity-sample.sql`): samples packs by stratum, scores each through two engine builds (it adapts to either signature), and deep-compares the **entire** `CaseStrengthResult` — comparing `overall` alone would pass a refactor that changed counts, hint, hero variant, or the reason token. The stratum report prints the population next to the sample so a thin stratum reads as "the database holds N" rather than as coverage. Prod (209 packs) holds exactly one fatal-loss verdict, one credit-already-issued block, zero Shopify-Protect-covered packs, and zero multi-gate packs, so those paths are covered synthetically in `lib/argument/__tests__/caseStrengthGates.test.ts` (gate behaviour + precedence: coverage > fatal-loss > credit floor > name-mismatch cap; risk-weakness never caps).
+**Replay verification** (`scripts/case-strength-parity.mjs` + `scripts/sql/case-strength-parity-sample.sql`): samples packs by stratum, scores each through two engine builds — the candidate through `buildCaseGateAssessment`, the legacy through the plain object its signature accepts, with identical values — and deep-compares the **entire** `CaseStrengthResult`; comparing `overall` alone would pass a refactor that changed counts, hint, hero variant, or the reason token. It no longer adapts to the pre-2026-08-01 positional signature: an engine that does not take a single gate argument is a mis-pointed `--old` and now fails loudly. The stratum report prints the population next to the sample so a thin stratum reads as "the database holds N" rather than as coverage. Prod holds exactly one fatal-loss verdict and zero Shopify-Protect-covered packs, so those paths are covered synthetically in `lib/argument/__tests__/caseStrengthGates.test.ts` (gate behaviour + precedence: coverage > fatal-loss > credit floor > name-mismatch cap; risk-weakness never caps). Run with `npx tsx` (Node 22.4 has no `--experimental-strip-types`).
+
+### P-1 — a `not_applicable` record is visible but never scored (2026-08-06)
+
+Approved decision P-1: *"Strict: do not score them. A record can remain visible and complete without affecting strength. No irrelevant fact can move a case from Weak to Moderate."*
+
+`lib/evidence/model/assessment.ts` used to carry a `ScoringPolicy.scoreNotApplicable` toggle defaulting to `false`. The toggle is gone: `checklistFromModel` and `completenessChecklistFromModel` skip `relevance === "not_applicable"` unconditionally, so such a record may not move points, the coverage denominator, the completeness denominator, a cap, a floor, or the band. It stays in `model.fields` with its records intact — representable, merchant-visible, and citable to the issuer.
+
+`SCORING_POLICY_VERSION` is deliberately **not** bumped: the resolved policy is the same strict rule that was already the default and the only value any production-shaped path used, so no persisted snapshot became stale. Measured on 73 open prod packs (2026-08-06): the strict column is identical before and after, and the now-unreachable permissive arm would have lifted exactly two packs (#352501 `DUPLICATE`, #352767 `FRAUDULENT`) from weak to moderate — precisely the transition P-1 forbids.
+
+Thresholds over completeness remain **P-7 and deferred** to the Phase 2 calibration report; P-1 fixes only which records the score sees. `scripts/evidence-model/*.analysis.ts` therefore report one column instead of a strict/permissive pair.
 
 ### Auto-submit guards — one decision, three callers (2026-07-27)
 

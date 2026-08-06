@@ -10,27 +10,23 @@
  * produced entirely by the adapter, not by production.
  *
  * Measured on prod 2026-08-04 (npm run analysis:evidence), 76 open ready packs:
- *   strict     (scoreNotApplicable: false) → 0 strength changes
- *   permissive (scoreNotApplicable: true)  → 2 changes, both weak → moderate
+ *   strict     → 0 strength changes
+ *   permissive → 2 changes, both weak → moderate
+ *
+ * P-1 (approved 2026-08-06) chose strict and retired the toggle, so permissive
+ * is no longer reachable and the second line is history, not a configuration.
+ * Re-measured on 73 open ready packs 2026-08-06: identical strict column.
  */
 
 import { describe, it, expect, vi } from "vitest";
 import {
   checklistFromModel,
+  completenessChecklistFromModel,
   deriveCaseAssessment,
-  DEFAULT_SCORING_POLICY,
   SCORING_POLICY_VERSION,
 } from "../assessment";
 import { deriveCaseEvidenceModel } from "../derive";
-import type { CaseStrengthGates } from "@/lib/argument/caseStrength";
-
-const NO_GATES: CaseStrengthGates = {
-  coverage: null,
-  fatalLoss: null,
-  riskWeakness: null,
-  nameMismatch: null,
-  creditAlreadyIssued: null,
-};
+import { NO_GATES } from "@/tests/helpers/caseStrengthGates";
 
 /** 3DS is in NO reason template, so it is always `not_applicable`. */
 const THREE_DS = {
@@ -65,30 +61,65 @@ function modelFor(sections: unknown[], reason: string | null) {
   }).model;
 }
 
-describe("the scoring policy is an explicit decision, not a default", () => {
-  it("strict omits not_applicable records from the checklist", () => {
+describe("P-1 — a not_applicable record is representable, visible, and unscored", () => {
+  it("keeps the record in the model, where the merchant projection reads it", () => {
+    // "Contributes nothing to strength" is not "does not exist". The record
+    // must survive in `model.fields` with its payload intact — it is still
+    // shown to the merchant and may still be cited to the issuer.
     const model = modelFor([THREE_DS, DELIVERY], "PRODUCT_NOT_RECEIVED");
-    const fields = checklistFromModel(model, { scoreNotApplicable: false }).map(
-      (c) => c.field,
-    );
+    const tds = model.fields["tds_authentication"];
+    expect(tds).toBeDefined();
+    expect(tds.relevance).toBe("not_applicable");
+    expect(tds.records.length).toBeGreaterThan(0);
+  });
+
+  it("omits it from the scoring checklist", () => {
+    const model = modelFor([THREE_DS, DELIVERY], "PRODUCT_NOT_RECEIVED");
+    const fields = checklistFromModel(model).map((c) => c.field);
     expect(fields).toContain("delivery_proof");
     expect(fields).not.toContain("tds_authentication");
   });
 
-  it("permissive includes them", () => {
+  it("omits it from the completeness denominator too", () => {
+    // The denominator is the one place an irrelevant record could still move
+    // a number without ever being counted as evidence.
     const model = modelFor([THREE_DS, DELIVERY], "PRODUCT_NOT_RECEIVED");
-    const fields = checklistFromModel(model, { scoreNotApplicable: true }).map(
-      (c) => c.field,
-    );
-    expect(fields).toContain("tds_authentication");
+    const fields = completenessChecklistFromModel(model).map((c) => c.field);
+    expect(fields).not.toContain("tds_authentication");
   });
 
-  it("defaults to strict — the conservative direction", () => {
-    // Making a case stronger files evidence we would otherwise have held, so
-    // it must be chosen, never inherited from a default.
-    expect(DEFAULT_SCORING_POLICY.scoreNotApplicable).toBe(false);
+  it("scores identically with and without the irrelevant record present", () => {
+    // The whole of P-1 in one assertion: adding a fact the reason does not
+    // weigh changes no part of the strength result.
+    const withOnlyRelevant = deriveCaseAssessment({
+      model: modelFor([DELIVERY], "PRODUCT_NOT_RECEIVED"),
+      gates: NO_GATES,
+      payloadSource: undefined,
+    });
+    const withIrrelevantToo = deriveCaseAssessment({
+      model: modelFor([DELIVERY, THREE_DS], "PRODUCT_NOT_RECEIVED"),
+      gates: NO_GATES,
+      payloadSource: undefined,
+    });
+    expect(withIrrelevantToo.strength).toEqual(withOnlyRelevant.strength);
+    expect(withIrrelevantToo.completeness).toEqual(withOnlyRelevant.completeness);
+  });
+
+  it("cannot carry a case that has nothing relevant above insufficient", () => {
+    // A case whose ONLY evidence is irrelevant scores as if it had none —
+    // never Weak → Moderate on an irrelevant fact.
     const model = modelFor([THREE_DS], "PRODUCT_UNACCEPTABLE");
     expect(checklistFromModel(model)).toEqual([]);
+    const assessment = deriveCaseAssessment({
+      model,
+      gates: NO_GATES,
+      payloadSource: undefined,
+    });
+    expect(assessment.strength.overall).toBe("insufficient");
+    expect(assessment.strength.strongCount).toBe(0);
+    expect(assessment.strength.moderateCount).toBe(0);
+    expect(assessment.strength.score).toBe(0);
+    expect(assessment.strength.coveragePercent).toBe(0);
   });
 });
 
