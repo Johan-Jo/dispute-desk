@@ -41,6 +41,10 @@ import {
 import { collectDeviceLocationEvidence } from "./sources/deviceLocationSource";
 import { calculateCaseStrength } from "@/lib/argument/caseStrength";
 import {
+  buildCaseGateAssessment,
+  gateProvided,
+} from "@/lib/argument/caseGateAssessment";
+import {
   cardholderNameFromPayload,
   detectCardholderNameMismatch,
 } from "@/lib/argument/nameMismatch";
@@ -802,23 +806,26 @@ export async function buildPack(
     customerName: disputeCustomerName,
   };
 
+  // The build path is the ONLY site that holds the Shopify order, so it is
+  // the only one that can derive all five gates. Everything else reads what
+  // this call persists.
   const caseStrengthForGate = calculateCaseStrength(
     reconciledChecklist,
     dispute.reason,
     caseStrengthPayloadSource,
-    {
-      coverage: {
+    buildCaseGateAssessment({
+      coverage: gateProvided({
         state: coverageSummary.state,
         shopifyProtectStatus: coverageSummary.shopifyProtectStatus,
-      },
-      fatalLoss: fatalLossSummary,
-      riskWeakness: riskWeaknessSummary,
-      nameMismatch: nameMismatchInput,
-      creditAlreadyIssued: {
+      }),
+      fatalLoss: gateProvided(fatalLossSummary),
+      riskWeakness: gateProvided(riskWeaknessSummary),
+      nameMismatch: gateProvided(nameMismatchInput),
+      creditAlreadyIssued: gateProvided({
         triggered: creditAlreadyIssued.triggered,
         coversDisputedAmount: creditAlreadyIssued.coversDisputedAmount,
-      },
-    },
+      }),
+    }),
   );
   const caseStrengthSummary: {
     overall: CaseStrengthLevel;

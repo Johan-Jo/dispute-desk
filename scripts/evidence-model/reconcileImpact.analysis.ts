@@ -22,7 +22,11 @@ import {
   reconcileChecklistWithCollectedFields,
   normalizeChecklistV2Shape,
 } from "@/lib/packs/checklistReconcile";
-import { calculateCaseStrength, type CaseStrengthGates } from "@/lib/argument/caseStrength";
+import { calculateCaseStrength } from "@/lib/argument/caseStrength";
+import {
+  buildCaseGateAssessment,
+  gateProvided,
+} from "@/lib/argument/caseGateAssessment";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 
 const ENV_FILE = process.env.ANALYSIS_ENV_FILE ?? ".env.production.local";
@@ -114,13 +118,15 @@ describe("additive reconcile — impact on live packs", () => {
         items: sections.map((s) => ({ payload: { ...(s.data ?? {}), fieldsProvided: s.fieldsProvided } })),
       };
       const j = (pack.pack_json ?? {}) as Record<string, never>;
-      const gates: CaseStrengthGates = {
-        coverage: (j.coverage as never) ?? null,
-        fatalLoss: (j.fatal_loss as never) ?? null,
-        riskWeakness: (j.risk_weakness as never) ?? null,
-        nameMismatch: (j.name_mismatch as never) ?? null,
-        creditAlreadyIssued: (j.credit_already_issued as never) ?? null,
-      };
+      // Read back exactly what `buildPack` persisted, so every gate is
+      // genuinely provided by this analysis — nothing is inferred.
+      const gates = buildCaseGateAssessment({
+        coverage: gateProvided((j.coverage as never) ?? null),
+        fatalLoss: gateProvided((j.fatal_loss as never) ?? null),
+        riskWeakness: gateProvided((j.risk_weakness as never) ?? null),
+        nameMismatch: gateProvided((j.name_mismatch as never) ?? null),
+        creditAlreadyIssued: gateProvided((j.credit_already_issued as never) ?? null),
+      });
 
       const before = legacyReconcile(pack.checklist_v2, collected);
       const after = reconcileChecklistWithCollectedFields(pack.checklist_v2 as never, collected);

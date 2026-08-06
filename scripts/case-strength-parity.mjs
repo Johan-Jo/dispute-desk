@@ -1,23 +1,32 @@
 /**
- * Case-strength parity harness — docs/plans/case-strength-gates-object.plan.md §6.1.
+ * Case-strength replay harness — the legacy-versus-candidate evidence for any
+ * change to the scoring path (originally docs/plans/case-strength-gates-object.plan.md
+ * §6.1; now also the Slice 1 fixture replay).
  *
- * The gates refactor is a pure signature change, so every sampled dispute
- * must score IDENTICALLY before and after. "Recompute a sample" is not a
- * procedure, so this is one:
+ * A scoring refactor must leave every sampled dispute scoring IDENTICALLY
+ * unless a specific behavioural change was approved. "Recompute a sample" is
+ * not a procedure, so this is one:
  *
  *   1. Sample (guarded DB read, one JSON row):
  *        npm run db:query:dev -- --file scripts/sql/case-strength-parity-sample.sql \
  *          --output json > <scratchpad>/sample.json
  *
  *   2. Compare two engine implementations over that sample:
- *        git worktree add ../dd-master master
+ *        git worktree add ../dd-develop develop
  *        node scripts/case-strength-parity.mjs \
  *          --input <scratchpad>/sample.json \
- *          --old ../dd-master/lib/argument/caseStrength.ts
+ *          --old ../dd-develop/lib/argument/caseStrength.ts
  *
- * The script adapts to EITHER signature (positional trailing gates, or
- * the required gates object) by inspecting `calculateCaseStrength.length`,
- * so the same file runs unmodified against master and the branch.
+ * Both sides are called with the SAME five gate values. The candidate side
+ * builds them through the canonical `buildCaseGateAssessment`; the legacy side
+ * receives the plain object its own signature accepts. That is deliberate —
+ * the replay must exercise the real construction path on the candidate, not a
+ * shape invented by the harness.
+ *
+ * The pre-2026-08-01 positional-gate signature is gone from every branch this
+ * can be pointed at, so the harness no longer adapts to it: an engine that
+ * does not take a single gate argument is a mis-pointed `--old`, and failing
+ * loudly beats silently scoring a different contract.
  *
  * WHAT IS COMPARED: the entire `CaseStrengthResult`, deep-equal — not
  * just `overall`. A refactor can land on the same label while changing
@@ -73,29 +82,45 @@ const loadEngine = async (path) => {
 const newEngine = await loadEngine("lib/argument/caseStrength.ts");
 const oldEngine = oldEnginePath ? await loadEngine(oldEnginePath) : null;
 
-/** Call either signature. The post-refactor function takes 4 params
- *  (checklist, reason, payloadSource, gates); the pre-refactor one takes
- *  8 positional args with the gates trailing. */
-function score(engine, { checklist, reason, payloadSource, gates }) {
+/** The candidate's canonical gate builder. Resolved from THIS worktree, so
+ *  the legacy engine is scored with plain values while the candidate is
+ *  scored through the real construction path. */
+const gateModule = await loadEngine("lib/argument/caseGateAssessment.ts");
+
+/**
+ * Score one case. `isCandidate` selects the construction path:
+ *   candidate — every gate stated through `buildCaseGateAssessment`;
+ *   legacy    — the plain five-member object its signature accepts.
+ * Both carry identical values, so a difference can only come from the engine.
+ */
+function score(engine, { checklist, reason, payloadSource, gates }, isCandidate) {
   const fn = engine.calculateCaseStrength;
-  if (fn.length <= 4) {
-    return fn(checklist, reason, payloadSource, {
-      coverage: gates.coverage ?? null,
-      fatalLoss: gates.fatalLoss ?? null,
-      riskWeakness: gates.riskWeakness ?? null,
-      nameMismatch: gates.nameMismatch ?? null,
-      creditAlreadyIssued: gates.creditAlreadyIssued ?? null,
-    });
+  if (fn.length > 4) {
+    throw new Error(
+      `engine takes ${fn.length} parameters — expected a single gate argument. ` +
+        "The positional-gate signature was removed on 2026-08-01; check --old.",
+    );
   }
+  const values = {
+    coverage: gates.coverage ?? null,
+    fatalLoss: gates.fatalLoss ?? null,
+    riskWeakness: gates.riskWeakness ?? null,
+    nameMismatch: gates.nameMismatch ?? null,
+    creditAlreadyIssued: gates.creditAlreadyIssued ?? null,
+  };
+  if (!isCandidate) return fn(checklist, reason, payloadSource, values);
+  const { buildCaseGateAssessment, gateProvided } = gateModule;
   return fn(
     checklist,
     reason,
     payloadSource,
-    gates.coverage ?? undefined,
-    gates.fatalLoss ?? undefined,
-    gates.riskWeakness ?? undefined,
-    gates.nameMismatch ?? undefined,
-    gates.creditAlreadyIssued ?? undefined,
+    buildCaseGateAssessment({
+      coverage: gateProvided(values.coverage),
+      fatalLoss: gateProvided(values.fatalLoss),
+      riskWeakness: gateProvided(values.riskWeakness),
+      nameMismatch: gateProvided(values.nameMismatch),
+      creditAlreadyIssued: gateProvided(values.creditAlreadyIssued),
+    }),
   );
 }
 
@@ -216,7 +241,7 @@ for (const row of rows) {
 
   let next;
   try {
-    next = score(newEngine, input);
+    next = score(newEngine, input, true);
   } catch (e) {
     diffs.push({ pack_id: row.pack_id, stratum: row.stratum, error: String(e) });
     continue;
@@ -231,7 +256,7 @@ for (const row of rows) {
   if (oldEngine) {
     let prev;
     try {
-      prev = score(oldEngine, input);
+      prev = score(oldEngine, input, false);
     } catch (e) {
       diffs.push({ pack_id: row.pack_id, stratum: row.stratum, error: `old engine: ${e}` });
       continue;
@@ -289,7 +314,7 @@ if (diffs.length === 0) {
 console.log(`\nPARITY DIFFERENCES: ${diffs.length}`);
 console.log(JSON.stringify(diffs, null, 2));
 console.log(
-  "\nOnly the fraud-family account_history pill demotion (plan §4) is expected.\n" +
-    "Anything else is a defect in the refactor.",
+  "\nEvery difference must map to a behavioural change approved for the change\n" +
+    "under replay. Anything else is a defect and blocks the switch.",
 );
 process.exit(1);

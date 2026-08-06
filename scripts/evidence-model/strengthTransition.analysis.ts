@@ -29,7 +29,11 @@ import { describe, it } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { calculateCaseStrength } from "@/lib/argument/caseStrength";
-import type { CaseStrengthGates } from "@/lib/argument/caseStrength";
+import {
+  buildCaseGateAssessment,
+  gateProvided,
+  type CaseGateAssessment,
+} from "@/lib/argument/caseGateAssessment";
 import { reconcileChecklistWithCollectedFields } from "@/lib/packs/checklistReconcile";
 import { deriveCaseEvidenceModel } from "@/lib/evidence/model/derive";
 import { deriveCaseAssessment } from "@/lib/evidence/model/assessment";
@@ -105,15 +109,15 @@ interface DisputeRow {
 }
 
 /** Gates exactly as `buildPack` passed them, read back from `pack_json`. */
-function gatesFrom(packJson: Record<string, unknown> | null): CaseStrengthGates {
+function gatesFrom(packJson: Record<string, unknown> | null): CaseGateAssessment {
   const j = (packJson ?? {}) as Record<string, never>;
-  return {
-    coverage: (j.coverage as never) ?? null,
-    fatalLoss: (j.fatal_loss as never) ?? null,
-    riskWeakness: (j.risk_weakness as never) ?? null,
-    nameMismatch: (j.name_mismatch as never) ?? null,
-    creditAlreadyIssued: (j.credit_already_issued as never) ?? null,
-  };
+  return buildCaseGateAssessment({
+    coverage: gateProvided((j.coverage as never) ?? null),
+    fatalLoss: gateProvided((j.fatal_loss as never) ?? null),
+    riskWeakness: gateProvided((j.risk_weakness as never) ?? null),
+    nameMismatch: gateProvided((j.name_mismatch as never) ?? null),
+    creditAlreadyIssued: gateProvided((j.credit_already_issued as never) ?? null),
+  });
 }
 
 /**
@@ -186,29 +190,25 @@ describe("P2b — strength transition matrix (prod, read-only)", () => {
         packId: pack.id,
         sections,
       });
-      // BOTH candidate policies, so the decision is made on numbers rather
-      // than on whichever default the implementation happened to pick.
-      const strict = deriveCaseAssessment({
+      // One policy, not two. This script used to score the pack under both
+      // candidate readings of `not_applicable` so the choice could be made on
+      // numbers; that choice was made — P-1, strict, approved 2026-08-06 —
+      // and the permissive arm now measures a behaviour the product cannot
+      // produce. Keeping it would report differences no deployment can cause.
+      const modelStrength = deriveCaseAssessment({
         model,
         gates,
         payloadSource,
-        policy: { scoreNotApplicable: false },
-      }).strength.overall;
-      const permissive = deriveCaseAssessment({
-        model,
-        gates,
-        payloadSource,
-        policy: { scoreNotApplicable: true },
       }).strength.overall;
 
-      const key = `${persisted} → ${runtime} → strict:${strict} · permissive:${permissive}`;
+      const key = `${persisted} → ${runtime} → ${modelStrength}`;
       transitions.set(key, (transitions.get(key) ?? 0) + 1);
       if (persisted !== runtime) staleSnapshots.push(dispute.order_name ?? dispute.id);
-      if (runtime !== strict || runtime !== permissive) {
+      if (runtime !== modelStrength) {
         modelChanges.push({
           order: dispute.order_name ?? dispute.id,
           from: runtime,
-          to: `strict:${strict} permissive:${permissive}`,
+          to: modelStrength,
           reason: dispute.reason ?? "(null)",
         });
       }

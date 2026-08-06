@@ -34,6 +34,11 @@ import {
   computeContributions,
   creditAlreadyIssuedInput,
 } from "@/lib/argument/caseStrength";
+import {
+  buildCaseGateAssessment,
+  gateNotProvided,
+  gateProvided,
+} from "@/lib/argument/caseGateAssessment";
 import type { EvidenceFact } from "@/lib/defence/types";
 import { CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
 import { buildGorgiasCommsBlock } from "@/lib/integrations/gorgias/workspaceBlock";
@@ -690,15 +695,19 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     reconciledChecklistV2,
     row.reason,
     caseStrengthPayloadSource,
-    {
-      coverage: coverageInput
-        ? { state: coverageInput.state, shopifyProtectStatus: coverageInput.shopifyProtectStatus }
-        : null,
+    buildCaseGateAssessment({
+      coverage: gateProvided(
+        coverageInput
+          ? { state: coverageInput.state, shopifyProtectStatus: coverageInput.shopifyProtectStatus }
+          : null,
+      ),
       // This route has no order in hand, so it cannot derive either of
-      // these; `buildPack` owns them and persists its verdict.
-      fatalLoss: null,
-      riskWeakness: null,
-      nameMismatch: nameMismatchInput,
+      // these; `buildPack` owns them and persists its verdict. Stated as
+      // "not provided" rather than `null` so the record says "nobody
+      // looked here", not "this case has no fatal loss".
+      fatalLoss: gateNotProvided("order_not_loaded"),
+      riskWeakness: gateNotProvided("order_not_loaded"),
+      nameMismatch: gateProvided(nameMismatchInput),
       // Credit-already-issued FLOOR. Read from the persisted pack rather
       // than re-derived: `buildPack` owns the timing comparison and has
       // the order in hand, this route does not.
@@ -708,8 +717,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       // buildPack scored `strong`, auto-submit filed it and emailed the
       // merchant, and the page they opened — rendered from here — showed
       // no strong badge.
-      creditAlreadyIssued: creditAlreadyIssuedInput(packRow?.pack_json),
-    },
+      creditAlreadyIssued: gateProvided(creditAlreadyIssuedInput(packRow?.pack_json)),
+    }),
   );
   // Contribution rows for the line-item resolver. This used to be a
   // hand-copied inline reimplementation of `computeContributions`, and

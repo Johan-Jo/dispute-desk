@@ -58,6 +58,10 @@ import { config } from "dotenv";
 import { join } from "node:path";
 import { randomUUID, createHash } from "node:crypto";
 import { calculateCaseStrength } from "../lib/argument/caseStrength.ts";
+import {
+  buildCaseGateAssessment,
+  gateNotProvided,
+} from "../lib/argument/caseGateAssessment.ts";
 
 config({ path: join(process.cwd(), ".env.local") });
 config({ path: join(process.cwd(), ".env") });
@@ -556,20 +560,20 @@ for (const { d, pack, gidSuffix, profile, strength } of plan) {
     }
   }
   // Synthetic dev seed — no order, no pack, so no gate has an input to
-  // read. `.mjs` is not typechecked, so this object is the only thing
-  // standing between a new gate and a silently un-gated seed: when one
-  // is added, come back here rather than leaving it absent.
+  // read. `.mjs` is not typechecked, so the canonical builder is the only
+  // thing standing between a new gate and a silently un-gated seed: when one
+  // is added, `buildCaseGateAssessment` still needs it stated here.
   const engine = calculateCaseStrength(
     checklistV2,
     d.reason,
     { kind: "byField", map: byField },
-    {
-      coverage: null,
-      fatalLoss: null,
-      riskWeakness: null,
-      nameMismatch: null,
-      creditAlreadyIssued: null,
-    },
+    buildCaseGateAssessment({
+      coverage: gateNotProvided("order_not_loaded"),
+      fatalLoss: gateNotProvided("order_not_loaded"),
+      riskWeakness: gateNotProvided("order_not_loaded"),
+      nameMismatch: gateNotProvided("order_not_loaded"),
+      creditAlreadyIssued: gateNotProvided("not_persisted_in_pack"),
+    }),
   );
   const engineOverall = engine.overall; // strong | moderate | weak | insufficient
 

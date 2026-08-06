@@ -24,6 +24,11 @@ import {
   computeContributions,
   type CaseStrengthContributions,
 } from "@/lib/argument/caseStrength";
+import {
+  buildCaseGateAssessment,
+  gateNotProvided,
+  gateProvided,
+} from "@/lib/argument/caseGateAssessment";
 import { generateWhyWins } from "@/lib/argument/whyThisCaseWins";
 import { generateRiskExplanation } from "@/lib/argument/riskExplanation";
 import { generateRecommendation } from "@/lib/argument/recommendation";
@@ -992,20 +997,23 @@ export function useDisputeWorkspace(disputeId: string) {
       effectiveChecklist,
       data.dispute.reason,
       payloadSource,
-      {
-        coverage: coverageInput ?? null,
+      buildCaseGateAssessment({
+        coverage: gateProvided(coverageInput ?? null),
         // Client-side recomputation. Fatal-loss, risk-weakness and the
         // name-mismatch gate are all derived server-side from the order
         // and the AVS payload; the workspace response does not carry
-        // them, so this surface has never applied them.
-        fatalLoss: null,
-        riskWeakness: null,
-        nameMismatch: null,
+        // them, so this surface has never applied them. Recorded as
+        // "not shipped to the client" rather than `null`: this is the
+        // exact pair whose conflation let the browser show Strong on a
+        // fraud case the server had capped at Moderate.
+        fatalLoss: gateNotProvided("not_shipped_to_client"),
+        riskWeakness: gateNotProvided("not_shipped_to_client"),
+        nameMismatch: gateNotProvided("not_shipped_to_client"),
         // Credit-already-issued floor from the persisted pack. Omitting
         // it here would make the client disagree with both the server
         // presentation and the submitted package.
-        creditAlreadyIssued: data.pack?.creditAlreadyIssued ?? null,
-      },
+        creditAlreadyIssued: gateProvided(data.pack?.creditAlreadyIssued ?? null),
+      }),
     );
     // Resolve the strength tokens into branded `Localized` strings at
     // the hook boundary. UI consumers receive already-translated text
