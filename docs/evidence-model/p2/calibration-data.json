@@ -1,0 +1,4395 @@
+{
+  "queriedAt": "2026-08-06T21:01:12.420Z",
+  "envFile": ".env.production.local",
+  "divergentFlags": [
+    "requireUsableEvidence",
+    "excludeNotApplicable"
+  ],
+  "rows": [
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "81e9b356",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "rule_mode_review",
+      "eligibilityPath": null,
+      "caseStrength": null,
+      "ruleMode": "review",
+      "persisted": 90,
+      "current": 77,
+      "reconstructed": 77,
+      "candidate": 42,
+      "singleFlagScores": {
+        "requireUsableEvidence": 43,
+        "excludeNotApplicable": 76
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "block",
+      "classification": "unresolved_blocker",
+      "causes": [
+        "requireUsableEvidence"
+      ],
+      "blockerReason": "suspected_collector_contract_defect",
+      "unusableFields": [
+        "billing_address_match",
+        "avs_cvv_match"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1074",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "legacy_no_strength",
+      "caseStrength": null,
+      "ruleMode": "auto",
+      "persisted": 69,
+      "current": 65,
+      "reconstructed": 65,
+      "candidate": 64,
+      "singleFlagScores": {
+        "requireUsableEvidence": 65,
+        "excludeNotApplicable": 64
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1061",
+      "packStatus": "save_failed",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "legacy_no_strength",
+      "caseStrength": null,
+      "ruleMode": "auto",
+      "persisted": 33,
+      "current": 45,
+      "reconstructed": 45,
+      "candidate": 24,
+      "singleFlagScores": {
+        "requireUsableEvidence": 24,
+        "excludeNotApplicable": 45
+      },
+      "currentOutcome": "block",
+      "candidateOutcome": "block",
+      "classification": "unresolved_blocker",
+      "causes": [],
+      "blockerReason": "unparseable_checklist",
+      "unusableFields": [
+        "billing_address_match"
+      ],
+      "notApplicableCollected": [],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof",
+        "avs_cvv_match"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1080",
+      "packStatus": "archived",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 0,
+      "current": 6,
+      "reconstructed": 6,
+      "candidate": 6,
+      "singleFlagScores": {
+        "requireUsableEvidence": 6,
+        "excludeNotApplicable": 6
+      },
+      "currentOutcome": "block",
+      "candidateOutcome": "block",
+      "classification": "unresolved_blocker",
+      "causes": [],
+      "blockerReason": "unparseable_checklist",
+      "unusableFields": [],
+      "notApplicableCollected": [],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof",
+        "avs_cvv_match"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1063",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 89,
+      "current": 82,
+      "reconstructed": 82,
+      "candidate": 64,
+      "singleFlagScores": {
+        "requireUsableEvidence": 65,
+        "excludeNotApplicable": 81
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1083",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 90,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 64,
+      "singleFlagScores": {
+        "requireUsableEvidence": 65,
+        "excludeNotApplicable": 90
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1067",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 89,
+      "current": 82,
+      "reconstructed": 82,
+      "candidate": 64,
+      "singleFlagScores": {
+        "requireUsableEvidence": 65,
+        "excludeNotApplicable": 81
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352505",
+      "packStatus": "ready",
+      "reason": "PRODUCT_UNACCEPTABLE",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 63,
+      "current": 64,
+      "reconstructed": 64,
+      "candidate": 60,
+      "singleFlagScores": {
+        "requireUsableEvidence": 63,
+        "excludeNotApplicable": 60
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
+      "notApplicableCollected": [
+        "billing_address_match",
+        "activity_log",
+        "delivery_proof",
+        "shipping_policy",
+        "cancellation_policy",
+        "avs_cvv_match",
+        "ip_location_check"
+      ],
+      "excludedUnavailable": [],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1076",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 100,
+      "current": 70,
+      "reconstructed": 70,
+      "candidate": 55,
+      "singleFlagScores": {
+        "requireUsableEvidence": 56,
+        "excludeNotApplicable": 70
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1065",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 89,
+      "current": 82,
+      "reconstructed": 82,
+      "candidate": 64,
+      "singleFlagScores": {
+        "requireUsableEvidence": 65,
+        "excludeNotApplicable": 81
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1077",
+      "packStatus": "archived",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "legacy_no_strength",
+      "caseStrength": null,
+      "ruleMode": "auto",
+      "persisted": null,
+      "current": 0,
+      "reconstructed": 0,
+      "candidate": 0,
+      "singleFlagScores": {
+        "requireUsableEvidence": 0,
+        "excludeNotApplicable": 0
+      },
+      "currentOutcome": "block",
+      "candidateOutcome": "block",
+      "classification": "unresolved_blocker",
+      "causes": [],
+      "blockerReason": "missing_pack_sections",
+      "unusableFields": [],
+      "notApplicableCollected": [],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof",
+        "avs_cvv_match"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1070",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "legacy_no_strength",
+      "caseStrength": null,
+      "ruleMode": "auto",
+      "persisted": 72,
+      "current": 63,
+      "reconstructed": 63,
+      "candidate": 62,
+      "singleFlagScores": {
+        "requireUsableEvidence": 63,
+        "excludeNotApplicable": 62
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1075",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 80,
+      "current": 56,
+      "reconstructed": 56,
+      "candidate": 55,
+      "singleFlagScores": {
+        "requireUsableEvidence": 56,
+        "excludeNotApplicable": 55
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "065bf902",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "legacy_no_strength",
+      "caseStrength": null,
+      "ruleMode": "auto",
+      "persisted": 89,
+      "current": 77,
+      "reconstructed": 77,
+      "candidate": 42,
+      "singleFlagScores": {
+        "requireUsableEvidence": 43,
+        "excludeNotApplicable": 76
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "block",
+      "classification": "unresolved_blocker",
+      "causes": [
+        "requireUsableEvidence"
+      ],
+      "blockerReason": "suspected_collector_contract_defect",
+      "unusableFields": [
+        "billing_address_match",
+        "avs_cvv_match"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1071",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "legacy_no_strength",
+      "caseStrength": null,
+      "ruleMode": "auto",
+      "persisted": 69,
+      "current": 70,
+      "reconstructed": 70,
+      "candidate": 55,
+      "singleFlagScores": {
+        "requireUsableEvidence": 56,
+        "excludeNotApplicable": 70
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#345812",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 84,
+      "singleFlagScores": {
+        "requireUsableEvidence": 85,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1072",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "legacy_no_strength",
+      "caseStrength": null,
+      "ruleMode": "auto",
+      "persisted": 69,
+      "current": 56,
+      "reconstructed": 56,
+      "candidate": 55,
+      "singleFlagScores": {
+        "requireUsableEvidence": 56,
+        "excludeNotApplicable": 55
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1066",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 89,
+      "current": 82,
+      "reconstructed": 82,
+      "candidate": 64,
+      "singleFlagScores": {
+        "requireUsableEvidence": 65,
+        "excludeNotApplicable": 81
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1069",
+      "packStatus": "saved_to_shopify_unverified",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "legacy_no_strength",
+      "caseStrength": null,
+      "ruleMode": "auto",
+      "persisted": 72,
+      "current": 77,
+      "reconstructed": 77,
+      "candidate": 62,
+      "singleFlagScores": {
+        "requireUsableEvidence": 63,
+        "excludeNotApplicable": 77
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1064",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 89,
+      "current": 82,
+      "reconstructed": 82,
+      "candidate": 64,
+      "singleFlagScores": {
+        "requireUsableEvidence": 65,
+        "excludeNotApplicable": 81
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1081",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 90,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 64,
+      "singleFlagScores": {
+        "requireUsableEvidence": 65,
+        "excludeNotApplicable": 90
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1068",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "legacy_no_strength",
+      "caseStrength": null,
+      "ruleMode": "auto",
+      "persisted": 71,
+      "current": 23,
+      "reconstructed": 23,
+      "candidate": 23,
+      "singleFlagScores": {
+        "requireUsableEvidence": 23,
+        "excludeNotApplicable": 23
+      },
+      "currentOutcome": "block",
+      "candidateOutcome": "block",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
+      "notApplicableCollected": [],
+      "excludedUnavailable": [
+        "refund_record",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": [
+        "billing_address_match",
+        "shipping_tracking"
+      ]
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1062",
+      "packStatus": "save_failed",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 89,
+      "current": 82,
+      "reconstructed": 82,
+      "candidate": 64,
+      "singleFlagScores": {
+        "requireUsableEvidence": 65,
+        "excludeNotApplicable": 81
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352554",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1073",
+      "packStatus": "save_failed",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 72,
+      "current": 67,
+      "reconstructed": 67,
+      "candidate": 66,
+      "singleFlagScores": {
+        "requireUsableEvidence": 67,
+        "excludeNotApplicable": 66
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": [
+        "supporting_documents"
+      ]
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1077",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 71,
+      "current": 56,
+      "reconstructed": 56,
+      "candidate": 55,
+      "singleFlagScores": {
+        "requireUsableEvidence": 56,
+        "excludeNotApplicable": 55
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1078",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 65,
+      "current": 71,
+      "reconstructed": 71,
+      "candidate": 71,
+      "singleFlagScores": {
+        "requireUsableEvidence": 71,
+        "excludeNotApplicable": 71
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "535efddc",
+      "packStatus": "archived",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "legacy_no_strength",
+      "caseStrength": null,
+      "ruleMode": "auto",
+      "persisted": 67,
+      "current": 77,
+      "reconstructed": 77,
+      "candidate": 42,
+      "singleFlagScores": {
+        "requireUsableEvidence": 43,
+        "excludeNotApplicable": 76
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "block",
+      "classification": "unresolved_blocker",
+      "causes": [
+        "requireUsableEvidence"
+      ],
+      "blockerReason": "suspected_collector_contract_defect",
+      "unusableFields": [
+        "billing_address_match",
+        "avs_cvv_match"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1080",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 90,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 73,
+      "singleFlagScores": {
+        "requireUsableEvidence": 73,
+        "excludeNotApplicable": 90
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1082",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 90,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 73,
+      "singleFlagScores": {
+        "requireUsableEvidence": 73,
+        "excludeNotApplicable": 90
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#346791",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 77,
+      "current": 77,
+      "reconstructed": 77,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 77
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#350317",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "#1084",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 90,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 73,
+      "singleFlagScores": {
+        "requireUsableEvidence": 73,
+        "excludeNotApplicable": 90
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352518",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 91,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352800",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "credit",
+      "caseStrength": "strong",
+      "ruleMode": "auto",
+      "persisted": 81,
+      "current": 86,
+      "reconstructed": 86,
+      "candidate": 67,
+      "singleFlagScores": {
+        "requireUsableEvidence": 68,
+        "excludeNotApplicable": 86
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352512",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 91,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352288",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "strong",
+      "caseStrength": "strong",
+      "ruleMode": "auto",
+      "persisted": 98,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352514",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 91,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#346588",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 72,
+      "current": 77,
+      "reconstructed": 77,
+      "candidate": 55,
+      "singleFlagScores": {
+        "requireUsableEvidence": 56,
+        "excludeNotApplicable": 77
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "block",
+      "classification": "unresolved_blocker",
+      "causes": [
+        "requireUsableEvidence"
+      ],
+      "blockerReason": "suspected_collector_contract_defect",
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#346159",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 84,
+      "current": 85,
+      "reconstructed": 85,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 84
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352555",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352511",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352803",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 98,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 73,
+      "singleFlagScores": {
+        "requireUsableEvidence": 74,
+        "excludeNotApplicable": 98
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352556",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#349144",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 91,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352515",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#349929",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "surasvenne.myshopify.com",
+      "order": "6fb2851a",
+      "packStatus": "archived",
+      "reason": "PRODUCT_UNACCEPTABLE",
+      "threshold": 50,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "rule_mode_review",
+      "eligibilityPath": null,
+      "caseStrength": null,
+      "ruleMode": "review",
+      "persisted": 90,
+      "current": 41,
+      "reconstructed": 41,
+      "candidate": 38,
+      "singleFlagScores": {
+        "requireUsableEvidence": 41,
+        "excludeNotApplicable": 38
+      },
+      "currentOutcome": "block",
+      "candidateOutcome": "block",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
+      "notApplicableCollected": [
+        "activity_log",
+        "shipping_policy"
+      ],
+      "excludedUnavailable": [],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352210",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352513",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352770",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 98,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 73,
+      "singleFlagScores": {
+        "requireUsableEvidence": 74,
+        "excludeNotApplicable": 98
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#342443",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 81,
+      "current": 82,
+      "reconstructed": 82,
+      "candidate": 73,
+      "singleFlagScores": {
+        "requireUsableEvidence": 74,
+        "excludeNotApplicable": 81
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352484",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352238",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 91,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352501",
+      "packStatus": "ready",
+      "reason": "DUPLICATE",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 58,
+      "current": 67,
+      "reconstructed": 67,
+      "candidate": 48,
+      "singleFlagScores": {
+        "requireUsableEvidence": 64,
+        "excludeNotApplicable": 48
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "block",
+      "classification": "intended_policy_change_requires_approval",
+      "causes": [
+        "excludeNotApplicable"
+      ],
+      "blockerReason": null,
+      "unusableFields": [],
+      "notApplicableCollected": [
+        "billing_address_match",
+        "no_return_initiated",
+        "activity_log",
+        "customer_account_info",
+        "shipping_tracking",
+        "delivery_proof",
+        "shipping_policy",
+        "refund_policy",
+        "cancellation_policy",
+        "customer_communication",
+        "avs_cvv_match",
+        "ip_location_check"
+      ],
+      "excludedUnavailable": [],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352216",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352517",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352220",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 91,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352230",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352510",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352764",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 98,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 73,
+      "singleFlagScores": {
+        "requireUsableEvidence": 74,
+        "excludeNotApplicable": 98
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352234",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#349644",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 90,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 64,
+      "singleFlagScores": {
+        "requireUsableEvidence": 66,
+        "excludeNotApplicable": 90
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#349178",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 84,
+      "singleFlagScores": {
+        "requireUsableEvidence": 85,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#347303",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 90,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 64,
+      "singleFlagScores": {
+        "requireUsableEvidence": 66,
+        "excludeNotApplicable": 90
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352237",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352225",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352560",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 91,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352266",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352218",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 89,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#353605",
+      "packStatus": "ready",
+      "reason": "PRODUCT_NOT_RECEIVED",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 87,
+      "current": 88,
+      "reconstructed": 88,
+      "candidate": 85,
+      "singleFlagScores": {
+        "requireUsableEvidence": 86,
+        "excludeNotApplicable": 85
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
+      "notApplicableCollected": [
+        "billing_address_match",
+        "no_return_initiated",
+        "activity_log",
+        "customer_account_info",
+        "refund_policy",
+        "cancellation_policy",
+        "avs_cvv_match",
+        "ip_location_check"
+      ],
+      "excludedUnavailable": [],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352519",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 98,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 73,
+      "singleFlagScores": {
+        "requireUsableEvidence": 74,
+        "excludeNotApplicable": 98
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352537",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 91,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352801",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 98,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 73,
+      "singleFlagScores": {
+        "requireUsableEvidence": 74,
+        "excludeNotApplicable": 98
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352796",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 73,
+      "current": 74,
+      "reconstructed": 74,
+      "candidate": 47,
+      "singleFlagScores": {
+        "requireUsableEvidence": 49,
+        "excludeNotApplicable": 73
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "block",
+      "classification": "unresolved_blocker",
+      "causes": [
+        "requireUsableEvidence"
+      ],
+      "blockerReason": "suspected_collector_contract_defect",
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#350318",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#349146",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 91,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352694",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "strong",
+      "caseStrength": "strong",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 84,
+      "singleFlagScores": {
+        "requireUsableEvidence": 85,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352762",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 98,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 73,
+      "singleFlagScores": {
+        "requireUsableEvidence": 74,
+        "excludeNotApplicable": 98
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#347625",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 81,
+      "current": 82,
+      "reconstructed": 82,
+      "candidate": 73,
+      "singleFlagScores": {
+        "requireUsableEvidence": 74,
+        "excludeNotApplicable": 81
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352772",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 72,
+      "current": 77,
+      "reconstructed": 77,
+      "candidate": 55,
+      "singleFlagScores": {
+        "requireUsableEvidence": 56,
+        "excludeNotApplicable": 77
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "block",
+      "classification": "unresolved_blocker",
+      "causes": [
+        "requireUsableEvidence"
+      ],
+      "blockerReason": "suspected_collector_contract_defect",
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352767",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 98,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 73,
+      "singleFlagScores": {
+        "requireUsableEvidence": 74,
+        "excludeNotApplicable": 98
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352768",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 90,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 64,
+      "singleFlagScores": {
+        "requireUsableEvidence": 66,
+        "excludeNotApplicable": 90
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352761",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 98,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 73,
+      "singleFlagScores": {
+        "requireUsableEvidence": 74,
+        "excludeNotApplicable": 98
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352538",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 91,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352222",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 89,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352212",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352264",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352236",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 91,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352558",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352265",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#349145",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 91,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#347617",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 81,
+      "current": 82,
+      "reconstructed": 82,
+      "candidate": 73,
+      "singleFlagScores": {
+        "requireUsableEvidence": 74,
+        "excludeNotApplicable": 81
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352553",
+      "packStatus": "ready",
+      "reason": "PRODUCT_UNACCEPTABLE",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 63,
+      "current": 65,
+      "reconstructed": 65,
+      "candidate": 60,
+      "singleFlagScores": {
+        "requireUsableEvidence": 63,
+        "excludeNotApplicable": 60
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
+      "notApplicableCollected": [
+        "billing_address_match",
+        "activity_log",
+        "delivery_proof",
+        "shipping_policy",
+        "cancellation_policy",
+        "avs_cvv_match",
+        "tds_authentication",
+        "ip_location_check"
+      ],
+      "excludedUnavailable": [],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#346793",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 77,
+      "current": 77,
+      "reconstructed": 77,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 77
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#345961",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 91,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#347620",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 81,
+      "current": 82,
+      "reconstructed": 82,
+      "candidate": 73,
+      "singleFlagScores": {
+        "requireUsableEvidence": 74,
+        "excludeNotApplicable": 81
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352552",
+      "packStatus": "ready",
+      "reason": "PRODUCT_UNACCEPTABLE",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 63,
+      "current": 65,
+      "reconstructed": 65,
+      "candidate": 60,
+      "singleFlagScores": {
+        "requireUsableEvidence": 63,
+        "excludeNotApplicable": 60
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
+      "notApplicableCollected": [
+        "billing_address_match",
+        "activity_log",
+        "delivery_proof",
+        "shipping_policy",
+        "cancellation_policy",
+        "avs_cvv_match",
+        "tds_authentication",
+        "ip_location_check"
+      ],
+      "excludedUnavailable": [],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#350764",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "PRODUCT_NOT_RECEIVED",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 88,
+      "current": 88,
+      "reconstructed": 88,
+      "candidate": 85,
+      "singleFlagScores": {
+        "requireUsableEvidence": 86,
+        "excludeNotApplicable": 85
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
+      "notApplicableCollected": [
+        "billing_address_match",
+        "no_return_initiated",
+        "activity_log",
+        "customer_account_info",
+        "refund_policy",
+        "cancellation_policy",
+        "avs_cvv_match",
+        "ip_location_check"
+      ],
+      "excludedUnavailable": [],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352557",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "strong",
+      "caseStrength": "strong",
+      "ruleMode": "auto",
+      "persisted": 89,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#351825",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "strong",
+      "caseStrength": "strong",
+      "ruleMode": "auto",
+      "persisted": 89,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#345459",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 72,
+      "current": 77,
+      "reconstructed": 77,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 77
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352289",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 89,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352541",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 89,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352311",
+      "packStatus": "ready",
+      "reason": "PRODUCT_NOT_RECEIVED",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "fatal_loss",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 96,
+      "current": 97,
+      "reconstructed": 97,
+      "candidate": 95,
+      "singleFlagScores": {
+        "requireUsableEvidence": 93,
+        "excludeNotApplicable": 95
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
+      "notApplicableCollected": [
+        "billing_address_match",
+        "no_return_initiated",
+        "activity_log",
+        "customer_account_info",
+        "refund_policy",
+        "cancellation_policy",
+        "avs_cvv_match",
+        "ip_location_check"
+      ],
+      "excludedUnavailable": [
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352284",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "strong",
+      "caseStrength": "strong",
+      "ruleMode": "auto",
+      "persisted": 98,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#351823",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 91,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#349344",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "strong",
+      "caseStrength": "strong",
+      "ruleMode": "auto",
+      "persisted": 99,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352286",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "strong",
+      "caseStrength": "strong",
+      "ruleMode": "auto",
+      "persisted": 98,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352285",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": true,
+      "ineligibleReason": null,
+      "eligibilityPath": "strong",
+      "caseStrength": "strong",
+      "ruleMode": "auto",
+      "persisted": 98,
+      "current": 99,
+      "reconstructed": 99,
+      "candidate": 77,
+      "singleFlagScores": {
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 99
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352773",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 72,
+      "current": 77,
+      "reconstructed": 77,
+      "candidate": 55,
+      "singleFlagScores": {
+        "requireUsableEvidence": 56,
+        "excludeNotApplicable": 77
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "block",
+      "classification": "unresolved_blocker",
+      "causes": [
+        "requireUsableEvidence"
+      ],
+      "blockerReason": "suspected_collector_contract_defect",
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#352526",
+      "packStatus": "ready",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 89,
+      "current": 92,
+      "reconstructed": 92,
+      "candidate": 70,
+      "singleFlagScores": {
+        "requireUsableEvidence": 70,
+        "excludeNotApplicable": 91
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#343101",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 56,
+      "current": 57,
+      "reconstructed": 57,
+      "candidate": 47,
+      "singleFlagScores": {
+        "requireUsableEvidence": 49,
+        "excludeNotApplicable": 56
+      },
+      "currentOutcome": "block",
+      "candidateOutcome": "block",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#347844",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 98,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 73,
+      "singleFlagScores": {
+        "requireUsableEvidence": 74,
+        "excludeNotApplicable": 98
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#347615",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 98,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 73,
+      "singleFlagScores": {
+        "requireUsableEvidence": 74,
+        "excludeNotApplicable": 98
+      },
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "billing_address_match",
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    }
+  ]
+}
