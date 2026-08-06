@@ -33,6 +33,7 @@ import {
   dispositionPreservingThreshold,
   divergentFlags,
   gateOutcome,
+  persistedLiveGateOutcome,
   resolveShopGateSettings,
   structurallyUnusableFields,
   thresholdTradeOffs,
@@ -536,13 +537,15 @@ describe("transition classification", () => {
   ];
 
   it("a flip leaning on a structurally-unusable field is a blocker, not a finding", () => {
-    // The live case: `orderSource.ts:113` encodes "billing address matches" by
-    // PUSHING the field into `fieldsProvided`, while `categorizeEvidenceField`
-    // asks for `p.match === true` — a key no collector writes. The field is
-    // therefore `invalid` on every pack that has it (measured 2026-08-06: 95
-    // collected, 0 valid). Reporting that as "the usable-evidence rule
-    // corrected a wrong decision" would sell a collector bug as a completeness
-    // finding, and a maintainer could lower a threshold to compensate for it.
+    // The live case: `canonicalEvidence.ts:153-160` defines
+    // `billing_address_match` as AVS-confirmed billing matching the CARDHOLDER,
+    // while `orderSource.ts:109-113` emits it when Shopify's billing and
+    // shipping addresses share a city and country. Two different facts under
+    // one name, so the grader returns `invalid` on every pack that has it
+    // (measured 2026-08-06: 95 collected, 0 valid). Reporting that as "the
+    // usable-evidence rule corrected a wrong decision" would sell an
+    // unresolved evidence-semantics question as a completeness finding, and a
+    // maintainer could lower a threshold to compensate for it.
     const verdict = classifyTransition({
       currentOutcome: "auto_save",
       reconstructedOutcome: "auto_save",
@@ -552,7 +555,7 @@ describe("transition classification", () => {
       usableEvidenceAttributionContaminated: true,
     });
     expect(verdict.classification).toBe("unresolved_blocker");
-    expect(verdict.blockerReason).toBe("suspected_collector_contract_defect");
+    expect(verdict.blockerReason).toBe("evidence_semantics_mismatch");
 
     // Same input, uncontaminated → the correction it would otherwise be.
     expect(
@@ -847,28 +850,28 @@ describe("semantics bookkeeping", () => {
 describe("threshold arithmetic", () => {
   it("finds the highest disposition-preserving threshold when one exists", () => {
     const packs = [
-      { currentScore: 90, candidateScore: 70 }, // files today
-      { currentScore: 80, candidateScore: 65 }, // files today
-      { currentScore: 40, candidateScore: 30 }, // blocked today
+      { filesToday: true, candidateScore: 70 },
+      { filesToday: true, candidateScore: 65 },
+      { filesToday: false, candidateScore: 30 },
     ];
     // Weakest passer scores 65; strongest blocked scores 30 → 65 is safe.
-    expect(dispositionPreservingThreshold(packs, 60)).toBe(65);
+    expect(dispositionPreservingThreshold(packs)).toBe(65);
   });
 
   it("returns null when the candidate REORDERS rather than rescales", () => {
     const packs = [
-      { currentScore: 90, candidateScore: 47 }, // files today, scores low
-      { currentScore: 40, candidateScore: 48 }, // blocked today, scores higher
+      { filesToday: true, candidateScore: 47 }, // files today, scores low
+      { filesToday: false, candidateScore: 48 }, // blocked today, scores higher
     ];
     // No threshold can keep both. The harness reports the conflict; it does
     // not silently pick a side.
-    expect(dispositionPreservingThreshold(packs, 60)).toBeNull();
+    expect(dispositionPreservingThreshold(packs)).toBeNull();
   });
 
   it("enumerates the trade-off at every real decision boundary", () => {
     const packs = [
-      { currentScore: 90, candidateScore: 47 },
-      { currentScore: 40, candidateScore: 48 },
+      { filesToday: true, candidateScore: 47 },
+      { filesToday: false, candidateScore: 48 },
     ];
     const rows = thresholdTradeOffs(packs, 60);
     expect(rows.map((r) => r.threshold)).toEqual([47, 48, 60]);
@@ -885,5 +888,161 @@ describe("threshold arithmetic", () => {
       newlyBlocks: 0,
       preserved: 1,
     });
+  });
+
+  it("keys off the LIVE disposition, not a recalculated score comparison", () => {
+    // The correction this test exists for. Both packs would look identical to
+    // a `recalculatedScore >= threshold` rule — they have the same candidate
+    // score — but production holds opposite dispositions for them, because the
+    // live gate reads a stale persisted score (and readiness, and blockers).
+    // Pricing the trade-off off the recalculated score would report one pack
+    // preserved and one changed, exactly backwards for one of them.
+    const rows = thresholdTradeOffs(
+      [
+        { filesToday: true, candidateScore: 55 },
+        { filesToday: false, candidateScore: 55 },
+      ],
+      60,
+    );
+    const at55 = rows.find((r) => r.threshold === 55)!;
+    expect(at55).toEqual({
+      threshold: 55,
+      newlyAutoFiles: 1, // the one blocked today now clears it
+      newlyBlocks: 0,
+      preserved: 1, // the one filing today keeps filing
+    });
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+ *  9. The two baselines
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+describe("persisted-live baseline vs recalculated baseline", () => {
+  const SETTINGS = {
+    autoSaveEnabled: true,
+    autoSaveMinScore: 60,
+    enforceNoBlockers: true,
+  };
+
+  it("reads the persisted score, not a recalculated one", () => {
+    // The whole point: a pack whose persisted snapshot says 90 auto-files
+    // today even if a fresh recalculation would score it 55. Production reads
+    // the column (`pipeline.ts:808`).
+    expect(
+      persistedLiveGateOutcome({
+        settings: SETTINGS,
+        persistedCompletenessScore: 90,
+        persistedSubmissionReadiness: "ready",
+        persistedBlockers: [],
+      }),
+    ).toBe("auto_save");
+
+    expect(
+      persistedLiveGateOutcome({
+        settings: SETTINGS,
+        persistedCompletenessScore: 55,
+        persistedSubmissionReadiness: "ready",
+        persistedBlockers: [],
+      }),
+    ).toBe("block");
+  });
+
+  it("treats a NULL persisted score as 0, exactly as pipeline.ts does", () => {
+    // `pack.completeness_score ?? 0`. Not "skip", not "assume it passes" —
+    // a null-scored pack is blocked by any non-zero threshold. One prod pack
+    // (#1077) is in this state.
+    expect(
+      persistedLiveGateOutcome({
+        settings: SETTINGS,
+        persistedCompletenessScore: null,
+        persistedSubmissionReadiness: null,
+        persistedBlockers: null,
+      }),
+    ).toBe("block");
+  });
+
+  it("a NULL persisted readiness falls to the LEGACY blocker-count path", () => {
+    // `?? undefined` in `pipeline.ts:810`, and `evaluateAutoSaveGate` branches
+    // on `submissionReadiness !== undefined`. With readiness absent, a
+    // non-empty `blockers` array blocks — a path the readiness-aware branch
+    // would NOT take, since `ready_with_warnings` is not `blocked`.
+    const args = {
+      settings: SETTINGS,
+      persistedCompletenessScore: 95,
+      persistedBlockers: ["Delivery Proof"],
+    };
+    expect(
+      persistedLiveGateOutcome({
+        ...args,
+        persistedSubmissionReadiness: null,
+      }),
+    ).toBe("block");
+    expect(
+      persistedLiveGateOutcome({
+        ...args,
+        persistedSubmissionReadiness: "ready_with_warnings",
+      }),
+    ).toBe("auto_save");
+  });
+
+  it("persisted readiness `blocked` blocks even at a perfect score", () => {
+    expect(
+      persistedLiveGateOutcome({
+        settings: SETTINGS,
+        persistedCompletenessScore: 100,
+        persistedSubmissionReadiness: "blocked",
+        persistedBlockers: [],
+      }),
+    ).toBe("block");
+  });
+
+  it("the two baselines can disagree about what happens today", () => {
+    // This is why both are reported. Measured on prod 2026-08-06: 67 of 115
+    // packs carry a persisted score the current engine no longer reproduces,
+    // so on those packs the recalculated baseline is NOT what production does.
+    const persisted = persistedLiveGateOutcome({
+      settings: SETTINGS,
+      persistedCompletenessScore: 100, // e.g. prod #1076
+      persistedSubmissionReadiness: "ready",
+      persistedBlockers: [],
+    });
+    const recalculated = gateOutcome({
+      score: 70, // what the engine says now
+      settings: SETTINGS,
+      readiness: "ready",
+      blockers: [],
+    });
+    expect(persisted).toBe("auto_save");
+    expect(recalculated).toBe("auto_save");
+
+    // ...and at a threshold between the two, they diverge outright.
+    const tighter = { ...SETTINGS, autoSaveMinScore: 80 };
+    expect(
+      persistedLiveGateOutcome({
+        settings: tighter,
+        persistedCompletenessScore: 100,
+        persistedSubmissionReadiness: "ready",
+        persistedBlockers: [],
+      }),
+    ).toBe("auto_save");
+    expect(
+      gateOutcome({ score: 70, settings: tighter, readiness: "ready", blockers: [] }),
+    ).toBe("block");
+  });
+
+  it("both baselines honour the shop's own auto-save switch", () => {
+    const off = { ...SETTINGS, autoSaveEnabled: false };
+    expect(
+      persistedLiveGateOutcome({
+        settings: off,
+        persistedCompletenessScore: 100,
+        persistedSubmissionReadiness: "ready",
+        persistedBlockers: [],
+      }),
+    ).toBe("block");
+    expect(
+      gateOutcome({ score: 100, settings: off, readiness: "ready", blockers: [] }),
+    ).toBe("block");
   });
 });

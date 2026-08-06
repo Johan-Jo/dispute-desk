@@ -1,13 +1,13 @@
 # Slice 2 / PR 2.0 — completeness calibration report
 
 **Status:** read-only calibration. Nothing here is deployed.
-**Queried:** 2026-08-06T21:01:04Z against **prod** (`aokhplydttxtebvbeuzc`, via `.env.production.local`).
+**Queried:** 2026-08-06T21:36:32Z against **prod** (`aokhplydttxtebvbeuzc`, via `.env.production.local`).
 **Harness:** `scripts/evidence-model/completenessThreshold.analysis.ts`
 **Contract:** `scripts/evidence-model/calibration/completenessCalibration.ts`
-**Raw rows:** `docs/evidence-model/p2/calibration-data.json`
+**Raw rows:** `docs/evidence-model/p2/calibration-data.json` (same run, same timestamp)
 **Reproduce:** `npm run analysis:evidence -- scripts/evidence-model/completenessThreshold.analysis.ts`
 
-**The recommendation in §7 is advisory. P-7 remains deferred and unapproved,
+**The recommendation in §8 is advisory. P-7 remains deferred and unapproved,
 and PR 2.1 (deployment) is not authorized.**
 
 ---
@@ -17,103 +17,121 @@ and PR 2.1 (deployment) is not authorized.**
 | | |
 |---|---|
 | Population | **115 packs on open disputes** (`disputes.final_outcome IS NULL`), 2 shops |
-| Packs that can actually reach the completeness gate | **19** (blume-box 9, surasvenne 10) |
-| Gate-outcome changes among eligible packs, at today's thresholds | **2** (both surasvenne) |
+| Packs that can reach the completeness gate | **19** (blume-box 9, surasvenne 10) |
+| **Operational** crossings among eligible packs (persisted-live → candidate) | **3** — all surasvenne |
+| **Semantic** crossings among eligible packs (recalculated → candidate) | **2** — all surasvenne |
 | Transitions classified | **115 / 115 — none unclassified** |
 | `unresolved_blocker` | **10** |
 
-**PR 2.0 delivers the harness, the tests and this report. It does not deliver a
-usable P-7 decision, because 10 transitions could not be attributed.** The
-largest blocker is not a completeness question at all — it is a collector
-contract defect that makes one evidence field grade `invalid` on every pack in
-the fleet (§5.1). Until it is resolved, "does the candidate score correctly
-drop this pack below its threshold?" has no honest answer for the packs it
-touches.
+**blume-box: recommendation retained (keep 60), and now supported by the live
+baseline — 9 of 9 eligible packs auto-file today and still auto-file under the
+candidate, 0 crossings, no eligible pack is a blocker.**
+
+**surasvenne: blocked**, now for two independent reasons — 4 of its 10 eligible
+packs are `unresolved_blocker`, and under the live baseline **no
+disposition-preserving threshold exists at all** (one did under the
+recalculated baseline; it was an artifact of that baseline).
 
 ---
 
-## 2. Two methodological corrections made during the run
+## 2. Three methodological corrections
 
-Both were found by measuring, not by reading, and both would have inverted the
-report's conclusion. They are recorded here because the numbers below are only
-meaningful with them applied.
+All three were found by measuring. Each would have changed the report's answer.
 
 ### 2.1 The population was selected by the very gate being calibrated
 
-The previous harness read `evidence_packs` with `status = 'ready'`. A pack that
-**passes** the auto-save gate is immediately moved to `saved_to_shopify`
-(`lib/automation/pipeline.ts:813-821`). So `status = 'ready'` is precisely the
-complement of "packs that cleared the gate."
+The original harness read `evidence_packs` with `status = 'ready'`. A pack that
+**passes** the gate is immediately moved to `saved_to_shopify`
+(`pipeline.ts:813-821`), so `'ready'` is precisely the complement of "packs
+that cleared the gate."
 
-Run against that population, the harness reported **zero eligible packs on both
-shops** and concluded the threshold decides nothing. The threshold had already
-decided; the winners had left the set. Widening to every pack on an open
-dispute moved the population from 73 to 115 and the eligible set from 0 to 19.
+Run that way it reported **zero eligible packs on both shops** and concluded the
+threshold decides nothing. It had already decided; the winners had left the set.
+73 → 115 packs, eligible 0 → 19.
 
-### 2.2 `proceed` is three different justifications, not one
+### 2.2 `proceed` is three justifications, not one
 
 `evaluateAutoSubmitGuards` returns `proceed` for Strong, for a fully-covering
-prior credit, **and** for a pack whose `pack_json.case_strength` is absent
-entirely. Counted together, surasvenne looked like a shop with 10 Strong packs.
-It has none:
+prior credit, **and** for a pack whose `pack_json.case_strength` is absent.
 
 | shop | eligible | via Strong | via credit | via *no recorded strength* |
 |---|---|---|---|---|
 | blume-box | 9 | 8 | 1 | 0 |
 | surasvenne | 10 | 0 | 0 | **10** |
 
-Surasvenne's entire eligible population predates the `case_strength` field.
-That is a materially weaker basis for a threshold decision than blume-box's,
-and §7 treats the two shops differently because of it.
+### 2.3 The gate reads persisted columns, not a recalculated score
+
+`evaluateAndMaybeAutoSave` does not recompute completeness. It reads the row
+(`pipeline.ts:804-811`):
+
+```
+completenessScore:    pack.completeness_score   ?? 0
+blockers:             pack.blockers             ?? []
+submissionReadiness:  pack.submission_readiness ?? undefined
+```
+
+67 of 115 packs carry a `completeness_score` the current engine no longer
+reproduces (§7.1). A calibration that answers "what does the gate do today" by
+re-running the engine silently substitutes a score production has never seen for
+the one production reads.
+
+The harness now carries **two baselines**, and they answer different questions:
+
+| baseline | definition | used for |
+|---|---|---|
+| **operational** — persisted-live | `evaluateAutoSaveGate` over `completeness_score`, `submission_readiness`, `blockers`, exactly as `pipeline.ts` calls it | crossing counts, threshold trade-offs, recommendations |
+| **semantic** — recalculated-current | `evaluateAutoSaveGate` over the current engine re-run now | attribution (§6) only |
+
+Attribution stays on the semantic baseline deliberately: the harness must be
+able to reproduce a baseline from the model before it may attribute a change
+away from it, and a persisted snapshot written by an older engine is
+unreproducible by construction. Classifying against it would mark most of the
+fleet `harness_cannot_reproduce_current_engine` and attribute nothing.
+
+Three faithful details a re-implementation would get wrong, each of which
+changes an answer: `?? 0` (a NULL score is 0, not "skip"), `?? undefined` for
+readiness (which drops the gate onto the **legacy blocker-count** path rather
+than the readiness path), `?? []` for blockers. All three are pinned by test.
 
 ---
 
 ## 3. The candidate completeness contract, as implemented
 
 Four named, independently ablatable rules. The ablation is the attribution
-mechanism: when a pack's gate outcome changes, the harness flips exactly one
-rule at a time and reports which one moved it.
+mechanism: when a pack's outcome changes, the harness flips exactly one rule at
+a time and reports which one moved it.
 
 | Rule | Candidate | Today | Meaning |
 |---|---|---|---|
-| `excludeUnavailableFromDenominator` | `true` | `true` | A row this **order** cannot produce leaves the denominator entirely — neither satisfied nor a gap. An unfulfilled order is not penalised for having no delivery proof. |
-| `waivedCountsSatisfied` | `true` | `true` | A waived row counts as **satisfied** and is never reported as **available**. Waiving removes a blocker; it does not conjure evidence. |
-| `requireUsableEvidence` | **`true`** | **`false`** | A row is satisfied by ≥1 record with `validity.state === "valid"`. Today any *collected* field satisfies its row, so an AVS payload of `N`/`N` counts exactly like a matching one. |
-| `excludeNotApplicable` | **`true`** | **`false`** | P-1 (Slice 1, #515): a `not_applicable` record enters neither numerator nor denominator. Today `reconcileChecklistWithCollectedFields` appends such fields at `optional`. |
+| `excludeUnavailableFromDenominator` | `true` | `true` | A row this **order** cannot produce leaves the denominator entirely. |
+| `waivedCountsSatisfied` | `true` | `true` | A waived row counts as **satisfied** and is never reported as **available**. |
+| `requireUsableEvidence` | **`true`** | **`false`** | A row is satisfied by ≥1 record with `validity.state === "valid"`. Today any *collected* field satisfies its row. |
+| `excludeNotApplicable` | **`true`** | **`false`** | P-1 (Slice 1, #515): a `not_applicable` record enters neither numerator nor denominator. |
 
-Only the bottom two differ, so those two are the entire delta. The top two are
-carried as flags so the report can **measure** that they are inert on this
-fleet rather than assert it (§6.4).
+Only the bottom two differ. The top two are carried as flags so the report can
+**measure** that they are inert rather than assert it (§7.3).
 
 ### 3.1 Completeness is independent of strength
 
 The projection reads exactly six things per field — `relevance`,
 `status.applicable`, `status.available`, `status.waived`, `status.blocking`,
 `records.length` — and never `summary.quality`, a record's `quality`, or
-`calculateCaseStrength`.
-
-The one place the concepts touch is `status.available`, which is a **validity**
-judgement, not a strength one. The canonical vocabulary separates them
-deliberately: an AVS payload with no matching codes is `invalid` (sound, proves
-nothing), while a `contextual` record is perfectly valid and merely weak.
-`tests/unit/completenessCalibration.test.ts` proves the independence over the
-full valid-quality cross-product, with a control asserting the same fixtures do
-move the strength scorer.
+`calculateCaseStrength`. The one place the concepts touch is `status.available`,
+a **validity** judgement: an AVS payload with no matching codes is `invalid`
+(sound, proves nothing), while a `contextual` record is valid and merely weak.
+Proved over the full valid-quality cross-product, with a control asserting the
+same fixtures do move the strength scorer.
 
 ### 3.2 What the candidate is *not*
 
 `definitionFor(field).relevance(reason)` is derived **from**
 `REASON_TEMPLATES_V2` (`lib/evidence/model/definitions.ts:128`). "Absent from
-the template" and `not_applicable` are therefore the same set, so the candidate
-row set is **not wider** than today's — under P-1 it is narrower. Any account
-of this slice that describes it as widening the denominator with new required
-evidence is wrong.
+the template" and `not_applicable` are the same set, so the candidate row set is
+**not wider** than today's — under P-1 it is narrower.
 
 ---
 
-## 4. Per-shop results
-
-### 4.1 Score distributions
+## 4. Score distributions
 
 | shop | engine | 0s | 20s | 30s | 40s | 50s | 60s | 70s | 80s | 90s | mean |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -122,34 +140,59 @@ evidence is wrong.
 | surasvenne (29) | current | 2 | 1 | | 2 | 3 | 3 | 7 | 6 | 5 | 66.9 |
 | surasvenne (29) | candidate | 2 | 2 | 1 | 3 | 5 | 12 | 4 | | | 53.4 |
 
-Mean shift: blume-box **−19.5**, surasvenne **−13.5**. The candidate scores
-lower everywhere, as expected — it stops counting collected-but-unusable
-evidence and stops counting appended not-applicable rows.
-
-### 4.2 Gate outcomes at each shop's own `auto_save_min_score`
-
-Thresholds are read per shop from `shop_settings` and never defaulted; a shop
-whose row could not be read produces a `missing_shop_settings` blocker rather
-than a house number. Both shops had a readable row.
-
-| shop | thr | scope | old auto | old block | new auto | new block | **crossings** |
-|---|---|---|---|---|---|---|---|
-| blume-box | 60 | all 86 | 85 | 1 | 80 | 6 | 5 |
-| blume-box | 60 | **eligible 9** | 9 | 0 | 9 | 0 | **0** |
-| surasvenne | 50 | all 29 | 24 | 5 | 21 | 8 | 3 |
-| surasvenne | 50 | **eligible 10** | 7 | 3 | 5 | 5 | **2** |
-
-The `all` rows are context. Only the `eligible` rows are operationally real: a
-pack that parks for review, is covered, is fatally lost, or is Moderate never
-reaches `evaluateAutoSaveGate` at all, so its "crossing" changes nothing.
-
-**blume-box: zero eligible crossings at its current threshold.**
-**surasvenne: two eligible packs move `auto_save → block`** — and both are
-`unresolved_blocker`, not findings (§5.1).
+Mean shift: blume-box **−19.5**, surasvenne **−13.5**.
 
 ---
 
-## 5. Transition classification — all 115, none unclassified
+## 5. Gate outcomes — both baselines, reported separately
+
+Thresholds are read per shop from `shop_settings` and never defaulted. Both
+shops had a readable row.
+
+| shop | thr | baseline | scope | old auto | old block | new auto | new block | **crossings** |
+|---|---|---|---|---|---|---|---|---|
+| blume-box | 60 | operational | all 86 | 84 | 2 | 80 | 6 | 4 |
+| blume-box | 60 | operational | **eligible 9** | 9 | 0 | 9 | 0 | **0** |
+| blume-box | 60 | semantic | all 86 | 85 | 1 | 80 | 6 | 5 |
+| blume-box | 60 | semantic | **eligible 9** | 9 | 0 | 9 | 0 | **0** |
+| surasvenne | 50 | operational | all 29 | 26 | 3 | 21 | 8 | 5 |
+| surasvenne | 50 | operational | **eligible 10** | 8 | 2 | 5 | 5 | **3** |
+| surasvenne | 50 | semantic | all 29 | 24 | 5 | 21 | 8 | 3 |
+| surasvenne | 50 | semantic | **eligible 10** | 7 | 3 | 5 | 5 | **2** |
+
+Fleet-wide operational transitions: `auto_save→auto_save` 101,
+`auto_save→block` 9, `block→block` 5. No pack moves `block→auto_save`.
+
+### 5.1 Every live-vs-recalculated disagreement (3 of 115)
+
+| shop | order | persisted | readiness | blockers | recalculated | live → / semantic → | eligible |
+|---|---|---|---|---|---|---|---|
+| surasvenne | #1068 | 71 | `ready` | 1 | 23 | **auto_save** / block | **yes** |
+| surasvenne | 6fb2851a | 90 | `submitted` | 0 | 41 | **auto_save** / block | no |
+| blume-box | #352501 | 58 | `ready_with_warnings` | 1 | 67 | **block** / auto_save | no |
+
+Two of these change what the report says:
+
+**surasvenne #1068 is an operational crossing the semantic baseline misses
+entirely.** Its persisted score is 71 and it auto-files today; recalculated it
+is 23. The semantic baseline sees `block → block` and classifies it
+`current_correct_preserved` — no change. The live baseline sees
+`auto_save → block`: a pack that files today would stop. This is exactly the
+gap the second baseline exists to close, and it is why surasvenne's eligible
+crossing count is 3 operationally and 2 semantically.
+
+**blume-box #352501 does not move operationally at all.** It is the one
+`intended_policy_change_requires_approval` pack (§6.3). Semantically it is
+`auto_save → block`; operationally it is `block → block`, because its persisted
+score of 58 is already under the shop's threshold of 60. So the P-1 row-set
+change has **zero measured operational effect** on this fleet — it still needs
+approval as a semantics matter, but it is not changing a live disposition.
+
+---
+
+## 6. Transition classification — all 115, none unclassified
+
+Classified against the **semantic** baseline, for the reason in §2.3.
 
 | class | blume-box | surasvenne | total |
 |---|---|---|---|
@@ -160,17 +203,31 @@ reaches `evaluateAutoSaveGate` at all, so its "crossing" changes nothing.
 
 Classification is total over its input and proved by enumeration in CI over the
 full cross-product of outcomes, missing-input sets, single-flag attributions and
-the contamination flag. `unresolved_blocker` is the honest bucket, never a
-fallthrough.
+the contamination flag.
 
-### 5.1 BLOCKER — `suspected_collector_contract_defect` (7 packs)
+### 6.1 BLOCKER — `evidence_semantics_mismatch`, `billing_address_match` (7 packs)
 
-`lib/packs/sources/orderSource.ts:109-114` encodes "the billing address
-matches" by **pushing `billing_address_match` into `fieldsProvided`** only when
-it does. The flag lives in the field's *presence*. But
-`categorizeEvidenceField` asks a different question —
-`canonicalEvidence.ts:502-504`: `p.match === true` — and no collector writes a
-`match` key into the section payload.
+**This is not a plumbing bug, and neither obvious mechanical fix is justified.**
+
+`canonicalEvidence.ts:153-160` defines the signal:
+
+> `billing_address_match` — category `strong`. *"Strong when AVS-confirmed
+> billing matches the cardholder. Invalid otherwise."*
+
+`orderSource.ts:109-113` emits it on a different fact entirely:
+
+```ts
+const match =
+  billingRedacted.city === shippingRedacted.city &&
+  billingRedacted.countryCode === shippingRedacted.countryCode;
+if (match) fieldsProvided.push("billing_address_match");
+```
+
+That compares Shopify's **billing address to its shipping address** — two
+merchant-held addresses — on city and country. There is no AVS anywhere in it,
+and no cardholder anywhere in it. The grader asks `p.match === true`
+(`canonicalEvidence.ts:502-504`), a key the section payload does not contain, so
+the field grades `invalid` on every pack that has it.
 
 Fleet census, this run:
 
@@ -179,26 +236,36 @@ Fleet census, this run:
 | `order_confirmation` | 112 | 112 | |
 | `activity_log` | 111 | 111 | |
 | `avs_cvv_match` | 108 | 105 | |
-| **`billing_address_match`** | **95** | **0** | ← structural defect |
-| `fraud_risk_screening` | 85 | 7 | payload-dependent, not a defect |
+| **`billing_address_match`** | **95** | **0** | ← semantics mismatch |
+| `fraud_risk_screening` | 85 | 7 | payload-dependent, not a mismatch |
 | `delivery_proof` | 62 | 62 | |
 
-95 collected, 0 valid. This is not a fleet whose billing addresses fail to
-match — it is a broken contract between two files, and it is **pre-existing**:
-`calculateCaseStrength` reads the same payload through the same categorizer, so
-production already scores this field `invalid` everywhere.
+**Neither mechanical fix is acceptable.** Writing `match: true` into the payload,
+or teaching the grader to read the field's presence, would both promote
+**billing/shipping geographic similarity into strong AVS-confirmed cardholder
+evidence** — a materially stronger claim than the data supports, on a signal
+whose canonical category is `strong`, and one that reaches an issuer. An earlier
+draft of this report framed the choice as "pick a side." That framing was wrong
+and is retracted.
 
-**Why this is a blocker and not a finding.** `requireUsableEvidence` drops the
-field on all 7 packs, and on all 7 that drop is what moves the pack below its
-threshold. Classified as `current_wrong_corrected`, the report would tell a
-maintainer that the usable-evidence rule caught 7 packs auto-filing on bad
-evidence — when in fact it caught a collector bug. The obvious response to such
-a finding is to lower the shop's threshold to compensate, which would bake the
-bug into a setting.
+**The grader's `invalid` is the safe answer.** Current runtime behaviour is not
+the defect; it is the thing preventing the overclaim. What is unresolved is
+that two files own the meaning of one field name and name different facts with
+it.
 
-Affected (all `auto_save → block`, cause `requireUsableEvidence`):
+> **Explicit statement for the record: the current collector output must NOT be
+> treated as strong `billing_address_match` evidence.** Billing/shipping city
+> and country agreement is not an AVS confirmation and is not a cardholder
+> match. Any future change here must decide what fact the field names and what
+> the collector is actually able to substantiate — a separate evidence-semantics
+> and ownership decision, out of scope for PR 2.0 and not made here.
 
-| shop | order | reason | current | candidate | thr | eligible |
+**Runtime code is untouched by this PR.**
+
+Affected packs (all `auto_save → block` on both baselines, cause
+`requireUsableEvidence`):
+
+| shop | order | reason | recalc | candidate | thr | eligible |
 |---|---|---|---|---|---|---|
 | blume-box | #346588 | FRAUDULENT | 77 | 55 | 60 | no |
 | blume-box | #352772 | FRAUDULENT | 77 | 55 | 60 | no |
@@ -208,86 +275,66 @@ Affected (all `auto_save → block`, cause `requireUsableEvidence`):
 | surasvenne | 065bf902 | FRAUDULENT | 77 | 42 | 50 | **yes** |
 | surasvenne | 535efddc | FRAUDULENT | 77 | 42 | 50 | **yes** |
 
-Two are eligible, and they are **exactly** surasvenne's two eligible crossings
-in §4.2. So surasvenne's entire measured operational impact rests on this
-defect.
+Why this is a blocker for *calibration*: if the `invalid` grade were counted as
+"collected but not usable", the report would show the usable-evidence rule
+stripping real evidence off every fraud pack, and the natural response — lower
+the shop threshold to compensate — would bake an unsettled evidence question
+into a setting. The harness detects the class generically (a field collected ≥3
+times and never valid), not by special-casing this field.
 
-**Resolution required before P-7 can be decided.** Someone must decide which
-side of the contract is right — either the collector writes `match: true` into
-the payload, or the categorizer reads presence. That is a product/ownership
-decision about an evidence definition, not a completeness threshold, and this
-report does not make it. Once resolved, re-run the harness; these 7 packs will
-reclassify with no change to the harness.
+### 6.2 BLOCKER — missing or unreadable pack inputs (3 packs, surasvenne)
 
-### 5.2 BLOCKER — missing or unreadable pack inputs (3 packs, surasvenne)
-
-| order | blocker | eligible | outcome |
+| order | blocker | eligible | operational |
 |---|---|---|---|
-| #1061 | `unparseable_checklist` | yes | block → block |
+| #1061 | `unparseable_checklist` | **yes** | block → block |
 | #1080 | `unparseable_checklist` | no | block → block |
-| #1077 | `missing_pack_sections` | yes | block → block |
+| #1077 | `missing_pack_sections` | **yes** | block → block |
 
 `checklist_v2` is null/non-array, or `pack_json.sections` is empty. The harness
 reconstructs order applicability from the persisted checklist, so with no
 checklist every conditional field reads "this order cannot produce it" — a
-fabricated input. The outcomes happen to agree on all three, but agreement
-produced by fabricated inputs is not evidence that nothing changes, so they are
-reported as blockers rather than as preserved.
+fabricated input. The outcomes agree on all three, but agreement produced from
+fabricated inputs is not evidence that nothing changes.
 
-This is the same class as the null-checklist blank-page fix in PR #506, which
-made the *read path* defensive. These rows show packs still persisted in that
-state on prod.
+Same class as the null-checklist fix in PR #506, which made the *read path*
+defensive. These rows show packs still persisted in that state on prod.
 
-### 5.3 REQUIRES APPROVAL — P-1 row-set change (1 pack)
+### 6.3 REQUIRES APPROVAL — P-1 row-set change (1 pack)
 
-**blume-box #352501, DUPLICATE, current 67 → candidate 48, threshold 60,
-`auto_save → block`, cause `excludeNotApplicable`, ineligible.**
+**blume-box #352501, DUPLICATE, recalculated 67 → candidate 48, threshold 60,
+cause `excludeNotApplicable`, ineligible.**
 
-The `DUPLICATE` template has three rows (`order_confirmation`,
-`duplicate_explanation`, `supporting_documents`). This order collected twelve
-further canonical fields — `billing_address_match`, `activity_log`,
-`avs_cvv_match`, `shipping_tracking`, `delivery_proof`, four policies,
-`customer_communication`, `customer_account_info`, `ip_location_check`,
-`no_return_initiated`. Today `reconcileChecklistWithCollectedFields` appends
-each at `optional` and counts it satisfied, lifting the score. Under P-1 they
-are `not_applicable` and enter neither side of the ratio.
+The `DUPLICATE` template has three rows. This order collected twelve further
+canonical fields, which `reconcileChecklistWithCollectedFields` appends at
+`optional` and counts satisfied. Under P-1 they are `not_applicable` and enter
+neither side of the ratio. Ablation confirms P-1 is the sole cause
+(`requireUsableEvidence` alone → 64, still above 60; `excludeNotApplicable`
+alone → 48).
 
-Ablating the flag alone reproduces today's outcome (`requireUsableEvidence`
-alone → 64, still above 60; `excludeNotApplicable` alone → 48). So P-1 is the
-sole cause.
-
-P-1 is approved as **semantics**; its effect on a **disposition** is what P-7
-was deferred to decide. This pack is currently ineligible (Moderate), so the
-change is not operationally live — but it is the one demonstrated case of the
-approved row-set rule moving a gate outcome, and it needs sign-off before
-deployment.
+**Operationally it does not move** (§5.1): its persisted score is 58, already
+below 60, so it is `block → block` today and under the candidate. P-1 is
+approved as *semantics*; its effect on a *disposition* is what P-7 was deferred
+to decide, and this remains the one demonstrated case of the rule moving a
+semantic outcome. It needs sign-off before deployment, but nothing on this fleet
+changes because of it.
 
 ---
 
-## 6. Supporting findings
+## 7. Supporting findings
 
-### 6.1 Persisted scores are already stale on 67 of 115 packs
+### 7.1 Persisted scores are stale on 67 of 115 packs
 
-`evaluateAutoSaveGate` reads `pack.completeness_score` — the value persisted at
-build. The current engine, re-run now, disagrees with it on **67 of 115** packs,
-in both directions (`#1076` persisted 100 / runtime 70; `#1061` persisted 33 /
-runtime 45; `#1077` persisted `null` / runtime 0).
+The gate reads `pack.completeness_score`, written at build. The current engine
+disagrees with it on **67 of 115** packs, in both directions (`#1076` persisted
+100 / recalculated 70; `#1061` persisted 33 / recalculated 45; `#1077` persisted
+`null` / recalculated 0). Only 3 of those 67 change the **disposition** (§5.1) —
+most differences are within the slack between the score and the threshold.
 
-This is **independent of Slice 2** and live today: a template change silently
-re-decides nothing until a rebuild, so the fleet is gated on a mixture of engine
-vintages. It is not in this PR's scope, and it is why this report compares the
-candidate against the engine **re-run now** rather than against the persisted
-column — comparing to persisted would measure template drift and attribute it
-to Slice 2.
+This is **independent of Slice 2** and live today: the fleet is gated on a
+mixture of engine vintages. Out of scope here, and the reason this report
+carries two baselines rather than one.
 
-### 6.2 Rule mode is observable, and two packs are review-mode
-
-`pickAutomationAction` is pure, so the harness reads `rules` and evaluates rule
-mode without side effects (it does **not** call `evaluateRules`, which writes an
-audit event). Two surasvenne packs resolve to `review` and are correctly
-excluded from the eligible population.
-
-### 6.3 Ineligibility breakdown
+### 7.2 Ineligibility breakdown
 
 | shop | moderate | weak | fatal_loss | review mode |
 |---|---|---|---|---|
@@ -298,22 +345,27 @@ Moderate strength is the dominant reason a pack never reaches the completeness
 gate — 74 of the 96 ineligible packs. Completeness thresholds are a much smaller
 lever on this fleet than the strength band is.
 
-### 6.4 The two inert rules, measured
+`pickAutomationAction` is pure, so rule mode is read without side effects (the
+harness does **not** call `evaluateRules`, which writes an audit event).
 
-- Rows satisfied by waiver: **2 packs**. The waiver path is live but rare.
-- Packs with ≥1 unavailable exclusion: **107 of 115**. The
-  applicability-exclusion rule is doing heavy work on almost every pack — which
-  is why the model derivation must be given order context, and why omitting it
-  reads ~30 points low.
+### 7.3 The two inert rules, measured
 
-Neither rule changed a single gate outcome, because both already hold in
-production. That is now measured, not assumed.
+- Rows satisfied by waiver: **2 packs** — live but rare.
+- Packs with ≥1 unavailable exclusion: **107 of 115** — the
+  applicability-exclusion rule does heavy work on nearly every pack, which is
+  why the model derivation must be given order context.
+
+Neither changed a gate outcome, because both already hold in production. Now
+measured, not assumed.
 
 ---
 
-## 7. P-7 recommendation (advisory)
+## 8. P-7 recommendation (advisory)
 
-### blume-box — **keep `auto_save_min_score` at 60. No change.**
+### blume-box — **keep `auto_save_min_score` at 60. Retained.**
+
+Basis is the **live** baseline: all 9 eligible packs auto-file today
+(persisted-live) and all 9 still auto-file under the candidate.
 
 | threshold | newly auto-files | newly blocks | preserved |
 |---|---|---|---|
@@ -323,71 +375,75 @@ production. That is now measured, not assumed.
 | 77 | 0 | 3 | 6 |
 | 84 | 0 | 8 | 1 |
 
-Every eligible pack keeps its disposition at 60. The highest
-disposition-preserving value is 67, so 60 sits comfortably inside the safe band
-with headroom — no reason to move it, and moving it upward would start blocking
-at 70. Confidence is reasonable: 8 of the 9 eligible packs are genuinely Strong,
-one is the credited branch.
+**Recommendation basis: SOUND — no eligible blume-box pack is an
+`unresolved_blocker`.** The four blume-box packs in §6.1 are all *ineligible*,
+so resolving that question cannot change this recommendation; it can only
+reclassify those four rows. 8 of the 9 eligible packs are genuinely Strong, one
+is the credited branch. The disposition-preserving band extends to 67, so 60
+sits inside it with headroom.
 
-Note the four blume-box packs in §5.1 are all **ineligible**, so resolving that
-defect cannot change this recommendation for blume-box — it can only change the
-classification of those four rows.
+### surasvenne — **no recommendation. Blocked, on two independent grounds.**
 
-### surasvenne — **no recommendation. Blocked.**
+Today (persisted-live): 8 of 10 eligible packs auto-file, 2 are blocked.
 
 | threshold | newly auto-files | newly blocks | preserved |
 |---|---|---|---|
-| 0 | 3 | 0 | 7 |
-| 23 | 2 | 0 | 8 |
-| 24 | 1 | 0 | 9 |
-| **42** | **0** | **0** | **10** |
-| **50 (current)** | **0** | **2** | **8** |
-| 55 | 0 | 2 | 8 |
-| 62 | 0 | 4 | 6 |
-| 64 | 0 | 6 | 4 |
+| 0 | 2 | 0 | 8 |
+| 23 | 1 | 0 | 9 |
+| 24 | 1 | 1 | 8 |
+| 42 | 0 | 1 | 9 |
+| **50 (current)** | **0** | **3** | **7** |
+| 55 | 0 | 3 | 7 |
+| 62 | 0 | 5 | 5 |
+| 64 | 0 | 7 | 3 |
 
-42 is the arithmetically disposition-preserving threshold. **Do not adopt it.**
-The only two packs it rescues are `065bf902` and `535efddc` — the two whose
-candidate score of 42 is produced by the `billing_address_match` defect (§5.1).
-Lowering the shop's threshold by 8 points to re-admit them would be tuning a
-setting to compensate for a collector bug, permanently and invisibly.
+**1. No disposition-preserving threshold exists.** Under the live baseline the
+weakest pack that auto-files today scores 23 under the candidate, while a pack
+blocked today scores 24 — the semantics **reorder** rather than rescale, so some
+disposition must change at every threshold. (The recalculated baseline reported
+a preserving value of 42; that was an artifact of scoring "today" with numbers
+production does not hold, and it does not survive the live baseline.)
 
-Keeping 50 is also not recommendable yet, because the 2 packs it would newly
-block are blocked for a reason the report cannot stand behind.
+**2. Four of the ten eligible packs are `unresolved_blocker`** — `#1061`,
+`#1077`, `065bf902`, `535efddc`. Every row of the trade-off table above is
+priced partly with numbers this report cannot stand behind.
 
-Both options are unsound for the same reason, which is the definition of a
-blocker. Additionally, all 10 of surasvenne's eligible packs reach the gate via
+Compounding both: all 10 of surasvenne's eligible packs reach the gate via
 `legacy_no_strength` (§2.2), so even a clean re-run would rest on packs no
 strength engine ever judged.
 
 **Prerequisites for a surasvenne recommendation:**
-1. Resolve the `billing_address_match` contract (§5.1).
-2. Resolve or exclude the 3 packs with missing inputs (§5.2).
-3. Re-run the harness — no harness change needed.
+1. Resolve the `billing_address_match` evidence-semantics question (§6.1) —
+   a decision about what the field means, not a code fix.
+2. Resolve or exclude the 3 packs with missing inputs (§6.2).
+3. Re-run the harness. No harness change is needed.
 
 ### Shop category
 
-Neither shop needs a threshold change to absorb the candidate semantics. The
-`−19.5` / `−13.5` mean shift is large, but it lands almost entirely on packs
-that never reach the gate. **The working hypothesis for a fleet-wide default is
-"thresholds do not move"** — but it is drawn from 19 eligible packs on 2 shops
-and should not be generalized further without more shops.
+blume-box needs no threshold change to absorb the candidate semantics. The
+`−19.5` / `−13.5` mean shift is large but lands almost entirely on packs that
+never reach the gate. **The working hypothesis for a fleet-wide default is
+"thresholds do not move"** — drawn from 19 eligible packs on 2 shops, one of
+which is blocked, so it should not be generalized further without more shops.
 
 ---
 
-## 8. Explicitly out of scope for this PR
+## 9. Explicitly out of scope for this PR
 
-Not touched, per the PR 2.0 boundary: production completeness behaviour, any
-threshold or shop setting, PR 2.1, reader/writer migration, auto-save,
-save-to-Shopify, deadline, UI, PDF, automation and package behaviour, schema
-migrations, backfills, jobs and feature flags.
+Not touched: production completeness behaviour, any threshold or shop setting,
+the `billing_address_match` runtime code, PR 2.1, reader/writer migration,
+auto-save, save-to-Shopify, deadline, UI, PDF, automation and package behaviour,
+schema migrations, backfills, jobs and feature flags.
 
 Deferred, with an owner needed:
 
-1. **`billing_address_match` contract defect** (§5.1) — blocks P-7.
-2. **3 packs with unreadable inputs** (§5.2) — blocks P-7 for surasvenne.
-3. **67 stale persisted completeness scores** (§6.1) — pre-existing, live, and
+1. **`billing_address_match` evidence-semantics / ownership mismatch** (§6.1) —
+   blocks P-7. Requires a decision on what fact the field names and what the
+   collector can substantiate. **Not** a mechanical fix; both obvious ones would
+   overclaim.
+2. **3 packs with unreadable inputs** (§6.2) — blocks P-7 for surasvenne.
+3. **67 stale persisted completeness scores** (§7.1) — pre-existing, live, and
    independent of this slice.
-4. **`fraud_risk_screening` at 7/85 valid** (§5.1 census) — payload-dependent
-   and therefore not flagged as a defect, but a 8% validity rate on a field the
-   FRAUDULENT template lists is worth its own look.
+4. **`fraud_risk_screening` at 7/85 valid** (§6.1 census) — payload-dependent so
+   correctly not flagged, but an 8% validity rate on a FRAUDULENT template field
+   is worth its own look.

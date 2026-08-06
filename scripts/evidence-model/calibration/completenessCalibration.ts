@@ -400,6 +400,60 @@ export function gateOutcome(args: {
 }
 
 /**
+ * TODAY'S REAL DISPOSITION — the gate as `pipeline.ts` actually calls it.
+ *
+ * WHY THIS EXISTS SEPARATELY FROM `gateOutcome`. `evaluateAndMaybeAutoSave`
+ * does not recompute completeness. It reads the columns
+ * (`pipeline.ts:804-811`):
+ *
+ *     completenessScore:    pack.completeness_score ?? 0
+ *     blockers:             (pack.blockers as string[]) ?? []
+ *     submissionReadiness:  (pack.submission_readiness as …) ?? undefined
+ *
+ * Those are a SNAPSHOT written at build time, and 67 of 115 open packs carry a
+ * `completeness_score` the current engine no longer reproduces. So a
+ * calibration that asks "what does the gate do today" by re-running the engine
+ * is answering a different question from "what did the gate do": it silently
+ * substitutes a score production has never seen for the one production reads.
+ *
+ * The two baselines answer different questions and both are needed:
+ *
+ *   recalculated-current → candidate   isolates the SEMANTICS. Both sides run
+ *                                      on the same fresh inputs, so a delta is
+ *                                      attributable to a semantics rule and to
+ *                                      nothing else. Attribution is only sound
+ *                                      here, because the harness can reproduce
+ *                                      this baseline from the model.
+ *
+ *   persisted-live      → candidate    is the OPERATIONAL truth. This is the
+ *                                      disposition a deployment would actually
+ *                                      change, so crossing counts and threshold
+ *                                      trade-offs must use it.
+ *
+ * Note the three faithful details that a re-implementation would get wrong and
+ * that change answers: `?? 0` (a NULL score is 0, not "skip"), `?? undefined`
+ * for readiness (which drops `evaluateAutoSaveGate` onto the LEGACY blocker-
+ * count path rather than the readiness path), and `?? []` for blockers.
+ */
+export function persistedLiveGateOutcome(args: {
+  settings: ShopGateSettings;
+  persistedCompletenessScore: number | null;
+  persistedSubmissionReadiness: string | null;
+  persistedBlockers: string[] | null;
+}): GateOutcome {
+  return evaluateAutoSaveGate({
+    autoSaveEnabled: args.settings.autoSaveEnabled,
+    autoSaveMinScore: args.settings.autoSaveMinScore,
+    enforceNoBlockers: args.settings.enforceNoBlockers,
+    completenessScore: args.persistedCompletenessScore ?? 0,
+    blockers: args.persistedBlockers ?? [],
+    submissionReadiness:
+      (args.persistedSubmissionReadiness as SubmissionReadiness | null) ??
+      undefined,
+  }).action;
+}
+
+/**
  * Reasons a pack never reaches the completeness gate at all.
  *
  * `pipeline.ts` runs `evaluateAutoSubmitGuards` BEFORE
@@ -492,28 +546,38 @@ export type BlockerReason =
   | "missing_pack_sections"
   | "unparseable_checklist"
   | "harness_cannot_reproduce_current_engine"
-  | "suspected_collector_contract_defect";
+  | "evidence_semantics_mismatch";
 
 /**
  * A field is STRUCTURALLY unusable when it is collected across the fleet and
- * `categorizeEvidenceField` grades it `invalid` every single time. That is not
- * a fleet whose evidence happens to be worthless — it is a contract defect
- * between the collector and the categorizer, and the completeness semantics
- * are not what makes it fail.
+ * `categorizeEvidenceField` grades it `invalid` every single time. Zero valid
+ * observations out of many is not a fleet whose evidence happens to be
+ * worthless — it means the producer and the grader are not describing the same
+ * fact, and the completeness semantics are not what makes it fail.
  *
- * The live example, found while calibrating rather than by reading:
- * `orderSource.ts:113` pushes `billing_address_match` into `fieldsProvided`
- * ONLY when the billing and shipping addresses match — the match is encoded by
- * the field's PRESENCE. `categorizeEvidenceField` asks a different question:
- * `p.match === true`, a key the section payload does not contain. So the field
- * is `invalid` on 100% of packs that have it.
+ * THE LIVE EXAMPLE, and note carefully what it is NOT.
+ * `canonicalEvidence.ts:153-160` defines `billing_address_match` as
+ * "Strong when AVS-confirmed billing matches the CARDHOLDER. Invalid
+ * otherwise." `orderSource.ts:109-113` emits the field when Shopify's billing
+ * and shipping addresses share a city and country — two merchant-held
+ * addresses, geographic similarity, no AVS anywhere, no cardholder anywhere.
+ * Result: collected 95, valid 0.
  *
- * If that were counted as "collected but not usable", the calibration would
- * report the usable-evidence rule stripping real evidence off every fraud
- * pack, and a maintainer would read a collector bug as a completeness finding
- * and lower a threshold to compensate. Any transition attributed to such a
- * field is therefore an `unresolved_blocker` — the harness cannot say whether
- * the candidate semantics are right about a field whose input is broken, and
+ * This is NOT a plumbing bug with a mechanical fix. Writing `match: true` into
+ * the payload, or teaching the grader to read the field's presence, would both
+ * promote billing/shipping geographic similarity into strong AVS-confirmed
+ * cardholder evidence — a materially stronger claim than the data supports,
+ * and one that would reach an issuer. The grader's `invalid` is the SAFE
+ * answer, and the honest description is that two files own the meaning of one
+ * field name and disagree about which fact it names.
+ *
+ * Why it is a blocker for calibration. If the `invalid` grade were counted as
+ * "collected but not usable", the report would show the usable-evidence rule
+ * stripping real evidence off every fraud pack, and a maintainer would read an
+ * unresolved evidence-semantics question as a completeness finding and lower a
+ * threshold to compensate. Any transition attributed to such a field is
+ * therefore an `unresolved_blocker`: the harness cannot say whether the
+ * candidate semantics are right about a field whose meaning is unsettled, and
  * it may not guess.
  */
 export function structurallyUnusableFields(
@@ -647,7 +711,7 @@ export function classifyTransition(input: TransitionInput): TransitionVerdict {
     return {
       classification: "unresolved_blocker",
       causes,
-      blockerReason: "suspected_collector_contract_defect",
+      blockerReason: "evidence_semantics_mismatch",
     };
   }
 
@@ -678,8 +742,18 @@ export interface ThresholdTradeOff {
 }
 
 export interface ThresholdCandidateInput {
-  /** Score under the CURRENT engine, re-run now. */
-  currentScore: number;
+  /**
+   * Whether the pack auto-files TODAY — the full
+   * `persistedLiveGateOutcome`, not `score >= threshold`.
+   *
+   * It has to be the outcome and not a score comparison, because the live gate
+   * also consults `auto_save_enabled`, persisted readiness and persisted
+   * blockers. Recomputing "does it clear the bar" from a freshly recalculated
+   * score would compare a disposition production never took against one it
+   * might — and on this fleet 67 of 115 persisted scores differ from the
+   * recalculated ones, so the two disagree often enough to change the answer.
+   */
+  filesToday: boolean;
   /** Score under the approved candidate semantics. */
   candidateScore: number;
 }
@@ -703,9 +777,8 @@ export function thresholdTradeOffs(
     let newlyBlocks = 0;
     let preserved = 0;
     for (const p of packs) {
-      const filesToday = p.currentScore >= currentThreshold;
       const filesUnder = p.candidateScore >= threshold;
-      if (filesToday === filesUnder) preserved += 1;
+      if (p.filesToday === filesUnder) preserved += 1;
       else if (filesUnder) newlyAutoFiles += 1;
       else newlyBlocks += 1;
     }
@@ -725,10 +798,9 @@ export function thresholdTradeOffs(
  */
 export function dispositionPreservingThreshold(
   packs: ThresholdCandidateInput[],
-  currentThreshold: number,
 ): number | null {
-  const filesToday = packs.filter((p) => p.currentScore >= currentThreshold);
-  const blockedToday = packs.filter((p) => p.currentScore < currentThreshold);
+  const filesToday = packs.filter((p) => p.filesToday);
+  const blockedToday = packs.filter((p) => !p.filesToday);
   if (filesToday.length === 0) return null;
 
   const floor = Math.min(...filesToday.map((p) => p.candidateScore));

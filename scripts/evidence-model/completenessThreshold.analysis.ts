@@ -63,6 +63,7 @@ import {
   dispositionPreservingThreshold,
   divergentFlags,
   gateOutcome,
+  persistedLiveGateOutcome,
   resolveShopGateSettings,
   structurallyUnusableFields,
   thresholdTradeOffs,
@@ -132,7 +133,10 @@ interface PackRow {
   shop_id: string;
   dispute_id: string;
   status: string | null;
+  /** The three columns `pipeline.ts:804-811` actually feeds to the gate. */
   completeness_score: number | null;
+  submission_readiness: string | null;
+  blockers: unknown;
   checklist_v2: unknown;
   waived_items: unknown;
   pack_json: Record<string, unknown> | null;
@@ -177,12 +181,28 @@ interface PackCalibration {
   caseStrength: string | null;
   ruleMode: "auto" | "review";
   persisted: number | null;
+  persistedReadiness: string | null;
+  persistedBlockerCount: number | null;
   current: number | null;
   reconstructed: number | null;
   candidate: number | null;
   singleFlagScores: Partial<Record<SemanticFlag, number>>;
+  /**
+   * TODAY'S REAL DISPOSITION — the gate over the PERSISTED columns, exactly as
+   * `pipeline.ts` calls it. The operational baseline.
+   */
+  persistedLiveOutcome: GateOutcome | null;
+  /**
+   * The gate over the CURRENT engine re-run now. The semantic baseline: it
+   * shares fresh inputs with the candidate, so a delta between them is
+   * attributable to a semantics rule.
+   */
   currentOutcome: GateOutcome | null;
   candidateOutcome: GateOutcome | null;
+  /** persisted-live → candidate. The transition a deployment would cause. */
+  operationalTransition: string;
+  /** True when the two baselines disagree about what happens today. */
+  baselinesDisagree: boolean;
   classification: TransitionClass;
   causes: SemanticFlag[];
   blockerReason: BlockerReason | null;
@@ -215,7 +235,8 @@ describe("Slice 2 / PR 2.0 — completeness calibration (prod, read-only)", () =
       // on the set of cases the gate rejected is a selection bias that inverts
       // the answer.
       rest<PackRow>(
-        "evidence_packs?select=id,shop_id,dispute_id,status,completeness_score,checklist_v2,waived_items,pack_json",
+        "evidence_packs?select=id,shop_id,dispute_id,status,completeness_score," +
+          "submission_readiness,blockers,checklist_v2,waived_items,pack_json",
       ),
       rest<SettingsRow>(
         "shop_settings?select=shop_id,auto_save_enabled,auto_save_min_score,enforce_no_blockers",
@@ -347,6 +368,25 @@ describe("Slice 2 / PR 2.0 — completeness calibration (prod, read-only)", () =
         candidate.blockers,
       );
 
+      // ── TODAY'S REAL DISPOSITION, from the persisted columns ──
+      //
+      // Not a re-run. `pipeline.ts` reads `completeness_score`,
+      // `submission_readiness` and `blockers` straight off the row, and 67 of
+      // these 115 packs carry a persisted score the current engine no longer
+      // reproduces. Recalculating would answer "what would the gate do on
+      // fresh inputs", which is not the disposition a deployment changes.
+      const persistedBlockers = Array.isArray(pack.blockers)
+        ? (pack.blockers as string[])
+        : null;
+      const persistedLiveOutcome = gateSettings
+        ? persistedLiveGateOutcome({
+            settings: gateSettings,
+            persistedCompletenessScore: pack.completeness_score,
+            persistedSubmissionReadiness: pack.submission_readiness,
+            persistedBlockers,
+          })
+        : null;
+
       // ── single-flag ablation: which rule moved this pack? ──
       const singleFlagScores: Partial<Record<SemanticFlag, number>> = {};
       const singleFlagOutcomes: Partial<Record<SemanticFlag, GateOutcome>> = {};
@@ -433,12 +473,20 @@ describe("Slice 2 / PR 2.0 — completeness calibration (prod, read-only)", () =
         caseStrength,
         ruleMode: ruleResult.action.mode,
         persisted: pack.completeness_score,
+        persistedReadiness: pack.submission_readiness,
+        persistedBlockerCount: persistedBlockers?.length ?? null,
         current: currentMetrics.completenessScore,
         reconstructed: reconstructed.score,
         candidate: candidate.score,
         singleFlagScores,
+        persistedLiveOutcome,
         currentOutcome,
         candidateOutcome,
+        operationalTransition: `${persistedLiveOutcome ?? "unknown"}→${candidateOutcome ?? "unknown"}`,
+        baselinesDisagree:
+          persistedLiveOutcome !== null &&
+          currentOutcome !== null &&
+          persistedLiveOutcome !== currentOutcome,
         // Filled by the second pass, below.
         classification: "unresolved_blocker",
         causes: [],
@@ -574,35 +622,82 @@ describe("Slice 2 / PR 2.0 — completeness calibration (prod, read-only)", () =
       line();
     }
 
-    /* 3 ── readiness / gate outcomes at TODAY's threshold */
-    line("── 3. GATE OUTCOMES AT EACH SHOP'S CURRENT THRESHOLD ─────────────");
+    /* 3 ── the two baselines, reported separately */
+    line("── 3. GATE OUTCOMES — TWO BASELINES, REPORTED SEPARATELY ─────────");
     line();
-    line("shop                        scope       old:auto old:block  new:auto new:block  crossings");
+    line("   OPERATIONAL (persisted-live → candidate): the gate over the columns");
+    line("   `pipeline.ts` actually reads. This is the disposition a deployment");
+    line("   would change, so crossings and threshold trade-offs use THIS row.");
+    line();
+    line("   SEMANTIC (recalculated-current → candidate): both sides on fresh");
+    line("   inputs, so a delta is attributable to a semantics rule. Used for");
+    line("   attribution ONLY — it is not what production does today.");
+    line();
+    line("shop                        baseline      scope      old:auto old:block  new:auto new:block  crossings");
     for (const [shop, list] of shopOrder) {
-      for (const [label, scope] of [
-        ["all       ", list],
-        ["eligible  ", list.filter((r) => r.eligible)],
+      for (const [baseline, pickOld] of [
+        ["operational", (r: PackCalibration) => r.persistedLiveOutcome],
+        ["semantic   ", (r: PackCalibration) => r.currentOutcome],
       ] as const) {
-        const oldAuto = scope.filter((r) => r.currentOutcome === "auto_save").length;
-        const oldBlock = scope.filter((r) => r.currentOutcome === "block").length;
-        const newAuto = scope.filter((r) => r.candidateOutcome === "auto_save").length;
-        const newBlock = scope.filter((r) => r.candidateOutcome === "block").length;
-        const crossings = scope.filter(
-          (r) =>
-            r.currentOutcome !== null &&
-            r.candidateOutcome !== null &&
-            r.currentOutcome !== r.candidateOutcome,
-        ).length;
-        line(
-          `${shop.padEnd(27)} ${label}  ${String(oldAuto).padStart(8)} ${String(oldBlock).padStart(9)}  ` +
-            `${String(newAuto).padStart(8)} ${String(newBlock).padStart(9)}  ${String(crossings).padStart(9)}`,
-        );
+        for (const [label, scope] of [
+          ["all      ", list],
+          ["eligible ", list.filter((r) => r.eligible)],
+        ] as const) {
+          const oldAuto = scope.filter((r) => pickOld(r) === "auto_save").length;
+          const oldBlock = scope.filter((r) => pickOld(r) === "block").length;
+          const newAuto = scope.filter((r) => r.candidateOutcome === "auto_save").length;
+          const newBlock = scope.filter((r) => r.candidateOutcome === "block").length;
+          const crossings = scope.filter(
+            (r) =>
+              pickOld(r) !== null &&
+              r.candidateOutcome !== null &&
+              pickOld(r) !== r.candidateOutcome,
+          ).length;
+          line(
+            `${shop.padEnd(27)} ${baseline}   ${label}  ${String(oldAuto).padStart(8)} ` +
+              `${String(oldBlock).padStart(9)}  ${String(newAuto).padStart(8)} ` +
+              `${String(newBlock).padStart(9)}  ${String(crossings).padStart(9)}`,
+          );
+        }
       }
+      line();
     }
 
-    /* 4 ── transition classification */
+    /* 3b ── every live-vs-recalculated disagreement, named */
+    line("── 3b. WHERE THE TWO BASELINES DISAGREE ABOUT TODAY ──────────────");
+    const disagree = rows.filter((r) => r.baselinesDisagree);
+    line();
+    line(`   ${disagree.length} of ${rows.length} packs: the persisted snapshot and a fresh`);
+    line(`   recalculation give DIFFERENT dispositions for today. On these packs the`);
+    line(`   semantic baseline is not what production does, and using it for a`);
+    line(`   crossing count would misstate the deployment's effect.`);
+    line();
+    if (disagree.length) {
+      line("   shop         order       persisted  readiness            blk  recalc  live→ / recalc→");
+      for (const r of disagree) {
+        line(
+          `   ${r.shop.split(".")[0].padEnd(12)} ${r.order.padEnd(11)} ` +
+            `${String(r.persisted).padStart(9)}  ${String(r.persistedReadiness).padEnd(19)} ` +
+            `${String(r.persistedBlockerCount).padStart(3)}  ${String(r.current).padStart(6)}  ` +
+            `${r.persistedLiveOutcome} / ${r.currentOutcome}   eligible=${r.eligible}`,
+        );
+      }
+    } else {
+      line("   none — the persisted snapshots all agree with a fresh recalculation.");
+    }
+
+    /* 4 ── transition classification (SEMANTIC baseline) */
     line();
     line("── 4. TRANSITION CLASSIFICATION (every pack, none unclassified) ──");
+    line();
+    line("   Classified against the SEMANTIC baseline, deliberately. Attribution");
+    line("   requires the harness to reproduce the baseline from the model before");
+    line("   it may attribute a change away from it, and it can only do that for a");
+    line("   freshly recalculated score. A persisted snapshot was written by an");
+    line("   older engine and is unreproducible by construction, so classifying");
+    line("   against it would mark most of the fleet");
+    line("   `harness_cannot_reproduce_current_engine` and attribute nothing.");
+    line("   Operational impact is reported from the persisted baseline in §3/§5.");
     line();
     const CLASSES: TransitionClass[] = [
       "current_wrong_corrected",
@@ -629,7 +724,8 @@ describe("Slice 2 / PR 2.0 — completeness calibration (prod, read-only)", () =
       line(
         `     ${r.shop.split(".")[0].padEnd(12)} ${r.order.padEnd(10)} ${String(r.reason).padEnd(22)} ` +
           `cur=${r.current} cand=${r.candidate} thr=${r.threshold} ` +
-          `${r.currentOutcome}→${r.candidateOutcome} eligible=${r.eligible} ` +
+          `semantic ${r.currentOutcome}→${r.candidateOutcome} ` +
+          `operational ${r.operationalTransition} eligible=${r.eligible} ` +
           `[${r.classification}] causes=${r.causes.join("+") || "—"}` +
           (r.blockerReason ? ` blocker=${r.blockerReason}` : ""),
       );
@@ -656,18 +752,28 @@ describe("Slice 2 / PR 2.0 — completeness calibration (prod, read-only)", () =
     }
     if (blockers.length) {
       line();
-      line("   A blocker is reported even when the two outcomes happen to agree:");
-      line("   the order context these packs were scored with was reconstructed");
-      line("   from inputs that are absent, so an agreeing outcome is an accident");
-      line("   of fabricated inputs and not evidence that nothing changes.");
+      line("   A blocker is reported even when the two outcomes happen to agree.");
+      line("   For the missing-input blockers the order context was reconstructed");
+      line("   from data that is absent, so an agreeing outcome is an accident of");
+      line("   fabricated inputs. For `evidence_semantics_mismatch` the score is");
+      line("   computed from a field whose MEANING is unsettled, so neither the");
+      line("   agreement nor the change can be relied on.");
     }
 
     /* 5 ── candidate thresholds */
     line();
     line("── 5. CANDIDATE THRESHOLDS AND THEIR OPERATIONAL TRADE-OFF ───────");
+    line();
+    line("   `filesToday` is the PERSISTED-LIVE outcome, not `recalculated >= thr`.");
+    line("   The trade-off has to be stated against the disposition production");
+    line("   actually holds, or it prices a change nobody would experience.");
     for (const [shop, list] of shopOrder) {
       const eligible = list.filter(
-        (r) => r.eligible && r.current !== null && r.candidate !== null && r.threshold !== null,
+        (r) =>
+          r.eligible &&
+          r.persistedLiveOutcome !== null &&
+          r.candidate !== null &&
+          r.threshold !== null,
       );
       const current = list[0].threshold;
       line();
@@ -678,10 +784,17 @@ describe("Slice 2 / PR 2.0 — completeness calibration (prod, read-only)", () =
         continue;
       }
       const points = eligible.map((r) => ({
-        currentScore: r.current!,
+        filesToday: r.persistedLiveOutcome === "auto_save",
         candidateScore: r.candidate!,
       }));
-      const preserving = dispositionPreservingThreshold(points, current);
+      const blockedPacks = eligible.filter(
+        (r) => r.persistedLiveOutcome !== "auto_save",
+      );
+      line(
+        `   today (persisted-live): ${points.filter((p) => p.filesToday).length} auto-file, ` +
+          `${blockedPacks.length} blocked`,
+      );
+      const preserving = dispositionPreservingThreshold(points);
       line(
         preserving !== null
           ? `   disposition-preserving threshold: ${preserving} ` +
@@ -693,9 +806,22 @@ describe("Slice 2 / PR 2.0 — completeness calibration (prod, read-only)", () =
       for (const t of thresholdTradeOffs(points, current)) {
         line(
           `   ${String(t.threshold).padStart(9)}   ${String(t.newlyAutoFiles).padStart(16)}   ` +
-            `${String(t.newlyBlocks).padStart(12)}   ${String(t.preserved).padStart(9)}`,
+            `${String(t.newlyBlocks).padStart(12)}   ${String(t.preserved).padStart(9)}` +
+            (t.threshold === current ? "   ← current" : ""),
         );
       }
+      // A recommendation may only stand if every eligible pack it rests on is
+      // free of blockers. One blocked pack in the set means the trade-off table
+      // is priced with a number the report cannot stand behind.
+      const blockedEligible = eligible.filter(
+        (r) => r.classification === "unresolved_blocker",
+      );
+      line(
+        blockedEligible.length === 0
+          ? `   recommendation basis: SOUND — no eligible pack is an unresolved_blocker`
+          : `   recommendation basis: BLOCKED — ${blockedEligible.length} eligible pack(s) ` +
+              `are unresolved_blocker (${blockedEligible.map((r) => r.order).join(", ")})`,
+      );
     }
 
     /* 6 ── persisted-vs-runtime staleness (a separate finding) */
@@ -714,9 +840,10 @@ describe("Slice 2 / PR 2.0 — completeness calibration (prod, read-only)", () =
     line();
     line("── 7. FIELD CENSUS: collected vs graded `valid`, fleet-wide ──────");
     line();
-    line("   A field collected many times and NEVER valid is a collector /");
-    line("   categorizer contract defect, not weak evidence. Transitions that");
-    line("   lean on one are reported as blockers, not as findings.");
+    line("   A field collected many times and NEVER valid means the producer and");
+    line("   the grader are not describing the same fact — an unsettled evidence");
+    line("   SEMANTICS question, not weak evidence and not a plumbing bug with a");
+    line("   mechanical fix. Transitions leaning on one are blockers, not findings.");
     line();
     line("   field                          collected   valid   structural-defect");
     for (const [field, stat] of [...fleetFieldStats].sort(
