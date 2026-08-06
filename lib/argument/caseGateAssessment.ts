@@ -139,6 +139,27 @@ export interface CaseGateAssessment {
 }
 
 /**
+ * Every member of `CaseGateAssessment` EXCEPT the nominal brand.
+ *
+ * This exists so the builder can be type-checked against the full contract
+ * before the brand is applied. The brand is the one thing a cast must supply,
+ * and a cast is blind: `{...} as CaseGateAssessment` would have accepted an
+ * object missing a newly-required member, which is the exact class of failure
+ * — a new gate silently absent at a site that still compiles — that this whole
+ * file exists to make impossible. Widening the cast to cover the data as well
+ * as the brand reinstated it one level down, inside the builder.
+ *
+ * So: the builder annotates its result with THIS type (a real check), and
+ * casts only to add the brand. Adding a required member to
+ * `CaseGateAssessment` now breaks `buildCaseGateAssessment` itself until the
+ * member is populated.
+ */
+export type CaseGateAssessmentFields = Omit<
+  CaseGateAssessment,
+  typeof CANONICAL_GATE_ASSESSMENT
+>;
+
+/**
  * The ONE way to produce a `CaseGateAssessment`.
  *
  * Behaviour-preserving: a stated gate scores exactly as its value, and an
@@ -153,12 +174,18 @@ export function buildCaseGateAssessment(sources: CaseGateSources): CaseGateAsses
     notProvided[key] = source.reason;
     return null;
   };
-  return {
+  // Fully checked against the contract MINUS the brand. Do not inline this
+  // into the `return` — an annotated local is what makes a missing member an
+  // error here rather than something the cast swallows.
+  const assessment: CaseGateAssessmentFields = {
     coverage: resolve("coverage", sources.coverage),
     fatalLoss: resolve("fatalLoss", sources.fatalLoss),
     riskWeakness: resolve("riskWeakness", sources.riskWeakness),
     nameMismatch: resolve("nameMismatch", sources.nameMismatch),
     creditAlreadyIssued: resolve("creditAlreadyIssued", sources.creditAlreadyIssued),
     notProvided,
-  } as CaseGateAssessment;
+  };
+  // The cast adds the nominal brand and nothing else. The brand is type-only,
+  // so the runtime object is unchanged.
+  return assessment as CaseGateAssessment;
 }
