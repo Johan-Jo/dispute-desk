@@ -21,6 +21,11 @@ vi.mock("../packageReviewRequired", () => ({
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { markPackageReviewRequired } from "../packageReviewRequired";
 import { finalizeAndEnqueueSave } from "../finalizeAndEnqueueSave";
+import {
+  CLEAN_FACTS,
+  CLEAN_NARRATIVE,
+  UNSAFE_NARRATIVE,
+} from "@/tests/fixtures/defencePackageShapes";
 
 const mockAudit = vi.mocked(logAuditEvent);
 const mockMark = vi.mocked(markPackageReviewRequired);
@@ -28,31 +33,16 @@ const mockMark = vi.mocked(markPackageReviewRequired);
 const PKG_ID = "pkg-3";
 const DISPUTE_ID = "dispute-1";
 
-// The full 13-key persisted fact shape. PR-C1's parser is schema-aware, so a
-// stub fact object is now `unreadable_facts_json` — correctly.
-const CLEAN_FACTS = [{
-    id: "f1",
-    category: "delivery_proof",
-    label: "Delivery confirmation",
-    source: "shopify_fulfillments",
-    sourceRef: null,
-    strength: "moderate",
-    bankEligible: true,
-    merchantVisible: true,
-    internalOnly: false,
-    includeInBankNarrative: true,
-    submissionRisk: false,
-    confidence: null,
-    value: { proofType: "delivered_confirmed" },
-  }];
-const CLEAN_NARRATIVE = {
-  fulfillmentArgument: { text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1)." },
-};
-const UNSAFE_NARRATIVE = {
-  fulfillmentArgument: { text: "The parcel was delivered to the cardholder's verified address." },
-};
 
-function mockSb(named: Record<string, unknown> | null, latestId = PKG_ID) {
+
+interface SbScenario {
+  latestId?: string | null;
+  namedError?: { message: string } | null;
+  latestError?: { message: string } | null;
+}
+
+function mockSb(named: Record<string, unknown> | null, scenario: SbScenario = {}) {
+  const latestId = scenario.latestId === undefined ? PKG_ID : scenario.latestId;
   const packageUpdate = vi.fn().mockReturnValue({
     eq: vi.fn().mockReturnValue({
       eq: vi.fn().mockReturnValue({
@@ -75,8 +65,15 @@ function mockSb(named: Record<string, unknown> | null, latestId = PKG_ID) {
         maybeSingle: vi.fn().mockImplementation(async () => {
           maybeCalls += 1;
           // 1st = named row, 2nd = latest-version probe, later = prior-final.
-          if (maybeCalls === 1) return { data: named, error: null };
-          if (maybeCalls === 2) return { data: { id: latestId, version: 3 }, error: null };
+          if (maybeCalls === 1) {
+            return scenario.namedError
+              ? { data: null, error: scenario.namedError }
+              : { data: named, error: null };
+          }
+          if (maybeCalls === 2) {
+            if (scenario.latestError) return { data: null, error: scenario.latestError };
+            return { data: latestId ? { id: latestId, version: 3 } : null, error: null };
+          }
           return { data: null, error: null };
         }),
       };
@@ -107,7 +104,7 @@ const call = (sb: never) =>
 
 beforeEach(() => vi.clearAllMocks());
 
-describe("finalizeAndEnqueueSave — PR-C1 preflight", () => {
+describe("finalizeAndEnqueueSave — content blocks", () => {
   it("performs NO mutation and NO enqueue for an unsafe candidate", async () => {
     const { sb, packageUpdate, jobsInsert } = mockSb(
       named({ facts_json: CLEAN_FACTS, narrative_json: UNSAFE_NARRATIVE }),
@@ -116,7 +113,9 @@ describe("finalizeAndEnqueueSave — PR-C1 preflight", () => {
     const result = await call(sb);
 
     expect(result.ok).toBe(false);
+    expect(result.failure).toBe("content_block");
     expect(result.blocked).toBe(true);
+    expect(result.retriable).toBe(false);
     expect(result.reason).toContain("affirmative_address_delivery_claim");
 
     // Nothing finalized, nothing superseded, nothing queued.
@@ -126,7 +125,10 @@ describe("finalizeAndEnqueueSave — PR-C1 preflight", () => {
     expect(mockAudit).toHaveBeenCalledWith(
       expect.objectContaining({
         eventType: "defence_package_blocked_unsafe_claim",
-        eventPayload: expect.objectContaining({ trigger: "finalize_and_enqueue_save" }),
+        eventPayload: expect.objectContaining({
+          trigger: "finalize_and_enqueue_save",
+          contentBlock: true,
+        }),
       }),
     );
     // The merchant gets a review-required attention state, not just a dead job.
@@ -136,28 +138,82 @@ describe("finalizeAndEnqueueSave — PR-C1 preflight", () => {
     );
   });
 
-  it("performs no side effect for an unreadable candidate", async () => {
+  it("performs no side effect for an unreadable candidate — also a content block", async () => {
     const { sb, packageUpdate, jobsInsert } = mockSb(
       named({ facts_json: null, narrative_json: null }),
     );
     const result = await call(sb);
+    expect(result.failure).toBe("content_block");
     expect(result.blocked).toBe(true);
     expect(packageUpdate).not.toHaveBeenCalled();
     expect(jobsInsert).not.toHaveBeenCalled();
+    expect(mockMark).toHaveBeenCalled();
   });
+});
 
-  it("performs no side effect when the named row is not the current candidate", async () => {
+/* ── Outcome classification ───────────────────────────────────────────────
+ *
+ * The first revision called `markPackageReviewRequired` and returned
+ * `blocked: true` for EVERY non-safe outcome, so a Supabase timeout or a
+ * not-yet-built package raised a merchant-facing "regenerate this package"
+ * banner and was counted by the reconcile pass as a safety block.
+ * ---------------------------------------------------------------------- */
+
+describe("finalizeAndEnqueueSave — non-content outcomes never park for review", () => {
+  const NON_CONTENT: Array<[string, SbScenario, string, boolean]> = [
+    ["a query error on the named lookup", { namedError: { message: "timeout" } }, "transient", true],
+    ["a query error on the latest probe", { latestError: { message: "timeout" } }, "transient", true],
+    ["no candidate at all", { latestId: null }, "pending", true],
+  ];
+
+  for (const [name, scenario, failure, retriable] of NON_CONTENT) {
+    it(`${name} → ${failure}, retriable=${retriable}, NO banner`, async () => {
+      const { sb, packageUpdate, jobsInsert } = mockSb(
+        scenario.latestId === null
+          ? null
+          : named({ facts_json: CLEAN_FACTS, narrative_json: CLEAN_NARRATIVE }),
+        scenario,
+      );
+      const result = await call(sb);
+
+      expect(result.ok).toBe(false);
+      expect(result.failure).toBe(failure);
+      expect(result.blocked).toBe(false);
+      expect(result.retriable).toBe(retriable);
+
+      // No mutation, no job — and crucially, no merchant review banner.
+      expect(packageUpdate).not.toHaveBeenCalled();
+      expect(jobsInsert).not.toHaveBeenCalled();
+      expect(mockMark).not.toHaveBeenCalled();
+
+      // The refusal is still audited, and marked as NOT a content verdict.
+      expect(mockAudit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "defence_package_blocked_unsafe_claim",
+          eventPayload: expect.objectContaining({ contentBlock: false }),
+        }),
+      );
+    });
+  }
+
+  it("a non-current named row is `stale`: no mutation, no banner, no retry", async () => {
     const { sb, packageUpdate, jobsInsert } = mockSb(
       named({ facts_json: CLEAN_FACTS, narrative_json: CLEAN_NARRATIVE }),
-      "pkg-4",
+      { latestId: "pkg-4" },
     );
     const result = await call(sb);
-    expect(result.blocked).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(result.failure).toBe("stale");
+    expect(result.blocked).toBe(false);
+    expect(result.retriable).toBe(false);
     expect(result.reason).toContain("candidate_not_current");
     expect(packageUpdate).not.toHaveBeenCalled();
     expect(jobsInsert).not.toHaveBeenCalled();
+    expect(mockMark).not.toHaveBeenCalled();
   });
+});
 
+describe("finalizeAndEnqueueSave — the safe path is untouched", () => {
   it("finalizes and enqueues normally for a safe, current candidate", async () => {
     const { sb, packageUpdate, jobsInsert } = mockSb(
       named({ facts_json: CLEAN_FACTS, narrative_json: CLEAN_NARRATIVE }),

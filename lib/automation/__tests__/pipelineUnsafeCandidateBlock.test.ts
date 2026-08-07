@@ -46,6 +46,10 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { markPackageReviewRequired } from "../packageReviewRequired";
 import { evaluateAndMaybeAutoSave } from "../pipeline";
+import {
+  factJson,
+  narrativeJson,
+} from "@/tests/fixtures/defencePackageShapes";
 
 const mockClient = vi.mocked(getServiceClient);
 const mockAudit = vi.mocked(logAuditEvent);
@@ -65,39 +69,19 @@ const PACK = {
   pack_json: { case_strength: { overall: "strong" } },
 };
 
-const FACT = {
-  id: "f1",
-  category: "delivery_proof",
-  label: "Delivery confirmation",
-  source: "shopify_fulfillments",
-  sourceRef: null,
-  strength: "moderate",
-  bankEligible: true,
-  merchantVisible: true,
-  internalOnly: false,
-  includeInBankNarrative: true,
-  submissionRisk: false,
-  confidence: null,
-  value: { proofType: "delivered_confirmed" },
-};
+const FACT = factJson();
 
 const UNSAFE_PKG = {
   id: "pkg-3",
   version: 3,
   facts_json: [FACT],
-  narrative_json: {
-    fulfillmentArgument: { text: "The parcel was delivered to the cardholder's verified address." },
-  },
+  narrative_json: narrativeJson({ fulfillmentArgument: "The parcel was delivered to the cardholder's verified address." }),
 };
 const SAFE_PKG = {
   id: "pkg-4",
   version: 4,
   facts_json: [FACT],
-  narrative_json: {
-    fulfillmentArgument: {
-      text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890).",
-    },
-  },
+  narrative_json: narrativeJson({ fulfillmentArgument: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890)." }),
 };
 
 /** Same wiring, but the defence_packages query fails. */

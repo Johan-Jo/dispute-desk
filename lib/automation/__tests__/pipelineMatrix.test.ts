@@ -49,6 +49,10 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { getShopSettings } from "@/lib/automation/settings";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { evaluateAndMaybeAutoSave } from "@/lib/automation/pipeline";
+import {
+  CLEAN_FACTS,
+  narrativeJson,
+} from "@/tests/fixtures/defencePackageShapes";
 
 const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockGetShopSettings = vi.mocked(getShopSettings);
@@ -121,26 +125,8 @@ function buildSb(pack: PackFixture, dispute: DisputeFixture) {
               id: "pkg-safe",
               version: 1,
               status: "final",
-              facts_json: [
-                {
-                  id: "f1",
-                  category: "delivery_proof",
-                  label: "Delivery confirmation",
-                  source: "shopify_fulfillments",
-                  sourceRef: null,
-                  strength: "moderate",
-                  bankEligible: true,
-                  merchantVisible: true,
-                  internalOnly: false,
-                  includeInBankNarrative: true,
-                  submissionRisk: false,
-                  confidence: null,
-                  value: { proofType: "delivered_confirmed" },
-                },
-              ],
-              narrative_json: {
-                executiveSummary: { text: "The carrier confirmed delivery on 12 May 2026.", usedFactIds: [] },
-              },
+              facts_json: CLEAN_FACTS,
+              narrative_json: narrativeJson({ executiveSummary: "The carrier confirmed delivery on 12 May 2026." }),
             },
             error: null,
           }),

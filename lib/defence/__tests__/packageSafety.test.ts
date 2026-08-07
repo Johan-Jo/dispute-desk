@@ -5,6 +5,12 @@
  * matter operationally are the candidate-based ones: a historical unsafe
  * version stays blocked, a regenerated safe version is usable, and the
  * presence of an old unsafe version never permanently blocks a dispute.
+ *
+ * The fixtures come from `tests/fixtures/defencePackageShapes` — the exact
+ * shapes measured in production, not hand-written approximations. An earlier
+ * revision of this file used narratives with one section and no `usedFactIds`,
+ * which meant it certified a parser against a shape the database has never
+ * held: the test was the reason the loose parser looked correct.
  */
 
 import { describe, expect, it } from "vitest";
@@ -13,56 +19,15 @@ import {
   narrativeTexts,
   packageBlockSummary,
 } from "../packageSafety";
-
-const CLEAN_NARRATIVE = {
-  executiveSummary: {
-    text: "The carrier confirmed delivery of the shipment on 12 May 2026 (PostNord, tracking 1234567890).",
-  },
-  fulfillmentArgument: { text: "The carrier recorded a signature on delivery." },
-};
-
-const UNSAFE_NARRATIVE = {
-  fulfillmentArgument: {
-    text: "The parcel was delivered to the cardholder's verified address on 12 May 2026.",
-  },
-};
-
-const AMBIGUOUS_NARRATIVE = {
-  fulfillmentArgument: { text: "Delivery to the customer's address." },
-};
-
-/** The full 13-key persisted fact shape, measured over 2 576 prod objects. */
-const CLEAN_FACTS = [{
-    id: "f1",
-    category: "delivery_proof",
-    label: "Delivery confirmation",
-    source: "shopify_fulfillments",
-    sourceRef: null,
-    strength: "moderate",
-    bankEligible: true,
-    merchantVisible: true,
-    internalOnly: false,
-    includeInBankNarrative: true,
-    submissionRisk: false,
-    confidence: null,
-    value: { proofType: "delivered_confirmed", carrier: "PostNord", trackingNumber: "1" },
-  }];
-
-const RETIRED_FACTS = [{
-    id: "f1",
-    category: "delivery_proof",
-    label: "Delivery confirmation",
-    source: "shopify_fulfillments",
-    sourceRef: null,
-    strength: "moderate",
-    bankEligible: true,
-    merchantVisible: true,
-    internalOnly: false,
-    includeInBankNarrative: true,
-    submissionRisk: false,
-    confidence: null,
-    value: { proofType: "delivered_confirmed", deliveredToVerifiedAddress: true },
-  }];
+import {
+  AMBIGUOUS_NARRATIVE,
+  CLEAN_FACTS,
+  CLEAN_NARRATIVE,
+  RETIRED_FACTS,
+  UNSAFE_NARRATIVE,
+  factJson,
+  narrativeJson,
+} from "@/tests/fixtures/defencePackageShapes";
 
 describe("assessPackageCandidateSafety", () => {
   it("a clean candidate is safe", () => {
@@ -87,9 +52,7 @@ describe("assessPackageCandidateSafety", () => {
 
   it("blocks on collectedByCustomer too", () => {
     const v = assessPackageCandidateSafety({
-      factsJson: [
-        { ...CLEAN_FACTS[0], category: "shipping_tracking", value: { collectedByCustomer: true } },
-      ],
+      factsJson: [factJson({ category: "shipping_tracking", value: { collectedByCustomer: true } })],
       narrativeJson: CLEAN_NARRATIVE,
     });
     expect(v.safe).toBe(false);
@@ -117,11 +80,10 @@ describe("assessPackageCandidateSafety", () => {
   it("does NOT block on negated / prohibition language", () => {
     const v = assessPackageCandidateSafety({
       factsJson: CLEAN_FACTS,
-      narrativeJson: {
-        fulfillmentArgument: {
-          text: "We do not claim the parcel was delivered to the cardholder's address.",
-        },
-      },
+      narrativeJson: narrativeJson({
+        fulfillmentArgument:
+          "We do not claim the parcel was delivered to the cardholder's address.",
+      }),
     });
     expect(v.safe).toBe(true);
   });
@@ -181,14 +143,17 @@ describe("assessPackageCandidateSafety", () => {
       undefined, 7, "nope", true, {},
       [], // array is not a section object
       [{ text: "x" }],
-      { omittedSections: [], warnings: [] }, // present but carries no prose
+      { omittedSections: [], warnings: [] }, // metadata only, no sections
       { fulfillmentArgument: 5 },
       { fulfillmentArgument: { notText: "x" } },
     ];
-    for (const narrativeJson of badNarratives) {
+    for (const narrativeJsonValue of badNarratives) {
       let v!: ReturnType<typeof assessPackageCandidateSafety>;
       expect(() => {
-        v = assessPackageCandidateSafety({ factsJson: CLEAN_FACTS, narrativeJson });
+        v = assessPackageCandidateSafety({
+          factsJson: CLEAN_FACTS,
+          narrativeJson: narrativeJsonValue,
+        });
       }).not.toThrow();
       expect(v.safe).toBe(false);
       expect(v.reasons).toContain("unreadable_narrative_json");
@@ -204,7 +169,6 @@ describe("assessPackageCandidateSafety", () => {
   });
 
   it("reads the ONE bare-array shape production actually holds", () => {
-    // Measured 2026-08-07T13:14:52.052Z: 241 × array[object], 39 × null.
     expect(
       assessPackageCandidateSafety({ factsJson: RETIRED_FACTS, narrativeJson: CLEAN_NARRATIVE }).safe,
     ).toBe(false);
@@ -243,12 +207,18 @@ describe("candidate-based blocking", () => {
 
 describe("narrativeTexts — recursive, so nothing hides", () => {
   it("reads every section's text", () => {
-    const texts = narrativeTexts({
-      executiveSummary: { text: "one", usedFactIds: [] },
-      conclusion: { text: "two", usedFactIds: [] },
-    });
+    const texts = narrativeTexts(
+      narrativeJson({ executiveSummary: "one", conclusion: "two" }),
+    );
     expect(texts).toContain("one");
     expect(texts).toContain("two");
+  });
+
+  it("reads metadata prose too — a warning is prose the model wrote", () => {
+    const texts = narrativeTexts(
+      narrativeJson({}, { warnings: ["delivered to the billing address"] }),
+    );
+    expect(texts).toContain("delivered to the billing address");
   });
 
   it("returns nothing for an unreadable shape — callers must use the verdict", () => {
@@ -257,20 +227,27 @@ describe("narrativeTexts — recursive, so nothing hides", () => {
   });
 });
 
-describe("schema-aware structural validation", () => {
+/* ── SCHEMA v1, enforced exactly ─────────────────────────────────────────
+ *
+ * The measured contract is 13 fact keys and 11 narrative keys, both 100 %
+ * uniform in production. Anything else is a shape this parser has never
+ * inspected, and an uninspected shape may not be filed.
+ * ------------------------------------------------------------------- */
+
+describe("facts schema — all 13 fields, no unknown keys", () => {
   it("rejects an INCOMPLETE fact object rather than reading it as empty evidence", () => {
-    // The two shapes called out in review. Both used to pass as "readable,
-    // no retired keys found, therefore safe".
-    for (const factsJson of [[{}], [{ value: "unexpected" }], [{ ...CLEAN_FACTS[0], value: "s" }]]) {
+    for (const factsJson of [[{}], [{ value: "unexpected" }], [factJson({ value: "s" })]]) {
       const v = assessPackageCandidateSafety({ factsJson, narrativeJson: CLEAN_NARRATIVE });
       expect(v.safe).toBe(false);
       expect(v.reasons).toContain("unreadable_facts_json");
     }
   });
 
-  it("rejects a fact object missing any required discriminating field", () => {
-    for (const drop of ["id", "category", "label", "source", "strength", "bankEligible", "submissionRisk"]) {
-      const partial = { ...CLEAN_FACTS[0] } as Record<string, unknown>;
+  it("rejects a fact object missing ANY of the thirteen fields", () => {
+    const all = Object.keys(factJson());
+    expect(all).toHaveLength(13);
+    for (const drop of all) {
+      const partial = factJson() as Record<string, unknown>;
       delete partial[drop];
       const v = assessPackageCandidateSafety({ factsJson: [partial], narrativeJson: CLEAN_NARRATIVE });
       expect(v.safe, `missing ${drop} must fail closed`).toBe(false);
@@ -278,46 +255,133 @@ describe("schema-aware structural validation", () => {
     }
   });
 
-  it("rejects a mistyped required field", () => {
+  it("rejects a mistyped field, including the two the previous parser never checked", () => {
+    const mistyped: Array<Record<string, unknown>> = [
+      { bankEligible: "yes" },
+      { strength: 3 },
+      // `sourceRef` and `confidence` went unvalidated in the previous revision.
+      { sourceRef: 42 },
+      { sourceRef: { id: "x" } },
+      { confidence: "high" },
+      { confidence: Number.NaN },
+      { confidence: {} },
+    ];
+    for (const over of mistyped) {
+      const v = assessPackageCandidateSafety({
+        factsJson: [factJson(over)],
+        narrativeJson: CLEAN_NARRATIVE,
+      });
+      expect(v.safe, JSON.stringify(over)).toBe(false);
+      expect(v.reasons).toContain("unreadable_facts_json");
+    }
+  });
+
+  it("accepts the two nullable fields at BOTH of their measured values", () => {
+    for (const over of [{ sourceRef: "evidence_items:1" }, { sourceRef: null }, { confidence: 0.5 }]) {
+      const v = assessPackageCandidateSafety({
+        factsJson: [factJson(over)],
+        narrativeJson: CLEAN_NARRATIVE,
+      });
+      expect(v.safe, JSON.stringify(over)).toBe(true);
+    }
+  });
+
+  it("REJECTS an unknown extra key — a future field needs a parser update, not silence", () => {
+    // Reversed in review. The previous revision tolerated extra keys and
+    // claimed they were "no blind spot"; that only holds if every extra branch
+    // is structurally inspected, and none was.
     const v = assessPackageCandidateSafety({
-      factsJson: [{ ...CLEAN_FACTS[0], bankEligible: "yes" }],
+      factsJson: [factJson({ someFutureField: 1 })],
       narrativeJson: CLEAN_NARRATIVE,
     });
     expect(v.safe).toBe(false);
     expect(v.reasons).toContain("unreadable_facts_json");
   });
 
-  it("tolerates an EXTRA key on a well-formed fact — forward compatibility", () => {
-    // An added field creates no blind spot: the retired-key scan reads
-    // `value`'s own keys. Rejecting it would turn a future schema addition
-    // into a fleet-wide block.
+  it("rejects an extra key even when it hides a retired flag or fresh prose", () => {
+    for (const over of [
+      { legacy: { deliveredToVerifiedAddress: true } },
+      { notes: "The parcel was delivered to the billing address." },
+    ]) {
+      const v = assessPackageCandidateSafety({
+        factsJson: [factJson(over)],
+        narrativeJson: CLEAN_NARRATIVE,
+      });
+      expect(v.safe).toBe(false);
+      expect(v.reasons).toContain("unreadable_facts_json");
+    }
+  });
+});
+
+describe("narrative schema — all eleven keys, every section exact", () => {
+  it("accepts the real 11-key narrative shape", () => {
     const v = assessPackageCandidateSafety({
-      factsJson: [{ ...CLEAN_FACTS[0], someFutureField: 1 }],
-      narrativeJson: CLEAN_NARRATIVE,
+      factsJson: CLEAN_FACTS,
+      narrativeJson: narrativeJson(
+        { executiveSummary: "The carrier confirmed delivery on 12 May." },
+        { omittedSections: [{ sectionKey: "policyArgument", reason: "n/a" }], warnings: ["w"] },
+      ),
     });
     expect(v.safe).toBe(true);
   });
 
   it("rejects an UNKNOWN narrative key instead of ignoring its nested prose", () => {
-    // The partial-valid / partial-unknown case: one good section plus an
-    // unknown branch that used to go uninspected.
-    const v = assessPackageCandidateSafety({
-      factsJson: CLEAN_FACTS,
-      narrativeJson: {
-        executiveSummary: { text: "clean text", usedFactIds: [] },
-        unknownSection: { nested: { text: "The parcel was delivered to the billing address." } },
-      },
-    });
+    const bad = {
+      ...narrativeJson({ executiveSummary: "clean text" }),
+      unknownSection: { nested: { text: "The parcel was delivered to the billing address." } },
+    };
+    const v = assessPackageCandidateSafety({ factsJson: CLEAN_FACTS, narrativeJson: bad });
+    expect(v.safe).toBe(false);
+    expect(v.reasons).toContain("unreadable_narrative_json");
+  });
+
+  it("rejects a narrative MISSING any required section", () => {
+    for (const drop of Object.keys(narrativeJson())) {
+      const partial = narrativeJson() as Record<string, unknown>;
+      delete partial[drop];
+      const v = assessPackageCandidateSafety({ factsJson: CLEAN_FACTS, narrativeJson: partial });
+      expect(v.safe, `missing ${drop} must fail closed`).toBe(false);
+      expect(v.reasons).toContain("unreadable_narrative_json");
+    }
+  });
+
+  it("rejects a section MISSING usedFactIds — the shape the old tests blessed", () => {
+    const bad = narrativeJson() as Record<string, unknown>;
+    bad.executiveSummary = { text: "The carrier confirmed delivery." };
+    const v = assessPackageCandidateSafety({ factsJson: CLEAN_FACTS, narrativeJson: bad });
+    expect(v.safe).toBe(false);
+    expect(v.reasons).toContain("unreadable_narrative_json");
+  });
+
+  it("rejects mistyped usedFactIds and mistyped identifiers inside it", () => {
+    for (const usedFactIds of ["f1", 7, {}, [1], [null], [{ id: "f1" }]]) {
+      const bad = narrativeJson() as Record<string, unknown>;
+      bad.conclusion = { text: "ok", usedFactIds };
+      const v = assessPackageCandidateSafety({ factsJson: CLEAN_FACTS, narrativeJson: bad });
+      expect(v.safe, JSON.stringify(usedFactIds)).toBe(false);
+      expect(v.reasons).toContain("unreadable_narrative_json");
+    }
+  });
+
+  it("rejects an EXTRA nested key inside a known section", () => {
+    const bad = narrativeJson() as Record<string, unknown>;
+    bad.fulfillmentArgument = {
+      text: "ok",
+      usedFactIds: [],
+      draft: { text: "The parcel was delivered to the billing address." },
+    };
+    const v = assessPackageCandidateSafety({ factsJson: CLEAN_FACTS, narrativeJson: bad });
     expect(v.safe).toBe(false);
     expect(v.reasons).toContain("unreadable_narrative_json");
   });
 
   it("rejects a KNOWN section with an unexpected value shape", () => {
     for (const bad of [
-      { executiveSummary: { usedFactIds: [] } },
-      { executiveSummary: "just a string" },
-      { executiveSummary: [{ text: "x" }] },
-      { executiveSummary: { text: "ok", usedFactIds: [] }, warnings: "not-an-array" },
+      { ...narrativeJson(), executiveSummary: { usedFactIds: [] } },
+      { ...narrativeJson(), executiveSummary: "just a string" },
+      { ...narrativeJson(), executiveSummary: [{ text: "x" }] },
+      { ...narrativeJson(), executiveSummary: null },
+      { ...narrativeJson(), warnings: "not-an-array" },
     ]) {
       const v = assessPackageCandidateSafety({ factsJson: CLEAN_FACTS, narrativeJson: bad });
       expect(v.safe).toBe(false);
@@ -325,24 +389,26 @@ describe("schema-aware structural validation", () => {
     }
   });
 
-  it("accepts the real 11-key narrative shape", () => {
-    const v = assessPackageCandidateSafety({
-      factsJson: CLEAN_FACTS,
-      narrativeJson: {
-        executiveSummary: { text: "The carrier confirmed delivery on 12 May.", usedFactIds: ["f1"] },
-        transactionOverviewArgument: { text: "", usedFactIds: [] },
-        chronologyArgument: { text: "", usedFactIds: [] },
-        paymentAuthenticationArgument: { text: "", usedFactIds: [] },
-        fulfillmentArgument: { text: "", usedFactIds: [] },
-        communicationArgument: { text: "", usedFactIds: [] },
-        policyArgument: { text: "", usedFactIds: [] },
-        manualEvidenceArgument: { text: "", usedFactIds: [] },
-        conclusion: { text: "", usedFactIds: [] },
-        omittedSections: [{ sectionKey: "policyArgument", reason: "n/a" }],
-        warnings: [],
-      },
-    });
-    expect(v.safe).toBe(true);
+  it("rejects malformed metadata ELEMENTS, not just a malformed container", () => {
+    const badMetadata: Array<Record<string, unknown>> = [
+      { omittedSections: ["policyArgument"] },
+      { omittedSections: [{ sectionKey: "policyArgument" }] },
+      { omittedSections: [{ sectionKey: "policyArgument", reason: 7 }] },
+      { omittedSections: [{ sectionKey: "notASection", reason: "n/a" }] },
+      { omittedSections: [{ sectionKey: "policyArgument", reason: "n/a", extra: 1 }] },
+      { omittedSections: [null] },
+      { warnings: [7] },
+      { warnings: [{ message: "x" }] },
+      { warnings: [null] },
+    ];
+    for (const over of badMetadata) {
+      const v = assessPackageCandidateSafety({
+        factsJson: CLEAN_FACTS,
+        narrativeJson: { ...narrativeJson(), ...over },
+      });
+      expect(v.safe, JSON.stringify(over)).toBe(false);
+      expect(v.reasons).toContain("unreadable_narrative_json");
+    }
   });
 });
 

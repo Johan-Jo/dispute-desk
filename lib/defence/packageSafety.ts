@@ -67,26 +67,39 @@ export interface PackageSafetyInput {
  * incomplete, or carries a shape this parser does not model may hold an
  * unknown claim, and an unknown claim may not be filed.
  *
- * Validating only the outer container was not enough: `[{}]` and
- * `[{ value: "unexpected" }]` both passed as "readable, no retired keys", and
- * a narrative with one good section plus `{ unknownSection: { nested: { text }}}`
- * had its unknown branch silently ignored.
+ * THREE REVISIONS, TWO OF THEM WRONG. The first validated only the outer
+ * container, so `[{}]` and `[{ value: "unexpected" }]` passed as "readable,
+ * no retired keys". The second validated ten of a fact's thirteen fields and
+ * tolerated unknown keys, and accepted a narrative with ONE section, a section
+ * missing `usedFactIds`, and extra nested keys inside a known section. Both
+ * left structure the parser had never looked at, which is the same blind spot
+ * in a smaller box.
  *
- * The accepted schemas are the ones production actually holds, measured
- * read-only at KEY level over all 280 candidates / 2 576 fact objects at
- * 2026-08-07T14:59:19.977Z. Both are 100 % uniform:
+ * This revision validates the measured contract EXACTLY and rejects anything
+ * else. A future schema addition is therefore a deliberate parser update, not
+ * a silent widening — which is the only version of "fail closed" that means
+ * anything.
  *
- *   facts_json      241 × array of objects, every object exactly:
+ * SCHEMA v1, measured read-only at KEY and TYPE level over all 280 candidates
+ * / 2 576 fact objects / 2 169 narrative sections in production at
+ * 2026-08-07T17:55:11Z. Every count below is 100 % uniform:
+ *
+ *   facts_json      241 × array of objects, every object EXACTLY these 13:
  *                   {bankEligible, category, confidence, id,
  *                    includeInBankNarrative, internalOnly, label,
  *                    merchantVisible, source, sourceRef, strength,
  *                    submissionRisk, value}
- *                   · value: object (2576/2576) · sourceRef: string|null
- *                   · confidence: null · flags: boolean · rest: string
+ *                   · 5 strings, 5 booleans · value: object 2576/2576
+ *                   · sourceRef: string 2143 / null 433 · confidence: null 2576
  *                   39 × null
- *   narrative_json  241 × object, top-level keys exactly the 9 section keys
- *                   (each {text: string, usedFactIds}) + omittedSections
- *                   (array) + warnings (array)
+ *   narrative_json  241 × object, top-level keys EXACTLY the 9 section keys +
+ *                   omittedSections + warnings (241/241 carry all eleven)
+ *                   · every section exactly {text, usedFactIds}: 2169 = 241×9
+ *                   · usedFactIds: array 2169/2169, elements string 4460/4460
+ *                   · omittedSections: array; elements exactly
+ *                     {reason, sectionKey}, both string, 760/760;
+ *                     sectionKey ∈ the 9 section keys
+ *                   · warnings: array; elements string 535/535
  *                   39 × null
  *
  * All 39 nulls are `failed` (37), `skipped` (1) and `stale` (1) — zero final,
@@ -94,29 +107,58 @@ export interface PackageSafetyInput {
  * fileable. Widening either schema requires re-running the census.
  */
 
-/** Fields every persisted fact object carries, with the type it must have. */
-const FACT_REQUIRED_STRING = ["id", "category", "label", "source", "strength"] as const;
-const FACT_REQUIRED_BOOLEAN = [
+/** The persisted schema this parser models. Bump on any deliberate widening;
+ *  it is quoted in the block audit so a refusal is traceable to a contract. */
+export const PACKAGE_SCHEMA_VERSION = 1;
+
+/** Exactly the 13 keys of `EvidenceFact`, by required value type. */
+const FACT_STRING_KEYS = ["id", "category", "label", "source", "strength"] as const;
+const FACT_BOOLEAN_KEYS = [
   "bankEligible",
   "includeInBankNarrative",
   "internalOnly",
   "merchantVisible",
   "submissionRisk",
 ] as const;
+/** `sourceRef: string | null`, `confidence: number | null`, `value: object`. */
+const FACT_NULLABLE_STRING_KEYS = ["sourceRef"] as const;
+const FACT_NULLABLE_NUMBER_KEYS = ["confidence"] as const;
+
+const FACT_ALLOWED_KEYS: ReadonlySet<string> = new Set<string>([
+  ...FACT_STRING_KEYS,
+  ...FACT_BOOLEAN_KEYS,
+  ...FACT_NULLABLE_STRING_KEYS,
+  ...FACT_NULLABLE_NUMBER_KEYS,
+  "value",
+]);
 
 /**
- * Extra top-level keys on a fact object are TOLERATED, deliberately.
- * Rejecting them would turn any future added field into a fleet-wide block,
- * and an extra key creates no blind spot: the retired-key scan reads
- * `value`'s own keys directly, so a well-formed fact is fully inspectable
- * whatever else sits beside it. Missing or mistyped REQUIRED fields are
- * rejected, because those are the ones that make a fact interpretable at all.
+ * All 13 fields, their measured types, and NO unknown keys.
+ *
+ * Unknown keys are rejected rather than tolerated. The previous revision
+ * argued an extra key was harmless "because the retired-key scan reads
+ * `value` directly" — but that only holds if every extra branch is
+ * structurally inspected, and it was not. Rejecting is the honest version:
+ * an added field must arrive with a parser update and a fresh census.
+ *
+ * `confidence` is `number | null` in the declared contract and null in all
+ * 2 576 measured facts; a finite number is accepted so a legitimate future
+ * value is not a fleet-wide block, and nothing else is.
  */
 function isValidFactObject(f: unknown): f is Record<string, unknown> {
   if (!f || typeof f !== "object" || Array.isArray(f)) return false;
   const o = f as Record<string, unknown>;
-  for (const k of FACT_REQUIRED_STRING) if (typeof o[k] !== "string") return false;
-  for (const k of FACT_REQUIRED_BOOLEAN) if (typeof o[k] !== "boolean") return false;
+  for (const k of Object.keys(o)) if (!FACT_ALLOWED_KEYS.has(k)) return false;
+  for (const k of FACT_STRING_KEYS) if (typeof o[k] !== "string") return false;
+  for (const k of FACT_BOOLEAN_KEYS) if (typeof o[k] !== "boolean") return false;
+  for (const k of FACT_NULLABLE_STRING_KEYS) {
+    if (!(k in o)) return false;
+    if (o[k] !== null && typeof o[k] !== "string") return false;
+  }
+  for (const k of FACT_NULLABLE_NUMBER_KEYS) {
+    if (!(k in o)) return false;
+    if (o[k] !== null && !(typeof o[k] === "number" && Number.isFinite(o[k]))) return false;
+  }
   // `value` is the payload the retired-key scan reads. A non-object value is
   // exactly the `{ value: "unexpected" }` case: uninspectable, so unresolved.
   if (!o.value || typeof o.value !== "object" || Array.isArray(o.value)) return false;
@@ -152,13 +194,45 @@ const NARRATIVE_SECTION_KEYS = [
   "conclusion",
 ] as const;
 
-/** Permitted non-section metadata keys, both arrays, neither prose. */
+/** Permitted non-section metadata keys, both arrays. */
 const NARRATIVE_METADATA_KEYS = ["omittedSections", "warnings"] as const;
 
 const NARRATIVE_ALLOWED_KEYS: ReadonlySet<string> = new Set<string>([
   ...NARRATIVE_SECTION_KEYS,
   ...NARRATIVE_METADATA_KEYS,
 ]);
+
+const NARRATIVE_SECTION_KEY_SET: ReadonlySet<string> = new Set<string>(NARRATIVE_SECTION_KEYS);
+
+/** A section is EXACTLY `{ text: string, usedFactIds: string[] }`. */
+function isValidNarrativeSection(section: unknown): boolean {
+  if (!section || typeof section !== "object" || Array.isArray(section)) return false;
+  const s = section as Record<string, unknown>;
+  const keys = Object.keys(s);
+  if (keys.length !== 2) return false;
+  if (typeof s.text !== "string") return false;
+  if (!Array.isArray(s.usedFactIds)) return false;
+  return s.usedFactIds.every((id) => typeof id === "string");
+}
+
+/** `omittedSections` is an array of exactly `{ sectionKey, reason }`, both
+ *  strings, with `sectionKey` naming a real section. */
+function isValidOmittedSections(value: unknown): boolean {
+  if (!Array.isArray(value)) return false;
+  return value.every((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
+    const e = entry as Record<string, unknown>;
+    const keys = Object.keys(e);
+    if (keys.length !== 2) return false;
+    if (typeof e.reason !== "string") return false;
+    return typeof e.sectionKey === "string" && NARRATIVE_SECTION_KEY_SET.has(e.sectionKey);
+  });
+}
+
+/** `warnings` is an array of strings. */
+function isValidWarnings(value: unknown): boolean {
+  return Array.isArray(value) && value.every((w) => typeof w === "string");
+}
 
 type NarrativeRead =
   | { readable: true; texts: string[] }
@@ -189,36 +263,35 @@ function collectStrings(value: unknown, out: string[], depth = 0): void {
   }
 }
 
+/**
+ * The measured contract, enforced exactly: all eleven top-level keys, no
+ * others, every section in the approved shape, and both metadata arrays
+ * element-validated.
+ *
+ * The previous revision accepted a narrative with a single section and no
+ * `usedFactIds`, which is not a shape production has ever held — and the tests
+ * that "proved" the parser used exactly those incomplete fixtures.
+ */
 function readNarrative(narrativeJson: unknown): NarrativeRead {
   if (!narrativeJson || typeof narrativeJson !== "object" || Array.isArray(narrativeJson)) {
     return { readable: false };
   }
   const o = narrativeJson as Record<string, unknown>;
-  const keys = Object.keys(o);
-  if (keys.length === 0) return { readable: false };
 
   // Unknown top-level key → unresolved. Ignoring it is what let an unknown
   // nested structure carry uninspected prose past the check.
-  for (const k of keys) if (!NARRATIVE_ALLOWED_KEYS.has(k)) return { readable: false };
+  for (const k of Object.keys(o)) if (!NARRATIVE_ALLOWED_KEYS.has(k)) return { readable: false };
 
-  // Every section that IS present must have the modelled shape.
-  let sawSection = false;
+  // Every one of the nine sections must be present and exactly shaped. A
+  // narrative missing a section is not a narrative this parser has measured,
+  // and the generator has never produced one — `narrativeWriter` rejects the
+  // model's JSON outright if any section is absent.
   for (const k of NARRATIVE_SECTION_KEYS) {
-    if (!(k in o)) continue;
-    const section = o[k];
-    if (!section || typeof section !== "object" || Array.isArray(section)) {
-      return { readable: false };
-    }
-    if (typeof (section as Record<string, unknown>).text !== "string") {
-      return { readable: false };
-    }
-    sawSection = true;
+    if (!isValidNarrativeSection(o[k])) return { readable: false };
   }
-  if (!sawSection) return { readable: false };
 
-  for (const k of NARRATIVE_METADATA_KEYS) {
-    if (k in o && !Array.isArray(o[k])) return { readable: false };
-  }
+  if (!isValidOmittedSections(o.omittedSections)) return { readable: false };
+  if (!isValidWarnings(o.warnings)) return { readable: false };
 
   const texts: string[] = [];
   collectStrings(o, texts);
@@ -318,6 +391,13 @@ export type PreflightOutcome =
   | { kind: "missing" }
   /** The named candidate exists but is no longer the newest version. */
   | { kind: "not_current"; candidate: CandidateRow; latestId: string | null }
+  /**
+   * Content-safe, but not in a state the worker could ever file: not `final`,
+   * validation not `ok`, or no PDF. Only requested by callers that enqueue a
+   * save (see `requireFileable`) — the finalize route legitimately operates on
+   * a draft, which is the whole point of finalizing.
+   */
+  | { kind: "not_fileable"; candidate: CandidateRow; reasons: string[] }
   /** A query failed, or a row came back unreadable. Never read as safe. */
   | { kind: "error"; message: string };
 
@@ -325,11 +405,42 @@ interface CandidateRow {
   id: string;
   version: number;
   status?: string | null;
+  validation_status?: string | null;
+  pdf_path?: string | null;
   facts_json?: unknown;
   narrative_json?: unknown;
 }
 
-const SELECT_COLS = "id, version, status, facts_json, narrative_json";
+const SELECT_COLS =
+  "id, version, status, validation_status, pdf_path, facts_json, narrative_json";
+
+export interface PreflightOptions {
+  /**
+   * Also require the candidate to be one the save worker could actually file.
+   *
+   * `saveToShopifyJob` §3 hard-requires the LATEST defence package to be
+   * `status='final'` with a `pdf_path`. Routes that approve or enqueue a save
+   * without checking that were handing the merchant a 202 for a job destined
+   * to fail — and the manual-save route additionally stamped the evidence pack
+   * `saving`, so the UI showed a save in progress that could not complete.
+   *
+   * `validation_status = 'ok'` is required on top of the worker's two checks:
+   * a `final` package that failed validation is finalizable only by a bug, and
+   * refusing it here is strictly safer than filing it.
+   */
+  requireFileable?: boolean;
+}
+
+const FILEABLE_STATUS = "final";
+
+/** Why this content-safe candidate still cannot be filed. */
+function fileabilityReasons(c: CandidateRow): string[] {
+  const reasons: string[] = [];
+  if ((c.status ?? null) !== FILEABLE_STATUS) reasons.push("candidate_not_final");
+  if ((c.validation_status ?? null) !== "ok") reasons.push("candidate_validation_not_ok");
+  if (!c.pdf_path || String(c.pdf_path).trim().length === 0) reasons.push("candidate_missing_pdf");
+  return reasons;
+}
 
 /** Minimal Supabase surface these helpers use — structural so tests can pass a
  *  hand-rolled mock without importing the client type. */
@@ -344,12 +455,17 @@ function asCandidateRow(data: unknown): CandidateRow | null {
   return r as unknown as CandidateRow;
 }
 
-function judge(candidate: CandidateRow): PreflightOutcome {
+function judge(candidate: CandidateRow, opts?: PreflightOptions): PreflightOutcome {
   const verdict = assessPackageCandidateSafety({
     factsJson: candidate.facts_json,
     narrativeJson: candidate.narrative_json,
   });
-  return verdict.safe ? { kind: "safe", candidate } : { kind: "blocked", candidate, verdict };
+  if (!verdict.safe) return { kind: "blocked", candidate, verdict };
+  if (opts?.requireFileable) {
+    const reasons = fileabilityReasons(candidate);
+    if (reasons.length > 0) return { kind: "not_fileable", candidate, reasons };
+  }
+  return { kind: "safe", candidate };
 }
 
 /**
@@ -360,6 +476,7 @@ function judge(candidate: CandidateRow): PreflightOutcome {
 export async function preflightLatestCandidate(
   sb: SbLike,
   disputeId: string,
+  opts?: PreflightOptions,
 ): Promise<PreflightOutcome> {
   const res = await sb
     .from("defence_packages")
@@ -377,7 +494,7 @@ export async function preflightLatestCandidate(
   if (res?.data == null) return { kind: "missing" };
   const row = asCandidateRow(res.data);
   if (!row) return { kind: "error", message: "latest_candidate_row_unreadable" };
-  return judge(row);
+  return judge(row, opts);
 }
 
 /**
@@ -391,6 +508,7 @@ export async function preflightLatestCandidate(
 export async function preflightNamedCandidate(
   sb: SbLike,
   args: { packageId: string; disputeId: string },
+  opts?: PreflightOptions,
 ): Promise<PreflightOutcome> {
   const [namedRes, latestRes] = await Promise.all([
     sb.from("defence_packages").select(SELECT_COLS).eq("id", args.packageId).maybeSingle(),
@@ -430,7 +548,7 @@ export async function preflightNamedCandidate(
   if (latestId === null) return { kind: "error", message: "latest_version_row_unreadable" };
   if (latestId !== named.id) return { kind: "not_current", candidate: named, latestId };
 
-  return judge(named);
+  return judge(named, opts);
 }
 
 /** True unless the outcome is the single proceeding state. */
@@ -449,6 +567,8 @@ export function preflightReasons(p: PreflightOutcome): string[] {
       return ["no_defence_package"];
     case "not_current":
       return ["candidate_not_current"];
+    case "not_fileable":
+      return [...p.reasons];
     case "error":
       return ["preflight_error"];
   }
@@ -461,7 +581,30 @@ export function preflightRetiredKeys(p: PreflightOutcome): RetiredPayloadKey[] {
 
 /** The candidate that was judged, when there was one. */
 export function preflightCandidate(p: PreflightOutcome): CandidateRow | null {
-  return p.kind === "blocked" || p.kind === "not_current" || p.kind === "safe" ? p.candidate : null;
+  switch (p.kind) {
+    case "safe":
+    case "blocked":
+    case "not_current":
+    case "not_fileable":
+      return p.candidate;
+    default:
+      return null;
+  }
+}
+
+/**
+ * A CONTENT verdict — the package itself carries an unsupported or
+ * uninspectable claim. Distinct from every other blocking outcome, all of
+ * which are lifecycle or infrastructure states.
+ *
+ * This distinction is load-bearing: only a content block may park a dispute
+ * with a merchant-facing "review required" banner, because only a content
+ * block is fixed by regenerating. A database timeout or a not-yet-built
+ * package raising that banner tells the merchant to fix something that is not
+ * broken, and (for the timeout) hides an outage behind a content warning.
+ */
+export function preflightIsContentBlock(p: PreflightOutcome): boolean {
+  return p.kind === "blocked";
 }
 
 /**
@@ -485,6 +628,33 @@ export function preflightIsPending(p: PreflightOutcome): boolean {
   return p.kind === "missing";
 }
 
+/**
+ * The ONE HTTP mapping for a blocking preflight, so the four merchant-facing
+ * endpoints cannot drift:
+ *
+ *   blocked / missing / not_current  422 PACKAGE_REVIEW_REQUIRED
+ *   not_fileable                     409 PACKAGE_NOT_FILEABLE
+ *   error                            503 PACKAGE_CHECK_UNAVAILABLE
+ *
+ * 503 matters on its own: a failed check is an outage, and telling the
+ * merchant to regenerate would send them to fix a package that is fine.
+ */
+export function preflightHttpRefusal(p: PreflightOutcome): {
+  status: number;
+  code: string;
+  reasons: string[];
+  message: string;
+} {
+  const code =
+    p.kind === "error"
+      ? "PACKAGE_CHECK_UNAVAILABLE"
+      : p.kind === "not_fileable"
+        ? "PACKAGE_NOT_FILEABLE"
+        : "PACKAGE_REVIEW_REQUIRED";
+  const status = p.kind === "error" ? 503 : p.kind === "not_fileable" ? 409 : 422;
+  return { status, code, reasons: preflightReasons(p), message: preflightSummary(p) };
+}
+
 /** Merchant-safe message for a blocking preflight. Never exposes JSON detail,
  *  gateway codes, addresses, or a database error string. */
 export function preflightSummary(p: PreflightOutcome): string {
@@ -503,6 +673,12 @@ export function preflightSummary(p: PreflightOutcome): string {
         "A newer version of this defence package exists. Refresh and review the " +
         "latest version before submitting."
       );
+    case "not_fileable":
+      return p.reasons.includes("candidate_not_final")
+        ? "This defence package has not been approved yet. Approve the latest " +
+            "version before saving it to Shopify."
+        : "This defence package is not ready to be filed. Regenerate the " +
+            "package and try again.";
     case "error":
       return (
         "We could not check this defence package just now. Please try again in " +

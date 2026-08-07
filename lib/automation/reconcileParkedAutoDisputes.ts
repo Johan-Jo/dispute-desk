@@ -40,10 +40,16 @@ interface PackJson {
 export interface ReconcileResult {
   scanned: number;
   reconciled: number;
-  /** PR-C1: candidates refused by the safety preflight. NOT counted as
-   *  reconciled — a blocked dispute has not been handled, it has been
-   *  deliberately left for the merchant. */
+  /** PR-C1: candidates refused on a CONTENT verdict — the package really does
+   *  carry an unsupported or uninspectable claim. NOT counted as reconciled:
+   *  a blocked dispute has not been handled, it has been deliberately left for
+   *  the merchant. Transient failures and not-yet-built packages are counted
+   *  separately below; folding them in here reported an outage as a fleet of
+   *  unsafe packages. */
   blocked: number;
+  /** Refused for a reason that is not the package's fault — a query failure,
+   *  or no package built yet. These are retried on the next reconcile. */
+  deferred: number;
   disputeIds: string[];
 }
 
@@ -56,7 +62,13 @@ export async function reconcileParkedAutoDisputes(
   shopId: string,
 ): Promise<ReconcileResult> {
   const sb = getServiceClient();
-  const result: ReconcileResult = { scanned: 0, reconciled: 0, blocked: 0, disputeIds: [] };
+  const result: ReconcileResult = {
+    scanned: 0,
+    reconciled: 0,
+    blocked: 0,
+    deferred: 0,
+    disputeIds: [],
+  };
 
   // Candidate disputes: not yet saved, still open, with a READY evidence
   // pack. We only look at the latest pack per dispute.
@@ -168,13 +180,17 @@ export async function reconcileParkedAutoDisputes(
     if (outcome.ok) {
       result.reconciled += 1;
       result.disputeIds.push(dispute.id);
-    } else if (outcome.blocked) {
-      // finalizeAndEnqueueSave refused on safety grounds: it finalized
+    } else if (outcome.failure === "content_block") {
+      // finalizeAndEnqueueSave refused on a CONTENT verdict: it finalized
       // nothing, superseded nothing and enqueued nothing, and it has already
       // audited the refusal and raised the review-required attention state.
       // Counting it as reconciled would report an unsafe historical draft as
       // promoted.
       result.blocked += 1;
+    } else {
+      // Transient / pending / stale. Not the package's fault, no merchant
+      // banner raised, and the next reconcile pass retries it.
+      result.deferred += 1;
     }
   }
 

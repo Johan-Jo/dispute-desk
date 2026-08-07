@@ -5,11 +5,10 @@ import { logAuditEvent } from "@/lib/audit/logEvent";
 import {
   preflightBlocks,
   preflightCandidate,
-  preflightIsTransient,
+  preflightHttpRefusal,
   preflightLatestCandidate,
   preflightReasons,
   preflightRetiredKeys,
-  preflightSummary,
 } from "@/lib/defence/packageSafety";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
 
@@ -96,12 +95,19 @@ export async function POST(
     );
   }
 
-  // PR-C1 — candidate-safety preflight on the LATEST defence package, before
-  // any enqueue or status change. Refused here as well as in the job so a
-  // merchant gets an immediate, explained 422 rather than a queued job that
-  // fails minutes later. Regenerating produces a new version judged on its own
+  // PR-C1 — candidate preflight on the LATEST defence package, before any
+  // enqueue or status change. Refused here as well as in the job so a merchant
+  // gets an immediate, explained refusal rather than a queued job that fails
+  // minutes later. Regenerating produces a new version judged on its own
   // merits.
-  const preflight = await preflightLatestCandidate(sb, pack.dispute_id as string);
+  //
+  // `requireFileable` also closes the lifecycle hole: this route stamps the
+  // evidence pack `saving`, so a safe-but-draft (or PDF-less) candidate used
+  // to put the UI into a save-in-progress state for a job the worker was
+  // always going to refuse.
+  const preflight = await preflightLatestCandidate(sb, pack.dispute_id as string, {
+    requireFileable: true,
+  });
   if (preflightBlocks(preflight)) {
     await logAuditEvent({
       shopId: pack.shop_id,
@@ -118,15 +124,15 @@ export async function POST(
         trigger: "manual_save",
       },
     });
-    const transient = preflightIsTransient(preflight);
+    const refusal = preflightHttpRefusal(preflight);
     return NextResponse.json(
       {
-        error: transient ? "PACKAGE_CHECK_UNAVAILABLE" : "PACKAGE_REVIEW_REQUIRED",
-        code: transient ? "PACKAGE_CHECK_UNAVAILABLE" : "PACKAGE_REVIEW_REQUIRED",
-        reasons: preflightReasons(preflight),
-        message: preflightSummary(preflight),
+        error: refusal.code,
+        code: refusal.code,
+        reasons: refusal.reasons,
+        message: refusal.message,
       },
-      { status: transient ? 503 : 422 },
+      { status: refusal.status },
     );
   }
 

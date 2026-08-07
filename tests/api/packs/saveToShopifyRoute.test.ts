@@ -26,6 +26,11 @@ vi.mock("@/lib/audit/logEvent", () => ({
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { POST } from "@/app/api/packs/[packId]/save-to-shopify/route";
+import {
+  CLEAN_FACTS,
+  RETIRED_FACTS,
+  narrativeJson,
+} from "@/tests/fixtures/defencePackageShapes";
 
 const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockLogAuditEvent = vi.mocked(logAuditEvent);
@@ -39,12 +44,7 @@ interface ScenarioRows {
   dispute?: Record<string, unknown> | null;
   jobInsertError?: { message: string } | null;
   /** PR-C1: latest defence_packages candidate, if any. */
-  defencePackage?: {
-    id: string;
-    version: number;
-    facts_json: unknown;
-    narrative_json: unknown;
-  } | null;
+  defencePackage?: Record<string, unknown> | null;
 }
 
 interface ScenarioSpies {
@@ -61,35 +61,22 @@ interface ScenarioSpies {
  *   4. jobs.insert({...})                                  → ok | error
  *   5. evidence_packs.update({...}).eq(id)                 → ok
  *
- * Step 2 is the PR-C1 candidate-safety gate. A missing candidate now BLOCKS
- * (the worker hard-requires a final package), so every non-blocking scenario
- * supplies `SAFE_PACKAGE`.
+ * Step 2 is the PR-C1 candidate preflight. A missing candidate BLOCKS (the
+ * worker hard-requires a final package), so every non-blocking scenario
+ * supplies `SAFE_PACKAGE` — which must now be genuinely FILEABLE, not merely
+ * content-safe. The earlier fixture carried no `status`, no `validation_status`
+ * and no `pdf_path`, so the happy path was proving that a candidate the worker
+ * would certainly refuse could still be enqueued.
  */
 
 const SAFE_PACKAGE = {
   id: "pkg-safe",
   version: 1,
-  facts_json: [{
-    id: "f1",
-    category: "delivery_proof",
-    label: "Delivery confirmation",
-    source: "shopify_fulfillments",
-    sourceRef: null,
-    strength: "moderate",
-    bankEligible: true,
-    merchantVisible: true,
-    internalOnly: false,
-    includeInBankNarrative: true,
-    submissionRisk: false,
-    confidence: null,
-    value: { proofType: "delivered_confirmed" },
-  }],
-  narrative_json: {
-    executiveSummary: {
-      text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890).",
-      usedFactIds: ["f1"],
-    },
-  },
+  status: "final",
+  validation_status: "ok",
+  pdf_path: "shop-1/dispute-1/v1.pdf",
+  facts_json: CLEAN_FACTS,
+  narrative_json: narrativeJson({ executiveSummary: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890)." }),
 };
 function mockSupabase(rows: ScenarioRows): ScenarioSpies {
   const jobsInsert = vi.fn().mockResolvedValue({
@@ -295,26 +282,8 @@ describe("POST /api/packs/:packId/save-to-shopify — happy path side effects", 
       defencePackage: {
         id: "pkg-3",
         version: 3,
-        facts_json: [{
-    id: "f1",
-    category: "delivery_proof",
-    label: "Delivery confirmation",
-    source: "shopify_fulfillments",
-    sourceRef: null,
-    strength: "moderate",
-    bankEligible: true,
-    merchantVisible: true,
-    internalOnly: false,
-    includeInBankNarrative: true,
-    submissionRisk: false,
-    confidence: null,
-    value: { proofType: "delivered_confirmed" },
-  }],
-        narrative_json: {
-          fulfillmentArgument: {
-            text: "The parcel was delivered to the cardholder's verified address on 12 May 2026.",
-          },
-        },
+        facts_json: CLEAN_FACTS,
+        narrative_json: narrativeJson({ fulfillmentArgument: "The parcel was delivered to the cardholder's verified address on 12 May 2026." }),
       },
     });
 
@@ -342,22 +311,8 @@ describe("POST /api/packs/:packId/save-to-shopify — happy path side effects", 
       defencePackage: {
         id: "pkg-3",
         version: 3,
-        facts_json: [{
-    id: "f1",
-    category: "delivery_proof",
-    label: "Delivery confirmation",
-    source: "shopify_fulfillments",
-    sourceRef: null,
-    strength: "moderate",
-    bankEligible: true,
-    merchantVisible: true,
-    internalOnly: false,
-    includeInBankNarrative: true,
-    submissionRisk: false,
-    confidence: null,
-    value: { deliveredToVerifiedAddress: true },
-  }],
-        narrative_json: { fulfillmentArgument: { text: "The carrier confirmed delivery on 12 May." } },
+        facts_json: RETIRED_FACTS,
+        narrative_json: narrativeJson({ fulfillmentArgument: "The carrier confirmed delivery on 12 May." }),
       },
     });
 
@@ -376,28 +331,10 @@ describe("POST /api/packs/:packId/save-to-shopify — happy path side effects", 
       },
       dispute: { id: disputeId, dispute_evidence_gid: "gid://shopify/DisputeEvidence/12345" },
       defencePackage: {
+        ...SAFE_PACKAGE,
         id: "pkg-4",
         version: 4,
-        facts_json: [{
-    id: "f1",
-    category: "delivery_proof",
-    label: "Delivery confirmation",
-    source: "shopify_fulfillments",
-    sourceRef: null,
-    strength: "moderate",
-    bankEligible: true,
-    merchantVisible: true,
-    internalOnly: false,
-    includeInBankNarrative: true,
-    submissionRisk: false,
-    confidence: null,
-    value: { proofType: "delivered_confirmed" },
-  }],
-        narrative_json: {
-          fulfillmentArgument: {
-            text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890).",
-          },
-        },
+        narrative_json: narrativeJson({ fulfillmentArgument: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890)." }),
       },
     });
 
@@ -405,6 +342,49 @@ describe("POST /api/packs/:packId/save-to-shopify — happy path side effects", 
     expect(res.status).toBe(202);
     expect(spies.jobsInsert).toHaveBeenCalledTimes(1);
   });
+
+  /* ── Fileability, not just content safety ────────────────────────────
+   *
+   * `saveToShopifyJob` §3 hard-requires the LATEST defence package to be
+   * `status='final'` with a `pdf_path`. This route used to enqueue on content
+   * safety alone AND stamp the evidence pack `saving`, so a safe draft put the
+   * UI into a save-in-progress state for a job that could never complete.
+   * ----------------------------------------------------------------- */
+
+  const NOT_FILEABLE: Array<[string, Record<string, unknown>, string]> = [
+    ["safe but still a DRAFT", { status: "draft" }, "candidate_not_final"],
+    ["safe but STALE", { status: "stale" }, "candidate_not_final"],
+    ["safe but FAILED", { status: "failed" }, "candidate_not_final"],
+    ["final with NO PDF", { pdf_path: null }, "candidate_missing_pdf"],
+    ["final with an empty PDF path", { pdf_path: "   " }, "candidate_missing_pdf"],
+    [
+      "final whose VALIDATION failed",
+      { validation_status: "failed" },
+      "candidate_validation_not_ok",
+    ],
+  ];
+
+  for (const [name, over, reason] of NOT_FILEABLE) {
+    it(`refuses (${name}) — no job, no 'saving' stamp`, async () => {
+      const spies = mockSupabase({
+        pack: {
+          id: packId, shop_id: shopId, dispute_id: disputeId,
+          status: "ready", completeness_score: 95, submission_readiness: "ready",
+        },
+        dispute: { id: disputeId, dispute_evidence_gid: "gid://shopify/DisputeEvidence/12345" },
+        defencePackage: { ...SAFE_PACKAGE, ...over },
+      });
+
+      const res = await POST(makeReq({}), params);
+      const body = await res.json();
+
+      expect(res.status).toBe(409);
+      expect(body.code).toBe("PACKAGE_NOT_FILEABLE");
+      expect(body.reasons).toContain(reason);
+      expect(spies.jobsInsert).not.toHaveBeenCalled();
+      expect(spies.packsUpdate).not.toHaveBeenCalled();
+    });
+  }
 
   it("accepts confirmWarnings: true to bypass the warnings gate", async () => {
     const spies = mockSupabase({

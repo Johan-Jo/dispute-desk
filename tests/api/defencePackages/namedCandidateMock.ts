@@ -10,45 +10,19 @@
  */
 
 import { vi } from "vitest";
+import {
+  AMBIGUOUS_NARRATIVE,
+  CLEAN_NARRATIVE,
+  RETIRED_FACTS,
+  UNSAFE_NARRATIVE,
+  factJson,
+} from "@/tests/fixtures/defencePackageShapes";
 
-export const FULL_FACT = {
-  id: "f1",
-  category: "delivery_proof",
-  label: "Delivery confirmation",
-  source: "shopify_fulfillments",
-  sourceRef: null,
-  strength: "moderate",
-  bankEligible: true,
-  merchantVisible: true,
-  internalOnly: false,
-  includeInBankNarrative: true,
-  submissionRisk: false,
-  confidence: null,
-  value: { proofType: "delivered_confirmed" },
-};
-
-export const RETIRED_FACT = {
-  ...FULL_FACT,
-  value: { deliveredToVerifiedAddress: true },
-};
-
-export const CLEAN_NARRATIVE = {
-  executiveSummary: {
-    text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890).",
-    usedFactIds: ["f1"],
-  },
-};
-
-export const UNSAFE_NARRATIVE = {
-  fulfillmentArgument: {
-    text: "The parcel was delivered to the cardholder's verified address on 12 May 2026.",
-    usedFactIds: ["f1"],
-  },
-};
-
-export const AMBIGUOUS_NARRATIVE = {
-  fulfillmentArgument: { text: "Delivery to the customer's address.", usedFactIds: [] },
-};
+/** Re-exported from the single shared fixture module so the route tests and
+ *  the predicate tests cannot drift from each other or from production. */
+export const FULL_FACT = factJson();
+export const RETIRED_FACT = RETIRED_FACTS[0];
+export { CLEAN_NARRATIVE, UNSAFE_NARRATIVE, AMBIGUOUS_NARRATIVE };
 
 export interface NamedCandidateScenario {
   /** The row the route loads by id, and the row the preflight judges. */

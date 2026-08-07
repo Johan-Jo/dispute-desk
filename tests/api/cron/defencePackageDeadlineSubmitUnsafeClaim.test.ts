@@ -25,6 +25,12 @@ import { logAuditEvent } from "@/lib/audit/logEvent";
 import { sendDefenceDeadlineFallbackAlert } from "@/lib/email/sendDefenceDeadlineFallbackAlert";
 import { GET } from "@/app/api/cron/defence-package-deadline-submit/route";
 import { NextRequest } from "next/server";
+import {
+  CLEAN_FACTS,
+  CLEAN_NARRATIVE,
+  RETIRED_FACTS,
+  UNSAFE_NARRATIVE,
+} from "@/tests/fixtures/defencePackageShapes";
 
 const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockAudit = vi.mocked(logAuditEvent);
@@ -47,16 +53,6 @@ const DISPUTE = {
   review_state: null,
 };
 
-const UNSAFE_NARRATIVE = {
-  fulfillmentArgument: {
-    text: "The parcel was delivered to the cardholder's verified address on 12 May 2026.",
-  },
-};
-const CLEAN_NARRATIVE = {
-  fulfillmentArgument: {
-    text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890).",
-  },
-};
 
 /** All defence_packages rows for the dispute, newest version first. The route
  *  must only ever consult the first one. */
@@ -131,21 +127,7 @@ describe("deadline submit — PR-C1 unsafe candidate", () => {
         validation_status: "ok",
         pdf_path: "p.pdf",
         failure_code: null,
-        facts_json: [{
-    id: "f1",
-    category: "delivery_proof",
-    label: "Delivery confirmation",
-    source: "shopify_fulfillments",
-    sourceRef: null,
-    strength: "moderate",
-    bankEligible: true,
-    merchantVisible: true,
-    internalOnly: false,
-    includeInBankNarrative: true,
-    submissionRisk: false,
-    confidence: null,
-    value: { proofType: "delivered_confirmed" },
-  }],
+        facts_json: CLEAN_FACTS,
         narrative_json: UNSAFE_NARRATIVE,
       },
     ]);
@@ -179,21 +161,7 @@ describe("deadline submit — PR-C1 unsafe candidate", () => {
       {
         id: "pkg-3", version: 3, status: "final", validation_status: "ok",
         pdf_path: "p.pdf", failure_code: null,
-        facts_json: [{
-    id: "f1",
-    category: "delivery_proof",
-    label: "Delivery confirmation",
-    source: "shopify_fulfillments",
-    sourceRef: null,
-    strength: "moderate",
-    bankEligible: true,
-    merchantVisible: true,
-    internalOnly: false,
-    includeInBankNarrative: true,
-    submissionRisk: false,
-    confidence: null,
-    value: { deliveredToVerifiedAddress: true },
-  }],
+        facts_json: RETIRED_FACTS,
         narrative_json: CLEAN_NARRATIVE,
       },
     ]);
@@ -221,21 +189,7 @@ describe("deadline submit — PR-C1 unsafe candidate", () => {
       {
         id: "pkg-4", version: 4, status: "final", validation_status: "ok",
         pdf_path: "p.pdf", failure_code: null,
-        facts_json: [{
-    id: "f1",
-    category: "delivery_proof",
-    label: "Delivery confirmation",
-    source: "shopify_fulfillments",
-    sourceRef: null,
-    strength: "moderate",
-    bankEligible: true,
-    merchantVisible: true,
-    internalOnly: false,
-    includeInBankNarrative: true,
-    submissionRisk: false,
-    confidence: null,
-    value: { proofType: "delivered_confirmed" },
-  }],
+        facts_json: CLEAN_FACTS,
         narrative_json: CLEAN_NARRATIVE,
       },
     ]);

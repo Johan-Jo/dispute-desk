@@ -49,6 +49,11 @@ import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
 import { uploadDisputeFile } from "@/lib/shopify/disputeFileUpload";
 import { handleSaveToShopify } from "../saveToShopifyJob";
 import type { ClaimedJob } from "../../claimJobs";
+import {
+  narrativeJson,
+  CLEAN_FACTS,
+  RETIRED_FACTS,
+} from "@/tests/fixtures/defencePackageShapes";
 
 const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockLogAuditEvent = vi.mocked(logAuditEvent);
@@ -87,47 +92,8 @@ const DISPUTE = {
   submitted_at: null,
 };
 
-const UNSAFE_NARRATIVE = {
-  fulfillmentArgument: {
-    text: "The parcel was delivered to the cardholder's verified address on 12 May 2026.",
-  },
-};
-const CLEAN_NARRATIVE = {
-  fulfillmentArgument: {
-    text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890).",
-  },
-};
-// The full 13-key persisted fact shape — PR-C1's parser is schema-aware.
-const RETIRED_FACTS = [{
-    id: "f1",
-    category: "delivery_proof",
-    label: "Delivery confirmation",
-    source: "shopify_fulfillments",
-    sourceRef: null,
-    strength: "moderate",
-    bankEligible: true,
-    merchantVisible: true,
-    internalOnly: false,
-    includeInBankNarrative: true,
-    submissionRisk: false,
-    confidence: null,
-    value: { deliveredToVerifiedAddress: true },
-  }];
-const CLEAN_FACTS = [{
-    id: "f1",
-    category: "delivery_proof",
-    label: "Delivery confirmation",
-    source: "shopify_fulfillments",
-    sourceRef: null,
-    strength: "moderate",
-    bankEligible: true,
-    merchantVisible: true,
-    internalOnly: false,
-    includeInBankNarrative: true,
-    submissionRisk: false,
-    confidence: null,
-    value: { proofType: "delivered_confirmed" },
-  }];
+const UNSAFE_NARRATIVE = narrativeJson({ fulfillmentArgument: "The parcel was delivered to the cardholder's verified address on 12 May 2026." });
+const CLEAN_NARRATIVE = narrativeJson({ fulfillmentArgument: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890)." });
 
 function makeSupabase(latestPackage: Record<string, unknown> | null) {
   const packUpdates: Array<Record<string, unknown>> = [];
@@ -214,7 +180,7 @@ describe("saveToShopifyJob — PR-C1 unsafe-candidate gate", () => {
     makeSupabase(
       finalPkg({
         facts_json: CLEAN_FACTS,
-        narrative_json: { fulfillmentArgument: { text: "Delivery to the customer's address." } },
+        narrative_json: narrativeJson({ fulfillmentArgument: "Delivery to the customer's address." }),
       }),
     );
     const result = await handleSaveToShopify(job());

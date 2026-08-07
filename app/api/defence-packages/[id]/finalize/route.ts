@@ -17,10 +17,9 @@ import { logAuditEvent } from "@/lib/audit/logEvent";
 import {
   preflightBlocks,
   preflightCandidate,
-  preflightIsTransient,
+  preflightHttpRefusal,
   preflightNamedCandidate,
   preflightReasons,
-  preflightSummary,
 } from "@/lib/defence/packageSafety";
 
 export const runtime = "nodejs";
@@ -99,15 +98,15 @@ export async function POST(
         trigger: "finalize",
       },
     });
-    const transient = preflightIsTransient(preflight);
+    const refusal = preflightHttpRefusal(preflight);
     return NextResponse.json(
       {
-        error: transient ? "PACKAGE_CHECK_UNAVAILABLE" : "PACKAGE_REVIEW_REQUIRED",
-        code: transient ? "PACKAGE_CHECK_UNAVAILABLE" : "PACKAGE_REVIEW_REQUIRED",
-        reasons: preflightReasons(preflight),
-        message: preflightSummary(preflight),
+        error: refusal.code,
+        code: refusal.code,
+        reasons: refusal.reasons,
+        message: refusal.message,
       },
-      { status: transient ? 503 : 422 },
+      { status: refusal.status },
     );
   }
 

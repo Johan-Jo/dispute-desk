@@ -276,7 +276,6 @@ export function CompleteDefencePackageCard({
   const latest = defencePackage?.latest ?? null;
   const bankFacing = defencePackage?.bankFacing ?? null;
   const currentPromptVersion = defencePackage?.currentPromptVersion ?? null;
-  const packageBlocked = defencePackage?.safety?.blocked === true;
   const loading = defencePackage === undefined;
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"regen" | "finalize" | "submit" | null>(null);
@@ -673,6 +672,29 @@ export function CompleteDefencePackageCard({
             </p>
           </div>
 
+          {/* PR-C1 — review-required. Rendered OUTSIDE the submitted/unsubmitted
+              split, above both, so it appears exactly once for every blocked
+              latest candidate.
+
+              It used to live inside the `isSubmittedToBank` branch only. The
+              main blocked population is packages that were NEVER saved to
+              Shopify, and for those the approval actions vanished with no
+              explanation at all — the merchant saw a card that had simply
+              stopped offering anything. The helper already returned
+              `showReviewRequired`; the component just wasn't reading it, which
+              is why the helper test passed while the unsent UI stayed broken.
+
+              Preview and Regenerate remain below; Finalize / Submit / Resubmit
+              are suppressed via `canFinalize` / `canSubmit` /
+              `bannerHostsActions`. */}
+          {actionState.showReviewRequired ? (
+            <Banner tone="warning" title={tPkg("reviewRequiredTitle")}>
+              <Text as="p" variant="bodySm">
+                {defencePackage?.safety?.message || tPkg("reviewRequiredBody")}
+              </Text>
+            </Banner>
+          ) : null}
+
           {/* Workflow layout. Three states:
               A. Never submitted               → status / mode / deadline strip, then action row
               B. Submitted, no newer draft     → "Submitted package" panel only
@@ -690,18 +712,6 @@ export function CompleteDefencePackageCard({
                   When presentationStatus is absent (legacy mount), the
                   copy falls back to the pre-2026-05-20 "Submitted
                   package" phrasing. */}
-              {/* PR-C1 — review-required. Rendered above every other state so
-                  the merchant reads WHY the approval actions are gone before
-                  seeing the package detail. Preview and Regenerate remain
-                  below; Finalize / Submit / Resubmit are suppressed via
-                  `canFinalize` / `canSubmit` / `bannerHostsActions`. */}
-              {packageBlocked ? (
-                <Banner tone="warning" title={tPkg("reviewRequiredTitle")}>
-                  <Text as="p" variant="bodySm">
-                    {defencePackage?.safety?.message || tPkg("reviewRequiredBody")}
-                  </Text>
-                </Banner>
-              ) : null}
               {submitPending ? (
                 <Banner tone="info" title={t("savingTitle")}>
                   <Text as="p" variant="bodySm">
@@ -786,7 +796,12 @@ export function CompleteDefencePackageCard({
                   The "Saving to Shopify…" banner above carries the
                   status during this gap until the save-to-shopify job
                   flips the latest row to status='submitted'. */}
-              {hasUnsubmittedDraft && latest && bankFacing && !isNetworkSubmitted && !isClosed && !submitPending ? (
+              {/* Gated on `bannerHostsActions`, not on a hand-copied repeat of
+                  its terms. The inline condition used to omit the PR-C1 safety
+                  term, so a blocked candidate still rendered "Draft vX is ready
+                  for review" — an invitation to approve — with every button
+                  inside it silently removed. */}
+              {bannerHostsActions && latest && bankFacing ? (
                 <Banner tone="info" title={tPkg("draftBannerTitle", { version: latest.version })}>
                   {/* Banner hosts the workflow's primary action AND the
                       Regenerate overflow, so the merchant doesn't have

@@ -19,6 +19,11 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { POST } from "@/app/api/packs/[packId]/approve/route";
 import { NextRequest } from "next/server";
+import {
+  CLEAN_FACTS,
+  CLEAN_NARRATIVE,
+  UNSAFE_NARRATIVE,
+} from "@/tests/fixtures/defencePackageShapes";
 
 const mockClient = vi.mocked(getServiceClient);
 const mockAudit = vi.mocked(logAuditEvent);
@@ -39,31 +44,18 @@ const blockAudits = () =>
 const PACK_ID = "pack-1";
 const DISPUTE_ID = "dispute-1";
 
+/** A content-safe candidate that is ALSO fileable: final, validated, with a
+ *  PDF. Anything less cannot be approved — the worker would refuse it. */
 const CLEAN = {
-  facts_json: [{
-    id: "f1",
-    category: "delivery_proof",
-    label: "Delivery confirmation",
-    source: "shopify_fulfillments",
-    sourceRef: null,
-    strength: "moderate",
-    bankEligible: true,
-    merchantVisible: true,
-    internalOnly: false,
-    includeInBankNarrative: true,
-    submissionRisk: false,
-    confidence: null,
-    value: { proofType: "delivered_confirmed" },
-  }],
-  narrative_json: {
-    fulfillmentArgument: { text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1)." },
-  },
+  status: "final",
+  validation_status: "ok",
+  pdf_path: "shop/dispute/v3.pdf",
+  facts_json: CLEAN_FACTS,
+  narrative_json: CLEAN_NARRATIVE,
 };
 const UNSAFE = {
-  facts_json: CLEAN.facts_json,
-  narrative_json: {
-    fulfillmentArgument: { text: "The parcel was delivered to the cardholder's verified address." },
-  },
+  ...CLEAN,
+  narrative_json: UNSAFE_NARRATIVE,
 };
 
 function mockSupabase(
@@ -201,5 +193,51 @@ describe("POST /api/packs/:packId/approve — PR-C1 preflight", () => {
     expect(body.message).not.toMatch(/regenerate/i);
     expect(packUpdate).not.toHaveBeenCalled();
     expect(jobsInsert).not.toHaveBeenCalled();
+  });
+
+  /* ── Fileability ─────────────────────────────────────────────────────
+   *
+   * Content safety alone was not enough: a safe DRAFT (or a `final` with no
+   * PDF, or one whose validation failed) was approved and enqueued, and the
+   * worker then refused it. This route deliberately does NOT finalize on the
+   * merchant's behalf — approval lives on the defence-package finalize
+   * endpoint, which performs the safety-gated promotion.
+   * ----------------------------------------------------------------- */
+
+  const NOT_FILEABLE: Array<[string, Record<string, unknown>, string]> = [
+    ["safe but still a DRAFT", { status: "draft" }, "candidate_not_final"],
+    ["safe but STALE", { status: "stale" }, "candidate_not_final"],
+    ["safe but FAILED", { status: "failed" }, "candidate_not_final"],
+    ["final with NO PDF", { pdf_path: null }, "candidate_missing_pdf"],
+    ["final whose VALIDATION failed", { validation_status: "failed" }, "candidate_validation_not_ok"],
+  ];
+
+  for (const [name, over, reason] of NOT_FILEABLE) {
+    it(`refuses (${name}): no approval stamp, no job, no approval audit`, async () => {
+      const { packUpdate, jobsInsert, auditInsert } = mockSupabase({
+        id: "pkg-3",
+        version: 3,
+        ...CLEAN,
+        ...over,
+      });
+
+      const res = await POST(req(), params);
+      const body = await res.json();
+
+      expect(res.status).toBe(409);
+      expect(body.code).toBe("PACKAGE_NOT_FILEABLE");
+      expect(body.reasons).toContain(reason);
+      expect(packUpdate).not.toHaveBeenCalled();
+      expect(jobsInsert).not.toHaveBeenCalled();
+      expect(auditInsert).not.toHaveBeenCalled();
+    });
+  }
+
+  it("does NOT silently finalize a draft on the merchant's behalf", async () => {
+    const { packUpdate } = mockSupabase({ id: "pkg-3", version: 3, ...CLEAN, status: "draft" });
+    await POST(req(), params);
+    // The only `update` this route ever issues is the approval stamp on
+    // evidence_packs; it never writes to defence_packages at all.
+    expect(packUpdate).not.toHaveBeenCalled();
   });
 });

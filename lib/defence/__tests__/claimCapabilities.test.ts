@@ -190,6 +190,69 @@ describe("detector bypasses closed in review", () => {
     });
   }
 
+  // Second review pass. Each of these shipped under the FLAT negation word
+  // list: any `no` / `not` / `without` anywhere in the claim clause negated
+  // it, even when the thing being negated was a delay, a damage state, or an
+  // unrelated evidentiary point.
+  const MUST_BLOCK_REVIEW_3: Array<[string, string]> = [
+    [
+      "qualifier negation — 'without delay' does not deny the destination",
+      "The parcel was delivered to the billing address without delay.",
+    ],
+    [
+      "qualifier negation — 'without incident'",
+      "The package arrived at the customer's home without incident.",
+    ],
+    [
+      "qualifier negation — 'not damaged' negates a damage state, not delivery",
+      "The parcel was not damaged when it was delivered to the billing address.",
+    ],
+    [
+      "prohibition scope — an assertion joined with 'and' is NOT covered",
+      "We do not claim that the carrier identified the address, and the parcel was delivered to the billing address.",
+    ],
+    [
+      "double negative — 'no question that' is an affirmation",
+      "There is no question that the parcel was delivered to the customer's residence.",
+    ],
+    [
+      "double negative — 'no dispute that'",
+      "There is no dispute that the goods reached the cardholder's premises.",
+    ],
+    [
+      "destination paraphrase — 'as instructed by the buyer'",
+      "The parcel was delivered as instructed by the buyer.",
+    ],
+    [
+      "destination paraphrase — a literal street address",
+      "The package went to 42 Elm Road.",
+    ],
+    [
+      "destination paraphrase — literal street address, alternate form",
+      "The consignment was left at 1 Main St.",
+    ],
+    [
+      "subordinate boundary — 'after' opens a new scope",
+      "No refund was issued after the parcel was delivered to the cardholder's address.",
+    ],
+    [
+      "subordinate boundary — 'because' opens a new scope",
+      "The claim cannot be correct because the parcel was delivered to the billing address.",
+    ],
+    [
+      "subordinate boundary — 'once' opens a new scope",
+      "No further contact was received once the goods arrived at the customer's residence.",
+    ],
+  ];
+
+  for (const [name, text] of MUST_BLOCK_REVIEW_3) {
+    it(`blocks: ${name}`, () => {
+      const verdict = classifyAddressDeliveryClaim(text);
+      expect(verdict === "affirmative" || verdict === "ambiguous", verdict).toBe(true);
+      expect(claimsAddressDelivery(text)).toBe(true);
+    });
+  }
+
   it("a prohibition that DOES cover the whole sentence still reads as negated", () => {
     expect(
       classifyAddressDeliveryClaim(
@@ -214,6 +277,27 @@ describe("detector bypasses closed in review", () => {
     ).toBe(false);
   });
 
+  it("a prohibition interrupted by a parenthetical does NOT carry — it fails closed", () => {
+    // "We do not claim, on the basis of the carrier record, that the parcel
+    // was delivered…" is a genuine prohibition, but the intervening clause
+    // makes its scope unresolvable by clause boundary. The rule is "a
+    // prohibition must demonstrably cover the assertion", so an unprovable
+    // scope blocks rather than clears. Over-blocking a prohibition costs a
+    // regeneration; under-blocking files an unsupported claim.
+    const verdict = classifyAddressDeliveryClaim(
+      "We do not claim, on the basis of the carrier record, that the parcel was delivered to the billing address.",
+    );
+    expect(verdict === "affirmative" || verdict === "ambiguous").toBe(true);
+  });
+
+  it("an uninterrupted prohibition of the exact assertion still reads as negated", () => {
+    expect(
+      classifyAddressDeliveryClaim(
+        "We do not claim that the parcel was delivered to the billing address on the basis of the carrier record.",
+      ),
+    ).toBe("negated");
+  });
+
   it("IP-location prose is not a delivery destination", () => {
     expect(
       claimsAddressDelivery(
@@ -235,6 +319,17 @@ describe("classifyAddressDeliveryClaim — legitimate prose still passes", () =>
     // Non-physical "address" uses must not trip the detector.
     "The order confirmation was sent to the customer's email address on 1 May.",
     "The order IP address geolocated to the same country as the order.",
+    // Ordinary carrier / date / tracking prose — no destination is named, so
+    // there is no address-delivery claim to authorize. These are the
+    // sentences PR-C1 must NOT start blocking.
+    "The parcel was dispatched on 10 May 2026 and the carrier scanned it as delivered on 12 May 2026.",
+    "PostNord tracking 00370729990123456789 records delivery at 14:07 on 12 May.",
+    "The shipment was not delivered on the first attempt and was redelivered on 13 May.",
+    "The order was fulfilled in a single shipment; no items were returned.",
+    "Delivery took place two days after dispatch, without delay.",
+    // Independently sourced signature / POD — the evidence PR-C1 preserves.
+    "The carrier captured a signature from R. Pipe on delivery.",
+    "Proof of delivery lists the recipient's signature and the scan timestamp.",
   ];
   for (const text of CLEAN) {
     it(`passes: ${text.slice(0, 52)}…`, () => {

@@ -61,6 +61,10 @@ import {
 } from "@/lib/rules/storeAutomation";
 import { pickAutomationAction } from "@/lib/rules/pickAutomationAction";
 import type { Rule } from "@/lib/rules/types";
+import {
+  CLEAN_FACTS,
+  narrativeJson,
+} from "@/tests/fixtures/defencePackageShapes";
 
 const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockGetShopSettings = vi.mocked(getShopSettings);
@@ -185,26 +189,8 @@ function runPipeline(
               id: "pkg-safe",
               version: 1,
               status: "final",
-              facts_json: [
-                {
-                  id: "f1",
-                  category: "delivery_proof",
-                  label: "Delivery confirmation",
-                  source: "shopify_fulfillments",
-                  sourceRef: null,
-                  strength: "moderate",
-                  bankEligible: true,
-                  merchantVisible: true,
-                  internalOnly: false,
-                  includeInBankNarrative: true,
-                  submissionRisk: false,
-                  confidence: null,
-                  value: { proofType: "delivered_confirmed" },
-                },
-              ],
-              narrative_json: {
-                executiveSummary: { text: "The carrier confirmed delivery on 12 May 2026.", usedFactIds: [] },
-              },
+              facts_json: CLEAN_FACTS,
+              narrative_json: narrativeJson({ executiveSummary: "The carrier confirmed delivery on 12 May 2026." }),
             },
             error: null,
           }),

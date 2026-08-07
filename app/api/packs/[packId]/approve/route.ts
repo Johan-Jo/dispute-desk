@@ -5,10 +5,9 @@ import { logAuditEvent } from "@/lib/audit/logEvent";
 import {
   preflightBlocks,
   preflightCandidate,
-  preflightIsTransient,
+  preflightHttpRefusal,
   preflightLatestCandidate,
   preflightReasons,
-  preflightSummary,
 } from "@/lib/defence/packageSafety";
 
 interface RouteParams {
@@ -68,13 +67,24 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     );
   }
 
-  /* ── PR-C1 candidate-safety preflight, BEFORE any side effect ──
+  /* ── PR-C1 candidate preflight, BEFORE any side effect ──
    *
    * Ordering matters: this must precede the `approved_for_save_at` stamp and
    * the enqueue, so a blocked attempt leaves no approval trace and no queued
    * job. Judges the latest candidate, because this route enqueues against the
-   * pack and the worker selects the latest version. */
-  const preflight = await preflightLatestCandidate(sb, pack.dispute_id as string);
+   * pack and the worker selects the latest version.
+   *
+   * `requireFileable` closes a second hole found in review: the route checked
+   * only that the candidate was content-SAFE, so a safe `draft` — or a `final`
+   * with no PDF, or one whose validation failed — was approved and enqueued,
+   * and the worker then refused it (`saveToShopifyJob` §3 hard-requires
+   * `status='final'` + `pdf_path`). The merchant saw an approval that could
+   * never complete. Finalizing through this legacy pack route is deliberately
+   * NOT offered: approval happens on the defence-package finalize endpoint,
+   * which is the path that performs the safety-gated promotion. */
+  const preflight = await preflightLatestCandidate(sb, pack.dispute_id as string, {
+    requireFileable: true,
+  });
   if (preflightBlocks(preflight)) {
     await logAuditEvent({
       shopId: pack.shop_id,
@@ -90,15 +100,15 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         trigger: "portal_approve",
       },
     });
-    const transient = preflightIsTransient(preflight);
+    const refusal = preflightHttpRefusal(preflight);
     return NextResponse.json(
       {
-        error: transient ? "PACKAGE_CHECK_UNAVAILABLE" : "PACKAGE_REVIEW_REQUIRED",
-        code: transient ? "PACKAGE_CHECK_UNAVAILABLE" : "PACKAGE_REVIEW_REQUIRED",
-        reasons: preflightReasons(preflight),
-        message: preflightSummary(preflight),
+        error: refusal.code,
+        code: refusal.code,
+        reasons: refusal.reasons,
+        message: refusal.message,
       },
-      { status: transient ? 503 : 422 },
+      { status: refusal.status },
     );
   }
 

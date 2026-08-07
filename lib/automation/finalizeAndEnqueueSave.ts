@@ -20,7 +20,7 @@ import type { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import {
   preflightBlocks,
-  preflightIsTransient,
+  preflightIsContentBlock,
   preflightNamedCandidate,
   preflightReasons,
   preflightRetiredKeys,
@@ -41,16 +41,46 @@ export interface FinalizeAndEnqueueSaveInput {
 }
 
 /**
+ * Why this call did not finalize.
+ *
+ * The first revision collapsed every non-`safe` preflight outcome into
+ * `blocked: true` AND called `markPackageReviewRequired` for all of them. So a
+ * Supabase timeout, or a dispute whose package had not been built yet, raised
+ * a merchant-facing "this package needs review — regenerate it" banner and was
+ * counted by `reconcileParkedAutoDisputes` as a safety block. Neither is true,
+ * and neither is fixed by regenerating.
+ *
+ *   content_block  the package really does carry an unsupported claim.
+ *                  Park it, raise the banner, notify. Retrying is pointless.
+ *   transient      a query or write failed. Retry. No banner.
+ *   pending        no package exists yet. Defer. No banner.
+ *   stale          a newer version exists; this one is moot. No mutation,
+ *                  no banner — the newer candidate owns the decision.
+ */
+export type FinalizeFailureKind = "content_block" | "transient" | "pending" | "stale";
+
+export interface FinalizeAndEnqueueSaveResult {
+  ok: boolean;
+  /** Present on every failure. */
+  failure?: FinalizeFailureKind;
+  reason?: string;
+  /** Machine-readable preflight reason codes, when the preflight refused. */
+  reasons?: string[];
+  /** Retry is worthwhile. True for `transient` and `pending` only. */
+  retriable?: boolean;
+  /** A genuine content verdict — the ONLY failure that parks for review. */
+  blocked?: boolean;
+}
+
+/**
  * Promote `packageId` (a draft) to final, supersede any prior final for the
  * same dispute, and enqueue a `save_to_shopify` job against `sourcePackId`.
- * Returns `{ ok }` and never throws — enqueue/supersede failures are logged
- * and surfaced via `ok:false` so the caller can decide whether to retry.
- * `blocked:true` distinguishes a PR-C1 safety refusal (no side effect
- * happened, and retrying will not help) from a transient failure.
+ * Never throws — every failure is classified (see `FinalizeFailureKind`) so
+ * the caller can tell a package problem from an infrastructure problem.
  */
 export async function finalizeAndEnqueueSave(
   input: FinalizeAndEnqueueSaveInput,
-): Promise<{ ok: boolean; reason?: string; blocked?: boolean; transient?: boolean }> {
+): Promise<FinalizeAndEnqueueSaveResult> {
   const { sb, shopId, disputeId, packageId, packageVersion, sourcePackId } =
     input;
 
@@ -62,6 +92,12 @@ export async function finalizeAndEnqueueSave(
   //    whose previous candidate has been retired.
   const preflight = await preflightNamedCandidate(sb, { packageId, disputeId });
   if (preflightBlocks(preflight)) {
+    const reasons = preflightReasons(preflight);
+    const contentBlock = preflightIsContentBlock(preflight);
+
+    // The audit row is written for EVERY refusal — including the transient
+    // ones — because "we declined to finalize" is a fact worth keeping either
+    // way. `outcome` distinguishes them in the trail.
     await logAuditEvent({
       shopId,
       disputeId,
@@ -71,22 +107,35 @@ export async function finalizeAndEnqueueSave(
         packageId,
         version: packageVersion,
         outcome: preflight.kind,
-        reasons: preflightReasons(preflight),
+        contentBlock,
+        reasons,
         retiredKeys: preflightRetiredKeys(preflight),
         trigger: "finalize_and_enqueue_save",
       },
     });
-    await markPackageReviewRequired(sb, {
-      disputeId,
-      packageId,
-      reasons: preflightReasons(preflight),
-    });
+
+    // ONLY a content verdict parks the dispute for merchant review.
+    if (contentBlock) {
+      await markPackageReviewRequired(sb, { disputeId, packageId, reasons });
+      return {
+        ok: false,
+        failure: "content_block",
+        reason: `defence_package_unsafe_claim: ${reasons.join(", ")}`,
+        reasons,
+        retriable: false,
+        blocked: true,
+      };
+    }
+
+    const failure: FinalizeFailureKind =
+      preflight.kind === "error" ? "transient" : preflight.kind === "missing" ? "pending" : "stale";
     return {
       ok: false,
-      reason: `defence_package_unsafe_claim: ${preflightReasons(preflight).join(", ")}`,
-      blocked: true,
-      // A database failure is retriable; an unsafe package is not.
-      transient: preflightIsTransient(preflight),
+      failure,
+      reason: `defence_package_preflight_${preflight.kind}: ${reasons.join(", ")}`,
+      reasons,
+      retriable: failure !== "stale",
+      blocked: false,
     };
   }
 
@@ -102,7 +151,7 @@ export async function finalizeAndEnqueueSave(
     .select("id");
   if (finalErr) {
     console.error("[finalizeAndEnqueueSave] finalize failed", finalErr);
-    return { ok: false, reason: finalErr.message };
+    return { ok: false, failure: "transient", reason: finalErr.message, retriable: true, blocked: false };
   }
 
   if (flipped && flipped.length > 0) {
@@ -168,7 +217,7 @@ export async function finalizeAndEnqueueSave(
   });
   if (jobErr) {
     console.error("[finalizeAndEnqueueSave] enqueue save_to_shopify failed", jobErr);
-    return { ok: false, reason: jobErr.message };
+    return { ok: false, failure: "transient", reason: jobErr.message, retriable: true, blocked: false };
   }
 
   return { ok: true };
