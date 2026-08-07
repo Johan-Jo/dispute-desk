@@ -24,6 +24,8 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { POST } from "@/app/api/defence-packages/[id]/finalize/route";
 import { NextRequest } from "next/server";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   AMBIGUOUS_NARRATIVE,
   CLEAN_NARRATIVE,
@@ -203,6 +205,49 @@ describe("POST /api/defence-packages/:id/finalize — PR-C1 preflight", () => {
     expect(packageUpdates.some((u) => u.status === "final")).toBe(true);
     expect(finalizedAudit()).toHaveLength(1);
     expect(blockAudit()).toHaveLength(0);
+  });
+
+  /* ── The guarded transition ──────────────────────────────────────────
+   *
+   * The read and the write are separate round-trips. The update used to be
+   * `.eq("id", id)` alone, so a lifecycle another actor changed in between —
+   * a regeneration flipping the row to `stale`, the auto path finalizing it,
+   * the worker marking it `submitted` — was silently overwritten.
+   * ----------------------------------------------------------------- */
+
+  it("a ZERO-ROW guarded transition returns 409 and mutates nothing downstream", async () => {
+    const { packageUpdates } = wire({
+      named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+      transitionRows: [],
+    });
+
+    const res = await POST(req(), params);
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.code).toBe("PACKAGE_LIFECYCLE_CONFLICT");
+
+    // The guarded UPDATE was attempted (and matched nothing); crucially,
+    // NOTHING after it ran.
+    expect(packageUpdates).toHaveLength(1);
+    expect(packageUpdates[0].status).toBe("final");
+    expect(packageUpdates.some((u) => u.status === "superseded")).toBe(false);
+    expect(finalizedAudit()).toHaveLength(0);
+    expect(supersededAudit()).toHaveLength(0);
+  });
+
+  it("the transition carries the authorization predicates, not just the id", async () => {
+    // If the predicates lived only in the pre-read, a concurrent change could
+    // still be overwritten. They must be part of the UPDATE itself.
+    const src = readFileSync(
+      join(process.cwd(), "app/api/defence-packages/[id]/finalize/route.ts"),
+      "utf-8",
+    );
+    const guarded = src.slice(src.indexOf('.update({ status: "final"'));
+    const transition = guarded.slice(0, guarded.indexOf(".select("));
+    expect(transition).toContain('.eq("status", "draft")');
+    expect(transition).toContain('.eq("validation_status", "ok")');
+    expect(transition).toContain('.not("pdf_path", "is", null)');
   });
 
   it("pre-existing gates still fire before the preflight is even reached", async () => {

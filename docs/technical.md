@@ -4838,6 +4838,21 @@ and logged the finalization audit BEFORE the preflight ran, and discarded the he
 audit trail claiming approval, and a job result of `{ ok: true }`. Proven end-to-end in
 `lib/jobs/handlers/__tests__/buildDefencePackageJobFinalizeOrdering.test.ts`.
 
+**Winning the guarded transition IS the authorization.** Both promotion sites —
+`finalizeAndEnqueueSave` and `POST /api/defence-packages/:id/finalize` — perform the `draft → final`
+update with the authorization predicates repeated *inside* the UPDATE
+(`.eq("status","draft").eq("validation_status","ok").not("pdf_path","is",null)`) and require
+**exactly one** affected row. Zero rows means a concurrent actor changed the lifecycle between the
+read and the write, so nothing downstream runs: no finalization audit, no supersede, no enqueue. The
+helper returns the typed `lifecycle` failure; the route returns `409 PACKAGE_LIFECYCLE_CONFLICT`.
+
+Before this, the helper guarded only on `status='draft'` and read an **empty** result as success —
+its comment said an already-final row "falls through" to supersede + enqueue, which produced a second
+save job and a supersede performed by a caller that had finalized nothing. The route's update was
+`.eq("id", id)` alone, so a concurrent `stale` / `final` / `submitted` / `superseded` transition was
+silently overwritten. `requireFinalizable` is the preflight mirror of the same predicates (draft +
+validation ok + PDF), so the check and the write cannot disagree.
+
 **Outcomes are classified, not collapsed.** `PreflightOutcome` is a discriminated union with exactly
 one proceeding member (`safe`); the others are `blocked` (a content verdict), `missing`,
 `not_current`, `not_fileable` and `error`. `finalizeAndEnqueueSave` maps them to
@@ -4851,8 +4866,11 @@ regenerate a package that was fine, and reported an outage as a fleet of unsafe 
 check (which never says "regenerate").
 
 **Content-safe is not the same as fileable.** `saveToShopifyJob` §3 hard-requires the LATEST defence
-package to be `status='final'` with a `pdf_path`, so the two pack-level routes pass
-`requireFileable: true` and additionally require `validation_status = 'ok'`. Without it a safe
+package to be `status='final'` with a `pdf_path`, so the two pack-level routes **and the direct
+Submit endpoint** pass `requireFileable: true`, which additionally requires
+`validation_status = 'ok'`. Submit checked only `status === "final"`, so a content-safe final package
+whose validation had failed — or which had no rendered PDF — still enqueued, and the card showed a
+submitted state for a job the worker would refuse. Without it a safe
 *draft* (or a `final` with no PDF) was approved and enqueued, and the manual-save route also stamped
 the evidence pack `saving` — a save-in-progress UI for a job the worker was always going to refuse.
 Neither pack route finalizes on the merchant's behalf; approval is the finalize endpoint's job,

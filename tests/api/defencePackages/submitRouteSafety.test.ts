@@ -40,10 +40,14 @@ const req = () =>
   new NextRequest("https://x.test/api/defence-packages/pkg-3/submit", { method: "POST" });
 const params = { params: Promise.resolve({ id: PKG_ID }) };
 
+/** A genuinely FILEABLE final package: the status check alone was never
+ *  enough — `saveToShopifyJob` also requires validation ok and a PDF. */
 const pkg = (over: Record<string, unknown>) => ({
   id: PKG_ID,
   version: 3,
   status: "final",
+  validation_status: "ok",
+  pdf_path: "shop/dispute/v3.pdf",
   source_pack_id: "pack-1",
   shop_id: "shop-1",
   dispute_id: "dispute-1",
@@ -159,7 +163,30 @@ describe("POST /api/defence-packages/:id/submit — PR-C1 preflight", () => {
     expect(jobsInsert).not.toHaveBeenCalled();
   });
 
-  it("enqueues normally for a safe, current candidate", async () => {
+  const NOT_FILEABLE: Array<[string, Record<string, unknown>, string]> = [
+    ["final whose VALIDATION failed", { validation_status: "failed" }, "candidate_validation_not_ok"],
+    ["final with a NULL validation_status", { validation_status: null }, "candidate_validation_not_ok"],
+    ["final with NO pdf_path", { pdf_path: null }, "candidate_missing_pdf"],
+    ["final with a BLANK pdf_path", { pdf_path: "   " }, "candidate_missing_pdf"],
+  ];
+
+  for (const [name, over, reason] of NOT_FILEABLE) {
+    it(`returns 409 PACKAGE_NOT_FILEABLE and enqueues nothing (${name})`, async () => {
+      // `status === "final"` passed the route's own gate, so without the
+      // central fileability contract this enqueued a job the worker refuses.
+      const { jobsInsert } = wire({
+        named: pkg({ ...over, facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+      });
+      const res = await POST(req(), params);
+      const body = await res.json();
+      expect(res.status).toBe(409);
+      expect(body.code).toBe("PACKAGE_NOT_FILEABLE");
+      expect(body.reasons).toContain(reason);
+      expect(jobsInsert).not.toHaveBeenCalled();
+    });
+  }
+
+  it("enqueues normally for a safe, current, genuinely fileable candidate", async () => {
     const { jobsInsert } = wire({
       named: pkg({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
     });

@@ -786,6 +786,17 @@ export async function handleBuildDefencePackage(
             retriable: false,
             reason: `defence_package_superseded_before_save: ${outcome.reason ?? "not_current"}`,
           };
+        case "lifecycle":
+          // The guarded draft→final transition matched zero rows: another
+          // actor changed the lifecycle between the render and the promotion,
+          // and whoever won it owns the enqueue. Nothing was finalized,
+          // superseded or queued here. Retrying this build would re-render the
+          // same package and lose the race again, so it is not retriable.
+          return {
+            ok: false,
+            retriable: false,
+            reason: `defence_package_transition_conflict: ${outcome.reason ?? "zero rows"}`,
+          };
         case "transient":
         case "pending":
         default:

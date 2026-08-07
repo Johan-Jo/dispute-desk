@@ -10,6 +10,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 vi.mock("@/lib/audit/logEvent", () => ({
   logAuditEvent: vi.fn().mockResolvedValue(undefined),
@@ -39,18 +41,35 @@ interface SbScenario {
   latestId?: string | null;
   namedError?: { message: string } | null;
   latestError?: { message: string } | null;
+  /**
+   * Rows the guarded draft-to-final UPDATE reports as affected. Defaults to
+   * ONE — this caller won the transition. `[]` simulates a concurrent
+   * lifecycle change between the preflight and the write.
+   *
+   * The previous fixture returned `[]` on the happy path and still expected an
+   * enqueue, which is exactly the fail-open the helper had: an empty update
+   * was being read as success.
+   */
+  transitionRows?: Array<{ id: string }>;
+  /** Inject a failure into the guarded transition itself. */
+  transitionError?: { message: string } | null;
 }
 
 function mockSb(named: Record<string, unknown> | null, scenario: SbScenario = {}) {
   const latestId = scenario.latestId === undefined ? PKG_ID : scenario.latestId;
-  const packageUpdate = vi.fn().mockReturnValue({
-    eq: vi.fn().mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        select: vi.fn().mockResolvedValue({ data: [], error: null }),
-      }),
-      select: vi.fn().mockResolvedValue({ data: [], error: null }),
-    }),
-  });
+  const transitionResult = {
+    data: scenario.transitionError ? null : scenario.transitionRows ?? [{ id: PKG_ID }],
+    error: scenario.transitionError ?? null,
+  };
+  // update(...).eq(...).eq(...).eq(...).not(...).select("id") — a chain that
+  // resolves to the affected rows whatever its length.
+  const transitionChain: Record<string, unknown> = {};
+  for (const k of ["eq", "neq", "not", "select"]) {
+    transitionChain[k] = vi.fn(() => transitionChain);
+  }
+  (transitionChain as { then?: unknown }).then = (cb: (v: unknown) => unknown) =>
+    cb(transitionResult);
+  const packageUpdate = vi.fn((_values: Record<string, unknown>) => transitionChain);
   const jobsInsert = vi.fn().mockResolvedValue({ data: null, error: null });
   let maybeCalls = 0;
   const from = vi.fn((table: string) => {
@@ -213,15 +232,136 @@ describe("finalizeAndEnqueueSave — non-content outcomes never park for review"
   });
 });
 
-describe("finalizeAndEnqueueSave — the safe path is untouched", () => {
-  it("finalizes and enqueues normally for a safe, current candidate", async () => {
-    const { sb, packageUpdate, jobsInsert } = mockSb(
-      named({ facts_json: CLEAN_FACTS, narrative_json: CLEAN_NARRATIVE }),
-    );
+/* ── The guarded lifecycle transition ─────────────────────────────────────
+ *
+ * Winning the draft-to-final UPDATE is the AUTHORIZATION to supersede and
+ * enqueue. The previous revision guarded only on status='draft' and treated an
+ * empty result as success — so an already-final row "fell through" to a second
+ * supersede and a second save job, performed by a caller that had finalized
+ * nothing.
+ * --------------------------------------------------------------------- */
+
+describe("finalizeAndEnqueueSave — the guarded transition", () => {
+  const eligibleDraft = () =>
+    named({
+      status: "draft",
+      validation_status: "ok",
+      pdf_path: "shop/dispute/v3.pdf",
+      facts_json: CLEAN_FACTS,
+      narrative_json: CLEAN_NARRATIVE,
+    });
+
+  it("promotes, audits, supersedes and enqueues when exactly ONE row transitions", async () => {
+    const { sb, packageUpdate, jobsInsert } = mockSb(eligibleDraft());
     const result = await call(sb);
+
     expect(result.ok).toBe(true);
     expect(packageUpdate).toHaveBeenCalled();
+    expect(packageUpdate.mock.calls[0]?.[0]).toMatchObject({ status: "final" });
     expect(jobsInsert).toHaveBeenCalledTimes(1);
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: "defence_package_finalized" }),
+    );
     expect(mockMark).not.toHaveBeenCalled();
+  });
+
+  it("a ZERO-ROW transition enqueues nothing, supersedes nothing, audits no finalization", async () => {
+    const { sb, jobsInsert } = mockSb(eligibleDraft(), { transitionRows: [] });
+    const result = await call(sb);
+
+    expect(result.ok).toBe(false);
+    expect(result.failure).toBe("lifecycle");
+    expect(result.blocked).toBe(false);
+    expect(result.retriable).toBe(false);
+    expect(result.reason).toContain("transition_conflict");
+
+    expect(jobsInsert).not.toHaveBeenCalled();
+    expect(
+      mockAudit.mock.calls.filter(
+        (c) => (c[0] as { eventType?: string })?.eventType === "defence_package_finalized",
+      ),
+    ).toHaveLength(0);
+    expect(
+      mockAudit.mock.calls.filter(
+        (c) => (c[0] as { eventType?: string })?.eventType === "defence_package_superseded",
+      ),
+    ).toHaveLength(0);
+    // A lost race is not the merchant's problem.
+    expect(mockMark).not.toHaveBeenCalled();
+  });
+
+  it("a transition DATABASE error stays transient and retriable", async () => {
+    const { sb, jobsInsert } = mockSb(eligibleDraft(), {
+      transitionError: { message: "deadlock detected" },
+    });
+    const result = await call(sb);
+    expect(result.failure).toBe("transient");
+    expect(result.retriable).toBe(true);
+    expect(jobsInsert).not.toHaveBeenCalled();
+  });
+
+  it("the transition carries every authorization predicate, not just the id", async () => {
+    const src = readFileSync(
+      join(process.cwd(), "lib/automation/finalizeAndEnqueueSave.ts"),
+      "utf-8",
+    );
+    const guarded = src.slice(src.indexOf('.update({ status: "final"'));
+    const transition = guarded.slice(0, guarded.indexOf('.select("id")'));
+    expect(transition).toContain('.eq("id", packageId)');
+    expect(transition).toContain('.eq("status", "draft")');
+    expect(transition).toContain('.eq("validation_status", "ok")');
+    expect(transition).toContain('.not("pdf_path", "is", null)');
+  });
+});
+
+/* ── Lifecycle preconditions, refused BEFORE the transition ─────────────── */
+
+describe("finalizeAndEnqueueSave — the candidate must still be the eligible draft", () => {
+  const NOT_FINALIZABLE: Array<[string, Record<string, unknown>, string]> = [
+    ["already final", { status: "final" }, "candidate_not_draft"],
+    ["already submitted", { status: "submitted" }, "candidate_not_draft"],
+    ["stale", { status: "stale" }, "candidate_not_draft"],
+    ["validation failed", { validation_status: "failed" }, "candidate_validation_not_ok"],
+    ["validation null", { validation_status: null }, "candidate_validation_not_ok"],
+    ["no pdf_path", { pdf_path: null }, "candidate_missing_pdf"],
+    ["blank pdf_path", { pdf_path: "   " }, "candidate_missing_pdf"],
+  ];
+
+  for (const [name, over, reason] of NOT_FINALIZABLE) {
+    it(`refuses (${name}): no mutation, no enqueue, no review banner`, async () => {
+      const { sb, packageUpdate, jobsInsert } = mockSb(
+        named({
+          status: "draft",
+          validation_status: "ok",
+          pdf_path: "shop/dispute/v3.pdf",
+          facts_json: CLEAN_FACTS,
+          narrative_json: CLEAN_NARRATIVE,
+          ...over,
+        }),
+      );
+      const result = await call(sb);
+
+      expect(result.ok).toBe(false);
+      expect(result.failure).toBe("lifecycle");
+      expect(result.reasons).toContain(reason);
+      expect(packageUpdate).not.toHaveBeenCalled();
+      expect(jobsInsert).not.toHaveBeenCalled();
+      expect(mockMark).not.toHaveBeenCalled();
+    });
+  }
+
+  it("already-final never authorizes an enqueue — a concurrent caller owns it", async () => {
+    const { sb, jobsInsert } = mockSb(
+      named({
+        status: "final",
+        validation_status: "ok",
+        pdf_path: "p.pdf",
+        facts_json: CLEAN_FACTS,
+        narrative_json: CLEAN_NARRATIVE,
+      }),
+    );
+    const result = await call(sb);
+    expect(result.ok).toBe(false);
+    expect(jobsInsert).not.toHaveBeenCalled();
   });
 });

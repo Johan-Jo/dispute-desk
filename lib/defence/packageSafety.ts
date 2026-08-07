@@ -429,16 +429,41 @@ export interface PreflightOptions {
    * refusing it here is strictly safer than filing it.
    */
   requireFileable?: boolean;
+  /**
+   * The mirror requirement for a caller that is about to PROMOTE the
+   * candidate: it must still be the eligible draft the caller believes it is.
+   *
+   * `finalizeAndEnqueueSave` performs a `draft → final` transition, so
+   * `requireFileable` (which demands `final`) is the wrong predicate there —
+   * it would reject every legitimate input. This one demands `draft` +
+   * `validation_status = 'ok'` + a PDF, which is exactly the set of
+   * preconditions the guarded UPDATE then re-asserts against the row.
+   */
+  requireFinalizable?: boolean;
 }
 
 const FILEABLE_STATUS = "final";
+const FINALIZABLE_STATUS = "draft";
+
+function hasPdf(c: CandidateRow): boolean {
+  return typeof c.pdf_path === "string" && c.pdf_path.trim().length > 0;
+}
 
 /** Why this content-safe candidate still cannot be filed. */
 function fileabilityReasons(c: CandidateRow): string[] {
   const reasons: string[] = [];
   if ((c.status ?? null) !== FILEABLE_STATUS) reasons.push("candidate_not_final");
   if ((c.validation_status ?? null) !== "ok") reasons.push("candidate_validation_not_ok");
-  if (!c.pdf_path || String(c.pdf_path).trim().length === 0) reasons.push("candidate_missing_pdf");
+  if (!hasPdf(c)) reasons.push("candidate_missing_pdf");
+  return reasons;
+}
+
+/** Why this content-safe candidate cannot be promoted to final. */
+function finalizabilityReasons(c: CandidateRow): string[] {
+  const reasons: string[] = [];
+  if ((c.status ?? null) !== FINALIZABLE_STATUS) reasons.push("candidate_not_draft");
+  if ((c.validation_status ?? null) !== "ok") reasons.push("candidate_validation_not_ok");
+  if (!hasPdf(c)) reasons.push("candidate_missing_pdf");
   return reasons;
 }
 
@@ -463,6 +488,10 @@ function judge(candidate: CandidateRow, opts?: PreflightOptions): PreflightOutco
   if (!verdict.safe) return { kind: "blocked", candidate, verdict };
   if (opts?.requireFileable) {
     const reasons = fileabilityReasons(candidate);
+    if (reasons.length > 0) return { kind: "not_fileable", candidate, reasons };
+  }
+  if (opts?.requireFinalizable) {
+    const reasons = finalizabilityReasons(candidate);
     if (reasons.length > 0) return { kind: "not_fileable", candidate, reasons };
   }
   return { kind: "safe", candidate };

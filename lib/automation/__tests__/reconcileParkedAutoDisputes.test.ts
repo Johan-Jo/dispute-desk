@@ -58,6 +58,9 @@ function mockSb(s: Scenario) {
       in: () => chain,
       is: () => chain,
       neq: () => chain,
+      // The guarded draft→final transition adds `.not("pdf_path","is",null)`
+      // so a concurrently invalidated row cannot be promoted.
+      not: () => chain,
       order: () => chain,
       limit: () => chain,
       update: (values: Record<string, unknown>) => {

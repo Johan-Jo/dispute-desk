@@ -99,6 +99,13 @@ interface Scenario {
   latestError?: { message: string } | null;
   /** Id of the newest version for the dispute. Defaults to the built package. */
   latestId?: string;
+  /**
+   * Simulate a CONCURRENT lifecycle change landing between the preflight and
+   * the guarded draft-to-final UPDATE: the row's status is flipped to this
+   * value just before the guard is evaluated, so the update matches zero rows
+   * exactly as Postgres would.
+   */
+  concurrentStatusAtTransition?: string;
 }
 
 /**
@@ -131,7 +138,7 @@ function mockSb(scenario: Scenario = {}) {
   const from = (table: string) => {
     const filters: Record<string, unknown> = {};
     let ordered = false;
-    let updated = false;
+    let pendingUpdate: Record<string, unknown> | null = null;
 
     let data: unknown = null;
     if (table === "evidence_packs") {
@@ -181,6 +188,7 @@ function mockSb(scenario: Scenario = {}) {
         return chain;
       },
       neq: () => chain,
+      not: () => chain,
       in: () => chain,
       is: () => chain,
       order: () => {
@@ -190,9 +198,8 @@ function mockSb(scenario: Scenario = {}) {
       limit: () => chain,
       update: (values: Record<string, unknown>) => {
         if (table === "defence_packages") {
-          updated = true;
+          pendingUpdate = values;
           packageUpdates.push(values);
-          Object.assign(row, values);
         }
         if (table === "disputes") disputeUpdates.push(values);
         return chain;
@@ -205,14 +212,23 @@ function mockSb(scenario: Scenario = {}) {
         table === "defence_packages" ? resolveDefencePackages() : { data, error: null },
       maybeSingle: async () =>
         table === "defence_packages" ? resolveDefencePackages() : { data, error: null },
-      then: (cb: (v: unknown) => unknown) =>
-        cb(
-          table === "defence_packages"
-            ? // `update(...).select("id")` must report the row it touched, or
-              // the helper reads "nothing was flipped" and skips its audit.
-              { data: updated ? [{ id: PKG_ID }] : [], error: null }
-            : { data, error: null },
-        ),
+      then: (cb: (v: unknown) => unknown) => {
+        if (table !== "defence_packages") return cb({ data, error: null });
+        if (!pendingUpdate) return cb({ data: [], error: null });
+        // Evaluate the guard the way Postgres would: the UPDATE applies only
+        // when every predicate still matches the CURRENT row. Filters are
+        // known by now because `.eq(...)` runs before the await.
+        if (scenario.concurrentStatusAtTransition !== undefined) {
+          row.status = scenario.concurrentStatusAtTransition;
+        }
+        const guardsMatch = Object.entries(filters).every(([k, v]) =>
+          k === "id" ? row.id === v : row[k] === v,
+        );
+        if (!guardsMatch) return cb({ data: [], error: null });
+        Object.assign(row, pendingUpdate);
+        pendingUpdate = null;
+        return cb({ data: [{ id: PKG_ID }], error: null });
+      },
     };
     return chain;
   };
@@ -353,6 +369,30 @@ describe("buildDefencePackageJob — nothing is finalized before the preflight p
     expect(packageUpdates.some((u) => u.status === "final")).toBe(false);
     expect(jobsInserted).toHaveLength(0);
     // Not the merchant's problem: a newer version owns the decision.
+    expect(disputeUpdates.some((u) => u.attention_reason !== undefined)).toBe(false);
+  });
+
+  it("a ZERO-ROW guarded transition is propagated, not swallowed", async () => {
+    // Someone else flips the row to `stale` between the preflight and the
+    // promotion. The guarded UPDATE matches nothing, so this build finalized
+    // nothing and must not enqueue — whoever won the transition owns that.
+    const { packageUpdates, jobsInserted, disputeUpdates } = mockSb({
+      concurrentStatusAtTransition: "stale",
+    });
+
+    const result = await handleBuildDefencePackage(job());
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("unreachable");
+    expect(result.retriable).toBe(false);
+    expect(result.reason).toContain("transition_conflict");
+
+    // The UPDATE was attempted; nothing after it ran.
+    expect(packageUpdates.some((u) => u.status === "superseded")).toBe(false);
+    expect(auditsOfType("defence_package_finalized")).toHaveLength(0);
+    expect(auditsOfType("defence_package_superseded")).toHaveLength(0);
+    expect(jobsInserted).toHaveLength(0);
+    // A lost race is not a merchant content problem.
     expect(disputeUpdates.some((u) => u.attention_reason !== undefined)).toBe(false);
   });
 

@@ -63,11 +63,19 @@ export async function POST(
    * It judges the EXACT package named in the URL and, separately, proves that
    * package is still the newest version — because the job is keyed to the
    * source pack and the worker re-selects the latest row. Without the
-   * currency check this endpoint would only look pinned. */
-  const preflight = await preflightNamedCandidate(sb, {
-    packageId: pkg.id as string,
-    disputeId: pkg.dispute_id as string,
-  });
+   * currency check this endpoint would only look pinned.
+   *
+   * `requireFileable` closes the last gap: the status check above proves
+   * `final`, but said nothing about `validation_status` or `pdf_path`. A
+   * content-safe `final` package whose validation failed, or which has no
+   * rendered PDF, could still be enqueued here — and `saveToShopifyJob` §3
+   * would then refuse it, after the card had already shown a submitted state.
+   * Same central contract the two pack-level routes use. */
+  const preflight = await preflightNamedCandidate(
+    sb,
+    { packageId: pkg.id as string, disputeId: pkg.dispute_id as string },
+    { requireFileable: true },
+  );
   if (preflightBlocks(preflight)) {
     await logAuditEvent({
       shopId: pkg.shop_id as string,

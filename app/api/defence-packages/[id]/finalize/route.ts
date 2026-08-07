@@ -110,15 +110,40 @@ export async function POST(
     );
   }
 
-  // Step 1: this draft → final.
-  const { error: finalErr } = await sb
+  // Step 1: this draft → final, GUARDED on the same preconditions the reads
+  // above checked.
+  //
+  // The read and the write are separate round-trips, so an unguarded
+  // `.eq("id", id)` update would happily overwrite a lifecycle another actor
+  // changed in between — a concurrent regeneration flipping the row to
+  // `stale`, the auto path finalizing it, the worker marking it `submitted`,
+  // or a supersede. Repeating the predicates inside the UPDATE is what makes
+  // the transition safe; the earlier read only produces a nicer error message.
+  const { data: promoted, error: finalErr } = await sb
     .from("defence_packages")
     .update({ status: "final", updated_at: new Date().toISOString() })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("status", "draft")
+    .eq("validation_status", "ok")
+    .not("pdf_path", "is", null)
+    .select("id");
   if (finalErr) {
     return NextResponse.json(
       { error: `Finalize failed: ${finalErr.message}` },
       { status: 500 },
+    );
+  }
+  // Exactly one row, or nothing downstream happens: no finalization audit, no
+  // supersede. Winning the transition IS the authorization to do those.
+  if (!Array.isArray(promoted) || promoted.length !== 1) {
+    return NextResponse.json(
+      {
+        error: "PACKAGE_LIFECYCLE_CONFLICT",
+        code: "PACKAGE_LIFECYCLE_CONFLICT",
+        message:
+          "This defence package changed while you were reviewing it. Refresh and review the latest version.",
+      },
+      { status: 409 },
     );
   }
 

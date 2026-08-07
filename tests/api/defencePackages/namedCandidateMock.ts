@@ -33,6 +33,12 @@ export interface NamedCandidateScenario {
   namedError?: { message: string } | null;
   /** Inject a failure into the latest-version probe only. */
   latestError?: { message: string } | null;
+  /**
+   * Rows the guarded `draft → final` UPDATE reports as affected. Defaults to
+   * one row, i.e. this caller won the transition. Set `[]` to simulate a
+   * concurrent lifecycle change between the preflight and the write.
+   */
+  transitionRows?: Array<{ id: string }>;
 }
 
 export function mockNamedCandidateClient(s: NamedCandidateScenario) {
@@ -45,6 +51,7 @@ export function mockNamedCandidateClient(s: NamedCandidateScenario) {
 
     const filters: Record<string, unknown> = {};
     let ordered = false;
+    let updating = false;
     const chain: Record<string, unknown> = {
       select: () => chain,
       eq: (k: string, v: unknown) => {
@@ -52,15 +59,25 @@ export function mockNamedCandidateClient(s: NamedCandidateScenario) {
         return chain;
       },
       neq: () => chain,
+      not: () => chain,
       order: () => {
         ordered = true;
         return chain;
       },
       limit: () => chain,
       update: (values: Record<string, unknown>) => {
+        updating = true;
         packageUpdates.push(values);
         return chain;
       },
+      // `update(...).eq(...).select("id")` is awaited directly. The rows it
+      // reports are what decides whether the caller owns the transition.
+      then: (cb: (v: unknown) => unknown) =>
+        cb(
+          updating
+            ? { data: s.transitionRows ?? [{ id: (s.named as { id?: string } | null)?.id ?? "pkg" }], error: null }
+            : { data: [], error: null },
+        ),
     };
 
     const resolve = () => {

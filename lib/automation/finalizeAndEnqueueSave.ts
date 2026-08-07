@@ -57,7 +57,18 @@ export interface FinalizeAndEnqueueSaveInput {
  *   stale          a newer version exists; this one is moot. No mutation,
  *                  no banner — the newer candidate owns the decision.
  */
-export type FinalizeFailureKind = "content_block" | "transient" | "pending" | "stale";
+export type FinalizeFailureKind =
+  | "content_block"
+  | "transient"
+  | "pending"
+  | "stale"
+  /**
+   * The candidate was not the eligible draft this caller believed it was, or
+   * the guarded `draft → final` UPDATE matched zero rows because someone else
+   * changed the lifecycle first. No side effect happened, and retrying THIS
+   * invocation will not help: whoever won the transition owns the enqueue.
+   */
+  | "lifecycle";
 
 export interface FinalizeAndEnqueueSaveResult {
   ok: boolean;
@@ -90,7 +101,16 @@ export async function finalizeAndEnqueueSave(
   //    and a prior good row superseded by it, with only the worker refusing to
   //    file: a dispute whose newest candidate is final-but-unfileable and
   //    whose previous candidate has been retired.
-  const preflight = await preflightNamedCandidate(sb, { packageId, disputeId });
+  //    `requireFinalizable` additionally asserts the candidate is still the
+  //    eligible DRAFT (validation ok, PDF rendered) this caller believes it
+  //    is. Content safety alone said nothing about the lifecycle, so a package
+  //    another actor had already finalized, invalidated or left PDF-less still
+  //    reached the transition below.
+  const preflight = await preflightNamedCandidate(
+    sb,
+    { packageId, disputeId },
+    { requireFinalizable: true },
+  );
   if (preflightBlocks(preflight)) {
     const reasons = preflightReasons(preflight);
     const contentBlock = preflightIsContentBlock(preflight);
@@ -128,45 +148,78 @@ export async function finalizeAndEnqueueSave(
     }
 
     const failure: FinalizeFailureKind =
-      preflight.kind === "error" ? "transient" : preflight.kind === "missing" ? "pending" : "stale";
+      preflight.kind === "error"
+        ? "transient"
+        : preflight.kind === "missing"
+          ? "pending"
+          : preflight.kind === "not_fileable"
+            ? "lifecycle"
+            : "stale";
     return {
       ok: false,
       failure,
       reason: `defence_package_preflight_${preflight.kind}: ${reasons.join(", ")}`,
       reasons,
-      retriable: failure !== "stale",
+      retriable: failure === "transient" || failure === "pending",
       blocked: false,
     };
   }
 
-  // 1. Promote this draft → final. Guarded on status='draft' so it is a
-  //    no-op when the caller (e.g. buildDefencePackageJob) already flipped
-  //    the row to final — in that case we skip the duplicate audit log and
-  //    fall through to supersede + enqueue.
+  // 1. Promote this draft → final, guarded on the SAME preconditions the
+  //    preflight just checked, so the check and the write cannot disagree
+  //    across a concurrent change.
+  //
+  //    WINNING THE TRANSITION IS THE AUTHORIZATION. The previous revision
+  //    guarded only on `status='draft'` and then treated an EMPTY result as
+  //    success — the comment even said an already-final row "falls through" to
+  //    supersede + enqueue. That is backwards: an empty update means this
+  //    invocation did not obtain the right to do anything downstream, and
+  //    "already final" most likely means a concurrent invocation owns the
+  //    transition AND its enqueue. Proceeding produced a second save job and a
+  //    supersede performed by a caller that finalized nothing.
   const { data: flipped, error: finalErr } = await sb
     .from("defence_packages")
     .update({ status: "final", updated_at: new Date().toISOString() })
     .eq("id", packageId)
     .eq("status", "draft")
+    .eq("validation_status", "ok")
+    .not("pdf_path", "is", null)
     .select("id");
   if (finalErr) {
     console.error("[finalizeAndEnqueueSave] finalize failed", finalErr);
     return { ok: false, failure: "transient", reason: finalErr.message, retriable: true, blocked: false };
   }
 
-  if (flipped && flipped.length > 0) {
-    await logAuditEvent({
-      shopId,
-      disputeId,
-      actorType: "system",
-      eventType: "defence_package_finalized",
-      eventPayload: {
-        packageId,
-        version: packageVersion,
-        source: "finalize_and_enqueue_save",
-      },
-    });
+  // Exactly one row, or nothing happens. Zero rows = someone else changed the
+  // lifecycle between the preflight and here.
+  if (!Array.isArray(flipped) || flipped.length !== 1) {
+    console.warn(
+      "[finalizeAndEnqueueSave] guarded draft→final matched",
+      Array.isArray(flipped) ? flipped.length : "no",
+      "rows; no supersede, no enqueue",
+    );
+    return {
+      ok: false,
+      failure: "lifecycle",
+      reason: `defence_package_transition_conflict: guarded draft->final affected ${
+        Array.isArray(flipped) ? flipped.length : 0
+      } rows`,
+      retriable: false,
+      blocked: false,
+    };
   }
+
+  await logAuditEvent({
+    shopId,
+    disputeId,
+    actorType: "system",
+    eventType: "defence_package_finalized",
+    eventPayload: {
+      packageId,
+      version: packageVersion,
+      source: "finalize_and_enqueue_save",
+    },
+  });
 
   // 2. Supersede any prior final (same dispute, different version) so the
   //    immutability trigger — which requires superseded_by_id to target a
