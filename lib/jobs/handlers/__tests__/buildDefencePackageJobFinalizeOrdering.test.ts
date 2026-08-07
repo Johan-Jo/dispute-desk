@@ -106,6 +106,10 @@ interface Scenario {
    * exactly as Postgres would.
    */
   concurrentStatusAtTransition?: string;
+  /** Force the transactional RPC's reply. */
+  rpcResult?: Record<string, unknown>;
+  /** Make the RPC call itself fail. */
+  rpcError?: { message: string } | null;
 }
 
 /**
@@ -124,6 +128,7 @@ function mockSb(scenario: Scenario = {}) {
     status: "draft",
     validation_status: null,
     pdf_path: null,
+    content_revision: "11111111-1111-4111-8111-111111111111",
     facts_json: null,
     narrative_json: null,
     generated_by: "system",
@@ -233,8 +238,27 @@ function mockSb(scenario: Scenario = {}) {
     return chain;
   };
 
-  mockClient.mockReturnValue({ from } as never);
-  return { row, packageUpdates, jobsInserted, disputeUpdates };
+  // The transactional promotion. The RPC's own behaviour (locking, currency,
+  // rollback) is proven against a real database in
+  // `scripts/db/finalizeDefencePackage.analysis.ts`; here it stands in so the
+  // BUILD JOB's ordering and outcome handling can be tested in isolation.
+  const rpc = vi.fn(async () => {
+    if (scenario.rpcError) return { data: null, error: scenario.rpcError };
+    if (scenario.rpcResult) return { data: scenario.rpcResult, error: null };
+    if (scenario.concurrentStatusAtTransition !== undefined) {
+      row.status = scenario.concurrentStatusAtTransition;
+      return { data: { outcome: "conflict", reason: "not_draft" }, error: null };
+    }
+    if (scenario.latestId && scenario.latestId !== PKG_ID) {
+      return { data: { outcome: "conflict", reason: "not_current" }, error: null };
+    }
+    row.status = "final";
+    jobsInserted.push({ job_type: "save_to_shopify", entity_id: "pack-1" });
+    return { data: { outcome: "promoted", package_id: PKG_ID, job_id: "job-1" }, error: null };
+  });
+
+  mockClient.mockReturnValue({ from, rpc } as never);
+  return { row, packageUpdates, jobsInserted, disputeUpdates, rpc };
 }
 
 const auditsOfType = (type: string) =>
@@ -281,15 +305,15 @@ describe("buildDefencePackageJob — nothing is finalized before the preflight p
     const contentWrite = packageUpdates.find((u) => u.narrative_json !== undefined);
     expect(contentWrite?.status).toBe("draft");
 
-    const finalFlip = packageUpdates.findIndex((u) => u.status === "final");
-    const contentIndex = packageUpdates.findIndex((u) => u.narrative_json !== undefined);
-    expect(finalFlip).toBeGreaterThan(contentIndex);
+    // The handler itself never writes `final`: promotion happens inside the
+    // transaction, after the preflight.
+    expect(packageUpdates.some((u) => u.status === "final")).toBe(false);
     expect(row.status).toBe("final");
 
     // Exactly one finalization audit, and it comes from the helper.
     expect(auditsOfType("defence_package_draft_generated")).toHaveLength(1);
     expect(auditsOfType("defence_package_finalized")).toHaveLength(1);
-    expect(auditsOfType("defence_package_finalized")[0][0]).toMatchObject({
+    expect(auditsOfType("defence_package_finalized")[0]?.[0]).toMatchObject({
       eventPayload: expect.objectContaining({ source: "finalize_and_enqueue_save" }),
     });
 

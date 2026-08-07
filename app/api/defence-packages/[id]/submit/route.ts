@@ -17,6 +17,7 @@ import {
   preflightHttpRefusal,
   preflightNamedCandidate,
   preflightReasons,
+  preflightRevision,
 } from "@/lib/defence/packageSafety";
 
 export const runtime = "nodejs";
@@ -105,19 +106,57 @@ export async function POST(
     );
   }
 
-  // Enqueue the standard save_to_shopify job pinned to the source pack.
-  // saveToShopifyJob (post-Commit 10) reads the latest final defence_packages
-  // row for the dispute and swaps the uncategorizedFile buffer.
-  const { error: jobErr } = await sb.from("jobs").insert({
-    shop_id: pkg.shop_id,
-    job_type: "save_to_shopify",
-    entity_id: pkg.source_pack_id,
-  });
-  if (jobErr) {
+  // ── Enqueue, in the same transaction as the recheck ──────────────────
+  //
+  // The preflight above proves currency and fileability at read time; between
+  // that read and a plain `jobs.insert` a newer version can land, or the
+  // package can be superseded or invalidated. `enqueue_defence_package_save`
+  // re-checks the exact inspected revision, currency, `status='final'`,
+  // `validation_status='ok'` and a TRIMMED non-empty PDF path under a
+  // `FOR UPDATE` lock on the dispute, and inserts the job in the same
+  // transaction — so the job cannot outlive the state that justified it.
+  //
+  // `saveToShopifyJob` keeps its own independent safety gate; this is the
+  // near-side of a defence in depth, not a replacement for it.
+  const contentRevision = preflightRevision(preflight);
+  if (!contentRevision) {
     return NextResponse.json(
-      { error: `Enqueue failed: ${jobErr.message}` },
+      {
+        error: "PACKAGE_NOT_FILEABLE",
+        code: "PACKAGE_NOT_FILEABLE",
+        reasons: ["candidate_revision_unavailable"],
+        message: "This defence package could not be verified. Refresh and try again.",
+      },
+      { status: 409 },
+    );
+  }
+
+  const { data: rpcData, error: rpcErr } = await sb.rpc("enqueue_defence_package_save", {
+    p_package_id: pkg.id as string,
+    p_expected_revision: contentRevision,
+  });
+  if (rpcErr) {
+    return NextResponse.json(
+      { error: `Enqueue failed: ${rpcErr.message}` },
       { status: 500 },
     );
   }
+
+  const result = (rpcData ?? {}) as { outcome?: string; reason?: string };
+  if (result.outcome === "conflict") {
+    return NextResponse.json(
+      {
+        error: "PACKAGE_NOT_FILEABLE",
+        code: "PACKAGE_NOT_FILEABLE",
+        reasons: [result.reason ?? "unknown"],
+        message:
+          "This defence package changed while you were reviewing it. Refresh and review the latest version.",
+      },
+      { status: 409 },
+    );
+  }
+
+  // `enqueued` and `already_done` are both success: an in-flight save for this
+  // pack already covers the request, and a second job would just race it.
   return NextResponse.json({ ok: true });
 }

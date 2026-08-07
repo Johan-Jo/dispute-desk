@@ -24,6 +24,7 @@ import {
   preflightNamedCandidate,
   preflightReasons,
   preflightRetiredKeys,
+  preflightRevision,
 } from "@/lib/defence/packageSafety";
 import { markPackageReviewRequired } from "./packageReviewRequired";
 
@@ -165,50 +166,85 @@ export async function finalizeAndEnqueueSave(
     };
   }
 
-  // 1. Promote this draft → final, guarded on the SAME preconditions the
-  //    preflight just checked, so the check and the write cannot disagree
-  //    across a concurrent change.
+  // ── The transaction ──────────────────────────────────────────────────
   //
-  //    WINNING THE TRANSITION IS THE AUTHORIZATION. The previous revision
-  //    guarded only on `status='draft'` and then treated an EMPTY result as
-  //    success — the comment even said an already-final row "falls through" to
-  //    supersede + enqueue. That is backwards: an empty update means this
-  //    invocation did not obtain the right to do anything downstream, and
-  //    "already final" most likely means a concurrent invocation owns the
-  //    transition AND its enqueue. Proceeding produced a second save job and a
-  //    supersede performed by a caller that finalized nothing.
-  const { data: flipped, error: finalErr } = await sb
-    .from("defence_packages")
-    .update({ status: "final", updated_at: new Date().toISOString() })
-    .eq("id", packageId)
-    .eq("status", "draft")
-    .eq("validation_status", "ok")
-    .not("pdf_path", "is", null)
-    .select("id");
-  if (finalErr) {
-    console.error("[finalizeAndEnqueueSave] finalize failed", finalErr);
-    return { ok: false, failure: "transient", reason: finalErr.message, retriable: true, blocked: false };
-  }
-
-  // Exactly one row, or nothing happens. Zero rows = someone else changed the
-  // lifecycle between the preflight and here.
-  if (!Array.isArray(flipped) || flipped.length !== 1) {
-    console.warn(
-      "[finalizeAndEnqueueSave] guarded draft→final matched",
-      Array.isArray(flipped) ? flipped.length : "no",
-      "rows; no supersede, no enqueue",
-    );
+  // Promotion, supersession and the enqueue are ONE database transaction, in
+  // `finalize_defence_package`, under a `FOR UPDATE` lock on the parent
+  // dispute. Three separate PostgREST calls could not express this contract
+  // however carefully each one was guarded:
+  //
+  //   * currency was proven in TypeScript and could be invalidated by a newer
+  //     version inserted before the promotion landed — the old row was still a
+  //     draft, so a field-guarded update promoted a stale candidate;
+  //   * the facts / narrative / PDF the preflight inspected could be rewritten
+  //     in between, so the filed row was not the judged row;
+  //   * a failed enqueue left the package `final`, the predecessor
+  //     `superseded`, and a "retriable" result that could never retry — the
+  //     rebuild refuses a non-draft, and reconciliation only looks at drafts.
+  //
+  // `contentRevision` is the database-enforced revision of exactly the four
+  // fields the preflight read. The transaction refuses if it moved.
+  const contentRevision = preflightRevision(preflight);
+  if (!contentRevision) {
+    // No revision means we cannot prove the inspected content is the content
+    // being promoted. Unresolved, therefore refused.
     return {
       ok: false,
       failure: "lifecycle",
-      reason: `defence_package_transition_conflict: guarded draft->final affected ${
-        Array.isArray(flipped) ? flipped.length : 0
-      } rows`,
+      reason: "defence_package_missing_content_revision",
       retriable: false,
       blocked: false,
     };
   }
 
+  const { data: rpcData, error: rpcErr } = await sb.rpc("finalize_defence_package", {
+    p_package_id: packageId,
+    p_expected_revision: contentRevision,
+    p_expected_version: packageVersion,
+    p_enqueue_save: true,
+  });
+  if (rpcErr) {
+    console.error("[finalizeAndEnqueueSave] finalize_defence_package failed", rpcErr);
+    return {
+      ok: false,
+      failure: "transient",
+      reason: rpcErr.message,
+      retriable: true,
+      blocked: false,
+    };
+  }
+
+  const result = (rpcData ?? {}) as {
+    outcome?: string;
+    reason?: string;
+    superseded_id?: string | null;
+    superseded_version?: number | null;
+    job_id?: string | null;
+    enqueued?: boolean;
+  };
+
+  if (result.outcome === "conflict") {
+    // Nothing was written — the whole transaction rolled back or never
+    // mutated. The candidate is still the draft it was, so a rebuild can
+    // genuinely start over.
+    return {
+      ok: false,
+      failure: "lifecycle",
+      reason: `defence_package_transition_conflict: ${result.reason ?? "unknown"}`,
+      reasons: result.reason ? [result.reason] : undefined,
+      retriable: false,
+      blocked: false,
+    };
+  }
+
+  if (result.outcome === "already_done") {
+    // Idempotent replay: this exact revision was already promoted, and the
+    // save job is guaranteed to exist by the RPC's dedupe key. Reporting a
+    // lifecycle failure here would misclassify committed work as lost.
+    return { ok: true };
+  }
+
+  // Audits are written only for an outcome the database actually committed.
   await logAuditEvent({
     shopId,
     disputeId,
@@ -218,59 +254,23 @@ export async function finalizeAndEnqueueSave(
       packageId,
       version: packageVersion,
       source: "finalize_and_enqueue_save",
+      jobId: result.job_id ?? null,
     },
   });
 
-  // 2. Supersede any prior final (same dispute, different version) so the
-  //    immutability trigger — which requires superseded_by_id to target a
-  //    status=final row — is satisfied.
-  const { data: priorFinal } = await sb
-    .from("defence_packages")
-    .select("id, version")
-    .eq("dispute_id", disputeId)
-    .eq("status", "final")
-    .neq("id", packageId)
-    .order("version", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (priorFinal) {
-    const { error: supErr } = await sb
-      .from("defence_packages")
-      .update({
-        status: "superseded",
-        superseded_by_id: packageId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", priorFinal.id);
-    if (supErr) {
-      // The new row is already final; a concurrent mutation can be retried
-      // later. Log and continue — the save still targets the new final.
-      console.error("[finalizeAndEnqueueSave] supersede failed", supErr);
-    } else {
-      await logAuditEvent({
-        shopId,
-        disputeId,
-        actorType: "system",
-        eventType: "defence_package_superseded",
-        eventPayload: {
-          supersededId: priorFinal.id,
-          supersededVersion: priorFinal.version,
-          replacedById: packageId,
-          replacedByVersion: packageVersion,
-        },
-      });
-    }
-  }
-
-  // 3. Enqueue the save. saveToShopifyJob re-checks status='final' + pdf_path.
-  const { error: jobErr } = await sb.from("jobs").insert({
-    shop_id: shopId,
-    job_type: "save_to_shopify",
-    entity_id: sourcePackId,
-  });
-  if (jobErr) {
-    console.error("[finalizeAndEnqueueSave] enqueue save_to_shopify failed", jobErr);
-    return { ok: false, failure: "transient", reason: jobErr.message, retriable: true, blocked: false };
+  if (result.superseded_id) {
+    await logAuditEvent({
+      shopId,
+      disputeId,
+      actorType: "system",
+      eventType: "defence_package_superseded",
+      eventPayload: {
+        supersededId: result.superseded_id,
+        supersededVersion: result.superseded_version ?? null,
+        replacedById: packageId,
+        replacedByVersion: packageVersion,
+      },
+    });
   }
 
   return { ok: true };

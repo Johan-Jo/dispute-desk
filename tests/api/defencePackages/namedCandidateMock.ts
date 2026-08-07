@@ -34,16 +34,34 @@ export interface NamedCandidateScenario {
   /** Inject a failure into the latest-version probe only. */
   latestError?: { message: string } | null;
   /**
-   * Rows the guarded `draft → final` UPDATE reports as affected. Defaults to
-   * one row, i.e. this caller won the transition. Set `[]` to simulate a
-   * concurrent lifecycle change between the preflight and the write.
+   * What the transactional RPC (`finalize_defence_package` /
+   * `enqueue_defence_package_save`) returns. Defaults to a successful
+   * promotion / enqueue. The RPC's OWN behaviour is tested against a real
+   * database in `scripts/db/finalizeDefencePackage.analysis.ts`; here we only
+   * pin what each route does with each outcome.
    */
-  transitionRows?: Array<{ id: string }>;
+  rpcResult?: Record<string, unknown>;
+  /** Make the RPC call itself fail (a transport/database error). */
+  rpcError?: { message: string } | null;
 }
+
+/** Every candidate carries a content revision; the routes refuse without one. */
+export const TEST_REVISION = "11111111-1111-4111-8111-111111111111";
 
 export function mockNamedCandidateClient(s: NamedCandidateScenario) {
   const jobsInsert = vi.fn().mockResolvedValue({ data: null, error: null });
   const packageUpdates: Array<Record<string, unknown>> = [];
+  const rpc = vi.fn(async (name: string) => {
+    if (s.rpcError) return { data: null, error: s.rpcError };
+    if (s.rpcResult) return { data: s.rpcResult, error: null };
+    return {
+      data:
+        name === "enqueue_defence_package_save"
+          ? { outcome: "enqueued", job_id: "job-1" }
+          : { outcome: "promoted", package_id: (s.named as { id?: string } | null)?.id ?? "pkg" },
+      error: null,
+    };
+  });
 
   const from = vi.fn((table: string) => {
     if (table === "jobs") return { insert: jobsInsert };
@@ -70,14 +88,7 @@ export function mockNamedCandidateClient(s: NamedCandidateScenario) {
         packageUpdates.push(values);
         return chain;
       },
-      // `update(...).eq(...).select("id")` is awaited directly. The rows it
-      // reports are what decides whether the caller owns the transition.
-      then: (cb: (v: unknown) => unknown) =>
-        cb(
-          updating
-            ? { data: s.transitionRows ?? [{ id: (s.named as { id?: string } | null)?.id ?? "pkg" }], error: null }
-            : { data: [], error: null },
-        ),
+      then: (cb: (v: unknown) => unknown) => cb({ data: updating ? [] : [], error: null }),
     };
 
     const resolve = () => {
@@ -89,7 +100,10 @@ export function mockNamedCandidateClient(s: NamedCandidateScenario) {
       }
       // Everything else filtered on `id` is the named lookup.
       if (s.namedError) return { data: null, error: s.namedError };
-      return { data: s.named, error: null };
+      return {
+        data: s.named ? { content_revision: TEST_REVISION, ...s.named } : s.named,
+        error: null,
+      };
     };
 
     (chain as { single: () => Promise<unknown> }).single = async () => resolve();
@@ -97,5 +111,5 @@ export function mockNamedCandidateClient(s: NamedCandidateScenario) {
     return chain;
   });
 
-  return { client: { from } as never, jobsInsert, packageUpdates };
+  return { client: { from, rpc } as never, jobsInsert, packageUpdates, rpc };
 }

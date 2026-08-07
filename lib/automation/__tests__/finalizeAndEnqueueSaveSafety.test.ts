@@ -10,8 +10,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 
 vi.mock("@/lib/audit/logEvent", () => ({
   logAuditEvent: vi.fn().mockResolvedValue(undefined),
@@ -50,26 +48,29 @@ interface SbScenario {
    * enqueue, which is exactly the fail-open the helper had: an empty update
    * was being read as success.
    */
-  transitionRows?: Array<{ id: string }>;
-  /** Inject a failure into the guarded transition itself. */
-  transitionError?: { message: string } | null;
+  /** What `finalize_defence_package` returns. Defaults to a promotion. */
+  rpcResult?: Record<string, unknown>;
+  /** Make the RPC call itself fail (a transport/database error). */
+  rpcError?: { message: string } | null;
 }
 
 function mockSb(named: Record<string, unknown> | null, scenario: SbScenario = {}) {
   const latestId = scenario.latestId === undefined ? PKG_ID : scenario.latestId;
-  const transitionResult = {
-    data: scenario.transitionError ? null : scenario.transitionRows ?? [{ id: PKG_ID }],
-    error: scenario.transitionError ?? null,
-  };
-  // update(...).eq(...).eq(...).eq(...).not(...).select("id") — a chain that
-  // resolves to the affected rows whatever its length.
-  const transitionChain: Record<string, unknown> = {};
-  for (const k of ["eq", "neq", "not", "select"]) {
-    transitionChain[k] = vi.fn(() => transitionChain);
-  }
-  (transitionChain as { then?: unknown }).then = (cb: (v: unknown) => unknown) =>
-    cb(transitionResult);
-  const packageUpdate = vi.fn((_values: Record<string, unknown>) => transitionChain);
+  const rpc = vi.fn(async () =>
+    scenario.rpcError
+      ? { data: null, error: scenario.rpcError }
+      : {
+          data: scenario.rpcResult ?? { outcome: "promoted", package_id: PKG_ID, job_id: "job-1" },
+          error: null,
+        },
+  );
+  // Any direct write to defence_packages is now a defect: promotion,
+  // supersession and the enqueue all live in the transaction.
+  const chain: Record<string, unknown> = {};
+  for (const k of ["eq", "neq", "not", "select"]) chain[k] = vi.fn(() => chain);
+  (chain as { then?: unknown }).then = (cb: (v: unknown) => unknown) =>
+    cb({ data: [], error: null });
+  const packageUpdate = vi.fn((_values: Record<string, unknown>) => chain);
   const jobsInsert = vi.fn().mockResolvedValue({ data: null, error: null });
   let maybeCalls = 0;
   const from = vi.fn((table: string) => {
@@ -101,12 +102,15 @@ function mockSb(named: Record<string, unknown> | null, scenario: SbScenario = {}
     if (table === "jobs") return { insert: jobsInsert };
     throw new Error(`unexpected table: ${table}`);
   });
-  return { sb: { from } as never, packageUpdate, jobsInsert };
+  return { sb: { from, rpc } as never, packageUpdate, jobsInsert, rpc };
 }
+
+const TEST_REVISION = "11111111-1111-4111-8111-111111111111";
 
 const named = (over: Record<string, unknown>) => ({
   id: PKG_ID,
   version: 3,
+  content_revision: TEST_REVISION,
   status: "draft",
   ...over,
 });
@@ -241,7 +245,7 @@ describe("finalizeAndEnqueueSave — non-content outcomes never park for review"
  * nothing.
  * --------------------------------------------------------------------- */
 
-describe("finalizeAndEnqueueSave — the guarded transition", () => {
+describe("finalizeAndEnqueueSave — the transactional promotion", () => {
   const eligibleDraft = () =>
     named({
       status: "draft",
@@ -251,48 +255,70 @@ describe("finalizeAndEnqueueSave — the guarded transition", () => {
       narrative_json: CLEAN_NARRATIVE,
     });
 
-  it("promotes, audits, supersedes and enqueues when exactly ONE row transitions", async () => {
-    const { sb, packageUpdate, jobsInsert } = mockSb(eligibleDraft());
+  it("delegates to the transaction and audits only what it committed", async () => {
+    const { sb, packageUpdate, jobsInsert, rpc } = mockSb(eligibleDraft(), {
+      rpcResult: { outcome: "promoted", superseded_id: "pkg-old", superseded_version: 2, job_id: "job-1" },
+    });
     const result = await call(sb);
 
     expect(result.ok).toBe(true);
-    expect(packageUpdate).toHaveBeenCalled();
-    expect(packageUpdate.mock.calls[0]?.[0]).toMatchObject({ status: "final" });
-    expect(jobsInsert).toHaveBeenCalledTimes(1);
+    // Promotion, supersession and the enqueue are ONE transaction — the helper
+    // must not write any of them itself.
+    expect(packageUpdate).not.toHaveBeenCalled();
+    expect(jobsInsert).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith(
+      "finalize_defence_package",
+      expect.objectContaining({
+        p_package_id: PKG_ID,
+        p_expected_revision: TEST_REVISION,
+        p_expected_version: 3,
+        p_enqueue_save: true,
+      }),
+    );
     expect(mockAudit).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: "defence_package_finalized" }),
     );
-    expect(mockMark).not.toHaveBeenCalled();
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: "defence_package_superseded" }),
+    );
   });
 
-  it("a ZERO-ROW transition enqueues nothing, supersedes nothing, audits no finalization", async () => {
-    const { sb, jobsInsert } = mockSb(eligibleDraft(), { transitionRows: [] });
+  it("a transactional CONFLICT audits no finalization and is not retriable", async () => {
+    const { sb, jobsInsert } = mockSb(eligibleDraft(), {
+      rpcResult: { outcome: "conflict", reason: "not_current" },
+    });
     const result = await call(sb);
 
     expect(result.ok).toBe(false);
     expect(result.failure).toBe("lifecycle");
     expect(result.blocked).toBe(false);
     expect(result.retriable).toBe(false);
-    expect(result.reason).toContain("transition_conflict");
-
+    expect(result.reason).toContain("not_current");
     expect(jobsInsert).not.toHaveBeenCalled();
     expect(
       mockAudit.mock.calls.filter(
         (c) => (c[0] as { eventType?: string })?.eventType === "defence_package_finalized",
       ),
     ).toHaveLength(0);
-    expect(
-      mockAudit.mock.calls.filter(
-        (c) => (c[0] as { eventType?: string })?.eventType === "defence_package_superseded",
-      ),
-    ).toHaveLength(0);
     // A lost race is not the merchant's problem.
     expect(mockMark).not.toHaveBeenCalled();
   });
 
-  it("a transition DATABASE error stays transient and retriable", async () => {
+  it("an idempotent replay is SUCCESS, not a lost-work failure", async () => {
+    // The response to the first call was lost. The retry finds the same
+    // revision already promoted, and the RPC's dedupe key guarantees the job
+    // exists. Reporting a lifecycle failure here would misclassify committed
+    // work — and, before the transaction, that is exactly what happened.
+    const { sb } = mockSb(eligibleDraft(), {
+      rpcResult: { outcome: "already_done", reason: "already_promoted" },
+    });
+    const result = await call(sb);
+    expect(result.ok).toBe(true);
+  });
+
+  it("an RPC transport error stays transient and retriable", async () => {
     const { sb, jobsInsert } = mockSb(eligibleDraft(), {
-      transitionError: { message: "deadlock detected" },
+      rpcError: { message: "deadlock detected" },
     });
     const result = await call(sb);
     expect(result.failure).toBe("transient");
@@ -300,17 +326,14 @@ describe("finalizeAndEnqueueSave — the guarded transition", () => {
     expect(jobsInsert).not.toHaveBeenCalled();
   });
 
-  it("the transition carries every authorization predicate, not just the id", async () => {
-    const src = readFileSync(
-      join(process.cwd(), "lib/automation/finalizeAndEnqueueSave.ts"),
-      "utf-8",
-    );
-    const guarded = src.slice(src.indexOf('.update({ status: "final"'));
-    const transition = guarded.slice(0, guarded.indexOf('.select("id")'));
-    expect(transition).toContain('.eq("id", packageId)');
-    expect(transition).toContain('.eq("status", "draft")');
-    expect(transition).toContain('.eq("validation_status", "ok")');
-    expect(transition).toContain('.not("pdf_path", "is", null)');
+  it("refuses when the candidate carries NO content revision to pin", async () => {
+    const draft = eligibleDraft() as Record<string, unknown>;
+    delete draft.content_revision;
+    const { sb, rpc } = mockSb(draft);
+    const result = await call(sb);
+    expect(result.ok).toBe(false);
+    expect(result.failure).toBe("lifecycle");
+    expect(rpc).not.toHaveBeenCalled();
   });
 });
 

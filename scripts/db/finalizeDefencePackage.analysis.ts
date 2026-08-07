@@ -1,0 +1,463 @@
+/**
+ * PR-C1 — the transactional lifecycle contract, tested against a REAL database.
+ *
+ * WHY THIS FILE EXISTS. Every claim in this area that was tested with a mocked
+ * Supabase client turned out to be untestable in principle: "the update is
+ * guarded", "the transition is atomic", "a newer version cannot slip in" are
+ * statements about Postgres locking and transaction boundaries, and a mock
+ * agrees with whatever you tell it. The previous revision even asserted the
+ * guard by grepping the source for `.not("pdf_path","is",null)` — which passes
+ * whether or not the predicate does anything. These are behavioural tests of
+ * `finalize_defence_package` and `enqueue_defence_package_save`.
+ *
+ * DEV ONLY, AND SELF-CLEANING. It refuses to run against anything but the dev
+ * project ref, creates its own fixture under a recognisable prefix, and
+ * removes it afterwards. It is collected by `vitest.analysis.config.ts`, which
+ * CI never runs — CI has no database credentials, and a database-reading job
+ * must never be able to turn CI red.
+ *
+ * Run:
+ *   npm run analysis:evidence -- scripts/db/finalizeDefencePackage.analysis.ts
+ */
+
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { readFileSync } from "fs";
+import { join } from "path";
+import pg from "pg";
+
+const DEV_REF = "vrpkgudqmpyunekrkpnc";
+const ENV_FILE = process.env.ANALYSIS_ENV_FILE ?? ".env.local";
+
+function loadEnv(file: string): Record<string, string> {
+  const vars: Record<string, string> = {};
+  for (const line of readFileSync(join(process.cwd(), file), "utf-8").split("\n")) {
+    const t = line.trim();
+    if (!t || t.startsWith("#")) continue;
+    const i = t.indexOf("=");
+    if (i === -1) continue;
+    let v = t.slice(i + 1).trim();
+    if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1, -1);
+    vars[t.slice(0, i).trim()] = v;
+  }
+  return vars;
+}
+
+const env = loadEnv(ENV_FILE);
+const CONN = env.SUPABASE_URL_POSTGRES ?? "";
+
+/** Hard guard. A destructive concurrency suite must never reach production. */
+if (!CONN.includes(DEV_REF)) {
+  throw new Error(
+    `Refusing to run: ${ENV_FILE} SUPABASE_URL_POSTGRES does not point at the dev project (${DEV_REF}).`,
+  );
+}
+
+const TAG = "prc1-txn-test";
+
+async function connect(): Promise<pg.Client> {
+  const c = new pg.Client({ connectionString: CONN, ssl: { rejectUnauthorized: false } });
+  await c.connect();
+  return c;
+}
+
+let db: pg.Client;
+let shopId: string;
+let disputeId: string;
+let packId: string;
+
+/** A fresh dispute + evidence pack + draft package, one per test. */
+async function seedCase(): Promise<{ disputeId: string; packId: string; pkgId: string; revision: string }> {
+  const d = await db.query<{ id: string }>(
+    `insert into disputes (shop_id, dispute_gid, reason, status)
+     values ($1, $2, 'FRAUDULENT', 'needs_response') returning id`,
+    [shopId, `gid://${TAG}/${crypto.randomUUID()}`],
+  );
+  const dispute = d.rows[0].id;
+  const p = await db.query<{ id: string }>(
+    `insert into evidence_packs (shop_id, dispute_id, status) values ($1, $2, 'ready') returning id`,
+    [shopId, dispute],
+  );
+  const pack = p.rows[0].id;
+  const pkg = await db.query<{ id: string; content_revision: string }>(
+    `insert into defence_packages
+       (shop_id, dispute_id, source_pack_id, version, status, generated_by,
+        evidence_hash, validation_status, pdf_path, facts_json, narrative_json)
+     values ($1, $2, $3, 1, 'draft', 'system', $4, 'ok', 'dev/${TAG}/v1.pdf', '[]'::jsonb, '{}'::jsonb)
+     returning id, content_revision`,
+    [shopId, dispute, pack, `${TAG}-${crypto.randomUUID()}`],
+  );
+  return {
+    disputeId: dispute,
+    packId: pack,
+    pkgId: pkg.rows[0].id,
+    revision: pkg.rows[0].content_revision,
+  };
+}
+
+async function finalize(
+  client: pg.Client,
+  pkgId: string,
+  revision: string,
+  version = 1,
+  enqueue = true,
+): Promise<Record<string, unknown>> {
+  const r = await client.query<{ finalize_defence_package: Record<string, unknown> }>(
+    `select finalize_defence_package($1::uuid, $2::uuid, $3::int, $4::boolean)`,
+    [pkgId, revision, version, enqueue],
+  );
+  return r.rows[0].finalize_defence_package;
+}
+
+async function enqueueSave(
+  client: pg.Client,
+  pkgId: string,
+  revision: string,
+): Promise<Record<string, unknown>> {
+  const r = await client.query<{ enqueue_defence_package_save: Record<string, unknown> }>(
+    `select enqueue_defence_package_save($1::uuid, $2::uuid)`,
+    [pkgId, revision],
+  );
+  return r.rows[0].enqueue_defence_package_save;
+}
+
+const statusOf = async (pkgId: string) =>
+  (await db.query<{ status: string }>(`select status from defence_packages where id = $1`, [pkgId]))
+    .rows[0]?.status;
+
+const jobCount = async (pack: string) =>
+  Number(
+    (
+      await db.query<{ n: string }>(
+        `select count(*)::text as n from jobs where job_type = 'save_to_shopify' and entity_id = $1`,
+        [pack],
+      )
+    ).rows[0].n,
+  );
+
+/**
+ * Give a seeded case a PRIOR final at version 1 and move the candidate to
+ * version 2. `defence_packages.version` carries a CHECK (>= 1), so the prior
+ * cannot simply be version 0.
+ */
+async function withPriorFinal(
+  c: { disputeId: string; packId: string; pkgId: string; revision: string },
+  priorStatus: "final" | "submitted" = "final",
+  tag = "prior",
+): Promise<string> {
+  // The candidate must move OFF version 1 first: (dispute_id, version) is
+  // unique, and the candidate must also be the LATEST version for the
+  // currency check to pass.
+  await db.query(`update defence_packages set version = 2 where id = $1`, [c.pkgId]);
+  const prior = await db.query<{ id: string }>(
+    `insert into defence_packages
+       (shop_id, dispute_id, source_pack_id, version, status, generated_by, evidence_hash,
+        validation_status, pdf_path)
+     values ($1, $2, $3, 1, 'final', 'system', $4, 'ok', 'dev/prior.pdf') returning id`,
+    [shopId, c.disputeId, c.packId, `${TAG}-${tag}-${crypto.randomUUID()}`],
+  );
+  if (priorStatus === "submitted") {
+    await db.query(`update defence_packages set status = 'submitted' where id = $1`, [
+      prior.rows[0].id,
+    ]);
+  }
+  return prior.rows[0].id;
+}
+
+beforeAll(async () => {
+  db = await connect();
+  const s = await db.query<{ id: string }>(
+    `insert into shops (shop_domain) values ($1) returning id`,
+    [`${TAG}-${Date.now()}.myshopify.com`],
+  );
+  shopId = s.rows[0].id;
+}, 120_000);
+
+afterAll(async () => {
+  if (db && shopId) {
+    // shops → disputes → evidence_packs → defence_packages all cascade.
+    await db.query(`delete from jobs where shop_id = $1`, [shopId]);
+    await db.query(`delete from shops where id = $1`, [shopId]);
+    await db.end();
+  }
+}, 120_000);
+
+describe("finalize_defence_package — currency is inside the transaction", () => {
+  it("the dispute lock actually blocks a concurrent package INSERT (the FK-lock claim)", async () => {
+    // The whole currency guarantee rests on this: `for update` on the parent
+    // dispute conflicts with the FOR KEY SHARE lock that inserting a
+    // defence_packages row takes through defence_packages_dispute_id_fkey. If
+    // that were not true, the lock would coordinate with nothing and a newer
+    // version could still appear mid-transaction. Demonstrated, not asserted.
+    const c = await seedCase();
+    const holder = await connect();
+    const inserter = await connect();
+    try {
+      await holder.query("begin");
+      await holder.query(`select 1 from disputes where id = $1 for update`, [c.disputeId]);
+
+      let insertDone = false;
+      const insert = inserter
+        .query(
+          `insert into defence_packages
+             (shop_id, dispute_id, source_pack_id, version, status, generated_by, evidence_hash)
+           values ($1, $2, $3, 2, 'draft', 'system', $4)`,
+          [shopId, c.disputeId, c.packId, `${TAG}-blocked`],
+        )
+        .then(() => {
+          insertDone = true;
+        });
+
+      await new Promise((r) => setTimeout(r, 1500));
+      expect(insertDone, "the insert must be BLOCKED while the dispute row is locked").toBe(false);
+
+      await holder.query("commit");
+      await insert;
+      expect(insertDone).toBe(true);
+    } finally {
+      await holder.end();
+      await inserter.end();
+    }
+  }, 120_000);
+
+  it("a newer version inserted before promotion makes the old candidate not_current", async () => {
+    const c = await seedCase();
+    await db.query(
+      `insert into defence_packages
+         (shop_id, dispute_id, source_pack_id, version, status, generated_by, evidence_hash)
+       values ($1, $2, $3, 2, 'draft', 'system', $4)`,
+      [shopId, c.disputeId, c.packId, `${TAG}-v2`],
+    );
+
+    const out = await finalize(db, c.pkgId, c.revision);
+    expect(out.outcome).toBe("conflict");
+    expect(out.reason).toBe("not_current");
+    expect(await statusOf(c.pkgId)).toBe("draft");
+    expect(await jobCount(c.packId)).toBe(0);
+  }, 120_000);
+});
+
+describe("finalize_defence_package — the inspected content must be unchanged", () => {
+  const MUTATIONS: Array<[string, string, unknown]> = [
+    ["facts_json", `update defence_packages set facts_json = $2 where id = $1`, JSON.stringify([{ id: "x" }])],
+    ["narrative_json", `update defence_packages set narrative_json = $2 where id = $1`, JSON.stringify({ a: 1 })],
+    ["pdf_path", `update defence_packages set pdf_path = $2 where id = $1`, "dev/other.pdf"],
+    ["validation_status", `update defence_packages set validation_status = $2 where id = $1`, "failed"],
+  ];
+
+  for (const [field, sql, value] of MUTATIONS) {
+    it(`a ${field} mutation after inspection prevents promotion`, async () => {
+      const c = await seedCase();
+      await db.query(sql, [c.pkgId, value]);
+      const out = await finalize(db, c.pkgId, c.revision);
+      expect(out.outcome).toBe("conflict");
+      // validation_status also fails its own precondition; either refusal is
+      // correct, but the content check is what must fire first.
+      expect(["content_changed", "validation_not_ok"]).toContain(out.reason);
+      expect(await statusOf(c.pkgId)).toBe("draft");
+      expect(await jobCount(c.packId)).toBe(0);
+    }, 120_000);
+  }
+
+  it("content_revision moves on every inspected field and on nothing else", async () => {
+    const c = await seedCase();
+    // A status-only write must NOT move the revision, or every promotion would
+    // invalidate itself.
+    await db.query(`update defence_packages set generated_by = 'admin' where id = $1`, [c.pkgId]);
+    const same = await db.query<{ content_revision: string }>(
+      `select content_revision from defence_packages where id = $1`,
+      [c.pkgId],
+    );
+    expect(same.rows[0].content_revision).toBe(c.revision);
+
+    await db.query(`update defence_packages set facts_json = '[{"a":1}]'::jsonb where id = $1`, [c.pkgId]);
+    const moved = await db.query<{ content_revision: string }>(
+      `select content_revision from defence_packages where id = $1`,
+      [c.pkgId],
+    );
+    expect(moved.rows[0].content_revision).not.toBe(c.revision);
+  }, 120_000);
+});
+
+describe("finalize_defence_package — PDF path is TRIMMED, not just non-null", () => {
+  for (const [label, value] of [
+    ["null", null],
+    ["empty string", ""],
+    ["whitespace only", "   "],
+  ] as Array<[string, string | null]>) {
+    it(`refuses a ${label} pdf_path`, async () => {
+      const c = await seedCase();
+      await db.query(`update defence_packages set pdf_path = $2 where id = $1`, [c.pkgId, value]);
+      const rev = (
+        await db.query<{ content_revision: string }>(
+          `select content_revision from defence_packages where id = $1`,
+          [c.pkgId],
+        )
+      ).rows[0].content_revision;
+
+      const out = await finalize(db, c.pkgId, rev);
+      expect(out.outcome).toBe("conflict");
+      expect(out.reason).toBe("missing_pdf");
+      expect(await statusOf(c.pkgId)).toBe("draft");
+    }, 120_000);
+  }
+});
+
+describe("finalize_defence_package — concurrency and idempotency", () => {
+  it("two concurrent finalizers promote exactly once and enqueue exactly one job", async () => {
+    const c = await seedCase();
+    const a = await connect();
+    const b = await connect();
+    try {
+      const [ra, rb] = await Promise.all([
+        finalize(a, c.pkgId, c.revision),
+        finalize(b, c.pkgId, c.revision),
+      ]);
+      const outcomes = [ra.outcome, rb.outcome].sort();
+      // Exactly one promotion. The loser converges on `already_done` rather
+      // than a spurious failure — same revision, same committed effect.
+      expect(outcomes.filter((o) => o === "promoted")).toHaveLength(1);
+      expect(outcomes.filter((o) => o === "already_done")).toHaveLength(1);
+      expect(await statusOf(c.pkgId)).toBe("final");
+      expect(await jobCount(c.packId)).toBe(1);
+    } finally {
+      await a.end();
+      await b.end();
+    }
+  }, 120_000);
+
+  it("a replayed call after a lost response creates no duplicate job", async () => {
+    const c = await seedCase();
+    const first = await finalize(db, c.pkgId, c.revision);
+    expect(first.outcome).toBe("promoted");
+    const replay = await finalize(db, c.pkgId, c.revision);
+    expect(replay.outcome).toBe("already_done");
+    expect(await jobCount(c.packId)).toBe(1);
+  }, 120_000);
+});
+
+describe("finalize_defence_package — the prior final", () => {
+  it("supersedes a prior FINAL", async () => {
+    const c = await seedCase();
+    const priorId = await withPriorFinal(c, "final");
+    const out = await finalize(db, c.pkgId, c.revision, 2);
+    expect(out.outcome).toBe("promoted");
+    expect(out.superseded_id).toBe(priorId);
+    expect(await statusOf(priorId)).toBe("superseded");
+  }, 120_000);
+
+  it("NEVER overwrites a prior package that has become SUBMITTED", async () => {
+    const c = await seedCase();
+    // The worker files the prior version while the merchant reviews the draft.
+    const priorId = await withPriorFinal(c, "submitted", "prior-submitted");
+
+    const out = await finalize(db, c.pkgId, c.revision, 2);
+    expect(out.outcome).toBe("promoted");
+    expect(out.superseded_id).toBeNull();
+    expect(await statusOf(priorId)).toBe("submitted");
+    const sup = await db.query<{ superseded_by_id: string | null }>(
+      `select superseded_by_id from defence_packages where id = $1`,
+      [priorId],
+    );
+    expect(sup.rows[0].superseded_by_id).toBeNull();
+  }, 120_000);
+});
+
+describe("finalize_defence_package — a failed enqueue rolls the whole thing back", () => {
+  it("promotion and supersession are undone, and the draft can genuinely retry", async () => {
+    const c = await seedCase();
+    const priorId = await withPriorFinal(c, "final", "rollback-prior");
+
+    // Inject the failure at the LAST step of the transaction.
+    await db.query(`
+      create or replace function prc1_txn_test_fail_job_insert() returns trigger
+      language plpgsql as $fn$
+      begin
+        raise exception 'injected job-insert failure';
+      end;
+      $fn$;
+    `);
+    await db.query(
+      `create trigger zz_prc1_txn_test_fail
+         before insert on jobs
+         for each row
+         when (new.entity_id = '${c.packId}')
+         execute function prc1_txn_test_fail_job_insert();`,
+    );
+
+    try {
+      await expect(finalize(db, c.pkgId, c.revision, 2)).rejects.toThrow(
+        /injected job-insert failure/,
+      );
+
+      // EVERYTHING rolled back — promotion AND supersession.
+      expect(await statusOf(c.pkgId)).toBe("draft");
+      expect(await statusOf(priorId)).toBe("final");
+      expect(await jobCount(c.packId)).toBe(0);
+    } finally {
+      await db.query(`drop trigger if exists zz_prc1_txn_test_fail on jobs`);
+      await db.query(`drop function if exists prc1_txn_test_fail_job_insert()`);
+    }
+
+    // …and the retry genuinely works, which the pre-transaction code could not
+    // do: it left a `final` package the rebuild refused and reconciliation
+    // skipped, so the "retriable" result could never actually retry.
+    const retry = await finalize(db, c.pkgId, c.revision, 2);
+    expect(retry.outcome).toBe("promoted");
+    expect(await statusOf(c.pkgId)).toBe("final");
+    expect(await statusOf(priorId)).toBe("superseded");
+    expect(await jobCount(c.packId)).toBe(1);
+  }, 120_000);
+});
+
+describe("enqueue_defence_package_save — the direct Submit path", () => {
+  async function seedFinal() {
+    const c = await seedCase();
+    const out = await finalize(db, c.pkgId, c.revision, 1, false);
+    expect(out.outcome).toBe("promoted");
+    return c;
+  }
+
+  it("enqueues for a current, fileable final package", async () => {
+    const c = await seedFinal();
+    const out = await enqueueSave(db, c.pkgId, c.revision);
+    expect(out.outcome).toBe("enqueued");
+    expect(await jobCount(c.packId)).toBe(1);
+  }, 120_000);
+
+  it("refuses after a concurrent CURRENCY change", async () => {
+    const c = await seedFinal();
+    await db.query(
+      `insert into defence_packages
+         (shop_id, dispute_id, source_pack_id, version, status, generated_by, evidence_hash)
+       values ($1, $2, $3, 5, 'draft', 'system', $4)`,
+      [shopId, c.disputeId, c.packId, `${TAG}-newer`],
+    );
+    const out = await enqueueSave(db, c.pkgId, c.revision);
+    expect(out.outcome).toBe("conflict");
+    expect(out.reason).toBe("not_current");
+    expect(await jobCount(c.packId)).toBe(0);
+  }, 120_000);
+
+  it("refuses after a concurrent CONTENT change", async () => {
+    const c = await seedFinal();
+    // A final row may still have superseded_by_id / shopify_response written;
+    // simulate a content change by rotating the revision directly, which is
+    // what any permitted content write would do.
+    await db.query(`update defence_packages set content_revision = gen_random_uuid() where id = $1`, [
+      c.pkgId,
+    ]);
+    const out = await enqueueSave(db, c.pkgId, c.revision);
+    expect(out.outcome).toBe("conflict");
+    expect(out.reason).toBe("content_changed");
+    expect(await jobCount(c.packId)).toBe(0);
+  }, 120_000);
+
+  it("is idempotent while a save is already in flight", async () => {
+    const c = await seedFinal();
+    expect((await enqueueSave(db, c.pkgId, c.revision)).outcome).toBe("enqueued");
+    const again = await enqueueSave(db, c.pkgId, c.revision);
+    expect(again.outcome).toBe("already_done");
+    expect(again.reason).toBe("save_already_queued");
+    expect(await jobCount(c.packId)).toBe(1);
+  }, 120_000);
+});

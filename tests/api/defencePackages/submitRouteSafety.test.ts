@@ -27,6 +27,7 @@ import {
   FULL_FACT,
   RETIRED_FACT,
   UNSAFE_NARRATIVE,
+  TEST_REVISION,
   mockNamedCandidateClient,
   type NamedCandidateScenario,
 } from "./namedCandidateMock";
@@ -186,13 +187,54 @@ describe("POST /api/defence-packages/:id/submit — PR-C1 preflight", () => {
     });
   }
 
-  it("enqueues normally for a safe, current, genuinely fileable candidate", async () => {
-    const { jobsInsert } = wire({
+  it("enqueues through the TRANSACTIONAL rpc, never a bare jobs.insert", async () => {
+    // The insert must live in the same transaction as the currency and
+    // fileability recheck; a plain `jobs.insert` here could outlive the state
+    // that justified it. The RPC's own behaviour is proven against a real
+    // database in `scripts/db/finalizeDefencePackage.analysis.ts`.
+    const { jobsInsert, rpc } = wire({
       named: pkg({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
     });
     const res = await POST(req(), params);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
-    expect(jobsInsert).toHaveBeenCalledTimes(1);
+    expect(jobsInsert).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith(
+      "enqueue_defence_package_save",
+      expect.objectContaining({ p_package_id: PKG_ID, p_expected_revision: TEST_REVISION }),
+    );
+  });
+
+  it("a transactional CONFLICT returns 409 and enqueues nothing", async () => {
+    // A newer version landed, or the content changed, between the preflight
+    // and the enqueue.
+    const { jobsInsert } = wire({
+      named: pkg({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+      rpcResult: { outcome: "conflict", reason: "not_current" },
+    });
+    const res = await POST(req(), params);
+    const body = await res.json();
+    expect(res.status).toBe(409);
+    expect(body.code).toBe("PACKAGE_NOT_FILEABLE");
+    expect(body.reasons).toContain("not_current");
+    expect(jobsInsert).not.toHaveBeenCalled();
+  });
+
+  it("an in-flight save is a successful no-op, not a duplicate job", async () => {
+    wire({
+      named: pkg({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+      rpcResult: { outcome: "already_done", reason: "save_already_queued", job_id: "job-9" },
+    });
+    const res = await POST(req(), params);
+    expect(res.status).toBe(200);
+  });
+
+  it("an RPC transport failure is a 500, not a silent success", async () => {
+    wire({
+      named: pkg({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+      rpcError: { message: "connection reset" },
+    });
+    const res = await POST(req(), params);
+    expect(res.status).toBe(500);
   });
 });

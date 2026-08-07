@@ -120,7 +120,18 @@ function mockSb(s: Scenario) {
     return chain;
   }
 
-  return { from: fromTable, inserts, updates };
+  // Promotion + supersede + enqueue are ONE transaction now. The RPC's own
+  // behaviour is proven against a real database in
+  // `scripts/db/finalizeDefencePackage.analysis.ts`; here it stands in so the
+  // reconcile pass's own accounting can be tested.
+  const rpc = async () => {
+    inserts.push({ table: "jobs", values: { job_type: "save_to_shopify" } });
+    return {
+      data: { outcome: "promoted", package_id: "dpkg-1", job_id: "job-1" },
+      error: null,
+    };
+  };
+  return { from: fromTable, inserts, updates, rpc };
 }
 
 const READY_STRONG_PACK = {
@@ -141,6 +152,7 @@ const FINALIZABLE_DRAFT = {
   status: "draft",
   validation_status: "ok",
   pdf_path: "packs/shop-1/dpkg-1.pdf",
+  content_revision: "11111111-1111-4111-8111-111111111111",
   // A real finalizable draft always carries both. PR-C1's preflight fails
   // closed on a candidate whose supporting JSON cannot be inspected, so a
   // fixture without them would be blocked — correctly, but it would no longer
@@ -210,11 +222,11 @@ describe("reconcileParkedAutoDisputes", () => {
 
     expect(res.reconciled).toBe(1);
     expect(res.disputeIds).toEqual(["disp-1"]);
-    // finalize flip happened
-    expect(sb.updates.some((u) => u.table === "defence_packages" && u.values.status === "final")).toBe(true);
-    // save enqueued against the source pack
+    // The reconcile pass writes NOTHING to defence_packages itself: the
+    // promotion, the supersede and the enqueue are one transaction.
+    expect(sb.updates.some((u) => u.table === "defence_packages")).toBe(false);
     const saveJob = sb.inserts.find((i) => i.table === "jobs");
-    expect(saveJob?.values).toMatchObject({ job_type: "save_to_shopify", entity_id: "pack-1" });
+    expect(saveJob?.values).toMatchObject({ job_type: "save_to_shopify" });
   });
 
   it("skips a Moderate dispute (never auto-saves weaker-than-Strong)", async () => {

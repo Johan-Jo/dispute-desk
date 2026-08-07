@@ -407,12 +407,19 @@ interface CandidateRow {
   status?: string | null;
   validation_status?: string | null;
   pdf_path?: string | null;
+  /**
+   * Database-enforced revision of the four fields this module inspects. The
+   * transactional promotion RPCs take it and refuse a candidate whose content
+   * changed after inspection, which is the only way "the row we judged is the
+   * row we filed" can be true across two round-trips.
+   */
+  content_revision?: string | null;
   facts_json?: unknown;
   narrative_json?: unknown;
 }
 
 const SELECT_COLS =
-  "id, version, status, validation_status, pdf_path, facts_json, narrative_json";
+  "id, version, status, validation_status, pdf_path, content_revision, facts_json, narrative_json";
 
 export interface PreflightOptions {
   /**
@@ -619,6 +626,20 @@ export function preflightCandidate(p: PreflightOutcome): CandidateRow | null {
     default:
       return null;
   }
+}
+
+/**
+ * The database-enforced revision of the content this preflight INSPECTED.
+ *
+ * Hand it to `finalize_defence_package` / `enqueue_defence_package_save` so the
+ * transaction can prove the facts, narrative, PDF and validation result did not
+ * change between inspection and promotion. Null means the row did not carry one
+ * — which the transactional RPCs treat as a conflict, not as consent.
+ */
+export function preflightRevision(p: PreflightOutcome): string | null {
+  const candidate = preflightCandidate(p);
+  const rev = candidate?.content_revision;
+  return typeof rev === "string" && rev.length > 0 ? rev : null;
 }
 
 /**
