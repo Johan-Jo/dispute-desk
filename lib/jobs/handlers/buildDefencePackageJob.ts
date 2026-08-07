@@ -91,11 +91,21 @@ export async function handleBuildDefencePackage(
     // (a merchant may have approved it by hand), and the original refusal
     // stands.
     if (pkg.status === "final" || pkg.status === "submitted") {
-      const { data: marker } = await sb
+      const { data: marker, error: markerErr } = await sb
         .from("jobs")
         .select("id")
         .eq("dedupe_key", finalizeDedupeKey(packageId))
         .maybeSingle();
+      // A FAILED lookup is not proof of absence. Discarding the error turned a
+      // transient blip into a permanent "this package is not a draft" failure
+      // for work that had in fact committed.
+      if (markerErr) {
+        return {
+          ok: false,
+          retriable: true,
+          reason: `commit_marker_lookup_failed: ${markerErr.message}`,
+        };
+      }
       if (marker) return { ok: true };
     }
     return { ok: false, retriable: false, reason: `package status=${pkg.status} is not draft` };

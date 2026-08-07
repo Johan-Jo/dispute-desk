@@ -64,7 +64,10 @@ export async function POST(
       { status: 409 },
     );
   }
-  if (!pkg.pdf_path) {
+  // TRIMMED, not truthy. `"   "` is not a PDF path, and the transactional
+  // contract (`btrim(pdf_path) <> ''`) would refuse it anyway — this early
+  // check exists to give the merchant the better message, so it has to agree.
+  if (typeof pkg.pdf_path !== "string" || pkg.pdf_path.trim().length === 0) {
     return NextResponse.json(
       { error: "Cannot finalize — no PDF has been rendered yet." },
       { status: 409 },
@@ -146,23 +149,20 @@ export async function POST(
     );
   }
 
-  // Idempotent success for an exact, current, unchanged already-final
-  // candidate. It deliberately does NOT enqueue: this route never has, and
-  // reaching the save from here would turn a repeated click into a second
-  // filing.
-  if (pkg.status === "final") {
-    return NextResponse.json({
-      ok: true,
-      packageId: id,
-      version: pkg.version,
-      idempotent: true,
-    });
-  }
+  // NOTE: an already-`final` candidate is NOT short-circuited here. Returning
+  // 200 from the initially-loaded row asserted "exact, current, unchanged"
+  // without ever taking the locks that could establish it — a newer version or
+  // a content change between the read and the reply would have been reported
+  // as an idempotent success. The RPC below is called for BOTH draft and final
+  // candidates and returns `already_done` only after re-checking revision,
+  // version, currency and fileability under the lock.
 
   const { data: rpcData, error: rpcErr } = await sb.rpc("finalize_defence_package", {
     p_package_id: id,
     p_expected_revision: contentRevision,
     p_expected_version: pkg.version,
+    // The merchant Finalize route NEVER enqueues. Approval and filing are
+    // separate steps, and a repeated click must not become a second filing.
     p_enqueue_save: false,
   });
   if (rpcErr) {
@@ -175,7 +175,10 @@ export async function POST(
   // STRICT. An unrecognised reply is an UNKNOWN, not a success: it gets the
   // same treatment as a transport failure. The previous revision returned 200
   // for `null`, `{}`, an array or a misspelled outcome.
-  const result = parseFinalizeRpcResult(rpcData, { expectEnqueue: false });
+  const result = parseFinalizeRpcResult(rpcData, {
+    expectEnqueue: false,
+    expectedPackageId: id,
+  });
 
   if (result.kind === "malformed") {
     console.error("[defence finalize] malformed RPC reply", result.detail, rpcData);
@@ -203,8 +206,18 @@ export async function POST(
     );
   }
 
-  // `already_done` is a successful idempotent replay — the same revision was
-  // already promoted. Do not write a second finalization audit for it.
+  // `already_done` is a successful idempotent replay, proven under the lock:
+  // the same revision, still current and still fileable, was already promoted.
+  // No second finalization audit, and no enqueue.
+  if (result.kind === "already_done") {
+    return NextResponse.json({
+      ok: true,
+      packageId: id,
+      version: pkg.version,
+      idempotent: true,
+    });
+  }
+
   if (result.kind === "promoted") {
     if (result.supersededId) {
       await logAuditEvent({

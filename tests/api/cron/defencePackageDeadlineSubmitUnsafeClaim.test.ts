@@ -56,8 +56,32 @@ const DISPUTE = {
 
 /** All defence_packages rows for the dispute, newest version first. The route
  *  must only ever consult the first one. */
-function makeSupabase(defenceVersions: Array<Record<string, unknown>>) {
+interface CronScenario {
+  /** What `enqueue_defence_package_save` / `finalize_defence_package` return. */
+  rpcResult?: unknown;
+  rpcError?: { message: string } | null;
+}
+
+function makeSupabase(
+  defenceVersions: Array<Record<string, unknown>>,
+  scenario: CronScenario = {},
+) {
   const jobsInsert = vi.fn().mockResolvedValue({ data: null, error: null });
+  const rpc = vi.fn(async (name: string) => {
+    if (scenario.rpcError) return { data: null, error: scenario.rpcError };
+    if ("rpcResult" in scenario) return { data: scenario.rpcResult, error: null };
+    return {
+      data:
+        name === "enqueue_defence_package_save"
+          ? { outcome: "enqueued", job_id: "job-1" }
+          : {
+              outcome: "promoted",
+              package_id: (defenceVersions[0] as { id?: string } | undefined)?.id ?? "pkg",
+              job_id: "job-1",
+            },
+      error: null,
+    };
+  });
   const defenceUpdate = vi.fn().mockReturnValue({
     eq: vi.fn().mockResolvedValue({ data: null, error: null }),
   });
@@ -109,8 +133,8 @@ function makeSupabase(defenceVersions: Array<Record<string, unknown>>) {
     throw new Error(`unexpected table: ${table}`);
   });
 
-  mockGetServiceClient.mockReturnValue({ from: mockFrom } as never);
-  return { jobsInsert, defenceUpdate, defenceQueries };
+  mockGetServiceClient.mockReturnValue({ from: mockFrom, rpc } as never);
+  return { jobsInsert, defenceUpdate, defenceQueries, rpc };
 }
 
 const req = () => new NextRequest("https://x.test/api/cron/defence-package-deadline-submit");
@@ -127,6 +151,7 @@ describe("deadline submit — PR-C1 unsafe candidate", () => {
         validation_status: "ok",
         pdf_path: "p.pdf",
         failure_code: null,
+        content_revision: "11111111-1111-4111-8111-111111111111",
         facts_json: CLEAN_FACTS,
         narrative_json: UNSAFE_NARRATIVE,
       },
@@ -160,7 +185,7 @@ describe("deadline submit — PR-C1 unsafe candidate", () => {
     const { jobsInsert } = makeSupabase([
       {
         id: "pkg-3", version: 3, status: "final", validation_status: "ok",
-        pdf_path: "p.pdf", failure_code: null,
+        pdf_path: "p.pdf", failure_code: null, content_revision: "11111111-1111-4111-8111-111111111111",
         facts_json: RETIRED_FACTS,
         narrative_json: CLEAN_NARRATIVE,
       },
@@ -174,7 +199,7 @@ describe("deadline submit — PR-C1 unsafe candidate", () => {
     const { defenceQueries, jobsInsert } = makeSupabase([
       {
         id: "pkg-3", version: 3, status: "final", validation_status: "ok",
-        pdf_path: "p.pdf", failure_code: null,
+        pdf_path: "p.pdf", failure_code: null, content_revision: "11111111-1111-4111-8111-111111111111",
         facts_json: [], narrative_json: UNSAFE_NARRATIVE,
       },
     ]);
@@ -184,19 +209,72 @@ describe("deadline submit — PR-C1 unsafe candidate", () => {
     expect(jobsInsert).not.toHaveBeenCalled();
   });
 
-  it("a regenerated SAFE latest version is submitted normally", async () => {
-    const { jobsInsert } = makeSupabase([
-      {
-        id: "pkg-4", version: 4, status: "final", validation_status: "ok",
-        pdf_path: "p.pdf", failure_code: null,
-        facts_json: CLEAN_FACTS,
-        narrative_json: CLEAN_NARRATIVE,
-      },
-    ]);
+  const safeFinal = () => [
+    {
+      id: "pkg-4", version: 4, status: "final", validation_status: "ok",
+      pdf_path: "p.pdf", failure_code: null,
+      content_revision: "11111111-1111-4111-8111-111111111111",
+      facts_json: CLEAN_FACTS,
+      narrative_json: CLEAN_NARRATIVE,
+    },
+  ];
+
+  /* ── The already-final branch goes through the enqueue TRANSACTION ─────
+   *
+   * It used to be a bare `jobs.insert` whose result was IGNORED, so a failed
+   * insert was still counted as `enqueuedSubmit` — on the last-day cron, the
+   * worst possible place to over-report. It also skipped the currency,
+   * revision and fileability checks the transaction performs.
+   * ------------------------------------------------------------------ */
+
+  it("a regenerated SAFE latest version is submitted through the enqueue RPC", async () => {
+    const { jobsInsert, rpc } = makeSupabase(safeFinal());
     const res = await GET(req());
     const body = await res.json();
-    expect(jobsInsert).toHaveBeenCalledTimes(1);
+    expect(jobsInsert).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledWith(
+      "enqueue_defence_package_save",
+      expect.objectContaining({ p_package_id: "pkg-4" }),
+    );
     expect(body.enqueuedSubmit).toBe(1);
     expect(mockEmail).not.toHaveBeenCalled();
+  });
+
+  it("an ALREADY-QUEUED save still counts as submitted, without a second job", async () => {
+    const { jobsInsert } = makeSupabase(safeFinal(), {
+      rpcResult: { outcome: "already_done", reason: "save_already_queued", job_id: "job-9" },
+    });
+    const body = await (await GET(req())).json();
+    expect(body.enqueuedSubmit).toBe(1);
+    expect(jobsInsert).not.toHaveBeenCalled();
+  });
+
+  const REFUSALS: Array<[string, CronScenario]> = [
+    ["a currency conflict", { rpcResult: { outcome: "conflict", reason: "not_current" } }],
+    ["a fileability conflict", { rpcResult: { outcome: "conflict", reason: "missing_pdf" } }],
+    ["a malformed reply", { rpcResult: null }],
+    ["an unknown outcome", { rpcResult: { outcome: "queuedish", job_id: "j" } }],
+    ["a database error", { rpcError: { message: "connection reset" } }],
+  ];
+
+  for (const [name, scenario] of REFUSALS) {
+    it(`does NOT count ${name} as submitted`, async () => {
+      const { jobsInsert } = makeSupabase(safeFinal(), scenario);
+      const body = await (await GET(req())).json();
+      expect(body.enqueuedSubmit).toBe(0);
+      expect(body.finalizeRefused).toBe(1);
+      expect(jobsInsert).not.toHaveBeenCalled();
+    });
+  }
+
+  it("refuses when the candidate carries no content revision to pin", async () => {
+    const rows = safeFinal();
+    delete (rows[0] as Record<string, unknown>).content_revision;
+    const { jobsInsert, rpc } = makeSupabase(rows);
+    const body = await (await GET(req())).json();
+    expect(body.enqueuedSubmit).toBe(0);
+    expect(body.finalizeRefused).toBe(1);
+    expect(rpc).not.toHaveBeenCalled();
+    expect(jobsInsert).not.toHaveBeenCalled();
   });
 });

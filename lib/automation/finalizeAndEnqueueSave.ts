@@ -263,7 +263,10 @@ export async function finalizeAndEnqueueSave(
   // unknown is handled like a transport failure: retry, write nothing. The
   // previous revision treated every non-conflict reply as a promotion and
   // audited it.
-  const result = parseFinalizeRpcResult(rpcData, { expectEnqueue: true });
+  const result = parseFinalizeRpcResult(rpcData, {
+    expectEnqueue: true,
+    expectedPackageId: packageId,
+  });
 
   if (result.kind === "malformed") {
     console.error("[finalizeAndEnqueueSave] malformed RPC reply", result.detail, rpcData);

@@ -63,10 +63,14 @@ const num = (v: unknown): number | null => (typeof v === "number" && Number.isFi
  * `expectEnqueue` is the caller's own contract: when it asked the transaction
  * to enqueue the save, a success that cannot NAME the job has not proven the
  * save exists, and is therefore malformed rather than success.
+ *
+ * `expectedPackageId` is checked too: a success naming a DIFFERENT package is
+ * not this caller's success, and auditing it would attribute a promotion to
+ * the wrong row.
  */
 export function parseFinalizeRpcResult(
   data: unknown,
-  opts: { expectEnqueue: boolean },
+  opts: { expectEnqueue: boolean; expectedPackageId: string },
 ): FinalizeRpcResult {
   const o = asObject(data);
   if (!o) return { kind: "malformed", detail: "reply is not an object" };
@@ -82,19 +86,26 @@ export function parseFinalizeRpcResult(
   if (outcome === "promoted" || outcome === "already_done") {
     const packageId = str(o.package_id);
     if (!packageId) return { kind: "malformed", detail: `${outcome} without package_id` };
+    if (packageId !== opts.expectedPackageId) {
+      return {
+        kind: "malformed",
+        detail: `${outcome} names package ${packageId}, not the requested ${opts.expectedPackageId}`,
+      };
+    }
     const jobId = str(o.job_id);
     if (opts.expectEnqueue && !jobId) {
       return { kind: "malformed", detail: `${outcome} did not prove the save job exists` };
     }
-    return outcome === "promoted"
-      ? {
-          kind: "promoted",
-          packageId,
-          supersededId: str(o.superseded_id),
-          supersededVersion: num(o.superseded_version),
-          jobId,
-        }
-      : { kind: "already_done", packageId, jobId };
+    if (outcome === "already_done") return { kind: "already_done", packageId, jobId };
+
+    // A supersession that cannot say WHICH version it retired is not a
+    // supersession we may audit.
+    const supersededId = str(o.superseded_id);
+    const supersededVersion = num(o.superseded_version);
+    if (supersededId && supersededVersion === null) {
+      return { kind: "malformed", detail: "superseded_id without a valid superseded_version" };
+    }
+    return { kind: "promoted", packageId, supersededId, supersededVersion, jobId };
   }
 
   return { kind: "malformed", detail: `unknown outcome "${outcome}"` };

@@ -4840,7 +4840,7 @@ audit trail claiming approval, and a job result of `{ ok: true }`. Proven end-to
 
 **Promotion is ONE database transaction.** `finalize_defence_package` and
 `enqueue_defence_package_save`
-(`supabase/migrations/20260807200000_defence_package_transactional_finalize.sql`, hardened by `20260807230000_defence_package_promotion_hardening.sql`) are the only two
+(`supabase/migrations/20260807200000_defence_package_transactional_finalize.sql`, hardened by `20260807230000_defence_package_promotion_hardening.sql` and `20260808000000_defence_package_promotion_authority.sql`) are the only two
 places a defence package is promoted or a save is enqueued. A TypeScript preflight followed by a
 field-guarded PostgREST update was never atomic, however many predicates the update repeated:
 
@@ -4878,9 +4878,14 @@ asserted: `scripts/db/finalizeDefencePackage.analysis.ts` holds the dispute lock
 and asserts a concurrent insert BLOCKS, and holds four different uncommitted UPDATEs open while the
 RPC runs, asserting it waits, re-reads the committed change and refuses.
 
-**Only the RPC may promote.** `defence_packages_authorize_promotion` rejects any `draft|stale → final`
-UPDATE that does not carry the transaction-local grant `finalize_defence_package` sets immediately
-before the write and clears immediately after. `final → submitted` and `final → superseded` are
+**Only the RPC may promote.** `defence_packages_authorize_promotion` rejects **every**
+non-`final` → `final` UPDATE that does not carry the transaction-local grant
+`finalize_defence_package` sets immediately before the write and clears immediately after — not just
+`draft|stale`, so `failed`, `skipped`, `superseded` and `submitted` are covered by the same door
+rather than by the immutability trigger alone. `p_allowed_statuses` is validated to a non-empty
+subset of `{draft, stale}`: a service-role caller cannot ask for `{superseded}` or `{failed}` and
+promote from a state the lifecycle has no business promoting from. The application default stays
+draft-only; the deadline cron's `{draft, stale}` is the one sanctioned widening. `final → submitted` and `final → superseded` are
 untouched, and INSERTs are unaffected (it is a BEFORE UPDATE trigger), so seeds and fixtures that
 create a `final` row keep working. All three promotion writers were inventoried and routed through
 the RPC first: `finalizeAndEnqueueSave`, the Finalize route, and the deadline cron — the last of

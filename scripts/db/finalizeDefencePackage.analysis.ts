@@ -752,3 +752,88 @@ describe("idempotent replay is still validated", () => {
     expect(await jobCount(c.packId)).toBe(1);
   }, 120_000);
 });
+
+
+/* ── The promotion SOURCE allow-list is constrained ───────────────────────
+ *
+ * `p_allowed_statuses` exists so the deadline cron can auto-finalize a
+ * `stale` candidate. Nothing stopped a service-role caller from passing
+ * `{superseded}` or `{failed}` and promoting from a state the lifecycle has
+ * no business promoting from, which quietly undid the trigger's boundary.
+ * --------------------------------------------------------------------- */
+
+async function finalizeWithStatuses(
+  pkgId: string,
+  revision: string,
+  version: number,
+  statuses: unknown,
+): Promise<Record<string, unknown>> {
+  const r = await db.query<{ finalize_defence_package: Record<string, unknown> }>(
+    `select finalize_defence_package($1::uuid, $2::uuid, $3::int, false, $4::text[])`,
+    [pkgId, revision, version, statuses],
+  );
+  return r.rows[0].finalize_defence_package;
+}
+
+describe("finalize_defence_package — p_allowed_statuses is validated", () => {
+  const REJECTED: Array<[string, unknown]> = [
+    ["submitted", ["submitted"]],
+    ["superseded", ["superseded"]],
+    ["failed", ["failed"]],
+    ["skipped", ["skipped"]],
+    ["final", ["final"]],
+    ["an arbitrary string", ["whatever"]],
+    ["draft plus an illegal status", ["draft", "superseded"]],
+    ["an empty array", []],
+    ["a null element", [null]],
+    ["null", null],
+  ];
+
+  for (const [name, statuses] of REJECTED) {
+    it(`refuses ${name} without mutating`, async () => {
+      const c = await seedCase();
+      const out = await finalizeWithStatuses(c.pkgId, c.revision, 1, statuses);
+      expect(out.outcome).toBe("conflict");
+      expect(out.reason).toBe("invalid_allowed_statuses");
+      expect(await statusOf(c.pkgId)).toBe("draft");
+      expect(await jobCount(c.packId)).toBe(0);
+    }, 120_000);
+  }
+
+  it("still accepts the two sanctioned sets", async () => {
+    const a = await seedCase();
+    expect((await finalizeWithStatuses(a.pkgId, a.revision, 1, ["draft"])).outcome).toBe("promoted");
+
+    const b = await seedCase();
+    await db.query(`update defence_packages set status = 'stale' where id = $1`, [b.pkgId]);
+    expect(
+      (await finalizeWithStatuses(b.pkgId, b.revision, 1, ["draft", "stale"])).outcome,
+    ).toBe("promoted");
+  }, 120_000);
+});
+
+describe("EVERY non-final → final needs the grant", () => {
+  for (const from of ["draft", "stale", "failed", "skipped"]) {
+    it(`a direct ${from} → final UPDATE is rejected`, async () => {
+      const c = await seedCase();
+      if (from !== "draft") {
+        await db.query(`update defence_packages set status = $2 where id = $1`, [c.pkgId, from]);
+      }
+      await expect(
+        db.query(`update defence_packages set status = 'final' where id = $1`, [c.pkgId]),
+      ).rejects.toThrow(/must go through finalize_defence_package/);
+      expect(await statusOf(c.pkgId)).toBe(from);
+    }, 120_000);
+  }
+
+  it("but a `failed` row still cannot be promoted BY the RPC either", async () => {
+    // The allow-list refuses the source, so widening the trigger did not open
+    // a new door — it closed a side one.
+    const c = await seedCase();
+    await db.query(`update defence_packages set status = 'failed' where id = $1`, [c.pkgId]);
+    const out = await finalizeWithStatuses(c.pkgId, c.revision, 1, ["draft", "stale"]);
+    expect(out.outcome).toBe("conflict");
+    expect(out.reason).toBe("not_draft");
+    expect(await statusOf(c.pkgId)).toBe("failed");
+  }, 120_000);
+});

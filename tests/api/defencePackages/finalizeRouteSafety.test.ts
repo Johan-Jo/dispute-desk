@@ -299,15 +299,52 @@ describe("POST /api/defence-packages/:id/finalize — PR-C1 preflight", () => {
     // route must never reach the save from this path either.
     const { jobsInsert, rpc, packageUpdates } = wire({
       named: draft({ status: "final", facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+      rpcResult: { outcome: "already_done", package_id: PKG_ID, reason: "already_promoted" },
     });
     const res = await POST(req(), params);
     const body = await res.json();
 
     expect(res.status).toBe(200);
     expect(body).toMatchObject({ ok: true, idempotent: true });
+    // The idempotency is established UNDER THE LOCK, not from the row this
+    // route happened to read first.
+    expect(rpc).toHaveBeenCalledWith(
+      "finalize_defence_package",
+      expect.objectContaining({ p_enqueue_save: false }),
+    );
     expect(jobsInsert).not.toHaveBeenCalled();
-    expect(rpc).not.toHaveBeenCalled();
     expect(packageUpdates).toEqual([]);
+    expect(finalizedAudit()).toHaveLength(0);
+  });
+
+  it("an already-FINAL candidate that CHANGED under the lock is a 409, not a 200", async () => {
+    // Exactly the case the pre-RPC shortcut could not see.
+    wire({
+      named: draft({ status: "final", facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+      rpcResult: { outcome: "conflict", reason: "not_current" },
+    });
+    const res = await POST(req(), params);
+    expect(res.status).toBe(409);
+    expect((await res.json()).reason).toBe("not_current");
+    expect(finalizedAudit()).toHaveLength(0);
+  });
+
+  it("a whitespace-only pdf_path is refused, like the transaction would", async () => {
+    wire({
+      named: draft({ pdf_path: "   ", facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+    });
+    const res = await POST(req(), params);
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/no PDF/i);
+  });
+
+  it("a success naming a DIFFERENT package is malformed, not success", async () => {
+    wire({
+      named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+      rpcResult: { outcome: "promoted", package_id: "some-other-package" },
+    });
+    const res = await POST(req(), params);
+    expect(res.status).toBe(503);
     expect(finalizedAudit()).toHaveLength(0);
   });
 

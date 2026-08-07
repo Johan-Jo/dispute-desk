@@ -30,7 +30,10 @@ import { isDefencePackageBuilderEnabled } from "@/lib/featureFlags";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { sendDefenceDeadlineFallbackAlert } from "@/lib/email/sendDefenceDeadlineFallbackAlert";
 import { assessPackageCandidateSafety } from "@/lib/defence/packageSafety";
-import { parseFinalizeRpcResult } from "@/lib/defence/finalizeRpc";
+import {
+  parseEnqueueRpcResult,
+  parseFinalizeRpcResult,
+} from "@/lib/defence/finalizeRpc";
 import { cronEnvGate } from "@/lib/cron/envGate";
 
 export const runtime = "nodejs";
@@ -232,12 +235,42 @@ export async function GET(req: NextRequest) {
 
       // We have a defence package row. Decide the action by status.
       if (dpkg!.status === "final") {
-        // Already finalized — just submit.
-        await sb.from("jobs").insert({
-          shop_id: d.shop_id,
-          job_type: "save_to_shopify",
-          entity_id: pack.id,
-        });
+        // Already finalized — enqueue the save through the transactional RPC.
+        //
+        // This used to be a bare `jobs.insert` whose RESULT WAS IGNORED, so a
+        // failed insert was counted as `enqueuedSubmit`. On the last-day cron
+        // that is the worst place to over-report: the dispute gets no further
+        // retry before its deadline. It also skipped the currency, revision
+        // and fileability checks the enqueue transaction performs.
+        const finalRevision = dpkg!.content_revision as string | null;
+        if (!finalRevision) {
+          summary.finalizeRefused += 1;
+          continue;
+        }
+
+        const { data: enqData, error: enqErr } = await sb.rpc(
+          "enqueue_defence_package_save",
+          { p_package_id: dpkg!.id, p_expected_revision: finalRevision },
+        );
+        if (enqErr) {
+          console.error("[deadline cron] enqueue_defence_package_save failed", enqErr);
+          summary.errors.push({ disputeId: d.id, error: enqErr.message });
+          summary.finalizeRefused += 1;
+          continue;
+        }
+
+        const enq = parseEnqueueRpcResult(enqData);
+        if (enq.kind === "conflict" || enq.kind === "malformed") {
+          console.error(
+            "[deadline cron] enqueue refused",
+            enq.kind === "conflict" ? enq.reason : enq.detail,
+          );
+          summary.finalizeRefused += 1;
+          continue;
+        }
+
+        // `enqueued` and `already_done` both mean a save job exists for this
+        // pack; only these count.
         summary.enqueuedSubmit += 1;
         continue;
       }
@@ -275,7 +308,10 @@ export async function GET(req: NextRequest) {
           continue;
         }
 
-        const finalizeResult = parseFinalizeRpcResult(rpcData, { expectEnqueue: true });
+        const finalizeResult = parseFinalizeRpcResult(rpcData, {
+          expectEnqueue: true,
+          expectedPackageId: dpkg!.id as string,
+        });
         if (finalizeResult.kind === "malformed" || finalizeResult.kind === "conflict") {
           // Nothing was written. Do not claim a submission the database
           // refused, or one we cannot verify.

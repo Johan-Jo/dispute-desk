@@ -116,6 +116,8 @@ interface Scenario {
    * Applies to the first RPC call only.
    */
   loseResponseOnce?: boolean;
+  /** Fail the commit-marker lookup once, then succeed. */
+  markerErrorOnce?: boolean;
 }
 
 /**
@@ -146,6 +148,7 @@ function mockSb(scenario: Scenario = {}) {
   const jobsInserted: Array<Record<string, unknown>> = [];
   const disputeUpdates: Array<Record<string, unknown>> = [];
   let responseLost = false;
+  let markerFailed = false;
 
   const from = (table: string) => {
     const filters: Record<string, unknown> = {};
@@ -225,6 +228,10 @@ function mockSb(scenario: Scenario = {}) {
       maybeSingle: async () => {
         if (table === "defence_packages") return resolveDefencePackages();
         if (table === "jobs" && typeof filters.dedupe_key === "string") {
+          if (scenario.markerErrorOnce && !markerFailed) {
+            markerFailed = true;
+            return { data: null, error: { message: "statement timeout" } };
+          }
           // The durable commit marker the auto transaction leaves behind.
           const hit = jobsInserted.find((j) => j.dedupe_key === filters.dedupe_key);
           return { data: hit ? { id: "job-1" } : null, error: null };
@@ -504,6 +511,30 @@ describe("buildDefencePackageJob — a lost response is replayed, not lost", () 
     // The retry did NOT rebuild: the content write happened once, on the
     // first attempt only.
     expect(packageUpdates.filter((u) => u.narrative_json !== undefined)).toHaveLength(1);
+  }, 60_000);
+
+  it("a TRANSIENT marker-query failure retries; the next attempt converges", async () => {
+    // The lookup error used to be discarded, so a blip on this query turned a
+    // committed auto-finalization into a permanent "not a draft" failure.
+    const { jobsInserted } = mockSb({ loseResponseOnce: true, markerErrorOnce: true });
+
+    // Attempt 1: the transaction commits, the reply is lost.
+    const first = await handleBuildDefencePackage(job());
+    expect(first.ok).toBe(false);
+    if (first.ok) throw new Error("unreachable");
+    expect(first.retriable).toBe(true);
+
+    // Attempt 2: the marker lookup itself fails — RETRIABLE, not a verdict.
+    const second = await handleBuildDefencePackage(job());
+    expect(second.ok).toBe(false);
+    if (second.ok) throw new Error("unreachable");
+    expect(second.retriable).toBe(true);
+    expect(second.reason).toContain("commit_marker_lookup_failed");
+
+    // Attempt 3: the lookup works, the marker is there, converge.
+    const third = await handleBuildDefencePackage(job());
+    expect(third).toEqual({ ok: true });
+    expect(jobsInserted).toHaveLength(1);
   }, 60_000);
 
   it("a final package with NO commit marker is still a hard refusal", async () => {
