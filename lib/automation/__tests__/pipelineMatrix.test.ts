@@ -49,6 +49,10 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { getShopSettings } from "@/lib/automation/settings";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { evaluateAndMaybeAutoSave } from "@/lib/automation/pipeline";
+import {
+  CLEAN_FACTS,
+  narrativeJson,
+} from "@/tests/fixtures/defencePackageShapes";
 
 const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockGetShopSettings = vi.mocked(getShopSettings);
@@ -105,6 +109,27 @@ function buildSb(pack: PackFixture, dispute: DisputeFixture) {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
           single: vi.fn().mockResolvedValue({ data: disputeRow, error: null }),
+        };
+      }
+      // PR-C1: a *missing* defence package is now UNRESOLVED, not safe, and
+      // defers the auto-save. These tests are about the gate matrix, not the
+      // containment, so they supply a safe current candidate.
+      if (table === "defence_packages") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          order: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: {
+              id: "pkg-safe",
+              version: 1,
+              status: "final",
+              facts_json: CLEAN_FACTS,
+              narrative_json: narrativeJson({ executiveSummary: "The carrier confirmed delivery on 12 May 2026." }),
+            },
+            error: null,
+          }),
         };
       }
       if (table === "audit_events") {

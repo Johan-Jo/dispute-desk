@@ -10,6 +10,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
+import { logAuditEvent } from "@/lib/audit/logEvent";
+import {
+  preflightBlocks,
+  preflightCandidate,
+  preflightHttpRefusal,
+  preflightNamedCandidate,
+  preflightReasons,
+} from "@/lib/defence/packageSafety";
 
 export const runtime = "nodejs";
 
@@ -28,7 +36,7 @@ export async function POST(
   const sb = getServiceClient();
   const { data: pkg } = await sb
     .from("defence_packages")
-    .select("id, status, source_pack_id, shop_id")
+    .select("id, status, source_pack_id, shop_id, dispute_id")
     .eq("id", id)
     .eq("shop_id", shopId)
     .single();
@@ -42,6 +50,50 @@ export async function POST(
         code: "INVALID_STATUS",
       },
       { status: 409 },
+    );
+  }
+
+  /* ── PR-C1 candidate-safety preflight, BEFORE any enqueue ──
+   *
+   * This route is what the embedded Review & Submit card calls. Enqueueing
+   * first and blocking in the worker showed the merchant a submitted state for
+   * a package that was never going to be filed, so the check has to happen
+   * here.
+   *
+   * It judges the EXACT package named in the URL and, separately, proves that
+   * package is still the newest version — because the job is keyed to the
+   * source pack and the worker re-selects the latest row. Without the
+   * currency check this endpoint would only look pinned. */
+  const preflight = await preflightNamedCandidate(sb, {
+    packageId: pkg.id as string,
+    disputeId: pkg.dispute_id as string,
+  });
+  if (preflightBlocks(preflight)) {
+    await logAuditEvent({
+      shopId: pkg.shop_id as string,
+      disputeId: pkg.dispute_id as string,
+      packId: pkg.source_pack_id as string,
+      actorType: "merchant",
+      eventType: "defence_package_blocked_unsafe_claim",
+      eventPayload: {
+        packageId: pkg.id,
+        version: preflightCandidate(preflight)?.version ?? null,
+        outcome: preflight.kind,
+        reasons: preflightReasons(preflight),
+        trigger: "embedded_submit",
+      },
+    });
+    // A database failure is not something the merchant fixes by regenerating:
+    // 503 + retry, never 422 + "regenerate".
+    const refusal = preflightHttpRefusal(preflight);
+    return NextResponse.json(
+      {
+        error: refusal.code,
+        code: refusal.code,
+        reasons: refusal.reasons,
+        message: refusal.message,
+      },
+      { status: refusal.status },
     );
   }
 

@@ -206,7 +206,21 @@ export interface NonEvidenceFacts {
   coverage: { state: string | null; shopifyProtectStatus: string | null } | null;
   riskSignals: Record<string, unknown> | null;
   disputeMetadata: { reason: string | null; networkReasonCode: string | null } | null;
-  operational: { collectorErrors: unknown[]; unregisteredFields: string[] };
+  operational: {
+    collectorErrors: unknown[];
+    unregisteredFields: string[];
+    /**
+     * Retired collector keys seen on this case's sections — recorded, never
+     * interpreted. A retired key is NOT an unregistered field (that would read
+     * as an accident); it is a value a past collector wrote that must never be
+     * evidence again. Reporting it here is what keeps "we stopped reading it"
+     * distinguishable from "it silently vanished" (#352552).
+     *
+     * Operational metadata only: never merchant-facing, never bank-facing,
+     * never scored, never cited. See `lib/evidence/model/retiredKeys.ts`.
+     */
+    retiredFields: string[];
+  };
 }
 
 export interface CaseEvidenceModel {

@@ -146,6 +146,9 @@ describe("delivery row collapse — one row, not two", () => {
   // "Delivered Jul 13" facts line.
   describe("delivered draft pack (no facts, no contributions)", () => {
     const carrierConfirmed = () =>
+      // PR-C1: the retired key is kept in the payload deliberately — the row
+      // must still render its delivered copy, and the badge must now be
+      // Moderate because the key no longer contributes.
       derive("delivered_confirmed", {
         deliveredAt: "2026-07-13T14:26:00Z",
         deliveredToVerifiedAddress: true,
@@ -173,11 +176,13 @@ describe("delivery row collapse — one row, not two", () => {
       expect(row.reasonToken.key).toBe("disputes.deliveryProof.whyCarrierConfirmed");
     });
 
-    it("still shows the Strong strength badge (title + facts stay honest)", () => {
+    it("shows the Moderate badge after PR-C1 (title + facts stay honest)", () => {
       const row = carrierConfirmed().find(
         (li) => li.field === "shipping_tracking" || li.field === "delivery_proof",
       )!;
-      expect(row.strengthContribution).toBe("strong");
+      // Was "strong" via the retired verified-address upgrade. A carrier
+      // confirmation with no signature is corroborating, not decisive.
+      expect(row.strengthContribution).toBe("moderate");
       expect(row.displayLabelToken).toEqual({
         key: "disputes.deliveryProof.titleDeliveredOn",
         params: { date: "Jul 13" },

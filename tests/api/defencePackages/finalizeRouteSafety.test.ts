@@ -1,0 +1,214 @@
+/**
+ * PR-C1 — the Finalize endpoint performs NO status mutation for a candidate
+ * that is unsafe, unreadable, missing, non-current, or unverifiable.
+ *
+ * Finalizing is a real authorization step, not cosmetic: it promotes the draft
+ * to `final` AND supersedes the prior final. An unsafe draft reaching this
+ * route therefore RETIRES the last good package and leaves the dispute with a
+ * newest candidate the worker will refuse — strictly worse than doing nothing.
+ *
+ * Suppressing the Finalize button is not an authorization boundary: a stale
+ * tab, a direct request, a race with a regeneration, or a future UI all reach
+ * this handler. These tests drive the real route handler.
+ */
+
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("@/lib/supabase/server", () => ({ getServiceClient: vi.fn() }));
+vi.mock("@/lib/middleware/extractShopId", () => ({ extractShopId: () => "shop-1" }));
+vi.mock("@/lib/audit/logEvent", () => ({
+  logAuditEvent: vi.fn().mockResolvedValue(undefined),
+}));
+
+import { getServiceClient } from "@/lib/supabase/server";
+import { logAuditEvent } from "@/lib/audit/logEvent";
+import { POST } from "@/app/api/defence-packages/[id]/finalize/route";
+import { NextRequest } from "next/server";
+import {
+  AMBIGUOUS_NARRATIVE,
+  CLEAN_NARRATIVE,
+  FULL_FACT,
+  RETIRED_FACT,
+  UNSAFE_NARRATIVE,
+  mockNamedCandidateClient,
+  type NamedCandidateScenario,
+} from "./namedCandidateMock";
+
+const mockClient = vi.mocked(getServiceClient);
+const mockAudit = vi.mocked(logAuditEvent);
+
+const PKG_ID = "pkg-3";
+
+const req = () =>
+  new NextRequest("https://x.test/api/defence-packages/pkg-3/finalize", { method: "POST" });
+const params = { params: Promise.resolve({ id: PKG_ID }) };
+
+/** A draft that passes every PRE-EXISTING finalize gate, so the only thing
+ *  that can stop it is the PR-C1 preflight. */
+const draft = (over: Record<string, unknown>) => ({
+  id: PKG_ID,
+  dispute_id: "dispute-1",
+  shop_id: "shop-1",
+  source_pack_id: "pack-1",
+  version: 3,
+  status: "draft",
+  validation_status: "ok",
+  pdf_path: "shop/dispute/v3.pdf",
+  ...over,
+});
+
+function wire(s: NamedCandidateScenario) {
+  const m = mockNamedCandidateClient(s);
+  mockClient.mockReturnValue(m.client);
+  return m;
+}
+
+const finalizedAudit = () =>
+  mockAudit.mock.calls.filter(
+    (c) => (c[0] as { eventType?: string })?.eventType === "defence_package_finalized",
+  );
+const supersededAudit = () =>
+  mockAudit.mock.calls.filter(
+    (c) => (c[0] as { eventType?: string })?.eventType === "defence_package_superseded",
+  );
+const blockAudit = () =>
+  mockAudit.mock.calls.filter(
+    (c) => (c[0] as { eventType?: string })?.eventType === "defence_package_blocked_unsafe_claim",
+  );
+
+beforeEach(() => vi.clearAllMocks());
+
+describe("POST /api/defence-packages/:id/finalize — PR-C1 preflight", () => {
+  const BLOCKING: Array<[string, NamedCandidateScenario, string, number]> = [
+    [
+      "unsafe narrative",
+      { named: draft({ facts_json: [FULL_FACT], narrative_json: UNSAFE_NARRATIVE }) },
+      "affirmative_address_delivery_claim",
+      422,
+    ],
+    [
+      "ambiguous narrative",
+      { named: draft({ facts_json: [FULL_FACT], narrative_json: AMBIGUOUS_NARRATIVE }) },
+      "ambiguous_address_delivery_claim",
+      422,
+    ],
+    [
+      "retired delivery fact",
+      { named: draft({ facts_json: [RETIRED_FACT], narrative_json: CLEAN_NARRATIVE }) },
+      "retired_delivery_fact",
+      422,
+    ],
+    [
+      "unreadable JSON",
+      { named: draft({ facts_json: null, narrative_json: null }) },
+      "unreadable_facts_json",
+      422,
+    ],
+    [
+      "structurally incomplete fact",
+      { named: draft({ facts_json: [{}], narrative_json: CLEAN_NARRATIVE }) },
+      "unreadable_facts_json",
+      422,
+    ],
+    [
+      "not the current candidate",
+      {
+        named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+        latestId: "pkg-4",
+      },
+      "candidate_not_current",
+      422,
+    ],
+    [
+      "latest-version probe query error",
+      {
+        named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+        latestError: { message: "timeout" },
+      },
+      "preflight_error",
+      503,
+    ],
+  ];
+
+  for (const [name, scenario, reason, status] of BLOCKING) {
+    it(`refuses (${name}): no finalize, no supersede, no finalization audit`, async () => {
+      const { packageUpdates } = wire(scenario);
+
+      const res = await POST(req(), params);
+      const body = await res.json();
+
+      expect(res.status).toBe(status);
+      expect(body.reasons).toContain(reason);
+
+      // NOTHING was promoted and NOTHING was superseded.
+      expect(packageUpdates).toEqual([]);
+      expect(finalizedAudit()).toHaveLength(0);
+      expect(supersededAudit()).toHaveLength(0);
+
+      // A safety-block audit IS expected, and is distinct from finalization.
+      expect(blockAudit()).toHaveLength(1);
+      expect(blockAudit()[0][0]).toMatchObject({
+        eventType: "defence_package_blocked_unsafe_claim",
+        eventPayload: expect.objectContaining({ trigger: "finalize" }),
+      });
+    });
+  }
+
+  it("an unsafe draft cannot supersede a prior safe final", async () => {
+    // The prior final is only ever touched in step 2, which the preflight
+    // returns before. Proven by: zero writes to defence_packages at all.
+    const { packageUpdates } = wire({
+      named: draft({ facts_json: [FULL_FACT], narrative_json: UNSAFE_NARRATIVE }),
+    });
+    await POST(req(), params);
+    expect(packageUpdates).toEqual([]);
+    expect(supersededAudit()).toHaveLength(0);
+  });
+
+  it("refuses and mutates nothing when the route's own package load errors", async () => {
+    // Same query as the preflight's named lookup, so a failure short-circuits
+    // at the 404 guard. The invariant that matters is unchanged: non-2xx, no
+    // write to defence_packages, no finalization audit.
+    const { packageUpdates } = wire({
+      named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+      namedError: { message: "connection reset" },
+    });
+    const res = await POST(req(), params);
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(packageUpdates).toEqual([]);
+    expect(finalizedAudit()).toHaveLength(0);
+  });
+
+  it("a transient LATEST-probe failure does not tell the merchant to regenerate", async () => {
+    wire({
+      named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+      latestError: { message: "timeout" },
+    });
+    const res = await POST(req(), params);
+    const body = await res.json();
+    expect(res.status).toBe(503);
+    expect(body.code).toBe("PACKAGE_CHECK_UNAVAILABLE");
+    expect(body.message).not.toMatch(/regenerate/i);
+  });
+
+  it("finalizes normally for a safe, current candidate", async () => {
+    const { packageUpdates } = wire({
+      named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+    });
+
+    const res = await POST(req(), params);
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, packageId: PKG_ID });
+    expect(packageUpdates.some((u) => u.status === "final")).toBe(true);
+    expect(finalizedAudit()).toHaveLength(1);
+    expect(blockAudit()).toHaveLength(0);
+  });
+
+  it("pre-existing gates still fire before the preflight is even reached", async () => {
+    wire({ named: draft({ status: "final", facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }) });
+    const res = await POST(req(), params);
+    expect(res.status).toBe(409);
+    expect(blockAudit()).toHaveLength(0);
+  });
+});

@@ -23,6 +23,7 @@
  */
 
 import { alwaysAdmissibleCategories } from "./alwaysAdmissible";
+import { deriveClaimCapabilities } from "./claimCapabilities";
 import { getServiceClient } from "@/lib/supabase/server";
 import {
   callClaudeMessages,
@@ -66,7 +67,9 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // change that stops banning natural lowercase "fulfilled" prose. Same
 // cache-invalidation pattern as prior bumps — first call after deploy
 // pays full prompt cost, subsequent calls amortise.
-const PROMPT_VERSION = 9;
+// v10 (PR-C1, 2026-08-07): rule 14 — structural claim capabilities; the
+// verified-address delivery claim is prohibited on every case.
+const PROMPT_VERSION = 10;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
@@ -97,7 +100,8 @@ Rules:
    evidentiary framing — verbs like "establishes", "demonstrates",
    "confirms", "evidences", "corroborates", "records", "documents", "shows".
    Quote specific values from approved facts to ground each claim
-   (e.g. "delivered 2026-05-12 to the verified address", "the customer
+   (e.g. "the carrier confirmed delivery on 2026-05-12, tracking
+   1234567890 (PostNord)", "the customer
    confirmed receipt on 2026-05-13"). State the relationship between
    fact and reason code explicitly (e.g. "These authentication results
    are consistent with a cardholder-initiated transaction under Visa 10.4.").
@@ -221,7 +225,34 @@ Rules:
 
 13. If a section has no supporting approved facts, return:
     { "text": "", "usedFactIds": [] }
-    and add an entry to omittedSections.`;
+    and add an entry to omittedSections.
+
+14. CLAIM CAPABILITIES. The payload carries a \`claimCapabilities\` array —
+    the claim classes this case is AUTHORIZED to make, derived from the
+    approved facts. A claim class absent from that array must not appear in
+    any section, in any wording.
+
+    "address_delivery" is NOT authorized on any case today. You must never
+    state, imply, or paraphrase that a delivery occurred AT a particular
+    physical address, and never describe an address as verified, matched,
+    AVS-confirmed, the cardholder's, the customer's own, on file, of record,
+    or the same as the billing address. Do not assert that the billing and
+    shipping addresses agree. DisputeDesk holds no evidence connecting a
+    delivery event to an address.
+
+    Permitted delivery wording (when a delivery fact is approved): the
+    carrier name, the tracking number, the tracking URL, the delivery status,
+    and the delivery date. A captured signature may be cited only when the
+    fact carries signedByName.
+      WRONG → "the parcel was delivered to the cardholder's verified address"
+      WRONG → "delivery was made to the address on file"
+      WRONG → "the billing and shipping addresses match"
+      RIGHT → "the carrier confirmed delivery on 12 May 2026 (PostNord,
+               tracking 1234567890)"
+      RIGHT → "the carrier recorded a signature on delivery"
+
+    This is enforced structurally after generation. A section that makes an
+    unauthorized claim fails validation and the package is not filed.`;
 
 /* ── Public surface ── */
 
@@ -485,6 +516,11 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
     reasonCode: input.reasonCode,
     packageMode: input.packageMode,
     caseStrength: input.caseStrength,
+    // PR-C1 — structural claim authorization. Derived from the SAME approved
+    // facts the validator re-derives from, so the model is shown exactly the
+    // claim classes the case holds and nothing else. `address_delivery` is
+    // absent on every case today.
+    claimCapabilities: [...deriveClaimCapabilities(input.approvedFacts)].sort(),
     reasonCodeGuidance: {
       key: input.reasonCodeModule.key,
       displayName: input.reasonCodeModule.displayName,

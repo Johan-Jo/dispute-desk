@@ -38,10 +38,14 @@ const DELIVERY_SECTION = {
   source: "shopify_fulfillments",
   fieldsProvided: ["shipping_tracking", "delivery_proof"],
   data: {
-    proofType: "delivered_confirmed",
+    // PR-C1: the retired key is LEFT in this fixture on purpose — it is a
+    // faithful copy of a real prod pack, and the model must derive it without
+    // the key becoming a record. `signature_confirmed` supplies the decisive
+    // grade the #352552 characterization is about.
+    proofType: "signature_confirmed",
     deliveredAt: "2026-07-10T19:28:00Z",
     deliveredToVerifiedAddress: true,
-    signedByName: null,
+    signedByName: "R. Pipe",
     fulfillmentCount: 1,
     fulfillments: [
       {
@@ -213,7 +217,6 @@ describe("P2a — real instances become real records", () => {
         fieldsProvided: ["delivery_proof"],
         data: {
           proofType: "delivered_confirmed",
-          deliveredToVerifiedAddress: true,
           fulfillments: [
             {
               fulfillmentId: "gid://shopify/Fulfillment/1",

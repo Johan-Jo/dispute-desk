@@ -344,6 +344,16 @@ export interface WorkspaceData {
     latest: unknown | null;
     bankFacing: unknown | null;
     currentPromptVersion: number | null;
+    /** PR-C1 candidate-safety verdict for `latest`, computed server-side by
+     *  the same predicate every save / forward path uses. When `blocked`, the
+     *  card must show review-required and disable Finalize / Submit /
+     *  Resubmit — the endpoints return 422 for these. `reasons` are machine
+     *  codes for support; `message` is the merchant-safe sentence. */
+    safety?: {
+      blocked: boolean;
+      reasons: string[];
+      message: string;
+    };
   };
 }
 

@@ -64,7 +64,7 @@ export const CATEGORY_WEIGHT: Record<EvidenceCategory, number> = {
  * each evidence item so the workspace API can detect stale caches and
  * recompute on read. Plan §P2.4a.
  */
-export const CANONICAL_EVIDENCE_VERSION = 2;
+export const CANONICAL_EVIDENCE_VERSION = 3;
 
 /** Persisted alongside an evidence item so we know which registry
  *  version classified it. */
@@ -166,7 +166,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     category: "moderate",
     supportingOnly: false,
     excludedFromStrength: false,
-    note: "signature_confirmed → strong; delivered_confirmed AND deliveredToVerifiedAddress → strong (rubric #9); delivered_confirmed alone → moderate; delivered_unverified → supporting; label_created → invalid.",
+    note: "signature_confirmed → strong; delivered_confirmed → moderate; delivered_unverified → supporting; label_created → invalid. The rubric-#9 verified-address upgrade and the collected-at-pickup upgrade were retired 2026-08-07 (PR-C1) as unsubstantiated — see retiredKeys.ts.",
   },
   shipping_tracking: {
     signalId: "delivery",
@@ -174,7 +174,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     category: "moderate",
     supportingOnly: false,
     excludedFromStrength: false,
-    note: "Same 4-state proofType mapping as delivery_proof, with the deliveredToVerifiedAddress upgrade for delivered_confirmed. Shares signalId 'delivery' so duplicate evidence does not double-count.",
+    note: "Same 4-state proofType mapping as delivery_proof. Shares signalId 'delivery' so duplicate evidence does not double-count.",
   },
 
   // ── IP / device (always at most moderate) ──
@@ -424,10 +424,13 @@ export function categorizeEvidenceField(
   const p = (payload ?? {}) as Record<string, unknown>;
 
   // ── delivery_proof / shipping_tracking ──
-  // Rubric #2 + #9. signature_confirmed always strong. delivered_confirmed
-  // is strong when payload confirms delivery to the verified billing /
-  // customer address (no mismatch); otherwise moderate. delivered_unverified
+  // Rubric #2. signature_confirmed always strong (an independently sourced
+  // signature / POD name). delivered_confirmed → moderate. delivered_unverified
   // → supporting. label_created → invalid (explicit negative).
+  //
+  // Rubric #9 (the "delivered to the verified address" upgrade) was RETIRED on
+  // 2026-08-07 by PR-C1: its input was a billing-vs-shipping city comparison,
+  // not the AVS match the rule requires. No payload key can restore it.
   //
   // Manual-upload nuance: when `proofType` is absent AND the payload
   // has a `fileName` (i.e. the merchant uploaded a document and assigned
@@ -448,18 +451,21 @@ export function categorizeEvidenceField(
       case "signature_confirmed":
         return "strong";
       case "delivered_confirmed":
-        // Strong on either decisive receipt path:
-        //  - rubric #9: doorstep delivery at the verified customer
-        //    address (deliveredToVerifiedAddress), or
-        //  - in-person collection at a pickup point
-        //    (collectedByCustomer): the recipient personally collected
-        //    the parcel — in SE/Nordic networks with photo ID / BankID —
-        //    which ties receipt to the customer even more directly than
-        //    a doorstep drop.
-        return p.deliveredToVerifiedAddress === true ||
-          p.collectedByCustomer === true
-          ? "strong"
-          : "moderate";
+        // MODERATE, always (PR-C1, 2026-08-07).
+        //
+        // Two upgrade paths used to reach STRONG here and both were
+        // unsupported. `deliveredToVerifiedAddress` was derived from a
+        // billing-vs-shipping city/country comparison with no AVS input, on a
+        // fleet where the issuer's AVS response was `N` for 54 of the 60 packs
+        // that asserted it. `collectedByCustomer` was inferred from carrier
+        // event message text with no signature or identification artifact.
+        // Both keys are now retired (`lib/evidence/model/retiredKeys.ts`) and
+        // stripped from every payload before it reaches this function, so this
+        // branch cannot be re-armed by a historical pack.
+        //
+        // A genuine signature or POD name still reaches STRONG through
+        // `signature_confirmed` above — that path is untouched.
+        return "moderate";
       case "delivered_unverified":
         return "supporting";
       case "label_created":

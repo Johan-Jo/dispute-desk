@@ -75,7 +75,15 @@ export type EvidencePayload =
       fieldKey: "delivery_proof" | "shipping_tracking";
       proofType: DeliveryProofType | null;
       deliveredAt: string | null;
-      deliveredToVerifiedAddress: boolean;
+      /**
+       * `deliveredToVerifiedAddress` was removed from this arm on 2026-08-07
+       * (PR-C1). It was an unsubstantiated STRONG upgrade derived from a
+       * billing-vs-shipping city comparison, and it is now a retired payload
+       * key stripped before normalization — see
+       * `lib/evidence/model/retiredKeys.ts`. It is deliberately NOT kept as an
+       * always-false field: a typed `false` invites a consumer to reason about
+       * it. `collectedByCustomer` was never in this union.
+       */
       signedByName: string | null;
       /** One entry per parcel. The multi-instance source for P2a splitting. */
       fulfillments: FulfillmentInstance[];
@@ -246,7 +254,6 @@ export function normalizeEvidencePayload(
         fieldKey,
         proofType: (str(raw?.proofType) as DeliveryProofType | null) ?? null,
         deliveredAt: str(raw?.deliveredAt),
-        deliveredToVerifiedAddress: bool(raw?.deliveredToVerifiedAddress),
         signedByName: str(raw?.signedByName),
         fulfillments: normalizeFulfillments(raw),
       };

@@ -1,9 +1,17 @@
 /**
- * Fulfillment source — delivery proofType + deliveredToVerifiedAddress
- * (rubric #9). Focus: the flag that upgrades a confirmed delivery to STRONG
- * for item-not-received disputes is set ONLY for a genuine final delivery
- * to the verified customer address, and never for pickup/returned/
- * cross-border.
+ * Fulfillment source — delivery proofType and the RETIRED verified-address /
+ * collected-by-customer flags.
+ *
+ * PR-C1 (2026-08-07): this file used to pin the conditions under which
+ * `deliveredToVerifiedAddress` was set. That flag compared Shopify's own
+ * billing and shipping addresses on city + country — no AVS anywhere — and
+ * upgraded a confirmed delivery to STRONG. It is retired. So is
+ * `collectedByCustomer`, which was inferred from carrier message text with no
+ * signature or identification artifact.
+ *
+ * The tests below now pin the retirement: the collector emits NEITHER key, and
+ * every surviving delivery fact (proofType, deliveredAt, carrier status,
+ * coverage) is unchanged.
  */
 import { describe, expect, it } from "vitest";
 import { collectFulfillmentEvidence } from "../fulfillmentSource";
@@ -69,67 +77,76 @@ async function sectionData(c: BuildContext) {
   return sections[0]?.data as Record<string, unknown>;
 }
 
-describe("collectFulfillmentEvidence — deliveredToVerifiedAddress (rubric #9)", () => {
-  it("sets the flag for a native final delivery to the verified (matching) address", async () => {
+describe("collectFulfillmentEvidence — RETIRED verified-address flag", () => {
+  it("emits NEITHER retired key on a genuine final delivery", async () => {
     const data = await sectionData(
       ctx({ fulfillments: [evtFulfillment([DELIVERED])] as OrderFulfillment[] } as Partial<OrderDetailNode>),
     );
+    // Surviving facts are unchanged.
     expect(data.proofType).toBe("delivered_confirmed");
-    expect(data.deliveredToVerifiedAddress).toBe(true);
     expect(data.deliveredAt).toBe("2026-07-06T18:16:00Z");
+    // The retired keys are ABSENT, not false — a `false` invites a consumer to
+    // reason about the flag, and a future writer to flip it.
+    expect("deliveredToVerifiedAddress" in data).toBe(false);
+    expect("collectedByCustomer" in data).toBe(false);
   });
 
-  it("does NOT set the flag when the parcel only reached a pickup point", async () => {
-    const data = await sectionData(
-      ctx({ fulfillments: [evtFulfillment([PICKUP])] as OrderFulfillment[] } as Partial<OrderDetailNode>),
-    );
-    expect(data.deliveredToVerifiedAddress).toBe(false);
-  });
-
-  it("does NOT set the flag when the parcel was returned to sender", async () => {
-    const data = await sectionData(
-      ctx({ fulfillments: [evtFulfillment([RETURNED])] as OrderFulfillment[] } as Partial<OrderDetailNode>),
-    );
-    expect(data.deliveredToVerifiedAddress).toBe(false);
-  });
-
-  it("does NOT set the flag on a cross-border order (billing≠shipping country) even when delivered", async () => {
+  it("still emits no retired key when billing and shipping happen to match", async () => {
+    // This is the exact input that used to produce the STRONG upgrade.
     const data = await sectionData(
       ctx({
-        billingAddress: addr("Berlin", "DE"),
+        billingAddress: addr("Stockholm", "SE"),
         shippingAddress: addr("Stockholm", "SE"),
         fulfillments: [evtFulfillment([DELIVERED])] as OrderFulfillment[],
       } as Partial<OrderDetailNode>),
     );
     expect(data.proofType).toBe("delivered_confirmed");
-    expect(data.deliveredToVerifiedAddress).toBe(false);
+    expect("deliveredToVerifiedAddress" in data).toBe(false);
   });
 
-  it("does NOT set the flag when billing and shipping cities differ", async () => {
-    const data = await sectionData(
-      ctx({
-        billingAddress: addr("Gothenburg", "SE"),
-        shippingAddress: addr("Örebro", "SE"),
-        fulfillments: [evtFulfillment([DELIVERED])] as OrderFulfillment[],
-      } as Partial<OrderDetailNode>),
+  it("cross-border and city-mismatch orders are indistinguishable now — no flag either way", async () => {
+    for (const [billing, shipping] of [
+      [addr("Berlin", "DE"), addr("Stockholm", "SE")],
+      [addr("Gothenburg", "SE"), addr("Örebro", "SE")],
+    ] as const) {
+      const data = await sectionData(
+        ctx({
+          billingAddress: billing,
+          shippingAddress: shipping,
+          fulfillments: [evtFulfillment([DELIVERED])] as OrderFulfillment[],
+        } as Partial<OrderDetailNode>),
+      );
+      expect(data.proofType).toBe("delivered_confirmed");
+      expect("deliveredToVerifiedAddress" in data).toBe(false);
+    }
+  });
+
+  it("pickup-only and returned shipments keep their existing proofType behaviour", async () => {
+    const pickup = await sectionData(
+      ctx({ fulfillments: [evtFulfillment([PICKUP])] as OrderFulfillment[] } as Partial<OrderDetailNode>),
     );
-    expect(data.deliveredToVerifiedAddress).toBe(false);
+    expect(pickup.proofType).toBe("delivered_unverified");
+    const returned = await sectionData(
+      ctx({ fulfillments: [evtFulfillment([RETURNED])] as OrderFulfillment[] } as Partial<OrderDetailNode>),
+    );
+    expect("deliveredToVerifiedAddress" in returned).toBe(false);
   });
 });
 
-describe("collectFulfillmentEvidence — collection at pickup point (ID-verified receipt)", () => {
+describe("collectFulfillmentEvidence — collection at pickup point", () => {
   const COLLECTION_SEQUENCE = [
     PICKUP, // 2026-07-01 arrival at serviceställe
     { status: "FAILURE", happenedAt: "2026-07-06T18:16:00Z", message: "Försändelsen har levererats." }, // customer collects
   ];
 
-  it("counts as confirmed receipt (moderate tier + receipt date) but NEVER as address delivery", async () => {
+  it("remains confirmed receipt (moderate tier + receipt date) and emits no retired key", async () => {
     const data = await sectionData(
       ctx({ fulfillments: [evtFulfillment(COLLECTION_SEQUENCE)] as OrderFulfillment[] } as Partial<OrderDetailNode>),
     );
     expect(data.proofType).toBe("delivered_confirmed"); // receipt confirmed
     expect(data.deliveredAt).toBe("2026-07-06T18:16:00Z"); // collection date
-    expect(data.deliveredToVerifiedAddress).toBe(false); // rubric #9 stays off
+    expect("collectedByCustomer" in data).toBe(false);
+    expect("deliveredToVerifiedAddress" in data).toBe(false);
     const f = (data.fulfillments as Array<Record<string, unknown>>)[0];
     expect((f.carrierTracking as Record<string, unknown>).deliveryStatus).toBe("CollectedAtPickup");
   });
@@ -146,7 +163,7 @@ describe("collectFulfillmentEvidence — the real #12121 shape (deliveredAt stam
     { status: "DELIVERED", happenedAt: "2026-05-12T17:27:00Z", message: "Försändelsen har levererats." },
   ];
 
-  it("classifies as CollectedAtPickup, upgrades to STRONG via collectedByCustomer", async () => {
+  it("classifies as CollectedAtPickup and no longer upgrades to STRONG", async () => {
     const data = await sectionData(
       ctx({
         fulfillments: [
@@ -157,8 +174,10 @@ describe("collectFulfillmentEvidence — the real #12121 shape (deliveredAt stam
     const f = (data.fulfillments as Array<Record<string, unknown>>)[0];
     expect((f.carrierTracking as Record<string, unknown>).deliveryStatus).toBe("CollectedAtPickup");
     expect(data.proofType).toBe("delivered_confirmed");
-    expect(data.collectedByCustomer).toBe(true); // categorizer → STRONG
-    expect(data.deliveredToVerifiedAddress).toBe(false); // never an address claim
+    // PR-C1: the inferred collection upgrade is gone. Receipt is still
+    // recognised (proofType + date above); it is simply Moderate now.
+    expect("collectedByCustomer" in data).toBe(false);
+    expect("deliveredToVerifiedAddress" in data).toBe(false);
     expect(data.deliveredAt).toBe("2026-05-12T17:27:00Z"); // receipt date kept
   });
 });

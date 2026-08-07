@@ -325,25 +325,39 @@ describe("rubric — conditional upgrades to strong", () => {
     ).toBe("moderate");
   });
 
-  it("rubric #9 — shipping_tracking delivered_confirmed + deliveredToVerifiedAddress → strong", () => {
+  // PR-C1 (2026-08-07): rubric #9 is retired. `deliveredToVerifiedAddress`
+  // was derived from a billing-vs-shipping city comparison with no AVS input,
+  // so it can no longer lift a confirmed delivery to STRONG. This test now
+  // pins the OPPOSITE of what it used to, deliberately — a historical pack
+  // carrying the key must not re-arm the upgrade.
+  it("RETIRED rubric #9 — deliveredToVerifiedAddress cannot produce strong", () => {
+    for (const field of ["shipping_tracking", "delivery_proof"] as const) {
+      expect(
+        categorizeEvidenceField(field, {
+          proofType: "delivered_confirmed",
+          deliveredToVerifiedAddress: true,
+        }),
+      ).toBe("moderate");
+    }
+  });
+
+  it("delivered_confirmed → moderate, with or without the retired keys", () => {
+    expect(
+      categorizeEvidenceField("shipping_tracking", { proofType: "delivered_confirmed" }),
+    ).toBe("moderate");
     expect(
       categorizeEvidenceField("shipping_tracking", {
         proofType: "delivered_confirmed",
         deliveredToVerifiedAddress: true,
+        collectedByCustomer: true,
       }),
-    ).toBe("strong");
-    expect(
-      categorizeEvidenceField("delivery_proof", {
-        proofType: "delivered_confirmed",
-        deliveredToVerifiedAddress: true,
-      }),
-    ).toBe("strong");
+    ).toBe("moderate");
   });
 
-  it("rubric #9 — delivered_confirmed alone (no verified address) → moderate", () => {
+  it("a genuine signature still reaches strong — PR-C1 preserves it", () => {
     expect(
-      categorizeEvidenceField("shipping_tracking", { proofType: "delivered_confirmed" }),
-    ).toBe("moderate");
+      categorizeEvidenceField("delivery_proof", { proofType: "signature_confirmed" }),
+    ).toBe("strong");
   });
 
   it("strict supporting-only fields stay supporting even with rich payload", () => {
@@ -468,20 +482,32 @@ describe("signal-level deduplication (#11)", () => {
   });
 });
 
-describe("delivered_confirmed strength upgrades (rubric #9 + collection sibling)", () => {
-  it("collectedByCustomer upgrades delivered_confirmed to STRONG (ID-verified collection)", async () => {
+describe("PR-C1 — the two retired delivery upgrades cannot produce STRONG", () => {
+  it("collectedByCustomer is inferred from carrier message text and no longer upgrades", async () => {
     const { categorizeEvidenceField } = await import("@/lib/argument/canonicalEvidence");
-    expect(
-      categorizeEvidenceField("delivery_proof", {
-        proofType: "delivered_confirmed",
-        collectedByCustomer: true,
-      }),
-    ).toBe("strong");
-    expect(
-      categorizeEvidenceField("delivery_proof", {
-        proofType: "delivered_confirmed",
-        collectedByCustomer: false,
-      }),
-    ).toBe("moderate");
+    for (const collectedByCustomer of [true, false]) {
+      expect(
+        categorizeEvidenceField("delivery_proof", {
+          proofType: "delivered_confirmed",
+          collectedByCustomer,
+        }),
+      ).toBe("moderate");
+    }
+  });
+
+  it("neither retired key, alone or together, reaches strong on either delivery field", async () => {
+    const { categorizeEvidenceField } = await import("@/lib/argument/canonicalEvidence");
+    const combos = [
+      { deliveredToVerifiedAddress: true },
+      { collectedByCustomer: true },
+      { deliveredToVerifiedAddress: true, collectedByCustomer: true },
+    ];
+    for (const field of ["delivery_proof", "shipping_tracking"] as const) {
+      for (const extra of combos) {
+        expect(
+          categorizeEvidenceField(field, { proofType: "delivered_confirmed", ...extra }),
+        ).not.toBe("strong");
+      }
+    }
   });
 });

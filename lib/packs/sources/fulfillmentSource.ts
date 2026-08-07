@@ -233,16 +233,6 @@ function confirmedReceipt(
   );
 }
 
-/** Doorstep delivery to the customer's own address, strictly — the ONLY
- *  state allowed to feed the rubric-#9 "delivered to verified address"
- *  claim. A collection is receipt, not address delivery. */
-function confirmedAddressDelivery(
-  f: OrderFulfillment,
-  s: FulfillmentDeliveryState,
-): boolean {
-  return s.current?.status === "Delivered" && !!(s.current.at || f.deliveredAt);
-}
-
 function extractTrackingData(
   fulfillment: OrderFulfillment,
   order: OrderDetailNode,
@@ -430,36 +420,25 @@ function resolveSignedByName(
   return null;
 }
 
-/** True when the order's shipping address is a legitimate "verified"
- *  customer address — billing and shipping align on city + country (the
- *  same match the order collector uses for `billing_address_match`, see
- *  lib/packs/sources/orderSource.ts). We require both addresses to be
- *  present and consistent; a cross-border or city mismatch is exactly the
- *  fraud pattern this flag must NOT vouch for. Conservative: any missing
- *  field → false. */
-function shippedToVerifiedAddress(order: OrderDetailNode): boolean {
-  const b = order.billingAddress;
-  const s = order.shippingAddress;
-  if (!b || !s) return false;
-  const bCountry = (b.countryCode ?? "").trim().toUpperCase();
-  const sCountry = (s.countryCode ?? "").trim().toUpperCase();
-  const bCity = (b.city ?? "").trim().toLowerCase();
-  const sCity = (s.city ?? "").trim().toLowerCase();
-  if (!bCountry || !sCountry || !bCity || !sCity) return false;
-  return bCountry === sCountry && bCity === sCity;
-}
-
-/** Whether ANY fulfillment's reconciled state is a true DOORSTEP delivery
- *  to the recipient's address with a corroborating timestamp. Collection
- *  at a pickup point / neighbour / returned do NOT count — collection is
- *  confirmed receipt (see confirmedReceipt) but never an address-delivery
- *  claim — and neither does a delivery a NEWER return event superseded. */
-function hasFinalDelivery(
-  fulfillments: OrderFulfillment[],
-  states: DeliveryStates,
-): boolean {
-  return fulfillments.some((f) => confirmedAddressDelivery(f, stateOf(states, f)));
-}
+/* RETIRED 2026-08-07 (PR-C1) — `shippedToVerifiedAddress`, `hasFinalDelivery`
+ * and `confirmedAddressDelivery` are deleted, not disabled.
+ *
+ * `shippedToVerifiedAddress` compared Shopify's OWN billing and shipping
+ * addresses on city + country — two merchant-held addresses — and fed
+ * `deliveredToVerifiedAddress`, which upgraded a confirmed delivery to STRONG
+ * and licensed the issuer-facing "delivered to the verified address" claim.
+ * The rule it purported to satisfy (Visa §4 Compelling Evidence chart Item 3:
+ * "delivered to the same physical address for which the Merchant received an
+ * AVS match of Y or M") requires an AVS result. This derivation read no AVS
+ * code at any point. Measured on production before removal: 60 packs asserted
+ * a verified address, and on 54 of them the issuer's own AVS response was `N`.
+ *
+ * Deleted rather than hard-wired to `false` on purpose: a branch that can never
+ * be true still reads as live logic to the next author (the `locationMatch ===
+ * "match"` branch in `ip_location_check` sat dead for a month for exactly that
+ * reason). Reintroduction requires the four-part evidentiary contract recorded
+ * in `docs/technical.md` § Delivery evidence, and its own approval.
+ */
 
 /** §5.6 — does the delivered portion cover the disputed merchandise?
  *  "complete" = delivered quantity ≥ ordered quantity; "partial" = some
@@ -494,48 +473,21 @@ function resolveDeliveryCoverage(
   return deliveredQty >= orderQty ? "complete" : "partial";
 }
 
-/** Rubric #9 flag consumed by the canonical categorizer
- *  (lib/argument/canonicalEvidence.ts): `delivered_confirmed` upgrades to
- *  STRONG when delivery landed at the verified customer address. True only
- *  when there is a genuine FINAL delivery AND the shipping address is
- *  verified (billing/shipping aligned, no cross-border/city mismatch) AND
- *  the delivered shipments cover the disputed merchandise (§5.6 — a
- *  single delivered package never vouches for a partially-delivered
- *  order). A pickup-point, neighbour, or returned parcel never sets this. */
-function resolveDeliveredToVerifiedAddress(
-  order: OrderDetailNode,
-  states: DeliveryStates,
-  coverage: DeliveryCoverage,
-): boolean {
-  return (
-    hasFinalDelivery(order.fulfillments, states) &&
-    shippedToVerifiedAddress(order) &&
-    (coverage === "complete" || coverage === "unknown")
-  );
-}
-
-/** Decisive-receipt sibling of rubric #9 for COLLECTIONS: the customer
- *  personally collected the parcel at the pickup point (ID/BankID at
- *  the counter in SE/Nordic networks) — receipt tied to the recipient
- *  even more directly than a doorstep drop. Same coverage gate as the
- *  address flag: one collected package never vouches for a
- *  partially-delivered order. */
-function resolveCollectedByCustomer(
-  order: OrderDetailNode,
-  states: DeliveryStates,
-  coverage: DeliveryCoverage,
-): boolean {
-  return (
-    order.fulfillments.some((f) => {
-      const s = stateOf(states, f);
-      return (
-        s.current?.status === "CollectedAtPickup" &&
-        !!(s.current.at || f.deliveredAt)
-      );
-    }) &&
-    (coverage === "complete" || coverage === "unknown")
-  );
-}
+/* RETIRED 2026-08-07 (PR-C1) — `resolveCollectedByCustomer` is deleted.
+ *
+ * It set a STRONG upgrade from `state.current.status === "CollectedAtPickup"`
+ * plus a timestamp. That status comes from `deliveryEventClassifier` matching
+ * carrier event MESSAGE TEXT against `COLLECTED_ROOTS`. No signature, no
+ * identification, no BankID artifact was read or required — `signedBy` is a
+ * separate field and was null on every production pack carrying the flag. The
+ * "collection requires photo ID / BankID in SE/Nordic networks" justification
+ * was a jurisdictional assumption in a comment, not data in the payload.
+ *
+ * Collection at a pickup point remains CONFIRMED RECEIPT (`confirmedReceipt`
+ * still admits it, so `proofType` is still `delivered_confirmed` → Moderate).
+ * Only the inferred STRONG upgrade is gone. A genuine signature / POD name
+ * still yields `signature_confirmed` → Strong, unchanged.
+ */
 
 export async function collectFulfillmentEvidence(
   ctx: BuildContext,
@@ -590,18 +542,11 @@ export async function collectFulfillmentEvidence(
         // cites "delivered {date}" / signature in bank-facing prose.
         deliveredAt: resolveDeliveredAt(order.fulfillments, states),
         signedByName: resolveSignedByName(order.fulfillments, states),
-        // Rubric #9 — canonical categorizer upgrades delivered_confirmed to
-        // STRONG when true. Requires final delivery + verified address +
-        // disputed-merchandise coverage (see resolveDeliveredToVerifiedAddress).
-        deliveredToVerifiedAddress: resolveDeliveredToVerifiedAddress(
-          order,
-          states,
-          coverage,
-        ),
-        // Decisive-receipt sibling for collections — the canonical
-        // categorizer upgrades delivered_confirmed → STRONG when true
-        // (in-person collection, ID-verified in SE/Nordic networks).
-        collectedByCustomer: resolveCollectedByCustomer(order, states, coverage),
+        // NOTE (PR-C1, 2026-08-07): `deliveredToVerifiedAddress` and
+        // `collectedByCustomer` are NOT written here any more. Both were
+        // unsupported STRONG upgrades — see the retirement notes above and
+        // `lib/evidence/model/retiredKeys.ts`. Historical packs still carry
+        // them; every derivation strips them at the boundary.
         // §5.6 — complete | partial | none | unknown. Package-level rows
         // below stay citable when only part of the order is confirmed.
         deliveryCoverage: coverage,

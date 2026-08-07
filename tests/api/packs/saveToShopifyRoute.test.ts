@@ -26,6 +26,11 @@ vi.mock("@/lib/audit/logEvent", () => ({
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { POST } from "@/app/api/packs/[packId]/save-to-shopify/route";
+import {
+  CLEAN_FACTS,
+  RETIRED_FACTS,
+  narrativeJson,
+} from "@/tests/fixtures/defencePackageShapes";
 
 const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockLogAuditEvent = vi.mocked(logAuditEvent);
@@ -38,6 +43,8 @@ interface ScenarioRows {
   pack: Record<string, unknown> | null;
   dispute?: Record<string, unknown> | null;
   jobInsertError?: { message: string } | null;
+  /** PR-C1: latest defence_packages candidate, if any. */
+  defencePackage?: Record<string, unknown> | null;
 }
 
 interface ScenarioSpies {
@@ -48,11 +55,29 @@ interface ScenarioSpies {
 /**
  * Wires a per-table Supabase mock that mirrors the route's actual
  * call sequence:
- *   1. evidence_packs.select(...).eq(id).single  → packRow
- *   2. disputes.select(...).eq(id).single        → disputeRow
- *   3. jobs.insert({...})                         → ok | error
- *   4. evidence_packs.update({...}).eq(id)        → ok
+ *   1. evidence_packs.select(...).eq(id).single           → packRow
+ *   2. defence_packages.select(...).order.limit.maybeSingle → latest candidate
+ *   3. disputes.select(...).eq(id).single                 → disputeRow
+ *   4. jobs.insert({...})                                  → ok | error
+ *   5. evidence_packs.update({...}).eq(id)                 → ok
+ *
+ * Step 2 is the PR-C1 candidate preflight. A missing candidate BLOCKS (the
+ * worker hard-requires a final package), so every non-blocking scenario
+ * supplies `SAFE_PACKAGE` — which must now be genuinely FILEABLE, not merely
+ * content-safe. The earlier fixture carried no `status`, no `validation_status`
+ * and no `pdf_path`, so the happy path was proving that a candidate the worker
+ * would certainly refuse could still be enqueued.
  */
+
+const SAFE_PACKAGE = {
+  id: "pkg-safe",
+  version: 1,
+  status: "final",
+  validation_status: "ok",
+  pdf_path: "shop-1/dispute-1/v1.pdf",
+  facts_json: CLEAN_FACTS,
+  narrative_json: narrativeJson({ executiveSummary: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890)." }),
+};
 function mockSupabase(rows: ScenarioRows): ScenarioSpies {
   const jobsInsert = vi.fn().mockResolvedValue({
     data: null,
@@ -80,6 +105,18 @@ function mockSupabase(rows: ScenarioRows): ScenarioSpies {
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
           data: rows.dispute ?? null,
+          error: null,
+        }),
+      };
+    }
+    if (table === "defence_packages") {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: rows.defencePackage === undefined ? SAFE_PACKAGE : rows.defencePackage,
           error: null,
         }),
       };
@@ -233,6 +270,121 @@ describe("POST /api/packs/:packId/save-to-shopify — happy path side effects", 
       }),
     );
   });
+
+  // ── PR-C1: an unsafe defence-package candidate cannot be saved manually ──
+  it("returns 422 PACKAGE_REVIEW_REQUIRED and enqueues nothing when the latest package asserts an address delivery", async () => {
+    const spies = mockSupabase({
+      pack: {
+        id: packId, shop_id: shopId, dispute_id: disputeId,
+        status: "ready", completeness_score: 95, submission_readiness: "ready",
+      },
+      dispute: { id: disputeId, dispute_evidence_gid: "gid://shopify/DisputeEvidence/12345" },
+      defencePackage: {
+        id: "pkg-3",
+        version: 3,
+        facts_json: CLEAN_FACTS,
+        narrative_json: narrativeJson({ fulfillmentArgument: "The parcel was delivered to the cardholder's verified address on 12 May 2026." }),
+      },
+    });
+
+    const res = await POST(makeReq({}), params);
+    const body = await res.json();
+
+    expect(res.status).toBe(422);
+    expect(body.error).toBe("PACKAGE_REVIEW_REQUIRED");
+    expect(body.reasons).toContain("affirmative_address_delivery_claim");
+    // Nothing queued, pack status untouched — no path to Shopify opens.
+    expect(spies.jobsInsert).not.toHaveBeenCalled();
+    expect(spies.packsUpdate).not.toHaveBeenCalled();
+    expect(mockLogAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: "defence_package_blocked_unsafe_claim" }),
+    );
+  });
+
+  it("returns 422 when the latest package carries a retired delivery fact", async () => {
+    const spies = mockSupabase({
+      pack: {
+        id: packId, shop_id: shopId, dispute_id: disputeId,
+        status: "ready", completeness_score: 95, submission_readiness: "ready",
+      },
+      dispute: { id: disputeId, dispute_evidence_gid: "gid://shopify/DisputeEvidence/12345" },
+      defencePackage: {
+        id: "pkg-3",
+        version: 3,
+        facts_json: RETIRED_FACTS,
+        narrative_json: narrativeJson({ fulfillmentArgument: "The carrier confirmed delivery on 12 May." }),
+      },
+    });
+
+    const res = await POST(makeReq({}), params);
+    expect(res.status).toBe(422);
+    expect((await res.json()).reasons).toContain("retired_delivery_fact");
+    expect(spies.jobsInsert).not.toHaveBeenCalled();
+  });
+
+  it("a regenerated SAFE version saves normally despite older blocked versions", async () => {
+    // The route reads the LATEST version only — version 4 is the clean rebuild.
+    const spies = mockSupabase({
+      pack: {
+        id: packId, shop_id: shopId, dispute_id: disputeId,
+        status: "ready", completeness_score: 95, submission_readiness: "ready",
+      },
+      dispute: { id: disputeId, dispute_evidence_gid: "gid://shopify/DisputeEvidence/12345" },
+      defencePackage: {
+        ...SAFE_PACKAGE,
+        id: "pkg-4",
+        version: 4,
+        narrative_json: narrativeJson({ fulfillmentArgument: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890)." }),
+      },
+    });
+
+    const res = await POST(makeReq({}), params);
+    expect(res.status).toBe(202);
+    expect(spies.jobsInsert).toHaveBeenCalledTimes(1);
+  });
+
+  /* ── Fileability, not just content safety ────────────────────────────
+   *
+   * `saveToShopifyJob` §3 hard-requires the LATEST defence package to be
+   * `status='final'` with a `pdf_path`. This route used to enqueue on content
+   * safety alone AND stamp the evidence pack `saving`, so a safe draft put the
+   * UI into a save-in-progress state for a job that could never complete.
+   * ----------------------------------------------------------------- */
+
+  const NOT_FILEABLE: Array<[string, Record<string, unknown>, string]> = [
+    ["safe but still a DRAFT", { status: "draft" }, "candidate_not_final"],
+    ["safe but STALE", { status: "stale" }, "candidate_not_final"],
+    ["safe but FAILED", { status: "failed" }, "candidate_not_final"],
+    ["final with NO PDF", { pdf_path: null }, "candidate_missing_pdf"],
+    ["final with an empty PDF path", { pdf_path: "   " }, "candidate_missing_pdf"],
+    [
+      "final whose VALIDATION failed",
+      { validation_status: "failed" },
+      "candidate_validation_not_ok",
+    ],
+  ];
+
+  for (const [name, over, reason] of NOT_FILEABLE) {
+    it(`refuses (${name}) — no job, no 'saving' stamp`, async () => {
+      const spies = mockSupabase({
+        pack: {
+          id: packId, shop_id: shopId, dispute_id: disputeId,
+          status: "ready", completeness_score: 95, submission_readiness: "ready",
+        },
+        dispute: { id: disputeId, dispute_evidence_gid: "gid://shopify/DisputeEvidence/12345" },
+        defencePackage: { ...SAFE_PACKAGE, ...over },
+      });
+
+      const res = await POST(makeReq({}), params);
+      const body = await res.json();
+
+      expect(res.status).toBe(409);
+      expect(body.code).toBe("PACKAGE_NOT_FILEABLE");
+      expect(body.reasons).toContain(reason);
+      expect(spies.jobsInsert).not.toHaveBeenCalled();
+      expect(spies.packsUpdate).not.toHaveBeenCalled();
+    });
+  }
 
   it("accepts confirmWarnings: true to bypass the warnings gate", async () => {
     const spies = mockSupabase({

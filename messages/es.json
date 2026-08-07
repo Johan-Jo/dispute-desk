@@ -920,7 +920,9 @@
           "superseded": "Sustituido",
           "validationFailed": "Falló la validación",
           "skipped": "Omitido"
-        }
+        },
+        "reviewRequiredTitle": "Se requiere revisión antes de poder presentar este paquete",
+        "reviewRequiredBody": "DisputeDesk no puede presentar este paquete de defensa tal como está creado. Vuelve a generarlo para obtener una versión que se pueda enviar. La vista previa y Volver a generar siguen disponibles; Finalizar y Enviar no están disponibles hasta que una versión regenerada supere la revisión."
       },
       "sections": {
         "status": {
@@ -1318,7 +1320,7 @@
     },
     "decisiveFamilies": {
       "fraud": "verificación del pago, entrega confirmada o un reconocimiento claro de compra por parte del cliente",
-      "delivery": "confirmación de firma del transportista, prueba de entrega en la dirección verificada del titular o reconocimiento de recepción del cliente",
+      "delivery": "confirmación de firma del transportista, un registro de entrega del transportista con seguimiento o reconocimiento de recepción del cliente",
       "product": "la ficha del producto tal como se anunció, divulgación de la política de reembolso o correspondencia con el cliente",
       "refund": "procesamiento documentado del reembolso, cronograma del reembolso o correspondencia con el cliente",
       "subscription": "divulgación de la política de cancelación, cronograma de cancelación o correspondencia con el cliente",

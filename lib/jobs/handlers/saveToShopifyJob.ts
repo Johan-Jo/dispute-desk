@@ -35,6 +35,10 @@ import {
   MAX_FILE_SIZE_BYTES,
 } from "@/lib/shopify/disputeFileUpload";
 import { downloadDefencePdf } from "@/lib/defence/storage";
+import {
+  assessPackageCandidateSafety,
+  packageBlockSummary,
+} from "@/lib/defence/packageSafety";
 import { merchantNameFromDomain } from "@/lib/defence/orderContext";
 import {
   verifyEvidenceReadback,
@@ -176,7 +180,7 @@ export async function handleSaveToShopify(
 
   const { data: dpkg } = await sb
     .from("defence_packages")
-    .select("id, version, status, pdf_path")
+    .select("id, version, status, pdf_path, facts_json, narrative_json")
     .eq("dispute_id", pack.dispute_id)
     .order("version", { ascending: false })
     .limit(1)
@@ -201,6 +205,40 @@ export async function handleSaveToShopify(
       ok: false,
       retriable: false,
       reason: "Defence package is final but has no PDF path. Regenerate the package and try again.",
+    };
+  }
+
+  /* ── 3b. PR-C1 candidate-safety gate ──
+   *
+   * The LATEST candidate is the only one considered (the query above), so a
+   * regenerated safe version supersedes a blocked one naturally and this gate
+   * never falls back to an older version. Non-retriable: retrying cannot make
+   * a persisted narrative safe — only regeneration can. */
+  const safety = assessPackageCandidateSafety({
+    factsJson: dpkg.facts_json,
+    narrativeJson: dpkg.narrative_json,
+  });
+  if (!safety.safe) {
+    await logAuditEvent({
+      shopId: pack.shop_id,
+      disputeId: pack.dispute_id,
+      packId,
+      actorType: "system",
+      eventType: "defence_package_blocked_unsafe_claim",
+      eventPayload: {
+        packageId: dpkg.id,
+        version: dpkg.version,
+        reasons: safety.reasons,
+        retiredKeys: safety.retiredKeys,
+        trigger: "save_to_shopify",
+      },
+    });
+    return {
+      ok: false,
+      retriable: false,
+      reason:
+        `defence_package_unsafe_claim: ${safety.reasons.join(", ")}. ` +
+        packageBlockSummary(safety),
     };
   }
 

@@ -48,6 +48,8 @@ const EXPECTED_CALL_SITES: Record<string, string> = {
     "read-only analysis — replays the gates buildPack persisted",
   "scripts/evidence-model/reconcileImpact.analysis.ts":
     "read-only analysis — replays the gates buildPack persisted",
+  "scripts/evidence-model/verifiedAddressContainment.analysis.ts":
+    "read-only analysis — replays the gates buildPack persisted",
 };
 
 function walk(dir: string, out: string[] = []): string[] {

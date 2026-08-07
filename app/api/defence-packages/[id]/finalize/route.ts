@@ -14,6 +14,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
+import {
+  preflightBlocks,
+  preflightCandidate,
+  preflightHttpRefusal,
+  preflightNamedCandidate,
+  preflightReasons,
+} from "@/lib/defence/packageSafety";
 
 export const runtime = "nodejs";
 
@@ -55,6 +62,51 @@ export async function POST(
     return NextResponse.json(
       { error: "Cannot finalize — no PDF has been rendered yet." },
       { status: 409 },
+    );
+  }
+
+  /* ── PR-C1 candidate-safety preflight, BEFORE any status mutation ──
+   *
+   * Finalizing is a real authorization step, not cosmetic: it promotes the
+   * draft to `final` AND supersedes the prior final, so an unsafe draft that
+   * reaches this route retires the last good package and leaves the dispute
+   * with a newest candidate the worker will refuse to file.
+   *
+   * Suppressing the Finalize button is not an authorization boundary — a stale
+   * browser tab, a direct request, a race with a regeneration, or a future UI
+   * all reach this handler. The check has to live here.
+   *
+   * The currency check matters for the same reason it does on submit: this
+   * route is named-package, but downstream selection is latest-version. */
+  const preflight = await preflightNamedCandidate(sb, {
+    packageId: pkg.id as string,
+    disputeId: pkg.dispute_id as string,
+  });
+  if (preflightBlocks(preflight)) {
+    // A safety-block audit, deliberately NOT `defence_package_finalized`.
+    await logAuditEvent({
+      shopId: pkg.shop_id,
+      disputeId: pkg.dispute_id,
+      packId: pkg.source_pack_id,
+      actorType: "merchant",
+      eventType: "defence_package_blocked_unsafe_claim",
+      eventPayload: {
+        packageId: pkg.id,
+        version: preflightCandidate(preflight)?.version ?? pkg.version,
+        outcome: preflight.kind,
+        reasons: preflightReasons(preflight),
+        trigger: "finalize",
+      },
+    });
+    const refusal = preflightHttpRefusal(preflight);
+    return NextResponse.json(
+      {
+        error: refusal.code,
+        code: refusal.code,
+        reasons: refusal.reasons,
+        message: refusal.message,
+      },
+      { status: refusal.status },
     );
   }
 

@@ -3004,13 +3004,13 @@ Per-signal verdicts come exclusively from `categorizeEvidenceField()` in `lib/ar
 6. `customer_communication` — `payload.customerConfirmsOrder === true`.
 7. `activity_log` — `decisiveSessionProof === true` OR `digitalAccessUsed === true`.
 8. `refund_policy` / `shipping_policy` / `cancellation_policy` — `acceptedAtCheckout === true` AND `acceptanceTimestamp` set.
-9. `shipping_tracking` / `delivery_proof` — `proofType === "delivered_confirmed"` AND `deliveredToVerifiedAddress === true`.
+9. ~~`shipping_tracking` / `delivery_proof` — `proofType === "delivered_confirmed"` AND `deliveredToVerifiedAddress === true`.~~ **RETIRED 2026-08-07 (PR-C1).** See *Retired: the verified-address delivery upgrade* below.
 10. `tds_authentication` — `tdsVerified === true` (merchant-confirmed manual upload only; the auto-collector never sets this).
 11. `billing_address_match` — `match === true`.
 
 **Moderate (weight 2) — useful but not decisive alone:**
 - `avs_cvv_match` — exactly one of AVS / CVV matches.
-- `shipping_tracking` / `delivery_proof` — `proofType === "delivered_confirmed"` without `deliveredToVerifiedAddress`.
+- `shipping_tracking` / `delivery_proof` — `proofType === "delivered_confirmed"`. Always moderate since PR-C1; the verified-address and collected-at-pickup upgrades are retired.
 - `ip_location_check` — clean match, no VPN/proxy/hosting flags, `bankEligible !== false`.
 - `device_session_consistency` — `consistent === true` only.
 - `tds_authentication` — `tdsAuthenticated === true` AND `verifiedSource === "shopify_receipt"` (auto-collected from `OrderTransaction.receiptJson` — see below).
@@ -4772,7 +4772,188 @@ A template item is marked **automatic** only when a current collector truly prod
 | `shipping_tracking` | Carrier tracking number + status from fulfillment | `lib/packs/sources/fulfillmentSource.ts` | Automatic when shipped |
 | `delivery_proof` | Carrier delivery status (with signature/photo when provided) | `lib/packs/sources/fulfillmentSource.ts` | Automatic when shipped |
 
-> **Delivery date in the bank narrative.** `fulfillmentSource.ts` lifts the best confirmed delivery timestamp (`resolveDeliveredAt` — Shopify `OrderFulfillment.deliveredAt`, else a tracking-app metafield's `deliveredAtTracking`) and any signature (`resolveSignedByName` — a tracking-app metafield `signedByName`, else a native carrier event signature via `extractNativeSignature`, so PostNord-style "signed by NAME" event messages also count) to the **top level** of the fulfillment section `data`, alongside `proofType`. The fact classifier (`lib/defence/factClassifier.ts`, `delivery_proof`/`shipping_tracking` branch) reads `p.deliveredAt` / `p.signedByName` and carries them into the classified `EvidenceFact`. The narrative writer prompt (`lib/defence/narrativeWriter.ts`, rule 7) already instructs the LLM to quote a concrete delivery date — e.g. *"delivered 2026-05-12 to the verified address"* — when the approved fact carries one. Previously the date stayed nested under `data.fulfillments[]` and never reached the rebuttal, so a delivered order proved delivery (Moderate/Strong badge) without the narrative stating *when*. Applies to every reason code, not just `credit_not_processed`. `delivery_proof` is now also a **recommended** (non-blocking) checklist row on `credit_not_processed` — delivery is secondary evidence for a refund dispute ("customer received and kept the goods, so no refund was owed"); `refund_record` stays the required primary.
+### Retired: the verified-address delivery upgrade (PR-C1, 2026-08-07)
+
+`deliveredToVerifiedAddress` and `collectedByCustomer` were removed from the collector, the
+categorizer, the typed payload, the fact extractor, and the prompt. Both are now **retired payload
+keys** (`lib/evidence/model/retiredKeys.ts`), stripped at the boundary of every derivation.
+
+**Why.** `deliveredToVerifiedAddress` was derived by `shippedToVerifiedAddress()`, which compared
+Shopify's own `billingAddress` and `shippingAddress` on city and country — two merchant-held
+addresses. **The derivation accepted no legitimate AVS-address contract: it read no AVS result code
+at any point.** The rule it purported to satisfy is Visa §4 Compelling Evidence chart Item 3
+(register `R-E`, V-PRIMARY): *"evidence that the item was delivered to the same physical address for
+which the Merchant received an AVS match of Y or M."* Measured on production before removal: 60
+packs asserted a verified address, and on **54 of them the issuer's own AVS response was `N`** — no
+address match. This closes the open Phase 0 note on `policy-matrix-v0.3.md` line 32 ("verify which
+AVS codes our verified-address derivation accepts"): **none**.
+
+`collectedByCustomer` was set purely from a carrier event message classified as
+`collected_at_pickup`. No signature, identification or BankID artifact was read or required; the
+"ID-verified collection" premise was a jurisdictional assumption in a comment.
+
+**What changed.** `delivered_confirmed` is **Moderate**, always. `signature_confirmed` — an
+independently sourced signature or POD name — is still **Strong** and is untouched. Delivery prose
+may cite carrier, tracking number, tracking URL, delivery status and delivery date; it may not state
+which physical address received the parcel.
+
+**Enforcement is structural, not lexical.** `lib/defence/claimCapabilities.ts` derives a typed
+`ClaimCapability` set from the approved facts; only held capabilities reach the prompt (rule 14), and
+`validateNarrative` re-derives them independently and rejects any section making an unheld claim
+(`unauthorized_claim`). `address_delivery` is underivable from any fact the system can currently
+produce.
+
+Phrase detection is defence in depth — it decides *whether a sentence makes the claim*, never
+*whether the claim is allowed*. A sentence coupling a delivery term with a physical destination (an
+address noun, a paraphrase such as "as instructed by the buyer", or a literal street address) is an
+address-delivery claim regardless of wording, and ambiguous language **fails closed**. Negation is
+**predicate-scoped**: only a modelled denial attached to a transport/receipt verb, an evidentiary
+verb or an evidence noun counts. A flat word list did not survive review — `without delay`,
+`without incident` and `was not damaged when it was delivered to the billing address` all read as
+negation of the destination claim, which none of them are. `without` is no longer a negation marker
+at all; a scoped prohibition ("we do not claim that…") covers only its own clause, so an assertion
+joined with `and` is not exempted; and double negatives ("there is no question that…") are
+affirmations. Adversarial cases are pinned in
+`lib/defence/__tests__/claimCapabilities.test.ts`. A prohibited claim gets one bounded repair attempt through the existing validation-retry
+path in `buildDefencePackageJob`; if it still fails the package is marked `failed` and never filed.
+
+**Every enqueue site is gated, not just the worker.** `lib/defence/packageSafety.ts` exposes one
+predicate plus two preflight loaders (`preflightLatestCandidate`, `preflightNamedCandidate`). They
+are consulted BEFORE any enqueue or status write by: the embedded Review & Submit endpoint
+(`/api/defence-packages/:id/submit`), the **finalize endpoint**
+(`/api/defence-packages/:id/finalize`), the portal approval endpoint (`/api/packs/:packId/approve`),
+the manual save endpoint (`/api/packs/:packId/save-to-shopify`), `finalizeAndEnqueueSave` (which
+covers both `buildDefencePackageJob` and `reconcileParkedAutoDisputes`), the auto-save branch of
+`evaluateAndMaybeAutoSave`, the deadline cron, and the workspace readiness projection.
+`saveToShopifyJob` keeps its own check as the final race-safe guard immediately before the PDF
+download and upload.
+
+**Finalization is an authorization step and happens in exactly one place.** `buildDefencePackageJob`
+persists every newly rendered package as a **draft** and writes
+`defence_package_draft_generated`; in auto mode it then calls `finalizeAndEnqueueSave`, which
+preflights the candidate and only then promotes it to `final`, supersedes the prior final, writes
+`defence_package_finalized`, and enqueues the save. Before this ordering the handler wrote `final`
+and logged the finalization audit BEFORE the preflight ran, and discarded the helper's return value
+— so a refusal left a final-but-unfileable newest candidate, a possibly superseded prior final, an
+audit trail claiming approval, and a job result of `{ ok: true }`. Proven end-to-end in
+`lib/jobs/handlers/__tests__/buildDefencePackageJobFinalizeOrdering.test.ts`.
+
+**Outcomes are classified, not collapsed.** `PreflightOutcome` is a discriminated union with exactly
+one proceeding member (`safe`); the others are `blocked` (a content verdict), `missing`,
+`not_current`, `not_fileable` and `error`. `finalizeAndEnqueueSave` maps them to
+`content_block` / `pending` / `stale` / `transient`, and **only a content block** raises the
+`package_review_required` attention reason or increments the reconcile `blocked` counter — the rest
+increment `deferred` and are retried. Collapsing them meant a Supabase timeout told the merchant to
+regenerate a package that was fine, and reported an outage as a fleet of unsafe packages.
+`preflightHttpRefusal` is the single HTTP mapping for all four merchant endpoints:
+`422 PACKAGE_REVIEW_REQUIRED` for a content verdict / missing / non-current,
+`409 PACKAGE_NOT_FILEABLE` for a lifecycle refusal, `503 PACKAGE_CHECK_UNAVAILABLE` for a failed
+check (which never says "regenerate").
+
+**Content-safe is not the same as fileable.** `saveToShopifyJob` §3 hard-requires the LATEST defence
+package to be `status='final'` with a `pdf_path`, so the two pack-level routes pass
+`requireFileable: true` and additionally require `validation_status = 'ok'`. Without it a safe
+*draft* (or a `final` with no PDF) was approved and enqueued, and the manual-save route also stamped
+the evidence pack `saving` — a save-in-progress UI for a job the worker was always going to refuse.
+Neither pack route finalizes on the merchant's behalf; approval is the finalize endpoint's job,
+because that is the path that performs the safety-gated promotion.
+
+The named-package endpoints additionally prove the package they were given is still the newest
+version (`candidate_not_current`). They enqueue against the source pack and the worker re-selects
+the latest row, so judging only the named row would let a merchant approve v3 while v4 is what gets
+filed.
+
+**Unreadable candidates fail closed, against the exact persisted schema.** `facts_json` and
+`narrative_json` are accepted only in the shape production actually holds, measured read-only at KEY
+and TYPE level over all 280 candidates / 2 576 fact objects / 2 169 narrative sections at
+`2026-08-07T17:55:11Z` (schema v1, `PACKAGE_SCHEMA_VERSION`):
+
+- `facts_json` — 241 × array of objects, each carrying **exactly** the thirteen `EvidenceFact` keys
+  (5 strings, 5 booleans, `value` object, `sourceRef` string|null, `confidence` null); 39 × `null`.
+  Unknown keys are **rejected**: an added field must arrive with a parser update and a fresh census.
+- `narrative_json` — 241 × object carrying **all eleven** top-level keys (the nine sections plus
+  `omittedSections` and `warnings`), every section exactly `{ text: string, usedFactIds: string[] }`,
+  `omittedSections` elements exactly `{ sectionKey, reason }` with `sectionKey` naming a real
+  section, `warnings` elements strings; 39 × `null`.
+
+All 39 nulls are `failed` (37), `skipped` (1) and `stale` (1) — none final or submitted — so failing
+closed on them blocks nothing otherwise fileable. Anything else yields `unreadable_facts_json` /
+`unreadable_narrative_json` and is refused: a final PDF whose supporting JSON cannot be inspected
+carries an unknown claim, and an unknown claim may not be filed. Two earlier revisions were looser
+(container-only, then ten-of-thirteen fields with a one-section narrative), and the tests that
+certified them used fixtures production has never held; all fixtures now come from
+`tests/fixtures/defencePackageShapes.ts`.
+
+**Historical packages are blocked, not rewritten.** The predicate is candidate-based. A candidate is unsafe when its persisted facts carry a retired key, its
+persisted narrative makes an affirmative *or* ambiguous address-delivery claim, or either JSON is
+unreadable. Unsafe candidates stay viewable but are never saved, forwarded, auto-filed or
+deadline-selected; Finalize / Submit / Resubmit are disabled in the workspace with a review-required
+banner, while Preview and Regenerate remain available.
+
+**Measured block population**, one census at `2026-08-07T18:24:16.273Z` over all 280 persisted
+candidates, under the strict schema parser and the predicate-scoped detector (a version can appear
+in several reason buckets, so the buckets do not sum to the union):
+
+| population | versions | disputes |
+|---|---|---|
+| `retired_delivery_fact` | 162 | 72 |
+| `affirmative_address_delivery_claim` | 157 | 75 |
+| `ambiguous_address_delivery_claim` | 134 | 70 |
+| `unreadable_facts_json` | 39 | 38 |
+| `unreadable_narrative_json` | 39 | 38 |
+| **deduplicated union (blocked)** | **212** | **91** |
+| safe (may proceed) | 68 | — |
+
+The union and the safe count are unchanged from the previous census; the detector correction only
+moves versions between the affirmative and ambiguous buckets (+15 / −4), which is the expected
+shape of "stop reading an unrelated qualifier as negation".
+
+Union by dispute state — mutually exclusive, reconciles to 91, `sent` meaning
+`disputes.submitted_at` is set (Shopify's `evidenceSentOn`):
+
+| state | disputes |
+|---|---|
+| `not_saved`, not sent | 67 |
+| `saved_to_shopify`, not yet forwarded | 2 |
+| `saved_to_shopify`, forwarded | 1 |
+| `submitted_confirmed`, forwarded | 21 |
+
+By shop: blume-box 191 versions / 83 disputes, cay-collective 19 / 6, surasvenne 2 / 2. By package
+status: draft 107, failed 43, stale 37, submitted 20, superseded 4, skipped 1. Only 7 packages are
+blocked by ambiguity alone, and none by unreadable facts alone. The block is **candidate-based**: selectors read the latest version only, so a
+regenerated safe version becomes usable immediately and an older unsafe version never blocks the
+dispute permanently — and no selector may search backwards for a "newest safe" version, because the
+older versions are the unsafe ones. Nothing already saved in Shopify is altered automatically.
+
+**Calibration.** The scoring impact is measured by a committed, read-only harness —
+`scripts/evidence-model/verifiedAddressContainment.analysis.ts`, run with
+`npm run analysis:evidence -- scripts/evidence-model/verifiedAddressContainment.analysis.ts`. It
+scores every `ready` pack twice through the REAL categorizer and scorer, differing only in whether
+the retired upgrade is presented, so neither arm re-implements the engine. Run at
+`2026-08-07T18:28:08.429Z` over 81 packs:
+
+| measure | before | after |
+|---|---|---|
+| delivery signal grade | strong 51, moderate 4, supporting 2 | strong 0, moderate 55, supporting 2 |
+| `avs_cvv_match` grade | strong 8, moderate 64, invalid 8 | **identical** |
+| case strength | — | 3 changes, all `moderate → weak` (`#12936`, `#352501`, `#353605`) |
+| `strong → not-strong` crossings | — | **0** |
+| completeness score sum | 7326 | 7326 (0 per-pack diffs) |
+
+No pack crosses the only threshold that gates behaviour (auto-save files Strong only), and
+completeness is invariant because it is weight/priority driven and reads no evidence category.
+These figures supersede the two earlier runs, whose harness was a scratchpad script that no longer
+exists — which is why this one is in the repository.
+
+**Reintroduction contract.** A future verified-address claim requires all four of: (1) an AVS result
+satisfying the governing `{Y, M}` rule for the observed network; (2) the order's shipping physical
+address proven to be the same complete physical address submitted for AVS — currently impossible,
+`orderSource.redactAddress` discards the street line and truncates the postal code, and Shopify does
+not expose the AVS-submitted address; (3) delivery evidence that actually names the delivery address,
+not a message-classified "Delivered"; (4) sufficient disputed-merchandise coverage. Missing, partial,
+redacted or merely city/country-equal data must return false. Each is an independent approval.
+
+> **Delivery date in the bank narrative.** `fulfillmentSource.ts` lifts the best confirmed delivery timestamp (`resolveDeliveredAt` — Shopify `OrderFulfillment.deliveredAt`, else a tracking-app metafield's `deliveredAtTracking`) and any signature (`resolveSignedByName` — a tracking-app metafield `signedByName`, else a native carrier event signature via `extractNativeSignature`, so PostNord-style "signed by NAME" event messages also count) to the **top level** of the fulfillment section `data`, alongside `proofType`. The fact classifier (`lib/defence/factClassifier.ts`, `delivery_proof`/`shipping_tracking` branch) reads `p.deliveredAt` / `p.signedByName` and carries them into the classified `EvidenceFact`. The narrative writer prompt (`lib/defence/narrativeWriter.ts`, rule 7) instructs the LLM to quote a concrete delivery date — e.g. *"the carrier confirmed delivery on 2026-05-12, tracking 1234567890 (PostNord)"* — when the approved fact carries one. It may **not** state which address received the parcel (rule 14). Previously the date stayed nested under `data.fulfillments[]` and never reached the rebuttal, so a delivered order proved delivery (Moderate/Strong badge) without the narrative stating *when*. Applies to every reason code, not just `credit_not_processed`. `delivery_proof` is now also a **recommended** (non-blocking) checklist row on `credit_not_processed` — delivery is secondary evidence for a refund dispute ("customer received and kept the goods, so no refund was owed"); `refund_record` stays the required primary.
 | `refund_record` | `order.refunds[]` (date, amount, note) from the Shopify order | `lib/packs/sources/orderSource.ts` | Automatic (capability key, not file name) |
 | `refund_policy` | Published refund policy snapshot | `lib/packs/sources/policySource.ts` | Policy-derived |
 | `shipping_policy` | Published shipping policy snapshot | `lib/packs/sources/policySource.ts` | Policy-derived |
