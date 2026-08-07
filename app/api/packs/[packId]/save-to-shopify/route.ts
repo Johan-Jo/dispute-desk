@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
+import {
+  assessPackageCandidateSafety,
+  packageBlockSummary,
+} from "@/lib/defence/packageSafety";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
 
 export const runtime = "nodejs";
@@ -85,6 +89,50 @@ export async function POST(
       { error: "PACK_HAS_WARNINGS", score, readiness, message: "High-impact evidence is missing. Send confirmWarnings: true to proceed." },
       { status: 422 }
     );
+  }
+
+  // PR-C1 — candidate-safety gate on the LATEST defence package. Refused here
+  // as well as in the job so a merchant gets an immediate, explained 422
+  // instead of a queued job that fails silently minutes later. Same predicate,
+  // same latest-candidate rule: regenerating produces a new version that is
+  // evaluated on its own merits.
+  const { data: latestPkg } = await sb
+    .from("defence_packages")
+    .select("id, version, facts_json, narrative_json")
+    .eq("dispute_id", pack.dispute_id)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (latestPkg) {
+    const safety = assessPackageCandidateSafety({
+      factsJson: latestPkg.facts_json,
+      narrativeJson: latestPkg.narrative_json,
+    });
+    if (!safety.safe) {
+      await logAuditEvent({
+        shopId: pack.shop_id,
+        disputeId: pack.dispute_id,
+        packId,
+        actorType: "merchant",
+        eventType: "defence_package_blocked_unsafe_claim",
+        eventPayload: {
+          packageId: latestPkg.id,
+          version: latestPkg.version,
+          reasons: safety.reasons,
+          retiredKeys: safety.retiredKeys,
+          trigger: "manual_save",
+        },
+      });
+      return NextResponse.json(
+        {
+          error: "PACKAGE_REVIEW_REQUIRED",
+          reasons: safety.reasons,
+          message: packageBlockSummary(safety),
+        },
+        { status: 422 },
+      );
+    }
   }
 
   const { data: dispute } = await sb

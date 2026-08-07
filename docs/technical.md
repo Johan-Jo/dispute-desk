@@ -3004,13 +3004,13 @@ Per-signal verdicts come exclusively from `categorizeEvidenceField()` in `lib/ar
 6. `customer_communication` — `payload.customerConfirmsOrder === true`.
 7. `activity_log` — `decisiveSessionProof === true` OR `digitalAccessUsed === true`.
 8. `refund_policy` / `shipping_policy` / `cancellation_policy` — `acceptedAtCheckout === true` AND `acceptanceTimestamp` set.
-9. `shipping_tracking` / `delivery_proof` — `proofType === "delivered_confirmed"` AND `deliveredToVerifiedAddress === true`.
+9. ~~`shipping_tracking` / `delivery_proof` — `proofType === "delivered_confirmed"` AND `deliveredToVerifiedAddress === true`.~~ **RETIRED 2026-08-07 (PR-C1).** See *Retired: the verified-address delivery upgrade* below.
 10. `tds_authentication` — `tdsVerified === true` (merchant-confirmed manual upload only; the auto-collector never sets this).
 11. `billing_address_match` — `match === true`.
 
 **Moderate (weight 2) — useful but not decisive alone:**
 - `avs_cvv_match` — exactly one of AVS / CVV matches.
-- `shipping_tracking` / `delivery_proof` — `proofType === "delivered_confirmed"` without `deliveredToVerifiedAddress`.
+- `shipping_tracking` / `delivery_proof` — `proofType === "delivered_confirmed"`. Always moderate since PR-C1; the verified-address and collected-at-pickup upgrades are retired.
 - `ip_location_check` — clean match, no VPN/proxy/hosting flags, `bankEligible !== false`.
 - `device_session_consistency` — `consistent === true` only.
 - `tds_authentication` — `tdsAuthenticated === true` AND `verifiedSource === "shopify_receipt"` (auto-collected from `OrderTransaction.receiptJson` — see below).
@@ -4772,7 +4772,59 @@ A template item is marked **automatic** only when a current collector truly prod
 | `shipping_tracking` | Carrier tracking number + status from fulfillment | `lib/packs/sources/fulfillmentSource.ts` | Automatic when shipped |
 | `delivery_proof` | Carrier delivery status (with signature/photo when provided) | `lib/packs/sources/fulfillmentSource.ts` | Automatic when shipped |
 
-> **Delivery date in the bank narrative.** `fulfillmentSource.ts` lifts the best confirmed delivery timestamp (`resolveDeliveredAt` — Shopify `OrderFulfillment.deliveredAt`, else a tracking-app metafield's `deliveredAtTracking`) and any signature (`resolveSignedByName` — a tracking-app metafield `signedByName`, else a native carrier event signature via `extractNativeSignature`, so PostNord-style "signed by NAME" event messages also count) to the **top level** of the fulfillment section `data`, alongside `proofType`. The fact classifier (`lib/defence/factClassifier.ts`, `delivery_proof`/`shipping_tracking` branch) reads `p.deliveredAt` / `p.signedByName` and carries them into the classified `EvidenceFact`. The narrative writer prompt (`lib/defence/narrativeWriter.ts`, rule 7) already instructs the LLM to quote a concrete delivery date — e.g. *"delivered 2026-05-12 to the verified address"* — when the approved fact carries one. Previously the date stayed nested under `data.fulfillments[]` and never reached the rebuttal, so a delivered order proved delivery (Moderate/Strong badge) without the narrative stating *when*. Applies to every reason code, not just `credit_not_processed`. `delivery_proof` is now also a **recommended** (non-blocking) checklist row on `credit_not_processed` — delivery is secondary evidence for a refund dispute ("customer received and kept the goods, so no refund was owed"); `refund_record` stays the required primary.
+### Retired: the verified-address delivery upgrade (PR-C1, 2026-08-07)
+
+`deliveredToVerifiedAddress` and `collectedByCustomer` were removed from the collector, the
+categorizer, the typed payload, the fact extractor, and the prompt. Both are now **retired payload
+keys** (`lib/evidence/model/retiredKeys.ts`), stripped at the boundary of every derivation.
+
+**Why.** `deliveredToVerifiedAddress` was derived by `shippedToVerifiedAddress()`, which compared
+Shopify's own `billingAddress` and `shippingAddress` on city and country — two merchant-held
+addresses. **The derivation accepted no legitimate AVS-address contract: it read no AVS result code
+at any point.** The rule it purported to satisfy is Visa §4 Compelling Evidence chart Item 3
+(register `R-E`, V-PRIMARY): *"evidence that the item was delivered to the same physical address for
+which the Merchant received an AVS match of Y or M."* Measured on production before removal: 60
+packs asserted a verified address, and on **54 of them the issuer's own AVS response was `N`** — no
+address match. This closes the open Phase 0 note on `policy-matrix-v0.3.md` line 32 ("verify which
+AVS codes our verified-address derivation accepts"): **none**.
+
+`collectedByCustomer` was set purely from a carrier event message classified as
+`collected_at_pickup`. No signature, identification or BankID artifact was read or required; the
+"ID-verified collection" premise was a jurisdictional assumption in a comment.
+
+**What changed.** `delivered_confirmed` is **Moderate**, always. `signature_confirmed` — an
+independently sourced signature or POD name — is still **Strong** and is untouched. Delivery prose
+may cite carrier, tracking number, tracking URL, delivery status and delivery date; it may not state
+which physical address received the parcel.
+
+**Enforcement is structural, not lexical.** `lib/defence/claimCapabilities.ts` derives a typed
+`ClaimCapability` set from the approved facts; only held capabilities reach the prompt (rule 14), and
+`validateNarrative` re-derives them independently and rejects any section making an unheld claim
+(`unauthorized_claim`). `address_delivery` is underivable from any fact the system can currently
+produce. Phrase detection is defence in depth: a sentence coupling a delivery term with a physical
+address term is an address-delivery claim regardless of wording, and ambiguous language **fails
+closed**. A prohibited claim gets one bounded repair attempt through the existing validation-retry
+path in `buildDefencePackageJob`; if it still fails the package is marked `failed` and never filed.
+
+**Historical packages are blocked, not rewritten.** `lib/defence/packageSafety.ts` is the single
+predicate consulted by the save job, the manual save route, the deadline cron and the workspace
+readiness projection. A candidate is unsafe when its persisted facts carry a retired key or its
+persisted narrative makes an affirmative *or* ambiguous address-delivery claim. Unsafe candidates
+stay viewable but are never saved, forwarded, auto-filed or deadline-selected, and the merchant is
+told to regenerate. The block is **candidate-based**: selectors read the latest version only, so a
+regenerated safe version becomes usable immediately and an older unsafe version never blocks the
+dispute permanently — and no selector may search backwards for a "newest safe" version, because the
+older versions are the unsafe ones. Nothing already saved in Shopify is altered automatically.
+
+**Reintroduction contract.** A future verified-address claim requires all four of: (1) an AVS result
+satisfying the governing `{Y, M}` rule for the observed network; (2) the order's shipping physical
+address proven to be the same complete physical address submitted for AVS — currently impossible,
+`orderSource.redactAddress` discards the street line and truncates the postal code, and Shopify does
+not expose the AVS-submitted address; (3) delivery evidence that actually names the delivery address,
+not a message-classified "Delivered"; (4) sufficient disputed-merchandise coverage. Missing, partial,
+redacted or merely city/country-equal data must return false. Each is an independent approval.
+
+> **Delivery date in the bank narrative.** `fulfillmentSource.ts` lifts the best confirmed delivery timestamp (`resolveDeliveredAt` — Shopify `OrderFulfillment.deliveredAt`, else a tracking-app metafield's `deliveredAtTracking`) and any signature (`resolveSignedByName` — a tracking-app metafield `signedByName`, else a native carrier event signature via `extractNativeSignature`, so PostNord-style "signed by NAME" event messages also count) to the **top level** of the fulfillment section `data`, alongside `proofType`. The fact classifier (`lib/defence/factClassifier.ts`, `delivery_proof`/`shipping_tracking` branch) reads `p.deliveredAt` / `p.signedByName` and carries them into the classified `EvidenceFact`. The narrative writer prompt (`lib/defence/narrativeWriter.ts`, rule 7) instructs the LLM to quote a concrete delivery date — e.g. *"the carrier confirmed delivery on 2026-05-12, tracking 1234567890 (PostNord)"* — when the approved fact carries one. It may **not** state which address received the parcel (rule 14). Previously the date stayed nested under `data.fulfillments[]` and never reached the rebuttal, so a delivered order proved delivery (Moderate/Strong badge) without the narrative stating *when*. Applies to every reason code, not just `credit_not_processed`. `delivery_proof` is now also a **recommended** (non-blocking) checklist row on `credit_not_processed` — delivery is secondary evidence for a refund dispute ("customer received and kept the goods, so no refund was owed"); `refund_record` stays the required primary.
 | `refund_record` | `order.refunds[]` (date, amount, note) from the Shopify order | `lib/packs/sources/orderSource.ts` | Automatic (capability key, not file name) |
 | `refund_policy` | Published refund policy snapshot | `lib/packs/sources/policySource.ts` | Policy-derived |
 | `shipping_policy` | Published shipping policy snapshot | `lib/packs/sources/policySource.ts` | Policy-derived |

@@ -1318,7 +1318,7 @@
     },
     "decisiveFamilies": {
       "fraud": "Zahlungsverifizierung, bestätigte Lieferung oder eine klare Kaufbestätigung des Kunden",
-      "delivery": "Empfangsbestätigung des Versanddienstleisters, Liefernachweis an die verifizierte Adresse des Karteninhabers oder Kundenbestätigung des Empfangs",
+      "delivery": "Empfangsbestätigung des Versanddienstleisters, ein Liefernachweis des Zustellers mit Sendungsverfolgung oder Kundenbestätigung des Empfangs",
       "product": "die Produktbeschreibung wie beworben, Offenlegung der Rückerstattungsrichtlinie oder Kundenkorrespondenz",
       "refund": "dokumentierte Rückerstattungsbearbeitung, Rückerstattungszeitplan oder Kundenkorrespondenz",
       "subscription": "Offenlegung der Stornierungsrichtlinie, Stornierungszeitplan oder Kundenkorrespondenz",

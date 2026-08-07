@@ -41,6 +41,10 @@ import {
 } from "@/lib/argument/caseGateAssessment";
 import type { EvidenceFact } from "@/lib/defence/types";
 import { CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
+import {
+  assessPackageCandidateSafety,
+  packageBlockSummary,
+} from "@/lib/defence/packageSafety";
 import { buildGorgiasCommsBlock } from "@/lib/integrations/gorgias/workspaceBlock";
 
 /** Merchant-facing dispute submission state derived from the underlying
@@ -951,6 +955,27 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       latest: defencePackageLatest,
       bankFacing: defencePackageBankFacing,
       currentPromptVersion: CURRENT_PROMPT_VERSION,
+      /**
+       * PR-C1 readiness. The latest candidate is refused at every save /
+       * forward path when it carries a retired delivery fact or an
+       * address-delivery assertion, so the workspace must say so rather than
+       * offer a Submit button that will 422. Merchant-safe copy only —
+       * `reasons` are machine codes for support, not merchant prose.
+       */
+      safety: defencePackageLatest
+        ? (() => {
+            const verdict = assessPackageCandidateSafety({
+              factsJson: (defencePackageLatest as { facts_json?: unknown }).facts_json,
+              narrativeJson: (defencePackageLatest as { narrative_json?: unknown })
+                .narrative_json,
+            });
+            return {
+              blocked: !verdict.safe,
+              reasons: verdict.reasons,
+              message: packageBlockSummary(verdict),
+            };
+          })()
+        : { blocked: false, reasons: [], message: "" },
     },
   });
 }

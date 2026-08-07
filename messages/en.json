@@ -724,7 +724,7 @@
     },
     "decisiveFamilies": {
       "fraud": "payment verification, confirmed delivery, or a clear customer purchase acknowledgement",
-      "delivery": "carrier signature confirmation, proof of delivery to the cardholder's verified address, or customer acknowledgement of receipt",
+      "delivery": "carrier signature confirmation, a carrier delivery record with tracking, or customer acknowledgement of receipt",
       "product": "the product listing as advertised, refund policy disclosure, or customer correspondence",
       "refund": "documented refund processing, refund timeline, or customer correspondence",
       "subscription": "cancellation policy disclosure, cancellation timeline, or customer correspondence",

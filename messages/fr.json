@@ -1318,7 +1318,7 @@
     },
     "decisiveFamilies": {
       "fraud": "vérification du paiement, livraison confirmée ou reconnaissance d'achat claire par le client",
-      "delivery": "confirmation de signature du transporteur, preuve de livraison à l'adresse vérifiée du titulaire de la carte ou accusé de réception du client",
+      "delivery": "confirmation de signature du transporteur, un relevé de livraison du transporteur avec suivi ou accusé de réception du client",
       "product": "la fiche produit telle qu'annoncée, la divulgation de la politique de remboursement ou la correspondance avec le client",
       "refund": "traitement de remboursement documenté, calendrier de remboursement ou correspondance avec le client",
       "subscription": "divulgation de la politique d'annulation, calendrier d'annulation ou correspondance avec le client",

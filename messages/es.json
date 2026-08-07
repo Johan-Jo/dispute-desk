@@ -1318,7 +1318,7 @@
     },
     "decisiveFamilies": {
       "fraud": "verificación del pago, entrega confirmada o un reconocimiento claro de compra por parte del cliente",
-      "delivery": "confirmación de firma del transportista, prueba de entrega en la dirección verificada del titular o reconocimiento de recepción del cliente",
+      "delivery": "confirmación de firma del transportista, un registro de entrega del transportista con seguimiento o reconocimiento de recepción del cliente",
       "product": "la ficha del producto tal como se anunció, divulgación de la política de reembolso o correspondencia con el cliente",
       "refund": "procesamiento documentado del reembolso, cronograma del reembolso o correspondencia con el cliente",
       "subscription": "divulgación de la política de cancelación, cronograma de cancelación o correspondencia con el cliente",

@@ -42,7 +42,14 @@ export interface DefenceDeadlineFallbackContext {
   currencyCode: string | null;
   dueAt: string | null;
   /** Why the defence package couldn't be used. */
-  fallbackReason: "validation_failed" | "skipped_no_facts" | "skipped_covered" | "missing";
+  fallbackReason:
+    | "validation_failed"
+    | "skipped_no_facts"
+    | "skipped_covered"
+    | "missing"
+    /** PR-C1: the existing package makes a delivery-address claim we no
+     *  longer support. Nothing is filed; the merchant must regenerate. */
+    | "unsafe_address_claim";
 }
 
 interface SendResult {
@@ -60,6 +67,8 @@ function readableReason(reason: DefenceDeadlineFallbackContext["fallbackReason"]
       return "the dispute is covered by Shopify Protect";
     case "missing":
       return "no Defence Package draft existed for this dispute";
+    case "unsafe_address_claim":
+      return "the existing Defence Package states that delivery reached a verified address — a claim we can no longer support — so it was not filed";
   }
 }
 

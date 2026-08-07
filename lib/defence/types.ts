@@ -460,6 +460,10 @@ export interface DefenceNarrativeOutput {
 export type ValidationErrorRule =
   | "forbidden_phrase"
   | "unsupported_claim"
+  /** PR-C1: the prose makes a claim whose CAPABILITY the case does not hold.
+   *  Distinct from `unsupported_claim`, which is a per-fact-property predicate
+   *  failure — this one says the claim CLASS is not authorized at all. */
+  | "unauthorized_claim"
   | "unknown_fact_id"
   | "omitted_section_inconsistent"
   | "narrow_mode_aggressive_conclusion"

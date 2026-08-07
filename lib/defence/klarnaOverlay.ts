@@ -102,7 +102,9 @@ in error.`,
 
   unauthorized_purchase: `Klarna category: UNAUTHORIZED PURCHASE.
 Klarna weighs delivery and customer-identity evidence.
-Foreground: proof the order was delivered to the customer's address, the
+Foreground: the carrier's delivery confirmation (carrier, tracking number,
+delivery date — never a claim about WHICH physical address received the
+parcel), the
 account / customer identity and order history, IP / location consistency
 where available, and any customer communication acknowledging the order.
 Do NOT use card-authentication constructs (they do not exist for Klarna) —

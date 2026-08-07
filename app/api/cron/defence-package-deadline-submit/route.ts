@@ -29,6 +29,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { isDefencePackageBuilderEnabled } from "@/lib/featureFlags";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { sendDefenceDeadlineFallbackAlert } from "@/lib/email/sendDefenceDeadlineFallbackAlert";
+import { assessPackageCandidateSafety } from "@/lib/defence/packageSafety";
 import { cronEnvGate } from "@/lib/cron/envGate";
 
 export const runtime = "nodejs";
@@ -155,13 +156,29 @@ export async function GET(req: NextRequest) {
         .from("defence_packages")
         // `failure_code` distinguishes a Shopify-Protect skip from a
         // no-bank-facts skip; without it every skip is reported as the latter.
-        .select("id, status, validation_status, pdf_path, version, failure_code")
+        .select(
+          "id, status, validation_status, pdf_path, version, failure_code, facts_json, narrative_json",
+        )
         .eq("dispute_id", d.id)
         .order("version", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      const fallbackReason = pickFallbackReason(dpkg);
+      // PR-C1 — candidate-safety gate, evaluated on the LATEST candidate only.
+      // A blocked candidate files NOTHING and notifies; the executor must never
+      // walk back to an older version to find something fileable, because the
+      // older versions are precisely the unsafe ones.
+      const unsafeCandidate = dpkg
+        ? assessPackageCandidateSafety({
+            factsJson: dpkg.facts_json,
+            narrativeJson: dpkg.narrative_json,
+          })
+        : null;
+
+      const fallbackReason =
+        unsafeCandidate && !unsafeCandidate.safe
+          ? ("unsafe_address_claim" as const)
+          : pickFallbackReason(dpkg);
 
       if (fallbackReason !== null) {
         // Post-retirement: no pack-PDF fallback. The defence-package PDF
@@ -175,11 +192,22 @@ export async function GET(req: NextRequest) {
           disputeId: d.id,
           packId: pack.id,
           actorType: "system",
-          eventType: "defence_package_failed",
+          eventType:
+            fallbackReason === "unsafe_address_claim"
+              ? "defence_package_blocked_unsafe_claim"
+              : "defence_package_failed",
           eventPayload: {
             trigger: "deadline_cron_no_fallback",
             fallbackReason,
             dueAt: d.due_at,
+            ...(fallbackReason === "unsafe_address_claim"
+              ? {
+                  packageId: dpkg?.id ?? null,
+                  version: dpkg?.version ?? null,
+                  reasons: unsafeCandidate?.reasons ?? [],
+                  retiredKeys: unsafeCandidate?.retiredKeys ?? [],
+                }
+              : {}),
           },
         });
 
