@@ -107,6 +107,18 @@ function buildSb(pack: PackFixture, dispute: DisputeFixture) {
           single: vi.fn().mockResolvedValue({ data: disputeRow, error: null }),
         };
       }
+      // PR-C1 candidate-safety preflight. `null` = no defence package for this
+      // dispute yet, which is the normal state at auto-save time (the build is
+      // enqueued after this) and is not a block.
+      if (table === "defence_packages") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          order: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      }
       if (table === "audit_events") {
         return {
           insert: vi.fn().mockResolvedValue({ data: null, error: null }),

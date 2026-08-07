@@ -920,7 +920,9 @@
           "superseded": "Substituído",
           "validationFailed": "Falha na validação",
           "skipped": "Ignorado"
-        }
+        },
+        "reviewRequiredTitle": "É necessária uma revisão antes de este pacote poder ser apresentado",
+        "reviewRequiredBody": "O DisputeDesk não pode apresentar este pacote de defesa tal como foi criado. Gere-o novamente para obter uma versão que possa ser submetida. A pré-visualização e Gerar novamente continuam disponíveis; Finalizar e Submeter ficam indisponíveis até que uma versão regenerada passe na revisão."
       },
       "sections": {
         "status": {

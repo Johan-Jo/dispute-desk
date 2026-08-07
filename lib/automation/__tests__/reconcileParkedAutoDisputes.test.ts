@@ -80,7 +80,17 @@ function mockSb(s: Scenario) {
           return [{ id: filters["id"] }];
         }
         const did = filters["dispute_id"] as string;
-        return s.dpkgByDispute[did] ?? null;
+        if (did) return s.dpkgByDispute[did] ?? null;
+        // PR-C1: `preflightNamedCandidate` looks the row up by id. Resolve it
+        // from the same fixture so the safety preflight sees real content.
+        const byId = filters["id"] as string;
+        if (byId) {
+          const hit = Object.values(s.dpkgByDispute).find(
+            (d) => d && (d as Record<string, unknown>).id === byId,
+          );
+          return hit ?? null;
+        }
+        return null;
       }
       if (table === "jobs") {
         const packId = filters["entity_id"] as string;
@@ -124,6 +134,18 @@ const FINALIZABLE_DRAFT = {
   status: "draft",
   validation_status: "ok",
   pdf_path: "packs/shop-1/dpkg-1.pdf",
+  // A real finalizable draft always carries both. PR-C1's preflight fails
+  // closed on a candidate whose supporting JSON cannot be inspected, so a
+  // fixture without them would be blocked — correctly, but it would no longer
+  // represent the happy path these tests are about.
+  facts_json: [
+    { id: "f1", category: "delivery_proof", value: { proofType: "delivered_confirmed" } },
+  ],
+  narrative_json: {
+    fulfillmentArgument: {
+      text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890).",
+    },
+  },
 };
 
 beforeEach(() => {
@@ -134,6 +156,51 @@ beforeEach(() => {
 });
 
 describe("reconcileParkedAutoDisputes", () => {
+  // ── PR-C1 ──────────────────────────────────────────────────────────
+  it("does NOT promote or count an unsafe candidate, and reports it as blocked", async () => {
+    const sb = mockSb({
+      disputes: [{ id: "disp-1", reason: "FRAUDULENT", status: "needs_response", amount: 100, phase: "chargeback" }],
+      packByDispute: { "disp-1": READY_STRONG_PACK },
+      dpkgByDispute: {
+        "disp-1": {
+          ...FINALIZABLE_DRAFT,
+          facts_json: [{ id: "f1", category: "delivery_proof", value: { proofType: "delivered_confirmed" } }],
+          narrative_json: {
+            fulfillmentArgument: {
+              text: "The parcel was delivered to the cardholder's verified address.",
+            },
+          },
+        },
+      },
+    });
+    mockGetServiceClient.mockReturnValue(sb as never);
+
+    const res = await reconcileParkedAutoDisputes("shop-1");
+
+    // Not reconciled — a blocked dispute has not been handled.
+    expect(res.reconciled).toBe(0);
+    expect(res.disputeIds).toEqual([]);
+    expect(res.blocked).toBe(1);
+    // Nothing promoted, nothing superseded, nothing enqueued.
+    expect(sb.updates.some((u) => u.table === "defence_packages")).toBe(false);
+    expect(sb.inserts.some((i) => i.table === "jobs")).toBe(false);
+  });
+
+  it("does NOT promote a candidate whose supporting JSON is unreadable", async () => {
+    const sb = mockSb({
+      disputes: [{ id: "disp-1", reason: "FRAUDULENT", status: "needs_response", amount: 100, phase: "chargeback" }],
+      packByDispute: { "disp-1": READY_STRONG_PACK },
+      dpkgByDispute: {
+        "disp-1": { ...FINALIZABLE_DRAFT, facts_json: null, narrative_json: null },
+      },
+    });
+    mockGetServiceClient.mockReturnValue(sb as never);
+    const res = await reconcileParkedAutoDisputes("shop-1");
+    expect(res.reconciled).toBe(0);
+    expect(res.blocked).toBe(1);
+    expect(sb.inserts.some((i) => i.table === "jobs")).toBe(false);
+  });
+
   it("finalizes + enqueues save for a parked Strong dispute now on auto", async () => {
     const sb = mockSb({
       disputes: [{ id: "disp-1", reason: "FRAUDULENT", status: "needs_response", amount: 100, phase: "chargeback" }],

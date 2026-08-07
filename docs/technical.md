@@ -4806,12 +4806,50 @@ address term is an address-delivery claim regardless of wording, and ambiguous l
 closed**. A prohibited claim gets one bounded repair attempt through the existing validation-retry
 path in `buildDefencePackageJob`; if it still fails the package is marked `failed` and never filed.
 
-**Historical packages are blocked, not rewritten.** `lib/defence/packageSafety.ts` is the single
-predicate consulted by the save job, the manual save route, the deadline cron and the workspace
-readiness projection. A candidate is unsafe when its persisted facts carry a retired key or its
-persisted narrative makes an affirmative *or* ambiguous address-delivery claim. Unsafe candidates
-stay viewable but are never saved, forwarded, auto-filed or deadline-selected, and the merchant is
-told to regenerate. The block is **candidate-based**: selectors read the latest version only, so a
+**Every enqueue site is gated, not just the worker.** `lib/defence/packageSafety.ts` exposes one
+predicate plus two preflight loaders (`preflightLatestCandidate`, `preflightNamedCandidate`). They
+are consulted BEFORE any enqueue or status write by: the embedded Review & Submit endpoint
+(`/api/defence-packages/:id/submit`), the portal approval endpoint (`/api/packs/:packId/approve`),
+the manual save endpoint (`/api/packs/:packId/save-to-shopify`), `finalizeAndEnqueueSave` (which
+covers both `buildDefencePackageJob` and `reconcileParkedAutoDisputes`), the auto-save branch of
+`evaluateAndMaybeAutoSave`, the deadline cron, and the workspace readiness projection.
+`saveToShopifyJob` keeps its own check as the final race-safe guard immediately before the PDF
+download and upload. A blocked background path raises the
+`package_review_required` attention reason so the merchant is not left with only a failed internal
+job; blocked merchant paths return `422 PACKAGE_REVIEW_REQUIRED` and enqueue nothing.
+
+The named-package endpoint additionally proves the package it was given is still the newest version
+(`candidate_not_current`). It enqueues against the source pack and the worker re-selects the latest
+row, so judging only the named row would let a merchant approve v3 while v4 is what gets filed.
+
+**Unreadable candidates fail closed.** `facts_json` and `narrative_json` are accepted only in the
+shapes production actually holds — measured over all 280 candidates at `2026-08-07T13:14:52.052Z`:
+`facts_json` 241 × bare `array[object]` + 39 × `null`; `narrative_json` 241 × section object + 39 ×
+`null`. All 39 nulls are `failed`/`skipped`/`stale`, none final or submitted. Anything else yields
+`unreadable_facts_json` / `unreadable_narrative_json` and is refused: a final PDF whose supporting
+JSON cannot be inspected carries an unknown claim, and an unknown claim may not be filed.
+
+**Historical packages are blocked, not rewritten.** The predicate is candidate-based. A candidate is unsafe when its persisted facts carry a retired key, its
+persisted narrative makes an affirmative *or* ambiguous address-delivery claim, or either JSON is
+unreadable. Unsafe candidates stay viewable but are never saved, forwarded, auto-filed or
+deadline-selected; Finalize / Submit / Resubmit are disabled in the workspace with a review-required
+banner, while Preview and Regenerate remain available.
+
+**Measured block population**, one census at `2026-08-07T13:33:15.649Z` over all 280 persisted
+candidates (a version can appear in several reason buckets, so the buckets do not sum to the union):
+
+| population | versions | disputes |
+|---|---|---|
+| `retired_delivery_fact` | 162 | 72 |
+| `affirmative_address_delivery_claim` | 135 | 64 |
+| `ambiguous_address_delivery_claim` | 130 | 67 |
+| `unreadable_facts_json` | 39 | 38 |
+| `unreadable_narrative_json` | 39 | 38 |
+| **deduplicated union (blocked)** | **209** | **88** |
+
+Union by dispute state (mutually exclusive, reconciles to 88): open-not-saved 60, saved-but-unsent
+1, actually sent 15, finalized 12. By shop: blume-box 188 versions / 80 disputes, cay-collective 19
+/ 6, surasvenne 2 / 2. Only 8 packages are blocked by ambiguity alone. The block is **candidate-based**: selectors read the latest version only, so a
 regenerated safe version becomes usable immediately and an older unsafe version never blocks the
 dispute permanently — and no selector may search backwards for a "newest safe" version, because the
 older versions are the unsafe ones. Nothing already saved in Shopify is altered automatically.

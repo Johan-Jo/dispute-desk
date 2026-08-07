@@ -171,9 +171,15 @@ function runPipeline(
           single: vi.fn().mockResolvedValue({ data: disputeRow, error: null }),
         };
       }
+      // Catch-all, incl. the PR-C1 `defence_packages` preflight. `null` = no
+      // defence package for this dispute yet, the normal state at auto-save
+      // time, which is not a block.
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
         single: vi.fn().mockResolvedValue({ data: null, error: null }),
         insert: vi.fn().mockResolvedValue({ data: null, error: null }),
       };

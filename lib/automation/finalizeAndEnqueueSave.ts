@@ -18,6 +18,12 @@
 
 import type { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
+import {
+  preflightBlocks,
+  preflightNamedCandidate,
+  preflightReasons,
+} from "@/lib/defence/packageSafety";
+import { markPackageReviewRequired } from "./packageReviewRequired";
 
 type ServiceClient = ReturnType<typeof getServiceClient>;
 
@@ -37,12 +43,44 @@ export interface FinalizeAndEnqueueSaveInput {
  * same dispute, and enqueue a `save_to_shopify` job against `sourcePackId`.
  * Returns `{ ok }` and never throws — enqueue/supersede failures are logged
  * and surfaced via `ok:false` so the caller can decide whether to retry.
+ * `blocked:true` distinguishes a PR-C1 safety refusal (no side effect
+ * happened, and retrying will not help) from a transient failure.
  */
 export async function finalizeAndEnqueueSave(
   input: FinalizeAndEnqueueSaveInput,
-): Promise<{ ok: boolean; reason?: string }> {
+): Promise<{ ok: boolean; reason?: string; blocked?: boolean }> {
   const { sb, shopId, disputeId, packageId, packageVersion, sourcePackId } =
     input;
+
+  // 0. PR-C1 candidate-safety preflight on the EXACT package about to be
+  //    promoted — before the finalize, before the supersede, before the
+  //    enqueue. Assessing later would leave an unsafe row promoted to `final`
+  //    and a prior good row superseded by it, with only the worker refusing to
+  //    file: a dispute whose newest candidate is final-but-unfileable and
+  //    whose previous candidate has been retired.
+  const preflight = await preflightNamedCandidate(sb, { packageId, disputeId });
+  if (preflightBlocks(preflight)) {
+    await logAuditEvent({
+      shopId,
+      disputeId,
+      actorType: "system",
+      eventType: "defence_package_blocked_unsafe_claim",
+      eventPayload: {
+        packageId,
+        version: packageVersion,
+        reasons: preflightReasons(preflight),
+        retiredKeys: preflight.verdict.retiredKeys,
+        isCurrent: preflight.isCurrent,
+        trigger: "finalize_and_enqueue_save",
+      },
+    });
+    await markPackageReviewRequired(sb, {
+      disputeId,
+      packageId,
+      reasons: preflightReasons(preflight),
+    });
+    return { ok: false, reason: `defence_package_unsafe_claim: ${preflightReasons(preflight).join(", ")}`, blocked: true };
+  }
 
   // 1. Promote this draft → final. Guarded on status='draft' so it is a
   //    no-op when the caller (e.g. buildDefencePackageJob) already flipped

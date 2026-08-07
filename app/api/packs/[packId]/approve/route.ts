@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
+import { logAuditEvent } from "@/lib/audit/logEvent";
+import {
+  preflightBlocks,
+  preflightLatestCandidate,
+  preflightReasons,
+  preflightSummary,
+} from "@/lib/defence/packageSafety";
 
 interface RouteParams {
   params: Promise<{ packId: string }>;
@@ -56,6 +63,38 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         message: "Pack is not in an approvable state. Only successfully built packs can be approved.",
       },
       { status: 409 }
+    );
+  }
+
+  /* ── PR-C1 candidate-safety preflight, BEFORE any side effect ──
+   *
+   * Ordering matters: this must precede the `approved_for_save_at` stamp and
+   * the enqueue, so a blocked attempt leaves no approval trace and no queued
+   * job. Judges the latest candidate, because this route enqueues against the
+   * pack and the worker selects the latest version. */
+  const preflight = await preflightLatestCandidate(sb, pack.dispute_id as string);
+  if (preflightBlocks(preflight)) {
+    await logAuditEvent({
+      shopId: pack.shop_id,
+      disputeId: pack.dispute_id,
+      packId,
+      actorType: userId ? "merchant" : "system",
+      eventType: "defence_package_blocked_unsafe_claim",
+      eventPayload: {
+        packageId: preflight.candidate?.id ?? null,
+        version: preflight.candidate?.version ?? null,
+        reasons: preflightReasons(preflight),
+        trigger: "portal_approve",
+      },
+    });
+    return NextResponse.json(
+      {
+        error: "PACKAGE_REVIEW_REQUIRED",
+        code: "PACKAGE_REVIEW_REQUIRED",
+        reasons: preflightReasons(preflight),
+        message: preflightSummary(preflight),
+      },
+      { status: 422 },
     );
   }
 

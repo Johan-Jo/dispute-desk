@@ -1,11 +1,10 @@
 /**
  * PR-C1 — the save path refuses an unsafe defence-package candidate.
  *
- * The measured population at the time of the change: 173 package versions
- * across 64 disputes carry either a retired delivery boolean in their
- * persisted facts or an address-delivery assertion in their persisted
- * narrative. Without this gate the next auto-save, manual save, or deadline
- * run would file one.
+ * A large share of persisted candidates carry a retired delivery boolean, an
+ * address-delivery assertion, or supporting JSON that cannot be inspected.
+ * Without this gate the next auto-save, manual save, or deadline run would
+ * file one. (Counts live in the PR description with their census timestamp.)
  *
  * Every Shopify side-effect is mocked to THROW, so "nothing was written" is
  * asserted structurally rather than by inspecting call counts alone.

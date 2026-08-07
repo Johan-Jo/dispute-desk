@@ -6,6 +6,13 @@
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
+import { logAuditEvent } from "@/lib/audit/logEvent";
+import {
+  preflightBlocks,
+  preflightLatestCandidate,
+  preflightReasons,
+} from "@/lib/defence/packageSafety";
+import { markPackageReviewRequired } from "./packageReviewRequired";
 import { getShopSettings } from "./settings";
 import { evaluateAutoSaveGate } from "./autoSaveGate";
 import { checkPackQuota } from "@/lib/billing/checkQuota";
@@ -811,6 +818,44 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   });
 
   if (gate.action === "auto_save") {
+    /* ── PR-C1 candidate-safety preflight, BEFORE the optimistic stamp ──
+     *
+     * This branch stamps `status = saved_to_shopify` + `saved_to_shopify_at`
+     * and enqueues in the same breath. A blocked attempt must therefore be
+     * refused HERE: stamping first would tell every UI, email and metric that
+     * the evidence was saved, for a package the worker is going to refuse.
+     *
+     * Scope note: the optimistic stamp itself is pre-existing behaviour and is
+     * deliberately left alone for the SAFE path — see the PR description's
+     * dependency note. This only prevents a blocked attempt from claiming
+     * success. */
+    const preflight = await preflightLatestCandidate(sb, pack.dispute_id as string);
+    if (preflightBlocks(preflight)) {
+      await logAuditEvent({
+        shopId: pack.shop_id,
+        disputeId: pack.dispute_id,
+        packId,
+        actorType: "system",
+        eventType: "defence_package_blocked_unsafe_claim",
+        eventPayload: {
+          packageId: preflight.candidate?.id ?? null,
+          version: preflight.candidate?.version ?? null,
+          reasons: preflightReasons(preflight),
+          retiredKeys: preflight.verdict.retiredKeys,
+          trigger: "auto_save",
+        },
+      });
+      await markPackageReviewRequired(sb, {
+        disputeId: pack.dispute_id as string,
+        packageId: preflight.candidate?.id ?? null,
+        reasons: preflightReasons(preflight),
+      });
+      return {
+        action: "park_for_review",
+        details: `defence_package_unsafe_claim: ${preflightReasons(preflight).join(", ")}`,
+      };
+    }
+
     await sb
       .from("evidence_packs")
       .update({

@@ -107,6 +107,8 @@ export default function ReviewSubmitTab({ workspace }: Props) {
                 latest: (data.defencePackage.latest as DefencePackageRow | null) ?? null,
                 bankFacing: (data.defencePackage.bankFacing as DefencePackageRow | null) ?? null,
                 currentPromptVersion: data.defencePackage.currentPromptVersion,
+                // PR-C1 review-required verdict for the latest candidate.
+                safety: data.defencePackage.safety,
               }
             : undefined
         }

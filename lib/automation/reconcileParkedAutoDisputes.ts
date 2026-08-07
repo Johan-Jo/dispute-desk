@@ -40,6 +40,10 @@ interface PackJson {
 export interface ReconcileResult {
   scanned: number;
   reconciled: number;
+  /** PR-C1: candidates refused by the safety preflight. NOT counted as
+   *  reconciled — a blocked dispute has not been handled, it has been
+   *  deliberately left for the merchant. */
+  blocked: number;
   disputeIds: string[];
 }
 
@@ -52,7 +56,7 @@ export async function reconcileParkedAutoDisputes(
   shopId: string,
 ): Promise<ReconcileResult> {
   const sb = getServiceClient();
-  const result: ReconcileResult = { scanned: 0, reconciled: 0, disputeIds: [] };
+  const result: ReconcileResult = { scanned: 0, reconciled: 0, blocked: 0, disputeIds: [] };
 
   // Candidate disputes: not yet saved, still open, with a READY evidence
   // pack. We only look at the latest pack per dispute.
@@ -164,6 +168,13 @@ export async function reconcileParkedAutoDisputes(
     if (outcome.ok) {
       result.reconciled += 1;
       result.disputeIds.push(dispute.id);
+    } else if (outcome.blocked) {
+      // finalizeAndEnqueueSave refused on safety grounds: it finalized
+      // nothing, superseded nothing and enqueued nothing, and it has already
+      // audited the refusal and raised the review-required attention state.
+      // Counting it as reconciled would report an unsafe historical draft as
+      // promoted.
+      result.blocked += 1;
     }
   }
 

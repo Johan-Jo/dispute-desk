@@ -920,7 +920,9 @@
           "superseded": "Remplacé",
           "validationFailed": "Échec de la validation",
           "skipped": "Ignoré"
-        }
+        },
+        "reviewRequiredTitle": "Vérification requise avant de pouvoir déposer ce dossier",
+        "reviewRequiredBody": "DisputeDesk ne peut pas déposer ce dossier de défense tel qu'il a été constitué. Régénérez-le pour obtenir une version soumettable. L'aperçu et Régénérer restent disponibles ; Finaliser et Soumettre sont indisponibles tant qu'une version régénérée n'a pas passé la vérification."
       },
       "sections": {
         "status": {

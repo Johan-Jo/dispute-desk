@@ -1355,7 +1355,9 @@
           "superseded": "Ersatt",
           "validationFailed": "Validering misslyckades",
           "skipped": "Överhoppat"
-        }
+        },
+        "reviewRequiredTitle": "Granskning krävs innan paketet kan skickas in",
+        "reviewRequiredBody": "DisputeDesk kan inte skicka in det här försvarspaketet som det är byggt. Generera om det för att skapa en version som kan skickas in. Förhandsgranska och Generera om är fortfarande tillgängliga; Slutför och Skicka in är otillgängliga tills en omgenererad version klarar granskningen."
       },
       "sections": {
         "status": {

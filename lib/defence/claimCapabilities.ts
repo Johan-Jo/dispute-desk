@@ -4,12 +4,13 @@
  * WHY A CAPABILITY LAYER AND NOT ANOTHER REGEX. The only control that ever
  * existed on the "delivered to the verified address" claim was prompt prose in
  * `item_not_received_delivery_proof_stack`, which loads for the INR family
- * only. Measured on production: 134 package versions across 63 disputes carry
- * an affirmative address-delivery assertion, and 7 versions across 3 disputes
- * produced it while the structured flag was FALSE — i.e. the model wrote the
- * claim with no structured basis, on modules whose prompts never mentioned it.
- * A denylist of the phrasings that happened to occur would not have stopped
- * those, and will not stop the next paraphrase.
+ * only. On production a large share of narratives carry an affirmative
+ * address-delivery assertion, and some produced it while the structured flag
+ * was FALSE — i.e. the model wrote the claim with no structured basis, on
+ * modules whose prompts never mentioned it. A denylist of the phrasings that
+ * happened to occur would not have stopped those, and will not stop the next
+ * paraphrase. (Population counts live in the PR description and
+ * `docs/technical.md` with their census timestamp, not in this comment.)
  *
  * So authorization is STRUCTURAL: capabilities are derived from approved facts
  * before generation, only the held capabilities are shown to the model, and the
@@ -30,12 +31,19 @@ import type { EvidenceFact } from "./types";
 export type ClaimCapability =
   /**
    * "The item was delivered to the cardholder's verified / AVS-matched /
-   * billing address." UNDERIVABLE after PR-C1: no fact any collector can
-   * currently produce grants it. The extension point is named
-   * (`addressDeliveryContract`) so a future, independently approved evidence
-   * contract has somewhere to land — it is not a back door, because nothing
-   * writes that key and a test asserts no producible fact combination grants
-   * the capability.
+   * billing address."
+   *
+   * PROHIBITED, AND STRUCTURALLY UNGRANTABLE. `deriveClaimCapabilities` has no
+   * branch that can add it — not from a fact property, not from a payload key,
+   * not from any combination. The identifier exists only so the validator can
+   * NAME the prohibited claim class.
+   *
+   * An earlier revision of this file granted it on `addressDeliveryContract:
+   * true`. That was removed: it recreated the dormant "apparently usable
+   * future path" the audit rejected, and a dormant branch that can never
+   * legitimately fire is how a later author re-arms a retired claim.
+   * Reintroduction requires an independently approved evidence contract AND a
+   * deliberate code change here.
    */
   | "address_delivery"
   /** Carrier-confirmed delivery: date, carrier, tracking, delivery status. */
@@ -77,12 +85,11 @@ export function deriveClaimCapabilities(
       held.add("signature_receipt");
       held.add("delivery_occurred");
     }
-    // The only path to `address_delivery`. Nothing writes this key today; see
-    // the type comment. A merely-collected pickup or delivery status must
-    // never reach here.
-    if (v.addressDeliveryContract === true) {
-      held.add("address_delivery");
-    }
+    // NO BRANCH GRANTS `address_delivery`. Deliberately absent — see the type
+    // comment. `lib/defence/__tests__/claimCapabilities.test.ts` proves
+    // adversarially that no fact value, including `addressDeliveryContract:
+    // true`, the retired keys, AVS values, or a hand-built manual fact, can
+    // produce it.
   }
   return held;
 }
@@ -106,7 +113,7 @@ const DELIVERY_TERMS =
  * appear in legitimate prose.
  */
 const ADDRESS_TERMS =
-  /\b(address(?:es)?|premises|residence|doorstep|door)\b/i;
+  /\b(address(?:es)?|premises|residence|dwelling|doorstep|door)\b/i;
 
 /** Non-physical "address" uses, stripped before the coupling test. */
 const NON_PHYSICAL_ADDRESS =
@@ -127,7 +134,37 @@ const BILLING_SHIPPING_AGREEMENT =
 const ISSUER_RECORDS = /\bissuer'?s?\s+record/i;
 
 const NEGATION =
-  /\b(no|not|never|cannot|can'?t|unable|without|absent|lack\w*|does\s+not|do\s+not|did\s+not|is\s+not|was\s+not|were\s+not|has\s+not|have\s+not|insufficient|unconfirmed|unverified|nothing|neither|nor|refrain\w*|must\s+not|may\s+not|do\s+not\s+claim)\b/i;
+  /\b(no|not|never|cannot|can'?t|unable|without|absent|lack\w*|does\s+not|do\s+not|did\s+not|is\s+not|was\s+not|were\s+not|has\s+not|have\s+not|insufficient|unconfirmed|unverified|nothing|neither|nor|refrain\w*|must\s+not|may\s+not)\b/i;
+
+/**
+ * A negated CLAIM VERB whose complement is the address sentence — "we do not
+ * claim that …", "no assertion is made that …". The negation legitimately
+ * scopes over the whole complement, so the sentence is a prohibition, not an
+ * assertion. Matched at sentence level because the scope crosses clauses.
+ */
+const SCOPED_PROHIBITION =
+  /\b(?:(?:do|does|did|will|would|shall|can|could|must|may|is|are|was|were)\s+not\s+(?:be\s+)?(?:claim\w*|assert\w*|stat\w+|suggest\w*|impl\w+|argu\w+|contend\w*|alleg\w+|represent\w*|maintain\w*)|(?:no|without)\s+(?:such\s+)?(?:claim|assertion|allegation|representation|suggestion)\b)/i;
+
+/**
+ * Litotes / double negation — "there is no reason to doubt that X", "it cannot
+ * be denied that X". These are AFFIRMATIONS wearing a negative word, and the
+ * clause-level negation test would otherwise clear them. When one matches, the
+ * sentence is never treated as negated.
+ */
+const LITOTES =
+  /\b(?:no\s+(?:reason|basis|grounds?|cause)\s+to\s+(?:doubt|dispute|question|contest)|(?:cannot|can'?t|could\s+not)\s+be\s+(?:doubted|denied|disputed|questioned|contested)|not\s+(?:in\s+)?(?:doubt|disputed|contested)|beyond\s+(?:any\s+)?doubt|nothing\s+(?:to\s+)?(?:suggests?|indicates?)\s+otherwise|no\s+(?:evidence|indication|suggestion)\s+(?:to\s+the\s+contrary|otherwise))\b/i;
+
+/**
+ * Clause boundaries. Coordination and subordination both open a NEW scope, so
+ * "the parcel was not delayed AND was delivered to the cardholder's address"
+ * must not let the first clause's negation license the second.
+ */
+function clausesOf(sentence: string): string[] {
+  return sentence
+    .split(/\s*(?:,|;|—|–|\n)\s*|\s+(?:and|but|while|whereas|although|though|however|yet|then|so)\s+/i)
+    .map((c) => c.trim())
+    .filter(Boolean);
+}
 
 /**
  * An assertion marker: a copula, an evidentiary verb, or a past-tense lexical
@@ -149,23 +186,98 @@ function sentences(text: string): string[] {
     .filter(Boolean);
 }
 
-/** Does this ONE sentence make an address-delivery / address-agreement claim? */
-function sentenceMakesAddressClaim(sentence: string): boolean {
-  const cleaned = stripNonPhysicalAddresses(sentence);
-  if (BILLING_SHIPPING_AGREEMENT.test(cleaned) && !ISSUER_RECORDS.test(cleaned)) {
-    return true;
-  }
+/** The delivery+address coupling, evaluated on ONE clause. */
+function clauseCouplesDeliveryAndAddress(clause: string): boolean {
+  const cleaned = stripNonPhysicalAddresses(clause);
   return DELIVERY_TERMS.test(cleaned) && ADDRESS_TERMS.test(cleaned);
+}
+
+/**
+ * Classify one sentence, clause by clause.
+ *
+ * Negation is scoped. A negative word in one clause must never license an
+ * affirmative address-delivery claim in another — that is how
+ * "The parcel was not delayed and was delivered to the cardholder's address"
+ * used to pass. Three scopes are recognised, in order:
+ *
+ *   1. LITOTES ("no reason to doubt that…") — a negative word doing
+ *      affirmative work. Never counts as negation.
+ *   2. SCOPED_PROHIBITION ("we do not claim that…") — the negation
+ *      legitimately covers the whole complement, so the sentence is a
+ *      prohibition.
+ *   3. Otherwise, per clause: the clause that MAKES the claim must itself
+ *      carry the negation.
+ *
+ * Anything that cannot be resolved deterministically is `ambiguous`, which
+ * blocks exactly like `affirmative`.
+ */
+function classifySentence(sentence: string): AddressClaimVerdict {
+  const cleaned = stripNonPhysicalAddresses(sentence);
+  const litotes = LITOTES.test(cleaned);
+
+  // Sentence-level claim: billing↔shipping agreement. Evaluated whole, because
+  // clause splitting would cut "billing and shipping addresses" in half.
+  const agreementClaim =
+    BILLING_SHIPPING_AGREEMENT.test(cleaned) && !ISSUER_RECORDS.test(cleaned);
+
+  const claimClauses = clausesOf(sentence).filter(clauseCouplesDeliveryAndAddress);
+
+  /**
+   * The coupling can straddle clause boundaries — "The order shipped to, and
+   * was received at, the cardholder's address." No single clause holds both
+   * halves, but the sentence plainly makes the claim.
+   *
+   * When that happens the clause-level negation scope is, by definition,
+   * unresolvable. So: no negation anywhere → judge the sentence normally;
+   * negation somewhere → `ambiguous`, because we cannot prove which half it
+   * covers. Ambiguous blocks, so this fails closed.
+   */
+  const straddles =
+    claimClauses.length === 0 &&
+    DELIVERY_TERMS.test(cleaned) &&
+    ADDRESS_TERMS.test(cleaned);
+
+  if (!agreementClaim && claimClauses.length === 0 && !straddles) return "none";
+
+  if (!litotes && SCOPED_PROHIBITION.test(cleaned)) return "negated";
+
+  if (straddles && !agreementClaim) {
+    if (!litotes && NEGATION.test(cleaned)) return "ambiguous";
+    return AFFIRMATION.test(cleaned) ? "affirmative" : "ambiguous";
+  }
+
+  let affirmative = false;
+  let ambiguous = false;
+  let negated = false;
+
+  const judge = (fragment: string) => {
+    if (!litotes && NEGATION.test(fragment)) {
+      negated = true;
+      return;
+    }
+    if (AFFIRMATION.test(fragment)) {
+      affirmative = true;
+      return;
+    }
+    ambiguous = true;
+  };
+
+  if (agreementClaim) judge(sentence);
+  for (const clause of claimClauses) judge(clause);
+
+  if (affirmative) return "affirmative";
+  if (ambiguous) return "ambiguous";
+  if (negated) return "negated";
+  return "none";
 }
 
 /**
  * Classify a whole piece of prose.
  *
- * Precedence is deliberate and fails closed: any affirmative sentence makes the
- * text affirmative; otherwise any ambiguous sentence makes it ambiguous; a text
+ * Precedence fails closed: any affirmative sentence makes the text
+ * affirmative; otherwise any ambiguous sentence makes it ambiguous; a text
  * whose every claim sentence is negated is `negated`. Ambiguity is never
- * resolved in the merchant's favour — an unresolved address-delivery sentence
- * blocks exactly like an affirmative one.
+ * resolved in the merchant's favour.
  */
 export function classifyAddressDeliveryClaim(text: string | null | undefined): AddressClaimVerdict {
   if (!text || !text.trim()) return "none";
@@ -173,16 +285,19 @@ export function classifyAddressDeliveryClaim(text: string | null | undefined): A
   let sawAmbiguous = false;
   let sawNegated = false;
   for (const sentence of sentences(text)) {
-    if (!sentenceMakesAddressClaim(sentence)) continue;
-    if (NEGATION.test(sentence)) {
-      sawNegated = true;
-      continue;
+    switch (classifySentence(sentence)) {
+      case "affirmative":
+        sawAffirmative = true;
+        break;
+      case "ambiguous":
+        sawAmbiguous = true;
+        break;
+      case "negated":
+        sawNegated = true;
+        break;
+      default:
+        break;
     }
-    if (AFFIRMATION.test(sentence)) {
-      sawAffirmative = true;
-      continue;
-    }
-    sawAmbiguous = true;
   }
   if (sawAffirmative) return "affirmative";
   if (sawAmbiguous) return "ambiguous";

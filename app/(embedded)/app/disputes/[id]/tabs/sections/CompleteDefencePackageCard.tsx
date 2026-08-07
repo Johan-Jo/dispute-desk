@@ -120,6 +120,13 @@ interface Props {
     latest: DefencePackageRow | null;
     bankFacing: DefencePackageRow | null;
     currentPromptVersion: number | null;
+    /** PR-C1 candidate-safety verdict for `latest`. When `blocked`, every
+     *  approval action is disabled and the review-required banner replaces
+     *  them — the submit / save / approve endpoints all return 422 for this
+     *  candidate, so offering the button would promise a submission that
+     *  cannot happen. Preview and Regenerate stay available: regenerating is
+     *  the fix. */
+    safety?: { blocked: boolean; reasons: string[]; message: string };
   };
   /** Triggers a workspace refresh. Bound to the parent's
    *  `actions.fetchAll`. Used by the "Check for update" action on the
@@ -265,6 +272,7 @@ export function CompleteDefencePackageCard({
   const latest = defencePackage?.latest ?? null;
   const bankFacing = defencePackage?.bankFacing ?? null;
   const currentPromptVersion = defencePackage?.currentPromptVersion ?? null;
+  const packageBlocked = defencePackage?.safety?.blocked === true;
   const loading = defencePackage === undefined;
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"regen" | "finalize" | "submit" | null>(null);
@@ -545,14 +553,26 @@ export function CompleteDefencePackageCard({
         // Surface the route's structured error message when present so
         // the merchant sees "Cannot submit a package in status=draft"
         // instead of an opaque HTTP code. Falls back to the bare status.
+        //
+        // PR-C1: a 422 PACKAGE_REVIEW_REQUIRED returns here BEFORE
+        // `setSubmitPending(true)` and before `onSubmitted?.()`, so a refused
+        // submission never shows a submitted state. Enqueueing first and
+        // blocking in the worker is exactly the false-submitted bug this
+        // ordering exists to prevent. A refresh pulls the server's
+        // review-required verdict so the banner and disabled buttons appear.
         let detail = tPkg("errors.submitFailed", { status: res.status });
         try {
-          const body = (await res.json()) as { error?: unknown };
-          if (typeof body.error === "string") detail = body.error;
+          const body = (await res.json()) as { error?: unknown; code?: unknown; message?: unknown };
+          if (body.code === "PACKAGE_REVIEW_REQUIRED" && typeof body.message === "string") {
+            detail = body.message;
+          } else if (typeof body.error === "string") {
+            detail = body.error;
+          }
         } catch {
           // Non-JSON body — keep the fallback.
         }
         setError(detail);
+        await onRefresh?.();
         return;
       }
       // POST accepted: the save-to-shopify job is enqueued but won't
@@ -600,12 +620,16 @@ export function CompleteDefencePackageCard({
   // has an actual draft pending — `hasUnsubmittedDraft` proves the
   // displayed `latest` row diverges from `bankFacing`.
   const hasActionableDraft = !isSubmittedToBank || hasUnsubmittedDraft;
+  // PR-C1: a blocked candidate cannot be finalized, submitted or resubmitted.
+  // `packageBlocked` is the server's verdict from the same predicate the
+  // endpoints enforce, so the button state and the endpoint agree.
   const canFinalize =
+    !packageBlocked &&
     hasActionableDraft &&
     row.status === "draft" &&
     row.validation_status === "ok" &&
     Boolean(row.pdf_path);
-  const canSubmit = hasActionableDraft && row.status === "final";
+  const canSubmit = !packageBlocked && hasActionableDraft && row.status === "final";
   // Regenerate gate. The pre-submit cases (draft / stale / failed) are
   // always reachable. For a submitted row, only offer Regenerate when
   // it would actually produce something new — otherwise the merchant
@@ -645,6 +669,7 @@ export function CompleteDefencePackageCard({
   // the banner itself a few lines down; precomputing it here lets the
   // lower action row suppress duplicates cleanly.
   const bannerHostsActions =
+    !packageBlocked &&
     hasUnsubmittedDraft &&
     !!latest &&
     !!bankFacing &&
@@ -695,6 +720,18 @@ export function CompleteDefencePackageCard({
                   When presentationStatus is absent (legacy mount), the
                   copy falls back to the pre-2026-05-20 "Submitted
                   package" phrasing. */}
+              {/* PR-C1 — review-required. Rendered above every other state so
+                  the merchant reads WHY the approval actions are gone before
+                  seeing the package detail. Preview and Regenerate remain
+                  below; Finalize / Submit / Resubmit are suppressed via
+                  `canFinalize` / `canSubmit` / `bannerHostsActions`. */}
+              {packageBlocked ? (
+                <Banner tone="warning" title={tPkg("reviewRequiredTitle")}>
+                  <Text as="p" variant="bodySm">
+                    {defencePackage?.safety?.message || tPkg("reviewRequiredBody")}
+                  </Text>
+                </Banner>
+              ) : null}
               {submitPending ? (
                 <Banner tone="info" title={t("savingTitle")}>
                   <Text as="p" variant="bodySm">

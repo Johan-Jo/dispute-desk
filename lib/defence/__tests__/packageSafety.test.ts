@@ -107,26 +107,96 @@ describe("assessPackageCandidateSafety", () => {
     expect(v.safe).toBe(true);
   });
 
-  it("tolerates missing / unreadable persisted shapes without throwing", () => {
-    for (const factsJson of [null, undefined, {}, 42, "nope", { approved: null }]) {
-      for (const narrativeJson of [null, undefined, {}, 7]) {
-        expect(() =>
-          assessPackageCandidateSafety({ factsJson, narrativeJson }),
-        ).not.toThrow();
-      }
-    }
-    expect(assessPackageCandidateSafety({ factsJson: null, narrativeJson: null }).safe).toBe(true);
+  // ── FAIL CLOSED ───────────────────────────────────────────────────
+  //
+  // An earlier revision asserted `factsJson: null, narrativeJson: null → safe`.
+  // That was wrong: a final PDF whose supporting JSON cannot be inspected
+  // carries an UNKNOWN claim, and an unknown claim may not be filed.
+
+  it("null facts_json is UNREADABLE, not safe", () => {
+    const v = assessPackageCandidateSafety({
+      factsJson: null,
+      narrativeJson: CLEAN_NARRATIVE,
+    });
+    expect(v.safe).toBe(false);
+    expect(v.reasons).toContain("unreadable_facts_json");
   });
 
-  it("reads both the bare-array and wrapped facts_json shapes", () => {
-    for (const factsJson of [
-      RETIRED_FACTS,
-      { approved: RETIRED_FACTS },
+  it("null narrative_json is UNREADABLE, not safe", () => {
+    const v = assessPackageCandidateSafety({
+      factsJson: CLEAN_FACTS,
+      narrativeJson: null,
+    });
+    expect(v.safe).toBe(false);
+    expect(v.reasons).toContain("unreadable_narrative_json");
+  });
+
+  it("null/null is unsafe on BOTH counts", () => {
+    const v = assessPackageCandidateSafety({ factsJson: null, narrativeJson: null });
+    expect(v.safe).toBe(false);
+    expect(v.reasons).toEqual(
+      expect.arrayContaining(["unreadable_facts_json", "unreadable_narrative_json"]),
+    );
+  });
+
+  it("every malformed or unknown shape fails closed, and none throws", () => {
+    const badFacts = [
+      undefined, 42, "nope", true, {},
+      { approved: RETIRED_FACTS }, // wrapper shapes do NOT exist in prod
       { facts: RETIRED_FACTS },
       { approvedFacts: RETIRED_FACTS },
-    ]) {
-      expect(assessPackageCandidateSafety({ factsJson, narrativeJson: null }).safe).toBe(false);
+      [1, 2, 3], // array of non-objects
+      [null], // array with a null member
+      [["nested"]], // array of arrays
+    ];
+    for (const factsJson of badFacts) {
+      let v!: ReturnType<typeof assessPackageCandidateSafety>;
+      expect(() => {
+        v = assessPackageCandidateSafety({ factsJson, narrativeJson: CLEAN_NARRATIVE });
+      }).not.toThrow();
+      expect(v.safe).toBe(false);
+      expect(v.reasons).toContain("unreadable_facts_json");
     }
+
+    const badNarratives = [
+      undefined, 7, "nope", true, {},
+      [], // array is not a section object
+      [{ text: "x" }],
+      { omittedSections: [], warnings: [] }, // present but carries no prose
+      { fulfillmentArgument: 5 },
+      { fulfillmentArgument: { notText: "x" } },
+    ];
+    for (const narrativeJson of badNarratives) {
+      let v!: ReturnType<typeof assessPackageCandidateSafety>;
+      expect(() => {
+        v = assessPackageCandidateSafety({ factsJson: CLEAN_FACTS, narrativeJson });
+      }).not.toThrow();
+      expect(v.safe).toBe(false);
+      expect(v.reasons).toContain("unreadable_narrative_json");
+    }
+  });
+
+  it("an unreadable candidate gets merchant-safe copy with no JSON detail", () => {
+    const msg = packageBlockSummary(
+      assessPackageCandidateSafety({ factsJson: null, narrativeJson: null }),
+    );
+    expect(msg).toContain("Regenerate");
+    expect(msg).not.toMatch(/json|facts_json|narrative|null|parse/i);
+  });
+
+  it("reads the ONE bare-array shape production actually holds", () => {
+    // Measured 2026-08-07T13:14:52.052Z: 241 × array[object], 39 × null.
+    expect(
+      assessPackageCandidateSafety({ factsJson: RETIRED_FACTS, narrativeJson: CLEAN_NARRATIVE }).safe,
+    ).toBe(false);
+    expect(
+      assessPackageCandidateSafety({ factsJson: CLEAN_FACTS, narrativeJson: CLEAN_NARRATIVE }).safe,
+    ).toBe(true);
+    // An empty fact list is a legitimate readable shape (a package with no
+    // approved facts), not an unreadable one.
+    expect(
+      assessPackageCandidateSafety({ factsJson: [], narrativeJson: CLEAN_NARRATIVE }).reasons,
+    ).not.toContain("unreadable_facts_json");
   });
 });
 

@@ -1476,7 +1476,9 @@
           "superseded": "Superseded",
           "validationFailed": "Validation failed",
           "skipped": "Skipped"
-        }
+        },
+        "reviewRequiredTitle": "Review required before this package can be filed",
+        "reviewRequiredBody": "DisputeDesk cannot file this defence package as built. Regenerate it to produce a version that can be submitted. Preview and Regenerate are still available; Finalize and Submit are unavailable until a regenerated version passes review."
       },
       "inclusion": {
         "title": "Inclusion review",
