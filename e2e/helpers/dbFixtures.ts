@@ -220,11 +220,27 @@ export async function seedReadyPackForUser(
         confidence: null,
       },
     ],
+    // ALL nine sections, plus both metadata arrays. The safety parser accepts
+    // only the shape production actually holds (schema v1), and production
+    // holds all eleven keys on every one of its 241 non-null narratives — a
+    // one-section fixture is not a narrative the generator can produce, and
+    // seeding one made the happy path 422 on `unreadable_narrative_json`.
     narrative_json: {
       executiveSummary: {
         text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890).",
         usedFactIds: ["f1"],
       },
+      transactionOverviewArgument: { text: "", usedFactIds: [] },
+      chronologyArgument: { text: "", usedFactIds: [] },
+      paymentAuthenticationArgument: { text: "", usedFactIds: [] },
+      fulfillmentArgument: {
+        text: "Tracking 1234567890 records the shipment as delivered on 12 May 2026.",
+        usedFactIds: ["f1"],
+      },
+      communicationArgument: { text: "", usedFactIds: [] },
+      policyArgument: { text: "", usedFactIds: [] },
+      manualEvidenceArgument: { text: "", usedFactIds: [] },
+      conclusion: { text: "", usedFactIds: [] },
       omittedSections: [],
       warnings: [],
     },
