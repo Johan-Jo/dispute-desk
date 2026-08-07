@@ -4,8 +4,11 @@ import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import {
   preflightBlocks,
+  preflightCandidate,
+  preflightIsTransient,
   preflightLatestCandidate,
   preflightReasons,
+  preflightRetiredKeys,
   preflightSummary,
 } from "@/lib/defence/packageSafety";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
@@ -107,21 +110,23 @@ export async function POST(
       actorType: "merchant",
       eventType: "defence_package_blocked_unsafe_claim",
       eventPayload: {
-        packageId: preflight.candidate?.id ?? null,
-        version: preflight.candidate?.version ?? null,
+        packageId: preflightCandidate(preflight)?.id ?? null,
+        version: preflightCandidate(preflight)?.version ?? null,
+        outcome: preflight.kind,
         reasons: preflightReasons(preflight),
-        retiredKeys: preflight.verdict.retiredKeys,
+        retiredKeys: preflightRetiredKeys(preflight),
         trigger: "manual_save",
       },
     });
+    const transient = preflightIsTransient(preflight);
     return NextResponse.json(
       {
-        error: "PACKAGE_REVIEW_REQUIRED",
-        code: "PACKAGE_REVIEW_REQUIRED",
+        error: transient ? "PACKAGE_CHECK_UNAVAILABLE" : "PACKAGE_REVIEW_REQUIRED",
+        code: transient ? "PACKAGE_CHECK_UNAVAILABLE" : "PACKAGE_REVIEW_REQUIRED",
         reasons: preflightReasons(preflight),
         message: preflightSummary(preflight),
       },
-      { status: 422 },
+      { status: transient ? 503 : 422 },
     );
   }
 

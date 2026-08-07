@@ -20,8 +20,10 @@ import type { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import {
   preflightBlocks,
+  preflightIsTransient,
   preflightNamedCandidate,
   preflightReasons,
+  preflightRetiredKeys,
 } from "@/lib/defence/packageSafety";
 import { markPackageReviewRequired } from "./packageReviewRequired";
 
@@ -48,7 +50,7 @@ export interface FinalizeAndEnqueueSaveInput {
  */
 export async function finalizeAndEnqueueSave(
   input: FinalizeAndEnqueueSaveInput,
-): Promise<{ ok: boolean; reason?: string; blocked?: boolean }> {
+): Promise<{ ok: boolean; reason?: string; blocked?: boolean; transient?: boolean }> {
   const { sb, shopId, disputeId, packageId, packageVersion, sourcePackId } =
     input;
 
@@ -68,9 +70,9 @@ export async function finalizeAndEnqueueSave(
       eventPayload: {
         packageId,
         version: packageVersion,
+        outcome: preflight.kind,
         reasons: preflightReasons(preflight),
-        retiredKeys: preflight.verdict.retiredKeys,
-        isCurrent: preflight.isCurrent,
+        retiredKeys: preflightRetiredKeys(preflight),
         trigger: "finalize_and_enqueue_save",
       },
     });
@@ -79,7 +81,13 @@ export async function finalizeAndEnqueueSave(
       packageId,
       reasons: preflightReasons(preflight),
     });
-    return { ok: false, reason: `defence_package_unsafe_claim: ${preflightReasons(preflight).join(", ")}`, blocked: true };
+    return {
+      ok: false,
+      reason: `defence_package_unsafe_claim: ${preflightReasons(preflight).join(", ")}`,
+      blocked: true,
+      // A database failure is retriable; an unsafe package is not.
+      transient: preflightIsTransient(preflight),
+    };
   }
 
   // 1. Promote this draft → final. Guarded on status='draft' so it is a

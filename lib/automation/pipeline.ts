@@ -9,8 +9,12 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import {
   preflightBlocks,
+  preflightCandidate,
+  preflightIsPending,
+  preflightIsTransient,
   preflightLatestCandidate,
   preflightReasons,
+  preflightRetiredKeys,
 } from "@/lib/defence/packageSafety";
 import { markPackageReviewRequired } from "./packageReviewRequired";
 import { getShopSettings } from "./settings";
@@ -365,7 +369,25 @@ export async function runAutomationPipeline(dispute: Dispute): Promise<{
  * Called at the end of the buildPack job handler.
  */
 export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
-  action: "auto_save" | "park_for_review" | "block" | "skip_covered";
+  /**
+   * `defer_no_package` (PR-C1): the gate said auto-save, but no validated
+   * Defence Package exists yet. NOTHING is stamped and NOTHING is enqueued —
+   * `saveToShopifyJob` hard-requires a latest `final` package, so a job
+   * queued now is a job the worker must reject, and the
+   * `status = saved_to_shopify` stamp that used to accompany it was a
+   * knowingly false saved state.
+   *
+   * The dispute is not dropped: `buildDefencePackageJob` re-resolves the rule
+   * mode after the build and calls `finalizeAndEnqueueSave` itself when the
+   * mode is auto, so the save still happens automatically — just after there
+   * is something real to file.
+   */
+  action:
+    | "auto_save"
+    | "park_for_review"
+    | "block"
+    | "skip_covered"
+    | "defer_no_package";
   details: string;
 }> {
   const sb = getServiceClient();
@@ -838,18 +860,35 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         actorType: "system",
         eventType: "defence_package_blocked_unsafe_claim",
         eventPayload: {
-          packageId: preflight.candidate?.id ?? null,
-          version: preflight.candidate?.version ?? null,
+          packageId: preflightCandidate(preflight)?.id ?? null,
+          version: preflightCandidate(preflight)?.version ?? null,
+          outcome: preflight.kind,
           reasons: preflightReasons(preflight),
-          retiredKeys: preflight.verdict.retiredKeys,
+          retiredKeys: preflightRetiredKeys(preflight),
           trigger: "auto_save",
         },
       });
-      await markPackageReviewRequired(sb, {
-        disputeId: pack.dispute_id as string,
-        packageId: preflight.candidate?.id ?? null,
-        reasons: preflightReasons(preflight),
-      });
+      // A MISSING package or a transient query failure is not a merchant
+      // problem, so neither raises a review-required banner. Both simply
+      // defer: the post-build path (buildDefencePackageJob ->
+      // finalizeAndEnqueueSave) picks the dispute up once a validated package
+      // exists, and a query failure is retried on the next build or reconcile.
+      if (!preflightIsTransient(preflight) && !preflightIsPending(preflight)) {
+        await markPackageReviewRequired(sb, {
+          disputeId: pack.dispute_id as string,
+          packageId: preflightCandidate(preflight)?.id ?? null,
+          reasons: preflightReasons(preflight),
+        });
+      }
+      // A MISSING package is not a merchant problem and not a park — it is a
+      // deferral to the post-build path. A transient query failure defers too:
+      // the next build or reconcile re-runs the check.
+      if (preflightIsPending(preflight)) {
+        return { action: "defer_no_package", details: "no_defence_package_yet" };
+      }
+      if (preflightIsTransient(preflight)) {
+        return { action: "defer_no_package", details: "preflight_error" };
+      }
       return {
         action: "park_for_review",
         details: `defence_package_unsafe_claim: ${preflightReasons(preflight).join(", ")}`,

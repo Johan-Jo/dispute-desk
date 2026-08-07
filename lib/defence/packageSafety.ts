@@ -62,25 +62,67 @@ export interface PackageSafetyInput {
 }
 
 /**
- * FAIL CLOSED. A candidate we cannot inspect is UNRESOLVED, never "proven
- * safe". A final PDF whose supporting JSON is null or in a shape this parser
- * does not recognise carries an unknown claim, and an unknown claim may not be
- * filed.
+ * FAIL CLOSED, SCHEMA-AWARE. A candidate we cannot fully inspect is
+ * UNRESOLVED, never "proven safe". A final PDF whose supporting JSON is null,
+ * incomplete, or carries a shape this parser does not model may hold an
+ * unknown claim, and an unknown claim may not be filed.
  *
- * The accepted shapes are the ones production actually holds, measured
- * read-only over all 280 persisted candidates at 2026-08-07T13:14:52.052Z:
+ * Validating only the outer container was not enough: `[{}]` and
+ * `[{ value: "unexpected" }]` both passed as "readable, no retired keys", and
+ * a narrative with one good section plus `{ unknownSection: { nested: { text }}}`
+ * had its unknown branch silently ignored.
  *
- *   facts_json      241 × bare `array[object]`   ·  39 × null
- *   narrative_json  241 × section object          ·  39 × null
+ * The accepted schemas are the ones production actually holds, measured
+ * read-only at KEY level over all 280 candidates / 2 576 fact objects at
+ * 2026-08-07T14:59:19.977Z. Both are 100 % uniform:
  *
- * All 39 nulls are `failed` (37), `skipped` (1) and `stale` (1) — **zero
- * final, zero submitted** — so failing closed on them blocks nothing that
- * could otherwise be filed. No wrapper shape (`{approved: […]}` etc.) exists
- * in production; an earlier revision accepted three speculative wrappers, and
- * that is exactly how an unknown shape silently becomes "no facts found, so
- * nothing unsafe". Only the measured shapes are accepted; widening this
- * requires re-running the census.
+ *   facts_json      241 × array of objects, every object exactly:
+ *                   {bankEligible, category, confidence, id,
+ *                    includeInBankNarrative, internalOnly, label,
+ *                    merchantVisible, source, sourceRef, strength,
+ *                    submissionRisk, value}
+ *                   · value: object (2576/2576) · sourceRef: string|null
+ *                   · confidence: null · flags: boolean · rest: string
+ *                   39 × null
+ *   narrative_json  241 × object, top-level keys exactly the 9 section keys
+ *                   (each {text: string, usedFactIds}) + omittedSections
+ *                   (array) + warnings (array)
+ *                   39 × null
+ *
+ * All 39 nulls are `failed` (37), `skipped` (1) and `stale` (1) — zero final,
+ * zero submitted — so failing closed on them blocks nothing otherwise
+ * fileable. Widening either schema requires re-running the census.
  */
+
+/** Fields every persisted fact object carries, with the type it must have. */
+const FACT_REQUIRED_STRING = ["id", "category", "label", "source", "strength"] as const;
+const FACT_REQUIRED_BOOLEAN = [
+  "bankEligible",
+  "includeInBankNarrative",
+  "internalOnly",
+  "merchantVisible",
+  "submissionRisk",
+] as const;
+
+/**
+ * Extra top-level keys on a fact object are TOLERATED, deliberately.
+ * Rejecting them would turn any future added field into a fleet-wide block,
+ * and an extra key creates no blind spot: the retired-key scan reads
+ * `value`'s own keys directly, so a well-formed fact is fully inspectable
+ * whatever else sits beside it. Missing or mistyped REQUIRED fields are
+ * rejected, because those are the ones that make a fact interpretable at all.
+ */
+function isValidFactObject(f: unknown): f is Record<string, unknown> {
+  if (!f || typeof f !== "object" || Array.isArray(f)) return false;
+  const o = f as Record<string, unknown>;
+  for (const k of FACT_REQUIRED_STRING) if (typeof o[k] !== "string") return false;
+  for (const k of FACT_REQUIRED_BOOLEAN) if (typeof o[k] !== "boolean") return false;
+  // `value` is the payload the retired-key scan reads. A non-object value is
+  // exactly the `{ value: "unexpected" }` case: uninspectable, so unresolved.
+  if (!o.value || typeof o.value !== "object" || Array.isArray(o.value)) return false;
+  return true;
+}
+
 type FactsRead =
   | { readable: true; facts: Record<string, unknown>[] }
   | { readable: false };
@@ -89,42 +131,97 @@ function readFacts(factsJson: unknown): FactsRead {
   if (!Array.isArray(factsJson)) return { readable: false };
   const facts: Record<string, unknown>[] = [];
   for (const entry of factsJson) {
-    // A non-object member means the array is not the fact list we know.
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-      return { readable: false };
-    }
-    facts.push(entry as Record<string, unknown>);
+    if (!isValidFactObject(entry)) return { readable: false };
+    facts.push(entry);
   }
+  // An empty list is a legitimate readable shape (a package with no approved
+  // facts). The canonical contract permits it, so it is not "unreadable".
   return { readable: true, facts };
 }
+
+/** The 9 narrative section keys, each `{ text: string, usedFactIds }`. */
+const NARRATIVE_SECTION_KEYS = [
+  "executiveSummary",
+  "transactionOverviewArgument",
+  "chronologyArgument",
+  "paymentAuthenticationArgument",
+  "fulfillmentArgument",
+  "communicationArgument",
+  "policyArgument",
+  "manualEvidenceArgument",
+  "conclusion",
+] as const;
+
+/** Permitted non-section metadata keys, both arrays, neither prose. */
+const NARRATIVE_METADATA_KEYS = ["omittedSections", "warnings"] as const;
+
+const NARRATIVE_ALLOWED_KEYS: ReadonlySet<string> = new Set<string>([
+  ...NARRATIVE_SECTION_KEYS,
+  ...NARRATIVE_METADATA_KEYS,
+]);
 
 type NarrativeRead =
   | { readable: true; texts: string[] }
   | { readable: false };
 
+/**
+ * Every string anywhere in the value, at any depth.
+ *
+ * Belt and braces with the key allowlist below: even if an unknown branch
+ * somehow reached the detector, its prose would still be READ rather than
+ * skipped. A denylist that ignores what it does not recognise is how
+ * `{ unknownSection: { nested: { text } } }` went uninspected.
+ */
+function collectStrings(value: unknown, out: string[], depth = 0): void {
+  if (depth > 8) return;
+  if (typeof value === "string") {
+    out.push(value);
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const v of value) collectStrings(v, out, depth + 1);
+    return;
+  }
+  if (value && typeof value === "object") {
+    for (const v of Object.values(value as Record<string, unknown>)) {
+      collectStrings(v, out, depth + 1);
+    }
+  }
+}
+
 function readNarrative(narrativeJson: unknown): NarrativeRead {
   if (!narrativeJson || typeof narrativeJson !== "object" || Array.isArray(narrativeJson)) {
     return { readable: false };
   }
-  const entries = Object.entries(narrativeJson as Record<string, unknown>);
-  if (entries.length === 0) return { readable: false };
-  const texts: string[] = [];
+  const o = narrativeJson as Record<string, unknown>;
+  const keys = Object.keys(o);
+  if (keys.length === 0) return { readable: false };
+
+  // Unknown top-level key → unresolved. Ignoring it is what let an unknown
+  // nested structure carry uninspected prose past the check.
+  for (const k of keys) if (!NARRATIVE_ALLOWED_KEYS.has(k)) return { readable: false };
+
+  // Every section that IS present must have the modelled shape.
   let sawSection = false;
-  for (const [, value] of entries) {
-    if (typeof value === "string") {
-      sawSection = true;
-      texts.push(value);
-    } else if (value && typeof value === "object" && !Array.isArray(value)) {
-      const text = (value as Record<string, unknown>).text;
-      if (typeof text === "string") {
-        sawSection = true;
-        texts.push(text);
-      }
+  for (const k of NARRATIVE_SECTION_KEYS) {
+    if (!(k in o)) continue;
+    const section = o[k];
+    if (!section || typeof section !== "object" || Array.isArray(section)) {
+      return { readable: false };
     }
+    if (typeof (section as Record<string, unknown>).text !== "string") {
+      return { readable: false };
+    }
+    sawSection = true;
   }
-  // `omittedSections` / `warnings` are arrays and carry no prose, so an object
-  // made only of those is not a narrative we can inspect.
   if (!sawSection) return { readable: false };
+
+  for (const k of NARRATIVE_METADATA_KEYS) {
+    if (k in o && !Array.isArray(o[k])) return { readable: false };
+  }
+
+  const texts: string[] = [];
+  collectStrings(o, texts);
   return { readable: true, texts };
 }
 
@@ -195,11 +292,34 @@ export function packageBlockSummary(verdict: PackageSafetyVerdict): string {
   );
 }
 
-/* ── Shared preflight loaders ─────────────────────────────────────────────
+
+/* ── Preflight: an explicit, fail-closed result contract ──────────────────
  *
- * Every enqueue site consults ONE of these two functions, so the "which row do
- * I judge?" question has a single answer per situation and cannot drift.
+ * The first revision returned `{candidate, verdict, isCurrent}` and DISCARDED
+ * Supabase errors. Four fail-open holes followed from that:
+ *
+ *   - a failed latest-candidate query became "no candidate" → SAFE;
+ *   - a failed named-candidate query returned candidate:null + SAFE;
+ *   - `preflightBlocks` only checked `!isCurrent` when `candidate !== null`,
+ *     so that null result did not block either;
+ *   - a failed latest-VERSION query made a stale named package look current.
+ *
+ * A transient database failure is not evidence of safety. The outcome is now a
+ * discriminated union with exactly ONE proceeding member, so a caller cannot
+ * accidentally treat any other state as "fine".
  * ---------------------------------------------------------------------- */
+
+export type PreflightOutcome =
+  /** Inspected, and every check passed. THE ONLY state that may proceed. */
+  | { kind: "safe"; candidate: CandidateRow }
+  /** Inspected, and the candidate carries an unsafe or unresolved claim. */
+  | { kind: "blocked"; candidate: CandidateRow; verdict: PackageSafetyVerdict }
+  /** No defence-package candidate exists for this dispute at all. */
+  | { kind: "missing" }
+  /** The named candidate exists but is no longer the newest version. */
+  | { kind: "not_current"; candidate: CandidateRow; latestId: string | null }
+  /** A query failed, or a row came back unreadable. Never read as safe. */
+  | { kind: "error"; message: string };
 
 interface CandidateRow {
   id: string;
@@ -209,62 +329,70 @@ interface CandidateRow {
   narrative_json?: unknown;
 }
 
-export interface CandidatePreflight {
-  /** The row that was judged. Null when no candidate exists at all. */
-  candidate: CandidateRow | null;
-  verdict: PackageSafetyVerdict;
-  /** True when the judged row is also the newest version for the dispute. */
-  isCurrent: boolean;
-}
-
 const SELECT_COLS = "id, version, status, facts_json, narrative_json";
 
-/** Minimal Supabase surface these helpers use — kept structural so tests can
- *  pass a hand-rolled mock without importing the client type. */
+/** Minimal Supabase surface these helpers use — structural so tests can pass a
+ *  hand-rolled mock without importing the client type. */
 type SbLike = {
   from: (table: string) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
 };
 
-const SAFE: PackageSafetyVerdict = { safe: true, reasons: [], retiredKeys: [] };
+function asCandidateRow(data: unknown): CandidateRow | null {
+  if (!data || typeof data !== "object") return null;
+  const r = data as Record<string, unknown>;
+  if (typeof r.id !== "string" || typeof r.version !== "number") return null;
+  return r as unknown as CandidateRow;
+}
 
-/** The newest candidate for a dispute, judged. Used by paths that do not name
- *  a specific package (auto-save, the worker, the deadline cron). */
+function judge(candidate: CandidateRow): PreflightOutcome {
+  const verdict = assessPackageCandidateSafety({
+    factsJson: candidate.facts_json,
+    narrativeJson: candidate.narrative_json,
+  });
+  return verdict.safe ? { kind: "safe", candidate } : { kind: "blocked", candidate, verdict };
+}
+
+/**
+ * The newest candidate for a dispute, judged. Used by paths that do not name a
+ * specific package: auto-save, the manual save route, the portal approval
+ * route, the deadline cron, the worker.
+ */
 export async function preflightLatestCandidate(
   sb: SbLike,
   disputeId: string,
-): Promise<CandidatePreflight> {
-  const { data } = await sb
+): Promise<PreflightOutcome> {
+  const res = await sb
     .from("defence_packages")
     .select(SELECT_COLS)
     .eq("dispute_id", disputeId)
     .order("version", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (!data) return { candidate: null, verdict: SAFE, isCurrent: true };
-  return {
-    candidate: data as CandidateRow,
-    verdict: assessPackageCandidateSafety({
-      factsJson: (data as CandidateRow).facts_json,
-      narrativeJson: (data as CandidateRow).narrative_json,
-    }),
-    isCurrent: true,
-  };
+  if (res?.error) {
+    return {
+      kind: "error",
+      message: `latest_candidate_query_failed: ${res.error.message ?? "unknown"}`,
+    };
+  }
+  if (res?.data == null) return { kind: "missing" };
+  const row = asCandidateRow(res.data);
+  if (!row) return { kind: "error", message: "latest_candidate_row_unreadable" };
+  return judge(row);
 }
 
 /**
- * A NAMED candidate, judged — plus proof that it is still the newest version.
+ * A NAMED candidate, judged — plus proof it is still the newest version.
  *
  * The named-package routes must not claim to be "pinned": they enqueue a job
- * keyed to the source pack, and the worker independently re-selects the latest
- * version. So judging only the named row would leave a window where the
- * merchant approves version 3 and the worker files version 4. `isCurrent`
- * makes that visible, and callers refuse when it is false.
+ * keyed to the source pack and the worker independently re-selects the latest
+ * version. Judging only the named row would leave a window where the merchant
+ * approves v3 and the worker files v4.
  */
 export async function preflightNamedCandidate(
   sb: SbLike,
   args: { packageId: string; disputeId: string },
-): Promise<CandidatePreflight> {
-  const [{ data: named }, { data: latest }] = await Promise.all([
+): Promise<PreflightOutcome> {
+  const [namedRes, latestRes] = await Promise.all([
     sb.from("defence_packages").select(SELECT_COLS).eq("id", args.packageId).maybeSingle(),
     sb
       .from("defence_packages")
@@ -274,38 +402,111 @@ export async function preflightNamedCandidate(
       .limit(1)
       .maybeSingle(),
   ]);
-  if (!named) return { candidate: null, verdict: SAFE, isCurrent: false };
-  const row = named as CandidateRow;
-  return {
-    candidate: row,
-    verdict: assessPackageCandidateSafety({
-      factsJson: row.facts_json,
-      narrativeJson: row.narrative_json,
-    }),
-    isCurrent: !latest || (latest as { id: string }).id === row.id,
-  };
-}
 
-/** True when this preflight must stop the caller: unsafe, unresolved, or a
- *  named row the worker would not actually file. */
-export function preflightBlocks(p: CandidatePreflight): boolean {
-  return !p.verdict.safe || (p.candidate !== null && !p.isCurrent);
-}
-
-/** Reason codes for the audit row / API body, including the staleness case. */
-export function preflightReasons(p: CandidatePreflight): string[] {
-  const out: string[] = [...p.verdict.reasons];
-  if (p.candidate !== null && !p.isCurrent) out.push("candidate_not_current");
-  return out;
-}
-
-/** Merchant-safe message for any blocking preflight. */
-export function preflightSummary(p: CandidatePreflight): string {
-  if (p.candidate !== null && !p.isCurrent && p.verdict.safe) {
-    return (
-      "A newer version of this defence package exists. Refresh and review the " +
-      "latest version before submitting."
-    );
+  if (namedRes?.error) {
+    return {
+      kind: "error",
+      message: `named_candidate_query_failed: ${namedRes.error.message ?? "unknown"}`,
+    };
   }
-  return packageBlockSummary(p.verdict);
+  // A failed latest lookup CANNOT be read as "the named row is current" —
+  // that was one of the four holes.
+  if (latestRes?.error) {
+    return {
+      kind: "error",
+      message: `latest_version_query_failed: ${latestRes.error.message ?? "unknown"}`,
+    };
+  }
+  if (namedRes?.data == null) return { kind: "missing" };
+
+  const named = asCandidateRow(namedRes.data);
+  if (!named) return { kind: "error", message: "named_candidate_row_unreadable" };
+
+  const latestId =
+    latestRes?.data && typeof (latestRes.data as Record<string, unknown>).id === "string"
+      ? ((latestRes.data as Record<string, unknown>).id as string)
+      : null;
+  // No latest row while the named row exists is contradictory, not reassuring.
+  if (latestId === null) return { kind: "error", message: "latest_version_row_unreadable" };
+  if (latestId !== named.id) return { kind: "not_current", candidate: named, latestId };
+
+  return judge(named);
+}
+
+/** True unless the outcome is the single proceeding state. */
+export function preflightBlocks(p: PreflightOutcome): boolean {
+  return p.kind !== "safe";
+}
+
+/** Machine-readable reasons for the audit row and the API body. */
+export function preflightReasons(p: PreflightOutcome): string[] {
+  switch (p.kind) {
+    case "safe":
+      return [];
+    case "blocked":
+      return [...p.verdict.reasons];
+    case "missing":
+      return ["no_defence_package"];
+    case "not_current":
+      return ["candidate_not_current"];
+    case "error":
+      return ["preflight_error"];
+  }
+}
+
+/** Retired keys found, when the candidate was inspectable. */
+export function preflightRetiredKeys(p: PreflightOutcome): RetiredPayloadKey[] {
+  return p.kind === "blocked" ? p.verdict.retiredKeys : [];
+}
+
+/** The candidate that was judged, when there was one. */
+export function preflightCandidate(p: PreflightOutcome): CandidateRow | null {
+  return p.kind === "blocked" || p.kind === "not_current" || p.kind === "safe" ? p.candidate : null;
+}
+
+/**
+ * TRANSIENT — a database failure, not a property of the package.
+ *
+ * Callers must not tell the merchant to regenerate in this case (regeneration
+ * does not fix a database outage), and background callers should retry rather
+ * than park permanently.
+ */
+export function preflightIsTransient(p: PreflightOutcome): boolean {
+  return p.kind === "error";
+}
+
+/**
+ * TRANSIENT-BY-WAITING — the package simply does not exist yet.
+ *
+ * Not a defect either: the build is still to come. Background paths defer;
+ * merchant paths say "not generated yet" rather than "regenerate".
+ */
+export function preflightIsPending(p: PreflightOutcome): boolean {
+  return p.kind === "missing";
+}
+
+/** Merchant-safe message for a blocking preflight. Never exposes JSON detail,
+ *  gateway codes, addresses, or a database error string. */
+export function preflightSummary(p: PreflightOutcome): string {
+  switch (p.kind) {
+    case "safe":
+      return "";
+    case "blocked":
+      return packageBlockSummary(p.verdict);
+    case "missing":
+      return (
+        "The defence package for this dispute has not been generated yet. It " +
+        "will become available once the package finishes building."
+      );
+    case "not_current":
+      return (
+        "A newer version of this defence package exists. Refresh and review the " +
+        "latest version before submitting."
+      );
+    case "error":
+      return (
+        "We could not check this defence package just now. Please try again in " +
+        "a few minutes."
+      );
+  }
 }

@@ -65,10 +65,26 @@ const PACK = {
   pack_json: { case_strength: { overall: "strong" } },
 };
 
+const FACT = {
+  id: "f1",
+  category: "delivery_proof",
+  label: "Delivery confirmation",
+  source: "shopify_fulfillments",
+  sourceRef: null,
+  strength: "moderate",
+  bankEligible: true,
+  merchantVisible: true,
+  internalOnly: false,
+  includeInBankNarrative: true,
+  submissionRisk: false,
+  confidence: null,
+  value: { proofType: "delivered_confirmed" },
+};
+
 const UNSAFE_PKG = {
   id: "pkg-3",
   version: 3,
-  facts_json: [{ id: "f1", category: "delivery_proof", value: { proofType: "delivered_confirmed" } }],
+  facts_json: [FACT],
   narrative_json: {
     fulfillmentArgument: { text: "The parcel was delivered to the cardholder's verified address." },
   },
@@ -76,7 +92,7 @@ const UNSAFE_PKG = {
 const SAFE_PKG = {
   id: "pkg-4",
   version: 4,
-  facts_json: UNSAFE_PKG.facts_json,
+  facts_json: [FACT],
   narrative_json: {
     fulfillmentArgument: {
       text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890).",
@@ -84,7 +100,15 @@ const SAFE_PKG = {
   },
 };
 
-function mockSb(latestPkg: Record<string, unknown> | null) {
+/** Same wiring, but the defence_packages query fails. */
+function mockSbError() {
+  return mockSb(null, { message: "connection reset" });
+}
+
+function mockSb(
+  latestPkg: Record<string, unknown> | null,
+  queryError: { message: string } | null = null,
+) {
   const packUpdates: Array<Record<string, unknown>> = [];
   const inserts: Array<{ table: string; values: Record<string, unknown> }> = [];
   const from = vi.fn((table: string) => {
@@ -116,7 +140,7 @@ function mockSb(latestPkg: Record<string, unknown> | null) {
         eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({ data: latestPkg, error: null }),
+        maybeSingle: vi.fn().mockResolvedValue({ data: queryError ? null : latestPkg, error: queryError }),
       };
     }
     return {
@@ -186,11 +210,32 @@ describe("evaluateAndMaybeAutoSave — PR-C1 unsafe-candidate block", () => {
     expect(mockMark).not.toHaveBeenCalled();
   });
 
-  it("auto-saves normally when no defence package exists yet (the usual ordering)", async () => {
+  it("DEFERS when no defence package exists yet — no stamp, no job", async () => {
+    // `saveToShopifyJob` hard-requires a latest `final` package, so a job
+    // queued now is a job the worker must reject, and the accompanying
+    // `saved_to_shopify` stamp was a knowingly false saved state.
+    // `buildDefencePackageJob` re-resolves the rule mode after the build and
+    // calls `finalizeAndEnqueueSave` itself, so the save still happens.
     const { packUpdates, inserts } = mockSb(null);
     const result = await evaluateAndMaybeAutoSave(PACK_ID);
-    expect(result.action).toBe("auto_save");
-    expect(packUpdates.some((p) => p.status === "saved_to_shopify")).toBe(true);
-    expect(inserts.some((i) => i.table === "jobs")).toBe(true);
+    expect(result.action).toBe("defer_no_package");
+    expect(result.details).toBe("no_defence_package_yet");
+    for (const patch of packUpdates) {
+      expect(patch.status).not.toBe("saved_to_shopify");
+      expect(patch.saved_to_shopify_at).toBeUndefined();
+    }
+    expect(inserts.some((i) => i.table === "jobs")).toBe(false);
+    // Not a merchant problem: no review-required banner for a pending build.
+    expect(mockMark).not.toHaveBeenCalled();
+  });
+
+  it("DEFERS on a preflight query error — a database failure is not safety", async () => {
+    const { packUpdates, inserts } = mockSbError();
+    const result = await evaluateAndMaybeAutoSave(PACK_ID);
+    expect(result.action).toBe("defer_no_package");
+    expect(result.details).toBe("preflight_error");
+    for (const patch of packUpdates) expect(patch.status).not.toBe("saved_to_shopify");
+    expect(inserts.some((i) => i.table === "jobs")).toBe(false);
+    expect(mockMark).not.toHaveBeenCalled();
   });
 });

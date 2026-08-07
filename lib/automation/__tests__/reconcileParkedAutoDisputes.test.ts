@@ -138,9 +138,21 @@ const FINALIZABLE_DRAFT = {
   // closed on a candidate whose supporting JSON cannot be inspected, so a
   // fixture without them would be blocked — correctly, but it would no longer
   // represent the happy path these tests are about.
-  facts_json: [
-    { id: "f1", category: "delivery_proof", value: { proofType: "delivered_confirmed" } },
-  ],
+  facts_json: [{
+    id: "f1",
+    category: "delivery_proof",
+    label: "Delivery confirmation",
+    source: "shopify_fulfillments",
+    sourceRef: null,
+    strength: "moderate",
+    bankEligible: true,
+    merchantVisible: true,
+    internalOnly: false,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+    confidence: null,
+    value: { proofType: "delivered_confirmed" },
+  }],
   narrative_json: {
     fulfillmentArgument: {
       text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890).",
@@ -164,7 +176,21 @@ describe("reconcileParkedAutoDisputes", () => {
       dpkgByDispute: {
         "disp-1": {
           ...FINALIZABLE_DRAFT,
-          facts_json: [{ id: "f1", category: "delivery_proof", value: { proofType: "delivered_confirmed" } }],
+          facts_json: [{
+    id: "f1",
+    category: "delivery_proof",
+    label: "Delivery confirmation",
+    source: "shopify_fulfillments",
+    sourceRef: null,
+    strength: "moderate",
+    bankEligible: true,
+    merchantVisible: true,
+    internalOnly: false,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+    confidence: null,
+    value: { proofType: "delivered_confirmed" },
+  }],
           narrative_json: {
             fulfillmentArgument: {
               text: "The parcel was delivered to the cardholder's verified address.",

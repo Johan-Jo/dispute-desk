@@ -16,16 +16,45 @@ vi.mock("@/lib/audit/logEvent", () => ({
 }));
 
 import { getServiceClient } from "@/lib/supabase/server";
+import { logAuditEvent } from "@/lib/audit/logEvent";
 import { POST } from "@/app/api/packs/[packId]/approve/route";
 import { NextRequest } from "next/server";
 
 const mockClient = vi.mocked(getServiceClient);
+const mockAudit = vi.mocked(logAuditEvent);
+
+/**
+ * The route writes TWO different kinds of audit record and they must not be
+ * conflated:
+ *   - the safety block goes through `logAuditEvent` (mocked here), and IS
+ *     expected on a refusal — a block is an event worth recording;
+ *   - the successful approval is a raw `audit_events` insert, and must NOT
+ *     appear on a refusal.
+ */
+const blockAudits = () =>
+  mockAudit.mock.calls.filter(
+    (c) => (c[0] as { eventType?: string })?.eventType === "defence_package_blocked_unsafe_claim",
+  );
 
 const PACK_ID = "pack-1";
 const DISPUTE_ID = "dispute-1";
 
 const CLEAN = {
-  facts_json: [{ id: "f1", category: "delivery_proof", value: { proofType: "delivered_confirmed" } }],
+  facts_json: [{
+    id: "f1",
+    category: "delivery_proof",
+    label: "Delivery confirmation",
+    source: "shopify_fulfillments",
+    sourceRef: null,
+    strength: "moderate",
+    bankEligible: true,
+    merchantVisible: true,
+    internalOnly: false,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+    confidence: null,
+    value: { proofType: "delivered_confirmed" },
+  }],
   narrative_json: {
     fulfillmentArgument: { text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1)." },
   },
@@ -37,7 +66,10 @@ const UNSAFE = {
   },
 };
 
-function mockSupabase(latest: Record<string, unknown> | null) {
+function mockSupabase(
+  latest: Record<string, unknown> | null,
+  queryError: { message: string } | null = null,
+) {
   const packUpdate = vi.fn().mockReturnValue({
     eq: vi.fn().mockResolvedValue({ data: null, error: null }),
   });
@@ -72,7 +104,7 @@ function mockSupabase(latest: Record<string, unknown> | null) {
         eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({ data: latest, error: null }),
+        maybeSingle: vi.fn().mockResolvedValue({ data: queryError ? null : latest, error: queryError }),
       };
     }
     if (table === "jobs") return { insert: jobsInsert };
@@ -108,10 +140,17 @@ describe("POST /api/packs/:packId/approve — PR-C1 preflight", () => {
     expect(body.code).toBe("PACKAGE_REVIEW_REQUIRED");
     expect(body.reasons).toContain("affirmative_address_delivery_claim");
 
-    // No approval stamp, no job, no "manual_approved_for_save" audit row.
+    // No approval stamp, no job, and no successful-approval audit row.
     expect(packUpdate).not.toHaveBeenCalled();
     expect(jobsInsert).not.toHaveBeenCalled();
     expect(auditInsert).not.toHaveBeenCalled();
+
+    // Exactly ONE safety-block audit, and it is not an approval event.
+    expect(blockAudits()).toHaveLength(1);
+    expect(blockAudits()[0][0]).toMatchObject({
+      eventType: "defence_package_blocked_unsafe_claim",
+      eventPayload: expect.objectContaining({ trigger: "portal_approve" }),
+    });
   });
 
   it("refuses an unreadable candidate — fails closed", async () => {
@@ -127,18 +166,40 @@ describe("POST /api/packs/:packId/approve — PR-C1 preflight", () => {
     expect(jobsInsert).not.toHaveBeenCalled();
   });
 
-  it("approves and enqueues normally for a safe candidate", async () => {
-    const { packUpdate, jobsInsert } = mockSupabase({ id: "pkg-4", version: 4, ...CLEAN });
+  it("approves and enqueues normally for a safe candidate — and writes NO block audit", async () => {
+    const { packUpdate, jobsInsert, auditInsert } = mockSupabase({ id: "pkg-4", version: 4, ...CLEAN });
     const res = await POST(req(), params);
     expect(res.status).toBe(202);
     expect(packUpdate).toHaveBeenCalledTimes(1);
     expect(jobsInsert).toHaveBeenCalledTimes(1);
+    // The approval audit fires; the block audit does not.
+    expect(auditInsert).toHaveBeenCalledTimes(1);
+    expect(blockAudits()).toHaveLength(0);
   });
 
-  it("approves normally when no defence package exists yet", async () => {
-    const { jobsInsert } = mockSupabase(null);
+  it("refuses when NO defence package exists — the worker would reject the job", async () => {
+    // `saveToShopifyJob` hard-requires a latest `final` package. Enqueueing
+    // against a dispute that has none is enqueueing a guaranteed failure and
+    // telling the merchant it was approved.
+    const { packUpdate, jobsInsert } = mockSupabase(null);
     const res = await POST(req(), params);
-    expect(res.status).toBe(202);
-    expect(jobsInsert).toHaveBeenCalledTimes(1);
+    const body = await res.json();
+    expect(res.status).toBe(422);
+    expect(body.reasons).toContain("no_defence_package");
+    expect(packUpdate).not.toHaveBeenCalled();
+    expect(jobsInsert).not.toHaveBeenCalled();
+  });
+
+  it("returns 503, not 422, when the preflight QUERY fails", async () => {
+    // A database failure is not something the merchant fixes by regenerating.
+    const { packUpdate, jobsInsert } = mockSupabase(null, { message: "connection reset" });
+    const res = await POST(req(), params);
+    const body = await res.json();
+    expect(res.status).toBe(503);
+    expect(body.code).toBe("PACKAGE_CHECK_UNAVAILABLE");
+    expect(body.reasons).toContain("preflight_error");
+    expect(body.message).not.toMatch(/regenerate/i);
+    expect(packUpdate).not.toHaveBeenCalled();
+    expect(jobsInsert).not.toHaveBeenCalled();
   });
 });

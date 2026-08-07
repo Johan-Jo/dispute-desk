@@ -105,7 +105,7 @@ export type AddressClaimVerdict = "none" | "affirmative" | "ambiguous" | "negate
  * lists below only sharpen it.
  */
 const DELIVERY_TERMS =
-  /\b(deliver\w*|dispatch\w*|ship(?:ped|ment|ping)?|arriv\w+|receiv\w+|receipt|hand(?:ed|-delivered)?|drop(?:ped)?\s*off|left\s+at|consignment|parcel|package)\b/i;
+  /\b(deliver\w*|dispatch\w*|ship(?:ped|ment|ping)?|sent|arriv\w+|reach\w+|receiv\w+|receipt|hand(?:ed|-delivered)?|drop(?:ped)?\s*off|left\s+at|consignment|courier|parcel|package|goods)\b/i;
 
 /**
  * Physical-address nouns. `email address`, `IP address`, `web address` and
@@ -113,11 +113,23 @@ const DELIVERY_TERMS =
  * appear in legitimate prose.
  */
 const ADDRESS_TERMS =
-  /\b(address(?:es)?|premises|residence|dwelling|doorstep|door)\b/i;
+  /\b(address(?:es)?|premises|residence|dwelling|doorstep|door|home)\b/i;
 
-/** Non-physical "address" uses, stripped before the coupling test. */
+/**
+ * Physical-DESTINATION paraphrases that never use the word "address".
+ * "reached its stated destination", "arrived at the customer's listed
+ * location", "arrived where the buyer asked us to send them" are the same
+ * unsupported claim in different words. A detector that only knows "address"
+ * is a lexical denylist wearing a structural label.
+ */
+const DESTINATION_TERMS =
+  /\b(destination|location|where\s+(?:the\s+)?(?:buyer|customer|cardholder|purchaser|recipient|they)\s+(?:asked|requested|instructed|told|wanted)\s+(?:us\s+)?to\s+(?:send|ship|deliver))\b/i;
+
+/** Non-physical "address" / "location" uses, stripped before the coupling
+ *  test. `IP location` and `geolocation` are the ip_location_check fact
+ *  describing itself, not a delivery destination. */
 const NON_PHYSICAL_ADDRESS =
-  /\b(e-?mail|ip|web|url|internet|billing\s+contact)\s+address(?:es)?\b/gi;
+  /\b(?:(?:e-?mail|ip|web|url|internet|billing\s+contact)\s+address(?:es)?|ip\s+location|geo-?locat\w+|home\s*page)\b/gi;
 
 /**
  * Billing↔shipping agreement, the retired derivation's own fact. Prohibited on
@@ -133,8 +145,17 @@ const BILLING_SHIPPING_AGREEMENT =
 
 const ISSUER_RECORDS = /\bissuer'?s?\s+record/i;
 
+/**
+ * SYNTACTIC negation only.
+ *
+ * `unverified`, `unconfirmed`, `insufficient`, `absent` and `lacking` were
+ * removed: they are adjectives describing a SOURCE, not negation of the
+ * predicate. With them in the list, "The unverified carrier record shows the
+ * parcel was delivered to the billing address" classified as `negated` and
+ * shipped — an affirmative address-delivery claim wearing a hedge.
+ */
 const NEGATION =
-  /\b(no|not|never|cannot|can'?t|unable|without|absent|lack\w*|does\s+not|do\s+not|did\s+not|is\s+not|was\s+not|were\s+not|has\s+not|have\s+not|insufficient|unconfirmed|unverified|nothing|neither|nor|refrain\w*|must\s+not|may\s+not)\b/i;
+  /\b(no|not|never|cannot|can'?t|unable|without|does\s+not|do\s+not|did\s+not|is\s+not|was\s+not|were\s+not|has\s+not|have\s+not|nothing|neither|nor|refrain\w*|must\s+not|may\s+not)\b/i;
 
 /**
  * A negated CLAIM VERB whose complement is the address sentence — "we do not
@@ -186,71 +207,57 @@ function sentences(text: string): string[] {
     .filter(Boolean);
 }
 
-/** The delivery+address coupling, evaluated on ONE clause. */
+/** The delivery+destination coupling, evaluated on ONE clause. */
 function clauseCouplesDeliveryAndAddress(clause: string): boolean {
   const cleaned = stripNonPhysicalAddresses(clause);
-  return DELIVERY_TERMS.test(cleaned) && ADDRESS_TERMS.test(cleaned);
+  if (!DELIVERY_TERMS.test(cleaned)) return false;
+  return ADDRESS_TERMS.test(cleaned) || DESTINATION_TERMS.test(cleaned);
 }
 
 /**
- * Classify one sentence, clause by clause.
+ * Contrast boundaries. A scoped prohibition ("we do not claim that X") covers
+ * its OWN segment and nothing past a contrast — "…, but the parcel was
+ * delivered to the billing address" is a fresh, unprohibited assertion.
+ */
+function prohibitionSegments(sentence: string): string[] {
+  return sentence
+    .split(/\s*;\s*|\s+(?:but|however|yet|though|although|whereas|while|nevertheless|nonetheless)\s+/i)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Classify one sentence.
  *
- * Negation is scoped. A negative word in one clause must never license an
- * affirmative address-delivery claim in another — that is how
- * "The parcel was not delayed and was delivered to the cardholder's address"
- * used to pass. Three scopes are recognised, in order:
+ * Negation is SCOPED. A negative word in one clause must never license an
+ * affirmative address-delivery claim in another. Four scopes, in order:
  *
  *   1. LITOTES ("no reason to doubt that…") — a negative word doing
  *      affirmative work. Never counts as negation.
- *   2. SCOPED_PROHIBITION ("we do not claim that…") — the negation
- *      legitimately covers the whole complement, so the sentence is a
- *      prohibition.
- *   3. Otherwise, per clause: the clause that MAKES the claim must itself
- *      carry the negation.
+ *   2. SCOPED_PROHIBITION ("we do not claim that…") — covers only the contrast
+ *      segment it appears in. A claim after "but" is NOT prohibited.
+ *   3. The billing↔shipping agreement claim, judged on the clause that makes
+ *      it — the AVS exception ("matched the issuer's records") applies to that
+ *      clause alone and may not immunise the rest of the sentence.
+ *   4. Otherwise, per clause: the clause that MAKES the claim must itself carry
+ *      the negation.
  *
- * Anything that cannot be resolved deterministically is `ambiguous`, which
- * blocks exactly like `affirmative`.
+ * Anything unresolvable is `ambiguous`, which blocks exactly like
+ * `affirmative`.
  */
 function classifySentence(sentence: string): AddressClaimVerdict {
-  const cleaned = stripNonPhysicalAddresses(sentence);
-  const litotes = LITOTES.test(cleaned);
-
-  // Sentence-level claim: billing↔shipping agreement. Evaluated whole, because
-  // clause splitting would cut "billing and shipping addresses" in half.
-  const agreementClaim =
-    BILLING_SHIPPING_AGREEMENT.test(cleaned) && !ISSUER_RECORDS.test(cleaned);
-
-  const claimClauses = clausesOf(sentence).filter(clauseCouplesDeliveryAndAddress);
-
-  /**
-   * The coupling can straddle clause boundaries — "The order shipped to, and
-   * was received at, the cardholder's address." No single clause holds both
-   * halves, but the sentence plainly makes the claim.
-   *
-   * When that happens the clause-level negation scope is, by definition,
-   * unresolvable. So: no negation anywhere → judge the sentence normally;
-   * negation somewhere → `ambiguous`, because we cannot prove which half it
-   * covers. Ambiguous blocks, so this fails closed.
-   */
-  const straddles =
-    claimClauses.length === 0 &&
-    DELIVERY_TERMS.test(cleaned) &&
-    ADDRESS_TERMS.test(cleaned);
-
-  if (!agreementClaim && claimClauses.length === 0 && !straddles) return "none";
-
-  if (!litotes && SCOPED_PROHIBITION.test(cleaned)) return "negated";
-
-  if (straddles && !agreementClaim) {
-    if (!litotes && NEGATION.test(cleaned)) return "ambiguous";
-    return AFFIRMATION.test(cleaned) ? "affirmative" : "ambiguous";
-  }
+  const cleanedSentence = stripNonPhysicalAddresses(sentence);
+  const litotes = LITOTES.test(cleanedSentence);
 
   let affirmative = false;
   let ambiguous = false;
   let negated = false;
 
-  const judge = (fragment: string) => {
+  const judge = (fragment: string, prohibited: boolean) => {
+    if (prohibited && !litotes) {
+      negated = true;
+      return;
+    }
     if (!litotes && NEGATION.test(fragment)) {
       negated = true;
       return;
@@ -262,9 +269,52 @@ function classifySentence(sentence: string): AddressClaimVerdict {
     ambiguous = true;
   };
 
-  if (agreementClaim) judge(sentence);
-  for (const clause of claimClauses) judge(clause);
+  let sawClaim = false;
 
+  for (const segment of prohibitionSegments(sentence)) {
+    const cleanedSegment = stripNonPhysicalAddresses(segment);
+    const prohibited = !litotes && SCOPED_PROHIBITION.test(cleanedSegment);
+
+    // (3) Billing↔shipping agreement. Judged on the CLAUSE that matches, so
+    // "The billing and shipping addresses match, and the issuer's records
+    // confirm payment verification" is still blocked — the issuer-records
+    // mention is in a different clause and does not cover the agreement.
+    for (const clause of clausesOf(segment)) {
+      const cleanedClause = stripNonPhysicalAddresses(clause);
+      if (
+        BILLING_SHIPPING_AGREEMENT.test(cleanedClause) &&
+        !ISSUER_RECORDS.test(cleanedClause)
+      ) {
+        sawClaim = true;
+        judge(clause, prohibited);
+      }
+    }
+
+    // (4) Delivery+destination coupling, per clause.
+    const claimClauses = clausesOf(segment).filter(clauseCouplesDeliveryAndAddress);
+    for (const clause of claimClauses) {
+      sawClaim = true;
+      judge(clause, prohibited);
+    }
+
+    // The coupling can straddle clause boundaries — "The order shipped to,
+    // and was received at, the cardholder's address." No single clause holds
+    // both halves. Clause-level negation scope is then unresolvable by
+    // definition, so a negation anywhere in the segment makes it ambiguous.
+    if (
+      claimClauses.length === 0 &&
+      DELIVERY_TERMS.test(cleanedSegment) &&
+      (ADDRESS_TERMS.test(cleanedSegment) || DESTINATION_TERMS.test(cleanedSegment))
+    ) {
+      sawClaim = true;
+      if (prohibited && !litotes) negated = true;
+      else if (!litotes && NEGATION.test(cleanedSegment)) ambiguous = true;
+      else if (AFFIRMATION.test(cleanedSegment)) affirmative = true;
+      else ambiguous = true;
+    }
+  }
+
+  if (!sawClaim) return "none";
   if (affirmative) return "affirmative";
   if (ambiguous) return "ambiguous";
   if (negated) return "negated";

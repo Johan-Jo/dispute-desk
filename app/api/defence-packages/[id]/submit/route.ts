@@ -13,6 +13,8 @@ import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import {
   preflightBlocks,
+  preflightCandidate,
+  preflightIsTransient,
   preflightNamedCandidate,
   preflightReasons,
   preflightSummary,
@@ -76,20 +78,23 @@ export async function POST(
       eventType: "defence_package_blocked_unsafe_claim",
       eventPayload: {
         packageId: pkg.id,
-        version: preflight.candidate?.version ?? null,
+        version: preflightCandidate(preflight)?.version ?? null,
+        outcome: preflight.kind,
         reasons: preflightReasons(preflight),
-        isCurrent: preflight.isCurrent,
         trigger: "embedded_submit",
       },
     });
+    // A database failure is not something the merchant fixes by regenerating:
+    // 503 + retry, never 422 + "regenerate".
+    const transient = preflightIsTransient(preflight);
     return NextResponse.json(
       {
-        error: "PACKAGE_REVIEW_REQUIRED",
-        code: "PACKAGE_REVIEW_REQUIRED",
+        error: transient ? "PACKAGE_CHECK_UNAVAILABLE" : "PACKAGE_REVIEW_REQUIRED",
+        code: transient ? "PACKAGE_CHECK_UNAVAILABLE" : "PACKAGE_REVIEW_REQUIRED",
         reasons: preflightReasons(preflight),
         message: preflightSummary(preflight),
       },
-      { status: 422 },
+      { status: transient ? 503 : 422 },
     );
   }
 

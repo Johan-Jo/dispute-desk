@@ -144,6 +144,85 @@ describe("classifyAddressDeliveryClaim — ambiguity fails closed", () => {
   }
 });
 
+describe("detector bypasses closed in review", () => {
+  // Each of these SHIPPED under an earlier revision of the detector.
+  const MUST_BLOCK: Array<[string, string]> = [
+    [
+      "scoped-prohibition bypass — prohibition in one clause, assertion after 'but'",
+      "We do not claim that the carrier identified the address, but the parcel was delivered to the billing address.",
+    ],
+    [
+      "scoped-prohibition bypass — semicolon contrast",
+      "No assertion is made about the delivery point; the parcel was delivered to the cardholder's address.",
+    ],
+    [
+      "negative-qualifier bypass — an adjective is not negation of the predicate",
+      "The unverified carrier record shows the parcel was delivered to the billing address.",
+    ],
+    [
+      "negative-qualifier bypass — 'unconfirmed'",
+      "An unconfirmed scan indicates the package arrived at the customer's residence.",
+    ],
+    [
+      "issuer-record scope bypass — AVS mentioned in a DIFFERENT clause",
+      "The billing and shipping addresses match, and the issuer's records confirm payment verification.",
+    ],
+    ["physical-location paraphrase — home", "The consignment reached the customer's home."],
+    [
+      "physical-location paraphrase — listed location",
+      "The package arrived at the customer's listed location.",
+    ],
+    [
+      "physical-location paraphrase — stated destination",
+      "The order reached its stated destination.",
+    ],
+    [
+      "physical-location paraphrase — where the buyer asked us to send",
+      "The goods arrived where the buyer asked us to send them.",
+    ],
+  ];
+
+  for (const [name, text] of MUST_BLOCK) {
+    it(`blocks: ${name}`, () => {
+      const verdict = classifyAddressDeliveryClaim(text);
+      expect(verdict === "affirmative" || verdict === "ambiguous").toBe(true);
+      expect(claimsAddressDelivery(text)).toBe(true);
+    });
+  }
+
+  it("a prohibition that DOES cover the whole sentence still reads as negated", () => {
+    expect(
+      classifyAddressDeliveryClaim(
+        "We do not claim that the parcel was delivered to the billing address.",
+      ),
+    ).toBe("negated");
+  });
+
+  it("an evidentiary negative about the source still reads as negated", () => {
+    expect(
+      classifyAddressDeliveryClaim("The carrier record does not identify the delivery address."),
+    ).toBe("negated");
+  });
+
+  it("the AVS clause keeps its own licensed wording", () => {
+    // Same sentence shape as the issuer-scope bypass, but the AVS statement is
+    // the ONLY claim — there is no billing↔shipping agreement assertion.
+    expect(
+      claimsAddressDelivery(
+        "The billing address matched the issuer's records and the card verification code matched the issuer's records.",
+      ),
+    ).toBe(false);
+  });
+
+  it("IP-location prose is not a delivery destination", () => {
+    expect(
+      claimsAddressDelivery(
+        "The order IP location resolved to the same country, and the parcel shipped the next day.",
+      ),
+    ).toBe(false);
+  });
+});
+
 describe("classifyAddressDeliveryClaim — legitimate prose still passes", () => {
   const CLEAN = [
     "The carrier confirmed delivery of the shipment on 12 May 2026 (PostNord, tracking 1234567890).",

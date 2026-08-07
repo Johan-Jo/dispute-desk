@@ -4,6 +4,8 @@ import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import {
   preflightBlocks,
+  preflightCandidate,
+  preflightIsTransient,
   preflightLatestCandidate,
   preflightReasons,
   preflightSummary,
@@ -81,20 +83,22 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       actorType: userId ? "merchant" : "system",
       eventType: "defence_package_blocked_unsafe_claim",
       eventPayload: {
-        packageId: preflight.candidate?.id ?? null,
-        version: preflight.candidate?.version ?? null,
+        packageId: preflightCandidate(preflight)?.id ?? null,
+        version: preflightCandidate(preflight)?.version ?? null,
+        outcome: preflight.kind,
         reasons: preflightReasons(preflight),
         trigger: "portal_approve",
       },
     });
+    const transient = preflightIsTransient(preflight);
     return NextResponse.json(
       {
-        error: "PACKAGE_REVIEW_REQUIRED",
-        code: "PACKAGE_REVIEW_REQUIRED",
+        error: transient ? "PACKAGE_CHECK_UNAVAILABLE" : "PACKAGE_REVIEW_REQUIRED",
+        code: transient ? "PACKAGE_CHECK_UNAVAILABLE" : "PACKAGE_REVIEW_REQUIRED",
         reasons: preflightReasons(preflight),
         message: preflightSummary(preflight),
       },
-      { status: 422 },
+      { status: transient ? 503 : 422 },
     );
   }
 

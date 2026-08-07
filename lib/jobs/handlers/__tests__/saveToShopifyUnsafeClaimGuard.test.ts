@@ -97,12 +97,37 @@ const CLEAN_NARRATIVE = {
     text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890).",
   },
 };
-const RETIRED_FACTS = [
-  { id: "f1", category: "delivery_proof", value: { deliveredToVerifiedAddress: true } },
-];
-const CLEAN_FACTS = [
-  { id: "f1", category: "delivery_proof", value: { proofType: "delivered_confirmed" } },
-];
+// The full 13-key persisted fact shape — PR-C1's parser is schema-aware.
+const RETIRED_FACTS = [{
+    id: "f1",
+    category: "delivery_proof",
+    label: "Delivery confirmation",
+    source: "shopify_fulfillments",
+    sourceRef: null,
+    strength: "moderate",
+    bankEligible: true,
+    merchantVisible: true,
+    internalOnly: false,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+    confidence: null,
+    value: { deliveredToVerifiedAddress: true },
+  }];
+const CLEAN_FACTS = [{
+    id: "f1",
+    category: "delivery_proof",
+    label: "Delivery confirmation",
+    source: "shopify_fulfillments",
+    sourceRef: null,
+    strength: "moderate",
+    bankEligible: true,
+    merchantVisible: true,
+    internalOnly: false,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+    confidence: null,
+    value: { proofType: "delivered_confirmed" },
+  }];
 
 function makeSupabase(latestPackage: Record<string, unknown> | null) {
   const packUpdates: Array<Record<string, unknown>> = [];

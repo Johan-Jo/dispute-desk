@@ -28,9 +28,23 @@ const mockMark = vi.mocked(markPackageReviewRequired);
 const PKG_ID = "pkg-3";
 const DISPUTE_ID = "dispute-1";
 
-const CLEAN_FACTS = [
-  { id: "f1", category: "delivery_proof", value: { proofType: "delivered_confirmed" } },
-];
+// The full 13-key persisted fact shape. PR-C1's parser is schema-aware, so a
+// stub fact object is now `unreadable_facts_json` — correctly.
+const CLEAN_FACTS = [{
+    id: "f1",
+    category: "delivery_proof",
+    label: "Delivery confirmation",
+    source: "shopify_fulfillments",
+    sourceRef: null,
+    strength: "moderate",
+    bankEligible: true,
+    merchantVisible: true,
+    internalOnly: false,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+    confidence: null,
+    value: { proofType: "delivered_confirmed" },
+  }];
 const CLEAN_NARRATIVE = {
   fulfillmentArgument: { text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1)." },
 };

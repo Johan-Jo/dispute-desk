@@ -61,9 +61,36 @@ interface ScenarioSpies {
  *   4. jobs.insert({...})                                  → ok | error
  *   5. evidence_packs.update({...}).eq(id)                 → ok
  *
- * Step 2 is the PR-C1 candidate-safety gate. `defencePackage: undefined`
- * means "no package yet", which the route treats as nothing to block.
+ * Step 2 is the PR-C1 candidate-safety gate. A missing candidate now BLOCKS
+ * (the worker hard-requires a final package), so every non-blocking scenario
+ * supplies `SAFE_PACKAGE`.
  */
+
+const SAFE_PACKAGE = {
+  id: "pkg-safe",
+  version: 1,
+  facts_json: [{
+    id: "f1",
+    category: "delivery_proof",
+    label: "Delivery confirmation",
+    source: "shopify_fulfillments",
+    sourceRef: null,
+    strength: "moderate",
+    bankEligible: true,
+    merchantVisible: true,
+    internalOnly: false,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+    confidence: null,
+    value: { proofType: "delivered_confirmed" },
+  }],
+  narrative_json: {
+    executiveSummary: {
+      text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890).",
+      usedFactIds: ["f1"],
+    },
+  },
+};
 function mockSupabase(rows: ScenarioRows): ScenarioSpies {
   const jobsInsert = vi.fn().mockResolvedValue({
     data: null,
@@ -102,7 +129,7 @@ function mockSupabase(rows: ScenarioRows): ScenarioSpies {
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({
-          data: rows.defencePackage ?? null,
+          data: rows.defencePackage === undefined ? SAFE_PACKAGE : rows.defencePackage,
           error: null,
         }),
       };
@@ -268,7 +295,21 @@ describe("POST /api/packs/:packId/save-to-shopify — happy path side effects", 
       defencePackage: {
         id: "pkg-3",
         version: 3,
-        facts_json: [{ id: "f1", category: "delivery_proof", value: { proofType: "delivered_confirmed" } }],
+        facts_json: [{
+    id: "f1",
+    category: "delivery_proof",
+    label: "Delivery confirmation",
+    source: "shopify_fulfillments",
+    sourceRef: null,
+    strength: "moderate",
+    bankEligible: true,
+    merchantVisible: true,
+    internalOnly: false,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+    confidence: null,
+    value: { proofType: "delivered_confirmed" },
+  }],
         narrative_json: {
           fulfillmentArgument: {
             text: "The parcel was delivered to the cardholder's verified address on 12 May 2026.",
@@ -301,9 +342,21 @@ describe("POST /api/packs/:packId/save-to-shopify — happy path side effects", 
       defencePackage: {
         id: "pkg-3",
         version: 3,
-        facts_json: [
-          { id: "f1", category: "delivery_proof", value: { deliveredToVerifiedAddress: true } },
-        ],
+        facts_json: [{
+    id: "f1",
+    category: "delivery_proof",
+    label: "Delivery confirmation",
+    source: "shopify_fulfillments",
+    sourceRef: null,
+    strength: "moderate",
+    bankEligible: true,
+    merchantVisible: true,
+    internalOnly: false,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+    confidence: null,
+    value: { deliveredToVerifiedAddress: true },
+  }],
         narrative_json: { fulfillmentArgument: { text: "The carrier confirmed delivery on 12 May." } },
       },
     });
@@ -325,7 +378,21 @@ describe("POST /api/packs/:packId/save-to-shopify — happy path side effects", 
       defencePackage: {
         id: "pkg-4",
         version: 4,
-        facts_json: [{ id: "f1", category: "delivery_proof", value: { proofType: "delivered_confirmed" } }],
+        facts_json: [{
+    id: "f1",
+    category: "delivery_proof",
+    label: "Delivery confirmation",
+    source: "shopify_fulfillments",
+    sourceRef: null,
+    strength: "moderate",
+    bankEligible: true,
+    merchantVisible: true,
+    internalOnly: false,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+    confidence: null,
+    value: { proofType: "delivered_confirmed" },
+  }],
         narrative_json: {
           fulfillmentArgument: {
             text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890).",

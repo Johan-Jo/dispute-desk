@@ -31,21 +31,38 @@ const AMBIGUOUS_NARRATIVE = {
   fulfillmentArgument: { text: "Delivery to the customer's address." },
 };
 
-const CLEAN_FACTS = [
-  {
+/** The full 13-key persisted fact shape, measured over 2 576 prod objects. */
+const CLEAN_FACTS = [{
     id: "f1",
     category: "delivery_proof",
+    label: "Delivery confirmation",
+    source: "shopify_fulfillments",
+    sourceRef: null,
+    strength: "moderate",
+    bankEligible: true,
+    merchantVisible: true,
+    internalOnly: false,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+    confidence: null,
     value: { proofType: "delivered_confirmed", carrier: "PostNord", trackingNumber: "1" },
-  },
-];
+  }];
 
-const RETIRED_FACTS = [
-  {
+const RETIRED_FACTS = [{
     id: "f1",
     category: "delivery_proof",
+    label: "Delivery confirmation",
+    source: "shopify_fulfillments",
+    sourceRef: null,
+    strength: "moderate",
+    bankEligible: true,
+    merchantVisible: true,
+    internalOnly: false,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+    confidence: null,
     value: { proofType: "delivered_confirmed", deliveredToVerifiedAddress: true },
-  },
-];
+  }];
 
 describe("assessPackageCandidateSafety", () => {
   it("a clean candidate is safe", () => {
@@ -70,7 +87,9 @@ describe("assessPackageCandidateSafety", () => {
 
   it("blocks on collectedByCustomer too", () => {
     const v = assessPackageCandidateSafety({
-      factsJson: [{ id: "f1", category: "shipping_tracking", value: { collectedByCustomer: true } }],
+      factsJson: [
+        { ...CLEAN_FACTS[0], category: "shipping_tracking", value: { collectedByCustomer: true } },
+      ],
       narrativeJson: CLEAN_NARRATIVE,
     });
     expect(v.safe).toBe(false);
@@ -222,11 +241,108 @@ describe("candidate-based blocking", () => {
   });
 });
 
-describe("narrativeTexts", () => {
-  it("reads both string sections and { text } sections", () => {
-    expect(
-      narrativeTexts({ a: "one", b: { text: "two" }, c: { nope: 1 }, d: 3 }).sort(),
-    ).toEqual(["one", "two"]);
+describe("narrativeTexts — recursive, so nothing hides", () => {
+  it("reads every section's text", () => {
+    const texts = narrativeTexts({
+      executiveSummary: { text: "one", usedFactIds: [] },
+      conclusion: { text: "two", usedFactIds: [] },
+    });
+    expect(texts).toContain("one");
+    expect(texts).toContain("two");
+  });
+
+  it("returns nothing for an unreadable shape — callers must use the verdict", () => {
+    expect(narrativeTexts({ unknownSection: { nested: { text: "hidden" } } })).toEqual([]);
+    expect(narrativeTexts(null)).toEqual([]);
+  });
+});
+
+describe("schema-aware structural validation", () => {
+  it("rejects an INCOMPLETE fact object rather than reading it as empty evidence", () => {
+    // The two shapes called out in review. Both used to pass as "readable,
+    // no retired keys found, therefore safe".
+    for (const factsJson of [[{}], [{ value: "unexpected" }], [{ ...CLEAN_FACTS[0], value: "s" }]]) {
+      const v = assessPackageCandidateSafety({ factsJson, narrativeJson: CLEAN_NARRATIVE });
+      expect(v.safe).toBe(false);
+      expect(v.reasons).toContain("unreadable_facts_json");
+    }
+  });
+
+  it("rejects a fact object missing any required discriminating field", () => {
+    for (const drop of ["id", "category", "label", "source", "strength", "bankEligible", "submissionRisk"]) {
+      const partial = { ...CLEAN_FACTS[0] } as Record<string, unknown>;
+      delete partial[drop];
+      const v = assessPackageCandidateSafety({ factsJson: [partial], narrativeJson: CLEAN_NARRATIVE });
+      expect(v.safe, `missing ${drop} must fail closed`).toBe(false);
+      expect(v.reasons).toContain("unreadable_facts_json");
+    }
+  });
+
+  it("rejects a mistyped required field", () => {
+    const v = assessPackageCandidateSafety({
+      factsJson: [{ ...CLEAN_FACTS[0], bankEligible: "yes" }],
+      narrativeJson: CLEAN_NARRATIVE,
+    });
+    expect(v.safe).toBe(false);
+    expect(v.reasons).toContain("unreadable_facts_json");
+  });
+
+  it("tolerates an EXTRA key on a well-formed fact — forward compatibility", () => {
+    // An added field creates no blind spot: the retired-key scan reads
+    // `value`'s own keys. Rejecting it would turn a future schema addition
+    // into a fleet-wide block.
+    const v = assessPackageCandidateSafety({
+      factsJson: [{ ...CLEAN_FACTS[0], someFutureField: 1 }],
+      narrativeJson: CLEAN_NARRATIVE,
+    });
+    expect(v.safe).toBe(true);
+  });
+
+  it("rejects an UNKNOWN narrative key instead of ignoring its nested prose", () => {
+    // The partial-valid / partial-unknown case: one good section plus an
+    // unknown branch that used to go uninspected.
+    const v = assessPackageCandidateSafety({
+      factsJson: CLEAN_FACTS,
+      narrativeJson: {
+        executiveSummary: { text: "clean text", usedFactIds: [] },
+        unknownSection: { nested: { text: "The parcel was delivered to the billing address." } },
+      },
+    });
+    expect(v.safe).toBe(false);
+    expect(v.reasons).toContain("unreadable_narrative_json");
+  });
+
+  it("rejects a KNOWN section with an unexpected value shape", () => {
+    for (const bad of [
+      { executiveSummary: { usedFactIds: [] } },
+      { executiveSummary: "just a string" },
+      { executiveSummary: [{ text: "x" }] },
+      { executiveSummary: { text: "ok", usedFactIds: [] }, warnings: "not-an-array" },
+    ]) {
+      const v = assessPackageCandidateSafety({ factsJson: CLEAN_FACTS, narrativeJson: bad });
+      expect(v.safe).toBe(false);
+      expect(v.reasons).toContain("unreadable_narrative_json");
+    }
+  });
+
+  it("accepts the real 11-key narrative shape", () => {
+    const v = assessPackageCandidateSafety({
+      factsJson: CLEAN_FACTS,
+      narrativeJson: {
+        executiveSummary: { text: "The carrier confirmed delivery on 12 May.", usedFactIds: ["f1"] },
+        transactionOverviewArgument: { text: "", usedFactIds: [] },
+        chronologyArgument: { text: "", usedFactIds: [] },
+        paymentAuthenticationArgument: { text: "", usedFactIds: [] },
+        fulfillmentArgument: { text: "", usedFactIds: [] },
+        communicationArgument: { text: "", usedFactIds: [] },
+        policyArgument: { text: "", usedFactIds: [] },
+        manualEvidenceArgument: { text: "", usedFactIds: [] },
+        conclusion: { text: "", usedFactIds: [] },
+        omittedSections: [{ sectionKey: "policyArgument", reason: "n/a" }],
+        warnings: [],
+      },
+    });
+    expect(v.safe).toBe(true);
   });
 });
 

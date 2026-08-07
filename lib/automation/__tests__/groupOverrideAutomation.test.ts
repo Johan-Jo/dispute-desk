@@ -171,9 +171,45 @@ function runPipeline(
           single: vi.fn().mockResolvedValue({ data: disputeRow, error: null }),
         };
       }
-      // Catch-all, incl. the PR-C1 `defence_packages` preflight. `null` = no
-      // defence package for this dispute yet, the normal state at auto-save
-      // time, which is not a block.
+      // PR-C1: a *missing* defence package is now UNRESOLVED, not safe, and
+      // defers the auto-save. These tests are about the gate matrix, not the
+      // containment, so they supply a safe current candidate.
+      if (table === "defence_packages") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          order: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: {
+              id: "pkg-safe",
+              version: 1,
+              status: "final",
+              facts_json: [
+                {
+                  id: "f1",
+                  category: "delivery_proof",
+                  label: "Delivery confirmation",
+                  source: "shopify_fulfillments",
+                  sourceRef: null,
+                  strength: "moderate",
+                  bankEligible: true,
+                  merchantVisible: true,
+                  internalOnly: false,
+                  includeInBankNarrative: true,
+                  submissionRisk: false,
+                  confidence: null,
+                  value: { proofType: "delivered_confirmed" },
+                },
+              ],
+              narrative_json: {
+                executiveSummary: { text: "The carrier confirmed delivery on 12 May 2026.", usedFactIds: [] },
+              },
+            },
+            error: null,
+          }),
+        };
+      }
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),

@@ -4835,21 +4835,24 @@ unreadable. Unsafe candidates stay viewable but are never saved, forwarded, auto
 deadline-selected; Finalize / Submit / Resubmit are disabled in the workspace with a review-required
 banner, while Preview and Regenerate remain available.
 
-**Measured block population**, one census at `2026-08-07T13:33:15.649Z` over all 280 persisted
-candidates (a version can appear in several reason buckets, so the buckets do not sum to the union):
+**Measured block population**, one census at `2026-08-07T15:22:50.289Z` over all 280 persisted
+candidates, under the schema-aware parser and the scope-corrected detector (a version can appear in
+several reason buckets, so the buckets do not sum to the union):
 
 | population | versions | disputes |
 |---|---|---|
 | `retired_delivery_fact` | 162 | 72 |
-| `affirmative_address_delivery_claim` | 135 | 64 |
-| `ambiguous_address_delivery_claim` | 130 | 67 |
+| `affirmative_address_delivery_claim` | 142 | 69 |
+| `ambiguous_address_delivery_claim` | 138 | 71 |
 | `unreadable_facts_json` | 39 | 38 |
 | `unreadable_narrative_json` | 39 | 38 |
-| **deduplicated union (blocked)** | **209** | **88** |
+| **deduplicated union (blocked)** | **212** | **91** |
+| safe (may proceed) | 68 | — |
 
-Union by dispute state (mutually exclusive, reconciles to 88): open-not-saved 60, saved-but-unsent
-1, actually sent 15, finalized 12. By shop: blume-box 188 versions / 80 disputes, cay-collective 19
-/ 6, surasvenne 2 / 2. Only 8 packages are blocked by ambiguity alone. The block is **candidate-based**: selectors read the latest version only, so a
+Union by dispute state (mutually exclusive, reconciles to 91): open-not-saved 62, saved-but-unsent
+1, actually sent 15, finalized 13. By shop: blume-box 191 versions / 83 disputes, cay-collective 19
+/ 6, surasvenne 2 / 2. By package status: draft 107, failed 43, stale 37, submitted 20, superseded
+4, skipped 1. Only 7 packages are blocked by ambiguity alone, and none by unreadable facts alone. The block is **candidate-based**: selectors read the latest version only, so a
 regenerated safe version becomes usable immediately and an older unsafe version never blocks the
 dispute permanently — and no selector may search backwards for a "newest safe" version, because the
 older versions are the unsafe ones. Nothing already saved in Shopify is altered automatically.
