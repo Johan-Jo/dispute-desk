@@ -30,6 +30,7 @@ import { isDefencePackageBuilderEnabled } from "@/lib/featureFlags";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { sendDefenceDeadlineFallbackAlert } from "@/lib/email/sendDefenceDeadlineFallbackAlert";
 import { assessPackageCandidateSafety } from "@/lib/defence/packageSafety";
+import { parseFinalizeRpcResult } from "@/lib/defence/finalizeRpc";
 import { cronEnvGate } from "@/lib/cron/envGate";
 
 export const runtime = "nodejs";
@@ -41,6 +42,9 @@ interface Summary {
   enqueuedAutoFinalize: number;
   enqueuedSubmit: number;
   enqueuedFallback: number;
+  /** Auto-finalize attempts the transaction refused, or that we could not
+   *  verify. Nothing was written for these; the next run retries. */
+  finalizeRefused: number;
   emailed: number;
   errors: Array<{ disputeId: string; error: string }>;
 }
@@ -55,6 +59,7 @@ export async function GET(req: NextRequest) {
     enqueuedAutoFinalize: 0,
     enqueuedSubmit: 0,
     enqueuedFallback: 0,
+    finalizeRefused: 0,
     emailed: 0,
     errors: [],
   };
@@ -157,7 +162,7 @@ export async function GET(req: NextRequest) {
         // `failure_code` distinguishes a Shopify-Protect skip from a
         // no-bank-facts skip; without it every skip is reported as the latter.
         .select(
-          "id, status, validation_status, pdf_path, version, failure_code, facts_json, narrative_json",
+          "id, status, validation_status, pdf_path, version, failure_code, content_revision, facts_json, narrative_json",
         )
         .eq("dispute_id", d.id)
         .order("version", { ascending: false })
@@ -243,55 +248,80 @@ export async function GET(req: NextRequest) {
         dpkg!.validation_status === "ok" &&
         dpkg!.pdf_path
       ) {
-        // Supersede any prior final first (so the trigger is happy when
-        // we flip this row to final).
-        const { data: priorFinal } = await sb
-          .from("defence_packages")
-          .select("id, version")
-          .eq("dispute_id", d.id)
-          .eq("status", "final")
-          .neq("id", dpkg!.id)
-          .order("version", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        await sb
-          .from("defence_packages")
-          .update({ status: "final", updated_at: new Date().toISOString() })
-          .eq("id", dpkg!.id);
-
-        if (priorFinal) {
-          await sb
-            .from("defence_packages")
-            .update({
-              status: "superseded",
-              superseded_by_id: dpkg!.id,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", priorFinal.id);
+        // Promotion goes through the transactional RPC, exactly like every
+        // other promotion writer. This route used to do it in three unguarded
+        // PostgREST calls — select the prior final, flip this row to `final`,
+        // flip that one to `superseded` — with no lock, no revision check and
+        // no atomicity, so a newer version or a concurrently-submitted
+        // predecessor could be trampled. `p_allowed_statuses` keeps the
+        // pre-existing behaviour of auto-finalizing a `stale` candidate as
+        // well as a `draft`; nothing else about the deadline policy changes.
+        const revision = dpkg!.content_revision as string | null;
+        if (!revision) {
+          summary.finalizeRefused += 1;
+          continue;
         }
 
-        await logAuditEvent({
-          shopId: d.shop_id,
-          disputeId: d.id,
-          packId: pack.id,
-          actorType: "system",
-          eventType: "defence_package_finalized",
-          eventPayload: {
-            packageId: dpkg!.id,
-            version: dpkg!.version,
-            trigger: "deadline_cron_auto_finalize",
-            dueAt: d.due_at,
-          },
+        const { data: rpcData, error: rpcErr } = await sb.rpc("finalize_defence_package", {
+          p_package_id: dpkg!.id,
+          p_expected_revision: revision,
+          p_expected_version: dpkg!.version,
+          p_enqueue_save: true,
+          p_allowed_statuses: ["draft", "stale"],
         });
+        if (rpcErr) {
+          console.error("[deadline cron] finalize_defence_package failed", rpcErr);
+          summary.finalizeRefused += 1;
+          continue;
+        }
 
-        await sb.from("jobs").insert({
-          shop_id: d.shop_id,
-          job_type: "save_to_shopify",
-          entity_id: pack.id,
-        });
+        const finalizeResult = parseFinalizeRpcResult(rpcData, { expectEnqueue: true });
+        if (finalizeResult.kind === "malformed" || finalizeResult.kind === "conflict") {
+          // Nothing was written. Do not claim a submission the database
+          // refused, or one we cannot verify.
+          console.error(
+            "[deadline cron] finalize refused",
+            finalizeResult.kind === "conflict" ? finalizeResult.reason : finalizeResult.detail,
+          );
+          summary.finalizeRefused += 1;
+          continue;
+        }
 
-        summary.enqueuedAutoFinalize += 1;
+        if (finalizeResult.kind === "promoted") {
+          if (finalizeResult.supersededId) {
+            await logAuditEvent({
+              shopId: d.shop_id,
+              disputeId: d.id,
+              packId: pack.id,
+              actorType: "system",
+              eventType: "defence_package_superseded",
+              eventPayload: {
+                supersededId: finalizeResult.supersededId,
+                supersededVersion: finalizeResult.supersededVersion,
+                replacedById: dpkg!.id,
+                replacedByVersion: dpkg!.version,
+              },
+            });
+          }
+          await logAuditEvent({
+            shopId: d.shop_id,
+            disputeId: d.id,
+            packId: pack.id,
+            actorType: "system",
+            eventType: "defence_package_finalized",
+            eventPayload: {
+              packageId: dpkg!.id,
+              version: dpkg!.version,
+              trigger: "deadline_cron_auto_finalize",
+              dueAt: d.due_at,
+              jobId: finalizeResult.jobId,
+            },
+          });
+          summary.enqueuedAutoFinalize += 1;
+        }
+
+        // `already_done` means an earlier run committed this exact promotion
+        // and its save job exists — counted as submitted, audited once.
         summary.enqueuedSubmit += 1;
         continue;
       }

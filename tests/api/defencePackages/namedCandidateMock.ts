@@ -40,7 +40,7 @@ export interface NamedCandidateScenario {
    * database in `scripts/db/finalizeDefencePackage.analysis.ts`; here we only
    * pin what each route does with each outcome.
    */
-  rpcResult?: Record<string, unknown>;
+  rpcResult?: unknown;
   /** Make the RPC call itself fail (a transport/database error). */
   rpcError?: { message: string } | null;
 }
@@ -53,12 +53,18 @@ export function mockNamedCandidateClient(s: NamedCandidateScenario) {
   const packageUpdates: Array<Record<string, unknown>> = [];
   const rpc = vi.fn(async (name: string) => {
     if (s.rpcError) return { data: null, error: s.rpcError };
-    if (s.rpcResult) return { data: s.rpcResult, error: null };
+    // `in`, not truthiness: `null` and `[]` are the malformed replies we most
+    // need to be able to inject.
+    if ("rpcResult" in s) return { data: s.rpcResult, error: null };
     return {
       data:
         name === "enqueue_defence_package_save"
           ? { outcome: "enqueued", job_id: "job-1" }
-          : { outcome: "promoted", package_id: (s.named as { id?: string } | null)?.id ?? "pkg" },
+          : {
+              outcome: "promoted",
+              package_id: (s.named as { id?: string } | null)?.id ?? "pkg",
+              job_id: "job-1",
+            },
       error: null,
     };
   });

@@ -31,6 +31,15 @@ const mockAudit = vi.mocked(logAuditEvent);
 const mockMark = vi.mocked(markPackageReviewRequired);
 
 const PKG_ID = "pkg-3";
+
+const finalizedAudits = () =>
+  mockAudit.mock.calls.filter(
+    (c) => (c[0] as { eventType?: string })?.eventType === "defence_package_finalized",
+  );
+const supersededAudits = () =>
+  mockAudit.mock.calls.filter(
+    (c) => (c[0] as { eventType?: string })?.eventType === "defence_package_superseded",
+  );
 const DISPUTE_ID = "dispute-1";
 
 
@@ -49,9 +58,13 @@ interface SbScenario {
    * was being read as success.
    */
   /** What `finalize_defence_package` returns. Defaults to a promotion. */
-  rpcResult?: Record<string, unknown>;
+  rpcResult?: unknown;
   /** Make the RPC call itself fail (a transport/database error). */
   rpcError?: { message: string } | null;
+  /** The durable `dpkg-finalize:<id>` job row, i.e. proof that an earlier
+   *  auto transaction committed. */
+  marker?: { id: string } | null;
+  markerError?: { message: string } | null;
 }
 
 function mockSb(named: Record<string, unknown> | null, scenario: SbScenario = {}) {
@@ -60,7 +73,10 @@ function mockSb(named: Record<string, unknown> | null, scenario: SbScenario = {}
     scenario.rpcError
       ? { data: null, error: scenario.rpcError }
       : {
-          data: scenario.rpcResult ?? { outcome: "promoted", package_id: PKG_ID, job_id: "job-1" },
+          data:
+            "rpcResult" in scenario
+              ? scenario.rpcResult
+              : { outcome: "promoted", package_id: PKG_ID, job_id: "job-1" },
           error: null,
         },
   );
@@ -99,7 +115,21 @@ function mockSb(named: Record<string, unknown> | null, scenario: SbScenario = {}
       };
       return q;
     }
-    if (table === "jobs") return { insert: jobsInsert };
+    if (table === "jobs") {
+      // `insert` for the legacy path (which must never be used any more), and
+      // `select` for the commit-marker lookup.
+      const q: Record<string, unknown> = {
+        insert: jobsInsert,
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockImplementation(async () =>
+          scenario.markerError
+            ? { data: null, error: scenario.markerError }
+            : { data: scenario.marker ?? null, error: null },
+        ),
+      };
+      return q;
+    }
     throw new Error(`unexpected table: ${table}`);
   });
   return { sb: { from, rpc } as never, packageUpdate, jobsInsert, rpc };
@@ -257,7 +287,13 @@ describe("finalizeAndEnqueueSave — the transactional promotion", () => {
 
   it("delegates to the transaction and audits only what it committed", async () => {
     const { sb, packageUpdate, jobsInsert, rpc } = mockSb(eligibleDraft(), {
-      rpcResult: { outcome: "promoted", superseded_id: "pkg-old", superseded_version: 2, job_id: "job-1" },
+      rpcResult: {
+        outcome: "promoted",
+        package_id: PKG_ID,
+        superseded_id: "pkg-old",
+        superseded_version: 2,
+        job_id: "job-1",
+      },
     });
     const result = await call(sb);
 
@@ -295,25 +331,8 @@ describe("finalizeAndEnqueueSave — the transactional promotion", () => {
     expect(result.retriable).toBe(false);
     expect(result.reason).toContain("not_current");
     expect(jobsInsert).not.toHaveBeenCalled();
-    expect(
-      mockAudit.mock.calls.filter(
-        (c) => (c[0] as { eventType?: string })?.eventType === "defence_package_finalized",
-      ),
-    ).toHaveLength(0);
-    // A lost race is not the merchant's problem.
+    expect(finalizedAudits()).toHaveLength(0);
     expect(mockMark).not.toHaveBeenCalled();
-  });
-
-  it("an idempotent replay is SUCCESS, not a lost-work failure", async () => {
-    // The response to the first call was lost. The retry finds the same
-    // revision already promoted, and the RPC's dedupe key guarantees the job
-    // exists. Reporting a lifecycle failure here would misclassify committed
-    // work — and, before the transaction, that is exactly what happened.
-    const { sb } = mockSb(eligibleDraft(), {
-      rpcResult: { outcome: "already_done", reason: "already_promoted" },
-    });
-    const result = await call(sb);
-    expect(result.ok).toBe(true);
   });
 
   it("an RPC transport error stays transient and retriable", async () => {
@@ -337,54 +356,116 @@ describe("finalizeAndEnqueueSave — the transactional promotion", () => {
   });
 });
 
-/* ── Lifecycle preconditions, refused BEFORE the transition ─────────────── */
+/* ── Malformed RPC replies are UNKNOWNS, never successes ──────────────────
+ *
+ * The previous revision read the reply as `(data ?? {}) as {outcome?: string}`
+ * and treated everything that was not `conflict` / `already_done` as a
+ * promotion — so `null`, `[]`, `{}`, a typo and a success that could not name
+ * its job all produced finalization and supersession audits for work the
+ * database may never have done.
+ * --------------------------------------------------------------------- */
 
-describe("finalizeAndEnqueueSave — the candidate must still be the eligible draft", () => {
-  const NOT_FINALIZABLE: Array<[string, Record<string, unknown>, string]> = [
-    ["already final", { status: "final" }, "candidate_not_draft"],
-    ["already submitted", { status: "submitted" }, "candidate_not_draft"],
-    ["stale", { status: "stale" }, "candidate_not_draft"],
-    ["validation failed", { validation_status: "failed" }, "candidate_validation_not_ok"],
-    ["validation null", { validation_status: null }, "candidate_validation_not_ok"],
-    ["no pdf_path", { pdf_path: null }, "candidate_missing_pdf"],
-    ["blank pdf_path", { pdf_path: "   " }, "candidate_missing_pdf"],
+describe("finalizeAndEnqueueSave — malformed RPC replies", () => {
+  const eligibleDraft = () =>
+    named({
+      status: "draft",
+      validation_status: "ok",
+      pdf_path: "shop/dispute/v3.pdf",
+      facts_json: CLEAN_FACTS,
+      narrative_json: CLEAN_NARRATIVE,
+    });
+
+  const MALFORMED: Array<[string, unknown]> = [
+    ["null", null],
+    ["undefined", undefined],
+    ["an array", [{ outcome: "promoted" }]],
+    ["an empty object", {}],
+    ["a string", "promoted"],
+    ["a misspelled outcome", { outcome: "promotedd", package_id: PKG_ID, job_id: "j" }],
+    ["a promotion with no package_id", { outcome: "promoted", job_id: "j" }],
+    ["a promotion that cannot name its job", { outcome: "promoted", package_id: PKG_ID }],
+    ["an already_done that cannot name its job", { outcome: "already_done", package_id: PKG_ID }],
+    ["a conflict with no reason", { outcome: "conflict" }],
   ];
 
-  for (const [name, over, reason] of NOT_FINALIZABLE) {
-    it(`refuses (${name}): no mutation, no enqueue, no review banner`, async () => {
-      const { sb, packageUpdate, jobsInsert } = mockSb(
-        named({
-          status: "draft",
-          validation_status: "ok",
-          pdf_path: "shop/dispute/v3.pdf",
-          facts_json: CLEAN_FACTS,
-          narrative_json: CLEAN_NARRATIVE,
-          ...over,
-        }),
-      );
+  for (const [label, rpcResult] of MALFORMED) {
+    it(`treats ${label} as unavailable, not success`, async () => {
+      const { sb, jobsInsert } = mockSb(eligibleDraft(), { rpcResult });
       const result = await call(sb);
 
       expect(result.ok).toBe(false);
-      expect(result.failure).toBe("lifecycle");
-      expect(result.reasons).toContain(reason);
-      expect(packageUpdate).not.toHaveBeenCalled();
+      expect(result.failure).toBe("transient");
+      expect(result.retriable).toBe(true);
       expect(jobsInsert).not.toHaveBeenCalled();
-      expect(mockMark).not.toHaveBeenCalled();
+      // The point: no audit claims work that was never proven.
+      expect(finalizedAudits()).toHaveLength(0);
+      expect(supersededAudits()).toHaveLength(0);
     });
   }
+});
 
-  it("already-final never authorizes an enqueue — a concurrent caller owns it", async () => {
-    const { sb, jobsInsert } = mockSb(
-      named({
-        status: "final",
-        validation_status: "ok",
-        pdf_path: "p.pdf",
-        facts_json: CLEAN_FACTS,
-        narrative_json: CLEAN_NARRATIVE,
-      }),
-    );
+/* ── Lost-response replay, reachable through the real caller ──────────────
+ *
+ * The RPC's own replay branch was already correct, but the application made
+ * it unreachable: `requireFinalizable` rejected an already-final candidate
+ * before `.rpc(...)` was ever called, so a committed auto-finalization whose
+ * reply was lost came back as a non-retriable failure.
+ * --------------------------------------------------------------------- */
+
+describe("finalizeAndEnqueueSave — lost-response replay", () => {
+  const promoted = (over: Record<string, unknown> = {}) =>
+    named({
+      status: "final",
+      validation_status: "ok",
+      pdf_path: "shop/dispute/v3.pdf",
+      facts_json: CLEAN_FACTS,
+      narrative_json: CLEAN_NARRATIVE,
+      ...over,
+    });
+
+  it("converges on success when the durable commit marker exists", async () => {
+    const { sb, rpc, jobsInsert } = mockSb(promoted(), { marker: { id: "job-1" } });
+    const result = await call(sb);
+
+    expect(result.ok).toBe(true);
+    expect(result.replayed).toBe(true);
+    // Nothing done a second time: no RPC, no job, no audit.
+    expect(rpc).not.toHaveBeenCalled();
+    expect(jobsInsert).not.toHaveBeenCalled();
+    expect(finalizedAudits()).toHaveLength(0);
+  });
+
+  it("also converges for a candidate already SUBMITTED", async () => {
+    const { sb } = mockSb(promoted({ status: "submitted" }), { marker: { id: "job-1" } });
+    const result = await call(sb);
+    expect(result.ok).toBe(true);
+    expect(result.replayed).toBe(true);
+  });
+
+  it("does NOT adopt a final package that has no commit marker", async () => {
+    // A merchant may have approved it by hand, or an older path promoted it.
+    // Either way this caller did not commit it and must not claim it did.
+    const { sb, rpc } = mockSb(promoted(), { marker: null });
     const result = await call(sb);
     expect(result.ok).toBe(false);
-    expect(jobsInsert).not.toHaveBeenCalled();
+    expect(result.failure).toBe("lifecycle");
+    expect(result.reason).toContain("without_commit_marker");
+    expect(rpc).not.toHaveBeenCalled();
+    expect(finalizedAudits()).toHaveLength(0);
+  });
+
+  it("a marker lookup failure is transient, not a lifecycle verdict", async () => {
+    const { sb } = mockSb(promoted(), { markerError: { message: "timeout" } });
+    const result = await call(sb);
+    expect(result.failure).toBe("transient");
+    expect(result.retriable).toBe(true);
+  });
+
+  it("a STALE final (a newer version exists) is refused before the marker matters", async () => {
+    const { sb, rpc } = mockSb(promoted(), { latestId: "pkg-9", marker: { id: "job-1" } });
+    const result = await call(sb);
+    expect(result.ok).toBe(false);
+    expect(result.failure).toBe("stale");
+    expect(rpc).not.toHaveBeenCalled();
   });
 });

@@ -45,6 +45,7 @@ import { computeEvidenceHash } from "@/lib/defence/computeEvidenceHash";
 import { deriveOrderContext, merchantNameFromDomain } from "@/lib/defence/orderContext";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { finalizeAndEnqueueSave } from "@/lib/automation/finalizeAndEnqueueSave";
+import { finalizeDedupeKey } from "@/lib/defence/finalizeRpc";
 import { evaluateAutoSubmitGuards } from "@/lib/automation/autoSubmitGuards";
 import type {
   DefencePackageDocumentData,
@@ -78,6 +79,25 @@ export async function handleBuildDefencePackage(
 
   // Don't run on terminal statuses. Only `draft` rows are valid targets.
   if (pkg.status !== "draft") {
+    // LOST-RESPONSE REPLAY. An auto build can finalize, enqueue the save and
+    // commit, then lose its reply; the worker retries the whole handler. The
+    // package is no longer a draft, and this used to be recorded as a
+    // non-retriable failure — committed work reported as lost.
+    //
+    // The durable proof that the auto transaction committed is the save job it
+    // inserted under `dpkg-finalize:<package_id>`. With that marker present,
+    // converge on success: no rebuild, no re-audit, no second enqueue. Without
+    // it, a `final` package is NOT assumed to be a committed auto-finalization
+    // (a merchant may have approved it by hand), and the original refusal
+    // stands.
+    if (pkg.status === "final" || pkg.status === "submitted") {
+      const { data: marker } = await sb
+        .from("jobs")
+        .select("id")
+        .eq("dedupe_key", finalizeDedupeKey(packageId))
+        .maybeSingle();
+      if (marker) return { ok: true };
+    }
     return { ok: false, retriable: false, reason: `package status=${pkg.status} is not draft` };
   }
 

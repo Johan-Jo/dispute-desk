@@ -110,6 +110,12 @@ interface Scenario {
   rpcResult?: Record<string, unknown>;
   /** Make the RPC call itself fail. */
   rpcError?: { message: string } | null;
+  /**
+   * Simulate a LOST RESPONSE: the transaction commits (row promoted, job
+   * inserted, marker written) and only then does the reply fail to arrive.
+   * Applies to the first RPC call only.
+   */
+  loseResponseOnce?: boolean;
 }
 
 /**
@@ -139,6 +145,7 @@ function mockSb(scenario: Scenario = {}) {
   const packageUpdates: Array<Record<string, unknown>> = [];
   const jobsInserted: Array<Record<string, unknown>> = [];
   const disputeUpdates: Array<Record<string, unknown>> = [];
+  let responseLost = false;
 
   const from = (table: string) => {
     const filters: Record<string, unknown> = {};
@@ -215,8 +222,15 @@ function mockSb(scenario: Scenario = {}) {
       },
       single: async () =>
         table === "defence_packages" ? resolveDefencePackages() : { data, error: null },
-      maybeSingle: async () =>
-        table === "defence_packages" ? resolveDefencePackages() : { data, error: null },
+      maybeSingle: async () => {
+        if (table === "defence_packages") return resolveDefencePackages();
+        if (table === "jobs" && typeof filters.dedupe_key === "string") {
+          // The durable commit marker the auto transaction leaves behind.
+          const hit = jobsInserted.find((j) => j.dedupe_key === filters.dedupe_key);
+          return { data: hit ? { id: "job-1" } : null, error: null };
+        }
+        return { data, error: null };
+      },
       then: (cb: (v: unknown) => unknown) => {
         if (table !== "defence_packages") return cb({ data, error: null });
         if (!pendingUpdate) return cb({ data: [], error: null });
@@ -252,8 +266,18 @@ function mockSb(scenario: Scenario = {}) {
     if (scenario.latestId && scenario.latestId !== PKG_ID) {
       return { data: { outcome: "conflict", reason: "not_current" }, error: null };
     }
+    // The transaction COMMITS first — promotion, job and marker — exactly as
+    // Postgres would. Only then may the reply be lost.
     row.status = "final";
-    jobsInserted.push({ job_type: "save_to_shopify", entity_id: "pack-1" });
+    jobsInserted.push({
+      job_type: "save_to_shopify",
+      entity_id: "pack-1",
+      dedupe_key: `dpkg-finalize:${PKG_ID}`,
+    });
+    if (scenario.loseResponseOnce && !responseLost) {
+      responseLost = true;
+      return { data: null, error: { message: "socket hang up" } };
+    }
     return { data: { outcome: "promoted", package_id: PKG_ID, job_id: "job-1" }, error: null };
   });
 
@@ -436,4 +460,62 @@ describe("buildDefencePackageJob — nothing is finalized before the preflight p
     expect(auditsOfType("defence_package_finalized")).toHaveLength(0);
     expect(jobsInserted).toHaveLength(0);
   });
+});
+
+/* ── Lost-response replay, through the WHOLE handler ──────────────────────
+ *
+ * A direct second call to the SQL function proves the RPC is idempotent. It
+ * does NOT prove the application can reach that idempotency — and it could
+ * not: `requireFinalizable` rejected an already-final candidate before the
+ * RPC, and this handler returned a non-retriable failure for any non-draft
+ * package. So a committed auto-finalization whose reply was lost was recorded
+ * as permanently failed.
+ * --------------------------------------------------------------------- */
+
+describe("buildDefencePackageJob — a lost response is replayed, not lost", () => {
+  it("commits, loses the reply, and the retried HANDLER converges on success", async () => {
+    const { jobsInserted, row, packageUpdates } = mockSb({ loseResponseOnce: true });
+
+    // 1–2. The transaction commits — one job — and the reply never arrives.
+    const first = await handleBuildDefencePackage(job());
+    expect(first.ok).toBe(false);
+    if (first.ok) throw new Error("unreachable");
+    expect(first.retriable).toBe(true);
+    expect(row.status).toBe("final");
+    expect(jobsInserted).toHaveLength(1);
+
+    const auditsAfterFirst = mockAudit.mock.calls.length;
+
+    // 3–4. The worker retries the whole handler.
+    const second = await handleBuildDefencePackage(job());
+    expect(second).toEqual({ ok: true });
+
+    // 5. Exactly one save job — no duplicate.
+    expect(jobsInserted).toHaveLength(1);
+
+    // 6. No second finalization or supersession audit. (None at all here: the
+    //    first attempt's reply was lost before it could write one, which is
+    //    the accepted cost of a lost response — the database state is correct
+    //    and the job exists; only the audit row is missing.)
+    expect(mockAudit.mock.calls.length).toBe(auditsAfterFirst);
+    expect(auditsOfType("defence_package_finalized")).toHaveLength(0);
+    expect(auditsOfType("defence_package_superseded")).toHaveLength(0);
+
+    // The retry did NOT rebuild: the content write happened once, on the
+    // first attempt only.
+    expect(packageUpdates.filter((u) => u.narrative_json !== undefined)).toHaveLength(1);
+  }, 60_000);
+
+  it("a final package with NO commit marker is still a hard refusal", async () => {
+    // Not every `final` package came from a committed auto transaction — a
+    // merchant may have approved it by hand. Adopting one would report work
+    // this handler never did.
+    const m = mockSb();
+    m.row.status = "final";
+    const result = await handleBuildDefencePackage(job());
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("unreachable");
+    expect(result.retriable).toBe(false);
+    expect(result.reason).toContain("is not draft");
+  }, 60_000);
 });

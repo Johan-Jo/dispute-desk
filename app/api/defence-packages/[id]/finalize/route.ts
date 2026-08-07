@@ -22,6 +22,7 @@ import {
   preflightReasons,
   preflightRevision,
 } from "@/lib/defence/packageSafety";
+import { parseFinalizeRpcResult } from "@/lib/defence/finalizeRpc";
 
 export const runtime = "nodejs";
 
@@ -47,7 +48,11 @@ export async function POST(
   if (error || !pkg) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  if (pkg.status !== "draft") {
+  // An already-`final` package is handled below as an idempotent success when
+  // it is the exact, current, unchanged candidate — a merchant double-click or
+  // a retried request must not read as an error. Every OTHER non-draft status
+  // is still a hard refusal.
+  if (pkg.status !== "draft" && pkg.status !== "final") {
     return NextResponse.json(
       { error: `Cannot finalize a package in status=${pkg.status}` },
       { status: 409 },
@@ -141,6 +146,19 @@ export async function POST(
     );
   }
 
+  // Idempotent success for an exact, current, unchanged already-final
+  // candidate. It deliberately does NOT enqueue: this route never has, and
+  // reaching the save from here would turn a repeated click into a second
+  // filing.
+  if (pkg.status === "final") {
+    return NextResponse.json({
+      ok: true,
+      packageId: id,
+      version: pkg.version,
+      idempotent: true,
+    });
+  }
+
   const { data: rpcData, error: rpcErr } = await sb.rpc("finalize_defence_package", {
     p_package_id: id,
     p_expected_revision: contentRevision,
@@ -154,20 +172,30 @@ export async function POST(
     );
   }
 
-  const result = (rpcData ?? {}) as {
-    outcome?: string;
-    reason?: string;
-    superseded_id?: string | null;
-    superseded_version?: number | null;
-  };
+  // STRICT. An unrecognised reply is an UNKNOWN, not a success: it gets the
+  // same treatment as a transport failure. The previous revision returned 200
+  // for `null`, `{}`, an array or a misspelled outcome.
+  const result = parseFinalizeRpcResult(rpcData, { expectEnqueue: false });
+
+  if (result.kind === "malformed") {
+    console.error("[defence finalize] malformed RPC reply", result.detail, rpcData);
+    return NextResponse.json(
+      {
+        error: "PACKAGE_CHECK_UNAVAILABLE",
+        code: "PACKAGE_CHECK_UNAVAILABLE",
+        message: "We could not complete the approval just now. Please try again in a few minutes.",
+      },
+      { status: 503 },
+    );
+  }
 
   // Nothing was written: the transaction refused, or rolled back whole.
-  if (result.outcome === "conflict") {
+  if (result.kind === "conflict") {
     return NextResponse.json(
       {
         error: "PACKAGE_LIFECYCLE_CONFLICT",
         code: "PACKAGE_LIFECYCLE_CONFLICT",
-        reason: result.reason ?? "unknown",
+        reason: result.reason,
         message:
           "This defence package changed while you were reviewing it. Refresh and review the latest version.",
       },
@@ -177,8 +205,8 @@ export async function POST(
 
   // `already_done` is a successful idempotent replay — the same revision was
   // already promoted. Do not write a second finalization audit for it.
-  if (result.outcome === "promoted") {
-    if (result.superseded_id) {
+  if (result.kind === "promoted") {
+    if (result.supersededId) {
       await logAuditEvent({
         shopId: pkg.shop_id,
         disputeId: pkg.dispute_id,
@@ -186,8 +214,8 @@ export async function POST(
         actorType: "merchant",
         eventType: "defence_package_superseded",
         eventPayload: {
-          supersededId: result.superseded_id,
-          supersededVersion: result.superseded_version ?? null,
+          supersededId: result.supersededId,
+          supersededVersion: result.supersededVersion,
           replacedById: id,
           replacedByVersion: pkg.version,
         },

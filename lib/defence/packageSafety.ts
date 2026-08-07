@@ -642,6 +642,12 @@ export function preflightRevision(p: PreflightOutcome): string | null {
   return typeof rev === "string" && rev.length > 0 ? rev : null;
 }
 
+/** The candidate's persisted lifecycle status, when there was a candidate. */
+export function preflightCandidateStatus(p: PreflightOutcome): string | null {
+  const c = preflightCandidate(p);
+  return typeof c?.status === "string" ? c.status : null;
+}
+
 /**
  * A CONTENT verdict — the package itself carries an unsupported or
  * uninspectable claim. Distinct from every other blocking outcome, all of

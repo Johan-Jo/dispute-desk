@@ -1,10 +1,19 @@
 /**
  * POST /api/defence-packages/:id/submit
  *
- * Enqueue the standard `save_to_shopify` job pinned to this package.
- * Submission only allowed when status=final. `saveToShopifyJob` reads the
- * package and swaps the uncategorizedFile buffer to the defence-package
- * PDF (per Commit 10 activation).
+ * Enqueue the standard `save_to_shopify` job for this package's source pack.
+ *
+ * ACCEPTED LIMITATION — the job is NOT pinned to the package named in the URL.
+ * It is keyed to `source_pack_id`, and `saveToShopifyJob` independently
+ * re-selects the LATEST defence package for the dispute when it runs. This
+ * endpoint proves, inside the enqueue transaction, that the named package is
+ * the latest at the moment the job is created; if a newer version lands
+ * afterwards, the worker files that one instead. That is deliberate — the
+ * newest candidate is the right thing to file — and the worker keeps its own
+ * independent safety gate, which re-runs the PR-C1 checks on whatever it
+ * selects. Repinning the job payload to a package id is a separate change and
+ * is not required for PR-C1 safety. Earlier comments here claimed the job was
+ * "pinned to this package"; it never was.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -19,6 +28,7 @@ import {
   preflightReasons,
   preflightRevision,
 } from "@/lib/defence/packageSafety";
+import { parseEnqueueRpcResult } from "@/lib/defence/finalizeRpc";
 
 export const runtime = "nodejs";
 
@@ -142,13 +152,28 @@ export async function POST(
     );
   }
 
-  const result = (rpcData ?? {}) as { outcome?: string; reason?: string };
-  if (result.outcome === "conflict") {
+  // STRICT. An unrecognised reply is an UNKNOWN, not a success. The previous
+  // revision returned 200 for `null`, `{}`, an array or a misspelled outcome.
+  const result = parseEnqueueRpcResult(rpcData);
+
+  if (result.kind === "malformed") {
+    console.error("[defence submit] malformed RPC reply", result.detail, rpcData);
+    return NextResponse.json(
+      {
+        error: "PACKAGE_CHECK_UNAVAILABLE",
+        code: "PACKAGE_CHECK_UNAVAILABLE",
+        message: "We could not queue this save just now. Please try again in a few minutes.",
+      },
+      { status: 503 },
+    );
+  }
+
+  if (result.kind === "conflict") {
     return NextResponse.json(
       {
         error: "PACKAGE_NOT_FILEABLE",
         code: "PACKAGE_NOT_FILEABLE",
-        reasons: [result.reason ?? "unknown"],
+        reasons: [result.reason],
         message:
           "This defence package changed while you were reviewing it. Refresh and review the latest version.",
       },

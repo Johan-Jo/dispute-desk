@@ -265,7 +265,7 @@ describe("POST /api/defence-packages/:id/finalize — PR-C1 preflight", () => {
   it("supersession is audited from the transaction's own report", async () => {
     wire({
       named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
-      rpcResult: { outcome: "promoted", superseded_id: "pkg-old", superseded_version: 2 },
+      rpcResult: { outcome: "promoted", package_id: PKG_ID, superseded_id: "pkg-old", superseded_version: 2 },
     });
     await POST(req(), params);
     expect(supersededAudit()).toHaveLength(1);
@@ -277,7 +277,7 @@ describe("POST /api/defence-packages/:id/finalize — PR-C1 preflight", () => {
   it("an idempotent replay writes no SECOND finalization audit", async () => {
     wire({
       named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
-      rpcResult: { outcome: "already_done", reason: "already_promoted" },
+      rpcResult: { outcome: "already_done", package_id: PKG_ID, reason: "already_promoted" },
     });
     const res = await POST(req(), params);
     expect(res.status).toBe(200);
@@ -285,9 +285,44 @@ describe("POST /api/defence-packages/:id/finalize — PR-C1 preflight", () => {
   });
 
   it("pre-existing gates still fire before the preflight is even reached", async () => {
-    wire({ named: draft({ status: "final", facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }) });
+    // `submitted` (and every other non-draft, non-final status) is still a
+    // hard refusal.
+    wire({ named: draft({ status: "submitted", facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }) });
     const res = await POST(req(), params);
     expect(res.status).toBe(409);
     expect(blockAudit()).toHaveLength(0);
+  });
+
+  it("an already-FINAL candidate is an idempotent success that enqueues nothing", async () => {
+    // A merchant double-click, or a retried request. Returning an error for
+    // work that is already done reads as a failure the merchant must fix; the
+    // route must never reach the save from this path either.
+    const { jobsInsert, rpc, packageUpdates } = wire({
+      named: draft({ status: "final", facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+    });
+    const res = await POST(req(), params);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({ ok: true, idempotent: true });
+    expect(jobsInsert).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+    expect(packageUpdates).toEqual([]);
+    expect(finalizedAudit()).toHaveLength(0);
+  });
+
+  it("a malformed RPC reply is 503 UNAVAILABLE, never a 200", async () => {
+    for (const rpcResult of [null, [], {}, { outcome: "promotedd", package_id: PKG_ID }]) {
+      vi.clearAllMocks();
+      wire({
+        named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+        rpcResult: rpcResult as Record<string, unknown>,
+      });
+      const res = await POST(req(), params);
+      expect(res.status, JSON.stringify(rpcResult)).toBe(503);
+      expect((await res.json()).code).toBe("PACKAGE_CHECK_UNAVAILABLE");
+      expect(finalizedAudit()).toHaveLength(0);
+      expect(supersededAudit()).toHaveLength(0);
+    }
   });
 });

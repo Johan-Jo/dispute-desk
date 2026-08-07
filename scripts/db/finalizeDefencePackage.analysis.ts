@@ -438,14 +438,25 @@ describe("enqueue_defence_package_save — the direct Submit path", () => {
     expect(await jobCount(c.packId)).toBe(0);
   }, 120_000);
 
-  it("refuses after a concurrent CONTENT change", async () => {
-    const c = await seedFinal();
-    // A final row may still have superseded_by_id / shopify_response written;
-    // simulate a content change by rotating the revision directly, which is
-    // what any permitted content write would do.
-    await db.query(`update defence_packages set content_revision = gen_random_uuid() where id = $1`, [
+  it("refuses after a REAL content change (not a hand-rotated revision)", async () => {
+    // Mutate genuine inspected content while the candidate is still a draft,
+    // let the trigger move the revision, promote at the NEW revision, then
+    // present the OLD one — exactly what a caller holding a stale inspection
+    // would do. The earlier version of this test rotated `content_revision`
+    // by hand, which the hardened trigger now (correctly) ignores.
+    const c = await seedCase();
+    await db.query(`update defence_packages set facts_json = '[{"a":1}]'::jsonb where id = $1`, [
       c.pkgId,
     ]);
+    const fresh = (
+      await db.query<{ content_revision: string }>(
+        `select content_revision from defence_packages where id = $1`,
+        [c.pkgId],
+      )
+    ).rows[0].content_revision;
+    expect(fresh).not.toBe(c.revision);
+    expect((await finalize(db, c.pkgId, fresh, 1, false)).outcome).toBe("promoted");
+
     const out = await enqueueSave(db, c.pkgId, c.revision);
     expect(out.outcome).toBe("conflict");
     expect(out.reason).toBe("content_changed");
@@ -458,6 +469,286 @@ describe("enqueue_defence_package_save — the direct Submit path", () => {
     const again = await enqueueSave(db, c.pkgId, c.revision);
     expect(again.outcome).toBe("already_done");
     expect(again.reason).toBe("save_already_queued");
+    expect(await jobCount(c.packId)).toBe(1);
+  }, 120_000);
+});
+
+
+/* ── Concurrent UPDATES, not sequential mutations ─────────────────────────
+ *
+ * The parent-dispute lock blocks INSERTs. It does NOT serialize updates to
+ * existing package rows, so the first cut still had this race: A rewrites the
+ * candidate's content and holds it uncommitted; B enters the RPC, locks the
+ * dispute, reads the OLD committed revision, validates it, reaches the
+ * promotion UPDATE and blocks on A; A commits; B resumes and `status='draft'`
+ * still matches, so B promotes content it never inspected.
+ *
+ * These tests hold a real uncommitted write open while the RPC runs, which is
+ * the only way to observe that. A sequential mutation cannot.
+ * --------------------------------------------------------------------- */
+
+/**
+ * Hold `sql` uncommitted in its own connection, run `body`, then commit the
+ * holder. Returns whatever `body` resolved to.
+ */
+async function whileUncommitted<T>(
+  sql: string,
+  params: unknown[],
+  body: () => Promise<T>,
+): Promise<T> {
+  const holder = await connect();
+  try {
+    await holder.query("begin");
+    await holder.query(sql, params);
+    // Give the RPC time to reach — and block on — the row lock.
+    const started = body();
+    await new Promise((r) => setTimeout(r, 800));
+    await holder.query("commit");
+    return await started;
+  } finally {
+    await holder.end();
+  }
+}
+
+describe("finalize_defence_package — concurrent UNCOMMITTED updates", () => {
+  const CASES: Array<[string, (pkgId: string) => [string, unknown[]], string]> = [
+    [
+      "facts_json rewritten and held uncommitted",
+      (id) => [`update defence_packages set facts_json = '[{"z":9}]'::jsonb where id = $1`, [id]],
+      "content_changed",
+    ],
+    [
+      "pdf_path rewritten and held uncommitted",
+      (id) => [`update defence_packages set pdf_path = 'dev/other.pdf' where id = $1`, [id]],
+      "content_changed",
+    ],
+    [
+      "validation_status invalidated and held uncommitted",
+      (id) => [`update defence_packages set validation_status = 'failed' where id = $1`, [id]],
+      "content_changed",
+    ],
+    [
+      "the candidate's own version changed and held uncommitted",
+      (id) => [`update defence_packages set version = 7 where id = $1`, [id]],
+      "version_mismatch",
+    ],
+  ];
+
+  for (const [name, mutation, expectedReason] of CASES) {
+    it(`waits, re-reads and refuses: ${name}`, async () => {
+      const c = await seedCase();
+      const [sql, params] = mutation(c.pkgId);
+      const runner = await connect();
+      try {
+        const out = await whileUncommitted(sql, params, () =>
+          finalize(runner, c.pkgId, c.revision, 1, true),
+        );
+        expect(out.outcome).toBe("conflict");
+        expect(out.reason).toBe(expectedReason);
+        expect(await statusOf(c.pkgId)).toBe("draft");
+        expect(await jobCount(c.packId)).toBe(0);
+      } finally {
+        await runner.end();
+      }
+    }, 120_000);
+  }
+
+  it("waits and refuses when ANOTHER row's version change makes it the latest", async () => {
+    const c = await seedCase();
+    // A sibling at version 0 is not the latest… until it is.
+    await db.query(`update defence_packages set version = 2 where id = $1`, [c.pkgId]);
+    const sibling = await db.query<{ id: string }>(
+      `insert into defence_packages
+         (shop_id, dispute_id, source_pack_id, version, status, generated_by, evidence_hash)
+       values ($1, $2, $3, 1, 'draft', 'system', $4) returning id`,
+      [shopId, c.disputeId, c.packId, `${TAG}-sibling-${crypto.randomUUID()}`],
+    );
+
+    const runner = await connect();
+    try {
+      const out = await whileUncommitted(
+        `update defence_packages set version = 9 where id = $1`,
+        [sibling.rows[0].id],
+        () => finalize(runner, c.pkgId, c.revision, 2, true),
+      );
+      expect(out.outcome).toBe("conflict");
+      expect(out.reason).toBe("not_current");
+      expect(await statusOf(c.pkgId)).toBe("draft");
+      expect(await jobCount(c.packId)).toBe(0);
+    } finally {
+      await runner.end();
+    }
+  }, 120_000);
+
+  it("direct Submit also waits and refuses on a concurrent uncommitted change", async () => {
+    const c = await seedCase();
+    expect((await finalize(db, c.pkgId, c.revision, 1, false)).outcome).toBe("promoted");
+    // A `final` row's content is immutable, so the observable concurrent change
+    // is a sibling becoming the latest version.
+    const sibling = await db.query<{ id: string }>(
+      `insert into defence_packages
+         (shop_id, dispute_id, source_pack_id, version, status, generated_by, evidence_hash)
+       values ($1, $2, $3, 2, 'draft', 'system', $4) returning id`,
+      [shopId, c.disputeId, c.packId, `${TAG}-submit-sibling-${crypto.randomUUID()}`],
+    );
+    const runner = await connect();
+    try {
+      const out = await whileUncommitted(
+        `update defence_packages set version = 11 where id = $1`,
+        [sibling.rows[0].id],
+        () => enqueueSave(runner, c.pkgId, c.revision),
+      );
+      expect(out.outcome).toBe("conflict");
+      expect(out.reason).toBe("not_current");
+      expect(await jobCount(c.packId)).toBe(0);
+    } finally {
+      await runner.end();
+    }
+  }, 120_000);
+});
+
+/* ── content_revision is owned by the database ────────────────────────────
+ *
+ * Previously the trigger only GENERATED a revision when content changed; it
+ * accepted a direct assignment otherwise. So "changes if and only if the
+ * inspected fields change" was false, and the analysis script itself used the
+ * bypass.
+ * --------------------------------------------------------------------- */
+
+describe("content_revision cannot be spoofed", () => {
+  it("an explicit assignment on a no-op update is ignored", async () => {
+    const c = await seedCase();
+    await db.query(
+      `update defence_packages set content_revision = gen_random_uuid() where id = $1`,
+      [c.pkgId],
+    );
+    const after = (
+      await db.query<{ content_revision: string }>(
+        `select content_revision from defence_packages where id = $1`,
+        [c.pkgId],
+      )
+    ).rows[0].content_revision;
+    expect(after).toBe(c.revision);
+  });
+
+  it("a caller cannot change content AND hold the old revision", async () => {
+    const c = await seedCase();
+    await db.query(
+      `update defence_packages
+          set facts_json = '[{"spoof":true}]'::jsonb,
+              content_revision = $2
+        where id = $1`,
+      [c.pkgId, c.revision],
+    );
+    const after = (
+      await db.query<{ content_revision: string }>(
+        `select content_revision from defence_packages where id = $1`,
+        [c.pkgId],
+      )
+    ).rows[0].content_revision;
+    expect(after).not.toBe(c.revision);
+    // …and the stale revision is refused, so the spoof buys nothing.
+    const out = await finalize(db, c.pkgId, c.revision);
+    expect(out.outcome).toBe("conflict");
+    expect(out.reason).toBe("content_changed");
+  });
+
+  it("an unrelated mutation preserves the revision", async () => {
+    const c = await seedCase();
+    await db.query(`update defence_packages set generated_by = 'merchant' where id = $1`, [c.pkgId]);
+    const after = (
+      await db.query<{ content_revision: string }>(
+        `select content_revision from defence_packages where id = $1`,
+        [c.pkgId],
+      )
+    ).rows[0].content_revision;
+    expect(after).toBe(c.revision);
+  });
+});
+
+/* ── Only the RPC may promote ─────────────────────────────────────────── */
+
+describe("direct draft → final is rejected", () => {
+  it("a plain UPDATE cannot promote", async () => {
+    const c = await seedCase();
+    await expect(
+      db.query(`update defence_packages set status = 'final' where id = $1`, [c.pkgId]),
+    ).rejects.toThrow(/must go through finalize_defence_package/);
+    expect(await statusOf(c.pkgId)).toBe("draft");
+  }, 120_000);
+
+  it("a plain UPDATE cannot promote a STALE candidate either", async () => {
+    const c = await seedCase();
+    await db.query(`update defence_packages set status = 'stale' where id = $1`, [c.pkgId]);
+    await expect(
+      db.query(`update defence_packages set status = 'final' where id = $1`, [c.pkgId]),
+    ).rejects.toThrow(/must go through finalize_defence_package/);
+    expect(await statusOf(c.pkgId)).toBe("stale");
+  }, 120_000);
+
+  it("the RPC promotes, and the grant does not leak to a later update", async () => {
+    const c = await seedCase();
+    expect((await finalize(db, c.pkgId, c.revision, 1, false)).outcome).toBe("promoted");
+    expect(await statusOf(c.pkgId)).toBe("final");
+
+    // Same session, a fresh draft: the grant was cleared, so this is refused.
+    const other = await seedCase();
+    await expect(
+      db.query(`update defence_packages set status = 'final' where id = $1`, [other.pkgId]),
+    ).rejects.toThrow(/must go through finalize_defence_package/);
+  }, 120_000);
+
+  it("legitimate final → submitted and final → superseded still work", async () => {
+    const c = await seedCase();
+    expect((await finalize(db, c.pkgId, c.revision, 1, false)).outcome).toBe("promoted");
+    await db.query(`update defence_packages set status = 'submitted' where id = $1`, [c.pkgId]);
+    expect(await statusOf(c.pkgId)).toBe("submitted");
+
+    const c2 = await seedCase();
+    const prior = await withPriorFinal(c2, "final", "supersede-ok");
+    expect((await finalize(db, c2.pkgId, c2.revision, 2, false)).outcome).toBe("promoted");
+    expect(await statusOf(prior)).toBe("superseded");
+  }, 120_000);
+
+  it("the deadline cron's stale auto-finalize still works through the RPC", async () => {
+    const c = await seedCase();
+    await db.query(`update defence_packages set status = 'stale' where id = $1`, [c.pkgId]);
+    const r = await db.query<{ finalize_defence_package: Record<string, unknown> }>(
+      `select finalize_defence_package($1::uuid, $2::uuid, $3::int, $4::boolean, $5::text[])`,
+      [c.pkgId, c.revision, 1, true, ["draft", "stale"]],
+    );
+    expect(r.rows[0].finalize_defence_package.outcome).toBe("promoted");
+    expect(await statusOf(c.pkgId)).toBe("final");
+    expect(await jobCount(c.packId)).toBe(1);
+  }, 120_000);
+});
+
+/* ── The already_done branch cannot bypass validation ─────────────────── */
+
+describe("idempotent replay is still validated", () => {
+  it("a STALE final with a matching revision is refused, not handed a job", async () => {
+    const c = await seedCase();
+    expect((await finalize(db, c.pkgId, c.revision, 1, false)).outcome).toBe("promoted");
+    // A newer version lands after the promotion.
+    await db.query(
+      `insert into defence_packages
+         (shop_id, dispute_id, source_pack_id, version, status, generated_by, evidence_hash)
+       values ($1, $2, $3, 4, 'draft', 'system', $4)`,
+      [shopId, c.disputeId, c.packId, `${TAG}-newer-${crypto.randomUUID()}`],
+    );
+
+    const replay = await finalize(db, c.pkgId, c.revision, 1, true);
+    expect(replay.outcome).toBe("conflict");
+    expect(replay.reason).toBe("not_current");
+    expect(await jobCount(c.packId)).toBe(0);
+  }, 120_000);
+
+  it("a replay NAMES the job so the caller can prove the save exists", async () => {
+    const c = await seedCase();
+    expect((await finalize(db, c.pkgId, c.revision)).outcome).toBe("promoted");
+    const replay = await finalize(db, c.pkgId, c.revision);
+    expect(replay.outcome).toBe("already_done");
+    expect(typeof replay.job_id).toBe("string");
     expect(await jobCount(c.packId)).toBe(1);
   }, 120_000);
 });
