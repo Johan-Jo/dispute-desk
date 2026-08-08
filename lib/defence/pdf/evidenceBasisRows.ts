@@ -16,6 +16,7 @@ import type { EvidenceBasisRow, EvidenceFact, EvidenceFactCategory } from "../ty
 import { formatChronologyTimestamp } from "../chronology";
 import {
   citableVerificationPartsEn,
+  citableVerificationSummaryEn,
   readPaymentVerification,
 } from "@/lib/argument/paymentVerification";
 
@@ -66,15 +67,24 @@ function renderValue(fact: EvidenceFact): string | null {
   switch (fact.category) {
     case "payment_authentication":
     case "payment_auth": {
-      // Prefer the pre-translated verificationSummary built by
-      // factClassifier.ts — bank-readable plain language, e.g.
-      // "billing address matched • CVV matched". Never quote the raw
-      // single-letter gateway codes (Y/M/N/etc.) in evidence basis
-      // rows — same rule the LLM narrative obeys.
-      const summary =
-        typeof v?.verificationSummary === "string" && v.verificationSummary
-          ? (v.verificationSummary as string)
-          : null;
+      // AUTHORITY COMES FROM THE VALUES, NEVER FROM THE PERSISTED PHRASE.
+      //
+      // `verificationSummary` is a rendering of a decision, not the decision.
+      // Facts written before PR-C2 carry summaries built under the old rule —
+      // including "the card verification code matched the issuer's records"
+      // on a CVV-only case, and "the billing postal code matched…" on AVS `Z`
+      // — and those rows also carry `bankEligible: true` from the same era.
+      // Trusting the stored sentence let exactly the claim this containment
+      // withdraws walk back into the letter on a re-render.
+      //
+      // So the underlying codes are read FIRST, through the one owner, and
+      // decide whether anything may be said at all. Only then does a stored
+      // summary matter — and then only as a signal of which register to write
+      // in, never as content.
+      const verification = readPaymentVerification(v);
+      const hasPersistedSummary =
+        typeof v?.verificationSummary === "string" &&
+        (v.verificationSummary as string).trim().length > 0;
       const threeDS = v?.threeDS === true;
       // Only a fact the classifier deemed citable reaches this renderer (see
       // `isUnciteableThreeDs`), so a 3DS mention here is liability-shifted or
@@ -89,14 +99,21 @@ function renderValue(fact: EvidenceFact): string | null {
         if (ds) bits.push(`DS transaction ${ds}`);
         return bits.join(", ");
       };
-      // Current facts carry `verificationSummary`, which the classifier only
-      // builds from citable content. Older facts predate it and carry the raw
-      // codes, so the phrase is rebuilt through the ONE owner (PR-C2) — this
-      // branch used to hold a seventh copy of the match rules and could print
-      // "CVV matched" on its own, the citation decision 1 withdraws.
-      const parts: string[] = summary
-        ? [summary]
-        : citableVerificationPartsEn(readPaymentVerification(v));
+      // Every word of AVS/CVV text is DERIVED from the values that just
+      // authorized it. A fact whose address half is missing or uncitable
+      // contributes nothing here, whatever its stored summary says.
+      //
+      // The two registers are the historical ones and are preserved so
+      // existing packages re-render identically: a fact that carried a
+      // summary gets the sentence form, a raw-code fact gets the terse
+      // "billing address matched • CVV matched" form.
+      const parts: string[] = [];
+      if (verification.citable) {
+        const derived = hasPersistedSummary
+          ? citableVerificationSummaryEn(verification)
+          : citableVerificationPartsEn(verification).join(" • ");
+        if (derived) parts.push(derived);
+      }
 
       // 3-D Secure is an INDEPENDENT citable fact: an authentication with a
       // liability shift stands on its own and must still render, whether or

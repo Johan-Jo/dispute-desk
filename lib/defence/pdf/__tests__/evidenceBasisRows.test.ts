@@ -206,9 +206,14 @@ describe("buildEvidenceBasisRows", () => {
     // start with a capital letter. The renderer normalizes at the
     // boundary, so this holds regardless of which category emits the
     // string.
+    // The underlying AVS value is what authorizes the text (PR-C2) — a
+    // summary alone renders nothing — so the fixture carries the code the
+    // sentence describes.
     const rows = buildEvidenceBasisRows([
       fact({
         value: {
+          avsResult: "Y",
+          cvvResult: "N",
           verificationSummary:
             "the billing address matched the issuer's records",
         },
@@ -368,6 +373,176 @@ describe("buildEvidenceBasisRows — uncitable payment verification (PR-C2)", ()
     expect(rows).toHaveLength(1);
     expect(rows[0].value).toContain("3DS authenticated");
     expect(rows[0].value).not.toMatch(/CVV|verification code|billing address/i);
+  });
+});
+
+/**
+ * A PERSISTED `verificationSummary` IS NOT CITATION AUTHORITY.
+ *
+ * The exact shapes below are what `factClassifier.extractValue` wrote BEFORE
+ * PR-C2: `{ avsResult, cvvResult, verificationSummary }`, where the summary
+ * was built whenever either half matched — so a CVV-only case carried
+ * "the card verification code matched the issuer's records", and AVS `Z`
+ * (street failed, postal matched) carried a "billing postal code matched"
+ * clause the post-split scorer calls a non-match. Those rows also carry
+ * `bankEligible: true` from the same era.
+ *
+ * The renderer reads the underlying codes through `readPaymentVerification`
+ * FIRST and lets them decide whether anything may be said. A stored sentence
+ * can only choose the register of text that the values already authorized.
+ */
+describe("buildEvidenceBasisRows — a persisted summary is not authority (PR-C2)", () => {
+  const staleCitableFlags = {
+    bankEligible: true,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+  } as const;
+
+  /** Verbatim pre-split shape for a CVV-only match. */
+  const HISTORICAL_CVV_ONLY = {
+    avsResult: "N",
+    cvvResult: "M",
+    verificationSummary: "the card verification code matched the issuer's records",
+  } as const;
+
+  it("stale CVV-only summary + stale citable flags → zero rows", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({ id: "legacy-cvv", value: { ...HISTORICAL_CVV_ONLY }, ...staleCitableFlags }),
+    ]);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("the stale summary's text never reaches the table under any row", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({ id: "legacy-cvv", value: { ...HISTORICAL_CVV_ONLY }, ...staleCitableFlags }),
+      fact({
+        id: "order",
+        category: "order_record",
+        label: "Order record",
+        value: {},
+        ...staleCitableFlags,
+      }),
+    ]);
+    expect(rows.map((r) => r.factId)).toEqual(["order"]);
+    expect(rows.map((r) => r.value).join(" | ")).not.toMatch(
+      /verification code|billing address|authenticated/i,
+    );
+  });
+
+  it("the same shape WITH valid 3DS renders the 3DS text only", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "legacy-cvv-3ds",
+        value: {
+          ...HISTORICAL_CVV_ONLY,
+          threeDS: true,
+          liabilityShift: true,
+          eci: "02",
+          dsTransactionId: "b3b905f0-1111-2222-3333-444455556666",
+        },
+        ...staleCitableFlags,
+      }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].value).toContain("3DS authenticated");
+    expect(rows[0].value).toContain("ECI 02");
+    expect(rows[0].value).not.toMatch(/verification code|billing address|CVV/i);
+  });
+
+  it("a summary with NO underlying AVS value at all → no payment-verification text", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "summary-only",
+        value: {
+          cvvResult: "M",
+          verificationSummary: "the card verification code matched the issuer's records",
+        },
+        ...staleCitableFlags,
+      }),
+      fact({
+        id: "summary-no-codes",
+        value: {
+          verificationSummary:
+            "the billing address matched the issuer's records and the card verification code matched the issuer's records",
+        },
+        ...staleCitableFlags,
+      }),
+    ]);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("a summary whose underlying AVS is uncitable (Z: street failed) → zero rows", () => {
+    // Pre-split, AVS `Z` produced a bank-facing "billing postal code matched"
+    // clause while the scorer graded the same code a non-match. The stored
+    // sentence must not resurrect it.
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "legacy-z",
+        value: {
+          avsResult: "Z",
+          cvvResult: "M",
+          verificationSummary:
+            "the billing postal code matched the issuer's records and the card verification code matched the issuer's records",
+        },
+        ...staleCitableFlags,
+      }),
+    ]);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("AVS-only with valid underlying data still renders, from the values", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "legacy-avs",
+        value: {
+          avsResult: "Y",
+          cvvResult: "N",
+          verificationSummary: "the billing address matched the issuer's records",
+        },
+        ...staleCitableFlags,
+      }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].value).toMatch(/billing address matched/i);
+    expect(rows[0].value).not.toMatch(/verification code|CVV/i);
+  });
+
+  it("AVS+CVV with valid underlying data still renders both halves", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "legacy-both",
+        value: {
+          avsResult: "Y",
+          cvvResult: "M",
+          verificationSummary:
+            "the billing address matched the issuer's records and the card verification code matched the issuer's records",
+        },
+        ...staleCitableFlags,
+      }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].value).toMatch(/billing address matched/i);
+    expect(rows[0].value).toContain("card verification code matched");
+  });
+
+  it("a stale summary cannot overstate what the values support", () => {
+    // Underlying: address matched, security code did NOT. The stored sentence
+    // claims both. The rendered row follows the values.
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "overstated",
+        value: {
+          avsResult: "Y",
+          cvvResult: "N",
+          verificationSummary:
+            "the billing address matched the issuer's records and the card verification code matched the issuer's records",
+        },
+        ...staleCitableFlags,
+      }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].value).toMatch(/billing address matched/i);
+    expect(rows[0].value).not.toMatch(/verification code/i);
   });
 });
 
