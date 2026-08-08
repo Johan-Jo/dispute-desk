@@ -1,10 +1,14 @@
+import fs from "node:fs";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
   isAddressMatchResult,
-  isCeItem3Code,
+  isCeItem3Citable,
   normalizeAvsCode,
   resolveCardNetwork,
+  visaCeItem3Codes,
   type CardNetwork,
 } from "../avsCodeMap";
 import {
@@ -25,6 +29,9 @@ import {
 
 const NETWORKS: CardNetwork[] = ["visa", "mastercard", "amex", "unknown"];
 
+/** The only cells with a primary source: register R-E is a VISA document. */
+const VISA_CITABLE = new Set(visaCeItem3Codes());
+
 describe("network resolution", () => {
   it("reads the brand the gateway reported, in any of its shapes", () => {
     expect(resolveCardNetwork({ cardCompany: "Visa" })).toBe("visa");
@@ -42,10 +49,19 @@ describe("network resolution", () => {
     expect(resolveCardNetwork({ cardCompany: "Discover" })).toBe("unknown");
   });
 
-  it("an unknown network is not punitive: the code still decides", () => {
+  it("an unknown network is not punitive: the code normalizes and scores the same", () => {
     for (const network of NETWORKS) {
-      expect(normalizeAvsCode(network, "Y").ceItem3Citable).toBe(true);
+      const cell = normalizeAvsCode(network, "Y");
+      expect(cell.result).toBe("full_match");
+      expect(isAddressMatchResult(cell.result)).toBe(true);
     }
+  });
+
+  it("...but only a SOURCED network cell may cite it", () => {
+    expect(normalizeAvsCode("visa", "Y").ceItem3Citable).toBe(true);
+    expect(normalizeAvsCode("mastercard", "Y").ceItem3Citable).toBe(false);
+    expect(normalizeAvsCode("amex", "Y").ceItem3Citable).toBe(false);
+    expect(normalizeAvsCode("unknown", "Y").ceItem3Citable).toBe(false);
   });
 });
 
@@ -56,8 +72,8 @@ describe("the map — table-driven, every network", () => {
     match: boolean;
     citable: boolean;
   }> = [
-    { code: "Y", result: "full_match", match: true, citable: true },
-    { code: "M", result: "full_match", match: true, citable: true },
+    { code: "Y", result: "full_match", match: true, citable: false },
+    { code: "M", result: "full_match", match: true, citable: false },
     { code: "X", result: "full_match", match: true, citable: false },
     { code: "D", result: "full_match", match: true, citable: false },
     { code: "A", result: "street_match", match: true, citable: false },
@@ -80,7 +96,9 @@ describe("the map — table-driven, every network", () => {
         expect(cell.network).toBe(network);
         expect(cell.unmapped).toBe(false);
         expect(isAddressMatchResult(cell.result)).toBe(c.match);
-        expect(cell.ceItem3Citable).toBe(c.citable);
+        // The base table cites nothing. Citation comes from the network
+        // override, and only Visa has one.
+        expect(cell.ceItem3Citable).toBe(network === "visa" && VISA_CITABLE.has(c.code));
       });
     }
   }
@@ -105,14 +123,18 @@ describe("the map — table-driven, every network", () => {
   });
 });
 
-describe("authority is recorded, and only primary-sourced cells are citable", () => {
-  it("only `Y` and `M` carry v_primary, and only they cite", () => {
-    for (const network of NETWORKS) {
-      for (const code of ["Y", "M"]) {
+describe("authority is recorded, and only primary-sourced CELLS are citable", () => {
+  it("v_primary exists on VISA Y/M and nowhere else", () => {
+    for (const code of ["Y", "M"]) {
+      expect(normalizeAvsCode("visa", code).authority).toBe("v_primary");
+      expect(normalizeAvsCode("visa", code).ceItem3Citable).toBe(true);
+      for (const network of ["mastercard", "amex", "unknown"] as CardNetwork[]) {
         const cell = normalizeAvsCode(network, code);
-        expect(cell.authority).toBe("v_primary");
-        expect(cell.ceItem3Citable).toBe(true);
+        expect(cell.authority).toBe("unverified");
+        expect(cell.ceItem3Citable).toBe(false);
       }
+    }
+    for (const network of NETWORKS) {
       for (const code of ["X", "D", "A", "W", "Z", "N", "C", "U", "S", "R", "G", "E", "Q"]) {
         const cell = normalizeAvsCode(network, code);
         expect(cell.authority).not.toBe("v_primary");
@@ -121,20 +143,38 @@ describe("authority is recorded, and only primary-sourced cells are citable", ()
     }
   });
 
-  it("the citable set is EXACTLY {Y, M}", () => {
-    const citable = ["Y", "M", "X", "D", "A", "W", "Z", "N", "C", "U", "S", "R", "G", "E"].filter(
-      (code) => normalizeAvsCode("visa", code).ceItem3Citable,
+  it("the citable set is EXACTLY {(visa, Y), (visa, M)}", () => {
+    const ALL_CODES = ["Y", "M", "X", "D", "A", "W", "Z", "N", "C", "U", "S", "R", "G", "E", "Q"];
+    const citable: string[] = [];
+    for (const network of NETWORKS) {
+      for (const code of ALL_CODES) {
+        if (normalizeAvsCode(network, code).ceItem3Citable) citable.push(network + "/" + code);
+      }
+    }
+    expect(citable.sort()).toEqual(["visa/M", "visa/Y"]);
+  });
+
+  it("the citability helper is network-aware — there is no code-only bypass", () => {
+    expect(isCeItem3Citable("visa", "Y")).toBe(true);
+    expect(isCeItem3Citable("visa", "M")).toBe(true);
+    expect(isCeItem3Citable("mastercard", "Y")).toBe(false);
+    expect(isCeItem3Citable("amex", "M")).toBe(false);
+    expect(isCeItem3Citable("unknown", "Y")).toBe(false);
+    expect(isCeItem3Citable("visa", "W")).toBe(false);
+    expect(isCeItem3Citable("visa", null)).toBe(false);
+
+    // The module must expose NO function answering citability from a code
+    // alone — that shape is the bypass this rule exists to prevent.
+    const surface = fs.readFileSync(
+      path.join(process.cwd(), "lib/argument/avsCodeMap.ts"),
+      "utf8",
     );
-    expect(citable.sort()).toEqual(["M", "Y"]);
-    expect(isCeItem3Code("Y")).toBe(true);
-    expect(isCeItem3Code("M")).toBe(true);
-    expect(isCeItem3Code("W")).toBe(false);
-    expect(isCeItem3Code(null)).toBe(false);
+    expect(surface).not.toMatch(/export function isCeItem3Code[^C]/);
   });
 
   it("a partial match reaches internal display but never a citation", () => {
     for (const code of ["A", "W", "X", "D"]) {
-      const v = readPaymentVerification({ avsResultCode: code });
+      const v = readPaymentVerification({ avsResultCode: code, cardCompany: "Visa" });
       // Internal: the merchant sees a match, and scoring still credits it.
       expect(v.addressVerified).toBe(true);
       expect(v.avs.outcome).toBe("match");
@@ -208,5 +248,18 @@ describe("grading does not move (C-13 is a citation change)", () => {
     const w = readPaymentVerification({ avsResultCode: "W", cvvResultCode: "M" });
     expect(gradePaymentVerification(w)).toBe("strong");
     expect(w.citable).toBe(false);
+  });
+
+  it("a MISSING network does not reduce the grade — missing information, not a result", () => {
+    for (const brand of [null, "Mastercard", "American Express", "Visa"]) {
+      const v = readPaymentVerification({
+        avsResultCode: "Y",
+        cvvResultCode: "M",
+        ...(brand ? { cardCompany: brand } : {}),
+      });
+      expect(v.addressVerified).toBe(true);
+      expect(v.avs.outcome).toBe("match");
+      expect(gradePaymentVerification(v)).toBe("strong");
+    }
   });
 });

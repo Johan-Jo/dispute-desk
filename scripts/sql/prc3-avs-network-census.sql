@@ -18,9 +18,11 @@
 -- Sections:
 --   a_network_distribution      card networks present on AVS-bearing packs
 --   b_network_x_avs             the (network, code) domain of the map
---   c_avs_authority_classes     citable {Y,M} / internal-only match / definite
---                               no-match / not-checked / UNMAPPED
---   d_narrowing_delta_packs     packs losing citation under decision 3
+--   c_avs_authority_classes     citable (visa,Y|M) / internal-only match /
+--                               definite no-match / not-checked / UNMAPPED
+--   d_narrowing_delta_packs     packs losing citation under decision 3, split
+--                               by WHY: a partial code, or a Y/M outside the
+--                               only network we can source
 --   e_narrowing_delta_disputes  the same, as open disputes
 --   f_unmapped_escalation       packages on disputes whose only AVS evidence
 --                               is an unmapped code — the escalation
@@ -51,7 +53,11 @@ classified as (
   select
     pv.*,
     (pv.avs_code in ('Y','A','W','X','D','M'))                  as scoring_match,
-    (pv.avs_code in ('Y','M'))                                  as ce_item3_citable,
+    -- Citation authority is the (NETWORK, CODE) CELL, not the code. Register
+    -- R-E is a Visa document, so only (visa, Y) and (visa, M) are sourced;
+    -- the same letter on Mastercard, Amex or an unbranded pack inherits the
+    -- unverified base cell and cannot be cited.
+    (pv.network = 'VISA' and pv.avs_code in ('Y','M'))           as ce_item3_citable,
     (pv.avs_code in ('Z','N','C'))                              as definite_no_match,
     (pv.avs_code in ('U','S','R','G','E','B','P','I','T','0','1','2','3','4','5')) as known_not_checked,
     (pv.avs_code = '')                                          as absent
@@ -75,8 +81,10 @@ select * from (
   select 'c_avs_authority_classes', klass || ' x ' || n::text
   from (
     select case
-             when ce_item3_citable then 'citable {Y,M} (primary-sourced)'
-             when scoring_match then 'match, internal-only under decision 3'
+             when ce_item3_citable then 'citable (visa, Y|M) — primary-sourced'
+             when scoring_match and avs_code in ('Y','M')
+               then 'Y/M outside Visa — internal-only, unsourced cell'
+             when scoring_match then 'partial match — internal-only'
              when definite_no_match then 'definite no-match'
              when known_not_checked then 'not checked / unavailable'
              when absent then 'absent (never a signal)'
@@ -86,16 +94,45 @@ select * from (
   ) t
 
   union all
-  select 'd_narrowing_delta_packs',
-         'packs citable today but NOT under {Y,M} x ' || count(*)::text
+  select 'd_narrowing_delta_packs', why || ' x ' || n::text
+  from (
+    select case
+             when avs_code in ('Y','M') then 'Y/M on an unsourced network'
+             else 'partial code (A/W/X/D)'
+           end as why, count(*) as n
+    from classified
+    where scoring_match and not ce_item3_citable
+    group by 1
+  ) t
+
+  union all
+  select 'd_narrowing_delta_total',
+         'packs citable today but NOT under a sourced (network, code) cell x '
+           || count(*)::text
   from classified where scoring_match and not ce_item3_citable
 
   union all
   select 'e_narrowing_delta_disputes',
-         'open disputes affected by the narrowing x ' || count(distinct c.dispute_id)::text
+         'OPEN disputes affected by the narrowing x ' || count(distinct c.dispute_id)::text
   from classified c
   join disputes d on d.id = c.dispute_id
   where c.scoring_match and not c.ce_item3_citable and d.final_outcome is null
+
+  union all
+  select 'e_narrowing_delta_disputes_all',
+         'all disputes (open or closed) affected x ' || count(distinct dispute_id)::text
+  from classified
+  where scoring_match and not ce_item3_citable
+
+  union all
+  select 'g_narrowing_delta_packages', st || ' x ' || n::text
+  from (
+    select dp.status as st, count(*) as n
+    from classified c
+    join defence_packages dp on dp.dispute_id = c.dispute_id
+    where c.scoring_match and not c.ce_item3_citable
+    group by 1
+  ) t
 
   union all
   select 'f_unmapped_escalation', st || ' x ' || n::text

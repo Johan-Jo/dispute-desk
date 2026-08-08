@@ -6,7 +6,7 @@ import {
   cvvBucket,
   gradePaymentVerification,
   hasFullAvsAndCvvMatch,
-  hasFullAvsMatch,
+  hasCitableAddressMatch,
   readPaymentVerification,
 } from "../paymentVerification";
 
@@ -82,17 +82,22 @@ describe("the two facts stay separate", () => {
 });
 
 describe("citability (decision 1)", () => {
-  it("requires the address half, to the PRIMARY-SOURCED standard (decision 3)", () => {
-    expect(readPaymentVerification({ avsResultCode: "Y" }).citable).toBe(true);
-    expect(readPaymentVerification({ avsResultCode: "M" }).citable).toBe(true);
-    // PR-C3 narrowed this: a postal-only match still SCORES and still shows
-    // on the merchant's screen, but register R-E names `Y` or `M`.
-    expect(readPaymentVerification({ avsResultCode: "W" }).citable).toBe(false);
-    expect(readPaymentVerification({ avsResultCode: "W" }).addressVerified).toBe(true);
-    expect(readPaymentVerification({ cvvResultCode: "M" }).citable).toBe(false);
+  it("requires the address half, on a PRIMARY-SOURCED (network, code) cell", () => {
+    const visa = (avs?: string, cvv?: string) =>
+      readPaymentVerification({ avsResultCode: avs, cvvResultCode: cvv, cardCompany: "Visa" });
+    expect(visa("Y").citable).toBe(true);
+    expect(visa("M").citable).toBe(true);
+    // A postal-only match still SCORES and still shows on the merchant's
+    // screen; register R-E names `Y` or `M`.
+    expect(visa("W").citable).toBe(false);
+    expect(visa("W").addressVerified).toBe(true);
+    expect(visa(undefined, "M").citable).toBe(false);
+    expect(visa("N", "M").citable).toBe(false);
+    // The same code on a network whose document we have never read.
     expect(
-      readPaymentVerification({ avsResultCode: "N", cvvResultCode: "M" }).citable,
+      readPaymentVerification({ avsResultCode: "Y", cardCompany: "Mastercard" }).citable,
     ).toBe(false);
+    expect(readPaymentVerification({ avsResultCode: "Y" }).citable).toBe(false);
   });
 
   it("produces NO citable summary for any CVV-only case", () => {
@@ -108,17 +113,27 @@ describe("citability (decision 1)", () => {
     // PR-C3: partial address results are no longer citable at all, so the
     // street-only and postal-only clauses have no citable case to describe.
     expect(
-      citableVerificationSummaryEn(readPaymentVerification({ avsResultCode: "A" })),
+      citableVerificationSummaryEn(
+        readPaymentVerification({ avsResultCode: "A", cardCompany: "Visa" }),
+      ),
     ).toBeNull();
     expect(
-      citableVerificationSummaryEn(readPaymentVerification({ avsResultCode: "W" })),
+      citableVerificationSummaryEn(
+        readPaymentVerification({ avsResultCode: "W", cardCompany: "Visa" }),
+      ),
     ).toBeNull();
     expect(
-      citableVerificationSummaryEn(readPaymentVerification({ avsResultCode: "Y" })),
+      citableVerificationSummaryEn(
+        readPaymentVerification({ avsResultCode: "Y", cardCompany: "Visa" }),
+      ),
     ).toBe("the billing address matched the issuer's records");
     expect(
       citableVerificationSummaryEn(
-        readPaymentVerification({ avsResultCode: "Y", cvvResultCode: "M" }),
+        readPaymentVerification({
+          avsResultCode: "Y",
+          cvvResultCode: "M",
+          cardCompany: "Visa",
+        }),
       ),
     ).toBe(
       "the billing address matched the issuer's records and the card verification code matched the issuer's records",
@@ -127,14 +142,18 @@ describe("citability (decision 1)", () => {
 
   it("never mentions the security code when only the address matched", () => {
     const summary = citableVerificationSummaryEn(
-      readPaymentVerification({ avsResultCode: "Y", cvvResultCode: "N" }),
+      readPaymentVerification({ avsResultCode: "Y", cvvResultCode: "N", cardCompany: "Visa" }),
     );
     expect(summary).toBe("the billing address matched the issuer's records");
     expect(summary).not.toContain("verification code");
   });
 
   it("AVS Z (street failed, postal matched) is not citable — it was, before the split", () => {
-    const v = readPaymentVerification({ avsResultCode: "Z", cvvResultCode: "M" });
+    const v = readPaymentVerification({
+      avsResultCode: "Z",
+      cvvResultCode: "M",
+      cardCompany: "Visa",
+    });
     expect(v.citable).toBe(false);
     expect(citableVerificationSummaryEn(v)).toBeNull();
   });
@@ -169,21 +188,59 @@ describe("grading is unchanged by the split", () => {
   });
 });
 
-describe("full-match helpers stay strict (PR-C3 owns widening)", () => {
-  it("hasFullAvsMatch is Y only", () => {
-    expect(hasFullAvsMatch(readPaymentVerification({ avsResultCode: "Y" }))).toBe(true);
-    expect(hasFullAvsMatch(readPaymentVerification({ avsResultCode: "W" }))).toBe(false);
-  });
-
-  it("hasFullAvsAndCvvMatch is Y + M only", () => {
+describe("the match helpers read the CELL, not the letter (PR-C3)", () => {
+  it("hasCitableAddressMatch needs a primary-sourced (network, code) cell", () => {
     expect(
-      hasFullAvsAndCvvMatch(
-        readPaymentVerification({ avsResultCode: "Y", cvvResultCode: "M" }),
+      hasCitableAddressMatch(
+        readPaymentVerification({ avsResultCode: "Y", cardCompany: "Visa" }),
       ),
     ).toBe(true);
     expect(
+      hasCitableAddressMatch(
+        readPaymentVerification({ avsResultCode: "M", cardCompany: "Visa" }),
+      ),
+    ).toBe(true);
+    expect(
+      hasCitableAddressMatch(
+        readPaymentVerification({ avsResultCode: "W", cardCompany: "Visa" }),
+      ),
+    ).toBe(false);
+    expect(
+      hasCitableAddressMatch(
+        readPaymentVerification({ avsResultCode: "Y", cardCompany: "Mastercard" }),
+      ),
+    ).toBe(false);
+    expect(hasCitableAddressMatch(readPaymentVerification({ avsResultCode: "Y" }))).toBe(false);
+  });
+
+  it("hasFullAvsAndCvvMatch is a citable address match PLUS a CVV match", () => {
+    for (const avs of ["Y", "M"]) {
+      expect(
+        hasFullAvsAndCvvMatch(
+          readPaymentVerification({
+            avsResultCode: avs,
+            cvvResultCode: "M",
+            cardCompany: "Visa",
+          }),
+        ),
+      ).toBe(true);
+    }
+    expect(
       hasFullAvsAndCvvMatch(
-        readPaymentVerification({ avsResultCode: "A", cvvResultCode: "M" }),
+        readPaymentVerification({
+          avsResultCode: "A",
+          cvvResultCode: "M",
+          cardCompany: "Visa",
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      hasFullAvsAndCvvMatch(
+        readPaymentVerification({
+          avsResultCode: "Y",
+          cvvResultCode: "M",
+          cardCompany: "Mastercard",
+        }),
       ),
     ).toBe(false);
   });

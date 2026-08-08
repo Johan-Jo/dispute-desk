@@ -14,7 +14,7 @@
  */
 
 import {
-  hasFullAvsMatch,
+  hasCitableAddressMatch,
   readPaymentVerification,
 } from "@/lib/argument/paymentVerification";
 import { FACT_PREDICATES } from "../factPredicates";
@@ -70,8 +70,11 @@ export const THESIS_TOKENS: Record<ThesisTokenName, ThesisToken> = {
       // all, so this token stays null for it. The "CVV match" arm that used to
       // live here was a bank-facing citation of exactly the fact the
       // containment withdraws.
+      // A citable (network, code) cell — not a bare letter (PR-C3). A Visa
+      // `M` names the same rule as `Y`; a `Y` on a network whose document we
+      // have never read names none.
       const auth = findFact(facts, "payment_authentication");
-      if (auth && hasFullAvsMatch(readPaymentVerification(auth.value))) {
+      if (auth && hasCitableAddressMatch(readPaymentVerification(auth.value))) {
         return "AVS match";
       }
       return null;

@@ -39,7 +39,7 @@ function fact(overrides: Partial<EvidenceFact> = {}): EvidenceFact {
     id: "f0",
     category: "payment_authentication",
     label: "Payment authentication",
-    value: { avsResult: "Y", cvvResult: "M" },
+    value: { network: "visa", avsResult: "Y", cvvResult: "M" },
     source: "shopify_order",
     sourceRef: null,
     strength: "strong",

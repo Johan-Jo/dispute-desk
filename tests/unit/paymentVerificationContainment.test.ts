@@ -36,8 +36,8 @@ import { deriveCaseEvidenceModel } from "@/lib/evidence/model/derive";
 
 const CVV_ONLY = { avsResultCode: "N", cvvResultCode: "M" } as const;
 const CVV_ONLY_NO_AVS = { cvvResultCode: "M" } as const;
-const BOTH = { avsResultCode: "Y", cvvResultCode: "M" } as const;
-const AVS_ONLY = { avsResultCode: "Y", cvvResultCode: "N" } as const;
+const BOTH = { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Visa" } as const;
+const AVS_ONLY = { avsResultCode: "Y", cvvResultCode: "N", cardCompany: "Visa" } as const;
 
 function sectionsFor(payload: Record<string, unknown>) {
   return [
@@ -154,7 +154,7 @@ describe("decision 1 — the Evidence Basis table", () => {
   });
 
   it("still prints the address match", () => {
-    const rows = buildEvidenceBasisRows([factOf({ avsResult: "Y", cvvResult: "M" })]);
+    const rows = buildEvidenceBasisRows([factOf({ network: "visa", avsResult: "Y", cvvResult: "M" })]);
     expect(rows.map((r) => r.value).join(" | ")).toMatch(/billing address matched/i);
   });
 });
@@ -203,7 +203,7 @@ describe("decision 1 — claim guards and thesis tokens", () => {
   it("an address claim PASSES on a real AVS match", () => {
     const { failures } = runClaimGuards({
       narrativeSections: sections("AVS confirmed the billing address."),
-      approvedFacts: [authFact({ avsResult: "Y" })],
+      approvedFacts: [authFact({ network: "visa", avsResult: "Y" })],
     });
     expect(failures).toHaveLength(0);
   });

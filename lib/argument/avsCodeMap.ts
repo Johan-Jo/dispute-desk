@@ -80,12 +80,17 @@ export interface AvsCell {
 }
 
 /**
- * The codes register R-E names. **The citation set, and the only cells that
- * may carry `v_primary`.**
+ * The codes register R-E names — **on Visa**, which is whose document it is.
  *
  * `M` here is an AVS response, not the CVV match code that shares the letter.
+ *
+ * Deliberately NOT exported, and deliberately not usable on its own: a
+ * code-only helper is a bypass waiting to be written, because the whole point
+ * of C-13 is that authority lives in the (network, code) CELL. Citability is
+ * only ever answered by `normalizeAvsCode(network, code).ceItem3Citable` or
+ * `isCeItem3Citable(network, code)`.
  */
-const CE_ITEM_3_CODES = new Set(["Y", "M"]);
+const VISA_CE_ITEM_3_CODES = new Set(["Y", "M"]);
 
 /* ── The shared base table ─────────────────────────────────────────────── */
 
@@ -105,15 +110,15 @@ const CE_ITEM_3_CODES = new Set(["Y", "M"]);
 const BASE_AVS_TABLE: Record<string, AvsCell> = {
   Y: {
     result: "full_match",
-    authority: "v_primary",
-    ceItem3Citable: true,
-    note: "Street address and postal code both matched. Named by register R-E (Visa §4 CE chart Item 3) as a qualifying AVS match.",
+    authority: "unverified",
+    ceItem3Citable: false,
+    note: "Street address and postal code both matched, per gateway convention. A FULL MATCH for scoring and merchant display on every network — but citable only where a network's own document says so, which today is Visa alone (see NETWORK_OVERRIDES).",
   },
   M: {
     result: "full_match",
-    authority: "v_primary",
-    ceItem3Citable: true,
-    note: "International address match. The second code register R-E names.",
+    authority: "unverified",
+    ceItem3Citable: false,
+    note: "International address match, per gateway convention. Same rule as `Y`: scores everywhere, cites only under a sourced network cell.",
   },
   X: {
     result: "full_match",
@@ -190,18 +195,42 @@ const BASE_AVS_TABLE: Record<string, AvsCell> = {
 };
 
 /**
- * Per-network overrides, applied on top of the base table.
+ * Per-network overrides, applied on top of the base table. **This is where
+ * citation authority lives.**
  *
- * EMPTY BY DESIGN, and that is the finding, not an omission: we hold no
- * primary Mastercard or Amex AVS code table, so there is nothing here that
- * could be quoted. When one is extracted, its cells land here with
- * `authority: "v_primary"` and the base entry stops applying for that network
- * — no consumer changes. The Visa entry is empty for the same reason: R-E
- * gives us the CE **citation** rule, which the base table already encodes; it
- * does not give us Visa's full response-code table.
+ * Only Visa has cells here, because register R-E is a **Visa** document:
+ * §4 of the Visa Compelling Evidence chart, Item 3, naming an AVS match of
+ * `Y` or `M`. Nothing in it speaks for another network, and a rule quoted
+ * from one network's book is not evidence about another's.
+ *
+ * Mastercard and Amex are EMPTY, and that is the finding rather than an
+ * omission: we hold no primary AVS code table for either, so there is nothing
+ * that could be quoted, and their `Y`/`M` inherit the base cell — a real
+ * match for scoring and for the merchant's screen, `unverified` and therefore
+ * non-citable. When a table is extracted, its cells land here with
+ * `authority: "v_primary"` and no consumer changes.
+ *
+ * `unknown` is empty for a different reason: a missing brand is missing
+ * INFORMATION, never a negative result. Its codes normalize exactly as any
+ * other network's, so internal grading and merchant copy are unaffected; it
+ * simply cannot reach a citation, because we cannot name the rule we would be
+ * citing under.
  */
 const NETWORK_OVERRIDES: Record<CardNetwork, Record<string, AvsCell>> = {
-  visa: {},
+  visa: {
+    Y: {
+      result: "full_match",
+      authority: "v_primary",
+      ceItem3Citable: true,
+      note: "Street address and postal code both matched. Register R-E (Visa §4 CE chart Item 3) names `Y` as a qualifying AVS match, on Visa.",
+    },
+    M: {
+      result: "full_match",
+      authority: "v_primary",
+      ceItem3Citable: true,
+      note: "International address match. The second code register R-E names, on Visa.",
+    },
+  },
   mastercard: {},
   amex: {},
   unknown: {},
@@ -228,6 +257,21 @@ const UNMAPPED_CELL: AvsCell = {
  */
 export function resolveCardNetwork(payload: unknown): CardNetwork {
   const p = (payload && typeof payload === "object" ? payload : {}) as Record<string, unknown>;
+
+  // The CANONICAL representation first. `factClassifier.extractValue` persists
+  // the resolved network on the fact value, so a projected fact — and every
+  // downstream re-validation that reads it back — keeps the network the
+  // collector's payload carried. Without this the fact layer dropped the
+  // brand, and a Visa-citable fact silently became unknown-network (i.e.
+  // non-citable) the moment it was re-read.
+  if (typeof p.network === "string") {
+    const canonical = p.network.trim().toLowerCase();
+    if (canonical === "visa" || canonical === "mastercard" || canonical === "amex") {
+      return canonical;
+    }
+    if (canonical === "unknown") return "unknown";
+  }
+
   const raw =
     (typeof p.cardCompany === "string" && p.cardCompany) ||
     (typeof p.company === "string" && p.company) ||
@@ -292,8 +336,23 @@ export function isAddressMatchResult(result: AvsNormalizedResult): boolean {
   return result === "full_match" || result === "street_match" || result === "postal_match";
 }
 
-/** The primary-sourced citation set, exposed for tests and for the invariant
- *  that no broader set reaches a citation. */
-export function isCeItem3Code(code: string | null): boolean {
-  return code !== null && CE_ITEM_3_CODES.has(code);
+/**
+ * Is this (network, code) CELL citable under CE chart Item 3?
+ *
+ * Network-aware by construction — there is deliberately no code-only variant.
+ * The previous `isCeItem3Code(code)` was exactly the bypass this rule exists
+ * to prevent: it would answer "yes" for a Mastercard `Y` that no document we
+ * hold speaks to.
+ */
+export function isCeItem3Citable(
+  network: CardNetwork,
+  code: string | null | undefined,
+): boolean {
+  return normalizeAvsCode(network, code ?? null).ceItem3Citable;
+}
+
+/** The codes register R-E names, for tests and documentation. Carries no
+ *  authority on its own — pair it with a network via `isCeItem3Citable`. */
+export function visaCeItem3Codes(): string[] {
+  return [...VISA_CE_ITEM_3_CODES].sort();
 }

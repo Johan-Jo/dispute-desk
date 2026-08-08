@@ -277,20 +277,20 @@ export function gradePaymentVerification(v: PaymentVerification): PaymentVerific
  * primary-sourced code set.
  */
 export function hasFullAvsAndCvvMatch(v: PaymentVerification): boolean {
-  return hasFullAvsMatch(v) && v.cvv.code === "M";
+  return hasCitableAddressMatch(v) && v.securityCodeVerified;
 }
 
 /**
- * A FULL address match (`Y`: street and postal) as distinct from a partial one
- * (`A` street-only, `W` postal-only) or an international match (`X`/`D`/`M`).
+ * The citable address match — a primary-sourced (network, code) cell.
  *
- * Kept separate from `addressVerified` because bank-facing text that names the
- * authentication method has always required the full match, and PR-C2 is a
- * split, not a widening. PR-C3 replaces the letter with a normalized,
- * primary-sourced result.
+ * PR-C2 left this as a literal `avs.code === "Y"`, which was the strictest
+ * thing available before the map existed and is now both too narrow and too
+ * loose: too narrow because a **Visa `M`** is named by the same rule as `Y`,
+ * too loose because it accepted a `Y` on any network, including one whose
+ * document we have never read. PR-C3 replaces the letter with the cell.
  */
-export function hasFullAvsMatch(v: PaymentVerification): boolean {
-  return v.avs.code === "Y";
+export function hasCitableAddressMatch(v: PaymentVerification): boolean {
+  return v.citableAddressVerified;
 }
 
 /* ── Citation ──────────────────────────────────────────────────────────── */

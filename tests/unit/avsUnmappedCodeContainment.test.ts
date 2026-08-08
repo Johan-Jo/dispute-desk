@@ -13,6 +13,7 @@ import {
 } from "@/lib/defence/factClassifier";
 import { FACT_PREDICATES } from "@/lib/defence/factPredicates";
 import { buildEvidenceBasisRows } from "@/lib/defence/pdf/evidenceBasisRows";
+import { THESIS_TOKENS } from "@/lib/defence/pdf/thesisTokens";
 import type { EvidenceFact, NarrativeSectionKey } from "@/lib/defence/types";
 import { deriveCaseEvidenceModel } from "@/lib/evidence/model/derive";
 
@@ -217,6 +218,79 @@ describe("recorded, NOT parked", () => {
   });
 });
 
+describe("citation authority is the (network, code) CELL", () => {
+  const CASES: Array<{ label: string; payload: Record<string, unknown>; factNetwork?: string }> = [
+    { label: "Mastercard Y", payload: { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Mastercard" }, factNetwork: "mastercard" },
+    { label: "Amex Y", payload: { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "American Express" }, factNetwork: "amex" },
+    { label: "unknown-network Y", payload: { avsResultCode: "Y", cvvResultCode: "M" }, factNetwork: "unknown" },
+    { label: "Mastercard M", payload: { avsResultCode: "M", cvvResultCode: "M", cardCompany: "Mastercard" }, factNetwork: "mastercard" },
+  ];
+
+  for (const c of CASES) {
+    it(`${c.label} scores and displays internally, and reaches no bank surface`, () => {
+      // Internal: unchanged. A missing or unsourced network is missing
+      // INFORMATION, never a negative result — the grade must not move.
+      expect(categorizeEvidenceField("avs_cvv_match", c.payload)).toBe("strong");
+
+      // Bank: nothing, on every surface.
+      expect(isFieldBankEligible("avs_cvv_match", c.payload)).toBe(false);
+
+      const factValue = { network: c.factNetwork, avsResult: "Y", cvvResult: "M" };
+      expect(buildEvidenceBasisRows([authFact(factValue)])).toHaveLength(0);
+      expect(THESIS_TOKENS.paymentAuthMethod.extract([authFact(factValue)])).toBeNull();
+      expect(FACT_PREDICATES.avs_address_verified.evaluate([authFact(factValue)])).toBe(false);
+      expect(FACT_PREDICATES.avs_and_cvv_match.evaluate([authFact(factValue)])).toBe(false);
+
+      const { model } = deriveCaseEvidenceModel({
+        disputeId: "d1",
+        reason: "FRAUDULENT",
+        sections: sectionsFor(c.payload),
+      });
+      expect(model.fields.avs_cvv_match?.records[0]?.citation.eligibility).toBe("withheld_risk");
+    });
+  }
+
+  it("a newly projected Visa fact KEEPS its network and survives re-validation downstream", () => {
+    // The fact layer used to drop `cardCompany`, so a citable Visa fact was
+    // re-read downstream as unknown-network — i.e. non-citable — and the
+    // Evidence Basis row vanished between build and render.
+    const result = classifyFacts(classifyInput(CITABLE));
+    const fact = result.approved.find(
+      (f) => (f.value as { fieldKey?: string }).fieldKey === "avs_cvv_match",
+    );
+    expect((fact?.value as Record<string, unknown>).network).toBe("visa");
+    expect(fact?.bankEligible).toBe(true);
+
+    // Re-validated by the renderer and the predicates from the PROJECTED
+    // value alone, with no access to the original payload.
+    const projected = authFact(fact?.value as Record<string, unknown>);
+    expect(buildEvidenceBasisRows([projected])).toHaveLength(1);
+    expect(FACT_PREDICATES.avs_address_verified.evaluate([projected])).toBe(true);
+    expect(FACT_PREDICATES.avs_and_cvv_match.evaluate([projected])).toBe(true);
+    expect(THESIS_TOKENS.paymentAuthMethod.extract([projected])).toBe("AVS and CVV match");
+  });
+
+  it("a Visa AVS=M fact is citable and satisfies the combined predicate", () => {
+    const visaM = authFact({ network: "visa", avsResult: "M", cvvResult: "M" });
+    expect(FACT_PREDICATES.avs_address_verified.evaluate([visaM])).toBe(true);
+    expect(FACT_PREDICATES.avs_and_cvv_match.evaluate([visaM])).toBe(true);
+    expect(buildEvidenceBasisRows([visaM])).toHaveLength(1);
+  });
+
+  it("a HISTORICAL Y/M fact with no network fails closed for citation, stays readable internally", () => {
+    const historical = authFact({ avsResult: "Y", cvvResult: "M" });
+    expect(buildEvidenceBasisRows([historical])).toHaveLength(0);
+    expect(FACT_PREDICATES.avs_address_verified.evaluate([historical])).toBe(false);
+    expect(FACT_PREDICATES.avs_and_cvv_match.evaluate([historical])).toBe(false);
+    expect(THESIS_TOKENS.paymentAuthMethod.extract([historical])).toBeNull();
+
+    // Still readable: the codes are there, the merchant view still scores it.
+    expect(categorizeEvidenceField("avs_cvv_match", { avsResultCode: "Y", cvvResultCode: "M" })).toBe(
+      "strong",
+    );
+  });
+});
+
 describe("decision 3 across the consumers — partial matches display, only Y/M cite", () => {
   it("a postal-only match stays merchant-visible and scored, and leaves no bank trace", () => {
     expect(categorizeEvidenceField("avs_cvv_match", PARTIAL)).toBe("moderate");
@@ -229,12 +303,14 @@ describe("decision 3 across the consumers — partial matches display, only Y/M 
 
   it("a primary-sourced match still reaches the bank on every surface", () => {
     expect(isFieldBankEligible("avs_cvv_match", CITABLE)).toBe(true);
-    const rows = buildEvidenceBasisRows([authFact({ avsResult: "Y", cvvResult: "M" })]);
+    const rows = buildEvidenceBasisRows([authFact({ network: "visa", avsResult: "Y", cvvResult: "M" })]);
     expect(rows).toHaveLength(1);
     expect(rows[0].value).toMatch(/billing address matched/i);
-    expect(FACT_PREDICATES.avs_address_verified.evaluate([authFact({ avsResult: "Y" })])).toBe(
-      true,
-    );
+    expect(
+      FACT_PREDICATES.avs_address_verified.evaluate([
+        authFact({ network: "visa", avsResult: "Y" }),
+      ]),
+    ).toBe(true);
 
     const { model } = deriveCaseEvidenceModel({
       disputeId: "d1",
