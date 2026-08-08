@@ -12,6 +12,10 @@
 
 import type { EvidenceBasisRow, EvidenceFact, EvidenceFactCategory } from "../types";
 import { formatChronologyTimestamp } from "../chronology";
+import {
+  citableVerificationPartsEn,
+  readPaymentVerification,
+} from "@/lib/argument/paymentVerification";
 
 const CATEGORY_ORDER: EvidenceFactCategory[] = [
   "payment_authentication",
@@ -81,22 +85,13 @@ function renderValue(fact: EvidenceFact): string {
         if (threeDS) parts.push(threeDsDetail());
         return parts.join(" • ");
       }
-      // Fallback for old facts that predate verificationSummary:
-      // translate the codes inline rather than print them raw.
-      const avs = v?.avsResult;
-      const cvv = v?.cvvResult;
-      const parts: string[] = [];
-      if (typeof avs === "string" && avs.toUpperCase() === "Y") {
-        parts.push("billing address matched");
-      } else if (
-        typeof avs === "string" &&
-        (avs.toUpperCase() === "Z" || avs.toUpperCase() === "W")
-      ) {
-        parts.push("billing postal code matched");
-      }
-      if (typeof cvv === "string" && cvv.toUpperCase() === "M") {
-        parts.push("CVV matched");
-      }
+      // Fallback for old facts that predate verificationSummary: rebuild the
+      // phrase through the ONE owner (PR-C2) rather than re-reading the
+      // letters here. This branch used to hold a seventh copy of the match
+      // rules, and it could print "CVV matched" on its own — the CVV-only
+      // citation decision 1 withdraws. `citableVerificationSummaryEn` returns
+      // null unless the address half is present, so it cannot any more.
+      const parts: string[] = citableVerificationPartsEn(readPaymentVerification(v));
       if (threeDS) parts.push(threeDsDetail());
       return parts.length ? parts.join(" • ") : "Authenticated";
     }

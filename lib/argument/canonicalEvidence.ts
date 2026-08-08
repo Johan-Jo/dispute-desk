@@ -20,6 +20,10 @@
  */
 
 import type { I18nKey } from "@/lib/i18n/token";
+import {
+  gradePaymentVerification,
+  readPaymentVerification,
+} from "./paymentVerification";
 
 /** Strict 4-state category. `invalid` items never enter the system. */
 export type EvidenceCategory = "strong" | "moderate" | "supporting" | "invalid";
@@ -124,7 +128,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     category: "strong",
     supportingOnly: false,
     excludedFromStrength: false,
-    note: "Strong only when BOTH AVS and CVV match. Otherwise moderate (one match) or invalid (none). Label intentionally omits parenthetical (AVS + CVV) — the row's value already shows the codes, no need to repeat them in the label.",
+    note: "Strong only when BOTH AVS and CVV match. Otherwise moderate (one match) or invalid (none). Grade is unchanged by PR-C2; CITATION is a separate axis — a CVV-only match grades moderate and is structurally uncitable (paymentVerification.citable, decision 1), because a security-code match is not an address match. Label intentionally omits parenthetical (AVS + CVV) — the row's value already shows the codes, no need to repeat them in the label.",
   },
   tds_authentication: {
     signalId: "payment_auth",
@@ -384,12 +388,10 @@ export function disputeFreeHistoryState(
   return "unknown";
 }
 
-/** AVS result codes Shopify exposes that count as a match.
- *  Y = full match (street+zip), A = address match only, W = zip match only,
- *  X = full match (international), D/M = international match. */
-const AVS_MATCH_CODES = new Set(["Y", "A", "W", "X", "D", "M"]);
-/** CVV result codes that count as a match. M = match. */
-const CVV_MATCH_CODES = new Set(["M"]);
+/* AVS / CVV match semantics are NOT defined here. `lib/argument/paymentVerification.ts`
+ * is their single owner (PR-C2): it reads every payload shape, classifies both
+ * subfacts, and grades them. This file kept its own copy of the code sets until
+ * 2026-08-08, one of six. */
 
 /** Delivery proofType discriminator written by the fulfillment
  *  collector. The four canonical states. (P2.3) */
@@ -475,14 +477,13 @@ export function categorizeEvidenceField(
   }
 
   // ── avs_cvv_match ── (rubric #1)
+  //
+  // Grade only. Whether the graded fact may be CITED is a separate axis owned
+  // by `paymentVerification.citable` and read by the bank filter — a CVV-only
+  // match keeps this `moderate` (it is real, and the merchant's own read of
+  // the case depends on it) while being structurally uncitable (decision 1).
   if (fieldKey === "avs_cvv_match") {
-    const avs = String(p.avsResultCode ?? "").toUpperCase();
-    const cvv = String(p.cvvResultCode ?? "").toUpperCase();
-    const avsOk = AVS_MATCH_CODES.has(avs);
-    const cvvOk = CVV_MATCH_CODES.has(cvv);
-    if (avsOk && cvvOk) return "strong";
-    if (avsOk || cvvOk) return "moderate";
-    return "invalid";
+    return gradePaymentVerification(readPaymentVerification(p));
   }
 
   // ── tds_authentication ──

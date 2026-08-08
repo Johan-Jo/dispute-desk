@@ -1099,11 +1099,11 @@
             "addressMatched": "L'adresse de facturation a correspondu aux enregistrements de l'émetteur.",
             "streetMatched": "La rue de l'adresse de facturation a correspondu aux enregistrements de l'émetteur.",
             "postalMatched": "Le code postal de facturation a correspondu aux enregistrements de l'émetteur.",
-            "cvvMatched": "Le code de vérification de la carte (CVV) a correspondu aux enregistrements de l'émetteur.",
             "notIncluded": "Le processeur de paiement n'a pas renvoyé de codes de vérification AVS ou CVV pour cette transaction. Rien à inclure — ces codes proviennent de la passerelle de paiement au moment du paiement, pas après coup.",
             "internalBothFail": "L'adresse de facturation (AVS) et le code de vérification de la carte (CVV) n'ont pas correspondu aux enregistrements de l'émetteur. Conservé en interne — citer cela à la banque émettrice affaiblirait la réponse à la fraude.",
             "internalAvsFail": "L'adresse de facturation (AVS) n'a pas correspondu aux enregistrements de l'émetteur. Conservé en interne — citer cela à la banque émettrice affaiblirait la réponse à la fraude.",
-            "internalCvvFail": "Le code de vérification de la carte (CVV) n'a pas correspondu aux enregistrements de l'émetteur. Conservé en interne — citer cela à la banque émettrice affaiblirait la réponse à la fraude."
+            "internalCvvFail": "Le code de vérification de la carte (CVV) n'a pas correspondu aux enregistrements de l'émetteur. Conservé en interne — citer cela à la banque émettrice affaiblirait la réponse à la fraude.",
+            "cvvOnlyInternal": "Le code de vérification de la carte (CVV) a correspondu aux enregistrements de l'émetteur, mais pas l'adresse de facturation. Conservé en interne — un code de sécurité correspondant n'est pas une correspondance d'adresse, il n'est donc pas cité à la banque."
           },
           "billingAddress": {
             "notIncluded": "La passerelle de paiement n'a pas renvoyé de résultat de correspondance AVS pour cette transaction. L'adresse de facturation est enregistrée, mais aucune décision de correspondance/non-correspondance n'est disponible."
@@ -1681,12 +1681,11 @@
         "resultAvsUncheckedOnly": "L'émetteur n'a pas vérifié l'adresse (code AVS {avs}).",
         "resultCvvFailOnly": "Le code de sécurité de la carte ne correspondait pas aux données de l'émetteur (code CVV {cvv}).",
         "resultCvvUncheckedOnly": "L'émetteur n'a pas vérifié le code de sécurité de la carte (code CVV {cvv}).",
-        "outcomeOnlyCvvCited": "Seul le code de sécurité correspondant a été cité comme preuve dans la réponse au litige — la divergence d'adresse l'affaiblirait.",
         "outcomeOnlyAvsCited": "Seule l'adresse correspondante a été citée comme preuve dans la réponse au litige — la divergence du code l'affaiblirait.",
-        "outcomeCvvCitedClean": "Le code de sécurité correspondant a été cité comme preuve dans la réponse au litige.",
         "outcomeAvsCitedClean": "L'adresse correspondante a été citée comme preuve dans la réponse au litige.",
         "outcomeNothingCited": "Aucun de ces résultats n'a été cité comme preuve dans la réponse au litige — seuls les résultats qui renforcent le dossier sont envoyés à la banque.",
-        "outcomeSingleNotCited": "Il n'a pas été cité comme preuve — il affaiblirait la réponse au litige."
+        "outcomeSingleNotCited": "Il n'a pas été cité comme preuve — il affaiblirait la réponse au litige.",
+        "outcomeCvvOnlyNotCited": "Le code de sécurité correspondant est conservé comme information interne — il n'est pas cité comme preuve dans la réponse au litige, car un code de sécurité correspondant n'est pas une correspondance d'adresse."
       },
       "billingAddress": {
         "title": "Les adresses de facturation et de livraison ne correspondent pas",
@@ -1868,7 +1867,8 @@
     "citation": {
       "withheldInternal": "Conservé en interne — ce signal sert uniquement à votre examen et n’est jamais montré à la banque.",
       "threeDsNoLiabilityShift": "Conservé en interne — l'authentification n'a pas abouti ; la citer affaiblirait la réponse.",
-      "ipNotBankEligible": "Conservé en interne — la correspondance de localisation n’est pas assez nette pour la banque."
+      "ipNotBankEligible": "Conservé en interne — la correspondance de localisation n’est pas assez nette pour la banque.",
+      "cvvOnlyNotAddressEvidence": "Conservé en interne — seul le code de sécurité de la carte a correspondu, ce qui ne constitue pas une preuve d'adresse."
     }
   },
   "disputeReasons": {

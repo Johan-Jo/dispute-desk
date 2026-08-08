@@ -1044,12 +1044,11 @@
         "resultAvsUncheckedOnly": "Utgivaren kontrollerade inte adressen (AVS-kod {avs}).",
         "resultCvvFailOnly": "Kortets säkerhetskod stämde inte med utgivarens register (CVV-kod {cvv}).",
         "resultCvvUncheckedOnly": "Utgivaren kontrollerade inte kortets säkerhetskod (CVV-kod {cvv}).",
-        "outcomeOnlyCvvCited": "Endast den matchande säkerhetskoden åberopades som bevis i tvistsvaret – adressavvikelsen skulle försvaga det.",
         "outcomeOnlyAvsCited": "Endast den matchande adressen åberopades som bevis i tvistsvaret – kodavvikelsen skulle försvaga det.",
-        "outcomeCvvCitedClean": "Den matchande säkerhetskoden åberopades som bevis i tvistsvaret.",
         "outcomeAvsCitedClean": "Den matchande adressen åberopades som bevis i tvistsvaret.",
         "outcomeNothingCited": "Inget av resultaten åberopades som bevis i tvistsvaret – endast resultat som stärker ärendet skickas till banken.",
-        "outcomeSingleNotCited": "Det åberopades inte som bevis – det skulle försvaga tvistsvaret."
+        "outcomeSingleNotCited": "Det åberopades inte som bevis – det skulle försvaga tvistsvaret.",
+        "outcomeCvvOnlyNotCited": "Den matchande säkerhetskoden hålls som en intern notering — den åberopas inte som bevis i tvistsvaret, eftersom en matchande säkerhetskod inte är detsamma som en matchande adress."
       },
       "billingAddress": {
         "title": "Fakturerings- och leveransadresser stämmer inte överens",
@@ -1534,11 +1533,11 @@
             "addressMatched": "Faktureringsadressen matchade utgivarens uppgifter.",
             "streetMatched": "Gatuadressen i faktureringsadressen matchade utgivarens uppgifter.",
             "postalMatched": "Postnumret i faktureringsadressen matchade utgivarens uppgifter.",
-            "cvvMatched": "Kortverifieringskoden (CVV) matchade utgivarens uppgifter.",
             "notIncluded": "Betalningsprocessorn returnerade inga AVS- eller CVV-verifieringskoder för den här transaktionen. Inget att inkludera — dessa koder kommer från betalningsgatewayen vid utcheckningen, inte i efterhand.",
             "internalBothFail": "Både faktureringsadressen (AVS) och kortverifieringskoden (CVV) misslyckades med att matcha utgivarens uppgifter. Hålls intern — att åberopa detta för banken skulle undergräva svaret på bedrägeriärendet.",
             "internalAvsFail": "Faktureringsadressen (AVS) matchade inte utgivarens uppgifter. Hålls intern — att åberopa detta för banken skulle undergräva svaret på bedrägeriärendet.",
-            "internalCvvFail": "Kortverifieringskoden (CVV) matchade inte utgivarens uppgifter. Hålls intern — att åberopa detta för banken skulle undergräva svaret på bedrägeriärendet."
+            "internalCvvFail": "Kortverifieringskoden (CVV) matchade inte utgivarens uppgifter. Hålls intern — att åberopa detta för banken skulle undergräva svaret på bedrägeriärendet.",
+            "cvvOnlyInternal": "Kortverifieringskoden (CVV) matchade utgivarens uppgifter, men inte faktureringsadressen. Hålls intern — en matchande säkerhetskod är inte detsamma som en matchande adress, och åberopas därför inte för banken."
           },
           "billingAddress": {
             "notIncluded": "Betalningsgatewayen returnerade inget AVS-matchresultat för den här transaktionen. Faktureringsadressen finns registrerad, men inget match/icke-match-beslut är tillgängligt."
@@ -1868,7 +1867,8 @@
     "citation": {
       "withheldInternal": "Hålls internt — signalen är endast för din granskning och visas aldrig för banken.",
       "threeDsNoLiabilityShift": "Hålls internt — autentiseringen slutfördes inte, så att nämna den skulle försvaga svaret.",
-      "ipNotBankEligible": "Hålls internt — platsmatchningen är inte tillräckligt tydlig för att visas för banken."
+      "ipNotBankEligible": "Hålls internt — platsmatchningen är inte tillräckligt tydlig för att visas för banken.",
+      "cvvOnlyNotAddressEvidence": "Hålls internt — endast kortets säkerhetskod matchade, och det utgör inget adressbevis."
     }
   },
   "disputeReasons": {

@@ -1099,11 +1099,11 @@
             "addressMatched": "O endereço de cobrança correspondeu aos registros do emissor.",
             "streetMatched": "A rua do endereço de cobrança correspondeu aos registros do emissor.",
             "postalMatched": "O código postal de cobrança correspondeu aos registros do emissor.",
-            "cvvMatched": "O código de verificação do cartão (CVV) correspondeu aos registros do emissor.",
             "notIncluded": "O processador de pagamentos não retornou códigos de verificação AVS ou CVV para esta transação. Nada a incluir — esses códigos vêm do gateway de pagamento no checkout, não depois.",
             "internalBothFail": "Tanto o endereço de cobrança (AVS) quanto o código de verificação do cartão (CVV) não corresponderam aos registros do emissor. Mantido interno — citar isso ao banco emissor minaria a resposta de fraude.",
             "internalAvsFail": "O endereço de cobrança (AVS) não correspondeu aos registros do emissor. Mantido interno — citar isso ao banco emissor minaria a resposta de fraude.",
-            "internalCvvFail": "O código de verificação do cartão (CVV) não correspondeu aos registros do emissor. Mantido interno — citar isso ao banco emissor minaria a resposta de fraude."
+            "internalCvvFail": "O código de verificação do cartão (CVV) não correspondeu aos registros do emissor. Mantido interno — citar isso ao banco emissor minaria a resposta de fraude.",
+            "cvvOnlyInternal": "O código de verificação do cartão (CVV) correspondeu aos registros do emissor, mas o endereço de cobrança não. Mantido interno — um código de segurança correspondente não é uma correspondência de endereço, por isso não é citado ao banco."
           },
           "billingAddress": {
             "notIncluded": "O gateway de pagamento não retornou um resultado de correspondência AVS para esta transação. O endereço de cobrança está registrado, mas não há decisão de correspondência/não correspondência disponível."
@@ -1681,12 +1681,11 @@
         "resultAvsUncheckedOnly": "O emissor não verificou o endereço (código AVS {avs}).",
         "resultCvvFailOnly": "O código de segurança do cartão não correspondeu aos registros do emissor (código CVV {cvv}).",
         "resultCvvUncheckedOnly": "O emissor não verificou o código de segurança do cartão (código CVV {cvv}).",
-        "outcomeOnlyCvvCited": "Apenas o código de segurança correspondente foi citado como evidência na resposta à disputa — a divergência de endereço a enfraqueceria.",
         "outcomeOnlyAvsCited": "Apenas o endereço correspondente foi citado como evidência na resposta à disputa — a divergência do código a enfraqueceria.",
-        "outcomeCvvCitedClean": "O código de segurança correspondente foi citado como evidência na resposta à disputa.",
         "outcomeAvsCitedClean": "O endereço correspondente foi citado como evidência na resposta à disputa.",
         "outcomeNothingCited": "Nenhum dos resultados foi citado como evidência na resposta à disputa — apenas resultados que fortalecem o caso são enviados ao banco.",
-        "outcomeSingleNotCited": "Não foi citado como evidência — enfraqueceria a resposta à disputa."
+        "outcomeSingleNotCited": "Não foi citado como evidência — enfraqueceria a resposta à disputa.",
+        "outcomeCvvOnlyNotCited": "O código de segurança correspondente é mantido como registro interno — não é citado como evidência na resposta à disputa, porque um código de segurança correspondente não é uma correspondência de endereço."
       },
       "billingAddress": {
         "title": "Os endereços de cobrança e envio não coincidem",
@@ -1868,7 +1867,8 @@
     "citation": {
       "withheldInternal": "Mantido interno — este sinal é apenas para a sua revisão e nunca é mostrado ao banco.",
       "threeDsNoLiabilityShift": "Mantido interno — a autenticação não foi concluída, por isso citá-la enfraqueceria a resposta.",
-      "ipNotBankEligible": "Mantido interno — a correspondência de localização não é clara o suficiente para o banco."
+      "ipNotBankEligible": "Mantido interno — a correspondência de localização não é clara o suficiente para o banco.",
+      "cvvOnlyNotAddressEvidence": "Mantido interno — apenas o código de segurança do cartão correspondeu, e isso não constitui prova de endereço."
     }
   },
   "disputeReasons": {

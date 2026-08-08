@@ -1038,12 +1038,11 @@
         "resultAvsUncheckedOnly": "The issuer did not check the address (AVS code {avs}).",
         "resultCvvFailOnly": "The card's security code did not match the issuer's records (CVV code {cvv}).",
         "resultCvvUncheckedOnly": "The issuer did not check the card's security code (CVV code {cvv}).",
-        "outcomeOnlyCvvCited": "Only the matching security code was cited as evidence in the dispute response — the address mismatch would weaken it.",
         "outcomeOnlyAvsCited": "Only the matching address was cited as evidence in the dispute response — the code mismatch would weaken it.",
-        "outcomeCvvCitedClean": "The matching security code was cited as evidence in the dispute response.",
         "outcomeAvsCitedClean": "The matching address was cited as evidence in the dispute response.",
         "outcomeNothingCited": "Neither result was cited as evidence in the dispute response — only results that strengthen the case go to the bank.",
-        "outcomeSingleNotCited": "It was not cited as evidence — it would weaken the dispute response."
+        "outcomeSingleNotCited": "It was not cited as evidence — it would weaken the dispute response.",
+        "outcomeCvvOnlyNotCited": "The matching security code is kept as an internal record — it is not cited in the dispute response, because a security-code match is not an address match."
       },
       "billingAddress": {
         "title": "Billing and shipping addresses do not match",
@@ -1599,11 +1598,11 @@
             "addressMatched": "The billing address matched the issuer's records.",
             "streetMatched": "The billing street address matched the issuer's records.",
             "postalMatched": "The billing postal code matched the issuer's records.",
-            "cvvMatched": "The card verification code (CVV) matched the issuer's records.",
             "notIncluded": "The payment processor did not return AVS or CVV verification codes for this transaction. Nothing to include — these codes come from the payment gateway at checkout, not after the fact.",
             "internalBothFail": "Both the billing address (AVS) and the card verification code (CVV) failed to match the issuer's records. Kept internal — citing this to the bank would undermine the fraud response.",
             "internalAvsFail": "The billing address (AVS) did not match the issuer's records. Kept internal — citing this to the bank would undermine the fraud response.",
-            "internalCvvFail": "The card verification code (CVV) did not match the issuer's records. Kept internal — citing this to the bank would undermine the fraud response."
+            "internalCvvFail": "The card verification code (CVV) did not match the issuer's records. Kept internal — citing this to the bank would undermine the fraud response.",
+            "cvvOnlyInternal": "The card verification code (CVV) matched the issuer's records, but the billing address did not. Kept internal — a security-code match is not an address match, so it is not cited to the bank."
           },
           "billingAddress": {
             "notIncluded": "The payment gateway did not return an AVS match result for this transaction. The billing address is on file, but no match/mismatch decision is available."
@@ -1868,7 +1867,8 @@
     "citation": {
       "withheldInternal": "Kept internal — this signal is for your review only and is never shown to the bank.",
       "threeDsNoLiabilityShift": "Kept internal — the authentication did not complete, so citing it would weaken the response.",
-      "ipNotBankEligible": "Kept internal — the location match is not clean enough to put in front of the bank."
+      "ipNotBankEligible": "Kept internal — the location match is not clean enough to put in front of the bank.",
+      "cvvOnlyNotAddressEvidence": "Kept internal — only the card security code matched, and a security-code match is not address evidence."
     }
   },
   "disputeReasons": {

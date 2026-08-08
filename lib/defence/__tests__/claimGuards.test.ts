@@ -229,20 +229,39 @@ describe("claimGuards", () => {
     expect(result.failures.some((f) => f.guardId === "liability_shift")).toBe(true);
   });
 
-  it("unsupported AVS/CVV mention fails when no result is present", () => {
+  it("unsupported AVS mention fails when no result is present", () => {
     const result = runClaimGuards({
       narrativeSections: narrative({ paymentAuthenticationArgument: { text: "AVS confirmed the cardholder address." } }),
       approvedFacts: [fact({ value: {} })],
     });
-    expect(result.failures.some((f) => f.guardId === "avs_cvv_authenticated")).toBe(true);
+    expect(result.failures.some((f) => f.guardId === "avs_address_verified_claim")).toBe(true);
   });
 
-  it("AVS mention passes when avsResult is on a payment_auth fact", () => {
+  // PR-C2 (C-12): the guard now requires a MATCH, not a value. The old
+  // predicate passed on AVS=N, licensing "AVS confirmed the address" on a
+  // transaction the issuer had refused to verify.
+  it("AVS mention fails when the AVS result is present but did not match", () => {
+    const result = runClaimGuards({
+      narrativeSections: narrative({ paymentAuthenticationArgument: { text: "AVS confirmed the cardholder address." } }),
+      approvedFacts: [fact({ value: { avsResult: "N" } })],
+    });
+    expect(result.failures.some((f) => f.guardId === "avs_address_verified_claim")).toBe(true);
+  });
+
+  it("AVS mention fails on a CVV-only match — a security code is not an address", () => {
+    const result = runClaimGuards({
+      narrativeSections: narrative({ paymentAuthenticationArgument: { text: "AVS confirmed the cardholder address." } }),
+      approvedFacts: [fact({ value: { avsResult: "N", cvvResult: "M" } })],
+    });
+    expect(result.failures.some((f) => f.guardId === "avs_address_verified_claim")).toBe(true);
+  });
+
+  it("AVS mention passes when the AVS result is a match", () => {
     const result = runClaimGuards({
       narrativeSections: narrative({ paymentAuthenticationArgument: { text: "AVS confirmed the cardholder address." } }),
       approvedFacts: [fact({ value: { avsResult: "Y" } })],
     });
-    expect(result.failures.some((f) => f.guardId === "avs_cvv_authenticated")).toBe(false);
+    expect(result.failures.some((f) => f.guardId === "avs_address_verified_claim")).toBe(false);
   });
 
   it("fulfilled claim fails on UNFULFILLED order with no separate delivery fact", () => {

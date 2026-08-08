@@ -15,7 +15,7 @@ import {
   cardholderNameFromPayload,
   detectCardholderNameMismatch,
 } from "./nameMismatch";
-import { avsBucket, cvvBucket } from "./avsCvvExplain";
+import { avsBucket, cvvBucket, readPaymentVerification } from "./paymentVerification";
 
 /* MERCHANT-LANGUAGE RULE (2026-07-23): never lead with a bare gateway
  * code — nobody but a bank knows what "AVS code Z" indicates. ONE
@@ -50,11 +50,16 @@ const AVS_CVV_RESULT_EN: Record<string, (avs: string, cvv: string) => string> = 
   "none|unchecked": (_a, c) => `The issuer did not check the card's security code (CVV code ${c}).`,
 };
 const OUTCOME_EN = {
-  onlyCvvCited:
-    "Only the matching security code was cited as evidence in the dispute response — the address mismatch would weaken it.",
+  // PR-C2 decision 1 (2026-08-08): a security-code match on its own is NOT
+  // cited to the bank. It is a real signal about the checkout and it stays on
+  // the merchant's screen, but it says nothing about the address, and the
+  // network rule this evidence is cited under is an address rule. The two
+  // strings that used to claim it "was cited as evidence" said the opposite of
+  // what the system now does.
+  cvvOnlyNotCited:
+    "The matching security code is kept as an internal record — it is not cited in the dispute response, because a security-code match is not an address match.",
   onlyAvsCited:
     "Only the matching address was cited as evidence in the dispute response — the code mismatch would weaken it.",
-  cvvCitedClean: "The matching security code was cited as evidence in the dispute response.",
   avsCitedClean: "The matching address was cited as evidence in the dispute response.",
   nothingCited:
     "Neither result was cited as evidence in the dispute response — only results that strengthen the case go to the bank.",
@@ -69,8 +74,7 @@ function readString(v: unknown): string | null {
   return typeof v === "string" ? v : null;
 }
 
-const AVS_MATCH_CODES = new Set(["Y", "A", "W", "X", "D", "M"]);
-const CVV_MATCH_CODES = new Set(["M"]);
+/* Match semantics: `lib/argument/paymentVerification.ts` (PR-C2). */
 
 /**
  * Build the field → warnings map used by `deriveEvidenceLineItems`'s
@@ -100,12 +104,13 @@ export function buildInternalSignalsByField(
   // AVS/CVV mismatch → anchor on avs_cvv_match
   const avsPayload = payloadByField.get("avs_cvv_match");
   if (isPlainObject(avsPayload)) {
-    const avs = readString(avsPayload.avsResultCode);
-    const cvv = readString(avsPayload.cvvResultCode);
-    const avsMismatch = avs !== null && avs !== "" && !AVS_MATCH_CODES.has(avs.toUpperCase());
-    const cvvMismatch = cvv !== null && cvv !== "" && !CVV_MATCH_CODES.has(cvv.toUpperCase());
-    const avsMatched = avs !== null && avs !== "" && AVS_MATCH_CODES.has(avs.toUpperCase());
-    const cvvMatched = cvv !== null && cvv !== "" && CVV_MATCH_CODES.has(cvv.toUpperCase());
+    const verification = readPaymentVerification(avsPayload);
+    const avs = verification.avs.code;
+    const cvv = verification.cvv.code;
+    const avsMismatch = verification.avs.present && !verification.addressVerified;
+    const cvvMismatch = verification.cvv.present && !verification.securityCodeVerified;
+    const avsMatched = verification.addressVerified;
+    const cvvMatched = verification.securityCodeVerified;
     if (avsMismatch || cvvMismatch) {
       // MERCHANT-LANGUAGE RULE: one combined plain-words sentence for
       // both results, then one short outcome sentence with consistent
@@ -121,9 +126,9 @@ export function buildInternalSignalsByField(
           result(avs?.toUpperCase() ?? "", cvv?.toUpperCase() ?? ""),
         ];
         if (cvvMatched) {
-          sentences.push(
-            avsB === "no_match" ? OUTCOME_EN.onlyCvvCited : OUTCOME_EN.cvvCitedClean,
-          );
+          // Always CVV-only here: a both-matched fact never reaches this
+          // block (it has no mismatch to warn about).
+          sentences.push(OUTCOME_EN.cvvOnlyNotCited);
         } else if (avsMatched) {
           sentences.push(
             cvvB === "no_match" ? OUTCOME_EN.onlyAvsCited : OUTCOME_EN.avsCitedClean,

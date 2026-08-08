@@ -176,20 +176,51 @@ describe("factPredicates", () => {
     });
   });
 
-  describe("avs_or_cvv_value_present", () => {
-    it("true when any avsResult is present", () => {
+  // PR-C2 (C-12): `avs_or_cvv_value_present` — satisfied by the mere presence
+  // of a code, including AVS=N — split into one predicate per fact, each
+  // requiring its own match.
+  describe("avs_address_verified", () => {
+    it("true when the AVS result is a match", () => {
       expect(
-        FACT_PREDICATES.avs_or_cvv_value_present.evaluate([
-          fact({ value: { avsResult: "N" } }),
+        FACT_PREDICATES.avs_address_verified.evaluate([
+          fact({ value: { avsResult: "Y" } }),
         ]),
       ).toBe(true);
     });
-    it("false on payment_auth without AVS/CVV", () => {
+    it("FALSE when AVS is present but did not match — the old predicate said true", () => {
       expect(
-        FACT_PREDICATES.avs_or_cvv_value_present.evaluate([
-          fact({ value: {} }),
+        FACT_PREDICATES.avs_address_verified.evaluate([
+          fact({ value: { avsResult: "N" } }),
         ]),
       ).toBe(false);
+    });
+    it("FALSE on a CVV-only match — a security code is not an address", () => {
+      expect(
+        FACT_PREDICATES.avs_address_verified.evaluate([
+          fact({ value: { avsResult: "N", cvvResult: "M" } }),
+        ]),
+      ).toBe(false);
+    });
+    it("false on payment_auth without AVS/CVV", () => {
+      expect(FACT_PREDICATES.avs_address_verified.evaluate([fact({ value: {} })])).toBe(false);
+    });
+  });
+
+  describe("cvv_verified", () => {
+    it("true when the CVV result is a match", () => {
+      expect(
+        FACT_PREDICATES.cvv_verified.evaluate([fact({ value: { cvvResult: "M" } })]),
+      ).toBe(true);
+    });
+    it("false when the CVV result is present but not a match", () => {
+      expect(
+        FACT_PREDICATES.cvv_verified.evaluate([fact({ value: { cvvResult: "N" } })]),
+      ).toBe(false);
+    });
+    it("never implies the address predicate", () => {
+      const facts = [fact({ value: { cvvResult: "M" } })];
+      expect(FACT_PREDICATES.cvv_verified.evaluate(facts)).toBe(true);
+      expect(FACT_PREDICATES.avs_address_verified.evaluate(facts)).toBe(false);
     });
   });
 

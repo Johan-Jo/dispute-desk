@@ -408,7 +408,10 @@ export type FactPredicateId =
   | "three_d_secure_present"
   | "liability_shift_present"
   | "avs_and_cvv_match"
-  | "avs_or_cvv_value_present"
+  // PR-C2 (C-12): `avs_or_cvv_value_present` split into two predicates, one
+  // per fact. The old id was satisfied by any code value, match or not.
+  | "avs_address_verified"
+  | "cvv_verified"
   | "billing_match_confirmed"
   | "prior_customer"
   | "policy_disclosed"

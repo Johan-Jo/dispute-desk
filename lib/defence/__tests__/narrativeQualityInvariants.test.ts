@@ -95,14 +95,20 @@ describe("Invariant 1 — avs_cvv_match fact carries a translated verificationSu
     expect(v.verificationSummary).toBeNull();
   });
 
-  it("emits a partial summary when only AVS or only CVV is present", () => {
+  it("emits an AVS-only summary that never mentions the security code", () => {
     const avsOnly = extractValue("avs_cvv_match", { avsResultCode: "Y" });
     expect(avsOnly.verificationSummary).toMatch(/billing address matched/i);
     expect(avsOnly.verificationSummary).not.toMatch(/card verification code/i);
+  });
 
+  // PR-C2 (C-12) decision 1: a CVV-only match is an internal fact with no
+  // citable content. It used to produce a bank-facing summary of its own.
+  it("emits NO summary for a CVV-only match, and withholds the codes with it", () => {
     const cvvOnly = extractValue("avs_cvv_match", { cvvResultCode: "M" });
-    expect(cvvOnly.verificationSummary).toMatch(/card verification code matched/i);
-    expect(cvvOnly.verificationSummary).not.toMatch(/billing address/i);
+    expect(cvvOnly.verificationSummary).toBeNull();
+    expect(cvvOnly.avsResult).toBeNull();
+    expect(cvvOnly.cvvResult).toBeNull();
+    expect(cvvOnly.securityCodeVerified).toBe(true);
   });
 });
 
