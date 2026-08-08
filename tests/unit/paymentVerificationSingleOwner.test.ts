@@ -16,6 +16,8 @@ import { describe, expect, it } from "vitest";
  */
 
 const OWNER = path.join("lib", "argument", "paymentVerification.ts");
+/** The AVS half of the owner: the canonical (network, code) map (PR-C3). */
+const AVS_MAP = path.join("lib", "argument", "avsCodeMap.ts");
 
 /**
  * Scope: the application code that decides evidence semantics. `scripts/` is
@@ -61,7 +63,7 @@ const FILES = ROOTS.flatMap((r) => walk(path.join(process.cwd(), r))).map((f) =>
 );
 
 function sourceFiles(): Array<{ rel: string; text: string }> {
-  return FILES.filter((rel) => rel !== OWNER && !isTestFile(rel)).map((rel) => ({
+  return FILES.filter((rel) => rel !== OWNER && rel !== AVS_MAP && !isTestFile(rel)).map((rel) => ({
     rel,
     text: fs.readFileSync(path.join(process.cwd(), rel), "utf8"),
   }));
@@ -105,9 +107,14 @@ describe("AVS / CVV match rules have exactly one definition", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("the owner is the only file that names the codes as rules", () => {
+  it("the owner and its code map are the only files that name the codes as rules", () => {
     const owner = fs.readFileSync(path.join(process.cwd(), OWNER), "utf8");
-    expect(owner).toContain("AVS_SCORING_MATCH");
+    const map = fs.readFileSync(path.join(process.cwd(), AVS_MAP), "utf8");
+    // PR-C3 moved AVS semantics into the (network, code) map; the owner keeps
+    // the CVV set and stays the only PREDICATE surface.
     expect(owner).toContain("CVV_SCORING_MATCH");
+    expect(owner).not.toContain("AVS_SCORING_MATCH");
+    expect(map).toContain("BASE_AVS_TABLE");
+    expect(map).toContain("CE_ITEM_3_CODES");
   });
 });

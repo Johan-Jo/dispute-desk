@@ -153,6 +153,25 @@ export function buildInternalSignalsByField(
       }
     }
 
+    // UNMAPPED AVS CODE → an internal diagnostic, and nothing more (PR-C3).
+    //
+    // The issuer returned something the canonical map has no entry for. It
+    // earns no grade, no citation and no completeness credit, and it asserts
+    // NOTHING against the cardholder — an unrecognised code is a gap in our
+    // map, not a failed verification. The merchant is told plainly, and the
+    // dispute is NOT parked: escalation happens only if a package tries to
+    // rely on the code, which the claim guards refuse on their own.
+    if (verification.avs.unmapped) {
+      push("avs_cvv_match", {
+        id: "internal:avs_code_unmapped",
+        label: "Unrecognised address-verification result",
+        reason: `The issuer returned an address-verification result we do not have on file (AVS ${verification.avs.code}${
+          verification.network === "unknown" ? "" : `, ${verification.network}`
+        }). It is recorded for review and is not used as evidence either way — it neither strengthens nor weakens the case, and nothing is on hold because of it.`,
+        severity: "info",
+      });
+    }
+
     // Cardholder-name mismatch → anchor on avs_cvv_match. The gateway
     // says the card is registered to someone who shares no name token
     // with the buyer — the classic stolen-card pattern. Prints BOTH

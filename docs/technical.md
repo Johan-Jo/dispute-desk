@@ -2181,9 +2181,28 @@ The `required_if_card_payment` mode now checks `OrderContext.avsCvvAvailable`: w
 
 **Decision 2 — completeness keeps ONE grouped payment-verification requirement**, with AVS and CVV as subfacts beneath it. No checklist row was added; the denominator and thresholds are unchanged, which matters because P-7 later calibrates on them.
 
-**Not decided here:** which codes qualify, per network. The carried-over set (`Y A W X D M`) is network-agnostic and broader than the only V-PRIMARY rule we hold (R-E qualifies `Y` or `M`). PR-C3 owns the network map and narrows the citation path; `hasFullAvsMatch` / `hasFullAvsAndCvvMatch` stay strict (`Y`, `Y`+`M`) until then.
+**Which codes qualify, per network:** answered by PR-C3 below.
 
 **Measured on prod before merge** (read-only, `scripts/sql/prc2-cvv-only-census.sql`, 2026-08-08): 130 packs carry an `avs_cvv_match` section — both matched 41, AVS-only 4, **CVV-only 76**, neither 9. AVS `N` alone is 73 of 130. 68 open disputes carry a CVV-only verification. AVS `F` appears on 0 packs, so the descriptive-vs-scoring disagreement pinned in the owner module is currently theoretical. No pack is rewritten and no dispute is remediated by this change.
+
+#### AVS normalization per (network, code) — PR-C3 (2026-08-08)
+
+`lib/argument/avsCodeMap.ts` normalizes an AVS response through a table keyed on **(network, code)**, and `paymentVerification.ts` stays the only predicate surface over it. Two questions are answered separately, because conflating them is how a postal-code match came to stand in for a rule about the delivery address:
+
+| Question | Answer | Vocabulary |
+|---|---|---|
+| What did the issuer say? | `AvsNormalizedResult` — deliberately broad, drives merchant copy, scoring inputs and diagnostics | `full_match` · `street_match` · `postal_match` · `no_match` · `not_checked` · `unavailable` · `unknown` |
+| May we cite it? | `ceItem3Citable` — deliberately narrow (decision 3) | `Y` and `M` only |
+
+**Authority is recorded per cell, not assumed.** Every entry carries `v_primary` / `v_secondary` / `unverified` in the vocabulary of `p0/primary-source-register.md`, and **an `unverified` cell is never citable** — the register's exit rule applied to code semantics. Only `Y` and `M` are `v_primary`, quoted from R-E. Stated plainly: **we hold no primary Mastercard or Amex AVS code table**, so their entries are the same gateway convention marked `unverified`, and the per-network override maps exist and are **empty**. The structure is keyed on (network, code) so a sourced table drops in without touching a consumer; nothing pretends to a network-specific meaning it cannot quote.
+
+**Unknown, missing and unmapped codes** resolve to `unknown` and earn nothing anywhere — no grade, no citation, no completeness credit — and are never read as a failure: an unrecognised code is a gap in *our* map, not the issuer's verdict, so its merchant-facing bucket is "not checked", never "did not match". A code outside the table raises an internal diagnostic (`internal:avs_code_unmapped`, severity `info`, localized in 6 locales) and **does not park the dispute**. Escalation happens only when a package tries to *rely* on the code: `avs_address_verified` is false, so the claim guard refuses the sentence and the existing validate → one retry → mark-failed path runs. `tests/unit/avsUnmappedCodeContainment.test.ts` asserts both halves separately, and proves the no-parking half by absence over the sources that can park a dispute rather than by one fixture not parking.
+
+`Z` (postal matched, street **failed**) normalizes to `no_match`: a component definitively failed, the merchant view is deliberately coarse, and the scorer has always treated it as a non-match. `postal_match` is reserved for `W`, where the street was not asserted against. AVS `F` — the descriptive-vs-scoring divergence PR-C2 pinned — is resolved by omission: it has no sourced entry, so it is unmapped and credits nothing.
+
+**Grading does not move.** `isAddressMatchResult` (the three match flavours) reproduces the carried-over scoring set `Y A W X D M` exactly, now derived from the table instead of restated, so the descriptive and scoring readings cannot disagree. The bank-visible delta is the citation narrowing alone.
+
+**Measured on prod before merge** (read-only, `scripts/sql/prc3-avs-network-census.sql`, 2026-08-08): networks on AVS-bearing packs are Mastercard 86, Visa 24, Amex 1, **no brand at all 19**. The (network, code) domain is small — `Y` on Visa 24 / MC 8 / Amex 1 / unknown 11, `N` on MC 73, `A` on MC 1, `U` on MC 2, `Z` on MC 2, absent 8. **Unmapped codes: 0**, so the conservative branch has no production population today and is held by tests alone. The citation narrowing costs **1 pack on 1 open dispute** (the single Mastercard `A`). Because 19 packs carry no brand, citation is keyed on the CODE per decision 3, not on the network — network-scoped citation is a separate decision and would move 20 of the 44 citable packs.
 
 ### Risk Assessment Collection
 

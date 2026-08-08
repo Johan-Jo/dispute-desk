@@ -1713,6 +1713,10 @@
         "title": "Contracargos previos en esta cuenta",
         "explanation": "Este cliente ya presentó un contracargo en un pedido anterior de tu tienda. Se mantiene interno: mencionar el historial de disputas de un cliente al banco emisor debilita tu respuesta en lugar de reforzarla. Se muestra aquí para que valores con qué fuerza defender este caso.",
         "explanationWithCount": "Este cliente tiene {prior} pedidos anteriores en tu tienda y al menos uno de ellos terminó en contracargo. Se mantiene interno: mencionar el historial de disputas de un cliente al banco emisor debilita tu respuesta en lugar de reforzarla. Se muestra aquí para que valores con qué fuerza defender este caso."
+      },
+      "avsCodeUnmapped": {
+        "title": "Resultado de verificación de dirección no reconocido",
+        "explanation": "El emisor devolvió un resultado de verificación de dirección que no tenemos registrado (AVS {avs}). Queda anotado para su revisión y no se usa como prueba en ningún sentido: ni refuerza ni debilita el caso, y no deja nada en espera."
       }
     },
     "deliveryProof": {

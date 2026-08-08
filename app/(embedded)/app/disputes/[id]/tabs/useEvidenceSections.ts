@@ -460,6 +460,33 @@ function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel
 }
 
 /**
+ * An AVS code the canonical map has no entry for (PR-C3 / C-13).
+ *
+ * Recorded, explained, and used for nothing: no grade, no citation, no
+ * completeness credit, and NO assertion against the cardholder — an
+ * unrecognised code is a gap in our map, not a failed verification. The
+ * dispute is not parked; a package that tries to rely on the code is refused
+ * by the claim guards on its own.
+ *
+ * Mirrors `lib/argument/internalSignals.ts` — keep the two in lockstep.
+ */
+export function classifyUnmappedAvsCode(
+  payload: unknown,
+  t: Translate,
+): InternalSignalViewModel | null {
+  if (!isPlainObject(payload)) return null;
+  const verification = readPaymentVerification(payload);
+  if (!verification.avs.unmapped || verification.avs.code === null) return null;
+
+  const NS = "internalSignals.avsCodeUnmapped";
+  return {
+    id: "internal:avs_code_unmapped",
+    title: t(`${NS}.title`),
+    explanation: t(`${NS}.explanation`, { avs: verification.avs.code }),
+  };
+}
+
+/**
  * Classify billing/shipping address mismatch as an internal-only signal.
  *
  * `billing_address_match` is auto-collected from Shopify order data
@@ -650,6 +677,9 @@ function deriveInternalOnlySignals(
   for (const item of effectiveChecklist) {
     if (item.payload) byField.set(item.field, item.payload);
   }
+
+  const unmappedAvs = classifyUnmappedAvsCode(byField.get("avs_cvv_match"), t);
+  if (unmappedAvs) out.push(unmappedAvs);
 
   const avs = classifyAvsCvv(byField.get("avs_cvv_match"), t);
   if (avs) out.push(avs);

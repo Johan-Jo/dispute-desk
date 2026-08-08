@@ -1713,6 +1713,10 @@
         "title": "Estornos anteriores nesta conta",
         "explanation": "Este cliente já estornou um pedido anterior na sua loja. Mantido interno — citar o histórico de disputas de um cliente ao banco emissor enfraquece a sua resposta em vez de reforçá-la. É mostrado aqui para que avalie com que força defender este caso.",
         "explanationWithCount": "Este cliente tem {prior} pedidos anteriores na sua loja e pelo menos um deles foi estornado. Mantido interno — citar o histórico de disputas de um cliente ao banco emissor enfraquece a sua resposta em vez de reforçá-la. É mostrado aqui para que avalie com que força defender este caso."
+      },
+      "avsCodeUnmapped": {
+        "title": "Resultado de verificação de endereço não reconhecido",
+        "explanation": "O emissor retornou um resultado de verificação de endereço que não temos registrado (AVS {avs}). Fica anotado para revisão e não é usado como evidência em nenhum sentido — não fortalece nem enfraquece o caso, e não deixa nada em espera."
       }
     },
     "deliveryProof": {

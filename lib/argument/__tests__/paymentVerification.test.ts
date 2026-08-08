@@ -82,9 +82,13 @@ describe("the two facts stay separate", () => {
 });
 
 describe("citability (decision 1)", () => {
-  it("requires the address half", () => {
+  it("requires the address half, to the PRIMARY-SOURCED standard (decision 3)", () => {
     expect(readPaymentVerification({ avsResultCode: "Y" }).citable).toBe(true);
-    expect(readPaymentVerification({ avsResultCode: "W" }).citable).toBe(true);
+    expect(readPaymentVerification({ avsResultCode: "M" }).citable).toBe(true);
+    // PR-C3 narrowed this: a postal-only match still SCORES and still shows
+    // on the merchant's screen, but register R-E names `Y` or `M`.
+    expect(readPaymentVerification({ avsResultCode: "W" }).citable).toBe(false);
+    expect(readPaymentVerification({ avsResultCode: "W" }).addressVerified).toBe(true);
     expect(readPaymentVerification({ cvvResultCode: "M" }).citable).toBe(false);
     expect(
       readPaymentVerification({ avsResultCode: "N", cvvResultCode: "M" }).citable,
@@ -101,12 +105,17 @@ describe("citability (decision 1)", () => {
   });
 
   it("names only what actually matched", () => {
+    // PR-C3: partial address results are no longer citable at all, so the
+    // street-only and postal-only clauses have no citable case to describe.
     expect(
       citableVerificationSummaryEn(readPaymentVerification({ avsResultCode: "A" })),
-    ).toBe("the billing street matched the issuer's records");
+    ).toBeNull();
     expect(
       citableVerificationSummaryEn(readPaymentVerification({ avsResultCode: "W" })),
-    ).toBe("the billing postal code matched the issuer's records");
+    ).toBeNull();
+    expect(
+      citableVerificationSummaryEn(readPaymentVerification({ avsResultCode: "Y" })),
+    ).toBe("the billing address matched the issuer's records");
     expect(
       citableVerificationSummaryEn(
         readPaymentVerification({ avsResultCode: "Y", cvvResultCode: "M" }),
@@ -193,9 +202,15 @@ describe("descriptive buckets vs the scoring predicate", () => {
     expect(cvvBucket("")).toBeNull();
   });
 
-  it("AVS F reads as a match and scores as nothing — the pinned disagreement PR-C3 resolves", () => {
+  it("AVS F — the disagreement PR-C2 pinned is RESOLVED by PR-C3's map, conservatively", () => {
+    // It used to read as a match in merchant copy while scoring credited
+    // nothing. The canonical map has no sourced entry for `F`, so it is now
+    // an unmapped code: described as not-verified, credited nowhere, and
+    // raised as a diagnostic instead of being guessed at.
     const v = readPaymentVerification({ avsResultCode: "F" });
-    expect(v.avs.outcome).toBe("match");
+    expect(v.avs.unmapped).toBe(true);
+    expect(v.avs.normalized).toBe("unknown");
+    expect(v.avs.outcome).toBe("unchecked");
     expect(v.avs.matched).toBe(false);
     expect(v.addressVerified).toBe(false);
     expect(v.citable).toBe(false);

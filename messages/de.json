@@ -1713,6 +1713,10 @@
         "title": "Frühere Rückbuchungen auf diesem Konto",
         "explanation": "Dieser Kunde hat bereits eine frühere Bestellung in Ihrem Shop zurückgebucht. Bleibt intern — die Streithistorie eines Kunden gegenüber der ausstellenden Bank zu nennen, schwächt Ihre Antwort, statt sie zu stärken. Sie wird hier gezeigt, damit Sie abwägen können, wie hart Sie diesen Fall verteidigen.",
         "explanationWithCount": "Dieser Kunde hat {prior} frühere Bestellungen in Ihrem Shop, und mindestens eine davon wurde zurückgebucht. Bleibt intern — die Streithistorie eines Kunden gegenüber der ausstellenden Bank zu nennen, schwächt Ihre Antwort, statt sie zu stärken. Sie wird hier gezeigt, damit Sie abwägen können, wie hart Sie diesen Fall verteidigen."
+      },
+      "avsCodeUnmapped": {
+        "title": "Unbekanntes Ergebnis der Adressprüfung",
+        "explanation": "Der Aussteller hat ein Ergebnis der Adressprüfung zurückgegeben, das uns nicht bekannt ist (AVS {avs}). Es wird zur Ansicht festgehalten und in keiner Richtung als Nachweis verwendet — es stärkt den Fall weder, noch schwächt es ihn, und es hält nichts auf."
       }
     },
     "deliveryProof": {

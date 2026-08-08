@@ -1076,6 +1076,10 @@
         "title": "Tidigare chargebacks på det här kontot",
         "explanation": "Den här kunden har redan gjort en chargeback på en tidigare beställning i din butik. Hålls internt — att nämna en kunds tvisthistorik för den utfärdande banken försvagar ditt svar i stället för att stärka det. Det visas här så att du kan bedöma hur hårt du vill driva ärendet.",
         "explanationWithCount": "Den här kunden har {prior} tidigare beställningar i din butik, och minst en av dem slutade i en chargeback. Hålls internt — att nämna en kunds tvisthistorik för den utfärdande banken försvagar ditt svar i stället för att stärka det. Det visas här så att du kan bedöma hur hårt du vill driva ärendet."
+      },
+      "avsCodeUnmapped": {
+        "title": "Okänt resultat från adresskontrollen",
+        "explanation": "Utgivaren returnerade ett resultat från adresskontrollen som vi inte känner igen (AVS {avs}). Det noteras för granskning och används inte som bevis åt något håll — det varken stärker eller försvagar ärendet, och ingenting väntar på grund av det."
       }
     },
     "evidenceTabExtra": {

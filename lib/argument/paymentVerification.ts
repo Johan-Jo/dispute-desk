@@ -43,34 +43,29 @@
  * reconciled, because reconciling it *is* PR-C3's job.
  */
 
+import {
+  isAddressMatchResult,
+  normalizeAvsCode,
+  resolveCardNetwork,
+  type AvsAuthority,
+  type AvsNormalizedResult,
+  type CardNetwork,
+} from "./avsCodeMap";
+
 /* ── Codes ─────────────────────────────────────────────────────────────── */
 
 /**
- * AVS codes that count as a match FOR SCORING AND CITATION.
+ * AVS semantics moved to `avsCodeMap.ts` in PR-C3 (C-13): normalization is
+ * keyed on (network, code), every cell carries an authority state, and the
+ * citation set is the primary-sourced one. This module stays the single
+ * PREDICATE surface — nothing outside it reads the map directly.
  *
- * Y = street+ZIP · A = street only · W = ZIP only · X = full (international)
- * D / M = international match.
- *
- * Network-agnostic, and broader than the only V-PRIMARY rule we hold
- * (register R-E qualifies `Y` or `M` specifically). PR-C3 narrows the
- * *citation* path to the primary-sourced set; PR-C2 changes neither the set
- * nor the grade it produces.
- *
- * THE ONE DEFINITION. `tests/unit/paymentVerificationSingleOwner.test.ts`
- * fails the build if a second one appears anywhere in the repo.
+ * `tests/unit/paymentVerificationSingleOwner.test.ts` fails the build if a
+ * second definition of either code set appears anywhere in the repo.
  */
-const AVS_SCORING_MATCH = new Set(["Y", "A", "W", "X", "D", "M"]);
 
 /** CVV codes that count as a match. M = match. */
 const CVV_SCORING_MATCH = new Set(["M"]);
-
-/**
- * AVS codes that assert a DEFINITE component failure — Z (street failed,
- * postal matched), N (nothing matched), C (nothing matched, international).
- * Everything outside both sets is "the issuer did not verify / did not tell
- * us", which is never a negative signal.
- */
-const AVS_DEFINITE_NO_MATCH = new Set(["Z", "N", "C"]);
 
 /** CVV codes that assert a definite failure. */
 const CVV_DEFINITE_NO_MATCH = new Set(["N"]);
@@ -92,23 +87,47 @@ export interface VerificationSubfact {
   /** Descriptive reading of the response (merchant copy). */
   outcome: VerificationOutcome | null;
   /**
-   * SCORING / CITATION predicate: is this a match we credit and may cite?
+   * SCORING predicate: is this a match we credit?
    *
-   * Not the same question as `outcome === "match"`. AVS `F` (UK street+postal
-   * match) reads as a match and is credited by nothing — carried over from
-   * the pre-split behaviour rather than quietly widened, because widening the
-   * set is PR-C3's decision with its own primary source.
+   * Since PR-C3 this is derived from the normalized result, so the
+   * descriptive reading and the scoring reading cannot disagree — the `F`
+   * divergence PR-C2 pinned is resolved by the map, conservatively: an
+   * unlisted code is `unknown` and credits nothing.
+   *
+   * NOT the citation question. See `PaymentVerification.citable`.
    */
   matched: boolean;
 }
 
+/** The AVS half, with its normalization and its authority. */
+export interface AvsSubfact extends VerificationSubfact {
+  /** Factual reading of the issuer's response (PR-C3). */
+  normalized: AvsNormalizedResult;
+  /** Verification state of the map cell this code resolved through. */
+  authority: AvsAuthority;
+  /** A code the map has no entry for: diagnostic, never credit. */
+  unmapped: boolean;
+}
+
 export interface PaymentVerification {
+  /** The card network, used to key the AVS map. `unknown` is first-class. */
+  network: CardNetwork;
   /** Address Verification Service — the ADDRESS fact. */
-  avs: VerificationSubfact;
+  avs: AvsSubfact;
   /** Card security code — the CARD-POSSESSION fact. */
   cvv: VerificationSubfact;
-  /** The issuer confirmed the address (AVS). The only address authority. */
+  /**
+   * The issuer confirmed the address (AVS), to the SCORING standard — the
+   * three match flavours. Feeds grade, merchant copy and internal signals.
+   * Broader than what may be cited (PR-C3 decision 3).
+   */
   addressVerified: boolean;
+  /**
+   * The issuer confirmed the address to the CITABLE standard: a
+   * primary-sourced code (register R-E names `Y` and `M`). This, not
+   * `addressVerified`, is what authorizes bank-facing text.
+   */
+  citableAddressVerified: boolean;
   /** The issuer confirmed the security code. Never an address authority. */
   securityCodeVerified: boolean;
   /**
@@ -117,11 +136,23 @@ export interface PaymentVerification {
    */
   cvvOnly: boolean;
   /**
-   * DECISION 1. May any part of this fact reach an issuer? Requires the
-   * address half. A CVV-only match is structurally uncitable: no consumer can
-   * opt back in, because every bank-facing surface reads this flag.
+   * May any part of this fact reach an issuer?
+   *
+   * DECISION 1 (PR-C2): requires the address half — a CVV-only match is
+   * structurally uncitable. DECISION 3 (PR-C3): the address half must be a
+   * PRIMARY-SOURCED match; a `W` postal-only result stays merchant-visible
+   * and no longer travels under a rule that names `Y` or `M`.
+   *
+   * No consumer can opt back in: every bank-facing surface reads this flag.
    */
   citable: boolean;
+  /**
+   * The issuer returned a code the canonical map does not recognise. Earns
+   * nothing anywhere and raises an internal diagnostic; on its own it never
+   * parks the dispute — escalation happens only when a package tries to RELY
+   * on it, which the claim guards refuse.
+   */
+  avsUnmapped: boolean;
   /** Gateway-registered cardholder name, when the payload carries one.
    *  Merchant-UI only (see `nameMismatch.ts`) — never bank-facing. */
   cardholderName: string | null;
@@ -151,13 +182,17 @@ function subfact(
   return { code, present: true, outcome, matched: matchSet.has(code) };
 }
 
-/**
- * AVS `F` — street and postal matched, UK-issued cards. Reads as a match,
- * scores as nothing. Kept as an explicit exception rather than folded into
- * either set: PR-C3's network map is where it gets an authority and a home,
- * and a silent widening here would be a re-grading disguised as a refactor.
- */
-const AVS_DESCRIPTIVE_ONLY_MATCH = new Set(["F"]);
+/** The descriptive bucket for a normalized AVS result — the coarse merchant
+ *  reading (2026-07-23 directive), derived from the map so the description
+ *  and the predicate cannot drift. */
+function outcomeForAvs(normalized: AvsNormalizedResult): VerificationOutcome {
+  if (isAddressMatchResult(normalized)) return "match";
+  if (normalized === "no_match") return "no_match";
+  // `not_checked`, `unavailable` and `unknown` all read as "the issuer did
+  // not tell us", never as a mismatch. An unrecognised code is a gap in OUR
+  // map; saying it failed would put words in the issuer's mouth.
+  return "unchecked";
+}
 
 /**
  * Normalize any historical or current payload shape into the two subfacts.
@@ -177,25 +212,40 @@ export function readPaymentVerification(payload: unknown): PaymentVerification {
   const avsCode = readCode(p.avsResultCode) ?? readCode(p.avs_result_code) ?? readCode(p.avsResult);
   const cvvCode = readCode(p.cvvResultCode) ?? readCode(p.cvv_result_code) ?? readCode(p.cvvResult);
 
-  const avsBase = subfact(avsCode, AVS_SCORING_MATCH, AVS_DEFINITE_NO_MATCH);
-  const avs: VerificationSubfact =
-    avsCode !== null && AVS_DESCRIPTIVE_ONLY_MATCH.has(avsCode)
-      ? { ...avsBase, outcome: "match", matched: false }
-      : avsBase;
+  // AVS resolves through the canonical (network, code) map (PR-C3). The
+  // network is read from the same payload the codes came from; `unknown` is a
+  // first-class state that selects the base table and is never punitive.
+  const network = resolveCardNetwork(p);
+  const normalizedAvs = normalizeAvsCode(network, avsCode);
+  const avsMatched = isAddressMatchResult(normalizedAvs.result);
+  const avs: AvsSubfact = {
+    code: normalizedAvs.code,
+    present: normalizedAvs.code !== null,
+    outcome: normalizedAvs.code === null ? null : outcomeForAvs(normalizedAvs.result),
+    matched: avsMatched,
+    normalized: normalizedAvs.result,
+    authority: normalizedAvs.authority,
+    unmapped: normalizedAvs.unmapped,
+  };
   const cvv = subfact(cvvCode, CVV_SCORING_MATCH, CVV_DEFINITE_NO_MATCH);
 
   const addressVerified = avs.matched;
+  // Citation needs the primary-sourced code, not merely a match (decision 3).
+  const citableAddressVerified = avsMatched && normalizedAvs.ceItem3Citable;
   const securityCodeVerified = cvv.matched;
 
   const name = typeof p.cardholderName === "string" ? p.cardholderName.trim() : "";
 
   return {
+    network,
     avs,
     cvv,
     addressVerified,
+    citableAddressVerified,
     securityCodeVerified,
     cvvOnly: securityCodeVerified && !addressVerified,
-    citable: addressVerified,
+    citable: citableAddressVerified,
+    avsUnmapped: avs.unmapped,
     cardholderName: name.length > 0 ? name : null,
   };
 }
@@ -266,15 +316,15 @@ export function citableVerificationSummaryEn(v: PaymentVerification): string | n
   return parts.join(" and ");
 }
 
-function addressClauseEn(v: PaymentVerification): string {
-  switch (v.avs.code) {
-    case "A":
-      return "the billing street matched the issuer's records";
-    case "W":
-      return "the billing postal code matched the issuer's records";
-    default:
-      return "the billing address matched the issuer's records";
-  }
+/**
+ * PR-C3: a citable fact is `Y` or `M` — a FULL address match — so the clause
+ * is the full-match one. The street-only (`A`) and postal-only (`W`) variants
+ * that used to live here are unreachable now that a partial result cannot be
+ * cited; they survive on the merchant surfaces, which say what the issuer
+ * actually returned.
+ */
+function addressClauseEn(_v: PaymentVerification): string {
+  return "the billing address matched the issuer's records";
 }
 
 /**
@@ -284,13 +334,7 @@ function addressClauseEn(v: PaymentVerification): string {
  */
 export function citableVerificationPartsEn(v: PaymentVerification): string[] {
   if (!v.citable) return [];
-  const parts: string[] = [
-    v.avs.code === "A"
-      ? "billing street matched"
-      : v.avs.code === "W"
-        ? "billing postal code matched"
-        : "billing address matched",
-  ];
+  const parts: string[] = ["billing address matched"];
   if (v.securityCodeVerified) parts.push("CVV matched");
   return parts;
 }
