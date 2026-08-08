@@ -18,6 +18,10 @@ vi.mock("@/lib/argument/reasonFamily", () => ({
 import { getServiceClient } from "@/lib/supabase/server";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { reconcileParkedAutoDisputes } from "../reconcileParkedAutoDisputes";
+import {
+  CLEAN_FACTS,
+  narrativeJson,
+} from "@/tests/fixtures/defencePackageShapes";
 
 const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockEvaluateRules = vi.mocked(evaluateRules);
@@ -54,6 +58,9 @@ function mockSb(s: Scenario) {
       in: () => chain,
       is: () => chain,
       neq: () => chain,
+      // The guarded draft→final transition adds `.not("pdf_path","is",null)`
+      // so a concurrently invalidated row cannot be promoted.
+      not: () => chain,
       order: () => chain,
       limit: () => chain,
       update: (values: Record<string, unknown>) => {
@@ -80,7 +87,17 @@ function mockSb(s: Scenario) {
           return [{ id: filters["id"] }];
         }
         const did = filters["dispute_id"] as string;
-        return s.dpkgByDispute[did] ?? null;
+        if (did) return s.dpkgByDispute[did] ?? null;
+        // PR-C1: `preflightNamedCandidate` looks the row up by id. Resolve it
+        // from the same fixture so the safety preflight sees real content.
+        const byId = filters["id"] as string;
+        if (byId) {
+          const hit = Object.values(s.dpkgByDispute).find(
+            (d) => d && (d as Record<string, unknown>).id === byId,
+          );
+          return hit ?? null;
+        }
+        return null;
       }
       if (table === "jobs") {
         const packId = filters["entity_id"] as string;
@@ -103,7 +120,18 @@ function mockSb(s: Scenario) {
     return chain;
   }
 
-  return { from: fromTable, inserts, updates };
+  // Promotion + supersede + enqueue are ONE transaction now. The RPC's own
+  // behaviour is proven against a real database in
+  // `scripts/db/finalizeDefencePackage.analysis.ts`; here it stands in so the
+  // reconcile pass's own accounting can be tested.
+  const rpc = async () => {
+    inserts.push({ table: "jobs", values: { job_type: "save_to_shopify" } });
+    return {
+      data: { outcome: "promoted", package_id: "dpkg-1", job_id: "job-1" },
+      error: null,
+    };
+  };
+  return { from: fromTable, inserts, updates, rpc };
 }
 
 const READY_STRONG_PACK = {
@@ -124,6 +152,13 @@ const FINALIZABLE_DRAFT = {
   status: "draft",
   validation_status: "ok",
   pdf_path: "packs/shop-1/dpkg-1.pdf",
+  content_revision: "11111111-1111-4111-8111-111111111111",
+  // A real finalizable draft always carries both. PR-C1's preflight fails
+  // closed on a candidate whose supporting JSON cannot be inspected, so a
+  // fixture without them would be blocked — correctly, but it would no longer
+  // represent the happy path these tests are about.
+  facts_json: CLEAN_FACTS,
+  narrative_json: narrativeJson({ fulfillmentArgument: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890)." }),
 };
 
 beforeEach(() => {
@@ -134,6 +169,47 @@ beforeEach(() => {
 });
 
 describe("reconcileParkedAutoDisputes", () => {
+  // ── PR-C1 ──────────────────────────────────────────────────────────
+  it("does NOT promote or count an unsafe candidate, and reports it as blocked", async () => {
+    const sb = mockSb({
+      disputes: [{ id: "disp-1", reason: "FRAUDULENT", status: "needs_response", amount: 100, phase: "chargeback" }],
+      packByDispute: { "disp-1": READY_STRONG_PACK },
+      dpkgByDispute: {
+        "disp-1": {
+          ...FINALIZABLE_DRAFT,
+          facts_json: CLEAN_FACTS,
+          narrative_json: narrativeJson({ fulfillmentArgument: "The parcel was delivered to the cardholder's verified address." }),
+        },
+      },
+    });
+    mockGetServiceClient.mockReturnValue(sb as never);
+
+    const res = await reconcileParkedAutoDisputes("shop-1");
+
+    // Not reconciled — a blocked dispute has not been handled.
+    expect(res.reconciled).toBe(0);
+    expect(res.disputeIds).toEqual([]);
+    expect(res.blocked).toBe(1);
+    // Nothing promoted, nothing superseded, nothing enqueued.
+    expect(sb.updates.some((u) => u.table === "defence_packages")).toBe(false);
+    expect(sb.inserts.some((i) => i.table === "jobs")).toBe(false);
+  });
+
+  it("does NOT promote a candidate whose supporting JSON is unreadable", async () => {
+    const sb = mockSb({
+      disputes: [{ id: "disp-1", reason: "FRAUDULENT", status: "needs_response", amount: 100, phase: "chargeback" }],
+      packByDispute: { "disp-1": READY_STRONG_PACK },
+      dpkgByDispute: {
+        "disp-1": { ...FINALIZABLE_DRAFT, facts_json: null, narrative_json: null },
+      },
+    });
+    mockGetServiceClient.mockReturnValue(sb as never);
+    const res = await reconcileParkedAutoDisputes("shop-1");
+    expect(res.reconciled).toBe(0);
+    expect(res.blocked).toBe(1);
+    expect(sb.inserts.some((i) => i.table === "jobs")).toBe(false);
+  });
+
   it("finalizes + enqueues save for a parked Strong dispute now on auto", async () => {
     const sb = mockSb({
       disputes: [{ id: "disp-1", reason: "FRAUDULENT", status: "needs_response", amount: 100, phase: "chargeback" }],
@@ -146,11 +222,11 @@ describe("reconcileParkedAutoDisputes", () => {
 
     expect(res.reconciled).toBe(1);
     expect(res.disputeIds).toEqual(["disp-1"]);
-    // finalize flip happened
-    expect(sb.updates.some((u) => u.table === "defence_packages" && u.values.status === "final")).toBe(true);
-    // save enqueued against the source pack
+    // The reconcile pass writes NOTHING to defence_packages itself: the
+    // promotion, the supersede and the enqueue are one transaction.
+    expect(sb.updates.some((u) => u.table === "defence_packages")).toBe(false);
     const saveJob = sb.inserts.find((i) => i.table === "jobs");
-    expect(saveJob?.values).toMatchObject({ job_type: "save_to_shopify", entity_id: "pack-1" });
+    expect(saveJob?.values).toMatchObject({ job_type: "save_to_shopify" });
   });
 
   it("skips a Moderate dispute (never auto-saves weaker-than-Strong)", async () => {

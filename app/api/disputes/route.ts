@@ -5,6 +5,11 @@ import {
   creditAlreadyIssuedFromBlock,
 } from "@/lib/argument/caseStrength";
 import {
+  buildCaseGateAssessment,
+  gateNotProvided,
+  gateProvided,
+} from "@/lib/argument/caseGateAssessment";
+import {
   cardholderNameFromPayload,
   detectCardholderNameMismatch,
 } from "@/lib/argument/nameMismatch";
@@ -468,28 +473,31 @@ export async function GET(req: NextRequest) {
             checklist,
             reason,
             payloadSource,
-            {
+            buildCaseGateAssessment({
               // List view. Coverage, fatal-loss and risk-weakness are all
               // derived by `buildPack` from the order, which this query
-              // does not load — the list has never shown them and this
-              // records that, rather than leaving it to argument position.
-              coverage: null,
-              fatalLoss: null,
-              riskWeakness: null,
-              nameMismatch: {
+              // does not load — the list has never shown them, and stating
+              // that as a reason keeps it distinguishable from a case that
+              // genuinely has no such gate.
+              coverage: gateNotProvided("order_not_loaded"),
+              fatalLoss: gateNotProvided("order_not_loaded"),
+              riskWeakness: gateNotProvided("order_not_loaded"),
+              nameMismatch: gateProvided({
                 triggered: detectCardholderNameMismatch(cardholderName, customerName),
                 cardholderName,
                 customerName,
-              },
+              }),
               // Credit-already-issued floor, projected out of pack_json
               // alongside the sections. This site was the fourth ❌ in the
               // 162042cd table and stayed broken after the first fix
               // because the text-level parity guard only enumerated three
               // files. Requiring the object is what surfaced it.
-              creditAlreadyIssued: creditAlreadyIssuedFromBlock(
-                (p as { credit_already_issued?: unknown }).credit_already_issued,
+              creditAlreadyIssued: gateProvided(
+                creditAlreadyIssuedFromBlock(
+                  (p as { credit_already_issued?: unknown }).credit_already_issued,
+                ),
               ),
-            },
+            }),
           );
           strengthByDispute.set(p.dispute_id, {
             overall: result.overall,

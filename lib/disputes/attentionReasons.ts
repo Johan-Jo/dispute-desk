@@ -64,6 +64,14 @@ export const DISPUTE_ATTENTION_REASONS = {
    *  deadline. Payload: `{ hours_to_deadline: number, due_at: string }`.
    *  Cleared when the merchant takes a fresh review action. */
   REVIEW_DEADLINE_APPROACHING: "review_deadline_approaching",
+
+  /** PR-C1 (2026-08-07): a background path (auto-save, reconcile, finalize)
+   *  refused to file the current defence package because it carries a retired
+   *  delivery fact, an address-delivery assertion, or supporting JSON that
+   *  cannot be inspected. Nothing was written to Shopify. Payload:
+   *  `{ package_id: string | null, reasons: string[] }`. Cleared when a
+   *  regenerated package passes the same preflight. */
+  PACKAGE_REVIEW_REQUIRED: "package_review_required",
 } as const;
 
 export type DisputeAttentionReason =

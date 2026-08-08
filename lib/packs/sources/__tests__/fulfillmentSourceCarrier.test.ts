@@ -150,8 +150,7 @@ describe("the #12809 acceptance shape — DHL Freight, no Shopify signal", () =>
     expect(data.proofType).toBe("delivered_confirmed");
     expect(data.deliveredAt).toBe("2026-06-04T14:31:00");
     // …but NEVER an address-delivery claim (rubric #9 stays off).
-    expect(data.deliveredToVerifiedAddress).toBe(false);
-    // Result persisted with provenance for cache + admin.
+    expect("deliveredToVerifiedAddress" in data).toBe(false); // PR-C1: key retired
     expect(upsertMock).toHaveBeenCalled();
     const persisted = upsertMock.mock.calls[0][0] as Record<string, unknown>;
     expect(persisted).toMatchObject({
@@ -334,7 +333,7 @@ describe("multi-shipment coverage (§5.6)", () => {
       ctx({ lineItems: lineItems(2), fulfillments: [delivered, inTransit] }),
     );
     expect(data.deliveryCoverage).toBe("partial");
-    expect(data.deliveredToVerifiedAddress).toBe(false); // no order-level definitive claim
+    expect("deliveredToVerifiedAddress" in data).toBe(false); // PR-C1: key retired
     expect(data.proofType).toBe("delivered_confirmed"); // package-level evidence preserved
     expect(data.deliveredAt).toBe("2026-06-01T10:00:00Z");
   });
@@ -344,7 +343,7 @@ describe("multi-shipment coverage (§5.6)", () => {
     const f2 = fulfillment({ events: NATIVE_DELIVERED, trackingInfo: [] });
     const data = await sectionData(ctx({ lineItems: lineItems(2), fulfillments: [f1, f2] }));
     expect(data.deliveryCoverage).toBe("complete");
-    expect(data.deliveredToVerifiedAddress).toBe(true);
+    expect("deliveredToVerifiedAddress" in data).toBe(false); // PR-C1: key retired
   });
 
   it("one delivered + one returned → partial coverage; the returned shipment adds nothing", async () => {
@@ -359,7 +358,7 @@ describe("multi-shipment coverage (§5.6)", () => {
       ctx({ lineItems: lineItems(2), fulfillments: [delivered, returned] }),
     );
     expect(data.deliveryCoverage).toBe("partial");
-    expect(data.deliveredToVerifiedAddress).toBe(false);
+    expect("deliveredToVerifiedAddress" in data).toBe(false); // PR-C1: key retired
   });
 
   it("no line items on the order → coverage unknown, existing behavior preserved", async () => {
@@ -367,6 +366,6 @@ describe("multi-shipment coverage (§5.6)", () => {
       ctx({ fulfillments: [fulfillment({ events: NATIVE_DELIVERED, trackingInfo: [] })] }),
     );
     expect(data.deliveryCoverage).toBe("unknown");
-    expect(data.deliveredToVerifiedAddress).toBe(true);
+    expect("deliveredToVerifiedAddress" in data).toBe(false); // PR-C1: key retired
   });
 });

@@ -78,6 +78,10 @@ export type EventType =
   | "defence_package_superseded"
   | "defence_package_validation_failed"
   | "defence_package_validation_retry"
+  /** PR-C1 (2026-08-07): a persisted package candidate was refused at a
+   *  save / forward / deadline path because it carries a retired delivery
+   *  fact or an address-delivery assertion. Nothing was written to Shopify. */
+  | "defence_package_blocked_unsafe_claim"
   | "manual_evidence_added_to_package"
   | "llm_narrative_generated"
   | "llm_narrative_failed"

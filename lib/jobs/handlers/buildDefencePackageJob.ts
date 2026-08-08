@@ -45,6 +45,7 @@ import { computeEvidenceHash } from "@/lib/defence/computeEvidenceHash";
 import { deriveOrderContext, merchantNameFromDomain } from "@/lib/defence/orderContext";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { finalizeAndEnqueueSave } from "@/lib/automation/finalizeAndEnqueueSave";
+import { finalizeDedupeKey } from "@/lib/defence/finalizeRpc";
 import { evaluateAutoSubmitGuards } from "@/lib/automation/autoSubmitGuards";
 import type {
   DefencePackageDocumentData,
@@ -78,6 +79,35 @@ export async function handleBuildDefencePackage(
 
   // Don't run on terminal statuses. Only `draft` rows are valid targets.
   if (pkg.status !== "draft") {
+    // LOST-RESPONSE REPLAY. An auto build can finalize, enqueue the save and
+    // commit, then lose its reply; the worker retries the whole handler. The
+    // package is no longer a draft, and this used to be recorded as a
+    // non-retriable failure — committed work reported as lost.
+    //
+    // The durable proof that the auto transaction committed is the save job it
+    // inserted under `dpkg-finalize:<package_id>`. With that marker present,
+    // converge on success: no rebuild, no re-audit, no second enqueue. Without
+    // it, a `final` package is NOT assumed to be a committed auto-finalization
+    // (a merchant may have approved it by hand), and the original refusal
+    // stands.
+    if (pkg.status === "final" || pkg.status === "submitted") {
+      const { data: marker, error: markerErr } = await sb
+        .from("jobs")
+        .select("id")
+        .eq("dedupe_key", finalizeDedupeKey(packageId))
+        .maybeSingle();
+      // A FAILED lookup is not proof of absence. Discarding the error turned a
+      // transient blip into a permanent "this package is not a draft" failure
+      // for work that had in fact committed.
+      if (markerErr) {
+        return {
+          ok: false,
+          retriable: true,
+          reason: `commit_marker_lookup_failed: ${markerErr.message}`,
+        };
+      }
+      if (marker) return { ok: true };
+    }
     return { ok: false, retriable: false, reason: `package status=${pkg.status} is not draft` };
   }
 
@@ -680,7 +710,20 @@ export async function handleBuildDefencePackage(
     }
   }
 
-  const targetStatus: DefencePackageStatus = resolvedMode === "auto" ? "final" : "draft";
+  // ── Persist the rendered package as a DRAFT, always ─────────────────
+  //
+  // This used to write `final` directly in auto mode and log
+  // `defence_package_finalized` immediately, THEN call
+  // finalizeAndEnqueueSave — whose whole job is to refuse an unsafe or
+  // unverifiable candidate. By the time the preflight ran, the package was
+  // already final and the successful-finalization audit already existed, so a
+  // refusal produced a dispute whose newest candidate was final-but-unfileable
+  // with an audit trail claiming it had been approved. The helper's return
+  // value was also discarded, and the job returned `{ ok: true }` regardless.
+  //
+  // Finalization is an authorization step. It happens in exactly one place —
+  // `finalizeAndEnqueueSave`, after the preflight — for every caller.
+  const targetStatus: DefencePackageStatus = "draft";
 
   await sb
     .from("defence_packages")
@@ -705,10 +748,9 @@ export async function handleBuildDefencePackage(
     disputeId: pkg.dispute_id,
     packId: pkg.source_pack_id,
     actorType: "system",
-    eventType:
-      targetStatus === "final"
-        ? "defence_package_finalized"
-        : "defence_package_draft_generated",
+    // Always the draft event. A finalization audit is written by
+    // `finalizeAndEnqueueSave` only after the candidate has been inspected.
+    eventType: "defence_package_draft_generated",
     eventPayload: {
       packageId,
       version: pkg.version,
@@ -738,14 +780,18 @@ export async function handleBuildDefencePackage(
     },
   });
 
-  // ── Auto mode: supersede any prior final + enqueue save_to_shopify ──
-  // The row was already flipped to final by the UPDATE above (targetStatus).
-  // finalizeAndEnqueueSave is idempotent on the final flip (it only acts on
-  // a `draft` row) — here it just supersedes any prior final and enqueues
-  // the save, the identical tail that reconcileParkedAutoDisputes runs so
-  // there is ONE finalize+save path, not two that can drift.
+  // ── Auto mode: inspect, then finalize + supersede + enqueue ─────────
+  //
+  // The canonical sequence, the identical one `reconcileParkedAutoDisputes`
+  // runs: preflight the exact candidate, and only then promote it to final,
+  // supersede the prior final, and enqueue the save. The row is still a draft
+  // at this point, so a refusal leaves a validated draft the merchant can
+  // regenerate — never a final package the worker will not file.
+  //
+  // The outcome is HANDLED, not discarded. A build that could not save is not
+  // a successful build-and-save.
   if (resolvedMode === "auto") {
-    await finalizeAndEnqueueSave({
+    const outcome = await finalizeAndEnqueueSave({
       sb,
       shopId: pkg.shop_id,
       disputeId: pkg.dispute_id,
@@ -753,6 +799,47 @@ export async function handleBuildDefencePackage(
       packageVersion: pkg.version,
       sourcePackId: pkg.source_pack_id,
     });
+
+    if (!outcome.ok) {
+      switch (outcome.failure) {
+        case "content_block":
+          // The package built correctly; we deliberately withheld the filing
+          // and parked it for merchant review. Retrying the BUILD would
+          // produce the same package, so the job is done, not failed.
+          return { ok: true };
+        case "stale":
+          // A newer version landed while this one rendered. That version owns
+          // the save decision; re-running this build would not change
+          // anything. Reported honestly rather than as a successful save.
+          return {
+            ok: false,
+            retriable: false,
+            reason: `defence_package_superseded_before_save: ${outcome.reason ?? "not_current"}`,
+          };
+        case "lifecycle":
+          // The guarded draft→final transition matched zero rows: another
+          // actor changed the lifecycle between the render and the promotion,
+          // and whoever won it owns the enqueue. Nothing was finalized,
+          // superseded or queued here. Retrying this build would re-render the
+          // same package and lose the race again, so it is not retriable.
+          return {
+            ok: false,
+            retriable: false,
+            reason: `defence_package_transition_conflict: ${outcome.reason ?? "zero rows"}`,
+          };
+        case "transient":
+        case "pending":
+        default:
+          // A query or write failed (or, contradictorily, the row we just
+          // wrote could not be found). Retriable: the package is fine and the
+          // build is idempotent on an existing version.
+          return {
+            ok: false,
+            retriable: true,
+            reason: `defence_package_finalize_deferred: ${outcome.reason ?? "unknown"}`,
+          };
+      }
+    }
   }
 
   return { ok: true };

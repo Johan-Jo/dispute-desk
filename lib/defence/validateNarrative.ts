@@ -20,6 +20,10 @@
  */
 
 import { runClaimGuards } from "./claimGuards";
+import {
+  checkAddressDeliveryAuthorization,
+  deriveClaimCapabilities,
+} from "./claimCapabilities";
 import { FACT_PREDICATES } from "./factPredicates";
 import type {
   ComposedDocumentBlock,
@@ -198,6 +202,27 @@ export function runPhraseAndGuardChecks(
         });
       }
     }
+  }
+
+  // 1c. STRUCTURAL claim authorization (PR-C1). Capabilities are re-derived
+  //     here from `approvedFacts` — independently of whatever the generator
+  //     was told it held — and the prose is rejected when it makes a claim the
+  //     case has no capability for. This is the authority; the phrase lists
+  //     above are defence in depth. `address_delivery` is underivable after
+  //     PR-C1, so any affirmative OR ambiguous address-delivery sentence fails.
+  const capabilities = deriveClaimCapabilities(approvedFacts);
+  const addressCheck = checkAddressDeliveryAuthorization({ text, capabilities });
+  if (!addressCheck.authorized) {
+    errors.push({
+      section: sectionKey,
+      rule: "unauthorized_claim",
+      message:
+        `${sectionKey} makes an ${addressCheck.verdict} address-delivery claim, ` +
+        `but this case holds no "address_delivery" capability. Delivery may cite ` +
+        `carrier, tracking and delivery date; it may not state which physical ` +
+        `address received the parcel.`,
+      layer,
+    });
   }
 
   // 2. Claim guards (fact-property predicates).

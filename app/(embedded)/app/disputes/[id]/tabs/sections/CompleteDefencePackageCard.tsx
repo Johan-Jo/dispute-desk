@@ -32,6 +32,10 @@ import type {
   EvidenceFact,
 } from "@/lib/defence/types";
 import {
+  deriveDefencePackageActionState,
+  deriveSubmitEffects,
+} from "./defencePackageActionState";
+import {
   DefencePackageHtmlView,
   type DisputeContextLike,
 } from "./DefencePackageHtmlView";
@@ -120,6 +124,13 @@ interface Props {
     latest: DefencePackageRow | null;
     bankFacing: DefencePackageRow | null;
     currentPromptVersion: number | null;
+    /** PR-C1 candidate-safety verdict for `latest`. When `blocked`, every
+     *  approval action is disabled and the review-required banner replaces
+     *  them — the submit / save / approve endpoints all return 422 for this
+     *  candidate, so offering the button would promise a submission that
+     *  cannot happen. Preview and Regenerate stay available: regenerating is
+     *  the fix. */
+    safety?: { blocked: boolean; reasons: string[]; message: string };
   };
   /** Triggers a workspace refresh. Bound to the parent's
    *  `actions.fetchAll`. Used by the "Check for update" action on the
@@ -541,30 +552,30 @@ export function CompleteDefencePackageCard({
     setBusy("submit");
     try {
       const res = await fetch(`/api/defence-packages/${latest.id}/submit${shopIdQs}`, { method: "POST" });
-      if (!res.ok) {
-        // Surface the route's structured error message when present so
-        // the merchant sees "Cannot submit a package in status=draft"
-        // instead of an opaque HTTP code. Falls back to the bare status.
-        let detail = tPkg("errors.submitFailed", { status: res.status });
-        try {
-          const body = (await res.json()) as { error?: unknown };
-          if (typeof body.error === "string") detail = body.error;
-        } catch {
-          // Non-JSON body — keep the fallback.
-        }
-        setError(detail);
-        return;
+      // PR-C1: `deriveSubmitEffects` is the shared, tested decision. On a
+      // refusal it returns `markPending:false, notifySubmitted:false`, so a
+      // 422 PACKAGE_REVIEW_REQUIRED (or any non-OK status) can never show a
+      // submitted state — enqueueing first and blocking in the worker is
+      // exactly the false-submitted bug this ordering prevents. The refresh
+      // pulls the server's review-required verdict so the banner and the
+      // disabled buttons appear.
+      let body: { error?: unknown; code?: unknown; message?: unknown } | null = null;
+      try {
+        body = (await res.json()) as { error?: unknown; code?: unknown; message?: unknown };
+      } catch {
+        // Non-JSON body — the fallback message covers it.
       }
-      // POST accepted: the save-to-shopify job is enqueued but won't
-      // have run yet. Notify the parent so it flips justSubmitted (which
-      // drives derived.isReadOnly → useReviewView state="submitted" →
-      // this card re-renders into the "Saved to Shopify" layout) AND
-      // kicks an immediate workspace fetch. The hook's 4s poll then
-      // replaces the placeholder timestamp with the real
-      // `saved_to_shopify_at` once the job persists.
-      setSubmitPending(true);
-      onSubmitted?.();
-      await onRefresh?.();
+      const effects = deriveSubmitEffects(
+        { ok: res.ok, status: res.status, body },
+        tPkg("errors.submitFailed", { status: res.status }),
+      );
+      if (effects.error) setError(effects.error);
+      // On success: notify the parent so it flips justSubmitted (which drives
+      // derived.isReadOnly -> useReviewView state="submitted" -> this card
+      // re-renders into the "Saved to Shopify" layout).
+      if (effects.markPending) setSubmitPending(true);
+      if (effects.notifySubmitted) onSubmitted?.();
+      if (effects.refresh) await onRefresh?.();
     } finally {
       setBusy(null);
     }
@@ -600,57 +611,40 @@ export function CompleteDefencePackageCard({
   // has an actual draft pending — `hasUnsubmittedDraft` proves the
   // displayed `latest` row diverges from `bankFacing`.
   const hasActionableDraft = !isSubmittedToBank || hasUnsubmittedDraft;
-  const canFinalize =
-    hasActionableDraft &&
-    row.status === "draft" &&
-    row.validation_status === "ok" &&
-    Boolean(row.pdf_path);
-  const canSubmit = hasActionableDraft && row.status === "final";
-  // Regenerate gate. The pre-submit cases (draft / stale / failed) are
-  // always reachable. For a submitted row, only offer Regenerate when
-  // it would actually produce something new — otherwise the merchant
-  // clicks "Regenerate" and gets a v10 that's byte-identical to v9.
+  // PR-C1: every action gate comes from ONE shared, tested derivation, so the
+  // button state and the endpoints agree by construction. See
+  // `defencePackageActionState.ts`.
+  const actionState = deriveDefencePackageActionState({
+    rowStatus: row.status,
+    rowValidationStatus: row.validation_status,
+    rowPdfPath: row.pdf_path,
+    latestStatus: latest?.status ?? null,
+    rowPromptVersion: row.prompt_version,
+    currentPromptVersion,
+    hasActionableDraft,
+    hasUnsubmittedDraft,
+    hasLatest: !!latest,
+    hasBankFacing: !!bankFacing,
+    isNetworkSubmitted,
+    isClosed,
+    submitPending,
+    safety: defencePackage?.safety,
+  });
+  const canFinalize = actionState.canFinalize;
+  const canSubmit = actionState.canSubmit;
+  // Regenerate gate (unchanged rules, now derived in one place): the
+  // pre-submit cases (draft / stale / failed) are always reachable; a
+  // submitted row only offers Regenerate when it would produce something new
+  // (`latest.status === "stale"`, or the prompt version has advanced). Hard
+  // lock once the network has the evidence or the dispute is closed.
   //
-  // "Something new" today means one of:
-  //   - status === 'stale'  → underlying evidence drifted since this
-  //                           draft was built. (Set by the enqueue
-  //                           path when the evidence_hash changes.)
-  //   - prompt_version lags → a code/prompt upgrade has shipped since
-  //                           this draft was generated, so the next
-  //                           regenerate picks up newer LLM guidance.
-  //
-  // Hard lock: once the card network has the evidence
-  // (`presentationStatus === "SUBMITTED_TO_NETWORK"`) or the dispute is
-  // closed, Regenerate is meaningless — Shopify can no longer swap the
-  // forwarded PDF, and a draft would just sit unused. The lock fires
-  // even if the prompt version has advanced.
-  const submittedRowIsStale = row.status === "submitted" && (
-    (latest?.status ?? null) === "stale" ||
-    (typeof row.prompt_version === "number" &&
-      typeof currentPromptVersion === "number" &&
-      row.prompt_version < currentPromptVersion)
-  );
-  const canRegenerate =
-    !isNetworkSubmitted &&
-    !isClosed &&
-    (row.status === "draft" ||
-      row.status === "stale" ||
-      row.status === "failed" ||
-      submittedRowIsStale);
+  // PR-C1 deliberately does NOT gate Regenerate on the safety verdict —
+  // regenerating is how a blocked package is fixed.
+  const canRegenerate = actionState.canRegenerate;
 
-  // True when the "Draft vX is ready for review" banner is going to
-  // render — that banner now hosts Approve / Resubmit / More actions
-  // so the merchant doesn't bounce between the banner and a detached
-  // action row below the inline preview. The same expression gates
-  // the banner itself a few lines down; precomputing it here lets the
-  // lower action row suppress duplicates cleanly.
-  const bannerHostsActions =
-    hasUnsubmittedDraft &&
-    !!latest &&
-    !!bankFacing &&
-    !isNetworkSubmitted &&
-    !isClosed &&
-    !submitPending;
+  // The "Draft vX is ready for review" banner hosts Approve / Resubmit / More
+  // actions, so it is suppressed for a blocked candidate along with them.
+  const bannerHostsActions = actionState.bannerHostsActions;
 
   const formattedSubmittedAt = submittedToShopifyAt
     ? (() => {
@@ -677,6 +671,29 @@ export function CompleteDefencePackageCard({
               })}
             </p>
           </div>
+
+          {/* PR-C1 — review-required. Rendered OUTSIDE the submitted/unsubmitted
+              split, above both, so it appears exactly once for every blocked
+              latest candidate.
+
+              It used to live inside the `isSubmittedToBank` branch only. The
+              main blocked population is packages that were NEVER saved to
+              Shopify, and for those the approval actions vanished with no
+              explanation at all — the merchant saw a card that had simply
+              stopped offering anything. The helper already returned
+              `showReviewRequired`; the component just wasn't reading it, which
+              is why the helper test passed while the unsent UI stayed broken.
+
+              Preview and Regenerate remain below; Finalize / Submit / Resubmit
+              are suppressed via `canFinalize` / `canSubmit` /
+              `bannerHostsActions`. */}
+          {actionState.showReviewRequired ? (
+            <Banner tone="warning" title={tPkg("reviewRequiredTitle")}>
+              <Text as="p" variant="bodySm">
+                {defencePackage?.safety?.message || tPkg("reviewRequiredBody")}
+              </Text>
+            </Banner>
+          ) : null}
 
           {/* Workflow layout. Three states:
               A. Never submitted               → status / mode / deadline strip, then action row
@@ -779,7 +796,12 @@ export function CompleteDefencePackageCard({
                   The "Saving to Shopify…" banner above carries the
                   status during this gap until the save-to-shopify job
                   flips the latest row to status='submitted'. */}
-              {hasUnsubmittedDraft && latest && bankFacing && !isNetworkSubmitted && !isClosed && !submitPending ? (
+              {/* Gated on `bannerHostsActions`, not on a hand-copied repeat of
+                  its terms. The inline condition used to omit the PR-C1 safety
+                  term, so a blocked candidate still rendered "Draft vX is ready
+                  for review" — an invitation to approve — with every button
+                  inside it silently removed. */}
+              {bannerHostsActions && latest && bankFacing ? (
                 <Banner tone="info" title={tPkg("draftBannerTitle", { version: latest.version })}>
                   {/* Banner hosts the workflow's primary action AND the
                       Regenerate overflow, so the merchant doesn't have

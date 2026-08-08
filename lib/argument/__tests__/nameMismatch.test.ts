@@ -70,9 +70,11 @@ const avsCvvPayload = {
   cardholderName: "Robin Denise Pipe",
 };
 
+// PR-C1: a STRONG delivery signal comes from a genuine signature/POD only.
+// This fixture needs a Strong fraud case to exercise the name-mismatch cap.
 const deliveryPayload = {
-  proofType: "delivered_confirmed",
-  deliveredToVerifiedAddress: true,
+  proofType: "signature_confirmed",
+  signedByName: "R. Pipe",
   deliveredAt: "2026-07-10T12:00:00Z",
   fulfillments: [],
 };

@@ -133,10 +133,17 @@ export async function getFirstShopIdForUser(
 }
 
 /**
- * Seed a minimal dispute + evidence_pack pair owned by the user with
- * the given email. The pack is inserted at `status="ready"` and
- * `completeness_score=92` so POST /api/packs/:id/save-to-shopify
- * accepts it without needing `confirmWarnings`.
+ * Seed a minimal dispute + evidence_pack + defence_package trio owned by the
+ * user with the given email. The pack is inserted at `status="ready"` and
+ * `completeness_score=92` so POST /api/packs/:id/save-to-shopify accepts it
+ * without needing `confirmWarnings`.
+ *
+ * The defence package is REQUIRED as of PR-C1 (2026-08-07): the save route
+ * preflights the latest candidate and refuses a dispute that has none, because
+ * `saveToShopifyJob` hard-requires a latest `final` package and a job queued
+ * without one is a job the worker must reject. Its `facts_json` and
+ * `narrative_json` therefore carry the real persisted shapes and clean,
+ * licensed delivery prose — no address-delivery claim.
  *
  * Returns the inserted IDs plus a cleanup function. Cleanup deletes
  * the rows in dependency order (jobs → packs → disputes); idempotent
@@ -152,6 +159,7 @@ export async function seedReadyPackForUser(
 
   const disputeId = randomUUID();
   const packId = randomUUID();
+  const defencePackageId = randomUUID();
 
   const { error: dErr } = await client.from("disputes").insert({
     id: disputeId,
@@ -178,6 +186,69 @@ export async function seedReadyPackForUser(
     // Roll back the dispute insert so we don't leave an orphan.
     await client.from("disputes").delete().eq("id", disputeId);
     throw new Error(`evidence_packs insert failed: ${pErr.message}`);
+  }
+
+  // PR-C1: a SAFE, current defence package. Shapes match the persisted
+  // contract the safety parser validates (13-key facts, section-keyed
+  // narrative); the prose cites carrier + tracking + date and never states
+  // which address received the parcel.
+  const { error: dpErr } = await client.from("defence_packages").insert({
+    id: defencePackageId,
+    dispute_id: disputeId,
+    shop_id: shopId,
+    source_pack_id: packId,
+    version: 1,
+    status: "final",
+    generated_by: "system",
+    evidence_hash: `e2e-${disputeId}`,
+    validation_status: "ok",
+    pdf_path: `e2e/${disputeId}/v1.pdf`,
+    facts_json: [
+      {
+        id: "f1",
+        category: "delivery_proof",
+        label: "Delivery confirmation",
+        value: { proofType: "delivered_confirmed", carrier: "PostNord", trackingNumber: "1234567890" },
+        source: "shopify_fulfillments",
+        sourceRef: null,
+        strength: "moderate",
+        bankEligible: true,
+        merchantVisible: true,
+        internalOnly: false,
+        includeInBankNarrative: true,
+        submissionRisk: false,
+        confidence: null,
+      },
+    ],
+    // ALL nine sections, plus both metadata arrays. The safety parser accepts
+    // only the shape production actually holds (schema v1), and production
+    // holds all eleven keys on every one of its 241 non-null narratives — a
+    // one-section fixture is not a narrative the generator can produce, and
+    // seeding one made the happy path 422 on `unreadable_narrative_json`.
+    narrative_json: {
+      executiveSummary: {
+        text: "The carrier confirmed delivery on 12 May 2026 (PostNord, tracking 1234567890).",
+        usedFactIds: ["f1"],
+      },
+      transactionOverviewArgument: { text: "", usedFactIds: [] },
+      chronologyArgument: { text: "", usedFactIds: [] },
+      paymentAuthenticationArgument: { text: "", usedFactIds: [] },
+      fulfillmentArgument: {
+        text: "Tracking 1234567890 records the shipment as delivered on 12 May 2026.",
+        usedFactIds: ["f1"],
+      },
+      communicationArgument: { text: "", usedFactIds: [] },
+      policyArgument: { text: "", usedFactIds: [] },
+      manualEvidenceArgument: { text: "", usedFactIds: [] },
+      conclusion: { text: "", usedFactIds: [] },
+      omittedSections: [],
+      warnings: [],
+    },
+  });
+  if (dpErr) {
+    await client.from("evidence_packs").delete().eq("id", packId);
+    await client.from("disputes").delete().eq("id", disputeId);
+    throw new Error(`defence_packages insert failed: ${dpErr.message}`);
   }
 
   const cleanup = async () => {

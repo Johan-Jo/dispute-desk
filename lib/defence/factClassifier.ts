@@ -22,6 +22,7 @@ import {
   type EvidenceCategory,
 } from "@/lib/argument/canonicalEvidence";
 import type { CaseStrengthLevel } from "@/lib/argument/types";
+import { stripRetiredPayloadKeys } from "@/lib/evidence/model/retiredKeys";
 import { evaluateAllPredicates } from "./factPredicates";
 import type {
   EvidenceFact,
@@ -273,7 +274,11 @@ function extractValue(
   payload: Record<string, unknown> | null,
   section: PackSectionLike,
 ): Record<string, unknown> {
-  const p = payload ?? {};
+  // Retired collector keys are removed at the boundary of fact extraction, so
+  // no historical value can enter `defence_evidence_facts`, `facts_json`, the
+  // Evidence Basis rows, or the LLM payload. See
+  // `lib/evidence/model/retiredKeys.ts` for why each key was retired.
+  const p = stripRetiredPayloadKeys(payload) ?? {};
   switch (fieldKey) {
     case "avs_cvv_match": {
       const avsResult =
@@ -363,7 +368,11 @@ function extractValue(
         trackingUrl: str(tracking?.url) ?? str(p.trackingUrl),
         deliveredAt: typeof p.deliveredAt === "string" ? p.deliveredAt : null,
         signedByName: typeof p.signedByName === "string" ? p.signedByName : null,
-        deliveredToVerifiedAddress: p.deliveredToVerifiedAddress === true,
+        // `deliveredToVerifiedAddress` is NOT emitted (PR-C1, 2026-08-07). It
+        // was the licence the LLM read for "delivered to the verified
+        // address", and its input was a billing-vs-shipping city comparison.
+        // The retired keys are also stripped from `p` before this switch runs
+        // (see `extractValue`), so a historical pack cannot reintroduce it.
       };
     }
     case "customer_communication":

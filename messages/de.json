@@ -1040,7 +1040,9 @@
           "superseded": "Ersetzt",
           "validationFailed": "Validierung fehlgeschlagen",
           "skipped": "Übersprungen"
-        }
+        },
+        "reviewRequiredTitle": "Prüfung erforderlich, bevor dieses Paket eingereicht werden kann",
+        "reviewRequiredBody": "DisputeDesk kann dieses Verteidigungspaket in der vorliegenden Form nicht einreichen. Generieren Sie es neu, um eine einreichbare Version zu erstellen. Vorschau und Neu generieren bleiben verfügbar; Abschließen und Einreichen sind gesperrt, bis eine neu generierte Version die Prüfung besteht."
       },
       "inclusion": {
         "title": "Einschluss­prüfung",
@@ -1318,7 +1320,7 @@
     },
     "decisiveFamilies": {
       "fraud": "Zahlungsverifizierung, bestätigte Lieferung oder eine klare Kaufbestätigung des Kunden",
-      "delivery": "Empfangsbestätigung des Versanddienstleisters, Liefernachweis an die verifizierte Adresse des Karteninhabers oder Kundenbestätigung des Empfangs",
+      "delivery": "Empfangsbestätigung des Versanddienstleisters, ein Liefernachweis des Zustellers mit Sendungsverfolgung oder Kundenbestätigung des Empfangs",
       "product": "die Produktbeschreibung wie beworben, Offenlegung der Rückerstattungsrichtlinie oder Kundenkorrespondenz",
       "refund": "dokumentierte Rückerstattungsbearbeitung, Rückerstattungszeitplan oder Kundenkorrespondenz",
       "subscription": "Offenlegung der Stornierungsrichtlinie, Stornierungszeitplan oder Kundenkorrespondenz",

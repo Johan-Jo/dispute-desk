@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import { logAuditEvent } from "@/lib/audit/logEvent";
+import {
+  preflightBlocks,
+  preflightCandidate,
+  preflightHttpRefusal,
+  preflightLatestCandidate,
+  preflightReasons,
+  preflightRetiredKeys,
+} from "@/lib/defence/packageSafety";
 import { parseJsonBody } from "@/lib/http/parseJsonBody";
 
 export const runtime = "nodejs";
@@ -84,6 +92,47 @@ export async function POST(
     return NextResponse.json(
       { error: "PACK_HAS_WARNINGS", score, readiness, message: "High-impact evidence is missing. Send confirmWarnings: true to proceed." },
       { status: 422 }
+    );
+  }
+
+  // PR-C1 — candidate preflight on the LATEST defence package, before any
+  // enqueue or status change. Refused here as well as in the job so a merchant
+  // gets an immediate, explained refusal rather than a queued job that fails
+  // minutes later. Regenerating produces a new version judged on its own
+  // merits.
+  //
+  // `requireFileable` also closes the lifecycle hole: this route stamps the
+  // evidence pack `saving`, so a safe-but-draft (or PDF-less) candidate used
+  // to put the UI into a save-in-progress state for a job the worker was
+  // always going to refuse.
+  const preflight = await preflightLatestCandidate(sb, pack.dispute_id as string, {
+    requireFileable: true,
+  });
+  if (preflightBlocks(preflight)) {
+    await logAuditEvent({
+      shopId: pack.shop_id,
+      disputeId: pack.dispute_id,
+      packId,
+      actorType: "merchant",
+      eventType: "defence_package_blocked_unsafe_claim",
+      eventPayload: {
+        packageId: preflightCandidate(preflight)?.id ?? null,
+        version: preflightCandidate(preflight)?.version ?? null,
+        outcome: preflight.kind,
+        reasons: preflightReasons(preflight),
+        retiredKeys: preflightRetiredKeys(preflight),
+        trigger: "manual_save",
+      },
+    });
+    const refusal = preflightHttpRefusal(preflight);
+    return NextResponse.json(
+      {
+        error: refusal.code,
+        code: refusal.code,
+        reasons: refusal.reasons,
+        message: refusal.message,
+      },
+      { status: refusal.status },
     );
   }
 

@@ -182,6 +182,101 @@ describe("validateNarrative", () => {
     expect(result.errors.some((e) => e.rule === "unsupported_claim")).toBe(true);
   });
 
+  // ── PR-C1: structural claim authorization ──────────────────────────
+  //
+  // These run through the SAME validator the build job calls, so a failure
+  // here inherits the existing behaviour: one bounded repair attempt with the
+  // errors fed back, then `status: "failed"` and no filing.
+
+  it("rejects an affirmative address-delivery claim — no case holds that capability", () => {
+    const result = validateNarrative({
+      narrative: narrative({
+        fulfillmentArgument: {
+          text: "The parcel was delivered to the cardholder's verified address on 12 May 2026.",
+          usedFactIds: ["f0"],
+        },
+      }),
+      approvedFacts: [
+        fact({ id: "f0", category: "delivery_proof", value: { proofType: "signature_confirmed", signedByName: "R. P." } }),
+      ],
+      reasonCodeModule,
+      packageMode: "full",
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => e.rule === "unauthorized_claim")).toBe(true);
+  });
+
+  it("rejects a paraphrase no historical regex covered", () => {
+    const result = validateNarrative({
+      narrative: narrative({
+        fulfillmentArgument: {
+          text: "The consignment reached the customer's residence, matching the billing details on record.",
+          usedFactIds: ["f0"],
+        },
+      }),
+      approvedFacts: [
+        fact({ id: "f0", category: "delivery_proof", value: { proofType: "delivered_confirmed" } }),
+      ],
+      reasonCodeModule,
+      packageMode: "full",
+    });
+    expect(result.errors.some((e) => e.rule === "unauthorized_claim")).toBe(true);
+  });
+
+  it("rejects ambiguous address-delivery language — fails closed", () => {
+    const result = validateNarrative({
+      narrative: narrative({
+        fulfillmentArgument: { text: "Delivery to the customer's address.", usedFactIds: ["f0"] },
+      }),
+      approvedFacts: [
+        fact({ id: "f0", category: "delivery_proof", value: { proofType: "delivered_confirmed" } }),
+      ],
+      reasonCodeModule,
+      packageMode: "full",
+    });
+    expect(result.errors.some((e) => e.rule === "unauthorized_claim")).toBe(true);
+  });
+
+  it("ACCEPTS properly licensed delivery and signature wording", () => {
+    const result = validateNarrative({
+      narrative: narrative({
+        fulfillmentArgument: {
+          text:
+            "The carrier confirmed delivery of the shipment on 12 May 2026 " +
+            "(PostNord, tracking 1234567890). The carrier recorded a signature on delivery.",
+          usedFactIds: ["f0"],
+        },
+      }),
+      approvedFacts: [
+        fact({
+          id: "f0",
+          category: "delivery_proof",
+          value: { proofType: "signature_confirmed", signedByName: "R. P.", carrier: "PostNord" },
+        }),
+      ],
+      reasonCodeModule,
+      packageMode: "full",
+    });
+    expect(result.errors.some((e) => e.rule === "unauthorized_claim")).toBe(false);
+  });
+
+  it("does not fire on negated or prohibition language", () => {
+    const result = validateNarrative({
+      narrative: narrative({
+        fulfillmentArgument: {
+          text: "We do not claim the parcel was delivered to the cardholder's address.",
+          usedFactIds: ["f0"],
+        },
+      }),
+      approvedFacts: [
+        fact({ id: "f0", category: "delivery_proof", value: { proofType: "delivered_confirmed" } }),
+      ],
+      reasonCodeModule,
+      packageMode: "full",
+    });
+    expect(result.errors.some((e) => e.rule === "unauthorized_claim")).toBe(false);
+  });
+
   it("rejects an empty section that's not in omittedSections", () => {
     const result = validateNarrative({
       narrative: {

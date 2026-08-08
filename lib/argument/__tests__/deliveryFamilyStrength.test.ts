@@ -22,12 +22,15 @@ const available = (field: string): ChecklistItemV2 =>
   ({ field, status: "available" }) as unknown as ChecklistItemV2;
 
 describe("delivery-family rollup (INR)", () => {
-  it("confirmed delivery to verified address alone → MODERATE (was weak)", () => {
+  // PR-C1: a STRONG delivery signal now comes only from a genuine signature /
+  // POD (`signature_confirmed`). The family rollup rule under test is
+  // unchanged; only the way the strong signal is produced is.
+  it("a signed delivery alone → MODERATE (was weak)", () => {
     const checklist = [available("order_confirmation"), available("shipping_tracking"), available("delivery_proof")];
     const source = byField({
       order_confirmation: { orderId: "1" },
-      shipping_tracking: { proofType: "delivered_confirmed", deliveredToVerifiedAddress: true },
-      delivery_proof: { proofType: "delivered_confirmed", deliveredToVerifiedAddress: true },
+      shipping_tracking: { proofType: "signature_confirmed" },
+      delivery_proof: { proofType: "signature_confirmed" },
     });
     const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source, NO_GATES);
     expect(r.strongCount).toBe(1); // delivery signal, deduped
@@ -37,10 +40,16 @@ describe("delivery-family rollup (INR)", () => {
     expect(r.strengthReasonI18n.key).toBe("disputes.strengthReason.moderate.strongOnly");
   });
 
-  it("delivered_confirmed WITHOUT verified address stays weak (only moderate delivery signal)", () => {
+  it("delivered_confirmed stays weak (only a moderate delivery signal)", () => {
     const checklist = [available("delivery_proof")];
     const source = byField({
-      delivery_proof: { proofType: "delivered_confirmed" }, // no verified-address flag → moderate
+      // Carrier-confirmed delivery is moderate. The retired keys are present
+      // here on purpose: a historical pack must not lift this to strong.
+      delivery_proof: {
+        proofType: "delivered_confirmed",
+        deliveredToVerifiedAddress: true,
+        collectedByCustomer: true,
+      },
     });
     const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source, NO_GATES);
     expect(r.strongCount).toBe(0);
@@ -58,7 +67,7 @@ describe("delivery-family rollup (INR)", () => {
   it("two strong signals still reach STRONG", () => {
     const checklist = [available("delivery_proof"), available("customer_communication")];
     const source = byField({
-      delivery_proof: { proofType: "delivered_confirmed", deliveredToVerifiedAddress: true },
+      delivery_proof: { proofType: "signature_confirmed" }, // strong via signature
       customer_communication: { customerConfirmsOrder: true }, // strong
     });
     const r = calculateCaseStrength(checklist, "PRODUCT_NOT_RECEIVED", source, NO_GATES);

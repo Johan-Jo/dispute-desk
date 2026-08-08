@@ -920,7 +920,9 @@
           "superseded": "Substituído",
           "validationFailed": "Falha na validação",
           "skipped": "Ignorado"
-        }
+        },
+        "reviewRequiredTitle": "É necessária uma revisão antes de este pacote poder ser apresentado",
+        "reviewRequiredBody": "O DisputeDesk não pode apresentar este pacote de defesa tal como foi criado. Gere-o novamente para obter uma versão que possa ser submetida. A pré-visualização e Gerar novamente continuam disponíveis; Finalizar e Submeter ficam indisponíveis até que uma versão regenerada passe na revisão."
       },
       "sections": {
         "status": {
@@ -1318,7 +1320,7 @@
     },
     "decisiveFamilies": {
       "fraud": "verificação do pagamento, entrega confirmada ou um reconhecimento claro de compra pelo cliente",
-      "delivery": "confirmação de assinatura da transportadora, prova de entrega no endereço verificado do titular do cartão ou reconhecimento de recebimento pelo cliente",
+      "delivery": "confirmação de assinatura da transportadora, um registo de entrega da transportadora com rastreamento ou reconhecimento de receção pelo cliente",
       "product": "a ficha do produto conforme anunciada, divulgação da política de reembolso ou correspondência com o cliente",
       "refund": "processamento de reembolso documentado, cronograma do reembolso ou correspondência com o cliente",
       "subscription": "divulgação da política de cancelamento, cronograma de cancelamento ou correspondência com o cliente",

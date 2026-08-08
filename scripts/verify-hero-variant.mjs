@@ -1,6 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 import { calculateCaseStrength } from "../lib/argument/caseStrength.ts";
+import {
+  buildCaseGateAssessment,
+  gateNotProvided,
+} from "../lib/argument/caseGateAssessment.ts";
 
 config({ path: ".env.local" });
 const sb = createClient(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
@@ -25,13 +29,13 @@ const cs = calculateCaseStrength(
   reconciled,
   "FRAUDULENT",
   { kind: "byField", map },
-  {
-    coverage: null,
-    fatalLoss: null,
-    riskWeakness: null,
-    nameMismatch: null,
-    creditAlreadyIssued: null,
-  },
+  buildCaseGateAssessment({
+    coverage: gateNotProvided("order_not_loaded"),
+    fatalLoss: gateNotProvided("order_not_loaded"),
+    riskWeakness: gateNotProvided("order_not_loaded"),
+    nameMismatch: gateNotProvided("order_not_loaded"),
+    creditAlreadyIssued: gateNotProvided("not_persisted_in_pack"),
+  }),
 );
 console.log("OUTPUT:");
 console.log("  overall:", cs.overall);

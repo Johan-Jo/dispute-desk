@@ -37,6 +37,7 @@ import {
   normalizeEvidencePayload,
   type EvidencePayload,
 } from "./payloads";
+import { retiredPayloadKeysIn, stripRetiredPayloadKeys } from "./retiredKeys";
 import {
   EVIDENCE_FIELD_KEYS,
   domainOf,
@@ -221,7 +222,11 @@ function makeRecords(args: {
   evidenceItemId: string | null;
   collectedAt: string | null;
 }): CaseEvidenceRecord[] {
-  const { fieldKey, raw, source, evidenceItemId, collectedAt } = args;
+  const { fieldKey, raw: rawInput, source, evidenceItemId, collectedAt } = args;
+  // Retired keys are removed BEFORE anything reads the payload, so a
+  // historical pack can be derived without its retired values re-entering a
+  // category, a grade, a normalized payload, or a citation decision.
+  const raw = stripRetiredPayloadKeys(rawInput);
   const legacy = categorizeEvidenceField(fieldKey, raw);
   const { validity, quality } = fromLegacyCategory(legacy);
   const isValid = validity === "valid";
@@ -294,6 +299,8 @@ export function deriveCaseEvidenceModel(
   const recordsByField = new Map<EvidenceFieldKey, CaseEvidenceRecord[]>();
   const collapsed: Record<string, { nested: number; emitted: number }> = {};
   const seenFields: string[] = [];
+  /** Retired keys observed on ANY input payload — reported, never read. */
+  const retiredSeen = new Set<string>();
 
   const push = (field: string, recs: CaseEvidenceRecord[], nested: number) => {
     if (!isEvidenceField(field)) return;
@@ -311,6 +318,7 @@ export function deriveCaseEvidenceModel(
   for (const section of sections) {
     const fields = section.fieldsProvided ?? [];
     seenFields.push(...fields);
+    for (const k of retiredPayloadKeysIn(section.data ?? null)) retiredSeen.add(k);
     for (const field of fields) {
       if (!isEvidenceField(field)) continue;
       const recs = makeRecords({
@@ -326,6 +334,7 @@ export function deriveCaseEvidenceModel(
 
   for (const item of evidenceItems) {
     const payload = item.payload ?? null;
+    for (const k of retiredPayloadKeysIn(payload)) retiredSeen.add(k);
     const fields = [
       ...((payload?.fieldsProvided as string[] | undefined) ?? []),
       ...(typeof payload?.checklistField === "string" ? [payload.checklistField] : []),
@@ -437,6 +446,10 @@ export function deriveCaseEvidenceModel(
         unregisteredFields: unregisteredCollectorFields(
           seenFields.filter((f) => domainOf(f) !== "coverage"),
         ),
+        // Retired keys are recorded here and NOWHERE else in the model. They
+        // are not unregistered fields (which would read as an accident) and
+        // they never became records.
+        retiredFields: [...retiredSeen],
       },
     },
     derivedFrom: {

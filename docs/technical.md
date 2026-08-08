@@ -2414,33 +2414,59 @@ review + fatal_loss → park_for_review           (review is absolute)
 - The `MESSAGES` copy in `lib/automation/fatalLoss.ts` is merchant-UI only. Bank-rebuttal text generation must NEVER cite "we already refunded" — that's a confession, not a defense.
 - Coverage beats fatal-loss. A covered case is never "fatal" because Shopify pays regardless.
 
-### Case-strength gates — one REQUIRED object (2026-08-01)
+### Case-strength gates — one canonical `CaseGateAssessment` (2026-08-01, canonicalised 2026-08-06)
 
-`calculateCaseStrength` takes its gates as a single **required** parameter with **required, explicitly-nullable** fields:
+`calculateCaseStrength` takes its gates as a single **required, branded** parameter produced by exactly one constructor, `lib/argument/caseGateAssessment.ts`:
 
 ```ts
-export interface CaseStrengthGates {
-  coverage: CaseCoverageInput | null;
-  fatalLoss: CaseFatalLossInput | null;
-  riskWeakness: CaseRiskWeaknessInput | null;
-  nameMismatch: CaseNameMismatchInput | null;
-  creditAlreadyIssued: CaseCreditAlreadyIssuedInput | null;
-}
+// Every gate must be STATED — provided (value or null), or explicitly unseen.
+buildCaseGateAssessment({
+  coverage:            gateProvided(coverageInput),         // this site derived it
+  fatalLoss:           gateNotProvided("order_not_loaded"), // this site cannot see it
+  riskWeakness:        gateNotProvided("order_not_loaded"),
+  nameMismatch:        gateProvided(nameMismatchInput),
+  creditAlreadyIssued: gateProvided(creditAlreadyIssuedInput(packJson)),
+}): CaseGateAssessment
 
-calculateCaseStrength(checklist, reason, payloadSource, gates): CaseStrengthResult
+calculateCaseStrength(checklist, reason, payloadSource, assessment): CaseStrengthResult
 ```
 
-**Why.** These were five trailing *optional* positional arguments. On 2026-08-01 the credit-already-issued floor was wired into `buildPack` alone; the other call sites kept compiling, kept running, and kept returning a plausible wrong number. `buildPack` scored blume-box `162042cd` **strong**, auto-submit filed the evidence and emailed the merchant — while the dispute page, recomputing without the floor, rendered **"Weak case"** and advised adding delivery confirmation to an already-refunded order. Nothing failed: not the compiler, not a test, not a runtime check. Now a caller with no data writes `null` (a decision on the record) and a caller that forgets does not compile; adding a sixth gate breaks **every** call site deliberately. Plan: `docs/plans/case-strength-gates-object.plan.md`.
+`GateNotProvidedReason` is a closed vocabulary: `order_not_loaded`, `not_persisted_in_pack`, `not_shipped_to_client`, `gate_free_query`.
+
+**Why (round 1 — omission).** These were five trailing *optional* positional arguments. On 2026-08-01 the credit-already-issued floor was wired into `buildPack` alone; the other call sites kept compiling, kept running, and kept returning a plausible wrong number. `buildPack` scored blume-box `162042cd` **strong**, auto-submit filed the evidence and emailed the merchant — while the dispute page, recomputing without the floor, rendered **"Weak case"** and advised adding delivery confirmation to an already-refunded order. Nothing failed: not the compiler, not a test, not a runtime check. Plan: `docs/plans/case-strength-gates-object.plan.md`.
+
+**Why (round 2 — conflation).** Requiring the object fixed omission but not meaning. Every member was `T | null`, and four independent object literals wrote `null` for two different facts: *"this case has no such gate"* and *"this call site cannot see the gate."* The 2026-08-05 audit measured the result — on a fraud case with a cardholder-name mismatch the browser scored **Strong** while the server capped **Moderate, on one screen** — because the client literal wrote `nameMismatch: null` for the second reason (`docs/evidence-model/p4/legacy-removal-inventory.md`, "the four gate-set variants"). Slice 1 therefore makes the *construction path* canonical: every gate must be stated, an unseen gate carries a named reason on `assessment.notProvided`, and the brand means an object literal is **not** a `CaseGateAssessment` — only the builder produces one. Scored values are unchanged.
 
 **Rules:**
-- **Do not** relax the interface to `Partial<>` or optional members, and **do not** export an all-nulls constant from `lib/` — either restores the hole one level up (a new gate would break only the shared constant). Production call sites write the object out literally. `NO_GATES` / `gatesWith()` exist for tests only, in `tests/helpers/caseStrengthGates.ts`; an ESLint `no-restricted-imports` rule bars `lib/**` and `app/**` from importing them.
-- The invariant is pinned at compile time by `tests/types/caseStrengthGates.typecheck.ts` — `@ts-expect-error` assertions for a missing field, a missing object, and the old positional shape. It is not a vitest test (vitest does not typecheck); it is read by `npx tsc --noEmit` and by `npm run build`. It replaced `tests/unit/caseStrengthGateParity.test.ts`, a text-level grep guard that could only enumerate call sites it already knew about — and which is exactly why the fourth site (`app/api/disputes/route.ts`, not in its list) stayed broken after the first fix.
-- Production call sites (all four): `lib/packs/buildPack.ts`, `app/api/disputes/[id]/workspace/route.ts`, `app/(embedded)/app/disputes/[id]/hooks/useDisputeWorkspace.ts`, `app/api/disputes/route.ts`. The list route now projects the floor out of `pack_json` (`select("… pack_json->credit_already_issued")` → `creditAlreadyIssuedFromBlock`), closing the last gate-parity gap from the incident.
-- `creditAlreadyIssuedInput(packJson)` returns `CaseCreditAlreadyIssuedInput | null` (was `| undefined`) so it drops straight into the object.
+- **Do not** relax `CaseGateSources` to `Partial<>` or optional members, and **do not** export an all-off shorthand from `lib/` — either restores the hole one level up (a new gate would break only the shared constant). `NO_GATES` / `gatesWith()` exist for tests only, in `tests/helpers/caseStrengthGates.ts` (themselves built through the canonical builder); an ESLint `no-restricted-imports` rule bars `lib/**` and `app/**` from importing them.
+- The invariant is pinned at compile time by `tests/types/caseStrengthGates.typecheck.ts` — `@ts-expect-error` assertions for a missing gate, a missing assessment argument, the old positional shape, and a hand-rolled gate literal. It is not a vitest test (vitest does not typecheck); it is read by `npx tsc --noEmit` and by `npm run build`. It replaced `tests/unit/caseStrengthGateParity.test.ts`, a text-level grep guard that could only enumerate call sites it already knew about — and which is exactly why the fourth site (`app/api/disputes/route.ts`, not in its list) stayed broken after the first fix.
+- The **call-site inventory itself** is pinned by `tests/unit/caseGateAssessmentCallSites.test.ts`: it scans `app/`, `lib/` and `scripts/`, asserts the set of scoring entry points matches a named list, and rejects any inline gate object. A new scoring entry point fails there until it is listed — which is the moment to ask which gates it can actually see.
+- Scoring entry points and what each can derive:
+
+  | Site | Gates derived | Gates unseen |
+  |---|---|---|
+  | `lib/packs/buildPack.ts` | all five (holds the Shopify order) | — |
+  | `app/api/disputes/[id]/workspace/route.ts` | coverage, nameMismatch, credit (from pack) | fatalLoss, riskWeakness — `order_not_loaded` |
+  | `app/api/disputes/route.ts` (list, stage B) | nameMismatch, credit (projected from `pack_json`) | coverage, fatalLoss, riskWeakness — `order_not_loaded` |
+  | `useDisputeWorkspace.ts` (client) | coverage, credit (shipped in the response) | fatalLoss, riskWeakness, nameMismatch — `not_shipped_to_client` |
+  | `calculateImprovement` (internal) | — | all five — `gate_free_query` (a counting question; gates only override verdicts) |
+  | `lib/evidence/model/assessment.ts` | — | passes its caller's assessment through unchanged |
+
+- `creditAlreadyIssuedInput(packJson)` returns `CaseCreditAlreadyIssuedInput | null` (was `| undefined`) so it drops straight into `gateProvided(...)`.
 
 **`computeContributions` takes an object too** (`ContributionInput { checklist, payloadSource, reason }`, all required). Same defect shape — its own doc comment already recorded what omitting `reason` costs — plus the two neighbouring helpers disagreed on positional order (`computeContributions(checklist, payloadSource, reason)` vs `calculateImprovement(checklist, reason, payloadSource)`). The workspace API used to carry a **hand-copied** reimplementation of the contributions loop that never consulted `reason`, so it skipped the fraud-family `account_history` strong→moderate demotion and rendered a Strong prior-order-history pill on rows the scorer counted as moderate; it now calls the shared function. There is one implementation — never re-implement it.
 
-**Parity verification** (`scripts/case-strength-parity.mjs` + `scripts/sql/case-strength-parity-sample.sql`): samples packs by stratum, scores each through two engine builds (it adapts to either signature), and deep-compares the **entire** `CaseStrengthResult` — comparing `overall` alone would pass a refactor that changed counts, hint, hero variant, or the reason token. The stratum report prints the population next to the sample so a thin stratum reads as "the database holds N" rather than as coverage. Prod (209 packs) holds exactly one fatal-loss verdict, one credit-already-issued block, zero Shopify-Protect-covered packs, and zero multi-gate packs, so those paths are covered synthetically in `lib/argument/__tests__/caseStrengthGates.test.ts` (gate behaviour + precedence: coverage > fatal-loss > credit floor > name-mismatch cap; risk-weakness never caps).
+**Replay verification** (`scripts/case-strength-parity.mjs` + `scripts/sql/case-strength-parity-sample.sql`): samples packs by stratum, scores each through two engine builds — the candidate through `buildCaseGateAssessment`, the legacy through the plain object its signature accepts, with identical values — and deep-compares the **entire** `CaseStrengthResult`; comparing `overall` alone would pass a refactor that changed counts, hint, hero variant, or the reason token. It no longer adapts to the pre-2026-08-01 positional signature: an engine that does not take a single gate argument is a mis-pointed `--old` and now fails loudly. The stratum report prints the population next to the sample so a thin stratum reads as "the database holds N" rather than as coverage. Prod holds exactly one fatal-loss verdict and zero Shopify-Protect-covered packs, so those paths are covered synthetically in `lib/argument/__tests__/caseStrengthGates.test.ts` (gate behaviour + precedence: coverage > fatal-loss > credit floor > name-mismatch cap; risk-weakness never caps). Run with `npx tsx` (Node 22.4 has no `--experimental-strip-types`).
+
+### P-1 — a `not_applicable` record is visible but never scored (2026-08-06)
+
+Approved decision P-1: *"Strict: do not score them. A record can remain visible and complete without affecting strength. No irrelevant fact can move a case from Weak to Moderate."*
+
+`lib/evidence/model/assessment.ts` used to carry a `ScoringPolicy.scoreNotApplicable` toggle defaulting to `false`. The toggle is gone: `checklistFromModel` and `completenessChecklistFromModel` skip `relevance === "not_applicable"` unconditionally, so such a record may not move points, the coverage denominator, the completeness denominator, a cap, a floor, or the band. It stays in `model.fields` with its records intact — representable, merchant-visible, and citable to the issuer.
+
+`SCORING_POLICY_VERSION` is deliberately **not** bumped: the resolved policy is the same strict rule that was already the default and the only value any production-shaped path used, so no persisted snapshot became stale. Measured on 73 open prod packs (2026-08-06): the strict column is identical before and after, and the now-unreachable permissive arm would have lifted exactly two packs (#352501 `DUPLICATE`, #352767 `FRAUDULENT`) from weak to moderate — precisely the transition P-1 forbids.
+
+Thresholds over completeness remain **P-7 and deferred** to the Phase 2 calibration report; P-1 fixes only which records the score sees. `scripts/evidence-model/*.analysis.ts` therefore report one column instead of a strict/permissive pair.
 
 ### Auto-submit guards — one decision, three callers (2026-07-27)
 
@@ -2978,13 +3004,13 @@ Per-signal verdicts come exclusively from `categorizeEvidenceField()` in `lib/ar
 6. `customer_communication` — `payload.customerConfirmsOrder === true`.
 7. `activity_log` — `decisiveSessionProof === true` OR `digitalAccessUsed === true`.
 8. `refund_policy` / `shipping_policy` / `cancellation_policy` — `acceptedAtCheckout === true` AND `acceptanceTimestamp` set.
-9. `shipping_tracking` / `delivery_proof` — `proofType === "delivered_confirmed"` AND `deliveredToVerifiedAddress === true`.
+9. ~~`shipping_tracking` / `delivery_proof` — `proofType === "delivered_confirmed"` AND `deliveredToVerifiedAddress === true`.~~ **RETIRED 2026-08-07 (PR-C1).** See *Retired: the verified-address delivery upgrade* below.
 10. `tds_authentication` — `tdsVerified === true` (merchant-confirmed manual upload only; the auto-collector never sets this).
 11. `billing_address_match` — `match === true`.
 
 **Moderate (weight 2) — useful but not decisive alone:**
 - `avs_cvv_match` — exactly one of AVS / CVV matches.
-- `shipping_tracking` / `delivery_proof` — `proofType === "delivered_confirmed"` without `deliveredToVerifiedAddress`.
+- `shipping_tracking` / `delivery_proof` — `proofType === "delivered_confirmed"`. Always moderate since PR-C1; the verified-address and collected-at-pickup upgrades are retired.
 - `ip_location_check` — clean match, no VPN/proxy/hosting flags, `bankEligible !== false`.
 - `device_session_consistency` — `consistent === true` only.
 - `tds_authentication` — `tdsAuthenticated === true` AND `verifiedSource === "shopify_receipt"` (auto-collected from `OrderTransaction.receiptJson` — see below).
@@ -4746,7 +4772,294 @@ A template item is marked **automatic** only when a current collector truly prod
 | `shipping_tracking` | Carrier tracking number + status from fulfillment | `lib/packs/sources/fulfillmentSource.ts` | Automatic when shipped |
 | `delivery_proof` | Carrier delivery status (with signature/photo when provided) | `lib/packs/sources/fulfillmentSource.ts` | Automatic when shipped |
 
-> **Delivery date in the bank narrative.** `fulfillmentSource.ts` lifts the best confirmed delivery timestamp (`resolveDeliveredAt` — Shopify `OrderFulfillment.deliveredAt`, else a tracking-app metafield's `deliveredAtTracking`) and any signature (`resolveSignedByName` — a tracking-app metafield `signedByName`, else a native carrier event signature via `extractNativeSignature`, so PostNord-style "signed by NAME" event messages also count) to the **top level** of the fulfillment section `data`, alongside `proofType`. The fact classifier (`lib/defence/factClassifier.ts`, `delivery_proof`/`shipping_tracking` branch) reads `p.deliveredAt` / `p.signedByName` and carries them into the classified `EvidenceFact`. The narrative writer prompt (`lib/defence/narrativeWriter.ts`, rule 7) already instructs the LLM to quote a concrete delivery date — e.g. *"delivered 2026-05-12 to the verified address"* — when the approved fact carries one. Previously the date stayed nested under `data.fulfillments[]` and never reached the rebuttal, so a delivered order proved delivery (Moderate/Strong badge) without the narrative stating *when*. Applies to every reason code, not just `credit_not_processed`. `delivery_proof` is now also a **recommended** (non-blocking) checklist row on `credit_not_processed` — delivery is secondary evidence for a refund dispute ("customer received and kept the goods, so no refund was owed"); `refund_record` stays the required primary.
+### Retired: the verified-address delivery upgrade (PR-C1, 2026-08-07)
+
+`deliveredToVerifiedAddress` and `collectedByCustomer` were removed from the collector, the
+categorizer, the typed payload, the fact extractor, and the prompt. Both are now **retired payload
+keys** (`lib/evidence/model/retiredKeys.ts`), stripped at the boundary of every derivation.
+
+**Why.** `deliveredToVerifiedAddress` was derived by `shippedToVerifiedAddress()`, which compared
+Shopify's own `billingAddress` and `shippingAddress` on city and country — two merchant-held
+addresses. **The derivation accepted no legitimate AVS-address contract: it read no AVS result code
+at any point.** The rule it purported to satisfy is Visa §4 Compelling Evidence chart Item 3
+(register `R-E`, V-PRIMARY): *"evidence that the item was delivered to the same physical address for
+which the Merchant received an AVS match of Y or M."* Measured on production before removal: 60
+packs asserted a verified address, and on **54 of them the issuer's own AVS response was `N`** — no
+address match. This closes the open Phase 0 note on `policy-matrix-v0.3.md` line 32 ("verify which
+AVS codes our verified-address derivation accepts"): **none**.
+
+`collectedByCustomer` was set purely from a carrier event message classified as
+`collected_at_pickup`. No signature, identification or BankID artifact was read or required; the
+"ID-verified collection" premise was a jurisdictional assumption in a comment.
+
+**What changed.** `delivered_confirmed` is **Moderate**, always. `signature_confirmed` — an
+independently sourced signature or POD name — is still **Strong** and is untouched. Delivery prose
+may cite carrier, tracking number, tracking URL, delivery status and delivery date; it may not state
+which physical address received the parcel.
+
+**Enforcement is structural, not lexical.** `lib/defence/claimCapabilities.ts` derives a typed
+`ClaimCapability` set from the approved facts; only held capabilities reach the prompt (rule 14), and
+`validateNarrative` re-derives them independently and rejects any section making an unheld claim
+(`unauthorized_claim`). `address_delivery` is underivable from any fact the system can currently
+produce.
+
+Phrase detection is defence in depth — it decides *whether a sentence makes the claim*, never
+*whether the claim is allowed*. A sentence coupling a delivery term with a physical destination (an
+address noun, a paraphrase such as "as instructed by the buyer", or a literal street address) is an
+address-delivery claim regardless of wording, and ambiguous language **fails closed**. Negation is
+**predicate-scoped**: only a modelled denial attached to a transport/receipt verb, an evidentiary
+verb or an evidence noun counts. A flat word list did not survive review — `without delay`,
+`without incident` and `was not damaged when it was delivered to the billing address` all read as
+negation of the destination claim, which none of them are. `without` is no longer a negation marker
+at all; a scoped prohibition ("we do not claim that…") covers only its own clause, so an assertion
+joined with `and` is not exempted; and double negatives ("there is no question that…") are
+affirmations. Adversarial cases are pinned in
+`lib/defence/__tests__/claimCapabilities.test.ts`. A prohibited claim gets one bounded repair attempt through the existing validation-retry
+path in `buildDefencePackageJob`; if it still fails the package is marked `failed` and never filed.
+
+**Every enqueue site is gated, not just the worker.** `lib/defence/packageSafety.ts` exposes one
+predicate plus two preflight loaders (`preflightLatestCandidate`, `preflightNamedCandidate`). They
+are consulted BEFORE any enqueue or status write by: the embedded Review & Submit endpoint
+(`/api/defence-packages/:id/submit`), the **finalize endpoint**
+(`/api/defence-packages/:id/finalize`), the portal approval endpoint (`/api/packs/:packId/approve`),
+the manual save endpoint (`/api/packs/:packId/save-to-shopify`), `finalizeAndEnqueueSave` (which
+covers both `buildDefencePackageJob` and `reconcileParkedAutoDisputes`), the auto-save branch of
+`evaluateAndMaybeAutoSave`, the deadline cron, and the workspace readiness projection.
+`saveToShopifyJob` keeps its own check as the final race-safe guard immediately before the PDF
+download and upload.
+
+**Finalization is an authorization step and happens in exactly one place.** `buildDefencePackageJob`
+persists every newly rendered package as a **draft** and writes
+`defence_package_draft_generated`; in auto mode it then calls `finalizeAndEnqueueSave`, which
+preflights the candidate and only then promotes it to `final`, supersedes the prior final, writes
+`defence_package_finalized`, and enqueues the save. Before this ordering the handler wrote `final`
+and logged the finalization audit BEFORE the preflight ran, and discarded the helper's return value
+— so a refusal left a final-but-unfileable newest candidate, a possibly superseded prior final, an
+audit trail claiming approval, and a job result of `{ ok: true }`. Proven end-to-end in
+`lib/jobs/handlers/__tests__/buildDefencePackageJobFinalizeOrdering.test.ts`.
+
+**Promotion is ONE database transaction.** `finalize_defence_package` and
+`enqueue_defence_package_save`
+(`supabase/migrations/20260807200000_defence_package_transactional_finalize.sql`, hardened by `20260807230000_defence_package_promotion_hardening.sql` and `20260808000000_defence_package_promotion_authority.sql`) are the only two
+places a defence package is promoted or a save is enqueued. A TypeScript preflight followed by a
+field-guarded PostgREST update was never atomic, however many predicates the update repeated:
+
+| hole | why guards could not close it |
+|---|---|
+| currency | a NEWER version can be inserted after the preflight; the old row is still `draft`, so a field-guarded update promotes a candidate that is no longer current |
+| content | the facts / narrative / PDF / validation the preflight judged can be rewritten before the write lands, so the filed row is not the judged row |
+| prior final | it can become `submitted` between "select the prior final" and "mark it superseded", and an `.eq("id", …)` update overwrites a row the route promises never to touch |
+| enqueue | promotion, supersede and job insert were three writes; a failed insert left a `final` package, a `superseded` predecessor and a "retriable" result that could never retry — the rebuild refuses a non-draft and reconciliation only scans drafts |
+| trimmed PDF | `.not("pdf_path","is",null)` accepts `""` and `"   "`; the TypeScript contract requires `trim().length > 0` |
+
+Inside each transaction: `select … from disputes where id = … for update`, re-read the candidate,
+require the expected `content_revision` and `version`, require the lifecycle preconditions, require
+it to still be the latest version, promote exactly one row, supersede the prior final **guarded on
+`status = 'final'`**, and insert the job — commit or roll back together.
+
+**Two locks, in a fixed order.** The parent-dispute lock alone was not enough — it blocks INSERTs,
+not UPDATEs to rows that already exist, so a transaction holding an uncommitted rewrite of the
+candidate's `facts_json` could let the promotion block on the status UPDATE, resume after the commit,
+still match `status='draft'`, and promote content it never inspected. Both RPCs now take:
+
+1. `select 1 from disputes where id = … for update` — blocks INSERTs of a newer version, because
+   inserting a `defence_packages` row takes `FOR KEY SHARE` on the referenced `disputes` row through
+   `defence_packages_dispute_id_fkey`, and `FOR KEY SHARE` conflicts with `FOR UPDATE`. Every
+   existing insert path is therefore serialised against the promotion without knowing anything about
+   it;
+2. `select 1 from defence_packages where dispute_id = … order by id for update` — blocks UPDATEs to
+   the candidate's content, validation, PDF, version and lifecycle, and to any sibling's version
+   (which would change which row is latest). Ordered by `id` so two concurrent finalizers cannot
+   deadlock.
+
+The candidate is read only after BOTH locks are held, so every value validated is a committed value
+that cannot move before COMMIT. All of this is demonstrated against a real database rather than
+asserted: `scripts/db/finalizeDefencePackage.analysis.ts` holds the dispute lock in one connection
+and asserts a concurrent insert BLOCKS, and holds four different uncommitted UPDATEs open while the
+RPC runs, asserting it waits, re-reads the committed change and refuses.
+
+**Only the RPC may promote.** `defence_packages_authorize_promotion` rejects **every**
+non-`final` → `final` UPDATE that does not carry the transaction-local grant
+`finalize_defence_package` sets immediately before the write and clears immediately after — not just
+`draft|stale`, so `failed`, `skipped`, `superseded` and `submitted` are covered by the same door
+rather than by the immutability trigger alone. `p_allowed_statuses` is validated to a non-empty
+subset of `{draft, stale}`: a service-role caller cannot ask for `{superseded}` or `{failed}` and
+promote from a state the lifecycle has no business promoting from. The application default stays
+draft-only; the deadline cron's `{draft, stale}` is the one sanctioned widening. `final → submitted` and `final → superseded` are
+untouched, and INSERTs are unaffected (it is a BEFORE UPDATE trigger), so seeds and fixtures that
+create a `final` row keep working. All three promotion writers were inventoried and routed through
+the RPC first: `finalizeAndEnqueueSave`, the Finalize route, and the deadline cron — the last of
+which auto-finalizes a `stale` candidate too, which is why the function takes
+`p_allowed_statuses`.
+
+**`content_revision` is the revision, not `updated_at`, and it is OWNED by the database.** A `uuid`
+column regenerated by `defence_packages_bump_content_revision` if and only if `facts_json`,
+`narrative_json`, `pdf_path` or `validation_status` changes — and when nothing inspected changed the
+trigger forces `NEW.content_revision` back to `OLD`, so a caller can neither choose a revision nor
+hold the old one across a content change. (The first cut only *generated* the value and accepted a
+direct assignment otherwise, which made the "if and only if" false.) `updated_at` is unusable for this: its trigger fires on every update, so
+a status flip would invalidate the caller's own promotion, and nothing forces a writer to move it in
+step with the content. The safety preflight reads the revision it inspected and hands it to the
+transaction, which refuses with `content_changed` if it moved. **The claim detector and the persisted
+-schema parser are NOT reproduced in SQL** — content safety stays in `lib/defence/packageSafety.ts`;
+the transaction only proves the inspected candidate is the promoted candidate.
+
+**Idempotency, reachable through the real callers.** `jobs.dedupe_key` is unique when present, and
+the auto path inserts `dpkg-finalize:<package_id>` — a DURABLE marker that the transaction committed.
+The RPC's own replay branch was correct from the start but unreachable: the helper's
+`requireFinalizable` and `buildDefencePackageJob`'s "not a draft" guard both rejected an
+already-final candidate before the RPC was called, so a committed auto-finalization whose reply was
+lost came back as a permanent failure. Both now look for the marker first and converge on success —
+no rebuild, no re-audit, no second enqueue. A `final` package **without** the marker is not adopted:
+a merchant may have approved it by hand. The `already_done` branch itself now runs *after* the
+version, currency and fileability checks, so a stale final with a matching revision can no longer be
+handed a save job.
+
+**Malformed RPC replies are unknowns, not successes.** `lib/defence/finalizeRpc.ts` parses both
+replies strictly; `null`, an array, `{}`, a misspelled outcome, or a success that cannot name its job
+is treated exactly like a transport failure (retry / 503) and writes no audit. All three callers
+previously read `(data ?? {}) as {outcome?: string}` and treated everything that was not `conflict`
+as a promotion. The direct Submit path is idempotent on an in-flight
+save instead (`already_done` / `save_already_queued`), so a legitimate later re-save is still
+possible.
+
+TypeScript maps the outcomes: `promoted` → success plus the finalization / supersede audits (written
+only for what the database actually committed); `already_done` → success, no second audit;
+`conflict` → the typed `lifecycle` failure or `409 PACKAGE_LIFECYCLE_CONFLICT` /
+`409 PACKAGE_NOT_FILEABLE`; an RPC transport error → `transient` / `500`.
+
+**ACCEPTED LIMITATION — the save job is not pinned to a package.** It is keyed to `source_pack_id`,
+and `saveToShopifyJob` independently re-selects the LATEST defence package for the dispute when it
+runs. The Submit endpoint proves, inside the enqueue transaction, that the named package is the
+latest at the moment the job is created; if a newer version lands afterwards the worker files that
+one instead. That is deliberate — the newest candidate is the right thing to file — and the worker
+keeps its own independent PR-C1 gate on whatever it selects. Comments claiming the job was "pinned to
+this package" were wrong and have been corrected.
+
+**DEPLOY ORDERING.** The migration must be applied before the code that reads `content_revision` and
+calls the RPCs. Applied to dev on 2026-08-07; prod applies with the prod release. If the code ships
+first, the preflight's `select` fails and the preflight returns `error` — which fails closed (503 /
+retry, nothing filed), but every promotion stops until the migration lands.
+
+**Outcomes are classified, not collapsed.** `PreflightOutcome` is a discriminated union with exactly
+one proceeding member (`safe`); the others are `blocked` (a content verdict), `missing`,
+`not_current`, `not_fileable` and `error`. `finalizeAndEnqueueSave` maps them to
+`content_block` / `pending` / `stale` / `transient`, and **only a content block** raises the
+`package_review_required` attention reason or increments the reconcile `blocked` counter — the rest
+increment `deferred` and are retried. Collapsing them meant a Supabase timeout told the merchant to
+regenerate a package that was fine, and reported an outage as a fleet of unsafe packages.
+`preflightHttpRefusal` is the single HTTP mapping for all four merchant endpoints:
+`422 PACKAGE_REVIEW_REQUIRED` for a content verdict / missing / non-current,
+`409 PACKAGE_NOT_FILEABLE` for a lifecycle refusal, `503 PACKAGE_CHECK_UNAVAILABLE` for a failed
+check (which never says "regenerate").
+
+**Content-safe is not the same as fileable.** `saveToShopifyJob` §3 hard-requires the LATEST defence
+package to be `status='final'` with a `pdf_path`, so the two pack-level routes **and the direct
+Submit endpoint** pass `requireFileable: true`, which additionally requires
+`validation_status = 'ok'`. Submit checked only `status === "final"`, so a content-safe final package
+whose validation had failed — or which had no rendered PDF — still enqueued, and the card showed a
+submitted state for a job the worker would refuse. Without it a safe
+*draft* (or a `final` with no PDF) was approved and enqueued, and the manual-save route also stamped
+the evidence pack `saving` — a save-in-progress UI for a job the worker was always going to refuse.
+Neither pack route finalizes on the merchant's behalf; approval is the finalize endpoint's job,
+because that is the path that performs the safety-gated promotion.
+
+The named-package endpoints additionally prove the package they were given is still the newest
+version (`candidate_not_current`). They enqueue against the source pack and the worker re-selects
+the latest row, so judging only the named row would let a merchant approve v3 while v4 is what gets
+filed.
+
+**Unreadable candidates fail closed, against the exact persisted schema.** `facts_json` and
+`narrative_json` are accepted only in the shape production actually holds, measured read-only at KEY
+and TYPE level over all 280 candidates / 2 576 fact objects / 2 169 narrative sections at
+`2026-08-07T17:55:11Z` (schema v1, `PACKAGE_SCHEMA_VERSION`):
+
+- `facts_json` — 241 × array of objects, each carrying **exactly** the thirteen `EvidenceFact` keys
+  (5 strings, 5 booleans, `value` object, `sourceRef` string|null, `confidence` null); 39 × `null`.
+  Unknown keys are **rejected**: an added field must arrive with a parser update and a fresh census.
+- `narrative_json` — 241 × object carrying **all eleven** top-level keys (the nine sections plus
+  `omittedSections` and `warnings`), every section exactly `{ text: string, usedFactIds: string[] }`,
+  `omittedSections` elements exactly `{ sectionKey, reason }` with `sectionKey` naming a real
+  section, `warnings` elements strings; 39 × `null`.
+
+All 39 nulls are `failed` (37), `skipped` (1) and `stale` (1) — none final or submitted — so failing
+closed on them blocks nothing otherwise fileable. Anything else yields `unreadable_facts_json` /
+`unreadable_narrative_json` and is refused: a final PDF whose supporting JSON cannot be inspected
+carries an unknown claim, and an unknown claim may not be filed. Two earlier revisions were looser
+(container-only, then ten-of-thirteen fields with a one-section narrative), and the tests that
+certified them used fixtures production has never held; all fixtures now come from
+`tests/fixtures/defencePackageShapes.ts`.
+
+**Historical packages are blocked, not rewritten.** The predicate is candidate-based. A candidate is unsafe when its persisted facts carry a retired key, its
+persisted narrative makes an affirmative *or* ambiguous address-delivery claim, or either JSON is
+unreadable. Unsafe candidates stay viewable but are never saved, forwarded, auto-filed or
+deadline-selected; Finalize / Submit / Resubmit are disabled in the workspace with a review-required
+banner, while Preview and Regenerate remain available.
+
+**Measured block population**, one census at `2026-08-07T18:24:16.273Z` over all 280 persisted
+candidates, under the strict schema parser and the predicate-scoped detector (a version can appear
+in several reason buckets, so the buckets do not sum to the union):
+
+| population | versions | disputes |
+|---|---|---|
+| `retired_delivery_fact` | 162 | 72 |
+| `affirmative_address_delivery_claim` | 157 | 75 |
+| `ambiguous_address_delivery_claim` | 134 | 70 |
+| `unreadable_facts_json` | 39 | 38 |
+| `unreadable_narrative_json` | 39 | 38 |
+| **deduplicated union (blocked)** | **212** | **91** |
+| safe (may proceed) | 68 | — |
+
+The union and the safe count are unchanged from the previous census; the detector correction only
+moves versions between the affirmative and ambiguous buckets (+15 / −4), which is the expected
+shape of "stop reading an unrelated qualifier as negation".
+
+Union by dispute state — mutually exclusive, reconciles to 91, `sent` meaning
+`disputes.submitted_at` is set (Shopify's `evidenceSentOn`):
+
+| state | disputes |
+|---|---|
+| `not_saved`, not sent | 67 |
+| `saved_to_shopify`, not yet forwarded | 2 |
+| `saved_to_shopify`, forwarded | 1 |
+| `submitted_confirmed`, forwarded | 21 |
+
+By shop: blume-box 191 versions / 83 disputes, cay-collective 19 / 6, surasvenne 2 / 2. By package
+status: draft 107, failed 43, stale 37, submitted 20, superseded 4, skipped 1. Only 7 packages are
+blocked by ambiguity alone, and none by unreadable facts alone. The block is **candidate-based**: selectors read the latest version only, so a
+regenerated safe version becomes usable immediately and an older unsafe version never blocks the
+dispute permanently — and no selector may search backwards for a "newest safe" version, because the
+older versions are the unsafe ones. Nothing already saved in Shopify is altered automatically.
+
+**Calibration.** The scoring impact is measured by a committed, read-only harness —
+`scripts/evidence-model/verifiedAddressContainment.analysis.ts`, run with
+`npm run analysis:evidence -- scripts/evidence-model/verifiedAddressContainment.analysis.ts`. It
+scores every `ready` pack twice through the REAL categorizer and scorer, differing only in whether
+the retired upgrade is presented, so neither arm re-implements the engine. Run at
+`2026-08-07T18:28:08.429Z` over 81 packs:
+
+| measure | before | after |
+|---|---|---|
+| delivery signal grade | strong 51, moderate 4, supporting 2 | strong 0, moderate 55, supporting 2 |
+| `avs_cvv_match` grade | strong 8, moderate 64, invalid 8 | **identical** |
+| case strength | — | 3 changes, all `moderate → weak` (`#12936`, `#352501`, `#353605`) |
+| `strong → not-strong` crossings | — | **0** |
+| completeness score sum | 7326 | 7326 (0 per-pack diffs) |
+
+No pack crosses the only threshold that gates behaviour (auto-save files Strong only), and
+completeness is invariant because it is weight/priority driven and reads no evidence category.
+These figures supersede the two earlier runs, whose harness was a scratchpad script that no longer
+exists — which is why this one is in the repository.
+
+**Reintroduction contract.** A future verified-address claim requires all four of: (1) an AVS result
+satisfying the governing `{Y, M}` rule for the observed network; (2) the order's shipping physical
+address proven to be the same complete physical address submitted for AVS — currently impossible,
+`orderSource.redactAddress` discards the street line and truncates the postal code, and Shopify does
+not expose the AVS-submitted address; (3) delivery evidence that actually names the delivery address,
+not a message-classified "Delivered"; (4) sufficient disputed-merchandise coverage. Missing, partial,
+redacted or merely city/country-equal data must return false. Each is an independent approval.
+
+> **Delivery date in the bank narrative.** `fulfillmentSource.ts` lifts the best confirmed delivery timestamp (`resolveDeliveredAt` — Shopify `OrderFulfillment.deliveredAt`, else a tracking-app metafield's `deliveredAtTracking`) and any signature (`resolveSignedByName` — a tracking-app metafield `signedByName`, else a native carrier event signature via `extractNativeSignature`, so PostNord-style "signed by NAME" event messages also count) to the **top level** of the fulfillment section `data`, alongside `proofType`. The fact classifier (`lib/defence/factClassifier.ts`, `delivery_proof`/`shipping_tracking` branch) reads `p.deliveredAt` / `p.signedByName` and carries them into the classified `EvidenceFact`. The narrative writer prompt (`lib/defence/narrativeWriter.ts`, rule 7) instructs the LLM to quote a concrete delivery date — e.g. *"the carrier confirmed delivery on 2026-05-12, tracking 1234567890 (PostNord)"* — when the approved fact carries one. It may **not** state which address received the parcel (rule 14). Previously the date stayed nested under `data.fulfillments[]` and never reached the rebuttal, so a delivered order proved delivery (Moderate/Strong badge) without the narrative stating *when*. Applies to every reason code, not just `credit_not_processed`. `delivery_proof` is now also a **recommended** (non-blocking) checklist row on `credit_not_processed` — delivery is secondary evidence for a refund dispute ("customer received and kept the goods, so no refund was owed"); `refund_record` stays the required primary.
 | `refund_record` | `order.refunds[]` (date, amount, note) from the Shopify order | `lib/packs/sources/orderSource.ts` | Automatic (capability key, not file name) |
 | `refund_policy` | Published refund policy snapshot | `lib/packs/sources/policySource.ts` | Policy-derived |
 | `shipping_policy` | Published shipping policy snapshot | `lib/packs/sources/policySource.ts` | Policy-derived |
@@ -5709,3 +6022,172 @@ Extended `EventType` union in `lib/audit/logEvent.ts` with 13 literals: `defence
 ### Submission integration
 
 `lib/jobs/handlers/saveToShopifyJob.ts` checks for the latest `defence_packages` row for the dispute when the flag is on. If a row exists, it must be `status=final` — anything else is a hard block. When `final`, the `uncategorizedFile` buffer source is swapped to the defence package PDF (via a fresh `kind:"pdf"` short-link pointing at the defence row id). On verify-ok, the row is marked `status=submitted` with `shopify_response` set. Structured text fields and per-evidence-field `*File` slots gated by `FILE_EVIDENCE_ATTACHMENTS_ENABLED` are unaffected.
+
+---
+
+## Canonical evidence model
+
+**Status (2026-08-04):** layers 1–2 exist and are consumed by nothing for a
+decision. The merchant surfaces still read `checklist_v2`; the defence package
+still reads `facts_json`. What shipped is the *visibility* fix (below), not a
+consumer migration.
+
+### Why it exists
+
+Three incidents of one shape: evidence that was collected, cited to the issuer,
+and invisible to the merchant.
+
+| Date | Field | Dispute |
+|---|---|---|
+| 2026-07-07 | `refund_record` | CREDIT_NOT_PROCESSED |
+| 2026-08-01 | `refund_record` | FRAUDULENT (blume-box 162042cd) |
+| 2026-08-02 | `tds_authentication` | PRODUCT_UNACCEPTABLE (blume-box #352552) |
+
+Mechanism: `factClassifier` iterates `pack_json.sections[*].fieldsProvided`
+directly, while the merchant surfaces and `calculateCaseStrength` read a
+template-gated checklist. `reconcileChecklistWithCollectedFields` could only
+*flip* an existing row, never add one — so a collected field with no template
+row was citable, invisible and unscored.
+
+An audit found **310 independent definition sites** across 8 properties of an
+evidence item (36 identity, 32 classification, 45 label, 40 availability, 45
+strength, 50 citation-eligibility, 25 deduplication, 37 document/link).
+
+### The fix that shipped
+
+`reconcileChecklistWithCollectedFields` **appends** a row for any collected
+canonical field the reason template omitted. It is the one function both
+pipelines' inputs pass through — build (`buildPack.ts`) and every read
+(`workspace/route.ts`) — so existing packs correct on next page load, no
+rebuild.
+
+Appended rows are `priority: "optional"` (the template did not ask for them, so
+they must not outweigh a field it did) and `label: ""` — `lib/**` may not emit
+English, and every render site resolves the localized name from
+`CANONICAL_EVIDENCE[field].labelKey`. **A row that renders blank means a
+consumer read `.label` directly; that is a bug in the consumer.** Note `??`
+does not catch an empty string — use `||`.
+
+Regression guard: `tests/unit/evidenceDivergenceManifest.test.ts` regenerates
+`docs/evidence-model/divergence-manifest.json` and fails if any collected field
+is invisible on any reason. It also re-runs detection against the *pre-fix*
+rule and asserts it still finds ≥70 divergences — an empty manifest and a
+broken detector otherwise look identical.
+
+### Two levels: definitions vs records
+
+A canonical field is **not** a canonical evidence item. A dispute can hold
+several fulfillments, uploads, helpdesk conversations and refunds.
+
+- `EvidenceDefinition` — what a kind of evidence *means*: identity,
+  `cardinality`, relevance rule, citation policy, aggregation rule.
+- `CaseEvidenceRecord[]` — the instances, with **source-derived** ids
+  (`delivery_proof#gid://shopify/Fulfillment/…`), never positional. Contrast
+  `EvidenceFact.id`, which is `f${index}` and changes on every rebuild.
+- `FieldEvidenceSummary` — a *view* that keeps `records` intact and names a
+  representative. It aggregates; it never replaces.
+
+Collapsing this to one item per field would make the model the fifth
+delivery-collapse implementation and lose evidence through aggregation.
+
+### Vocabularies — one per concept
+
+Seven overlapping enums became six distinct ones. `invalid` is a **validity**
+state, not a strength.
+
+| Concept | Values |
+|---|---|
+| `ValidityState` | `valid` / `invalid` / `unverifiable` |
+| `EvidenceQuality` | `decisive` / `corroborating` / `contextual` |
+| `RelevanceLevel` | `critical` / `recommended` / `optional` / `not_applicable` |
+| `CitationEligibility` | `eligible` / `ineligible` / `withheld_internal` / `withheld_risk` |
+| `SubmissionDisposition` | 7 values |
+| `CaseStrengthLevel` | case-level, not item-level |
+
+Six status concepts stay separate and must not be folded together:
+`applicable` (can this ORDER produce it) · `available` (≥1 valid record) ·
+`required` · `waived` · `blocking` · `satisfied`.
+
+**Waiving never sets `available`.** Waiving means the absence no longer blocks
+completion; it does not conjure evidence. And `applicable` is not `relevance` —
+relevance asks whether the dispute REASON weighs a field, applicability asks
+whether the ORDER could ever have it. Collapsing those two costs ~30
+completeness points, because `deriveCompletenessMetrics` excludes `unavailable`
+rows from the denominator.
+
+### Domain boundary
+
+Every collector output lands in a registered typed domain — `evidence`,
+`coverage`, `risk_signal`, `dispute_metadata`, `operational`. There is no
+discard path. `shopify_protect_coverage` is `coverage`: a gate, never scored,
+never cited, and it must never appear in `model.fields`.
+
+`device_session_consistency`, `ip_location_check` and `fraud_risk_screening`
+stay in the `evidence` domain even though they are never or only conditionally
+bank-facing — they are *scored*, so removing them from `fields` would silently
+stop scoring them. Bank exposure is expressed by `citationPolicy`, not domain.
+
+### Invariant vs intentional across surfaces
+
+The rule is **not** "every surface shows the same thing". Consistency-as-a-goal
+invites someone to push raw AVS codes into the PDF to make a test pass.
+
+**Invariant — identical wherever a record appears:** `recordId`, `fieldKey`,
+`provenance`, `validity`, `quality`, `citation.eligibility`, `status.*`,
+`documents`, `links`, `labelToken`. Every projected row must remain traceable
+to its canonical record.
+
+**Intentional — must differ, and must match these rules:**
+
+| Difference | Rule |
+|---|---|
+| Bank non-disclosure | Raw AVS/CVV codes and `internalSignals` never leave the merchant surfaces. `BankEvidenceRow` carries no payload field, so there is nothing for a renderer to reach into. |
+| Never-citable records | `withheld_internal` (device/session telemetry) is visible to the merchant, flagged `keptInternal`, and absent from the bank projection. |
+| Withheld-risk records | An attempted 3DS (ECI 01/06, no liability shift) is visible to the merchant and withheld from the issuer — citing it invites the issuer to answer it. |
+| Delivery collapse | Overview shows the representative and reports `alsoRepresents`; Evidence shows every parcel. Declared once via `aggregation.collapsesWith`. |
+| Missing evidence | Evidence lists it as actionable; the PDF never mentions absence. |
+| Ordering, grouping, verbosity | Per surface. |
+
+Both directions are asserted in
+`lib/evidence/model/__tests__/projections.test.ts`: the invariants hold, **and**
+the documented divergences are actually present.
+
+### Layer separation
+
+`CaseEvidenceModel` (what exists) → `CaseAssessment` (what it is worth) →
+`CaseAutomationDecision` (what we do). Each carries its own policy version, so
+changing `auto_save_min_score` cannot change the meaning or version of the
+evidence model.
+
+`CaseAssessment` is deliberately an **adapter** over `calculateCaseStrength`,
+not a port: it changes exactly one input (the checklist), so any measured
+difference is attributable to one cause. `payloadSource` is passed through by
+identity — an earlier version rebuilt it as a by-field map and, because
+`avs_cvv_match` is emitted by two sections, handed the categorizer the wrong
+payload and reported 56 of 76 prod packs as stale. That number was produced
+entirely by the adapter.
+
+### Known open items
+
+- **P4 (defence package reads the model) does not proceed as specced.** The
+  gate (`scripts/evidence-model/factEquivalence.analysis.ts`) returns 0
+  identical of 76: `classifyFacts` filters through
+  `reasonCodeModule.allowedFactCategories` and the model's projection does not.
+  That allow-list is the same gate that suppressed `payment_authentication` on
+  #352552, which is why `alwaysAdmissible.ts` exists. Decision 2026-08-04: the
+  allow-list stays, so the projection would need reason-relevance before it
+  could replace the classifier.
+- **The six-consumer contract matrix is blocked on that migration** — four of
+  the six consumers do not read the model yet.
+- Records from one section share a `quality` grade; per-instance grading is a
+  scoring-policy change, not a refactor.
+- Completeness measures **usable evidence** (a valid record), not mere
+  collection — decision 2026-08-04. Thresholds were lowered to match
+  (blume-box 60, surasvenne 50).
+
+### Analysis harness
+
+`npm run analysis:evidence -- scripts/evidence-model/<file>.analysis.ts` runs
+read-only prod comparisons under a separate vitest config, so a prod-reading
+job can never become a CI dependency. All are strictly non-mutating: no pack
+write, no disposition stamp, no job enqueue, no `submission_state` touch.

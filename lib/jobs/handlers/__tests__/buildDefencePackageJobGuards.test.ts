@@ -270,12 +270,18 @@ describe("buildDefencePackageJob — auto-submit guards", () => {
     expect(finalizeAndEnqueueSave).not.toHaveBeenCalled();
   });
 
-  it("Strong non-product FINALIZES and enqueues the save", async () => {
+  it("Strong non-product persists a DRAFT and delegates finalization", async () => {
+    // Changed in review. The handler used to write `final` itself and log the
+    // finalization audit BEFORE the safety preflight ran. It now always
+    // persists a draft and hands promotion to `finalizeAndEnqueueSave`, which
+    // finalizes only after inspecting the candidate. Ordering is proven
+    // end-to-end (with the REAL helper) in
+    // `buildDefencePackageJobFinalizeOrdering.test.ts`.
     const { pkgUpdate, blockedAudit } = await runWith(
       packJsonWith({ case_strength: { overall: "strong" } }),
     );
 
-    expect(pkgUpdate?.values.status).toBe("final");
+    expect(pkgUpdate?.values.status).toBe("draft");
     expect(blockedAudit).toBeUndefined();
     expect(finalizeAndEnqueueSave).toHaveBeenCalledTimes(1);
   });
