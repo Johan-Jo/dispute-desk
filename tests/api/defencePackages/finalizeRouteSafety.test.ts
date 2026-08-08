@@ -30,6 +30,7 @@ import {
   FULL_FACT,
   RETIRED_FACT,
   UNSAFE_NARRATIVE,
+  TEST_REVISION,
   mockNamedCandidateClient,
   type NamedCandidateScenario,
 } from "./namedCandidateMock";
@@ -192,7 +193,7 @@ describe("POST /api/defence-packages/:id/finalize — PR-C1 preflight", () => {
   });
 
   it("finalizes normally for a safe, current candidate", async () => {
-    const { packageUpdates } = wire({
+    wire({
       named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
     });
 
@@ -200,15 +201,165 @@ describe("POST /api/defence-packages/:id/finalize — PR-C1 preflight", () => {
 
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ ok: true, packageId: PKG_ID });
-    expect(packageUpdates.some((u) => u.status === "final")).toBe(true);
     expect(finalizedAudit()).toHaveLength(1);
     expect(blockAudit()).toHaveLength(0);
   });
 
+  /* ── The guarded transition ──────────────────────────────────────────
+   *
+   * The read and the write are separate round-trips. The update used to be
+   * `.eq("id", id)` alone, so a lifecycle another actor changed in between —
+   * a regeneration flipping the row to `stale`, the auto path finalizing it,
+   * the worker marking it `submitted` — was silently overwritten.
+   * ----------------------------------------------------------------- */
+
+  it("a transactional CONFLICT returns 409 and writes no finalization audit", async () => {
+    // The RPC refused (a newer version landed, the content changed, the row
+    // was no longer a draft…). Nothing was written, so nothing downstream may
+    // claim success.
+    wire({
+      named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+      rpcResult: { outcome: "conflict", reason: "not_current" },
+    });
+
+    const res = await POST(req(), params);
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.code).toBe("PACKAGE_LIFECYCLE_CONFLICT");
+    expect(body.reason).toBe("not_current");
+    expect(finalizedAudit()).toHaveLength(0);
+    expect(supersededAudit()).toHaveLength(0);
+  });
+
+  it("an RPC transport failure is a 500, not a silent success", async () => {
+    wire({
+      named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+      rpcError: { message: "connection reset" },
+    });
+    const res = await POST(req(), params);
+    expect(res.status).toBe(500);
+    expect(finalizedAudit()).toHaveLength(0);
+  });
+
+  it("the route performs NO direct status write — promotion belongs to the transaction", async () => {
+    // A pre-read plus a later PostgREST update cannot be atomic however many
+    // predicates it repeats. The behavioural proof of the transaction itself
+    // (currency under lock, content revision, rollback, concurrency) lives in
+    // `scripts/db/finalizeDefencePackage.analysis.ts`, against a real database.
+    const { packageUpdates, rpc } = wire({
+      named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+    });
+    await POST(req(), params);
+    expect(packageUpdates).toEqual([]);
+    expect(rpc).toHaveBeenCalledWith(
+      "finalize_defence_package",
+      expect.objectContaining({
+        p_package_id: PKG_ID,
+        p_expected_revision: TEST_REVISION,
+        p_enqueue_save: false,
+      }),
+    );
+  });
+
+  it("supersession is audited from the transaction's own report", async () => {
+    wire({
+      named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+      rpcResult: { outcome: "promoted", package_id: PKG_ID, superseded_id: "pkg-old", superseded_version: 2 },
+    });
+    await POST(req(), params);
+    expect(supersededAudit()).toHaveLength(1);
+    expect(supersededAudit()[0][0]).toMatchObject({
+      eventPayload: expect.objectContaining({ supersededId: "pkg-old" }),
+    });
+  });
+
+  it("an idempotent replay writes no SECOND finalization audit", async () => {
+    wire({
+      named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+      rpcResult: { outcome: "already_done", package_id: PKG_ID, reason: "already_promoted" },
+    });
+    const res = await POST(req(), params);
+    expect(res.status).toBe(200);
+    expect(finalizedAudit()).toHaveLength(0);
+  });
+
   it("pre-existing gates still fire before the preflight is even reached", async () => {
-    wire({ named: draft({ status: "final", facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }) });
+    // `submitted` (and every other non-draft, non-final status) is still a
+    // hard refusal.
+    wire({ named: draft({ status: "submitted", facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }) });
     const res = await POST(req(), params);
     expect(res.status).toBe(409);
     expect(blockAudit()).toHaveLength(0);
+  });
+
+  it("an already-FINAL candidate is an idempotent success that enqueues nothing", async () => {
+    // A merchant double-click, or a retried request. Returning an error for
+    // work that is already done reads as a failure the merchant must fix; the
+    // route must never reach the save from this path either.
+    const { jobsInsert, rpc, packageUpdates } = wire({
+      named: draft({ status: "final", facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+      rpcResult: { outcome: "already_done", package_id: PKG_ID, reason: "already_promoted" },
+    });
+    const res = await POST(req(), params);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({ ok: true, idempotent: true });
+    // The idempotency is established UNDER THE LOCK, not from the row this
+    // route happened to read first.
+    expect(rpc).toHaveBeenCalledWith(
+      "finalize_defence_package",
+      expect.objectContaining({ p_enqueue_save: false }),
+    );
+    expect(jobsInsert).not.toHaveBeenCalled();
+    expect(packageUpdates).toEqual([]);
+    expect(finalizedAudit()).toHaveLength(0);
+  });
+
+  it("an already-FINAL candidate that CHANGED under the lock is a 409, not a 200", async () => {
+    // Exactly the case the pre-RPC shortcut could not see.
+    wire({
+      named: draft({ status: "final", facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+      rpcResult: { outcome: "conflict", reason: "not_current" },
+    });
+    const res = await POST(req(), params);
+    expect(res.status).toBe(409);
+    expect((await res.json()).reason).toBe("not_current");
+    expect(finalizedAudit()).toHaveLength(0);
+  });
+
+  it("a whitespace-only pdf_path is refused, like the transaction would", async () => {
+    wire({
+      named: draft({ pdf_path: "   ", facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+    });
+    const res = await POST(req(), params);
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toMatch(/no PDF/i);
+  });
+
+  it("a success naming a DIFFERENT package is malformed, not success", async () => {
+    wire({
+      named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+      rpcResult: { outcome: "promoted", package_id: "some-other-package" },
+    });
+    const res = await POST(req(), params);
+    expect(res.status).toBe(503);
+    expect(finalizedAudit()).toHaveLength(0);
+  });
+
+  it("a malformed RPC reply is 503 UNAVAILABLE, never a 200", async () => {
+    for (const rpcResult of [null, [], {}, { outcome: "promotedd", package_id: PKG_ID }]) {
+      vi.clearAllMocks();
+      wire({
+        named: draft({ facts_json: [FULL_FACT], narrative_json: CLEAN_NARRATIVE }),
+        rpcResult: rpcResult as Record<string, unknown>,
+      });
+      const res = await POST(req(), params);
+      expect(res.status, JSON.stringify(rpcResult)).toBe(503);
+      expect((await res.json()).code).toBe("PACKAGE_CHECK_UNAVAILABLE");
+      expect(finalizedAudit()).toHaveLength(0);
+      expect(supersededAudit()).toHaveLength(0);
+    }
   });
 });

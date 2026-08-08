@@ -407,12 +407,19 @@ interface CandidateRow {
   status?: string | null;
   validation_status?: string | null;
   pdf_path?: string | null;
+  /**
+   * Database-enforced revision of the four fields this module inspects. The
+   * transactional promotion RPCs take it and refuse a candidate whose content
+   * changed after inspection, which is the only way "the row we judged is the
+   * row we filed" can be true across two round-trips.
+   */
+  content_revision?: string | null;
   facts_json?: unknown;
   narrative_json?: unknown;
 }
 
 const SELECT_COLS =
-  "id, version, status, validation_status, pdf_path, facts_json, narrative_json";
+  "id, version, status, validation_status, pdf_path, content_revision, facts_json, narrative_json";
 
 export interface PreflightOptions {
   /**
@@ -429,16 +436,41 @@ export interface PreflightOptions {
    * refusing it here is strictly safer than filing it.
    */
   requireFileable?: boolean;
+  /**
+   * The mirror requirement for a caller that is about to PROMOTE the
+   * candidate: it must still be the eligible draft the caller believes it is.
+   *
+   * `finalizeAndEnqueueSave` performs a `draft → final` transition, so
+   * `requireFileable` (which demands `final`) is the wrong predicate there —
+   * it would reject every legitimate input. This one demands `draft` +
+   * `validation_status = 'ok'` + a PDF, which is exactly the set of
+   * preconditions the guarded UPDATE then re-asserts against the row.
+   */
+  requireFinalizable?: boolean;
 }
 
 const FILEABLE_STATUS = "final";
+const FINALIZABLE_STATUS = "draft";
+
+function hasPdf(c: CandidateRow): boolean {
+  return typeof c.pdf_path === "string" && c.pdf_path.trim().length > 0;
+}
 
 /** Why this content-safe candidate still cannot be filed. */
 function fileabilityReasons(c: CandidateRow): string[] {
   const reasons: string[] = [];
   if ((c.status ?? null) !== FILEABLE_STATUS) reasons.push("candidate_not_final");
   if ((c.validation_status ?? null) !== "ok") reasons.push("candidate_validation_not_ok");
-  if (!c.pdf_path || String(c.pdf_path).trim().length === 0) reasons.push("candidate_missing_pdf");
+  if (!hasPdf(c)) reasons.push("candidate_missing_pdf");
+  return reasons;
+}
+
+/** Why this content-safe candidate cannot be promoted to final. */
+function finalizabilityReasons(c: CandidateRow): string[] {
+  const reasons: string[] = [];
+  if ((c.status ?? null) !== FINALIZABLE_STATUS) reasons.push("candidate_not_draft");
+  if ((c.validation_status ?? null) !== "ok") reasons.push("candidate_validation_not_ok");
+  if (!hasPdf(c)) reasons.push("candidate_missing_pdf");
   return reasons;
 }
 
@@ -463,6 +495,10 @@ function judge(candidate: CandidateRow, opts?: PreflightOptions): PreflightOutco
   if (!verdict.safe) return { kind: "blocked", candidate, verdict };
   if (opts?.requireFileable) {
     const reasons = fileabilityReasons(candidate);
+    if (reasons.length > 0) return { kind: "not_fileable", candidate, reasons };
+  }
+  if (opts?.requireFinalizable) {
+    const reasons = finalizabilityReasons(candidate);
     if (reasons.length > 0) return { kind: "not_fileable", candidate, reasons };
   }
   return { kind: "safe", candidate };
@@ -590,6 +626,26 @@ export function preflightCandidate(p: PreflightOutcome): CandidateRow | null {
     default:
       return null;
   }
+}
+
+/**
+ * The database-enforced revision of the content this preflight INSPECTED.
+ *
+ * Hand it to `finalize_defence_package` / `enqueue_defence_package_save` so the
+ * transaction can prove the facts, narrative, PDF and validation result did not
+ * change between inspection and promotion. Null means the row did not carry one
+ * — which the transactional RPCs treat as a conflict, not as consent.
+ */
+export function preflightRevision(p: PreflightOutcome): string | null {
+  const candidate = preflightCandidate(p);
+  const rev = candidate?.content_revision;
+  return typeof rev === "string" && rev.length > 0 ? rev : null;
+}
+
+/** The candidate's persisted lifecycle status, when there was a candidate. */
+export function preflightCandidateStatus(p: PreflightOutcome): string | null {
+  const c = preflightCandidate(p);
+  return typeof c?.status === "string" ? c.status : null;
 }
 
 /**

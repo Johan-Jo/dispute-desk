@@ -4838,6 +4838,109 @@ and logged the finalization audit BEFORE the preflight ran, and discarded the he
 audit trail claiming approval, and a job result of `{ ok: true }`. Proven end-to-end in
 `lib/jobs/handlers/__tests__/buildDefencePackageJobFinalizeOrdering.test.ts`.
 
+**Promotion is ONE database transaction.** `finalize_defence_package` and
+`enqueue_defence_package_save`
+(`supabase/migrations/20260807200000_defence_package_transactional_finalize.sql`, hardened by `20260807230000_defence_package_promotion_hardening.sql` and `20260808000000_defence_package_promotion_authority.sql`) are the only two
+places a defence package is promoted or a save is enqueued. A TypeScript preflight followed by a
+field-guarded PostgREST update was never atomic, however many predicates the update repeated:
+
+| hole | why guards could not close it |
+|---|---|
+| currency | a NEWER version can be inserted after the preflight; the old row is still `draft`, so a field-guarded update promotes a candidate that is no longer current |
+| content | the facts / narrative / PDF / validation the preflight judged can be rewritten before the write lands, so the filed row is not the judged row |
+| prior final | it can become `submitted` between "select the prior final" and "mark it superseded", and an `.eq("id", …)` update overwrites a row the route promises never to touch |
+| enqueue | promotion, supersede and job insert were three writes; a failed insert left a `final` package, a `superseded` predecessor and a "retriable" result that could never retry — the rebuild refuses a non-draft and reconciliation only scans drafts |
+| trimmed PDF | `.not("pdf_path","is",null)` accepts `""` and `"   "`; the TypeScript contract requires `trim().length > 0` |
+
+Inside each transaction: `select … from disputes where id = … for update`, re-read the candidate,
+require the expected `content_revision` and `version`, require the lifecycle preconditions, require
+it to still be the latest version, promote exactly one row, supersede the prior final **guarded on
+`status = 'final'`**, and insert the job — commit or roll back together.
+
+**Two locks, in a fixed order.** The parent-dispute lock alone was not enough — it blocks INSERTs,
+not UPDATEs to rows that already exist, so a transaction holding an uncommitted rewrite of the
+candidate's `facts_json` could let the promotion block on the status UPDATE, resume after the commit,
+still match `status='draft'`, and promote content it never inspected. Both RPCs now take:
+
+1. `select 1 from disputes where id = … for update` — blocks INSERTs of a newer version, because
+   inserting a `defence_packages` row takes `FOR KEY SHARE` on the referenced `disputes` row through
+   `defence_packages_dispute_id_fkey`, and `FOR KEY SHARE` conflicts with `FOR UPDATE`. Every
+   existing insert path is therefore serialised against the promotion without knowing anything about
+   it;
+2. `select 1 from defence_packages where dispute_id = … order by id for update` — blocks UPDATEs to
+   the candidate's content, validation, PDF, version and lifecycle, and to any sibling's version
+   (which would change which row is latest). Ordered by `id` so two concurrent finalizers cannot
+   deadlock.
+
+The candidate is read only after BOTH locks are held, so every value validated is a committed value
+that cannot move before COMMIT. All of this is demonstrated against a real database rather than
+asserted: `scripts/db/finalizeDefencePackage.analysis.ts` holds the dispute lock in one connection
+and asserts a concurrent insert BLOCKS, and holds four different uncommitted UPDATEs open while the
+RPC runs, asserting it waits, re-reads the committed change and refuses.
+
+**Only the RPC may promote.** `defence_packages_authorize_promotion` rejects **every**
+non-`final` → `final` UPDATE that does not carry the transaction-local grant
+`finalize_defence_package` sets immediately before the write and clears immediately after — not just
+`draft|stale`, so `failed`, `skipped`, `superseded` and `submitted` are covered by the same door
+rather than by the immutability trigger alone. `p_allowed_statuses` is validated to a non-empty
+subset of `{draft, stale}`: a service-role caller cannot ask for `{superseded}` or `{failed}` and
+promote from a state the lifecycle has no business promoting from. The application default stays
+draft-only; the deadline cron's `{draft, stale}` is the one sanctioned widening. `final → submitted` and `final → superseded` are
+untouched, and INSERTs are unaffected (it is a BEFORE UPDATE trigger), so seeds and fixtures that
+create a `final` row keep working. All three promotion writers were inventoried and routed through
+the RPC first: `finalizeAndEnqueueSave`, the Finalize route, and the deadline cron — the last of
+which auto-finalizes a `stale` candidate too, which is why the function takes
+`p_allowed_statuses`.
+
+**`content_revision` is the revision, not `updated_at`, and it is OWNED by the database.** A `uuid`
+column regenerated by `defence_packages_bump_content_revision` if and only if `facts_json`,
+`narrative_json`, `pdf_path` or `validation_status` changes — and when nothing inspected changed the
+trigger forces `NEW.content_revision` back to `OLD`, so a caller can neither choose a revision nor
+hold the old one across a content change. (The first cut only *generated* the value and accepted a
+direct assignment otherwise, which made the "if and only if" false.) `updated_at` is unusable for this: its trigger fires on every update, so
+a status flip would invalidate the caller's own promotion, and nothing forces a writer to move it in
+step with the content. The safety preflight reads the revision it inspected and hands it to the
+transaction, which refuses with `content_changed` if it moved. **The claim detector and the persisted
+-schema parser are NOT reproduced in SQL** — content safety stays in `lib/defence/packageSafety.ts`;
+the transaction only proves the inspected candidate is the promoted candidate.
+
+**Idempotency, reachable through the real callers.** `jobs.dedupe_key` is unique when present, and
+the auto path inserts `dpkg-finalize:<package_id>` — a DURABLE marker that the transaction committed.
+The RPC's own replay branch was correct from the start but unreachable: the helper's
+`requireFinalizable` and `buildDefencePackageJob`'s "not a draft" guard both rejected an
+already-final candidate before the RPC was called, so a committed auto-finalization whose reply was
+lost came back as a permanent failure. Both now look for the marker first and converge on success —
+no rebuild, no re-audit, no second enqueue. A `final` package **without** the marker is not adopted:
+a merchant may have approved it by hand. The `already_done` branch itself now runs *after* the
+version, currency and fileability checks, so a stale final with a matching revision can no longer be
+handed a save job.
+
+**Malformed RPC replies are unknowns, not successes.** `lib/defence/finalizeRpc.ts` parses both
+replies strictly; `null`, an array, `{}`, a misspelled outcome, or a success that cannot name its job
+is treated exactly like a transport failure (retry / 503) and writes no audit. All three callers
+previously read `(data ?? {}) as {outcome?: string}` and treated everything that was not `conflict`
+as a promotion. The direct Submit path is idempotent on an in-flight
+save instead (`already_done` / `save_already_queued`), so a legitimate later re-save is still
+possible.
+
+TypeScript maps the outcomes: `promoted` → success plus the finalization / supersede audits (written
+only for what the database actually committed); `already_done` → success, no second audit;
+`conflict` → the typed `lifecycle` failure or `409 PACKAGE_LIFECYCLE_CONFLICT` /
+`409 PACKAGE_NOT_FILEABLE`; an RPC transport error → `transient` / `500`.
+
+**ACCEPTED LIMITATION — the save job is not pinned to a package.** It is keyed to `source_pack_id`,
+and `saveToShopifyJob` independently re-selects the LATEST defence package for the dispute when it
+runs. The Submit endpoint proves, inside the enqueue transaction, that the named package is the
+latest at the moment the job is created; if a newer version lands afterwards the worker files that
+one instead. That is deliberate — the newest candidate is the right thing to file — and the worker
+keeps its own independent PR-C1 gate on whatever it selects. Comments claiming the job was "pinned to
+this package" were wrong and have been corrected.
+
+**DEPLOY ORDERING.** The migration must be applied before the code that reads `content_revision` and
+calls the RPCs. Applied to dev on 2026-08-07; prod applies with the prod release. If the code ships
+first, the preflight's `select` fails and the preflight returns `error` — which fails closed (503 /
+retry, nothing filed), but every promotion stops until the migration lands.
+
 **Outcomes are classified, not collapsed.** `PreflightOutcome` is a discriminated union with exactly
 one proceeding member (`safe`); the others are `blocked` (a content verdict), `missing`,
 `not_current`, `not_fileable` and `error`. `finalizeAndEnqueueSave` maps them to
@@ -4851,8 +4954,11 @@ regenerate a package that was fine, and reported an outage as a fleet of unsafe 
 check (which never says "regenerate").
 
 **Content-safe is not the same as fileable.** `saveToShopifyJob` §3 hard-requires the LATEST defence
-package to be `status='final'` with a `pdf_path`, so the two pack-level routes pass
-`requireFileable: true` and additionally require `validation_status = 'ok'`. Without it a safe
+package to be `status='final'` with a `pdf_path`, so the two pack-level routes **and the direct
+Submit endpoint** pass `requireFileable: true`, which additionally requires
+`validation_status = 'ok'`. Submit checked only `status === "final"`, so a content-safe final package
+whose validation had failed — or which had no rendered PDF — still enqueued, and the card showed a
+submitted state for a job the worker would refuse. Without it a safe
 *draft* (or a `final` with no PDF) was approved and enqueued, and the manual-save route also stamped
 the evidence pack `saving` — a save-in-progress UI for a job the worker was always going to refuse.
 Neither pack route finalizes on the merchant's behalf; approval is the finalize endpoint's job,

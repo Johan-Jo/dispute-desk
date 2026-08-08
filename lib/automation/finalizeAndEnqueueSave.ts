@@ -21,10 +21,16 @@ import { logAuditEvent } from "@/lib/audit/logEvent";
 import {
   preflightBlocks,
   preflightIsContentBlock,
+  preflightCandidateStatus,
   preflightNamedCandidate,
   preflightReasons,
   preflightRetiredKeys,
+  preflightRevision,
 } from "@/lib/defence/packageSafety";
+import {
+  finalizeDedupeKey,
+  parseFinalizeRpcResult,
+} from "@/lib/defence/finalizeRpc";
 import { markPackageReviewRequired } from "./packageReviewRequired";
 
 type ServiceClient = ReturnType<typeof getServiceClient>;
@@ -57,7 +63,18 @@ export interface FinalizeAndEnqueueSaveInput {
  *   stale          a newer version exists; this one is moot. No mutation,
  *                  no banner — the newer candidate owns the decision.
  */
-export type FinalizeFailureKind = "content_block" | "transient" | "pending" | "stale";
+export type FinalizeFailureKind =
+  | "content_block"
+  | "transient"
+  | "pending"
+  | "stale"
+  /**
+   * The candidate was not the eligible draft this caller believed it was, or
+   * the guarded `draft → final` UPDATE matched zero rows because someone else
+   * changed the lifecycle first. No side effect happened, and retrying THIS
+   * invocation will not help: whoever won the transition owns the enqueue.
+   */
+  | "lifecycle";
 
 export interface FinalizeAndEnqueueSaveResult {
   ok: boolean;
@@ -70,6 +87,9 @@ export interface FinalizeAndEnqueueSaveResult {
   retriable?: boolean;
   /** A genuine content verdict — the ONLY failure that parks for review. */
   blocked?: boolean;
+  /** The work was already committed by an earlier attempt whose reply was
+   *  lost. Success, and nothing was done a second time. */
+  replayed?: boolean;
 }
 
 /**
@@ -90,6 +110,13 @@ export async function finalizeAndEnqueueSave(
   //    and a prior good row superseded by it, with only the worker refusing to
   //    file: a dispute whose newest candidate is final-but-unfileable and
   //    whose previous candidate has been retired.
+  //    The lifecycle is NOT pre-judged here. It used to be
+  //    (`requireFinalizable`), which made the lost-response replay below
+  //    unreachable: an auto transaction could commit, enqueue the save, lose
+  //    its reply, and the retry would be rejected as "not a draft" before the
+  //    RPC was ever called — committed work reported as a failure. The
+  //    transaction owns the lifecycle decision; this preflight owns content
+  //    safety and currency.
   const preflight = await preflightNamedCandidate(sb, { packageId, disputeId });
   if (preflightBlocks(preflight)) {
     const reasons = preflightReasons(preflight);
@@ -128,96 +155,176 @@ export async function finalizeAndEnqueueSave(
     }
 
     const failure: FinalizeFailureKind =
-      preflight.kind === "error" ? "transient" : preflight.kind === "missing" ? "pending" : "stale";
+      preflight.kind === "error"
+        ? "transient"
+        : preflight.kind === "missing"
+          ? "pending"
+          : preflight.kind === "not_fileable"
+            ? "lifecycle"
+            : "stale";
     return {
       ok: false,
       failure,
       reason: `defence_package_preflight_${preflight.kind}: ${reasons.join(", ")}`,
       reasons,
-      retriable: failure !== "stale",
+      retriable: failure === "transient" || failure === "pending",
       blocked: false,
     };
   }
 
-  // 1. Promote this draft → final. Guarded on status='draft' so it is a
-  //    no-op when the caller (e.g. buildDefencePackageJob) already flipped
-  //    the row to final — in that case we skip the duplicate audit log and
-  //    fall through to supersede + enqueue.
-  const { data: flipped, error: finalErr } = await sb
-    .from("defence_packages")
-    .update({ status: "final", updated_at: new Date().toISOString() })
-    .eq("id", packageId)
-    .eq("status", "draft")
-    .select("id");
-  if (finalErr) {
-    console.error("[finalizeAndEnqueueSave] finalize failed", finalErr);
-    return { ok: false, failure: "transient", reason: finalErr.message, retriable: true, blocked: false };
+  // ── The transaction ──────────────────────────────────────────────────
+  //
+  // Promotion, supersession and the enqueue are ONE database transaction, in
+  // `finalize_defence_package`, under a `FOR UPDATE` lock on the parent
+  // dispute. Three separate PostgREST calls could not express this contract
+  // however carefully each one was guarded:
+  //
+  //   * currency was proven in TypeScript and could be invalidated by a newer
+  //     version inserted before the promotion landed — the old row was still a
+  //     draft, so a field-guarded update promoted a stale candidate;
+  //   * the facts / narrative / PDF the preflight inspected could be rewritten
+  //     in between, so the filed row was not the judged row;
+  //   * a failed enqueue left the package `final`, the predecessor
+  //     `superseded`, and a "retriable" result that could never retry — the
+  //     rebuild refuses a non-draft, and reconciliation only looks at drafts.
+  //
+  // `contentRevision` is the database-enforced revision of exactly the four
+  // fields the preflight read. The transaction refuses if it moved.
+  const contentRevision = preflightRevision(preflight);
+  if (!contentRevision) {
+    // No revision means we cannot prove the inspected content is the content
+    // being promoted. Unresolved, therefore refused.
+    return {
+      ok: false,
+      failure: "lifecycle",
+      reason: "defence_package_missing_content_revision",
+      retriable: false,
+      blocked: false,
+    };
   }
 
-  if (flipped && flipped.length > 0) {
+  // ── Lost-response replay, before anything else ───────────────────────
+  //
+  // A committed auto-finalization leaves a DURABLE marker: the save job the
+  // transaction inserted under `dpkg-finalize:<package_id>`. If the candidate
+  // is already promoted AND that marker exists, this call is a retry of work
+  // that succeeded — converge on success, rebuild nothing, audit nothing
+  // again, enqueue nothing again.
+  //
+  // A `final` package WITHOUT the marker is not a committed auto-finalization
+  // (a merchant may have approved it by hand, or an older code path promoted
+  // it), so it is not silently adopted.
+  const candidateStatus = preflightCandidateStatus(preflight);
+  if (candidateStatus === "final" || candidateStatus === "submitted") {
+    const { data: marker, error: markerErr } = await sb
+      .from("jobs")
+      .select("id")
+      .eq("dedupe_key", finalizeDedupeKey(packageId))
+      .maybeSingle();
+    if (markerErr) {
+      return {
+        ok: false,
+        failure: "transient",
+        reason: `defence_package_marker_lookup_failed: ${markerErr.message}`,
+        retriable: true,
+        blocked: false,
+      };
+    }
+    if (marker) {
+      return { ok: true, replayed: true };
+    }
+    return {
+      ok: false,
+      failure: "lifecycle",
+      reason: `defence_package_already_${candidateStatus}_without_commit_marker`,
+      retriable: false,
+      blocked: false,
+    };
+  }
+
+  const { data: rpcData, error: rpcErr } = await sb.rpc("finalize_defence_package", {
+    p_package_id: packageId,
+    p_expected_revision: contentRevision,
+    p_expected_version: packageVersion,
+    p_enqueue_save: true,
+  });
+  if (rpcErr) {
+    console.error("[finalizeAndEnqueueSave] finalize_defence_package failed", rpcErr);
+    return {
+      ok: false,
+      failure: "transient",
+      reason: rpcErr.message,
+      retriable: true,
+      blocked: false,
+    };
+  }
+
+  // STRICT. Anything the parser does not recognise is an unknown, and an
+  // unknown is handled like a transport failure: retry, write nothing. The
+  // previous revision treated every non-conflict reply as a promotion and
+  // audited it.
+  const result = parseFinalizeRpcResult(rpcData, {
+    expectEnqueue: true,
+    expectedPackageId: packageId,
+  });
+
+  if (result.kind === "malformed") {
+    console.error("[finalizeAndEnqueueSave] malformed RPC reply", result.detail, rpcData);
+    return {
+      ok: false,
+      failure: "transient",
+      reason: `defence_package_rpc_malformed: ${result.detail}`,
+      retriable: true,
+      blocked: false,
+    };
+  }
+
+  if (result.kind === "conflict") {
+    // Nothing was written — the transaction refused or rolled back whole. The
+    // candidate is still the draft it was, so a rebuild can start over.
+    return {
+      ok: false,
+      failure: "lifecycle",
+      reason: `defence_package_transition_conflict: ${result.reason}`,
+      reasons: [result.reason],
+      retriable: false,
+      blocked: false,
+    };
+  }
+
+  if (result.kind === "already_done") {
+    // The same revision was already promoted and the job is named, so the save
+    // exists. Committed work is never reported as lost.
+    return { ok: true, replayed: true };
+  }
+
+  // Audits are written only for an outcome the database actually committed.
+  await logAuditEvent({
+    shopId,
+    disputeId,
+    actorType: "system",
+    eventType: "defence_package_finalized",
+    eventPayload: {
+      packageId,
+      version: packageVersion,
+      source: "finalize_and_enqueue_save",
+      jobId: result.jobId,
+    },
+  });
+
+  if (result.supersededId) {
     await logAuditEvent({
       shopId,
       disputeId,
       actorType: "system",
-      eventType: "defence_package_finalized",
+      eventType: "defence_package_superseded",
       eventPayload: {
-        packageId,
-        version: packageVersion,
-        source: "finalize_and_enqueue_save",
+        supersededId: result.supersededId,
+        supersededVersion: result.supersededVersion,
+        replacedById: packageId,
+        replacedByVersion: packageVersion,
       },
     });
-  }
-
-  // 2. Supersede any prior final (same dispute, different version) so the
-  //    immutability trigger — which requires superseded_by_id to target a
-  //    status=final row — is satisfied.
-  const { data: priorFinal } = await sb
-    .from("defence_packages")
-    .select("id, version")
-    .eq("dispute_id", disputeId)
-    .eq("status", "final")
-    .neq("id", packageId)
-    .order("version", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (priorFinal) {
-    const { error: supErr } = await sb
-      .from("defence_packages")
-      .update({
-        status: "superseded",
-        superseded_by_id: packageId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", priorFinal.id);
-    if (supErr) {
-      // The new row is already final; a concurrent mutation can be retried
-      // later. Log and continue — the save still targets the new final.
-      console.error("[finalizeAndEnqueueSave] supersede failed", supErr);
-    } else {
-      await logAuditEvent({
-        shopId,
-        disputeId,
-        actorType: "system",
-        eventType: "defence_package_superseded",
-        eventPayload: {
-          supersededId: priorFinal.id,
-          supersededVersion: priorFinal.version,
-          replacedById: packageId,
-          replacedByVersion: packageVersion,
-        },
-      });
-    }
-  }
-
-  // 3. Enqueue the save. saveToShopifyJob re-checks status='final' + pdf_path.
-  const { error: jobErr } = await sb.from("jobs").insert({
-    shop_id: shopId,
-    job_type: "save_to_shopify",
-    entity_id: sourcePackId,
-  });
-  if (jobErr) {
-    console.error("[finalizeAndEnqueueSave] enqueue save_to_shopify failed", jobErr);
-    return { ok: false, failure: "transient", reason: jobErr.message, retriable: true, blocked: false };
   }
 
   return { ok: true };
