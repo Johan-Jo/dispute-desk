@@ -5,7 +5,9 @@
  * facts — the LLM does not write it. This module is the single source of
  * truth for which facts appear and in what order.
  *
- * Selection: bankEligible && includeInBankNarrative && !submissionRisk.
+ * Selection: bankEligible && includeInBankNarrative && !submissionRisk, AND
+ * the fact must have something citable to say — `renderValue` returning null
+ * suppresses the ROW, not just its text.
  * Ordering: by category-rank then label, so two builds with identical
  * facts produce identical rows.
  */
@@ -52,7 +54,14 @@ function categoryRank(c: EvidenceFactCategory): number {
   return idx === -1 ? 999 : idx;
 }
 
-function renderValue(fact: EvidenceFact): string {
+/**
+ * The cell text for one fact, or **null when the fact has nothing citable to
+ * say** — in which case the caller emits no row at all.
+ *
+ * Only the payment-authentication branch can return null today. Every other
+ * category reaching this renderer has content by construction.
+ */
+function renderValue(fact: EvidenceFact): string | null {
   const v = fact.value;
   switch (fact.category) {
     case "payment_authentication":
@@ -80,20 +89,36 @@ function renderValue(fact: EvidenceFact): string {
         if (ds) bits.push(`DS transaction ${ds}`);
         return bits.join(", ");
       };
-      if (summary) {
-        const parts = [summary];
-        if (threeDS) parts.push(threeDsDetail());
-        return parts.join(" • ");
-      }
-      // Fallback for old facts that predate verificationSummary: rebuild the
-      // phrase through the ONE owner (PR-C2) rather than re-reading the
-      // letters here. This branch used to hold a seventh copy of the match
-      // rules, and it could print "CVV matched" on its own — the CVV-only
-      // citation decision 1 withdraws. `citableVerificationSummaryEn` returns
-      // null unless the address half is present, so it cannot any more.
-      const parts: string[] = citableVerificationPartsEn(readPaymentVerification(v));
+      // Current facts carry `verificationSummary`, which the classifier only
+      // builds from citable content. Older facts predate it and carry the raw
+      // codes, so the phrase is rebuilt through the ONE owner (PR-C2) — this
+      // branch used to hold a seventh copy of the match rules and could print
+      // "CVV matched" on its own, the citation decision 1 withdraws.
+      const parts: string[] = summary
+        ? [summary]
+        : citableVerificationPartsEn(readPaymentVerification(v));
+
+      // 3-D Secure is an INDEPENDENT citable fact: an authentication with a
+      // liability shift stands on its own and must still render, whether or
+      // not an AVS result exists. `isUnciteableThreeDsFact` upstream already
+      // withheld the "attempted"/exempted cases, so a `threeDS` that reaches
+      // here is one we may cite.
       if (threeDS) parts.push(threeDsDetail());
-      return parts.length ? parts.join(" • ") : "Authenticated";
+
+      // NOTHING CITABLE → NO ROW (PR-C2 review, 2026-08-08).
+      //
+      // This used to return the bare word "Authenticated". On a legacy
+      // CVV-only fact — where the address half is missing and there is no
+      // 3DS — that printed an unsupported assertion of authentication to the
+      // issuer, and it printed it under a row whose label reads "Payment
+      // authentication". Stripping the words "CVV" and "verification code"
+      // was not enough: the row itself was the claim. A fact with no citable
+      // content is not summarized more vaguely, it is not shown.
+      //
+      // Facts built by the current classifier never get here (a CVV-only
+      // fact is already `bankEligible: false`). This closes the path for a
+      // persisted fact whose stale flags say otherwise.
+      return parts.length ? parts.join(" • ") : null;
     }
     case "billing_match":
       return v?.match === true ? "MATCH" : "Confirmed";
@@ -289,10 +314,18 @@ export function buildEvidenceBasisRows(facts: EvidenceFact[]): EvidenceBasisRow[
     if (r !== 0) return r;
     return a.label.localeCompare(b.label);
   });
-  return sorted.map((f) => ({
-    factId: f.id,
-    category: f.category,
-    label: f.label,
-    value: capitalizeFirst(renderValue(f)),
-  }));
+  const rows: EvidenceBasisRow[] = [];
+  for (const f of sorted) {
+    const value = renderValue(f);
+    // A fact with nothing citable to say produces NO row — the row's own
+    // label is an assertion, so an empty-but-present row is still a claim.
+    if (value === null) continue;
+    rows.push({
+      factId: f.id,
+      category: f.category,
+      label: f.label,
+      value: capitalizeFirst(value),
+    });
+  }
+  return rows;
 }

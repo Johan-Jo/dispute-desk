@@ -2173,6 +2173,8 @@ The `required_if_card_payment` mode now checks `OrderContext.avsCvvAvailable`: w
 - the canonical model records `citation.eligibility: "withheld_risk"` (`avs_cvv_match` is now a `conditional` citation policy);
 - the Evidence Basis table cannot print it, and the `paymentAuthMethod` thesis token stays null.
 
+**A payment-verification fact with nothing citable produces NO Evidence Basis row.** `renderValue` returns `null` and `buildEvidenceBasisRows` skips the fact entirely, rather than falling back to the generic word "Authenticated" as it did before. The row's own label ("Payment authentication") is itself an assertion, so suppressing only the words "CVV"/"verification code" would still have filed the claim on a legacy CVV-only fact whose persisted `bankEligible` predates the split. **3-D Secure stays independently citable** — a liability-shifted or merchant-confirmed authentication renders whether or not an AVS result exists, and a CVV-only fact that also carries citable 3DS renders the 3DS half alone.
+
 **Claim guards split with the facts.** `avs_or_cvv_value_present` — satisfied by the mere *presence* of either code, including `AVS = N` — is replaced by `avs_address_verified` and `cvv_verified`, each requiring its own match. The single `/\b(AVS|CVV)\b/` guard became `avs_address_verified_claim` (also catching address-verification prose that avoids the acronym) and `cvv_verified_claim`.
 
 **Decision 2 — completeness keeps ONE grouped payment-verification requirement**, with AVS and CVV as subfacts beneath it. No checklist row was added; the denominator and thresholds are unchanged, which matters because P-7 later calibrates on them.
