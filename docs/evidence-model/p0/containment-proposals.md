@@ -44,8 +44,8 @@ C-12 and C-13 have given the address-verification semantics a real owner.
 | # | PR | Defect | Reachability (measured) | Narrow fix | Bank-visible effect |
 |---|---|---|---|---|---|
 | **C-11** | **PR-C1** | `deliveredToVerifiedAddress` / `collectedByCustomer` graded a delivery claim STRONG from a billing-vs-shipping city+country comparison that read no AVS code | **Was: 60 packs asserted a verified address, 54 of them on an issuer `AVS = N`**; 212 package versions across 91 disputes carried the claim at release | **SHIPPED** — both derivations deleted, both keys retired at every derivation boundary, `delivered_confirmed` graded Moderate always, `address_delivery` made an underivable claim capability re-derived in narrative validation, one `packageSafety` predicate consulted at every save/forward/auto-file/deadline boundary | Unsupported verified-address delivery claims can no longer reach an issuer, on any path |
-| **C-12** | PR-C2 | `avs_cvv_match` fuses two independent evidence facts (issuer AVS response, CVV/CVC response) into one record, one grade, one checklist row and one citation decision — and the match-code sets are redefined at four independent sites | **Every card pack**: prod grade census at the PR-C1 measurement — strong 27 / moderate 77 / invalid 3 (unchanged by PR-C1) | Split the fact identity and the predicate: AVS and CVV become distinct evidence facts with distinct semantics, behind **one** shared predicate owner; legacy combined payloads normalize at the derivation boundary | None intended in this PR. Downstream it becomes possible to say *which* verification the issuer returned, rather than "payment authentication" |
-| **C-13** | PR-C3 | Grading keys on a single network-agnostic match set (`Y A W X D M`) while the only V-PRIMARY rule we hold (register **R-E**, Visa §4 CE chart Item 3) qualifies **`Y` or `M` specifically**; unknown/missing codes are treated one way by the grader and another way by the merchant-facing signal | **Every card pack** (same population as C-12); unknown/unmapped-code count to be measured before the PR | Canonical normalization + grading map for Visa / Mastercard / Amex network AVS results; grade from the normalized value, never from the raw letter; unknown, missing and unmapped codes resolve conservatively | Citation stops resting on a match set broader than the rule it invokes |
+| **C-12** | PR-C2 | `avs_cvv_match` fuses two independent evidence facts (issuer AVS response, CVV/CVC response) into one record, one grade, one checklist row and one citation decision — and the match-code sets are redefined at four independent sites | **Every card pack**: prod grade census at the PR-C1 measurement — strong 27 / moderate 77 / invalid 3 (unchanged by PR-C1) | Split the fact identity and the predicate: AVS and CVV become distinct evidence facts with distinct semantics, behind **one** shared predicate owner; legacy combined payloads normalize at the derivation boundary | **Not "none".** Decision 1 makes a CVV-only match non-citable, so CVV-only citations drop out — a conservative removal whose delta must be **measured and enumerated case by case** before merge. Downstream it becomes possible to say *which* verification the issuer returned, rather than "payment authentication" |
+| **C-13** | PR-C3 | Grading keys on a single network-agnostic match set (`Y A W X D M`) while the only V-PRIMARY rule we hold (register **R-E**, Visa §4 CE chart Item 3) qualifies **`Y` or `M` specifically**; unknown/missing codes are treated one way by the grader and another way by the merchant-facing signal | **Every card pack** (same population as C-12); unknown/unmapped-code count to be measured before the PR | Canonical normalization + grading map for Visa / Mastercard / Amex network AVS results; grade from the normalized value, never from the raw letter; unknown, missing and unmapped codes lose all claim/citation credit and raise an internal diagnostic without parking the dispute | Citation narrows to the primary-sourced `Y`/`M` (decision 3) instead of resting on a match set broader than the rule it invokes; delta enumerated |
 | **C-14** | PR-C4 | `billing_address_match` is graded **strong** ("Strong when AVS-confirmed billing matches the cardholder") but is emitted when Shopify's **own** billing and shipping addresses share a city and country — two merchant-held addresses, no AVS, no cardholder | **Fleet census: collected 95, valid 0** (`categorizeEvidenceField` already returns `invalid`, which is the safe answer — runtime is not the defect) | Retire the key as an independent evidence-strength / claim-authority signal via the established `retiredKeys.ts` boundary; the address-verification semantics live on the canonical AVS fact from C-12/C-13 | Removes a strength/authority signal that never carried the authority its grade claimed |
 
 ## C-11 / PR-C1 — verified-address delivery-claim containment (IMPLEMENTED · RELEASED · PRODUCTION-VALIDATED)
@@ -90,11 +90,24 @@ address evidence does. Compounding it, the match-code sets are defined **four** 
 `app/(embedded)/app/disputes/[id]/tabs/useEvidenceSections.ts:381-382` — the last three kept "in
 lockstep" by comment only.
 
-**Containment boundary.** The split changes *identity and predicate ownership*. It does **not**
-decide which codes qualify (C-13), does **not** retire `billing_address_match` (C-14), does
-**not** change issuer-visible wording, and does **not** touch thresholds. Grades for a given
-(AVS, CVV) pair must be reproducible from the pre-split behaviour or the difference enumerated
-case by case.
+**Containment boundary.** The split changes *identity and predicate ownership*, and applies
+decisions 1 and 2. It does **not** decide which codes qualify (C-13), does **not** retire
+`billing_address_match` (C-14), does **not** change completeness thresholds or the denominator,
+and does **not** rewrite issuer-visible wording beyond what removing the CVV-only citation
+requires. Grades for a given (AVS, CVV) pair must be reproducible from the pre-split behaviour
+or the difference enumerated case by case.
+
+**Decided inputs (see *Decision gates*).**
+
+- **CVV-only match — decision 1.** A CVV/CVC match with no qualifying AVS result is a **valid
+  internal merchant fact**: it is collected, graded, shown to the merchant and may inform
+  internal diagnostics. It is **not issuer-citable**, and it **cannot satisfy an AVS/address
+  claim, CE chart Item 3, or any related claim guard**. The predicate must make that
+  impossible structurally, not by prompt instruction.
+- **Completeness — decision 2.** PR-C2 keeps **one grouped payment-verification requirement**
+  with AVS and CVV as separate **subfacts** beneath it. The merchant-visible denominator does
+  not change and no threshold moves; the split is visible in what the row *says*, not in how
+  many rows there are.
 
 **Affected consumers.**
 
@@ -117,15 +130,21 @@ case by case.
 2. Historical `pack_json` continues to parse: the combined shape normalizes into the two facts
    at the derivation boundary (the pattern `retiredKeys.ts` established), so no persisted data
    is rewritten and no pack is regenerated.
-3. Checklist/completeness rows follow the split explicitly — the merchant-visible denominator
-   change is a decided output of this PR, not a side effect (see *Ambiguities*).
+3. Completeness keeps **one grouped payment-verification requirement** (decision 2): AVS and CVV
+   become subfacts of the existing row rather than two rows. The denominator and the thresholds
+   are unchanged — this is a stated constraint of the PR, not an outcome to be discovered.
 
 **Acceptance criteria.**
 
 - No second definition of the AVS or CVV match sets anywhere in the repo.
 - Prod read-only measurement before merge: grade, case-strength, completeness and
   citation-eligibility deltas either zero or fully enumerated per case.
-- Zero issuer-visible wording change attributable to this PR.
+- **The CVV-only citation removal is measured and enumerated, not assumed to be nil.** Every
+  package version that cites a CVV-only match today is listed with its dispute, and the
+  post-split citation set for each is stated. This is the one intended bank-visible delta of
+  PR-C2, and it is conservative by construction (a claim is withdrawn, never added).
+- No other issuer-visible wording change attributable to this PR.
+- Completeness denominator and thresholds provably unchanged (decision 2).
 - Legacy and current payload shapes both derive; divergence manifest stays at 0.
 
 **Required tests.**
@@ -134,6 +153,11 @@ case by case.
   facts, plus the legacy combined and `avs_result_code` shapes.
 - CI invariant (class-closing, not instance-patching): fail the build on any second definition
   of the match sets outside the owning module.
+- Invariant (decision 1): a CVV-only match is present as an internal fact and **absent** from
+  the citation set, the LLM payload's citable values, and every AVS/address claim guard —
+  asserted on the fact layer, not on generated prose.
+- Invariant (decision 2): the grouped payment-verification requirement contributes exactly one
+  unit to the completeness denominator before and after the split.
 - Characterization fixtures copied verbatim from prod payloads.
 - Regression: `nameMismatch` still reads the gateway cardholder name; `evidenceDivergenceManifest`
   guard green.
@@ -154,32 +178,48 @@ as not-a-match, while the merchant-facing internal signal treats the same value 
    Networks covered: Visa, Mastercard, Amex.
 2. Every grading, citation and merchant-signal decision reads the **normalized** value. No
    consumer may branch on a raw letter.
-3. **Unknown, missing and unmapped codes resolve conservatively and identically everywhere:**
-   never a match, never a citation, never a negative assertion about the cardholder, never a
-   completeness credit for a verified address. They are surfaced as `review_required` /
-   internal-only, and an unmapped code is a *recorded gap*, not a silent fall-through.
+3. **Unknown, missing and unmapped codes lose all claim and citation credit, and raise an
+   internal diagnostic — they do not park the dispute.** Such a code is never a match, never
+   citable, never a negative assertion about the cardholder, and never completeness credit for
+   a verified address; it is recorded as an internal diagnostic (a *recorded gap*, not a silent
+   fall-through) visible to us and to the merchant as an internal signal. It must **not**
+   automatically set the whole dispute to `review_required`: the normal path is that the case
+   simply proceeds without that credit. **Escalation happens only if a package attempts to rely
+   on the code** — i.e. a claim or citation would need it to be a match — and that attempt is
+   refused and escalated, not silently downgraded.
 4. **Classification authority stays in the canonical rules/evidence layer**
    (`lib/argument/canonicalEvidence.ts` + `lib/evidence/model/`). No mapping, no match set and
    no grade may be defined in a UI component, a prompt, a strategy module or the LLM payload
    builder.
 
+**Decided input (see *Decision gates*).**
+
+- **Citation set — decision 3.** **Only the primary-sourced `Y` / `M` may enter the CE chart
+  Item 3 citation path** (register R-E). Broader normalized results — `street_match`,
+  `postal_match` and the rest of the current `Y A W X D M` set — remain valid for **internal
+  display and internal scoring inputs only**, and are never admitted to that citation path. The
+  two sets are named separately in code and never conflated.
+
 **Acceptance criteria.**
 
 - Every mapped code carries its authority state (V-PRIMARY / V-SECONDARY / unverified) per
   `p0/primary-source-register.md`; unverified cells stay non-citable rather than assumed.
-- The set admitted to the CE chart Item 3 **citation** path is exactly the primary-sourced one;
-  a broader set may remain valid for internal display only, and the two sets are named
-  separately, never conflated.
-- Unknown/unmapped code frequency measured on prod (read-only) before the PR merges.
-- No threshold, no strength policy and no issuer wording changed by this PR.
+- The CE chart Item 3 citation set is exactly `{Y, M}` (decision 3); the internal-display set is
+  declared separately and cannot reach a citation.
+- Unknown/unmapped code frequency measured on prod (read-only) before the PR merges, together
+  with the count of packages that would have *relied* on such a code (the escalation population).
+- No threshold, no strength policy and no issuer wording changed by this PR beyond narrowing the
+  Item 3 citation set, whose delta is enumerated case by case.
 
 **Required tests.**
 
 - Table-driven per network across mapped, unmapped, empty, lowercase and whitespace inputs.
-- Invariant: the citation-eligible set for the address claim is a subset of the primary-sourced
-  codes.
-- Invariant: an unmapped code produces the conservative result on **every** consumer
-  (grade, citation, completeness, merchant signal) — one fixture asserted across all four.
+- Invariant: the citation-eligible set for the CE Item 3 address claim is exactly `{Y, M}`, and
+  a `street_match`/`postal_match` result reaches internal display but never a citation.
+- Invariant: an unmapped code loses grade, citation and completeness credit on **every**
+  consumer and raises the internal diagnostic — one fixture asserted across all four.
+- Invariant: an unmapped code alone does **not** set `review_required`; a package that attempts
+  to rely on it is refused and escalated. Both halves asserted separately.
 
 ## C-14 / PR-C4 — `billing_address_match` retirement (PROPOSED)
 
@@ -206,9 +246,9 @@ a grade, a completeness credit, a citation or an LLM value — surfaced only as
 | `lib/automation/completeness.ts` (two templates, `required_always`, priority critical) | Row removed; the address-verification requirement, if any, is expressed on the AVS fact |
 | `lib/argument/evidenceLineItem.ts` (row, ordering, reason) | Row removed with its ordering entry |
 | `lib/evidence/model/payloads.ts` (`{ fieldKey: "billing_address_match"; match: boolean }`) | Legacy shape parses, derives nothing |
-| Merchant billing-vs-shipping internal signal (`internalSignals.ts`, `useEvidenceSections.ts`) | This is a genuine merchant-facing observation and may survive **as a non-evidence operational note** — never as evidence, never scored, never cited |
+| Merchant billing-vs-shipping internal signal (`internalSignals.ts`, `useEvidenceSections.ts`) | **Decision 4:** preserved as an explicitly **non-evidence operational note** — "billing and shipping city/country agree" — under a **new label**. Never evidence, never scored, never cited, never a claim input |
 | `p0/policy-matrix-v0.3.md` row "Billing address match" | Its V-PRIMARY chart linkage is to the **AVS** fact; the authority migrates to the AVS fact, and the row is restated rather than inherited |
-| `disputes.signalLabel.billing_match` ×6 locales | Retired or repurposed with the internal-signal decision, in the same PR |
+| `disputes.signalLabel.billing_match` ×6 locales | **Decision 4: retired, not repurposed.** The evidence label is misleading (it names an AVS-confirmed cardholder match that never existed); the operational note ships under a **new** key in all 6 locales in the same PR |
 
 **Deletion criteria (all must hold before the key is retired).**
 
@@ -254,19 +294,21 @@ PR-C2 + PR-C3  →  PR-C4  →  P-7 calibration  →  threshold approval  →  S
    no backfill, no `pack_json` rewrite, no submission-state change. Remediation is its own
    decision and its own PR.
 
-## Ambiguities to resolve before PR-C2 begins
+## Decision gates
 
-1. **Does a CVV-only match remain citable?** The code grades it `moderate` today; the policy
-   matrix (§A) records "AVS + CVV both matched" as the V-PRIMARY supporting form and
-   "AVS/CVV partial" as **excluded from the argument**. The split makes the conflict explicit
-   and unavoidable — it needs a decision, not a default.
-2. **Does the split change the merchant-visible completeness denominator** (one row becomes two,
-   or one row keeps two facts)? Either answer is defensible; the answer changes the completeness
-   inputs P-7 will later calibrate on, so it must be decided in PR-C2 and stated, not discovered
-   during calibration.
-3. **Does the CE Item 3 citation path narrow to the primary-sourced codes** (`Y`/`M`) while a
-   broader set stays valid for internal display, or does one set serve both? PR-C3 owns the
-   decision; PR-C2 must not pre-decide it by construction.
-4. **What fact does the retired `billing_address_match` name for the merchant** — a
-   non-evidence "billing and shipping agree" operational note, or nothing at all? This
-   determines whether the ×6 locale label is repurposed or deleted in PR-C4.
+The four questions this series could not answer for itself. **All four are now decided**
+(maintainer, 2026-08-08). Each is recorded against the PR it gates: decisions **1 and 2 gate
+PR-C2**, decision **3 gates PR-C3**, decision **4 gates PR-C4**. An implementation may not
+re-open a gate it is downstream of, and may not pre-empt one it is upstream of.
+
+| # | Gates | Question | **Decision** |
+|---|---|---|---|
+| 1 | **PR-C2** | Does a CVV-only match remain citable? | **Valid as an internal merchant fact; not issuer-citable.** It cannot satisfy an AVS/address claim, CE chart Item 3, or any related claim guard. Enforced structurally in the predicate, not by prompt wording |
+| 2 | **PR-C2** | Does the split change the merchant-visible completeness denominator? | **No.** PR-C2 retains **one grouped payment-verification requirement**, with AVS and CVV as separate **subfacts**. Denominator unchanged, thresholds unchanged |
+| 3 | **PR-C3** | Does the CE Item 3 citation path narrow to the primary-sourced codes? | **Yes — only `Y` / `M` may enter the CE Item 3 citation path.** Broader normalized results may be **displayed internally** but never cited |
+| 4 | **PR-C4** | What does the retired `billing_address_match` name for the merchant? | **Preserve "billing and shipping city/country agree" as an explicitly non-evidence operational note under a NEW label.** The misleading `billing_match` **evidence** label is retired, not repurposed |
+
+Consequences already folded into the sections above: decision 1 gives PR-C2 a real, conservative
+bank-visible delta (withdrawn CVV-only citations) that **must be measured and enumerated** — the
+PR may not claim "no bank-visible effect"; decision 3 gives PR-C3 an enumerated citation-set
+narrowing; decision 4 makes the ×6 locale change a new key plus a retirement, not a rename.
