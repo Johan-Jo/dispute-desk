@@ -135,3 +135,20 @@ Companion files:
   - 20260729010000_convert_legacy_setup_rules_to_groups.sql
   - 20260729020000_restore_live_group_rules_after_collapse.sql
 - **Status:** all listed migrations applied in order
+
+
+### 2026-08-08T14:24:26.105Z — prod migration push SUCCEEDED (non-interactive)
+
+- **Route:** guarded raw CLI — `node scripts/guard-db-target.mjs prod && APP_ENV=production npx supabase db push --linked --yes --include-all`. `db-push-prod.mjs` is TTY-only and refuses piped invocation, so an agent cannot run it; `run-migration.mjs` was rejected here because it records into its own `_migrations` table rather than `supabase_migrations.schema_migrations`, which would desync CLI state for every future migration. Link target verified = prod immediately before the push. Same authorized pattern as the 2026-07-03 and 2026-07-30 entries.
+- **Target ref:** `aokhplydttxtebvbeuzc`
+- **Git SHA:** `ddd17e0c` (develop) — deliberately pushed from `develop` BEFORE the `develop → master` merge, because the application code reads `defence_packages.content_revision`; code-first would fail every preflight closed (503 / retry, nothing filed) until the migrations landed.
+- **Remote state before:** applied through `20260729020000`; exactly three migrations pending, nothing else out of sync.
+- **Applied (3), in order:**
+  - 20260807200000_defence_package_transactional_finalize.sql
+  - 20260807230000_defence_package_promotion_hardening.sql
+  - 20260808000000_defence_package_promotion_authority.sql
+- **Status:** all three applied in order.
+- **Verified on prod after push:** `content_revision uuid NOT NULL default gen_random_uuid()` present, 280/280 rows carrying a distinct revision; `jobs.dedupe_key` + partial unique index `jobs_dedupe_key_uniq`; triggers `defence_packages_content_revision` and `defence_packages_authorize_promotion`; functions `finalize_defence_package(uuid,uuid,integer,boolean,text[])`, `enqueue_defence_package_save(uuid,uuid)`, `defence_packages_bump_content_revision()`, `defence_packages_authorize_promotion()`. The superseded 4-arg `finalize_defence_package` is gone.
+- **Ships with:** PR #519 (develop → master), authorized in-chat 2026-08-08.
+- **Rollback note:** a code-only revert also requires `drop trigger if exists defence_packages_authorize_promotion on defence_packages;` — the reverted code promotes with a direct `draft → final` UPDATE, which the trigger rejects. `content_revision` and `jobs.dedupe_key` are inert to the old code and can stay.
+- **NOT included:** no remediation of the 91 disputes the containment gate blocks. No regeneration, no backfill, no submission-state change.
