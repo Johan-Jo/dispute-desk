@@ -5,13 +5,20 @@
  * facts — the LLM does not write it. This module is the single source of
  * truth for which facts appear and in what order.
  *
- * Selection: bankEligible && includeInBankNarrative && !submissionRisk.
+ * Selection: bankEligible && includeInBankNarrative && !submissionRisk, AND
+ * the fact must have something citable to say — `renderValue` returning null
+ * suppresses the ROW, not just its text.
  * Ordering: by category-rank then label, so two builds with identical
  * facts produce identical rows.
  */
 
 import type { EvidenceBasisRow, EvidenceFact, EvidenceFactCategory } from "../types";
 import { formatChronologyTimestamp } from "../chronology";
+import {
+  citableVerificationPartsEn,
+  citableVerificationSummaryEn,
+  readPaymentVerification,
+} from "@/lib/argument/paymentVerification";
 
 const CATEGORY_ORDER: EvidenceFactCategory[] = [
   "payment_authentication",
@@ -48,20 +55,36 @@ function categoryRank(c: EvidenceFactCategory): number {
   return idx === -1 ? 999 : idx;
 }
 
-function renderValue(fact: EvidenceFact): string {
+/**
+ * The cell text for one fact, or **null when the fact has nothing citable to
+ * say** — in which case the caller emits no row at all.
+ *
+ * Only the payment-authentication branch can return null today. Every other
+ * category reaching this renderer has content by construction.
+ */
+function renderValue(fact: EvidenceFact): string | null {
   const v = fact.value;
   switch (fact.category) {
     case "payment_authentication":
     case "payment_auth": {
-      // Prefer the pre-translated verificationSummary built by
-      // factClassifier.ts — bank-readable plain language, e.g.
-      // "billing address matched • CVV matched". Never quote the raw
-      // single-letter gateway codes (Y/M/N/etc.) in evidence basis
-      // rows — same rule the LLM narrative obeys.
-      const summary =
-        typeof v?.verificationSummary === "string" && v.verificationSummary
-          ? (v.verificationSummary as string)
-          : null;
+      // AUTHORITY COMES FROM THE VALUES, NEVER FROM THE PERSISTED PHRASE.
+      //
+      // `verificationSummary` is a rendering of a decision, not the decision.
+      // Facts written before PR-C2 carry summaries built under the old rule —
+      // including "the card verification code matched the issuer's records"
+      // on a CVV-only case, and "the billing postal code matched…" on AVS `Z`
+      // — and those rows also carry `bankEligible: true` from the same era.
+      // Trusting the stored sentence let exactly the claim this containment
+      // withdraws walk back into the letter on a re-render.
+      //
+      // So the underlying codes are read FIRST, through the one owner, and
+      // decide whether anything may be said at all. Only then does a stored
+      // summary matter — and then only as a signal of which register to write
+      // in, never as content.
+      const verification = readPaymentVerification(v);
+      const hasPersistedSummary =
+        typeof v?.verificationSummary === "string" &&
+        (v.verificationSummary as string).trim().length > 0;
       const threeDS = v?.threeDS === true;
       // Only a fact the classifier deemed citable reaches this renderer (see
       // `isUnciteableThreeDs`), so a 3DS mention here is liability-shifted or
@@ -76,29 +99,43 @@ function renderValue(fact: EvidenceFact): string {
         if (ds) bits.push(`DS transaction ${ds}`);
         return bits.join(", ");
       };
-      if (summary) {
-        const parts = [summary];
-        if (threeDS) parts.push(threeDsDetail());
-        return parts.join(" • ");
-      }
-      // Fallback for old facts that predate verificationSummary:
-      // translate the codes inline rather than print them raw.
-      const avs = v?.avsResult;
-      const cvv = v?.cvvResult;
+      // Every word of AVS/CVV text is DERIVED from the values that just
+      // authorized it. A fact whose address half is missing or uncitable
+      // contributes nothing here, whatever its stored summary says.
+      //
+      // The two registers are the historical ones and are preserved so
+      // existing packages re-render identically: a fact that carried a
+      // summary gets the sentence form, a raw-code fact gets the terse
+      // "billing address matched • CVV matched" form.
       const parts: string[] = [];
-      if (typeof avs === "string" && avs.toUpperCase() === "Y") {
-        parts.push("billing address matched");
-      } else if (
-        typeof avs === "string" &&
-        (avs.toUpperCase() === "Z" || avs.toUpperCase() === "W")
-      ) {
-        parts.push("billing postal code matched");
+      if (verification.citable) {
+        const derived = hasPersistedSummary
+          ? citableVerificationSummaryEn(verification)
+          : citableVerificationPartsEn(verification).join(" • ");
+        if (derived) parts.push(derived);
       }
-      if (typeof cvv === "string" && cvv.toUpperCase() === "M") {
-        parts.push("CVV matched");
-      }
+
+      // 3-D Secure is an INDEPENDENT citable fact: an authentication with a
+      // liability shift stands on its own and must still render, whether or
+      // not an AVS result exists. `isUnciteableThreeDsFact` upstream already
+      // withheld the "attempted"/exempted cases, so a `threeDS` that reaches
+      // here is one we may cite.
       if (threeDS) parts.push(threeDsDetail());
-      return parts.length ? parts.join(" • ") : "Authenticated";
+
+      // NOTHING CITABLE → NO ROW (PR-C2 review, 2026-08-08).
+      //
+      // This used to return the bare word "Authenticated". On a legacy
+      // CVV-only fact — where the address half is missing and there is no
+      // 3DS — that printed an unsupported assertion of authentication to the
+      // issuer, and it printed it under a row whose label reads "Payment
+      // authentication". Stripping the words "CVV" and "verification code"
+      // was not enough: the row itself was the claim. A fact with no citable
+      // content is not summarized more vaguely, it is not shown.
+      //
+      // Facts built by the current classifier never get here (a CVV-only
+      // fact is already `bankEligible: false`). This closes the path for a
+      // persisted fact whose stale flags say otherwise.
+      return parts.length ? parts.join(" • ") : null;
     }
     case "billing_match":
       return v?.match === true ? "MATCH" : "Confirmed";
@@ -294,10 +331,18 @@ export function buildEvidenceBasisRows(facts: EvidenceFact[]): EvidenceBasisRow[
     if (r !== 0) return r;
     return a.label.localeCompare(b.label);
   });
-  return sorted.map((f) => ({
-    factId: f.id,
-    category: f.category,
-    label: f.label,
-    value: capitalizeFirst(renderValue(f)),
-  }));
+  const rows: EvidenceBasisRow[] = [];
+  for (const f of sorted) {
+    const value = renderValue(f);
+    // A fact with nothing citable to say produces NO row — the row's own
+    // label is an assertion, so an empty-but-present row is still a claim.
+    if (value === null) continue;
+    rows.push({
+      factId: f.id,
+      category: f.category,
+      label: f.label,
+      value: capitalizeFirst(value),
+    });
+  }
+  return rows;
 }

@@ -13,6 +13,10 @@
  * thesis unless `three_d_secure_present` is true.
  */
 
+import {
+  hasFullAvsMatch,
+  readPaymentVerification,
+} from "@/lib/argument/paymentVerification";
 import { FACT_PREDICATES } from "../factPredicates";
 import type {
   EvidenceFact,
@@ -61,11 +65,14 @@ export const THESIS_TOKENS: Record<ThesisTokenName, ThesisToken> = {
       if (FACT_PREDICATES.avs_and_cvv_match.evaluate(facts)) {
         return "AVS and CVV match";
       }
-      // Partial: any payment_authentication fact with avsResult OR cvvResult.
+      // Partial. PR-C2 (C-12) decision 1: an AVS match still describes the
+      // authentication method; a CVV-ONLY match does not reach an issuer at
+      // all, so this token stays null for it. The "CVV match" arm that used to
+      // live here was a bank-facing citation of exactly the fact the
+      // containment withdraws.
       const auth = findFact(facts, "payment_authentication");
-      if (auth) {
-        if (auth.value?.avsResult === "Y") return "AVS match";
-        if (auth.value?.cvvResult === "M") return "CVV match";
+      if (auth && hasFullAvsMatch(readPaymentVerification(auth.value))) {
+        return "AVS match";
       }
       return null;
     },

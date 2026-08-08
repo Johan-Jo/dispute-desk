@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildEvidenceBasisRows } from "../evidenceBasisRows";
+import { classifyFacts, type ClassifyFactsInput } from "../../factClassifier";
 import type { EvidenceFact } from "../../types";
 
 function fact(overrides: Partial<EvidenceFact> = {}): EvidenceFact {
@@ -205,9 +206,14 @@ describe("buildEvidenceBasisRows", () => {
     // start with a capital letter. The renderer normalizes at the
     // boundary, so this holds regardless of which category emits the
     // string.
+    // The underlying AVS value is what authorizes the text (PR-C2) — a
+    // summary alone renders nothing — so the fixture carries the code the
+    // sentence describes.
     const rows = buildEvidenceBasisRows([
       fact({
         value: {
+          avsResult: "Y",
+          cvvResult: "N",
           verificationSummary:
             "the billing address matched the issuer's records",
         },
@@ -230,5 +236,356 @@ describe("buildEvidenceBasisRows", () => {
       }),
     ]);
     expect(rows).toHaveLength(0);
+  });
+});
+
+/**
+ * PR-C2 review (2026-08-08) — a payment-verification fact with no citable
+ * content produces NO ROW.
+ *
+ * The legacy fallback returned the bare word "Authenticated" whenever it
+ * could not build a phrase. On a CVV-only fact that is an unsupported
+ * assertion of authentication, printed under a row labelled "Payment
+ * authentication" — and one that survives every check aimed at the words
+ * "CVV" or "verification code", because the claim is the ROW, not its text.
+ *
+ * The current classifier never produces such a fact (a CVV-only match is
+ * `bankEligible: false` before it reaches here). These tests cover the fact
+ * that is PERSISTED with stale flags: `defence_evidence_facts` rows written
+ * before the split still say `bankEligible: true`, and a re-render must not
+ * trust them.
+ */
+describe("buildEvidenceBasisRows — uncitable payment verification (PR-C2)", () => {
+  const legacyCitableFlags = {
+    bankEligible: true,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+  } as const;
+
+  it("a legacy CVV-only fact with stale citable flags produces ZERO rows", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "cvv-only",
+        value: { avsResult: "N", cvvResult: "M" },
+        ...legacyCitableFlags,
+      }),
+    ]);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("the row is ABSENT — not merely stripped of the words 'CVV' / 'verification code'", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({ id: "cvv-only", value: { avsResult: "N", cvvResult: "M" }, ...legacyCitableFlags }),
+      fact({
+        id: "order",
+        category: "order_record",
+        label: "Order record",
+        value: {},
+        ...legacyCitableFlags,
+      }),
+    ]);
+    // The surviving row is the unrelated one; no payment row exists at all,
+    // under any wording.
+    expect(rows.map((r) => r.factId)).toEqual(["order"]);
+    expect(rows.some((r) => r.category === "payment_authentication")).toBe(false);
+    expect(rows.some((r) => r.label === "Payment authentication")).toBe(false);
+    expect(rows.map((r) => r.value).join(" | ")).not.toMatch(/authenticated/i);
+  });
+
+  it("no row for a CVV-only fact whose AVS code is absent entirely", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({ id: "cvv-only", value: { cvvResult: "M" }, ...legacyCitableFlags }),
+    ]);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("no row for a payment fact with neither an AVS match nor 3DS", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({ id: "empty", value: { avsResult: "N", cvvResult: "N" }, ...legacyCitableFlags }),
+      fact({ id: "bare", value: {}, ...legacyCitableFlags }),
+    ]);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("AVS-only still renders", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({ id: "avs", value: { avsResult: "Y", cvvResult: "N" }, ...legacyCitableFlags }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].value).toMatch(/billing address matched/i);
+    expect(rows[0].value).not.toMatch(/CVV/i);
+  });
+
+  it("AVS + CVV still renders both halves", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({ id: "both", value: { avsResult: "Y", cvvResult: "M" }, ...legacyCitableFlags }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].value).toMatch(/billing address matched/i);
+    expect(rows[0].value).toContain("CVV matched");
+  });
+
+  it("a current fact carrying verificationSummary still renders it", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "summary",
+        value: {
+          avsResult: "Y",
+          cvvResult: "M",
+          verificationSummary:
+            "the billing address matched the issuer's records and the card verification code matched the issuer's records",
+        },
+        ...legacyCitableFlags,
+      }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].value).toMatch(/billing address matched/i);
+  });
+
+  it("a 3DS-only fact still renders — 3DS is independently citable, AVS or no AVS", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "tds",
+        label: "3-D Secure authentication",
+        value: {
+          threeDS: true,
+          liabilityShift: true,
+          eci: "02",
+          dsTransactionId: "b3b905f0-1111-2222-3333-444455556666",
+        },
+        ...legacyCitableFlags,
+      }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].value).toContain("3DS authenticated");
+    expect(rows[0].value).toContain("ECI 02");
+    expect(rows[0].value).toContain("DS transaction b3b905f0-1111-2222-3333-444455556666");
+  });
+
+  it("a CVV-only fact that ALSO carries citable 3DS renders the 3DS half only", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "cvv-plus-tds",
+        value: { avsResult: "N", cvvResult: "M", threeDS: true, eci: "02" },
+        ...legacyCitableFlags,
+      }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].value).toContain("3DS authenticated");
+    expect(rows[0].value).not.toMatch(/CVV|verification code|billing address/i);
+  });
+});
+
+/**
+ * A PERSISTED `verificationSummary` IS NOT CITATION AUTHORITY.
+ *
+ * The exact shapes below are what `factClassifier.extractValue` wrote BEFORE
+ * PR-C2: `{ avsResult, cvvResult, verificationSummary }`, where the summary
+ * was built whenever either half matched — so a CVV-only case carried
+ * "the card verification code matched the issuer's records", and AVS `Z`
+ * (street failed, postal matched) carried a "billing postal code matched"
+ * clause the post-split scorer calls a non-match. Those rows also carry
+ * `bankEligible: true` from the same era.
+ *
+ * The renderer reads the underlying codes through `readPaymentVerification`
+ * FIRST and lets them decide whether anything may be said. A stored sentence
+ * can only choose the register of text that the values already authorized.
+ */
+describe("buildEvidenceBasisRows — a persisted summary is not authority (PR-C2)", () => {
+  const staleCitableFlags = {
+    bankEligible: true,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+  } as const;
+
+  /** Verbatim pre-split shape for a CVV-only match. */
+  const HISTORICAL_CVV_ONLY = {
+    avsResult: "N",
+    cvvResult: "M",
+    verificationSummary: "the card verification code matched the issuer's records",
+  } as const;
+
+  it("stale CVV-only summary + stale citable flags → zero rows", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({ id: "legacy-cvv", value: { ...HISTORICAL_CVV_ONLY }, ...staleCitableFlags }),
+    ]);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("the stale summary's text never reaches the table under any row", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({ id: "legacy-cvv", value: { ...HISTORICAL_CVV_ONLY }, ...staleCitableFlags }),
+      fact({
+        id: "order",
+        category: "order_record",
+        label: "Order record",
+        value: {},
+        ...staleCitableFlags,
+      }),
+    ]);
+    expect(rows.map((r) => r.factId)).toEqual(["order"]);
+    expect(rows.map((r) => r.value).join(" | ")).not.toMatch(
+      /verification code|billing address|authenticated/i,
+    );
+  });
+
+  it("the same shape WITH valid 3DS renders the 3DS text only", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "legacy-cvv-3ds",
+        value: {
+          ...HISTORICAL_CVV_ONLY,
+          threeDS: true,
+          liabilityShift: true,
+          eci: "02",
+          dsTransactionId: "b3b905f0-1111-2222-3333-444455556666",
+        },
+        ...staleCitableFlags,
+      }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].value).toContain("3DS authenticated");
+    expect(rows[0].value).toContain("ECI 02");
+    expect(rows[0].value).not.toMatch(/verification code|billing address|CVV/i);
+  });
+
+  it("a summary with NO underlying AVS value at all → no payment-verification text", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "summary-only",
+        value: {
+          cvvResult: "M",
+          verificationSummary: "the card verification code matched the issuer's records",
+        },
+        ...staleCitableFlags,
+      }),
+      fact({
+        id: "summary-no-codes",
+        value: {
+          verificationSummary:
+            "the billing address matched the issuer's records and the card verification code matched the issuer's records",
+        },
+        ...staleCitableFlags,
+      }),
+    ]);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("a summary whose underlying AVS is uncitable (Z: street failed) → zero rows", () => {
+    // Pre-split, AVS `Z` produced a bank-facing "billing postal code matched"
+    // clause while the scorer graded the same code a non-match. The stored
+    // sentence must not resurrect it.
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "legacy-z",
+        value: {
+          avsResult: "Z",
+          cvvResult: "M",
+          verificationSummary:
+            "the billing postal code matched the issuer's records and the card verification code matched the issuer's records",
+        },
+        ...staleCitableFlags,
+      }),
+    ]);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("AVS-only with valid underlying data still renders, from the values", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "legacy-avs",
+        value: {
+          avsResult: "Y",
+          cvvResult: "N",
+          verificationSummary: "the billing address matched the issuer's records",
+        },
+        ...staleCitableFlags,
+      }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].value).toMatch(/billing address matched/i);
+    expect(rows[0].value).not.toMatch(/verification code|CVV/i);
+  });
+
+  it("AVS+CVV with valid underlying data still renders both halves", () => {
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "legacy-both",
+        value: {
+          avsResult: "Y",
+          cvvResult: "M",
+          verificationSummary:
+            "the billing address matched the issuer's records and the card verification code matched the issuer's records",
+        },
+        ...staleCitableFlags,
+      }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].value).toMatch(/billing address matched/i);
+    expect(rows[0].value).toContain("card verification code matched");
+  });
+
+  it("a stale summary cannot overstate what the values support", () => {
+    // Underlying: address matched, security code did NOT. The stored sentence
+    // claims both. The rendered row follows the values.
+    const rows = buildEvidenceBasisRows([
+      fact({
+        id: "overstated",
+        value: {
+          avsResult: "Y",
+          cvvResult: "N",
+          verificationSummary:
+            "the billing address matched the issuer's records and the card verification code matched the issuer's records",
+        },
+        ...staleCitableFlags,
+      }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].value).toMatch(/billing address matched/i);
+    expect(rows[0].value).not.toMatch(/verification code/i);
+  });
+});
+
+/**
+ * The upstream half of the same guarantee: the CURRENT classifier never hands
+ * the renderer a citable CVV-only fact in the first place. The renderer fix
+ * above is the second line, for facts persisted before the split.
+ */
+describe("classifier output for a CVV-only match (PR-C2)", () => {
+  it("is merchant-visible, moderate, and bank-ineligible", () => {
+    const result = classifyFacts({
+      packageId: "pkg_1",
+      sections: [
+        {
+          type: "payment",
+          label: "Payment authentication",
+          source: "shopify_order",
+          data: { avsResultCode: "N", cvvResultCode: "M" },
+          fieldsProvided: ["avs_cvv_match"],
+        },
+      ],
+      evidenceItems: [],
+      checklist: [],
+      coverage: { state: "not_covered" },
+      fatalLoss: { triggered: false, reason: null },
+      caseStrength: "moderate",
+      manualRows: [],
+      reasonCodeModule: {
+        allowedFactCategories: ["payment_authentication"],
+        criticalCategories: [],
+      } as unknown as ClassifyFactsInput["reasonCodeModule"],
+    });
+
+    const classified = result.approved.find(
+      (f) => (f.value as { fieldKey?: string }).fieldKey === "avs_cvv_match",
+    );
+    expect(classified).toBeDefined();
+    expect(classified?.merchantVisible).toBe(true);
+    expect(classified?.strength).toBe("moderate");
+    expect(classified?.bankEligible).toBe(false);
+    expect(classified?.includeInBankNarrative).toBe(false);
+
+    // And so it never reaches the table by the normal path either.
+    expect(buildEvidenceBasisRows(result.approved)).toHaveLength(0);
   });
 });

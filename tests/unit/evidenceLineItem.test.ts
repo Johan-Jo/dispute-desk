@@ -1571,11 +1571,12 @@ describe("Test 25 — draft-pack inclusion consistency (2026-07-21 blume-box 306
         mustNotMatch: /CVV|card verification code/,
       },
       {
-        // CVV only — must NOT claim the billing address matched.
+        // CVV only — PR-C2 (C-12) decision 1. The copy names the match AND
+        // says it is kept internal; it must never read as cited evidence,
+        // and must never claim the billing address matched.
         payload: { avsResultCode: "N", cvvResultCode: "M" },
-        mustMatch:
-          /^The card verification code \(CVV\) matched the issuer's records\.$/,
-        mustNotMatch: /billing address/,
+        mustMatch: /Kept internal/,
+        mustNotMatch: /billing address matched/,
       },
       {
         // AVS street-only match (code A).

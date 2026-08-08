@@ -212,7 +212,7 @@ describe("buildInternalSignalsByField — cardholder-name mismatch warning", () 
     ).toBeUndefined();
   });
 
-  it("partial AVS/CVV warning: one plain combined sentence + 'cited as evidence' outcome", () => {
+  it("partial AVS/CVV warning: one plain combined sentence + internal-only outcome", () => {
     const map = buildInternalSignalsByField(
       new Map([["avs_cvv_match", avsCvvPayload]]),
       { customerName: "Sean Boyd" },
@@ -224,9 +224,12 @@ describe("buildInternalSignalsByField — cardholder-name mismatch warning", () 
     expect(avsWarning!.label).toBe("Card security check partially passed");
     // Plain-language rule: describe WHAT happened, codes in parentheses
     // at the end — never lead with a bare gateway code.
+    // PR-C2 (C-12) decision 1: the security-code match is NOT cited. The
+    // previous copy told the merchant the opposite of what the system does.
     expect(avsWarning!.reason).toBe(
       "The address did not match the card issuer's records, but the card's security code did (AVS N, CVV M). " +
-        "Only the matching security code was cited as evidence in the dispute response — the address mismatch would weaken it.",
+        "The matching security code is kept as an internal record — it is not cited in the dispute response, " +
+        "because a security-code match is not an address match.",
     );
   });
 
@@ -258,7 +261,8 @@ describe("buildInternalSignalsByField — cardholder-name mismatch warning", () 
     expect(w).toBeDefined();
     expect(w!.reason).toBe(
       "The issuer did not check the address; the card's security code matched (AVS U, CVV M). " +
-        "The matching security code was cited as evidence in the dispute response.",
+        "The matching security code is kept as an internal record — it is not cited in the dispute response, " +
+        "because a security-code match is not an address match.",
     );
   });
 

@@ -44,7 +44,11 @@ import {
   cardholderNameFromPayload,
   detectCardholderNameMismatch,
 } from "@/lib/argument/nameMismatch";
-import { avsBucket, cvvBucket } from "@/lib/argument/avsCvvExplain";
+import {
+  avsBucket,
+  cvvBucket,
+  readPaymentVerification,
+} from "@/lib/argument/paymentVerification";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import type { Localized } from "@/lib/i18n/localized";
 import { resolveToken } from "@/lib/i18n/resolveToken";
@@ -373,13 +377,9 @@ function readString(v: unknown): string | null {
   return typeof v === "string" ? v : null;
 }
 
-// Kept in lockstep with the canonical categorizer
-// (lib/argument/canonicalEvidence.ts): Y/A/W/X/D/M are AVS matches, M is
-// a CVV match. A narrower set here would flag a canonically-matching code
-// (e.g. AVS W = zip match) as a mismatch and surface a false internal
-// warning that contradicts the positive bucket.
-const AVS_MATCH_CODES = new Set(["Y", "A", "W", "X", "D", "M"]);
-const CVV_MATCH_CODES = new Set(["M"]);
+// AVS / CVV match semantics come from `lib/argument/paymentVerification.ts`
+// (PR-C2). This file used to keep its own copy "in lockstep" by comment —
+// one of six, and they had already drifted.
 
 /**
  * MERCHANT-LANGUAGE RULE (2026-07-23): never lead with a bare gateway
@@ -410,12 +410,13 @@ const AVS_CVV_RESULT_KEY: Record<string, string> = {
 
 function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel | null {
   if (!isPlainObject(payload)) return null;
-  const avs = readString(payload.avsResultCode)?.toUpperCase() ?? null;
-  const cvv = readString(payload.cvvResultCode)?.toUpperCase() ?? null;
+  const verification = readPaymentVerification(payload);
+  const avs = verification.avs.code;
+  const cvv = verification.cvv.code;
   // Only emit when at least one code is present AND that code is
   // outside the scoring match set. Absence of codes is not a signal.
-  const avsMismatch = avs !== null && avs !== "" && !AVS_MATCH_CODES.has(avs);
-  const cvvMismatch = cvv !== null && cvv !== "" && !CVV_MATCH_CODES.has(cvv);
+  const avsMismatch = verification.avs.present && !verification.addressVerified;
+  const cvvMismatch = verification.cvv.present && !verification.securityCodeVerified;
   if (!avsMismatch && !cvvMismatch) return null;
 
   const NS = "internalSignals.avsCvvMismatch";
@@ -432,12 +433,13 @@ function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel
   // the SCORING match sets (what actually reaches the positive bucket /
   // narrative). Pure-unchecked results carry no outcome: nothing was
   // withheld and nothing cited, the result sentence stands alone.
-  const avsCited = avs !== null && AVS_MATCH_CODES.has(avs);
-  const cvvCited = cvv !== null && CVV_MATCH_CODES.has(cvv);
-  if (cvvCited) {
-    sentences.push(
-      t(`${NS}.${avsB === "no_match" ? "outcomeOnlyCvvCited" : "outcomeCvvCitedClean"}`),
-    );
+  const avsCited = verification.addressVerified;
+  const cvvMatched = verification.securityCodeVerified;
+  if (cvvMatched) {
+    // CVV-only by construction (a both-matched fact raises no warning).
+    // PR-C2 decision 1: it is on record for the merchant and withheld from
+    // the bank — a security-code match is not an address match.
+    sentences.push(t(`${NS}.outcomeCvvOnlyNotCited`));
   } else if (avsCited) {
     sentences.push(
       t(`${NS}.${cvvB === "no_match" ? "outcomeOnlyAvsCited" : "outcomeAvsCitedClean"}`),
@@ -452,7 +454,7 @@ function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel
 
   return {
     id: "internal:avs_cvv_mismatch",
-    title: avsCited || cvvCited ? t(`${NS}.titlePartial`) : t(`${NS}.title`),
+    title: avsCited || cvvMatched ? t(`${NS}.titlePartial`) : t(`${NS}.title`),
     explanation: sentences.join(" "),
   };
 }

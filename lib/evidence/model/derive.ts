@@ -24,7 +24,10 @@
 
 import { createHash } from "crypto";
 import { categorizeEvidenceField } from "@/lib/argument/canonicalEvidence";
-import { isUnciteableThreeDsFact } from "@/lib/defence/factClassifier";
+import {
+  isUnciteablePaymentVerificationFact,
+  isUnciteableThreeDsFact,
+} from "@/lib/defence/factClassifier";
 import type { WaivedItemRecord } from "@/lib/types/evidenceItem";
 import {
   definitionFor,
@@ -153,6 +156,16 @@ function citationFor(
             eligibility: "withheld_risk",
             reasonToken: { key: "disputes.citation.ipNotBankEligible" },
           };
+    }
+    if (fieldKey === "avs_cvv_match") {
+      // PR-C2 decision 1 — same predicate the bank filter uses, imported
+      // rather than restated.
+      return isUnciteablePaymentVerificationFact(fieldKey, payload)
+        ? {
+            eligibility: "withheld_risk",
+            reasonToken: { key: "disputes.citation.cvvOnlyNotAddressEvidence" },
+          }
+        : { eligibility: "eligible", reasonToken: null };
     }
     if (fieldKey === "fraud_risk_screening") {
       const positives = payload?.positiveFacts;

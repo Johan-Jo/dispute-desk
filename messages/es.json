@@ -1099,11 +1099,11 @@
             "addressMatched": "La dirección de facturación coincidió con los registros del emisor.",
             "streetMatched": "La calle de la dirección de facturación coincidió con los registros del emisor.",
             "postalMatched": "El código postal de facturación coincidió con los registros del emisor.",
-            "cvvMatched": "El código de verificación de la tarjeta (CVV) coincidió con los registros del emisor.",
             "notIncluded": "El procesador de pagos no devolvió códigos de verificación AVS ni CVV para esta transacción. Nada que incluir: estos códigos vienen de la pasarela de pago en el momento del pago, no después.",
             "internalBothFail": "Tanto la dirección de facturación (AVS) como el código de verificación de la tarjeta (CVV) no coincidieron con los registros del emisor. Se mantiene interno: citarlo al banco socavaría la respuesta de fraude.",
             "internalAvsFail": "La dirección de facturación (AVS) no coincidió con los registros del emisor. Se mantiene interno: citarlo al banco socavaría la respuesta de fraude.",
-            "internalCvvFail": "El código de verificación de la tarjeta (CVV) no coincidió con los registros del emisor. Se mantiene interno: citarlo al banco socavaría la respuesta de fraude."
+            "internalCvvFail": "El código de verificación de la tarjeta (CVV) no coincidió con los registros del emisor. Se mantiene interno: citarlo al banco socavaría la respuesta de fraude.",
+            "cvvOnlyInternal": "El código de verificación de la tarjeta (CVV) coincidió con los registros del emisor, pero la dirección de facturación no. Se mantiene interno: que coincida el código de seguridad no equivale a que coincida la dirección, así que no se cita al banco."
           },
           "billingAddress": {
             "notIncluded": "La pasarela de pago no devolvió un resultado de coincidencia AVS para esta transacción. La dirección de facturación está en el archivo, pero no hay una decisión de coincidencia/no coincidencia disponible."
@@ -1681,12 +1681,11 @@
         "resultAvsUncheckedOnly": "El emisor no comprobó la dirección (código AVS {avs}).",
         "resultCvvFailOnly": "El código de seguridad de la tarjeta no coincidió con los registros del emisor (código CVV {cvv}).",
         "resultCvvUncheckedOnly": "El emisor no comprobó el código de seguridad de la tarjeta (código CVV {cvv}).",
-        "outcomeOnlyCvvCited": "Solo el código de seguridad coincidente se citó como prueba en la respuesta a la disputa: la discrepancia de dirección la debilitaría.",
         "outcomeOnlyAvsCited": "Solo la dirección coincidente se citó como prueba en la respuesta a la disputa: la discrepancia del código la debilitaría.",
-        "outcomeCvvCitedClean": "El código de seguridad coincidente se citó como prueba en la respuesta a la disputa.",
         "outcomeAvsCitedClean": "La dirección coincidente se citó como prueba en la respuesta a la disputa.",
         "outcomeNothingCited": "Ninguno de los resultados se citó como prueba en la respuesta a la disputa: solo se envían al banco los resultados que refuerzan el caso.",
-        "outcomeSingleNotCited": "No se citó como prueba: debilitaría la respuesta a la disputa."
+        "outcomeSingleNotCited": "No se citó como prueba: debilitaría la respuesta a la disputa.",
+        "outcomeCvvOnlyNotCited": "El código de seguridad coincidente se mantiene como registro interno: no se cita en la respuesta a la disputa, porque que coincida el código de seguridad no equivale a que coincida la dirección."
       },
       "billingAddress": {
         "title": "Las direcciones de facturación y envío no coinciden",
@@ -1868,7 +1867,8 @@
     "citation": {
       "withheldInternal": "Uso interno: esta señal es solo para tu revisión y nunca se muestra al banco.",
       "threeDsNoLiabilityShift": "Uso interno: la autenticación no se completó, así que citarla debilitaría la respuesta.",
-      "ipNotBankEligible": "Uso interno: la coincidencia de ubicación no es lo bastante clara para presentarla al banco."
+      "ipNotBankEligible": "Uso interno: la coincidencia de ubicación no es lo bastante clara para presentarla al banco.",
+      "cvvOnlyNotAddressEvidence": "Uso interno: solo coincidió el código de seguridad de la tarjeta, y eso no constituye prueba de dirección."
     }
   },
   "disputeReasons": {

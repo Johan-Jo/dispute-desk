@@ -158,14 +158,29 @@ export const CLAIM_GUARDS: ClaimGuard[] = [
     predicateId: "liability_shift_present",
     requiredFact: "payment_authentication (or payment_auth) with liabilityShift=true",
   }),
+  // PR-C2 (C-12): ONE guard on the words "AVS|CVV", satisfied by the mere
+  // presence of either code, became two guards — one per fact, each requiring
+  // its own MATCH. The old rule let a CVV-only case (or an outright AVS=N)
+  // license "AVS confirmed the billing address". Decision 1: a security-code
+  // match can never ground an address claim.
   makeGuard({
-    id: "avs_cvv_authenticated",
-    description: "Claim that AVS / CVV authenticated the transaction",
-    pattern: /\b(AVS|CVV)\b/i,
+    id: "avs_address_verified_claim",
+    description: "Claim that the address was verified / AVS-matched",
+    // The word AVS, or address-verification prose that avoids it.
+    pattern:
+      /\bAVS\b|\b(?:billing\s+)?address\s+(?:was\s+|has\s+been\s+)?(?:verified|match\w*|confirm\w*)\b|\bmatch\w*\s+the\s+issuer'?s?\s+(?:address\s+)?records?\b/i,
     appliesToSections: ["paymentAuthenticationArgument", "executiveSummary", "conclusion"],
-    predicateId: "avs_or_cvv_value_present",
+    predicateId: "avs_address_verified",
     requiredFact:
-      "payment_authentication / payment_auth / billing_match with an avsResult or cvvResult value",
+      "payment_authentication / payment_auth whose AVS result is a match (a CVV match does not satisfy this)",
+  }),
+  makeGuard({
+    id: "cvv_verified_claim",
+    description: "Claim that the card security code was verified",
+    pattern: /\bCVV\b|\bCVC\b|\bcard\s+(?:security|verification)\s+(?:code|value)\b/i,
+    appliesToSections: ["paymentAuthenticationArgument", "executiveSummary", "conclusion"],
+    predicateId: "cvv_verified",
+    requiredFact: "payment_authentication / payment_auth whose CVV result is a match",
   }),
   makeGuard({
     id: "fulfilled_or_delivered_claim",

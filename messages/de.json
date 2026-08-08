@@ -1163,11 +1163,11 @@
             "addressMatched": "Die Rechnungsadresse stimmte mit den Daten des Ausstellers überein.",
             "streetMatched": "Die Straße der Rechnungsadresse stimmte mit den Daten des Ausstellers überein.",
             "postalMatched": "Die Postleitzahl der Rechnungsadresse stimmte mit den Daten des Ausstellers überein.",
-            "cvvMatched": "Der Kartenprüfwert (CVV) stimmte mit den Daten des Ausstellers überein.",
             "notIncluded": "Der Zahlungsprozessor hat für diese Transaktion keine AVS- oder CVV-Verifizierungscodes zurückgegeben. Nichts hinzuzufügen — diese Codes kommen vom Zahlungs-Gateway beim Checkout, nicht im Nachhinein.",
             "internalBothFail": "Sowohl die Rechnungsadresse (AVS) als auch der Kartenprüfwert (CVV) konnten nicht mit den Daten des Ausstellers abgeglichen werden. Wird intern gehalten — dies gegenüber der Bank anzuführen, würde die Antwort auf den Betrugsstreitfall untergraben.",
             "internalAvsFail": "Die Rechnungsadresse (AVS) stimmte nicht mit den Daten des Ausstellers überein. Wird intern gehalten — dies gegenüber der Bank anzuführen, würde die Antwort auf den Betrugsstreitfall untergraben.",
-            "internalCvvFail": "Der Kartenprüfwert (CVV) stimmte nicht mit den Daten des Ausstellers überein. Wird intern gehalten — dies gegenüber der Bank anzuführen, würde die Antwort auf den Betrugsstreitfall untergraben."
+            "internalCvvFail": "Der Kartenprüfwert (CVV) stimmte nicht mit den Daten des Ausstellers überein. Wird intern gehalten — dies gegenüber der Bank anzuführen, würde die Antwort auf den Betrugsstreitfall untergraben.",
+            "cvvOnlyInternal": "Der Kartenprüfwert (CVV) stimmte mit den Daten des Ausstellers überein, die Rechnungsadresse jedoch nicht. Wird intern gehalten — ein übereinstimmender Prüfwert ist keine Adressübereinstimmung und wird der Bank daher nicht angeführt."
           },
           "billingAddress": {
             "notIncluded": "Das Zahlungs-Gateway hat für diese Transaktion kein AVS-Abgleichsergebnis zurückgegeben. Die Rechnungsadresse ist hinterlegt, aber es liegt keine Match-/Mismatch-Entscheidung vor."
@@ -1681,12 +1681,11 @@
         "resultAvsUncheckedOnly": "Der Aussteller prüfte die Adresse nicht (AVS-Code {avs}).",
         "resultCvvFailOnly": "Die Sicherheitszahl der Karte stimmte nicht mit den Unterlagen des Ausstellers überein (CVV-Code {cvv}).",
         "resultCvvUncheckedOnly": "Der Aussteller prüfte die Sicherheitszahl der Karte nicht (CVV-Code {cvv}).",
-        "outcomeOnlyCvvCited": "Nur die übereinstimmende Sicherheitszahl wurde in der Antwort als Nachweis angeführt – die Adressabweichung würde sie schwächen.",
         "outcomeOnlyAvsCited": "Nur die übereinstimmende Adresse wurde in der Antwort als Nachweis angeführt – die Codeabweichung würde sie schwächen.",
-        "outcomeCvvCitedClean": "Die übereinstimmende Sicherheitszahl wurde in der Antwort als Nachweis angeführt.",
         "outcomeAvsCitedClean": "Die übereinstimmende Adresse wurde in der Antwort als Nachweis angeführt.",
         "outcomeNothingCited": "Keines der Ergebnisse wurde in der Antwort als Nachweis angeführt – nur Ergebnisse, die den Fall stärken, gehen an die Bank.",
-        "outcomeSingleNotCited": "Es wurde nicht als Nachweis angeführt – es würde die Antwort schwächen."
+        "outcomeSingleNotCited": "Es wurde nicht als Nachweis angeführt – es würde die Antwort schwächen.",
+        "outcomeCvvOnlyNotCited": "Die übereinstimmende Sicherheitszahl wird als interner Vermerk gehalten — sie wird in der Antwort nicht als Nachweis angeführt, denn ein übereinstimmender Prüfwert ist keine Adressübereinstimmung."
       },
       "billingAddress": {
         "title": "Rechnungs- und Lieferadresse stimmen nicht überein",
@@ -1868,7 +1867,8 @@
     "citation": {
       "withheldInternal": "Intern behalten — dieses Signal dient nur Ihrer Prüfung und wird der Bank nie gezeigt.",
       "threeDsNoLiabilityShift": "Intern behalten — die Authentifizierung wurde nicht abgeschlossen; sie zu nennen würde die Antwort schwächen.",
-      "ipNotBankEligible": "Intern behalten — die Standortübereinstimmung ist nicht eindeutig genug für die Bank."
+      "ipNotBankEligible": "Intern behalten — die Standortübereinstimmung ist nicht eindeutig genug für die Bank.",
+      "cvvOnlyNotAddressEvidence": "Intern behalten — nur der Kartenprüfwert stimmte überein, und ein übereinstimmender Prüfwert ist kein Adressnachweis."
     }
   },
   "disputeReasons": {

@@ -14,6 +14,7 @@ import {
   DeliveryIcon,
   NoteIcon,
 } from "@shopify/polaris-icons";
+import { avsBucket, cvvBucket } from "@/lib/argument/paymentVerification";
 
 /* ── Types ── */
 
@@ -184,6 +185,13 @@ function formatAddress(addr: { city?: string; provinceCode?: string; countryCode
   if (!addr) return "—";
   const parts = [addr.city, addr.provinceCode, addr.countryCode].filter(Boolean);
   return parts.join(", ") || "—";
+}
+
+/** Badge tone from the owner's descriptive bucket — never from a raw code. */
+function toneFor(bucket: "match" | "no_match" | "unchecked" | null): "success" | "critical" | undefined {
+  if (bucket === "match") return "success";
+  if (bucket === "no_match") return "critical";
+  return undefined;
 }
 
 function avsLabel(code: string | undefined): string {
@@ -506,11 +514,15 @@ function PaymentContent({ payload }: { payload: EvidencePayload }) {
     <BlockStack gap="150">
       {payload.gateway && <DataRow label="Gateway" value={payload.gateway} />}
       {payload.cardCompany && <DataRow label="Card" value={`${payload.cardCompany.toUpperCase()} •••• ${payload.lastFour || "?"}`} />}
+      {/* Tone comes from the ONE owner of AVS/CVV semantics
+          (`lib/argument/paymentVerification.ts`, PR-C2). This component used
+          to branch on the raw letters, which is how a viewer ends up calling
+          a code a success that scoring credits with nothing. */}
       {payload.avsResultCode && (
         <DataRow
           label="AVS check"
           value={
-            <Badge tone={payload.avsResultCode === "Y" ? "success" : payload.avsResultCode === "N" ? "critical" : undefined}>
+            <Badge tone={toneFor(avsBucket(payload.avsResultCode))}>
               {avsLabel(payload.avsResultCode)}
             </Badge>
           }
@@ -520,7 +532,7 @@ function PaymentContent({ payload }: { payload: EvidencePayload }) {
         <DataRow
           label="CVV check"
           value={
-            <Badge tone={payload.cvvResultCode === "M" ? "success" : payload.cvvResultCode === "N" ? "critical" : undefined}>
+            <Badge tone={toneFor(cvvBucket(payload.cvvResultCode))}>
               {cvvLabel(payload.cvvResultCode)}
             </Badge>
           }
