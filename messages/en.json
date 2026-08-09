@@ -1872,6 +1872,25 @@
       "threeDsNoLiabilityShift": "Kept internal — the authentication did not complete, so citing it would weaken the response.",
       "ipNotBankEligible": "Kept internal — the location match is not clean enough to put in front of the bank.",
       "cvvOnlyNotAddressEvidence": "Kept internal — only the card security code matched, and a security-code match is not address evidence."
+    },
+    "deadlineOnly": {
+      "normal": {
+        "title": "Ready to send",
+        "body": "Your evidence is ready and will be sent to Shopify automatically."
+      },
+      "held": {
+        "title": "Waiting for the deadline",
+        "body": "{itemCount, plural, one {1 item needs your confirmation} other {# items need your confirmation}}, so DisputeDesk is holding this response until the deadline. It will be sent then, with or without {itemCount, plural, one {the flagged item} other {the flagged items}}.",
+        "action": "{itemCount, plural, one {Confirm the flagged item} other {Confirm the flagged items}} to send this response now instead of waiting."
+      },
+      "withheld": {
+        "title": "This response will not be sent",
+        "body": "Once the evidence that needs your confirmation is set aside, nothing remains that DisputeDesk can stand behind. Sending a response it cannot support would weaken your case, so nothing will be sent.",
+        "action": "Add or confirm evidence on this dispute to change this."
+      },
+      "reviewItem": {
+        "generic": "This item needs your confirmation before it can be used."
+      }
     }
   },
   "disputeReasons": {

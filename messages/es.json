@@ -1872,6 +1872,25 @@
       "threeDsNoLiabilityShift": "Uso interno: la autenticación no se completó, así que citarla debilitaría la respuesta.",
       "ipNotBankEligible": "Uso interno: la coincidencia de ubicación no es lo bastante clara para presentarla al banco.",
       "cvvOnlyNotAddressEvidence": "Uso interno: solo coincidió el código de seguridad de la tarjeta, y eso no constituye prueba de dirección."
+    },
+    "deadlineOnly": {
+      "normal": {
+        "title": "Listo para enviarse",
+        "body": "Tu evidencia está lista y se enviará a Shopify automáticamente."
+      },
+      "held": {
+        "title": "Esperando la fecha límite",
+        "body": "{itemCount, plural, one {1 elemento necesita tu confirmación} other {# elementos necesitan tu confirmación}}, por lo que DisputeDesk mantiene esta respuesta hasta la fecha límite. Se enviará entonces, con o sin {itemCount, plural, one {el elemento marcado} other {los elementos marcados}}.",
+        "action": "{itemCount, plural, one {Confirma el elemento marcado} other {Confirma los elementos marcados}} para enviar esta respuesta ahora en lugar de esperar."
+      },
+      "withheld": {
+        "title": "Esta respuesta no se enviará",
+        "body": "Una vez apartada la evidencia que necesita tu confirmación, no queda nada que DisputeDesk pueda respaldar. Enviar una respuesta que no puede sostener debilitaría tu caso, así que no se enviará nada.",
+        "action": "Añade o confirma evidencia en esta disputa para cambiarlo."
+      },
+      "reviewItem": {
+        "generic": "Este elemento necesita tu confirmación antes de poder usarse."
+      }
     }
   },
   "disputeReasons": {
