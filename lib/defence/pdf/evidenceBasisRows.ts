@@ -13,6 +13,7 @@
  */
 
 import type { EvidenceBasisRow, EvidenceFact, EvidenceFactCategory } from "../types";
+import { bankIncludedFacts } from "../bankInclusion";
 import { formatChronologyTimestamp } from "../chronology";
 import {
   citableVerificationPartsEn,
@@ -321,11 +322,11 @@ function collapseDeliveryPair(facts: EvidenceFact[]): EvidenceFact[] {
 }
 
 export function buildEvidenceBasisRows(facts: EvidenceFact[]): EvidenceBasisRow[] {
-  const filtered = collapseDeliveryPair(
-    facts.filter(
-      (f) => f.bankEligible && f.includeInBankNarrative && !f.submissionRisk,
-    ),
-  );
+  // The ONE bank-inclusion predicate (`lib/defence/bankInclusion.ts`). The rule
+  // used to be spelled inline here, in the classifier, in the workspace route
+  // and — differently — in the LLM payload filter; delegating is what lets
+  // `tests/unit/bankInclusionSingleOwner.test.ts` prove there is one owner.
+  const filtered = collapseDeliveryPair(bankIncludedFacts(facts));
   const sorted = [...filtered].sort((a, b) => {
     const r = categoryRank(a.category) - categoryRank(b.category);
     if (r !== 0) return r;

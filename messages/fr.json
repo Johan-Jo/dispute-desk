@@ -1903,6 +1903,15 @@
     "Subscription": "Abonnement"
   },
   "packs": {
+    "argumentPlan": {
+      "exclusion": {
+        "reviewRequired": "En attente de votre confirmation, cet élément n’a donc pas été inclus dans la réponse.",
+        "unverified": "Nous n’avons pas pu le vérifier avec les données dont nous disposons, il n’a donc pas été inclus dans la réponse.",
+        "adverse": "L’inclure donnerait à la banque un argument contre vous, il n’a donc pas été inclus dans la réponse.",
+        "merchantOnly": "Conservé uniquement pour vos archives — ce type de signal n’est jamais transmis à la banque.",
+        "notArgumentRelevant": "Sans rapport avec ce que la banque conteste dans ce litige, il n’a donc pas été inclus dans la réponse."
+      }
+    },
     "section": {
       "order": "Commande {orderName}",
       "refundHistory": "Historique des remboursements",

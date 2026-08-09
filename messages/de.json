@@ -1903,6 +1903,15 @@
     "Subscription": "Abonnement"
   },
   "packs": {
+    "argumentPlan": {
+      "exclusion": {
+        "reviewRequired": "Wartet auf Ihre Bestätigung und wurde deshalb nicht in die Antwort aufgenommen.",
+        "unverified": "Anhand der vorliegenden Daten nicht überprüfbar und deshalb nicht in die Antwort aufgenommen.",
+        "adverse": "Eine Nennung würde der Bank ein Gegenargument liefern und wurde deshalb nicht in die Antwort aufgenommen.",
+        "merchantOnly": "Nur für Ihre Unterlagen — diese Art von Signal wird niemals an die Bank weitergegeben.",
+        "notArgumentRelevant": "Für die Behauptung der Bank in diesem Fall nicht relevant und deshalb nicht in die Antwort aufgenommen."
+      }
+    },
     "section": {
       "order": "Bestellung {orderName}",
       "refundHistory": "Erstattungsverlauf",

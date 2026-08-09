@@ -6376,3 +6376,183 @@ entirely by the adapter.
 read-only prod comparisons under a separate vitest config, so a prod-reading
 job can never become a CI dependency. All are strictly non-mutating: no pack
 write, no disposition stamp, no job enqueue, no `submission_state` touch.
+
+## Canonical argument plan and the fileable-package selector (CP-B — DARK)
+
+**Status: dark.** Everything in this section is built, tested and importable, and
+**no production switch is flipped by it**. The call sites in the CP-0 ownership
+map (the pipeline, the auto-save gate, the save job, the deadline cron, the four
+package routes and the workspace route) still run the pre-existing logic; Agent C
+wires them in a later epic. The only files whose runtime behaviour changed are
+the three that now delegate the bank-inclusion predicate to its new owner —
+**with the same rule and the same result at each one**.
+
+### `CaseArgumentPlan` — the one owner of issuer-facing claim authority
+
+`lib/argument/plan/` derives a `CaseArgumentPlanSnapshot`
+(`lib/pipeline/contracts/argumentPlan.ts`).
+
+```
+CaseEvidenceModel ──planCandidatesFromModel──▶ PlanCandidate[]
+                                                   │
+              reason module allow-list ────────────┤
+              alwaysAdmissible categories ─────────┤──▶ deriveCaseArgumentPlan
+              MerchantReviewItem[] (CP-A) ─────────┘            │
+                                                                ▼
+                                     included[] · excluded[] · noSafeArgument · deadlineOnly
+```
+
+**Exclusion happens before generation.** A `review_required`, unverified, adverse
+or merchant-only record is removed from the argument before any issuer-facing
+text exists, so the language model is never shown a fact it may not cite.
+Filtering generated prose afterwards is the failure this ordering prevents:
+prose already written around a fact does not survive that fact's removal, it
+merely loses its support and keeps its sentence.
+
+**Exclusion reasons, first match wins.** The order is load-bearing: a record that
+is both irrelevant and adverse is reported as adverse, because relevance is the
+weakest of the five and would mask the reason that matters.
+
+| Order | Reason | Derived from |
+|---|---|---|
+| 1 | `review_required` | a `MerchantReviewItem` naming this `recordId` |
+| 2 | `merchant_only` | `citation.eligibility === "withheld_internal"` |
+| 3 | `adverse` | `citation.eligibility === "withheld_risk"` |
+| 4 | `unverified` | `validity.state !== "valid"`, or `citation.eligibility === "ineligible"` |
+| 5 | `not_argument_relevant` | `reasonCodeModule.allowedFactCategories` (+ always-admissible) |
+
+Every exclusion carries a merchant-facing **token**, never English:
+`packs.argumentPlan.exclusion.*` in all six locales, or the review item's own
+`reasonToken` when one exists. `lib/**` may not emit resolved copy.
+
+**Argument relevance is consumed, not replaced.** The 2026-08-04 decision that
+`allowedFactCategories` stays is unchanged — it is why P4-as-specced was stopped
+(0 of 76 packs identical). `tests/unit/ce30BankPackageRetired.test.ts` asserts
+every module still declares an allow-list and that the plan reads it.
+
+**`noSafeArgument`** is non-null only when nothing remains included, with the
+reason distinguishing what was lost: nothing collected (`no_rebuttal_argument`),
+the module's own `criticalCategories` support excluded (`no_primary_argument`),
+or everything else excluded (`all_support_excluded`).
+
+**`deadlineOnly`** is true while any `review_required` exclusion remains. A plan
+with none may produce normal eligibility.
+
+**`computePlanInputHash`** sorts on the source-derived `recordId`, never on
+`EvidenceFact.id` (which is positional and is the direct cause of R4).
+Introducing it stales every pre-CP-B package as `snapshot_absent` — measured and
+reconciled in `docs/evidence-model/p4/legacy-removal-inventory.md` § R4.
+
+### The package is a projection of the plan
+
+`lib/defence/package/projectFromPlan.ts`. The load-bearing property: **no
+sentence survives after its support is removed.**
+
+- `selectPlanFacts` resolves `plan.included` against the case's facts, keyed by
+  `recordId`. A plan-authorised record with no fact is **reported**
+  (`missingRecordIds`), never silently skipped — it means the plan and the fact
+  set came from different inputs.
+- `rebuildNarrativeFromPlan` drops any section citing a record the plan does not
+  authorise, records it as an `OrphanedClaim`, and lists it in `omittedSections`
+  with the machine reason `support_excluded_by_argument_plan`. **Whole sections,
+  not clauses** — sub-sentence surgery would need to know which words a fact
+  supports, which nothing here knows, and a partial edit that leaves the topic
+  sentence is the orphaned claim again in a smaller box.
+- `projectPackageFromPlan` then composes through the existing
+  `composePdfBlocks`, handing it **only** the included facts, so a templated
+  thesis whose predicate no longer evaluates resolves null and its blockquote
+  disappears.
+
+### Deterministic document validation
+
+`lib/defence/package/documentValidation.ts` runs **after** composition and
+returns `DocumentValidationResult`. **A failure makes the package non-fileable —
+never a warning.** It adds the plan-aware checks (`no_safe_argument`,
+`orphaned_claim`, `plan_fact_mismatch`, `empty_document`, `retired_delivery_fact`)
+on top of `validateComposedDocument`'s phrase, claim-guard and structural
+claim-authorization rules over thesis, body and fallback of every block. No
+clock, no I/O, no model call: the same document produces the same sorted codes on
+every run.
+
+### `selectFileablePackage` — one selector, three outcomes
+
+`lib/defence/package/selectFileablePackage.ts`.
+
+```ts
+selectFileablePackage({ caseId, trigger, candidates, assessment, plan, decision, current })
+// → { outcome: "selected", package }
+// | { outcome: "none", reason, staleness? }
+// | { outcome: "ambiguous", candidateIds }
+```
+
+Decision order — coverage/concession, hard block, staleness, no safe argument,
+no candidate, **ambiguity**, superseded, content safety (C-11), deterministic
+validation, `validation_status`, not `final`, artifact missing,
+`deadline_only_not_yet_due`, selected.
+
+- **It subsumes `packageSafety` (C-11)**, it does not sit beside it: the content
+  verdict *is* `assessPackageCandidateSafety`, called on the same two persisted
+  columns, so the measured production behaviour (**212 of 280 package versions
+  blocked**) is preserved by construction.
+  `lib/defence/package/__tests__/selectFileablePackage.test.ts` replays every
+  blocking and non-blocking shape from `packageSafety.test.ts` through the
+  selector.
+- **Latest candidate only, never a fallback.** Two candidates at the highest
+  version return `ambiguous` — an error that alerts, never a silent pick, because
+  "take the newest" is how a superseded package reaches an issuer.
+- **A deadline relaxes nothing (P-6).** The only outcome the deadline trigger may
+  change is `deadline_only_not_yet_due`; the nine shared fixtures assert that as
+  a property across the whole set.
+- `deadlineExecutionConditions()` restates the same inputs as P-6's five
+  conjunctive conditions for `mayExecuteAtDeadline`, so a refusal names **which**
+  condition failed.
+
+### One bank-inclusion predicate
+
+`lib/defence/bankInclusion.ts` is now the single owner of
+`bankEligible AND includeInBankNarrative AND NOT submissionRisk`. It was spelled
+inline at four sites, and one of them — the LLM payload filter — used a **weaker**
+rule (`NOT submissionRisk OR includeInBankNarrative`), so the generator could
+argue from a fact the PDF's own Evidence Basis table suppresses (C-1).
+
+`factClassifier.ts` and `pdf/evidenceBasisRows.ts` now call `isBankIncludedFact`
+/ `bankIncludedFacts`; `narrativeWriter.ts` calls `reachesLlmPayloadLegacy`,
+which is the divergent live rule **named and documented rather than converged** —
+changing what the model sees on live disputes is a reviewed change with a
+measured delta, not a side effect of a dark epic. `bankInclusionDivergence()`
+returns the facts the two rules disagree about, so the delta can be measured on a
+real population.
+
+`tests/unit/bankInclusionSingleOwner.test.ts` fails the build on any new inline
+combination of the inclusion flags. One site remains inline —
+`app/api/disputes/[id]/workspace/route.ts`, which belongs to Agent C in the CP-0
+ownership map — and the pending list may only ever shrink. The same test asserts
+the AVS/CVV half: the four pre-C-12 match-code sites declare no code list and all
+read the canonical owner, with the structural AST scan in
+`tests/unit/paymentVerificationSingleOwner.test.ts` still enforcing it.
+
+### CE 3.0 bank-package route retired (P-4)
+
+Deleted: `lib/liabilityShift/packageTemplates.ts`,
+`lib/liabilityShift/submissionRouter.ts`, `lib/packs/pdf/CE30PackDocument.tsx`
+and the package-template test. All were dormant — no caller — and the CE 3.0
+package is the artifact C-8 flags for raw IP addresses, an ungated merchant
+attestation and a hard-coded reason code.
+
+**CE 3.0 qualification is retained** as merchant insight: `qualifyCE30.ts`,
+`evaluateQualification.ts`, `autoQualified.ts`, `GET /api/disputes/[id]/qualification`
+and the Liability Shift insights surface are untouched, and the Visa 10.4 anchor
+stays in the reason-code catalog. `submission_logs` is retained too — the ratios
+calculator reads it for historical attribution; only its dormant writer is gone.
+`tests/unit/ce30BankPackageRetired.test.ts` makes reintroduction a red build.
+
+### D-1 — measured, not decided
+
+`visa_10_4_fraud.criticalCategories` still names `billing_match`, a category with
+zero members after PR-C4, so **every Visa 10.4 package is already `narrow`**. The
+before/after replay across all 32 reachable cells is
+`docs/evidence-model/p4/d1-billing-match-replay.md`, generated by
+`lib/defence/package/__tests__/d1BillingMatchReplay.test.ts`: **exactly two cells
+transition, both `narrow` to `full`**, and none transitions `full` to `narrow`.
+`visa_10_4_fraud.ts` is unchanged and the entry is not removed — the maintainer
+answers D-1 on that output.

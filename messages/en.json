@@ -1903,6 +1903,15 @@
     "Subscription": "Subscription"
   },
   "packs": {
+    "argumentPlan": {
+      "exclusion": {
+        "reviewRequired": "Waiting for your confirmation, so it was left out of the response.",
+        "unverified": "We could not verify this from the records we hold, so it was left out of the response.",
+        "adverse": "Including this would invite the bank to argue against you, so it was left out of the response.",
+        "merchantOnly": "Kept for your records only — this type of signal is never shared with the bank.",
+        "notArgumentRelevant": "Not relevant to what the bank is claiming in this dispute, so it was left out of the response."
+      }
+    },
     "section": {
       "order": "Order {orderName}",
       "refundHistory": "Refund history",
