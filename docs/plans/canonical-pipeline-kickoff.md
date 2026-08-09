@@ -187,6 +187,32 @@ these numbers. A drift is information, not a blocker — but it must be stated.
 
 ---
 
+## 7b. D-1 population context (coordinator, 2026-08-09)
+
+Agent B's replay enumerates *which* cells removing the orphaned `billing_match`
+entry would move narrow → full, but its worktree had no Supabase link, so it
+could not say *how many* packages sit in them. Answered here, read-only:
+`scripts/sql/d1-visa-10-4-transition-population.sql`.
+
+| Shop | Open unsubmitted | Visa 10.4 | In a transitioning cell |
+|---|---|---|---|
+| blume-box | 61 | **0** | **0** |
+| cay-collective | 3 | **0** | **0** |
+| **Total** | **64** | **0** | **0** |
+
+**Checked for a false zero, because this project has had one.** The
+`network_reason_code` column is populated, not empty: of the 64 open unsubmitted
+cases, **57 are Mastercard `4837`**, 2 are `4853`, 1 is `4834`, and 4 are NULL.
+There is no Visa reason code anywhere in the population. The zero is real.
+
+**What that means for D-1:** removing the entry would flip **no currently open,
+unsubmitted case**. The bank-visible risk is entirely prospective — it lands on
+future Visa 10.4 disputes, not on anything in flight. That is context for the
+decision at PR 2's review; it is not the decision, and it does not make the
+change riskless.
+
+---
+
 ## 8. Standing rules that apply to every agent
 
 - **DB target is confirmed per command, not per session.** `npm run db:query:dev`
