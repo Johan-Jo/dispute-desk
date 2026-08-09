@@ -1042,7 +1042,8 @@
         "outcomeAvsCitedClean": "The matching address was cited as evidence in the dispute response.",
         "outcomeNothingCited": "Neither result was cited as evidence in the dispute response — only results that strengthen the case go to the bank.",
         "outcomeSingleNotCited": "It was not cited as evidence — it would weaken the dispute response.",
-        "outcomeCvvOnlyNotCited": "The matching security code is kept as an internal record — it is not cited in the dispute response, because a security-code match is not an address match."
+        "outcomeCvvOnlyNotCited": "The matching security code is kept as an internal record — it is not cited in the dispute response, because a security-code match is not an address match.",
+        "outcomeAvsMatchedNotCitable": "The matching address counts towards your case assessment, but it is not cited in the dispute response — we cite an address result only when the card scheme's own rules recognise that result as evidence, and this one is not covered."
       },
       "billingAddress": {
         "title": "Billing and shipping addresses do not match",

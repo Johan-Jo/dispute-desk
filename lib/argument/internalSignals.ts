@@ -61,6 +61,12 @@ const OUTCOME_EN = {
   onlyAvsCited:
     "Only the matching address was cited as evidence in the dispute response — the code mismatch would weaken it.",
   avsCitedClean: "The matching address was cited as evidence in the dispute response.",
+  // PR-C3: the address matched but its (network, code) cell has no
+  // primary-source citation authority — a Mastercard/Amex/unbranded `Y`, or a
+  // partial result. Deliberately NOT the "would weaken" wording: nothing here
+  // is weak, we simply cannot name the scheme rule we would be citing under.
+  avsMatchedNotCitable:
+    "The matching address counts towards your case assessment, but it is not cited in the dispute response — we cite an address result only when the card scheme's own rules recognise that result as evidence, and this one is not covered.",
   nothingCited:
     "Neither result was cited as evidence in the dispute response — only results that strengthen the case go to the bank.",
   singleNotCited: "It was not cited as evidence — it would weaken the dispute response.",
@@ -115,15 +121,23 @@ export function buildInternalSignalsByField(
     // does not carry the letter.
     const avsFailed = verification.avs.normalized === "no_match";
     const cvvFailed = verification.cvv.outcome === "no_match";
+    // TWO DIFFERENT QUESTIONS, KEPT APART (PR-C3):
+    //   avsMatched — did the address match? Factual; drives the result
+    //                sentence and the "partially passed" title.
+    //   avsCited   — may we cite it to the issuer? Only a primary-sourced
+    //                (network, code) cell. A Mastercard `Y` matches and is
+    //                NOT citable.
+    // Saying "the matching address was cited" off `avsMatched` told the
+    // merchant we had filed something we deliberately withhold.
     const avsMatched = verification.addressVerified;
+    const avsCited = verification.citableAddressVerified;
     const cvvMatched = verification.securityCodeVerified;
     // Fire on a genuine failure, or on a CVV-only match — the case where the
     // merchant must be told the match is kept internal (PR-C2 decision 1).
     if (avsFailed || cvvFailed || verification.cvvOnly) {
       // MERCHANT-LANGUAGE RULE: one combined plain-words sentence for
-      // both results, then one short outcome sentence with consistent
-      // "cited as evidence" phrasing. "Cited" follows the SCORING match
-      // sets — what actually reaches the positive bucket / narrative.
+      // both results, then one short outcome sentence. "Cited" follows the
+      // CITATION authority — the sourced cell — not the scoring match set.
       // Pure not-checked results carry no outcome: nothing was cited
       // or withheld, the result sentence stands alone.
       // Buckets come from the verification we already have — network-aware,
@@ -140,10 +154,17 @@ export function buildInternalSignalsByField(
           // Always CVV-only here: a both-matched fact never reaches this
           // block (it has no mismatch to warn about).
           sentences.push(OUTCOME_EN.cvvOnlyNotCited);
-        } else if (avsMatched) {
+        } else if (avsCited) {
           sentences.push(
             cvvB === "no_match" ? OUTCOME_EN.onlyAvsCited : OUTCOME_EN.avsCitedClean,
           );
+        } else if (avsMatched) {
+          // The address matched and is NOT citable — a Mastercard/Amex/
+          // unbranded `Y`, or a partial result like `W`. It still counts in
+          // the assessment; it is withheld because no scheme rule we hold
+          // recognises this (network, code) cell as evidence. That is not the
+          // "would weaken the response" case and must not borrow its words.
+          sentences.push(OUTCOME_EN.avsMatchedNotCitable);
         } else if (
           (avsB === "no_match" && cvvB === "none") ||
           (cvvB === "no_match" && avsB === "none")

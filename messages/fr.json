@@ -1685,7 +1685,8 @@
         "outcomeAvsCitedClean": "L'adresse correspondante a été citée comme preuve dans la réponse au litige.",
         "outcomeNothingCited": "Aucun de ces résultats n'a été cité comme preuve dans la réponse au litige — seuls les résultats qui renforcent le dossier sont envoyés à la banque.",
         "outcomeSingleNotCited": "Il n'a pas été cité comme preuve — il affaiblirait la réponse au litige.",
-        "outcomeCvvOnlyNotCited": "Le code de sécurité correspondant est conservé comme information interne — il n'est pas cité comme preuve dans la réponse au litige, car un code de sécurité correspondant n'est pas une correspondance d'adresse."
+        "outcomeCvvOnlyNotCited": "Le code de sécurité correspondant est conservé comme information interne — il n'est pas cité comme preuve dans la réponse au litige, car un code de sécurité correspondant n'est pas une correspondance d'adresse.",
+        "outcomeAvsMatchedNotCitable": "L'adresse correspondante compte dans l'évaluation de votre dossier, mais elle n'est pas citée dans la réponse au litige : nous ne citons un résultat d'adresse que lorsque les règles du réseau de cartes le reconnaissent comme preuve, ce qui n'est pas le cas ici."
       },
       "billingAddress": {
         "title": "Les adresses de facturation et de livraison ne correspondent pas",

@@ -1685,7 +1685,8 @@
         "outcomeAvsCitedClean": "O endereço correspondente foi citado como evidência na resposta à disputa.",
         "outcomeNothingCited": "Nenhum dos resultados foi citado como evidência na resposta à disputa — apenas resultados que fortalecem o caso são enviados ao banco.",
         "outcomeSingleNotCited": "Não foi citado como evidência — enfraqueceria a resposta à disputa.",
-        "outcomeCvvOnlyNotCited": "O código de segurança correspondente é mantido como registro interno — não é citado como evidência na resposta à disputa, porque um código de segurança correspondente não é uma correspondência de endereço."
+        "outcomeCvvOnlyNotCited": "O código de segurança correspondente é mantido como registro interno — não é citado como evidência na resposta à disputa, porque um código de segurança correspondente não é uma correspondência de endereço.",
+        "outcomeAvsMatchedNotCitable": "O endereço correspondente conta para a avaliação do seu caso, mas não é citado na resposta à disputa — só citamos um resultado de endereço quando as regras da bandeira do cartão o reconhecem como evidência, e este não está contemplado."
       },
       "billingAddress": {
         "title": "Os endereços de cobrança e envio não coincidem",

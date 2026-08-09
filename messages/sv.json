@@ -1048,7 +1048,8 @@
         "outcomeAvsCitedClean": "Den matchande adressen åberopades som bevis i tvistsvaret.",
         "outcomeNothingCited": "Inget av resultaten åberopades som bevis i tvistsvaret – endast resultat som stärker ärendet skickas till banken.",
         "outcomeSingleNotCited": "Det åberopades inte som bevis – det skulle försvaga tvistsvaret.",
-        "outcomeCvvOnlyNotCited": "Den matchande säkerhetskoden hålls som en intern notering — den åberopas inte som bevis i tvistsvaret, eftersom en matchande säkerhetskod inte är detsamma som en matchande adress."
+        "outcomeCvvOnlyNotCited": "Den matchande säkerhetskoden hålls som en intern notering — den åberopas inte som bevis i tvistsvaret, eftersom en matchande säkerhetskod inte är detsamma som en matchande adress.",
+        "outcomeAvsMatchedNotCitable": "Den matchande adressen räknas i bedömningen av ditt ärende, men den åberopas inte i tvistsvaret — vi åberopar ett adressresultat först när kortnätverkets egna regler erkänner resultatet som bevis, och det gör de inte här."
       },
       "billingAddress": {
         "title": "Fakturerings- och leveransadresser stämmer inte överens",
