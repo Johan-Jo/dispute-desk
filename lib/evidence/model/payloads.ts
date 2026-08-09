@@ -164,7 +164,14 @@ export type EvidencePayload =
       refundedAt: string | null;
     }
   | { fieldKey: "no_return_initiated"; returnStatus: string | null }
-  | { fieldKey: "billing_address_match"; match: boolean }
+  /**
+   * `billing_address_match` had an arm here until 2026-08-09 (PR-C4). It is a
+   * retired FIELD key now, so no arm exists and none may be added: the union is
+   * keyed on `EvidenceFieldKey`, and the retired key is no longer one. A
+   * historical `pack_json` carrying it still parses — the field is simply never
+   * normalized, exactly like `deliveredToVerifiedAddress` on the delivery arm.
+   * See `lib/evidence/model/retiredKeys.ts`.
+   */
   | {
       fieldKey: "customer_account_info";
       totalOrders: number | null;
@@ -369,9 +376,6 @@ export function normalizeEvidencePayload(
 
     case "no_return_initiated":
       return { fieldKey, returnStatus: str(raw?.returnStatus) };
-
-    case "billing_address_match":
-      return { fieldKey, match: bool(raw?.match) };
 
     case "customer_account_info":
       return {

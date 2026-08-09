@@ -15,6 +15,8 @@
  *  - Only `missing` rows are flipped to `available`. Intentional states
  *    (`unavailable`, `waived`, `available`) are preserved.
  *  - A collected field with NO row at all is APPENDED (see below).
+ *  - A RETIRED field key (`lib/evidence/model/retiredKeys.ts`) is DROPPED,
+ *    whatever status a historical checklist recorded for it.
  *  - Applies to every canonical field, supporting items included.
  *  - Pure: no DB I/O. Used both at build time (to persist) and on read
  *    (to normalize older packs without rebuild).
@@ -41,6 +43,7 @@ import {
   EVIDENCE_FIELD_KEYS,
   isEvidenceField,
 } from "@/lib/evidence/model/domains";
+import { isRetiredFieldKey } from "@/lib/evidence/model/retiredKeys";
 import { definitionFor } from "@/lib/evidence/model/definitions";
 
 interface SectionLike {
@@ -117,7 +120,20 @@ export function reconcileChecklistWithCollectedFields(
   // checklist write failed after the sections were persisted.
   const normalized = normalizeChecklistV2Shape(checklist) ?? [];
 
-  const flipped = normalized.map((c) => {
+  // RETIRED FIELDS ARE DROPPED HERE, ONCE (PR-C4).
+  //
+  // A template edit only changes checklists built after it. Every pack that
+  // already exists keeps the row it was built with — 112 of them on prod at the
+  // C-14 census, 97 reading `available/critical` and 15 `missing/critical`. So
+  // the row would keep earning (or costing) completeness weight, keep rendering
+  // as an evidence row, and keep nagging for evidence that can never be
+  // evidence. This is the ONE function build time (`buildPack`) and every read
+  // (`workspace/route`) both pass through, which makes it the single boundary
+  // where a retirement takes effect everywhere without a rebuild, a backfill or
+  // a `pack_json` rewrite.
+  const live = normalized.filter((c) => !isRetiredFieldKey(c.field));
+
+  const flipped = live.map((c) => {
     if (c.status !== "missing") return c;
     if (!collected.has(c.field)) return c;
     return { ...c, status: "available" as const, unavailableReason: undefined };

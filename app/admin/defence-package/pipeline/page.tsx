@@ -54,7 +54,6 @@ export const dynamic = "force-dynamic";
 const KNOWN_FIELD_KEYS = [
   "avs_cvv_match",
   "tds_authentication",
-  "billing_address_match",
   "delivery_proof",
   "shipping_tracking",
   "ip_location_check",

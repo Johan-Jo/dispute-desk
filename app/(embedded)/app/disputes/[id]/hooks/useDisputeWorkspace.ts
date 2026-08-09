@@ -44,7 +44,6 @@ import { safeDynamicT } from "@/lib/i18n/safeDynamicT";
 
 const EFFORT_MAP: Record<string, "low" | "medium" | "high"> = {
   order_confirmation: "low",
-  billing_address_match: "low",
   avs_cvv_match: "low",
   shipping_tracking: "low",
   delivery_proof: "medium",

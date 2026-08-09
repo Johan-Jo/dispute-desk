@@ -690,7 +690,6 @@
     "signalLabel": {
       "payment_auth": "Betalningsautentisering",
       "tds_authentication": "3-D Secure-autentisering",
-      "billing_match": "Faktureringsadress matchar",
       "delivery": "Leveransbekräftelse",
       "ip_location": "IP & platskonsistens",
       "device_session": "Enhets- och sessionssignaler",
@@ -836,7 +835,6 @@
       "manual_upload": "Uppladdat manuellt",
       "unavailable_from_source": "Inte tillgängligt från källan",
       "order_confirmation": "Från Shopify-orderdata",
-      "billing_address_match": "Från Shopify-orderdata",
       "avs_cvv_match": "Från betalningsgateway",
       "shipping_tracking": "Från Shopify-uppfyllelsedata",
       "delivery_proof": "Från transportörspårning",
@@ -893,7 +891,6 @@
       "order_confirmation": "Bevisar att transaktionen är legitim — grunden för varje tviststvar",
       "shipping_tracking": "Visar att transportören bekräftat försändelsen — krävs för att vinna 'ej mottaget'-tvister",
       "delivery_proof": "Bekräftar att kunden mottog paketet — det starkaste beviset mot 'ej mottaget'-krav",
-      "billing_address_match": "Matchar faktureringsadressen mot ordern — en stödjande signal vid bedrägeritvister",
       "avs_cvv_match": "Visar att kortets säkerhetskontroller godkändes — en stödjande signal vars vikt beror på tvistens orsak och övriga tillgängliga bevis",
       "product_description": "Bevisar att produkten matchade vad som annonserades — viktigt försvar för 'inte som beskrivet'-tvister",
       "refund_policy": "Visar att kunden godkände dina chargebackvillkor — skyddar mot ångerkrav",
@@ -1056,6 +1053,10 @@
         "countryDetail": "Faktureringsland {billingCountry} skiljer sig från leveransland {shippingCountry}.",
         "cityDetail": "Faktureringsstad skiljer sig från leveransstad.",
         "explanation": "{detail} Används internt för bedömning; visas inte för banken för att undvika att försvaga svaret."
+      },
+      "billingShippingAgree": {
+        "title": "Fakturerings- och leveransadress på ordern stämmer överens",
+        "explanation": "Faktureringsadressen och leveransadressen du har för den här ordern anger samma stad och land. Det här är en intern notering om din egen orderuppgift, inte ett bevis – det är ingen kontroll från kortinnehavarens bank, och den poängsätts därför aldrig och tas aldrig med i tvistesvaret. Adressverifieringen kommer från utgivarens AVS-resultat på betalningsraden."
       },
       "ipCountryMismatch": {
         "title": "IP-geolokalisering matchar inte",
@@ -1543,9 +1544,6 @@
             "internalAvsFail": "Faktureringsadressen (AVS) matchade inte utgivarens uppgifter. Hålls intern — att åberopa detta för banken skulle undergräva svaret på bedrägeriärendet.",
             "internalCvvFail": "Kortverifieringskoden (CVV) matchade inte utgivarens uppgifter. Hålls intern — att åberopa detta för banken skulle undergräva svaret på bedrägeriärendet.",
             "cvvOnlyInternal": "Kortverifieringskoden (CVV) matchade utgivarens uppgifter, men inte faktureringsadressen. Hålls intern — en matchande säkerhetskod är inte detsamma som en matchande adress, och åberopas därför inte för banken."
-          },
-          "billingAddress": {
-            "notIncluded": "Betalningsgatewayen returnerade inget AVS-matchresultat för den här transaktionen. Faktureringsadressen finns registrerad, men inget match/icke-match-beslut är tillgängligt."
           },
           "shippingTracking": {
             "notIncluded": "Beställningen har inte skickats än, så ingen spårning från transportören finns tillgänglig. När du skickar beställningen fylls den här raden i automatiskt."

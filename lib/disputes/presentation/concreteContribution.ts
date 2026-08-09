@@ -32,8 +32,8 @@ export const DEFAULT_FIELD_ACTION: FieldAction = { actionType: "upload" };
 /** Set of evidence fields the merchant can directly act on (upload or
  * paste). Derived from `FIELD_ACTIONS` so the allowlist stays in sync
  * with the per-field CTA config. Other fields (`avs_cvv_match`,
- * `billing_address_match`, `ip_location_check`, etc.) are gateway/
- * system signals where a manual upload doesn't make semantic sense.
+ * `ip_location_check`, etc.) are gateway/system signals where a manual
+ * upload doesn't make semantic sense.
  *
  * Why this is the gate (and `collectionType !== "auto"` is not):
  * `customer_communication` is marked `collection_type=auto` in the
@@ -62,7 +62,6 @@ export const MERCHANT_ACTIONABLE_FIELDS: ReadonlySet<string> = new Set(
  */
 export const SYSTEM_DERIVED_FIELDS: ReadonlySet<string> = new Set([
   "avs_cvv_match",
-  "billing_address_match",
   "tds_authentication",
   "fraud_risk_screening",
   "ip_location_check",

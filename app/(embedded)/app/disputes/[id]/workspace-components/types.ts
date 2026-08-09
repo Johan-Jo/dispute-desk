@@ -374,7 +374,9 @@ export interface EvidenceItemWithStrength extends ChecklistItemV2 {
 
 // Render sites translate via `t("disputes.evidenceCategoryLabel." + cat.key)`.
 export const EVIDENCE_CATEGORIES: EvidenceCategory[] = [
-  { key: "order", fields: ["order_confirmation", "billing_address_match"] },
+  // `billing_address_match` sat in this bucket until 2026-08-09 (PR-C4 /
+  // C-14). It is a retired field — see `lib/evidence/model/retiredKeys.ts`.
+  { key: "order", fields: ["order_confirmation"] },
   { key: "payment", fields: ["avs_cvv_match"] },
   { key: "fulfillment", fields: ["shipping_tracking", "delivery_proof"] },
   { key: "communication", fields: ["customer_communication"] },

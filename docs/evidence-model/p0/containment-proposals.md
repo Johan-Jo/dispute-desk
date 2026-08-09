@@ -8,8 +8,9 @@ None restores past behaviour; none adds architecture. Reachability measured 2026
 
 **Amendment 2026-08-08 — the address containment series (C-11 – C-14) is appended below.**
 **C-11 is no longer a proposal**: it shipped as PR-C1 (#517) and is released and
-production-validated (#519). C-12 – C-14 are proposals and inherit this document's status
-(proposed, not approved, each separately approvable).
+production-validated (#519). **C-12 and C-13 shipped to `develop`** as PR-C2 (#521) and PR-C3
+(#522). **C-14 is IMPLEMENTED on `develop`** as PR-C4 (2026-08-09); it is not in production.
+Nothing in the series has been remediated, regenerated or backfilled.
 
 | # | Defect | Reachability (measured) | Proposed narrow fix | Bank-visible effect |
 |---|---|---|---|---|
@@ -221,7 +222,7 @@ as not-a-match, while the merchant-facing internal signal treats the same value 
 - Invariant: an unmapped code alone does **not** set `review_required`; a package that attempts
   to rely on it is refused and escalated. Both halves asserted separately.
 
-## C-14 / PR-C4 — `billing_address_match` retirement (PROPOSED)
+## C-14 / PR-C4 — `billing_address_match` retirement (IMPLEMENTED on `develop`, 2026-08-09)
 
 **Defect.** `lib/argument/canonicalEvidence.ts` grades `billing_address_match` **strong**, with
 the note "Strong when AVS-confirmed billing matches the cardholder". `lib/packs/sources/orderSource.ts`
@@ -267,6 +268,34 @@ recompute.
 credit, no citation, no LLM value, present in `retiredFields`); completeness templates no longer
 reference the field; divergence-manifest guard green; claim-capability re-derivation test; the
 merchant billing-vs-shipping note still renders wherever it is kept.
+
+### Measured before merge (prod, read-only, 2026-08-09)
+
+`scripts/sql/prc4-billing-address-match-census.sql` and
+`scripts/evidence-model/billingAddressMatchRetirement.analysis.ts`. Both are committed and
+re-runnable; the analysis reconstructs the pre-retirement arm from the persisted checklist so a
+reviewer can reproduce these numbers after the merge.
+
+| deletion criterion | result |
+|---|---|
+| **1.** C-12 + C-13 merged, AVS fact owns address verification | Yes — #521 (`2e2134cd`), #522 (`b8b96a19`) on `develop` |
+| **2.** every strength delta enumerated | **0 case-strength changes** on 131 affected packs (moderate→moderate 98, weak→weak 27, strong→strong 6). 96 packs' `coveragePercent` moves; no band is crossed |
+| **2.** every completeness delta enumerated | 90 packs −1…−7, 15 packs +2…+17, 26 unchanged; **13 packs `ready_with_warnings` → `ready`**, none the other way |
+| **2.** every citation delta enumerated | **0.** 0 `defence_evidence_facts` rows in category `billing_match`, 0 packages whose `facts_json` embeds one, 0 bank-eligible sections. Nothing was ever cited, so nothing is withdrawn |
+| **2.** no case weaker for want of address representation | Of the 97 packs losing an `available` row: citable Visa `Y` 17, match on an unsourced cell 16, issuer `N` **70**, not-checked 8, unavailable 1, no AVS fact 4. Genuine verification already lives on `avs_cvv_match` |
+| **3.** no narrative claim depends on the key | `deriveClaimCapabilities` reads delivery categories only and grants nothing from a `billing_match` fact (asserted adversarially, including a hand-built strong one); `billing_match_confirmed` cannot fire |
+
+Collection census: **116 packs across 114 disputes** carry the field (99 FRAUDULENT); `data.match
+=== true` on **0**; a `match` key present on **0** — the collector never wrote the key its grader
+keys on, which is why the fleet reads "collected 116, valid 0". 112 packs still hold a persisted
+`checklist_v2` row (97 `available`/critical, 15 `missing`/critical); those are dropped on read at
+the reconcile boundary, without a rebuild or a backfill.
+
+**Left standing on purpose.** `visa_10_4_fraud.criticalCategories` still names `billing_match`,
+now a category with no member. It had 0 members in production already, so every Visa 10.4 package
+is *already* `narrow` and this PR changes nothing; removing the entry would flip real packages
+narrow → full, which is bank-visible and needs its own approval. Pinned by a test so it is seen
+rather than discovered. **A candidate C-15.**
 
 ## Dependency chain
 

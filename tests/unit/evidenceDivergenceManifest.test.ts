@@ -214,9 +214,10 @@ describe("evidence divergence manifest", () => {
 
   it("guard the guard — the detector examined a non-trivial matrix", () => {
     // A broken import or an empty template map would make every assertion
-    // below vacuous. 7 reasons + the GENERAL fallback × 20 evidence fields.
+    // below vacuous. 7 reasons + the GENERAL fallback × 19 evidence fields
+    // (20 until PR-C4 retired `billing_address_match`).
     expect(REASONS.length).toBeGreaterThanOrEqual(8);
-    expect(EVIDENCE_FIELD_KEYS.length).toBeGreaterThanOrEqual(20);
+    expect(EVIDENCE_FIELD_KEYS.length).toBeGreaterThanOrEqual(19);
   });
 
   it("the detector still WORKS — it finds the incident against the pre-fix rule", () => {

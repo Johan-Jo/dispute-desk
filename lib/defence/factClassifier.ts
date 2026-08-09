@@ -26,7 +26,10 @@ import {
   readPaymentVerification,
 } from "@/lib/argument/paymentVerification";
 import type { CaseStrengthLevel } from "@/lib/argument/types";
-import { stripRetiredPayloadKeys } from "@/lib/evidence/model/retiredKeys";
+import {
+  isRetiredFieldKey,
+  stripRetiredPayloadKeys,
+} from "@/lib/evidence/model/retiredKeys";
 import { evaluateAllPredicates } from "./factPredicates";
 import type {
   EvidenceFact,
@@ -215,6 +218,8 @@ export function isFieldBankEligible(
   fieldKey: string,
   payload: Record<string, unknown> | null,
 ): boolean {
+  // A retired field is never bank-eligible, whatever a historical payload says.
+  if (isRetiredFieldKey(fieldKey)) return false;
   if (INTERNAL_ONLY_FIELDS.has(fieldKey)) return false;
   if (isUnciteablePaymentVerificationFact(fieldKey, payload)) return false;
   const cat = categoryFor({ fieldKey, payload });
@@ -226,8 +231,11 @@ export function categoryForField(fieldKey: string, payload: Record<string, unkno
     case "avs_cvv_match":
     case "tds_authentication":
       return "payment_authentication";
-    case "billing_address_match":
-      return "billing_match";
+    // `billing_address_match` mapped to `billing_match` until 2026-08-09
+    // (PR-C4). The field is retired; the category keeps its declaration and
+    // loses its only member. Nothing maps to it now — asserted in
+    // `tests/unit/retiredFieldKeyContainment.test.ts` — so `derivePackageMode`
+    // sees exactly what it sees on prod today (0 such facts).
     case "delivery_proof":
       return "delivery_proof";
     case "shipping_tracking":
@@ -367,8 +375,6 @@ function extractValue(
         exemptionIndicator: strv(p.exemptionIndicator),
       };
     }
-    case "billing_address_match":
-      return { match: p.match === true };
     case "delivery_proof":
     case "shipping_tracking": {
       // The carrier, tracking number and tracking URL live INSIDE
@@ -563,7 +569,6 @@ const FIELD_LABEL_EN: Record<string, string> = {
   avs_cvv_match: "Payment authentication",
   tds_authentication: "3-D Secure authentication",
   fraud_risk_screening: "Pre-authorization fraud screening",
-  billing_address_match: "Billing address match",
   delivery_proof: "Delivery confirmation",
   shipping_tracking: "Shipping tracking",
   ip_location_check: "IP & location consistency",
@@ -645,6 +650,12 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
     const sourceRef = itemBySectionIdx.get(i)?.id ?? null;
 
     for (const fieldKey of section.fieldsProvided) {
+      // A RETIRED field key produces no fact — no category, no strength, no
+      // value in the LLM payload, no citation. Stated explicitly rather than
+      // relying on the `!spec` fall-through below, because a deliberate
+      // retirement and an unregistered key must never look the same in code
+      // (`lib/evidence/model/retiredKeys.ts`).
+      if (isRetiredFieldKey(fieldKey)) continue;
       const spec = CANONICAL_EVIDENCE[fieldKey];
       if (!spec) continue;
 
@@ -726,6 +737,12 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
   // Missing-evidence rows — internal only, never sent to the LLM.
   const missing: MissingEvidence[] = input.checklist
     .filter((c) => c.status === "missing")
+    // A persisted `checklist_v2` written before the retirement still carries a
+    // row for the retired field (112 packs on prod at the PR-C4 census).
+    // `reconcileChecklistWithCollectedFields` drops it on every read, but this
+    // classifier is also called with checklists from other paths — so the
+    // retirement is enforced here too rather than assumed upstream.
+    .filter((c) => !isRetiredFieldKey(c.field))
     .map((c) => ({
       category: categoryForField(c.field, null),
       label: labelForField(c.field),

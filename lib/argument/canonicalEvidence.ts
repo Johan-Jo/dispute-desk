@@ -68,7 +68,7 @@ export const CATEGORY_WEIGHT: Record<EvidenceCategory, number> = {
  * each evidence item so the workspace API can detect stale caches and
  * recompute on read. Plan §P2.4a.
  */
-export const CANONICAL_EVIDENCE_VERSION = 3;
+export const CANONICAL_EVIDENCE_VERSION = 4;
 
 /** Persisted alongside an evidence item so we know which registry
  *  version classified it. */
@@ -154,14 +154,22 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   },
 
   // ── Billing match ──
-  billing_address_match: {
-    signalId: "billing_match",
-    labelKey: "disputes.signalLabel.billing_match",
-    category: "strong",
-    supportingOnly: false,
-    excludedFromStrength: false,
-    note: "Strong when AVS-confirmed billing matches the cardholder. Invalid otherwise.",
-  },
+  // `billing_address_match` was registered here until 2026-08-09 (PR-C4 /
+  // C-14), graded `strong` with the note "Strong when AVS-confirmed billing
+  // matches the cardholder". It was emitted from a comparison of Shopify's own
+  // billing and shipping addresses on city + country — two merchant-held
+  // addresses, no AVS result, no cardholder — so the note described evidence
+  // the field never held. It is a RETIRED FIELD KEY now
+  // (`lib/evidence/model/retiredKeys.ts`) and must not be re-registered:
+  // `categorizeEvidenceField` returns `invalid` for an unregistered field, and
+  // every consumer skips a field with no spec. Address verification is carried
+  // by `avs_cvv_match` (PR-C2 split, PR-C3 network code map).
+  //
+  // The `billing_match` SignalId and the `billing_match` fact category are
+  // deliberately left declared: they now have no member, which keeps
+  // `visa_10_4_fraud.criticalCategories` — and therefore `derivePackageMode` —
+  // behaving exactly as it does on prod today. Restating that reason module is
+  // a separate decision with its own approval.
 
   // ── Delivery (proofType-conditional) ──
   delivery_proof: {
@@ -505,10 +513,10 @@ export function categorizeEvidenceField(
     return "invalid";
   }
 
-  // ── billing_address_match ──
-  if (fieldKey === "billing_address_match") {
-    return p.match === true ? "strong" : "invalid";
-  }
+  // `billing_address_match` had its branch here until 2026-08-09 (PR-C4). It
+  // returned `strong` on `match === true`. No payload key can restore it: the
+  // field has no spec, so the `if (!spec) return "invalid"` guard above is
+  // reached before any payload is read.
 
   // ── fraud_risk_screening ──
   // Moderate when payload carries ≥1 positiveFacts entry (the collector
