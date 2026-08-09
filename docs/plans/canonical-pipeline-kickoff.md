@@ -15,9 +15,20 @@ settled; none of it is an open question.
 |---|---|
 | Kickoff baseline | `develop` @ **`58e15806e002a0473edd2d2a069073ad88b25018`** — PR-C4 / C-14 (#523), not in production |
 | Epic branch | `epic/canonical-pipeline-lite`, cut from that baseline |
-| Contract commit | the commit that added `lib/pipeline/contracts/**` — SHA recorded in §7 |
-| Agent branches | `epic/cp-a-assessment`, `epic/cp-b-argument`, `epic/cp-c-automation`, each cut from the contract commit |
+| Contract commit | **`16e0e1f4539a8641227914fa920f6a482d8e7f49`** — `feat(pipeline): CP-0 contract commit` |
 | Supabase link at kickoff | dev `vrpkgudqmpyunekrkpnc` (DisputeDesk-Dev), verified |
+
+### Agent branches and worktrees
+
+All three cut from the contract commit `16e0e1f4` — not from the baseline, not
+from one another. `node_modules` is a junction to the main checkout, so
+`npx vitest` and `npx tsc` work in each worktree without a separate install.
+
+| Agent | Branch | Worktree |
+|---|---|---|
+| A — Assessment & UI | `epic/cp-a-assessment` | `C:\Users\johan\Cursor Portfolio\DisputeDesk-cp-a` |
+| B — Argument & Package | `epic/cp-b-argument` | `C:\Users\johan\Cursor Portfolio\DisputeDesk-cp-b` |
+| C — Automation | `epic/cp-c-automation` | `C:\Users\johan\Cursor Portfolio\DisputeDesk-cp-c` |
 
 ---
 
