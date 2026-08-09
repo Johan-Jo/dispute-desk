@@ -79,6 +79,7 @@ describe("shared fixtures", () => {
     const excluded = f.plan.excluded.find((e) => e.reason === "review_required");
     expect(excluded).toBeDefined();
     expect(excluded?.merchantReasonToken).toBeTruthy();
+    expect(excluded?.factCategory).toBeTruthy();
     // The excluded record must not also be included — that is the orphaned-claim bug.
     expect(f.plan.included.map((i) => i.recordId)).not.toContain(excluded?.recordId);
     expect(f.plan.deadlineOnly).toBe(true);
@@ -140,9 +141,10 @@ describe("mayExecuteAtDeadline — P-6, conjunctive", () => {
     noHardBlock: true,
     notStale: true,
     noAmbiguity: true,
+    noUnsupportedArgument: true,
   };
 
-  it("permits execution only when all five hold", () => {
+  it("permits execution only when every condition holds", () => {
     expect(mayExecuteAtDeadline(allTrue)).toBe(true);
   });
 

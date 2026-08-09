@@ -76,15 +76,22 @@ export interface DeadlineExecutionConditions {
   noHardBlock: boolean;
   notStale: boolean;
   noAmbiguity: boolean;
+  /**
+   * Revision 1, Agent C's friction 3: P-6's prose names six things and the
+   * first cut of this interface had five fields, with "no unsupported argument"
+   * folded into `hasCurrentValidatedSafePackage`. A reviewer counting
+   * conditions against the decision could not find them one-to-one, which is
+   * precisely the check this object exists to make easy. Now it is 1:1.
+   */
+  noUnsupportedArgument: boolean;
 }
 
-/** Conjunctive by construction. A deadline relaxes none of these. */
+/**
+ * Conjunctive by construction. A deadline relaxes none of these.
+ *
+ * Written over `Object.values` rather than a hand-listed `&&` chain so that
+ * adding a condition to the interface cannot silently leave it unchecked.
+ */
 export function mayExecuteAtDeadline(c: DeadlineExecutionConditions): boolean {
-  return (
-    c.hasCurrentCanonicalDecision &&
-    c.hasCurrentValidatedSafePackage &&
-    c.noHardBlock &&
-    c.notStale &&
-    c.noAmbiguity
-  );
+  return Object.values(c).every(Boolean);
 }

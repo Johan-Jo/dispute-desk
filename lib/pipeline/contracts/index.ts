@@ -25,6 +25,7 @@ export { evaluateFreshness } from "./freshness";
 export type {
   CaseAssessmentSnapshot,
   CompletenessSnapshot,
+  GateDecision,
   MerchantAssessmentProjection,
   MerchantReviewItem,
 } from "./assessment";
@@ -47,6 +48,8 @@ export type {
 export { mayExecuteAtDeadline } from "./automationDecision";
 
 export type {
+  CurrentPipelineInputs,
+  FileablePackageCandidate,
   FileableSelection,
   NotFileableReason,
   SelectedPackage,

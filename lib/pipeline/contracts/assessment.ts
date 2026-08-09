@@ -16,8 +16,9 @@
  */
 
 import type { CaseStrengthResult } from "@/lib/argument/types";
+import type { I18nToken } from "@/lib/i18n/token";
 import type { SubmissionReadiness } from "@/lib/types/evidenceItem";
-import type { SnapshotFreshness } from "./freshness";
+import type { SnapshotFreshness, StalenessReason } from "./freshness";
 
 /**
  * Completeness, as its own contract.
@@ -36,9 +37,31 @@ import type { SnapshotFreshness } from "./freshness";
 export interface CompletenessSnapshot {
   score: number;
   evidenceStrengthScore: number;
-  readiness: SubmissionReadiness;
+  /**
+   * `null` is NOT "unknown" — it is the LEGACY GATE ARM, and it is
+   * representable on purpose (revision 1, Agent A's friction 1).
+   *
+   * Production reads `pack.submission_readiness ?? undefined`, and an absent
+   * readiness selects a *different arm* of `evaluateAutoSaveGate`: the legacy
+   * blocker-count path rather than the readiness path. The first cut of this
+   * shape made `readiness` non-optional, which made that arm unrepresentable
+   * and forced a parallel type next to the contract — exactly the divergence
+   * the contract exists to prevent. So the third state lives here, named.
+   */
+  readiness: SubmissionReadiness | null;
   blockers: string[];
 }
+
+/**
+ * Which gate already decided the case, when one has.
+ *
+ * NOT a boolean (revision 1, Agent C's friction 1). Coverage and fatal-loss are
+ * not interchangeable: coverage BEATS fatal-loss, they produce different reason
+ * codes, and the fatal-loss reason must never reach bank-facing text while a
+ * coverage status may be shown to the merchant. A boolean collapses a
+ * distinction that has to survive all the way to the issuer boundary.
+ */
+export type GateDecision = "coverage" | "fatal_loss" | null;
 
 export interface CaseAssessmentSnapshot {
   caseId: string;
@@ -47,12 +70,30 @@ export interface CaseAssessmentSnapshot {
   strength: CaseStrengthResult;
   completeness: CompletenessSnapshot;
   /**
-   * True when coverage (Shopify Protect) or a fatal-loss trigger has already
-   * decided the case. Carried so downstream layers read one flag instead of
-   * re-deriving two gates. Coverage beats fatal-loss; neither is ever widened
-   * here (`COVERED_STATUSES` stays exactly `{PROTECTED, ACTIVE}`).
+   * Which gate decided the case, if either did. Carried so downstream layers
+   * read one typed value instead of re-deriving two gates. Coverage beats
+   * fatal-loss; neither is ever widened here (`COVERED_STATUSES` stays exactly
+   * `{PROTECTED, ACTIVE}`).
    */
-  gateDecided: boolean;
+  gateDecision: GateDecision;
+  /**
+   * How many `review_required` items the case still carries (revision 1, Agent
+   * C's friction 2).
+   *
+   * `review_required_present` is an `AutomationReasonCode`, but automation may
+   * not import argument-plan internals and `MerchantReviewItem` lives on a
+   * merchant projection — so without this the automation layer could name the
+   * state and not observe it. A count, not the items: automation needs to know
+   * *whether*, never *what*.
+   */
+  reviewRequiredCount: number;
+  /**
+   * The evidence-model version this assessment was derived from. Distinct from
+   * `freshness.policyVersion` (the scoring policy). Both are needed: a reader of
+   * a persisted row must be able to say which model produced it without
+   * re-deriving (revision 1, Agent A's friction 5).
+   */
+  modelVersion: number;
   freshness: SnapshotFreshness;
 }
 
@@ -70,6 +111,14 @@ export interface CaseAssessmentSnapshot {
 export interface MerchantAssessmentProjection {
   caseId: string;
   needsRecalculation: boolean;
+  /**
+   * WHY it needs recalculating, null when it does not (revision 1, Agent A's
+   * friction 2). `evaluateFreshness` already distinguishes three reasons and
+   * they route differently in the UI — "never computed" asks the merchant to
+   * wait, "inputs changed" asks them to rebuild. Collapsing them into the
+   * boolean above threw that away one layer after computing it.
+   */
+  recalculationReason: StalenessReason | null;
   /** Null exactly when `needsRecalculation` is true. */
   strengthBand: CaseStrengthResult["overall"] | null;
   completenessScore: number | null;
@@ -91,6 +140,12 @@ export interface MerchantAssessmentProjection {
 export interface MerchantReviewItem {
   recordId: string;
   fieldKey: string;
-  reasonToken: string;
+  /**
+   * `I18nToken`, not a bare key string (revision 1, Agent A's friction 3).
+   * Every other merchant-facing token in `lib/**` is an `I18nToken`, and a bare
+   * string cannot carry params — so the first reason that needs a count or a
+   * field label would have forced English into `lib/` or a second token shape.
+   */
+  reasonToken: I18nToken;
   blocksNormalFiling: boolean;
 }

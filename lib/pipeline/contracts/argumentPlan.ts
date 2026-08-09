@@ -39,6 +39,14 @@ export interface IncludedFact {
 export interface ExcludedFact {
   recordId: string;
   fieldKey: string;
+  /**
+   * Symmetric with `IncludedFact` (revision 1, Agent B's friction 2). Without
+   * it, a reader of a persisted snapshot cannot tell whether the excluded record
+   * was in the module's `criticalCategories` — which is exactly what separates
+   * `no_primary_argument` from `all_support_excluded`. The derivation knows;
+   * the snapshot has to keep it or the verdict cannot be re-audited later.
+   */
+  factCategory: string;
   reason: ExclusionReason;
   /** I18nToken key. Merchant-facing only — never reaches the issuer. */
   merchantReasonToken: string | null;
@@ -69,9 +77,13 @@ export interface CaseArgumentPlanSnapshot {
    */
   noSafeArgument: NoSafeArgumentReason | null;
   /**
-   * True while any `review_required` item remains excluded. Makes the resulting
-   * package `deadline_only` — selectable by the deadline trigger only, and only
-   * with all five P-6 conditions met.
+   * True while any `review_required` item remains excluded.
+   *
+   * NOT the only source of deadline-only-ness (revision 1, Agent B's friction
+   * 6). A package is `deadline_only` when THIS is true **or** the automation
+   * decision holds (`hold_for_deadline` / `park_for_review`). The plan owns the
+   * evidence-shaped reason; automation owns the policy-shaped one; the selector
+   * ORs them. Neither layer may read the other's internals to compute it.
    */
   deadlineOnly: boolean;
   freshness: SnapshotFreshness;

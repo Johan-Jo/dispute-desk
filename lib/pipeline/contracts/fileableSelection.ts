@@ -23,7 +23,42 @@
 
 import type { StalenessReason } from "./freshness";
 
+/**
+ * KNOWN GAP, deliberately not filled in this delivery: there is no `"manual"`
+ * trigger. The merchant-confirmed save is genuinely a third trigger with
+ * different semantics (the merchant may acknowledge warnings a machine may
+ * not), and the manual save route is NOT converted to the selector in this
+ * delivery — so adding the member now would create a case with no
+ * implementation behind it. Whoever converts that route adds it then.
+ */
 export type SelectionTrigger = "normal" | "deadline";
+
+/**
+ * A candidate row, as the selector sees it before choosing (revision 1, Agent
+ * B's frictions 4 and 5).
+ *
+ * The first cut described only the selector's OUTPUT, so each epic invented its
+ * own candidate and "current inputs" shapes — which is how two layers end up
+ * disagreeing about which package is current. Both live here now.
+ */
+export interface FileablePackageCandidate {
+  packageId: string;
+  packageVersion: number;
+  artifactId: string | null;
+  /** Package lifecycle state as stored. `"final"` is the only fileable value. */
+  status: string;
+  planInputHash: string | null;
+  policyVersion: number | null;
+  validationPassed: boolean | null;
+}
+
+/** What a candidate must match to be current. Compared, never recomputed here. */
+export interface CurrentPipelineInputs {
+  assessmentInputHash: string;
+  planInputHash: string;
+  decisionInputHash: string;
+  policyVersion: number;
+}
 
 /**
  * Every way "nothing may be filed" can be true, enumerated.
@@ -35,6 +70,14 @@ export type SelectionTrigger = "normal" | "deadline";
  */
 export type NotFileableReason =
   | "no_package"
+  /**
+   * A candidate exists but is not `final` (revision 1, Agent B's friction 1).
+   * Distinct from `no_package` because the live HTTP contract already splits
+   * them — `preflightHttpRefusal` answers 409 `PACKAGE_NOT_FILEABLE` here and
+   * 422 `PACKAGE_REVIEW_REQUIRED` for missing/blocked/not-current — and the
+   * merchant action differs: approve it, versus regenerate it, versus wait.
+   */
+  | "not_final"
   | "no_safe_argument"
   | "validation_failed"
   | "hard_block"

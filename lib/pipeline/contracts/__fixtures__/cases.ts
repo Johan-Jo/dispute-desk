@@ -95,7 +95,8 @@ function baseAssessment(
   opts: {
     readiness?: CaseAssessmentSnapshot["completeness"]["readiness"];
     blockers?: string[];
-    gateDecided?: boolean;
+    gateDecision?: CaseAssessmentSnapshot["gateDecision"];
+    reviewRequiredCount?: number;
     stale?: boolean;
   } = {},
 ): CaseAssessmentSnapshot {
@@ -109,7 +110,9 @@ function baseAssessment(
       readiness: opts.readiness ?? "ready",
       blockers: opts.blockers ?? [],
     },
-    gateDecided: opts.gateDecided ?? false,
+    gateDecision: opts.gateDecision ?? null,
+    reviewRequiredCount: opts.reviewRequiredCount ?? 0,
+    modelVersion: 1,
     freshness: freshness(`${caseId}-assessment`, { stale: opts.stale }),
   };
 }
@@ -227,7 +230,7 @@ export const FIXTURE_HARD_BLOCKED: ContractFixture = {
 export const FIXTURE_COVERED: ContractFixture = {
   name: "covered_conceded",
   intent: "Coverage/concession decides the case before anything else. Coverage beats fatal-loss; never auto-file a covered pack.",
-  assessment: baseAssessment("covered_conceded", "moderate", 90, { gateDecided: true }),
+  assessment: baseAssessment("covered_conceded", "moderate", 90, { gateDecision: "coverage" }),
   plan: basePlan("covered_conceded"),
   decision: baseDecision("covered_conceded", "block", ["coverage_active"]),
   expected: {
@@ -256,13 +259,14 @@ export const FIXTURE_REVIEW_REQUIRED_SAFE: ContractFixture = {
   name: "review_required_safe_argument",
   intent:
     "A review_required fact is excluded, the argument is rebuilt from what remains, and the package becomes deadline_only. The normal trigger declines; the deadline trigger may take it.",
-  assessment: baseAssessment("review_required_safe", "moderate", 70),
+  assessment: baseAssessment("review_required_safe", "moderate", 70, { reviewRequiredCount: 1 }),
   plan: basePlan("review_required_safe", {
     deadlineOnly: true,
     excluded: [
       {
         recordId: "review_required_safe#tds",
         fieldKey: "tds_authentication",
+        factCategory: "payment_authentication",
         reason: "review_required",
         merchantReasonToken: "fixtures.reviewRequired.tds",
       },
@@ -282,7 +286,7 @@ export const FIXTURE_REVIEW_REQUIRED_NO_SAFE: ContractFixture = {
   name: "review_required_no_safe_argument",
   intent:
     "Removing the review_required fact leaves no safe rebuttal. Nothing is filed on either trigger and the merchant is notified — the honest outcome, not a reason to file something weaker.",
-  assessment: baseAssessment("review_required_no_safe", "weak", 40),
+  assessment: baseAssessment("review_required_no_safe", "weak", 40, { reviewRequiredCount: 1 }),
   plan: basePlan("review_required_no_safe", {
     included: [],
     deadlineOnly: true,
@@ -291,12 +295,21 @@ export const FIXTURE_REVIEW_REQUIRED_NO_SAFE: ContractFixture = {
       {
         recordId: "review_required_no_safe#delivery",
         fieldKey: "delivery_proof",
+        factCategory: "delivery",
         reason: "review_required",
         merchantReasonToken: "fixtures.reviewRequired.delivery",
       },
     ],
   }),
-  decision: baseDecision("review_required_no_safe", "block", ["review_required_present"]),
+  // Revision 1. Agent C's derivation yields `strength_insufficient` here, not
+  // `review_required_present`: this case is ALSO weak, and the strength floor
+  // fires before the review rung. The contract says reasonCodes are "ordered
+  // most-decisive first", so both belong, in that order. Same action, same
+  // selection on both triggers — only the audit vocabulary was wrong.
+  decision: baseDecision("review_required_no_safe", "block", [
+    "strength_insufficient",
+    "review_required_present",
+  ]),
   expected: {
     normal: "none",
     normalReason: "no_safe_argument",
