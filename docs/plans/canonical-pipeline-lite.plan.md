@@ -129,6 +129,15 @@ The only architectural rules that may block an epic.
 3. A hard block, coverage/concession, staleness, validation failure, or absence of a safe
    argument always prevents filing. A deadline cannot override any of them (this is P-6,
    restated).
+
+   **A hard block is an honesty condition, never an odds condition** (revision 2). Filing
+   nothing does not produce silence: Shopify auto-compiles and files its own scrape, there is
+   no accept/concede mutation, and VDMP/VAMP compute the ratio from disputes *received*, so
+   losing a representment costs nothing. Every guard therefore chooses **our document vs
+   Shopify's scrape**, never submit-vs-silence — and "we might lose" can never justify
+   withholding. Hard block means exactly: coverage/concession, fatal-loss, or an unsafe claim
+   (packageSafety / C-11). **Weak or insufficient strength is not a hard block**; a thin but
+   honest argument still beats a scrape and is still filed at the deadline.
 4. Read paths never persist, regenerate, enqueue, or alter submission state.
 5. `CaseAutomationDecision` is independent of `CaseArgumentPlan`; package selection happens
    separately at execution time.
@@ -485,7 +494,8 @@ change class, and the named post-deploy checks.
 | Approved facts, safe argument, current valid package, automation allowed | Selected and filed through the canonical executor path |
 | Approved + `review_required`, safe argument remains | Review item visible with reason; excluded fact absent; normal trigger files nothing; deadline trigger may select the `deadline_only` package **only with all five P-6 conditions met**; merchant told which state applies |
 | `review_required`, no safe argument remains | `withheld_no_safe_argument`; nothing filed; merchant notified |
-| Hard loss, risk block, covered/conceded | Nothing filed under either trigger |
+| Coverage/concession, fatal-loss, or an unsafe claim | Nothing filed under either trigger — the three honesty-grounded hard blocks |
+| **Weak or insufficient strength, nothing else wrong** | **Auto-file path declines; the DEADLINE PATH FILES.** Strength is an odds judgement and odds never withhold — filing nothing would just hand the issuer Shopify's scrape instead of our letter |
 | Stale assessment, decision, plan or package | Nothing filed; recalculation/rebuild required |
 | Deterministic validation failure | Nothing filed; blocking reason recorded |
 | Ambiguous package selection | Nothing filed; error and alert, never an arbitrary pick |

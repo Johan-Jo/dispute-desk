@@ -66,6 +66,29 @@ describe("shared fixtures", () => {
     }
   });
 
+  /**
+   * Revision 2. The property that stops the defect returning: strength is an
+   * ODDS judgement, and odds may never withhold a filing. Filing nothing does
+   * not produce silence — Shopify files its own scrape — so the only grounds
+   * for a hard block are honesty grounds: coverage/concession, fatal-loss, or an
+   * unsafe claim.
+   */
+  it("never lets weak or insufficient strength produce a hard block", () => {
+    for (const f of CONTRACT_FIXTURES) {
+      if (f.assessment.gateDecision !== null) continue; // coverage / fatal-loss may block
+      if (f.plan.noSafeArgument !== null) continue; // no argument to file is not an odds call
+      const strengthOnly =
+        f.assessment.strength.overall === "weak" || f.assessment.strength.overall === "insufficient";
+      if (!strengthOnly) continue;
+      expect(f.expected.deadlineReason, `${f.name}: strength must not read as a hard block`).not.toBe(
+        "hard_block",
+      );
+      expect(f.expected.deadline, `${f.name}: a thin but honest case still files at the deadline`).toBe(
+        "selected",
+      );
+    }
+  });
+
   it("never files a case with no safe argument, on either trigger", () => {
     const f = FIXTURE_REVIEW_REQUIRED_NO_SAFE;
     expect(f.plan.noSafeArgument).not.toBeNull();

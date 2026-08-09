@@ -170,15 +170,35 @@ export const FIXTURE_STRONG: ContractFixture = {
 
 export const FIXTURE_WEAK: ContractFixture = {
   name: "weak",
-  intent: "Weak strength blocks before completeness is ever consulted — the gate order pipeline.ts already uses.",
+  intent:
+    "A thin but HONEST argument. The auto-file path declines it (status quo), the deadline path FILES it — because filing nothing means Shopify files its scrape instead, so weak evidence is never a reason to withhold.",
   assessment: baseAssessment("weak", "weak", 85),
   plan: basePlan("weak"),
-  decision: baseDecision("weak", "block", ["strength_insufficient"]),
+  /**
+   * REVISION 2 — this fixture previously said `block` / `hard_block` on both
+   * triggers, and it was wrong.
+   *
+   * The reasoning behind the original was "weak strength blocks before
+   * completeness is ever consulted, the gate order pipeline.ts already uses".
+   * That is true of the AUTO-FILE path and was generalised to the DEADLINE path,
+   * which is a different question: the deadline cron files every non-conceded
+   * case with a valid PDF today.
+   *
+   * It is also wrong on the merits. Shopify auto-files its own scrape when we
+   * file nothing, there is no accept mutation, and losing a representment costs
+   * nothing (VDMP/VAMP count disputes received). So withholding a weak case does
+   * not produce silence — it produces Shopify's scrape in place of our letter.
+   * The question is honesty, not odds, and thin evidence honestly argued is not
+   * a dishonest letter.
+   *
+   * `hold_for_deadline`, not `block`: automation policy still declines to
+   * auto-file it, and the deadline still files it.
+   */
+  decision: baseDecision("weak", "hold_for_deadline", ["strength_insufficient"]),
   expected: {
     normal: "none",
-    normalReason: "hard_block",
-    deadline: "none",
-    deadlineReason: "hard_block",
+    normalReason: "deadline_only_not_yet_due",
+    deadline: "selected",
   },
 };
 

@@ -80,6 +80,24 @@ export type NotFileableReason =
   | "not_final"
   | "no_safe_argument"
   | "validation_failed"
+  /**
+   * A HARD BLOCK IS AN HONESTY CONDITION, NEVER AN ODDS CONDITION.
+   * Revision 2. Defined here because leaving it to inference produced a real
+   * defect: `FIXTURE_WEAK` mapped weak strength onto `hard_block`, which would
+   * have stopped the deadline path filing thin-but-honest cases.
+   *
+   * Shopify auto-compiles and files its OWN scrape when we file nothing, there
+   * is no accept/concede mutation, and VDMP/VAMP compute the dispute ratio from
+   * disputes *received* — so losing a representment costs nothing. A guard
+   * therefore never chooses "submit vs stay silent"; it chooses OUR DOCUMENT vs
+   * SHOPIFY'S SCRAPE. "We might lose" can never justify withholding.
+   * Source: docs/evidence-model — 2026-07-30 finding; PR #465.
+   *
+   * Hard block means exactly: coverage/concession (nothing to win), fatal-loss
+   * (our own order record contradicts the letter), or an unsafe claim
+   * (packageSafety / C-11). Weak or insufficient STRENGTH is none of those — a
+   * thin but honest argument beats a scrape and must still be filed.
+   */
   | "hard_block"
   | "coverage_or_concession"
   | "stale"

@@ -107,7 +107,8 @@ Migrations are applied in-session with an explicit target (`npm run db:migrate:d
 | Approved facts, safe argument, current valid package, automation allowed | Selected and filed through the canonical executor path |
 | Approved + `review_required`, safe argument remains | Review item visible with reason; excluded fact absent; normal trigger files nothing; deadline trigger may select the `deadline_only` package **only with all five P-6 conditions met**; merchant told which state applies |
 | `review_required`, no safe argument remains | `withheld_no_safe_argument`; nothing filed; merchant notified |
-| Hard loss, risk block, covered/conceded | Nothing filed under either trigger |
+| Coverage/concession, fatal-loss, or an unsafe claim | Nothing filed under either trigger — the three honesty-grounded hard blocks |
+| **Weak or insufficient strength, nothing else wrong** | **Auto-file path declines; the DEADLINE PATH FILES.** Strength is an odds judgement and odds never withhold — filing nothing would just hand the issuer Shopify's scrape instead of our letter |
 | Stale assessment, decision, plan or package | Nothing filed; recalculation/rebuild required |
 | Deterministic validation failure | Nothing filed; blocking reason recorded |
 | Ambiguous package selection | Nothing filed; error and alert, never an arbitrary pick |
