@@ -469,9 +469,9 @@ function reasonFor(
  *
  * The copy variant never reports a single successful verification as "both
  * matched":
- *   - AVS + CVV both match → bothMatched
- *   - AVS only: A (street) → streetMatched; W (zip) → postalMatched;
- *     otherwise → addressMatched
+ *   - address + security code both match → bothMatched
+ *   - address only: the canonical `street_match` result → streetMatched;
+ *     `postal_match` → postalMatched; any other match → addressMatched
  *   - CVV only → `cvvOnlyInternal`. PR-C2 decision 1: that row is no longer
  *     bank-eligible, so the copy says what is true — the match is on record
  *     and kept internal, because a security-code match is not an address
@@ -484,9 +484,18 @@ function avsCvvReasonFromPayload(payload: unknown): I18nToken | null {
     return { key: `${REASONS_NS}.avsCvv.bothMatched` };
   }
   if (v.addressVerified) {
-    if (v.avs.code === "A") return { key: `${REASONS_NS}.avsCvv.streetMatched` };
-    if (v.avs.code === "W") return { key: `${REASONS_NS}.avsCvv.postalMatched` };
-    return { key: `${REASONS_NS}.avsCvv.addressMatched` };
+    // Selected from the CANONICAL normalized result, never from the letter
+    // (PR-C3). `A`/`W` were a seventh reading of the code space living in the
+    // copy layer, and a copy layer that knows what a letter means is a copy
+    // layer that can disagree with the grader about it.
+    switch (v.avs.normalized) {
+      case "street_match":
+        return { key: `${REASONS_NS}.avsCvv.streetMatched` };
+      case "postal_match":
+        return { key: `${REASONS_NS}.avsCvv.postalMatched` };
+      default:
+        return { key: `${REASONS_NS}.avsCvv.addressMatched` };
+    }
   }
   if (v.securityCodeVerified) return { key: `${REASONS_NS}.avsCvv.cvvOnlyInternal` };
   return null;

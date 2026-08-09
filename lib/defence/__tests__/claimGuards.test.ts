@@ -256,12 +256,30 @@ describe("claimGuards", () => {
     expect(result.failures.some((f) => f.guardId === "avs_address_verified_claim")).toBe(true);
   });
 
-  it("AVS mention passes when the AVS result is a match", () => {
+  it("AVS mention passes on a primary-sourced (network, code) cell", () => {
+    const result = runClaimGuards({
+      narrativeSections: narrative({ paymentAuthenticationArgument: { text: "AVS confirmed the cardholder address." } }),
+      approvedFacts: [fact({ value: { avsResult: "Y", network: "visa" } })],
+    });
+    expect(result.failures.some((f) => f.guardId === "avs_address_verified_claim")).toBe(false);
+  });
+
+  // PR-C3: the same letter on a network whose AVS table we have never read
+  // authorizes nothing. Register R-E is a Visa document.
+  it("AVS mention FAILS on a Mastercard Y — no sourced cell", () => {
+    const result = runClaimGuards({
+      narrativeSections: narrative({ paymentAuthenticationArgument: { text: "AVS confirmed the cardholder address." } }),
+      approvedFacts: [fact({ value: { avsResult: "Y", network: "mastercard" } })],
+    });
+    expect(result.failures.some((f) => f.guardId === "avs_address_verified_claim")).toBe(true);
+  });
+
+  it("AVS mention FAILS on a historical fact with no network — fails closed", () => {
     const result = runClaimGuards({
       narrativeSections: narrative({ paymentAuthenticationArgument: { text: "AVS confirmed the cardholder address." } }),
       approvedFacts: [fact({ value: { avsResult: "Y" } })],
     });
-    expect(result.failures.some((f) => f.guardId === "avs_address_verified_claim")).toBe(false);
+    expect(result.failures.some((f) => f.guardId === "avs_address_verified_claim")).toBe(true);
   });
 
   it("fulfilled claim fails on UNFULFILLED order with no separate delivery fact", () => {

@@ -192,7 +192,8 @@ export const FACT_PREDICATES: Record<FactPredicateId, FactPredicate> = {
 
   avs_and_cvv_match: {
     id: "avs_and_cvv_match",
-    description: "payment_authentication / payment_auth with a full AVS match (Y) AND a CVV match (M)",
+    description:
+      "payment_authentication / payment_auth whose ADDRESS result is the canonical citable match (a primary-sourced (network, code) cell, register R-E) AND whose SECURITY-CODE result is a match",
     evaluate: (facts) =>
       paymentVerifications(facts).some((v) => hasFullAvsAndCvvMatch(v)),
   },
@@ -207,8 +208,13 @@ export const FACT_PREDICATES: Record<FactPredicateId, FactPredicate> = {
   avs_address_verified: {
     id: "avs_address_verified",
     description:
-      "payment_authentication / payment_auth whose AVS result is a match — the ONLY predicate that may ground an address-verification claim",
-    evaluate: (facts) => paymentVerifications(facts).some((v) => v.addressVerified),
+      "payment_authentication / payment_auth whose AVS result is a PRIMARY-SOURCED match (register R-E names Y and M) — the ONLY predicate that may ground an address-verification claim",
+    // PR-C3 decision 3: authorizing bank-facing text needs the citable
+    // standard, not merely a match. A `W` postal-only result still scores and
+    // still shows on the merchant's screen; it can no longer license a
+    // sentence filed under a rule that names `Y` or `M`. An unmapped code
+    // fails here too — which is the "refused" half of "recorded, not parked".
+    evaluate: (facts) => paymentVerifications(facts).some((v) => v.citableAddressVerified),
   },
 
   /**

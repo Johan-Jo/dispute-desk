@@ -1685,7 +1685,8 @@
         "outcomeAvsCitedClean": "L'adresse correspondante a été citée comme preuve dans la réponse au litige.",
         "outcomeNothingCited": "Aucun de ces résultats n'a été cité comme preuve dans la réponse au litige — seuls les résultats qui renforcent le dossier sont envoyés à la banque.",
         "outcomeSingleNotCited": "Il n'a pas été cité comme preuve — il affaiblirait la réponse au litige.",
-        "outcomeCvvOnlyNotCited": "Le code de sécurité correspondant est conservé comme information interne — il n'est pas cité comme preuve dans la réponse au litige, car un code de sécurité correspondant n'est pas une correspondance d'adresse."
+        "outcomeCvvOnlyNotCited": "Le code de sécurité correspondant est conservé comme information interne — il n'est pas cité comme preuve dans la réponse au litige, car un code de sécurité correspondant n'est pas une correspondance d'adresse.",
+        "outcomeAvsMatchedNotCitable": "L'adresse correspondante compte dans l'évaluation de votre dossier, mais elle n'est pas citée dans la réponse au litige : nous ne citons un résultat d'adresse que lorsque les règles du réseau de cartes le reconnaissent comme preuve, ce qui n'est pas le cas ici."
       },
       "billingAddress": {
         "title": "Les adresses de facturation et de livraison ne correspondent pas",
@@ -1713,6 +1714,10 @@
         "title": "Rétrofacturations antérieures sur ce compte",
         "explanation": "Ce client a déjà contesté une commande précédente dans votre boutique. Reste interne — mentionner l'historique de litiges d'un client à la banque émettrice affaiblit votre réponse au lieu de la renforcer. Affiché ici pour que vous jugiez avec quelle vigueur défendre ce dossier.",
         "explanationWithCount": "Ce client a {prior} commandes précédentes dans votre boutique, dont au moins une a fait l'objet d'une rétrofacturation. Reste interne — mentionner l'historique de litiges d'un client à la banque émettrice affaiblit votre réponse au lieu de la renforcer. Affiché ici pour que vous jugiez avec quelle vigueur défendre ce dossier."
+      },
+      "avsCodeUnmapped": {
+        "title": "Résultat de vérification d'adresse non reconnu",
+        "explanation": "L'émetteur a renvoyé un résultat de vérification d'adresse que nous ne connaissons pas (AVS {avs}). Il est consigné pour information et n'est utilisé comme preuve dans aucun sens : il ne renforce ni n'affaiblit le dossier, et ne met rien en attente."
       }
     },
     "deliveryProof": {

@@ -329,6 +329,14 @@ function extractValue(
       const verification = readPaymentVerification(p);
       const verificationSummary = citableVerificationSummaryEn(verification);
       return {
+        // The NETWORK travels with the codes (PR-C3). Citation authority is a
+        // property of the (network, code) cell, so a fact that loses its
+        // network loses the only thing that could authorize it — and this
+        // projection used to drop `cardCompany` on the floor, which meant a
+        // Visa-citable fact re-read as unknown-network downstream. Persisted
+        // even when nothing is citable: it is not a claim, it is the context
+        // every re-validation needs.
+        network: verification.network,
         avsResult: verification.citable ? verification.avs.code : null,
         cvvResult: verification.citable ? verification.cvv.code : null,
         addressVerified: verification.addressVerified,

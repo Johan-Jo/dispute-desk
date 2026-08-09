@@ -15,10 +15,10 @@ import {
   cardholderNameFromPayload,
   detectCardholderNameMismatch,
 } from "./nameMismatch";
-import { avsBucket, cvvBucket, readPaymentVerification } from "./paymentVerification";
+import { readPaymentVerification } from "./paymentVerification";
 
 /* MERCHANT-LANGUAGE RULE (2026-07-23): never lead with a bare gateway
- * code — nobody but a bank knows what "AVS code Z" indicates. ONE
+ * code — nobody but a bank knows what a bare AVS letter indicates. ONE
  * combined plain-words sentence covers both results (codes
  * parenthesized at the end), then one short outcome sentence with the
  * consistent "cited as evidence" phrasing. These English sentences
@@ -61,6 +61,12 @@ const OUTCOME_EN = {
   onlyAvsCited:
     "Only the matching address was cited as evidence in the dispute response — the code mismatch would weaken it.",
   avsCitedClean: "The matching address was cited as evidence in the dispute response.",
+  // PR-C3: the address matched, but the (network, code) cell it resolved
+  // through carries no primary-source citation authority. Deliberately NOT the
+  // "would weaken" wording: nothing here is weak, we simply cannot name the
+  // scheme rule we would be citing under.
+  avsMatchedNotCitable:
+    "The matching address counts towards your case assessment, but it is not cited in the dispute response — we cite an address result only when the card scheme's own rules recognise that result as evidence, and this one is not covered.",
   nothingCited:
     "Neither result was cited as evidence in the dispute response — only results that strengthen the case go to the bank.",
   singleNotCited: "It was not cited as evidence — it would weaken the dispute response.",
@@ -107,19 +113,38 @@ export function buildInternalSignalsByField(
     const verification = readPaymentVerification(avsPayload);
     const avs = verification.avs.code;
     const cvv = verification.cvv.code;
-    const avsMismatch = verification.avs.present && !verification.addressVerified;
-    const cvvMismatch = verification.cvv.present && !verification.securityCodeVerified;
+    // A FAILURE is the canonical `no_match` result and nothing else (PR-C3).
+    // The old test — present && !addressVerified — counted `unknown`,
+    // `not_checked` and `unavailable` as mismatches, so an unrecognised code
+    // produced a warning-severity "did not fully pass" on top of its own
+    // diagnostic. The issuer never said the address failed; our map simply
+    // does not carry the letter.
+    const avsFailed = verification.avs.normalized === "no_match";
+    const cvvFailed = verification.cvv.outcome === "no_match";
+    // TWO DIFFERENT QUESTIONS, KEPT APART (PR-C3):
+    //   avsMatched — did the address match? Factual; drives the result
+    //                sentence and the "partially passed" title.
+    //   avsCited   — may we cite it to the issuer? Only a primary-sourced
+    //                (network, code) cell. A scoring match resolved through an
+    //                unverified cell is not citable.
+    // Saying "the matching address was cited" off `avsMatched` told the
+    // merchant we had filed something we deliberately withhold.
     const avsMatched = verification.addressVerified;
+    const avsCited = verification.citableAddressVerified;
     const cvvMatched = verification.securityCodeVerified;
-    if (avsMismatch || cvvMismatch) {
+    // Fire on a genuine failure, or on a CVV-only match — the case where the
+    // merchant must be told the match is kept internal (PR-C2 decision 1).
+    if (avsFailed || cvvFailed || verification.cvvOnly) {
       // MERCHANT-LANGUAGE RULE: one combined plain-words sentence for
-      // both results, then one short outcome sentence with consistent
-      // "cited as evidence" phrasing. "Cited" follows the SCORING match
-      // sets — what actually reaches the positive bucket / narrative.
+      // both results, then one short outcome sentence. "Cited" follows the
+      // CITATION authority — the sourced cell — not the scoring match set.
       // Pure not-checked results carry no outcome: nothing was cited
       // or withheld, the result sentence stands alone.
-      const avsB = avsBucket(avs) ?? "none";
-      const cvvB = cvvBucket(cvv) ?? "none";
+      // Buckets come from the verification we already have — network-aware,
+      // normalized once. Re-reading the raw code through a code-only helper
+      // would re-normalize it as an unknown-network payload (PR-C3).
+      const avsB = verification.avs.outcome ?? "none";
+      const cvvB = verification.cvv.outcome ?? "none";
       const result = AVS_CVV_RESULT_EN[`${avsB}|${cvvB}`];
       if (result) {
         const sentences: string[] = [
@@ -129,10 +154,17 @@ export function buildInternalSignalsByField(
           // Always CVV-only here: a both-matched fact never reaches this
           // block (it has no mismatch to warn about).
           sentences.push(OUTCOME_EN.cvvOnlyNotCited);
-        } else if (avsMatched) {
+        } else if (avsCited) {
           sentences.push(
             cvvB === "no_match" ? OUTCOME_EN.onlyAvsCited : OUTCOME_EN.avsCitedClean,
           );
+        } else if (avsMatched) {
+          // A scoring match whose (network, code) cell is unverified, or a
+          // partial address result. It still counts in the assessment; it is
+          // withheld because no scheme rule we hold recognises that cell as
+          // evidence. That is not the "would weaken the response" case and
+          // must not borrow its words.
+          sentences.push(OUTCOME_EN.avsMatchedNotCitable);
         } else if (
           (avsB === "no_match" && cvvB === "none") ||
           (cvvB === "no_match" && avsB === "none")
@@ -151,6 +183,25 @@ export function buildInternalSignalsByField(
           severity: "warning",
         });
       }
+    }
+
+    // UNMAPPED AVS CODE → an internal diagnostic, and nothing more (PR-C3).
+    //
+    // The issuer returned something the canonical map has no entry for. It
+    // earns no grade, no citation and no completeness credit, and it asserts
+    // NOTHING against the cardholder — an unrecognised code is a gap in our
+    // map, not a failed verification. The merchant is told plainly, and the
+    // dispute is NOT parked: escalation happens only if a package tries to
+    // rely on the code, which the claim guards refuse on their own.
+    if (verification.avs.unmapped) {
+      push("avs_cvv_match", {
+        id: "internal:avs_code_unmapped",
+        label: "Unrecognised address-verification result",
+        reason: `The issuer returned an address-verification result we do not have on file (AVS ${verification.avs.code}${
+          verification.network === "unknown" ? "" : `, ${verification.network}`
+        }). It is recorded for review and is not used as evidence either way — it neither strengthens nor weakens the case, and nothing is on hold because of it.`,
+        severity: "info",
+      });
     }
 
     // Cardholder-name mismatch → anchor on avs_cvv_match. The gateway

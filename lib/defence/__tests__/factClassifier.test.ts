@@ -179,7 +179,7 @@ describe("classifyFacts", () => {
         caseStrength: "moderate",
         sections: [
           section({
-            data: { avsResultCode: "Y", cvvResultCode: "M" },
+            data: { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Visa" },
             fieldsProvided: ["avs_cvv_match"],
           }),
           section({
@@ -211,7 +211,7 @@ describe("classifyFacts", () => {
       baseInput({
         sections: [
           section({
-            data: { avsResultCode: "Y", cvvResultCode: "M" },
+            data: { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Visa" },
             fieldsProvided: ["avs_cvv_match"],
           }),
           section({
@@ -247,7 +247,7 @@ describe("classifyFacts", () => {
       baseInput({
         sections: [
           section({
-            data: { avsResultCode: "Y", cvvResultCode: "M" },
+            data: { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Visa" },
             fieldsProvided: ["avs_cvv_match"],
           }),
           section({
@@ -288,7 +288,7 @@ describe("classifyFacts", () => {
       baseInput({
         sections: [
           section({
-            data: { avsResultCode: "Y", cvvResultCode: "M" },
+            data: { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Visa" },
             fieldsProvided: ["avs_cvv_match"],
           }),
           section({
@@ -353,7 +353,7 @@ describe("classifyFacts", () => {
       baseInput({
         coverage: { state: "covered_shopify" },
         sections: [
-          section({ data: { avsResultCode: "Y", cvvResultCode: "M" }, fieldsProvided: ["avs_cvv_match"] }),
+          section({ data: { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Visa" }, fieldsProvided: ["avs_cvv_match"] }),
         ],
       }),
     );
@@ -373,7 +373,7 @@ describe("classifyFacts", () => {
       baseInput({
         caseStrength: "weak",
         sections: [
-          section({ data: { avsResultCode: "Y", cvvResultCode: "M" }, fieldsProvided: ["avs_cvv_match"] }),
+          section({ data: { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Visa" }, fieldsProvided: ["avs_cvv_match"] }),
           section({ data: { match: true }, fieldsProvided: ["billing_address_match"] }),
         ],
       }),
@@ -388,7 +388,7 @@ describe("classifyFacts", () => {
         caseStrength: "moderate",
         fatalLoss: { triggered: true, reason: "refund_issued" },
         sections: [
-          section({ data: { avsResultCode: "Y", cvvResultCode: "M" }, fieldsProvided: ["avs_cvv_match"] }),
+          section({ data: { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Visa" }, fieldsProvided: ["avs_cvv_match"] }),
           section({ data: { match: true }, fieldsProvided: ["billing_address_match"] }),
         ],
       }),
@@ -402,7 +402,7 @@ describe("classifyFacts", () => {
       baseInput({
         caseStrength: "strong",
         sections: [
-          section({ data: { avsResultCode: "Y", cvvResultCode: "M" }, fieldsProvided: ["avs_cvv_match"] }),
+          section({ data: { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Visa" }, fieldsProvided: ["avs_cvv_match"] }),
           section({ data: { match: true }, fieldsProvided: ["billing_address_match"] }),
           section({ data: { proofType: "delivered_confirmed" }, fieldsProvided: ["delivery_proof"] }),
         ],
@@ -415,7 +415,7 @@ describe("classifyFacts", () => {
     const result = classifyFacts(
       baseInput({
         sections: [
-          section({ data: { avsResultCode: "Y", cvvResultCode: "M" }, fieldsProvided: ["avs_cvv_match"] }),
+          section({ data: { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Visa" }, fieldsProvided: ["avs_cvv_match"] }),
           section({ data: { match: true }, fieldsProvided: ["billing_address_match"] }),
         ],
         manualRows: [
@@ -444,7 +444,7 @@ describe("classifyFacts", () => {
     const result = classifyFacts(
       baseInput({
         sections: [
-          section({ data: { avsResultCode: "Y", cvvResultCode: "M" }, fieldsProvided: ["avs_cvv_match"] }),
+          section({ data: { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Visa" }, fieldsProvided: ["avs_cvv_match"] }),
           section({ data: { match: true }, fieldsProvided: ["billing_address_match"] }),
           section({ data: { locationMatch: "no_match" }, fieldsProvided: ["ip_location_check"] }),
           section({ data: { consistent: false }, fieldsProvided: ["device_session_consistency"] }),

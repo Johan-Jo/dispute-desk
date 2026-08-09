@@ -1042,7 +1042,8 @@
         "outcomeAvsCitedClean": "The matching address was cited as evidence in the dispute response.",
         "outcomeNothingCited": "Neither result was cited as evidence in the dispute response — only results that strengthen the case go to the bank.",
         "outcomeSingleNotCited": "It was not cited as evidence — it would weaken the dispute response.",
-        "outcomeCvvOnlyNotCited": "The matching security code is kept as an internal record — it is not cited in the dispute response, because a security-code match is not an address match."
+        "outcomeCvvOnlyNotCited": "The matching security code is kept as an internal record — it is not cited in the dispute response, because a security-code match is not an address match.",
+        "outcomeAvsMatchedNotCitable": "The matching address counts towards your case assessment, but it is not cited in the dispute response — we cite an address result only when the card scheme's own rules recognise that result as evidence, and this one is not covered."
       },
       "billingAddress": {
         "title": "Billing and shipping addresses do not match",
@@ -1070,6 +1071,10 @@
         "title": "Prior chargebacks on this account",
         "explanation": "This customer has charged back an earlier order with your store. Kept internal — naming a customer's dispute history to the issuing bank weakens your response rather than strengthening it. It is shown here so you can weigh how hard to fight this case.",
         "explanationWithCount": "This customer has {prior} earlier orders with your store, and at least one of them was charged back. Kept internal — naming a customer's dispute history to the issuing bank weakens your response rather than strengthening it. It is shown here so you can weigh how hard to fight this case."
+      },
+      "avsCodeUnmapped": {
+        "title": "Unrecognised address-verification result",
+        "explanation": "The issuer returned an address-verification result we do not have on file (AVS {avs}). It is recorded for review and is not used as evidence either way — it neither strengthens nor weakens the case, and nothing is on hold because of it."
       }
     },
     "evidenceTabExtra": {

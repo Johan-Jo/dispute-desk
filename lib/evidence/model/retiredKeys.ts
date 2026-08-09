@@ -16,7 +16,8 @@
  *     country. Two merchant-held addresses. No AVS result was read at any
  *     point, so the Visa CE-chart Item 3 remedy it purported to satisfy
  *     ("delivered to the same physical address for which the Merchant received
- *     an AVS match of Y or M") had no AVS input at all.
+ *     a qualifying AVS match — see register R-E and the canonical cells in
+ *     `lib/argument/avsCodeMap.ts`) had no AVS input at all.
  *   - `collectedByCustomer` was set from a carrier event message classified as
  *     `collected_at_pickup`. No signature, identification or BankID artifact is
  *     read or required; the "ID-verified collection" premise was a

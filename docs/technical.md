@@ -2181,9 +2181,58 @@ The `required_if_card_payment` mode now checks `OrderContext.avsCvvAvailable`: w
 
 **Decision 2 — completeness keeps ONE grouped payment-verification requirement**, with AVS and CVV as subfacts beneath it. No checklist row was added; the denominator and thresholds are unchanged, which matters because P-7 later calibrates on them.
 
-**Not decided here:** which codes qualify, per network. The carried-over set (`Y A W X D M`) is network-agnostic and broader than the only V-PRIMARY rule we hold (R-E qualifies `Y` or `M`). PR-C3 owns the network map and narrows the citation path; `hasFullAvsMatch` / `hasFullAvsAndCvvMatch` stay strict (`Y`, `Y`+`M`) until then.
+**Which codes qualify, per network:** answered by PR-C3 below.
 
 **Measured on prod before merge** (read-only, `scripts/sql/prc2-cvv-only-census.sql`, 2026-08-08): 130 packs carry an `avs_cvv_match` section — both matched 41, AVS-only 4, **CVV-only 76**, neither 9. AVS `N` alone is 73 of 130. 68 open disputes carry a CVV-only verification. AVS `F` appears on 0 packs, so the descriptive-vs-scoring disagreement pinned in the owner module is currently theoretical. No pack is rewritten and no dispute is remediated by this change.
+
+#### AVS normalization per (network, code) — PR-C3 (2026-08-08)
+
+`lib/argument/avsCodeMap.ts` normalizes an AVS response through a table keyed on **(network, code)**, and `paymentVerification.ts` stays the only predicate surface over it. Two questions are answered separately, because conflating them is how a postal-code match came to stand in for a rule about the delivery address:
+
+| Question | Answer | Vocabulary |
+|---|---|---|
+| What did the issuer say? | `AvsNormalizedResult` — deliberately broad, drives merchant copy, scoring inputs and diagnostics | `full_match` · `street_match` · `postal_match` · `no_match` · `not_checked` · `unavailable` · `unknown` |
+| May we cite it? | `ceItem3Citable` — deliberately narrow (decision 3) | **`(visa, Y)` and `(visa, M)` only** |
+
+**Citation authority is the (network, code) CELL, not the code.** Decision 3 requires a **primary-sourced cell**: register R-E is a *Visa* document — §4 of the Visa CE chart, Item 3 — and a rule quoted from one network's book is not evidence about another's. So the shared base table's `Y`/`M` are `unverified` and non-citable, and the **Visa override** supplies the sourced citation authority. Mastercard, Amex and unknown-network `Y`/`M` remain **valid internal scoring and display results** — they grade exactly as before — but cannot be cited until each has its own primary source. `unknown` is a missing *brand*, never a negative result: it changes nothing about grading or merchant copy, it only means we cannot name the rule we would be citing under.
+
+There is deliberately **no code-only citability helper**. `isCeItem3Citable(network, code)` is the only entry point; the earlier `isCeItem3Code(code)` was removed because it would answer "yes" for a Mastercard `Y` that no document we hold speaks to — exactly the bypass this rule exists to prevent, and `lib/argument/__tests__/avsCodeMap.test.ts` asserts the module exposes no such shape.
+
+**Authority is recorded per cell, not assumed.** Every entry carries `v_primary` / `v_secondary` / `unverified` per `p0/primary-source-register.md`, and **an `unverified` cell is never citable** — the register's exit rule applied to code semantics. Stated plainly: **we hold no primary Mastercard or Amex AVS code table**, so their overrides are **empty** and their codes inherit the unverified base. The structure is keyed on (network, code) so a sourced table drops in without touching a consumer; nothing pretends to a network-specific meaning it cannot quote.
+
+**The network travels with the codes.** `factClassifier.extractValue` used to drop `cardCompany`, so a Visa-citable fact re-read downstream as unknown-network — non-citable — and its Evidence Basis row vanished between build and render. The projection now persists the resolved `network` on the fact value (always, citable or not: it is context, not a claim), and `resolveCardNetwork` reads that canonical field first. **A historical fact with no network fails closed for citation** — no bank eligibility, no Evidence Basis row, no thesis token, no claim guard — while staying fully readable internally.
+
+The combined predicate follows the same rule: `hasCitableAddressMatch` replaced the literal `avs.code === "Y"`, which was both too narrow (a **Visa `M`** is named by the same rule as `Y`) and too loose (it accepted a `Y` on any network). `avs_and_cvv_match` is now a citable address match plus a CVV match, so **Visa `Y` or `M` + CVV `M`** satisfies it.
+
+**Unknown, missing and unmapped codes** resolve to `unknown` and earn nothing anywhere — no grade, no citation, no completeness credit — and are never read as a failure: an unrecognised code is a gap in *our* map, not the issuer's verdict, so its merchant-facing bucket is "not checked", never "did not match". A code outside the table raises an internal diagnostic (`internal:avs_code_unmapped`, severity `info`, localized in 6 locales) and **does not park the dispute**. Escalation happens only when a package tries to *rely* on the code: `avs_address_verified` is false, so the claim guard refuses the sentence and the existing validate → one retry → mark-failed path runs. `tests/unit/avsUnmappedCodeContainment.test.ts` asserts both halves separately, and proves the no-parking half by absence over the sources that can park a dispute rather than by one fixture not parking.
+
+`Z` (postal matched, street **failed**) normalizes to `no_match`: a component definitively failed, the merchant view is deliberately coarse, and the scorer has always treated it as a non-match. `postal_match` is reserved for `W`, where the street was not asserted against. AVS `F` — the descriptive-vs-scoring divergence PR-C2 pinned — is resolved by omission: it has no sourced entry, so it is unmapped and credits nothing.
+
+**The canonical model carries the normalization, and `MODEL_VERSION` is now 2.** The `avs_cvv_match` payload in `lib/evidence/model/payloads.ts` derives through `readPaymentVerification` and preserves the network, the raw code (audit/display), the normalized AVS result, its authority, the unmapped flag, the scoring-match and citation states, the CVV subfact and the cardholder name. The model does not duplicate the map or reinterpret a letter. A version-1 snapshot has none of those keys, so anything reading a persisted model must re-derive rather than assume the new shape.
+
+**An unmapped code is not a mismatch.** Both merchant-signal implementations previously defined an AVS failure as `present && !addressVerified`, which counted `unknown`, `not_checked` and `unavailable` as failures — so an unrecognised code produced a warning-severity "did not fully pass" on top of its own diagnostic, telling the merchant the issuer rejected an address the issuer never commented on. The failure test is now the canonical result: **only `no_match`**. A `Q` alone yields exactly one informational `internal:avs_code_unmapped` signal; `Q` with a genuine CVV failure reports the CVV and describes the AVS half as *not checked*; a missing code stays absence, with no diagnostic at all.
+
+**No consumer interprets a raw code — the class is closed, not just the instances.** Three sites still held their own reading of the letters after the first pass: the line-item copy branched on `A`/`W` to pick a street/postal phrase, the portal pack viewer kept its own AVS label map (which disagreed with the canonical layer on `Z` and knew nothing about the network), and the `unauthorized_fraud_auth_signal_stack` prompt spelled the rule out in gateway codes — wrong in both directions once citation became a `(network, code)` question. All three now read the canonical normalized result; the viewer still *shows* the raw code for audit, but it no longer decides meaning, tone or classification. The prompt names the approved `avs_and_cvv_match` fact and quotes the `verificationSummary` the classifier already built, and says nothing about codes or networks.
+
+`tests/unit/paymentVerificationSingleOwner.test.ts` is the guard, and it is now proven to bite: five pure detectors (match-set literal, named code set, raw-code branch **including the `v.avs.code === "A"` property form**, letter-keyed map, raw-code rule inside a string) run over `lib/`, `app/` and `components/`, and a companion block feeds each detector the verbatim defect shape it missed the first time. It caught one more leak while being written — a history comment that restated the old code rule.
+
+**"Matched" and "cited" are different claims in merchant copy.** The internal-signal outcome sentence was selected off the factual `addressVerified`, so a Mastercard `Y` told the merchant *"the matching address was cited as evidence in the dispute response"* about a result the system deliberately withholds — 20 of 130 prod packs. Both implementations now keep the two apart: `avsMatched` (`addressVerified`) drives the result sentence and the "partially passed" title; **only** `avsCited` (`citableAddressVerified`) can say a result was cited. A matched-but-not-citable address — any `Y`/`M` outside Visa, or a partial result like `W` — gets a new outcome (`outcomeAvsMatchedNotCitable`, 6 locales) explaining that it counts towards the case assessment but is not cited because the card scheme's own rules do not recognise that result as evidence. It deliberately does **not** reuse the "would weaken it" wording: nothing here is weak, we simply cannot name the rule we would cite under. `tests/unit/avsCitationLanguage.test.ts` asserts the same matrix against the server and client implementations, including that both emit the outcome sentence verbatim.
+
+**The code-only normalization path is gone.** `avsBucket(code)` / `cvvBucket(code)` took a letter with no network and normalized it as an unknown-network payload — and both signal paths held a fully normalized `PaymentVerification` before throwing it away to call them. Consumers read `verification.avs.outcome` / `verification.cvv.outcome`; `readPaymentVerification` takes the whole payload, so the network is never optional at the boundary, and `tests/unit/paymentVerificationSingleOwner.test.ts` fails the build on any AVS normalization that omits it.
+
+**Grading does not move.** `isAddressMatchResult` (the three match flavours) reproduces the carried-over scoring set `Y A W X D M` exactly, now derived from the table instead of restated, so the descriptive and scoring readings cannot disagree. The bank-visible delta is the citation narrowing alone.
+
+**Measured on prod before merge** (read-only, `scripts/sql/prc3-avs-network-census.sql`, 2026-08-08). Networks on AVS-bearing packs: Mastercard 86, Visa 24, Amex 1, **no brand at all 19**. The (network, code) domain: `Y` on Visa 24 / MC 8 / Amex 1 / unknown 11, `N` on MC 73, `A` on MC 1, `U` on MC 2, `Z` on MC 2, absent 8. **Unmapped codes: 0**, so the conservative branch has no production population today and is held by tests alone.
+
+Citation-narrowing delta — **21 packs across 21 disputes, 11 of them open**:
+
+| why | packs |
+|---|---|
+| `Y`/`M` on a network with no primary source (MC 8, Amex 1, unknown 11) | 20 |
+| partial code (the single Mastercard `A`) | 1 |
+| **total** | **21** |
+
+Package versions on those disputes: draft 4, stale 4, submitted 7, failed 2, superseded 2. The 7 `submitted` are letters already filed; PR-C3 does not touch them. Citable packs after the change: **24** (Visa `Y`). No pack is rewritten, no dispute regenerated, no submission state changed.
 
 ### Risk Assessment Collection
 

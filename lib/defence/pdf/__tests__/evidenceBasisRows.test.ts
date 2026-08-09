@@ -8,7 +8,7 @@ function fact(overrides: Partial<EvidenceFact> = {}): EvidenceFact {
     id: "f0",
     category: "payment_authentication",
     label: "Payment authentication",
-    value: { avsResult: "Y", cvvResult: "M" },
+    value: { network: "visa", avsResult: "Y", cvvResult: "M" },
     source: "shopify_order",
     sourceRef: null,
     strength: "strong",
@@ -50,6 +50,7 @@ describe("buildEvidenceBasisRows", () => {
     const rows = buildEvidenceBasisRows([
       fact({
         value: {
+          network: "visa",
           avsResult: "Y",
           cvvResult: "M",
           threeDS: true,
@@ -74,7 +75,7 @@ describe("buildEvidenceBasisRows", () => {
     // the raw codes. The formatter still translates rather than
     // quoting them verbatim.
     const rows = buildEvidenceBasisRows([
-      fact({ value: { avsResult: "Y", cvvResult: "M", threeDS: true } }),
+      fact({ value: { network: "visa", avsResult: "Y", cvvResult: "M", threeDS: true } }),
     ]);
     // Case-insensitive — the renderer capitalizes the leading
     // character at the boundary; the underlying translation is what
@@ -212,6 +213,7 @@ describe("buildEvidenceBasisRows", () => {
     const rows = buildEvidenceBasisRows([
       fact({
         value: {
+          network: "visa",
           avsResult: "Y",
           cvvResult: "N",
           verificationSummary:
@@ -309,7 +311,7 @@ describe("buildEvidenceBasisRows — uncitable payment verification (PR-C2)", ()
 
   it("AVS-only still renders", () => {
     const rows = buildEvidenceBasisRows([
-      fact({ id: "avs", value: { avsResult: "Y", cvvResult: "N" }, ...legacyCitableFlags }),
+      fact({ id: "avs", value: { network: "visa", avsResult: "Y", cvvResult: "N" }, ...legacyCitableFlags }),
     ]);
     expect(rows).toHaveLength(1);
     expect(rows[0].value).toMatch(/billing address matched/i);
@@ -318,7 +320,7 @@ describe("buildEvidenceBasisRows — uncitable payment verification (PR-C2)", ()
 
   it("AVS + CVV still renders both halves", () => {
     const rows = buildEvidenceBasisRows([
-      fact({ id: "both", value: { avsResult: "Y", cvvResult: "M" }, ...legacyCitableFlags }),
+      fact({ id: "both", value: { network: "visa", avsResult: "Y", cvvResult: "M" }, ...legacyCitableFlags }),
     ]);
     expect(rows).toHaveLength(1);
     expect(rows[0].value).toMatch(/billing address matched/i);
@@ -330,6 +332,7 @@ describe("buildEvidenceBasisRows — uncitable payment verification (PR-C2)", ()
       fact({
         id: "summary",
         value: {
+          network: "visa",
           avsResult: "Y",
           cvvResult: "M",
           verificationSummary:
@@ -495,6 +498,7 @@ describe("buildEvidenceBasisRows — a persisted summary is not authority (PR-C2
       fact({
         id: "legacy-avs",
         value: {
+          network: "visa",
           avsResult: "Y",
           cvvResult: "N",
           verificationSummary: "the billing address matched the issuer's records",
@@ -512,6 +516,7 @@ describe("buildEvidenceBasisRows — a persisted summary is not authority (PR-C2
       fact({
         id: "legacy-both",
         value: {
+          network: "visa",
           avsResult: "Y",
           cvvResult: "M",
           verificationSummary:
@@ -532,6 +537,7 @@ describe("buildEvidenceBasisRows — a persisted summary is not authority (PR-C2
       fact({
         id: "overstated",
         value: {
+          network: "visa",
           avsResult: "Y",
           cvvResult: "N",
           verificationSummary:

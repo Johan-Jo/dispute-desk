@@ -44,11 +44,7 @@ import {
   cardholderNameFromPayload,
   detectCardholderNameMismatch,
 } from "@/lib/argument/nameMismatch";
-import {
-  avsBucket,
-  cvvBucket,
-  readPaymentVerification,
-} from "@/lib/argument/paymentVerification";
+import { readPaymentVerification } from "@/lib/argument/paymentVerification";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import type { Localized } from "@/lib/i18n/localized";
 import { resolveToken } from "@/lib/i18n/resolveToken";
@@ -383,15 +379,16 @@ function readString(v: unknown): string | null {
 
 /**
  * MERCHANT-LANGUAGE RULE (2026-07-23): never lead with a bare gateway
- * code — nobody but a bank knows what "AVS code Z" indicates. One
+ * code — nobody but a bank knows what a bare AVS letter indicates. One
  * combined plain-words sentence covers both results (codes in
- * parentheses at the end), then one short outcome sentence using the
- * consistent "cited as evidence" phrasing. Mirrors
+ * parentheses at the end), then one short outcome sentence. "Cited"
+ * follows the CITATION authority, never the scoring match. Mirrors
  * `lib/argument/internalSignals.ts` — keep the two in lockstep.
  *
- * Result-sentence key by (avsBucket, cvvBucket); null = code absent.
- * Only combinations that can fire the warning (at least one present
- * code outside the scoring match set) are listed.
+ * Result-sentence key by (avs outcome, cvv outcome); "none" = code absent.
+ * Only combinations that can fire the warning are listed — a genuine
+ * `no_match` on either side, or a CVV-only match. An `unknown` /
+ * `not_checked` / `unavailable` AVS result is NOT a mismatch (PR-C3).
  */
 const AVS_CVV_RESULT_KEY: Record<string, string> = {
   "no_match|match": "resultAvsFailCvvMatch",
@@ -408,20 +405,29 @@ const AVS_CVV_RESULT_KEY: Record<string, string> = {
   "none|unchecked": "resultCvvUncheckedOnly",
 };
 
-function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel | null {
+/** Exported for test — the client mirror of `lib/argument/internalSignals.ts`.
+ *  The two must agree, so both are asserted against the same matrix in
+ *  `tests/unit/avsCitationLanguage.test.ts`. */
+export function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel | null {
   if (!isPlainObject(payload)) return null;
   const verification = readPaymentVerification(payload);
   const avs = verification.avs.code;
   const cvv = verification.cvv.code;
-  // Only emit when at least one code is present AND that code is
-  // outside the scoring match set. Absence of codes is not a signal.
-  const avsMismatch = verification.avs.present && !verification.addressVerified;
-  const cvvMismatch = verification.cvv.present && !verification.securityCodeVerified;
-  if (!avsMismatch && !cvvMismatch) return null;
+  // A FAILURE is the canonical `no_match` result and nothing else (PR-C3) —
+  // `unknown`, `not_checked` and `unavailable` are not failures, and an
+  // unrecognised code must not become a mismatch warning on top of its own
+  // diagnostic. Fires additionally on a CVV-only match, where the merchant
+  // must be told the match is kept internal (PR-C2 decision 1).
+  const avsFailed = verification.avs.normalized === "no_match";
+  const cvvFailed = verification.cvv.outcome === "no_match";
+  if (!avsFailed && !cvvFailed && !verification.cvvOnly) return null;
 
   const NS = "internalSignals.avsCvvMismatch";
-  const avsB = avsBucket(avs) ?? "none";
-  const cvvB = cvvBucket(cvv) ?? "none";
+  // Buckets come from the verification already normalized above — network
+  // aware, read once. A code-only helper would re-read the letter as an
+  // unknown-network payload.
+  const avsB = verification.avs.outcome ?? "none";
+  const cvvB = verification.cvv.outcome ?? "none";
   const resultKey = AVS_CVV_RESULT_KEY[`${avsB}|${cvvB}`];
   if (!resultKey) return null; // unreachable combos (match|match etc.)
 
@@ -429,11 +435,15 @@ function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel
     t(`${NS}.${resultKey}`, { avs: avs ?? "", cvv: cvv ?? "" }),
   ];
 
-  // Outcome — consistent "cited as evidence" phrasing. "Cited" follows
-  // the SCORING match sets (what actually reaches the positive bucket /
-  // narrative). Pure-unchecked results carry no outcome: nothing was
-  // withheld and nothing cited, the result sentence stands alone.
-  const avsCited = verification.addressVerified;
+  // Outcome. "Cited" follows the CITATION authority — a primary-sourced
+  // (network, code) cell — NOT the scoring match set: a scoring match from an
+  // unverified (network, code) cell is not citable. Pure-unchecked results
+  // carry no outcome: nothing was withheld and nothing cited, so the result
+  // sentence stands alone.
+  //   avsMatched — factual, for wording and the "partially passed" title
+  //   avsCited   — issuer-facing authority, the only basis for "was cited"
+  const avsMatched = verification.addressVerified;
+  const avsCited = verification.citableAddressVerified;
   const cvvMatched = verification.securityCodeVerified;
   if (cvvMatched) {
     // CVV-only by construction (a both-matched fact raises no warning).
@@ -444,6 +454,10 @@ function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel
     sentences.push(
       t(`${NS}.${cvvB === "no_match" ? "outcomeOnlyAvsCited" : "outcomeAvsCitedClean"}`),
     );
+  } else if (avsMatched) {
+    // Matched, not citable — the (network, code) cell has no primary source.
+    // Never the "would weaken" wording: nothing here is weak.
+    sentences.push(t(`${NS}.outcomeAvsMatchedNotCitable`));
   } else if (avsB === "no_match" && cvvB === "none") {
     sentences.push(t(`${NS}.outcomeSingleNotCited`));
   } else if (cvvB === "no_match" && avsB === "none") {
@@ -454,8 +468,36 @@ function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel
 
   return {
     id: "internal:avs_cvv_mismatch",
-    title: avsCited || cvvMatched ? t(`${NS}.titlePartial`) : t(`${NS}.title`),
+    // Factual title: something DID pass, whether or not it may be cited.
+    title: avsMatched || cvvMatched ? t(`${NS}.titlePartial`) : t(`${NS}.title`),
     explanation: sentences.join(" "),
+  };
+}
+
+/**
+ * An AVS code the canonical map has no entry for (PR-C3 / C-13).
+ *
+ * Recorded, explained, and used for nothing: no grade, no citation, no
+ * completeness credit, and NO assertion against the cardholder — an
+ * unrecognised code is a gap in our map, not a failed verification. The
+ * dispute is not parked; a package that tries to rely on the code is refused
+ * by the claim guards on its own.
+ *
+ * Mirrors `lib/argument/internalSignals.ts` — keep the two in lockstep.
+ */
+export function classifyUnmappedAvsCode(
+  payload: unknown,
+  t: Translate,
+): InternalSignalViewModel | null {
+  if (!isPlainObject(payload)) return null;
+  const verification = readPaymentVerification(payload);
+  if (!verification.avs.unmapped || verification.avs.code === null) return null;
+
+  const NS = "internalSignals.avsCodeUnmapped";
+  return {
+    id: "internal:avs_code_unmapped",
+    title: t(`${NS}.title`),
+    explanation: t(`${NS}.explanation`, { avs: verification.avs.code }),
   };
 }
 
@@ -650,6 +692,9 @@ function deriveInternalOnlySignals(
   for (const item of effectiveChecklist) {
     if (item.payload) byField.set(item.field, item.payload);
   }
+
+  const unmappedAvs = classifyUnmappedAvsCode(byField.get("avs_cvv_match"), t);
+  if (unmappedAvs) out.push(unmappedAvs);
 
   const avs = classifyAvsCvv(byField.get("avs_cvv_match"), t);
   if (avs) out.push(avs);

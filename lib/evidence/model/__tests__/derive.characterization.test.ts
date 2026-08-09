@@ -288,6 +288,77 @@ describe("P2a — typed payloads replace the raw-record back door", () => {
     });
   });
 
+  // MODEL_VERSION 2 (PR-C3): the payload carries the NORMALIZED verification,
+  // derived through `paymentVerification` — the model never re-reads letters.
+  it("carries the canonical verification: network, normalization, authority, citation", () => {
+    const { model } = derive([
+      {
+        source: "shopify_transactions",
+        fieldsProvided: ["avs_cvv_match"],
+        data: {
+          avsResultCode: "Y",
+          cvvResultCode: "M",
+          cardCompany: "Visa",
+          cardholderName: "Robin Pipe",
+        },
+      },
+    ]);
+    expect(model.modelVersion).toBe(2);
+    expect(model.fields.avs_cvv_match.records[0].payload).toEqual({
+      fieldKey: "avs_cvv_match",
+      network: "visa",
+      avsResultCode: "Y",
+      cvvResultCode: "M",
+      avsNormalized: "full_match",
+      avsAuthority: "v_primary",
+      avsUnmapped: false,
+      addressVerified: true,
+      citableAddressVerified: true,
+      cvvOutcome: "match",
+      securityCodeVerified: true,
+      citable: true,
+      cardholderName: "Robin Pipe",
+    });
+  });
+
+  it("a Mastercard Y is a scoring match with an UNVERIFIED cell and no citation", () => {
+    const { model } = derive([
+      {
+        source: "shopify_transactions",
+        fieldsProvided: ["avs_cvv_match"],
+        data: { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Mastercard" },
+      },
+    ]);
+    expect(model.fields.avs_cvv_match.records[0].payload).toMatchObject({
+      network: "mastercard",
+      avsNormalized: "full_match",
+      avsAuthority: "unverified",
+      addressVerified: true,
+      citableAddressVerified: false,
+      citable: false,
+    });
+  });
+
+  it("an unmapped code is recorded with its raw letter and credits nothing", () => {
+    const { model } = derive([
+      {
+        source: "shopify_transactions",
+        fieldsProvided: ["avs_cvv_match"],
+        data: { avsResultCode: "Q", cvvResultCode: "M", cardCompany: "Visa" },
+      },
+    ]);
+    expect(model.fields.avs_cvv_match.records[0].payload).toMatchObject({
+      avsResultCode: "Q",
+      avsNormalized: "unknown",
+      avsUnmapped: true,
+      addressVerified: false,
+      citable: false,
+      // The CVV subfact survives on its own terms.
+      cvvOutcome: "match",
+      securityCodeVerified: true,
+    });
+  });
+
   it("reads the LEGACY flat delivery shape (4 prod packs, no fulfillments[])", () => {
     const { model } = derive([
       {

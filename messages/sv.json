@@ -1048,7 +1048,8 @@
         "outcomeAvsCitedClean": "Den matchande adressen åberopades som bevis i tvistsvaret.",
         "outcomeNothingCited": "Inget av resultaten åberopades som bevis i tvistsvaret – endast resultat som stärker ärendet skickas till banken.",
         "outcomeSingleNotCited": "Det åberopades inte som bevis – det skulle försvaga tvistsvaret.",
-        "outcomeCvvOnlyNotCited": "Den matchande säkerhetskoden hålls som en intern notering — den åberopas inte som bevis i tvistsvaret, eftersom en matchande säkerhetskod inte är detsamma som en matchande adress."
+        "outcomeCvvOnlyNotCited": "Den matchande säkerhetskoden hålls som en intern notering — den åberopas inte som bevis i tvistsvaret, eftersom en matchande säkerhetskod inte är detsamma som en matchande adress.",
+        "outcomeAvsMatchedNotCitable": "Den matchande adressen räknas i bedömningen av ditt ärende, men den åberopas inte i tvistsvaret — vi åberopar ett adressresultat först när kortnätverkets egna regler erkänner resultatet som bevis, och det gör de inte här."
       },
       "billingAddress": {
         "title": "Fakturerings- och leveransadresser stämmer inte överens",
@@ -1076,6 +1077,10 @@
         "title": "Tidigare chargebacks på det här kontot",
         "explanation": "Den här kunden har redan gjort en chargeback på en tidigare beställning i din butik. Hålls internt — att nämna en kunds tvisthistorik för den utfärdande banken försvagar ditt svar i stället för att stärka det. Det visas här så att du kan bedöma hur hårt du vill driva ärendet.",
         "explanationWithCount": "Den här kunden har {prior} tidigare beställningar i din butik, och minst en av dem slutade i en chargeback. Hålls internt — att nämna en kunds tvisthistorik för den utfärdande banken försvagar ditt svar i stället för att stärka det. Det visas här så att du kan bedöma hur hårt du vill driva ärendet."
+      },
+      "avsCodeUnmapped": {
+        "title": "Okänt resultat från adresskontrollen",
+        "explanation": "Utgivaren returnerade ett resultat från adresskontrollen som vi inte känner igen (AVS {avs}). Det noteras för granskning och används inte som bevis åt något håll — det varken stärker eller försvagar ärendet, och ingenting väntar på grund av det."
       }
     },
     "evidenceTabExtra": {

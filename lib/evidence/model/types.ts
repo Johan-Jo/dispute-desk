@@ -238,5 +238,13 @@ export interface CaseEvidenceModel {
   };
 }
 
-/** Bumped when the derivation changes shape. Persisted with every snapshot. */
-export const MODEL_VERSION = 1;
+/**
+ * Bumped when the derivation changes shape. Persisted with every snapshot.
+ *
+ * 2 (PR-C3, 2026-08-08) — `avs_cvv_match` payloads carry the normalized
+ * verification (network, normalized AVS result, authority, unmapped state,
+ * scoring-match and citation state, CVV subfact) instead of two raw letters.
+ * A version-1 snapshot has none of those keys; anything reading a persisted
+ * model must re-derive rather than assume the new shape.
+ */
+export const MODEL_VERSION = 2;

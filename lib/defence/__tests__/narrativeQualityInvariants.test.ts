@@ -78,6 +78,7 @@ describe("Invariant 1 — avs_cvv_match fact carries a translated verificationSu
     const v = extractValue("avs_cvv_match", {
       avsResultCode: "Y",
       cvvResultCode: "M",
+      cardCompany: "Visa",
     });
     expect(v).toMatchObject({
       avsResult: "Y",
@@ -96,7 +97,10 @@ describe("Invariant 1 — avs_cvv_match fact carries a translated verificationSu
   });
 
   it("emits an AVS-only summary that never mentions the security code", () => {
-    const avsOnly = extractValue("avs_cvv_match", { avsResultCode: "Y" });
+    const avsOnly = extractValue("avs_cvv_match", {
+      avsResultCode: "Y",
+      cardCompany: "Visa",
+    });
     expect(avsOnly.verificationSummary).toMatch(/billing address matched/i);
     expect(avsOnly.verificationSummary).not.toMatch(/card verification code/i);
   });
@@ -568,6 +572,7 @@ describe("Invariant 8 — Evidence Basis never echoes raw gateway codes or fulfi
         category: "payment_authentication",
         label: "Payment authentication",
         value: {
+          network: "visa",
           avsResult: "Y",
           cvvResult: "M",
           verificationSummary:

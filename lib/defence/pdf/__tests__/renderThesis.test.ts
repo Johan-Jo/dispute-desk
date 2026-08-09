@@ -28,7 +28,7 @@ describe("renderThesis", () => {
         sectionKey: "executiveSummary",
         familyKey: "unauthorized_fraud",
         packageMode: "full",
-        approvedFacts: [fact({ value: { avsResult: "Y", cvvResult: "M" } })],
+        approvedFacts: [fact({ value: { network: "visa", avsResult: "Y", cvvResult: "M" } })],
       });
       expect(text).toContain("AVS and CVV match");
       expect(text).toContain("consistent with a cardholder-authorized transaction");
@@ -40,7 +40,7 @@ describe("renderThesis", () => {
         familyKey: "unauthorized_fraud",
         packageMode: "full",
         approvedFacts: [
-          fact({ value: { avsResult: "Y", cvvResult: "M", threeDS: true } }),
+          fact({ value: { network: "visa", avsResult: "Y", cvvResult: "M", threeDS: true } }),
         ],
       });
       expect(text).toContain("3-D Secure authentication");
@@ -52,7 +52,7 @@ describe("renderThesis", () => {
         familyKey: "unauthorized_fraud",
         packageMode: "full",
         approvedFacts: [
-          fact({ value: { avsResult: "Y", cvvResult: "M" } }),
+          fact({ value: { network: "visa", avsResult: "Y", cvvResult: "M" } }),
           fact({
             id: "f1",
             category: "prior_customer_history",
@@ -68,7 +68,7 @@ describe("renderThesis", () => {
         sectionKey: "executiveSummary",
         familyKey: "unauthorized_fraud",
         packageMode: "full",
-        approvedFacts: [fact({ value: { avsResult: "Y", cvvResult: "M" } })],
+        approvedFacts: [fact({ value: { network: "visa", avsResult: "Y", cvvResult: "M" } })],
       });
       expect(text).not.toContain("prior undisputed");
     });
@@ -93,7 +93,7 @@ describe("renderThesis", () => {
         sectionKey: "executiveSummary",
         familyKey: "unauthorized_fraud",
         packageMode: "narrow",
-        approvedFacts: [fact({ value: { avsResult: "Y", cvvResult: "M" } })],
+        approvedFacts: [fact({ value: { network: "visa", avsResult: "Y", cvvResult: "M" } })],
       });
       // narrow-mode template uses "available records" phrasing
       expect(text).toContain("available records");
@@ -130,7 +130,7 @@ describe("renderThesis", () => {
         sectionKey: "executiveSummary",
         familyKey: "unauthorized_fraud",
         packageMode: "full",
-        approvedFacts: [fact({ value: { avsResult: "Y", cvvResult: "M" } })],
+        approvedFacts: [fact({ value: { network: "visa", avsResult: "Y", cvvResult: "M" } })],
       });
       // Should not contain double periods, hanging commas, double spaces.
       expect(text).not.toMatch(/\.\s*\./);

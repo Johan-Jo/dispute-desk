@@ -1685,7 +1685,8 @@
         "outcomeAvsCitedClean": "O endereço correspondente foi citado como evidência na resposta à disputa.",
         "outcomeNothingCited": "Nenhum dos resultados foi citado como evidência na resposta à disputa — apenas resultados que fortalecem o caso são enviados ao banco.",
         "outcomeSingleNotCited": "Não foi citado como evidência — enfraqueceria a resposta à disputa.",
-        "outcomeCvvOnlyNotCited": "O código de segurança correspondente é mantido como registro interno — não é citado como evidência na resposta à disputa, porque um código de segurança correspondente não é uma correspondência de endereço."
+        "outcomeCvvOnlyNotCited": "O código de segurança correspondente é mantido como registro interno — não é citado como evidência na resposta à disputa, porque um código de segurança correspondente não é uma correspondência de endereço.",
+        "outcomeAvsMatchedNotCitable": "O endereço correspondente conta para a avaliação do seu caso, mas não é citado na resposta à disputa — só citamos um resultado de endereço quando as regras da bandeira do cartão o reconhecem como evidência, e este não está contemplado."
       },
       "billingAddress": {
         "title": "Os endereços de cobrança e envio não coincidem",
@@ -1713,6 +1714,10 @@
         "title": "Estornos anteriores nesta conta",
         "explanation": "Este cliente já estornou um pedido anterior na sua loja. Mantido interno — citar o histórico de disputas de um cliente ao banco emissor enfraquece a sua resposta em vez de reforçá-la. É mostrado aqui para que avalie com que força defender este caso.",
         "explanationWithCount": "Este cliente tem {prior} pedidos anteriores na sua loja e pelo menos um deles foi estornado. Mantido interno — citar o histórico de disputas de um cliente ao banco emissor enfraquece a sua resposta em vez de reforçá-la. É mostrado aqui para que avalie com que força defender este caso."
+      },
+      "avsCodeUnmapped": {
+        "title": "Resultado de verificação de endereço não reconhecido",
+        "explanation": "O emissor retornou um resultado de verificação de endereço que não temos registrado (AVS {avs}). Fica anotado para revisão e não é usado como evidência em nenhum sentido — não fortalece nem enfraquece o caso, e não deixa nada em espera."
       }
     },
     "deliveryProof": {
