@@ -69,41 +69,95 @@ function sourceFiles(): Array<{ rel: string; text: string }> {
   }));
 }
 
-describe("AVS / CVV match rules have exactly one definition", () => {
-  it("no second match-code set exists outside the owner", () => {
-    // A `new Set([...])` holding three or more AVS response letters is a
-    // re-declaration of the scoring set, whatever it is named.
-    const SET_LITERAL = /new Set\(\s*\[[^\]]*\]\s*\)/g;
-    const offenders: string[] = [];
+/* ── The detectors ───────────────────────────────────────────────────────
+ *
+ * Pure functions over source text, so the same code that scans the repo can
+ * be fed the exact defect shapes it must catch. A green invariant proves
+ * nothing unless the detector is itself proven to bite — the first version of
+ * this file passed while three consumers were still interpreting letters.
+ */
 
+const AVS_LETTERS = ["Y", "A", "W", "X", "D", "M", "Z", "N", "C"];
+
+/** A `new Set([...])` holding three or more AVS response letters. */
+export function findMatchSetLiterals(text: string): string[] {
+  const out: string[] = [];
+  for (const match of text.match(/new Set\(\s*\[[^\]]*\]\s*\)/g) ?? []) {
+    const letters = (match.match(/["']([A-Z])["']/g) ?? []).map((s) => s.replace(/["']/g, ""));
+    if (letters.filter((l) => AVS_LETTERS.includes(l)).length >= 3) out.push(match);
+  }
+  return out;
+}
+
+/** A re-declared, named code set. */
+export function findNamedCodeSets(text: string): string[] {
+  return (text.match(/const\s+(AVS|CVV)_[A-Z_]*(MATCH|CODES)/g) ?? []);
+}
+
+/**
+ * A branch on a raw code. Covers the property forms the first version missed:
+ * `v.avs.code === "A"` and `verification.cvv.code === "M"` as well as
+ * `avsResult === "Y"` / `payload.cvvResultCode !== "M"`.
+ */
+export function findRawCodeBranches(text: string): string[] {
+  const RAW_BRANCH =
+    /\b(avs|cvv)[A-Za-z]*(?:\.code)?\s*(?:\.toUpperCase\(\))?\s*[!=]==\s*["'][A-Za-z]["']/gi;
+  return text.match(RAW_BRANCH) ?? [];
+}
+
+/**
+ * An object literal keyed by AVS letters — a label map, a tone map, a lookup
+ * of any kind. This is how a UI acquires its own opinion about what `Z`
+ * means. Detected by proximity: three or more distinct AVS letters used as
+ * keys within one small span of text.
+ */
+export function findLetterKeyedMaps(text: string): string[] {
+  const hits: Array<{ index: number; letter: string }> = [];
+  const KEY = /[{,]\s*([A-Z])\s*:/g;
+  let m: RegExpExecArray | null;
+  while ((m = KEY.exec(text)) !== null) {
+    if (AVS_LETTERS.includes(m[1])) hits.push({ index: m.index, letter: m[1] });
+  }
+  const out: string[] = [];
+  for (let i = 0; i < hits.length; i += 1) {
+    const window = hits.filter((h) => h.index >= hits[i].index && h.index - hits[i].index < 400);
+    const distinct = new Set(window.map((h) => h.letter));
+    if (distinct.size >= 3) {
+      out.push(text.slice(hits[i].index, hits[i].index + 80).replace(/\s+/g, " "));
+      break;
+    }
+  }
+  return out;
+}
+
+/**
+ * A raw-code rule restated inside a string — the shape that hid in the
+ * strategy prompt: `"…(avsResult='Y' AND cvvResult='M')…"`. Prompt policy is
+ * policy; a letter in it is a second definition of the rule that nothing
+ * keeps in step with the map.
+ */
+export function findRawCodeRulesInStrings(text: string): string[] {
+  return text.match(/(avs|cvv)Result(?:Code)?\s*=\s*["'][A-Za-z]["']/gi) ?? [];
+}
+
+const DETECTORS: Array<{ name: string; run: (text: string) => string[] }> = [
+  { name: "match-set literal", run: findMatchSetLiterals },
+  { name: "named code set", run: findNamedCodeSets },
+  { name: "raw-code branch", run: findRawCodeBranches },
+  { name: "letter-keyed map", run: findLetterKeyedMaps },
+  { name: "raw-code rule in a string", run: findRawCodeRulesInStrings },
+];
+
+describe("AVS / CVV match rules have exactly one definition", () => {
+  it("no source file outside the owner interprets a raw code, in any shape", () => {
+    const offenders: string[] = [];
     for (const { rel, text } of sourceFiles()) {
-      for (const match of text.match(SET_LITERAL) ?? []) {
-        const letters = (match.match(/"([A-Z])"/g) ?? []).map((s) => s.replace(/"/g, ""));
-        const avsish = letters.filter((l) => ["Y", "A", "W", "X", "D", "M", "Z", "N", "C"].includes(l));
-        if (avsish.length >= 3) offenders.push(`${rel}: ${match}`);
+      for (const detector of DETECTORS) {
+        for (const hit of detector.run(text)) {
+          offenders.push(`${rel} [${detector.name}]: ${hit.slice(0, 70)}`);
+        }
       }
     }
-
-    expect(offenders).toEqual([]);
-  });
-
-  it("no module re-declares the named code sets", () => {
-    const offenders = sourceFiles()
-      .filter(({ text }) => /const\s+(AVS|CVV)_[A-Z_]*(MATCH|CODES)/.test(text))
-      .map(({ rel }) => rel);
-
-    expect(offenders).toEqual([]);
-  });
-
-  it("no consumer branches on a raw AVS or CVV code", () => {
-    // `avsResult === "Y"` / `cvvResultCode !== "M"` and the upper-cased
-    // variants. Reading a code is fine; DECIDING on one is the owner's job.
-    const RAW_BRANCH =
-      /(avs|cvv)(_?[Rr]esult(_?[Cc]ode)?)?\s*(\)|\.toUpperCase\(\))?\s*[!=]==\s*"[A-Za-z]"/;
-    const offenders = sourceFiles()
-      .filter(({ text }) => RAW_BRANCH.test(text))
-      .map(({ rel }) => rel);
-
     expect(offenders).toEqual([]);
   });
 
@@ -146,5 +200,70 @@ describe("AVS / CVV match rules have exactly one definition", () => {
     expect(owner).not.toContain("AVS_SCORING_MATCH");
     expect(map).toContain("BASE_AVS_TABLE");
     expect(map).toContain("CE_ITEM_3_CODES");
+  });
+});
+
+/**
+ * THE DETECTORS MUST BITE.
+ *
+ * Each case below is a verbatim shape that was live in this repo and passed
+ * the first version of this invariant. A detector that cannot catch the defect
+ * it was written for is worse than no detector: it reports the class closed.
+ */
+describe("the invariant catches the shapes that slipped through", () => {
+  it("catches the line-item copy branching on a letter (evidenceLineItem.ts)", () => {
+    const shape = `
+      if (v.addressVerified) {
+        if (v.avs.code === "A") return { key: \`\${REASONS_NS}.avsCvv.streetMatched\` };
+        if (v.avs.code === "W") return { key: \`\${REASONS_NS}.avsCvv.postalMatched\` };
+        return { key: \`\${REASONS_NS}.avsCvv.addressMatched\` };
+      }`;
+    expect(findRawCodeBranches(shape).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("catches a UI label map keyed by AVS letters (EvidenceContentViewer.tsx)", () => {
+    const shape = `
+      const map: Record<string, string> = {
+        Y: "Full match",
+        A: "Address match only",
+        Z: "ZIP match only",
+        N: "No match",
+        U: "Unavailable",
+      };`;
+    expect(findLetterKeyedMaps(shape)).not.toEqual([]);
+  });
+
+  it("catches a raw-code rule embedded in prompt policy (auth_signal_stack)", () => {
+    const shape =
+      `"When AVS+CVV both match (avsResult='Y' AND cvvResult='M'), describe them as the verification credentials."`;
+    expect(findRawCodeRulesInStrings(shape)).not.toEqual([]);
+  });
+
+  it("still catches the shapes it caught before", () => {
+    expect(findMatchSetLiterals('const S = new Set(["Y", "A", "W", "X", "D", "M"]);')).not.toEqual([]);
+    expect(findNamedCodeSets("const AVS_MATCH_CODES = x;")).not.toEqual([]);
+    expect(findRawCodeBranches('if (avsResult === "Y") {}')).not.toEqual([]);
+    expect(findRawCodeBranches('if (payload.cvvResultCode !== "M") {}')).not.toEqual([]);
+  });
+
+  it("does not fire on legitimate canonical usage", () => {
+    const clean = `
+      const v = readPaymentVerification(payload);
+      if (v.addressVerified) {
+        switch (v.avs.normalized) {
+          case "street_match": return streetMatched;
+          case "postal_match": return postalMatched;
+          default: return addressMatched;
+        }
+      }
+      const words: Record<AvsNormalizedResult, string> = {
+        full_match: "Full match",
+        street_match: "Street address matched",
+        no_match: "No match",
+      };
+      if (v.network === "visa" && v.citableAddressVerified) cite();`;
+    for (const detector of DETECTORS) {
+      expect({ [detector.name]: detector.run(clean) }).toEqual({ [detector.name]: [] });
+    }
   });
 });

@@ -14,7 +14,11 @@ import {
   DeliveryIcon,
   NoteIcon,
 } from "@shopify/polaris-icons";
-import { readPaymentVerification } from "@/lib/argument/paymentVerification";
+import {
+  readPaymentVerification,
+  type VerificationOutcome,
+} from "@/lib/argument/paymentVerification";
+import type { AvsNormalizedResult } from "@/lib/argument/avsCodeMap";
 
 /* ── Types ── */
 
@@ -194,28 +198,37 @@ function toneFor(bucket: "match" | "no_match" | "unchecked" | null): "success" |
   return undefined;
 }
 
-function avsLabel(code: string | undefined): string {
-  if (!code) return "—";
-  const map: Record<string, string> = {
-    Y: "Full match",
-    A: "Address match only",
-    Z: "ZIP match only",
-    N: "No match",
-    U: "Unavailable",
+/**
+ * Merchant label from the CANONICAL normalized result (PR-C3).
+ *
+ * This component used to keep its own AVS code map — `Y: "Full match"`,
+ * `A: "Address match only"`, `Z: "ZIP match only"` — a second definition of
+ * what the letters mean, living in a viewer. It disagreed with the canonical
+ * layer on `Z` (which the grader treats as a non-match) and it knew nothing
+ * about the network. The raw code is still SHOWN, for audit; it no longer
+ * decides meaning, tone or classification.
+ */
+function avsLabel(normalized: AvsNormalizedResult, code: string | null): string {
+  const words: Record<AvsNormalizedResult, string> = {
+    full_match: "Full match",
+    street_match: "Street address matched",
+    postal_match: "Postal code matched",
+    no_match: "No match",
+    not_checked: "Not checked by the issuer",
+    unavailable: "Result unavailable",
+    unknown: "Unrecognised result",
   };
-  return map[code] || code;
+  return code ? `${words[normalized]} (${code})` : words[normalized];
 }
 
-function cvvLabel(code: string | undefined): string {
-  if (!code) return "—";
-  const map: Record<string, string> = {
-    M: "Match",
-    N: "No match",
-    P: "Not processed",
-    U: "Unavailable",
-    S: "Not provided",
+function cvvLabel(outcome: VerificationOutcome | null, code: string | null): string {
+  if (!outcome || !code) return "—";
+  const words: Record<VerificationOutcome, string> = {
+    match: "Match",
+    no_match: "No match",
+    unchecked: "Not checked by the issuer",
   };
-  return map[code] || code;
+  return `${words[outcome]} (${code})`;
 }
 
 /* ── Row helper ── */
@@ -522,22 +535,22 @@ function PaymentContent({ payload }: { payload: EvidencePayload }) {
           (`lib/argument/paymentVerification.ts`, PR-C2). This component used
           to branch on the raw letters, which is how a viewer ends up calling
           a code a success that scoring credits with nothing. */}
-      {payload.avsResultCode && (
+      {verification.avs.present && (
         <DataRow
           label="AVS check"
           value={
             <Badge tone={toneFor(verification.avs.outcome)}>
-              {avsLabel(payload.avsResultCode)}
+              {avsLabel(verification.avs.normalized, verification.avs.code)}
             </Badge>
           }
         />
       )}
-      {payload.cvvResultCode && (
+      {verification.cvv.present && (
         <DataRow
           label="CVV check"
           value={
             <Badge tone={toneFor(verification.cvv.outcome)}>
-              {cvvLabel(payload.cvvResultCode)}
+              {cvvLabel(verification.cvv.outcome, verification.cvv.code)}
             </Badge>
           }
         />
