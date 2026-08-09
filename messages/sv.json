@@ -1922,6 +1922,15 @@
     "Subscription": "Prenumeration"
   },
   "packs": {
+    "argumentPlan": {
+      "exclusion": {
+        "reviewRequired": "Väntar på din bekräftelse och togs därför inte med i svaret.",
+        "unverified": "Vi kunde inte verifiera detta utifrån de uppgifter vi har, och det togs därför inte med i svaret.",
+        "adverse": "Att ta med detta skulle ge banken ett argument emot dig, och det togs därför inte med i svaret.",
+        "merchantOnly": "Sparas endast för dina egna underlag — den här typen av signal delas aldrig med banken.",
+        "notArgumentRelevant": "Inte relevant för det banken hävdar i den här tvisten, och togs därför inte med i svaret."
+      }
+    },
     "section": {
       "order": "Beställning {orderName}",
       "refundHistory": "Chargebackhistorik",

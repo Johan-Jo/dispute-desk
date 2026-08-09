@@ -1922,6 +1922,15 @@
     "Subscription": "Assinatura"
   },
   "packs": {
+    "argumentPlan": {
+      "exclusion": {
+        "reviewRequired": "Aguardando a sua confirmação, por isso não foi incluído na resposta.",
+        "unverified": "Não conseguimos verificar isto com os dados que temos, por isso não foi incluído na resposta.",
+        "adverse": "Incluir isto daria ao banco um argumento contra você, por isso não foi incluído na resposta.",
+        "merchantOnly": "Mantido apenas nos seus registos — este tipo de sinal nunca é partilhado com o banco.",
+        "notArgumentRelevant": "Não é relevante para o que o banco alega nesta disputa, por isso não foi incluído na resposta."
+      }
+    },
     "section": {
       "order": "Pedido {orderName}",
       "refundHistory": "Histórico de reembolsos",

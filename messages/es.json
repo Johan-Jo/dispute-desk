@@ -1922,6 +1922,15 @@
     "Subscription": "Suscripción"
   },
   "packs": {
+    "argumentPlan": {
+      "exclusion": {
+        "reviewRequired": "Pendiente de tu confirmación, por eso no se incluyó en la respuesta.",
+        "unverified": "No pudimos verificarlo con los datos que tenemos, por eso no se incluyó en la respuesta.",
+        "adverse": "Incluirlo daría al banco un argumento en tu contra, por eso no se incluyó en la respuesta.",
+        "merchantOnly": "Solo para tus registros: este tipo de señal nunca se comparte con el banco.",
+        "notArgumentRelevant": "No es relevante para lo que el banco alega en esta disputa, por eso no se incluyó en la respuesta."
+      }
+    },
     "section": {
       "order": "Pedido {orderName}",
       "refundHistory": "Historial de reembolsos",

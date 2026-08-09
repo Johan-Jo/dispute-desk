@@ -113,3 +113,45 @@ evidence-pack PDF (`renderPdfJob.ts:35,70`), intelligence registry (`registry.ts
 - **R4** `EvidenceFact.id` is positional and `computeEvidenceHash` sorts on it
   (`computeEvidenceHash.ts:90-91`) — record-id migration changes every hash once: schedule a
   deliberate fleet-wide package version bump with the enqueue idempotency check accounted for.
+
+---
+
+## R4 — measured churn from introducing the plan input hash (CP-B, 2026-08-09)
+
+**Measured by:** Epic CP-B (Agent B). **Remedy already decided at kickoff** — rebuild current open,
+unsubmitted cases through an authorised writer before wave two; do not grandfather legacy packages.
+Execution belongs to the coordinator, between PR 2 and PR 3 (CP-D).
+
+**The size of the churn is 100 %, and it is structural rather than empirical.**
+`CaseArgumentPlan` carries a `SnapshotFreshness` whose `inputHash` is produced by
+`computePlanInputHash` (`lib/argument/plan/planInputHash.ts`). **No package persisted before CP-B
+carries one**, so `evaluateFreshness` returns `snapshot_absent` for every one of them — not
+`input_hash_mismatch`, which matters because the two route differently: absent means "never
+computed" (recalculate), mismatch means "computed against something that has since changed"
+(rebuild).
+
+Against the CP-0 recorded population (prod `aokhplydttxtebvbeuzc`, 2026-08-09, read-only):
+
+| Shop | Open unsubmitted | With defence package | Staled by the hash | Rebuildable |
+|---|---|---|---|---|
+| blume-box | 61 | 61 | 61 | 61 |
+| cay-collective | 3 | 0 | 0 | 0 |
+| **Total** | **64** | **61** | **61** | **61** |
+
+Two things CP-D must state rather than quietly reconcile:
+
+- **64 is the denominator, 61 is the rebuildable set.** The 3 cay-collective cases are in the
+  population by predicate and have neither pack nor package, so there is nothing to rebuild for
+  them. Reporting "61" alone hides that.
+- **surasvenne has zero open unsubmitted cases** and is absent from this population entirely —
+  independent of, and consistent with, P-7 excluding it.
+
+**A second, separate churn is already latent and is NOT counted above.** `EvidenceFact.id` is
+positional (`f${index}`) and `computeEvidenceHash` sorts on it, so the record-id migration changes
+every `evidence_hash` once, fleet-wide — including submitted and closed packages. The plan hash does
+not add to that; it is a distinct hash on a distinct column. `computePlanInputHash` deliberately
+sorts on the **source-derived** `recordId` instead, so it does not inherit the defect: re-running
+the derivation over the same evidence in a different order produces the same value.
+
+**No grandfathering escape hatch was added**, in either the contract or the derivation. A legacy
+package going stale and non-fileable is the intended outcome.
