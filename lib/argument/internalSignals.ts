@@ -61,10 +61,10 @@ const OUTCOME_EN = {
   onlyAvsCited:
     "Only the matching address was cited as evidence in the dispute response — the code mismatch would weaken it.",
   avsCitedClean: "The matching address was cited as evidence in the dispute response.",
-  // PR-C3: the address matched but its (network, code) cell has no
-  // primary-source citation authority — a Mastercard/Amex/unbranded `Y`, or a
-  // partial result. Deliberately NOT the "would weaken" wording: nothing here
-  // is weak, we simply cannot name the scheme rule we would be citing under.
+  // PR-C3: the address matched, but the (network, code) cell it resolved
+  // through carries no primary-source citation authority. Deliberately NOT the
+  // "would weaken" wording: nothing here is weak, we simply cannot name the
+  // scheme rule we would be citing under.
   avsMatchedNotCitable:
     "The matching address counts towards your case assessment, but it is not cited in the dispute response — we cite an address result only when the card scheme's own rules recognise that result as evidence, and this one is not covered.",
   nothingCited:
@@ -125,8 +125,8 @@ export function buildInternalSignalsByField(
     //   avsMatched — did the address match? Factual; drives the result
     //                sentence and the "partially passed" title.
     //   avsCited   — may we cite it to the issuer? Only a primary-sourced
-    //                (network, code) cell. A Mastercard `Y` matches and is
-    //                NOT citable.
+    //                (network, code) cell. A scoring match resolved through an
+    //                unverified cell is not citable.
     // Saying "the matching address was cited" off `avsMatched` told the
     // merchant we had filed something we deliberately withhold.
     const avsMatched = verification.addressVerified;
@@ -159,11 +159,11 @@ export function buildInternalSignalsByField(
             cvvB === "no_match" ? OUTCOME_EN.onlyAvsCited : OUTCOME_EN.avsCitedClean,
           );
         } else if (avsMatched) {
-          // The address matched and is NOT citable — a Mastercard/Amex/
-          // unbranded `Y`, or a partial result like `W`. It still counts in
-          // the assessment; it is withheld because no scheme rule we hold
-          // recognises this (network, code) cell as evidence. That is not the
-          // "would weaken the response" case and must not borrow its words.
+          // A scoring match whose (network, code) cell is unverified, or a
+          // partial address result. It still counts in the assessment; it is
+          // withheld because no scheme rule we hold recognises that cell as
+          // evidence. That is not the "would weaken the response" case and
+          // must not borrow its words.
           sentences.push(OUTCOME_EN.avsMatchedNotCitable);
         } else if (
           (avsB === "no_match" && cvvB === "none") ||

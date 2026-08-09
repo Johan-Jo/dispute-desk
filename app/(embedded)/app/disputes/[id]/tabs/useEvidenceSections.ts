@@ -436,9 +436,10 @@ export function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalVi
   ];
 
   // Outcome. "Cited" follows the CITATION authority — a primary-sourced
-  // (network, code) cell — NOT the scoring match set: a Mastercard `Y`
-  // matches and is not citable. Pure-unchecked results carry no outcome:
-  // nothing was withheld and nothing cited, the result sentence stands alone.
+  // (network, code) cell — NOT the scoring match set: a scoring match from an
+  // unverified (network, code) cell is not citable. Pure-unchecked results
+  // carry no outcome: nothing was withheld and nothing cited, so the result
+  // sentence stands alone.
   //   avsMatched — factual, for wording and the "partially passed" title
   //   avsCited   — issuer-facing authority, the only basis for "was cited"
   const avsMatched = verification.addressVerified;
