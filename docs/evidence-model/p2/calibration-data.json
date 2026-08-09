@@ -1,6 +1,6 @@
 {
-  "queriedAt": "2026-08-06T21:36:32.648Z",
-  "envFile": ".env.production.local",
+  "queriedAt": "2026-08-09T15:45:32.222Z",
+  "envFile": "../DisputeDesk/.env.production.local",
   "divergentFlags": [
     "requireUsableEvidence",
     "excludeNotApplicable"
@@ -21,27 +21,22 @@
       "persisted": 90,
       "persistedReadiness": "submitted",
       "persistedBlockerCount": 0,
-      "current": 77,
-      "reconstructed": 77,
-      "candidate": 42,
+      "current": 72,
+      "reconstructed": 72,
+      "candidate": 71,
       "singleFlagScores": {
-        "requireUsableEvidence": 43,
-        "excludeNotApplicable": 76
+        "requireUsableEvidence": 72,
+        "excludeNotApplicable": 71
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
-      "candidateOutcome": "block",
-      "operationalTransition": "auto_save→block",
+      "candidateOutcome": "auto_save",
+      "operationalTransition": "auto_save→auto_save",
       "baselinesDisagree": false,
-      "classification": "unresolved_blocker",
-      "causes": [
-        "requireUsableEvidence"
-      ],
-      "blockerReason": "evidence_semantics_mismatch",
-      "unusableFields": [
-        "billing_address_match",
-        "avs_cvv_match"
-      ],
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
       "notApplicableCollected": [
         "customer_account_info"
       ],
@@ -67,12 +62,12 @@
       "persisted": 69,
       "persistedReadiness": "ready_with_warnings",
       "persistedBlockerCount": 1,
-      "current": 65,
-      "reconstructed": 65,
-      "candidate": 64,
+      "current": 78,
+      "reconstructed": 78,
+      "candidate": 78,
       "singleFlagScores": {
-        "requireUsableEvidence": 65,
-        "excludeNotApplicable": 64
+        "requireUsableEvidence": 78,
+        "excludeNotApplicable": 78
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -108,12 +103,12 @@
       "persisted": 33,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 45,
-      "reconstructed": 45,
-      "candidate": 24,
+      "current": 31,
+      "reconstructed": 31,
+      "candidate": 31,
       "singleFlagScores": {
-        "requireUsableEvidence": 24,
-        "excludeNotApplicable": 45
+        "requireUsableEvidence": 31,
+        "excludeNotApplicable": 31
       },
       "persistedLiveOutcome": "block",
       "currentOutcome": "block",
@@ -123,9 +118,7 @@
       "classification": "unresolved_blocker",
       "causes": [],
       "blockerReason": "unparseable_checklist",
-      "unusableFields": [
-        "billing_address_match"
-      ],
+      "unusableFields": [],
       "notApplicableCollected": [],
       "excludedUnavailable": [
         "refund_record",
@@ -150,12 +143,12 @@
       "persisted": 0,
       "persistedReadiness": "blocked",
       "persistedBlockerCount": null,
-      "current": 6,
-      "reconstructed": 6,
-      "candidate": 6,
+      "current": 8,
+      "reconstructed": 8,
+      "candidate": 8,
       "singleFlagScores": {
-        "requireUsableEvidence": 6,
-        "excludeNotApplicable": 6
+        "requireUsableEvidence": 8,
+        "excludeNotApplicable": 8
       },
       "persistedLiveOutcome": "block",
       "currentOutcome": "block",
@@ -190,12 +183,12 @@
       "persisted": 89,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 82,
-      "reconstructed": 82,
-      "candidate": 64,
+      "current": 78,
+      "reconstructed": 78,
+      "candidate": 78,
       "singleFlagScores": {
-        "requireUsableEvidence": 65,
-        "excludeNotApplicable": 81
+        "requireUsableEvidence": 78,
+        "excludeNotApplicable": 78
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -205,9 +198,7 @@
       "classification": "current_correct_preserved",
       "causes": [],
       "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match"
-      ],
+      "unusableFields": [],
       "notApplicableCollected": [
         "customer_account_info"
       ],
@@ -233,12 +224,12 @@
       "persisted": 90,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 90,
-      "reconstructed": 90,
-      "candidate": 64,
+      "current": 88,
+      "reconstructed": 88,
+      "candidate": 78,
       "singleFlagScores": {
-        "requireUsableEvidence": 65,
-        "excludeNotApplicable": 90
+        "requireUsableEvidence": 78,
+        "excludeNotApplicable": 88
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -249,7 +240,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -277,12 +267,12 @@
       "persisted": 89,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 82,
-      "reconstructed": 82,
-      "candidate": 64,
+      "current": 78,
+      "reconstructed": 78,
+      "candidate": 78,
       "singleFlagScores": {
-        "requireUsableEvidence": 65,
-        "excludeNotApplicable": 81
+        "requireUsableEvidence": 78,
+        "excludeNotApplicable": 78
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -292,9 +282,7 @@
       "classification": "current_correct_preserved",
       "causes": [],
       "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match"
-      ],
+      "unusableFields": [],
       "notApplicableCollected": [
         "customer_account_info"
       ],
@@ -324,7 +312,7 @@
       "reconstructed": 64,
       "candidate": 60,
       "singleFlagScores": {
-        "requireUsableEvidence": 63,
+        "requireUsableEvidence": 64,
         "excludeNotApplicable": 60
       },
       "persistedLiveOutcome": "auto_save",
@@ -337,7 +325,6 @@
       "blockerReason": null,
       "unusableFields": [],
       "notApplicableCollected": [
-        "billing_address_match",
         "activity_log",
         "delivery_proof",
         "shipping_policy",
@@ -363,12 +350,12 @@
       "persisted": 100,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 70,
-      "reconstructed": 70,
-      "candidate": 55,
+      "current": 65,
+      "reconstructed": 65,
+      "candidate": 64,
       "singleFlagScores": {
-        "requireUsableEvidence": 56,
-        "excludeNotApplicable": 70
+        "requireUsableEvidence": 65,
+        "excludeNotApplicable": 64
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -378,9 +365,7 @@
       "classification": "current_correct_preserved",
       "causes": [],
       "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match"
-      ],
+      "unusableFields": [],
       "notApplicableCollected": [
         "customer_account_info"
       ],
@@ -404,12 +389,12 @@
       "persisted": 89,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 82,
-      "reconstructed": 82,
-      "candidate": 64,
+      "current": 78,
+      "reconstructed": 78,
+      "candidate": 78,
       "singleFlagScores": {
-        "requireUsableEvidence": 65,
-        "excludeNotApplicable": 81
+        "requireUsableEvidence": 78,
+        "excludeNotApplicable": 78
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -419,9 +404,7 @@
       "classification": "current_correct_preserved",
       "causes": [],
       "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match"
-      ],
+      "unusableFields": [],
       "notApplicableCollected": [
         "customer_account_info"
       ],
@@ -487,12 +470,12 @@
       "persisted": 72,
       "persistedReadiness": "ready_with_warnings",
       "persistedBlockerCount": 1,
-      "current": 63,
-      "reconstructed": 63,
-      "candidate": 62,
+      "current": 73,
+      "reconstructed": 73,
+      "candidate": 73,
       "singleFlagScores": {
-        "requireUsableEvidence": 63,
-        "excludeNotApplicable": 62
+        "requireUsableEvidence": 73,
+        "excludeNotApplicable": 73
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -526,12 +509,12 @@
       "persisted": 80,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 56,
-      "reconstructed": 56,
-      "candidate": 55,
+      "current": 65,
+      "reconstructed": 65,
+      "candidate": 64,
       "singleFlagScores": {
-        "requireUsableEvidence": 56,
-        "excludeNotApplicable": 55
+        "requireUsableEvidence": 65,
+        "excludeNotApplicable": 64
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -565,27 +548,22 @@
       "persisted": 89,
       "persistedReadiness": "submitted",
       "persistedBlockerCount": 0,
-      "current": 77,
-      "reconstructed": 77,
-      "candidate": 42,
+      "current": 72,
+      "reconstructed": 72,
+      "candidate": 71,
       "singleFlagScores": {
-        "requireUsableEvidence": 43,
-        "excludeNotApplicable": 76
+        "requireUsableEvidence": 72,
+        "excludeNotApplicable": 71
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
-      "candidateOutcome": "block",
-      "operationalTransition": "auto_save→block",
+      "candidateOutcome": "auto_save",
+      "operationalTransition": "auto_save→auto_save",
       "baselinesDisagree": false,
-      "classification": "unresolved_blocker",
-      "causes": [
-        "requireUsableEvidence"
-      ],
-      "blockerReason": "evidence_semantics_mismatch",
-      "unusableFields": [
-        "billing_address_match",
-        "avs_cvv_match"
-      ],
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
       "notApplicableCollected": [
         "customer_account_info"
       ],
@@ -611,12 +589,12 @@
       "persisted": 69,
       "persistedReadiness": "ready_with_warnings",
       "persistedBlockerCount": 1,
-      "current": 70,
-      "reconstructed": 70,
-      "candidate": 55,
+      "current": 65,
+      "reconstructed": 65,
+      "candidate": 64,
       "singleFlagScores": {
-        "requireUsableEvidence": 56,
-        "excludeNotApplicable": 70
+        "requireUsableEvidence": 65,
+        "excludeNotApplicable": 64
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -626,9 +604,7 @@
       "classification": "current_correct_preserved",
       "causes": [],
       "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match"
-      ],
+      "unusableFields": [],
       "notApplicableCollected": [
         "customer_account_info"
       ],
@@ -652,12 +628,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 84,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 98,
       "singleFlagScores": {
-        "requireUsableEvidence": 85,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 98,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -667,9 +643,7 @@
       "classification": "current_correct_preserved",
       "causes": [],
       "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match"
-      ],
+      "unusableFields": [],
       "notApplicableCollected": [
         "no_return_initiated",
         "customer_account_info"
@@ -694,12 +668,12 @@
       "persisted": 69,
       "persistedReadiness": "ready_with_warnings",
       "persistedBlockerCount": 1,
-      "current": 56,
-      "reconstructed": 56,
-      "candidate": 55,
+      "current": 65,
+      "reconstructed": 65,
+      "candidate": 64,
       "singleFlagScores": {
-        "requireUsableEvidence": 56,
-        "excludeNotApplicable": 55
+        "requireUsableEvidence": 65,
+        "excludeNotApplicable": 64
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -733,12 +707,12 @@
       "persisted": 89,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 82,
-      "reconstructed": 82,
-      "candidate": 64,
+      "current": 78,
+      "reconstructed": 78,
+      "candidate": 78,
       "singleFlagScores": {
-        "requireUsableEvidence": 65,
-        "excludeNotApplicable": 81
+        "requireUsableEvidence": 78,
+        "excludeNotApplicable": 78
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -748,9 +722,7 @@
       "classification": "current_correct_preserved",
       "causes": [],
       "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match"
-      ],
+      "unusableFields": [],
       "notApplicableCollected": [
         "customer_account_info"
       ],
@@ -776,12 +748,12 @@
       "persisted": 72,
       "persistedReadiness": "ready_with_warnings",
       "persistedBlockerCount": 1,
-      "current": 77,
-      "reconstructed": 77,
-      "candidate": 62,
+      "current": 73,
+      "reconstructed": 73,
+      "candidate": 73,
       "singleFlagScores": {
-        "requireUsableEvidence": 63,
-        "excludeNotApplicable": 77
+        "requireUsableEvidence": 73,
+        "excludeNotApplicable": 73
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -791,9 +763,7 @@
       "classification": "current_correct_preserved",
       "causes": [],
       "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match"
-      ],
+      "unusableFields": [],
       "notApplicableCollected": [
         "customer_account_info"
       ],
@@ -817,12 +787,12 @@
       "persisted": 89,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 82,
-      "reconstructed": 82,
-      "candidate": 64,
+      "current": 78,
+      "reconstructed": 78,
+      "candidate": 78,
       "singleFlagScores": {
-        "requireUsableEvidence": 65,
-        "excludeNotApplicable": 81
+        "requireUsableEvidence": 78,
+        "excludeNotApplicable": 78
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -832,9 +802,7 @@
       "classification": "current_correct_preserved",
       "causes": [],
       "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match"
-      ],
+      "unusableFields": [],
       "notApplicableCollected": [
         "customer_account_info"
       ],
@@ -860,12 +828,12 @@
       "persisted": 90,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 90,
-      "reconstructed": 90,
-      "candidate": 64,
+      "current": 88,
+      "reconstructed": 88,
+      "candidate": 78,
       "singleFlagScores": {
-        "requireUsableEvidence": 65,
-        "excludeNotApplicable": 90
+        "requireUsableEvidence": 78,
+        "excludeNotApplicable": 88
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -876,7 +844,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -904,12 +871,12 @@
       "persisted": 71,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 1,
-      "current": 23,
-      "reconstructed": 23,
-      "candidate": 23,
+      "current": 9,
+      "reconstructed": 9,
+      "candidate": 9,
       "singleFlagScores": {
-        "requireUsableEvidence": 23,
-        "excludeNotApplicable": 23
+        "requireUsableEvidence": 9,
+        "excludeNotApplicable": 9
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "block",
@@ -926,7 +893,6 @@
         "delivery_proof"
       ],
       "satisfiedByWaiver": [
-        "billing_address_match",
         "shipping_tracking"
       ]
     },
@@ -945,12 +911,12 @@
       "persisted": 89,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 82,
-      "reconstructed": 82,
-      "candidate": 64,
+      "current": 78,
+      "reconstructed": 78,
+      "candidate": 78,
       "singleFlagScores": {
-        "requireUsableEvidence": 65,
-        "excludeNotApplicable": 81
+        "requireUsableEvidence": 78,
+        "excludeNotApplicable": 78
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -960,9 +926,7 @@
       "classification": "current_correct_preserved",
       "causes": [],
       "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match"
-      ],
+      "unusableFields": [],
       "notApplicableCollected": [
         "customer_account_info"
       ],
@@ -988,12 +952,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1004,7 +968,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -1031,12 +994,12 @@
       "persisted": 72,
       "persistedReadiness": "ready_with_warnings",
       "persistedBlockerCount": 1,
-      "current": 67,
-      "reconstructed": 67,
-      "candidate": 66,
+      "current": 80,
+      "reconstructed": 80,
+      "candidate": 80,
       "singleFlagScores": {
-        "requireUsableEvidence": 67,
-        "excludeNotApplicable": 66
+        "requireUsableEvidence": 80,
+        "excludeNotApplicable": 80
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1074,12 +1037,12 @@
       "persisted": 71,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 56,
-      "reconstructed": 56,
-      "candidate": 55,
+      "current": 65,
+      "reconstructed": 65,
+      "candidate": 64,
       "singleFlagScores": {
-        "requireUsableEvidence": 56,
-        "excludeNotApplicable": 55
+        "requireUsableEvidence": 65,
+        "excludeNotApplicable": 64
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1113,12 +1076,12 @@
       "persisted": 65,
       "persistedReadiness": "ready_with_warnings",
       "persistedBlockerCount": 1,
-      "current": 71,
-      "reconstructed": 71,
-      "candidate": 71,
+      "current": 83,
+      "reconstructed": 83,
+      "candidate": 83,
       "singleFlagScores": {
-        "requireUsableEvidence": 71,
-        "excludeNotApplicable": 71
+        "requireUsableEvidence": 83,
+        "excludeNotApplicable": 83
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1152,27 +1115,22 @@
       "persisted": 67,
       "persistedReadiness": "submitted",
       "persistedBlockerCount": 0,
-      "current": 77,
-      "reconstructed": 77,
-      "candidate": 42,
+      "current": 72,
+      "reconstructed": 72,
+      "candidate": 71,
       "singleFlagScores": {
-        "requireUsableEvidence": 43,
-        "excludeNotApplicable": 76
+        "requireUsableEvidence": 72,
+        "excludeNotApplicable": 71
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
-      "candidateOutcome": "block",
-      "operationalTransition": "auto_save→block",
+      "candidateOutcome": "auto_save",
+      "operationalTransition": "auto_save→auto_save",
       "baselinesDisagree": false,
-      "classification": "unresolved_blocker",
-      "causes": [
-        "requireUsableEvidence"
-      ],
-      "blockerReason": "evidence_semantics_mismatch",
-      "unusableFields": [
-        "billing_address_match",
-        "avs_cvv_match"
-      ],
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [],
       "notApplicableCollected": [
         "customer_account_info"
       ],
@@ -1198,12 +1156,12 @@
       "persisted": 90,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 90,
-      "reconstructed": 90,
-      "candidate": 73,
+      "current": 88,
+      "reconstructed": 88,
+      "candidate": 88,
       "singleFlagScores": {
-        "requireUsableEvidence": 73,
-        "excludeNotApplicable": 90
+        "requireUsableEvidence": 88,
+        "excludeNotApplicable": 88
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1213,9 +1171,7 @@
       "classification": "current_correct_preserved",
       "causes": [],
       "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match"
-      ],
+      "unusableFields": [],
       "notApplicableCollected": [
         "customer_account_info"
       ],
@@ -1241,12 +1197,12 @@
       "persisted": 90,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 90,
-      "reconstructed": 90,
-      "candidate": 73,
+      "current": 88,
+      "reconstructed": 88,
+      "candidate": 88,
       "singleFlagScores": {
-        "requireUsableEvidence": 73,
-        "excludeNotApplicable": 90
+        "requireUsableEvidence": 88,
+        "excludeNotApplicable": 88
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1256,9 +1212,7 @@
       "classification": "current_correct_preserved",
       "causes": [],
       "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match"
-      ],
+      "unusableFields": [],
       "notApplicableCollected": [
         "customer_account_info"
       ],
@@ -1266,48 +1220,6 @@
         "refund_record",
         "shipping_tracking",
         "delivery_proof"
-      ],
-      "satisfiedByWaiver": []
-    },
-    {
-      "shop": "blume-box.myshopify.com",
-      "order": "#346791",
-      "packStatus": "saved_to_shopify_verified",
-      "reason": "FRAUDULENT",
-      "threshold": 60,
-      "autoSaveEnabled": true,
-      "eligible": false,
-      "ineligibleReason": "moderate_strength",
-      "eligibilityPath": null,
-      "caseStrength": "moderate",
-      "ruleMode": "auto",
-      "persisted": 77,
-      "persistedReadiness": "ready_with_warnings",
-      "persistedBlockerCount": 1,
-      "current": 77,
-      "reconstructed": 77,
-      "candidate": 70,
-      "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 77
-      },
-      "persistedLiveOutcome": "auto_save",
-      "currentOutcome": "auto_save",
-      "candidateOutcome": "auto_save",
-      "operationalTransition": "auto_save→auto_save",
-      "baselinesDisagree": false,
-      "classification": "current_correct_preserved",
-      "causes": [],
-      "blockerReason": null,
-      "unusableFields": [
-        "fraud_risk_screening"
-      ],
-      "notApplicableCollected": [
-        "no_return_initiated",
-        "customer_account_info"
-      ],
-      "excludedUnavailable": [
-        "refund_record"
       ],
       "satisfiedByWaiver": []
     },
@@ -1326,12 +1238,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1342,7 +1254,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -1369,12 +1280,12 @@
       "persisted": 90,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 90,
-      "reconstructed": 90,
-      "candidate": 73,
+      "current": 88,
+      "reconstructed": 88,
+      "candidate": 88,
       "singleFlagScores": {
-        "requireUsableEvidence": 73,
-        "excludeNotApplicable": 90
+        "requireUsableEvidence": 88,
+        "excludeNotApplicable": 88
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1384,9 +1295,7 @@
       "classification": "current_correct_preserved",
       "causes": [],
       "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match"
-      ],
+      "unusableFields": [],
       "notApplicableCollected": [
         "customer_account_info"
       ],
@@ -1412,12 +1321,12 @@
       "persisted": 91,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
       "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1428,7 +1337,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -1455,12 +1363,12 @@
       "persisted": 81,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 86,
-      "reconstructed": 86,
-      "candidate": 67,
+      "current": 84,
+      "reconstructed": 84,
+      "candidate": 77,
       "singleFlagScores": {
-        "requireUsableEvidence": 68,
-        "excludeNotApplicable": 86
+        "requireUsableEvidence": 77,
+        "excludeNotApplicable": 84
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1471,7 +1379,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -1495,12 +1402,12 @@
       "persisted": 91,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
       "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1511,50 +1418,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
-        "fraud_risk_screening"
-      ],
-      "notApplicableCollected": [
-        "no_return_initiated",
-        "customer_account_info"
-      ],
-      "excludedUnavailable": [
-        "refund_record"
-      ],
-      "satisfiedByWaiver": []
-    },
-    {
-      "shop": "blume-box.myshopify.com",
-      "order": "#352288",
-      "packStatus": "saved_to_shopify_verified",
-      "reason": "FRAUDULENT",
-      "threshold": 60,
-      "autoSaveEnabled": true,
-      "eligible": true,
-      "ineligibleReason": null,
-      "eligibilityPath": "strong",
-      "caseStrength": "strong",
-      "ruleMode": "auto",
-      "persisted": 98,
-      "persistedReadiness": "ready",
-      "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
-      "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
-      },
-      "persistedLiveOutcome": "auto_save",
-      "currentOutcome": "auto_save",
-      "candidateOutcome": "auto_save",
-      "operationalTransition": "auto_save→auto_save",
-      "baselinesDisagree": false,
-      "classification": "current_correct_preserved",
-      "causes": [],
-      "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -1581,12 +1444,12 @@
       "persisted": 91,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
       "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1597,7 +1460,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -1624,25 +1486,22 @@
       "persisted": 72,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 77,
-      "reconstructed": 77,
-      "candidate": 55,
+      "current": 74,
+      "reconstructed": 74,
+      "candidate": 64,
       "singleFlagScores": {
-        "requireUsableEvidence": 56,
-        "excludeNotApplicable": 77
+        "requireUsableEvidence": 66,
+        "excludeNotApplicable": 73
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
-      "candidateOutcome": "block",
-      "operationalTransition": "auto_save→block",
+      "candidateOutcome": "auto_save",
+      "operationalTransition": "auto_save→auto_save",
       "baselinesDisagree": false,
-      "classification": "unresolved_blocker",
-      "causes": [
-        "requireUsableEvidence"
-      ],
-      "blockerReason": "evidence_semantics_mismatch",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -1669,12 +1528,12 @@
       "persisted": 84,
       "persistedReadiness": "ready_with_warnings",
       "persistedBlockerCount": 1,
-      "current": 85,
-      "reconstructed": 85,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 84
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1711,12 +1570,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1727,7 +1586,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -1754,12 +1612,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1770,7 +1628,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -1799,9 +1656,9 @@
       "persistedBlockerCount": 0,
       "current": 98,
       "reconstructed": 98,
-      "candidate": 73,
+      "candidate": 88,
       "singleFlagScores": {
-        "requireUsableEvidence": 74,
+        "requireUsableEvidence": 88,
         "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
@@ -1813,7 +1670,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -1842,12 +1698,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1858,50 +1714,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
-        "fraud_risk_screening"
-      ],
-      "notApplicableCollected": [
-        "no_return_initiated",
-        "customer_account_info"
-      ],
-      "excludedUnavailable": [
-        "refund_record"
-      ],
-      "satisfiedByWaiver": []
-    },
-    {
-      "shop": "blume-box.myshopify.com",
-      "order": "#349144",
-      "packStatus": "ready",
-      "reason": "FRAUDULENT",
-      "threshold": 60,
-      "autoSaveEnabled": true,
-      "eligible": false,
-      "ineligibleReason": "moderate_strength",
-      "eligibilityPath": null,
-      "caseStrength": "moderate",
-      "ruleMode": "auto",
-      "persisted": 91,
-      "persistedReadiness": "ready",
-      "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
-      "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
-      },
-      "persistedLiveOutcome": "auto_save",
-      "currentOutcome": "auto_save",
-      "candidateOutcome": "auto_save",
-      "operationalTransition": "auto_save→auto_save",
-      "baselinesDisagree": false,
-      "classification": "current_correct_preserved",
-      "causes": [],
-      "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -1928,12 +1740,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1944,7 +1756,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -1971,12 +1782,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -1987,7 +1798,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2052,12 +1862,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2068,7 +1878,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2095,12 +1904,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2111,7 +1920,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2140,9 +1948,9 @@
       "persistedBlockerCount": 0,
       "current": 98,
       "reconstructed": 98,
-      "candidate": 73,
+      "candidate": 88,
       "singleFlagScores": {
-        "requireUsableEvidence": 74,
+        "requireUsableEvidence": 88,
         "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
@@ -2154,7 +1962,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2183,12 +1990,12 @@
       "persisted": 81,
       "persistedReadiness": "ready_with_warnings",
       "persistedBlockerCount": 1,
-      "current": 82,
-      "reconstructed": 82,
-      "candidate": 73,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 88,
       "singleFlagScores": {
-        "requireUsableEvidence": 74,
-        "excludeNotApplicable": 81
+        "requireUsableEvidence": 88,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2227,12 +2034,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2243,7 +2050,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2270,12 +2076,12 @@
       "persisted": 91,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
       "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2286,7 +2092,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2313,11 +2118,11 @@
       "persisted": 58,
       "persistedReadiness": "ready_with_warnings",
       "persistedBlockerCount": 1,
-      "current": 67,
-      "reconstructed": 67,
+      "current": 66,
+      "reconstructed": 66,
       "candidate": 48,
       "singleFlagScores": {
-        "requireUsableEvidence": 64,
+        "requireUsableEvidence": 66,
         "excludeNotApplicable": 48
       },
       "persistedLiveOutcome": "block",
@@ -2332,7 +2137,6 @@
       "blockerReason": null,
       "unusableFields": [],
       "notApplicableCollected": [
-        "billing_address_match",
         "no_return_initiated",
         "activity_log",
         "customer_account_info",
@@ -2363,12 +2167,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2379,7 +2183,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2406,12 +2209,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2422,7 +2225,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2449,12 +2251,12 @@
       "persisted": 91,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
       "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2465,7 +2267,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2492,12 +2293,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2508,7 +2309,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2535,12 +2335,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2551,7 +2351,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2580,9 +2379,9 @@
       "persistedBlockerCount": 0,
       "current": 98,
       "reconstructed": 98,
-      "candidate": 73,
+      "candidate": 88,
       "singleFlagScores": {
-        "requireUsableEvidence": 74,
+        "requireUsableEvidence": 88,
         "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
@@ -2594,7 +2393,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2623,12 +2421,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2639,7 +2437,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2648,51 +2445,6 @@
       ],
       "excludedUnavailable": [
         "refund_record"
-      ],
-      "satisfiedByWaiver": []
-    },
-    {
-      "shop": "blume-box.myshopify.com",
-      "order": "#349644",
-      "packStatus": "ready",
-      "reason": "FRAUDULENT",
-      "threshold": 60,
-      "autoSaveEnabled": true,
-      "eligible": false,
-      "ineligibleReason": "weak",
-      "eligibilityPath": null,
-      "caseStrength": "weak",
-      "ruleMode": "auto",
-      "persisted": 90,
-      "persistedReadiness": "ready",
-      "persistedBlockerCount": 0,
-      "current": 90,
-      "reconstructed": 90,
-      "candidate": 64,
-      "singleFlagScores": {
-        "requireUsableEvidence": 66,
-        "excludeNotApplicable": 90
-      },
-      "persistedLiveOutcome": "auto_save",
-      "currentOutcome": "auto_save",
-      "candidateOutcome": "auto_save",
-      "operationalTransition": "auto_save→auto_save",
-      "baselinesDisagree": false,
-      "classification": "current_correct_preserved",
-      "causes": [],
-      "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match",
-        "fraud_risk_screening"
-      ],
-      "notApplicableCollected": [
-        "no_return_initiated",
-        "customer_account_info"
-      ],
-      "excludedUnavailable": [
-        "refund_record",
-        "shipping_tracking",
-        "delivery_proof"
       ],
       "satisfiedByWaiver": []
     },
@@ -2711,12 +2463,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 84,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 98,
       "singleFlagScores": {
-        "requireUsableEvidence": 85,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 98,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2726,9 +2478,7 @@
       "classification": "current_correct_preserved",
       "causes": [],
       "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match"
-      ],
+      "unusableFields": [],
       "notApplicableCollected": [
         "no_return_initiated",
         "customer_account_info"
@@ -2753,12 +2503,12 @@
       "persisted": 90,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 90,
-      "reconstructed": 90,
-      "candidate": 64,
+      "current": 88,
+      "reconstructed": 88,
+      "candidate": 78,
       "singleFlagScores": {
-        "requireUsableEvidence": 66,
-        "excludeNotApplicable": 90
+        "requireUsableEvidence": 78,
+        "excludeNotApplicable": 88
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2769,7 +2519,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2798,12 +2547,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2814,7 +2563,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2841,12 +2589,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2857,7 +2605,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2884,12 +2631,12 @@
       "persisted": 91,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
       "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2900,7 +2647,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2927,12 +2673,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2943,7 +2689,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -2970,12 +2715,12 @@
       "persisted": 89,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
       "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -2986,7 +2731,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3017,7 +2761,7 @@
       "reconstructed": 88,
       "candidate": 85,
       "singleFlagScores": {
-        "requireUsableEvidence": 86,
+        "requireUsableEvidence": 88,
         "excludeNotApplicable": 85
       },
       "persistedLiveOutcome": "auto_save",
@@ -3030,7 +2774,6 @@
       "blockerReason": null,
       "unusableFields": [],
       "notApplicableCollected": [
-        "billing_address_match",
         "no_return_initiated",
         "activity_log",
         "customer_account_info",
@@ -3059,9 +2802,9 @@
       "persistedBlockerCount": 0,
       "current": 98,
       "reconstructed": 98,
-      "candidate": 73,
+      "candidate": 88,
       "singleFlagScores": {
-        "requireUsableEvidence": 74,
+        "requireUsableEvidence": 88,
         "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
@@ -3073,7 +2816,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3102,12 +2844,12 @@
       "persisted": 91,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
       "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -3118,7 +2860,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3147,9 +2888,9 @@
       "persistedBlockerCount": 0,
       "current": 98,
       "reconstructed": 98,
-      "candidate": 73,
+      "candidate": 88,
       "singleFlagScores": {
-        "requireUsableEvidence": 74,
+        "requireUsableEvidence": 88,
         "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
@@ -3161,7 +2902,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3190,25 +2930,24 @@
       "persisted": 73,
       "persistedReadiness": "ready_with_warnings",
       "persistedBlockerCount": 1,
-      "current": 74,
-      "reconstructed": 74,
-      "candidate": 47,
+      "current": 69,
+      "reconstructed": 69,
+      "candidate": 57,
       "singleFlagScores": {
-        "requireUsableEvidence": 49,
-        "excludeNotApplicable": 73
+        "requireUsableEvidence": 59,
+        "excludeNotApplicable": 67
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
       "candidateOutcome": "block",
       "operationalTransition": "auto_save→block",
       "baselinesDisagree": false,
-      "classification": "unresolved_blocker",
+      "classification": "current_wrong_corrected",
       "causes": [
         "requireUsableEvidence"
       ],
-      "blockerReason": "evidence_semantics_mismatch",
+      "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3237,12 +2976,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -3253,50 +2992,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
-        "fraud_risk_screening"
-      ],
-      "notApplicableCollected": [
-        "no_return_initiated",
-        "customer_account_info"
-      ],
-      "excludedUnavailable": [
-        "refund_record"
-      ],
-      "satisfiedByWaiver": []
-    },
-    {
-      "shop": "blume-box.myshopify.com",
-      "order": "#349146",
-      "packStatus": "ready",
-      "reason": "FRAUDULENT",
-      "threshold": 60,
-      "autoSaveEnabled": true,
-      "eligible": false,
-      "ineligibleReason": "moderate_strength",
-      "eligibilityPath": null,
-      "caseStrength": "moderate",
-      "ruleMode": "auto",
-      "persisted": 91,
-      "persistedReadiness": "ready",
-      "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
-      "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
-      },
-      "persistedLiveOutcome": "auto_save",
-      "currentOutcome": "auto_save",
-      "candidateOutcome": "auto_save",
-      "operationalTransition": "auto_save→auto_save",
-      "baselinesDisagree": false,
-      "classification": "current_correct_preserved",
-      "causes": [],
-      "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3323,12 +3018,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 84,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 98,
       "singleFlagScores": {
-        "requireUsableEvidence": 85,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 98,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -3338,9 +3033,7 @@
       "classification": "current_correct_preserved",
       "causes": [],
       "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match"
-      ],
+      "unusableFields": [],
       "notApplicableCollected": [
         "no_return_initiated",
         "customer_account_info"
@@ -3367,9 +3060,9 @@
       "persistedBlockerCount": 0,
       "current": 98,
       "reconstructed": 98,
-      "candidate": 73,
+      "candidate": 88,
       "singleFlagScores": {
-        "requireUsableEvidence": 74,
+        "requireUsableEvidence": 88,
         "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
@@ -3381,7 +3074,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3410,12 +3102,12 @@
       "persisted": 81,
       "persistedReadiness": "ready_with_warnings",
       "persistedBlockerCount": 1,
-      "current": 82,
-      "reconstructed": 82,
-      "candidate": 73,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 88,
       "singleFlagScores": {
-        "requireUsableEvidence": 74,
-        "excludeNotApplicable": 81
+        "requireUsableEvidence": 88,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -3454,25 +3146,22 @@
       "persisted": 72,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 77,
-      "reconstructed": 77,
-      "candidate": 55,
+      "current": 74,
+      "reconstructed": 74,
+      "candidate": 64,
       "singleFlagScores": {
-        "requireUsableEvidence": 56,
-        "excludeNotApplicable": 77
+        "requireUsableEvidence": 66,
+        "excludeNotApplicable": 73
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
-      "candidateOutcome": "block",
-      "operationalTransition": "auto_save→block",
+      "candidateOutcome": "auto_save",
+      "operationalTransition": "auto_save→auto_save",
       "baselinesDisagree": false,
-      "classification": "unresolved_blocker",
-      "causes": [
-        "requireUsableEvidence"
-      ],
-      "blockerReason": "evidence_semantics_mismatch",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3501,9 +3190,9 @@
       "persistedBlockerCount": 0,
       "current": 98,
       "reconstructed": 98,
-      "candidate": 73,
+      "candidate": 88,
       "singleFlagScores": {
-        "requireUsableEvidence": 74,
+        "requireUsableEvidence": 88,
         "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
@@ -3515,7 +3204,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3544,12 +3232,12 @@
       "persisted": 90,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 90,
-      "reconstructed": 90,
-      "candidate": 64,
+      "current": 88,
+      "reconstructed": 88,
+      "candidate": 78,
       "singleFlagScores": {
-        "requireUsableEvidence": 66,
-        "excludeNotApplicable": 90
+        "requireUsableEvidence": 78,
+        "excludeNotApplicable": 88
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -3560,7 +3248,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3591,9 +3278,9 @@
       "persistedBlockerCount": 0,
       "current": 98,
       "reconstructed": 98,
-      "candidate": 73,
+      "candidate": 88,
       "singleFlagScores": {
-        "requireUsableEvidence": 74,
+        "requireUsableEvidence": 88,
         "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
@@ -3605,7 +3292,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3634,12 +3320,12 @@
       "persisted": 91,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
       "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -3650,7 +3336,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3677,12 +3362,12 @@
       "persisted": 89,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
       "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -3693,7 +3378,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3720,12 +3404,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -3736,7 +3420,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3763,12 +3446,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -3779,7 +3462,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3806,12 +3488,12 @@
       "persisted": 91,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
       "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -3822,7 +3504,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3849,12 +3530,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -3865,7 +3546,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3892,12 +3572,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -3908,50 +3588,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
-        "fraud_risk_screening"
-      ],
-      "notApplicableCollected": [
-        "no_return_initiated",
-        "customer_account_info"
-      ],
-      "excludedUnavailable": [
-        "refund_record"
-      ],
-      "satisfiedByWaiver": []
-    },
-    {
-      "shop": "blume-box.myshopify.com",
-      "order": "#349145",
-      "packStatus": "ready",
-      "reason": "FRAUDULENT",
-      "threshold": 60,
-      "autoSaveEnabled": true,
-      "eligible": false,
-      "ineligibleReason": "moderate_strength",
-      "eligibilityPath": null,
-      "caseStrength": "moderate",
-      "ruleMode": "auto",
-      "persisted": 91,
-      "persistedReadiness": "ready",
-      "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
-      "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
-      },
-      "persistedLiveOutcome": "auto_save",
-      "currentOutcome": "auto_save",
-      "candidateOutcome": "auto_save",
-      "operationalTransition": "auto_save→auto_save",
-      "baselinesDisagree": false,
-      "classification": "current_correct_preserved",
-      "causes": [],
-      "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -3978,12 +3614,12 @@
       "persisted": 81,
       "persistedReadiness": "ready_with_warnings",
       "persistedBlockerCount": 1,
-      "current": 82,
-      "reconstructed": 82,
-      "candidate": 73,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 88,
       "singleFlagScores": {
-        "requireUsableEvidence": 74,
-        "excludeNotApplicable": 81
+        "requireUsableEvidence": 88,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -4022,11 +3658,11 @@
       "persisted": 63,
       "persistedReadiness": "ready_with_warnings",
       "persistedBlockerCount": 1,
-      "current": 65,
-      "reconstructed": 65,
+      "current": 64,
+      "reconstructed": 64,
       "candidate": 60,
       "singleFlagScores": {
-        "requireUsableEvidence": 63,
+        "requireUsableEvidence": 64,
         "excludeNotApplicable": 60
       },
       "persistedLiveOutcome": "auto_save",
@@ -4039,7 +3675,6 @@
       "blockerReason": null,
       "unusableFields": [],
       "notApplicableCollected": [
-        "billing_address_match",
         "activity_log",
         "delivery_proof",
         "shipping_policy",
@@ -4049,48 +3684,6 @@
         "ip_location_check"
       ],
       "excludedUnavailable": [],
-      "satisfiedByWaiver": []
-    },
-    {
-      "shop": "blume-box.myshopify.com",
-      "order": "#346793",
-      "packStatus": "saved_to_shopify_verified",
-      "reason": "FRAUDULENT",
-      "threshold": 60,
-      "autoSaveEnabled": true,
-      "eligible": false,
-      "ineligibleReason": "moderate_strength",
-      "eligibilityPath": null,
-      "caseStrength": "moderate",
-      "ruleMode": "auto",
-      "persisted": 77,
-      "persistedReadiness": "ready_with_warnings",
-      "persistedBlockerCount": 1,
-      "current": 77,
-      "reconstructed": 77,
-      "candidate": 70,
-      "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 77
-      },
-      "persistedLiveOutcome": "auto_save",
-      "currentOutcome": "auto_save",
-      "candidateOutcome": "auto_save",
-      "operationalTransition": "auto_save→auto_save",
-      "baselinesDisagree": false,
-      "classification": "current_correct_preserved",
-      "causes": [],
-      "blockerReason": null,
-      "unusableFields": [
-        "fraud_risk_screening"
-      ],
-      "notApplicableCollected": [
-        "no_return_initiated",
-        "customer_account_info"
-      ],
-      "excludedUnavailable": [
-        "refund_record"
-      ],
       "satisfiedByWaiver": []
     },
     {
@@ -4108,12 +3701,12 @@
       "persisted": 91,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
       "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -4124,7 +3717,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -4151,12 +3743,12 @@
       "persisted": 81,
       "persistedReadiness": "ready_with_warnings",
       "persistedBlockerCount": 1,
-      "current": 82,
-      "reconstructed": 82,
-      "candidate": 73,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 88,
       "singleFlagScores": {
-        "requireUsableEvidence": 74,
-        "excludeNotApplicable": 81
+        "requireUsableEvidence": 88,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -4195,11 +3787,11 @@
       "persisted": 63,
       "persistedReadiness": "ready_with_warnings",
       "persistedBlockerCount": 1,
-      "current": 65,
-      "reconstructed": 65,
+      "current": 64,
+      "reconstructed": 64,
       "candidate": 60,
       "singleFlagScores": {
-        "requireUsableEvidence": 63,
+        "requireUsableEvidence": 64,
         "excludeNotApplicable": 60
       },
       "persistedLiveOutcome": "auto_save",
@@ -4212,7 +3804,6 @@
       "blockerReason": null,
       "unusableFields": [],
       "notApplicableCollected": [
-        "billing_address_match",
         "activity_log",
         "delivery_proof",
         "shipping_policy",
@@ -4243,7 +3834,7 @@
       "reconstructed": 88,
       "candidate": 85,
       "singleFlagScores": {
-        "requireUsableEvidence": 86,
+        "requireUsableEvidence": 88,
         "excludeNotApplicable": 85
       },
       "persistedLiveOutcome": "auto_save",
@@ -4256,7 +3847,6 @@
       "blockerReason": null,
       "unusableFields": [],
       "notApplicableCollected": [
-        "billing_address_match",
         "no_return_initiated",
         "activity_log",
         "customer_account_info",
@@ -4266,92 +3856,6 @@
         "ip_location_check"
       ],
       "excludedUnavailable": [],
-      "satisfiedByWaiver": []
-    },
-    {
-      "shop": "blume-box.myshopify.com",
-      "order": "#352557",
-      "packStatus": "saved_to_shopify_verified",
-      "reason": "FRAUDULENT",
-      "threshold": 60,
-      "autoSaveEnabled": true,
-      "eligible": true,
-      "ineligibleReason": null,
-      "eligibilityPath": "strong",
-      "caseStrength": "strong",
-      "ruleMode": "auto",
-      "persisted": 89,
-      "persistedReadiness": "ready",
-      "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
-      "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
-      },
-      "persistedLiveOutcome": "auto_save",
-      "currentOutcome": "auto_save",
-      "candidateOutcome": "auto_save",
-      "operationalTransition": "auto_save→auto_save",
-      "baselinesDisagree": false,
-      "classification": "current_correct_preserved",
-      "causes": [],
-      "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match",
-        "fraud_risk_screening"
-      ],
-      "notApplicableCollected": [
-        "no_return_initiated",
-        "customer_account_info"
-      ],
-      "excludedUnavailable": [
-        "refund_record"
-      ],
-      "satisfiedByWaiver": []
-    },
-    {
-      "shop": "blume-box.myshopify.com",
-      "order": "#351825",
-      "packStatus": "saved_to_shopify_verified",
-      "reason": "FRAUDULENT",
-      "threshold": 60,
-      "autoSaveEnabled": true,
-      "eligible": true,
-      "ineligibleReason": null,
-      "eligibilityPath": "strong",
-      "caseStrength": "strong",
-      "ruleMode": "auto",
-      "persisted": 89,
-      "persistedReadiness": "ready",
-      "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
-      "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
-      },
-      "persistedLiveOutcome": "auto_save",
-      "currentOutcome": "auto_save",
-      "candidateOutcome": "auto_save",
-      "operationalTransition": "auto_save→auto_save",
-      "baselinesDisagree": false,
-      "classification": "current_correct_preserved",
-      "causes": [],
-      "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match",
-        "fraud_risk_screening"
-      ],
-      "notApplicableCollected": [
-        "no_return_initiated",
-        "customer_account_info"
-      ],
-      "excludedUnavailable": [
-        "refund_record"
-      ],
       "satisfiedByWaiver": []
     },
     {
@@ -4369,12 +3873,12 @@
       "persisted": 72,
       "persistedReadiness": "ready_with_warnings",
       "persistedBlockerCount": 1,
-      "current": 77,
-      "reconstructed": 77,
-      "candidate": 70,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
       "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 77
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -4411,12 +3915,12 @@
       "persisted": 89,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
       "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -4427,7 +3931,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -4454,12 +3957,12 @@
       "persisted": 89,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
       "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -4470,7 +3973,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -4497,11 +3999,11 @@
       "persisted": 96,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 97,
-      "reconstructed": 97,
+      "current": 96,
+      "reconstructed": 96,
       "candidate": 95,
       "singleFlagScores": {
-        "requireUsableEvidence": 93,
+        "requireUsableEvidence": 96,
         "excludeNotApplicable": 95
       },
       "persistedLiveOutcome": "auto_save",
@@ -4514,7 +4016,6 @@
       "blockerReason": null,
       "unusableFields": [],
       "notApplicableCollected": [
-        "billing_address_match",
         "no_return_initiated",
         "activity_log",
         "customer_account_info",
@@ -4526,49 +4027,6 @@
       "excludedUnavailable": [
         "shipping_tracking",
         "delivery_proof"
-      ],
-      "satisfiedByWaiver": []
-    },
-    {
-      "shop": "blume-box.myshopify.com",
-      "order": "#352284",
-      "packStatus": "saved_to_shopify_verified",
-      "reason": "FRAUDULENT",
-      "threshold": 60,
-      "autoSaveEnabled": true,
-      "eligible": true,
-      "ineligibleReason": null,
-      "eligibilityPath": "strong",
-      "caseStrength": "strong",
-      "ruleMode": "auto",
-      "persisted": 98,
-      "persistedReadiness": "ready",
-      "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
-      "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
-      },
-      "persistedLiveOutcome": "auto_save",
-      "currentOutcome": "auto_save",
-      "candidateOutcome": "auto_save",
-      "operationalTransition": "auto_save→auto_save",
-      "baselinesDisagree": false,
-      "classification": "current_correct_preserved",
-      "causes": [],
-      "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match",
-        "fraud_risk_screening"
-      ],
-      "notApplicableCollected": [
-        "no_return_initiated",
-        "customer_account_info"
-      ],
-      "excludedUnavailable": [
-        "refund_record"
       ],
       "satisfiedByWaiver": []
     },
@@ -4587,12 +4045,12 @@
       "persisted": 91,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
       "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -4603,7 +4061,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -4630,12 +4087,12 @@
       "persisted": 99,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
+      "current": 98,
+      "reconstructed": 98,
+      "candidate": 90,
       "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
+        "requireUsableEvidence": 90,
+        "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -4646,93 +4103,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
-        "fraud_risk_screening"
-      ],
-      "notApplicableCollected": [
-        "no_return_initiated",
-        "customer_account_info"
-      ],
-      "excludedUnavailable": [
-        "refund_record"
-      ],
-      "satisfiedByWaiver": []
-    },
-    {
-      "shop": "blume-box.myshopify.com",
-      "order": "#352286",
-      "packStatus": "saved_to_shopify_verified",
-      "reason": "FRAUDULENT",
-      "threshold": 60,
-      "autoSaveEnabled": true,
-      "eligible": true,
-      "ineligibleReason": null,
-      "eligibilityPath": "strong",
-      "caseStrength": "strong",
-      "ruleMode": "auto",
-      "persisted": 98,
-      "persistedReadiness": "ready",
-      "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
-      "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
-      },
-      "persistedLiveOutcome": "auto_save",
-      "currentOutcome": "auto_save",
-      "candidateOutcome": "auto_save",
-      "operationalTransition": "auto_save→auto_save",
-      "baselinesDisagree": false,
-      "classification": "current_correct_preserved",
-      "causes": [],
-      "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match",
-        "fraud_risk_screening"
-      ],
-      "notApplicableCollected": [
-        "no_return_initiated",
-        "customer_account_info"
-      ],
-      "excludedUnavailable": [
-        "refund_record"
-      ],
-      "satisfiedByWaiver": []
-    },
-    {
-      "shop": "blume-box.myshopify.com",
-      "order": "#352285",
-      "packStatus": "saved_to_shopify_verified",
-      "reason": "FRAUDULENT",
-      "threshold": 60,
-      "autoSaveEnabled": true,
-      "eligible": true,
-      "ineligibleReason": null,
-      "eligibilityPath": "strong",
-      "caseStrength": "strong",
-      "ruleMode": "auto",
-      "persisted": 98,
-      "persistedReadiness": "ready",
-      "persistedBlockerCount": 0,
-      "current": 99,
-      "reconstructed": 99,
-      "candidate": 77,
-      "singleFlagScores": {
-        "requireUsableEvidence": 77,
-        "excludeNotApplicable": 99
-      },
-      "persistedLiveOutcome": "auto_save",
-      "currentOutcome": "auto_save",
-      "candidateOutcome": "auto_save",
-      "operationalTransition": "auto_save→auto_save",
-      "baselinesDisagree": false,
-      "classification": "current_correct_preserved",
-      "causes": [],
-      "blockerReason": null,
-      "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -4759,25 +4129,22 @@
       "persisted": 72,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 77,
-      "reconstructed": 77,
-      "candidate": 55,
+      "current": 74,
+      "reconstructed": 74,
+      "candidate": 64,
       "singleFlagScores": {
-        "requireUsableEvidence": 56,
-        "excludeNotApplicable": 77
+        "requireUsableEvidence": 66,
+        "excludeNotApplicable": 73
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
-      "candidateOutcome": "block",
-      "operationalTransition": "auto_save→block",
+      "candidateOutcome": "auto_save",
+      "operationalTransition": "auto_save→auto_save",
       "baselinesDisagree": false,
-      "classification": "unresolved_blocker",
-      "causes": [
-        "requireUsableEvidence"
-      ],
-      "blockerReason": "evidence_semantics_mismatch",
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -4804,12 +4171,12 @@
       "persisted": 89,
       "persistedReadiness": "ready",
       "persistedBlockerCount": 0,
-      "current": 92,
-      "reconstructed": 92,
-      "candidate": 70,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
       "singleFlagScores": {
-        "requireUsableEvidence": 70,
-        "excludeNotApplicable": 91
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
       },
       "persistedLiveOutcome": "auto_save",
       "currentOutcome": "auto_save",
@@ -4820,7 +4187,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -4829,50 +4195,6 @@
       ],
       "excludedUnavailable": [
         "refund_record"
-      ],
-      "satisfiedByWaiver": []
-    },
-    {
-      "shop": "blume-box.myshopify.com",
-      "order": "#343101",
-      "packStatus": "saved_to_shopify_verified",
-      "reason": "FRAUDULENT",
-      "threshold": 60,
-      "autoSaveEnabled": true,
-      "eligible": false,
-      "ineligibleReason": "weak",
-      "eligibilityPath": null,
-      "caseStrength": "weak",
-      "ruleMode": "auto",
-      "persisted": 56,
-      "persistedReadiness": "ready_with_warnings",
-      "persistedBlockerCount": 2,
-      "current": 57,
-      "reconstructed": 57,
-      "candidate": 47,
-      "singleFlagScores": {
-        "requireUsableEvidence": 49,
-        "excludeNotApplicable": 56
-      },
-      "persistedLiveOutcome": "block",
-      "currentOutcome": "block",
-      "candidateOutcome": "block",
-      "operationalTransition": "block→block",
-      "baselinesDisagree": false,
-      "classification": "current_correct_preserved",
-      "causes": [],
-      "blockerReason": null,
-      "unusableFields": [
-        "fraud_risk_screening"
-      ],
-      "notApplicableCollected": [
-        "no_return_initiated",
-        "customer_account_info"
-      ],
-      "excludedUnavailable": [
-        "refund_record",
-        "shipping_tracking",
-        "delivery_proof"
       ],
       "satisfiedByWaiver": []
     },
@@ -4893,9 +4215,9 @@
       "persistedBlockerCount": 0,
       "current": 98,
       "reconstructed": 98,
-      "candidate": 73,
+      "candidate": 88,
       "singleFlagScores": {
-        "requireUsableEvidence": 74,
+        "requireUsableEvidence": 88,
         "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
@@ -4907,7 +4229,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -4938,9 +4259,9 @@
       "persistedBlockerCount": 0,
       "current": 98,
       "reconstructed": 98,
-      "candidate": 73,
+      "candidate": 88,
       "singleFlagScores": {
-        "requireUsableEvidence": 74,
+        "requireUsableEvidence": 88,
         "excludeNotApplicable": 98
       },
       "persistedLiveOutcome": "auto_save",
@@ -4952,7 +4273,6 @@
       "causes": [],
       "blockerReason": null,
       "unusableFields": [
-        "billing_address_match",
         "fraud_risk_screening"
       ],
       "notApplicableCollected": [
@@ -4963,6 +4283,176 @@
         "refund_record",
         "shipping_tracking",
         "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#349145",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 92,
+      "persistedReadiness": "ready",
+      "persistedBlockerCount": 0,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
+      "singleFlagScores": {
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
+      },
+      "persistedLiveOutcome": "auto_save",
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "operationalTransition": "auto_save→auto_save",
+      "baselinesDisagree": false,
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#349146",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 92,
+      "persistedReadiness": "ready",
+      "persistedBlockerCount": 0,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
+      "singleFlagScores": {
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
+      },
+      "persistedLiveOutcome": "auto_save",
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "operationalTransition": "auto_save→auto_save",
+      "baselinesDisagree": false,
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#349644",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "weak",
+      "eligibilityPath": null,
+      "caseStrength": "weak",
+      "ruleMode": "auto",
+      "persisted": 90,
+      "persistedReadiness": "ready",
+      "persistedBlockerCount": 0,
+      "current": 88,
+      "reconstructed": 88,
+      "candidate": 78,
+      "singleFlagScores": {
+        "requireUsableEvidence": 78,
+        "excludeNotApplicable": 88
+      },
+      "persistedLiveOutcome": "auto_save",
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "operationalTransition": "auto_save→auto_save",
+      "baselinesDisagree": false,
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record",
+        "shipping_tracking",
+        "delivery_proof"
+      ],
+      "satisfiedByWaiver": []
+    },
+    {
+      "shop": "blume-box.myshopify.com",
+      "order": "#349144",
+      "packStatus": "saved_to_shopify_verified",
+      "reason": "FRAUDULENT",
+      "threshold": 60,
+      "autoSaveEnabled": true,
+      "eligible": false,
+      "ineligibleReason": "moderate_strength",
+      "eligibilityPath": null,
+      "caseStrength": "moderate",
+      "ruleMode": "auto",
+      "persisted": 92,
+      "persistedReadiness": "ready",
+      "persistedBlockerCount": 0,
+      "current": 90,
+      "reconstructed": 90,
+      "candidate": 81,
+      "singleFlagScores": {
+        "requireUsableEvidence": 82,
+        "excludeNotApplicable": 90
+      },
+      "persistedLiveOutcome": "auto_save",
+      "currentOutcome": "auto_save",
+      "candidateOutcome": "auto_save",
+      "operationalTransition": "auto_save→auto_save",
+      "baselinesDisagree": false,
+      "classification": "current_correct_preserved",
+      "causes": [],
+      "blockerReason": null,
+      "unusableFields": [
+        "fraud_risk_screening"
+      ],
+      "notApplicableCollected": [
+        "no_return_initiated",
+        "customer_account_info"
+      ],
+      "excludedUnavailable": [
+        "refund_record"
       ],
       "satisfiedByWaiver": []
     }

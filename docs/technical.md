@@ -3892,6 +3892,86 @@ Pack preview pages show a yellow warning banner when `completeness_score < 60%`:
 - Lists missing required checklist items.
 - Guidance only — merchant can still proceed.
 
+### CP-A — Canonical assessment, completeness, and the merchant projection (2026-08-09)
+
+`CaseAssessment` is the single owner of strength and completeness, and the three merchant
+tabs render a **server projection** of it. The definition of done is the deleted call site,
+not the new derivation — the previous attempt built the derivations and never flipped the
+callers, and the browser kept its own scorer for a year.
+
+**Modules**
+
+| File | Owns |
+|---|---|
+| `lib/evidence/model/assessmentSnapshot.ts` | `CaseAssessmentSnapshot` — the persisted, versioned form, plus `computeAssessmentInputHash()` |
+| `lib/evidence/model/completenessSnapshot.ts` | completeness derived independently of strength, and `readPersistedCompletenessForGate()` |
+| `lib/evidence/model/merchantProjection.ts` | `projectMerchantAssessment()` / `projectReviewItems()` — `needsRecalculation` as a first-class state |
+| `lib/disputes/workspaceAssessment.ts` | `buildWorkspaceAssessment()` — the one derivation the workspace API ships |
+| `lib/disputes/workspaceAssessmentTypes.ts` | the payload shape + `emptyWorkspaceAssessment()`, importable from the client without pulling in the scorer |
+| `lib/disputes/deadlineOnlyCopy.ts` | `deadline_only` vs `withheld_no_safe_argument` merchant copy, as `I18nToken`s |
+
+**The input hash.** `SnapshotFreshness.inputHash` covers every result-bearing input: the
+dispute reason, model/registry versions, per-field relevance + status flags + record count,
+each record's validity / quality / citation eligibility / normalized payload, the coverage
+and dispute metadata on `nonEvidence`, the five resolved gates (a **provided `null` hashes
+differently from a `gateNotProvided` reason** — the pair whose conflation shipped a wrong
+band), and the external payload source. Deliberately excluded: `derivedFrom.packId`,
+`evidenceItemIds`, every timestamp, and `nonEvidence.operational.*` — none can move the
+result, and hashing them would mark the fleet permanently stale, which is not the
+conservative choice but a fleet that never files. `computedAt` is audit-only and never an
+input. The two `EvidencePayloadSource` forms (`list` from `buildPack`, `byField` from the
+workspace route) produce the same hash, so the surfaces cannot report each other stale.
+
+**Strength and completeness stay separate.** `deriveCompletenessSnapshot(model)` takes the
+model and nothing else — no gates, no payload source, no reason family. Pinned by test:
+flipping the coverage gate changes `heroVariant` and leaves every completeness number
+untouched.
+
+**The three faithful gate coercions**, now in one reader
+(`readPersistedCompletenessForGate`) instead of inline at `pipeline.ts:837-839`:
+`completeness_score` NULL → `0`; `blockers` NULL → `[]`; `submission_readiness` NULL →
+`undefined`, which selects the **legacy blocker-count arm** of `evaluateAutoSaveGate`.
+Coercing that third one to `"ready"` would auto-file every legacy pack that has blockers;
+`"blocked"` would freeze them all. One deliberate difference from the old inline cast: a
+non-array `blockers` becomes `[]` rather than passing through, which produces an identical
+gate disposition (`undefined > 0` and `0 > 0` are both false) with an honest type.
+
+**`needsRecalculation`.** A stale or absent assessment nulls the band, the score and the
+readiness *together*; there is no partial mode. `evaluateFreshness` is the only predicate,
+and its three reasons (`snapshot_absent` / `input_hash_mismatch` /
+`policy_version_superseded`) are carried through so the UI can route recalculate-vs-rebuild.
+Review items deliberately survive staleness: "one item needs your confirmation" is a fact
+about the evidence, and hiding it would remove the merchant's only lever exactly when they
+are asked to wait.
+
+**Deleted from the browser.** `useDisputeWorkspace` no longer imports
+`calculateCaseStrength`, `calculateImprovement`, `computeContributions`,
+`buildCaseGateAssessment`, `gateProvided` or `gateNotProvided`, and no longer reconstructs
+submission readiness from the checklist. Its old gate set stated three of five gates as
+`not_shipped_to_client`, so its answer had to differ from the server's whenever any of the
+three fired. `tests/unit/clientAssessmentRecomputation.test.ts` is the falsification-guarded
+CI invariant: it scans the six client surfaces for value imports of a scoring module, calls
+to a computing symbol, and readiness reconstruction; it re-runs all three detectors against
+a checked-in copy of the pre-fix hook to prove the detector still detects; and it holds a
+**shrink-only allow-list** of the remaining server-side `calculateCaseStrength` call sites
+with the epic that closes each.
+
+**`deadline_only` merchant copy** (`disputes.deadlineOnly.*`, ×6 locales). Three states,
+each with a distinct key set: `normal`, `deadline_only` ("waiting for the deadline because N
+item(s) need your confirmation" — `itemCount` is an ICU plural **param**, so each locale
+pluralises in its own grammar), and `withheld_no_safe_argument`. `willFile` is stated
+explicitly on the copy object so no surface infers "will it file?" from tone — the inference
+that made the auto-pilot hold read as "please review". `noSafeArgument` outranks
+`deadlineOnly`: a plan can be both, and promising a deadline filing would be false.
+
+**Hand-off to the workspace route** (Agent C owns
+`app/api/disputes/[id]/workspace/route.ts`): replace the inline `calculateCaseStrength` /
+`computeContributions` pair with one `buildWorkspaceAssessment({ disputeId, checklist:
+reconciledChecklistV2, reason: row.reason, payloadSource: caseStrengthPayloadSource, gates,
+packSaved: !!packRow?.saved_to_shopify_at, plan })` and ship the result as
+`workspaceAssessment` on the response. When there is no pack, ship
+`emptyWorkspaceAssessment(disputeId)`.
+
 ### Generate Pack — Template Check
 
 When a merchant clicks "Generate Pack" on the dispute detail page, the UI first checks for a matching template before running the generate call:

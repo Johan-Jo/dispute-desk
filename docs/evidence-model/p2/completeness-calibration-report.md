@@ -447,3 +447,59 @@ Deferred, with an owner needed:
 4. **`fraud_risk_screening` at 7/85 valid** (§6.1 census) — payload-dependent so
    correctly not flagged, but an 8% validity rate on a FRAUDULENT template field
    is worth its own look.
+
+---
+
+## Addendum — CP-A re-run on the post-C-14 baseline (2026-08-09)
+
+**Queried:** 2026-08-09T15:45:32Z against **prod** (`aokhplydttxtebvbeuzc`), read-only, same
+harness and same contract. `docs/evidence-model/p2/calibration-data.json` regenerated from this
+run. The CLI link was never touched; the harness reads over PostgREST GETs and takes its
+credentials from an explicit `ANALYSIS_ENV_FILE`.
+
+**P-7 was already decided** at kickoff and this re-run applies it; it does not seek approval.
+
+> blume-box activates at threshold **60**. surasvenne is excluded unless the new calibration
+> produces a disposition-preserving result.
+
+**Result: the shop set is blume-box alone, at 60.**
+
+| | blume-box | surasvenne |
+|---|---|---|
+| Packs on open disputes | 77 | 29 |
+| Eligible (can reach the gate) | 3 | 10 |
+| Current `auto_save_min_score` | 60 | 50 |
+| Disposition-preserving threshold | **77** (60 is inside it: 0 eligible packs change) | **none exists** |
+| Recommendation basis | **SOUND** | **BLOCKED** — 2 eligible packs are `unresolved_blocker` (#1061, #1077) |
+| Transition classification | 75 preserved · 1 corrected · 1 policy-change · 0 blockers | 26 preserved · 3 `unresolved_blocker` |
+
+C-14 cleared one of surasvenne's three prerequisites and neither of the others. The candidate
+semantics still **reorder rather than rescale** there — no threshold value leaves all ten
+eligible packs on their current disposition — and 2 of its 10 eligible packs remain unreadable
+(`unparseable_checklist` on #1061, `missing_pack_sections` on #1077). Under P-7's own rule
+surasvenne therefore stays on the current path and is out of scope for this delivery. That is
+consistent with the CP-0 census, which found surasvenne has **zero** open unsubmitted cases and
+is absent from the rebuild population entirely.
+
+### Reconciliation against the C-14 anchors
+
+| Anchor (epic brief) | Reproduced? |
+|---|---|
+| Case-strength changes **0** | ✅ — 0 band changes on the eligible population in both baselines |
+| Submission readiness moves in one direction only | ✅ — no eligible pack moves `ready → ready_with_warnings` |
+| Citation / LLM-value delta **0** | ✅ — the field was never bank-eligible; nothing to cite |
+| `coveragePercent` **96** | **Not reproducible, by design.** `docs/technical.md` marks it *"pre-implementation run only"*: it was measured against a checklist that still carried `billing_address_match`, and PR-C4 retired the row. Post-C-14 code cannot produce it, and requiring it would mandate an unexplainable difference. |
+| Affected packs **131** / effectively available **116** | Not re-measurable here — those are `billing_address_match` populations counted by the retirement harness (`billingAddressMatchRetirement.analysis.ts`) against pre-C-14 code, not quantities this harness computes. |
+
+### What the re-run says that is new
+
+**Persisted-vs-runtime drift widened: 94 of 106 packs** (was 67 of 115) carry a
+`completeness_score` the current engine no longer reproduces. The gate reads the **persisted**
+column, so this is live and independent of any threshold decision — and it is precisely the
+condition `SnapshotFreshness.inputHash` exists to make visible instead of silent. It is CP-D's
+rebuild population, not CP-A's to fix.
+
+**3 of 106 packs disagree about today**: the persisted snapshot and a fresh recalculation give
+different dispositions (surasvenne #1068 and 6fb2851a, blume-box #352501). On those the semantic
+baseline is not what production does, which is why §3 reports the two baselines separately and
+prices the trade-off from the persisted one.

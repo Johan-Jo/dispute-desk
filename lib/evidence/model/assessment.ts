@@ -168,6 +168,51 @@ export function completenessChecklistFromModel(
   return out;
 }
 
+/**
+ * The ONE place `calculateCaseStrength` is called from.
+ *
+ * Two entry points exist because two kinds of caller exist — one holds a
+ * `CaseEvidenceModel` (the build path) and one holds an already-reconciled
+ * `checklist_v2` (the read paths: the workspace API, the manual-upload
+ * route). Forcing the second kind to reconstruct a model would make the
+ * reconstruction a SECOND derivation, which is the class of defect this epic
+ * closes, so instead both funnel through here.
+ *
+ * `strengthChecklist` and `completenessChecklist` are separate parameters and
+ * must stay separate. Scoring skips empty fields for free; completeness
+ * divides by TOTAL weight, so an omitted empty field shrinks the denominator
+ * and silently inflates the score — straight past `auto_save_min_score`. They
+ * answer different questions from different row sets.
+ *
+ * CI invariant: `tests/unit/clientAssessmentRecomputation.test.ts` asserts
+ * that no client surface calls the scorer, and tracks the remaining
+ * server-side call sites as a named, shrinking allow-list.
+ */
+export function deriveAssessmentFromChecklists(args: {
+  strengthChecklist: ChecklistItemV2[];
+  completenessChecklist: ChecklistItemV2[];
+  reason: string | null | undefined;
+  payloadSource: EvidencePayloadSource | undefined;
+  gates: CaseGateAssessment;
+}): { strength: CaseStrengthResult; completeness: CaseAssessment["completeness"] } {
+  const strength = calculateCaseStrength(
+    args.strengthChecklist,
+    args.reason,
+    args.payloadSource,
+    args.gates,
+  );
+  const completeness = deriveCompletenessMetrics(args.completenessChecklist);
+  return {
+    strength,
+    completeness: {
+      score: completeness.completenessScore,
+      evidenceStrengthScore: completeness.evidenceStrengthScore,
+      readiness: completeness.submissionReadiness,
+      blockers: completeness.blockers,
+    },
+  };
+}
+
 export function deriveCaseAssessment(args: {
   model: CaseEvidenceModel;
   gates: CaseGateAssessment;
@@ -189,17 +234,15 @@ export function deriveCaseAssessment(args: {
   payloadSource: EvidencePayloadSource | undefined;
 }): CaseAssessment {
   const { model, gates, payloadSource } = args;
-  const strength = calculateCaseStrength(
-    checklistFromModel(model),
-    model.reason,
+  // Same adapter discipline as before: reuse the real engines rather than
+  // restate the weights, so a difference can only come from the row set.
+  const { strength, completeness } = deriveAssessmentFromChecklists({
+    strengthChecklist: checklistFromModel(model),
+    completenessChecklist: completenessChecklistFromModel(model),
+    reason: model.reason,
     payloadSource,
     gates,
-  );
-  // Same adapter discipline as strength: reuse the real engine rather than
-  // restate the weights, so a difference can only come from the row set.
-  const completeness = deriveCompletenessMetrics(
-    completenessChecklistFromModel(model),
-  );
+  });
   return {
     assessmentVersion: 1,
     scoringPolicyVersion: SCORING_POLICY_VERSION,
@@ -207,11 +250,6 @@ export function deriveCaseAssessment(args: {
     sectionsHash: model.derivedFrom.sectionsHash,
     gates,
     strength,
-    completeness: {
-      score: completeness.completenessScore,
-      evidenceStrengthScore: completeness.evidenceStrengthScore,
-      readiness: completeness.submissionReadiness,
-      blockers: completeness.blockers,
-    },
+    completeness,
   };
 }
