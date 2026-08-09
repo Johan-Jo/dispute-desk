@@ -15,7 +15,7 @@ import {
   cardholderNameFromPayload,
   detectCardholderNameMismatch,
 } from "./nameMismatch";
-import { avsBucket, cvvBucket, readPaymentVerification } from "./paymentVerification";
+import { readPaymentVerification } from "./paymentVerification";
 
 /* MERCHANT-LANGUAGE RULE (2026-07-23): never lead with a bare gateway
  * code — nobody but a bank knows what "AVS code Z" indicates. ONE
@@ -107,19 +107,30 @@ export function buildInternalSignalsByField(
     const verification = readPaymentVerification(avsPayload);
     const avs = verification.avs.code;
     const cvv = verification.cvv.code;
-    const avsMismatch = verification.avs.present && !verification.addressVerified;
-    const cvvMismatch = verification.cvv.present && !verification.securityCodeVerified;
+    // A FAILURE is the canonical `no_match` result and nothing else (PR-C3).
+    // The old test — present && !addressVerified — counted `unknown`,
+    // `not_checked` and `unavailable` as mismatches, so an unrecognised code
+    // produced a warning-severity "did not fully pass" on top of its own
+    // diagnostic. The issuer never said the address failed; our map simply
+    // does not carry the letter.
+    const avsFailed = verification.avs.normalized === "no_match";
+    const cvvFailed = verification.cvv.outcome === "no_match";
     const avsMatched = verification.addressVerified;
     const cvvMatched = verification.securityCodeVerified;
-    if (avsMismatch || cvvMismatch) {
+    // Fire on a genuine failure, or on a CVV-only match — the case where the
+    // merchant must be told the match is kept internal (PR-C2 decision 1).
+    if (avsFailed || cvvFailed || verification.cvvOnly) {
       // MERCHANT-LANGUAGE RULE: one combined plain-words sentence for
       // both results, then one short outcome sentence with consistent
       // "cited as evidence" phrasing. "Cited" follows the SCORING match
       // sets — what actually reaches the positive bucket / narrative.
       // Pure not-checked results carry no outcome: nothing was cited
       // or withheld, the result sentence stands alone.
-      const avsB = avsBucket(avs) ?? "none";
-      const cvvB = cvvBucket(cvv) ?? "none";
+      // Buckets come from the verification we already have — network-aware,
+      // normalized once. Re-reading the raw code through a code-only helper
+      // would re-normalize it as an unknown-network payload (PR-C3).
+      const avsB = verification.avs.outcome ?? "none";
+      const cvvB = verification.cvv.outcome ?? "none";
       const result = AVS_CVV_RESULT_EN[`${avsB}|${cvvB}`];
       if (result) {
         const sentences: string[] = [

@@ -14,7 +14,7 @@ import {
   DeliveryIcon,
   NoteIcon,
 } from "@shopify/polaris-icons";
-import { avsBucket, cvvBucket } from "@/lib/argument/paymentVerification";
+import { readPaymentVerification } from "@/lib/argument/paymentVerification";
 
 /* ── Types ── */
 
@@ -510,6 +510,10 @@ function CommsContent({ payload }: { payload: EvidencePayload }) {
 }
 
 function PaymentContent({ payload }: { payload: EvidencePayload }) {
+  // Normalized ONCE, from the WHOLE payload — so the card brand on this very
+  // record keys the map (PR-C3). Reading a bare letter would have normalized
+  // it as an unknown-network result.
+  const verification = readPaymentVerification(payload);
   return (
     <BlockStack gap="150">
       {payload.gateway && <DataRow label="Gateway" value={payload.gateway} />}
@@ -522,7 +526,7 @@ function PaymentContent({ payload }: { payload: EvidencePayload }) {
         <DataRow
           label="AVS check"
           value={
-            <Badge tone={toneFor(avsBucket(payload.avsResultCode))}>
+            <Badge tone={toneFor(verification.avs.outcome)}>
               {avsLabel(payload.avsResultCode)}
             </Badge>
           }
@@ -532,7 +536,7 @@ function PaymentContent({ payload }: { payload: EvidencePayload }) {
         <DataRow
           label="CVV check"
           value={
-            <Badge tone={toneFor(cvvBucket(payload.cvvResultCode))}>
+            <Badge tone={toneFor(verification.cvv.outcome)}>
               {cvvLabel(payload.cvvResultCode)}
             </Badge>
           }

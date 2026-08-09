@@ -130,6 +130,78 @@ describe("an unmapped AVS code earns nothing, on every consumer", () => {
     expect(diagnostic?.reason).toMatch(/not used as evidence/i);
   });
 
+  it("an unmapped code ALONE produces exactly one informational signal — no mismatch warning", () => {
+    // The old trigger was `present && !addressVerified`, which counted
+    // `unknown` as a failure: an unrecognised code got a warning-severity
+    // "did not fully pass" on top of its own diagnostic, telling the merchant
+    // the issuer rejected an address the issuer never commented on.
+    const signals =
+      buildInternalSignalsByField(
+        new Map<string, unknown>([["avs_cvv_match", { avsResultCode: "Q" }]]),
+      ).get("avs_cvv_match") ?? [];
+
+    expect(signals).toHaveLength(1);
+    expect(signals[0].id).toBe("internal:avs_code_unmapped");
+    expect(signals[0].severity).toBe("info");
+    expect(signals.some((s) => s.id === "internal:avs_cvv_mismatch")).toBe(false);
+    expect(signals.some((s) => s.severity === "warning")).toBe(false);
+
+    const prose = signals.map((s) => `${s.label} ${s.reason}`).join(" ");
+    expect(prose).not.toMatch(/did not fully pass/i);
+    expect(prose).not.toMatch(/would weaken/i);
+    expect(prose).not.toMatch(/partially passed/i);
+  });
+
+  it("an unmapped code WITH a genuine CVV failure reports the CVV, and calls AVS not-checked", () => {
+    const signals =
+      buildInternalSignalsByField(
+        new Map<string, unknown>([
+          ["avs_cvv_match", { avsResultCode: "Q", cvvResultCode: "N" }],
+        ]),
+      ).get("avs_cvv_match") ?? [];
+
+    const mismatch = signals.find((s) => s.id === "internal:avs_cvv_mismatch");
+    expect(mismatch).toBeDefined();
+    // The CVV failure is real and is stated.
+    expect(mismatch?.reason).toContain("security code did not match");
+    // The AVS half is described as not checked — never as a failure.
+    expect(mismatch?.reason).toContain("the address was not checked");
+    expect(mismatch?.reason).not.toMatch(/address did not match/i);
+
+    // And the diagnostic still rides alongside it.
+    expect(signals.some((s) => s.id === "internal:avs_code_unmapped")).toBe(true);
+  });
+
+  it("a not-checked or unavailable AVS code is not a mismatch either", () => {
+    for (const code of ["U", "S", "R", "G", "E"]) {
+      const signals =
+        buildInternalSignalsByField(
+          new Map<string, unknown>([["avs_cvv_match", { avsResultCode: code }]]),
+        ).get("avs_cvv_match") ?? [];
+      expect(signals).toEqual([]);
+    }
+  });
+
+  it("a genuine AVS failure still warns", () => {
+    for (const code of ["N", "Z", "C"]) {
+      const signals =
+        buildInternalSignalsByField(
+          new Map<string, unknown>([["avs_cvv_match", { avsResultCode: code }]]),
+        ).get("avs_cvv_match") ?? [];
+      expect(signals.some((s) => s.id === "internal:avs_cvv_mismatch")).toBe(true);
+    }
+  });
+
+  it("a MISSING AVS code is absence — no diagnostic, no warning", () => {
+    for (const payload of [{}, { avsResultCode: "" }, { cvvResultCode: "M" }]) {
+      const signals =
+        buildInternalSignalsByField(
+          new Map<string, unknown>([["avs_cvv_match", payload]]),
+        ).get("avs_cvv_match") ?? [];
+      expect(signals.some((s) => s.id === "internal:avs_code_unmapped")).toBe(false);
+    }
+  });
+
   it("a recognised code raises no such diagnostic", () => {
     for (const payload of [CITABLE, PARTIAL, { avsResultCode: "N" }, {}]) {
       const signals = buildInternalSignalsByField(

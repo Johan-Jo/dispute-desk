@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  avsBucket,
   citableVerificationSummaryEn,
-  cvvBucket,
   gradePaymentVerification,
   hasFullAvsAndCvvMatch,
   hasCitableAddressMatch,
@@ -247,16 +245,24 @@ describe("the match helpers read the CELL, not the letter (PR-C3)", () => {
 });
 
 describe("descriptive buckets vs the scoring predicate", () => {
-  it("buckets read the same as before the fold-in", () => {
-    expect(avsBucket("Y")).toBe("match");
-    expect(avsBucket("N")).toBe("no_match");
-    expect(avsBucket("Z")).toBe("no_match");
-    expect(avsBucket("U")).toBe("unchecked");
-    expect(avsBucket(null)).toBeNull();
-    expect(cvvBucket("M")).toBe("match");
-    expect(cvvBucket("N")).toBe("no_match");
-    expect(cvvBucket("P")).toBe("unchecked");
-    expect(cvvBucket("")).toBeNull();
+  // PR-C3 removed the code-only `avsBucket(code)` / `cvvBucket(code)` helpers:
+  // a bare letter normalized as an unknown-network payload. Outcomes now come
+  // off the verification, which always reads the whole payload.
+  const outcomes = (payload: Record<string, unknown>) => {
+    const v = readPaymentVerification(payload);
+    return { avs: v.avs.outcome, cvv: v.cvv.outcome };
+  };
+
+  it("outcomes read the same as the old buckets did", () => {
+    expect(outcomes({ avsResultCode: "Y" }).avs).toBe("match");
+    expect(outcomes({ avsResultCode: "N" }).avs).toBe("no_match");
+    expect(outcomes({ avsResultCode: "Z" }).avs).toBe("no_match");
+    expect(outcomes({ avsResultCode: "U" }).avs).toBe("unchecked");
+    expect(outcomes({}).avs).toBeNull();
+    expect(outcomes({ cvvResultCode: "M" }).cvv).toBe("match");
+    expect(outcomes({ cvvResultCode: "N" }).cvv).toBe("no_match");
+    expect(outcomes({ cvvResultCode: "P" }).cvv).toBe("unchecked");
+    expect(outcomes({ cvvResultCode: "" }).cvv).toBeNull();
   });
 
   it("AVS F — the disagreement PR-C2 pinned is RESOLVED by PR-C3's map, conservatively", () => {

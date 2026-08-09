@@ -30,17 +30,19 @@
  * internal-only, not "probably fine".
  *
  * WHAT IS NOT SOURCED YET, stated plainly rather than papered over: we hold no
- * primary Mastercard or Amex AVS code table. Their entries below are the same
- * gateway convention marked `unverified`, and the per-network override maps
- * exist and are EMPTY — the structure is keyed on (network, code) so a sourced
- * table drops in without touching a consumer, but nothing here pretends to
- * know a network-specific meaning it cannot quote.
+ * primary Mastercard or Amex AVS code table. Their codes inherit the shared
+ * base cells marked `unverified`, and their override maps are EMPTY — the
+ * structure is keyed on (network, code) so a sourced table drops in without
+ * touching a consumer, but nothing here pretends to know a network-specific
+ * meaning it cannot quote.
  *
- * ALSO NOT DECIDED HERE: whether citation should additionally require the
- * network to BE Visa. Decision 3 is scoped to codes (`Y`/`M`), not networks,
- * and 20 of the 44 citable packs on prod are Mastercard, Amex, or carry no
- * network at all. Narrowing by network is a separate decision with its own
- * measured delta — see the PR body.
+ * DECISION 3, PRECISELY: citation requires a PRIMARY-SOURCED (network, code)
+ * cell. Register R-E is a Visa document, so `(visa, Y)` and `(visa, M)` are
+ * the citable cells today. The same letters on Mastercard, Amex or an
+ * unbranded pack are real matches for scoring and merchant display, and
+ * `unverified` — therefore non-citable — until each network's own table is
+ * extracted. Measured cost of applying that rule: 21 packs across 21
+ * disputes, 11 open (PR body).
  */
 
 /* ── Vocabularies ──────────────────────────────────────────────────────── */
@@ -252,8 +254,10 @@ const UNMAPPED_CELL: AvsCell = {
  *
  * Returns `unknown` rather than guessing. On prod, 19 of 130 AVS-bearing
  * packs carry no brand at all — an unknown network must therefore be a
- * first-class, non-punitive state: it selects the base table, and citation
- * still turns on the CODE, per decision 3.
+ * first-class, NON-PUNITIVE state: it selects the base table, so normalization
+ * and scoring are identical to any other network. What it cannot do is cite,
+ * because citation is a property of the (network, code) cell and an unbranded
+ * pack has no sourced cell to stand on.
  */
 export function resolveCardNetwork(payload: unknown): CardNetwork {
   const p = (payload && typeof payload === "object" ? payload : {}) as Record<string, unknown>;

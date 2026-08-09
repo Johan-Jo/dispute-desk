@@ -35,12 +35,13 @@
  * with AVS and CVV as subfacts beneath it. This module produces the subfacts;
  * it deliberately does not add a checklist row. (`lib/automation/completeness.ts`)
  *
- * WHAT THIS FILE DOES NOT DECIDE — PR-C3 (C-13) owns it: which codes qualify,
- * per network. The match sets below are today's behaviour, carried over
- * unchanged and network-agnostic, so that PR-C2 is a split and not a
- * re-grading. Every place where the descriptive reading and the scoring
- * reading disagree (`F`) is named explicitly below rather than silently
- * reconciled, because reconciling it *is* PR-C3's job.
+ * DECISION 3 (PR-C3 / C-13): which codes qualify is answered by
+ * `avsCodeMap.ts`, keyed on (network, code). Citation requires a
+ * PRIMARY-SOURCED cell — `(visa, Y)` and `(visa, M)` today, per register R-E —
+ * while scoring and merchant display still credit the broader match set on
+ * every network. `addressVerified` is the scoring answer,
+ * `citableAddressVerified` the citation one; they are separate fields because
+ * they are separate questions.
  */
 
 import {
@@ -356,10 +357,18 @@ export function citableVerificationPartsEn(v: PaymentVerification): string[] {
 export type AvsBucket = VerificationOutcome;
 export type CvvBucket = VerificationOutcome;
 
-export function avsBucket(code: string | null | undefined): AvsBucket | null {
-  return readPaymentVerification({ avsResultCode: code ?? null }).avs.outcome;
-}
-
-export function cvvBucket(code: string | null | undefined): CvvBucket | null {
-  return readPaymentVerification({ cvvResultCode: code ?? null }).cvv.outcome;
-}
+/**
+ * THE CODE-ONLY BUCKET HELPERS ARE GONE (PR-C3).
+ *
+ * `avsBucket(code)` took a letter with no network and normalized it as an
+ * unknown-network payload. Both merchant-signal implementations already held
+ * a fully normalized, network-aware `PaymentVerification` and then threw it
+ * away to call this — re-deriving the same code through a weaker path, which
+ * is how the descriptive reading drifts from the predicate.
+ *
+ * Read `verification.avs.outcome` / `verification.cvv.outcome` instead.
+ * `readPaymentVerification` takes the whole payload, so the network is never
+ * optional at the boundary, and
+ * `tests/unit/paymentVerificationSingleOwner.test.ts` fails the build on any
+ * AVS normalization that omits it.
+ */

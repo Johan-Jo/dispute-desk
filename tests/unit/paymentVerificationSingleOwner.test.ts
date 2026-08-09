@@ -107,6 +107,36 @@ describe("AVS / CVV match rules have exactly one definition", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("no AVS normalization omits the network (PR-C3)", () => {
+    // `normalizeAvsCode` is network-first by signature, so the way to lose the
+    // network is to call it with a literal, or to rebuild a payload holding
+    // only a code. Both are bans: a bare code normalizes as unknown-network,
+    // which silently downgrades a citable Visa result.
+    const offenders: string[] = [];
+    for (const { rel, text } of sourceFiles()) {
+      // normalizeAvsCode("visa", …) with a literal network, outside the map.
+      if (/normalizeAvsCode\(\s*"/.test(text)) offenders.push(`${rel}: literal network`);
+      // readPaymentVerification({ avsResultCode … }) with no network key —
+      // the code-only shape the deleted bucket helpers used.
+      const synthetic = text.match(/readPaymentVerification\(\{[^}]*\}/g) ?? [];
+      for (const call of synthetic) {
+        if (/avsResultCode|avsResult/.test(call) && !/network|cardCompany|cardBrand/.test(call)) {
+          offenders.push(`${rel}: ${call.slice(0, 70)}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("the code-only bucket helpers no longer exist", () => {
+    const owner = fs.readFileSync(path.join(process.cwd(), OWNER), "utf8");
+    expect(owner).not.toMatch(/export function avsBucket\b/);
+    expect(owner).not.toMatch(/export function cvvBucket\b/);
+
+    const callers = sourceFiles().filter(({ text }) => /\b(avsBucket|cvvBucket)\s*\(/.test(text));
+    expect(callers.map(({ rel }) => rel)).toEqual([]);
+  });
+
   it("the owner and its code map are the only files that name the codes as rules", () => {
     const owner = fs.readFileSync(path.join(process.cwd(), OWNER), "utf8");
     const map = fs.readFileSync(path.join(process.cwd(), AVS_MAP), "utf8");

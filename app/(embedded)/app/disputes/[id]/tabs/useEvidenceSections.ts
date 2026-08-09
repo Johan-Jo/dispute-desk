@@ -44,11 +44,7 @@ import {
   cardholderNameFromPayload,
   detectCardholderNameMismatch,
 } from "@/lib/argument/nameMismatch";
-import {
-  avsBucket,
-  cvvBucket,
-  readPaymentVerification,
-} from "@/lib/argument/paymentVerification";
+import { readPaymentVerification } from "@/lib/argument/paymentVerification";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import type { Localized } from "@/lib/i18n/localized";
 import { resolveToken } from "@/lib/i18n/resolveToken";
@@ -413,15 +409,21 @@ function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel
   const verification = readPaymentVerification(payload);
   const avs = verification.avs.code;
   const cvv = verification.cvv.code;
-  // Only emit when at least one code is present AND that code is
-  // outside the scoring match set. Absence of codes is not a signal.
-  const avsMismatch = verification.avs.present && !verification.addressVerified;
-  const cvvMismatch = verification.cvv.present && !verification.securityCodeVerified;
-  if (!avsMismatch && !cvvMismatch) return null;
+  // A FAILURE is the canonical `no_match` result and nothing else (PR-C3) —
+  // `unknown`, `not_checked` and `unavailable` are not failures, and an
+  // unrecognised code must not become a mismatch warning on top of its own
+  // diagnostic. Fires additionally on a CVV-only match, where the merchant
+  // must be told the match is kept internal (PR-C2 decision 1).
+  const avsFailed = verification.avs.normalized === "no_match";
+  const cvvFailed = verification.cvv.outcome === "no_match";
+  if (!avsFailed && !cvvFailed && !verification.cvvOnly) return null;
 
   const NS = "internalSignals.avsCvvMismatch";
-  const avsB = avsBucket(avs) ?? "none";
-  const cvvB = cvvBucket(cvv) ?? "none";
+  // Buckets come from the verification already normalized above — network
+  // aware, read once. A code-only helper would re-read the letter as an
+  // unknown-network payload.
+  const avsB = verification.avs.outcome ?? "none";
+  const cvvB = verification.cvv.outcome ?? "none";
   const resultKey = AVS_CVV_RESULT_KEY[`${avsB}|${cvvB}`];
   if (!resultKey) return null; // unreachable combos (match|match etc.)
 
