@@ -429,7 +429,8 @@ function resolveSignedByName(
  * and licensed the issuer-facing "delivered to the verified address" claim.
  * The rule it purported to satisfy (Visa §4 Compelling Evidence chart Item 3:
  * "delivered to the same physical address for which the Merchant received an
- * AVS match of Y or M") requires an AVS result. This derivation read no AVS
+ * qualifying AVS match — register R-E, encoded in `lib/argument/avsCodeMap.ts`)
+ * requires an AVS result. This derivation read no AVS
  * code at any point. Measured on production before removal: 60 packs asserted
  * a verified address, and on 54 of them the issuer's own AVS response was `N`.
  *

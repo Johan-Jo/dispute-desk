@@ -379,10 +379,10 @@ function readString(v: unknown): string | null {
 
 /**
  * MERCHANT-LANGUAGE RULE (2026-07-23): never lead with a bare gateway
- * code — nobody but a bank knows what "AVS code Z" indicates. One
+ * code — nobody but a bank knows what a bare AVS letter indicates. One
  * combined plain-words sentence covers both results (codes in
- * parentheses at the end), then one short outcome sentence using the
- * consistent "cited as evidence" phrasing. Mirrors
+ * parentheses at the end), then one short outcome sentence. "Cited"
+ * follows the CITATION authority, never the scoring match. Mirrors
  * `lib/argument/internalSignals.ts` — keep the two in lockstep.
  *
  * Result-sentence key by (avs outcome, cvv outcome); "none" = code absent.

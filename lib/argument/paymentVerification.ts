@@ -272,10 +272,14 @@ export function gradePaymentVerification(v: PaymentVerification): PaymentVerific
 }
 
 /**
- * The strict both-matched form the CE chart contemplates: AVS `Y` with CVV
- * `M`. Kept strict (not widened to the scoring set) because it gates
- * bank-facing strategy selection and thesis text; PR-C3 assigns it a
- * primary-sourced code set.
+ * The both-matched form the CE chart contemplates, in canonical terms: a
+ * CITABLE address result — a primary-sourced (network, code) cell, which today
+ * means a Visa full or international match (register R-E) — TOGETHER WITH a
+ * matched security code.
+ *
+ * Stated as predicates, not letters, and deliberately so: it gates bank-facing
+ * strategy selection and thesis text, and PR-C3 made the answer depend on the
+ * network as well as the code.
  */
 export function hasFullAvsAndCvvMatch(v: PaymentVerification): boolean {
   return hasCitableAddressMatch(v) && v.securityCodeVerified;

@@ -18,7 +18,7 @@ import {
 import { readPaymentVerification } from "./paymentVerification";
 
 /* MERCHANT-LANGUAGE RULE (2026-07-23): never lead with a bare gateway
- * code — nobody but a bank knows what "AVS code Z" indicates. ONE
+ * code — nobody but a bank knows what a bare AVS letter indicates. ONE
  * combined plain-words sentence covers both results (codes
  * parenthesized at the end), then one short outcome sentence with the
  * consistent "cited as evidence" phrasing. These English sentences

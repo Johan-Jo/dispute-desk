@@ -192,7 +192,8 @@ export const FACT_PREDICATES: Record<FactPredicateId, FactPredicate> = {
 
   avs_and_cvv_match: {
     id: "avs_and_cvv_match",
-    description: "payment_authentication / payment_auth with a full AVS match (Y) AND a CVV match (M)",
+    description:
+      "payment_authentication / payment_auth whose ADDRESS result is the canonical citable match (a primary-sourced (network, code) cell, register R-E) AND whose SECURITY-CODE result is a match",
     evaluate: (facts) =>
       paymentVerifications(facts).some((v) => hasFullAvsAndCvvMatch(v)),
   },

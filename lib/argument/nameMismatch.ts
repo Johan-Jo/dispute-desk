@@ -7,7 +7,8 @@
  * with the name on the order, the order was placed by someone other
  * than the person the issuer knows — the classic stolen-card pattern
  * (prod dispute 235d4152: card registered to "Robin Denise Pipe",
- * order placed by "Sean Boyd", AVS N, first-order account, Shopify
+ * order placed by "Sean Boyd", address verification returning a no-match,
+ * first-order account, Shopify
  * pre-auth risk HIGH/CANCEL — presented as a Strong case pre-fix).
  *
  * MERCHANT-UI ONLY. The mismatch NEVER enters the bank-facing PDF,

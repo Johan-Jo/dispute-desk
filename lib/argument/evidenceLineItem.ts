@@ -469,9 +469,9 @@ function reasonFor(
  *
  * The copy variant never reports a single successful verification as "both
  * matched":
- *   - AVS + CVV both match → bothMatched
- *   - AVS only: A (street) → streetMatched; W (zip) → postalMatched;
- *     otherwise → addressMatched
+ *   - address + security code both match → bothMatched
+ *   - address only: the canonical `street_match` result → streetMatched;
+ *     `postal_match` → postalMatched; any other match → addressMatched
  *   - CVV only → `cvvOnlyInternal`. PR-C2 decision 1: that row is no longer
  *     bank-eligible, so the copy says what is true — the match is on record
  *     and kept internal, because a security-code match is not an address
