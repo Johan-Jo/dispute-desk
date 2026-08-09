@@ -40,7 +40,11 @@ import {
   normalizeEvidencePayload,
   type EvidencePayload,
 } from "./payloads";
-import { retiredPayloadKeysIn, stripRetiredPayloadKeys } from "./retiredKeys";
+import {
+  retiredFieldKeysIn,
+  retiredPayloadKeysIn,
+  stripRetiredPayloadKeys,
+} from "./retiredKeys";
 import {
   EVIDENCE_FIELD_KEYS,
   domainOf,
@@ -312,7 +316,12 @@ export function deriveCaseEvidenceModel(
   const recordsByField = new Map<EvidenceFieldKey, CaseEvidenceRecord[]>();
   const collapsed: Record<string, { nested: number; emitted: number }> = {};
   const seenFields: string[] = [];
-  /** Retired keys observed on ANY input payload — reported, never read. */
+  /**
+   * Retired keys observed on ANY input — payload keys inside `data`, and whole
+   * retired FIELD keys in `fieldsProvided`. Reported, never read: neither kind
+   * ever becomes a record, a category, a grade, a completeness credit, a
+   * citation or an LLM value.
+   */
   const retiredSeen = new Set<string>();
 
   const push = (field: string, recs: CaseEvidenceRecord[], nested: number) => {
@@ -332,7 +341,11 @@ export function deriveCaseEvidenceModel(
     const fields = section.fieldsProvided ?? [];
     seenFields.push(...fields);
     for (const k of retiredPayloadKeysIn(section.data ?? null)) retiredSeen.add(k);
+    for (const k of retiredFieldKeysIn(fields)) retiredSeen.add(k);
     for (const field of fields) {
+      // A retired field key is not an evidence field, so this `continue` is
+      // what stops it — but it is recorded above first, so a historical pack
+      // reports it rather than losing it.
       if (!isEvidenceField(field)) continue;
       const recs = makeRecords({
         fieldKey: field,
@@ -353,6 +366,7 @@ export function deriveCaseEvidenceModel(
       ...(typeof payload?.checklistField === "string" ? [payload.checklistField] : []),
     ];
     seenFields.push(...fields);
+    for (const k of retiredFieldKeysIn(fields)) retiredSeen.add(k);
     for (const field of fields) {
       if (!isEvidenceField(field)) continue;
       const recs = makeRecords({

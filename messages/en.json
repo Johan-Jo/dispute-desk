@@ -684,7 +684,6 @@
     "signalLabel": {
       "payment_auth": "Payment authentication",
       "tds_authentication": "3-D Secure authentication",
-      "billing_match": "Billing address match",
       "delivery": "Delivery confirmation",
       "ip_location": "IP & location consistency",
       "device_session": "Device & session signals",
@@ -830,7 +829,6 @@
       "manual_upload": "Uploaded manually",
       "unavailable_from_source": "Not available from source",
       "order_confirmation": "From Shopify order data",
-      "billing_address_match": "From Shopify order data",
       "avs_cvv_match": "From payment gateway",
       "shipping_tracking": "From Shopify fulfillment data",
       "delivery_proof": "From carrier tracking",
@@ -887,7 +885,6 @@
       "order_confirmation": "Proves the transaction is legitimate — the foundation of every dispute response",
       "shipping_tracking": "Shows the carrier confirmed shipment — required to win 'item not received' disputes",
       "delivery_proof": "Confirms the customer received the package — strongest evidence against 'not received' claims",
-      "billing_address_match": "Matches the billing address to the order — a supporting signal for fraud disputes",
       "avs_cvv_match": "Shows the card security checks passed — a supporting signal whose weight depends on the dispute reason and the other evidence available",
       "product_description": "Proves the product matched what was advertised — key defense for 'not as described' disputes",
       "refund_policy": "Shows the customer agreed to your refund terms — protects against buyer's remorse claims",
@@ -1050,6 +1047,10 @@
         "countryDetail": "Billing country {billingCountry} differs from shipping country {shippingCountry}.",
         "cityDetail": "Billing city differs from shipping city.",
         "explanation": "{detail} Used internally for assessment; not surfaced to the bank to avoid weakening the response."
+      },
+      "billingShippingAgree": {
+        "title": "Billing and shipping addresses on the order agree",
+        "explanation": "The billing and shipping addresses you hold for this order have the same city and country. This is an internal note about your own order record, not evidence — it is not a check by the cardholder's bank, so it is never scored and never included in the dispute response. Address verification comes from the issuer's AVS result on the payment row."
       },
       "ipCountryMismatch": {
         "title": "IP geolocation mismatch",
@@ -1608,9 +1609,6 @@
             "internalAvsFail": "The billing address (AVS) did not match the issuer's records. Kept internal — citing this to the bank would undermine the fraud response.",
             "internalCvvFail": "The card verification code (CVV) did not match the issuer's records. Kept internal — citing this to the bank would undermine the fraud response.",
             "cvvOnlyInternal": "The card verification code (CVV) matched the issuer's records, but the billing address did not. Kept internal — a security-code match is not an address match, so it is not cited to the bank."
-          },
-          "billingAddress": {
-            "notIncluded": "The payment gateway did not return an AVS match result for this transaction. The billing address is on file, but no match/mismatch decision is available."
           },
           "shippingTracking": {
             "notIncluded": "The order has not shipped yet, so no carrier tracking is available. Once you ship the order this row will populate automatically."

@@ -4839,11 +4839,123 @@ A template item is marked **automatic** only when a current collector truly prod
 | `tds_authentication` | 3-D Secure result read from gateway receipt | `lib/packs/sources/threeDSecureSource.ts` | Conditional (Shopify Payments only, "if available") |
 | `fraud_risk_screening` | Shopify pre-authorization risk assessment | `lib/packs/sources/fraudRiskSource.ts` | Automatic |
 | `ip_location_check` | Checkout IP resolved via IPinfo, compared to billing country | `lib/packs/sources/deviceLocationSource.ts` | Automatic |
-| `billing_address_match` | Billing vs shipping city/country comparison | `lib/packs/sources/orderSource.ts` | Automatic |
 | `customer_account_info` | Repeat-customer signal (`customer.numberOfOrders` from the disputed order) | `lib/packs/sources/orderSource.ts` | Automatic |
 | `customer_communication` | Shopify timeline messages, order notes, buyer attributes | `lib/packs/sources/customerCommSource.ts` | Automatic |
 | `shipping_tracking` | Carrier tracking number + status from fulfillment | `lib/packs/sources/fulfillmentSource.ts` | Automatic when shipped |
 | `delivery_proof` | Carrier delivery status (with signature/photo when provided) | `lib/packs/sources/fulfillmentSource.ts` | Automatic when shipped |
+
+### Retired: `billing_address_match` (PR-C4 / C-14, 2026-08-09)
+
+`billing_address_match` is a **retired field key** — the second kind of entry in
+`lib/evidence/model/retiredKeys.ts`. A retired *payload* key (PR-C1) is a property stripped from a
+section's `data`; a retired *field* key is a whole entry in `fieldsProvided` /
+`checklist_v2.field`, removed at the boundary of every derivation, classification and checklist
+read. The two registries are separate on purpose: one is a property, the other an identity.
+
+**Why.** The canonical registry graded it **strong**, noting "Strong when AVS-confirmed billing
+matches the cardholder". `orderSource` emitted it whenever Shopify's own `billingAddress` and
+`shippingAddress` shared a city and a country — two merchant-held addresses, no AVS result, no
+cardholder. It is the same defect class PR-C1 retired on the delivery side, and PR-C1 deliberately
+left it out of scope. The runtime was never the defect: the collector never wrote the `match` key
+the grader keys on, so the grade has always resolved `invalid`. What is retired is the **semantics
+and the ownership** — a strength and claim-authority signal that never carried the authority its
+grade claimed, and which one future collector line writing `match: true` would have promoted into
+AVS-confirmed cardholder evidence. Address verification has a real owner now: the canonical AVS
+fact from PR-C2 (predicate split) and PR-C3 (per-(network, code) normalization). The concept was
+given a new owner **before** the old one was deleted.
+
+**Measured on prod before merge** (read-only; `scripts/sql/prc4-billing-address-match-census.sql`
+and `scripts/evidence-model/billingAddressMatchRetirement.analysis.ts`, 2026-08-09). The SQL census
+and the completeness/claim-capability arms of the harness re-run identically today; the
+`coveragePercent` figure below could only be taken on the unmodified code and is marked as such —
+see *Reproducibility* at the end of this section:
+
+| | |
+|---|---|
+| packs carrying the field / disputes | **116 / 114** (99 FRAUDULENT) |
+| of those, `data.match === true` (the grader's strong branch) | **0** |
+| sections carrying a `match` key at all | **0** |
+| `defence_evidence_facts` rows in category `billing_match` | **0** |
+| packages whose `facts_json` embeds a `billing_match` fact | **0** |
+| **case-strength changes** | **0** (moderate→moderate 98, weak→weak 27, strong→strong 6) |
+| `coveragePercent` moves (no band crossed) | **96** — *pre-implementation run only* |
+| **citation / LLM-value delta** | **0** — the field was never bank-eligible, so nothing was ever cited |
+| persisted `checklist_v2` rows for the field | **112** (97 `available`/critical, 15 `missing`/critical) |
+| rows the pre-C-14 reconcile actually **scored** | **116 effectively available** = 97 persisted + 19 appended at read time; plus 15 persisted `missing` |
+| completeness score delta | **90 packs −1…−7, 15 packs +2…+17, 26 unchanged** |
+| submission readiness | **13 packs `ready_with_warnings` → `ready`**; none moves the other way |
+
+The completeness delta is the whole point of the ordering `PR-C4 → P-7`: 97 packs were earning
+**critical**-priority credit and 19 more **optional**-priority credit for a geographic coincidence,
+while 15 were being nagged for evidence that could never be evidence. Calibrating P-7 over a field
+that is collected 116 / valid 0 measures the defect, not the gate.
+
+**Two populations, not one number.** The SQL census counts **persisted** rows; completeness scores
+the rows the reconcile actually produced, which is a different set because
+`reconcileChecklistWithCollectedFields` flips and appends before the engine sees the checklist.
+Measured decomposition of the 131 affected packs:
+
+| pre-C-14 row | packs |
+|---|---|
+| persisted `available`/critical, field collected | 97 |
+| no persisted row, field collected → appended `optional`/`available` at read time (the append rule, 2026-08-04) | 19 |
+| **effectively available — what completeness scored** | **116** |
+| persisted `missing`/critical, field never collected | 15 |
+
+**No case ends up weaker for want of address representation** (deletion criterion 2). Across those
+**116** effectively-available rows — not the 97 persisted ones; an earlier draft of this section
+quoted the wrong population — the canonical AVS fact reads:
+
+| AVS reading on the same pack | packs |
+|---|---|
+| citable address match (Visa `Y`) | 17 |
+| address match on an unsourced (network, code) cell (unknown `Y` 11, MC `Y` 3, MC `A` 1, Amex `Y` 1) | 16 |
+| issuer `N` — an explicit *no* match | 70 |
+| not checked (no code returned) | 8 |
+| unavailable (MC `U`) | 1 |
+| no AVS fact on the pack at all | 4 |
+| **total** | **116** |
+
+Genuine address verification is already carried by `avs_cvv_match`; the 70 `N` packs are the defect
+in one number, the same shape as PR-C1's 54-of-60.
+
+**What the merchant keeps (decision 4).** The billing-vs-shipping comparison survives as an
+explicitly **non-evidence operational note** under a **new** label —
+`disputes.internalSignals.billingShippingAgree` in all six locales, emitted by
+`buildInternalSignalsByField` and `classifyBillingShippingAgreement`, anchored on
+`order_confirmation`, severity `info`. It is never scored, never cited, never a claim input, and it
+says so. The misleading **evidence** label `disputes.signalLabel.billing_match` is **retired, not
+repurposed**, along with `whyText` / `sourceCaption` / the line-item `notIncluded` reason in all six
+locales. The mismatch note is unchanged.
+
+**Where the retirement takes effect.** `reconcileChecklistWithCollectedFields` drops the row — it is
+the one function both build time and every read pass through, so all 112 existing packs stop
+scoring it on the next page load with no rebuild, no backfill and no `pack_json` rewrite.
+`classifyFacts` skips the field explicitly (sections and missing-rows alike) rather than relying on
+the `!spec` fall-through, because a deliberate retirement and an unregistered key must never look
+the same in code. `deriveCaseEvidenceModel` reports it under
+`nonEvidence.operational.retiredFields`, never `unregisteredFields`. `CANONICAL_EVIDENCE_VERSION`
+bumps **3 → 4** so persisted category caches recompute.
+
+**Reproducibility.** The harness reconstructs its BEFORE arm from the persisted checklist, so the
+grade census, the completeness distribution, the readiness transitions, the row-provenance
+decomposition, the claim-capability probe and the case-strength histogram all re-run identically
+after the merge (verified: 2026-08-09T11:36Z unmodified vs 12:33Z after). Two figures cannot:
+the **96-pack `coveragePercent` delta**, because `calculateCaseStrength` counts a checklist row only
+when its field has a `CANONICAL_EVIDENCE` spec — with the spec deleted the re-attached BEFORE row is
+invisible to the scorer, so the post-merge BEFORE arm no longer models the coverage-denominator
+effect at all and "0 case-strength changes" stands on the pre-implementation run against the real
+registry; and the harness's own `bankEligible` counter, which is now 0 by the retirement guard
+rather than by measurement (the durable evidence for the zero citation delta is the SQL census,
+which reads persisted data and re-runs indefinitely).
+
+**Deliberately out of scope.** `visa_10_4_fraud.criticalCategories` still names `billing_match`,
+whose only member this PR removes. That category had **0 facts in production** already, so every
+Visa 10.4 package is *already* `narrow` and this PR changes nothing — removing the entry would flip
+real packages narrow → full, a bank-visible change needing its own approval. The condition is
+pinned by a test rather than left to be discovered; **no work on it is started here**. Also
+unchanged: completeness thresholds, P-7 calibration, and every existing package, submission state
+and `pack_json`.
 
 ### Retired: the verified-address delivery upgrade (PR-C1, 2026-08-07)
 

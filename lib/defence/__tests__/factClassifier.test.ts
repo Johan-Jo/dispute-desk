@@ -398,17 +398,46 @@ describe("classifyFacts", () => {
   });
 
   it("strong case with 2+ bank-eligible categories and all critical categories present produces packageMode=full", () => {
+    // INR, whose criticalCategories are reachable (`delivery_proof`).
     const result = classifyFacts(
       baseInput({
         caseStrength: "strong",
+        reasonCodeModule: resolveReasonCodeModuleForContext(null, "PRODUCT_NOT_RECEIVED"),
         sections: [
           section({ data: { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Visa" }, fieldsProvided: ["avs_cvv_match"] }),
-          section({ data: { match: true }, fieldsProvided: ["billing_address_match"] }),
           section({ data: { proofType: "delivered_confirmed" }, fieldsProvided: ["delivery_proof"] }),
         ],
       }),
     );
     expect(result.packageMode).toBe("full");
+  });
+
+  it("Visa 10.4 stays packageMode=narrow — its critical `billing_match` category has no member", () => {
+    // PINNED, NOT INTRODUCED (PR-C4 / C-14). `visa_10_4_fraud.criticalCategories`
+    // names `billing_match`, whose only member was `billing_address_match`. That
+    // field never produced a fact in production — the collector never wrote the
+    // `match` key its grader keys on, so the prod census counts 0 rows in the
+    // `billing_match` category and every Visa 10.4 package is ALREADY `narrow`.
+    // Retiring the field makes that structural rather than incidental.
+    //
+    // Restating `visa_10_4_fraud` is deliberately OUT OF SCOPE for C-14: doing
+    // it here would flip real packages narrow -> full, which is a bank-visible
+    // change needing its own approval. This test exists so the next author sees
+    // the condition instead of discovering it.
+    const result = classifyFacts(
+      baseInput({
+        caseStrength: "strong",
+        sections: [
+          section({ data: { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Visa" }, fieldsProvided: ["avs_cvv_match"] }),
+          section({ data: { proofType: "delivered_confirmed" }, fieldsProvided: ["delivery_proof"] }),
+          // A historical section for the retired field — with the `match: true`
+          // production never actually wrote, to prove even that grants nothing.
+          section({ data: { match: true }, fieldsProvided: ["billing_address_match"] }),
+        ],
+      }),
+    );
+    expect(result.approved.some((f) => f.category === "billing_match")).toBe(false);
+    expect(result.packageMode).toBe("narrow");
   });
 
   it("manual upload marked bank-eligible appears in approved as supporting strength", () => {

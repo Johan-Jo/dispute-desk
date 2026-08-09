@@ -1105,9 +1105,6 @@
             "internalCvvFail": "Le code de vérification de la carte (CVV) n'a pas correspondu aux enregistrements de l'émetteur. Conservé en interne — citer cela à la banque émettrice affaiblirait la réponse à la fraude.",
             "cvvOnlyInternal": "Le code de vérification de la carte (CVV) a correspondu aux enregistrements de l'émetteur, mais pas l'adresse de facturation. Conservé en interne — un code de sécurité correspondant n'est pas une correspondance d'adresse, il n'est donc pas cité à la banque."
           },
-          "billingAddress": {
-            "notIncluded": "La passerelle de paiement n'a pas renvoyé de résultat de correspondance AVS pour cette transaction. L'adresse de facturation est enregistrée, mais aucune décision de correspondance/non-correspondance n'est disponible."
-          },
           "shippingTracking": {
             "notIncluded": "La commande n'a pas encore été expédiée, donc aucun suivi du transporteur n'est disponible. Une fois la commande expédiée, cette ligne se remplira automatiquement."
           },
@@ -1290,7 +1287,6 @@
     "signalLabel": {
       "payment_auth": "Authentification du paiement",
       "tds_authentication": "Authentification 3-D Secure",
-      "billing_match": "Correspondance de l'adresse de facturation",
       "delivery": "Confirmation de livraison",
       "ip_location": "Cohérence IP et localisation",
       "device_session": "Signaux d'appareil et de session",
@@ -1421,7 +1417,6 @@
       "refund_record": "Issu des données de remboursement Shopify",
       "no_return_initiated": "Issu du statut de retour Shopify",
       "order_confirmation": "Issu des données de commande Shopify",
-      "billing_address_match": "Issu des données de commande Shopify",
       "avs_cvv_match": "Issu de la passerelle de paiement",
       "shipping_tracking": "Issu des données d'expédition Shopify",
       "delivery_proof": "Issu du suivi du transporteur",
@@ -1483,7 +1478,6 @@
       "order_confirmation": "Prouve que la transaction est légitime — la base de toute réponse à un litige",
       "shipping_tracking": "Montre que le transporteur a confirmé l'expédition — indispensable pour gagner les litiges « article non reçu »",
       "delivery_proof": "Confirme que le client a reçu le colis — preuve la plus solide contre les réclamations « non reçu »",
-      "billing_address_match": "Fait correspondre l'adresse de facturation à la commande — un signal de soutien pour les litiges pour fraude",
       "avs_cvv_match": "Montre que les contrôles de sécurité de la carte ont été validés — un signal de soutien dont le poids dépend du motif du litige et des autres preuves disponibles",
       "product_description": "Prouve que le produit correspondait à ce qui était annoncé — argument clé pour les litiges « non conforme à la description »",
       "refund_policy": "Montre que le client a accepté vos conditions de remboursement — protège contre les réclamations de remords d'achat",
@@ -1693,6 +1687,10 @@
         "countryDetail": "Le pays de facturation {billingCountry} diffère du pays de livraison {shippingCountry}.",
         "cityDetail": "La ville de facturation diffère de la ville de livraison.",
         "explanation": "{detail} Utilisé en interne pour l'évaluation ; non transmis à la banque afin de ne pas affaiblir la réponse."
+      },
+      "billingShippingAgree": {
+        "title": "Les adresses de facturation et de livraison de la commande concordent",
+        "explanation": "Les adresses de facturation et de livraison que vous détenez pour cette commande indiquent la même ville et le même pays. Il s'agit d'une note interne sur votre propre enregistrement de commande, et non d'une preuve : ce n'est pas une vérification effectuée par la banque du titulaire de la carte, elle n'est donc jamais notée ni incluse dans la réponse au litige. La vérification de l'adresse provient du résultat AVS de l'émetteur, sur la ligne de paiement."
       },
       "ipCountryMismatch": {
         "title": "Incohérence de géolocalisation IP",

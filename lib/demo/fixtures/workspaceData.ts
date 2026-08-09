@@ -26,7 +26,6 @@ function rebase(iso: string): string {
 
 const FIELD_ORDER = [
   "order_confirmation",
-  "billing_address_match",
   "avs_cvv_match",
   "shipping_tracking",
   "delivery_proof",
@@ -45,7 +44,6 @@ type FieldName = (typeof FIELD_ORDER)[number];
 /** Per-field metadata: label + which evidence-category bucket it lives in. */
 const FIELD_META: Record<FieldName, { label: string; category: string; priority: "critical" | "recommended" | "optional" }> = {
   order_confirmation: { label: "Order confirmation", category: "order", priority: "critical" },
-  billing_address_match: { label: "Billing address match", category: "order", priority: "critical" },
   avs_cvv_match: { label: "AVS / CVV verification", category: "payment", priority: "critical" },
   shipping_tracking: { label: "Shipping tracking number", category: "fulfillment", priority: "critical" },
   delivery_proof: { label: "Delivery confirmation", category: "fulfillment", priority: "critical" },
@@ -63,12 +61,12 @@ const FIELD_META: Record<FieldName, { label: string; category: string; priority:
  *  the checklist `status: "available"` flags and the per-row submission
  *  method. The rest render as `missing`. */
 const FIELDS_PRESENT_BY_DISPUTE: Record<string, FieldName[]> = {
-  "dp-2401": ["order_confirmation", "billing_address_match", "avs_cvv_match", "activity_log", "refund_policy", "shipping_policy", "shipping_tracking", "delivery_proof"],
-  "dp-2402": ["order_confirmation", "billing_address_match", "shipping_tracking", "delivery_proof", "shipping_policy"],
-  "dp-2403": ["order_confirmation", "billing_address_match", "avs_cvv_match", "activity_log", "refund_policy", "cancellation_policy"],
-  "dp-2404": ["order_confirmation", "billing_address_match"], // Covered — minimal
+  "dp-2401": ["order_confirmation", "avs_cvv_match", "activity_log", "refund_policy", "shipping_policy", "shipping_tracking", "delivery_proof"],
+  "dp-2402": ["order_confirmation", "shipping_tracking", "delivery_proof", "shipping_policy"],
+  "dp-2403": ["order_confirmation", "avs_cvv_match", "activity_log", "refund_policy", "cancellation_policy"],
+  "dp-2404": ["order_confirmation"], // Covered — minimal
   "dp-2405": ["order_confirmation", "refund_policy"], // Fatal loss — refund issued
-  "dp-2406": ["order_confirmation", "billing_address_match", "avs_cvv_match"],
+  "dp-2406": ["order_confirmation", "avs_cvv_match"],
 };
 
 // ── Builders ────────────────────────────────────────────────────────────────
@@ -108,7 +106,6 @@ function buildChecklist(disputeId: string) {
  */
 const STRONG_PAYLOADS: Record<string, Record<string, unknown>> = {
   avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M", fieldsProvided: ["avs_cvv_match"] },
-  billing_address_match: { match: true, fieldsProvided: ["billing_address_match"] },
   shipping_tracking: { proofType: "signature_confirmed", deliveredToVerifiedAddress: true, fieldsProvided: ["shipping_tracking"] },
   delivery_proof: { proofType: "signature_confirmed", deliveredToVerifiedAddress: true, fieldsProvided: ["delivery_proof"] },
   refund_policy: { acceptedAtCheckout: true, acceptanceTimestamp: "2026-01-09T14:20:00Z", fieldsProvided: ["refund_policy"] },
@@ -129,8 +126,6 @@ const STRONG_PAYLOADS: Record<string, Record<string, unknown>> = {
 const WEAK_PAYLOADS: Record<string, Record<string, unknown>> = {
   // No AVS code → invalid
   avs_cvv_match: { fieldsProvided: ["avs_cvv_match"] },
-  // No `match: true` flag → invalid
-  billing_address_match: { fieldsProvided: ["billing_address_match"] },
   // No proofType → invalid (label_created default)
   shipping_tracking: { fieldsProvided: ["shipping_tracking"] },
   delivery_proof: { fieldsProvided: ["delivery_proof"] },

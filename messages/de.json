@@ -1169,9 +1169,6 @@
             "internalCvvFail": "Der Kartenprüfwert (CVV) stimmte nicht mit den Daten des Ausstellers überein. Wird intern gehalten — dies gegenüber der Bank anzuführen, würde die Antwort auf den Betrugsstreitfall untergraben.",
             "cvvOnlyInternal": "Der Kartenprüfwert (CVV) stimmte mit den Daten des Ausstellers überein, die Rechnungsadresse jedoch nicht. Wird intern gehalten — ein übereinstimmender Prüfwert ist keine Adressübereinstimmung und wird der Bank daher nicht angeführt."
           },
-          "billingAddress": {
-            "notIncluded": "Das Zahlungs-Gateway hat für diese Transaktion kein AVS-Abgleichsergebnis zurückgegeben. Die Rechnungsadresse ist hinterlegt, aber es liegt keine Match-/Mismatch-Entscheidung vor."
-          },
           "shippingTracking": {
             "notIncluded": "Die Bestellung wurde noch nicht versendet, daher ist keine Sendungsverfolgung des Spediteurs verfügbar. Sobald Sie die Bestellung versenden, wird diese Zeile automatisch gefüllt."
           },
@@ -1290,7 +1287,6 @@
     "signalLabel": {
       "payment_auth": "Zahlungsauthentifizierung",
       "tds_authentication": "3-D-Secure-Authentifizierung",
-      "billing_match": "Übereinstimmung der Rechnungsadresse",
       "delivery": "Lieferbestätigung",
       "ip_location": "IP- und Standortübereinstimmung",
       "device_session": "Geräte- und Sitzungssignale",
@@ -1421,7 +1417,6 @@
       "refund_record": "Aus Shopify-Rückerstattungsdaten",
       "no_return_initiated": "Aus dem Shopify-Rücksendestatus",
       "order_confirmation": "Aus Shopify-Bestelldaten",
-      "billing_address_match": "Aus Shopify-Bestelldaten",
       "avs_cvv_match": "Vom Zahlungs-Gateway",
       "shipping_tracking": "Aus Shopify-Fulfillment-Daten",
       "delivery_proof": "Aus Versanddienstleister-Tracking",
@@ -1483,7 +1478,6 @@
       "order_confirmation": "Belegt die Legitimität der Transaktion — die Grundlage jeder Streitfall-Antwort",
       "shipping_tracking": "Zeigt, dass der Versanddienstleister den Versand bestätigt hat — erforderlich, um Streitfälle wegen nicht erhaltener Ware zu gewinnen",
       "delivery_proof": "Bestätigt, dass der Kunde das Paket erhalten hat — stärkster Beweis gegen Behauptungen, die Ware sei nicht angekommen",
-      "billing_address_match": "Gleicht die Rechnungsadresse mit der Bestellung ab — ein unterstützendes Signal bei Betrugsstreitfällen",
       "avs_cvv_match": "Zeigt, dass die Kartensicherheitsprüfungen bestanden wurden — ein unterstützendes Signal, dessen Gewicht vom Streitgrund und den übrigen Beweisen abhängt",
       "product_description": "Belegt, dass das Produkt der Beschreibung entsprach — Schlüsselargument bei Streitfällen wegen abweichender Ware",
       "refund_policy": "Zeigt, dass der Kunde Ihren Rückerstattungsbedingungen zugestimmt hat — schützt vor Reue-Käufen",
@@ -1693,6 +1687,10 @@
         "countryDetail": "Rechnungsland {billingCountry} weicht vom Lieferland {shippingCountry} ab.",
         "cityDetail": "Rechnungsstadt weicht von Lieferstadt ab.",
         "explanation": "{detail} Wird intern zur Bewertung verwendet; nicht an die Bank weitergegeben, um die Antwort nicht zu schwächen."
+      },
+      "billingShippingAgree": {
+        "title": "Rechnungs- und Lieferadresse der Bestellung stimmen überein",
+        "explanation": "Die Rechnungs- und die Lieferadresse, die Sie zu dieser Bestellung haben, nennen dieselbe Stadt und dasselbe Land. Das ist ein interner Hinweis zu Ihrem eigenen Bestelldatensatz, kein Nachweis — es ist keine Prüfung durch die Bank des Karteninhabers und wird deshalb nie bewertet und nie in die Streitfallantwort aufgenommen. Die Adressverifizierung stammt aus dem AVS-Ergebnis des Kartenausstellers in der Zahlungszeile."
       },
       "ipCountryMismatch": {
         "title": "IP-Geolokalisierung stimmt nicht überein",

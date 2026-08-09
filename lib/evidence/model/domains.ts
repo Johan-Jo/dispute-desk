@@ -18,6 +18,7 @@
  */
 
 import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
+import { RETIRED_FIELD_KEYS } from "./retiredKeys";
 
 export type CanonicalDomain =
   /** May be scored and/or cited. Has an EvidenceDefinition. */
@@ -28,7 +29,12 @@ export type CanonicalDomain =
   | "risk_signal"
   /** Facts about the dispute itself, not about the merchant's case. */
   | "dispute_metadata"
-  /** Build diagnostics. Never merchant-facing, never bank-facing. */
+  /**
+   * Build diagnostics, and RETIRED fields. Never scored, never cited, never a
+   * claim input. A retired field stays registered here on purpose: an
+   * unregistered key reads as an accident (`unregisteredFields`), and the whole
+   * point of a retirement is that it is a decision with a record.
+   */
   | "operational";
 
 /**
@@ -43,7 +49,6 @@ export type CanonicalDomain =
 export const CANONICAL_DOMAIN = {
   // ── evidence ──────────────────────────────────────────────────────────
   order_confirmation: "evidence",
-  billing_address_match: "evidence",
   refund_record: "evidence",
   no_return_initiated: "evidence",
   activity_log: "evidence",
@@ -95,6 +100,22 @@ export const CANONICAL_DOMAIN = {
    * `CaseAutomationDecision`, and must never appear in `fields`.
    */
   shopify_protect_coverage: "coverage",
+
+  // ── operational: RETIRED ───────────────────────────────────────────────
+  /**
+   * RETIRED 2026-08-09 (PR-C4 / C-14). It was graded `strong` on the promise
+   * of "AVS-confirmed billing matches the cardholder" while being emitted from
+   * a billing-vs-shipping city+country comparison that read no AVS result and
+   * knew no cardholder. Address verification is now carried by the canonical
+   * AVS fact (`avs_cvv_match`, PR-C2 + PR-C3).
+   *
+   * It stays registered so a historical pack that carries it is REPORTED
+   * (`nonEvidence.operational.retiredFields`) rather than filed under
+   * `unregisteredFields`, which is the shape of an accident. It must never
+   * return to the `evidence` domain — `RETIRED_FIELD_KEYS` is the registry and
+   * `retiredFieldKeysInEvidenceDomain()` is the guard.
+   */
+  billing_address_match: "operational",
 } as const satisfies Record<string, CanonicalDomain>;
 
 export type CollectorFieldKey = keyof typeof CANONICAL_DOMAIN;
@@ -136,4 +157,14 @@ export function unregisteredCollectorFields(fields: readonly string[]): string[]
  */
 export function canonicalEvidenceKeysMissingADomain(): string[] {
   return Object.keys(CANONICAL_EVIDENCE).filter((k) => domainOf(k) === null);
+}
+
+/**
+ * Guard for the retirement itself: a retired field key must never sit in the
+ * `evidence` domain. Returns the offenders so the invariant test can name
+ * them. Re-adding one here would silently restore its definition, its grade,
+ * its checklist append and its citation path in a single line.
+ */
+export function retiredFieldKeysInEvidenceDomain(): string[] {
+  return RETIRED_FIELD_KEYS.filter((k) => domainOf(k) === "evidence");
 }

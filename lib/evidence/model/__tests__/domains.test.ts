@@ -62,7 +62,10 @@ describe("domain registry — guard the guard", () => {
 
   it("registers at least the 20 canonical evidence fields plus coverage", () => {
     expect(Object.keys(CANONICAL_DOMAIN).length).toBeGreaterThanOrEqual(21);
-    expect(EVIDENCE_FIELD_KEYS.length).toBeGreaterThanOrEqual(20);
+    // 19 since PR-C4 retired `billing_address_match` (was 20). It stays in
+    // CANONICAL_DOMAIN as `operational`, so the registry count above is
+    // unchanged — a retirement is reported, never dropped.
+    expect(EVIDENCE_FIELD_KEYS.length).toBeGreaterThanOrEqual(19);
   });
 });
 

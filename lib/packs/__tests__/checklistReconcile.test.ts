@@ -106,10 +106,23 @@ describe("reconcileChecklistWithCollectedFields", () => {
 
   it("leaves missing rows alone when the field is NOT in collectedFields", () => {
     const out = reconcileChecklistWithCollectedFields(
-      [item("billing_address_match", "missing")],
+      [item("shipping_policy", "missing")],
       new Set(["refund_policy"]),
     );
     expect(out[0]!.status).toBe("missing");
+  });
+
+  it("DROPS a retired field's row whatever status it was persisted with", () => {
+    // PR-C4 / C-14. 112 prod packs still carry a `billing_address_match` row
+    // (97 `available`, 15 `missing`). A template edit cannot reach them; this
+    // function can, and it is the one both pipelines pass through.
+    for (const status of ["available", "missing", "unavailable", "waived"] as const) {
+      const out = reconcileChecklistWithCollectedFields(
+        [item("billing_address_match", status), item("order_confirmation", "available")],
+        new Set(["billing_address_match", "order_confirmation"]),
+      );
+      expect(out.map((c) => c.field), status).toEqual(["order_confirmation"]);
+    }
   });
 
   it("reproduces the dispute aee832ad scenario", () => {
@@ -117,7 +130,6 @@ describe("reconcileChecklistWithCollectedFields", () => {
     // actually produced. Reconciliation must flip exactly these.
     const checklist: ChecklistItemV2[] = [
       item("order_confirmation", "available"),
-      item("billing_address_match", "missing"), // not collected — stays missing
       item("avs_cvv_match", "available"),
       item("activity_log", "available"),
       item("ip_location_check", "missing"), // collected — flips
@@ -146,7 +158,7 @@ describe("reconcileChecklistWithCollectedFields", () => {
     expect(status("refund_policy")).toBe("available");
     expect(status("shipping_policy")).toBe("available");
     expect(status("cancellation_policy")).toBe("available");
-    expect(status("billing_address_match")).toBe("missing");
+    expect(status("billing_address_match")).toBeUndefined(); // retired (PR-C4)
     expect(status("delivery_proof")).toBe("unavailable");
   });
 });

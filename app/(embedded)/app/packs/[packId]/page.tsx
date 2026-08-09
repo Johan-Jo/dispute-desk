@@ -162,7 +162,6 @@ const COLLECTOR_KEY_SOURCE: Record<string, FieldSource> = {
   tds_authentication: "shopify_order_auto",
   fraud_risk_screening: "shopify_order_auto",
   ip_location_check: "shopify_order_auto",
-  billing_address_match: "shopify_order_auto",
   customer_account_info: "shopify_order_auto",
   refund_record: "shopify_order_auto",
   no_return_initiated: "shopify_order_auto",

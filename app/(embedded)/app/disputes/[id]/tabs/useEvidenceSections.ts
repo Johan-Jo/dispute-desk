@@ -328,7 +328,6 @@ const WHY_THIS_MATTERS: Record<string, string> = {
   order_confirmation: "Anchors the case — proves a real transaction with itemized totals and customer details.",
   shipping_tracking: "Carrier confirmation that the order shipped — required for item-not-received disputes.",
   delivery_proof: "Signature or photo confirmation that the customer received the package.",
-  billing_address_match: "Ties the cardholder to the order — critical for fraud rebuttal.",
   avs_cvv_match: "Card security checks the bank weighs heavily in fraud cases.",
   product_description: "Shows the product matched what was advertised — defense for not-as-described claims.",
   refund_policy: "Customer agreed to refund terms before purchase — protects against buyer's remorse.",
@@ -502,38 +501,35 @@ export function classifyUnmappedAvsCode(
 }
 
 /**
- * Classify billing/shipping address mismatch as an internal-only signal.
+ * Classify the billing-vs-shipping address comparison as an internal-only
+ * OPERATIONAL note — in both directions.
  *
- * `billing_address_match` is auto-collected from Shopify order data
- * (`lib/packs/sources/orderSource.ts`) — the merchant cannot upload it.
- * When billing and shipping addresses do not align by city + country,
- * surfacing that to the bank would expose a weakness; instead the
- * merchant sees it as an internal-only signal.
+ * NOT EVIDENCE, EITHER WAY (PR-C4 / C-14, decision 4). The agreement half was
+ * an evidence field until 2026-08-09: `billing_address_match`, graded strong
+ * as "AVS-confirmed billing matches the cardholder" while being emitted from a
+ * comparison of two merchant-held addresses that read no AVS result and knew
+ * no cardholder. The field is retired
+ * (`lib/evidence/model/retiredKeys.ts`); this note is what the comparison
+ * honestly supports, under its own label, and it is never scored, never cited
+ * and never a claim input. Address verification is the AVS row's job.
  *
- * Sources of truth:
- *   - The order section payload (under the `order_confirmation` field)
- *     carries redacted `billingAddress` and `shippingAddress` objects
- *     with `{ city, provinceCode, countryCode, zipPrefix }`.
- *   - The collector only adds `billing_address_match` to `fieldsProvided`
- *     when city + countryCode match. Absence of the field in the
- *     checklist's "available" state therefore implies non-match
- *     (provided both addresses exist).
+ * Source of truth: the order section payload (carried on the
+ * `order_confirmation` row) holds redacted `billingAddress` and
+ * `shippingAddress` objects with `{ city, provinceCode, countryCode,
+ * zipPrefix }`. The retired checklist row is deliberately NOT consulted — a
+ * historical pack still carries one, and reading it would let the retired
+ * field decide what the merchant sees.
  *
- * Conservative: emits ONLY when both addresses are present AND at least
- * one of city/countryCode mismatches. Missing addresses → no signal
- * (absence is not a negative signal, per the existing classifier rules).
+ * Conservative, and asymmetrically so:
+ *   - no usable country pair          → neither note;
+ *   - countries differ                → MISMATCH, whatever the city data says;
+ *   - countries agree, a city missing → neither note (absence is not agreement);
+ *   - countries and cities agree      → AGREEMENT.
  */
-export function classifyBillingAddressMismatch(
+export function classifyBillingShippingAgreement(
   effectiveChecklist: EvidenceItemWithStrength[],
   t: Translate,
 ): InternalSignalViewModel | null {
-  // If billing_address_match is already available, the collector confirmed
-  // a match — nothing to surface internally.
-  const billingItem = effectiveChecklist.find(
-    (i) => i.field === "billing_address_match",
-  );
-  if (billingItem?.status === "available") return null;
-
   // Read the order section payload (carried on the order_confirmation row).
   const orderItem = effectiveChecklist.find(
     (i) => i.field === "order_confirmation",
@@ -561,14 +557,37 @@ export function classifyBillingAddressMismatch(
     return null;
   }
 
-  const countryMismatch = billingCountry !== shippingCountry;
-  const cityMismatch =
+  const haveCities =
     billingCity !== null &&
     billingCity !== "" &&
     shippingCity !== null &&
-    shippingCity !== "" &&
-    billingCity !== shippingCity;
+    shippingCity !== "";
+  const countryMismatch = billingCountry !== shippingCountry;
+  const cityMismatch = haveCities && billingCity !== shippingCity;
 
+  // The agreement half, under its own NEW label. It replaces nothing the
+  // merchant used to read as evidence — the retired row's label is gone with
+  // the row.
+  //
+  // ALL FOUR VALUES REQUIRED. Both countries and both cities must be present
+  // and equal — the same predicate the retired collector used. Asserting
+  // agreement from "countries match and no city mismatch is provable" would
+  // claim the same city on an order where one city is missing. Absence is not
+  // agreement, in either direction: a missing city yields neither note, and
+  // the mismatch branch below is unchanged (differing countries still read as
+  // a mismatch whatever the city data).
+  if (!countryMismatch && haveCities && !cityMismatch) {
+    return {
+      id: "internal:billing_shipping_agree",
+      title: t("internalSignals.billingShippingAgree.title"),
+      explanation: t("internalSignals.billingShippingAgree.explanation"),
+    };
+  }
+
+  // Neither note: the countries agree but a city is missing, so there is
+  // nothing to affirm and nothing to warn about. This branch did not exist
+  // before the four-value rule — the function used to fall straight through to
+  // the mismatch return, which would now report a mismatch we cannot show.
   if (!countryMismatch && !cityMismatch) return null;
 
   const detail = countryMismatch
@@ -706,7 +725,7 @@ function deriveInternalOnlySignals(
   );
   if (nameMismatch) out.push(nameMismatch);
 
-  const billing = classifyBillingAddressMismatch(effectiveChecklist, t);
+  const billing = classifyBillingShippingAgreement(effectiveChecklist, t);
   if (billing) out.push(billing);
 
   const ip = classifyIpLocation(byField.get("ip_location_check"), t);

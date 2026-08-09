@@ -322,9 +322,6 @@ const REASON_OVERRIDES: Record<string, Partial<Record<SubmissionMethod, I18nToke
     bank_argument: { key: `${REASONS_NS}.avsCvv.bankArgument` },
     not_included: { key: `${REASONS_NS}.avsCvv.notIncluded` },
   },
-  billing_address_match: {
-    not_included: { key: `${REASONS_NS}.billingAddress.notIncluded` },
-  },
   shipping_tracking: {
     not_included: { key: `${REASONS_NS}.shippingTracking.notIncluded` },
   },
@@ -366,7 +363,6 @@ const REASON_OVERRIDES: Record<string, Partial<Record<SubmissionMethod, I18nToke
  */
 const SOURCE_OUTSIDE_MERCHANT_CONTROL = new Set<string>([
   "avs_cvv_match",
-  "billing_address_match",
   "tds_authentication",
   "fraud_risk_screening",
   "ip_location_check",

@@ -1105,9 +1105,6 @@
             "internalCvvFail": "El código de verificación de la tarjeta (CVV) no coincidió con los registros del emisor. Se mantiene interno: citarlo al banco socavaría la respuesta de fraude.",
             "cvvOnlyInternal": "El código de verificación de la tarjeta (CVV) coincidió con los registros del emisor, pero la dirección de facturación no. Se mantiene interno: que coincida el código de seguridad no equivale a que coincida la dirección, así que no se cita al banco."
           },
-          "billingAddress": {
-            "notIncluded": "La pasarela de pago no devolvió un resultado de coincidencia AVS para esta transacción. La dirección de facturación está en el archivo, pero no hay una decisión de coincidencia/no coincidencia disponible."
-          },
           "shippingTracking": {
             "notIncluded": "El pedido aún no se ha enviado, por lo que no hay seguimiento del transportista disponible. Cuando envíes el pedido, esta fila se rellenará automáticamente."
           },
@@ -1290,7 +1287,6 @@
     "signalLabel": {
       "payment_auth": "Autenticación del pago",
       "tds_authentication": "Autenticación 3-D Secure",
-      "billing_match": "Coincidencia de dirección de facturación",
       "delivery": "Confirmación de entrega",
       "ip_location": "Coherencia de IP y ubicación",
       "device_session": "Señales de dispositivo y sesión",
@@ -1421,7 +1417,6 @@
       "refund_record": "De los datos de reembolso de Shopify",
       "no_return_initiated": "Del estado de devolución de Shopify",
       "order_confirmation": "De los datos del pedido en Shopify",
-      "billing_address_match": "De los datos del pedido en Shopify",
       "avs_cvv_match": "De la pasarela de pago",
       "shipping_tracking": "De los datos de cumplimiento en Shopify",
       "delivery_proof": "Del rastreo del transportista",
@@ -1483,7 +1478,6 @@
       "order_confirmation": "Prueba que la transacción es legítima — la base de toda respuesta a una disputa",
       "shipping_tracking": "Muestra que el transportista confirmó el envío — necesario para ganar disputas de 'producto no recibido'",
       "delivery_proof": "Confirma que el cliente recibió el paquete — la evidencia más sólida contra reclamos de 'no recibido'",
-      "billing_address_match": "Compara la dirección de facturación con el pedido — una señal de apoyo en disputas por fraude",
       "avs_cvv_match": "Muestra que las comprobaciones de seguridad de la tarjeta se superaron — una señal de apoyo cuyo peso depende del motivo de la disputa y de las demás pruebas disponibles",
       "product_description": "Prueba que el producto coincidió con lo anunciado — clave para disputas de 'no coincide con la descripción'",
       "refund_policy": "Muestra que el cliente aceptó tus términos de reembolso — protege contra reclamos de arrepentimiento",
@@ -1693,6 +1687,10 @@
         "countryDetail": "El país de facturación {billingCountry} difiere del país de envío {shippingCountry}.",
         "cityDetail": "La ciudad de facturación difiere de la ciudad de envío.",
         "explanation": "{detail} Se usa internamente para la evaluación; no se envía al banco para no debilitar la respuesta."
+      },
+      "billingShippingAgree": {
+        "title": "Las direcciones de facturación y envío del pedido coinciden",
+        "explanation": "Las direcciones de facturación y envío que tienes para este pedido comparten la misma ciudad y el mismo país. Es una nota interna sobre tu propio registro del pedido, no una prueba: no es una comprobación del banco del titular de la tarjeta, por lo que nunca se puntúa ni se incluye en la respuesta a la disputa. La verificación de la dirección proviene del resultado AVS del emisor en la fila de pago."
       },
       "ipCountryMismatch": {
         "title": "Discrepancia de geolocalización por IP",

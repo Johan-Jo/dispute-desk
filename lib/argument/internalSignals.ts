@@ -226,7 +226,16 @@ export function buildInternalSignalsByField(
     }
   }
 
-  // Billing/shipping mismatch → anchor on order_confirmation
+  // Billing/shipping comparison → anchor on order_confirmation.
+  //
+  // BOTH DIRECTIONS ARE OPERATIONAL NOTES, NEITHER IS EVIDENCE (PR-C4,
+  // decision 4). The agreement half used to be an evidence field
+  // (`billing_address_match`) graded strong as an "AVS-confirmed billing match
+  // to the cardholder". It is retired. What survives is what the comparison
+  // actually observes: two merchant-held addresses on the same order agree, or
+  // they do not. It is never scored, never cited, never a claim input, and it
+  // carries its own label so it can never again be read as address
+  // verification — that lives on `avs_cvv_match` (PR-C2 + PR-C3).
   const orderPayload = payloadByField.get("order_confirmation");
   if (isPlainObject(orderPayload)) {
     const billing = orderPayload.billingAddress;
@@ -240,11 +249,29 @@ export function buildInternalSignalsByField(
         billingCountry !== null && billingCountry !== "" &&
         shippingCountry !== null && shippingCountry !== "";
       if (haveCountries) {
-        const countryMismatch = billingCountry !== shippingCountry;
-        const cityMismatch =
+        const haveCities =
           billingCity !== null && billingCity !== "" &&
-          shippingCity !== null && shippingCity !== "" &&
-          billingCity !== shippingCity;
+          shippingCity !== null && shippingCity !== "";
+        const countryMismatch = billingCountry !== shippingCountry;
+        const cityMismatch = haveCities && billingCity !== shippingCity;
+        // THE AGREEMENT HALF NEEDS ALL FOUR VALUES. Both countries and both
+        // cities must be present and equal — the same predicate the retired
+        // collector used to decide the field was collectable at all. An earlier
+        // revision of this PR asserted agreement whenever the countries matched
+        // and no city MISMATCH could be shown, so an order with one city
+        // missing read as "same city and country" on the strength of data we
+        // did not hold. Absence is not agreement, in either direction: the
+        // mismatch branch below is unaffected, and a missing city produces
+        // neither note.
+        if (!countryMismatch && haveCities && !cityMismatch) {
+          push("order_confirmation", {
+            id: "internal:billing_shipping_agree",
+            label: "Billing and shipping addresses on the order agree",
+            reason:
+              "The billing and shipping addresses you hold for this order have the same city and country. This is an internal note about your own order record, not evidence: it is not a check by the cardholder's bank, so it is never scored and never included in the dispute response. Address verification comes from the issuer's AVS result on the payment row.",
+            severity: "info",
+          });
+        }
         if (countryMismatch || cityMismatch) {
           const detail = countryMismatch
             ? `Billing country ${billingCountry} differs from shipping country ${shippingCountry}.`
