@@ -34,8 +34,18 @@ const SKIP_DIR_SEGMENTS = ["node_modules", "__tests__", ".next"];
 const EXPECTED_CALL_SITES: Record<string, string> = {
   "lib/packs/buildPack.ts":
     "build path — the only site holding the Shopify order; derives all five",
-  "app/api/disputes/[id]/workspace/route.ts":
-    "dispute detail API — coverage + name mismatch derived, credit read from the pack, order-derived gates unavailable",
+  // `app/api/disputes/[id]/workspace/route.ts` was here until the CP-A/B/C
+  // integration (2026-08-09), described as "dispute detail API — coverage +
+  // name mismatch derived, credit read from the pack, order-derived gates
+  // unavailable".
+  //
+  // That is still a true description of what the route can SEE, and the route
+  // still builds exactly that gate assessment — but it no longer scores with
+  // it. It hands the gates to `buildWorkspaceAssessment`, which reaches the
+  // scorer through `deriveAssessmentFromChecklists`, the single derivation
+  // already listed below. So the entry is removed because the CALL moved, not
+  // because the gates changed: this inventory pins who scores, and the
+  // workspace route no longer does.
   "app/api/disputes/route.ts":
     "list route stage B — name mismatch derived, credit projected from pack_json, order-derived gates unavailable",
   // `app/(embedded)/app/disputes/[id]/hooks/useDisputeWorkspace.ts` was here

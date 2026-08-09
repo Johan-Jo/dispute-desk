@@ -93,10 +93,12 @@ const SERVER_CALLSITE_ALLOWLIST: Record<string, string> = {
   "lib/packs/buildPack.ts": "CP-C/CP-D — build path, not CP-A's to move",
   // List route. Computes a band per row for the disputes index.
   "app/api/disputes/route.ts": "CP-D — list route, one band per row",
-  // Workspace route. CP-A ships `buildWorkspaceAssessment` for it; Agent C
-  // owns the file and performs the swap.
-  "app/api/disputes/[id]/workspace/route.ts":
-    "CP-C — call site owned by Agent C; buildWorkspaceAssessment is ready",
+  // NOTE: `app/api/disputes/[id]/workspace/route.ts` was here and is GONE.
+  // The swap CP-A shipped `buildWorkspaceAssessment` for is done: the route
+  // calls neither `calculateCaseStrength` nor `computeContributions`, it calls
+  // the one derivation and returns the payload as `workspaceAssessment`. The
+  // entry is deleted rather than left as a no-op so that the route re-acquiring
+  // a scorer fails this test.
   // The scorer calls itself from `calculateImprovement`.
   "lib/argument/caseStrength.ts": "self-call inside the scorer",
 };

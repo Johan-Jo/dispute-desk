@@ -25,6 +25,36 @@
  * can therefore only come from the row projection — which is the one thing
  * Slice 2 changes. If it re-implemented the engine, every number would be
  * measuring the re-implementation too, and no reader could tell them apart.
+ *
+ * ── WHY IT STILL IMPORTS THE RETIRED LADDERS (CP-A/B/C integration) ────
+ *
+ * `lib/automation/autoSaveGate.ts` and `lib/automation/autoSubmitGuards.ts`
+ * have ZERO readers under `lib/` and `app/` — the canonical
+ * `deriveCaseAutomationDecision` replaced every one of them, and
+ * `branchBoundary.test.ts` fails the build if a production reader reappears.
+ * This harness is the last importer anywhere, and it stays that way on purpose.
+ *
+ * Repointing it at the canonical decision was considered and REJECTED, because
+ * it would change what the harness measures — which is the one thing it may not
+ * do. The decision is not a renamed gate; it differs from the two ladders in at
+ * least three ways this harness deliberately holds constant:
+ *
+ *   1. It resolves an ABSENT readiness to `"blocked"` (R1), where
+ *      `evaluateAutoSaveGate` drops onto the legacy blocker-count arm. Prod
+ *      packs with a NULL column would change disposition for a reason that has
+ *      nothing to do with the Slice 2 row projection.
+ *   2. It folds coverage, fatal-loss and staleness into the SAME verdict the
+ *      gate produces, so a covered pack would stop being attributable to the
+ *      semantics flags at all.
+ *   3. Post-revision-2 it returns `hold_for_deadline` where the guards returned
+ *      a block for weak/insufficient, which moves counts in the very column the
+ *      calibration reports.
+ *
+ * The harness's job is to answer "what does production do TODAY, and what would
+ * the new row semantics do to that". Both halves of that question are asked of
+ * the legacy ladders on purpose. Converging it belongs with the deployment of
+ * the canonical decision to the calibration baseline, as its own measured
+ * change — not as a side effect of an integration merge.
  */
 
 import {

@@ -29,17 +29,24 @@ import {
   detectCardholderNameMismatch,
 } from "@/lib/argument/nameMismatch";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
+/*
+ * `calculateCaseStrength` and `computeContributions` are deliberately NOT
+ * imported here any more. Both now arrive through `buildWorkspaceAssessment`,
+ * and `tests/unit/clientAssessmentRecomputation.test.ts` fails the build if a
+ * new scorer call site appears — this route was the last allow-listed one.
+ */
+import { creditAlreadyIssuedInput } from "@/lib/argument/caseStrength";
 import {
-  calculateCaseStrength,
-  computeContributions,
-  creditAlreadyIssuedInput,
-} from "@/lib/argument/caseStrength";
+  buildWorkspaceAssessment,
+  emptyWorkspaceAssessment,
+} from "@/lib/disputes/workspaceAssessment";
 import {
   buildCaseGateAssessment,
   gateNotProvided,
   gateProvided,
 } from "@/lib/argument/caseGateAssessment";
 import type { EvidenceFact } from "@/lib/defence/types";
+import { bankIncludedFacts } from "@/lib/defence/bankInclusion";
 import { CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
 import {
   assessPackageCandidateSafety,
@@ -695,11 +702,20 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     kind: "byField" as const,
     map: evidenceItemsByField as Record<string, { payload?: Record<string, unknown> | null }>,
   };
-  const caseStrength = calculateCaseStrength(
-    reconciledChecklistV2,
-    row.reason,
-    caseStrengthPayloadSource,
-    buildCaseGateAssessment({
+  /*
+   * CP-A/CP-C INTEGRATION. This route used to call `calculateCaseStrength` and
+   * `computeContributions` inline, which made it the fourth server call site
+   * scoring a case with its own hand-assembled gate set. Both now come from
+   * ONE server-side derivation, `buildWorkspaceAssessment`, which the three
+   * workspace tabs render rather than recompute — the browser scorer that used
+   * to disagree with this route on the same screen is deleted.
+   *
+   * The gate assessment below is UNCHANGED and still built here: this route is
+   * the only thing that knows which gates it can honestly answer (it holds no
+   * order, hence the two `gateNotProvided("order_not_loaded")` entries).
+   */
+  const workspaceGates = packRow
+    ? buildCaseGateAssessment({
       coverage: gateProvided(
         coverageInput
           ? { state: coverageInput.state, shopifyProtectStatus: coverageInput.shopifyProtectStatus }
@@ -721,20 +737,43 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       // buildPack scored `strong`, auto-submit filed it and emailed the
       // merchant, and the page they opened — rendered from here — showed
       // no strong badge.
-      creditAlreadyIssued: gateProvided(creditAlreadyIssuedInput(packRow?.pack_json)),
-    }),
-  );
-  // Contribution rows for the line-item resolver. This used to be a
-  // hand-copied inline reimplementation of `computeContributions`, and
-  // the copy had drifted: it never consulted `reason`, so it skipped the
+        creditAlreadyIssued: gateProvided(creditAlreadyIssuedInput(packRow.pack_json)),
+      })
+    : null;
+
+  /*
+   * No pack means nothing has been assessed yet — and `emptyWorkspaceAssessment`
+   * is what the tabs must render for that, NOT a zeroed `CaseStrengthResult`.
+   * The difference is the whole reason the payload carries
+   * `assessment.needsRecalculation`: "insufficient · 0%" rendered as a verdict
+   * is a number a merchant acts on.
+   */
+  const workspaceAssessment =
+    packRow && workspaceGates
+      ? buildWorkspaceAssessment({
+          disputeId,
+          checklist: reconciledChecklistV2,
+          reason: row.reason,
+          payloadSource: caseStrengthPayloadSource,
+          gates: workspaceGates,
+          packSaved: !!packRow.saved_to_shopify_at,
+          // Layer 3 is not persisted yet, so the workspace has no plan to
+          // project. Passing `null` yields zero review items and the `normal`
+          // filing state — the honest answer, not an invented one.
+          plan: null,
+        })
+      : emptyWorkspaceAssessment(disputeId);
+
+  const caseStrength = workspaceAssessment.caseStrength;
+  // Contribution rows for the line-item resolver, now taken off the ONE
+  // derivation rather than recomputed beside it. This was a hand-copied
+  // inline reimplementation of `computeContributions` before CP-A, and the
+  // copy had drifted: it never consulted `reason`, so it skipped the
   // fraud-family `account_history` strong->moderate demotion the scorer
   // applies and rendered a Strong prior-order-history pill on rows the
-  // score counted as moderate. Call the shared function.
-  const { strong: strongContribs, moderate: moderateContribs } = computeContributions({
-    checklist: reconciledChecklistV2,
-    payloadSource: caseStrengthPayloadSource,
-    reason: row.reason,
-  });
+  // score counted as moderate.
+  const { strong: strongContribs, moderate: moderateContribs } =
+    workspaceAssessment.contributions;
 
   // Inclusion overrides — keyed by field. Stored in
   // pack_json.inclusionOverrides (commit 10 writes here; empty until
@@ -837,8 +876,15 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     const last = rest.join(" ").trim();
     customerLastName = last || null;
   }
-  const factsInPdf = factsJson
-    .filter((f) => f.bankEligible && f.includeInBankNarrative && !f.submissionRisk)
+  /*
+   * CP-B. This was the fourth inline spelling of the bank-inclusion rule, and
+   * the last one outside its owner: the identical three-conjunct expression,
+   * copied. It now asks `isBankIncludedFact`, so the workspace's "what is in
+   * the PDF" list and the PDF's own Evidence Basis rows cannot drift apart —
+   * which is exactly how `narrativeWriter`'s weaker filter (C-1) went unnoticed
+   * for as long as it did.
+   */
+  const factsInPdf = bankIncludedFacts(factsJson)
     .map((f) => ({
       field: ((f.value as { fieldKey?: string } | null)?.fieldKey ?? "") as string,
       label: f.label,
@@ -866,11 +912,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       waived: methodCount("waived"),
     },
   };
-  // Reference unused fields so tsc doesn't complain when caseStrength
-  // isn't directly returned (the workspace UI re-derives it client-side
-  // for now; the server-side compute exists so future commits can move
-  // strengthReason composition to the API).
-  void caseStrength;
+  /*
+   * The `void caseStrength` that stood here is gone, and so is the comment
+   * that justified it — "the workspace UI re-derives it client-side for now"
+   * described the browser scorer CP-A deleted. The strength IS returned now,
+   * inside `workspaceAssessment`, and the tabs render it.
+   */
 
   // Gorgias evidence core — summaries only (transcripts are lazy-loaded
   // per ticket). Null when the shop has no Gorgias integration row, so
@@ -931,6 +978,15 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // milestones resolved by lib/disputes/presentation (identical to
     // the list + dashboard interpretation).
     presentation,
+    /*
+     * CP-A. The single server-side assessment the three workspace tabs render:
+     * strength, completeness, readiness, filing state, contributions and the
+     * improvement hint. Consumers MUST branch on
+     * `workspaceAssessment.assessment.needsRecalculation` before reading any
+     * number out of it — a stale or absent assessment rendered as current is
+     * worse than no number, because the merchant acts on it.
+     */
+    workspaceAssessment,
     // Auto-pilot hold — what the case is waiting for (a clock, not the
     // merchant) and the one contribution that can still change it.
     held,

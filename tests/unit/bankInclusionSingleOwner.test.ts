@@ -23,16 +23,19 @@ import { describe, expect, it } from "vitest";
 const OWNER = path.join("lib", "defence", "bankInclusion.ts");
 
 /**
- * The ONE site that still spells the predicate inline.
+ * EMPTY, as of the CP-A/B/C integration — and it stays empty.
  *
- * `app/api/disputes/[id]/workspace/route.ts` is in the CP-0 per-file ownership
- * map and belongs to Agent C, who converts it when the call sites move. The list
- * may only ever SHRINK: adding an entry is how an invariant quietly stops being
- * one, so a new offender fails this test rather than joining the list.
+ * It held exactly one entry, `app/api/disputes/[id]/workspace/route.ts`, which
+ * was in the CP-0 per-file ownership map and belonged to Agent C. That route's
+ * `factsInPdf` filter now calls `bankIncludedFacts`, so no file outside the
+ * owner spells the rule.
+ *
+ * The list may only ever SHRINK: adding an entry is how an invariant quietly
+ * stops being one, so a new offender fails the test below rather than joining
+ * this array. It is kept (rather than deleted along with its last entry) so
+ * that the shrink-only rule survives as an assertion instead of as a memory.
  */
-const PENDING_CONVERSION: readonly string[] = [
-  path.join("app", "api", "disputes", "[id]", "workspace", "route.ts"),
-];
+const PENDING_CONVERSION: readonly string[] = [];
 
 const ROOTS = ["lib", "app", "components"];
 const EXTENSIONS = new Set([".ts", ".tsx"]);
@@ -141,8 +144,10 @@ describe("exactly one bank-inclusion predicate", () => {
         true,
       );
     }
-    // One entry, and it is Agent C's call site in the CP-0 ownership map.
-    expect(PENDING_CONVERSION).toHaveLength(1);
+    // ZERO. The last entry — Agent C's workspace route — was converted during
+    // the CP-A/B/C integration. This bound only ever moves down; a new inline
+    // spelling must be fixed, never allow-listed.
+    expect(PENDING_CONVERSION).toHaveLength(0);
   });
 
   it("the three surfaces this epic owns delegate rather than re-spell", () => {

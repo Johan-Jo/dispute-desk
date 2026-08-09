@@ -19,6 +19,18 @@ vi.mock("@/lib/email/sendDefenceDeadlineFallbackAlert", () => ({
 }));
 vi.mock("@/lib/featureFlags", () => ({ isDefencePackageBuilderEnabled: () => true }));
 vi.mock("@/lib/cron/envGate", () => ({ cronEnvGate: () => null }));
+// CP-C (R3): the deadline cron now consults the ONE canonical automation
+// decision before it files anything, and the decision takes the shop's
+// automation policy as an input. This route previously consulted no strength,
+// no completeness, no coverage and no guards at all.
+vi.mock("@/lib/automation/settings", () => ({
+  getShopSettings: vi.fn().mockResolvedValue({
+    auto_build_enabled: true,
+    auto_save_enabled: true,
+    auto_save_min_score: 60,
+    enforce_no_blockers: true,
+  }),
+}));
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
@@ -106,7 +118,21 @@ function makeSupabase(
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({
-          data: { id: PACK_ID, status: "ready" },
+          // CP-C decision inputs. A real ready pack always carries these
+          // (`submission_readiness` is NOT NULL); the fixture never needed them
+          // while this route filed without consulting anything.
+          data: {
+            id: PACK_ID,
+            status: "ready",
+            completeness_score: 90,
+            blockers: [],
+            submission_readiness: "ready",
+            pack_json: {
+              case_strength: { overall: "strong" },
+              coverage: { state: "not_covered" },
+              fatal_loss: { triggered: false },
+            },
+          },
           error: null,
         }),
       };
@@ -273,8 +299,17 @@ describe("deadline submit — PR-C1 unsafe candidate", () => {
     const { jobsInsert, rpc } = makeSupabase(rows);
     const body = await (await GET(req())).json();
     expect(body.enqueuedSubmit).toBe(0);
-    expect(body.finalizeRefused).toBe(1);
     expect(rpc).not.toHaveBeenCalled();
     expect(jobsInsert).not.toHaveBeenCalled();
+    // CP-C: this refusal moved one step earlier. The selector will not offer a
+    // candidate whose inspected content cannot be pinned to what would be
+    // filed, so it is counted as "nothing fileable" (and the merchant is now
+    // TOLD, which the old `finalizeRefused` path never did) rather than as a
+    // transaction the database refused.
+    expect(body.finalizeRefused).toBe(0);
+    expect(body.enqueuedFallback).toBe(1);
+    expect(mockEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ fallbackReason: "validation_failed" }),
+    );
   });
 });
