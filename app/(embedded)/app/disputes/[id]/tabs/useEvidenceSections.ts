@@ -520,9 +520,11 @@ export function classifyUnmappedAvsCode(
  * historical pack still carries one, and reading it would let the retired
  * field decide what the merchant sees.
  *
- * Conservative: emits nothing unless BOTH addresses are present with usable
- * country codes. Missing addresses → no signal, in either direction (absence
- * is not a signal, per the existing classifier rules).
+ * Conservative, and asymmetrically so:
+ *   - no usable country pair          → neither note;
+ *   - countries differ                → MISMATCH, whatever the city data says;
+ *   - countries agree, a city missing → neither note (absence is not agreement);
+ *   - countries and cities agree      → AGREEMENT.
  */
 export function classifyBillingShippingAgreement(
   effectiveChecklist: EvidenceItemWithStrength[],
@@ -555,24 +557,38 @@ export function classifyBillingShippingAgreement(
     return null;
   }
 
-  const countryMismatch = billingCountry !== shippingCountry;
-  const cityMismatch =
+  const haveCities =
     billingCity !== null &&
     billingCity !== "" &&
     shippingCity !== null &&
-    shippingCity !== "" &&
-    billingCity !== shippingCity;
+    shippingCity !== "";
+  const countryMismatch = billingCountry !== shippingCountry;
+  const cityMismatch = haveCities && billingCity !== shippingCity;
 
   // The agreement half, under its own NEW label. It replaces nothing the
   // merchant used to read as evidence — the retired row's label is gone with
   // the row.
-  if (!countryMismatch && !cityMismatch) {
+  //
+  // ALL FOUR VALUES REQUIRED. Both countries and both cities must be present
+  // and equal — the same predicate the retired collector used. Asserting
+  // agreement from "countries match and no city mismatch is provable" would
+  // claim the same city on an order where one city is missing. Absence is not
+  // agreement, in either direction: a missing city yields neither note, and
+  // the mismatch branch below is unchanged (differing countries still read as
+  // a mismatch whatever the city data).
+  if (!countryMismatch && haveCities && !cityMismatch) {
     return {
       id: "internal:billing_shipping_agree",
       title: t("internalSignals.billingShippingAgree.title"),
       explanation: t("internalSignals.billingShippingAgree.explanation"),
     };
   }
+
+  // Neither note: the countries agree but a city is missing, so there is
+  // nothing to affirm and nothing to warn about. This branch did not exist
+  // before the four-value rule — the function used to fall straight through to
+  // the mismatch return, which would now report a mismatch we cannot show.
+  if (!countryMismatch && !cityMismatch) return null;
 
   const detail = countryMismatch
     ? t("internalSignals.billingAddress.countryDetail", { billingCountry, shippingCountry })

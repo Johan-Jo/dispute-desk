@@ -340,19 +340,27 @@ describe("no claim authority", () => {
 /* ── 6. The operational note survives, under its own label ────────────── */
 
 describe("the billing-vs-shipping comparison survives as a NON-EVIDENCE note", () => {
-  const payloads = (billingCity: string, shippingCity: string) =>
-    new Map<string, unknown>([
-      [
-        "order_confirmation",
-        {
-          billingAddress: { city: billingCity, countryCode: "SE" },
-          shippingAddress: { city: shippingCity, countryCode: "SE" },
-        },
-      ],
-    ]);
+  const signalIds = (billing: Record<string, unknown>, shipping: Record<string, unknown>) => {
+    const signals = buildInternalSignalsByField(
+      new Map<string, unknown>([
+        ["order_confirmation", { billingAddress: billing, shippingAddress: shipping }],
+      ]),
+    );
+    return (signals.get("order_confirmation") ?? []).map((s) => s.id);
+  };
 
   it("emits the agreement note when city + country agree", () => {
-    const signals = buildInternalSignalsByField(payloads("Stockholm", "Stockholm"));
+    const signals = buildInternalSignalsByField(
+      new Map<string, unknown>([
+        [
+          "order_confirmation",
+          {
+            billingAddress: { city: "Stockholm", countryCode: "SE" },
+            shippingAddress: { city: "Stockholm", countryCode: "SE" },
+          },
+        ],
+      ]),
+    );
     const note = signals.get("order_confirmation")?.find(
       (s) => s.id === "internal:billing_shipping_agree",
     );
@@ -365,12 +373,84 @@ describe("the billing-vs-shipping comparison survives as a NON-EVIDENCE note", (
     expect(note?.label).not.toMatch(/cardholder|AVS/i);
   });
 
-  it("still emits the mismatch note when they differ, and not the agreement one", () => {
-    const signals = buildInternalSignalsByField(payloads("Stockholm", "Malmö"));
-    const ids = (signals.get("order_confirmation") ?? []).map((s) => s.id);
-    expect(ids).toContain("internal:billing_address_mismatch");
-    expect(ids).not.toContain("internal:billing_shipping_agree");
-  });
+  // The same four-value rule the client-side classifier is held to, asserted
+  // against the server-safe implementation. The two must not drift: they are
+  // rendered on different surfaces from the same payload.
+  const CASES: Array<{
+    name: string;
+    billing: Record<string, unknown>;
+    shipping: Record<string, unknown>;
+    expected: string | null;
+  }> = [
+    {
+      name: "countries and cities agree",
+      billing: { city: "Stockholm", countryCode: "SE" },
+      shipping: { city: "Stockholm", countryCode: "SE" },
+      expected: "internal:billing_shipping_agree",
+    },
+    {
+      name: "countries agree, billing city missing",
+      billing: { city: null, countryCode: "SE" },
+      shipping: { city: "Stockholm", countryCode: "SE" },
+      expected: null,
+    },
+    {
+      name: "countries agree, shipping city missing",
+      billing: { city: "Stockholm", countryCode: "SE" },
+      shipping: { city: null, countryCode: "SE" },
+      expected: null,
+    },
+    {
+      name: "countries agree, both cities missing",
+      billing: { countryCode: "SE" },
+      shipping: { countryCode: "SE" },
+      expected: null,
+    },
+    {
+      name: "countries agree, billing city empty string",
+      billing: { city: "", countryCode: "SE" },
+      shipping: { city: "Stockholm", countryCode: "SE" },
+      expected: null,
+    },
+    {
+      name: "countries agree, cities differ",
+      billing: { city: "Stockholm", countryCode: "SE" },
+      shipping: { city: "Malmö", countryCode: "SE" },
+      expected: "internal:billing_address_mismatch",
+    },
+    {
+      name: "countries differ, cities agree",
+      billing: { city: "Berlin", countryCode: "DE" },
+      shipping: { city: "Berlin", countryCode: "US" },
+      expected: "internal:billing_address_mismatch",
+    },
+    {
+      name: "countries differ, city data missing entirely",
+      billing: { countryCode: "DE" },
+      shipping: { countryCode: "US" },
+      expected: "internal:billing_address_mismatch",
+    },
+    {
+      name: "countries differ, one city missing",
+      billing: { city: "Berlin", countryCode: "DE" },
+      shipping: { city: null, countryCode: "US" },
+      expected: "internal:billing_address_mismatch",
+    },
+    {
+      name: "no usable country pair",
+      billing: { city: "Stockholm", countryCode: null },
+      shipping: { city: "Stockholm", countryCode: "SE" },
+      expected: null,
+    },
+  ];
+
+  for (const c of CASES) {
+    it(`${c.name} → ${c.expected ?? "no note"}`, () => {
+      const ids = signalIds(c.billing, c.shipping);
+      const billingIds = ids.filter((id) => id.startsWith("internal:billing"));
+      expect(billingIds).toEqual(c.expected ? [c.expected] : []);
+    });
+  }
 });
 
 /* ── 7. Copy: the misleading label is retired, the new one ships ×6 ───── */

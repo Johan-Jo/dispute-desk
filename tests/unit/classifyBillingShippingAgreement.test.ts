@@ -101,6 +101,21 @@ describe("classifyBillingShippingAgreement", () => {
     expect(result?.id).toBe("internal:billing_shipping_agree");
   });
 
+  it("a HISTORICAL retired row cannot manufacture agreement when a city is missing", () => {
+    // The two invariants together: the retired row is ignored, AND absence is
+    // not agreement. A pre-retirement pack carries an `available` row precisely
+    // because the old collector thought the addresses matched — that row must
+    // not stand in for city data we do not hold now.
+    const result = classifyBillingShippingAgreement([
+      retiredBillingRow("available"),
+      orderRow({
+        billingAddress: { city: null, countryCode: "US" },
+        shippingAddress: { city: "NYC", countryCode: "US" },
+      }),
+    ], fakeT);
+    expect(result).toBeNull();
+  });
+
   it("emits the mismatch note even when a HISTORICAL retired row says available", () => {
     const result = classifyBillingShippingAgreement([
       retiredBillingRow("available"),
@@ -136,6 +151,84 @@ describe("classifyBillingShippingAgreement", () => {
     expect(result).not.toBeNull();
     expect(result?.title).toMatch(/do not match/i);
   });
+
+  // ── The four-value rule. Absence is not agreement. ──────────────────────
+  //
+  // Regression: an earlier revision emitted the agreement note whenever the
+  // countries matched and no city MISMATCH could be proven, so an order with
+  // one city missing told the merchant its addresses "have the same city and
+  // country" on the strength of data we do not hold.
+  const CITY_CASES: Array<{
+    name: string;
+    billing: Record<string, unknown>;
+    shipping: Record<string, unknown>;
+    expected: string | null;
+  }> = [
+    {
+      name: "countries and cities agree",
+      billing: { city: "NYC", countryCode: "US" },
+      shipping: { city: "NYC", countryCode: "US" },
+      expected: "internal:billing_shipping_agree",
+    },
+    {
+      name: "countries agree, billing city missing",
+      billing: { city: null, countryCode: "US" },
+      shipping: { city: "NYC", countryCode: "US" },
+      expected: null,
+    },
+    {
+      name: "countries agree, shipping city missing",
+      billing: { city: "NYC", countryCode: "US" },
+      shipping: { city: null, countryCode: "US" },
+      expected: null,
+    },
+    {
+      name: "countries agree, both cities missing",
+      billing: { city: null, countryCode: "US" },
+      shipping: { city: null, countryCode: "US" },
+      expected: null,
+    },
+    {
+      name: "countries agree, billing city empty string",
+      billing: { city: "", countryCode: "US" },
+      shipping: { city: "NYC", countryCode: "US" },
+      expected: null,
+    },
+    {
+      name: "countries agree, cities differ",
+      billing: { city: "NYC", countryCode: "US" },
+      shipping: { city: "LA", countryCode: "US" },
+      expected: "internal:billing_address_mismatch",
+    },
+    {
+      name: "countries differ, cities agree",
+      billing: { city: "Berlin", countryCode: "DE" },
+      shipping: { city: "Berlin", countryCode: "US" },
+      expected: "internal:billing_address_mismatch",
+    },
+    {
+      name: "countries differ, city data missing entirely",
+      billing: { city: null, countryCode: "DE" },
+      shipping: { city: null, countryCode: "US" },
+      expected: "internal:billing_address_mismatch",
+    },
+    {
+      name: "countries differ, one city missing",
+      billing: { city: "Berlin", countryCode: "DE" },
+      shipping: { city: null, countryCode: "US" },
+      expected: "internal:billing_address_mismatch",
+    },
+  ];
+
+  for (const c of CITY_CASES) {
+    it(`${c.name} → ${c.expected ?? "no note"}`, () => {
+      const result = classifyBillingShippingAgreement(
+        [orderRow({ billingAddress: c.billing, shippingAddress: c.shipping })],
+        fakeT,
+      );
+      expect(result?.id ?? null).toBe(c.expected);
+    });
+  }
 
   it("returns null when country codes are missing (insufficient data)", () => {
     const result = classifyBillingShippingAgreement([

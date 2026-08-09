@@ -249,12 +249,21 @@ export function buildInternalSignalsByField(
         billingCountry !== null && billingCountry !== "" &&
         shippingCountry !== null && shippingCountry !== "";
       if (haveCountries) {
-        const countryMismatch = billingCountry !== shippingCountry;
-        const cityMismatch =
+        const haveCities =
           billingCity !== null && billingCity !== "" &&
-          shippingCity !== null && shippingCity !== "" &&
-          billingCity !== shippingCity;
-        if (!countryMismatch && !cityMismatch) {
+          shippingCity !== null && shippingCity !== "";
+        const countryMismatch = billingCountry !== shippingCountry;
+        const cityMismatch = haveCities && billingCity !== shippingCity;
+        // THE AGREEMENT HALF NEEDS ALL FOUR VALUES. Both countries and both
+        // cities must be present and equal — the same predicate the retired
+        // collector used to decide the field was collectable at all. An earlier
+        // revision of this PR asserted agreement whenever the countries matched
+        // and no city MISMATCH could be shown, so an order with one city
+        // missing read as "same city and country" on the strength of data we
+        // did not hold. Absence is not agreement, in either direction: the
+        // mismatch branch below is unaffected, and a missing city produces
+        // neither note.
+        if (!countryMismatch && haveCities && !cityMismatch) {
           push("order_confirmation", {
             id: "internal:billing_shipping_agree",
             label: "Billing and shipping addresses on the order agree",

@@ -15,6 +15,17 @@
  * reviewer; this is the same harness `verifiedAddressContainment.analysis.ts`
  * established for PR-C1, in the repository, runnable with prod read credentials.
  *
+ * TWO POPULATIONS, DELIBERATELY NOT CONFLATED. The SQL census counts PERSISTED
+ * `checklist_v2` rows. This harness counts the rows the pre-C-14 reconcile
+ * actually SCORED, which is a different set, because the reconcile flips and
+ * appends before completeness ever sees the checklist. Measured here:
+ * **97** persisted `available` + **19** appended at read time by the
+ * append rule (`optional` priority, for packs that collect the field but were
+ * built before it had a template row) = **116** effectively-available rows;
+ * plus **15** persisted `missing` rows on packs that never collected it. 97 and
+ * 116 are both correct answers to different questions, and quoting one for the
+ * other is how the first revision of this PR mislabelled its AVS table.
+ *
  * ADAPTER DISCIPLINE. It does not re-implement the categorizer, the scorer or
  * the completeness engine. Both arms call the SAME shipped functions
  * (`calculateCaseStrength`, `deriveCompletenessMetrics`,
@@ -28,11 +39,40 @@
  *     `missing` row flips to `available` when the field was collected, and a
  *     collected field with no row is appended as `optional`.
  *
- * Reconstructing "BEFORE" rather than reading it off the old code is what
- * keeps this file re-runnable AFTER the PR merges — the property PR-C1's
- * harness established and the reason a reviewer can reproduce these numbers
- * at all. The reconstruction is validated by the fact that it reproduces the
- * pre-implementation run (2026-08-09T11:36Z) exactly.
+ * WHAT IS RE-RUNNABLE AFTER THE MERGE, AND WHAT IS NOT. The reconstruction
+ * keeps most of this file re-runnable, but NOT all of it, and the difference
+ * must not be papered over.
+ *
+ * Re-runnable — these outputs are identical before and after the merge,
+ * confirmed by running the harness on both sides (2026-08-09T11:36Z on the
+ * unmodified code, 2026-08-09T12:33Z after):
+ *
+ *   - the grade census, including its "pre-C-14 rule" arm: `data.match === true`
+ *     is read straight off the payload, not through the deleted registry entry;
+ *   - the completeness delta distribution and the readiness transitions —
+ *     `deriveCompletenessMetrics` reads priority and status only, never a
+ *     registry spec;
+ *   - the BEFORE-row provenance decomposition;
+ *   - the claim-capability probe;
+ *   - the case-strength transition histogram (with the caveat below).
+ *
+ * NOT re-runnable — captured on the unmodified code at 2026-08-09T11:36Z and
+ * quoted from that run wherever it appears:
+ *
+ *   - the **96-pack `coveragePercent` delta**. `calculateCaseStrength` counts a
+ *     checklist row only when its field has a `CANONICAL_EVIDENCE` spec, so once
+ *     the spec is deleted the re-attached BEFORE row is invisible to the scorer
+ *     and the counter reads 0. The consequence runs deeper than one number: the
+ *     post-merge BEFORE arm no longer models the retired row's contribution to
+ *     the coverage denominator at all. "0 case-strength changes" was therefore
+ *     ESTABLISHED pre-implementation, against the real registry, and only
+ *     re-confirmed afterwards under a weaker reconstruction.
+ *   - the `bankEligibleToday` counter, which is now 0 because
+ *     `isFieldBankEligible` short-circuits on retired fields — true by
+ *     construction rather than by measurement. The durable evidence for the
+ *     zero citation delta is the SQL census (0 `defence_evidence_facts` rows in
+ *     category `billing_match`, 0 packages whose `facts_json` embeds one),
+ *     which reads persisted data and is re-runnable indefinitely.
  *
  * WHAT IT DELIBERATELY DOES NOT MEASURE. `criticalCategories` on
  * `visa_10_4_fraud` still names `billing_match`, and this PR leaves it there —
@@ -264,10 +304,17 @@ describe("PR-C4 — billing_address_match retirement calibration (prod, read-onl
     const readinessTransitions: Record<string, number> = {};
     let coverageChanged = 0;
 
-    /** Deletion criterion 2, second half: for every pack that LOSES an
-     *  `available` billing row, how is address verification represented on the
-     *  canonical C-12/C-13 AVS fact? */
+    /** Deletion criterion 2, second half: for every pack whose pre-C-14
+     *  checklist held an EFFECTIVELY AVAILABLE billing row, how is address
+     *  verification represented on the canonical C-12/C-13 AVS fact? */
     const avsRepresentation: Record<string, number> = {};
+    /**
+     * Where that "effectively available" row came from. The SQL census counts
+     * PERSISTED rows; the pre-C-14 reconcile then flipped and appended, so the
+     * two populations are not the same number and must not be quoted as if
+     * they were.
+     */
+    const rowOrigin: Record<string, number> = {};
 
     const capabilityDelta: Record<string, number> = {};
 
@@ -305,6 +352,24 @@ describe("PR-C4 — billing_address_match retirement calibration (prod, read-onl
 
       const row = checklistBefore.find((c) => c.field === RETIRED_FIELD);
       const rowStatus = row ? `${row.status}/${row.priority}` : "(no row)";
+
+      // Provenance of the BEFORE row, so the persisted-vs-effective difference
+      // is a measured number rather than an inference.
+      const persistedRows = Array.isArray(pack.checklist_v2)
+        ? (pack.checklist_v2 as { field?: string; status?: string }[])
+        : ((pack.checklist_v2 as { items?: { field?: string; status?: string }[] } | null)
+            ?.items ?? []);
+      const persisted = persistedRows.find((c) => c?.field === RETIRED_FIELD);
+      bump(
+        rowOrigin,
+        persisted
+          ? collectsRetired
+            ? `persisted ${persisted.status} + collected -> ${row?.status}`
+            : `persisted ${persisted.status}, NOT collected -> ${row?.status}`
+          : collectsRetired
+            ? "no persisted row, collected -> appended optional/available"
+            : "no row, not collected",
+      );
 
       // ── 3. Case strength.
       const sBefore = calculateCaseStrength(
@@ -429,8 +494,16 @@ describe("PR-C4 — billing_address_match retirement calibration (prod, read-onl
     console.log("submission-readiness transitions", JSON.stringify(readinessTransitions));
     console.log("completeness/readiness changes", completenessChanged.length);
     console.log(JSON.stringify(completenessChanged, null, 1));
-    console.log("AVS representation on packs LOSING an available billing row",
-      JSON.stringify(avsRepresentation, null, 1));
+    console.log("BEFORE-row provenance (persisted vs effective)",
+      JSON.stringify(rowOrigin, null, 1));
+    console.log(
+      "AVS representation on packs whose pre-C-14 row was EFFECTIVELY available",
+      JSON.stringify(avsRepresentation, null, 1),
+    );
+    console.log(
+      "  sum of the AVS buckets",
+      Object.values(avsRepresentation).reduce((a, b) => a + b, 0),
+    );
     console.log("claim capabilities granted by a billing_match fact",
       JSON.stringify(capabilityDelta));
   }, 300_000);

@@ -272,30 +272,58 @@ merchant billing-vs-shipping note still renders wherever it is kept.
 ### Measured before merge (prod, read-only, 2026-08-09)
 
 `scripts/sql/prc4-billing-address-match-census.sql` and
-`scripts/evidence-model/billingAddressMatchRetirement.analysis.ts`. Both are committed and
-re-runnable; the analysis reconstructs the pre-retirement arm from the persisted checklist so a
-reviewer can reproduce these numbers after the merge.
+`scripts/evidence-model/billingAddressMatchRetirement.analysis.ts`, both committed. The analysis
+reconstructs its pre-retirement arm from the persisted checklist, so **most** of it re-runs
+identically after the merge — verified by running it on both sides (11:36Z unmodified, 12:33Z
+after). **Two figures do not, and are quoted from the pre-implementation run:**
+
+- the **96-pack `coveragePercent` delta**. `calculateCaseStrength` counts a checklist row only when
+  its field has a `CANONICAL_EVIDENCE` spec; with the spec deleted the re-attached BEFORE row is
+  invisible to the scorer, the counter reads 0, and the post-merge BEFORE arm no longer models the
+  coverage-denominator effect at all. **"0 case-strength changes" therefore rests on the
+  pre-implementation run against the real registry**, and was only re-confirmed afterwards under
+  the weaker reconstruction.
+- the harness's `bankEligible` counter, now 0 by the retirement guard rather than by measurement.
+  The durable evidence for the zero citation delta is the SQL census (0 fact rows, 0 `facts_json`
+  embeds), which reads persisted data and re-runs indefinitely.
+
+Everything else — the grade census, the completeness distribution, the readiness transitions, the
+row-provenance decomposition and the claim-capability probe — is re-runnable as written.
 
 | deletion criterion | result |
 |---|---|
 | **1.** C-12 + C-13 merged, AVS fact owns address verification | Yes — #521 (`2e2134cd`), #522 (`b8b96a19`) on `develop` |
-| **2.** every strength delta enumerated | **0 case-strength changes** on 131 affected packs (moderate→moderate 98, weak→weak 27, strong→strong 6). 96 packs' `coveragePercent` moves; no band is crossed |
+| **2.** every strength delta enumerated | **0 case-strength changes** on 131 affected packs (moderate→moderate 98, weak→weak 27, strong→strong 6). 96 packs' `coveragePercent` moves and no band is crossed — that figure from the pre-implementation run only |
 | **2.** every completeness delta enumerated | 90 packs −1…−7, 15 packs +2…+17, 26 unchanged; **13 packs `ready_with_warnings` → `ready`**, none the other way |
 | **2.** every citation delta enumerated | **0.** 0 `defence_evidence_facts` rows in category `billing_match`, 0 packages whose `facts_json` embeds one, 0 bank-eligible sections. Nothing was ever cited, so nothing is withdrawn |
-| **2.** no case weaker for want of address representation | Of the 97 packs losing an `available` row: citable Visa `Y` 17, match on an unsourced cell 16, issuer `N` **70**, not-checked 8, unavailable 1, no AVS fact 4. Genuine verification already lives on `avs_cvv_match` |
+| **2.** no case weaker for want of address representation | Across the **116** effectively-available rows (see the population note below): citable Visa `Y` 17, match on an unsourced cell 16, issuer `N` **70**, not-checked 8, unavailable 1, no AVS fact 4 — total 116. Genuine verification already lives on `avs_cvv_match` |
 | **3.** no narrative claim depends on the key | `deriveClaimCapabilities` reads delivery categories only and grants nothing from a `billing_match` fact (asserted adversarially, including a hand-built strong one); `billing_match_confirmed` cannot fire |
 
 Collection census: **116 packs across 114 disputes** carry the field (99 FRAUDULENT); `data.match
 === true` on **0**; a `match` key present on **0** — the collector never wrote the key its grader
-keys on, which is why the fleet reads "collected 116, valid 0". 112 packs still hold a persisted
-`checklist_v2` row (97 `available`/critical, 15 `missing`/critical); those are dropped on read at
-the reconcile boundary, without a rebuild or a backfill.
+keys on, which is why the fleet reads "collected 116, valid 0".
+
+**Two populations, not one number.** The SQL census counts PERSISTED `checklist_v2` rows;
+completeness scores the rows `reconcileChecklistWithCollectedFields` actually produced, and the
+reconcile flips and appends first. Measured decomposition of the 131 affected packs:
+
+| pre-C-14 row | packs |
+|---|---|
+| persisted `available`/critical, field collected | 97 |
+| no persisted row, field collected → appended `optional`/`available` at read time (append rule, 2026-08-04) | 19 |
+| **effectively available — what completeness scored** | **116** |
+| persisted `missing`/critical, field never collected | 15 |
+
+97 and 116 are both correct answers to different questions; an earlier draft of this section quoted
+the persisted 97 against a table that enumerates all 116, which is the discrepancy corrected here.
+All of these rows are dropped on read at the reconcile boundary, without a rebuild or a backfill.
 
 **Left standing on purpose.** `visa_10_4_fraud.criticalCategories` still names `billing_match`,
 now a category with no member. It had 0 members in production already, so every Visa 10.4 package
 is *already* `narrow` and this PR changes nothing; removing the entry would flip real packages
 narrow → full, which is bank-visible and needs its own approval. Pinned by a test so it is seen
-rather than discovered. **A candidate C-15.**
+rather than discovered. Recorded as a possible future item; **no work on it is started, proposed or
+scheduled by this PR**, and `visa_10_4_fraud` is byte-for-byte unchanged.
 
 ## Dependency chain
 
