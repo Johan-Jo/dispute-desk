@@ -9,6 +9,18 @@ vi.mock("@/lib/audit/logEvent", () => ({
 vi.mock("@/lib/rules/evaluateRules", () => ({
   evaluateRules: vi.fn(),
 }));
+// CP-C: the reconcile pass reads the ONE canonical automation decision, which
+// takes the shop's automation policy (threshold, blocker enforcement) as an
+// input. It used to hand-roll a coverage / fatal-loss / strength pre-filter and
+// never looked at settings at all.
+vi.mock("@/lib/automation/settings", () => ({
+  getShopSettings: vi.fn().mockResolvedValue({
+    auto_build_enabled: true,
+    auto_save_enabled: true,
+    auto_save_min_score: 60,
+    enforce_no_blockers: true,
+  }),
+}));
 vi.mock("@/lib/argument/reasonFamily", () => ({
   resolveReasonFamily: vi.fn((reason: string | null) =>
     reason === "PRODUCT_NOT_AS_DESCRIBED" ? "product" : "fraud",
@@ -138,6 +150,12 @@ const READY_STRONG_PACK = {
   id: "pack-1",
   status: "ready",
   shop_id: "shop-1",
+  // CP-C: completeness and readiness are decision inputs now. They were always
+  // present on a real ready pack (`submission_readiness` is NOT NULL); the
+  // fixture simply never needed them while this path ran its own pre-filter.
+  completeness_score: 90,
+  blockers: [],
+  submission_readiness: "ready",
   pack_json: {
     case_strength: { overall: "strong" },
     disputeReason: "FRAUDULENT",

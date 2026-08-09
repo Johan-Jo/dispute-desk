@@ -2079,6 +2079,111 @@ Source: [`docs/epics/EPIC-LSE-6-direct-submission.md`](epics/EPIC-LSE-6-direct-s
 
 These come online when commercial credentials are validated against a real sandbox. The schema is positioned so partnership signing → activation is a single PR + credential population step, not a full feature build.
 
+## Canonical automation decision (CP-C, dark)
+
+`lib/automation/decision/` — **one** `CaseAutomationDecision` that every
+automation entry point reads. It replaces four independent ladders that could
+disagree about the same dispute, and it is DARK: no production switch is flipped
+by this change, and the observable side effects of every existing path are
+preserved.
+
+**Readers** — `lib/automation/pipeline.ts` (`evaluateAndMaybeAutoSave`),
+`lib/jobs/handlers/buildDefencePackageJob.ts`,
+`lib/automation/reconcileParkedAutoDisputes.ts`, `lib/disputes/heldState.ts`
+(and through it the workspace route and the new-dispute email), and
+`app/api/cron/defence-package-deadline-submit/route.ts`.
+
+**Deleted** — `evaluateAutoSaveGate` and `evaluateAutoSubmitGuards` have zero
+production readers. Both files remain only because
+`scripts/evidence-model/calibration/**` replays historical behaviour through
+them; a CI invariant in
+`lib/automation/decision/__tests__/branchBoundary.test.ts` fails the build if
+anything under `lib/` or `app/` starts reading them again.
+
+**R1 closed.** The auto-save gate's `submissionReadiness: … ?? undefined`
+fallback silently dropped the whole gate onto the legacy blocker-count path
+whenever the column was absent — a second, differently-calibrated ladder
+reachable by a NULL. An absent readiness now resolves to `blocked`: the signal
+fails closed instead of switching engines. (`?? 0` on a NULL completeness score
+is deliberately preserved — it has always meant zero to the gate.)
+
+### The ladder
+
+Evaluated in order, most decisive first. Every rung that can BLOCK sits above
+the automation-mode rung, so the resolved rule mode can never turn a block into
+a non-block — asserted directly, because the deadline path depends on it.
+
+| # | Rung | Action | Reason code |
+|---|---|---|---|
+| 1 | Coverage (`coverage.state === "covered_shopify"`) | `block` | `coverage_active` |
+| 2 | Fatal loss (`fatal_loss.triggered`) | `block` | `fatal_loss` |
+| 3 | Stale assessment (via `evaluateFreshness`) | `block` | `assessment_stale` |
+| 4 | Hard block (`readiness === "blocked"` + `enforce_no_blockers`) | `block` | `hard_block` |
+| 5 | Strength floor — weak / insufficient | `block` | `strength_insufficient` |
+| 6 | Automation off — review mode or `auto_save_enabled = false` | `park_for_review` | `automation_disabled` |
+| 7 | Completeness below threshold | `park_for_review` | `below_completeness_threshold` |
+| 8 | `review_required` facts present | `hold_for_deadline` | `review_required_present` |
+| 9 | Moderate strength | `hold_for_deadline` | `eligible` |
+| 10 | Otherwise | `auto_file` | `eligible` |
+
+Coverage beats fatal-loss (PRD §4 over §5), and `COVERED_STATUSES` stays exactly
+`{PROTECTED, ACTIVE}` — both pinned by test. A fatal-loss REASON never travels
+in the decision, only the code.
+
+Below-threshold **parks**, it does not hard-block: a thin case still gets a
+response at the deadline rather than a forfeit. Only a `block` stops the
+deadline.
+
+### Time invariance
+
+The decision may carry the **absolute** evidence due date. It may never carry,
+or be derived from, a **relative** time state — time remaining, window
+open/closed, days to deadline. Executors compute window state from the absolute
+due date at execution, in `lib/automation/decision/deadlineWindow.ts`, the only
+module in the branch that reads a clock.
+
+`freshness.computedAt` is audit-only and is excluded from the input hash by
+construction. Pinned by `decisionTimeInvariance.test.ts`: identical inputs at two
+clock times produce an identical `inputHash` and identical `reasonCodes`, while a
+due-date change moves the hash.
+
+### Package choice is NOT in the decision
+
+Executors receive a `FileableSelection` at execution time through
+`FileableSelectorPort`, so a decision stored yesterday can never authorise
+filing a package superseded since. `lib/automation/decision/latestCandidateSelector.ts`
+implements the port over today's storage (latest candidate only — never a search
+for "the newest SAFE version", which on this fleet would be a fallback into the
+defect) and is the module CP-B's selector replaces.
+
+### The deadline path — P-6
+
+`app/api/cron/defence-package-deadline-submit/route.ts` is the ACTUAL submitter.
+It previously consulted **no** strength, **no** completeness, **no** coverage and
+**no** guards, which made every other gate advisory (risk R3). It now calls
+`cronEnvGate(req)` first, then derives the decision and executes P-6 through the
+shared `mayExecuteAtDeadline`:
+
+> `deadline_only` execution is allowed only with a current canonical decision AND
+> a current validated safe package, with no hard block, no staleness, no
+> ambiguity and no unsupported argument.
+
+Five conditions, conjunctive. **A deadline relaxes nothing.** When any one fails,
+nothing is filed, the merchant is emailed, and the audit row names the failing
+condition (`deadlineConditions`, `deadlineWindow`, `decisionAction`,
+`decisionReasonCodes`, `decisionInputHash`) — an executor that can only say "not
+allowed" produces exactly the un-diagnosable behaviour this replaces. The
+response body gains a `blockedByDecision` counter, distinct from
+`finalizeRefused`: a P-6 refusal is the gate working, not a retriable
+transaction failure.
+
+### Branch boundary
+
+Automation decides what to DO; the argument decides what to SAY. Nothing under
+`lib/automation/decision/` may import argument-plan or review internals, and the
+decision snapshot carries no narrative, no package id and no plan field.
+Enforced structurally by `branchBoundary.test.ts`.
+
 ## Automation Pipeline
 
 DisputeDesk is **automation-first**. The pipeline runs automatically
@@ -2090,9 +2195,10 @@ when disputes are detected:
 2. For each new dispute, `runAutomationPipeline()` checks `shop_settings`:
    - If `auto_build_enabled` → enqueue `build_pack` job.
 3. `build_pack` collects evidence sources, evaluates completeness.
-4. `evaluateAndMaybeAutoSave()` checks the auto-save gate:
-   - `auto_save_enabled` + `score >= threshold` + `blockers == 0` + review status.
-   - Decision: `auto_save` | `park_for_review` | `block`.
+4. `evaluateAndMaybeAutoSave()` derives the **canonical automation decision**
+   (see *Canonical automation decision* above) and maps its action onto the
+   pipeline's existing side effects: `auto_save` | `park_for_review` | `block` |
+   `skip_covered` | `defer_no_package`. It no longer runs a gate of its own.
 5. If `auto_save` → enqueue `save_to_shopify` job.
 
 When the gate decision is `block`, the pipeline writes the gate's `reasons` to both the `auto_save_blocked` audit event (`event_payload.reasons`) and the `pack_blocked` dispute event (`description` + `metadata_json.reasons`). The embedded app surfaces this in two places so the merchant is never left guessing why auto-submit stopped:

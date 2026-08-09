@@ -26,15 +26,36 @@
  * by hand.
  *
  * PURE — no DB, no I/O. The strength ladder is NOT restated here: this module
- * calls `evaluateAutoSubmitGuards`, the same function the pipeline and the
- * defence-package job call. Re-deriving it is precisely the drift that guard
- * module was created to end.
+ * reads the ONE canonical `CaseAutomationDecision`, the same object the
+ * pipeline, the defence-package job, the reconcile pass and the deadline cron
+ * read (CP-C). Re-deriving it is precisely the drift the canonical decision was
+ * created to end — and before it, five ladders answered this question five
+ * ways.
+ *
+ * WHY THE DECISION ANSWERS "held". "Held" is not a fifth state; it is what two
+ * of the decision's outcomes MEAN to a merchant on Auto-pilot:
+ *   hold_for_deadline                     → moderate_strength
+ *   block + strength_insufficient         → weak_strength
+ * Everything else — coverage, fatal-loss, review mode, a hard block — has its
+ * own copy elsewhere and is deliberately NOT held.
  */
 
+import type { CaseAssessmentSnapshot } from "@/lib/pipeline/contracts";
 import {
-  evaluateAutoSubmitGuards,
-  type AutoSubmitGuardInput,
-} from "@/lib/automation/autoSubmitGuards";
+  AUTOMATION_POLICY_VERSION,
+  deriveCaseAutomationDecision,
+  type AutomationGateFacts,
+} from "@/lib/automation/decision";
+
+/**
+ * The gate facts a held-state caller has to hand. Structurally identical to
+ * `AutomationGateFacts` plus the pack's recorded strength band, which the
+ * decision reads off the assessment.
+ */
+export interface HeldGuardInput extends AutomationGateFacts {
+  /** `pack_json.case_strength.overall`. */
+  caseStrength: string | null | undefined;
+}
 
 /** Why the case is held. Both end in the same place (saved on the due date);
  *  they differ in what we can honestly promise about improving it. */
@@ -86,7 +107,7 @@ export interface AcknowledgementOfferInput {
   finalOutcome?: string | null;
 }
 
-export interface HeldStateInput extends AutoSubmitGuardInput {
+export interface HeldStateInput extends HeldGuardInput {
   /** Resolved rule mode for this dispute (`normalizeMode` output). */
   automationMode: "auto" | "review" | null;
   /** Offer facts. Omit to resolve `held` without an offer. */
@@ -145,6 +166,65 @@ export function canOfferCardholderAcknowledgement(
 }
 
 /**
+ * This module is pure and its output is never persisted, so `computedAt` has no
+ * reader. A constant keeps it out of any accidental hash and out of snapshot
+ * churn; see the time-invariance rule in the automation-decision contract.
+ */
+const HELD_STATE_COMPUTED_AT = "1970-01-01T00:00:00.000Z";
+
+/**
+ * The minimum assessment the held question needs: the recorded strength band,
+ * and nothing that could make another rung of the ladder fire.
+ */
+function heldAssessment(
+  caseStrength: string | null | undefined,
+): CaseAssessmentSnapshot {
+  const overall =
+    caseStrength === "strong" ||
+    caseStrength === "moderate" ||
+    caseStrength === "weak" ||
+    caseStrength === "insufficient"
+      ? caseStrength
+      : // A pack built before `case_strength` existed is not held — the same
+        // fall-through every caller had before the canonical decision.
+        ("strong" as const);
+  return {
+    caseId: "held-state",
+    assessmentVersion: 1,
+    strength: {
+      overall,
+      score: 0,
+      coveragePercent: 0,
+      strongCount: 0,
+      moderateCount: 0,
+      supportingCount: 0,
+      supportedClaims: 0,
+      totalClaims: 0,
+      strengthReasonI18n: { key: "automation.decision.projectedStrength" },
+      improvementHintI18n: null,
+      heroVariant:
+        overall === "strong"
+          ? "likely_to_win"
+          : overall === "moderate"
+            ? "could_win"
+            : "hard_to_win",
+    },
+    completeness: {
+      score: 100,
+      evidenceStrengthScore: 100,
+      readiness: "ready",
+      blockers: [],
+    },
+    gateDecided: false,
+    freshness: {
+      inputHash: "held-state",
+      policyVersion: AUTOMATION_POLICY_VERSION,
+      computedAt: HELD_STATE_COMPUTED_AT,
+    },
+  };
+}
+
+/**
  * Resolve the held state. Coverage and fatal-loss are NOT "held": they have
  * their own dedicated copy (Shopify Protect / hard-to-win) and no amount of
  * merchant evidence changes them, so they return `held: false` and are left
@@ -160,19 +240,38 @@ export function resolveHeldState(input: HeldStateInput): HeldState {
 
   if (input.automationMode !== "auto") return none;
 
-  const verdict = evaluateAutoSubmitGuards({
-    coverageState: input.coverageState,
-    fatalLoss: input.fatalLoss,
-    caseStrength: input.caseStrength,
-    creditAlreadyIssued: input.creditAlreadyIssued,
+  const decision = deriveCaseAutomationDecision({
+    caseId: "held-state",
+    assessment: heldAssessment(input.caseStrength),
+    assessmentFreshness: { fresh: true },
+    policy: {
+      version: AUTOMATION_POLICY_VERSION,
+      autoSaveEnabled: true,
+      // Held-ness is a STRENGTH question, not a completeness one. The synthetic
+      // assessment sits at the ceiling on both so the completeness and
+      // hard-block rungs cannot fire and change the answer — the caller has
+      // neither value to hand, and inventing one would make this module
+      // disagree with the pipeline about the same dispute.
+      completenessThreshold: 0,
+      enforceNoBlockers: false,
+    },
+    automationMode: "auto",
+    gates: {
+      coverageState: input.coverageState,
+      fatalLoss: input.fatalLoss,
+      creditAlreadyIssued: input.creditAlreadyIssued,
+    },
+    reviewRequiredCount: 0,
+    evidenceDueAt: null,
+    computedAt: HELD_STATE_COMPUTED_AT,
   });
 
   let reason: HeldReason | null = null;
-  if (verdict.decision === "park" && verdict.reason === "moderate_strength") {
+  if (decision.action === "hold_for_deadline") {
     reason = "moderate_strength";
   } else if (
-    verdict.decision === "block" &&
-    (verdict.reason === "weak" || verdict.reason === "insufficient")
+    decision.action === "block" &&
+    decision.reasonCodes.includes("strength_insufficient")
   ) {
     reason = "weak_strength";
   }
