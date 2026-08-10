@@ -7,6 +7,7 @@ import { getServiceClient } from "@/lib/supabase/server";
  * whenever coverage, fatal-loss or risk-weakness fired. It now projects what
  * the build path persisted and computes nothing. */
 import { extractShopId } from "@/lib/middleware/extractShopId";
+import { ASSESSMENT_POLICY_VERSION } from "@/lib/evidence/model/assessmentSnapshot";
 import {
   gatherPresentations,
   type DisputeRowFacts,
@@ -217,7 +218,15 @@ export async function GET(req: NextRequest) {
   ) {
     const { data: strengthPacks } = await sb
       .from("evidence_packs")
-      .select("dispute_id, created_at, overall:pack_json->case_strength->>overall")
+      /* The CANONICAL snapshot, same as the display path below.
+       *
+       * This filter used to read the legacy `case_strength` summary while the
+       * pill rendered something else, so `?strength=strong` could return a
+       * dispute the list then showed as unassessed — a filter and a display
+       * disagreeing about the same row. One source for both. */
+      .select(
+        "dispute_id, created_at, overall:pack_json->case_assessment->strength->>overall",
+      )
       .eq("shop_id", shopId)
       .not("status", "in", "(failed,queued,building)")
       .order("created_at", { ascending: false });
@@ -322,33 +331,13 @@ export async function GET(req: NextRequest) {
   // list page can render the strength pill + "{N} strong signals" subtitle
   // without a per-row N+1.
   //
-  // Two-stage fetch for performance:
-  //   Stage A — narrow select of `pack_json -> case_strength` only.
-  //             Returns ~150 bytes per pack. Common case after the
-  //             2026-04-26 persist (commit 24235cc): every pack has it
-  //             and we never hit Stage B.
-  //   Stage B — for stale packs whose persisted case_strength is null,
-  //             fetch the heavier columns (`pack_json -> sections`,
-  //             `checklist_v2`) and recompute via the engine. Pass
-  //             `payloadSource = byField(map)` so conditional fields
-  //             (delivery proofType, AVS/CVV codes, IP location flags)
-  //             classify correctly — without it, the list under-counts
-  //             strong signals vs the detail page.
+  // ONE narrow select of `pack_json -> case_assessment`, and no recompute.
+  // The second stage that used to re-score stale packs is gone: it scored with
+  // three of five gates stated `order_not_loaded`, so its answer had to differ
+  // from the detail page whenever any of the three fired.
   const disputeIds = (data ?? []).map((d) => d.id);
   const reasonByDisputeId = new Map<string, string | null>();
   for (const d of data ?? []) reasonByDisputeId.set(d.id, d.reason ?? null);
-  // Customer names for the cardholder-name-mismatch gate in the Stage B
-  // recompute below — keeps the list's live-computed strength consistent
-  // with the build path's persisted case_strength (Stage A), which
-  // already applies the cap.
-  const customerNameByDisputeId = new Map<string, string | null>();
-  for (const d of data ?? []) {
-    const name =
-      typeof d.customer_display_name === "string" && d.customer_display_name.trim().length > 0
-        ? d.customer_display_name.trim()
-        : null;
-    customerNameByDisputeId.set(d.id, name);
-  }
   const strengthByDispute = new Map<
     string,
     {
@@ -362,73 +351,93 @@ export async function GET(req: NextRequest) {
       strengthReasonI18n?: I18nToken | null;
     }
   >();
+  /** Disputes whose latest pack carries no usable canonical snapshot. */
+  const unassessedDisputes = new Set<string>();
   if (disputeIds.length > 0) {
     // Stage A: narrow select.
     const { data: csPacks } = await sb
       .from("evidence_packs")
       .select(
-        "id, dispute_id, status, created_at, pack_json->case_strength, pack_json->case_assessment",
+        "id, dispute_id, status, created_at, rebuild_pending, pack_json->case_assessment",
       )
       .in("dispute_id", disputeIds)
       .not("status", "in", "(failed,queued,building)")
       .order("created_at", { ascending: false });
 
-    // First row per dispute wins (sorted desc). Track each so we can
-    // hit Stage B for stale packs.
-    type FallbackPack = { id: string; dispute_id: string };
-    const latestForDispute = new Map<string, FallbackPack>();
+    /* First row per dispute wins (sorted desc) — the LATEST pack. Taking the
+     * latest is itself the rebuild-staleness check: when a pack is rebuilt a
+     * new row is written, and its snapshot is the current one. */
     for (const p of csPacks ?? []) {
-      if (!p.dispute_id || latestForDispute.has(p.dispute_id)) continue;
-      /* THE CANONICAL SNAPSHOT FIRST.
+      if (!p.dispute_id || strengthByDispute.has(p.dispute_id)) continue;
+      if (unassessedDisputes.has(p.dispute_id)) continue;
+
+      /* ── ONLY THE CANONICAL SNAPSHOT IS A VERDICT ──────────────────────
        *
-       * `case_assessment` is the versioned `CaseAssessmentSnapshot` the build
-       * path writes — the same derivation the detail page projects, so the
-       * list and the detail page cannot describe one case two ways.
+       * The legacy four-field summary is NOT read here any more, even as a
+       * fallback. It is a
+       * four-field summary with no freshness of its own: nothing on it says
+       * which evidence it describes or which policy produced it, so a reader
+       * cannot tell a current one from one written months ago against
+       * evidence that has since changed. Falling back to it meant the list
+       * rendered a band it could not verify, next to a detail page that had
+       * already refused to.
        *
-       * `case_strength` remains the fallback for packs built before this
-       * writer existed. That is NOT a second calculation: it is the summary
-       * the old build path persisted from the same five-gate site. What was
-       * removed is the LIVE recompute (Stage B), which is where the partial
-       * gate set lived. A pack carrying neither gets `null` and renders as
-       * not assessed. */
+       * A pack with no `case_assessment` is UNASSESSED on this surface. That
+       * is the honest answer and the same one the detail page gives; the packs
+       * it applies to are the ones PR 3's rebuild exists to refresh. */
       const snapshot = (p as { case_assessment?: unknown }).case_assessment as
-        | { strength?: { overall?: string; strongCount?: number; moderateCount?: number; supportingCount?: number; strengthReasonI18n?: { key: string; params?: Record<string, string | number> } | null } }
+        | {
+            strength?: {
+              overall?: string;
+              strongCount?: number;
+              moderateCount?: number;
+              supportingCount?: number;
+              strengthReasonI18n?: { key: string; params?: Record<string, string | number> } | null;
+            };
+            freshness?: { policyVersion?: number };
+          }
         | null
         | undefined;
-      const cs =
-        (snapshot?.strength as
-          | {
-              overall?: string;
-              strongCount?: number;
-              moderateCount?: number;
-              supportingCount?: number;
-              strengthReasonI18n?: { key: string; params?: Record<string, string | number> } | null;
-            }
-          | undefined) ??
-        ((p as { case_strength?: unknown }).case_strength as
-          | {
-              overall?: string;
-              strongCount?: number;
-              moderateCount?: number;
-              supportingCount?: number;
-              strengthReasonI18n?: { key: string; params?: Record<string, string | number> } | null;
-            }
-          | null
-          | undefined);
-      if (cs?.overall) {
-        strengthByDispute.set(p.dispute_id, {
-          overall: cs.overall,
-          strongCount: cs.strongCount ?? 0,
-          moderateCount: cs.moderateCount ?? 0,
-          supportingCount: cs.supportingCount ?? 0,
-          strengthReasonI18n: cs.strengthReasonI18n ?? null,
-        });
-      } else {
-        latestForDispute.set(p.dispute_id, {
-          id: p.id,
-          dispute_id: p.dispute_id,
-        });
+
+      const cs = snapshot?.strength;
+      if (!cs?.overall) {
+        unassessedDisputes.add(p.dispute_id);
+        continue;
       }
+
+      /* ── STALENESS, AS FAR AS THIS SURFACE CAN SEE IT ──────────────────
+       *
+       * The list deliberately does not load `pack_json.sections`, so it cannot
+       * reconstruct the input hash — that was Stage B's heavy query and the
+       * reason it existed. It checks the two dimensions it CAN check
+       * truthfully:
+       *
+       *   policy version  — a policy bump invalidates every snapshot, and the
+       *                     version travels on the snapshot itself.
+       *   rebuild_pending — the pack is known to need rebuilding, which is a
+       *                     persisted statement that its numbers describe
+       *                     evidence that has already moved.
+       *
+       * Anything it cannot check is left to the detail page, which loads the
+       * inputs and reconstructs the hash properly. What matters is the
+       * direction of the error: both checks can only WITHHOLD a band, never
+       * manufacture one. */
+      const policyVersion = snapshot?.freshness?.policyVersion;
+      const stale =
+        policyVersion !== ASSESSMENT_POLICY_VERSION ||
+        (p as { rebuild_pending?: unknown }).rebuild_pending === true;
+      if (stale) {
+        unassessedDisputes.add(p.dispute_id);
+        continue;
+      }
+
+      strengthByDispute.set(p.dispute_id, {
+        overall: cs.overall,
+        strongCount: cs.strongCount ?? 0,
+        moderateCount: cs.moderateCount ?? 0,
+        supportingCount: cs.supportingCount ?? 0,
+        strengthReasonI18n: cs.strengthReasonI18n ?? null,
+      });
     }
 
     /* ── STAGE B IS DELETED (CP-A) ────────────────────────────────────
@@ -437,19 +446,15 @@ export async function GET(req: NextRequest) {
      * `riskWeakness` all stated `order_not_loaded` — a partial gate set by
      * construction, because this query never loads the Shopify order. Three
      * of five gates missing means the list's answer had to differ from the
-     * detail page's whenever any of the three fired, and it did: the
-     * 2026-08-05 audit found exactly that divergence on a fraud case with a
+     * detail page's whenever any of the three fired, and the 2026-08-05
+     * audit found exactly that divergence on a fraud case with a
      * cardholder-name mismatch.
      *
-     * The list now RENDERS what the build path persisted and computes
-     * nothing. A pack that carries no assessment gets `null`, which the UI
-     * already shows as an em-dash — the honest answer, and the same
-     * `needsRecalculation` state the detail page renders. It is not a
-     * regression to stop showing a number that was wrong.
-     *
-     * `latestForDispute` therefore has no consumer beyond the loop above,
-     * and is kept only as the record of which packs are unassessed. */
-    void latestForDispute;
+     * There is no recompute and no fallback. The list renders what the build
+     * path persisted, or nothing. `unassessedDisputes` is the record of which
+     * disputes fell into "nothing" and why the pill is an em-dash rather than
+     * a number. */
+    void unassessedDisputes;
   }
 
   // ── Shared presentation model (plan §3) ────────────────────────────

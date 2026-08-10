@@ -53,6 +53,7 @@ import {
   activatedShopDomains,
   canonicalScoreFromPackJson,
   completenessActivationFor,
+  resolveEffectiveCompleteness,
   P7_EXCLUSIONS,
 } from "@/lib/evidence/model/completenessActivation";
 import { CLEAN_FACTS, narrativeJson } from "@/tests/fixtures/defencePackageShapes";
@@ -96,19 +97,27 @@ function packJson(opts: { withAssessment: boolean }) {
   };
 }
 
-function setup(opts: { shopDomain: string; withAssessment?: boolean }) {
+function setup(opts: {
+  shopDomain: string;
+  withAssessment?: boolean;
+  persistedScore?: number;
+  blockers?: string[];
+  readiness?: string;
+  merchantThreshold?: number;
+}) {
   const pj = packJson({ withAssessment: opts.withAssessment ?? true });
   const packRow = {
     id: "p1",
     shop_id: "s1",
     dispute_id: "d1",
-    completeness_score: PERSISTED_SCORE,
-    blockers: [],
-    submission_readiness: "ready",
+    completeness_score: opts.persistedScore ?? PERSISTED_SCORE,
+    blockers: opts.blockers ?? [],
+    submission_readiness: opts.readiness ?? "ready",
     status: "ready",
     pack_json: pj,
   };
   const jobsInsert = vi.fn().mockResolvedValue({ data: null, error: null });
+  const auditInsert = vi.fn().mockResolvedValue({ data: null, error: null });
 
   const from = vi.fn((table: string) => {
     if (table === "evidence_packs") {
@@ -172,7 +181,7 @@ function setup(opts: { shopDomain: string; withAssessment?: boolean }) {
       };
     }
     if (table === "audit_events") {
-      return { insert: vi.fn().mockResolvedValue({ data: null, error: null }) };
+      return { insert: auditInsert };
     }
     if (table === "jobs") return { insert: jobsInsert };
     return {
@@ -198,11 +207,11 @@ function setup(opts: { shopDomain: string; withAssessment?: boolean }) {
   mockSettings.mockResolvedValue({
     auto_build_enabled: true,
     auto_save_enabled: true,
-    auto_save_min_score: MERCHANT_THRESHOLD,
+    auto_save_min_score: opts.merchantThreshold ?? MERCHANT_THRESHOLD,
     enforce_no_blockers: true,
     require_review_before_save: false,
   } as never);
-  return { jobsInsert };
+  return { jobsInsert, auditInsert };
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -298,20 +307,187 @@ describe("P-7 through the ACTIVE gate path", () => {
     expect(r.details).toContain(String(PERSISTED_SCORE));
   });
 
-  it("an activated shop with a PRE-ACTIVATION pack falls back, it does not park on 0", async () => {
-    /* The legacy pack has no `case_assessment`. Persisted 55 against the
-     * calibrated 60 still blocks — but on 55, not on 0, and that is the
-     * assertion: the fallback is to the real number. */
+  it("an activated shop with a PRE-ACTIVATION pack falls back on BOTH values", async () => {
+    /* The legacy pack has no `case_assessment`, so the whole legacy pair
+     * applies: persisted 55 against the MERCHANT threshold 80.
+     *
+     * This assertion was previously the other way round — 55 against the
+     * calibrated 60 — which is precisely the illegal pairing. A legacy score
+     * judged on a threshold calibrated for the canonical scale silently lowers
+     * the bar for every pack the rebuild has not reached yet. */
     setup({ shopDomain: "blume-box.myshopify.com", withAssessment: false });
     const r = await evaluateAndMaybeAutoSave("p1");
     expect(r.action).toBe("block");
-    expect(r.details).toContain(`${PERSISTED_SCORE}%`);
-    // The score it compared is 55, not 0 — asserted on the SCORE position in
-    // the message, because "60%" contains "0%" and a substring check here
-    // would pass on the threshold instead.
+    // The score compared is 55, not 0 — matched on the SCORE position, because
+    // "60%" contains "0%" and a bare substring check would pass on a threshold.
     expect(r.details).toMatch(new RegExp(`score ${PERSISTED_SCORE}%`));
     expect(r.details).not.toMatch(/score 0%/);
-    // …and against the CALIBRATED threshold, not the merchant setting.
-    expect(r.details).toContain("60%");
+    // …and against the MERCHANT threshold. 60 was never in force here.
+    expect(r.details).toMatch(new RegExp(`threshold ${MERCHANT_THRESHOLD}%`));
+    expect(r.details).not.toMatch(/threshold 60%/);
+  });
+});
+
+
+/* ── The atomic pair ─────────────────────────────────────────────────── */
+
+describe("score and threshold are ONE decision", () => {
+  it("canonical snapshot on an activated shop → canonical score + 60", () => {
+    const e = resolveEffectiveCompleteness({
+      shopDomain: "blume-box.myshopify.com",
+      packJson: packJson({ withAssessment: true }),
+      persistedScore: PERSISTED_SCORE,
+      merchantThreshold: MERCHANT_THRESHOLD,
+    });
+    expect(e).toEqual({ score: CANONICAL_SCORE, threshold: 60, source: "canonical" });
+  });
+
+  it("NO canonical snapshot on an activated shop → persisted score + MERCHANT threshold", () => {
+    /* THE illegal pairing this object exists to prevent: a legacy score
+     * against the calibrated 60. Resolving the two lookups separately makes it
+     * representable, and it silently lowers the bar for every pack the rebuild
+     * has not reached yet. */
+    const e = resolveEffectiveCompleteness({
+      shopDomain: "blume-box.myshopify.com",
+      packJson: packJson({ withAssessment: false }),
+      persistedScore: 70,
+      merchantThreshold: 80,
+    });
+    expect(e).toEqual({ score: 70, threshold: 80, source: "legacy" });
+    expect(e.threshold).not.toBe(60);
+  });
+
+  it("a non-activated shop is legacy on both, even with a canonical snapshot", () => {
+    const e = resolveEffectiveCompleteness({
+      shopDomain: "someone-else.myshopify.com",
+      packJson: packJson({ withAssessment: true }),
+      persistedScore: PERSISTED_SCORE,
+      merchantThreshold: MERCHANT_THRESHOLD,
+    });
+    expect(e).toEqual({
+      score: PERSISTED_SCORE,
+      threshold: MERCHANT_THRESHOLD,
+      source: "legacy",
+    });
+  });
+
+  it("no combination yields a legacy score against the calibrated threshold", () => {
+    /* Exhaustive over the two axes that produce the pairing: activated or not,
+     * canonical snapshot present or not. Four cases, and the illegal pair must
+     * appear in none. */
+    for (const shopDomain of ["blume-box.myshopify.com", "someone-else.myshopify.com"]) {
+      for (const withAssessment of [true, false]) {
+        const e = resolveEffectiveCompleteness({
+          shopDomain,
+          packJson: packJson({ withAssessment }),
+          persistedScore: 70,
+          merchantThreshold: 80,
+        });
+        const illegal = e.source === "legacy" && e.threshold === 60;
+        expect(illegal, `${shopDomain} withAssessment=${withAssessment}`).toBe(false);
+      }
+    }
+  });
+});
+
+/* ── The discriminating legacy pack, through the live gate ───────────── */
+
+describe("a LEGACY pack on Blume Box is judged on 70/80, never 70/60", () => {
+  /* The fixture is chosen so the two pairings disagree about the outcome:
+   *
+   *   70 against 80 (legacy, correct)     → BLOCKED
+   *   70 against 60 (the illegal pairing) → auto-saved
+   *
+   * Anything that reads `blocked` here is reading the legacy pair. */
+  it("blocks, and the message quotes 70 and 80", async () => {
+    setup({
+      shopDomain: "blume-box.myshopify.com",
+      withAssessment: false,
+      persistedScore: 70,
+      merchantThreshold: 80,
+    });
+    const r = await evaluateAndMaybeAutoSave("p1");
+    expect(r.action).toBe("block");
+    expect(r.details).toMatch(/score 70%/);
+    expect(r.details).toMatch(/threshold 80%/);
+    // The calibrated threshold must not appear: it was never in force.
+    expect(r.details).not.toMatch(/threshold 60%/);
+  });
+
+  it("is NEVER auto-saved — the illegal pairing would have let it through", async () => {
+    setup({
+      shopDomain: "blume-box.myshopify.com",
+      withAssessment: false,
+      persistedScore: 70,
+      merchantThreshold: 80,
+    });
+    const r = await evaluateAndMaybeAutoSave("p1");
+    expect(r.action).not.toBe("auto_save");
+  });
+
+  it("the audit row records 70, 80 and source=legacy", async () => {
+    const { auditInsert } = setup({
+      shopDomain: "blume-box.myshopify.com",
+      withAssessment: false,
+      persistedScore: 70,
+      merchantThreshold: 80,
+    });
+    await evaluateAndMaybeAutoSave("p1");
+    const blocked = auditInsert.mock.calls
+      .map((c) => c[0] as Record<string, unknown>)
+      .find((row) => row.event_type === "auto_save_blocked");
+    expect(blocked, "no auto_save_blocked audit row").toBeTruthy();
+    const payload = blocked!.event_payload as Record<string, unknown>;
+    expect(payload.completeness_score).toBe(70);
+    expect(payload.completeness_threshold).toBe(80);
+    expect(payload.completeness_source).toBe("legacy");
+  });
+});
+
+/* ── The canonical decision leaves the canonical numbers behind ──────── */
+
+describe("a CANONICAL 72/60 decision records 72 and 60", () => {
+  /* The persisted column still says 55 on this pack. If the audit row recorded
+   * 55, the trail would claim the gate compared a number it never saw — and
+   * during the rollout the two scales differ by -7...+17, so that is not a
+   * cosmetic difference.
+   *
+   * The case is made to BLOCK on blockers rather than on completeness, so the
+   * canonical pair is resolved, used, and still has an audit row to be read
+   * from. */
+  it("records the canonical score and the calibrated threshold, not the persisted score", async () => {
+    const { auditInsert } = setup({
+      shopDomain: "blume-box.myshopify.com",
+      withAssessment: true,
+      blockers: ["missing_delivery_proof"],
+      readiness: "blocked",
+    });
+    const r = await evaluateAndMaybeAutoSave("p1");
+    expect(r.action).toBe("block");
+
+    const blocked = auditInsert.mock.calls
+      .map((c) => c[0] as Record<string, unknown>)
+      .find((row) => row.event_type === "auto_save_blocked");
+    expect(blocked, "no auto_save_blocked audit row").toBeTruthy();
+    const payload = blocked!.event_payload as Record<string, unknown>;
+    expect(payload.completeness_source).toBe("canonical");
+    expect(payload.completeness_score).toBe(CANONICAL_SCORE);
+    expect(payload.completeness_threshold).toBe(60);
+    // The persisted score is NOT what decided, and must not be recorded as if
+    // it were.
+    expect(payload.completeness_score).not.toBe(PERSISTED_SCORE);
+  });
+
+  it("the passing canonical path writes no blocked row at all", async () => {
+    const { auditInsert } = setup({
+      shopDomain: "blume-box.myshopify.com",
+      withAssessment: true,
+    });
+    const r = await evaluateAndMaybeAutoSave("p1");
+    expect(r.action).toBe("auto_save");
+    const blocked = auditInsert.mock.calls
+      .map((c) => c[0] as Record<string, unknown>)
+      .find((row) => row.event_type === "auto_save_blocked");
+    expect(blocked).toBeUndefined();
   });
 });

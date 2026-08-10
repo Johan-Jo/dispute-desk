@@ -19,10 +19,7 @@ import {
 import { markPackageReviewRequired } from "./packageReviewRequired";
 import { getShopSettings } from "./settings";
 import { evaluateAutoSaveGate } from "./autoSaveGate";
-import {
-  canonicalScoreFromPackJson,
-  completenessActivationFor,
-} from "@/lib/evidence/model/completenessActivation";
+import { resolveEffectiveCompleteness } from "@/lib/evidence/model/completenessActivation";
 import { checkPackQuota } from "@/lib/billing/checkQuota";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
@@ -496,12 +493,16 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     .select("shop_domain")
     .eq("id", pack.shop_id)
     .maybeSingle();
-  const activation = completenessActivationFor(
-    (gateShop?.shop_domain as string | null) ?? null,
-  );
-  const canonicalScore = activation.useCanonicalScore
-    ? canonicalScoreFromPackJson(pack.pack_json)
-    : null;
+  /* ONE object: score, threshold and which scale produced them. Resolving the
+   * two numbers separately is what makes a legacy score against the calibrated
+   * 60 representable, and that pairing silently lowers the bar for every pack
+   * the rebuild has not reached. */
+  const effectiveCompleteness = resolveEffectiveCompleteness({
+    shopDomain: (gateShop?.shop_domain as string | null) ?? null,
+    packJson: pack.pack_json,
+    persistedScore: pack.completeness_score as number | null,
+    merchantThreshold: settings.auto_save_min_score,
+  });
 
   // The Rules page is the source of truth for whether to automate.
   // We re-evaluate the shop's rules against the dispute at save-time:
@@ -862,17 +863,11 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // auto → run the quality gate.
   const gate = evaluateAutoSaveGate({
     autoSaveEnabled: settings.auto_save_enabled,
-    // The calibrated threshold REPLACES the merchant setting on an activated
-    // shop — the two numbers live on different scales, and applying a number
-    // chosen on the old one to the new one would move dispositions for a
-    // reason nobody decided.
-    autoSaveMinScore: activation.threshold ?? settings.auto_save_min_score,
+    // BOTH from the same object, always. The gate's own diagnostic message
+    // quotes these two numbers, so the message names the scale that decided.
+    autoSaveMinScore: effectiveCompleteness.threshold,
     enforceNoBlockers: settings.enforce_no_blockers,
-    /* An activated shop whose pack predates the assessment writer falls back
-     * to the persisted column, NOT to zero: treating "not yet written" as 0
-     * would park every pre-activation pack against a threshold it was never
-     * measured on. */
-    completenessScore: canonicalScore ?? pack.completeness_score ?? 0,
+    completenessScore: effectiveCompleteness.score,
     blockers: (pack.blockers as string[]) ?? [],
     submissionReadiness: (pack.submission_readiness as "ready" | "ready_with_warnings" | "blocked" | "submitted") ?? undefined,
   });
@@ -1000,7 +995,16 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     pack_id: packId,
     actor_type: "system",
     event_type: "auto_save_blocked",
-    event_payload: { reasons: gate.reasons },
+    event_payload: {
+      reasons: gate.reasons,
+      /* The pair the gate ACTUALLY compared, and which scale it came from.
+       * A score in an audit row that does not say which scale produced it
+       * cannot be checked afterwards — and during the P-7 rollout the two
+       * scales disagree by −7…+17 on the same pack. */
+      completeness_score: effectiveCompleteness.score,
+      completeness_threshold: effectiveCompleteness.threshold,
+      completeness_source: effectiveCompleteness.source,
+    },
   });
 
   if (pack.dispute_id) {
@@ -1013,7 +1017,16 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       sourceType: "pack_engine",
       visibility: "merchant_and_internal",
       description: (gate.reasons as string[]).join("; "),
-      metadataJson: { pack_id: packId, reasons: gate.reasons },
+      metadataJson: {
+        pack_id: packId,
+        reasons: gate.reasons,
+        // Same pair as the audit row. The dispute timeline and the audit trail
+        // must agree about which numbers decided, or reconciling them later
+        // means guessing which scale each was on.
+        completeness_score: effectiveCompleteness.score,
+        completeness_threshold: effectiveCompleteness.threshold,
+        completeness_source: effectiveCompleteness.source,
+      },
       dedupeKey: `${pack.dispute_id}:${PACK_BLOCKED}:${packId}:${new Date().toISOString()}`,
     });
     void updateNormalizedStatus(pack.dispute_id);

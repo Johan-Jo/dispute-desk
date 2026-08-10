@@ -36,15 +36,20 @@ import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
  * new scorer call site appears — this route was the last allow-listed one.
  */
 import { creditAlreadyIssuedInput } from "@/lib/argument/caseStrength";
+import { deriveCaseEvidenceModel } from "@/lib/evidence/model/derive";
+import {
+  computeAssessmentInputHash,
+  readPersistedGateFingerprint,
+} from "@/lib/evidence/model/assessmentSnapshot";
+import type { CaseAssessmentSnapshot } from "@/lib/pipeline/contracts";
 import {
   buildWorkspaceAssessment,
   emptyWorkspaceAssessment,
 } from "@/lib/disputes/workspaceAssessment";
-import {
-  buildCaseGateAssessment,
-  gateNotProvided,
-  gateProvided,
-} from "@/lib/argument/caseGateAssessment";
+/* The gate builder is GONE from this route (CP-A). It could honestly answer
+ * only two of the five gates — it holds no Shopify order — and building a
+ * partial set here was what made this the fourth site scoring a case. It now
+ * projects the snapshot `buildPack` persisted with all five. */
 import type { EvidenceFact } from "@/lib/defence/types";
 import { CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
 import {
@@ -692,11 +697,14 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     row.customer_display_name.trim().length > 0
       ? row.customer_display_name.trim()
       : null;
-  const nameMismatchInput = {
-    triggered: detectCardholderNameMismatch(gatewayCardholderName, disputeCustomerName),
-    cardholderName: gatewayCardholderName,
-    customerName: disputeCustomerName,
-  };
+  /* The cardholder-name comparison is still surfaced to the MERCHANT below
+   * (the Overview explains a name mismatch). It is no longer assembled into a
+   * gate here, because this route no longer scores. */
+  const nameMismatchTriggered = detectCardholderNameMismatch(
+    gatewayCardholderName,
+    disputeCustomerName,
+  );
+  void nameMismatchTriggered;
   const caseStrengthPayloadSource = {
     kind: "byField" as const,
     map: evidenceItemsByField as Record<string, { payload?: Record<string, unknown> | null }>,
@@ -713,32 +721,67 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
    * the only thing that knows which gates it can honestly answer (it holds no
    * order, hence the two `gateNotProvided("order_not_loaded")` entries).
    */
-  const workspaceGates = packRow
-    ? buildCaseGateAssessment({
-      coverage: gateProvided(
-        coverageInput
-          ? { state: coverageInput.state, shopifyProtectStatus: coverageInput.shopifyProtectStatus }
-          : null,
-      ),
-      // This route has no order in hand, so it cannot derive either of
-      // these; `buildPack` owns them and persists its verdict. Stated as
-      // "not provided" rather than `null` so the record says "nobody
-      // looked here", not "this case has no fatal loss".
-      fatalLoss: gateNotProvided("order_not_loaded"),
-      riskWeakness: gateNotProvided("order_not_loaded"),
-      nameMismatch: gateProvided(nameMismatchInput),
-      // Credit-already-issued FLOOR. Read from the persisted pack rather
-      // than re-derived: `buildPack` owns the timing comparison and has
-      // the order in hand, this route does not.
-      //
-      // Omitting it here is now a compile error, which it was not on
-      // blume-box 162042cd: that call simply lacked the argument, so
-      // buildPack scored `strong`, auto-submit filed it and emailed the
-      // merchant, and the page they opened — rendered from here — showed
-      // no strong badge.
-        creditAlreadyIssued: gateProvided(creditAlreadyIssuedInput(packRow.pack_json)),
-      })
+  /* ── THE PERSISTED ASSESSMENT, PROJECTED ──────────────────────────────
+   *
+   * This route no longer builds a gate assessment and no longer scores. It
+   * could only ever answer two of the five gates — it holds no Shopify order —
+   * and a second derivation from a strictly worse gate set is a second answer,
+   * which is how a fraud case with a cardholder-name mismatch showed one band
+   * here and another from the build path.
+   *
+   * What it does instead: rebuild the CURRENT input hash from live inputs
+   * through the canonical owner, and hand both it and the persisted snapshot
+   * to `projectMerchantAssessment`.
+   *
+   * ── WHY THE HASH IS RECONSTRUCTED AND NOT READ BACK ───────────────────
+   *
+   * Comparing `snapshot.freshness.inputHash` against itself detects nothing.
+   * The model and the payload terms are therefore derived HERE, from the pack
+   * as it stands now, with the same inputs `buildPack` used — sections and
+   * waived items, no `evidence_items`, because that is what the writer hashed
+   * and a different input set would report every snapshot stale.
+   *
+   * The gate term cannot be re-derived (see above), so the writer persists it.
+   * Absent — a pack built before the writer — means no current hash can be
+   * formed, and an unverifiable snapshot is not a fresh one: the projection
+   * returns `needsRecalculation` with every verdict value null.
+   */
+  const persistedGates = readPersistedGateFingerprint(
+    (packRow?.pack_json as { case_assessment_gates?: unknown } | null)
+      ?.case_assessment_gates,
+  );
+  const persistedSnapshot =
+    ((packRow?.pack_json as { case_assessment?: unknown } | null)
+      ?.case_assessment as CaseAssessmentSnapshot | undefined) ?? null;
+
+  const liveModel = packRow
+    ? deriveCaseEvidenceModel({
+        disputeId,
+        reason: row.reason ?? null,
+        packId: packRow.id as string,
+        sections: packJsonSections.map((sec) => ({
+          source: (sec as { source?: string }).source ?? null,
+          fieldsProvided: (sec as { fieldsProvided?: string[] }).fieldsProvided ?? [],
+          data: ((sec as { data?: Record<string, unknown> }).data ?? null) as
+            | Record<string, unknown>
+            | null,
+        })),
+        waivedItems: (packRow.waived_items as never) ?? [],
+        coverage: {
+          state: coverageInput?.state ?? null,
+          shopifyProtectStatus: coverageInput?.shopifyProtectStatus ?? null,
+        },
+      }).model
     : null;
+
+  const currentAssessmentHash =
+    liveModel && persistedGates
+      ? computeAssessmentInputHash({
+          model: liveModel,
+          gates: persistedGates,
+          payloadSource: caseStrengthPayloadSource,
+        })
+      : null;
 
   /*
    * No pack means nothing has been assessed yet — and `emptyWorkspaceAssessment`
@@ -747,21 +790,21 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
    * `assessment.needsRecalculation`: "insufficient · 0%" rendered as a verdict
    * is a number a merchant acts on.
    */
-  const workspaceAssessment =
-    packRow && workspaceGates
-      ? buildWorkspaceAssessment({
-          disputeId,
-          checklist: reconciledChecklistV2,
-          reason: row.reason,
-          payloadSource: caseStrengthPayloadSource,
-          gates: workspaceGates,
-          packSaved: !!packRow.saved_to_shopify_at,
-          // Layer 3 is not persisted yet, so the workspace has no plan to
-          // project. Passing `null` yields zero review items and the `normal`
-          // filing state — the honest answer, not an invented one.
-          plan: null,
-        })
-      : emptyWorkspaceAssessment(disputeId);
+  const workspaceAssessment = packRow
+    ? buildWorkspaceAssessment({
+        disputeId,
+        checklist: reconciledChecklistV2,
+        reason: row.reason,
+        payloadSource: caseStrengthPayloadSource,
+        snapshot: persistedSnapshot,
+        currentInputHash: currentAssessmentHash,
+        packSaved: !!packRow.saved_to_shopify_at,
+        // Layer 3 is not persisted yet, so the workspace has no plan to
+        // project. Passing `null` yields zero review items and the `normal`
+        // filing state — the honest answer, not an invented one.
+        plan: null,
+      })
+    : emptyWorkspaceAssessment(disputeId);
 
   const caseStrength = workspaceAssessment.caseStrength;
   // Contribution rows for the line-item resolver, now taken off the ONE

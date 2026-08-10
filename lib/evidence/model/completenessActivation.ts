@@ -67,6 +67,77 @@ export const P7_EXCLUSIONS: ReadonlyMap<string, string> = new Map([
   ],
 ]);
 
+/**
+ * The gate's completeness decision, as ONE object.
+ *
+ * ── WHY SCORE AND THRESHOLD CANNOT BE RESOLVED SEPARATELY ─────────────
+ *
+ * They live on different scales. The calibration measured 90 packs moving
+ * −1…−7 and 15 moving +2…+17 between the persisted column and the canonical
+ * snapshot, and 60 was calibrated on the canonical one. So there are exactly
+ * two legal pairings:
+ *
+ *     canonical score  +  calibrated threshold (60)
+ *     persisted score  +  the merchant's auto_save_min_score
+ *
+ * and one illegal one: a LEGACY score against 60. That is not a hypothetical
+ * — it is what an activated shop with a pre-activation pack produces the
+ * moment the two lookups are independent, and it silently lowers the bar for
+ * every pack the rebuild has not reached yet. Resolving both in one call, from
+ * one branch, makes the illegal pairing unrepresentable rather than merely
+ * unintended.
+ *
+ * `source` is carried so the audit trail, the dispute event and the diagnostic
+ * message all say which scale was in force. A number in an audit row that does
+ * not say which scale produced it cannot be checked afterwards.
+ */
+export type CompletenessSource = "canonical" | "legacy";
+
+export interface EffectiveCompleteness {
+  score: number;
+  threshold: number;
+  source: CompletenessSource;
+}
+
+export interface ResolveEffectiveCompletenessArgs {
+  shopDomain: string | null | undefined;
+  /** `evidence_packs.pack_json`, for the canonical snapshot. */
+  packJson: unknown;
+  /** `evidence_packs.completeness_score`. */
+  persistedScore: number | null | undefined;
+  /** The merchant's own `auto_save_min_score`. */
+  merchantThreshold: number;
+}
+
+/**
+ * Resolve the pair the gate will actually use.
+ *
+ * An activated shop whose pack carries no usable canonical score falls back to
+ * BOTH legacy values together — never to the legacy score against the
+ * calibrated threshold. `canonicalScoreFromPackJson` returns `null` rather
+ * than 0 for exactly this reason: 0 would look like a usable canonical score
+ * and park every pre-activation pack.
+ */
+export function resolveEffectiveCompleteness(
+  args: ResolveEffectiveCompletenessArgs,
+): EffectiveCompleteness {
+  const legacy: EffectiveCompleteness = {
+    score: args.persistedScore ?? 0,
+    threshold: args.merchantThreshold,
+    source: "legacy",
+  };
+
+  const activation = completenessActivationFor(args.shopDomain);
+  if (!activation.useCanonicalScore || activation.threshold === null) return legacy;
+
+  const canonical = canonicalScoreFromPackJson(args.packJson);
+  // Missing or unusable canonical snapshot → the WHOLE legacy pair. Taking the
+  // calibrated threshold here would be the illegal pairing.
+  if (canonical === null) return legacy;
+
+  return { score: canonical, threshold: activation.threshold, source: "canonical" };
+}
+
 export interface CompletenessActivation {
   /** Read the canonical snapshot's score instead of the persisted column. */
   useCanonicalScore: boolean;

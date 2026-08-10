@@ -124,7 +124,9 @@ function sha256(value: unknown): string {
  * the gate should be treated as computing something different. Two snapshots
  * that scored identically for different reasons are not interchangeable.
  */
-function gateFingerprint(gates: CaseGateAssessment): unknown {
+function gateFingerprint(
+  gates: CaseGateAssessment | PersistedGateFingerprint,
+): unknown {
   const g = gates as unknown as Record<string, unknown>;
   return {
     coverage: g.coverage ?? null,
@@ -221,9 +223,99 @@ function modelFingerprint(model: CaseEvidenceModel): unknown {
 
 /* ── the hash ──────────────────────────────────────────────────────── */
 
+/**
+ * The gate half of the hash, as it can be PERSISTED and read back.
+ *
+ * ── WHY THIS EXISTS ───────────────────────────────────────────────────
+ *
+ * The input hash covers model + gates + payloads. A reader can rebuild the
+ * model and the payloads from `pack_json`; it cannot rebuild the GATES,
+ * because three of the five are derived from the Shopify order and only
+ * `buildPack` loads it. Without them a reader has two bad options: hash a
+ * different gate set — which reports every snapshot stale — or skip the hash
+ * and compare the snapshot against itself, which detects nothing.
+ *
+ * So the writer persists exactly the fields the fingerprint reads. The gates
+ * term is then CONSTANT between write and read, which is correct rather than
+ * convenient: a reader that cannot see the order also cannot observe a gate
+ * changing, and claiming otherwise would be the `order_not_loaded` lie in a
+ * new place. What the reader CAN observe — the evidence moving underneath the
+ * snapshot — is exactly what the model and payload terms carry.
+ *
+ * Plain data, no brand. The brand on `CaseGateAssessment` stops a hand-rolled
+ * literal reaching the SCORER; nothing here is ever scored with.
+ */
+export interface PersistedGateFingerprint {
+  coverage: unknown;
+  fatalLoss: unknown;
+  riskWeakness: unknown;
+  nameMismatch: unknown;
+  creditAlreadyIssued: unknown;
+  notProvided: unknown;
+}
+
+/**
+ * The gate fields to persist beside a snapshot, taken from the real gates.
+ *
+ * Deliberately produced by the SAME function the hash uses, so the persisted
+ * value and the hashed value cannot drift into two shapes.
+ */
+export function persistableGateFingerprint(
+  gates: CaseGateAssessment,
+): PersistedGateFingerprint {
+  return gateFingerprint(gates) as PersistedGateFingerprint;
+}
+
+/**
+ * Read a persisted fingerprint back, or `null` when it is absent/malformed.
+ *
+ * `null` propagates to "no current hash can be reconstructed", which
+ * `projectMerchantAssessment` renders as `needsRecalculation`. Guessing a
+ * default here would manufacture a hash that matches nothing, reporting a
+ * fresh snapshot stale, or — worse, if the default happened to match —
+ * reporting a stale one fresh.
+ */
+export function readPersistedGateFingerprint(
+  value: unknown,
+): PersistedGateFingerprint | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const v = value as Record<string, unknown>;
+  const keys = [
+    "coverage",
+    "fatalLoss",
+    "riskWeakness",
+    "nameMismatch",
+    "creditAlreadyIssued",
+    "notProvided",
+  ] as const;
+  // Every key must be PRESENT — `null` is a meaningful value here ("no such
+  // gate"), so a missing key is a different thing from a null one and must
+  // not be coerced into it.
+  for (const k of keys) {
+    if (!(k in v)) return null;
+  }
+  return {
+    coverage: v.coverage ?? null,
+    fatalLoss: v.fatalLoss ?? null,
+    riskWeakness: v.riskWeakness ?? null,
+    nameMismatch: v.nameMismatch ?? null,
+    creditAlreadyIssued: v.creditAlreadyIssued ?? null,
+    notProvided: v.notProvided ?? null,
+  };
+}
+
 export interface AssessmentInputs {
   model: CaseEvidenceModel;
-  gates: CaseGateAssessment;
+  /**
+   * The live gates at write time, or the persisted fingerprint at read time.
+   *
+   * ONE hash function, two callers — `gateFingerprint` reads plain fields and
+   * never touches the brand, so the writer's branded object and the reader's
+   * persisted record produce byte-identical terms. A second
+   * `computeHashFromParts` would be a second hash, which is the divergence
+   * this whole layer exists to end.
+   */
+  gates: CaseGateAssessment | PersistedGateFingerprint;
   payloadSource: EvidencePayloadSource | undefined;
 }
 

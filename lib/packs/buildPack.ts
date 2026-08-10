@@ -61,7 +61,10 @@ import { derivePaymentContext } from "@/lib/disputes/paymentContext";
 import { klarnaInquiryTemplateOverride } from "@/lib/packs/klarnaInquiryTemplate";
 import { evaluateQualification } from "@/lib/liabilityShift/evaluateQualification";
 import { deriveCaseEvidenceModel } from "@/lib/evidence/model/derive";
-import { buildCaseAssessmentSnapshot } from "@/lib/evidence/model/assessmentSnapshot";
+import {
+  buildCaseAssessmentSnapshot,
+  persistableGateFingerprint,
+} from "@/lib/evidence/model/assessmentSnapshot";
 import type { EvidenceSection, BuildContext } from "./types";
 import { readSectionLabel } from "./sectionLabel";
 import enMessages from "@/messages/en.json";
@@ -993,6 +996,17 @@ export async function buildPack(
      * CP-C's cutover, not this PR's. Both are written from the SAME
      * derivation on the same build, so they cannot disagree. */
     case_assessment: caseAssessmentSnapshot,
+
+    /* The gate half of the snapshot's input hash, persisted so a READER can
+     * reconstruct the current hash through the canonical owner.
+     *
+     * Three of the five gates come from the Shopify order, which only this
+     * site loads. Without them a reader could either hash a different gate set
+     * — reporting every snapshot stale — or compare the snapshot against
+     * itself, which detects nothing. Persisting the term keeps it constant
+     * across write and read, so what the reader observes is evidence drift:
+     * the thing it can actually see. */
+    case_assessment_gates: persistableGateFingerprint(gateAssessment),
   };
 
   // Update the pack row (dual-write: v1 checklist + v2 checklist).

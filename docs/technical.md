@@ -3994,6 +3994,65 @@ phrase or the old label. Deliberately **not** a catalog-wide phrase detector —
 flags every honest sentence containing "nothing" and ends up allow-listed into uselessness.
 Adding a locale or a new surface for these states means adding it to that list.
 
+#### The persisted assessment is what the read paths render
+
+`buildPack` is the authorized writer — the only site holding the Shopify order,
+therefore the only one that can derive all five gates. It persists the versioned
+`CaseAssessmentSnapshot` at `pack_json.case_assessment`.
+
+Both read paths PROJECT it. Neither derives a band:
+
+| Route | Before | Now |
+|---|---|---|
+| workspace detail | scored with its own gates — 2 of 5 answerable | `projectMerchantAssessment` over the persisted snapshot |
+| disputes list | Stage B re-scored live — 3 of 5 `order_not_loaded` | projects the snapshot; Stage B deleted |
+
+**The current hash is reconstructed, not read back.** Comparing
+`snapshot.freshness.inputHash` against itself detects nothing. The workspace
+route derives the model and the payload terms from the pack as it stands, with
+the same inputs `buildPack` used, and hashes them through
+`computeAssessmentInputHash` — the one owner.
+
+The gate term cannot be re-derived: three of the five gates come from the order
+and only `buildPack` loads it. So the writer persists exactly the fields the
+fingerprint reads, at `pack_json.case_assessment_gates`. That keeps the gates
+term constant between write and read, which is correct rather than convenient —
+a reader that cannot see the order also cannot observe a gate changing, and
+claiming otherwise would be the `order_not_loaded` lie in a new place. What the
+reader *can* observe, evidence drift, is exactly what the model and payload
+terms carry. A pack with no persisted fingerprint yields no current hash, and an
+unverifiable snapshot is not a fresh one.
+
+**The list checks the two staleness dimensions it can check truthfully** —
+policy version, and `rebuild_pending` — and withholds a band otherwise. It never
+falls back to the legacy `case_strength` summary, which carries no freshness of
+its own. The `?strength=` filter reads the same source as the pill, so a filter
+and a display can no longer disagree about one row.
+
+`display-only` rows (contributions, the improvement hint) are still derived.
+They produce labels, not a band, and cannot reconstruct completeness or
+readiness.
+
+#### P-7: score and threshold are one atomic decision
+
+They live on different scales — the calibration measured 90 packs moving −1…−7
+and 15 moving +2…+17 between the persisted column and the canonical snapshot,
+and 60 was calibrated on the canonical one. So there are exactly two legal
+pairings, and one illegal one:
+
+| Case | score | threshold | `source` |
+|---|---|---|---|
+| Blume Box, usable canonical snapshot | canonical | **60** | `canonical` |
+| Blume Box, missing/unusable snapshot | persisted | merchant `auto_save_min_score` | `legacy` |
+| any other shop | persisted | merchant `auto_save_min_score` | `legacy` |
+| **legacy score against 60** | — | — | **unrepresentable** |
+
+`resolveEffectiveCompleteness` returns all three together, from one branch, so
+the illegal pairing cannot be assembled by two independent lookups. The same
+object feeds `evaluateAutoSaveGate`, the `auto_save_blocked` audit payload, the
+`PACK_BLOCKED` dispute-event metadata and the diagnostic message — a score in an
+audit row that does not say which scale produced it cannot be checked afterwards.
+
 **Hand-off to the workspace route** (Agent C owns
 `app/api/disputes/[id]/workspace/route.ts`): replace the inline `calculateCaseStrength` /
 `computeContributions` pair with one `buildWorkspaceAssessment({ disputeId, checklist:
