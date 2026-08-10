@@ -163,6 +163,50 @@ const BILLING_SHIPPING_AGREEMENT =
 const ISSUER_RECORDS = /\bissuer'?s?\s+record/i;
 
 /**
+ * A clause that OPENS in a destination role — "to the …", "at the …".
+ *
+ * Load-bearing for `isLicensedAvsClause` below: a clause introduced by a
+ * directional preposition is the destination argument of the sentence's
+ * delivery predicate, so it may never be discounted as AVS prose however it
+ * goes on to read. "…was delivered, to the billing address that matched the
+ * issuer's records" must stay blocked; only a clause that mentions the address
+ * as the SUBJECT of an AVS predicate is licensed.
+ */
+const DESTINATION_ROLE_OPENER = /^(?:and\s+|but\s+|then\s+)?(?:to|at|into|onto|toward|towards)\b/i;
+
+/**
+ * A clause whose address mention is the licensed AVS statement and nothing
+ * else — "payment authentication records indicate the billing address matched
+ * the issuer's records".
+ *
+ * WHY THIS EXISTS. The AVS carve-out was already declared on
+ * `BILLING_SHIPPING_AGREEMENT` and applied at clause level, but the
+ * sentence-level straddle fallback never consulted it: it asked only whether a
+ * delivery term and an address term appear ANYWHERE in the sentence. So a
+ * sentence pairing two separately-licensed facts —
+ *
+ *   "The carrier confirmed delivery on 17 July 2026 (TechSHIP, tracking …),
+ *    and payment authentication records indicate that the billing address
+ *    matched the issuer's records at the time of purchase."
+ *
+ * — was classified `affirmative` and failed validation twice, once on the
+ * first attempt and once on the fed-back retry, leaving the dispute with no
+ * fileable package. Measured on production package
+ * 08575d57-c692-4fb5-a5c6-f0112f808008 (2026-08-10), pinned below.
+ *
+ * A clause is discounted ONLY when all three hold: it cites the issuer's
+ * records, it carries no transport/receipt term of its own, and it does not
+ * open in a destination role. Any one of those failing leaves the clause in
+ * the straddle test, so the fallback keeps its reach over real couplings.
+ */
+function isLicensedAvsClause(clause: string): boolean {
+  const cleaned = stripNonPhysicalAddresses(clause);
+  if (!ISSUER_RECORDS.test(cleaned)) return false;
+  if (DELIVERY_TERMS.test(cleaned)) return false;
+  return !DESTINATION_ROLE_OPENER.test(clause.trim());
+}
+
+/**
  * PREDICATE-SCOPED negation.
  *
  * Two earlier revisions failed here. The first treated adjectives
@@ -358,7 +402,19 @@ function classifySentence(sentence: string): AddressClaimVerdict {
   // was received at, the cardholder's address." No single clause holds both
   // halves, so clause-level scope is unresolvable by definition: a negation
   // anywhere in the sentence makes it ambiguous rather than negated.
-  if (!sawClaim && DELIVERY_TERMS.test(cleanedSentence) && hasDestination(cleanedSentence)) {
+  //
+  // Licensed AVS clauses are removed BEFORE the coupling is looked for. They
+  // are not part of any delivery predicate — they are the `avs_cvv_match`
+  // fact stating itself — and leaving them in is what made a carrier-delivery
+  // clause couple with an AVS clause that merely stood next to it. Negation,
+  // prohibition and affirmation still read the WHOLE sentence: a prohibition
+  // in a discounted clause must keep its scope.
+  const straddleText = stripNonPhysicalAddresses(
+    clausesOf(sentence)
+      .filter((clause) => !isLicensedAvsClause(clause))
+      .join(", "),
+  );
+  if (!sawClaim && DELIVERY_TERMS.test(straddleText) && hasDestination(straddleText)) {
     sawClaim = true;
     const prohibited = !litotes && SCOPED_PROHIBITION.test(cleanedSentence);
     if (prohibited) negated = true;
