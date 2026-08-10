@@ -1551,13 +1551,13 @@
         "concede": "Kein Verteidigungspaket hinzufügen",
         "holdHelp": "Wir behalten ihn im Auge und erinnern Sie vor der Frist.",
         "approveHelp": "Wir reichen die Beweise automatisch zum Fristtermin ein.",
-        "concedeHelp": "DisputeDesk fügt diesem Fall kein Verteidigungspaket hinzu. Shopify übermittelt trotzdem die Bestelldaten, die dort bereits vorliegen, sobald die Frist erreicht ist.",
+        "concedeHelp": "DisputeDesk fügt diesem Fall kein Verteidigungspaket hinzu. Ist der Fall zum Fristablauf bei Shopify noch offen, übermittelt Shopify die dort bereits vorliegenden Bestelldaten.",
         "stateInReviewTitle": "Für Ihre Prüfung zurückgehalten",
         "stateInReviewBody": "Sie prüfen diese Reklamation. Wenn Sie nichts weiter unternehmen, folgt sie zum Fristtermin Ihrer Automatisierungsregel{due}.",
         "stateApprovedTitle": "Zur Einreichung geplant",
         "stateApprovedBody": "Diese Reklamation wird zum Fristtermin automatisch eingereicht{due}.",
         "stateConcededTitle": "Es wird kein Verteidigungspaket hinzugefügt",
-        "stateConcededBody": "Sie haben sich entschieden, kein DisputeDesk-Verteidigungspaket hinzuzufügen. Shopify übermittelt trotzdem die Bestelldaten, die dort bereits vorliegen, sobald die Frist erreicht ist.",
+        "stateConcededBody": "Sie haben sich entschieden, kein DisputeDesk-Verteidigungspaket hinzuzufügen. Ist der Fall zum Fristablauf bei Shopify noch offen, übermittelt Shopify die dort bereits vorliegenden Bestelldaten.",
         "dueSuffix": " ({date})",
         "change": "Entscheidung ändern",
         "undo": "Rückgängig",
@@ -1880,12 +1880,12 @@
       },
       "held": {
         "title": "Wird bis zur Frist zurückgehalten",
-        "body": "{itemCount, plural, one {1 Beweis benötigt Ihre Bestätigung} other {# Beweise benötigen Ihre Bestätigung}}, deshalb hält DisputeDesk Ihr Verteidigungspaket für die Fristbearbeitung zurück, statt es jetzt hinzuzufügen. Shopifys eigener Fristablauf läuft ohnehin weiter und verwendet dabei die dort bereits vorliegenden Bestelldaten.",
+        "body": "{itemCount, plural, one {1 Beweis benötigt Ihre Bestätigung} other {# Beweise benötigen Ihre Bestätigung}}, deshalb hält DisputeDesk Ihr Verteidigungspaket für die Fristbearbeitung zurück, statt es jetzt hinzuzufügen. Shopifys eigener Fristablauf folgt seinem eigenen Zeitplan: Ist der Fall dann noch offen, verwendet Shopify die dort bereits vorliegenden Bestelldaten.",
         "action": "{itemCount, plural, one {Bestätigen Sie den markierten Beweis} other {Bestätigen Sie die markierten Beweise}}, um Ihr Verteidigungspaket sofort freizugeben, statt auf die Frist zu warten."
       },
       "withheld": {
         "title": "Es wird kein DisputeDesk-Verteidigungspaket hinzugefügt",
-        "body": "Sobald die Beweise, die Ihre Bestätigung benötigen, beiseitegelegt sind, bleibt nichts übrig, wofür DisputeDesk einstehen kann. Deshalb wird diesem Fall kein Verteidigungspaket hinzugefügt. Der Fall verstummt dadurch nicht: Shopify übermittelt trotzdem die Bestelldaten, die dort bereits vorliegen, sobald die Frist erreicht ist.",
+        "body": "Sobald die Beweise, die Ihre Bestätigung benötigen, beiseitegelegt sind, bleibt nichts übrig, wofür DisputeDesk einstehen kann. Deshalb wird diesem Fall kein Verteidigungspaket hinzugefügt. Der Fall verstummt dadurch nicht: Ist der Fall zum Fristablauf bei Shopify noch offen, übermittelt Shopify die dort bereits vorliegenden Bestelldaten.",
         "action": "Fügen Sie Beweise zu diesem Streitfall hinzu oder bestätigen Sie sie, um das zu ändern."
       },
       "reviewItem": {
@@ -3119,11 +3119,11 @@
       },
       "reviewQueue": {
         "title": "Die Prüfungswarteschlange",
-        "body": "Die Prüfliste enthält Fälle, die für Sie zurückgehalten werden, bevor Beweise in Shopify gespeichert werden.\n\nFälle landen in der Prüfliste, wenn:\n- Eine Regel sie zur Prüfung leitet (z. B. Fälle über einem bestimmten Betrag).\n- Keine Regel greift und die Standardaktion „Prüfen“ ist.\n- Die Beweislage schwach oder subjektiv ist oder der Fall bereits verloren ist.\n\nIm Tab „Prüfliste“ können Sie:\n- Alle Fälle sehen, die auf Sie warten.\n- Einen Fall öffnen und das Beweispaket prüfen.\n- Auf „Freigeben“ klicken, um die Beweise in Shopify zu speichern.\n\nEin Fall in der Prüfliste ist nicht eingefroren. Im Autopilot wird er zur Frist in Shopify gespeichert, wenn Sie nicht gehandelt haben; im Prüfmodus nur, wenn Sie freigeben. Wählen Sie „Kein Verteidigungspaket hinzufügen“, damit DisputeDesk keines hinzufügt — Shopify übermittelt trotzdem die dort bereits vorliegenden Bestelldaten."
+        "body": "Die Prüfliste enthält Fälle, die für Sie zurückgehalten werden, bevor Beweise in Shopify gespeichert werden.\n\nFälle landen in der Prüfliste, wenn:\n- Eine Regel sie zur Prüfung leitet (z. B. Fälle über einem bestimmten Betrag).\n- Keine Regel greift und die Standardaktion „Prüfen“ ist.\n- Die Beweislage schwach oder subjektiv ist oder der Fall bereits verloren ist.\n\nIm Tab „Prüfliste“ können Sie:\n- Alle Fälle sehen, die auf Sie warten.\n- Einen Fall öffnen und das Beweispaket prüfen.\n- Auf „Freigeben“ klicken, um die Beweise in Shopify zu speichern.\n\nEin Fall in der Prüfliste ist nicht eingefroren. Im Autopilot wird er zur Frist in Shopify gespeichert, wenn Sie nicht gehandelt haben; im Prüfmodus nur, wenn Sie freigeben. Wählen Sie „Kein Verteidigungspaket hinzufügen“, damit DisputeDesk keines hinzufügt — ist der Fall zum Fristablauf bei Shopify noch offen, übermittelt Shopify die dort bereits vorliegenden Bestelldaten."
       },
       "approvingDisputes": {
         "title": "Streitfälle aus der Warteschlange genehmigen",
-        "body": "Wenn ein Fall in Ihrer Prüfliste liegt, hat DisputeDesk die Beweise bereits erstellt. Ihre Freigabe entscheidet nur, ob sie in Shopify gespeichert werden.\n\nSo geben Sie einen Fall frei:\n1. Öffnen Sie die Seite „Fälle“ und wechseln Sie zum Tab „Prüfliste“.\n2. Klicken Sie neben dem Fall auf „Freigeben“.\n3. Besteht das Paket Ihre Vollständigkeits- und Blocker-Prüfungen, werden die Beweise in Shopify gespeichert.\n\nSie können auch auf der Detailseite über „Freigeben & speichern“ freigeben.\n\nIm Autopilot wird ein zurückgehaltener Fall zur Frist in Shopify gespeichert, wenn Sie nichts unternehmen. Im Prüfmodus wird nichts gespeichert, solange Sie nicht freigeben. Wählen Sie „Kein Verteidigungspaket hinzufügen“, damit DisputeDesk in beiden Modi keines hinzufügt — Shopify übermittelt trotzdem die dort bereits vorliegenden Bestelldaten.\n\nAlle Freigaben werden im Audit-Trail protokolliert."
+        "body": "Wenn ein Fall in Ihrer Prüfliste liegt, hat DisputeDesk die Beweise bereits erstellt. Ihre Freigabe entscheidet nur, ob sie in Shopify gespeichert werden.\n\nSo geben Sie einen Fall frei:\n1. Öffnen Sie die Seite „Fälle“ und wechseln Sie zum Tab „Prüfliste“.\n2. Klicken Sie neben dem Fall auf „Freigeben“.\n3. Besteht das Paket Ihre Vollständigkeits- und Blocker-Prüfungen, werden die Beweise in Shopify gespeichert.\n\nSie können auch auf der Detailseite über „Freigeben & speichern“ freigeben.\n\nIm Autopilot wird ein zurückgehaltener Fall zur Frist in Shopify gespeichert, wenn Sie nichts unternehmen. Im Prüfmodus wird nichts gespeichert, solange Sie nicht freigeben. Wählen Sie „Kein Verteidigungspaket hinzufügen“, damit DisputeDesk in beiden Modi keines hinzufügt — ist der Fall zum Fristablauf bei Shopify noch offen, übermittelt Shopify die dort bereits vorliegenden Bestelldaten.\n\nAlle Freigaben werden im Audit-Trail protokolliert."
       },
       "howPacksBuilt": {
         "title": "Wie Bewispakete automatisch erstellt werden",
@@ -3327,7 +3327,7 @@
         },
         "reviewQueue": {
           "title": "Die Prüfungswarteschlange",
-          "body": "Die Prüfliste sind Fälle, die DisputeDesk vorbereitet, aber noch nicht in Shopify gespeichert hat.\n\nFälle landen hier, wenn:\n- Eine Regel sie zur Prüfung schickt (zum Beispiel hoher Betrag).\n- Keine Regel greift und der Standard „Prüfen“ ist.\n- Die Beweislage schwach oder subjektiv ist oder der Fall bereits verloren ist.\n\nIn der eingebetteten App erscheinen diese Fälle in der Liste **Fälle** zusammen mit Ihren übrigen Rückbuchungen — nutzen Sie **Filter** nach Status oder öffnen Sie Einträge vom Dashboard. Öffnen Sie einen Fall, prüfen Sie das Paket und nutzen Sie dann **Freigeben & speichern** auf der Detailseite.\n\nEin Fall hier ist nicht eingefroren, und im Autopilot wartet er nicht auf Sie: DisputeDesk sammelt weiter Beweise und speichert die Antwort zur Frist in Shopify. Im Modus **Alles prüfen** wird sie nur gespeichert, wenn Sie freigeben. Wählen Sie **Kein Verteidigungspaket hinzufügen**, damit DisputeDesk keines hinzufügt — Shopify übermittelt trotzdem die dort bereits vorliegenden Bestelldaten."
+          "body": "Die Prüfliste sind Fälle, die DisputeDesk vorbereitet, aber noch nicht in Shopify gespeichert hat.\n\nFälle landen hier, wenn:\n- Eine Regel sie zur Prüfung schickt (zum Beispiel hoher Betrag).\n- Keine Regel greift und der Standard „Prüfen“ ist.\n- Die Beweislage schwach oder subjektiv ist oder der Fall bereits verloren ist.\n\nIn der eingebetteten App erscheinen diese Fälle in der Liste **Fälle** zusammen mit Ihren übrigen Rückbuchungen — nutzen Sie **Filter** nach Status oder öffnen Sie Einträge vom Dashboard. Öffnen Sie einen Fall, prüfen Sie das Paket und nutzen Sie dann **Freigeben & speichern** auf der Detailseite.\n\nEin Fall hier ist nicht eingefroren, und im Autopilot wartet er nicht auf Sie: DisputeDesk sammelt weiter Beweise und speichert die Antwort zur Frist in Shopify. Im Modus **Alles prüfen** wird sie nur gespeichert, wenn Sie freigeben. Wählen Sie **Kein Verteidigungspaket hinzufügen**, damit DisputeDesk keines hinzufügt — ist der Fall zum Fristablauf bei Shopify noch offen, übermittelt Shopify die dort bereits vorliegenden Bestelldaten."
         },
         "approvingDisputes": {
           "title": "Freigabe aus der Prüfungswarteschlange",
@@ -5881,7 +5881,7 @@
         },
         "conceded": {
           "title": "Es wird kein Verteidigungspaket hinzugefügt",
-          "message": "Sie haben sich entschieden, kein DisputeDesk-Verteidigungspaket hinzuzufügen. Shopify übermittelt trotzdem die Bestelldaten, die dort bereits vorliegen, sobald die Frist erreicht ist."
+          "message": "Sie haben sich entschieden, kein DisputeDesk-Verteidigungspaket hinzuzufügen. Ist der Fall zum Fristablauf bei Shopify noch offen, übermittelt Shopify die dort bereits vorliegenden Bestelldaten."
         }
       },
       "nextHeldWithDate": "Zurückgehalten, während wir auf stärkere Beweise achten — wird am {date} in Shopify gespeichert",

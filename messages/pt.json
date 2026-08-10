@@ -1551,13 +1551,13 @@
         "concede": "Não adicionar pacote de defesa",
         "holdHelp": "Continuaremos acompanhando e lembraremos você antes do prazo.",
         "approveHelp": "Enviaremos as evidências automaticamente quando o prazo chegar.",
-        "concedeHelp": "O DisputeDesk não vai adicionar um pacote de defesa a esta disputa. O Shopify continua a transmitir os dados da encomenda que já tem quando o prazo termina.",
+        "concedeHelp": "O DisputeDesk não vai adicionar um pacote de defesa a esta disputa. Se a disputa ainda estiver aberta no prazo do Shopify, o Shopify transmite os dados da encomenda que já tem.",
         "stateInReviewTitle": "Em espera para sua análise",
         "stateInReviewBody": "Você está analisando esta disputa. Se não fizer mais nada, ela seguirá sua regra de automação no prazo{due}.",
         "stateApprovedTitle": "Agendada para envio",
         "stateApprovedBody": "Esta disputa será enviada automaticamente no prazo{due}.",
         "stateConcededTitle": "Não será adicionado nenhum pacote de defesa",
-        "stateConcededBody": "Optou por não adicionar um pacote de defesa do DisputeDesk. O Shopify continua a transmitir os dados da encomenda que já tem quando o prazo termina.",
+        "stateConcededBody": "Optou por não adicionar um pacote de defesa do DisputeDesk. Se a disputa ainda estiver aberta no prazo do Shopify, o Shopify transmite os dados da encomenda que já tem.",
         "dueSuffix": " ({date})",
         "change": "Alterar decisão",
         "undo": "Desfazer",
@@ -1880,12 +1880,12 @@
       },
       "held": {
         "title": "Retido para o prazo",
-        "body": "{itemCount, plural, one {1 item precisa da sua confirmação} other {# itens precisam da sua confirmação}}, por isso o DisputeDesk retém o seu pacote de defesa para processamento no prazo em vez de o adicionar agora. O processo de prazo do próprio Shopify decorre de qualquer forma, com os dados da encomenda que já tem.",
+        "body": "{itemCount, plural, one {1 item precisa da sua confirmação} other {# itens precisam da sua confirmação}}, por isso o DisputeDesk retém o seu pacote de defesa para processamento no prazo em vez de o adicionar agora. O processo de prazo do próprio Shopify segue o seu calendário: se a disputa ainda estiver aberta nessa altura, o Shopify usa os dados da encomenda que já tem.",
         "action": "{itemCount, plural, one {Confirme o item assinalado} other {Confirme os itens assinalados}} para libertar o seu pacote de defesa agora, em vez de esperar pelo prazo."
       },
       "withheld": {
         "title": "Não será adicionado nenhum pacote de defesa do DisputeDesk",
-        "body": "Depois de postas de lado as provas que precisam da sua confirmação, não resta nada que o DisputeDesk possa sustentar, por isso não será adicionado nenhum pacote de defesa a esta disputa. Isso não deixa a disputa em silêncio: O Shopify continua a transmitir os dados da encomenda que já tem quando o prazo termina.",
+        "body": "Depois de postas de lado as provas que precisam da sua confirmação, não resta nada que o DisputeDesk possa sustentar, por isso não será adicionado nenhum pacote de defesa a esta disputa. Isso não deixa a disputa em silêncio: Se a disputa ainda estiver aberta no prazo do Shopify, o Shopify transmite os dados da encomenda que já tem.",
         "action": "Adicione ou confirme evidências nesta disputa para alterar isto."
       },
       "reviewItem": {
@@ -3119,11 +3119,11 @@
       },
       "reviewQueue": {
         "title": "A fila de revisão",
-        "body": "A fila de revisão contém disputas retidas para si antes de as provas serem guardadas no Shopify.\n\nUma disputa chega à fila de revisão quando:\n- Uma regra a envia para revisão (por exemplo, disputas acima de um determinado valor).\n- Nenhuma regra corresponde e a ação padrão é rever.\n- As provas são fracas ou subjetivas, ou o caso já está perdido.\n\nNo separador Fila de revisão pode:\n- Ver todas as disputas que aguardam a sua atenção.\n- Abrir qualquer disputa para rever o pacote de provas.\n- Clicar em «Aprovar» para guardar as provas no Shopify.\n\nUma disputa na fila não está congelada. No piloto automático é guardada no Shopify no prazo se não tiver agido; no modo de revisão só é guardada quando a aprovar. Escolha «Não adicionar pacote de defesa» para que o DisputeDesk não adicione o seu, em ambos os casos — o Shopify continua a transmitir os dados da encomenda que já tem."
+        "body": "A fila de revisão contém disputas retidas para si antes de as provas serem guardadas no Shopify.\n\nUma disputa chega à fila de revisão quando:\n- Uma regra a envia para revisão (por exemplo, disputas acima de um determinado valor).\n- Nenhuma regra corresponde e a ação padrão é rever.\n- As provas são fracas ou subjetivas, ou o caso já está perdido.\n\nNo separador Fila de revisão pode:\n- Ver todas as disputas que aguardam a sua atenção.\n- Abrir qualquer disputa para rever o pacote de provas.\n- Clicar em «Aprovar» para guardar as provas no Shopify.\n\nUma disputa na fila não está congelada. No piloto automático é guardada no Shopify no prazo se não tiver agido; no modo de revisão só é guardada quando a aprovar. Escolha «Não adicionar pacote de defesa» para que o DisputeDesk não adicione o seu, em ambos os casos — se a disputa ainda estiver aberta no prazo do Shopify, o Shopify transmite os dados da encomenda que já tem."
       },
       "approvingDisputes": {
         "title": "Aprovando disputas da fila de revisão",
-        "body": "Quando uma disputa está na sua fila de revisão, o DisputeDesk já criou as provas. A sua aprovação apenas controla se são guardadas no Shopify.\n\nPara aprovar uma disputa:\n1. Vá à página Disputas e mude para o separador «Fila de revisão».\n2. Clique em «Aprovar» ao lado da disputa.\n3. Se o pacote passar as suas verificações de integridade e bloqueios, as provas são guardadas no Shopify.\n\nTambém pode aprovar na página de detalhe com «Aprovar e guardar».\n\nNo piloto automático, uma disputa retida é guardada no Shopify no prazo se não fizer nada. No modo de revisão, nada é guardado enquanto não aprovar. Escolha «Não adicionar pacote de defesa» para que o DisputeDesk não adicione o seu em nenhum dos modos — o Shopify continua a transmitir os dados da encomenda que já tem.\n\nTodas as aprovações ficam registadas no histórico de auditoria."
+        "body": "Quando uma disputa está na sua fila de revisão, o DisputeDesk já criou as provas. A sua aprovação apenas controla se são guardadas no Shopify.\n\nPara aprovar uma disputa:\n1. Vá à página Disputas e mude para o separador «Fila de revisão».\n2. Clique em «Aprovar» ao lado da disputa.\n3. Se o pacote passar as suas verificações de integridade e bloqueios, as provas são guardadas no Shopify.\n\nTambém pode aprovar na página de detalhe com «Aprovar e guardar».\n\nNo piloto automático, uma disputa retida é guardada no Shopify no prazo se não fizer nada. No modo de revisão, nada é guardado enquanto não aprovar. Escolha «Não adicionar pacote de defesa» para que o DisputeDesk não adicione o seu em nenhum dos modos — se a disputa ainda estiver aberta no prazo do Shopify, o Shopify transmite os dados da encomenda que já tem.\n\nTodas as aprovações ficam registadas no histórico de auditoria."
       },
       "howPacksBuilt": {
         "title": "Como os pacotes de evidências são gerados automaticamente",
@@ -3327,7 +3327,7 @@
         },
         "reviewQueue": {
           "title": "A fila de revisão",
-          "body": "A fila de revisão são disputas que o DisputeDesk preparou mas ainda não guardou no Shopify.\n\nChegam aqui quando:\n- Uma regra as envia para revisão (por exemplo, valor elevado).\n- Nenhuma regra corresponde e o padrão é rever.\n- As provas são fracas ou subjetivas, ou o caso já está perdido.\n\nNa app incorporada, essas disputas aparecem na lista **Disputas** com os restantes estornos — use **Filtrar** por estado ou abra itens a partir do painel. Abra uma disputa para inspecionar o pacote e use **Aprovar e guardar** na página de detalhe quando estiver pronto.\n\nUma disputa aqui não está congelada e, no piloto automático, não está à sua espera: o DisputeDesk continua a recolher provas e guarda a resposta no Shopify no prazo. No modo **Rever tudo** só é guardada quando a aprovar. Escolha **Não adicionar pacote de defesa** para que o DisputeDesk não adicione o seu — o Shopify continua a transmitir os dados da encomenda que já tem."
+          "body": "A fila de revisão são disputas que o DisputeDesk preparou mas ainda não guardou no Shopify.\n\nChegam aqui quando:\n- Uma regra as envia para revisão (por exemplo, valor elevado).\n- Nenhuma regra corresponde e o padrão é rever.\n- As provas são fracas ou subjetivas, ou o caso já está perdido.\n\nNa app incorporada, essas disputas aparecem na lista **Disputas** com os restantes estornos — use **Filtrar** por estado ou abra itens a partir do painel. Abra uma disputa para inspecionar o pacote e use **Aprovar e guardar** na página de detalhe quando estiver pronto.\n\nUma disputa aqui não está congelada e, no piloto automático, não está à sua espera: o DisputeDesk continua a recolher provas e guarda a resposta no Shopify no prazo. No modo **Rever tudo** só é guardada quando a aprovar. Escolha **Não adicionar pacote de defesa** para que o DisputeDesk não adicione o seu — se a disputa ainda estiver aberta no prazo do Shopify, o Shopify transmite os dados da encomenda que já tem."
         },
         "approvingDisputes": {
           "title": "Aprovar disputas na fila de revisão",
@@ -5881,7 +5881,7 @@
         },
         "conceded": {
           "title": "Não será adicionado nenhum pacote de defesa",
-          "message": "Optou por não adicionar um pacote de defesa do DisputeDesk. O Shopify continua a transmitir os dados da encomenda que já tem quando o prazo termina."
+          "message": "Optou por não adicionar um pacote de defesa do DisputeDesk. Se a disputa ainda estiver aberta no prazo do Shopify, o Shopify transmite os dados da encomenda que já tem."
         }
       },
       "nextHeldWithDate": "Retida enquanto procuramos provas mais fortes — guardada no Shopify a {date}",

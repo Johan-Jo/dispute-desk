@@ -73,12 +73,38 @@ describe("deadline_only vs withheld_no_safe_argument — the distinction, in wor
     expect(held.actionToken?.key).not.toBe(withheld.actionToken?.key);
   });
 
-  it("states `willFile` explicitly so no surface has to infer it from tone", () => {
+  it("states the filing OUTCOME explicitly so no surface infers it from tone", () => {
     // Inferring "will it file?" from the wording is how the auto-pilot hold
     // came to read as "please review".
-    expect(deadlineFilingCopy({ kind: "deadline_only", itemCount: 1 }).willFile).toBe(true);
-    expect(deadlineFilingCopy({ kind: "withheld_no_safe_argument" }).willFile).toBe(false);
-    expect(deadlineFilingCopy({ kind: "normal" }).willFile).toBe(true);
+    expect(deadlineFilingCopy({ kind: "normal" }).filingOutcome).toBe("adding_now");
+    expect(deadlineFilingCopy({ kind: "deadline_only", itemCount: 1 }).filingOutcome).toBe(
+      "scheduled_for_deadline",
+    );
+    expect(deadlineFilingCopy({ kind: "withheld_no_safe_argument" }).filingOutcome).toBe(
+      "not_adding",
+    );
+  });
+
+  it("deadline_only is SCHEDULED, never promised", () => {
+    /* The field was `willFile: boolean` and `deadline_only` set it `true`.
+     * That is an unconditional promise about the future, and the product
+     * cannot make one: at the deadline P-6 is evaluated again from scratch,
+     * and a stale plan, a superseded package, a new hard block or an ambiguous
+     * pair each still refuses. A boolean cannot express "scheduled", so it
+     * expressed "will", and every reader inherited the promise.
+     *
+     * Pinned three ways: the value is its own member, it is NOT the same
+     * member as the ordinary path, and no member is a boolean. */
+    const held = deadlineFilingCopy({ kind: "deadline_only", itemCount: 1 });
+    expect(held.filingOutcome).not.toBe("adding_now");
+    expect(held.filingOutcome).not.toBe("not_adding");
+    expect(typeof held.filingOutcome).toBe("string");
+    // Guard the guard: a two-member union would let a reader recover the
+    // boolean by negation. There are three, and the middle one is the point.
+    const outcomes = new Set(
+      ALL_STATES.map((st) => deadlineFilingCopy(st).filingOutcome),
+    );
+    expect(outcomes.size).toBe(3);
   });
 
   it("the held state names the merchant's lever; the normal state has none to name", () => {

@@ -110,14 +110,15 @@ describe("buildWorkspaceAssessment — deadline_only filing copy", () => {
   it("with no plan, filing is `normal` and nothing is held", () => {
     const p = build(COMPLETE);
     expect(p.filing.state).toEqual({ kind: "normal" });
-    expect(p.filing.willFile).toBe(true);
+    expect(p.filing.filingOutcome).toBe("adding_now");
     expect(p.assessment.reviewItems).toEqual([]);
   });
 
   it("a review_required exclusion makes it deadline_only, counted", () => {
     const p = build(COMPLETE, { plan: FIXTURE_REVIEW_REQUIRED_SAFE.plan });
     expect(p.filing.state).toEqual({ kind: "deadline_only", itemCount: 1 });
-    expect(p.filing.willFile).toBe(true);
+    // SCHEDULED for deadline processing — not a promise that it is filed.
+    expect(p.filing.filingOutcome).toBe("scheduled_for_deadline");
     expect(p.filing.bodyToken.params).toEqual({ itemCount: 1 });
     expect(p.assessment.reviewItems).toHaveLength(1);
   });
@@ -125,7 +126,7 @@ describe("buildWorkspaceAssessment — deadline_only filing copy", () => {
   it("no safe argument outranks deadline_only and says it will NOT file", () => {
     const p = build(COMPLETE, { plan: FIXTURE_REVIEW_REQUIRED_NO_SAFE.plan });
     expect(p.filing.state).toEqual({ kind: "withheld_no_safe_argument" });
-    expect(p.filing.willFile).toBe(false);
+    expect(p.filing.filingOutcome).toBe("not_adding");
   });
 
   it("filing state is read from the PLAN, not from the band", () => {
@@ -136,7 +137,7 @@ describe("buildWorkspaceAssessment — deadline_only filing copy", () => {
       plan: { ...FIXTURE_REVIEW_REQUIRED_SAFE.plan, deadlineOnly: false, excluded: [] },
     });
     expect(weakButSafe.caseStrength.overall).toBe("weak");
-    expect(weakButSafe.filing.willFile).toBe(true);
+    expect(weakButSafe.filing.filingOutcome).toBe("adding_now");
   });
 });
 

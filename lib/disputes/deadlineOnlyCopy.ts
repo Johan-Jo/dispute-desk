@@ -65,7 +65,9 @@ export type DeadlineFilingState =
   | { kind: "normal" }
   /**
    * Safe and validated, but held for the deadline while `itemCount`
-   * review-required item(s) remain unconfirmed. WILL be filed.
+   * review-required item(s) remain unconfirmed. SCHEDULED for deadline
+   * processing — not promised: P-6's conditions are evaluated again at the
+   * deadline, and any of them can still refuse.
    */
   | { kind: "deadline_only"; itemCount: number }
   /**
@@ -76,6 +78,12 @@ export type DeadlineFilingState =
    */
   | { kind: "withheld_no_safe_argument" };
 
+/**
+ * What is scheduled for the DisputeDesk defence package. Never a promise that
+ * it will be filed — see `DeadlineFilingCopy.filingOutcome`.
+ */
+export type FilingOutcome = "adding_now" | "scheduled_for_deadline" | "not_adding";
+
 export interface DeadlineFilingCopy {
   /** Short state label. Never a verb the merchant must act on. */
   titleToken: I18nToken;
@@ -84,16 +92,31 @@ export interface DeadlineFilingCopy {
   /** What the merchant can do about it. Null when there is nothing to do. */
   actionToken: I18nToken | null;
   /**
-   * Whether this state ends with the DISPUTEDESK DEFENCE PACKAGE being filed.
+   * What is scheduled to happen to the DisputeDesk defence package.
    *
-   * Deliberately not "whether evidence reaches the issuer" — that is always
-   * true. Shopify files its own scrape at the deadline regardless, so the
-   * only thing this flag can honestly describe is whose document goes.
+   * ── WHY NOT A BOOLEAN ─────────────────────────────────────────────
+   *
+   * This was `willFile: boolean`, and `deadline_only` set it `true`. That is
+   * an unconditional promise about the future, and the product cannot make
+   * one: `deadline_only` means the package is SCHEDULED for deadline
+   * processing, and at the deadline P-6 is evaluated again from scratch. A
+   * plan that goes stale, a package that is superseded, a hard block that
+   * appears, an ambiguous pair — any of those and nothing is filed, having
+   * been promised otherwise.
+   *
+   * The three members say only what is true at the time of asking:
+   *
+   *   adding_now             the ordinary path; nothing is waiting.
+   *   scheduled_for_deadline held for deadline processing, and revalidated
+   *                          against P-6 when that moment arrives.
+   *   not_adding             no defence package will be added at all.
    *
    * Carried explicitly so a surface never has to infer it from the tone of a
-   * string — the inference that made the hold state read as "please review".
+   * string — the inference that made the hold state read as "please review" —
+   * and as a closed union so nobody can read "not `not_adding`" as "will
+   * definitely be filed".
    */
-  willFile: boolean;
+  filingOutcome: FilingOutcome;
 }
 
 /**
@@ -110,7 +133,7 @@ export function deadlineFilingCopy(state: DeadlineFilingState): DeadlineFilingCo
         titleToken: { key: "disputes.deadlineOnly.normal.title" },
         bodyToken: { key: "disputes.deadlineOnly.normal.body" },
         actionToken: null,
-        willFile: true,
+        filingOutcome: "adding_now",
       };
 
     case "deadline_only":
@@ -129,7 +152,8 @@ export function deadlineFilingCopy(state: DeadlineFilingState): DeadlineFilingCo
           key: "disputes.deadlineOnly.held.action",
           params: { itemCount: state.itemCount },
         },
-        willFile: true,
+        // SCHEDULED, not promised. P-6 is evaluated again at the deadline.
+        filingOutcome: "scheduled_for_deadline",
       };
 
     case "withheld_no_safe_argument":
@@ -137,7 +161,7 @@ export function deadlineFilingCopy(state: DeadlineFilingState): DeadlineFilingCo
         titleToken: { key: "disputes.deadlineOnly.withheld.title" },
         bodyToken: { key: "disputes.deadlineOnly.withheld.body" },
         actionToken: { key: "disputes.deadlineOnly.withheld.action" },
-        willFile: false,
+        filingOutcome: "not_adding",
       };
   }
 }
