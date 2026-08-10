@@ -7,7 +7,7 @@ import { getServiceClient } from "@/lib/supabase/server";
  * whenever coverage, fatal-loss or risk-weakness fired. It now projects what
  * the build path persisted and computes nothing. */
 import { extractShopId } from "@/lib/middleware/extractShopId";
-import { ASSESSMENT_POLICY_VERSION } from "@/lib/evidence/model/assessmentSnapshot";
+import { assessmentSnapshotUsability } from "@/lib/evidence/model/assessmentSnapshot";
 import {
   gatherPresentations,
   type DisputeRowFacts,
@@ -218,22 +218,32 @@ export async function GET(req: NextRequest) {
   ) {
     const { data: strengthPacks } = await sb
       .from("evidence_packs")
-      /* The CANONICAL snapshot, same as the display path below.
+      /* The whole snapshot plus `rebuild_pending`, because the filter runs
+       * the SAME usability predicate the pill runs.
        *
-       * This filter used to read the legacy `case_strength` summary while the
-       * pill rendered something else, so `?strength=strong` could return a
-       * dispute the list then showed as unassessed — a filter and a display
-       * disagreeing about the same row. One source for both. */
-      .select(
-        "dispute_id, created_at, overall:pack_json->case_assessment->strength->>overall",
-      )
+       * Selecting only `->strength->>overall` was not enough: it answered
+       * "is there a band" and nothing about whether the band may be used, so
+       * a superseded-policy or rebuild-pending Strong snapshot matched
+       * `?strength=strong` and then rendered as unassessed. A filter and a
+       * display disagreeing about one row is worse than either being wrong
+       * alone — the merchant filters to Strong and gets a list of blanks. */
+      .select("dispute_id, created_at, rebuild_pending, pack_json->case_assessment")
       .eq("shop_id", shopId)
       .not("status", "in", "(failed,queued,building)")
       .order("created_at", { ascending: false });
     const latestOverall = new Map<string, string | null>();
     for (const p of strengthPacks ?? []) {
       if (!p.dispute_id || latestOverall.has(p.dispute_id)) continue;
-      latestOverall.set(p.dispute_id, (p as { overall?: string | null }).overall ?? null);
+      // ONE predicate, shared with the pill below. An unusable snapshot
+      // contributes `null`, which matches no strength filter.
+      const usability = assessmentSnapshotUsability({
+        snapshot: (p as { case_assessment?: unknown }).case_assessment,
+        rebuildPending: (p as { rebuild_pending?: unknown }).rebuild_pending,
+      });
+      latestOverall.set(
+        p.dispute_id,
+        usability.usable ? usability.strength.overall : null,
+      );
     }
     const matchingIds: string[] = [];
     for (const [id, overall] of latestOverall) {
@@ -385,51 +395,33 @@ export async function GET(req: NextRequest) {
        * A pack with no `case_assessment` is UNASSESSED on this surface. That
        * is the honest answer and the same one the detail page gives; the packs
        * it applies to are the ones PR 3's rebuild exists to refresh. */
-      const snapshot = (p as { case_assessment?: unknown }).case_assessment as
-        | {
-            strength?: {
-              overall?: string;
-              strongCount?: number;
-              moderateCount?: number;
-              supportingCount?: number;
-              strengthReasonI18n?: { key: string; params?: Record<string, string | number> } | null;
-            };
-            freshness?: { policyVersion?: number };
-          }
-        | null
-        | undefined;
-
-      const cs = snapshot?.strength;
-      if (!cs?.overall) {
+      /* THE SAME PREDICATE THE FILTER USES.
+       *
+       * It answers four questions together — snapshot present, current
+       * assessment shape, current policy, no pending rebuild — because
+       * checking a subset is what let the two surfaces disagree. Both can only
+       * WITHHOLD a band; neither can manufacture one. */
+      const usability = assessmentSnapshotUsability({
+        snapshot: (p as { case_assessment?: unknown }).case_assessment,
+        rebuildPending: (p as { rebuild_pending?: unknown }).rebuild_pending,
+      });
+      if (!usability.usable) {
         unassessedDisputes.add(p.dispute_id);
         continue;
       }
+      const cs = usability.strength as {
+        overall: string;
+        strongCount?: number;
+        moderateCount?: number;
+        supportingCount?: number;
+        strengthReasonI18n?: { key: string; params?: Record<string, string | number> } | null;
+      };
 
-      /* ── STALENESS, AS FAR AS THIS SURFACE CAN SEE IT ──────────────────
-       *
-       * The list deliberately does not load `pack_json.sections`, so it cannot
-       * reconstruct the input hash — that was Stage B's heavy query and the
-       * reason it existed. It checks the two dimensions it CAN check
-       * truthfully:
-       *
-       *   policy version  — a policy bump invalidates every snapshot, and the
-       *                     version travels on the snapshot itself.
-       *   rebuild_pending — the pack is known to need rebuilding, which is a
-       *                     persisted statement that its numbers describe
-       *                     evidence that has already moved.
-       *
-       * Anything it cannot check is left to the detail page, which loads the
-       * inputs and reconstructs the hash properly. What matters is the
-       * direction of the error: both checks can only WITHHOLD a band, never
-       * manufacture one. */
-      const policyVersion = snapshot?.freshness?.policyVersion;
-      const stale =
-        policyVersion !== ASSESSMENT_POLICY_VERSION ||
-        (p as { rebuild_pending?: unknown }).rebuild_pending === true;
-      if (stale) {
-        unassessedDisputes.add(p.dispute_id);
-        continue;
-      }
+      /* The input-hash comparison is NOT done here, deliberately: it needs
+       * the model, and this query does not load `pack_json.sections` — that
+       * was the heavy second stage and the reason it existed. The detail page
+       * reconstructs the hash properly. This surface is therefore stricter
+       * than it is precise, which is the safe direction. */
 
       strengthByDispute.set(p.dispute_id, {
         overall: cs.overall,

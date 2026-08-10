@@ -1,3 +1,5 @@
+import { assessmentSnapshotUsability } from "./assessmentSnapshot";
+
 /**
  * P-7, as an operational switch rather than a recommendation.
  *
@@ -93,6 +95,9 @@ export const P7_EXCLUSIONS: ReadonlyMap<string, string> = new Map([
  */
 export type CompletenessSource = "canonical" | "legacy";
 
+/* The usability floor is imported, not restated: three surfaces ask the same
+ * question and a fourth partial copy is how they came to disagree. */
+
 export interface EffectiveCompleteness {
   score: number;
   threshold: number;
@@ -103,6 +108,15 @@ export interface ResolveEffectiveCompletenessArgs {
   shopDomain: string | null | undefined;
   /** `evidence_packs.pack_json`, for the canonical snapshot. */
   packJson: unknown;
+  /**
+   * `evidence_packs.rebuild_pending`.
+   *
+   * A persisted statement that the pack's numbers describe evidence that has
+   * already moved. Without it the canonical branch would judge a known-stale
+   * score against the calibrated 60 — the illegal pairing, arriving through a
+   * different door than the one this function was written to close.
+   */
+  rebuildPending: unknown;
   /** `evidence_packs.completeness_score`. */
   persistedScore: number | null | undefined;
   /** The merchant's own `auto_save_min_score`. */
@@ -130,10 +144,25 @@ export function resolveEffectiveCompleteness(
   const activation = completenessActivationFor(args.shopDomain);
   if (!activation.useCanonicalScore || activation.threshold === null) return legacy;
 
+  /* USABILITY FIRST, through the shared predicate.
+   *
+   * Checking only "is there a number" was not enough. A snapshot from a
+   * superseded policy, or one on a pack already flagged for rebuild, still
+   * carries a perfectly well-formed score — and judging THAT against the
+   * calibrated 60 is the illegal pairing this function exists to prevent,
+   * reached by a different route. The same four conditions the list applies
+   * apply here. */
+  const usability = assessmentSnapshotUsability({
+    snapshot: (args.packJson as { case_assessment?: unknown } | null | undefined)
+      ?.case_assessment,
+    rebuildPending: args.rebuildPending,
+  });
+  if (!usability.usable) return legacy;
+
   const canonical = canonicalScoreFromPackJson(args.packJson);
-  // Missing or unusable canonical snapshot → the WHOLE legacy pair. Taking the
-  // calibrated threshold here would be the illegal pairing.
-  if (canonical === null) return legacy;
+  // A usable snapshot whose completeness score is absent or non-finite is
+  // still not something to compare against a threshold.
+  if (canonical === null || !Number.isFinite(canonical)) return legacy;
 
   return { score: canonical, threshold: activation.threshold, source: "canonical" };
 }

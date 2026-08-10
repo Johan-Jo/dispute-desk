@@ -421,3 +421,86 @@ export function resolveGateDecision(gates: CaseGateAssessment): GateDecision {
   if (g.fatalLoss?.triggered === true) return "fatal_loss";
   return null;
 }
+
+
+/* ── usability ─────────────────────────────────────────────────────── */
+
+/**
+ * The ONE answer to "may this persisted snapshot be used at all?"
+ *
+ * ── WHY IT HAS TO BE ONE PREDICATE ────────────────────────────────────
+ *
+ * Three surfaces need it — the list's strength pill, the list's `?strength=`
+ * pre-filter, and the P-7 gate — and each had its own partial version. The
+ * costs were not symmetric:
+ *
+ *   * the pill checked policy version and `rebuild_pending`; the FILTER
+ *     checked neither, so `?strength=strong` returned disputes the list then
+ *     rendered as unassessed — a filter and a display disagreeing about one
+ *     row;
+ *   * the P-7 branch checked only that a canonical score was a number, so a
+ *     STALE canonical score could be judged against the calibrated 60 — the
+ *     illegal pairing, arriving through a different door than the one
+ *     `resolveEffectiveCompleteness` closed.
+ *
+ * Four conditions, checked together, or the snapshot is not usable:
+ *
+ *   1. it exists;
+ *   2. `assessmentVersion` is the current shape;
+ *   3. `freshness.policyVersion` is the current policy;
+ *   4. the pack is not flagged `rebuild_pending`.
+ *
+ * NOT included: the input-hash comparison. Reconstructing that needs the
+ * model, which the list deliberately does not load and the gate has no reason
+ * to. This predicate is the cheap, always-checkable floor; the workspace route
+ * additionally reconstructs the hash. Both can only WITHHOLD a verdict, never
+ * manufacture one, so a surface that can afford less is stricter than one that
+ * can afford more — never looser.
+ */
+export interface SnapshotUsabilityInput {
+  snapshot: unknown;
+  /** `evidence_packs.rebuild_pending`. */
+  rebuildPending: unknown;
+}
+
+export type SnapshotUnusableReason =
+  | "absent"
+  | "assessment_version"
+  | "policy_version"
+  | "rebuild_pending"
+  | "missing_strength";
+
+export type SnapshotUsability =
+  | { usable: true; strength: CaseAssessmentSnapshot["strength"] }
+  | { usable: false; reason: SnapshotUnusableReason };
+
+/**
+ * `strength.overall` is the field every reader renders, so its ABSENCE is a
+ * distinct unusable reason rather than a silent `undefined` reaching a pill.
+ * A snapshot written by a future shape with a renamed field would otherwise
+ * pass the version checks and render nothing.
+ */
+export function assessmentSnapshotUsability(
+  input: SnapshotUsabilityInput,
+): SnapshotUsability {
+  if (input.rebuildPending === true) return { usable: false, reason: "rebuild_pending" };
+
+  const snap = input.snapshot;
+  if (!snap || typeof snap !== "object" || Array.isArray(snap)) {
+    return { usable: false, reason: "absent" };
+  }
+  const s = snap as Partial<CaseAssessmentSnapshot>;
+
+  if (s.assessmentVersion !== ASSESSMENT_VERSION) {
+    return { usable: false, reason: "assessment_version" };
+  }
+  if (s.freshness?.policyVersion !== ASSESSMENT_POLICY_VERSION) {
+    return { usable: false, reason: "policy_version" };
+  }
+
+  const strength = s.strength;
+  if (!strength || typeof strength !== "object" || typeof strength.overall !== "string") {
+    return { usable: false, reason: "missing_strength" };
+  }
+  return { usable: true, strength: strength as CaseAssessmentSnapshot["strength"] };
+}

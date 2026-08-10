@@ -261,40 +261,79 @@ describe("3. a STALE STRONG snapshot cannot render Strong", () => {
   });
 });
 
-describe("4. no re-scoring through order_not_loaded", () => {
-  it("neither read route builds a gate assessment", () => {
-    /* A fatal-loss or risk-weakness case is exactly where a partial gate set
-     * does damage: both gates are derived from the Shopify order, neither
-     * route loads it, and scoring without them produces a band that
-     * contradicts the build path. The routes no longer own the machinery to
-     * do it — asserted at the source, because a behaviour test can only cover
-     * the fixtures it is given. */
-    const { readFileSync } = require("fs") as typeof import("fs");
-    const { resolve } = require("path") as typeof import("path");
-    const root = resolve(__dirname, "../../..");
-    for (const rel of [
-      "app/api/disputes/[id]/workspace/route.ts",
-      "app/api/disputes/route.ts",
-    ]) {
-      const code = readFileSync(resolve(root, rel), "utf8")
-        .replace(/\/\*[\s\S]*?\*\//g, " ")
-        .split("\n")
-        .map((l) => l.replace(/(^|[^:])\/\/.*$/, "$1 "))
-        .join("\n");
-      expect(/\bbuildCaseGateAssessment\s*\(/.test(code), rel).toBe(false);
-      expect(/gateNotProvided\s*\(\s*["']order_not_loaded["']\s*\)/.test(code), rel).toBe(
-        false,
-      );
-      expect(/\bcalculateCaseStrength\s*\(/.test(code), rel).toBe(false);
-    }
+describe("4. a fatal-loss / risk case is not re-scored", () => {
+  /* This is where a partial gate set does its damage: fatal-loss and
+   * risk-weakness are both derived from the Shopify order, the read route does
+   * not load it, and scoring without them produces a band that contradicts the
+   * build path.
+   *
+   * Asserted by BEHAVIOUR rather than by scanning the route's source. The
+   * source form ("the file does not mention the gate builder") cannot tell two
+   * code paths apart, which is precisely how the `?strength=` filter went on
+   * checking nothing while a sibling assertion about the same file passed. */
+
+  /** A checklist rich enough that re-scoring it would produce a HIGH band. */
+  const RICH_CHECKLIST: ChecklistItemV2[] = [
+    "delivery_proof",
+    "shipping_tracking",
+    "order_confirmation",
+    "customer_communication",
+    "avs_cvv_match",
+  ].map(
+    (field) =>
+      ({
+        field,
+        label: field,
+        status: "available",
+        priority: "critical",
+        blocking: false,
+        source: "auto_shopify",
+      }) as ChecklistItemV2,
+  );
+
+  function projectRich(snapshot: CaseAssessmentSnapshot) {
+    const persistedGates = readPersistedGateFingerprint(
+      persistableGateFingerprint(GATES),
+    )!;
+    return buildWorkspaceAssessment({
+      disputeId: DISPUTE_ID,
+      checklist: RICH_CHECKLIST,
+      reason: "FRAUDULENT",
+      payloadSource: undefined,
+      snapshot,
+      currentInputHash: computeAssessmentInputHash({
+        model: liveModel(),
+        gates: persistedGates,
+        payloadSource: undefined,
+      }),
+      packSaved: false,
+      plan: null,
+    });
+  }
+
+  it("a capped WEAK band survives a checklist that would have scored higher", () => {
+    /* The build path saw the fatal loss and capped the case at `weak`. The
+     * read route sees five available critical rows and no fatal-loss gate. If
+     * it scored, it would disagree — and the merchant would be shown a
+     * winnable case that the filing path refuses. */
+    const p = projectRich(snapshotWith({ overall: "weak" }));
+    expect(p.assessment.strengthBand).toBe("weak");
+    expect(p.caseStrength.overall).toBe("weak");
+    expect(p.caseStrength.heroVariant).toBe("hard_to_win");
   });
 
-  it("a fatal-loss snapshot is projected verbatim, never recomputed", () => {
-    // The build path capped it; the read path renders that cap.
-    const snap = snapshotWith({ overall: "weak" });
-    const p = projectAsWorkspaceRouteDoes({ snapshot: snap });
-    expect(p.assessment.strengthBand).toBe("weak");
-    expect(p.caseStrength.heroVariant).toBe("hard_to_win");
+  it("the completeness score is the snapshot's, not one derived from the rows", () => {
+    // Five available criticals would derive a high completeness; the snapshot
+    // says 41 and the snapshot is the authority.
+    const p = projectRich(snapshotWith({ overall: "weak", score: 41 }));
+    expect(p.assessment.completenessScore).toBe(41);
+  });
+
+  it("guard the guard — the same rich checklist under a STRONG snapshot reads strong", () => {
+    // Proves the two cases above are reading the snapshot rather than
+    // returning a constant.
+    const p = projectRich(snapshotWith({ overall: "strong" }));
+    expect(p.assessment.strengthBand).toBe("strong");
   });
 });
 
@@ -328,39 +367,14 @@ describe("5. no filing override while the assessment is absent or stale", () => 
   });
 });
 
-describe("the LIST route reads only the canonical snapshot", () => {
-  const { readFileSync } = require("fs") as typeof import("fs");
-  const { resolve } = require("path") as typeof import("path");
-  const src = readFileSync(
-    resolve(__dirname, "../../..", "app/api/disputes/route.ts"),
-    "utf8",
-  );
-
-  it("does not fall back to the legacy case_strength summary", () => {
-    /* `case_strength` carries no freshness of its own — nothing on it says
-     * which evidence or which policy produced it — so a reader cannot tell a
-     * current one from one written against evidence that has since changed.
-     * Falling back to it meant the list rendered a band it could not verify,
-     * beside a detail page that had already refused to.
-     *
-     * Comments are stripped: the file still EXPLAINS the removal, and prose
-     * naming the old column is history, not a read. */
-    const code = src
-      .replace(/\/\*[\s\S]*?\*\//g, " ")
-      .replace(/(^|[^:])\/\/.*/gm, "$1 ");
-    expect(code).not.toMatch(/case_strength/);
-  });
-
-  it("the ?strength= filter reads the same source as the pill", () => {
-    /* The filter used to read the legacy summary while the pill rendered
-     * something else, so `?strength=strong` could return a dispute the list
-     * then showed as unassessed. */
-    expect(src).toMatch(/case_assessment->strength->>overall/);
-  });
-
-  it("withholds a band on a superseded policy version or a pending rebuild", () => {
-    expect(src).toMatch(/ASSESSMENT_POLICY_VERSION/);
-    expect(src).toMatch(/rebuild_pending/);
-    expect(src).toMatch(/unassessedDisputes/);
-  });
-});
+/**
+ * The list route's behaviour is asserted by RUNNING it, in
+ * `tests/api/disputes/listAssessmentUsability.test.ts`.
+ *
+ * Three source-presence assertions used to live here — "the file does not
+ * mention `case_strength`", "the file mentions `ASSESSMENT_POLICY_VERSION`",
+ * "the file mentions `rebuild_pending`" — and all three passed while the
+ * `?strength=` filter checked none of those things. The constants WERE
+ * mentioned, on the other code path. A file-content assertion cannot tell two
+ * code paths apart, which is exactly the distinction that mattered.
+ */

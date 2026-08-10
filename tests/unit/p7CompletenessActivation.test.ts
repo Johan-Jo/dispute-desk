@@ -50,6 +50,10 @@ import { getShopSettings } from "@/lib/automation/settings";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { evaluateAndMaybeAutoSave } from "@/lib/automation/pipeline";
 import {
+  ASSESSMENT_POLICY_VERSION,
+  ASSESSMENT_VERSION,
+} from "@/lib/evidence/model/assessmentSnapshot";
+import {
   activatedShopDomains,
   canonicalScoreFromPackJson,
   completenessActivationFor,
@@ -66,7 +70,12 @@ const PERSISTED_SCORE = 55;
 const CANONICAL_SCORE = 72;
 const MERCHANT_THRESHOLD = 80;
 
-function packJson(opts: { withAssessment: boolean }) {
+function packJson(opts: {
+  withAssessment: boolean;
+  policyVersion?: number;
+  assessmentVersion?: number;
+  canonicalScore?: number;
+}) {
   return {
     case_strength: { overall: "strong" },
     coverage: { state: "not_covered" },
@@ -75,11 +84,11 @@ function packJson(opts: { withAssessment: boolean }) {
       ? {
           case_assessment: {
             caseId: "d1",
-            assessmentVersion: 1,
+            assessmentVersion: opts.assessmentVersion ?? ASSESSMENT_VERSION,
             strength: { overall: "strong" },
             completeness: {
-              score: CANONICAL_SCORE,
-              evidenceStrengthScore: CANONICAL_SCORE,
+              score: opts.canonicalScore ?? CANONICAL_SCORE,
+              evidenceStrengthScore: opts.canonicalScore ?? CANONICAL_SCORE,
               readiness: "ready",
               blockers: [],
             },
@@ -88,7 +97,7 @@ function packJson(opts: { withAssessment: boolean }) {
             modelVersion: 1,
             freshness: {
               inputHash: "hash",
-              policyVersion: 1,
+              policyVersion: opts.policyVersion ?? ASSESSMENT_POLICY_VERSION,
               computedAt: "2026-08-10T00:00:00.000Z",
             },
           },
@@ -104,8 +113,15 @@ function setup(opts: {
   blockers?: string[];
   readiness?: string;
   merchantThreshold?: number;
+  rebuildPending?: boolean;
+  policyVersion?: number;
+  canonicalScore?: number;
 }) {
-  const pj = packJson({ withAssessment: opts.withAssessment ?? true });
+  const pj = packJson({
+    withAssessment: opts.withAssessment ?? true,
+    policyVersion: opts.policyVersion,
+    canonicalScore: opts.canonicalScore,
+  });
   const packRow = {
     id: "p1",
     shop_id: "s1",
@@ -115,6 +131,7 @@ function setup(opts: {
     submission_readiness: opts.readiness ?? "ready",
     status: "ready",
     pack_json: pj,
+    rebuild_pending: opts.rebuildPending ?? false,
   };
   const jobsInsert = vi.fn().mockResolvedValue({ data: null, error: null });
   const auditInsert = vi.fn().mockResolvedValue({ data: null, error: null });
@@ -336,6 +353,7 @@ describe("score and threshold are ONE decision", () => {
     const e = resolveEffectiveCompleteness({
       shopDomain: "blume-box.myshopify.com",
       packJson: packJson({ withAssessment: true }),
+      rebuildPending: false,
       persistedScore: PERSISTED_SCORE,
       merchantThreshold: MERCHANT_THRESHOLD,
     });
@@ -350,6 +368,7 @@ describe("score and threshold are ONE decision", () => {
     const e = resolveEffectiveCompleteness({
       shopDomain: "blume-box.myshopify.com",
       packJson: packJson({ withAssessment: false }),
+      rebuildPending: false,
       persistedScore: 70,
       merchantThreshold: 80,
     });
@@ -361,6 +380,7 @@ describe("score and threshold are ONE decision", () => {
     const e = resolveEffectiveCompleteness({
       shopDomain: "someone-else.myshopify.com",
       packJson: packJson({ withAssessment: true }),
+      rebuildPending: false,
       persistedScore: PERSISTED_SCORE,
       merchantThreshold: MERCHANT_THRESHOLD,
     });
@@ -380,6 +400,7 @@ describe("score and threshold are ONE decision", () => {
         const e = resolveEffectiveCompleteness({
           shopDomain,
           packJson: packJson({ withAssessment }),
+          rebuildPending: false,
           persistedScore: 70,
           merchantThreshold: 80,
         });
@@ -489,5 +510,115 @@ describe("a CANONICAL 72/60 decision records 72 and 60", () => {
       .map((c) => c[0] as Record<string, unknown>)
       .find((row) => row.event_type === "auto_save_blocked");
     expect(blocked).toBeUndefined();
+  });
+});
+
+
+/* ── An UNUSABLE canonical snapshot falls back atomically ────────────── */
+
+describe("a stale canonical score is never judged against 60", () => {
+  /* The fixture is chosen so the two answers disagree:
+   *
+   *   canonical 95 against 60  → auto-saves
+   *   persisted 70 against 80  → blocks
+   *
+   * Anything that auto-saves here used a stale canonical score at the
+   * calibrated threshold — the illegal pairing, reached through a door
+   * `resolveEffectiveCompleteness` did not previously close: it checked only
+   * that a canonical number EXISTED, not whether it was usable. */
+  const STALE_CANONICAL = 95;
+
+  it("SUPERSEDED POLICY: blocks on 70/80/legacy, not 95/60", async () => {
+    const { auditInsert } = setup({
+      shopDomain: "blume-box.myshopify.com",
+      canonicalScore: STALE_CANONICAL,
+      policyVersion: ASSESSMENT_POLICY_VERSION - 1,
+      persistedScore: 70,
+      merchantThreshold: 80,
+    });
+    const r = await evaluateAndMaybeAutoSave("p1");
+    expect(r.action).toBe("block");
+    expect(r.details).toMatch(/score 70%/);
+    expect(r.details).toMatch(/threshold 80%/);
+    expect(r.details).not.toMatch(/threshold 60%/);
+    expect(r.details).not.toMatch(new RegExp(`score ${STALE_CANONICAL}%`));
+
+    const blocked = auditInsert.mock.calls
+      .map((c) => c[0] as Record<string, unknown>)
+      .find((row) => row.event_type === "auto_save_blocked");
+    const payload = blocked!.event_payload as Record<string, unknown>;
+    expect(payload.completeness_source).toBe("legacy");
+    expect(payload.completeness_score).toBe(70);
+    expect(payload.completeness_threshold).toBe(80);
+  });
+
+  it("REBUILD PENDING: blocks on 70/80/legacy, not 95/60", async () => {
+    const { auditInsert } = setup({
+      shopDomain: "blume-box.myshopify.com",
+      canonicalScore: STALE_CANONICAL,
+      rebuildPending: true,
+      persistedScore: 70,
+      merchantThreshold: 80,
+    });
+    const r = await evaluateAndMaybeAutoSave("p1");
+    expect(r.action).toBe("block");
+    expect(r.details).toMatch(/score 70%/);
+    expect(r.details).toMatch(/threshold 80%/);
+
+    const blocked = auditInsert.mock.calls
+      .map((c) => c[0] as Record<string, unknown>)
+      .find((row) => row.event_type === "auto_save_blocked");
+    const payload = blocked!.event_payload as Record<string, unknown>;
+    expect(payload.completeness_source).toBe("legacy");
+    expect(payload.completeness_score).toBe(70);
+  });
+
+  it("guard the guard — the SAME canonical 95 auto-saves once it is usable", async () => {
+    /* Without this the two cases above would be satisfiable by a resolver
+     * that had simply stopped reading canonical scores at all. The only
+     * difference here is that the snapshot is current. */
+    setup({
+      shopDomain: "blume-box.myshopify.com",
+      canonicalScore: STALE_CANONICAL,
+      persistedScore: 70,
+      merchantThreshold: 80,
+    });
+    const r = await evaluateAndMaybeAutoSave("p1");
+    expect(r.action).toBe("auto_save");
+  });
+
+  it("a CURRENT canonical snapshot still resolves 72/60/canonical", async () => {
+    const e = resolveEffectiveCompleteness({
+      shopDomain: "blume-box.myshopify.com",
+      packJson: packJson({ withAssessment: true }),
+      rebuildPending: false,
+      persistedScore: PERSISTED_SCORE,
+      merchantThreshold: MERCHANT_THRESHOLD,
+    });
+    expect(e).toEqual({ score: CANONICAL_SCORE, threshold: 60, source: "canonical" });
+  });
+
+  it("neither unusable form yields the calibrated threshold", () => {
+    for (const over of [
+      { policyVersion: ASSESSMENT_POLICY_VERSION - 1 },
+      { assessmentVersion: ASSESSMENT_VERSION + 1 },
+    ]) {
+      const e = resolveEffectiveCompleteness({
+        shopDomain: "blume-box.myshopify.com",
+        packJson: packJson({ withAssessment: true, ...over }),
+        rebuildPending: false,
+        persistedScore: 70,
+        merchantThreshold: 80,
+      });
+      expect(e).toEqual({ score: 70, threshold: 80, source: "legacy" });
+    }
+    const pending = resolveEffectiveCompleteness({
+      shopDomain: "blume-box.myshopify.com",
+      packJson: packJson({ withAssessment: true }),
+      rebuildPending: true,
+      persistedScore: 70,
+      merchantThreshold: 80,
+    });
+    expect(pending).toEqual({ score: 70, threshold: 80, source: "legacy" });
   });
 });

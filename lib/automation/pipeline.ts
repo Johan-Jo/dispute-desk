@@ -396,7 +396,10 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   const { data: pack, error } = await sb
     .from("evidence_packs")
     .select(
-      "id, shop_id, dispute_id, completeness_score, blockers, submission_readiness, status, pack_json"
+      // `rebuild_pending` is a P-7 input: a pack already flagged for rebuild
+      // carries numbers that describe evidence which has moved, and judging
+      // one of those against the calibrated threshold is the illegal pairing.
+      "id, shop_id, dispute_id, completeness_score, blockers, submission_readiness, status, pack_json, rebuild_pending"
     )
     .eq("id", packId)
     .single();
@@ -500,6 +503,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   const effectiveCompleteness = resolveEffectiveCompleteness({
     shopDomain: (gateShop?.shop_domain as string | null) ?? null,
     packJson: pack.pack_json,
+    rebuildPending: (pack as { rebuild_pending?: unknown }).rebuild_pending,
     persistedScore: pack.completeness_score as number | null,
     merchantThreshold: settings.auto_save_min_score,
   });
