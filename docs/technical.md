@@ -3957,12 +3957,42 @@ a checked-in copy of the pre-fix hook to prove the detector still detects; and i
 with the epic that closes each.
 
 **`deadline_only` merchant copy** (`disputes.deadlineOnly.*`, ×6 locales). Three states,
-each with a distinct key set: `normal`, `deadline_only` ("waiting for the deadline because N
-item(s) need your confirmation" — `itemCount` is an ICU plural **param**, so each locale
-pluralises in its own grammar), and `withheld_no_safe_argument`. `willFile` is stated
-explicitly on the copy object so no surface infers "will it file?" from tone — the inference
-that made the auto-pilot hold read as "please review". `noSafeArgument` outranks
-`deadlineOnly`: a plan can be both, and promising a deadline filing would be false.
+each with a distinct key set: `normal`, `deadline_only` ("N item(s) need your confirmation,
+so DisputeDesk is holding your defence package for deadline processing" — `itemCount` is an
+ICU plural **param**, so each locale pluralises in its own grammar), and
+`withheld_no_safe_argument`. `willFile` is stated explicitly on the copy object so no surface
+infers it from tone — the inference that made the auto-pilot hold read as "please review".
+`noSafeArgument` outranks `deadlineOnly`: a plan can be both, and promising a deadline filing
+would be false.
+
+#### No merchant surface may promise that nothing reaches the issuer
+
+Shopify auto-compiles and files **its own scrape** of the order at the deadline whether or
+not DisputeDesk adds a defence package, and there is no accept/concede mutation that stops
+it. Every guard in this pipeline therefore chooses *our document vs Shopify's scrape*, never
+submit-vs-silence — and the merchant copy has to say the same thing.
+
+It did not. The pre-existing "Don't defend" state said **"Nothing will be submitted"** on
+four surfaces in six languages, describing an outcome the product cannot produce: a merchant
+who read it and declined had not bought silence, they had swapped our document for Shopify's
+scrape without being told. `withheld_no_safe_argument` shipped with the same defect
+("…so nothing will be sent").
+
+The correction, applied to 23 keys per locale:
+
+| Concept | Wording |
+|---|---|
+| The merchant declines | **"Don't add a defence package"** — replaces "Don't defend"; internal state stays `conceded`, `ReviewAction` stays `concede` |
+| `withheld_no_safe_argument` | DisputeDesk **will not add a defence package**; Shopify still passes on the order details it already holds when the deadline arrives |
+| `deadline_only` | DisputeDesk is **holding your defence package for deadline processing** instead of adding it now; Shopify's own deadline process runs either way |
+| Every declining/holding string | names **both** actors — DisputeDesk and Shopify — explicitly |
+
+Pinned by `lib/disputes/__tests__/issuerSilenceCopy.test.ts`: a fixed list of the 23 affected
+key paths × 6 locales, asserting each resolves, each declining/holding key names Shopify (and
+the two decline surfaces name DisputeDesk), and none still carries its locale's silence
+phrase or the old label. Deliberately **not** a catalog-wide phrase detector — that shape
+flags every honest sentence containing "nothing" and ends up allow-listed into uselessness.
+Adding a locale or a new surface for these states means adding it to that list.
 
 **Hand-off to the workspace route** (Agent C owns
 `app/api/disputes/[id]/workspace/route.ts`): replace the inline `calculateCaseStrength` /

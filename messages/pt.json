@@ -1282,7 +1282,7 @@
       "inReview": "Em análise",
       "inReviewDue": "Em análise · {days} d",
       "scheduled": "Agendada",
-      "notDefended": "Sem defesa"
+      "notDefended": "Sem pacote de defesa"
     },
     "signalLabel": {
       "payment_auth": "Autenticação do pagamento",
@@ -1545,19 +1545,19 @@
       "evidenceOrderingHelper": "Ordenadas pelo quanto cada item fortalece o caso. Mais fortes primeiro.",
       "review": {
         "title": "Decida o que fazer com esta disputa",
-        "prompt": "Este caso precisa da sua decisão antes do prazo. Mantenha-o em análise enquanto investiga, agende o envio automático ou desista dele se não valer a pena defender.",
+        "prompt": "Este caso precisa da sua decisão antes do prazo. Mantenha-o em análise enquanto investiga, agende o envio automático ou diga ao DisputeDesk para não adicionar um pacote de defesa.",
         "hold": "Manter em análise",
         "approve": "Enviar no prazo",
-        "concede": "Não defender",
+        "concede": "Não adicionar pacote de defesa",
         "holdHelp": "Continuaremos acompanhando e lembraremos você antes do prazo.",
         "approveHelp": "Enviaremos as evidências automaticamente quando o prazo chegar.",
-        "concedeHelp": "Não enviaremos o seu pacote de defesa. O Shopify continuará a transmitir os dados básicos da encomenda que tem registados.",
+        "concedeHelp": "O DisputeDesk não vai adicionar um pacote de defesa a esta disputa. O Shopify continua a transmitir os dados da encomenda que já tem quando o prazo termina.",
         "stateInReviewTitle": "Em espera para sua análise",
         "stateInReviewBody": "Você está analisando esta disputa. Se não fizer mais nada, ela seguirá sua regra de automação no prazo{due}.",
         "stateApprovedTitle": "Agendada para envio",
         "stateApprovedBody": "Esta disputa será enviada automaticamente no prazo{due}.",
-        "stateConcededTitle": "Sem defesa",
-        "stateConcededBody": "Você optou por não defender esta disputa. Nada será enviado.",
+        "stateConcededTitle": "Não será adicionado nenhum pacote de defesa",
+        "stateConcededBody": "Optou por não adicionar um pacote de defesa do DisputeDesk. O Shopify continua a transmitir os dados da encomenda que já tem quando o prazo termina.",
         "dueSuffix": " ({date})",
         "change": "Alterar decisão",
         "undo": "Desfazer",
@@ -1876,16 +1876,16 @@
     "deadlineOnly": {
       "normal": {
         "title": "Pronto para envio",
-        "body": "As suas evidências estão prontas e serão enviadas automaticamente para a Shopify."
+        "body": "O seu pacote de defesa está pronto. O DisputeDesk vai adicioná-lo a esta disputa no Shopify automaticamente."
       },
       "held": {
-        "title": "A aguardar a data limite",
-        "body": "{itemCount, plural, one {1 item precisa da sua confirmação} other {# itens precisam da sua confirmação}}, por isso o DisputeDesk mantém esta resposta até à data limite. Será enviada nessa altura, com ou sem {itemCount, plural, one {o item assinalado} other {os itens assinalados}}.",
-        "action": "{itemCount, plural, one {Confirme o item assinalado} other {Confirme os itens assinalados}} para enviar esta resposta agora, em vez de esperar."
+        "title": "Retido para o prazo",
+        "body": "{itemCount, plural, one {1 item precisa da sua confirmação} other {# itens precisam da sua confirmação}}, por isso o DisputeDesk retém o seu pacote de defesa para processamento no prazo em vez de o adicionar agora. O processo de prazo do próprio Shopify decorre de qualquer forma, com os dados da encomenda que já tem.",
+        "action": "{itemCount, plural, one {Confirme o item assinalado} other {Confirme os itens assinalados}} para libertar o seu pacote de defesa agora, em vez de esperar pelo prazo."
       },
       "withheld": {
-        "title": "Esta resposta não será enviada",
-        "body": "Depois de postas de parte as evidências que precisam da sua confirmação, não resta nada que o DisputeDesk possa sustentar. Enviar uma resposta que não consegue defender enfraqueceria o seu caso, por isso nada será enviado.",
+        "title": "Não será adicionado nenhum pacote de defesa do DisputeDesk",
+        "body": "Depois de postas de lado as provas que precisam da sua confirmação, não resta nada que o DisputeDesk possa sustentar, por isso não será adicionado nenhum pacote de defesa a esta disputa. Isso não deixa a disputa em silêncio: O Shopify continua a transmitir os dados da encomenda que já tem quando o prazo termina.",
         "action": "Adicione ou confirme evidências nesta disputa para alterar isto."
       },
       "reviewItem": {
@@ -2541,7 +2541,7 @@
     "modeSectionSubtitle": "Isto aplica-se a todas as disputas. Alguns casos são sempre retidos e monitorizados primeiro — consulte as Salvaguardas abaixo.",
     "modeAutoTitle": "Piloto automático",
     "modeAutoBadge": "Recomendado",
-    "modeAutoDesc": "Guardamos os seus casos mais fortes no Shopify assim que estão prontos. Tudo o resto fica retido enquanto continuamos a recolher provas e é depois guardado no Shopify no prazo — nada fica à espera da sua aprovação, a não ser que escolha “Não defender”.",
+    "modeAutoDesc": "Guardamos os seus casos mais fortes no Shopify assim que estão prontos. Tudo o resto fica retido enquanto continuamos a recolher provas e é depois guardado no Shopify no prazo — nada fica à espera da sua aprovação, a não ser que escolha “Não adicionar pacote de defesa”.",
     "modeReviewTitle": "Rever tudo",
     "modeReviewDesc": "Preparamos todas as respostas. Nada é guardado no Shopify até que aprove.",
     "modeSaved": "Definições guardadas",
@@ -2580,7 +2580,7 @@
     "groupHasOwnSetting": "Tem a sua própria definição",
     "modeClearedExceptions": "Foram apagados {count} tipos de disputa que tinham a sua própria definição. Tudo segue agora «{mode}». Defina um tipo abaixo se quiser uma exceção.",
     "modeAutoLead": "Guardamos os seus casos mais fortes no Shopify assim que estão prontos.",
-    "modeAutoNote": "Tudo o resto fica retido enquanto continuamos a recolher provas e é depois guardado no Shopify no prazo — nada fica à espera da sua aprovação, a não ser que escolha “Não defender”.",
+    "modeAutoNote": "Tudo o resto fica retido enquanto continuamos a recolher provas e é depois guardado no Shopify no prazo — nada fica à espera da sua aprovação, a não ser que escolha “Não adicionar pacote de defesa”.",
     "modeReviewLead": "Preparamos todas as respostas. Nada é guardado no Shopify até que aprove.",
     "modeReviewNote": "Controlo total — cada caso aguarda a sua aprovação."
   },
@@ -3119,11 +3119,11 @@
       },
       "reviewQueue": {
         "title": "A fila de revisão",
-        "body": "A fila de revisão contém disputas retidas para si antes de as provas serem guardadas no Shopify.\n\nUma disputa chega à fila de revisão quando:\n- Uma regra a envia para revisão (por exemplo, disputas acima de um determinado valor).\n- Nenhuma regra corresponde e a ação padrão é rever.\n- As provas são fracas ou subjetivas, ou o caso já está perdido.\n\nNo separador Fila de revisão pode:\n- Ver todas as disputas que aguardam a sua atenção.\n- Abrir qualquer disputa para rever o pacote de provas.\n- Clicar em «Aprovar» para guardar as provas no Shopify.\n\nUma disputa na fila não está congelada. No piloto automático é guardada no Shopify no prazo se não tiver agido; no modo de revisão só é guardada quando a aprovar. Escolha «Não defender» para a parar em ambos os casos."
+        "body": "A fila de revisão contém disputas retidas para si antes de as provas serem guardadas no Shopify.\n\nUma disputa chega à fila de revisão quando:\n- Uma regra a envia para revisão (por exemplo, disputas acima de um determinado valor).\n- Nenhuma regra corresponde e a ação padrão é rever.\n- As provas são fracas ou subjetivas, ou o caso já está perdido.\n\nNo separador Fila de revisão pode:\n- Ver todas as disputas que aguardam a sua atenção.\n- Abrir qualquer disputa para rever o pacote de provas.\n- Clicar em «Aprovar» para guardar as provas no Shopify.\n\nUma disputa na fila não está congelada. No piloto automático é guardada no Shopify no prazo se não tiver agido; no modo de revisão só é guardada quando a aprovar. Escolha «Não adicionar pacote de defesa» para que o DisputeDesk não adicione o seu, em ambos os casos — o Shopify continua a transmitir os dados da encomenda que já tem."
       },
       "approvingDisputes": {
         "title": "Aprovando disputas da fila de revisão",
-        "body": "Quando uma disputa está na sua fila de revisão, o DisputeDesk já criou as provas. A sua aprovação apenas controla se são guardadas no Shopify.\n\nPara aprovar uma disputa:\n1. Vá à página Disputas e mude para o separador «Fila de revisão».\n2. Clique em «Aprovar» ao lado da disputa.\n3. Se o pacote passar as suas verificações de integridade e bloqueios, as provas são guardadas no Shopify.\n\nTambém pode aprovar na página de detalhe com «Aprovar e guardar».\n\nNo piloto automático, uma disputa retida é guardada no Shopify no prazo se não fizer nada. No modo de revisão, nada é guardado enquanto não aprovar. Escolha «Não defender» para a parar em qualquer dos modos.\n\nTodas as aprovações ficam registadas no histórico de auditoria."
+        "body": "Quando uma disputa está na sua fila de revisão, o DisputeDesk já criou as provas. A sua aprovação apenas controla se são guardadas no Shopify.\n\nPara aprovar uma disputa:\n1. Vá à página Disputas e mude para o separador «Fila de revisão».\n2. Clique em «Aprovar» ao lado da disputa.\n3. Se o pacote passar as suas verificações de integridade e bloqueios, as provas são guardadas no Shopify.\n\nTambém pode aprovar na página de detalhe com «Aprovar e guardar».\n\nNo piloto automático, uma disputa retida é guardada no Shopify no prazo se não fizer nada. No modo de revisão, nada é guardado enquanto não aprovar. Escolha «Não adicionar pacote de defesa» para que o DisputeDesk não adicione o seu em nenhum dos modos — o Shopify continua a transmitir os dados da encomenda que já tem.\n\nTodas as aprovações ficam registadas no histórico de auditoria."
       },
       "howPacksBuilt": {
         "title": "Como os pacotes de evidências são gerados automaticamente",
@@ -3327,11 +3327,11 @@
         },
         "reviewQueue": {
           "title": "A fila de revisão",
-          "body": "A fila de revisão são disputas que o DisputeDesk preparou mas ainda não guardou no Shopify.\n\nChegam aqui quando:\n- Uma regra as envia para revisão (por exemplo, valor elevado).\n- Nenhuma regra corresponde e o padrão é rever.\n- As provas são fracas ou subjetivas, ou o caso já está perdido.\n\nNa app incorporada, essas disputas aparecem na lista **Disputas** com os restantes estornos — use **Filtrar** por estado ou abra itens a partir do painel. Abra uma disputa para inspecionar o pacote e use **Aprovar e guardar** na página de detalhe quando estiver pronto.\n\nUma disputa aqui não está congelada e, no piloto automático, não está à sua espera: o DisputeDesk continua a recolher provas e guarda a resposta no Shopify no prazo. No modo **Rever tudo** só é guardada quando a aprovar. Escolha **Não defender** para não enviarmos nada — o Shopify transmite mesmo assim os dados básicos da encomenda que tem."
+          "body": "A fila de revisão são disputas que o DisputeDesk preparou mas ainda não guardou no Shopify.\n\nChegam aqui quando:\n- Uma regra as envia para revisão (por exemplo, valor elevado).\n- Nenhuma regra corresponde e o padrão é rever.\n- As provas são fracas ou subjetivas, ou o caso já está perdido.\n\nNa app incorporada, essas disputas aparecem na lista **Disputas** com os restantes estornos — use **Filtrar** por estado ou abra itens a partir do painel. Abra uma disputa para inspecionar o pacote e use **Aprovar e guardar** na página de detalhe quando estiver pronto.\n\nUma disputa aqui não está congelada e, no piloto automático, não está à sua espera: o DisputeDesk continua a recolher provas e guarda a resposta no Shopify no prazo. No modo **Rever tudo** só é guardada quando a aprovar. Escolha **Não adicionar pacote de defesa** para que o DisputeDesk não adicione o seu — o Shopify continua a transmitir os dados da encomenda que já tem."
         },
         "approvingDisputes": {
           "title": "Aprovar disputas na fila de revisão",
-          "body": "Aprove na página de **detalhe da disputa** depois de abri-la pela lista ou pelo painel.\n\nPassos:\n1. Vá em **Disputas** e use **Ver detalhes** (ou abra a disputa pelo painel).\n2. Revise o pacote de evidências e a completude no detalhe.\n3. Use **Aprovar e salvar** para executar o fluxo e salvar no Shopify se os limites forem atendidos.\n\nVocê pode gerar ou atualizar pacotes no detalhe antes. **Não há botão Aprovar só na lista** — a confirmação é no detalhe.\n\n**Se nunca aprovar:** no modo **Rever tudo**, o DisputeDesk não envia nada — nem agora, nem no prazo. O Shopify apenas transmite os dados básicos da encomenda quando o prazo termina, o que raramente ganha. Aprovar agenda a gravação do seu pacote no Shopify no prazo; escolher **Não defender** impede-nos de o enviar, mas o Shopify continua a transmitir os seus próprios dados da encomenda."
+          "body": "Aprove na página de **detalhe da disputa** depois de abri-la pela lista ou pelo painel.\n\nPassos:\n1. Vá em **Disputas** e use **Ver detalhes** (ou abra a disputa pelo painel).\n2. Revise o pacote de evidências e a completude no detalhe.\n3. Use **Aprovar e salvar** para executar o fluxo e salvar no Shopify se os limites forem atendidos.\n\nVocê pode gerar ou atualizar pacotes no detalhe antes. **Não há botão Aprovar só na lista** — a confirmação é no detalhe.\n\n**Se nunca aprovar:** no modo **Rever tudo**, o DisputeDesk não envia nada — nem agora, nem no prazo. O Shopify apenas transmite os dados básicos da encomenda quando o prazo termina, o que raramente ganha. Aprovar agenda a gravação do seu pacote no Shopify no prazo; escolher **Não adicionar pacote de defesa** impede o DisputeDesk de adicionar o seu, mas o Shopify continua a transmitir os dados da encomenda que já tem."
         }
       },
       "heroSearchPlaceholder": "Pesquise artigos de ajuda, guias ou tópicos…",
@@ -4417,7 +4417,7 @@
       "setupSummaryTitle": "O que configurámos para si",
       "setupSummaryInquiry": "Consultas iniciais cobertas automaticamente",
       "setupSummaryReady": "Pronto para disputas de {families}.",
-      "setupSummaryModeAuto": "As respostas fortes são guardadas automaticamente no Shopify. O que for menos decisivo fica retido e monitorizado e é guardado no Shopify no prazo, a não ser que escolha “Não defender”.",
+      "setupSummaryModeAuto": "As respostas fortes são guardadas automaticamente no Shopify. O que for menos decisivo fica retido e monitorizado e é guardado no Shopify no prazo, a não ser que escolha “Não adicionar pacote de defesa”.",
       "setupSummaryModeReview": "Cada resposta é criada para si e aguarda a sua aprovação antes de seguir para o Shopify.",
       "setupSummarySafeguard": "Disputas acima de ${amount} aguardam sempre a sua aprovação.",
       "setupSummaryPointer": "Pode ajustar tipos de disputa específicos mais tarde na página de Automação.",
@@ -5880,8 +5880,8 @@
           "message": "Você está analisando esta disputa antes do prazo ({date}). Se não tomar nenhuma outra ação, sua regra de automação será aplicada no prazo."
         },
         "conceded": {
-          "title": "Não está sendo defendida",
-          "message": "Você optou por não defender esta disputa. Nada será enviado."
+          "title": "Não será adicionado nenhum pacote de defesa",
+          "message": "Optou por não adicionar um pacote de defesa do DisputeDesk. O Shopify continua a transmitir os dados da encomenda que já tem quando o prazo termina."
         }
       },
       "nextHeldWithDate": "Retida enquanto procuramos provas mais fortes — guardada no Shopify a {date}",
@@ -5925,12 +5925,12 @@
     },
     "reviewDecision": {
       "approved": "Agendado",
-      "conceded": "Não defendido",
+      "conceded": "Sem pacote de defesa",
       "in_review": "Em análise"
     },
     "reviewDecisionSub": {
       "approved": "Definido para enviar automaticamente no prazo",
-      "conceded": "Você optou por não defender esta disputa",
+      "conceded": "Optou por não adicionar um pacote de defesa do DisputeDesk",
       "in_review": "Você está analisando isto antes do prazo"
     }
   }

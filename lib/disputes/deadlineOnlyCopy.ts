@@ -17,8 +17,9 @@
  *
  * ── THE TWO STATES MUST BE DISTINGUISHABLE IN WORDS ───────────────────
  *
- *   deadline_only              → we WILL file. Waiting for the deadline.
- *   withheld_no_safe_argument  → we will NOT file. Nothing safe remains.
+ *   deadline_only              → the DisputeDesk package is held for deadline
+ *                                processing rather than added now.
+ *   withheld_no_safe_argument  → DisputeDesk adds no defence package at all.
  *
  * Both look like "not filed yet" on a status badge, and the difference is
  * the entire product. One is a scheduled outcome; the other is an outcome
@@ -26,6 +27,18 @@
  * they may still act on it. Rendering them with the same string, or letting
  * a caller pick a badge tone and infer the rest, is how a merchant discovers
  * on day 21 that nothing was ever going to be sent.
+ *
+ * ── NEITHER STATE BUYS SILENCE, AND NO STRING MAY SAY IT DOES ─────────
+ *
+ * The one claim this copy may never make is that the issuer hears nothing.
+ * Shopify auto-compiles and files its own scrape of the order at the
+ * deadline whether or not DisputeDesk adds a package, and there is no
+ * accept/concede mutation that stops it. Every string below therefore says
+ * which of the TWO actors does what: DisputeDesk adds (or does not add) a
+ * defence package; Shopify's own deadline process runs either way with the
+ * order details it already holds. The pre-existing "Don't defend" copy —
+ * "Nothing will be submitted" — told merchants the opposite, and it is
+ * corrected in the same change as these keys.
  *
  * ── THE LEVER ─────────────────────────────────────────────────────────
  *
@@ -56,9 +69,10 @@ export type DeadlineFilingState =
    */
   | { kind: "deadline_only"; itemCount: number }
   /**
-   * No safe argument survives the exclusions. Will NOT be filed. This is an
-   * honest product outcome, not an error — and specifically not a reason to
-   * lower the bar and file something weaker.
+   * No safe argument survives the exclusions, so DisputeDesk adds no defence
+   * package. This is an honest product outcome, not an error — and
+   * specifically not a reason to lower the bar and file something weaker.
+   * It is also NOT silence: Shopify still files what it holds.
    */
   | { kind: "withheld_no_safe_argument" };
 
@@ -70,11 +84,14 @@ export interface DeadlineFilingCopy {
   /** What the merchant can do about it. Null when there is nothing to do. */
   actionToken: I18nToken | null;
   /**
-   * Whether this state ends with evidence reaching the issuer.
+   * Whether this state ends with the DISPUTEDESK DEFENCE PACKAGE being filed.
    *
-   * Carried explicitly so a surface never has to infer "will it file?" from
-   * the tone of a string — the inference that made the hold state read as
-   * "please review".
+   * Deliberately not "whether evidence reaches the issuer" — that is always
+   * true. Shopify files its own scrape at the deadline regardless, so the
+   * only thing this flag can honestly describe is whose document goes.
+   *
+   * Carried explicitly so a surface never has to infer it from the tone of a
+   * string — the inference that made the hold state read as "please review".
    */
   willFile: boolean;
 }
