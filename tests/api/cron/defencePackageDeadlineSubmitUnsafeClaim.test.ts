@@ -46,7 +46,9 @@ import {
   CLEAN_NARRATIVE,
   RETIRED_FACTS,
   UNSAFE_NARRATIVE,
+  healthyPackJson,
 } from "@/tests/fixtures/defencePackageShapes";
+import { derivePlanIdentityForPack } from "@/lib/defence/package";
 
 const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockAudit = vi.mocked(logAuditEvent);
@@ -61,6 +63,7 @@ const DISPUTE = {
   shop_id: SHOP_ID,
   dispute_gid: "gid://shopify/ShopifyPaymentsDispute/1",
   reason: "fraudulent",
+  network_reason_code: null,
   amount: 100,
   currency_code: "USD",
   due_at: new Date().toISOString(),
@@ -69,6 +72,37 @@ const DISPUTE = {
   review_state: null,
 };
 
+const PACK_JSON = healthyPackJson();
+
+/**
+ * The canonical identity a candidate must carry to read CURRENT, computed from
+ * the same inputs the route derives from rather than hard-coded — a literal
+ * hash would quietly turn every case here into a staleness test.
+ *
+ * Applied to each fixture version below, so "the route refused" is never
+ * confused with "the fixture was stale".
+ */
+const IDENTITY = derivePlanIdentityForPack({
+  caseId: DISPUTE_ID,
+  packId: PACK_ID,
+  packJson: PACK_JSON,
+  evidenceItems: [],
+  checklist: [],
+  disputeReason: "fraudulent",
+  networkReasonCode: null,
+});
+
+function withIdentity(row: Record<string, unknown>): Record<string, unknown> {
+  return {
+    superseded_by_id: null,
+    plan_input_hash: IDENTITY.planInputHash,
+    plan_policy_version: IDENTITY.policyVersion,
+    plan_deadline_only: IDENTITY.plan.deadlineOnly,
+    document_validation_passed: row.validation_status === "ok",
+    document_failure_codes: [],
+    ...row,
+  };
+}
 
 /** All defence_packages rows for the dispute, newest version first. The route
  *  must only ever consult the first one. */
@@ -102,7 +136,7 @@ function makeSupabase(
     eq: vi.fn().mockResolvedValue({ data: null, error: null }),
   });
   /** Which rows the route actually asked for — proves no older-version scan. */
-  const defenceQueries: Array<{ limit?: number }> = [];
+  const defenceQueries: Array<{ offered: number }> = [];
 
   const mockFrom = vi.fn((table: string) => {
     if (table === "disputes") {
@@ -131,33 +165,37 @@ function makeSupabase(
             completeness_score: 90,
             blockers: [],
             submission_readiness: "ready",
-            pack_json: {
-              case_strength: { overall: "strong" },
-              coverage: { state: "not_covered" },
-              fatal_loss: { triggered: false },
-            },
+            pack_json: PACK_JSON,
+            checklist_v2: [],
           },
           error: null,
         }),
       };
     }
     if (table === "defence_packages") {
+      /* Every version is handed over, newest first, and the SELECTOR picks.
+       * That is the point of the PR-C1 case: it must judge the highest version
+       * and refuse, never walk back to an older safe one. `defenceQueries`
+       * records the rows offered so "it never scanned older versions" is an
+       * assertion about behaviour rather than about a `limit` argument. */
+      const rows = defenceVersions.map(withIdentity);
       const q: Record<string, unknown> = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         neq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        limit: vi.fn((n: number) => {
-          defenceQueries.push({ limit: n });
-          return q;
-        }),
-        maybeSingle: vi.fn().mockResolvedValue({
-          data: defenceVersions[0] ?? null,
-          error: null,
+        order: vi.fn(() => {
+          defenceQueries.push({ offered: rows.length });
+          return Promise.resolve({ data: rows, error: null });
         }),
         update: defenceUpdate,
       };
       return q;
+    }
+    if (table === "evidence_items") {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
     }
     if (table === "jobs") return { insert: jobsInsert };
     throw new Error(`unexpected table: ${table}`);
@@ -236,18 +274,44 @@ describe("deadline submit — PR-C1 unsafe candidate", () => {
     expect((await res.json()).enqueuedSubmit).toBe(0);
   });
 
-  it("never scans older versions looking for a fileable one", async () => {
-    const { defenceQueries, jobsInsert } = makeSupabase([
+  it("never walks back to an older SAFE version when the newest is unsafe", async () => {
+    /* The strongest form of the PR-C1 property, and only now testable.
+     *
+     * The old shape asserted `limit: 1` — the route could not walk back
+     * because it never looked. The real selector is HANDED every version, so
+     * the refusal has to come from the rule rather than from the query, and
+     * this fixture makes the temptation concrete: the newest version is
+     * unsafe and there are two perfectly safe, final, current older ones
+     * sitting right there. On this fleet that is the actual shape — the older
+     * versions are the ones that pass, because they predate the containment.
+     *
+     * Nothing is filed. A "find the newest safe version" fallback would be a
+     * fallback INTO the defect. */
+    const { defenceQueries, jobsInsert, rpc } = makeSupabase([
       {
         id: "pkg-3", version: 3, status: "final", validation_status: "ok",
         pdf_path: "p.pdf", failure_code: null, content_revision: "11111111-1111-4111-8111-111111111111",
         facts_json: [], narrative_json: UNSAFE_NARRATIVE,
       },
+      {
+        id: "pkg-2", version: 2, status: "final", validation_status: "ok",
+        pdf_path: "p.pdf", failure_code: null, content_revision: "22222222-2222-4222-8222-222222222222",
+        facts_json: CLEAN_FACTS, narrative_json: CLEAN_NARRATIVE,
+      },
+      {
+        id: "pkg-1", version: 1, status: "final", validation_status: "ok",
+        pdf_path: "p.pdf", failure_code: null, content_revision: "33333333-3333-4333-8333-333333333333",
+        facts_json: CLEAN_FACTS, narrative_json: CLEAN_NARRATIVE,
+      },
     ]);
-    await GET(req());
-    // Exactly one candidate lookup, limited to one row: the latest.
-    expect(defenceQueries).toEqual([{ limit: 1 }]);
+    const body = await (await GET(req())).json();
+    // One query, three candidates offered, top one judged, nothing filed.
+    expect(defenceQueries).toEqual([{ offered: 3 }]);
     expect(jobsInsert).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+    expect(body.enqueuedSubmit).toBe(0);
+    expect(body.enqueuedAutoFinalize).toBe(0);
+    expect(body.enqueuedFallback).toBe(1);
   });
 
   const safeFinal = () => [

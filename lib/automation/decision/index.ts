@@ -58,9 +58,3 @@ export {
   type DecisionPackRow,
 } from "./loadCaseAutomationDecision";
 
-export {
-  createLatestCandidateSelector,
-  type CandidateDetail,
-  type LatestCandidateRow,
-  type LatestCandidateSelector,
-} from "./latestCandidateSelector";

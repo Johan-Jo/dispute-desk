@@ -43,7 +43,9 @@ import {
 import {
   CLEAN_FACTS,
   CLEAN_NARRATIVE,
+  healthyPackJson,
 } from "@/tests/fixtures/defencePackageShapes";
+import { derivePlanIdentityForPack } from "@/lib/defence/package";
 
 const mockGetServiceClient = vi.mocked(getServiceClient);
 const mockAudit = vi.mocked(logAuditEvent);
@@ -52,23 +54,48 @@ const mockEmail = vi.mocked(sendDefenceDeadlineFallbackAlert);
 const SHOP_ID = "shop-1";
 const DISPUTE_ID = "dispute-1";
 
-const SAFE_FINAL = {
-  id: "pkg-4",
-  version: 4,
-  status: "final",
-  validation_status: "ok",
-  pdf_path: "p.pdf",
-  failure_code: null,
-  content_revision: "11111111-1111-4111-8111-111111111111",
-  facts_json: CLEAN_FACTS,
-  narrative_json: CLEAN_NARRATIVE,
-};
+/**
+ * The canonical identity a package must carry to read CURRENT.
+ *
+ * Computed from the same inputs the route derives from, through the same
+ * exported helper, rather than hard-coded. A literal hash here would silently
+ * become a staleness test the day the derivation changes — it would still
+ * pass, and it would stop testing what it claims to.
+ */
+function currentIdentity(packJson: Record<string, unknown>) {
+  return derivePlanIdentityForPack({
+    caseId: DISPUTE_ID,
+    packId: "pack-1",
+    packJson,
+    evidenceItems: [],
+    checklist: [],
+    disputeReason: "fraudulent",
+    networkReasonCode: null,
+  });
+}
 
-const HEALTHY_PACK_JSON = {
-  case_strength: { overall: "strong" },
-  coverage: { state: "not_covered" },
-  fatal_loss: { triggered: false },
-};
+function safeFinal(packJson: Record<string, unknown>) {
+  const identity = currentIdentity(packJson);
+  return {
+    id: "pkg-4",
+    version: 4,
+    status: "final",
+    validation_status: "ok",
+    pdf_path: "p.pdf",
+    failure_code: null,
+    content_revision: "11111111-1111-4111-8111-111111111111",
+    facts_json: CLEAN_FACTS,
+    narrative_json: CLEAN_NARRATIVE,
+    superseded_by_id: null,
+    plan_input_hash: identity.planInputHash,
+    plan_policy_version: identity.policyVersion,
+    plan_deadline_only: identity.plan.deadlineOnly,
+    document_validation_passed: true,
+    document_failure_codes: [],
+  };
+}
+
+const HEALTHY_PACK_JSON = healthyPackJson();
 
 function setup(opts: {
   packJson?: Record<string, unknown>;
@@ -87,6 +114,7 @@ function setup(opts: {
     shop_id: SHOP_ID,
     dispute_gid: "gid://shopify/ShopifyPaymentsDispute/1",
     reason: "fraudulent",
+    network_reason_code: null,
     amount: 100,
     currency_code: "USD",
     due_at: opts.dueAt ?? new Date().toISOString(),
@@ -119,20 +147,29 @@ function setup(opts: {
             blockers: [],
             submission_readiness: opts.readiness ?? "ready",
             pack_json: opts.packJson ?? HEALTHY_PACK_JSON,
+            checklist_v2: [],
           },
           error: null,
         }),
       };
     }
     if (table === "defence_packages") {
+      // The real selector reads EVERY version and picks the highest itself —
+      // `limit 1` cannot tell one candidate at the top version from two, and
+      // the second case is `ambiguous`. So the query resolves to a LIST.
+      const rows = [safeFinal(opts.packJson ?? HEALTHY_PACK_JSON)];
       const q: Record<string, unknown> = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({ data: SAFE_FINAL, error: null }),
+        order: vi.fn().mockResolvedValue({ data: rows, error: null }),
       };
       return q;
+    }
+    if (table === "evidence_items") {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
     }
     if (table === "jobs") return { insert: jobsInsert };
     throw new Error(`unexpected table: ${table}`);

@@ -41,3 +41,25 @@ export {
   isDeadlineOnly,
   selectFileablePackage,
 } from "./selectFileablePackage";
+
+export type {
+  CanonicalSelector,
+  DeadlineFallbackReason,
+  FileableSelectionContext,
+  JudgedCandidate,
+} from "./loadFileableSelection";
+export {
+  createCanonicalSelector,
+  fallbackReasonForSelection,
+  loadFileableSelection,
+  toSelectableCandidate,
+} from "./loadFileableSelection";
+
+export type {
+  BuildSelectionContextArgs,
+  SelectionContextPackRow,
+} from "./caseSelectionContext";
+export {
+  buildFileableSelectionContext,
+  derivePlanIdentityForPack,
+} from "./caseSelectionContext";

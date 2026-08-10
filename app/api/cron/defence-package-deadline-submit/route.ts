@@ -40,12 +40,13 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { isDefencePackageBuilderEnabled } from "@/lib/featureFlags";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { sendDefenceDeadlineFallbackAlert } from "@/lib/email/sendDefenceDeadlineFallbackAlert";
+import { decideForPack, selectForDeadline } from "@/lib/automation/decision";
 import {
-  createLatestCandidateSelector,
-  decideForPack,
-  selectForDeadline,
-  type CandidateDetail,
-} from "@/lib/automation/decision";
+  buildFileableSelectionContext,
+  createCanonicalSelector,
+  fallbackReasonForSelection,
+  type FileableSelectionContext,
+} from "@/lib/defence/package";
 import { getShopSettings } from "@/lib/automation/settings";
 import {
   parseEnqueueRpcResult,
@@ -147,7 +148,7 @@ export async function GET(req: NextRequest) {
   const { data: disputes, error } = await sb
     .from("disputes")
     .select(
-      "id, shop_id, dispute_gid, reason, amount, currency_code, due_at, status, normalized_status, review_state",
+      "id, shop_id, dispute_gid, reason, network_reason_code, amount, currency_code, due_at, status, normalized_status, review_state",
     )
     .gte("due_at", startOfToday.toISOString())
     .lt("due_at", endOfToday.toISOString())
@@ -168,10 +169,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(summary);
   }
 
-  // The ONE way this route obtains a package. No fileable-row query lives in
-  // this file; CP-B's selector replaces this implementation behind the same
-  // port without touching the executor.
-  const selector = createLatestCandidateSelector(sb);
+  /* The ONE way this route obtains a package: CP-B's real
+   * `selectFileablePackage`, over every candidate version for the case.
+   *
+   * No fileable-row query lives in this file, and the placeholder that used to
+   * stand here — `order by version desc limit 1` plus the lifecycle and content
+   * checks — is deleted rather than kept as a fallback. It could never answer
+   * "is this package CURRENT", because nothing it read recorded what the
+   * package was built from.
+   *
+   * The per-case context is filled in below, after the decision exists: the
+   * selector judges a candidate against the decision the executor is actually
+   * acting on, never against one it re-derived for itself. */
+  const contexts = new Map<string, FileableSelectionContext>();
+  const selector = createCanonicalSelector({
+    sb,
+    contextFor: (caseId: string) => contexts.get(caseId) ?? null,
+  });
   const settingsByShop = new Map<string, Awaited<ReturnType<typeof getShopSettings>>>();
 
   for (const d of disputes) {
@@ -234,6 +248,29 @@ export async function GET(req: NextRequest) {
         evidenceDueAt: (d.due_at as string | null) ?? null,
       });
 
+      /* What "current" means for this case, right now. Derived through the
+       * SAME `derivePlanForCase` the build job wrote the package with — two
+       * bridges would produce two hashes and every package would read stale
+       * against itself. */
+      const context = await buildFileableSelectionContext({
+        sb,
+        caseId: d.id as string,
+        pack: {
+          id: pack.id as string,
+          dispute_id: d.id as string,
+          completeness_score: (pack.completeness_score as number | null) ?? null,
+          blockers: pack.blockers,
+          submission_readiness: pack.submission_readiness,
+          pack_json: pack.pack_json,
+          checklist_v2: (pack as { checklist_v2?: unknown }).checklist_v2 ?? null,
+        },
+        decision,
+        disputeReason: (d.reason as string | null) ?? null,
+        networkReasonCode: (d.network_reason_code as string | null) ?? null,
+        reasonCodeModuleKey: null,
+      });
+      if (context) contexts.set(d.id as string, context);
+
       const outcome = await selectForDeadline({
         decision,
         // The decision was derived from the rows that are current right now, so
@@ -248,15 +285,24 @@ export async function GET(req: NextRequest) {
         now,
       });
 
-      const dpkg = selector.rowFor(d.id as string);
+      const dpkg = selector.judgedFor(d.id as string);
 
       if (outcome.selection.outcome !== "selected") {
         /* Nothing may be filed. The merchant is told; nothing weaker is
          * substituted, and no older version is tried. */
         summary.enqueuedFallback += 1;
-        const detail = selector.detailFor(d.id as string);
-        const unsafe = selector.unsafeReasonsFor(d.id as string);
-        const decisionRefused = outcome.selection.outcome === "none" && dpkg != null && detail === null;
+        /* The refusal reason comes from the SELECTION's own typed vocabulary
+         * now, not from a selector-private detail enum that ran in parallel
+         * with it. One refusal vocabulary, and the merchant copy stops
+         * depending on a type PR 3 deletes. */
+        const unsafeContent = selector.unsafeContentFor(d.id as string);
+        const fallbackReason = unsafeContent
+          ? ("unsafe_address_claim" as const)
+          : fallbackReasonForSelection(outcome.selection);
+        const decisionRefused =
+          outcome.selection.outcome === "none" &&
+          dpkg != null &&
+          outcome.selection.reason === "hard_block";
         if (decisionRefused || decision.action === "block") summary.blockedByDecision += 1;
 
         await logAuditEvent({
@@ -264,13 +310,12 @@ export async function GET(req: NextRequest) {
           disputeId: d.id,
           packId: pack.id,
           actorType: "system",
-          eventType:
-            detail === "unsafe_address_claim"
-              ? "defence_package_blocked_unsafe_claim"
-              : "defence_package_failed",
+          eventType: unsafeContent
+            ? "defence_package_blocked_unsafe_claim"
+            : "defence_package_failed",
           eventPayload: {
             trigger: "deadline_cron_no_fallback",
-            fallbackReason: fallbackReasonFor(detail),
+            fallbackReason,
             dueAt: d.due_at,
             // P-6, named. An executor that can only say "not allowed" produces
             // exactly the un-diagnosable behaviour this replaces.
@@ -281,12 +326,10 @@ export async function GET(req: NextRequest) {
             decisionInputHash: decision.freshness.inputHash,
             selectionReason:
               outcome.selection.outcome === "none" ? outcome.selection.reason : "ambiguous",
-            ...(detail === "unsafe_address_claim"
+            ...(unsafeContent
               ? {
-                  packageId: dpkg?.id ?? null,
+                  packageId: dpkg?.packageId ?? null,
                   version: dpkg?.version ?? null,
-                  reasons: unsafe?.reasons ?? [],
-                  retiredKeys: unsafe?.retiredKeys ?? [],
                 }
               : {}),
           },
@@ -300,7 +343,7 @@ export async function GET(req: NextRequest) {
           amount: d.amount as number | null,
           currencyCode: d.currency_code as string | null,
           dueAt: d.due_at as string | null,
-          fallbackReason: fallbackReasonFor(detail),
+          fallbackReason,
         });
         if (emailResult.ok) summary.emailed += 1;
         continue;
@@ -315,7 +358,7 @@ export async function GET(req: NextRequest) {
         // that is the worst place to over-report: the dispute gets no further
         // retry before its deadline. It also skipped the currency, revision
         // and fileability checks the enqueue transaction performs.
-        const finalRevision = dpkg!.content_revision as string | null;
+        const finalRevision = dpkg!.contentRevision;
         if (!finalRevision) {
           summary.finalizeRefused += 1;
           continue;
@@ -323,7 +366,7 @@ export async function GET(req: NextRequest) {
 
         const { data: enqData, error: enqErr } = await sb.rpc(
           "enqueue_defence_package_save",
-          { p_package_id: dpkg!.id, p_expected_revision: finalRevision },
+          { p_package_id: dpkg!.packageId, p_expected_revision: finalRevision },
         );
         if (enqErr) {
           console.error("[deadline cron] enqueue_defence_package_save failed", enqErr);
@@ -349,11 +392,13 @@ export async function GET(req: NextRequest) {
       }
 
       // Draft or stale with validation=ok and a PDF: auto-finalize, then submit.
-      if (
-        (dpkg!.status === "draft" || dpkg!.status === "stale") &&
-        dpkg!.validation_status === "ok" &&
-        dpkg!.pdf_path
-      ) {
+      /* A `selected` outcome already proves validation and an artifact — the
+       * selector refuses `validationPassed !== true`, a non-`ok`
+       * `validation_status` and a missing artifact before it can return one. So
+       * the lifecycle branch asks only what it is about to DO: promote, or
+       * enqueue an already-final row. Re-checking the same two columns here
+       * would be a second gate with its own opinion. */
+      if (dpkg!.status === "draft" || dpkg!.status === "stale") {
         // Promotion goes through the transactional RPC, exactly like every
         // other promotion writer. This route used to do it in three unguarded
         // PostgREST calls — select the prior final, flip this row to `final`,
@@ -362,14 +407,14 @@ export async function GET(req: NextRequest) {
         // predecessor could be trampled. `p_allowed_statuses` keeps the
         // pre-existing behaviour of auto-finalizing a `stale` candidate as
         // well as a `draft`; nothing else about the deadline policy changes.
-        const revision = dpkg!.content_revision as string | null;
+        const revision = dpkg!.contentRevision;
         if (!revision) {
           summary.finalizeRefused += 1;
           continue;
         }
 
         const { data: rpcData, error: rpcErr } = await sb.rpc("finalize_defence_package", {
-          p_package_id: dpkg!.id,
+          p_package_id: dpkg!.packageId,
           p_expected_revision: revision,
           p_expected_version: dpkg!.version,
           p_enqueue_save: true,
@@ -383,7 +428,7 @@ export async function GET(req: NextRequest) {
 
         const finalizeResult = parseFinalizeRpcResult(rpcData, {
           expectEnqueue: true,
-          expectedPackageId: dpkg!.id as string,
+          expectedPackageId: dpkg!.packageId,
         });
         if (finalizeResult.kind === "malformed" || finalizeResult.kind === "conflict") {
           // Nothing was written. Do not claim a submission the database
@@ -407,7 +452,7 @@ export async function GET(req: NextRequest) {
               eventPayload: {
                 supersededId: finalizeResult.supersededId,
                 supersededVersion: finalizeResult.supersededVersion,
-                replacedById: dpkg!.id,
+                replacedById: dpkg!.packageId,
                 replacedByVersion: dpkg!.version,
               },
             });
@@ -419,7 +464,7 @@ export async function GET(req: NextRequest) {
             actorType: "system",
             eventType: "defence_package_finalized",
             eventPayload: {
-              packageId: dpkg!.id,
+              packageId: dpkg!.packageId,
               version: dpkg!.version,
               trigger: "deadline_cron_auto_finalize",
               dueAt: d.due_at,
@@ -470,23 +515,3 @@ export async function GET(req: NextRequest) {
  * the `failure_code === "covered_shopify"` distinction that stops a
  * Shopify-Protect dispute being told its evidence was too thin.
  */
-function fallbackReasonFor(
-  detail: CandidateDetail | null,
-): "validation_failed" | "skipped_no_facts" | "skipped_covered" | "missing" | "unsafe_address_claim" {
-  switch (detail) {
-    case "missing":
-    case "query_error":
-      return "missing";
-    case "unsafe_address_claim":
-      return "unsafe_address_claim";
-    case "skipped_covered":
-      return "skipped_covered";
-    case "skipped_no_facts":
-      return "skipped_no_facts";
-    // `not_finalizable`, `no_content_revision`, an explicit `failed` row, and a
-    // refusal that came from the DECISION rather than the candidate all land on
-    // the same merchant instruction: this could not be filed, regenerate it.
-    default:
-      return "validation_failed";
-  }
-}
