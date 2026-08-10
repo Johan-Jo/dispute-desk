@@ -63,3 +63,11 @@ export {
   buildFileableSelectionContext,
   derivePlanIdentityForPack,
 } from "./caseSelectionContext";
+
+export type { ExecutorSelection, ExecutorSelectionArgs } from "./executorSelection";
+export {
+  selectForNormalExecutor,
+  selectForSaveWorker,
+  selectionIsMerchantActionable,
+  selectionIsPending,
+} from "./executorSelection";

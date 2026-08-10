@@ -41,17 +41,26 @@ import {
  * refusal in the fixture sweep is attributable to the fixture's own snapshots
  * and not to the package row.
  */
+/** The plan hash `inputFor` presents as current, so a healthy candidate matches. */
+let CURRENT_PLAN_HASH = "strong-plan";
+
 function healthyCandidate(over: Partial<SelectableCandidate> = {}): SelectableCandidate {
   return {
     packageId: "pkg-1",
     packageVersion: 3,
     artifactId: "defence/pkg-1.pdf",
     status: "final",
-    // Contract revision 1 fields. `planInputHash` / `policyVersion` are the
-    // candidate's own record of what it was built against; the selector's
-    // staleness verdict still comes from the three SNAPSHOTS, so these are
-    // carried, not yet compared.
-    planInputHash: "strong-plan",
+    /* The candidate's own record of what it was built against, and it IS
+     * compared now (rung 7b).
+     *
+     * It used to be carried and not compared — the comment here said so — and
+     * that made the whole canonical identity decorative: a package whose
+     * evidence had moved underneath it was still final, validated, safe and
+     * unambiguous, so it was filed. The gap was found by an end-to-end trace
+     * that mutated the stored hash and watched the deadline cron file the
+     * package anyway. `healthyCandidate` therefore defaults to the CURRENT
+     * hash; a fixture that wants a stale candidate passes its own. */
+    planInputHash: CURRENT_PLAN_HASH,
     policyVersion: 1,
     validationPassed: true,
     validationStatus: "ok",
@@ -66,6 +75,8 @@ function healthyCandidate(over: Partial<SelectableCandidate> = {}): SelectableCa
 /** Current hashes matched to the fixture's own, so only the STALE fixture is stale. */
 function inputFor(fixture: ContractFixture, trigger: SelectionTrigger): SelectFileablePackageInput {
   const caseId = fixture.plan.caseId;
+  // Set before the candidate is built so a healthy row reads as current.
+  CURRENT_PLAN_HASH = `${caseId}-plan`;
   return {
     caseId,
     trigger,

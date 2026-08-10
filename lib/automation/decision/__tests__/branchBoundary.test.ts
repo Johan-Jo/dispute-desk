@@ -11,7 +11,7 @@
  * has a production reader, and no cron route bypasses `cronEnvGate`.
  */
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -26,6 +26,13 @@ function walk(dir: string, out: string[] = []): string[] {
     else if (/\.(ts|tsx)$/.test(full)) out.push(full);
   }
   return out;
+}
+
+/** Comments are prose about a rule, not the rule. */
+function stripComments(src: string): string {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/(^|[^:])\/\/.*/gm, "$1 ");
 }
 
 function importsOf(source: string): string[] {
@@ -321,5 +328,85 @@ describe("CI invariant — the deadline submitter gates before it decides", () =
     );
     expect(handler).not.toBeNull();
     expect(handler![1].trim().startsWith("const gate = cronEnvGate(req);")).toBe(true);
+  });
+});
+
+
+describe("CI invariant — no canonical executor reaches a package directly", () => {
+  /**
+   * Plan §11: "Executors: zero direct fileable-row queries."
+   *
+   * The four executors that OBTAIN a package — the pack pipeline, the save
+   * worker, the deadline cron, and the reconcile pass through the promotion
+   * helper — must do it through `selectFileablePackage`. Two things are
+   * asserted, and the second is the one that actually bites:
+   *
+   *   1. `preflightLatestCandidate` has no reader outside a gated legacy path.
+   *   2. Where a raw `order("version").limit(1)` on `defence_packages` still
+   *      exists in a live module, it is unreachable when the switch is on.
+   *
+   * NOT asserted: `preflightNamedCandidate`. It answers a different question —
+   * "may THIS named draft be promoted" — and the selector cannot answer it,
+   * because the selector only ever returns `final` rows. Conflating the two
+   * would either break promotion or force the selector to grow a second mode.
+   */
+  const EXECUTORS = [
+    "lib/automation/pipeline.ts",
+    "lib/jobs/handlers/saveToShopifyJob.ts",
+    "app/api/cron/defence-package-deadline-submit/route.ts",
+  ];
+
+  for (const rel of EXECUTORS) {
+    it(`${rel} guards every direct package read behind the switch`, () => {
+      const src = readFileSync(join(ROOT, ...rel.split("/")), "utf8");
+      const stripped = stripComments(src);
+
+      const rawSelect =
+        /from\(["']defence_packages["']\)[\s\S]{0,400}order\([\s\S]{0,80}limit\(1\)/.test(
+          stripped,
+        );
+      const usesPreflightLatest = /preflightLatestCandidate\s*\(/.test(stripped);
+
+      if (!rawSelect && !usesPreflightLatest) return; // nothing to guard
+
+      // Anything that still reads a package directly must sit behind the
+      // switch, and the file must reach the real selector on the other side.
+      expect(
+        stripped.includes("canonicalPipelineEnabled()"),
+        `${rel} reads a package directly with no activation guard`,
+      ).toBe(true);
+      expect(
+        /selectForNormalExecutor|selectForSaveWorker|createCanonicalSelector|selectForDeadline/.test(
+          stripped,
+        ),
+        `${rel} has no canonical selection path`,
+      ).toBe(true);
+    });
+  }
+
+  it("the placeholder selector is gone, not merely unused", () => {
+    // It could answer "is this the newest row" and never "is this row
+    // CURRENT", so keeping it as a fallback would keep a second selector with
+    // a weaker question alive behind the switch.
+    expect(
+      existsSync(join(ROOT, "lib", "automation", "decision", "latestCandidateSelector.ts")),
+    ).toBe(false);
+  });
+
+  it("the selector compares the CANDIDATE's own plan hash, not just the snapshots", () => {
+    /* The rung that makes the persisted identity load-bearing.
+     *
+     * Checking only the three snapshots compares this moment against itself:
+     * a caller that derives assessment, plan and decision live will always
+     * find them consistent. Until rung 7b existed, a package built from a plan
+     * that had since changed was still final, validated, safe and unambiguous
+     * — and was filed. Found by an end-to-end trace, not by a unit test, which
+     * is why the guard lives at the source as well as in that trace. */
+    const src = readFileSync(
+      join(ROOT, "lib", "defence", "package", "selectFileablePackage.ts"),
+      "utf8",
+    );
+    expect(src).toContain("candidate.planInputHash");
+    expect(src).toMatch(/evaluateFreshness\(\{[\s\S]{0,400}candidate\.planInputHash/);
   });
 });

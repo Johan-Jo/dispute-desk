@@ -215,6 +215,43 @@ export function selectFileablePackage(
     return none(trigger, "superseded");
   }
 
+  /* 7b. THE CANDIDATE'S OWN FRESHNESS — the rung the identity exists for.
+   *
+   * Rung 3 checks the three SNAPSHOTS against the current input hashes, and a
+   * caller that derives all three live will always find them consistent: it is
+   * comparing this moment against itself. What it does not answer is the
+   * question the whole canonical identity was added to answer — was THIS
+   * PACKAGE built from the plan that is current now?
+   *
+   * Without this rung the identity is decorative: a package whose evidence
+   * moved underneath it is still final, still validated, still safe, still
+   * unambiguous — and would be filed. That is precisely the stale-but-
+   * plausible package the pipeline exists to stop, and it was reachable
+   * through the shipped ladder until an end-to-end trace mutated the stored
+   * hash and watched the cron file it anyway.
+   *
+   * `evaluateFreshness` is the ONE predicate, so a null hash is
+   * `snapshot_absent` — the post-R4 legacy shape, non-fileable and not
+   * grandfathered — and a mismatch is `input_hash_mismatch`, which routes the
+   * merchant to a rebuild rather than a recalculation.
+   */
+  const candidateFreshness = evaluateFreshness({
+    snapshot:
+      candidate.planInputHash === null
+        ? null
+        : {
+            inputHash: candidate.planInputHash,
+            policyVersion: candidate.policyVersion ?? -1,
+            // Audit-only on the contract, and never read by the predicate.
+            computedAt: "",
+          },
+    currentInputHash: input.current.planInputHash,
+    currentPolicyVersion: input.current.policyVersion,
+  });
+  if (!candidateFreshness.fresh) {
+    return none(trigger, "stale", candidateFreshness.reason);
+  }
+
   // 8. CONTENT — the C-11 predicate, on the same two persisted columns it reads
   //    in production today. This is the subsumption: same input, same verdict.
   const safety = assessPackageCandidateSafety({

@@ -6523,15 +6523,117 @@ read-only prod comparisons under a separate vitest config, so a prod-reading
 job can never become a CI dependency. All are strictly non-mutating: no pack
 write, no disposition stamp, no job enqueue, no `submission_state` touch.
 
-## Canonical argument plan and the fileable-package selector (CP-B — DARK)
+## Canonical argument plan and the fileable-package selector (CP-B — WIRED, DARK)
 
-**Status: dark.** Everything in this section is built, tested and importable, and
-**no production switch is flipped by it**. The call sites in the CP-0 ownership
-map (the pipeline, the auto-save gate, the save job, the deadline cron, the four
-package routes and the workspace route) still run the pre-existing logic; Agent C
-wires them in a later epic. The only files whose runtime behaviour changed are
-the three that now delegate the bank-inclusion predicate to its new owner —
-**with the same rule and the same result at each one**.
+**Status: wired and dark, which are two different claims.**
+
+*Wired* — the canonical route is load-bearing. `buildDefencePackageJob` derives
+the plan, projects the document from it, validates it deterministically and
+persists the plan identity on the row; the deadline cron, the pack pipeline and
+the save worker obtain a package through `selectFileablePackage`; the workspace
+route renders the plan the package was built from. There is no fallback inside
+that route: if the plan is absent, stale or unsafe, nothing is filed.
+
+*Dark* — none of it runs unless `CANONICAL_PIPELINE=on`
+(`lib/pipeline/activation.ts`), which is unset everywhere. With it unset,
+production runs the ladders that shipped at the kickoff baseline `58e15806`,
+**as the same code**, moved verbatim into `*.legacy.ts` modules.
+
+### Why the legacy paths are moved code and not a re-expression
+
+None of the four rewrites is behaviour-preserving, and that is the point:
+
+| Entry point | Canonical behaviour differs how |
+|---|---|
+| `evaluateAndMaybeAutoSave` | weak/insufficient HOLD for the deadline instead of blocking (revision 2); completeness read through one reader instead of three inline coercions |
+| `reconcileParkedAutoDisputes` | counts `scanned` after the decision, not after a strong-only pre-filter |
+| `resolveHeldState` | reaches `weak_strength` through `hold_for_deadline`, not `block` |
+| deadline cron | consults strength, completeness, coverage and P-6 — the shipped route consults none of them (R3) |
+
+"Behaviour-preserving because the mapping is faithful" is an argument; "the same
+code runs" is a fact, and only the second survives a reviewer who does not trust
+the mapping. PR 3 deletes the legacy modules and the switch's `false` branch
+together.
+
+### The activation-off proof is behavioural, not a source scan
+
+`branchBoundary.test.ts` proves each legacy module is reached only behind
+`canonicalPipelineEnabled()` — a statement about the SHAPE of the dispatch, which
+would keep passing if the legacy module had drifted or a side effect were added
+outside the branch. So `tests/integration/activationParity.test.ts` RUNS all four
+entry points on both settings and compares observable outcomes against the
+kickoff baseline. Two results worth recording, because both are counter-intuitive:
+
+- **The pack pipeline's answer for a weak case does not change.** It still
+  returns `block`, and it should — `block` there means "auto-save did not happen
+  at build time". What revision 2 moved is the DECISION underneath
+  (`hold_for_deadline` + `strength_insufficient`), observable at the cron.
+- **At the cron, a weak case is filed on BOTH settings.** The discriminator is a
+  COVERED case: the shipped route files it (R3), the canonical route refuses and
+  emails the merchant.
+
+### The rung that made the identity load-bearing
+
+`selectFileablePackage` originally compared only the three snapshots against the
+current input hashes — which, for a caller that derives all three live, compares
+this moment against itself. The candidate's own `plan_input_hash` was carried and
+never read. That made the whole canonical identity decorative: a package built
+from a plan that had since changed was still final, validated, safe and
+unambiguous, and was filed.
+
+Rung 7b compares it, through the one `evaluateFreshness` predicate. A NULL hash
+is `snapshot_absent` — the post-R4 legacy shape, non-fileable and deliberately
+not grandfathered — and a mismatch is `input_hash_mismatch`, which routes the
+merchant to a rebuild rather than a recalculation. Found by an end-to-end trace
+(`tests/integration/canonicalRouteEndToEnd.test.ts`) that mutated the stored hash
+and watched the cron file the package anyway; no unit test had the standing to
+see it.
+
+### `derivePlanForCase` is an adapter, and that is enforced
+
+The module between `pack_json.sections` and `CaseArgumentPlan` is exactly where a
+second evidence-classification layer would grow, and it would arrive as one
+reasonable-looking line. Every classification it produces is CARRIED from a
+canonical owner — existence, validity and citation from `deriveCaseEvidenceModel`;
+fact category from `definitionFor`; bank eligibility from `classifyFacts`; claim
+admission from `alwaysAdmissibleCategories`; argument relevance from the reason
+module — and it decides none of them itself.
+
+`lib/argument/plan/__tests__/planForCaseIsAnAdapter.test.ts` proves it two ways:
+a dependency/contract scan (no comparison against any canonical vocabulary value,
+no classification flag, no threshold, and an import list restricted to the named
+owners), plus a behavioural half asserting the carried values are byte-identical
+to the owner's. The scan is falsification-guarded against a deliberately
+classifying module.
+
+### F1–F6, and where each is resolved
+
+| # | Finding | Resolution |
+|---|---|---|
+| F1 | thesis may use only plan-approved, bank-included support | generation, composition and the renderer all receive `plan.included` intersected with `bankIncludedFacts` |
+| F2 | chronology uses the same support and passes deterministic validation | narrative REBUILT against the plan before composition; `validatePackageDocument` refuses orphaned/unsupported/unauthorized claims |
+| F3 | supporting evidence respects bank eligibility; merchant-only text and the internal "Inclusion" column never reach the issuer | Supporting Evidence Index selects on `isBankIncludedManualEvidence`, not `includeInPackage`; the Inclusion column is not rendered |
+| F4 | `reviewRequiredCount` derives from actual plan exclusions | `projectReviewItems(plan).length`, the same projection the merchant sees — it was a hardcoded 0, which made `deadline_only` unreachable by construction |
+| F5 | fatal loss prevents a fileable argument/package before document generation | refused before the LLM call; no draft is left for the deadline path to pick up |
+| F6 | fulfilment claims require canonical claim authority | `hasFulfillmentClaimAuthority` — a plan-included order fact or a held `delivery_occurred` capability; no fallback from the raw `fulfillmentStatus` scalar |
+
+### Canonical identity columns
+
+`defence_packages` gains `plan_json`, `plan_input_hash`, `plan_policy_version`,
+`plan_deadline_only`, `plan_no_safe_argument`, `document_validation_passed`,
+`document_failure_codes`. All nullable, no defaults, no backfill: a legacy
+package carries NULL and is non-fileable. A DEFAULT here would be a grandfathering
+escape hatch wearing a schema hat. The columns are explicitly NULLED on the
+legacy route rather than left alone, so a rebuild with the switch off clears a
+previous build's identity instead of inheriting it.
+
+### What `preflightNamedCandidate` still does, and why
+
+`preflightLatestCandidate` and raw latest-row queries are gone from every
+canonical executor. `preflightNamedCandidate` stays in `finalizeAndEnqueueSave`,
+deliberately: it answers "may THIS named draft be promoted", and the selector
+cannot answer it, because the selector only ever returns `final` rows. Conflating
+the two would either break promotion or force the selector to grow a second mode.
 
 ### `CaseArgumentPlan` — the one owner of issuer-facing claim authority
 

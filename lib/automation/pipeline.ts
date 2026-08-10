@@ -20,6 +20,11 @@ import { markPackageReviewRequired } from "./packageReviewRequired";
 import { getShopSettings } from "./settings";
 import { decideForPack } from "./decision";
 import { canonicalPipelineEnabled } from "@/lib/pipeline/activation";
+import {
+  selectForNormalExecutor,
+  selectionIsMerchantActionable,
+  selectionIsPending,
+} from "@/lib/defence/package";
 import { evaluateAndMaybeAutoSaveLegacy } from "./pipeline.legacy";
 import { readPersistedCompletenessForGate } from "@/lib/evidence/model/completenessSnapshot";
 import { checkPackQuota } from "@/lib/billing/checkQuota";
@@ -546,6 +551,10 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   let ruleMode: AutomationMode = "review";
   let matchedRuleName: string | null = null;
   let evidenceDueAt: string | null = null;
+  // Plan-derivation inputs for the canonical selector. Read off the same
+  // dispute row the decision already loads, never re-queried.
+  let disputeReason: string | null = null;
+  let networkReasonCode: string | null = null;
   let disputeForAlert: {
     reason: string | null;
     amount: number | null;
@@ -556,11 +565,13 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       // `due_at` is an INPUT to the canonical decision — the ABSOLUTE evidence
       // deadline, never a relative window. Executors derive window state from
       // it at execution time; the decision only carries the instant.
-      .select("reason, status, amount, phase, due_at")
+      .select("reason, network_reason_code, status, amount, phase, due_at")
       .eq("id", pack.dispute_id)
       .single();
     if (dispute) {
       evidenceDueAt = (dispute.due_at as string | null) ?? null;
+      disputeReason = (dispute.reason as string | null) ?? null;
+      networkReasonCode = (dispute.network_reason_code as string | null) ?? null;
       const phaseLower = (dispute.phase ?? "").toLowerCase();
       const phaseForRules =
         phaseLower === "inquiry" || phaseLower === "chargeback"
@@ -974,8 +985,96 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
      * deliberately left alone for the SAFE path — see the PR description's
      * dependency note. This only prevents a blocked attempt from claiming
      * success. */
-    const preflight = await preflightLatestCandidate(sb, pack.dispute_id as string);
-    if (preflightBlocks(preflight)) {
+    /* CANONICAL ROUTE. `preflightLatestCandidate` is a raw latest-row query
+     * with its own opinion of fileability, and it cannot see whether the
+     * package is CURRENT — the whole reason the selector exists. With the
+     * switch on, this branch asks `selectFileablePackage` through the shared
+     * executor helper instead, so the pipeline, the promotion helper, the save
+     * worker and the deadline cron all judge a candidate the same way.
+     *
+     * The DISPOSITIONS below are unchanged and deliberately still this
+     * function's own: a merchant-actionable refusal parks, an absent package
+     * or a transient failure defers. Those differ per executor and collapsing
+     * them into the helper would be a fifth opinion about one verdict. */
+    if (canonicalPipelineEnabled()) {
+      const canonicalOutcome = await selectForNormalExecutor({
+        sb,
+        caseId: pack.dispute_id as string,
+        pack: {
+          id: packId,
+          dispute_id: (pack.dispute_id as string | null) ?? null,
+          completeness_score: pack.completeness_score ?? null,
+          blockers: pack.blockers,
+          submission_readiness: pack.submission_readiness,
+          pack_json: pack.pack_json,
+          checklist_v2: (pack as { checklist_v2?: unknown }).checklist_v2 ?? null,
+        },
+        settings,
+        automationMode: ruleMode,
+        evidenceDueAt,
+        disputeReason,
+        networkReasonCode,
+      });
+      const sel = canonicalOutcome.selection;
+      if (sel.outcome !== "selected") {
+        await logAuditEvent({
+          shopId: pack.shop_id,
+          disputeId: pack.dispute_id,
+          packId,
+          actorType: "system",
+          eventType: canonicalOutcome.unsafeContent
+            ? "defence_package_blocked_unsafe_claim"
+            : "defence_package_failed",
+          eventPayload: {
+            packageId: canonicalOutcome.judged?.packageId ?? null,
+            version: canonicalOutcome.judged?.version ?? null,
+            selectionOutcome: sel.outcome,
+            selectionReason: sel.outcome === "none" ? sel.reason : "ambiguous",
+            decisionAction: canonicalOutcome.decision.action,
+            decisionReasonCodes: canonicalOutcome.decision.reasonCodes,
+            trigger: "auto_save",
+          },
+        });
+        if (selectionIsPending(sel)) {
+          return { action: "defer_no_package", details: "no_defence_package_yet" };
+        }
+        if (!selectionIsMerchantActionable(sel)) {
+          // `deadline_only_not_yet_due` and `ambiguous` land here. Neither is
+          // a merchant task: the first is the normal trigger correctly leaving
+          // the case to the deadline trigger, the second is an alerting error.
+          return {
+            action: "defer_no_package",
+            details:
+              sel.outcome === "ambiguous"
+                ? "ambiguous_package_selection"
+                : `not_fileable_now: ${sel.reason}`,
+          };
+        }
+        await markPackageReviewRequired(sb, {
+          disputeId: pack.dispute_id as string,
+          packageId: canonicalOutcome.judged?.packageId ?? null,
+          reasons: [sel.outcome === "none" ? sel.reason : "ambiguous"],
+        });
+        return {
+          action: "park_for_review",
+          details: `defence_package_not_fileable: ${
+            sel.outcome === "none" ? sel.reason : "ambiguous"
+          }`,
+        };
+      }
+    }
+
+    /* LEGACY PREFLIGHT — unreachable when the switch is on.
+     *
+     * The canonical branch above has already either returned or established
+     * that a current, validated, safe package is selected, so running this as
+     * well would be a second gate re-judging the row the selector just
+     * approved. It stays intact, and only intact, for the dark period; PR 3
+     * deletes it with the rest of the legacy paths. */
+    const preflight = canonicalPipelineEnabled()
+      ? null
+      : await preflightLatestCandidate(sb, pack.dispute_id as string);
+    if (preflight && preflightBlocks(preflight)) {
       await logAuditEvent({
         shopId: pack.shop_id,
         disputeId: pack.dispute_id,

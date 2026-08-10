@@ -36,6 +36,8 @@ import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
  * new scorer call site appears — this route was the last allow-listed one.
  */
 import { creditAlreadyIssuedInput } from "@/lib/argument/caseStrength";
+import { canonicalPipelineEnabled } from "@/lib/pipeline/activation";
+import type { CaseArgumentPlanSnapshot } from "@/lib/pipeline/contracts";
 import {
   buildWorkspaceAssessment,
   emptyWorkspaceAssessment,
@@ -645,7 +647,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   // `factsJson` for the evidence-line-item derivation below comes from
   // `latest.facts_json` — no separate single-column query needed.
   const DEFENCE_SELECT_COLS =
-    "id, version, status, package_mode, generated_at, generated_by, pdf_path, evidence_hash, llm_model, prompt_family, prompt_version, reason_code_module, validation_status, validation_errors, failure_code, failure_reason, submitted_at, narrative_json, facts_json";
+    "id, version, status, package_mode, generated_at, generated_by, pdf_path, evidence_hash, llm_model, prompt_family, prompt_version, reason_code_module, validation_status, validation_errors, failure_code, failure_reason, submitted_at, narrative_json, facts_json, plan_json, plan_input_hash, plan_deadline_only, plan_no_safe_argument, document_validation_passed";
   let defencePackageLatest: Record<string, unknown> | null = null;
   let defencePackageBankFacing: Record<string, unknown> | null = null;
   if (packRow?.id) {
@@ -748,6 +750,25 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
    * `assessment.needsRecalculation`: "insufficient · 0%" rendered as a verdict
    * is a number a merchant acts on.
    */
+  /* THE CANONICAL PLAN, for the surfaces that project it.
+   *
+   * Read from the package the build job persisted it on — never re-derived
+   * here. A read path that re-derives the plan would answer a different
+   * question from the one the package was built against the moment any input
+   * moved, and the merchant would be shown review items for a package that
+   * does not carry them. `plan_json` is the plan that package IS a projection
+   * of; if it is absent the package predates the canonical route and the
+   * honest answer is no plan.
+   *
+   * Dark until PR 3: with the switch off this is `null`, which yields zero
+   * review items and the `normal` filing state — exactly what shipped. */
+  const canonicalPlan =
+    canonicalPipelineEnabled() &&
+    defencePackageLatest &&
+    (defencePackageLatest as { plan_json?: unknown }).plan_json
+      ? ((defencePackageLatest as { plan_json: CaseArgumentPlanSnapshot }).plan_json)
+      : null;
+
   const workspaceAssessment =
     packRow && workspaceGates
       ? buildWorkspaceAssessment({
@@ -757,10 +778,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           payloadSource: caseStrengthPayloadSource,
           gates: workspaceGates,
           packSaved: !!packRow.saved_to_shopify_at,
-          // Layer 3 is not persisted yet, so the workspace has no plan to
-          // project. Passing `null` yields zero review items and the `normal`
-          // filing state — the honest answer, not an invented one.
-          plan: null,
+          plan: canonicalPlan,
         })
       : emptyWorkspaceAssessment(disputeId);
 
