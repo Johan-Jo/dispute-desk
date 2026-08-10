@@ -298,6 +298,45 @@ describe("detector bypasses closed in review", () => {
     ).toBe("negated");
   });
 
+  /**
+   * The straddle fallback must not couple a carrier-delivery clause with an
+   * AVS clause that merely stands next to it.
+   *
+   * Both sentences are verbatim from production package
+   * 08575d57-c692-4fb5-a5c6-f0112f808008 (dispute 77eb59a3, 2026-08-10). Each
+   * pairs two separately-licensed facts — carrier + tracking + date, and the
+   * `avs_cvv_match` statement — and neither says where the parcel went. They
+   * were classified `affirmative`, failed validation on the first attempt and
+   * again on the fed-back retry, and left the dispute with no fileable
+   * package one day before its deadline.
+   */
+  const AVS_BESIDE_DELIVERY = [
+    "The carrier confirmed delivery on 17 July 2026 (TechSHIP, tracking 420327129261290416102423888396), and payment authentication records indicate that the billing address matched the issuer's records at the time of purchase.",
+    "The carrier confirmed delivery on 17 July 2026 (TechSHIP, tracking 420327129261290416102423888396), payment authentication records indicate the billing address matched the issuer's records at the time of purchase, and no return has been initiated.",
+  ];
+  for (const text of AVS_BESIDE_DELIVERY) {
+    it(`does not couple delivery with an adjacent AVS clause: ${text.slice(0, 42)}…`, () => {
+      expect(classifyAddressDeliveryClaim(text)).toBe("none");
+      expect(claimsAddressDelivery(text)).toBe(false);
+    });
+  }
+
+  it("an AVS clause in a DESTINATION role is still the destination", () => {
+    // The discount applies to an address that is the SUBJECT of an AVS
+    // predicate, never to one introduced as where the parcel went.
+    const verdict = classifyAddressDeliveryClaim(
+      "The parcel was delivered, to the billing address that matched the issuer's records.",
+    );
+    expect(verdict === "affirmative" || verdict === "ambiguous", verdict).toBe(true);
+  });
+
+  it("an AVS clause that carries its own delivery term is not discounted", () => {
+    const verdict = classifyAddressDeliveryClaim(
+      "Tracking shows the goods reached the address held in the issuer's records.",
+    );
+    expect(verdict === "affirmative" || verdict === "ambiguous", verdict).toBe(true);
+  });
+
   it("IP-location prose is not a delivery destination", () => {
     expect(
       claimsAddressDelivery(
