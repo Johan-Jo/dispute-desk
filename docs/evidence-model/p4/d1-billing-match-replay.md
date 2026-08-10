@@ -108,9 +108,46 @@ From the CP-0 kickoff census (prod `aokhplydttxtebvbeuzc`, 2026-08-09, read-only
 | **Total** | **64** | **61** |
 
 The transitioning cells require `strength ∈ {strong, moderate}`, no fatal loss, ≥2 approved
-categories and a `payment_authentication` fact — i.e. the healthier Visa 10.4 cases. The count of
-open unsubmitted Visa 10.4 packages meeting all four is the one number this document does not
-carry; it is a single read-only query for the coordinator before the review.
+categories and a `payment_authentication` fact — i.e. the healthier Visa 10.4 cases.
+
+### 4a. The population count — MEASURED, 2026-08-10
+
+The number §4 said this document did not carry has now been measured, against prod
+`aokhplydttxtebvbeuzc`, read-only, by
+[`scripts/evidence-model/d1BillingMatchPopulation.analysis.ts`](../../../scripts/evidence-model/d1BillingMatchPopulation.analysis.ts).
+
+Method: every stored `visa_10_4_fraud` package, its **own** `facts_json` exactly as persisted, run
+through the **real** `derivePackageMode` twice — once against the module as it ships, once against
+the module with `billing_match` removed. Nothing re-derived, nothing re-classified; the only
+difference between the two arms is the one array element.
+
+| Measure | Count |
+|---|---|
+| `visa_10_4_fraud` packages, all time | 240 |
+| …on an open dispute | 215 |
+| Persisted `package_mode` | `narrow` = 205, `null` = 35, **`full` = 0** |
+| `facts_json` unreadable (excluded, fails closed) | 35 |
+| Recomputed BEFORE = AFTER (stayed `narrow`) | 28 |
+| **`narrow → full` transitions, all versions all time** | **177** |
+| …restricted to open disputes | 155 |
+| **…restricted to the CURRENT version of an open dispute** | **61 packages across 61 cases** |
+
+**61 across 61 cases is the decision-relevant number.** Superseded, stale and failed versions are
+history — nothing will ever file them, and one case alone (`bd425f70`) contributes fifteen dead
+versions to the all-time figure. The current-version subset is also the only one where the strength
+input is exact, since `case_strength` is read from the latest pack.
+
+Two corroborations that the mechanism is the one §1 describes:
+
+- **Zero** `visa_10_4_fraud` packages carry `package_mode = full` in the entire corpus, while every
+  other module has some: `inr_product_not_received` 8, `product_unacceptable` 11, `generic_fallback`
+  4, `credit_not_processed` 2, `duplicate_processing` 2. Visa 10.4 is the only module that has never
+  produced a full-mode package, which is exactly what an unsatisfiable critical category predicts.
+- All but three of the 61 are `strength = moderate`; the rest are `strong`. No `weak` or
+  `insufficient` case appears, as the cell enumeration requires.
+
+**So the removal would change the bank narrative of 61 currently-live cases**, every one of them
+blume-box. That is the number the answer turns on, and it is larger than "a handful".
 
 ---
 
