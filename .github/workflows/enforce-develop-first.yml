@@ -1,9 +1,26 @@
 name: enforce-develop-first
 # Hard guardrail: master (prod) may ONLY receive changes that came through
-# develop (staging). Any pull request into master whose source branch is not
-# `develop` fails this check, and the check is REQUIRED on master — so a feature
-# branch can never be merged straight to prod. Promote to develop first, then
-# open a develop -> master PR.
+# develop (staging). The check is REQUIRED on master, so a feature branch can
+# never be merged straight to prod.
+#
+# TWO WAYS TO SATISFY IT, and both mean the same thing — every commit reaching
+# prod has already been on staging:
+#
+#   1. head is `develop`. The normal release: promote to develop, then open a
+#      develop -> master PR.
+#
+#   2. SUBSET PROMOTION. A branch off master carrying `git cherry-pick -x`
+#      commits, each of which names a source commit that is an ancestor of
+#      origin/develop. This exists for the case a full develop -> master
+#      release is the wrong risk at that moment — a one-file fix needed before
+#      a deadline, with a large unrelated release sitting on develop. The
+#      subset still went through develop first; it is a smaller slice of it.
+#
+# The guard used to compare the head branch NAME to "develop", which could
+# only express case 1. A name is not evidence, and the check it replaced is:
+# the cherry-pick trailer is verified against develop's actual history, so a
+# hand-written trailer naming a commit that never reached develop fails, and
+# a plain commit with no trailer fails. `--admin` remains forbidden.
 on:
   pull_request:
     branches:
@@ -13,12 +30,52 @@ jobs:
     name: develop-first-guard
     runs-on: ubuntu-latest
     steps:
-      - name: Require PR head to be develop
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require develop, or commits provably cherry-picked from develop
         run: |
-          HEAD="${{ github.head_ref }}"
-          echo "PR head branch: $HEAD -> base: master"
-          if [ "$HEAD" != "develop" ]; then
-            echo "::error::master may only be merged from 'develop'. This PR's head is '$HEAD'. Promote the change to develop first, then open a develop -> master PR."
+          HEAD_REF="${{ github.head_ref }}"
+          echo "PR head branch: $HEAD_REF -> base: master"
+          if [ "$HEAD_REF" = "develop" ]; then
+            echo "OK: develop -> master is allowed."
+            exit 0
+          fi
+
+          git fetch --quiet origin develop master
+
+          COMMITS="$(git rev-list origin/master..HEAD --no-merges)"
+          if [ -z "$COMMITS" ]; then
+            echo "::error::This PR adds no commits to master."
             exit 1
           fi
-          echo "OK: develop -> master is allowed."
+
+          FAILED=0
+          for sha in $COMMITS; do
+            subject="$(git show -s --format=%s "$sha")"
+            src="$(git show -s --format=%B "$sha" \
+                   | sed -n 's/^(cherry picked from commit \([0-9a-f]\{7,40\}\))$/\1/p' \
+                   | tail -1)"
+            if [ -z "$src" ]; then
+              echo "::error::$sha ($subject) carries no 'cherry picked from commit' trailer. A subset promotion must use 'git cherry-pick -x' from a commit already on develop."
+              FAILED=1
+              continue
+            fi
+            if ! git cat-file -e "${src}^{commit}" 2>/dev/null; then
+              echo "::error::$sha ($subject) names source commit $src, which does not exist in this repository."
+              FAILED=1
+              continue
+            fi
+            if ! git merge-base --is-ancestor "$src" origin/develop; then
+              echo "::error::$sha ($subject) names source commit $src, which is NOT an ancestor of origin/develop. Promote it to develop first."
+              FAILED=1
+              continue
+            fi
+            echo "OK: $sha ($subject) <- $src, on develop."
+          done
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo "::error::master may only receive commits that have been through develop."
+            exit 1
+          fi
+          echo "OK: every commit in this subset promotion is already on develop."
