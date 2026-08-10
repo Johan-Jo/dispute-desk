@@ -1873,6 +1873,18 @@
       "ipNotBankEligible": "Conservé en interne — la correspondance de localisation n’est pas assez nette pour la banque.",
       "cvvOnlyNotAddressEvidence": "Conservé en interne — seul le code de sécurité de la carte a correspondu, ce qui ne constitue pas une preuve d'adresse."
     },
+    "assessmentState": {
+      "current": {
+        "title": "Évaluation à jour",
+        "body": "Ce dossier a été évalué au regard des preuves actuellement au dossier."
+      },
+      "notAssessed": {
+        "title": "Pas encore évalué",
+        "bodyAbsent": "DisputeDesk n'a pas encore évalué ce dossier : il n'y a donc ni solidité ni exhaustivité à afficher. L'évaluation est automatique dès que le dossier de preuves est constitué — vous n'avez rien à faire.",
+        "bodyStale": "Les preuves de ce dossier ont changé après la dernière évaluation : la solidité et l'exhaustivité précédentes ne le décrivent plus. DisputeDesk le réévalue automatiquement — vous n'avez rien à faire.",
+        "actionsHidden": "L'envoi n'est pas disponible tant que ce dossier n'a pas été évalué."
+      }
+    },
     "deadlineOnly": {
       "normal": {
         "title": "Prêt à être envoyé",

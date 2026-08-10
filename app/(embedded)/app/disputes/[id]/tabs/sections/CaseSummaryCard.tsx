@@ -21,6 +21,7 @@
 "use client";
 
 import { useTranslations, useLocale } from "next-intl";
+import { resolveToken } from "@/lib/i18n/resolveToken";
 import type {
   CaseSummaryViewModel,
   CaseStatus,
@@ -90,6 +91,10 @@ function nextStepCopy(
   // translator vars through helper functions).
   if (step.kind === "submitted_no_action") return tNext("submittedNoAction");
   if (step.kind === "review_missing") return tNext("reviewMissing");
+  // No assessment: the headline states the state and nothing else. It must not
+  // fall through to `review_missing`, which instructs the merchant to go and
+  // find missing evidence we have not established is missing.
+  if (step.kind === "not_assessed") return "";
 
   const loose = tNext as unknown as LooseTranslate;
   const dueDate = formatDueDate(step.dueAt, locale);
@@ -142,14 +147,24 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
     "disputes.evidenceTab.sections.summary.nextStep",
   );
   const tAutoCopy = useTranslations("disputes.evidenceTab.automation");
+  const tAssessment = useTranslations("disputes.assessmentState");
+  const tRoot = useTranslations();
   const locale = useLocale();
 
-  const display = toDisplayStrength(props.strength);
+  /* NO ASSESSMENT, NO BADGE.
+   *
+   * `props.strength` is null exactly when there is no current assessment, and
+   * `toDisplayStrength` coerces `insufficient` to "Weak" — so before this
+   * branch an unassessed case rendered a WEAK verdict badge. The badge is
+   * replaced by a neutral state chip; nothing infers a band. */
+  const notAssessed = props.nextStep.kind === "not_assessed";
+  const display = props.strength ? toDisplayStrength(props.strength) : null;
   const showExplanation =
+    !notAssessed &&
     props.strength !== "strong" &&
     (Boolean(props.strengthReasonText) || Boolean(props.improvementHintText));
 
-  const strengthColors = STRENGTH_PILL[display];
+  const strengthColors = display ? STRENGTH_PILL[display] : null;
   const statusColors = STATUS_PILL[props.status];
   // null automationMode → decided dispute: no automation pill at all.
   const autoColors = props.automationMode ? AUTOMATION_PILL[props.automationMode] : null;
@@ -209,24 +224,43 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
             {/* Pill-shaped strength badge — the dominant visual element
                 in the lead row. Slightly larger padding than the
                 right-side Status/Automation pills to match the design. */}
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                padding: "4px 12px",
-                borderRadius: 999,
-                fontSize: 13,
-                fontWeight: 600,
-                background: strengthColors.bg,
-                color: strengthColors.color,
-              }}
-            >
-              {tStrength(display)}
-            </span>
+            {display && strengthColors ? (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  padding: "4px 12px",
+                  borderRadius: 999,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  background: strengthColors.bg,
+                  color: strengthColors.color,
+                }}
+              >
+                {tStrength(display)}
+              </span>
+            ) : (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  padding: "4px 12px",
+                  borderRadius: 999,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  background: "#F1F2F3",
+                  color: "#6D7175",
+                }}
+              >
+                {tAssessment("notAssessed.title")}
+              </span>
+            )}
             <span style={{ fontSize: 16, fontWeight: 600, color: "#202223" }}>
               {props.status === "won" || props.status === "lost" || props.status === "closed"
                 ? t(`outcomeHeadline.${props.status}`)
-                : nextStepCopy(props.nextStep, tNext, locale)}
+                : notAssessed
+                  ? tAssessment("notAssessed.title")
+                  : nextStepCopy(props.nextStep, tNext, locale)}
             </span>
           </div>
         </div>
@@ -293,6 +327,34 @@ export function CaseSummaryCard(props: CaseSummaryViewModel) {
           before submission.") is folded into this block as a small
           subdued meta line, since the design groups them together
           rather than placing the meta line at the card's bottom. */}
+      {/* THE EXPLICIT STATE.
+        *
+        * Rendered instead of the strength explanation, never beside it: the
+        * merchant is owed a reason there is no number, and an empty card is
+        * indistinguishable from a broken one. `bodyToken` distinguishes "not
+        * assessed yet" from "the evidence moved after we assessed it" — two
+        * different situations that read the same as silence. */}
+      {props.nextStep.kind === "not_assessed" ? (
+        <div
+          style={{
+            marginTop: 16,
+            paddingTop: 16,
+            borderTop: "1px solid #E1E3E5",
+          }}
+        >
+          <p
+            style={{
+              fontSize: 13,
+              color: "#6D7175",
+              margin: 0,
+              lineHeight: 1.5,
+            }}
+          >
+            {resolveToken(tRoot, props.nextStep.bodyToken)}
+          </p>
+        </div>
+      ) : null}
+
       {showExplanation ? (
         <div
           style={{

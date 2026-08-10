@@ -2539,7 +2539,7 @@ Approved decision P-1: *"Strict: do not score them. A record can remain visible 
 
 `SCORING_POLICY_VERSION` is deliberately **not** bumped: the resolved policy is the same strict rule that was already the default and the only value any production-shaped path used, so no persisted snapshot became stale. Measured on 73 open prod packs (2026-08-06): the strict column is identical before and after, and the now-unreachable permissive arm would have lifted exactly two packs (#352501 `DUPLICATE`, #352767 `FRAUDULENT`) from weak to moderate — precisely the transition P-1 forbids.
 
-Thresholds over completeness remain **P-7 and deferred** to the Phase 2 calibration report; P-1 fixes only which records the score sees. `scripts/evidence-model/*.analysis.ts` therefore report one column instead of a strict/permissive pair.
+Thresholds over completeness were **P-7**, and P-7 is now ACTIVATED: Blume Box runs on canonical completeness at 60, SuraSvenne is excluded because no disposition-preserving threshold exists for it at any value. The shop set and the threshold live in `lib/evidence/model/completenessActivation.ts` and are read by the auto-save gate; `docs/evidence-model/p2/completeness-calibration-report.md` is the single current account. P-1 fixed only which records the score sees. `scripts/evidence-model/*.analysis.ts` therefore report one column instead of a strict/permissive pair.
 
 ### Auto-submit guards — one decision, three callers (2026-07-27)
 

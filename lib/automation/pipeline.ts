@@ -19,6 +19,10 @@ import {
 import { markPackageReviewRequired } from "./packageReviewRequired";
 import { getShopSettings } from "./settings";
 import { evaluateAutoSaveGate } from "./autoSaveGate";
+import {
+  canonicalScoreFromPackJson,
+  completenessActivationFor,
+} from "@/lib/evidence/model/completenessActivation";
 import { checkPackQuota } from "@/lib/billing/checkQuota";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
@@ -473,6 +477,32 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
 
   const settings = await getShopSettings(pack.shop_id);
 
+  /* ── P-7, APPLIED (plan §1A) ──────────────────────────────────────────
+   *
+   * blume-box reads CANONICAL completeness at the calibrated threshold 60;
+   * every other shop keeps the persisted column and its own
+   * `auto_save_min_score`. The decision is a constant, not a question — the
+   * calibration re-run on the post-C-14 baseline produced no
+   * disposition-preserving threshold for surasvenne at any value, so it is
+   * excluded rather than deferred.
+   *
+   * Resolved HERE, at the live gate, because that is what activation means: a
+   * statement in a calibration report changes no disposition. See
+   * `lib/evidence/model/completenessActivation.ts` for the shop set, the
+   * exclusion and why the threshold travels with the shop rather than reusing
+   * a merchant setting chosen on the OLD scale. */
+  const { data: gateShop } = await sb
+    .from("shops")
+    .select("shop_domain")
+    .eq("id", pack.shop_id)
+    .maybeSingle();
+  const activation = completenessActivationFor(
+    (gateShop?.shop_domain as string | null) ?? null,
+  );
+  const canonicalScore = activation.useCanonicalScore
+    ? canonicalScoreFromPackJson(pack.pack_json)
+    : null;
+
   // The Rules page is the source of truth for whether to automate.
   // We re-evaluate the shop's rules against the dispute at save-time:
   //
@@ -832,9 +862,17 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // auto → run the quality gate.
   const gate = evaluateAutoSaveGate({
     autoSaveEnabled: settings.auto_save_enabled,
-    autoSaveMinScore: settings.auto_save_min_score,
+    // The calibrated threshold REPLACES the merchant setting on an activated
+    // shop — the two numbers live on different scales, and applying a number
+    // chosen on the old one to the new one would move dispositions for a
+    // reason nobody decided.
+    autoSaveMinScore: activation.threshold ?? settings.auto_save_min_score,
     enforceNoBlockers: settings.enforce_no_blockers,
-    completenessScore: pack.completeness_score ?? 0,
+    /* An activated shop whose pack predates the assessment writer falls back
+     * to the persisted column, NOT to zero: treating "not yet written" as 0
+     * would park every pre-activation pack against a threshold it was never
+     * measured on. */
+    completenessScore: canonicalScore ?? pack.completeness_score ?? 0,
     blockers: (pack.blockers as string[]) ?? [],
     submissionReadiness: (pack.submission_readiness as "ready" | "ready_with_warnings" | "blocked" | "submitted") ?? undefined,
   });

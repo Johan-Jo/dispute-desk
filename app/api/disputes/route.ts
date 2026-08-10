@@ -1,19 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/server";
-import {
-  calculateCaseStrength,
-  creditAlreadyIssuedFromBlock,
-} from "@/lib/argument/caseStrength";
-import {
-  buildCaseGateAssessment,
-  gateNotProvided,
-  gateProvided,
-} from "@/lib/argument/caseGateAssessment";
-import {
-  cardholderNameFromPayload,
-  detectCardholderNameMismatch,
-} from "@/lib/argument/nameMismatch";
-import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
+/* The scorer, the gate builder and the name-mismatch detector are GONE from
+ * this route (CP-A). It rendered a strength it computed itself, from a gate
+ * set that was missing three of five gates because the list query never loads
+ * the Shopify order — so its answer had to differ from the detail page's
+ * whenever coverage, fatal-loss or risk-weakness fired. It now projects what
+ * the build path persisted and computes nothing. */
 import { extractShopId } from "@/lib/middleware/extractShopId";
 import {
   gatherPresentations,
@@ -374,7 +366,9 @@ export async function GET(req: NextRequest) {
     // Stage A: narrow select.
     const { data: csPacks } = await sb
       .from("evidence_packs")
-      .select("id, dispute_id, status, created_at, pack_json->case_strength")
+      .select(
+        "id, dispute_id, status, created_at, pack_json->case_strength, pack_json->case_assessment",
+      )
       .in("dispute_id", disputeIds)
       .not("status", "in", "(failed,queued,building)")
       .order("created_at", { ascending: false });
@@ -385,16 +379,42 @@ export async function GET(req: NextRequest) {
     const latestForDispute = new Map<string, FallbackPack>();
     for (const p of csPacks ?? []) {
       if (!p.dispute_id || latestForDispute.has(p.dispute_id)) continue;
-      const cs = (p as { case_strength?: unknown }).case_strength as
-        | {
-            overall?: string;
-            strongCount?: number;
-            moderateCount?: number;
-            supportingCount?: number;
-            strengthReasonI18n?: { key: string; params?: Record<string, string | number> } | null;
-          }
+      /* THE CANONICAL SNAPSHOT FIRST.
+       *
+       * `case_assessment` is the versioned `CaseAssessmentSnapshot` the build
+       * path writes — the same derivation the detail page projects, so the
+       * list and the detail page cannot describe one case two ways.
+       *
+       * `case_strength` remains the fallback for packs built before this
+       * writer existed. That is NOT a second calculation: it is the summary
+       * the old build path persisted from the same five-gate site. What was
+       * removed is the LIVE recompute (Stage B), which is where the partial
+       * gate set lived. A pack carrying neither gets `null` and renders as
+       * not assessed. */
+      const snapshot = (p as { case_assessment?: unknown }).case_assessment as
+        | { strength?: { overall?: string; strongCount?: number; moderateCount?: number; supportingCount?: number; strengthReasonI18n?: { key: string; params?: Record<string, string | number> } | null } }
         | null
         | undefined;
+      const cs =
+        (snapshot?.strength as
+          | {
+              overall?: string;
+              strongCount?: number;
+              moderateCount?: number;
+              supportingCount?: number;
+              strengthReasonI18n?: { key: string; params?: Record<string, string | number> } | null;
+            }
+          | undefined) ??
+        ((p as { case_strength?: unknown }).case_strength as
+          | {
+              overall?: string;
+              strongCount?: number;
+              moderateCount?: number;
+              supportingCount?: number;
+              strengthReasonI18n?: { key: string; params?: Record<string, string | number> } | null;
+            }
+          | null
+          | undefined);
       if (cs?.overall) {
         strengthByDispute.set(p.dispute_id, {
           overall: cs.overall,
@@ -411,107 +431,25 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Stage B: only for the latest packs whose case_strength was null.
-    // Pulls just `pack_json -> sections` (for the byField payload map)
-    // and `checklist_v2`.
-    const stalePackIds = Array.from(latestForDispute.values()).map(
-      (f) => f.id,
-    );
-    if (stalePackIds.length > 0) {
-      const { data: heavy } = await sb
-        .from("evidence_packs")
-        .select(
-          "id, dispute_id, checklist_v2, pack_json->sections, pack_json->credit_already_issued",
-        )
-        .in("id", stalePackIds);
-
-      for (const p of heavy ?? []) {
-        if (!p.dispute_id) continue;
-        const checklist = (p.checklist_v2 ?? []) as ChecklistItemV2[];
-        if (checklist.length === 0) continue;
-
-        // Build evidenceItemsByField from pack_json.sections so the
-        // engine can read per-field payloads (matches the detail
-        // page's workspace API behavior).
-        type RawSection = {
-          type?: string;
-          label?: string;
-          source?: string;
-          fieldsProvided?: string[];
-          data?: Record<string, unknown>;
-        };
-        const sections = ((p as { sections?: RawSection[] }).sections ?? []) as RawSection[];
-        const byField: Record<
-          string,
-          { id: string; type?: string; label?: string | null; source?: string | null; payload?: Record<string, unknown> | null }
-        > = {};
-        for (const s of sections) {
-          for (const f of s.fieldsProvided ?? []) {
-            if (f in byField) continue;
-            byField[f] = {
-              id: `pack-section:${f}`,
-              type: s.type,
-              label: s.label ?? null,
-              source: s.source ?? null,
-              payload: { ...(s.data ?? {}), fieldsProvided: s.fieldsProvided },
-            };
-          }
-        }
-
-        const payloadSource =
-          Object.keys(byField).length > 0
-            ? ({ kind: "byField" as const, map: byField })
-            : undefined;
-
-        try {
-          const reason = reasonByDisputeId.get(p.dispute_id) ?? null;
-          const customerName = customerNameByDisputeId.get(p.dispute_id) ?? null;
-          const cardholderName = cardholderNameFromPayload(
-            (byField["avs_cvv_match"]?.payload ?? null) as Record<string, unknown> | null,
-          );
-          const result = calculateCaseStrength(
-            checklist,
-            reason,
-            payloadSource,
-            buildCaseGateAssessment({
-              // List view. Coverage, fatal-loss and risk-weakness are all
-              // derived by `buildPack` from the order, which this query
-              // does not load — the list has never shown them, and stating
-              // that as a reason keeps it distinguishable from a case that
-              // genuinely has no such gate.
-              coverage: gateNotProvided("order_not_loaded"),
-              fatalLoss: gateNotProvided("order_not_loaded"),
-              riskWeakness: gateNotProvided("order_not_loaded"),
-              nameMismatch: gateProvided({
-                triggered: detectCardholderNameMismatch(cardholderName, customerName),
-                cardholderName,
-                customerName,
-              }),
-              // Credit-already-issued floor, projected out of pack_json
-              // alongside the sections. This site was the fourth ❌ in the
-              // 162042cd table and stayed broken after the first fix
-              // because the text-level parity guard only enumerated three
-              // files. Requiring the object is what surfaced it.
-              creditAlreadyIssued: gateProvided(
-                creditAlreadyIssuedFromBlock(
-                  (p as { credit_already_issued?: unknown }).credit_already_issued,
-                ),
-              ),
-            }),
-          );
-          strengthByDispute.set(p.dispute_id, {
-            overall: result.overall,
-            strongCount: result.strongCount,
-            moderateCount: result.moderateCount,
-            supportingCount: result.supportingCount,
-            strengthReasonI18n: result.strengthReasonI18n ?? null,
-          });
-        } catch {
-          // If the engine throws on a malformed legacy checklist, leave
-          // the dispute as caseStrength: null. UI shows em-dash.
-        }
-      }
-    }
+    /* ── STAGE B IS DELETED (CP-A) ────────────────────────────────────
+     *
+     * It re-scored a pack LIVE, with `coverage`, `fatalLoss` and
+     * `riskWeakness` all stated `order_not_loaded` — a partial gate set by
+     * construction, because this query never loads the Shopify order. Three
+     * of five gates missing means the list's answer had to differ from the
+     * detail page's whenever any of the three fired, and it did: the
+     * 2026-08-05 audit found exactly that divergence on a fraud case with a
+     * cardholder-name mismatch.
+     *
+     * The list now RENDERS what the build path persisted and computes
+     * nothing. A pack that carries no assessment gets `null`, which the UI
+     * already shows as an em-dash — the honest answer, and the same
+     * `needsRecalculation` state the detail page renders. It is not a
+     * regression to stop showing a number that was wrong.
+     *
+     * `latestForDispute` therefore has no consumer beyond the loop above,
+     * and is kept only as the record of which packs are unassessed. */
+    void latestForDispute;
   }
 
   // ── Shared presentation model (plan §3) ────────────────────────────

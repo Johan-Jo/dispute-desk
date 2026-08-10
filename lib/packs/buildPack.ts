@@ -61,6 +61,7 @@ import { derivePaymentContext } from "@/lib/disputes/paymentContext";
 import { klarnaInquiryTemplateOverride } from "@/lib/packs/klarnaInquiryTemplate";
 import { evaluateQualification } from "@/lib/liabilityShift/evaluateQualification";
 import { deriveCaseEvidenceModel } from "@/lib/evidence/model/derive";
+import { buildCaseAssessmentSnapshot } from "@/lib/evidence/model/assessmentSnapshot";
 import type { EvidenceSection, BuildContext } from "./types";
 import { readSectionLabel } from "./sectionLabel";
 import enMessages from "@/messages/en.json";
@@ -806,27 +807,70 @@ export async function buildPack(
     customerName: disputeCustomerName,
   };
 
-  // The build path is the ONLY site that holds the Shopify order, so it is
-  // the only one that can derive all five gates. Everything else reads what
-  // this call persists.
-  const caseStrengthForGate = calculateCaseStrength(
-    reconciledChecklist,
-    dispute.reason,
-    caseStrengthPayloadSource,
-    buildCaseGateAssessment({
-      coverage: gateProvided({
-        state: coverageSummary.state,
-        shopifyProtectStatus: coverageSummary.shopifyProtectStatus,
-      }),
-      fatalLoss: gateProvided(fatalLossSummary),
-      riskWeakness: gateProvided(riskWeaknessSummary),
-      nameMismatch: gateProvided(nameMismatchInput),
-      creditAlreadyIssued: gateProvided({
-        triggered: creditAlreadyIssued.triggered,
-        coversDisputedAmount: creditAlreadyIssued.coversDisputedAmount,
-      }),
+  /* ── THE AUTHORIZED ASSESSMENT WRITER (CP-A) ──────────────────────────
+   *
+   * The build path is the ONLY site that holds the Shopify order, so it is
+   * the only one that can derive all five gates. That made it the natural
+   * writer, and it already was one — it just wrote a four-field SUMMARY
+   * (`overall` + three counts) and threw the rest away, so every later reader
+   * either did without or recomputed with a smaller gate set. That is how the
+   * browser came to score a fraud case Strong while the server had capped it
+   * Moderate on the same request.
+   *
+   * It now derives the full `CaseAssessmentSnapshot` — strength, completeness
+   * derived independently of it, the named gate decision, the model version
+   * and the input hash — and persists it. Readers project it; nobody scores
+   * again.
+   *
+   * `calculateCaseStrength` is NOT called here any more. It is reached once,
+   * through `deriveCaseAssessment`, which is the single derivation
+   * `caseGateAssessmentCallSites.test.ts` pins. */
+  const gateAssessment = buildCaseGateAssessment({
+    coverage: gateProvided({
+      state: coverageSummary.state,
+      shopifyProtectStatus: coverageSummary.shopifyProtectStatus,
     }),
-  );
+    fatalLoss: gateProvided(fatalLossSummary),
+    riskWeakness: gateProvided(riskWeaknessSummary),
+    nameMismatch: gateProvided(nameMismatchInput),
+    creditAlreadyIssued: gateProvided({
+      triggered: creditAlreadyIssued.triggered,
+      coversDisputedAmount: creditAlreadyIssued.coversDisputedAmount,
+    }),
+  });
+  /* The model is derived HERE rather than at the `pack_json` write below,
+   * because the assessment is a projection of it and the two must describe
+   * the same evidence. Deriving it twice — once for the snapshot, once for
+   * the persisted `evidence_model` — is exactly the "two derivations, one
+   * concept" shape this epic removes; the value below now reuses this. */
+  const canonicalModel = deriveCaseEvidenceModel({
+    disputeId: dispute.id,
+    reason: dispute.reason ?? null,
+    packId,
+    sections: allSections.map((s) => ({
+      source: s.source,
+      fieldsProvided: s.fieldsProvided,
+      data: s.data as Record<string, unknown> | null,
+    })),
+    waivedItems: waivedItems ?? [],
+    coverage: {
+      state: coverageSummary?.state ?? null,
+      shopifyProtectStatus: coverageSummary?.shopifyProtectStatus ?? null,
+    },
+  }).model;
+
+  const caseAssessmentSnapshot = buildCaseAssessmentSnapshot({
+    caseId: dispute.id,
+    model: canonicalModel,
+    gates: gateAssessment,
+    // UNCHANGED from what the scorer was given before: the `list` form over
+    // ALL sections. Substituting a per-field map here silently re-rated a
+    // real AVS match `invalid` and reported 56 of 76 prod packs stale — a
+    // false finding produced entirely by the adapter.
+    payloadSource: caseStrengthPayloadSource,
+    now: new Date().toISOString(),
+  });
+  const caseStrengthForGate = caseAssessmentSnapshot.strength;
   const caseStrengthSummary: {
     overall: CaseStrengthLevel;
     strongCount: number;
@@ -933,21 +977,22 @@ export async function buildPack(
     // pasted acknowledgements) are added at read time, because their ids are
     // assigned by the insert above and re-reading them here would cost a
     // round trip for a value nothing consumes yet.
-    evidence_model: deriveCaseEvidenceModel({
-      disputeId: dispute.id,
-      reason: dispute.reason ?? null,
-      packId,
-      sections: allSections.map((s) => ({
-        source: s.source,
-        fieldsProvided: s.fieldsProvided,
-        data: s.data as Record<string, unknown> | null,
-      })),
-      waivedItems: waivedItems ?? [],
-      coverage: {
-        state: coverageSummary?.state ?? null,
-        shopifyProtectStatus: coverageSummary?.shopifyProtectStatus ?? null,
-      },
-    }).model,
+    evidence_model: canonicalModel,
+
+    /* ── THE PERSISTED ASSESSMENT (CP-A) ────────────────────────────────
+     *
+     * The versioned `CaseAssessmentSnapshot`, written on every build by the
+     * one site that can see all five gates. This is the agreed pack
+     * representation: readers project it, and a reader that finds it absent
+     * or whose live inputs no longer hash to `freshness.inputHash` renders
+     * `needsRecalculation` rather than a stale number.
+     *
+     * It sits BESIDE `case_strength` rather than replacing it, deliberately:
+     * that four-field summary is read by the automation decision, the
+     * deadline cron and the held-state resolver, and repointing those is
+     * CP-C's cutover, not this PR's. Both are written from the SAME
+     * derivation on the same build, so they cannot disagree. */
+    case_assessment: caseAssessmentSnapshot,
   };
 
   // Update the pack row (dual-write: v1 checklist + v2 checklist).

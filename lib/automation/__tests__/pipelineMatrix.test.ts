@@ -142,10 +142,17 @@ function buildSb(pack: PackFixture, dispute: DisputeFixture) {
           insert: vi.fn().mockResolvedValue({ data: null, error: null }),
         };
       }
+      /* P-7 reads `shops.shop_domain` to resolve the completeness activation
+       * (`lib/evidence/model/completenessActivation.ts`). These fixtures use a
+       * synthetic shop that is on no activated list, so the gate keeps the
+       * persisted column and the merchant threshold — which is exactly the
+       * behaviour this matrix pins. `maybeSingle` is added because the lookup
+       * tolerates a missing row; the generic stub only had `single`. */
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
     }),
   };
