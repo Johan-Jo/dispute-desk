@@ -1,9 +1,32 @@
 /**
- * Automation pipeline orchestrator.
+ * The pack auto-save ladder as production runs it TODAY, moved verbatim.
  *
- * Called after a dispute is synced/detected. Decides whether to
- * auto-build a pack and auto-save based on shop settings.
+ * ── WHY THIS FILE EXISTS ──────────────────────────────────────────────
+ *
+ * PR 2 wires `evaluateAndMaybeAutoSave` onto the canonical
+ * `CaseAutomationDecision`, replacing the two independent ladders this
+ * function used to run — `evaluateAutoSubmitGuards` (coverage / fatal-loss /
+ * strength) and `evaluateAutoSaveGate` (completeness / readiness). It ships
+ * DARK (`lib/pipeline/activation.ts`).
+ *
+ * "Dark" cannot mean a re-expression that is argued to be equivalent. The
+ * canonical ladder deliberately answers weak and insufficient differently
+ * (contract revision 2: `hold_for_deadline`, not `block`), reads completeness
+ * through `readPersistedCompletenessForGate` rather than three inline
+ * coercions, and moved the strength rung below the automation-mode rung. Any
+ * of those can change a live disposition. So the OFF path is the SAME CODE,
+ * from the kickoff baseline `58e15806`, with two mechanical edits and nothing
+ * else:
+ *
+ *   1. `evaluateAndMaybeAutoSave` -> `evaluateAndMaybeAutoSaveLegacy`.
+ *   2. `runAutomationPipeline` and its private `resolveAutomationTemplate`
+ *      helper are omitted. CP-C did not touch them, they still live in
+ *      `pipeline.ts`, and copying a function nobody gated would create a
+ *      second version that can drift.
+ *
+ * PR 3 deletes this file together with the switch's `false` branch.
  */
+
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
@@ -18,10 +41,7 @@ import {
 } from "@/lib/defence/packageSafety";
 import { markPackageReviewRequired } from "./packageReviewRequired";
 import { getShopSettings } from "./settings";
-import { decideForPack } from "./decision";
-import { canonicalPipelineEnabled } from "@/lib/pipeline/activation";
-import { evaluateAndMaybeAutoSaveLegacy } from "./pipeline.legacy";
-import { readPersistedCompletenessForGate } from "@/lib/evidence/model/completenessSnapshot";
+import { evaluateAutoSaveGate } from "./autoSaveGate";
 import { checkPackQuota } from "@/lib/billing/checkQuota";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
@@ -44,6 +64,7 @@ import {
   type DisputeAttentionReason,
 } from "@/lib/disputes/attentionReasons";
 import { claimBillingBlockedEmailSlot } from "./billingBlockedEmailThrottle";
+import { evaluateAutoSubmitGuards } from "./autoSubmitGuards";
 
 import {
   AUTO_BUILD_TRIGGERED,
@@ -178,56 +199,6 @@ async function clearStaleBillingAttention(disputeId: string): Promise<void> {
   }
 }
 
-/* ── Audit / timeline phrasing for a decision outcome ──────────────────────
- *
- * These strings are MOVED, not written: they are the exact messages
- * `evaluateAutoSubmitGuards` and `evaluateAutoSaveGate` produced, kept
- * character-for-character so the audit trail and the dispute timeline do not
- * shift under a change that is meant to be behaviour-preserving.
- *
- * They are the pre-existing English-in-`lib/` debt this epic deliberately does
- * NOT pay off: replacing them with `I18nToken`s changes merchant-visible copy
- * across six locales and belongs in its own change, not inside the one that
- * unifies the decision. The decision itself emits machine reason codes only —
- * that is the part that had to be right here.
- */
-const MODERATE_PARK_MESSAGE =
-  "Auto-mode case strength is Moderate — parked for merchant review per PRD §9";
-
-function fatalLossMessage(
-  fatalLoss: { reason?: string | null; message?: string | null } | null | undefined,
-): string {
-  return (
-    fatalLoss?.message ??
-    `Auto-submit blocked — fatal-loss condition (${fatalLoss?.reason ?? "unknown"}) per PRD §5`
-  );
-}
-
-function strengthBlockMessage(overall: string | null): string {
-  const label = overall === "insufficient" ? "Insufficient" : "Weak";
-  return `Auto-mode case strength is ${label} — auto-submit blocked per PRD §9`;
-}
-
-function gateBlockMessage(
-  reasonCode: string | undefined,
-  settings: { auto_save_min_score: number },
-  completenessScore: number,
-): string {
-  switch (reasonCode) {
-    case "automation_disabled":
-      return "Auto-save is disabled for this store";
-    case "below_completeness_threshold":
-      return `Completeness score ${completenessScore}% is below threshold ${settings.auto_save_min_score}%`;
-    case "hard_block":
-      return "Submission is blocked — required evidence missing";
-    default:
-      // Coverage, fatal-loss and staleness are handled by their own branches
-      // above and are unreachable here; the code is surfaced rather than
-      // invented copy so an unexpected outcome is diagnosable.
-      return reasonCode ?? "unknown";
-  }
-}
-
 interface Dispute {
   id: string;
   shop_id: string;
@@ -238,189 +209,12 @@ interface Dispute {
   pack_template_id?: string | null;
 }
 
-/**
- * Resolve which pack_template the auto-build should use.
- *
- * Precedence:
- *   1. The template the matched rule explicitly specified.
- *   2. The phase-specific default mapping for (reason, phase) — only consulted
- *      when the rule did not specify a template (catch-all / safeguard rules).
- *      This is what makes inquiry-phase disputes get the lighter inquiry
- *      template instead of falling through to the chargeback REASON_TEMPLATES
- *      hardcoded list.
- *   3. null (the build falls through to REASON_TEMPLATES inside buildPack).
- */
-async function resolveAutomationTemplate(dispute: Dispute): Promise<string | null> {
-  if (dispute.pack_template_id) return dispute.pack_template_id;
-  if (!dispute.reason || !dispute.phase) return null;
-
-  const sb = getServiceClient();
-  const { data } = await sb
-    .from("reason_template_mappings")
-    .select("template_id")
-    .eq("reason_code", dispute.reason)
-    .eq("dispute_phase", dispute.phase)
-    .eq("is_active", true)
-    .maybeSingle();
-
-  return (data?.template_id as string | null) ?? null;
-}
-
-/**
- * Run the automation pipeline for a single dispute.
- * Returns the action taken.
- */
-export async function runAutomationPipeline(dispute: Dispute): Promise<{
-  action:
-    | "pack_enqueued"
-    | "skipped_auto_build_off"
-    | "existing_pack"
-    | "quota_exceeded"
-    | "skipped_terminal";
-}> {
-  // Terminal-status guard: never auto-build (or emit a blocked event, or spend
-  // a credit) for a dispute with nothing left to submit. A closed / won / lost /
-  // accepted dispute has no live deadline — building a pack is wasted work and,
-  // on credit-gated plans, would burn a pack on a resolved case. The
-  // historicalImport guard in the dispatcher covers first-sync; this protects
-  // EVERY caller (manual re-sync, status-change events on resolved disputes).
-  {
-    const sb0 = getServiceClient();
-    const { data: row } = await sb0
-      .from("disputes")
-      .select("final_outcome, closed_at, normalized_status")
-      .eq("id", dispute.id)
-      .maybeSingle();
-    const outcome = (row?.final_outcome as string | null) ?? null;
-    const ns = (row?.normalized_status as string | null) ?? null;
-    const isTerminal =
-      row?.closed_at != null ||
-      (outcome != null && outcome !== "unknown") ||
-      ns === "won" ||
-      ns === "lost" ||
-      ns === "accepted_not_contested" ||
-      ns === "closed_other";
-    if (isTerminal) {
-      return { action: "skipped_terminal" };
-    }
-  }
-
-  const settings = await getShopSettings(dispute.shop_id);
-
-  if (!settings.auto_build_enabled) {
-    await recordBlockedAutoBuild({
-      shopId: dispute.shop_id,
-      disputeId: dispute.id,
-      reason: DISPUTE_ATTENTION_REASONS.AUTO_BUILD_OFF,
-      attentionPayload: { source: "automation_pipeline" },
-      nextActionText:
-        "Auto-build is off for this shop. Turn it on in Settings → Automation to start building packs for new disputes.",
-    });
-    return { action: "skipped_auto_build_off" };
-  }
-
-  const quota = await checkPackQuota(dispute.shop_id);
-  if (!quota.allowed) {
-    await recordBlockedAutoBuild({
-      shopId: dispute.shop_id,
-      disputeId: dispute.id,
-      reason: DISPUTE_ATTENTION_REASONS.QUOTA_EXCEEDED,
-      attentionPayload: {
-        plan: quota.plan,
-        remaining: quota.remaining,
-        limit: quota.limit ?? null,
-      },
-      nextActionText:
-        "You're out of pack credits this cycle. Upgrade your plan or buy a top-up to keep automating disputes.",
-      auditPayload: { used: quota.used },
-    });
-    return { action: "quota_exceeded" };
-  }
-
-  // Self-heal a STALE billing block: the shop now HAS credits (we passed
-  // the quota gate), so any lingering `quota_exceeded` (or other billing)
-  // attention flag on this dispute is out of date and must be cleared —
-  // otherwise a dispute stays "Billing action required" forever after the
-  // merchant tops up (blume-box prod, 2026-07-27: 65 disputes stuck on a
-  // pre-top-up quota flag). Only touches billing-shaped reasons; never a
-  // real merchant task (gorgias/approval/etc.).
-  await clearStaleBillingAttention(dispute.id);
-
-  // NOTE: auto-build is NOT tier-gated. Every plan — including Free — can
-  // auto-build; the credit ledger is the only gate. Free ships with 5
-  // free_lifetime credits (FREE_LIFETIME_PACKS), so free-tier shops auto-build
-  // until those 5 are spent, then `checkPackQuota` above returns the proper
-  // "out of pack credits" exit. (Previously a `checkFeatureAccess(plan,
-  // "autoPack")` tier check blocked ALL free shops here — even with credits
-  // available — flooding the feed with "Auto-build is a paid feature".)
-
-  const sb = getServiceClient();
-
-  const { data: existingPack } = await sb
-    .from("evidence_packs")
-    .select("id, status")
-    .eq("dispute_id", dispute.id)
-    .not("status", "in", '("failed","archived")')
-    .limit(1)
-    .maybeSingle();
-
-  if (existingPack) {
-    return { action: "existing_pack" };
-  }
-
-  const resolvedTemplateId = await resolveAutomationTemplate(dispute);
-
-  const { data: pack, error: packErr } = await sb
-    .from("evidence_packs")
-    .insert({
-      shop_id: dispute.shop_id,
-      dispute_id: dispute.id,
-      status: "queued",
-      created_by: "automation",
-      pack_template_id: resolvedTemplateId,
-    })
-    .select("id")
-    .single();
-
-  if (packErr) throw new Error(`Failed to create pack: ${packErr.message}`);
-
-  const { error: jobErr } = await sb.from("jobs").insert({
-    shop_id: dispute.shop_id,
-    job_type: "build_pack",
-    entity_id: pack.id,
-  });
-
-  if (jobErr) throw new Error(`Failed to enqueue build job: ${jobErr.message}`);
-
-  await sb.from("audit_events").insert({
-    shop_id: dispute.shop_id,
-    dispute_id: dispute.id,
-    pack_id: pack.id,
-    actor_type: "system",
-    event_type: "auto_build_enqueued",
-    event_payload: { trigger: "automation_pipeline" },
-  });
-
-  void emitDisputeEvent({
-    disputeId: dispute.id,
-    shopId: dispute.shop_id,
-    eventType: AUTO_BUILD_TRIGGERED,
-    eventAt: new Date().toISOString(),
-    actorType: "disputedesk_system",
-    sourceType: "pack_engine",
-    metadataJson: { pack_id: pack.id },
-    dedupeKey: `${dispute.id}:${AUTO_BUILD_TRIGGERED}:${pack.id}`,
-  });
-  void updateNormalizedStatus(dispute.id);
-
-  return { action: "pack_enqueued" };
-}
 
 /**
  * After a pack is built, evaluate completeness + auto-save gate.
  * Called at the end of the buildPack job handler.
  */
-export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
+export async function evaluateAndMaybeAutoSaveLegacy(packId: string): Promise<{
   /**
    * `defer_no_package` (PR-C1): the gate said auto-save, but no validated
    * Defence Package exists yet. NOTHING is stamped and NOTHING is enqueued —
@@ -442,15 +236,6 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     | "defer_no_package";
   details: string;
 }> {
-  // DARK UNTIL PR 3. The canonical ladder below is load-bearing when the
-  // switch is on — one `CaseAutomationDecision`, read by every branch. With
-  // the switch off the ladder that shipped at `58e15806` runs instead, from
-  // `pipeline.legacy.ts`, unchanged. Not a mapped equivalent: the canonical
-  // ladder holds weak/insufficient for the deadline where the shipped one
-  // blocks (contract revision 2), and that difference must not reach
-  // production on a merge.
-  if (!canonicalPipelineEnabled()) return evaluateAndMaybeAutoSaveLegacy(packId);
-
   const sb = getServiceClient();
 
   const { data: pack, error } = await sb
@@ -545,7 +330,6 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // silently drop a pack that reached the gate.
   let ruleMode: AutomationMode = "review";
   let matchedRuleName: string | null = null;
-  let evidenceDueAt: string | null = null;
   let disputeForAlert: {
     reason: string | null;
     amount: number | null;
@@ -553,14 +337,10 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   if (pack.dispute_id) {
     const { data: dispute } = await sb
       .from("disputes")
-      // `due_at` is an INPUT to the canonical decision — the ABSOLUTE evidence
-      // deadline, never a relative window. Executors derive window state from
-      // it at execution time; the decision only carries the instant.
-      .select("reason, status, amount, phase, due_at")
+      .select("reason, status, amount, phase")
       .eq("id", pack.dispute_id)
       .single();
     if (dispute) {
-      evidenceDueAt = (dispute.due_at as string | null) ?? null;
       const phaseLower = (dispute.phase ?? "").toLowerCase();
       const phaseForRules =
         phaseLower === "inquiry" || phaseLower === "chargeback"
@@ -588,51 +368,42 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // `false`. Computed once so we don't hit the DB per branch.
   const isRegen = await isRegenerateBuild(pack.dispute_id);
 
-  /* ── THE canonical automation decision ────────────────────────────────
-   *
-   * ONE object, derived once, read by every branch below. It replaces the two
-   * independent ladders this function used to run — `evaluateAutoSubmitGuards`
-   * (coverage / fatal-loss / strength) and `evaluateAutoSaveGate`
-   * (completeness / readiness) — which between them could disagree with the
-   * defence build, the reconcile pass and the deadline cron about the same
-   * dispute. Nothing below re-derives a gate; each branch only chooses the
-   * SIDE EFFECTS (pack status, audit event, timeline event, email variant)
-   * that this codebase already produces for that outcome.
-   *
-   * Coverage is handled earlier (it returns `skip_covered` before rules are
-   * even resolved), so `coverage_active` is unreachable here by construction —
-   * it exists on the decision for the other callers.
-   *
-   * Review mode never reaches the strength branches: `ruleMode !== "auto"`
-   * short-circuits each of them, exactly as the guards did by only running in
-   * auto mode, so a merchant on review still sees the pack and decides for
-   * themselves even on a structurally unwinnable case.
-   */
+  // Auto-mode pre-flight guards (PRD §5 fatal-loss + §9 strength). ONE
+  // shared decision — the same
+  // function backs buildDefencePackageJob and reconcileParkedAutoDisputes
+  // so the three paths can never disagree (they did: the job used to BLOCK
+  // on Moderate while this path PARKED). See lib/automation/autoSubmitGuards.ts.
+  //
+  // Review mode never consults the guards: it falls through to the review
+  // branch below and parks, so the merchant can still see the pack and
+  // decide for themselves even on a structurally unwinnable case.
+  //
+  // Coverage is handled earlier (it returns `skip_covered` before rules are
+  // even resolved), so the guards' coverage verdict is unreachable here by
+  // construction — it exists for the other two callers.
   const fatalLoss = (pack.pack_json as { fatal_loss?: { triggered?: boolean; reason?: string | null; message?: string | null } } | null)?.fatal_loss;
   const strengthOverall =
     (pack.pack_json as { case_strength?: { overall?: string } } | null)?.case_strength?.overall ?? null;
-  const decision = decideForPack({
-    caseId: (pack.dispute_id as string | null) ?? packId,
-    pack: {
-      id: packId,
-      dispute_id: (pack.dispute_id as string | null) ?? null,
-      completeness_score: pack.completeness_score ?? null,
-      blockers: pack.blockers,
-      submission_readiness: pack.submission_readiness,
-      pack_json: pack.pack_json,
-    },
-    settings,
-    automationMode: ruleMode,
-    evidenceDueAt,
-  });
-  const decisionHead = decision.reasonCodes[0];
+  const guardVerdict =
+    ruleMode === "auto"
+      ? evaluateAutoSubmitGuards({
+          coverageState: coverage?.state,
+          fatalLoss,
+          caseStrength: strengthOverall,
+          creditAlreadyIssued:
+            (
+              pack.pack_json as {
+                credit_already_issued?: {
+                  triggered?: boolean;
+                  coversDisputedAmount?: boolean;
+                };
+              } | null
+            )?.credit_already_issued ?? null,
+        })
+      : ({ decision: "proceed" } as const);
 
-  if (
-    ruleMode === "auto" &&
-    decision.action === "block" &&
-    decisionHead === "fatal_loss"
-  ) {
-    const reason = fatalLossMessage(fatalLoss);
+  if (guardVerdict.decision === "block" && guardVerdict.reason === "fatal_loss") {
+    const reason = guardVerdict.message;
     await sb.from("audit_events").insert({
       shop_id: pack.shop_id,
       dispute_id: pack.dispute_id,
@@ -675,31 +446,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     return { action: "block", details: reason };
   }
 
-  /*
-   * CONTRACT REVISION 2 — THE TWO HOLDS, AND WHY THEY ARE TOLD APART BY A
-   * REASON CODE RATHER THAN BY AN ACTION.
-   *
-   * Weak / insufficient used to come back from the decision as `block`, so this
-   * function distinguished "parked by the Moderate guard" from "blocked by the
-   * strength floor" on `decision.action`. Revision 2 removed that distinction
-   * at the source: strength is an odds judgement, odds never withhold a filing,
-   * and BOTH bands now return `hold_for_deadline`.
-   *
-   * Left unadapted, this is not a cosmetic mismatch — it is a live defect.
-   * Every weak case would have fallen into the Moderate branch below, which
-   * tells the merchant "case strength is Moderate", skips the
-   * `blocked_weak` / `blocked_no_material_change` rebuild stamp a merchant
-   * watches after re-uploading evidence, and leaves the strength floor's own
-   * branch with no reachable condition at all.
-   *
-   * So the discriminator moves to the reason code — the same one
-   * `resolveHeldState` reads, which is what keeps the page, the email and this
-   * function describing one dispute the same way.
-   */
-  const holdsForDeadline = ruleMode === "auto" && decision.action === "hold_for_deadline";
-  const holdsOnStrength =
-    holdsForDeadline && decision.reasonCodes.includes("strength_insufficient");
-  const parksAsModerate = holdsForDeadline && !holdsOnStrength;
+  const parksAsModerate = guardVerdict.decision === "park";
   // Approved-fact count for the material-change heuristic. We need it
   // before the review-mode branch, which is where the
   // `blocked_no_material_change` outcome fires. Read from the most
@@ -740,7 +487,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
         });
       }
     }
-    const reason = MODERATE_PARK_MESSAGE;
+    const reason = guardVerdict.message;
     const alreadySaved =
       pack.status === "saved_to_shopify" ||
       pack.status === "saved_to_shopify_unverified" ||
@@ -789,14 +536,10 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     }
     return { action: "park_for_review", details: reason };
   }
-  /*
-   * The strength floor. Revision 2: this is a HOLD, not a block — the case
-   * waits for the clock and the deadline cron files it. What the branch does
-   * is unchanged, because everything it does was already true of a hold: it is
-   * the AUTO-FILE path declining to file early, it stamps the strength-specific
-   * rebuild outcome, and it sends the `held` email rather than the `review` one.
-   */
-  if (holdsOnStrength) {
+  if (
+    guardVerdict.decision === "block" &&
+    (guardVerdict.reason === "weak" || guardVerdict.reason === "insufficient")
+  ) {
     if (isRegen && pack.dispute_id) {
       // On a regenerate that lands at weak/insufficient, the merchant
       // needs to know nothing was re-saved AND, if their upload didn't
@@ -815,18 +558,14 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
           : "no_new_bank_eligible_signals",
       });
     }
-    const reason = strengthBlockMessage(strengthOverall);
+    const reason = guardVerdict.message;
     await sb.from("audit_events").insert({
       shop_id: pack.shop_id,
       dispute_id: pack.dispute_id,
       pack_id: packId,
       actor_type: "system",
       event_type: "auto_save_blocked",
-      event_payload: {
-        reasons: [reason],
-        case_strength: strengthOverall,
-        decision_reason_codes: decision.reasonCodes,
-      },
+      event_payload: { reasons: [reason], case_strength: strengthOverall },
     });
     if (pack.dispute_id) {
       void emitDisputeEvent({
@@ -936,33 +675,17 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     return { action: "park_for_review", details: reason };
   }
 
-  /* auto → the decision already ran the quality gate. There is no second
-   * ladder here any more: `evaluateAutoSaveGate` was a separate,
-   * differently-calibrated pass over completeness and readiness, and its
-   * `?? undefined` readiness fallback (R1) silently dropped the whole gate onto
-   * the legacy blocker-count path whenever the column was absent. The decision
-   * resolves an absent readiness to `blocked` instead, so an absent signal
-   * fails closed rather than switching engines. */
-  /*
-   * The score quoted in the block message comes from the SAME reader the
-   * decision used, not from a fourth inline `?? 0` (CP-A's
-   * `readPersistedCompletenessForGate`). A message that quotes a differently
-   * coerced number than the gate that produced it is how "blocked at 0%" gets
-   * reported for a pack the gate scored otherwise.
-   */
-  const gateCompleteness = readPersistedCompletenessForGate({
-    completeness_score: pack.completeness_score ?? null,
-    blockers: pack.blockers,
-    submission_readiness:
-      typeof pack.submission_readiness === "string" ? pack.submission_readiness : null,
-    pack_json: pack.pack_json,
+  // auto → run the quality gate.
+  const gate = evaluateAutoSaveGate({
+    autoSaveEnabled: settings.auto_save_enabled,
+    autoSaveMinScore: settings.auto_save_min_score,
+    enforceNoBlockers: settings.enforce_no_blockers,
+    completenessScore: pack.completeness_score ?? 0,
+    blockers: (pack.blockers as string[]) ?? [],
+    submissionReadiness: (pack.submission_readiness as "ready" | "ready_with_warnings" | "blocked" | "submitted") ?? undefined,
   });
-  const gateReasons: string[] =
-    decision.action === "auto_file"
-      ? []
-      : [gateBlockMessage(decision.reasonCodes[0], settings, gateCompleteness.score)];
 
-  if (decision.action === "auto_file") {
+  if (gate.action === "auto_save") {
     /* ── PR-C1 candidate-safety preflight, BEFORE the optimistic stamp ──
      *
      * This branch stamps `status = saved_to_shopify` + `saved_to_shopify_at`
@@ -1041,9 +764,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       event_type: "auto_save_enqueued",
       event_payload: {
         completeness_score: pack.completeness_score,
-        decision_action: decision.action,
-        decision_reason_codes: decision.reasonCodes,
-        decision_input_hash: decision.freshness.inputHash,
+        gate_result: gate,
       },
     });
 
@@ -1078,19 +799,16 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     return { action: "auto_save", details: "Enqueued save to Shopify" };
   }
 
-  // The rule said auto but the decision refused on quality (completeness /
-  // readiness). Pack stays "ready" so the merchant can fill the gap and retry.
+  // gate.action === "block" — the rule said auto but the pack doesn't
+  // meet the quality criteria (completeness / blockers). Pack stays
+  // "ready" so the merchant can fill the gap and retry.
   await sb.from("audit_events").insert({
     shop_id: pack.shop_id,
     dispute_id: pack.dispute_id,
     pack_id: packId,
     actor_type: "system",
     event_type: "auto_save_blocked",
-    event_payload: {
-      reasons: gateReasons,
-      decision_reason_codes: decision.reasonCodes,
-      decision_input_hash: decision.freshness.inputHash,
-    },
+    event_payload: { reasons: gate.reasons },
   });
 
   if (pack.dispute_id) {
@@ -1102,8 +820,8 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       actorType: "disputedesk_system",
       sourceType: "pack_engine",
       visibility: "merchant_and_internal",
-      description: gateReasons.join("; "),
-      metadataJson: { pack_id: packId, reasons: gateReasons },
+      description: (gate.reasons as string[]).join("; "),
+      metadataJson: { pack_id: packId, reasons: gate.reasons },
       dedupeKey: `${pack.dispute_id}:${PACK_BLOCKED}:${packId}:${new Date().toISOString()}`,
     });
     void updateNormalizedStatus(pack.dispute_id);
@@ -1120,7 +838,7 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
 
   return {
     action: "block",
-    details: gateReasons.join("; "),
+    details: (gate.reasons as string[]).join("; "),
   };
 }
 

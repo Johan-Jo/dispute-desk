@@ -48,6 +48,31 @@ export function bankIncludedFacts(facts: readonly EvidenceFact[]): EvidenceFact[
 }
 
 /**
+ * THE predicate, as it applies to a MANUAL upload (CP-B, F3).
+ *
+ * A `ManualEvidenceRecord` is a merchant-supplied document rather than a
+ * derived fact, so it carries no `submissionRisk` — the risk judgement for an
+ * upload IS `bankEligible`, set by whoever reviewed it. The remaining two
+ * conjuncts are the ones `isBankIncludedFact` applies, and this lives HERE
+ * rather than beside its caller for the reason the whole module exists: the
+ * same rule spelled in two files is how C-1's divergence survived a comment
+ * claiming the two agreed.
+ *
+ * WHAT IT REPLACES. The PDF's Supporting Evidence Index selected on
+ * `includeInPackage` — a routing flag answering "where does this document
+ * belong inside our product", never "may the issuer see it". A merchant-only
+ * upload with `includeInPackage: true` therefore reached the issuer, and the
+ * internal "Inclusion" column then announced which documents we had chosen to
+ * argue from versus merely attach.
+ */
+export function isBankIncludedManualEvidence(record: {
+  bankEligible: boolean;
+  includeInBankNarrative: boolean;
+}): boolean {
+  return record.bankEligible && record.includeInBankNarrative;
+}
+
+/**
  * The LLM payload's filter as production runs it today. NOT a second
  * bank-inclusion rule — the measured pre-convergence behaviour of ONE call site,
  * named so it can be seen.

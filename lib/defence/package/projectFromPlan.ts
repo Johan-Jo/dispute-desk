@@ -29,6 +29,7 @@
 import type { CaseArgumentPlanSnapshot } from "@/lib/pipeline/contracts";
 import { excludedRecordIds, includedRecordIds } from "@/lib/argument/plan";
 import { composePdfBlocks } from "../pdf/composePdfBlocks";
+import { hasFulfillmentClaimAuthority } from "./fulfillmentClaimAuthority";
 import type {
   ComposedDocumentBlock,
   DefenceNarrativeOutput,
@@ -167,6 +168,19 @@ export interface ProjectPackageInput {
   familyKey: ReasonCodeFamilyKey;
   moduleKey: string | null;
   fulfillmentStatus: string | null;
+  /**
+   * The plan's included facts AFTER the bank-inclusion filter, when the caller
+   * applies one.
+   *
+   * Two different questions produce two different lists and both have to be
+   * asked: `plan.included` answers "does this fact belong in THIS argument",
+   * `isBankIncludedFact` answers "may an issuer see it at all". The projection
+   * composes from the intersection; `selectPlanFacts` alone would compose from
+   * the first only, which is how a plan-authorised but bank-ineligible fact
+   * reaches a thesis. Omitted ⇒ the plan's own list, i.e. the caller has
+   * already intersected or has no bank filter to apply.
+   */
+  bankIncludedFacts?: EvidenceFact[];
 }
 
 export interface PackageProjection {
@@ -201,13 +215,20 @@ export function projectPackageFromPlan(input: ProjectPackageInput): PackageProje
     plan: input.plan,
   });
 
+  const composeFrom = input.bankIncludedFacts ?? selection.includedFacts;
+
   const blocks = composePdfBlocks({
     narrative: rebuilt.narrative,
-    approvedFacts: selection.includedFacts,
+    approvedFacts: composeFrom,
     packageMode: input.packageMode,
     familyKey: input.familyKey,
     moduleKey: input.moduleKey,
     fulfillmentStatus: input.fulfillmentStatus,
+    // F6. The deterministic fulfilment paragraph is authorised by the
+    // ARGUMENT, never by the raw `fulfillmentStatus` scalar. Derived from the
+    // same facts the document is composed from, so the validator can
+    // re-derive it independently instead of trusting a flag passed alongside.
+    fulfillmentClaimAuthority: hasFulfillmentClaimAuthority(composeFrom),
   });
 
   return {

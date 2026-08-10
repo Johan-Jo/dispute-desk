@@ -21,4 +21,7 @@ export {
 export type { PlanInputHashParts } from "./planInputHash";
 export { computePlanInputHash } from "./planInputHash";
 
+export type { DerivePlanForCaseInput, PlanForCase } from "./planForCase";
+export { PLAN_POLICY_VERSION, derivePlanForCase } from "./planForCase";
+
 export { EXCLUSION_REASON_TOKENS, exclusionReasonToken } from "./exclusionTokens";

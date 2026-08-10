@@ -96,19 +96,67 @@ describe("branch boundary — automation may not import the argument branch", ()
   });
 });
 
-describe("CI invariant — legacy gate ladders have no production reader", () => {
+describe("CI invariant — legacy gate ladders are reachable only behind the switch", () => {
   /**
    * Each entry is a legacy ladder the canonical decision replaces. The files
    * still exist because `scripts/evidence-model/calibration/**` (Agent A's
    * measurement harness) replays historical behaviour through them, and a
    * harness that measured the NEW ladder would answer a different question.
-   * What must be true is that nothing under `lib/` or `app/` decides anything
-   * with them any more.
+   *
+   * ── WHY THIS IS NOT YET "ZERO READERS" ────────────────────────────────
+   *
+   * PR 2 ships the canonical route DARK. With the switch off, production runs
+   * the ladders that shipped at the kickoff baseline — and it runs them as the
+   * SAME CODE, moved verbatim into `*.legacy.ts` modules, because "dark" must
+   * mean the same code rather than a re-expression argued to be equivalent.
+   * Those modules are therefore real readers, and asserting zero here would
+   * only be satisfiable by faking the dark period.
+   *
+   * So the invariant for the dark period is the one that actually matters:
+   *
+   *   1. Every reader is a gated legacy module — no OTHER file decides
+   *      anything with a retired ladder.
+   *   2. Every gated legacy module is reached only from a live module that
+   *      dispatches on `canonicalPipelineEnabled()`, so an activated
+   *      deployment cannot reach one.
+   *
+   * PR 3 deletes the legacy modules and this list becomes empty again, at
+   * which point `GATED_LEGACY_MODULES` and this comment go with them.
    */
   const RETIRED_LADDERS: Array<{ name: string; definedIn: string }> = [
     { name: "evaluateAutoSaveGate", definedIn: "lib/automation/autoSaveGate.ts" },
     { name: "evaluateAutoSubmitGuards", definedIn: "lib/automation/autoSubmitGuards.ts" },
   ];
+
+  /**
+   * The verbatim pre-cutover implementations, and the live module that gates
+   * each one. Both halves are asserted: a legacy module with no gate is a
+   * legacy module that ships live.
+   */
+  const GATED_LEGACY_MODULES: Array<{ legacy: string; gatedBy: string; entry: string }> = [
+    {
+      legacy: "lib/automation/pipeline.legacy.ts",
+      gatedBy: "lib/automation/pipeline.ts",
+      entry: "evaluateAndMaybeAutoSaveLegacy",
+    },
+    {
+      legacy: "lib/automation/reconcileParkedAutoDisputes.legacy.ts",
+      gatedBy: "lib/automation/reconcileParkedAutoDisputes.ts",
+      entry: "reconcileParkedAutoDisputesLegacy",
+    },
+    {
+      legacy: "lib/disputes/heldState.legacy.ts",
+      gatedBy: "lib/disputes/heldState.ts",
+      entry: "resolveHeldStateLegacy",
+    },
+    {
+      legacy: "app/api/cron/defence-package-deadline-submit/legacyRoute.ts",
+      gatedBy: "app/api/cron/defence-package-deadline-submit/route.ts",
+      entry: "runDeadlineSubmitLegacy",
+    },
+  ];
+
+  const LEGACY_PATHS = new Set(GATED_LEGACY_MODULES.map((m) => m.legacy));
 
   const productionFiles = [
     ...walk(join(ROOT, "lib")),
@@ -116,7 +164,7 @@ describe("CI invariant — legacy gate ladders have no production reader", () =>
   ].filter((f) => !f.includes("__tests__"));
 
   for (const { name, definedIn } of RETIRED_LADDERS) {
-    it(`${name} has zero production readers`, () => {
+    it(`${name} is read only by a gated legacy module`, () => {
       const readers = productionFiles.filter((file) => {
         const rel = relative(ROOT, file).replace(/\\/g, "/");
         // The defining module is not a reader of itself.
@@ -128,9 +176,34 @@ describe("CI invariant — legacy gate ladders have no production reader", () =>
           new RegExp(`\\b${name}\\s*\\(`).test(src)
         );
       });
-      expect(readers.map((f) => relative(ROOT, f).replace(/\\/g, "/"))).toEqual([]);
+      const unexpected = readers
+        .map((f) => relative(ROOT, f).replace(/\\/g, "/"))
+        .filter((rel) => !LEGACY_PATHS.has(rel));
+      expect(unexpected).toEqual([]);
     });
   }
+
+  for (const { legacy, gatedBy, entry } of GATED_LEGACY_MODULES) {
+    it(`${legacy} is reachable only through canonicalPipelineEnabled()`, () => {
+      const live = readFileSync(join(ROOT, ...gatedBy.split("/")), "utf8");
+      // The gate, and the call, and the gate BEFORE the call. A dispatch that
+      // reads the switch somewhere else in the file would satisfy a naive
+      // "contains both" check while running the legacy body unconditionally.
+      const gateIndex = live.indexOf(`if (!canonicalPipelineEnabled()) return ${entry}(`);
+      expect(gateIndex, `${gatedBy} does not dispatch to ${entry} behind the switch`).toBeGreaterThan(-1);
+      // …and nowhere else. One call site, one gate.
+      const callCount = live.split(`${entry}(`).length - 1;
+      expect(callCount, `${gatedBy} calls ${entry} more than once`).toBe(1);
+    });
+  }
+
+  it("guard the guard — the gate pattern really is what makes those tests pass", () => {
+    // Re-run the detector against a file that imports a legacy entry point and
+    // calls it WITHOUT the switch. If this does not fail the pattern, the
+    // assertions above prove nothing.
+    const ungated = `import { resolveHeldStateLegacy } from "./heldState.legacy";\nreturn resolveHeldStateLegacy(input);`;
+    expect(ungated.indexOf("if (!canonicalPipelineEnabled()) return resolveHeldStateLegacy(")).toBe(-1);
+  });
 
   it("no undefined-readiness fallback remains (R1)", () => {
     /**
@@ -152,10 +225,17 @@ describe("CI invariant — legacy gate ladders have no production reader", () =>
     const stripComments = (src: string) =>
       src.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
     for (const file of productionFiles) {
+      const rel = relative(ROOT, file).replace(/\\/g, "/");
+      // The gated legacy modules are the pre-cutover code, verbatim. R1 IS the
+      // pre-cutover behaviour, so its presence there is the point — removing
+      // it would make the "off" path something other than what shipped. The
+      // preceding suite proves those modules are unreachable when the switch
+      // is on, which is what makes this exemption safe rather than convenient.
+      if (LEGACY_PATHS.has(rel)) continue;
       const src = stripComments(readFileSync(file, "utf8"));
       expect(
         /submission(_r|R)eadiness[^\n]*\?\?\s*undefined/.test(src),
-        relative(ROOT, file).replace(/\\/g, "/"),
+        rel,
       ).toBe(false);
     }
   });
@@ -202,11 +282,22 @@ describe("CI invariant — the deadline submitter gates before it decides", () =
   );
 
   it("cronEnvGate(req) is the first statement of GET", () => {
-    const src = readFileSync(route, "utf8");
-    const handler = src.match(/export async function GET\s*\([^)]*\)\s*\{([\s\S]{0,200})/);
+    // Comments are stripped first, for the same reason the R1 scan strips
+    // them: a scan that cannot tell an implementation from the prose above it
+    // fails on the change that documents itself. What is asserted is the
+    // STATEMENT order — and the gate must precede the activation switch too,
+    // because an unauthenticated request may not reach either branch.
+    const src = readFileSync(route, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, " ")
+      .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+    const handler = src.match(/export async function GET\s*\([^)]*\)\s*\{([\s\S]{0,400})/);
     expect(handler).not.toBeNull();
     const head = handler![1].trim();
     expect(head.startsWith("const gate = cronEnvGate(req);")).toBe(true);
+    // The switch is read AFTER the gate, never before it.
+    expect(head.indexOf("canonicalPipelineEnabled()")).toBeGreaterThan(
+      head.indexOf("cronEnvGate(req)"),
+    );
   });
 
   it("the deadline route reaches a package only through the selection adapter", () => {
@@ -214,5 +305,21 @@ describe("CI invariant — the deadline submitter gates before it decides", () =
     expect(src).toContain("selectForDeadline");
     // No executor may obtain a package through a direct fileable-row query.
     expect(src).not.toMatch(/from\(["']defence_packages["']\)[\s\S]{0,400}order\(/);
+  });
+
+  it("the legacy route keeps its own cronEnvGate — the gate is not the switch's job", () => {
+    // `route.ts` gates before dispatching, so this is belt-and-braces. It is
+    // asserted anyway because the legacy module is a full request handler: if
+    // anything ever calls it directly, authentication must not depend on the
+    // caller having done it first.
+    const legacy = readFileSync(
+      join(ROOT, "app", "api", "cron", "defence-package-deadline-submit", "legacyRoute.ts"),
+      "utf8",
+    ).replace(/\/\*[\s\S]*?\*\//g, " ");
+    const handler = legacy.match(
+      /export async function runDeadlineSubmitLegacy\s*\([^)]*\)\s*\{([\s\S]{0,200})/,
+    );
+    expect(handler).not.toBeNull();
+    expect(handler![1].trim().startsWith("const gate = cronEnvGate(req);")).toBe(true);
   });
 });

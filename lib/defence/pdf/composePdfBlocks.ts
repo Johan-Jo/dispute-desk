@@ -47,6 +47,24 @@ export interface ComposePdfBlocksInput {
    *  module are dropped from the output regardless of LLM emission. */
   moduleKey: string | null;
   fulfillmentStatus: string | null;
+  /**
+   * F6 — CANONICAL CLAIM AUTHORITY for the deterministic fulfilment fallback.
+   *
+   * When supplied, it REPLACES the raw-scalar test below. The scalar is
+   * `orderContext.fulfillmentStatus`, read straight off `pack_json`, and on the
+   * legacy path a bare `"FULFILLED"` is enough to write
+   * `FULFILLMENT_FALLBACK_TEXT` into the issuer-facing document — a
+   * deterministic sentence asserting fulfilment with no approved fact behind
+   * it. The narrative claim guard covers the opposite case (UNFULFILLED with no
+   * delivery fact) and says nothing about this one, so the scalar has been the
+   * sole authority for that sentence.
+   *
+   * On the canonical route authority comes from the plan: an order fact the
+   * plan included and the classifier deemed bank-citable, or a held
+   * `delivery_occurred` capability. Undefined keeps the shipped behaviour
+   * exactly, which is what makes the dark period a true no-op here.
+   */
+  fulfillmentClaimAuthority?: boolean;
 }
 
 export function composePdfBlocks(
@@ -56,8 +74,9 @@ export function composePdfBlocks(
     input.narrative.omittedSections.map((o) => o.sectionKey),
   );
   const isFulfilled =
-    typeof input.fulfillmentStatus === "string" &&
-    input.fulfillmentStatus.toUpperCase() === "FULFILLED";
+    input.fulfillmentClaimAuthority ??
+    (typeof input.fulfillmentStatus === "string" &&
+      input.fulfillmentStatus.toUpperCase() === "FULFILLED");
 
   const blocks: ComposedDocumentBlock[] = [];
 

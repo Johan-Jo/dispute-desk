@@ -26,6 +26,8 @@ export type {
 } from "./documentValidation";
 export { validatePackageDocument } from "./documentValidation";
 
+export { hasFulfillmentClaimAuthority } from "./fulfillmentClaimAuthority";
+
 // `FileablePackageCandidate` and `CurrentPipelineInputs` live in the shared
 // contract as of revision 1 — import them from `@/lib/pipeline/contracts`.
 // `SelectableCandidate` is CP-B's extension of the former, carrying the fields

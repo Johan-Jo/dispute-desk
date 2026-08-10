@@ -11,7 +11,7 @@
  * none of them.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("@/lib/supabase/server", () => ({ getServiceClient: vi.fn() }));
 vi.mock("@/lib/audit/logEvent", () => ({
@@ -36,6 +36,10 @@ import { logAuditEvent } from "@/lib/audit/logEvent";
 import { sendDefenceDeadlineFallbackAlert } from "@/lib/email/sendDefenceDeadlineFallbackAlert";
 import { GET } from "@/app/api/cron/defence-package-deadline-submit/route";
 import { NextRequest } from "next/server";
+import {
+  CANONICAL_PIPELINE_ENV,
+  CANONICAL_PIPELINE_ON,
+} from "@/lib/pipeline/activation";
 import {
   CLEAN_FACTS,
   CLEAN_NARRATIVE,
@@ -140,7 +144,18 @@ function setup(opts: {
 
 const req = () => new NextRequest("https://x.test/api/cron/defence-package-deadline-submit");
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  // The canonical deadline route ships DARK (`lib/pipeline/activation.ts`).
+  // Every case in this file is about the CANONICAL route — P-6 at the actual
+  // submitter — so the switch is on for the whole suite. The legacy route's
+  // own behaviour is pinned separately, in
+  // `tests/api/cron/deadlineSubmitActivationParity.test.ts`.
+  process.env[CANONICAL_PIPELINE_ENV] = CANONICAL_PIPELINE_ON;
+});
+afterEach(() => {
+  delete process.env[CANONICAL_PIPELINE_ENV];
+});
 
 describe("deadline submit — a deadline relaxes NOTHING (P-6)", () => {
   it("baseline: a strong, complete, safe case IS filed", async () => {

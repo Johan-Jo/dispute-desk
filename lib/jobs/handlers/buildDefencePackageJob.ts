@@ -48,14 +48,43 @@ import { finalizeAndEnqueueSave } from "@/lib/automation/finalizeAndEnqueueSave"
 import { finalizeDedupeKey } from "@/lib/defence/finalizeRpc";
 import { decideForPack } from "@/lib/automation/decision";
 import { getShopSettings } from "@/lib/automation/settings";
+import { canonicalPipelineEnabled } from "@/lib/pipeline/activation";
+import {
+  derivePlanForCase,
+  planHasSafeArgument,
+  type PlanForCase,
+} from "@/lib/argument/plan";
+import {
+  bankIncludedFacts,
+  isBankIncludedManualEvidence,
+} from "@/lib/defence/bankInclusion";
+import {
+  projectPackageFromPlan,
+  selectPlanFacts,
+  validatePackageDocument,
+  type PackageProjection,
+} from "@/lib/defence/package";
+import { projectReviewItems } from "@/lib/evidence/model/merchantProjection";
 import type {
   DefencePackageDocumentData,
 } from "@/lib/defence/pdf/DefencePackageDocument";
 import type {
   DefencePackageStatus,
   DefencePackageFailureCode,
+  EvidenceFact,
+  ValidationError,
 } from "@/lib/defence/types";
 import type { ClaimedJob, JobResult } from "../claimJobs";
+
+/**
+ * What every issuer-facing surface in this handler is built from.
+ *
+ * Named rather than spelled `EvidenceFact[]` at each site so the ONE
+ * substitution this change makes — `classification.approved` becomes the
+ * plan's bank-included facts on the canonical route — is a single assignment
+ * with a reason next to it, not thirteen edits a reviewer has to diff.
+ */
+type EvidenceFactList = EvidenceFact[];
 
 export async function handleBuildDefencePackage(
   job: ClaimedJob,
@@ -260,6 +289,100 @@ export async function handleBuildDefencePackage(
     return await markSkipped(sb, pkg, classification.ineligibilityReason);
   }
 
+  /* ── THE CANONICAL ARGUMENT PLAN (CP-B) ──────────────────────────────
+   *
+   * Derived BEFORE anything issuer-facing exists. That ordering is the whole
+   * design: a `review_required`, unverified, adverse or merchant-only record is
+   * removed from the argument before the language model is shown anything, so
+   * the model is never given a fact it may not cite. Filtering generated prose
+   * afterwards is the failure mode this ordering prevents — prose written
+   * around a fact does not survive that fact's removal, it merely loses its
+   * support and keeps its sentence.
+   *
+   * Dark until PR 3. With the switch off, `plan` stays null and every branch
+   * below falls through to `classification.approved`, exactly as shipped.
+   */
+  const canonical = canonicalPipelineEnabled();
+  let planned: PlanForCase | null = null;
+  let planFacts: EvidenceFactList = classification.approved;
+
+  if (canonical) {
+    planned = derivePlanForCase({
+      caseId: pkg.dispute_id as string,
+      model: {
+        disputeId: pkg.dispute_id as string,
+        reason: (dispute?.reason as string | null) ?? null,
+        packId: pack.id as string,
+        sections: sectionsRaw,
+        evidenceItems: items,
+        coverage: { state: coverage },
+        networkReasonCode: reasonCode,
+      },
+      reasonCodeModule,
+      approvedFacts: planFacts,
+      // F4. Phase 4R is not built, so nothing writes a review flag yet and this
+      // list is empty on live data — but it is a real INPUT rather than a
+      // hardcoded zero, and everything downstream reads the count off the
+      // plan's own exclusions. `deadline_only` is therefore reachable the
+      // moment a writer exists, instead of being structurally impossible.
+      reviewItems: [],
+      computedAt: new Date().toISOString(),
+    });
+
+    /* ── F5 — a fatally-lost case produces no fileable argument, and it is
+     * refused HERE, before a document exists.
+     *
+     * The fatal-loss gate already capped strength and blocked auto-mode, but
+     * the build still generated a full letter: the LLM was called, the PDF was
+     * rendered and a validated draft was persisted for a case that is
+     * structurally unwinnable. That draft is a fileable-looking candidate, and
+     * the deadline path is exactly the path that used to pick one up without
+     * consulting any gate at all.
+     *
+     * `markSkipped` writes `status = skipped` with the reason, which the
+     * selector reads as `no_safe_argument` — never a draft, never a candidate.
+     * The reason stays MERCHANT-facing only: bank text may never cite a
+     * fatal-loss reason, and nothing here composes any.
+     */
+    if (fatalLoss.triggered === true) {
+      return await markSkipped(sb, pkg, "no_bank_eligible_facts");
+    }
+
+    /* No safe argument survives the exclusions. An honest product outcome, not
+     * an error — and specifically not a reason to lower the bar and generate
+     * something weaker. Refused before generation for the same reason. */
+    if (!planHasSafeArgument(planned.plan)) {
+      return await markSkipped(sb, pkg, "no_bank_eligible_facts");
+    }
+
+    /* ── F1 / F3 / F6 — what the argument may be built from ─────────────
+     *
+     * TWO filters, both required, in this order:
+     *
+     *   1. `plan.included` — argument authority. Nothing outside it may reach
+     *      an issuer, and nothing downstream re-decides that.
+     *   2. `bankIncludedFacts` — bank eligibility. The plan answers "does this
+     *      belong in THIS argument"; the classifier answers "may an issuer see
+     *      it at all". They are different questions and both have to be asked.
+     *
+     * This is also where C-1 converges on the canonical route: the LLM payload
+     * filter (`reachesLlmPayloadLegacy`) is strictly weaker than
+     * `isBankIncludedFact`, so the model could be argued from a fact the PDF's
+     * Evidence Basis table suppresses. On this route the model, the thesis, the
+     * chronology, the Evidence Basis and Case Details all receive the SAME
+     * list. The legacy route keeps the weaker filter untouched.
+     */
+    planFacts = bankIncludedFacts(
+      selectPlanFacts(planned.plan, planned.factsByRecordId).includedFacts,
+    );
+
+    // Everything the plan authorised was bank-ineligible. Same honest answer:
+    // no document, no draft, no candidate.
+    if (planFacts.length === 0) {
+      return await markSkipped(sb, pkg, "no_bank_eligible_facts");
+    }
+  }
+
   // Phase 3 — rank strategy submodules for this dispute. Empty result
   // (family has no strategies yet) is fine; the narrative writer
   // simply doesn't emit the 4th cached system block.
@@ -295,7 +418,7 @@ export async function handleBuildDefencePackage(
       strategies,
       packageMode: classification.packageMode,
       caseStrength: "moderate",
-      approvedFacts: classification.approved,
+      approvedFacts: planFacts,
       manualEvidence: classification.manual,
       internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
       missingEvidence: classification.missing,
@@ -341,7 +464,7 @@ export async function handleBuildDefencePackage(
   ];
   let validation = validateNarrative({
     narrative: narrativeRes.narrative,
-    approvedFacts: classification.approved,
+    approvedFacts: planFacts,
     reasonCodeModule,
     packageMode: classification.packageMode,
     internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
@@ -377,7 +500,7 @@ export async function handleBuildDefencePackage(
         strategies,
         packageMode: classification.packageMode,
         caseStrength: "moderate",
-        approvedFacts: classification.approved,
+        approvedFacts: planFacts,
         manualEvidence: classification.manual,
         internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
         missingEvidence: classification.missing,
@@ -402,7 +525,7 @@ export async function handleBuildDefencePackage(
       // with its errors.
       const retryValidation = validateNarrative({
         narrative: retryRes.narrative,
-        approvedFacts: classification.approved,
+        approvedFacts: planFacts,
         reasonCodeModule,
         packageMode: classification.packageMode,
         internalOnlyFactIds: classification.internalOnly.map((f) => f.id),
@@ -433,7 +556,7 @@ export async function handleBuildDefencePackage(
         failure_code: "validation_failed",
         failure_reason: `${validation.errors.length} validation error${validation.errors.length === 1 ? "" : "s"} (after one retry)`,
         narrative_json: narrativeRes.narrative,
-        facts_json: classification.approved,
+        facts_json: planFacts,
         package_mode: classification.packageMode,
         llm_model: narrativeRes.modelUsed,
         prompt_family: narrativeRes.promptFamily,
@@ -487,21 +610,94 @@ export async function handleBuildDefencePackage(
   // (renderThesis) — a thesis can no longer claim a fact that isn't
   // in approvedFacts because the required-token gate short-circuits to
   // "" when any token resolves null.
-  const composedBlocks = composePdfBlocks({
-    narrative: narrativeRes.narrative,
-    approvedFacts: classification.approved,
-    packageMode: classification.packageMode,
-    familyKey: reasonCodeFamily.key,
-    moduleKey: reasonCodeModule.key,
-    fulfillmentStatus: orderContext.fulfillmentStatus,
-  });
-  const composedValidation = validateComposedDocument({
-    blocks: composedBlocks,
-    approvedFacts: classification.approved,
-    packageMode: classification.packageMode,
-    extraHardPhrases: hardPhrases,
-    guardedPhrases: reasonCodeFamily.guardedBankPhrases,
-  });
+  /* ── F1 / F2 — the document as a PROJECTION of the plan ──────────────
+   *
+   * On the canonical route the blocks are not composed from a narrative and
+   * then checked; the narrative is REBUILT against `plan.included` first, so a
+   * section that cites a record the plan removed is dropped whole before any
+   * composition happens. `composePdfBlocks` then runs inside the projection,
+   * over the plan's bank-included facts only — which is what makes the
+   * templated thesis (F1) and the chronology (F2) re-render from the surviving
+   * support instead of from whatever the model was given.
+   *
+   * Section granularity is deliberate: when a section cites an excluded
+   * record the WHOLE section goes, not the offending clause. Sub-sentence
+   * surgery needs to know which words a fact supports, which nothing here
+   * knows, and a partial edit that leaves the topic sentence standing is the
+   * orphaned claim again in a smaller box.
+   */
+  let projection: PackageProjection | null = null;
+  let documentFailureCodes: readonly string[] = [];
+
+  if (canonical && planned) {
+    projection = projectPackageFromPlan({
+      plan: planned.plan,
+      narrative: narrativeRes.narrative,
+      factsByRecordId: planned.factsByRecordId,
+      // The intersection the document is actually composed from — plan
+      // authority AND bank eligibility. See `ProjectPackageInput`.
+      bankIncludedFacts: planFacts,
+      packageMode: classification.packageMode,
+      familyKey: reasonCodeFamily.key,
+      moduleKey: reasonCodeModule.key,
+      fulfillmentStatus: orderContext.fulfillmentStatus,
+    });
+  }
+
+  const composedBlocks =
+    projection?.blocks ??
+    composePdfBlocks({
+      narrative: narrativeRes.narrative,
+      approvedFacts: planFacts,
+      packageMode: classification.packageMode,
+      familyKey: reasonCodeFamily.key,
+      moduleKey: reasonCodeModule.key,
+      fulfillmentStatus: orderContext.fulfillmentStatus,
+    });
+
+  /* F2's second half — DETERMINISTIC document validation, run after
+   * composition and covering what only exists once the plan is in the picture:
+   * orphaned claims, plan/fact mismatch, an empty document, a retired delivery
+   * key, plus the whole composed-prose contract. A failure makes the package
+   * NON-FILEABLE — never a warning, never a score, never something a caller
+   * may weigh against a deadline. */
+  const composedValidation =
+    canonical && planned && projection
+      ? (() => {
+          const verdict = validatePackageDocument({
+            plan: planned.plan,
+            blocks: projection.blocks,
+            includedFacts: planFacts,
+            orphaned: projection.orphaned,
+            missingRecordIds: projection.missingRecordIds,
+            packageMode: classification.packageMode,
+            extraHardPhrases: hardPhrases,
+            guardedPhrases: reasonCodeFamily.guardedBankPhrases,
+          });
+          documentFailureCodes = verdict.failureCodes;
+          return {
+            ok: verdict.passed,
+            // The machine codes ARE the verdict on this route — they are the
+            // vocabulary `deadlineExecutionConditions` reads for P-6's
+            // `noUnsupportedArgument`. They are widened to `ValidationError`
+            // only so the existing failure-persistence branch below keeps
+            // writing the same column shape; the CODE is what carries meaning
+            // and `message` deliberately restates it rather than inventing
+            // prose the selector would then have to parse back.
+            errors: verdict.failureCodes.map((rule) => ({
+              section: "global" as const,
+              rule: rule as ValidationError["rule"],
+              message: rule,
+            })),
+          };
+        })()
+      : validateComposedDocument({
+          blocks: composedBlocks,
+          approvedFacts: planFacts,
+          packageMode: classification.packageMode,
+          extraHardPhrases: hardPhrases,
+          guardedPhrases: reasonCodeFamily.guardedBankPhrases,
+        });
   if (!composedValidation.ok) {
     const summary = summariseComposedErrors(composedValidation.errors);
     await sb
@@ -513,7 +709,7 @@ export async function handleBuildDefencePackage(
         failure_code: "validation_failed",
         failure_reason: summary,
         narrative_json: narrativeRes.narrative,
-        facts_json: classification.approved,
+        facts_json: planFacts,
         package_mode: classification.packageMode,
         llm_model: narrativeRes.modelUsed,
         prompt_family: narrativeRes.promptFamily,
@@ -582,8 +778,16 @@ export async function handleBuildDefencePackage(
       generatedBy: pkg.generated_by as "system" | "merchant" | "admin",
     },
     composedBlocks,
-    approvedFacts: classification.approved,
-    manualEvidence: classification.manual,
+    approvedFacts: planFacts,
+    // F3. `classification.manual` is the full merchant-visible list, and the
+    // renderer used to select from it on `includeInPackage` — a routing flag
+    // that has never meant "the issuer may see this". On the canonical route
+    // the list handed to the document is already bank-filtered, and the
+    // renderer drops the internal "Inclusion" column with it.
+    manualEvidence: canonical
+      ? classification.manual.filter(isBankIncludedManualEvidence)
+      : classification.manual,
+    issuerSafeSupportingIndex: canonical,
   };
 
   let pdfPath: string;
@@ -609,7 +813,7 @@ export async function handleBuildDefencePackage(
         failure_code: "pdf_render_failed",
         failure_reason: fullReason,
         narrative_json: narrativeRes.narrative,
-        facts_json: classification.approved,
+        facts_json: planFacts,
         package_mode: classification.packageMode,
         llm_model: narrativeRes.modelUsed,
         prompt_family: narrativeRes.promptFamily,
@@ -632,7 +836,7 @@ export async function handleBuildDefencePackage(
   // (in case enqueue used an empty classifier — the canonical source of
   // truth is what the LLM actually saw).
   const finalHash = computeEvidenceHash({
-    approvedFacts: classification.approved,
+    approvedFacts: planFacts,
     manualEvidence: classification.manual,
     reasonCode,
   });
@@ -688,6 +892,21 @@ export async function handleBuildDefencePackage(
       automationMode: "auto",
       // The ABSOLUTE deadline. This handler never computes a window from it.
       evidenceDueAt: (dispute?.due_at as string | null) ?? null,
+      /* F4 — the count comes from the PLAN'S ACTUAL EXCLUSIONS.
+       *
+       * `assessmentFromPackRow` defaults it to 0, and every caller took the
+       * default, so `review_required_present` could not fire anywhere and
+       * `deadline_only` was unreachable by construction — the state was
+       * specified, contracted, given merchant copy in six locales, and then
+       * made impossible by a hardcoded zero.
+       *
+       * `projectReviewItems` reads `plan.excluded` where the reason is
+       * `review_required`. It is the same projection the merchant surface
+       * renders, so the number automation acts on and the number the merchant
+       * is shown cannot disagree. On the legacy route `planned` is null and
+       * the count is 0 — which is what shipped.
+       */
+      reviewRequiredCount: projectReviewItems(planned?.plan ?? null).length,
     });
     if (decision.action !== "auto_file") {
       resolvedMode = "review";
@@ -729,13 +948,53 @@ export async function handleBuildDefencePackage(
   // `finalizeAndEnqueueSave`, after the preflight — for every caller.
   const targetStatus: DefencePackageStatus = "draft";
 
+  /* ── CANONICAL IDENTITY ────────────────────────────────────────────────
+   *
+   * What makes this row comparable against the CURRENT pipeline inputs later.
+   * Without it `selectFileablePackage` has to treat every candidate as current,
+   * which is exactly the "take the newest and hope" behaviour it exists to
+   * replace.
+   *
+   * Written on the canonical route and explicitly NULLED otherwise — not
+   * omitted-and-left-alone. A rebuild that runs with the switch off must CLEAR
+   * a previous build's identity rather than let this row keep claiming a plan
+   * it was not projected from. `null` reads as `snapshot_absent`, which is
+   * non-fileable, and that is the correct answer for a package no plan was
+   * derived for.
+   */
+  const canonicalIdentityColumns =
+    canonical && planned
+      ? {
+          plan_json: planned.plan,
+          plan_input_hash: planned.planInputHash,
+          plan_policy_version: planned.policyVersion,
+          plan_deadline_only: planned.plan.deadlineOnly,
+          plan_no_safe_argument: planned.plan.noSafeArgument,
+          // Reached only after `composedValidation.ok`, so `true` here is a
+          // recorded verdict rather than an assumption. The codes are carried
+          // beside it because P-6's `noUnsupportedArgument` reads THEM, not the
+          // boolean — folding the two together is the collapse contract
+          // revision 1 undid.
+          document_validation_passed: true,
+          document_failure_codes: documentFailureCodes,
+        }
+      : {
+          plan_json: null,
+          plan_input_hash: null,
+          plan_policy_version: null,
+          plan_deadline_only: null,
+          plan_no_safe_argument: null,
+          document_validation_passed: null,
+          document_failure_codes: null,
+        };
+
   await sb
     .from("defence_packages")
     .update({
       status: targetStatus,
       pdf_path: pdfPath,
       narrative_json: narrativeRes.narrative,
-      facts_json: classification.approved,
+      facts_json: planFacts,
       package_mode: classification.packageMode,
       llm_model: narrativeRes.modelUsed,
       prompt_family: narrativeRes.promptFamily,
@@ -744,6 +1003,7 @@ export async function handleBuildDefencePackage(
       validation_errors: [],
       evidence_hash: finalHash,
       updated_at: new Date().toISOString(),
+      ...canonicalIdentityColumns,
     })
     .eq("id", packageId);
 

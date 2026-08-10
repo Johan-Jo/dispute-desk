@@ -42,6 +42,8 @@
  */
 
 import type { CaseAssessmentSnapshot, GateDecision } from "@/lib/pipeline/contracts";
+import { canonicalPipelineEnabled } from "@/lib/pipeline/activation";
+import { resolveHeldStateLegacy } from "./heldState.legacy";
 import {
   AUTOMATION_POLICY_VERSION,
   deriveCaseAutomationDecision,
@@ -261,6 +263,14 @@ function heldAssessment(
  * to the surfaces that already handle them.
  */
 export function resolveHeldState(input: HeldStateInput): HeldState {
+  // DARK UNTIL PR 3. The canonical ladder below answers weak/insufficient with
+  // `hold_for_deadline` (contract revision 2) where the shipped one answers
+  // `block`; both produce `weak_strength`, but only through different actions,
+  // and the difference is visible at every other reader of the same decision.
+  // Until the switch flips, the shipped ladder runs — the same code, not a
+  // re-expression of it.
+  if (!canonicalPipelineEnabled()) return resolveHeldStateLegacy(input);
+
   const none: HeldState = {
     held: false,
     reason: null,
