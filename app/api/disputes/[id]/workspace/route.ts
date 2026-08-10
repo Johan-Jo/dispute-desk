@@ -46,6 +46,7 @@ import {
   gateProvided,
 } from "@/lib/argument/caseGateAssessment";
 import type { EvidenceFact } from "@/lib/defence/types";
+import { bankIncludedFacts } from "@/lib/defence/bankInclusion";
 import { CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
 import {
   assessPackageCandidateSafety,
@@ -702,7 +703,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     map: evidenceItemsByField as Record<string, { payload?: Record<string, unknown> | null }>,
   };
   /*
-   * CP-A INTEGRATION. This route used to call `calculateCaseStrength` and
+   * CP-A/CP-C INTEGRATION. This route used to call `calculateCaseStrength` and
    * `computeContributions` inline, which made it the fourth server call site
    * scoring a case with its own hand-assembled gate set. Both now come from
    * ONE server-side derivation, `buildWorkspaceAssessment`, which the three
@@ -875,8 +876,15 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     const last = rest.join(" ").trim();
     customerLastName = last || null;
   }
-  const factsInPdf = factsJson
-    .filter((f) => f.bankEligible && f.includeInBankNarrative && !f.submissionRisk)
+  /*
+   * CP-B. This was the fourth inline spelling of the bank-inclusion rule, and
+   * the last one outside its owner: the identical three-conjunct expression,
+   * copied. It now asks `isBankIncludedFact`, so the workspace's "what is in
+   * the PDF" list and the PDF's own Evidence Basis rows cannot drift apart —
+   * which is exactly how `narrativeWriter`'s weaker filter (C-1) went unnoticed
+   * for as long as it did.
+   */
+  const factsInPdf = bankIncludedFacts(factsJson)
     .map((f) => ({
       field: ((f.value as { fieldKey?: string } | null)?.fieldKey ?? "") as string,
       label: f.label,

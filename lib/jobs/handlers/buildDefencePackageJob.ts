@@ -46,7 +46,8 @@ import { deriveOrderContext, merchantNameFromDomain } from "@/lib/defence/orderC
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { finalizeAndEnqueueSave } from "@/lib/automation/finalizeAndEnqueueSave";
 import { finalizeDedupeKey } from "@/lib/defence/finalizeRpc";
-import { evaluateAutoSubmitGuards } from "@/lib/automation/autoSubmitGuards";
+import { decideForPack } from "@/lib/automation/decision";
+import { getShopSettings } from "@/lib/automation/settings";
 import type {
   DefencePackageDocumentData,
 } from "@/lib/defence/pdf/DefencePackageDocument";
@@ -115,7 +116,12 @@ export async function handleBuildDefencePackage(
   const [{ data: pack }, { data: dispute }, { data: shop }] = await Promise.all([
     sb
       .from("evidence_packs")
-      .select("id, shop_id, dispute_id, pack_json, checklist_v2")
+      // `completeness_score` / `blockers` / `submission_readiness` are inputs
+      // to the canonical automation decision (CP-C). This handler used to run
+      // its own guard call and never looked at them.
+      .select(
+        "id, shop_id, dispute_id, pack_json, checklist_v2, completeness_score, blockers, submission_readiness",
+      )
       .eq("id", pkg.source_pack_id)
       .single(),
     sb
@@ -655,38 +661,35 @@ export async function handleBuildDefencePackage(
     }
   }
 
-  // Pre-flight guards: even when rules say "auto", the same gates the pack
-  // pipeline applies (Coverage / Fatal-loss / PRD §9 strength) must prevent
-  // auto-finalize + save-to-Shopify enqueue here. Without this, the pack
-  // pipeline can correctly block at sync
-  // time and then this handler — re-resolving rules independently — silently
-  // saves a Weak / Fatal-loss / Covered pack a few minutes later, bypassing
-  // the gate.
+  // THE canonical automation decision (CP-C). This handler used to run its own
+  // `evaluateRules` + guard call — a second ladder that BLOCKED on Moderate
+  // while the pack pipeline PARKED on it, so the same dispute got a different
+  // audit trail depending on which path evaluated it. It now reads the same
+  // object every other entry point reads.
   //
-  // The decision itself lives in lib/automation/autoSubmitGuards.ts, shared
-  // with the pipeline and reconcileParkedAutoDisputes. Before that extraction
-  // this handler BLOCKED on Moderate while the pipeline PARKED on it — same
-  // net effect (both leave a draft) but two different audit trails, which is
-  // why the drift went unnoticed. Our only lever is targetStatus, so a park
-  // and a block both demote to "review"; the verdict is recorded so they stay
-  // distinguishable in the audit trail.
+  // Our only lever here is `resolvedMode`, so every non-`auto_file` outcome
+  // demotes to "review" (the package stays a draft); the decision's reason
+  // codes are recorded so park and block stay distinguishable in the trail.
   const caseStrengthOverall =
     (packJson.case_strength as { overall?: string } | undefined)?.overall ?? null;
   if (resolvedMode === "auto") {
-    const verdict = evaluateAutoSubmitGuards({
-      coverageState: coverage,
-      fatalLoss,
-      caseStrength: caseStrengthOverall,
-      // Previously omitted (P5, 2026-08-04). A fully-credited case reaches
-      // "strong" through the strength FLOOR, so the verdict was the same —
-      // but its REASON read `strong` here and `credit_already_issued` in the
-      // pipeline, for one dispute. The audit trail now agrees with itself.
-      creditAlreadyIssued:
-        (packJson.credit_already_issued as
-          | { triggered?: boolean; coversDisputedAmount?: boolean }
-          | undefined) ?? null,
+    const settings = await getShopSettings(pkg.shop_id);
+    const decision = decideForPack({
+      caseId: pkg.dispute_id as string,
+      pack: {
+        id: pack.id as string,
+        dispute_id: pkg.dispute_id as string,
+        completeness_score: (pack.completeness_score as number | null) ?? null,
+        blockers: pack.blockers,
+        submission_readiness: pack.submission_readiness,
+        pack_json: pack.pack_json,
+      },
+      settings,
+      automationMode: "auto",
+      // The ABSOLUTE deadline. This handler never computes a window from it.
+      evidenceDueAt: (dispute?.due_at as string | null) ?? null,
     });
-    if (verdict.decision !== "proceed") {
+    if (decision.action !== "auto_file") {
       resolvedMode = "review";
       // Raw insert (bypasses typed logEvent helper) because
       // `auto_save_blocked` is not in the typed EventType union — the
@@ -698,9 +701,10 @@ export async function handleBuildDefencePackage(
         actor_type: "system",
         event_type: "auto_save_blocked",
         event_payload: {
-          reasons: [verdict.message],
-          decision: verdict.decision,
-          verdict_reason: verdict.reason,
+          reasons: decision.reasonCodes,
+          decision: decision.action,
+          verdict_reason: decision.reasonCodes[0],
+          decision_input_hash: decision.freshness.inputHash,
           case_strength: caseStrengthOverall,
           coverage,
           fatal_loss: fatalLoss.triggered === true ? fatalLoss.reason : null,

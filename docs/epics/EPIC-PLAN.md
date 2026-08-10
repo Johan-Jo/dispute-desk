@@ -15,6 +15,7 @@
 | **10b** | Add-on epic that extends EPIC-10 | Help guides |
 | **CH-1 … CH-7** | **Content Hub** epics (marketing CMS). **Not** the same as EPIC-P0. | CH-2 = admin shell + components |
 | **LSE-1 … LSE-6** | **Liability-Shift Engine** epics (CE 3.0 / FPT readiness + submission). See [`docs/liability-shift-engine-prd.md`](../liability-shift-engine-prd.md). | LSE-1 = CE 3.0 qualification |
+| **CP-0 … CP-E** | **Canonical Pipeline** epics — one owner for evidence → assessment → argument → package, and a separate automation decision. See [`docs/plans/canonical-pipeline-lite.plan.md`](../plans/canonical-pipeline-lite.plan.md). | CP-B = argument + issuer-safe package |
 
 ---
 
@@ -46,6 +47,12 @@ Read this table top-to-bottom for historical order. **Status** is V1 intent (see
 | **LSE-4** | Session Evidence Capture | Planned | [EPIC-LSE-4-session-capture.md](EPIC-LSE-4-session-capture.md) |
 | **LSE-5** | Ratio & Compliance Dashboard | Planned | [EPIC-LSE-5-ratio-dashboard.md](EPIC-LSE-5-ratio-dashboard.md) |
 | **LSE-6** | Direct Network Submission (Verifi + Ethoca) | Planned — partnership-gated | [EPIC-LSE-6-direct-submission.md](EPIC-LSE-6-direct-submission.md) |
+| **CP-0** | Decision gates, contracts, fixtures, ownership | Proposed | [EPIC-CP-0-gates-and-contracts.md](EPIC-CP-0-gates-and-contracts.md) |
+| **CP-A** | Canonical assessment, completeness, UI | Proposed | [EPIC-CP-A-assessment-and-ui.md](EPIC-CP-A-assessment-and-ui.md) |
+| **CP-B** | Canonical argument + issuer-safe package | Proposed | [EPIC-CP-B-argument-and-package.md](EPIC-CP-B-argument-and-package.md) |
+| **CP-C** | Canonical automation decision | Proposed | [EPIC-CP-C-automation-decision.md](EPIC-CP-C-automation-decision.md) |
+| **CP-D** | Integration, replay, two ordered activations | Proposed | [EPIC-CP-D-integration-and-cutover.md](EPIC-CP-D-integration-and-cutover.md) |
+| **CP-E** | Remediation of existing disputes | Deferred — owned, not scheduled | [EPIC-CP-E-remediation.md](EPIC-CP-E-remediation.md) |
 
 ---
 
@@ -75,6 +82,18 @@ Builds on top of the existing core (EPIC-1 sync, EPIC-A1 automation, EPIC-3 PDF,
 7. **LSE-6 (Direct network submission)** is **partnership-gated** — does not start engineering until Verifi or Ethoca credentials are in hand. Commercial outreach starts in LSE-1 and runs continuously.
 
 Chain: **LSE-0 → LSE-1 → LSE-2 → LSE-3 → LSE-5**, with **LSE-4** parallel to LSE-3, and **LSE-6** gated on external partnership.
+
+### Canonical Pipeline track (CP-0 … CP-E)
+
+Rebuilds ownership under the existing core (EPIC-2 pack builder, EPIC-A1 automation, EPIC-4 governance, EPIC-5 save-to-Shopify). It follows the containment series C-11 – C-14, the last of which merged to `develop` as `58e15806`.
+
+1. **CP-0** is Day-0 coordinator work. **P-4, P-6, P-7 and the R4 hash-migration remedy were decided at kickoff (2026-08-09)** and are carried into the contract commit as constants, not gates. CP-0 commits those decisions plus the shared shapes, the shared fixtures and a **per-file** ownership map. CP-A/B/C all branch from that one commit.
+2. **CP-A, CP-B, CP-C develop simultaneously** against the frozen contracts.
+3. Delivery is **three reviewed PRs**: PR 1 = CP-A implemented *and activated*; PR 2 = CP-B + CP-C integrated dark, carrying the whole-pipeline replay; PR 3 = a small activation and legacy-cutover PR. Between PR 2 and PR 3, the coordinator runs the pre-activation rebuild of current open, unsubmitted cases — an operational step, not a PR.
+4. **One decision stays open — D-1**, whether `visa_10_4_fraud.criticalCategories` keeps its orphaned `billing_match` entry. It is answered on CP-B's replay output inside PR 2's single review.
+5. **CP-E** is historical / already-sent remediation only, and stays deferred. The rebuild wave two *requires* is not deferred — it is CP-D, before activation.
+
+Chain: **CP-0 → (CP-A ∥ CP-B ∥ CP-C) → PR 1 → PR 2 → rebuild → PR 3**, with **CP-E** separate.
 
 ---
 

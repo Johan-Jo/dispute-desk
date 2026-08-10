@@ -18,24 +18,17 @@
  * and its safeguard) and every custom-rule mutation — `POST /api/rules`,
  * `PATCH /api/rules/[id]`, `DELETE /api/rules/[id]`.
  *
- * It re-applies the SAME gates the auto path enforces — Coverage, Fatal-loss,
- * and PRD §9 strength (Strong only) — via
- * the shared `evaluateAutoSubmitGuards`, so it can ONLY promote a case the
- * pipeline itself would have auto-saved. It never touches
- * moderate/weak/insufficient, covered, or fatal-loss cases.
+ * It does not re-apply "the same gates" by re-listing them — it reads the ONE
+ * canonical `CaseAutomationDecision` (CP-C), so it can only promote a case the
+ * pipeline itself would have auto-filed. Its own pre-filter chain is gone: the
+ * decision decides, this function executes.
  */
 
 import { getServiceClient } from "@/lib/supabase/server";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
-import { evaluateAutoSubmitGuards } from "./autoSubmitGuards";
+import { getShopSettings } from "./settings";
+import { decideForPack } from "./decision";
 import { finalizeAndEnqueueSave } from "./finalizeAndEnqueueSave";
-
-interface PackJson {
-  case_strength?: { overall?: string } | null;
-  disputeReason?: string | null;
-  coverage?: { state?: string } | null;
-  fatal_loss?: { triggered?: boolean } | null;
-}
 
 export interface ReconcileResult {
   scanned: number;
@@ -70,11 +63,13 @@ export async function reconcileParkedAutoDisputes(
     disputeIds: [],
   };
 
+  const settings = await getShopSettings(shopId);
+
   // Candidate disputes: not yet saved, still open, with a READY evidence
   // pack. We only look at the latest pack per dispute.
   const { data: disputes } = await sb
     .from("disputes")
-    .select("id, reason, status, amount, phase")
+    .select("id, reason, status, amount, phase, due_at")
     .eq("shop_id", shopId)
     .eq("submission_state", "not_saved")
     .is("closed_at", null);
@@ -85,43 +80,19 @@ export async function reconcileParkedAutoDisputes(
     // Latest evidence pack for this dispute.
     const { data: pack } = await sb
       .from("evidence_packs")
-      .select("id, status, pack_json, shop_id")
+      .select(
+        "id, status, pack_json, shop_id, completeness_score, blockers, submission_readiness",
+      )
       .eq("dispute_id", dispute.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
     if (!pack || pack.status !== "ready") continue;
 
-    const packJson = (pack.pack_json ?? {}) as PackJson;
-    const strength = packJson.case_strength?.overall ?? null;
-    // PRD §9: auto saves ONLY Strong. Anything else legitimately parks.
-    // Checked up front so `scanned` counts only Strong candidates, and so a
-    // legacy pack with no recorded strength is never promoted here (the
-    // shared guards let `null` proceed for the build paths, but promoting a
-    // never-scored pack after the fact is not this function's job).
-    if (strength !== "strong") continue;
-
-    result.scanned += 1;
-
-    // Coverage / fatal-loss / strength — the SAME decision the pipeline and
-    // the defence-build job apply. Shared so the three paths can never drift
-    // apart. See lib/automation/autoSubmitGuards.ts.
-    const verdict = evaluateAutoSubmitGuards({
-      coverageState: packJson.coverage?.state,
-      fatalLoss: packJson.fatal_loss,
-      caseStrength: strength,
-      // Previously omitted (P5, 2026-08-04). This path only promotes Strong
-      // packs, so a credited case already passed via the floor — but the gate
-      // set must be identical across all four call sites or "the SAME decision
-      // the pipeline applies" in the comment above stops being true.
-      creditAlreadyIssued:
-        (packJson as { credit_already_issued?: { triggered?: boolean; coversDisputedAmount?: boolean } })
-          .credit_already_issued ?? null,
-    });
-    if (verdict.decision !== "proceed") continue;
-
-    // Does the CURRENT rule set resolve this dispute to auto? If the rule
-    // is still review, the merchant wants to approve manually — leave it.
+    // Does the CURRENT rule set resolve this dispute to auto? Resolved BEFORE
+    // the decision because the mode is one of the decision's inputs — the old
+    // order asked the guards first and the rules second, which is how this
+    // path came to own a pre-filter chain of its own.
     let mode: "auto" | "review" = "review";
     try {
       const evalResult = await evaluateRules({
@@ -137,7 +108,32 @@ export async function reconcileParkedAutoDisputes(
       console.error("[reconcileParkedAuto] evaluateRules failed", err);
       continue;
     }
-    if (mode !== "auto") continue;
+
+    // THE decision. Coverage, fatal-loss, staleness, hard blocks, mode,
+    // strength and completeness — one object, the same one the pipeline, the
+    // defence build and the deadline cron read. This function no longer owns
+    // an opinion about any of them; it only executes what the decision allows.
+    const decision = decideForPack({
+      caseId: dispute.id as string,
+      pack: {
+        id: pack.id as string,
+        dispute_id: dispute.id as string,
+        completeness_score: (pack.completeness_score as number | null) ?? null,
+        blockers: pack.blockers,
+        submission_readiness: pack.submission_readiness,
+        pack_json: pack.pack_json,
+      },
+      settings,
+      automationMode: mode,
+      evidenceDueAt: (dispute.due_at as string | null) ?? null,
+    });
+
+    // `scanned` counts the cases this pass could plausibly promote — i.e. the
+    // ones the decision authorises. Everything else legitimately stays parked
+    // and is not this function's business.
+    if (decision.action !== "auto_file") continue;
+
+    result.scanned += 1;
 
     // Latest defence package must be a finalize-able draft: draft +
     // validation ok + pdf present. Anything else (cap-failed, no PDF,

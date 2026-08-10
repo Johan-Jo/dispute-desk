@@ -30,6 +30,7 @@ import {
   isRetiredFieldKey,
   stripRetiredPayloadKeys,
 } from "@/lib/evidence/model/retiredKeys";
+import { isBankIncludedFact } from "./bankInclusion";
 import { evaluateAllPredicates } from "./factPredicates";
 import type {
   EvidenceFact,
@@ -593,7 +594,14 @@ function labelForField(fieldKey: string): string {
 
 /* ── Package mode derivation ── */
 
-function derivePackageMode(input: {
+/**
+ * Exported for the D-1 replay (`docs/evidence-model/p4/d1-billing-match-replay.md`).
+ *
+ * The replay must enumerate mode transitions through the REAL rule, not a copy
+ * of it: a measurement taken against a re-implementation measures the
+ * re-implementation. Production callers still reach it only via `classifyFacts`.
+ */
+export function derivePackageMode(input: {
   approvedFacts: EvidenceFact[];
   caseStrength: CaseStrengthLevel;
   fatalLoss: FatalLossLike;
@@ -798,7 +806,11 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
   }
 
   // Eligibility check.
-  const eligible = approved.some((f) => f.bankEligible && f.includeInBankNarrative && !f.submissionRisk);
+  // Delegated to the ONE bank-inclusion predicate (`lib/defence/bankInclusion.ts`).
+  // Same rule, same result — the expression was identical here, in the Evidence
+  // Basis renderer and in the workspace route, and identical-by-comment is how
+  // the LLM payload's weaker copy went unnoticed (C-1).
+  const eligible = approved.some(isBankIncludedFact);
   if (!eligible) {
     return {
       approved,

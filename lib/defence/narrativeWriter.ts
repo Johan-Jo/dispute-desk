@@ -23,6 +23,7 @@
  */
 
 import { alwaysAdmissibleCategories } from "./alwaysAdmissible";
+import { reachesLlmPayloadLegacy } from "./bankInclusion";
 import { deriveClaimCapabilities } from "./claimCapabilities";
 import { getServiceClient } from "@/lib/supabase/server";
 import {
@@ -485,9 +486,14 @@ export async function generateNarrative(
  *  Test `narrativeWriter.bankInclusionInvariant.test.ts` locks in that
  *  every fact in the payload satisfies the classifier's contract. */
 export function buildLlmFactPayload(input: NarrativeInput): Record<string, unknown> {
-  // Filter: never expose submission-risk facts unless includeInBankNarrative override.
+  // Filter: never expose submission-risk facts unless includeInBankNarrative
+  // override. Delegated to `lib/defence/bankInclusion.ts`, which owns the rule
+  // AND names this call site's divergence from it (C-1): the payload filter is
+  // strictly weaker than `isBankIncludedFact`, and converging the two changes
+  // what the model sees on live disputes — a reviewed change with a measured
+  // delta, not a silent one. Behaviour here is unchanged.
   const approvedFacts = input.approvedFacts
-    .filter((f) => !f.submissionRisk || f.includeInBankNarrative)
+    .filter(reachesLlmPayloadLegacy)
     .map((f) => ({
       id: f.id,
       category: f.category,

@@ -2090,9 +2090,10 @@ when disputes are detected:
 2. For each new dispute, `runAutomationPipeline()` checks `shop_settings`:
    - If `auto_build_enabled` → enqueue `build_pack` job.
 3. `build_pack` collects evidence sources, evaluates completeness.
-4. `evaluateAndMaybeAutoSave()` checks the auto-save gate:
-   - `auto_save_enabled` + `score >= threshold` + `blockers == 0` + review status.
-   - Decision: `auto_save` | `park_for_review` | `block`.
+4. `evaluateAndMaybeAutoSave()` derives the **canonical automation decision**
+   (see *Canonical automation decision* above) and maps its action onto the
+   pipeline's existing side effects: `auto_save` | `park_for_review` | `block` |
+   `skip_covered` | `defer_no_package`. It no longer runs a gate of its own.
 5. If `auto_save` → enqueue `save_to_shopify` job.
 
 When the gate decision is `block`, the pipeline writes the gate's `reasons` to both the `auto_save_blocked` audit event (`event_payload.reasons`) and the `pack_blocked` dispute event (`description` + `metadata_json.reasons`). The embedded app surfaces this in two places so the merchant is never left guessing why auto-submit stopped:
@@ -6462,6 +6463,41 @@ identity — an earlier version rebuilt it as a by-field map and, because
 payload and reported 56 of 76 prod packs as stale. That number was produced
 entirely by the adapter.
 
+### The workspace has no scorer (CP-A)
+
+`app/api/disputes/[id]/workspace/route.ts` returns a **`workspaceAssessment`**
+payload built once, server-side, by `lib/disputes/workspaceAssessment.ts`. The
+three workspace tabs render it; they compute none of it.
+
+Two things were deleted to get there, and both were the same defect wearing
+different clothes:
+
+1. **The browser scorer.** `useDisputeWorkspace` called `calculateCaseStrength`
+   in the browser with a gate set it assembled itself, three of whose five gates
+   were `not_shipped_to_client`. On a fraud case with a cardholder-name mismatch
+   the page rendered Strong while the server had capped Moderate — on one
+   screen, on one request. `tests/unit/clientAssessmentRecomputation.test.ts`
+   fails the build if a client surface scores again.
+2. **The route's own inline call.** The route was the fourth server call site
+   passing its own gates to the scorer. It still *builds* the gate assessment —
+   it is the only thing that knows it holds no order, hence two
+   `gateNotProvided("order_not_loaded")` entries — but it hands those gates to
+   `buildWorkspaceAssessment` and reaches the scorer through
+   `deriveAssessmentFromChecklists`, the single derivation.
+   `tests/unit/caseGateAssessmentCallSites.test.ts` pins the remaining
+   inventory.
+
+`needsRecalculation` is a **first-class state**, not a null: with no pack the
+route returns `emptyWorkspaceAssessment(disputeId)` and every consumer must
+branch on it before reading a number. A zeroed `CaseStrengthResult` rendered as
+a verdict — "insufficient · 0%" — is a number the merchant acts on.
+
+The same route's `factsInPdf` filter now calls `bankIncludedFacts`
+(`lib/defence/bankInclusion.ts`), which was the last inline spelling of the
+bank-inclusion predicate outside its owner;
+`tests/unit/bankInclusionSingleOwner.test.ts`'s pending-conversion list is now
+empty and may only shrink.
+
 ### Known open items
 
 - **P4 (defence package reads the model) does not proceed as specced.** The
@@ -6486,3 +6522,330 @@ entirely by the adapter.
 read-only prod comparisons under a separate vitest config, so a prod-reading
 job can never become a CI dependency. All are strictly non-mutating: no pack
 write, no disposition stamp, no job enqueue, no `submission_state` touch.
+
+## Canonical argument plan and the fileable-package selector (CP-B — DARK)
+
+**Status: dark.** Everything in this section is built, tested and importable, and
+**no production switch is flipped by it**. The call sites in the CP-0 ownership
+map (the pipeline, the auto-save gate, the save job, the deadline cron, the four
+package routes and the workspace route) still run the pre-existing logic; Agent C
+wires them in a later epic. The only files whose runtime behaviour changed are
+the three that now delegate the bank-inclusion predicate to its new owner —
+**with the same rule and the same result at each one**.
+
+### `CaseArgumentPlan` — the one owner of issuer-facing claim authority
+
+`lib/argument/plan/` derives a `CaseArgumentPlanSnapshot`
+(`lib/pipeline/contracts/argumentPlan.ts`).
+
+```
+CaseEvidenceModel ──planCandidatesFromModel──▶ PlanCandidate[]
+                                                   │
+              reason module allow-list ────────────┤
+              alwaysAdmissible categories ─────────┤──▶ deriveCaseArgumentPlan
+              MerchantReviewItem[] (CP-A) ─────────┘            │
+                                                                ▼
+                                     included[] · excluded[] · noSafeArgument · deadlineOnly
+```
+
+**Exclusion happens before generation.** A `review_required`, unverified, adverse
+or merchant-only record is removed from the argument before any issuer-facing
+text exists, so the language model is never shown a fact it may not cite.
+Filtering generated prose afterwards is the failure this ordering prevents:
+prose already written around a fact does not survive that fact's removal, it
+merely loses its support and keeps its sentence.
+
+**Exclusion reasons, first match wins.** The order is load-bearing: a record that
+is both irrelevant and adverse is reported as adverse, because relevance is the
+weakest of the five and would mask the reason that matters.
+
+| Order | Reason | Derived from |
+|---|---|---|
+| 1 | `review_required` | a `MerchantReviewItem` naming this `recordId` |
+| 2 | `merchant_only` | `citation.eligibility === "withheld_internal"` |
+| 3 | `adverse` | `citation.eligibility === "withheld_risk"` |
+| 4 | `unverified` | `validity.state !== "valid"`, or `citation.eligibility === "ineligible"` |
+| 5 | `not_argument_relevant` | `reasonCodeModule.allowedFactCategories` (+ always-admissible) |
+
+Every exclusion carries a merchant-facing **token**, never English:
+`packs.argumentPlan.exclusion.*` in all six locales, or the review item's own
+`reasonToken` when one exists. `lib/**` may not emit resolved copy.
+
+**Argument relevance is consumed, not replaced.** The 2026-08-04 decision that
+`allowedFactCategories` stays is unchanged — it is why P4-as-specced was stopped
+(0 of 76 packs identical). `tests/unit/ce30BankPackageRetired.test.ts` asserts
+every module still declares an allow-list and that the plan reads it.
+
+**`noSafeArgument`** is non-null only when nothing remains included, with the
+reason distinguishing what was lost: nothing collected (`no_rebuttal_argument`),
+the module's own `criticalCategories` support excluded (`no_primary_argument`),
+or everything else excluded (`all_support_excluded`).
+
+**`deadlineOnly`** is true while any `review_required` exclusion remains. A plan
+with none may produce normal eligibility.
+
+**`computePlanInputHash`** sorts on the source-derived `recordId`, never on
+`EvidenceFact.id` (which is positional and is the direct cause of R4).
+Introducing it stales every pre-CP-B package as `snapshot_absent` — measured and
+reconciled in `docs/evidence-model/p4/legacy-removal-inventory.md` § R4.
+
+### The package is a projection of the plan
+
+`lib/defence/package/projectFromPlan.ts`. The load-bearing property: **no
+sentence survives after its support is removed.**
+
+- `selectPlanFacts` resolves `plan.included` against the case's facts, keyed by
+  `recordId`. A plan-authorised record with no fact is **reported**
+  (`missingRecordIds`), never silently skipped — it means the plan and the fact
+  set came from different inputs.
+- `rebuildNarrativeFromPlan` drops any section citing a record the plan does not
+  authorise, records it as an `OrphanedClaim`, and lists it in `omittedSections`
+  with the machine reason `support_excluded_by_argument_plan`. **Whole sections,
+  not clauses** — sub-sentence surgery would need to know which words a fact
+  supports, which nothing here knows, and a partial edit that leaves the topic
+  sentence is the orphaned claim again in a smaller box.
+- `projectPackageFromPlan` then composes through the existing
+  `composePdfBlocks`, handing it **only** the included facts, so a templated
+  thesis whose predicate no longer evaluates resolves null and its blockquote
+  disappears.
+
+### Deterministic document validation
+
+`lib/defence/package/documentValidation.ts` runs **after** composition and
+returns `DocumentValidationResult`. **A failure makes the package non-fileable —
+never a warning.** It adds the plan-aware checks (`no_safe_argument`,
+`orphaned_claim`, `plan_fact_mismatch`, `empty_document`, `retired_delivery_fact`)
+on top of `validateComposedDocument`'s phrase, claim-guard and structural
+claim-authorization rules over thesis, body and fallback of every block. No
+clock, no I/O, no model call: the same document produces the same sorted codes on
+every run.
+
+### `selectFileablePackage` — one selector, three outcomes
+
+`lib/defence/package/selectFileablePackage.ts`.
+
+```ts
+selectFileablePackage({ caseId, trigger, candidates, assessment, plan, decision, current })
+// → { outcome: "selected", package }
+// | { outcome: "none", reason, staleness? }
+// | { outcome: "ambiguous", candidateIds }
+```
+
+Decision order — coverage/concession, hard block, staleness, no safe argument,
+no candidate, **ambiguity**, superseded, content safety (C-11), deterministic
+validation, `validation_status`, not `final`, artifact missing,
+`deadline_only_not_yet_due`, selected.
+
+- **It subsumes `packageSafety` (C-11)**, it does not sit beside it: the content
+  verdict *is* `assessPackageCandidateSafety`, called on the same two persisted
+  columns, so the measured production behaviour (**212 of 280 package versions
+  blocked**) is preserved by construction.
+  `lib/defence/package/__tests__/selectFileablePackage.test.ts` replays every
+  blocking and non-blocking shape from `packageSafety.test.ts` through the
+  selector.
+- **Latest candidate only, never a fallback.** Two candidates at the highest
+  version return `ambiguous` — an error that alerts, never a silent pick, because
+  "take the newest" is how a superseded package reaches an issuer.
+- **A deadline relaxes nothing (P-6).** The only outcome the deadline trigger may
+  change is `deadline_only_not_yet_due`; the nine shared fixtures assert that as
+  a property across the whole set.
+- `deadlineExecutionConditions()` restates the same inputs as P-6's five
+  conjunctive conditions for `mayExecuteAtDeadline`, so a refusal names **which**
+  condition failed.
+
+### One bank-inclusion predicate
+
+`lib/defence/bankInclusion.ts` is now the single owner of
+`bankEligible AND includeInBankNarrative AND NOT submissionRisk`. It was spelled
+inline at four sites, and one of them — the LLM payload filter — used a **weaker**
+rule (`NOT submissionRisk OR includeInBankNarrative`), so the generator could
+argue from a fact the PDF's own Evidence Basis table suppresses (C-1).
+
+`factClassifier.ts` and `pdf/evidenceBasisRows.ts` now call `isBankIncludedFact`
+/ `bankIncludedFacts`; `narrativeWriter.ts` calls `reachesLlmPayloadLegacy`,
+which is the divergent live rule **named and documented rather than converged** —
+changing what the model sees on live disputes is a reviewed change with a
+measured delta, not a side effect of a dark epic. `bankInclusionDivergence()`
+returns the facts the two rules disagree about, so the delta can be measured on a
+real population.
+
+`tests/unit/bankInclusionSingleOwner.test.ts` fails the build on any new inline
+combination of the inclusion flags. One site remains inline —
+`app/api/disputes/[id]/workspace/route.ts`, which belongs to Agent C in the CP-0
+ownership map — and the pending list may only ever shrink. The same test asserts
+the AVS/CVV half: the four pre-C-12 match-code sites declare no code list and all
+read the canonical owner, with the structural AST scan in
+`tests/unit/paymentVerificationSingleOwner.test.ts` still enforcing it.
+
+### CE 3.0 bank-package route retired (P-4)
+
+Deleted: `lib/liabilityShift/packageTemplates.ts`,
+`lib/liabilityShift/submissionRouter.ts`, `lib/packs/pdf/CE30PackDocument.tsx`
+and the package-template test. All were dormant — no caller — and the CE 3.0
+package is the artifact C-8 flags for raw IP addresses, an ungated merchant
+attestation and a hard-coded reason code.
+
+**CE 3.0 qualification is retained** as merchant insight: `qualifyCE30.ts`,
+`evaluateQualification.ts`, `autoQualified.ts`, `GET /api/disputes/[id]/qualification`
+and the Liability Shift insights surface are untouched, and the Visa 10.4 anchor
+stays in the reason-code catalog. `submission_logs` is retained too — the ratios
+calculator reads it for historical attribution; only its dormant writer is gone.
+`tests/unit/ce30BankPackageRetired.test.ts` makes reintroduction a red build.
+
+### D-1 — measured, not decided
+
+`visa_10_4_fraud.criticalCategories` still names `billing_match`, a category with
+zero members after PR-C4, so **every Visa 10.4 package is already `narrow`**. The
+before/after replay across all 32 reachable cells is
+`docs/evidence-model/p4/d1-billing-match-replay.md`, generated by
+`lib/defence/package/__tests__/d1BillingMatchReplay.test.ts`: **exactly two cells
+transition, both `narrow` to `full`**, and none transitions `full` to `narrow`.
+`visa_10_4_fraud.ts` is unchanged and the entry is not removed — the maintainer
+answers D-1 on that output.
+
+## Canonical automation decision (CP-C, dark)
+
+`lib/automation/decision/` — **one** `CaseAutomationDecision` that every
+automation entry point reads. It replaces four independent ladders that could
+disagree about the same dispute, and it is DARK: no production switch is flipped
+by this change, and the observable side effects of every existing path are
+preserved.
+
+**Readers** — `lib/automation/pipeline.ts` (`evaluateAndMaybeAutoSave`),
+`lib/jobs/handlers/buildDefencePackageJob.ts`,
+`lib/automation/reconcileParkedAutoDisputes.ts`, `lib/disputes/heldState.ts`
+(and through it the workspace route and the new-dispute email), and
+`app/api/cron/defence-package-deadline-submit/route.ts`.
+
+**Deleted** — `evaluateAutoSaveGate` and `evaluateAutoSubmitGuards` have zero
+production readers. Both files remain only because
+`scripts/evidence-model/calibration/**` replays historical behaviour through
+them; a CI invariant in
+`lib/automation/decision/__tests__/branchBoundary.test.ts` fails the build if
+anything under `lib/` or `app/` starts reading them again.
+
+**R1 closed.** The auto-save gate's `submissionReadiness: … ?? undefined`
+fallback silently dropped the whole gate onto the legacy blocker-count path
+whenever the column was absent — a second, differently-calibrated ladder
+reachable by a NULL. An absent readiness now resolves to `blocked`: the signal
+fails closed instead of switching engines. (`?? 0` on a NULL completeness score
+is deliberately preserved — it has always meant zero to the gate.)
+
+### The ladder
+
+Evaluated in order, most decisive first. Every rung that can BLOCK sits above
+the automation-mode rung, so the resolved rule mode can never turn a block into
+a non-block — asserted directly, because the deadline path depends on it.
+
+| # | Rung | Action | Reason code |
+|---|---|---|---|
+| 1 | Coverage (`coverage.state === "covered_shopify"`) | `block` | `coverage_active` |
+| 2 | Fatal loss (`fatal_loss.triggered`) | `block` | `fatal_loss` |
+| 3 | Stale assessment (via `evaluateFreshness`) | `block` | `assessment_stale` |
+| 4 | Hard block (`readiness === "blocked"` + `enforce_no_blockers`) | `block` | `hard_block` |
+| 5 | Automation off — review mode or `auto_save_enabled = false` | `park_for_review` | `automation_disabled` |
+| 6 | Strength floor — weak / insufficient | `hold_for_deadline` | `strength_insufficient` (+ `review_required_present`) |
+| 7 | Completeness below threshold | `park_for_review` | `below_completeness_threshold` |
+| 8 | `review_required` facts present | `hold_for_deadline` | `review_required_present` |
+| 9 | Moderate strength | `hold_for_deadline` | `eligible` |
+| 10 | Otherwise | `auto_file` | `eligible` |
+
+Coverage beats fatal-loss (PRD §4 over §5), and `COVERED_STATUSES` stays exactly
+`{PROTECTED, ACTIVE}` — both pinned by test. A fatal-loss REASON never travels
+in the decision, only the code.
+
+**A hard block is an HONESTY condition, never an odds condition.** Rungs 1–4 are
+the complete list: coverage/concession, fatal-loss, a stale assessment, and a
+readiness hard block (plus an unsafe claim, which the *selector* refuses at
+execution — `packageSafety`/C-11). Weak or insufficient STRENGTH is none of
+those, and rung 6 therefore **holds for the deadline** rather than blocking.
+
+The reasoning, because it is not obvious and it is the one thing most likely to
+be "corrected" back: filing nothing does not produce silence. Shopify
+auto-compiles and files its own scrape when we file nothing, there is no
+accept/concede mutation, and VDMP/VAMP compute the dispute ratio from disputes
+*received* — so losing a representment costs nothing. A guard therefore never
+chooses "submit vs stay silent"; it chooses **our document vs Shopify's
+scrape**. "We might lose" can never justify withholding a filing.
+
+This is also why the strength floor sits **below** the automation-mode rung
+rather than above it. The old ordering existed so that review mode could not
+soften a block into a park; now that the rung holds instead of blocking, the
+invariant is stronger the other way round — **every blocking rung is above the
+mode rung and every holding rung is below it**. In review mode a weak case parks
+(the merchant is the lever); in auto mode it holds, and the deadline path files
+it.
+
+Below-threshold **parks**, it does not hard-block: a thin case still gets a
+response at the deadline rather than a forfeit. Only a `block` stops the
+deadline.
+
+**Held state.** `lib/disputes/heldState.ts` reads this decision rather than
+re-deriving a ladder, and since revision 2 both held reasons arrive as
+`hold_for_deadline`, told apart by the reason code:
+`strength_insufficient` → `weak_strength`, anything else → `moderate_strength`.
+`lib/automation/pipeline.ts` uses the same discriminator, so the dispute page,
+the new-dispute email and the pipeline cannot describe one dispute three ways.
+
+### Time invariance
+
+The decision may carry the **absolute** evidence due date. It may never carry,
+or be derived from, a **relative** time state — time remaining, window
+open/closed, days to deadline. Executors compute window state from the absolute
+due date at execution, in `lib/automation/decision/deadlineWindow.ts`, the only
+module in the branch that reads a clock.
+
+`freshness.computedAt` is audit-only and is excluded from the input hash by
+construction. Pinned by `decisionTimeInvariance.test.ts`: identical inputs at two
+clock times produce an identical `inputHash` and identical `reasonCodes`, while a
+due-date change moves the hash.
+
+### Package choice is NOT in the decision
+
+Executors receive a `FileableSelection` at execution time through
+`FileableSelectorPort`, so a decision stored yesterday can never authorise
+filing a package superseded since. `lib/automation/decision/latestCandidateSelector.ts`
+implements the port over today's storage (latest candidate only — never a search
+for "the newest SAFE version", which on this fleet would be a fallback into the
+defect) and is the module CP-B's selector replaces.
+
+### The deadline path — P-6
+
+`app/api/cron/defence-package-deadline-submit/route.ts` is the ACTUAL submitter.
+It previously consulted **no** strength, **no** completeness, **no** coverage and
+**no** guards, which made every other gate advisory (risk R3). It now calls
+`cronEnvGate(req)` first, then derives the decision and executes P-6 through the
+shared `mayExecuteAtDeadline`:
+
+> `deadline_only` execution is allowed only with a current canonical decision AND
+> a current validated safe package, with no hard block, no staleness, no
+> ambiguity and no unsupported argument.
+
+**Six** conditions, conjunctive — `DeadlineExecutionConditions` has one field per
+clause of that sentence, and contract revision 1 un-folded `noUnsupportedArgument`
+from `hasCurrentValidatedSafePackage` precisely so a reviewer can match them 1:1.
+`mayExecuteAtDeadline` folds over `Object.values`, so a condition added to the
+interface cannot silently go unchecked.
+
+**A deadline relaxes nothing — and strength was never one of the six.** A weak or
+insufficient case IS filed at the deadline (revision 2, above): it reaches this
+path as `hold_for_deadline`, not `block`. What still refuses here is exactly what
+refused before: coverage, fatal-loss, a readiness hard block, staleness,
+ambiguity, and an unsupported argument.
+
+When any one fails,
+nothing is filed, the merchant is emailed, and the audit row names the failing
+condition (`deadlineConditions`, `deadlineWindow`, `decisionAction`,
+`decisionReasonCodes`, `decisionInputHash`) — an executor that can only say "not
+allowed" produces exactly the un-diagnosable behaviour this replaces. The
+response body gains a `blockedByDecision` counter, distinct from
+`finalizeRefused`: a P-6 refusal is the gate working, not a retriable
+transaction failure.
+
+### Branch boundary
+
+Automation decides what to DO; the argument decides what to SAY. Nothing under
+`lib/automation/decision/` may import argument-plan or review internals, and the
+decision snapshot carries no narrative, no package id and no plan field.
+Enforced structurally by `branchBoundary.test.ts`.
+
