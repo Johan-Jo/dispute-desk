@@ -1873,6 +1873,18 @@
       "ipNotBankEligible": "Hålls internt — platsmatchningen är inte tillräckligt tydlig för att visas för banken.",
       "cvvOnlyNotAddressEvidence": "Hålls internt — endast kortets säkerhetskod matchade, och det utgör inget adressbevis."
     },
+    "assessmentState": {
+      "current": {
+        "title": "Bedömningen är aktuell",
+        "body": "Det här ärendet har bedömts utifrån de bevis som finns registrerade nu."
+      },
+      "notAssessed": {
+        "title": "Inte bedömt ännu",
+        "bodyAbsent": "DisputeDesk har ännu inte bedömt det här ärendet, så det finns varken ärendestyrka eller fullständighet att visa. Bedömningen sker automatiskt när bevispaketet har byggts — du behöver inte göra något.",
+        "bodyStale": "Bevisen i det här ärendet ändrades efter den senaste bedömningen, så tidigare ärendestyrka och fullständighet beskriver det inte längre. DisputeDesk bedömer om det automatiskt — du behöver inte göra något.",
+        "actionsHidden": "Det går inte att skicka förrän ärendet har bedömts."
+      }
+    },
     "deadlineOnly": {
       "normal": {
         "title": "Redo att skickas",

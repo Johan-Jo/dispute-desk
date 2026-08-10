@@ -2540,7 +2540,7 @@ Approved decision P-1: *"Strict: do not score them. A record can remain visible 
 
 `SCORING_POLICY_VERSION` is deliberately **not** bumped: the resolved policy is the same strict rule that was already the default and the only value any production-shaped path used, so no persisted snapshot became stale. Measured on 73 open prod packs (2026-08-06): the strict column is identical before and after, and the now-unreachable permissive arm would have lifted exactly two packs (#352501 `DUPLICATE`, #352767 `FRAUDULENT`) from weak to moderate — precisely the transition P-1 forbids.
 
-Thresholds over completeness remain **P-7 and deferred** to the Phase 2 calibration report; P-1 fixes only which records the score sees. `scripts/evidence-model/*.analysis.ts` therefore report one column instead of a strict/permissive pair.
+Thresholds over completeness were **P-7**, and P-7 is now ACTIVATED: Blume Box runs on canonical completeness at 60, SuraSvenne is excluded because no disposition-preserving threshold exists for it at any value. The shop set and the threshold live in `lib/evidence/model/completenessActivation.ts` and are read by the auto-save gate; `docs/evidence-model/p2/completeness-calibration-report.md` is the single current account. P-1 fixed only which records the score sees. `scripts/evidence-model/*.analysis.ts` therefore report one column instead of a strict/permissive pair.
 
 ### Auto-submit guards — one decision, three callers (2026-07-27)
 
@@ -3995,6 +3995,65 @@ phrase or the old label. Deliberately **not** a catalog-wide phrase detector —
 flags every honest sentence containing "nothing" and ends up allow-listed into uselessness.
 Adding a locale or a new surface for these states means adding it to that list.
 
+#### The persisted assessment is what the read paths render
+
+`buildPack` is the authorized writer — the only site holding the Shopify order,
+therefore the only one that can derive all five gates. It persists the versioned
+`CaseAssessmentSnapshot` at `pack_json.case_assessment`.
+
+Both read paths PROJECT it. Neither derives a band:
+
+| Route | Before | Now |
+|---|---|---|
+| workspace detail | scored with its own gates — 2 of 5 answerable | `projectMerchantAssessment` over the persisted snapshot |
+| disputes list | Stage B re-scored live — 3 of 5 `order_not_loaded` | projects the snapshot; Stage B deleted |
+
+**The current hash is reconstructed, not read back.** Comparing
+`snapshot.freshness.inputHash` against itself detects nothing. The workspace
+route derives the model and the payload terms from the pack as it stands, with
+the same inputs `buildPack` used, and hashes them through
+`computeAssessmentInputHash` — the one owner.
+
+The gate term cannot be re-derived: three of the five gates come from the order
+and only `buildPack` loads it. So the writer persists exactly the fields the
+fingerprint reads, at `pack_json.case_assessment_gates`. That keeps the gates
+term constant between write and read, which is correct rather than convenient —
+a reader that cannot see the order also cannot observe a gate changing, and
+claiming otherwise would be the `order_not_loaded` lie in a new place. What the
+reader *can* observe, evidence drift, is exactly what the model and payload
+terms carry. A pack with no persisted fingerprint yields no current hash, and an
+unverifiable snapshot is not a fresh one.
+
+**The list checks the two staleness dimensions it can check truthfully** —
+policy version, and `rebuild_pending` — and withholds a band otherwise. It never
+falls back to the legacy `case_strength` summary, which carries no freshness of
+its own. The `?strength=` filter reads the same source as the pill, so a filter
+and a display can no longer disagree about one row.
+
+`display-only` rows (contributions, the improvement hint) are still derived.
+They produce labels, not a band, and cannot reconstruct completeness or
+readiness.
+
+#### P-7: score and threshold are one atomic decision
+
+They live on different scales — the calibration measured 90 packs moving −1…−7
+and 15 moving +2…+17 between the persisted column and the canonical snapshot,
+and 60 was calibrated on the canonical one. So there are exactly two legal
+pairings, and one illegal one:
+
+| Case | score | threshold | `source` |
+|---|---|---|---|
+| Blume Box, usable canonical snapshot | canonical | **60** | `canonical` |
+| Blume Box, missing/unusable snapshot | persisted | merchant `auto_save_min_score` | `legacy` |
+| any other shop | persisted | merchant `auto_save_min_score` | `legacy` |
+| **legacy score against 60** | — | — | **unrepresentable** |
+
+`resolveEffectiveCompleteness` returns all three together, from one branch, so
+the illegal pairing cannot be assembled by two independent lookups. The same
+object feeds `evaluateAutoSaveGate`, the `auto_save_blocked` audit payload, the
+`PACK_BLOCKED` dispute-event metadata and the diagnostic message — a score in an
+audit row that does not say which scale produced it cannot be checked afterwards.
+
 **Hand-off to the workspace route** (Agent C owns
 `app/api/disputes/[id]/workspace/route.ts`): replace the inline `calculateCaseStrength` /
 `computeContributions` pair with one `buildWorkspaceAssessment({ disputeId, checklist:
@@ -5112,6 +5171,22 @@ joined with `and` is not exempted; and double negatives ("there is no question t
 affirmations. Adversarial cases are pinned in
 `lib/defence/__tests__/claimCapabilities.test.ts`. A prohibited claim gets one bounded repair attempt through the existing validation-retry
 path in `buildDefencePackageJob`; if it still fails the package is marked `failed` and never filed.
+
+**The AVS statement is not a destination (corrected 2026-08-10).** The coupling is looked for
+CLAUSE by clause; only when no single clause holds both halves does a sentence-level fallback catch a
+straddled coupling ("The order shipped to, and was received at, the cardholder's address"). That
+fallback originally asked only whether a delivery term and an address term appeared anywhere in the
+sentence, so it coupled a carrier-delivery clause with an `avs_cvv_match` clause that merely stood
+beside it — and the AVS carve-out declared on `BILLING_SHIPPING_AGREEMENT` ("the billing address
+matched the issuer's records" stays licensed) was applied at clause level only, never in the
+fallback. Production package `08575d57` (dispute `77eb59a3`, blume-box, 2026-08-10) failed on both
+the first attempt and the fed-back retry for two sentences of exactly that shape, leaving the
+dispute with no fileable package one day before its deadline. Licensed AVS clauses are now removed
+before the straddle test — a clause qualifies only when it cites the issuer's records, carries no
+transport/receipt term of its own, and does not open in a destination role (`to`/`at`/`into`/…), so
+"…was delivered, to the billing address that matched the issuer's records" stays blocked. Negation,
+prohibition and affirmation still read the whole sentence. Both production sentences are pinned
+verbatim as regression cases.
 
 **Every enqueue site is gated, not just the worker.** `lib/defence/packageSafety.ts` exposes one
 predicate plus two preflight loaders (`preflightLatestCandidate`, `preflightNamedCandidate`). They

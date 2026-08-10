@@ -80,28 +80,24 @@ const SCORING_SYMBOLS = [
 ] as const;
 
 /**
- * Server call sites of `calculateCaseStrength` that CP-A does not own.
+ * THE ALLOW-LIST IS GONE.
  *
- * MAY ONLY SHRINK. Each entry names the epic that closes it, so "still four
- * call sites" cannot be reported as "migration complete".
+ * It listed five call sites, four of them production, each with a named epic
+ * that would "eventually" close it — and it could only shrink. That is a
+ * ratchet, not an invariant: it stayed green with four divergent sites in
+ * place for the whole of Slice 1, because "four tolerated sites" is exactly
+ * what it was written to tolerate.
+ *
+ * The exact global inventory now lives in
+ * `tests/unit/caseGateAssessmentCallSites.test.ts`, which asserts EQUALITY
+ * against two production entries (the single derivation, and the scorer's own
+ * self-call inside `calculateImprovement`). Keeping a second, more permissive
+ * list here would have meant two tests disagreeing about the same fact, with
+ * the laxer one deciding whether CI went green.
+ *
+ * What stays in this file is the thing it uniquely owns: the CLIENT must not
+ * score, and that deletion is permanent.
  */
-const SERVER_CALLSITE_ALLOWLIST: Record<string, string> = {
-  // THE canonical derivation. Every other entry is a site that should
-  // eventually route through it.
-  "lib/evidence/model/assessment.ts": "CP-A — the single derivation",
-  // Build path. Owned by Agent C under the CP-0 map (silence defaults to C).
-  "lib/packs/buildPack.ts": "CP-C/CP-D — build path, not CP-A's to move",
-  // List route. Computes a band per row for the disputes index.
-  "app/api/disputes/route.ts": "CP-D — list route, one band per row",
-  // NOTE: `app/api/disputes/[id]/workspace/route.ts` was here and is GONE.
-  // The swap CP-A shipped `buildWorkspaceAssessment` for is done: the route
-  // calls neither `calculateCaseStrength` nor `computeContributions`, it calls
-  // the one derivation and returns the payload as `workspaceAssessment`. The
-  // entry is deleted rather than left as a no-op so that the route re-acquiring
-  // a scorer fails this test.
-  // The scorer calls itself from `calculateImprovement`.
-  "lib/argument/caseStrength.ts": "self-call inside the scorer",
-};
 
 /* ── the detectors ─────────────────────────────────────────────────── */
 
@@ -334,35 +330,53 @@ describe("CP-A invariant — calculateCaseStrength call sites", () => {
     expect(productionCallSites()).toContain("lib/evidence/model/assessment.ts");
   });
 
-  it("every remaining call site is on the allow-list, with a named owner", () => {
-    const unexpected = productionCallSites().filter(
-      (rel) => !(rel in SERVER_CALLSITE_ALLOWLIST),
-    );
-    expect(
-      unexpected,
-      "A new `calculateCaseStrength` call site appeared. Four call sites " +
-        "passing four different gate sets is the defect this pipeline exists " +
-        "to end — route it through `deriveAssessmentFromChecklists` instead.",
-    ).toEqual([]);
+  it("no production call site outside the ONE derivation and the scorer itself", () => {
+    /* EQUALITY, not a ceiling. The predecessor allow-list permitted four
+     * production sites and asked each to be closed "eventually"; it went green
+     * every day they were not. */
+    expect(productionCallSites()).toEqual([
+      "lib/argument/caseStrength.ts",
+      "lib/evidence/model/assessment.ts",
+    ]);
   });
 
-  it("the client is NOT on the allow-list — CP-A's deletion is permanent", () => {
+  it("the client is not among them — CP-A's deletion is permanent", () => {
+    const sites = productionCallSites();
     for (const rel of CLIENT_SURFACES) {
       expect(
-        SERVER_CALLSITE_ALLOWLIST[rel],
-        `${rel} must never be allow-listed. A browser scorer is not a call ` +
-          "site to be tolerated; it is the one this epic removed.",
-      ).toBeUndefined();
+        sites,
+        `${rel} scores again. A browser scorer is not a call site to be ` +
+          "tolerated; it is the one this epic removed.",
+      ).not.toContain(rel);
     }
   });
 
-  it("the workspace assessment builder routes through the single derivation", () => {
-    // CP-A's own server module must not become a fifth call site. It is
-    // allowed to import the scorer's HELPERS (contributions, improvement)
-    // but the band itself comes from `deriveAssessmentFromChecklists`.
+  it("the workspace builder PROJECTS a snapshot — it derives no band", () => {
+    /* It used to reach the scorer through `deriveAssessmentFromChecklists`,
+     * with the workspace route's gates — a set in which three of five are
+     * unavailable because the route holds no order. That was a second
+     * derivation with worse inputs, which is a second answer.
+     *
+     * It now renders what `buildPack` persisted. Both halves are asserted: no
+     * scorer call, and the projection actually used. */
     const src = readFileSync(join(ROOT, "lib/disputes/workspaceAssessment.ts"), "utf-8");
     const code = stripCommentsAndTypeImports(src);
     expect(/\bcalculateCaseStrength\s*\(/.test(code)).toBe(false);
-    expect(code).toMatch(/deriveAssessmentFromChecklists\s*\(/);
+    expect(/\bderiveAssessmentFromChecklists\s*\(/.test(code)).toBe(false);
+    expect(code).toMatch(/projectMerchantAssessment\s*\(/);
+  });
+
+  it("neither production route builds a gate assessment of its own", () => {
+    /* The gate builder is how a route acquires an opinion. Both of these used
+     * to call it — the workspace route with two of five gates answerable, the
+     * list route with three `order_not_loaded` — and both are now readers. */
+    for (const rel of [
+      "app/api/disputes/[id]/workspace/route.ts",
+      "app/api/disputes/route.ts",
+    ]) {
+      const code = stripCommentsAndTypeImports(readFileSync(join(ROOT, rel), "utf-8"));
+      expect(/\bbuildCaseGateAssessment\s*\(/.test(code), rel).toBe(false);
+      expect(/\bgateNotProvided\s*\(/.test(code), rel).toBe(false);
+    }
   });
 });

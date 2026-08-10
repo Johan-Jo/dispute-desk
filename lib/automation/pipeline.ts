@@ -26,7 +26,10 @@ import {
   selectionIsPending,
 } from "@/lib/defence/package";
 import { evaluateAndMaybeAutoSaveLegacy } from "./pipeline.legacy";
-import { readPersistedCompletenessForGate } from "@/lib/evidence/model/completenessSnapshot";
+import {
+  resolveEffectiveCompleteness,
+  type EffectiveCompleteness,
+} from "@/lib/evidence/model/completenessActivation";
 import { checkPackQuota } from "@/lib/billing/checkQuota";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
@@ -213,16 +216,24 @@ function strengthBlockMessage(overall: string | null): string {
   return `Auto-mode case strength is ${label} — auto-submit blocked per PRD §9`;
 }
 
+/**
+ * The merchant-visible reason, quoting the pair that actually decided.
+ *
+ * Takes `EffectiveCompleteness` rather than `settings` + a loose number: under
+ * P-7 an activated shop is judged against the calibrated 60, not against their
+ * own `auto_save_min_score`, and a message naming the setting would report a
+ * threshold the gate never applied. One object, so the two numbers in the
+ * sentence cannot come from different scales.
+ */
 function gateBlockMessage(
   reasonCode: string | undefined,
-  settings: { auto_save_min_score: number },
-  completenessScore: number,
+  completeness: EffectiveCompleteness,
 ): string {
   switch (reasonCode) {
     case "automation_disabled":
       return "Auto-save is disabled for this store";
     case "below_completeness_threshold":
-      return `Completeness score ${completenessScore}% is below threshold ${settings.auto_save_min_score}%`;
+      return `Completeness score ${completeness.score}% is below threshold ${completeness.threshold}%`;
     case "hard_block":
       return "Submission is blocked — required evidence missing";
     default:
@@ -461,7 +472,10 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   const { data: pack, error } = await sb
     .from("evidence_packs")
     .select(
-      "id, shop_id, dispute_id, completeness_score, blockers, submission_readiness, status, pack_json"
+      // `rebuild_pending` is a P-7 input: a pack already flagged for rebuild
+      // carries numbers that describe evidence which has moved, and judging
+      // one of those against the calibrated threshold is the illegal pairing.
+      "id, shop_id, dispute_id, completeness_score, blockers, submission_readiness, status, pack_json, rebuild_pending"
     )
     .eq("id", packId)
     .single();
@@ -538,6 +552,37 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   }
 
   const settings = await getShopSettings(pack.shop_id);
+
+  /* ── P-7, APPLIED (plan §1A) ──────────────────────────────────────────
+   *
+   * blume-box reads CANONICAL completeness at the calibrated threshold 60;
+   * every other shop keeps the persisted column and its own
+   * `auto_save_min_score`. The decision is a constant, not a question — the
+   * calibration re-run on the post-C-14 baseline produced no
+   * disposition-preserving threshold for surasvenne at any value, so it is
+   * excluded rather than deferred.
+   *
+   * Resolved HERE, at the live gate, because that is what activation means: a
+   * statement in a calibration report changes no disposition. See
+   * `lib/evidence/model/completenessActivation.ts` for the shop set, the
+   * exclusion and why the threshold travels with the shop rather than reusing
+   * a merchant setting chosen on the OLD scale. */
+  const { data: gateShop } = await sb
+    .from("shops")
+    .select("shop_domain")
+    .eq("id", pack.shop_id)
+    .maybeSingle();
+  /* ONE object: score, threshold and which scale produced them. Resolving the
+   * two numbers separately is what makes a legacy score against the calibrated
+   * 60 representable, and that pairing silently lowers the bar for every pack
+   * the rebuild has not reached. */
+  const effectiveCompleteness = resolveEffectiveCompleteness({
+    shopDomain: (gateShop?.shop_domain as string | null) ?? null,
+    packJson: pack.pack_json,
+    rebuildPending: (pack as { rebuild_pending?: unknown }).rebuild_pending,
+    persistedScore: pack.completeness_score as number | null,
+    merchantThreshold: settings.auto_save_min_score,
+  });
 
   // The Rules page is the source of truth for whether to automate.
   // We re-evaluate the shop's rules against the dispute at save-time:
@@ -633,6 +678,16 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       pack_json: pack.pack_json,
     },
     settings,
+    /* P-7 travels INTO the decision, as one object.
+     *
+     * Without this the canonical ladder read `completeness_score` and
+     * `auto_save_min_score` itself, which quietly un-did the activation the
+     * moment the switch went on: blume-box would have been judged on the legacy
+     * column against their own setting, and every shop with no setting judged
+     * against a 60 nobody calibrated for them. The score also enters the
+     * decision's input hash through here, so a decision taken on one scale
+     * cannot be reused as current after the shop moves to the other. */
+    completeness: effectiveCompleteness,
     automationMode: ruleMode,
     evidenceDueAt,
   });
@@ -953,25 +1008,18 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
    * `?? undefined` readiness fallback (R1) silently dropped the whole gate onto
    * the legacy blocker-count path whenever the column was absent. The decision
    * resolves an absent readiness to `blocked` instead, so an absent signal
-   * fails closed rather than switching engines. */
-  /*
-   * The score quoted in the block message comes from the SAME reader the
-   * decision used, not from a fourth inline `?? 0` (CP-A's
-   * `readPersistedCompletenessForGate`). A message that quotes a differently
-   * coerced number than the gate that produced it is how "blocked at 0%" gets
-   * reported for a pack the gate scored otherwise.
-   */
-  const gateCompleteness = readPersistedCompletenessForGate({
-    completeness_score: pack.completeness_score ?? null,
-    blockers: pack.blockers,
-    submission_readiness:
-      typeof pack.submission_readiness === "string" ? pack.submission_readiness : null,
-    pack_json: pack.pack_json,
-  });
+   * fails closed rather than switching engines.
+   *
+   * The pair quoted in the block message is `effectiveCompleteness` — the SAME
+   * object the decision was handed (see the `completeness:` argument above), not
+   * a second reader of the same columns. A message that quotes a differently
+   * resolved number than the gate that produced it is how "blocked at 0%" gets
+   * reported for a pack the gate scored otherwise, and under P-7 it is also how
+   * a merchant is told they missed a threshold that was never applied to them. */
   const gateReasons: string[] =
     decision.action === "auto_file"
       ? []
-      : [gateBlockMessage(decision.reasonCodes[0], settings, gateCompleteness.score)];
+      : [gateBlockMessage(decision.reasonCodes[0], effectiveCompleteness)];
 
   if (decision.action === "auto_file") {
     /* ── PR-C1 candidate-safety preflight, BEFORE the optimistic stamp ──
@@ -1189,6 +1237,13 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       reasons: gateReasons,
       decision_reason_codes: decision.reasonCodes,
       decision_input_hash: decision.freshness.inputHash,
+      /* The pair the gate ACTUALLY compared, and which scale it came from.
+       * A score in an audit row that does not say which scale produced it
+       * cannot be checked afterwards — and during the P-7 rollout the two
+       * scales disagree by −7…+17 on the same pack. */
+      completeness_score: effectiveCompleteness.score,
+      completeness_threshold: effectiveCompleteness.threshold,
+      completeness_source: effectiveCompleteness.source,
     },
   });
 
@@ -1202,7 +1257,16 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       sourceType: "pack_engine",
       visibility: "merchant_and_internal",
       description: gateReasons.join("; "),
-      metadataJson: { pack_id: packId, reasons: gateReasons },
+      metadataJson: {
+        pack_id: packId,
+        reasons: gateReasons,
+        // Same pair as the audit row. The dispute timeline and the audit trail
+        // must agree about which numbers decided, or reconciling them later
+        // means guessing which scale each was on.
+        completeness_score: effectiveCompleteness.score,
+        completeness_threshold: effectiveCompleteness.threshold,
+        completeness_source: effectiveCompleteness.source,
+      },
       dedupeKey: `${pack.dispute_id}:${PACK_BLOCKED}:${packId}:${new Date().toISOString()}`,
     });
     void updateNormalizedStatus(pack.dispute_id);

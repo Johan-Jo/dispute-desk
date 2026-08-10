@@ -28,6 +28,7 @@ import type {
   GateDecision,
 } from "@/lib/pipeline/contracts";
 import { readPersistedCompletenessForGate } from "@/lib/evidence/model/completenessSnapshot";
+import type { EffectiveCompleteness } from "@/lib/evidence/model/completenessActivation";
 import { hashDecisionInputs } from "./inputHash";
 import {
   AUTOMATION_POLICY_VERSION,
@@ -114,7 +115,20 @@ export function gateDecisionFromPackRow(pack: DecisionPackRow): GateDecision {
  */
 export function assessmentFromPackRow(
   pack: DecisionPackRow,
-  opts: { caseId: string; reviewRequiredCount?: number },
+  opts: {
+    caseId: string;
+    reviewRequiredCount?: number;
+    /**
+     * P-7's effective score, when the caller resolved one.
+     *
+     * Applied HERE rather than to the finished snapshot so it enters
+     * `hashDecisionInputs` — a decision taken on the canonical scale and one
+     * taken on the legacy scale are different decisions, and a hash that could
+     * not tell them apart would let a persisted decision survive the shop's
+     * activation unchanged.
+     */
+    completenessScore?: number;
+  },
 ): CaseAssessmentSnapshot {
   const pj = packJsonOf(pack);
   const overall = normaliseStrength(pj.case_strength?.overall ?? null);
@@ -128,6 +142,7 @@ export function assessmentFromPackRow(
 
   const completeness: CompletenessSnapshot = {
     ...persisted,
+    score: opts.completenessScore ?? persisted.score,
     // R1 closed, and this is the ONE line where this module departs from what
     // production's auto-save gate does with a NULL. See the header.
     readiness: persisted.readiness ?? "blocked",
@@ -220,6 +235,17 @@ export interface BuildDecisionArgs {
   reviewRequiredCount?: number;
   /** Audit only. Defaults to now; never enters the hash. */
   computedAt?: string;
+  /**
+   * P-7's resolved completeness pair, from `resolveEffectiveCompleteness`.
+   *
+   * ONE object, and it sets BOTH the score the ladder compares and the
+   * threshold it compares against. The two knobs already here — `assessment`
+   * and `policy` — could express the same thing separately, and separately is
+   * exactly how a legacy score comes to be judged against the calibrated 60.
+   * Passing this makes the two legal pairings the only representable ones at
+   * this call site too, not just at the legacy gate's.
+   */
+  completeness?: EffectiveCompleteness;
   policy?: AutomationPolicy;
   assessment?: CaseAssessmentSnapshot;
   assessmentFreshness?: FreshnessVerdict;
@@ -228,6 +254,20 @@ export interface BuildDecisionArgs {
 export function buildCaseAutomationDecisionInput(
   args: BuildDecisionArgs,
 ): CaseAutomationDecisionInput {
+  /* Splitting the pair is a programming error, not a fallback. A caller that
+   * hands over an effective pair AND a hand-built policy or assessment has
+   * expressed two answers to one question, and whichever wins is arbitrary —
+   * so neither does. */
+  if (args.completeness && (args.policy || args.assessment)) {
+    throw new Error(
+      "decideForPack: `completeness` resolves the score and the threshold " +
+        "together; passing `policy` or `assessment` alongside it would split " +
+        "the pair across scales.",
+    );
+  }
+
+  const basePolicy = args.policy ?? automationPolicyFromSettings(args.settings);
+
   return {
     caseId: args.caseId,
     assessment:
@@ -235,10 +275,13 @@ export function buildCaseAutomationDecisionInput(
       assessmentFromPackRow(args.pack, {
         caseId: args.caseId,
         reviewRequiredCount: args.reviewRequiredCount,
+        completenessScore: args.completeness?.score,
       }),
     assessmentFreshness:
       args.assessmentFreshness ?? PROJECTED_ASSESSMENT_FRESHNESS,
-    policy: args.policy ?? automationPolicyFromSettings(args.settings),
+    policy: args.completeness
+      ? { ...basePolicy, completenessThreshold: args.completeness.threshold }
+      : basePolicy,
     automationMode: args.automationMode,
     gates: gateFactsFromPackRow(args.pack),
     evidenceDueAt: args.evidenceDueAt,

@@ -124,7 +124,9 @@ function sha256(value: unknown): string {
  * the gate should be treated as computing something different. Two snapshots
  * that scored identically for different reasons are not interchangeable.
  */
-function gateFingerprint(gates: CaseGateAssessment): unknown {
+function gateFingerprint(
+  gates: CaseGateAssessment | PersistedGateFingerprint,
+): unknown {
   const g = gates as unknown as Record<string, unknown>;
   return {
     coverage: g.coverage ?? null,
@@ -221,9 +223,99 @@ function modelFingerprint(model: CaseEvidenceModel): unknown {
 
 /* ── the hash ──────────────────────────────────────────────────────── */
 
+/**
+ * The gate half of the hash, as it can be PERSISTED and read back.
+ *
+ * ── WHY THIS EXISTS ───────────────────────────────────────────────────
+ *
+ * The input hash covers model + gates + payloads. A reader can rebuild the
+ * model and the payloads from `pack_json`; it cannot rebuild the GATES,
+ * because three of the five are derived from the Shopify order and only
+ * `buildPack` loads it. Without them a reader has two bad options: hash a
+ * different gate set — which reports every snapshot stale — or skip the hash
+ * and compare the snapshot against itself, which detects nothing.
+ *
+ * So the writer persists exactly the fields the fingerprint reads. The gates
+ * term is then CONSTANT between write and read, which is correct rather than
+ * convenient: a reader that cannot see the order also cannot observe a gate
+ * changing, and claiming otherwise would be the `order_not_loaded` lie in a
+ * new place. What the reader CAN observe — the evidence moving underneath the
+ * snapshot — is exactly what the model and payload terms carry.
+ *
+ * Plain data, no brand. The brand on `CaseGateAssessment` stops a hand-rolled
+ * literal reaching the SCORER; nothing here is ever scored with.
+ */
+export interface PersistedGateFingerprint {
+  coverage: unknown;
+  fatalLoss: unknown;
+  riskWeakness: unknown;
+  nameMismatch: unknown;
+  creditAlreadyIssued: unknown;
+  notProvided: unknown;
+}
+
+/**
+ * The gate fields to persist beside a snapshot, taken from the real gates.
+ *
+ * Deliberately produced by the SAME function the hash uses, so the persisted
+ * value and the hashed value cannot drift into two shapes.
+ */
+export function persistableGateFingerprint(
+  gates: CaseGateAssessment,
+): PersistedGateFingerprint {
+  return gateFingerprint(gates) as PersistedGateFingerprint;
+}
+
+/**
+ * Read a persisted fingerprint back, or `null` when it is absent/malformed.
+ *
+ * `null` propagates to "no current hash can be reconstructed", which
+ * `projectMerchantAssessment` renders as `needsRecalculation`. Guessing a
+ * default here would manufacture a hash that matches nothing, reporting a
+ * fresh snapshot stale, or — worse, if the default happened to match —
+ * reporting a stale one fresh.
+ */
+export function readPersistedGateFingerprint(
+  value: unknown,
+): PersistedGateFingerprint | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const v = value as Record<string, unknown>;
+  const keys = [
+    "coverage",
+    "fatalLoss",
+    "riskWeakness",
+    "nameMismatch",
+    "creditAlreadyIssued",
+    "notProvided",
+  ] as const;
+  // Every key must be PRESENT — `null` is a meaningful value here ("no such
+  // gate"), so a missing key is a different thing from a null one and must
+  // not be coerced into it.
+  for (const k of keys) {
+    if (!(k in v)) return null;
+  }
+  return {
+    coverage: v.coverage ?? null,
+    fatalLoss: v.fatalLoss ?? null,
+    riskWeakness: v.riskWeakness ?? null,
+    nameMismatch: v.nameMismatch ?? null,
+    creditAlreadyIssued: v.creditAlreadyIssued ?? null,
+    notProvided: v.notProvided ?? null,
+  };
+}
+
 export interface AssessmentInputs {
   model: CaseEvidenceModel;
-  gates: CaseGateAssessment;
+  /**
+   * The live gates at write time, or the persisted fingerprint at read time.
+   *
+   * ONE hash function, two callers — `gateFingerprint` reads plain fields and
+   * never touches the brand, so the writer's branded object and the reader's
+   * persisted record produce byte-identical terms. A second
+   * `computeHashFromParts` would be a second hash, which is the divergence
+   * this whole layer exists to end.
+   */
+  gates: CaseGateAssessment | PersistedGateFingerprint;
   payloadSource: EvidencePayloadSource | undefined;
 }
 
@@ -328,4 +420,87 @@ export function resolveGateDecision(gates: CaseGateAssessment): GateDecision {
   if (g.coverage?.state === "covered_shopify") return "coverage";
   if (g.fatalLoss?.triggered === true) return "fatal_loss";
   return null;
+}
+
+
+/* ── usability ─────────────────────────────────────────────────────── */
+
+/**
+ * The ONE answer to "may this persisted snapshot be used at all?"
+ *
+ * ── WHY IT HAS TO BE ONE PREDICATE ────────────────────────────────────
+ *
+ * Three surfaces need it — the list's strength pill, the list's `?strength=`
+ * pre-filter, and the P-7 gate — and each had its own partial version. The
+ * costs were not symmetric:
+ *
+ *   * the pill checked policy version and `rebuild_pending`; the FILTER
+ *     checked neither, so `?strength=strong` returned disputes the list then
+ *     rendered as unassessed — a filter and a display disagreeing about one
+ *     row;
+ *   * the P-7 branch checked only that a canonical score was a number, so a
+ *     STALE canonical score could be judged against the calibrated 60 — the
+ *     illegal pairing, arriving through a different door than the one
+ *     `resolveEffectiveCompleteness` closed.
+ *
+ * Four conditions, checked together, or the snapshot is not usable:
+ *
+ *   1. it exists;
+ *   2. `assessmentVersion` is the current shape;
+ *   3. `freshness.policyVersion` is the current policy;
+ *   4. the pack is not flagged `rebuild_pending`.
+ *
+ * NOT included: the input-hash comparison. Reconstructing that needs the
+ * model, which the list deliberately does not load and the gate has no reason
+ * to. This predicate is the cheap, always-checkable floor; the workspace route
+ * additionally reconstructs the hash. Both can only WITHHOLD a verdict, never
+ * manufacture one, so a surface that can afford less is stricter than one that
+ * can afford more — never looser.
+ */
+export interface SnapshotUsabilityInput {
+  snapshot: unknown;
+  /** `evidence_packs.rebuild_pending`. */
+  rebuildPending: unknown;
+}
+
+export type SnapshotUnusableReason =
+  | "absent"
+  | "assessment_version"
+  | "policy_version"
+  | "rebuild_pending"
+  | "missing_strength";
+
+export type SnapshotUsability =
+  | { usable: true; strength: CaseAssessmentSnapshot["strength"] }
+  | { usable: false; reason: SnapshotUnusableReason };
+
+/**
+ * `strength.overall` is the field every reader renders, so its ABSENCE is a
+ * distinct unusable reason rather than a silent `undefined` reaching a pill.
+ * A snapshot written by a future shape with a renamed field would otherwise
+ * pass the version checks and render nothing.
+ */
+export function assessmentSnapshotUsability(
+  input: SnapshotUsabilityInput,
+): SnapshotUsability {
+  if (input.rebuildPending === true) return { usable: false, reason: "rebuild_pending" };
+
+  const snap = input.snapshot;
+  if (!snap || typeof snap !== "object" || Array.isArray(snap)) {
+    return { usable: false, reason: "absent" };
+  }
+  const s = snap as Partial<CaseAssessmentSnapshot>;
+
+  if (s.assessmentVersion !== ASSESSMENT_VERSION) {
+    return { usable: false, reason: "assessment_version" };
+  }
+  if (s.freshness?.policyVersion !== ASSESSMENT_POLICY_VERSION) {
+    return { usable: false, reason: "policy_version" };
+  }
+
+  const strength = s.strength;
+  if (!strength || typeof strength !== "object" || typeof strength.overall !== "string") {
+    return { usable: false, reason: "missing_strength" };
+  }
+  return { usable: true, strength: strength as CaseAssessmentSnapshot["strength"] };
 }

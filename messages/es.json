@@ -1873,6 +1873,18 @@
       "ipNotBankEligible": "Uso interno: la coincidencia de ubicación no es lo bastante clara para presentarla al banco.",
       "cvvOnlyNotAddressEvidence": "Uso interno: solo coincidió el código de seguridad de la tarjeta, y eso no constituye prueba de dirección."
     },
+    "assessmentState": {
+      "current": {
+        "title": "Evaluación actualizada",
+        "body": "Este caso se ha evaluado con las pruebas que constan actualmente."
+      },
+      "notAssessed": {
+        "title": "Aún sin evaluar",
+        "bodyAbsent": "DisputeDesk todavía no ha evaluado este caso, así que no hay solidez del caso ni nivel de completitud que mostrar. Se evalúa automáticamente en cuanto se genera el paquete de pruebas; no necesitas hacer nada.",
+        "bodyStale": "Las pruebas de este caso cambiaron después de la última evaluación, así que la solidez y la completitud anteriores ya no lo describen. DisputeDesk lo reevalúa automáticamente; no necesitas hacer nada.",
+        "actionsHidden": "No se puede enviar hasta que este caso se haya evaluado."
+      }
+    },
     "deadlineOnly": {
       "normal": {
         "title": "Listo para enviarse",

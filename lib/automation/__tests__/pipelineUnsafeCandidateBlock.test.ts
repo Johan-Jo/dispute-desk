@@ -127,10 +127,15 @@ function mockSb(
         maybeSingle: vi.fn().mockResolvedValue({ data: queryError ? null : latestPkg, error: queryError }),
       };
     }
+    /* P-7 reads `shops.shop_domain` to resolve the completeness activation.
+     * This fixture's shop is on no activated list, so the gate keeps the
+     * persisted column and the merchant threshold — unchanged behaviour for
+     * what this file pins. */
     return {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
       insert: vi.fn((values: Record<string, unknown>) => {
         inserts.push({ table, values });
         return Promise.resolve({ data: null, error: null });

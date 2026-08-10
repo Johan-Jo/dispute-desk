@@ -1873,6 +1873,18 @@
       "ipNotBankEligible": "Intern behalten — die Standortübereinstimmung ist nicht eindeutig genug für die Bank.",
       "cvvOnlyNotAddressEvidence": "Intern behalten — nur der Kartenprüfwert stimmte überein, und ein übereinstimmender Prüfwert ist kein Adressnachweis."
     },
+    "assessmentState": {
+      "current": {
+        "title": "Bewertung aktuell",
+        "body": "Dieser Fall wurde anhand der derzeit vorliegenden Beweise bewertet."
+      },
+      "notAssessed": {
+        "title": "Noch nicht bewertet",
+        "bodyAbsent": "DisputeDesk hat diesen Fall noch nicht bewertet, daher gibt es weder eine Fallstärke noch eine Vollständigkeit anzuzeigen. Die Bewertung erfolgt automatisch, sobald das Beweispaket erstellt ist — von Ihnen ist nichts erforderlich.",
+        "bodyStale": "Die Beweise zu diesem Fall haben sich nach der letzten Bewertung geändert, daher beschreiben die frühere Fallstärke und Vollständigkeit ihn nicht mehr. DisputeDesk bewertet ihn automatisch neu — von Ihnen ist nichts erforderlich.",
+        "actionsHidden": "Das Senden ist erst möglich, wenn dieser Fall bewertet wurde."
+      }
+    },
     "deadlineOnly": {
       "normal": {
         "title": "Bereit zum Senden",

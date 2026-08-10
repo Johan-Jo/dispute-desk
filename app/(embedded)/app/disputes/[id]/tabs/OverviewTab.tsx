@@ -246,6 +246,16 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     recommendationHelperText,
   } = derived;
 
+  /* ── NO ASSESSMENT, NO VERDICT AND NO ADVICE ──────────────────────
+   *
+   * The gate, read once. Everything below that states a band, a chip, a
+   * recommendation or an improvement hint is downstream of an assessment
+   * that may not exist — and the empty sentinel is not neutral: it carries
+   * `overall: "insufficient"` and `heroVariant: "hard_to_win"`, so an
+   * unassessed case rendered as one we had judged unwinnable. */
+  const assessed = derived.assessment.mayRenderVerdict;
+  const mayAdvise = derived.assessment.mayRenderRecommendation;
+
   /* ── F1: Failure short-circuit ── */
   if (derived.isFailed) {
     const failureCode = derived.failureCode;
@@ -960,7 +970,15 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 {tp("assessmentCard.title")}
               </span>
               {(() => {
-                const strengthKey = presentation?.strength
+                /* `not_assessed` when the gate says so, whatever the sentinel
+                 * says. The old expression reached `not_assessed` only via
+                 * `overall === "insufficient"`, which is ALSO a real verdict —
+                 * so a genuinely insufficient case and an unassessed one were
+                 * indistinguishable, and a stale assessment with any other
+                 * band rendered that band as current. */
+                const strengthKey = !assessed
+                  ? "not_assessed"
+                  : presentation?.strength
                   ?? (caseStrength.overall === "insufficient" ? "not_assessed" : caseStrength.overall);
                 const tokens = STRENGTH_CHIP[strengthKey as keyof typeof STRENGTH_CHIP];
                 return (
@@ -1311,17 +1329,25 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
           suppressed once the pack is submitted because the merchant
           can no longer act on it — the card collapses to the
           submission/deadline line plus the evaluation helper. */}
-      {((!submitted && (recommendationText || improvementHintText)) || dispute.dueAt || submitted) && (
+      {/* Pre-submit ADVICE requires a current assessment: the recommendation
+          and the improvement hint are both derived from the band. The
+          deadline line below does not, and stays. */}
+      {((!submitted && mayAdvise && (recommendationText || improvementHintText)) || dispute.dueAt || submitted) && (
         <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
           <BlockStack gap="200">
-            {!submitted && recommendationText && (
+            {!submitted && mayAdvise && recommendationText && (
               <Text as="p" variant="bodyMd" fontWeight="semibold">{recommendationText}</Text>
             )}
-            {!submitted && recommendationHelperText && (
+            {!submitted && mayAdvise && recommendationHelperText && (
               <Text as="p" variant="bodySm" tone="subdued">{recommendationHelperText}</Text>
             )}
-            {!submitted && improvementHintText && (
+            {!submitted && mayAdvise && improvementHintText && (
               <Text as="p" variant="bodySm" tone="subdued">{improvementHintText}</Text>
+            )}
+            {!submitted && !mayAdvise && (
+              <Text as="p" variant="bodySm" tone="subdued">
+                {resolveToken(tRoot, derived.assessment.bodyToken)}
+              </Text>
             )}
             <Text as="p" variant="bodySm" tone="subdued">
               {submitted

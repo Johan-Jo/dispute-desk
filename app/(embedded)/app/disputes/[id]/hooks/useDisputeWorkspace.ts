@@ -38,6 +38,10 @@ import { computeNextAction } from "@/lib/argument/nextAction";
  * The type-only import below is safe and load-bearing: it is erased at
  * compile time, so the scorer never enters the client bundle. */
 import type { WorkspaceAssessmentPayload } from "@/lib/disputes/workspaceAssessmentTypes";
+import {
+  resolveAssessmentGate,
+  type AssessmentGate,
+} from "@/lib/disputes/assessmentPresence";
 import { generateWhyWins } from "@/lib/argument/whyThisCaseWins";
 import { generateRiskExplanation } from "@/lib/argument/riskExplanation";
 import { generateRecommendation } from "@/lib/argument/recommendation";
@@ -326,6 +330,16 @@ export interface DerivedState {
    * shown as current is worse than no number: the merchant acts on it.
    */
   needsRecalculation: boolean;
+  /**
+   * THE gate every surface reads before rendering a verdict, a
+   * recommendation, or a filing action.
+   *
+   * `needsRecalculation` above is the raw flag and stays for the one consumer
+   * that genuinely wants a boolean; this carries the three permissions and the
+   * merchant copy, so five surfaces cannot each write the condition slightly
+   * differently. See `lib/disputes/assessmentPresence.ts`.
+   */
+  assessment: AssessmentGate;
   /**
    * `deadline_only` vs `withheld_no_safe_argument`, as tokens (plan §4.1).
    * Null until the server ships it.
@@ -947,6 +961,9 @@ export function useDisputeWorkspace(disputeId: string) {
         // strength above exists only to satisfy the type; every surface must
         // branch on this flag first.
         needsRecalculation: true,
+        // No response yet is the same merchant-facing state as no assessment:
+        // nothing may be rendered as a verdict and nothing may be filed.
+        assessment: resolveAssessmentGate({ needsRecalculation: true }),
         filing: null,
       };
     }
@@ -1106,6 +1123,11 @@ export function useDisputeWorkspace(disputeId: string) {
       recommendationHelperText,
       contributions,
       needsRecalculation,
+      assessment: resolveAssessmentGate({
+        needsRecalculation,
+        recalculationReason:
+          serverAssessment?.assessment.recalculationReason ?? null,
+      }),
       filing: serverAssessment?.filing ?? null,
       isReadOnly,
       isBuilding: pack?.status === "queued" || pack?.status === "building",

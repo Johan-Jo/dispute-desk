@@ -20,9 +20,23 @@ export const AUTOMATION_POLICY_VERSION = 1;
 export const AUTOMATION_DECISION_VERSION = 1;
 
 /**
- * P-7: blume-box activates at completeness threshold 60. The shop-level
- * `auto_save_min_score` still overrides this; 60 is the value used when a shop
- * carries none, and the value the contract fixtures are calibrated against.
+ * The threshold used when a shop carries no `auto_save_min_score` at all, and
+ * the value the contract fixtures are written against.
+ *
+ * ── THIS IS NOT P-7 ───────────────────────────────────────────────────
+ *
+ * It said so until the CP-A integration, and the claim was wrong in both
+ * directions: it applied 60 to EVERY shop with an absent setting, none of which
+ * was calibrated, and it gave blume-box their own `auto_save_min_score` rather
+ * than 60 whenever the setting was present — the opposite of the activation.
+ * Worse, it paired that 60 with the persisted legacy score, which is the one
+ * pairing `resolveEffectiveCompleteness` exists to make unrepresentable.
+ *
+ * P-7 has exactly one owner: `lib/evidence/model/completenessActivation.ts`.
+ * Executors resolve the pair there and hand it to `decideForPack` as
+ * `completeness`, which replaces this default. A second copy of the rule here
+ * would be a second answer, and the two would disagree on precisely the packs
+ * the rollout is about.
  */
 export const DEFAULT_COMPLETENESS_THRESHOLD = 60;
 

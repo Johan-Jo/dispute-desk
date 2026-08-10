@@ -23,14 +23,19 @@
  * Nothing here reads a database, a request, or a clock.
  */
 
-import type { CaseGateAssessment } from "@/lib/argument/caseGateAssessment";
+
+import type { CaseStrengthResult } from "@/lib/argument/types";
 import type { EvidencePayloadSource } from "@/lib/argument/caseStrength";
 import { calculateImprovement, computeContributions } from "@/lib/argument/caseStrength";
 import type { ChecklistItemV2, SubmissionReadiness } from "@/lib/types/evidenceItem";
-import { deriveAssessmentFromChecklists } from "@/lib/evidence/model/assessment";
-import { completenessFromChecklist } from "@/lib/evidence/model/completenessSnapshot";
-import { projectReviewItems } from "@/lib/evidence/model/merchantProjection";
-import type { CaseArgumentPlanSnapshot, MerchantReviewItem } from "@/lib/pipeline/contracts";
+import { ASSESSMENT_POLICY_VERSION } from "@/lib/evidence/model/assessmentSnapshot";
+
+import { projectMerchantAssessment } from "@/lib/evidence/model/merchantProjection";
+import type {
+  CaseArgumentPlanSnapshot,
+  CaseAssessmentSnapshot,
+  InputHash,
+} from "@/lib/pipeline/contracts";
 import { deadlineFilingCopy, resolveDeadlineFilingState } from "./deadlineOnlyCopy";
 import type { WorkspaceAssessmentPayload } from "./workspaceAssessmentTypes";
 
@@ -43,8 +48,27 @@ export interface WorkspaceAssessmentInput {
   checklist: ChecklistItemV2[];
   reason: string | null | undefined;
   payloadSource: EvidencePayloadSource | undefined;
-  /** Built through `buildCaseGateAssessment` by the route. */
-  gates: CaseGateAssessment;
+  /**
+   * The PERSISTED snapshot, read from `pack_json.case_assessment`.
+   *
+   * Absent for a pack built before the writer existed. Absent is a state, not
+   * a zero: it produces `needsRecalculation` and null verdict values.
+   */
+  snapshot: CaseAssessmentSnapshot | null;
+  /**
+   * The current input hash, reconstructed by the CALLER from live inputs
+   * through `computeAssessmentInputHash`.
+   *
+   * `null` when the caller could not reconstruct one — a legacy pack with no
+   * persisted gate fingerprint. That is `needsRecalculation` too: an
+   * unverifiable snapshot is not a fresh one.
+   *
+   * Passed IN rather than computed here, and this module deliberately cannot
+   * compute it: a function that both produces the hash and checks it against
+   * the snapshot would be comparing the snapshot with itself, which is exactly
+   * the check that detects nothing.
+   */
+  currentInputHash: InputHash | null;
   /**
    * Whether the evidence has already reached Shopify. Drives the `submitted`
    * terminal readiness, which is a LIFECYCLE fact and not a completeness one
@@ -56,36 +80,73 @@ export interface WorkspaceAssessmentInput {
 }
 
 /**
- * Build the payload.
+ * Build the payload by PROJECTING the persisted snapshot.
  *
- * READINESS IS DERIVED HERE ONCE, from `deriveCompletenessMetrics` via
- * `completenessFromChecklist`, with exactly one thing layered on top: the
- * `submitted` terminal. The browser used to compute the same three-way
- * blocked / ready_with_warnings / ready branch inline, which meant a change
- * to the readiness rule had to be made in two places or the page would
- * disagree with the gate that filed the evidence.
+ * ── WHAT THIS NO LONGER DOES ──────────────────────────────────────────
+ *
+ * It used to call `deriveAssessmentFromChecklists` with the workspace route's
+ * own gate set — a set in which three of five gates are unavailable, because
+ * the route does not load the Shopify order. That is a second derivation with
+ * strictly worse inputs, and it produced a second answer: on a fraud case with
+ * a cardholder-name mismatch it showed one band while the build path had
+ * capped another.
+ *
+ * Deleting the browser's scorer moved that defect one layer down rather than
+ * removing it. The route now renders what `buildPack` — the only site holding
+ * all five gates — persisted.
+ *
+ * ── WHAT IS STILL DERIVED, AND WHY IT IS SAFE ─────────────────────────
+ *
+ * `contributions` and `improvement` are display rows: "what supports your
+ * case" and the single highest-value missing signal. They read the checklist
+ * and produce LABELS. Neither returns a band, a score or a readiness, so
+ * neither can re-band the case or reconstruct completeness — which is the line
+ * that matters. `blockerCount` / `warningCount` / `submitOverrideGaps` are
+ * likewise counts of checklist rows, not a readiness derivation.
+ *
+ * When the snapshot is absent or stale they are still computed but the payload
+ * carries no verdict, and `assessmentPresence` stops every surface rendering
+ * them as one.
  */
 export function buildWorkspaceAssessment(
   input: WorkspaceAssessmentInput,
 ): WorkspaceAssessmentPayload {
-  const { checklist, reason, payloadSource, gates, packSaved, plan } = input;
+  const { checklist, reason, payloadSource, packSaved, plan, snapshot } = input;
 
-  // One derivation, through the single entry point. `deriveAssessmentFrom
-  // Checklists` is the only module allowed to call the scorer.
-  const { strength } = deriveAssessmentFromChecklists({
-    strengthChecklist: checklist,
-    completenessChecklist: checklist,
-    reason,
-    payloadSource,
-    gates,
+  /* THE projection. One owner for "is this snapshot current", shared with the
+   * persisted path, so the two cannot answer differently. A null current hash
+   * is passed through as a sentinel that can never equal a real one — the
+   * snapshot is then unverifiable, and unverifiable is not fresh. */
+  const projection = projectMerchantAssessment({
+    caseId: input.disputeId,
+    snapshot,
+    currentInputHash: input.currentInputHash ?? UNRECONSTRUCTABLE_HASH,
+    currentPolicyVersion: ASSESSMENT_POLICY_VERSION,
+    plan,
   });
-  const completeness = completenessFromChecklist(checklist);
 
-  // `submitted` is a lifecycle terminal layered over the derived readiness,
-  // never a fourth completeness outcome. A saved pack with critical gaps is
-  // still saved, and telling the merchant "ready with warnings" about
-  // evidence Shopify already holds is an instruction they cannot act on.
-  const readiness: SubmissionReadiness = packSaved ? "submitted" : completeness.readiness;
+  const assessed = !projection.needsRecalculation && snapshot !== null;
+
+  /* Strength comes from the SNAPSHOT, never from a fresh score.
+   *
+   * `EMPTY_WORKSPACE_STRENGTH` is the scorer's "nothing to assess" value and
+   * is used only while `needsRecalculation` is true. Every surface branches on
+   * the flag before reading it — `lib/disputes/assessmentPresence.ts` — and
+   * `tests/unit/assessmentPresenceSurfaces.test.ts` fails if one stops. */
+  const strength: CaseStrengthResult = assessed
+    ? snapshot!.strength
+    : EMPTY_WORKSPACE_STRENGTH;
+
+  /* Readiness: the snapshot's, with the `submitted` lifecycle terminal layered
+   * on top. Not recomputed from the checklist — that was the second
+   * completeness derivation. With no current snapshot there is no readiness to
+   * report, and `"blocked"` would be a verdict; the payload carries the
+   * sentinel and the projection carries `null`. */
+  const readiness: SubmissionReadiness = packSaved
+    ? "submitted"
+    : assessed
+      ? (snapshot!.completeness.readiness ?? "blocked")
+      : "blocked";
 
   const blockerCount = checklist.filter(
     (c) => c.blocking && c.status === "missing",
@@ -94,35 +155,50 @@ export function buildWorkspaceAssessment(
     (c) => c.priority === "critical" && !c.blocking && c.status === "missing",
   );
 
-  const reviewItems: MerchantReviewItem[] = projectReviewItems(plan);
   const filingState = resolveDeadlineFilingState({
     deadlineOnly: plan?.deadlineOnly ?? false,
     noSafeArgument: plan?.noSafeArgument ?? null,
-    reviewItemCount: reviewItems.length,
+    reviewItemCount: projection.reviewItems.length,
   });
 
   return {
     caseStrength: strength,
-    // The workspace route computes the assessment from LIVE inputs on every
-    // request, so by construction it cannot be stale against itself. The
-    // projection is still built through the same function the persisted path
-    // uses, so the two surfaces cannot describe one case two ways.
     assessment: {
-      caseId: input.disputeId,
-      needsRecalculation: false,
-      strengthBand: strength.overall,
-      completenessScore: completeness.score,
-      readiness,
-      reviewItems,
-      recalculationReason: null,
+      ...projection,
+      // The lifecycle terminal is a rendering fact, not part of the snapshot.
+      readiness: assessed ? readiness : projection.readiness,
     },
     filing: { ...deadlineFilingCopy(filingState), state: filingState },
     readiness,
     blockerCount,
     warningCount: criticalGaps.length,
     submitOverrideGaps: criticalGaps.map((c) => ({ field: c.field, label: c.label })),
+    // DISPLAY ONLY. Labels, not a band; see the header.
     contributions: computeContributions({ checklist, payloadSource, reason }),
     improvement: calculateImprovement(checklist, reason, payloadSource),
   };
 }
 
+/**
+ * A hash no real snapshot can carry.
+ *
+ * Used when the caller could not reconstruct the current hash at all. The
+ * alternative — skipping the freshness check — would render an unverifiable
+ * snapshot as current, which is the failure this layer exists to prevent.
+ */
+const UNRECONSTRUCTABLE_HASH = "unreconstructable" as InputHash;
+
+/** The scorer's own "nothing to assess" value. Never a judgement about a case. */
+const EMPTY_WORKSPACE_STRENGTH: CaseStrengthResult = {
+  overall: "insufficient",
+  score: 0,
+  coveragePercent: 0,
+  strongCount: 0,
+  moderateCount: 0,
+  supportingCount: 0,
+  supportedClaims: 0,
+  totalClaims: 0,
+  improvementHintI18n: null,
+  strengthReasonI18n: { key: "disputes.strengthReason.general.insufficient" },
+  heroVariant: "hard_to_win",
+};

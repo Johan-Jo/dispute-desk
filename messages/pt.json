@@ -1873,6 +1873,18 @@
       "ipNotBankEligible": "Mantido interno — a correspondência de localização não é clara o suficiente para o banco.",
       "cvvOnlyNotAddressEvidence": "Mantido interno — apenas o código de segurança do cartão correspondeu, e isso não constitui prova de endereço."
     },
+    "assessmentState": {
+      "current": {
+        "title": "Avaliação atualizada",
+        "body": "Este caso foi avaliado com as provas atualmente em arquivo."
+      },
+      "notAssessed": {
+        "title": "Ainda sem avaliação",
+        "bodyAbsent": "O DisputeDesk ainda não avaliou este caso, por isso não há solidez nem grau de completude para mostrar. É avaliado automaticamente assim que o pacote de provas for criado — não precisa de fazer nada.",
+        "bodyStale": "As provas deste caso mudaram depois da última avaliação, por isso a solidez e a completude anteriores já não o descrevem. O DisputeDesk reavalia-o automaticamente — não precisa de fazer nada.",
+        "actionsHidden": "O envio não está disponível enquanto este caso não for avaliado."
+      }
+    },
     "deadlineOnly": {
       "normal": {
         "title": "Pronto para envio",
