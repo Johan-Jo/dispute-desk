@@ -77,6 +77,17 @@ import { finalizeAndEnqueueSave } from "@/lib/automation/finalizeAndEnqueueSave"
 import { handleBuildDefencePackage } from "../buildDefencePackageJob";
 import type { ClaimedJob } from "../../claimJobs";
 
+vi.mock("@/lib/automation/settings", () => ({
+  // CP-C: the defence build reads the ONE canonical automation decision, which
+  // takes the shop's automation policy as an input. This handler used to run
+  // its own guard call and never looked at settings.
+  getShopSettings: vi.fn().mockResolvedValue({
+    auto_build_enabled: true,
+    auto_save_enabled: true,
+    auto_save_min_score: 60,
+    enforce_no_blockers: true,
+  }),
+}));
 vi.mock("@/lib/rules/evaluateRules", () => ({
   evaluateRules: vi.fn(),
 }));
@@ -123,6 +134,12 @@ function mockSb(packJson: Record<string, unknown>, captured: Captured) {
         dispute_id: "disp-1",
         pack_json: packJson,
         checklist_v2: [],
+        // CP-C decision inputs. Always present on a real ready pack
+        // (`submission_readiness` is NOT NULL); the fixture never needed them
+        // while this handler ran its own guard call.
+        completeness_score: 90,
+        blockers: [],
+        submission_readiness: "ready",
       };
     }
     if (table === "disputes") {
@@ -217,10 +234,14 @@ describe("buildDefencePackageJob — auto-submit guards", () => {
 
     // The behaviour merchants see is unchanged: still a draft.
     expect(pkgUpdate?.values.status).toBe("draft");
-    // The audit trail is what changed — park is now distinguishable.
+    // CP-C: the audit trail now speaks the canonical decision's vocabulary.
+    // A Moderate auto case is `hold_for_deadline` — nothing is wrong with it
+    // (`eligible`), it is waiting for the clock rather than for a merchant.
+    // That is the same outcome the old `park` / `moderate_strength` verdict
+    // described; only the words are the shared ones now.
     expect(blockedAudit?.values.event_payload).toMatchObject({
-      decision: "park",
-      verdict_reason: "moderate_strength",
+      decision: "hold_for_deadline",
+      verdict_reason: "eligible",
       case_strength: "moderate",
     });
     expect(finalizeAndEnqueueSave).not.toHaveBeenCalled();
@@ -241,17 +262,33 @@ describe("buildDefencePackageJob — auto-submit guards", () => {
     expect(finalizeAndEnqueueSave).toHaveBeenCalled();
   });
 
-  it("Weak strength BLOCKS and records a block verdict", async () => {
+  it("Weak strength HOLDS for the deadline and records a hold verdict", async () => {
     const { pkgUpdate, blockedAudit } = await runWith(
       packJsonWith({ case_strength: { overall: "weak" } }),
     );
 
+    // UNCHANGED, and this is the part that matters: the build path still does
+    // not finalize or enqueue a weak case, and the package stays a draft.
     expect(pkgUpdate?.values.status).toBe("draft");
-    expect(blockedAudit?.values.event_payload).toMatchObject({
-      decision: "block",
-      verdict_reason: "weak",
-    });
     expect(finalizeAndEnqueueSave).not.toHaveBeenCalled();
+
+    /*
+     * CHANGED: `decision` reads `hold_for_deadline` where it read `block`.
+     * Contract revision 2 — strength is an odds judgement and odds never
+     * withhold a filing, so the strength floor holds for the clock instead of
+     * blocking. The audit row now says which of the two it was, and the
+     * distinction is load-bearing downstream: the deadline cron FILES a hold
+     * and refuses a block.
+     *
+     * CP-C: `strength_insufficient` is still the canonical reason code covering
+     * both `weak` and `insufficient`; the band itself stays on the payload as
+     * `case_strength`.
+     */
+    expect(blockedAudit?.values.event_payload).toMatchObject({
+      decision: "hold_for_deadline",
+      verdict_reason: "strength_insufficient",
+      case_strength: "weak",
+    });
   });
 
   it("fatal loss BLOCKS", async () => {
