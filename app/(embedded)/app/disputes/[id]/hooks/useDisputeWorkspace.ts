@@ -18,17 +18,30 @@ import type {
 } from "../workspace-components/types";
 import { EVIDENCE_CATEGORIES } from "../workspace-components/types";
 import { computeNextAction } from "@/lib/argument/nextAction";
+/* ── CP-A: the browser has no scorer ──────────────────────────────────
+ *
+ * This hook used to import `calculateCaseStrength`, `calculateImprovement`,
+ * `computeContributions` and the gate builders, assemble its own
+ * `CaseGateAssessment`, and score the case client-side — while the workspace
+ * route scored the SAME case server-side from a different gate set on the
+ * same request. On a fraud dispute with a cardholder-name mismatch the two
+ * disagreed on one screen: the browser rendered Strong, the server had capped
+ * Moderate (2026-08-05 audit, `p4/legacy-removal-inventory.md`).
+ *
+ * All of it now arrives pre-derived on `data.workspaceAssessment`, built by
+ * `buildWorkspaceAssessment` in `lib/disputes/workspaceAssessment.ts`. Those
+ * imports are deliberately absent, and their absence is enforced by
+ * `tests/unit/clientAssessmentRecomputation.test.ts` — a derivation that
+ * exists while the old caller survives is exactly the failure this epic was
+ * written to correct.
+ *
+ * The type-only import below is safe and load-bearing: it is erased at
+ * compile time, so the scorer never enters the client bundle. */
+import type { WorkspaceAssessmentPayload } from "@/lib/disputes/workspaceAssessmentTypes";
 import {
-  calculateCaseStrength,
-  calculateImprovement,
-  computeContributions,
-  type CaseStrengthContributions,
-} from "@/lib/argument/caseStrength";
-import {
-  buildCaseGateAssessment,
-  gateNotProvided,
-  gateProvided,
-} from "@/lib/argument/caseGateAssessment";
+  resolveAssessmentGate,
+  type AssessmentGate,
+} from "@/lib/disputes/assessmentPresence";
 import { generateWhyWins } from "@/lib/argument/whyThisCaseWins";
 import { generateRiskExplanation } from "@/lib/argument/riskExplanation";
 import { generateRecommendation } from "@/lib/argument/recommendation";
@@ -174,6 +187,30 @@ function deriveCategories(
     .filter((c) => c.items.length > 0);
 }
 
+/**
+ * The scorer's "nothing to assess" result.
+ *
+ * NOT a verdict about a case. Rendered only while
+ * `derived.needsRecalculation` is true, and present at all because the tabs
+ * type against a non-null `CaseStrengthResult`. Kept as a frozen module
+ * constant so the two places that need it cannot drift into two different
+ * "empty" shapes — which is how "insufficient · 0%" once got rendered as if
+ * the scorer had reached that conclusion.
+ */
+const EMPTY_CASE_STRENGTH: Readonly<CaseStrengthResult> = Object.freeze({
+  overall: "insufficient",
+  score: 0,
+  coveragePercent: 0,
+  strongCount: 0,
+  moderateCount: 0,
+  supportingCount: 0,
+  supportedClaims: 0,
+  totalClaims: 0,
+  improvementHintI18n: null,
+  strengthReasonI18n: { key: "disputes.strengthReason.general.insufficient" },
+  heroVariant: "hard_to_win",
+}) as Readonly<CaseStrengthResult>;
+
 /* ── Hook ── */
 
 /** Shown after a successful manual upload so the row leaving "Missing"
@@ -271,7 +308,7 @@ export interface DerivedState {
    *  canonical signalId with effective category `strong` or
    *  `moderate`. The Overview UI iterates this directly — no UI
    *  inference, no text-based dedupe. */
-  contributions: CaseStrengthContributions;
+  contributions: WorkspaceAssessmentPayload["contributions"];
   isReadOnly: boolean;
   isBuilding: boolean;
   /** True when the build itself failed (system error), distinct from
@@ -284,6 +321,30 @@ export interface DerivedState {
    *  "Regenerating defence package" banner. Distinct from `isBuilding`
    *  (which fires on first-time builds too). */
   isRegenerating: boolean;
+  /**
+   * CP-A — the server could not give a current assessment for this case.
+   *
+   * A FIRST-CLASS STATE, not a null. When true, `caseStrength`, `readiness`
+   * and the counts carry the scorer's own "nothing to assess" values and a
+   * surface MUST branch on this before rendering any of them. A stale number
+   * shown as current is worse than no number: the merchant acts on it.
+   */
+  needsRecalculation: boolean;
+  /**
+   * THE gate every surface reads before rendering a verdict, a
+   * recommendation, or a filing action.
+   *
+   * `needsRecalculation` above is the raw flag and stays for the one consumer
+   * that genuinely wants a boolean; this carries the three permissions and the
+   * merchant copy, so five surfaces cannot each write the condition slightly
+   * differently. See `lib/disputes/assessmentPresence.ts`.
+   */
+  assessment: AssessmentGate;
+  /**
+   * `deadline_only` vs `withheld_no_safe_argument`, as tokens (plan §4.1).
+   * Null until the server ships it.
+   */
+  filing: WorkspaceAssessmentPayload["filing"] | null;
 }
 
 export function useDisputeWorkspace(disputeId: string) {
@@ -881,19 +942,7 @@ export function useDisputeWorkspace(disputeId: string) {
         readiness: "blocked" as SubmissionReadiness,
         blockerCount: 0,
         warningCount: 0,
-        caseStrength: {
-          overall: "insufficient",
-          score: 0,
-          coveragePercent: 0,
-          strongCount: 0,
-          moderateCount: 0,
-          supportingCount: 0,
-          supportedClaims: 0,
-          totalClaims: 0,
-          improvementHintI18n: null,
-          strengthReasonI18n: { key: "disputes.strengthReason.general.insufficient" },
-          heroVariant: "hard_to_win",
-        },
+        caseStrength: EMPTY_CASE_STRENGTH,
         strengthReasonText: asLocalized(""),
         improvementHintText: null,
         whyWins: { strengths: [], weaknesses: [], overall: "insufficient" },
@@ -908,6 +957,14 @@ export function useDisputeWorkspace(disputeId: string) {
         isFailed: false,
         failureCode: null,
         isRegenerating: false,
+        // No response yet is not "this case scored insufficient". The zeroed
+        // strength above exists only to satisfy the type; every surface must
+        // branch on this flag first.
+        needsRecalculation: true,
+        // No response yet is the same merchant-facing state as no assessment:
+        // nothing may be rendered as a verdict and nothing may be filed.
+        assessment: resolveAssessmentGate({ needsRecalculation: true }),
+        filing: null,
       };
     }
 
@@ -952,89 +1009,75 @@ export function useDisputeWorkspace(disputeId: string) {
       recOptional: safeT(tWorkspace, "recOptional") || "Recommended if available",
     });
 
-    // Readiness. A pack is "saved" when its status reflects a successful
-    // save OR it carries a saved_to_shopify_at timestamp. The timestamp is
-    // the authoritative signal: status can be overwritten on a rebuild, but
-    // the save really did happen and the merchant must not be told "Not
-    // submitted" in that case.
+    // Lifecycle only. A pack is "saved" when its status reflects a
+    // successful save OR it carries a saved_to_shopify_at timestamp — the
+    // timestamp is authoritative, because status can be overwritten on a
+    // rebuild while the save really did happen and the merchant must not
+    // then be told "Not submitted".
+    //
+    // READINESS ITSELF IS NO LONGER RECONSTRUCTED HERE. The three-way
+    // blocked / ready_with_warnings / ready branch lived in this file AND in
+    // `deriveCompletenessMetrics`, so a change to the rule had to be made
+    // twice or the page would disagree with the gate that filed the
+    // evidence. It is now derived once, server-side, by
+    // `buildWorkspaceAssessment`.
     const isSaved =
       pack?.status === "saved_to_shopify" ||
       pack?.status === "saved_to_shopify_unverified" ||
       pack?.status === "saved_to_shopify_verified" ||
       !!pack?.savedToShopifyAt;
-    let readiness: SubmissionReadiness;
-    if (isSaved) {
-      readiness = "submitted";
-    } else {
-      const missingBlockers = effectiveChecklist.filter((c) => c.blocking && c.status === "missing");
-      const missingCritical = effectiveChecklist.filter((c) => c.priority === "critical" && !c.blocking && c.status === "missing");
-      readiness = missingBlockers.length > 0 ? "blocked" : missingCritical.length > 0 ? "ready_with_warnings" : "ready";
-    }
 
-    const blockerCount = effectiveChecklist.filter((c) => c.blocking && c.status === "missing").length;
-    const warningCount = effectiveChecklist.filter((c) => c.priority === "critical" && !c.blocking && c.status === "missing").length;
-    const submitOverrideGaps = effectiveChecklist
-      .filter((c) => c.priority === "critical" && !c.blocking && c.status === "missing")
-      .map((c) => ({ field: c.field, label: c.label }));
+    /* ── The server assessment ──────────────────────────────────────
+     *
+     * Absent means the response predates the server change (or the route
+     * could not derive one). That is `needsRecalculation` — a state the UI
+     * renders as "recalculating", never as a number. Filling in a plausible
+     * default here would recreate the browser derivation with worse inputs.
+     */
+    const serverAssessment: WorkspaceAssessmentPayload | null =
+      data.workspaceAssessment ?? null;
+    const needsRecalculation =
+      serverAssessment === null || serverAssessment.assessment.needsRecalculation;
 
-    // Pass the workspace's evidenceItemsByField map so the canonical
-    // categorizer can read payloads (delivery proofType, AVS/CVV codes,
-    // IP location flags) instead of falling back to default categories.
-    // Plan v3 §P2 step 4.
-    const payloadSource = data.pack?.evidenceItemsByField
-      ? { kind: "byField" as const, map: data.pack.evidenceItemsByField }
-      : undefined;
-    // Coverage Gate input (PRD §4). Read from the workspace pack's
-    // coverage summary; null when the order is not on Shopify Protect.
-    const coverageInput = data.pack?.coverage
-      ? {
-          state: data.pack.coverage.state,
-          shopifyProtectStatus: data.pack.coverage.shopifyProtectStatus,
-        }
-      : undefined;
-    const caseStrength = calculateCaseStrength(
-      effectiveChecklist,
-      data.dispute.reason,
-      payloadSource,
-      buildCaseGateAssessment({
-        coverage: gateProvided(coverageInput ?? null),
-        // Client-side recomputation. Fatal-loss, risk-weakness and the
-        // name-mismatch gate are all derived server-side from the order
-        // and the AVS payload; the workspace response does not carry
-        // them, so this surface has never applied them. Recorded as
-        // "not shipped to the client" rather than `null`: this is the
-        // exact pair whose conflation let the browser show Strong on a
-        // fraud case the server had capped at Moderate.
-        fatalLoss: gateNotProvided("not_shipped_to_client"),
-        riskWeakness: gateNotProvided("not_shipped_to_client"),
-        nameMismatch: gateNotProvided("not_shipped_to_client"),
-        // Credit-already-issued floor from the persisted pack. Omitting
-        // it here would make the client disagree with both the server
-        // presentation and the submitted package.
-        creditAlreadyIssued: gateProvided(data.pack?.creditAlreadyIssued ?? null),
-      }),
-    );
-    // Resolve the strength tokens into branded `Localized` strings at
-    // the hook boundary. UI consumers receive already-translated text
-    // through `strengthReasonText` / `improvementHintText`; the raw
-    // tokens stay on `caseStrength.*I18n` for any consumer that needs
-    // them (tests, server callers).
+    const readiness: SubmissionReadiness = serverAssessment?.readiness ?? "blocked";
+    const blockerCount = serverAssessment?.blockerCount ?? 0;
+    const warningCount = serverAssessment?.warningCount ?? 0;
+    const submitOverrideGaps = serverAssessment?.submitOverrideGaps ?? [];
+
+    /* ── Strength: rendered, never computed ──────────────────────────
+     *
+     * The gate set this hook used to assemble stated three of five gates as
+     * `not_shipped_to_client` — an honest record that the browser could not
+     * see them, and a guarantee that its answer would differ from the
+     * server's whenever any of the three fired. Shipping the derived result
+     * instead of the inputs is the only fix that makes the two agree by
+     * construction.
+     *
+     * `EMPTY_CASE_STRENGTH` is the scorer's own "nothing to assess" value,
+     * used ONLY while `needsRecalculation` is true. Consumers must branch on
+     * that flag rather than treat `insufficient` as a verdict.
+     */
+    const caseStrength: CaseStrengthResult =
+      serverAssessment?.caseStrength ?? EMPTY_CASE_STRENGTH;
+    // Resolve the strength tokens into branded `Localized` strings at the
+    // hook boundary. UI consumers receive already-translated text through
+    // `strengthReasonText` / `improvementHintText`; the raw tokens stay on
+    // `caseStrength.*I18n` for any consumer that needs them.
     const strengthReasonText: Localized = resolveToken(tRoot, caseStrength.strengthReasonI18n);
     const improvementHintText: Localized | null = caseStrength.improvementHintI18n
       ? resolveToken(tRoot, caseStrength.improvementHintI18n)
       : null;
-    // Pass the reason so the contribution rows apply the same
-    // fraud-family account_history demotion the scorer does — otherwise
-    // "What supports your case" would show a Strong pill for prior-order
-    // history that the score counted as moderate corroboration.
-    const contributions = computeContributions({
-      checklist: effectiveChecklist,
-      payloadSource,
-      reason: data.dispute.reason,
-    });
+    // "What supports your case" and the improvement hint were BOTH computed
+    // here from `computeContributions` / `calculateImprovement`, and the
+    // route computed its own copy for the line-item resolver on the same
+    // request. One derivation now, server-side.
+    const contributions = serverAssessment?.contributions ?? { strong: [], moderate: [] };
+    const improvement = serverAssessment?.improvement ?? null;
+    // These two take the BAND as an input and return copy; they derive no
+    // score of their own, so they stay client-side. The band they are given
+    // is the server's.
     const whyWins = generateWhyWins(effectiveChecklist, caseStrength.overall);
     const risk = generateRiskExplanation(effectiveChecklist, caseStrength.overall);
-    const improvement = calculateImprovement(effectiveChecklist, data.dispute.reason, payloadSource);
 
     const nextAction = computeNextAction({
       packExists: !!pack,
@@ -1079,6 +1122,13 @@ export function useDisputeWorkspace(disputeId: string) {
       recommendationText,
       recommendationHelperText,
       contributions,
+      needsRecalculation,
+      assessment: resolveAssessmentGate({
+        needsRecalculation,
+        recalculationReason:
+          serverAssessment?.assessment.recalculationReason ?? null,
+      }),
+      filing: serverAssessment?.filing ?? null,
       isReadOnly,
       isBuilding: pack?.status === "queued" || pack?.status === "building",
       isFailed: pack?.status === "failed",

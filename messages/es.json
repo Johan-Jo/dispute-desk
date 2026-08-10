@@ -1282,7 +1282,7 @@
       "inReview": "En revisión",
       "inReviewDue": "En revisión · {days} d",
       "scheduled": "Programada",
-      "notDefended": "Sin defender"
+      "notDefended": "Sin paquete de defensa"
     },
     "signalLabel": {
       "payment_auth": "Autenticación del pago",
@@ -1545,19 +1545,19 @@
       "evidenceOrderingHelper": "Ordenado según cuánto fortalece cada elemento el caso. Las más fuertes primero.",
       "review": {
         "title": "Decide qué hacer con esta disputa",
-        "prompt": "Este caso necesita tu decisión antes de la fecha límite. Ponla en revisión mientras la analizas, prográmala para enviarse automáticamente o concédela si no vale la pena defenderla.",
+        "prompt": "Este caso necesita tu decisión antes de la fecha límite. Ponla en revisión mientras la analizas, prográmala para enviarse automáticamente o indica a DisputeDesk que no añada un paquete de defensa.",
         "hold": "Poner en revisión",
         "approve": "Enviar en la fecha límite",
-        "concede": "No defender",
+        "concede": "No añadir paquete de defensa",
         "holdHelp": "Seguiremos vigilándola y te avisaremos antes de la fecha límite.",
         "approveHelp": "Enviaremos la evidencia automáticamente cuando llegue la fecha límite.",
-        "concedeHelp": "No enviaremos tu paquete de defensa. Shopify seguirá transmitiendo los datos básicos del pedido que tiene registrados.",
+        "concedeHelp": "DisputeDesk no añadirá un paquete de defensa a esta disputa. Si la disputa sigue abierta en la fecha límite de Shopify, Shopify transmite los datos del pedido que ya tiene.",
         "stateInReviewTitle": "En espera de tu revisión",
         "stateInReviewBody": "Estás revisando esta disputa. Si no haces nada más, seguirá tu regla de automatización en la fecha límite{due}.",
         "stateApprovedTitle": "Programada para enviarse",
         "stateApprovedBody": "Esta disputa se enviará automáticamente en la fecha límite{due}.",
-        "stateConcededTitle": "Sin defender",
-        "stateConcededBody": "Elegiste no defender esta disputa. No se enviará nada.",
+        "stateConcededTitle": "No se añadirá ningún paquete de defensa",
+        "stateConcededBody": "Elegiste no añadir un paquete de defensa de DisputeDesk. Si la disputa sigue abierta en la fecha límite de Shopify, Shopify transmite los datos del pedido que ya tiene.",
         "dueSuffix": " ({date})",
         "change": "Cambiar decisión",
         "undo": "Deshacer",
@@ -1872,6 +1872,37 @@
       "threeDsNoLiabilityShift": "Uso interno: la autenticación no se completó, así que citarla debilitaría la respuesta.",
       "ipNotBankEligible": "Uso interno: la coincidencia de ubicación no es lo bastante clara para presentarla al banco.",
       "cvvOnlyNotAddressEvidence": "Uso interno: solo coincidió el código de seguridad de la tarjeta, y eso no constituye prueba de dirección."
+    },
+    "assessmentState": {
+      "current": {
+        "title": "Evaluación actualizada",
+        "body": "Este caso se ha evaluado con las pruebas que constan actualmente."
+      },
+      "notAssessed": {
+        "title": "Aún sin evaluar",
+        "bodyAbsent": "DisputeDesk todavía no ha evaluado este caso, así que no hay solidez del caso ni nivel de completitud que mostrar. Se evalúa automáticamente en cuanto se genera el paquete de pruebas; no necesitas hacer nada.",
+        "bodyStale": "Las pruebas de este caso cambiaron después de la última evaluación, así que la solidez y la completitud anteriores ya no lo describen. DisputeDesk lo reevalúa automáticamente; no necesitas hacer nada.",
+        "actionsHidden": "No se puede enviar hasta que este caso se haya evaluado."
+      }
+    },
+    "deadlineOnly": {
+      "normal": {
+        "title": "Listo para enviarse",
+        "body": "Tu paquete de defensa está listo. DisputeDesk lo añadirá a esta disputa en Shopify automáticamente."
+      },
+      "held": {
+        "title": "Retenido para la fecha límite",
+        "body": "{itemCount, plural, one {1 elemento necesita tu confirmación} other {# elementos necesitan tu confirmación}}, por lo que DisputeDesk retiene tu paquete de defensa para procesarlo en la fecha límite en lugar de añadirlo ahora. El proceso de fecha límite de Shopify sigue su propio calendario: si la disputa continúa abierta cuando llega, Shopify usa los datos del pedido que ya tiene.",
+        "action": "{itemCount, plural, one {Confirma el elemento marcado} other {Confirma los elementos marcados}} para liberar tu paquete de defensa ahora en lugar de esperar a la fecha límite."
+      },
+      "withheld": {
+        "title": "No se añadirá ningún paquete de defensa de DisputeDesk",
+        "body": "Una vez apartadas las pruebas que necesitan tu confirmación, no queda nada que DisputeDesk pueda respaldar, así que no añadirá un paquete de defensa a esta disputa. Eso no hace que la disputa quede en silencio: Si la disputa sigue abierta en la fecha límite de Shopify, Shopify transmite los datos del pedido que ya tiene.",
+        "action": "Añade o confirma evidencia en esta disputa para cambiarlo."
+      },
+      "reviewItem": {
+        "generic": "Este elemento necesita tu confirmación antes de poder usarse."
+      }
     }
   },
   "disputeReasons": {
@@ -2522,7 +2553,7 @@
     "modeSectionSubtitle": "Esto se aplica a todas las disputas. Algunos casos siempre se retienen y se vigilan primero: consulta las Salvaguardas más abajo.",
     "modeAutoTitle": "Piloto automático",
     "modeAutoBadge": "Recomendado",
-    "modeAutoDesc": "Guardamos tus casos más sólidos en Shopify en cuanto están listos. Todo lo demás queda retenido mientras seguimos recopilando pruebas y se guarda en Shopify en la fecha límite: nada espera tu aprobación, salvo que elijas “No defender”.",
+    "modeAutoDesc": "Guardamos tus casos más sólidos en Shopify en cuanto están listos. Todo lo demás queda retenido mientras seguimos recopilando pruebas y se guarda en Shopify en la fecha límite: nada espera tu aprobación, salvo que elijas “No añadir paquete de defensa”.",
     "modeReviewTitle": "Revisar todo",
     "modeReviewDesc": "Preparamos cada respuesta. No se guarda nada en Shopify hasta que lo apruebes.",
     "modeSaved": "Configuración guardada",
@@ -2561,7 +2592,7 @@
     "groupHasOwnSetting": "Tiene su propia configuración",
     "modeClearedExceptions": "Se borraron {count} tipos de disputa que tenían su propia configuración. Ahora todo sigue «{mode}». Define un tipo abajo si quieres una excepción.",
     "modeAutoLead": "Guardamos tus casos más sólidos en Shopify en cuanto están listos.",
-    "modeAutoNote": "Todo lo demás queda retenido mientras seguimos recopilando pruebas y se guarda en Shopify en la fecha límite: nada espera tu aprobación, salvo que elijas “No defender”.",
+    "modeAutoNote": "Todo lo demás queda retenido mientras seguimos recopilando pruebas y se guarda en Shopify en la fecha límite: nada espera tu aprobación, salvo que elijas “No añadir paquete de defensa”.",
     "modeReviewLead": "Preparamos cada respuesta. No se guarda nada en Shopify hasta que lo apruebes.",
     "modeReviewNote": "Control total: cada caso espera tu aprobación."
   },
@@ -3100,11 +3131,11 @@
       },
       "reviewQueue": {
         "title": "La cola de revisión",
-        "body": "La cola de revisión contiene disputas retenidas para ti antes de guardar las pruebas en Shopify.\n\nUna disputa llega a la cola de revisión cuando:\n- Una regla la envía a revisión (por ejemplo, disputas por encima de cierto importe).\n- Ninguna regla coincide y la acción predeterminada es revisar.\n- Las pruebas son débiles o subjetivas, o el caso ya está perdido.\n\nDesde la pestaña Cola de revisión puedes:\n- Ver todas las disputas que esperan tu atención.\n- Abrir cualquier disputa para revisar el paquete de pruebas.\n- Hacer clic en «Aprobar» para guardar las pruebas en Shopify.\n\nUna disputa en la cola no está congelada. En piloto automático se guarda en Shopify en la fecha límite si no has actuado; en modo de revisión solo se guarda cuando la apruebas. Elige «No defender» para detenerla en ambos casos."
+        "body": "La cola de revisión contiene disputas retenidas para ti antes de guardar las pruebas en Shopify.\n\nUna disputa llega a la cola de revisión cuando:\n- Una regla la envía a revisión (por ejemplo, disputas por encima de cierto importe).\n- Ninguna regla coincide y la acción predeterminada es revisar.\n- Las pruebas son débiles o subjetivas, o el caso ya está perdido.\n\nDesde la pestaña Cola de revisión puedes:\n- Ver todas las disputas que esperan tu atención.\n- Abrir cualquier disputa para revisar el paquete de pruebas.\n- Hacer clic en «Aprobar» para guardar las pruebas en Shopify.\n\nUna disputa en la cola no está congelada. En piloto automático se guarda en Shopify en la fecha límite si no has actuado; en modo de revisión solo se guarda cuando la apruebas. Elige «No añadir paquete de defensa» para que DisputeDesk no añada el suyo en ninguno de los dos casos; si la disputa sigue abierta en la fecha límite de Shopify, Shopify transmite los datos del pedido que ya tiene."
       },
       "approvingDisputes": {
         "title": "Aprobar disputas desde la cola de revisión",
-        "body": "Cuando una disputa está en tu cola de revisión, DisputeDesk ya ha creado las pruebas. Tu aprobación solo controla si se guardan en Shopify.\n\nPara aprobar una disputa:\n1. Ve a la página Disputas y cambia a la pestaña «Cola de revisión».\n2. Haz clic en «Aprobar» junto a la disputa.\n3. Si el paquete supera tus comprobaciones de integridad y bloqueos, las pruebas se guardan en Shopify.\n\nTambién puedes aprobar desde la página de detalle con «Aprobar y guardar».\n\nEn piloto automático, una disputa retenida se guarda en Shopify en la fecha límite si no haces nada. En modo de revisión no se guarda nada hasta que la apruebes. Elige «No defender» para detenerla en cualquiera de los dos modos.\n\nTodas las aprobaciones quedan registradas en el historial de auditoría."
+        "body": "Cuando una disputa está en tu cola de revisión, DisputeDesk ya ha creado las pruebas. Tu aprobación solo controla si se guardan en Shopify.\n\nPara aprobar una disputa:\n1. Ve a la página Disputas y cambia a la pestaña «Cola de revisión».\n2. Haz clic en «Aprobar» junto a la disputa.\n3. Si el paquete supera tus comprobaciones de integridad y bloqueos, las pruebas se guardan en Shopify.\n\nTambién puedes aprobar desde la página de detalle con «Aprobar y guardar».\n\nEn piloto automático, una disputa retenida se guarda en Shopify en la fecha límite si no haces nada. En modo de revisión no se guarda nada hasta que la apruebes. Elige «No añadir paquete de defensa» para que DisputeDesk no añada el suyo en ninguno de los dos modos; si la disputa sigue abierta en la fecha límite de Shopify, Shopify transmite los datos del pedido que ya tiene.\n\nTodas las aprobaciones quedan registradas en el historial de auditoría."
       },
       "howPacksBuilt": {
         "title": "Cómo se crean los paquetes automáticamente",
@@ -3308,11 +3339,11 @@
         },
         "reviewQueue": {
           "title": "La cola de revisión",
-          "body": "La cola de revisión son disputas que DisputeDesk ha preparado pero todavía no ha guardado en Shopify.\n\nLlegan aquí cuando:\n- Una regla las envía a revisión (por ejemplo, importe alto).\n- Ninguna regla coincide y el valor predeterminado es revisar.\n- Las pruebas son débiles o subjetivas, o el caso ya está perdido.\n\nEn la app integrada esas disputas aparecen en la lista **Disputas** junto con el resto de contracargos: usa **Filtrar** por estado o abre elementos desde el panel. Abre una disputa para inspeccionar el paquete y usa **Aprobar y guardar** en la página de detalle cuando esté listo.\n\nUna disputa aquí no está congelada y, en piloto automático, no te está esperando: DisputeDesk sigue recopilando pruebas y guarda la respuesta en Shopify en la fecha límite. En el modo **Revisar todo** solo se guarda cuando la apruebas. Elige **No defender** para que no enviemos nada; Shopify seguirá transmitiendo los datos básicos del pedido que tiene."
+          "body": "La cola de revisión son disputas que DisputeDesk ha preparado pero todavía no ha guardado en Shopify.\n\nLlegan aquí cuando:\n- Una regla las envía a revisión (por ejemplo, importe alto).\n- Ninguna regla coincide y el valor predeterminado es revisar.\n- Las pruebas son débiles o subjetivas, o el caso ya está perdido.\n\nEn la app integrada esas disputas aparecen en la lista **Disputas** junto con el resto de contracargos: usa **Filtrar** por estado o abre elementos desde el panel. Abre una disputa para inspeccionar el paquete y usa **Aprobar y guardar** en la página de detalle cuando esté listo.\n\nUna disputa aquí no está congelada y, en piloto automático, no te está esperando: DisputeDesk sigue recopilando pruebas y guarda la respuesta en Shopify en la fecha límite. En el modo **Revisar todo** solo se guarda cuando la apruebas. Elige **No añadir paquete de defensa** para que DisputeDesk no añada el tuyo; si la disputa sigue abierta en la fecha límite de Shopify, Shopify transmite los datos del pedido que ya tiene."
         },
         "approvingDisputes": {
           "title": "Aprobar disputas desde la cola de revisión",
-          "body": "Apruebe en la página de **detalle de la disputa** tras abrirla desde la lista o el panel.\n\nPasos:\n1. Vaya a **Disputas** y use **Ver detalles** (o abra la disputa desde el panel).\n2. Revise el paquete de evidencia y la completitud en el detalle.\n3. Use **Aprobar y guardar** para ejecutar el flujo y guardar en Shopify si pasan sus umbrales.\n\nPuede generar o actualizar paquetes en el detalle antes. **No hay un botón Aprobar solo en la lista** — la confirmación es en el detalle.\n\n**Si nunca apruebas:** en el modo **Revisar todo**, DisputeDesk no envía nada, ni ahora ni en la fecha límite. Shopify solo transmite los datos básicos del pedido cuando vence el plazo, y eso rara vez gana. Al aprobar, tu paquete preparado se guarda en Shopify en la fecha límite; si eliges **No defender**, no lo enviamos, aunque Shopify sigue transmitiendo sus propios datos del pedido."
+          "body": "Apruebe en la página de **detalle de la disputa** tras abrirla desde la lista o el panel.\n\nPasos:\n1. Vaya a **Disputas** y use **Ver detalles** (o abra la disputa desde el panel).\n2. Revise el paquete de evidencia y la completitud en el detalle.\n3. Use **Aprobar y guardar** para ejecutar el flujo y guardar en Shopify si pasan sus umbrales.\n\nPuede generar o actualizar paquetes en el detalle antes. **No hay un botón Aprobar solo en la lista** — la confirmación es en el detalle.\n\n**Si nunca apruebas:** en el modo **Revisar todo**, DisputeDesk no envía nada, ni ahora ni en la fecha límite. Shopify solo transmite los datos básicos del pedido cuando vence el plazo, y eso rara vez gana. Al aprobar, tu paquete preparado se guarda en Shopify en la fecha límite; si eliges **No añadir paquete de defensa**, DisputeDesk no añade el tuyo, aunque Shopify sigue transmitiendo los datos del pedido que ya tiene."
         }
       },
       "heroSearchPlaceholder": "Busca artículos de ayuda, guías o temas…",
@@ -4398,7 +4429,7 @@
       "setupSummaryTitle": "Esto es lo que hemos configurado por ti",
       "setupSummaryInquiry": "Consultas iniciales cubiertas automáticamente",
       "setupSummaryReady": "Listo para disputas por {families}.",
-      "setupSummaryModeAuto": "Las respuestas sólidas se guardan en Shopify automáticamente. Lo que resulte menos decisivo se retiene y se vigila, y se guarda en Shopify en la fecha límite salvo que elijas “No defender”.",
+      "setupSummaryModeAuto": "Las respuestas sólidas se guardan en Shopify automáticamente. Lo que resulte menos decisivo se retiene y se vigila, y se guarda en Shopify en la fecha límite salvo que elijas “No añadir paquete de defensa”.",
       "setupSummaryModeReview": "Cada respuesta se crea para ti y espera tu aprobación antes de enviarse a Shopify.",
       "setupSummarySafeguard": "Las disputas de más de ${amount} siempre esperan tu aprobación.",
       "setupSummaryPointer": "Puedes ajustar tipos de disputa concretos más adelante en la página de Automatización.",
@@ -5861,8 +5892,8 @@
           "message": "Está revisando esta disputa antes de la fecha límite ({date}). Si no realiza ninguna otra acción, se aplicará su regla de automatización en la fecha límite."
         },
         "conceded": {
-          "title": "No se está defendiendo",
-          "message": "Decidió no defender esta disputa. No se enviará nada."
+          "title": "No se añadirá ningún paquete de defensa",
+          "message": "Elegiste no añadir un paquete de defensa de DisputeDesk. Si la disputa sigue abierta en la fecha límite de Shopify, Shopify transmite los datos del pedido que ya tiene."
         }
       },
       "nextHeldWithDate": "Retenida mientras vigilamos si aparecen pruebas más sólidas — se guardará en Shopify el {date}",
@@ -5906,12 +5937,12 @@
     },
     "reviewDecision": {
       "approved": "Programado",
-      "conceded": "No defendido",
+      "conceded": "Sin paquete de defensa",
       "in_review": "En revisión"
     },
     "reviewDecisionSub": {
       "approved": "Configurado para enviarse automáticamente en la fecha límite",
-      "conceded": "Decidió no defender esta disputa",
+      "conceded": "Elegiste no añadir un paquete de defensa de DisputeDesk",
       "in_review": "Está revisando esto antes de la fecha límite"
     }
   }

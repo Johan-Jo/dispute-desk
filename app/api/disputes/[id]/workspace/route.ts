@@ -29,16 +29,27 @@ import {
   detectCardholderNameMismatch,
 } from "@/lib/argument/nameMismatch";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
+/*
+ * `calculateCaseStrength` and `computeContributions` are deliberately NOT
+ * imported here any more. Both now arrive through `buildWorkspaceAssessment`,
+ * and `tests/unit/clientAssessmentRecomputation.test.ts` fails the build if a
+ * new scorer call site appears — this route was the last allow-listed one.
+ */
+import { creditAlreadyIssuedInput } from "@/lib/argument/caseStrength";
+import { deriveCaseEvidenceModel } from "@/lib/evidence/model/derive";
 import {
-  calculateCaseStrength,
-  computeContributions,
-  creditAlreadyIssuedInput,
-} from "@/lib/argument/caseStrength";
+  computeAssessmentInputHash,
+  readPersistedGateFingerprint,
+} from "@/lib/evidence/model/assessmentSnapshot";
+import type { CaseAssessmentSnapshot } from "@/lib/pipeline/contracts";
 import {
-  buildCaseGateAssessment,
-  gateNotProvided,
-  gateProvided,
-} from "@/lib/argument/caseGateAssessment";
+  buildWorkspaceAssessment,
+  emptyWorkspaceAssessment,
+} from "@/lib/disputes/workspaceAssessment";
+/* The gate builder is GONE from this route (CP-A). It could honestly answer
+ * only two of the five gates — it holds no Shopify order — and building a
+ * partial set here was what made this the fourth site scoring a case. It now
+ * projects the snapshot `buildPack` persisted with all five. */
 import type { EvidenceFact } from "@/lib/defence/types";
 import { CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
 import {
@@ -686,55 +697,125 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     row.customer_display_name.trim().length > 0
       ? row.customer_display_name.trim()
       : null;
-  const nameMismatchInput = {
-    triggered: detectCardholderNameMismatch(gatewayCardholderName, disputeCustomerName),
-    cardholderName: gatewayCardholderName,
-    customerName: disputeCustomerName,
-  };
+  /* The cardholder-name comparison is still surfaced to the MERCHANT below
+   * (the Overview explains a name mismatch). It is no longer assembled into a
+   * gate here, because this route no longer scores. */
+  const nameMismatchTriggered = detectCardholderNameMismatch(
+    gatewayCardholderName,
+    disputeCustomerName,
+  );
+  void nameMismatchTriggered;
   const caseStrengthPayloadSource = {
     kind: "byField" as const,
     map: evidenceItemsByField as Record<string, { payload?: Record<string, unknown> | null }>,
   };
-  const caseStrength = calculateCaseStrength(
-    reconciledChecklistV2,
-    row.reason,
-    caseStrengthPayloadSource,
-    buildCaseGateAssessment({
-      coverage: gateProvided(
-        coverageInput
-          ? { state: coverageInput.state, shopifyProtectStatus: coverageInput.shopifyProtectStatus }
-          : null,
-      ),
-      // This route has no order in hand, so it cannot derive either of
-      // these; `buildPack` owns them and persists its verdict. Stated as
-      // "not provided" rather than `null` so the record says "nobody
-      // looked here", not "this case has no fatal loss".
-      fatalLoss: gateNotProvided("order_not_loaded"),
-      riskWeakness: gateNotProvided("order_not_loaded"),
-      nameMismatch: gateProvided(nameMismatchInput),
-      // Credit-already-issued FLOOR. Read from the persisted pack rather
-      // than re-derived: `buildPack` owns the timing comparison and has
-      // the order in hand, this route does not.
-      //
-      // Omitting it here is now a compile error, which it was not on
-      // blume-box 162042cd: that call simply lacked the argument, so
-      // buildPack scored `strong`, auto-submit filed it and emailed the
-      // merchant, and the page they opened — rendered from here — showed
-      // no strong badge.
-      creditAlreadyIssued: gateProvided(creditAlreadyIssuedInput(packRow?.pack_json)),
-    }),
+  /*
+   * CP-A INTEGRATION. This route used to call `calculateCaseStrength` and
+   * `computeContributions` inline, which made it the fourth server call site
+   * scoring a case with its own hand-assembled gate set. Both now come from
+   * ONE server-side derivation, `buildWorkspaceAssessment`, which the three
+   * workspace tabs render rather than recompute — the browser scorer that used
+   * to disagree with this route on the same screen is deleted.
+   *
+   * The gate assessment below is UNCHANGED and still built here: this route is
+   * the only thing that knows which gates it can honestly answer (it holds no
+   * order, hence the two `gateNotProvided("order_not_loaded")` entries).
+   */
+  /* ── THE PERSISTED ASSESSMENT, PROJECTED ──────────────────────────────
+   *
+   * This route no longer builds a gate assessment and no longer scores. It
+   * could only ever answer two of the five gates — it holds no Shopify order —
+   * and a second derivation from a strictly worse gate set is a second answer,
+   * which is how a fraud case with a cardholder-name mismatch showed one band
+   * here and another from the build path.
+   *
+   * What it does instead: rebuild the CURRENT input hash from live inputs
+   * through the canonical owner, and hand both it and the persisted snapshot
+   * to `projectMerchantAssessment`.
+   *
+   * ── WHY THE HASH IS RECONSTRUCTED AND NOT READ BACK ───────────────────
+   *
+   * Comparing `snapshot.freshness.inputHash` against itself detects nothing.
+   * The model and the payload terms are therefore derived HERE, from the pack
+   * as it stands now, with the same inputs `buildPack` used — sections and
+   * waived items, no `evidence_items`, because that is what the writer hashed
+   * and a different input set would report every snapshot stale.
+   *
+   * The gate term cannot be re-derived (see above), so the writer persists it.
+   * Absent — a pack built before the writer — means no current hash can be
+   * formed, and an unverifiable snapshot is not a fresh one: the projection
+   * returns `needsRecalculation` with every verdict value null.
+   */
+  const persistedGates = readPersistedGateFingerprint(
+    (packRow?.pack_json as { case_assessment_gates?: unknown } | null)
+      ?.case_assessment_gates,
   );
-  // Contribution rows for the line-item resolver. This used to be a
-  // hand-copied inline reimplementation of `computeContributions`, and
-  // the copy had drifted: it never consulted `reason`, so it skipped the
+  const persistedSnapshot =
+    ((packRow?.pack_json as { case_assessment?: unknown } | null)
+      ?.case_assessment as CaseAssessmentSnapshot | undefined) ?? null;
+
+  const liveModel = packRow
+    ? deriveCaseEvidenceModel({
+        disputeId,
+        reason: row.reason ?? null,
+        packId: packRow.id as string,
+        sections: packJsonSections.map((sec) => ({
+          source: (sec as { source?: string }).source ?? null,
+          fieldsProvided: (sec as { fieldsProvided?: string[] }).fieldsProvided ?? [],
+          data: ((sec as { data?: Record<string, unknown> }).data ?? null) as
+            | Record<string, unknown>
+            | null,
+        })),
+        waivedItems: (packRow.waived_items as never) ?? [],
+        coverage: {
+          state: coverageInput?.state ?? null,
+          shopifyProtectStatus: coverageInput?.shopifyProtectStatus ?? null,
+        },
+      }).model
+    : null;
+
+  const currentAssessmentHash =
+    liveModel && persistedGates
+      ? computeAssessmentInputHash({
+          model: liveModel,
+          gates: persistedGates,
+          payloadSource: caseStrengthPayloadSource,
+        })
+      : null;
+
+  /*
+   * No pack means nothing has been assessed yet — and `emptyWorkspaceAssessment`
+   * is what the tabs must render for that, NOT a zeroed `CaseStrengthResult`.
+   * The difference is the whole reason the payload carries
+   * `assessment.needsRecalculation`: "insufficient · 0%" rendered as a verdict
+   * is a number a merchant acts on.
+   */
+  const workspaceAssessment = packRow
+    ? buildWorkspaceAssessment({
+        disputeId,
+        checklist: reconciledChecklistV2,
+        reason: row.reason,
+        payloadSource: caseStrengthPayloadSource,
+        snapshot: persistedSnapshot,
+        currentInputHash: currentAssessmentHash,
+        packSaved: !!packRow.saved_to_shopify_at,
+        // Layer 3 is not persisted yet, so the workspace has no plan to
+        // project. Passing `null` yields zero review items and the `normal`
+        // filing state — the honest answer, not an invented one.
+        plan: null,
+      })
+    : emptyWorkspaceAssessment(disputeId);
+
+  const caseStrength = workspaceAssessment.caseStrength;
+  // Contribution rows for the line-item resolver, now taken off the ONE
+  // derivation rather than recomputed beside it. This was a hand-copied
+  // inline reimplementation of `computeContributions` before CP-A, and the
+  // copy had drifted: it never consulted `reason`, so it skipped the
   // fraud-family `account_history` strong->moderate demotion the scorer
   // applies and rendered a Strong prior-order-history pill on rows the
-  // score counted as moderate. Call the shared function.
-  const { strong: strongContribs, moderate: moderateContribs } = computeContributions({
-    checklist: reconciledChecklistV2,
-    payloadSource: caseStrengthPayloadSource,
-    reason: row.reason,
-  });
+  // score counted as moderate.
+  const { strong: strongContribs, moderate: moderateContribs } =
+    workspaceAssessment.contributions;
 
   // Inclusion overrides — keyed by field. Stored in
   // pack_json.inclusionOverrides (commit 10 writes here; empty until
@@ -866,11 +947,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       waived: methodCount("waived"),
     },
   };
-  // Reference unused fields so tsc doesn't complain when caseStrength
-  // isn't directly returned (the workspace UI re-derives it client-side
-  // for now; the server-side compute exists so future commits can move
-  // strengthReason composition to the API).
-  void caseStrength;
+  /*
+   * The `void caseStrength` that stood here is gone, and so is the comment
+   * that justified it — "the workspace UI re-derives it client-side for now"
+   * described the browser scorer CP-A deleted. The strength IS returned now,
+   * inside `workspaceAssessment`, and the tabs render it.
+   */
 
   // Gorgias evidence core — summaries only (transcripts are lazy-loaded
   // per ticket). Null when the shop has no Gorgias integration row, so
@@ -931,6 +1013,15 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // milestones resolved by lib/disputes/presentation (identical to
     // the list + dashboard interpretation).
     presentation,
+    /*
+     * CP-A. The single server-side assessment the three workspace tabs render:
+     * strength, completeness, readiness, filing state, contributions and the
+     * improvement hint. Consumers MUST branch on
+     * `workspaceAssessment.assessment.needsRecalculation` before reading any
+     * number out of it — a stale or absent assessment rendered as current is
+     * worse than no number, because the merchant acts on it.
+     */
+    workspaceAssessment,
     // Auto-pilot hold — what the case is waiting for (a clock, not the
     // merchant) and the one contribution that can still change it.
     held,

@@ -46,7 +46,8 @@ import {
 } from "@/lib/argument/nameMismatch";
 import { readPaymentVerification } from "@/lib/argument/paymentVerification";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
-import type { Localized } from "@/lib/i18n/localized";
+import { asLocalized, type Localized } from "@/lib/i18n/localized";
+import type { I18nToken } from "@/lib/i18n/token";
 import { resolveToken } from "@/lib/i18n/resolveToken";
 import {
   MERCHANT_UI_HIDDEN_FIELDS,
@@ -111,12 +112,29 @@ export type NextStep =
   | { kind: "ready_with_warnings_auto"; dueAt: string | null }
   | { kind: "ready_with_warnings_review"; dueAt: string | null }
   | { kind: "review_missing" }
-  | { kind: "submitted_no_action" };
+  | { kind: "submitted_no_action" }
+  /**
+   * No current assessment, so there is no next step to name.
+   *
+   * Distinct from `review_missing`, deliberately. `review_missing` says
+   * "evidence is missing, go and add it" — an instruction. With no assessment
+   * we do not know whether anything is missing, and telling the merchant to
+   * fix a gap we have not measured sends them looking for a problem that may
+   * not exist. This state says only what is true: it has not been assessed.
+   */
+  | { kind: "not_assessed"; titleToken: I18nToken; bodyToken: I18nToken };
 
 export interface CaseSummaryViewModel {
-  /** Raw backend value, preserved verbatim. Display-time coercion of
-   *  `insufficient` → `Weak` lives in CaseSummaryCard. */
-  strength: CaseStrengthLevel;
+  /**
+   * NULL when there is no current assessment.
+   *
+   * It was `CaseStrengthLevel`, non-null, so the empty sentinel's
+   * `insufficient` flowed straight into the badge — and `CaseSummaryCard`
+   * coerces `insufficient` to "Weak" at display time, so an unassessed case
+   * rendered as a WEAK VERDICT. Null forces every renderer to handle the
+   * absence instead of inheriting a judgement.
+   */
+  strength: CaseStrengthLevel | null;
   status: CaseStatus;
   /** null on a DECIDED dispute (won/lost/closed) — no automation pill. */
   automationMode: AutomationMode | null;
@@ -843,22 +861,37 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
     outcome: caseOutcome,
   });
   const decided = isDecided(caseStatus);
+  /* NO ASSESSMENT, NO VERDICT.
+   *
+   * `derived.caseStrength.overall` is `insufficient` on the empty sentinel and
+   * `derived.readiness` is `"blocked"`, so without this branch the summary
+   * card shows a Weak badge, a needs-attention status and a "review missing
+   * evidence" step for a case nothing has assessed. */
+  const assessed = derived.assessment.mayRenderVerdict;
   const caseSummary: CaseSummaryViewModel = {
-    strength: derived.caseStrength.overall,
+    strength: assessed ? derived.caseStrength.overall : null,
     status: caseStatus,
     // Decided cases have nothing to automate — drop the "Review required"
     // pill (the outcome pill + calm headline carry the state).
     automationMode: decided ? null : automationMode,
     nextStep: decided
       ? { kind: "submitted_no_action" }
-      : deriveNextStep({
-          isReadOnly: derived.isReadOnly,
-          readiness: derived.readiness,
-          automationMode,
-          dueAt: data.dispute.dueAt,
-        }),
-    strengthReasonText: derived.strengthReasonText,
-    improvementHintText: derived.improvementHintText,
+      : !assessed
+        ? {
+            kind: "not_assessed" as const,
+            titleToken: derived.assessment.titleToken,
+            bodyToken: derived.assessment.bodyToken,
+          }
+        : deriveNextStep({
+            isReadOnly: derived.isReadOnly,
+            readiness: derived.readiness,
+            automationMode,
+            dueAt: data.dispute.dueAt,
+          }),
+    // The reason line explains a band; with no band it explains nothing, and
+    // the sentinel's reason token reads as a verdict about the case.
+    strengthReasonText: assessed ? derived.strengthReasonText : asLocalized(""),
+    improvementHintText: assessed ? derived.improvementHintText : null,
   };
 
   // ── Evidence used in defense ──

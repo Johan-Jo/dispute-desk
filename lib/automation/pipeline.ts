@@ -19,6 +19,7 @@ import {
 import { markPackageReviewRequired } from "./packageReviewRequired";
 import { getShopSettings } from "./settings";
 import { evaluateAutoSaveGate } from "./autoSaveGate";
+import { resolveEffectiveCompleteness } from "@/lib/evidence/model/completenessActivation";
 import { checkPackQuota } from "@/lib/billing/checkQuota";
 import { emitDisputeEvent } from "@/lib/disputeEvents/emitEvent";
 import { updateNormalizedStatus } from "@/lib/disputeEvents/updateNormalizedStatus";
@@ -395,7 +396,10 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   const { data: pack, error } = await sb
     .from("evidence_packs")
     .select(
-      "id, shop_id, dispute_id, completeness_score, blockers, submission_readiness, status, pack_json"
+      // `rebuild_pending` is a P-7 input: a pack already flagged for rebuild
+      // carries numbers that describe evidence which has moved, and judging
+      // one of those against the calibrated threshold is the illegal pairing.
+      "id, shop_id, dispute_id, completeness_score, blockers, submission_readiness, status, pack_json, rebuild_pending"
     )
     .eq("id", packId)
     .single();
@@ -472,6 +476,37 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   }
 
   const settings = await getShopSettings(pack.shop_id);
+
+  /* ── P-7, APPLIED (plan §1A) ──────────────────────────────────────────
+   *
+   * blume-box reads CANONICAL completeness at the calibrated threshold 60;
+   * every other shop keeps the persisted column and its own
+   * `auto_save_min_score`. The decision is a constant, not a question — the
+   * calibration re-run on the post-C-14 baseline produced no
+   * disposition-preserving threshold for surasvenne at any value, so it is
+   * excluded rather than deferred.
+   *
+   * Resolved HERE, at the live gate, because that is what activation means: a
+   * statement in a calibration report changes no disposition. See
+   * `lib/evidence/model/completenessActivation.ts` for the shop set, the
+   * exclusion and why the threshold travels with the shop rather than reusing
+   * a merchant setting chosen on the OLD scale. */
+  const { data: gateShop } = await sb
+    .from("shops")
+    .select("shop_domain")
+    .eq("id", pack.shop_id)
+    .maybeSingle();
+  /* ONE object: score, threshold and which scale produced them. Resolving the
+   * two numbers separately is what makes a legacy score against the calibrated
+   * 60 representable, and that pairing silently lowers the bar for every pack
+   * the rebuild has not reached. */
+  const effectiveCompleteness = resolveEffectiveCompleteness({
+    shopDomain: (gateShop?.shop_domain as string | null) ?? null,
+    packJson: pack.pack_json,
+    rebuildPending: (pack as { rebuild_pending?: unknown }).rebuild_pending,
+    persistedScore: pack.completeness_score as number | null,
+    merchantThreshold: settings.auto_save_min_score,
+  });
 
   // The Rules page is the source of truth for whether to automate.
   // We re-evaluate the shop's rules against the dispute at save-time:
@@ -832,9 +867,11 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
   // auto → run the quality gate.
   const gate = evaluateAutoSaveGate({
     autoSaveEnabled: settings.auto_save_enabled,
-    autoSaveMinScore: settings.auto_save_min_score,
+    // BOTH from the same object, always. The gate's own diagnostic message
+    // quotes these two numbers, so the message names the scale that decided.
+    autoSaveMinScore: effectiveCompleteness.threshold,
     enforceNoBlockers: settings.enforce_no_blockers,
-    completenessScore: pack.completeness_score ?? 0,
+    completenessScore: effectiveCompleteness.score,
     blockers: (pack.blockers as string[]) ?? [],
     submissionReadiness: (pack.submission_readiness as "ready" | "ready_with_warnings" | "blocked" | "submitted") ?? undefined,
   });
@@ -962,7 +999,16 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
     pack_id: packId,
     actor_type: "system",
     event_type: "auto_save_blocked",
-    event_payload: { reasons: gate.reasons },
+    event_payload: {
+      reasons: gate.reasons,
+      /* The pair the gate ACTUALLY compared, and which scale it came from.
+       * A score in an audit row that does not say which scale produced it
+       * cannot be checked afterwards — and during the P-7 rollout the two
+       * scales disagree by −7…+17 on the same pack. */
+      completeness_score: effectiveCompleteness.score,
+      completeness_threshold: effectiveCompleteness.threshold,
+      completeness_source: effectiveCompleteness.source,
+    },
   });
 
   if (pack.dispute_id) {
@@ -975,7 +1021,16 @@ export async function evaluateAndMaybeAutoSave(packId: string): Promise<{
       sourceType: "pack_engine",
       visibility: "merchant_and_internal",
       description: (gate.reasons as string[]).join("; "),
-      metadataJson: { pack_id: packId, reasons: gate.reasons },
+      metadataJson: {
+        pack_id: packId,
+        reasons: gate.reasons,
+        // Same pair as the audit row. The dispute timeline and the audit trail
+        // must agree about which numbers decided, or reconciling them later
+        // means guessing which scale each was on.
+        completeness_score: effectiveCompleteness.score,
+        completeness_threshold: effectiveCompleteness.threshold,
+        completeness_source: effectiveCompleteness.source,
+      },
       dedupeKey: `${pack.dispute_id}:${PACK_BLOCKED}:${packId}:${new Date().toISOString()}`,
     });
     void updateNormalizedStatus(pack.dispute_id);

@@ -679,7 +679,7 @@
       "inReview": "In review",
       "inReviewDue": "In review · {days}d",
       "scheduled": "Scheduled",
-      "notDefended": "Not defended"
+      "notDefended": "No defence package"
     },
     "signalLabel": {
       "payment_auth": "Payment authentication",
@@ -952,19 +952,19 @@
       "evidenceOrderingHelper": "Ordered by how much each item strengthens the case. Strongest first.",
       "review": {
         "title": "Decide what to do with this dispute",
-        "prompt": "This case needs your call before the deadline. Hold it while you look into it, schedule it to submit automatically, or concede it if it isn't worth defending.",
+        "prompt": "This case needs your call before the deadline. Hold it while you look into it, schedule it to be sent automatically, or tell DisputeDesk not to add a defence package.",
         "hold": "Hold for review",
         "approve": "Submit on the deadline",
-        "concede": "Don't defend",
+        "concede": "Don't add a defence package",
         "holdHelp": "We'll keep watching it and remind you before the deadline.",
         "approveHelp": "We'll submit the evidence automatically when the deadline arrives.",
-        "concedeHelp": "We won't send your defence package. Shopify will still pass on the basic order details it has on file.",
+        "concedeHelp": "DisputeDesk won't add a defence package to this dispute. If the dispute is still open at Shopify's deadline, Shopify passes on the order details it already holds.",
         "stateInReviewTitle": "On hold for your review",
         "stateInReviewBody": "You're reviewing this dispute. If you take no further action, it will follow your automation rule at the deadline{due}.",
         "stateApprovedTitle": "Scheduled to submit",
         "stateApprovedBody": "This dispute is set to submit automatically on the deadline{due}.",
-        "stateConcededTitle": "Not being defended",
-        "stateConcededBody": "You chose not to defend this dispute. Nothing will be submitted.",
+        "stateConcededTitle": "No defence package will be added",
+        "stateConcededBody": "You chose not to add a DisputeDesk defence package. If the dispute is still open at Shopify's deadline, Shopify passes on the order details it already holds.",
         "dueSuffix": " ({date})",
         "change": "Change decision",
         "undo": "Undo",
@@ -1872,6 +1872,37 @@
       "threeDsNoLiabilityShift": "Kept internal — the authentication did not complete, so citing it would weaken the response.",
       "ipNotBankEligible": "Kept internal — the location match is not clean enough to put in front of the bank.",
       "cvvOnlyNotAddressEvidence": "Kept internal — only the card security code matched, and a security-code match is not address evidence."
+    },
+    "assessmentState": {
+      "current": {
+        "title": "Assessment up to date",
+        "body": "This case has been assessed against the evidence currently on file."
+      },
+      "notAssessed": {
+        "title": "Not assessed yet",
+        "bodyAbsent": "DisputeDesk has not assessed this case yet, so there is no case strength or completeness to show. It is assessed automatically once the evidence pack is built — nothing is needed from you.",
+        "bodyStale": "The evidence on this case changed after it was last assessed, so the previous case strength and completeness no longer describe it. DisputeDesk reassesses it automatically — nothing is needed from you.",
+        "actionsHidden": "Sending is unavailable until this case has been assessed."
+      }
+    },
+    "deadlineOnly": {
+      "normal": {
+        "title": "Ready to send",
+        "body": "Your defence package is ready. DisputeDesk will add it to this dispute in Shopify automatically."
+      },
+      "held": {
+        "title": "Held for the deadline",
+        "body": "{itemCount, plural, one {1 item needs your confirmation} other {# items need your confirmation}}, so DisputeDesk is holding your defence package for deadline processing instead of adding it now. Shopify's own deadline process runs on its own schedule: if the dispute is still open when it reaches it, Shopify uses the order details it already holds.",
+        "action": "{itemCount, plural, one {Confirm the flagged item} other {Confirm the flagged items}} to release your defence package now instead of waiting for the deadline."
+      },
+      "withheld": {
+        "title": "No DisputeDesk defence package will be added",
+        "body": "Once the evidence that needs your confirmation is set aside, nothing remains that DisputeDesk can stand behind, so it will not add a defence package to this dispute. That does not make the dispute go quiet: If the dispute is still open at Shopify's deadline, Shopify passes on the order details it already holds.",
+        "action": "Add or confirm evidence on this dispute to change this."
+      },
+      "reviewItem": {
+        "generic": "This item needs your confirmation before it can be used."
+      }
     }
   },
   "disputeReasons": {
@@ -2522,7 +2553,7 @@
     "modeSectionSubtitle": "This applies to every dispute. Some cases are always held back and monitored first — see Safeguards below.",
     "modeAutoTitle": "Auto-pilot",
     "modeAutoBadge": "Recommended",
-    "modeAutoDesc": "We save your strongest cases to Shopify as soon as they're ready. Everything else is held while we keep collecting evidence, then saved to Shopify on the due date — nothing waits for your approval, unless you choose “Don't defend”.",
+    "modeAutoDesc": "We save your strongest cases to Shopify as soon as they're ready. Everything else is held while we keep collecting evidence, then saved to Shopify on the due date — nothing waits for your approval, unless you choose “Don't add a defence package”.",
     "modeReviewTitle": "Review everything",
     "modeReviewDesc": "We prepare every response. Nothing is saved to Shopify until you approve it.",
     "modeSaved": "Handling settings saved",
@@ -2561,7 +2592,7 @@
     "groupHasOwnSetting": "Has its own setting",
     "modeClearedExceptions": "Cleared {count} dispute types that had their own setting. Everything now follows {mode}. Set a type below if you want an exception.",
     "modeAutoLead": "We save your strongest cases to Shopify as soon as they're ready.",
-    "modeAutoNote": "Everything else is held while we keep collecting evidence, then saved to Shopify on the due date — nothing waits for your approval, unless you choose “Don't defend”.",
+    "modeAutoNote": "Everything else is held while we keep collecting evidence, then saved to Shopify on the due date — nothing waits for your approval, unless you choose “Don't add a defence package”.",
     "modeReviewLead": "We prepare every response. Nothing is saved to Shopify until you approve it.",
     "modeReviewNote": "Full oversight — every case waits for your approval."
   },
@@ -3099,11 +3130,11 @@
       },
       "reviewQueue": {
         "title": "The review queue",
-        "body": "The Review Queue contains disputes held for you before evidence is saved to Shopify.\n\nDisputes end up in the review queue when:\n- A rule routes them to review (e.g. high-value disputes over a certain amount).\n- No rule matches and the default action is review.\n- The evidence is weak, subjective, or the case is already lost.\n\nFrom the Review Queue tab on the Disputes page, you can:\n- See all disputes awaiting your attention.\n- Click into any dispute to review the evidence pack.\n- Click \"Approve\" to save the evidence to Shopify.\n\nA dispute in the review queue is not frozen. On Auto-pilot it is saved to Shopify on the due date if you have not acted; in review mode it is saved only when you approve it. Choose \"Don't defend\" to stop it either way."
+        "body": "The Review Queue contains disputes held for you before evidence is saved to Shopify.\n\nDisputes end up in the review queue when:\n- A rule routes them to review (e.g. high-value disputes over a certain amount).\n- No rule matches and the default action is review.\n- The evidence is weak, subjective, or the case is already lost.\n\nFrom the Review Queue tab on the Disputes page, you can:\n- See all disputes awaiting your attention.\n- Click into any dispute to review the evidence pack.\n- Click \"Approve\" to save the evidence to Shopify.\n\nA dispute in the review queue is not frozen. On Auto-pilot it is saved to Shopify on the due date if you have not acted; in review mode it is saved only when you approve it. Choose \"Don't add a defence package\" to stop DisputeDesk adding yours either way — if the dispute is still open at Shopify's deadline, Shopify passes on the order details it already holds."
       },
       "approvingDisputes": {
         "title": "Approving disputes from the review queue",
-        "body": "When a dispute is in your Review Queue, DisputeDesk has already built the evidence. Your approval controls whether it is saved to Shopify.\n\nTo approve a dispute:\n1. Go to the Disputes page and switch to the \"Review Queue\" tab.\n2. Click the \"Approve\" button next to the dispute.\n3. If the pack passes your completeness and blocker gates, evidence is saved to Shopify.\n\nYou can also approve from the dispute detail page by clicking \"Approve & Save.\"\n\nOn Auto-pilot, a dispute held for review is saved to Shopify on the due date if you take no action. In review mode, nothing is saved unless you approve it. Choose \"Don't defend\" to stop a dispute in either mode.\n\nAll approvals are logged in the audit trail for compliance tracking."
+        "body": "When a dispute is in your Review Queue, DisputeDesk has already built the evidence. Your approval controls whether it is saved to Shopify.\n\nTo approve a dispute:\n1. Go to the Disputes page and switch to the \"Review Queue\" tab.\n2. Click the \"Approve\" button next to the dispute.\n3. If the pack passes your completeness and blocker gates, evidence is saved to Shopify.\n\nYou can also approve from the dispute detail page by clicking \"Approve & Save.\"\n\nOn Auto-pilot, a dispute held for review is saved to Shopify on the due date if you take no action. In review mode, nothing is saved unless you approve it. Choose \"Don't add a defence package\" to stop DisputeDesk adding yours in either mode — if the dispute is still open at Shopify's deadline, Shopify passes on the order details it already holds.\n\nAll approvals are logged in the audit trail for compliance tracking."
       },
       "howPacksBuilt": {
         "title": "How evidence packs are built automatically",
@@ -3307,11 +3338,11 @@
         },
         "reviewQueue": {
           "title": "The review queue",
-          "body": "The review queue is disputes DisputeDesk has prepared but not saved to Shopify yet.\n\nDisputes land here when:\n- A rule sends them to review (for example high value).\n- No rule matches and the default is review.\n- The evidence is weak, subjective, or the case is already lost.\n\nIn the embedded app, those disputes appear on the **Disputes** list with your other chargebacks — use **Filter** by status or open items from the dashboard. Open a dispute to inspect the pack, then use **Approve & Save** on the detail page when ready.\n\nA dispute here is not frozen, and on Auto-pilot it is not waiting for you: DisputeDesk keeps collecting evidence and saves the response to Shopify on the due date. In **Review everything** mode it is saved only when you approve it. Choose **Don't defend** to stop us sending it — Shopify still passes on the basic order details it holds."
+          "body": "The review queue is disputes DisputeDesk has prepared but not saved to Shopify yet.\n\nDisputes land here when:\n- A rule sends them to review (for example high value).\n- No rule matches and the default is review.\n- The evidence is weak, subjective, or the case is already lost.\n\nIn the embedded app, those disputes appear on the **Disputes** list with your other chargebacks — use **Filter** by status or open items from the dashboard. Open a dispute to inspect the pack, then use **Approve & Save** on the detail page when ready.\n\nA dispute here is not frozen, and on Auto-pilot it is not waiting for you: DisputeDesk keeps collecting evidence and saves the response to Shopify on the due date. In **Review everything** mode it is saved only when you approve it. Choose **Don't add a defence package** to stop DisputeDesk adding yours — if the dispute is still open at Shopify's deadline, Shopify passes on the order details it already holds."
         },
         "approvingDisputes": {
           "title": "Approving disputes from the review queue",
-          "body": "Approve from the **dispute detail** page after you open a dispute from the list or dashboard.\n\nSteps:\n1. Go to **Disputes** and choose **View details** (or open the dispute from the dashboard).\n2. Review the evidence pack and completeness on the detail page.\n3. Use **Approve & Save** to run the pipeline and save evidence to Shopify when your gates pass.\n\nYou can generate or refresh packs on the detail page first. There is no **Approve** button only on the list — the detail page is where you confirm evidence before saving.\n\n**If you never approve:** in **Review everything** mode nothing is sent from DisputeDesk — not now, not on the due date. Shopify files only the basic order details it holds when the deadline passes, which rarely wins. Approving schedules your prepared pack to be saved to Shopify on the due date; choosing **Don't defend** stops us sending it, though Shopify still passes on its own order details."
+          "body": "Approve from the **dispute detail** page after you open a dispute from the list or dashboard.\n\nSteps:\n1. Go to **Disputes** and choose **View details** (or open the dispute from the dashboard).\n2. Review the evidence pack and completeness on the detail page.\n3. Use **Approve & Save** to run the pipeline and save evidence to Shopify when your gates pass.\n\nYou can generate or refresh packs on the detail page first. There is no **Approve** button only on the list — the detail page is where you confirm evidence before saving.\n\n**If you never approve:** in **Review everything** mode nothing is sent from DisputeDesk — not now, not on the due date. Shopify files only the basic order details it holds when the deadline passes, which rarely wins. Approving schedules your prepared pack to be saved to Shopify on the due date; choosing **Don't add a defence package** stops DisputeDesk adding yours, though Shopify still passes on the order details it already holds."
         }
       },
       "heroSearchPlaceholder": "Search for help articles, guides, or topics…",
@@ -4674,7 +4705,7 @@
       "setupSummaryTitle": "What we've set up for you",
       "setupSummaryInquiry": "Early-stage inquiries covered automatically",
       "setupSummaryReady": "Ready for {families} disputes.",
-      "setupSummaryModeAuto": "Strong responses are saved to Shopify automatically. Anything less decisive is held back and monitored, then saved to Shopify on the due date unless you choose “Don't defend”.",
+      "setupSummaryModeAuto": "Strong responses are saved to Shopify automatically. Anything less decisive is held back and monitored, then saved to Shopify on the due date unless you choose “Don't add a defence package”.",
       "setupSummaryModeReview": "Every response is built for you and waits for your approval before it goes to Shopify.",
       "setupSummarySafeguard": "Disputes over ${amount} always wait for your approval.",
       "setupSummaryPointer": "You can fine-tune individual dispute types later on the Automation page.",
@@ -5815,12 +5846,12 @@
     },
     "reviewDecision": {
       "approved": "Scheduled",
-      "conceded": "Not defended",
+      "conceded": "No defence package",
       "in_review": "On hold"
     },
     "reviewDecisionSub": {
       "approved": "Set to submit automatically on the deadline",
-      "conceded": "You chose not to defend this dispute",
+      "conceded": "You chose not to add a DisputeDesk defence package",
       "in_review": "You're reviewing this before the deadline"
     },
     "internalIssue": "DisputeDesk detected a technical issue and is working to resolve it. No action is currently required from you.",
@@ -5870,8 +5901,8 @@
           "message": "You're reviewing this dispute before the deadline ({date}). If you take no further action, it will follow your automation rule at the deadline."
         },
         "conceded": {
-          "title": "Not being defended",
-          "message": "You chose not to defend this dispute. Nothing will be submitted."
+          "title": "No defence package will be added",
+          "message": "You chose not to add a DisputeDesk defence package. If the dispute is still open at Shopify's deadline, Shopify passes on the order details it already holds."
         }
       },
       "nextHeldWithDate": "Held while we watch for stronger evidence — saved to Shopify on {date}",

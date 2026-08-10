@@ -12,6 +12,7 @@
 
 import { BlockStack, Banner, Spinner } from "@shopify/polaris";
 import { useTranslations } from "next-intl";
+import { resolveToken } from "@/lib/i18n/resolveToken";
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { useReviewView } from "./useReviewView";
 import {
@@ -31,6 +32,7 @@ export default function ReviewSubmitTab({ workspace }: Props) {
   const view = useReviewView(workspace);
   const tExtra = useTranslations("disputes.evidenceTabExtra");
   const tChrome = useTranslations("disputes.reviewTab.chrome");
+  const tRoot = useTranslations();
 
   // ── Loading state ──
   if (clientState.loading && !data) {
@@ -76,12 +78,27 @@ export default function ReviewSubmitTab({ workspace }: Props) {
       </Banner>
     ) : null;
 
+  /* ── NO ASSESSMENT, EXPLICITLY ────────────────────────────────────
+   *
+   * `useReviewView` already withholds the CTA in this state — including the
+   * "Save anyway" override the empty sentinel's `readiness: "blocked"` used
+   * to produce. This banner is the other half: without it the tab loses its
+   * primary action with no explanation, which reads as a broken page rather
+   * than an honest one. */
+  const notAssessedBanner =
+    view.state === "not_assessed" && view.notAssessed ? (
+      <Banner tone="info" title={resolveToken(tRoot, view.notAssessed.titleToken)}>
+        <p>{resolveToken(tRoot, view.notAssessed.bodyToken)}</p>
+      </Banner>
+    ) : null;
+
   return (
     <BlockStack gap="500">
       {failedBanner}
       {buildingBanner}
       {noPackBanner}
       {noDefenceLetterBanner}
+      {notAssessedBanner}
 
       {/* Complete Defence Package — the primary card on this tab.
           Mounted first so the merchant sees the submission state,

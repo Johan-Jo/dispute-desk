@@ -1282,7 +1282,7 @@
       "inReview": "En cours d'examen",
       "inReviewDue": "En examen · {days} j",
       "scheduled": "Programmé",
-      "notDefended": "Non défendu"
+      "notDefended": "Aucun dossier de défense"
     },
     "signalLabel": {
       "payment_auth": "Authentification du paiement",
@@ -1545,19 +1545,19 @@
       "evidenceOrderingHelper": "Classées selon leur capacité à renforcer le dossier. Les plus solides en premier.",
       "review": {
         "title": "Décidez quoi faire de ce litige",
-        "prompt": "Ce dossier nécessite votre décision avant la date limite. Mettez-le en attente le temps de l'examiner, programmez son envoi automatique, ou renoncez à le défendre s'il n'en vaut pas la peine.",
+        "prompt": "Ce dossier nécessite votre décision avant la date limite. Mettez-le en attente le temps de l'examiner, programmez son envoi automatique, ou demandez à DisputeDesk de ne pas ajouter de dossier de défense.",
         "hold": "Mettre en attente",
         "approve": "Envoyer à la date limite",
-        "concede": "Ne pas défendre",
+        "concede": "Ne pas ajouter de dossier de défense",
         "holdHelp": "Nous continuons à le surveiller et vous rappelons avant la date limite.",
         "approveHelp": "Nous envoyons les preuves automatiquement à la date limite.",
-        "concedeHelp": "Nous n'enverrons pas votre dossier de défense. Shopify transmettra tout de même les informations de commande de base dont il dispose.",
+        "concedeHelp": "DisputeDesk n'ajoutera pas de dossier de défense à ce litige. Si le litige est encore ouvert à l'échéance fixée par Shopify, Shopify transmet les informations de commande dont il dispose déjà.",
         "stateInReviewTitle": "En attente de votre examen",
         "stateInReviewBody": "Vous examinez ce litige. Sans autre action de votre part, il suivra votre règle d'automatisation à la date limite{due}.",
         "stateApprovedTitle": "Programmé pour envoi",
         "stateApprovedBody": "Ce litige sera envoyé automatiquement à la date limite{due}.",
-        "stateConcededTitle": "Non défendu",
-        "stateConcededBody": "Vous avez choisi de ne pas défendre ce litige. Rien ne sera envoyé.",
+        "stateConcededTitle": "Aucun dossier de défense ne sera ajouté",
+        "stateConcededBody": "Vous avez choisi de ne pas ajouter de dossier de défense DisputeDesk. Si le litige est encore ouvert à l'échéance fixée par Shopify, Shopify transmet les informations de commande dont il dispose déjà.",
         "dueSuffix": " ({date})",
         "change": "Changer la décision",
         "undo": "Annuler",
@@ -1872,6 +1872,37 @@
       "threeDsNoLiabilityShift": "Conservé en interne — l'authentification n'a pas abouti ; la citer affaiblirait la réponse.",
       "ipNotBankEligible": "Conservé en interne — la correspondance de localisation n’est pas assez nette pour la banque.",
       "cvvOnlyNotAddressEvidence": "Conservé en interne — seul le code de sécurité de la carte a correspondu, ce qui ne constitue pas une preuve d'adresse."
+    },
+    "assessmentState": {
+      "current": {
+        "title": "Évaluation à jour",
+        "body": "Ce dossier a été évalué au regard des preuves actuellement au dossier."
+      },
+      "notAssessed": {
+        "title": "Pas encore évalué",
+        "bodyAbsent": "DisputeDesk n'a pas encore évalué ce dossier : il n'y a donc ni solidité ni exhaustivité à afficher. L'évaluation est automatique dès que le dossier de preuves est constitué — vous n'avez rien à faire.",
+        "bodyStale": "Les preuves de ce dossier ont changé après la dernière évaluation : la solidité et l'exhaustivité précédentes ne le décrivent plus. DisputeDesk le réévalue automatiquement — vous n'avez rien à faire.",
+        "actionsHidden": "L'envoi n'est pas disponible tant que ce dossier n'a pas été évalué."
+      }
+    },
+    "deadlineOnly": {
+      "normal": {
+        "title": "Prêt à être envoyé",
+        "body": "Votre dossier de défense est prêt. DisputeDesk l'ajoutera automatiquement à ce litige dans Shopify."
+      },
+      "held": {
+        "title": "Conservé jusqu'à la date limite",
+        "body": "{itemCount, plural, one {1 élément nécessite votre confirmation} other {# éléments nécessitent votre confirmation}} : DisputeDesk conserve donc votre dossier de défense pour un traitement à la date limite au lieu de l'ajouter maintenant. Le processus d'échéance de Shopify suit son propre calendrier : si le litige est encore ouvert à ce moment-là, Shopify utilise les informations de commande dont il dispose déjà.",
+        "action": "{itemCount, plural, one {Confirmez l'élément signalé} other {Confirmez les éléments signalés}} pour libérer votre dossier de défense maintenant au lieu d'attendre la date limite."
+      },
+      "withheld": {
+        "title": "Aucun dossier de défense DisputeDesk ne sera ajouté",
+        "body": "Une fois écartées les preuves qui nécessitent votre confirmation, il ne reste rien que DisputeDesk puisse assumer ; aucun dossier de défense ne sera donc ajouté à ce litige. Cela ne rend pas le litige silencieux : Si le litige est encore ouvert à l'échéance fixée par Shopify, Shopify transmet les informations de commande dont il dispose déjà.",
+        "action": "Ajoutez ou confirmez des preuves sur ce litige pour changer cela."
+      },
+      "reviewItem": {
+        "generic": "Cet élément nécessite votre confirmation avant de pouvoir être utilisé."
+      }
     }
   },
   "disputeReasons": {
@@ -2522,7 +2553,7 @@
     "modeSectionSubtitle": "Cela s'applique à tous les litiges. Certains dossiers sont toujours mis en attente et surveillés d'abord — voir les Garde-fous ci-dessous.",
     "modeAutoTitle": "Pilote automatique",
     "modeAutoBadge": "Recommandé",
-    "modeAutoDesc": "Nous enregistrons vos dossiers les plus solides dans Shopify dès qu'ils sont prêts. Tout le reste est mis en attente pendant que nous continuons à collecter des preuves, puis enregistré dans Shopify à la date limite — rien n'attend votre approbation, sauf si vous choisissez « Ne pas défendre ».",
+    "modeAutoDesc": "Nous enregistrons vos dossiers les plus solides dans Shopify dès qu'ils sont prêts. Tout le reste est mis en attente pendant que nous continuons à collecter des preuves, puis enregistré dans Shopify à la date limite — rien n'attend votre approbation, sauf si vous choisissez « Ne pas ajouter de dossier de défense ».",
     "modeReviewTitle": "Tout examiner",
     "modeReviewDesc": "Nous préparons chaque réponse. Rien n'est enregistré dans Shopify tant que vous ne l'avez pas approuvé.",
     "modeSaved": "Paramètres enregistrés",
@@ -2561,7 +2592,7 @@
     "groupHasOwnSetting": "A son propre réglage",
     "modeClearedExceptions": "{count} types de litige qui avaient leur propre réglage ont été effacés. Tout suit maintenant « {mode} ». Définissez un type ci-dessous si vous voulez une exception.",
     "modeAutoLead": "Nous enregistrons vos dossiers les plus solides dans Shopify dès qu'ils sont prêts.",
-    "modeAutoNote": "Tout le reste est mis en attente pendant que nous continuons à collecter des preuves, puis enregistré dans Shopify à la date limite — rien n'attend votre approbation, sauf si vous choisissez « Ne pas défendre ».",
+    "modeAutoNote": "Tout le reste est mis en attente pendant que nous continuons à collecter des preuves, puis enregistré dans Shopify à la date limite — rien n'attend votre approbation, sauf si vous choisissez « Ne pas ajouter de dossier de défense ».",
     "modeReviewLead": "Nous préparons chaque réponse. Rien n'est enregistré dans Shopify tant que vous ne l'avez pas approuvé.",
     "modeReviewNote": "Contrôle total — chaque dossier attend votre validation."
   },
@@ -3100,11 +3131,11 @@
       },
       "reviewQueue": {
         "title": "La file d'examen",
-        "body": "La file d'examen contient les litiges retenus pour vous avant l'enregistrement des preuves dans Shopify.\n\nUn litige arrive dans la file d'examen quand :\n- Une règle l'y envoie (par exemple les litiges au-dessus d'un certain montant).\n- Aucune règle ne correspond et l'action par défaut est l'examen.\n- Les preuves sont faibles ou subjectives, ou le dossier est déjà perdu.\n\nDepuis l'onglet File d'examen, vous pouvez :\n- Voir tous les litiges qui attendent votre attention.\n- Ouvrir un litige pour examiner le dossier de preuves.\n- Cliquer sur « Valider » pour enregistrer les preuves dans Shopify.\n\nUn litige dans la file n'est pas gelé. En pilote automatique, il est enregistré dans Shopify à la date limite si vous n'avez rien fait ; en mode examen, il ne l'est que lorsque vous validez. Choisissez « Ne pas défendre » pour l'arrêter dans les deux cas."
+        "body": "La file d'examen contient les litiges retenus pour vous avant l'enregistrement des preuves dans Shopify.\n\nUn litige arrive dans la file d'examen quand :\n- Une règle l'y envoie (par exemple les litiges au-dessus d'un certain montant).\n- Aucune règle ne correspond et l'action par défaut est l'examen.\n- Les preuves sont faibles ou subjectives, ou le dossier est déjà perdu.\n\nDepuis l'onglet File d'examen, vous pouvez :\n- Voir tous les litiges qui attendent votre attention.\n- Ouvrir un litige pour examiner le dossier de preuves.\n- Cliquer sur « Valider » pour enregistrer les preuves dans Shopify.\n\nUn litige dans la file n'est pas gelé. En pilote automatique, il est enregistré dans Shopify à la date limite si vous n'avez rien fait ; en mode examen, il ne l'est que lorsque vous validez. Choisissez « Ne pas ajouter de dossier de défense » pour que DisputeDesk n'en ajoute pas, dans les deux cas — si le litige est encore ouvert à l'échéance fixée par Shopify, Shopify transmet les informations de commande dont il dispose déjà."
       },
       "approvingDisputes": {
         "title": "Approuver des litiges depuis la file d'examen",
-        "body": "Lorsqu'un litige est dans votre file d'examen, DisputeDesk a déjà préparé les preuves. Votre validation détermine seulement si elles sont enregistrées dans Shopify.\n\nPour valider un litige :\n1. Ouvrez la page Litiges et passez à l'onglet « File d'examen ».\n2. Cliquez sur « Valider » à côté du litige.\n3. Si le dossier passe vos contrôles d'exhaustivité et de blocage, les preuves sont enregistrées dans Shopify.\n\nVous pouvez aussi valider depuis la page de détail avec « Valider et enregistrer ».\n\nEn pilote automatique, un litige retenu est enregistré dans Shopify à la date limite si vous n'intervenez pas. En mode examen, rien n'est enregistré tant que vous ne validez pas. Choisissez « Ne pas défendre » pour l'arrêter dans les deux modes.\n\nToutes les validations sont consignées dans la piste d'audit."
+        "body": "Lorsqu'un litige est dans votre file d'examen, DisputeDesk a déjà préparé les preuves. Votre validation détermine seulement si elles sont enregistrées dans Shopify.\n\nPour valider un litige :\n1. Ouvrez la page Litiges et passez à l'onglet « File d'examen ».\n2. Cliquez sur « Valider » à côté du litige.\n3. Si le dossier passe vos contrôles d'exhaustivité et de blocage, les preuves sont enregistrées dans Shopify.\n\nVous pouvez aussi valider depuis la page de détail avec « Valider et enregistrer ».\n\nEn pilote automatique, un litige retenu est enregistré dans Shopify à la date limite si vous n'intervenez pas. En mode examen, rien n'est enregistré tant que vous ne validez pas. Choisissez « Ne pas ajouter de dossier de défense » pour que DisputeDesk n'en ajoute pas, dans les deux modes — si le litige est encore ouvert à l'échéance fixée par Shopify, Shopify transmet les informations de commande dont il dispose déjà.\n\nToutes les validations sont consignées dans la piste d'audit."
       },
       "howPacksBuilt": {
         "title": "Comment les dossiers sont créés automatiquement",
@@ -3308,11 +3339,11 @@
         },
         "reviewQueue": {
           "title": "La file d'attente de révision",
-          "body": "La file d'examen regroupe les litiges que DisputeDesk a préparés mais pas encore enregistrés dans Shopify.\n\nIls arrivent ici quand :\n- Une règle les envoie en examen (par exemple un montant élevé).\n- Aucune règle ne correspond et le réglage par défaut est l'examen.\n- Les preuves sont faibles ou subjectives, ou le dossier est déjà perdu.\n\nDans l'application intégrée, ces litiges apparaissent dans la liste **Litiges** avec vos autres impayés — utilisez **Filtrer** par statut ou ouvrez-les depuis le tableau de bord. Ouvrez un litige pour inspecter le dossier, puis utilisez **Valider et enregistrer** sur la page de détail.\n\nUn litige ici n'est pas gelé et, en pilote automatique, il ne vous attend pas : DisputeDesk continue de collecter des preuves et enregistre la réponse dans Shopify à la date limite. En mode **Tout examiner**, elle n'est enregistrée que lorsque vous validez. Choisissez **Ne pas défendre** pour que nous n'envoyions rien — Shopify transmet malgré tout les informations de commande dont il dispose."
+          "body": "La file d'examen regroupe les litiges que DisputeDesk a préparés mais pas encore enregistrés dans Shopify.\n\nIls arrivent ici quand :\n- Une règle les envoie en examen (par exemple un montant élevé).\n- Aucune règle ne correspond et le réglage par défaut est l'examen.\n- Les preuves sont faibles ou subjectives, ou le dossier est déjà perdu.\n\nDans l'application intégrée, ces litiges apparaissent dans la liste **Litiges** avec vos autres impayés — utilisez **Filtrer** par statut ou ouvrez-les depuis le tableau de bord. Ouvrez un litige pour inspecter le dossier, puis utilisez **Valider et enregistrer** sur la page de détail.\n\nUn litige ici n'est pas gelé et, en pilote automatique, il ne vous attend pas : DisputeDesk continue de collecter des preuves et enregistre la réponse dans Shopify à la date limite. En mode **Tout examiner**, elle n'est enregistrée que lorsque vous validez. Choisissez **Ne pas ajouter de dossier de défense** pour que DisputeDesk n'en ajoute pas — si le litige est encore ouvert à l'échéance fixée par Shopify, Shopify transmet les informations de commande dont il dispose déjà."
         },
         "approvingDisputes": {
           "title": "Approuver des litiges depuis la file d'attente",
-          "body": "Approuvez depuis la page de **détail du litige** après l'avoir ouverte depuis la liste ou le tableau de bord.\n\nÉtapes :\n1. Allez dans **Litiges** et utilisez **Voir les détails** (ou ouvrez le litige depuis le tableau de bord).\n2. Vérifiez le paquet de preuves et la complétude sur le détail.\n3. Utilisez **Approuver et enregistrer** pour lancer le pipeline et enregistrer dans Shopify si vos seuils sont atteints.\n\nVous pouvez générer ou actualiser les paquets sur le détail au préalable. **Il n'y a pas de bouton Approuver uniquement sur la liste** — la confirmation se fait sur le détail.\n\n**Si vous n'approuvez jamais :** en mode **Tout examiner**, DisputeDesk n'envoie rien — ni maintenant, ni à la date limite. Shopify ne transmet que les informations de commande de base à l'échéance, ce qui l'emporte rarement. Approuver programme l'enregistrement de votre dossier dans Shopify à la date limite ; choisir **Ne pas défendre** nous empêche de l'envoyer, mais Shopify transmet tout de même ses propres informations de commande."
+          "body": "Approuvez depuis la page de **détail du litige** après l'avoir ouverte depuis la liste ou le tableau de bord.\n\nÉtapes :\n1. Allez dans **Litiges** et utilisez **Voir les détails** (ou ouvrez le litige depuis le tableau de bord).\n2. Vérifiez le paquet de preuves et la complétude sur le détail.\n3. Utilisez **Approuver et enregistrer** pour lancer le pipeline et enregistrer dans Shopify si vos seuils sont atteints.\n\nVous pouvez générer ou actualiser les paquets sur le détail au préalable. **Il n'y a pas de bouton Approuver uniquement sur la liste** — la confirmation se fait sur le détail.\n\n**Si vous n'approuvez jamais :** en mode **Tout examiner**, DisputeDesk n'envoie rien — ni maintenant, ni à la date limite. Shopify ne transmet que les informations de commande de base à l'échéance, ce qui l'emporte rarement. Approuver programme l'enregistrement de votre dossier dans Shopify à la date limite ; choisir **Ne pas ajouter de dossier de défense** empêche DisputeDesk d'en ajouter un, mais Shopify transmet tout de même les informations de commande dont il dispose déjà."
         }
       },
       "heroSearchPlaceholder": "Rechercher des articles d aide, des guides ou des sujets…",
@@ -4398,7 +4429,7 @@
       "setupSummaryTitle": "Ce que nous avons configuré pour vous",
       "setupSummaryInquiry": "Demandes préalables couvertes automatiquement",
       "setupSummaryReady": "Prêt pour les litiges de type {families}.",
-      "setupSummaryModeAuto": "Les réponses solides sont enregistrées automatiquement dans Shopify. Ce qui est moins décisif est mis en attente et surveillé, puis enregistré dans Shopify à la date limite, sauf si vous choisissez « Ne pas défendre ».",
+      "setupSummaryModeAuto": "Les réponses solides sont enregistrées automatiquement dans Shopify. Ce qui est moins décisif est mis en attente et surveillé, puis enregistré dans Shopify à la date limite, sauf si vous choisissez « Ne pas ajouter de dossier de défense ».",
       "setupSummaryModeReview": "Chaque réponse est préparée pour vous et attend votre validation avant d'être envoyée à Shopify.",
       "setupSummarySafeguard": "Les litiges de plus de {amount} $ attendent toujours votre validation.",
       "setupSummaryPointer": "Vous pourrez affiner chaque type de litige plus tard sur la page Automatisation.",
@@ -5861,8 +5892,8 @@
           "message": "Vous examinez ce litige avant l'échéance ({date}). Si vous ne faites rien d'autre, votre règle d'automatisation s'appliquera à l'échéance."
         },
         "conceded": {
-          "title": "Non défendu",
-          "message": "Vous avez choisi de ne pas défendre ce litige. Rien ne sera soumis."
+          "title": "Aucun dossier de défense ne sera ajouté",
+          "message": "Vous avez choisi de ne pas ajouter de dossier de défense DisputeDesk. Si le litige est encore ouvert à l'échéance fixée par Shopify, Shopify transmet les informations de commande dont il dispose déjà."
         }
       },
       "nextHeldWithDate": "En attente pendant que nous cherchons des preuves plus solides — enregistré dans Shopify le {date}",
@@ -5906,12 +5937,12 @@
     },
     "reviewDecision": {
       "approved": "Planifié",
-      "conceded": "Non défendu",
+      "conceded": "Aucun dossier de défense",
       "in_review": "En cours d'examen"
     },
     "reviewDecisionSub": {
       "approved": "Configuré pour être soumis automatiquement à l'échéance",
-      "conceded": "Vous avez choisi de ne pas défendre ce litige",
+      "conceded": "Vous avez choisi de ne pas ajouter de dossier de défense DisputeDesk",
       "in_review": "Vous examinez ceci avant l'échéance"
     }
   }

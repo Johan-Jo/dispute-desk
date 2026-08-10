@@ -685,7 +685,7 @@
       "inReview": "Under granskning",
       "inReviewDue": "Under granskning · {days} d",
       "scheduled": "Schemalagd",
-      "notDefended": "Försvaras inte"
+      "notDefended": "Inget försvarspaket"
     },
     "signalLabel": {
       "payment_auth": "Betalningsautentisering",
@@ -958,19 +958,19 @@
       "evidenceOrderingHelper": "Sorterade efter hur mycket varje objekt stärker ärendet. Starkast först.",
       "review": {
         "title": "Bestäm vad du vill göra med den här tvisten",
-        "prompt": "Det här ärendet behöver ditt beslut före tidsfristen. Pausa det medan du undersöker, schemalägg det för automatisk inskickning, eller avstå om det inte är värt att försvara.",
+        "prompt": "Det här ärendet behöver ditt beslut före tidsfristen. Pausa det medan du undersöker, schemalägg det för automatisk inskickning, eller säg till DisputeDesk att inte lägga till något försvarspaket.",
         "hold": "Pausa för granskning",
         "approve": "Skicka in vid tidsfristen",
-        "concede": "Försvara inte",
+        "concede": "Lägg inte till försvarspaket",
         "holdHelp": "Vi fortsätter bevaka det och påminner dig före tidsfristen.",
         "approveHelp": "Vi skickar in bevisningen automatiskt när tidsfristen infaller.",
-        "concedeHelp": "Vi skickar inte in ditt försvarspaket. Shopify vidarebefordrar ändå de grundläggande orderuppgifterna som finns registrerade.",
+        "concedeHelp": "DisputeDesk lägger inte till något försvarspaket i den här tvisten. Om tvisten fortfarande är öppen vid Shopifys frist vidarebefordrar Shopify de orderuppgifter som redan finns där.",
         "stateInReviewTitle": "Pausad för din granskning",
         "stateInReviewBody": "Du granskar den här tvisten. Om du inte gör något mer följer den din automatiseringsregel vid tidsfristen{due}.",
         "stateApprovedTitle": "Schemalagd för inskickning",
         "stateApprovedBody": "Den här tvisten är inställd på att skickas in automatiskt vid tidsfristen{due}.",
-        "stateConcededTitle": "Försvaras inte",
-        "stateConcededBody": "Du valde att inte försvara den här tvisten. Inget kommer att skickas in.",
+        "stateConcededTitle": "Inget försvarspaket läggs till",
+        "stateConcededBody": "Du valde att inte lägga till något försvarspaket från DisputeDesk. Om tvisten fortfarande är öppen vid Shopifys frist vidarebefordrar Shopify de orderuppgifter som redan finns där.",
         "dueSuffix": " ({date})",
         "change": "Ändra beslut",
         "undo": "Ångra",
@@ -1872,6 +1872,37 @@
       "threeDsNoLiabilityShift": "Hålls internt — autentiseringen slutfördes inte, så att nämna den skulle försvaga svaret.",
       "ipNotBankEligible": "Hålls internt — platsmatchningen är inte tillräckligt tydlig för att visas för banken.",
       "cvvOnlyNotAddressEvidence": "Hålls internt — endast kortets säkerhetskod matchade, och det utgör inget adressbevis."
+    },
+    "assessmentState": {
+      "current": {
+        "title": "Bedömningen är aktuell",
+        "body": "Det här ärendet har bedömts utifrån de bevis som finns registrerade nu."
+      },
+      "notAssessed": {
+        "title": "Inte bedömt ännu",
+        "bodyAbsent": "DisputeDesk har ännu inte bedömt det här ärendet, så det finns varken ärendestyrka eller fullständighet att visa. Bedömningen sker automatiskt när bevispaketet har byggts — du behöver inte göra något.",
+        "bodyStale": "Bevisen i det här ärendet ändrades efter den senaste bedömningen, så tidigare ärendestyrka och fullständighet beskriver det inte längre. DisputeDesk bedömer om det automatiskt — du behöver inte göra något.",
+        "actionsHidden": "Det går inte att skicka förrän ärendet har bedömts."
+      }
+    },
+    "deadlineOnly": {
+      "normal": {
+        "title": "Redo att skickas",
+        "body": "Ditt försvarspaket är klart. DisputeDesk lägger till det i den här tvisten i Shopify automatiskt."
+      },
+      "held": {
+        "title": "Hålls kvar till fristen",
+        "body": "{itemCount, plural, one {1 uppgift behöver din bekräftelse} other {# uppgifter behöver din bekräftelse}}, därför håller DisputeDesk kvar ditt försvarspaket för hantering vid fristen i stället för att lägga till det nu. Shopifys egen fristhantering följer sitt eget schema: är tvisten fortfarande öppen då använder Shopify de orderuppgifter som redan finns där.",
+        "action": "{itemCount, plural, one {Bekräfta den markerade uppgiften} other {Bekräfta de markerade uppgifterna}} för att släppa ditt försvarspaket nu i stället för att vänta på fristen."
+      },
+      "withheld": {
+        "title": "Inget försvarspaket från DisputeDesk läggs till",
+        "body": "När de bevis som behöver din bekräftelse har lagts åt sidan återstår inget som DisputeDesk kan stå bakom, så inget försvarspaket läggs till i den här tvisten. Det gör inte tvisten tyst: Om tvisten fortfarande är öppen vid Shopifys frist vidarebefordrar Shopify de orderuppgifter som redan finns där.",
+        "action": "Lägg till eller bekräfta bevis i den här tvisten för att ändra det."
+      },
+      "reviewItem": {
+        "generic": "Den här uppgiften behöver din bekräftelse innan den kan användas."
+      }
     }
   },
   "disputeReasons": {
@@ -2522,7 +2553,7 @@
     "modeSectionSubtitle": "Detta gäller varje tvist. Vissa ärenden hålls alltid kvar och bevakas först — se Skyddsräcken nedan.",
     "modeAutoTitle": "Autopilot",
     "modeAutoBadge": "Rekommenderas",
-    "modeAutoDesc": "Vi sparar dina starkaste ärenden till Shopify så snart de är klara. Allt annat hålls kvar medan vi fortsätter samla bevis och sparas sedan till Shopify på förfallodagen — inget väntar på ditt godkännande, om du inte väljer ”Försvara inte”.",
+    "modeAutoDesc": "Vi sparar dina starkaste ärenden till Shopify så snart de är klara. Allt annat hålls kvar medan vi fortsätter samla bevis och sparas sedan till Shopify på förfallodagen — inget väntar på ditt godkännande, om du inte väljer ”Lägg inte till försvarspaket”.",
     "modeReviewTitle": "Granska allt",
     "modeReviewDesc": "Vi förbereder varje svar. Ingenting sparas till Shopify förrän du godkänt det.",
     "modeSaved": "Inställningarna har sparats",
@@ -2561,7 +2592,7 @@
     "groupHasOwnSetting": "Har en egen inställning",
     "modeClearedExceptions": "{count} invändningstyper med egen inställning rensades. Allt följer nu ”{mode}”. Ställ in en typ nedan om du vill ha ett undantag.",
     "modeAutoLead": "Vi sparar dina starkaste ärenden till Shopify så snart de är klara.",
-    "modeAutoNote": "Allt annat hålls kvar medan vi fortsätter samla bevis och sparas sedan till Shopify på förfallodagen — inget väntar på ditt godkännande, om du inte väljer ”Försvara inte”.",
+    "modeAutoNote": "Allt annat hålls kvar medan vi fortsätter samla bevis och sparas sedan till Shopify på förfallodagen — inget väntar på ditt godkännande, om du inte väljer ”Lägg inte till försvarspaket”.",
     "modeReviewLead": "Vi förbereder varje svar. Ingenting sparas till Shopify förrän du godkänt det.",
     "modeReviewNote": "Full överblick — varje ärende väntar på ditt godkännande."
   },
@@ -3100,11 +3131,11 @@
       },
       "reviewQueue": {
         "title": "Granskningskön",
-        "body": "Granskningskön innehåller invändningar som hålls för dig innan bevis sparas till Shopify.\n\nEn invändning hamnar i granskningskön när:\n- En regel skickar den till granskning (till exempel ärenden över ett visst belopp).\n- Ingen regel matchar och standardåtgärden är granskning.\n- Bevisen är svaga eller subjektiva, eller ärendet redan är förlorat.\n\nPå fliken Granskningskö kan du:\n- Se alla invändningar som väntar på dig.\n- Öppna en invändning och granska bevispaketet.\n- Klicka på ”Godkänn” för att spara bevisen till Shopify.\n\nEtt ärende i kön är inte fryst. I autopilot sparas det till Shopify på förfallodagen om du inte har agerat; i granskningsläge sparas det bara när du godkänner. Välj ”Försvara inte” för att stoppa det i båda fallen."
+        "body": "Granskningskön innehåller invändningar som hålls för dig innan bevis sparas till Shopify.\n\nEn invändning hamnar i granskningskön när:\n- En regel skickar den till granskning (till exempel ärenden över ett visst belopp).\n- Ingen regel matchar och standardåtgärden är granskning.\n- Bevisen är svaga eller subjektiva, eller ärendet redan är förlorat.\n\nPå fliken Granskningskö kan du:\n- Se alla invändningar som väntar på dig.\n- Öppna en invändning och granska bevispaketet.\n- Klicka på ”Godkänn” för att spara bevisen till Shopify.\n\nEtt ärende i kön är inte fryst. I autopilot sparas det till Shopify på förfallodagen om du inte har agerat; i granskningsläge sparas det bara när du godkänner. Välj ”Lägg inte till försvarspaket” så lägger DisputeDesk inte till något i något av fallen — om tvisten fortfarande är öppen vid Shopifys frist vidarebefordrar Shopify de orderuppgifter som redan finns där."
       },
       "approvingDisputes": {
         "title": "Godkänna tvister från granskningskön",
-        "body": "När en invändning ligger i din granskningskö har DisputeDesk redan byggt bevisen. Ditt godkännande avgör bara om de sparas till Shopify.\n\nSå godkänner du en invändning:\n1. Gå till sidan Invändningar och byt till fliken ”Granskningskö”.\n2. Klicka på ”Godkänn” bredvid invändningen.\n3. Om paketet klarar dina kontroller för fullständighet och blockerare sparas bevisen till Shopify.\n\nDu kan också godkänna från detaljsidan med ”Godkänn och spara”.\n\nI autopilot sparas ett hållet ärende till Shopify på förfallodagen om du inte gör något. I granskningsläge sparas ingenting förrän du godkänner. Välj ”Försvara inte” för att stoppa ett ärende i båda lägena.\n\nAlla godkännanden loggas i granskningsspåret."
+        "body": "När en invändning ligger i din granskningskö har DisputeDesk redan byggt bevisen. Ditt godkännande avgör bara om de sparas till Shopify.\n\nSå godkänner du en invändning:\n1. Gå till sidan Invändningar och byt till fliken ”Granskningskö”.\n2. Klicka på ”Godkänn” bredvid invändningen.\n3. Om paketet klarar dina kontroller för fullständighet och blockerare sparas bevisen till Shopify.\n\nDu kan också godkänna från detaljsidan med ”Godkänn och spara”.\n\nI autopilot sparas ett hållet ärende till Shopify på förfallodagen om du inte gör något. I granskningsläge sparas ingenting förrän du godkänner. Välj ”Lägg inte till försvarspaket” så lägger DisputeDesk inte till något i något av lägena — om tvisten fortfarande är öppen vid Shopifys frist vidarebefordrar Shopify de orderuppgifter som redan finns där.\n\nAlla godkännanden loggas i granskningsspåret."
       },
       "howPacksBuilt": {
         "title": "Hur bevispaket byggs automatiskt",
@@ -3308,11 +3339,11 @@
         },
         "reviewQueue": {
           "title": "Granskningskön",
-          "body": "Granskningskön är tvister som DisputeDesk har förberett men ännu inte sparat till Shopify.\n\nDe hamnar här när:\n- En regel skickar dem till granskning (till exempel högt belopp).\n- Ingen regel matchar och standard är granskning.\n- Bevisen är svaga eller subjektiva, eller ärendet redan är förlorat.\n\nI den inbäddade appen visas de i listan **Invändningar** tillsammans med dina övriga återkrav — använd **Filtrera** på status eller öppna poster från översikten. Öppna en invändning för att granska paketet och använd sedan **Godkänn och spara** på detaljsidan.\n\nEtt ärende här är inte fryst, och i autopilot väntar det inte på dig: DisputeDesk fortsätter samla bevis och sparar svaret till Shopify på förfallodagen. I läget **Granska allt** sparas det bara när du godkänner. Välj **Försvara inte** så skickar vi ingenting — Shopify vidarebefordrar ändå de grundläggande orderuppgifter det har."
+          "body": "Granskningskön är tvister som DisputeDesk har förberett men ännu inte sparat till Shopify.\n\nDe hamnar här när:\n- En regel skickar dem till granskning (till exempel högt belopp).\n- Ingen regel matchar och standard är granskning.\n- Bevisen är svaga eller subjektiva, eller ärendet redan är förlorat.\n\nI den inbäddade appen visas de i listan **Invändningar** tillsammans med dina övriga återkrav — använd **Filtrera** på status eller öppna poster från översikten. Öppna en invändning för att granska paketet och använd sedan **Godkänn och spara** på detaljsidan.\n\nEtt ärende här är inte fryst, och i autopilot väntar det inte på dig: DisputeDesk fortsätter samla bevis och sparar svaret till Shopify på förfallodagen. I läget **Granska allt** sparas det bara när du godkänner. Välj **Lägg inte till försvarspaket** så lägger DisputeDesk inte till något — om tvisten fortfarande är öppen vid Shopifys frist vidarebefordrar Shopify de orderuppgifter som redan finns där."
         },
         "approvingDisputes": {
           "title": "Godkänna tvister från granskningskön",
-          "body": "Godkänn på **tvistens detaljsida** efter att du öppnat den från listan eller instrumentpanelen.\n\nSteg:\n1. Gå till **Tvister** och använd **Visa detaljer** (eller öppna tvisten från instrumentpanelen).\n2. Granska bevispaketet och kompletenhet på detaljsidan.\n3. Använd **Godkänn och spara** för att köra pipelinen och spara i Shopify när dina trösklar passar.\n\nDu kan generera eller uppdatera paket på detaljsidan först. **Det finns ingen Godkänn-knapp bara i listan** — bekräftelsen sker på detaljsidan.\n\n**Om du aldrig godkänner:** i läget **Granska allt** skickar DisputeDesk ingenting — varken nu eller på förfallodagen. Shopify vidarebefordrar bara de grundläggande orderuppgifterna när fristen löper ut, vilket sällan vinner. Att godkänna schemalägger ditt förberedda paket för att sparas till Shopify på förfallodagen; väljer du **Försvara inte** skickar vi det inte, men Shopify vidarebefordrar ändå sina egna orderuppgifter."
+          "body": "Godkänn på **tvistens detaljsida** efter att du öppnat den från listan eller instrumentpanelen.\n\nSteg:\n1. Gå till **Tvister** och använd **Visa detaljer** (eller öppna tvisten från instrumentpanelen).\n2. Granska bevispaketet och kompletenhet på detaljsidan.\n3. Använd **Godkänn och spara** för att köra pipelinen och spara i Shopify när dina trösklar passar.\n\nDu kan generera eller uppdatera paket på detaljsidan först. **Det finns ingen Godkänn-knapp bara i listan** — bekräftelsen sker på detaljsidan.\n\n**Om du aldrig godkänner:** i läget **Granska allt** skickar DisputeDesk ingenting — varken nu eller på förfallodagen. Shopify vidarebefordrar bara de grundläggande orderuppgifterna när fristen löper ut, vilket sällan vinner. Att godkänna schemalägger ditt förberedda paket för att sparas till Shopify på förfallodagen; väljer du **Lägg inte till försvarspaket** skickar DisputeDesk inte till något, men Shopify vidarebefordrar ändå de orderuppgifter som redan finns där."
         }
       },
       "heroSearchPlaceholder": "Sök efter hjälpartiklar, guider eller ämnen…",
@@ -4398,7 +4429,7 @@
       "setupSummaryTitle": "Det här har vi ställt in åt dig",
       "setupSummaryInquiry": "Tidiga förfrågningar täcks automatiskt",
       "setupSummaryReady": "Redo för tvister om {families}.",
-      "setupSummaryModeAuto": "Starka svar sparas automatiskt till Shopify. Det som är mindre avgörande hålls kvar och bevakas och sparas sedan till Shopify på förfallodagen, om du inte väljer ”Försvara inte”.",
+      "setupSummaryModeAuto": "Starka svar sparas automatiskt till Shopify. Det som är mindre avgörande hålls kvar och bevakas och sparas sedan till Shopify på förfallodagen, om du inte väljer ”Lägg inte till försvarspaket”.",
       "setupSummaryModeReview": "Varje svar byggs åt dig och väntar på ditt godkännande innan det går till Shopify.",
       "setupSummarySafeguard": "Tvister över {amount} USD väntar alltid på ditt godkännande.",
       "setupSummaryPointer": "Du kan finjustera enskilda tvisttyper senare på Automatiseringssidan.",
@@ -5861,8 +5892,8 @@
           "message": "Du granskar denna tvist före tidsfristen ({date}). Om du inte vidtar någon ytterligare åtgärd tillämpas din automatiseringsregel vid tidsfristen."
         },
         "conceded": {
-          "title": "Försvaras inte",
-          "message": "Du valde att inte försvara denna tvist. Ingenting kommer att skickas."
+          "title": "Inget försvarspaket läggs till",
+          "message": "Du valde att inte lägga till något försvarspaket från DisputeDesk. Om tvisten fortfarande är öppen vid Shopifys frist vidarebefordrar Shopify de orderuppgifter som redan finns där."
         }
       },
       "nextHeldWithDate": "Pausad medan vi bevakar starkare bevis — sparas till Shopify den {date}",
@@ -5906,12 +5937,12 @@
     },
     "reviewDecision": {
       "approved": "Schemalagd",
-      "conceded": "Ej försvarad",
+      "conceded": "Inget försvarspaket",
       "in_review": "Under granskning"
     },
     "reviewDecisionSub": {
       "approved": "Inställd att skickas automatiskt vid tidsfristen",
-      "conceded": "Du valde att inte försvara denna tvist",
+      "conceded": "Du valde att inte lägga till något försvarspaket från DisputeDesk",
       "in_review": "Du granskar detta före tidsfristen"
     }
   }

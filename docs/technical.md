@@ -2539,7 +2539,7 @@ Approved decision P-1: *"Strict: do not score them. A record can remain visible 
 
 `SCORING_POLICY_VERSION` is deliberately **not** bumped: the resolved policy is the same strict rule that was already the default and the only value any production-shaped path used, so no persisted snapshot became stale. Measured on 73 open prod packs (2026-08-06): the strict column is identical before and after, and the now-unreachable permissive arm would have lifted exactly two packs (#352501 `DUPLICATE`, #352767 `FRAUDULENT`) from weak to moderate — precisely the transition P-1 forbids.
 
-Thresholds over completeness remain **P-7 and deferred** to the Phase 2 calibration report; P-1 fixes only which records the score sees. `scripts/evidence-model/*.analysis.ts` therefore report one column instead of a strict/permissive pair.
+Thresholds over completeness were **P-7**, and P-7 is now ACTIVATED: Blume Box runs on canonical completeness at 60, SuraSvenne is excluded because no disposition-preserving threshold exists for it at any value. The shop set and the threshold live in `lib/evidence/model/completenessActivation.ts` and are read by the auto-save gate; `docs/evidence-model/p2/completeness-calibration-report.md` is the single current account. P-1 fixed only which records the score sees. `scripts/evidence-model/*.analysis.ts` therefore report one column instead of a strict/permissive pair.
 
 ### Auto-submit guards — one decision, three callers (2026-07-27)
 
@@ -3891,6 +3891,175 @@ Each row has an "Approve" button that clears `needs_review`, logs `rule_overridd
 Pack preview pages show a yellow warning banner when `completeness_score < 60%`:
 - Lists missing required checklist items.
 - Guidance only — merchant can still proceed.
+
+### CP-A — Canonical assessment, completeness, and the merchant projection (2026-08-09)
+
+`CaseAssessment` is the single owner of strength and completeness, and the three merchant
+tabs render a **server projection** of it. The definition of done is the deleted call site,
+not the new derivation — the previous attempt built the derivations and never flipped the
+callers, and the browser kept its own scorer for a year.
+
+**Modules**
+
+| File | Owns |
+|---|---|
+| `lib/evidence/model/assessmentSnapshot.ts` | `CaseAssessmentSnapshot` — the persisted, versioned form, plus `computeAssessmentInputHash()` |
+| `lib/evidence/model/completenessSnapshot.ts` | completeness derived independently of strength, and `readPersistedCompletenessForGate()` |
+| `lib/evidence/model/merchantProjection.ts` | `projectMerchantAssessment()` / `projectReviewItems()` — `needsRecalculation` as a first-class state |
+| `lib/disputes/workspaceAssessment.ts` | `buildWorkspaceAssessment()` — the one derivation the workspace API ships |
+| `lib/disputes/workspaceAssessmentTypes.ts` | the payload shape + `emptyWorkspaceAssessment()`, importable from the client without pulling in the scorer |
+| `lib/disputes/deadlineOnlyCopy.ts` | `deadline_only` vs `withheld_no_safe_argument` merchant copy, as `I18nToken`s |
+
+**The input hash.** `SnapshotFreshness.inputHash` covers every result-bearing input: the
+dispute reason, model/registry versions, per-field relevance + status flags + record count,
+each record's validity / quality / citation eligibility / normalized payload, the coverage
+and dispute metadata on `nonEvidence`, the five resolved gates (a **provided `null` hashes
+differently from a `gateNotProvided` reason** — the pair whose conflation shipped a wrong
+band), and the external payload source. Deliberately excluded: `derivedFrom.packId`,
+`evidenceItemIds`, every timestamp, and `nonEvidence.operational.*` — none can move the
+result, and hashing them would mark the fleet permanently stale, which is not the
+conservative choice but a fleet that never files. `computedAt` is audit-only and never an
+input. The two `EvidencePayloadSource` forms (`list` from `buildPack`, `byField` from the
+workspace route) produce the same hash, so the surfaces cannot report each other stale.
+
+**Strength and completeness stay separate.** `deriveCompletenessSnapshot(model)` takes the
+model and nothing else — no gates, no payload source, no reason family. Pinned by test:
+flipping the coverage gate changes `heroVariant` and leaves every completeness number
+untouched.
+
+**The three faithful gate coercions**, now in one reader
+(`readPersistedCompletenessForGate`) instead of inline at `pipeline.ts:837-839`:
+`completeness_score` NULL → `0`; `blockers` NULL → `[]`; `submission_readiness` NULL →
+`undefined`, which selects the **legacy blocker-count arm** of `evaluateAutoSaveGate`.
+Coercing that third one to `"ready"` would auto-file every legacy pack that has blockers;
+`"blocked"` would freeze them all. One deliberate difference from the old inline cast: a
+non-array `blockers` becomes `[]` rather than passing through, which produces an identical
+gate disposition (`undefined > 0` and `0 > 0` are both false) with an honest type.
+
+**`needsRecalculation`.** A stale or absent assessment nulls the band, the score and the
+readiness *together*; there is no partial mode. `evaluateFreshness` is the only predicate,
+and its three reasons (`snapshot_absent` / `input_hash_mismatch` /
+`policy_version_superseded`) are carried through so the UI can route recalculate-vs-rebuild.
+Review items deliberately survive staleness: "one item needs your confirmation" is a fact
+about the evidence, and hiding it would remove the merchant's only lever exactly when they
+are asked to wait.
+
+**Deleted from the browser.** `useDisputeWorkspace` no longer imports
+`calculateCaseStrength`, `calculateImprovement`, `computeContributions`,
+`buildCaseGateAssessment`, `gateProvided` or `gateNotProvided`, and no longer reconstructs
+submission readiness from the checklist. Its old gate set stated three of five gates as
+`not_shipped_to_client`, so its answer had to differ from the server's whenever any of the
+three fired. `tests/unit/clientAssessmentRecomputation.test.ts` is the falsification-guarded
+CI invariant: it scans the six client surfaces for value imports of a scoring module, calls
+to a computing symbol, and readiness reconstruction; it re-runs all three detectors against
+a checked-in copy of the pre-fix hook to prove the detector still detects; and it holds a
+**shrink-only allow-list** of the remaining server-side `calculateCaseStrength` call sites
+with the epic that closes each.
+
+**`deadline_only` merchant copy** (`disputes.deadlineOnly.*`, ×6 locales). Three states,
+each with a distinct key set: `normal`, `deadline_only` ("N item(s) need your confirmation,
+so DisputeDesk is holding your defence package for deadline processing" — `itemCount` is an
+ICU plural **param**, so each locale pluralises in its own grammar), and
+`withheld_no_safe_argument`. `willFile` is stated explicitly on the copy object so no surface
+infers it from tone — the inference that made the auto-pilot hold read as "please review".
+`noSafeArgument` outranks `deadlineOnly`: a plan can be both, and promising a deadline filing
+would be false.
+
+#### No merchant surface may promise that nothing reaches the issuer
+
+Shopify auto-compiles and files **its own scrape** of the order at the deadline whether or
+not DisputeDesk adds a defence package, and there is no accept/concede mutation that stops
+it. Every guard in this pipeline therefore chooses *our document vs Shopify's scrape*, never
+submit-vs-silence — and the merchant copy has to say the same thing.
+
+It did not. The pre-existing "Don't defend" state said **"Nothing will be submitted"** on
+four surfaces in six languages, describing an outcome the product cannot produce: a merchant
+who read it and declined had not bought silence, they had swapped our document for Shopify's
+scrape without being told. `withheld_no_safe_argument` shipped with the same defect
+("…so nothing will be sent").
+
+The correction, applied to 23 keys per locale:
+
+| Concept | Wording |
+|---|---|
+| The merchant declines | **"Don't add a defence package"** — replaces "Don't defend"; internal state stays `conceded`, `ReviewAction` stays `concede` |
+| `withheld_no_safe_argument` | DisputeDesk **will not add a defence package**; Shopify still passes on the order details it already holds when the deadline arrives |
+| `deadline_only` | DisputeDesk is **holding your defence package for deadline processing** instead of adding it now; Shopify's own deadline process runs either way |
+| Every declining/holding string | names **both** actors — DisputeDesk and Shopify — explicitly |
+
+Pinned by `lib/disputes/__tests__/issuerSilenceCopy.test.ts`: a fixed list of the 23 affected
+key paths × 6 locales, asserting each resolves, each declining/holding key names Shopify (and
+the two decline surfaces name DisputeDesk), and none still carries its locale's silence
+phrase or the old label. Deliberately **not** a catalog-wide phrase detector — that shape
+flags every honest sentence containing "nothing" and ends up allow-listed into uselessness.
+Adding a locale or a new surface for these states means adding it to that list.
+
+#### The persisted assessment is what the read paths render
+
+`buildPack` is the authorized writer — the only site holding the Shopify order,
+therefore the only one that can derive all five gates. It persists the versioned
+`CaseAssessmentSnapshot` at `pack_json.case_assessment`.
+
+Both read paths PROJECT it. Neither derives a band:
+
+| Route | Before | Now |
+|---|---|---|
+| workspace detail | scored with its own gates — 2 of 5 answerable | `projectMerchantAssessment` over the persisted snapshot |
+| disputes list | Stage B re-scored live — 3 of 5 `order_not_loaded` | projects the snapshot; Stage B deleted |
+
+**The current hash is reconstructed, not read back.** Comparing
+`snapshot.freshness.inputHash` against itself detects nothing. The workspace
+route derives the model and the payload terms from the pack as it stands, with
+the same inputs `buildPack` used, and hashes them through
+`computeAssessmentInputHash` — the one owner.
+
+The gate term cannot be re-derived: three of the five gates come from the order
+and only `buildPack` loads it. So the writer persists exactly the fields the
+fingerprint reads, at `pack_json.case_assessment_gates`. That keeps the gates
+term constant between write and read, which is correct rather than convenient —
+a reader that cannot see the order also cannot observe a gate changing, and
+claiming otherwise would be the `order_not_loaded` lie in a new place. What the
+reader *can* observe, evidence drift, is exactly what the model and payload
+terms carry. A pack with no persisted fingerprint yields no current hash, and an
+unverifiable snapshot is not a fresh one.
+
+**The list checks the two staleness dimensions it can check truthfully** —
+policy version, and `rebuild_pending` — and withholds a band otherwise. It never
+falls back to the legacy `case_strength` summary, which carries no freshness of
+its own. The `?strength=` filter reads the same source as the pill, so a filter
+and a display can no longer disagree about one row.
+
+`display-only` rows (contributions, the improvement hint) are still derived.
+They produce labels, not a band, and cannot reconstruct completeness or
+readiness.
+
+#### P-7: score and threshold are one atomic decision
+
+They live on different scales — the calibration measured 90 packs moving −1…−7
+and 15 moving +2…+17 between the persisted column and the canonical snapshot,
+and 60 was calibrated on the canonical one. So there are exactly two legal
+pairings, and one illegal one:
+
+| Case | score | threshold | `source` |
+|---|---|---|---|
+| Blume Box, usable canonical snapshot | canonical | **60** | `canonical` |
+| Blume Box, missing/unusable snapshot | persisted | merchant `auto_save_min_score` | `legacy` |
+| any other shop | persisted | merchant `auto_save_min_score` | `legacy` |
+| **legacy score against 60** | — | — | **unrepresentable** |
+
+`resolveEffectiveCompleteness` returns all three together, from one branch, so
+the illegal pairing cannot be assembled by two independent lookups. The same
+object feeds `evaluateAutoSaveGate`, the `auto_save_blocked` audit payload, the
+`PACK_BLOCKED` dispute-event metadata and the diagnostic message — a score in an
+audit row that does not say which scale produced it cannot be checked afterwards.
+
+**Hand-off to the workspace route** (Agent C owns
+`app/api/disputes/[id]/workspace/route.ts`): replace the inline `calculateCaseStrength` /
+`computeContributions` pair with one `buildWorkspaceAssessment({ disputeId, checklist:
+reconciledChecklistV2, reason: row.reason, payloadSource: caseStrengthPayloadSource, gates,
+packSaved: !!packRow?.saved_to_shopify_at, plan })` and ship the result as
+`workspaceAssessment` on the response. When there is no pack, ship
+`emptyWorkspaceAssessment(disputeId)`.
 
 ### Generate Pack — Template Check
 
