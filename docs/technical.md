@@ -4817,6 +4817,22 @@ affirmations. Adversarial cases are pinned in
 `lib/defence/__tests__/claimCapabilities.test.ts`. A prohibited claim gets one bounded repair attempt through the existing validation-retry
 path in `buildDefencePackageJob`; if it still fails the package is marked `failed` and never filed.
 
+**The AVS statement is not a destination (corrected 2026-08-10).** The coupling is looked for
+CLAUSE by clause; only when no single clause holds both halves does a sentence-level fallback catch a
+straddled coupling ("The order shipped to, and was received at, the cardholder's address"). That
+fallback originally asked only whether a delivery term and an address term appeared anywhere in the
+sentence, so it coupled a carrier-delivery clause with an `avs_cvv_match` clause that merely stood
+beside it — and the AVS carve-out declared on `BILLING_SHIPPING_AGREEMENT` ("the billing address
+matched the issuer's records" stays licensed) was applied at clause level only, never in the
+fallback. Production package `08575d57` (dispute `77eb59a3`, blume-box, 2026-08-10) failed on both
+the first attempt and the fed-back retry for two sentences of exactly that shape, leaving the
+dispute with no fileable package one day before its deadline. Licensed AVS clauses are now removed
+before the straddle test — a clause qualifies only when it cites the issuer's records, carries no
+transport/receipt term of its own, and does not open in a destination role (`to`/`at`/`into`/…), so
+"…was delivered, to the billing address that matched the issuer's records" stays blocked. Negation,
+prohibition and affirmation still read the whole sentence. Both production sentences are pinned
+verbatim as regression cases.
+
 **Every enqueue site is gated, not just the worker.** `lib/defence/packageSafety.ts` exposes one
 predicate plus two preflight loaders (`preflightLatestCandidate`, `preflightNamedCandidate`). They
 are consulted BEFORE any enqueue or status write by: the embedded Review & Submit endpoint
