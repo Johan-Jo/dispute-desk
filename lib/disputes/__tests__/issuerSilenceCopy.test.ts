@@ -79,6 +79,32 @@ const LABELS_AND_TITLES = [
 const AFFECTED_KEYS = [...MUST_NAME_SHOPIFY, ...LABELS_AND_TITLES];
 
 /**
+ * The keys whose Shopify sentence must be CONDITIONAL.
+ *
+ * Not every key in `MUST_NAME_SHOPIFY` qualifies: two of the help articles
+ * mention Shopify while describing something else entirely (what the review
+ * queue is, where Approve & Save lives), and requiring the condition there
+ * would force it into sentences that make no claim about filing.
+ */
+const CONDITIONAL_SHOPIFY_KEYS = [
+  "disputes.deadlineOnly.held.body",
+  "disputes.deadlineOnly.withheld.body",
+  "disputes.overviewExtra.review.concedeHelp",
+  "disputes.overviewExtra.review.stateConcededBody",
+  "presentation.hero.reviewDecision.conceded.message",
+] as const;
+
+/** "…if/while the dispute is still open", per locale. */
+const CONDITION_MARKER: Record<Locale, RegExp> = {
+  en: /still open/i,
+  de: /noch offen/i,
+  es: /sigue abierta|contin(ú|u)a abierta/i,
+  fr: /encore ouvert/i,
+  pt: /ainda estiver aberta|ainda est(á|a) aberta/i,
+  sv: /fortfarande (är )?öppen/i,
+};
+
+/**
  * The exact promise each locale used to make, and the old label that framed
  * the choice as defend-vs-concede. Written out per locale rather than
  * matched by pattern: a regex over six grammars either misses a form or
@@ -148,6 +174,29 @@ describe("no surface promises that nothing reaches the issuer", () => {
         for (const key of MUST_NAME_SHOPIFY) {
           const value = lookup(cat, key) as string;
           expect(value.includes("Shopify"), `${locale} ${key} omits Shopify`).toBe(true);
+        }
+      });
+
+      it("names Shopify's process CONDITIONALLY — one absolute is not replaced by another", () => {
+        /* The first correction removed "nothing will be submitted" and put
+         * "Shopify still passes on the order details it already holds" in its
+         * place. That is also an absolute, and also not quite true: Shopify's
+         * deadline process acts on a dispute that is still OPEN when it
+         * reaches it. A dispute the merchant resolved, or that the issuer
+         * withdrew, or that closed for any other reason, has no Shopify filing
+         * either.
+         *
+         * So each of these strings must carry the condition. The detector is
+         * per-locale and structural — the word for "if/when it is still open"
+         * — rather than a phrase match, so a reworded sentence that keeps the
+         * condition still passes and one that drops it does not. */
+        const cat = catalog(locale);
+        for (const key of CONDITIONAL_SHOPIFY_KEYS) {
+          const value = lookup(cat, key) as string;
+          expect(
+            CONDITION_MARKER[locale].test(value),
+            `${locale} ${key} states Shopify's filing unconditionally`,
+          ).toBe(true);
         }
       });
 
