@@ -1872,6 +1872,25 @@
       "threeDsNoLiabilityShift": "Conservé en interne — l'authentification n'a pas abouti ; la citer affaiblirait la réponse.",
       "ipNotBankEligible": "Conservé en interne — la correspondance de localisation n’est pas assez nette pour la banque.",
       "cvvOnlyNotAddressEvidence": "Conservé en interne — seul le code de sécurité de la carte a correspondu, ce qui ne constitue pas une preuve d'adresse."
+    },
+    "deadlineOnly": {
+      "normal": {
+        "title": "Prêt à être envoyé",
+        "body": "Vos preuves sont prêtes et seront envoyées automatiquement à Shopify."
+      },
+      "held": {
+        "title": "En attente de la date limite",
+        "body": "{itemCount, plural, one {1 élément nécessite votre confirmation} other {# éléments nécessitent votre confirmation}} : DisputeDesk conserve donc cette réponse jusqu'à la date limite. Elle sera envoyée à ce moment-là, avec ou sans {itemCount, plural, one {l'élément signalé} other {les éléments signalés}}.",
+        "action": "{itemCount, plural, one {Confirmez l'élément signalé} other {Confirmez les éléments signalés}} pour envoyer cette réponse maintenant au lieu d'attendre."
+      },
+      "withheld": {
+        "title": "Cette réponse ne sera pas envoyée",
+        "body": "Une fois écartées les preuves qui nécessitent votre confirmation, il ne reste rien que DisputeDesk puisse défendre. Envoyer une réponse qu'il ne peut pas étayer affaiblirait votre dossier : rien ne sera donc envoyé.",
+        "action": "Ajoutez ou confirmez des preuves sur ce litige pour changer cela."
+      },
+      "reviewItem": {
+        "generic": "Cet élément nécessite votre confirmation avant de pouvoir être utilisé."
+      }
     }
   },
   "disputeReasons": {

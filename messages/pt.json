@@ -1872,6 +1872,25 @@
       "threeDsNoLiabilityShift": "Mantido interno — a autenticação não foi concluída, por isso citá-la enfraqueceria a resposta.",
       "ipNotBankEligible": "Mantido interno — a correspondência de localização não é clara o suficiente para o banco.",
       "cvvOnlyNotAddressEvidence": "Mantido interno — apenas o código de segurança do cartão correspondeu, e isso não constitui prova de endereço."
+    },
+    "deadlineOnly": {
+      "normal": {
+        "title": "Pronto para envio",
+        "body": "As suas evidências estão prontas e serão enviadas automaticamente para a Shopify."
+      },
+      "held": {
+        "title": "A aguardar a data limite",
+        "body": "{itemCount, plural, one {1 item precisa da sua confirmação} other {# itens precisam da sua confirmação}}, por isso o DisputeDesk mantém esta resposta até à data limite. Será enviada nessa altura, com ou sem {itemCount, plural, one {o item assinalado} other {os itens assinalados}}.",
+        "action": "{itemCount, plural, one {Confirme o item assinalado} other {Confirme os itens assinalados}} para enviar esta resposta agora, em vez de esperar."
+      },
+      "withheld": {
+        "title": "Esta resposta não será enviada",
+        "body": "Depois de postas de parte as evidências que precisam da sua confirmação, não resta nada que o DisputeDesk possa sustentar. Enviar uma resposta que não consegue defender enfraqueceria o seu caso, por isso nada será enviado.",
+        "action": "Adicione ou confirme evidências nesta disputa para alterar isto."
+      },
+      "reviewItem": {
+        "generic": "Este item precisa da sua confirmação antes de poder ser utilizado."
+      }
     }
   },
   "disputeReasons": {

@@ -1872,6 +1872,25 @@
       "threeDsNoLiabilityShift": "Hålls internt — autentiseringen slutfördes inte, så att nämna den skulle försvaga svaret.",
       "ipNotBankEligible": "Hålls internt — platsmatchningen är inte tillräckligt tydlig för att visas för banken.",
       "cvvOnlyNotAddressEvidence": "Hålls internt — endast kortets säkerhetskod matchade, och det utgör inget adressbevis."
+    },
+    "deadlineOnly": {
+      "normal": {
+        "title": "Redo att skickas",
+        "body": "Dina bevis är klara och skickas automatiskt till Shopify."
+      },
+      "held": {
+        "title": "Väntar på sista datum",
+        "body": "{itemCount, plural, one {1 uppgift behöver din bekräftelse} other {# uppgifter behöver din bekräftelse}}, därför håller DisputeDesk kvar det här svaret till sista datum. Det skickas då, med eller utan {itemCount, plural, one {den markerade uppgiften} other {de markerade uppgifterna}}.",
+        "action": "{itemCount, plural, one {Bekräfta den markerade uppgiften} other {Bekräfta de markerade uppgifterna}} för att skicka svaret nu i stället för att vänta."
+      },
+      "withheld": {
+        "title": "Det här svaret kommer inte att skickas",
+        "body": "När de bevis som behöver din bekräftelse har lagts åt sidan återstår inget som DisputeDesk kan stå bakom. Att skicka ett svar som inte går att styrka skulle försvaga ditt ärende, därför skickas ingenting.",
+        "action": "Lägg till eller bekräfta bevis i den här tvisten för att ändra det."
+      },
+      "reviewItem": {
+        "generic": "Den här uppgiften behöver din bekräftelse innan den kan användas."
+      }
     }
   },
   "disputeReasons": {

@@ -1872,6 +1872,25 @@
       "threeDsNoLiabilityShift": "Intern behalten — die Authentifizierung wurde nicht abgeschlossen; sie zu nennen würde die Antwort schwächen.",
       "ipNotBankEligible": "Intern behalten — die Standortübereinstimmung ist nicht eindeutig genug für die Bank.",
       "cvvOnlyNotAddressEvidence": "Intern behalten — nur der Kartenprüfwert stimmte überein, und ein übereinstimmender Prüfwert ist kein Adressnachweis."
+    },
+    "deadlineOnly": {
+      "normal": {
+        "title": "Bereit zum Senden",
+        "body": "Ihre Beweise sind fertig und werden automatisch an Shopify gesendet."
+      },
+      "held": {
+        "title": "Wartet auf das Fälligkeitsdatum",
+        "body": "{itemCount, plural, one {1 Beweis benötigt Ihre Bestätigung} other {# Beweise benötigen Ihre Bestätigung}}, deshalb hält DisputeDesk diese Antwort bis zum Fälligkeitsdatum zurück. Sie wird dann gesendet – mit oder ohne {itemCount, plural, one {den markierten Beweis} other {die markierten Beweise}}.",
+        "action": "{itemCount, plural, one {Bestätigen Sie den markierten Beweis} other {Bestätigen Sie die markierten Beweise}}, um diese Antwort sofort zu senden, statt zu warten."
+      },
+      "withheld": {
+        "title": "Diese Antwort wird nicht gesendet",
+        "body": "Wenn die Beweise ausgeklammert werden, die Ihre Bestätigung benötigen, bleibt nichts übrig, wofür DisputeDesk einstehen kann. Eine Antwort zu senden, die sich nicht belegen lässt, würde Ihren Fall schwächen – deshalb wird nichts gesendet.",
+        "action": "Fügen Sie Beweise zu diesem Streitfall hinzu oder bestätigen Sie sie, um das zu ändern."
+      },
+      "reviewItem": {
+        "generic": "Dieser Beweis benötigt Ihre Bestätigung, bevor er verwendet werden kann."
+      }
     }
   },
   "disputeReasons": {
