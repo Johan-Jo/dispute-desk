@@ -584,6 +584,21 @@ redesign; lost-response audit remediation; `finalizeRefused` cron alerting redes
 transaction-authorized final → submitted/superseded transitions; **historical / already-sent
 remediation (CP-E)**.
 
+**Added 2026-08-10, from D-1's resolution (answered KEEP — see
+`docs/evidence-model/p4/d1-billing-match-replay.md` §7):**
+
+- **The orphaned `billing_match` category in `visa_10_4_fraud.criticalCategories`.** Zero members
+  since PR-C4 retired `billing_address_match`, which makes the module unconditionally `narrow` —
+  Visa 10.4 is the only reason module that has never produced a full-mode package. Kept for this
+  delivery because removal moves 61 live open cases' bank narratives and `derivePackageMode` is on
+  the shared classification path, so it would land on the activation-OFF route immediately rather
+  than at PR 3. Whether `full` is the right posture for 10.4 is a question about the module, to be
+  answered on its own evidence after the cutover.
+- **The `defence_manual_evidence.evidence_category` override.** While the entry is kept, a single
+  ops row categorised `billing_match` flips a Visa 10.4 package `narrow → full` with no code change
+  and no review. Prod holds zero such rows (C-7), so nothing is exposed today; post-cutover work
+  decides whether the override should be constrained.
+
 ---
 
 ## 15. Target schedule

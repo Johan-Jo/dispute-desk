@@ -1,9 +1,11 @@
 # D-1 — `visa_10_4_fraud.criticalCategories` and the orphaned `billing_match` entry
 
-> **Status:** MEASURED. **Not decided.**
-> **Produced by:** Epic CP-B (Agent B), 2026-08-09 · **Answered by:** the maintainer, inside PR 2's single review
-> **Harness:** [`lib/defence/package/__tests__/d1BillingMatchReplay.test.ts`](../../../lib/defence/package/__tests__/d1BillingMatchReplay.test.ts)
-> **`lib/defence/reasonCodes/visa_10_4_fraud.ts` is UNCHANGED. The entry has not been removed.**
+> **Status: DECIDED — KEEP.** Answered by the maintainer on 2026-08-10, inside PR 2's single review, on the measurement below.
+> **Produced by:** Epic CP-B (Agent B), 2026-08-09 · **Population count added:** coordinator, 2026-08-10
+> **Harnesses:** [`lib/defence/package/__tests__/d1BillingMatchReplay.test.ts`](../../../lib/defence/package/__tests__/d1BillingMatchReplay.test.ts) (cells) · [`scripts/evidence-model/d1BillingMatchPopulation.analysis.ts`](../../../scripts/evidence-model/d1BillingMatchPopulation.analysis.ts) (population)
+> **`lib/defence/reasonCodes/visa_10_4_fraud.ts` is UNCHANGED and stays that way. The entry is NOT removed.**
+>
+> **The decision is in §7.** Sections 1–6 are the measurement it was taken on and are left exactly as they read before it.
 
 ---
 
@@ -173,4 +175,54 @@ and no review. The harness pins that behaviour so the answer is made with it vis
   does not replace it).
 - No regeneration, backfill or remediation of any existing package.
 
-**D-1 is answered by the maintainer, on this output, inside PR 2's single review.**
+**D-1 was answered on this output, inside PR 2's single review — see §7. The answer is KEEP.**
+
+---
+
+## 7. THE DECISION — KEEP (maintainer, 2026-08-10)
+
+`billing_match` **stays** in `visa_10_4_fraud.criticalCategories` for this delivery.
+
+### 7.1 Why
+
+**Preservation of approved production behaviour.** Two facts, together:
+
+1. Removal changes the bank narrative of **61 currently-live open cases** (§4a). `packageMode`
+   selects thesis templates and gates the narrow-mode phrasing rules, so those 61 cases would
+   start arguing differently to the same issuers. That is a real change to filed evidence, and it
+   has not been reviewed as one.
+2. **`derivePackageMode` sits on the SHARED classification path, not behind the canonical
+   switch.** It is reached by `buildDefencePackageJob` regardless of `CANONICAL_PIPELINE`, so
+   removing the entry would take effect **immediately, on the activation-OFF route** — not at
+   PR 3 with the rest of the cutover, and not with the rollback story the switch provides.
+
+A behavioural change to 61 live cases that lands outside the switch it appears to belong to is
+the opposite of what a dark PR is for. The entry is orphaned; it is also, today, load-bearing for
+behaviour that is approved and in production.
+
+### 7.2 What is NOT being done
+
+- No edit to `visa_10_4_fraud.ts`.
+- **No containment fix.** No CI invariant, no guard, no shim, no second predicate to "protect"
+  the entry or to route around it. The entry is correct-as-shipped for this delivery; adding
+  machinery to defend a decision to change nothing would be a third layer with an opinion about
+  `packageMode`, which is the class of problem this epic exists to close.
+
+### 7.3 What is carried to backlog
+
+Two concerns are real and are **deferred, not dismissed** — recorded in
+`docs/plans/canonical-pipeline-lite.plan.md` §14:
+
+1. **The orphaned category itself.** `billing_match` has zero members since PR-C4 retired
+   `billing_address_match`, so the `payment_authentication` half of the pair, the fact-count rule,
+   the strength rule and the fatal-loss rule are all unreachable for this module. Visa 10.4 is the
+   only reason module that has never produced a full-mode package (§4a). Whether that is the right
+   argument posture for 10.4 is a question about the module, to be answered on its own evidence
+   after the cutover — not as a side effect of a category retirement.
+2. **The manual-override reachability caveat (§5).** While the entry is kept, a single
+   `defence_manual_evidence` row categorised `billing_match` would flip a Visa 10.4 package from
+   `narrow` to `full` with no code change and no review. Prod holds zero such rows (C-7), so
+   nothing is exposed today. Post-cutover work decides whether that override should be
+   constrained.
+
+Neither is a blocker for PR 2 or PR 3.
