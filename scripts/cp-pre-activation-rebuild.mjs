@@ -54,6 +54,15 @@ const ENV_FILES = { dev: ".env.local", prod: ".env.production.local" };
 const args = process.argv.slice(2);
 const envArg = args[args.indexOf("--env") + 1];
 const APPLY = args.includes("--apply");
+/* Pilot controls. §9.3 on prod is not a single shot: `buildPackJob` runs
+ * `evaluateAndMaybeAutoSave` after every rebuild, so a pack that now clears the
+ * gate is stamped and enqueued for a save that files evidence with
+ * `submitEvidence: true`. A bulk run is therefore an outward-facing action on
+ * live disputes, and the only responsible way to size it is to do a few first
+ * and measure. Ordered by dispute id so the selection is deterministic and a
+ * later batch cannot silently re-pick the same cases. */
+const SHOP = args.includes("--shop") ? args[args.indexOf("--shop") + 1] : null;
+const LIMIT = args.includes("--limit") ? Number(args[args.indexOf("--limit") + 1]) : null;
 const OUT =
   args.includes("--out") ? args[args.indexOf("--out") + 1] : `tmp/cp-rebuild-before-${envArg}.json`;
 
@@ -156,7 +165,17 @@ for (const p of packs) {
 /* CURRENT OPEN, UNSUBMITTED. `saved_to_shopify_at IS NULL` on the LATEST pack
  * is the unsubmitted test — never `status`, which a pack that cleared the gate
  * has already had rewritten to `saved_to_shopify`. */
-const population = [...latest.values()].filter((p) => p.saved_to_shopify_at === null);
+const shopRows = await page("shops?select=id,shop_domain");
+const domainOf = new Map(shopRows.map((s) => [s.id, s.shop_domain]));
+
+let population = [...latest.values()]
+  .filter((p) => p.saved_to_shopify_at === null)
+  .sort((a, b) => (a.dispute_id < b.dispute_id ? -1 : 1));
+const fullPopulationSize = population.length;
+
+if (SHOP) population = population.filter((p) => domainOf.get(p.shop_id) === SHOP);
+const scopedSize = population.length;
+if (LIMIT !== null) population = population.slice(0, LIMIT);
 
 const before = {
   ranAt: new Date().toISOString(),
@@ -188,7 +207,9 @@ writeFileSync(join(process.cwd(), OUT), JSON.stringify(before, null, 2));
 
 console.log(`\nOPEN disputes:            ${disputes.length}`);
 console.log(`  with a pack:            ${latest.size}`);
-console.log(`  OPEN + UNSUBMITTED:     ${population.length}   <- the population`);
+console.log(`  OPEN + UNSUBMITTED:     ${fullPopulationSize}   <- the full population`);
+if (SHOP) console.log(`  scoped to ${SHOP}:  ${scopedSize}`);
+if (LIMIT !== null) console.log(`  LIMIT ${LIMIT} applied — this batch: ${population.length}`);
 console.log(
   `  already canonical:      ${[...latest.values()].filter((p) => p.pack_json?.case_assessment).length}`,
 );
