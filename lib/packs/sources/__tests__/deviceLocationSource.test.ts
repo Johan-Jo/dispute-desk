@@ -145,30 +145,30 @@ describe("computeBankEligible", () => {
 });
 
 describe("generateSummary (interpreted, plain English, no raw IP/org/city)", () => {
-  it("same_city clean + consistent → 'matches billing country and prior customer activity'", () => {
+  it("same_city clean + consistent → 'matches shipping country and prior customer activity'", () => {
     const s = generateSummary(ipinfo(), { country: "US" }, "same_city", CLEAN, "consistent");
-    expect(s).toBe("Location matches billing country and prior customer activity.");
+    expect(s).toBe("Location matches shipping country and prior customer activity.");
   });
 
-  it("same_city clean + first_seen → 'matches billing country' (no consistency line on this row)", () => {
+  it("same_city clean + first_seen → 'matches shipping country' (no consistency line on this row)", () => {
     const s = generateSummary(ipinfo(), { country: "US" }, "same_city", CLEAN, "first_seen");
-    expect(s).toBe("Location matches billing country.");
+    expect(s).toBe("Location matches shipping country.");
   });
 
-  it("same_country clean + variable → 'matches billing country' (variable downgrade not exposed on IP row)", () => {
+  it("same_country clean + variable → 'matches shipping country' (variable downgrade not exposed on IP row)", () => {
     const s = generateSummary(ipinfo(), { country: "US" }, "same_country", CLEAN, "variable");
-    expect(s).toBe("Location matches billing country.");
+    expect(s).toBe("Location matches shipping country.");
   });
 
-  it("different_country clean → 'Purchase location differs from billing country.'", () => {
+  it("different_country clean → 'Purchase location differs from shipping country.'", () => {
     const s = generateSummary(ipinfo({ country: "PT" }), { country: "BR" }, "different_country", CLEAN, "consistent");
-    expect(s).toBe("Purchase location differs from billing country.");
+    expect(s).toBe("Purchase location differs from shipping country.");
   });
 
   it("any privacy flag adds a second reliability line", () => {
     const s = generateSummary(ipinfo(), { country: "US" }, "same_city", VPN, "consistent");
     expect(s).toBe(
-      "Location matches billing country and prior customer activity.\nVPN or proxy detected — location reliability reduced.",
+      "Location matches shipping country and prior customer activity.\nVPN or proxy detected — location reliability reduced.",
     );
   });
 
@@ -219,7 +219,7 @@ describe("generateBankParagraph (only called when eligible) — bank-grade short
       { country: "BR" },
     );
     expect(p).toBe(
-      "The purchase originated from a location consistent with the customer's billing details and prior activity.",
+      "The purchase originated from a location consistent with the shipping destination and prior activity.",
     );
   });
 
@@ -228,7 +228,7 @@ describe("generateBankParagraph (only called when eligible) — bank-grade short
     const b = generateBankParagraph(ipinfo(), 5, "consistent", "same_country", { country: "US" });
     expect(a).toBe(b);
     expect(a).toBe(
-      "The purchase originated from a location consistent with the customer's billing details and prior activity.",
+      "The purchase originated from a location consistent with the shipping destination and prior activity.",
     );
   });
 
