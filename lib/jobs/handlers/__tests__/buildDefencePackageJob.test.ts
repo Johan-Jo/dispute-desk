@@ -61,6 +61,7 @@ function mockSb(args: ChainBuilderArgs) {
     type Chain = {
       select: (cols: string) => Chain;
       eq: (k: string, v: unknown) => Chain;
+      neq: (k: string, v: unknown) => Chain;
       order: (k: string, opts?: unknown) => Chain;
       limit: (n: number) => Chain;
       single: () => Promise<{ data: unknown; error: null }>;
@@ -78,6 +79,9 @@ function mockSb(args: ChainBuilderArgs) {
     const chain: Chain = {
       select: () => chain,
       eq: () => chain,
+      // The worker's defensive guard reads the version BENEATH the draft it is
+      // building, so the chain must offer `.neq(...)`.
+      neq: () => chain,
       order: () => chain,
       limit: () => chain,
       single: async () => ({ data: returningData, error: null }),

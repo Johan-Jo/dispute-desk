@@ -50,6 +50,10 @@ import { decideForPack } from "@/lib/automation/decision";
 import { getShopSettings } from "@/lib/automation/settings";
 import { canonicalPipelineEnabled } from "@/lib/pipeline/activation";
 import {
+  evaluateGenerationGuard,
+  generationBlockPayload,
+} from "@/lib/defence/latestPackageGenerationGuard";
+import {
   derivePlanForCase,
   planHasSafeArgument,
   type PlanForCase,
@@ -166,6 +170,49 @@ export async function handleBuildDefencePackage(
   ]);
   if (!pack) {
     return await markFailed(sb, pkg, "source pack missing", "validation_failed");
+  }
+
+  /* ── DEFENSIVE RE-CHECK: a job may predate the guard ────────────────
+   *
+   * `maybeEnqueueDefencePackage` declines to CREATE a draft over a
+   * human-gated rejection, but a draft inserted before that guard existed —
+   * or by any future path — already has a job pointing at it, and the
+   * non-draft refusal above does not catch it: THIS row is a valid draft; the
+   * rejection is on the version beneath it.
+   *
+   * Same predicate, evaluated against the newest OTHER version. Declines
+   * without marking this row failed: it is not defective, it should not have
+   * been created, and turning it into a second failure would deepen the state
+   * the guard exists to protect. Not retriable — retrying re-reads the same
+   * rejection. */
+  const { data: priorLatest } = await sb
+    .from("defence_packages")
+    .select("id, version, status, validation_status, failure_code")
+    .eq("dispute_id", pkg.dispute_id)
+    .neq("id", pkg.id)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const priorGuard = evaluateGenerationGuard(priorLatest);
+  if (priorGuard.blocked) {
+    await logAuditEvent({
+      shopId: pkg.shop_id,
+      disputeId: pkg.dispute_id,
+      packId: pkg.source_pack_id,
+      actorType: "system",
+      eventType: "defence_package_generation_skipped",
+      eventPayload: {
+        ...generationBlockPayload(priorGuard),
+        detected_at: "worker",
+        abandoned_draft_id: pkg.id,
+        abandoned_draft_version: pkg.version,
+      },
+    });
+    return {
+      ok: false,
+      retriable: false,
+      reason: `generation_blocked: ${priorGuard.reason}`,
+    };
   }
 
   const packJson = (pack.pack_json ?? {}) as Record<string, unknown>;

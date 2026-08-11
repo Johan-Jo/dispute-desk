@@ -163,6 +163,9 @@ function mockSb(packJson: Record<string, unknown>, captured: Captured) {
     const chain: Chain = {
       select: () => chain,
       eq: () => chain,
+      // The worker's defensive guard reads the version BENEATH the draft it is
+      // building, so the chain must offer `.neq(...)`.
+      neq: () => chain,
       in: () => chain,
       is: () => chain,
       order: () => chain,
