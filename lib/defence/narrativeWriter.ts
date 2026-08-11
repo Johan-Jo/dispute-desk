@@ -25,6 +25,7 @@
 import { alwaysAdmissibleCategories } from "./alwaysAdmissible";
 import { reachesLlmPayloadLegacy } from "./bankInclusion";
 import { deriveClaimCapabilities } from "./claimCapabilities";
+import { projectScreeningValueForBank } from "@/lib/argument/fraudScreeningSignals";
 import { getServiceClient } from "@/lib/supabase/server";
 import {
   callClaudeMessages,
@@ -70,7 +71,33 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // pays full prompt cost, subsequent calls amortise.
 // v10 (PR-C1, 2026-08-07): rule 14 — structural claim capabilities; the
 // verified-address delivery claim is prohibited on every case.
-const PROMPT_VERSION = 10;
+// v11 (2026-08-11, AVS hotfix): the prompt contained four paths to the
+// claim the C-12 validator refuses. 4 of 6 regenerations on 2026-08-11
+// failed, every one on that rule.
+//   * rule 7's worked example WAS the forbidden string ("…and the card
+//     verification code matched the issuer's records"), so with a null
+//     verificationSummary the model reproduced its own instructions;
+//   * rule 8b offered two "softer" replacements that both asserted
+//     card-verification evidence — on an AVS-only case they imply a CVV
+//     result that does not exist, and the first names no code or value so
+//     the CVV guard cannot catch it. REMOVED, not conditioned: rule 7 is
+//     the whole contract;
+//   * rule 14 forbade describing an address as verified/matched under any
+//     circumstances, contradicting rule 7's licensed clause. Now scoped to
+//     the DELIVERY DESTINATION, matching `isLicensedAvsClause`;
+//   * `visa_10_4_fraud`'s module block, appended after this one, still said
+//     "Prioritise … AVS+CVV match" and carried the same replacement
+//     sentence. Fixed there, module version 7 → 8.
+// v12 (2026-08-11, same day): reading the RUNTIME strings rather than the
+// diff showed the fix still had the failure mechanism in it. Rule 7's null
+// branch PRINTED all three observed failure forms as negative examples, and
+// rule 14 printed the licensed clause twice as a RIGHT example. The model
+// sees those strings on every call, including calls where the case carries
+// no verificationSummary — which is exactly how the regression happened.
+// Neither section now contains any concrete AVS, billing-address or
+// security-code sentence, in either direction. The only permitted text on
+// the subject is a verbatim copy of the runtime verificationSummary value.
+const PROMPT_VERSION = 12;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
@@ -109,15 +136,31 @@ Rules:
 
    PAYMENT AUTHENTICATION CODES (AVS / CVV) — DO NOT quote the raw
    single-letter gateway result codes ("Y", "M", "N", "Z", "A", "W",
-   "X", etc.) in any merchant prose. The fact value carries a
-   pre-translated verificationSummary string (e.g. "the billing
-   address matched the issuer's records and the card verification
-   code matched the issuer's records") — quote that summary instead.
-   Raw letter codes look unhinged in bank-facing prose and force the
-   reader to look up the AVS/CVV reference. If verificationSummary
-   is null, summarise neutrally ("the available payment authentication
-   signals are consistent with a cardholder-initiated transaction")
-   without naming the underlying letter codes.
+   "X", etc.) in any merchant prose. Raw letter codes look unhinged in
+   bank-facing prose and force the reader to look up the AVS/CVV
+   reference.
+
+   QUOTE verificationSummary VERBATIM. It is the ONLY approved wording
+   for address or security-code verification. Do not paraphrase it, do
+   not extend it, and do not write address- or security-code language
+   that is not in it.
+
+   IF verificationSummary IS NULL OR ABSENT: the case has no citable
+   verification. OMIT THE ENTIRE SUBJECT. Write nothing asserting that
+   an address, a billing detail or a security code was checked,
+   verified, matched, confirmed, accepted, on record or in agreement
+   with anything — in any wording, in any section. Do not hedge it
+   either: a softened, qualified or "consistent with" version of an
+   unsupported assertion is the same assertion. Argue the case from the
+   facts you do have.
+
+   NO EXAMPLE SENTENCES ARE GIVEN HERE, in either direction. Concrete
+   claim text in this prompt is what produced the failure this rule
+   exists to prevent: printed as an illustration, it was reproduced as
+   output on cases that did not carry the evidence. The only text you
+   may write on this subject is a verbatim copy of the runtime value of
+   verificationSummary.
+
 8. Do NOT use overclaim or accusatory language: NEVER use "irrefutable",
    "definitive proof", "definitively proves", "definitively shows
    authorization", "undeniable", "unequivocally", "baseless", "invalidates
@@ -138,14 +181,19 @@ Rules:
 
 8b. CARD-NOT-PRESENT disputes only: NEVER claim the cardholder had
    "possession of the physical card", "had the physical card", "held
-   the card", or that the "card was physically present". AVS and CVV
-   confirm access to verification credentials and billing details on
-   record with the issuer, not physical possession. Use:
-   - "had access to card verification credentials and billing details
-     associated with the cardholder account"
-   - "provided verification details that matched issuer records"
-   - "submitted billing and card verification data that matched the
-     cardholder account"
+   the card", or that the "card was physically present". Card-not-present
+   evidence does not establish physical possession — and the reason it does
+   not is NOT a licence to describe what it does establish instead. Any
+   statement about what was verified, checked or held on record is governed
+   by rule 7 and by nothing else.
+
+   NO REPLACEMENT SENTENCE IS OFFERED, and none is quoted here — a
+   prompt that prints the sentence it is banning teaches that sentence.
+   The suggestions that used to sit at this point all asserted
+   card-verification evidence, so on an address-only case they implied
+   a security-code result that did not exist. Rule 7 is the whole
+   contract: quote verificationSummary verbatim and add nothing. If you
+   cannot say it by quoting, do not say it.
 
 8c. FULFILLMENT precision. order.fulfillmentStatus=FULFILLED alone is
    NOT delivery, access, use, or service completion. The forbidden
@@ -235,11 +283,25 @@ Rules:
 
     "address_delivery" is NOT authorized on any case today. You must never
     state, imply, or paraphrase that a delivery occurred AT a particular
-    physical address, and never describe an address as verified, matched,
-    AVS-confirmed, the cardholder's, the customer's own, on file, of record,
-    or the same as the billing address. Do not assert that the billing and
-    shipping addresses agree. DisputeDesk holds no evidence connecting a
-    delivery event to an address.
+    physical address, and never describe the DELIVERY DESTINATION as
+    verified, matched, AVS-confirmed, the cardholder's, the customer's own,
+    on file, of record, or the same as the billing address. Do not assert
+    that the billing and shipping addresses agree. DisputeDesk holds no
+    evidence connecting a delivery event to an address.
+
+    WHAT THIS RULE DOES NOT PROHIBIT. Rule 7's standalone
+    payment-authentication clause stays permitted — a verbatim copy of the
+    runtime verificationSummary, presented as an AUTHENTICATION statement and
+    nothing else. What is forbidden is COUPLING that clause to a delivery, so
+    that the address becomes a destination. Authentication and delivery are
+    claims about different facts and different evidence.
+
+    The same distinction is enforced structurally by \`isLicensedAvsClause\`: a
+    clause opening in a destination role — a directional preposition
+    introducing the delivery predicate's argument — is refused however it goes
+    on to read. So the copied clause may stand on its own; it may not become
+    the place something was delivered to. No sample sentence is printed here
+    for either case, for the reason rule 7 gives.
 
     Permitted delivery wording (when a delivery fact is approved): the
     carrier name, the tracking number, the tracking URL, the delivery status,
@@ -492,6 +554,20 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
   // strictly weaker than `isBankIncludedFact`, and converging the two changes
   // what the model sees on live disputes — a reviewed change with a measured
   // delta, not a silent one. Behaviour here is unchanged.
+  /* SCREENING VERIFICATION PHRASES NEVER ENTER THE PAYLOAD.
+   *
+   * `value` used to pass through unchanged, so a `fraud_screening` fact
+   * carried Shopify's raw `positiveFacts` — including sentences asserting an
+   * address match or a correct card code — straight into the context window.
+   * The model was shown the forbidden assertion AS EVIDENCE and then refused
+   * when it repeated it. Removing those strings from the system prompt did not
+   * touch this path.
+   *
+   * The classification is `lib/argument/fraudScreeningSignals.ts`, shared with
+   * the Evidence Basis row, so the model is never asked to decide which of its
+   * own inputs are safe to quote. A fact whose signals were ALL verification
+   * assertions is dropped entirely — an empty corroborator corroborates
+   * nothing. */
   const approvedFacts = input.approvedFacts
     .filter(reachesLlmPayloadLegacy)
     .map((f) => ({
@@ -499,8 +575,9 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
       category: f.category,
       label: f.label,
       strength: f.strength,
-      value: f.value,
-    }));
+      value: projectScreeningValueForBank(f.value),
+    }))
+    .filter((f) => f.value !== null);
 
   // Some facts are admissible under ANY claim type and must not be gated on
   // the reason code, because the reason code comes from the BANK's label and

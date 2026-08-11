@@ -141,12 +141,12 @@ export function generateSummary(
   // Primary verdict
   let primary: string;
   if (match === "different_country") {
-    primary = "Purchase location differs from billing country.";
+    primary = "Purchase location differs from shipping country.";
   } else if (match === "same_city" || match === "same_country") {
     primary =
       consistency === "consistent"
-        ? "Location matches billing country and prior customer activity."
-        : "Location matches billing country.";
+        ? "Location matches shipping country and prior customer activity."
+        : "Location matches shipping country.";
   } else {
     return "";
   }
@@ -206,7 +206,15 @@ export function generateBankParagraph(
   _shipping: { country: string | null } | null,
 ): string | null {
   if (!ipinfo) return null;
-  return "The purchase originated from a location consistent with the customer's billing details and prior activity.";
+  /* SHIPPING, because that is what `computeLocationMatch` compared.
+   *
+   * This said "billing details" while the verdict above it was computed
+   * against `order.shippingAddress` — a bank-facing sentence describing a
+   * comparison that never ran. It also invited the retired billing↔shipping
+   * agreement claim by implying a relationship between the two addresses.
+   * The collector is NOT changed to compare billing: which address to compare
+   * is an evidence-design decision, not a copy fix. */
+  return "The purchase originated from a location consistent with the shipping destination and prior activity.";
 }
 
 /* ═══════════════════════════════════════════════════════════════════ */

@@ -32,6 +32,10 @@ import {
   type EvidenceCategory,
 } from "./canonicalEvidence";
 import {
+  bankFacingScreeningSignals,
+  screeningReachesBank,
+} from "./fraudScreeningSignals";
+import {
   numberFromTrackingUrl,
   resolveDeliveryTitle,
   resolveDeliveryReceipt,
@@ -509,11 +513,13 @@ function fraudScreeningReasonWithSignals(
 ): I18nToken | null {
   if (!payload || typeof payload !== "object") return null;
   const p = payload as Record<string, unknown>;
-  const facts = Array.isArray(p.positiveFacts)
-    ? (p.positiveFacts as unknown[]).filter(
-        (x): x is string => typeof x === "string",
-      )
-    : [];
+  /* BANK-FACING SUBSET ONLY. These signals are inlined verbatim into the
+   * Evidence Basis row, which reaches the issuer with no claim guard between
+   * it and the page — so a verification phrase here is an unlicensed
+   * verification claim on a bank surface. Same owner as the LLM payload
+   * (`fraudScreeningSignals.ts`); a second regex here is the drift that
+   * module exists to prevent. */
+  const facts = bankFacingScreeningSignals(p.positiveFacts);
   if (facts.length === 0) return null;
   const signals = facts.join("; ");
   if (method === "bank_argument") {
@@ -925,6 +931,29 @@ function isNegativeOrAmbiguous(
     // The explicit flag is the primary signal; positiveFacts.length is a
     // belt-and-suspenders backstop for older payloads that pre-date the flag.
     if (payload.isNegativeVerdict === true) return true;
+
+    /* NOTHING BANK-FACING SURVIVED THE FILTER → INTERNAL-ONLY.
+     *
+     * Filtering the SIGNALS was not enough. `fraudScreeningReasonWithSignals`
+     * returned null when every phrase was a verification assertion, and
+     * `reasonFor` then fell back to the static `fraudScreening.bankArgument`
+     * reason — so the row still shipped in the defence package and still told
+     * the bank the screening recommended ACCEPT, with the evidence for that
+     * recommendation removed. A corroborator stripped of its content is not a
+     * quieter claim; it is the same claim with nothing behind it.
+     *
+     * Decided HERE, at the shared inclusion boundary, so all three booleans
+     * (`includedInDefencePackage`, `includedInBankArgument`,
+     * `usedAsPositiveBankEvidence`) and the PDF fall together — routing it
+     * `internal_only` rather than rewording a fallback. The predicate is
+     * `screeningReachesBank` from `fraudScreeningSignals.ts`, the same owner
+     * the LLM payload and the row reason use; a fourth regex here is the drift
+     * that module exists to prevent.
+     *
+     * The raw payload is untouched: the merchant still sees every signal the
+     * collector returned. */
+    if (!screeningReachesBank(payload.positiveFacts)) return true;
+
     const positiveFacts = payload.positiveFacts;
     if (Array.isArray(positiveFacts) && positiveFacts.length === 0) {
       // No positive facts to cite. If the collector ran and we have a
