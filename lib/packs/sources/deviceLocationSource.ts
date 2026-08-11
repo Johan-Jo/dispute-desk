@@ -214,7 +214,18 @@ export function generateBankParagraph(
    * agreement claim by implying a relationship between the two addresses.
    * The collector is NOT changed to compare billing: which address to compare
    * is an evidence-design decision, not a copy fix. */
-  return "The purchase originated from a location consistent with the shipping destination and prior activity.";
+  /* WORDED TO PASS THE STRUCTURAL GUARD, not merely to be accurate.
+   *
+   * The previous sentence — "a location consistent with the shipping
+   * destination" — is rated `ambiguous` by `classifyAddressDeliveryClaim`,
+   * because "location"/"destination" in a delivery-adjacent sentence is
+   * exactly the shape it exists to catch. A bank-facing sentence this module
+   * emits must survive the validator that reads it; one that cannot is a
+   * package that fails to build.
+   *
+   * The COUNTRY is what `computeLocationMatch` actually compares, so naming it
+   * is both narrower and truer than naming a "destination". */
+  return "The order originated from the same country recorded for shipping on this order, with no VPN, proxy or datacenter signals.";
 }
 
 /* ═══════════════════════════════════════════════════════════════════ */
