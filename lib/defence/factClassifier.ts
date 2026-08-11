@@ -521,10 +521,35 @@ function extractValue(
           typeof p.recommendation === "string" ? p.recommendation : null,
       };
     }
-    case "ip_location_check":
+    case "ip_location_check": {
+      /* ONE APPROVED SENTENCE, like `verificationSummary`.
+       *
+       * The fact used to carry `locationMatch` alone — a bare enum — and the
+       * model was left to phrase the signal itself. On 2026-08-11 it wrote
+       * "the order IP geolocated to the same country as the billing and
+       * shipping address": an assertion about two addresses, from a fact that
+       * names neither, which is the retired billing/shipping agreement claim
+       * and failed validation as an address-delivery claim.
+       *
+       * Neither the pack nor the facts contained that phrase — it was
+       * generated. Correcting the prompt's EXAMPLE did not stop it, because
+       * the model was not copying an example; it was filling a gap. So the
+       * gap is closed the way the AVS gap was: the wording is produced here,
+       * from the collector that owns the comparison, and the model quotes it
+       * or says nothing.
+       *
+       * `bankLocationSummary` describes the SHIPPING comparison, because
+       * `computeLocationMatch` compares the IP against `order.shippingAddress`
+       * and nothing else. */
+      const summary =
+        typeof p.bankParagraph === "string" && p.bankParagraph.trim().length > 0
+          ? p.bankParagraph.trim()
+          : null;
       return {
         locationMatch: typeof p.locationMatch === "string" ? p.locationMatch : null,
+        bankLocationSummary: summary,
       };
+    }
     case "device_session_consistency":
       return {
         consistent: p.consistent === true,

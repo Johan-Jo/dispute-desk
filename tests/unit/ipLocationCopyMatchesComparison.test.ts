@@ -91,13 +91,15 @@ describe("no IP-location surface invents a billing relationship", () => {
   });
 
   it("the Visa module's IP guidance names shipping and forbids the billing framing", () => {
-    expect(visa_10_4_fraud.promptBody).toMatch(/same country as the shipping destination/);
-    expect(visa_10_4_fraud.promptBody).toMatch(/comparison is against the SHIPPING address/);
+    // The module no longer supplies ANY phrasing — the fact carries the one
+    // approved sentence and the prompt requires a verbatim copy (v10).
+    expect(visa_10_4_fraud.promptBody).toMatch(/VERBATIM copy of that fact's `bankLocationSummary`/);
+    expect(visa_10_4_fraud.promptBody).toMatch(/COMPARISON IS AGAINST THE SHIPPING ADDRESS/);
     expect(visa_10_4_fraud.promptBody).toMatch(/retired agreement claim/);
   });
 
   it("its pre-gate description matches the gate that actually runs", () => {
     expect(visa_10_4_fraud.promptBody).not.toMatch(/same country\/city as billing/);
-    expect(visa_10_4_fraud.promptBody).toMatch(/same country\/city as the SHIPPING address/);
+    expect(visa_10_4_fraud.promptBody).toMatch(/COMPARISON IS AGAINST THE SHIPPING ADDRESS/);
   });
 });
