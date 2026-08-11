@@ -243,7 +243,7 @@ describe("neither runtime prompt prints a concrete verification claim", () => {
   });
 
   it("both cached bodies were re-versioned", () => {
-    expect(CURRENT_PROMPT_VERSION).toBe(12);
+    expect(CURRENT_PROMPT_VERSION).toBe(13);
     expect(visa_10_4_fraud.version).toBe(9);
   });
 });
@@ -336,7 +336,7 @@ describe("rule 14 blocks the delivery coupling, not the authentication clause", 
      * two rules, the model has to guess, and the audit shows which way it
      * guessed. */
     expect(BASE).toMatch(/WHAT THIS RULE DOES NOT PROHIBIT/);
-    expect(BASE).toMatch(/never describe the DELIVERY DESTINATION as/);
+    expect(BASE).toMatch(/never characterise the DELIVERY DESTINATION at all/);
     expect(BASE).toMatch(/isLicensedAvsClause/);
   });
 
