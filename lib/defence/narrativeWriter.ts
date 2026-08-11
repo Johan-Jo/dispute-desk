@@ -70,7 +70,16 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // pays full prompt cost, subsequent calls amortise.
 // v10 (PR-C1, 2026-08-07): rule 14 — structural claim capabilities; the
 // verified-address delivery claim is prohibited on every case.
-const PROMPT_VERSION = 10;
+// v11 (2026-08-11, AVS hotfix): rule 7 no longer TEACHES the phrase the
+// C-12 validator refuses. Its worked example was literally "the billing
+// address matched the issuer's records and the card verification code
+// matched the issuer's records" — so when verificationSummary came back
+// null the model reproduced the most salient phrasing in the prompt and
+// the package failed deterministic validation. 4 of 6 regenerations on
+// 2026-08-11, every one on this rule. Rule 7 now states the omission
+// requirement instead of demonstrating the violation, and 8b's softer
+// phrasings are explicitly conditional on a summary existing.
+const PROMPT_VERSION = 11;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
@@ -109,15 +118,30 @@ Rules:
 
    PAYMENT AUTHENTICATION CODES (AVS / CVV) — DO NOT quote the raw
    single-letter gateway result codes ("Y", "M", "N", "Z", "A", "W",
-   "X", etc.) in any merchant prose. The fact value carries a
-   pre-translated verificationSummary string (e.g. "the billing
-   address matched the issuer's records and the card verification
-   code matched the issuer's records") — quote that summary instead.
-   Raw letter codes look unhinged in bank-facing prose and force the
-   reader to look up the AVS/CVV reference. If verificationSummary
-   is null, summarise neutrally ("the available payment authentication
-   signals are consistent with a cardholder-initiated transaction")
-   without naming the underlying letter codes.
+   "X", etc.) in any merchant prose. Raw letter codes look unhinged in
+   bank-facing prose and force the reader to look up the AVS/CVV
+   reference.
+
+   QUOTE verificationSummary VERBATIM. It is the ONLY approved wording
+   for address or security-code verification. Do not paraphrase it, do
+   not extend it, and do not write address- or security-code language
+   that is not in it.
+
+   IF verificationSummary IS NULL OR ABSENT: the case has no citable
+   verification. OMIT the subject entirely. Do NOT write that anything
+   "matched the issuer's records", that a "billing address was
+   verified", or that a "card security code" matched — those sentences
+   are refused by a deterministic validator and the package fails to
+   build. Do NOT substitute a vaguer version of the same claim either:
+   "the payment details appear consistent with the cardholder" is the
+   same unsupported assertion with hedging. Say nothing about
+   verification and argue the case on the facts you do have.
+
+   IF verificationSummary CONTAINS ONLY a security-code clause, that is
+   a case where the address did NOT match. Quote the security-code
+   clause and write NOTHING about the billing address — not even that
+   it was "on file", "associated with" or "consistent with" the
+   cardholder.
 8. Do NOT use overclaim or accusatory language: NEVER use "irrefutable",
    "definitive proof", "definitively proves", "definitively shows
    authorization", "undeniable", "unequivocally", "baseless", "invalidates
@@ -140,10 +164,15 @@ Rules:
    "possession of the physical card", "had the physical card", "held
    the card", or that the "card was physically present". AVS and CVV
    confirm access to verification credentials and billing details on
-   record with the issuer, not physical possession. Use:
+   record with the issuer, not physical possession.
+
+   These replacements are available ONLY when verificationSummary is
+   present, and only for what it actually asserts. They are softer
+   phrasings of a SUPPORTED claim, never a way to make an unsupported
+   one deniable — if there is no verificationSummary, none of them may
+   be used:
    - "had access to card verification credentials and billing details
      associated with the cardholder account"
-   - "provided verification details that matched issuer records"
    - "submitted billing and card verification data that matched the
      cardholder account"
 
