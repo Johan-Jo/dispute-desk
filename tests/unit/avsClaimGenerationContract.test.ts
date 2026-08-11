@@ -216,18 +216,125 @@ describe("the prompt states the omission rule instead of demonstrating the breac
     expect(prompt).toMatch(/vaguer version of the same claim/);
   });
 
-  it("names the CVV-only case and forbids address prose in it", () => {
-    expect(prompt).toMatch(/ONLY a security-code clause/);
-  });
-
-  it("the softer 8b phrasings are conditional on a summary existing", () => {
-    expect(prompt).toMatch(/ONLY when verificationSummary is\s*\n?\s*present/);
-    // The unconditional "matched issuer records" line is gone: it asserted a
-    // match in a rule whose whole purpose is cases where none is proven.
+  it("does not print the banned sentence even as a negative example", () => {
+    /* The first draft of THIS fix quoted the removed 8b suggestions inside
+     * their own prohibition — reproducing rule 7's original mistake one level
+     * down. A prompt that prints the sentence it is banning teaches that
+     * sentence; the ban is stated as a class instead. */
+    expect(prompt).toMatch(/none is quoted here/);
     expect(prompt).not.toMatch(/provided verification details that matched issuer records/);
   });
 
   it("the prompt version was bumped, or a cached prompt would still teach it", () => {
     expect(src).toMatch(/const PROMPT_VERSION = 11;/);
+  });
+});
+
+
+/* ── 5. The COMPLETE prompt contract ─────────────────────────────────── */
+
+/**
+ * The base prompt is not the whole instruction set. `visa_10_4_fraud`'s
+ * `promptBody` is appended as a second cached system block AFTER it, so a
+ * correction that stops at `narrativeWriter.ts` leaves the module free to
+ * reintroduce the claim two paragraphs later. Both are asserted together.
+ */
+const BASE = (() => {
+  const src = readFileSync(resolve(ROOT, "lib/defence/narrativeWriter.ts"), "utf8");
+  return src.slice(src.indexOf("BASE_SYSTEM_PROMPT"), src.indexOf("export interface GenerateNarrativeResult"));
+})();
+const VISA = readFileSync(resolve(ROOT, "lib/defence/reasonCodes/visa_10_4_fraud.ts"), "utf8");
+
+describe("the whole prompt contract, base + module", () => {
+  it("never describes a security-code-ONLY summary — that input cannot exist", () => {
+    /* `citableVerificationSummaryEn` produces an address clause, or an address
+     * clause plus a security-code clause. Never the security-code half alone:
+     * a CVV-only fact returns null AND is excluded from the bank payload by
+     * decision 1. Teaching the model to handle that shape would describe an
+     * impossible input and imply CVV-only prose is sometimes filable. */
+    expect(BASE).not.toMatch(/ONLY a security-code clause/i);
+    expect(BASE).not.toMatch(/CONTAINS ONLY a security/i);
+  });
+
+  it("offers NO card-verification paraphrase anywhere — an AVS-only case must not imply CVV", () => {
+    /* Both removed 8b examples asserted card-verification evidence. On an
+     * AVS-only summary — which is valid and common — they imply a security-code
+     * result that does not exist. The first is the more dangerous of the two:
+     * it names no code and no value, so `cvv_verified_claim`'s pattern cannot
+     * catch it and the claim would ship unrefused. */
+    for (const src of [BASE, VISA]) {
+      expect(src).not.toMatch(/had access to card verification credentials and billing details associated with/);
+      expect(src).not.toMatch(/submitted billing and card verification data that matched/);
+      expect(src).not.toMatch(/provided verification details that matched issuer records/);
+    }
+  });
+
+  it("both prompts require SILENCE when no summary exists, and offer no substitute", () => {
+    expect(BASE).toMatch(/OMIT the subject entirely/);
+    expect(BASE).toMatch(/vaguer version of the same claim/);
+    expect(BASE).toMatch(/NO REPLACEMENT SENTENCE IS OFFERED/);
+    expect(VISA).toMatch(/write NOTHING about AVS/);
+    expect(VISA).toMatch(/no generic replacement sentence/i);
+    expect(VISA).toMatch(/NO REPLACEMENT SENTENCE IS OFFERED/);
+  });
+
+  it("the Visa module no longer prioritises 'AVS+CVV match' unconditionally", () => {
+    /* The module block is appended after the base prompt, so an unconditional
+     * instruction here outranks the base prompt's caution by recency. */
+    expect(VISA).not.toMatch(/Prioritise payment authentication signals: AVS\+CVV match/);
+    expect(VISA).toMatch(/quoting the approved payment_authentication fact's `verificationSummary` verbatim/);
+  });
+
+  it("the Visa module forbids extending an address-only summary to imply CVV", () => {
+    expect(VISA).toMatch(/names ONLY the billing address must never be extended to imply a security-code result/);
+  });
+
+  it("the module version was bumped — its block is cached separately", () => {
+    expect(VISA).toMatch(/version: 8,/);
+  });
+
+  it("a valid AVS-only and a valid AVS+CVV summary both remain quotable verbatim", () => {
+    // The fix must not have made the SUPPORTED sentence unsayable.
+    const avsOnly = citableVerificationSummaryEn(verification({ avs: "Y" }))!;
+    const both = citableVerificationSummaryEn(verification({ avs: "Y", cvv: "M" }))!;
+    expect(guardFailures(avsOnly, "paymentAuthenticationArgument", [paymentFact({ avs: "Y" })])).toEqual([]);
+    expect(
+      guardFailures(both, "paymentAuthenticationArgument", [paymentFact({ avs: "Y", cvv: "M" })]),
+    ).toEqual([]);
+    expect(BASE).toMatch(/QUOTE verificationSummary VERBATIM/);
+  });
+});
+
+/* ── 6. Rule 7 and rule 14 no longer contradict each other ───────────── */
+
+describe("rule 14 blocks the delivery coupling, not the authentication clause", () => {
+  it("rule 14 scopes its address prohibition to the DELIVERY DESTINATION", () => {
+    /* Before this fix rule 14 said "never describe an address as verified,
+     * matched, AVS-confirmed" with no qualifier — flatly contradicting rule 7,
+     * which requires quoting a summary whose text is exactly that. Faced with
+     * two rules, the model has to guess, and the audit shows which way it
+     * guessed. */
+    expect(BASE).toMatch(/WHAT THIS RULE DOES NOT PROHIBIT/);
+    expect(BASE).toMatch(/never describe the DELIVERY DESTINATION as/);
+    expect(BASE).toMatch(/isLicensedAvsClause/);
+  });
+
+  it("the structural distinction it points at is real and unchanged", () => {
+    /* The prompt now cites `isLicensedAvsClause` as its authority. If that
+     * function or #528's destination-opener guard were removed, the prompt
+     * would be citing something that no longer enforces anything. */
+    const caps = readFileSync(resolve(ROOT, "lib/defence/claimCapabilities.ts"), "utf8");
+    expect(caps).toMatch(/isLicensedAvsClause/);
+    expect(caps).toMatch(/OPENS in a destination role/i);
+  });
+
+  it("standalone licensed AVS passes while the destination coupling is refused", () => {
+    const licensed = citableVerificationSummaryEn(verification({ avs: "Y" }))!;
+    const facts = [paymentFact({ avs: "Y" })];
+    // Standalone authentication statement — permitted.
+    expect(guardFailures(licensed, "paymentAuthenticationArgument", facts)).toEqual([]);
+    // The same words in a destination role — refused, per #528.
+    const coupled = "The parcel was delivered, to the billing address that matched the issuer's records.";
+    expect(guardFailures(coupled, "fulfillmentArgument", facts).length).toBeGreaterThan(0);
   });
 });
