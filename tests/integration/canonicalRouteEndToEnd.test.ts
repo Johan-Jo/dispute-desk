@@ -202,6 +202,9 @@ function harness(opts: {
       const q: Record<string, unknown> = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        // `.neq(...)` — the worker's defensive guard excludes the draft it is
+        // building when it looks for the version beneath it.
+        neq: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: row, error: null }),
         maybeSingle: vi.fn().mockResolvedValue({ data: row, error: null }),
@@ -223,6 +226,9 @@ function harness(opts: {
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        // `.neq(...)` — the worker's defensive guard excludes the draft it is
+        // building when it looks for the version beneath it.
+        neq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: packRow, error: null }),
@@ -233,6 +239,9 @@ function harness(opts: {
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        // `.neq(...)` — the worker's defensive guard excludes the draft it is
+        // building when it looks for the version beneath it.
+        neq: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
         lt: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
@@ -244,6 +253,9 @@ function harness(opts: {
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        // `.neq(...)` — the worker's defensive guard excludes the draft it is
+        // building when it looks for the version beneath it.
+        neq: vi.fn().mockReturnThis(),
         single: vi
           .fn()
           .mockResolvedValue({ data: { id: SHOP_ID, shop_domain: "x.myshopify.com" }, error: null }),
@@ -265,6 +277,9 @@ function harness(opts: {
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        // `.neq(...)` — the worker's defensive guard excludes the draft it is
+        // building when it looks for the version beneath it.
+        neq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
@@ -278,6 +293,9 @@ function harness(opts: {
         insert: vi.fn().mockResolvedValue({ data: null, error: null }),
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        // `.neq(...)` — the worker's defensive guard excludes the draft it is
+        // building when it looks for the version beneath it.
+        neq: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
     }
