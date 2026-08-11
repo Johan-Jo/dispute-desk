@@ -44,6 +44,8 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { runClaimGuards } from "@/lib/defence/claimGuards";
+import { BASE_SYSTEM_PROMPT, CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
+import { visa_10_4_fraud } from "@/lib/defence/reasonCodes/visa_10_4_fraud";
 import {
   citableVerificationSummaryEn,
   citableVerificationPartsEn,
@@ -199,37 +201,52 @@ describe("decision 1 still holds — no bank-facing CVV wording exists", () => {
   });
 });
 
-/* ── 4. The prompt no longer teaches the violation ───────────────────── */
+/* ── 4. The RUNTIME prompt contains no concrete claim text ───────────── */
 
-describe("the prompt states the omission rule instead of demonstrating the breach", () => {
-  const src = readFileSync(resolve(ROOT, "lib/defence/narrativeWriter.ts"), "utf8");
-  const prompt = src.slice(src.indexOf("BASE_SYSTEM_PROMPT"), src.indexOf("export interface GenerateNarrativeResult"));
+/**
+ * Asserted against `BASE_SYSTEM_PROMPT` and `visa_10_4_fraud.promptBody` —
+ * the exact strings the model receives — not a slice of the source file.
+ *
+ * Slicing reads code comments, so a rule deleted from the prompt but still
+ * described in the comment above it would "pass"; and it cannot see
+ * `promptBody`'s joined output at all.
+ */
+describe("neither runtime prompt prints a concrete verification claim", () => {
+  /* The three forms observed in production, as PATTERNS. Whether a sentence is
+   * framed as RIGHT or as WRONG is irrelevant — it is present in the context
+   * window either way, on every call, including the calls that carry no
+   * verificationSummary. That is the mechanism this PR exists to remove. */
+  const OBSERVED_PATTERNS: Array<[string, RegExp]> = [
+    ["issuer-record matching", /match\w*\s+the\s+issuer'?s?\s+records?/i],
+    ["billing-address verification", /(?:billing\s+)?address\s+(?:was\s+|has\s+been\s+)?(?:verified|matched|confirmed)/i],
+    ["card security / verification code matching", /card\s+(?:security|verification)\s+(?:code|value)/i],
+  ];
 
-  it("no longer contains the forbidden phrase as a worked example", () => {
-    /* THE root cause. A prompt that prints the exact string a deterministic
-     * validator refuses will get that string back. */
-    expect(prompt).not.toMatch(/card verification\s+code matched the issuer'?s? records/i);
+  for (const [label, pattern] of OBSERVED_PATTERNS) {
+    it(`BASE_SYSTEM_PROMPT contains no ${label} sentence`, () => {
+      expect(BASE).not.toMatch(pattern);
+    });
+    it(`visa_10_4_fraud.promptBody contains no ${label} sentence`, () => {
+      expect(VISA).not.toMatch(pattern);
+    });
+  }
+
+  it("neither prompt prints a RIGHT/WRONG example for the AVS clause", () => {
+    // Rule 14 used to print the licensed sentence twice as a static example.
+    expect(BASE).not.toMatch(/RIGHT → "the billing address/);
+    expect(BASE).not.toMatch(/delivered to the billing address/i);
   });
 
-  it("instructs OMISSION, and forbids the vaguer paraphrase", () => {
-    expect(prompt).toMatch(/OMIT the subject entirely/);
-    expect(prompt).toMatch(/vaguer version of the same claim/);
+  it("the base prompt says why no examples are given", () => {
+    expect(BASE).toMatch(/NO EXAMPLE SENTENCES ARE GIVEN HERE/);
+    expect(BASE).toMatch(/verbatim copy of the runtime value/);
   });
 
-  it("does not print the banned sentence even as a negative example", () => {
-    /* The first draft of THIS fix quoted the removed 8b suggestions inside
-     * their own prohibition — reproducing rule 7's original mistake one level
-     * down. A prompt that prints the sentence it is banning teaches that
-     * sentence; the ban is stated as a class instead. */
-    expect(prompt).toMatch(/none is quoted here/);
-    expect(prompt).not.toMatch(/provided verification details that matched issuer records/);
-  });
-
-  it("the prompt version was bumped, or a cached prompt would still teach it", () => {
-    expect(src).toMatch(/const PROMPT_VERSION = 11;/);
+  it("both cached bodies were re-versioned", () => {
+    expect(CURRENT_PROMPT_VERSION).toBe(12);
+    expect(visa_10_4_fraud.version).toBe(9);
   });
 });
-
 
 /* ── 5. The COMPLETE prompt contract ─────────────────────────────────── */
 
@@ -239,11 +256,15 @@ describe("the prompt states the omission rule instead of demonstrating the breac
  * correction that stops at `narrativeWriter.ts` leaves the module free to
  * reintroduce the claim two paragraphs later. Both are asserted together.
  */
-const BASE = (() => {
-  const src = readFileSync(resolve(ROOT, "lib/defence/narrativeWriter.ts"), "utf8");
-  return src.slice(src.indexOf("BASE_SYSTEM_PROMPT"), src.indexOf("export interface GenerateNarrativeResult"));
-})();
-const VISA = readFileSync(resolve(ROOT, "lib/defence/reasonCodes/visa_10_4_fraud.ts"), "utf8");
+/* THE RUNTIME STRINGS, not a slice of the source file.
+ *
+ * Source slicing reads code comments too, so a rule deleted from the prompt
+ * but described in a comment above it still "passes". Worse, it cannot see
+ * `promptBody`'s `.join("
+")` output at all. These are the exact two cached
+ * system blocks the model receives. */
+const BASE = BASE_SYSTEM_PROMPT;
+const VISA = visa_10_4_fraud.promptBody;
 
 describe("the whole prompt contract, base + module", () => {
   it("never describes a security-code-ONLY summary — that input cannot exist", () => {
@@ -270,10 +291,10 @@ describe("the whole prompt contract, base + module", () => {
   });
 
   it("both prompts require SILENCE when no summary exists, and offer no substitute", () => {
-    expect(BASE).toMatch(/OMIT the subject entirely/);
-    expect(BASE).toMatch(/vaguer version of the same claim/);
+    expect(BASE).toMatch(/OMIT THE ENTIRE SUBJECT/);
+    expect(BASE).toMatch(/Do not hedge it/);
     expect(BASE).toMatch(/NO REPLACEMENT SENTENCE IS OFFERED/);
-    expect(VISA).toMatch(/write NOTHING about AVS/);
+    expect(VISA).toMatch(/write NOTHING on that subject in any wording/);
     expect(VISA).toMatch(/no generic replacement sentence/i);
     expect(VISA).toMatch(/NO REPLACEMENT SENTENCE IS OFFERED/);
   });
@@ -290,7 +311,7 @@ describe("the whole prompt contract, base + module", () => {
   });
 
   it("the module version was bumped — its block is cached separately", () => {
-    expect(VISA).toMatch(/version: 8,/);
+    expect(visa_10_4_fraud.version).toBe(9);
   });
 
   it("a valid AVS-only and a valid AVS+CVV summary both remain quotable verbatim", () => {
@@ -336,5 +357,117 @@ describe("rule 14 blocks the delivery coupling, not the authentication clause", 
     // The same words in a destination role — refused, per #528.
     const coupled = "The parcel was delivered, to the billing address that matched the issuer's records.";
     expect(guardFailures(coupled, "fulfillmentArgument", facts).length).toBeGreaterThan(0);
+  });
+});
+
+
+/* ── 7. fraud_screening is not verification authority ────────────────── */
+
+/**
+ * The sharpest of the remaining contradictions, and the only one that is a
+ * BEHAVIOURAL fact rather than a wording one.
+ *
+ * The module told the model to quote `fraud_screening.value.positiveFacts`
+ * and illustrated it with phrases naming a correct card code and a matching
+ * billing street address. But `avs_address_verified_claim` and
+ * `cvv_verified_claim` accept ONLY `payment_authentication` / `payment_auth`
+ * as authority. So on a screening-only case the prompt instructed a claim that
+ * no predicate can license — unrefusable by evidence, guaranteed to fail
+ * validation.
+ *
+ * The predicates are NOT broadened to accept screening. The prompt stops
+ * asking for it.
+ */
+function screeningFact(positiveFacts: string[]): EvidenceFact {
+  return {
+    id: "f1",
+    category: "fraud_screening",
+    label: "Fraud screening",
+    value: { positiveFacts, recommendation: "ACCEPT" },
+    source: "shopify",
+    sourceRef: null,
+    strength: "supporting",
+    bankEligible: true,
+    merchantVisible: true,
+    internalOnly: false,
+    includeInBankNarrative: true,
+    submissionRisk: false,
+    confidence: null,
+  } as unknown as EvidenceFact;
+}
+
+describe("a fraud_screening fact alone licenses no verification claim", () => {
+  const SCREENING_ONLY = [
+    screeningFact([
+      "Card Verification Value (CVV) is correct",
+      "Billing street address matches credit card's registered address",
+    ]),
+  ];
+
+  it("cannot license the ADDRESS claim", () => {
+    const failures = guardFailures(
+      "The billing address matched the issuer's records.",
+      "paymentAuthenticationArgument",
+      SCREENING_ONLY,
+    );
+    expect(failures.some((f) => f.guardId === "avs_address_verified_claim")).toBe(true);
+  });
+
+  it("cannot license the SECURITY-CODE claim", () => {
+    const failures = guardFailures(
+      "The card security code matched.",
+      "paymentAuthenticationArgument",
+      SCREENING_ONLY,
+    );
+    expect(failures.some((f) => f.guardId === "cvv_verified_claim")).toBe(true);
+  });
+
+  it("the predicates were NOT broadened to accept screening", () => {
+    // Guard the guard: if a later change let `fraud_screening` satisfy either
+    // predicate, the two assertions above would pass vacuously.
+    const preds = readFileSync(resolve(ROOT, "lib/defence/factPredicates.ts"), "utf8");
+    const block = preds.slice(preds.indexOf("function paymentVerifications"), preds.indexOf("function orderRecordFulfillment"));
+    expect(block).toMatch(/payment_authentication/);
+    expect(block).not.toMatch(/fraud_screening/);
+  });
+
+  it("the module no longer offers verification phrases as screening examples", () => {
+    expect(VISA).not.toMatch(/Card Verification Value/i);
+    expect(VISA).not.toMatch(/Billing street address matches/i);
+    expect(VISA).toMatch(/NOT VERIFICATION AUTHORITY/);
+  });
+
+  it("the 'cite at least two' floor is gone and an empty safe set omits it", () => {
+    expect(VISA).not.toMatch(/at least 2 of those phrases/);
+    expect(VISA).toMatch(/there is no minimum/);
+    expect(VISA).toMatch(/OMIT the fraud-screening corroborator entirely/);
+  });
+});
+
+/* ── 8. The other three runtime contradictions ───────────────────────── */
+
+describe("the remaining internal contradictions are gone", () => {
+  it("'billing alignment' no longer appears — it invited a retired claim", () => {
+    expect(VISA).not.toMatch(/mention billing alignment/);
+    expect(VISA).toMatch(/Do NOT assert billing alignment/);
+  });
+
+  it("'and vice versa' is gone — it implied a security-code-only summary", () => {
+    expect(VISA).not.toMatch(/and vice versa/);
+    expect(VISA).toMatch(/There is no security-code-only summary/);
+  });
+
+  it("no generic access-to-credentials replacement survives in either prompt", () => {
+    /* That sentence was itself a verification claim, and named no code or
+     * value — so neither guard could catch it. */
+    for (const src of [BASE, VISA]) {
+      expect(src).not.toMatch(/access to (?:card )?verification credentials/i);
+      expect(src).not.toMatch(/confirm access to credentials and billing details/i);
+    }
+  });
+
+  it("the closing instruction no longer REQUIRES an 'authenticated' framing", () => {
+    expect(VISA).not.toMatch(/Frame as: the transaction was authenticated/);
+    expect(VISA).toMatch(/make no authentication characterisation at all/);
   });
 });

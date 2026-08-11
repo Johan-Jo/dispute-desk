@@ -87,7 +87,16 @@ const PROMPT_FAMILY = "defence_package_narrative";
 //   * `visa_10_4_fraud`'s module block, appended after this one, still said
 //     "Prioritise … AVS+CVV match" and carried the same replacement
 //     sentence. Fixed there, module version 7 → 8.
-const PROMPT_VERSION = 11;
+// v12 (2026-08-11, same day): reading the RUNTIME strings rather than the
+// diff showed the fix still had the failure mechanism in it. Rule 7's null
+// branch PRINTED all three observed failure forms as negative examples, and
+// rule 14 printed the licensed clause twice as a RIGHT example. The model
+// sees those strings on every call, including calls where the case carries
+// no verificationSummary — which is exactly how the regression happened.
+// Neither section now contains any concrete AVS, billing-address or
+// security-code sentence, in either direction. The only permitted text on
+// the subject is a verbatim copy of the runtime verificationSummary value.
+const PROMPT_VERSION = 12;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
@@ -136,14 +145,20 @@ Rules:
    that is not in it.
 
    IF verificationSummary IS NULL OR ABSENT: the case has no citable
-   verification. OMIT the subject entirely. Do NOT write that anything
-   "matched the issuer's records", that a "billing address was
-   verified", or that a "card security code" matched — those sentences
-   are refused by a deterministic validator and the package fails to
-   build. Do NOT substitute a vaguer version of the same claim either:
-   "the payment details appear consistent with the cardholder" is the
-   same unsupported assertion with hedging. Say nothing about
-   verification and argue the case on the facts you do have.
+   verification. OMIT THE ENTIRE SUBJECT. Write nothing asserting that
+   an address, a billing detail or a security code was checked,
+   verified, matched, confirmed, accepted, on record or in agreement
+   with anything — in any wording, in any section. Do not hedge it
+   either: a softened, qualified or "consistent with" version of an
+   unsupported assertion is the same assertion. Argue the case from the
+   facts you do have.
+
+   NO EXAMPLE SENTENCES ARE GIVEN HERE, in either direction. Concrete
+   claim text in this prompt is what produced the failure this rule
+   exists to prevent: printed as an illustration, it was reproduced as
+   output on cases that did not carry the evidence. The only text you
+   may write on this subject is a verbatim copy of the runtime value of
+   verificationSummary.
 
 8. Do NOT use overclaim or accusatory language: NEVER use "irrefutable",
    "definitive proof", "definitively proves", "definitively shows
@@ -165,9 +180,11 @@ Rules:
 
 8b. CARD-NOT-PRESENT disputes only: NEVER claim the cardholder had
    "possession of the physical card", "had the physical card", "held
-   the card", or that the "card was physically present". AVS and CVV
-   confirm access to verification credentials and billing details on
-   record with the issuer, not physical possession.
+   the card", or that the "card was physically present". Card-not-present
+   evidence does not establish physical possession — and the reason it does
+   not is NOT a licence to describe what it does establish instead. Any
+   statement about what was verified, checked or held on record is governed
+   by rule 7 and by nothing else.
 
    NO REPLACEMENT SENTENCE IS OFFERED, and none is quoted here — a
    prompt that prints the sentence it is banning teaches that sentence.
@@ -271,18 +288,19 @@ Rules:
     that the billing and shipping addresses agree. DisputeDesk holds no
     evidence connecting a delivery event to an address.
 
-    WHAT THIS RULE DOES NOT PROHIBIT. The standalone payment-authentication
-    clause from rule 7 stays permitted: when verificationSummary is present
-    you may quote "the billing address matched the issuer's records" as an
-    AUTHENTICATION statement. What is forbidden is COUPLING it to a delivery
-    — the address as a destination. The two are different claims about
-    different facts, and the same distinction is enforced structurally by
-    \`isLicensedAvsClause\`: a clause that opens in a destination role ("to
-    the…", "at the…") is the delivery predicate's argument and is refused
-    however it goes on to read.
-      RIGHT → "the billing address matched the issuer's records"   (rule 7)
-      WRONG → "delivered to the billing address that matched the issuer's
-               records"                                    (destination role)
+    WHAT THIS RULE DOES NOT PROHIBIT. Rule 7's standalone
+    payment-authentication clause stays permitted — a verbatim copy of the
+    runtime verificationSummary, presented as an AUTHENTICATION statement and
+    nothing else. What is forbidden is COUPLING that clause to a delivery, so
+    that the address becomes a destination. Authentication and delivery are
+    claims about different facts and different evidence.
+
+    The same distinction is enforced structurally by \`isLicensedAvsClause\`: a
+    clause opening in a destination role — a directional preposition
+    introducing the delivery predicate's argument — is refused however it goes
+    on to read. So the copied clause may stand on its own; it may not become
+    the place something was delivered to. No sample sentence is printed here
+    for either case, for the reason rule 7 gives.
 
     Permitted delivery wording (when a delivery fact is approved): the
     carrier name, the tracking number, the tracking URL, the delivery status,
