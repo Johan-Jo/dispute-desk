@@ -97,7 +97,16 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // Neither section now contains any concrete AVS, billing-address or
 // security-code sentence, in either direction. The only permitted text on
 // the subject is a verbatim copy of the runtime verificationSummary value.
-const PROMPT_VERSION = 12;
+// v13 (2026-08-11): rule 14 printed THREE address-delivery sentences as WRONG
+// examples. The same mechanism as rule 7's v12 fix, one rule further down, and
+// it survived that pass because only the AVS examples were removed. Three of
+// four packages in the post-deploy canary failed on `unauthorized_claim` /
+// address_delivery, in chronologyArgument, fulfillmentArgument and
+// paymentAuthenticationArgument. No fact in those cases carried an address —
+// the payload was clean, so the model was reproducing the prompt. The
+// prohibition is now stated as a class; only the permitted form is
+// illustrated.
+const PROMPT_VERSION = 13;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
@@ -283,11 +292,17 @@ Rules:
 
     "address_delivery" is NOT authorized on any case today. You must never
     state, imply, or paraphrase that a delivery occurred AT a particular
-    physical address, and never describe the DELIVERY DESTINATION as
-    verified, matched, AVS-confirmed, the cardholder's, the customer's own,
-    on file, of record, or the same as the billing address. Do not assert
-    that the billing and shipping addresses agree. DisputeDesk holds no
-    evidence connecting a delivery event to an address.
+    physical address, and never characterise the DELIVERY DESTINATION at all —
+    not as verified, matched, confirmed, the cardholder's, the customer's own,
+    held on record, nor as corresponding to any other address on the order.
+    DisputeDesk holds no evidence connecting a delivery event to an address,
+    so there is nothing true you can say about where the parcel went.
+
+    NO EXAMPLE OF THE FORBIDDEN SENTENCE IS PRINTED HERE. Three were, until
+    2026-08-11, and the model reproduced them: three of four packages in that
+    day's canary failed on this rule, in the very sections the examples were
+    written for. An illustration of a banned claim is still an instance of the
+    claim, sitting in the context window on every call.
 
     WHAT THIS RULE DOES NOT PROHIBIT. Rule 7's standalone
     payment-authentication clause stays permitted — a verbatim copy of the
@@ -307,12 +322,16 @@ Rules:
     carrier name, the tracking number, the tracking URL, the delivery status,
     and the delivery date. A captured signature may be cited only when the
     fact carries signedByName.
-      WRONG → "the parcel was delivered to the cardholder's verified address"
-      WRONG → "delivery was made to the address on file"
-      WRONG → "the billing and shipping addresses match"
+    Only the PERMITTED form is illustrated, because a positive template can be
+    copied safely and carries no address:
       RIGHT → "the carrier confirmed delivery on 12 May 2026 (PostNord,
                tracking 1234567890)"
       RIGHT → "the carrier recorded a signature on delivery"
+
+    If a section has no fact that can be expressed in that permitted form,
+    return an empty string for it and list it in omittedSections (rules 9 and
+    13). An empty section is correct; a section filled with a claim about
+    where the parcel went is not.
 
     This is enforced structurally after generation. A section that makes an
     unauthorized claim fails validation and the package is not filed.`;

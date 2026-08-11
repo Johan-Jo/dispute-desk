@@ -1,0 +1,126 @@
+/**
+ * No runtime prompt prints an address-delivery sentence.
+ *
+ * ── THE INCIDENT ──────────────────────────────────────────────────────
+ *
+ * The 2026-08-11 post-deploy canary rebuilt four blume-box cases. Three of the
+ * four packages failed deterministic validation on `unauthorized_claim` /
+ * `address_delivery`, across `chronologyArgument`, `fulfillmentArgument` and
+ * `paymentAuthenticationArgument`.
+ *
+ * The approved facts for those cases carry NO address. The payload was clean —
+ * `order_record`, `shipping_tracking`, `delivery_proof`, `payment_authentication`
+ * and the rest expose carrier, tracking, timestamps and flags, and not one of
+ * them contains a street, city or postcode. So the model was not reading an
+ * address; it was reproducing one from its instructions.
+ *
+ * Rule 14 printed three:
+ *
+ *     WRONG → "the parcel was delivered to the cardholder's verified address"
+ *     WRONG → "delivery was made to the address on file"
+ *     WRONG → "the billing and shipping addresses match"
+ *
+ * ── WHY THIS KEEPS HAPPENING ──────────────────────────────────────────
+ *
+ * This is the same mechanism as the AVS regression, one rule further down, and
+ * it survived that fix because only the AVS examples were removed. An
+ * illustration of a banned claim is still an instance of the claim, sitting in
+ * the context window on every call — including the calls where the case holds
+ * no evidence for it. Framing a sentence as WRONG does not remove it from the
+ * prompt.
+ *
+ * So this file asserts the property structurally, across EVERY runtime prompt
+ * body rather than the one that happened to be wrong: base, all reason-code
+ * modules, all family overlays. A future rule that reaches for an illustration
+ * fails here.
+ */
+
+import { describe, it, expect } from "vitest";
+import { BASE_SYSTEM_PROMPT, CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
+import { ALL_REASON_CODE_MODULES } from "@/lib/defence/reasonCodes/registry";
+import { ALL_REASON_CODE_FAMILIES } from "@/lib/defence/reasonCodes/familyRegistry";
+
+/** Every cached system block the model can receive, by name. */
+const RUNTIME_PROMPTS: Array<[string, string]> = [
+  ["BASE_SYSTEM_PROMPT", BASE_SYSTEM_PROMPT],
+  ...ALL_REASON_CODE_MODULES.map(
+    (m) => [`module:${m.key}`, m.promptBody ?? ""] as [string, string],
+  ),
+  ...(ALL_REASON_CODE_FAMILIES as Array<{ key: string; overlayPromptBody?: string }>).map(
+    (f) => [`family:${f.key}`, f.overlayPromptBody ?? ""] as [string, string],
+  ),
+];
+
+/**
+ * Sentence shapes that attach a delivery to an address, or relate two
+ * addresses. Shape-based, because the point is not to ban three specific
+ * strings — it is that no concrete instance of the claim may appear.
+ */
+const ADDRESS_DELIVERY_SHAPES: Array<[string, RegExp]> = [
+  ["delivered to/at an address", /deliver\w*[^."]{0,40}\b(?:to|at)\s+the\s+[^."]{0,40}address/i],
+  ["an address received the parcel", /address[^."]{0,30}\breceived\b/i],
+  ["billing↔shipping agreement", /billing and shipping addresses/i],
+  ["address on file / of record as a destination", /\b(?:to|at)\s+the\s+address\s+(?:on\s+file|of\s+record)/i],
+];
+
+describe("no runtime prompt prints an address-delivery claim", () => {
+  it("the corpus under test is the real one, and non-empty", () => {
+    /* Guard the guard. If the registries were renamed or came back empty,
+     * every assertion below would pass over nothing. */
+    expect(RUNTIME_PROMPTS.length).toBeGreaterThan(10);
+    expect(BASE_SYSTEM_PROMPT.length).toBeGreaterThan(2000);
+    expect(ALL_REASON_CODE_MODULES.length).toBeGreaterThan(3);
+  });
+
+  for (const [label, pattern] of ADDRESS_DELIVERY_SHAPES) {
+    it(`no prompt contains: ${label}`, () => {
+      const offenders = RUNTIME_PROMPTS.filter(([, body]) => pattern.test(body)).map(
+        ([name]) => name,
+      );
+      expect(offenders, `${label} appears in: ${offenders.join(", ")}`).toEqual([]);
+    });
+  }
+
+  it("the three sentences that actually caused the failures are gone", () => {
+    for (const [, body] of RUNTIME_PROMPTS) {
+      expect(body).not.toContain("delivered to the cardholder's verified address");
+      expect(body).not.toContain("delivery was made to the address on file");
+      expect(body).not.toContain("the billing and shipping addresses match");
+    }
+  });
+});
+
+/* ── The rule still prohibits, and still permits ─────────────────────── */
+
+describe("rule 14 states the prohibition as a class", () => {
+  it("still forbids characterising the delivery destination", () => {
+    expect(BASE_SYSTEM_PROMPT).toMatch(/"address_delivery" is NOT authorized/);
+    expect(BASE_SYSTEM_PROMPT).toMatch(/never characterise the DELIVERY DESTINATION at all/);
+    expect(BASE_SYSTEM_PROMPT).toMatch(/nothing true you can say about where the parcel went/);
+  });
+
+  it("explains why no counter-example is printed", () => {
+    expect(BASE_SYSTEM_PROMPT).toMatch(/NO EXAMPLE OF THE FORBIDDEN SENTENCE IS PRINTED HERE/);
+  });
+
+  it("KEEPS the permitted delivery wording, which carries no address", () => {
+    /* The positive template is safe and useful — a model given nothing to copy
+     * invents, which is the failure mode one level up. Both examples cite
+     * carrier, tracking and date only. */
+    expect(BASE_SYSTEM_PROMPT).toMatch(/the carrier confirmed delivery on 12 May 2026/);
+    expect(BASE_SYSTEM_PROMPT).toMatch(/the carrier recorded a signature on delivery/);
+    expect(BASE_SYSTEM_PROMPT).toMatch(/Permitted delivery wording/);
+  });
+
+  it("points a section with no expressible fact at omission, not invention", () => {
+    /* The three failures were in sections the model had to fill. Rules 9 and 13
+     * already permit omission; rule 14 now names that as the answer here. */
+    expect(BASE_SYSTEM_PROMPT).toMatch(/return an empty string for it and list it in omittedSections/);
+    expect(BASE_SYSTEM_PROMPT).toMatch(/An empty section is correct/);
+  });
+
+  it("the cached prompt was re-versioned", () => {
+    // Without a bump the corrected block would sit behind the cached old one.
+    expect(CURRENT_PROMPT_VERSION).toBe(13);
+  });
+});

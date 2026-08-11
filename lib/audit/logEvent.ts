@@ -73,6 +73,11 @@ export type EventType =
   | "defence_package_finalized"
   | "defence_package_submitted"
   | "defence_package_stale"
+  /* An automatic rebuild declined to generate over a human-gated rejection
+   * (`lib/defence/latestPackageGenerationGuard.ts`). Recorded because the
+   * absence of a new version is otherwise indistinguishable from nothing
+   * having tried. */
+  | "defence_package_generation_skipped"
   | "defence_package_failed"
   | "defence_package_skipped"
   | "defence_package_superseded"
