@@ -36,6 +36,7 @@ import {
   screeningReachesBank,
 } from "@/lib/argument/fraudScreeningSignals";
 import { runClaimGuards } from "@/lib/defence/claimGuards";
+import { deriveEvidenceLineItems } from "@/lib/argument/evidenceLineItem";
 import { visa_10_4_fraud } from "@/lib/defence/reasonCodes/visa_10_4_fraud";
 import type { EvidenceFact } from "@/lib/defence/types";
 
@@ -229,5 +230,104 @@ describe("C-12 is untouched", () => {
     const before = JSON.stringify(raw);
     projectScreeningValueForBank(raw);
     expect(JSON.stringify(raw)).toBe(before);
+  });
+});
+
+
+/* ── 5. The INCLUSION boundary, through the real derivation ──────────── */
+
+/**
+ * Filtering the signals was not enough, and this is the assertion that shows
+ * why. `fraudScreeningReasonWithSignals` returned null when every phrase was a
+ * verification assertion — and `reasonFor` then fell back to the static
+ * `fraudScreening.bankArgument` reason, so the row still shipped in the
+ * defence package and still told the bank the screening recommended ACCEPT,
+ * with the evidence for that recommendation removed.
+ *
+ * Asserted through the REAL `deriveEvidenceLineItems`, not through
+ * `bankFacingScreeningSignals`. The helper was already correct; the row was
+ * not, and only the exported derivation shows the difference.
+ */
+function screeningRow(positiveFacts: string[]) {
+  const rows = deriveEvidenceLineItems({
+    checklist: [
+      {
+        field: "fraud_risk_screening",
+        label: "Fraud analysis",
+        status: "available",
+        priority: "recommended",
+        blocking: false,
+        source: "auto_shopify",
+        collectionType: "auto",
+      },
+    ],
+    facts: [],
+    payloadByField: new Map<string, unknown>([
+      [
+        "fraud_risk_screening",
+        { positiveFacts, recommendation: "ACCEPT", riskLevel: "low" },
+      ],
+    ]),
+    // Counted as a signal, so the test exercises the INCLUSION gate rather
+    // than the contribution gate.
+    contributions: { strong: [], moderate: [{ evidenceFieldKey: "fraud_risk_screening" }] },
+    packSavedToShopify: true,
+    excludedFields: new Set<string>(),
+    attachmentUploadFailures: new Map<string, string>(),
+    inclusionOverrides: new Map<string, unknown>(),
+  } as never);
+  return rows.find((r) => r.field === "fraud_risk_screening")!;
+}
+
+describe("the row's bank-facing inclusion follows the same predicate", () => {
+  it("MIXED signals: the row stays bank-facing and carries only safe signals", () => {
+    const row = screeningRow([...VERIFICATION_PHRASES, ...SAFE_PHRASES]);
+    expect(row.includedInDefencePackage).toBe(true);
+    expect(row.submissionMethod).not.toBe("internal_only");
+
+    // The inlined signals in the row reason are the safe ones only.
+    const json = JSON.stringify(row);
+    for (const phrase of VERIFICATION_PHRASES) {
+      expect(json, `row still carries: ${phrase}`).not.toContain(phrase);
+    }
+    expect(json).toContain(SAFE_PHRASES[0]);
+  });
+
+  it("VERIFICATION-ONLY: the row is routed internal-only, on all three flags", () => {
+    const row = screeningRow(VERIFICATION_PHRASES);
+    expect(row.includedInDefencePackage).toBe(false);
+    expect(row.includedInBankArgument).toBe(false);
+    expect(row.usedAsPositiveBankEvidence).toBe(false);
+    expect(row.submissionMethod).toBe("internal_only");
+    expect(row.isNegativeOrAmbiguous).toBe(true);
+  });
+
+  it("VERIFICATION-ONLY: no static 'recommended ACCEPT' fallback reaches the bank", () => {
+    /* The precise defect. The row used to fall back to
+     * `fraudScreening.bankArgument` — a bank-facing assertion that screening
+     * recommended ACCEPT, with every supporting phrase removed. */
+    const row = screeningRow(VERIFICATION_PHRASES);
+    const json = JSON.stringify(row);
+    // The reason token is the INTERNAL one, not the bank-argument fallback.
+    expect(row.reasonToken?.key).toMatch(/fraudScreening\.internal$/);
+    expect(json).not.toMatch(/fraudScreening\.bankArgument/);
+    for (const phrase of VERIFICATION_PHRASES) {
+      expect(json).not.toContain(phrase);
+    }
+  });
+
+  it("guard the guard — a purely SAFE payload still reaches the bank", () => {
+    /* Without this, the two assertions above would be satisfiable by a change
+     * that simply stopped emitting the screening row at all. */
+    const row = screeningRow(SAFE_PHRASES);
+    expect(row.includedInDefencePackage).toBe(true);
+    expect(row.submissionMethod).not.toBe("internal_only");
+  });
+
+  it("the raw payload keeps every signal for the merchant", () => {
+    // Internal-only routing is a BANK-facing exclusion, not deletion.
+    const raw = [...VERIFICATION_PHRASES];
+    screeningRow(raw);
+    expect(raw).toEqual(VERIFICATION_PHRASES);
   });
 });

@@ -1287,12 +1287,22 @@ describe("Test 24 — internal-only field with no payload routes to not_included
   });
 
   it("fraud_risk_screening WITH a favourable payload resolves to context_only (citable, not hidden)", async () => {
-    // Updated 2026-05-19. Under the new policy, fraud_risk_screening
-    // is NOT internal-only — `fraudRiskSource` only emits a section
-    // when Shopify returned a favourable verdict (ACCEPT + positive
-    // facts), so any payload that reaches the line-item layer is
-    // bank-safe by construction. The row should be citable in the
-    // bank narrative, not hidden under "Kept internal".
+    // Updated 2026-05-19: fraud_risk_screening is NOT internal-only — the
+    // source only emits a section on a favourable verdict, so the row should
+    // be citable rather than hidden under "Kept internal".
+    //
+    // Re-fixtured 2026-08-11. The 2026-05-19 premise — "any payload that
+    // reaches the line-item layer is bank-safe by construction" — stopped
+    // being true at C-12: a `positiveFacts` list containing ONLY address or
+    // card-code assertions is favourable to the merchant and still
+    // unciteable to a bank, because only an approved payment_authentication
+    // fact may ground those claims. This fixture used exactly such a list, so
+    // it was asserting that the unciteable case stays bank-facing.
+    //
+    // The INTENT is preserved and the fixture corrected: a favourable payload
+    // of independently safe signals is still citable. The verification-only
+    // case is covered by `tests/unit/fraudScreeningBankFacingFilter.test.ts`,
+    // which requires it to route internal_only.
     const mod = await import("@/lib/argument/evidenceLineItem");
     const { deriveEvidenceLineItems } = mod as {
       deriveEvidenceLineItems: (args: unknown) => Array<{
@@ -1319,8 +1329,8 @@ describe("Test 24 — internal-only field with no payload routes to not_included
           riskLevel: "NONE",
           recommendation: "ACCEPT",
           positiveFacts: [
-            "Card verification value matches",
-            "Billing address matches",
+            "The device used to place the order has been seen before",
+            "There was 1 successful transaction with this credit card in the past",
           ],
         },
       ],
