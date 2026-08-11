@@ -31,6 +31,7 @@ import {
   effectivePriorOrders,
   type EvidenceCategory,
 } from "./canonicalEvidence";
+import { bankFacingScreeningSignals } from "./fraudScreeningSignals";
 import {
   numberFromTrackingUrl,
   resolveDeliveryTitle,
@@ -509,11 +510,13 @@ function fraudScreeningReasonWithSignals(
 ): I18nToken | null {
   if (!payload || typeof payload !== "object") return null;
   const p = payload as Record<string, unknown>;
-  const facts = Array.isArray(p.positiveFacts)
-    ? (p.positiveFacts as unknown[]).filter(
-        (x): x is string => typeof x === "string",
-      )
-    : [];
+  /* BANK-FACING SUBSET ONLY. These signals are inlined verbatim into the
+   * Evidence Basis row, which reaches the issuer with no claim guard between
+   * it and the page — so a verification phrase here is an unlicensed
+   * verification claim on a bank surface. Same owner as the LLM payload
+   * (`fraudScreeningSignals.ts`); a second regex here is the drift that
+   * module exists to prevent. */
+  const facts = bankFacingScreeningSignals(p.positiveFacts);
   if (facts.length === 0) return null;
   const signals = facts.join("; ");
   if (method === "bank_argument") {

@@ -25,6 +25,7 @@
 import { alwaysAdmissibleCategories } from "./alwaysAdmissible";
 import { reachesLlmPayloadLegacy } from "./bankInclusion";
 import { deriveClaimCapabilities } from "./claimCapabilities";
+import { projectScreeningValueForBank } from "@/lib/argument/fraudScreeningSignals";
 import { getServiceClient } from "@/lib/supabase/server";
 import {
   callClaudeMessages,
@@ -553,6 +554,20 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
   // strictly weaker than `isBankIncludedFact`, and converging the two changes
   // what the model sees on live disputes — a reviewed change with a measured
   // delta, not a silent one. Behaviour here is unchanged.
+  /* SCREENING VERIFICATION PHRASES NEVER ENTER THE PAYLOAD.
+   *
+   * `value` used to pass through unchanged, so a `fraud_screening` fact
+   * carried Shopify's raw `positiveFacts` — including sentences asserting an
+   * address match or a correct card code — straight into the context window.
+   * The model was shown the forbidden assertion AS EVIDENCE and then refused
+   * when it repeated it. Removing those strings from the system prompt did not
+   * touch this path.
+   *
+   * The classification is `lib/argument/fraudScreeningSignals.ts`, shared with
+   * the Evidence Basis row, so the model is never asked to decide which of its
+   * own inputs are safe to quote. A fact whose signals were ALL verification
+   * assertions is dropped entirely — an empty corroborator corroborates
+   * nothing. */
   const approvedFacts = input.approvedFacts
     .filter(reachesLlmPayloadLegacy)
     .map((f) => ({
@@ -560,8 +575,9 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
       category: f.category,
       label: f.label,
       strength: f.strength,
-      value: f.value,
-    }));
+      value: projectScreeningValueForBank(f.value),
+    }))
+    .filter((f) => f.value !== null);
 
   // Some facts are admissible under ANY claim type and must not be gated on
   // the reason code, because the reason code comes from the BANK's label and
