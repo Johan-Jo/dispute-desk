@@ -12,17 +12,28 @@
 
 import type { useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { getShopifyDisputeUrl } from "@/lib/shopify/shopifyAdminUrl";
+import type { I18nToken } from "@/lib/i18n/token";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
 /* ── View-model types ── */
 
-export type ReviewState = "submitted" | "ready_to_submit";
+/**
+ * `not_assessed` is a real state, not an error and not a loading spinner.
+ *
+ * It is what the tab shows when the server could give no current assessment.
+ * Without it the only options were `ready_to_submit` — which offers a submit
+ * button for a case nothing has judged — or nothing at all, which reads as a
+ * broken page.
+ */
+export type ReviewState = "submitted" | "ready_to_submit" | "not_assessed";
 
 export interface ReviewViewModel {
   state: ReviewState;
   submittedAt: string | null;
   shopifyAdminUrl: string | null;
+  /** Title + body tokens for the `not_assessed` state. Null otherwise. */
+  notAssessed: { titleToken: I18nToken; bodyToken: I18nToken } | null;
   cta: {
     label: string;
     severity: "info" | "warning" | "critical";
@@ -38,9 +49,38 @@ export function useReviewView(workspace: Workspace): ReviewViewModel {
 
   if (!data) {
     return {
-      state: "ready_to_submit",
+      state: "not_assessed",
       submittedAt: null,
       shopifyAdminUrl: null,
+      notAssessed: {
+        titleToken: derived.assessment.titleToken,
+        bodyToken: derived.assessment.bodyToken,
+      },
+      cta: null,
+    };
+  }
+
+  /* ── NO ASSESSMENT, NO SUBMIT ACTION ──────────────────────────────
+   *
+   * Checked before anything reads `derived.readiness`, and that ordering is
+   * the whole point. With no assessment the readiness sentinel is `"blocked"`,
+   * which sets `requiresOverride` below and relabels the CTA "Save anyway" —
+   * an invitation to accept a risk the product has not measured, on a case it
+   * has not judged. The empty sentinel is not permission to override; it is
+   * the absence of the thing an override would be overriding.
+   */
+  if (!derived.assessment.mayOfferFilingAction && !derived.isReadOnly) {
+    return {
+      state: "not_assessed",
+      submittedAt: null,
+      shopifyAdminUrl: getShopifyDisputeUrl(
+        data.dispute.shopDomain,
+        data.dispute.disputeEvidenceGid,
+      ),
+      notAssessed: {
+        titleToken: derived.assessment.titleToken,
+        bodyToken: derived.assessment.bodyToken,
+      },
       cta: null,
     };
   }
@@ -79,6 +119,7 @@ export function useReviewView(workspace: Workspace): ReviewViewModel {
     state,
     submittedAt,
     shopifyAdminUrl,
+    notAssessed: null,
     cta,
   };
 }

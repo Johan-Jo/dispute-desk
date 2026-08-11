@@ -211,31 +211,29 @@ describe("classifyEvidenceRow — ip_location_check", () => {
   });
 });
 
-describe("classifyEvidenceRow — billing_address_match", () => {
-  it("match: true → strong", () => {
-    expect(
-      classifyEvidenceRow({
-        fieldKey: "billing_address_match",
-        status: "available",
-        payload: { match: true },
-      }).category,
-    ).toBe("strong");
-  });
-  it("match: false → invalid (explicit)", () => {
-    expect(
-      classifyEvidenceRow({
-        fieldKey: "billing_address_match",
-        status: "available",
-        payload: { match: false },
-      }).category,
-    ).toBe("invalid");
-  });
-  it("payload absent → supporting", () => {
-    expect(
-      classifyEvidenceRow({ fieldKey: "billing_address_match", status: "available", payload: null })
-        .category,
-    ).toBe("supporting");
-  });
+describe("classifyEvidenceRow — billing_address_match is RETIRED", () => {
+  // Until 2026-08-09 (PR-C4 / C-14) `match: true` graded STRONG here, on the
+  // registry promise "Strong when AVS-confirmed billing matches the
+  // cardholder". The field is retired: it has no registry spec, so no payload
+  // can grade it. `classifyEvidenceRow` treats an unregistered available row as
+  // `supporting` by design (never surface `invalid` from a missing spec) — the
+  // point asserted here is that NO payload reaches `strong`.
+  for (const payload of [
+    { match: true },
+    { match: false },
+    { match: true, avsResultCode: "Y" },
+    null,
+  ]) {
+    it(`payload ${JSON.stringify(payload)} never grades strong`, () => {
+      expect(
+        classifyEvidenceRow({
+          fieldKey: "billing_address_match",
+          status: "available",
+          payload,
+        }).category,
+      ).not.toBe("strong");
+    });
+  }
 });
 
 describe("classifyEvidenceRow — unknown fields", () => {

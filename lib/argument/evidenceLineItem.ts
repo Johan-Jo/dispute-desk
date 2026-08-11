@@ -43,6 +43,7 @@ import {
   isFieldBankEligible,
 } from "@/lib/defence/factClassifier";
 import { isNonEvidenceAccountHistoryRow } from "@/lib/automation/merchantUiHiddenFields";
+import { readPaymentVerification } from "./paymentVerification";
 import type { CaseStrengthContribution } from "./caseStrength";
 import type { ReasonFamily } from "./reasonFamily";
 import type { I18nToken } from "@/lib/i18n/token";
@@ -321,9 +322,6 @@ const REASON_OVERRIDES: Record<string, Partial<Record<SubmissionMethod, I18nToke
     bank_argument: { key: `${REASONS_NS}.avsCvv.bankArgument` },
     not_included: { key: `${REASONS_NS}.avsCvv.notIncluded` },
   },
-  billing_address_match: {
-    not_included: { key: `${REASONS_NS}.billingAddress.notIncluded` },
-  },
   shipping_tracking: {
     not_included: { key: `${REASONS_NS}.shippingTracking.notIncluded` },
   },
@@ -365,7 +363,6 @@ const REASON_OVERRIDES: Record<string, Partial<Record<SubmissionMethod, I18nToke
  */
 const SOURCE_OUTSIDE_MERCHANT_CONTROL = new Set<string>([
   "avs_cvv_match",
-  "billing_address_match",
   "tds_authentication",
   "fraud_risk_screening",
   "ip_location_check",
@@ -461,37 +458,42 @@ function reasonFor(
 }
 
 /**
- * Builds the row reason for avs_cvv_match from the actual gateway result
- * codes. Returns null when neither code is a match (callers fall back to
- * the static REASON_OVERRIDES entry — negative payloads never reach the
- * bank-facing methods anyway via `isNegativeOrAmbiguous`).
+ * Builds the row reason for avs_cvv_match from the actual gateway result,
+ * read through the single owner (`lib/argument/paymentVerification.ts`).
+ * Returns null when nothing matched (callers fall back to the static
+ * REASON_OVERRIDES entry).
  *
- * Match sets mirror the canonical categorizer
- * (`lib/argument/canonicalEvidence.ts`): AVS Y/A/W/X/D/M, CVV M. The
- * copy variant is chosen so a single successful verification is never
- * reported as "both matched":
- *   - AVS + CVV both match → bothMatched
- *   - AVS only: A (street) → streetMatched; W (zip) → postalMatched;
- *     Y/X/D/M (full/international) → addressMatched
- *   - CVV only → cvvMatched
+ * The copy variant never reports a single successful verification as "both
+ * matched":
+ *   - address + security code both match → bothMatched
+ *   - address only: the canonical `street_match` result → streetMatched;
+ *     `postal_match` → postalMatched; any other match → addressMatched
+ *   - CVV only → `cvvOnlyInternal`. PR-C2 decision 1: that row is no longer
+ *     bank-eligible, so the copy says what is true — the match is on record
+ *     and kept internal, because a security-code match is not an address
+ *     match. The old `cvvMatched` string described it as cited evidence.
  */
 function avsCvvReasonFromPayload(payload: unknown): I18nToken | null {
-  if (!payload || typeof payload !== "object") return null;
-  const p = payload as Record<string, unknown>;
-  const avs =
-    typeof p.avsResultCode === "string" ? p.avsResultCode.toUpperCase() : "";
-  const cvv =
-    typeof p.cvvResultCode === "string" ? p.cvvResultCode.toUpperCase() : "";
-  const avsOk = AVS_MATCH_CODES.has(avs);
-  const cvvOk = CVV_MATCH_CODES.has(cvv);
+  const v = readPaymentVerification(payload);
 
-  if (avsOk && cvvOk) return { key: `${REASONS_NS}.avsCvv.bothMatched` };
-  if (avsOk) {
-    if (avs === "A") return { key: `${REASONS_NS}.avsCvv.streetMatched` };
-    if (avs === "W") return { key: `${REASONS_NS}.avsCvv.postalMatched` };
-    return { key: `${REASONS_NS}.avsCvv.addressMatched` };
+  if (v.addressVerified && v.securityCodeVerified) {
+    return { key: `${REASONS_NS}.avsCvv.bothMatched` };
   }
-  if (cvvOk) return { key: `${REASONS_NS}.avsCvv.cvvMatched` };
+  if (v.addressVerified) {
+    // Selected from the CANONICAL normalized result, never from the letter
+    // (PR-C3). `A`/`W` were a seventh reading of the code space living in the
+    // copy layer, and a copy layer that knows what a letter means is a copy
+    // layer that can disagree with the grader about it.
+    switch (v.avs.normalized) {
+      case "street_match":
+        return { key: `${REASONS_NS}.avsCvv.streetMatched` };
+      case "postal_match":
+        return { key: `${REASONS_NS}.avsCvv.postalMatched` };
+      default:
+        return { key: `${REASONS_NS}.avsCvv.addressMatched` };
+    }
+  }
+  if (v.securityCodeVerified) return { key: `${REASONS_NS}.avsCvv.cvvOnlyInternal` };
   return null;
 }
 
@@ -739,18 +741,23 @@ function specificInternalReason(field: string, payload: unknown): I18nToken | nu
   }
 
   if (field === "avs_cvv_match") {
-    const avs = typeof p.avsResultCode === "string" ? p.avsResultCode.toUpperCase() : null;
-    const cvv = typeof p.cvvResultCode === "string" ? p.cvvResultCode.toUpperCase() : null;
-    // Both codes returned a no-match — the LLM narrative can't lean
-    // on AVS/CVV, but the merchant deserves to see what was actually
-    // returned by the gateway.
-    if (avs === "N" && cvv === "N") {
+    const v = readPaymentVerification(p);
+    // A security-code match with no address match: the row is on record for
+    // the merchant and withheld from the bank (PR-C2 decision 1). Checked
+    // BEFORE the failure branches so the reason names the reason it is
+    // internal, not just the half that failed.
+    if (v.cvvOnly) {
+      return { key: `${REASONS_NS}.avsCvv.cvvOnlyInternal` };
+    }
+    // A no-match — the LLM narrative can't lean on AVS/CVV, but the merchant
+    // deserves to see what was actually returned by the gateway.
+    if (v.avs.outcome === "no_match" && v.cvv.outcome === "no_match") {
       return { key: `${REASONS_NS}.avsCvv.internalBothFail` };
     }
-    if (avs === "N") {
+    if (v.avs.outcome === "no_match") {
       return { key: `${REASONS_NS}.avsCvv.internalAvsFail` };
     }
-    if (cvv === "N") {
+    if (v.cvv.outcome === "no_match") {
       return { key: `${REASONS_NS}.avsCvv.internalCvvFail` };
     }
   }
@@ -832,8 +839,8 @@ function categoryForField(field: string, payload: Record<string, unknown> | null
   return categorizeEvidenceField(field, payload);
 }
 
-const AVS_MATCH_CODES = new Set(["Y", "A", "W", "X", "D", "M"]);
-const CVV_MATCH_CODES = new Set(["M"]);
+/* AVS / CVV match semantics live in `lib/argument/paymentVerification.ts`
+ * (PR-C2). This file held one of the six copies. */
 
 function readString(v: unknown): string | null {
   return typeof v === "string" ? v : null;
@@ -867,14 +874,11 @@ function isNegativeOrAmbiguous(
   if (!payload) return false;
 
   if (field === "avs_cvv_match") {
-    const avs = readString(payload.avsResultCode);
-    const cvv = readString(payload.cvvResultCode);
-    const avsPresent = avs !== null && avs !== "";
-    const cvvPresent = cvv !== null && cvv !== "";
-    const avsFail = avsPresent && !AVS_MATCH_CODES.has(avs.toUpperCase());
-    const cvvFail = cvvPresent && !CVV_MATCH_CODES.has(cvv.toUpperCase());
-    // Both codes present AND both fail → unambiguously negative.
-    if (avsPresent && cvvPresent && avsFail && cvvFail) return true;
+    const v = readPaymentVerification(payload);
+    // Both codes present AND neither matched → unambiguously negative.
+    if (v.avs.present && v.cvv.present && !v.addressVerified && !v.securityCodeVerified) {
+      return true;
+    }
   }
 
   if (field === "customer_account_info" && reasonFamily === "fraud") {

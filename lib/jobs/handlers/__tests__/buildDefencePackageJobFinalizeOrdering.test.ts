@@ -24,6 +24,17 @@ vi.mock("@/lib/supabase/server", () => ({ getServiceClient: vi.fn() }));
 vi.mock("@/lib/audit/logEvent", () => ({
   logAuditEvent: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("@/lib/automation/settings", () => ({
+  // CP-C: the defence build reads the ONE canonical automation decision, which
+  // takes the shop's automation policy as an input. This handler used to run
+  // its own guard call and never looked at settings.
+  getShopSettings: vi.fn().mockResolvedValue({
+    auto_build_enabled: true,
+    auto_save_enabled: true,
+    auto_save_min_score: 60,
+    enforce_no_blockers: true,
+  }),
+}));
 vi.mock("@/lib/rules/evaluateRules", () => ({ evaluateRules: vi.fn() }));
 vi.mock("@/lib/defence/validateNarrative", () => ({
   validateNarrative: vi.fn().mockReturnValue({ ok: true, errors: [] }),
@@ -163,6 +174,12 @@ function mockSb(scenario: Scenario = {}) {
         dispute_id: DISPUTE_ID,
         pack_json: PACK_JSON,
         checklist_v2: [],
+        // CP-C decision inputs. Always present on a real ready pack
+        // (`submission_readiness` is NOT NULL); the fixture never needed them
+        // while this handler ran its own guard call.
+        completeness_score: 90,
+        blockers: [],
+        submission_readiness: "ready",
       };
     }
     if (table === "disputes") {

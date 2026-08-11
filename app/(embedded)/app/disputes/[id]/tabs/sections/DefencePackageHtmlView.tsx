@@ -191,7 +191,7 @@ function fmtAmount(amount: number | string | null | undefined, currency: string 
 //
 // The old local `buildEvidenceBasis()` + `renderFactValue()` here were
 // a parallel implementation that drifted from the canonical version
-// (e.g. they output raw "AVS Y / CVV M" gateway codes and
+// (e.g. they output the raw gateway codes verbatim and
 // "Order on record (UNFULFILLED)" — both bank-readability problems the
 // canonical formatter now translates to plain language).
 

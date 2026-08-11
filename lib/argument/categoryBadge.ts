@@ -78,8 +78,6 @@ function payloadIsInformative(
       return Boolean(p.avsResultCode) || Boolean(p.cvvResultCode);
     case "tds_authentication":
       return typeof p.tdsVerified === "boolean" || typeof p.tdsAuthenticated === "boolean";
-    case "billing_address_match":
-      return typeof p.match === "boolean";
     case "delivery_proof":
     case "shipping_tracking":
       return typeof p.proofType === "string" && p.proofType !== "";

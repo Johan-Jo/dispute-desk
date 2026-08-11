@@ -98,3 +98,44 @@ export const CLEAN_FACTS = [factJson()];
 export const RETIRED_FACTS = [
   factJson({ value: { proofType: "delivered_confirmed", deliveredToVerifiedAddress: true } }),
 ];
+
+
+/* ── Pack sections that actually produce a bank-eligible fact ──────────
+ *
+ * The deadline-cron suites used to hand the route a `pack_json` with no
+ * `sections` at all, because the placeholder selector never looked at one. The
+ * REAL selector derives the current argument plan from exactly these rows, and
+ * a pack with no sections yields no evidence records, no plan candidates and
+ * therefore `no_safe_argument` — which would make every "IS filed" case fail
+ * for a reason that has nothing to do with what it is testing.
+ *
+ * One delivery-proof section, carrier-confirmed. Enough for one included,
+ * bank-citable fact and nothing more; a fixture that maximises evidence hides
+ * which fact a rung actually turned on.
+ */
+export const DELIVERY_SECTION = {
+  type: "fulfillment",
+  label: "Delivery confirmation",
+  source: "shopify_fulfillments",
+  fieldsProvided: ["delivery_proof"],
+  data: {
+    proofType: "delivered_confirmed",
+    carrier: "PostNord",
+    trackingNumber: "1",
+    deliveredAt: "2026-05-12T10:00:00.000Z",
+    fulfillmentId: "gid://shopify/Fulfillment/1",
+  },
+};
+
+/** `pack_json` for a healthy, strong, uncovered case with real evidence. */
+export function healthyPackJson(
+  over: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    case_strength: { overall: "strong" },
+    coverage: { state: "not_covered" },
+    fatal_loss: { triggered: false },
+    sections: [DELIVERY_SECTION],
+    ...over,
+  };
+}

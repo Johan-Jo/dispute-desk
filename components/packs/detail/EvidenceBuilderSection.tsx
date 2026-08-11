@@ -36,7 +36,6 @@ const FIELD_PRIORITY: Record<string, number> = {
   delivery_proof: 0,
   shipping_tracking: 1,
   avs_cvv_match: 2,
-  billing_address_match: 3,
   customer_communication: 4,
   refund_policy: 7,
   shipping_policy: 8,
@@ -68,15 +67,14 @@ function sortByPriority(items: ChecklistItemV2[]): ChecklistItemV2[] {
  * they belong in their own status-only card, not the merchant-actionable
  * blockers/high-impact lists.
  *
- * `billing_address_match` and `avs_cvv_match` are the canonical examples:
- * structural payment/order facts the merchant cannot "upload". When
+ * `avs_cvv_match` is the canonical example: a structural payment fact the
+ * merchant cannot "upload". When
  * missing, surfacing them under a section with an Upload button is
  * confusing — there is nothing to upload, and exposing a mismatch as a
  * weakness is exactly what `feedback_bank_optimized_rebuttal.md` warns
  * against.
  */
 const INTERNAL_ONLY_FIELDS: ReadonlySet<string> = new Set([
-  "billing_address_match",
   "avs_cvv_match",
   "ip_location_check",
   "device_session_consistency",
@@ -92,8 +90,6 @@ function isInternalOnly(item: ChecklistItemV2): boolean {
 }
 
 const INTERNAL_ONLY_REASON: Record<string, string> = {
-  billing_address_match:
-    "We could not confirm that the billing address matches the order from Shopify data. Used internally for assessment; not surfaced to the bank to avoid weakening the response.",
   avs_cvv_match:
     "The payment gateway did not return a clean AVS/CVV match for this order. Used internally for assessment; not surfaced to the bank.",
   ip_location_check:

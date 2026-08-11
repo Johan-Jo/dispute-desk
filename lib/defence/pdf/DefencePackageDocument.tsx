@@ -24,6 +24,7 @@ import React from "react";
 import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { styles } from "./styles";
 import { buildEvidenceBasisRows } from "./evidenceBasisRows";
+import { isBankIncludedManualEvidence } from "../bankInclusion";
 import {
   buildChronologyEvents,
   formatChronologyTimestamp,
@@ -98,6 +99,27 @@ export interface DefencePackageDocumentData {
   composedBlocks: ComposedDocumentBlock[];
   approvedFacts: EvidenceFact[];
   manualEvidence: ManualEvidenceRecord[];
+  /**
+   * CANONICAL ROUTE (CP-B, PR 2). Set by `buildDefencePackageJob` when the
+   * document is a projection of a `CaseArgumentPlan`.
+   *
+   * Two things change in the Supporting Evidence Index, and both are F3:
+   *
+   *   1. The index is selected on BANK ELIGIBILITY, not on `includeInPackage`.
+   *      `includeInPackage` is a merchant/ops routing decision about where a
+   *      document belongs in OUR product — it has never been a statement that
+   *      the issuer may see the document, and using it as one is how a
+   *      merchant-only upload reaches an issuer.
+   *   2. The "Inclusion" column is not rendered. Its values — "Narrative +
+   *      appendix", "Appendix" — are internal routing metadata. Printing them
+   *      tells the issuer which of our own documents we chose to argue from
+   *      versus merely attach, which is an invitation to ask what else there
+   *      was and why it was not argued.
+   *
+   * Absent/false keeps the shipped rendering exactly, so the legacy path is
+   * byte-identical while the switch is off.
+   */
+  issuerSafeSupportingIndex?: boolean;
 }
 
 /* ── Helpers ── */
@@ -325,10 +347,14 @@ function inclusionLabel(m: ManualEvidenceRecord): string {
 
 function SupportingEvidenceIndex({
   manualEvidence,
+  issuerSafe,
 }: {
   manualEvidence: ManualEvidenceRecord[];
+  issuerSafe: boolean;
 }) {
-  const included = manualEvidence.filter((m) => m.includeInPackage);
+  const included = issuerSafe
+    ? manualEvidence.filter(isBankIncludedManualEvidence)
+    : manualEvidence.filter((m) => m.includeInPackage);
   if (included.length === 0) return null;
   return (
     <View minPresenceAhead={100}>
@@ -336,8 +362,13 @@ function SupportingEvidenceIndex({
       <View style={styles.table}>
         <View style={styles.tableHeader} wrap={false}>
           <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Document</Text>
-          <Text style={[styles.tableHeaderCell, { flex: 3 }]}>Type &amp; description</Text>
-          <Text style={[styles.tableHeaderCell, { flex: 1.4 }]}>Inclusion</Text>
+          <Text style={[styles.tableHeaderCell, { flex: issuerSafe ? 4.4 : 3 }]}>
+            Type &amp; description
+          </Text>
+          {/* The internal routing column. Never on the issuer-safe route. */}
+          {issuerSafe ? null : (
+            <Text style={[styles.tableHeaderCell, { flex: 1.4 }]}>Inclusion</Text>
+          )}
         </View>
         {included.map((m, i) => (
           <View
@@ -346,13 +377,15 @@ function SupportingEvidenceIndex({
             wrap={false}
           >
             <Text style={[styles.tableCellLabel, { flex: 2 }]}>{m.filename}</Text>
-            <Text style={[styles.tableCellValue, { flex: 3 }]}>
+            <Text style={[styles.tableCellValue, { flex: issuerSafe ? 4.4 : 3 }]}>
               {m.fileType ?? "—"}
               {m.description ? ` — ${m.description}` : ""}
             </Text>
-            <Text style={[styles.tableCellValue, { flex: 1.4 }]}>
-              {inclusionLabel(m)}
-            </Text>
+            {issuerSafe ? null : (
+              <Text style={[styles.tableCellValue, { flex: 1.4 }]}>
+                {inclusionLabel(m)}
+              </Text>
+            )}
           </View>
         ))}
       </View>
@@ -408,6 +441,7 @@ export function DefencePackageDocument({
   data: DefencePackageDocumentData;
 }) {
   const { meta, composedBlocks, approvedFacts, manualEvidence } = data;
+  const issuerSafe = data.issuerSafeSupportingIndex === true;
   const chronology = buildChronologyEvents(meta, approvedFacts);
   const lineItems = buildLineItems(approvedFacts, meta.lineItemsFromContext);
   const chronologyBlock = findBlock(composedBlocks, "chronologyArgument");
@@ -461,7 +495,10 @@ export function DefencePackageDocument({
 
         <SectionBlock block={findBlock(composedBlocks, "manualEvidenceArgument")} />
 
-        <SupportingEvidenceIndex manualEvidence={manualEvidence} />
+        <SupportingEvidenceIndex
+          manualEvidence={manualEvidence}
+          issuerSafe={issuerSafe}
+        />
 
         <ConclusionBlock block={findBlock(composedBlocks, "conclusion")} />
 

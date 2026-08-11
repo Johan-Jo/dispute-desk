@@ -31,26 +31,61 @@ const SKIP_DIR_SEGMENTS = ["node_modules", "__tests__", ".next"];
  * calls, with the gates each site can actually derive. Paths use forward
  * slashes. Update this ONLY together with the call site.
  */
+/**
+ * The EXACT inventory of `calculateCaseStrength` call sites.
+ *
+ * ── WHAT CHANGED, AND WHY IT IS SMALLER ───────────────────────────────
+ *
+ * This was a shrinking ALLOW-LIST: each entry described the gates that site
+ * could see, and three of the four production entries described a partial set
+ * — `not_shipped_to_client`, `order_not_loaded` — as though a documented gap
+ * were a resolved one. Documenting a divergence is not closing it. The
+ * browser scored a fraud case Strong while the server capped it Moderate, on
+ * one screen, and both entries said so in prose.
+ *
+ * There are now TWO production entries and neither is a gap:
+ *
+ *   `lib/evidence/model/assessment.ts`  — the ONE derivation. Every server
+ *      surface reaches the scorer through it, with the caller's own
+ *      `CaseGateAssessment` passed straight through.
+ *   `lib/argument/caseStrength.ts`      — the scorer's INTERNAL self-call
+ *      inside `calculateImprovement`, which asks a counting question with no
+ *      gates by construction. Deliberate, and the only one exempt.
+ *
+ * `lib/packs/buildPack.ts` left when it moved to
+ * `buildCaseAssessmentSnapshot`; `app/api/disputes/route.ts` left when its
+ * live partial-gate recompute was deleted rather than re-described.
+ *
+ * The analysis scripts stay: they REPLAY gates `buildPack` persisted, over
+ * historical rows, and a harness that measured the new derivation would
+ * answer a different question than "what did production do".
+ */
 const EXPECTED_CALL_SITES: Record<string, string> = {
-  "lib/packs/buildPack.ts":
-    "build path — the only site holding the Shopify order; derives all five",
-  "app/api/disputes/[id]/workspace/route.ts":
-    "dispute detail API — coverage + name mismatch derived, credit read from the pack, order-derived gates unavailable",
-  "app/api/disputes/route.ts":
-    "list route stage B — name mismatch derived, credit projected from pack_json, order-derived gates unavailable",
-  "app/(embedded)/app/disputes/[id]/hooks/useDisputeWorkspace.ts":
-    "client recompute — coverage + credit shipped in the workspace response, server-derived gates are not",
   "lib/argument/caseStrength.ts":
-    "calculateImprovement's internal counting question — gate-free by construction",
+    "the scorer's intentional internal self-call (calculateImprovement) — a counting question, gate-free by construction",
   "lib/evidence/model/assessment.ts":
-    "CaseAssessment adapter — passes its caller's assessment straight through; it derives no gate of its own",
+    "THE derivation — deriveAssessmentFromChecklists; passes its caller's CaseGateAssessment straight through and derives no gate of its own",
   "scripts/evidence-model/strengthTransition.analysis.ts":
     "read-only analysis — replays the gates buildPack persisted",
   "scripts/evidence-model/reconcileImpact.analysis.ts":
     "read-only analysis — replays the gates buildPack persisted",
   "scripts/evidence-model/verifiedAddressContainment.analysis.ts":
     "read-only analysis — replays the gates buildPack persisted",
+  "scripts/evidence-model/billingAddressMatchRetirement.analysis.ts":
+    "read-only analysis — replays the gates buildPack persisted",
 };
+
+/**
+ * The two production files, named separately from the analysis scripts.
+ *
+ * Asserted as an EXACT set rather than "the allow-list has not grown": a list
+ * that may only shrink still passes while it holds four entries that should
+ * be two, which is what it did for the whole of Slice 1.
+ */
+const PRODUCTION_CALL_SITES = [
+  "lib/argument/caseStrength.ts",
+  "lib/evidence/model/assessment.ts",
+] as const;
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
@@ -206,5 +241,75 @@ describe("the gate contract cannot be widened by accident", () => {
       fatalLoss: "order_not_loaded",
       riskWeakness: "order_not_loaded",
     });
+  });
+});
+
+
+describe("CI invariant — exactly two production scorer call sites", () => {
+  /**
+   * The EXACT set, not a ceiling.
+   *
+   * A shrink-only allow-list passes while it holds four entries that should
+   * hold two, which is what it did for the whole of Slice 1: every divergent
+   * site was listed, described accurately, and left in place. Equality is the
+   * only form of this assertion that fails while the migration is incomplete.
+   */
+  const productionSites = [...callSites.keys()]
+    .filter((f) => f.startsWith("lib/") || f.startsWith("app/"))
+    .sort();
+
+  it("is exactly the derivation and the scorer's own self-call", () => {
+    expect(productionSites).toEqual([...PRODUCTION_CALL_SITES].sort());
+  });
+
+  it("no route, job, hook or component scores a case", () => {
+    /* Named by SHAPE rather than by path, so a new route that scores fails
+     * here on the day it is written instead of on the day someone notices. */
+    const offenders = productionSites.filter(
+      (f) =>
+        f.startsWith("app/") ||
+        f.includes("/jobs/") ||
+        f.includes("/hooks/") ||
+        f.endsWith(".tsx"),
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it("the scorer's self-call is the ONLY exemption, and it is gate-free", () => {
+    /* `calculateImprovement` re-scores to answer "would adding this field
+     * change the band" — a counting question about a hypothetical checklist,
+     * not an assessment of the case. It passes the caller's own gates
+     * through; it does not build a set of its own. Pinned so the exemption
+     * cannot quietly widen into "the scorer may call itself for anything". */
+    const args = callSites.get("lib/argument/caseStrength.ts") ?? [];
+    expect(args.length).toBe(1);
+    expect(args[0].startsWith("{"), "a hand-rolled gate literal").toBe(false);
+  });
+
+  it("guard the guard — the detector finds a call that should not exist", () => {
+    /* Without this, a rename of `calculateCaseStrength`, a change to the
+     * argument arity, or a bug in the balanced-paren scan would empty
+     * `callSites` and turn every assertion above green while the codebase was
+     * full of divergent scoring. The detector is re-run against a source
+     * string carrying exactly the shape it must catch. */
+    const smuggled = `
+      import { calculateCaseStrength } from "@/lib/argument/caseStrength";
+      const r = calculateCaseStrength(checklist, reason, payloadSource, {
+        coverage: null, fatalLoss: null, riskWeakness: null,
+        nameMismatch: null, creditAlreadyIssued: null,
+      });
+    `;
+    const found = gateArguments(smuggled);
+    expect(found.length).toBe(1);
+    // …and the hand-rolled-literal check would reject it.
+    expect(found[0].startsWith("{")).toBe(true);
+  });
+
+  it("guard the guard — a comment mentioning the scorer is not a call", () => {
+    const prose = `
+      // calculateCaseStrength(a, b, c, d) is described here, not called.
+      /* calculateCaseStrength(a, b, c, d) */
+    `;
+    expect(gateArguments(prose)).toEqual([]);
   });
 });

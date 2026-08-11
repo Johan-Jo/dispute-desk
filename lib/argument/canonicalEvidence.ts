@@ -20,6 +20,10 @@
  */
 
 import type { I18nKey } from "@/lib/i18n/token";
+import {
+  gradePaymentVerification,
+  readPaymentVerification,
+} from "./paymentVerification";
 
 /** Strict 4-state category. `invalid` items never enter the system. */
 export type EvidenceCategory = "strong" | "moderate" | "supporting" | "invalid";
@@ -64,7 +68,7 @@ export const CATEGORY_WEIGHT: Record<EvidenceCategory, number> = {
  * each evidence item so the workspace API can detect stale caches and
  * recompute on read. Plan §P2.4a.
  */
-export const CANONICAL_EVIDENCE_VERSION = 3;
+export const CANONICAL_EVIDENCE_VERSION = 4;
 
 /** Persisted alongside an evidence item so we know which registry
  *  version classified it. */
@@ -124,7 +128,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     category: "strong",
     supportingOnly: false,
     excludedFromStrength: false,
-    note: "Strong only when BOTH AVS and CVV match. Otherwise moderate (one match) or invalid (none). Label intentionally omits parenthetical (AVS + CVV) — the row's value already shows the codes, no need to repeat them in the label.",
+    note: "Strong only when BOTH AVS and CVV match. Otherwise moderate (one match) or invalid (none). Grade is unchanged by PR-C2; CITATION is a separate axis — a CVV-only match grades moderate and is structurally uncitable (paymentVerification.citable, decision 1), because a security-code match is not an address match. Label intentionally omits parenthetical (AVS + CVV) — the row's value already shows the codes, no need to repeat them in the label.",
   },
   tds_authentication: {
     signalId: "payment_auth",
@@ -150,14 +154,22 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
   },
 
   // ── Billing match ──
-  billing_address_match: {
-    signalId: "billing_match",
-    labelKey: "disputes.signalLabel.billing_match",
-    category: "strong",
-    supportingOnly: false,
-    excludedFromStrength: false,
-    note: "Strong when AVS-confirmed billing matches the cardholder. Invalid otherwise.",
-  },
+  // `billing_address_match` was registered here until 2026-08-09 (PR-C4 /
+  // C-14), graded `strong` with the note "Strong when AVS-confirmed billing
+  // matches the cardholder". It was emitted from a comparison of Shopify's own
+  // billing and shipping addresses on city + country — two merchant-held
+  // addresses, no AVS result, no cardholder — so the note described evidence
+  // the field never held. It is a RETIRED FIELD KEY now
+  // (`lib/evidence/model/retiredKeys.ts`) and must not be re-registered:
+  // `categorizeEvidenceField` returns `invalid` for an unregistered field, and
+  // every consumer skips a field with no spec. Address verification is carried
+  // by `avs_cvv_match` (PR-C2 split, PR-C3 network code map).
+  //
+  // The `billing_match` SignalId and the `billing_match` fact category are
+  // deliberately left declared: they now have no member, which keeps
+  // `visa_10_4_fraud.criticalCategories` — and therefore `derivePackageMode` —
+  // behaving exactly as it does on prod today. Restating that reason module is
+  // a separate decision with its own approval.
 
   // ── Delivery (proofType-conditional) ──
   delivery_proof: {
@@ -384,12 +396,10 @@ export function disputeFreeHistoryState(
   return "unknown";
 }
 
-/** AVS result codes Shopify exposes that count as a match.
- *  Y = full match (street+zip), A = address match only, W = zip match only,
- *  X = full match (international), D/M = international match. */
-const AVS_MATCH_CODES = new Set(["Y", "A", "W", "X", "D", "M"]);
-/** CVV result codes that count as a match. M = match. */
-const CVV_MATCH_CODES = new Set(["M"]);
+/* AVS / CVV match semantics are NOT defined here. `lib/argument/paymentVerification.ts`
+ * is their single owner (PR-C2): it reads every payload shape, classifies both
+ * subfacts, and grades them. This file kept its own copy of the code sets until
+ * 2026-08-08, one of six. */
 
 /** Delivery proofType discriminator written by the fulfillment
  *  collector. The four canonical states. (P2.3) */
@@ -475,14 +485,13 @@ export function categorizeEvidenceField(
   }
 
   // ── avs_cvv_match ── (rubric #1)
+  //
+  // Grade only. Whether the graded fact may be CITED is a separate axis owned
+  // by `paymentVerification.citable` and read by the bank filter — a CVV-only
+  // match keeps this `moderate` (it is real, and the merchant's own read of
+  // the case depends on it) while being structurally uncitable (decision 1).
   if (fieldKey === "avs_cvv_match") {
-    const avs = String(p.avsResultCode ?? "").toUpperCase();
-    const cvv = String(p.cvvResultCode ?? "").toUpperCase();
-    const avsOk = AVS_MATCH_CODES.has(avs);
-    const cvvOk = CVV_MATCH_CODES.has(cvv);
-    if (avsOk && cvvOk) return "strong";
-    if (avsOk || cvvOk) return "moderate";
-    return "invalid";
+    return gradePaymentVerification(readPaymentVerification(p));
   }
 
   // ── tds_authentication ──
@@ -504,10 +513,10 @@ export function categorizeEvidenceField(
     return "invalid";
   }
 
-  // ── billing_address_match ──
-  if (fieldKey === "billing_address_match") {
-    return p.match === true ? "strong" : "invalid";
-  }
+  // `billing_address_match` had its branch here until 2026-08-09 (PR-C4). It
+  // returned `strong` on `match === true`. No payload key can restore it: the
+  // field has no spec, so the `if (!spec) return "invalid"` guard above is
+  // reached before any payload is read.
 
   // ── fraud_risk_screening ──
   // Moderate when payload carries ≥1 positiveFacts entry (the collector

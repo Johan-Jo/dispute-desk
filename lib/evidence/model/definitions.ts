@@ -69,12 +69,16 @@ const MULTIPLE: ReadonlySet<string> = new Set([
  *   - `tds_authentication` — `factClassifier.isUnciteableThreeDs` withholds an
  *     authentication that neither shifted liability nor was merchant-confirmed;
  *     an "attempted" 3DS reads against us.
+ *   - `avs_cvv_match` — PR-C2 decision 1: the row carries two facts, and only
+ *     the ADDRESS half is citable. A CVV-only match is valid, scored, shown to
+ *     the merchant, and withheld from every bank-facing surface.
  */
 const CITATION_POLICY: Record<string, EvidenceDefinition["citationPolicy"]> = {
   device_session_consistency: "never",
   ip_location_check: "conditional",
   fraud_risk_screening: "conditional",
   tds_authentication: "conditional",
+  avs_cvv_match: "conditional",
 };
 
 const AGGREGATION: Record<string, AggregationRule> = {

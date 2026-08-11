@@ -107,7 +107,11 @@ export const REASON_TEMPLATES: Record<string, ReasonTemplate> = {
   ],
   FRAUDULENT: [
     { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always" },
-    { field: "billing_address_match", label: "Billing Address Match", requirementMode: "required_always" },
+    // `billing_address_match` was a `required_always` row here until 2026-08-09
+    // (PR-C4 / C-14). It asked for a billing-vs-shipping city comparison under
+    // the name of an AVS-confirmed cardholder match. Address verification is
+    // asked for by the `avs_cvv_match` row below, which reads the issuer's own
+    // response. The field is retired, not moved.
     { field: "avs_cvv_match", label: "AVS / CVV Result", requirementMode: "required_if_card_payment" },
     { field: "activity_log", label: "Customer Purchase History", requirementMode: "recommended" },
     { field: "shipping_tracking", label: "Shipping Tracking", requirementMode: "required_if_fulfilled" },
@@ -397,7 +401,10 @@ export const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
   ],
   FRAUDULENT: [
     { field: "order_confirmation", label: "Transaction Record", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
-    { field: "billing_address_match", label: "Billing Address Match", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
+    // See the v1 template above: `billing_address_match` was a `critical`,
+    // `required_always` row here until 2026-08-09 (PR-C4 / C-14) and is retired.
+    // The completeness delta this removal produces is measured, not assumed —
+    // `scripts/evidence-model/billingAddressMatchRetirement.analysis.ts`.
     { field: "avs_cvv_match", label: "Payment Verification (AVS & CVV)", requirementMode: "required_if_card_payment", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "activity_log", label: "Customer History", requirementMode: "recommended", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "ip_location_check", label: "IP & Location Check", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_ipinfo", collectionType: "auto" },

@@ -19,7 +19,8 @@ import { REASON_TEMPLATES_V2 } from "@/lib/automation/completeness";
 
 describe("guard the guard", () => {
   it("has a definition for every evidence field", () => {
-    expect(EVIDENCE_FIELD_KEYS.length).toBeGreaterThanOrEqual(20);
+    // 19 since PR-C4 retired `billing_address_match` (was 20).
+    expect(EVIDENCE_FIELD_KEYS.length).toBeGreaterThanOrEqual(19);
     const missing = EVIDENCE_FIELD_KEYS.filter((k) => !EVIDENCE_DEFINITIONS[k]);
     expect(missing, `No definition for: ${missing.join(", ")}`).toEqual([]);
     expect(DEFINITION_REGISTRY_VERSION).toBeGreaterThan(0);
@@ -138,7 +139,9 @@ describe("merchantSuppliable gates the 'add X' prompt", () => {
       "avs_cvv_match",
       "ip_location_check",
       "fraud_risk_screening",
-      "billing_address_match",
+      // `billing_address_match` was in this list until 2026-08-09 (PR-C4). It
+      // is retired and no longer has a definition at all — the stronger
+      // guarantee, asserted in `tests/unit/retiredFieldKeyContainment.test.ts`.
       "device_session_consistency",
     ] as const) {
       expect(definitionFor(field).merchantSuppliable, field).toBe(false);

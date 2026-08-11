@@ -103,15 +103,21 @@ export async function collectOrderEvidence(
 
   const fieldsProvided: string[] = ["order_confirmation"];
 
+  // The redacted addresses are still carried on the order payload below: the
+  // merchant-facing OPERATIONAL note ("billing and shipping city/country
+  // agree", and its mismatch counterpart) reads them from there.
+  //
+  // What is gone is `billing_address_match` as a collected EVIDENCE field
+  // (PR-C4 / C-14, 2026-08-09). It was pushed into `fieldsProvided` whenever
+  // these two merchant-held addresses shared a city and a country, and the
+  // canonical registry then graded that field "Strong when AVS-confirmed
+  // billing matches the cardholder" — a description of evidence this
+  // comparison never produced. No AVS result is read here, and no cardholder
+  // is involved. Address verification belongs to `avs_cvv_match`, which reads
+  // the issuer's own response (PR-C2 + PR-C3). The key is retired at every
+  // derivation boundary — `lib/evidence/model/retiredKeys.ts`.
   const billingRedacted = redactAddress(order.billingAddress);
   const shippingRedacted = redactAddress(order.shippingAddress);
-
-  if (billingRedacted && shippingRedacted) {
-    const match =
-      billingRedacted.city === shippingRedacted.city &&
-      billingRedacted.countryCode === shippingRedacted.countryCode;
-    if (match) fieldsProvided.push("billing_address_match");
-  }
 
   const sections: EvidenceSection[] = [
     {

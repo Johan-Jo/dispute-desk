@@ -156,14 +156,33 @@ describe("factPredicates", () => {
     it("true on AVS=Y + CVV=M", () => {
       expect(
         FACT_PREDICATES.avs_and_cvv_match.evaluate([
-          fact({ value: { avsResult: "Y", cvvResult: "M" } }),
+          fact({ value: { avsResult: "Y", cvvResult: "M", network: "visa" } }),
         ]),
       ).toBe(true);
     });
     it("false on AVS=Y only", () => {
       expect(
         FACT_PREDICATES.avs_and_cvv_match.evaluate([
-          fact({ value: { avsResult: "Y" } }),
+          fact({ value: { avsResult: "Y", network: "visa" } }),
+        ]),
+      ).toBe(false);
+    });
+
+    // PR-C3: `M` is the second code register R-E names, so a Visa `M` plus a
+    // CVV match satisfies the combined predicate exactly as `Y` does. The
+    // pre-C3 implementation compared the letter and answered false.
+    it("TRUE on a Visa AVS=M + CVV=M", () => {
+      expect(
+        FACT_PREDICATES.avs_and_cvv_match.evaluate([
+          fact({ value: { avsResult: "M", cvvResult: "M", network: "visa" } }),
+        ]),
+      ).toBe(true);
+    });
+
+    it("false on a Mastercard AVS=Y + CVV=M — no sourced cell", () => {
+      expect(
+        FACT_PREDICATES.avs_and_cvv_match.evaluate([
+          fact({ value: { avsResult: "Y", cvvResult: "M", network: "mastercard" } }),
         ]),
       ).toBe(false);
     });
@@ -176,20 +195,59 @@ describe("factPredicates", () => {
     });
   });
 
-  describe("avs_or_cvv_value_present", () => {
-    it("true when any avsResult is present", () => {
+  // PR-C2 (C-12): `avs_or_cvv_value_present` — satisfied by the mere presence
+  // of a code, including AVS=N — split into one predicate per fact, each
+  // requiring its own match.
+  describe("avs_address_verified", () => {
+    it("true on a primary-sourced (network, code) cell", () => {
       expect(
-        FACT_PREDICATES.avs_or_cvv_value_present.evaluate([
-          fact({ value: { avsResult: "N" } }),
+        FACT_PREDICATES.avs_address_verified.evaluate([
+          fact({ value: { avsResult: "Y", network: "visa" } }),
         ]),
       ).toBe(true);
     });
-    it("false on payment_auth without AVS/CVV", () => {
+
+    it("FALSE on the same code with no network — fails closed", () => {
       expect(
-        FACT_PREDICATES.avs_or_cvv_value_present.evaluate([
-          fact({ value: {} }),
+        FACT_PREDICATES.avs_address_verified.evaluate([
+          fact({ value: { avsResult: "Y" } }),
         ]),
       ).toBe(false);
+    });
+    it("FALSE when AVS is present but did not match — the old predicate said true", () => {
+      expect(
+        FACT_PREDICATES.avs_address_verified.evaluate([
+          fact({ value: { avsResult: "N" } }),
+        ]),
+      ).toBe(false);
+    });
+    it("FALSE on a CVV-only match — a security code is not an address", () => {
+      expect(
+        FACT_PREDICATES.avs_address_verified.evaluate([
+          fact({ value: { avsResult: "N", cvvResult: "M" } }),
+        ]),
+      ).toBe(false);
+    });
+    it("false on payment_auth without AVS/CVV", () => {
+      expect(FACT_PREDICATES.avs_address_verified.evaluate([fact({ value: {} })])).toBe(false);
+    });
+  });
+
+  describe("cvv_verified", () => {
+    it("true when the CVV result is a match", () => {
+      expect(
+        FACT_PREDICATES.cvv_verified.evaluate([fact({ value: { cvvResult: "M" } })]),
+      ).toBe(true);
+    });
+    it("false when the CVV result is present but not a match", () => {
+      expect(
+        FACT_PREDICATES.cvv_verified.evaluate([fact({ value: { cvvResult: "N" } })]),
+      ).toBe(false);
+    });
+    it("never implies the address predicate", () => {
+      const facts = [fact({ value: { cvvResult: "M" } })];
+      expect(FACT_PREDICATES.cvv_verified.evaluate(facts)).toBe(true);
+      expect(FACT_PREDICATES.avs_address_verified.evaluate(facts)).toBe(false);
     });
   });
 

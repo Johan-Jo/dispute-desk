@@ -50,6 +50,9 @@ import {
   type DisputeEvidenceUpdateInput,
 } from "@/lib/shopify/mutations/disputeEvidenceUpdate";
 import { logAuditEvent } from "@/lib/audit/logEvent";
+import { canonicalPipelineEnabled } from "@/lib/pipeline/activation";
+import { getShopSettings } from "@/lib/automation/settings";
+import { selectForSaveWorker } from "@/lib/defence/package";
 import { emitSaveToShopifyEvents } from "./saveToShopifyEvents";
 import {
   isRegenerateBuild,
@@ -76,7 +79,11 @@ export async function handleSaveToShopify(
 
   const { data: pack } = await sb
     .from("evidence_packs")
-    .select("id, shop_id, dispute_id, status")
+    // The canonical selector needs the decision's inputs and the pack's
+    // sections; the legacy path reads none of them and is unaffected.
+    .select(
+      "id, shop_id, dispute_id, status, completeness_score, blockers, submission_readiness, pack_json, checklist_v2",
+    )
     .eq("id", packId)
     .single();
   if (!pack) {
@@ -117,7 +124,7 @@ export async function handleSaveToShopify(
   const { data: dispute } = await sb
     .from("disputes")
     .select(
-      "id, dispute_evidence_gid, dispute_gid, reason, amount, currency_code, customer_display_name, customer_email, submission_state, submitted_at",
+      "id, dispute_evidence_gid, dispute_gid, reason, network_reason_code, due_at, amount, currency_code, customer_display_name, customer_email, submission_state, submitted_at",
     )
     .eq("id", pack.dispute_id)
     .single();
@@ -177,6 +184,67 @@ export async function handleSaveToShopify(
   }
 
   /* ── 3. Load latest defence_packages row — must be FINAL ── */
+
+  /* CANONICAL ROUTE. The raw latest-row query below cannot answer whether the
+   * package is CURRENT — nothing it selects records what the package was built
+   * from — and it carries its own lifecycle opinion beside the selector's. With
+   * the switch on, the worker asks `selectFileablePackage` and files the row it
+   * names.
+   *
+   * The `deadline` trigger, deliberately: this worker is downstream of BOTH
+   * triggers, and the job it is running may have been enqueued by the deadline
+   * cron. Applying the normal veto would make it refuse, at the deadline, a
+   * save the deadline path legitimately authorised. That trigger relaxes
+   * exactly one rung — `deadline_only_not_yet_due` — and nothing else. */
+  if (canonicalPipelineEnabled()) {
+    const settings = await getShopSettings(pack.shop_id as string);
+    const outcome = await selectForSaveWorker({
+      sb,
+      caseId: pack.dispute_id as string,
+      pack: {
+        id: pack.id as string,
+        dispute_id: (pack.dispute_id as string | null) ?? null,
+        completeness_score: (pack.completeness_score as number | null) ?? null,
+        blockers: pack.blockers,
+        submission_readiness: pack.submission_readiness,
+        pack_json: pack.pack_json,
+        checklist_v2: pack.checklist_v2 ?? null,
+      },
+      settings,
+      automationMode: "auto",
+      evidenceDueAt: (dispute.due_at as string | null) ?? null,
+      disputeReason: (dispute.reason as string | null) ?? null,
+      networkReasonCode: (dispute.network_reason_code as string | null) ?? null,
+    });
+
+    if (outcome.selection.outcome !== "selected") {
+      const reason =
+        outcome.selection.outcome === "none" ? outcome.selection.reason : "ambiguous";
+      await logAuditEvent({
+        shopId: pack.shop_id,
+        disputeId: pack.dispute_id,
+        packId,
+        actorType: "system",
+        eventType: outcome.unsafeContent
+          ? "defence_package_blocked_unsafe_claim"
+          : "defence_package_failed",
+        eventPayload: {
+          packageId: outcome.judged?.packageId ?? null,
+          version: outcome.judged?.version ?? null,
+          selectionReason: reason,
+          trigger: "save_to_shopify",
+        },
+      });
+      // Non-retriable for the same reason the C-11 gate was: retrying cannot
+      // make a persisted narrative safe, a superseded row current, or an
+      // ambiguous pair unambiguous. Only a rebuild can.
+      return {
+        ok: false,
+        retriable: false,
+        reason: `defence_package_not_fileable: ${reason}`,
+      };
+    }
+  }
 
   const { data: dpkg } = await sb
     .from("defence_packages")

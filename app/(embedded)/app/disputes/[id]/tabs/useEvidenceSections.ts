@@ -44,9 +44,10 @@ import {
   cardholderNameFromPayload,
   detectCardholderNameMismatch,
 } from "@/lib/argument/nameMismatch";
-import { avsBucket, cvvBucket } from "@/lib/argument/avsCvvExplain";
+import { readPaymentVerification } from "@/lib/argument/paymentVerification";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
-import type { Localized } from "@/lib/i18n/localized";
+import { asLocalized, type Localized } from "@/lib/i18n/localized";
+import type { I18nToken } from "@/lib/i18n/token";
 import { resolveToken } from "@/lib/i18n/resolveToken";
 import {
   MERCHANT_UI_HIDDEN_FIELDS,
@@ -111,12 +112,29 @@ export type NextStep =
   | { kind: "ready_with_warnings_auto"; dueAt: string | null }
   | { kind: "ready_with_warnings_review"; dueAt: string | null }
   | { kind: "review_missing" }
-  | { kind: "submitted_no_action" };
+  | { kind: "submitted_no_action" }
+  /**
+   * No current assessment, so there is no next step to name.
+   *
+   * Distinct from `review_missing`, deliberately. `review_missing` says
+   * "evidence is missing, go and add it" — an instruction. With no assessment
+   * we do not know whether anything is missing, and telling the merchant to
+   * fix a gap we have not measured sends them looking for a problem that may
+   * not exist. This state says only what is true: it has not been assessed.
+   */
+  | { kind: "not_assessed"; titleToken: I18nToken; bodyToken: I18nToken };
 
 export interface CaseSummaryViewModel {
-  /** Raw backend value, preserved verbatim. Display-time coercion of
-   *  `insufficient` → `Weak` lives in CaseSummaryCard. */
-  strength: CaseStrengthLevel;
+  /**
+   * NULL when there is no current assessment.
+   *
+   * It was `CaseStrengthLevel`, non-null, so the empty sentinel's
+   * `insufficient` flowed straight into the badge — and `CaseSummaryCard`
+   * coerces `insufficient` to "Weak" at display time, so an unassessed case
+   * rendered as a WEAK VERDICT. Null forces every renderer to handle the
+   * absence instead of inheriting a judgement.
+   */
+  strength: CaseStrengthLevel | null;
   status: CaseStatus;
   /** null on a DECIDED dispute (won/lost/closed) — no automation pill. */
   automationMode: AutomationMode | null;
@@ -328,7 +346,6 @@ const WHY_THIS_MATTERS: Record<string, string> = {
   order_confirmation: "Anchors the case — proves a real transaction with itemized totals and customer details.",
   shipping_tracking: "Carrier confirmation that the order shipped — required for item-not-received disputes.",
   delivery_proof: "Signature or photo confirmation that the customer received the package.",
-  billing_address_match: "Ties the cardholder to the order — critical for fraud rebuttal.",
   avs_cvv_match: "Card security checks the bank weighs heavily in fraud cases.",
   product_description: "Shows the product matched what was advertised — defense for not-as-described claims.",
   refund_policy: "Customer agreed to refund terms before purchase — protects against buyer's remorse.",
@@ -373,25 +390,22 @@ function readString(v: unknown): string | null {
   return typeof v === "string" ? v : null;
 }
 
-// Kept in lockstep with the canonical categorizer
-// (lib/argument/canonicalEvidence.ts): Y/A/W/X/D/M are AVS matches, M is
-// a CVV match. A narrower set here would flag a canonically-matching code
-// (e.g. AVS W = zip match) as a mismatch and surface a false internal
-// warning that contradicts the positive bucket.
-const AVS_MATCH_CODES = new Set(["Y", "A", "W", "X", "D", "M"]);
-const CVV_MATCH_CODES = new Set(["M"]);
+// AVS / CVV match semantics come from `lib/argument/paymentVerification.ts`
+// (PR-C2). This file used to keep its own copy "in lockstep" by comment —
+// one of six, and they had already drifted.
 
 /**
  * MERCHANT-LANGUAGE RULE (2026-07-23): never lead with a bare gateway
- * code — nobody but a bank knows what "AVS code Z" indicates. One
+ * code — nobody but a bank knows what a bare AVS letter indicates. One
  * combined plain-words sentence covers both results (codes in
- * parentheses at the end), then one short outcome sentence using the
- * consistent "cited as evidence" phrasing. Mirrors
+ * parentheses at the end), then one short outcome sentence. "Cited"
+ * follows the CITATION authority, never the scoring match. Mirrors
  * `lib/argument/internalSignals.ts` — keep the two in lockstep.
  *
- * Result-sentence key by (avsBucket, cvvBucket); null = code absent.
- * Only combinations that can fire the warning (at least one present
- * code outside the scoring match set) are listed.
+ * Result-sentence key by (avs outcome, cvv outcome); "none" = code absent.
+ * Only combinations that can fire the warning are listed — a genuine
+ * `no_match` on either side, or a CVV-only match. An `unknown` /
+ * `not_checked` / `unavailable` AVS result is NOT a mismatch (PR-C3).
  */
 const AVS_CVV_RESULT_KEY: Record<string, string> = {
   "no_match|match": "resultAvsFailCvvMatch",
@@ -408,19 +422,29 @@ const AVS_CVV_RESULT_KEY: Record<string, string> = {
   "none|unchecked": "resultCvvUncheckedOnly",
 };
 
-function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel | null {
+/** Exported for test — the client mirror of `lib/argument/internalSignals.ts`.
+ *  The two must agree, so both are asserted against the same matrix in
+ *  `tests/unit/avsCitationLanguage.test.ts`. */
+export function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel | null {
   if (!isPlainObject(payload)) return null;
-  const avs = readString(payload.avsResultCode)?.toUpperCase() ?? null;
-  const cvv = readString(payload.cvvResultCode)?.toUpperCase() ?? null;
-  // Only emit when at least one code is present AND that code is
-  // outside the scoring match set. Absence of codes is not a signal.
-  const avsMismatch = avs !== null && avs !== "" && !AVS_MATCH_CODES.has(avs);
-  const cvvMismatch = cvv !== null && cvv !== "" && !CVV_MATCH_CODES.has(cvv);
-  if (!avsMismatch && !cvvMismatch) return null;
+  const verification = readPaymentVerification(payload);
+  const avs = verification.avs.code;
+  const cvv = verification.cvv.code;
+  // A FAILURE is the canonical `no_match` result and nothing else (PR-C3) —
+  // `unknown`, `not_checked` and `unavailable` are not failures, and an
+  // unrecognised code must not become a mismatch warning on top of its own
+  // diagnostic. Fires additionally on a CVV-only match, where the merchant
+  // must be told the match is kept internal (PR-C2 decision 1).
+  const avsFailed = verification.avs.normalized === "no_match";
+  const cvvFailed = verification.cvv.outcome === "no_match";
+  if (!avsFailed && !cvvFailed && !verification.cvvOnly) return null;
 
   const NS = "internalSignals.avsCvvMismatch";
-  const avsB = avsBucket(avs) ?? "none";
-  const cvvB = cvvBucket(cvv) ?? "none";
+  // Buckets come from the verification already normalized above — network
+  // aware, read once. A code-only helper would re-read the letter as an
+  // unknown-network payload.
+  const avsB = verification.avs.outcome ?? "none";
+  const cvvB = verification.cvv.outcome ?? "none";
   const resultKey = AVS_CVV_RESULT_KEY[`${avsB}|${cvvB}`];
   if (!resultKey) return null; // unreachable combos (match|match etc.)
 
@@ -428,20 +452,29 @@ function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel
     t(`${NS}.${resultKey}`, { avs: avs ?? "", cvv: cvv ?? "" }),
   ];
 
-  // Outcome — consistent "cited as evidence" phrasing. "Cited" follows
-  // the SCORING match sets (what actually reaches the positive bucket /
-  // narrative). Pure-unchecked results carry no outcome: nothing was
-  // withheld and nothing cited, the result sentence stands alone.
-  const avsCited = avs !== null && AVS_MATCH_CODES.has(avs);
-  const cvvCited = cvv !== null && CVV_MATCH_CODES.has(cvv);
-  if (cvvCited) {
-    sentences.push(
-      t(`${NS}.${avsB === "no_match" ? "outcomeOnlyCvvCited" : "outcomeCvvCitedClean"}`),
-    );
+  // Outcome. "Cited" follows the CITATION authority — a primary-sourced
+  // (network, code) cell — NOT the scoring match set: a scoring match from an
+  // unverified (network, code) cell is not citable. Pure-unchecked results
+  // carry no outcome: nothing was withheld and nothing cited, so the result
+  // sentence stands alone.
+  //   avsMatched — factual, for wording and the "partially passed" title
+  //   avsCited   — issuer-facing authority, the only basis for "was cited"
+  const avsMatched = verification.addressVerified;
+  const avsCited = verification.citableAddressVerified;
+  const cvvMatched = verification.securityCodeVerified;
+  if (cvvMatched) {
+    // CVV-only by construction (a both-matched fact raises no warning).
+    // PR-C2 decision 1: it is on record for the merchant and withheld from
+    // the bank — a security-code match is not an address match.
+    sentences.push(t(`${NS}.outcomeCvvOnlyNotCited`));
   } else if (avsCited) {
     sentences.push(
       t(`${NS}.${cvvB === "no_match" ? "outcomeOnlyAvsCited" : "outcomeAvsCitedClean"}`),
     );
+  } else if (avsMatched) {
+    // Matched, not citable — the (network, code) cell has no primary source.
+    // Never the "would weaken" wording: nothing here is weak.
+    sentences.push(t(`${NS}.outcomeAvsMatchedNotCitable`));
   } else if (avsB === "no_match" && cvvB === "none") {
     sentences.push(t(`${NS}.outcomeSingleNotCited`));
   } else if (cvvB === "no_match" && avsB === "none") {
@@ -452,44 +485,69 @@ function classifyAvsCvv(payload: unknown, t: Translate): InternalSignalViewModel
 
   return {
     id: "internal:avs_cvv_mismatch",
-    title: avsCited || cvvCited ? t(`${NS}.titlePartial`) : t(`${NS}.title`),
+    // Factual title: something DID pass, whether or not it may be cited.
+    title: avsMatched || cvvMatched ? t(`${NS}.titlePartial`) : t(`${NS}.title`),
     explanation: sentences.join(" "),
   };
 }
 
 /**
- * Classify billing/shipping address mismatch as an internal-only signal.
+ * An AVS code the canonical map has no entry for (PR-C3 / C-13).
  *
- * `billing_address_match` is auto-collected from Shopify order data
- * (`lib/packs/sources/orderSource.ts`) — the merchant cannot upload it.
- * When billing and shipping addresses do not align by city + country,
- * surfacing that to the bank would expose a weakness; instead the
- * merchant sees it as an internal-only signal.
+ * Recorded, explained, and used for nothing: no grade, no citation, no
+ * completeness credit, and NO assertion against the cardholder — an
+ * unrecognised code is a gap in our map, not a failed verification. The
+ * dispute is not parked; a package that tries to rely on the code is refused
+ * by the claim guards on its own.
  *
- * Sources of truth:
- *   - The order section payload (under the `order_confirmation` field)
- *     carries redacted `billingAddress` and `shippingAddress` objects
- *     with `{ city, provinceCode, countryCode, zipPrefix }`.
- *   - The collector only adds `billing_address_match` to `fieldsProvided`
- *     when city + countryCode match. Absence of the field in the
- *     checklist's "available" state therefore implies non-match
- *     (provided both addresses exist).
- *
- * Conservative: emits ONLY when both addresses are present AND at least
- * one of city/countryCode mismatches. Missing addresses → no signal
- * (absence is not a negative signal, per the existing classifier rules).
+ * Mirrors `lib/argument/internalSignals.ts` — keep the two in lockstep.
  */
-export function classifyBillingAddressMismatch(
+export function classifyUnmappedAvsCode(
+  payload: unknown,
+  t: Translate,
+): InternalSignalViewModel | null {
+  if (!isPlainObject(payload)) return null;
+  const verification = readPaymentVerification(payload);
+  if (!verification.avs.unmapped || verification.avs.code === null) return null;
+
+  const NS = "internalSignals.avsCodeUnmapped";
+  return {
+    id: "internal:avs_code_unmapped",
+    title: t(`${NS}.title`),
+    explanation: t(`${NS}.explanation`, { avs: verification.avs.code }),
+  };
+}
+
+/**
+ * Classify the billing-vs-shipping address comparison as an internal-only
+ * OPERATIONAL note — in both directions.
+ *
+ * NOT EVIDENCE, EITHER WAY (PR-C4 / C-14, decision 4). The agreement half was
+ * an evidence field until 2026-08-09: `billing_address_match`, graded strong
+ * as "AVS-confirmed billing matches the cardholder" while being emitted from a
+ * comparison of two merchant-held addresses that read no AVS result and knew
+ * no cardholder. The field is retired
+ * (`lib/evidence/model/retiredKeys.ts`); this note is what the comparison
+ * honestly supports, under its own label, and it is never scored, never cited
+ * and never a claim input. Address verification is the AVS row's job.
+ *
+ * Source of truth: the order section payload (carried on the
+ * `order_confirmation` row) holds redacted `billingAddress` and
+ * `shippingAddress` objects with `{ city, provinceCode, countryCode,
+ * zipPrefix }`. The retired checklist row is deliberately NOT consulted — a
+ * historical pack still carries one, and reading it would let the retired
+ * field decide what the merchant sees.
+ *
+ * Conservative, and asymmetrically so:
+ *   - no usable country pair          → neither note;
+ *   - countries differ                → MISMATCH, whatever the city data says;
+ *   - countries agree, a city missing → neither note (absence is not agreement);
+ *   - countries and cities agree      → AGREEMENT.
+ */
+export function classifyBillingShippingAgreement(
   effectiveChecklist: EvidenceItemWithStrength[],
   t: Translate,
 ): InternalSignalViewModel | null {
-  // If billing_address_match is already available, the collector confirmed
-  // a match — nothing to surface internally.
-  const billingItem = effectiveChecklist.find(
-    (i) => i.field === "billing_address_match",
-  );
-  if (billingItem?.status === "available") return null;
-
   // Read the order section payload (carried on the order_confirmation row).
   const orderItem = effectiveChecklist.find(
     (i) => i.field === "order_confirmation",
@@ -517,14 +575,37 @@ export function classifyBillingAddressMismatch(
     return null;
   }
 
-  const countryMismatch = billingCountry !== shippingCountry;
-  const cityMismatch =
+  const haveCities =
     billingCity !== null &&
     billingCity !== "" &&
     shippingCity !== null &&
-    shippingCity !== "" &&
-    billingCity !== shippingCity;
+    shippingCity !== "";
+  const countryMismatch = billingCountry !== shippingCountry;
+  const cityMismatch = haveCities && billingCity !== shippingCity;
 
+  // The agreement half, under its own NEW label. It replaces nothing the
+  // merchant used to read as evidence — the retired row's label is gone with
+  // the row.
+  //
+  // ALL FOUR VALUES REQUIRED. Both countries and both cities must be present
+  // and equal — the same predicate the retired collector used. Asserting
+  // agreement from "countries match and no city mismatch is provable" would
+  // claim the same city on an order where one city is missing. Absence is not
+  // agreement, in either direction: a missing city yields neither note, and
+  // the mismatch branch below is unchanged (differing countries still read as
+  // a mismatch whatever the city data).
+  if (!countryMismatch && haveCities && !cityMismatch) {
+    return {
+      id: "internal:billing_shipping_agree",
+      title: t("internalSignals.billingShippingAgree.title"),
+      explanation: t("internalSignals.billingShippingAgree.explanation"),
+    };
+  }
+
+  // Neither note: the countries agree but a city is missing, so there is
+  // nothing to affirm and nothing to warn about. This branch did not exist
+  // before the four-value rule — the function used to fall straight through to
+  // the mismatch return, which would now report a mismatch we cannot show.
   if (!countryMismatch && !cityMismatch) return null;
 
   const detail = countryMismatch
@@ -649,6 +730,9 @@ function deriveInternalOnlySignals(
     if (item.payload) byField.set(item.field, item.payload);
   }
 
+  const unmappedAvs = classifyUnmappedAvsCode(byField.get("avs_cvv_match"), t);
+  if (unmappedAvs) out.push(unmappedAvs);
+
   const avs = classifyAvsCvv(byField.get("avs_cvv_match"), t);
   if (avs) out.push(avs);
 
@@ -659,7 +743,7 @@ function deriveInternalOnlySignals(
   );
   if (nameMismatch) out.push(nameMismatch);
 
-  const billing = classifyBillingAddressMismatch(effectiveChecklist, t);
+  const billing = classifyBillingShippingAgreement(effectiveChecklist, t);
   if (billing) out.push(billing);
 
   const ip = classifyIpLocation(byField.get("ip_location_check"), t);
@@ -777,22 +861,37 @@ export function useEvidenceSections(workspace: Workspace): EvidenceSectionsViewM
     outcome: caseOutcome,
   });
   const decided = isDecided(caseStatus);
+  /* NO ASSESSMENT, NO VERDICT.
+   *
+   * `derived.caseStrength.overall` is `insufficient` on the empty sentinel and
+   * `derived.readiness` is `"blocked"`, so without this branch the summary
+   * card shows a Weak badge, a needs-attention status and a "review missing
+   * evidence" step for a case nothing has assessed. */
+  const assessed = derived.assessment.mayRenderVerdict;
   const caseSummary: CaseSummaryViewModel = {
-    strength: derived.caseStrength.overall,
+    strength: assessed ? derived.caseStrength.overall : null,
     status: caseStatus,
     // Decided cases have nothing to automate — drop the "Review required"
     // pill (the outcome pill + calm headline carry the state).
     automationMode: decided ? null : automationMode,
     nextStep: decided
       ? { kind: "submitted_no_action" }
-      : deriveNextStep({
-          isReadOnly: derived.isReadOnly,
-          readiness: derived.readiness,
-          automationMode,
-          dueAt: data.dispute.dueAt,
-        }),
-    strengthReasonText: derived.strengthReasonText,
-    improvementHintText: derived.improvementHintText,
+      : !assessed
+        ? {
+            kind: "not_assessed" as const,
+            titleToken: derived.assessment.titleToken,
+            bodyToken: derived.assessment.bodyToken,
+          }
+        : deriveNextStep({
+            isReadOnly: derived.isReadOnly,
+            readiness: derived.readiness,
+            automationMode,
+            dueAt: data.dispute.dueAt,
+          }),
+    // The reason line explains a band; with no band it explains nothing, and
+    // the sentinel's reason token reads as a verdict about the case.
+    strengthReasonText: assessed ? derived.strengthReasonText : asLocalized(""),
+    improvementHintText: assessed ? derived.improvementHintText : null,
   };
 
   // ── Evidence used in defense ──

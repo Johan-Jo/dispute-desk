@@ -18,6 +18,11 @@
  * re-implementations.
  */
 
+import {
+  hasFullAvsAndCvvMatch,
+  readPaymentVerification,
+  type PaymentVerification,
+} from "@/lib/argument/paymentVerification";
 import type {
   EvidenceFact,
   EvidenceFactCategory,
@@ -77,6 +82,20 @@ function hasCategoryWithValueGreaterThan(
     const v = f.value?.[key];
     return typeof v === "number" && v > threshold;
   });
+}
+
+/**
+ * Every payment-verification fact, read through the ONE owner
+ * (`lib/argument/paymentVerification.ts`). Predicates used to test raw letters
+ * inline — a seventh definition of the match rules living in the layer that
+ * authorizes bank-facing claims.
+ */
+function paymentVerifications(facts: EvidenceFact[]): PaymentVerification[] {
+  return facts
+    .filter(
+      (f) => f.category === "payment_authentication" || f.category === "payment_auth",
+    )
+    .map((f) => readPaymentVerification(f.value));
 }
 
 function orderRecordFulfillment(facts: EvidenceFact[]): string | null {
@@ -173,27 +192,42 @@ export const FACT_PREDICATES: Record<FactPredicateId, FactPredicate> = {
 
   avs_and_cvv_match: {
     id: "avs_and_cvv_match",
-    description: "payment_authentication / billing_match with avsResult='Y' AND cvvResult='M'",
+    description:
+      "payment_authentication / payment_auth whose ADDRESS result is the canonical citable match (a primary-sourced (network, code) cell, register R-E) AND whose SECURITY-CODE result is a match",
     evaluate: (facts) =>
-      facts.some(
-        (f) =>
-          (f.category === "payment_authentication" || f.category === "payment_auth") &&
-          f.value?.avsResult === "Y" &&
-          f.value?.cvvResult === "M",
-      ),
+      paymentVerifications(facts).some((v) => hasFullAvsAndCvvMatch(v)),
   },
 
-  avs_or_cvv_value_present: {
-    id: "avs_or_cvv_value_present",
-    description: "payment_authentication / payment_auth / billing_match with any avsResult or cvvResult value",
-    evaluate: (facts) =>
-      facts.some(
-        (f) =>
-          (f.category === "payment_authentication" ||
-            f.category === "payment_auth" ||
-            f.category === "billing_match") &&
-          (f.value?.avsResult !== undefined || f.value?.cvvResult !== undefined),
-      ),
+  /**
+   * PR-C2 (C-12). Replaced `avs_or_cvv_value_present`, which was satisfied by
+   * the mere PRESENCE of either code — including `AVS = N` — and so licensed a
+   * narrative claiming AVS authenticated a transaction the issuer had refused
+   * to verify. The two facts now have two predicates, and each requires its
+   * own match.
+   */
+  avs_address_verified: {
+    id: "avs_address_verified",
+    description:
+      "payment_authentication / payment_auth whose AVS result is a PRIMARY-SOURCED match (register R-E names Y and M) — the ONLY predicate that may ground an address-verification claim",
+    // PR-C3 decision 3: authorizing bank-facing text needs the citable
+    // standard, not merely a match. A `W` postal-only result still scores and
+    // still shows on the merchant's screen; it can no longer license a
+    // sentence filed under a rule that names `Y` or `M`. An unmapped code
+    // fails here too — which is the "refused" half of "recorded, not parked".
+    evaluate: (facts) => paymentVerifications(facts).some((v) => v.citableAddressVerified),
+  },
+
+  /**
+   * The card-possession fact. DECISION 1: satisfying this NEVER satisfies
+   * `avs_address_verified`, and a CVV-only fact is not bank-eligible in the
+   * first place — so a guard keyed on this predicate can only fire on prose
+   * about the security code itself.
+   */
+  cvv_verified: {
+    id: "cvv_verified",
+    description:
+      "payment_authentication / payment_auth whose CVV result is a match. Never an address authority.",
+    evaluate: (facts) => paymentVerifications(facts).some((v) => v.securityCodeVerified),
   },
 
   billing_match_confirmed: {

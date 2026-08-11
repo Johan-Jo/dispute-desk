@@ -29,6 +29,11 @@
  * Nothing here is speculative back-compat.
  */
 
+import {
+  readPaymentVerification,
+  type VerificationOutcome,
+} from "@/lib/argument/paymentVerification";
+import type { AvsAuthority, AvsNormalizedResult, CardNetwork } from "@/lib/argument/avsCodeMap";
 import type { EvidenceFieldKey } from "./domains";
 
 /* ── Shared value types ──────────────────────────────────────────────── */
@@ -101,10 +106,32 @@ export type EvidencePayload =
     }
   | {
       fieldKey: "avs_cvv_match";
-      /** Raw codes are MERCHANT-ONLY. Bank-facing prose is built in the
-       *  projection layer, never by concatenating these. */
+      /**
+       * PR-C3: the canonical model carries the NORMALIZED verification, not a
+       * pair of letters for each consumer to re-read. Everything below is
+       * derived by `lib/argument/paymentVerification.ts` — the map is not
+       * duplicated here and no raw letter is reinterpreted.
+       */
+      network: CardNetwork;
+      /** Raw codes are MERCHANT-ONLY, kept for audit and display. Bank-facing
+       *  prose is built in the projection layer, never by concatenating these. */
       avsResultCode: string | null;
       cvvResultCode: string | null;
+      /** Factual reading of the issuer's AVS response. */
+      avsNormalized: AvsNormalizedResult;
+      /** Verification state of the (network, code) cell it resolved through. */
+      avsAuthority: AvsAuthority;
+      /** The code is outside the canonical map: diagnostic, never credit. */
+      avsUnmapped: boolean;
+      /** SCORING: the address matched (any of the three match flavours). */
+      addressVerified: boolean;
+      /** CITATION: the cell is primary-sourced — register R-E on Visa. */
+      citableAddressVerified: boolean;
+      /** The CVV subfact: its descriptive outcome and its match. */
+      cvvOutcome: VerificationOutcome | null;
+      securityCodeVerified: boolean;
+      /** Fact-level citability (decision 1 + decision 3). */
+      citable: boolean;
       cardholderName: string | null;
     }
   | {
@@ -137,7 +164,14 @@ export type EvidencePayload =
       refundedAt: string | null;
     }
   | { fieldKey: "no_return_initiated"; returnStatus: string | null }
-  | { fieldKey: "billing_address_match"; match: boolean }
+  /**
+   * `billing_address_match` had an arm here until 2026-08-09 (PR-C4). It is a
+   * retired FIELD key now, so no arm exists and none may be added: the union is
+   * keyed on `EvidenceFieldKey`, and the retired key is no longer one. A
+   * historical `pack_json` carrying it still parses — the field is simply never
+   * normalized, exactly like `deliveredToVerifiedAddress` on the delivery arm.
+   * See `lib/evidence/model/retiredKeys.ts`.
+   */
   | {
       fieldKey: "customer_account_info";
       totalOrders: number | null;
@@ -271,15 +305,28 @@ export function normalizeEvidencePayload(
         exemption: str(raw?.exemptionIndicator),
       };
 
-    case "avs_cvv_match":
+    case "avs_cvv_match": {
+      // Derived through the ONE owner (PR-C3), which also handles the LEGACY
+      // shapes — snake_case `avs_result_code` (11 packs, newest 2026-01-19)
+      // and the `avsResult` fact projection. A second reading of the letters
+      // here is exactly the divergence the canonical model exists to remove.
+      const v = readPaymentVerification(raw);
       return {
         fieldKey,
-        // LEGACY (11 packs, newest 2026-01-19): snake_case keys. Without this
-        // the categorizer reads nothing and rates a real AVS match `invalid`.
-        avsResultCode: str(raw?.avsResultCode) ?? str(raw?.avs_result_code),
-        cvvResultCode: str(raw?.cvvResultCode) ?? str(raw?.cvv_result_code),
-        cardholderName: str(raw?.cardholderName),
+        network: v.network,
+        avsResultCode: v.avs.code,
+        cvvResultCode: v.cvv.code,
+        avsNormalized: v.avs.normalized,
+        avsAuthority: v.avs.authority,
+        avsUnmapped: v.avs.unmapped,
+        addressVerified: v.addressVerified,
+        citableAddressVerified: v.citableAddressVerified,
+        cvvOutcome: v.cvv.outcome,
+        securityCodeVerified: v.securityCodeVerified,
+        citable: v.citable,
+        cardholderName: v.cardholderName,
       };
+    }
 
     case "customer_communication":
       return {
@@ -329,9 +376,6 @@ export function normalizeEvidencePayload(
 
     case "no_return_initiated":
       return { fieldKey, returnStatus: str(raw?.returnStatus) };
-
-    case "billing_address_match":
-      return { fieldKey, match: bool(raw?.match) };
 
     case "customer_account_info":
       return {

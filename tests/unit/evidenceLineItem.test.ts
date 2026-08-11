@@ -1418,7 +1418,7 @@ describe("Test 25 — draft-pack inclusion consistency (2026-07-21 blume-box 306
     const lineItems = await derive({
       checklist: [AVS_CHECKLIST_ROW],
       payloadByField: new Map<string, unknown>([
-        ["avs_cvv_match", { avsResultCode: "Y", cvvResultCode: "M" }],
+        ["avs_cvv_match", { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Visa" }],
       ]),
       contributions: { strong: [PAYMENT_AUTH_STRONG_CONTRIBUTION], moderate: [] },
     });
@@ -1500,7 +1500,7 @@ describe("Test 25 — draft-pack inclusion consistency (2026-07-21 blume-box 306
         },
       ],
       payloadByField: new Map<string, unknown>([
-        ["avs_cvv_match", { avsResultCode: "Y", cvvResultCode: "M" }],
+        ["avs_cvv_match", { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Visa" }],
         // Negative IP payload → internal_only (legitimately non-positive).
         ["ip_location_check", { locationMatch: "different_country", riskLevel: "high" }],
         // Zero-history account on a fraud dispute → the row is DROPPED
@@ -1560,31 +1560,32 @@ describe("Test 25 — draft-pack inclusion consistency (2026-07-21 blume-box 306
     }> = [
       {
         // Both matched (this dispute's live payload).
-        payload: { avsResultCode: "Y", cvvResultCode: "M" },
+        payload: { avsResultCode: "Y", cvvResultCode: "M", cardCompany: "Visa" },
         mustMatch:
           /^Billing address and card verification code \(CVV\) matched the issuer's records\.$/,
       },
       {
         // AVS full match only — must NOT claim the CVV matched.
-        payload: { avsResultCode: "Y", cvvResultCode: "N" },
+        payload: { avsResultCode: "Y", cvvResultCode: "N", cardCompany: "Visa" },
         mustMatch: /^The billing address matched the issuer's records\.$/,
         mustNotMatch: /CVV|card verification code/,
       },
       {
-        // CVV only — must NOT claim the billing address matched.
+        // CVV only — PR-C2 (C-12) decision 1. The copy names the match AND
+        // says it is kept internal; it must never read as cited evidence,
+        // and must never claim the billing address matched.
         payload: { avsResultCode: "N", cvvResultCode: "M" },
-        mustMatch:
-          /^The card verification code \(CVV\) matched the issuer's records\.$/,
-        mustNotMatch: /billing address/,
+        mustMatch: /Kept internal/,
+        mustNotMatch: /billing address matched/,
       },
       {
         // AVS street-only match (code A).
-        payload: { avsResultCode: "A", cvvResultCode: "N" },
+        payload: { avsResultCode: "A", cvvResultCode: "N", cardCompany: "Visa" },
         mustMatch: /^The billing street address matched the issuer's records\.$/,
       },
       {
         // AVS zip-only match (code W).
-        payload: { avsResultCode: "W", cvvResultCode: "N" },
+        payload: { avsResultCode: "W", cvvResultCode: "N", cardCompany: "Visa" },
         mustMatch: /^The billing postal code matched the issuer's records\.$/,
       },
     ];

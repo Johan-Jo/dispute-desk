@@ -21,8 +21,16 @@ import {
   effectivePriorOrders,
   type EvidenceCategory,
 } from "@/lib/argument/canonicalEvidence";
+import {
+  citableVerificationSummaryEn,
+  readPaymentVerification,
+} from "@/lib/argument/paymentVerification";
 import type { CaseStrengthLevel } from "@/lib/argument/types";
-import { stripRetiredPayloadKeys } from "@/lib/evidence/model/retiredKeys";
+import {
+  isRetiredFieldKey,
+  stripRetiredPayloadKeys,
+} from "@/lib/evidence/model/retiredKeys";
+import { isBankIncludedFact } from "./bankInclusion";
 import { evaluateAllPredicates } from "./factPredicates";
 import type {
   EvidenceFact,
@@ -149,6 +157,33 @@ export function isUnciteableThreeDsFact(
   );
 }
 
+/**
+ * A payment-verification fact is bank-citable only through its ADDRESS half.
+ *
+ * DECISION 1 (PR-C2 / C-12, maintainer 2026-08-08): a CVV-only match is a
+ * valid internal merchant fact and is not issuer-citable. A security-code
+ * match says the person at checkout held the card; it says nothing about the
+ * address, and the Visa CE rule this evidence is cited under (register R-E,
+ * chart Item 3) is an address rule. Citing it invited the issuer to answer the
+ * half we did not have.
+ *
+ * Same shape as `isUnciteableThreeDsFact` and for the same reason: bank-
+ * inclusion predicates belong to the classifier by contract, so the LLM
+ * payload, the Evidence Basis rows, the workspace line items and the canonical
+ * model's citation state agree by construction instead of by comment.
+ *
+ * The grade is untouched — `categorizeEvidenceField` still returns `moderate`
+ * for a CVV-only match, so case strength and completeness see exactly what
+ * they saw before the split.
+ */
+export function isUnciteablePaymentVerificationFact(
+  fieldKey: string,
+  payload: Record<string, unknown> | null | undefined,
+): boolean {
+  if (fieldKey !== "avs_cvv_match") return false;
+  return !readPaymentVerification(payload).citable;
+}
+
 /** Field keys whose facts must never appear in bank-facing surfaces by
  *  default. The LLM payload filter excludes them; `submission_risk=true`
  *  is set on the persisted row for the same reason. */
@@ -184,7 +219,10 @@ export function isFieldBankEligible(
   fieldKey: string,
   payload: Record<string, unknown> | null,
 ): boolean {
+  // A retired field is never bank-eligible, whatever a historical payload says.
+  if (isRetiredFieldKey(fieldKey)) return false;
   if (INTERNAL_ONLY_FIELDS.has(fieldKey)) return false;
+  if (isUnciteablePaymentVerificationFact(fieldKey, payload)) return false;
   const cat = categoryFor({ fieldKey, payload });
   return cat === "strong" || cat === "moderate";
 }
@@ -194,8 +232,11 @@ export function categoryForField(fieldKey: string, payload: Record<string, unkno
     case "avs_cvv_match":
     case "tds_authentication":
       return "payment_authentication";
-    case "billing_address_match":
-      return "billing_match";
+    // `billing_address_match` mapped to `billing_match` until 2026-08-09
+    // (PR-C4). The field is retired; the category keeps its declaration and
+    // loses its only member. Nothing maps to it now — asserted in
+    // `tests/unit/retiredFieldKeyContainment.test.ts` — so `derivePackageMode`
+    // sees exactly what it sees on prod today (0 such facts).
     case "delivery_proof":
       return "delivery_proof";
     case "shipping_tracking":
@@ -281,38 +322,34 @@ function extractValue(
   const p = stripRetiredPayloadKeys(payload) ?? {};
   switch (fieldKey) {
     case "avs_cvv_match": {
-      const avsResult =
-        typeof p.avsResultCode === "string"
-          ? (p.avsResultCode as string).toUpperCase()
-          : null;
-      const cvvResult =
-        typeof p.cvvResultCode === "string"
-          ? (p.cvvResultCode as string).toUpperCase()
-          : null;
-      // Translated phrase the LLM is told to quote instead of the raw
-      // gateway codes (Y/M/N/etc.). Issuers know what the letters mean
-      // but quoting them verbatim ("AVS Y, CVV M") in merchant prose
-      // looks amateurish and forces the merchant to trust we didn't
-      // misquote. The plain-language summary preserves the same evidentiary
-      // signal in language that reads naturally.
-      const parts: string[] = [];
-      if (avsResult === "Y" || avsResult === "X") {
-        parts.push("the billing address matched the issuer's records");
-      } else if (avsResult === "A") {
-        parts.push("the billing street matched the issuer's records");
-      } else if (avsResult === "Z" || avsResult === "W") {
-        parts.push("the billing postal code matched the issuer's records");
-      }
-      if (cvvResult === "M") {
-        parts.push("the card verification code matched the issuer's records");
-      }
-      const verificationSummary =
-        parts.length > 0
-          ? parts.join(" and ")
-          : null;
+      // TWO facts, one row (PR-C2). `paymentVerification` owns which codes
+      // mean what; this branch only projects them.
+      //
+      // `verificationSummary` is the plain-language phrase the LLM is told to
+      // quote instead of the raw gateway codes (Y/M/N/etc.) — issuers know
+      // what the letters mean, but quoting them verbatim reads amateurishly
+      // and forces the merchant to trust we did not misquote.
+      //
+      // DECISION 1: when the address half is missing, NOTHING here is
+      // citable, so the codes themselves are withheld from the fact value as
+      // well as the summary. A CVV-only fact reaches the LLM payload with no
+      // quotable content even if a later change forgot to check
+      // `bankEligible` — the codes are not there to misuse.
+      const verification = readPaymentVerification(p);
+      const verificationSummary = citableVerificationSummaryEn(verification);
       return {
-        avsResult,
-        cvvResult,
+        // The NETWORK travels with the codes (PR-C3). Citation authority is a
+        // property of the (network, code) cell, so a fact that loses its
+        // network loses the only thing that could authorize it — and this
+        // projection used to drop `cardCompany` on the floor, which meant a
+        // Visa-citable fact re-read as unknown-network downstream. Persisted
+        // even when nothing is citable: it is not a claim, it is the context
+        // every re-validation needs.
+        network: verification.network,
+        avsResult: verification.citable ? verification.avs.code : null,
+        cvvResult: verification.citable ? verification.cvv.code : null,
+        addressVerified: verification.addressVerified,
+        securityCodeVerified: verification.securityCodeVerified,
         verificationSummary,
       };
     }
@@ -339,8 +376,6 @@ function extractValue(
         exemptionIndicator: strv(p.exemptionIndicator),
       };
     }
-    case "billing_address_match":
-      return { match: p.match === true };
     case "delivery_proof":
     case "shipping_tracking": {
       // The carrier, tracking number and tracking URL live INSIDE
@@ -535,7 +570,6 @@ const FIELD_LABEL_EN: Record<string, string> = {
   avs_cvv_match: "Payment authentication",
   tds_authentication: "3-D Secure authentication",
   fraud_risk_screening: "Pre-authorization fraud screening",
-  billing_address_match: "Billing address match",
   delivery_proof: "Delivery confirmation",
   shipping_tracking: "Shipping tracking",
   ip_location_check: "IP & location consistency",
@@ -560,7 +594,14 @@ function labelForField(fieldKey: string): string {
 
 /* ── Package mode derivation ── */
 
-function derivePackageMode(input: {
+/**
+ * Exported for the D-1 replay (`docs/evidence-model/p4/d1-billing-match-replay.md`).
+ *
+ * The replay must enumerate mode transitions through the REAL rule, not a copy
+ * of it: a measurement taken against a re-implementation measures the
+ * re-implementation. Production callers still reach it only via `classifyFacts`.
+ */
+export function derivePackageMode(input: {
   approvedFacts: EvidenceFact[];
   caseStrength: CaseStrengthLevel;
   fatalLoss: FatalLossLike;
@@ -617,6 +658,12 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
     const sourceRef = itemBySectionIdx.get(i)?.id ?? null;
 
     for (const fieldKey of section.fieldsProvided) {
+      // A RETIRED field key produces no fact — no category, no strength, no
+      // value in the LLM payload, no citation. Stated explicitly rather than
+      // relying on the `!spec` fall-through below, because a deliberate
+      // retirement and an unregistered key must never look the same in code
+      // (`lib/evidence/model/retiredKeys.ts`).
+      if (isRetiredFieldKey(fieldKey)) continue;
       const spec = CANONICAL_EVIDENCE[fieldKey];
       if (!spec) continue;
 
@@ -648,6 +695,15 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
       // the same issuer, three lines below.
       const isUnciteableThreeDs = isUnciteableThreeDsFact(fieldKey, value);
 
+      // A CVV-only payment-verification match: kept as an internal fact,
+      // never citable (PR-C2 decision 1). Read from the SECTION payload, not
+      // from `value` — `extractValue` has already dropped the raw codes for
+      // any fact whose address half is missing.
+      const isUnciteableVerification = isUnciteablePaymentVerificationFact(
+        fieldKey,
+        section.data,
+      );
+
       const fact: EvidenceFact = {
         id: factId,
         category,
@@ -657,13 +713,17 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
         sourceRef,
         strength: cat,
         bankEligible:
-          !isInternalOnly && !isUnciteableThreeDs && (cat === "strong" || cat === "moderate"),
+          !isInternalOnly &&
+          !isUnciteableThreeDs &&
+          !isUnciteableVerification &&
+          (cat === "strong" || cat === "moderate"),
         merchantVisible: true,
         internalOnly: isInternalOnly,
         includeInBankNarrative:
           !isInternalOnly &&
           !isSubmissionRisk &&
           !isUnciteableThreeDs &&
+          !isUnciteableVerification &&
           (cat === "strong" || cat === "moderate"),
         submissionRisk: isSubmissionRisk,
         confidence: null,
@@ -685,6 +745,12 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
   // Missing-evidence rows — internal only, never sent to the LLM.
   const missing: MissingEvidence[] = input.checklist
     .filter((c) => c.status === "missing")
+    // A persisted `checklist_v2` written before the retirement still carries a
+    // row for the retired field (112 packs on prod at the PR-C4 census).
+    // `reconcileChecklistWithCollectedFields` drops it on every read, but this
+    // classifier is also called with checklists from other paths — so the
+    // retirement is enforced here too rather than assumed upstream.
+    .filter((c) => !isRetiredFieldKey(c.field))
     .map((c) => ({
       category: categoryForField(c.field, null),
       label: labelForField(c.field),
@@ -740,7 +806,11 @@ export function classifyFacts(input: ClassifyFactsInput): FactClassificationResu
   }
 
   // Eligibility check.
-  const eligible = approved.some((f) => f.bankEligible && f.includeInBankNarrative && !f.submissionRisk);
+  // Delegated to the ONE bank-inclusion predicate (`lib/defence/bankInclusion.ts`).
+  // Same rule, same result — the expression was identical here, in the Evidence
+  // Basis renderer and in the workspace route, and identical-by-comment is how
+  // the LLM payload's weaker copy went unnoticed (C-1).
+  const eligible = approved.some(isBankIncludedFact);
   if (!eligible) {
     return {
       approved,

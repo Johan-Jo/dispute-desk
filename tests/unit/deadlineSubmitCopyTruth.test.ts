@@ -85,14 +85,33 @@ describe("deadline cron — what can and cannot escape submission", () => {
   });
 
   it("only a finished, validated package is auto-finalized", () => {
+    /* The property is unchanged; its OWNER moved.
+     *
+     * The route used to re-check `validation_status === "ok"` and `pdf_path`
+     * itself, beside the candidate query. Those are now preconditions of a
+     * `selected` outcome — `selectFileablePackage` refuses `validationPassed
+     * !== true`, a non-`ok` validation status and a missing artifact before it
+     * can return one — so re-checking them in the route would be a second gate
+     * with its own opinion about the same columns, which is the divergence this
+     * delivery exists to end.
+     *
+     * So the assertion is split: the route still decides only what it is about
+     * to DO (promote a draft/stale row, or enqueue an already-final one), and
+     * the SELECTOR is where "validated, with an artifact" is enforced. */
     const branch = CRON.slice(
-      CRON.indexOf("// Draft or stale with validation=ok"),
+      CRON.indexOf("if (dpkg!.status === \"draft\""),
       CRON.indexOf("summary.enqueuedAutoFinalize"),
     );
     expect(branch).toContain('dpkg!.status === "draft"');
     expect(branch).toContain('dpkg!.status === "stale"');
-    expect(branch).toContain('dpkg!.validation_status === "ok"');
-    expect(branch).toContain("dpkg!.pdf_path");
+
+    const SELECTOR = readFileSync(
+      resolve(process.cwd(), "lib/defence/package/selectFileablePackage.ts"),
+      "utf8",
+    );
+    expect(SELECTOR).toContain("candidate.validationPassed !== true");
+    expect(SELECTOR).toContain("candidate.validationStatus !== OK_VALIDATION");
+    expect(SELECTOR).toContain('none(trigger, "artifact_missing")');
   });
 });
 

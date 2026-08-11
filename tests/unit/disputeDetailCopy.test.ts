@@ -191,8 +191,10 @@ describe("Saved-vs-sent vocabulary — plan §8 wording corrections", () => {
     const why = disputes.whyText as Record<string, string>;
     expect(why.avs_cvv_match).toMatch(/supporting signal/i);
     expect(why.avs_cvv_match).not.toMatch(/weigh this heavily/i);
-    expect(why.billing_address_match).toMatch(/supporting signal/i);
-    expect(why.billing_address_match).not.toMatch(/critical/i);
+    // `billing_address_match` had a whyText entry until 2026-08-09 (PR-C4 /
+    // C-14). The field is retired, so the copy is gone rather than reworded —
+    // asserted here so a future author does not restore it.
+    expect(why.billing_address_match).toBeUndefined();
     expect(why.fraud_risk_screening).toMatch(/supporting context/i);
     expect(why.fraud_risk_screening).not.toMatch(/independent backing/i);
   });

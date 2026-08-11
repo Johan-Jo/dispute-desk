@@ -8,6 +8,7 @@ import type { CaseStrengthResult, WhyWinsResult, RiskResult, ImprovementSignal, 
 import type { EvidenceLineItem } from "@/lib/argument/evidenceLineItem";
 import type { DisputePresentation } from "@/lib/disputes/presentation/types";
 import type { HeldState } from "@/lib/disputes/heldState";
+import type { WorkspaceAssessmentPayload } from "@/lib/disputes/workspaceAssessmentTypes";
 
 /** Canonical tab indices for the dispute-detail workspace. Order per
  *  reviewer direction 2026-07-24 (supersedes plan §6.0): Overview →
@@ -305,6 +306,21 @@ export interface WorkspaceData {
    *  lifecycle/attention/strength interpretation the list and dashboard
    *  use. The detail page must never re-derive these dimensions. */
   presentation?: DisputePresentation | null;
+  /**
+   * CP-A — case strength, completeness, readiness and filing state, all
+   * derived ONCE on the server by `buildWorkspaceAssessment`.
+   *
+   * Before this existed the browser ran `calculateCaseStrength` itself, with
+   * a gate set it assembled locally, and reconstructed submission readiness
+   * from the checklist. The route computed its own answer on the same
+   * request; on a fraud case with a cardholder-name mismatch the two
+   * disagreed on one screen (client Strong, server Moderate).
+   *
+   * Optional on the type so a response from a deploy that predates the
+   * server change degrades to `needsRecalculation` rather than to a wrong
+   * number. That is deliberate: absent is a state, not a zero.
+   */
+  workspaceAssessment?: WorkspaceAssessmentPayload | null;
   /** Auto-pilot hold (lib/disputes/heldState) — resolved server-side
    *  from the SAME guard verdict the pipeline acted on, and shared with
    *  the new-dispute email so the page and the email cannot describe
@@ -374,7 +390,9 @@ export interface EvidenceItemWithStrength extends ChecklistItemV2 {
 
 // Render sites translate via `t("disputes.evidenceCategoryLabel." + cat.key)`.
 export const EVIDENCE_CATEGORIES: EvidenceCategory[] = [
-  { key: "order", fields: ["order_confirmation", "billing_address_match"] },
+  // `billing_address_match` sat in this bucket until 2026-08-09 (PR-C4 /
+  // C-14). It is a retired field — see `lib/evidence/model/retiredKeys.ts`.
+  { key: "order", fields: ["order_confirmation"] },
   { key: "payment", fields: ["avs_cvv_match"] },
   { key: "fulfillment", fields: ["shipping_tracking", "delivery_proof"] },
   { key: "communication", fields: ["customer_communication"] },

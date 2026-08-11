@@ -2090,9 +2090,10 @@ when disputes are detected:
 2. For each new dispute, `runAutomationPipeline()` checks `shop_settings`:
    - If `auto_build_enabled` → enqueue `build_pack` job.
 3. `build_pack` collects evidence sources, evaluates completeness.
-4. `evaluateAndMaybeAutoSave()` checks the auto-save gate:
-   - `auto_save_enabled` + `score >= threshold` + `blockers == 0` + review status.
-   - Decision: `auto_save` | `park_for_review` | `block`.
+4. `evaluateAndMaybeAutoSave()` derives the **canonical automation decision**
+   (see *Canonical automation decision* above) and maps its action onto the
+   pipeline's existing side effects: `auto_save` | `park_for_review` | `block` |
+   `skip_covered` | `defer_no_package`. It no longer runs a gate of its own.
 5. If `auto_save` → enqueue `save_to_shopify` job.
 
 When the gate decision is `block`, the pipeline writes the gate's `reasons` to both the `auto_save_blocked` audit event (`event_payload.reasons`) and the `pack_blocked` dispute event (`description` + `metadata_json.reasons`). The embedded app surfaces this in two places so the merchant is never left guessing why auto-submit stopped:
@@ -2160,6 +2161,79 @@ DB columns (`evidence_packs`): `checklist_v2` (jsonb), `submission_readiness` (t
 - `not_applicable` — non-card payment (PayPal, manual, etc.)
 
 The `required_if_card_payment` mode now checks `OrderContext.avsCvvAvailable`: when a card payment exists but the gateway didn't return codes, AVS/CVV is marked `unavailable` (not `missing`) — it does not penalize the completeness score or appear as a warning. In v2: `priority: "critical"`, `blocking: false`.
+
+#### AVS and CVV are two facts — one owner (PR-C2, 2026-08-08)
+
+`lib/argument/paymentVerification.ts` is the **single owner** of AVS/CVV semantics: it normalizes every payload shape (`avsResultCode` / `avs_result_code` / the `avsResult` fact projection), classifies both subfacts, grades them, and decides what may be cited. Before it, the match rules were written **six** times — `canonicalEvidence.ts`, `evidenceLineItem.ts`, `internalSignals.ts`, `useEvidenceSections.ts`, the deleted `avsCvvExplain.ts`, and inline `"Y"` / `"M"` comparisons in `factPredicates.ts` — kept aligned by comment, and already drifted (AVS `F` read as *matched* in merchant copy while scoring credited nothing; AVS `Z` produced a bank-facing "postal code matched" clause the scorer called a non-match). `tests/unit/paymentVerificationSingleOwner.test.ts` fails the build on any second definition, any re-declared code set, and any consumer that branches on a raw letter.
+
+**Decision 1 — a CVV-only match is not issuer-citable.** A security-code match says the person at checkout held the card; it says nothing about the address, and the Visa §4 Compelling Evidence rule this evidence is cited under (register R-E, chart Item 3) is an address rule. So when the CVV matched and AVS did not (or was never verified):
+
+- the fact is still **collected, graded `moderate`, and shown to the merchant** — case strength and completeness are unchanged by the split;
+- `factClassifier.isUnciteablePaymentVerificationFact` sets `bankEligible: false` and `includeInBankNarrative: false`;
+- `extractValue` withholds the **codes themselves** along with `verificationSummary`, so a downstream consumer that forgets the flag has nothing to quote;
+- the canonical model records `citation.eligibility: "withheld_risk"` (`avs_cvv_match` is now a `conditional` citation policy);
+- the Evidence Basis table cannot print it, and the `paymentAuthMethod` thesis token stays null.
+
+**A persisted `verificationSummary` is not citation authority.** The renderer reads the underlying codes through `readPaymentVerification` **first**; only if the address half is citable does any AVS/CVV text get written, and that text is *derived from the values*, never copied from the stored sentence. This matters because facts written before PR-C2 carry summaries built under the old rule — "the card verification code matched the issuer's records" on a CVV-only case, "the billing postal code matched…" on AVS `Z` — alongside a `bankEligible: true` from the same era. A stored summary now only selects the register (sentence form for facts that had one, terse "billing address matched • CVV matched" for raw-code facts), so existing packages re-render identically while an overstated summary is clipped back to what the values support.
+
+**A payment-verification fact with nothing citable produces NO Evidence Basis row.** `renderValue` returns `null` and `buildEvidenceBasisRows` skips the fact entirely, rather than falling back to the generic word "Authenticated" as it did before. The row's own label ("Payment authentication") is itself an assertion, so suppressing only the words "CVV"/"verification code" would still have filed the claim on a legacy CVV-only fact whose persisted `bankEligible` predates the split. **3-D Secure stays independently citable** — a liability-shifted or merchant-confirmed authentication renders whether or not an AVS result exists, and a CVV-only fact that also carries citable 3DS renders the 3DS half alone.
+
+**Claim guards split with the facts.** `avs_or_cvv_value_present` — satisfied by the mere *presence* of either code, including `AVS = N` — is replaced by `avs_address_verified` and `cvv_verified`, each requiring its own match. The single `/\b(AVS|CVV)\b/` guard became `avs_address_verified_claim` (also catching address-verification prose that avoids the acronym) and `cvv_verified_claim`.
+
+**Decision 2 — completeness keeps ONE grouped payment-verification requirement**, with AVS and CVV as subfacts beneath it. No checklist row was added; the denominator and thresholds are unchanged, which matters because P-7 later calibrates on them.
+
+**Which codes qualify, per network:** answered by PR-C3 below.
+
+**Measured on prod before merge** (read-only, `scripts/sql/prc2-cvv-only-census.sql`, 2026-08-08): 130 packs carry an `avs_cvv_match` section — both matched 41, AVS-only 4, **CVV-only 76**, neither 9. AVS `N` alone is 73 of 130. 68 open disputes carry a CVV-only verification. AVS `F` appears on 0 packs, so the descriptive-vs-scoring disagreement pinned in the owner module is currently theoretical. No pack is rewritten and no dispute is remediated by this change.
+
+#### AVS normalization per (network, code) — PR-C3 (2026-08-08)
+
+`lib/argument/avsCodeMap.ts` normalizes an AVS response through a table keyed on **(network, code)**, and `paymentVerification.ts` stays the only predicate surface over it. Two questions are answered separately, because conflating them is how a postal-code match came to stand in for a rule about the delivery address:
+
+| Question | Answer | Vocabulary |
+|---|---|---|
+| What did the issuer say? | `AvsNormalizedResult` — deliberately broad, drives merchant copy, scoring inputs and diagnostics | `full_match` · `street_match` · `postal_match` · `no_match` · `not_checked` · `unavailable` · `unknown` |
+| May we cite it? | `ceItem3Citable` — deliberately narrow (decision 3) | **`(visa, Y)` and `(visa, M)` only** |
+
+**Citation authority is the (network, code) CELL, not the code.** Decision 3 requires a **primary-sourced cell**: register R-E is a *Visa* document — §4 of the Visa CE chart, Item 3 — and a rule quoted from one network's book is not evidence about another's. So the shared base table's `Y`/`M` are `unverified` and non-citable, and the **Visa override** supplies the sourced citation authority. Mastercard, Amex and unknown-network `Y`/`M` remain **valid internal scoring and display results** — they grade exactly as before — but cannot be cited until each has its own primary source. `unknown` is a missing *brand*, never a negative result: it changes nothing about grading or merchant copy, it only means we cannot name the rule we would be citing under.
+
+There is deliberately **no code-only citability helper**. `isCeItem3Citable(network, code)` is the only entry point; the earlier `isCeItem3Code(code)` was removed because it would answer "yes" for a Mastercard `Y` that no document we hold speaks to — exactly the bypass this rule exists to prevent, and `lib/argument/__tests__/avsCodeMap.test.ts` asserts the module exposes no such shape.
+
+**Authority is recorded per cell, not assumed.** Every entry carries `v_primary` / `v_secondary` / `unverified` per `p0/primary-source-register.md`, and **an `unverified` cell is never citable** — the register's exit rule applied to code semantics. Stated plainly: **we hold no primary Mastercard or Amex AVS code table**, so their overrides are **empty** and their codes inherit the unverified base. The structure is keyed on (network, code) so a sourced table drops in without touching a consumer; nothing pretends to a network-specific meaning it cannot quote.
+
+**The network travels with the codes.** `factClassifier.extractValue` used to drop `cardCompany`, so a Visa-citable fact re-read downstream as unknown-network — non-citable — and its Evidence Basis row vanished between build and render. The projection now persists the resolved `network` on the fact value (always, citable or not: it is context, not a claim), and `resolveCardNetwork` reads that canonical field first. **A historical fact with no network fails closed for citation** — no bank eligibility, no Evidence Basis row, no thesis token, no claim guard — while staying fully readable internally.
+
+The combined predicate follows the same rule: `hasCitableAddressMatch` replaced the literal `avs.code === "Y"`, which was both too narrow (a **Visa `M`** is named by the same rule as `Y`) and too loose (it accepted a `Y` on any network). `avs_and_cvv_match` is now a citable address match plus a CVV match, so **Visa `Y` or `M` + CVV `M`** satisfies it.
+
+**Unknown, missing and unmapped codes** resolve to `unknown` and earn nothing anywhere — no grade, no citation, no completeness credit — and are never read as a failure: an unrecognised code is a gap in *our* map, not the issuer's verdict, so its merchant-facing bucket is "not checked", never "did not match". A code outside the table raises an internal diagnostic (`internal:avs_code_unmapped`, severity `info`, localized in 6 locales) and **does not park the dispute**. Escalation happens only when a package tries to *rely* on the code: `avs_address_verified` is false, so the claim guard refuses the sentence and the existing validate → one retry → mark-failed path runs. `tests/unit/avsUnmappedCodeContainment.test.ts` asserts both halves separately, and proves the no-parking half by absence over the sources that can park a dispute rather than by one fixture not parking.
+
+`Z` (postal matched, street **failed**) normalizes to `no_match`: a component definitively failed, the merchant view is deliberately coarse, and the scorer has always treated it as a non-match. `postal_match` is reserved for `W`, where the street was not asserted against. AVS `F` — the descriptive-vs-scoring divergence PR-C2 pinned — is resolved by omission: it has no sourced entry, so it is unmapped and credits nothing.
+
+**The canonical model carries the normalization, and `MODEL_VERSION` is now 2.** The `avs_cvv_match` payload in `lib/evidence/model/payloads.ts` derives through `readPaymentVerification` and preserves the network, the raw code (audit/display), the normalized AVS result, its authority, the unmapped flag, the scoring-match and citation states, the CVV subfact and the cardholder name. The model does not duplicate the map or reinterpret a letter. A version-1 snapshot has none of those keys, so anything reading a persisted model must re-derive rather than assume the new shape.
+
+**An unmapped code is not a mismatch.** Both merchant-signal implementations previously defined an AVS failure as `present && !addressVerified`, which counted `unknown`, `not_checked` and `unavailable` as failures — so an unrecognised code produced a warning-severity "did not fully pass" on top of its own diagnostic, telling the merchant the issuer rejected an address the issuer never commented on. The failure test is now the canonical result: **only `no_match`**. A `Q` alone yields exactly one informational `internal:avs_code_unmapped` signal; `Q` with a genuine CVV failure reports the CVV and describes the AVS half as *not checked*; a missing code stays absence, with no diagnostic at all.
+
+**No consumer interprets a raw code — the class is closed, not just the instances.** Three sites still held their own reading of the letters after the first pass: the line-item copy branched on `A`/`W` to pick a street/postal phrase, the portal pack viewer kept its own AVS label map (which disagreed with the canonical layer on `Z` and knew nothing about the network), and the `unauthorized_fraud_auth_signal_stack` prompt spelled the rule out in gateway codes — wrong in both directions once citation became a `(network, code)` question. All three now read the canonical normalized result; the viewer still *shows* the raw code for audit, but it no longer decides meaning, tone or classification. The prompt names the approved `avs_and_cvv_match` fact and quotes the `verificationSummary` the classifier already built, and says nothing about codes or networks.
+
+`tests/unit/paymentVerificationSingleOwner.test.ts` is the guard, and it is now proven to bite: five pure detectors (match-set literal, named code set, raw-code branch **including the `v.avs.code === "A"` property form**, letter-keyed map, raw-code rule inside a string) run over `lib/`, `app/` and `components/`, and a companion block feeds each detector the verbatim defect shape it missed the first time. It caught one more leak while being written — a history comment that restated the old code rule.
+
+**"Matched" and "cited" are different claims in merchant copy.** The internal-signal outcome sentence was selected off the factual `addressVerified`, so a Mastercard `Y` told the merchant *"the matching address was cited as evidence in the dispute response"* about a result the system deliberately withholds — 20 of 130 prod packs. Both implementations now keep the two apart: `avsMatched` (`addressVerified`) drives the result sentence and the "partially passed" title; **only** `avsCited` (`citableAddressVerified`) can say a result was cited. A matched-but-not-citable address — any `Y`/`M` outside Visa, or a partial result like `W` — gets a new outcome (`outcomeAvsMatchedNotCitable`, 6 locales) explaining that it counts towards the case assessment but is not cited because the card scheme's own rules do not recognise that result as evidence. It deliberately does **not** reuse the "would weaken it" wording: nothing here is weak, we simply cannot name the rule we would cite under. `tests/unit/avsCitationLanguage.test.ts` asserts the same matrix against the server and client implementations, including that both emit the outcome sentence verbatim.
+
+**The code-only normalization path is gone.** `avsBucket(code)` / `cvvBucket(code)` took a letter with no network and normalized it as an unknown-network payload — and both signal paths held a fully normalized `PaymentVerification` before throwing it away to call them. Consumers read `verification.avs.outcome` / `verification.cvv.outcome`; `readPaymentVerification` takes the whole payload, so the network is never optional at the boundary, and `tests/unit/paymentVerificationSingleOwner.test.ts` fails the build on any AVS normalization that omits it.
+
+**Grading does not move.** `isAddressMatchResult` (the three match flavours) reproduces the carried-over scoring set `Y A W X D M` exactly, now derived from the table instead of restated, so the descriptive and scoring readings cannot disagree. The bank-visible delta is the citation narrowing alone.
+
+**Measured on prod before merge** (read-only, `scripts/sql/prc3-avs-network-census.sql`, 2026-08-08). Networks on AVS-bearing packs: Mastercard 86, Visa 24, Amex 1, **no brand at all 19**. The (network, code) domain: `Y` on Visa 24 / MC 8 / Amex 1 / unknown 11, `N` on MC 73, `A` on MC 1, `U` on MC 2, `Z` on MC 2, absent 8. **Unmapped codes: 0**, so the conservative branch has no production population today and is held by tests alone.
+
+Citation-narrowing delta — **21 packs across 21 disputes, 11 of them open**:
+
+| why | packs |
+|---|---|
+| `Y`/`M` on a network with no primary source (MC 8, Amex 1, unknown 11) | 20 |
+| partial code (the single Mastercard `A`) | 1 |
+| **total** | **21** |
+
+Package versions on those disputes: draft 4, stale 4, submitted 7, failed 2, superseded 2. The 7 `submitted` are letters already filed; PR-C3 does not touch them. Citable packs after the change: **24** (Visa `Y`). No pack is rewritten, no dispute regenerated, no submission state changed.
 
 ### Risk Assessment Collection
 
@@ -2466,7 +2540,7 @@ Approved decision P-1: *"Strict: do not score them. A record can remain visible 
 
 `SCORING_POLICY_VERSION` is deliberately **not** bumped: the resolved policy is the same strict rule that was already the default and the only value any production-shaped path used, so no persisted snapshot became stale. Measured on 73 open prod packs (2026-08-06): the strict column is identical before and after, and the now-unreachable permissive arm would have lifted exactly two packs (#352501 `DUPLICATE`, #352767 `FRAUDULENT`) from weak to moderate — precisely the transition P-1 forbids.
 
-Thresholds over completeness remain **P-7 and deferred** to the Phase 2 calibration report; P-1 fixes only which records the score sees. `scripts/evidence-model/*.analysis.ts` therefore report one column instead of a strict/permissive pair.
+Thresholds over completeness were **P-7**, and P-7 is now ACTIVATED: Blume Box runs on canonical completeness at 60, SuraSvenne is excluded because no disposition-preserving threshold exists for it at any value. The shop set and the threshold live in `lib/evidence/model/completenessActivation.ts` and are read by the auto-save gate; `docs/evidence-model/p2/completeness-calibration-report.md` is the single current account. P-1 fixed only which records the score sees. `scripts/evidence-model/*.analysis.ts` therefore report one column instead of a strict/permissive pair.
 
 ### Auto-submit guards — one decision, three callers (2026-07-27)
 
@@ -2706,7 +2780,7 @@ The payment gateway returns the name the card is registered to (`cardholderName`
 
 **Bank non-disclosure:** the mismatch and both names are merchant-UI + audit only. They MUST NEVER enter the bank-rebuttal text, the evidence PDF body, or Shopify `disputeEvidence` mutations — telling the bank the buyer isn't the cardholder is a confession, and the issuer already knows their cardholder's name. (The PDF Case Details "Cardholder name" row is unchanged: it prints the gateway name the issuer already has.)
 
-**Merchant-language rule for gateway codes (2026-07-23):** merchant-facing copy (all dispute-detail tabs, evidence rows, internal-signal warnings) must NEVER lead with a bare gateway code — "AVS code Z" means nothing to anyone but a bank. The AVS/CVV internal warning is exactly TWO short sentences: one combined plain-words result sentence with the codes in parentheses at the end, then one outcome sentence with the consistent "cited as evidence" phrasing. Canonical example (AVS N + CVV M): *"The address did not match the card issuer's records, but the card's security code did (AVS N, CVV M). Only the matching security code was cited as evidence in the dispute response — the address mismatch would weaken it."* The merchant view is deliberately COARSE: any address-component failure reads as "did not match" (no street-vs-ZIP hairsplitting — user decision, same day); not-checked codes read as "the issuer did not check…", never as a mismatch. Buckets in `lib/argument/avsCvvExplain.ts` (match mirrors the scoring set / no_match Z·N·C / unchecked rest); localized sentences under `disputes.internalSignals.avsCvvMismatch.*`; server English mirror in `lib/argument/internalSignals.ts`. Scoring's match sets in `canonicalEvidence.ts` are unchanged. The bank-facing rebuttal letter is exempt (issuers know the codes).
+**Merchant-language rule for gateway codes (2026-07-23):** merchant-facing copy (all dispute-detail tabs, evidence rows, internal-signal warnings) must NEVER lead with a bare gateway code — "AVS code Z" means nothing to anyone but a bank. The AVS/CVV internal warning is exactly TWO short sentences: one combined plain-words result sentence with the codes in parentheses at the end, then one outcome sentence with the consistent "cited as evidence" phrasing. Canonical example (AVS N + CVV M), updated by PR-C2: *"The address did not match the card issuer's records, but the card's security code did (AVS N, CVV M). The matching security code is kept as an internal record — it is not cited in the dispute response, because a security-code match is not an address match."* (The outcome sentence used to say the security code **was** cited; decision 1 made that false, so the two "CVV cited" strings were replaced by one internal-record string in all six locales.) The merchant view is deliberately COARSE: any address-component failure reads as "did not match" (no street-vs-ZIP hairsplitting — user decision, same day); not-checked codes read as "the issuer did not check…", never as a mismatch. Buckets now live with the predicate in `lib/argument/paymentVerification.ts` (match / no_match Z·N·C / unchecked rest) — `avsCvvExplain.ts` was folded into it so the description and the rule cannot drift; localized sentences under `disputes.internalSignals.avsCvvMismatch.*`; server English mirror in `lib/argument/internalSignals.ts`. Scoring's match set is unchanged. The bank-facing rebuttal letter is exempt (issuers know the codes).
 
 **Non-evidence account-history row hidden (2026-07-23):** a FIRST-TIME customer's "Customer account history" on a fraud dispute renders NOWHERE merchant-facing — it is not evidence, it is the absence of history, and the card only said "we're withholding a fraud indicator". Predicate `isNonEvidenceAccountHistoryRow` in `lib/automation/merchantUiHiddenFields.ts`, applied in `deriveEvidenceLineItems` (drops the line item → Evidence tab buckets, Submission Summary, Inclusion Review), `useEvidenceSections` (Evidence-used list), and `OverviewTab` (Evidence-collected list + coverage counts). Returning customers (≥1 prior order) keep the row — that IS evidence. Non-fraud families keep it too (first-time status is neutral context there). Scoring, pack builder, coverage gate, and admin views unaffected.
 
@@ -3819,6 +3893,175 @@ Pack preview pages show a yellow warning banner when `completeness_score < 60%`:
 - Lists missing required checklist items.
 - Guidance only — merchant can still proceed.
 
+### CP-A — Canonical assessment, completeness, and the merchant projection (2026-08-09)
+
+`CaseAssessment` is the single owner of strength and completeness, and the three merchant
+tabs render a **server projection** of it. The definition of done is the deleted call site,
+not the new derivation — the previous attempt built the derivations and never flipped the
+callers, and the browser kept its own scorer for a year.
+
+**Modules**
+
+| File | Owns |
+|---|---|
+| `lib/evidence/model/assessmentSnapshot.ts` | `CaseAssessmentSnapshot` — the persisted, versioned form, plus `computeAssessmentInputHash()` |
+| `lib/evidence/model/completenessSnapshot.ts` | completeness derived independently of strength, and `readPersistedCompletenessForGate()` |
+| `lib/evidence/model/merchantProjection.ts` | `projectMerchantAssessment()` / `projectReviewItems()` — `needsRecalculation` as a first-class state |
+| `lib/disputes/workspaceAssessment.ts` | `buildWorkspaceAssessment()` — the one derivation the workspace API ships |
+| `lib/disputes/workspaceAssessmentTypes.ts` | the payload shape + `emptyWorkspaceAssessment()`, importable from the client without pulling in the scorer |
+| `lib/disputes/deadlineOnlyCopy.ts` | `deadline_only` vs `withheld_no_safe_argument` merchant copy, as `I18nToken`s |
+
+**The input hash.** `SnapshotFreshness.inputHash` covers every result-bearing input: the
+dispute reason, model/registry versions, per-field relevance + status flags + record count,
+each record's validity / quality / citation eligibility / normalized payload, the coverage
+and dispute metadata on `nonEvidence`, the five resolved gates (a **provided `null` hashes
+differently from a `gateNotProvided` reason** — the pair whose conflation shipped a wrong
+band), and the external payload source. Deliberately excluded: `derivedFrom.packId`,
+`evidenceItemIds`, every timestamp, and `nonEvidence.operational.*` — none can move the
+result, and hashing them would mark the fleet permanently stale, which is not the
+conservative choice but a fleet that never files. `computedAt` is audit-only and never an
+input. The two `EvidencePayloadSource` forms (`list` from `buildPack`, `byField` from the
+workspace route) produce the same hash, so the surfaces cannot report each other stale.
+
+**Strength and completeness stay separate.** `deriveCompletenessSnapshot(model)` takes the
+model and nothing else — no gates, no payload source, no reason family. Pinned by test:
+flipping the coverage gate changes `heroVariant` and leaves every completeness number
+untouched.
+
+**The three faithful gate coercions**, now in one reader
+(`readPersistedCompletenessForGate`) instead of inline at `pipeline.ts:837-839`:
+`completeness_score` NULL → `0`; `blockers` NULL → `[]`; `submission_readiness` NULL →
+`undefined`, which selects the **legacy blocker-count arm** of `evaluateAutoSaveGate`.
+Coercing that third one to `"ready"` would auto-file every legacy pack that has blockers;
+`"blocked"` would freeze them all. One deliberate difference from the old inline cast: a
+non-array `blockers` becomes `[]` rather than passing through, which produces an identical
+gate disposition (`undefined > 0` and `0 > 0` are both false) with an honest type.
+
+**`needsRecalculation`.** A stale or absent assessment nulls the band, the score and the
+readiness *together*; there is no partial mode. `evaluateFreshness` is the only predicate,
+and its three reasons (`snapshot_absent` / `input_hash_mismatch` /
+`policy_version_superseded`) are carried through so the UI can route recalculate-vs-rebuild.
+Review items deliberately survive staleness: "one item needs your confirmation" is a fact
+about the evidence, and hiding it would remove the merchant's only lever exactly when they
+are asked to wait.
+
+**Deleted from the browser.** `useDisputeWorkspace` no longer imports
+`calculateCaseStrength`, `calculateImprovement`, `computeContributions`,
+`buildCaseGateAssessment`, `gateProvided` or `gateNotProvided`, and no longer reconstructs
+submission readiness from the checklist. Its old gate set stated three of five gates as
+`not_shipped_to_client`, so its answer had to differ from the server's whenever any of the
+three fired. `tests/unit/clientAssessmentRecomputation.test.ts` is the falsification-guarded
+CI invariant: it scans the six client surfaces for value imports of a scoring module, calls
+to a computing symbol, and readiness reconstruction; it re-runs all three detectors against
+a checked-in copy of the pre-fix hook to prove the detector still detects; and it holds a
+**shrink-only allow-list** of the remaining server-side `calculateCaseStrength` call sites
+with the epic that closes each.
+
+**`deadline_only` merchant copy** (`disputes.deadlineOnly.*`, ×6 locales). Three states,
+each with a distinct key set: `normal`, `deadline_only` ("N item(s) need your confirmation,
+so DisputeDesk is holding your defence package for deadline processing" — `itemCount` is an
+ICU plural **param**, so each locale pluralises in its own grammar), and
+`withheld_no_safe_argument`. `willFile` is stated explicitly on the copy object so no surface
+infers it from tone — the inference that made the auto-pilot hold read as "please review".
+`noSafeArgument` outranks `deadlineOnly`: a plan can be both, and promising a deadline filing
+would be false.
+
+#### No merchant surface may promise that nothing reaches the issuer
+
+Shopify auto-compiles and files **its own scrape** of the order at the deadline whether or
+not DisputeDesk adds a defence package, and there is no accept/concede mutation that stops
+it. Every guard in this pipeline therefore chooses *our document vs Shopify's scrape*, never
+submit-vs-silence — and the merchant copy has to say the same thing.
+
+It did not. The pre-existing "Don't defend" state said **"Nothing will be submitted"** on
+four surfaces in six languages, describing an outcome the product cannot produce: a merchant
+who read it and declined had not bought silence, they had swapped our document for Shopify's
+scrape without being told. `withheld_no_safe_argument` shipped with the same defect
+("…so nothing will be sent").
+
+The correction, applied to 23 keys per locale:
+
+| Concept | Wording |
+|---|---|
+| The merchant declines | **"Don't add a defence package"** — replaces "Don't defend"; internal state stays `conceded`, `ReviewAction` stays `concede` |
+| `withheld_no_safe_argument` | DisputeDesk **will not add a defence package**; Shopify still passes on the order details it already holds when the deadline arrives |
+| `deadline_only` | DisputeDesk is **holding your defence package for deadline processing** instead of adding it now; Shopify's own deadline process runs either way |
+| Every declining/holding string | names **both** actors — DisputeDesk and Shopify — explicitly |
+
+Pinned by `lib/disputes/__tests__/issuerSilenceCopy.test.ts`: a fixed list of the 23 affected
+key paths × 6 locales, asserting each resolves, each declining/holding key names Shopify (and
+the two decline surfaces name DisputeDesk), and none still carries its locale's silence
+phrase or the old label. Deliberately **not** a catalog-wide phrase detector — that shape
+flags every honest sentence containing "nothing" and ends up allow-listed into uselessness.
+Adding a locale or a new surface for these states means adding it to that list.
+
+#### The persisted assessment is what the read paths render
+
+`buildPack` is the authorized writer — the only site holding the Shopify order,
+therefore the only one that can derive all five gates. It persists the versioned
+`CaseAssessmentSnapshot` at `pack_json.case_assessment`.
+
+Both read paths PROJECT it. Neither derives a band:
+
+| Route | Before | Now |
+|---|---|---|
+| workspace detail | scored with its own gates — 2 of 5 answerable | `projectMerchantAssessment` over the persisted snapshot |
+| disputes list | Stage B re-scored live — 3 of 5 `order_not_loaded` | projects the snapshot; Stage B deleted |
+
+**The current hash is reconstructed, not read back.** Comparing
+`snapshot.freshness.inputHash` against itself detects nothing. The workspace
+route derives the model and the payload terms from the pack as it stands, with
+the same inputs `buildPack` used, and hashes them through
+`computeAssessmentInputHash` — the one owner.
+
+The gate term cannot be re-derived: three of the five gates come from the order
+and only `buildPack` loads it. So the writer persists exactly the fields the
+fingerprint reads, at `pack_json.case_assessment_gates`. That keeps the gates
+term constant between write and read, which is correct rather than convenient —
+a reader that cannot see the order also cannot observe a gate changing, and
+claiming otherwise would be the `order_not_loaded` lie in a new place. What the
+reader *can* observe, evidence drift, is exactly what the model and payload
+terms carry. A pack with no persisted fingerprint yields no current hash, and an
+unverifiable snapshot is not a fresh one.
+
+**The list checks the two staleness dimensions it can check truthfully** —
+policy version, and `rebuild_pending` — and withholds a band otherwise. It never
+falls back to the legacy `case_strength` summary, which carries no freshness of
+its own. The `?strength=` filter reads the same source as the pill, so a filter
+and a display can no longer disagree about one row.
+
+`display-only` rows (contributions, the improvement hint) are still derived.
+They produce labels, not a band, and cannot reconstruct completeness or
+readiness.
+
+#### P-7: score and threshold are one atomic decision
+
+They live on different scales — the calibration measured 90 packs moving −1…−7
+and 15 moving +2…+17 between the persisted column and the canonical snapshot,
+and 60 was calibrated on the canonical one. So there are exactly two legal
+pairings, and one illegal one:
+
+| Case | score | threshold | `source` |
+|---|---|---|---|
+| Blume Box, usable canonical snapshot | canonical | **60** | `canonical` |
+| Blume Box, missing/unusable snapshot | persisted | merchant `auto_save_min_score` | `legacy` |
+| any other shop | persisted | merchant `auto_save_min_score` | `legacy` |
+| **legacy score against 60** | — | — | **unrepresentable** |
+
+`resolveEffectiveCompleteness` returns all three together, from one branch, so
+the illegal pairing cannot be assembled by two independent lookups. The same
+object feeds `evaluateAutoSaveGate`, the `auto_save_blocked` audit payload, the
+`PACK_BLOCKED` dispute-event metadata and the diagnostic message — a score in an
+audit row that does not say which scale produced it cannot be checked afterwards.
+
+**Hand-off to the workspace route** (Agent C owns
+`app/api/disputes/[id]/workspace/route.ts`): replace the inline `calculateCaseStrength` /
+`computeContributions` pair with one `buildWorkspaceAssessment({ disputeId, checklist:
+reconciledChecklistV2, reason: row.reason, payloadSource: caseStrengthPayloadSource, gates,
+packSaved: !!packRow?.saved_to_shopify_at, plan })` and ship the result as
+`workspaceAssessment` on the response. When there is no pack, ship
+`emptyWorkspaceAssessment(disputeId)`.
+
 ### Generate Pack — Template Check
 
 When a merchant clicks "Generate Pack" on the dispute detail page, the UI first checks for a matching template before running the generate call:
@@ -4766,11 +5009,123 @@ A template item is marked **automatic** only when a current collector truly prod
 | `tds_authentication` | 3-D Secure result read from gateway receipt | `lib/packs/sources/threeDSecureSource.ts` | Conditional (Shopify Payments only, "if available") |
 | `fraud_risk_screening` | Shopify pre-authorization risk assessment | `lib/packs/sources/fraudRiskSource.ts` | Automatic |
 | `ip_location_check` | Checkout IP resolved via IPinfo, compared to billing country | `lib/packs/sources/deviceLocationSource.ts` | Automatic |
-| `billing_address_match` | Billing vs shipping city/country comparison | `lib/packs/sources/orderSource.ts` | Automatic |
 | `customer_account_info` | Repeat-customer signal (`customer.numberOfOrders` from the disputed order) | `lib/packs/sources/orderSource.ts` | Automatic |
 | `customer_communication` | Shopify timeline messages, order notes, buyer attributes | `lib/packs/sources/customerCommSource.ts` | Automatic |
 | `shipping_tracking` | Carrier tracking number + status from fulfillment | `lib/packs/sources/fulfillmentSource.ts` | Automatic when shipped |
 | `delivery_proof` | Carrier delivery status (with signature/photo when provided) | `lib/packs/sources/fulfillmentSource.ts` | Automatic when shipped |
+
+### Retired: `billing_address_match` (PR-C4 / C-14, 2026-08-09)
+
+`billing_address_match` is a **retired field key** — the second kind of entry in
+`lib/evidence/model/retiredKeys.ts`. A retired *payload* key (PR-C1) is a property stripped from a
+section's `data`; a retired *field* key is a whole entry in `fieldsProvided` /
+`checklist_v2.field`, removed at the boundary of every derivation, classification and checklist
+read. The two registries are separate on purpose: one is a property, the other an identity.
+
+**Why.** The canonical registry graded it **strong**, noting "Strong when AVS-confirmed billing
+matches the cardholder". `orderSource` emitted it whenever Shopify's own `billingAddress` and
+`shippingAddress` shared a city and a country — two merchant-held addresses, no AVS result, no
+cardholder. It is the same defect class PR-C1 retired on the delivery side, and PR-C1 deliberately
+left it out of scope. The runtime was never the defect: the collector never wrote the `match` key
+the grader keys on, so the grade has always resolved `invalid`. What is retired is the **semantics
+and the ownership** — a strength and claim-authority signal that never carried the authority its
+grade claimed, and which one future collector line writing `match: true` would have promoted into
+AVS-confirmed cardholder evidence. Address verification has a real owner now: the canonical AVS
+fact from PR-C2 (predicate split) and PR-C3 (per-(network, code) normalization). The concept was
+given a new owner **before** the old one was deleted.
+
+**Measured on prod before merge** (read-only; `scripts/sql/prc4-billing-address-match-census.sql`
+and `scripts/evidence-model/billingAddressMatchRetirement.analysis.ts`, 2026-08-09). The SQL census
+and the completeness/claim-capability arms of the harness re-run identically today; the
+`coveragePercent` figure below could only be taken on the unmodified code and is marked as such —
+see *Reproducibility* at the end of this section:
+
+| | |
+|---|---|
+| packs carrying the field / disputes | **116 / 114** (99 FRAUDULENT) |
+| of those, `data.match === true` (the grader's strong branch) | **0** |
+| sections carrying a `match` key at all | **0** |
+| `defence_evidence_facts` rows in category `billing_match` | **0** |
+| packages whose `facts_json` embeds a `billing_match` fact | **0** |
+| **case-strength changes** | **0** (moderate→moderate 98, weak→weak 27, strong→strong 6) |
+| `coveragePercent` moves (no band crossed) | **96** — *pre-implementation run only* |
+| **citation / LLM-value delta** | **0** — the field was never bank-eligible, so nothing was ever cited |
+| persisted `checklist_v2` rows for the field | **112** (97 `available`/critical, 15 `missing`/critical) |
+| rows the pre-C-14 reconcile actually **scored** | **116 effectively available** = 97 persisted + 19 appended at read time; plus 15 persisted `missing` |
+| completeness score delta | **90 packs −1…−7, 15 packs +2…+17, 26 unchanged** |
+| submission readiness | **13 packs `ready_with_warnings` → `ready`**; none moves the other way |
+
+The completeness delta is the whole point of the ordering `PR-C4 → P-7`: 97 packs were earning
+**critical**-priority credit and 19 more **optional**-priority credit for a geographic coincidence,
+while 15 were being nagged for evidence that could never be evidence. Calibrating P-7 over a field
+that is collected 116 / valid 0 measures the defect, not the gate.
+
+**Two populations, not one number.** The SQL census counts **persisted** rows; completeness scores
+the rows the reconcile actually produced, which is a different set because
+`reconcileChecklistWithCollectedFields` flips and appends before the engine sees the checklist.
+Measured decomposition of the 131 affected packs:
+
+| pre-C-14 row | packs |
+|---|---|
+| persisted `available`/critical, field collected | 97 |
+| no persisted row, field collected → appended `optional`/`available` at read time (the append rule, 2026-08-04) | 19 |
+| **effectively available — what completeness scored** | **116** |
+| persisted `missing`/critical, field never collected | 15 |
+
+**No case ends up weaker for want of address representation** (deletion criterion 2). Across those
+**116** effectively-available rows — not the 97 persisted ones; an earlier draft of this section
+quoted the wrong population — the canonical AVS fact reads:
+
+| AVS reading on the same pack | packs |
+|---|---|
+| citable address match (Visa `Y`) | 17 |
+| address match on an unsourced (network, code) cell (unknown `Y` 11, MC `Y` 3, MC `A` 1, Amex `Y` 1) | 16 |
+| issuer `N` — an explicit *no* match | 70 |
+| not checked (no code returned) | 8 |
+| unavailable (MC `U`) | 1 |
+| no AVS fact on the pack at all | 4 |
+| **total** | **116** |
+
+Genuine address verification is already carried by `avs_cvv_match`; the 70 `N` packs are the defect
+in one number, the same shape as PR-C1's 54-of-60.
+
+**What the merchant keeps (decision 4).** The billing-vs-shipping comparison survives as an
+explicitly **non-evidence operational note** under a **new** label —
+`disputes.internalSignals.billingShippingAgree` in all six locales, emitted by
+`buildInternalSignalsByField` and `classifyBillingShippingAgreement`, anchored on
+`order_confirmation`, severity `info`. It is never scored, never cited, never a claim input, and it
+says so. The misleading **evidence** label `disputes.signalLabel.billing_match` is **retired, not
+repurposed**, along with `whyText` / `sourceCaption` / the line-item `notIncluded` reason in all six
+locales. The mismatch note is unchanged.
+
+**Where the retirement takes effect.** `reconcileChecklistWithCollectedFields` drops the row — it is
+the one function both build time and every read pass through, so all 112 existing packs stop
+scoring it on the next page load with no rebuild, no backfill and no `pack_json` rewrite.
+`classifyFacts` skips the field explicitly (sections and missing-rows alike) rather than relying on
+the `!spec` fall-through, because a deliberate retirement and an unregistered key must never look
+the same in code. `deriveCaseEvidenceModel` reports it under
+`nonEvidence.operational.retiredFields`, never `unregisteredFields`. `CANONICAL_EVIDENCE_VERSION`
+bumps **3 → 4** so persisted category caches recompute.
+
+**Reproducibility.** The harness reconstructs its BEFORE arm from the persisted checklist, so the
+grade census, the completeness distribution, the readiness transitions, the row-provenance
+decomposition, the claim-capability probe and the case-strength histogram all re-run identically
+after the merge (verified: 2026-08-09T11:36Z unmodified vs 12:33Z after). Two figures cannot:
+the **96-pack `coveragePercent` delta**, because `calculateCaseStrength` counts a checklist row only
+when its field has a `CANONICAL_EVIDENCE` spec — with the spec deleted the re-attached BEFORE row is
+invisible to the scorer, so the post-merge BEFORE arm no longer models the coverage-denominator
+effect at all and "0 case-strength changes" stands on the pre-implementation run against the real
+registry; and the harness's own `bankEligible` counter, which is now 0 by the retirement guard
+rather than by measurement (the durable evidence for the zero citation delta is the SQL census,
+which reads persisted data and re-runs indefinitely).
+
+**Deliberately out of scope.** `visa_10_4_fraud.criticalCategories` still names `billing_match`,
+whose only member this PR removes. That category had **0 facts in production** already, so every
+Visa 10.4 package is *already* `narrow` and this PR changes nothing — removing the entry would flip
+real packages narrow → full, a bank-visible change needing its own approval. The condition is
+pinned by a test rather than left to be discovered; **no work on it is started here**. Also
+unchanged: completeness thresholds, P-7 calibration, and every existing package, submission state
+and `pack_json`.
 
 ### Retired: the verified-address delivery upgrade (PR-C1, 2026-08-07)
 
@@ -6183,6 +6538,41 @@ identity — an earlier version rebuilt it as a by-field map and, because
 payload and reported 56 of 76 prod packs as stale. That number was produced
 entirely by the adapter.
 
+### The workspace has no scorer (CP-A)
+
+`app/api/disputes/[id]/workspace/route.ts` returns a **`workspaceAssessment`**
+payload built once, server-side, by `lib/disputes/workspaceAssessment.ts`. The
+three workspace tabs render it; they compute none of it.
+
+Two things were deleted to get there, and both were the same defect wearing
+different clothes:
+
+1. **The browser scorer.** `useDisputeWorkspace` called `calculateCaseStrength`
+   in the browser with a gate set it assembled itself, three of whose five gates
+   were `not_shipped_to_client`. On a fraud case with a cardholder-name mismatch
+   the page rendered Strong while the server had capped Moderate — on one
+   screen, on one request. `tests/unit/clientAssessmentRecomputation.test.ts`
+   fails the build if a client surface scores again.
+2. **The route's own inline call.** The route was the fourth server call site
+   passing its own gates to the scorer. It still *builds* the gate assessment —
+   it is the only thing that knows it holds no order, hence two
+   `gateNotProvided("order_not_loaded")` entries — but it hands those gates to
+   `buildWorkspaceAssessment` and reaches the scorer through
+   `deriveAssessmentFromChecklists`, the single derivation.
+   `tests/unit/caseGateAssessmentCallSites.test.ts` pins the remaining
+   inventory.
+
+`needsRecalculation` is a **first-class state**, not a null: with no pack the
+route returns `emptyWorkspaceAssessment(disputeId)` and every consumer must
+branch on it before reading a number. A zeroed `CaseStrengthResult` rendered as
+a verdict — "insufficient · 0%" — is a number the merchant acts on.
+
+The same route's `factsInPdf` filter now calls `bankIncludedFacts`
+(`lib/defence/bankInclusion.ts`), which was the last inline spelling of the
+bank-inclusion predicate outside its owner;
+`tests/unit/bankInclusionSingleOwner.test.ts`'s pending-conversion list is now
+empty and may only shrink.
+
 ### Known open items
 
 - **P4 (defence package reads the model) does not proceed as specced.** The
@@ -6207,3 +6597,432 @@ entirely by the adapter.
 read-only prod comparisons under a separate vitest config, so a prod-reading
 job can never become a CI dependency. All are strictly non-mutating: no pack
 write, no disposition stamp, no job enqueue, no `submission_state` touch.
+
+## Canonical argument plan and the fileable-package selector (CP-B — WIRED, DARK)
+
+**Status: wired and dark, which are two different claims.**
+
+*Wired* — the canonical route is load-bearing. `buildDefencePackageJob` derives
+the plan, projects the document from it, validates it deterministically and
+persists the plan identity on the row; the deadline cron, the pack pipeline and
+the save worker obtain a package through `selectFileablePackage`; the workspace
+route renders the plan the package was built from. There is no fallback inside
+that route: if the plan is absent, stale or unsafe, nothing is filed.
+
+*Dark* — none of it runs unless `CANONICAL_PIPELINE=on`
+(`lib/pipeline/activation.ts`), which is unset everywhere. With it unset,
+production runs the ladders that shipped at the kickoff baseline `58e15806`,
+**as the same code**, moved verbatim into `*.legacy.ts` modules.
+
+### Why the legacy paths are moved code and not a re-expression
+
+None of the four rewrites is behaviour-preserving, and that is the point:
+
+| Entry point | Canonical behaviour differs how |
+|---|---|
+| `evaluateAndMaybeAutoSave` | weak/insufficient HOLD for the deadline instead of blocking (revision 2); completeness read through one reader instead of three inline coercions |
+| `reconcileParkedAutoDisputes` | counts `scanned` after the decision, not after a strong-only pre-filter |
+| `resolveHeldState` | reaches `weak_strength` through `hold_for_deadline`, not `block` |
+| deadline cron | consults strength, completeness, coverage and P-6 — the shipped route consults none of them (R3) |
+
+"Behaviour-preserving because the mapping is faithful" is an argument; "the same
+code runs" is a fact, and only the second survives a reviewer who does not trust
+the mapping. PR 3 deletes the legacy modules and the switch's `false` branch
+together.
+
+### The activation-off proof is behavioural, not a source scan
+
+`branchBoundary.test.ts` proves each legacy module is reached only behind
+`canonicalPipelineEnabled()` — a statement about the SHAPE of the dispatch, which
+would keep passing if the legacy module had drifted or a side effect were added
+outside the branch. So `tests/integration/activationParity.test.ts` RUNS all four
+entry points on both settings and compares observable outcomes against the
+kickoff baseline. Two results worth recording, because both are counter-intuitive:
+
+- **The pack pipeline's answer for a weak case does not change.** It still
+  returns `block`, and it should — `block` there means "auto-save did not happen
+  at build time". What revision 2 moved is the DECISION underneath
+  (`hold_for_deadline` + `strength_insufficient`), observable at the cron.
+- **At the cron, a weak case is filed on BOTH settings.** The discriminator is a
+  COVERED case: the shipped route files it (R3), the canonical route refuses and
+  emails the merchant.
+
+### The rung that made the identity load-bearing
+
+`selectFileablePackage` originally compared only the three snapshots against the
+current input hashes — which, for a caller that derives all three live, compares
+this moment against itself. The candidate's own `plan_input_hash` was carried and
+never read. That made the whole canonical identity decorative: a package built
+from a plan that had since changed was still final, validated, safe and
+unambiguous, and was filed.
+
+Rung 7b compares it, through the one `evaluateFreshness` predicate. A NULL hash
+is `snapshot_absent` — the post-R4 legacy shape, non-fileable and deliberately
+not grandfathered — and a mismatch is `input_hash_mismatch`, which routes the
+merchant to a rebuild rather than a recalculation. Found by an end-to-end trace
+(`tests/integration/canonicalRouteEndToEnd.test.ts`) that mutated the stored hash
+and watched the cron file the package anyway; no unit test had the standing to
+see it.
+
+### `derivePlanForCase` is an adapter, and that is enforced
+
+The module between `pack_json.sections` and `CaseArgumentPlan` is exactly where a
+second evidence-classification layer would grow, and it would arrive as one
+reasonable-looking line. Every classification it produces is CARRIED from a
+canonical owner — existence, validity and citation from `deriveCaseEvidenceModel`;
+fact category from `definitionFor`; bank eligibility from `classifyFacts`; claim
+admission from `alwaysAdmissibleCategories`; argument relevance from the reason
+module — and it decides none of them itself.
+
+`lib/argument/plan/__tests__/planForCaseIsAnAdapter.test.ts` proves it two ways:
+a dependency/contract scan (no comparison against any canonical vocabulary value,
+no classification flag, no threshold, and an import list restricted to the named
+owners), plus a behavioural half asserting the carried values are byte-identical
+to the owner's. The scan is falsification-guarded against a deliberately
+classifying module.
+
+### F1–F6, and where each is resolved
+
+| # | Finding | Resolution |
+|---|---|---|
+| F1 | thesis may use only plan-approved, bank-included support | generation, composition and the renderer all receive `plan.included` intersected with `bankIncludedFacts` |
+| F2 | chronology uses the same support and passes deterministic validation | narrative REBUILT against the plan before composition; `validatePackageDocument` refuses orphaned/unsupported/unauthorized claims |
+| F3 | supporting evidence respects bank eligibility; merchant-only text and the internal "Inclusion" column never reach the issuer | Supporting Evidence Index selects on `isBankIncludedManualEvidence`, not `includeInPackage`; the Inclusion column is not rendered |
+| F4 | `reviewRequiredCount` derives from actual plan exclusions | `projectReviewItems(plan).length`, the same projection the merchant sees — it was a hardcoded 0, which made `deadline_only` unreachable by construction |
+| F5 | fatal loss prevents a fileable argument/package before document generation | refused before the LLM call; no draft is left for the deadline path to pick up |
+| F6 | fulfilment claims require canonical claim authority | `hasFulfillmentClaimAuthority` — a plan-included order fact or a held `delivery_occurred` capability; no fallback from the raw `fulfillmentStatus` scalar |
+
+### Canonical identity columns
+
+`defence_packages` gains `plan_json`, `plan_input_hash`, `plan_policy_version`,
+`plan_deadline_only`, `plan_no_safe_argument`, `document_validation_passed`,
+`document_failure_codes`. All nullable, no defaults, no backfill: a legacy
+package carries NULL and is non-fileable. A DEFAULT here would be a grandfathering
+escape hatch wearing a schema hat. The columns are explicitly NULLED on the
+legacy route rather than left alone, so a rebuild with the switch off clears a
+previous build's identity instead of inheriting it.
+
+### What `preflightNamedCandidate` still does, and why
+
+`preflightLatestCandidate` and raw latest-row queries are gone from every
+canonical executor. `preflightNamedCandidate` stays in `finalizeAndEnqueueSave`,
+deliberately: it answers "may THIS named draft be promoted", and the selector
+cannot answer it, because the selector only ever returns `final` rows. Conflating
+the two would either break promotion or force the selector to grow a second mode.
+
+### `CaseArgumentPlan` — the one owner of issuer-facing claim authority
+
+`lib/argument/plan/` derives a `CaseArgumentPlanSnapshot`
+(`lib/pipeline/contracts/argumentPlan.ts`).
+
+```
+CaseEvidenceModel ──planCandidatesFromModel──▶ PlanCandidate[]
+                                                   │
+              reason module allow-list ────────────┤
+              alwaysAdmissible categories ─────────┤──▶ deriveCaseArgumentPlan
+              MerchantReviewItem[] (CP-A) ─────────┘            │
+                                                                ▼
+                                     included[] · excluded[] · noSafeArgument · deadlineOnly
+```
+
+**Exclusion happens before generation.** A `review_required`, unverified, adverse
+or merchant-only record is removed from the argument before any issuer-facing
+text exists, so the language model is never shown a fact it may not cite.
+Filtering generated prose afterwards is the failure this ordering prevents:
+prose already written around a fact does not survive that fact's removal, it
+merely loses its support and keeps its sentence.
+
+**Exclusion reasons, first match wins.** The order is load-bearing: a record that
+is both irrelevant and adverse is reported as adverse, because relevance is the
+weakest of the five and would mask the reason that matters.
+
+| Order | Reason | Derived from |
+|---|---|---|
+| 1 | `review_required` | a `MerchantReviewItem` naming this `recordId` |
+| 2 | `merchant_only` | `citation.eligibility === "withheld_internal"` |
+| 3 | `adverse` | `citation.eligibility === "withheld_risk"` |
+| 4 | `unverified` | `validity.state !== "valid"`, or `citation.eligibility === "ineligible"` |
+| 5 | `not_argument_relevant` | `reasonCodeModule.allowedFactCategories` (+ always-admissible) |
+
+Every exclusion carries a merchant-facing **token**, never English:
+`packs.argumentPlan.exclusion.*` in all six locales, or the review item's own
+`reasonToken` when one exists. `lib/**` may not emit resolved copy.
+
+**Argument relevance is consumed, not replaced.** The 2026-08-04 decision that
+`allowedFactCategories` stays is unchanged — it is why P4-as-specced was stopped
+(0 of 76 packs identical). `tests/unit/ce30BankPackageRetired.test.ts` asserts
+every module still declares an allow-list and that the plan reads it.
+
+**`noSafeArgument`** is non-null only when nothing remains included, with the
+reason distinguishing what was lost: nothing collected (`no_rebuttal_argument`),
+the module's own `criticalCategories` support excluded (`no_primary_argument`),
+or everything else excluded (`all_support_excluded`).
+
+**`deadlineOnly`** is true while any `review_required` exclusion remains. A plan
+with none may produce normal eligibility.
+
+**`computePlanInputHash`** sorts on the source-derived `recordId`, never on
+`EvidenceFact.id` (which is positional and is the direct cause of R4).
+Introducing it stales every pre-CP-B package as `snapshot_absent` — measured and
+reconciled in `docs/evidence-model/p4/legacy-removal-inventory.md` § R4.
+
+### The package is a projection of the plan
+
+`lib/defence/package/projectFromPlan.ts`. The load-bearing property: **no
+sentence survives after its support is removed.**
+
+- `selectPlanFacts` resolves `plan.included` against the case's facts, keyed by
+  `recordId`. A plan-authorised record with no fact is **reported**
+  (`missingRecordIds`), never silently skipped — it means the plan and the fact
+  set came from different inputs.
+- `rebuildNarrativeFromPlan` drops any section citing a record the plan does not
+  authorise, records it as an `OrphanedClaim`, and lists it in `omittedSections`
+  with the machine reason `support_excluded_by_argument_plan`. **Whole sections,
+  not clauses** — sub-sentence surgery would need to know which words a fact
+  supports, which nothing here knows, and a partial edit that leaves the topic
+  sentence is the orphaned claim again in a smaller box.
+- `projectPackageFromPlan` then composes through the existing
+  `composePdfBlocks`, handing it **only** the included facts, so a templated
+  thesis whose predicate no longer evaluates resolves null and its blockquote
+  disappears.
+
+### Deterministic document validation
+
+`lib/defence/package/documentValidation.ts` runs **after** composition and
+returns `DocumentValidationResult`. **A failure makes the package non-fileable —
+never a warning.** It adds the plan-aware checks (`no_safe_argument`,
+`orphaned_claim`, `plan_fact_mismatch`, `empty_document`, `retired_delivery_fact`)
+on top of `validateComposedDocument`'s phrase, claim-guard and structural
+claim-authorization rules over thesis, body and fallback of every block. No
+clock, no I/O, no model call: the same document produces the same sorted codes on
+every run.
+
+### `selectFileablePackage` — one selector, three outcomes
+
+`lib/defence/package/selectFileablePackage.ts`.
+
+```ts
+selectFileablePackage({ caseId, trigger, candidates, assessment, plan, decision, current })
+// → { outcome: "selected", package }
+// | { outcome: "none", reason, staleness? }
+// | { outcome: "ambiguous", candidateIds }
+```
+
+Decision order — coverage/concession, hard block, staleness, no safe argument,
+no candidate, **ambiguity**, superseded, content safety (C-11), deterministic
+validation, `validation_status`, not `final`, artifact missing,
+`deadline_only_not_yet_due`, selected.
+
+- **It subsumes `packageSafety` (C-11)**, it does not sit beside it: the content
+  verdict *is* `assessPackageCandidateSafety`, called on the same two persisted
+  columns, so the measured production behaviour (**212 of 280 package versions
+  blocked**) is preserved by construction.
+  `lib/defence/package/__tests__/selectFileablePackage.test.ts` replays every
+  blocking and non-blocking shape from `packageSafety.test.ts` through the
+  selector.
+- **Latest candidate only, never a fallback.** Two candidates at the highest
+  version return `ambiguous` — an error that alerts, never a silent pick, because
+  "take the newest" is how a superseded package reaches an issuer.
+- **A deadline relaxes nothing (P-6).** The only outcome the deadline trigger may
+  change is `deadline_only_not_yet_due`; the nine shared fixtures assert that as
+  a property across the whole set.
+- `deadlineExecutionConditions()` restates the same inputs as P-6's five
+  conjunctive conditions for `mayExecuteAtDeadline`, so a refusal names **which**
+  condition failed.
+
+### One bank-inclusion predicate
+
+`lib/defence/bankInclusion.ts` is now the single owner of
+`bankEligible AND includeInBankNarrative AND NOT submissionRisk`. It was spelled
+inline at four sites, and one of them — the LLM payload filter — used a **weaker**
+rule (`NOT submissionRisk OR includeInBankNarrative`), so the generator could
+argue from a fact the PDF's own Evidence Basis table suppresses (C-1).
+
+`factClassifier.ts` and `pdf/evidenceBasisRows.ts` now call `isBankIncludedFact`
+/ `bankIncludedFacts`; `narrativeWriter.ts` calls `reachesLlmPayloadLegacy`,
+which is the divergent live rule **named and documented rather than converged** —
+changing what the model sees on live disputes is a reviewed change with a
+measured delta, not a side effect of a dark epic. `bankInclusionDivergence()`
+returns the facts the two rules disagree about, so the delta can be measured on a
+real population.
+
+`tests/unit/bankInclusionSingleOwner.test.ts` fails the build on any new inline
+combination of the inclusion flags. One site remains inline —
+`app/api/disputes/[id]/workspace/route.ts`, which belongs to Agent C in the CP-0
+ownership map — and the pending list may only ever shrink. The same test asserts
+the AVS/CVV half: the four pre-C-12 match-code sites declare no code list and all
+read the canonical owner, with the structural AST scan in
+`tests/unit/paymentVerificationSingleOwner.test.ts` still enforcing it.
+
+### CE 3.0 bank-package route retired (P-4)
+
+Deleted: `lib/liabilityShift/packageTemplates.ts`,
+`lib/liabilityShift/submissionRouter.ts`, `lib/packs/pdf/CE30PackDocument.tsx`
+and the package-template test. All were dormant — no caller — and the CE 3.0
+package is the artifact C-8 flags for raw IP addresses, an ungated merchant
+attestation and a hard-coded reason code.
+
+**CE 3.0 qualification is retained** as merchant insight: `qualifyCE30.ts`,
+`evaluateQualification.ts`, `autoQualified.ts`, `GET /api/disputes/[id]/qualification`
+and the Liability Shift insights surface are untouched, and the Visa 10.4 anchor
+stays in the reason-code catalog. `submission_logs` is retained too — the ratios
+calculator reads it for historical attribution; only its dormant writer is gone.
+`tests/unit/ce30BankPackageRetired.test.ts` makes reintroduction a red build.
+
+### D-1 — measured, not decided
+
+`visa_10_4_fraud.criticalCategories` still names `billing_match`, a category with
+zero members after PR-C4, so **every Visa 10.4 package is already `narrow`**. The
+before/after replay across all 32 reachable cells is
+`docs/evidence-model/p4/d1-billing-match-replay.md`, generated by
+`lib/defence/package/__tests__/d1BillingMatchReplay.test.ts`: **exactly two cells
+transition, both `narrow` to `full`**, and none transitions `full` to `narrow`.
+`visa_10_4_fraud.ts` is unchanged and the entry is not removed — the maintainer
+answers D-1 on that output.
+
+## Canonical automation decision (CP-C, dark)
+
+`lib/automation/decision/` — **one** `CaseAutomationDecision` that every
+automation entry point reads. It replaces four independent ladders that could
+disagree about the same dispute, and it is DARK: no production switch is flipped
+by this change, and the observable side effects of every existing path are
+preserved.
+
+**Readers** — `lib/automation/pipeline.ts` (`evaluateAndMaybeAutoSave`),
+`lib/jobs/handlers/buildDefencePackageJob.ts`,
+`lib/automation/reconcileParkedAutoDisputes.ts`, `lib/disputes/heldState.ts`
+(and through it the workspace route and the new-dispute email), and
+`app/api/cron/defence-package-deadline-submit/route.ts`.
+
+**Deleted** — `evaluateAutoSaveGate` and `evaluateAutoSubmitGuards` have zero
+production readers. Both files remain only because
+`scripts/evidence-model/calibration/**` replays historical behaviour through
+them; a CI invariant in
+`lib/automation/decision/__tests__/branchBoundary.test.ts` fails the build if
+anything under `lib/` or `app/` starts reading them again.
+
+**R1 closed.** The auto-save gate's `submissionReadiness: … ?? undefined`
+fallback silently dropped the whole gate onto the legacy blocker-count path
+whenever the column was absent — a second, differently-calibrated ladder
+reachable by a NULL. An absent readiness now resolves to `blocked`: the signal
+fails closed instead of switching engines. (`?? 0` on a NULL completeness score
+is deliberately preserved — it has always meant zero to the gate.)
+
+### The ladder
+
+Evaluated in order, most decisive first. Every rung that can BLOCK sits above
+the automation-mode rung, so the resolved rule mode can never turn a block into
+a non-block — asserted directly, because the deadline path depends on it.
+
+| # | Rung | Action | Reason code |
+|---|---|---|---|
+| 1 | Coverage (`coverage.state === "covered_shopify"`) | `block` | `coverage_active` |
+| 2 | Fatal loss (`fatal_loss.triggered`) | `block` | `fatal_loss` |
+| 3 | Stale assessment (via `evaluateFreshness`) | `block` | `assessment_stale` |
+| 4 | Hard block (`readiness === "blocked"` + `enforce_no_blockers`) | `block` | `hard_block` |
+| 5 | Automation off — review mode or `auto_save_enabled = false` | `park_for_review` | `automation_disabled` |
+| 6 | Strength floor — weak / insufficient | `hold_for_deadline` | `strength_insufficient` (+ `review_required_present`) |
+| 7 | Completeness below threshold | `park_for_review` | `below_completeness_threshold` |
+| 8 | `review_required` facts present | `hold_for_deadline` | `review_required_present` |
+| 9 | Moderate strength | `hold_for_deadline` | `eligible` |
+| 10 | Otherwise | `auto_file` | `eligible` |
+
+Coverage beats fatal-loss (PRD §4 over §5), and `COVERED_STATUSES` stays exactly
+`{PROTECTED, ACTIVE}` — both pinned by test. A fatal-loss REASON never travels
+in the decision, only the code.
+
+**A hard block is an HONESTY condition, never an odds condition.** Rungs 1–4 are
+the complete list: coverage/concession, fatal-loss, a stale assessment, and a
+readiness hard block (plus an unsafe claim, which the *selector* refuses at
+execution — `packageSafety`/C-11). Weak or insufficient STRENGTH is none of
+those, and rung 6 therefore **holds for the deadline** rather than blocking.
+
+The reasoning, because it is not obvious and it is the one thing most likely to
+be "corrected" back: filing nothing does not produce silence. Shopify
+auto-compiles and files its own scrape when we file nothing, there is no
+accept/concede mutation, and VDMP/VAMP compute the dispute ratio from disputes
+*received* — so losing a representment costs nothing. A guard therefore never
+chooses "submit vs stay silent"; it chooses **our document vs Shopify's
+scrape**. "We might lose" can never justify withholding a filing.
+
+This is also why the strength floor sits **below** the automation-mode rung
+rather than above it. The old ordering existed so that review mode could not
+soften a block into a park; now that the rung holds instead of blocking, the
+invariant is stronger the other way round — **every blocking rung is above the
+mode rung and every holding rung is below it**. In review mode a weak case parks
+(the merchant is the lever); in auto mode it holds, and the deadline path files
+it.
+
+Below-threshold **parks**, it does not hard-block: a thin case still gets a
+response at the deadline rather than a forfeit. Only a `block` stops the
+deadline.
+
+**Held state.** `lib/disputes/heldState.ts` reads this decision rather than
+re-deriving a ladder, and since revision 2 both held reasons arrive as
+`hold_for_deadline`, told apart by the reason code:
+`strength_insufficient` → `weak_strength`, anything else → `moderate_strength`.
+`lib/automation/pipeline.ts` uses the same discriminator, so the dispute page,
+the new-dispute email and the pipeline cannot describe one dispute three ways.
+
+### Time invariance
+
+The decision may carry the **absolute** evidence due date. It may never carry,
+or be derived from, a **relative** time state — time remaining, window
+open/closed, days to deadline. Executors compute window state from the absolute
+due date at execution, in `lib/automation/decision/deadlineWindow.ts`, the only
+module in the branch that reads a clock.
+
+`freshness.computedAt` is audit-only and is excluded from the input hash by
+construction. Pinned by `decisionTimeInvariance.test.ts`: identical inputs at two
+clock times produce an identical `inputHash` and identical `reasonCodes`, while a
+due-date change moves the hash.
+
+### Package choice is NOT in the decision
+
+Executors receive a `FileableSelection` at execution time through
+`FileableSelectorPort`, so a decision stored yesterday can never authorise
+filing a package superseded since. `lib/automation/decision/latestCandidateSelector.ts`
+implements the port over today's storage (latest candidate only — never a search
+for "the newest SAFE version", which on this fleet would be a fallback into the
+defect) and is the module CP-B's selector replaces.
+
+### The deadline path — P-6
+
+`app/api/cron/defence-package-deadline-submit/route.ts` is the ACTUAL submitter.
+It previously consulted **no** strength, **no** completeness, **no** coverage and
+**no** guards, which made every other gate advisory (risk R3). It now calls
+`cronEnvGate(req)` first, then derives the decision and executes P-6 through the
+shared `mayExecuteAtDeadline`:
+
+> `deadline_only` execution is allowed only with a current canonical decision AND
+> a current validated safe package, with no hard block, no staleness, no
+> ambiguity and no unsupported argument.
+
+**Six** conditions, conjunctive — `DeadlineExecutionConditions` has one field per
+clause of that sentence, and contract revision 1 un-folded `noUnsupportedArgument`
+from `hasCurrentValidatedSafePackage` precisely so a reviewer can match them 1:1.
+`mayExecuteAtDeadline` folds over `Object.values`, so a condition added to the
+interface cannot silently go unchecked.
+
+**A deadline relaxes nothing — and strength was never one of the six.** A weak or
+insufficient case IS filed at the deadline (revision 2, above): it reaches this
+path as `hold_for_deadline`, not `block`. What still refuses here is exactly what
+refused before: coverage, fatal-loss, a readiness hard block, staleness,
+ambiguity, and an unsupported argument.
+
+When any one fails,
+nothing is filed, the merchant is emailed, and the audit row names the failing
+condition (`deadlineConditions`, `deadlineWindow`, `decisionAction`,
+`decisionReasonCodes`, `decisionInputHash`) — an executor that can only say "not
+allowed" produces exactly the un-diagnosable behaviour this replaces. The
+response body gains a `blockedByDecision` counter, distinct from
+`finalizeRefused`: a P-6 refusal is the gate working, not a retriable
+transaction failure.
+
+### Branch boundary
+
+Automation decides what to DO; the argument decides what to SAY. Nothing under
+`lib/automation/decision/` may import argument-plan or review internals, and the
+decision snapshot carries no narrative, no package id and no plan field.
+Enforced structurally by `branchBoundary.test.ts`.
+
