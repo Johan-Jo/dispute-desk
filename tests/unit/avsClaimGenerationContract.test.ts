@@ -244,7 +244,7 @@ describe("neither runtime prompt prints a concrete verification claim", () => {
 
   it("both cached bodies were re-versioned", () => {
     expect(CURRENT_PROMPT_VERSION).toBe(13);
-    expect(visa_10_4_fraud.version).toBe(9);
+    expect(visa_10_4_fraud.version).toBe(10);
   });
 });
 
@@ -311,7 +311,7 @@ describe("the whole prompt contract, base + module", () => {
   });
 
   it("the module version was bumped — its block is cached separately", () => {
-    expect(visa_10_4_fraud.version).toBe(9);
+    expect(visa_10_4_fraud.version).toBe(10);
   });
 
   it("a valid AVS-only and a valid AVS+CVV summary both remain quotable verbatim", () => {
