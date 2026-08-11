@@ -15,6 +15,10 @@
 import { getServiceClient } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { isDefencePackageBuilderEnabled } from "@/lib/featureFlags";
+import {
+  evaluateGenerationGuard,
+  generationBlockPayload,
+} from "./latestPackageGenerationGuard";
 import { computeEvidenceHash } from "./computeEvidenceHash";
 import { classifyFacts } from "./factClassifier";
 import {
@@ -172,11 +176,45 @@ export async function maybeEnqueueDefencePackage(
   // Look at the latest existing row.
   const { data: latest } = await sb
     .from("defence_packages")
-    .select("id, version, status, evidence_hash")
+    .select("id, version, status, evidence_hash, validation_status, failure_code")
     .eq("dispute_id", pack.dispute_id)
     .order("version", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  /* ── A HUMAN-GATED REJECTION IS NOT AN INPUT TO AUTOMATION ──────────
+   *
+   * Checked BEFORE the idempotent-draft branch and before `nextVersion` is
+   * computed, because everything below this point either writes a row or
+   * mutates one. On 2026-08-11 a case whose newest package was
+   * `failed` / `validation_failed` was rebuilt: the function has no opinion
+   * about failed rows, so it inserted the next version and enqueued a
+   * regeneration that failed the same way. The case had been protected by a
+   * manual instruction, and the instruction did not survive a change to how
+   * the batch was selected.
+   *
+   * `evaluateGenerationGuard` is the single predicate, shared with the
+   * ops rebuild script and the worker's defensive check. Nothing is deleted,
+   * retried or superseded here — clearing the rejection is a human action, and
+   * this function offers no way to bypass it. */
+  const guard = evaluateGenerationGuard(latest);
+  if (guard.blocked) {
+    await logAuditEvent({
+      shopId: pack.shop_id,
+      disputeId: pack.dispute_id,
+      packId,
+      actorType: "system",
+      eventType: "defence_package_generation_skipped",
+      eventPayload: generationBlockPayload(guard),
+    });
+    return {
+      enqueued: false,
+      reason: guard.reason as string,
+      packageId: guard.blockingPackageId,
+      version: guard.blockingVersion,
+      status: (latest?.status as DefencePackageStatus | null) ?? null,
+    };
+  }
 
   const nextVersion = latest ? latest.version + 1 : 1;
 
