@@ -103,7 +103,7 @@ describe("the ip_location fact carries an approved sentence", () => {
       "same_country" as never,
       { country: "SE" } as never,
     );
-    expect(approved).toContain("shipping");
+    expect(approved).toContain("country recorded on this order");
   });
 });
 
@@ -141,5 +141,52 @@ describe("the Visa module's IP rule", () => {
 
   it("no runtime prompt asserts a relationship between the two order addresses", () => {
     expect(BODY).not.toMatch(/billing and shipping address/i);
+  });
+});
+
+
+/* ── 4. The test that was missing twice ──────────────────────────────── */
+
+describe("the approved sentence survives what the model writes AROUND it", () => {
+  /* THE LESSON OF THIS WHOLE SERIES.
+   *
+   * The sentence was verified in isolation and shipped twice; both times the
+   * package still failed, because the model quotes the sentence and then
+   * CONTINUES it. This is the real production tail, from 2026-08-11:
+   *
+   *   "… — consistent with an order placed from a location aligned with the
+   *    cardholder's account details."
+   *
+   * Neither half trips `classifyAddressDeliveryClaim` alone. Together, with
+   * the previous wording, they are `affirmative` — the shipping reference gave
+   * the tail an address to bind to. Testing the sentence by itself proved
+   * nothing, twice.
+   */
+  const MODEL_TAIL =
+    " — consistent with an order placed from a location aligned with the cardholder's account details.";
+
+  const approved = () =>
+    generateBankParagraph(
+      { country: "SE" } as never,
+      1 as never,
+      "consistent" as never,
+      "same_country" as never,
+      { country: "SE" } as never,
+    )!;
+
+  it("passes alone", () => {
+    expect(classifyAddressDeliveryClaim(approved())).toBe("none");
+  });
+
+  it("passes WITH the model's appended clause", () => {
+    expect(classifyAddressDeliveryClaim(approved().replace(/\.$/, "") + MODEL_TAIL)).toBe("none");
+  });
+
+  it("guard the guard — the OLD wording plus that same tail still fails", () => {
+    /* Proves the assertion above is discriminating: the detector was not
+     * weakened, the sentence was changed. */
+    const OLD =
+      "The order originated from the same country recorded for shipping on this order, with no VPN, proxy or datacenter signals";
+    expect(classifyAddressDeliveryClaim(OLD + MODEL_TAIL)).not.toBe("none");
   });
 });
