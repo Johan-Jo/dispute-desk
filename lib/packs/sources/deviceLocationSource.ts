@@ -225,7 +225,27 @@ export function generateBankParagraph(
    *
    * The COUNTRY is what `computeLocationMatch` actually compares, so naming it
    * is both narrower and truer than naming a "destination". */
-  return "The order originated from the same country recorded for shipping on this order, with no VPN, proxy or datacenter signals.";
+  /* NO ADDRESS NOUN, deliberately — including "shipping".
+   *
+   * Measured, not assumed. The model quotes this sentence and then appends its
+   * own clause; production on 2026-08-11 produced
+   *   "…the same country recorded FOR SHIPPING on this order … — consistent
+   *    with an order placed from a location aligned with the cardholder's
+   *    account details."
+   * Neither half trips `classifyAddressDeliveryClaim` alone. TOGETHER they are
+   * `affirmative`: the shipping reference gives the trailing clause an address
+   * to bind to, and the package fails to build.
+   *
+   * Dropping the word survives the same appended tail (verified in
+   * `ipLocationApprovedWording.test.ts`). "the country recorded on this order"
+   * is still exactly what `computeLocationMatch` compared — the shipping
+   * country IS the country recorded on the order — and it names no
+   * destination, so an embellishment has nothing to attach to.
+   *
+   * This is the third correction to this one sentence, and the first that was
+   * tested against what the model actually writes around it rather than
+   * against the sentence in isolation. */
+  return "The order originated from the same country recorded on this order, with no VPN, proxy or datacenter signals.";
 }
 
 /* ═══════════════════════════════════════════════════════════════════ */
