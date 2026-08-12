@@ -37,6 +37,43 @@ import type {
   ValidationResult,
 } from "./types";
 
+/**
+ * THE VALIDATOR'S OWN VERSION — bump on ANY change to what this module
+ * accepts or rejects.
+ *
+ * WHY IT EXISTS. A package that failed validation is not permanently wrong; it
+ * is wrong *according to the rules in force when it was built*. Without a
+ * recorded version, nothing downstream can tell "this failed and the rules have
+ * since changed" from "this failed and nothing has moved" — so the generation
+ * guard has to assume the worst and block both, and a case stays dead after the
+ * defect that killed it is fixed.
+ *
+ * Measured on production 2026-08-12: fourteen open disputes held a `failed`
+ * latest package, every one of them `validation_failed`, none of them a human
+ * rejection. Seven failed at prompt version 13 — the CURRENT version — so a
+ * generator-version comparison alone would have kept them blocked, because the
+ * fix that unblocked them was #539 in `claimCapabilities.ts`: the validator
+ * changed, not the prompt. `#12936` sat blocked for three weeks past its
+ * deadline; `#353605` failed at prompt 10 and was still blocked while 12 and 13
+ * shipped, and lost its deadline.
+ *
+ * THE SURFACE THIS COVERS. Anything that can change a verdict:
+ *   - `FORBIDDEN_PHRASES` / `NARROW_AGGRESSIVE_PHRASES` below
+ *   - `claimGuards.ts`, `factPredicates.ts`
+ *   - `claimCapabilities.ts` — capability derivation AND claim detection
+ *   - the referential/consistency layers in `validateNarrative` itself
+ *
+ * A change in any of those without a bump here means a case that should have
+ * self-healed will not. `validatorVersionBump.test.ts` pins the current value
+ * so the bump is a deliberate edit rather than something to remember.
+ *
+ * HISTORY
+ *   1  initial versioning (2026-08-12). Covers the state after #539 —
+ *      URL-blind address-delivery detection, the AVS-clause carve-out, and the
+ *      approved IP wording from #535/#537.
+ */
+export const VALIDATOR_VERSION = 1;
+
 export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,
   /\bdefinitive\s+proof\b/i,

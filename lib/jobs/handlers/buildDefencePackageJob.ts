@@ -36,6 +36,7 @@ import {
   validateNarrative,
   validateComposedDocument,
   summariseComposedErrors,
+  VALIDATOR_VERSION,
 } from "@/lib/defence/validateNarrative";
 import { rankStrategies } from "@/lib/defence/strategies/registry";
 import { composePdfBlocks } from "@/lib/defence/pdf/composePdfBlocks";
@@ -608,6 +609,11 @@ export async function handleBuildDefencePackage(
         llm_model: narrativeRes.modelUsed,
         prompt_family: narrativeRes.promptFamily,
         prompt_version: narrativeRes.promptVersion,
+        /* WHICH RULES REJECTED IT. Without this the next rebuild cannot tell
+         * "failed under rules we have since fixed" from "failed under the rules
+         * still in force", so the guard blocks both and the case never
+         * recovers — the state fourteen disputes were in on 2026-08-12. */
+        validator_version: VALIDATOR_VERSION,
         updated_at: new Date().toISOString(),
       })
       .eq("id", packageId);
@@ -761,6 +767,10 @@ export async function handleBuildDefencePackage(
         llm_model: narrativeRes.modelUsed,
         prompt_family: narrativeRes.promptFamily,
         prompt_version: narrativeRes.promptVersion,
+        /* Same reason as the narrative-validation branch above: the failure has
+         * to say which rules produced it, or it cannot be retried when they
+         * change. */
+        validator_version: VALIDATOR_VERSION,
         updated_at: new Date().toISOString(),
       })
       .eq("id", packageId);
@@ -1049,6 +1059,11 @@ export async function handleBuildDefencePackage(
       validation_status: "ok",
       validation_errors: [],
       evidence_hash: finalHash,
+      /* Written on success too, not only on failure: the column must describe
+       * the rules this row was last built under, whatever the outcome. A
+       * success carrying a stale version would make the NEXT failure look
+       * older than it is. */
+      validator_version: VALIDATOR_VERSION,
       updated_at: new Date().toISOString(),
       ...canonicalIdentityColumns,
     })
@@ -1205,13 +1220,29 @@ async function markFailed(
   reason: string,
   failureCode: DefencePackageFailureCode,
   retriable = false,
+  /**
+   * The generator version that produced this failure, when one ran. Absent for
+   * failures raised before generation (cap reached, LLM transport error).
+   */
+  promptVersion?: number | null,
 ): Promise<JobResult> {
+  /* THE VERSIONS ARE PART OF THE FAILURE RECORD.
+   *
+   * A failure that does not say which rules produced it cannot be distinguished
+   * later from one produced under rules we have since fixed, so
+   * `evaluateGenerationGuard` has to block both and the case never recovers.
+   * That is what stranded fourteen disputes on 2026-08-12 — `#12936` for three
+   * weeks past its deadline. `validator_version` is written unconditionally
+   * because the validator is the thing most likely to change underneath a
+   * failure; `prompt_version` only when a generation actually ran. */
   await sb
     .from("defence_packages")
     .update({
       status: "failed",
       failure_code: failureCode,
       failure_reason: reason,
+      validator_version: VALIDATOR_VERSION,
+      ...(typeof promptVersion === "number" ? { prompt_version: promptVersion } : {}),
       updated_at: new Date().toISOString(),
     })
     .eq("id", pkg.id);

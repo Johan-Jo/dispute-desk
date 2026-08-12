@@ -63,7 +63,33 @@ export interface LatestPackageRow {
   status?: string | null;
   validation_status?: string | null;
   failure_code?: string | null;
+  /** The generator version that produced the failure. */
+  prompt_version?: number | null;
+  /** The validator version in force when it failed. NULL = pre-versioning. */
+  validator_version?: number | null;
+  /** The evidence the failure was produced from. */
+  evidence_hash?: string | null;
 }
+
+/**
+ * What the world looks like NOW, for comparison against the failed row.
+ *
+ * Passed in rather than imported so this module stays pure and the callers —
+ * which have already computed the current evidence hash — do not pay for a
+ * second derivation.
+ */
+export interface CurrentGenerationInputs {
+  promptVersion: number;
+  validatorVersion: number;
+  /** The hash of the evidence a rebuild would run against. */
+  evidenceHash: string | null;
+}
+
+/** Which input moved since the failure. Empty when nothing did. */
+export type GenerationRetryBasis =
+  | "prompt_version_changed"
+  | "validator_version_changed"
+  | "evidence_changed";
 
 export interface GenerationGuardVerdict {
   /** True when an automatic generation must not proceed. */
@@ -75,6 +101,11 @@ export interface GenerationGuardVerdict {
   blockingPackageId: string | null;
   /** The recorded failure code, when the row carries one. Never inferred. */
   failureCode: string | null;
+  /**
+   * Why a FAILED latest package was nonetheless allowed through. Empty when
+   * the row did not fail, or when it failed and stays blocked.
+   */
+  retryBasis: GenerationRetryBasis[];
 }
 
 const ALLOWED: GenerationGuardVerdict = {
@@ -83,6 +114,7 @@ const ALLOWED: GenerationGuardVerdict = {
   blockingVersion: null,
   blockingPackageId: null,
   failureCode: null,
+  retryBasis: [],
 };
 
 /**
@@ -96,6 +128,7 @@ const ALLOWED: GenerationGuardVerdict = {
  */
 export function evaluateGenerationGuard(
   latest: LatestPackageRow | null | undefined,
+  current?: CurrentGenerationInputs,
 ): GenerationGuardVerdict {
   if (!latest) return ALLOWED;
 
@@ -112,18 +145,71 @@ export function evaluateGenerationGuard(
     failureCode,
   };
 
+  const failed = status === BLOCKING_STATUS || validation === "failed";
+  if (!failed) return ALLOWED;
+
+  /* ── WOULD A REBUILD BE A NEW ATTEMPT, OR THE SAME ONE AGAIN? ────────
+   *
+   * The hazard this guard was built for (2026-08-11) is a REGENERATION LOOP:
+   * rebuilding a failed package under the rules that failed it produces the
+   * same failure, wastes an LLM call, and buries the original error under a
+   * new row. That hazard is real and this still blocks it.
+   *
+   * What the original revision could not express is the other half: a package
+   * that failed under rules WE HAVE SINCE CHANGED is not the same attempt, and
+   * refusing it leaves a case dead after the defect is fixed. Measured
+   * 2026-08-12, that cost `#12936` three weeks past its deadline and `#353605`
+   * its deadline outright — both blocked while the fixes that would have saved
+   * them shipped.
+   *
+   * The original comment framed the block as protecting a "human-gated
+   * rejection". No such state exists in the data: all fourteen blocked rows
+   * were `validation_failed`, a machine verdict, and nothing in
+   * `DefencePackageStatus` records human intent. The honest predicate is about
+   * CHANGE, not motive.
+   *
+   * Any one of three inputs moving makes this a new attempt:
+   *   - the generator (`prompt_version`)
+   *   - the validator (`validator_version`) — the one that mattered, since a
+   *     detector fix leaves the prompt untouched
+   *   - the evidence (`evidence_hash`)
+   *
+   * A NULL on the row means "not recorded", which is not evidence of sameness:
+   * it is treated as changed, so packages built before versioning get exactly
+   * one attempt under current rules. The rebuild then writes all three, and a
+   * second failure with everything matching blocks — so the loop is bounded at
+   * one, not reopened.
+   *
+   * With no `current` supplied the guard keeps its original behaviour and
+   * blocks, so a caller that cannot answer the question does not get a pass.
+   */
+  if (current) {
+    const retryBasis: GenerationRetryBasis[] = [];
+    if (latest.prompt_version == null || latest.prompt_version !== current.promptVersion) {
+      retryBasis.push("prompt_version_changed");
+    }
+    if (latest.validator_version == null || latest.validator_version !== current.validatorVersion) {
+      retryBasis.push("validator_version_changed");
+    }
+    if (
+      current.evidenceHash != null &&
+      (latest.evidence_hash == null || latest.evidence_hash !== current.evidenceHash)
+    ) {
+      retryBasis.push("evidence_changed");
+    }
+    if (retryBasis.length > 0) {
+      return { ...ALLOWED, retryBasis };
+    }
+  }
+
   if (status === BLOCKING_STATUS) {
-    return { blocked: true, reason: "latest_package_failed", ...base };
+    return { blocked: true, reason: "latest_package_failed", ...base, retryBasis: [] };
   }
   /* The validator's own verdict, read even when `status` disagrees. A row that
    * says `validation_status = 'failed'` while its status says otherwise is a
    * half-written failure, and resuming generation over it would be acting on
    * the half that happens to be convenient. */
-  if (validation === "failed") {
-    return { blocked: true, reason: "latest_package_validation_failed", ...base };
-  }
-
-  return ALLOWED;
+  return { blocked: true, reason: "latest_package_validation_failed", ...base, retryBasis: [] };
 }
 
 /** The audit/telemetry payload for a blocked attempt. */
