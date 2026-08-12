@@ -43,6 +43,7 @@ import {
   type EvidenceCategory,
   type SignalId,
 } from "./canonicalEvidence";
+import { canMerchantUpload } from "@/lib/disputes/presentation/concreteContribution";
 import { resolveReasonFamily, type ReasonFamily } from "./reasonFamily";
 import { buildDeliveryPresentation } from "./deliveryPresentation";
 import {
@@ -512,10 +513,36 @@ export function calculateCaseStrength(
       if (!prev || RANK[category] > RANK[prev.category]) {
         bestBySignalDetailed.set(spec.signalId, { category, field: item.field });
       }
-    } else if (isMissing && (item.collectionType === "manual" || !item.collectionType)) {
-      // Candidate for the improvement hint. We use the spec's default
-      // category (best case) since we don't have a payload to evaluate.
-      // Selection happens after the loop, once signal coverage is known.
+    } else if (isMissing && canMerchantUpload(item)) {
+      /* ONLY SUGGEST WHAT THE MERCHANT CAN ACTUALLY SUPPLY.
+       *
+       * This was `item.collectionType === "manual" || !item.collectionType`
+       * — permissive by default, so a row whose `collectionType` was absent
+       * became a merchant task. `canMerchantUpload` answers the same question
+       * and is strict by default: an allowlist, then the
+       * `SYSTEM_DERIVED_FIELDS` denylist, then an EXPLICIT `manual` /
+       * `conditional_auto`. Its own comment says the denylist exists so "a
+       * future template/registry change that inadvertently nulls
+       * `collectionType` cannot accidentally promote a system signal back to
+       * a merchant task" — which is exactly what happened here.
+       *
+       * Measured on production 2026-08-12, dispute 9a40da90 (#352537): the
+       * persisted assessment snapshot carried
+       *   { key: "disputes.improvementHint",
+       *     params: { label: { key: "disputes.signalLabel.fraud_screening" } } }
+       * and the Evidence tab told the merchant to "Add Pre-authorization
+       * fraud screening" — a signal Shopify computes at CHECKOUT, three days
+       * before their deadline, on an order placed a month earlier. It cannot
+       * be supplied at all, least of all on an open dispute.
+       *
+       * The hint also OUTLIVES its own truth: the snapshot is written at
+       * build time and never recomputed, so it kept naming a field that had
+       * since been collected. Gating at the source is what stops a wrong hint
+       * being persisted in the first place.
+       *
+       * We use the spec's default category (best case) since we don't have a
+       * payload to evaluate. Selection happens after the loop, once signal
+       * coverage is known. */
       const candidateCat = spec.category;
       if (!affectsStrength(candidateCat)) continue;
       missingActionableCandidates.push({
@@ -1047,7 +1074,12 @@ export function calculateImprovement(
 
   for (const item of checklist) {
     if (item.status !== "missing") continue;
-    if (item.collectionType !== "manual" && item.collectionType) continue;
+    /* Same gate as the improvement-hint candidate loop above. This filter
+     * excluded an explicit non-`manual` value but ADMITTED an absent one, so
+     * a row with no `collectionType` still became a suggestion. Both call
+     * sites now ask `canMerchantUpload`, which is strict by default and
+     * consults `SYSTEM_DERIVED_FIELDS`. */
+    if (!canMerchantUpload(item)) continue;
     const spec = CANONICAL_EVIDENCE[item.field];
     if (!spec) continue;
     if (coveredSignals.has(spec.signalId)) continue;
