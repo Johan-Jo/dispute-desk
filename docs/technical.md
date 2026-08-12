@@ -5172,6 +5172,16 @@ affirmations. Adversarial cases are pinned in
 `lib/defence/__tests__/claimCapabilities.test.ts`. A prohibited claim gets one bounded repair attempt through the existing validation-retry
 path in `buildDefencePackageJob`; if it still fails the package is marked `failed` and never filed.
 
+**A carrier's URL scheme is not a delivery claim (corrected 2026-08-12).** URLs are stripped
+before every other test, because no substring of a link is evidence about where a parcel went. Four
+production packages were refused carrying the CANONICAL PERMITTED delivery sentence — carrier, date,
+tracking number, the shape rule 14 lists as RIGHT — because DHL's tracking path contains `/home/`
+and `home` is an `ADDRESS_TERM`. Removing only the URL turned all four from `affirmative` to `none`,
+so the link was the entire cause. A destination asserted in the prose AROUND a link is untouched;
+the false-negative cases in `claimCapabilities.test.ts` pin that. Re-run the measurement with
+`scripts/sql/address-claim-failing-narratives.sql`, which returns every failing section with its
+text so each can be judged as a genuine claim or a false positive.
+
 **The AVS statement is not a destination (corrected 2026-08-10).** The coupling is looked for
 CLAUSE by clause; only when no single clause holds both halves does a sentence-level fallback catch a
 straddled coupling ("The order shipped to, and was received at, the cardholder's address"). That
