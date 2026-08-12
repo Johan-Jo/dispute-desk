@@ -153,6 +153,53 @@ describe("non-failed rows are untouched", () => {
   });
 });
 
+describe("every call site asks the SAME question", () => {
+  /* THE DEFECT THIS PINS, 2026-08-12.
+   *
+   * The guard has two call sites: `maybeEnqueueDefencePackage` decides whether
+   * to CREATE a draft, and `buildDefencePackageJob` re-checks defensively
+   * before building it. The first was given the current versions; the second
+   * was not.
+   *
+   * `evaluateGenerationGuard` blocks when it cannot answer, which is right —
+   * but it made the worker refuse the very job the enqueue site had just
+   * decided was a legitimate retry. Three disputes (#352513, #352511, #352555)
+   * came out with an empty draft stranded above their real failure and
+   * `generation_blocked: latest_package_failed` on the job.
+   *
+   * A defensive re-check that asks a DIFFERENT question from the decision it
+   * re-checks is not defence; it is a second, contradictory decision. Both
+   * sites must pass `current`, and this asserts the disagreement they had.
+   */
+  const STRANDED: LatestPackageRow = {
+    id: "pkg-prior",
+    version: 4,
+    status: "failed",
+    validation_status: "failed",
+    failure_code: "validation_failed",
+    prompt_version: 13,
+    validator_version: null, // pre-versioning, as all 14 production rows were
+    evidence_hash: "hash-current",
+  };
+
+  it("without `current` the guard blocks — the fallback that stranded the drafts", () => {
+    expect(evaluateGenerationGuard(STRANDED).blocked).toBe(true);
+  });
+
+  it("with `current` it allows — so a caller omitting it CONTRADICTS the enqueue decision", () => {
+    expect(evaluateGenerationGuard(STRANDED, NOW).blocked).toBe(false);
+  });
+
+  it("the two verdicts must not differ for the same row — pass `current` at every site", () => {
+    const withoutCurrent = evaluateGenerationGuard(STRANDED).blocked;
+    const withCurrent = evaluateGenerationGuard(STRANDED, NOW).blocked;
+    expect(
+      withoutCurrent === withCurrent,
+      "a call site that omits `current` reaches the opposite verdict; both sites must supply it",
+    ).toBe(false);
+  });
+});
+
 describe("the versions are real, not placeholders", () => {
   it("VALIDATOR_VERSION is a positive integer", () => {
     expect(Number.isInteger(VALIDATOR_VERSION)).toBe(true);
