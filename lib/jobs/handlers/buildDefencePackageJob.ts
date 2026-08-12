@@ -32,6 +32,7 @@ import type { KlarnaSubProduct } from "@/lib/disputes/paymentContext";
 import { klarnaDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategory";
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
 import { generateNarrative, CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
+import { sendDefencePackageFailedAlert } from "@/lib/email/sendDefencePackageFailedAlert";
 import {
   validateNarrative,
   validateComposedDocument,
@@ -651,6 +652,14 @@ export async function handleBuildDefencePackage(
         retryAttempted: true,
       },
     });
+    void notifyDefencePackageFailed(
+      sb,
+      pkg,
+      "validation_failed",
+      `${validation.errors.length} validation error${validation.errors.length === 1 ? "" : "s"} (after one retry)`,
+      validation.errors,
+      narrativeRes.promptVersion,
+    );
     return { ok: false, retriable: false, reason: "validation_failed" };
   }
 
@@ -808,6 +817,14 @@ export async function handleBuildDefencePackage(
         composed: true,
       },
     });
+    void notifyDefencePackageFailed(
+      sb,
+      pkg,
+      "validation_failed",
+      summary,
+      composedValidation.errors,
+      narrativeRes.promptVersion,
+    );
     return { ok: false, retriable: false, reason: `validation_failed:composed (${summary})` };
   }
 
@@ -1229,6 +1246,50 @@ async function markSkipped(
   return { ok: true };
 }
 
+/**
+ * Load the context an operator needs and send the failed-package alert.
+ *
+ * ONE notifier for every failure path, so a new branch cannot ship without the
+ * alarm — the omission that let fourteen disputes accumulate silently.
+ *
+ * Swallows everything. The caller is already on a failure path; an alert that
+ * throws would replace a diagnosable build failure with an email error.
+ */
+async function notifyDefencePackageFailed(
+  sb: ReturnType<typeof getServiceClient>,
+  pkg: { id: string; dispute_id: string; shop_id: string; version: number },
+  failureCode: string,
+  failureReason: string,
+  validationErrors?: Array<{ rule?: string; section?: string; message?: string }>,
+  promptVersion?: number | null,
+): Promise<void> {
+  try {
+    const [{ data: dispute }, { data: shop }] = await Promise.all([
+      sb
+        .from("disputes")
+        .select("order_name, due_at")
+        .eq("id", pkg.dispute_id)
+        .maybeSingle(),
+      sb.from("shops").select("shop_domain").eq("id", pkg.shop_id).maybeSingle(),
+    ]);
+    await sendDefencePackageFailedAlert({
+      shopDomain: (shop?.shop_domain as string | null) ?? null,
+      orderName: (dispute?.order_name as string | null) ?? null,
+      disputeId: pkg.dispute_id,
+      packageId: pkg.id,
+      version: pkg.version,
+      failureCode,
+      failureReason,
+      validationErrors,
+      dueAt: (dispute?.due_at as string | null) ?? null,
+      promptVersion: promptVersion ?? null,
+      validatorVersion: VALIDATOR_VERSION,
+    });
+  } catch (err) {
+    console.error("[defence] failed-package alert could not be sent", err);
+  }
+}
+
 async function markFailed(
   sb: ReturnType<typeof getServiceClient>,
   pkg: {
@@ -1275,5 +1336,10 @@ async function markFailed(
     eventType: "defence_package_failed",
     eventPayload: { packageId: pkg.id, version: pkg.version, failureCode, failureReason: reason },
   });
+  /* TELL SOMEONE. An audit row that nothing reads is not a notification — it
+   * is how fourteen disputes reached a failed latest package unnoticed, two of
+   * them past their deadline. Not awaited into the failure path: a build that
+   * already failed must not fail differently because an email did. */
+  void notifyDefencePackageFailed(sb, pkg, failureCode, reason);
   return { ok: false, retriable, reason };
 }
