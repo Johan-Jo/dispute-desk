@@ -15,6 +15,7 @@
  */
 
 import { canonicalReasonCode } from "@/lib/rules/disputeReasons";
+import { canMerchantUpload } from "@/lib/disputes/presentation/concreteContribution";
 
 export type RequirementMode =
   | "required_always"
@@ -751,10 +752,27 @@ export function deriveCompletenessMetrics(
 
   const blockers = missingBlockers.map((c) => c.label);
   const warnings = missingCritical.map((c) => c.label);
+  /* ── "ADD X" MUST BE SOMETHING THE MERCHANT CAN ACTUALLY DO ─────────
+   *
+   * This mapping is from 2026-02-24, when the checklist was small and
+   * effectively all merchant-supplied, so `recommended && missing` implied
+   * "ask them for it". `fraud_risk_screening` (2026-05-15) is where that
+   * stopped being true: it is `collectionType: "auto"`,
+   * `expectedSource: "auto_shopify"`, and Shopify runs it at CHECKOUT. A
+   * merchant cannot produce one for an order placed weeks ago, let alone for
+   * an already-open dispute — but the row is `priority: "recommended"`, so
+   * this line rendered "Add Pre-Authorization Fraud Screening".
+   *
+   * `canMerchantUpload` has been the single source of truth for this question
+   * since 2026-05-18 (`SYSTEM_DERIVED_FIELDS`, which names
+   * `fraud_risk_screening` explicitly). It was applied to the surfaces that
+   * showed upload buttons and never to this one, so two answers to one
+   * question have coexisted for three months. This is the migration.
+   */
   const recommendedActions = checklist
     .filter(
       (c) =>
-        c.priority === "recommended" && c.status === "missing",
+        c.priority === "recommended" && c.status === "missing" && canMerchantUpload(c),
     )
     .map((c) => `Add ${c.label}`);
 
@@ -772,11 +790,17 @@ export function deriveCompletenessMetrics(
         c.status === "missing",
     )
     .map((c) => c.label);
+  /* Same gate as `recommendedActions` above. This is the list that reaches
+   * `evidence_packs.recommended_actions` and therefore the merchant's PDF
+   * (`EvidencePackDocument` "Recommended: …"), so leaving it ungated would
+   * have kept the impossible instruction in the document even after the
+   * in-app surfaces were fixed. */
   const legacyRecommendedActions = checklist
     .filter(
       (c) =>
         c.priority !== "critical" &&
-        c.status === "missing",
+        c.status === "missing" &&
+        canMerchantUpload(c),
     )
     .map((c) => `Add ${c.label}`);
 
