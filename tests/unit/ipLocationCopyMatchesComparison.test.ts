@@ -78,7 +78,9 @@ describe("no IP-location surface invents a billing relationship", () => {
     );
     expect(text).not.toBeNull();
     expect(text!.toLowerCase()).not.toContain("billing");
-    expect(text!.toLowerCase()).toContain("shipping");
+    /* No longer names shipping: the word gave a model-appended clause an
+     * address to bind to, and the combination failed validation. */
+    expect(text!.toLowerCase()).toContain("country recorded on this order");
   });
 
   it("no surface asserts billing↔shipping agreement — the retired claim", () => {
