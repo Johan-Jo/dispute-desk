@@ -337,6 +337,75 @@ describe("detector bypasses closed in review", () => {
     expect(verdict === "affirmative" || verdict === "ambiguous", verdict).toBe(true);
   });
 
+  /**
+   * A CARRIER'S URL SCHEME IS NOT A DELIVERY CLAIM (2026-08-12).
+   *
+   * All four are verbatim from production packages refused as
+   * `unauthorized_claim`, pulled by
+   * `scripts/sql/address-claim-failing-narratives.sql`. Each is the canonical
+   * PERMITTED delivery sentence — carrier, date, tracking number — which rule
+   * 14 lists as RIGHT. They were blocked because DHL's tracking path contains
+   * `/home/` and `home` is an ADDRESS_TERM.
+   *
+   * Pinned as data, not paraphrased: the detector has to be measured against
+   * the links carriers actually issue.
+   */
+  const TRACKING_URL_FALSE_POSITIVES: Array<[string, string]> = [
+    [
+      "'tracking URL:' parenthetical",
+      "The carrier TechSHIP confirmed delivery on 13 July 2026 under tracking number 420754079261290416102420728879 (tracking URL: https://www.dhl.com/us-en/home/tracking.html?submit=1&tracking-id=420754079261290416102420728879).",
+    ],
+    [
+      "'trackable at' phrasing",
+      "The carrier confirmed delivery of the shipment on 10 July 2026 (TechSHIP, tracking 420754079261290416102425275033, trackable at https://www.dhl.com/us-en/home/tracking.html?submit=1&tracking-id=420754079261290416102425275033).",
+    ],
+    [
+      "'tracking available at', no delivery confirmation",
+      "The shipment was handled by TechSHIP under tracking number 420115809261290416102420728510, with tracking available at https://www.dhl.com/us-en/home/tracking.html?submit=1&tracking-id=420115809261290416102420728510.",
+    ],
+    [
+      "URL inline in the chronology sentence",
+      "The carrier confirmed delivery on 13 July 2026 (TechSHIP, tracking 420754079261290416102420739080, tracking URL: https://www.dhl.com/us-en/home/tracking.html?submit=1&tracking-id=420754079261290416102420739080).",
+    ],
+  ];
+
+  for (const [name, text] of TRACKING_URL_FALSE_POSITIVES) {
+    it(`does not block the permitted delivery sentence: ${name}`, () => {
+      expect(classifyAddressDeliveryClaim(text)).toBe("none");
+      expect(claimsAddressDelivery(text)).toBe(false);
+    });
+  }
+
+  /**
+   * THE FALSE-NEGATIVE GUARD for the URL strip.
+   *
+   * A false positive costs a regeneration; a false negative sends an
+   * unsupported claim to an issuer. So a link must never launder a genuine
+   * destination assertion made in the prose beside it.
+   */
+  const URL_MUST_NOT_LAUNDER: Array<[string, string]> = [
+    [
+      "a tracking URL does not license a destination claim in the same sentence",
+      "The parcel was delivered to the cardholder's billing address (tracking URL: https://www.dhl.com/us-en/home/tracking.html?tracking-id=42075407926).",
+    ],
+    [
+      "a link after a destination claim does not clear it",
+      "The goods reached the customer's residence; see https://www.dhl.com/us-en/home/tracking.html?tracking-id=42075407926.",
+    ],
+    [
+      "a bare www link does not license a destination claim",
+      "The consignment was left at the customer's premises, per www.dhl.com/us-en/home/tracking.html.",
+    ],
+  ];
+
+  for (const [name, text] of URL_MUST_NOT_LAUNDER) {
+    it(`still blocks: ${name}`, () => {
+      const verdict = classifyAddressDeliveryClaim(text);
+      expect(verdict === "affirmative" || verdict === "ambiguous", verdict).toBe(true);
+      expect(claimsAddressDelivery(text)).toBe(true);
+    });
+  }
+
   it("IP-location prose is not a delivery destination", () => {
     expect(
       claimsAddressDelivery(

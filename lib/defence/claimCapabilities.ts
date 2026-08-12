@@ -142,6 +142,28 @@ function hasDestination(text: string): boolean {
   return ADDRESS_TERMS.test(text) || DESTINATION_TERMS.test(text) || STREET_ADDRESS.test(text);
 }
 
+/**
+ * A URL is a CITATION, and its path is not prose.
+ *
+ * Stripped before every other test because no substring of a link is evidence
+ * of a claim about where a parcel went. Measured on production 2026-08-12: four
+ * blocked packages carried the CANONICAL PERMITTED delivery sentence — the one
+ * `narrativeWriter` rule 14 lists as RIGHT —
+ *
+ *   "The carrier TechSHIP confirmed delivery on 13 July 2026 under tracking
+ *    number 420754… (tracking URL: https://www.dhl.com/us-en/home/tracking…)"
+ *
+ * and were refused because DHL's path contains `/home/`, which `ADDRESS_TERMS`
+ * matches as a physical destination. Removing only the URL turns all four from
+ * `affirmative` to `none`, so the link was the entire cause: DisputeDesk was
+ * refusing to file its own approved wording because of a carrier's URL scheme.
+ *
+ * This does not narrow what counts as a claim. A destination asserted in the
+ * PROSE around a link is untouched — proven by the false-negative cases in
+ * `claimCapabilities.test.ts`.
+ */
+const URL_LITERAL = /\bhttps?:\/\/\S+|\bwww\.\S+/gi;
+
 /** Non-physical "address" / "location" uses, stripped before the coupling
  *  test. `IP location` and `geolocation` are the ip_location_check fact
  *  describing itself, not a delivery destination. */
@@ -305,7 +327,9 @@ const AFFIRMATION =
   /\b(was|were|has\s+been|have\s+been|is|are|confirm\w*|show\w*|demonstrat\w+|record\w*|establish\w*|indicat\w*|evidenc\w+|reach\w*|hand(?:ed|s)|deliver(?:ed|s)|arriv\w+|receiv\w+|left|collect(?:ed|s)|match(?:es|ed)?|align\w*|sign(?:ed|s)|drop(?:ped|s)|went|goes|gone|travel\w*)\b/i;
 
 function stripNonPhysicalAddresses(text: string): string {
-  return text.replace(NON_PHYSICAL_ADDRESS, " ");
+  // URLs first: a tracking link's path is not prose, and `/home/` inside one is
+  // not a physical destination.
+  return text.replace(URL_LITERAL, " ").replace(NON_PHYSICAL_ADDRESS, " ");
 }
 
 function sentences(text: string): string[] {
