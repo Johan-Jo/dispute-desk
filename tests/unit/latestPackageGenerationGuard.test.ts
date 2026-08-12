@@ -283,7 +283,14 @@ describe("the status logic is not duplicated", () => {
       resolve(__dirname, "../../lib/jobs/handlers/buildDefencePackageJob.ts"),
       "utf8",
     );
-    expect(src).toMatch(/evaluateGenerationGuard\(priorLatest\)/);
+    /* The re-check must ask the SAME question as the enqueue site, which means
+     * passing the current versions. Called with `priorLatest` alone the
+     * predicate falls back to "cannot answer, therefore block", and the worker
+     * refuses the job the enqueue site had just allowed — three disputes came
+     * out with an empty draft stranded above their real failure on 2026-08-12.
+     * So the assertion is the two-argument form, not the bare call. */
+    expect(src).toMatch(/evaluateGenerationGuard\(priorLatest,\s*\{/);
+    expect(src).toMatch(/validatorVersion:\s*VALIDATOR_VERSION/);
     // Declines without marking the draft failed — it is not defective.
     expect(src).toMatch(/generation_blocked: \$\{priorGuard\.reason\}/);
   });

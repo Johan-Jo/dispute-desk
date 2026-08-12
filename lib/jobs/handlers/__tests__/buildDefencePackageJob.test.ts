@@ -18,6 +18,8 @@ vi.mock("@/lib/audit/logEvent", () => ({
 }));
 vi.mock("@/lib/defence/narrativeWriter", () => ({
   generateNarrative: vi.fn(),
+  // Read by the worker's defensive guard re-check.
+  CURRENT_PROMPT_VERSION: 13,
 }));
 vi.mock("@/lib/defence/renderDefencePdf", () => ({
   renderDefencePdf: vi.fn(),

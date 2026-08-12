@@ -31,7 +31,7 @@ import { isNonCardPaymentFamily } from "@/lib/disputes/paymentContext";
 import type { KlarnaSubProduct } from "@/lib/disputes/paymentContext";
 import { klarnaDisputeCategoryDisplay } from "@/lib/defence/klarnaDisputeCategory";
 import { paymentOverlayFor } from "@/lib/defence/paymentOverlays";
-import { generateNarrative } from "@/lib/defence/narrativeWriter";
+import { generateNarrative, CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
 import {
   validateNarrative,
   validateComposedDocument,
@@ -185,16 +185,37 @@ export async function handleBuildDefencePackage(
    * without marking this row failed: it is not defective, it should not have
    * been created, and turning it into a second failure would deepen the state
    * the guard exists to protect. Not retriable — retrying re-reads the same
-   * rejection. */
+   * rejection.
+   *
+   * THE SAME QUESTION, WITH THE SAME INPUTS (2026-08-12). This re-check must
+   * be given the current generator/validator/evidence versions, exactly as the
+   * enqueue site is. Called without them the predicate falls back to "cannot
+   * answer, therefore block", and the worker then refuses the very job the
+   * enqueue site had just decided was a legitimate retry — leaving an empty
+   * draft stranded above the real failure. That is what happened to #352513,
+   * #352511 and #352555 on the first self-heal run: three `build_pack` jobs
+   * succeeded, three drafts were created, and all three defence builds died on
+   * `generation_blocked: latest_package_failed`.
+   *
+   * A defensive re-check that asks a DIFFERENT question from the decision it
+   * is re-checking is not defence — it is a second, contradictory decision. */
   const { data: priorLatest } = await sb
     .from("defence_packages")
-    .select("id, version, status, validation_status, failure_code")
+    .select(
+      "id, version, status, validation_status, failure_code, prompt_version, validator_version, evidence_hash",
+    )
     .eq("dispute_id", pkg.dispute_id)
     .neq("id", pkg.id)
     .order("version", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const priorGuard = evaluateGenerationGuard(priorLatest);
+  const priorGuard = evaluateGenerationGuard(priorLatest, {
+    promptVersion: CURRENT_PROMPT_VERSION,
+    validatorVersion: VALIDATOR_VERSION,
+    /* The draft under construction carries the hash the enqueue site computed,
+     * so the comparison is against the same evidence that decision used. */
+    evidenceHash: typeof pkg.evidence_hash === "string" ? pkg.evidence_hash : null,
+  });
   if (priorGuard.blocked) {
     await logAuditEvent({
       shopId: pkg.shop_id,
