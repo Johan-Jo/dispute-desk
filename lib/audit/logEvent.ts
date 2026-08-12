@@ -78,6 +78,9 @@ export type EventType =
    * absence of a new version is otherwise indistinguishable from nothing
    * having tried. */
   | "defence_package_generation_skipped"
+  /** A failed package was regenerated because the rules that failed it moved.
+   *  Payload carries `retryBasis` — which of prompt / validator / evidence. */
+  | "defence_package_failure_retried"
   | "defence_package_failed"
   | "defence_package_skipped"
   | "defence_package_superseded"

@@ -40,6 +40,8 @@ vi.mock("@/lib/defence/validateNarrative", () => ({
   validateNarrative: vi.fn().mockReturnValue({ ok: true, errors: [] }),
   validateComposedDocument: vi.fn().mockReturnValue({ ok: true, errors: [] }),
   summariseComposedErrors: vi.fn().mockReturnValue(""),
+  // The handler stamps this on every package write, success or failure.
+  VALIDATOR_VERSION: 1,
 }));
 vi.mock("@/lib/defence/pdf/composePdfBlocks", () => ({
   composePdfBlocks: vi.fn().mockReturnValue([]),

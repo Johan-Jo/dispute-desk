@@ -20,6 +20,8 @@ import {
   generationBlockPayload,
 } from "./latestPackageGenerationGuard";
 import { computeEvidenceHash } from "./computeEvidenceHash";
+import { CURRENT_PROMPT_VERSION } from "./narrativeWriter";
+import { VALIDATOR_VERSION } from "./validateNarrative";
 import { classifyFacts } from "./factClassifier";
 import {
   resolveReasonCodeModule,
@@ -176,28 +178,58 @@ export async function maybeEnqueueDefencePackage(
   // Look at the latest existing row.
   const { data: latest } = await sb
     .from("defence_packages")
-    .select("id, version, status, evidence_hash, validation_status, failure_code")
+    .select(
+      "id, version, status, evidence_hash, validation_status, failure_code, prompt_version, validator_version",
+    )
     .eq("dispute_id", pack.dispute_id)
     .order("version", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  /* ── A HUMAN-GATED REJECTION IS NOT AN INPUT TO AUTOMATION ──────────
+  /* ── A FAILURE MAY BE RETRIED ONLY WHEN SOMETHING HAS CHANGED ────────
    *
    * Checked BEFORE the idempotent-draft branch and before `nextVersion` is
    * computed, because everything below this point either writes a row or
    * mutates one. On 2026-08-11 a case whose newest package was
-   * `failed` / `validation_failed` was rebuilt: the function has no opinion
+   * `failed` / `validation_failed` was rebuilt: the function had no opinion
    * about failed rows, so it inserted the next version and enqueued a
-   * regeneration that failed the same way. The case had been protected by a
-   * manual instruction, and the instruction did not survive a change to how
-   * the batch was selected.
+   * regeneration that failed the same way.
    *
-   * `evaluateGenerationGuard` is the single predicate, shared with the
-   * ops rebuild script and the worker's defensive check. Nothing is deleted,
-   * retried or superseded here — clearing the rejection is a human action, and
-   * this function offers no way to bypass it. */
-  const guard = evaluateGenerationGuard(latest);
+   * The guard stops that loop. What it must NOT do is outlive the defect: a
+   * package that failed under rules we have since changed is a new attempt,
+   * not a repeat, and blocking it leaves the case dead after the fix ships.
+   * Measured 2026-08-12 that cost `#12936` three weeks past its deadline and
+   * `#353605` its deadline outright.
+   *
+   * So the current generator version, validator version and evidence hash go
+   * in, and the guard decides. All three come from this scope — the hash is
+   * already computed above for the idempotency check, so there is no second
+   * derivation and no second answer. */
+  const guard = evaluateGenerationGuard(latest, {
+    promptVersion: CURRENT_PROMPT_VERSION,
+    validatorVersion: VALIDATOR_VERSION,
+    evidenceHash,
+  });
+  if (!guard.blocked && guard.retryBasis.length > 0) {
+    /* A failed package is being retried. Audited explicitly — this is the one
+     * path that writes over a prior failure, and an operator reading the trail
+     * must see WHY it was allowed, not just that a new version appeared. */
+    await logAuditEvent({
+      shopId: pack.shop_id,
+      disputeId: pack.dispute_id,
+      packId,
+      actorType: "system",
+      eventType: "defence_package_failure_retried",
+      eventPayload: {
+        previousPackageId: latest?.id ?? null,
+        previousVersion: latest?.version ?? null,
+        previousFailureCode: latest?.failure_code ?? null,
+        retryBasis: guard.retryBasis,
+        promptVersion: CURRENT_PROMPT_VERSION,
+        validatorVersion: VALIDATOR_VERSION,
+      },
+    });
+  }
   if (guard.blocked) {
     await logAuditEvent({
       shopId: pack.shop_id,
