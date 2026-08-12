@@ -54,6 +54,8 @@ vi.mock("@/lib/defence/storage", () => ({
 }));
 vi.mock("@/lib/defence/narrativeWriter", () => ({
   generateNarrative: vi.fn(),
+  // Read by the worker's defensive guard re-check.
+  CURRENT_PROMPT_VERSION: 13,
 }));
 vi.mock("@/lib/defence/factClassifier", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();

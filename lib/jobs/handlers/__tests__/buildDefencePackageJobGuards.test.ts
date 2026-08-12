@@ -28,6 +28,8 @@ vi.mock("@/lib/defence/narrativeWriter", () => ({
     tokens: { prompt: 1, completion: 1, cached: 0 },
     durationMs: 1,
   }),
+  // Read by the worker's defensive guard re-check.
+  CURRENT_PROMPT_VERSION: 13,
 }));
 vi.mock("@/lib/defence/validateNarrative", () => ({
   validateNarrative: vi.fn().mockReturnValue({ ok: true, errors: [] }),
