@@ -108,19 +108,41 @@ describe("improvement hint never contradicts a collected signal (cay cc86296d, 2
   });
 
   it("still recommends a missing field of an UNCOVERED signal", () => {
+    /* Was `delivery_proof` until 2026-08-12. That field is in
+     * `SYSTEM_DERIVED_FIELDS` — delivery confirmation comes from the CARRIER,
+     * not the merchant — so the fixture was asserting that we suggest
+     * something the merchant cannot supply, the same wrong premise that put
+     * "Add Pre-authorization fraud screening" in front of a live merchant
+     * (dispute 9a40da90). The `collectionType: "manual"` on the fixture row
+     * did not make it true; it just defeated the old permissive filter.
+     *
+     * `no_return_initiated` preserves what this case exists to prove — a
+     * missing field of an UNCOVERED signal is still recommended — using a
+     * field that is BOTH merchant-suppliable and strength-affecting. Only two
+     * fields in the registry are both (`refund_record` and
+     * `no_return_initiated`, each `moderate`); everything else in
+     * `FIELD_ACTIONS` is weight-0 `supporting` and is correctly skipped by
+     * `affectsStrength`, so a fixture picking one would assert a hint that
+     * can never fire.
+     *
+     * `refund_record` is therefore dropped from the AVAILABLE rows: it shares
+     * `signalId: "refund"` with `no_return_initiated`, and a covered signal
+     * correctly suppresses its sibling — which is the rule the sibling test
+     * above pins. Leaving it in would make this case assert the opposite of
+     * its neighbour. */
     const checklist = [
       available("order_confirmation"),
-      available("refund_record"),
-      { field: "delivery_proof", status: "missing", collectionType: "manual" } as unknown as ChecklistItemV2,
+      { field: "no_return_initiated", status: "missing", collectionType: "manual" } as unknown as ChecklistItemV2,
     ];
     const source = byField({
       order_confirmation: { orderId: "1" },
-      refund_record: { refundStatus: "processed", amount: "249.00", currency: "SEK" },
     });
     const r = calculateCaseStrength(checklist, "CREDIT_NOT_PROCESSED", source, NO_GATES);
     expect(r.improvementHintI18n).not.toBeNull();
     const label = r.improvementHintI18n?.params?.label as { key?: string };
-    expect(JSON.stringify(label)).toContain("delivery");
+    // The hint names the SIGNAL, not the field — `no_return_initiated` carries
+    // `signalId: "refund"`, so the label resolves to the refund signal.
+    expect(JSON.stringify(label)).toContain("refund");
   });
 });
 
