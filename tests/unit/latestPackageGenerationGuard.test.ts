@@ -36,6 +36,9 @@ import {
   evaluateGenerationGuard,
   generationBlockPayload,
 } from "@/lib/defence/latestPackageGenerationGuard";
+import { computeEvidenceHash } from "@/lib/defence/computeEvidenceHash";
+import { CURRENT_PROMPT_VERSION } from "@/lib/defence/narrativeWriter";
+import { VALIDATOR_VERSION } from "@/lib/defence/validateNarrative";
 
 const mockSb = vi.mocked(getServiceClient);
 const mockAudit = vi.mocked(logAuditEvent);
@@ -156,9 +159,31 @@ function setup(latest: Record<string, unknown> | null): Harness {
 beforeEach(() => vi.clearAllMocks());
 
 describe("maybeEnqueueDefencePackage — blocked, with ZERO side effects", () => {
+  /* Built under EXACTLY the rules in force now — the only shape that still
+   * blocks after 2026-08-12. A failure recorded under superseded rules (or
+   * before the versions were recorded at all) is a new attempt, not a repeat,
+   * and is covered by `failedPackageSelfHeal.test.ts`.
+   *
+   * The versions are read from the modules rather than hardcoded so a bump
+   * cannot silently turn these fixtures into "something changed" and quietly
+   * stop exercising the blocked path. */
+  const CURRENT_RULES = {
+    prompt_version: CURRENT_PROMPT_VERSION,
+    validator_version: VALIDATOR_VERSION,
+    /* The hash the stubbed pack (empty sections, no items) actually produces,
+     * computed with the real function rather than hardcoded — a wrong literal
+     * would read as "evidence changed", allow the retry, and silently stop
+     * these assertions from exercising the blocked path at all. */
+    evidence_hash: computeEvidenceHash({
+      approvedFacts: [],
+      manualEvidence: [],
+      reasonCode: null,
+    }),
+  };
+
   const BLOCKING = [
-    { label: "status = failed", row: { id: "p3", version: 3, status: "failed", failure_code: "validation_failed", validation_status: "failed" } },
-    { label: "validation_status = failed", row: { id: "p3", version: 3, status: "draft", validation_status: "failed" } },
+    { label: "status = failed", row: { id: "p3", version: 3, status: "failed", failure_code: "validation_failed", validation_status: "failed", ...CURRENT_RULES } },
+    { label: "validation_status = failed", row: { id: "p3", version: 3, status: "draft", validation_status: "failed", ...CURRENT_RULES } },
   ];
 
   for (const { label, row } of BLOCKING) {
