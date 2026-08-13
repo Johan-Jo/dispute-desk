@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { withShopParams } from "@/lib/withShopParams";
+import { getShopifyOrderUrl } from "@/lib/shopify/shopifyAdminUrl";
 import { useDisputeWorkspace } from "./hooks/useDisputeWorkspace";
 import OverviewTab from "./tabs/OverviewTab";
 import EvidenceTab from "./tabs/EvidenceTab";
@@ -120,10 +121,38 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
 
   const dispute = data.dispute;
   const reasonLabel = reasonLabelFor(dispute.reason);
-  const headerTitle = t("disputes.workspaceShell.headerTitle", {
-    id: dispute.id.slice(0, 8).toUpperCase(),
-    reason: reasonLabel,
-  });
+  /* THE ORDER NUMBER, NOT A UUID FRAGMENT.
+   *
+   * This rendered `dispute.id.slice(0, 8).toUpperCase()` — "Dispute #E8E0E4FC"
+   * — the first eight characters of our internal UUID. That string exists
+   * nowhere in Shopify, nowhere on the order, and is searchable nowhere; it
+   * also LOOKS like an order number (same `#` prefix, similar length), so it
+   * invites a lookup that cannot succeed. A merchant checking why several
+   * disputed orders showed no shipment could not get from the dispute back to
+   * the order.
+   *
+   * The list view has shown `order_name` all along, so clicking a row lost the
+   * identifier the merchant was tracking.
+   *
+   * `orderName` is used when present and falls back to the UUID fragment only
+   * when it is not — a dispute synced before the order resolved still needs a
+   * title. */
+  const orderName = dispute.orderName?.trim() || null;
+  const headerTitle = orderName
+    ? t("disputes.workspaceShell.headerTitleOrder", {
+        order: orderName,
+        reason: reasonLabel,
+      })
+    : t("disputes.workspaceShell.headerTitle", {
+        id: dispute.id.slice(0, 8).toUpperCase(),
+        reason: reasonLabel,
+      });
+  /* Links to the ORDER, via its GID. The numeric id in the URL is not the
+   * order number — Shopify addresses orders by internal id and displays the
+   * name — so the link and the label legitimately differ. Null when the GID is
+   * absent or malformed, so the title renders as plain text rather than a dead
+   * link. */
+  const orderUrl = getShopifyOrderUrl(dispute.shopDomain, dispute.orderGid);
 
   // Shared presentation model — the API-resolved interpretation (never
   // re-derived here). Strength falls back to the workspace engine
@@ -234,7 +263,18 @@ export default function WorkspaceShell({ disputeId }: { disputeId: string }) {
                   lineHeight: 1.4,
                 }}
               >
-                {headerTitle}
+                {orderName && orderUrl ? (
+                  <a
+                    href={orderUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "inherit", textDecoration: "underline" }}
+                  >
+                    {headerTitle}
+                  </a>
+                ) : (
+                  headerTitle
+                )}
               </h1>
               <div
                 style={{

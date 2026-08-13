@@ -918,6 +918,7 @@
     },
     "workspaceShell": {
       "headerTitle": "Tvist #{id} — {reason}",
+      "headerTitleOrder": "Order {order} — {reason}",
       "tabs": {
         "overview": "Översikt",
         "evidence": "Bevis",
