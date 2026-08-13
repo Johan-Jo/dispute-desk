@@ -85,7 +85,9 @@ async function runWorker(req: NextRequest) {
           handlerResult = await handleBuildDefencePackage(job);
           break;
         case "snapshot_shop_daily_metrics":
-          await handleSnapshotShopDailyMetrics(job);
+          // Returns a JobResult so `shop_unavailable` is honoured as
+          // non-retriable; discarding it would re-queue a deleted store daily.
+          handlerResult = await handleSnapshotShopDailyMetrics(job);
           break;
         case "backfill_shop_daily_metrics":
           await handleBackfillShopDailyMetrics(job);
