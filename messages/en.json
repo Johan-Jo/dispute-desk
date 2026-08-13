@@ -912,6 +912,7 @@
     },
     "workspaceShell": {
       "headerTitle": "Dispute #{id} — {reason}",
+      "headerTitleOrder": "Order {order} — {reason}",
       "tabs": {
         "overview": "Overview",
         "evidence": "Evidence",

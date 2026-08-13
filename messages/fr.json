@@ -1505,6 +1505,7 @@
     },
     "workspaceShell": {
       "headerTitle": "Litige #{id} — {reason}",
+      "headerTitleOrder": "Commande {order} — {reason}",
       "tabs": {
         "overview": "Aperçu",
         "evidence": "Preuves",

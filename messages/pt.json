@@ -1505,6 +1505,7 @@
     },
     "workspaceShell": {
       "headerTitle": "Disputa #{id} — {reason}",
+      "headerTitleOrder": "Pedido {order} — {reason}",
       "tabs": {
         "overview": "Visão geral",
         "evidence": "Evidências",
