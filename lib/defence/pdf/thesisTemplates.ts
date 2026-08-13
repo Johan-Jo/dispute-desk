@@ -53,7 +53,23 @@ export const THESIS_TEMPLATES: ThesisTemplate[] = [
     familyKey: "item_not_received",
     packageMode: "any",
     template:
-      "The submitted records address the item-not-received claim[[: {{deliveryClause}}]][[. {{digitalAccessClause}}]].",
+      /* "respond to", NOT "address".
+       *
+       * `ADDRESS_TERMS` matches the word `address` with no part-of-speech
+       * distinction — it cannot tell the VERB ("the records address the
+       * claim") from the NOUN. Coupled with "delivery" in the same sentence,
+       * this template read as a delivery-to-address claim and failed
+       * `unauthorized_claim` at the `thesis` layer.
+       *
+       * Production #12936 (cay-collective) v6, 2026-08-13: the LLM prose was
+       * finally CLEAN under prompt v14, which is what exposed this — the
+       * thesis line had been carrying the trip all along, masked by the
+       * model's own claims failing first.
+       *
+       * Reworded rather than teaching the detector the verb sense: two
+       * strings we control versus widening `ADDRESS_TERMS`, which is the
+       * higher-risk edit and would earn its own false-negative guards. */
+      "The submitted records respond to the item-not-received claim[[: {{deliveryClause}}]][[. {{digitalAccessClause}}]].",
     requiredTokens: [],
     optionalTokens: ["deliveryClause", "digitalAccessClause"],
   },
@@ -63,7 +79,9 @@ export const THESIS_TEMPLATES: ThesisTemplate[] = [
     familyKey: "credit_not_processed",
     packageMode: "any",
     template:
-      "The submitted records address the credit-not-processed claim[[. {{refundProcessedClause}}]].",
+      // Same reason as the item-not-received template above: the verb
+      // "address" is indistinguishable from the noun to `ADDRESS_TERMS`.
+      "The submitted records respond to the credit-not-processed claim[[. {{refundProcessedClause}}]].",
     requiredTokens: [],
     optionalTokens: ["refundProcessedClause"],
   },
