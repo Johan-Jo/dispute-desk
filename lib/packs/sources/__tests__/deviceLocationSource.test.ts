@@ -219,7 +219,7 @@ describe("generateBankParagraph (only called when eligible) — bank-grade short
       { country: "BR" },
     );
     expect(p).toBe(
-      "The order originated from the same country recorded on this order, with no VPN, proxy or datacenter signals.",
+      "The order was placed from an IP address geolocating to the same country as the order's shipping destination, with no VPN, proxy or datacenter signals.",
     );
   });
 
@@ -228,7 +228,7 @@ describe("generateBankParagraph (only called when eligible) — bank-grade short
     const b = generateBankParagraph(ipinfo(), 5, "consistent", "same_country", { country: "US" });
     expect(a).toBe(b);
     expect(a).toBe(
-      "The order originated from the same country recorded on this order, with no VPN, proxy or datacenter signals.",
+      "The order was placed from an IP address geolocating to the same country as the order's shipping destination, with no VPN, proxy or datacenter signals.",
     );
   });
 

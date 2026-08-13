@@ -201,11 +201,35 @@ export function generateMerchantGuidance(
 export function generateBankParagraph(
   ipinfo: IpinfoResponse | null,
   _ipReuseCount: number,
-  _consistency: IpConsistencyLevel,
-  _match: LocationMatch,
-  _shipping: { country: string | null } | null,
+  consistency: IpConsistencyLevel,
+  match: LocationMatch,
+  shipping: { country: string | null } | null,
+  privacy: IpinfoPrivacy = {} as IpinfoPrivacy,
 ): string | null {
   if (!ipinfo) return null;
+  /* THE SENTENCE ENFORCES ITS OWN PRECONDITION.
+   *
+   * Every parameter but `ipinfo` was previously `_`-prefixed and ignored, so
+   * this returned the same claim whenever an IPinfo response existed — and
+   * the claim asserts a COUNTRY MATCH. The gating lived only at the single
+   * call site (`bankEligible ? generateBankParagraph(...) : null`), which
+   * held, but the export advertised itself as safe to call directly when it
+   * was not: any second caller would emit "same country as the shipping
+   * destination" for a MISMATCH.
+   *
+   * That is the shape of the defects PR-C1 and PR-C4 retired — copy asserting
+   * authority the derivation never established. `computeBankEligible` reads
+   * exactly these three inputs, so re-asking it here costs nothing and makes
+   * the dormant path impossible rather than merely unused.
+   *
+   * `privacy` defaults to an empty object so existing 5-argument callers keep
+   * compiling; an absent privacy record cannot set the vpn/proxy/hosting
+   * flags, so the default is the permissive-but-harmless case and the real
+   * call site passes the measured value. */
+  if (!computeBankEligible(match, privacy, consistency)) return null;
+  // The comparison is against the shipping country. With none recorded there
+  // is nothing to compare, and the sentence would assert a match nobody made.
+  if (!shipping?.country) return null;
   /* SHIPPING, because that is what `computeLocationMatch` compared.
    *
    * This said "billing details" while the verdict above it was computed
@@ -225,27 +249,36 @@ export function generateBankParagraph(
    *
    * The COUNTRY is what `computeLocationMatch` actually compares, so naming it
    * is both narrower and truer than naming a "destination". */
-  /* NO ADDRESS NOUN, deliberately — including "shipping".
+  /* SAY THE TRUE THING; THE DETECTOR IS PRECISE ENOUGH TO ALLOW IT.
    *
-   * Measured, not assumed. The model quotes this sentence and then appends its
-   * own clause; production on 2026-08-11 produced
-   *   "…the same country recorded FOR SHIPPING on this order … — consistent
-   *    with an order placed from a location aligned with the cardholder's
-   *    account details."
-   * Neither half trips `classifyAddressDeliveryClaim` alone. TOGETHER they are
-   * `affirmative`: the shipping reference gives the trailing clause an address
-   * to bind to, and the package fails to build.
+   * Three earlier revisions removed information to survive
+   * `classifyAddressDeliveryClaim`, ending at "The order originated from the
+   * same country recorded on this order" — which compares one term to itself,
+   * never states what the country is compared AGAINST, and never mentions the
+   * IP, the only evidence involved. A bank reviewer cannot extract a fact from
+   * it. Each rewrite was optimising to pass a gate rather than to inform a
+   * reader, and the sentence got emptier every time.
    *
-   * Dropping the word survives the same appended tail (verified in
-   * `ipLocationApprovedWording.test.ts`). "the country recorded on this order"
-   * is still exactly what `computeLocationMatch` compared — the shipping
-   * country IS the country recorded on the order — and it names no
-   * destination, so an embellishment has nothing to attach to.
+   * The constraint was real: the model QUOTES this sentence and then appends
+   * its own clause, and a destination noun gave that trailing clause an
+   * address to bind to (three packages failed exactly that way in the #535
+   * window). The answer is not to keep deleting words — it is for the detector
+   * to distinguish an IP GEOLOCATING to a country from a PARCEL ARRIVING at a
+   * place. `IP_ORIGIN_COUNTRY_COMPARISON` in `claimCapabilities.ts` does that,
+   * scoped to the comparison so a destination asserted ELSEWHERE in the
+   * sentence still blocks.
    *
-   * This is the third correction to this one sentence, and the first that was
-   * tested against what the model actually writes around it rather than
-   * against the sentence in isolation. */
-  return "The order originated from the same country recorded on this order, with no VPN, proxy or datacenter signals.";
+   * Verified against the real appended tail, and against eight
+   * false-negative guards written BEFORE the detector changed —
+   * `ipGeolocationNotDelivery.test.ts`. A false positive costs a
+   * regeneration; a false negative sends an unsupported claim to an issuer,
+   * so the guards decide whether the widening is acceptable, not the
+   * sentence.
+   *
+   * Names the IP, and names what the country is compared to. Still no city, no
+   * street, no coordinates, no ASN — the bank gets one neutral-positive
+   * statement about origin, which is all `computeLocationMatch` measured. */
+  return "The order was placed from an IP address geolocating to the same country as the order's shipping destination, with no VPN, proxy or datacenter signals.";
 }
 
 /* ═══════════════════════════════════════════════════════════════════ */
@@ -372,7 +405,17 @@ export async function collectDeviceLocationEvidence(
   const summary = generateSummary(ipinfo, shippingForCopy, locationMatch, privacy, ipConsistencyLevel);
   const merchantGuidance = generateMerchantGuidance(locationMatch, privacy, ipConsistencyLevel, ipinfo);
   const bankParagraph = bankEligible
-    ? generateBankParagraph(ipinfo, ipReuseCount, ipConsistencyLevel, locationMatch, shippingForCopy)
+    ? generateBankParagraph(
+        ipinfo,
+        ipReuseCount,
+        ipConsistencyLevel,
+        locationMatch,
+        shippingForCopy,
+        // Passed so the generator re-asserts eligibility from the same three
+        // inputs `bankEligible` was derived from, rather than trusting this
+        // call site to have asked.
+        privacy,
+      )
     : null;
 
   const data: DeviceLocationData = {
