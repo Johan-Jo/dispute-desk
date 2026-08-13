@@ -214,11 +214,25 @@ describe("narrativeTexts — recursive, so nothing hides", () => {
     expect(texts).toContain("two");
   });
 
-  it("reads metadata prose too — a warning is prose the model wrote", () => {
+  it("does NOT read metadata — a warning is a build diagnostic, not an argument", () => {
+    /* Was the opposite assertion until 2026-08-13, on the premise that "a
+     * warning is prose the model wrote". True, but it does not follow that it
+     * should be judged: `warnings` and `omittedSections.reason` reach NO
+     * surface — `composePdfBlocks` reads only `omittedSections[].sectionKey`,
+     * and nothing reads the rest.
+     *
+     * Judging them blocked four valid packages. Dispute 392379b2 (#347625)
+     * was refused on the generator's own note, "claimCapabilities array is
+     * empty; no delivery, address, or fulfillment claims have been made" —
+     * a statement that NO claim was made, read as a claim. Its package had
+     * `validation_status: ok` and a rendered PDF.
+     *
+     * The nine sections are still walked recursively, which is what the
+     * "nothing hides" guarantee is actually about. */
     const texts = narrativeTexts(
       narrativeJson({}, { warnings: ["delivered to the billing address"] }),
     );
-    expect(texts).toContain("delivered to the billing address");
+    expect(texts).not.toContain("delivered to the billing address");
   });
 
   it("returns nothing for an unreadable shape — callers must use the verdict", () => {

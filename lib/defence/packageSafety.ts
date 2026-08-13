@@ -293,8 +293,38 @@ function readNarrative(narrativeJson: unknown): NarrativeRead {
   if (!isValidOmittedSections(o.omittedSections)) return { readable: false };
   if (!isValidWarnings(o.warnings)) return { readable: false };
 
+  /* ── JUDGE THE PROSE THAT REACHES THE ISSUER, AND ONLY THAT ─────────
+   *
+   * This walked EVERY string in the object, `warnings` and
+   * `omittedSections.reason` included. Those are BUILD DIAGNOSTICS: measured
+   * 2026-08-13, `composePdfBlocks` reads `omittedSections[].sectionKey` — an
+   * enum — and nothing reads `reason` or `warnings` at all, on any surface.
+   * They cannot reach a bank.
+   *
+   * Judging them produced a self-negating block. Package v4 of dispute
+   * 392379b2 (#347625, blume-box, due 2026-08-16) was refused on this
+   * generator note:
+   *
+   *   "claimCapabilities array is empty; no delivery, address, or
+   *    fulfillment claims have been made."
+   *
+   * — the model correctly reporting that it made NO address claim. The
+   * detector saw "delivery" and "address" in one sentence, could not resolve
+   * it, and failed closed. Four otherwise-valid packages (validation ok, PDF
+   * rendered) were unfileable for saying they were clean.
+   *
+   * It also split the two gates: `validateNarrative` judges the nine section
+   * texts and passed these, while this predicate judged everything and
+   * blocked them — which is how a `draft / validation ok / PDF present` row
+   * shows a "cannot be filed" banner. Both now read the same prose.
+   *
+   * The nine sections are still walked in FULL, at any depth, so the
+   * defence-in-depth argument for `collectStrings` is untouched where it
+   * matters: an unknown nested branch inside a SECTION still has its prose
+   * read. Metadata keeps its shape validation above — that is the schema
+   * guard, and it is unchanged — it just stops being read as argument. */
   const texts: string[] = [];
-  collectStrings(o, texts);
+  for (const key of NARRATIVE_SECTION_KEYS) collectStrings(o[key], texts);
   return { readable: true, texts };
 }
 
