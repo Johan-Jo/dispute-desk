@@ -77,10 +77,18 @@ describe("no IP-location surface invents a billing relationship", () => {
       { country: "SE" } as never,
     );
     expect(text).not.toBeNull();
+    // The load-bearing assertion: the collector compares against SHIPPING, so
+    // naming billing would describe a comparison that never ran.
     expect(text!.toLowerCase()).not.toContain("billing");
-    /* No longer names shipping: the word gave a model-appended clause an
-     * address to bind to, and the combination failed validation. */
-    expect(text!.toLowerCase()).toContain("country recorded on this order");
+    /* Names shipping again as of 2026-08-13. It was removed because the word
+     * gave a model-appended clause an address to bind to — but the fix for
+     * that belongs in the detector, not in deleting the only term the
+     * comparison has. `IP_ORIGIN_COUNTRY_COMPARISON` now distinguishes an IP
+     * geolocating to a country from a parcel arriving at a place, and the
+     * eight false-negative guards in `ipGeolocationNotDelivery.test.ts` hold
+     * that widening honest. */
+    expect(text!.toLowerCase()).toContain("shipping destination");
+    expect(text!.toLowerCase()).toContain("ip address");
   });
 
   it("no surface asserts billing↔shipping agreement — the retired claim", () => {

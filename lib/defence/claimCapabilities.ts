@@ -171,6 +171,31 @@ const NON_PHYSICAL_ADDRESS =
   /\b(?:(?:e-?mail|ip|web|url|internet|billing\s+contact)\s+address(?:es)?|ip\s+location|geo-?locat\w+|home\s*page)\b/gi;
 
 /**
+ * WHERE AN IP RESOLVED — not where a parcel went.
+ *
+ * An IP geolocating to the shipping destination's COUNTRY and a parcel
+ * arriving at an ADDRESS are different claims about different evidence. The
+ * first is what `ip_location` measures and can prove; the second is
+ * `address_delivery`, which no case holds.
+ *
+ * Without this, the two are indistinguishable to the coupling test, and the
+ * bank-facing IP sentence had to be rewritten three times to avoid naming a
+ * destination at all — arriving at "The order originated from the same
+ * country recorded on this order", which compares one term to itself and
+ * never mentions the IP. Safe, and close to meaningless.
+ *
+ * SCOPED TO THE COMPARISON, NOT THE NOUN. This matches an IP-origin phrase
+ * bound to a COUNTRY comparison, and consumes only that far. A destination
+ * asserted elsewhere in the sentence is untouched, which is what keeps
+ * "…geolocated to the same country as the shipping destination; the goods
+ * reached that destination" blocking — pinned in
+ * `ipGeolocationNotDelivery.test.ts` alongside seven other guards that must
+ * never pass.
+ */
+const IP_ORIGIN_COUNTRY_COMPARISON =
+  /\b(?:placed|originated|made|came)\s+from\s+an?\s+ip\s+address\s+(?:geo-?locating|geo-?located|resolving|resolved|in)\s*(?:to)?\s*(?:the\s+)?same\s+country\s+as\s+the\s+(?:order'?s\s+)?shipping\s+(?:destination|address)/gi;
+
+/**
  * Billing↔shipping agreement, the retired derivation's own fact. Prohibited on
  * its own because the only thing that could produce it is the city/country
  * comparison PR-C1 retires.
@@ -328,8 +353,19 @@ const AFFIRMATION =
 
 function stripNonPhysicalAddresses(text: string): string {
   // URLs first: a tracking link's path is not prose, and `/home/` inside one is
-  // not a physical destination.
-  return text.replace(URL_LITERAL, " ").replace(NON_PHYSICAL_ADDRESS, " ");
+  // not a physical destination. Then the self-describing facts, then the
+  // IP-origin comparison — which must run BEFORE the coupling test so the
+  // `ip_location` fact can name what it compares against without the sentence
+  // reading as a delivery.
+  return text
+    .replace(URL_LITERAL, " ")
+    /* BEFORE `NON_PHYSICAL_ADDRESS`, which matches the bare "IP address" and
+     * would consume the phrase this pattern needs to recognise — leaving the
+     * "…same country as the shipping destination" tail stranded and reading as
+     * a delivery. Order is the whole behaviour here, so the two are adjacent
+     * with the reason stated rather than separated by chance. */
+    .replace(IP_ORIGIN_COUNTRY_COMPARISON, " ")
+    .replace(NON_PHYSICAL_ADDRESS, " ");
 }
 
 function sentences(text: string): string[] {
