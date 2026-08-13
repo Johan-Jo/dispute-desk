@@ -143,9 +143,23 @@ export function detectFatalLoss(
     typeof disputeReason === "string" &&
     INR_REASON_CODES.has(disputeReason.toUpperCase());
   if (isInr) {
+    /* ON_HOLD IS UNFULFILLED FOR THIS PURPOSE.
+     *
+     * `displayFulfillmentStatus` has more members than the two this gate
+     * originally tested, and `ON_HOLD` — the state Shopify Flow leaves an
+     * order in when it flags the risk but does not cancel — matched neither.
+     * So a held INR order slipped a gate whose whole point is "nothing
+     * shipped, so there is no delivery evidence to argue with".
+     *
+     * Measured on production 2026-08-13: six open blume-box disputes are
+     * `ON_HOLD`, PAID, never cancelled and never refunded. The goods never
+     * left the warehouse — structurally identical to UNFULFILLED for the
+     * purpose of this gate, and the `fulfillmentCount === 0` conjunct still
+     * proves nothing shipped either way.
+     */
     const status = order.displayFulfillmentStatus ?? null;
     const fulfillmentCount = order.fulfillments?.length ?? 0;
-    if (status === "UNFULFILLED" && fulfillmentCount === 0) {
+    if ((status === "UNFULFILLED" || status === "ON_HOLD") && fulfillmentCount === 0) {
       return {
         triggered: true,
         reason: "inr_no_fulfillment",

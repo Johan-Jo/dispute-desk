@@ -430,6 +430,10 @@ export type FactPredicateId =
   | "is_card_absent_dispute"
   | "fulfilment_status_fulfilled"
   | "fulfilment_status_unfulfilled"
+  /** Shopify Flow flagged the risk and held the order without cancelling it.
+   *  Distinct from UNFULFILLED: nothing shipped, but by a merchant DECISION
+   *  rather than an omission — which is a different thing to tell a bank. */
+  | "fulfilment_status_on_hold"
   | "safe_to_claim_fulfilment"
   | "duplicate_distinct_markers"
   | "order_record_present"
