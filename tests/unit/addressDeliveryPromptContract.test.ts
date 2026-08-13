@@ -119,8 +119,38 @@ describe("rule 14 states the prohibition as a class", () => {
     expect(BASE_SYSTEM_PROMPT).toMatch(/An empty section is correct/);
   });
 
+  it("prohibits the OTHER nouns for a place, not just 'address'", () => {
+    /* v13 named addresses and nothing else, so "the goods reached their
+     * destination" read as permitted while `classifyAddressDeliveryClaim`
+     * rates it `affirmative` — DESTINATION_TERMS has covered it all along.
+     * Five production packages failed on that shape on 2026-08-13. */
+    expect(BASE_SYSTEM_PROMPT).toMatch(/A PLACE IS AN ADDRESS, WHATEVER YOU CALL IT/);
+    // The list wraps across lines in the template literal, so match tolerantly
+    // on each noun rather than on one fragile single-line string.
+    for (const noun of ["destination", "premises", "residence", "home", "location"]) {
+      expect(BASE_SYSTEM_PROMPT, `rule 14 must name "${noun}"`).toContain(noun);
+    }
+  });
+
+  it("tells the model to stop at the evidence, not summarise it as an arrival", () => {
+    /* Every one of the five was a CLOSING sentence restating correctly worded
+     * carrier/tracking/date evidence as an arrival. The evidence was right;
+     * the summary was the claim. */
+    expect(BASE_SYSTEM_PROMPT).toMatch(/DO NOT CLOSE A SECTION BY RESTATING THE DELIVERY AS AN ARRIVAL/);
+    expect(BASE_SYSTEM_PROMPT).toMatch(/Stop at the evidence/);
+  });
+
+  it("STILL prints no instance of the forbidden claim", () => {
+    /* v13's finding: an illustration of a banned claim is still an instance of
+     * it, sitting in the context window on every call — three of four canary
+     * packages reproduced the printed examples. The new block is a
+     * prohibition, not a sample. */
+    expect(BASE_SYSTEM_PROMPT).not.toMatch(/reached (its|their) (intended )?destination/i);
+    expect(BASE_SYSTEM_PROMPT).not.toMatch(/delivered to the .*address/i);
+  });
+
   it("the cached prompt was re-versioned", () => {
     // Without a bump the corrected block would sit behind the cached old one.
-    expect(CURRENT_PROMPT_VERSION).toBe(13);
+    expect(CURRENT_PROMPT_VERSION).toBe(14);
   });
 });
