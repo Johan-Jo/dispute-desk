@@ -261,6 +261,75 @@ console.log(
 );
 console.log(`BEFORE snapshot written:  ${OUT}`);
 
+/* ── THE DAILY GENERATION BUDGET, READ BEFORE ANYTHING IS ENQUEUED ────
+ *
+ * `narrativeWriter` enforces a per-shop daily cap at the moment of
+ * generation — correctly, but far too late to be useful here. By then a
+ * `build_pack` has rebuilt the pack, inserted a defence-package draft and
+ * chained a `build_defence_package`, and the refusal lands as a `failed` row
+ * sitting above the case's last good package.
+ *
+ * Nothing upstream could see the budget, so every bulk rebuild was a blind
+ * bet. Measured 2026-08-12/13: three batches (43, 6 and 11 packs) were
+ * enqueued against an already-spent budget; 10 of the last 11 died on the cap
+ * without generating a single narrative.
+ *
+ * Mirrors `lib/defence/generationBudget.ts` rather than importing it — this is
+ * an `.mjs` ops script and booting the TS toolchain here would be worse. The
+ * env vars and defaults are the same; `generationBudget.test.ts` pins the
+ * shared arithmetic.
+ *
+ * ADVISORY, NOT A SECOND ENFORCEMENT POINT. It refuses when the budget is
+ * spent and warns when the batch exceeds it; `narrativeWriter` remains the
+ * authority, because concurrent traffic can still overtake any number
+ * computed here. */
+const DAILY_GENERATION_CAP = Number(process.env.DEFENCE_PACKAGE_DAILY_GENERATION_CAP ?? "100");
+const DAILY_TOKEN_CAP = Number(process.env.DEFENCE_PACKAGE_DAILY_TOKEN_CAP ?? "50000");
+const ESTIMATED_TOKENS_PER_GENERATION = 1400;
+
+{
+  const today = new Date().toISOString().slice(0, 10);
+  const shopIds = [...new Set(population.map((p) => p.shop_id))];
+  let worstRemaining = Infinity;
+  for (const shopId of shopIds) {
+    const runs = await page(
+      `defence_package_runs?select=prompt_tokens&shop_id=eq.${shopId}&daily_bucket=eq.${today}`,
+    ).catch(() => null);
+    // A failed read must not block the rebuild — same soft-fail as the writer.
+    if (!runs) continue;
+    const gens = runs.length;
+    const tokens = runs.reduce((s, r) => s + (r.prompt_tokens ?? 0), 0);
+    const remaining = Math.min(
+      Math.max(0, DAILY_GENERATION_CAP - gens),
+      Math.max(0, Math.floor((DAILY_TOKEN_CAP - tokens) / ESTIMATED_TOKENS_PER_GENERATION)),
+    );
+    const domain = domainOf.get(shopId) ?? shopId;
+    console.log(
+      `\nBUDGET ${domain}: ~${remaining} generations left ` +
+        `(used ${gens}/${DAILY_GENERATION_CAP} gens, ${tokens}/${DAILY_TOKEN_CAP} tokens)`,
+    );
+    worstRemaining = Math.min(worstRemaining, remaining);
+  }
+
+  if (worstRemaining === 0) {
+    console.error(
+      `\n[budget] EXHAUSTED. Every package enqueued now would fail with ` +
+        `daily_cap_reached WITHOUT generating, and would leave a failed row ` +
+        `above the case's last good package. Resets at 00:00 UTC.\n` +
+        `Refusing to enqueue. Re-run tomorrow, or raise ` +
+        `DEFENCE_PACKAGE_DAILY_TOKEN_CAP deliberately.`,
+    );
+    process.exit(1);
+  }
+  if (Number.isFinite(worstRemaining) && population.length > worstRemaining) {
+    console.warn(
+      `\n[budget] This batch is ${population.length} packs but only ~${worstRemaining} ` +
+        `generations remain. The excess will fail on the cap. ` +
+        `Re-run with --limit ${worstRemaining}, or split across days.`,
+    );
+  }
+}
+
 if (!APPLY) {
   console.log(`\nDRY RUN — no jobs enqueued. Re-run with --apply.`);
   process.exit(0);
