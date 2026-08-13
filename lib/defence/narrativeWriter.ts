@@ -106,7 +106,18 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // the payload was clean, so the model was reproducing the prompt. The
 // prohibition is now stated as a class; only the permitted form is
 // illustrated.
-const PROMPT_VERSION = 13;
+// v14 (2026-08-13) — "destination" is an address.
+// Rule 14 named addresses but never the OTHER nouns for a place, so
+// "the goods reached their destination" read to the model as permitted while
+// `classifyAddressDeliveryClaim` rates it `affirmative` (DESTINATION_TERMS has
+// covered it all along). Five production packages failed on exactly that
+// shape — #12936, #352555, #352236, #352220 (fulfillmentArgument) and #345459
+// (conclusion) — every one a CLOSING sentence restating correctly worded
+// evidence as an arrival. The rule now prohibits the class (destination,
+// premises, residence, home, location) and says to stop at the evidence
+// rather than summarise it. Still no forbidden example is printed: v13's
+// finding was that printing one makes the model reproduce it.
+const PROMPT_VERSION = 14;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
@@ -327,6 +338,21 @@ Rules:
       RIGHT → "the carrier confirmed delivery on 12 May 2026 (PostNord,
                tracking 1234567890)"
       RIGHT → "the carrier recorded a signature on delivery"
+
+    A PLACE IS AN ADDRESS, WHATEVER YOU CALL IT. The prohibition is on
+    asserting that the parcel ARRIVED SOMEWHERE, not on the word "address".
+    Nouns naming where it ended up — destination, premises, residence, home,
+    location — are the same claim and are equally forbidden. The delivery
+    fact records that the carrier marked the shipment delivered; it does not
+    record where, and the where cannot be proven from it.
+
+    DO NOT CLOSE A SECTION BY RESTATING THE DELIVERY AS AN ARRIVAL. Once you
+    have cited carrier, tracking number and date, the fulfilment point is
+    made. A summarising final sentence adds no fact, and it is where this
+    claim keeps appearing: measured on production 2026-08-13, five packages
+    failed validation on precisely this shape — four in fulfillmentArgument,
+    one in conclusion, every one a closing arrival sentence written AFTER
+    correctly worded evidence. Stop at the evidence.
 
     If a section has no fact that can be expressed in that permitted form,
     return an empty string for it and list it in omittedSections (rules 9 and

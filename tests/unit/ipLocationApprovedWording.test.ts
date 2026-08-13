@@ -103,7 +103,11 @@ describe("the ip_location fact carries an approved sentence", () => {
       "same_country" as never,
       { country: "SE" } as never,
     );
-    expect(approved).toContain("country recorded on this order");
+    /* Wording changed 2026-08-13 (option A): the sentence now names the IP and
+     * what its country is compared to. The point this case pins is unchanged —
+     * ONE owner produces the sentence, so the copy cannot drift from the
+     * comparison the collector actually ran. */
+    expect(approved).toContain("shipping destination");
   });
 });
 

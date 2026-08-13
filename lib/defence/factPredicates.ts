@@ -330,11 +330,38 @@ export const FACT_PREDICATES: Record<FactPredicateId, FactPredicate> = {
   safe_to_claim_fulfilment: {
     id: "safe_to_claim_fulfilment",
     description:
-      "Either order_record is absent or not UNFULFILLED, OR delivery_confirmed / digital_access_used / service_delivered exists. Mirrors fulfilled_or_delivered_claim guard's conditional logic.",
+      "Either order_record is absent or shows a SHIPPED-CAPABLE status, OR delivery_confirmed / digital_access_used / service_delivered exists. Mirrors fulfilled_or_delivered_claim guard's conditional logic.",
+    /* THE TEST IS "DID ANYTHING SHIP", NOT "IS IT UNFULFILLED".
+     *
+     * This read `!== "UNFULFILLED"`, which returns TRUE for every other
+     * member of `displayFulfillmentStatus` — including `ON_HOLD`, the state
+     * Shopify Flow leaves an order in when it flags the risk without
+     * cancelling. So on a held order the guard permitted the model to write
+     * "fulfilled" / "shipped" / "dispatched" with nothing behind it: an
+     * unsupported claim to an issuer, from a gate built to prevent exactly
+     * that.
+     *
+     * Measured 2026-08-13: six open blume-box disputes are ON_HOLD, PAID,
+     * never cancelled, never refunded — goods never left the warehouse.
+     *
+     * Stated as an explicit NOT-SHIPPED set so a new status member fails
+     * SAFE (it falls to the delivery-fact requirement) rather than silently
+     * licensing a fulfilment claim, which is how ON_HOLD slipped through. */
     evaluate: (facts) => {
-      if (orderRecordFulfillment(facts) !== "UNFULFILLED") return true;
+      const status = orderRecordFulfillment(facts);
+      const nothingShipped = status === "UNFULFILLED" || status === "ON_HOLD";
+      if (!nothingShipped) return true;
       return FACT_PREDICATES.customer_received_goods_or_service.evaluate(facts);
     },
+  },
+
+  /* The held state, addressable in its own right — so the narrative and the
+   * merchant surfaces can say WHY nothing shipped ("your fraud screening
+   * held this order") instead of the bare, and misleading, "unfulfilled". */
+  fulfilment_status_on_hold: {
+    id: "fulfilment_status_on_hold",
+    description: "order_record.fulfillmentStatus === 'ON_HOLD'",
+    evaluate: (facts) => orderRecordFulfillment(facts) === "ON_HOLD",
   },
 
   duplicate_distinct_markers: {
