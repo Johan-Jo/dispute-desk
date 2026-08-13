@@ -32,8 +32,32 @@ async function runWorker(req: NextRequest) {
   const gate = cronEnvGate(req);
   if (gate) return gate;
 
+  /* ── BATCH SIZE, SIZED AGAINST THE REAL BUDGET ──────────────────────
+   *
+   * Was 5. With the cron at every 2 minutes that is a hard ceiling of 150
+   * jobs/hour no matter how fast the work is, and jobs run SEQUENTIALLY in
+   * the loop below.
+   *
+   * Measured on production 2026-08-12 over 43 pack rebuilds:
+   *
+   *   build_pack             work  9.5s avg (max 17s) · queue wait ~1238s
+   *   build_defence_package  work 29.7s avg (max 46s) · queue wait  ~771s
+   *
+   * Wait was 99 % of elapsed time — a 43-pack rebuild (86 jobs, each
+   * `build_pack` chaining a `build_defence_package`) took hours of wall clock
+   * for ~40 seconds of work per dispute. Every bulk operation hits this.
+   *
+   * 10 is the size the 300s `maxDuration` supports with real margin: ten of
+   * the SLOWEST observed job (46s) is 460s and would overrun, so the bound is
+   * not "worst case × batch". It is that the queue is overwhelmingly
+   * `build_pack` (9.5s) with at most a few defence builds interleaved — 10
+   * mixed jobs measure ~100-200s. A batch that overruns is not lost: the job
+   * stays claimed, `claim_jobs` reclaims stale locks, and the next tick
+   * continues. Doubling throughput while keeping ~40 % headroom is the trade;
+   * raising it further would start betting on the mix.
+   */
   const workerId = `worker-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const claimed = await claimJobs(workerId, 5);
+  const claimed = await claimJobs(workerId, 10);
 
   const results: Array<{ jobId: string; status: string; error?: string }> = [];
 
