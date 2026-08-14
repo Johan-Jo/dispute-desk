@@ -119,19 +119,55 @@ narratives before/after shows no change in fact selection.
 
 ---
 
-## 4. Step 2 — backfill identity for the open cases
+## 4. Backfill discipline — the backfill is the LAST step
 
-49 open drafts need a hash without being rebuilt (a rebuild costs an LLM call and risks a new
-failure — see the 2026-08-14 incident).
+**Maintainer instruction, 2026-08-14: all logic and programming is finished, tested and
+deployed dark BEFORE any bulk backfill runs.** Too many backfills on this project have been
+started mid-change, hit a wall, and been abandoned half-applied.
 
-The backfill **must** go through the same `derivePlanForCase` the build job uses. Two bridges
-produce two hashes, and every package would then read stale against itself — the failure mode
-`loadFileableSelection`'s header already warns about.
+This is not only scheduling. A backfill run while `derivePlanForCase` can still change
+**invalidates itself**, and fails worse than not running:
 
-Script, not a migration: it needs the pack, its sections, evidence items, coverage and reason
-code, which is application logic.
+| state | how `evaluateFreshness` reads it | what the merchant surface says |
+|---|---|---|
+| never stamped | `snapshot_absent` | non-fileable — correct, and obviously unstamped |
+| stamped, then the bridge changed | `input_hash_mismatch` | "the case moved, rebuild it" — **false**, and indistinguishable from a real change |
 
----
+A half-finished backfill is therefore not a partial win. It converts an honest "not done yet"
+into a misleading "this case changed", across however many rows it reached before stopping.
+
+### 4.1 The backfill shrinks if you wait
+
+Once step 1 lands, **every rebuild stamps identity by itself**. The pre-deadline rebuild cron
+touches every due-today case, so open cases acquire identity naturally as their deadlines come
+round. The bulk backfill is therefore a sweep for stragglers, not a migration of all 398 — and
+the longer the code takes to freeze, the smaller it gets. Re-measure the remaining population
+immediately before running it; do not size it from this document.
+
+### 4.2 Canary first — 2 to 3 cases
+
+Before any bulk run, stamp two or three cases and prove:
+
+1. the hash the backfill writes is **byte-identical** to the hash a real rebuild writes for the
+   same case (run one of each and compare — this is the whole risk of the backfill);
+2. the stamped case reads `fresh` through `evaluateFreshness` against live inputs;
+3. nothing else about the case changed — same status, same PDF, same narrative.
+
+If (1) fails, the backfill is using a second bridge and must not proceed. That is the exact
+defect `loadFileableSelection`'s header warns about, and it is silent.
+
+### 4.3 The full run
+
+Requirements, all of them:
+
+- **Chunked and resumable.** A ledger of which case ids are done, so an interrupted run
+  continues rather than restarts, and so "it never finished" is visible rather than assumed.
+- **Idempotent.** Re-stamping an already-current case is a no-op.
+- **Bounded.** Stops on the first hash mismatch rather than continuing past it.
+- **Reports what it skipped.** A case it could not stamp is named, not silently left.
+- Same `derivePlanForCase` the build job uses. No second derivation, ever.
+
+It runs **after** every code step below, and **immediately before** the flip.
 
 ## 5. Step 3 — resolve the `final` gap
 
@@ -189,23 +225,41 @@ Gated call sites (verify this list is still nine at cutover):
 
 ## 9. Sequencing and reversibility
 
+Code first, frozen, deployed dark. Data last.
+
 ```
-0 (decide) → 1 (persist identity, dark) → 2 (backfill)
-                                   ↘ 3 (final gap)  ┐
-                                   ↘ 4 (parity)     ├→ 5 (re-measure) → 6 (flip + delete)
+0  decide (option A)
+   ↓
+1  persist identity while dark        ┐
+3  resolve the `final` gap            ├─ ALL CODE. Shipped, tested, deployed dark.
+4  close activation-OFF parity        ┘  Nothing below starts until these are done.
+   ↓
+   ── logic freeze on derivePlanForCase ──
+   ↓
+4.2 canary backfill (2–3 cases) — prove the hash matches a real rebuild
+   ↓
+5  re-measure threshold 60 on the current population
+   ↓
+4.3 FULL BACKFILL — chunked, resumable, last data step
+   ↓
+6  flip + delete
 ```
 
-Steps 3 and 4 are independent of 1–2 and can run in parallel.
+Steps 1, 3 and 4 are independent of each other and can run in parallel. Nothing after the
+freeze line may change `derivePlanForCase`; if it has to, the backfill restarts from empty.
 
-**Reversibility.** Steps 1 and 2 are additive: the columns are unread while the switch is off,
-so there is nothing to roll back. Steps 3, 4 and 6 revert by turning the flag off — until PR 3
-deletes the legacy modules, at which point the flag stops being a revert and the only way back
-is forward.
+**Why the flip is after the backfill and not before.** A case with no identity is non-fileable
+at activation. Flipping first means a blackout across every unstamped case, through whatever
+deadlines fall in that window. The backfill is the last data step; the flip is the last step.
+
+**Reversibility.** Steps 1 and 3–4 revert by turning the flag off (steps 1's columns are unread
+while dark, so there is nothing to undo). The backfill is **not** revertible in a useful sense —
+its rows are additive, but un-stamping them would return cases to `snapshot_absent`, so a
+mistake is corrected by re-running with the fixed bridge, not by rollback. That is precisely
+why it goes last, after the bridge can no longer move.
 
 **Do not flip before step 3 lands.** With identity backfilled but the `final` gap open,
 activation still files nothing — and it would look like the backfill failed.
-
----
 
 ## 10. Open questions for the maintainer
 
