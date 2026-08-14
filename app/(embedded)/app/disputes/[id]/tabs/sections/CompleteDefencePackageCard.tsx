@@ -968,18 +968,47 @@ export function CompleteDefencePackageCard({
             </Banner>
           )}
 
+          {/* A FAILED BUILD IS NOT ALWAYS AN EMERGENCY, AND NEVER SPEAKS
+              VALIDATOR (2026-08-14).
+
+              This rendered `tone="critical"` with `row.failure_reason` and the
+              raw `validation_errors[].message` on every failed row. On dispute
+              11051073729 that put a red "Validation failed" panel reading
+
+                paymentAuthenticationArgument makes an ambiguous
+                address-delivery claim, but this case holds no
+                "address_delivery" capability.
+
+              directly under a green "Saved to Shopify — v4". The case was fully
+              defended: v4 was filed and readback-verified at the bank, and the
+              failure was a BACKGROUND rebuild that died hours earlier. The card
+              read as "your dispute is broken" when the honest message is "you
+              are covered".
+
+              Two corrections, independent of each other:
+
+              1. TONE follows the consequence, not the row. With a version at
+                 the bank there is nothing to lose and nothing to do, so this is
+                 a warning. With nothing filed the merchant really must act
+                 before the deadline — that stays critical.
+
+              2. The validator's own words are NEVER merchant copy. Section keys
+                 and capability names are how this module talks to itself; a
+                 merchant cannot act on `paymentAuthenticationArgument`, and it
+                 is the same class as the bare gateway codes forbidden
+                 everywhere else in the UI. The detail is already on the audit
+                 row (`defence_package_validation_failed`), which is where a
+                 support question gets answered from. */}
           {row.status === "failed" && (
-            <Banner tone="critical" title={t("validationFailedTitle")}>
-              <BlockStack gap="200">
-                <p>{row.failure_reason ?? tPkg("validationFailedFallback")}</p>
-                {row.validation_errors?.length > 0 && (
-                  <ul style={{ marginLeft: 16, fontSize: 12 }}>
-                    {row.validation_errors.slice(0, 5).map((e, i) => (
-                      <li key={i}>{e.message ?? e.rule}</li>
-                    ))}
-                  </ul>
-                )}
-              </BlockStack>
+            <Banner
+              tone={bankFacing ? "warning" : "critical"}
+              title={tPkg("rebuildFailedTitle")}
+            >
+              <p>
+                {bankFacing
+                  ? tPkg("rebuildFailedBodyFiled", { bankVersion: bankFacing.version })
+                  : tPkg("rebuildFailedBodyUnfiled")}
+              </p>
             </Banner>
           )}
 

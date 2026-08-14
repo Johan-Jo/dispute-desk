@@ -905,6 +905,9 @@
         "coveredByShopifyProtectBody": "Este contracargo está cubierto por Shopify Protect. No se requiere paquete de evidencia para el banco.",
         "notEnoughEvidenceBody": "El clasificador no encontró hechos aprobados para el banco en este contracargo. Sube documentos de respaldo adicionales o espera la próxima sincronización para incluir evidencia recién recopilada.",
         "validationFailedFallback": "La validación encontró afirmaciones no respaldadas en la narrativa generada.",
+        "rebuildFailedTitle": "La última regeneración no superó nuestras comprobaciones",
+        "rebuildFailedBodyFiled": "El paquete de defensa v{bankVersion} está presentado en Shopify y sigue vigente. Se generó una versión más reciente, pero no superó nuestras comprobaciones de evidencia, así que no se presentó. No hace falta hacer nada: vuelve a generarlo si quieres intentarlo de nuevo.",
+        "rebuildFailedBodyUnfiled": "El paquete de defensa no superó nuestras comprobaciones de evidencia, así que no se ha presentado nada para esta disputa. Vuelve a generarlo antes de la fecha límite.",
         "newEvidenceAvailableBody": "Las actualizaciones recientes (subidas, cambios de estado o nuevas señales recopiladas automáticamente) aún no se reflejan en este borrador. Haz clic en Regenerar abajo para construir una nueva versión que las incluya — la reconstrucción tarda de 2 a 3 minutos y se ejecuta en segundo plano.",
         "errors": {
           "couldNotLoad": "No se pudo cargar el paquete de evidencia ({status})",
