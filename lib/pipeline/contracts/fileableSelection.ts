@@ -110,6 +110,29 @@ export interface SelectedPackage {
   packageVersion: number;
   /** The generated artifact this selection stands behind. Never inferred. */
   artifactId: string;
+  /**
+   * This package is authorised to be filed, but is not `final` yet — the
+   * executor must promote it through `finalize_defence_package` first.
+   *
+   * WHY THIS EXISTS. Rung 10 refused everything that was not already `final`,
+   * and on 2026-08-14 production held 58 open unsubmitted cases of which
+   * **zero** were final: 49 drafts and 9 failed builds. The deadline route has
+   * a draft-promotion branch, but it sits AFTER the `outcome !== "selected"`
+   * early return, so it could never run — activation would have filed nothing,
+   * for every case, while looking like a selector working correctly.
+   *
+   * The alternative shapes were a fourth union member (explicit, but every
+   * consumer and `isFileable` change) and finalizing before selecting (small,
+   * but it promotes a package the gate may then refuse — leaving a `final` row
+   * that should not exist, in the status the save worker files on). A flag on
+   * the existing member keeps promotion downstream of authorization without
+   * touching a single consumer that does not care.
+   *
+   * `false` on the normal trigger, always: only a deadline may file a package
+   * the merchant has not approved, and that is the one relaxation P-6 permits
+   * beyond `deadline_only_not_yet_due`.
+   */
+  requiresFinalize: boolean;
 }
 
 export type FileableSelection =
