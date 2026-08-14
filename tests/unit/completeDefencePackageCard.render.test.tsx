@@ -208,13 +208,53 @@ describe("CompleteDefencePackageCard — a FAILED rebuild over a filed version",
     expect(html).not.toContain("that will replace v4");
   });
 
-  it("still shows the failure and its validation errors", () => {
-    /* Suppressing the false invitation must not suppress the diagnosis — the
-     * merchant has to know WHY the rebuild produced nothing. */
+  it("still reports that the rebuild failed", () => {
+    /* Suppressing the false invitation must not suppress the fact — the
+     * merchant has to know the refresh did not happen. */
     const html = render(props(failedLatest));
-    expect(contains(html, messages.disputes.completeDefencePackage.validationFailedTitle)).toBe(true);
-    expect(html).toContain("1 validation error (after one retry)");
-    expect(html).toContain("ambiguous address-delivery claim");
+    expect(contains(html, PKG.rebuildFailedTitle)).toBe(true);
+  });
+
+  it("says the filed version still stands, and does not shout", () => {
+    /* v4 is at the bank and readback-verified; there is nothing to lose and
+     * nothing to do, so this is a warning, not a critical failure. The card
+     * used to render a red panel directly under a green "Saved to Shopify". */
+    const html = render(props(failedLatest));
+    expect(html).toContain("v4 is filed with Shopify and still stands");
+    // Polaris expresses banner tone as a design token, not a status class.
+    expect(html).toContain("--p-color-bg-fill-warning");
+    expect(html).not.toContain("--p-color-bg-fill-critical");
+  });
+
+  it("is CRITICAL when nothing is filed — then the merchant really must act", () => {
+    const html = render({
+      packId: "pack-1",
+      submittedToShopifyAt: null,
+      defencePackage: {
+        latest: failedLatest,
+        bankFacing: null,
+        currentPromptVersion: 10,
+        safety: SAFE,
+      },
+    });
+    expect(html).toContain("--p-color-bg-fill-critical");
+    expect(contains(html, PKG.rebuildFailedBodyUnfiled)).toBe(true);
+  });
+
+  it("never speaks the validator's language to a merchant", () => {
+    /* Section keys and capability names are how the module talks to itself.
+     * A merchant cannot act on `paymentAuthenticationArgument`, and the detail
+     * is already on the `defence_package_validation_failed` audit row. Same
+     * class as the bare gateway codes forbidden everywhere else in the UI. */
+    const html = render(props(failedLatest));
+    for (const leak of [
+      "paymentAuthenticationArgument",
+      "address_delivery",
+      "unauthorized_claim",
+      "1 validation error (after one retry)",
+    ]) {
+      expect(html, `${leak} must not reach the merchant`).not.toContain(leak);
+    }
   });
 
   it("keeps Regenerate reachable — it is the fix", () => {
