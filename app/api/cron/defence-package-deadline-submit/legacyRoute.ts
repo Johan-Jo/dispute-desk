@@ -32,6 +32,7 @@ import { isDefencePackageBuilderEnabled } from "@/lib/featureFlags";
 import { logAuditEvent } from "@/lib/audit/logEvent";
 import { sendDefenceDeadlineFallbackAlert } from "@/lib/email/sendDefenceDeadlineFallbackAlert";
 import { assessPackageCandidateSafety } from "@/lib/defence/packageSafety";
+import { fetchCandidateRows, latestCandidate } from "@/lib/defence/candidateVersions";
 import {
   parseEnqueueRpcResult,
   parseFinalizeRpcResult,
@@ -159,18 +160,37 @@ export async function runDeadlineSubmitLegacy(req: NextRequest) {
         continue;
       }
 
-      // Look at the latest defence package row for this dispute.
-      const { data: dpkg } = await sb
-        .from("defence_packages")
+      /* The latest CANDIDATE for this dispute — not the highest version.
+       *
+       * This was `order by version desc limit 1`, which cannot tell a package
+       * apart from a build that failed to produce one. On 2026-08-14 a rebuild
+       * two hours before this cron left dispute 11051073729 with a `failed` v5
+       * on top of a validated, PDF-rendered v4 the pipeline had explicitly held
+       * to file at this deadline — and this route filed nothing. An aborted
+       * build has no artifact and no validated narrative; it is not a version
+       * of the argument, and it may not shadow the last one that was.
+       *
+       * The safety gate below is unchanged and still runs on whatever row this
+       * names: a candidate that is REFUSED still stops the filing. Nothing
+       * searches past a refusal for an older package that passes. */
+      const { rows: candidateRows } = await fetchCandidateRows<{
+        id: string;
+        status: string;
+        validation_status: string | null;
+        pdf_path: string | null;
+        version: number;
         // `failure_code` distinguishes a Shopify-Protect skip from a
         // no-bank-facts skip; without it every skip is reported as the latter.
-        .select(
-          "id, status, validation_status, pdf_path, version, failure_code, content_revision, facts_json, narrative_json",
-        )
-        .eq("dispute_id", d.id)
-        .order("version", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        failure_code: string | null;
+        content_revision: string | null;
+        facts_json: unknown;
+        narrative_json: unknown;
+      }>(
+        sb,
+        d.id as string,
+        "id, status, validation_status, pdf_path, version, failure_code, content_revision, facts_json, narrative_json",
+      );
+      const { candidate: dpkg, abortedNewer } = latestCandidate(candidateRows);
 
       // PR-C1 — candidate-safety gate, evaluated on the LATEST candidate only.
       // A blocked candidate files NOTHING and notifies; the executor must never
@@ -186,7 +206,13 @@ export async function runDeadlineSubmitLegacy(req: NextRequest) {
       const fallbackReason =
         unsafeCandidate && !unsafeCandidate.safe
           ? ("unsafe_address_claim" as const)
-          : pickFallbackReason(dpkg);
+          : // No candidate at all, but a build DID run and fail — "no Defence
+            // Package draft existed for this dispute" would be false, and it is
+            // the one reason whose merchant instruction ("wait for the build")
+            // is wrong here.
+            !dpkg && abortedNewer.length > 0
+            ? ("validation_failed" as const)
+            : pickFallbackReason(dpkg);
 
       if (fallbackReason !== null) {
         // Post-retirement: no pack-PDF fallback. The defence-package PDF
@@ -231,6 +257,28 @@ export async function runDeadlineSubmitLegacy(req: NextRequest) {
         });
         if (emailResult.ok) summary.emailed += 1;
         continue;
+      }
+
+      /* We are about to file a package that a NEWER build attempt tried to
+       * replace and failed to. Say so, once, where the case history is read.
+       * The version we file was built from an earlier evidence snapshot, and a
+       * reviewer reconstructing "why is v4 at the bank when v5 exists" should
+       * not have to infer it from two unrelated rows. */
+      if (abortedNewer.length > 0) {
+        await logAuditEvent({
+          shopId: d.shop_id,
+          disputeId: d.id,
+          packId: pack.id,
+          actorType: "system",
+          eventType: "defence_package_last_good_version_used",
+          eventPayload: {
+            trigger: "deadline_cron_last_good",
+            dueAt: d.due_at,
+            filedPackageId: dpkg!.id,
+            filedVersion: dpkg!.version,
+            abortedVersions: abortedNewer.map((r) => r.version),
+          },
+        });
       }
 
       // We have a defence package row. Decide the action by status.

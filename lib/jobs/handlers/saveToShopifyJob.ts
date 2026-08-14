@@ -53,6 +53,7 @@ import { logAuditEvent } from "@/lib/audit/logEvent";
 import { canonicalPipelineEnabled } from "@/lib/pipeline/activation";
 import { getShopSettings } from "@/lib/automation/settings";
 import { selectForSaveWorker } from "@/lib/defence/package";
+import { fetchLatestCandidate } from "@/lib/defence/candidateVersions";
 import { emitSaveToShopifyEvents } from "./saveToShopifyEvents";
 import {
   isRegenerateBuild,
@@ -246,13 +247,25 @@ export async function handleSaveToShopify(
     }
   }
 
-  const { data: dpkg } = await sb
-    .from("defence_packages")
-    .select("id, version, status, pdf_path, facts_json, narrative_json")
-    .eq("dispute_id", pack.dispute_id)
-    .order("version", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  /* The latest CANDIDATE, not the highest version number — see
+   * `lib/defence/candidateVersions.ts`. A `failed` row carries no PDF and no
+   * validated narrative; it is the record of a build that never produced a
+   * package, and it must not shadow the last one that did. Without this the
+   * deadline cron's last-good promotion would finalize v4 and this worker
+   * would still re-select the failed v5 and refuse — the two halves have to
+   * agree on which row "the package" is. */
+  const { row: dpkg } = await fetchLatestCandidate<{
+    id: string;
+    version: number;
+    status: string;
+    pdf_path: string | null;
+    facts_json: unknown;
+    narrative_json: unknown;
+  }>(
+    sb,
+    pack.dispute_id as string,
+    "id, version, status, pdf_path, facts_json, narrative_json",
+  );
   if (!dpkg) {
     return {
       ok: false,
@@ -278,10 +291,10 @@ export async function handleSaveToShopify(
 
   /* ── 3b. PR-C1 candidate-safety gate ──
    *
-   * The LATEST candidate is the only one considered (the query above), so a
-   * regenerated safe version supersedes a blocked one naturally and this gate
-   * never falls back to an older version. Non-retriable: retrying cannot make
-   * a persisted narrative safe — only regeneration can. */
+   * The latest CANDIDATE is the only one considered (the selection above), so
+   * a regenerated safe version supersedes a blocked one naturally and this gate
+   * never falls back past a refusal to an older version. Non-retriable:
+   * retrying cannot make a persisted narrative safe — only regeneration can. */
   const safety = assessPackageCandidateSafety({
     factsJson: dpkg.facts_json,
     narrativeJson: dpkg.narrative_json,
