@@ -5272,6 +5272,25 @@ invariant: any production module ordering `defence_packages` by version must go 
 `rebuildOutcome.ts`, the canonical loader, and the workspace card, which reports the latest build
 ATTEMPT because a merchant whose rebuild failed has to see that it failed).
 
+**A failed build is not a reviewable draft, in the UI either (2026-08-14).**
+`CompleteDefencePackageCard` decided "there is a newer draft awaiting your action" from
+`latest.id !== bankFacing.id` alone. After v4 of dispute `11051073729` was filed and the v5
+rebuild failed, the card printed *"Draft v5 is ready for review … If it looks correct,
+resubmit it to Shopify — that will replace v4"* directly above its own **Validation failed**
+banner naming the reason v5 did not exist — and with no button inside it, because `canSubmit`
+already (correctly) required `final`. The PR-C1 `packageBlocked` gate did not catch it:
+nothing was built to judge, so the safety verdict was not `blocked`.
+
+`hasUnsubmittedDraft` now also requires `!isAbortedBuild(latest.status)` — the SAME predicate
+`lib/defence/candidateVersions.ts` gives the filing paths, so "the draft" in the card and "the
+candidate" in the deadline cron cannot mean different rows. It is fixed there rather than in
+`bannerHostsActions` because the flag also drives `displayRow`: with a failed `latest` the
+inline preview was rendering the REJECTED narrative as the thing to review. The
+`status === "failed"` banner reads `latest`, not `displayRow`, so the failure and its
+validation errors stay on screen, and Regenerate stays reachable — regenerating is the fix.
+Pinned in `tests/unit/completeDefencePackageCard.render.test.tsx`, including a control that a
+genuine newer draft still gets the banner.
+
 **Every enqueue site is gated, not just the worker.** `lib/defence/packageSafety.ts` exposes one
 predicate plus two preflight loaders (`preflightLatestCandidate`, `preflightNamedCandidate`). They
 are consulted BEFORE any enqueue or status write by: the embedded Review & Submit endpoint
@@ -7109,4 +7128,4 @@ Automation decides what to DO; the argument decides what to SAY. Nothing under
 `lib/automation/decision/` may import argument-plan or review internals, and the
 decision snapshot carries no narrative, no package id and no plan field.
 Enforced structurally by `branchBoundary.test.ts`.
-
+

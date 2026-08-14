@@ -143,3 +143,87 @@ describe("CompleteDefencePackageCard — blocked with an older bank-facing versi
     expect(contains(blockedHtml, PKG.resubmitToShopify)).toBe(false);
   });
 });
+
+describe("CompleteDefencePackageCard — a FAILED rebuild over a filed version", () => {
+  /* The production shape, 2026-08-14. blume-box dispute 11051073729: v4 was
+   * filed and verified in Shopify at 13:00Z; the v5 rebuild had already failed
+   * narrative validation twice and carries no PDF.
+   *
+   * The card called v5 "a newer draft awaiting your action" purely because its
+   * id differed from the bank-facing row, and printed:
+   *
+   *   "Draft v5 is ready for review … If it looks correct, resubmit it to
+   *    Shopify — that will replace v4."
+   *
+   * …immediately above its own "Validation failed" banner naming the reason v5
+   * does not exist. `canSubmit` was already false, so the invitation had no
+   * button in it: an instruction the merchant could not carry out, for a
+   * package that was never built. */
+  const failedLatest = row({
+    id: "pkg-5",
+    version: 5,
+    status: "failed",
+    validation_status: "failed",
+    pdf_path: null,
+    failure_code: "validation_failed",
+    failure_reason: "1 validation error (after one retry)",
+    validation_errors: [
+      {
+        section: "paymentAuthenticationArgument",
+        rule: "unauthorized_claim",
+        message:
+          'paymentAuthenticationArgument makes an ambiguous address-delivery claim, but this case holds no "address_delivery" capability.',
+      },
+    ],
+  });
+  const filedV4 = row({
+    id: "pkg-4",
+    version: 4,
+    status: "submitted",
+    submitted_at: "2026-08-14T13:00:16.000Z",
+  });
+
+  const props = (latest: DefencePackageRow): CardProps => ({
+    packId: "pack-1",
+    submittedToShopifyAt: "2026-08-14T13:00:16.000Z",
+    defencePackage: {
+      latest,
+      bankFacing: filedV4,
+      currentPromptVersion: 10,
+      // NOT a PR-C1 content block: nothing was built to judge. The existing
+      // `packageBlocked` gate therefore never fired, which is why this reached
+      // production after that gate shipped.
+      safety: SAFE,
+    },
+  });
+
+  it("does not call a failed build a draft that is ready for review", () => {
+    const html = render(props(failedLatest));
+    expect(html).not.toContain("Draft v5 is ready for review");
+  });
+
+  it("does not invite a resubmit that cannot happen", () => {
+    const html = render(props(failedLatest));
+    expect(contains(html, PKG.resubmitToShopify)).toBe(false);
+    expect(html).not.toContain("that will replace v4");
+  });
+
+  it("still shows the failure and its validation errors", () => {
+    /* Suppressing the false invitation must not suppress the diagnosis — the
+     * merchant has to know WHY the rebuild produced nothing. */
+    const html = render(props(failedLatest));
+    expect(contains(html, messages.disputes.completeDefencePackage.validationFailedTitle)).toBe(true);
+    expect(html).toContain("1 validation error (after one retry)");
+    expect(html).toContain("ambiguous address-delivery claim");
+  });
+
+  it("keeps Regenerate reachable — it is the fix", () => {
+    expect(contains(render(props(failedLatest)), PKG.moreActions)).toBe(true);
+  });
+
+  it("still offers the banner for a genuine newer draft — the gate is the status, not the fixture", () => {
+    const realDraft = row({ id: "pkg-5", version: 5, status: "final" });
+    const html = render(props(realDraft));
+    expect(html).toContain("Draft v5 is ready for review");
+  });
+});
