@@ -169,22 +169,27 @@ Requirements, all of them:
 
 It runs **after** every code step below, and **immediately before** the flip.
 
-## 5. Step 3 — resolve the `final` gap
+## 5. Step 3 — resolve the `final` gap — **DONE (2026-08-14, option a)**
 
-A design decision, not a mechanical fix. Two shapes:
+Decision: **(a)** — a `requiresFinalize: boolean` on the existing `selected` member.
+Rejected: a fourth union member (every consumer and `isFileable` change) and finalizing before
+selecting (promotes a package the gate may then refuse, leaving a `final` row that should not
+exist — in the status the save worker files on).
 
-1. **Selector-side:** the deadline trigger treats a validated draft as *fileable after
-   finalize*, so the route's existing promotion branch becomes reachable. Keeps promotion in
-   one place; widens a selector rung that was deliberately narrow.
-2. **Route-side:** finalize before selecting. Keeps the selector's contract intact; puts a
-   promotion decision upstream of the gate that authorises it, which is the inversion
-   `finalizeAndEnqueueSave` exists to prevent.
+Shipped:
 
-Option 1 is more consistent with "one selector decides"; option 2 is a smaller diff. Whichever
-is chosen, it needs a test proving a validated draft at its deadline reaches Shopify — the
-scenario that is currently 49 cases wide.
+- `SelectedPackage.requiresFinalize` on the contract.
+- Rung 10 accepts `draft` and `stale` on the **deadline** trigger only, and sets the flag.
+  `PROMOTABLE_AT_DEADLINE` mirrors the RPC's `p_allowed_statuses` validation — the two must
+  agree, or the selector authorises a promotion the transaction refuses.
+- The deadline route branches on the flag instead of re-deriving from `status`.
+- `saveToShopifyJob` refuses a `requiresFinalize` selection outright: it files, it does not
+  promote. Without that it would have hit the raw `status !== "final"` check three steps later
+  and reported "not final, finalize the draft" for a package the selector had just authorised.
 
----
+Pinned: draft/stale selected-with-flag at the deadline; the same rows refused `not_final` on the
+normal trigger; `final` selects with the flag false; and `submitted`/`superseded`/`skipped`/
+`failed` never select, so promotion cannot widen past what the RPC accepts.
 
 ## 6. Step 4 — close activation-OFF parity
 

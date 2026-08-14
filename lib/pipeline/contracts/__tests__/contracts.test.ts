@@ -185,7 +185,7 @@ describe("FileableSelection", () => {
     const selected: FileableSelection = {
       outcome: "selected",
       trigger: "deadline",
-      package: { packageId: "p1", packageVersion: 3, artifactId: "a1" },
+      package: { packageId: "p1", packageVersion: 3, artifactId: "a1", requiresFinalize: false },
     };
     const ambiguous: FileableSelection = {
       outcome: "ambiguous",
