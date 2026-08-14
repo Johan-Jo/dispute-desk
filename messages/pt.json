@@ -905,6 +905,9 @@
         "coveredByShopifyProtectBody": "Este estorno é coberto pelo Shopify Protect. Não é necessário pacote de evidências voltado ao banco.",
         "notEnoughEvidenceBody": "O classificador não encontrou fatos aprovados elegíveis ao banco para este estorno. Faça upload de documentos de apoio adicionais ou aguarde a próxima sincronização para incluir evidências recém-coletadas.",
         "validationFailedFallback": "A validação encontrou alegações não comprovadas na narrativa gerada.",
+        "rebuildFailedTitle": "A última regeneração não passou nas nossas verificações",
+        "rebuildFailedBodyFiled": "O pacote de defesa v{bankVersion} está apresentado na Shopify e continua válido. Uma versão mais recente foi gerada, mas não passou nas nossas verificações de evidências, por isso não foi apresentada. Não é preciso fazer nada — regenere se quiser tentar novamente.",
+        "rebuildFailedBodyUnfiled": "O pacote de defesa não passou nas nossas verificações de evidências, por isso nada foi apresentado para esta disputa. Regenere-o antes do prazo.",
         "newEvidenceAvailableBody": "Atualizações recentes (uploads, mudanças de status ou novos sinais coletados automaticamente) ainda não estão refletidas neste rascunho. Clique em Regenerar abaixo para construir uma nova versão que as inclua — a reconstrução leva de 2 a 3 minutos e roda em segundo plano.",
         "errors": {
           "couldNotLoad": "Não foi possível carregar o pacote de evidências ({status})",

@@ -905,6 +905,9 @@
         "coveredByShopifyProtectBody": "Cette rétrofacturation est couverte par Shopify Protect. Aucun dossier de preuves destiné à la banque n'est requis.",
         "notEnoughEvidenceBody": "Le classifieur n'a trouvé aucun fait approuvé éligible pour la banque dans cette rétrofacturation. Téléversez des documents justificatifs supplémentaires ou attendez la prochaine synchronisation pour inclure les preuves nouvellement collectées.",
         "validationFailedFallback": "La validation a trouvé des affirmations non étayées dans l'argumentation générée.",
+        "rebuildFailedTitle": "La dernière regénération n'a pas passé nos contrôles",
+        "rebuildFailedBodyFiled": "Le dossier de défense v{bankVersion} est déposé auprès de Shopify et reste valable. Une version plus récente a été générée mais n'a pas passé nos contrôles de preuves, elle n'a donc pas été déposée. Aucune action n'est nécessaire — regénérez-le si vous souhaitez réessayer.",
+        "rebuildFailedBodyUnfiled": "Le dossier de défense n'a pas passé nos contrôles de preuves, rien n'a donc été déposé pour ce litige. Regénérez-le avant la date limite.",
         "newEvidenceAvailableBody": "Les mises à jour récentes (téléversements, changements de statut ou nouveaux signaux collectés automatiquement) ne sont pas encore reflétées dans cette ébauche. Cliquez sur Régénérer ci-dessous pour construire une nouvelle version qui les inclut — la reconstruction prend 2 à 3 minutes et s'exécute en arrière-plan.",
         "errors": {
           "couldNotLoad": "Impossible de charger le dossier de preuves ({status})",

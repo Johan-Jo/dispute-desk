@@ -5291,6 +5291,28 @@ validation errors stay on screen, and Regenerate stays reachable — regeneratin
 Pinned in `tests/unit/completeDefencePackageCard.render.test.tsx`, including a control that a
 genuine newer draft still gets the banner.
 
+**A failed build is not always an emergency, and never speaks validator (2026-08-14).** The
+`status === "failed"` banner rendered `tone="critical"` with `failure_reason` and the raw
+`validation_errors[].message` on every failed row. On dispute `11051073729` that put a red
+*Validation failed* panel reading `paymentAuthenticationArgument makes an ambiguous
+address-delivery claim, but this case holds no "address_delivery" capability` **directly under
+a green "Saved to Shopify — v4"** — on a case that was fully defended, where the failure was a
+background rebuild that had died hours before the filing. Two corrections, independent:
+
+1. **Tone follows the consequence, not the row.** With a version at the bank there is nothing
+   to lose and nothing to do → `warning`, and the copy names the filed version and says it
+   stands. With nothing filed the merchant must act before the deadline → stays `critical`.
+2. **The validator's own words are never merchant copy.** Section keys and capability names are
+   how the module talks to itself; a merchant cannot act on `paymentAuthenticationArgument`, and
+   it is the same class as the bare gateway codes forbidden elsewhere in the UI. The detail
+   already lives on the `defence_package_validation_failed` audit row, which is where a support
+   question gets answered from.
+
+Copy keys `rebuildFailedTitle` / `rebuildFailedBodyFiled` / `rebuildFailedBodyUnfiled` under
+`disputes.reviewTab.package`, all six locales. A render test asserts the leak set
+(`paymentAuthenticationArgument`, `address_delivery`, `unauthorized_claim`, the raw
+`failure_reason`) never reaches the markup, and that the tone flips with `bankFacing`.
+
 **Every enqueue site is gated, not just the worker.** `lib/defence/packageSafety.ts` exposes one
 predicate plus two preflight loaders (`preflightLatestCandidate`, `preflightNamedCandidate`). They
 are consulted BEFORE any enqueue or status write by: the embedded Review & Submit endpoint
