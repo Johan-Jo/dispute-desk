@@ -1025,6 +1025,9 @@
         "coveredByShopifyProtectBody": "Diese Rückbuchung ist durch Shopify Protect abgedeckt. Es wird kein bankgerichtetes Beweispaket benötigt.",
         "notEnoughEvidenceBody": "Der Klassifikator hat keine bankfähigen genehmigten Fakten für diese Rückbuchung gefunden. Laden Sie zusätzliche Belege hoch oder warten Sie auf die nächste Synchronisierung, um neu erfasste Beweise einzubeziehen.",
         "validationFailedFallback": "Die Validierung hat nicht belegbare Behauptungen im generierten Narrativ gefunden.",
+        "rebuildFailedTitle": "Die letzte Neuerstellung hat unsere Prüfung nicht bestanden",
+        "rebuildFailedBodyFiled": "Verteidigungspaket v{bankVersion} ist bei Shopify eingereicht und bleibt gültig. Eine neuere Version wurde erstellt, hat unsere Nachweisprüfung aber nicht bestanden und wurde daher nicht eingereicht. Es ist nichts zu tun — erstellen Sie sie neu, wenn Sie es erneut versuchen möchten.",
+        "rebuildFailedBodyUnfiled": "Das Verteidigungspaket hat unsere Nachweisprüfung nicht bestanden, daher wurde für diesen Fall nichts eingereicht. Erstellen Sie es vor Fristablauf neu.",
         "newEvidenceAvailableBody": "Aktuelle Aktualisierungen (Uploads, Statusänderungen oder neue automatisch erfasste Signale) sind in diesem Entwurf noch nicht berücksichtigt. Klicken Sie unten auf Neu generieren, um eine neue Version mit diesen Daten zu erstellen — der Neuaufbau dauert 2–3 Minuten und läuft im Hintergrund.",
         "errors": {
           "couldNotLoad": "Beweispaket konnte nicht geladen werden ({status})",

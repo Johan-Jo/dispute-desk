@@ -1354,6 +1354,9 @@
         "coveredByShopifyProtectBody": "Detta ärende täcks av Shopify Protect. Inget bankvänt försvarspaket krävs.",
         "notEnoughEvidenceBody": "Klassificeraren hittade inga bankgodkända fakta för detta ärende. Ladda upp ytterligare stödjande dokument eller vänta på nästa synkronisering för att inkludera nyligen insamlade bevis.",
         "validationFailedFallback": "Valideringen hittade ostödda påståenden i den genererade berättelsen.",
+        "rebuildFailedTitle": "Den senaste ombyggnaden klarade inte våra kontroller",
+        "rebuildFailedBodyFiled": "Försvarspaket v{bankVersion} är inskickat till Shopify och gäller fortfarande. En nyare version togs fram men klarade inte våra bevisregler, så den skickades inte in. Du behöver inte göra något — skapa om paketet om du vill försöka igen.",
+        "rebuildFailedBodyUnfiled": "Försvarspaketet klarade inte våra bevisregler, så ingenting har skickats in för den här tvisten. Skapa om det före tidsfristen.",
         "newEvidenceAvailableBody": "Senaste uppdateringar (uppladdningar, statusändringar eller nya automatiskt insamlade signaler) återspeglas inte i detta utkast ännu. Klicka på Generera om nedan för att bygga en ny version som inkluderar dem — ombygget tar 2–3 minuter och körs i bakgrunden.",
         "errors": {
           "couldNotLoad": "Det gick inte att läsa in försvarspaketet ({status})",
