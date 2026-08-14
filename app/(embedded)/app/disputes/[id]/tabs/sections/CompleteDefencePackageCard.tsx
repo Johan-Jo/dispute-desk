@@ -35,6 +35,9 @@ import {
   deriveDefencePackageActionState,
   deriveSubmitEffects,
 } from "./defencePackageActionState";
+// The same predicate the filing paths use, so "the draft" in this card and
+// "the candidate" in the deadline cron cannot mean different rows.
+import { isAbortedBuild } from "@/lib/defence/candidateVersions";
 import {
   DefencePackageHtmlView,
   type DisputeContextLike,
@@ -442,11 +445,43 @@ export function CompleteDefencePackageCard({
   // `latest` (the work-in-progress draft) regardless of what's
   // rendered; the submission-state banner above the body still cites
   // `bankFacing.version` so "the bank has v1" stays accurate.
+  /* A FAILED BUILD IS NOT AN UNSUBMITTED DRAFT (2026-08-14).
+   *
+   * This asked only whether `latest` differs from `bankFacing` — so a build
+   * that FAILED counted as "a newer draft awaiting your action", and the card
+   * told the merchant, about a row with no PDF and no validated narrative:
+   *
+   *   "Draft v5 is ready for review … If it looks correct, resubmit it to
+   *    Shopify — that will replace v4."
+   *
+   * …directly above its own "Validation failed" banner naming the reason v5
+   * could not be built. Every button inside that invitation was already
+   * correctly suppressed (`canSubmit` requires `final`), so the merchant was
+   * offered an action that did not exist, for a package that did not exist.
+   * Measured on blume-box dispute 11051073729 after v4 was filed and the v5
+   * rebuild failed.
+   *
+   * `isAbortedBuild` is the SAME predicate the filing paths use
+   * (`lib/defence/candidateVersions.ts`), so what the card calls "the draft"
+   * and what the deadline cron calls "the candidate" cannot drift apart.
+   *
+   * Fixing it here rather than in `bannerHostsActions` is deliberate: this
+   * flag also drives `displayRow`, and with a failed `latest` the inline
+   * preview was rendering the REJECTED narrative — the prose containing the
+   * unauthorised claim — as the thing to review. Both follow from one
+   * question, so they get one answer.
+   *
+   * The `status === "failed"` banner below reads `latest`, not `displayRow`,
+   * so the failure and its validation errors stay on screen. Regenerate is
+   * likewise untouched (`canRegenerate` reads `row.status === "failed"`) —
+   * regenerating is the fix, and it must stay reachable.
+   */
   const hasUnsubmittedDraft = Boolean(
     isSubmittedToBank &&
       bankFacing &&
       latest &&
-      latest.id !== bankFacing.id,
+      latest.id !== bankFacing.id &&
+      !isAbortedBuild(latest.status),
   );
   const displayRow =
     hasUnsubmittedDraft && latest
