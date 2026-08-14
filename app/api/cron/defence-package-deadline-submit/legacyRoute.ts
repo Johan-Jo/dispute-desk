@@ -254,6 +254,9 @@ export async function runDeadlineSubmitLegacy(req: NextRequest) {
           currencyCode: d.currency_code as string | null,
           dueAt: d.due_at as string | null,
           fallbackReason,
+          // The verdict's own reasons, so the copy can say which of the five
+          // outcomes this is instead of asserting the most specific one.
+          unsafeReasons: unsafeCandidate?.reasons,
         });
         if (emailResult.ok) summary.emailed += 1;
         continue;

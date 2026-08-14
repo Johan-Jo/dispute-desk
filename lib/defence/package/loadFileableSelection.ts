@@ -48,7 +48,10 @@ import type {
   SelectionTrigger,
 } from "@/lib/pipeline/contracts";
 import type { DocumentFailureCode } from "./documentValidation";
-import { assessPackageCandidateSafety } from "../packageSafety";
+import {
+  assessPackageCandidateSafety,
+  type PackageUnsafeReason,
+} from "../packageSafety";
 import { candidateVersions } from "../candidateVersions";
 import {
   selectFileablePackage,
@@ -233,6 +236,16 @@ export interface CanonicalSelector {
    * cause the merchant can actually act on.
    */
   unsafeContentFor(caseId: string): boolean;
+  /**
+   * WHICH content verdict refused it — `affirmative`, `ambiguous`, a retired
+   * fact, or supporting JSON we could not read.
+   *
+   * The merchant copy needs the distinction: "the package states X" and "we
+   * could not parse the package" are different sentences, and asserting the
+   * first about the second is a claim we cannot support. Empty when the
+   * candidate was safe or absent.
+   */
+  unsafeReasonsFor(caseId: string): PackageUnsafeReason[];
 }
 
 export function createCanonicalSelector(args: {
@@ -242,6 +255,7 @@ export function createCanonicalSelector(args: {
 }): CanonicalSelector {
   const judged = new Map<string, JudgedCandidate | null>();
   const unsafe = new Map<string, boolean>();
+  const unsafeReasons = new Map<string, PackageUnsafeReason[]>();
 
   return {
     async select(a) {
@@ -252,6 +266,7 @@ export function createCanonicalSelector(args: {
       if (!context) {
         judged.set(a.caseId, null);
         unsafe.set(a.caseId, false);
+        unsafeReasons.set(a.caseId, []);
         return { outcome: "none", trigger: a.trigger, reason: "no_package" };
       }
       const loaded = await loadCandidateRows(args.sb, a.caseId);
@@ -264,15 +279,14 @@ export function createCanonicalSelector(args: {
       const topRow = top
         ? (loaded.find((r) => r.id === top.packageId) ?? null)
         : null;
-      unsafe.set(
-        a.caseId,
-        topRow
-          ? !assessPackageCandidateSafety({
-              factsJson: topRow.facts_json,
-              narrativeJson: topRow.narrative_json,
-            }).safe
-          : false,
-      );
+      const verdict = topRow
+        ? assessPackageCandidateSafety({
+            factsJson: topRow.facts_json,
+            narrativeJson: topRow.narrative_json,
+          })
+        : null;
+      unsafe.set(a.caseId, verdict ? !verdict.safe : false);
+      unsafeReasons.set(a.caseId, verdict && !verdict.safe ? verdict.reasons : []);
       return selectFileablePackage({
         caseId: a.caseId,
         trigger: a.trigger,
@@ -285,6 +299,7 @@ export function createCanonicalSelector(args: {
     },
     judgedFor: (caseId) => judged.get(caseId) ?? null,
     unsafeContentFor: (caseId) => unsafe.get(caseId) ?? false,
+    unsafeReasonsFor: (caseId) => unsafeReasons.get(caseId) ?? [],
   };
 }
 

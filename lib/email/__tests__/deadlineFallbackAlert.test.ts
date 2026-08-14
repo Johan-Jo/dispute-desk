@@ -40,6 +40,7 @@ vi.mock("@/lib/supabase/server", () => ({ getServiceClient: vi.fn() }));
 
 import { sendDefenceDeadlineFallbackAlert } from "@/lib/email/sendDefenceDeadlineFallbackAlert";
 import { getServiceClient } from "@/lib/supabase/server";
+import type { PackageUnsafeReason } from "@/lib/defence/packageSafety";
 
 const mockGetServiceClient = vi.mocked(getServiceClient);
 
@@ -76,9 +77,17 @@ function buildClient() {
   return { from: fromImpl } as unknown as never;
 }
 
-type Reason = "validation_failed" | "skipped_no_facts" | "skipped_covered" | "missing";
+type Reason =
+  | "validation_failed"
+  | "skipped_no_facts"
+  | "skipped_covered"
+  | "missing"
+  | "unsafe_address_claim";
 
-async function render(fallbackReason: Reason) {
+async function render(
+  fallbackReason: Reason,
+  unsafeReasons?: readonly PackageUnsafeReason[],
+) {
   mockGetServiceClient.mockReturnValue(buildClient());
   await sendDefenceDeadlineFallbackAlert({
     shopId: "shop-1",
@@ -89,6 +98,7 @@ async function render(fallbackReason: Reason) {
     currencyCode: "USD",
     dueAt: "2026-08-14T22:55:00Z",
     fallbackReason,
+    unsafeReasons,
   });
   expect(sendMock).toHaveBeenCalledTimes(1);
   return sendMock.mock.calls[0][0];
@@ -145,5 +155,100 @@ describe("deadline fallback alert — nothing was submitted", () => {
     expect(mail.subject).toMatch(/Shopify Protect/i);
     expect(mail.html).toMatch(/nothing to defend and nothing for you to do/i);
     expect(mail.html).not.toMatch(/lost by default|action required/i);
+  });
+});
+
+
+/* ── The refusal must not describe itself as something it is not ────── */
+
+describe("unsafe_address_claim — says only what we can support", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.RESEND_API_KEY = "test-key";
+  });
+
+  /* The sentence that shipped, and what it asserted about every verdict:
+   *   "the existing Defence Package STATES THAT DELIVERY REACHED A VERIFIED
+   *    ADDRESS — a claim we can no longer support"
+   *
+   * `assessPackageCandidateSafety` refuses on five different grounds. Only one
+   * of them is that claim. */
+  const OVERSTATEMENT = "states that delivery reached a verified address";
+
+  it("does not tell a merchant their package states a claim, on ANY verdict", async () => {
+    const verdicts: PackageUnsafeReason[][] = [
+      ["affirmative_address_delivery_claim"],
+      ["ambiguous_address_delivery_claim"],
+      ["retired_delivery_fact"],
+      ["unreadable_facts_json"],
+      ["unreadable_narrative_json"],
+    ];
+    for (const reasons of verdicts) {
+      vi.clearAllMocks();
+      const sent = await render("unsafe_address_claim", reasons);
+      expect(sent.html, `${reasons[0]} must not assert the claim`).not.toContain(OVERSTATEMENT);
+      expect(sent.text, `${reasons[0]} must not assert the claim`).not.toContain(OVERSTATEMENT);
+    }
+  });
+
+  it("on AMBIGUOUS says we could not stand behind the wording, not that it claims one", async () => {
+    /* The real production case: blume-box 11051073729 was refused on
+     * `ambiguous_address_delivery_claim`, where the offending sentence was the
+     * `ip_location` fact naming its own comparand. The detector could not
+     * resolve it and failed closed — the package asserted nothing. */
+    const sent = await render("unsafe_address_claim", ["ambiguous_address_delivery_claim"]);
+    expect(sent.text).toContain("built a defence package but could not file it: it used delivery wording we can no longer stand behind");
+  });
+
+  it("on UNREADABLE says we could not check it — we never parsed it to know", async () => {
+    const sent = await render("unsafe_address_claim", ["unreadable_narrative_json"]);
+    expect(sent.text).toContain("could not file it: we could not check it automatically");
+    expect(sent.text).not.toContain("delivery wording");
+  });
+
+  it("degrades to the non-asserting branch when no reasons are supplied", async () => {
+    /* A caller that cannot answer must not get the most specific sentence. */
+    const sent = await render("unsafe_address_claim");
+    expect(sent.text).not.toContain(OVERSTATEMENT);
+    expect(sent.text).toContain("it used delivery wording we can no longer stand behind");
+  });
+
+  it("still says DisputeDesk filed nothing — the point of the email is unchanged", async () => {
+    const sent = await render("unsafe_address_claim", ["ambiguous_address_delivery_claim"]);
+    expect(sent.subject).toContain("has no response filed");
+    expect(sent.text).toContain("We have sent no evidence to Shopify for this dispute.");
+  });
+});
+
+describe("the summary table speaks English, not enum", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.RESEND_API_KEY = "test-key";
+  });
+
+  /* `Why we could not build it: unsafe_address_claim` printed an internal
+   * identifier to a merchant — the same class as the validator vocabulary
+   * removed from the workspace card. The enum belongs in the audit row. */
+  const ENUMS = [
+    "unsafe_address_claim",
+    "validation_failed",
+    "skipped_no_facts",
+    "missing",
+  ] as const;
+
+  for (const value of ENUMS) {
+    it(`${value}: the raw identifier never reaches the merchant`, async () => {
+      const sent = await render(value);
+      expect(sent.text).not.toContain(value);
+      expect(sent.html).not.toContain(value);
+    });
+  }
+
+  it("every branch reads as one sentence, not a comma splice", async () => {
+    for (const value of ENUMS) {
+      vi.clearAllMocks();
+      const sent = await render(value);
+      expect(sent.text, value).not.toMatch(/,\s+There is no fallback/);
+    }
   });
 });
