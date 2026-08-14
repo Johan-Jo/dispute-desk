@@ -98,12 +98,14 @@ describe("deadline cron — what can and cannot escape submission", () => {
      * So the assertion is split: the route still decides only what it is about
      * to DO (promote a draft/stale row, or enqueue an already-final one), and
      * the SELECTOR is where "validated, with an artifact" is enforced. */
-    const branch = CRON.slice(
-      CRON.indexOf("if (dpkg!.status === \"draft\""),
-      CRON.indexOf("summary.enqueuedAutoFinalize"),
-    );
-    expect(branch).toContain('dpkg!.status === "draft"');
-    expect(branch).toContain('dpkg!.status === "stale"');
+    /* 2026-08-14: the route stopped re-deriving "must this be promoted first"
+     * from the status column and now reads the SELECTION's own
+     * `requiresFinalize`. Same split, one fewer opinion — the selector decides
+     * both that the package may be filed and whether it needs promoting, and
+     * the route only executes it. Which statuses are promotable is asserted
+     * against the selector below, where the rule now lives. */
+    expect(CRON).toContain("outcome.selection.package.requiresFinalize");
+    expect(CRON).not.toContain('dpkg!.status === "draft"');
 
     const SELECTOR = readFileSync(
       resolve(process.cwd(), "lib/defence/package/selectFileablePackage.ts"),
@@ -112,6 +114,9 @@ describe("deadline cron — what can and cannot escape submission", () => {
     expect(SELECTOR).toContain("candidate.validationPassed !== true");
     expect(SELECTOR).toContain("candidate.validationStatus !== OK_VALIDATION");
     expect(SELECTOR).toContain('none(trigger, "artifact_missing")');
+    // The promotion sources live here now, and must stay the pair the
+    // `finalize_defence_package` RPC validates as `p_allowed_statuses`.
+    expect(SELECTOR).toContain('PROMOTABLE_AT_DEADLINE: ReadonlySet<string> = new Set(["draft", "stale"])');
   });
 });
 

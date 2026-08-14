@@ -90,34 +90,39 @@ spend the contract it is trying to establish.
 
 ---
 
-## 3. Step 1 — persist identity while dark (NOT a one-line un-gate)
+## 3. Step 1 — persist identity while dark — **DONE (2026-08-14)**
 
-The obvious move — change `canonical && planned` to `planned` at line 1060 — does not work,
-and the reason matters.
+The obvious move — change `canonical && planned` to `planned` at line 1060 — did not work, and
+the reason is the whole of this step.
 
-`planned` is itself computed only under the flag (`:379`), and it does **not** only feed the
-identity columns. It also drives:
+`planned` was itself computed only under the flag, and it does not only feed the identity
+columns. It also drove the skip decision, **which facts reach the narrative generator**, the
+projection, the document validation, and `reviewRequiredCount` — the last of which was already
+read UNGATED, so deriving the plan always would have changed a live input to `decideForPack`.
 
-| line | what it decides |
-|---|---|
-| `:424` | `planHasSafeArgument` → skip the build entirely (`no_bank_eligible_facts`) |
-| `:446` | `selectPlanFacts(...)` → **which facts reach the narrative generator** |
-| `:715` | the package projection |
-| `:748` | composed-document validation |
-| `:1004` | `reviewRequiredCount` (already reads `planned?.plan ?? null`, ungated) |
+Shipped as a split, not a flag move:
 
-Un-gating `planned` wholesale therefore changes what the model is argued from. That is a
-behaviour change, not a dark one, and it breaks `activation.ts`'s central promise that OFF is
-byte-for-byte the kickoff ladders.
+- `derivePlanForCase` runs on every build. It is pure — evidence model, candidates, hash, no IO
+  and no model call — so deriving it while dark costs nothing.
+- **`activePlan = canonical ? planned : null`** is the plan *as an input to behaviour*. Every
+  consumer reads it, so fact selection, the skip decision, the projection, document validation
+  and `reviewRequiredCount` keep the legacy path byte for byte.
+- `planned` is the plan *as identity* and feeds nothing but the columns.
+- A dark derivation that throws is swallowed with a warning; the same failure under the switch
+  rethrows, because then the plan IS the build.
+- **The document verdict is not part of the identity.** `plan_*` describe what the package was
+  built from and are true either way; `document_validation_passed` is a verdict and
+  `validatePackageDocument` does not run while dark, so it stays null rather than claiming a
+  check that never happened — it is the column rung 9 refuses on.
 
-**So step 1 is a split, not a flag move:** derive the plan unconditionally *for identity*, and
-keep every consumer gated. Concretely — compute `planned`, write the seven columns from it, and
-leave `:424`, `:446`, `:715` and `:748` reading the legacy path until activation.
+`tests/unit/darkIdentityDerivation.test.ts` pins the invariant structurally: `planned` may be
+read in exactly two places. A behavioural test cannot catch a consumer reading the wrong
+variable, because with the flag off the two agree on every case where the plan authorises
+everything — the defect only shows on cases where the plan EXCLUDES something, which is the
+population a fixture is least likely to contain.
 
-Acceptance: new builds carry a `plan_input_hash` with the switch off, and a diff of generated
-narratives before/after shows no change in fact selection.
-
----
+**Effect:** every build from now on stamps its own identity. The backfill population shrinks
+from here (§4.1).
 
 ## 4. Backfill discipline — the backfill is the LAST step
 
@@ -191,17 +196,19 @@ Pinned: draft/stale selected-with-flag at the deadline; the same rows refused `n
 normal trigger; `final` selects with the flag false; and `submitted`/`superseded`/`skipped`/
 `failed` never select, so promotion cannot widen past what the RPC accepts.
 
-## 6. Step 4 — close activation-OFF parity
+## 6. Step 4 — activation-OFF parity — **DONE (2026-08-14), documented not gated**
 
-`decideForPack` at `buildDefencePackageJob.ts:976` runs whenever `resolvedMode === "auto"`,
-with **no** canonical guard, and drives the draft-vs-finalize demotion. The canonical decision
-ladder is therefore already shaping production behaviour with the switch off.
+`decideForPack` at `buildDefencePackageJob.ts:976` runs whenever `resolvedMode === "auto"` with
+no canonical guard, and its verdict demotes the mode. The canonical decision ladder therefore
+already shapes live behaviour with the switch off.
 
-This is a live parity break, not a future risk: it means "OFF is the same code" is currently
-false in the build job. Either gate it, or record deliberately that this rung is exempt and
-why.
+Gating it was the wrong fix: the call *demotes* to review, so removing it would let **more**
+packages auto-finalize than today — a live behaviour change, in the riskier direction, to
+restore a parity claim on a path PR 3 deletes.
 
----
+Recorded as a deliberate exemption in `activation.ts`, alongside the step-1 derivation, and the
+file's "byte-for-byte" claim now names both rather than overstating. An undocumented exemption
+is indistinguishable from a bug.
 
 ## 7. Step 5 — re-measure threshold 60
 
