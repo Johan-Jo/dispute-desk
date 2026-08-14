@@ -352,8 +352,20 @@ export function evaluateCompleteness(
     .filter((c) => c.required && !c.present && c.collectable)
     .map((c) => c.label);
 
+  /* Same gate as `evaluateCompletenessV2`'s two lists (2026-08-13).
+   *
+   * This v1 path has NO production callers — only its own test suite — but it
+   * carried the identical defect: `collectable` says the FIELD can be
+   * collected, not that the MERCHANT can collect it, so an auto-only signal
+   * like `fraud_risk_screening` became "Add Pre-Authorization Fraud
+   * Screening". Left ungated it is a live bug waiting for its first caller,
+   * and the next person to wire it up would ship the thing we just spent a
+   * day removing from three other sites.
+   *
+   * Not deleted along with the function: it has real tests, so removal is a
+   * deliberate decision rather than a cleanup ridden along on a bug fix. */
   const recommended_actions = checklist
-    .filter((c) => !c.required && !c.present && c.collectable)
+    .filter((c) => !c.required && !c.present && c.collectable && canMerchantUpload(c))
     .map((c) => `Add ${c.label}`);
 
   return {

@@ -1604,6 +1604,14 @@
         "ask": "Si vous disposez d'un e-mail ou d'un chat dans lequel le titulaire de la carte confirme avoir passé et reçu cette commande, ajoutez-le : c'est la preuve la plus forte que vous puissiez ajouter à ce dossier.",
         "askFlipsToStrong": "Si vous disposez d'un e-mail ou d'un chat dans lequel le titulaire de la carte confirme avoir passé et reçu cette commande, ajoutez-le : la confirmation du titulaire est décisive et nous pourrons alors enregistrer cette réponse dans Shopify immédiatement.",
         "addAcknowledgement": "Ajouter la confirmation du titulaire"
+      },
+      "heldUnrefunded": {
+        "title": {
+          "held": "Cette commande a été mise en attente, pas expédiée",
+          "cancelled": "Cette commande a été annulée, pas expédiée"
+        },
+        "body": "Votre contrôle antifraude a signalé cette commande et rien n'a été expédié. Le paiement est toujours encaissé — aucun remboursement n'a été effectué.",
+        "helper": "Comme rien n'a été expédié, il n'y a aucune preuve de livraison à soumettre — le score reflète cela, pas une lacune dans vos dossiers."
       }
     },
     "evidenceTabExtra": {
@@ -3336,7 +3344,7 @@
         },
         "disputeDetailPage": {
           "title": "Détail du litige dans cette application",
-          "body": "Sous **Litiges**, choisissez **Voir les détails** pour ouvrir cette page.\n\n- **KPI** : montant, statut, échéance, temps restant (mise en avant si urgent).\n- **Statut du litige** : cinq étapes jusqu'au résultat. La barre progresse quand des packs existent et les preuves sont **enregistrées dans Shopify** (manuel ou automatisation). Un résultat final marque toutes les étapes complètes.\n- **Preuves supplémentaires** après enregistrement dans Shopify — **Ouvrir le pack de preuves** mène au téléversement.\n- **Chronologie** mélange les événements Shopify et les jalons DisputeDesk.\n- **Packs de preuves** liste tous les packs.\n\nActions : **Générer un pack**, **Resynchroniser**, **Ouvrir le litige dans Shopify**. La langue dans l'URL recharge le profil pour que la chronologie suive la langue de la boutique lorsque c'est possible."
+          "body": "Sous **Litiges**, choisissez **Voir les détails** pour ouvrir cette page.\n\n- **KPI** : montant, statut, échéance, temps restant (mise en avant si urgent).\n- **Statut du litige** : cinq étapes jusqu'au résultat. La barre progresse quand des packs existent et les preuves sont **enregistrées dans Shopify** (manuel ou automatisation). Un résultat final marque toutes les étapes complètes.\n- **Preuves supplémentaires** après enregistrement dans Shopify — **Ouvrir le pack de preuves** mène au téléversement.\n- **Chronologie** mélange les événements Shopify et les jalons DisputeDesk.\n- **Packs de preuves** liste tous les packs.\n\nActions : **Générer un pack**, **Resynchroniser**, **Ouvrir le litige dans Shopify**. La langue dans l'URL recharge le profil pour que la chronologie suive la langue de la boutique lorsque c'est possible.\n\n**Si la commande a été mise en attente ou annulée sans remboursement**, une bannière l'indique. Votre contrôle antifraude a signalé la commande, rien n'a été expédié et le paiement est toujours encaissé. Il n'y a alors aucune preuve de livraison à soumettre — le score reflète ce qui est arrivé à la commande, pas une lacune dans vos dossiers."
         },
         "reviewQueue": {
           "title": "La file d'attente de révision",

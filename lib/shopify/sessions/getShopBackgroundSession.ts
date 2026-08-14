@@ -77,6 +77,58 @@ const AUTH_INVALID_PATTERN =
   /invalid api key|unrecognized login|access denied|wrong password|non-expiring access tokens/i;
 
 /**
+ * The STORE itself is gone — deleted, frozen, or otherwise no longer served.
+ *
+ * Distinct from auth invalidation: a bad token can be refreshed and a
+ * reinstall repairs it, but no credential reaches a store Shopify will not
+ * serve. Retrying is guaranteed to fail, forever.
+ *
+ * Measured 2026-08-13: two dev stores (`6mjjvm-tc`, `xxda51-v1`) had
+ * accumulated 34 failed `snapshot_shop_daily_metrics` jobs EACH — one per day
+ * since they disappeared — because `Unavailable Shop` was handled as a generic
+ * error and re-queued. Both were still `uninstalled_at: null` in our records,
+ * so nothing else knew either. Neither holds a dispute, so this cost noise
+ * rather than money; the noise is what hid a real `Unavailable Shop` behind
+ * 68 fake ones.
+ */
+const SHOP_UNAVAILABLE_PATTERN = /unavailable shop|shop is unavailable|shop not found/i;
+
+/** Raised when Shopify reports the store no longer exists. Never retriable. */
+export class ShopUnavailableError extends Error {
+  readonly shopId: string;
+  constructor(shopId: string, reason: string) {
+    super(`Shop unavailable (${shopId}): ${reason}`);
+    this.name = "ShopUnavailableError";
+    this.shopId = shopId;
+  }
+}
+
+/** The matched reason, or null. Non-throwing, mirroring `detectAuthInvalidReason`. */
+export function detectShopUnavailableReason(response: {
+  errors?: Array<{ message?: string } | null | undefined> | null;
+}): string | null {
+  const messages = (response.errors ?? [])
+    .map((e) => (e && typeof e.message === "string" ? e.message : ""))
+    .filter((m) => m.length > 0);
+  return messages.find((m) => SHOP_UNAVAILABLE_PATTERN.test(m)) ?? null;
+}
+
+/**
+ * Throw `ShopUnavailableError` when the store is gone.
+ *
+ * Call BEFORE the generic error branch, exactly as `assertNotAuthInvalid` is —
+ * both turn one shape of GraphQL error into a typed, non-retriable failure so
+ * the job dispatcher stops re-queueing work that cannot succeed.
+ */
+export function assertShopAvailable(
+  shopId: string,
+  response: { errors?: Array<{ message?: string } | null | undefined> | null },
+): void {
+  const reason = detectShopUnavailableReason(response);
+  if (reason) throw new ShopUnavailableError(shopId, reason);
+}
+
+/**
  * Non-throwing version of the same detection `assertNotAuthInvalid`
  * uses — returns the matched reason (or null). Used by
  * `makeAuthedRequest`'s reactive refresh-and-retry, which needs to

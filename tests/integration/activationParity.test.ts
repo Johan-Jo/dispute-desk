@@ -190,6 +190,7 @@ function buildSb(opts: {
         const q: Record<string, unknown> = {
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
+          neq: vi.fn().mockReturnThis(),
           limit: vi.fn().mockReturnThis(),
           maybeSingle: vi.fn().mockResolvedValue({ data: rows[0], error: null }),
           update: vi.fn().mockReturnValue({
@@ -556,6 +557,7 @@ function buildCronSb(packJson: Record<string, unknown>) {
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        neq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({
@@ -576,6 +578,7 @@ function buildCronSb(packJson: Record<string, unknown>) {
       const q: Record<string, unknown> = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        neq: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: rows[0], error: null }),
         update: vi.fn().mockReturnValue({
@@ -698,6 +701,7 @@ function buildReconcileSb(strength: string, completeness = 90) {
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        neq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({
@@ -718,6 +722,7 @@ function buildReconcileSb(strength: string, completeness = 90) {
       const q: Record<string, unknown> = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        neq: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: rows[0], error: null }),
       };

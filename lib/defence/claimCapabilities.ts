@@ -184,16 +184,105 @@ const NON_PHYSICAL_ADDRESS =
  * country recorded on this order", which compares one term to itself and
  * never mentions the IP. Safe, and close to meaningless.
  *
- * SCOPED TO THE COMPARISON, NOT THE NOUN. This matches an IP-origin phrase
- * bound to a COUNTRY comparison, and consumes only that far. A destination
- * asserted elsewhere in the sentence is untouched, which is what keeps
- * "…geolocated to the same country as the shipping destination; the goods
- * reached that destination" blocking — pinned in
+ * ── WHY THIS IS NO LONGER ONE REGEX ───────────────────────────────────
+ *
+ * It used to be a single pattern fitted to the LEAD-IN of the approved
+ * sentence `generateBankParagraph` emits:
+ *
+ *   /(?:placed|originated|made|came)\s+from\s+an?\s+ip\s+address\s+
+ *    (?:geo-?locating|geo-?located|…)\s*(?:to)?\s*(?:the\s+)?same\s+country…/
+ *
+ * The model is told to QUOTE that sentence, and on 2026-08-14 it paraphrased
+ * it instead — same fact, same comparison, different opening:
+ *
+ *   approved:  "The order was placed from an IP address geolocating to the
+ *               same country as the order's shipping destination…"
+ *   written:   "The order IP address geolocated to the same country as the
+ *               order's shipping destination…"
+ *
+ * The carve-out missed, `NON_PHYSICAL_ADDRESS` consumed "IP address", and what
+ * was left — "…geolocated to the same country as the order's SHIPPING
+ * DESTINATION" — coupled `ship*` with `destination` and classified
+ * `ambiguous`. Blume-box dispute 11051073729 (USD 120) reached its deadline
+ * with nothing filed because DisputeDesk refused its own approved wording,
+ * reworded. An allowlist keyed to one phrasing is the same lexical denylist
+ * this file warns about, wearing the opposite sign.
+ *
+ * ── WHAT IS RECOGNISED INSTEAD ────────────────────────────────────────
+ *
+ * The STRUCTURE of the licensed statement: the shipping destination named as
+ * the COMPARAND of an IP-origin country comparison. Three parts, checked in
+ * `stripIpCountryComparison`:
+ *
+ *   1. an IP / geo-IP mention,
+ *   2. …followed, in the same sentence, by "same country as … shipping
+ *      destination|address|country",
+ *   3. …with NO transport or receipt term in the gap between them.
+ *
+ * Condition 3 is what keeps this an exemption for a comparison rather than a
+ * licence for a delivery. "The IP record shows the parcel was DELIVERED in the
+ * same country as the shipping destination" has `deliver` in the gap, so
+ * nothing is stripped and it blocks — as does any sentence whose IP mention
+ * comes AFTER the comparand. Only the comparand phrase is consumed, never the
+ * clause around it, so a destination asserted elsewhere still blocks: that is
+ * what keeps "…geolocated to the same country as the shipping destination; the
+ * goods reached that destination" refused, pinned in
  * `ipGeolocationNotDelivery.test.ts` alongside seven other guards that must
  * never pass.
  */
-const IP_ORIGIN_COUNTRY_COMPARISON =
-  /\b(?:placed|originated|made|came)\s+from\s+an?\s+ip\s+address\s+(?:geo-?locating|geo-?located|resolving|resolved|in)\s*(?:to)?\s*(?:the\s+)?same\s+country\s+as\s+the\s+(?:order'?s\s+)?shipping\s+(?:destination|address)/gi;
+const IP_MENTION = /\b(?:ip\s+address(?:es)?|ip|geo-?ip)\b/gi;
+
+/** The comparand itself — "same country as the order's shipping destination". */
+const SHIPPING_COUNTRY_COMPARAND =
+  /\bsame\s+country\s+as\s+(?:that\s+of\s+)?(?:the\s+)?(?:order'?s?\s+|customer'?s?\s+|recorded\s+|stated\s+|listed\s+)*shipping\s+(?:destination|address|country)\b/gi;
+
+/** Sentence-ish boundary: an exemption may not reach across one. */
+const CLAUSE_TERMINATOR = /[.;!?]/;
+
+/**
+ * Remove every shipping-country comparand that is governed by an IP-origin
+ * geolocation, and nothing else.
+ *
+ * Deliberately written as a scan rather than one regex: condition 3 is a
+ * statement about what is ABSENT from the gap, and a regex that expresses
+ * "no delivery term in between" as a character-class exclusion is unreadable
+ * and silently wrong the first time `DELIVERY_TERMS` grows a word.
+ */
+function stripIpCountryComparison(text: string): string {
+  if (!SHIPPING_COUNTRY_COMPARAND.test(text)) {
+    SHIPPING_COUNTRY_COMPARAND.lastIndex = 0;
+    return text;
+  }
+  SHIPPING_COUNTRY_COMPARAND.lastIndex = 0;
+
+  const ipEnds: number[] = [];
+  IP_MENTION.lastIndex = 0;
+  for (let m = IP_MENTION.exec(text); m !== null; m = IP_MENTION.exec(text)) {
+    ipEnds.push(m.index + m[0].length);
+  }
+  if (ipEnds.length === 0) return text;
+
+  let out = "";
+  let cursor = 0;
+  SHIPPING_COUNTRY_COMPARAND.lastIndex = 0;
+  for (
+    let m = SHIPPING_COUNTRY_COMPARAND.exec(text);
+    m !== null;
+    m = SHIPPING_COUNTRY_COMPARAND.exec(text)
+  ) {
+    // The nearest IP mention that precedes this comparand.
+    const ipEnd = ipEnds.filter((end) => end <= m!.index).pop();
+    if (ipEnd === undefined) continue;
+    const gap = text.slice(ipEnd, m.index);
+    // An exemption never reaches across a sentence boundary, and never over a
+    // transport or receipt term — that gap holds a delivery predicate, not a
+    // geolocation one.
+    if (CLAUSE_TERMINATOR.test(gap) || DELIVERY_TERMS.test(gap)) continue;
+    out += text.slice(cursor, m.index) + " ";
+    cursor = m.index + m[0].length;
+  }
+  return out + text.slice(cursor);
+}
 
 /**
  * Billing↔shipping agreement, the retired derivation's own fact. Prohibited on
@@ -357,15 +446,13 @@ function stripNonPhysicalAddresses(text: string): string {
   // IP-origin comparison — which must run BEFORE the coupling test so the
   // `ip_location` fact can name what it compares against without the sentence
   // reading as a delivery.
-  return text
-    .replace(URL_LITERAL, " ")
-    /* BEFORE `NON_PHYSICAL_ADDRESS`, which matches the bare "IP address" and
-     * would consume the phrase this pattern needs to recognise — leaving the
-     * "…same country as the shipping destination" tail stranded and reading as
-     * a delivery. Order is the whole behaviour here, so the two are adjacent
-     * with the reason stated rather than separated by chance. */
-    .replace(IP_ORIGIN_COUNTRY_COMPARISON, " ")
-    .replace(NON_PHYSICAL_ADDRESS, " ");
+  const withoutUrls = text.replace(URL_LITERAL, " ");
+  /* BEFORE `NON_PHYSICAL_ADDRESS`, which matches the bare "IP address" and
+   * would consume the mention this exemption is anchored to — leaving the
+   * "…same country as the shipping destination" tail stranded and reading as
+   * a delivery. Order is the whole behaviour here, so the two are adjacent
+   * with the reason stated rather than separated by chance. */
+  return stripIpCountryComparison(withoutUrls).replace(NON_PHYSICAL_ADDRESS, " ");
 }
 
 function sentences(text: string): string[] {

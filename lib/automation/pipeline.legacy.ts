@@ -39,6 +39,7 @@ import {
   preflightReasons,
   preflightRetiredKeys,
 } from "@/lib/defence/packageSafety";
+import { fetchLatestCandidate } from "@/lib/defence/candidateVersions";
 import { markPackageReviewRequired } from "./packageReviewRequired";
 import { getShopSettings } from "./settings";
 import { evaluateAutoSaveGate } from "./autoSaveGate";
@@ -485,13 +486,15 @@ export async function evaluateAndMaybeAutoSaveLegacy(packId: string): Promise<{
   // submit.
   let newApprovedFactCount: number | null = null;
   if (isRegen && pack.dispute_id) {
-    const { data: latestDraft } = await sb
-      .from("defence_packages")
-      .select("facts_json")
-      .eq("dispute_id", pack.dispute_id)
-      .order("version", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    /* "What the next save would submit" is the latest CANDIDATE, not the
+     * highest version — a `failed` build submits nothing. Counting its facts
+     * made the material-change heuristic compare against a package that could
+     * never reach a bank. See `lib/defence/candidateVersions.ts`. */
+    const { row: latestDraft } = await fetchLatestCandidate<{
+      version: number;
+      status?: string | null;
+      facts_json: unknown;
+    }>(sb, pack.dispute_id as string, "version, status, facts_json");
     newApprovedFactCount = Array.isArray(latestDraft?.facts_json)
       ? (latestDraft!.facts_json as unknown[]).length
       : null;
