@@ -68,7 +68,58 @@ const MUST_BLOCK: Array<[string, string]> = [
     "a literal street address as the destination",
     "The package went to 42 Elm Road.",
   ],
+  /* ── Added 2026-08-14 with the paraphrase-tolerant exemption below.
+   *
+   * Widening what the detector ALLOWS is the moment to widen what it must
+   * still refuse. Each of these puts an IP mention and a shipping-country
+   * comparand in one sentence — the exemption's own shape — with a delivery
+   * predicate that must survive it. */
+  [
+    "a delivery predicate between the IP mention and the comparand",
+    "The IP record shows the parcel was delivered in the same country as the shipping destination.",
+  ],
+  [
+    "an IP mention that arrives only AFTER the delivery claim",
+    "The parcel was delivered to the same country as the shipping destination, per the IP record.",
+  ],
+  [
+    "an IP clause does not license a delivery claim joined with 'and'",
+    "The order IP geolocated to the same country as the shipping destination and the parcel reached that address.",
+  ],
 ];
+
+/* ── 1b. THE PARAPHRASES. The model rewords the approved sentence. ──
+ *
+ * `narrativeWriter` tells the model to quote `generateBankParagraph`'s
+ * sentence; it does not always. On 2026-08-14 it wrote the subject form
+ * ("The order IP address geolocated to…") instead of the predicate form
+ * ("The order was placed from an IP address geolocating to…"), the
+ * lead-in-keyed exemption missed, and blume-box dispute 11051073729 reached
+ * its deadline with nothing filed. Same fact, same comparison, one reworded
+ * opening. An allowlist that only knows one phrasing is a denylist wearing
+ * the opposite sign. */
+const MUST_ALLOW: Array<[string, string]> = [
+  [
+    "the production paraphrase that cost dispute 11051073729 its deadline",
+    "The order IP address geolocated to the same country as the order's shipping destination, with no VPN, proxy, or datacenter signals detected — consistent with a cardholder placing the order from their usual location.",
+  ],
+  [
+    "the subject form with 'resolved' and 'shipping address'",
+    "The customer's IP address resolved to the same country as the shipping address.",
+  ],
+  [
+    "a bare IP mention with no geolocation verb at all",
+    "The order was placed from an IP address in the same country as the shipping destination.",
+  ],
+];
+
+describe("paraphrases of the approved IP sentence still pass", () => {
+  for (const [name, text] of MUST_ALLOW) {
+    it(`allows: ${name}`, () => {
+      expect(classifyAddressDeliveryClaim(text), `for: ${text}`).toBe("none");
+    });
+  }
+});
 
 describe("false-negative guards — these must block, before and after", () => {
   for (const [name, text] of MUST_BLOCK) {

@@ -94,6 +94,7 @@ function mockSupabase(
       return {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        neq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: queryError ? null : latest, error: queryError }),
@@ -207,7 +208,11 @@ describe("POST /api/packs/:packId/approve — PR-C1 preflight", () => {
   const NOT_FILEABLE: Array<[string, Record<string, unknown>, string]> = [
     ["safe but still a DRAFT", { status: "draft" }, "candidate_not_final"],
     ["safe but STALE", { status: "stale" }, "candidate_not_final"],
-    ["safe but FAILED", { status: "failed" }, "candidate_not_final"],
+    /* A `failed` row is not a candidate at all (2026-08-14) — it is a build
+     * that produced no package. The refusal is unchanged; the reason is now
+     * the precise one, and "not final" no longer implies there is a draft to
+     * approve. */
+    ["safe but FAILED", { status: "failed" }, "candidate_build_failed"],
     ["final with NO PDF", { pdf_path: null }, "candidate_missing_pdf"],
     ["final whose VALIDATION failed", { validation_status: "failed" }, "candidate_validation_not_ok"],
   ];

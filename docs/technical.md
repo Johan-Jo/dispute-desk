@@ -5219,6 +5219,59 @@ transport/receipt term of its own, and does not open in a destination role (`to`
 prohibition and affirmation still read the whole sentence. Both production sentences are pinned
 verbatim as regression cases.
 
+**An IP geolocating to a country is not a parcel arriving (corrected 2026-08-14).** The exemption
+for the `ip_location` sentence was one regex fitted to the LEAD-IN of the approved wording
+`generateBankParagraph` emits — "The order **was placed from an IP address geolocating to** the same
+country as the order's shipping destination". The model is told to quote that sentence; it
+paraphrased it instead, into the subject form "The order **IP address geolocated to** the same
+country as the order's shipping destination". The exemption missed, `NON_PHYSICAL_ADDRESS` consumed
+"IP address", and what remained coupled `ship*` with `destination` and classified `ambiguous`.
+blume-box dispute `11051073729` (USD 120, due 2026-08-14T23:00Z) reached its deadline with nothing
+filed because DisputeDesk refused its own approved wording, reworded — and 22 of the last 23
+validation failures fleet-wide were this same `unauthorized_claim` rule. An allowlist keyed to one
+phrasing is the lexical denylist this containment rejects, wearing the opposite sign.
+
+Recognition is now STRUCTURAL: the shipping destination named as the **comparand** of an IP-origin
+country comparison. `stripIpCountryComparison` consumes `same country as … shipping
+destination|address|country` only when (1) an IP / geo-IP mention precedes it, (2) in the same
+sentence, and (3) **no transport or receipt term sits in the gap between them**. Condition 3 is what
+keeps this an exemption for a comparison rather than a licence for a delivery: "The IP record shows
+the parcel was DELIVERED in the same country as the shipping destination" has `deliver` in the gap,
+so nothing is stripped and it blocks, as does any sentence whose IP mention comes after the
+comparand. Only the comparand phrase is consumed, never the clause around it. Paraphrases and the
+adversarial cases are pinned in `tests/unit/ipGeolocationNotDelivery.test.ts`.
+
+**A failed build is not a candidate (corrected 2026-08-14).** Every filing path asked "which
+package?" as `order by version desc limit 1`, conflating *the highest version number* with *the
+package we would file*. A `failed` row produces no PDF and no validated narrative — it is the record
+of a build that never produced a package — but it takes the next version number, so it **shadows**
+the last package that did. On dispute `11051073729` the pre-deadline rebuild cron (06:00 UTC)
+regenerated a case whose v4 was `validation_status='ok'` with a rendered PDF and had been explicitly
+held to file at that deadline (`auto_save_blocked` → `hold_for_deadline`, verdict `eligible`); v5
+failed validation twice; the 08:00 cron read v5 and filed nothing. Twelve disputes were in that shape
+fleet-wide, one already lost with a good v2 unfiled beneath it.
+
+`lib/defence/candidateVersions.ts` is now the single answer. `fetchLatestCandidate` excludes
+`status='failed'` in SQL and `latestCandidate` re-applies the predicate in code, so the rule lives in
+a tested pure function rather than in a query string repeated at six call sites;
+`fetchLatestAnyVersion` separates "no package was ever built" (`missing` — wait for the build) from
+"a build ran and failed" (`not_fileable` / `candidate_build_failed` — waiting cannot help). The
+deadline cron additionally reads all versions so it can audit
+`defence_package_last_good_version_used` with the filed version and the aborted ones above it,
+because the version it files was built from an earlier evidence snapshot and that has to be on the
+record. `skipped` is deliberately still a candidate — it means "we decided not to build" (covered by
+Shopify Protect, or no bank-eligible facts), and filing past it would defend a case the pipeline
+chose to leave alone.
+
+This is **not** the forbidden "newest SAFE version" search. A candidate the content gate REFUSES
+still stops the filing and nothing walks past it; only a build that never produced a version is
+skipped. `tests/unit/defencePackageCandidateSelection.test.ts` pins both halves and carries the CI
+invariant: any production module ordering `defence_packages` by version must go through
+`candidateVersions.ts`, with an exact, reasoned exemption list (the version counter in
+`enqueue.ts`, the generation guard's `priorLatest`, the last-submitted comparison in
+`rebuildOutcome.ts`, the canonical loader, and the workspace card, which reports the latest build
+ATTEMPT because a merchant whose rebuild failed has to see that it failed).
+
 **Every enqueue site is gated, not just the worker.** `lib/defence/packageSafety.ts` exposes one
 predicate plus two preflight loaders (`preflightLatestCandidate`, `preflightNamedCandidate`). They
 are consulted BEFORE any enqueue or status write by: the embedded Review & Submit endpoint

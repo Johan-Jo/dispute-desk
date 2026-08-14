@@ -90,6 +90,11 @@ export type EventType =
    *  save / forward / deadline path because it carries a retired delivery
    *  fact or an address-delivery assertion. Nothing was written to Shopify. */
   | "defence_package_blocked_unsafe_claim"
+  /** 2026-08-14: the deadline path filed a package that a NEWER build attempt
+   *  tried to replace and failed to. The filed version was built from an
+   *  earlier evidence snapshot; this row is what explains why v(n-1) reached
+   *  the bank while v(n) exists. See `lib/defence/candidateVersions.ts`. */
+  | "defence_package_last_good_version_used"
   | "manual_evidence_added_to_package"
   | "llm_narrative_generated"
   | "llm_narrative_failed"

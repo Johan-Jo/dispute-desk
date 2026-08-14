@@ -49,6 +49,7 @@ import type {
 } from "@/lib/pipeline/contracts";
 import type { DocumentFailureCode } from "./documentValidation";
 import { assessPackageCandidateSafety } from "../packageSafety";
+import { candidateVersions } from "../candidateVersions";
 import {
   selectFileablePackage,
   type SelectableCandidate,
@@ -190,9 +191,9 @@ export async function loadFileableSelection(
 
   if (error) return { outcome: "none", trigger, reason: "no_package" };
 
-  const candidates = ((data ?? []) as unknown as CandidateRow[]).map(
-    toSelectableCandidate,
-  );
+  const candidates = candidateVersions(
+    (data ?? []) as unknown as CandidateRow[],
+  ).map(toSelectableCandidate);
 
   return selectFileablePackage({
     caseId,
@@ -287,6 +288,20 @@ export function createCanonicalSelector(args: {
   };
 }
 
+/**
+ * Every CANDIDATE for the case, newest first.
+ *
+ * `failed` rows are dropped here rather than inside `selectFileablePackage`,
+ * and the placement is the point: the selector's invariant is "the highest
+ * version of the candidates I was given, never a fallback", and that stays
+ * literally true. What changes is what counts as a candidate — a build that
+ * never produced a PDF or a validated narrative is not a version of the
+ * argument, and it may not shadow the last one that was. See
+ * `lib/defence/candidateVersions.ts` for the production incident.
+ *
+ * Ambiguity is unaffected: two candidates tying at the top version is still
+ * the selector's error to raise, now over the filtered set.
+ */
 async function loadCandidateRows(
   sb: ServiceClient,
   caseId: string,
@@ -297,7 +312,7 @@ async function loadCandidateRows(
     .eq("dispute_id", caseId)
     .order("version", { ascending: false });
   if (error) return [];
-  return (data ?? []) as unknown as CandidateRow[];
+  return candidateVersions((data ?? []) as unknown as CandidateRow[]);
 }
 
 /**
