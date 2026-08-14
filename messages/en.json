@@ -1475,6 +1475,9 @@
         "coveredByShopifyProtectBody": "This dispute is covered by Shopify Protect. No bank-facing defence package is required.",
         "notEnoughEvidenceBody": "The classifier did not find any bank-eligible approved facts for this dispute. Upload additional supporting documents or wait for the next sync to include freshly collected evidence.",
         "validationFailedFallback": "Validation found unsupported claims in the generated narrative.",
+        "rebuildFailedTitle": "Latest rebuild didn't pass our checks",
+        "rebuildFailedBodyFiled": "Defence package v{bankVersion} is filed with Shopify and still stands. A newer version was generated but did not pass our evidence checks, so it was not filed. No action is needed — regenerate if you'd like to try again.",
+        "rebuildFailedBodyUnfiled": "The defence package did not pass our evidence checks, so nothing has been filed for this dispute. Regenerate it before the deadline.",
         "newEvidenceAvailableBody": "Recent updates (uploads, status changes, or new auto-collected signals) aren't reflected in this draft yet. Click Regenerate below to build a new version that includes them — the rebuild takes 2–3 minutes and runs in the background.",
         "errors": {
           "couldNotLoad": "Could not load defence package ({status})",
