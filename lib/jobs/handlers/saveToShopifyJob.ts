@@ -245,6 +245,29 @@ export async function handleSaveToShopify(
         reason: `defence_package_not_fileable: ${reason}`,
       };
     }
+
+    /* THIS WORKER FILES; IT DOES NOT PROMOTE.
+     *
+     * The adapter above uses the `deadline` trigger deliberately (it is
+     * downstream of both), and since the `final` gap was closed that trigger
+     * also selects a validated DRAFT, flagged `requiresFinalize`. Promotion
+     * belongs to `finalize_defence_package`, called by whoever enqueued this
+     * job — a worker that filed an unpromoted draft would put a package at the
+     * bank that no `final` row ever recorded.
+     *
+     * Refused here, by the flag, rather than three checks later by the raw
+     * `status !== "final"` test: that test would report "not final. Finalize
+     * the latest draft" for a case the selector had just authorised, which
+     * reads as a contradiction rather than as a missing step. */
+    if (outcome.selection.package.requiresFinalize) {
+      return {
+        ok: false,
+        retriable: false,
+        reason:
+          "defence_package_requires_finalize: the selected package is a draft. " +
+          "Promote it through finalize_defence_package before enqueueing a save.",
+      };
+    }
   }
 
   /* The latest CANDIDATE, not the highest version number — see

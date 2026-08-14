@@ -107,6 +107,10 @@ const DEADLINE_ONLY_ACTIONS = new Set(["hold_for_deadline", "park_for_review"]);
 
 const FILEABLE_STATUS = "final";
 const OK_VALIDATION = "ok";
+/** The only statuses a deadline may promote from. Mirrors the RPC's
+ *  `p_allowed_statuses` validation — the two must agree, or the selector
+ *  authorises a promotion the transaction then refuses. */
+const PROMOTABLE_AT_DEADLINE: ReadonlySet<string> = new Set(["draft", "stale"]);
 
 function none(
   trigger: SelectionTrigger,
@@ -269,13 +273,33 @@ export function selectFileablePackage(
     return none(trigger, "validation_failed");
   }
 
-  // 10. Lifecycle. A draft is not a fileable package — and revision 1 gave that
-  //     state its own reason, `not_final`. CP-B mapped it to `no_package`, which
-  //     lost the live HTTP split (`preflightHttpRefusal` answers 409
-  //     `PACKAGE_NOT_FILEABLE` here and 422 `PACKAGE_REVIEW_REQUIRED` for
-  //     missing/blocked/not-current) and, with it, the merchant action:
-  //     approve it, versus regenerate it, versus wait.
-  if (candidate.status !== FILEABLE_STATUS) return none(trigger, "not_final");
+  /* 10. Lifecycle.
+   *
+   * A draft is not a fileable package on the NORMAL trigger — revision 1 gave
+   * that state its own reason, `not_final`, which drives the live HTTP split
+   * (`preflightHttpRefusal` answers 409 `PACKAGE_NOT_FILEABLE` here and 422
+   * `PACKAGE_REVIEW_REQUIRED` for missing/blocked/not-current) and, with it, the
+   * merchant action: approve it, versus regenerate it, versus wait.
+   *
+   * ON THE DEADLINE TRIGGER IT IS FILEABLE-AFTER-PROMOTION. Every other rung
+   * has already passed — coverage, hard block, staleness, a safe argument, an
+   * unambiguous current candidate, safe content, a passed validation and a real
+   * artifact. What is left is a lifecycle flag saying a human has not pressed
+   * approve, and at the deadline nobody is going to. Refusing here is how
+   * activation would have filed NOTHING: measured 2026-08-14, zero of 58 open
+   * cases were `final`.
+   *
+   * The promotion sources are exactly {draft, stale} — the same pair
+   * `finalize_defence_package` validates as `p_allowed_statuses`, and the same
+   * pair the shipped legacy cron has auto-finalized since before this selector
+   * existed. Nothing else may be promoted, so `submitted`, `superseded`,
+   * `skipped` and `failed` still refuse.
+   */
+  if (candidate.status !== FILEABLE_STATUS) {
+    const promotable =
+      trigger === "deadline" && PROMOTABLE_AT_DEADLINE.has(candidate.status);
+    if (!promotable) return none(trigger, "not_final");
+  }
 
   // 11. The artifact this selection would stand behind must exist.
   if (!candidate.artifactId || candidate.artifactId.trim().length === 0) {
@@ -294,6 +318,9 @@ export function selectFileablePackage(
       packageId: candidate.packageId,
       packageVersion: candidate.packageVersion,
       artifactId: candidate.artifactId,
+      // Read off the candidate the selector judged, never re-derived: the
+      // executor must promote exactly the row this verdict was about.
+      requiresFinalize: candidate.status !== FILEABLE_STATUS,
     },
   };
 }

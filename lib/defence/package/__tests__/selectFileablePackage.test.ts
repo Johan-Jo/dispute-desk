@@ -305,7 +305,11 @@ describe("selection is never an arbitrary pick", () => {
     // live HTTP split — 409 PACKAGE_NOT_FILEABLE for a draft that exists versus
     // 422 PACKAGE_REVIEW_REQUIRED for one that is missing or blocked — and with
     // it the merchant's next action: approve it, versus regenerate it.
-    for (const status of ["draft", "generating", "review"]) {
+    //
+    // `draft` and `stale` moved: at the DEADLINE they are promotable (see the
+    // block below). Every other non-final state still refuses on both triggers.
+    // `superseded` is caught a rung earlier, by its own reason.
+    for (const status of ["generating", "review", "skipped"]) {
       const selection = selectFileablePackage({
         ...base(),
         candidates: [healthyCandidate({ status })],
@@ -315,6 +319,63 @@ describe("selection is never an arbitrary pick", () => {
     }
   });
 
+  /* ── The `final` gap ────────────────────────────────────────────────
+   *
+   * Measured on production 2026-08-14: of 58 open unsubmitted cases, 49 held a
+   * `draft` and 9 a `failed` build. ZERO were `final`. Rung 10 refused
+   * everything that was not already final, and the deadline route's promotion
+   * branch sits after the `outcome !== "selected"` early return — so it could
+   * never run. Activation would have filed nothing, for every case, while
+   * looking like a selector working correctly.
+   *
+   * A deadline may therefore select a package that still needs promoting, and
+   * says so on the selection rather than leaving the executor to re-derive it
+   * from `status`. */
+  describe("a deadline may file a package the merchant never approved", () => {
+    for (const status of ["draft", "stale"]) {
+      it(`selects a validated \`${status}\` and flags it for promotion`, () => {
+        const selection = selectFileablePackage({
+          ...base(),
+          candidates: [healthyCandidate({ status })],
+        });
+        if (selection.outcome !== "selected") throw new Error(`refused: ${JSON.stringify(selection)}`);
+        expect(selection.package.requiresFinalize).toBe(true);
+      });
+
+      it(`refuses the same \`${status}\` on the NORMAL trigger`, () => {
+        /* The relaxation is the deadline's alone. Filing a package nobody
+         * approved, on an ordinary day, is the thing review mode exists to
+         * prevent. */
+        const selection = selectFileablePackage({
+          ...inputFor(strong, "normal"),
+          candidates: [healthyCandidate({ status })],
+        });
+        if (selection.outcome !== "none") throw new Error("unreachable");
+        expect(selection.reason).toBe("not_final");
+      });
+    }
+
+    it("a `final` package needs no promotion", () => {
+      const selection = selectFileablePackage(base());
+      if (selection.outcome !== "selected") throw new Error("unreachable");
+      expect(selection.package.requiresFinalize).toBe(false);
+    });
+
+    it("promotion never widens past what the RPC accepts", () => {
+      /* `finalize_defence_package` validates `p_allowed_statuses` as a subset
+       * of {draft, stale} and refuses anything else without touching a row. A
+       * selector that authorised a promotion the transaction rejects would
+       * turn a filing into a silent conflict. */
+      for (const status of ["submitted", "superseded", "skipped", "failed"]) {
+        const selection = selectFileablePackage({
+          ...base(),
+          candidates: [healthyCandidate({ status })],
+        });
+        expect(selection.outcome, status).not.toBe("selected");
+      }
+    });
+  });
+
   it("carries the artifact identity the selection stands behind", () => {
     const selection = selectFileablePackage(base());
     if (selection.outcome !== "selected") throw new Error("unreachable");
@@ -322,6 +383,7 @@ describe("selection is never an arbitrary pick", () => {
       packageId: "pkg-1",
       packageVersion: 3,
       artifactId: "defence/pkg-1.pdf",
+      requiresFinalize: false,
     });
   });
 

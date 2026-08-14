@@ -373,10 +373,33 @@ export async function handleBuildDefencePackage(
    * below falls through to `classification.approved`, exactly as shipped.
    */
   const canonical = canonicalPipelineEnabled();
-  let planned: PlanForCase | null = null;
   let planFacts: EvidenceFactList = classification.approved;
 
-  if (canonical) {
+  /* ── DERIVATION IS UNCONDITIONAL; CONSUMPTION IS GATED ────────────────
+   *
+   * Activation step 1 (docs/plans/canonical-pipeline-activation.plan.md §3).
+   *
+   * The canonical identity — `plan_input_hash` and its four siblings — used to
+   * be written only when the switch was ON, which made activation impossible
+   * to stage: identity could never exist before the flip, and at the flip every
+   * package without one reads `snapshot_absent`, non-fileable and deliberately
+   * not grandfathered. Measured 2026-08-14: 0 of 398 packages carried a hash.
+   * Flipping would have made all of them unfileable at once.
+   *
+   * So the plan is now derived on every build and STAMPED on the row, while
+   * every consumer of it stays gated. `derivePlanForCase` is pure — evidence
+   * model, candidates, hash — with no IO and no model call, so deriving it
+   * while dark costs nothing and changes nothing.
+   *
+   * `activePlan` is the plan AS AN INPUT TO BEHAVIOUR. It is null while dark,
+   * so fact selection, the skip decision, the projection, the document
+   * validation and `reviewRequiredCount` all keep the legacy path byte for
+   * byte. `planned` is the plan as IDENTITY, and feeds nothing but the columns.
+   * Reading the wrong one is the difference between a dark change and a live
+   * one, which is why they have different names.
+   */
+  let planned: PlanForCase | null = null;
+  try {
     planned = derivePlanForCase({
       caseId: pkg.dispute_id as string,
       model: {
@@ -398,7 +421,23 @@ export async function handleBuildDefencePackage(
       reviewItems: [],
       computedAt: new Date().toISOString(),
     });
+  } catch (err) {
+    /* While dark the identity is best-effort: a derivation that throws must
+     * never break a build that would otherwise succeed on the legacy path.
+     * Once the switch is on the plan IS the build, so the same failure is real
+     * and must surface rather than silently fall back to legacy fact
+     * selection. */
+    if (canonical) throw err;
+    console.warn(
+      `[buildDefencePackage] dark identity derivation failed for ${pkg.dispute_id}: ` +
+        (err instanceof Error ? err.message : String(err)),
+    );
+  }
 
+  /** The plan as an INPUT TO BEHAVIOUR — null while dark. See above. */
+  const activePlan = canonical ? planned : null;
+
+  if (activePlan) {
     /* ── F5 — a fatally-lost case produces no fileable argument, and it is
      * refused HERE, before a document exists.
      *
@@ -421,7 +460,7 @@ export async function handleBuildDefencePackage(
     /* No safe argument survives the exclusions. An honest product outcome, not
      * an error — and specifically not a reason to lower the bar and generate
      * something weaker. Refused before generation for the same reason. */
-    if (!planHasSafeArgument(planned.plan)) {
+    if (!planHasSafeArgument(activePlan.plan)) {
       return await markSkipped(sb, pkg, "no_bank_eligible_facts");
     }
 
@@ -443,7 +482,7 @@ export async function handleBuildDefencePackage(
      * list. The legacy route keeps the weaker filter untouched.
      */
     planFacts = bankIncludedFacts(
-      selectPlanFacts(planned.plan, planned.factsByRecordId).includedFacts,
+      selectPlanFacts(activePlan.plan, activePlan.factsByRecordId).includedFacts,
     );
 
     // Everything the plan authorised was bank-ineligible. Same honest answer:
@@ -712,11 +751,11 @@ export async function handleBuildDefencePackage(
   let projection: PackageProjection | null = null;
   let documentFailureCodes: readonly string[] = [];
 
-  if (canonical && planned) {
+  if (activePlan) {
     projection = projectPackageFromPlan({
-      plan: planned.plan,
+      plan: activePlan.plan,
       narrative: narrativeRes.narrative,
-      factsByRecordId: planned.factsByRecordId,
+      factsByRecordId: activePlan.factsByRecordId,
       // The intersection the document is actually composed from — plan
       // authority AND bank eligibility. See `ProjectPackageInput`.
       bankIncludedFacts: planFacts,
@@ -745,10 +784,10 @@ export async function handleBuildDefencePackage(
    * NON-FILEABLE — never a warning, never a score, never something a caller
    * may weigh against a deadline. */
   const composedValidation =
-    canonical && planned && projection
+    activePlan && projection
       ? (() => {
           const verdict = validatePackageDocument({
-            plan: planned.plan,
+            plan: activePlan.plan,
             blocks: projection.blocks,
             includedFacts: planFacts,
             orphaned: projection.orphaned,
@@ -1001,7 +1040,7 @@ export async function handleBuildDefencePackage(
        * is shown cannot disagree. On the legacy route `planned` is null and
        * the count is 0 — which is what shipped.
        */
-      reviewRequiredCount: projectReviewItems(planned?.plan ?? null).length,
+      reviewRequiredCount: projectReviewItems(activePlan?.plan ?? null).length,
     });
     if (decision.action !== "auto_file") {
       resolvedMode = "review";
@@ -1050,28 +1089,37 @@ export async function handleBuildDefencePackage(
    * which is exactly the "take the newest and hope" behaviour it exists to
    * replace.
    *
-   * Written on the canonical route and explicitly NULLED otherwise — not
-   * omitted-and-left-alone. A rebuild that runs with the switch off must CLEAR
-   * a previous build's identity rather than let this row keep claiming a plan
-   * it was not projected from. `null` reads as `snapshot_absent`, which is
+   * Written whenever a plan was derived — which since activation step 1 is
+   * every build, dark or not — and explicitly NULLED otherwise, not
+   * omitted-and-left-alone. A rebuild that could not derive a plan must CLEAR a
+   * previous build's identity rather than let this row keep claiming a plan it
+   * was not projected from. `null` reads as `snapshot_absent`, which is
    * non-fileable, and that is the correct answer for a package no plan was
    * derived for.
+   *
+   * THE DOCUMENT VERDICT IS NOT PART OF THE IDENTITY. `plan_*` describe what
+   * the package was built FROM and are true whether or not the canonical
+   * consumers ran. `document_validation_passed` is a VERDICT, and while dark
+   * `validatePackageDocument` never executes — stamping `true` there would
+   * record a check we did not perform, in the column `selectFileablePackage`
+   * rung 9 refuses on. It stays gated on the validation having actually run.
    */
   const canonicalIdentityColumns =
-    canonical && planned
+    planned
       ? {
           plan_json: planned.plan,
           plan_input_hash: planned.planInputHash,
           plan_policy_version: planned.policyVersion,
           plan_deadline_only: planned.plan.deadlineOnly,
           plan_no_safe_argument: planned.plan.noSafeArgument,
-          // Reached only after `composedValidation.ok`, so `true` here is a
-          // recorded verdict rather than an assumption. The codes are carried
-          // beside it because P-6's `noUnsupportedArgument` reads THEM, not the
-          // boolean — folding the two together is the collapse contract
+          // Reached only after `composedValidation.ok` ON THE CANONICAL ROUTE,
+          // so `true` is a recorded verdict rather than an assumption; `null`
+          // while dark says "not checked", which is the truth. The codes are
+          // carried beside it because P-6's `noUnsupportedArgument` reads THEM,
+          // not the boolean — folding the two together is the collapse contract
           // revision 1 undid.
-          document_validation_passed: true,
-          document_failure_codes: documentFailureCodes,
+          document_validation_passed: activePlan ? true : null,
+          document_failure_codes: activePlan ? documentFailureCodes : null,
         }
       : {
           plan_json: null,

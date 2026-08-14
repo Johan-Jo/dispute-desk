@@ -27,6 +27,31 @@
  * is an argument; "the same code runs" is a fact, and only the second one
  * survives a reviewer who does not trust the mapping.
  *
+ * ── TWO DOCUMENTED EXEMPTIONS ─────────────────────────────────────────
+ *
+ * The claim above is not universal, and saying so is worth more than
+ * pretending otherwise:
+ *
+ * 1. `buildDefencePackageJob:976` calls `decideForPack` UNGATED whenever
+ *    `resolvedMode === "auto"`, and its verdict demotes the mode — so the
+ *    canonical decision ladder already shapes live behaviour with the switch
+ *    off. Gating it now would REMOVE that demotion and let more packages
+ *    auto-finalize than today: a live behaviour change, in the riskier
+ *    direction, to restore parity on a path PR 3 deletes. Deliberately left
+ *    as-is (activation plan §6, 2026-08-14).
+ *
+ * 2. The same job derives `derivePlanForCase` on every build so the canonical
+ *    identity can accumulate BEFORE activation — otherwise identity can only
+ *    exist after the flip, and at the flip every package without one is
+ *    non-fileable (measured: 0 of 398 carried a hash). The derivation is pure
+ *    and its consumers stay gated behind `activePlan`; the only observable
+ *    difference while dark is that five `plan_*` columns are populated, which
+ *    nothing reads until the switch is on. Pinned by
+ *    `tests/unit/darkIdentityDerivation.test.ts`.
+ *
+ * Neither is a licence to add a third. Both are recorded because an
+ * undocumented exemption is indistinguishable from a bug.
+ *
  * PR 3 deletes those modules and this file's `false` branch together.
  *
  * ── WHY AN ENV VAR AND NOT A DB SETTING ───────────────────────────────
