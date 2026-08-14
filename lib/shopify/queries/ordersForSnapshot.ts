@@ -24,7 +24,10 @@
  */
 
 import { requestShopifyGraphQL } from "@/lib/shopify/graphql";
-import { assertNotAuthInvalid } from "@/lib/shopify/sessions/getShopBackgroundSession";
+import {
+  assertNotAuthInvalid,
+  assertShopAvailable,
+} from "@/lib/shopify/sessions/getShopBackgroundSession";
 
 export const ORDERS_FOR_SNAPSHOT_QUERY = /* GraphQL */ `
   query ShopOrdersForSnapshot($first: Int!, $after: String, $query: String) {
@@ -118,6 +121,14 @@ export async function fetchOrdersInWindow(
     });
 
     assertNotAuthInvalid(session.shopDomain, "offline", { errors: resp.errors ?? null });
+    /* A DELETED STORE IS NOT A TRANSIENT ERROR.
+     *
+     * `Unavailable Shop` fell through to the generic throw below and was
+     * re-queued daily. Two dev stores had 34 failed jobs each by 2026-08-13 —
+     * one per day since they vanished — and the noise is what hid the
+     * possibility of a REAL unavailable shop among them. Typed here so the
+     * dispatcher can refuse to retry. */
+    assertShopAvailable(session.shopDomain, { errors: resp.errors ?? null });
     if (resp.errors && resp.errors.length > 0) {
       throw new Error(
         `Shopify orders list failed: ${resp.errors.map((e) => e.message).join("; ")}`,
