@@ -58,6 +58,7 @@ import {
   isNonEvidenceAccountHistoryRow,
 } from "@/lib/automation/merchantUiHiddenFields";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
+import { heldOrCancelledUnrefunded } from "@/lib/disputes/heldOrCancelledUnrefunded";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -291,6 +292,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
   const submitted = isReadOnly;
   const submittedAt = data.pack?.savedToShopifyAt ?? null;
+
+  // "held" | "cancelled" | null — see lib/disputes/heldOrCancelledUnrefunded.ts.
+  // Fails closed: a pack built before `refunded` was persisted returns null
+  // rather than claiming no refund was issued.
+  const heldReason = heldOrCancelledUnrefunded(dispute);
 
   const deadlineDays = dispute.dueAt
     ? Math.ceil((new Date(dispute.dueAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
@@ -1332,6 +1338,27 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       {/* Pre-submit ADVICE requires a current assessment: the recommendation
           and the improvement hint are both derived from the band. The
           deadline line below does not, and stays. */}
+      {/* NOTHING SHIPPED, AND THE MONEY IS STILL CAPTURED.
+          Sits above the recommendation because it reframes what the
+          recommendation is about: the case is not weak because we failed to
+          gather delivery evidence, it is weak because no delivery happened —
+          and the cardholder has been charged regardless.
+
+          Measured 2026-08-14: 17 open disputes (11 cancelled, 6 ON_HOLD), every
+          one PAID with 0.0 refunded, showed only "delivery proof unavailable /
+          weak". Suppressed once submitted, like every other pre-submit advice
+          block — the merchant can no longer act on it. */}
+      {!submitted && heldReason && (
+        <Banner tone="info" title={tExtra(`heldUnrefunded.title.${heldReason}`)}>
+          <BlockStack gap="200">
+            <Text as="p" variant="bodyMd">{tExtra("heldUnrefunded.body")}</Text>
+            <Text as="p" variant="bodySm" tone="subdued">
+              {tExtra("heldUnrefunded.helper")}
+            </Text>
+          </BlockStack>
+        </Banner>
+      )}
+
       {((!submitted && mayAdvise && (recommendationText || improvementHintText)) || dispute.dueAt || submitted) && (
         <div style={{ background: "#fff", border: "1px solid #E1E3E5", borderRadius: 12, padding: 20 }}>
           <BlockStack gap="200">

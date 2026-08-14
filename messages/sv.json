@@ -1017,6 +1017,14 @@
         "ask": "Om du har ett mejl eller en chatt där kortinnehavaren bekräftar att hen lade och tog emot den här ordern, lägg till den — det är det enskilt starkaste bevis du kan tillföra ärendet.",
         "askFlipsToStrong": "Om du har ett mejl eller en chatt där kortinnehavaren bekräftar att hen lade och tog emot den här ordern, lägg till den — en bekräftelse från kortinnehavaren är avgörande, och med den kan vi spara svaret till Shopify direkt.",
         "addAcknowledgement": "Lägg till kortinnehavarens bekräftelse"
+      },
+      "heldUnrefunded": {
+        "title": {
+          "held": "Den här ordern hölls kvar, skickades inte",
+          "cancelled": "Den här ordern avbröts, skickades inte"
+        },
+        "body": "Din bedrägerikontroll flaggade ordern och inget skickades. Betalningen är fortfarande dragen — ingen återbetalning har gjorts.",
+        "helper": "Eftersom inget skickades finns ingen leveransbevisning att skicka in — betyget speglar det, inte en lucka i dina underlag."
       }
     },
     "overviewPill": {
@@ -3336,7 +3344,7 @@
         },
         "disputeDetailPage": {
           "title": "Tvistdetalj i den här appen",
-          "body": "Under **Tvister**, välj **Visa detaljer** för att öppna sidan.\n\n- **KPI:er**: belopp, status, deadline, tid kvar (tydligare vid brådska).\n- **Tviststatus**: fem steg till utfall. Raden går framåt när paket finns och bevis **sparats i Shopify** (manuellt eller automation). Slututfall markerar alla steg klara.\n- **Kompletterande bevis** efter sparning i Shopify — **Öppna bevispaket** leder till uppladdning.\n- **Tidslinje** blandar Shopify-ordenhändelser med DisputeDesk-milepålar.\n- **Bevispaket** listar alla paket.\n\nÅtgärder: **Skapa paket**, **Synka om**, **Öppna tvist i Shopify**. Språk i URL:en laddar om profilen så tidslinjen kan följa butikens språk."
+          "body": "Under **Tvister**, välj **Visa detaljer** för att öppna sidan.\n\n- **KPI:er**: belopp, status, deadline, tid kvar (tydligare vid brådska).\n- **Tviststatus**: fem steg till utfall. Raden går framåt när paket finns och bevis **sparats i Shopify** (manuellt eller automation). Slututfall markerar alla steg klara.\n- **Kompletterande bevis** efter sparning i Shopify — **Öppna bevispaket** leder till uppladdning.\n- **Tidslinje** blandar Shopify-ordenhändelser med DisputeDesk-milepålar.\n- **Bevispaket** listar alla paket.\n\nÅtgärder: **Skapa paket**, **Synka om**, **Öppna tvist i Shopify**. Språk i URL:en laddar om profilen så tidslinjen kan följa butikens språk.\n\n**Om ordern hölls kvar eller avbröts utan återbetalning** visas en informationsruta om det. Din bedrägerikontroll flaggade ordern, inget skickades och betalningen är fortfarande dragen. Då finns ingen leveransbevisning att skicka in — betyget speglar vad som hände med ordern, inte en lucka i dina underlag."
         },
         "reviewQueue": {
           "title": "Granskningskön",

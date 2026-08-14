@@ -2449,6 +2449,27 @@ The "Chronology of Events" bullets (PDF + embedded, via `lib/defence/chronology.
 
 **Prior chargebacks on the Evidence tab (2026-08-01).** The Evidence tab's internal-signals card is built from a fixed list of classifiers (AVS/CVV, cardholder-name, billing-address, IP) plus a sweep for payloads that literally set `bankEligible: false`. The account-history row's bank exclusion is decided downstream in `evidenceLineItem.isNegativeOrAmbiguous` and never written back into the payload, so the sweep could not see it — the prior-chargeback finding showed on Overview and was missing from the Evidence tab. `classifyPriorChargebacks` (exported from `useEvidenceSections.ts` for test) closes it, firing only on a VERIFIED `disputeFreeHistory === false`; `unknown` must never render as an accusation. It stays merchant-only in every case — citing a customer's dispute history to the issuer hands them our weakness.
 
+### Held / cancelled-unrefunded banner (2026-08-14)
+
+**Merchant-UI only.** An Overview-tab banner naming a state the merchant could not previously see: the order was flagged by their fraud screening and either **held** or **cancelled**, nothing shipped, and **no refund was issued** — so the payment is still captured. From the cardholder's side that is indistinguishable from being charged for nothing, which is why the chargeback arrives and why it cannot be won on delivery evidence.
+
+Measured on prod 2026-08-14 across open, unsubmitted disputes: **11 `cancelled` + 6 `ON_HOLD`, every one `PAID` with `0.0` refunded** — uniform, so one condition covers both. Until now these surfaced only as `delivery_proof: unavailable` and strength `weak`, with no explanation, which reads as "*we* failed to ship" rather than "your fraud screening caught this and the money is still yours".
+
+`lib/disputes/heldOrCancelledUnrefunded.ts` owns the predicate, returning `"held" | "cancelled" | null`:
+
+| Condition | Rule |
+|---|---|
+| Payment captured | `financialStatus === "PAID"` — an authorised-only or already-refunded order has no money in the wrong place |
+| Nothing returned | `refundedAmount` parses finite AND `<= 0` |
+| `cancelled` | `cancelledAt` is set (wins when an order is somehow both — it is the stronger, completed decision) |
+| `held` | `fulfillmentStatus === "ON_HOLD"` |
+
+**It fails CLOSED on unknowns.** An absent, empty, or unparseable `refundedAmount` returns `null` rather than assuming zero. The banner asserts "no refund has been issued"; asserting that from absent data is how a merchant gets told something untrue about their own money, and a pack built before `refunded` was persisted knows nothing about it. Same reasoning as `detectCreditAlreadyIssued` below — every unknown resolves to *not* triggered.
+
+`cancelledAt` and `refundedAmount` are read off `pack_json` sections in `app/api/disputes/[id]/workspace/route.ts` (the only place either is persisted — `deriveOrderContext` carries neither) and forwarded on the `dispute` payload. The banner renders above the recommendation card and is suppressed once submitted, like every other pre-submit advice block: after filing the merchant can no longer act on it.
+
+**It does not recommend refunding, and it does not claim refunding closes the dispute.** That claim is common industry advice but is unsourced in this codebase, and it is outright wrong once the case reaches the chargeback phase — funds are already withdrawn, so a refund there risks paying twice rather than withdrawing anything. Whether to refund is also the merchant's call: some held orders are genuine fraud they may prefer to contest. The copy explains why the strength score is what it is — "no delivery evidence to submit … not a gap in your records" — and stops there.
+
 ### Credit-already-issued defence (2026-08-01)
 
 A credit processed **before** the cardholder filed is not stronger evidence for the family's theory — it is a different claim: the transaction was already made whole. Visa's *Dispute Management Guidelines* list "credit or reversal has already been processed for the transaction" among the grounds that make a dispute **invalid**, and that ground attaches to the transaction rather than to a reason code. Hence one cross-family strategy rather than per-reason variants. Full research + decisions: `docs/plans/credit-already-issued-defence.plan.md`.
