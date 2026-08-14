@@ -349,8 +349,15 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
+      /* The selection says whether this row still needs promoting; the status
+       * column is only the evidence behind that. Reading the flag rather than
+       * re-deriving from `status` keeps ONE answer to "must this be finalized
+       * first" — the selector's — instead of a second opinion that can drift
+       * from the rung that authorised it. */
+      const requiresFinalize = outcome.selection.package.requiresFinalize;
+
       // We have a defence package row. Decide the action by status.
-      if (dpkg!.status === "final") {
+      if (!requiresFinalize) {
         // Already finalized — enqueue the save through the transactional RPC.
         //
         // This used to be a bare `jobs.insert` whose RESULT WAS IGNORED, so a
@@ -398,7 +405,7 @@ export async function GET(req: NextRequest) {
        * the lifecycle branch asks only what it is about to DO: promote, or
        * enqueue an already-final row. Re-checking the same two columns here
        * would be a second gate with its own opinion. */
-      if (dpkg!.status === "draft" || dpkg!.status === "stale") {
+      {
         // Promotion goes through the transactional RPC, exactly like every
         // other promotion writer. This route used to do it in three unguarded
         // PostgREST calls — select the prior final, flip this row to `final`,

@@ -35,7 +35,7 @@ function selected(trigger: SelectionTrigger): FileableSelection {
   return {
     outcome: "selected",
     trigger,
-    package: { packageId: "pkg-1", packageVersion: 3, artifactId: "art-1" },
+    package: { packageId: "pkg-1", packageVersion: 3, artifactId: "art-1", requiresFinalize: false },
   };
 }
 
