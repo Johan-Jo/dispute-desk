@@ -1604,6 +1604,14 @@
         "ask": "Se tiver um e-mail ou chat em que o titular do cartão confirma que fez e recebeu esta encomenda, adicione-o: é a prova isolada mais forte que pode juntar a este caso.",
         "askFlipsToStrong": "Se tiver um e-mail ou chat em que o titular do cartão confirma que fez e recebeu esta encomenda, adicione-o: a confirmação do titular é decisiva e com ela podemos guardar esta resposta no Shopify de imediato.",
         "addAcknowledgement": "Adicionar confirmação do titular"
+      },
+      "heldUnrefunded": {
+        "title": {
+          "held": "Este pedido ficou retido, não foi enviado",
+          "cancelled": "Este pedido foi cancelado, não foi enviado"
+        },
+        "body": "Sua triagem de fraude sinalizou este pedido e nada foi enviado. O pagamento continua capturado — nenhum reembolso foi emitido.",
+        "helper": "Como nada foi enviado, não há comprovante de entrega para enviar — a pontuação reflete isso, não uma falha nos seus registros."
       }
     },
     "evidenceTabExtra": {
@@ -3336,7 +3344,7 @@
         },
         "disputeDetailPage": {
           "title": "Detalhe da disputa neste app",
-          "body": "Em **Disputas**, escolha **Ver detalhes** para abrir esta página.\n\n- **KPIs**: valor, status, vencimento, tempo restante (destaque quando urgente).\n- **Status da disputa**: cinco etapas até o resultado. A trilha avança quando há pacotes e as evidências estão **salvas na Shopify** (manual ou automação). Resultados finais marcam todas as etapas concluídas.\n- **Evidências complementares** após salvar na Shopify — **Abrir pacote de evidências** leva ao upload.\n- **Linha do tempo** combina eventos de pedido da Shopify com marcos do DisputeDesk.\n- **Pacotes de evidências** lista todos os pacotes.\n\nAções: **Gerar pacote**, **Ressincronizar**, **Abrir disputa na Shopify**. O locale na URL recarrega o perfil para que a linha do tempo possa seguir o idioma da loja."
+          "body": "Em **Disputas**, escolha **Ver detalhes** para abrir esta página.\n\n- **KPIs**: valor, status, vencimento, tempo restante (destaque quando urgente).\n- **Status da disputa**: cinco etapas até o resultado. A trilha avança quando há pacotes e as evidências estão **salvas na Shopify** (manual ou automação). Resultados finais marcam todas as etapas concluídas.\n- **Evidências complementares** após salvar na Shopify — **Abrir pacote de evidências** leva ao upload.\n- **Linha do tempo** combina eventos de pedido da Shopify com marcos do DisputeDesk.\n- **Pacotes de evidências** lista todos os pacotes.\n\nAções: **Gerar pacote**, **Ressincronizar**, **Abrir disputa na Shopify**. O locale na URL recarrega o perfil para que a linha do tempo possa seguir o idioma da loja.\n\n**Se o pedido ficou retido ou foi cancelado e não foi reembolsado**, um aviso indica isso. Sua triagem de fraude sinalizou o pedido, nada foi enviado e o pagamento continua capturado. Nesse caso não há comprovante de entrega para enviar — a pontuação reflete o que aconteceu com o pedido, não uma falha nos seus registros."
         },
         "reviewQueue": {
           "title": "A fila de revisão",

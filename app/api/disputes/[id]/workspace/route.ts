@@ -420,6 +420,22 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     paymentGateway: orderContext.paymentGateway,
     financialStatus: orderContext.financialStatus,
     fulfillmentStatus: orderContext.fulfillmentStatus,
+    /* CANCELLED / REFUNDED — read off the pack's order section, which is the
+     * only place they are persisted; `deriveOrderContext` does not carry
+     * either.
+     *
+     * Needed so the Overview can explain a held-or-cancelled order that was
+     * never refunded. Measured 2026-08-14: 17 open disputes are in exactly
+     * that state — 11 cancelled, 6 ON_HOLD, every one PAID with 0.0
+     * refunded — and the merchant currently sees only "delivery proof
+     * unavailable / weak", which reads as "we failed to ship" rather than
+     * "the money is still captured against goods that never left". */
+    cancelledAt:
+      (packJsonSections.find((s) => (s.data as Record<string, unknown> | undefined)?.orderName)
+        ?.data as Record<string, unknown> | undefined)?.cancelledAt as string | null ?? null,
+    refundedAmount:
+      ((packJsonSections.find((s) => (s.data as Record<string, unknown> | undefined)?.orderName)
+        ?.data as { totals?: { refunded?: string | null } } | undefined)?.totals?.refunded) ?? null,
     cardholderName: orderContext.cardholderName ?? row.customer_display_name ?? null,
     // Full event timeline from the pack's access_log section. The PDF
     // builder threads the same array through `meta.timelineEvents`;

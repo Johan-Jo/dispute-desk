@@ -118,6 +118,12 @@ export interface WorkspaceDispute {
   paymentGateway?: string | null;
   financialStatus?: string | null;
   fulfillmentStatus?: string | null;
+  /** ISO timestamp when the order was cancelled, or null. Read off the pack's
+   *  order section — `deriveOrderContext` does not carry it. */
+  cancelledAt?: string | null;
+  /** Amount refunded, as the decimal string the pack persists ("0.0", "220.0").
+   *  Null when the pack predates the field. */
+  refundedAmount?: string | null;
   cardholderName?: string | null;
   /** Full event timeline from the pack's access_log section — the SAME
    *  array the PDF builder threads through `meta.timelineEvents`. The

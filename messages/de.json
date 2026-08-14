@@ -1604,6 +1604,14 @@
         "ask": "Wenn Sie eine E-Mail oder einen Chat haben, in dem der Karteninhaber bestätigt, diese Bestellung aufgegeben und erhalten zu haben, fügen Sie sie hinzu — es ist der stärkste einzelne Beleg, den Sie diesem Fall hinzufügen können.",
         "askFlipsToStrong": "Wenn Sie eine E-Mail oder einen Chat haben, in dem der Karteninhaber bestätigt, diese Bestellung aufgegeben und erhalten zu haben, fügen Sie sie hinzu — eine Bestätigung des Karteninhabers ist entscheidend, und damit können wir diese Antwort sofort in Shopify speichern.",
         "addAcknowledgement": "Bestätigung des Karteninhabers hinzufügen"
+      },
+      "heldUnrefunded": {
+        "title": {
+          "held": "Diese Bestellung wurde zurückgehalten, nicht versandt",
+          "cancelled": "Diese Bestellung wurde storniert, nicht versandt"
+        },
+        "body": "Ihre Betrugsprüfung hat diese Bestellung markiert und es wurde nichts versandt. Die Zahlung ist weiterhin eingezogen — es wurde keine Rückerstattung vorgenommen.",
+        "helper": "Da nichts versandt wurde, gibt es keine Zustellnachweise zum Einreichen — die Bewertung spiegelt das wider, keine Lücke in Ihren Unterlagen."
       }
     },
     "evidenceTabExtra": {
@@ -3336,7 +3344,7 @@
         },
         "disputeDetailPage": {
           "title": "Streitfall-Detail in dieser App",
-          "body": "Unter **Streitfälle** **Details anzeigen** wählen.\n\n- **KPIs**: Betrag, Status, Frist, verbleibende Zeit (hervorgehoben bei Dringlichkeit).\n- **Streitfallstatus**: fünf Schritte bis zum Ergebnis. Die Leiste schreitet voran, sobald Pakete existieren und Beweise **in Shopify gespeichert** sind (manuell oder Automatisierung). Endstatus markiert alle Schritte als erledigt.\n- **Zusätzliche Beweise** nach Speichern bei Shopify — **Bewispaket öffnen** führt zum Upload.\n- **Zeitleiste** verbindet Shopify-Ereignisse mit DisputeDesk-Meilensteinen.\n- **Bewispakete** listet alle Pakete.\n\nAktionen: **Paket erstellen**, **Erneut synchronisieren**, **Streitfall in Shopify öffnen**. Die Locale in der URL lädt Profildaten neu, sodass Zeilentexte der Zeitleiste der Shopsprache folgen können."
+          "body": "Unter **Streitfälle** **Details anzeigen** wählen.\n\n- **KPIs**: Betrag, Status, Frist, verbleibende Zeit (hervorgehoben bei Dringlichkeit).\n- **Streitfallstatus**: fünf Schritte bis zum Ergebnis. Die Leiste schreitet voran, sobald Pakete existieren und Beweise **in Shopify gespeichert** sind (manuell oder Automatisierung). Endstatus markiert alle Schritte als erledigt.\n- **Zusätzliche Beweise** nach Speichern bei Shopify — **Bewispaket öffnen** führt zum Upload.\n- **Zeitleiste** verbindet Shopify-Ereignisse mit DisputeDesk-Meilensteinen.\n- **Bewispakete** listet alle Pakete.\n\nAktionen: **Paket erstellen**, **Erneut synchronisieren**, **Streitfall in Shopify öffnen**. Die Locale in der URL lädt Profildaten neu, sodass Zeilentexte der Zeitleiste der Shopsprache folgen können.\n\n**Wurde die Bestellung zurückgehalten oder storniert und nicht erstattet**, weist ein Hinweisbanner darauf hin. Ihre Betrugsprüfung hat die Bestellung markiert, es wurde nichts versandt und die Zahlung ist weiterhin eingezogen. In diesem Fall gibt es keine Zustellnachweise zum Einreichen — die Bewertung spiegelt wider, was mit der Bestellung geschehen ist, keine Lücke in Ihren Unterlagen."
         },
         "reviewQueue": {
           "title": "Die Prüfungswarteschlange",
