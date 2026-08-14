@@ -47,6 +47,7 @@ import {
   isFieldBankEligible,
 } from "@/lib/defence/factClassifier";
 import { isNonEvidenceAccountHistoryRow } from "@/lib/automation/merchantUiHiddenFields";
+import { trackingLinkUrl } from "@/lib/carriers/trackingLinkUrl";
 import { readPaymentVerification } from "./paymentVerification";
 import type { CaseStrengthContribution } from "./caseStrength";
 import type { ReasonFamily } from "./reasonFamily";
@@ -1310,7 +1311,16 @@ function buildDeliveryFacts(
     }
   }
 
-  return { factsTokens, trackingUrl, trackingNumber };
+  // Same canonical link the PDF and the LLM narrative get — the merchant
+  // clicking through from the dispute page must land where the issuer
+  // lands, and must not be handed a dead search form either.
+  const canonicalUrl = trackingLinkUrl({
+    company: carrier,
+    number: trackingNumber,
+    url: trackingUrl,
+  });
+
+  return { factsTokens, trackingUrl: canonicalUrl, trackingNumber };
 }
 
 /** Collapse the two delivery rows into one, in place. Returns a new
