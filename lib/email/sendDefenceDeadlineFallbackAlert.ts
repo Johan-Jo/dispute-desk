@@ -22,6 +22,7 @@
 
 import { Resend } from "resend";
 import { getServiceClient } from "@/lib/supabase/server";
+import type { PackageUnsafeReason } from "@/lib/defence/packageSafety";
 
 // Read lazily so a test can stub `process.env.RESEND_API_KEY` in beforeEach and
 // have the new value picked up. A module-level `const` captures the value at
@@ -47,9 +48,17 @@ export interface DefenceDeadlineFallbackContext {
     | "skipped_no_facts"
     | "skipped_covered"
     | "missing"
-    /** PR-C1: the existing package makes a delivery-address claim we no
-     *  longer support. Nothing is filed; the merchant must regenerate. */
+    /** PR-C1: the existing package carries a claim we cannot stand behind, or
+     *  content we could not inspect. Nothing is filed; the merchant must
+     *  regenerate. */
     | "unsafe_address_claim";
+  /**
+   * The content verdict's own reasons, when the caller has them.
+   *
+   * Without these the message can only guess which of five outcomes it is
+   * describing, and it guessed the most specific one. See `readableReason`.
+   */
+  unsafeReasons?: readonly PackageUnsafeReason[];
 }
 
 interface SendResult {
@@ -57,7 +66,37 @@ interface SendResult {
   error?: string;
 }
 
-function readableReason(reason: DefenceDeadlineFallbackContext["fallbackReason"]): string {
+/**
+ * `unsafe_address_claim` covers FIVE distinct verdicts, and this said the most
+ * specific one about all of them.
+ *
+ * `assessPackageCandidateSafety` can refuse a candidate for: an affirmative
+ * address-delivery claim, an AMBIGUOUS one (prose the detector could not
+ * resolve — it fails closed), a retired delivery fact, or supporting JSON it
+ * could not read at all. The copy asserted the first: "the existing Defence
+ * Package **states that delivery reached a verified address**".
+ *
+ * On 2026-08-14 blume-box `11051073729` was refused on
+ * `ambiguous_address_delivery_claim` and the merchant was told their package
+ * states something it does not state — the sentence in question was the
+ * `ip_location` fact naming what it compares against, and the detector simply
+ * could not resolve it. On an `unreadable_*` verdict the claim is not merely
+ * over-stated, it is impossible: we never parsed the package to know what it
+ * says.
+ *
+ * Both replacements are true of every verdict in their branch. Neither asserts
+ * what the package claims — only what WE could or could not stand behind,
+ * which is the honest thing to put in front of a merchant and the only thing
+ * this module actually knows.
+ *
+ * With no reasons supplied the wording branch is used: it never over-asserts,
+ * so an older caller degrades to accurate-but-general rather than to a
+ * statement that may be false.
+ */
+function readableReason(
+  reason: DefenceDeadlineFallbackContext["fallbackReason"],
+  unsafeReasons?: readonly PackageUnsafeReason[],
+): string {
   switch (reason) {
     case "validation_failed":
       return "the generated narrative failed our grounding validator";
@@ -68,7 +107,48 @@ function readableReason(reason: DefenceDeadlineFallbackContext["fallbackReason"]
     case "missing":
       return "no Defence Package draft existed for this dispute";
     case "unsafe_address_claim":
-      return "the existing Defence Package states that delivery reached a verified address — a claim we can no longer support — so it was not filed";
+      return (unsafeReasons ?? []).some(
+        (r) => r === "unreadable_facts_json" || r === "unreadable_narrative_json",
+      )
+        ? "we could not check it automatically"
+        : "it used delivery wording we can no longer stand behind";
+  }
+}
+
+/**
+ * The failure sentence, whole.
+ *
+ * The template used to be fixed — "DisputeDesk could not produce a defence
+ * package because {reason}" — which is true of four of the five reasons and
+ * self-contradicting on the fifth: for `unsafe_address_claim` a package WAS
+ * produced, it just could not be filed. Rendered, that read "could not produce
+ * a defence package because the existing Defence Package used…", which invites
+ * the merchant to wonder which of the two halves is true.
+ */
+function failureSentence(
+  fallbackReason: DefenceDeadlineFallbackContext["fallbackReason"],
+  reason: string,
+): string {
+  return fallbackReason === "unsafe_address_claim"
+    ? `DisputeDesk built a defence package but could not file it: ${reason}.`
+    : `DisputeDesk could not produce a defence package because ${reason}.`;
+}
+
+/** Merchant-readable, for the summary table. The enum is for our logs. */
+function fallbackReasonLabel(
+  fallbackReason: DefenceDeadlineFallbackContext["fallbackReason"],
+): string {
+  switch (fallbackReason) {
+    case "validation_failed":
+      return "The generated narrative did not pass our checks";
+    case "skipped_no_facts":
+      return "Not enough bank-eligible evidence to build on";
+    case "skipped_covered":
+      return "Covered by Shopify Protect";
+    case "missing":
+      return "No defence package had been built yet";
+    case "unsafe_address_claim":
+      return "The package we built could not be filed";
   }
 }
 
@@ -112,7 +192,7 @@ export async function sendDefenceDeadlineFallbackAlert(
     .single();
   const shopDomain = shop?.shop_domain ?? null;
 
-  const reason = readableReason(ctx.fallbackReason);
+  const reason = readableReason(ctx.fallbackReason, ctx.unsafeReasons);
   const disputeIdShort = ctx.disputeGid
     ? ctx.disputeGid.split("/").pop()
     : ctx.disputeId.slice(0, 8);
@@ -155,12 +235,12 @@ export async function sendDefenceDeadlineFallbackAlert(
         ``,
         `The chargeback dispute ${disputeIdShort}${amountStr ? ` (${amountStr})` : ""} reaches its evidence deadline today and DISPUTEDESK HAS FILED NOTHING.`,
         ``,
-        `DisputeDesk could not produce a defence package because ${reason}, and there is no fallback — the defence package is the only thing we submit. We have sent no evidence to Shopify for this dispute.`,
+        `${failureSentence(ctx.fallbackReason, reason)} There is no fallback — the defence package is the only thing we submit. We have sent no evidence to Shopify for this dispute.`,
         ``,
         `Shopify will pass on the basic order details it holds when the deadline passes, but nothing we built and nothing you have reviewed. That rarely wins. Open the dispute in DisputeDesk to regenerate the package, or add your own evidence directly in Shopify Admin before the deadline.`,
         ``,
         `Dispute reason: ${ctx.reason ?? "—"}`,
-        `Why we could not build it: ${ctx.fallbackReason}`,
+        `Why: ${fallbackReasonLabel(ctx.fallbackReason)}`,
         `Deadline: ${ctx.dueAt ?? "—"}`,
         ``,
         `— DisputeDesk`,
@@ -170,7 +250,7 @@ export async function sendDefenceDeadlineFallbackAlert(
     ? `<p>The chargeback dispute <strong>${disputeIdShort}</strong>${amountStr ? ` (${amountStr})` : ""} reached its evidence deadline today, and DisputeDesk did not build a response for it.</p>
 <p>That is deliberate: ${reason}. Shopify absorbs this loss, so there is nothing to defend and nothing for you to do.</p>`
     : `<p style="font-size:16px;font-weight:600;">The chargeback dispute <strong>${disputeIdShort}</strong>${amountStr ? ` (${amountStr})` : ""} reaches its evidence deadline today and DisputeDesk has filed nothing.</p>
-<p>DisputeDesk could not produce a defence package because ${reason}, and there is no fallback — the defence package is the only thing we submit. <strong>We have sent no evidence to Shopify for this dispute.</strong></p>
+<p>${failureSentence(ctx.fallbackReason, reason)} There is no fallback — the defence package is the only thing we submit. <strong>We have sent no evidence to Shopify for this dispute.</strong></p>
 <p>Shopify will pass on the basic order details it holds when the deadline passes, but nothing we built and nothing you have reviewed. That rarely wins. Open the dispute in DisputeDesk to regenerate the package, or add your own evidence directly in Shopify Admin before the deadline.</p>`;
 
   const html = `<!doctype html>
@@ -179,7 +259,7 @@ export async function sendDefenceDeadlineFallbackAlert(
 ${body}
 <table style="border-collapse:collapse;margin-top:12px;font-size:13px;">
   <tr><td style="color:#64748B;padding:4px 12px 4px 0;">Dispute reason</td><td>${escapeHtml(ctx.reason ?? "—")}</td></tr>
-  ${covered ? "" : `<tr><td style="color:#64748B;padding:4px 12px 4px 0;">Why we could not build it</td><td>${escapeHtml(ctx.fallbackReason)}</td></tr>`}
+  ${covered ? "" : `<tr><td style="color:#64748B;padding:4px 12px 4px 0;">Why</td><td>${escapeHtml(fallbackReasonLabel(ctx.fallbackReason))}</td></tr>`}
   <tr><td style="color:#64748B;padding:4px 12px 4px 0;">Deadline</td><td>${escapeHtml(ctx.dueAt ?? "—")}</td></tr>
   ${shopDomain ? `<tr><td style="color:#64748B;padding:4px 12px 4px 0;">Shop</td><td>${escapeHtml(shopDomain)}</td></tr>` : ""}
 </table>
