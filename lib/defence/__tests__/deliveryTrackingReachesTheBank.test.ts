@@ -126,7 +126,7 @@ describe("the evidence-basis row prints those identifiers", () => {
     // must be the CANONICAL results endpoint rebuilt from the number, not
     // the merchant's `.action?tLabels=` variant.
     expect(out).toContain(
-      "https://tools.usps.com/go/TrackConfirmAction?qtc_tLabels1=9434650899562189159072",
+      "https://tools.usps.com/tracking/9434650899562189159072",
     );
   });
 

@@ -45,16 +45,17 @@ describe("resolveTrackingLinkUrl — canonical templates", () => {
     expect(r.source).toBe("canonical");
   });
 
-  it("USPS never emits the TrackConfirmAction_input empty-form endpoint", () => {
+  it("USPS emits the short path form USPS's own UI produces", () => {
+    // Browser-verified 2026-08-14: all of `/tracking/{n}`,
+    // `TrackConfirmAction?qtc_tLabels1=`, `?tLabels=` and even
+    // `TrackConfirmAction_input` resolve the SAME parcel — USPS
+    // normalizes them. The path form is chosen as the shortest.
     const r = resolveTrackingLinkUrl({
       company: "USPS",
-      number: "420008029400111206209845261834",
-      url: "https://tools.usps.com/go/TrackConfirmAction_input?qtc_tLabels1=420008029400111206209845261834",
+      number: "9434650899563194079164",
+      url: "https://tools.usps.com/go/TrackConfirmAction_input?qtc_tLabels1=9434650899563194079164",
     });
-    expect(r.url).toBe(
-      "https://tools.usps.com/go/TrackConfirmAction?qtc_tLabels1=420008029400111206209845261834",
-    );
-    expect(r.url).not.toContain("_input");
+    expect(r.url).toBe("https://tools.usps.com/tracking/9434650899563194079164");
   });
 
   it("DHL eCommerce keeps its own host — an eCommerce number on the Express page finds nothing", () => {
@@ -178,9 +179,9 @@ describe("resolveTrackingLinkUrl — refuses to print a link that disproves the 
       url: "https://tools.usps.com/go/TrackConfirmAction?tLabels=9400150899563470273413",
     });
     expect(r.source).toBe("merchant");
-    expect(r.url).toBe(
-      "https://tools.usps.com/go/TrackConfirmAction?tLabels=9400150899563470273413",
-    );
+    // The number is recovered from the URL's own param and normalized onto
+    // the path form, rather than a number being invented from nowhere.
+    expect(r.url).toBe("https://tools.usps.com/tracking/9400150899563470273413");
   });
 
   it("rejects a truncated junk identifier like ?trackingid=c", () => {

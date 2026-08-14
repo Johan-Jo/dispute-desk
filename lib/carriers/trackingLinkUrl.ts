@@ -15,9 +15,13 @@
  *     — the link opens a blank search form with nothing to search.
  *   -   2,303 carry no identifier at all (`https://gtagsm.com/tracking/`,
  *     `http://ppxtrack.com`, `https://webtrack.dhlglobalmail.com/`).
- *   -  17,058 use USPS's `TrackConfirmAction_input` endpoint, whose
- *     `_input` suffix is precisely the "render the empty form" variant.
  *   -  19,931 + 1,798 use `wwwapps.ups.com/WebTracking/track`, retired.
+ *
+ * (A sixth class was suspected and DISPROVEN: 17,058 rows use USPS's
+ * `TrackConfirmAction_input` endpoint, whose `_input` suffix reads like an
+ * empty-form variant. Browser-checked 2026-08-14 — it resolves the parcel
+ * exactly like the other three USPS forms. Left here so the next reader
+ * does not "rediscover" it from the URL's name alone.)
  *
  * So the merchant's own URL is not a reliable citation. An issuer who
  * clicks it and lands on an empty search box does not read "the link is
@@ -51,22 +55,38 @@
  * owned source (official plugins, SPA route tables), carrier-issued 301
  * redirects, and live merchant links (2026-08-14).
  *
- * WHAT IS ESTABLISHED — the HOST and PATH of each template, i.e. that the
- * URL is the carrier's current tracking endpoint and not a retired one.
- * Several were confirmed by the carrier redirecting its own legacy URL
- * here (Colissimo → laposte.fr) or by the carrier's own form markup
- * (Dragonfly's GET form posts exactly this shape).
+ * HOW TO VERIFY (this works — do not skip it and guess):
  *
- * WHAT IS **NOT** ESTABLISHED — that any of them AUTO-SUBMITS rather than
- * rendering a pre-filled form. dhl.com, ups.com, tools.usps.com,
- * intelcom.ca and postnord.se all refuse automated requests, and every
- * one of these pages is a client-rendered SPA, so no fetch — ours or
- * anyone's — observes what a real browser renders. Auto-submit is
- * therefore a REPORTED behaviour here, not a verified one.
+ *   curl and headless Chromium are both 403'd by Akamai/Imperva on
+ *   usps.com, ups.com, fedex.com and dhl.com. A HEADED real-Chrome
+ *   session is not:
  *
- * Any change must be checked by opening the URL in a real browser against
- * a live shipment. A template that renders an empty form is worse than no
- * template, because rule 3 would at least have printed nothing.
+ *     chromium.launch({ channel: "chrome", headless: false,
+ *       args: ["--disable-blink-features=AutomationControlled"] })
+ *     + addInitScript stripping navigator.webdriver
+ *     + waitForTimeout(~13s) for the SPA to fetch and render
+ *
+ *   Then assert on the rendered body text. Use a tracking number that is
+ *   still within carrier retention (~90-120 days) — an old number returns
+ *   "not found" from a perfectly good URL and proves nothing. Pull a fresh
+ *   one from `shopify_fulfillment_trackings` where shipment_status =
+ *   'Delivered' and updated_at > now() - interval '25 days'.
+ *
+ * VERIFIED 2026-08-14 by that method, each against a live Delivered parcel
+ * from prod — all four render the shipment, not a form:
+ *   - DHL      `?submit=1&tracking-id=` → "Tracking Results … DELIVERED"
+ *   - DHL eCom webtrack → full scan history with origin/destination
+ *   - USPS     `/tracking/{n}` → "Delivered, In/At Mailbox … June 26"
+ *   - UPS      `?tracknum=` → "Delivered … Tuesday, July 07 at 6:18 P.M."
+ *
+ * NOT verified this way: PostNord (consent wall blocks the render),
+ * Colissimo (same), Canada Post, Purolator, Dragonfly, Evri, Stallion,
+ * Fleet Optics. Their host+path come from carrier-issued redirects,
+ * carrier-owned route tables and official plugin source; treat them as
+ * correct-endpoint-but-unproven-render, and verify before relying on one.
+ *
+ * A template that renders an empty form is worse than no template, because
+ * rule 3 would at least have printed nothing.
  *
  * Known gates that no URL can bypass — for these, the link is a courtesy
  * and the carrier-confirmed timestamp we persist is the actual evidence:
@@ -118,15 +138,34 @@ const TEMPLATES: Record<TrackingLinkCarrier, (id: string) => string> = {
   // `wwwapps.ups.com` host are the retired forms that 21,729 prod rows
   // still carry.
   ups: (id) => `https://www.ups.com/track?loc=en_US&requester=ST&tracknum=${id}`,
-  // `TrackConfirmAction` lands on results. `TrackConfirmAction_input` —
-  // 17,058 prod rows — is the empty-form endpoint. The `_input` suffix is
-  // the entire difference.
-  usps: (id) => `https://tools.usps.com/go/TrackConfirmAction?qtc_tLabels1=${id}`,
+  // VERIFIED in a headed real-Chrome session 2026-08-14 (see the
+  // "verified how" note below). All four USPS forms — `/tracking/{n}`,
+  // `TrackConfirmAction?qtc_tLabels1=`, `TrackConfirmAction_input?...`
+  // and `TrackConfirmAction?tLabels=` — render the SAME resolved parcel
+  // ("Delivered, Parcel Locker … July 27, 2026"). The `_input` endpoint
+  // is NOT an empty-form trap; USPS normalizes all of them.
+  //
+  // So the USPS rewrite is not a correctness fix, and the "Tracking Not
+  // Available" page a bad link produces comes from the NUMBER not
+  // resolving, never from the endpoint. The path form is kept because it
+  // is the shortest and the one USPS's own UI produces.
+  usps: (id) => `https://tools.usps.com/tracking/${id}`,
   fedex: (id) => `https://www.fedex.com/fedextrack/?trknbr=${id}`,
+  // VERIFIED 2026-08-14 in headed real Chrome, against the live parcel from
+  // dispute 11051073729: `?submit=1&tracking-id={n}` ALONE already renders
+  // "Tracking Results … DELIVERED". The duplicated un-hyphenated
+  // `trackingid=` is NOT required — both forms resolve identically. The
+  // duplicate is kept only because it is byte-identical in outcome and is
+  // the form the maintainer reported working; it costs nothing and removes
+  // a class of doubt. Do not add more spellings on that reasoning.
   dhl: (id) =>
     `https://www.dhl.com/us-en/home/tracking.html?submit=1&trackingid=${id}&tracking-id=${id}`,
-  // DHL eCommerce (GM/LX/94-prefixed US parcels) is a separate system;
-  // an eCommerce number on the Express page returns nothing.
+  // DHL eCommerce keeps its own host. VERIFIED 2026-08-14 against a live
+  // Delivered 420-prefixed parcel: webtrack renders the full scan history
+  // ("10 July 2026 02:54 PM CT Delivered, From PLAINFIELD, IN → Princeton,
+  // TX"), which is MORE detail than dhl.com gives for the same number
+  // (dhl.com resolves it too, but only as "DELIVERED" with a link back out
+  // to "DHL eCommerce Web track").
   dhl_ecommerce: (id) => `https://webtrack.dhlglobalmail.com/?trackingnumber=${id}`,
   canada_post: (id) =>
     `https://www.canadapost-postescanada.ca/track-reperage/en#/search?searchFor=${id}`,
@@ -271,18 +310,29 @@ function parseHttpUrl(raw: string | null | undefined): URL | null {
  * This is the test that removes the 5,547 prod URLs which open an empty
  * search form.
  */
+/** The first plausible shipment identifier carried in a URL's query or
+ *  hash params, or null. One owner, so `urlReferencesShipment` and
+ *  `repairMerchantUrl` can never disagree about what a URL contains. */
+function firstIdentifierParam(parsed: URL): string | null {
+  const paramSources = [
+    parsed.searchParams,
+    new URLSearchParams(parsed.hash.replace(/^#[^?]*\??/, "")),
+  ];
+  for (const params of paramSources) {
+    for (const [key, value] of params) {
+      if (!IDENTIFIER_PARAMS.has(key.toLowerCase())) continue;
+      const first = (value.split(",")[0] ?? "").trim();
+      if (isPlausibleIdentifier(first)) return first;
+    }
+  }
+  return null;
+}
+
 export function urlReferencesShipment(raw: string | null | undefined): boolean {
   const parsed = parseHttpUrl(raw);
   if (!parsed) return false;
 
-  const paramSources = [parsed.searchParams, new URLSearchParams(parsed.hash.replace(/^#[^?]*\??/, ""))];
-  for (const params of paramSources) {
-    for (const [key, value] of params) {
-      if (!IDENTIFIER_PARAMS.has(key.toLowerCase())) continue;
-      const first = value.split(",")[0] ?? "";
-      if (isPlausibleIdentifier(first)) return true;
-    }
-  }
+  if (firstIdentifierParam(parsed)) return true;
 
   // Path-embedded identifier: ANY segment that looks like a shipment
   // reference rather than a page name. Not just the last one — Evri ends
@@ -321,15 +371,20 @@ export function identifyTrackingLinkCarrier(
 
 /**
  * Repair a merchant URL we are going to fall back to: force https (35% of
- * prod rows are http) and drop USPS's empty-form `_input` endpoint in
- * favour of the results endpoint. Conservative — it changes the scheme and
- * that one known-bad path, nothing else.
+ * prod rows are http) and rewrite USPS's dead `TrackConfirmAction*` query
+ * endpoints onto the path form that actually resolves. Conservative — it
+ * changes the scheme and that one known-bad family, nothing else.
+ *
+ * The USPS rewrite needs a number to move, so it only fires when the URL
+ * carries one; otherwise the URL is left alone for `urlReferencesShipment`
+ * to reject.
  */
 function repairMerchantUrl(parsed: URL): string {
   const u = new URL(parsed.toString());
   u.protocol = "https:";
-  if (/(^|\.)usps\.com$/i.test(u.hostname)) {
-    u.pathname = u.pathname.replace(/TrackConfirmAction_input$/i, "TrackConfirmAction");
+  if (/(^|\.)usps\.com$/i.test(u.hostname) && /TrackConfirmAction/i.test(u.pathname)) {
+    const num = firstIdentifierParam(u);
+    if (num) return `https://tools.usps.com/tracking/${encodeURIComponent(num)}`;
   }
   return u.toString();
 }
