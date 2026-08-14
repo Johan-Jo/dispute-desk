@@ -210,7 +210,46 @@ describe("the versions are real, not placeholders", () => {
    * without bumping the version means a case that should self-heal will not,
    * and that failure is silent. Updating this number is the reminder. */
   it("VALIDATOR_VERSION is pinned — bump it when validation behaviour changes", () => {
-    expect(VALIDATOR_VERSION).toBe(1);
+    expect(VALIDATOR_VERSION).toBe(2);
+  });
+
+  it("unblocks the row that proved the pin is not decorative", () => {
+    /* blume-box 11051073729 v5, verbatim from production. It failed under the
+     * OLD detector; #561 replaced that detector and left this constant at 1, so
+     * a merchant-clicked Regenerate on 2026-08-14T14:30Z answered
+     * `defence_package_generation_skipped / latest_package_failed` — prompt,
+     * validator and evidence all matched, so the guard correctly called it the
+     * same attempt. Nine open blume-box cases were dead the same way.
+     *
+     * Both directions are asserted: the bump is what unblocks it, and with the
+     * old value it still blocks — so this fails if someone reverts the constant
+     * and fails if someone weakens the guard. */
+    const v5: LatestPackageRow = {
+      id: "b3f37324-2d54-40cb-9d76-326d63c73c25",
+      version: 5,
+      status: "failed",
+      validation_status: "failed",
+      failure_code: "validation_failed",
+      prompt_version: 14,
+      validator_version: 1,
+      evidence_hash: "9012d4c3c6b2be92803cae2a492ace4f648e69140a39b82f203d72e245e43231",
+    };
+    const unchangedExceptValidator: CurrentGenerationInputs = {
+      promptVersion: 14,
+      validatorVersion: VALIDATOR_VERSION,
+      evidenceHash: v5.evidence_hash!,
+    };
+
+    const now = evaluateGenerationGuard(v5, unchangedExceptValidator);
+    expect(now.blocked).toBe(false);
+    expect(now.retryBasis).toContain("validator_version_changed");
+
+    const before = evaluateGenerationGuard(v5, {
+      ...unchangedExceptValidator,
+      validatorVersion: 1,
+    });
+    expect(before.blocked).toBe(true);
+    expect(before.reason).toBe("latest_package_failed");
   });
 
   it("CURRENT_PROMPT_VERSION is a positive integer", () => {
