@@ -22,6 +22,7 @@ import { getServiceClient } from "@/lib/supabase/server";
 import { evaluateRules } from "@/lib/rules/evaluateRules";
 import { evaluateAutoSubmitGuards } from "./autoSubmitGuards";
 import { finalizeAndEnqueueSave } from "./finalizeAndEnqueueSave";
+import { fetchLatestCandidate } from "@/lib/defence/candidateVersions";
 
 interface PackJson {
   case_strength?: { overall?: string } | null;
@@ -132,16 +133,19 @@ export async function reconcileParkedAutoDisputesLegacy(
     }
     if (mode !== "auto") continue;
 
-    // Latest defence package must be a finalize-able draft: draft +
-    // validation ok + pdf present. Anything else (cap-failed, no PDF,
-    // already final/submitted) is not our job to fix here.
-    const { data: dpkg } = await sb
-      .from("defence_packages")
-      .select("id, version, status, validation_status, pdf_path")
-      .eq("dispute_id", dispute.id)
-      .order("version", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Latest CANDIDATE must be a finalize-able draft: draft + validation ok +
+    // pdf present. Anything else (cap-failed, no PDF, already final/submitted)
+    // is not our job to fix here. A `failed` row is not a candidate at all —
+    // see `lib/defence/candidateVersions.ts`; letting one stand in for the
+    // package is what left a validated draft unreachable behind a failed
+    // rebuild on the morning of a deadline.
+    const { row: dpkg } = await fetchLatestCandidate<{
+      id: string;
+      version: number;
+      status: string;
+      validation_status: string | null;
+      pdf_path: string | null;
+    }>(sb, dispute.id as string, "id, version, status, validation_status, pdf_path");
     if (
       !dpkg ||
       dpkg.status !== "draft" ||

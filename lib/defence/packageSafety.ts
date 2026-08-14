@@ -18,11 +18,19 @@
  *   - the existence of an older unsafe version must never permanently block a
  *     dispute;
  *   - and a selector must never fall back from a new safe-or-failed candidate
- *     to an older unsafe one. Both selectors (`saveToShopifyJob` §3 and the
- *     deadline cron) already take `order by version desc limit 1` — the latest
- *     candidate only — and this module must not be used to reintroduce a
- *     search for "the newest SAFE version", which would be exactly that
- *     forbidden fallback.
+ *     to an older unsafe one. Every selector takes the latest CANDIDATE only
+ *     (`lib/defence/candidateVersions.ts`), and this module must not be used to
+ *     reintroduce a search for "the newest SAFE version", which would be
+ *     exactly that forbidden fallback.
+ *
+ * WHAT "LATEST CANDIDATE" NARROWED TO, 2026-08-14. It used to mean `order by
+ * version desc limit 1`. A `failed` row takes a version number without ever
+ * producing a package — no PDF, no validated narrative — so that query let an
+ * aborted build shadow the last package that WAS built, and a validated,
+ * PDF-rendered v4 went to forfeit behind a v5 that failed to generate. Aborted
+ * builds are therefore not candidates. This is not the forbidden fallback: a
+ * candidate this module REFUSES still stops the filing, and nothing walks past
+ * a refusal.
  *
  * NOT A DATA REWRITE. Nothing here mutates a package. Unsafe candidates stay
  * viewable; they are refused at the save/forward boundary and the merchant is
@@ -30,6 +38,7 @@
  */
 
 import { classifyAddressDeliveryClaim } from "./claimCapabilities";
+import { fetchLatestAnyVersion, fetchLatestCandidate } from "./candidateVersions";
 import {
   RETIRED_PAYLOAD_KEYS,
   type RetiredPayloadKey,
@@ -544,21 +553,36 @@ export async function preflightLatestCandidate(
   disputeId: string,
   opts?: PreflightOptions,
 ): Promise<PreflightOutcome> {
-  const res = await sb
-    .from("defence_packages")
-    .select(SELECT_COLS)
-    .eq("dispute_id", disputeId)
-    .order("version", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (res?.error) {
-    return {
-      kind: "error",
-      message: `latest_candidate_query_failed: ${res.error.message ?? "unknown"}`,
-    };
+  /* "Latest" means the latest CANDIDATE — see `candidateVersions.ts`. A
+   * `failed` row is a build that never produced a package, and letting it
+   * stand in for one is what stranded a validated, PDF-rendered v4 behind a
+   * failed v5 on the morning of a deadline. */
+  const { row: candidate, error } = await fetchLatestCandidate<
+    Record<string, unknown> & { version: number }
+  >(sb, disputeId, SELECT_COLS);
+  if (error) {
+    return { kind: "error", message: `latest_candidate_query_failed: ${error}` };
   }
-  if (res?.data == null) return { kind: "missing" };
-  const row = asCandidateRow(res.data);
+  if (candidate == null) {
+    /* No rows at all is `missing` — "not generated yet", wait for the build.
+     * Rows that are ALL aborted builds is not that: a build ran and failed, so
+     * waiting is the one instruction that cannot help. `missing` would tell the
+     * merchant to wait for something that has already happened and will not
+     * happen again on its own. */
+    const anyVersion = await fetchLatestAnyVersion<Record<string, unknown> & { version: number }>(
+      sb,
+      disputeId,
+      SELECT_COLS,
+    );
+    if (anyVersion.error) {
+      return { kind: "error", message: `latest_candidate_query_failed: ${anyVersion.error}` };
+    }
+    if (anyVersion.row == null) return { kind: "missing" };
+    const failed = asCandidateRow(anyVersion.row);
+    if (!failed) return { kind: "error", message: "latest_candidate_row_unreadable" };
+    return { kind: "not_fileable", candidate: failed, reasons: ["candidate_build_failed"] };
+  }
+  const row = asCandidateRow(candidate);
   if (!row) return { kind: "error", message: "latest_candidate_row_unreadable" };
   return judge(row, opts);
 }
@@ -578,13 +602,14 @@ export async function preflightNamedCandidate(
 ): Promise<PreflightOutcome> {
   const [namedRes, latestRes] = await Promise.all([
     sb.from("defence_packages").select(SELECT_COLS).eq("id", args.packageId).maybeSingle(),
-    sb
-      .from("defence_packages")
-      .select("id, version")
-      .eq("dispute_id", args.disputeId)
-      .order("version", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+    // The current CANDIDATE, not the highest version — otherwise a failed
+    // rebuild makes the package the merchant is looking at read `not_current`
+    // and sends them to "review the latest version" that does not exist.
+    fetchLatestCandidate<{ id: string; version: number; status?: string | null }>(
+      sb,
+      args.disputeId,
+      "id, version, status",
+    ),
   ]);
 
   if (namedRes?.error) {
@@ -595,10 +620,10 @@ export async function preflightNamedCandidate(
   }
   // A failed latest lookup CANNOT be read as "the named row is current" —
   // that was one of the four holes.
-  if (latestRes?.error) {
+  if (latestRes.error) {
     return {
       kind: "error",
-      message: `latest_version_query_failed: ${latestRes.error.message ?? "unknown"}`,
+      message: `latest_version_query_failed: ${latestRes.error}`,
     };
   }
   if (namedRes?.data == null) return { kind: "missing" };
@@ -606,10 +631,7 @@ export async function preflightNamedCandidate(
   const named = asCandidateRow(namedRes.data);
   if (!named) return { kind: "error", message: "named_candidate_row_unreadable" };
 
-  const latestId =
-    latestRes?.data && typeof (latestRes.data as Record<string, unknown>).id === "string"
-      ? ((latestRes.data as Record<string, unknown>).id as string)
-      : null;
+  const latestId = latestRes.row?.id ?? null;
   // No latest row while the named row exists is contradictory, not reassuring.
   if (latestId === null) return { kind: "error", message: "latest_version_row_unreadable" };
   if (latestId !== named.id) return { kind: "not_current", candidate: named, latestId };
