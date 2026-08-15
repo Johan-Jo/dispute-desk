@@ -20,6 +20,7 @@ import {
   citableVerificationSummaryEn,
   readPaymentVerification,
 } from "@/lib/argument/paymentVerification";
+import { trackingLinkUrl } from "@/lib/carriers/trackingLinkUrl";
 
 const CATEGORY_ORDER: EvidenceFactCategory[] = [
   "payment_authentication",
@@ -160,7 +161,17 @@ function renderValue(fact: EvidenceFact): string | null {
       // looking it up is the whole point.
       const carrier = typeof v?.carrier === "string" ? (v.carrier as string).trim() : "";
       const number = typeof v?.trackingNumber === "string" ? (v.trackingNumber as string).trim() : "";
-      const url = typeof v?.trackingUrl === "string" ? (v.trackingUrl as string).trim() : "";
+      // NOT the merchant's raw URL. `resolveTrackingLinkUrl` rebuilds the
+      // link from the carrier's canonical deep-link format so it opens the
+      // shipment's RESULT page, and returns null rather than print a link
+      // that opens an empty search box — which an issuer reads as "no proof
+      // of delivery", the opposite of what this row asserts.
+      const url =
+        trackingLinkUrl({
+          company: carrier,
+          number,
+          url: typeof v?.trackingUrl === "string" ? (v.trackingUrl as string) : null,
+        }) ?? "";
       const ref = [[carrier, number].filter(Boolean).join(" "), url]
         .filter(Boolean)
         .join(" · ");
