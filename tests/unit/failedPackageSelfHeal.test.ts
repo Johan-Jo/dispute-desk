@@ -210,7 +210,16 @@ describe("the versions are real, not placeholders", () => {
    * without bumping the version means a case that should self-heal will not,
    * and that failure is silent. Updating this number is the reminder. */
   it("VALIDATOR_VERSION is pinned — bump it when validation behaviour changes", () => {
-    expect(VALIDATOR_VERSION).toBe(2);
+    /* 2 → 3 on 2026-08-15: the address-delivery refusal now quotes the sentence
+     * it refused. That message is fed back to the model on retry, so changing it
+     * changes validation behaviour in the way this pin exists to catch — and the
+     * two packages that failed under the old message must become retryable.
+     *
+     * Kept as an exact pin, unlike the two prompt-version pins relaxed the same
+     * day. Those asserted "the fix is not behind a cached body", which `>=`
+     * satisfies. This one asserts that a human consciously acknowledged the
+     * bump, and only an exact value can ask for that. */
+    expect(VALIDATOR_VERSION).toBe(3);
   });
 
   it("unblocks the row that proved the pin is not decorative", () => {
