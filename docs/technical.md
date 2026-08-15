@@ -5333,6 +5333,25 @@ the failure is silent. `tests/unit/failedPackageSelfHeal.test.ts` pins the value
 pins the real v5 row in both directions: blocked at validator 1, unblocked at the current
 value.
 
+**The deadline email says only what we can support (2026-08-14).** `unsafe_address_claim` covers
+FIVE verdicts — affirmative claim, AMBIGUOUS claim, retired delivery fact, and either JSON
+unreadable — and the copy asserted the most specific one about all of them: *"the existing
+Defence Package **states that delivery reached a verified address**"*. blume-box `11051073729`
+was refused on `ambiguous_address_delivery_claim`, where the offending sentence was the
+`ip_location` fact naming its own comparand — the detector could not resolve it and failed
+closed, so the package asserted nothing. On an `unreadable_*` verdict the statement is not
+merely over-stated but impossible: the package was never parsed. The cron now passes the
+verdict's own `reasons` through (`unsafeReasons`), and the copy states what WE could not stand
+behind rather than what the package claims. With no reasons supplied it degrades to the
+non-asserting branch.
+
+Two further corrections in the same message, both found by rendering it: the fixed lead-in
+*"could not produce a defence package because {reason}"* contradicted itself on the one branch
+where a package DOES exist (now *"built a defence package but could not file it: …"*), and the
+summary row printed the raw enum (`Why we could not build it: unsafe_address_claim`) — the same
+class as the validator vocabulary removed from the workspace card. Tests assert no enum reaches
+the merchant on any branch, and that no branch renders a comma splice.
+
 **Every enqueue site is gated, not just the worker.** `lib/defence/packageSafety.ts` exposes one
 predicate plus two preflight loaders (`preflightLatestCandidate`, `preflightNamedCandidate`). They
 are consulted BEFORE any enqueue or status write by: the embedded Review & Submit endpoint
