@@ -751,6 +751,79 @@ export async function handleBuildDefencePackage(
   let projection: PackageProjection | null = null;
   let documentFailureCodes: readonly string[] = [];
 
+  /**
+   * The projection as IDENTITY — derived from `planned`, never from
+   * `activePlan`, and never allowed to reach `composedBlocks`.
+   *
+   * ── THE SECOND DEADLOCK, AND WHY THIS MIRRORS THE FIRST ───────────────
+   *
+   * Step 1 made the plan derive while dark so `plan_input_hash` could exist
+   * before activation. It deliberately left `document_validation_passed` null,
+   * on the correct reasoning that stamping a verdict for a check that never
+   * ran is a lie in the one column `selectFileablePackage` rung 9 trusts.
+   *
+   * What nobody then checked was rung 9 itself. It refuses
+   * `validationPassed !== true`, so on 2026-08-15 — with all 55 open cases
+   * stamped and drained — flipping the switch would have returned
+   * `validation_failed` for every one of them. Same shape as blocker 1.1: the
+   * data the flip needs can only be written after the flip.
+   *
+   * The fix is not to stamp `true` anyway, and not to teach rung 9 to tolerate
+   * null. It is to RUN THE CHECK. `validatePackageDocument` is pure and
+   * synchronous — no IO, no model call — so running it dark costs CPU and
+   * makes the stamped verdict honest: we really did validate the document the
+   * canonical route would compose.
+   *
+   * The one hazard is that the projection is not pure IDENTITY the way the
+   * plan is — `composedBlocks` reads `projection?.blocks`, so un-gating the
+   * existing variable would change bank-facing PDF output while claiming to be
+   * dark. Hence a separate variable that nothing downstream may read.
+   */
+  let darkProjection: ReturnType<typeof projectPackageFromPlan> | null = null;
+  /**
+   * The fact list the CANONICAL route would use, recomputed darkly.
+   *
+   * Not `planFacts`. That variable is only reassigned inside `if (activePlan)`
+   * (see the `bankIncludedFacts(selectPlanFacts(…))` block above), so while
+   * dark it still holds the LEGACY selection. Projecting the canonical plan
+   * over legacy facts would produce a hybrid document belonging to neither
+   * route, and the verdict stamped from it would not predict what rung 9 reads
+   * after the flip — which is the entire purpose of stamping it.
+   */
+  let darkPlanFacts: typeof planFacts | null = null;
+  if (planned) {
+    try {
+      darkPlanFacts = bankIncludedFacts(
+        selectPlanFacts(planned.plan, planned.factsByRecordId).includedFacts,
+      );
+      /* Empty is not a failure here. On the canonical route this returns
+       * `markSkipped(no_bank_eligible_facts)`; darkly there is simply no
+       * document to judge, so the verdict stays null — "not assessed", which
+       * rung 9 refuses correctly. */
+      darkProjection = darkPlanFacts.length
+        ? projectPackageFromPlan({
+            plan: planned.plan,
+            narrative: narrativeRes.narrative,
+            factsByRecordId: planned.factsByRecordId,
+            bankIncludedFacts: darkPlanFacts,
+            packageMode: classification.packageMode,
+            familyKey: reasonCodeFamily.key,
+            moduleKey: reasonCodeModule.key,
+            fulfillmentStatus: orderContext.fulfillmentStatus,
+          })
+        : null;
+    } catch (err) {
+      /* Same contract as the dark plan derivation: best-effort while dark,
+       * real once the switch is on (where `activePlan` drives the real
+       * projection below and this variable is not consulted). */
+      if (canonical) throw err;
+      console.warn(
+        `[buildDefencePackage] dark projection failed for ${pkg.dispute_id}: ` +
+          (err instanceof Error ? err.message : String(err)),
+      );
+    }
+  }
+
   if (activePlan) {
     projection = projectPackageFromPlan({
       plan: activePlan.plan,
@@ -820,6 +893,45 @@ export async function handleBuildDefencePackage(
           extraHardPhrases: hardPhrases,
           guardedPhrases: reasonCodeFamily.guardedBankPhrases,
         });
+
+  /**
+   * The document verdict as IDENTITY — the real result of a check we really
+   * ran, on the document the canonical route would compose.
+   *
+   * Read `planned` and `darkProjection`, never `activePlan`/`projection`: this
+   * must produce the same answer whether the switch is on or off, because it is
+   * what rung 9 will read after the flip. When the switch IS on, the live
+   * `composedValidation` above has already run the identical check on the
+   * identical inputs, so the two agree by construction.
+   *
+   * `null` only when no plan or no projection could be derived — genuinely
+   * "not assessed", which rung 9 correctly refuses.
+   */
+  let darkDocumentPassed: boolean | null = null;
+  let darkDocumentFailureCodes: readonly string[] = [];
+  if (planned && darkProjection && darkPlanFacts) {
+    try {
+      const darkVerdict = validatePackageDocument({
+        plan: planned.plan,
+        blocks: darkProjection.blocks,
+        // The canonical fact list, for the same reason the projection uses it.
+        includedFacts: darkPlanFacts,
+        orphaned: darkProjection.orphaned,
+        missingRecordIds: darkProjection.missingRecordIds,
+        packageMode: classification.packageMode,
+        extraHardPhrases: hardPhrases,
+        guardedPhrases: reasonCodeFamily.guardedBankPhrases,
+      });
+      darkDocumentPassed = darkVerdict.passed;
+      darkDocumentFailureCodes = darkVerdict.failureCodes;
+    } catch (err) {
+      if (canonical) throw err;
+      console.warn(
+        `[buildDefencePackage] dark document validation failed for ${pkg.dispute_id}: ` +
+          (err instanceof Error ? err.message : String(err)),
+      );
+    }
+  }
   if (!composedValidation.ok) {
     const summary = summariseComposedErrors(composedValidation.errors);
     await sb
@@ -1097,12 +1209,21 @@ export async function handleBuildDefencePackage(
    * non-fileable, and that is the correct answer for a package no plan was
    * derived for.
    *
-   * THE DOCUMENT VERDICT IS NOT PART OF THE IDENTITY. `plan_*` describe what
-   * the package was built FROM and are true whether or not the canonical
-   * consumers ran. `document_validation_passed` is a VERDICT, and while dark
-   * `validatePackageDocument` never executes — stamping `true` there would
-   * record a check we did not perform, in the column `selectFileablePackage`
-   * rung 9 refuses on. It stays gated on the validation having actually run.
+   * THE DOCUMENT VERDICT IS A RECORDED RESULT, NEVER AN ASSUMPTION.
+   *
+   * Originally this column was gated on `activePlan`, so it was null while
+   * dark — on the correct reasoning that stamping `true` for a check that never
+   * ran is a lie in the column rung 9 trusts. The consequence went unnoticed
+   * until 2026-08-15: rung 9 refuses `validationPassed !== true`, so with all
+   * 55 open cases stamped and drained, the flip would have answered
+   * `validation_failed` for every one. The verdict could only be written after
+   * the flip that required it — blocker 1.1's shape, one column over.
+   *
+   * Resolved by RUNNING THE CHECK rather than by asserting its result:
+   * `validatePackageDocument` is pure and synchronous, so it now executes
+   * while dark against `darkProjection` and this column carries its real
+   * answer. `null` survives for the case where no plan or projection could be
+   * derived — genuinely "not assessed", which rung 9 still refuses, correctly.
    */
   const canonicalIdentityColumns =
     planned
@@ -1112,14 +1233,16 @@ export async function handleBuildDefencePackage(
           plan_policy_version: planned.policyVersion,
           plan_deadline_only: planned.plan.deadlineOnly,
           plan_no_safe_argument: planned.plan.noSafeArgument,
-          // Reached only after `composedValidation.ok` ON THE CANONICAL ROUTE,
-          // so `true` is a recorded verdict rather than an assumption; `null`
-          // while dark says "not checked", which is the truth. The codes are
-          // carried beside it because P-6's `noUnsupportedArgument` reads THEM,
-          // not the boolean — folding the two together is the collapse contract
-          // revision 1 undid.
-          document_validation_passed: activePlan ? true : null,
-          document_failure_codes: activePlan ? documentFailureCodes : null,
+          // On the canonical route this line is reached only after
+          // `composedValidation.ok`, so `true` is already established; the dark
+          // verdict ran the identical check on identical inputs and agrees by
+          // construction. Reading the dark value in BOTH cases keeps one
+          // source for the column instead of two that could drift. The codes
+          // are carried beside it because P-6's `noUnsupportedArgument` reads
+          // THEM, not the boolean — folding the two together is the collapse
+          // contract revision 1 undid.
+          document_validation_passed: darkDocumentPassed,
+          document_failure_codes: darkDocumentPassed === null ? null : darkDocumentFailureCodes,
         }
       : {
           plan_json: null,
