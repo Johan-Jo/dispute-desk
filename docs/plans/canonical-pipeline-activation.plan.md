@@ -216,6 +216,51 @@ A prior report states threshold 60 blocks 19 of 73 cases and flips 17. **Unverif
 population it was measured on has since changed.** Re-measure before deciding; do not carry the
 number forward.
 
+### Measured 2026-08-15 — `scripts/sql/threshold-60-remeasure.sql`
+
+Population: 54 open, unfiled, `not_saved` cases with a `ready` pack. The two legal pairings only;
+the illegal one (legacy score vs 60) is not computed, because it is what the resolver exists to
+make unrepresentable.
+
+```
+cases                                54
+usable canonical snapshot            54   (assessmentVersion 1, policyVersion 1,
+                                            rebuild_pending false, strength present — so the
+                                            canonical arm is genuinely in force, not falling back)
+legacy passes  (score vs merchant)   54
+canonical passes (score vs 60)       47
+activation BLOCKS                     7
+activation ADMITS                     0
+```
+
+**The flip direction is safe.** Seven cases move from auto-file to review and none move the other
+way, and a blocked case is not a lost case — `PROMOTABLE_AT_DEADLINE` still lets the deadline
+trigger file a `draft`, so those seven file later rather than never. The old "blocks 19, flips 17"
+is superseded: **blocks 7, flips 7, on 54.**
+
+### ⚠ The calibration basis no longer holds — resolve before flipping
+
+This file records the calibration as "90 packs moving −1…−7 and 15 moving +2…+17 between the
+persisted column and the canonical snapshot". Today's population does not behave that way:
+
+```
+mean delta (canonical − legacy)   −21.07
+range                             −36 … +11
+```
+
+Representative pairs, all on packs built 2026-07-22: legacy 98 → canonical 62 (×8),
+legacy 88 → canonical 55 (×2), legacy 90 → canonical 70 (×3).
+
+A threshold calibrated against a −4 mean delta is not the same instrument when the mean delta is
+−21. Either the persisted column is now written by a more generous scorer than it was at
+calibration, or the canonical scorer has tightened; this measurement cannot tell which, and the
+difference decides whether 60 is still the right number or merely a safe-direction one.
+
+**This does not block the rebuild drainage** (identity stamping is independent of the gate). It
+blocks step 6. Recalibrate on the current scale, or accept the seven blocks as a deliberate
+tightening and say so in the plan — but do not flip on the assumption that 60 still means what it
+meant when it was chosen.
+
 ---
 
 ## 8. Step 6 — flip, then delete
@@ -250,7 +295,10 @@ Code first, frozen, deployed dark. Data last.
    ↓
 4.2 canary backfill (2–3 cases) — prove the hash matches a real rebuild
    ↓
-5  re-measure threshold 60 on the current population
+5  re-measure threshold 60 on the current population   ← DONE 2026-08-15 (§7).
+                                                          Blocks 7 of 54, admits 0. Safe
+                                                          direction, but the calibration basis
+                                                          no longer holds — see the warning.
    ↓
 4.3 FULL BACKFILL — chunked, resumable, last data step
    ↓
