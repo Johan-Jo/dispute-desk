@@ -619,15 +619,59 @@ export function claimsAddressDelivery(text: string | null | undefined): boolean 
 }
 
 /**
+ * The FIRST sentence that trips the detector, verbatim, or null.
+ *
+ * ── WHY THE VALIDATOR MUST QUOTE THE SENTENCE ─────────────────────────
+ *
+ * The retry already feeds validation errors back to the model
+ * (`narrativeWriter`'s `retryGuidance`). It was not working on this rule, and
+ * the reason is that the message described the RULE rather than the OFFENCE:
+ * "it may not state which physical address received the parcel". A model that
+ * wrote "the shipment reached its destination" reads that, observes it named
+ * no address, concludes it complied, and rewrites around a sentence it does
+ * not know is the problem. Measured 2026-08-15: two packages failed on exactly
+ * that sentence AFTER a retry, at prompt 15 — the retry spent a generation and
+ * changed nothing.
+ *
+ * Naming the span is the general fix, and it is why this is not a fourth
+ * prompt version. A prompt rule can only forbid the phrasings someone thought
+ * of; v14 named `destination`, v15 named the summarising sections, and the
+ * model then reached it through an evidentiary gloss ("the record documents
+ * that…") that neither anticipated. Quoting the matched sentence makes the
+ * feedback correct for phrasings nobody has seen yet.
+ */
+export function findAddressDeliveryClaimSentence(
+  text: string | null | undefined,
+): string | null {
+  if (!text || !text.trim()) return null;
+  for (const sentence of sentences(text)) {
+    const verdict = classifySentence(sentence);
+    if (verdict === "affirmative" || verdict === "ambiguous") return sentence;
+  }
+  return null;
+}
+
+/**
  * The authorization check itself: is this prose permitted, given the
  * capabilities the case actually holds?
  */
 export function checkAddressDeliveryAuthorization(args: {
   text: string | null | undefined;
   capabilities: ReadonlySet<ClaimCapability>;
-}): { authorized: true } | { authorized: false; verdict: "affirmative" | "ambiguous" } {
+}):
+  | { authorized: true }
+  | {
+      authorized: false;
+      verdict: "affirmative" | "ambiguous";
+      /** The exact sentence that failed, for the retry to act on. */
+      offendingSentence: string | null;
+    } {
   const verdict = classifyAddressDeliveryClaim(args.text);
   if (verdict !== "affirmative" && verdict !== "ambiguous") return { authorized: true };
   if (args.capabilities.has("address_delivery")) return { authorized: true };
-  return { authorized: false, verdict };
+  return {
+    authorized: false,
+    verdict,
+    offendingSentence: findAddressDeliveryClaimSentence(args.text),
+  };
 }
