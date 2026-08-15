@@ -243,8 +243,12 @@ describe("neither runtime prompt prints a concrete verification claim", () => {
   });
 
   it("both cached bodies were re-versioned", () => {
-    expect(CURRENT_PROMPT_VERSION).toBe(14);
-    expect(visa_10_4_fraud.version).toBe(10);
+    /* `>=` for the same reason as the address-delivery contract: the invariant
+     * is "this correction is live, not behind a cached older body", and an
+     * exact pin fails on every subsequent correct bump rather than on the
+     * mistake it was written to catch. */
+    expect(CURRENT_PROMPT_VERSION).toBeGreaterThanOrEqual(14);
+    expect(visa_10_4_fraud.version).toBeGreaterThanOrEqual(10);
   });
 });
 
