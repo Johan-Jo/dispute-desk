@@ -129,7 +129,19 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // rebuild batch of 2026-08-15. The rule now binds the summarising sections by
 // name and gives them somewhere else to close: a section with a job it cannot
 // do without breaking a rule will break the rule.
-const PROMPT_VERSION = 15;
+// v16 (2026-08-15) — canonical fact ids reach the model as PLAN RECORD IDS.
+// Not a wording change: on the canonical route `selectPlanFacts` now hands the
+// writer facts relabelled `order_confirmation#shopify_order`-style instead of
+// positional `f${n}`, so the ids the model cites in `usedFactIds` are the ids
+// the projection joins on. The first live execution of the canonical route
+// (activation canary, 2026-08-15) failed `orphaned_claim` on a FRESH
+// generation because the two halves spoke different id namespaces — the
+// projection's own header called this caller "half-migrated", and it was.
+// Bumped so the guard treats post-fix rebuilds as a new attempt: the canary's
+// failed v6 is unretryable at prompt 15 (same prompt, same validator, same
+// evidence), and this constant is the one that moved. Legacy payloads still
+// carry `f${n}` — the legacy route does not consult the plan, by contract.
+const PROMPT_VERSION = 16;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted

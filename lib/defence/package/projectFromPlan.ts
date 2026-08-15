@@ -86,7 +86,27 @@ export function selectPlanFacts(
       missingRecordIds.push(recordId);
       continue;
     }
-    includedFacts.push(fact);
+    /* RELABELLED to the record id — this line is what joins the two halves of
+     * the pipeline.
+     *
+     * The narrative writer passes `fact.id` into the LLM payload verbatim, the
+     * model cites those ids back in `usedFactIds`, and
+     * `rebuildNarrativeFromPlan` checks the citations against the plan's
+     * record ids. With the classifier's positional `f${n}` ids, nothing could
+     * ever match: every section orphaned and every canonical build failed
+     * `orphaned_claim` — measured live on the 2026-08-15 activation canary,
+     * a FRESH generation, on the first real execution of this route.
+     *
+     * A copy, never a mutation: the map's values are the classifier's own fact
+     * objects, shared with the legacy path, and relabelling those in place
+     * would leak record ids into a route that still expects `f${n}`.
+     *
+     * Everything downstream of the canonical route reads this one list — the
+     * LLM payload, `validateNarrative`'s referential layer (it builds
+     * `approvedFactIds` from the same array), and the projection — so the
+     * namespaces agree everywhere by construction rather than by parallel
+     * bookkeeping. */
+    includedFacts.push({ ...fact, id: recordId });
   }
   return {
     includedFacts,
