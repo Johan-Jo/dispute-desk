@@ -122,6 +122,33 @@ describe("selectPlanFacts", () => {
     expect(selection.includedFacts).toEqual([]);
     expect(selection.missingRecordIds).toEqual(plan.included.map((i) => i.recordId));
   });
+
+  it("RELABELS positional classifier ids to record ids — the join the writer depends on", () => {
+    /* THE TEST GAP THAT LET THE ACTIVATION CANARY FAIL.
+     *
+     * Every fixture in this file builds facts with `id: recordId`, so the
+     * suite could never see what production actually does: `factClassifier`
+     * assigns positional `f${n}` ids, the writer passes `fact.id` into the LLM
+     * payload verbatim, the model cites those ids back, and
+     * `rebuildNarrativeFromPlan` joins the citations on record ids. On
+     * 2026-08-15 the first live execution of the canonical route failed
+     * `orphaned_claim` on a FRESH generation because nothing ever matched.
+     *
+     * So this test feeds `selectPlanFacts` a fact carrying the REAL production
+     * shape — a positional id — and pins that the selection comes back keyed
+     * by the record id, on a copy, with the original untouched (the map's
+     * values are shared with the legacy route). */
+    const plan = FIXTURE_REVIEW_REQUIRED_SAFE.plan;
+    const positional = fact({ id: "f7" });
+    const selection = selectPlanFacts(plan, new Map([[DELIVERY_RECORD, positional]]));
+
+    expect(selection.includedFacts.map((f) => f.id)).toEqual([DELIVERY_RECORD]);
+    // A copy, never a mutation — the classifier's object still says f7.
+    expect(positional.id).toBe("f7");
+    // Everything else about the fact travels unchanged.
+    expect(selection.includedFacts[0].value).toEqual(positional.value);
+    expect(selection.includedFacts[0].category).toBe(positional.category);
+  });
 });
 
 describe("rebuildNarrativeFromPlan — no sentence survives its support", () => {

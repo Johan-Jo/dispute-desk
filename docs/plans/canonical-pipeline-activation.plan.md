@@ -263,6 +263,37 @@ meant when it was chosen.
 
 ---
 
+### First flip attempt — 2026-08-15, rolled back after one canary
+
+The flip went live for ~15 minutes and the single canary rebuild failed
+`orphaned_claim` — on a FRESH generation, which ruled out every "stale
+narrative" theory. Root cause: the writer and the projection spoke different id
+namespaces. `factClassifier` assigns positional `f${n}` fact ids, the writer
+passes `fact.id` into the LLM payload verbatim, and `rebuildNarrativeFromPlan`
+joins `usedFactIds` against the plan's RECORD ids — so nothing ever matched,
+every section orphaned, and every canonical build failed document validation.
+The projection's own header had named this caller "half-migrated"; the
+migration had simply never been done, and the fixture suite couldn't see it
+because every fixture builds facts with `id: recordId` already.
+
+Two operational notes from the attempt, for the next person who flips:
+- `echo "on" | vercel env add` stores `"on\n"`, and the flag check is an EXACT
+  match — the pipeline stays silently off. Use `printf "on"`, and verify with
+  `vercel env pull`, not `env ls`.
+- Rollback really is the 4 minutes the plan claims: remove the var, redeploy.
+  Nothing merchant-facing happened in the window; the only failure was the
+  canary itself.
+
+Fix: `selectPlanFacts` relabels each selected fact to its record id (a copy —
+the map's values are shared with the legacy route). Every canonical consumer
+reads that one list, so the namespaces agree by construction. PROMPT_VERSION
+15 → 16 so the guard treats post-fix rebuilds as a new attempt. Note the
+corollary: packages built while DARK still generate from `f${n}` ids, so their
+stamped verdicts read `false` (an honest mismatch) — a case built dark needs
+one rebuild after the flip before rung 9 will pass it. With the 2026-08-15
+population fully filed, that cost falls only on disputes that arrive between
+the fix and the flip.
+
 ## 8. Step 6 — flip, then delete
 
 `CANONICAL_PIPELINE=on`, then PR 3 removes the false branch at all nine gated call sites and
