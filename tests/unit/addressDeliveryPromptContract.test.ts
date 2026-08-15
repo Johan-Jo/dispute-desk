@@ -151,6 +151,27 @@ describe("rule 14 states the prohibition as a class", () => {
 
   it("the cached prompt was re-versioned", () => {
     // Without a bump the corrected block would sit behind the cached old one.
-    expect(CURRENT_PROMPT_VERSION).toBe(14);
+    //
+    // `>=`, not `toBe`. The contract is that this rule is not serving from a
+    // stale cache — which an exact pin does not actually test. What it tests is
+    // that nobody ever bumps the version again, so it fails on every CORRECT
+    // change too; it failed on v15, whose only purpose was to fix a defect in
+    // this very rule. A tripwire that fires on the fix is noise, and noise is
+    // what gets suppressed.
+    expect(CURRENT_PROMPT_VERSION).toBeGreaterThanOrEqual(14);
+  });
+
+  it("binds the summarising sections by name (v15)", () => {
+    /* v14 told the model to "stop at the evidence" and cited fulfillmentArgument
+     * and conclusion. executiveSummary was never named, and "stop at the
+     * evidence" is close to self-contradictory in a section that exists to
+     * restate — so package 6b47d368 wrote the arrival into the summary anyway,
+     * after a retry, at prompt 14. Naming the sections is half the fix. */
+    expect(BASE_SYSTEM_PROMPT).toMatch(/THE SUMMARISING SECTIONS ARE NOT EXEMPT/);
+    expect(BASE_SYSTEM_PROMPT).toMatch(/executiveSummary and conclusion are bound by this rule/);
+    /* The other half: the rule must give those sections somewhere else to go.
+     * Prohibition alone is what already failed — the section still had to close
+     * on something, and the only thing it had was the delivery. */
+    expect(BASE_SYSTEM_PROMPT).toMatch(/close on something else|close on nothing/);
   });
 });
