@@ -83,8 +83,19 @@ import type {
  *      answered `defence_package_generation_skipped`,
  *      `skip_reason: latest_package_failed` — the exact PERMANENT DEATH this
  *      file's header describes, caused by the omission it warns about.
+ *   3  (2026-08-15) — the address-delivery refusal now QUOTES the sentence it
+ *      refused. The message is fed back to the model by `retryGuidance`, and
+ *      describing the rule instead of the offence made that feedback useless on
+ *      this one rule: a model that wrote "the shipment reached its destination"
+ *      read "may not state which physical address received the parcel", saw
+ *      that it had named no address, and rewrote around the wrong sentence. Two
+ *      packages failed that way AFTER a retry at prompt 15, on the same day
+ *      prompt 15 fixed the summarising-section variant of the same claim.
+ *      Bumped because the failed packages must become retryable — and because
+ *      three prompt versions chasing individual phrasings is the signal that
+ *      the FEEDBACK was wrong, not the wording list.
  */
-export const VALIDATOR_VERSION = 2;
+export const VALIDATOR_VERSION = 3;
 
 export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,
@@ -272,7 +283,19 @@ export function runPhraseAndGuardChecks(
         `${sectionKey} makes an ${addressCheck.verdict} address-delivery claim, ` +
         `but this case holds no "address_delivery" capability. Delivery may cite ` +
         `carrier, tracking and delivery date; it may not state which physical ` +
-        `address received the parcel.`,
+        `address received the parcel.` +
+        /* QUOTE THE SENTENCE. This message is fed back to the model on retry,
+         * and without the span it describes the rule rather than the offence:
+         * a model that wrote "reached its destination" reads "may not state
+         * which physical address", sees no address, and believes it complied.
+         * Two packages failed on that sentence AFTER a retry on 2026-08-15. */
+        (addressCheck.offendingSentence
+          ? ` The sentence that failed is, verbatim: "${addressCheck.offendingSentence}" ` +
+            `Delete it or rewrite it so it makes no statement about where the ` +
+            `parcel went — naming no place at all, including words like ` +
+            `"destination", "premises" or "location". Citing the carrier, the ` +
+            `tracking number and the delivery date is sufficient and is already permitted.`
+          : ""),
       layer,
     });
   }
