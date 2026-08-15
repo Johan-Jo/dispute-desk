@@ -168,7 +168,11 @@ describe("rule 14 states the prohibition as a class", () => {
      * restate — so package 6b47d368 wrote the arrival into the summary anyway,
      * after a retry, at prompt 14. Naming the sections is half the fix. */
     expect(BASE_SYSTEM_PROMPT).toMatch(/THE SUMMARISING SECTIONS ARE NOT EXEMPT/);
-    expect(BASE_SYSTEM_PROMPT).toMatch(/executiveSummary and conclusion are bound by this rule/);
+    // Whitespace-tolerant: the rule wraps across lines in the template literal,
+    // for the same reason the noun list two tests up does.
+    expect(BASE_SYSTEM_PROMPT).toMatch(
+      /executiveSummary\s+and\s+conclusion\s+are\s+bound\s+by\s+this\s+rule/,
+    );
     /* The other half: the rule must give those sections somewhere else to go.
      * Prohibition alone is what already failed — the section still had to close
      * on something, and the only thing it had was the delivery. */
