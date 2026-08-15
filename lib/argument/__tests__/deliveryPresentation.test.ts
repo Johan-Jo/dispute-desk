@@ -76,8 +76,17 @@ describe("buildDeliveryPresentation", () => {
       trackingUrl: "https://carrier.example/ABC123",
       carrier: "DHL",
     });
+    // The number and carrier survive; the LINK is rebuilt to DHL's own
+    // canonical tracking page rather than passing through the merchant's
+    // arbitrary host (lib/carriers/trackingLinkUrl).
     expect(p.trackingLinks).toEqual([
-      { carrier: "DHL", number: "ABC123", url: "https://carrier.example/ABC123" },
+      {
+        carrier: "DHL",
+        number: "ABC123",
+        url:
+          "https://www.dhl.com/us-en/home/tracking.html?submit=1" +
+          "&trackingid=ABC123&tracking-id=ABC123",
+      },
     ]);
   });
 
@@ -98,11 +107,14 @@ describe("buildDeliveryPresentation", () => {
         },
       ],
     });
+    // Number recovered from the hash; the link is then rebuilt on
+    // PostNord's own tracker rather than sending an issuer to a
+    // third-party aggregator.
     expect(p.trackingLinks).toEqual([
       {
         carrier: "PostNord SE",
         number: "LA113743680SE",
-        url: "https://t.17track.net/en#nums=LA113743680SE&fc=19241",
+        url: "https://tracking.postnord.com/se/?id=LA113743680SE",
       },
     ]);
   });
@@ -124,7 +136,7 @@ describe("buildDeliveryPresentation", () => {
     expect(p.trackingLinks[0]?.number).toBe("5194515796");
   });
 
-  it("leaves number null when the URL carries no known tracking param", () => {
+  it("drops a link that opens a bare search page with no number to search", () => {
     const p = buildDeliveryPresentation({
       fulfillments: [
         {
@@ -138,8 +150,11 @@ describe("buildDeliveryPresentation", () => {
         },
       ],
     });
+    // No number anywhere and a URL that references no shipment: the row
+    // keeps the carrier but renders NO link. A link to an empty search box
+    // reads to an issuer as "this merchant has no delivery proof".
     expect(p.trackingLinks).toEqual([
-      { carrier: "PostNord SE", number: null, url: "https://tracking.postnord.com/se/" },
+      { carrier: "PostNord SE", number: null, url: null },
     ]);
   });
 
