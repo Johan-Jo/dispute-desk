@@ -122,8 +122,12 @@ describe("the evidence-basis row prints those identifiers", () => {
     expect(out).toContain("Delivered");
     expect(out).toContain("USPS 9434650899562189159072");
     // The issuer should be able to check the parcel on the carrier's own site
-    // without first working out whose number format this is.
-    expect(out).toContain("https://tools.usps.com/go/TrackConfirmAction.action");
+    // without first working out whose number format this is — and the link
+    // must be the CANONICAL results endpoint rebuilt from the number, not
+    // the merchant's `.action?tLabels=` variant.
+    expect(out).toContain(
+      "https://tools.usps.com/tracking/9434650899562189159072",
+    );
   });
 
   it("prints the URL even when the carrier name is missing", () => {
@@ -158,7 +162,9 @@ describe("the evidence-basis row prints those identifiers", () => {
     });
     expect(out).toContain("In transit");
     expect(out).toContain("PostNord SE 00370725111111111111");
-    expect(out).toContain("https://postnord.se/track");
+    // tracking.postnord.com is the real tracker; the postnord.se page is a
+    // shell that embeds that same widget.
+    expect(out).toContain("https://tracking.postnord.com/se/?id=00370725111111111111");
   });
 
   it("prints no dangling separator when there is no tracking", () => {

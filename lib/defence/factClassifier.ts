@@ -30,6 +30,7 @@ import {
   isRetiredFieldKey,
   stripRetiredPayloadKeys,
 } from "@/lib/evidence/model/retiredKeys";
+import { trackingLinkUrl } from "@/lib/carriers/trackingLinkUrl";
 import { isBankIncludedFact } from "./bankInclusion";
 import { evaluateAllPredicates } from "./factPredicates";
 import type {
@@ -396,11 +397,24 @@ function extractValue(
       const tracking = firstTrackingEntry(p);
       const str = (v: unknown): string | null =>
         typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
+      const carrier = str(tracking?.carrier) ?? str(p.carrier);
+      const trackingNumber = str(tracking?.number) ?? str(p.trackingNumber);
       return {
         proofType: typeof p.proofType === "string" ? p.proofType : null,
-        carrier: str(tracking?.carrier) ?? str(p.carrier),
-        trackingNumber: str(tracking?.number) ?? str(p.trackingNumber),
-        trackingUrl: str(tracking?.url) ?? str(p.trackingUrl),
+        carrier,
+        trackingNumber,
+        // The LLM is instructed to cite this URL verbatim, so whatever is
+        // put here is what reaches the issuer. It must therefore be the
+        // CANONICAL carrier link — rebuilt to open the shipment's result
+        // page — not the merchant's app-generated URL, which on prod is
+        // 35% plain http and thousands of times an empty search form.
+        // Null when nothing citable exists: the narrative then states the
+        // carrier and number alone, which is still verifiable.
+        trackingUrl: trackingLinkUrl({
+          company: carrier,
+          number: trackingNumber,
+          url: str(tracking?.url) ?? str(p.trackingUrl),
+        }),
         deliveredAt: typeof p.deliveredAt === "string" ? p.deliveredAt : null,
         signedByName: typeof p.signedByName === "string" ? p.signedByName : null,
         // `deliveredToVerifiedAddress` is NOT emitted (PR-C1, 2026-08-07). It

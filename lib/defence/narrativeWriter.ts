@@ -117,7 +117,19 @@ const PROMPT_FAMILY = "defence_package_narrative";
 // premises, residence, home, location) and says to stop at the evidence
 // rather than summarise it. Still no forbidden example is printed: v13's
 // finding was that printing one makes the model reproduce it.
-const PROMPT_VERSION = 14;
+// v15 (2026-08-15) — the summarising sections are not exempt.
+// v14 named the class and told the model to stop at the evidence, and the
+// empirical list it cited was fulfillmentArgument and conclusion. It did not
+// name executiveSummary, and "stop at the evidence" is close to
+// self-contradictory in a section that exists to restate — so the model was
+// told to summarise and told not to summarise, and resolved it the way the
+// section's purpose pointed. Package 6b47d368 (dispute 70c0a077, order
+// #352554) failed on exactly that, in executiveSummary AND fulfillmentArgument,
+// AFTER a retry, at prompt 14 / validator 2 — the one failure in the 25-case
+// rebuild batch of 2026-08-15. The rule now binds the summarising sections by
+// name and gives them somewhere else to close: a section with a job it cannot
+// do without breaking a rule will break the rule.
+const PROMPT_VERSION = 15;
 
 // Re-export under a stable name for read-only consumers (workspace
 // route surfaces this so the embedded card can detect "the submitted
@@ -353,6 +365,20 @@ Rules:
     failed validation on precisely this shape — four in fulfillmentArgument,
     one in conclusion, every one a closing arrival sentence written AFTER
     correctly worded evidence. Stop at the evidence.
+
+    THE SUMMARISING SECTIONS ARE NOT EXEMPT — executiveSummary LEAST OF ALL.
+    "Stop at the evidence" can read as a contradiction in a section whose whole
+    purpose is to restate, so state it plainly: executiveSummary and conclusion
+    are bound by this rule exactly as fulfillmentArgument is. Measured on
+    production 2026-08-15, a package failed on this shape in executiveSummary
+    and fulfillmentArgument TOGETHER, after a retry, on a case whose delivery
+    evidence was otherwise worded correctly — the summary reached for an
+    arrival precisely because summarising is what the section is for.
+    A summary may restate the delivery in the permitted form above, verbatim if
+    need be. What it may not do is convert that evidence into a statement about
+    where the parcel ended up. If the permitted form feels too thin to close on,
+    close on something else — the authorisation, the account history, the
+    absence of a return — or close on nothing.
 
     If a section has no fact that can be expressed in that permitted form,
     return an empty string for it and list it in omittedSections (rules 9 and

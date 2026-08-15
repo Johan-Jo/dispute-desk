@@ -26,6 +26,7 @@
  */
 
 import type { DeliveryProofType } from "@/lib/argument/canonicalEvidence";
+import { trackingLinkUrl } from "@/lib/carriers/trackingLinkUrl";
 import type { I18nKey, I18nToken } from "@/lib/i18n/token";
 
 /** One carrier tracking reference, ready to render as a link. */
@@ -156,12 +157,17 @@ function extractTrackingLinks(
     const num =
       (typeof number === "string" && number.trim() ? number.trim() : null) ??
       (link ? numberFromTrackingUrl(link) : null);
+    // Rebuild the link through the one canonical owner, so the tracking
+    // link the merchant clicks is the same one the issuer receives — and
+    // so a URL that only opens an empty search box renders as plain text
+    // instead of a link that appears to disprove the row.
+    const canonical = trackingLinkUrl({ company: car, number: num, url: link });
     // Skip an entry that carries nothing renderable.
-    if (!num && !link && !car) return;
-    const key = num ?? link ?? car!;
+    if (!num && !canonical && !car) return;
+    const key = num ?? canonical ?? car!;
     if (seen.has(key)) return;
     seen.add(key);
-    links.push({ carrier: car, number: num, url: link });
+    links.push({ carrier: car, number: num, url: canonical });
   };
 
   const fulfillments = Array.isArray(p.fulfillments) ? p.fulfillments : [];
