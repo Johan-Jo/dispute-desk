@@ -205,7 +205,16 @@ describe("credit-already-issued floor", () => {
   });
 });
 
-/* ── Risk-weakness: received, recorded, does NOT cap (2026-05-15) ── */
+/* ── Risk-weakness: caps the HERO COPY, never the grade ──────────────
+ *
+ * 2026-05-15: received and recorded, no merchant-facing effect.
+ * 2026-08-17 amendment (maintainer): the hero copy caps. Dispute
+ * 11143315649 was rated strong (full AVS+CVV, name match) while
+ * Shopify's pre-auth screening had said HIGH / CANCEL — and
+ * stolen-card-with-correct-codes is exactly what card-testing looks
+ * like, so "likely to win" overpromised on precisely these orders.
+ * The grade stays (the evidence IS strong; the issuer weighs their own
+ * auth data, not Shopify's score) and auto-mode still files. */
 
 describe("risk-weakness gate", () => {
   it("propagates diagnostics without changing the verdict", () => {
@@ -217,6 +226,46 @@ describe("risk-weakness gate", () => {
     );
     expect(r.overall).toBe("strong");
     expect(r.riskWeakness).toEqual(RISK);
+  });
+
+  it("caps the hero at could_win on a strong case — the copy, not the grade", () => {
+    const r = calculateCaseStrength(
+      strongChecklist(),
+      "FRAUDULENT",
+      strongPayload,
+      gatesWith({ riskWeakness: RISK }),
+    );
+    expect(r.overall).toBe("strong");
+    expect(r.heroVariant).toBe("could_win");
+  });
+
+  it("leaves the hero at likely_to_win when it does NOT fire", () => {
+    const r = calculateCaseStrength(strongChecklist(), "FRAUDULENT", strongPayload, gatesWith({}));
+    expect(r.overall).toBe("strong");
+    expect(r.heroVariant).toBe("likely_to_win");
+  });
+
+  it("does NOT cap a credit-already-issued case", () => {
+    /* That win rests on the credit fact — the amount is already refunded —
+     * not on whether the fraud claim is genuine, so the fraud prior the
+     * HIGH flag encodes is irrelevant to it. */
+    const r = calculateCaseStrength(
+      weakChecklist(),
+      "FRAUDULENT",
+      weakPayload,
+      gatesWith({ creditAlreadyIssued: CREDIT_FULL, riskWeakness: RISK }),
+    );
+    expect(r.heroVariant).toBe("likely_to_win");
+  });
+
+  it("does not disturb the weaker tiers, which never promised a win", () => {
+    const r = calculateCaseStrength(
+      weakChecklist(),
+      "FRAUDULENT",
+      weakPayload,
+      gatesWith({ riskWeakness: RISK }),
+    );
+    expect(r.heroVariant).toBe("hard_to_win");
   });
 });
 
