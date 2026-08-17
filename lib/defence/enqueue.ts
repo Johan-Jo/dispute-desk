@@ -250,11 +250,32 @@ export async function maybeEnqueueDefencePackage(
 
   const nextVersion = latest ? latest.version + 1 : 1;
 
-  // Idempotent skip if latest is a draft with matching hash.
+  /* ── IDEMPOTENT ONLY WHEN *NOTHING* HAS MOVED ────────────────────────
+   *
+   * The skip used to compare evidence alone, so a draft with an unchanged
+   * hash was unrebuildable through EVERY caller — the pack-rebuild path and
+   * the merchant's Regenerate button both funnel through this function, and
+   * neither had a way past this branch. A prompt or validator release
+   * therefore never reached existing drafts: on 2026-08-16 one of two
+   * post-fix verification rebuilds was silently eaten here (no audit event,
+   * `enqueued: false`), and during activation this same branch would have
+   * left every draft stranded on prompt 15 with no path to a verdict.
+   *
+   * The failure-retry guard above already answers the identical question for
+   * `failed` rows — "has prompt, validator or evidence moved since this row
+   * was built?" — so the draft branch now asks about the same three inputs
+   * rather than one of them. A draft built under older guidance falls
+   * through: the branch below marks it stale and versions a fresh build,
+   * exactly as if the evidence had moved. NULL versions on pre-versioning
+   * rows read as "not recorded", which counts as moved — the guard's own
+   * precedent (#565).
+   */
   if (
     latest &&
     latest.status === "draft" &&
-    latest.evidence_hash === evidenceHash
+    latest.evidence_hash === evidenceHash &&
+    latest.prompt_version === CURRENT_PROMPT_VERSION &&
+    latest.validator_version === VALIDATOR_VERSION
   ) {
     return {
       enqueued: false,
@@ -282,7 +303,13 @@ export async function maybeEnqueueDefencePackage(
         version: latest.version,
         previousHash: latest.evidence_hash,
         newHash: evidenceHash,
-        trigger: "pack_rebuild",
+        /* A guidance refresh reaches this branch with previousHash ===
+         * newHash, which an operator would otherwise read as a bug. Name
+         * which inputs actually moved. */
+        trigger:
+          latest.evidence_hash === evidenceHash ? "guidance_refresh" : "pack_rebuild",
+        promptVersionMoved: latest.prompt_version !== CURRENT_PROMPT_VERSION,
+        validatorVersionMoved: latest.validator_version !== VALIDATOR_VERSION,
       },
     });
   }
