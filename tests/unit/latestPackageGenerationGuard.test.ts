@@ -260,6 +260,82 @@ describe("maybeEnqueueDefencePackage — still generates when it should", () => 
   });
 });
 
+/* ── 3b. The idempotent skip asks about ALL THREE inputs ─────────────── */
+
+describe("a draft is idempotent only when NOTHING has moved", () => {
+  /* The defect this pins: the skip compared evidence alone, so a draft with an
+   * unchanged hash was unrebuildable through every caller — pack rebuilds and
+   * the merchant's Regenerate button both funnel through this function. A
+   * prompt or validator release therefore never reached existing drafts; on
+   * 2026-08-16 one of two post-fix verification rebuilds was silently eaten
+   * here, and during activation this branch would have stranded every draft
+   * on the old prompt with no path to a document verdict.
+   *
+   * The evidence hash is CAPTURED from a real run rather than re-derived —
+   * a second derivation in the test would be a second answer. */
+  async function capturedHash(): Promise<string> {
+    const h = setup(null);
+    await maybeEnqueueDefencePackage("pack-1");
+    const inserted = h.packageInsert.mock.calls[0][0] as { evidence_hash: string };
+    vi.clearAllMocks();
+    return inserted.evidence_hash;
+  }
+
+  function draftAt(hash: string, over: Record<string, unknown> = {}) {
+    return {
+      id: "p5",
+      version: 5,
+      status: "draft",
+      validation_status: "ok",
+      evidence_hash: hash,
+      prompt_version: CURRENT_PROMPT_VERSION,
+      validator_version: VALIDATOR_VERSION,
+      ...over,
+    };
+  }
+
+  it("same evidence, same prompt, same validator → idempotent_match, zero writes", async () => {
+    const hash = await capturedHash();
+    const h = setup(draftAt(hash));
+    const r = await maybeEnqueueDefencePackage("pack-1");
+    expect(r.enqueued).toBe(false);
+    expect(r.reason).toBe("idempotent_match");
+    expect(h.packageInsert).not.toHaveBeenCalled();
+    expect(h.jobsInsert).not.toHaveBeenCalled();
+  });
+
+  it("same evidence but an OLDER PROMPT → the draft is refreshed", async () => {
+    const hash = await capturedHash();
+    const h = setup(draftAt(hash, { prompt_version: CURRENT_PROMPT_VERSION - 1 }));
+    const r = await maybeEnqueueDefencePackage("pack-1");
+    expect(r.enqueued).toBe(true);
+    // The old draft is marked stale, and a fresh version is built — the same
+    // shape as an evidence change, because a guidance change IS an input change.
+    expect(h.packageUpdate).toHaveBeenCalled();
+    expect(h.packageInsert).toHaveBeenCalled();
+    expect(h.jobsInsert).toHaveBeenCalled();
+  });
+
+  it("same evidence but an OLDER VALIDATOR → the draft is refreshed", async () => {
+    const hash = await capturedHash();
+    const h = setup(draftAt(hash, { validator_version: VALIDATOR_VERSION - 1 }));
+    const r = await maybeEnqueueDefencePackage("pack-1");
+    expect(r.enqueued).toBe(true);
+    expect(h.packageInsert).toHaveBeenCalled();
+  });
+
+  it("versions never recorded (pre-versioning rows) count as MOVED", async () => {
+    /* The guard's own precedent (#565): "not recorded" is indistinguishable
+     * from "built under something older", and treating it as current is how a
+     * case stays dead after the fix ships. */
+    const hash = await capturedHash();
+    const h = setup(draftAt(hash, { prompt_version: null, validator_version: null }));
+    const r = await maybeEnqueueDefencePackage("pack-1");
+    expect(r.enqueued).toBe(true);
+    expect(h.packageInsert).toHaveBeenCalled();
+  });
+});
+
 /* ── 4. One owner, no second interpretation ──────────────────────────── */
 
 describe("the status logic is not duplicated", () => {
