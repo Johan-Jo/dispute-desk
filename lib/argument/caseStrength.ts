@@ -877,13 +877,37 @@ export function calculateCaseStrength(
   // either defensible or not based on AVS/CVV/delivery/auth evidence,
   // regardless of the risk score at checkout. Auto-mode continues to
   // submit on Strong cases even when risk-weakness would have fired.
+  //
+  // AMENDED 2026-08-17 (maintainer): the HERO COPY caps, the grade does
+  // not. Dispute 11143315649 (#351237) was rated strong — a full
+  // address-and-security-code match, name match — while Shopify's
+  // pre-auth screening had said
+  // HIGH / CANCEL and the order shipped anyway. Both signals are true
+  // and measure different things: the verification codes measure what
+  // the ISSUER will weigh (their own auth data; the risk score never
+  // reaches them), while the HIGH flag measures the probability the
+  // fraud is REAL — and no evidence wins a genuinely-stolen-card case.
+  // Stolen-card-with-correct-AVS/CVV is exactly what card-testing and
+  // account-takeover look like, so "likely to win" overpromises on
+  // precisely these orders. The strength pill stays "strong" (the
+  // evidence IS strong), auto-mode still files (a thin-but-honest
+  // representment beats Shopify's scrape), but the hero says
+  // "could win" instead of promising the win.
+
+  const riskWeaknessFired = riskWeakness?.triggered === true;
 
   let heroVariant: NonNullable<CaseStrengthResult["heroVariant"]>;
   if (isCovered) heroVariant = "covered";
   else if (isFatalLoss) heroVariant = "hard_to_win";
-  else if (isCreditAlreadyIssued) heroVariant = "likely_to_win";
-  else if (overall === "strong") heroVariant = "likely_to_win";
-  else if (overall === "moderate") {
+  else if (isCreditAlreadyIssued) {
+    /* NOT capped by risk-weakness, deliberately: this win rests on the
+     * credit fact — the disputed amount is already refunded — not on
+     * whether the fraud claim is genuine, so the fraud prior the HIGH
+     * flag encodes is irrelevant to it. */
+    heroVariant = "likely_to_win";
+  } else if (overall === "strong") {
+    heroVariant = riskWeaknessFired ? "could_win" : "likely_to_win";
+  } else if (overall === "moderate") {
     heroVariant = isFraudAvsOnlyStrong ? "needs_strengthening" : "could_win";
   } else heroVariant = "hard_to_win";
 
