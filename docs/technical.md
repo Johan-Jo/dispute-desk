@@ -5356,6 +5356,23 @@ the failure is silent. `tests/unit/failedPackageSelfHeal.test.ts` pins the value
 pins the real v5 row in both directions: blocked at validator 1, unblocked at the current
 value.
 
+**Claim guards read negation — a negated statement is not a claim (validator 4, 2026-08-18).**
+The `refund_processed` guard matched "refund was issued" inside "**no** refund was issued" —
+the exact sentence the `credit_not_processed_no_return` strategy prompt *instructs* the model
+to write ("State the facts: no return was initiated and no refund was issued"). cay-collective
+`#13195` proved the contradiction deterministic: prompt 16 mandated the phrase, validator 3
+rejected it as an unsupported affirmative refund claim, the retry rewrote it the same way, and
+the package failed. `runClaimGuards` now skips a pattern match when a negation cue
+(no/not/never/without/nor/neither/cannot/n't) appears within the last four tokens of the SAME
+clause before the match (`isNegatedContext` in `lib/defence/claimGuards.ts`). Clause boundaries
+(`. ! ? ; : ,` and newlines) reset the window, so a negation in one clause never licenses an
+affirmative claim in the next ("no return was initiated, and a refund was issued" still
+fires), and scanning continues past a negated match so a later affirmative occurrence in the
+same section still fires. The defect was a class, not an instance — "no signature was
+captured" / "never signed for" false-positived `signature_on_delivery` the same way.
+`VALIDATOR_VERSION` bumped to 4 so every package that failed on a negated non-claim
+regenerates; `lib/defence/__tests__/claimGuards.test.ts` pins the verbatim #13195 conclusion.
+
 **The deadline email says only what we can support (2026-08-14).** `unsafe_address_claim` covers
 FIVE verdicts — affirmative claim, AMBIGUOUS claim, retired delivery fact, and either JSON
 unreadable — and the copy asserted the most specific one about all of them: *"the existing

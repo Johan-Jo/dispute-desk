@@ -94,8 +94,21 @@ import type {
  *      Bumped because the failed packages must become retryable — and because
  *      three prompt versions chasing individual phrasings is the signal that
  *      the FEEDBACK was wrong, not the wording list.
+ *   4  (2026-08-18) — claim guards learned to read negation. The
+ *      `refund_processed` guard matched "refund was issued" inside "no
+ *      refund was issued" — the exact sentence the
+ *      `credit_not_processed_no_return` strategy prompt instructs the model
+ *      to write (cay-collective #13195: prompt 16 mandated the phrase,
+ *      validator 3 rejected it, retry included — a deterministic
+ *      prompt/validator contradiction). `runClaimGuards` now skips a
+ *      pattern match preceded by a negation cue (no/not/never/without…)
+ *      within the same clause, and keeps scanning for a later affirmative
+ *      occurrence. The same defect was latent in every guard whose pattern
+ *      can appear negated ("no signature was captured", "never signed
+ *      for"). Bumped so packages that failed on a negated non-claim
+ *      regenerate.
  */
-export const VALIDATOR_VERSION = 3;
+export const VALIDATOR_VERSION = 4;
 
 export const FORBIDDEN_PHRASES = [
   /\birrefutable\b/i,

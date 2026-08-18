@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { runClaimGuards, CLAIM_GUARDS } from "../claimGuards";
+import { runClaimGuards, CLAIM_GUARDS, isNegatedContext } from "../claimGuards";
 import { FACT_PREDICATES } from "../factPredicates";
 import type {
   EvidenceFact,
@@ -393,5 +393,84 @@ describe("claimGuards", () => {
       ],
     });
     expect(result.failures.some((f) => f.guardId === "service_completed_claim")).toBe(false);
+  });
+});
+
+describe("claimGuards — negated statements are not claims (validator 4)", () => {
+  // Verbatim conclusion from cay-collective #13195 (prod, 2026-08-18):
+  // the credit_not_processed_no_return strategy INSTRUCTS this sentence,
+  // and validator 3 failed it as an affirmative refund claim.
+  const CAY_13195_CONCLUSION =
+    "The available records indicate that no return was initiated by the " +
+    "customer, and no refund was issued. The submitted evidence is " +
+    "consistent with a position that no refund was owed at the time of " +
+    "this dispute. On this basis, the merchant respectfully requests that " +
+    "the dispute be resolved in the merchant's favour.";
+
+  it("'no refund was issued' does NOT fire refund_processed (cay-collective #13195)", () => {
+    const result = runClaimGuards({
+      narrativeSections: narrative({ conclusion: { text: CAY_13195_CONCLUSION } }),
+      approvedFacts: [
+        fact({ id: "no_return_initiated#shopify_order", category: "no_return_initiated" }),
+      ],
+    });
+    expect(result.failures).toEqual([]);
+  });
+
+  it("an affirmative refund claim still fires with the same fact set", () => {
+    const result = runClaimGuards({
+      narrativeSections: narrative({ conclusion: { text: "A refund was issued to the cardholder." } }),
+      approvedFacts: [
+        fact({ id: "no_return_initiated#shopify_order", category: "no_return_initiated" }),
+      ],
+    });
+    expect(result.failures.some((f) => f.guardId === "refund_processed")).toBe(true);
+  });
+
+  it("a negated match does not mask a later affirmative match in the same section", () => {
+    const result = runClaimGuards({
+      narrativeSections: narrative({
+        conclusion: {
+          text: "No refund was issued at first. Later, a refund was issued in full.",
+        },
+      }),
+      approvedFacts: [],
+    });
+    expect(result.failures.some((f) => f.guardId === "refund_processed")).toBe(true);
+  });
+
+  it("negation in one clause does not license a claim in the next clause", () => {
+    // The comma bounds the negation window: "no return…" cannot make
+    // ", and a refund was issued" safe.
+    const result = runClaimGuards({
+      narrativeSections: narrative({
+        conclusion: { text: "No return was initiated, and a refund was issued." },
+      }),
+      approvedFacts: [],
+    });
+    expect(result.failures.some((f) => f.guardId === "refund_processed")).toBe(true);
+  });
+
+  it("the same defect class is closed for other guards ('no signature was captured', 'never signed for')", () => {
+    const result = runClaimGuards({
+      narrativeSections: narrative({
+        fulfillmentArgument: {
+          text: "No signature was captured by the carrier, and the customer never signed for the parcel.",
+        },
+      }),
+      approvedFacts: [],
+    });
+    expect(result.failures.some((f) => f.guardId === "signature_on_delivery")).toBe(false);
+  });
+
+  it("isNegatedContext: cue must be within the trailing window of the same clause", () => {
+    const negated = "and no refund was issued";
+    expect(isNegatedContext(negated, negated.indexOf("refund"))).toBe(true);
+
+    const affirmative = "therefore a refund was issued";
+    expect(isNegatedContext(affirmative, affirmative.indexOf("refund"))).toBe(false);
+
+    const boundary = "no return was initiated, and a refund was issued";
+    expect(isNegatedContext(boundary, boundary.indexOf("refund was"))).toBe(false);
   });
 });
