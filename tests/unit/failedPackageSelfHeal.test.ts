@@ -218,8 +218,13 @@ describe("the versions are real, not placeholders", () => {
      * Kept as an exact pin, unlike the two prompt-version pins relaxed the same
      * day. Those asserted "the fix is not behind a cached body", which `>=`
      * satisfies. This one asserts that a human consciously acknowledged the
-     * bump, and only an exact value can ask for that. */
-    expect(VALIDATOR_VERSION).toBe(3);
+     * bump, and only an exact value can ask for that.
+     *
+     * 3 → 4 on 2026-08-18: claim guards learned to read negation — "no refund
+     * was issued" stopped counting as a refund claim (cay-collective #13195),
+     * and the packages that failed on a negated non-claim must become
+     * retryable. */
+    expect(VALIDATOR_VERSION).toBe(4);
   });
 
   it("unblocks the row that proved the pin is not decorative", () => {
