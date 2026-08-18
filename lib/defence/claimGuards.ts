@@ -194,6 +194,61 @@ export const CLAIM_GUARDS: ClaimGuard[] = [
   }),
 ];
 
+/* ── Negation window ── */
+
+/**
+ * A guard polices an AFFIRMATIVE claim; the same words inside a negated
+ * clause assert the opposite. "no refund was issued" is not a refund
+ * claim — it is the sanctioned no-return framing that
+ * `credit_not_processed_no_return` explicitly instructs (cay-collective
+ * #13195, 2026-08-18: prompt 16 mandated that exact sentence and
+ * validator 3 rejected it, deterministically, retry included).
+ *
+ * A match is negated when a negation cue appears among the last
+ * NEGATION_WINDOW_TOKENS words of the SAME clause before the match.
+ * Clause boundaries (.,;:!? and newlines) reset the window, so a
+ * negation in one clause never licenses an affirmative claim in the
+ * next ("no return was initiated, and a refund was issued" still
+ * fires). Scanning continues past a negated match — a later
+ * affirmative occurrence in the same section still fires the guard.
+ */
+const NEGATION_WINDOW_TOKENS = 4;
+const CLAUSE_BOUNDARY_CHARS = /[.!?;:,\n()]/;
+const NEGATION_CUE = /^(?:no|not|never|without|nor|neither|cannot)$|n['’]t$/i;
+
+export function isNegatedContext(text: string, matchIndex: number): boolean {
+  const before = text.slice(0, matchIndex);
+  let clauseStart = 0;
+  for (let i = before.length - 1; i >= 0; i--) {
+    if (CLAUSE_BOUNDARY_CHARS.test(before[i])) {
+      clauseStart = i + 1;
+      break;
+    }
+  }
+  const tokens = before
+    .slice(clauseStart)
+    .split(/\s+/)
+    .map((t) => t.replace(/^[^\p{L}'’]+|[^\p{L}'’]+$/gu, ""))
+    .filter(Boolean);
+  return tokens
+    .slice(-NEGATION_WINDOW_TOKENS)
+    .some((t) => NEGATION_CUE.test(t));
+}
+
+/** First match of `pattern` in `text` that is NOT inside a negated clause. */
+function firstAffirmativeMatch(
+  text: string,
+  pattern: RegExp,
+): RegExpExecArray | null {
+  const flags = pattern.flags.includes("g")
+    ? pattern.flags
+    : pattern.flags + "g";
+  for (const m of text.matchAll(new RegExp(pattern.source, flags))) {
+    if (!isNegatedContext(text, m.index ?? 0)) return m as RegExpExecArray;
+  }
+  return null;
+}
+
 /* ── Evaluator ── */
 
 export interface RunClaimGuardsInput {
@@ -218,7 +273,7 @@ export function runClaimGuards(input: RunClaimGuardsInput): {
         guard.appliesToSections.includes(sectionKey);
       if (!applies) continue;
 
-      const match = text.match(guard.pattern);
+      const match = firstAffirmativeMatch(text, guard.pattern);
       if (!match) continue;
 
       if (guard.predicate(input.approvedFacts)) continue;
