@@ -17,6 +17,7 @@
 import { DEMO_DISPUTES } from "./fixtures/disputes";
 import { DEMO_DASHBOARD_STATS_REAL, DEMO_RECENT_ACTIVITY_REAL } from "./fixtures/realDashboardStats";
 import { buildWorkspaceData } from "./fixtures/workspaceData";
+import { buildDemoPresentation } from "./fixtures/presentation";
 
 const ORIGINAL_FETCH = typeof window !== "undefined" ? window.fetch.bind(window) : null;
 
@@ -133,6 +134,11 @@ const HANDLERS: Handler[] = [
             outcome_amount_lost: null,
             last_event_at: rebase(d.timeline[d.timeline.length - 1]?.at ?? d.openedAt),
             caseStrength: strengthFor(d),
+            // The 4-dimension presentation model (PR#410). Absent, every
+            // status cell silently falls back to the legacy normalized-status
+            // Badge instead of the designed lifecycle chip — see
+            // DashboardRecentDisputesPreview.tsx:161 and lib/demo/fixtures/presentation.ts.
+            presentation: buildDemoPresentation(d),
           };
         }),
         pagination: { page: 1, per_page: 25, total: DEMO_DISPUTES.length, total_pages: 1 },

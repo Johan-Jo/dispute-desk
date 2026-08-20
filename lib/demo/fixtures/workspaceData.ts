@@ -14,6 +14,19 @@
  */
 
 import { DEMO_DISPUTES } from "./disputes";
+import {
+  computeContributions,
+  calculateImprovement,
+  type EvidencePayloadSource,
+} from "@/lib/argument/caseStrength";
+import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
+import { deadlineFilingCopy, type DeadlineFilingState } from "@/lib/disputes/deadlineOnlyCopy";
+import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
+import {
+  emptyWorkspaceAssessment,
+  type WorkspaceAssessmentPayload,
+} from "@/lib/disputes/workspaceAssessmentTypes";
+import type { CaseStrengthResult } from "@/lib/argument/types";
 
 /** Rebase a fixture ISO string relative to today so urgency math + due
  *  countdowns look natural whenever the demo is viewed. */
@@ -210,6 +223,128 @@ function buildSubmissionSummary(disputeId: string, customerName: string) {
   };
 }
 
+// ── CP-A workspace assessment ───────────────────────────────────────────────
+
+/**
+ * The `workspaceAssessment` payload (CP-A).
+ *
+ * ── WHY THE DEMO WENT BLANK WITHOUT THIS ──────────────────────────────
+ *
+ * CP-A moved assessment out of the browser and onto the server. The hook now
+ * reads exactly one key — `data.workspaceAssessment` — and treats its absence
+ * as `needsRecalculation` (useDisputeWorkspace.ts:1037). That is correct: a
+ * response with no assessment is a case nothing has judged, and
+ * `resolveAssessmentGate` then refuses to render a verdict, a recommendation
+ * or a filing action (lib/disputes/assessmentPresence.ts).
+ *
+ * This fixture predated that change and emitted no such key, so every demo
+ * dispute rendered as un-assessed: an empty Review & Submit tab with no
+ * strength, no evidence summary and no CTA. Nothing was broken in the product
+ * — the demo was simply speaking the pre-CP-A contract.
+ *
+ * ── WHAT IS DERIVED VS DECLARED ───────────────────────────────────────
+ *
+ * `contributions` and `improvement` are computed by the PRODUCTION helpers
+ * over the same checklist the pack carries, so "what supports your case"
+ * lists real signals with real i18n tokens rather than a hand-copied array
+ * that would drift the moment a signal is renamed. Only the band and the
+ * score are declared, because the demo's whole point is to show a chosen
+ * case shape — and the real scorer's inputs (gates, snapshots, hashes) do not
+ * exist for a fixture.
+ */
+function buildWorkspaceAssessmentFixture(
+  disputeId: string,
+  opts: {
+    checklist: ChecklistItemV2[];
+    /**
+     * The per-field evidence payloads.
+     *
+     * REQUIRED, not optional. `categorizeEvidenceField` reads the payload to
+     * decide strong/moderate — an AVS row with no `avsResultCode` is
+     * `invalid`, not strong. Omitting this returned an EMPTY "what supports
+     * your case" list while every other number looked right, which is the
+     * quietest possible way for the demo to be wrong.
+     */
+    payloadSource: EvidencePayloadSource;
+    reason: string;
+    strength: (typeof DEMO_DISPUTES)[number]["strength"];
+    strengthScore: number;
+    readiness: string;
+    isSubmitted: boolean;
+  },
+): WorkspaceAssessmentPayload {
+  const { checklist, payloadSource, reason, strength, strengthScore, readiness, isSubmitted } = opts;
+
+  /* ── Covered and fatal-loss are genuinely NOT ASSESSED ──────────────
+   *
+   * Both short-circuit before scoring in the real pipeline (Coverage Gate,
+   * PRD §4; Fatal-loss Gate, §5) and neither has a pack, so no snapshot
+   * exists to render. Declaring `needsRecalculation: false` with the
+   * scorer's `insufficient` sentinel would state that we assessed these
+   * cases and judged them unwinnable — which is precisely the defect
+   * `assessmentPresence` was written to stop, reproduced in the demo.
+   *
+   * `emptyWorkspaceAssessment` is the production shape for this state, so
+   * the demo shows the same "not assessed yet" surface a merchant would see.
+   */
+  if (strength === "covered" || strength === "fatal_loss") {
+    return emptyWorkspaceAssessment(disputeId);
+  }
+
+  const family = resolveReasonFamily(reason);
+  const strongCount = checklist.filter((c) => STRONG_FIELDS.has(c.field)).length;
+  const moderateCount = checklist.length - strongCount;
+
+  // Only real scorer bands reach here — covered / fatal_loss returned above.
+  const band: CaseStrengthResult["overall"] = strength;
+
+  const caseStrength: CaseStrengthResult = {
+    overall: band,
+    // Plan v3 §P2.1 weights — keep the demo consistent with the real formula
+    // rather than inventing a number that the weights would not produce.
+    score: strongCount * 3 + moderateCount * 2,
+    coveragePercent: strengthScore,
+    strongCount,
+    moderateCount,
+    supportingCount: 0,
+    supportedClaims: strongCount + moderateCount,
+    totalClaims: FIELD_ORDER.length,
+    strengthReasonI18n: { key: `disputes.strengthReason.${family}.${band}` },
+    improvementHintI18n: null,
+    heroVariant:
+      band === "strong" ? "likely_to_win" : band === "moderate" ? "could_win" : "hard_to_win",
+  };
+
+  // Nothing in the demo is held for the deadline — the fixtures are either
+  // fileable now or already sent. `normal` is the state that says so.
+  const filingState: DeadlineFilingState = { kind: "normal" };
+
+  return {
+    caseStrength,
+    assessment: {
+      caseId: disputeId,
+      needsRecalculation: false,
+      recalculationReason: null,
+      strengthBand: band,
+      completenessScore: strengthScore,
+      readiness: readiness as WorkspaceAssessmentPayload["readiness"],
+      reviewItems: [],
+    },
+    filing: { ...deadlineFilingCopy(filingState), state: filingState },
+    readiness: (isSubmitted ? "submitted" : readiness) as WorkspaceAssessmentPayload["readiness"],
+    blockerCount: 0,
+    warningCount: 0,
+    submitOverrideGaps: [],
+    // Production helpers — see the header. Not hand-written arrays.
+    contributions: computeContributions({ checklist, payloadSource, reason }),
+    improvement: calculateImprovement(checklist, reason, payloadSource),
+  };
+}
+
+/** Fields the fixture treats as strong contributors — mirrors
+ *  `buildEvidenceLineItems`'s own `isStrong` test so the two cannot disagree. */
+const STRONG_FIELDS = new Set(["avs_cvv_match", "delivery_proof", "shipping_tracking"]);
+
 // ── Workspace builder ───────────────────────────────────────────────────────
 
 export function buildWorkspaceData(disputeId: string) {
@@ -325,10 +460,31 @@ export function buildWorkspaceData(disputeId: string) {
     },
   } : null;
 
+  const activePack = coveredPack ?? pack;
+
   return {
     dispute,
-    pack: coveredPack ?? pack,
+    pack: activePack,
     presentationStatus,
+    // CP-A — without this key every tab renders `not_assessed`. See
+    // buildWorkspaceAssessmentFixture above.
+    workspaceAssessment: buildWorkspaceAssessmentFixture(fixture.id, {
+      checklist: (activePack?.checklistV2 ?? []) as unknown as ChecklistItemV2[],
+      payloadSource: {
+        kind: "byField",
+        map: (activePack?.evidenceItemsByField ?? {}) as EvidencePayloadSource extends {
+          kind: "byField";
+          map: infer M;
+        }
+          ? M
+          : never,
+      },
+      reason: reasonUpper,
+      strength: fixture.strength,
+      strengthScore: fixture.strengthScore,
+      readiness: submissionReadiness,
+      isSubmitted: fixture.status === "submitted",
+    }),
     evidenceLineItems: buildEvidenceLineItems(fixture.id),
     submissionSummary: buildSubmissionSummary(fixture.id, fixture.customerName),
     attachments: [],
