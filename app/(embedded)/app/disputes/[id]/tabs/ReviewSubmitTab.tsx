@@ -109,6 +109,7 @@ export default function ReviewSubmitTab({ workspace }: Props) {
         submittedToShopifyAt={view.submittedAt}
         shopifyAdminUrl={view.shopifyAdminUrl}
         presentationStatus={data?.presentationStatus}
+        returnedToSender={derived.caseStrength?.returnedToSender?.triggered === true}
         evidenceSentOn={data?.dispute?.submittedAt ?? null}
         // Defence package rows lifted from the workspace endpoint
         // (2026-05-25). Pre-lift the card owned its own fetch and

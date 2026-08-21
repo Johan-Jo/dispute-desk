@@ -1076,7 +1076,9 @@
           "skipped": "Übersprungen"
         },
         "reviewRequiredTitle": "Prüfung erforderlich, bevor dieses Paket eingereicht werden kann",
-        "reviewRequiredBody": "DisputeDesk kann dieses Verteidigungspaket in der vorliegenden Form nicht einreichen. Generieren Sie es neu, um eine einreichbare Version zu erstellen. Vorschau und Neu generieren bleiben verfügbar; Abschließen und Einreichen sind gesperrt, bis eine neu generierte Version die Prüfung besteht."
+        "reviewRequiredBody": "DisputeDesk kann dieses Verteidigungspaket in der vorliegenden Form nicht einreichen. Generieren Sie es neu, um eine einreichbare Version zu erstellen. Vorschau und Neu generieren bleiben verfügbar; Abschließen und Einreichen sind gesperrt, bis eine neu generierte Version die Prüfung besteht.",
+        "notEnoughEvidenceReturnedTitle": "Es gibt nichts zu argumentieren, bis Sie uns sagen, warum das Paket zurückkam",
+        "notEnoughEvidenceReturnedBody": "Der Zusteller hat dieses Paket an Sie zurückgesendet. Es gibt also keine Zustellung, über die sich streiten ließe, und für diese Bestellung kann nie eine Zustellbestätigung entstehen. Warten ändert daran nichts — es wird nichts mehr erfasst. Das Einzige, was jetzt noch hilft, finden Sie im Reiter „Nachweise“: Sagen Sie uns, ob der Kunde die Annahme verweigert oder das Paket nie abgeholt hat. Beides gilt nicht als gültige Rücksendung, und genau das nehmen wir in Ihre Stellungnahme auf."
       },
       "inclusion": {
         "title": "Einschluss­prüfung",
