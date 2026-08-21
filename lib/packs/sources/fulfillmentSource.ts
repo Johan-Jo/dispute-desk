@@ -11,6 +11,7 @@
  *   delivered_confirmed → moderate
  *   delivered_unverified → supporting
  *   label_created → invalid
+ *   returned_to_sender → invalid
  *
  * Carrier plan PR 1C (docs/plans/carrier-delivery-verification.plan.md):
  * delivery state is now resolved PER SHIPMENT across three sources —
@@ -321,7 +322,7 @@ function extractTrackingData(
   };
 }
 
-/** Resolve the canonical 4-state proofType across all fulfillments.
+/** Resolve the canonical 5-state proofType across all fulfillments.
  *  Picks the BEST tier observed (signature > delivered > unverified >
  *  label). The categorizer will downgrade strong→moderate→supporting→
  *  invalid based on this string.
@@ -331,14 +332,26 @@ function extractTrackingData(
  *  signee on at least one fulfillment — carrier-attested human-readable
  *  signature is the strongest possible delivery evidence.
  *
- *  A shipment whose RECONCILED state is Returned contributes nothing —
- *  including when an older Delivered event exists (stale positives are
- *  exactly what reconciliation kills). */
+ *  A shipment whose RECONCILED state is Returned contributes NO POSITIVE
+ *  TIER — including when an older Delivered event exists (stale positives
+ *  are exactly what reconciliation kills). It is still RECORDED, though:
+ *  when nothing else on the order reached a positive tier, the answer is
+ *  `returned_to_sender`, not `label_created`.
+ *
+ *  That distinction is the whole point (cay-collective #13195,
+ *  2026-08-20). Both states score `invalid`, so nothing about the SCORE
+ *  changes — but `label_created` means "a label was printed and the
+ *  carrier never scanned it", and telling that to a merchant whose parcel
+ *  went out, failed delivery and came back is simply false. Every
+ *  display, checklist and narrative surface downstream switches on this
+ *  string, so naming the state honestly here is what lets them all stop
+ *  lying at once. */
 function resolveProofType(
   fulfillments: OrderFulfillment[],
   states: DeliveryStates,
 ): DeliveryProofType {
   let bestTier: 0 | 1 | 2 | 3 = 0;
+  let sawReturned = false;
   for (const f of fulfillments) {
     const s = stateOf(states, f);
     if (s.signedBy) {
@@ -346,8 +359,11 @@ function resolveProofType(
       continue;
     }
     // A reconciled return is the opposite of delivery evidence — never
-    // let this shipment raise the tier.
-    if (s.current?.status === "Returned") continue;
+    // let this shipment raise the tier. Remember it, though.
+    if (s.current?.status === "Returned") {
+      sawReturned = true;
+      continue;
+    }
     // Confirmed receipt: doorstep delivery OR ID-verified collection at a
     // pickup point, with a timestamp.
     if (confirmedReceipt(f, s)) {
@@ -372,7 +388,10 @@ function resolveProofType(
     case 2: return "delivered_confirmed";
     case 1: return "delivered_unverified";
     case 0:
-    default: return "label_created";
+    default:
+      // Nothing on this order reached a positive tier. If a shipment came
+      // back, say so; a bare label is a different (and here, false) fact.
+      return sawReturned ? "returned_to_sender" : "label_created";
   }
 }
 

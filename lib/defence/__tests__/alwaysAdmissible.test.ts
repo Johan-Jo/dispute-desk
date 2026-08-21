@@ -145,6 +145,29 @@ describe("the label can no longer suppress an admitted category", () => {
     expect(payload.reasonCodeGuidance.allowedFactCategories).toContain("no_return_initiated");
   });
 
+  it("STOPS admitting no_return_initiated once the carrier returned the parcel", () => {
+    /* The module's admission test is "can citing this read AGAINST us
+     * under any claim type?". On cay-collective #13195 the answer became
+     * yes: "no refund was owed because the customer never sent it back",
+     * about goods sitting in the merchant's own warehouse. The rule was
+     * `matches: () => true` and admitted it anyway. */
+    const payload = payloadFor("13.1", [
+      fact({
+        category: "no_return_initiated",
+        value: { fieldKey: "no_return_initiated" },
+      }),
+      fact({
+        id: "delivery-returned",
+        category: "delivery_proof",
+        strength: "invalid",
+        value: { fieldKey: "delivery_proof", proofType: "returned_to_sender" },
+      }),
+    ]);
+    expect(payload.reasonCodeGuidance.allowedFactCategories).not.toContain(
+      "no_return_initiated",
+    );
+  });
+
   it("leaves the module untouched when nothing qualifies", () => {
     const payload = payloadFor("13.3", [
       fact({ strength: "moderate", value: { fieldKey: "avs_cvv_match" } }),

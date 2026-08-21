@@ -207,6 +207,7 @@ function legacyDisposition(
   const guards = evaluateAutoSubmitGuards({
     coverageState: pj.coverage?.state ?? null,
     fatalLoss: pj.fatal_loss ?? null,
+    returnedToSender: null,
     caseStrength: pj.case_strength?.overall ?? null,
     creditAlreadyIssued: pj.credit_already_issued ?? null,
   });

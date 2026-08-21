@@ -55,6 +55,19 @@ export type EventType =
   // attestation independently of the evidence_items insert. Payload
   // carries no PII — just `{ evidenceItemId, textLength, confirmedAt }`.
   | "cardholder_acknowledgement_confirmed"
+  // A collector-emitted section was suppressed because a SECOND source
+  // refuted the fact it asserts (lib/packs/contradictionGate.ts). Written
+  // at pack build; payload carries the typed ContradictionRecord[] so the
+  // suppression is auditable rather than invisible. Founding case:
+  // cay-collective #13195, where Shopify's `returnStatus: NO_RETURN` and a
+  // DHL return-to-sender could not both ground an argument.
+  | "evidence_contradiction_suppressed"
+  // Merchant answered the returned-parcel question via
+  // POST /api/packs/:packId/parcel-outcome. Recorded separately from
+  // `item_added` because the `disposition` — what the merchant did with
+  // goods that came back — is the record anyone reviewing a lost dispute
+  // will want, and it never appears in bank-facing text.
+  | "parcel_outcome_recorded"
   | "submitted_with_warnings"
   | "order_fetch_failed"
   | "order_gid_null_at_build"

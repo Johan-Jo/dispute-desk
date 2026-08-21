@@ -85,6 +85,12 @@ const SECTIONS = [DELIVERY_SECTION];
 const GATES = buildCaseGateAssessment({
   coverage: gateProvided({ state: "not_covered", shopifyProtectStatus: null }),
   fatalLoss: gateProvided({ triggered: false, reason: null, messageToken: null }),
+  returnedToSender: gateProvided({
+    triggered: false,
+    reason: null,
+    returnedAt: null,
+    messageToken: null,
+  }),
   riskWeakness: gateProvided(null),
   nameMismatch: gateProvided(null),
   creditAlreadyIssued: gateProvided({ triggered: false, coversDisputedAmount: false }),

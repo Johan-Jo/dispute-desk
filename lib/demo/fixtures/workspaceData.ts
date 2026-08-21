@@ -14,6 +14,21 @@
  */
 
 import { DEMO_DISPUTES } from "./disputes";
+import {
+  computeContributions,
+  calculateImprovement,
+  type EvidencePayloadSource,
+} from "@/lib/argument/caseStrength";
+import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
+import { classifyEvidenceRow } from "@/lib/argument/categoryBadge";
+import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
+import { deadlineFilingCopy, type DeadlineFilingState } from "@/lib/disputes/deadlineOnlyCopy";
+import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
+import {
+  emptyWorkspaceAssessment,
+  type WorkspaceAssessmentPayload,
+} from "@/lib/disputes/workspaceAssessmentTypes";
+import type { CaseStrengthResult } from "@/lib/argument/types";
 
 /** Rebase a fixture ISO string relative to today so urgency math + due
  *  countdowns look natural whenever the demo is viewed. */
@@ -62,7 +77,9 @@ const FIELD_META: Record<FieldName, { label: string; category: string; priority:
  *  method. The rest render as `missing`. */
 const FIELDS_PRESENT_BY_DISPUTE: Record<string, FieldName[]> = {
   "dp-2401": ["order_confirmation", "avs_cvv_match", "activity_log", "refund_policy", "shipping_policy", "shipping_tracking", "delivery_proof"],
-  "dp-2402": ["order_confirmation", "shipping_tracking", "delivery_proof", "shipping_policy"],
+  // Signed delivery + the logged-in-account/address-match signal its
+  // narrative already cites ("Order placed by customer account").
+  "dp-2402": ["order_confirmation", "shipping_tracking", "delivery_proof", "shipping_policy", "avs_cvv_match"],
   "dp-2403": ["order_confirmation", "avs_cvv_match", "activity_log", "refund_policy", "cancellation_policy"],
   "dp-2404": ["order_confirmation"], // Covered — minimal
   "dp-2405": ["order_confirmation", "refund_policy"], // Fatal loss — refund issued
@@ -95,23 +112,49 @@ function buildChecklist(disputeId: string) {
   });
 }
 
-/** Realistic per-field payload shapes that satisfy
- *  `categorizeEvidenceField` in lib/argument/canonicalEvidence.ts —
- *  drives the client's `calculateCaseStrength` so the hero variant
- *  computes correctly (likely_to_win / could_win / hard_to_win).
+/** Per-field payload shapes fed to `categorizeEvidenceField`
+ *  (lib/argument/canonicalEvidence.ts).
  *
- *  Without these, the embedded UI sees evidence items but classifies
- *  them as `invalid` (no AVS code) or `supporting` (no signature) and
- *  the overall strength bottoms out at "weak".
+ *  ── THESE DESCRIBE A CASE; THEY DO NOT TUNE AN OUTCOME ──────────────
+ *
+ *  An earlier version of this table set every promotable flag at once —
+ *  `acceptedAtCheckout` on all three policies, `decisiveSessionProof` AND
+ *  `digitalAccessUsed` on the activity log — because it was written to
+ *  make the headline compute as Strong. The rubric duly promoted all of
+ *  them, and "Evidence collected" rendered SIX Strong rows including two
+ *  policy documents, which no real fraud case produces.
+ *
+ *  The rubric was right; the data was stacked. Payloads here describe
+ *  what a plausible store would actually have, and the band is then
+ *  whatever the production rubric says it is:
+ *
+ *    - Strong requires DECISIVE proof. For a physical-goods fraud case
+ *      that is AVS/CVV match (rubric #1) and signature-confirmed delivery
+ *      to the verified address (#2). Two decisive signals is what a strong
+ *      fraud defence looks like.
+ *    - A policy is Strong ONLY with `acceptedAtCheckout === true` plus an
+ *      acceptance timestamp tying it to the order (#8). Publishing a
+ *      refund policy is not the customer accepting one, so these carry
+ *      policy text and land as `supporting`.
+ *    - `activity_log` is Strong only on `decisiveSessionProof` (#4, login
+ *      + consistent device/session/IP) or `digitalAccessUsed` (#7, a
+ *      digital good). This is a shipped physical order, so neither holds
+ *      and it lands as `supporting` — corroboration, not proof.
+ *
+ *  Do not add a flag here to move a band. Change the fixture's evidence
+ *  list instead, and let the rubric answer.
  */
 const STRONG_PAYLOADS: Record<string, Record<string, unknown>> = {
   avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M", fieldsProvided: ["avs_cvv_match"] },
   shipping_tracking: { proofType: "signature_confirmed", deliveredToVerifiedAddress: true, fieldsProvided: ["shipping_tracking"] },
   delivery_proof: { proofType: "signature_confirmed", deliveredToVerifiedAddress: true, fieldsProvided: ["delivery_proof"] },
-  refund_policy: { acceptedAtCheckout: true, acceptanceTimestamp: "2026-01-09T14:20:00Z", fieldsProvided: ["refund_policy"] },
-  shipping_policy: { acceptedAtCheckout: true, acceptanceTimestamp: "2026-01-09T14:20:00Z", fieldsProvided: ["shipping_policy"] },
-  cancellation_policy: { acceptedAtCheckout: true, acceptanceTimestamp: "2026-01-09T14:20:00Z", fieldsProvided: ["cancellation_policy"] },
-  activity_log: { decisiveSessionProof: true, digitalAccessUsed: true, fieldsProvided: ["activity_log"] },
+  // Published policy text, not proof of acceptance → supporting (rubric #8).
+  refund_policy: { policyText: "30-day returns on unworn items.", publishedAt: "2025-11-02T09:00:00Z", fieldsProvided: ["refund_policy"] },
+  shipping_policy: { policyText: "Tracked delivery, 2-5 business days.", publishedAt: "2025-11-02T09:00:00Z", fieldsProvided: ["shipping_policy"] },
+  cancellation_policy: { policyText: "Cancel before dispatch for a full refund.", publishedAt: "2025-11-02T09:00:00Z", fieldsProvided: ["cancellation_policy"] },
+  // Account + session context on a PHYSICAL order: no decisive session
+  // proof, no digital good → supporting (rubric #4 / #7).
+  activity_log: { accountAgeDays: 412, priorOrders: 4, lastLoginAt: "2026-01-09T14:11:00Z", fieldsProvided: ["activity_log"] },
   customer_communication: { customerConfirmsOrder: true, fieldsProvided: ["customer_communication"] },
   customer_account_info: { priorUndisputedOrders: 4, totalOrders: 5, disputeFreeHistory: true, fieldsProvided: ["customer_account_info"] },
   order_confirmation: { fieldsProvided: ["order_confirmation"] },
@@ -132,7 +175,36 @@ const WEAK_PAYLOADS: Record<string, Record<string, unknown>> = {
   order_confirmation: { fieldsProvided: ["order_confirmation"] },
 };
 
+/**
+ * Per-dispute payload overrides.
+ *
+ * The fixture narratives in `disputes.ts` already state facts the shared
+ * default table cannot express — dp-2403's "Customer accepted terms on
+ * Feb 14 2025" is a genuine `acceptedAtCheckout`, and its "January access
+ * logs show 14 active sessions" is `digitalAccessUsed` on a subscription.
+ * Encoding them here keeps the workspace checklist consistent with the
+ * story the demo tells, instead of promoting policies on every case.
+ */
+const PAYLOAD_OVERRIDES: Record<string, Record<string, Record<string, unknown>>> = {
+  // Subscription: terms genuinely accepted at signup (rubric #8), and a
+  // digital service the customer kept using (rubric #7).
+  "dp-2403": {
+    cancellation_policy: {
+      acceptedAtCheckout: true,
+      acceptanceTimestamp: "2025-02-14T10:04:00Z",
+      fieldsProvided: ["cancellation_policy"],
+    },
+    activity_log: {
+      digitalAccessUsed: true,
+      sessionsSinceLastCharge: 14,
+      fieldsProvided: ["activity_log"],
+    },
+  },
+};
+
 function payloadFor(disputeId: string, field: string): Record<string, unknown> {
+  const override = PAYLOAD_OVERRIDES[disputeId]?.[field];
+  if (override) return override;
   const fixture = DEMO_DISPUTES.find((d) => d.id === disputeId);
   if (fixture?.strength === "weak") {
     return WEAK_PAYLOADS[field] ?? { fieldsProvided: [field] };
@@ -207,6 +279,177 @@ function buildSubmissionSummary(disputeId: string, customerName: string) {
       failedUpload: 0,
       waived: 0,
     },
+  };
+}
+
+// ── CP-A workspace assessment ───────────────────────────────────────────────
+
+/**
+ * The `workspaceAssessment` payload (CP-A).
+ *
+ * ── WHY THE DEMO WENT BLANK WITHOUT THIS ──────────────────────────────
+ *
+ * CP-A moved assessment out of the browser and onto the server. The hook now
+ * reads exactly one key — `data.workspaceAssessment` — and treats its absence
+ * as `needsRecalculation` (useDisputeWorkspace.ts:1037). That is correct: a
+ * response with no assessment is a case nothing has judged, and
+ * `resolveAssessmentGate` then refuses to render a verdict, a recommendation
+ * or a filing action (lib/disputes/assessmentPresence.ts).
+ *
+ * This fixture predated that change and emitted no such key, so every demo
+ * dispute rendered as un-assessed: an empty Review & Submit tab with no
+ * strength, no evidence summary and no CTA. Nothing was broken in the product
+ * — the demo was simply speaking the pre-CP-A contract.
+ *
+ * ── WHAT IS DERIVED VS DECLARED ───────────────────────────────────────
+ *
+ * `contributions` and `improvement` are computed by the PRODUCTION helpers
+ * over the same checklist the pack carries, so "what supports your case"
+ * lists real signals with real i18n tokens rather than a hand-copied array
+ * that would drift the moment a signal is renamed. Only the band and the
+ * score are declared, because the demo's whole point is to show a chosen
+ * case shape — and the real scorer's inputs (gates, snapshots, hashes) do not
+ * exist for a fixture.
+ */
+function buildWorkspaceAssessmentFixture(
+  disputeId: string,
+  opts: {
+    checklist: ChecklistItemV2[];
+    /**
+     * The per-field evidence payloads.
+     *
+     * REQUIRED, not optional. `categorizeEvidenceField` reads the payload to
+     * decide strong/moderate — an AVS row with no `avsResultCode` is
+     * `invalid`, not strong. Omitting this returned an EMPTY "what supports
+     * your case" list while every other number looked right, which is the
+     * quietest possible way for the demo to be wrong.
+     */
+    payloadSource: EvidencePayloadSource;
+    reason: string;
+    strength: (typeof DEMO_DISPUTES)[number]["strength"];
+    strengthScore: number;
+    readiness: string;
+    isSubmitted: boolean;
+  },
+): WorkspaceAssessmentPayload {
+  const { checklist, payloadSource, reason, strength, strengthScore, readiness, isSubmitted } = opts;
+
+  /* ── Covered and fatal-loss are genuinely NOT ASSESSED ──────────────
+   *
+   * Both short-circuit before scoring in the real pipeline (Coverage Gate,
+   * PRD §4; Fatal-loss Gate, §5) and neither has a pack, so no snapshot
+   * exists to render. Declaring `needsRecalculation: false` with the
+   * scorer's `insufficient` sentinel would state that we assessed these
+   * cases and judged them unwinnable — which is precisely the defect
+   * `assessmentPresence` was written to stop, reproduced in the demo.
+   *
+   * `emptyWorkspaceAssessment` is the production shape for this state, so
+   * the demo shows the same "not assessed yet" surface a merchant would see.
+   */
+  if (strength === "covered" || strength === "fatal_loss") {
+    return emptyWorkspaceAssessment(disputeId);
+  }
+
+  const family = resolveReasonFamily(reason);
+
+  /* Counts come from the PRODUCTION classifier, deduped by `signalId` the
+   * way the scorer dedupes — `shipping_tracking` and `delivery_proof` are
+   * both the `delivery` signal and must count ONCE, not twice.
+   *
+   * The previous version hardcoded a three-field "strong" set, which is a
+   * restatement of the rubric that cannot be kept in sync with it. That is
+   * the same drift class as the missing keys this file was fixed for. */
+  const byCategory = new Map<string, "strong" | "moderate">();
+  for (const c of checklist) {
+    const spec = CANONICAL_EVIDENCE[c.field];
+    if (!spec) continue;
+    const cls = classifyEvidenceRow({
+      fieldKey: c.field,
+      status: c.status,
+      payload: payloadFor(disputeId, c.field),
+    });
+    if (cls.category !== "strong" && cls.category !== "moderate") continue;
+    const prev = byCategory.get(spec.signalId);
+    if (prev !== "strong") byCategory.set(spec.signalId, cls.category);
+  }
+  const counts = [...byCategory.values()];
+  const strongCount = counts.filter((c) => c === "strong").length;
+  const moderateCount = counts.filter((c) => c === "moderate").length;
+
+  /* ── The band is DERIVED, and the fixture's own label is checked ────
+   *
+   * Applying the scorer's count rule (`caseStrength.ts` — 2 strong for
+   * `strong`; the fraud and delivery families each reach `moderate` on one
+   * decisive signal) means a fixture cannot advertise a band its evidence
+   * does not support. dp-2403 previously declared "strong" on a single
+   * strong signal purely because the fixture said so.
+   *
+   * The mismatch throws rather than silently correcting: a fixture whose
+   * label and evidence disagree is an authoring mistake, and quietly
+   * rendering the derived value would hide it exactly the way the missing
+   * `workspaceAssessment` key was hidden.
+   */
+  const derived: CaseStrengthResult["overall"] =
+    strongCount >= 2
+      ? "strong"
+      : strongCount === 1 && moderateCount >= 1
+        ? "moderate"
+        : strongCount === 1 && (family === "fraud" || family === "delivery")
+          ? "moderate"
+          : moderateCount >= 2
+            ? "moderate"
+            : "weak";
+
+  if (derived !== strength) {
+    throw new Error(
+      `Demo fixture ${disputeId} declares strength "${strength}" but its evidence ` +
+        `derives "${derived}" (${strongCount} strong / ${moderateCount} moderate signals). ` +
+        `Fix the fixture's evidence list or its strength label — do not add payload ` +
+        `flags to force a band.`,
+    );
+  }
+  const band: CaseStrengthResult["overall"] = derived;
+
+  const caseStrength: CaseStrengthResult = {
+    overall: band,
+    // Plan v3 §P2.1 weights — keep the demo consistent with the real formula
+    // rather than inventing a number that the weights would not produce.
+    score: strongCount * 3 + moderateCount * 2,
+    coveragePercent: strengthScore,
+    strongCount,
+    moderateCount,
+    supportingCount: 0,
+    supportedClaims: strongCount + moderateCount,
+    totalClaims: FIELD_ORDER.length,
+    strengthReasonI18n: { key: `disputes.strengthReason.${family}.${band}` },
+    improvementHintI18n: null,
+    heroVariant:
+      band === "strong" ? "likely_to_win" : band === "moderate" ? "could_win" : "hard_to_win",
+  };
+
+  // Nothing in the demo is held for the deadline — the fixtures are either
+  // fileable now or already sent. `normal` is the state that says so.
+  const filingState: DeadlineFilingState = { kind: "normal" };
+
+  return {
+    caseStrength,
+    assessment: {
+      caseId: disputeId,
+      needsRecalculation: false,
+      recalculationReason: null,
+      strengthBand: band,
+      completenessScore: strengthScore,
+      readiness: readiness as WorkspaceAssessmentPayload["readiness"],
+      reviewItems: [],
+    },
+    filing: { ...deadlineFilingCopy(filingState), state: filingState },
+    readiness: (isSubmitted ? "submitted" : readiness) as WorkspaceAssessmentPayload["readiness"],
+    blockerCount: 0,
+    warningCount: 0,
+    submitOverrideGaps: [],
+    // Production helpers — see the header. Not hand-written arrays.
+    contributions: computeContributions({ checklist, payloadSource, reason }),
+    improvement: calculateImprovement(checklist, reason, payloadSource),
   };
 }
 
@@ -325,10 +568,31 @@ export function buildWorkspaceData(disputeId: string) {
     },
   } : null;
 
+  const activePack = coveredPack ?? pack;
+
   return {
     dispute,
-    pack: coveredPack ?? pack,
+    pack: activePack,
     presentationStatus,
+    // CP-A — without this key every tab renders `not_assessed`. See
+    // buildWorkspaceAssessmentFixture above.
+    workspaceAssessment: buildWorkspaceAssessmentFixture(fixture.id, {
+      checklist: (activePack?.checklistV2 ?? []) as unknown as ChecklistItemV2[],
+      payloadSource: {
+        kind: "byField",
+        map: (activePack?.evidenceItemsByField ?? {}) as EvidencePayloadSource extends {
+          kind: "byField";
+          map: infer M;
+        }
+          ? M
+          : never,
+      },
+      reason: reasonUpper,
+      strength: fixture.strength,
+      strengthScore: fixture.strengthScore,
+      readiness: submissionReadiness,
+      isSubmitted: fixture.status === "submitted",
+    }),
     evidenceLineItems: buildEvidenceLineItems(fixture.id),
     submissionSummary: buildSubmissionSummary(fixture.id, fixture.customerName),
     attachments: [],

@@ -416,9 +416,11 @@ export function resolveGateDecision(gates: CaseGateAssessment): GateDecision {
   const g = gates as unknown as {
     coverage: { state?: string | null } | null;
     fatalLoss: { triggered?: boolean } | null;
+    returnedToSender: { triggered?: boolean } | null;
   };
   if (g.coverage?.state === "covered_shopify") return "coverage";
   if (g.fatalLoss?.triggered === true) return "fatal_loss";
+  if (g.returnedToSender?.triggered === true) return "returned_to_sender";
   return null;
 }
 

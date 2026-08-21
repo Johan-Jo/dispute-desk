@@ -206,6 +206,7 @@ describe("the gate contract cannot be widened by accident", () => {
     const assessment = mod.buildCaseGateAssessment({
       coverage: mod.gateNotProvided("gate_free_query"),
       fatalLoss: mod.gateNotProvided("gate_free_query"),
+      returnedToSender: mod.gateNotProvided("gate_free_query"),
       riskWeakness: mod.gateNotProvided("gate_free_query"),
       nameMismatch: mod.gateNotProvided("gate_free_query"),
       creditAlreadyIssued: mod.gateNotProvided("gate_free_query"),
@@ -219,6 +220,7 @@ describe("the gate contract cannot be widened by accident", () => {
         "fatalLoss",
         "nameMismatch",
         "notProvided",
+        "returnedToSender",
         "riskWeakness",
       ].sort(),
     );
@@ -229,6 +231,7 @@ describe("the gate contract cannot be widened by accident", () => {
     const a = mod.buildCaseGateAssessment({
       coverage: mod.gateProvided(null),
       fatalLoss: mod.gateNotProvided("order_not_loaded"),
+      returnedToSender: mod.gateProvided(null),
       riskWeakness: mod.gateNotProvided("order_not_loaded"),
       nameMismatch: mod.gateProvided(null),
       creditAlreadyIssued: mod.gateProvided(null),

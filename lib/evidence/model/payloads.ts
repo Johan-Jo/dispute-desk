@@ -42,7 +42,11 @@ export type DeliveryProofType =
   | "signature_confirmed"
   | "delivered_confirmed"
   | "delivered_unverified"
-  | "label_created";
+  | "label_created"
+  /** The carrier brought the parcel back. Scores `invalid` like
+   *  `label_created`, but it is a different fact — see the note on the
+   *  union in `lib/argument/canonicalEvidence.ts`. */
+  | "returned_to_sender";
 
 export interface TrackingEntry {
   carrier: string | null;

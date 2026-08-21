@@ -19,6 +19,7 @@ function baseInput(overrides: Partial<AutoSubmitGuardInput> = {}): AutoSubmitGua
   return {
     coverageState: "not_covered",
     fatalLoss: { triggered: false, reason: null },
+    returnedToSender: null,
     caseStrength: "strong",
     // Required as of 2026-08-04 (P5): every caller states every gate, so a
     // path can no longer omit one and reach a different verdict reason.
@@ -154,6 +155,7 @@ describe("evaluateAutoSubmitGuards — precedence", () => {
       baseInput({
         coverageState: "covered_shopify",
         fatalLoss: { triggered: true, reason: "refund_issued" },
+        returnedToSender: null,
       }),
     );
     expect(v).toMatchObject({ decision: "block", reason: "covered_shopify" });
@@ -170,6 +172,7 @@ describe("evaluateAutoSubmitGuards — precedence", () => {
     const v = evaluateAutoSubmitGuards(
       baseInput({
         fatalLoss: { triggered: true, reason: "refund_issued" },
+        returnedToSender: null,
         caseStrength: "weak",
       }),
     );
@@ -180,6 +183,7 @@ describe("evaluateAutoSubmitGuards — precedence", () => {
     const v = evaluateAutoSubmitGuards(
       baseInput({
         fatalLoss: { triggered: true, reason: "refund_issued" },
+        returnedToSender: null,
         caseStrength: "strong",
       }),
     );

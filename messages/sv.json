@@ -705,7 +705,8 @@
       "fraud_screening": "Bedrägerikontroll före auktorisering",
       "refund_record": "Återbetalningsbevis",
       "refund": "Återbetalningsstatus",
-      "no_return_initiated": "Ingen retur påbörjad"
+      "no_return_initiated": "Ingen retur påbörjad",
+      "returned_parcel_outcome": "Returnerat paket"
     },
     "reasonFamilyLabel": {
       "fraud": "bedrägeri",
@@ -808,7 +809,10 @@
         "refund_issued": "En chargeback har redan utfärdats för denna order — banken kommer att behandla detta som ett erkännande av ansvar, så ärendet kan inte vinnas som det är.",
         "inr_no_fulfillment": "Ordern uppfylldes aldrig och tvistorsaken är att artikeln inte mottagits — det finns ingen faktisk grund att försvara debiteringen."
       },
-      "creditAlreadyIssued": "Den här transaktionen återbetalades redan innan tvisten öppnades. Det starkaste svaret är återbetalningen i sig — kortinnehavaren har fått pengarna tillbaka, så inget mer är utestående."
+      "creditAlreadyIssued": "Den här transaktionen återbetalades redan innan tvisten öppnades. Det starkaste svaret är återbetalningen i sig — kortinnehavaren har fått pengarna tillbaka, så inget mer är utestående.",
+      "returnedToSender": {
+        "returned_unrefunded": "Transportören returnerade paketet till dig och ingen återbetalning har gjorts, så du har både varorna och betalningen. Det kan aldrig finnas någon leveransbekräftelse för den här ordern, och utan en sådan avgör banken normalt till kundens fördel. Berätta varför paketet kom tillbaka — om kunden vägrade ta emot det eller aldrig hämtade ut det är det ingen giltig retur, och det är värt att argumentera för. Har du behållit både varorna och pengarna är det rimliga svaret att återbetala."
+      }
     },
     "improvementHint": "Lägg till {label} för att stärka ditt ärende.",
     "recommendation": {
@@ -852,7 +856,8 @@
       "fraud_risk_screening": "Från Shopifys riskmotor",
       "customer_account_info": "Från Shopify-kunddata",
       "default": "Från butiksdata",
-      "carrier_api": "Från transportörens spårningssystem ({carrier})"
+      "carrier_api": "Från transportörens spårningssystem ({carrier})",
+      "returned_parcel_outcome": "Detta har du uppgett"
     },
     "fieldAction": {
       "default": {
@@ -900,7 +905,8 @@
       "duplicate_explanation": "Förklarar varför debiteringarna inte är dubbla — krävs för dubbelttvistsvar",
       "supporting_documents": "Ytterligare bevis som stärker ditt ärende",
       "activity_log": "Kontoaktivitet som bevisar legitimt kundengagemang",
-      "tds_authentication": "Visar att banken autentiserade kortinnehavaren med 3-D Secure innan betalningen gick igenom — det starkaste beviset för att rätt kortinnehavare godkände den."
+      "tds_authentication": "Visar att banken autentiserade kortinnehavaren med 3-D Secure innan betalningen gick igenom — det starkaste beviset för att rätt kortinnehavare godkände den.",
+      "returned_parcel_outcome": "Förklarar varför ett paket som kom tillbaka till dig aldrig togs emot — en vägrad eller oupphämtad leverans är ingen giltig retur, vilket är det enda argument som återstår i den här tvisten"
     },
     "targetField": {
       "SHIPPING_DOCUMENTATION": "Fraktdokumentation",
@@ -1304,6 +1310,37 @@
         "errorWindowClosed": "Shopify har redan vidarebefordrat denna tvist till banken, så nya bekräftelser kan inte längre läggas till.",
         "errorGeneric": "Det gick inte att spara bekräftelsen ({code}). Försök igen.",
         "charCount": "{count}/{max}"
+      },
+      "parcelOutcome": {
+        "ctaEyebrow": "Behövs för svaret · bara du kan svara på detta",
+        "title": "Berätta varför paketet kom tillbaka",
+        "subtitle": "Transportören returnerade den här ordern till dig, så det kan aldrig finnas någon leveransbekräftelse för den. Om kunden vägrade ta emot paketet eller aldrig hämtade ut det är det ingen giltig retur — och det är det enda argument som återstår i tvisten. Vi kan inte se vilket som hände; det kan du.",
+        "ctaButton": "Svara på två frågor",
+        "ctaMeta": "Tar under en minut",
+        "choosePlaceholder": "Välj ett alternativ …",
+        "reasonLabel": "Varför kom paketet tillbaka?",
+        "reasonHint": "Det här tas med i ditt svar. En vägrad eller oupphämtad leverans är ingen giltig retur, vilket är värt att påpeka.",
+        "reason": {
+          "refused_delivery": "Kunden vägrade ta emot leveransen",
+          "not_collected": "Kunden hämtade aldrig ut det på utlämningsstället",
+          "undeliverable_address": "Adressen gick inte att leverera till"
+        },
+        "dispositionLabel": "Vad hände med varorna när de kom tillbaka?",
+        "dispositionHint": "Endast för din och vår dokumentation — det här svaret tas aldrig med i svaret som skickas för din räkning.",
+        "disposition": {
+          "restocked_not_refunded": "Tillbaka i lager, och ingen återbetalning gjord",
+          "still_held": "Ligger kvar, varken inlagt i lager eller återbetalat",
+          "reshipped": "Skickat till kunden igen",
+          "refunded": "Återbetalat till kunden"
+        },
+        "noteLabel": "Något annat som är bra att veta (valfritt)",
+        "notePlaceholder": "Till exempel: kunden kontaktades den 12 juli och bad oss hålla kvar paketet.",
+        "noteHint": "Sparas tillsammans med tvisten.",
+        "submit": "Spara svaren",
+        "submitting": "Sparar …",
+        "cancel": "Avbryt",
+        "errorWindowClosed": "Shopify har redan vidarebefordrat den här tvisten till banken, så svaret kan inte längre läggas till.",
+        "errorGeneric": "Det gick inte att spara svaren ({code}). Försök igen."
       }
     },
     "reviewTab": {
@@ -1759,7 +1796,13 @@
       "titleCollectedOn": "Uthämtad av kunden på utlämningsstället ({date})",
       "titleAwaitingCollection": "På utlämningsstället — väntar på att kunden hämtar ut",
       "factsCollected": "Uthämtad på utlämningsstället {date} — legitimation krävs vid uthämtning",
-      "factsAwaitingCollection": "På utlämningsstället — ännu inte uthämtad"
+      "factsAwaitingCollection": "På utlämningsstället — ännu inte uthämtad",
+      "returnedToSender": "Returnerad till avsändaren",
+      "titleReturnedToSender": "Returnerad till avsändaren — kunden tog aldrig emot paketet",
+      "titleReturnedToSenderOn": "Returnerad till avsändaren {date} — kunden tog aldrig emot paketet",
+      "whyReturnedToSender": "Transportören lämnade tillbaka paketet till dig. Eftersom kunden aldrig tog emot det kan det aldrig finnas någon leveransbekräftelse för den här ordern — därför går ärendet inte att driva på leveransen. Det som betyder något nu är varför paketet kom tillbaka och vad du gjorde med varorna.",
+      "factsReturnedToSender": "Returnerad till avsändaren",
+      "factsReturnedToSenderOn": "Returnerad till avsändaren {date}"
     },
     "gorgiasComms": {
       "title": "Kundsupportkonversationer",
@@ -3312,6 +3355,10 @@
       "sessionCapture": {
         "title": "Sessionsregistrering på butiken — vad det är och vad vi lagrar",
         "body": "För att matcha tvister mot CE 3.0 / FPT-krav behöver DisputeDesk känna till vissa fakta om varje checkout-session: vilken IP kunden använde, om de var inloggade, sidorna de visade, enheten. Utan dessa data förblir kvalifikationsfrekvensen artificiellt låg — de flesta tvister når inte upp till kravet på matchande datapunkter.\n\nVad DisputeDesk fångar (när sessionsregistrering är aktiverad):\n- Shopify cart_token (för att koppla session till order)\n- IP-adress (hashad i vila, salt per butik; råvärde krypterat, dekrypteras endast vid kvalificering)\n- IP-härledd geografi (endast land och region)\n- User agent\n- Kund-ID och inloggningsstatus vid betalning\n- Kundkontoålder\n- Besökta sidor och tid på checkout-sidan\n- Webbläsarens integritetssignaler (Do Not Track, Global Privacy Control)\n\nVad som INTE fångas: formulärvärden (namn, adresser, kortnummer — inget inskrivet), sammansatta enhetsfingeravtryck (canvas / WebGL / ljud — uppskjutna till senare fas under rättslig granskning), musrörelser, cross-session-cookies.\n\nIntegritetskontroller:\n- DNT- och GPC-signaler får DisputeDesk att avvisa posten serversidan\n- Sessionsdata raderas automatiskt 18 månader efter registrering\n- Rätt-att-bli-glömd-förfrågningar (LGPD / GDPR / CCPA) hedras via raderings-endpoint\n- DisputeDesk agerar som personuppgiftsbiträde; du är personuppgiftsansvarig\n\nDu behöver uppdatera din butiks integritetspolicy för att avslöja denna registrering. DisputeDesk tillhandahåller en mall.\n\nFramåtblickande not: sessionsregistrering hjälper inte tvister inlämnade före aktivering. Den bygger bevisgrunden för varje tvist efter installation."
+      },
+      "returnedToSenderParcels": {
+        "title": "När ett paket returneras till avsändaren",
+        "body": "Ibland kan en transportör inte slutföra en leverans och lämnar tillbaka paketet till dig. Kunden fick aldrig sin order — och om de senare bestrider betalningen förändrar det vad ärendet kan och inte kan handla om.\n\n**Vad DisputeDesk gör automatiskt**\n\nNär vi läser av en returhändelse från transportören gör vi följande:\n\n1. Visar leveransraden som \"Returnerad till avsändaren\" med transportörens eget datum, i stället för att behandla den som en oskannad etikett.\n2. Tar bort alla argument som bygger på att kunden aldrig skickat tillbaka varorna. Shopify kan fortfarande visa returstatusen som \"ingen retur\", eftersom ingen returbegäran öppnades — men varorna finns hos dig, och ett argument byggt på motsatsen vore osant.\n3. Markerar ärendet som svagt och stoppar automatisk inlämning, även på deadline. Ett returnerat paket kan aldrig ha någon leveransbekräftelse, och utan en sådan avgör banken normalt till kundens fördel.\n\n**Vad vi behöver från dig**\n\nEn enda sak, och det är det vi inte kan se: **varför paketet kom tillbaka.** Frågan hittar du på fliken Bevis.\n\n- **Kunden vägrade ta emot leveransen** eller **hämtade aldrig ut den på utlämningsstället** — det är värt att argumentera för. Enligt EU:s konsumentregler är det ingen giltig retur och ingen giltig ångerrätt att bara låta bli att ta emot ett paket. Vi tar med det i svaret åt dig.\n- **Adressen gick inte att leverera till** — vi noterar det, men tar inte med det i svaret. Det hjälper inte ärendet, och att lyfta det bjuder in till en fråga ingen ställt.\n\nVi frågar också vad som hände med varorna när de kom tillbaka. Det svaret är för din och vår dokumentation; det tas aldrig med i svaret som skickas för din räkning.\n\n**Om du behållit både varorna och betalningen**\n\nDet ärliga svaret är oftast att återbetala. Kunden har betalat, aldrig fått sin order, och varorna är tillbaka hos dig. Att driva ärendet lyckas sällan och kan dessutom kosta dig tvisteavgiften. Om du ska återbetala är ditt beslut — DisputeDesk gör det inte åt dig — men bedömningen du ser speglar de verkliga oddsen, inte en optimistisk gissning.\n\n**En notering om tid**\n\nOm du svarar att du går med på att justera betalningen förväntar sig vissa betalleverantörer att återbetalningen sker inom kort tid (Klarna drar till exempel tillbaka betalningen automatiskt om återbetalningen inte kommer i tid). Gör återbetalningen snarast efter att du åtagit dig den."
       }
     },
     "embedded": {

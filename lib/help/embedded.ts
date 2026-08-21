@@ -26,6 +26,7 @@ const EMBEDDED_ARTICLE_SLUGS: string[] = [
   "uploading-evidence",
   "evidence-checklist",
   "evidence-strength-rubric",
+  "returned-to-sender-parcels",
   "fraud-risk-screening",
   "defense-letter-rebuttal",
   "evidence-pack-templates",

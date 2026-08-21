@@ -85,6 +85,33 @@ function hasCategoryWithValueGreaterThan(
 }
 
 /**
+ * True when any delivery fact on this order carries the carrier's
+ * return-to-sender terminal state.
+ *
+ * Exported because THREE layers must agree on what "the parcel came back"
+ * means, and a second definition is exactly how the original defect was
+ * possible: `lib/defence/alwaysAdmissible.ts` (may this fact be cited at
+ * all?), `return_not_initiated` (may the argument be built?), and
+ * `safe_to_deny_return` (may the narrative deny it?).
+ *
+ * The bare `"returned"` / `"Returned"` spellings are accepted alongside
+ * the canonical `returned_to_sender` proofType so a manually-entered or
+ * pre-2026-08-20 payload cannot slip past on wording.
+ */
+export function hasReturnedToSenderShipment(facts: EvidenceFact[]): boolean {
+  const set = new Set<EvidenceFactCategory>(DELIVERY_CATEGORIES);
+  return facts.some((f) => {
+    if (!set.has(f.category)) return false;
+    const proof = f.value?.proofType;
+    return (
+      proof === "returned_to_sender" ||
+      proof === "returned" ||
+      proof === "Returned"
+    );
+  });
+}
+
+/**
  * Every payment-verification fact, read through the ONE owner
  * (`lib/argument/paymentVerification.ts`). Predicates used to test raw letters
  * inline — a seventh definition of the match rules living in the layer that
@@ -293,7 +320,21 @@ export const FACT_PREDICATES: Record<FactPredicateId, FactPredicate> = {
     id: "return_not_initiated",
     description:
       "no_return_initiated fact present (order returnStatus=NO_RETURN, no refund) — grounds the 'no refund was owed, customer never returned the item' argument",
-    evaluate: (facts) => hasCategory(facts, ["no_return_initiated"]),
+    // The collector-level contradiction gate (lib/packs/contradictionGate.ts)
+    // suppresses `no_return_initiated` outright when a carrier returned the
+    // parcel, so this predicate is already false on such a case. The
+    // belt-and-braces conjunct below makes that independent of the gate:
+    // a historical pack rebuilt from persisted sections, or a fact set
+    // assembled by any other path, still cannot ground the argument.
+    evaluate: (facts) =>
+      hasCategory(facts, ["no_return_initiated"]) && !hasReturnedToSenderShipment(facts),
+  },
+
+  safe_to_deny_return: {
+    id: "safe_to_deny_return",
+    description:
+      "no carrier reconciled a shipment on this order to returned_to_sender — i.e. it is factually safe to state that the goods did not come back",
+    evaluate: (facts) => !hasReturnedToSenderShipment(facts),
   },
 
   subscription_terms_present: {

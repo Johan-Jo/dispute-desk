@@ -37,6 +37,7 @@ import { EvidenceUsedSection } from "./sections/EvidenceUsedSection";
 import { MissingOrWeakSection } from "./sections/MissingOrWeakSection";
 import { RegeneratePromptModal } from "./sections/RegeneratePromptModal";
 import { CardholderAcknowledgementCard } from "./sections/CardholderAcknowledgementCard";
+import { ParcelOutcomeCard } from "./sections/ParcelOutcomeCard";
 import { GorgiasCommsReviewSection } from "./sections/GorgiasCommsReviewSection";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -296,6 +297,12 @@ export default function EvidenceTab({ workspace }: Props) {
               customer_communication is already a positive bank
               argument — so its prominence never contradicts the
               actual case state. */}
+      {/* Returned-to-sender parcels only — `canOfferParcelOutcome` hides
+          this on every other dispute. Placed above the acknowledgement
+          card because on a returned parcel it is the more relevant ask:
+          an acknowledgement that the customer placed the order does not
+          help a case whose problem is that they never received it. */}
+      <ParcelOutcomeCard workspace={workspace} />
       <CardholderAcknowledgementCard workspace={workspace} />
 
       {/* §3 — Evidence in your defence package.

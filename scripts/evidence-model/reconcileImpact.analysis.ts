@@ -123,6 +123,7 @@ describe("additive reconcile — impact on live packs", () => {
       const gates = buildCaseGateAssessment({
         coverage: gateProvided((j.coverage as never) ?? null),
         fatalLoss: gateProvided((j.fatal_loss as never) ?? null),
+    returnedToSender: gateProvided((j.returned_to_sender as never) ?? null),
         riskWeakness: gateProvided((j.risk_weakness as never) ?? null),
         nameMismatch: gateProvided((j.name_mismatch as never) ?? null),
         creditAlreadyIssued: gateProvided((j.credit_already_issued as never) ?? null),

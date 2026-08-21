@@ -55,6 +55,12 @@ export interface DecisionPackRow {
 interface PackJsonShape {
   coverage?: { state?: string } | null;
   fatal_loss?: { triggered?: boolean; reason?: string | null; message?: string | null } | null;
+  returned_to_sender?: {
+    triggered?: boolean;
+    reason?: string | null;
+    returnedAt?: string | null;
+    messageToken?: unknown;
+  } | null;
   case_strength?: { overall?: string } | null;
   credit_already_issued?: { triggered?: boolean; coversDisputedAmount?: boolean } | null;
 }
@@ -90,6 +96,7 @@ export function gateDecisionFromPackRow(pack: DecisionPackRow): GateDecision {
   return gateDecisionFromFacts({
     coverageState: pj.coverage?.state ?? null,
     fatalLoss: pj.fatal_loss ?? null,
+    returnedToSender: pj.returned_to_sender ?? null,
   });
 }
 

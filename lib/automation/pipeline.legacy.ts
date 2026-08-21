@@ -421,6 +421,16 @@ export async function evaluateAndMaybeAutoSaveLegacy(packId: string): Promise<{
       ? evaluateAutoSubmitGuards({
           coverageState: coverage?.state,
           fatalLoss,
+          returnedToSender:
+            (
+              pack.pack_json as {
+                returned_to_sender?: {
+                  triggered?: boolean;
+                  reason?: string | null;
+                  message?: string | null;
+                };
+              } | null
+            )?.returned_to_sender ?? null,
           caseStrength: strengthOverall,
           creditAlreadyIssued:
             (
