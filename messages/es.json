@@ -956,7 +956,9 @@
           "skipped": "Omitido"
         },
         "reviewRequiredTitle": "Se requiere revisión antes de poder presentar este paquete",
-        "reviewRequiredBody": "DisputeDesk no puede presentar este paquete de defensa tal como está creado. Vuelve a generarlo para obtener una versión que se pueda enviar. La vista previa y Volver a generar siguen disponibles; Finalizar y Enviar no están disponibles hasta que una versión regenerada supere la revisión."
+        "reviewRequiredBody": "DisputeDesk no puede presentar este paquete de defensa tal como está creado. Vuelve a generarlo para obtener una versión que se pueda enviar. La vista previa y Volver a generar siguen disponibles; Finalizar y Enviar no están disponibles hasta que una versión regenerada supere la revisión.",
+        "notEnoughEvidenceReturnedTitle": "No hay nada que argumentar hasta que nos digas por qué volvió el paquete",
+        "notEnoughEvidenceReturnedBody": "El transportista te devolvió este paquete, así que no hay entrega que defender y nunca podrá existir una confirmación de entrega para este pedido. Esperar no lo cambiará: no se recopilará nada más. Lo único que aún puede ayudar está en la pestaña Pruebas: dinos si el cliente rechazó la entrega o nunca la recogió. Ninguna de las dos cosas cuenta como una devolución válida, y lo incluiremos en tu respuesta."
       },
       "sections": {
         "status": {

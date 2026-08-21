@@ -956,7 +956,9 @@
           "skipped": "Ignorado"
         },
         "reviewRequiredTitle": "É necessária uma revisão antes de este pacote poder ser apresentado",
-        "reviewRequiredBody": "O DisputeDesk não pode apresentar este pacote de defesa tal como foi criado. Gere-o novamente para obter uma versão que possa ser submetida. A pré-visualização e Gerar novamente continuam disponíveis; Finalizar e Submeter ficam indisponíveis até que uma versão regenerada passe na revisão."
+        "reviewRequiredBody": "O DisputeDesk não pode apresentar este pacote de defesa tal como foi criado. Gere-o novamente para obter uma versão que possa ser submetida. A pré-visualização e Gerar novamente continuam disponíveis; Finalizar e Submeter ficam indisponíveis até que uma versão regenerada passe na revisão.",
+        "notEnoughEvidenceReturnedTitle": "Não há nada a argumentar enquanto não nos disser por que a encomenda voltou",
+        "notEnoughEvidenceReturnedBody": "A transportadora devolveu-lhe esta encomenda, pelo que não há entrega a defender e nunca poderá existir uma confirmação de entrega para este pedido. Esperar não altera isso — não será recolhido mais nada. A única coisa que ainda pode ajudar está no separador Provas: diga-nos se o cliente recusou a entrega ou nunca a levantou. Nenhuma das situações conta como devolução válida, e é isso que incluiremos na sua resposta."
       },
       "sections": {
         "status": {

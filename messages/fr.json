@@ -956,7 +956,9 @@
           "skipped": "Ignoré"
         },
         "reviewRequiredTitle": "Vérification requise avant de pouvoir déposer ce dossier",
-        "reviewRequiredBody": "DisputeDesk ne peut pas déposer ce dossier de défense tel qu'il a été constitué. Régénérez-le pour obtenir une version soumettable. L'aperçu et Régénérer restent disponibles ; Finaliser et Soumettre sont indisponibles tant qu'une version régénérée n'a pas passé la vérification."
+        "reviewRequiredBody": "DisputeDesk ne peut pas déposer ce dossier de défense tel qu'il a été constitué. Régénérez-le pour obtenir une version soumettable. L'aperçu et Régénérer restent disponibles ; Finaliser et Soumettre sont indisponibles tant qu'une version régénérée n'a pas passé la vérification.",
+        "notEnoughEvidenceReturnedTitle": "Il n’y a rien à plaider tant que vous ne nous dites pas pourquoi le colis est revenu",
+        "notEnoughEvidenceReturnedBody": "Le transporteur vous a retourné ce colis : il n’y a donc aucune livraison à plaider, et aucune confirmation de livraison ne pourra jamais exister pour cette commande. Attendre n’y changera rien — plus rien ne sera collecté. La seule chose qui puisse encore aider se trouve dans l’onglet Preuves : dites-nous si le client a refusé la livraison ou ne l’a jamais retirée. Ni l’un ni l’autre ne constitue un retour valable, et nous le mentionnerons dans votre réponse."
       },
       "sections": {
         "status": {
