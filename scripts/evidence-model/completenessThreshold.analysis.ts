@@ -425,6 +425,7 @@ describe("Slice 2 / PR 2.0 — completeness calibration (prod, read-only)", () =
         guards: {
           coverageState: packJson?.coverage?.state ?? null,
           fatalLoss: packJson?.fatal_loss ?? null,
+          returnedToSender: null,
           caseStrength,
           creditAlreadyIssued: packJson?.credit_already_issued ?? null,
         },

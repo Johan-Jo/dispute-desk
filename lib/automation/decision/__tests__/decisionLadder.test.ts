@@ -84,6 +84,7 @@ describe("Coverage Gate — preserved", () => {
       gateDecisionFromFacts({
         coverageState: "covered_shopify",
         fatalLoss: { triggered: true },
+        returnedToSender: null,
       }),
     ).toBe("coverage");
     const d = deriveCaseAutomationDecision(input({ assessment: COVERED_ASSESSMENT }));
@@ -124,14 +125,14 @@ describe("Coverage Gate — preserved", () => {
   it("only `covered_shopify` triggers the gate — no widening here", () => {
     for (const state of ["not_covered", "PENDING", "pending", "", "protected"]) {
       // Asserted at the projection, which is where the literal now lives.
-      expect(gateDecisionFromFacts({ coverageState: state, fatalLoss: null }), state).not.toBe(
+      expect(gateDecisionFromFacts({ coverageState: state, fatalLoss: null, returnedToSender: null }), state).not.toBe(
         "coverage",
       );
       const d = deriveCaseAutomationDecision(
         input({
           assessment: withGate(
             BASE,
-            gateDecisionFromFacts({ coverageState: state, fatalLoss: null }),
+            gateDecisionFromFacts({ coverageState: state, fatalLoss: null, returnedToSender: null }),
           ),
         }),
       );
@@ -170,6 +171,7 @@ describe("Fatal-loss Gate — preserved", () => {
       gateDecisionFromFacts({
         coverageState: null,
         fatalLoss: { triggered: true },
+        returnedToSender: null,
       }),
     ).toBe("fatal_loss");
     const d = deriveCaseAutomationDecision(input({ assessment: FATAL_ASSESSMENT }));
@@ -179,7 +181,7 @@ describe("Fatal-loss Gate — preserved", () => {
 
   it("an untriggered fatal_loss object does not block", () => {
     expect(
-      gateDecisionFromFacts({ coverageState: null, fatalLoss: { triggered: false } }),
+      gateDecisionFromFacts({ coverageState: null, fatalLoss: { triggered: false }, returnedToSender: null }),
     ).toBeNull();
     const d = deriveCaseAutomationDecision(input({ assessment: withGate(BASE, null) }));
     expect(d.action).toBe("auto_file");

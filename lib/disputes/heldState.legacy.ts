@@ -47,6 +47,7 @@ export function resolveHeldStateLegacy(input: HeldStateInput): HeldState {
   const verdict = evaluateAutoSubmitGuards({
     coverageState: input.coverageState,
     fatalLoss: input.fatalLoss,
+    returnedToSender: input.returnedToSender ?? null,
     caseStrength: input.caseStrength,
     creditAlreadyIssued: input.creditAlreadyIssued,
   });

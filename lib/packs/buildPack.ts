@@ -24,6 +24,11 @@ import {
   type OrderDetailResponse,
   type OrderDetailNode,
 } from "@/lib/shopify/queries/orders";
+import {
+  applyContradictionGate,
+  hasReturnedToSenderShipment,
+  returnedToSenderAt,
+} from "./contradictionGate";
 import { collectOrderEvidence } from "./sources/orderSource";
 import { collectFulfillmentEvidence } from "./sources/fulfillmentSource";
 import { collectPolicyEvidence } from "./sources/policySource";
@@ -50,6 +55,10 @@ import {
 } from "@/lib/argument/nameMismatch";
 import type { CaseStrengthLevel } from "@/lib/argument/types";
 import { detectFatalLoss, type FatalLossSummary } from "@/lib/automation/fatalLoss";
+import {
+  detectReturnedToSender,
+  type ReturnedToSenderSummary,
+} from "@/lib/automation/returnedToSender";
 import { loadPriorOrderHistory } from "./priorOrderHistory";
 import { detectCreditAlreadyIssued } from "@/lib/automation/creditTiming";
 import {
@@ -451,6 +460,37 @@ export async function buildPack(
     }
   }
 
+  /* ── CROSS-SOURCE CONTRADICTION GATE ──────────────────────────────────
+   *
+   * Collectors above ran CONCURRENTLY and each read a single source, so
+   * none of them could see that another had produced a refuting fact.
+   * This is the first point that holds every section at once, and it is
+   * the only place a contradiction between two individually-correct
+   * sources can be resolved.
+   *
+   * Live case: cay-collective #13195. Shopify said `returnStatus:
+   * NO_RETURN` (true — no RMA) while the DHL adapter had the parcel
+   * RETURNED TO SENDER on 2026-07-06. The pack carried both, and the
+   * defence package filed the inference drawn from the first: "no refund
+   * obligation arose, as the goods were never returned to the merchant".
+   *
+   * Suppressions are recorded, never silent — same rule the delivery
+   * reconciler follows for `sourceConflict`. */
+  const contradictionResult = applyContradictionGate(allSections);
+  const contradictions = contradictionResult.contradictions;
+  if (contradictions.length > 0) {
+    allSections.length = 0;
+    allSections.push(...contradictionResult.sections);
+    await logAuditEvent({
+      shopId: pack.shop_id,
+      disputeId: dispute.id,
+      packId,
+      actorType: "system",
+      eventType: "evidence_contradiction_suppressed",
+      eventPayload: { contradictions },
+    });
+  }
+
   // Clear prior evidence_items for this pack before re-inserting. buildPack
   // runs on every (re)build, and the workspace API resolves each field to
   // the OLDEST-created evidence_item ("first write wins", ordered
@@ -631,12 +671,19 @@ export async function buildPack(
   const hasRefund =
     (order?.refunds?.length ?? 0) > 0 ||
     Number(order?.totalRefundedSet?.shopMoney?.amount ?? 0) > 0;
+  // Did a carrier bring a parcel back? Read from the assembled sections,
+  // not the order: the carrier knows this and Shopify frequently does not
+  // (cay-collective #13195 had no return event in Shopify's own
+  // fulfillment timeline at all). Gates the returned-parcel question, so
+  // the merchant is asked about a returned parcel only when one exists.
+  const hasReturnedToSenderParcel = hasReturnedToSenderShipment(allSections);
   const orderContext: OrderContext = {
     isFulfilled,
     hasCardPayment,
     avsCvvAvailable,
     hasShippingEvidence,
     hasRefund,
+    hasReturnedToSenderParcel,
     paymentFamily: paymentContext.family,
   };
 
@@ -738,6 +785,21 @@ export async function buildPack(
     dispute.phase ?? null,
   );
 
+  /* Returned-to-sender summary. Derived from the ASSEMBLED SECTIONS
+   * rather than the order, because the carrier — not Shopify — is what
+   * knows the parcel came back: on cay-collective #13195 Shopify's own
+   * fulfillment events carried no return at all, and only the DHL adapter
+   * had it. Reads the same `hasReturnedToSenderShipment` the contradiction
+   * gate uses, so "the parcel came back" has exactly one definition. */
+  const returnedToSenderSummary: ReturnedToSenderSummary = detectReturnedToSender({
+    returnedToSender: hasReturnedToSenderParcel,
+    returnedAt: returnedToSenderAt(allSections),
+    order,
+    disputeAmount: Number.isFinite(disputeAmountNum)
+      ? (disputeAmountNum as number)
+      : null,
+  });
+
   // The credit-already-issued summary rides in pack_json so the hero,
   // the strength engine and the admin view all read one derived answer
   // instead of three re-derivations of the same timing comparison.
@@ -834,6 +896,7 @@ export async function buildPack(
       shopifyProtectStatus: coverageSummary.shopifyProtectStatus,
     }),
     fatalLoss: gateProvided(fatalLossSummary),
+    returnedToSender: gateProvided(returnedToSenderSummary),
     riskWeakness: gateProvided(riskWeaknessSummary),
     nameMismatch: gateProvided(nameMismatchInput),
     creditAlreadyIssued: gateProvided({
@@ -938,6 +1001,13 @@ export async function buildPack(
     coverage: coverageSummary,
     case_strength: caseStrengthSummary,
     fatal_loss: fatalLossSummary,
+    returned_to_sender: returnedToSenderSummary,
+    // Sections a SECOND source refuted, dropped by the cross-source
+    // contradiction gate. Empty on the overwhelming majority of packs.
+    // Persisted (rather than only audit-logged) so admin — the source of
+    // truth for the pipeline — shows WHY a fact the merchant can see in
+    // Shopify is absent from the pack. Never merchant- or bank-facing.
+    contradictions,
     credit_already_issued: creditAlreadyIssued,
     risk_weakness: riskWeaknessSummary,
     // Cardholder-name-mismatch diagnostics (merchant-UI + audit only —

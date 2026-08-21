@@ -131,6 +131,7 @@ const _builderMissingProvenance: CaseGateAssessmentFields = {
 const _builderFields: CaseGateAssessmentFields = {
   coverage: null,
   fatalLoss: null,
+  returnedToSender: null,
   riskWeakness: null,
   nameMismatch: null,
   creditAlreadyIssued: null,
@@ -159,6 +160,7 @@ const _ok = calculateCaseStrength(
   buildCaseGateAssessment({
     coverage: gateProvided(null),
     fatalLoss: gateNotProvided("order_not_loaded"),
+    returnedToSender: gateNotProvided("order_not_loaded"),
     riskWeakness: gateNotProvided("order_not_loaded"),
     nameMismatch: gateNotProvided("not_shipped_to_client"),
     creditAlreadyIssued: gateNotProvided("not_persisted_in_pack"),

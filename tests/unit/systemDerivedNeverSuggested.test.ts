@@ -49,6 +49,7 @@ import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 const NO_GATES = buildCaseGateAssessment({
   coverage: gateNotProvided("gate_free_query"),
   fatalLoss: gateNotProvided("gate_free_query"),
+  returnedToSender: gateNotProvided("gate_free_query"),
   riskWeakness: gateNotProvided("gate_free_query"),
   nameMismatch: gateNotProvided("gate_free_query"),
   creditAlreadyIssued: gateNotProvided("gate_free_query"),

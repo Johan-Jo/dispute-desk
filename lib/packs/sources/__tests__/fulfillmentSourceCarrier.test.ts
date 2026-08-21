@@ -231,7 +231,10 @@ describe("always-verify + cache participation (§5.7 v2)", () => {
       trackingSource: "carrier_api_dhl",
     });
     expect(payload.sourceConflict).toBe(true); // conflict surfaced, not discarded
-    expect(data.proofType).toBe("label_created"); // stale positive is dead
+    // The stale positive is still dead — and since 2026-08-20 the state is
+    // NAMED rather than collapsed into "a label was printed". Both score
+    // `invalid`; only `returned_to_sender` is true about this shipment.
+    expect(data.proofType).toBe("returned_to_sender");
     expect(data.deliveredAt).toBeNull();
   });
 

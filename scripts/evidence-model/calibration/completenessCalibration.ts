@@ -498,6 +498,7 @@ export type IneligibilityReason =
   | "rule_mode_review"
   | "covered_shopify"
   | "fatal_loss"
+  | "returned_to_sender"
   | "moderate_strength"
   | "weak"
   | "insufficient";

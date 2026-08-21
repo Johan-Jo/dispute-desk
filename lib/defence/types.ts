@@ -425,6 +425,13 @@ export type FactPredicateId =
    *  that says the transaction was credited IN FULL. */
   | "credit_covers_disputed_amount"
   | "return_not_initiated"
+  /** Safe to DENY that the goods came back. False whenever a carrier
+   *  reconciled a shipment on this order to `returned_to_sender` — the
+   *  parcel is with the merchant, whatever Shopify's `returnStatus` says.
+   *  Backs the first NEGATIVE-polarity claim guard: unlike every other
+   *  predicate here, it licenses the absence of a fact rather than its
+   *  presence. See `lib/defence/claimGuards.ts`. */
+  | "safe_to_deny_return"
   | "subscription_terms_present"
   | "customer_communication_on_record"
   | "is_card_absent_dispute"
@@ -504,12 +511,31 @@ export interface ValidationResult {
 
 /** A guard that fires when the narrative contains `pattern` and the
  *  approvedFacts don't satisfy `predicate`. */
+/** Which grammatical form of a claim a guard polices.
+ *
+ *  `affirmative` (the default, and every guard until 2026-08-20) fires on
+ *  a plain assertion — "the order was delivered" — and skips the same
+ *  words inside a negated clause, because "no delivery was recorded"
+ *  asserts the opposite and needs no delivery fact.
+ *
+ *  `negative` is the mirror: it fires ONLY on the negated form, because
+ *  the DENIAL is the dangerous statement. "The goods were never returned
+ *  to the merchant" is a claim about the world that can be false, and the
+ *  affirmative machinery is structurally blind to it — the negation
+ *  window exists precisely to wave it through. cay-collective #13195 had
+ *  exactly that sentence in a validated draft while the carrier had the
+ *  parcel back at the merchant since 2026-07-06. */
+export type ClaimPolarity = "affirmative" | "negative";
+
 export interface ClaimGuard {
   id: string;
   /** What the guard is checking for. */
   description: string;
   /** Match against narrative section text. */
   pattern: RegExp;
+  /** Which form of the claim this guard polices. Defaults to
+   *  `affirmative` when omitted, so existing rows are unchanged. */
+  polarity?: ClaimPolarity;
   /** Sections this guard applies to. Empty = all sections. */
   appliesToSections: NarrativeSectionKey[] | "all";
   /** Phase 2: the named predicate that backs this guard. The guard's

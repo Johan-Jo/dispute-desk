@@ -155,6 +155,14 @@ export const HELP_ARTICLES: HelpArticle[] = [
     tags: ["strong", "moderate", "supporting", "invalid", "rubric", "categorization", "AVS", "CVV", "delivery", "policy"],
   },
   {
+    slug: "returned-to-sender-parcels",
+    category: "evidence-packs",
+    titleKey: "help.articles.returnedToSenderParcels.title",
+    bodyKey: "help.articles.returnedToSenderParcels.body",
+    relatedSlugs: ["evidence-strength-rubric", "evidence-checklist", "uploading-evidence", "defense-letter-rebuttal"],
+    tags: ["returned to sender", "RTS", "undelivered", "refused", "uncollected", "carrier", "delivery", "refund", "Klarna"],
+  },
+  {
     slug: "fraud-risk-screening",
     category: "evidence-packs",
     titleKey: "help.articles.fraudRiskScreening.title",

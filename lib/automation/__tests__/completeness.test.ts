@@ -40,9 +40,16 @@ describe("evaluateCompleteness", () => {
     // shipping_tracking and delivery_proof should be unavailable, not blockers
     expect(result.blockers).toHaveLength(0);
     const unavailable = result.checklist.filter((c) => c.unavailableReason);
-    expect(unavailable.length).toBe(2);
     expect(unavailable.map((c) => c.field)).toContain("shipping_tracking");
     expect(unavailable.map((c) => c.field)).toContain("delivery_proof");
+    // `returned_parcel_outcome` is unavailable too, for its OWN reason —
+    // nothing came back, so there is nothing to ask about. Asserted by
+    // field rather than by a total count: a bare count turns every future
+    // conditional row into a failure that says nothing about what broke.
+    expect(
+      unavailable.find((c) => c.field === "returned_parcel_outcome")
+        ?.unavailableReason,
+    ).toMatch(/returned to sender/i);
   });
 
   it("marks avs_cvv_match as unavailable when no card payment", () => {

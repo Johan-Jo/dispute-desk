@@ -444,6 +444,7 @@ describe("completeness-gate eligibility", () => {
   const NO_GUARDS = {
     coverageState: null,
     fatalLoss: null,
+    returnedToSender: null,
     caseStrength: "strong",
     creditAlreadyIssued: null,
   };

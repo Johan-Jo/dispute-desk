@@ -20,6 +20,7 @@
  *   delivered_confirmed  → "Delivery confirmation (carrier)"    [moderate/strong]
  *   delivered_unverified → "Shipping & tracking"                [supporting]
  *   label_created        → "Shipping label created"             [invalid]
+ *   returned_to_sender   → "Returned to sender"                  [invalid]
  *
  * Lib code emits i18n keys, never English. The `labelKey` returned here is
  * resolved by the UI's root translator.
@@ -60,6 +61,7 @@ const PROOF_LABEL_KEY: Record<DeliveryProofType, I18nKey> = {
   delivered_confirmed: "disputes.deliveryProof.carrierConfirmed",
   delivered_unverified: "disputes.deliveryProof.shippedUnconfirmed",
   label_created: "disputes.deliveryProof.labelOnly",
+  returned_to_sender: "disputes.deliveryProof.returnedToSender",
 };
 
 /** Narrow the raw payload's `proofType` to the canonical enum, defaulting
@@ -76,7 +78,8 @@ function resolveProofType(
     explicit === "signature_confirmed" ||
     explicit === "delivered_confirmed" ||
     explicit === "delivered_unverified" ||
-    explicit === "label_created"
+    explicit === "label_created" ||
+    explicit === "returned_to_sender"
   ) {
     return explicit;
   }
@@ -212,16 +215,38 @@ export function shortEvidenceDate(iso: unknown): string | null {
  *  outranks an awaiting-collection arrival. `date` is the customer-
  *  receipt timestamp when one exists. */
 export interface DeliveryReceipt {
-  state: "delivered" | "collected" | "awaiting_collection" | null;
+  state:
+    | "delivered"
+    | "collected"
+    | "awaiting_collection"
+    /** The carrier brought the parcel back to the merchant. A terminal
+     *  state like `delivered`, and the OPPOSITE of receipt — ranked
+     *  lowest so a genuine delivery on another shipment still wins the
+     *  display, but never dropped, because dropping it is what made the
+     *  Overview say "the carrier never scanned the parcel". */
+    | "returned"
+    | null;
   date: string | null;
   carrierApiSlug: string | null;
 }
 
 const RECEIPT_RANK: Record<string, number> = {
-  Delivered: 3,
-  CollectedAtPickup: 2,
-  DeliveredToPickup: 1,
+  Delivered: 4,
+  CollectedAtPickup: 3,
+  DeliveredToPickup: 2,
+  Returned: 1,
 };
+
+/** Timestamp of the carrier's own terminal event for ONE fulfillment.
+ *  The collector lifts it onto `carrierTerminalEvent` (see
+ *  `lib/packs/sources/fulfillmentSource.ts`). This is the only date a
+ *  RETURNED shipment has — it never carries `deliveredAtTracking`. */
+function terminalEventAt(fulfillment: Record<string, unknown>): string | null {
+  const ev = fulfillment.carrierTerminalEvent;
+  if (!ev || typeof ev !== "object") return null;
+  const at = (ev as Record<string, unknown>).happenedAt;
+  return typeof at === "string" && at ? at : null;
+}
 
 export function resolveDeliveryReceipt(
   payload: Record<string, unknown> | null | undefined,
@@ -245,8 +270,13 @@ export function resolveDeliveryReceipt(
     if (!status || !(status in RECEIPT_RANK)) continue;
     if (!bestStatus || RECEIPT_RANK[status] > RECEIPT_RANK[bestStatus]) {
       bestStatus = status;
+      // A returned shipment has no `deliveredAtTracking` — its terminal
+      // moment is the return scan, which the collector lifts onto
+      // `carrierTerminalEvent.happenedAt`.
       bestAt =
-        typeof tr.deliveredAtTracking === "string" ? tr.deliveredAtTracking : null;
+        typeof tr.deliveredAtTracking === "string"
+          ? tr.deliveredAtTracking
+          : terminalEventAt(f as Record<string, unknown>);
     }
   }
 
@@ -259,9 +289,11 @@ export function resolveDeliveryReceipt(
         ? "collected"
         : bestStatus === "DeliveredToPickup"
           ? "awaiting_collection"
-          : topLevelDeliveredAt
-            ? "delivered"
-            : null;
+          : bestStatus === "Returned"
+            ? "returned"
+            : topLevelDeliveredAt
+              ? "delivered"
+              : null;
   return {
     state,
     date: bestAt ?? topLevelDeliveredAt,
@@ -301,6 +333,11 @@ export function resolveDeliveryTitle(
       return { key: `${NS}.titleAwaitingCollection` };
     }
     return { key: PROOF_LABEL_KEY.delivered_unverified };
+  }
+  if (proofType === "returned_to_sender") {
+    return date
+      ? { key: `${NS}.titleReturnedToSenderOn`, params: { date } }
+      : { key: `${NS}.titleReturnedToSender` };
   }
   return { key: PROOF_LABEL_KEY.label_created };
 }

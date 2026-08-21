@@ -64,6 +64,7 @@ describe("automation group model", () => {
     const verdict = evaluateAutoSubmitGuards({
       coverageState: "not_covered",
       fatalLoss: null,
+      returnedToSender: null,
       caseStrength: "strong",
       creditAlreadyIssued: null,
     });
@@ -79,6 +80,7 @@ describe("automation group model", () => {
       const verdict = evaluateAutoSubmitGuards({
         coverageState: "not_covered",
         fatalLoss: null,
+        returnedToSender: null,
         caseStrength: "strong",
       creditAlreadyIssued: null,
       });

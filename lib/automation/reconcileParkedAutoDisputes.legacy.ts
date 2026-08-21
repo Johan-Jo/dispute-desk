@@ -103,6 +103,14 @@ export async function reconcileParkedAutoDisputesLegacy(
     const verdict = evaluateAutoSubmitGuards({
       coverageState: packJson.coverage?.state,
       fatalLoss: packJson.fatal_loss,
+      returnedToSender:
+        (packJson as {
+          returned_to_sender?: {
+            triggered?: boolean;
+            reason?: string | null;
+            message?: string | null;
+          };
+        }).returned_to_sender ?? null,
       caseStrength: strength,
       // Previously omitted (P5, 2026-08-04). This path only promotes Strong
       // packs, so a credited case already passed via the floor — but the gate

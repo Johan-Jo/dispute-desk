@@ -855,6 +855,37 @@
         "errorWindowClosed": "Shopify ya reenvió esta disputa al banco, por lo que ya no se pueden añadir nuevos reconocimientos.",
         "errorGeneric": "No se pudo guardar el reconocimiento ({code}). Inténtalo de nuevo.",
         "charCount": "{count}/{max}"
+      },
+      "parcelOutcome": {
+        "ctaEyebrow": "Necesario para responder · solo tú puedes contestarlo",
+        "title": "Cuéntanos por qué volvió este paquete",
+        "subtitle": "El transportista te devolvió este pedido, así que nunca podrá existir una confirmación de entrega. Si el cliente rechazó el paquete o nunca lo recogió, eso no es una devolución válida, y es el único argumento que sigue abierto en esta disputa. Nosotros no podemos ver qué pasó; tú sí.",
+        "ctaButton": "Responder dos preguntas",
+        "ctaMeta": "Menos de un minuto",
+        "choosePlaceholder": "Elige una opción…",
+        "reasonLabel": "¿Por qué volvió el paquete?",
+        "reasonHint": "Esto se incluye en tu respuesta. Una entrega rechazada o no recogida no es una devolución válida, y conviene decirlo.",
+        "reason": {
+          "refused_delivery": "El cliente rechazó la entrega",
+          "not_collected": "El cliente nunca lo recogió en el punto de recogida",
+          "undeliverable_address": "No se pudo entregar en la dirección"
+        },
+        "dispositionLabel": "¿Qué pasó con la mercancía al volver?",
+        "dispositionHint": "Solo para tu registro y el nuestro: esta respuesta nunca aparece en la respuesta enviada en tu nombre.",
+        "disposition": {
+          "restocked_not_refunded": "De vuelta en stock, sin reembolso emitido",
+          "still_held": "Aún retenida, ni repuesta en stock ni reembolsada",
+          "reshipped": "Reenviada al cliente",
+          "refunded": "Reembolsada al cliente"
+        },
+        "noteLabel": "Algo más que convenga saber (opcional)",
+        "notePlaceholder": "Por ejemplo: contactamos con el cliente el 12 de julio y nos pidió que retuviéramos el paquete.",
+        "noteHint": "Se guarda junto con la disputa.",
+        "submit": "Guardar respuestas",
+        "submitting": "Guardando…",
+        "cancel": "Cancelar",
+        "errorWindowClosed": "Shopify ya ha enviado esta disputa al banco, así que esta respuesta ya no se puede añadir.",
+        "errorGeneric": "No se han podido guardar tus respuestas ({code}). Inténtalo de nuevo."
       }
     },
     "reviewTab": {
@@ -1305,7 +1336,8 @@
       "fraud_screening": "Detección de fraude previa a la autorización",
       "refund_record": "Registro de reembolso",
       "refund": "Estado del reembolso",
-      "no_return_initiated": "Sin devolución iniciada"
+      "no_return_initiated": "Sin devolución iniciada",
+      "returned_parcel_outcome": "Paquete devuelto"
     },
     "decisiveHint": {
       "fraud": "confirmación de entrega, firma archivada o coherencia de dispositivo/sesión",
@@ -1398,7 +1430,10 @@
         "refund_issued": "Ya se emitió un reembolso para este pedido — el banco lo considerará una confesión de responsabilidad, por lo que el caso no puede ganarse tal como está.",
         "inr_no_fulfillment": "El pedido nunca se cumplió y el motivo de la disputa es «artículo no recibido» — no hay base factual para defender el cargo."
       },
-      "creditAlreadyIssued": "Esta transacción ya fue reembolsada antes de que se presentara la disputa. La respuesta más sólida es el propio reembolso: al titular de la tarjeta ya se le devolvió el dinero, así que no queda nada pendiente."
+      "creditAlreadyIssued": "Esta transacción ya fue reembolsada antes de que se presentara la disputa. La respuesta más sólida es el propio reembolso: al titular de la tarjeta ya se le devolvió el dinero, así que no queda nada pendiente.",
+      "returnedToSender": {
+        "returned_unrefunded": "El transportista te devolvió este paquete y no se ha emitido ningún reembolso, así que tienes la mercancía y el dinero. Para este pedido no puede existir una confirmación de entrega y, sin ella, el banco suele decidir a favor del cliente. Dinos por qué volvió el paquete: si el cliente lo rechazó o nunca lo recogió, eso no es una devolución válida y merece la pena argumentarlo. Si te has quedado con la mercancía y el dinero, lo justo es reembolsar."
+      }
     },
     "improvementHint": "Agregue {label} para fortalecer su caso.",
     "recommendation": {
@@ -1442,7 +1477,8 @@
       "auto_ipinfo": "De inteligencia de IP",
       "manual_upload": "Subido manualmente",
       "unavailable_from_source": "No disponible desde la fuente",
-      "carrier_api": "Del sistema de seguimiento del transportista ({carrier})"
+      "carrier_api": "Del sistema de seguimiento del transportista ({carrier})",
+      "returned_parcel_outcome": "Nos lo has indicado tú"
     },
     "fieldAction": {
       "default": {
@@ -1490,7 +1526,8 @@
       "duplicate_explanation": "Explica por qué los cargos no son duplicados — requerido para responder a disputas de duplicado",
       "supporting_documents": "Pruebas adicionales que fortalecen tu caso",
       "activity_log": "Actividad de la cuenta que demuestra interacción legítima del cliente",
-      "tds_authentication": "Muestra que el banco autenticó al titular con 3-D Secure antes de procesar el pago: la prueba más sólida de que el titular real lo aprobó."
+      "tds_authentication": "Muestra que el banco autenticó al titular con 3-D Secure antes de procesar el pago: la prueba más sólida de que el titular real lo aprobó.",
+      "returned_parcel_outcome": "Explica por qué nunca se recibió un paquete que volvió a ti: una entrega rechazada o no recogida no es una devolución válida, y es el único argumento que sigue abierto en esta disputa"
     },
     "targetField": {
       "SHIPPING_DOCUMENTATION": "Documentación de envío",
@@ -1759,7 +1796,13 @@
       "titleCollectedOn": "Recogido por el cliente en el punto de recogida ({date})",
       "titleAwaitingCollection": "En el punto de recogida — pendiente de que el cliente lo recoja",
       "factsCollected": "Recogido en el punto de recogida el {date} — se requiere identificación al recoger",
-      "factsAwaitingCollection": "En el punto de recogida — aún sin recoger"
+      "factsAwaitingCollection": "En el punto de recogida — aún sin recoger",
+      "returnedToSender": "Devuelto al remitente",
+      "titleReturnedToSender": "Devuelto al remitente — el cliente nunca recibió el paquete",
+      "titleReturnedToSenderOn": "Devuelto al remitente el {date} — el cliente nunca recibió el paquete",
+      "whyReturnedToSender": "El transportista te devolvió este paquete. Como el cliente nunca lo recibió, nunca podrá existir una confirmación de entrega para este pedido, así que el caso no se puede defender por la entrega. Lo que importa ahora es por qué volvió y qué hiciste con la mercancía.",
+      "factsReturnedToSender": "Devuelto al remitente",
+      "factsReturnedToSenderOn": "Devuelto al remitente el {date}"
     },
     "gorgiasComms": {
       "title": "Conversaciones de soporte al cliente",
@@ -3312,6 +3355,10 @@
       "sessionCapture": {
         "title": "Captura de sesión en la tienda — qué es y qué guardamos",
         "body": "Para comparar disputas con los requisitos de CE 3.0 / FPT, DisputeDesk necesita saber ciertos hechos sobre cada sesión de checkout: IP usado, si el cliente estaba logueado, páginas vistas, dispositivo. Sin estos datos, las tasas de calificación quedan artificialmente bajas — la mayoría de disputas no alcanzará el requisito de coincidencia de datos.\n\nQué captura DisputeDesk (cuando la captura está habilitada):\n- El cart_token de Shopify (para vincular sesión y pedido)\n- Dirección IP (con hash en reposo, salt por tienda; valor crudo cifrado, solo descifrado al calificar)\n- Geografía derivada del IP (solo país y región)\n- User agent\n- ID y estado de login del cliente al pagar\n- Antigüedad de la cuenta del cliente\n- Páginas vistas y tiempo en la página de checkout\n- Señales de privacidad del navegador (Do Not Track, Global Privacy Control)\n\nQué NO captura: valores de formularios (nombres, direcciones, tarjetas, nada tecleado), fingerprints compuestos de dispositivo (canvas / WebGL / audio — diferido para fase con revisión legal), movimiento del ratón, cookies cross-session.\n\nControles de privacidad:\n- Las señales DNT y GPC hacen que DisputeDesk descarte el registro en el servidor\n- Los datos de sesión se borran automáticamente 18 meses después de capturarse\n- Solicitudes de derecho al olvido (LGPD / RGPD / CCPA) honradas vía endpoint de eliminación\n- DisputeDesk actúa como encargado del tratamiento; tú eres el responsable\n\nNecesitarás actualizar la política de privacidad de tu tienda para informar esta captura. DisputeDesk ofrece una plantilla.\n\nNota prospectiva: la captura de sesión no ayuda con disputas anteriores a su activación. Construye la base de evidencias para toda disputa posterior."
+      },
+      "returnedToSenderParcels": {
+        "title": "Cuando un paquete se devuelve al remitente",
+        "body": "A veces el transportista no puede completar una entrega y te devuelve el paquete. El cliente nunca recibió el pedido y, si más adelante disputa el cargo, eso cambia lo que el caso puede y no puede defender.\n\n**Lo que hace DisputeDesk automáticamente**\n\nCuando detectamos una devolución al remitente en los datos del transportista:\n\n1. Mostramos la línea de entrega como \"Devuelto al remitente\" con la fecha del propio transportista, en lugar de tratarla como una etiqueta sin escanear.\n2. Retiramos cualquier argumento que dependa de que el cliente nunca devolvió la mercancía. Shopify puede seguir mostrando el estado de devolución como \"sin devolución\", porque nunca se abrió una solicitud — pero la mercancía está contigo, y un argumento que diga lo contrario sería falso.\n3. Marcamos el caso como de baja probabilidad e impedimos que se envíe automáticamente, incluso en la fecha límite. Un paquete devuelto nunca puede tener confirmación de entrega y, sin ella, el banco suele decidir a favor del cliente.\n\n**Lo que necesitamos de ti**\n\nUna sola cosa, y es justo la que no podemos ver: **por qué volvió el paquete.** Encontrarás la pregunta en la pestaña Pruebas.\n\n- **El cliente rechazó la entrega** o **nunca lo recogió en el punto de recogida**: esto merece la pena argumentarlo. Según las normas de consumo de la UE, no aceptar un paquete no es una devolución válida ni un ejercicio válido del derecho de desistimiento. Lo incluimos en la respuesta por ti.\n- **No se pudo entregar en la dirección**: lo registramos, pero no lo incluimos en la respuesta. No ayuda al caso y plantea una pregunta que nadie ha hecho.\n\nTambién te preguntamos qué pasó con la mercancía al volver. Esa respuesta es para tu registro y el nuestro; nunca aparece en la respuesta enviada en tu nombre.\n\n**Si te has quedado con la mercancía y el dinero**\n\nLo honesto suele ser reembolsar. El cliente pagó, nunca recibió el pedido y la mercancía está de vuelta contigo. Discutirlo rara vez funciona y puede costarte además la comisión de la disputa. Reembolsar o no es decisión tuya — DisputeDesk no lo hace por ti — pero la valoración que ves refleja las probabilidades reales, no unas optimistas.\n\n**Sobre los plazos**\n\nSi respondes aceptando ajustar el cargo, algunos proveedores de pago esperan el reembolso en un plazo corto (Klarna, por ejemplo, revierte el pago automáticamente si el reembolso no llega a tiempo). Emite el reembolso enseguida después de comprometerte."
       }
     },
     "embedded": {

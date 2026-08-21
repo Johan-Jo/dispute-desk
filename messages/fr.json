@@ -855,6 +855,37 @@
         "errorWindowClosed": "Shopify a déjà transféré ce litige à la banque, donc aucune nouvelle reconnaissance ne peut être ajoutée.",
         "errorGeneric": "Impossible d’enregistrer la reconnaissance ({code}). Veuillez réessayer.",
         "charCount": "{count}/{max}"
+      },
+      "parcelOutcome": {
+        "ctaEyebrow": "Nécessaire pour répondre · vous seul pouvez le dire",
+        "title": "Dites-nous pourquoi ce colis est revenu",
+        "subtitle": "Le transporteur vous a retourné cette commande : aucune confirmation de livraison ne pourra donc jamais exister. Si le client a refusé le colis ou ne l’a jamais retiré, il ne s’agit pas d’un retour valable — et c’est le seul argument encore ouvert dans ce litige. Nous ne pouvons pas voir ce qui s’est passé ; vous, si.",
+        "ctaButton": "Répondre à deux questions",
+        "ctaMeta": "Moins d’une minute",
+        "choosePlaceholder": "Choisissez une option…",
+        "reasonLabel": "Pourquoi le colis est-il revenu ?",
+        "reasonHint": "Cette information figurera dans votre réponse. Une livraison refusée ou non retirée n’est pas un retour valable : cela mérite d’être dit.",
+        "reason": {
+          "refused_delivery": "Le client a refusé la livraison",
+          "not_collected": "Le client ne l’a jamais retiré au point de retrait",
+          "undeliverable_address": "L’adresse ne permettait pas la livraison"
+        },
+        "dispositionLabel": "Qu’est devenue la marchandise à son retour ?",
+        "dispositionHint": "Pour votre suivi et le nôtre uniquement : cette réponse n’apparaît jamais dans la réponse transmise en votre nom.",
+        "disposition": {
+          "restocked_not_refunded": "Remise en stock, aucun remboursement effectué",
+          "still_held": "Toujours conservée, ni remise en stock ni remboursée",
+          "reshipped": "Réexpédiée au client",
+          "refunded": "Remboursée au client"
+        },
+        "noteLabel": "Autre chose à signaler (facultatif)",
+        "notePlaceholder": "Par exemple : le client a été contacté le 12 juillet et nous a demandé de conserver le colis.",
+        "noteHint": "Conservé avec le dossier de litige.",
+        "submit": "Enregistrer les réponses",
+        "submitting": "Enregistrement…",
+        "cancel": "Annuler",
+        "errorWindowClosed": "Shopify a déjà transmis ce litige à la banque : cette réponse ne peut plus être ajoutée.",
+        "errorGeneric": "Impossible d’enregistrer vos réponses ({code}). Veuillez réessayer."
       }
     },
     "reviewTab": {
@@ -1305,7 +1336,8 @@
       "fraud_screening": "Contrôle anti-fraude pré-autorisation",
       "refund_record": "Preuve de remboursement",
       "refund": "Statut du remboursement",
-      "no_return_initiated": "Aucun retour initié"
+      "no_return_initiated": "Aucun retour initié",
+      "returned_parcel_outcome": "Colis retourné"
     },
     "decisiveHint": {
       "fraud": "confirmation de livraison, signature au dossier ou cohérence appareil/session",
@@ -1398,7 +1430,10 @@
         "refund_issued": "Un remboursement a déjà été émis pour cette commande — la banque le considérera comme un aveu de responsabilité, donc le dossier ne peut pas être gagné en l'état.",
         "inr_no_fulfillment": "La commande n'a jamais été exécutée et le motif du litige est « article non reçu » — il n'y a aucune base factuelle pour défendre le débit."
       },
-      "creditAlreadyIssued": "Cette transaction a déjà été remboursée avant le dépôt du litige. La réponse la plus solide est le remboursement lui-même — le titulaire de la carte a été remboursé, il ne reste rien à devoir."
+      "creditAlreadyIssued": "Cette transaction a déjà été remboursée avant le dépôt du litige. La réponse la plus solide est le remboursement lui-même — le titulaire de la carte a été remboursé, il ne reste rien à devoir.",
+      "returnedToSender": {
+        "returned_unrefunded": "Le transporteur vous a retourné ce colis et aucun remboursement n’a été effectué : vous détenez donc à la fois la marchandise et le paiement. Aucune confirmation de livraison ne peut exister pour cette commande et, sans elle, la banque tranche généralement en faveur du client. Dites-nous pourquoi le colis est revenu : si le client a refusé la livraison ou ne l’a jamais retiré, il ne s’agit pas d’un retour valable, et cela vaut la peine d’être plaidé. Si vous gardez la marchandise et l’argent, la réponse équitable est de rembourser."
+      }
     },
     "improvementHint": "Ajoutez {label} pour renforcer votre dossier.",
     "recommendation": {
@@ -1442,7 +1477,8 @@
       "auto_ipinfo": "Issu de l'analyse d'IP",
       "manual_upload": "Téléversé manuellement",
       "unavailable_from_source": "Indisponible à la source",
-      "carrier_api": "Du système de suivi du transporteur ({carrier})"
+      "carrier_api": "Du système de suivi du transporteur ({carrier})",
+      "returned_parcel_outcome": "Vous nous l’avez indiqué"
     },
     "fieldAction": {
       "default": {
@@ -1490,7 +1526,8 @@
       "duplicate_explanation": "Explique pourquoi les frais ne sont pas des doublons — indispensable pour répondre aux litiges de double facturation",
       "supporting_documents": "Preuves supplémentaires qui renforcent votre dossier",
       "activity_log": "Activité du compte qui prouve un engagement client légitime",
-      "tds_authentication": "Montre que la banque a authentifié le titulaire via 3-D Secure avant le paiement — la preuve la plus solide que le vrai titulaire l'a approuvé."
+      "tds_authentication": "Montre que la banque a authentifié le titulaire via 3-D Secure avant le paiement — la preuve la plus solide que le vrai titulaire l'a approuvé.",
+      "returned_parcel_outcome": "Explique pourquoi un colis qui vous est revenu n’a jamais été pris : une livraison refusée ou non retirée n’est pas un retour valable, et c’est le seul argument encore ouvert dans ce litige"
     },
     "targetField": {
       "SHIPPING_DOCUMENTATION": "Documents d'expédition",
@@ -1759,7 +1796,13 @@
       "titleCollectedOn": "Retiré par le client au point de retrait ({date})",
       "titleAwaitingCollection": "Au point de retrait — en attente de retrait par le client",
       "factsCollected": "Retiré au point de retrait le {date} — pièce d'identité exigée au retrait",
-      "factsAwaitingCollection": "Au point de retrait — pas encore retiré"
+      "factsAwaitingCollection": "Au point de retrait — pas encore retiré",
+      "returnedToSender": "Retourné à l’expéditeur",
+      "titleReturnedToSender": "Retourné à l’expéditeur — le client n’a jamais pris livraison",
+      "titleReturnedToSenderOn": "Retourné à l’expéditeur le {date} — le client n’a jamais pris livraison",
+      "whyReturnedToSender": "Le transporteur vous a rapporté ce colis. Le client ne l’ayant jamais pris, aucune confirmation de livraison ne pourra jamais exister pour cette commande : le dossier ne peut donc pas se défendre sur la livraison. Ce qui compte maintenant, c’est pourquoi le colis est revenu et ce que vous avez fait de la marchandise.",
+      "factsReturnedToSender": "Retourné à l’expéditeur",
+      "factsReturnedToSenderOn": "Retourné à l’expéditeur le {date}"
     },
     "gorgiasComms": {
       "title": "Conversations du support client",
@@ -3312,6 +3355,10 @@
       "sessionCapture": {
         "title": "Capture de session storefront — ce que c'est et ce que nous stockons",
         "body": "Pour comparer les litiges aux exigences CE 3.0 / FPT, DisputeDesk doit connaître certains faits sur chaque session de paiement : l'IP utilisée, si le client était connecté, les pages consultées, l'appareil. Sans ces données, les taux de qualification restent artificiellement bas — la plupart des litiges ne satisferont pas aux exigences de correspondance.\n\nCe que DisputeDesk capture (lorsque la capture de session est activée) :\n- Le cart_token Shopify (pour relier la session à la commande)\n- Adresse IP (hashée au repos, salt par boutique ; valeur brute chiffrée, déchiffrée uniquement à la qualification)\n- Géographie dérivée de l'IP (pays et région uniquement)\n- User agent\n- ID et état de connexion du client au paiement\n- Ancienneté du compte client\n- Pages consultées et temps passé sur la page de paiement\n- Signaux de confidentialité du navigateur (Do Not Track, Global Privacy Control)\n\nCe que DisputeDesk NE capture PAS : valeurs saisies dans les formulaires (noms, adresses, cartes — rien de tapé), empreintes composites d'appareil (canvas / WebGL / audio — différées en phase ultérieure sous revue juridique), mouvement de souris, cookies cross-session.\n\nContrôles de confidentialité :\n- Les signaux DNT et GPC font que DisputeDesk rejette l'enregistrement côté serveur\n- Les données de session sont automatiquement supprimées 18 mois après la capture\n- Les demandes de droit à l'oubli (LGPD / RGPD / CCPA) sont honorées via l'endpoint de suppression\n- DisputeDesk agit comme sous-traitant ; vous êtes responsable de traitement\n\nVous devrez mettre à jour la politique de confidentialité de votre boutique pour divulguer cette capture. DisputeDesk fournit un modèle.\n\nNote prospective : la capture de session n'aide pas les litiges déposés avant son activation. Elle construit la base de preuves pour tout litige déposé après l'installation."
+      },
+      "returnedToSenderParcels": {
+        "title": "Quand un colis est retourné à l’expéditeur",
+        "body": "Il arrive qu’un transporteur ne puisse pas livrer et vous rapporte le colis. Le client n’a jamais reçu la commande — et s’il conteste ensuite le paiement, cela change ce que le dossier peut ou ne peut pas plaider.\n\n**Ce que DisputeDesk fait automatiquement**\n\nDès que nous détectons un retour à l’expéditeur chez le transporteur :\n\n1. Nous affichons la ligne de livraison comme « Retourné à l’expéditeur » avec la date du transporteur, au lieu de la traiter comme une étiquette jamais scannée.\n2. Nous retirons tout argument reposant sur le fait que le client n’a jamais renvoyé la marchandise. Shopify peut continuer d’indiquer « aucun retour », car aucune demande de retour n’a été ouverte — mais la marchandise est chez vous, et un argument affirmant le contraire serait faux.\n3. Nous classons le dossier comme peu susceptible d’aboutir et empêchons tout dépôt automatique, y compris à la date limite. Un colis retourné ne peut jamais avoir de confirmation de livraison et, sans elle, la banque tranche généralement en faveur du client.\n\n**Ce dont nous avons besoin de vous**\n\nUne seule chose, et c’est précisément celle que nous ne pouvons pas voir : **pourquoi le colis est revenu.** La question se trouve dans l’onglet Preuves.\n\n- **Le client a refusé la livraison** ou **ne l’a jamais retiré au point de retrait** : cela vaut la peine d’être plaidé. Selon les règles de consommation de l’UE, ne pas accepter un colis n’est ni un retour valable ni un exercice valable du droit de rétractation. Nous l’intégrons à la réponse pour vous.\n- **L’adresse ne permettait pas la livraison** : nous l’enregistrons, mais ne l’intégrons pas à la réponse. Cela n’aide pas le dossier et soulève une question que personne n’a posée.\n\nNous demandons aussi ce qu’est devenue la marchandise à son retour. Cette réponse sert à votre suivi et au nôtre ; elle n’apparaît jamais dans la réponse transmise en votre nom.\n\n**Si vous avez gardé la marchandise et le paiement**\n\nLa réponse honnête est le plus souvent de rembourser. Le client a payé, n’a jamais reçu la commande, et la marchandise est revenue chez vous. Contester aboutit rarement et peut vous coûter en plus les frais de litige. Rembourser ou non reste votre décision — DisputeDesk ne le fera pas à votre place — mais l’évaluation affichée reflète les chances réelles, pas les chances optimistes.\n\n**À propos des délais**\n\nSi vous répondez en acceptant d’ajuster le montant, certains prestataires de paiement attendent le remboursement dans un délai court (Klarna, par exemple, annule automatiquement le paiement si le remboursement n’arrive pas à temps). Effectuez le remboursement rapidement après vous y être engagé."
       }
     },
     "embedded": {

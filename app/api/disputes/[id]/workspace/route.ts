@@ -1030,6 +1030,9 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       ((packRow?.pack_json as { fatal_loss?: unknown } | null)?.fatal_loss as
         | { triggered?: boolean }
         | null) ?? null,
+    returnedToSender:
+      ((packRow?.pack_json as { returned_to_sender?: unknown } | null)
+        ?.returned_to_sender as { triggered?: boolean } | null) ?? null,
     creditAlreadyIssued: creditAlreadyIssuedInput(packRow?.pack_json),
     acknowledgement: {
       // The acknowledgement's own marker, from the same evidence items the

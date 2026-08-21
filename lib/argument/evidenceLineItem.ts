@@ -1144,6 +1144,7 @@ function resolveSubmissionMethod(ctx: ResolutionContext): SubmissionMethod {
  *   delivered_confirmed  → "Delivery confirmation (carrier)"    [moderate/strong]
  *   delivered_unverified → "Shipping & tracking"                [supporting]
  *   label_created        → "Shipping label created"             [invalid]
+ *   returned_to_sender   → "Returned to sender"                  [invalid]
  *
  * We keep the row with the more decisive proofType (and prefer an
  * `available` one), drop the other, and preserve the kept row's
@@ -1156,12 +1157,21 @@ type DeliveryProofType =
   | "signature_confirmed"
   | "delivered_confirmed"
   | "delivered_unverified"
-  | "label_created";
+  | "label_created"
+  | "returned_to_sender";
 
+/** Rank decides which of two delivery rows survives the collapse.
+ *  `returned_to_sender` outranks `label_created` — both are `invalid`,
+ *  but when the two describe the same shipment the returned row is the
+ *  one that states what actually happened, and dropping it in favour of
+ *  "label created" is exactly the lie this tier exists to end. It stays
+ *  below every positive tier: a genuine delivery on a second parcel
+ *  still wins the row. */
 const PROOF_RANK: Record<DeliveryProofType, number> = {
-  signature_confirmed: 3,
-  delivered_confirmed: 2,
-  delivered_unverified: 1,
+  signature_confirmed: 4,
+  delivered_confirmed: 3,
+  delivered_unverified: 2,
+  returned_to_sender: 1,
   label_created: 0,
 };
 
@@ -1171,7 +1181,8 @@ function readProofType(payload: Record<string, unknown> | null): DeliveryProofTy
     p === "signature_confirmed" ||
     p === "delivered_confirmed" ||
     p === "delivered_unverified" ||
-    p === "label_created"
+    p === "label_created" ||
+    p === "returned_to_sender"
   ) {
     return p;
   }
@@ -1190,6 +1201,8 @@ function deliveryLabelToken(proof: DeliveryProofType): I18nToken {
       return { key: "disputes.deliveryProof.carrierConfirmed" };
     case "delivered_unverified":
       return { key: "disputes.deliveryProof.shippedUnconfirmed" };
+    case "returned_to_sender":
+      return { key: "disputes.deliveryProof.returnedToSender" };
     case "label_created":
     default:
       return { key: "disputes.deliveryProof.labelOnly" };
@@ -1208,6 +1221,8 @@ function deliveryReasonToken(proof: DeliveryProofType): I18nToken {
       return { key: `${NS}.whyCarrierConfirmed` };
     case "label_created":
       return { key: `${NS}.whyLabelOnly` };
+    case "returned_to_sender":
+      return { key: `${NS}.whyReturnedToSender` };
     case "delivered_unverified":
     default:
       return { key: `${NS}.whyShippedUnconfirmed` };
@@ -1298,6 +1313,17 @@ function buildDeliveryFacts(
         ? { key: `${NS}.factsCollected`, params: { date } }
         : { key: `${NS}.factsDelivered`, params: { date } },
     );
+  } else if (proof === "returned_to_sender") {
+    // The parcel came BACK. State that, with the carrier's own terminal
+    // date when we have one — never the generic "Delivery not confirmed",
+    // which reads as "still in transit" for a shipment that finished its
+    // journey weeks ago.
+    const back = shortDate(receipt.date);
+    factsTokens.push(
+      back
+        ? { key: `${NS}.factsReturnedToSenderOn`, params: { date: back } }
+        : { key: `${NS}.factsReturnedToSender` },
+    );
   } else if (proof === "delivered_unverified") {
     if (receipt.state === "awaiting_collection") {
       factsTokens.push({ key: `${NS}.factsAwaitingCollection` });
@@ -1374,6 +1400,9 @@ function collapseDeliveryRows(
     li.submissionMethod === "bank_argument" ||
     li.submissionMethod === "context_only" ||
     (li.submissionMethod === "not_included" && proof !== "label_created");
+  // `returned_to_sender` deliberately satisfies the test above: the parcel
+  // DID move, so the "has not shipped yet" copy is as wrong for a returned
+  // shipment as it is for a delivered one.
   return out
     .filter((li) => !DELIVERY_FIELDS.has(li.field) || li.field === survivor.field)
     .map((li) =>

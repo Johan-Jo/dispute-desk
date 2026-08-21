@@ -41,6 +41,7 @@ export type AutomationAction =
 export type AutomationReasonCode =
   | "coverage_active"
   | "fatal_loss"
+  | "returned_to_sender"
   | "hard_block"
   | "below_completeness_threshold"
   | "strength_insufficient"
