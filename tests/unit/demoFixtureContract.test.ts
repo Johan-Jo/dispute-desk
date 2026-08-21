@@ -120,3 +120,59 @@ describe("demo evidence badges are plausible", () => {
     }
   });
 });
+
+describe("the three tabs agree", () => {
+  /**
+   * Overview classifies each row from its payload via `classifyEvidenceRow`.
+   * The Evidence tab, the Review tab's Inclusion review, and the Submission
+   * Summary all read `evidenceLineItems`. When the fixture built line items
+   * by hand -- `isStrong = avs_cvv_match || delivery_proof ||
+   * shipping_tracking`, everything else `moderate` -- FOUR of dp-2401's seven
+   * rows disagreed with Overview.
+   *
+   * Three tabs must not give three answers for the same evidence. That is the
+   * defect the canonical pipeline exists to prevent, and a hand-written
+   * fixture reproduced it inside the demo.
+   */
+  it("Overview's row category matches the line item every other tab reads", () => {
+    for (const d of DEMO_DISPUTES) {
+      const w: any = buildWorkspaceData(d.id);
+      const byField = new Map<string, any>(
+        (w.evidenceLineItems ?? []).map((li: any) => [li.field, li]),
+      );
+      for (const c of w.pack?.checklistV2 ?? []) {
+        const li = byField.get(c.field);
+        // Delivery rows legitimately collapse into one line item.
+        if (!li) continue;
+        /* `none` / `internal_only` are the line item saying "this row does
+         * not influence the argument" (excluded, waived, or withheld) --
+         * a disposition, not a strength. Overview still soft-lands such a
+         * row to `supporting` via `classifyEvidenceRow`, and the two are
+         * answering different questions. Only compare where the line item
+         * is actually reporting a strength. */
+        if (li.strengthContribution === "none" || li.strengthContribution === "internal_only") {
+          continue;
+        }
+        const overview = classifyEvidenceRow({
+          fieldKey: c.field,
+          status: c.status,
+          payload: w.pack.evidenceItemsByField[c.field]?.payload ?? null,
+        });
+        expect(li.strengthContribution, `${d.id}/${c.field}`).toBe(overview.category);
+      }
+    }
+  });
+
+  it("a strong signal actually reaches the bank argument", () => {
+    // A row shown as Strong that never reaches the bank is the demo telling
+    // two stories at once. AVS needs `network` in the payload to be citable
+    // under register R-E -- without it the row scores strong and lands
+    // context_only.
+    const w: any = buildWorkspaceData("dp-2401");
+    const strong = w.evidenceLineItems.filter((li: any) => li.strengthContribution === "strong");
+    expect(strong.length).toBeGreaterThan(0);
+    for (const li of strong) {
+      expect(li.usedAsPositiveBankEvidence, li.field).toBe(true);
+    }
+  });
+});
