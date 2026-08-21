@@ -26,6 +26,7 @@ import { buildDemoPresentation } from "@/lib/demo/fixtures/presentation";
 import { DEMO_DISPUTES } from "@/lib/demo/fixtures/disputes";
 import { resolveAssessmentGate } from "@/lib/disputes/assessmentPresence";
 import { LIFECYCLE_CHIP } from "@/lib/disputes/presentation/uiTokens";
+import { classifyEvidenceRow } from "@/lib/argument/categoryBadge";
 
 const gateFor = (wa: any) =>
   resolveAssessmentGate({
@@ -74,6 +75,48 @@ describe("demo presentation", () => {
       expect(LIFECYCLE_CHIP[p.lifecycle], `${d.id} chip`).toBeTruthy();
       console.log(d.id, "→", p.lifecycle, "| attention:", p.attention,
         "| strength:", p.strength, "| mode:", p.automationMode);
+    }
+  });
+});
+
+describe("demo evidence badges are plausible", () => {
+  /**
+   * The "Evidence collected" pill comes from `classifyEvidenceRow`, driven by
+   * the fixture payloads. An earlier payload table set every promotable flag
+   * at once to force a Strong headline, and the rubric duly rendered SIX
+   * Strong rows on dp-2401 -- including two policy documents, which no real
+   * fraud case produces.
+   *
+   * Strong must mean DECISIVE. These assertions pin that: a published policy
+   * is not proof the customer accepted it, and account context on a shipped
+   * physical order is corroboration rather than proof.
+   */
+  it("a published policy is not Strong without acceptance at checkout", () => {
+    const d: any = buildWorkspaceData("dp-2401");
+    for (const field of ["refund_policy", "shipping_policy"]) {
+      const cls = classifyEvidenceRow({
+        fieldKey: field,
+        status: "available",
+        payload: d.pack.evidenceItemsByField[field]?.payload ?? null,
+      });
+      expect(cls.category, `${field} on dp-2401`).not.toBe("strong");
+    }
+  });
+
+  it("account context on a shipped physical order is not Strong", () => {
+    const d: any = buildWorkspaceData("dp-2401");
+    const cls = classifyEvidenceRow({
+      fieldKey: "activity_log",
+      status: "available",
+      payload: d.pack.evidenceItemsByField.activity_log?.payload ?? null,
+    });
+    expect(cls.category).not.toBe("strong");
+  });
+
+  it("every fixture's declared band is derivable from its own evidence", () => {
+    // buildWorkspaceData throws when a fixture's label and evidence disagree.
+    for (const d of DEMO_DISPUTES) {
+      expect(() => buildWorkspaceData(d.id), d.id).not.toThrow();
     }
   });
 });
