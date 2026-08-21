@@ -230,6 +230,14 @@ describe("always-verify + cache participation (§5.7 v2)", () => {
       deliveryStatus: "Returned",
       trackingSource: "carrier_api_dhl",
     });
+    // The terminal DATE survives a cache hit. The cache keeps `terminal_at`
+    // but not the event text, so `state.carrier.shipment` is absent on a
+    // rebuild; before 2026-08-21 that wrote `carrierTerminalEvent: null`
+    // and the merchant lost the date on every rebuild after the first
+    // (caught on prod, cay-collective #13195).
+    expect(payload.carrierTerminalEvent).toMatchObject({
+      happenedAt: "2026-06-20T10:00:00Z",
+    });
     expect(payload.sourceConflict).toBe(true); // conflict surfaced, not discarded
     // The stale positive is still dead — and since 2026-08-20 the state is
     // NAMED rather than collapsed into "a label was printed". Both score

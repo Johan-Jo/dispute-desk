@@ -205,6 +205,15 @@ function getTemplate(reason: string | null | undefined): ReasonTemplate {
   return REASON_TEMPLATES[key] ?? REASON_TEMPLATES.GENERAL;
 }
 
+/** Requirement modes a DB-backed `pack_template_items` row cannot carry,
+ *  because they postdate the template system. The template branch of
+ *  `evaluateCompletenessV2` bridges these from the reason template so an
+ *  admin template authored before the mode existed does not silently hide
+ *  the row. Add a mode here only when the same is true of it. */
+const TEMPLATE_INEXPRESSIBLE_MODES: ReadonlySet<RequirementMode> = new Set([
+  "required_if_returned_to_sender",
+]);
+
 const SCORE_WEIGHT: Record<RequirementMode, number> = {
   required_always: 1.0,
   required_if_fulfilled: 1.0,
@@ -736,6 +745,60 @@ export function evaluateCompletenessV2(
             waivedBy: waivedItem?.waivedBy,
           };
         });
+
+  /* A DB-backed template may SUBSET what we ask the merchant for. It may
+   * not hide a row that is applicable right now and that only the merchant
+   * can answer — and it cannot know about a requirement mode invented
+   * after the template was authored.
+   *
+   * cay-collective #13195 (prod, 2026-08-21): the pack is built from
+   * template a0000000-…-15, so `evaluateCompletenessV2` took the
+   * `templateItems` branch and `returned_parcel_outcome` never got a row —
+   * no checklist entry, no whyText, no sourceCaption, on the one dispute
+   * where that question is the whole remaining case.
+   *
+   * `reconcileChecklistWithCollectedFields` does not cover it: that
+   * appends rows for fields the collectors PRODUCED, and this one does not
+   * exist until the merchant answers. The gap is precisely the
+   * before-they-answer window.
+   *
+   * Scoped to modes the template schema has no way to express, so this
+   * stays a bridge for post-hoc conditional modes rather than a second
+   * copy of the reason template. A row whose condition does NOT apply
+   * resolves `unavailable` and is dropped, so a normal order gains
+   * nothing. */
+  if (templateItems && templateItems.length > 0) {
+    const present = new Set(checklist.map((c) => c.field));
+    for (const t of reasonTemplate) {
+      if (!TEMPLATE_INEXPRESSIBLE_MODES.has(t.requirementMode)) continue;
+      if (present.has(t.field)) continue;
+      const waivedItem = waiveMap.get(t.field);
+      const resolved = resolveItemStatus(
+        t.requirementMode,
+        ctx,
+        presentFields.has(t.field),
+        waivedItem,
+        t.field,
+      );
+      if (resolved.status === "unavailable") continue;
+      checklist.push({
+        field: t.field,
+        label: t.label,
+        status: resolved.status,
+        priority: t.priority,
+        blocking: t.blocking,
+        source: resolved.collectable
+          ? t.expectedSource
+          : ("unavailable_from_source" as EvidenceItemSource),
+        collectionType: t.collectionType,
+        unavailableReason: resolved.unavailableReason,
+        waiveReason: waivedItem?.reason,
+        waiveNote: waivedItem?.note,
+        waivedAt: waivedItem?.waivedAt,
+        waivedBy: waivedItem?.waivedBy,
+      });
+    }
+  }
 
   // ALWAYS_INCLUDE_IF_COLLECTED was removed 2026-08-04 (P6).
   //
