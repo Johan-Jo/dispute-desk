@@ -1532,7 +1532,9 @@
           "skipped": "Skipped"
         },
         "reviewRequiredTitle": "Review required before this package can be filed",
-        "reviewRequiredBody": "DisputeDesk cannot file this defence package as built. Regenerate it to produce a version that can be submitted. Preview and Regenerate are still available; Finalize and Submit are unavailable until a regenerated version passes review."
+        "reviewRequiredBody": "DisputeDesk cannot file this defence package as built. Regenerate it to produce a version that can be submitted. Preview and Regenerate are still available; Finalize and Submit are unavailable until a regenerated version passes review.",
+        "notEnoughEvidenceReturnedTitle": "There is nothing to argue until you tell us why the parcel came back",
+        "notEnoughEvidenceReturnedBody": "The carrier returned this parcel to you, so there is no delivery to argue and no proof of delivery can ever exist for this order. Waiting will not change that — nothing further will be collected. The one thing that can still help is on the Evidence tab: tell us whether the customer refused the delivery or never collected it. Neither counts as a valid return, and we will say so in your response."
       },
       "inclusion": {
         "title": "Inclusion review",

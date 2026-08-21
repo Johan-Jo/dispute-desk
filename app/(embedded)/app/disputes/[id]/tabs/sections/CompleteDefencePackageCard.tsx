@@ -106,6 +106,13 @@ interface Props {
    *  back to the pre-2026-05-20 behaviour driven only by
    *  `submittedToShopifyAt`. */
   presentationStatus?: PresentationStatusLike;
+  /** The returned-to-sender gate fired on this case. Changes ONLY the
+   *  `no_bank_eligible_facts` banner: the generic copy tells the merchant
+   *  to "wait for the next sync to include freshly collected evidence",
+   *  and on a returned parcel that is the one thing that cannot help —
+   *  nothing further will ever be collected, because the parcel came back.
+   *  Read from the same gate every other surface reads, never re-derived. */
+  returnedToSender?: boolean;
   /** Shopify's `evidenceSentOn` — the moment Shopify forwarded the
    *  evidence to the card network. Persisted as `disputes.submitted_at`.
    *  Drives the outcome-expected countdown. Optional. */
@@ -235,6 +242,7 @@ export function CompleteDefencePackageCard({
   submittedToShopifyAt,
   shopifyAdminUrl,
   presentationStatus,
+  returnedToSender,
   evidenceSentOn,
   onSubmitted,
   defencePackage,
@@ -962,9 +970,27 @@ export function CompleteDefencePackageCard({
             </Banner>
           )}
 
+          {/* NOTHING TO ARGUE IS NOT ALWAYS "WAIT FOR MORE EVIDENCE".
+              The generic copy sends the merchant to upload documents or
+              wait for the next sync. On a returned parcel both are dead
+              ends — the carrier brought the goods back, so no delivery
+              evidence can ever arrive — and the ONE thing that helps is
+              a question waiting on the Evidence tab. Telling them to wait
+              is the dishonest-nag pattern in a different place. */}
           {row.status === "skipped" && row.failure_code === "no_bank_eligible_facts" && (
-            <Banner tone="warning" title={t("notEnoughEvidenceTitle")}>
-              <p>{tPkg("notEnoughEvidenceBody")}</p>
+            <Banner
+              tone="warning"
+              title={
+                returnedToSender
+                  ? tPkg("notEnoughEvidenceReturnedTitle")
+                  : t("notEnoughEvidenceTitle")
+              }
+            >
+              <p>
+                {returnedToSender
+                  ? tPkg("notEnoughEvidenceReturnedBody")
+                  : tPkg("notEnoughEvidenceBody")}
+              </p>
             </Banner>
           )}
 
