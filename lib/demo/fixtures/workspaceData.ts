@@ -21,7 +21,8 @@ import {
 } from "@/lib/argument/caseStrength";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import { classifyEvidenceRow } from "@/lib/argument/categoryBadge";
-import { CANONICAL_EVIDENCE } from "@/lib/argument/canonicalEvidence";
+import { CANONICAL_EVIDENCE, categorizeEvidenceField } from "@/lib/argument/canonicalEvidence";
+import { deriveEvidenceLineItems } from "@/lib/argument/evidenceLineItem";
 import { deadlineFilingCopy, type DeadlineFilingState } from "@/lib/disputes/deadlineOnlyCopy";
 import type { ChecklistItemV2 } from "@/lib/types/evidenceItem";
 import {
@@ -145,7 +146,12 @@ function buildChecklist(disputeId: string) {
  *  list instead, and let the rubric answer.
  */
 const STRONG_PAYLOADS: Record<string, Record<string, unknown>> = {
-  avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M", fieldsProvided: ["avs_cvv_match"] },
+  // `network` matters: issuer CITATION is keyed on (network, code) per
+  // register R-E (PR-C3), so an AVS "Y" with no network scores as a match
+  // but is not citable — and the row lands `context_only`, never reaching
+  // the bank argument. The demo dispute is a Visa (`cardNetwork` on the
+  // dispute record), so the payload must say so too.
+  avs_cvv_match: { avsResultCode: "Y", cvvResultCode: "M", network: "visa", fieldsProvided: ["avs_cvv_match"] },
   shipping_tracking: { proofType: "signature_confirmed", deliveredToVerifiedAddress: true, fieldsProvided: ["shipping_tracking"] },
   delivery_proof: { proofType: "signature_confirmed", deliveredToVerifiedAddress: true, fieldsProvided: ["delivery_proof"] },
   // Published policy text, not proof of acceptance → supporting (rubric #8).
@@ -224,33 +230,75 @@ function buildEvidenceItems(disputeId: string) {
   }));
 }
 
-function buildEvidenceLineItems(disputeId: string) {
-  // Only emit line items for fields the dispute has — same reason as
-  // buildChecklist (the missing-row path needs fieldAction i18n keys
-  // that don't exist for every field in our list).
+/**
+ * Evidence line items — built by the PRODUCTION derivation.
+ *
+ * ── THE DEFECT THIS CLOSES ────────────────────────────────────────────
+ *
+ * `deriveEvidenceLineItems` is the single source of truth for per-row
+ * state, and its own header names its consumers: the Overview tab's
+ * "Evidence collected", the Evidence tab's package section, the Review
+ * tab's "Inclusion review", and the Submission Summary panel.
+ *
+ * This fixture used to hand-roll the rows with a hardcoded
+ * `isStrong = avs_cvv_match || delivery_proof || shipping_tracking`, and
+ * every other row fell to `moderate`. Overview classifies from the payload
+ * via `classifyEvidenceRow`, so the tabs disagreed on FOUR of dp-2401's
+ * seven rows — Overview said `supporting` where Evidence and Review said
+ * `moderate`. Three tabs, three answers, for the same evidence.
+ *
+ * That is precisely the class of defect the canonical-pipeline work exists
+ * to prevent, reproduced inside the demo by a third hand-written
+ * restatement of the rubric. Deriving the rows means the four surfaces
+ * cannot disagree, because there is only one computation left.
+ */
+function buildEvidenceLineItems(disputeId: string): ReturnType<typeof deriveEvidenceLineItems> {
+  const fixture = DEMO_DISPUTES.find((d) => d.id === disputeId);
   const present = FIELDS_PRESENT_BY_DISPUTE[disputeId] ?? [];
-  return present.map((field) => {
-    const meta = FIELD_META[field];
-    const isStrong = field === "avs_cvv_match" || field === "delivery_proof" || field === "shipping_tracking";
+  const checklist = buildChecklist(disputeId) as unknown as ChecklistItemV2[];
+  const reason = (fixture?.reasonFamily ?? "general").toUpperCase();
+
+  // `facts` mirrors what the defence classifier would emit for these rows.
+  // Strength comes from the canonical categorizer — never a second opinion.
+  const facts = present.map((field) => {
+    const payload = payloadFor(disputeId, field);
+    const category = categorizeEvidenceField(field, payload);
     return {
-      id: `li-${disputeId}-${field}`,
-      field,
-      label: meta.label,
-      source: "shopify",
-      hasEvidence: true,
-      strengthContribution: isStrong ? "strong" : "moderate",
+      id: `fact-${disputeId}-${field}`,
+      category: (CANONICAL_EVIDENCE[field]?.signalId ?? field) as never,
+      label: FIELD_META[field].label,
+      value: payload,
+      source: "shopify_order",
+      sourceRef: null,
+      strength: category,
       bankEligible: true,
       merchantVisible: true,
-      includedInDefencePackage: true,
-      includedInBankArgument: true,
-      usedAsPositiveBankEvidence: true,
-      submittedToShopify: false,
-      submissionMethod: "bank_argument",
-      isNegativeOrAmbiguous: false,
-      reason: "Cited as a positive bank argument",
-      reasonToken: { key: "disputes.reviewTab.inclusion.reasons.method.bank_argument", params: {} },
-      canBeForceIncluded: false,
+      internalOnly: false,
+      includeInBankNarrative: true,
+      submissionRisk: false,
+      confidence: null,
     };
+  }) as never;
+
+  return deriveEvidenceLineItems({
+    checklist,
+    facts,
+    payloadByField: new Map(present.map((f) => [f, payloadFor(disputeId, f)])),
+    contributions: computeContributions({
+      checklist,
+      payloadSource: {
+        kind: "byField",
+        map: Object.fromEntries(
+          present.map((f) => [f, { payload: payloadFor(disputeId, f) }]),
+        ),
+      },
+      reason,
+    }),
+    packSavedToShopify: false,
+    excludedFields: new Set(),
+    attachmentUploadFailures: new Map(),
+    inclusionOverrides: new Map(),
+    reasonFamily: resolveReasonFamily(reason),
   });
 }
 
