@@ -699,7 +699,8 @@
       "fraud_screening": "Pre-authorization fraud screening",
       "refund_record": "Refund record",
       "refund": "Refund status",
-      "no_return_initiated": "No return initiated"
+      "no_return_initiated": "No return initiated",
+      "returned_parcel_outcome": "Returned parcel"
     },
     "reasonFamilyLabel": {
       "fraud": "fraud",
@@ -802,7 +803,10 @@
         "refund_issued": "A refund was already issued for this order — the bank will treat this as a confession of liability, so the case cannot win as-is.",
         "inr_no_fulfillment": "The order was never fulfilled and the dispute reason is item-not-received — there is no factual basis to defend the charge."
       },
-      "creditAlreadyIssued": "This transaction was already credited before the dispute was filed. The strongest response is the credit itself — the cardholder has been refunded, so there is nothing further owed."
+      "creditAlreadyIssued": "This transaction was already credited before the dispute was filed. The strongest response is the credit itself — the cardholder has been refunded, so there is nothing further owed.",
+      "returnedToSender": {
+        "returned_unrefunded": "The carrier returned this parcel to you and no refund has been issued, so you are holding both the goods and the payment. No proof of delivery can exist for this order, and without one the bank will normally decide for the customer. Tell us why the parcel came back — if the customer refused it or never collected it, that is not a valid return and it is worth arguing. If you kept the goods and the money, the fair answer is to refund."
+      }
     },
     "improvementHint": "Add {label} to strengthen your case.",
     "recommendation": {
@@ -846,7 +850,8 @@
       "fraud_risk_screening": "From Shopify risk engine",
       "customer_account_info": "From Shopify customer data",
       "default": "From store data",
-      "carrier_api": "From the carrier's tracking system ({carrier})"
+      "carrier_api": "From the carrier's tracking system ({carrier})",
+      "returned_parcel_outcome": "You told us this"
     },
     "fieldAction": {
       "default": {
@@ -894,7 +899,8 @@
       "duplicate_explanation": "Explains why the charges are not duplicates — required for duplicate dispute responses",
       "supporting_documents": "Additional proof that strengthens your case",
       "activity_log": "Account activity that proves legitimate customer engagement",
-      "tds_authentication": "Shows the issuer authenticated the cardholder with 3-D Secure before the payment went through — the strongest proof the real cardholder approved it."
+      "tds_authentication": "Shows the issuer authenticated the cardholder with 3-D Secure before the payment went through — the strongest proof the real cardholder approved it.",
+      "returned_parcel_outcome": "Explains why a parcel that came back to you was never taken — a refused or uncollected delivery is not a valid return, which is the one argument still open on this dispute"
     },
     "targetField": {
       "SHIPPING_DOCUMENTATION": "Shipping documentation",
@@ -1425,7 +1431,38 @@
         "primaryAction": "Regenerate package",
         "secondaryAction": "Keep file only"
       },
-      "windowClosedError": "Shopify has already forwarded this dispute evidence to the bank, so new files can no longer be added."
+      "windowClosedError": "Shopify has already forwarded this dispute evidence to the bank, so new files can no longer be added.",
+      "parcelOutcome": {
+        "ctaEyebrow": "Needed to respond · only you can answer this",
+        "title": "Tell us why this parcel came back",
+        "subtitle": "The carrier returned this order to you, so no delivery confirmation can ever exist for it. If the customer refused the parcel or never collected it, that is not a valid return — and it is the one argument still open on this dispute. We cannot see which happened; you can.",
+        "ctaButton": "Answer two questions",
+        "ctaMeta": "Takes under a minute",
+        "choosePlaceholder": "Choose one…",
+        "reasonLabel": "Why did the parcel come back?",
+        "reasonHint": "This goes into your response. A refused or uncollected delivery is not a valid return, which is worth stating.",
+        "reason": {
+          "refused_delivery": "The customer refused the delivery",
+          "not_collected": "The customer never collected it from the pickup point",
+          "undeliverable_address": "The address could not be delivered to"
+        },
+        "dispositionLabel": "What happened to the goods after they came back?",
+        "dispositionHint": "For your record and ours only — this answer never appears in the response sent on your behalf.",
+        "disposition": {
+          "restocked_not_refunded": "Back in stock, and no refund issued",
+          "still_held": "Still held, not yet restocked or refunded",
+          "reshipped": "Sent out to the customer again",
+          "refunded": "Refunded to the customer"
+        },
+        "noteLabel": "Anything else worth knowing (optional)",
+        "notePlaceholder": "For example: the customer was contacted on 12 July and asked us to hold the parcel.",
+        "noteHint": "Kept with the dispute record.",
+        "submit": "Save answers",
+        "submitting": "Saving…",
+        "cancel": "Cancel",
+        "errorWindowClosed": "Shopify has already forwarded this dispute to the bank, so this answer can no longer be added.",
+        "errorGeneric": "Could not save your answers ({code}). Please try again."
+      }
     },
     "reviewTab": {
       "chrome": {
@@ -1759,7 +1796,13 @@
       "titleCollectedOn": "Collected by customer at pickup point ({date})",
       "titleAwaitingCollection": "At pickup point — awaiting customer collection",
       "factsCollected": "Collected at the pickup point {date} — ID required at collection",
-      "factsAwaitingCollection": "At the pickup point — not yet collected"
+      "factsAwaitingCollection": "At the pickup point — not yet collected",
+      "returnedToSender": "Returned to sender",
+      "titleReturnedToSender": "Returned to sender — the customer never took delivery",
+      "titleReturnedToSenderOn": "Returned to sender {date} — the customer never took delivery",
+      "whyReturnedToSender": "The carrier delivered this parcel back to you. Because the customer never took delivery, no proof of delivery can exist for this order — so the case cannot be argued on delivery. What matters now is why it came back, and what you did with the goods.",
+      "factsReturnedToSender": "Returned to sender",
+      "factsReturnedToSenderOn": "Returned to sender {date}"
     },
     "gorgiasComms": {
       "title": "Customer support conversations",
@@ -3311,6 +3354,10 @@
       "sessionCapture": {
         "title": "Storefront session capture — what it is and what we store",
         "body": "To match disputes against CE 3.0 / FPT requirements, DisputeDesk needs to know certain facts about each customer's checkout session: what IP address they used, whether they were logged in, the pages they viewed, the device they used. Without this data, qualification rates stay artificially low — most disputes will fall short of the matching-data-point requirement.\n\nWhat DisputeDesk captures (when storefront session capture is enabled):\n- The Shopify cart_token (so we can match the session to the eventual order)\n- IP address (hashed at rest with a per-shop salt; raw value encrypted and decrypted only at qualification time)\n- IP-derived geography (country and region only, never city or precise location)\n- User agent string\n- Customer ID and login state at checkout (if logged in)\n- Customer account age (e.g., 'this customer joined 200 days ago')\n- Pages viewed during the session and time spent on the checkout page\n- Privacy signals from the browser (Do Not Track, Global Privacy Control)\n\nWhat DisputeDesk does NOT capture:\n- Form input values (names, addresses, card numbers, anything typed)\n- Composite device fingerprints (canvas / WebGL / audio fingerprinting is deferred to a later, legal-reviewed phase)\n- Mouse movement or behavioral entropy\n- Cross-session cookies linking your storefront to other sites\n\nPrivacy controls:\n- Do Not Track and Global Privacy Control signals cause DisputeDesk to drop the session record server-side\n- Session data is automatically deleted 18 months after capture (covers the 365-day CE 3.0 window plus buffer)\n- LGPD / GDPR / CCPA right-to-be-forgotten requests are honored via the merchant-facing subject-deletion endpoint\n- DisputeDesk acts as your data processor; you are the controller\n\nYou'll need to update your storefront's privacy policy to disclose this capture. DisputeDesk provides a template you can adapt.\n\nForward-looking note: session capture doesn't help disputes filed before you enable it (we have no data on those sessions). It builds the evidence base for every dispute filed after install."
+      },
+      "returnedToSenderParcels": {
+        "title": "When a parcel is returned to sender",
+        "body": "Sometimes a carrier cannot complete a delivery and brings the parcel back to you. The customer never received the order — and if they later dispute the charge, that changes what the case can and cannot be.\n\n**What DisputeDesk does automatically**\n\nWhen we read a return-to-sender event from the carrier, we:\n\n1. Show the delivery row as \"Returned to sender\" with the carrier's own date, instead of treating it as an unscanned label.\n2. Remove any argument that depends on the customer never having sent the goods back. Shopify may still show the return status as \"no return\", because no return request was ever opened — but the goods are with you, and an argument built on the opposite would be untrue.\n3. Mark the case as low likelihood and stop it from being filed automatically, including on the deadline. A returned parcel can never have a delivery confirmation, and without one the bank normally decides for the customer.\n\n**What we need from you**\n\nOne thing only, and it is the one thing we cannot see: **why the parcel came back.** You will find the question on the Evidence tab.\n\n- **The customer refused the delivery** or **never collected it from the pickup point** — this is worth arguing. Under EU consumer rules, simply not accepting a parcel is not a valid return and is not a valid use of the right of withdrawal. We put that in the response for you.\n- **The address could not be delivered to** — we record it, but we will not put it in the response. It does not help the case, and offering it invites a question nobody asked.\n\nWe also ask what happened to the goods after they came back. That answer is for your records and ours; it never appears in the response sent on your behalf.\n\n**If you kept the goods and the payment**\n\nThe honest answer is usually to refund. The customer paid, never received the order, and the goods are back with you. Arguing the point rarely succeeds and can leave you paying the dispute fee on top. Whether to refund is your decision — DisputeDesk will not do it for you — but the score you see reflects the real odds, not an optimistic one.\n\n**A note on timing**\n\nIf you respond by agreeing to adjust the charge, some payment providers expect the refund within a short window (Klarna, for example, reverses the payment automatically if the refund does not land in time). Issue the refund promptly after committing to it."
       }
     },
     "embedded": {

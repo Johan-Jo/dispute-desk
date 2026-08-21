@@ -38,10 +38,30 @@ type GateValues = {
 const GATE_KEYS = [
   "coverage",
   "fatalLoss",
+  "returnedToSender",
   "riskWeakness",
   "nameMismatch",
   "creditAlreadyIssued",
 ] as const satisfies readonly (keyof CaseGateSources)[];
+
+/**
+ * `satisfies readonly (keyof CaseGateSources)[]` only checks that each member
+ * IS a gate key — not that every gate key is a member. So when
+ * `returnedToSender` was added (2026-08-20) this file kept compiling and
+ * instead failed at RUNTIME, in eleven unrelated suites, with
+ * "Cannot read properties of undefined (reading 'provided')".
+ *
+ * The whole point of the branded gate contract is that a new gate is a
+ * COMPILE-TIME alarm at every site. This fixture is a site. The line below
+ * makes it one: a missing key resolves to a tuple type, which is not
+ * assignable to `true`, and the error names the gate.
+ */
+type GateKeysExhaustive =
+  Exclude<keyof CaseGateSources, (typeof GATE_KEYS)[number]> extends never
+    ? true
+    : ["GATE_KEYS is missing gate(s)", Exclude<keyof CaseGateSources, (typeof GATE_KEYS)[number]>];
+const _gateKeysAreExhaustive: GateKeysExhaustive = true;
+void _gateKeysAreExhaustive;
 
 /**
  * `NO_GATES` with specific gates overridden. A key present in `overrides` is

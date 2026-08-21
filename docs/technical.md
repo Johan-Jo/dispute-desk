@@ -2470,6 +2470,86 @@ The "Chronology of Events" bullets (PDF + embedded, via `lib/defence/chronology.
 
 **Prior chargebacks on the Evidence tab (2026-08-01).** The Evidence tab's internal-signals card is built from a fixed list of classifiers (AVS/CVV, cardholder-name, billing-address, IP) plus a sweep for payloads that literally set `bankEligible: false`. The account-history row's bank exclusion is decided downstream in `evidenceLineItem.isNegativeOrAmbiguous` and never written back into the payload, so the sweep could not see it — the prior-chargeback finding showed on Overview and was missing from the Evidence tab. `classifyPriorChargebacks` (exported from `useEvidenceSections.ts` for test) closes it, firing only on a VERIFIED `disputeFreeHistory === false`; `unknown` must never render as an accusation. It stays merchant-only in every case — citing a customer's dispute history to the issuer hands them our weakness.
 
+### Returned-to-sender Gate (2026-08-20)
+
+**Routing primitive, ranked below Coverage and Fatal-loss and above everything else.** Fires when a carrier reconciled any shipment on the order to `Returned` **and** no refund covers the disputed amount — i.e. the goods are back with the merchant and the money is not.
+
+When triggered:
+
+- `caseStrength.overall` is capped at `"weak"`, `heroVariant` becomes `hard_to_win`, and `strengthReasonI18n` is replaced.
+- `deliveryInTransit` is forced false — a returned parcel is emphatically not in transit.
+- `improvementHintI18n` is suppressed: nothing the merchant can add creates a proof of delivery for a parcel that came back.
+- `evaluateAutoSubmitGuards` returns `block` with reason `returned_to_sender`, and `assessment.gateDecision` becomes `"returned_to_sender"`, so the canonical ladder in `deriveCaseAutomationDecision` **blocks** rather than holds. The distinction is the whole point: rung 6 (strength floor) *holds a weak case for the deadline*, and holding is what would have filed cay-collective #13195's false claim on 2026-09-05.
+
+**Why it is not a fatal-loss trigger.** Fatal-loss means "there is no factual basis to defend the charge". That overstates this case. Klarna's merchant documentation is explicit that a parcel refused or left uncollected and sent back *"is not a valid use of the right of withdrawal (in the EU) nor is it considered a valid return"*, and asks merchants to include exactly that in their response. There **is** an argument — it is narrow, it turns on WHY the parcel came back, and only the merchant knows. What is unavailable is an automated filing: no proof of delivery can ever exist, and Klarna's docs state that without a valid POD the dispute is decided for the customer.
+
+**Source field:** `pack_json.returned_to_sender = { triggered, reason, returnedAt, messageToken }`, written by `buildPack` via `detectReturnedToSender` (`lib/automation/returnedToSender.ts`). The `returnedToSender` boolean is derived from the **assembled pack sections**, not the order — on #13195 Shopify's own fulfillment events carried no return event at all and only the DHL adapter had it.
+
+**Hard rules:**
+- The copy under `disputes.strengthReason.returnedToSender.*` is merchant-UI only and must never reach bank-facing text.
+- A returned-and-refunded order does not trigger — that is a resolved order, and the refund gates own it.
+- Every unknown resolves toward triggering (the gate only ever makes automation stricter).
+
+### The fifth delivery proof tier: `returned_to_sender` (2026-08-20)
+
+`DeliveryProofType` gained a fifth member. It scores **`invalid`, identically to `label_created`** — a returned parcel is not delivery evidence — but it is a *different fact*, and collapsing the two made every surface tell the merchant that *"a shipping label was created but the carrier never scanned the parcel"* about a shipment the carrier scanned all the way out and all the way back.
+
+| proofType | category | merchant-facing |
+|---|---|---|
+| `signature_confirmed` | strong | Delivery confirmation (signature) |
+| `delivered_confirmed` | moderate | Delivery confirmation (carrier) |
+| `delivered_unverified` | supporting | Shipping & tracking |
+| `returned_to_sender` | **invalid** | **Returned to sender {date} — the customer never took delivery** |
+| `label_created` | invalid | Shipping label created |
+
+`resolveProofType` (`lib/packs/sources/fulfillmentSource.ts`) still refuses to let a returned shipment raise the tier; it now *records* it, and returns `returned_to_sender` when nothing else on the order reached a positive tier. `resolveDeliveryReceipt` gained a `returned` state whose date comes from `carrierTerminalEvent.happenedAt` (a returned shipment never carries `deliveredAtTracking`).
+
+### Cross-source contradiction gate (2026-08-20)
+
+`lib/packs/contradictionGate.ts`, applied in `buildPack` immediately after `Promise.allSettled` over the collectors.
+
+**The problem it closes.** Every collector reads a single source and is individually correct. Nothing checked whether two collectors, both right about their own source, had produced a pair of facts that cannot both be true about the world. On cay-collective #13195, Shopify's `Order.returnStatus` was `NO_RETURN` — true, no RMA was ever opened — so `orderSource` emitted `no_return_initiated`, whose entire meaning is *"the customer never returned the goods, therefore no refund was owed"*. The DHL adapter had meanwhile established that the parcel was returned to sender on 2026-07-06. The defence package then stated, in its executive summary, that *"no refund obligation arose, as the goods were never returned to the merchant."*
+
+Collectors run **concurrently**, so none of them could consult another — and in this case could not have, since the return was known only to the carrier API. `buildPack` after the gather is the first and only place that holds every section at once.
+
+**Rule 1 (the only rule today):** drop `no_return_initiated` when any shipping section reconciles to `Returned`. Asymmetric on purpose — we drop the *inference*, never the carrier observation.
+
+**Suppressions are recorded, never silent.** Each drop produces a typed `ContradictionRecord` persisted at `pack_json.contradictions` and written to `audit_events` as `evidence_contradiction_suppressed`, so admin — the source of truth for the pipeline — shows WHY a fact the merchant can see in Shopify is absent from the pack. Same rule the delivery reconciler already follows with `sourceConflict`.
+
+**Defence in depth.** Three layers now agree on what "the parcel came back" means, deliberately:
+
+1. **The collector level** — this gate suppresses the section.
+2. **Admissibility** — `lib/defence/alwaysAdmissible.ts`'s `no_return_initiated` rule was `matches: () => true` on the rationale that the fact "has no adverse reading". It is now conditional: with a returned parcel the module's own admission test ("can citing this read AGAINST us under any claim type?") answers *yes*.
+3. **The narrative** — the `return_not_initiated` predicate and a new claim guard (below).
+
+### Negative-polarity claim guards (2026-08-20)
+
+`ClaimGuard` gained `polarity: "affirmative" | "negative"` (default `affirmative`, so every pre-existing row is unchanged).
+
+Every guard until now policed an **assertion** and deliberately skipped the same words inside a negated clause — "no refund was issued" is not a refund claim. PR #586/#587 hardened that skip, correctly, on this very dispute. But nothing ever asked whether a **denial** was TRUE, and on a returned parcel the denial is the false statement: *"the goods were never returned to the merchant"*, in a validated draft, about goods in the merchant's own warehouse.
+
+- `firstNegatedMatch` mirrors `firstAffirmativeMatch` and reuses `isNegatedContext` unchanged, so the two polarities can never disagree about what counts as negated.
+- The one negative guard is `goods_never_returned_claim`, backed by the `safe_to_deny_return` predicate (false whenever a delivery fact carries `proofType === "returned_to_sender"`). Fails closed like every other guard.
+- Its pattern is **anchored on the return verb, never on the goods noun** — `isNegatedContext` looks at the words *before* the match, so a pattern matching at "goods" in "the goods were never returned" never sees the "never". Both paraphrases in the tests failed exactly this way on the first cut.
+- It must not catch the two sanctioned framings: *"no return was initiated"* and *"no refund was issued"* are true statements about the order record and are what the `credit_not_processed` module is instructed to say.
+
+### Returned-parcel outcome — merchant input (2026-08-20)
+
+`POST /api/packs/[packId]/parcel-outcome` + `ParcelOutcomeCard` on the Evidence tab. Follows the `cardholder-acknowledgement` pattern end to end: structured answer → manual `evidence_items` row with a `kind` discriminator → `checklist_v2` patched in place → audit → `build_pack` enqueued → `RegeneratePromptModal` inside the resubmission window.
+
+**Two fields, two audiences — the split is the point.**
+
+| Field | Values | Bank-facing? |
+|---|---|---|
+| `reason` | `refused_delivery` · `not_collected` · `undeliverable_address` | **Yes**, for the first two only. `undeliverable_address` is recorded and never cited — "we shipped to an address that does not work" is not an argument. |
+| `disposition` | `restocked_not_refunded` · `refunded` · `reshipped` · `still_held` | **Never.** "Restocked, not refunded" is a confession, and it is the answer most likely to be true. It exists so the merchant's own view is complete. |
+
+Enforced in `lib/defence/factClassifier.ts`, which hands the writer a `citableReason` and never the disposition — the same two-layer non-disclosure rule the fatal-loss message follows.
+
+**Canonical field:** `returned_parcel_outcome`, `evidence` domain, own `signalId: "parcel_outcome"` (NOT `delivery` — sharing that signal would let a merchant's answer lift an `invalid` delivery row to `supporting`), and **`excludedFromStrength: true`**. It exists to be cited, not counted; the gate owns the verdict. Answering honestly must not appear to improve the score.
+
+**Checklist:** new requirement mode **`required_if_returned_to_sender`**, driven by `OrderContext.hasReturnedToSenderParcel`. On the ~all orders where nothing came back the row resolves `unavailable`, never `missing` — same anti-nag rule as `required_if_refunded`.
+
 ### Held / cancelled-unrefunded banner (2026-08-14)
 
 **Merchant-UI only.** An Overview-tab banner naming a state the merchant could not previously see: the order was flagged by their fraud screening and either **held** or **cancelled**, nothing shipped, and **no refund was issued** — so the payment is still captured. From the cardholder's side that is indistinguishable from being charged for nothing, which is why the chargeback arrives and why it cannot be won on delivery evidence.
@@ -2512,7 +2592,7 @@ The refund check requires a non-null `dispute.amount` to avoid false positives o
 **Out of scope for v1 (deferred to a future P4.1+):**
 - "Valid cancellation before billing" — no clean source today.
 - "Confirmed fraud accepted by merchant" — no UI for this today.
-- "Evidence contradiction" — needs a contradiction model.
+- ~~"Evidence contradiction" — needs a contradiction model.~~ **Partially delivered 2026-08-20** as a separate, narrower primitive: see *Cross-source contradiction gate* below. It is deliberately NOT a fatal-loss trigger — it suppresses a refuted fact rather than declaring a case unwinnable.
 
 **Source field:** `pack_json.fatal_loss = { triggered, reason, message }`, persisted by `buildPack` via `detectFatalLoss(order, dispute.reason, dispute.amount)`. Pure function over the order + dispute context — no I/O.
 

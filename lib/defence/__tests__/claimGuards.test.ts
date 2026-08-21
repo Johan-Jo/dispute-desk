@@ -463,6 +463,96 @@ describe("claimGuards — negated statements are not claims (validator 4)", () =
     expect(result.failures.some((f) => f.guardId === "signature_on_delivery")).toBe(false);
   });
 
+  /* ── Negative-polarity guard (cay-collective #13195, 2026-08-20) ── */
+
+  const returnedFact = (): EvidenceFact =>
+    fact({
+      id: "delivery-returned",
+      category: "delivery_proof",
+      label: "Delivery",
+      value: { proofType: "returned_to_sender" },
+      strength: "invalid",
+    });
+
+  it("fires on the exact sentence that shipped in the #13195 draft", () => {
+    const text =
+      "The available evidence is consistent with a position that no refund " +
+      "obligation arose, as the goods were never returned to the merchant.";
+    const result = runClaimGuards({
+      narrativeSections: narrative({ executiveSummary: { text } }),
+      approvedFacts: [returnedFact()],
+    });
+    expect(
+      result.failures.some((f) => f.guardId === "goods_never_returned_claim"),
+    ).toBe(true);
+  });
+
+  it("stays silent on the same sentence when no parcel came back", () => {
+    const text =
+      "The available evidence is consistent with a position that no refund " +
+      "obligation arose, as the goods were never returned to the merchant.";
+    const result = runClaimGuards({
+      narrativeSections: narrative({ executiveSummary: { text } }),
+      approvedFacts: [],
+    });
+    expect(
+      result.failures.some((f) => f.guardId === "goods_never_returned_claim"),
+    ).toBe(false);
+  });
+
+  it("does not fire on the sanctioned no-return / no-refund framings", () => {
+    // Both are TRUE statements about the order record and both are what
+    // the credit_not_processed module is instructed to say. Guarding them
+    // would re-open the #586/#587 defect from the other side.
+    const result = runClaimGuards({
+      narrativeSections: narrative({
+        conclusion: {
+          text:
+            "No return was initiated by the customer, and no refund was issued. " +
+            "The customer did not request a return.",
+        },
+      }),
+      approvedFacts: [returnedFact()],
+    });
+    expect(
+      result.failures.some((f) => f.guardId === "goods_never_returned_claim"),
+    ).toBe(false);
+  });
+
+  it("catches the paraphrases, not only the one sentence", () => {
+    for (const text of [
+      "The customer never returned the item.",
+      "We never received the merchandise back.",
+      "The parcel did not come back to us.",
+      "The goods were not sent back to the merchant.",
+    ]) {
+      const result = runClaimGuards({
+        narrativeSections: narrative({ conclusion: { text } }),
+        approvedFacts: [returnedFact()],
+      });
+      expect(
+        result.failures.some((f) => f.guardId === "goods_never_returned_claim"),
+        `expected a failure for: ${text}`,
+      ).toBe(true);
+    }
+  });
+
+  it("an AFFIRMATIVE statement that the goods came back is not this guard's business", () => {
+    // Stating the truth ("the parcel was returned to sender on 6 July")
+    // must never be blocked — the guard polices the denial only.
+    const result = runClaimGuards({
+      narrativeSections: narrative({
+        chronologyArgument: {
+          text: "The parcel was returned to the merchant on 6 July 2026.",
+        },
+      }),
+      approvedFacts: [returnedFact()],
+    });
+    expect(
+      result.failures.some((f) => f.guardId === "goods_never_returned_claim"),
+    ).toBe(false);
+  });
+
   it("isNegatedContext: cue must be within the trailing window of the same clause", () => {
     const negated = "and no refund was issued";
     expect(isNegatedContext(negated, negated.indexOf("refund"))).toBe(true);

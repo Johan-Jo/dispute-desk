@@ -50,6 +50,7 @@ import type {
   CaseCreditAlreadyIssuedInput,
   CaseFatalLossInput,
   CaseNameMismatchInput,
+  CaseReturnedToSenderInput,
   CaseRiskWeaknessInput,
 } from "./caseStrength";
 
@@ -93,7 +94,7 @@ export function gateNotProvided<T>(reason: GateNotProvidedReason): GateSource<T>
 /**
  * Every gate the scorer consults, each REQUIRED and each explicitly stated.
  *
- * A sixth gate added here breaks every call site at compile time — the alarm
+ * A further gate added here breaks every call site at compile time — the alarm
  * that was missing when the credit-already-issued floor was wired into
  * `buildPack` alone (blume-box 162042cd, 2026-08-01) and again when only
  * three of four sites were repaired.
@@ -103,6 +104,10 @@ export interface CaseGateSources {
   coverage: GateSource<CaseCoverageInput>;
   /** Fatal-loss Gate (PRD §5). Caps `overall` at "weak". */
   fatalLoss: GateSource<CaseFatalLossInput>;
+  /** Returned-to-sender Gate. Caps `overall` at "weak" and blocks
+   *  automated filing when the carrier brought the parcel back and no
+   *  refund followed. Ranks below fatal-loss. */
+  returnedToSender: GateSource<CaseReturnedToSenderInput>;
   /** Risk-weakness Gate. Diagnostics only — never caps `overall`. */
   riskWeakness: GateSource<CaseRiskWeaknessInput>;
   /** Cardholder-name-mismatch Gate. Fraud family only; caps at "moderate". */
@@ -125,6 +130,7 @@ declare const CANONICAL_GATE_ASSESSMENT: unique symbol;
 export interface CaseGateAssessment {
   readonly coverage: CaseCoverageInput | null;
   readonly fatalLoss: CaseFatalLossInput | null;
+  readonly returnedToSender: CaseReturnedToSenderInput | null;
   readonly riskWeakness: CaseRiskWeaknessInput | null;
   readonly nameMismatch: CaseNameMismatchInput | null;
   readonly creditAlreadyIssued: CaseCreditAlreadyIssuedInput | null;
@@ -180,6 +186,7 @@ export function buildCaseGateAssessment(sources: CaseGateSources): CaseGateAsses
   const assessment: CaseGateAssessmentFields = {
     coverage: resolve("coverage", sources.coverage),
     fatalLoss: resolve("fatalLoss", sources.fatalLoss),
+    returnedToSender: resolve("returnedToSender", sources.returnedToSender),
     riskWeakness: resolve("riskWeakness", sources.riskWeakness),
     nameMismatch: resolve("nameMismatch", sources.nameMismatch),
     creditAlreadyIssued: resolve("creditAlreadyIssued", sources.creditAlreadyIssued),

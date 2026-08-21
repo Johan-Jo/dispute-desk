@@ -37,6 +37,7 @@
  * whatever the label said.
  */
 
+import { hasReturnedToSenderShipment } from "./factPredicates";
 import type { EvidenceFact, EvidenceFactCategory } from "./types";
 
 interface AdmissionRule {
@@ -46,7 +47,11 @@ interface AdmissionRule {
   category: EvidenceFactCategory;
   /** Why it cannot read against us under any claim type. */
   rationale: string;
-  matches: (fact: EvidenceFact) => boolean;
+  /** `fact` is the candidate; `facts` is the WHOLE set, because
+   *  admissibility can turn on something the candidate does not know
+   *  about itself. `no_return_initiated` is the case that forced this
+   *  second argument — see its rule below. */
+  matches: (fact: EvidenceFact, facts: readonly EvidenceFact[]) => boolean;
 }
 
 export const ALWAYS_ADMISSIBLE_RULES: readonly AdmissionRule[] = [
@@ -77,9 +82,16 @@ export const ALWAYS_ADMISSIBLE_RULES: readonly AdmissionRule[] = [
     rationale:
       "Emitted by orderSource ONLY when returnStatus is NO_RETURN and no " +
       "refund was issued (orderSource.ts:219) — a factual statement about the " +
-      "order record that has no adverse reading. It was admissible in exactly " +
-      "one module and silently dropped by every other.",
-    matches: () => true,
+      "order record that has no adverse reading, PROVIDED the goods really " +
+      "did not come back. It was admissible in exactly one module and " +
+      "silently dropped by every other. " +
+      "CONDITIONAL since 2026-08-20 (cay-collective #13195): when a carrier " +
+      "returned the parcel to the merchant, this fact has a plainly adverse " +
+      "reading — it invites the argument 'no refund was owed because the " +
+      "customer never sent it back' about goods sitting in the merchant's " +
+      "own warehouse. That is the admission test in this module's header " +
+      "answering 'yes', so the rule must stop matching.",
+    matches: (_fact, facts) => !hasReturnedToSenderShipment([...facts]),
   },
 ] as const;
 
@@ -96,7 +108,7 @@ export function alwaysAdmissibleCategories(
     const fieldKey = (fact.value as { fieldKey?: unknown } | null)?.fieldKey;
     for (const rule of ALWAYS_ADMISSIBLE_RULES) {
       if (fieldKey !== rule.fieldKey) continue;
-      if (!rule.matches(fact)) continue;
+      if (!rule.matches(fact, facts)) continue;
       out.add(rule.category);
     }
   }

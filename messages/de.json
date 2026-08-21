@@ -975,7 +975,38 @@
         "primaryAction": "Paket neu erstellen",
         "secondaryAction": "Nur Datei behalten"
       },
-      "windowClosedError": "Shopify hat die Streitbeweise bereits an die Bank weitergeleitet, daher können keine neuen Dateien mehr hinzugefügt werden."
+      "windowClosedError": "Shopify hat die Streitbeweise bereits an die Bank weitergeleitet, daher können keine neuen Dateien mehr hinzugefügt werden.",
+      "parcelOutcome": {
+        "ctaEyebrow": "Für die Antwort nötig · nur Sie können das beantworten",
+        "title": "Sagen Sie uns, warum dieses Paket zurückkam",
+        "subtitle": "Der Zusteller hat diese Bestellung an Sie zurückgesendet, deshalb kann es dafür niemals eine Zustellbestätigung geben. Hat der Kunde das Paket verweigert oder nie abgeholt, ist das keine gültige Rücksendung — und genau das ist das einzige Argument, das in diesem Fall noch offensteht. Wir können nicht sehen, was zutrifft; Sie schon.",
+        "ctaButton": "Zwei Fragen beantworten",
+        "ctaMeta": "Dauert unter einer Minute",
+        "choosePlaceholder": "Bitte auswählen …",
+        "reasonLabel": "Warum kam das Paket zurück?",
+        "reasonHint": "Das fließt in Ihre Antwort ein. Eine verweigerte oder nicht abgeholte Zustellung ist keine gültige Rücksendung — das sollte gesagt werden.",
+        "reason": {
+          "refused_delivery": "Der Kunde hat die Annahme verweigert",
+          "not_collected": "Der Kunde hat es nie an der Abholstelle abgeholt",
+          "undeliverable_address": "An die Adresse konnte nicht zugestellt werden"
+        },
+        "dispositionLabel": "Was ist mit der Ware nach der Rücksendung passiert?",
+        "dispositionHint": "Nur für Ihre und unsere Unterlagen — diese Antwort erscheint nie in der Stellungnahme, die in Ihrem Namen übermittelt wird.",
+        "disposition": {
+          "restocked_not_refunded": "Wieder im Bestand, keine Rückerstattung veranlasst",
+          "still_held": "Liegt noch da, weder eingelagert noch erstattet",
+          "reshipped": "Erneut an den Kunden versendet",
+          "refunded": "Dem Kunden erstattet"
+        },
+        "noteLabel": "Sonst noch etwas Wichtiges (optional)",
+        "notePlaceholder": "Zum Beispiel: Der Kunde wurde am 12. Juli kontaktiert und bat uns, das Paket zurückzuhalten.",
+        "noteHint": "Wird beim Fall gespeichert.",
+        "submit": "Antworten speichern",
+        "submitting": "Wird gespeichert …",
+        "cancel": "Abbrechen",
+        "errorWindowClosed": "Shopify hat diesen Fall bereits an die Bank weitergeleitet, deshalb kann diese Antwort nicht mehr hinzugefügt werden.",
+        "errorGeneric": "Ihre Antworten konnten nicht gespeichert werden ({code}). Bitte versuchen Sie es erneut."
+      }
     },
     "reviewTab": {
       "chrome": {
@@ -1305,7 +1336,8 @@
       "fraud_screening": "Betrugsprüfung vor Autorisierung",
       "refund_record": "Rückerstattungsnachweis",
       "refund": "Rückerstattungsstatus",
-      "no_return_initiated": "Keine Rücksendung veranlasst"
+      "no_return_initiated": "Keine Rücksendung veranlasst",
+      "returned_parcel_outcome": "Zurückgesendetes Paket"
     },
     "decisiveHint": {
       "fraud": "Lieferbestätigung, Unterschrift bei Empfang oder Geräte-/Sitzungskonsistenz",
@@ -1398,7 +1430,10 @@
         "refund_issued": "Für diese Bestellung wurde bereits eine Rückerstattung ausgestellt — die Bank wird dies als Schuldeingeständnis werten, daher kann der Fall in dieser Form nicht gewonnen werden.",
         "inr_no_fulfillment": "Die Bestellung wurde nie ausgeführt und der Streitfallgrund ist ‚Produkt nicht erhalten' — es gibt keine sachliche Grundlage zur Verteidigung der Belastung."
       },
-      "creditAlreadyIssued": "Diese Transaktion wurde bereits vor Einreichung des Widerspruchs erstattet. Die stärkste Antwort ist die Erstattung selbst — der Karteninhaber hat sein Geld zurück, es ist nichts weiter offen."
+      "creditAlreadyIssued": "Diese Transaktion wurde bereits vor Einreichung des Widerspruchs erstattet. Die stärkste Antwort ist die Erstattung selbst — der Karteninhaber hat sein Geld zurück, es ist nichts weiter offen.",
+      "returnedToSender": {
+        "returned_unrefunded": "Der Zusteller hat dieses Paket an Sie zurückgesendet und es wurde keine Rückerstattung veranlasst — Sie haben also sowohl die Ware als auch das Geld. Für diese Bestellung kann es keine Zustellbestätigung geben, und ohne sie entscheidet die Bank in der Regel zugunsten des Kunden. Sagen Sie uns, warum das Paket zurückkam: Hat der Kunde die Annahme verweigert oder es nie abgeholt, ist das keine gültige Rücksendung, und das ist ein Argument wert. Behalten Sie Ware und Geld, ist die faire Antwort eine Rückerstattung."
+      }
     },
     "improvementHint": "Fügen Sie {label} hinzu, um Ihren Fall zu stärken.",
     "recommendation": {
@@ -1442,7 +1477,8 @@
       "auto_ipinfo": "Aus IP-Intelligenz",
       "manual_upload": "Manuell hochgeladen",
       "unavailable_from_source": "Nicht aus Quelle verfügbar",
-      "carrier_api": "Aus dem Tracking-System des Versanddienstleisters ({carrier})"
+      "carrier_api": "Aus dem Tracking-System des Versanddienstleisters ({carrier})",
+      "returned_parcel_outcome": "Von Ihnen angegeben"
     },
     "fieldAction": {
       "default": {
@@ -1490,7 +1526,8 @@
       "duplicate_explanation": "Erklärt, warum die Belastungen keine Duplikate sind — erforderlich für Antworten auf doppelte Belastung",
       "supporting_documents": "Zusätzliche Beweise, die Ihren Fall stärken",
       "activity_log": "Kontoaktivität, die legitime Kundeninteraktion belegt",
-      "tds_authentication": "Zeigt, dass die Bank den Karteninhaber vor der Zahlung per 3-D Secure authentifiziert hat — der stärkste Nachweis, dass der echte Karteninhaber zugestimmt hat."
+      "tds_authentication": "Zeigt, dass die Bank den Karteninhaber vor der Zahlung per 3-D Secure authentifiziert hat — der stärkste Nachweis, dass der echte Karteninhaber zugestimmt hat.",
+      "returned_parcel_outcome": "Erklärt, warum ein an Sie zurückgesendetes Paket nie angenommen wurde — eine verweigerte oder nicht abgeholte Zustellung ist keine gültige Rücksendung, und das ist das einzige Argument, das in diesem Fall noch offensteht"
     },
     "targetField": {
       "SHIPPING_DOCUMENTATION": "Versanddokumentation",
@@ -1759,7 +1796,13 @@
       "titleCollectedOn": "Vom Kunden an der Abholstelle abgeholt ({date})",
       "titleAwaitingCollection": "An der Abholstelle — Abholung durch den Kunden ausstehend",
       "factsCollected": "An der Abholstelle abgeholt am {date} — Ausweis bei Abholung erforderlich",
-      "factsAwaitingCollection": "An der Abholstelle — noch nicht abgeholt"
+      "factsAwaitingCollection": "An der Abholstelle — noch nicht abgeholt",
+      "returnedToSender": "An den Absender zurückgesendet",
+      "titleReturnedToSender": "An den Absender zurückgesendet — der Kunde hat die Sendung nie angenommen",
+      "titleReturnedToSenderOn": "Am {date} an den Absender zurückgesendet — der Kunde hat die Sendung nie angenommen",
+      "whyReturnedToSender": "Der Zusteller hat dieses Paket an Sie zurückgebracht. Da der Kunde es nie angenommen hat, kann es für diese Bestellung niemals eine Zustellbestätigung geben — über die Zustellung lässt sich der Fall also nicht führen. Entscheidend ist jetzt, warum das Paket zurückkam und was Sie mit der Ware gemacht haben.",
+      "factsReturnedToSender": "An den Absender zurückgesendet",
+      "factsReturnedToSenderOn": "Am {date} an den Absender zurückgesendet"
     },
     "gorgiasComms": {
       "title": "Kundensupport-Konversationen",
@@ -3312,6 +3355,10 @@
       "sessionCapture": {
         "title": "Storefront-Sitzungserfassung — was es ist und was wir speichern",
         "body": "Um Streitfälle gegen CE-3.0- / FPT-Anforderungen abzugleichen, muss DisputeDesk bestimmte Fakten über jede Checkout-Sitzung kennen: welche IP der Kunde verwendet hat, ob er eingeloggt war, welche Seiten besucht wurden, welches Gerät. Ohne diese Daten bleiben die Qualifikationsraten künstlich niedrig — die meisten Streitfälle erfüllen die Anforderungen an übereinstimmende Datenpunkte nicht.\n\nWas DisputeDesk erfasst (bei aktivierter Sitzungserfassung):\n- Den Shopify-cart_token (zur Verknüpfung von Sitzung und Bestellung)\n- IP-Adresse (im Ruhezustand gehasht, Salt pro Shop; Roh-Wert verschlüsselt, nur zur Qualifikation entschlüsselt)\n- IP-abgeleitete Geografie (nur Land und Region)\n- User-Agent\n- Kunden-ID und Login-Status beim Bezahlen\n- Alter des Kundenkontos\n- Besuchte Seiten und Zeit auf der Checkout-Seite\n- Datenschutzsignale des Browsers (Do Not Track, Global Privacy Control)\n\nWas NICHT erfasst wird: Formularwerte (Namen, Adressen, Karten — nichts Getipptes), Composite-Gerätefingerabdrücke (canvas / WebGL / Audio — auf Phase mit Rechtsprüfung verschoben), Mausbewegungen, Cross-Session-Cookies.\n\nDatenschutzkontrollen:\n- DNT- und GPC-Signale führen dazu, dass DisputeDesk den Datensatz serverseitig verwirft\n- Sitzungsdaten werden 18 Monate nach Erfassung automatisch gelöscht\n- Recht-auf-Vergessen-Anfragen (LGPD / DSGVO / CCPA) werden über den Löschungs-Endpoint erfüllt\n- DisputeDesk fungiert als Auftragsverarbeiter; Sie sind der Verantwortliche\n\nSie müssen die Datenschutzerklärung Ihres Shops aktualisieren, um diese Erfassung offenzulegen. DisputeDesk stellt eine Vorlage bereit.\n\nVorausschauender Hinweis: Sitzungserfassung hilft nicht bei Streitfällen, die vor Aktivierung eingereicht wurden. Sie baut die Beweisgrundlage für jeden Streitfall nach der Installation auf."
+      },
+      "returnedToSenderParcels": {
+        "title": "Wenn ein Paket an den Absender zurückgeht",
+        "body": "Manchmal kann ein Zusteller eine Sendung nicht zustellen und bringt das Paket zu Ihnen zurück. Der Kunde hat die Bestellung nie erhalten — und wenn er die Zahlung später anficht, ändert das, worum es im Fall gehen kann und worum nicht.\n\n**Was DisputeDesk automatisch tut**\n\nSobald wir ein Rücksendeereignis des Zustellers erfassen:\n\n1. Zeigen wir die Zustellzeile als \"An den Absender zurückgesendet\" mit dem Datum des Zustellers, statt sie wie ein nie gescanntes Etikett zu behandeln.\n2. Entfernen wir jedes Argument, das darauf beruht, dass der Kunde die Ware nie zurückgeschickt hat. Shopify zeigt den Rücksendestatus womöglich weiterhin als \"keine Rücksendung\", weil nie eine Rücksendung beantragt wurde — aber die Ware ist bei Ihnen, und ein Argument, das das Gegenteil behauptet, wäre unwahr.\n3. Stufen wir den Fall als aussichtsarm ein und verhindern jede automatische Übermittlung, auch am Fristtag. Für ein zurückgesendetes Paket kann es nie eine Zustellbestätigung geben, und ohne sie entscheidet die Bank in der Regel zugunsten des Kunden.\n\n**Was wir von Ihnen brauchen**\n\nNur eines, und zwar genau das, was wir nicht sehen können: **warum das Paket zurückkam.** Die Frage finden Sie im Reiter \"Nachweise\".\n\n- **Der Kunde hat die Annahme verweigert** oder **das Paket nie an der Abholstelle abgeholt** — das ist ein Argument wert. Nach EU-Verbraucherrecht ist es weder eine gültige Rücksendung noch eine wirksame Ausübung des Widerrufsrechts, ein Paket einfach nicht anzunehmen. Wir nehmen das für Sie in die Stellungnahme auf.\n- **An die Adresse konnte nicht zugestellt werden** — wir halten es fest, nehmen es aber nicht in die Stellungnahme auf. Es hilft dem Fall nicht und wirft eine Frage auf, die niemand gestellt hat.\n\nWir fragen außerdem, was nach der Rücksendung mit der Ware geschehen ist. Diese Antwort dient Ihren und unseren Unterlagen; sie erscheint nie in der Stellungnahme, die in Ihrem Namen übermittelt wird.\n\n**Wenn Sie Ware und Zahlung behalten haben**\n\nDie ehrliche Antwort ist meist eine Rückerstattung. Der Kunde hat bezahlt, die Bestellung nie erhalten, und die Ware ist wieder bei Ihnen. Den Fall zu bestreiten gelingt selten und kann Sie zusätzlich die Fallgebühr kosten. Ob Sie erstatten, ist Ihre Entscheidung — DisputeDesk tut es nicht für Sie — aber die angezeigte Einschätzung bildet die tatsächlichen Chancen ab, nicht die optimistischen.\n\n**Hinweis zur Frist**\n\nWenn Sie zusagen, die Belastung anzupassen, erwarten manche Zahlungsanbieter die Rückerstattung innerhalb eines kurzen Zeitfensters (Klarna storniert die Zahlung zum Beispiel automatisch, wenn die Erstattung nicht rechtzeitig erfolgt). Erstatten Sie zügig, nachdem Sie sich dazu verpflichtet haben."
       }
     },
     "embedded": {

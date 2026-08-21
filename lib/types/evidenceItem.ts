@@ -249,6 +249,10 @@ export interface TemplateFieldV2 {
     /** Only when the order carries a refund; otherwise `unavailable`,
      *  never `missing` (see completeness.ts RequirementMode). */
     | "required_if_refunded"
+    /** Only when a carrier returned a parcel on this order to the
+     *  merchant; otherwise `unavailable`, never `missing`. This union
+     *  duplicates `completeness.RequirementMode` — keep the two in step. */
+    | "required_if_returned_to_sender"
     | "recommended"
     | "optional";
   priority: EvidenceItemPriority;

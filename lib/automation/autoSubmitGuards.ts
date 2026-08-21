@@ -48,6 +48,7 @@ export type AutoSubmitParkReason = "moderate_strength";
 export type AutoSubmitBlockReason =
   | "covered_shopify"
   | "fatal_loss"
+  | "returned_to_sender"
   | "weak"
   | "insufficient";
 
@@ -61,6 +62,18 @@ export interface AutoSubmitGuardInput {
   coverageState: string | null | undefined;
   /** `pack_json.fatal_loss` */
   fatalLoss:
+    | { triggered?: boolean; reason?: string | null; message?: string | null }
+    | null
+    | undefined;
+  /**
+   * `pack_json.returned_to_sender`.
+   *
+   * REQUIRED, for the same reason `creditAlreadyIssued` is: a trailing
+   * optional gate is how gate sets drift apart between call sites. Packs
+   * built before the field existed pass `null`, which reads as
+   * not-triggered and preserves prior behaviour exactly.
+   */
+  returnedToSender:
     | { triggered?: boolean; reason?: string | null; message?: string | null }
     | null
     | undefined;
@@ -97,8 +110,9 @@ export interface AutoSubmitGuardInput {
 }
 
 /**
- * Order of precedence: Coverage → Fatal-loss → strength. Matches PRD §4
- * (coverage beats everything), §5 (fatal-loss), and §9.
+ * Order of precedence: Coverage → Fatal-loss → Returned-to-sender →
+ * credit-already-issued → strength. Matches PRD §4 (coverage beats
+ * everything), §5 (fatal-loss), and §9.
  */
 export function evaluateAutoSubmitGuards(
   input: AutoSubmitGuardInput,
@@ -122,6 +136,23 @@ export function evaluateAutoSubmitGuards(
       message:
         input.fatalLoss.message ??
         `Auto-submit blocked — fatal-loss condition (${input.fatalLoss.reason ?? "unknown"}) per PRD §5`,
+    };
+  }
+
+  // The carrier brought the parcel back to the merchant and no refund
+  // followed. Not "unwinnable" — Klarna's own rules say a refused or
+  // uncollected parcel is not a valid return, so there IS an argument —
+  // but it turns on WHY the parcel came back, which only the merchant
+  // knows, and no proof of delivery can ever exist for it. So: never
+  // filed automatically, including at the deadline. A human decides.
+  // (cay-collective #13195, 2026-08-20.)
+  if (input.returnedToSender?.triggered === true) {
+    return {
+      decision: "block",
+      reason: "returned_to_sender",
+      message:
+        input.returnedToSender.message ??
+        "Auto-submit blocked — the carrier returned this parcel to the merchant and no refund followed; the merchant must decide how to respond",
     };
   }
 

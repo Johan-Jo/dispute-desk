@@ -16,6 +16,7 @@
 import { FACT_PREDICATES } from "./factPredicates";
 import type {
   ClaimGuard,
+  ClaimPolarity,
   EvidenceFact,
   FactPredicateId,
   GuardFailure,
@@ -31,6 +32,8 @@ function makeGuard(g: {
   appliesToSections: NarrativeSectionKey[] | "all";
   predicateId: FactPredicateId;
   requiredFact: string;
+  /** Omit for the ordinary case. See `ClaimPolarity`. */
+  polarity?: ClaimPolarity;
 }): ClaimGuard {
   const predicate = FACT_PREDICATES[g.predicateId];
   if (!predicate) {
@@ -46,8 +49,53 @@ function makeGuard(g: {
     predicateId: g.predicateId,
     predicate: (facts) => predicate.evaluate(facts),
     requiredFact: g.requiredFact,
+    polarity: g.polarity ?? "affirmative",
   };
 }
+
+/**
+ * "The goods came back to us" — the phrase the one negative-polarity
+ * guard watches for. Built from parts because the alternation is doing
+ * real work and a single opaque literal would not survive review.
+ *
+ * It must match a claim about WHERE THE GOODS PHYSICALLY ARE, and must
+ * NOT match the two adjacent statements that are true and sanctioned:
+ *   - "no refund was issued"          → no return verb at all
+ *   - "no return was initiated / requested by the customer"
+ *                                     → "return", never "returned"
+ * Hence every branch requires a past-tense return verb, and pairs it with
+ * a goods noun or a to-the-merchant destination inside the same clause
+ * (`[^.!?;:\n]` never crosses a clause boundary, matching the negation
+ * window's own notion of a clause).
+ */
+const GOODS_NOUN = "goods|items?|products?|merchandise|parcel|package|shipment|order";
+/** Both the inflected and the bare form — "never returned" and "did not
+ *  return" are the same claim. */
+const CAME_BACK_VERB =
+  "returned?|sen[dt]\\s+back|c[oa]me\\s+back|coming\\s+back|ship(?:ped)?\\s+back";
+const BACK_TO_US = "to\\s+(?:the\\s+)?(?:merchant|sender|us)";
+/** Stay inside ONE clause. The excluded set matches
+ *  `CLAUSE_BOUNDARY_CHARS` below — the negation window's own notion of a
+ *  clause — so the guard and the window never disagree about scope. */
+const NEAR = "[^.!?;:,\\n()]{0,40}";
+/**
+ * Every branch is ANCHORED ON THE VERB, never on the noun. That is not
+ * stylistic: `isNegatedContext` looks at the few words BEFORE the match,
+ * so a pattern that matches at "goods" in "the goods were never
+ * returned" never sees the "never" and the guard silently does nothing.
+ * Anchor on "returned" and the cue is right there. (Both paraphrases in
+ * the tests failed exactly this way on the first cut.)
+ */
+const GOODS_CAME_BACK = new RegExp(
+  [
+    // "never returned the goods" · "was never returned to the merchant"
+    // "did not come back to us" · "were not sent back to the merchant"
+    `\\b(?:${CAME_BACK_VERB})\\b${NEAR}\\b(?:${GOODS_NOUN}|${BACK_TO_US})\\b`,
+    // "we never received the merchandise back"
+    `\\breceived\\b${NEAR}\\bback\\b`,
+  ].join("|"),
+  "i",
+);
 
 /* ── The guard table ── */
 
@@ -182,6 +230,39 @@ export const CLAIM_GUARDS: ClaimGuard[] = [
     predicateId: "cvv_verified",
     requiredFact: "payment_authentication / payment_auth whose CVV result is a match",
   }),
+  /* ── The one NEGATIVE-polarity guard ──────────────────────────────
+   *
+   * Every rule above polices an assertion. This one polices a DENIAL,
+   * because on a returned parcel the denial is the false statement.
+   *
+   * cay-collective #13195 shipped a validated draft whose executive
+   * summary read "no refund obligation arose, as the goods were never
+   * returned to the merchant" — while DHL had the parcel back with the
+   * merchant since 2026-07-06. Nothing could catch it: the affirmative
+   * machinery skips negated clauses by design, and #586/#587 had just
+   * hardened that skip (correctly — "no refund was issued" is not a
+   * refund claim). The gap was never the negation window; it was that
+   * no guard ever asked whether a denial was TRUE. */
+  makeGuard({
+    id: "goods_never_returned_claim",
+    description:
+      "Denial that the goods came back to the merchant, on an order whose parcel was returned to sender",
+    polarity: "negative",
+    // Deliberately narrow: it must catch the RETURN-OF-GOODS denial and
+    // nothing adjacent. "no refund was issued" and "no return was
+    // requested by the customer" are both true and both sanctioned; only
+    // a claim about where the goods physically are is guarded.
+    pattern: GOODS_CAME_BACK,
+    appliesToSections: [
+      "fulfillmentArgument",
+      "chronologyArgument",
+      "executiveSummary",
+      "conclusion",
+    ],
+    predicateId: "safe_to_deny_return",
+    requiredFact:
+      "no delivery_proof / shipping_tracking fact with proofType='returned_to_sender' (a carrier return-to-sender makes any denial that the goods came back false)",
+  }),
   makeGuard({
     id: "fulfilled_or_delivered_claim",
     description:
@@ -249,6 +330,23 @@ function firstAffirmativeMatch(
   return null;
 }
 
+/** First match of `pattern` in `text` that IS inside a negated clause —
+ *  the mirror of `firstAffirmativeMatch`, for `negative`-polarity guards.
+ *  Reuses `isNegatedContext` unchanged so the two polarities can never
+ *  disagree about what counts as negated. */
+function firstNegatedMatch(
+  text: string,
+  pattern: RegExp,
+): RegExpExecArray | null {
+  const flags = pattern.flags.includes("g")
+    ? pattern.flags
+    : pattern.flags + "g";
+  for (const m of text.matchAll(new RegExp(pattern.source, flags))) {
+    if (isNegatedContext(text, m.index ?? 0)) return m as RegExpExecArray;
+  }
+  return null;
+}
+
 /* ── Evaluator ── */
 
 export interface RunClaimGuardsInput {
@@ -273,7 +371,10 @@ export function runClaimGuards(input: RunClaimGuardsInput): {
         guard.appliesToSections.includes(sectionKey);
       if (!applies) continue;
 
-      const match = firstAffirmativeMatch(text, guard.pattern);
+      const match =
+        guard.polarity === "negative"
+          ? firstNegatedMatch(text, guard.pattern)
+          : firstAffirmativeMatch(text, guard.pattern);
       if (!match) continue;
 
       if (guard.predicate(input.approvedFacts)) continue;

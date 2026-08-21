@@ -49,6 +49,12 @@ export type SignalId =
   // Refund record — proof a refund was actually issued for the order.
   // Decisive for CREDIT_NOT_PROCESSED ("you didn't refund me") disputes.
   | "refund"
+  // What happened to a parcel the carrier returned to the merchant, as
+  // stated by the merchant. Deliberately NOT `delivery`: sharing that
+  // signal would let a merchant's answer lift an `invalid` delivery row to
+  // `supporting`, and knowing WHY a parcel came back is not evidence that
+  // it was ever delivered.
+  | "parcel_outcome"
   // Pre-authorization fraud screening (Phase 1 of fraud-risk plan).
   // Distinct from `payment_auth` so dedup doesn't collapse it into
   // AVS/CVV — the screening is a separate signal that complements,
@@ -178,7 +184,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     category: "moderate",
     supportingOnly: false,
     excludedFromStrength: false,
-    note: "signature_confirmed → strong; delivered_confirmed → moderate; delivered_unverified → supporting; label_created → invalid. The rubric-#9 verified-address upgrade and the collected-at-pickup upgrade were retired 2026-08-07 (PR-C1) as unsubstantiated — see retiredKeys.ts.",
+    note: "signature_confirmed → strong; delivered_confirmed → moderate; delivered_unverified → supporting; label_created → invalid; returned_to_sender → invalid (the parcel came BACK — same score as label_created, different fact). The rubric-#9 verified-address upgrade and the collected-at-pickup upgrade were retired 2026-08-07 (PR-C1) as unsubstantiated — see retiredKeys.ts.",
   },
   shipping_tracking: {
     signalId: "delivery",
@@ -186,7 +192,7 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     category: "moderate",
     supportingOnly: false,
     excludedFromStrength: false,
-    note: "Same 4-state proofType mapping as delivery_proof. Shares signalId 'delivery' so duplicate evidence does not double-count.",
+    note: "Same 5-state proofType mapping as delivery_proof. Shares signalId 'delivery' so duplicate evidence does not double-count.",
   },
 
   // ── IP / device (always at most moderate) ──
@@ -258,6 +264,24 @@ export const CANONICAL_EVIDENCE: Record<string, CanonicalSpec> = {
     supportingOnly: false,
     excludedFromStrength: false,
     note: "Proof a refund was actually issued on the order. Strong when payload.refundStatus === 'processed' with a refunded amount > 0 — decisive for CREDIT_NOT_PROCESSED ('you didn't refund me') disputes. Moderate otherwise. Distinct from refund_policy (the policy text) — this is the transaction record.",
+  },
+  /* Merchant's answer to "what happened to this returned parcel?" — the
+   * one fact only they hold, and the one Klarna's merchant documentation
+   * asks for by name ("If a customer has not accepted the delivery make
+   * sure this information is included ... in the response to Klarna").
+   *
+   * `excludedFromStrength` is the load-bearing property. A returned parcel
+   * is governed by its own gate, which caps the case at weak; if this fact
+   * could also move the SCORE, answering the question honestly would
+   * appear to improve the case, which is both false and a bad incentive.
+   * It exists to be CITED, not counted. */
+  returned_parcel_outcome: {
+    signalId: "parcel_outcome",
+    labelKey: "disputes.signalLabel.returned_parcel_outcome",
+    category: "supporting",
+    supportingOnly: false,
+    excludedFromStrength: true,
+    note: "Merchant-stated reason a returned-to-sender parcel came back (refused_delivery | not_collected | undeliverable_address) plus its disposition. Never scored — the returned-to-sender gate owns the verdict. `reason` is bank-facing when it is refused_delivery or not_collected; `disposition` NEVER is (see lib/defence/bankInclusion.ts).",
   },
   no_return_initiated: {
     signalId: "refund",
@@ -402,12 +426,20 @@ export function disputeFreeHistoryState(
  * 2026-08-08, one of six. */
 
 /** Delivery proofType discriminator written by the fulfillment
- *  collector. The four canonical states. (P2.3) */
+ *  collector. The five canonical states. (P2.3)
+ *
+ *  `returned_to_sender` was added 2026-08-20 (cay-collective #13195). It
+ *  scores identically to `label_created` — a returned parcel is not
+ *  delivery evidence — but it is a DIFFERENT FACT, and collapsing the two
+ *  made every downstream surface tell the merchant the carrier "never
+ *  scanned the parcel" about a shipment the carrier scanned all the way
+ *  out and all the way back. Same score, named honestly. */
 export type DeliveryProofType =
   | "signature_confirmed"
   | "delivered_confirmed"
   | "delivered_unverified"
-  | "label_created";
+  | "label_created"
+  | "returned_to_sender";
 
 /**
  * Classify an evidence item by `evidenceFieldKey` + payload.
@@ -478,6 +510,11 @@ export function categorizeEvidenceField(
         return "moderate";
       case "delivered_unverified":
         return "supporting";
+      case "returned_to_sender":
+        // The carrier brought the parcel BACK. Never delivery evidence —
+        // invalid, exactly like `label_created`. Kept as its own case so
+        // the switch is exhaustive and the reason is legible here.
+        return "invalid";
       case "label_created":
       default:
         return "invalid";

@@ -90,12 +90,16 @@ export interface RawGateFacts {
   coverageState: string | null | undefined;
   /** `pack_json.fatal_loss`. The reason is audit material and never copy. */
   fatalLoss: { triggered?: boolean } | null | undefined;
+  /** `pack_json.returned_to_sender`. Same rule: the reason is merchant-UI
+   *  and audit material, and never bank-facing copy. */
+  returnedToSender: { triggered?: boolean } | null | undefined;
 }
 
 /** Coverage first — PRD §4 beats §5, and the order here IS that invariant. */
 export function gateDecisionFromFacts(facts: RawGateFacts): GateDecision {
   if (facts.coverageState === "covered_shopify") return "coverage";
   if (facts.fatalLoss?.triggered === true) return "fatal_loss";
+  if (facts.returnedToSender?.triggered === true) return "returned_to_sender";
   return null;
 }
 
@@ -203,6 +207,18 @@ function verdict(input: CaseAutomationDecisionInput): Verdict {
   //    the snapshot carries a named gate rather than the gate's reason string.
   if (assessment.gateDecision === "fatal_loss") {
     return { action: "block", reasonCodes: ["fatal_loss"] };
+  }
+
+  // 2b. RETURNED TO SENDER. The carrier brought the parcel back to the
+  //     merchant and no refund followed. BLOCKS rather than holds, and the
+  //     distinction matters: rung 6 below HOLDS a weak case for the
+  //     deadline, and holding is what would have filed cay-collective
+  //     #13195's false "the goods were never returned" claim on
+  //     2026-09-05. A case with no possible proof of delivery, whose only
+  //     defence depends on a fact only the merchant holds, is not
+  //     something a clock should be allowed to file.
+  if (assessment.gateDecision === "returned_to_sender") {
+    return { action: "block", reasonCodes: ["returned_to_sender"] };
   }
 
   // 3. STALENESS. A decision computed against inputs that have since changed

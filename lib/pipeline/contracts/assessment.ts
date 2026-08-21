@@ -61,7 +61,17 @@ export interface CompletenessSnapshot {
  * coverage status may be shown to the merchant. A boolean collapses a
  * distinction that has to survive all the way to the issuer boundary.
  */
-export type GateDecision = "coverage" | "fatal_loss" | null;
+export type GateDecision =
+  | "coverage"
+  | "fatal_loss"
+  /** The carrier returned the parcel to the merchant and no refund
+   *  followed. Ranks below fatal-loss: the case is not unwinnable, but it
+   *  can never carry a proof of delivery and the only available argument
+   *  turns on why the parcel came back — which only the merchant knows.
+   *  So it BLOCKS automated filing, at the deadline included, and the
+   *  merchant decides. (cay-collective #13195, 2026-08-20.) */
+  | "returned_to_sender"
+  | null;
 
 export interface CaseAssessmentSnapshot {
   caseId: string;

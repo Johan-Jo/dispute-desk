@@ -28,6 +28,7 @@ function held(overrides: Record<string, unknown> = {}) {
       creditAlreadyIssued: null,
     coverageState: "not_covered",
     fatalLoss: null,
+    returnedToSender: null,
     acknowledgement: OFFERABLE,
     ...overrides,
   });

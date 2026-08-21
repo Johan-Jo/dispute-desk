@@ -1059,6 +1059,7 @@ export async function claimAndSendDeferredNewDisputeAlert(
         case_strength?: { overall?: string };
         coverage?: { state?: string };
         fatal_loss?: { triggered?: boolean };
+        returned_to_sender?: { triggered?: boolean };
         credit_already_issued?: { triggered?: boolean; coversDisputedAmount?: boolean };
       } | null;
       held = resolveHeldState({
@@ -1068,6 +1069,7 @@ export async function claimAndSendDeferredNewDisputeAlert(
         caseStrength: packJson?.case_strength?.overall ?? null,
         coverageState: packJson?.coverage?.state ?? null,
         fatalLoss: packJson?.fatal_loss ?? null,
+        returnedToSender: packJson?.returned_to_sender ?? null,
         creditAlreadyIssued: packJson?.credit_already_issued ?? null,
         acknowledgement: {
           merchantSuppliedAcknowledgement: merchantSuppliedAcknowledgementFromItems(

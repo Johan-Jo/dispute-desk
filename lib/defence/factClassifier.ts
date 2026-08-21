@@ -264,6 +264,8 @@ export function categoryForField(fieldKey: string, payload: Record<string, unkno
       return "refund_record";
     case "no_return_initiated":
       return "no_return_initiated";
+    case "returned_parcel_outcome":
+      return "parcel_outcome";
     case "shipping_policy":
       return "policy_shipping";
     case "cancellation_policy":
@@ -505,6 +507,34 @@ function extractValue(
         returnInitiated: false,
         returnStatus: typeof p.returnStatus === "string" ? p.returnStatus : null,
       };
+    case "returned_parcel_outcome": {
+      /* TWO AUDIENCES, ONE FACT.
+       *
+       * `reason` is bank-facing when the merchant says the customer
+       * refused delivery or never collected — Klarna's merchant docs ask
+       * for exactly that, and treat it as NOT a valid return or
+       * withdrawal. `undeliverable_address` is carried but grounds
+       * nothing: "we sent it to an address that doesn't work" is not an
+       * argument, and no strategy may cite it.
+       *
+       * `disposition` NEVER leaves the merchant UI. "We restocked it and
+       * kept the money" is a confession, and it is the answer most likely
+       * to be true. It rides here so the gate and the merchant's own view
+       * can use it, and `citableReason` is what the writer is handed.
+       * Same two-layer rule as the fatal-loss message. */
+      const reason =
+        p.reason === "refused_delivery" ||
+        p.reason === "not_collected" ||
+        p.reason === "undeliverable_address"
+          ? p.reason
+          : null;
+      return {
+        reason,
+        citableReason:
+          reason === "refused_delivery" || reason === "not_collected" ? reason : null,
+        returnedAt: typeof p.returnedAt === "string" ? p.returnedAt : null,
+      };
+    }
     case "fraud_risk_screening": {
       // Pass the actual positive fact descriptions through to the
       // LLM payload so the narrative can cite specific Shopify
@@ -620,6 +650,7 @@ const FIELD_LABEL_EN: Record<string, string> = {
   refund_policy: "Refund policy",
   refund_record: "Refund record",
   no_return_initiated: "No return initiated",
+  returned_parcel_outcome: "Returned parcel outcome",
   shipping_policy: "Shipping policy",
   cancellation_policy: "Cancellation policy",
   order_confirmation: "Order record",

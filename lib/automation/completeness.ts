@@ -26,6 +26,13 @@ export type RequirementMode =
    *  never-refunded order is never nagged to "add a refund record" —
    *  a demand the merchant could not satisfy and should not see. */
   | "required_if_refunded"
+  /** Applies ONLY when a carrier returned a parcel on this order to the
+   *  merchant. The merchant's answer to "why did it come back?" is the
+   *  one fact no system can collect, and the one Klarna's merchant docs
+   *  ask for by name — but on the overwhelming majority of orders no
+   *  parcel came back, and a permanently-missing "tell us about the
+   *  returned parcel" row would be a nag nobody could ever satisfy. */
+  | "required_if_returned_to_sender"
   | "recommended"
   | "optional";
 
@@ -65,6 +72,15 @@ export interface OrderContext {
    * Optional for back-compat; defaults to `false`.
    */
   hasRefund?: boolean;
+  /**
+   * Whether a carrier reconciled any shipment on this order to
+   * return-to-sender. Drives `required_if_returned_to_sender`. Derived
+   * from the assembled pack sections (the carrier knows this; Shopify
+   * often does not) via `hasReturnedToSenderShipment` in
+   * `lib/packs/contradictionGate.ts`.
+   * Optional for back-compat; defaults to `false`.
+   */
+  hasReturnedToSenderParcel?: boolean;
 }
 
 export interface ChecklistItem {
@@ -105,6 +121,7 @@ export const REASON_TEMPLATES: Record<string, ReasonTemplate> = {
     { field: "shipping_policy", label: "Shipping Policy", requirementMode: "recommended" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "optional" },
     { field: "supporting_documents", label: "Supporting documents", requirementMode: "optional" },
+    { field: "returned_parcel_outcome", label: "Returned Parcel Outcome", requirementMode: "required_if_returned_to_sender" },
   ],
   FRAUDULENT: [
     { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always" },
@@ -135,6 +152,7 @@ export const REASON_TEMPLATES: Record<string, ReasonTemplate> = {
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended" },
     { field: "shipping_tracking", label: "Shipping Tracking", requirementMode: "optional" },
     { field: "supporting_documents", label: "Supporting documents", requirementMode: "optional" },
+    { field: "returned_parcel_outcome", label: "Returned Parcel Outcome", requirementMode: "required_if_returned_to_sender" },
   ],
   DUPLICATE: [
     { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always" },
@@ -166,6 +184,7 @@ export const REASON_TEMPLATES: Record<string, ReasonTemplate> = {
     { field: "delivery_proof", label: "Delivery Confirmation", requirementMode: "recommended" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended" },
     { field: "supporting_documents", label: "Supporting documents", requirementMode: "optional" },
+    { field: "returned_parcel_outcome", label: "Returned Parcel Outcome", requirementMode: "required_if_returned_to_sender" },
   ],
   GENERAL: [
     { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always" },
@@ -173,6 +192,7 @@ export const REASON_TEMPLATES: Record<string, ReasonTemplate> = {
     { field: "customer_communication", label: "Customer Communication", requirementMode: "optional" },
     { field: "refund_policy", label: "Refund Policy", requirementMode: "optional" },
     { field: "supporting_documents", label: "Supporting documents", requirementMode: "optional" },
+    { field: "returned_parcel_outcome", label: "Returned Parcel Outcome", requirementMode: "required_if_returned_to_sender" },
   ],
 };
 
@@ -190,6 +210,7 @@ const SCORE_WEIGHT: Record<RequirementMode, number> = {
   required_if_fulfilled: 1.0,
   required_if_card_payment: 1.0,
   required_if_refunded: 1.0,
+  required_if_returned_to_sender: 1.0,
   recommended: 0.5,
   optional: 0.1,
 };
@@ -245,6 +266,15 @@ export function resolveRequirement(
           required: false,
           collectable: false,
           unavailableReason: "No refund was issued on this order",
+        };
+      }
+      return { required: true, collectable: true };
+    case "required_if_returned_to_sender":
+      if (!ctx.hasReturnedToSenderParcel) {
+        return {
+          required: false,
+          collectable: false,
+          unavailableReason: "No parcel on this order was returned to sender",
         };
       }
       return { required: true, collectable: true };
@@ -411,6 +441,7 @@ export const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
     { field: "shipping_policy", label: "Shipping Policy", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_policy", collectionType: "conditional_auto" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "optional", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "supporting_documents", label: "Supporting Documents", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
+    { field: "returned_parcel_outcome", label: "Returned Parcel Outcome", requirementMode: "required_if_returned_to_sender", priority: "critical", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
   ],
   FRAUDULENT: [
     { field: "order_confirmation", label: "Transaction Record", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
@@ -462,6 +493,7 @@ export const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
     { field: "customer_account_info", label: "Customer Account History", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "shipping_tracking", label: "Shipping Tracking", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "supporting_documents", label: "Supporting Documents", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
+    { field: "returned_parcel_outcome", label: "Returned Parcel Outcome", requirementMode: "required_if_returned_to_sender", priority: "critical", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
   ],
   DUPLICATE: [
     { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
@@ -499,6 +531,7 @@ export const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
     { field: "delivery_proof", label: "Delivery Confirmation", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "conditional_auto" },
     { field: "customer_communication", label: "Customer Communication", requirementMode: "recommended", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "supporting_documents", label: "Supporting Documents", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
+    { field: "returned_parcel_outcome", label: "Returned Parcel Outcome", requirementMode: "required_if_returned_to_sender", priority: "critical", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
   ],
   GENERAL: [
     { field: "order_confirmation", label: "Order Confirmation", requirementMode: "required_always", priority: "critical", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
@@ -506,6 +539,7 @@ export const REASON_TEMPLATES_V2: Record<string, TemplateFieldV2[]> = {
     { field: "customer_communication", label: "Customer Communication", requirementMode: "optional", priority: "recommended", blocking: false, expectedSource: "auto_shopify", collectionType: "auto" },
     { field: "refund_policy", label: "Refund Policy", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "auto_policy", collectionType: "conditional_auto" },
     { field: "supporting_documents", label: "Supporting Documents", requirementMode: "optional", priority: "optional", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
+    { field: "returned_parcel_outcome", label: "Returned Parcel Outcome", requirementMode: "required_if_returned_to_sender", priority: "critical", blocking: false, expectedSource: "manual_upload", collectionType: "manual" },
   ],
 };
 
@@ -586,6 +620,16 @@ function resolveItemStatus(
           status: "unavailable",
           collectable: false,
           unavailableReason: "No refund was issued on this order",
+        };
+      }
+      break;
+    case "required_if_returned_to_sender":
+      // Nothing came back → there is nothing to tell us about it.
+      if (!ctx.hasReturnedToSenderParcel) {
+        return {
+          status: "unavailable",
+          collectable: false,
+          unavailableReason: "No parcel on this order was returned to sender",
         };
       }
       break;

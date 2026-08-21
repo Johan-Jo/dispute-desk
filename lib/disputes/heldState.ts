@@ -166,6 +166,51 @@ export function merchantSuppliedAcknowledgementFromItems(
 }
 
 /**
+ * Written ONLY by `app/api/packs/[packId]/parcel-outcome/route.ts` — i.e.
+ * by the merchant, through the returned-parcel form.
+ */
+const PARCEL_OUTCOME_KIND = "returned_parcel_outcome";
+
+/** Has the merchant already answered the returned-parcel question? */
+export function merchantAnsweredParcelOutcomeFromItems(
+  items: ReadonlyArray<EvidenceItemPayloadRow> | null | undefined,
+): boolean {
+  return (items ?? []).some(
+    (item) =>
+      !!item?.payload &&
+      typeof item.payload === "object" &&
+      (item.payload as Record<string, unknown>).kind === PARCEL_OUTCOME_KIND,
+  );
+}
+
+export interface ParcelOutcomeOfferInput {
+  /** A carrier returned a shipment on this order to the merchant. */
+  returnedToSender: boolean;
+  merchantAnsweredParcelOutcome: boolean;
+  submissionState: string | null | undefined;
+  finalOutcome: string | null | undefined;
+}
+
+/**
+ * Would the returned-parcel question render? THE ONE gate, for the same
+ * reason `canOfferCardholderAcknowledgement` below is: a surface that
+ * invites an action the card hides — or that hides while the card is on
+ * screen — is the failure mode this shape exists to prevent.
+ *
+ * Note the first condition. The question is only ever asked about a
+ * parcel that actually came back; asking it otherwise would be a demand
+ * the merchant cannot satisfy, which is exactly what the checklist's
+ * `required_if_returned_to_sender` mode also encodes.
+ */
+export function canOfferParcelOutcome(input: ParcelOutcomeOfferInput): boolean {
+  if (!input.returnedToSender) return false;
+  if (input.merchantAnsweredParcelOutcome) return false;
+  if (input.submissionState === "submitted_confirmed") return false;
+  if (input.finalOutcome) return false;
+  return true;
+}
+
+/**
  * Would the cardholder-acknowledgement CTA render? This is the ONE gate;
  * `CardholderAcknowledgementCard` calls it too, so a surface can never invite
  * an action the card hides (or stay silent while the card is on screen).
@@ -287,6 +332,7 @@ export function resolveHeldState(input: HeldStateInput): HeldState {
       gateDecisionFromFacts({
         coverageState: input.coverageState,
         fatalLoss: input.fatalLoss,
+        returnedToSender: input.returnedToSender,
       }),
     ),
     assessmentFreshness: { fresh: true },

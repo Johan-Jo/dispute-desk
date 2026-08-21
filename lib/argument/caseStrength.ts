@@ -295,6 +295,19 @@ export interface CaseFatalLossInput {
   messageToken: I18nToken | null;
 }
 
+/** Optional Returned-to-sender Gate input
+ *  (`lib/automation/returnedToSender`). Caps `overall` at "weak" and
+ *  replaces `strengthReasonI18n`, like fatal-loss — but it is a SEPARATE
+ *  gate because the case is not structurally unwinnable, only
+ *  un-auto-filable. Coverage beats it; fatal-loss beats it. */
+export interface CaseReturnedToSenderInput {
+  triggered: boolean;
+  reason: "returned_unrefunded" | null;
+  returnedAt: string | null;
+  /** Merchant-facing message token. NEVER bank-facing. */
+  messageToken: I18nToken | null;
+}
+
 /** Optional credit-already-issued input (`lib/automation/creditTiming`).
  *  A FLOOR, not a signal: when the credit precedes the dispute AND
  *  covers it in full, `overall` becomes "strong" and the hero reads
@@ -393,6 +406,23 @@ const COVERED_STRENGTH_REASON_TOKEN: I18nToken = {
  * `buildCaseGateAssessment`, where each one had to be stated.
  */
 
+/** Merchant-facing reason for a returned-to-sender case. Prefers the
+ *  gate's own token (which the gate builds from its reason), falls back to
+ *  the reason key, and finally to the family's generic weak copy — the
+ *  same three-step shape the fatal-loss branches use, so a future reason
+ *  added to the gate can never render as a raw key. */
+function returnedToSenderReasonToken(
+  gate: CaseReturnedToSenderInput | null,
+  family: ReasonFamily,
+): I18nToken {
+  return (
+    gate?.messageToken ??
+    (gate?.reason
+      ? { key: `disputes.strengthReason.returnedToSender.${gate.reason}` }
+      : { key: `disputes.strengthReason.${family}.weak` })
+  );
+}
+
 export function calculateCaseStrength(
   checklist: ChecklistItemV2[],
   reason: string | null | undefined,
@@ -406,14 +436,23 @@ export function calculateCaseStrength(
    *  `buildCaseGateAssessment`. See `CaseGateAssessment`. */
   gates: CaseGateAssessment,
 ): CaseStrengthResult {
-  const { coverage, fatalLoss, riskWeakness, nameMismatch, creditAlreadyIssued } = gates;
+  const {
+    coverage,
+    fatalLoss,
+    returnedToSender,
+    riskWeakness,
+    nameMismatch,
+    creditAlreadyIssued,
+  } = gates;
   const family = resolveReasonFamily(reason);
 
   if (!checklist.length) {
     const earlyCovered = coverage?.state === "covered_shopify";
     const earlyFatal = !earlyCovered && fatalLoss?.triggered === true;
+    const earlyReturned =
+      !earlyCovered && !earlyFatal && returnedToSender?.triggered === true;
     return {
-      overall: earlyFatal ? "weak" : "insufficient",
+      overall: earlyFatal || earlyReturned ? "weak" : "insufficient",
       score: 0,
       coveragePercent: 0,
       strongCount: 0,
@@ -430,9 +469,12 @@ export function calculateCaseStrength(
               ?? (fatalLoss?.reason
                 ? { key: `disputes.strengthReason.fatalLoss.${fatalLoss.reason}` }
                 : { key: `disputes.strengthReason.${family}.weak` }))
-          : { key: `disputes.strengthReason.${family}.insufficient` },
+          : earlyReturned
+            ? returnedToSenderReasonToken(returnedToSender, family)
+            : { key: `disputes.strengthReason.${family}.insufficient` },
       coverage: coverage ?? undefined,
       fatalLoss: fatalLoss ?? undefined,
+      returnedToSender: returnedToSender ?? undefined,
       // No checklist → no scoring → the risk-weakness and name-mismatch
       // caps are no-ops here. Diagnostic blocks still propagate for audit.
       riskWeakness: riskWeakness ?? undefined,
@@ -843,6 +885,24 @@ export function calculateCaseStrength(
     isFraudAvsOnlyStrong = false;
   }
 
+  /* Returned-to-sender Gate (2026-08-20, cay-collective #13195). Ranks
+   * BELOW coverage and fatal-loss: a covered case is Shopify's problem,
+   * and a refund already issued is a bigger fact than a parcel back in
+   * the stockroom. Above everything else, though, because a returned
+   * parcel can never have a proof of delivery — so whatever the family's
+   * own evidence counted, the case is weak and a human has to decide it.
+   *
+   * The cap is `weak`, not `insufficient`: there IS evidence and there IS
+   * a narrow argument (see lib/automation/returnedToSender.ts). What
+   * there is not, is an automated filing. */
+  const isReturnedToSender =
+    !isCovered && !isFatalLoss && returnedToSender?.triggered === true;
+
+  if (isReturnedToSender) {
+    overall = "weak";
+    isFraudAvsOnlyStrong = false;
+  }
+
   // Credit-already-issued (2026-08-01). A credit processed BEFORE the
   // cardholder filed is not "strong evidence for this family's theory" —
   // it is a different claim, that the transaction was already made whole.
@@ -860,6 +920,10 @@ export function calculateCaseStrength(
   const isCreditAlreadyIssued =
     !isCovered &&
     !isFatalLoss &&
+    // A returned-to-sender case is never lifted back to "strong" by the
+    // credit floor: the floor's premise is that the customer already has
+    // the money, and this gate only fires when they do not.
+    !isReturnedToSender &&
     creditAlreadyIssued?.triggered === true &&
     creditAlreadyIssued?.coversDisputedAmount === true;
 
@@ -918,9 +982,11 @@ export function calculateCaseStrength(
           ?? (fatalLoss?.reason
             ? { key: `disputes.strengthReason.fatalLoss.${fatalLoss.reason}` }
             : { key: `disputes.strengthReason.${family}.weak` }))
-      : isCreditAlreadyIssued
-        ? { key: "disputes.strengthReason.creditAlreadyIssued" }
-        : strengthReasonI18nToken;
+      : isReturnedToSender
+        ? returnedToSenderReasonToken(returnedToSender, family)
+        : isCreditAlreadyIssued
+          ? { key: "disputes.strengthReason.creditAlreadyIssued" }
+          : strengthReasonI18nToken;
 
   return {
     overall,
@@ -936,14 +1002,20 @@ export function calculateCaseStrength(
     // confirmation to a transaction they already refunded is noise —
     // it advises work that cannot change the argument.
     improvementHintI18n:
-      isCovered || isFatalLoss || isCreditAlreadyIssued ? null : improvementHintI18n,
+      isCovered || isFatalLoss || isReturnedToSender || isCreditAlreadyIssued
+        ? null
+        : improvementHintI18n,
     heroVariant,
-    // Suppress the in-transit framing when coverage or fatal-loss has
-    // overridden the reason — those states own the merchant message.
-    deliveryInTransit: isCovered || isFatalLoss ? false : deliveryInTransit,
+    // Suppress the in-transit framing when coverage, fatal-loss or a
+    // returned parcel has overridden the reason — those states own the
+    // merchant message. A returned parcel is emphatically NOT in transit;
+    // leaving that framing on is the same lie in a different place.
+    deliveryInTransit:
+      isCovered || isFatalLoss || isReturnedToSender ? false : deliveryInTransit,
     strengthReasonI18n: finalStrengthReasonI18n,
     coverage: coverage ?? undefined,
     fatalLoss: fatalLoss ?? undefined,
+    returnedToSender: returnedToSender ?? undefined,
     riskWeakness: riskWeakness ?? undefined,
     nameMismatch: nameMismatch
       ? { ...nameMismatch, capApplied: nameMismatchCapApplied }
@@ -1139,6 +1211,7 @@ export function calculateImprovement(
     buildCaseGateAssessment({
       coverage: gateNotProvided("gate_free_query"),
       fatalLoss: gateNotProvided("gate_free_query"),
+      returnedToSender: gateNotProvided("gate_free_query"),
       riskWeakness: gateNotProvided("gate_free_query"),
       nameMismatch: gateNotProvided("gate_free_query"),
       creditAlreadyIssued: gateNotProvided("gate_free_query"),

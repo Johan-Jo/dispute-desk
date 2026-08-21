@@ -51,6 +51,15 @@ export const CANONICAL_DOMAIN = {
   order_confirmation: "evidence",
   refund_record: "evidence",
   no_return_initiated: "evidence",
+  /**
+   * Merchant-stated outcome for a parcel the carrier returned to sender.
+   * `evidence` domain with `citationPolicy` effectively split by key: the
+   * `reason` may be cited, the `disposition` may not. Same
+   * scorable-vs-citable independence the `device_session_consistency` note
+   * below describes, in the other direction — this one is CITABLE but
+   * never SCORED (`excludedFromStrength: true`).
+   */
+  returned_parcel_outcome: "evidence",
   activity_log: "evidence",
   customer_account_info: "evidence",
   shipping_tracking: "evidence",

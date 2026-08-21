@@ -167,6 +167,20 @@ export interface CaseStrengthResult {
     /** Merchant-facing message token. Resolved via `resolveToken`. */
     messageToken: I18nToken | null;
   };
+  /** Returned-to-sender gate state. When `triggered === true` AND not
+   *  pre-empted by coverage or fatal-loss, `overall` is capped at "weak",
+   *  `heroVariant` becomes "hard_to_win", `strengthReasonI18n` is replaced
+   *  and auto-submission is blocked — the carrier brought the parcel back
+   *  to the merchant and no refund followed, so no proof of delivery can
+   *  exist and a human has to decide the case.
+   *  Merchant-facing only; the message NEVER reaches bank-facing text. */
+  returnedToSender?: {
+    triggered: boolean;
+    reason: "returned_unrefunded" | null;
+    /** Carrier's terminal return timestamp, ISO, when known. */
+    returnedAt: string | null;
+    messageToken: I18nToken | null;
+  };
   /** Risk-weakness gate state (fraud-risk Phase 2). When
    *  `triggered === true` AND not pre-empted by coverage or fatal-loss,
    *  the engine CAPS `overall` at "moderate" (never elevated). If the

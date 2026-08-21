@@ -297,6 +297,7 @@ describe("evaluateAutoSubmitGuards — credit already issued", () => {
     const v = evaluateAutoSubmitGuards({
       coverageState: null,
       fatalLoss: null,
+      returnedToSender: null,
       // Weak on the family's own evidence — the credit is the case.
       caseStrength: "weak",
       creditAlreadyIssued: { triggered: true, coversDisputedAmount: true },
@@ -308,6 +309,7 @@ describe("evaluateAutoSubmitGuards — credit already issued", () => {
     const v = evaluateAutoSubmitGuards({
       coverageState: null,
       fatalLoss: null,
+      returnedToSender: null,
       caseStrength: "weak",
       creditAlreadyIssued: { triggered: true, coversDisputedAmount: false },
     });
@@ -319,6 +321,7 @@ describe("evaluateAutoSubmitGuards — credit already issued", () => {
       evaluateAutoSubmitGuards({
         coverageState: "covered_shopify",
         fatalLoss: null,
+        returnedToSender: null,
         caseStrength: "strong",
         creditAlreadyIssued: { triggered: true, coversDisputedAmount: true },
       }).decision,
@@ -327,6 +330,7 @@ describe("evaluateAutoSubmitGuards — credit already issued", () => {
       evaluateAutoSubmitGuards({
         coverageState: null,
         fatalLoss: { triggered: true, reason: "inr_no_fulfillment" },
+        returnedToSender: null,
         caseStrength: "strong",
         creditAlreadyIssued: { triggered: true, coversDisputedAmount: true },
       }).decision,

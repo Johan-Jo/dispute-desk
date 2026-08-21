@@ -179,6 +179,7 @@ describe("input hash — every result-bearing input moves it", () => {
     const unseen = buildCaseGateAssessment({
       coverage: gateNotProvided("gate_free_query"),
       fatalLoss: gateNotProvided("order_not_loaded"),
+      returnedToSender: gateNotProvided("gate_free_query"),
       riskWeakness: gateNotProvided("gate_free_query"),
       nameMismatch: gateNotProvided("gate_free_query"),
       creditAlreadyIssued: gateNotProvided("gate_free_query"),
@@ -314,6 +315,7 @@ describe("resolveGateDecision", () => {
         buildCaseGateAssessment({
           coverage: gateNotProvided("order_not_loaded"),
           fatalLoss: gateNotProvided("order_not_loaded"),
+          returnedToSender: gateNotProvided("order_not_loaded"),
           riskWeakness: gateProvided(null),
           nameMismatch: gateProvided(null),
           creditAlreadyIssued: gateProvided(null),
