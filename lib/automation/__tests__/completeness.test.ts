@@ -52,6 +52,41 @@ describe("evaluateCompleteness", () => {
     ).toMatch(/returned to sender/i);
   });
 
+  it("a DB template cannot hide the returned-parcel question (prod #13195)", () => {
+    // The pack is built from an admin template, so evaluateCompletenessV2
+    // takes the templateItems branch — which knows nothing about a mode
+    // invented after the template was authored.
+    const templateItems = [
+      { key: "order_confirmation", label: "Order Confirmation", required: true, collector_key: "order_confirmation", requirement_mode: "required_always" as const },
+      { key: "delivery_proof", label: "Delivery Proof", required: false, collector_key: "delivery_proof", requirement_mode: "recommended" as const },
+    ];
+    const ctx = { ...FULFILLED_CARD, hasReturnedToSenderParcel: true };
+    const r = evaluateCompletenessV2(
+      "CREDIT_NOT_PROCESSED",
+      new Set(["order_confirmation", "delivery_proof"]),
+      null,
+      templateItems,
+      ctx,
+    );
+    const row = r.checklist.find((c) => c.field === "returned_parcel_outcome");
+    expect(row, "the returned-parcel row must survive a DB template").toBeTruthy();
+    expect(row?.status).toBe("missing");
+  });
+
+  it("...and does not add it when nothing came back", () => {
+    const templateItems = [
+      { key: "order_confirmation", label: "Order Confirmation", required: true, collector_key: "order_confirmation", requirement_mode: "required_always" as const },
+    ];
+    const r = evaluateCompletenessV2(
+      "CREDIT_NOT_PROCESSED",
+      new Set(["order_confirmation"]),
+      null,
+      templateItems,
+      FULFILLED_CARD,
+    );
+    expect(r.checklist.some((c) => c.field === "returned_parcel_outcome")).toBe(false);
+  });
+
   it("marks avs_cvv_match as unavailable when no card payment", () => {
     const fields = new Set(["order_confirmation", "billing_address_match", "shipping_tracking", "delivery_proof"]);
     const result = evaluateCompleteness("FRAUDULENT", fields, null, FULFILLED_NO_CARD);

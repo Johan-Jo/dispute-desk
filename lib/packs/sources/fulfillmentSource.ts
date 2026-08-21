@@ -259,6 +259,20 @@ function extractTrackingData(
 
   // The carrier's own terminal event, citable verbatim in evidence
   // ("Picked up by receiver, X Servicepoint") — data, not UI copy.
+  //
+  // `state.carrier.shipment` exists only after a LIVE lookup. A cached
+  // terminal hit (the normal case on every rebuild — see
+  // `isTerminalCacheHit`) reuses the stored result without re-calling the
+  // carrier, and the cache keeps `terminal_at` but not the event text. So
+  // fall back to the reconciled winner's own timestamp with a null
+  // message: the DATE is the part every surface needs, and losing it on a
+  // rebuild is a silent regression.
+  //
+  // Caught on prod 2026-08-21: cay-collective #13195's first build
+  // recorded "Shipment returned to sender / 2026-07-06T09:40", and the
+  // rebuild an hour later — same data, cache hit — wrote null, so the
+  // merchant saw "Returned to sender" with no date and the gate's
+  // `returnedAt` was empty.
   const shipment = state.carrier?.shipment;
   const carrierTerminalEvent =
     shipment?.deliveryStatus && shipment.terminalAt
@@ -267,7 +281,9 @@ function extractTrackingData(
           message:
             shipment.events.find((e) => e.happenedAt === shipment.terminalAt)?.message ?? null,
         }
-      : null;
+      : carrierWon && state.current?.at
+        ? { happenedAt: state.current.at, message: null }
+        : null;
 
   return {
     fulfillmentId: fulfillment.id,
