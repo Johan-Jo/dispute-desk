@@ -1005,7 +1005,8 @@
         "submitting": "Wird gespeichert …",
         "cancel": "Abbrechen",
         "errorWindowClosed": "Shopify hat diesen Fall bereits an die Bank weitergeleitet, deshalb kann diese Antwort nicht mehr hinzugefügt werden.",
-        "errorGeneric": "Ihre Antworten konnten nicht gespeichert werden ({code}). Bitte versuchen Sie es erneut."
+        "errorGeneric": "Ihre Antworten konnten nicht gespeichert werden ({code}). Bitte versuchen Sie es erneut.",
+        "reasonHintFromCarrier": "Die Aufzeichnung von {carrier} deutet auf Folgendes hin: {reason}. Bestätigen Sie das oder wählen Sie, was tatsächlich passiert ist — in die Stellungnahme geht Ihre Antwort ein, nicht deren."
       }
     },
     "reviewTab": {

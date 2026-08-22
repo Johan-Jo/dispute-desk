@@ -24,6 +24,7 @@
 
 import {
   classifyDeliveryTimeline,
+  classifyReturnReason,
 } from "@/lib/shopify/deliveryEventClassifier";
 import { extractNativeSignature } from "@/lib/shopify/queries/ordersForBackfill";
 import { extractDhlTrackingIds } from "@/lib/carriers/urlTracking";
@@ -175,6 +176,20 @@ export function normalizeDhlShipment(
     events,
     deliveryStatus,
     terminalAt,
+    // Only meaningful for a return; `classifyReturnReason` is bounded by
+    // `terminalAt` so a reship-then-refuse cannot backdate onto an
+    // earlier return.
+    returnReason:
+      deliveryStatus === "Returned"
+        ? classifyReturnReason(
+            events.map((e) => ({
+              status: e.statusCode,
+              happenedAt: e.happenedAt,
+              message: e.message,
+            })),
+            terminalAt,
+          )
+        : null,
     podName: extractNativeSignature(
       events.map((e) => ({ status: e.statusCode, message: e.message })),
     ),

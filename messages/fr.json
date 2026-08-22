@@ -885,7 +885,8 @@
         "submitting": "Enregistrement…",
         "cancel": "Annuler",
         "errorWindowClosed": "Shopify a déjà transmis ce litige à la banque : cette réponse ne peut plus être ajoutée.",
-        "errorGeneric": "Impossible d’enregistrer vos réponses ({code}). Veuillez réessayer."
+        "errorGeneric": "Impossible d’enregistrer vos réponses ({code}). Veuillez réessayer.",
+        "reasonHintFromCarrier": "Le relevé de {carrier} indique : {reason}. Confirmez-le ou choisissez ce qui s'est réellement passé — c'est votre réponse qui figurera dans la réponse transmise, pas la sienne."
       }
     },
     "reviewTab": {

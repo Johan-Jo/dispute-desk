@@ -1461,7 +1461,8 @@
         "submitting": "Saving…",
         "cancel": "Cancel",
         "errorWindowClosed": "Shopify has already forwarded this dispute to the bank, so this answer can no longer be added.",
-        "errorGeneric": "Could not save your answers ({code}). Please try again."
+        "errorGeneric": "Could not save your answers ({code}). Please try again.",
+        "reasonHintFromCarrier": "{carrier}'s record suggests: {reason}. Confirm it or choose what actually happened — your answer is the one that goes into the response, not theirs."
       }
     },
     "reviewTab": {

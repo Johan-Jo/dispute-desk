@@ -47,6 +47,10 @@ import {
   canOfferParcelOutcome,
   merchantAnsweredParcelOutcomeFromItems,
 } from "@/lib/disputes/heldState";
+import {
+  buildDeliveryPresentation,
+  resolveDeliveryReceipt,
+} from "@/lib/argument/deliveryPresentation";
 import type { useDisputeWorkspace } from "../../hooks/useDisputeWorkspace";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
@@ -84,6 +88,23 @@ export function ParcelOutcomeCard({ workspace }: Props) {
   // The same gate the strength engine and the auto-submit guards read —
   // never a local re-derivation of "did a parcel come back".
   const returnedToSender = derived.caseStrength?.returnedToSender?.triggered === true;
+
+  /* WHAT THE CARRIER SAID, IF ANYTHING — a hint, never a pre-selection.
+   *
+   * Pre-selecting would let a merchant click through and ship the
+   * carrier's guess as their own sworn answer; only the merchant's answer
+   * is citable to the bank, so the merchant has to make it. What this
+   * does is spare them from guessing when the carrier already recorded
+   * it. Usually null: measured on prod, carriers mostly emit a bare
+   * "returned to sender" with no reason at all. */
+  const deliveryPayload = (data?.pack?.evidenceItemsByField?.delivery_proof?.payload ??
+    data?.pack?.evidenceItemsByField?.shipping_tracking?.payload ??
+    null) as Record<string, unknown> | null;
+  const returnHint = resolveDeliveryReceipt(deliveryPayload).returnHint;
+  // Name the carrier in the hint so the merchant knows whose record it is
+  // and can go check the tracking page themselves.
+  const carrierName =
+    buildDeliveryPresentation(deliveryPayload).trackingLinks[0]?.carrier ?? null;
 
   const offerable = canOfferParcelOutcome({
     returnedToSender,
@@ -266,7 +287,14 @@ export function ParcelOutcomeCard({ workspace }: Props) {
         <BlockStack gap="300">
           <Select
             label={t("reasonLabel")}
-            helpText={t("reasonHint")}
+            helpText={
+              returnHint && carrierName
+                ? t("reasonHintFromCarrier", {
+                    carrier: carrierName,
+                    reason: t(`reason.${returnHint}`),
+                  })
+                : t("reasonHint")
+            }
             options={[
               { label: t("choosePlaceholder"), value: "" },
               ...REASONS.map((r) => ({ label: t(`reason.${r}`), value: r })),
