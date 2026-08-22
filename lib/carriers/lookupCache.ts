@@ -30,6 +30,7 @@ export interface CachedLookup {
   shopify_fulfillment_id: string;
   shipment_status: string | null;
   terminal_at: string | null;
+  return_reason: string | null;
   tracking_source: string | null;
   last_carrier_lookup_result: string | null;
   last_carrier_lookup_at: string | null;
@@ -56,7 +57,7 @@ export async function getCachedLookups(
     const { data, error } = await sb
       .from("shopify_fulfillment_trackings")
       .select(
-        "tracking_key, shopify_fulfillment_id, shipment_status, terminal_at, tracking_source, last_carrier_lookup_result, last_carrier_lookup_at, effective_tracking_id",
+        "tracking_key, shopify_fulfillment_id, shipment_status, terminal_at, return_reason, tracking_source, last_carrier_lookup_result, last_carrier_lookup_at, effective_tracking_id",
       )
       .eq("shop_id", shopId)
       .in("shopify_fulfillment_id", fulfillmentIds);
@@ -136,6 +137,12 @@ export async function persistCarrierLookup(args: {
     row.shipment_status = args.shipment.deliveryStatus;
     row.terminal_at = args.shipment.terminalAt;
     row.tracking_source = `carrier_api_${args.match.carrier}`;
+    // Persisted, not re-derived on read: a terminal cache hit reuses this
+    // row without re-calling the carrier, and the event timeline the
+    // reason was classified from is gone by then. Anything left only in
+    // the live response silently becomes null on the first rebuild — see
+    // `carrierTerminalEvent` on cay-collective #13195 (PR #593).
+    row.return_reason = args.shipment.returnReason ?? null;
   }
   try {
     const sb = getServiceClient();
@@ -150,6 +157,13 @@ export async function persistCarrierLookup(args: {
       message: err instanceof Error ? err.message : String(err),
     });
   }
+}
+
+/** The carrier's suggested return reason for a cached row, when it held
+ *  one. Reads the persisted column — the only place it survives past the
+ *  live lookup. */
+export function cachedReturnReason(row: CachedLookup | undefined): string | null {
+  return row?.return_reason ?? null;
 }
 
 /** Roll the reconciled carrier state up to `shopify_orders` so the

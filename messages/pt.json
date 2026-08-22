@@ -885,7 +885,8 @@
         "submitting": "A guardar…",
         "cancel": "Cancelar",
         "errorWindowClosed": "A Shopify já encaminhou esta disputa para o banco, pelo que esta resposta já não pode ser adicionada.",
-        "errorGeneric": "Não foi possível guardar as suas respostas ({code}). Tente novamente."
+        "errorGeneric": "Não foi possível guardar as suas respostas ({code}). Tente novamente.",
+        "reasonHintFromCarrier": "O registo da {carrier} sugere: {reason}. Confirme ou escolha o que aconteceu de facto — é a sua resposta que segue na resposta enviada, não a deles."
       }
     },
     "reviewTab": {

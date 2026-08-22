@@ -1340,7 +1340,8 @@
         "submitting": "Sparar …",
         "cancel": "Avbryt",
         "errorWindowClosed": "Shopify har redan vidarebefordrat den här tvisten till banken, så svaret kan inte längre läggas till.",
-        "errorGeneric": "Det gick inte att spara svaren ({code}). Försök igen."
+        "errorGeneric": "Det gick inte att spara svaren ({code}). Försök igen.",
+        "reasonHintFromCarrier": "{carrier}s uppgifter tyder på: {reason}. Bekräfta det eller välj vad som faktiskt hände — det är ditt svar som tas med i responsen, inte deras."
       }
     },
     "reviewTab": {
