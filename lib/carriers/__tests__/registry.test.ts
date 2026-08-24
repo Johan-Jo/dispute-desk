@@ -98,6 +98,7 @@ describe("carrier-neutrality via the fake adapter (plan §9 PR 1B)", () => {
         deliveryStatus: "Delivered",
         terminalAt: "2026-07-01T10:00:00Z",
         podName: null,
+        returnReason: null,
       },
     };
     const fetched: string[] = [];

@@ -2550,6 +2550,27 @@ Enforced in `lib/defence/factClassifier.ts`, which hands the writer a `citableRe
 
 **Checklist:** new requirement mode **`required_if_returned_to_sender`**, driven by `OrderContext.hasReturnedToSenderParcel`. On the ~all orders where nothing came back the row resolves `unavailable`, never `missing` — same anti-nag rule as `required_if_refunded`.
 
+### Return sub-reason: WHY a parcel went back (2026-08-22)
+
+A return-to-sender is one outcome with three very different meanings, and the difference decides whether the merchant has an argument at all. Klarna's rules make a **refused** or **uncollected** parcel arguable — *"not a valid use of the right of withdrawal (in the EU) nor … a valid return"* — while an **undeliverable address** is the merchant's own problem and argues nothing.
+
+`classifyReturnReason` (`lib/shopify/deliveryEventClassifier.ts`) returns `"refused" | "not_collected" | "undeliverable" | null`.
+
+**Two facts shaped the whole design.**
+
+1. **The sub-reason is almost never in the return event.** *"Shipment returned to sender"* is the outcome; the reason was recorded days earlier. So the classifier walks the events **up to and including** the return, newest first, and takes the first that speaks. `returnAt` bounds the walk so a reship-then-refuse on a second journey cannot be attributed to the first return.
+2. **DHL's own integration guidance:** *"If your integration relies on matching or parsing tracking text, we strongly recommend using structured status codes instead of free-text descriptions."* So `statusCode` is checked **before** message text here — the inverse of the delivery-state classifier, on purpose. Message roots are the fallback, in EN/SV/NO/DA/DE/ES/PT/FR/NL.
+
+**`null` is the expected answer, and that is not a defect.** Measured on prod 2026-08-22: across every pack we hold, exactly one shipment has a carrier return event, and its message is the bare *"Shipment returned to sender"* — no sub-reason. Every other "return"-matching string in prod is a Shopify RMA record or our own synthesized chronology line. This classifier exists to **capture** the signal when a carrier emits one, never to manufacture it.
+
+**It is a hint, never a claim.** The output renders as help text beside the merchant's own answer on `ParcelOutcomeCard` — *"{carrier}'s record suggests: {reason}. Confirm it or choose what actually happened — your answer is the one that goes into the response, not theirs."* It deliberately does **not** pre-select: a pre-selection lets a merchant click through and ship the carrier's guess as their own sworn answer. Only the merchant's `reason` is citable (`lib/defence/factClassifier.ts`), and that is unchanged by this work.
+
+**Persisted, not derived on read.** `shopify_fulfillment_trackings.return_reason` (migration `20260822090000`, CHECK-constrained to the three values or NULL). A terminal cache hit reuses the stored row **without re-calling the carrier**, and by then the event timeline the reason was classified from is gone — so anything living only in the live adapter response silently becomes `null` on the first rebuild. That is exactly how `carrierTerminalEvent` regressed on cay-collective #13195 between its first build and its second (fixed 2026-08-21, PR #593); this column is that lesson applied ahead of time, and `resolveShipments.test.ts` pins the cache round-trip.
+
+Flow: `dhl.normalizeDhlShipment` → `NormalizedCarrierShipment.returnReason` → persisted by `recordLookup` → re-read by `cachedReturnReason` on a cache hit → `CarrierShipmentSignal.returnReason` → `carrierTracking.returnReason` on the pack payload → `resolveDeliveryReceipt().returnHint` → the card's help text.
+
+**Scope.** DHL is the only live adapter, so DHL is the only carrier that can produce a value today. The message roots are written for the carriers the delivery classifier already covers, but they are **uncalibrated against production traffic** — there is none to calibrate against yet. Treat a non-null value as a suggestion worth showing, not as a measured signal, until prod produces enough returns to check the vocabulary against.
+
 ### Held / cancelled-unrefunded banner (2026-08-14)
 
 **Merchant-UI only.** An Overview-tab banner naming a state the merchant could not previously see: the order was flagged by their fraud screening and either **held** or **cancelled**, nothing shipped, and **no refund was issued** — so the payment is still captured. From the cardholder's side that is indistinguishable from being charged for nothing, which is why the chargeback arrives and why it cannot be won on delivery evidence.

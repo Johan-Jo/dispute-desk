@@ -214,6 +214,11 @@ export function shortEvidenceDate(iso: unknown): string | null {
  *  Display precedence: a doorstep delivery outranks a collection, which
  *  outranks an awaiting-collection arrival. `date` is the customer-
  *  receipt timestamp when one exists. */
+/** Carrier-suggested reason a returned parcel went back. Mirrors
+ *  `ReturnReason` in the event classifier; kept as a plain union here so
+ *  UI code needs no carrier-layer import. */
+export type CarrierReturnHint = "refused" | "not_collected" | "undeliverable";
+
 export interface DeliveryReceipt {
   state:
     | "delivered"
@@ -228,6 +233,10 @@ export interface DeliveryReceipt {
     | null;
   date: string | null;
   carrierApiSlug: string | null;
+  /** Set only when the reconciled state is `returned` AND the carrier
+   *  named a reason. A HINT — the merchant still answers for themselves,
+   *  and only their answer is citable. Null is the common case. */
+  returnHint: CarrierReturnHint | null;
 }
 
 const RECEIPT_RANK: Record<string, number> = {
@@ -255,6 +264,7 @@ export function resolveDeliveryReceipt(
   let bestStatus: string | null = null;
   let bestAt: string | null = null;
   let carrierApiSlug: string | null = null;
+  let returnHint: CarrierReturnHint | null = null;
 
   const fulfillments = Array.isArray(p.fulfillments) ? p.fulfillments : [];
   for (const f of fulfillments) {
@@ -266,6 +276,13 @@ export function resolveDeliveryReceipt(
     const source = typeof tr.trackingSource === "string" ? tr.trackingSource : "";
     if (source.startsWith("carrier_api")) {
       carrierApiSlug = source.replace(/^carrier_api_?/, "") || "carrier";
+    }
+    const hint = tr.returnReason;
+    if (
+      status === "Returned" &&
+      (hint === "refused" || hint === "not_collected" || hint === "undeliverable")
+    ) {
+      returnHint = hint;
     }
     if (!status || !(status in RECEIPT_RANK)) continue;
     if (!bestStatus || RECEIPT_RANK[status] > RECEIPT_RANK[bestStatus]) {
@@ -298,6 +315,9 @@ export function resolveDeliveryReceipt(
     state,
     date: bestAt ?? topLevelDeliveredAt,
     carrierApiSlug,
+    // Never leaks out of a returned state: a delivered parcel with a
+    // stale hint on some other shipment must not offer one.
+    returnHint: state === "returned" ? returnHint : null,
   };
 }
 

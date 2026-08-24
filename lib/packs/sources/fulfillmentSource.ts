@@ -314,6 +314,14 @@ function extractTrackingData(
           deliveredAtTracking: carrierDeliveredAt,
           signedByName: state.signedBy,
           trackingSource: state.current.source,
+          // Only ever set for a Returned shipment, and null far more
+          // often than not — the carrier usually does not say. A HINT
+          // for the merchant's own answer, never a bank-facing claim:
+          // `factClassifier` cites the merchant's `reason`, not this.
+          returnReason:
+            state.current.status === "Returned"
+              ? (state.carrier?.returnReason ?? null)
+              : null,
         }
       : tracking.deliveryStatus
         ? {

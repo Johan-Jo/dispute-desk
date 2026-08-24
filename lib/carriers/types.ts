@@ -14,6 +14,8 @@
  *  - Absence of a carrier result is never evidence of non-delivery.
  */
 
+import type { ReturnReason } from "@/lib/shopify/deliveryEventClassifier";
+
 /** Normalized carrier slugs known to the identification registry.
  *  Grows as adapters are added; `fake_carrier` exists only for the
  *  carrier-neutrality test adapter (never registered in production). */
@@ -82,6 +84,11 @@ export interface NormalizedCarrierShipment {
   terminalAt: string | null;
   /** Recipient/POD name when the carrier reports one. */
   podName: string | null;
+  /** WHY the shipment went back, when `deliveryStatus === "Returned"` and
+   *  the carrier said. `null` otherwise — and `null` is the common answer.
+   *  A hint for the merchant UI, never a bank-facing claim on its own.
+   *  See `classifyReturnReason` in lib/shopify/deliveryEventClassifier. */
+  returnReason: ReturnReason | null;
 }
 
 /** Exhaustive lookup outcome — plan §5.4. Every branch is explicit,

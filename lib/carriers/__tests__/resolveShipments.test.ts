@@ -22,6 +22,7 @@ const persistCarrierLookup = vi.fn(async () => {});
 const rollupOrderDelivery = vi.fn(async () => {});
 const isTerminalCacheHit = vi.fn<(...a: unknown[]) => boolean>(() => false);
 const cachedSignal = vi.fn<(...a: unknown[]) => unknown>(() => null);
+const cachedReturnReason = vi.fn<(...a: unknown[]) => string | null>(() => null);
 
 vi.mock("@/lib/carriers/lookupCache", () => ({
   getCachedLookups: (...a: unknown[]) => getCachedLookups(...(a as [])),
@@ -29,6 +30,7 @@ vi.mock("@/lib/carriers/lookupCache", () => ({
   rollupOrderDelivery: (...a: unknown[]) => rollupOrderDelivery(...(a as [])),
   isTerminalCacheHit: (...a: unknown[]) => isTerminalCacheHit(...(a as [])),
   cachedSignal: (...a: unknown[]) => cachedSignal(...(a as [])),
+  cachedReturnReason: (...a: unknown[]) => cachedReturnReason(...(a as [])),
   trackingKeyOf: (e: { number?: string | null }) => e.number ?? "k",
 }));
 
@@ -113,6 +115,7 @@ describe("resolveCarrierShipments — always-verify", () => {
           events: [],
           deliveryStatus: "Delivered",
           terminalAt: "2026-07-13T14:26:00Z",
+          returnReason: null,
           podName: "FRONT DOOR",
         },
       }, spy),
@@ -134,10 +137,18 @@ describe("resolveCarrierShipments — always-verify", () => {
     isTerminalCacheHit.mockReturnValue(true);
     cachedSignal.mockReturnValue(shopifyDelivered);
 
+    cachedReturnReason.mockReturnValue("not_collected");
+
     const out = await resolveCarrierShipments(baseInput([shopifyDelivered]));
     // No live adapter call — the cache answered.
     expect(spy.calls).toEqual([]);
     expect(out.get("ful-1")?.lookupStatus).toBe("cache_hit");
+    // ...and the return reason came from the PERSISTED column, not from a
+    // live timeline that no longer exists. This is the whole reason the
+    // column exists: on a cache hit there are no events left to classify,
+    // and anything derived only at lookup time goes null on rebuild
+    // (cay-collective #13195, PR #593).
+    expect(out.get("ful-1")?.returnReason).toBe("not_collected");
   });
 
   it("never downgrades: a not_found carrier result leaves the Shopify positive intact (no rollup)", async () => {

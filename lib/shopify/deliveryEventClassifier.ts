@@ -129,6 +129,162 @@ const RETURNED_ROOTS = [
   "delivered_sender",
 ];
 
+/* ── WHY a parcel went back ──────────────────────────────────────────
+ *
+ * A return-to-sender is one outcome with three very different meanings,
+ * and the difference decides whether the merchant has an argument at all.
+ * Klarna's merchant rules say a parcel the customer REFUSED or never
+ * COLLECTED "is not a valid use of the right of withdrawal (in the EU)
+ * nor is it considered a valid return" — that is arguable. An address
+ * that could not be delivered to is the merchant's own problem and
+ * argues nothing.
+ *
+ * TWO THINGS TO KNOW BEFORE TRUSTING ANY OF THIS.
+ *
+ * 1. The sub-reason is almost never in the RETURN event itself.
+ *    "Shipment returned to sender" is the outcome; the reason was
+ *    recorded days earlier ("Recipient refused acceptance", "Not
+ *    collected within the holding period"). So we classify over the
+ *    events UP TO AND INCLUDING the return, newest first, and take the
+ *    first that speaks.
+ *
+ * 2. DHL's own integration guidance is: "If your integration relies on
+ *    matching or parsing tracking text, we strongly recommend using
+ *    structured status codes instead of free-text descriptions." So
+ *    `statusCode` is checked BEFORE message text here, and text is the
+ *    fallback — the inverse of the delivery-state classifier above, on
+ *    purpose.
+ *
+ * DEFAULT IS null, AND null IS THE EXPECTED ANSWER. Measured on prod
+ * 2026-08-22: every returned shipment we hold carries the bare message
+ * "Shipment returned to sender" and no sub-reason at all. This exists to
+ * CAPTURE the signal when a carrier does emit one — never to manufacture
+ * it. Nothing it returns is bank-facing on its own: it renders as a hint
+ * beside the merchant's own answer, and only the merchant's answer is
+ * citable. See `lib/defence/factClassifier.ts`.
+ */
+export type ReturnReason = "refused" | "not_collected" | "undeliverable";
+
+/** Structured status codes that name the sub-reason outright. Preferred
+ *  over text per DHL's guidance above. Compared lowercased. */
+const RETURN_REASON_STATUS_CODES: Record<string, ReturnReason> = {
+  // DHL Parcel DE event codes.
+  ann: "refused", // Annahme verweigert — acceptance refused
+  nzg: "not_collected", // Nicht abgeholt — not collected
+  unz: "undeliverable", // Unzustellbar — undeliverable
+};
+
+/** The customer was offered the parcel and said no. */
+const REFUSED_ROOTS = [
+  // EN
+  "refused",
+  "refusal",
+  "declined by recipient",
+  "rejected by recipient",
+  "recipient rejected",
+  // SV / NO / DA
+  "vagrade",
+  "vägrade",
+  "vägrad",
+  "nekade mottagning",
+  "mottagaren nekade",
+  "nektet",
+  "afvist",
+  // DE
+  "annahme verweigert",
+  "verweigert",
+  // ES / PT
+  "rechazado",
+  "rechazada",
+  "recusado",
+  "recusada",
+  // FR
+  "refusé",
+  "refus du destinataire",
+  // NL
+  "geweigerd",
+];
+
+/** The parcel reached a pickup point and the customer never came; the
+ *  holding period expired and it went back. */
+const NOT_COLLECTED_ROOTS = [
+  // EN
+  "not collected",
+  "uncollected",
+  "unclaimed",
+  "not picked up",
+  "collection period expired",
+  "holding period expired",
+  // SV / NO / DA
+  "ej uthämtat",
+  "ej uthämtad",
+  "ej uthamtat",
+  "inte uthämtat",
+  "outhämtat",
+  "ohämtat",
+  "ikke hentet",
+  "ikke afhentet",
+  "hentefrist",
+  // DE
+  "nicht abgeholt",
+  "abholfrist",
+  "lagerfrist",
+  // ES / PT
+  "no recogido",
+  "no retirado",
+  "não levantado",
+  "nao levantado",
+  "não retirado",
+  // FR
+  "non réclamé",
+  "non reclame",
+  "non retiré",
+  "non retire",
+  // NL
+  "niet afgehaald",
+];
+
+/** The address itself did not work — incomplete, wrong, unknown, or the
+ *  recipient could not be found there. Argues NOTHING for the merchant,
+ *  which is exactly why it must be distinguishable from the other two. */
+const UNDELIVERABLE_ROOTS = [
+  // EN
+  "undeliverable",
+  "bad address",
+  "incorrect address",
+  "incomplete address",
+  "address unknown",
+  "invalid address",
+  "recipient unknown",
+  "addressee unknown",
+  "no such address",
+  // SV / NO / DA
+  "okänd adress",
+  "okand adress",
+  "felaktig adress",
+  "bristfällig adress",
+  "ukjent adresse",
+  "ukendt adresse",
+  // DE
+  "unzustellbar",
+  "empfänger unbekannt",
+  "empfaenger unbekannt",
+  "adresse unvollständig",
+  // ES / PT
+  "dirección incorrecta",
+  "direccion incorrecta",
+  "destinatario desconocido",
+  "morada incorreta",
+  "endereço incorreto",
+  // FR
+  "adresse incorrecte",
+  "adresse inconnue",
+  "destinataire inconnu",
+  // NL
+  "onbestelbaar",
+  "adres onbekend",
+];
+
 /** Roots for delivery to a NEIGHBOUR / left in a safe place. Confirmed
  *  across DHL / GLS: the message says "delivered / zugestellt" but to a
  *  neighbour or a safe drop — NOT into the cardholder's own hands. For a
@@ -478,4 +634,52 @@ export function classifyDeliveryTimeline(
   }
 
   return { finalCategory, finalAt };
+}
+
+/**
+ * WHY a returned parcel went back, or null when the carrier never said.
+ *
+ * Walks the events at or before the return, newest first, and takes the
+ * first that speaks — because the sub-reason is recorded when the
+ * delivery attempt failed, not when the parcel finally reached the
+ * warehouse. Structured `statusCode` beats message text on every event
+ * (DHL's own guidance); text is the fallback.
+ *
+ * `returnAt` bounds the walk. A parcel returned, reshipped and refused
+ * on the SECOND journey must not have the second refusal attributed to
+ * the first return, and an undated event can never be ordered, so it is
+ * only consulted when there is no dated evidence at all.
+ *
+ * Returns null far more often than not. That is correct: see the header
+ * note on the vocabularies above.
+ */
+export function classifyReturnReason(
+  events: DeliveryEventLike[] | null | undefined,
+  returnAt: string | null,
+): ReturnReason | null {
+  const candidates = (events ?? [])
+    .filter((e) => !returnAt || !e.happenedAt || e.happenedAt <= returnAt)
+    .sort((a, b) => {
+      // Newest first; undated sorts last so a dated event always wins.
+      if (!a.happenedAt) return 1;
+      if (!b.happenedAt) return -1;
+      return a.happenedAt < b.happenedAt ? 1 : -1;
+    });
+
+  for (const e of candidates) {
+    const code = (e.status ?? "").trim().toLowerCase();
+    const byCode = code ? RETURN_REASON_STATUS_CODES[code] : undefined;
+    if (byCode) return byCode;
+
+    const msg = (e.message ?? "").toLowerCase();
+    if (!msg) continue;
+    // Order matters only where a message could plausibly match two sets.
+    // "refused" is the most specific claim about the customer's own
+    // conduct, so it is tested first; "undeliverable" is last because it
+    // is the catch-all wording carriers also use as a summary line.
+    if (containsAny(msg, REFUSED_ROOTS)) return "refused";
+    if (containsAny(msg, NOT_COLLECTED_ROOTS)) return "not_collected";
+    if (containsAny(msg, UNDELIVERABLE_ROOTS)) return "undeliverable";
+  }
+  return null;
 }

@@ -43,6 +43,7 @@ import {
 } from "@/lib/carriers/alerts";
 import {
   cachedSignal,
+  cachedReturnReason,
   getCachedLookups,
   isTerminalCacheHit,
   persistCarrierLookup,
@@ -78,6 +79,10 @@ export interface CarrierShipmentSignal {
   lookupStatus: CarrierLookupStatus | "cache_hit";
   /** POD/recipient name when the carrier reports one. */
   podName: string | null;
+  /** Carrier-suggested reason a RETURNED shipment went back, from the
+   *  live classification or — on a cache hit, where the event timeline is
+   *  long gone — the persisted column. Null is the common answer. */
+  returnReason: string | null;
 }
 
 /** not_found is log/metric only unless a pattern emerges (§6.5); every
@@ -217,6 +222,7 @@ async function resolveOne(
         signal: cachedSignal(cached!),
         lookupStatus: "cache_hit",
         podName: null,
+        returnReason: cachedReturnReason(cached),
       };
     }
 
@@ -285,6 +291,7 @@ async function resolveOne(
         shipment: result.shipment,
         lookupStatus: result.status,
         podName: result.shipment.podName,
+        returnReason: result.shipment.returnReason,
       };
     }
 
@@ -322,6 +329,7 @@ async function resolveOne(
       signal: null,
       lookupStatus: result.status,
       podName: null,
+      returnReason: null,
     };
   }
   return null;
