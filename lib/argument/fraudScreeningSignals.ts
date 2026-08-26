@@ -159,13 +159,45 @@ const ADDRESS_VERIFICATION_KEYS = [
 export function projectPaymentVerificationValueForBank(
   value: unknown,
   bankEligible: boolean,
+  category?: string,
 ): unknown {
   if (bankEligible) return value;
   if (!value || typeof value !== "object") return value;
   const v = value as Record<string, unknown>;
-  if (v.fieldKey !== "avs_cvv_match") return value;
+
+  // CATEGORY drives this, not an inner `fieldKey` (corrective, 2026-08-26).
+  // `EvidenceFact.value` is `Record<string, unknown>` — `fieldKey` is a
+  // convention of the current collectors, not a contract, so a value shape
+  // that omits it would have slipped the whole guard. `category` is a typed
+  // enum on the fact itself. The `fieldKey` check is retained only as a
+  // fallback for callers that cannot supply a category.
+  const isPaymentAuth =
+    category === "payment_authentication" || v.fieldKey === "avs_cvv_match";
+  if (!isPaymentAuth) return value;
 
   const out: Record<string, unknown> = { ...v };
   for (const key of ADDRESS_VERIFICATION_KEYS) delete out[key];
+
+  // A bare boolean must not license bank-facing text either — the address leak
+  // WAS `addressVerified: true` with nothing behind it. But provenance cannot
+  // be judged from THIS value: `cvvResult` is nulled by the citability rule
+  // (PR-C2 "Decision 1") even when the gateway returned a match, so reading it
+  // here would discard real evidence. On #347617 the source pack carries
+  // `cvvResultCode: "M"` while the projected fact shows `cvvResult: null`.
+  //
+  // The caller therefore supplies the basis. Absent an explicit
+  // `cvvProvenance`, the boolean is treated as the classifier's own finding
+  // (`readPaymentVerification` sets it from a real CVV code, never from
+  // nothing) and is kept — the leak this function exists to close is the
+  // ADDRESS half. A caller that knows the CVV is unsubstantiated passes
+  // `cvvProvenance: "unsubstantiated"` and the boolean is dropped.
+  if (
+    out.securityCodeVerified === true &&
+    v.cvvProvenance === "unsubstantiated"
+  ) {
+    delete out.securityCodeVerified;
+    delete out.cvvProvenance;
+  }
+
   return out;
 }
