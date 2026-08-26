@@ -118,3 +118,54 @@ export function projectScreeningValueForBank(value: unknown): unknown | null {
   if (safe.length === 0) return null;
   return { ...v, positiveFacts: safe };
 }
+
+/* ── Payment-verification bank projection (P0, 2026-08-26) ──────────────── */
+
+/**
+ * Address/AVS-bearing keys on a `payment_authentication` fact value.
+ *
+ * `addressVerified` is the leak this list exists for. On #347617 the fact
+ * carried `addressVerified: true` with `bankEligible: false` and
+ * `verificationSummary: null` — the CODES were correctly withheld (PR-C2
+ * "Decision 1"), but the BOOLEAN was not, and the narrative generator wrote
+ * "both address verification and security-code verification were completed"
+ * from it. That sentence reached the filed PDF in three places.
+ *
+ * Neither Visa CE Item 3 nor the Mastercard Chargeback Guide 4837 AVS route
+ * authorizes a standalone address-verification assertion: both require the
+ * compound element (delivery/dispatch to the AVS-confirmed address), which is
+ * not observable today.
+ */
+const ADDRESS_VERIFICATION_KEYS = [
+  "addressVerified",
+  "avsResult",
+  "avsResultCode",
+  "avs_result_code",
+] as const;
+
+/**
+ * A `payment_authentication` fact value, projected for bank-facing use.
+ *
+ * When the fact is NOT bank-eligible, every address/AVS-bearing field is
+ * omitted from what the narrative generator sees. What survives is the
+ * independently supported material — `securityCodeVerified`, `cvvResult`,
+ * `network` — so a CVV match still argues, and the internal factual/risk
+ * signal is untouched on the persisted fact.
+ *
+ * This fixes the boolean leak ONLY. Whether authoritative AVS may ever appear
+ * as narrowly factual corroboration without satisfying the complete network
+ * remedy is a separate policy decision and is deliberately NOT decided here.
+ */
+export function projectPaymentVerificationValueForBank(
+  value: unknown,
+  bankEligible: boolean,
+): unknown {
+  if (bankEligible) return value;
+  if (!value || typeof value !== "object") return value;
+  const v = value as Record<string, unknown>;
+  if (v.fieldKey !== "avs_cvv_match") return value;
+
+  const out: Record<string, unknown> = { ...v };
+  for (const key of ADDRESS_VERIFICATION_KEYS) delete out[key];
+  return out;
+}
