@@ -28,12 +28,15 @@ with pkg as (
       or dp.narrative_json::text ilike '%billing postal code matched%')  as emit_w1,
     -- wording 2: "address verification ... completed/performed"
     (dp.narrative_json::text ilike '%address verification%')             as emit_w2,
-    -- The COMPOUND form: an address assertion tied to delivery (Visa CE
-    -- Item 3) or dispatch (MC 4837) to that same address. NOTE: on this
-    -- corpus every hit is the RETIRED `deliveredToVerifiedAddress` claim —
-    -- all 138 packages predate PR-C1 (newest 2026-08-06, the day before the
-    -- fix). It is historical, not evidence that any pack satisfies the rule:
-    -- the claim was unsound precisely because it never read an AVS code.
+    -- Packages that ASSERTED the compound wording — an address claim tied to
+    -- delivery (Visa CE Item 3) or dispatch (MC 4837) to that same address.
+    --
+    -- NAMED `asserted_compound_claim` DELIBERATELY. It counts what the prose
+    -- SAYS, never what the network rule was SATISFIED by. On this corpus all
+    -- 138 hits are the RETIRED `deliveredToVerifiedAddress` claim and every
+    -- one predates PR-C1 (newest 2026-08-06, the day before the fix). That
+    -- claim was unsound precisely because it never read an AVS code — so a
+    -- non-zero count here is evidence of a defect, not of compliance.
     -- Measured over CONCATENATED SECTION PROSE, not narrative_json::text —
     -- the raw JSON interleaves field names and escapes, so a cross-field
     -- regex matched 109 packages on 4837/N where no address is asserted at
@@ -45,7 +48,7 @@ with pkg as (
         and sect.value ? 'text'
         and (sect.value->>'text') ~*
             '(deliver(ed|y)?|shipp?(ed)?|sent|dispatch(ed)?)[^.!?]{0,120}\y(same|confirmed|verified|AVS)\y[^.!?]{0,40}address'
-    )                                                                         as compound_claim
+    )                                                                         as asserted_compound_claim
   from defence_packages dp
   join disputes d on d.id = dp.dispute_id
   left join lateral jsonb_array_elements(dp.facts_json) fx on true
@@ -62,7 +65,7 @@ select
   count(*) filter (where emit_w1 or emit_w2)                     as emit_any,
   count(*) filter (where (emit_w1 or emit_w2) and submitted_at is not null) as saved_and_emitted,
   count(*) filter (where (emit_w1 or emit_w2) and dispute_status = 'needs_response' and due_at > now()) as emitted_still_open,
-  count(*) filter (where compound_claim)                         as compound_claim
+  count(*) filter (where asserted_compound_claim)                as asserted_compound_claim
 from pkg
 where emit_w1 or emit_w2 or avs_code is not null or address_verified_flag
 group by 1, 2

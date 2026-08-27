@@ -30,6 +30,7 @@
 import { describe, expect, it } from "vitest";
 
 import { projectPaymentVerificationValueForBank } from "../fraudScreeningSignals";
+import { readPaymentVerification } from "../paymentVerification";
 
 /** The production fact value from #347617 v6, field-for-field. */
 const FACT_347617 = {
@@ -44,9 +45,12 @@ const FACT_347617 = {
 
 const ADDRESS_KEYS = [
   "addressVerified",
+  "citableAddressVerified",
   "avsResult",
   "avsResultCode",
   "avs_result_code",
+  "verificationSummary",
+  "fieldKey",
 ];
 
 describe("payment-verification bank projection — #347617", () => {
@@ -69,16 +73,46 @@ describe("payment-verification bank projection — #347617", () => {
 
     expect(projected.securityCodeVerified).toBe(true);
     expect(projected.network).toBe("mastercard");
-    expect(projected.fieldKey).toBe("avs_cvv_match");
   });
 
   it("leaves no serialized trace the model could read as an address claim", () => {
     const blob = JSON.stringify(
-      projectPaymentVerificationValueForBank(FACT_347617, false),
+      projectPaymentVerificationValueForBank(
+        FACT_347617,
+        false,
+        "payment_authentication",
+      ),
     ).toLowerCase();
 
-    expect(blob).not.toContain("addressverified");
-    expect(blob).not.toContain("avsresult");
+    // The discriminator itself is an AVS token to a reader.
+    expect(blob).not.toContain("avs_cvv_match");
+    expect(blob).not.toContain("avs");
+    expect(blob).not.toContain("address");
+  });
+
+  it("drops fieldKey after using it as the fallback discriminator", () => {
+    const projected = projectPaymentVerificationValueForBank(
+      FACT_347617,
+      false,
+    ) as Record<string, unknown>;
+
+    expect(projected).not.toHaveProperty("fieldKey");
+    // …and the fallback still worked: address fields are gone.
+    expect(projected).not.toHaveProperty("addressVerified");
+  });
+
+  it("covers the legacy `payment_auth` category spelling", () => {
+    const noFieldKey = { ...FACT_347617 } as Record<string, unknown>;
+    delete noFieldKey.fieldKey;
+
+    const projected = projectPaymentVerificationValueForBank(
+      noFieldKey,
+      false,
+      "payment_auth",
+    ) as Record<string, unknown>;
+
+    expect(projected).not.toHaveProperty("addressVerified");
+    expect(projected.securityCodeVerified).toBe(true);
   });
 
   it("does not mutate the caller's fact — the internal signal survives", () => {
@@ -97,9 +131,13 @@ describe("payment-verification bank projection — #347617", () => {
       verificationSummary: "the billing address matched the issuer's records",
     };
 
-    expect(projectPaymentVerificationValueForBank(eligible, true)).toEqual(
-      eligible,
-    );
+    expect(
+      projectPaymentVerificationValueForBank(
+        eligible,
+        true,
+        "payment_authentication",
+      ),
+    ).toEqual(eligible);
   });
 
   it("ignores non-payment-verification values", () => {
@@ -107,5 +145,48 @@ describe("payment-verification bank projection — #347617", () => {
     expect(projectPaymentVerificationValueForBank(other, false)).toEqual(other);
     expect(projectPaymentVerificationValueForBank(null, false)).toBeNull();
     expect(projectPaymentVerificationValueForBank("x", false)).toBe("x");
+  });
+});
+
+/**
+ * Why keeping `securityCodeVerified` is safe.
+ *
+ * The projection retains the CVV boolean while stripping the address one. That
+ * asymmetry is only defensible if the CVV flag cannot itself be a bare
+ * assertion — the exact failure mode `addressVerified` was.
+ *
+ * It cannot: `readPaymentVerification` sets `securityCodeVerified` from
+ * `cvv.matched`, and the CVV match set is `{"M"}`. There is no path that sets
+ * it from an absent, unknown or non-matching code. #347617's source pack
+ * carries `cvvResultCode: "M"`, so its boolean was gateway-backed — the code
+ * was withheld downstream by the citability rule, not missing.
+ *
+ * This pins the invariant the projection's doc comment relies on, replacing an
+ * earlier `cvvProvenance` parameter that no caller ever passed.
+ */
+describe("classifier invariant — securityCodeVerified needs a gateway match", () => {
+  it("is true only for a CVV code in the match set", () => {
+    expect(
+      readPaymentVerification({ cvvResultCode: "M" }).securityCodeVerified,
+    ).toBe(true);
+  });
+
+  it("is false for a non-matching, unknown or absent code", () => {
+    for (const cvvResultCode of ["N", "U", "P", "S", "", "X"]) {
+      expect(
+        readPaymentVerification({ cvvResultCode }).securityCodeVerified,
+      ).toBe(false);
+    }
+    expect(readPaymentVerification({}).securityCodeVerified).toBe(false);
+    expect(
+      readPaymentVerification({ cvvResultCode: null }).securityCodeVerified,
+    ).toBe(false);
+  });
+
+  it("cannot be forced true by a bare boolean on the payload", () => {
+    expect(
+      readPaymentVerification({ securityCodeVerified: true })
+        .securityCodeVerified,
+    ).toBe(false);
   });
 });

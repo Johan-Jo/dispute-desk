@@ -79,16 +79,32 @@ function inputWith(facts: EvidenceFact[]): NarrativeInput {
   } as unknown as NarrativeInput;
 }
 
-const ADDRESS_TOKENS = ["addressverified", "avsresult", "avs_result_code"];
+/** Every token that reads as an AVS/address claim in the serialized payload —
+ *  including the discriminator `avs_cvv_match` itself. */
+const FORBIDDEN_TOKENS = [
+  "avs_cvv_match",
+  "avs",
+  "address",
+  "verificationsummary",
+];
 
 describe("LLM fact payload — no address/AVS leak (#347617)", () => {
-  it("serializes with neither an AVS nor an address key", () => {
+  it("serializes with no avs, address or avs_cvv_match token", () => {
     const payload = buildLlmFactPayload(inputWith([fact347617()]));
     const blob = JSON.stringify(payload).toLowerCase();
 
-    for (const token of ADDRESS_TOKENS) {
+    for (const token of FORBIDDEN_TOKENS) {
       expect(blob).not.toContain(token);
     }
+  });
+
+  it("projects the fact value with no fieldKey at all", () => {
+    const payload = buildLlmFactPayload(inputWith([fact347617()])) as {
+      approvedFacts: { value: Record<string, unknown> }[];
+    };
+
+    expect(payload.approvedFacts).toHaveLength(1);
+    expect(payload.approvedFacts[0].value).not.toHaveProperty("fieldKey");
   });
 
   it("still excludes them when the value carries no fieldKey", () => {
@@ -97,7 +113,7 @@ describe("LLM fact payload — no address/AVS leak (#347617)", () => {
     );
     const blob = JSON.stringify(payload).toLowerCase();
 
-    for (const token of ADDRESS_TOKENS) {
+    for (const token of FORBIDDEN_TOKENS) {
       expect(blob).not.toContain(token);
     }
   });
