@@ -669,6 +669,7 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
       value: projectPaymentVerificationValueForBank(
         projectScreeningValueForBank(f.value),
         f.bankEligible === true,
+        f.category,
       ),
     }))
     .filter((f) => f.value !== null);
