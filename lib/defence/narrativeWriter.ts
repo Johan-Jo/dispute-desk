@@ -25,7 +25,10 @@
 import { alwaysAdmissibleCategories } from "./alwaysAdmissible";
 import { reachesLlmPayloadLegacy } from "./bankInclusion";
 import { deriveClaimCapabilities } from "./claimCapabilities";
-import { projectScreeningValueForBank } from "@/lib/argument/fraudScreeningSignals";
+import {
+  projectPaymentVerificationValueForBank,
+  projectScreeningValueForBank,
+} from "@/lib/argument/fraudScreeningSignals";
 import { getServiceClient } from "@/lib/supabase/server";
 import {
   callClaudeMessages,
@@ -658,7 +661,16 @@ export function buildLlmFactPayload(input: NarrativeInput): Record<string, unkno
       category: f.category,
       label: f.label,
       strength: f.strength,
-      value: projectScreeningValueForBank(f.value),
+      // A non-bank-eligible payment-authentication fact reaches the model
+      // WITHOUT its address/AVS fields (P0, 2026-08-26). `addressVerified`
+      // used to survive here even though the codes and the summary were
+      // withheld, and the model wrote an address-verification assertion from
+      // the bare boolean. See `projectPaymentVerificationValueForBank`.
+      value: projectPaymentVerificationValueForBank(
+        projectScreeningValueForBank(f.value),
+        f.bankEligible === true,
+        f.category,
+      ),
     }))
     .filter((f) => f.value !== null);
 
