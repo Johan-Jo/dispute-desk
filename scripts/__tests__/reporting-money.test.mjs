@@ -41,6 +41,16 @@ describe("reporting money summaries", () => {
     });
   });
 
+  it("annualizes against the explicit reporting period", () => {
+    const summary = summarizeAmountsByCurrency([
+      { amount: 100, currency_code: "USD", initiated_at: "2026-01-10T00:00:00Z" },
+    ], 30);
+
+    expect(summary.USD.span_days).toBe(30);
+    expect(summary.USD.annualized_case_run_rate).toBeCloseTo(365 / 30);
+    expect(summary.USD.annualized_disputed_value_run_rate).toBeCloseTo(3650 / 3);
+  });
+
   it("does not expose unknown-currency amounts as a safe scalar", () => {
     const summary = summarizeAmountsByCurrency([
       { amount: 50, currency_code: null, initiated_at: "2026-01-01T00:00:00Z" },

@@ -6,6 +6,10 @@ import {
   singleCurrencySummary,
   summarizeAmountsByCurrency,
 } from "./lib/reporting-money.mjs";
+import {
+  isSyntheticDispute,
+  reportingWindow,
+} from "./lib/reporting-window.mjs";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(`${projectRoot}/package.json`);
@@ -20,6 +24,14 @@ if (!shopDomain) {
     "Shop domain required. Pass it as the first argument or set REPORT_SHOP_DOMAIN.",
   );
 }
+const reportFrom = process.argv[3] || process.env.REPORT_FROM;
+const reportTo = process.argv[4] || process.env.REPORT_TO;
+if (!reportFrom || !reportTo) {
+  throw new Error(
+    "Report dates required. Pass YYYY-MM-DD start and end dates or set REPORT_FROM and REPORT_TO.",
+  );
+}
+const window = reportingWindow(reportFrom, reportTo);
 
 const db = createClient(
   process.env.SUPABASE_URL,
@@ -54,14 +66,15 @@ function countBy(rows, field) {
   }, {});
 }
 
-async function rows(table, select, shopId, since) {
+async function rows(table, select, shopId, windowStart, timestamp = "created_at") {
   let query = db.from(table).select(select).eq("shop_id", shopId);
-  if (since) query = query.gte("created_at", since);
-  const { data, error } = await query.order("created_at", { ascending: true });
+  if (windowStart) query = query
+    .gte(timestamp, windowStart)
+    .lt(timestamp, window.to);
+  const { data, error } = await query.order(timestamp, { ascending: true });
   return error ? { error: error.message, data: [] } : { data };
 }
 
-const since = "2026-07-28T00:00:00Z";
 const { data: shop, error: shopError } = await db
   .from("shops")
   .select("id,shop_domain,currency_code,plan,created_at,installed_at,uninstalled_at,last_reconciled_at,first_win_at")
@@ -73,36 +86,31 @@ if (!shop) throw new Error(`Active shop not found: ${shopDomain}`);
 
 const { data: disputes, error: disputeError } = await db
   .from("disputes")
-  .select("id,dispute_gid,status,normalized_status,submission_state,reason,amount,currency_code,initiated_at,due_at,created_at,last_synced_at,submitted_at,closed_at,final_outcome,outcome_amount_recovered,outcome_amount_lost")
+  .select("id,dispute_gid,status,normalized_status,submission_state,reason,amount,currency_code,initiated_at,due_at,created_at,last_synced_at,submitted_at,closed_at,final_outcome,outcome_amount_recovered,outcome_amount_lost,raw_snapshot")
   .eq("shop_id", shop.id)
-  .gte("initiated_at", since)
+  .gte("initiated_at", window.from)
+  .lt("initiated_at", window.to)
   .order("initiated_at", { ascending: true });
 if (disputeError) throw disputeError;
 
-const { data: allDisputes, error: allDisputesError } = await db
-  .from("disputes")
-  .select("id,dispute_gid,status,normalized_status,submission_state,reason,amount,currency_code,initiated_at,created_at,submitted_at,closed_at,final_outcome,outcome_amount_recovered,outcome_amount_lost")
-  .eq("shop_id", shop.id)
-  .order("initiated_at", { ascending: true });
-if (allDisputesError) throw allDisputesError;
-
-const isSynthetic = (gid = "") => /(?:test-|seed-|dd-seed|e2e|fixture|mock)/i.test(gid);
-const productionDisputes = allDisputes.filter((row) => !isSynthetic(row.dispute_gid));
-const syntheticDisputes = allDisputes.filter((row) => isSynthetic(row.dispute_gid));
-const productionAmountsByCurrency = summarizeAmountsByCurrency(productionDisputes);
+const productionDisputes = disputes.filter((row) => !isSyntheticDispute(row));
+const syntheticDisputes = disputes.filter((row) => isSyntheticDispute(row));
+const safeDisputes = disputes.map(({ raw_snapshot: _rawSnapshot, ...row }) => row);
+const productionAmountsByCurrency = summarizeAmountsByCurrency(
+  productionDisputes,
+  window.days,
+);
 const singleProductionCurrency = singleCurrencySummary(productionAmountsByCurrency);
-const productionSpanDays = productionDisputes.length > 1
-  ? (new Date(productionDisputes.at(-1).initiated_at) - new Date(productionDisputes[0].initiated_at)) / 86400000 + 1
-  : 0;
+const productionSpanDays = window.days;
 
 const [packs, packages, submissions, audit, events, jobs, webhooks] = await Promise.all([
-  rows("evidence_packs", "id,dispute_id,status,submission_readiness,package_type,created_at,updated_at,last_saved_to_shopify_at,saved_to_shopify_at,failure_code,failure_reason", shop.id, since),
-  rows("defence_packages", "id,dispute_id,status,created_at,updated_at,submitted_at", shop.id, since),
-  rows("submission_logs", "id,dispute_id,channel,final_outcome,created_at,submitted_at", shop.id, since),
-  rows("audit_events", "id,dispute_id,event_type,actor_type,created_at,event_payload", shop.id, since),
-  rows("dispute_events", "id,dispute_id,event_type,source,created_at,event_payload", shop.id, since),
-  rows("jobs", "id,type,status,created_at,updated_at,error", shop.id, since),
-  rows("webhook_events", "id,topic,outcome,created_at,processed_at,error", shop.id, since),
+  rows("evidence_packs", "id,dispute_id,status,submission_readiness,package_type,created_at,updated_at,last_saved_to_shopify_at,saved_to_shopify_at,failure_code,failure_reason", shop.id, window.from),
+  rows("defence_packages", "id,dispute_id,status,created_at,updated_at,submitted_at", shop.id, window.from),
+  rows("submission_logs", "id,dispute_id,channel,final_outcome,created_at,submitted_at", shop.id, window.from),
+  rows("audit_events", "id,dispute_id,event_type,actor_type,created_at,event_payload", shop.id, window.from),
+  rows("dispute_events", "id,dispute_id,event_type,source_type,event_at,created_at,metadata_json", shop.id, window.from),
+  rows("jobs", "id,job_type,status,created_at,updated_at,last_error", shop.id, window.from),
+  rows("webhook_events", "id,topic,outcome,received_at,processed_at,error_message", shop.id, window.from, "received_at"),
 ]);
 
 const configReads = await Promise.all([
@@ -113,8 +121,8 @@ const configReads = await Promise.all([
   db.from("policy_snapshots").select("policy_type,captured_at").eq("shop_id", shop.id),
   db.from("pack_templates").select("id,name,status,created_at,updated_at").eq("shop_id", shop.id),
   db.from("pack_usage_events").select("event_type,packs,created_at").eq("shop_id", shop.id),
-  db.from("app_events").select("name,created_at").eq("shop_id", shop.id).gte("created_at", since),
-  db.from("shop_daily_metrics").select("date,order_count,dispute_count,chargeback_count,inquiry_count,last_synced_at").eq("shop_id", shop.id).gte("date", "2026-07-28"),
+  db.from("app_events").select("name,created_at").eq("shop_id", shop.id).gte("created_at", window.from).lt("created_at", window.to),
+  db.from("shop_daily_metrics").select("date,order_count,dispute_count,chargeback_count,inquiry_count,last_synced_at").eq("shop_id", shop.id).gte("date", reportFrom).lt("date", reportTo),
 ]);
 
 const [setupRead, settingsRead, rulesRead, integrationsRead, policiesRead, templatesRead, usageRead, appEventsRead, dailyRead] = configReads;
@@ -172,13 +180,16 @@ const safeAudit = audit.data.map((row) => ({
 
 console.log(JSON.stringify({
   snapshot_at: new Date().toISOString(),
+  reporting_window: window,
   shop,
   local: {
-    disputes,
+    disputes: safeDisputes,
     dispute_quality: {
-      all_count: allDisputes.length,
+      all_count: disputes.length,
       production_count: productionDisputes.length,
       synthetic_count: syntheticDisputes.length,
+      synthetic_classification:
+        "Repository fixture GID markers plus explicit raw_snapshot seed flags",
       production_by_outcome: countBy(productionDisputes, "final_outcome"),
       production_by_currency: countBy(productionDisputes, "currency_code"),
       production_by_reason: countBy(productionDisputes, "reason"),
