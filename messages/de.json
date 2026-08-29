@@ -1438,6 +1438,26 @@
         "returned_unrefunded": "Der Zusteller hat dieses Paket an Sie zurückgesendet und es wurde keine Rückerstattung veranlasst — Sie haben also sowohl die Ware als auch das Geld. Für diese Bestellung kann es keine Zustellbestätigung geben, und ohne sie entscheidet die Bank in der Regel zugunsten des Kunden. Sagen Sie uns, warum das Paket zurückkam: Hat der Kunde die Annahme verweigert oder es nie abgeholt, ist das keine gültige Rücksendung, und das ist ein Argument wert. Behalten Sie Ware und Geld, ist die faire Antwort eine Rückerstattung."
       }
     },
+    "outcomeExplanation": {
+      "filedWithFactor": {
+        "lost": "Wir haben Ihre Nachweise am {date} eingereicht. {clause} — Banken gewichten dies bei dieser Art von Fall stark.",
+        "won": "Wir haben Ihre Nachweise am {date} eingereicht. {clause} — das gibt bei solchen Fällen meist den Ausschlag."
+      },
+      "filedNoFactors": {
+        "lost": "Wir haben Ihre Nachweise am {date} eingereicht. Die Bank hat dennoch zugunsten des Karteninhabers entschieden.",
+        "won": "Wir haben Ihre Nachweise am {date} eingereicht, und die Bank hat zu Ihren Gunsten entschieden."
+      },
+      "notDefendedByUs": "Dieser Fall wurde entschieden, bevor DisputeDesk Nachweise dafür eingereicht hat.",
+      "factor": {
+        "avs_mismatch": "Die Rechnungsadresse der Karte stimmte nicht mit der Adresse der Bestellung überein",
+        "no_signature_on_fraud": "Die Zustellung wurde bestätigt, aber niemand hat unterschrieben",
+        "no_delivery_confirmation": "Uns hat keine Zustellbestätigung des Transportunternehmens erreicht",
+        "weak_identity_signals": "Das einzige bestätigte Identitätsmerkmal war das Land der Kundin oder des Kunden",
+        "signature_confirmed": "Die Zustellung wurde bestätigt und unterschrieben",
+        "avs_match": "Die Rechnungsadresse der Karte stimmte mit der Adresse der Bestellung überein",
+        "delivery_confirmed": "Das Transportunternehmen hat die Zustellung bestätigt"
+      }
+    },
     "improvementHint": "Fügen Sie {label} hinzu, um Ihren Fall zu stärken.",
     "recommendation": {
       "submitted": {
@@ -3277,7 +3297,7 @@
       },
       "afterSaving": {
         "title": "Was nach dem Speichern passiert",
-        "body": "Nach dem Speichern:\n\n1. Beweise erscheinen im Shopify Admin: Bestellungen > die verknüpfte Bestellung > Chargeback.\n2. Prüfen Sie in Shopify und fügen Sie Anmerkungen hinzu.\n3. Shopify reicht beim Kartennetzwerk ein — manuell oder automatisch zum Fälligkeitsdatum.\n4. Das Kartennetzwerk prüft die Beweise.\n5. Entscheidung: Gewonnen oder Verloren.\n\nDisputeDesk überwacht den Status und aktualisiert ihn.\n\n**Datei-Zeilen in Shopify Admin:** Wenn die Datei-Beweis-Schicht aktiviert ist, zeigen die Zeilen **Versanddokumentation**, **Kundenkommunikation**, **Servicedokumentation** und **Sonstige Beweise** in Shopify Payments eine ausgefüllte Datei mit Download-Symbol — DisputeDesk lädt eine fokussierte PDF pro Slot hoch, die den Grund und die wichtigsten Fakten aus deinem Paket enthält. Deine ursprünglich hochgeladenen Dateien bleiben zusätzlich als markierte sichere Links (https://disputedesk.app/e/…) im Beweistext erhalten — der Aussteller sieht also sowohl die kontextuelle Zusammenfassung als auch die Originaldateien. Die Zeilen für **Rückgaberichtlinie** und **Stornierungsrichtlinie** sind reason-aware und werden in Admin nur bei bestimmten Streitgründen gerendert; bis die Anzeige pro Familie verifiziert ist, fließen diese Dateien als markierte Links. Bei deaktivierter Schicht fließt jede Datei nur als markierter Link. Verwende **Prüfen und weiterleiten** hier, um die exakte Nutzlast vorab anzuzeigen."
+        "body": "Nach dem Speichern:\n\n1. Beweise erscheinen im Shopify Admin: Bestellungen > die verknüpfte Bestellung > Chargeback.\n2. Prüfen Sie in Shopify und fügen Sie Anmerkungen hinzu.\n3. Shopify reicht beim Kartennetzwerk ein — manuell oder automatisch zum Fälligkeitsdatum.\n4. Das Kartennetzwerk prüft die Beweise.\n5. Entscheidung: Gewonnen oder Verloren.\n\nDisputeDesk überwacht den Status und aktualisiert ihn.\n\n**Datei-Zeilen in Shopify Admin:** Wenn die Datei-Beweis-Schicht aktiviert ist, zeigen die Zeilen **Versanddokumentation**, **Kundenkommunikation**, **Servicedokumentation** und **Sonstige Beweise** in Shopify Payments eine ausgefüllte Datei mit Download-Symbol — DisputeDesk lädt eine fokussierte PDF pro Slot hoch, die den Grund und die wichtigsten Fakten aus deinem Paket enthält. Deine ursprünglich hochgeladenen Dateien bleiben zusätzlich als markierte sichere Links (https://disputedesk.app/e/…) im Beweistext erhalten — der Aussteller sieht also sowohl die kontextuelle Zusammenfassung als auch die Originaldateien. Die Zeilen für **Rückgaberichtlinie** und **Stornierungsrichtlinie** sind reason-aware und werden in Admin nur bei bestimmten Streitgründen gerendert; bis die Anzeige pro Familie verifiziert ist, fließen diese Dateien als markierte Links. Bei deaktivierter Schicht fließt jede Datei nur als markierter Link. Verwende **Prüfen und weiterleiten** hier, um die exakte Nutzlast vorab anzuzeigen.\n\n**Wenn der Fall entschieden ist.** Sobald die Bank entschieden hat, nennt die Übersicht das Ergebnis und — sofern DisputeDesk die Nachweise erstellt und eingereicht hat — einen Satz zu dem Faktor, der den Fall am wahrscheinlichsten entschieden hat, abgeleitet aus den tatsächlich eingereichten Nachweisen (zum Beispiel, dass die Rechnungsadresse der Karte nicht mit der Adresse der Bestellung übereinstimmte). Derselbe Satz steht in der Ergebnis-E-Mail.\n\nZwei Einschränkungen sind wichtig. Die Begründung der Bank können wir nicht sehen: Die Shopify-API meldet nur, ob der Fall gewonnen oder verloren wurde, und die schriftliche Begründung des Ausstellers liegt ausschließlich im Shopify Admin — öffnen Sie den Fall dort, um sie zu lesen. Und unser Satz beschreibt, was die Nachweise zeigten, nicht was die Bank gefolgert hat: Er sagt, dass ein Faktor stark gewichtet wird, nicht dass er den Verlust verursacht hat. Wurde der Fall vor Ihrer Installation von DisputeDesk entschieden, sagt die Übersicht genau das, statt eine Einreichung zu behaupten."
       },
       "notSubmitToNetworks": {
         "title": "DisputeDesk reicht NICHT beim Kartennetzwerk ein",

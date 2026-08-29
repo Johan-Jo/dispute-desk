@@ -2470,6 +2470,40 @@ The "Chronology of Events" bullets (PDF + embedded, via `lib/defence/chronology.
 
 **Prior chargebacks on the Evidence tab (2026-08-01).** The Evidence tab's internal-signals card is built from a fixed list of classifiers (AVS/CVV, cardholder-name, billing-address, IP) plus a sweep for payloads that literally set `bankEligible: false`. The account-history row's bank exclusion is decided downstream in `evidenceLineItem.isNegativeOrAmbiguous` and never written back into the payload, so the sweep could not see it — the prior-chargeback finding showed on Overview and was missing from the Evidence tab. `classifyPriorChargebacks` (exported from `useEvidenceSections.ts` for test) closes it, firing only on a VERIFIED `disputeFreeHistory === false`; `unknown` must never render as an accusation. It stays merchant-only in every case — citing a customer's dispute history to the issuer hands them our weakness.
 
+### Decided-dispute explanation (2026-08-29)
+
+**Source:** `lib/disputes/outcomeExplanation.ts`. Renders in the Overview hero (`OverviewTab.tsx`) and as a paragraph in the outcome email (`lib/email/sendOutcomePostedAlert.ts`) — one derivation, two surfaces, pinned identical by test.
+
+**The defect.** A decided dispute rendered the live-case assessment vocabulary: `Evidence assessment: Not yet assessed` plus `No evidence available.` — on cases carrying a fully submitted defence package (observed on `#349145`, MC 4837, 11 classified facts). Two independent causes:
+
+1. `assessmentPresence.mayRenderVerdict` asks *"is the assessment fresh enough to file against?"*. Correct for a live case; meaningless once the bank has decided, where the snapshot is *supposed* to be stale. It answered "not fresh" and the UI rendered that as "never assessed". **`assessmentPresence.ts` is not the bug — the caller was.** It still gates every live case unchanged.
+2. `strengthReasonText` had no `assessed` guard, so the `EMPTY_WORKSPACE_STRENGTH` sentinel printed `disputes.strengthReason.general.insufficient` as a factual claim. Fingerprint: the `general` family string on a fraud case, where a real scorer run would emit `fraud`.
+
+**Three states, discriminated by pack presence — never by `submission_state`.**
+
+| State | Condition | Copy |
+|---|---|---|
+| `we_defended_with_facts` | submitted `defence_packages` row with usable `facts_json` | "We filed your evidence on {date}. {clause} — banks weight this heavily…" |
+| `we_defended_no_facts` | pack row, no usable facts (e.g. Klarna: no card network) | "We filed your evidence on {date}. The bank still decided for the cardholder." |
+| `not_defended_by_us` | no pack row | "This dispute was decided before DisputeDesk filed any evidence for it." |
+
+**`submission_state = 'submitted_confirmed'` MUST NOT gate this.** It is true on ~390 disputes that closed *before* the shop installed — it records that a response reached Shopify, not who assembled it (`scripts/sql/filed-by-whom.sql`). Gating on it would claim credit for evidence merchants filed themselves, years earlier. Pack rows switch on at install rather than eroding (`pack-presence-by-era.sql`: 2026-Q3 139/140; 2026-Q1 and earlier 0), so presence is a reliable proxy — 96% post-install.
+
+**Factors.** Ranked, top-ranked only rendered (it is a header line). Loss: `avs_mismatch`, `no_signature_on_fraud`, `no_delivery_confirmation`, `weak_identity_signals`. Win: `signature_confirmed`, `avs_match`, `delivery_confirmed`.
+
+Rules that are load-bearing:
+
+- **AVS is read through `readPaymentVerification`** — the single owner of AVS/CVV semantics, network-aware, normalizing three historical payload shapes. A local letter set here is the exact defect `tests/unit/paymentVerificationSingleOwner.test.ts` forbids. Only a canonical `no_match` counts; `unchecked` is absence of evidence, never evidence of mismatch.
+- **Reason-scoped factors.** `no_delivery_confirmation` fires only on fraud/delivery/product families — on a refund or subscription dispute the parcel is not what the bank weighed, so it would explain nothing and read as our own failure. `no_signature_on_fraud` is fraud-only.
+- **Zero factors is a valid result** — falls back to the plain sentence. Never padded with filler.
+- **Never causal.** Copy says "banks weight this heavily", never "you lost because": `ShopifyPaymentsDispute` exposes only `status` + `finalizedOn` (verified across Admin GraphQL 2025-10 / 2026-01 / `unstable`), and the issuer's rationale packet is Admin-UI-only. Do not plan an ingest.
+- **Merchant-facing only.** These strings must never reach `narrative_json` or a PDF — naming our own weaknesses to an issuer is the bank-optimised-rebuttal violation.
+- **No bare gateway codes** ("the billing address did not match", never "AVS = N").
+
+**Email specifics.** Inserted as `body[1]` on `won`/`lost` and their `inquiry` counterparts. **`accepted` is excluded** — it is a catch-all that also reaches disputes we submitted, so it cannot know what was filed. The lookup is failure-tolerant at both layers: a read error or missing key degrades to the email's existing wording rather than costing the merchant the notification. Historical emails are not resent (`OUTCOME_DETECTED` is dedup-guarded), so already-decided cases get the sentence in the Overview only.
+
+**Won side is unvalidated.** The only won dispute holding a package is a Klarna inquiry (`cardNetwork: null`), where AVS and signature do not exist — so the win predicates cannot fire there and must not be tuned against it. Expect `we_defended_no_facts` until a card-network win is decided post-install.
+
 ### Returned-to-sender Gate (2026-08-20)
 
 **Routing primitive, ranked below Coverage and Fatal-loss and above everything else.** Fires when a carrier reconciled any shipment on the order to `Returned` **and** no refund covers the disputed amount — i.e. the goods are back with the merchant and the money is not.

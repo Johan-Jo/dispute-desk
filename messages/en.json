@@ -808,6 +808,26 @@
         "returned_unrefunded": "The carrier returned this parcel to you and no refund has been issued, so you are holding both the goods and the payment. No proof of delivery can exist for this order, and without one the bank will normally decide for the customer. Tell us why the parcel came back — if the customer refused it or never collected it, that is not a valid return and it is worth arguing. If you kept the goods and the money, the fair answer is to refund."
       }
     },
+    "outcomeExplanation": {
+      "filedWithFactor": {
+        "lost": "We filed your evidence on {date}. {clause} — banks weight this heavily on this type of claim.",
+        "won": "We filed your evidence on {date}. {clause} — that is usually what carries a case like this."
+      },
+      "filedNoFactors": {
+        "lost": "We filed your evidence on {date}. The bank still decided for the cardholder.",
+        "won": "We filed your evidence on {date}, and the bank ruled in your favour."
+      },
+      "notDefendedByUs": "This dispute was decided before DisputeDesk filed any evidence for it.",
+      "factor": {
+        "avs_mismatch": "The card's billing address did not match the address on the order",
+        "no_signature_on_fraud": "The delivery was confirmed but nobody signed for it",
+        "no_delivery_confirmation": "No carrier confirmation of delivery ever reached us",
+        "weak_identity_signals": "The only identity signal we could confirm was the customer's country",
+        "signature_confirmed": "The delivery was confirmed and signed for",
+        "avs_match": "The card's billing address matched the address on the order",
+        "delivery_confirmed": "The carrier confirmed delivery"
+      }
+    },
     "improvementHint": "Add {label} to strengthen your case.",
     "recommendation": {
       "submitted": {
@@ -3292,7 +3312,7 @@
       },
       "afterSaving": {
         "title": "What happens after saving evidence",
-        "body": "After DisputeDesk saves your evidence to Shopify, here's what happens next:\n\n1. Evidence appears in Shopify Admin: go to Orders > the linked order > Chargeback to review the evidence Shopify received.\n2. Review in Shopify: you can add final notes or make adjustments directly in Shopify Admin.\n3. Shopify sends evidence to the card network (Visa, Mastercard, etc.) either:\n   - When you click the respond button in Shopify Admin, or\n   - Automatically on the dispute's due date if you haven't responded manually.\n4. Card network reviews: the card network evaluates the evidence and makes a decision.\n5. Resolution: the dispute is resolved as \"Won\" (reversed in your favor) or \"Lost.\"\n\nDisputeDesk monitors the dispute status and updates it when Shopify reports a resolution.\n\n**File evidence rows in Shopify Admin:** when the file evidence layer is enabled, **Shipping documentation**, **Customer communication**, **Proof of service**, and **Any other evidence** rows render a populated file with a download icon — DisputeDesk uploads a focused per-slot PDF that includes the reason and the key facts from your pack. Your original uploaded files also remain as labelled secure links (https://disputedesk.app/e/…) inside the evidence text, so the issuer has access to both the contextual summary and the source bytes. **Refund policy** and **Cancellation policy** rows are reason-aware — they only render on certain dispute reasons in Admin and are currently delivered as labelled links across all reason types. When the file evidence layer is disabled, every file flows as a labelled link only and Shopify's native file rows stay empty. Use **Review and Forward** here to preview the exact payload."
+        "body": "After DisputeDesk saves your evidence to Shopify, here's what happens next:\n\n1. Evidence appears in Shopify Admin: go to Orders > the linked order > Chargeback to review the evidence Shopify received.\n2. Review in Shopify: you can add final notes or make adjustments directly in Shopify Admin.\n3. Shopify sends evidence to the card network (Visa, Mastercard, etc.) either:\n   - When you click the respond button in Shopify Admin, or\n   - Automatically on the dispute's due date if you haven't responded manually.\n4. Card network reviews: the card network evaluates the evidence and makes a decision.\n5. Resolution: the dispute is resolved as \"Won\" (reversed in your favor) or \"Lost.\"\n\nDisputeDesk monitors the dispute status and updates it when Shopify reports a resolution.\n\n**File evidence rows in Shopify Admin:** when the file evidence layer is enabled, **Shipping documentation**, **Customer communication**, **Proof of service**, and **Any other evidence** rows render a populated file with a download icon — DisputeDesk uploads a focused per-slot PDF that includes the reason and the key facts from your pack. Your original uploaded files also remain as labelled secure links (https://disputedesk.app/e/…) inside the evidence text, so the issuer has access to both the contextual summary and the source bytes. **Refund policy** and **Cancellation policy** rows are reason-aware — they only render on certain dispute reasons in Admin and are currently delivered as labelled links across all reason types. When the file evidence layer is disabled, every file flows as a labelled link only and Shopify's native file rows stay empty. Use **Review and Forward** here to preview the exact payload.\n\n**When the dispute is decided.** Once the bank rules, the Overview header states the outcome and — when DisputeDesk built and filed the evidence — one sentence naming the factor that most likely decided it, drawn from the evidence we actually filed (for example, that the card's billing address did not match the address on the order). The same sentence appears in the outcome email.\n\nTwo limits worth knowing. We cannot see the bank's own reasoning: Shopify's API reports only whether the dispute was won or lost, and the issuer's written explanation is available solely inside Shopify Admin — open the dispute there to read it. And our sentence describes what the evidence showed, not what the bank concluded, so it says a factor was weighted heavily rather than that it caused the loss. If the dispute was decided before you installed DisputeDesk, the header says so instead of claiming we filed anything."
       },
       "notSubmitToNetworks": {
         "title": "DisputeDesk does NOT send evidence to card networks",

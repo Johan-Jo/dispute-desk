@@ -49,6 +49,10 @@ import {
   type DeliveryPresentation,
 } from "@/lib/argument/deliveryPresentation";
 import { resolveToken } from "@/lib/i18n/resolveToken";
+import {
+  outcomeExplanationToken,
+  resolveOutcomeExplanation,
+} from "@/lib/disputes/outcomeExplanation";
 import { classifyEvidenceRow } from "@/lib/argument/categoryBadge";
 import { canMerchantUpload, type useDisputeWorkspace } from "../hooks/useDisputeWorkspace";
 import { LiabilityShiftPanel } from "@/components/liability-shift/LiabilityShiftPanel";
@@ -332,6 +336,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
   // the type was made non-optional in lib/argument/types.ts so a
   // dropped field surfaces as a TypeScript error rather than a silent
   // "hard_to_win" degradation in the UI.
+
   const heroVariant: HeroVariant = caseStrength.heroVariant as HeroVariant;
 
   // ── Shared presentation model (plan §6.2) ──
@@ -356,6 +361,50 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       normalizedStatus: dispute.normalizedStatus ?? null,
       packStatus: data.pack?.status ?? null,
     });
+
+  /* ── DECIDED CASE: explanation, not assessment ────────────────────
+   *
+   * `mayRenderVerdict` asks "is the assessment fresh enough to FILE
+   * against?". Once the bank has decided, that question has no meaning:
+   * nothing will be re-filed, and the snapshot is SUPPOSED to be stale
+   * (it was computed weeks before the decision, under an older policy
+   * version). The gate answered "not fresh" and this tab rendered it as
+   * "Not yet assessed" + the sentinel's "No evidence available." — on
+   * cases carrying a fully submitted defence package.
+   *
+   * Terminal disputes therefore leave the assessment vocabulary behind
+   * entirely and state what we filed and the likely deciding factor.
+   * The gate itself is untouched and still governs every live case. */
+  const isDecided = lifecycle === "won" || lifecycle === "lost";
+  const decidedOutcome: "won" | "lost" | null =
+    lifecycle === "won" ? "won" : lifecycle === "lost" ? "lost" : null;
+
+  const outcomeExplanationText = (() => {
+    if (!decidedOutcome) return null;
+    // Presence of the submitted defence package — NOT
+    // `dispute.submissionState` — is what says DisputeDesk defended this
+    // case. That flag is also true on historical imports back-filled at
+    // install, which closed before the app existed.
+    const bankFacing = data.defencePackage?.bankFacing as
+      | { submitted_at?: string | null; facts_json?: unknown }
+      | null
+      | undefined;
+    const explanation = resolveOutcomeExplanation({
+      outcome: decidedOutcome,
+      reason: dispute.reason ?? null,
+      pack: bankFacing
+        ? { submittedAt: bankFacing.submitted_at ?? null, facts: bankFacing.facts_json }
+        : null,
+    });
+    const filedAt =
+      explanation.kind === "not_defended_by_us" ? null : explanation.filedAt;
+    const token = outcomeExplanationToken(
+      explanation,
+      decidedOutcome,
+      filedAt ? formatDate(filedAt) : null,
+    );
+    return token ? resolveToken(tRoot, token) : null;
+  })();
 
   // Hero tone follows LIFECYCLE, not strength (plan §8: strength never
   // creates alarm or a green "ready" glow). Calm indigo default; green
@@ -970,6 +1019,20 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               subtle divider. Assessment copy only — strength never becomes
               an operational callout (plan §8). The standalone card below
               is suppressed so this shows once. */}
+          {isDecided ? (
+            /* Decided: one sentence saying what we filed and the likely
+               deciding factor. No strength pill and no `strengthReasonText`
+               — the first is a live-case verdict and the second is an
+               ungated sentinel that printed "No evidence available." on
+               cases we had fully defended. */
+            outcomeExplanationText ? (
+              <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${heroTone.border}` }}>
+                <p style={{ fontSize: 12.5, color: heroTone.bodyColor, margin: 0, lineHeight: 1.55, maxWidth: 760 }}>
+                  {outcomeExplanationText}
+                </p>
+              </div>
+            ) : null
+          ) : (
           <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${heroTone.border}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span style={{ fontSize: 12.5, fontWeight: 600, color: heroTone.titleColor }}>
@@ -1006,6 +1069,7 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
               </p>
             ) : null}
           </div>
+          )}
           {/* Gate actions — the two buttons the removed amber banner carried,
               relocated into the card per `Dispute Case v2.dc.html`. The design
               INVERTS the old emphasis: "Add missing evidence" is the primary
