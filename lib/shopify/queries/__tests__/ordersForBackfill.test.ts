@@ -639,6 +639,90 @@ describe("normalizeBackfillOrder", () => {
     expect(noTx.payment_method).toBeNull();
   });
 
+  // A PayPal / standalone-Klarna transaction is typed as the bare
+  // PaymentDetails interface — neither union fragment matches, so both
+  // paymentMethodName and wallet are absent. Before the gateway
+  // fallback these stored null and the admin dashboard reported them
+  // as "other": 86.6% of orders on one PayPal-heavy shop.
+  it("falls back to the gateway when it names the method itself", () => {
+    const viaGateway = (gateway: string) =>
+      normalizeBackfillOrder(
+        shopId,
+        rawOrder({
+          transactions: [
+            {
+              kind: "SALE",
+              status: "SUCCESS",
+              gateway,
+              receiptJson: null,
+              paymentDetails: { __typename: "PaymentDetails" },
+            },
+          ],
+        }),
+        { storeCountryCode: "US" },
+      ).order.payment_method;
+
+    expect(viaGateway("paypal")).toBe("paypal");
+    // Shopify is inconsistent about casing across gateways; this shop
+    // stores "Klarna" capitalised and "paypal" lower.
+    expect(viaGateway("Klarna")).toBe("klarna");
+    expect(viaGateway("Amazon Pay")).toBe("amazon_pay");
+  });
+
+  // The deny-list is what keeps the fallback honest: an acquirer name
+  // says nothing about how the shopper paid, so the method stays
+  // unknown rather than becoming the string "shopify_payments".
+  it("does not invent a method from a card acquirer's name", () => {
+    const acquirer = (gateway: string) =>
+      normalizeBackfillOrder(
+        shopId,
+        rawOrder({
+          transactions: [
+            {
+              kind: "SALE",
+              status: "SUCCESS",
+              gateway,
+              receiptJson: null,
+              paymentDetails: null,
+            },
+          ],
+        }),
+        { storeCountryCode: "US" },
+      ).order.payment_method;
+
+    expect(acquirer("shopify_payments")).toBeNull();
+    expect(acquirer("stripe")).toBeNull();
+    expect(acquirer("manual")).toBeNull();
+    // Acquirers arrive under connector names too — prod carries both
+    // of these. Matched as a family so the next one needs no code.
+    expect(acquirer("stripe_connect")).toBeNull();
+    expect(acquirer("carro_stripe")).toBeNull();
+  });
+
+  // paymentDetails stays authoritative — Klarna routed *through*
+  // Shopify Payments must not be relabelled by the gateway fallback.
+  it("prefers paymentDetails over the gateway when both are present", () => {
+    const { order } = normalizeBackfillOrder(
+      shopId,
+      rawOrder({
+        transactions: [
+          {
+            kind: "SALE",
+            status: "SUCCESS",
+            gateway: "paypal",
+            receiptJson: null,
+            paymentDetails: {
+              __typename: "CardPaymentDetails",
+              wallet: "APPLE_PAY",
+            },
+          },
+        ],
+      }),
+      { storeCountryCode: "US" },
+    );
+    expect(order.payment_method).toBe("apple_pay");
+  });
+
   it("flags cross-border when shipping country differs from store country", () => {
     const { order } = normalizeBackfillOrder(
       shopId,
