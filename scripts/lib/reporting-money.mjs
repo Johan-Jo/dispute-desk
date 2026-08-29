@@ -6,7 +6,7 @@ function median(sortedValues) {
     : sortedValues[middle];
 }
 
-export function summarizeAmountsByCurrency(rows) {
+export function summarizeAmountsByCurrency(rows, reportingDays) {
   const groups = new Map();
 
   for (const row of rows) {
@@ -26,9 +26,10 @@ export function summarizeAmountsByCurrency(rows) {
           .map((row) => row.initiated_at)
           .filter(Boolean)
           .sort();
-        const spanDays = initiatedAt.length > 1
+        const observedSpanDays = initiatedAt.length > 1
           ? (new Date(initiatedAt.at(-1)) - new Date(initiatedAt[0])) / 86400000 + 1
           : 0;
+        const spanDays = reportingDays ?? observedSpanDays;
         const total = amounts.reduce((sum, amount) => sum + amount, 0);
 
         return [currency, {
