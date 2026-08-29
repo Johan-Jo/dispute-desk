@@ -1450,12 +1450,21 @@
       "notDefendedByUs": "Esta disputa se resolvió antes de que DisputeDesk presentara ninguna prueba.",
       "factor": {
         "avs_mismatch": "La dirección de facturación de la tarjeta no coincidía con la dirección del pedido",
+        "cardholder_name_mismatch": "El nombre registrado en la tarjeta era distinto del nombre del comprador",
+        "prior_chargebacks": "La cuenta del cliente tenía un contracargo anterior",
+        "ip_country_mismatch": "La ubicación del pedido y el país de envío no coincidían",
+        "ip_high_risk": "El pago se realizó desde una red o ubicación de alto riesgo",
         "no_signature_on_fraud": "Se confirmó la entrega, pero nadie firmó",
         "no_delivery_confirmation": "No nos llegó ninguna confirmación de entrega del transportista",
         "weak_identity_signals": "La única señal de identidad que pudimos confirmar fue el país del cliente",
         "signature_confirmed": "La entrega se confirmó y se firmó",
         "avs_match": "La dirección de facturación de la tarjeta coincidía con la dirección del pedido",
         "delivery_confirmed": "El transportista confirmó la entrega"
+      },
+      "learning": {
+        "title": "Lo que probablemente debilitó este caso",
+        "caveat": "El emisor no comparte su razonamiento exacto. Estas son las señales de riesgo más importantes de la evaluación completa, incluidas las que no se enviaron al banco.",
+        "fraudRecommendation": "Recomendación: revisa o cancela manualmente futuros pedidos de alto riesgo cuando falle la verificación del pago o no coincidan los nombres del titular y del comprador, especialmente si la cuenta ya tiene un contracargo."
       }
     },
     "improvementHint": "Agregue {label} para fortalecer su caso.",
