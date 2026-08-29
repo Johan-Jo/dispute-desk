@@ -141,6 +141,35 @@ describe("deriveOutcomeFactors — loss side", () => {
     expect(factors.map((f) => f.code)).toContain("no_signature_on_fraud");
   });
 
+  it("uses merchant-only fraud signals before an unsigned delivery", () => {
+    const factors = deriveOutcomeFactors({
+      facts: [
+        fact({
+          fieldKey: "avs_cvv_match",
+          avsResult: "N",
+          cvvResult: "M",
+          cardholderName: "ELAINE GOLIMOWSKI",
+        }),
+        fact({ fieldKey: "customer_account_info", disputeFreeHistory: false }),
+        fact({
+          fieldKey: "delivery_proof",
+          proofType: "delivered_confirmed",
+          signedByName: null,
+        }),
+      ],
+      reason: "FRAUDULENT",
+      outcome: "lost",
+      customerName: "Jesse Hanks",
+    });
+
+    expect(factors.map((factor) => factor.code).slice(0, 3)).toEqual([
+      "avs_mismatch",
+      "cardholder_name_mismatch",
+      "prior_chargebacks",
+    ]);
+    expect(factors.findIndex((factor) => factor.code === "no_signature_on_fraud")).toBeGreaterThan(2);
+  });
+
   it("an unsigned delivery is only a factor on a fraud claim", () => {
     const codes = (reason: string) =>
       deriveOutcomeFactors({ facts: FACTS_349145, reason, outcome: "lost" }).map(

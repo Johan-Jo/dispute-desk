@@ -1450,12 +1450,21 @@
       "notDefendedByUs": "Dieser Fall wurde entschieden, bevor DisputeDesk Nachweise dafür eingereicht hat.",
       "factor": {
         "avs_mismatch": "Die Rechnungsadresse der Karte stimmte nicht mit der Adresse der Bestellung überein",
+        "cardholder_name_mismatch": "Der für die Karte registrierte Name unterschied sich vom Namen des Käufers",
+        "prior_chargebacks": "Für das Kundenkonto gab es bereits eine Rückbuchung",
+        "ip_country_mismatch": "Bestellstandort und Lieferland stimmten nicht überein",
+        "ip_high_risk": "Beim Checkout wurde ein risikoreiches Netzwerk oder ein risikoreicher Standort verwendet",
         "no_signature_on_fraud": "Die Zustellung wurde bestätigt, aber niemand hat unterschrieben",
         "no_delivery_confirmation": "Uns hat keine Zustellbestätigung des Transportunternehmens erreicht",
         "weak_identity_signals": "Das einzige bestätigte Identitätsmerkmal war das Land der Kundin oder des Kunden",
         "signature_confirmed": "Die Zustellung wurde bestätigt und unterschrieben",
         "avs_match": "Die Rechnungsadresse der Karte stimmte mit der Adresse der Bestellung überein",
         "delivery_confirmed": "Das Transportunternehmen hat die Zustellung bestätigt"
+      },
+      "learning": {
+        "title": "Was diesen Fall wahrscheinlich geschwächt hat",
+        "caveat": "Der Kartenaussteller teilt seine genaue Begründung nicht mit. Dies sind die stärksten Risikosignale aus der vollständigen Bewertung, einschließlich der Signale, die nicht an die Bank übermittelt wurden.",
+        "fraudRecommendation": "Empfehlung: Prüfen oder stornieren Sie zukünftige Hochrisikobestellungen manuell, wenn die Zahlungsprüfung fehlschlägt oder Karteninhaber und Käufer unterschiedliche Namen haben – insbesondere bei früheren Rückbuchungen."
       }
     },
     "improvementHint": "Fügen Sie {label} hinzu, um Ihren Fall zu stärken.",

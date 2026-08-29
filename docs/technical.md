@@ -7447,3 +7447,8 @@ Automation decides what to DO; the argument decides what to SAY. Nothing under
 decision snapshot carries no narrative, no package id and no plan field.
 Enforced structurally by `branchBoundary.test.ts`.
 
+## Post-decision merchant learning
+
+Terminal disputes use `lib/disputes/outcomeExplanation.ts` for a merchant-only explanation of the recorded outcome. The filing sentence continues to use the submitted defence-package timestamp, but a lost case's **What likely weakened this case** panel evaluates the complete workspace evidence map (`pack.evidenceItemsByField`), not only `defencePackage.bankFacing.facts_json`. This distinction is intentional: AVS failures, cardholder/buyer name mismatches, prior chargebacks and risky IP signals are correctly withheld from the issuer-facing response, yet remain essential learning for the merchant after a decision.
+
+Fraud-loss factors are ranked by operational relevance: payment-verification failure, cardholder/buyer mismatch, prior chargebacks, location/network risk, then delivery gaps. The panel shows up to four observed or carefully qualified signals and a prevention recommendation. It explicitly states that the issuer does not disclose its exact reasoning; no factor is presented as proven causation. This path is display-only and must never feed `narrative_json`, a PDF, or a Shopify evidence mutation.

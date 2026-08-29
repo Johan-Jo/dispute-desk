@@ -1450,12 +1450,21 @@
       "notDefendedByUs": "Esta contestação foi decidida antes de a DisputeDesk ter enviado quaisquer provas.",
       "factor": {
         "avs_mismatch": "A morada de faturação do cartão não correspondia à morada da encomenda",
+        "cardholder_name_mismatch": "O nome registado no cartão era diferente do nome do comprador",
+        "prior_chargebacks": "A conta do cliente tinha um chargeback anterior",
+        "ip_country_mismatch": "A localização da encomenda e o país de entrega não correspondiam",
+        "ip_high_risk": "O pagamento foi feito a partir de uma rede ou localização de alto risco",
         "no_signature_on_fraud": "A entrega foi confirmada, mas ninguém assinou",
         "no_delivery_confirmation": "Não nos chegou qualquer confirmação de entrega da transportadora",
         "weak_identity_signals": "O único sinal de identidade que conseguimos confirmar foi o país do cliente",
         "signature_confirmed": "A entrega foi confirmada e assinada",
         "avs_match": "A morada de faturação do cartão correspondia à morada da encomenda",
         "delivery_confirmed": "A transportadora confirmou a entrega"
+      },
+      "learning": {
+        "title": "O que provavelmente enfraqueceu este caso",
+        "caveat": "O emissor não partilha o motivo exato da decisão. Estes são os sinais de risco mais fortes da avaliação completa, incluindo os que não foram enviados ao banco.",
+        "fraudRecommendation": "Recomendação: analise ou cancele manualmente futuras encomendas de alto risco quando a verificação do pagamento falhar ou os nomes do titular e do comprador forem diferentes, sobretudo se a conta já tiver um chargeback."
       }
     },
     "improvementHint": "Adicione {label} para fortalecer seu caso.",
