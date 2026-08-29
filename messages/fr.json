@@ -1438,6 +1438,26 @@
         "returned_unrefunded": "Le transporteur vous a retourné ce colis et aucun remboursement n’a été effectué : vous détenez donc à la fois la marchandise et le paiement. Aucune confirmation de livraison ne peut exister pour cette commande et, sans elle, la banque tranche généralement en faveur du client. Dites-nous pourquoi le colis est revenu : si le client a refusé la livraison ou ne l’a jamais retiré, il ne s’agit pas d’un retour valable, et cela vaut la peine d’être plaidé. Si vous gardez la marchandise et l’argent, la réponse équitable est de rembourser."
       }
     },
+    "outcomeExplanation": {
+      "filedWithFactor": {
+        "lost": "Nous avons transmis vos preuves le {date}. {clause} — les banques y accordent beaucoup de poids sur ce type de litige.",
+        "won": "Nous avons transmis vos preuves le {date}. {clause} — c'est généralement ce qui emporte ce type de dossier."
+      },
+      "filedNoFactors": {
+        "lost": "Nous avons transmis vos preuves le {date}. La banque a tout de même tranché en faveur du titulaire de la carte.",
+        "won": "Nous avons transmis vos preuves le {date}, et la banque a tranché en votre faveur."
+      },
+      "notDefendedByUs": "Ce litige a été tranché avant que DisputeDesk ne transmette la moindre preuve.",
+      "factor": {
+        "avs_mismatch": "L'adresse de facturation de la carte ne correspondait pas à celle de la commande",
+        "no_signature_on_fraud": "La livraison a été confirmée mais personne n'a signé",
+        "no_delivery_confirmation": "Aucune confirmation de livraison du transporteur ne nous est parvenue",
+        "weak_identity_signals": "Le seul élément d'identité confirmé était le pays du client",
+        "signature_confirmed": "La livraison a été confirmée et signée",
+        "avs_match": "L'adresse de facturation de la carte correspondait à celle de la commande",
+        "delivery_confirmed": "Le transporteur a confirmé la livraison"
+      }
+    },
     "improvementHint": "Ajoutez {label} pour renforcer votre dossier.",
     "recommendation": {
       "submitted": {
@@ -3277,7 +3297,7 @@
       },
       "afterSaving": {
         "title": "Que se passe-t-il après l'enregistrement",
-        "body": "Après l'enregistrement :\n\n1. Les preuves apparaissent dans Shopify Admin : Commandes > la commande liée > Contestation.\n2. Révisez dans Shopify et ajoutez des notes.\n3. Shopify soumet au réseau de cartes — manuellement ou automatiquement à la date d'échéance.\n4. Le réseau évalue les preuves.\n5. Résolution : Gagné ou Perdu.\n\nDisputeDesk surveille le statut et le met à jour.\n\n**Lignes de fichier dans Shopify Admin :** Lorsque la couche de preuve par fichier est activée, les lignes **Documentation d'expédition**, **Communication client**, **Documentation de service** et **Autres preuves** affichent un fichier avec icône de téléchargement — DisputeDesk télécharge un PDF ciblé par emplacement contenant le motif et les faits clés de votre dossier. Vos fichiers originaux restent également sous forme de liens sécurisés étiquetés (https://disputedesk.app/e/…) dans le texte de preuve, de sorte que l'émetteur voit à la fois le résumé contextuel et les fichiers originaux. Les lignes **Politique de remboursement** et **Politique d'annulation** sont reason-aware et ne s'affichent que pour certains motifs ; jusqu'à vérification par famille, ces fichiers circulent sous forme de liens étiquetés. Lorsque la couche est désactivée, chaque fichier circule uniquement sous forme de lien. Utilisez **Vérifier et transmettre** ici pour prévisualiser la charge utile exacte."
+        "body": "Après l'enregistrement :\n\n1. Les preuves apparaissent dans Shopify Admin : Commandes > la commande liée > Contestation.\n2. Révisez dans Shopify et ajoutez des notes.\n3. Shopify soumet au réseau de cartes — manuellement ou automatiquement à la date d'échéance.\n4. Le réseau évalue les preuves.\n5. Résolution : Gagné ou Perdu.\n\nDisputeDesk surveille le statut et le met à jour.\n\n**Lignes de fichier dans Shopify Admin :** Lorsque la couche de preuve par fichier est activée, les lignes **Documentation d'expédition**, **Communication client**, **Documentation de service** et **Autres preuves** affichent un fichier avec icône de téléchargement — DisputeDesk télécharge un PDF ciblé par emplacement contenant le motif et les faits clés de votre dossier. Vos fichiers originaux restent également sous forme de liens sécurisés étiquetés (https://disputedesk.app/e/…) dans le texte de preuve, de sorte que l'émetteur voit à la fois le résumé contextuel et les fichiers originaux. Les lignes **Politique de remboursement** et **Politique d'annulation** sont reason-aware et ne s'affichent que pour certains motifs ; jusqu'à vérification par famille, ces fichiers circulent sous forme de liens étiquetés. Lorsque la couche est désactivée, chaque fichier circule uniquement sous forme de lien. Utilisez **Vérifier et transmettre** ici pour prévisualiser la charge utile exacte.\n\n**Lorsque le litige est tranché.** Une fois la banque décidée, l'en-tête Aperçu indique l'issue et — lorsque DisputeDesk a constitué et transmis les preuves — une phrase nommant le facteur qui l'a très probablement emporté, tirée des preuves réellement transmises (par exemple, que l'adresse de facturation de la carte ne correspondait pas à celle de la commande). La même phrase figure dans l'e-mail de résultat.\n\nDeux limites à connaître. Nous ne voyons pas le raisonnement de la banque : l'API Shopify indique seulement si le litige est gagné ou perdu, et l'explication écrite de l'émetteur n'existe que dans Shopify Admin — ouvrez-y le litige pour la lire. Et notre phrase décrit ce que montraient les preuves, non ce que la banque a conclu : elle dit qu'un facteur pèse lourd, pas qu'il a causé la perte. Si le litige a été tranché avant votre installation de DisputeDesk, l'en-tête le précise au lieu de prétendre que nous avons transmis quoi que ce soit."
       },
       "notSubmitToNetworks": {
         "title": "DisputeDesk ne soumet PAS au réseau de cartes",

@@ -411,6 +411,33 @@ async function dispatchOutcomeDetected(
         .maybeSingle();
       const orderName =
         (row as { order_name?: string | null } | null)?.order_name ?? null;
+      // The submitted defence package, when we built one. Presence — not
+      // `submission_state` — is what says DisputeDesk defended this case;
+      // that flag is also true on historical imports back-filled at
+      // install. Absent, the email keeps its existing wording.
+      // Failure-tolerant on purpose: the explanation paragraph is an
+      // enhancement, and a read error here must never cost the merchant
+      // the outcome notification itself. Absent, the email keeps its
+      // existing wording.
+      let defencePackage: { submittedAt: string | null; facts: unknown } | null =
+        null;
+      try {
+        const { data: pkg } = await sb
+          .from("defence_packages")
+          .select("submitted_at, facts_json")
+          .eq("dispute_id", event.disputeId)
+          .eq("status", "submitted")
+          .maybeSingle();
+        if (pkg) {
+          defencePackage = {
+            submittedAt:
+              (pkg as { submitted_at?: string | null }).submitted_at ?? null,
+            facts: (pkg as { facts_json?: unknown }).facts_json,
+          };
+        }
+      } catch {
+        defencePackage = null;
+      }
       await sendOutcomePostedAlert({
         shopId: args.shopId,
         disputeId: event.disputeId,
@@ -422,6 +449,7 @@ async function dispatchOutcomeDetected(
         // Inquiries must not be announced as chargebacks — the email
         // helper switches to "dispute"-worded copy for this phase.
         phase: event.context.phase === "inquiry" ? "inquiry" : "chargeback",
+        defencePackage,
       });
     },
   });
