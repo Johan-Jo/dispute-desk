@@ -4648,6 +4648,53 @@ balance** and hits the `upgrade_required` block on its first pack build.
 Free stays manual (`autoPack: false`, `rules: false`); the grant only unblocks manual
 build/export/submit up to N.
 
+### Credit-arrival replay (`lib/billing/replayBlockedBuilds.ts`)
+
+**A dispute that hits `quota_exceeded` never retries on its own.** The dispatcher wraps the
+automation pipeline in `withEffectDedup` (`lib/disputes/dispatchOnce.ts`), which inserts its
+`dispute_event_key` claim row **before** invoking the effect and treats any later attempt as
+`already_applied`. A quota exit therefore *consumes* the dispute's one and only pipeline run.
+Neither rebuild cron recovers it: `refresh-open-disputes` only enqueues when delivery state
+moves, and `defence-package-deadline-rebuild` counts a pack-less dispute as `skippedNoPack`.
+
+Observed on `6a8848-dd` (prod, 2026-08-29): install granted no credits, the pipeline gave up on
+63 live disputes at 10:37–11:07, credits landed at 14:30. Balance read 105 remaining / 0 used
+while 50 open disputes — earliest deadline the next morning — had no pack and no queued job.
+
+**The guard:** `grantCredits()` (`lib/billing/consumePack.ts`) is the single chokepoint every
+credit passes through. After a successful ledger insert it fire-and-forgets
+`scheduleBlockedBuildReplay()`, which enqueues a `replay_blocked_builds` job (priority 20,
+deduped on the grant's `reference`). The handler re-invokes `runAutomationPipeline` for each
+candidate, **bypassing the burnt effect claim** rather than trying to un-burn it.
+
+- **Scope is live deadlines only:** `status ∈ {needs_response, under_review}`,
+  `submission_state = 'not_saved'`, `closed_at is null`, `due_at > now()`, and no non-failed /
+  non-archived pack. A dispute past its deadline cannot be helped by a pack, and the tight scope
+  is what keeps the sweep from re-running over resolved history.
+- **The sweep decides nothing itself.** `runAutomationPipeline` already guards terminal status,
+  auto-build-off, existing packs and quota, and clears stale billing attention on the way
+  through; the sweep only selects candidates and re-invokes it. A dispute the pipeline declines
+  keeps its attention flag — clearing it would hide a real blocker.
+- **Capped** at `REPLAY_CANDIDATE_CAP = 200` per sweep, ordered by soonest deadline, and the
+  handler logs when the cap is hit rather than silently truncating.
+- **Deferred while the order backfill runs.** Pack evidence is computed *from* `shopify_orders` —
+  `loadPriorOrderHistory` counts prior orders out of that table, and the fulfillment source falls
+  back to its persisted snapshot. Building mid-import bakes a too-low prior-order count into the
+  pack **silently** (the helper returns a number, not an error), and prior-order history is the
+  "long-standing good customer" argument that wins these cases. `isHistoricalImportRunning()`
+  blocks the sweep while `historical_import_status = 'in_progress'`.
+  **Only `in_progress` defers** — `not_started` and `failed` must not, or a shop whose backfill
+  never ran is stranded exactly like the bug this module fixes. `backfillShopOrders` re-fires the
+  sweep when it flips the shop to `complete`, since the credit grant that would have re-triggered
+  it happened hours earlier; a CI invariant asserts that call stays wired.
+- **CI invariant:** `lib/billing/__tests__/replayBlockedBuilds.test.ts` greps `lib/`, `app/` and
+  `scripts/` for any `.insert()` into `pack_credits_ledger` outside `grantCredits`. This caught a
+  fourth grant path — the downgrade-to-free fresh-start grant in `app/api/billing/cancel/route.ts`,
+  now routed through `grantCredits`. A new grant path that inserts directly fails the build.
+
+`grantCredits` also now **throws on insert failure**; it previously discarded the error, so a
+failed grant reported success while the ledger stayed empty and every build stayed blocked.
+
 **Wall banner (`free_out_of_packs`).** When a free shop exhausts its lifetime packs it needs a
 conversion prompt, but the `low_credits` billing banner only fires for paid plans
 (`monthlyPackLimit > 0`), so a free shop at 0 would otherwise see nothing. `bannerState.ts` adds a
