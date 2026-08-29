@@ -814,6 +814,26 @@
         "returned_unrefunded": "Transportören returnerade paketet till dig och ingen återbetalning har gjorts, så du har både varorna och betalningen. Det kan aldrig finnas någon leveransbekräftelse för den här ordern, och utan en sådan avgör banken normalt till kundens fördel. Berätta varför paketet kom tillbaka — om kunden vägrade ta emot det eller aldrig hämtade ut det är det ingen giltig retur, och det är värt att argumentera för. Har du behållit både varorna och pengarna är det rimliga svaret att återbetala."
       }
     },
+    "outcomeExplanation": {
+      "filedWithFactor": {
+        "lost": "Vi skickade in dina bevis den {date}. {clause} — banker lägger stor vikt vid detta i den här typen av ärenden.",
+        "won": "Vi skickade in dina bevis den {date}. {clause} — det är oftast det som avgör ett ärende som detta."
+      },
+      "filedNoFactors": {
+        "lost": "Vi skickade in dina bevis den {date}. Banken beslutade ändå till kortinnehavarens fördel.",
+        "won": "Vi skickade in dina bevis den {date}, och banken beslutade till din fördel."
+      },
+      "notDefendedByUs": "Den här tvisten avgjordes innan DisputeDesk skickade in några bevis för den.",
+      "factor": {
+        "avs_mismatch": "Kortets faktureringsadress stämde inte med adressen på ordern",
+        "no_signature_on_fraud": "Leveransen bekräftades men ingen kvitterade den",
+        "no_delivery_confirmation": "Ingen leveransbekräftelse från transportören nådde oss",
+        "weak_identity_signals": "Den enda identitetssignal vi kunde bekräfta var kundens land",
+        "signature_confirmed": "Leveransen bekräftades och kvitterades",
+        "avs_match": "Kortets faktureringsadress stämde med adressen på ordern",
+        "delivery_confirmed": "Transportören bekräftade leveransen"
+      }
+    },
     "improvementHint": "Lägg till {label} för att stärka ditt ärende.",
     "recommendation": {
       "submitted": {
@@ -3277,7 +3297,7 @@
       },
       "afterSaving": {
         "title": "Vad händer efter att bevis sparats",
-        "body": "Efter att DisputeDesk sparat dina bevis till Shopify:\n\n1. Bevis visas i Shopify Admin: Order > den länkade ordern > Chargeback.\n2. Granska i Shopify: du kan lägga till slutliga anteckningar.\n3. Inlämning till kortnätverket: Shopify skickar in antingen manuellt eller automatiskt på förfallodatumet.\n4. Kortnätverket utvärderar beviset.\n5. Tvisten löses som \"Vunnen\" eller \"Förlorad\".\n\nDisputeDesk övervakar tvistens status och uppdaterar den.\n\n**Filrader i Shopify Admin:** När filbeviset är aktiverat visar raderna **Fraktdokumentation**, **Kundkommunikation**, **Servicedokumentation** och **Övriga bevis** en fil med nedladdningsikon — DisputeDesk laddar upp en fokuserad PDF per plats som innehåller skälet och nyckelfakta från ditt paket. Dina ursprungliga uppladdade filer förblir också som märkta säkra länkar (https://disputedesk.app/e/…) i bevistexten, så utgivaren ser både den kontextuella sammanfattningen och originalfilerna. Raderna **Returpolicy** och **Avbokningspolicy** är reason-aware och renderas endast vid vissa tvistskäl; tills detta verifierats per familj flyter dessa filer som märkta länkar. När lagret är inaktiverat flyter varje fil endast som en länk. Använd **Granska och skicka** här för att förhandsvisa den exakta nyttolasten."
+        "body": "Efter att DisputeDesk sparat dina bevis till Shopify:\n\n1. Bevis visas i Shopify Admin: Order > den länkade ordern > Chargeback.\n2. Granska i Shopify: du kan lägga till slutliga anteckningar.\n3. Inlämning till kortnätverket: Shopify skickar in antingen manuellt eller automatiskt på förfallodatumet.\n4. Kortnätverket utvärderar beviset.\n5. Tvisten löses som \"Vunnen\" eller \"Förlorad\".\n\nDisputeDesk övervakar tvistens status och uppdaterar den.\n\n**Filrader i Shopify Admin:** När filbeviset är aktiverat visar raderna **Fraktdokumentation**, **Kundkommunikation**, **Servicedokumentation** och **Övriga bevis** en fil med nedladdningsikon — DisputeDesk laddar upp en fokuserad PDF per plats som innehåller skälet och nyckelfakta från ditt paket. Dina ursprungliga uppladdade filer förblir också som märkta säkra länkar (https://disputedesk.app/e/…) i bevistexten, så utgivaren ser både den kontextuella sammanfattningen och originalfilerna. Raderna **Returpolicy** och **Avbokningspolicy** är reason-aware och renderas endast vid vissa tvistskäl; tills detta verifierats per familj flyter dessa filer som märkta länkar. När lagret är inaktiverat flyter varje fil endast som en länk. Använd **Granska och skicka** här för att förhandsvisa den exakta nyttolasten.\n\n**När tvisten är avgjord.** När banken har beslutat visar Översikt-rubriken utfallet och — om DisputeDesk byggde och skickade in bevisen — en mening som namnger den faktor som troligen avgjorde ärendet, hämtad från de bevis vi faktiskt skickade in (till exempel att kortets faktureringsadress inte stämde med adressen på ordern). Samma mening finns i utfallsmejlet.\n\nTvå begränsningar är värda att känna till. Vi kan inte se bankens egen motivering: Shopifys API rapporterar bara om tvisten vanns eller förlorades, och utfärdarens skriftliga förklaring finns enbart i Shopify Admin — öppna tvisten där för att läsa den. Och vår mening beskriver vad bevisen visade, inte vad banken slöt sig till, så den säger att en faktor vägde tungt snarare än att den orsakade förlusten. Om tvisten avgjordes innan du installerade DisputeDesk säger rubriken det i stället för att påstå att vi skickade in något."
       },
       "notSubmitToNetworks": {
         "title": "DisputeDesk skickar INTE in till kortnätverk",

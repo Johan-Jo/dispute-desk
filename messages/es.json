@@ -1438,6 +1438,26 @@
         "returned_unrefunded": "El transportista te devolvió este paquete y no se ha emitido ningún reembolso, así que tienes la mercancía y el dinero. Para este pedido no puede existir una confirmación de entrega y, sin ella, el banco suele decidir a favor del cliente. Dinos por qué volvió el paquete: si el cliente lo rechazó o nunca lo recogió, eso no es una devolución válida y merece la pena argumentarlo. Si te has quedado con la mercancía y el dinero, lo justo es reembolsar."
       }
     },
+    "outcomeExplanation": {
+      "filedWithFactor": {
+        "lost": "Presentamos tus pruebas el {date}. {clause}: los bancos dan mucho peso a esto en este tipo de reclamaciones.",
+        "won": "Presentamos tus pruebas el {date}. {clause}: eso suele ser lo que decide un caso así."
+      },
+      "filedNoFactors": {
+        "lost": "Presentamos tus pruebas el {date}. Aun así, el banco falló a favor del titular de la tarjeta.",
+        "won": "Presentamos tus pruebas el {date} y el banco falló a tu favor."
+      },
+      "notDefendedByUs": "Esta disputa se resolvió antes de que DisputeDesk presentara ninguna prueba.",
+      "factor": {
+        "avs_mismatch": "La dirección de facturación de la tarjeta no coincidía con la dirección del pedido",
+        "no_signature_on_fraud": "Se confirmó la entrega, pero nadie firmó",
+        "no_delivery_confirmation": "No nos llegó ninguna confirmación de entrega del transportista",
+        "weak_identity_signals": "La única señal de identidad que pudimos confirmar fue el país del cliente",
+        "signature_confirmed": "La entrega se confirmó y se firmó",
+        "avs_match": "La dirección de facturación de la tarjeta coincidía con la dirección del pedido",
+        "delivery_confirmed": "El transportista confirmó la entrega"
+      }
+    },
     "improvementHint": "Agregue {label} para fortalecer su caso.",
     "recommendation": {
       "submitted": {
@@ -3277,7 +3297,7 @@
       },
       "afterSaving": {
         "title": "Qué sucede después de guardar",
-        "body": "Después de guardar:\n\n1. La evidencia aparece en Shopify Admin: Pedidos > el pedido vinculado > Contracargo.\n2. Revise en Shopify y agregue notas.\n3. Shopify envía a la red de tarjetas — manual o automáticamente en la fecha límite.\n4. La red evalúa la evidencia.\n5. Resolución: Ganada o Perdida.\n\nDisputeDesk monitorea el estado y lo actualiza.\n\n**Filas de archivo en Shopify Admin:** Cuando la capa de evidencia en archivos está activada, las filas **Documentación de envío**, **Comunicación con el cliente**, **Documentación del servicio** y **Otra evidencia** muestran un archivo con icono de descarga — DisputeDesk sube un PDF enfocado por espacio que incluye el motivo y los datos clave de tu paquete. Tus archivos originales también permanecen como enlaces seguros etiquetados (https://disputedesk.app/e/…) dentro del texto de evidencia, así que el emisor ve tanto el resumen contextual como los archivos originales. Las filas **Política de reembolso** y **Política de cancelación** son reason-aware y solo se renderizan en ciertos motivos de disputa; hasta verificarlo por familia, esos archivos viajan como enlaces etiquetados. Cuando la capa está desactivada, todos los archivos viajan solo como enlaces. Usa **Revisar y reenviar** aquí para previsualizar la carga útil exacta."
+        "body": "Después de guardar:\n\n1. La evidencia aparece en Shopify Admin: Pedidos > el pedido vinculado > Contracargo.\n2. Revise en Shopify y agregue notas.\n3. Shopify envía a la red de tarjetas — manual o automáticamente en la fecha límite.\n4. La red evalúa la evidencia.\n5. Resolución: Ganada o Perdida.\n\nDisputeDesk monitorea el estado y lo actualiza.\n\n**Filas de archivo en Shopify Admin:** Cuando la capa de evidencia en archivos está activada, las filas **Documentación de envío**, **Comunicación con el cliente**, **Documentación del servicio** y **Otra evidencia** muestran un archivo con icono de descarga — DisputeDesk sube un PDF enfocado por espacio que incluye el motivo y los datos clave de tu paquete. Tus archivos originales también permanecen como enlaces seguros etiquetados (https://disputedesk.app/e/…) dentro del texto de evidencia, así que el emisor ve tanto el resumen contextual como los archivos originales. Las filas **Política de reembolso** y **Política de cancelación** son reason-aware y solo se renderizan en ciertos motivos de disputa; hasta verificarlo por familia, esos archivos viajan como enlaces etiquetados. Cuando la capa está desactivada, todos los archivos viajan solo como enlaces. Usa **Revisar y reenviar** aquí para previsualizar la carga útil exacta.\n\n**Cuando la disputa se resuelve.** Una vez que el banco decide, el encabezado de Resumen indica el resultado y —cuando DisputeDesk creó y presentó las pruebas— una frase que nombra el factor que probablemente la decidió, extraída de las pruebas que realmente presentamos (por ejemplo, que la dirección de facturación de la tarjeta no coincidía con la dirección del pedido). La misma frase aparece en el correo de resultado.\n\nDos límites que conviene conocer. No podemos ver el razonamiento del banco: la API de Shopify solo informa si la disputa se ganó o se perdió, y la explicación escrita del emisor está únicamente dentro de Shopify Admin; abre la disputa allí para leerla. Y nuestra frase describe lo que mostraban las pruebas, no lo que concluyó el banco, así que dice que un factor tuvo mucho peso, no que causó la pérdida. Si la disputa se resolvió antes de que instalaras DisputeDesk, el encabezado lo indica en lugar de afirmar que presentamos algo."
       },
       "notSubmitToNetworks": {
         "title": "DisputeDesk NO envía a redes de tarjetas",

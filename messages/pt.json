@@ -1438,6 +1438,26 @@
         "returned_unrefunded": "A transportadora devolveu esta encomenda a si e não foi emitido qualquer reembolso, pelo que tem a mercadoria e o pagamento. Não pode existir confirmação de entrega para este pedido e, sem ela, o banco decide normalmente a favor do cliente. Diga-nos por que motivo a encomenda voltou: se o cliente recusou a entrega ou nunca a levantou, não é uma devolução válida e vale a pena argumentá-lo. Se ficou com a mercadoria e com o dinheiro, a resposta justa é reembolsar."
       }
     },
+    "outcomeExplanation": {
+      "filedWithFactor": {
+        "lost": "Enviámos as suas provas a {date}. {clause} — os bancos dão muito peso a isto neste tipo de contestação.",
+        "won": "Enviámos as suas provas a {date}. {clause} — é normalmente isso que decide um caso destes."
+      },
+      "filedNoFactors": {
+        "lost": "Enviámos as suas provas a {date}. Ainda assim, o banco decidiu a favor do titular do cartão.",
+        "won": "Enviámos as suas provas a {date}, e o banco decidiu a seu favor."
+      },
+      "notDefendedByUs": "Esta contestação foi decidida antes de a DisputeDesk ter enviado quaisquer provas.",
+      "factor": {
+        "avs_mismatch": "A morada de faturação do cartão não correspondia à morada da encomenda",
+        "no_signature_on_fraud": "A entrega foi confirmada, mas ninguém assinou",
+        "no_delivery_confirmation": "Não nos chegou qualquer confirmação de entrega da transportadora",
+        "weak_identity_signals": "O único sinal de identidade que conseguimos confirmar foi o país do cliente",
+        "signature_confirmed": "A entrega foi confirmada e assinada",
+        "avs_match": "A morada de faturação do cartão correspondia à morada da encomenda",
+        "delivery_confirmed": "A transportadora confirmou a entrega"
+      }
+    },
     "improvementHint": "Adicione {label} para fortalecer seu caso.",
     "recommendation": {
       "submitted": {
@@ -3277,7 +3297,7 @@
       },
       "afterSaving": {
         "title": "O que acontece após salvar as evidências",
-        "body": "Após o DisputeDesk salvar suas evidências no Shopify, veja o que acontece:\n\n1. As evidências aparecem no Shopify Admin: vá em Pedidos > o pedido vinculado > Chargeback para revisar as evidências recebidas pelo Shopify.\n2. Revise no Shopify: você pode adicionar notas finais ou fazer ajustes diretamente no Shopify Admin.\n3. O Shopify envia as evidências à operadora de cartão (Visa, Mastercard, etc.) quando:\n   - Você clica no botão de resposta no Shopify Admin, ou\n   - Automaticamente na data limite da disputa, se você não respondeu manualmente.\n4. A operadora de cartão analisa: a operadora avalia as evidências e toma uma decisão.\n5. Resolução: a disputa é resolvida como \"Ganha\" (revertida a seu favor) ou \"Perdida\".\n\nO DisputeDesk monitora o status da disputa e o atualiza quando o Shopify reporta uma resolução.\n\n**Linhas de arquivo no Shopify Admin:** Quando a camada de evidência em arquivos está ativada, as linhas **Documentação de envio**, **Comunicação com o cliente**, **Documentação de serviço** e **Outras evidências** exibem um arquivo com ícone de download — o DisputeDesk envia um PDF focado por slot que inclui o motivo e os fatos-chave do seu pacote. Seus arquivos originais também permanecem como links seguros rotulados (https://disputedesk.app/e/…) dentro do texto de evidência, então o emissor vê tanto o resumo contextual quanto os arquivos originais. As linhas **Política de reembolso** e **Política de cancelamento** são reason-aware e só são renderizadas em certos motivos de disputa; até a verificação por família, esses arquivos fluem como links rotulados. Quando a camada está desativada, todo arquivo flui apenas como link rotulado. Use **Revisar e encaminhar** aqui para pré-visualizar o payload exato."
+        "body": "Após o DisputeDesk salvar suas evidências no Shopify, veja o que acontece:\n\n1. As evidências aparecem no Shopify Admin: vá em Pedidos > o pedido vinculado > Chargeback para revisar as evidências recebidas pelo Shopify.\n2. Revise no Shopify: você pode adicionar notas finais ou fazer ajustes diretamente no Shopify Admin.\n3. O Shopify envia as evidências à operadora de cartão (Visa, Mastercard, etc.) quando:\n   - Você clica no botão de resposta no Shopify Admin, ou\n   - Automaticamente na data limite da disputa, se você não respondeu manualmente.\n4. A operadora de cartão analisa: a operadora avalia as evidências e toma uma decisão.\n5. Resolução: a disputa é resolvida como \"Ganha\" (revertida a seu favor) ou \"Perdida\".\n\nO DisputeDesk monitora o status da disputa e o atualiza quando o Shopify reporta uma resolução.\n\n**Linhas de arquivo no Shopify Admin:** Quando a camada de evidência em arquivos está ativada, as linhas **Documentação de envio**, **Comunicação com o cliente**, **Documentação de serviço** e **Outras evidências** exibem um arquivo com ícone de download — o DisputeDesk envia um PDF focado por slot que inclui o motivo e os fatos-chave do seu pacote. Seus arquivos originais também permanecem como links seguros rotulados (https://disputedesk.app/e/…) dentro do texto de evidência, então o emissor vê tanto o resumo contextual quanto os arquivos originais. As linhas **Política de reembolso** e **Política de cancelamento** são reason-aware e só são renderizadas em certos motivos de disputa; até a verificação por família, esses arquivos fluem como links rotulados. Quando a camada está desativada, todo arquivo flui apenas como link rotulado. Use **Revisar e encaminhar** aqui para pré-visualizar o payload exato.\n\n**Quando a contestação é decidida.** Assim que o banco decide, o cabeçalho da Visão geral indica o resultado e — quando a DisputeDesk criou e enviou as provas — uma frase que nomeia o fator que provavelmente a decidiu, retirada das provas que realmente enviámos (por exemplo, que a morada de faturação do cartão não correspondia à morada da encomenda). A mesma frase aparece no e-mail de resultado.\n\nDois limites a conhecer. Não conseguimos ver o raciocínio do banco: a API da Shopify só informa se a contestação foi ganha ou perdida, e a explicação escrita do emissor existe apenas no Shopify Admin — abra lá a contestação para a ler. E a nossa frase descreve o que as provas mostravam, não o que o banco concluiu, pelo que diz que um fator pesou muito, não que causou a perda. Se a contestação foi decidida antes de instalar a DisputeDesk, o cabeçalho di-lo em vez de afirmar que enviámos alguma coisa."
       },
       "notSubmitToNetworks": {
         "title": "O DisputeDesk NÃO envia evidências às operadoras de cartão",
