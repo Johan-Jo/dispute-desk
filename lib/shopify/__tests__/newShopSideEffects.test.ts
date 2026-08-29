@@ -63,16 +63,16 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 /**
- * Matches a Supabase insert into the `shops` table, tolerating the formatting
- * both current call sites use:
+ * Matches a Supabase insert into the `shops` table.
  *
- *   .from("shops")            .from("shops")
- *     .insert({ ... })          .select("id")
- *                               .insert({ ... })
+ * Applied to comment-stripped source, so interleaved `//` comments between
+ * `.from("shops")` and `.insert(` cannot hide a call site — that regressed
+ * once already when a locale comment was added inside the token-exchange
+ * chain and this invariant silently stopped seeing that install path.
  *
- * Only `.` -chained calls may appear between `.from("shops")` and `.insert(`,
- * so the match cannot run past the end of the statement into an unrelated
- * `.from("audit_events").insert(...)` later in the file — that looser form
+ * Only `.`-chained calls may appear between the two, so a match cannot run
+ * past the end of the statement into an unrelated
+ * `.from("audit_events").insert(...)` later in the file — a looser form
  * produced false positives on the orders-reconciliation cron and the GDPR
  * customers-data-request webhook, neither of which creates a shop.
  */
@@ -80,8 +80,9 @@ const SHOPS_INSERT =
   /\.from\(\s*["'`]shops["'`]\s*\)\s*(?:\.\w+\([^()]*\)\s*)*?\.insert\(/;
 
 /**
- * Strips block and line comments so a passing mention of `onNewShopCreated` in
- * prose can't satisfy the invariant — only a real reference in code counts.
+ * Strips block and line comments. Used both to stop a passing prose mention of
+ * `onNewShopCreated` from satisfying the invariant, and to keep comments from
+ * breaking the chained-call match above.
  */
 function stripComments(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
@@ -97,7 +98,7 @@ describe("new-shop side effects are wired into every install path", () => {
 
   it("routes every `shops` row insert through onNewShopCreated", () => {
     const inserters = files.filter((f) =>
-      SHOPS_INSERT.test(readFileSync(f, "utf8")),
+      SHOPS_INSERT.test(stripComments(readFileSync(f, "utf8"))),
     );
 
     // Both known install paths must still be found — if this drops to zero the
@@ -115,7 +116,7 @@ describe("new-shop side effects are wired into every install path", () => {
 
   it("covers the two known install paths", () => {
     const rel = files
-      .filter((f) => SHOPS_INSERT.test(readFileSync(f, "utf8")))
+      .filter((f) => SHOPS_INSERT.test(stripComments(readFileSync(f, "utf8"))))
       .map((f) => f.slice(REPO_ROOT.length + 1).replace(/\\/g, "/"));
 
     expect(rel).toContain("app/api/auth/shopify/callback/route.ts");

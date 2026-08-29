@@ -39,9 +39,11 @@
  * effect can never break an otherwise-working install.
  */
 
+import type { Locale } from "@/lib/i18n/locales";
 import { fetchShopDetails } from "@/lib/shopify/shopDetails";
 import { grantFreeLifetimeCredits } from "@/lib/billing/grantFreeLifetime";
 import { sendAdminInstallNotification } from "@/lib/email/sendAdminNotification";
+import { sendInstallWelcomeEmail } from "@/lib/email/sendInstallWelcome";
 
 export interface OnNewShopCreatedOptions {
   /** Internal `shops.id` of the just-inserted row. */
@@ -53,6 +55,8 @@ export interface OnNewShopCreatedOptions {
    * so a missed install can be traced back to its path.
    */
   source: string;
+  /** Merchant locale, for the welcome email. Defaults to English. */
+  locale?: Locale;
 }
 
 /**
@@ -98,6 +102,27 @@ export async function onNewShopCreated(
   }).catch((err) => {
     console.warn(
       "[email:admin-install] notification failed:",
+      err instanceof Error ? err.message : err,
+    );
+  });
+
+  // Merchant-facing welcome. Awaited for the same reason as the admin alert:
+  // both install paths end in an immediate redirect and Vercel kills the
+  // instance on return, so a fire-and-forget send would lose the race.
+  //
+  // Recipient is the Shopify shop-owner address from the same `details` fetch
+  // above — the merchant-configured alert address (Settings → team email) does
+  // not exist yet at install time. When enrichment failed, `to` is undefined
+  // and the sender skips rather than guessing an address.
+  await sendInstallWelcomeEmail({
+    shopInternalId,
+    shopDomain,
+    to: details?.email,
+    shopName: details?.name,
+    locale: options.locale,
+  }).catch((err) => {
+    console.warn(
+      "[email:install-welcome] send threw:",
       err instanceof Error ? err.message : err,
     );
   });

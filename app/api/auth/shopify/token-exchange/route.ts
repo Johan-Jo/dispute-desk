@@ -6,6 +6,7 @@ import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
 import { persistShopCurrency } from "@/lib/shopify/persistShopCurrency";
 import { needsRefresh } from "@/lib/shopify/sessions/refreshOfflineToken";
 import { onNewShopCreated } from "@/lib/shopify/onNewShopCreated";
+import { normalizeLocale } from "@/lib/i18n/locales";
 
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY ?? "";
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET ?? "";
@@ -35,6 +36,12 @@ export async function GET(req: NextRequest) {
   const shopParam = req.nextUrl.searchParams.get("shop");
   const hostParam = req.nextUrl.searchParams.get("host") ?? "";
   const returnTo = req.nextUrl.searchParams.get("return_to") || "/app";
+  // Shopify appends `locale` to embedded app loads (e.g. `de` for a German
+  // Admin). Captured so a new shop's welcome email is written in the
+  // merchant's language rather than defaulting to English — Mein Maison, the
+  // 2026-08-29 install, is a German store that came in through this path.
+  const localeParam = req.nextUrl.searchParams.get("locale");
+  const locale = normalizeLocale(localeParam) ?? undefined;
 
   if (!idToken || !shopParam) {
     return errorPage("Missing id_token or shop parameter.");
@@ -64,7 +71,7 @@ export async function GET(req: NextRequest) {
   const announceNewShop = async (source: string): Promise<void> => {
     if (!isNewShop || announced) return;
     announced = true;
-    await onNewShopCreated({ shopInternalId, shopDomain: shop, source });
+    await onNewShopCreated({ shopInternalId, shopDomain: shop, source, locale });
   };
   {
     const { data: existing } = await db
@@ -82,7 +89,10 @@ export async function GET(req: NextRequest) {
     } else {
       const { data: created, error } = await db
         .from("shops")
-        .insert({ shop_domain: shop })
+        // Persist the locale like the OAuth callback does, so DB-driven,
+        // request-less senders (billing cron / webhook emails) address the
+        // merchant in their own language rather than defaulting to English.
+        .insert(locale ? { shop_domain: shop, locale } : { shop_domain: shop })
         .select("id")
         .single();
       if (error || !created) {

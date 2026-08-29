@@ -151,6 +151,7 @@ export async function GET(req: NextRequest) {
           shopInternalId,
           shopDomain: shop,
           source,
+          locale,
         });
       }
 
