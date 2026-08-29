@@ -415,8 +415,17 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     });
     const filedAt =
       explanation.kind === "not_defended_by_us" ? null : explanation.filedAt;
+    /* The learning panel below owns the factor explanation on lost cases.
+     * Feeding the same factor into this filing sentence rendered an exact
+     * duplicate immediately above the panel. Keep the richer explanation for
+     * outcome emails (which have no panel), but make the Overview hero a
+     * concise filing/outcome summary. */
+    const heroExplanation =
+      decidedOutcome === "lost" && explanation.kind === "we_defended_with_facts"
+        ? ({ kind: "we_defended_no_facts", filedAt: explanation.filedAt } as const)
+        : explanation;
     const token = outcomeExplanationToken(
-      explanation,
+      heroExplanation,
       decidedOutcome,
       filedAt ? formatDate(filedAt) : null,
     );

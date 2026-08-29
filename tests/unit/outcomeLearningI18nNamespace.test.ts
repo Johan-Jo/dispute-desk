@@ -17,4 +17,10 @@ describe("outcome learning i18n namespace", () => {
       );
     }
   });
+
+  it("keeps factor detail in the panel instead of repeating it in the hero", () => {
+    expect(overview).toContain('explanation.kind === "we_defended_with_facts"');
+    expect(overview).toContain('kind: "we_defended_no_facts"');
+    expect(overview).toContain("The learning panel below owns the factor explanation");
+  });
 });
