@@ -63,6 +63,7 @@ import {
 } from "@/lib/automation/merchantUiHiddenFields";
 import { resolveReasonFamily } from "@/lib/argument/reasonFamily";
 import { heldOrCancelledUnrefunded } from "@/lib/disputes/heldOrCancelledUnrefunded";
+import { resolveOutcomeDecisionDate } from "@/lib/disputes/outcomeDecisionDate";
 
 type Workspace = ReturnType<typeof useDisputeWorkspace>;
 
@@ -296,6 +297,10 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
 
   const submitted = isReadOnly;
   const submittedAt = data.pack?.savedToShopifyAt ?? null;
+  const outcomeDecisionAt = resolveOutcomeDecisionDate({
+    closedAt: dispute.closedAt,
+    submittedAt,
+  });
 
   // "held" | "cancelled" | null — see lib/disputes/heldOrCancelledUnrefunded.ts.
   // Fails closed: a pack built before `refunded` was persisted returns null
@@ -561,11 +566,11 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     switch (lifecycle) {
       case "won":
         return t("hero.subtitle.closedWon", {
-          submittedDate: submittedAt ? formatDate(submittedAt) : "none",
+          decisionDate: outcomeDecisionAt ? formatDate(outcomeDecisionAt) : "none",
         });
       case "lost":
         return t("hero.subtitle.closedLost", {
-          submittedDate: submittedAt ? formatDate(submittedAt) : "none",
+          decisionDate: outcomeDecisionAt ? formatDate(outcomeDecisionAt) : "none",
         });
       case "closed":
         return t("hero.subtitle.closedUnknown", {

@@ -1305,8 +1305,8 @@
           "awaitingForward": "{strengthReason} Shopify a le dossier et le transférera à votre réseau de cartes. DisputeDesk peut confirmer que les preuves ont été enregistrées dans Shopify, mais ne peut pas vérifier indépendamment quand le transfert a lieu.",
           "submittedToNetwork": "{strengthReason} Le réseau de cartes examine cette défense. Le résultat est généralement publié dans 30–75 jours.",
           "submittedToNetworkWithDate": "Envoyé à votre réseau de cartes le {submittedDate}. Le résultat est généralement publié dans 30–75 jours.",
-          "closedWon": "Résultat : gagné{submittedDate, select, none {} other { (décidé le {submittedDate})}}.",
-          "closedLost": "Résultat : perdu{submittedDate, select, none {} other { (décidé le {submittedDate})}}.",
+          "closedWon": "Résultat : gagné{decisionDate, select, none {} other { (décidé le {decisionDate})}}.",
+          "closedLost": "Résultat : perdu{decisionDate, select, none {} other { (décidé le {decisionDate})}}.",
           "closedUnknown": "Résultat signalé par Shopify : {outcome}."
         }
       },

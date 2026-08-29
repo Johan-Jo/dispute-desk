@@ -1271,8 +1271,8 @@
           "awaitingForward": "{strengthReason} Shopify has the package and will forward it to your card network. DisputeDesk can confirm the evidence was saved to Shopify, but cannot independently verify when forwarding occurs.",
           "submittedToNetwork": "{strengthReason} The card network is reviewing this defence. Outcome typically posts in 30–75 days.",
           "submittedToNetworkWithDate": "Sent to your card network on {submittedDate}. Outcome typically posts in 30–75 days.",
-          "closedWon": "Outcome: won{submittedDate, select, none {} other { (decided on {submittedDate})}}.",
-          "closedLost": "Outcome: lost{submittedDate, select, none {} other { (decided on {submittedDate})}}.",
+          "closedWon": "Outcome: won{decisionDate, select, none {} other { (decided on {decisionDate})}}.",
+          "closedLost": "Outcome: lost{decisionDate, select, none {} other { (decided on {decisionDate})}}.",
           "closedUnknown": "Outcome reported by Shopify: {outcome}."
         }
       }
