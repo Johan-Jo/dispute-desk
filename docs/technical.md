@@ -4677,6 +4677,16 @@ candidate, **bypassing the burnt effect claim** rather than trying to un-burn it
   keeps its attention flag — clearing it would hide a real blocker.
 - **Capped** at `REPLAY_CANDIDATE_CAP = 200` per sweep, ordered by soonest deadline, and the
   handler logs when the cap is hit rather than silently truncating.
+- **Deferred while the order backfill runs.** Pack evidence is computed *from* `shopify_orders` —
+  `loadPriorOrderHistory` counts prior orders out of that table, and the fulfillment source falls
+  back to its persisted snapshot. Building mid-import bakes a too-low prior-order count into the
+  pack **silently** (the helper returns a number, not an error), and prior-order history is the
+  "long-standing good customer" argument that wins these cases. `isHistoricalImportRunning()`
+  blocks the sweep while `historical_import_status = 'in_progress'`.
+  **Only `in_progress` defers** — `not_started` and `failed` must not, or a shop whose backfill
+  never ran is stranded exactly like the bug this module fixes. `backfillShopOrders` re-fires the
+  sweep when it flips the shop to `complete`, since the credit grant that would have re-triggered
+  it happened hours earlier; a CI invariant asserts that call stays wired.
 - **CI invariant:** `lib/billing/__tests__/replayBlockedBuilds.test.ts` greps `lib/`, `app/` and
   `scripts/` for any `.insert()` into `pack_credits_ledger` outside `grantCredits`. This caught a
   fourth grant path — the downgrade-to-free fresh-start grant in `app/api/billing/cancel/route.ts`,
