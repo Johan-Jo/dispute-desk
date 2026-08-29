@@ -48,15 +48,38 @@ describe("classifyPaymentMethod — dashboard buckets", () => {
     expect(classifyPaymentMethod("shop_pay")).toBe("shop_pay");
   });
 
+  // Shopify emits the Shop Pay wallet as SHOPIFY_PAY, so the column
+  // holds `shopify_pay` — the classifier only tested `shop_pay`, and
+  // every Shop Pay order fell through to "other".
+  it("buckets the stored shopify_pay spelling as shop_pay", () => {
+    expect(classifyPaymentMethod("shopify_pay")).toBe("shop_pay");
+    expect(classifyPaymentMethod("SHOPIFY_PAY")).toBe("shop_pay");
+  });
+
   it("groups every klarna variant under klarna", () => {
     expect(classifyPaymentMethod("klarna")).toBe("klarna");
     expect(classifyPaymentMethod("klarna_pay_later")).toBe("klarna");
     expect(classifyPaymentMethod("klarna_slice_it")).toBe("klarna");
   });
 
-  it("folds other local methods + null into other", () => {
+  it("names paypal, in any casing the gateway arrives in", () => {
+    expect(classifyPaymentMethod("paypal")).toBe("paypal");
+    expect(classifyPaymentMethod("PayPal")).toBe("paypal");
+    expect(classifyPaymentMethod("paypal_express")).toBe("paypal");
+  });
+
+  it("folds other real local methods into other", () => {
     expect(classifyPaymentMethod("ideal")).toBe("other");
     expect(classifyPaymentMethod("affirm")).toBe("other");
-    expect(classifyPaymentMethod(null)).toBe("other");
+  });
+
+  // The bug this whole change exists to close: a missing method is a
+  // coverage gap, not a payment method. Callers exclude "unknown" from
+  // the split; folding it into "other" reported a method nobody used.
+  it("separates a missing method from a real uncharted one", () => {
+    expect(classifyPaymentMethod(null)).toBe("unknown");
+    expect(classifyPaymentMethod(undefined)).toBe("unknown");
+    expect(classifyPaymentMethod("")).toBe("unknown");
+    expect(classifyPaymentMethod("   ")).toBe("unknown");
   });
 });

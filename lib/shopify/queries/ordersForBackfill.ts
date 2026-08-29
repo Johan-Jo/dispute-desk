@@ -435,11 +435,12 @@ export interface ShopifyOrderRow {
   customer_shopify_id: string | null;
   payment_gateway: string | null;
   /** Payment-method family derived from the primary transaction's
-   *  paymentDetails union: card | apple_pay | google_pay | shop_pay |
-   *  klarna | <local method name> | null. Distinct from payment_gateway
-   *  (which is the top-level gateway, ~always shopify_payments). Null
-   *  when the method can't be determined — we never guess. See
-   *  pickPaymentMethod. */
+   *  paymentDetails union, falling back to the transaction gateway when
+   *  that gateway IS a payment method: card | apple_pay | google_pay |
+   *  shopify_pay | klarna | paypal | <local method name> | null.
+   *  Distinct from payment_gateway (the top-level gateway, which for a
+   *  card sale is the acquirer). Null only when the method genuinely
+   *  can't be determined — we never guess. See pickPaymentMethod. */
   payment_method: string | null;
   financial_status: string | null;
   fulfillment_status: string | null;
@@ -546,21 +547,83 @@ export function pickThreeDsAuthenticated(
 }
 
 /**
- * Pure helper: derive the payment-method family from an order's
- * transactions. Reads the primary sale/authorization transaction's
- * `paymentDetails` union — the ONLY place Shopify distinguishes
- * card vs. wallet vs. Klarna/BNPL, since `paymentGatewayNames` is
- * "shopify_payments" for all of them.
+ * Card acquirers and generic gateways: the gateway name says nothing
+ * about *how* the shopper paid, because any card (or a wallet, or a
+ * BNPL product routed through the same acquirer) can arrive on it.
+ * For these, an unresolved `paymentDetails` leaves the method genuinely
+ * unknown and `pickPaymentMethod` returns null.
  *
- * Mapping:
+ * Every OTHER gateway names the payment method by naming itself —
+ * `paypal` is PayPal, `klarna` is Klarna, `amazon_pay` is Amazon Pay.
+ * Deny-listing the acquirers (a small, stable set) rather than
+ * allow-listing the alternative-payment brands (a long tail that grows
+ * every year) is what keeps this closed: a new BNPL brand is classified
+ * correctly on the day it appears, with no code change.
+ */
+const GENERIC_GATEWAYS = new Set([
+  "shopify_payments",
+  "checkout",
+  "checkout_com",
+  "mollie",
+  "worldpay",
+  "authorize_net",
+  "cybersource",
+  "nuvei",
+  "manual",
+  "bogus",
+]);
+
+/**
+ * Acquirer families. An acquirer reaches Shopify under many connector
+ * names — prod carries `stripe_connect` and `carro_stripe` alongside
+ * plain `stripe` — and every one of them hides a card behind it. Match
+ * the family as a substring so the next connector is handled on the day
+ * it appears, instead of silently becoming a "payment method" named
+ * after somebody's integration.
+ *
+ * Safe as a substring test: no real payment method embeds these names.
+ */
+const ACQUIRER_FAMILIES = ["stripe", "braintree", "adyen"];
+
+function isGenericGateway(gw: string): boolean {
+  if (GENERIC_GATEWAYS.has(gw)) return true;
+  return ACQUIRER_FAMILIES.some((family) => gw.includes(family));
+}
+
+/** Normalize a raw gateway string for comparison. Shopify is not
+ *  consistent about case or separators across gateways — this shop's
+ *  rows carry both `paypal` and `Klarna`. */
+function normalizeGateway(gateway: string | null | undefined): string | null {
+  const g = gateway?.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return g ? g : null;
+}
+
+/**
+ * Pure helper: derive the payment-method family from an order's
+ * transactions. Prefers the primary sale/authorization transaction's
+ * `paymentDetails` union — the ONLY place Shopify distinguishes card
+ * vs. wallet vs. Klarna/BNPL *within* one gateway, since
+ * `paymentGatewayNames` is "shopify_payments" for all of them.
+ *
+ * Mapping, in order:
  *   - LocalPaymentMethodsPaymentDetails -> `paymentMethodName`
  *     lower-cased (e.g. "klarna", "ideal"). This is how Klarna and
- *     other local/BNPL methods surface.
+ *     other local/BNPL methods surface *inside* Shopify Payments.
  *   - CardPaymentDetails with a wallet  -> the wallet lower-cased
- *     ("apple_pay", "google_pay", "shop_pay").
+ *     ("apple_pay", "google_pay", "shopify_pay").
  *   - CardPaymentDetails without wallet -> "card".
- *   - anything else / no paymentDetails -> null. We never guess; a
- *     null method is "unknown", not a negative signal.
+ *   - no usable paymentDetails, but the transaction ran on a gateway
+ *     that IS a payment method (PayPal, Klarna as its own gateway,
+ *     Amazon Pay, …) -> that gateway, normalized.
+ *   - anything else -> null. We never guess; a null method is
+ *     "unknown", not a negative signal.
+ *
+ * The gateway fallback exists because a PayPal or standalone-Klarna
+ * transaction is typed as the bare `PaymentDetails` interface — neither
+ * union member matches, so both `paymentMethodName` and `wallet` are
+ * absent. Before this fallback those orders stored null and the admin
+ * dashboard reported them as "other", which on a PayPal-heavy merchant
+ * meant ~86% of orders showed as an unnamed method they never used.
  *
  * Picks the same primary transaction rule as pickThreeDsAuthenticated
  * (first SUCCESS sale/auth, else the first transaction) so all derived
@@ -576,17 +639,22 @@ export function pickPaymentMethod(
         (t.kind === "SALE" || t.kind === "AUTHORIZATION") &&
         t.status === "SUCCESS",
     ) ?? transactions[0];
-  const pd = tx?.paymentDetails;
-  if (!pd) return null;
+  if (!tx) return null;
 
-  const local = pd.paymentMethodName?.trim();
+  const pd = tx.paymentDetails;
+
+  const local = pd?.paymentMethodName?.trim();
   if (local) return local.toLowerCase();
 
-  if (pd.__typename === "CardPaymentDetails") {
+  if (pd?.__typename === "CardPaymentDetails") {
     const wallet = pd.wallet?.trim();
     if (wallet) return wallet.toLowerCase();
     return "card";
   }
+
+  // paymentDetails told us nothing. The gateway still can.
+  const gw = normalizeGateway(tx.gateway);
+  if (gw && !isGenericGateway(gw)) return gw;
 
   return null;
 }
