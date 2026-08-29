@@ -745,8 +745,8 @@
           "awaitingForward": "{strengthReason} Shopify hat das Paket und leitet es an Ihr Kartennetzwerk weiter. DisputeDesk kann bestätigen, dass die Beweise bei Shopify gespeichert wurden, kann aber nicht unabhängig überprüfen, wann die Weiterleitung erfolgt.",
           "submittedToNetwork": "{strengthReason} Das Kartennetzwerk prüft diese Verteidigung. Das Ergebnis wird in der Regel in 30–75 Tagen veröffentlicht.",
           "submittedToNetworkWithDate": "Am {submittedDate} an Ihr Kartennetzwerk gesendet. Das Ergebnis wird in der Regel in 30–75 Tagen veröffentlicht.",
-          "closedWon": "Ergebnis: gewonnen{submittedDate, select, none {} other { (entschieden am {submittedDate})}}.",
-          "closedLost": "Ergebnis: verloren{submittedDate, select, none {} other { (entschieden am {submittedDate})}}.",
+          "closedWon": "Ergebnis: gewonnen{decisionDate, select, none {} other { (entschieden am {decisionDate})}}.",
+          "closedLost": "Ergebnis: verloren{decisionDate, select, none {} other { (entschieden am {decisionDate})}}.",
           "closedUnknown": "Von Shopify gemeldetes Ergebnis: {outcome}."
         }
       },
