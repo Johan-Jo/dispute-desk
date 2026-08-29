@@ -1450,12 +1450,21 @@
       "notDefendedByUs": "Ce litige a été tranché avant que DisputeDesk ne transmette la moindre preuve.",
       "factor": {
         "avs_mismatch": "L'adresse de facturation de la carte ne correspondait pas à celle de la commande",
+        "cardholder_name_mismatch": "Le nom associé à la carte différait du nom de l'acheteur",
+        "prior_chargebacks": "Le compte du client avait déjà fait l'objet d'une contestation",
+        "ip_country_mismatch": "Le lieu de la commande et le pays de livraison ne correspondaient pas",
+        "ip_high_risk": "Le paiement a été effectué depuis un réseau ou un lieu à haut risque",
         "no_signature_on_fraud": "La livraison a été confirmée mais personne n'a signé",
         "no_delivery_confirmation": "Aucune confirmation de livraison du transporteur ne nous est parvenue",
         "weak_identity_signals": "Le seul élément d'identité confirmé était le pays du client",
         "signature_confirmed": "La livraison a été confirmée et signée",
         "avs_match": "L'adresse de facturation de la carte correspondait à celle de la commande",
         "delivery_confirmed": "Le transporteur a confirmé la livraison"
+      },
+      "learning": {
+        "title": "Ce qui a probablement affaibli ce dossier",
+        "caveat": "L'émetteur ne communique pas son raisonnement exact. Voici les principaux signaux de risque de l'évaluation complète, y compris ceux qui n'ont pas été transmis à la banque.",
+        "fraudRecommendation": "Recommandation : examinez ou annulez manuellement les futures commandes à haut risque lorsque la vérification du paiement échoue ou que les noms du titulaire et de l'acheteur diffèrent, surtout si le compte présente déjà une contestation."
       }
     },
     "improvementHint": "Ajoutez {label} pour renforcer votre dossier.",

@@ -394,11 +394,23 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
       | { submitted_at?: string | null; facts_json?: unknown }
       | null
       | undefined;
+    /* Post-decision learning is merchant-only and must see the complete
+     * assessment, including facts correctly withheld from the issuer. The
+     * previous implementation read only bankFacing.facts_json, making AVS,
+     * name and account-history warnings disappear and allowing an unsigned
+     * parcel to become the headline. */
+    const assessmentFacts = Object.entries(data.pack?.evidenceItemsByField ?? {}).map(
+      ([fieldKey, item]) => ({ value: { ...item.payload, fieldKey } }),
+    );
     const explanation = resolveOutcomeExplanation({
       outcome: decidedOutcome,
       reason: dispute.reason ?? null,
+      customerName: dispute.customerName ?? null,
       pack: bankFacing
-        ? { submittedAt: bankFacing.submitted_at ?? null, facts: bankFacing.facts_json }
+        ? {
+            submittedAt: bankFacing.submitted_at ?? null,
+            facts: assessmentFacts.length > 0 ? assessmentFacts : bankFacing.facts_json,
+          }
         : null,
     });
     const filedAt =
@@ -410,6 +422,25 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
     );
     return token ? resolveToken(tRoot, token) : null;
   })();
+
+  const outcomeLearningFactors = (() => {
+    if (decidedOutcome !== "lost") return null;
+    const facts = Object.entries(data.pack?.evidenceItemsByField ?? {}).map(
+      ([fieldKey, item]) => ({ value: { ...item.payload, fieldKey } }),
+    );
+    return resolveOutcomeExplanation({
+      outcome: "lost",
+      reason: dispute.reason ?? null,
+      customerName: dispute.customerName ?? null,
+      pack: data.defencePackage?.bankFacing
+        ? { submittedAt: null, facts }
+        : null,
+    });
+  })();
+  const outcomeLearningList =
+    outcomeLearningFactors?.kind === "we_defended_with_facts"
+      ? outcomeLearningFactors.factors
+      : [];
 
   // Hero tone follows LIFECYCLE, not strength (plan §8: strength never
   // creates alarm or a green "ready" glow). Calm indigo default; green
@@ -1035,6 +1066,28 @@ export default function OverviewTab({ workspace }: { workspace: Workspace }) {
                 <p style={{ fontSize: 12.5, color: heroTone.bodyColor, margin: 0, lineHeight: 1.55, maxWidth: 760 }}>
                   {outcomeExplanationText}
                 </p>
+                {outcomeLearningList.length > 0 ? (
+                  <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: "rgba(255,255,255,0.62)" }}>
+                    <Text as="p" variant="bodySm" fontWeight="semibold">
+                      {tRoot("outcomeExplanation.learning.title")}
+                    </Text>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {tRoot("outcomeExplanation.learning.caveat")}
+                    </Text>
+                    <ul style={{ margin: "8px 0", paddingLeft: 20, color: heroTone.bodyColor }}>
+                      {outcomeLearningList.slice(0, 4).map((factor) => (
+                        <li key={factor.code} style={{ fontSize: 12.5, lineHeight: 1.55 }}>
+                          {resolveToken(tRoot, factor.token)}
+                        </li>
+                      ))}
+                    </ul>
+                    {resolveReasonFamily(dispute.reason ?? null) === "fraud" ? (
+                      <Text as="p" variant="bodySm">
+                        {tRoot("outcomeExplanation.learning.fraudRecommendation")}
+                      </Text>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             ) : null
           ) : (

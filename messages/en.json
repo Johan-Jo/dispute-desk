@@ -820,12 +820,21 @@
       "notDefendedByUs": "This dispute was decided before DisputeDesk filed any evidence for it.",
       "factor": {
         "avs_mismatch": "The card's billing address did not match the address on the order",
+        "cardholder_name_mismatch": "The name registered to the card differed from the buyer's name",
+        "prior_chargebacks": "The customer's account had a previous chargeback",
+        "ip_country_mismatch": "The order location and shipping country did not match",
+        "ip_high_risk": "The checkout used a high-risk network or location",
         "no_signature_on_fraud": "The delivery was confirmed but nobody signed for it",
         "no_delivery_confirmation": "No carrier confirmation of delivery ever reached us",
         "weak_identity_signals": "The only identity signal we could confirm was the customer's country",
         "signature_confirmed": "The delivery was confirmed and signed for",
         "avs_match": "The card's billing address matched the address on the order",
         "delivery_confirmed": "The carrier confirmed delivery"
+      },
+      "learning": {
+        "title": "What likely weakened this case",
+        "caveat": "The issuer does not share its exact reasoning. These are the strongest risk signals in the complete assessment, including signals kept out of the bank-facing response.",
+        "fraudRecommendation": "Recommended action: manually review or cancel future high-risk orders when payment verification fails or the cardholder and buyer names differ, especially when the account has a previous chargeback."
       }
     },
     "improvementHint": "Add {label} to strengthen your case.",
@@ -3416,7 +3425,7 @@
         },
         "disputeDetailPage": {
           "title": "Dispute detail in this app",
-          "body": "From **Disputes**, choose **View details** to open this page.\n\n- **KPIs**: amount, status, due date, time left (urgent styling when the deadline is close or past).\n- **Dispute status**: five steps from Created through Outcome. The rail advances as packs exist and evidence is **saved to Shopify** (manual save or automation). Terminal outcomes mark all steps complete.\n- **Supplemental evidence** unlocks after a save to Shopify — then **Open evidence pack** goes to the pack where you upload extra files.\n- **Timeline** mixes Shopify order events with DisputeDesk milestones.\n- **Evidence packs** lists every pack for the dispute.\n\nActions: **Generate Pack**, **Re-sync**, and **Open dispute in Shopify** when the link is available. Locale in the URL refetches profile data so timeline text can follow the store language when Shopify returns localized events.\n\n**If the order was held or cancelled and not refunded**, a banner says so. Your fraud screening flagged the order, nothing shipped, and the payment is still captured. There is no delivery evidence to submit in that case — the strength score reflects what happened to the order, not a gap in your records."
+          "body": "From **Disputes**, choose **View details** to open this page.\n\n- **KPIs**: amount, status, due date, time left (urgent styling when the deadline is close or past).\n- **Dispute status**: five steps from Created through Outcome. The rail advances as packs exist and evidence is **saved to Shopify** (manual save or automation). Terminal outcomes mark all steps complete. For a lost case, **What likely weakened this case** uses the complete merchant assessment — including risk signals kept out of the bank response — to show what to watch for next time. The issuer does not disclose its exact reasoning, so these signals are guidance rather than a claim about the decision.\n- **Supplemental evidence** unlocks after a save to Shopify — then **Open evidence pack** goes to the pack where you upload extra files.\n- **Timeline** mixes Shopify order events with DisputeDesk milestones.\n- **Evidence packs** lists every pack for the dispute.\n\nActions: **Generate Pack**, **Re-sync**, and **Open dispute in Shopify** when the link is available. Locale in the URL refetches profile data so timeline text can follow the store language when Shopify returns localized events.\n\n**If the order was held or cancelled and not refunded**, a banner says so. Your fraud screening flagged the order, nothing shipped, and the payment is still captured. There is no delivery evidence to submit in that case — the strength score reflects what happened to the order, not a gap in your records."
         },
         "reviewQueue": {
           "title": "The review queue",

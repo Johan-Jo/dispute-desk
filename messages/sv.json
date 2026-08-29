@@ -826,12 +826,21 @@
       "notDefendedByUs": "Den här tvisten avgjordes innan DisputeDesk skickade in några bevis för den.",
       "factor": {
         "avs_mismatch": "Kortets faktureringsadress stämde inte med adressen på ordern",
+        "cardholder_name_mismatch": "Namnet som var registrerat på kortet skilde sig från köparens namn",
+        "prior_chargebacks": "Kundkontot hade en tidigare kortreklamation",
+        "ip_country_mismatch": "Orderplatsen och leveranslandet stämde inte överens",
+        "ip_high_risk": "Köpet gjordes från ett nätverk eller en plats med hög risk",
         "no_signature_on_fraud": "Leveransen bekräftades men ingen kvitterade den",
         "no_delivery_confirmation": "Ingen leveransbekräftelse från transportören nådde oss",
         "weak_identity_signals": "Den enda identitetssignal vi kunde bekräfta var kundens land",
         "signature_confirmed": "Leveransen bekräftades och kvitterades",
         "avs_match": "Kortets faktureringsadress stämde med adressen på ordern",
         "delivery_confirmed": "Transportören bekräftade leveransen"
+      },
+      "learning": {
+        "title": "Det som sannolikt försvagade ärendet",
+        "caveat": "Kortutgivaren delar inte sin exakta motivering. Detta är de starkaste risksignalerna i den fullständiga bedömningen, inklusive signaler som inte skickades till banken.",
+        "fraudRecommendation": "Rekommendation: granska eller avbryt framtida högriskordrar manuellt när betalningskontrollen misslyckas eller kortinnehavarens och köparens namn skiljer sig, särskilt om kontot har en tidigare kortreklamation."
       }
     },
     "improvementHint": "Lägg till {label} för att stärka ditt ärende.",
