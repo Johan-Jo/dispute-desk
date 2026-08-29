@@ -40,6 +40,11 @@ import { Resend } from "resend";
 import { getEmbeddedAppUrl } from "@/lib/email/publicSiteUrl";
 import { getServiceClient } from "@/lib/supabase/server";
 import { canonicalReasonCode } from "@/lib/rules/disputeReasons";
+import { getMessages } from "@/lib/i18n/getMessages";
+import {
+  outcomeExplanationToken,
+  resolveOutcomeExplanation,
+} from "@/lib/disputes/outcomeExplanation";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL =
@@ -62,6 +67,20 @@ export interface OutcomePostedAlertContext {
   /** Dispute phase at resolution. "inquiry" selects the inquiry-worded
    *  copy; null/undefined falls back to chargeback wording. */
   phase?: "inquiry" | "chargeback" | null;
+  /**
+   * The submitted defence package, when DisputeDesk built one. Drives the
+   * "what we filed, and the likely deciding factor" paragraph — the SAME
+   * sentence the dispute Overview header renders, from the same
+   * derivation, so a merchant who reads the email and then opens the app
+   * cannot be shown two different explanations of one decision.
+   *
+   * Its PRESENCE is what says we defended the case. `submission_state`
+   * cannot be used for that: it is also true on ~390 historical imports
+   * back-filled at install, which closed before the app existed.
+   *
+   * Omit (or pass null) and the email keeps its existing wording exactly.
+   */
+  defencePackage?: { submittedAt: string | null; facts: unknown } | null;
 }
 
 type Locale = "en" | "es" | "pt" | "fr" | "de" | "sv";
@@ -628,6 +647,85 @@ function resolveLocale(storeLocale: string | null): Locale {
   return "en";
 }
 
+/** Walk a dotted key path into a loaded message bundle. */
+function lookupMessage(
+  messages: Record<string, unknown>,
+  key: string,
+): string | null {
+  let node: unknown = messages;
+  for (const part of key.split(".")) {
+    if (typeof node !== "object" || node === null) return null;
+    node = (node as Record<string, unknown>)[part];
+  }
+  return typeof node === "string" ? node : null;
+}
+
+/**
+ * Build the explanation paragraph, resolved against the merchant's locale
+ * bundle.
+ *
+ * Reads the SAME `disputes.outcomeExplanation.*` messages the Overview
+ * header uses, through the same `resolveOutcomeExplanation` /
+ * `outcomeExplanationToken` pair — so the email and the app cannot drift
+ * into describing one decision two ways.
+ *
+ * ICU is not needed here: these messages use simple `{date}` / `{clause}`
+ * placeholders with no plural or select arms, so a literal substitution is
+ * exact. A message that ever needs real ICU must move to a translator
+ * rather than gain a hand-rolled parser here.
+ *
+ * Returns null when there is nothing to add, and never throws — a missing
+ * key degrades to the email's existing wording rather than failing the
+ * send.
+ */
+async function outcomeExplanationSentence(input: {
+  locale: Locale;
+  outcome: "won" | "lost";
+  reason: string | null;
+  pack: { submittedAt: string | null; facts: unknown } | null;
+}): Promise<string | null> {
+  try {
+    const explanation = resolveOutcomeExplanation({
+      outcome: input.outcome,
+      reason: input.reason,
+      pack: input.pack,
+    });
+    const filedAt =
+      explanation.kind === "not_defended_by_us" ? null : explanation.filedAt;
+    // A historical import gets no paragraph at all. The Overview header
+    // states it plainly because the merchant is looking at that case; an
+    // unprompted email volunteering "we did nothing here" is noise.
+    if (explanation.kind === "not_defended_by_us") return null;
+
+    const formattedDate = filedAt
+      ? new Date(filedAt).toLocaleDateString(input.locale, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        })
+      : null;
+    const token = outcomeExplanationToken(explanation, input.outcome, formattedDate);
+    if (!token) return null;
+
+    const messages = await getMessages(input.locale);
+    const template = lookupMessage(messages, token.key);
+    if (!template) return null;
+
+    let out = template;
+    for (const [name, value] of Object.entries(token.params ?? {})) {
+      const resolved =
+        typeof value === "object" && value !== null && "key" in value
+          ? lookupMessage(messages, (value as { key: string }).key)
+          : String(value);
+      if (resolved === null) return null;
+      out = out.split(`{${name}}`).join(resolved);
+    }
+    return out;
+  } catch {
+    return null;
+  }
+}
+
 function formatCurrency(
   amount: number | null,
   currencyCode: string | null,
@@ -717,6 +815,26 @@ export async function sendOutcomePostedAlert(
     const variant =
       ctx.phase === "inquiry" ? s.inquiry[ctx.outcome] : s[ctx.outcome];
 
+    /* The explanation paragraph — won/lost only.
+     *
+     * `accepted` is deliberately excluded. Its own doc comment above says
+     * it is a catch-all that also reaches disputes DisputeDesk submitted,
+     * so it cannot know what was filed; adding this sentence there would
+     * be exactly the unfounded claim the derivation exists to avoid. */
+    const bodyParagraphs = [...variant.body];
+    if (ctx.outcome === "won" || ctx.outcome === "lost") {
+      const sentence = await outcomeExplanationSentence({
+        locale,
+        outcome: ctx.outcome,
+        reason: ctx.reason,
+        pack: ctx.defencePackage ?? null,
+      });
+      // Slot in after the result statement and before the "no further
+      // action / review what happened" paragraph, which then reads as the
+      // natural follow-on rather than an interruption.
+      if (sentence) bodyParagraphs.splice(1, 0, sentence);
+    }
+
     const { data: shop } = await sb
       .from("shops")
       .select("shop_domain")
@@ -765,7 +883,7 @@ export async function sendOutcomePostedAlert(
       <h1 style="font-size:20px;font-weight:600;color:${accent};margin:0 0 12px">
         ${variant.heading}
       </h1>
-      ${variant.body
+      ${bodyParagraphs
         .map(
           (p) =>
             `<p style="font-size:14px;color:#202223;margin:0 0 12px;line-height:1.55">${p}</p>`,
