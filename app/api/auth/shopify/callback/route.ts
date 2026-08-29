@@ -15,13 +15,10 @@ import {
 import { fetchShopDetails } from "@/lib/shopify/shopDetails";
 import { persistShopCurrency } from "@/lib/shopify/persistShopCurrency";
 import { ingestShopifyPolicies } from "@/lib/policies/ingestShopifyPolicies";
-import { grantFreeLifetimeCredits } from "@/lib/billing/grantFreeLifetime";
+import { onNewShopCreated } from "@/lib/shopify/onNewShopCreated";
 import { sendWelcomeEmail } from "@/lib/email/sendWelcome";
 import { seedDefaultStoreAutomation } from "@/lib/rules/storeAutomation";
-import {
-  sendAdminSignupNotification,
-  sendAdminInstallNotification,
-} from "@/lib/email/sendAdminNotification";
+import { sendAdminSignupNotification } from "@/lib/email/sendAdminNotification";
 import { normalizeLocale } from "@/lib/i18n/locales";
 import type { Locale } from "@/lib/i18n/locales";
 
@@ -145,64 +142,16 @@ export async function GET(req: NextRequest) {
         expiresAt: null,
       });
 
-      // Admin install notification — fires once per NEW merchant, on the
-      // offline OAuth phase (the first phase of every install, portal AND
-      // embedded). Source-independent so an App Store install can no longer
-      // go unannounced (unlike sendAdminSignupNotification, which is gated on
-      // source === "portal"). fetchShopDetails works here because the offline
-      // session was just stored above.
-      //
-      // MUST be AWAITED (see below) — it cannot be fire-and-forget: the offline
-      // phase ends in an immediate NextResponse.redirect(onlineAuthUrl) for
-      // embedded App Store installs, and Vercel freezes/kills the serverless
-      // instance the moment the response returns. An un-awaited
-      // fetchShopDetails→send chain (a Shopify GraphQL round-trip) loses that
-      // race and the email never sends — the cause of missed install alerts
-      // for every App Store install (daniel-store / blume-box / cay-collective,
-      // all source !== "portal"). Awaiting is safe: fetchShopDetails is
-      // .catch()'d to null and sendAdminInstallNotification never throws, so
-      // this only adds a bounded, best-effort delay before the redirect.
+      // Once-per-new-merchant side effects (admin install alert + Free-tier
+      // pack grant). Shared with the Session Token Exchange install path via
+      // lib/shopify/onNewShopCreated.ts — see that module for why this must
+      // not be re-inlined, and why the notification is awaited.
       if (isNewShop) {
-        // Free-tier lifetime pack floor — grant N usable packs once per
-        // new shop so the Free plan isn't blocked at its first pack build.
-        // Idempotent (guards on an existing free_lifetime ledger row), so
-        // re-install can't double-grant. Fire-and-forget: never blocks OAuth.
-        grantFreeLifetimeCredits(shopInternalId).catch((err) => {
-          console.warn(
-            "[billing] free_lifetime grant failed:",
-            err instanceof Error ? err.message : err,
-          );
+        await onNewShopCreated({
+          shopInternalId,
+          shopDomain: shop,
+          source,
         });
-
-        // Enrichment (store name / owner email) is best-effort: on a fresh
-        // install this is the FIRST authed call after the token was stored
-        // milliseconds ago, and Shopify commonly 401s that first request
-        // before the token propagates — fetchShopDetails then THROWS. That
-        // throw must NOT suppress the notification: shopDomain alone is
-        // always known and the enriched fields render as "—" when absent.
-        // So swallow the fetch failure to null and always send.
-        await fetchShopDetails(shopInternalId)
-          .catch((err) => {
-            console.warn(
-              "[email:admin-install] shop-details enrichment failed; sending without it:",
-              err instanceof Error ? err.message : err,
-            );
-            return null;
-          })
-          .then((details) =>
-            sendAdminInstallNotification({
-              shopDomain: shop,
-              email: details?.email,
-              shopName: details?.name,
-              source,
-            }),
-          )
-          .catch((err) => {
-            console.warn(
-              "[email:admin-install] notification failed:",
-              err instanceof Error ? err.message : err,
-            );
-          });
       }
 
       registerDisputeWebhooks({

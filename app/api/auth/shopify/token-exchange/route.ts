@@ -5,6 +5,7 @@ import { verifySessionToken } from "@/lib/shopify/sessionToken";
 import { registerDisputeWebhooks } from "@/lib/shopify/registerDisputeWebhooks";
 import { persistShopCurrency } from "@/lib/shopify/persistShopCurrency";
 import { needsRefresh } from "@/lib/shopify/sessions/refreshOfflineToken";
+import { onNewShopCreated } from "@/lib/shopify/onNewShopCreated";
 
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY ?? "";
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET ?? "";
@@ -52,6 +53,19 @@ export async function GET(req: NextRequest) {
 
   // Upsert the shop row so we have an internal id to hang the session on.
   let shopInternalId: string;
+  // True only when THIS request creates the shops row — i.e. a brand-new
+  // merchant installing through Session Token Exchange. Gates the
+  // once-per-merchant side effects below so a re-install can't re-notify.
+  let isNewShop = false;
+  // Latched once the install has been announced, so no control-flow path
+  // (success, exchange rejection, thrown error) can send a second alert for
+  // the same request.
+  let announced = false;
+  const announceNewShop = async (source: string): Promise<void> => {
+    if (!isNewShop || announced) return;
+    announced = true;
+    await onNewShopCreated({ shopInternalId, shopDomain: shop, source });
+  };
   {
     const { data: existing } = await db
       .from("shops")
@@ -75,6 +89,7 @@ export async function GET(req: NextRequest) {
         return errorPage(`Failed to create shop row: ${error?.message ?? "unknown"}`);
       }
       shopInternalId = created.id;
+      isNewShop = true;
     }
   }
 
@@ -137,6 +152,13 @@ export async function GET(req: NextRequest) {
             tokenExpiring: finalTokenExpiring,
           });
         }
+        // A brand-new shop row was just created but the exchange failed, so
+        // the enriched path below never runs. Still announce the install —
+        // the row exists and the merchant is real; without this the new
+        // merchant is silently invisible. fetchShopDetails has no usable
+        // session here and degrades to null, so the alert carries the shop
+        // domain and "—" for the rest.
+        await announceNewShop("token-exchange (exchange failed)");
         return errorPage(`Shopify rejected token exchange (${exchangeRes.status}).`);
       }
 
@@ -168,6 +190,18 @@ export async function GET(req: NextRequest) {
           : null,
         tokenExpiring,
       });
+
+      // Once-per-new-merchant side effects (admin install alert + Free-tier
+      // pack grant), shared with the OAuth callback path via
+      // lib/shopify/onNewShopCreated.ts.
+      //
+      // Placed AFTER storeSession so fetchShopDetails has a usable offline
+      // token and the alert carries store name + owner email rather than
+      // degrading to "—". Awaited deliberately: this handler ends in a
+      // redirect and Vercel kills the serverless instance the moment the
+      // response returns, so a fire-and-forget Shopify round-trip would lose
+      // that race and the email would never send.
+      await announceNewShop("token-exchange");
 
       // Register dispute webhooks out-of-band; don't block the redirect.
       registerDisputeWebhooks({ shopDomain: shop, accessToken: data.access_token })
@@ -203,6 +237,9 @@ export async function GET(req: NextRequest) {
           tokenExpiring: finalTokenExpiring,
         });
       }
+      // Same reasoning as the !exchangeRes.ok branch: a new shop row exists,
+      // so the install must still be announced even though enrichment failed.
+      await announceNewShop("token-exchange (error)");
       return errorPage(err instanceof Error ? err.message : "Token exchange failed.");
     }
   }
