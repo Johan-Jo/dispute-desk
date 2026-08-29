@@ -132,6 +132,10 @@ export async function enqueueJob(params: {
   jobType: string;
   entityId?: string;
   priority?: number;
+  /** Optional collision key. `jobs_dedupe_key_uniq` is a partial unique
+   *  index over non-null values, so passing the same key twice raises
+   *  23505 — callers that treat a duplicate as benign must catch it. */
+  dedupeKey?: string;
 }): Promise<string> {
   const db = getServiceClient();
 
@@ -143,6 +147,7 @@ export async function enqueueJob(params: {
       entity_id: params.entityId ?? null,
       priority: params.priority ?? 100,
       status: "queued",
+      ...(params.dedupeKey ? { dedupe_key: params.dedupeKey } : {}),
     })
     .select("id")
     .single();
