@@ -30,6 +30,8 @@ vi.mock("@/lib/supabase/server", () => ({
 import {
   findBlockedBuildCandidates,
   scheduleBlockedBuildReplay,
+  isHistoricalImportRunning,
+  replayBlockedBuilds,
   REPLAY_CANDIDATE_CAP,
 } from "@/lib/billing/replayBlockedBuilds";
 
@@ -40,6 +42,8 @@ function builder(result: { data: unknown; error: unknown }) {
   for (const m of ["select", "eq", "in", "is", "gt", "order", "limit", "not"]) {
     chain[m] = () => chain;
   }
+  chain.maybeSingle = () => Promise.resolve(result);
+  chain.single = () => Promise.resolve(result);
   chain.then = (resolve: (v: unknown) => unknown) => resolve(result);
   return chain;
 }
@@ -114,6 +118,58 @@ describe("scheduleBlockedBuildReplay", () => {
   });
 });
 
+describe("historical-import deferral", () => {
+  /** Pack evidence is computed FROM shopify_orders, so a mid-backfill build
+   *  silently undercounts prior-order history — the argument that wins these
+   *  cases. Caught on 6a8848-dd before it corrupted 56 packs. */
+  function shopWithStatus(status: string | null) {
+    return () =>
+      builder({
+        data: status === null ? null : { historical_import_status: status },
+        error: null,
+      });
+  }
+
+  it("defers while the order backfill is in_progress", async () => {
+    from.mockImplementation(shopWithStatus("in_progress"));
+    expect(await isHistoricalImportRunning("shop-1")).toBe(true);
+  });
+
+  it.each(["complete", "not_started", "failed"])(
+    "does NOT defer when status is %s",
+    async (status) => {
+      from.mockImplementation(shopWithStatus(status));
+      expect(await isHistoricalImportRunning("shop-1")).toBe(false);
+    },
+  );
+
+  it("treats a missing shop row as not-running rather than blocking forever", async () => {
+    from.mockImplementation(shopWithStatus(null));
+    expect(await isHistoricalImportRunning("shop-1")).toBe(false);
+  });
+
+  it("returns deferredForImport without enqueuing anything mid-backfill", async () => {
+    const inserted: unknown[] = [];
+    from.mockImplementation((table: string) => {
+      if (table === "shops") return shopWithStatus("in_progress")();
+      if (table === "audit_events") {
+        return { insert: (row: unknown) => {
+          inserted.push(row);
+          return Promise.resolve({ error: null });
+        } };
+      }
+      return builder({ data: [], error: null });
+    });
+
+    const summary = await replayBlockedBuilds("shop-1");
+
+    expect(summary.deferredForImport).toBe(true);
+    expect(summary.candidates).toBe(0);
+    expect(summary.enqueued).toBe(0);
+    expect(inserted).toHaveLength(1);
+  });
+});
+
 describe("structural invariant: grantCredits is the only ledger entry point", () => {
   const ROOTS = ["lib", "app", "scripts"];
 
@@ -157,6 +213,22 @@ describe("structural invariant: grantCredits is the only ledger entry point", ()
         `the blocked-build replay will not fire and disputes blocked on quota ` +
         `will stay permanently pack-less:\n${offenders.join("\n")}`,
     ).toEqual([]);
+  });
+
+  it("re-fires the sweep when the order backfill completes", () => {
+    // The deferral above is only safe because something wakes the sweep
+    // back up. The credit grant that would have triggered it already
+    // happened hours earlier, so without this call a deferred shop is
+    // stranded exactly like the bug this module fixes.
+    const src = readFileSync("lib/disputes/backfillOrders.ts", "utf-8");
+    const completeBlock = src.slice(src.indexOf('historical_import_status: "complete"'));
+
+    expect(
+      completeBlock.includes("scheduleBlockedBuildReplay"),
+      "backfillShopOrders must call scheduleBlockedBuildReplay when it flips " +
+        "the shop to `complete` — otherwise a sweep deferred mid-backfill " +
+        "never runs and the disputes stay permanently pack-less.",
+    ).toBe(true);
   });
 
   it("keeps the candidate cap bounded", () => {

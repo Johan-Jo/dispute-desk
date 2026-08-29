@@ -55,6 +55,35 @@ export interface ReplayCandidate {
 }
 
 /**
+ * True while the shop's historical order import is still walking.
+ *
+ * Pack evidence is computed FROM `shopify_orders` — `loadPriorOrderHistory`
+ * counts a customer's prior orders out of that table, and the fulfillment
+ * source falls back to its persisted snapshot. Building mid-backfill
+ * therefore bakes a too-low prior-order count into the pack, and does it
+ * SILENTLY: the helper returns a number, not an error, so a pack built at
+ * 60% order coverage is indistinguishable from one built at 100%. Prior
+ * order history is exactly the "long-standing good customer" argument that
+ * wins these cases, so a quiet undercount is worse than waiting.
+ *
+ * Only `in_progress` blocks. `not_started` and `failed` must NOT — a shop
+ * whose backfill never ran (or died) would otherwise never get its packs,
+ * which is the same class of permanent-stranding bug this module exists to
+ * fix. `complete` is the normal green light.
+ */
+export async function isHistoricalImportRunning(
+  shopId: string,
+): Promise<boolean> {
+  const sb = getServiceClient();
+  const { data } = await sb
+    .from("shops")
+    .select("historical_import_status")
+    .eq("id", shopId)
+    .maybeSingle();
+  return data?.historical_import_status === "in_progress";
+}
+
+/**
  * Find disputes that are blocked but still winnable: open, un-submitted,
  * with no live pack, and with a deadline that has not passed.
  */
@@ -110,6 +139,9 @@ export interface ReplaySummary {
   enqueued: number;
   /** True when the candidate set hit REPLAY_CANDIDATE_CAP and more may remain. */
   capped: boolean;
+  /** True when the sweep deferred because the order backfill is still
+   *  running. `backfillShopOrders` re-fires it on completion. */
+  deferredForImport: boolean;
   errors: string[];
 }
 
@@ -160,8 +192,26 @@ export async function replayBlockedBuilds(
     candidates: 0,
     enqueued: 0,
     capped: false,
+    deferredForImport: false,
     errors: [],
   };
+
+  // Never build against a half-ingested order history — see
+  // isHistoricalImportRunning. `backfillShopOrders` re-fires this sweep the
+  // moment it flips the shop to `complete`, so deferring here does not
+  // strand anything.
+  if (await isHistoricalImportRunning(shopId)) {
+    summary.deferredForImport = true;
+    await getServiceClient()
+      .from("audit_events")
+      .insert({
+        shop_id: shopId,
+        actor_type: "system",
+        event_type: "blocked_builds_replay_deferred",
+        event_payload: { reason: "historical_import_in_progress" },
+      });
+    return summary;
+  }
 
   const candidates = await findBlockedBuildCandidates(shopId, nowIso);
   summary.candidates = candidates.length;
