@@ -2,6 +2,10 @@ import { createRequire } from "node:module";
 import { createDecipheriv } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  singleCurrencySummary,
+  summarizeAmountsByCurrency,
+} from "./lib/reporting-money.mjs";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(`${projectRoot}/package.json`);
@@ -50,14 +54,6 @@ function countBy(rows, field) {
   }, {});
 }
 
-function median(sortedValues) {
-  if (sortedValues.length === 0) return 0;
-  const middle = Math.floor(sortedValues.length / 2);
-  return sortedValues.length % 2 === 0
-    ? (sortedValues[middle - 1] + sortedValues[middle]) / 2
-    : sortedValues[middle];
-}
-
 async function rows(table, select, shopId, since) {
   let query = db.from(table).select(select).eq("shop_id", shopId);
   if (since) query = query.gte("created_at", since);
@@ -93,9 +89,8 @@ if (allDisputesError) throw allDisputesError;
 const isSynthetic = (gid = "") => /(?:test-|seed-|dd-seed|e2e|fixture|mock)/i.test(gid);
 const productionDisputes = allDisputes.filter((row) => !isSynthetic(row.dispute_gid));
 const syntheticDisputes = allDisputes.filter((row) => isSynthetic(row.dispute_gid));
-const numericAmounts = productionDisputes.map((row) => Number(row.amount) || 0).sort((a, b) => a - b);
-const productionAmount = numericAmounts.reduce((total, amount) => total + amount, 0);
-const productionMedianAmount = median(numericAmounts);
+const productionAmountsByCurrency = summarizeAmountsByCurrency(productionDisputes);
+const singleProductionCurrency = singleCurrencySummary(productionAmountsByCurrency);
 const productionSpanDays = productionDisputes.length > 1
   ? (new Date(productionDisputes.at(-1).initiated_at) - new Date(productionDisputes[0].initiated_at)) / 86400000 + 1
   : 0;
@@ -189,12 +184,14 @@ console.log(JSON.stringify({
       production_by_reason: countBy(productionDisputes, "reason"),
       production_by_status: countBy(productionDisputes, "normalized_status"),
       production_by_submission_state: countBy(productionDisputes, "submission_state"),
-      production_amount: productionAmount,
-      production_average_amount: productionDisputes.length ? productionAmount / productionDisputes.length : 0,
-      production_median_amount: productionMedianAmount,
+      production_amount_by_currency: productionAmountsByCurrency,
+      production_amount: singleProductionCurrency?.total ?? null,
+      production_average_amount: singleProductionCurrency?.average ?? null,
+      production_median_amount: singleProductionCurrency?.median ?? null,
       production_span_days: productionSpanDays,
       annualized_case_run_rate: productionSpanDays ? productionDisputes.length / productionSpanDays * 365 : 0,
-      annualized_disputed_value_run_rate: productionSpanDays ? productionAmount / productionSpanDays * 365 : 0,
+      annualized_disputed_value_run_rate:
+        singleProductionCurrency?.annualized_disputed_value_run_rate ?? null,
       production_first_initiated_at: productionDisputes[0]?.initiated_at || null,
       production_last_initiated_at: productionDisputes.at(-1)?.initiated_at || null,
       synthetic_gid_samples: syntheticDisputes.slice(0, 5).map((row) => row.dispute_gid),
